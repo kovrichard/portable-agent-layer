@@ -1,18 +1,20 @@
 /**
- * Dynamic CLAUDE.md generation.
+ * Dynamic AGENTS.md generation.
  *
- * CLAUDE.md is regenerated when setup.json or any telos file is newer than
- * the existing CLAUDE.md. The template lives at CLAUDE.md.template.
+ * AGENTS.md is regenerated when setup.json or any telos file is newer than
+ * the existing AGENTS.md. The template lives at AGENTS.md.template.
+ * CLAUDE.md is kept as a symlink pointing to AGENTS.md.
  */
 
-import { existsSync, readFileSync, writeFileSync, readdirSync, statSync } from "fs";
+import { existsSync, readFileSync, writeFileSync, readdirSync, statSync, symlinkSync, unlinkSync, lstatSync } from "fs";
 import { resolve } from "path";
 import { paiPath, paths } from "./paths";
 import { readSetupState, buildSetupPrompt } from "./setup";
 import { loadTelos } from "./context";
 
-const TEMPLATE_PATH = paiPath("CLAUDE.md.template");
-const OUTPUT_PATH = paiPath("CLAUDE.md");
+const TEMPLATE_PATH = paiPath("AGENTS.md.template");
+const OUTPUT_PATH = paiPath("AGENTS.md");
+const SYMLINK_PATH = paiPath("CLAUDE.md");
 
 function latestMtime(...filePaths: string[]): number {
   let latest = 0;
@@ -26,7 +28,20 @@ function latestMtime(...filePaths: string[]): number {
   return latest;
 }
 
-/** Returns true if CLAUDE.md needs to be regenerated */
+/** Ensure CLAUDE.md is a symlink pointing to AGENTS.md */
+function ensureSymlink(): void {
+  try {
+    const stat = lstatSync(SYMLINK_PATH);
+    // If it exists but isn't a symlink (e.g. old generated file), remove it
+    if (!stat.isSymbolicLink()) unlinkSync(SYMLINK_PATH);
+    else return; // already a symlink, leave it
+  } catch {
+    // doesn't exist — create it
+  }
+  symlinkSync("AGENTS.md", SYMLINK_PATH);
+}
+
+/** Returns true if AGENTS.md needs to be regenerated */
 export function needsRebuild(): boolean {
   if (!existsSync(OUTPUT_PATH)) return true;
 
@@ -54,7 +69,7 @@ function memoryPaths(): string {
   ].join("\n");
 }
 
-/** Render CLAUDE.md from the template using current state */
+/** Render AGENTS.md from the template using current state */
 export function buildClaudeMd(): string {
   const template = existsSync(TEMPLATE_PATH)
     ? readFileSync(TEMPLATE_PATH, "utf-8")
@@ -70,8 +85,9 @@ export function buildClaudeMd(): string {
     .replace("{{MEMORY_PATHS}}", memoryPaths());
 }
 
-/** Regenerate CLAUDE.md if any source file is newer. Returns true if rebuilt. */
+/** Regenerate AGENTS.md if any source file is newer, and ensure CLAUDE.md symlink exists. Returns true if rebuilt. */
 export function regenerateIfNeeded(): boolean {
+  ensureSymlink();
   if (!needsRebuild()) return false;
   writeFileSync(OUTPUT_PATH, buildClaudeMd(), "utf-8");
   return true;
