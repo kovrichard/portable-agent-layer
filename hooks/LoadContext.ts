@@ -9,6 +9,10 @@
  */
 
 import { buildGreeting, buildSystemReminder } from "./lib/context";
+import { regenerateIfNeeded } from "./lib/claude-md";
+
+// --- Regenerate CLAUDE.md if telos or setup changed ---
+regenerateIfNeeded();
 
 // --- Visible greeting to stderr ---
 process.stderr.write(buildGreeting().join("\n") + "\n");

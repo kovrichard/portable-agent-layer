@@ -1,0 +1,7 @@
+# PAI Context
+
+{{SETUP_PROMPT}}
+{{TELOS}}
+## Memory
+
+{{MEMORY_PATHS}}
