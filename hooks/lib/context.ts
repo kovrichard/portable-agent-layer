@@ -9,6 +9,7 @@ import { paths } from "./paths";
 import { readSetupState, buildSetupPrompt, remainingSteps, STEP_ORDER } from "./setup";
 import { readFramePrinciples } from "./wisdom";
 import { loadRecentNotes } from "./relationship";
+import { computeSignalTrends, formatTrends } from "./signal-trends";
 
 /** Load all populated TELOS files as a single markdown string */
 export function loadTelos(): string {
@@ -118,6 +119,49 @@ export function loadWisdomContext(): string {
   }
 }
 
+/** Load 3 most recent session learning files as digest */
+export function loadLearningDigest(): string {
+  try {
+    const sessionDir = paths.sessionLearning();
+    if (!existsSync(sessionDir)) return "";
+
+    const files: string[] = [];
+    for (const month of readdirSync(sessionDir).sort().reverse()) {
+      const monthPath = resolve(sessionDir, month);
+      try {
+        const monthFiles = readdirSync(monthPath)
+          .filter((f) => f.endsWith(".md"))
+          .sort()
+          .reverse()
+          .map((f) => resolve(monthPath, f));
+        files.push(...monthFiles);
+      } catch { /* skip */ }
+      if (files.length >= 3) break;
+    }
+
+    const excerpts = files.slice(0, 3).map((f) => {
+      const content = readFileSync(f, "utf-8").trim();
+      // Extract title line
+      const titleLine = content.split("\n").find((l) => l.startsWith("**Title:**")) ?? "";
+      return titleLine || content.slice(0, 80);
+    });
+
+    if (excerpts.length === 0) return "";
+    return ["## Recent Session Learnings", ...excerpts.map((e) => `- ${e}`)].join("\n");
+  } catch {
+    return "";
+  }
+}
+
+/** Load signal trends as a formatted string */
+export function loadSignalTrends(): string {
+  try {
+    return formatTrends(computeSignalTrends());
+  } catch {
+    return "";
+  }
+}
+
 /** Load recent relationship notes (today + yesterday) */
 export function loadRelationshipContext(): string {
   try {
@@ -135,6 +179,8 @@ export function buildSystemReminder(): string {
   const work = loadActiveWork();
   const wisdom = loadWisdomContext();
   const relationship = loadRelationshipContext();
+  const digest = loadLearningDigest();
+  const trends = loadSignalTrends();
   const setupState = readSetupState();
   const setupPrompt = setupState ? buildSetupPrompt(setupState) : null;
 
@@ -144,6 +190,8 @@ export function buildSystemReminder(): string {
   if (telos) parts.push(telos);
   if (wisdom) parts.push("", wisdom);
   if (relationship) parts.push("", relationship);
+  if (digest) parts.push("", digest);
+  if (trends) parts.push("", trends);
   if (work) parts.push("", work.text);
 
   parts.push("</system-reminder>");
