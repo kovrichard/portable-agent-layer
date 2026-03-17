@@ -7,6 +7,9 @@ CLAUDE.md
 # Runtime state
 memory/state/current-work.json
 memory/state/setup.json
+memory/state/session-names.json
+memory/state/signal-cache.json
+memory/state/pending-failure.json
 
 # Signal logs (append-only, machine-local)
 memory/signals/ratings.jsonl
@@ -14,3 +17,9 @@ memory/signals/learnings.jsonl
 
 # Auto-generated learning artifacts
 memory/learning/low-ratings/
+memory/learning/failures/
+memory/learning/session/
+
+# New memory subsystems
+memory/wisdom/frames/
+memory/relationship/

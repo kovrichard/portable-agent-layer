@@ -3,28 +3,18 @@
  */
 
 import { emitLearning } from "../lib/signals";
+import { parseMessages, extractLastAssistant, extractContent } from "../lib/transcript";
 
 export async function captureLearning(transcript: string): Promise<void> {
-  // Try to parse as JSON transcript
-  try {
-    const messages = JSON.parse(transcript);
-    if (!Array.isArray(messages)) return;
+  const messages = parseMessages(transcript);
 
-    // Extract last assistant message as a rough summary
-    const lastAssistant = messages
-      .filter((m: any) => m.role === "assistant")
-      .pop();
-
+  if (messages.length > 0) {
+    const lastAssistant = extractLastAssistant(messages);
     if (!lastAssistant) return;
 
-    const content =
-      typeof lastAssistant.content === "string"
-        ? lastAssistant.content
-        : JSON.stringify(lastAssistant.content);
-
-    const summary = content.slice(0, 300);
+    const summary = extractContent(lastAssistant).slice(0, 300);
     emitLearning(summary, "session");
-  } catch {
+  } else {
     // Transcript wasn't JSON — just log a basic signal
     emitLearning(transcript.slice(0, 300), "session");
   }

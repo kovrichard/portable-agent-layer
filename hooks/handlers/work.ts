@@ -6,23 +6,15 @@ import { writeFileSync } from "fs";
 import { resolve } from "path";
 import { paths, ensureDir } from "../lib/paths";
 import { now } from "../lib/time";
+import { parseMessages, extractLastAssistant, extractLastUser, extractContent } from "../lib/transcript";
 
 export async function captureWork(transcript: string): Promise<void> {
   try {
-    const messages = JSON.parse(transcript);
-    if (!Array.isArray(messages)) return;
+    const messages = parseMessages(transcript);
+    if (messages.length === 0) return;
 
-    const lastUser = messages.filter((m: any) => m.role === "user").pop();
-    const lastAssistant = messages
-      .filter((m: any) => m.role === "assistant")
-      .pop();
-
-    const extract = (msg: any): string => {
-      if (!msg) return "";
-      return typeof msg.content === "string"
-        ? msg.content.slice(0, 300)
-        : JSON.stringify(msg.content).slice(0, 300);
-    };
+    const lastUser = extractLastUser(messages);
+    const lastAssistant = extractLastAssistant(messages);
 
     const stateDir = ensureDir(paths.state());
     writeFileSync(
@@ -30,8 +22,8 @@ export async function captureWork(transcript: string): Promise<void> {
       JSON.stringify(
         {
           ts: now(),
-          last_user: extract(lastUser),
-          last_assistant: extract(lastAssistant),
+          last_user: extractContent(lastUser).slice(0, 300),
+          last_assistant: extractContent(lastAssistant).slice(0, 300),
           cwd: process.cwd(),
         },
         null,

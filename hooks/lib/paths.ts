@@ -27,4 +27,9 @@ export const paths = {
   research: () => ensureDir(paiPath("memory", "research")),
   skills: () => paiPath("skills"),
   hooks: () => paiPath("hooks"),
+  // New memory subsystems
+  wisdom: () => ensureDir(paiPath("memory", "wisdom", "frames")),
+  relationship: () => ensureDir(paiPath("memory", "relationship")),
+  failures: () => ensureDir(paiPath("memory", "learning", "failures")),
+  sessionLearning: () => ensureDir(paiPath("memory", "learning", "session")),
 } as const;
