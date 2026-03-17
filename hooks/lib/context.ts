@@ -8,6 +8,7 @@ import { resolve } from "path";
 import { paths } from "./paths";
 import { readSetupState, buildSetupPrompt, remainingSteps, STEP_ORDER } from "./setup";
 import { readFramePrinciples } from "./wisdom";
+import { loadRecentNotes } from "./relationship";
 
 /** Load all populated TELOS files as a single markdown string */
 export function loadTelos(): string {
@@ -117,11 +118,23 @@ export function loadWisdomContext(): string {
   }
 }
 
+/** Load recent relationship notes (today + yesterday) */
+export function loadRelationshipContext(): string {
+  try {
+    const notes = loadRecentNotes(2);
+    if (!notes) return "";
+    return `## Recent Interaction Notes\n${notes}`;
+  } catch {
+    return "";
+  }
+}
+
 /** Build the <system-reminder> content for the AI */
 export function buildSystemReminder(): string {
   const telos = loadTelos();
   const work = loadActiveWork();
   const wisdom = loadWisdomContext();
+  const relationship = loadRelationshipContext();
   const setupState = readSetupState();
   const setupPrompt = setupState ? buildSetupPrompt(setupState) : null;
 
@@ -130,6 +143,7 @@ export function buildSystemReminder(): string {
   if (setupPrompt) parts.push(setupPrompt);
   if (telos) parts.push(telos);
   if (wisdom) parts.push("", wisdom);
+  if (relationship) parts.push("", relationship);
   if (work) parts.push("", work.text);
 
   parts.push("</system-reminder>");
