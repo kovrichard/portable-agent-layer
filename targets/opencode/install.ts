@@ -18,7 +18,11 @@ mkdirSync(OC_PLUGINS_DIR, { recursive: true });
 // --- 1. Deploy plugin ---
 const pluginSrc = resolve(PAI_DIR, "targets", "opencode", "plugin.ts");
 const pluginDst = resolve(OC_PLUGINS_DIR, "pai-plugin.ts");
-const pluginContent = `// PAI_DIR=${PAI_DIR}\n` + readFileSync(pluginSrc, "utf-8");
+// Embed PAI_DIR as a hardcoded constant so no env config is needed
+const pluginContent = readFileSync(pluginSrc, "utf-8").replace(
+  /const PAI_DIR = process\.env\.PAI_DIR \|\| resolve\(import\.meta\.dir, "\.\.\/\.\."\);/,
+  `const PAI_DIR = ${JSON.stringify(PAI_DIR)};`
+);
 writeFileSync(pluginDst, pluginContent, "utf-8");
 log.success(`Deployed plugin to ${pluginDst}`);
 
@@ -89,14 +93,6 @@ const paiSection = [
 
 writeFileSync(INSTRUCTIONS, (existing ? existing + "\n\n" : "") + paiSection + "\n", "utf-8");
 log.success("Added TELOS + skills to instructions.md");
-
-// --- 4. Set PAI_DIR in opencode config ---
-const OC_CONFIG = resolve(OC_GLOBAL_DIR, "config.json");
-const config = readJson(OC_CONFIG, {} as Record<string, unknown>);
-if (!config.env) config.env = {};
-(config.env as Record<string, string>).PAI_DIR = PAI_DIR;
-writeJson(OC_CONFIG, config);
-log.info("Set PAI_DIR in opencode config");
 
 log.success("opencode installation complete");
 console.log("");

@@ -4,10 +4,9 @@
  */
 
 import { existsSync, readFileSync, writeFileSync, unlinkSync } from "fs";
-import { resolve, dirname } from "path";
-import { log, readJson, writeJson } from "../lib";
+import { resolve } from "path";
+import { log } from "../lib";
 
-const PAI_DIR = resolve(dirname(import.meta.dir), "..");
 const OC_GLOBAL_DIR = resolve(process.env.HOME!, ".config", "opencode");
 
 // --- Remove plugin ---
@@ -35,20 +34,6 @@ if (existsSync(INSTRUCTIONS)) {
   } else {
     log.info("No PAI section in instructions.md");
   }
-}
-
-// --- Remove PAI_DIR and PAI_IMPLICIT_SENTIMENT from config ---
-const OC_CONFIG = resolve(OC_GLOBAL_DIR, "config.json");
-if (existsSync(OC_CONFIG)) {
-  const config = readJson(OC_CONFIG, {} as Record<string, unknown>);
-  const env = config.env as Record<string, string> | undefined;
-  if (env) {
-    delete env.PAI_DIR;
-    delete env.PAI_IMPLICIT_SENTIMENT;
-    if (Object.keys(env).length === 0) delete config.env;
-  }
-  writeJson(OC_CONFIG, config);
-  log.info("Removed PAI_DIR from opencode config");
 }
 
 log.success("opencode uninstall complete");
