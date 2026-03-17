@@ -1,0 +1,16 @@
+# User content (filled-in TELOS files) — templates are in telos/templates/
+telos/*.md
+
+# Generated context (contains user-specific content)
+CLAUDE.md
+
+# Runtime state
+memory/state/current-work.json
+memory/state/setup.json
+
+# Signal logs (append-only, machine-local)
+memory/signals/ratings.jsonl
+memory/signals/learnings.jsonl
+
+# Auto-generated learning artifacts
+memory/learning/low-ratings/
