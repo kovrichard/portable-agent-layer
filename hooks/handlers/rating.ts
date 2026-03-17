@@ -9,6 +9,7 @@ import { emitRating } from "../lib/signals";
 import { paths } from "../lib/paths";
 import { fileTimestamp, monthPath } from "../lib/time";
 import { inference } from "../lib/inference";
+import { now } from "../lib/time";
 
 // Match: "8", "8/10", "8 - great work", "rating: 8", "score: 8"
 const EXPLICIT_RE =
@@ -20,7 +21,15 @@ const PRAISE_PATTERNS =
 function handleRating(rating: number, context: string, source: string): void {
   emitRating(rating, context, source);
 
-  if (rating < 6) {
+  if (rating <= 3) {
+    // Deep failure — write pending file for Stop handler to pick up with full transcript
+    writeFileSync(
+      resolve(paths.state(), "pending-failure.json"),
+      JSON.stringify({ rating, context, source, ts: now() }, null, 2),
+      "utf-8"
+    );
+  } else if (rating < 6) {
+    // Low rating but not critical — write simple low-ratings note
     const dir = resolve(paths.learning(), "low-ratings", monthPath());
     mkdirSync(dir, { recursive: true });
 

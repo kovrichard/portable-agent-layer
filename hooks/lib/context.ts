@@ -153,6 +153,34 @@ export function loadLearningDigest(): string {
   }
 }
 
+/** Load 5 most recent failure slugs as an "avoid" list */
+export function loadFailurePatterns(): string {
+  try {
+    const failuresDir = paths.failures();
+    if (!existsSync(failuresDir)) return "";
+
+    const slugs: string[] = [];
+    for (const month of readdirSync(failuresDir).sort().reverse()) {
+      const monthPath = resolve(failuresDir, month);
+      try {
+        const dirs = readdirSync(monthPath).sort().reverse();
+        for (const dir of dirs) {
+          // dir name is {timestamp}_{slug} — extract slug after first underscore group
+          const slug = dir.replace(/^\d{8}-\d{6}_/, "");
+          slugs.push(slug);
+          if (slugs.length >= 5) break;
+        }
+      } catch { /* skip */ }
+      if (slugs.length >= 5) break;
+    }
+
+    if (slugs.length === 0) return "";
+    return ["## Recent Failure Patterns (Avoid)", ...slugs.map((s) => `- ${s}`)].join("\n");
+  } catch {
+    return "";
+  }
+}
+
 /** Load signal trends as a formatted string */
 export function loadSignalTrends(): string {
   try {
@@ -181,6 +209,7 @@ export function buildSystemReminder(): string {
   const relationship = loadRelationshipContext();
   const digest = loadLearningDigest();
   const trends = loadSignalTrends();
+  const failures = loadFailurePatterns();
   const setupState = readSetupState();
   const setupPrompt = setupState ? buildSetupPrompt(setupState) : null;
 
@@ -192,6 +221,7 @@ export function buildSystemReminder(): string {
   if (relationship) parts.push("", relationship);
   if (digest) parts.push("", digest);
   if (trends) parts.push("", trends);
+  if (failures) parts.push("", failures);
   if (work) parts.push("", work.text);
 
   parts.push("</system-reminder>");
