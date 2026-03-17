@@ -7,6 +7,7 @@ import { readdirSync, readFileSync, existsSync } from "fs";
 import { resolve } from "path";
 import { paths } from "./paths";
 import { readSetupState, buildSetupPrompt, remainingSteps, STEP_ORDER } from "./setup";
+import { readFramePrinciples } from "./wisdom";
 
 /** Load all populated TELOS files as a single markdown string */
 export function loadTelos(): string {
@@ -105,10 +106,22 @@ export function buildGreeting(): string[] {
   return greeting;
 }
 
+/** Load high-confidence wisdom principles for injection into system-reminder */
+export function loadWisdomContext(): string {
+  try {
+    const principles = readFramePrinciples();
+    if (principles.length === 0) return "";
+    return ["## Crystallized Principles", ...principles.map((p) => `- ${p}`)].join("\n");
+  } catch {
+    return "";
+  }
+}
+
 /** Build the <system-reminder> content for the AI */
 export function buildSystemReminder(): string {
   const telos = loadTelos();
   const work = loadActiveWork();
+  const wisdom = loadWisdomContext();
   const setupState = readSetupState();
   const setupPrompt = setupState ? buildSetupPrompt(setupState) : null;
 
@@ -116,6 +129,7 @@ export function buildSystemReminder(): string {
 
   if (setupPrompt) parts.push(setupPrompt);
   if (telos) parts.push(telos);
+  if (wisdom) parts.push("", wisdom);
   if (work) parts.push("", work.text);
 
   parts.push("</system-reminder>");

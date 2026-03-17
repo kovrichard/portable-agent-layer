@@ -14,6 +14,7 @@ import { captureWork } from "./handlers/work";
 import { captureLearning } from "./handlers/learning";
 import { notifyCompletion } from "./handlers/notify";
 import { resetTab } from "./handlers/tab";
+import { captureWisdom } from "./handlers/wisdom";
 
 const transcript = await readStdin();
 
@@ -26,4 +27,5 @@ await Promise.allSettled([
   captureWork(transcript),
   notifyCompletion(transcript),
   resetTab(),
+  captureWisdom(transcript),
 ]);
