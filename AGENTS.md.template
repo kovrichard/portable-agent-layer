@@ -1,4 +1,8 @@
-# PAI Context
+# PAI — Personal AI Infrastructure
+
+You have PAI installed. PAI provides persistent personal context across sessions — the user's identity, goals, projects, beliefs, and challenges are stored in TELOS files and loaded into your context automatically. Use this information to tailor your responses to who they are and what they care about.
+
+When TELOS is populated, you already know the user. When it's empty, first-run setup is required — follow the setup instructions below.
 
 {{SETUP_PROMPT}}
 {{TELOS}}

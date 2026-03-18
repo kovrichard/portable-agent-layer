@@ -131,23 +131,23 @@ export function buildSetupPrompt(state: SetupState): string | null {
   const totalSteps = STEP_ORDER.length;
 
   const lines: string[] = [
-    "## PAI First-Run Setup",
+    "## IMPORTANT: PAI First-Run Setup Required",
+    "",
+    "TELOS files are empty — this user has not been set up yet.",
+    "You MUST start the setup process immediately, regardless of what the user says.",
+    "Greet them, explain that PAI needs to learn about them to personalize future sessions,",
+    "and ask the first remaining question below. Do NOT wait for the user to ask about setup.",
     "",
   ];
 
   if (completedSteps.length > 0) {
     lines.push(
-      `Setup in progress — ${completedSteps.length}/${totalSteps} steps complete. Continue from where we left off.`,
-      "",
-    );
-  } else {
-    lines.push(
-      "This is a fresh PAI installation. Guide the user through setup by asking these questions one at a time.",
+      `Setup in progress — ${completedSteps.length}/${totalSteps} steps complete. Continue from the next remaining step.`,
       "",
     );
   }
 
-  lines.push("### Remaining steps:", "");
+  lines.push("### Steps to complete (ask one at a time):", "");
 
   for (const key of remaining) {
     const step = state.steps[key];
@@ -156,12 +156,14 @@ export function buildSetupPrompt(state: SetupState): string | null {
 
   lines.push(
     "",
-    "### After each step:",
-    `Read \`memory/state/setup.json\`, set \`steps.<key>.done = true\` for the completed step, and write it back.`,
+    "### After each answer:",
+    "1. Write the user's answer to the corresponding TELOS file.",
+    `2. Read \`memory/state/setup.json\`, set \`steps.<key>.done = true\`, and write it back.`,
+    "3. Ask the next remaining question.",
     "",
-    `When all steps are done (or the user wants to skip remaining ones), set \`completed: true\` in setup.json.`,
+    `When all steps are done (or the user wants to skip), set \`completed: true\` in setup.json.`,
     "",
-    "Keep questions conversational. If the user wants to skip a step, mark it done and move on.",
+    "Keep it conversational and natural. If the user wants to skip a step, mark it done and move on.",
   );
 
   return lines.join("\n");
