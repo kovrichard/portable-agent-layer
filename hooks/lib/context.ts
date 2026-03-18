@@ -11,6 +11,12 @@ import { readSessionNames } from "./session-names";
 import { buildSetupPrompt, readSetupState, remainingSteps, STEP_ORDER } from "./setup";
 import { computeSignalTrends, formatTrends } from "./signal-trends";
 import { readFramePrinciples } from "./wisdom";
+import {
+  activeProjects,
+  readSessions,
+  recentSessions,
+  staleProjects,
+} from "./work-tracking";
 
 /** Load all populated TELOS files as a single markdown string */
 export function loadTelos(): string {
@@ -51,39 +57,87 @@ export function countSignals(filename: string): number {
   }
 }
 
-/** Load previous session context from current-work.json + recent session names */
+/** Load structured session history + project dashboard */
 export function loadActiveWork(): { text: string; summary: string | null } | null {
-  const workFile = resolve(paths.state(), "current-work.json");
-  if (!existsSync(workFile)) return null;
-
   try {
-    const data = JSON.parse(readFileSync(workFile, "utf-8"));
-    const lines = [
-      "## Previous Session Context",
-      `**Last active:** ${data.ts}`,
-      `**Working directory:** ${data.cwd}`,
-      `**Last request:** ${data.last_user}`,
-    ];
+    const recent = recentSessions(48);
+    const projects = activeProjects();
+    const stale = staleProjects(7);
 
-    // Append recent named sessions for broader context
-    const recent = loadRecentSessions(5);
+    if (recent.length === 0 && projects.length === 0) return null;
+
+    const lines: string[] = [];
+
     if (recent.length > 0) {
-      lines.push("", "**Recent sessions:**");
-      for (const s of recent) lines.push(`- ${s}`);
+      lines.push("## Recent Work (last 48h)");
+      for (const s of recent.slice(-10).reverse()) {
+        const ago = formatAgo(s.ts);
+        lines.push(`- [${s.status}] ${s.name} — ${ago}`);
+        if (s.handoff) {
+          lines.push(`  Handoff: ${s.handoff.split("\n")[0].slice(0, 120)}`);
+        }
+      }
     }
 
-    const lastUser = data.last_user?.slice(0, 60) || null;
-    return { text: lines.join("\n"), summary: lastUser ? `"${lastUser}"` : null };
+    if (projects.length > 0) {
+      lines.push("", "### Active Projects");
+      for (const p of projects) {
+        const sessionCount = p.sessions.length;
+        const ago = formatAgo(p.updated);
+        lines.push(`- **${p.name}** (${sessionCount} sessions, last: ${ago})`);
+        if (p.nextSteps.length > 0) {
+          lines.push(`  Next: ${p.nextSteps[0]}`);
+        }
+        if (p.blockers.length > 0) {
+          lines.push(`  Blockers: ${p.blockers.join(", ")}`);
+        } else {
+          lines.push("  Blockers: None");
+        }
+      }
+    }
+
+    if (stale.length > 0) {
+      lines.push("", "### Stale Projects (>7d inactive)");
+      for (const p of stale) {
+        lines.push(`- **${p.name}** — last active ${formatAgo(p.updated)}`);
+      }
+    }
+
+    // Summary from most recent session
+    const last = recent.length > 0 ? recent[recent.length - 1] : null;
+    const summary = last?.summary?.slice(0, 60) || null;
+
+    return {
+      text: lines.join("\n"),
+      summary: summary ? `"${summary}"` : null,
+    };
   } catch {
     return null;
   }
 }
 
-/** Load the N most recent session names */
+/** Format a timestamp as a human-readable "X ago" string */
+function formatAgo(ts: string): string {
+  const diff = Date.now() - new Date(ts).getTime();
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  if (hours < 1) return "just now";
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+/** Load the N most recent session names (fallback for greeting) */
 export function loadRecentSessions(count: number): string[] {
   try {
+    const sessions = readSessions();
+    if (sessions.length > 0) {
+      return sessions
+        .slice(-count)
+        .reverse()
+        .map((s) => s.name);
+    }
+    // Fallback to session-names.json for backwards compat
     const names = readSessionNames();
-    // session-names.json is keyed by UUID — return the last N values
     const entries = Object.values(names);
     return entries.slice(-count).reverse();
   } catch {

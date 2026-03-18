@@ -10,8 +10,8 @@ import { captureLearning } from "../handlers/learning";
 import { captureRelationship } from "../handlers/relationship";
 import { resetTab } from "../handlers/tab";
 import { updateCounts } from "../handlers/update-counts";
-import { captureWork } from "../handlers/work";
 import { captureWorkLearning } from "../handlers/work-learning";
+import { captureWorkSession } from "../handlers/work-session";
 import { logDebug, logError } from "./log";
 import { ensureDir, paths } from "./paths";
 import { extractContent, extractLastAssistant, parseMessages } from "./transcript";
@@ -37,7 +37,7 @@ export async function runStopHandlers(
   // Run all handlers concurrently (manual wisdom extraction only - no automatic extraction)
   const results = await Promise.allSettled([
     captureLearning(transcript),
-    captureWork(transcript),
+    captureWorkSession(transcript, options.sessionId),
     resetTab(),
     captureRelationship(transcript, options.sessionId),
     captureWorkLearning(transcript),
@@ -47,7 +47,7 @@ export async function runStopHandlers(
 
   const handlerNames = [
     "learning",
-    "work",
+    "work-session",
     "tab",
     "relationship",
     "work-learning",

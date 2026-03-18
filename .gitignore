@@ -7,6 +7,8 @@ AGENTS.md
 
 # Runtime state
 memory/state/current-work.json
+memory/state/sessions.json
+memory/state/projects.json
 memory/state/setup.json
 memory/state/session-names.json
 memory/state/signal-cache.json
