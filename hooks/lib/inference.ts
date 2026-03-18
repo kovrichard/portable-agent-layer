@@ -59,7 +59,12 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
 
     clearTimeout(timer);
 
-    if (!response.ok) return { success: false };
+    if (!response.ok) {
+      const { logError } = await import("./log");
+      const errBody = await response.text().catch(() => "");
+      logError("inference", `HTTP ${response.status}: ${errBody.slice(0, 200)}`);
+      return { success: false };
+    }
 
     const data = (await response.json()) as Record<string, unknown>;
     const content = data?.content as Array<{ text?: string }> | undefined;
