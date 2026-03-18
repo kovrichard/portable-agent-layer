@@ -62,11 +62,13 @@ export function needsRebuild(): boolean {
 }
 
 function memoryPaths(): string {
-  const pai = paiPath("memory");
+  const mem = paiPath("memory");
   return [
-    `- Learning log: ${resolve(pai, "signals", "learnings.jsonl")}`,
-    `- Ratings log: ${resolve(pai, "signals", "ratings.jsonl")}`,
-    `- Session state: ${resolve(pai, "state", "current-work.json")}`,
+    `- **Wisdom frames**: \`${resolve(mem, "wisdom", "frames")}/\` — crystallized principles per domain (loaded every session)`,
+    `- **Relationship notes**: \`${resolve(mem, "relationship")}/YYYY-MM/YYYY-MM-DD.md\` — daily interaction observations (loaded every session)`,
+    `- **Session learnings**: \`${resolve(mem, "learning", "session")}/YYYY-MM/*.md\` — reusable insights from sessions (loaded every session)`,
+    `- **Failure captures**: \`${resolve(mem, "learning", "failures")}/YYYY-MM/{timestamp}_{slug}/capture.md\` — what went wrong and why`,
+    `- **Signals**: \`${resolve(mem, "signals")}/ratings.jsonl\`, \`learnings.jsonl\` — append-only signal logs (do not edit directly)`,
   ].join("\n");
 }
 
