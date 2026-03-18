@@ -22,51 +22,62 @@ export interface RelationshipNote {
   confidence?: number;
 }
 
+// Only match user messages where the user is expressing a personal preference/feeling.
+// These require first-person framing to avoid matching technical descriptions.
 const PREFERENCE_RE =
-  /\b(prefer|like to|appreciate|love|enjoy|hate|dislike|don't like|do not like)\b/i;
+  /\b(I\s+(?:prefer|like to|appreciate|love|enjoy|hate|dislike|don't like|do not like))\b/i;
 const FRUSTRATION_RE =
-  /\b(frustrat|annoy|irritat|wrong|broken|doesn't work|not working)\b/i;
-const POSITIVE_RE = /\b(great|awesome|perfect|excellent|love it|well done|nice|thank)\b/i;
+  /\b(I'm\s+(?:frustrat|annoy|irritat)|this\s+is\s+(?:frustrat|annoy)|stop\s+doing|don't\s+do\s+that)\b/i;
+const POSITIVE_RE =
+  /\b(I\s+(?:love it|like (?:this|that|it))|(?:great|awesome|perfect|excellent)\s+(?:job|work)|well\s+done|thanks?(?:\s+you)?[!.])\b/i;
 const MILESTONE_RE =
-  /\b(first time|breakthrough|finally|success|got it working|managed to)\b/i;
-const AI_ACTION_RE =
-  /\b(I (wrote|created|refactored|added|fixed|updated|removed|implemented|built|changed))\b/i;
+  /\b(first time|breakthrough|finally\s+(?:got|works|working|done)|managed to)\b/i;
 
-function isTrivial(s: string): boolean {
-  return s.length < 15 || s.length > 250;
+/** Skip sentences that look like code, errors, or technical descriptions */
+function isTechnical(s: string): boolean {
+  // Code artifacts: paths, backticks, camelCase, function calls, stack traces
+  if (/[`{}()[\]]/.test(s)) return true;
+  if (/(?:\/[\w.-]+){2,}/.test(s)) return true; // file paths
+  if (/\b[a-z]+[A-Z][a-zA-Z]*\b/.test(s)) return true; // camelCase
+  if (/\b\w+\.\w+\(/.test(s)) return true; // method calls
+  if (/error|exception|stack|trace|stderr|stdout/i.test(s)) return true;
+  if (/^\*\*/.test(s)) return true; // markdown bold (usually structured output)
+  return false;
 }
 
-/** Analyze messages and extract relationship notes */
+function isTrivial(s: string): boolean {
+  return s.length < 20 || s.length > 200;
+}
+
+/** Analyze USER messages only for relationship signals */
 export function analyzeTranscript(messages: Message[]): RelationshipNote[] {
   const notes: RelationshipNote[] = [];
   const seen = new Set<string>();
 
   for (const msg of messages) {
+    // Only analyze user messages — assistant output is not relationship signal
+    if (msg.role !== "user") continue;
+
     const text = extractContent(msg);
     if (!text) continue;
 
     for (const sentence of text.split(/(?<=[.!?])\s+/)) {
       const s = sentence.trim();
       if (isTrivial(s)) continue;
+      if (isTechnical(s)) continue;
 
-      const key = s.slice(0, 60);
+      const key = s.slice(0, 60).toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
 
-      if (msg.role === "user") {
-        if (PREFERENCE_RE.test(s)) {
-          notes.push({ type: "O", text: s.slice(0, 200), confidence: 0.75 });
-        } else if (FRUSTRATION_RE.test(s)) {
-          notes.push({ type: "O", text: s.slice(0, 200), confidence: 0.8 });
-        } else if (POSITIVE_RE.test(s)) {
-          notes.push({ type: "W", text: s.slice(0, 200) });
-        } else if (MILESTONE_RE.test(s)) {
-          notes.push({ type: "W", text: s.slice(0, 200) });
-        }
-      } else if (msg.role === "assistant") {
-        if (AI_ACTION_RE.test(s)) {
-          notes.push({ type: "B", text: s.slice(0, 200) });
-        }
+      if (PREFERENCE_RE.test(s)) {
+        notes.push({ type: "O", text: s.slice(0, 200), confidence: 0.75 });
+      } else if (FRUSTRATION_RE.test(s)) {
+        notes.push({ type: "O", text: s.slice(0, 200), confidence: 0.8 });
+      } else if (POSITIVE_RE.test(s)) {
+        notes.push({ type: "W", text: s.slice(0, 200) });
+      } else if (MILESTONE_RE.test(s)) {
+        notes.push({ type: "W", text: s.slice(0, 200) });
       }
 
       if (notes.length >= 5) return notes;
