@@ -5,7 +5,7 @@
  */
 
 import { inference } from "../lib/inference";
-import { logDebug } from "../lib/log";
+import { logDebug, logError } from "../lib/log";
 import { appendNotes, hasSessionNotes, type RelationshipNote } from "../lib/relationship";
 import { extractContent, parseMessages } from "../lib/transcript";
 
@@ -37,14 +37,22 @@ export async function captureRelationship(
   transcript: string,
   sessionId?: string
 ): Promise<void> {
-  if (sessionId && hasSessionNotes(sessionId)) return;
+  if (sessionId && hasSessionNotes(sessionId)) {
+    logDebug("relationship", "Skipped: session already has notes");
+    return;
+  }
 
   const messages = parseMessages(transcript);
-  // Only run on substantial sessions
-  if (messages.length < 10) return;
+  logDebug("relationship", `Messages: ${messages.length}`);
+  if (messages.length < 10) {
+    logDebug("relationship", "Skipped: < 10 messages");
+    return;
+  }
 
-  // No API key → skip silently
-  if (!process.env.ANTHROPIC_API_KEY) return;
+  if (!process.env.ANTHROPIC_API_KEY) {
+    logDebug("relationship", "Skipped: no ANTHROPIC_API_KEY");
+    return;
+  }
 
   // Collect user messages for analysis
   const userMessages = messages
@@ -54,8 +62,13 @@ export async function captureRelationship(
     .slice(-15)
     .map((t) => t.slice(0, 200));
 
-  if (userMessages.length < 3) return;
+  logDebug("relationship", `User messages: ${userMessages.length}`);
+  if (userMessages.length < 3) {
+    logDebug("relationship", "Skipped: < 3 user messages");
+    return;
+  }
 
+  logDebug("relationship", "Calling inference...");
   const result = await inference({
     system:
       "You analyze user messages from an AI coding session to extract relationship observations. " +
@@ -68,13 +81,18 @@ export async function captureRelationship(
     jsonSchema: OBSERVATION_SCHEMA,
   });
 
-  if (!result.success || !result.output) return;
+  logDebug("relationship", `Inference result: success=${result.success}`);
+  if (!result.success || !result.output) {
+    logDebug("relationship", "Skipped: inference failed or empty output");
+    return;
+  }
 
   try {
     const parsed = JSON.parse(result.output) as {
       observations: Array<{ type: "O" | "W"; text: string; confidence: number }>;
     };
 
+    logDebug("relationship", `Parsed ${parsed.observations?.length ?? 0} observations`);
     if (!parsed.observations || parsed.observations.length === 0) return;
 
     const notes: RelationshipNote[] = parsed.observations.map((o) => ({
@@ -85,7 +103,7 @@ export async function captureRelationship(
 
     appendNotes(notes, sessionId);
     logDebug("relationship", `Captured ${notes.length} observations via inference`);
-  } catch {
-    // Non-critical
+  } catch (err) {
+    logError("relationship", err);
   }
 }
