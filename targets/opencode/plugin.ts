@@ -18,10 +18,10 @@ async function lib<T>(mod: string): Promise<T> {
 
 const PAIPlugin: Plugin = async ({ directory }) => {
   // Pre-load shared modules
-  const { loadTelos, loadActiveWork, countSignals, buildGreeting } = await lib<
+  const { loadActiveWork, countSignals, buildGreeting, buildSystemReminder } = await lib<
     typeof import("../../hooks/lib/context")
   >("context.ts");
-  const { readSetupState, buildSetupPrompt, STEP_ORDER } = await lib<
+  const { readSetupState, STEP_ORDER } = await lib<
     typeof import("../../hooks/lib/setup")
   >("setup.ts");
   const { checkBashCommand, checkFilePath } = await lib<
@@ -57,19 +57,11 @@ const PAIPlugin: Plugin = async ({ directory }) => {
     /^(great\s*job|nice|perfect|awesome|excellent|thanks|thank\s*you|well\s*done|good\s*job|love\s*it|amazing|brilliant|fantastic|wonderful|superb|nailed\s*it)[.!]?$/i;
 
   return {
-    // --- Inject TELOS context + setup instructions into system prompt ---
+    // --- Inject dynamic context into system prompt ---
+    // Static context (TELOS, setup) is in AGENTS.md, read natively by opencode.
     "experimental.chat.system.transform": async (_input, output) => {
-      const telos = loadTelos();
-      const work = loadActiveWork();
-      const setupState = readSetupState();
-      const setupPrompt = setupState ? buildSetupPrompt(setupState) : null;
-
-      const ctxParts = ["# Personal Context (TELOS)"];
-      if (setupPrompt) ctxParts.push(setupPrompt);
-      if (telos) ctxParts.push(telos);
-      if (work) ctxParts.push("", work.text);
-
-      output.system.push(ctxParts.join("\n"));
+      const reminder = buildSystemReminder();
+      if (reminder) output.system.push(reminder);
 
       // Prepend status greeting
       output.system.unshift(buildGreeting().join("\n"));

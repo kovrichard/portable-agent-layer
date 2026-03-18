@@ -201,29 +201,30 @@ export function loadRelationshipContext(): string {
   }
 }
 
-/** Build the <system-reminder> content for the AI */
+/**
+ * Build the <system-reminder> content for the AI.
+ *
+ * Static context (TELOS, setup prompt) lives in AGENTS.md / CLAUDE.md and is
+ * loaded natively by Claude Code / opencode. This injects dynamic context only —
+ * things that change per-session and can't live in a static file.
+ */
 export function buildSystemReminder(): string {
-  const telos = loadTelos();
   const work = loadActiveWork();
   const wisdom = loadWisdomContext();
   const relationship = loadRelationshipContext();
   const digest = loadLearningDigest();
   const trends = loadSignalTrends();
   const failures = loadFailurePatterns();
-  const setupState = readSetupState();
-  const setupPrompt = setupState ? buildSetupPrompt(setupState) : null;
 
-  const parts = ["<system-reminder>", "# Personal Context (TELOS)"];
+  const parts: string[] = [];
+  if (wisdom) parts.push(wisdom);
+  if (relationship) parts.push(relationship);
+  if (digest) parts.push(digest);
+  if (trends) parts.push(trends);
+  if (failures) parts.push(failures);
+  if (work) parts.push(work.text);
 
-  if (setupPrompt) parts.push(setupPrompt);
-  if (telos) parts.push(telos);
-  if (wisdom) parts.push("", wisdom);
-  if (relationship) parts.push("", relationship);
-  if (digest) parts.push("", digest);
-  if (trends) parts.push("", trends);
-  if (failures) parts.push("", failures);
-  if (work) parts.push("", work.text);
+  if (parts.length === 0) return "";
 
-  parts.push("</system-reminder>");
-  return parts.join("\n");
+  return ["<system-reminder>", ...parts, "</system-reminder>"].join("\n");
 }
