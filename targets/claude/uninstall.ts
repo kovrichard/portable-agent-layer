@@ -43,7 +43,6 @@ if (settings.hooks) {
 // --- Remove env ---
 if (settings.env) {
   delete settings.env.PAI_DIR;
-  delete settings.env.PAI_IMPLICIT_SENTIMENT;
   if (Object.keys(settings.env).length === 0) delete settings.env;
 }
 

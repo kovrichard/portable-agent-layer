@@ -87,8 +87,8 @@ const PAIPlugin: Plugin = async ({ directory }) => {
         }
       }
 
-      // Implicit sentiment (opt-in)
-      if (process.env.PAI_IMPLICIT_SENTIMENT === "1") {
+      // Implicit sentiment: auto-enabled when ANTHROPIC_API_KEY is set
+      if (process.env.ANTHROPIC_API_KEY) {
         const trimmed = text.trim();
         if (PRAISE_PATTERNS.test(trimmed)) {
           handleRating(8, trimmed, "implicit");

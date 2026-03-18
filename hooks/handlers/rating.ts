@@ -109,7 +109,8 @@ export async function captureRating(message: string): Promise<void> {
     }
   }
 
-  if (process.env.PAI_IMPLICIT_SENTIMENT === "1") {
+  // Implicit sentiment: auto-enabled when ANTHROPIC_API_KEY is set
+  if (process.env.ANTHROPIC_API_KEY) {
     await handleImplicitSentiment(message);
   }
 }

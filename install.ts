@@ -73,41 +73,6 @@ if (installOpencode) {
   console.log("");
 }
 
-// --- Prompt for implicit sentiment ---
-console.log("");
-console.log("  Implicit sentiment detection analyzes each message for");
-console.log("  sentiment using Haiku API (requires ANTHROPIC_API_KEY).");
-console.log("");
-
-const answer = prompt("  Enable implicit sentiment detection? [y/N]: ") ?? "";
-console.log("");
-
-if (/^[Yy]$/.test(answer.trim())) {
-  if (installClaude) {
-    const settingsPath = resolve(process.env.HOME!, ".claude", "settings.json");
-    if (existsSync(settingsPath)) {
-      const s = readJson(settingsPath, {} as Record<string, unknown>);
-      if (!s.env) s.env = {};
-      (s.env as Record<string, string>).PAI_IMPLICIT_SENTIMENT = "1";
-      writeJson(settingsPath, s);
-      log.success("Enabled implicit sentiment in Claude Code settings");
-    }
-  }
-
-  if (installOpencode) {
-    const configPath = resolve(process.env.HOME!, ".config", "opencode", "config.json");
-    if (existsSync(configPath)) {
-      const c = readJson(configPath, {} as Record<string, unknown>);
-      if (!c.env) c.env = {};
-      (c.env as Record<string, string>).PAI_IMPLICIT_SENTIMENT = "1";
-      writeJson(configPath, c);
-      log.success("Enabled implicit sentiment in opencode config");
-    }
-  }
-} else {
-  log.info("Implicit sentiment: disabled (set PAI_IMPLICIT_SENTIMENT=1 to enable later)");
-}
-
 log.success("Done. Existing config was preserved — only new entries were added.");
 console.log("");
 log.info("Next steps:");
