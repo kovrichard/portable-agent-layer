@@ -16,7 +16,7 @@ async function lib<T>(mod: string): Promise<T> {
   return await import(resolve(PAI_DIR, "hooks", "lib", mod));
 }
 
-const PAIPlugin: Plugin = async ({ directory }) => {
+const PAIPlugin: Plugin = async ({ directory, client }) => {
   // Pre-load shared modules
   const { loadActiveWork, countSignals, buildGreeting, buildSystemReminder } = await lib<
     typeof import("../../hooks/lib/context")
@@ -56,15 +56,33 @@ const PAIPlugin: Plugin = async ({ directory }) => {
   const PRAISE_PATTERNS =
     /^(great\s*job|nice|perfect|awesome|excellent|thanks|thank\s*you|well\s*done|good\s*job|love\s*it|amazing|brilliant|fantastic|wonderful|superb|nailed\s*it)[.!]?$/i;
 
+  // Load shared stop-orchestrator handler
+  const { runStopHandlers } = await lib<typeof import("../../hooks/lib/stop")>("stop.ts");
+
   return {
-    // --- Inject dynamic context into system prompt ---
-    // Static context (TELOS, setup) is in AGENTS.md, read natively by opencode.
+    // --- Per-message: Inject dynamic system reminder ---
     "experimental.chat.system.transform": async (_input, output) => {
       const reminder = buildSystemReminder();
       if (reminder) output.system.push(reminder);
+    },
 
-      // Prepend status greeting
-      output.system.unshift(buildGreeting().join("\n"));
+    // --- Session events: start and stop handling ---
+    event: async ({ event }) => {
+      if (event.type === "session.created" || event.type === "session.updated") {
+        const { regenerateIfNeeded } = await lib<typeof import("../../hooks/lib/claude-md")>("claude-md.ts");
+        regenerateIfNeeded();
+        console.log(buildGreeting().join("\n"));
+      }
+      
+      if (event.type === "session.idle" || event.type === "session.diff") {
+        try {
+          const messages = await client.session.getMessages();
+          const transcript = JSON.stringify(messages);
+          await runStopHandlers(transcript);
+        } catch {
+          // Silent fail - session might not have transcript available
+        }
+      }
     },
 
     // --- Capture ratings from user messages ---
