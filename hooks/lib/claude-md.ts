@@ -7,7 +7,7 @@
  */
 
 import { existsSync, readFileSync, writeFileSync, readdirSync, statSync, symlinkSync, unlinkSync, lstatSync } from "fs";
-import { resolve } from "path";
+import { resolve, relative, dirname } from "path";
 import { paiPath, paths } from "./paths";
 import { readSetupState, buildSetupPrompt } from "./setup";
 import { loadTelos } from "./context";
@@ -38,7 +38,8 @@ function ensureSymlink(): void {
   } catch {
     // doesn't exist — create it
   }
-  symlinkSync(OUTPUT_PATH, SYMLINK_PATH);
+  const relTarget = relative(dirname(SYMLINK_PATH), OUTPUT_PATH).replaceAll("\\", "/");
+  symlinkSync(relTarget, SYMLINK_PATH);
 }
 
 /** Returns true if AGENTS.md needs to be regenerated */
