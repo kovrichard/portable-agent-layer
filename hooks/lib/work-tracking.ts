@@ -95,19 +95,52 @@ export function extractArtifacts(
   return artifacts;
 }
 
+/** Strip code blocks, paths, and technical noise from text */
+function cleanForHandoff(text: string): string {
+  return (
+    text
+      // Remove fenced code blocks
+      .replace(/```[\s\S]*?```/g, "")
+      // Remove inline code
+      .replace(/`[^`]+`/g, "")
+      // Remove file paths
+      .replace(/(?:\/[\w./-]+\.[\w]+)/g, "")
+      // Remove markdown formatting
+      .replace(/\*\*([^*]+)\*\*/g, "$1")
+      .replace(/^[#]+\s*/gm, "")
+      // Remove tool call artifacts
+      .replace(/^\s*[-*]\s*`[^`]+`.*$/gm, "")
+      // Collapse whitespace
+      .replace(/\n{3,}/g, "\n\n")
+      .trim()
+  );
+}
+
 /** Extract handoff notes from last assistant message */
 export function extractHandoff(lastAssistant: string): string {
   // Look for explicit next-steps / TODO / remaining sections
   const sectionMatch = lastAssistant.match(
-    /(?:next steps?|todo|remaining|what's left|still need)[:\s]*\n([\s\S]{10,300}?)(?:\n\n|\n(?=[A-Z#]))/i
+    /(?:next steps?|todo|remaining|what's left|still need|want me to)[:\s]*\n([\s\S]{10,300}?)(?:\n\n|\n(?=[A-Z#]))/i
   );
-  if (sectionMatch) return sectionMatch[1].trim();
+  if (sectionMatch) return cleanForHandoff(sectionMatch[1]);
 
-  // Fallback: last 300 chars
-  if (lastAssistant.length > 300) {
-    return lastAssistant.slice(-300).trim();
-  }
-  return lastAssistant.trim();
+  // Look for closing question/offer (common assistant pattern)
+  const closingMatch = lastAssistant.match(
+    /(?:want (?:me to|to)|shall I|should I|ready to|anything else|let me know)[^\n]*$/im
+  );
+
+  const cleaned = cleanForHandoff(lastAssistant);
+
+  // Use last meaningful paragraph
+  const paragraphs = cleaned
+    .split(/\n\n+/)
+    .map((p) => p.trim())
+    .filter((p) => p.length >= 15 && p.length <= 300);
+
+  if (closingMatch) return closingMatch[0].trim();
+  if (paragraphs.length > 0) return paragraphs[paragraphs.length - 1];
+  if (cleaned.length > 200) return cleaned.slice(-200).trim();
+  return cleaned;
 }
 
 // ── Persistent Projects ──────────────────────────────────────────
