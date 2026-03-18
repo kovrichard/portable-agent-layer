@@ -21,6 +21,7 @@ import { captureWisdom } from "./handlers/wisdom";
 import { captureRelationship } from "./handlers/relationship";
 import { captureWorkLearning } from "./handlers/work-learning";
 import { captureFailure } from "./handlers/failure";
+import { captureReflection } from "./handlers/reflection";
 
 const transcript = await readStdin();
 
@@ -36,6 +37,7 @@ await Promise.allSettled([
   captureWisdom(transcript),
   captureRelationship(transcript),
   captureWorkLearning(transcript),
+  captureReflection(transcript),
   checkPendingFailure(transcript),
 ]);
 

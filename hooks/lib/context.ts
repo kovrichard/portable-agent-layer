@@ -201,6 +201,34 @@ export function loadRelationshipContext(): string {
   }
 }
 
+/** Load pending TELOS updates flagged by reflection handler */
+export function loadPendingTelosUpdates(): string {
+  const pendingPath = resolve(paths.state(), "pending-telos-update.json");
+  if (!existsSync(pendingPath)) return "";
+
+  try {
+    const updates = JSON.parse(readFileSync(pendingPath, "utf-8")) as Array<{
+      file: string;
+      change: string;
+      ts: string;
+    }>;
+    if (updates.length === 0) return "";
+
+    const lines = updates.map(
+      (u) => `- **${u.file}:** ${u.change}`
+    );
+    return [
+      "## Pending TELOS Updates",
+      "The following changes were detected in your last session. Please review and apply:",
+      ...lines,
+      "",
+      "After applying, delete `memory/state/pending-telos-update.json`.",
+    ].join("\n");
+  } catch {
+    return "";
+  }
+}
+
 /**
  * Build the <system-reminder> content for the AI.
  *
@@ -215,6 +243,7 @@ export function buildSystemReminder(): string {
   const digest = loadLearningDigest();
   const trends = loadSignalTrends();
   const failures = loadFailurePatterns();
+  const pendingTelos = loadPendingTelosUpdates();
 
   const parts: string[] = [];
   if (wisdom) parts.push(wisdom);
@@ -222,6 +251,7 @@ export function buildSystemReminder(): string {
   if (digest) parts.push(digest);
   if (trends) parts.push(trends);
   if (failures) parts.push(failures);
+  if (pendingTelos) parts.push(pendingTelos);
   if (work) parts.push(work.text);
 
   if (parts.length === 0) return "";

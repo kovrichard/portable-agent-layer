@@ -8,6 +8,8 @@ export interface InferenceOptions {
   model?: string;
   maxTokens?: number;
   timeout?: number;
+  /** JSON schema for structured output — guarantees valid JSON matching the schema */
+  jsonSchema?: Record<string, unknown>;
 }
 
 export interface InferenceResult {
@@ -25,6 +27,7 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
     model = "claude-haiku-4-5-20251001",
     maxTokens = 200,
     timeout = 5000,
+    jsonSchema,
   } = opts;
 
   try {
@@ -37,6 +40,11 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
       messages: [{ role: "user", content: user }],
     };
     if (system) body.system = system;
+    if (jsonSchema) {
+      body.output_config = {
+        format: { type: "json_schema", schema: jsonSchema },
+      };
+    }
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
