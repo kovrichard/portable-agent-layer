@@ -235,6 +235,9 @@ const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       output: { env: Record<string, string> }
     ) => {
       output.env.PAI_DIR = PAI_DIR;
+      if (process.env.PAI_DEBUG) {
+        output.env.PAI_DEBUG = process.env.PAI_DEBUG;
+      }
     },
   };
 };
