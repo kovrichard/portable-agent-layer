@@ -3,6 +3,7 @@ telos/*.md
 
 # Generated context (contains user-specific content)
 CLAUDE.md
+AGENTS.md
 
 # Runtime state
 memory/state/current-work.json

@@ -4,10 +4,10 @@
  * Copies skills additively. Generates CLAUDE.md from TELOS.
  */
 
-import { existsSync, mkdirSync, copyFileSync, writeFileSync, symlinkSync, unlinkSync, lstatSync } from "fs";
+import { existsSync, mkdirSync, copyFileSync, writeFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { log, readJson, writeJson, copySkills, countSkills, countMd } from "../lib";
-import { buildClaudeMd } from "../../hooks/lib/claude-md";
+import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
 
 const PAI_DIR = resolve(dirname(import.meta.dir), "..");
 const CLAUDE_DIR = resolve(process.env.HOME!, ".claude");
@@ -83,15 +83,9 @@ log.success("Merged hooks into settings.json");
 const skillsDir = resolve(CLAUDE_DIR, "skills");
 copySkills(PAI_DIR, skillsDir);
 
-// --- Generate AGENTS.md and symlink CLAUDE.md → AGENTS.md ---
-writeFileSync(resolve(PAI_DIR, "AGENTS.md"), buildClaudeMd(), "utf-8");
-const symlinkPath = resolve(PAI_DIR, "CLAUDE.md");
-try {
-  const stat = lstatSync(symlinkPath);
-  if (!stat.isSymbolicLink()) unlinkSync(symlinkPath);
-} catch { /* doesn't exist */ }
-try { symlinkSync("AGENTS.md", symlinkPath); } catch { /* already a symlink */ }
-log.success("Generated AGENTS.md (CLAUDE.md → symlink)");
+// --- Generate ~/.claude/AGENTS.md and symlink ~/.claude/CLAUDE.md → AGENTS.md ---
+regenerateIfNeeded();
+log.success("Generated ~/.config/opencode/AGENTS.md (→ ~/.claude/CLAUDE.md symlink)");
 
 log.success("Claude Code installation complete");
 console.log("");

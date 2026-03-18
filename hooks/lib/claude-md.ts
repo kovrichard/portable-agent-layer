@@ -13,8 +13,8 @@ import { readSetupState, buildSetupPrompt } from "./setup";
 import { loadTelos } from "./context";
 
 const TEMPLATE_PATH = paiPath("AGENTS.md.template");
-const OUTPUT_PATH = paiPath("AGENTS.md");
-const SYMLINK_PATH = paiPath("CLAUDE.md");
+const OUTPUT_PATH = resolve(process.env.HOME!, ".config", "opencode", "AGENTS.md");
+const SYMLINK_PATH = resolve(process.env.HOME!, ".claude", "CLAUDE.md");
 
 function latestMtime(...filePaths: string[]): number {
   let latest = 0;
@@ -38,7 +38,7 @@ function ensureSymlink(): void {
   } catch {
     // doesn't exist — create it
   }
-  symlinkSync("AGENTS.md", SYMLINK_PATH);
+  symlinkSync(OUTPUT_PATH, SYMLINK_PATH);
 }
 
 /** Returns true if AGENTS.md needs to be regenerated */
