@@ -9,6 +9,7 @@ import { captureFailure } from "../handlers/failure";
 import { captureLearning } from "../handlers/learning";
 import { captureRelationship } from "../handlers/relationship";
 import { resetTab } from "../handlers/tab";
+import { updateCounts } from "../handlers/update-counts";
 import { captureWork } from "../handlers/work";
 import { captureWorkLearning } from "../handlers/work-learning";
 import { logDebug, logError } from "./log";
@@ -41,6 +42,7 @@ export async function runStopHandlers(
     captureRelationship(transcript, options.sessionId),
     captureWorkLearning(transcript),
     checkPendingFailure(transcript),
+    updateCounts(),
   ]);
 
   const handlerNames = [
@@ -50,6 +52,7 @@ export async function runStopHandlers(
     "relationship",
     "work-learning",
     "pending-failure",
+    "update-counts",
   ];
   for (let i = 0; i < results.length; i++) {
     const r = results[i];

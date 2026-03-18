@@ -91,9 +91,33 @@ export function loadRecentSessions(count: number): string[] {
   }
 }
 
+/** Read cached counts from counts.json, falling back to live counting */
+function loadCachedCounts(): {
+  signals: number;
+  telos: number;
+  skills: number;
+  sessions: number;
+} {
+  try {
+    const countsPath = resolve(paths.state(), "counts.json");
+    if (existsSync(countsPath)) {
+      return JSON.parse(readFileSync(countsPath, "utf-8"));
+    }
+  } catch {
+    /* fall through */
+  }
+  // Fallback: count live (first session before any stop has run)
+  return {
+    signals: countSignals("ratings.jsonl") + countSignals("learnings.jsonl"),
+    telos: 0,
+    skills: 0,
+    sessions: 0,
+  };
+}
+
 /** Build the visible greeting lines for stderr */
 export function buildGreeting(): string[] {
-  const signalCount = countSignals("ratings.jsonl") + countSignals("learnings.jsonl");
+  const counts = loadCachedCounts();
   const work = loadActiveWork();
   const setupState = readSetupState();
   const setupPrompt = setupState ? buildSetupPrompt(setupState) : null;
@@ -102,12 +126,13 @@ export function buildGreeting(): string[] {
 
   if (setupPrompt) {
     const done = STEP_ORDER.length - (setupState ? remainingSteps(setupState).length : 0);
-    greeting.push(`🔧 PAI setup ${done}/${STEP_ORDER.length} | ${signalCount} signals`);
+    greeting.push(
+      `🔧 PAI setup ${done}/${STEP_ORDER.length} | ${counts.signals} signals`
+    );
   } else {
-    const telosCount = setupState
-      ? STEP_ORDER.filter((k) => setupState.steps[k]?.done).length
-      : 0;
-    greeting.push(`✅ PAI ready | ${telosCount} TELOS files | ${signalCount} signals`);
+    greeting.push(
+      `✅ PAI ready | ${counts.telos} TELOS | ${counts.skills} skills | ${counts.signals} signals | ${counts.sessions} sessions`
+    );
   }
 
   if (work?.summary) {
