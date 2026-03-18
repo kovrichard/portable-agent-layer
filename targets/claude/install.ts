@@ -52,6 +52,10 @@ const hooksPayload = {
           { type: "command", command: `bun run ${PAI_DIR}/hooks/SecurityValidator.ts` },
         ],
       },
+      {
+        matcher: "Skill",
+        hooks: [{ type: "command", command: `bun run ${PAI_DIR}/hooks/SkillGuard.ts` }],
+      },
     ],
     Stop: [
       {
@@ -101,6 +105,6 @@ log.success("Generated ~/.config/opencode/AGENTS.md (→ ~/.claude/CLAUDE.md sym
 
 log.success("Claude Code installation complete");
 console.log("");
-log.info(`Hooks: 4 (SessionStart, UserPromptSubmit, PreToolUse, Stop)`);
+log.info(`Hooks: 5 (SessionStart, UserPromptSubmit, PreToolUse×2, Stop)`);
 log.info(`Skills: ${countSkills()}`);
 log.info(`TELOS: ${countMd(resolve(PAI_DIR, "telos"))} files`);
