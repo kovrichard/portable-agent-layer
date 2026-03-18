@@ -37,6 +37,7 @@ const PAIPlugin: Plugin = async ({ directory, client }) => {
   const { monthPath, fileTimestamp } = await lib<
     typeof import("../../hooks/lib/time")
   >("time.ts");
+  const { logError } = await lib<typeof import("../../hooks/lib/log")>("log.ts");
 
   // Local helpers for rating (thin wrappers around shared signals)
   function handleRating(rating: number, context: string, source: string): void {
@@ -79,8 +80,8 @@ const PAIPlugin: Plugin = async ({ directory, client }) => {
           const messages = await client.session.getMessages();
           const transcript = JSON.stringify(messages);
           await runStopHandlers(transcript);
-        } catch {
-          // Silent fail - session might not have transcript available
+        } catch (err) {
+          logError("opencode:session.stop", err);
         }
       }
     },
