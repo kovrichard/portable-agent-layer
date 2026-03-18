@@ -23,7 +23,7 @@ export interface SetupState {
 }
 
 /** Ordered setup steps — defines the wizard flow */
-export const SETUP_STEPS: Record<string, Omit<SetupStep, "done">> = {
+const SETUP_STEPS: Record<string, Omit<SetupStep, "done">> = {
   mission: {
     file: "telos/MISSION.md",
     question: "What's your name and what do you do?",

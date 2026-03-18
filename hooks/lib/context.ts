@@ -329,5 +329,8 @@ export function buildSystemReminder(): string {
 
   if (parts.length === 0) return "";
 
-  return ["<system-reminder>", ...parts, "</system-reminder>"].join("\n");
+  const now = new Date();
+  const time = `**Current time:** ${now.toISOString().slice(0, 19).replace("T", " ")} UTC`;
+
+  return ["<system-reminder>", time, ...parts, "</system-reminder>"].join("\n");
 }
