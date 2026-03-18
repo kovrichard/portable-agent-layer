@@ -11,14 +11,9 @@ memory/state/setup.json
 memory/state/session-names.json
 memory/state/signal-cache.json
 memory/state/pending-failure.json
-memory/state/pending-telos-update.json
 memory/state/last-response.txt
 memory/state/debug.log
 memory/state/debug.log.prev
-
-# Wisdom graduation state (validation counters)
-memory/wisdom/state/validation-counter.json
-graduation-summary.txt
 
 # Signal logs (append-only, machine-local)
 memory/signals/ratings.jsonl
