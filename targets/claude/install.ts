@@ -72,9 +72,12 @@ for (const [event, entries] of Object.entries(hooksPayload.hooks)) {
   settings.hooks[event] = existing;
 }
 
-// --- Set env ---
+// --- Set env (persist platform paths from shell scripts so hooks get them) ---
 if (!settings.env) settings.env = {};
 settings.env.PAI_DIR = PAI_DIR;
+settings.env.PAI_CLAUDE_DIR = CLAUDE_DIR;
+settings.env.PAI_OPENCODE_DIR = process.env.PAI_OPENCODE_DIR!;
+settings.env.PAI_AGENTS_DIR = process.env.PAI_AGENTS_DIR!;
 
 writeJson(SETTINGS, settings);
 log.success("Merged hooks into settings.json");
