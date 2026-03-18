@@ -29,7 +29,8 @@ const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   const { now } = await lib<typeof import("../../hooks/lib/time")>("time.ts");
   const { monthPath, fileTimestamp } =
     await lib<typeof import("../../hooks/lib/time")>("time.ts");
-  const { logError } = await lib<typeof import("../../hooks/lib/log")>("log.ts");
+  const { logDebug, logError } =
+    await lib<typeof import("../../hooks/lib/log")>("log.ts");
 
   // Local helpers for rating (thin wrappers around shared signals)
   function handleRating(rating: number, context: string, source: string): void {
@@ -59,6 +60,8 @@ const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
 
     // --- Session events: start and stop handling ---
     event: async ({ event }) => {
+      logDebug("opencode:event", `Event: ${event.type}`);
+
       if (event.type === "session.created" || event.type === "session.updated") {
         const { regenerateIfNeeded } =
           await lib<typeof import("../../hooks/lib/claude-md")>("claude-md.ts");
@@ -67,17 +70,24 @@ const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       }
 
       if (event.type === "session.idle" || event.type === "session.diff") {
+        logDebug("opencode:event", "Running stop handlers...");
         try {
           // Access messages from session - API may vary by opencode version
           const session = client.session as unknown as {
             messages?: unknown[];
             getMessages?: () => Promise<unknown[]>;
           };
+          logDebug(
+            "opencode:event",
+            `Session keys: ${Object.keys(session || {}).join(", ")}`
+          );
           const messages = session.getMessages
             ? await session.getMessages()
             : session.messages || [];
+          logDebug("opencode:event", `Got ${messages.length} messages`);
           const transcript = JSON.stringify(messages);
           await runStopHandlers(transcript);
+          logDebug("opencode:event", "Stop handlers complete");
         } catch (err) {
           logError("opencode:session.stop", err);
         }
