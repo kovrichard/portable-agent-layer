@@ -9,6 +9,7 @@
   "scripts": {
     "type-check": "tsc --noEmit",
     "test": "bun test",
+    "wisdom:sync": "bun run scripts/cross-frame.ts",
     "format": "biome format",
     "format-write": "biome format --write",
     "lint": "biome lint",
