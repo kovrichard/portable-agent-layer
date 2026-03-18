@@ -176,19 +176,23 @@ export function loadFailurePatterns(): string {
     const failuresDir = paths.failures();
     if (!existsSync(failuresDir)) return "";
 
+    // Structure: failures/{year}/{month}/{timestamp}_{slug}/
     const slugs: string[] = [];
-    for (const month of readdirSync(failuresDir).sort().reverse()) {
-      const monthPath = resolve(failuresDir, month);
-      try {
-        const dirs = readdirSync(monthPath).sort().reverse();
-        for (const dir of dirs) {
-          // dir name is {timestamp}_{slug} — extract slug after first underscore group
-          const slug = dir.replace(/^\d{8}-\d{6}_/, "");
-          slugs.push(slug);
-          if (slugs.length >= 5) break;
+    for (const year of readdirSync(failuresDir).sort().reverse()) {
+      const yearPath = resolve(failuresDir, year);
+      for (const month of readdirSync(yearPath).sort().reverse()) {
+        const monthPath = resolve(yearPath, month);
+        try {
+          const dirs = readdirSync(monthPath).sort().reverse();
+          for (const dir of dirs) {
+            const slug = dir.replace(/^\d{8}-\d{6}_/, "");
+            if (slug !== dir) slugs.push(slug);
+            if (slugs.length >= 5) break;
+          }
+        } catch {
+          /* skip */
         }
-      } catch {
-        /* skip */
+        if (slugs.length >= 5) break;
       }
       if (slugs.length >= 5) break;
     }
