@@ -36,6 +36,9 @@ const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
 
   // Load shared stop-orchestrator handler
   const { runStopHandlers } = await lib<typeof import("../../hooks/lib/stop")>("stop.ts");
+  const { captureSessionName } = await lib<
+    typeof import("../../hooks/handlers/session-name")
+  >("../handlers/session-name.ts");
 
   function partsToText(parts: Array<Record<string, unknown>>): string {
     return parts
@@ -120,6 +123,12 @@ const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
           const messages = await buildSessionTranscript(sessionID);
           logDebug("opencode:event", `Got ${messages.length} transcript messages`);
           if (messages.length < 2) return;
+
+          // Name session from first user message (if not already named)
+          const firstUser = messages.find((m: TranscriptMessage) => m.role === "user");
+          if (firstUser) {
+            await captureSessionName(firstUser.content, sessionID);
+          }
 
           await runStopHandlers(JSON.stringify(messages), { sessionId: sessionID });
           logDebug("opencode:event", "Stop handlers complete");

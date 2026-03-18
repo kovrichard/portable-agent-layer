@@ -10,6 +10,16 @@ import { regenerateIfNeeded } from "./lib/claude-md";
 import { buildGreeting, buildSystemReminder } from "./lib/context";
 import { logDebug, logError } from "./lib/log";
 
+// --- Skip heavy context for subagents ---
+const isSubagent =
+  process.env.CLAUDE_PROJECT_DIR?.includes("/.claude/Agents/") ||
+  process.env.CLAUDE_AGENT_TYPE !== undefined;
+
+if (isSubagent) {
+  logDebug("LoadContext", "Subagent session — skipping context loading");
+  process.exit(0);
+}
+
 // --- Regenerate CLAUDE.md if telos or setup changed ---
 try {
   const rebuilt = regenerateIfNeeded();

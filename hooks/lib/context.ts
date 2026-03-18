@@ -7,6 +7,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { paths } from "./paths";
 import { loadRecentNotes } from "./relationship";
+import { readSessionNames } from "./session-names";
 import { buildSetupPrompt, readSetupState, remainingSteps, STEP_ORDER } from "./setup";
 import { computeSignalTrends, formatTrends } from "./signal-trends";
 import { readFramePrinciples } from "./wisdom";
@@ -50,29 +51,47 @@ export function countSignals(filename: string): number {
   }
 }
 
-/** Load previous session context from current-work.json */
+/** Load previous session context from current-work.json + recent session names */
 export function loadActiveWork(): { text: string; summary: string | null } | null {
   const workFile = resolve(paths.state(), "current-work.json");
   if (!existsSync(workFile)) return null;
 
   try {
     const data = JSON.parse(readFileSync(workFile, "utf-8"));
-    const text = [
+    const lines = [
       "## Previous Session Context",
       `**Last active:** ${data.ts}`,
       `**Working directory:** ${data.cwd}`,
       `**Last request:** ${data.last_user}`,
-    ].join("\n");
+    ];
+
+    // Append recent named sessions for broader context
+    const recent = loadRecentSessions(5);
+    if (recent.length > 0) {
+      lines.push("", "**Recent sessions:**");
+      for (const s of recent) lines.push(`- ${s}`);
+    }
 
     const lastUser = data.last_user?.slice(0, 60) || null;
-
-    return { text, summary: lastUser ? `"${lastUser}"` : null };
+    return { text: lines.join("\n"), summary: lastUser ? `"${lastUser}"` : null };
   } catch {
     return null;
   }
 }
 
-/** Build the visible greeting line for stderr */
+/** Load the N most recent session names */
+export function loadRecentSessions(count: number): string[] {
+  try {
+    const names = readSessionNames();
+    // session-names.json is keyed by UUID — return the last N values
+    const entries = Object.values(names);
+    return entries.slice(-count).reverse();
+  } catch {
+    return [];
+  }
+}
+
+/** Build the visible greeting lines for stderr */
 export function buildGreeting(): string[] {
   const signalCount = countSignals("ratings.jsonl") + countSignals("learnings.jsonl");
   const work = loadActiveWork();
@@ -93,6 +112,12 @@ export function buildGreeting(): string[] {
 
   if (work?.summary) {
     greeting.push(`📋 Previous: ${work.summary}`);
+  }
+
+  // Show recent session names for quick context
+  const recent = loadRecentSessions(3);
+  if (recent.length > 0) {
+    greeting.push(`📂 Recent: ${recent.join(" | ")}`);
   }
 
   return greeting;
