@@ -11,6 +11,8 @@ memory/state/setup.json
 memory/state/session-names.json
 memory/state/signal-cache.json
 memory/state/pending-failure.json
+memory/state/debug.log
+memory/state/debug.log.prev
 
 # Signal logs (append-only, machine-local)
 memory/signals/ratings.jsonl

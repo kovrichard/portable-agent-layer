@@ -13,17 +13,17 @@ import { captureSessionName } from "./handlers/session-name";
 import { logDebug, logError } from "./lib/log";
 
 interface PromptSubmitInput {
-  message: string;
+  prompt: string;
   session_id?: string;
 }
 
 const input = await readStdinJSON<PromptSubmitInput>();
 logDebug("UserPromptOrchestrator", `Input: ${JSON.stringify(input).slice(0, 200)}`);
-if (!input?.message) process.exit(0);
+if (!input?.prompt) process.exit(0);
 
 const results = await Promise.allSettled([
-  captureRating(input.message),
-  captureSessionName(input.message, input.session_id ?? ""),
+  captureRating(input.prompt),
+  captureSessionName(input.prompt, input.session_id ?? ""),
 ]);
 
 const handlerNames = ["rating", "session-name"];
