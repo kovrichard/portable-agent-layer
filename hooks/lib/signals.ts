@@ -17,8 +17,10 @@ export function emitSignal(filename: string, data: Omit<Signal, "ts">): void {
 }
 
 /** Append a rating signal */
-export function emitRating(rating: number, context: string, source: string = "explicit"): void {
-  emitSignal("ratings.jsonl", { type: "rating", rating, context, source });
+export function emitRating(rating: number, context: string, source: string = "explicit", responsePreview?: string): void {
+  const data: Record<string, unknown> = { type: "rating", rating, context, source };
+  if (responsePreview) data.response_preview = responsePreview;
+  emitSignal("ratings.jsonl", data);
 }
 
 /** Append a learning signal */

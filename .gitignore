@@ -11,6 +11,7 @@ memory/state/setup.json
 memory/state/session-names.json
 memory/state/signal-cache.json
 memory/state/pending-failure.json
+memory/state/last-response.txt
 memory/state/debug.log
 memory/state/debug.log.prev
 
