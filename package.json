@@ -14,14 +14,23 @@
     "lint-write": "biome lint --write",
     "check": "biome check",
     "check-write": "biome check --write",
+    "lint-staged": "lint-staged",
+    "prepare": "husky",
     "install:all": "bun run install.ts",
     "uninstall": "bun run uninstall.ts"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "bun run check"
+    ]
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.7",
     "@opencode-ai/plugin": "latest",
     "@types/bun": "latest",
     "@types/node": "latest",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.0",
     "typescript": "^5.9.0"
   }
 }
