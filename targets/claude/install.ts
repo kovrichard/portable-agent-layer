@@ -6,7 +6,7 @@
 
 import { existsSync, mkdirSync, copyFileSync, writeFileSync, symlinkSync, unlinkSync, lstatSync } from "fs";
 import { resolve, dirname } from "path";
-import { log, readJson, writeJson, copySkills, countMd } from "../lib";
+import { log, readJson, writeJson, copySkills, countSkills, countMd } from "../lib";
 import { buildClaudeMd } from "../../hooks/lib/claude-md";
 
 const PAI_DIR = resolve(dirname(import.meta.dir), "..");
@@ -96,5 +96,5 @@ log.success("Generated AGENTS.md (CLAUDE.md → symlink)");
 log.success("Claude Code installation complete");
 console.log("");
 log.info(`Hooks: 4 (SessionStart, UserPromptSubmit, PreToolUse, Stop)`);
-log.info(`Skills: ${countMd(skillsDir)}`);
+log.info(`Skills: ${countSkills()}`);
 log.info(`TELOS: ${countMd(resolve(PAI_DIR, "telos"))} files`);

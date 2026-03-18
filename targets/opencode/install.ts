@@ -5,7 +5,7 @@
 
 import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync } from "fs";
 import { resolve, dirname } from "path";
-import { log, readJson, writeJson, countMd, readSkillField, skillBody } from "../lib";
+import { log, writeJson, copySkills, countSkills } from "../lib";
 import { loadTelos } from "../../hooks/lib/context";
 import { readSetupState, buildSetupPrompt } from "../../hooks/lib/setup";
 
@@ -41,14 +41,18 @@ try {
   log.warn("Could not install plugin deps — run 'bun install' in " + OC_PLUGINS_DIR);
 }
 
-// --- 3. Build instructions section ---
+// --- 3. Install skills into ~/.agents/skills/ ---
+const claudeSkillsDir = resolve(process.env.HOME!, ".claude", "skills");
+copySkills(PAI_DIR, claudeSkillsDir);
+log.success("Installed skills to ~/.agents/skills/");
+
+// --- 4. Build instructions section (TELOS only — skills are native via ~/.agents/skills/) ---
 const INSTRUCTIONS = resolve(OC_GLOBAL_DIR, "instructions.md");
 const PAI_START = "<!-- PAI:START -->";
 const PAI_END = "<!-- PAI:END -->";
 
 let existing = existsSync(INSTRUCTIONS) ? readFileSync(INSTRUCTIONS, "utf-8") : "";
 
-// Remove existing PAI section if present
 if (existing.includes(PAI_START)) {
   existing = existing.replace(
     new RegExp(`${PAI_START}[\\s\\S]*?${PAI_END}\n?`, "g"),
@@ -61,41 +65,20 @@ const state = readSetupState();
 const setupPrompt = state ? buildSetupPrompt(state) : null;
 const telos = loadTelos();
 
-const skillsDir = resolve(PAI_DIR, "skills");
-const skillFiles = existsSync(skillsDir)
-  ? Bun.Glob ? [...new Bun.Glob("*.md").scanSync(skillsDir)] : []
-  : [];
-
-// Import readdirSync for skill listing
-const { readdirSync } = await import("fs");
-const skills = existsSync(skillsDir)
-  ? readdirSync(skillsDir).filter((f: string) => f.endsWith(".md"))
-  : [];
-
 const paiSection = [
   PAI_START,
   "# Personal Context (TELOS)",
   "",
   ...(setupPrompt ? [setupPrompt, ""] : []),
   ...(telos ? [telos, ""] : []),
-  "# Available Skills",
-  "",
-  ...skills.map((f: string) => {
-    const p = resolve(skillsDir, f);
-    const name = readSkillField(p, "name");
-    const desc = readSkillField(p, "description");
-    return `- **/${name}** — ${desc}`;
-  }),
-  "",
-  ...skills.flatMap((f: string) => ["---", "", skillBody(resolve(skillsDir, f)), ""]),
   PAI_END,
 ].join("\n");
 
 writeFileSync(INSTRUCTIONS, (existing ? existing + "\n\n" : "") + paiSection + "\n", "utf-8");
-log.success("Added TELOS + skills to instructions.md");
+log.success("Added TELOS to instructions.md");
 
 log.success("opencode installation complete");
 console.log("");
 log.info(`Plugin: ${pluginDst}`);
 log.info(`Instructions: ${INSTRUCTIONS}`);
-log.info(`Skills: ${skills.length} (embedded in instructions)`);
+log.info(`Skills: ${countSkills()} (native via ~/.agents/skills/`);

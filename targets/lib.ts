@@ -2,7 +2,7 @@
  * Shared utilities for PAI installers.
  */
 
-import { existsSync, readFileSync, writeFileSync, copyFileSync, readdirSync, mkdirSync, unlinkSync } from "fs";
+import { existsSync, readFileSync, writeFileSync, copyFileSync, readdirSync, mkdirSync, unlinkSync, symlinkSync, lstatSync, rmSync } from "fs";
 import { resolve, basename } from "path";
 
 // --- Colored logging ---
@@ -49,43 +49,84 @@ export function scaffoldTelos(paiDir: string): void {
 
 // --- Skills ---
 
-/** Copy skills additively (no overwrite) into a target skills dir */
-export function copySkills(paiDir: string, targetSkillsDir: string): number {
+const AGENTS_SKILLS_DIR = resolve(process.env.HOME!, ".agents", "skills");
+
+/**
+ * Install PAI skills into the shared ~/.agents/skills/<name>/SKILL.md standard,
+ * then symlink ~/.claude/skills/<name> → ../../.agents/skills/<name>.
+ * Additive — skips skills already installed.
+ */
+export function copySkills(paiDir: string, claudeSkillsDir: string): number {
   const skillsDir = resolve(paiDir, "skills");
   if (!existsSync(skillsDir)) return 0;
 
-  mkdirSync(targetSkillsDir, { recursive: true });
+  mkdirSync(AGENTS_SKILLS_DIR, { recursive: true });
+  mkdirSync(claudeSkillsDir, { recursive: true });
   let count = 0;
 
   for (const file of readdirSync(skillsDir).filter((f) => f.endsWith(".md"))) {
+    const name = file.replace(/\.md$/, "");
     const src = resolve(skillsDir, file);
-    const dst = resolve(targetSkillsDir, file);
-    if (!existsSync(dst)) {
-      copyFileSync(src, dst);
-      log.info(`Added skill: ${file}`);
+    const agentSkillDir = resolve(AGENTS_SKILLS_DIR, name);
+    const agentSkillFile = resolve(agentSkillDir, "SKILL.md");
+    const claudeLink = resolve(claudeSkillsDir, name);
+
+    // Install into ~/.agents/skills/<name>/SKILL.md
+    if (!existsSync(agentSkillFile)) {
+      mkdirSync(agentSkillDir, { recursive: true });
+      copyFileSync(src, agentSkillFile);
+      log.info(`Added skill: ${name}`);
       count++;
     } else {
-      log.warn(`Skill exists, skipping: ${file}`);
+      log.warn(`Skill exists, skipping: ${name}`);
+    }
+
+    // Create ~/.claude/skills/<name> symlink if missing or not a symlink
+    try {
+      const st = lstatSync(claudeLink);
+      if (!st.isSymbolicLink()) {
+        unlinkSync(claudeLink); // was a flat file — replace with symlink
+        symlinkSync(`../../.agents/skills/${name}`, claudeLink);
+      }
+    } catch {
+      symlinkSync(`../../.agents/skills/${name}`, claudeLink);
     }
   }
   return count;
 }
 
-/** Remove PAI skills from a target skills dir */
-export function removeSkills(paiDir: string, targetSkillsDir: string): string[] {
+/** Remove PAI skills from ~/.agents/skills/ and their symlinks from ~/.claude/skills/ */
+export function removeSkills(paiDir: string, claudeSkillsDir: string): string[] {
   const skillsDir = resolve(paiDir, "skills");
-  if (!existsSync(skillsDir) || !existsSync(targetSkillsDir)) return [];
+  if (!existsSync(skillsDir)) return [];
 
   const removed: string[] = [];
   for (const file of readdirSync(skillsDir).filter((f) => f.endsWith(".md"))) {
-    const dst = resolve(targetSkillsDir, file);
-    if (existsSync(dst)) {
-      unlinkSync(dst);
-      removed.push(file);
-      log.info(`Removed skill: ${file}`);
+    const name = file.replace(/\.md$/, "");
+
+    const agentSkillDir = resolve(AGENTS_SKILLS_DIR, name);
+    if (existsSync(agentSkillDir)) {
+      rmSync(agentSkillDir, { recursive: true });
+      removed.push(name);
+      log.info(`Removed skill: ${name}`);
     }
+
+    const claudeLink = resolve(claudeSkillsDir, name);
+    try { unlinkSync(claudeLink); } catch { /* already gone */ }
   }
   return removed;
+}
+
+/** Count skill subdirectories in ~/.agents/skills/ */
+export function countSkills(): number {
+  if (!existsSync(AGENTS_SKILLS_DIR)) return 0;
+  try {
+    return readdirSync(AGENTS_SKILLS_DIR).filter((f) =>
+      existsSync(resolve(AGENTS_SKILLS_DIR, f, "SKILL.md"))
+    ).length;
+  } catch {
+    return 0;
+  }
 }
 
 /** Count .md files in a directory */
