@@ -22,15 +22,16 @@ const OBSERVATION_SCHEMA = {
             enum: ["O", "W"],
             description: "O=opinion/preference, W=factual observation",
           },
-          text: { type: "string", maxLength: 200 },
-          confidence: { type: "number", minimum: 0.5, maximum: 1.0 },
+          text: { type: "string" },
+          confidence: { type: "number" },
         },
         required: ["type", "text", "confidence"],
+        additionalProperties: false,
       },
-      maxItems: 3,
     },
   },
   required: ["observations"],
+  additionalProperties: false,
 } as const;
 
 export async function captureRelationship(

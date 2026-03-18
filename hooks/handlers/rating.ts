@@ -63,7 +63,7 @@ function handleRating(rating: number, context: string, source: string): void {
 const SENTIMENT_SCHEMA = {
   type: "object",
   properties: {
-    rating: { type: ["number", "null"], minimum: 1, maximum: 10 },
+    rating: { type: ["number", "null"] },
     sentiment: { type: "string" },
     neutral: { type: "boolean" },
   },
