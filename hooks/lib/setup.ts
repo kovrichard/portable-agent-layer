@@ -29,6 +29,18 @@ const SETUP_STEPS: Record<string, Omit<SetupStep, "done">> = {
     question: "What's your name and what do you do?",
     hint: "Write their name, role, and core purpose to telos/MISSION.md",
   },
+  ai_name: {
+    file: "telos/IDENTITY.md",
+    question:
+      "What would you like to call your AI? (Pick a name — this is how I'll identify myself.)",
+    hint: "Write the chosen AI name and identity to telos/IDENTITY.md with fields: name, fullName (name — Personal AI), displayName (UPPERCASED)",
+  },
+  catchphrase: {
+    file: "telos/IDENTITY.md",
+    question:
+      'What should your AI\'s startup catchphrase be? (e.g. "{name} here, ready to go" — {name} gets replaced with the AI name.)',
+    hint: "Append the catchphrase to telos/IDENTITY.md under a ## Catchphrase heading. Support {name} as a placeholder.",
+  },
   goals: {
     file: "telos/GOALS.md",
     question: "What are your current goals? (short-term, medium-term, long-term)",
