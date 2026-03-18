@@ -60,6 +60,17 @@ function handleRating(rating: number, context: string, source: string): void {
   }
 }
 
+const SENTIMENT_SCHEMA = {
+  type: "object",
+  properties: {
+    rating: { type: ["number", "null"], minimum: 1, maximum: 10 },
+    sentiment: { type: "string" },
+    neutral: { type: "boolean" },
+  },
+  required: ["rating", "sentiment", "neutral"],
+  additionalProperties: false,
+} as const;
+
 async function handleImplicitSentiment(message: string): Promise<void> {
   const trimmed = message.trim();
 
@@ -74,17 +85,26 @@ async function handleImplicitSentiment(message: string): Promise<void> {
   if (/^[/$`{]/.test(trimmed) || trimmed.includes("\n\n")) return;
 
   const result = await inference({
-    user: `Rate the sentiment of this user message toward an AI assistant on a 1-10 scale (1=very negative, 5=neutral, 10=very positive). If the message has no clear sentiment toward the assistant, respond with just "neutral". Otherwise respond with just a JSON object: {"rating": N, "sentiment": "one-word"}
+    user: `Rate the sentiment of this user message toward an AI assistant. If the message has no clear sentiment toward the assistant, set neutral to true and rating to null. Otherwise, provide a rating (1=very negative, 5=neutral, 10=very positive) and a one-word sentiment description.
 
 Message: "${trimmed.slice(0, 300)}"`,
     maxTokens: 100,
     timeout: 5000,
+    jsonSchema: SENTIMENT_SCHEMA,
   });
 
-  if (!result.success || !result.output || result.output === "neutral") return;
+  if (!result.success || !result.output) return;
 
   try {
-    const parsed = JSON.parse(result.output) as { rating?: number; sentiment?: string };
+    const parsed = JSON.parse(result.output) as {
+      rating: number | null;
+      sentiment: string;
+      neutral: boolean;
+    };
+
+    // Skip if explicitly neutral or no valid rating
+    if (parsed.neutral || parsed.rating === null) return;
+
     const rating = parsed.rating;
     if (typeof rating === "number" && rating >= 1 && rating <= 10 && rating !== 5) {
       handleRating(
