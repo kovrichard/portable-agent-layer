@@ -67,7 +67,9 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
     if (!text) return { success: false };
 
     return { success: true, output: text };
-  } catch {
+  } catch (err) {
+    const { logError } = await import("./log");
+    logError("inference", err);
     return { success: false };
   }
 }

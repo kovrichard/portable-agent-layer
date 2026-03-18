@@ -22,14 +22,17 @@ import { captureRelationship } from "./handlers/relationship";
 import { captureWorkLearning } from "./handlers/work-learning";
 import { captureFailure } from "./handlers/failure";
 import { captureReflection } from "./handlers/reflection";
+import { logError, logDebug } from "./lib/log";
 
 const transcript = await readStdin();
 
 // Skip trivial sessions
 if (transcript.length < 100) process.exit(0);
 
+logDebug("StopOrchestrator", `Running handlers (transcript: ${transcript.length} chars)`);
+
 // Run all handlers concurrently — none should block the others
-await Promise.allSettled([
+const results = await Promise.allSettled([
   captureLearning(transcript),
   captureWork(transcript),
   notifyCompletion(transcript),
@@ -40,6 +43,17 @@ await Promise.allSettled([
   captureReflection(transcript),
   checkPendingFailure(transcript),
 ]);
+
+const handlerNames = [
+  "learning", "work", "notify", "tab", "wisdom",
+  "relationship", "work-learning", "reflection", "pending-failure",
+];
+for (let i = 0; i < results.length; i++) {
+  const r = results[i];
+  if (r.status === "rejected") {
+    logError(`StopOrchestrator:${handlerNames[i]}`, r.reason);
+  }
+}
 
 async function checkPendingFailure(transcript: string): Promise<void> {
   const pendingPath = resolve(paths.state(), "pending-failure.json");

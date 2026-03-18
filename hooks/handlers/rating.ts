@@ -82,8 +82,9 @@ Message: "${trimmed.slice(0, 300)}"`,
         "implicit"
       );
     }
-  } catch {
-    // Haiku didn't return valid JSON — skip
+  } catch (err) {
+    const { logError } = await import("../lib/log");
+    logError("rating:implicit", err);
   }
 }
 

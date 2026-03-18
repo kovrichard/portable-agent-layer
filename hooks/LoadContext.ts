@@ -8,13 +8,24 @@
 
 import { buildGreeting, buildSystemReminder } from "./lib/context";
 import { regenerateIfNeeded } from "./lib/claude-md";
+import { logError, logDebug } from "./lib/log";
 
 // --- Regenerate CLAUDE.md if telos or setup changed ---
-regenerateIfNeeded();
+try {
+  const rebuilt = regenerateIfNeeded();
+  if (rebuilt) logDebug("LoadContext", "AGENTS.md regenerated");
+} catch (err) {
+  logError("LoadContext:regenerate", err);
+}
 
 // --- Visible greeting to stderr ---
 process.stderr.write(buildGreeting().join("\n") + "\n");
 
 // --- Dynamic system-reminder to stdout (empty = nothing injected) ---
-const reminder = buildSystemReminder();
-if (reminder) console.log(reminder);
+try {
+  const reminder = buildSystemReminder();
+  if (reminder) console.log(reminder);
+  logDebug("LoadContext", `Reminder injected: ${reminder ? reminder.length : 0} chars`);
+} catch (err) {
+  logError("LoadContext:reminder", err);
+}

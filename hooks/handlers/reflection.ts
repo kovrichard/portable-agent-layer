@@ -9,6 +9,7 @@
 import { parseMessages, extractContent } from "../lib/transcript";
 import { inference } from "../lib/inference";
 import { paths } from "../lib/paths";
+import { logDebug, logError } from "../lib/log";
 import { writeFileSync, existsSync, readFileSync } from "fs";
 import { resolve } from "path";
 import type { Message } from "../lib/transcript";
@@ -95,12 +96,16 @@ export async function captureReflection(transcript: string): Promise<void> {
     jsonSchema: REFLECTION_SCHEMA,
   });
 
-  if (!result.success || !result.output) return;
+  if (!result.success || !result.output) {
+    logDebug("reflection", `Inference failed or empty (success=${result.success})`);
+    return;
+  }
 
   let parsed: ReflectionOutput;
   try {
     parsed = JSON.parse(result.output);
-  } catch {
+  } catch (err) {
+    logError("reflection", `Failed to parse output: ${result.output}`);
     return;
   }
 
@@ -120,6 +125,7 @@ export async function captureReflection(transcript: string): Promise<void> {
       if (existing.includes(item.text.slice(0, 60))) continue;
 
       writeFileSync(filepath, existing + entry, "utf-8");
+      logDebug("reflection", `Wisdom added to ${domain}: ${item.text.slice(0, 60)}`);
     }
   }
 

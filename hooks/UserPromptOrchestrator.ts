@@ -10,6 +10,7 @@
 import { readStdinJSON } from "./lib/stdin";
 import { captureRating } from "./handlers/rating";
 import { captureSessionName } from "./handlers/session-name";
+import { logDebug, logError } from "./lib/log";
 
 interface PromptSubmitInput {
   message: string;
@@ -17,9 +18,18 @@ interface PromptSubmitInput {
 }
 
 const input = await readStdinJSON<PromptSubmitInput>();
+logDebug("UserPromptOrchestrator", `Input: ${JSON.stringify(input).slice(0, 200)}`);
 if (!input?.message) process.exit(0);
 
-await Promise.allSettled([
+const results = await Promise.allSettled([
   captureRating(input.message),
   captureSessionName(input.message, input.session_id ?? ""),
 ]);
+
+const handlerNames = ["rating", "session-name"];
+for (let i = 0; i < results.length; i++) {
+  const r = results[i];
+  if (r.status === "rejected") {
+    logError(`UserPromptOrchestrator:${handlerNames[i]}`, r.reason);
+  }
+}
