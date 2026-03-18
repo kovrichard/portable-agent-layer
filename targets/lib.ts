@@ -87,10 +87,12 @@ export function copySkills(paiDir: string, claudeSkillsDir: string): number {
     try {
       const st = lstatSync(claudeLink);
       if (!st.isSymbolicLink()) {
-        unlinkSync(claudeLink);
+        rmSync(claudeLink, { recursive: true, force: true });
         symlinkSync(`../../.agents/skills/${name}`, claudeLink, linkType);
       }
     } catch {
+      // Entry might exist but lstatSync failed (broken symlink/junction on Windows)
+      try { rmSync(claudeLink, { recursive: true, force: true }); } catch { /* gone */ }
       symlinkSync(`../../.agents/skills/${name}`, claudeLink, linkType);
     }
   }
