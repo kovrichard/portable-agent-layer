@@ -16,6 +16,8 @@ async function lib<T>(mod: string): Promise<T> {
   return await import(resolve(PAI_DIR, "hooks", "lib", mod));
 }
 
+type TranscriptMessage = { role: string; content: string };
+
 const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   // Pre-load shared modules
   const { buildGreeting, buildSystemReminder } =
@@ -32,6 +34,45 @@ const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   const { logDebug, logError } =
     await lib<typeof import("../../hooks/lib/log")>("log.ts");
 
+  // Load shared stop-orchestrator handler
+  const { runStopHandlers } = await lib<typeof import("../../hooks/lib/stop")>("stop.ts");
+
+  function partsToText(parts: Array<Record<string, unknown>>): string {
+    return parts
+      .filter((p) => p?.type === "text" && !p.ignored && !p.synthetic)
+      .map((p) => (typeof p.text === "string" ? p.text : ""))
+      .join(" ")
+      .trim();
+  }
+
+  async function buildSessionTranscript(sessionID: string): Promise<TranscriptMessage[]> {
+    const result = await client.session.messages({
+      path: { id: sessionID },
+      query: { directory },
+    });
+
+    if (result.error || !result.data) {
+      logDebug(
+        "opencode:session.messages",
+        `Failed to fetch messages (error=${Boolean(result.error)})`
+      );
+      return [];
+    }
+
+    const rows = result.data as Array<{
+      info: { role?: string };
+      parts: Array<Record<string, unknown>>;
+    }>;
+
+    return rows
+      .map((row) => {
+        const role = row?.info?.role ?? "unknown";
+        const content = partsToText(row?.parts ?? []);
+        return { role, content };
+      })
+      .filter((m) => m.content.length > 0);
+  }
+
   // Local helpers for rating (thin wrappers around shared signals)
   function handleRating(rating: number, context: string, source: string): void {
     emitRating(rating, context, source);
@@ -46,10 +87,7 @@ const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   }
 
   const PRAISE_PATTERNS =
-    /^(great\s*job|nice|perfect|awesome|excellent|thanks|thank\s*you|well\s*done|good\s*job|love\s*it|amazing|brilliant|fantastic|wonderful|superb|nailed\s*it)[.!]?$/i;
-
-  // Load shared stop-orchestrator handler
-  const { runStopHandlers } = await lib<typeof import("../../hooks/lib/stop")>("stop.ts");
+    /^(great\s*job|nice|perfect|awesome|excellent|thanks|thank\s*you|well\s*done|good\s*job|love\s*it|amazing|brilliant|fantastic|wonderful|superb|nailed\s*it)[.!?]?$/i;
 
   return {
     // --- Per-message: Inject dynamic system reminder ---
@@ -72,21 +110,18 @@ const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       if (event.type === "session.idle" || event.type === "session.diff") {
         logDebug("opencode:event", "Running stop handlers...");
         try {
-          // Access messages from session - API may vary by opencode version
-          const session = client.session as unknown as {
-            messages?: unknown[];
-            getMessages?: () => Promise<unknown[]>;
-          };
-          logDebug(
-            "opencode:event",
-            `Session keys: ${Object.keys(session || {}).join(", ")}`
-          );
-          const messages = session.getMessages
-            ? await session.getMessages()
-            : session.messages || [];
-          logDebug("opencode:event", `Got ${messages.length} messages`);
-          const transcript = JSON.stringify(messages);
-          await runStopHandlers(transcript);
+          const sessionID = (event as { properties?: { sessionID?: string } })?.properties
+            ?.sessionID;
+          if (!sessionID) {
+            logDebug("opencode:event", "Skipping stop handlers: missing sessionID");
+            return;
+          }
+
+          const messages = await buildSessionTranscript(sessionID);
+          logDebug("opencode:event", `Got ${messages.length} transcript messages`);
+          if (messages.length < 2) return;
+
+          await runStopHandlers(JSON.stringify(messages));
           logDebug("opencode:event", "Stop handlers complete");
         } catch (err) {
           logError("opencode:session.stop", err);
