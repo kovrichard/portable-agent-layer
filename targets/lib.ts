@@ -82,14 +82,16 @@ export function copySkills(paiDir: string, claudeSkillsDir: string): number {
     }
 
     // Create ~/.claude/skills/<name> symlink if missing or not a symlink
+    // Use 'junction' on Windows (no admin required), 'dir' symlink on Unix
+    const linkType = process.platform === "win32" ? "junction" : "dir";
     try {
       const st = lstatSync(claudeLink);
       if (!st.isSymbolicLink()) {
-        unlinkSync(claudeLink); // was a flat file — replace with symlink
-        symlinkSync(`../../.agents/skills/${name}`, claudeLink);
+        unlinkSync(claudeLink);
+        symlinkSync(`../../.agents/skills/${name}`, claudeLink, linkType);
       }
     } catch {
-      symlinkSync(`../../.agents/skills/${name}`, claudeLink);
+      symlinkSync(`../../.agents/skills/${name}`, claudeLink, linkType);
     }
   }
   return count;
