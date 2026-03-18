@@ -1,39 +1,27 @@
 /**
  * PAI — opencode uninstaller (TypeScript)
- * Removes plugin, PAI section from instructions.md, and PAI_DIR env.
+ * Removes plugin and AGENTS.md.
  */
 
-import { existsSync, readFileSync, writeFileSync, unlinkSync } from "fs";
+import { existsSync, unlinkSync } from "fs";
 import { resolve } from "path";
-import { log } from "../lib";
+import { log, removeSkills } from "../lib";
 
+const PAI_DIR = resolve(import.meta.dir, "..", "..");
 const OC_GLOBAL_DIR = resolve(process.env.HOME!, ".config", "opencode");
 
 // --- Remove plugin ---
 const pluginPath = resolve(OC_GLOBAL_DIR, "plugins", "pai-plugin.ts");
-if (existsSync(pluginPath)) {
-  unlinkSync(pluginPath);
-  log.success("Removed PAI plugin");
-} else {
-  log.info("No PAI plugin found");
-}
+try { unlinkSync(pluginPath); log.success("Removed PAI plugin"); } catch { log.info("No PAI plugin found"); }
 
-// --- Remove PAI section from instructions ---
-const INSTRUCTIONS = resolve(OC_GLOBAL_DIR, "instructions.md");
-const PAI_START = "<!-- PAI:START -->";
-const PAI_END = "<!-- PAI:END -->";
+// --- Remove skills ---
+const removed = removeSkills(PAI_DIR, resolve(process.env.HOME!, ".claude", "skills"));
+if (removed.length > 0) log.success(`Removed ${removed.length} skill(s): ${removed.join(", ")}`);
 
-if (existsSync(INSTRUCTIONS)) {
-  const content = readFileSync(INSTRUCTIONS, "utf-8");
-  if (content.includes(PAI_START)) {
-    const cleaned = content
-      .replace(new RegExp(`${PAI_START}[\\s\\S]*?${PAI_END}\n?`, "g"), "")
-      .trimEnd();
-    writeFileSync(INSTRUCTIONS, cleaned + (cleaned ? "\n" : ""), "utf-8");
-    log.success("Removed PAI section from instructions.md");
-  } else {
-    log.info("No PAI section in instructions.md");
-  }
-}
+// --- Remove AGENTS.md and ~/.claude/CLAUDE.md symlink ---
+const agentsMd = resolve(OC_GLOBAL_DIR, "AGENTS.md");
+const claudeMd = resolve(process.env.HOME!, ".claude", "CLAUDE.md");
+try { unlinkSync(claudeMd); log.success("Removed ~/.claude/CLAUDE.md"); } catch { /* gone */ }
+try { unlinkSync(agentsMd); log.success("Removed ~/.config/opencode/AGENTS.md"); } catch { /* gone */ }
 
 log.success("opencode uninstall complete");

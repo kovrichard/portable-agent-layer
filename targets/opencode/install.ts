@@ -1,13 +1,12 @@
 /**
  * PAI — opencode target installer (TypeScript)
- * Deploys plugin, injects TELOS into instructions.md, sets PAI_DIR env.
+ * Deploys plugin, installs skills, generates AGENTS.md.
  */
 
 import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { log, writeJson, copySkills, countSkills } from "../lib";
-import { loadTelos } from "../../hooks/lib/context";
-import { readSetupState, buildSetupPrompt } from "../../hooks/lib/setup";
+import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
 
 const PAI_DIR = resolve(dirname(import.meta.dir), "..");
 const OC_GLOBAL_DIR = resolve(process.env.HOME!, ".config", "opencode");
@@ -33,7 +32,6 @@ if (!existsSync(pkgPath)) {
   log.info("Created package.json for plugin dependencies");
 }
 
-// Install deps
 try {
   Bun.spawnSync(["bun", "install", "--silent"], { cwd: OC_PLUGINS_DIR });
   log.success("Installed plugin dependencies");
@@ -46,39 +44,11 @@ const claudeSkillsDir = resolve(process.env.HOME!, ".claude", "skills");
 copySkills(PAI_DIR, claudeSkillsDir);
 log.success("Installed skills to ~/.agents/skills/");
 
-// --- 4. Build instructions section (TELOS only — skills are native via ~/.agents/skills/) ---
-const INSTRUCTIONS = resolve(OC_GLOBAL_DIR, "instructions.md");
-const PAI_START = "<!-- PAI:START -->";
-const PAI_END = "<!-- PAI:END -->";
-
-let existing = existsSync(INSTRUCTIONS) ? readFileSync(INSTRUCTIONS, "utf-8") : "";
-
-if (existing.includes(PAI_START)) {
-  existing = existing.replace(
-    new RegExp(`${PAI_START}[\\s\\S]*?${PAI_END}\n?`, "g"),
-    ""
-  ).trimEnd();
-  log.info("Replacing existing PAI section in instructions.md");
-}
-
-const state = readSetupState();
-const setupPrompt = state ? buildSetupPrompt(state) : null;
-const telos = loadTelos();
-
-const paiSection = [
-  PAI_START,
-  "# Personal Context (TELOS)",
-  "",
-  ...(setupPrompt ? [setupPrompt, ""] : []),
-  ...(telos ? [telos, ""] : []),
-  PAI_END,
-].join("\n");
-
-writeFileSync(INSTRUCTIONS, (existing ? existing + "\n\n" : "") + paiSection + "\n", "utf-8");
-log.success("Added TELOS to instructions.md");
+// --- 4. Generate ~/.config/opencode/AGENTS.md ---
+regenerateIfNeeded();
+log.success("Generated ~/.config/opencode/AGENTS.md");
 
 log.success("opencode installation complete");
 console.log("");
 log.info(`Plugin: ${pluginDst}`);
-log.info(`Instructions: ${INSTRUCTIONS}`);
-log.info(`Skills: ${countSkills()} (native via ~/.agents/skills/`);
+log.info(`Skills: ${countSkills()} (native via ~/.agents/skills/)`);

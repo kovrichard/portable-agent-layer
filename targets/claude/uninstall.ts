@@ -3,7 +3,7 @@
  * Removes PAI hooks, skills, and env from settings.json.
  */
 
-import { existsSync, copyFileSync, readdirSync, unlinkSync } from "fs";
+import { existsSync, copyFileSync, unlinkSync } from "fs";
 import { resolve, dirname } from "path";
 import { log, readJson, writeJson, removeSkills } from "../lib";
 
@@ -55,5 +55,13 @@ const removed = removeSkills(PAI_DIR, resolve(CLAUDE_DIR, "skills"));
 if (removed.length > 0) {
   log.success(`Removed ${removed.length} skill(s): ${removed.join(", ")}`);
 } else {
-  log.info("No PAI skills found in ~/.claude/skills/");
+  log.info("No PAI skills found");
 }
+
+// --- Remove AGENTS.md and CLAUDE.md symlink ---
+const agentsMd = resolve(process.env.HOME!, ".config", "opencode", "AGENTS.md");
+const claudeMd = resolve(CLAUDE_DIR, "CLAUDE.md");
+try { unlinkSync(claudeMd); log.success("Removed ~/.claude/CLAUDE.md"); } catch { /* gone */ }
+try { unlinkSync(agentsMd); log.success("Removed ~/.config/opencode/AGENTS.md"); } catch { /* gone */ }
+
+log.success("Claude Code uninstall complete");
