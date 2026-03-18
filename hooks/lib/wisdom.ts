@@ -7,7 +7,6 @@
 
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { addValidation } from "./graduation";
 import { paths } from "./paths";
 
 export type ObservationType = "principle" | "rule" | "anti-pattern";
@@ -113,7 +112,4 @@ export function updateFrame(
   content = content.replace(`${header}\n`, `${header}\n${entry}\n`);
 
   writeFileSync(filepath, content, "utf-8");
-
-  // Track this principle in the validation system
-  addValidation(entry, domain, 0);
 }

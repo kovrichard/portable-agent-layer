@@ -8,7 +8,6 @@ import { resolve } from "node:path";
 import { manualCrystallize, updateConfidenceTag } from "../lib/graduation";
 import { logDebug, logError } from "../lib/log";
 import { paths } from "../lib/paths";
-import { formatManualCrystallization } from "../lib/session-summary";
 
 // Match: "graduate principle X", "crystallize Y", "promote Z to crystal"
 const CRYSTALLIZE_RE =
@@ -92,9 +91,7 @@ export async function handleCrystallizeCommand(message: string): Promise<boolean
       lines[bestMatch.index] = newLine;
       writeFileSync(bestMatch.filepath, lines.join("\n"), "utf-8");
 
-      // Log summary to debug log (UI-safe)
-      const summary = formatManualCrystallization(bestMatch.line, bestMatch.domain);
-      logDebug("crystallize", `Crystallized principle:\n${summary}`);
+      logDebug("crystallize", `Crystallized principle in ${bestMatch.domain}.md`);
       return true;
     }
   } catch (err) {

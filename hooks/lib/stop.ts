@@ -13,8 +13,6 @@ import { resetTab } from "../handlers/tab";
 import { captureWisdom } from "../handlers/wisdom";
 import { captureWork } from "../handlers/work";
 import { captureWorkLearning } from "../handlers/work-learning";
-import { runGraduation } from "../lib/graduation";
-import { formatGraduationSummary } from "../lib/session-summary";
 import { logDebug, logError } from "./log";
 import { ensureDir, paths } from "./paths";
 import { extractContent, extractLastAssistant, parseMessages } from "./transcript";
@@ -63,20 +61,6 @@ export async function runStopHandlers(
     if (r.status === "rejected") {
       logError(`runStopHandlers:${handlerNames[i]}`, r.reason);
     }
-  }
-
-  // Run graduation system at session end (after all handlers complete)
-  try {
-    const { promoted, approaching } = runGraduation();
-    const summary = formatGraduationSummary(promoted, approaching);
-    if (summary) {
-      // Write summary to file instead of console (UI-safe)
-      const summaryPath = resolve(paths.state(), "graduation-summary.txt");
-      writeFileSync(summaryPath, summary, "utf-8");
-      logDebug("runStopHandlers", `Graduation summary written to ${summaryPath}`);
-    }
-  } catch (err) {
-    logError("runStopHandlers:graduation", err);
   }
 }
 
