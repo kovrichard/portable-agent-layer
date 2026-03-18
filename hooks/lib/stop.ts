@@ -36,11 +36,11 @@ export async function runStopHandlers(
 
   // Run all handlers concurrently (manual wisdom extraction only - no automatic extraction)
   const results = await Promise.allSettled([
-    captureLearning(transcript),
+    captureLearning(transcript, options.sessionId),
     captureWorkSession(transcript, options.sessionId),
     resetTab(),
     captureRelationship(transcript, options.sessionId),
-    captureWorkLearning(transcript),
+    captureWorkLearning(transcript, options.sessionId),
     checkPendingFailure(transcript),
     updateCounts(),
   ]);
