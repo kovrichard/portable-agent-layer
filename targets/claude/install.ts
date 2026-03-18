@@ -9,7 +9,7 @@ import { resolve, dirname } from "path";
 import { log, readJson, writeJson, copySkills, countSkills, countMd } from "../lib";
 import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
 
-const PAI_DIR = resolve(dirname(import.meta.dir), "..");
+const PAI_DIR = resolve(dirname(import.meta.dir), "..").replaceAll("\\", "/");
 const CLAUDE_DIR = process.env.PAI_CLAUDE_DIR!;
 const SETTINGS = resolve(CLAUDE_DIR, "settings.json");
 
