@@ -2,8 +2,7 @@
  * Stop handler: resets terminal tab title to default.
  */
 
-import { setTabTitle } from "../lib/notify";
-
 export async function resetTab(): Promise<void> {
-  setTabTitle("claude");
+  // Reset terminal tab title
+  process.stdout.write("\x1b]0;claude\x07");
 }

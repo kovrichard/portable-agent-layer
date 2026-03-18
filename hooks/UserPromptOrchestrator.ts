@@ -7,6 +7,7 @@
  *  - session-name: generate 4-word session headline on first prompt
  */
 
+import { handleCrystallizeCommand } from "./handlers/crystallize";
 import { captureRating } from "./handlers/rating";
 import { captureSessionName } from "./handlers/session-name";
 import { logDebug, logError } from "./lib/log";
@@ -24,9 +25,10 @@ if (!input?.prompt) process.exit(0);
 const results = await Promise.allSettled([
   captureRating(input.prompt),
   captureSessionName(input.prompt, input.session_id ?? ""),
+  handleCrystallizeCommand(input.prompt),
 ]);
 
-const handlerNames = ["rating", "session-name"];
+const handlerNames = ["rating", "session-name", "crystallize"];
 for (let i = 0; i < results.length; i++) {
   const r = results[i];
   if (r.status === "rejected") {

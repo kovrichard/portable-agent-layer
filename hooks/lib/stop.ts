@@ -7,13 +7,14 @@ import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { captureFailure } from "../handlers/failure";
 import { captureLearning } from "../handlers/learning";
-import { notifyCompletion } from "../handlers/notify";
 import { captureReflection } from "../handlers/reflection";
 import { captureRelationship } from "../handlers/relationship";
 import { resetTab } from "../handlers/tab";
 import { captureWisdom } from "../handlers/wisdom";
 import { captureWork } from "../handlers/work";
 import { captureWorkLearning } from "../handlers/work-learning";
+import { runGraduation } from "../lib/graduation";
+import { formatGraduationSummary } from "../lib/session-summary";
 import { logDebug, logError } from "./log";
 import { ensureDir, paths } from "./paths";
 import { extractContent, extractLastAssistant, parseMessages } from "./transcript";
@@ -39,7 +40,6 @@ export async function runStopHandlers(
   const results = await Promise.allSettled([
     captureLearning(transcript),
     captureWork(transcript),
-    notifyCompletion(transcript),
     resetTab(),
     captureWisdom(transcript),
     captureRelationship(transcript),
@@ -51,7 +51,6 @@ export async function runStopHandlers(
   const handlerNames = [
     "learning",
     "work",
-    "notify",
     "tab",
     "wisdom",
     "relationship",
@@ -64,6 +63,17 @@ export async function runStopHandlers(
     if (r.status === "rejected") {
       logError(`runStopHandlers:${handlerNames[i]}`, r.reason);
     }
+  }
+
+  // Run graduation system at session end (after all handlers complete)
+  try {
+    const { promoted, approaching } = runGraduation();
+    const summary = formatGraduationSummary(promoted, approaching);
+    if (summary) {
+      console.log("\n" + summary);
+    }
+  } catch (err) {
+    logError("runStopHandlers:graduation", err);
   }
 }
 

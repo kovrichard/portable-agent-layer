@@ -29,6 +29,7 @@ export const paths = {
   hooks: () => paiPath("hooks"),
   // New memory subsystems
   wisdom: () => ensureDir(paiPath("memory", "wisdom", "frames")),
+  wisdomState: () => ensureDir(paiPath("memory", "wisdom", "state")),
   relationship: () => ensureDir(paiPath("memory", "relationship")),
   failures: () => ensureDir(paiPath("memory", "learning", "failures")),
   sessionLearning: () => ensureDir(paiPath("memory", "learning", "session")),
