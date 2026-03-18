@@ -2,11 +2,16 @@
  * Stop handler: saves session state so the next session can pick up.
  */
 
-import { writeFileSync } from "fs";
-import { resolve } from "path";
-import { paths, ensureDir } from "../lib/paths";
+import { writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { ensureDir, paths } from "../lib/paths";
 import { now } from "../lib/time";
-import { parseMessages, extractLastAssistant, extractLastUser, extractContent } from "../lib/transcript";
+import {
+  extractContent,
+  extractLastAssistant,
+  extractLastUser,
+  parseMessages,
+} from "../lib/transcript";
 
 export async function captureWork(transcript: string): Promise<void> {
   try {

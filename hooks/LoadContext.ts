@@ -6,9 +6,9 @@
  * learning digest, signal trends, failure patterns, active work state.
  */
 
-import { buildGreeting, buildSystemReminder } from "./lib/context";
 import { regenerateIfNeeded } from "./lib/claude-md";
-import { logError, logDebug } from "./lib/log";
+import { buildGreeting, buildSystemReminder } from "./lib/context";
+import { logDebug, logError } from "./lib/log";
 
 // --- Regenerate CLAUDE.md if telos or setup changed ---
 try {
@@ -19,7 +19,7 @@ try {
 }
 
 // --- Visible greeting to stderr ---
-process.stderr.write(buildGreeting().join("\n") + "\n");
+process.stderr.write(`${buildGreeting().join("\n")}\n`);
 
 // --- Dynamic system-reminder to stdout (empty = nothing injected) ---
 try {

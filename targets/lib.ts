@@ -2,16 +2,27 @@
  * Shared utilities for PAI installers.
  */
 
-import { existsSync, readFileSync, writeFileSync, copyFileSync, readdirSync, mkdirSync, unlinkSync, symlinkSync, lstatSync, rmSync } from "fs";
-import { resolve, basename } from "path";
+import {
+  copyFileSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { resolve } from "node:path";
 
 // --- Colored logging ---
 
 export const log = {
-  info:    (msg: string) => console.log(`\x1b[34m[pai]\x1b[0m ${msg}`),
+  info: (msg: string) => console.log(`\x1b[34m[pai]\x1b[0m ${msg}`),
   success: (msg: string) => console.log(`\x1b[32m[pai]\x1b[0m ${msg}`),
-  warn:    (msg: string) => console.log(`\x1b[33m[pai]\x1b[0m ${msg}`),
-  error:   (msg: string) => console.error(`\x1b[31m[pai]\x1b[0m ${msg}`),
+  warn: (msg: string) => console.log(`\x1b[33m[pai]\x1b[0m ${msg}`),
+  error: (msg: string) => console.error(`\x1b[31m[pai]\x1b[0m ${msg}`),
 };
 
 // --- JSON helpers ---
@@ -26,7 +37,7 @@ export function readJson<T = Record<string, unknown>>(path: string, fallback: T)
 }
 
 export function writeJson(path: string, data: unknown): void {
-  writeFileSync(path, JSON.stringify(data, null, 2) + "\n", "utf-8");
+  writeFileSync(path, `${JSON.stringify(data, null, 2)}\n`, "utf-8");
 }
 
 // --- TELOS scaffolding ---
@@ -92,7 +103,11 @@ export function copySkills(paiDir: string, claudeSkillsDir: string): number {
       }
     } catch {
       // Entry might exist but lstatSync failed (broken symlink/junction on Windows)
-      try { rmSync(claudeLink, { recursive: true, force: true }); } catch { /* gone */ }
+      try {
+        rmSync(claudeLink, { recursive: true, force: true });
+      } catch {
+        /* gone */
+      }
       symlinkSync(`../../.agents/skills/${name}`, claudeLink, linkType);
     }
   }
@@ -116,7 +131,11 @@ export function removeSkills(paiDir: string, claudeSkillsDir: string): string[] 
     }
 
     const claudeLink = resolve(claudeSkillsDir, name);
-    try { unlinkSync(claudeLink); } catch { /* already gone */ }
+    try {
+      unlinkSync(claudeLink);
+    } catch {
+      /* already gone */
+    }
   }
   return removed;
 }

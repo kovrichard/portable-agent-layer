@@ -4,10 +4,10 @@
  * Copies skills additively. Generates CLAUDE.md from TELOS.
  */
 
-import { existsSync, mkdirSync, copyFileSync, writeFileSync } from "fs";
-import { resolve, dirname } from "path";
-import { log, readJson, writeJson, copySkills, countSkills, countMd } from "../lib";
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
+import { copySkills, countMd, countSkills, log, readJson, writeJson } from "../lib";
 
 const PAI_DIR = resolve(dirname(import.meta.dir), "..").replaceAll("\\", "/");
 const CLAUDE_DIR = process.env.PAI_CLAUDE_DIR!;
@@ -37,19 +37,28 @@ const hooksPayload = {
     UserPromptSubmit: [
       {
         matcher: "",
-        hooks: [{ type: "command", command: `bun run ${PAI_DIR}/hooks/UserPromptOrchestrator.ts` }],
+        hooks: [
+          {
+            type: "command",
+            command: `bun run ${PAI_DIR}/hooks/UserPromptOrchestrator.ts`,
+          },
+        ],
       },
     ],
     PreToolUse: [
       {
         matcher: "Bash|Write|Edit",
-        hooks: [{ type: "command", command: `bun run ${PAI_DIR}/hooks/SecurityValidator.ts` }],
+        hooks: [
+          { type: "command", command: `bun run ${PAI_DIR}/hooks/SecurityValidator.ts` },
+        ],
       },
     ],
     Stop: [
       {
         matcher: "",
-        hooks: [{ type: "command", command: `bun run ${PAI_DIR}/hooks/StopOrchestrator.ts` }],
+        hooks: [
+          { type: "command", command: `bun run ${PAI_DIR}/hooks/StopOrchestrator.ts` },
+        ],
       },
     ],
   },

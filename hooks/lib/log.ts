@@ -5,8 +5,8 @@
  * Only writes when PAI_DEBUG=1 or when called via logError (always logged).
  */
 
-import { appendFileSync, existsSync, writeFileSync, statSync } from "fs";
-import { resolve } from "path";
+import { appendFileSync, existsSync, statSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { paths } from "./paths";
 
 const LOG_FILE = resolve(paths.state(), "debug.log");
@@ -19,13 +19,15 @@ function timestamp(): string {
 function rotateIfNeeded(): void {
   try {
     if (existsSync(LOG_FILE) && statSync(LOG_FILE).size > MAX_LOG_SIZE) {
-      const prev = LOG_FILE + ".prev";
+      const prev = `${LOG_FILE}.prev`;
       writeFileSync(prev, "");
       // Swap: current → prev, start fresh
-      const { renameSync } = require("fs");
+      const { renameSync } = require("node:fs");
       renameSync(LOG_FILE, prev);
     }
-  } catch { /* non-critical */ }
+  } catch {
+    /* non-critical */
+  }
 }
 
 /** Log a debug message (only when PAI_DEBUG=1) */
@@ -34,7 +36,9 @@ export function logDebug(source: string, message: string): void {
   rotateIfNeeded();
   try {
     appendFileSync(LOG_FILE, `[${timestamp()}] DEBUG ${source}: ${message}\n`);
-  } catch { /* non-critical */ }
+  } catch {
+    /* non-critical */
+  }
 }
 
 /** Log an error (always written, regardless of PAI_DEBUG) */
@@ -43,5 +47,7 @@ export function logError(source: string, error: unknown): void {
   const msg = error instanceof Error ? `${error.message}\n${error.stack}` : String(error);
   try {
     appendFileSync(LOG_FILE, `[${timestamp()}] ERROR ${source}: ${msg}\n`);
-  } catch { /* non-critical */ }
+  } catch {
+    /* non-critical */
+  }
 }

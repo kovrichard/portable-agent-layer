@@ -8,10 +8,17 @@
   },
   "scripts": {
     "type-check": "tsc --noEmit",
+    "format": "biome format",
+    "format-write": "biome format --write",
+    "lint": "biome lint",
+    "lint-write": "biome lint --write",
+    "check": "biome check",
+    "check-write": "biome check --write",
     "install:all": "bun run install.ts",
     "uninstall": "bun run uninstall.ts"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.4.7",
     "@opencode-ai/plugin": "latest",
     "@types/bun": "latest",
     "@types/node": "latest",

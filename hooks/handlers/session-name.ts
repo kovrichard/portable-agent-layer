@@ -3,8 +3,12 @@
  * first prompt. Subsequent prompts in the same session are skipped.
  */
 
-import { readSessionNames, writeSessionName, extractFallbackName } from "../lib/session-names";
 import { inference } from "../lib/inference";
+import {
+  extractFallbackName,
+  readSessionNames,
+  writeSessionName,
+} from "../lib/session-names";
 
 export async function captureSessionName(
   message: string,

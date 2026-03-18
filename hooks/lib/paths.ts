@@ -1,5 +1,5 @@
-import { resolve, dirname } from "path";
-import { existsSync, mkdirSync } from "fs";
+import { existsSync, mkdirSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 
 /** Root of the PAI installation */
 export function paiDir(): string {

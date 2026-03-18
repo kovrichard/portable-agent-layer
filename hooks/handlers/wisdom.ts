@@ -3,10 +3,10 @@
  * and appends them to domain-specific wisdom frame files.
  */
 
-import { parseMessages, extractContent } from "../lib/transcript";
-import { updateFrame } from "../lib/wisdom";
 import type { Message } from "../lib/transcript";
+import { extractContent, parseMessages } from "../lib/transcript";
 import type { ObservationType } from "../lib/wisdom";
+import { updateFrame } from "../lib/wisdom";
 
 interface Detection {
   domain: string;
@@ -15,19 +15,36 @@ interface Detection {
 }
 
 const PRINCIPLE_RE = /\b(always|make sure|remember to|important to|should always)\b/i;
-const ANTI_PATTERN_RE =
-  /\b(don't|do not|never|avoid|stop)\s.{5,60}(?:[.!]|$)/i;
+const ANTI_PATTERN_RE = /\b(don't|do not|never|avoid|stop)\s.{5,60}(?:[.!]|$)/i;
 const PREFERENCE_RE = /\b(prefer|like to|want|appreciate|hate|dislike)\b/i;
 
 const DOMAIN_KEYWORDS: Record<string, string[]> = {
   coding: [
-    "code", "function", "variable", "class", "method", "typescript",
-    "javascript", "python", "test", "lint", "format", "refactor", "import",
+    "code",
+    "function",
+    "variable",
+    "class",
+    "method",
+    "typescript",
+    "javascript",
+    "python",
+    "test",
+    "lint",
+    "format",
+    "refactor",
+    "import",
   ],
   git: ["commit", "branch", "merge", "push", "pull", "pr", "pull request", "rebase"],
   communication: [
-    "explain", "respond", "answer", "tone", "verbose", "concise", "summary",
-    "message", "write",
+    "explain",
+    "respond",
+    "answer",
+    "tone",
+    "verbose",
+    "concise",
+    "summary",
+    "message",
+    "write",
   ],
   tools: ["tool", "editor", "terminal", "claude", "hook", "script", "plugin"],
   workflow: ["workflow", "task", "session", "setup", "install", "process", "step"],

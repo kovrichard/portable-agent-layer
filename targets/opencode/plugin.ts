@@ -5,9 +5,9 @@
  * This plugin just wires opencode's hook API to those shared functions.
  */
 
+import { writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import type { Plugin, PluginInput } from "@opencode-ai/plugin";
-import { resolve } from "path";
-import { writeFileSync } from "fs";
 
 const PAI_DIR = process.env.PAI_DIR || resolve(import.meta.dir, "../..");
 
@@ -18,25 +18,17 @@ async function lib<T>(mod: string): Promise<T> {
 
 const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   // Pre-load shared modules
-  const { loadActiveWork, countSignals, buildGreeting, buildSystemReminder } = await lib<
-    typeof import("../../hooks/lib/context")
-  >("context.ts");
-  const { readSetupState, STEP_ORDER } = await lib<
-    typeof import("../../hooks/lib/setup")
-  >("setup.ts");
-  const { checkBashCommand, checkFilePath } = await lib<
-    typeof import("../../hooks/lib/security")
-  >("security.ts");
-  const { paths, ensureDir } = await lib<
-    typeof import("../../hooks/lib/paths")
-  >("paths.ts");
-  const { emitRating } = await lib<
-    typeof import("../../hooks/lib/signals")
-  >("signals.ts");
+  const { buildGreeting, buildSystemReminder } =
+    await lib<typeof import("../../hooks/lib/context")>("context.ts");
+  const { checkBashCommand, checkFilePath } =
+    await lib<typeof import("../../hooks/lib/security")>("security.ts");
+  const { paths, ensureDir } =
+    await lib<typeof import("../../hooks/lib/paths")>("paths.ts");
+  const { emitRating } =
+    await lib<typeof import("../../hooks/lib/signals")>("signals.ts");
   const { now } = await lib<typeof import("../../hooks/lib/time")>("time.ts");
-  const { monthPath, fileTimestamp } = await lib<
-    typeof import("../../hooks/lib/time")
-  >("time.ts");
+  const { monthPath, fileTimestamp } =
+    await lib<typeof import("../../hooks/lib/time")>("time.ts");
   const { logError } = await lib<typeof import("../../hooks/lib/log")>("log.ts");
 
   // Local helpers for rating (thin wrappers around shared signals)
@@ -44,9 +36,7 @@ const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
     emitRating(rating, context, source);
 
     if (rating < 6) {
-      const dir = ensureDir(
-        resolve(paths.learning(), "low-ratings", monthPath())
-      );
+      const dir = ensureDir(resolve(paths.learning(), "low-ratings", monthPath()));
       writeFileSync(
         resolve(dir, `${fileTimestamp()}.md`),
         `# Low Rating: ${rating}/10\n**Source:** ${source}\n**User said:** ${context}\n\n## What went wrong?\n\n## What should be done differently?\n`
@@ -70,16 +60,22 @@ const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
     // --- Session events: start and stop handling ---
     event: async ({ event }) => {
       if (event.type === "session.created" || event.type === "session.updated") {
-        const { regenerateIfNeeded } = await lib<typeof import("../../hooks/lib/claude-md")>("claude-md.ts");
+        const { regenerateIfNeeded } =
+          await lib<typeof import("../../hooks/lib/claude-md")>("claude-md.ts");
         regenerateIfNeeded();
         console.log(buildGreeting().join("\n"));
       }
-      
+
       if (event.type === "session.idle" || event.type === "session.diff") {
         try {
           // Access messages from session - API may vary by opencode version
-          const session = client.session as unknown as { messages?: unknown[]; getMessages?: () => Promise<unknown[]> };
-          const messages = session.getMessages ? await session.getMessages() : (session.messages || []);
+          const session = client.session as unknown as {
+            messages?: unknown[];
+            getMessages?: () => Promise<unknown[]>;
+          };
+          const messages = session.getMessages
+            ? await session.getMessages()
+            : session.messages || [];
           const transcript = JSON.stringify(messages);
           await runStopHandlers(transcript);
         } catch (err) {
@@ -120,40 +116,42 @@ const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
         if (
           trimmed.length >= 5 &&
           trimmed.length <= 500 &&
-          !/^[\/\$`{]/.test(trimmed) &&
+          !/^[/$`{]/.test(trimmed) &&
           !trimmed.includes("\n\n")
         ) {
           const apiKey = process.env.ANTHROPIC_API_KEY;
           if (apiKey) {
             try {
-              const response = await fetch(
-                "https://api.anthropic.com/v1/messages",
-                {
-                  method: "POST",
-                  headers: {
-                    "x-api-key": apiKey,
-                    "anthropic-version": "2023-06-01",
-                    "content-type": "application/json",
-                  },
-                  body: JSON.stringify({
-                    model: "claude-haiku-4-5-20251001",
-                    max_tokens: 100,
-                    messages: [
-                      {
-                        role: "user",
-                        content: `Rate the sentiment of this user message toward an AI assistant on a 1-10 scale (1=very negative, 5=neutral, 10=very positive). If the message has no clear sentiment toward the assistant, respond with just "neutral". Otherwise respond with just a JSON object: {"rating": N, "sentiment": "one-word"}\n\nMessage: "${trimmed.slice(0, 300)}"`,
-                      },
-                    ],
-                  }),
-                }
-              );
+              const response = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: {
+                  "x-api-key": apiKey,
+                  "anthropic-version": "2023-06-01",
+                  "content-type": "application/json",
+                },
+                body: JSON.stringify({
+                  model: "claude-haiku-4-5-20251001",
+                  max_tokens: 100,
+                  messages: [
+                    {
+                      role: "user",
+                      content: `Rate the sentiment of this user message toward an AI assistant on a 1-10 scale (1=very negative, 5=neutral, 10=very positive). If the message has no clear sentiment toward the assistant, respond with just "neutral". Otherwise respond with just a JSON object: {"rating": N, "sentiment": "one-word"}\n\nMessage: "${trimmed.slice(0, 300)}"`,
+                    },
+                  ],
+                }),
+              });
 
               if (response.ok) {
-                const data = (await response.json()) as any;
+                const data = (await response.json()) as {
+                  content?: Array<{ text?: string }>;
+                };
                 const rText = data?.content?.[0]?.text?.trim();
                 if (rText && rText !== "neutral") {
                   try {
-                    const parsed = JSON.parse(rText);
+                    const parsed = JSON.parse(rText) as {
+                      rating?: number;
+                      sentiment?: string;
+                    };
                     if (
                       typeof parsed.rating === "number" &&
                       parsed.rating >= 1 &&
@@ -166,10 +164,14 @@ const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
                         "implicit"
                       );
                     }
-                  } catch {}
+                  } catch {
+                    // Ignore parse errors
+                  }
                 }
               }
-            } catch {}
+            } catch {
+              // Ignore API errors
+            }
           }
         }
       }
@@ -186,24 +188,16 @@ const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
         const cmd =
           typeof output.args === "string"
             ? output.args
-            : (output.args?.command as string) ?? "";
+            : ((output.args?.command as string) ?? "");
         const reason = checkBashCommand(cmd);
         if (reason) {
           throw new Error(`PAI Security: Blocked — ${reason}`);
         }
       }
 
-      if (
-        toolName === "write" ||
-        toolName === "edit" ||
-        toolName === "patch"
-      ) {
+      if (toolName === "write" || toolName === "edit" || toolName === "patch") {
         const args = output.args as Record<string, string>;
-        const filePath =
-          args?.file_path ??
-          args?.filePath ??
-          args?.path ??
-          "";
+        const filePath = args?.file_path ?? args?.filePath ?? args?.path ?? "";
         if (checkFilePath(filePath)) {
           throw new Error(`PAI Security: Protected path — ${filePath}`);
         }
@@ -218,13 +212,11 @@ const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       try {
         writeFileSync(
           resolve(ensureDir(paths.state()), "current-work.json"),
-          JSON.stringify(
-            { ts: now(), tool: input.tool, cwd: directory },
-            null,
-            2
-          )
+          JSON.stringify({ ts: now(), tool: input.tool, cwd: directory }, null, 2)
         );
-      } catch {}
+      } catch {
+        // Ignore write errors
+      }
     },
 
     // --- Inject PAI_DIR into shell environment ---

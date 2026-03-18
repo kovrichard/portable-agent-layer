@@ -9,7 +9,12 @@
  * Used by shell scripts to avoid duplicating setup logic.
  */
 
-import { ensureSetupState, readSetupState, buildSetupPrompt, isSetupComplete } from "./lib/setup";
+import {
+  buildSetupPrompt,
+  ensureSetupState,
+  isSetupComplete,
+  readSetupState,
+} from "./lib/setup";
 
 const command = process.argv[2] ?? "status";
 

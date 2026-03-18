@@ -3,13 +3,13 @@
  * Used by LoadContext.ts (Claude Code) and the opencode plugin.
  */
 
-import { readdirSync, readFileSync, existsSync } from "fs";
-import { resolve } from "path";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { paths } from "./paths";
-import { readSetupState, buildSetupPrompt, remainingSteps, STEP_ORDER } from "./setup";
-import { readFramePrinciples } from "./wisdom";
 import { loadRecentNotes } from "./relationship";
+import { buildSetupPrompt, readSetupState, remainingSteps, STEP_ORDER } from "./setup";
 import { computeSignalTrends, formatTrends } from "./signal-trends";
+import { readFramePrinciples } from "./wisdom";
 
 /** Load all populated TELOS files as a single markdown string */
 export function loadTelos(): string {
@@ -29,10 +29,7 @@ export function loadTelos(): string {
       .split("\n")
       .filter(
         (l) =>
-          !l.startsWith("#") &&
-          !l.startsWith("<!--") &&
-          !l.startsWith("-->") &&
-          l.trim()
+          !l.startsWith("#") && !l.startsWith("<!--") && !l.startsWith("-->") && l.trim()
       );
     if (realLines.length === 0) continue;
     sections.push(content);
@@ -77,8 +74,7 @@ export function loadActiveWork(): { text: string; summary: string | null } | nul
 
 /** Build the visible greeting line for stderr */
 export function buildGreeting(): string[] {
-  const signalCount =
-    countSignals("ratings.jsonl") + countSignals("learnings.jsonl");
+  const signalCount = countSignals("ratings.jsonl") + countSignals("learnings.jsonl");
   const work = loadActiveWork();
   const setupState = readSetupState();
   const setupPrompt = setupState ? buildSetupPrompt(setupState) : null;
@@ -86,19 +82,13 @@ export function buildGreeting(): string[] {
   const greeting: string[] = [];
 
   if (setupPrompt) {
-    const done =
-      STEP_ORDER.length -
-      (setupState ? remainingSteps(setupState).length : 0);
-    greeting.push(
-      `🔧 PAI setup ${done}/${STEP_ORDER.length} | ${signalCount} signals`
-    );
+    const done = STEP_ORDER.length - (setupState ? remainingSteps(setupState).length : 0);
+    greeting.push(`🔧 PAI setup ${done}/${STEP_ORDER.length} | ${signalCount} signals`);
   } else {
     const telosCount = setupState
       ? STEP_ORDER.filter((k) => setupState.steps[k]?.done).length
       : 0;
-    greeting.push(
-      `✅ PAI ready | ${telosCount} TELOS files | ${signalCount} signals`
-    );
+    greeting.push(`✅ PAI ready | ${telosCount} TELOS files | ${signalCount} signals`);
   }
 
   if (work?.summary) {
@@ -135,7 +125,9 @@ export function loadLearningDigest(): string {
           .reverse()
           .map((f) => resolve(monthPath, f));
         files.push(...monthFiles);
-      } catch { /* skip */ }
+      } catch {
+        /* skip */
+      }
       if (files.length >= 3) break;
     }
 
@@ -170,12 +162,16 @@ export function loadFailurePatterns(): string {
           slugs.push(slug);
           if (slugs.length >= 5) break;
         }
-      } catch { /* skip */ }
+      } catch {
+        /* skip */
+      }
       if (slugs.length >= 5) break;
     }
 
     if (slugs.length === 0) return "";
-    return ["## Recent Failure Patterns (Avoid)", ...slugs.map((s) => `- ${s}`)].join("\n");
+    return ["## Recent Failure Patterns (Avoid)", ...slugs.map((s) => `- ${s}`)].join(
+      "\n"
+    );
   } catch {
     return "";
   }
@@ -214,9 +210,7 @@ export function loadPendingTelosUpdates(): string {
     }>;
     if (updates.length === 0) return "";
 
-    const lines = updates.map(
-      (u) => `- **${u.file}:** ${u.change}`
-    );
+    const lines = updates.map((u) => `- **${u.file}:** ${u.change}`);
     return [
       "## Pending TELOS Updates",
       "The following changes were detected in your last session. Please review and apply:",

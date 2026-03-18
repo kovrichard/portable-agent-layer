@@ -8,10 +8,9 @@
  * O = opinion (preference with confidence)
  */
 
-import { existsSync, readFileSync, writeFileSync, readdirSync } from "fs";
-import { resolve } from "path";
-import { paths } from "./paths";
-import { ensureDir } from "./paths";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { ensureDir, paths } from "./paths";
 import type { Message } from "./transcript";
 import { extractContent } from "./transcript";
 
@@ -25,9 +24,11 @@ export interface RelationshipNote {
 
 const PREFERENCE_RE =
   /\b(prefer|like to|appreciate|love|enjoy|hate|dislike|don't like|do not like)\b/i;
-const FRUSTRATION_RE = /\b(frustrat|annoy|irritat|wrong|broken|doesn't work|not working)\b/i;
+const FRUSTRATION_RE =
+  /\b(frustrat|annoy|irritat|wrong|broken|doesn't work|not working)\b/i;
 const POSITIVE_RE = /\b(great|awesome|perfect|excellent|love it|well done|nice|thank)\b/i;
-const MILESTONE_RE = /\b(first time|breakthrough|finally|success|got it working|managed to)\b/i;
+const MILESTONE_RE =
+  /\b(first time|breakthrough|finally|success|got it working|managed to)\b/i;
 const AI_ACTION_RE =
   /\b(I (wrote|created|refactored|added|fixed|updated|removed|implemented|built|changed))\b/i;
 

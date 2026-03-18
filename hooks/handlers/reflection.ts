@@ -6,13 +6,13 @@
  * Requires ANTHROPIC_API_KEY. Silently skips if unavailable.
  */
 
-import { parseMessages, extractContent } from "../lib/transcript";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { inference } from "../lib/inference";
-import { paths } from "../lib/paths";
 import { logDebug, logError } from "../lib/log";
-import { writeFileSync, existsSync, readFileSync } from "fs";
-import { resolve } from "path";
+import { paths } from "../lib/paths";
 import type { Message } from "../lib/transcript";
+import { extractContent, parseMessages } from "../lib/transcript";
 
 /** Trim transcript to last ~4000 chars of user messages for Haiku context */
 function buildTranscriptExcerpt(messages: Message[]): string {
@@ -23,7 +23,7 @@ function buildTranscriptExcerpt(messages: Message[]): string {
 
   let result = "";
   for (let i = userMessages.length - 1; i >= 0; i--) {
-    const candidate = userMessages[i] + "\n---\n" + result;
+    const candidate = `${userMessages[i]}\n---\n${result}`;
     if (candidate.length > 4000) break;
     result = candidate;
   }
@@ -104,7 +104,7 @@ export async function captureReflection(transcript: string): Promise<void> {
   let parsed: ReflectionOutput;
   try {
     parsed = JSON.parse(result.output);
-  } catch (err) {
+  } catch (_err) {
     logError("reflection", `Failed to parse output: ${result.output}`);
     return;
   }
@@ -117,9 +117,7 @@ export async function captureReflection(transcript: string): Promise<void> {
       const filepath = resolve(framesDir, `${domain}.md`);
 
       const entry = `- ${item.text} [CRYSTAL: 90%]\n`;
-      const existing = existsSync(filepath)
-        ? readFileSync(filepath, "utf-8")
-        : "";
+      const existing = existsSync(filepath) ? readFileSync(filepath, "utf-8") : "";
 
       // Dedup by first 60 chars
       if (existing.includes(item.text.slice(0, 60))) continue;

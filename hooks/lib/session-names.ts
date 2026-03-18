@@ -2,8 +2,8 @@
  * Session naming utilities — 4-word headline per session, stored in session-names.json.
  */
 
-import { existsSync, readFileSync, writeFileSync } from "fs";
-import { resolve } from "path";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { paths } from "./paths";
 
 export interface SessionNames {
@@ -11,10 +11,45 @@ export interface SessionNames {
 }
 
 const STOP_WORDS = new Set([
-  "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for",
-  "of", "with", "is", "it", "this", "that", "i", "you", "we", "can",
-  "do", "not", "be", "from", "by", "as", "are", "was", "were", "my",
-  "me", "just", "so", "if", "how", "what", "when", "its",
+  "a",
+  "an",
+  "the",
+  "and",
+  "or",
+  "but",
+  "in",
+  "on",
+  "at",
+  "to",
+  "for",
+  "of",
+  "with",
+  "is",
+  "it",
+  "this",
+  "that",
+  "i",
+  "you",
+  "we",
+  "can",
+  "do",
+  "not",
+  "be",
+  "from",
+  "by",
+  "as",
+  "are",
+  "was",
+  "were",
+  "my",
+  "me",
+  "just",
+  "so",
+  "if",
+  "how",
+  "what",
+  "when",
+  "its",
 ]);
 
 /** Deterministic fallback: extract up to 4 keywords from a prompt */

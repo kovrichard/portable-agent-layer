@@ -4,15 +4,15 @@
  * Output: memory/learning/session/YYYY-MM/{datetime}_work_{slug}.md
  */
 
-import { writeFileSync } from "fs";
-import { resolve } from "path";
-import { paths, ensureDir } from "../lib/paths";
+import { writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { ensureDir, paths } from "../lib/paths";
 import { fileTimestamp, monthPath } from "../lib/time";
 import {
-  parseMessages,
+  extractContent,
   extractLastAssistant,
   extractLastUser,
-  extractContent,
+  parseMessages,
 } from "../lib/transcript";
 
 function slugify(text: string): string {

@@ -3,7 +3,7 @@
  * Usage: bun run uninstall.ts [--claude] [--opencode] [--all]
  */
 
-import { dirname, resolve } from "path";
+import { dirname, resolve } from "node:path";
 import { log } from "./targets/lib";
 
 const PAI_DIR = resolve(dirname(import.meta.path));
@@ -18,10 +18,12 @@ if (args.length === 0) {
 }
 
 for (const arg of args) {
-  if (arg === "--claude")   removeClaude = true;
+  if (arg === "--claude") removeClaude = true;
   else if (arg === "--opencode") removeOpencode = true;
-  else if (arg === "--all") { removeClaude = true; removeOpencode = true; }
-  else if (arg === "--help" || arg === "-h") {
+  else if (arg === "--all") {
+    removeClaude = true;
+    removeOpencode = true;
+  } else if (arg === "--help" || arg === "-h") {
     console.log("Usage: bun run uninstall.ts [--claude] [--opencode] [--all]");
     process.exit(0);
   } else {

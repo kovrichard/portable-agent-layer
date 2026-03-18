@@ -6,20 +6,27 @@
  *   sentiment.json — structured rating + metadata
  */
 
-import { writeFileSync } from "fs";
-import { resolve } from "path";
-import { paths, ensureDir } from "../lib/paths";
+import { writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { ensureDir, paths } from "../lib/paths";
 import { fileTimestamp, monthPath } from "../lib/time";
-import { extractLastAssistant, extractLastUser, extractContent, parseMessages } from "../lib/transcript";
+import {
+  extractContent,
+  extractLastAssistant,
+  extractLastUser,
+  parseMessages,
+} from "../lib/transcript";
 
 function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, "")
-    .trim()
-    .split(/\s+/)
-    .slice(0, 4)
-    .join("-") || "failure";
+  return (
+    text
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, "")
+      .trim()
+      .split(/\s+/)
+      .slice(0, 4)
+      .join("-") || "failure"
+  );
 }
 
 export async function captureFailure(

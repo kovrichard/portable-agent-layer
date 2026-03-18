@@ -5,8 +5,8 @@
  * Fail-open design: if anything goes wrong, the command is allowed through.
  */
 
-import { readStdinJSON } from "./lib/stdin";
 import { checkBashCommand, checkFilePath, WARN_COMMANDS } from "./lib/security";
+import { readStdinJSON } from "./lib/stdin";
 
 interface ToolUseInput {
   tool_name: string;

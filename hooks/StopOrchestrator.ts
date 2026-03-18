@@ -6,10 +6,10 @@
  * Transcript is read from the file at transcript_path, NOT from stdin.
  */
 
-import { readStdinJSON } from "./lib/stdin";
-import { readTranscriptFile } from "./lib/transcript";
-import { runStopHandlers } from "./lib/stop";
 import { logError } from "./lib/log";
+import { readStdinJSON } from "./lib/stdin";
+import { runStopHandlers } from "./lib/stop";
+import { readTranscriptFile } from "./lib/transcript";
 
 interface StopHookInput {
   session_id: string;

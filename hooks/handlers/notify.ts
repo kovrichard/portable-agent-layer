@@ -13,14 +13,12 @@ export async function notifyCompletion(transcript: string): Promise<void> {
     if (!Array.isArray(messages)) return;
 
     const lastAssistant = messages
-      .filter((m: any) => m.role === "assistant")
+      .filter((m: { role: string }) => m.role === "assistant")
       .pop();
 
     if (lastAssistant) {
       const content =
-        typeof lastAssistant.content === "string"
-          ? lastAssistant.content
-          : "";
+        typeof lastAssistant.content === "string" ? lastAssistant.content : "";
       // First sentence only
       const firstSentence = content.split(/[.!?]\s/)[0] || "Done";
       speak(firstSentence);

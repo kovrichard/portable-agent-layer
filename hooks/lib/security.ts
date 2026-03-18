@@ -5,7 +5,7 @@
 
 /** Dangerous command patterns — always blocked */
 export const BLOCKED_COMMANDS: [RegExp, string][] = [
-  [/rm\s+-rf\s+[\/~]/, "Recursive delete of root or home"],
+  [/rm\s+-rf\s+[/~]/, "Recursive delete of root or home"],
   [/mkfs\./, "Filesystem format"],
   [/dd\s+if=.*of=\/dev\//, "Raw disk write"],
   [/>\s*\/dev\/sd/, "Direct device write"],

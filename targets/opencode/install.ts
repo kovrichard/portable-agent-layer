@@ -3,10 +3,10 @@
  * Deploys plugin, installs skills, generates AGENTS.md.
  */
 
-import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync } from "fs";
-import { resolve, dirname } from "path";
-import { log, writeJson, copySkills, countSkills } from "../lib";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
+import { copySkills, countSkills, log, writeJson } from "../lib";
 
 const PAI_DIR = resolve(dirname(import.meta.dir), "..");
 const OC_GLOBAL_DIR = process.env.PAI_OPENCODE_DIR!;
@@ -36,7 +36,7 @@ try {
   Bun.spawnSync(["bun", "install", "--silent"], { cwd: OC_PLUGINS_DIR });
   log.success("Installed plugin dependencies");
 } catch {
-  log.warn("Could not install plugin deps — run 'bun install' in " + OC_PLUGINS_DIR);
+  log.warn(`Could not install plugin deps — run 'bun install' in ${OC_PLUGINS_DIR}`);
 }
 
 // --- 3. Install skills into ~/.agents/skills/ ---

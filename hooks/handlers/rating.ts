@@ -3,26 +3,26 @@
  * Extracted from RatingCapture.ts — pure handler function.
  */
 
-import { writeFileSync, mkdirSync, existsSync, readFileSync } from "fs";
-import { resolve } from "path";
-import { emitRating } from "../lib/signals";
-import { paths } from "../lib/paths";
-import { fileTimestamp, monthPath } from "../lib/time";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { inference } from "../lib/inference";
-import { now } from "../lib/time";
+import { paths } from "../lib/paths";
+import { emitRating } from "../lib/signals";
+import { fileTimestamp, monthPath, now } from "../lib/time";
 
 /** Read cached last assistant response (written by StopOrchestrator) */
 function getLastResponse(): string {
   try {
     const cachePath = resolve(paths.state(), "last-response.txt");
     if (existsSync(cachePath)) return readFileSync(cachePath, "utf-8");
-  } catch { /* non-critical */ }
+  } catch {
+    /* non-critical */
+  }
   return "";
 }
 
 // Match: "8", "8/10", "8 - great work", "rating: 8", "score: 8"
-const EXPLICIT_RE =
-  /(?:^|rating:?\s*|score:?\s*)(\d|10)(?:\s*(?:\/10|[-.])|$|\s)/i;
+const EXPLICIT_RE = /(?:^|rating:?\s*|score:?\s*)(\d|10)(?:\s*(?:\/10|[-.])|$|\s)/i;
 
 const PRAISE_PATTERNS =
   /^(great\s*job|nice|perfect|awesome|excellent|thanks|thank\s*you|well\s*done|good\s*job|love\s*it|amazing|brilliant|fantastic|wonderful|superb|nailed\s*it)[.!]?$/i;

@@ -3,8 +3,8 @@
  * Returns today / this-week / this-month averages + trend direction.
  */
 
-import { existsSync, readFileSync, writeFileSync } from "fs";
-import { resolve } from "path";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { paths } from "./paths";
 
 interface RatingSignal {
@@ -29,7 +29,10 @@ function avg(nums: number[]): number | null {
   return Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 10) / 10;
 }
 
-function trendDirection(week: number | null, month: number | null): "up" | "down" | "stable" | null {
+function trendDirection(
+  week: number | null,
+  month: number | null
+): "up" | "down" | "stable" | null {
   if (week === null || month === null) return null;
   if (week > month + 0.5) return "up";
   if (week < month - 0.5) return "down";
@@ -53,7 +56,13 @@ export function computeSignalTrends(): SignalCache {
 
   const ratingsPath = resolve(paths.signals(), "ratings.jsonl");
   if (!existsSync(ratingsPath)) {
-    const empty: SignalCache = { computed_at: new Date().toISOString(), today: null, week: null, month: null, trend: null };
+    const empty: SignalCache = {
+      computed_at: new Date().toISOString(),
+      today: null,
+      week: null,
+      month: null,
+      trend: null,
+    };
     writeFileSync(cachePath, JSON.stringify(empty, null, 2), "utf-8");
     return empty;
   }

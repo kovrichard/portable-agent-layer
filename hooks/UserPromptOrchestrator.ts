@@ -7,10 +7,10 @@
  *  - session-name: generate 4-word session headline on first prompt
  */
 
-import { readStdinJSON } from "./lib/stdin";
 import { captureRating } from "./handlers/rating";
 import { captureSessionName } from "./handlers/session-name";
 import { logDebug, logError } from "./lib/log";
+import { readStdinJSON } from "./lib/stdin";
 
 interface PromptSubmitInput {
   prompt: string;

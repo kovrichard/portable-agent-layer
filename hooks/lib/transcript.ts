@@ -3,7 +3,7 @@
  * Used by Stop handlers and the opencode plugin.
  */
 
-import { readFileSync } from "fs";
+import { readFileSync } from "node:fs";
 
 export interface Message {
   role: string;
@@ -48,7 +48,9 @@ export function readTranscriptFile(path: string): Message[] {
             messages.push({ role: entry.type, content: text });
           }
         }
-      } catch { /* skip malformed lines */ }
+      } catch {
+        /* skip malformed lines */
+      }
     }
 
     return messages;
@@ -60,9 +62,7 @@ export function readTranscriptFile(path: string): Message[] {
 /** Extract string content from a message object */
 export function extractContent(msg: Message | undefined): string {
   if (!msg) return "";
-  return typeof msg.content === "string"
-    ? msg.content
-    : JSON.stringify(msg.content);
+  return typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
 }
 
 /** Get the last assistant message from a messages array */

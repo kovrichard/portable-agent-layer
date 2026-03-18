@@ -3,9 +3,9 @@
  * Removes PAI hooks, skills, and env from settings.json.
  */
 
-import { existsSync, copyFileSync, unlinkSync } from "fs";
-import { resolve, dirname } from "path";
-import { log, readJson, writeJson, removeSkills } from "../lib";
+import { copyFileSync, existsSync, unlinkSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { log, readJson, removeSkills, writeJson } from "../lib";
 
 const PAI_DIR = resolve(dirname(import.meta.dir), "..");
 const CLAUDE_DIR = process.env.PAI_CLAUDE_DIR!;
@@ -21,7 +21,11 @@ copyFileSync(SETTINGS, `${SETTINGS}.bak.${Date.now()}`);
 log.info("Backed up settings.json");
 
 // --- Remove PAI hooks ---
-type HookEntry = { matcher?: string; hooks?: Array<{ command?: string }>; command?: string };
+type HookEntry = {
+  matcher?: string;
+  hooks?: Array<{ command?: string }>;
+  command?: string;
+};
 type Settings = { hooks?: Record<string, HookEntry[]>; env?: Record<string, string> };
 
 const settings = readJson<Settings>(SETTINGS, {});
@@ -60,7 +64,17 @@ if (removed.length > 0) {
 // --- Remove AGENTS.md and CLAUDE.md symlink ---
 const agentsMd = resolve(process.env.PAI_OPENCODE_DIR!, "AGENTS.md");
 const claudeMd = resolve(CLAUDE_DIR, "CLAUDE.md");
-try { unlinkSync(claudeMd); log.success("Removed ~/.claude/CLAUDE.md"); } catch { /* gone */ }
-try { unlinkSync(agentsMd); log.success("Removed ~/.config/opencode/AGENTS.md"); } catch { /* gone */ }
+try {
+  unlinkSync(claudeMd);
+  log.success("Removed ~/.claude/CLAUDE.md");
+} catch {
+  /* gone */
+}
+try {
+  unlinkSync(agentsMd);
+  log.success("Removed ~/.config/opencode/AGENTS.md");
+} catch {
+  /* gone */
+}
 
 log.success("Claude Code uninstall complete");

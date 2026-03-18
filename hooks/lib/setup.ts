@@ -5,9 +5,9 @@
  * The AI is instructed to mark steps done after writing each file.
  */
 
-import { readFileSync, writeFileSync, existsSync } from "fs";
-import { resolve } from "path";
-import { paths, paiPath, ensureDir } from "./paths";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { ensureDir, paiPath, paths } from "./paths";
 
 export interface SetupStep {
   done: boolean;
@@ -62,10 +62,17 @@ function hasRealContent(filePath: string): boolean {
   if (!existsSync(filePath)) return false;
   try {
     const content = readFileSync(filePath, "utf-8").trim();
-    return content.split("\n").some((l) =>
-      !l.startsWith("#") && !l.startsWith("<!--") && !l.startsWith("-->") &&
-      l.trim() && !/^\s*-\s*$/.test(l) && !/^\s*\|/.test(l)
-    );
+    return content
+      .split("\n")
+      .some(
+        (l) =>
+          !l.startsWith("#") &&
+          !l.startsWith("<!--") &&
+          !l.startsWith("-->") &&
+          l.trim() &&
+          !/^\s*-\s*$/.test(l) &&
+          !/^\s*\|/.test(l)
+      );
   } catch {
     return false;
   }
@@ -95,7 +102,7 @@ export function readSetupState(): SetupState | null {
 
 /** Write setup state to disk */
 export function writeSetupState(state: SetupState): void {
-  writeFileSync(setupPath(), JSON.stringify(state, null, 2) + "\n");
+  writeFileSync(setupPath(), `${JSON.stringify(state, null, 2)}\n`);
 }
 
 /** Seed setup.json if it doesn't exist yet. Returns the state. */
@@ -143,7 +150,7 @@ export function buildSetupPrompt(state: SetupState): string | null {
   if (completedSteps.length > 0) {
     lines.push(
       `Setup in progress — ${completedSteps.length}/${totalSteps} steps complete. Continue from the next remaining step.`,
-      "",
+      ""
     );
   }
 
@@ -163,7 +170,7 @@ export function buildSetupPrompt(state: SetupState): string | null {
     "",
     `When all steps are done (or the user wants to skip), set \`completed: true\` in setup.json.`,
     "",
-    "Keep it conversational and natural. If the user wants to skip a step, mark it done and move on.",
+    "Keep it conversational and natural. If the user wants to skip a step, mark it done and move on."
   );
 
   return lines.join("\n");

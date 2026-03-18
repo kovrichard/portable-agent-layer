@@ -5,8 +5,8 @@
  * Principles marked [CRYSTAL: ≥85%] are injected into every session.
  */
 
-import { existsSync, readFileSync, writeFileSync, readdirSync } from "fs";
-import { resolve } from "path";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { paths } from "./paths";
 
 export type ObservationType = "principle" | "rule" | "anti-pattern";
@@ -22,7 +22,7 @@ export function readFramePrinciples(): string[] {
     const content = readFileSync(resolve(framesDir, file), "utf-8");
     for (const line of content.split("\n")) {
       const match = line.match(/\[CRYSTAL:\s*(\d+)%\]/);
-      if (match && parseInt(match[1]) >= 85) {
+      if (match && parseInt(match[1], 10) >= 85) {
         principles.push(line.trim().replace(/^-\s*/, ""));
       }
     }
@@ -68,7 +68,7 @@ export function updateFrame(
   // Bump observation count and date
   content = content.replace(
     /Observations: (\d+) \| Last Updated: [\d-]+/,
-    (_, n) => `Observations: ${parseInt(n) + 1} | Last Updated: ${today}`
+    (_, n) => `Observations: ${parseInt(n, 10) + 1} | Last Updated: ${today}`
   );
 
   // Append to evolution log

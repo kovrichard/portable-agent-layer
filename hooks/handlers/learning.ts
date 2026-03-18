@@ -3,7 +3,7 @@
  */
 
 import { emitLearning } from "../lib/signals";
-import { parseMessages, extractLastAssistant, extractContent } from "../lib/transcript";
+import { extractContent, extractLastAssistant, parseMessages } from "../lib/transcript";
 
 export async function captureLearning(transcript: string): Promise<void> {
   const messages = parseMessages(transcript);

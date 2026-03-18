@@ -6,15 +6,34 @@
  * CLAUDE.md is kept as a symlink pointing to AGENTS.md.
  */
 
-import { existsSync, readFileSync, writeFileSync, readdirSync, statSync, symlinkSync, unlinkSync, lstatSync } from "fs";
-import { resolve, relative, dirname } from "path";
-import { paiPath, paths } from "./paths";
-import { readSetupState, buildSetupPrompt } from "./setup";
+import {
+  existsSync,
+  lstatSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  symlinkSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, relative, resolve } from "node:path";
 import { loadTelos } from "./context";
+import { paiPath, paths } from "./paths";
+import { buildSetupPrompt, readSetupState } from "./setup";
 
 const TEMPLATE_PATH = paiPath("AGENTS.md.template");
-const OUTPUT_PATH = resolve(process.env.PAI_OPENCODE_DIR!, "AGENTS.md");
-const SYMLINK_PATH = resolve(process.env.PAI_CLAUDE_DIR!, "CLAUDE.md");
+
+function getOutputPaths() {
+  const opencodeDir = process.env.PAI_OPENCODE_DIR;
+  const claudeDir = process.env.PAI_CLAUDE_DIR;
+  if (!opencodeDir || !claudeDir) {
+    throw new Error("PAI_OPENCODE_DIR or PAI_CLAUDE_DIR not set");
+  }
+  return {
+    outputPath: resolve(opencodeDir, "AGENTS.md"),
+    symlinkPath: resolve(claudeDir, "CLAUDE.md"),
+  };
+}
 
 function latestMtime(...filePaths: string[]): number {
   let latest = 0;
@@ -23,30 +42,34 @@ function latestMtime(...filePaths: string[]): number {
     try {
       const mt = statSync(p).mtimeMs;
       if (mt > latest) latest = mt;
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }
   return latest;
 }
 
 /** Ensure CLAUDE.md is a symlink pointing to AGENTS.md */
 function ensureSymlink(): void {
+  const { outputPath, symlinkPath } = getOutputPaths();
   try {
-    const stat = lstatSync(SYMLINK_PATH);
+    const stat = lstatSync(symlinkPath);
     // If it exists but isn't a symlink (e.g. old generated file), remove it
-    if (!stat.isSymbolicLink()) unlinkSync(SYMLINK_PATH);
+    if (!stat.isSymbolicLink()) unlinkSync(symlinkPath);
     else return; // already a symlink, leave it
   } catch {
     // doesn't exist — create it
   }
-  const relTarget = relative(dirname(SYMLINK_PATH), OUTPUT_PATH).replaceAll("\\", "/");
-  symlinkSync(relTarget, SYMLINK_PATH);
+  const relTarget = relative(dirname(symlinkPath), outputPath).replaceAll("\\", "/");
+  symlinkSync(relTarget, symlinkPath);
 }
 
 /** Returns true if AGENTS.md needs to be regenerated */
 export function needsRebuild(): boolean {
-  if (!existsSync(OUTPUT_PATH)) return true;
+  const { outputPath } = getOutputPaths();
+  if (!existsSync(outputPath)) return true;
 
-  const outputMtime = statSync(OUTPUT_PATH).mtimeMs;
+  const outputMtime = statSync(outputPath).mtimeMs;
 
   // Collect source files: template + setup.json + all telos/*.md
   const sources: string[] = [TEMPLATE_PATH, resolve(paths.state(), "setup.json")];
@@ -83,15 +106,16 @@ export function buildClaudeMd(): string {
   const telos = loadTelos();
 
   return template
-    .replace("{{SETUP_PROMPT}}", setupPrompt ? setupPrompt + "\n" : "")
-    .replace("{{TELOS}}", telos ? telos + "\n" : "")
+    .replace("{{SETUP_PROMPT}}", setupPrompt ? `${setupPrompt}\n` : "")
+    .replace("{{TELOS}}", telos ? `${telos}\n` : "")
     .replace("{{MEMORY_PATHS}}", memoryPaths());
 }
 
 /** Regenerate AGENTS.md if any source file is newer, and ensure CLAUDE.md symlink exists. Returns true if rebuilt. */
 export function regenerateIfNeeded(): boolean {
+  const { outputPath } = getOutputPaths();
   ensureSymlink();
   if (!needsRebuild()) return false;
-  writeFileSync(OUTPUT_PATH, buildClaudeMd(), "utf-8");
+  writeFileSync(outputPath, buildClaudeMd(), "utf-8");
   return true;
 }

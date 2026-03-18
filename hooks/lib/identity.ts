@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from "fs";
+import { existsSync, readFileSync } from "node:fs";
 import { paiPath } from "./paths";
 
 export interface Identity {
@@ -18,7 +18,8 @@ export function getIdentity(): Identity {
   const missionPath = paiPath("telos", "MISSION.md");
   if (!existsSync(missionPath)) return defaults;
 
-  const content = readFileSync(missionPath, "utf-8");
+  const _content = readFileSync(missionPath, "utf-8");
+  // TODO: Parse YAML frontmatter from MISSION.md
   // Identity can be embedded as YAML frontmatter or just used as-is
   return defaults;
 }

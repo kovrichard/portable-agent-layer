@@ -3,19 +3,19 @@
  * Used by StopOrchestrator.ts (Claude Code) and opencode plugin.
  */
 
-import { existsSync, readFileSync, unlinkSync, writeFileSync } from "fs";
-import { resolve } from "path";
-import { paths, ensureDir } from "./paths";
-import { captureWork } from "../handlers/work";
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { captureFailure } from "../handlers/failure";
 import { captureLearning } from "../handlers/learning";
 import { notifyCompletion } from "../handlers/notify";
+import { captureReflection } from "../handlers/reflection";
+import { captureRelationship } from "../handlers/relationship";
 import { resetTab } from "../handlers/tab";
 import { captureWisdom } from "../handlers/wisdom";
-import { captureRelationship } from "../handlers/relationship";
+import { captureWork } from "../handlers/work";
 import { captureWorkLearning } from "../handlers/work-learning";
-import { captureFailure } from "../handlers/failure";
-import { captureReflection } from "../handlers/reflection";
-import { logError, logDebug } from "./log";
+import { logDebug, logError } from "./log";
+import { ensureDir, paths } from "./paths";
 import { extractContent, extractLastAssistant, parseMessages } from "./transcript";
 
 export interface RunStopHandlersOptions {
@@ -49,8 +49,15 @@ export async function runStopHandlers(
   ]);
 
   const handlerNames = [
-    "learning", "work", "notify", "tab", "wisdom",
-    "relationship", "work-learning", "reflection", "pending-failure",
+    "learning",
+    "work",
+    "notify",
+    "tab",
+    "wisdom",
+    "relationship",
+    "work-learning",
+    "reflection",
+    "pending-failure",
   ];
   for (let i = 0; i < results.length; i++) {
     const r = results[i];

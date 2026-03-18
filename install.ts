@@ -4,11 +4,9 @@
  * Default: installs for both targets.
  */
 
-import { resolve, dirname } from "path";
-import { log, scaffoldTelos } from "./targets/lib";
+import { dirname, resolve } from "node:path";
 import { ensureSetupState, isSetupComplete } from "./hooks/lib/setup";
-import { readJson, writeJson } from "./targets/lib";
-import { existsSync } from "fs";
+import { log, scaffoldTelos } from "./targets/lib";
 
 const PAI_DIR = resolve(dirname(import.meta.path));
 
@@ -23,10 +21,12 @@ if (args.length === 0) {
 }
 
 for (const arg of args) {
-  if (arg === "--claude")   installClaude = true;
+  if (arg === "--claude") installClaude = true;
   else if (arg === "--opencode") installOpencode = true;
-  else if (arg === "--all") { installClaude = true; installOpencode = true; }
-  else if (arg === "--help" || arg === "-h") {
+  else if (arg === "--all") {
+    installClaude = true;
+    installOpencode = true;
+  } else if (arg === "--help" || arg === "-h") {
     console.log("Usage: bun run install.ts [--claude] [--opencode] [--all]");
     console.log("");
     console.log("  --claude    Install hooks/skills for Claude Code");
