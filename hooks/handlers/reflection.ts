@@ -116,7 +116,7 @@ export async function captureReflection(transcript: string): Promise<void> {
       const framesDir = paths.wisdom();
       const filepath = resolve(framesDir, `${domain}.md`);
 
-      const entry = `- ${item.text} [CRYSTAL: 90%]\n`;
+      const entry = `- ${item.text} [confidence: 70%]\n`;
       const existing = existsSync(filepath) ? readFileSync(filepath, "utf-8") : "";
 
       // Dedup by first 60 chars

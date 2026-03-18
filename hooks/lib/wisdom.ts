@@ -92,6 +92,24 @@ export function updateFrame(
 
   const header = sectionMap[type];
   const entry = `- ${observation} ${suffixMap[type]}`;
+
+  // Check for duplicates (by observation text, ignoring confidence tags)
+  const existingLines = content.split("\n");
+  const isDuplicate = existingLines.some((line) => {
+    const cleanLine = line
+      .replace(/\s*\[(?:confidence|CRYSTAL|severity):\s*[^\]]+\]\s*$/, "")
+      .trim();
+    const cleanEntry = entry
+      .replace(/\s*\[(?:confidence|CRYSTAL|severity):\s*[^\]]+\]\s*$/, "")
+      .trim();
+    return cleanLine === cleanEntry;
+  });
+
+  if (isDuplicate) {
+    // Skip adding duplicate - don't track validation for duplicates
+    return;
+  }
+
   content = content.replace(`${header}\n`, `${header}\n${entry}\n`);
 
   writeFileSync(filepath, content, "utf-8");

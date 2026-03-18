@@ -18,6 +18,7 @@ memory/state/debug.log.prev
 
 # Wisdom graduation state (validation counters)
 memory/wisdom/state/validation-counter.json
+graduation-summary.txt
 
 # Signal logs (append-only, machine-local)
 memory/signals/ratings.jsonl

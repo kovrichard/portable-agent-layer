@@ -80,9 +80,10 @@ function extractDetections(messages: Message[]): Detection[] {
 
       let type: ObservationType | null = null;
 
-      if (PRINCIPLE_RE.test(s)) {
+      // Only extract wisdom from USER messages (not assistant responses)
+      if (PRINCIPLE_RE.test(s) && msg.role === "user") {
         type = "principle";
-      } else if (ANTI_PATTERN_RE.test(s)) {
+      } else if (ANTI_PATTERN_RE.test(s) && msg.role === "user") {
         type = "anti-pattern";
       } else if (PREFERENCE_RE.test(s) && msg.role === "user") {
         type = "rule";
