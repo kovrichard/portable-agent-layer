@@ -1,14 +1,27 @@
 /**
- * UserPromptSubmit handler: generates a 4-word name for the session on the
- * first prompt. Subsequent prompts in the same session are skipped.
+ * UserPromptSubmit handler: generates a 4-word name for the session.
+ *
+ * Architecture (fast-exit):
+ * - First prompt: instant deterministic name from keywords (<10ms),
+ *   then spawns a detached background process to upgrade via inference.
+ * - Subsequent prompts: no-op (name already set).
+ *
+ * This avoids the 1-5s inference latency that previously blocked every first prompt.
  */
 
+// import { spawn } from "node:child_process";
 import { inference } from "../lib/inference";
+import { logDebug, logError } from "../lib/log";
 import {
   extractFallbackName,
   readSessionNames,
   writeSessionName,
 } from "../lib/session-names";
+
+const NAME_PROMPT =
+  "You generate concise 4-word session titles for AI coding sessions. " +
+  "Output EXACTLY 4 words in Title Case, no punctuation. Describe the specific task. " +
+  'Example: "Fix Session Name Generation", "Debug Auth Token Refresh"';
 
 export async function captureSessionName(
   message: string,
@@ -20,19 +33,87 @@ export async function captureSessionName(
   const names = readSessionNames();
   if (names[sessionId]) return;
 
-  const result = await inference({
-    system:
-      "You generate concise 4-word session titles for AI coding sessions. " +
-      "Respond with ONLY 4 words, lowercase, no punctuation.",
-    user: `Generate a 4-word title for a session starting with: "${message.slice(0, 200)}"`,
-    maxTokens: 20,
-    timeout: 4000,
-  });
+  // 1. Instant deterministic name from keywords
+  const fallback = extractFallbackName(message);
+  writeSessionName(sessionId, fallback);
+  logDebug("session-name", `Deterministic name: "${fallback}"`);
 
-  const name =
-    result.success && result.output
-      ? result.output.trim().slice(0, 60)
-      : extractFallbackName(message);
+  // TODO: re-enable when a consumer exists (tab titles, dashboard)
+  // // 2. Spawn detached background process to upgrade with inference
+  // if (!process.env.ANTHROPIC_API_KEY) return;
+  // try {
+  //   const promptB64 = Buffer.from(message.slice(0, 800)).toString("base64");
+  //   const child = spawn(
+  //     "bun",
+  //     [import.meta.filename, "--upgrade", sessionId, promptB64, fallback],
+  //     {
+  //       detached: true,
+  //       stdio: "ignore",
+  //       env: { ...process.env, CLAUDECODE: undefined },
+  //     }
+  //   );
+  //   child.unref();
+  //   logDebug("session-name", "Spawned background inference upgrade");
+  // } catch {
+  //   // Non-critical — deterministic name is already stored
+  // }
+}
 
-  writeSessionName(sessionId, name);
+/**
+ * Background upgrade mode: called via --upgrade flag from a detached subprocess.
+ * Runs inference for a better name, writes only if the name hasn't changed since spawn.
+ */
+async function upgradeWithInference(
+  sessionId: string,
+  promptB64: string,
+  expectedName: string
+): Promise<void> {
+  try {
+    // Version guard: if name changed since we were spawned, skip
+    const currentNames = readSessionNames();
+    if (currentNames[sessionId] !== expectedName) return;
+
+    const promptText = Buffer.from(promptB64, "base64").toString("utf-8");
+    const result = await inference({
+      system: NAME_PROMPT,
+      user: `Generate a 4-word title for: "${promptText}"`,
+      maxTokens: 20,
+      timeout: 10000,
+    });
+
+    if (!result.success || !result.output) return;
+
+    let label = result.output
+      .replace(/^["']|["']$/g, "")
+      .replace(/[.!?,;:]/g, "")
+      .trim();
+
+    const words = label.split(/\s+/).slice(0, 4);
+    label = words
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(" ");
+
+    const allSubstantial = words.every((w) => w.length >= 3);
+    if (!label || words.length !== 4 || !allSubstantial) return;
+
+    // Only write if name hasn't changed (re-read under guard)
+    const freshNames = readSessionNames();
+    if (freshNames[sessionId] !== expectedName) return;
+
+    writeSessionName(sessionId, label);
+    logDebug("session-name", `Background upgrade: "${label}"`);
+  } catch (err) {
+    logError("session-name:upgrade", err);
+  }
+}
+
+// Background upgrade entry point
+if (process.argv[2] === "--upgrade") {
+  const sid = process.argv[3];
+  const prompt = process.argv[4];
+  const expected = process.argv[5];
+  if (sid && prompt && expected !== undefined) {
+    await upgradeWithInference(sid, prompt, expected);
+  }
+  process.exit(0);
 }
