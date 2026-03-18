@@ -7,6 +7,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { categorizeLearning } from "../lib/learning-category";
 import { ensureDir, paths } from "../lib/paths";
 import { fileTimestamp, monthPath } from "../lib/time";
 import {
@@ -68,14 +69,16 @@ export async function captureWorkLearning(
 
   const title = extractContent(lastUser).slice(0, 80) || "session";
   const summary = extractContent(lastAssistant).slice(0, 600);
+  const category = categorizeLearning(title, summary);
 
   const slug = slugify(title);
   const dir = ensureDir(resolve(paths.sessionLearning(), monthPath()));
-  const filename = `${fileTimestamp()}_work_${slug}.md`;
+  const filename = `${fileTimestamp()}_${category}_${slug}.md`;
 
   const content = [
     "# Work Completion Learning",
     `**Title:** ${title}`,
+    `**Category:** ${category.toUpperCase()}`,
     `**Date:** ${new Date().toISOString().slice(0, 10)}`,
     ...(sessionId ? [`**Session:** ${sessionId}`] : []),
     "",

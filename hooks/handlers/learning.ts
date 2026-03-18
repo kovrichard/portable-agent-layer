@@ -5,9 +5,15 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { categorizeLearning } from "../lib/learning-category";
 import { paths } from "../lib/paths";
 import { emitLearning } from "../lib/signals";
-import { extractContent, extractLastAssistant, parseMessages } from "../lib/transcript";
+import {
+  extractContent,
+  extractLastAssistant,
+  extractLastUser,
+  parseMessages,
+} from "../lib/transcript";
 
 /** Check if we already emitted a learning for this session */
 function alreadyEmitted(sessionId: string): boolean {
@@ -35,5 +41,8 @@ export async function captureLearning(
   if (!lastAssistant) return;
 
   const summary = extractContent(lastAssistant).slice(0, 300);
-  emitLearning(summary, "session", sessionId);
+  const lastUser = extractLastUser(messages);
+  const userText = extractContent(lastUser).slice(0, 200);
+  const category = categorizeLearning(userText, summary);
+  emitLearning(summary, category, sessionId);
 }
