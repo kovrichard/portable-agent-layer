@@ -92,11 +92,9 @@ export async function handleCrystallizeCommand(message: string): Promise<boolean
       lines[bestMatch.index] = newLine;
       writeFileSync(bestMatch.filepath, lines.join("\n"), "utf-8");
 
-      // Output summary
+      // Log summary to debug log (UI-safe)
       const summary = formatManualCrystallization(bestMatch.line, bestMatch.domain);
-      console.log("\n" + summary);
-
-      logDebug("crystallize", `Crystallized principle in ${bestMatch.domain}.md`);
+      logDebug("crystallize", `Crystallized principle:\n${summary}`);
       return true;
     }
   } catch (err) {

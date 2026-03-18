@@ -70,7 +70,10 @@ export async function runStopHandlers(
     const { promoted, approaching } = runGraduation();
     const summary = formatGraduationSummary(promoted, approaching);
     if (summary) {
-      console.log("\n" + summary);
+      // Write summary to file instead of console (UI-safe)
+      const summaryPath = resolve(paths.state(), "graduation-summary.txt");
+      writeFileSync(summaryPath, summary, "utf-8");
+      logDebug("runStopHandlers", `Graduation summary written to ${summaryPath}`);
     }
   } catch (err) {
     logError("runStopHandlers:graduation", err);
