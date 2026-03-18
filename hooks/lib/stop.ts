@@ -7,10 +7,8 @@ import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { captureFailure } from "../handlers/failure";
 import { captureLearning } from "../handlers/learning";
-import { captureReflection } from "../handlers/reflection";
 import { captureRelationship } from "../handlers/relationship";
 import { resetTab } from "../handlers/tab";
-import { captureWisdom } from "../handlers/wisdom";
 import { captureWork } from "../handlers/work";
 import { captureWorkLearning } from "../handlers/work-learning";
 import { logDebug, logError } from "./log";
@@ -34,15 +32,13 @@ export async function runStopHandlers(
   // Cache last assistant response
   cacheLastResponse(messages, options.lastAssistantMessage);
 
-  // Run all handlers concurrently
+  // Run all handlers concurrently (manual wisdom extraction only - no automatic extraction)
   const results = await Promise.allSettled([
     captureLearning(transcript),
     captureWork(transcript),
     resetTab(),
-    captureWisdom(transcript),
     captureRelationship(transcript),
     captureWorkLearning(transcript),
-    captureReflection(transcript),
     checkPendingFailure(transcript),
   ]);
 
@@ -50,10 +46,8 @@ export async function runStopHandlers(
     "learning",
     "work",
     "tab",
-    "wisdom",
     "relationship",
     "work-learning",
-    "reflection",
     "pending-failure",
   ];
   for (let i = 0; i < results.length; i++) {
