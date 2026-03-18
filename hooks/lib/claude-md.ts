@@ -13,8 +13,8 @@ import { readSetupState, buildSetupPrompt } from "./setup";
 import { loadTelos } from "./context";
 
 const TEMPLATE_PATH = paiPath("AGENTS.md.template");
-const OUTPUT_PATH = resolve(process.env.HOME!, ".config", "opencode", "AGENTS.md");
-const SYMLINK_PATH = resolve(process.env.HOME!, ".claude", "CLAUDE.md");
+const OUTPUT_PATH = resolve(process.env.PAI_OPENCODE_DIR!, "AGENTS.md");
+const SYMLINK_PATH = resolve(process.env.PAI_CLAUDE_DIR!, "CLAUDE.md");
 
 function latestMtime(...filePaths: string[]): number {
   let latest = 0;

@@ -10,7 +10,7 @@ import { log, readJson, writeJson, copySkills, countSkills, countMd } from "../l
 import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
 
 const PAI_DIR = resolve(dirname(import.meta.dir), "..");
-const CLAUDE_DIR = resolve(process.env.HOME!, ".claude");
+const CLAUDE_DIR = process.env.PAI_CLAUDE_DIR!;
 const SETTINGS = resolve(CLAUDE_DIR, "settings.json");
 
 // --- Ensure settings.json exists ---

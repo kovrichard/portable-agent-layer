@@ -49,7 +49,7 @@ export function scaffoldTelos(paiDir: string): void {
 
 // --- Skills ---
 
-const AGENTS_SKILLS_DIR = resolve(process.env.HOME!, ".agents", "skills");
+const AGENTS_SKILLS_DIR = resolve(process.env.PAI_AGENTS_DIR!, "skills");
 
 /**
  * Install PAI skills into the shared ~/.agents/skills/<name>/SKILL.md standard,

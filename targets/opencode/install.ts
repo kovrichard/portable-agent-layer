@@ -9,7 +9,7 @@ import { log, writeJson, copySkills, countSkills } from "../lib";
 import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
 
 const PAI_DIR = resolve(dirname(import.meta.dir), "..");
-const OC_GLOBAL_DIR = resolve(process.env.HOME!, ".config", "opencode");
+const OC_GLOBAL_DIR = process.env.PAI_OPENCODE_DIR!;
 const OC_PLUGINS_DIR = resolve(OC_GLOBAL_DIR, "plugins");
 
 mkdirSync(OC_PLUGINS_DIR, { recursive: true });
@@ -40,7 +40,7 @@ try {
 }
 
 // --- 3. Install skills into ~/.agents/skills/ ---
-const claudeSkillsDir = resolve(process.env.HOME!, ".claude", "skills");
+const claudeSkillsDir = resolve(process.env.PAI_CLAUDE_DIR!, "skills");
 copySkills(PAI_DIR, claudeSkillsDir);
 log.success("Installed skills to ~/.agents/skills/");
 
