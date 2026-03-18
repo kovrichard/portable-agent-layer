@@ -121,7 +121,7 @@ const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
           logDebug("opencode:event", `Got ${messages.length} transcript messages`);
           if (messages.length < 2) return;
 
-          await runStopHandlers(JSON.stringify(messages));
+          await runStopHandlers(JSON.stringify(messages), { sessionId: sessionID });
           logDebug("opencode:event", "Stop handlers complete");
         } catch (err) {
           logError("opencode:session.stop", err);

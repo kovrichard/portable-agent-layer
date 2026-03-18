@@ -17,6 +17,7 @@ import { extractContent, extractLastAssistant, parseMessages } from "./transcrip
 
 export interface RunStopHandlersOptions {
   lastAssistantMessage?: string;
+  sessionId?: string;
 }
 
 /** Run all stop handlers with a transcript string */
@@ -37,7 +38,7 @@ export async function runStopHandlers(
     captureLearning(transcript),
     captureWork(transcript),
     resetTab(),
-    captureRelationship(transcript),
+    captureRelationship(transcript, options.sessionId),
     captureWorkLearning(transcript),
     checkPendingFailure(transcript),
   ]);

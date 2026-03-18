@@ -29,4 +29,7 @@ if (messages.length < 2) process.exit(0);
 
 // Serialize and run handlers
 const transcript = JSON.stringify(messages);
-await runStopHandlers(transcript, { lastAssistantMessage: input.last_assistant_message });
+await runStopHandlers(transcript, {
+  lastAssistantMessage: input.last_assistant_message,
+  sessionId: input.session_id,
+});

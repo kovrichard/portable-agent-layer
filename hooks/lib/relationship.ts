@@ -69,7 +69,7 @@ export function analyzeTranscript(messages: Message[]): RelationshipNote[] {
         }
       }
 
-      if (notes.length >= 8) return notes;
+      if (notes.length >= 5) return notes;
     }
   }
 
@@ -84,12 +84,43 @@ function dailyFilePath(date: Date): string {
   return resolve(monthDir, `${yyyy}-${mm}-${dd}.md`);
 }
 
+/** Check if a session already has notes in today's file */
+export function hasSessionNotes(sessionId: string): boolean {
+  const filepath = dailyFilePath(new Date());
+  if (!existsSync(filepath)) return false;
+  try {
+    const content = readFileSync(filepath, "utf-8");
+    return content.includes(`<!-- session:${sessionId} -->`);
+  } catch {
+    return false;
+  }
+}
+
+/** Deduplicate notes against what's already in today's file */
+function dedup(notes: RelationshipNote[], filepath: string): RelationshipNote[] {
+  if (!existsSync(filepath)) return notes;
+  try {
+    const existing = readFileSync(filepath, "utf-8").toLowerCase();
+    return notes.filter((n) => {
+      // Check if a substantially similar line already exists
+      const key = n.text.slice(0, 80).toLowerCase();
+      return !existing.includes(key);
+    });
+  } catch {
+    return notes;
+  }
+}
+
 /** Append notes to today's relationship file */
-export function appendNotes(notes: RelationshipNote[]): void {
+export function appendNotes(notes: RelationshipNote[], sessionId?: string): void {
   if (notes.length === 0) return;
 
   const filepath = dailyFilePath(new Date());
   const today = new Date().toISOString().slice(0, 10);
+
+  // Deduplicate against existing content
+  const fresh = dedup(notes, filepath);
+  if (fresh.length === 0) return;
 
   const lines: string[] = [];
 
@@ -99,8 +130,9 @@ export function appendNotes(notes: RelationshipNote[]): void {
 
   const timestamp = new Date().toTimeString().slice(0, 5);
   lines.push(`## ${timestamp}`);
+  if (sessionId) lines.push(`<!-- session:${sessionId} -->`);
 
-  for (const note of notes) {
+  for (const note of fresh) {
     if (note.type === "O" && note.confidence !== undefined) {
       lines.push(`- O(c=${note.confidence}): ${note.text}`);
     } else {
