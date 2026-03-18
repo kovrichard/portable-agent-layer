@@ -27,3 +27,5 @@ memory/learning/session/
 # New memory subsystems
 memory/wisdom/frames/
 memory/relationship/
+
+node_modules/

@@ -5,7 +5,7 @@
  * This plugin just wires opencode's hook API to those shared functions.
  */
 
-import type { Plugin } from "@opencode-ai/plugin";
+import type { Plugin, PluginInput } from "@opencode-ai/plugin";
 import { resolve } from "path";
 import { writeFileSync } from "fs";
 
@@ -16,7 +16,7 @@ async function lib<T>(mod: string): Promise<T> {
   return await import(resolve(PAI_DIR, "hooks", "lib", mod));
 }
 
-const PAIPlugin: Plugin = async ({ directory, client }) => {
+const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   // Pre-load shared modules
   const { loadActiveWork, countSignals, buildGreeting, buildSystemReminder } = await lib<
     typeof import("../../hooks/lib/context")
@@ -77,7 +77,9 @@ const PAIPlugin: Plugin = async ({ directory, client }) => {
       
       if (event.type === "session.idle" || event.type === "session.diff") {
         try {
-          const messages = await client.session.getMessages();
+          // Access messages from session - API may vary by opencode version
+          const session = client.session as unknown as { messages?: unknown[]; getMessages?: () => Promise<unknown[]> };
+          const messages = session.getMessages ? await session.getMessages() : (session.messages || []);
           const transcript = JSON.stringify(messages);
           await runStopHandlers(transcript);
         } catch (err) {
@@ -90,8 +92,8 @@ const PAIPlugin: Plugin = async ({ directory, client }) => {
     "chat.message": async (_input, output) => {
       const text =
         output.parts
-          ?.filter((p: any) => p.type === "text")
-          .map((p: any) => p.text)
+          ?.filter((p) => p.type === "text")
+          .map((p) => p.text || "")
           .join(" ") ?? "";
 
       // Explicit rating
@@ -174,14 +176,17 @@ const PAIPlugin: Plugin = async ({ directory, client }) => {
     },
 
     // --- Security: block dangerous tool executions ---
-    "tool.execute.before": async (_input, output) => {
+    "tool.execute.before": async (
+      _input: { tool: string; sessionID: string; callID: string },
+      output: { args: Record<string, unknown> | string }
+    ) => {
       const toolName = _input.tool;
 
       if (toolName === "shell" || toolName === "bash") {
         const cmd =
           typeof output.args === "string"
             ? output.args
-            : (output.args?.command ?? "");
+            : (output.args?.command as string) ?? "";
         const reason = checkBashCommand(cmd);
         if (reason) {
           throw new Error(`PAI Security: Blocked — ${reason}`);
@@ -193,10 +198,11 @@ const PAIPlugin: Plugin = async ({ directory, client }) => {
         toolName === "edit" ||
         toolName === "patch"
       ) {
+        const args = output.args as Record<string, string>;
         const filePath =
-          output.args?.file_path ??
-          output.args?.filePath ??
-          output.args?.path ??
+          args?.file_path ??
+          args?.filePath ??
+          args?.path ??
           "";
         if (checkFilePath(filePath)) {
           throw new Error(`PAI Security: Protected path — ${filePath}`);
@@ -205,7 +211,10 @@ const PAIPlugin: Plugin = async ({ directory, client }) => {
     },
 
     // --- Capture work state after tool use ---
-    "tool.execute.after": async (input, _output) => {
+    "tool.execute.after": async (
+      input: { tool: string; sessionID: string; callID: string; args: unknown },
+      _output: { title: string; output: string; metadata: unknown }
+    ) => {
       try {
         writeFileSync(
           resolve(ensureDir(paths.state()), "current-work.json"),
@@ -219,7 +228,10 @@ const PAIPlugin: Plugin = async ({ directory, client }) => {
     },
 
     // --- Inject PAI_DIR into shell environment ---
-    "shell.env": async (_input, output) => {
+    "shell.env": async (
+      _input: { cwd: string; sessionID?: string; callID?: string },
+      output: { env: Record<string, string> }
+    ) => {
       output.env.PAI_DIR = PAI_DIR;
     },
   };

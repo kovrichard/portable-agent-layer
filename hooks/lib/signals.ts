@@ -10,7 +10,7 @@ export interface Signal {
 }
 
 /** Append a signal to a JSONL file in the signals directory */
-export function emitSignal(filename: string, data: Omit<Signal, "ts">): void {
+export function emitSignal(filename: string, data: { type: string; [key: string]: unknown }): void {
   const signal: Signal = { ts: now(), ...data };
   const filepath = resolve(paths.signals(), filename);
   appendFileSync(filepath, JSON.stringify(signal) + "\n");
@@ -18,8 +18,7 @@ export function emitSignal(filename: string, data: Omit<Signal, "ts">): void {
 
 /** Append a rating signal */
 export function emitRating(rating: number, context: string, source: string = "explicit", responsePreview?: string): void {
-  const data: Record<string, unknown> = { type: "rating", rating, context, source };
-  if (responsePreview) data.response_preview = responsePreview;
+  const data = { type: "rating", rating, context, source, ...(responsePreview ? { response_preview: responsePreview } : {}) };
   emitSignal("ratings.jsonl", data);
 }
 
