@@ -23,8 +23,8 @@ export function collectExportFiles(): string[] {
     .filter(
       (f) =>
         f.length > 0 &&
+        !f.startsWith(".") &&
         !f.startsWith("node_modules/") &&
-        !f.startsWith(".husky/_/") &&
         !f.startsWith("pai-export-") &&
         !f.startsWith("backups/")
     );
