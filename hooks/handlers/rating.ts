@@ -16,11 +16,21 @@ import { ensureDir, paths } from "../lib/paths";
 import { emitRating } from "../lib/signals";
 import { fileTimestamp, monthPath, now } from "../lib/time";
 
-/** Read cached last assistant response (written by StopOrchestrator) */
-function getLastResponse(): string {
+/** Read cached last assistant response (written by StopOrchestrator), looked up by session */
+function getLastResponse(sessionId?: string): string {
   try {
-    const cachePath = resolve(paths.state(), "last-response.txt");
-    if (existsSync(cachePath)) return readFileSync(cachePath, "utf-8");
+    const cachePath = resolve(paths.state(), "last-responses.json");
+    if (!existsSync(cachePath)) return "";
+    const cache = JSON.parse(readFileSync(cachePath, "utf-8")) as Record<
+      string,
+      { response?: string }
+    >;
+    // Look up by session, or fall back to most recent entry
+    if (sessionId && cache[sessionId]) {
+      return cache[sessionId].response ?? "";
+    }
+    // No session match — return empty rather than wrong context
+    return "";
   } catch {
     /* non-critical */
   }
@@ -112,6 +122,20 @@ function isPraise(prompt: string): boolean {
     POSITIVE_PHRASES.has(normalized) ||
     (words.length === 2 && words.every((w) => POSITIVE_PRAISE_WORDS.has(w)))
   );
+}
+
+// ── System-Injected Tag Stripping ──
+
+/**
+ * Strip IDE/system-injected XML tags from the prompt to recover the raw user text.
+ * Claude Code VSCode extension prepends tags like <ide_opened_file>...</ide_opened_file>
+ * and <ide_selection>...</ide_selection> to the prompt field in hooks.
+ */
+const INJECTED_TAG_RE =
+  /<(?:ide_opened_file|ide_selection|system-reminder|task-notification)[^>]*>[\s\S]*?<\/(?:ide_opened_file|ide_selection|system-reminder|task-notification)>/gi;
+
+function stripInjectedTags(prompt: string): string {
+  return prompt.replace(INJECTED_TAG_RE, "").trim();
 }
 
 // ── System Text Filters ──
@@ -243,9 +267,10 @@ function handleRating(
   rating: number,
   context: string,
   source: string,
-  detailedContext?: string
+  detailedContext?: string,
+  sessionId?: string
 ): void {
-  const responsePreview = getLastResponse().slice(0, 500);
+  const responsePreview = getLastResponse(sessionId).slice(0, 500);
   emitRating(rating, context, source, responsePreview);
 
   if (rating <= 3) {
@@ -265,12 +290,15 @@ function handleRating(
 
 // ── Implicit Sentiment ──
 
-async function handleImplicitSentiment(message: string): Promise<void> {
+async function handleImplicitSentiment(
+  message: string,
+  sessionId?: string
+): Promise<void> {
   const trimmed = message.trim();
 
   // Fast-path: short praise -> rating 8
   if (isPraise(trimmed)) {
-    handleRating(8, `Direct praise: "${trimmed}"`, "implicit");
+    handleRating(8, `Direct praise: "${trimmed}"`, "implicit", undefined, sessionId);
     return;
   }
 
@@ -281,7 +309,7 @@ async function handleImplicitSentiment(message: string): Promise<void> {
   if (trimmed.length < 5 || trimmed.length > 500) return;
   if (/^[/$`{]/.test(trimmed) || trimmed.includes("\n\n")) return;
 
-  const lastResponse = getLastResponse().slice(0, 300);
+  const lastResponse = getLastResponse(sessionId).slice(0, 300);
   const contextBlock = lastResponse
     ? `CONTEXT (last AI response excerpt):\n${lastResponse}\n\nCURRENT USER MESSAGE:\n${trimmed.slice(0, 300)}`
     : trimmed.slice(0, 300);
@@ -309,7 +337,8 @@ async function handleImplicitSentiment(message: string): Promise<void> {
         rating,
         `${parsed.summary}: ${trimmed.slice(0, 150)}`,
         "implicit",
-        parsed.detailed_context
+        parsed.detailed_context,
+        sessionId
       );
     }
   } catch (err) {
@@ -320,20 +349,24 @@ async function handleImplicitSentiment(message: string): Promise<void> {
 
 // ── Main Export ──
 
-export async function captureRating(message: string): Promise<void> {
+export async function captureRating(message: string, sessionId?: string): Promise<void> {
+  // Strip IDE/system-injected tags to recover raw user text
+  const cleaned = stripInjectedTags(message);
+
   // Path 1: Explicit rating
-  const explicit = parseExplicitRating(message);
+  const explicit = parseExplicitRating(cleaned);
   if (explicit) {
-    const responseContext = getLastResponse().slice(0, 500);
+    const responseContext = getLastResponse(sessionId).slice(0, 500);
     handleRating(
       explicit.rating,
-      explicit.comment || message.slice(0, 200),
+      explicit.comment || cleaned.slice(0, 200),
       "explicit",
-      responseContext
+      responseContext,
+      sessionId
     );
     return;
   }
 
   // Path 2: Implicit sentiment (requires ANTHROPIC_API_KEY — inference silently no-ops without it)
-  await handleImplicitSentiment(message);
+  await handleImplicitSentiment(cleaned, sessionId);
 }

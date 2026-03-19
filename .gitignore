@@ -13,7 +13,7 @@ memory/state/setup.json
 memory/state/session-names.json
 memory/state/signal-cache.json
 memory/state/pending-failure.json
-memory/state/last-response.txt
+memory/state/last-responses.json
 memory/state/counts.json
 memory/state/captured-learnings.json
 memory/state/debug.log
@@ -31,5 +31,14 @@ memory/learning/session/
 # New memory subsystems
 memory/wisdom/frames/
 memory/relationship/
+memory/entities/entity-index.json
+
+# Export archives
+pai-export-*.zip
+
+# Automatic backups
+backups/
 
 node_modules/
+
+.test-tmp/

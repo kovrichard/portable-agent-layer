@@ -22,7 +22,7 @@ logDebug("UserPromptOrchestrator", `Input: ${JSON.stringify(input).slice(0, 200)
 if (!input?.prompt) process.exit(0);
 
 const results = await Promise.allSettled([
-  captureRating(input.prompt),
+  captureRating(input.prompt, input.session_id),
   captureSessionName(input.prompt, input.session_id ?? ""),
 ]);
 

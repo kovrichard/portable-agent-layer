@@ -19,8 +19,11 @@
     "prepare": "husky",
     "install:all": "bun run install.ts",
     "uninstall": "bun run uninstall.ts",
+    "tool:entity-save": "bun run tools/entity-save.ts",
     "tool:patterns": "bun run tools/pattern-synthesis.ts",
-    "tool:reflect": "bun run tools/relationship-reflect.ts"
+    "tool:reflect": "bun run tools/relationship-reflect.ts",
+    "export": "bun run tools/export.ts",
+    "import": "bun run tools/import.ts"
   },
   "lint-staged": {
     "*.ts": [
@@ -30,10 +33,14 @@
   "devDependencies": {
     "@biomejs/biome": "2.4.7",
     "@opencode-ai/plugin": "latest",
+    "@types/adm-zip": "^0.5.8",
     "@types/bun": "latest",
     "@types/node": "latest",
     "husky": "^9.1.7",
     "lint-staged": "^15.5.0",
     "typescript": "^5.9.0"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16"
   }
 }

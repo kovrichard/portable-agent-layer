@@ -31,6 +31,7 @@ export const paths = {
   wisdom: () => ensureDir(paiPath("memory", "wisdom", "frames")),
   wisdomState: () => ensureDir(paiPath("memory", "wisdom", "state")),
   relationship: () => ensureDir(paiPath("memory", "relationship")),
+  entities: () => ensureDir(paiPath("memory", "entities")),
   failures: () => ensureDir(paiPath("memory", "learning", "failures")),
   sessionLearning: () => ensureDir(paiPath("memory", "learning", "session")),
 } as const;
