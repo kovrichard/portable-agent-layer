@@ -2,11 +2,17 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import {
+  getExistingContentId,
   getOrCreateCompany,
+  getOrCreateLink,
   getOrCreatePerson,
+  getOrCreateSource,
+  isUrlAlreadyParsed,
   loadEntityIndex,
   normalizeCompanyKey,
   normalizeName,
+  normalizeSourceKey,
+  normalizeUrl,
   processEntities,
   saveEntityIndex,
 } from "./entities";
@@ -39,12 +45,31 @@ describe("normalizeCompanyKey", () => {
 
 // --- Index I/O ---
 
+describe("normalizeUrl", () => {
+  test("lowercases, trims, strips trailing slash", () => {
+    expect(normalizeUrl("  HTTPS://Example.COM/  ")).toBe("https://example.com");
+  });
+});
+
+describe("normalizeSourceKey", () => {
+  test("uses URL when available", () => {
+    expect(normalizeSourceKey("https://arxiv.org/abs/123", null, null)).toBe(
+      "https://arxiv.org/abs/123"
+    );
+  });
+
+  test("falls back to author|publication", () => {
+    expect(normalizeSourceKey(null, "John Doe", "Nature")).toBe("john doe|nature");
+  });
+});
+
 describe("loadEntityIndex", () => {
   test("returns empty index when file missing", () => {
     const index = loadEntityIndex(TEST_INDEX);
     expect(index.people).toEqual({});
     expect(index.companies).toEqual({});
-    expect(index.version).toBe("1.0.0");
+    expect(index.links).toEqual({});
+    expect(index.sources).toEqual({});
   });
 
   test("loads existing index from disk", () => {
@@ -125,6 +150,92 @@ describe("getOrCreateCompany", () => {
     getOrCreateCompany({ name: "DeepMind", domain: "deepmind.com" }, index, "src-1");
 
     expect(Object.keys(index.companies)).toHaveLength(2);
+  });
+});
+
+// --- Link deduplication ---
+
+describe("getOrCreateLink", () => {
+  test("creates new link with UUID", () => {
+    const index = loadEntityIndex(TEST_INDEX);
+    const id = getOrCreateLink({ url: "https://example.com/post" }, index, "src-1");
+
+    expect(id).toMatch(/^[0-9a-f]{8}-/);
+    expect(index.links["https://example.com/post"].occurrences).toBe(1);
+  });
+
+  test("deduplicates by normalized URL", () => {
+    const index = loadEntityIndex(TEST_INDEX);
+    const id1 = getOrCreateLink({ url: "https://Example.COM/" }, index, "src-1");
+    const id2 = getOrCreateLink({ url: "https://example.com" }, index, "src-2");
+
+    expect(id1).toBe(id2);
+    expect(index.links["https://example.com"].occurrences).toBe(2);
+  });
+});
+
+// --- Source deduplication ---
+
+describe("getOrCreateSource", () => {
+  test("deduplicates by URL", () => {
+    const index = loadEntityIndex(TEST_INDEX);
+    const id1 = getOrCreateSource(
+      { url: "https://arxiv.org/abs/123", author: null, publication: null },
+      index,
+      "src-1"
+    );
+    const id2 = getOrCreateSource(
+      { url: "https://arxiv.org/abs/123", author: "Someone", publication: null },
+      index,
+      "src-2"
+    );
+
+    expect(id1).toBe(id2);
+  });
+
+  test("deduplicates by author|publication when no URL", () => {
+    const index = loadEntityIndex(TEST_INDEX);
+    const id1 = getOrCreateSource(
+      { url: null, author: "John Doe", publication: "Nature" },
+      index,
+      "src-1"
+    );
+    const id2 = getOrCreateSource(
+      { url: null, author: "john doe", publication: "Nature" },
+      index,
+      "src-2"
+    );
+
+    expect(id1).toBe(id2);
+    expect(Object.keys(index.sources)).toHaveLength(1);
+  });
+});
+
+// --- URL dedup checks ---
+
+describe("isUrlAlreadyParsed", () => {
+  test("returns false for unknown URL", () => {
+    const index = loadEntityIndex(TEST_INDEX);
+    expect(isUrlAlreadyParsed("https://new.com", index)).toBe(false);
+  });
+
+  test("returns true for known URL", () => {
+    const index = loadEntityIndex(TEST_INDEX);
+    getOrCreateLink({ url: "https://known.com" }, index, "src-1");
+    expect(isUrlAlreadyParsed("https://known.com", index)).toBe(true);
+  });
+});
+
+describe("getExistingContentId", () => {
+  test("returns first source_id for known URL", () => {
+    const index = loadEntityIndex(TEST_INDEX);
+    getOrCreateLink({ url: "https://known.com" }, index, "src-1");
+    expect(getExistingContentId("https://known.com", index)).toBe("src-1");
+  });
+
+  test("returns null for unknown URL", () => {
+    const index = loadEntityIndex(TEST_INDEX);
+    expect(getExistingContentId("https://unknown.com", index)).toBeNull();
   });
 });
 

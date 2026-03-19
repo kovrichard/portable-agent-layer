@@ -40,6 +40,8 @@ if (!raw.trim()) {
 let data: {
   people: Array<Record<string, unknown>>;
   companies: Array<Record<string, unknown>>;
+  links?: Array<Record<string, unknown>>;
+  sources?: Array<Record<string, unknown>>;
 };
 try {
   data = JSON.parse(raw);
@@ -52,10 +54,17 @@ if (!Array.isArray(data.people) || !Array.isArray(data.companies)) {
   console.error('Error: JSON must have "people" and "companies" arrays.');
   process.exit(1);
 }
+data.links ??= [];
+data.sources ??= [];
 
 const before = loadEntityIndex();
-const peopleBefore = Object.keys(before.people).length;
-const companiesBefore = Object.keys(before.companies).length;
+const counts = (idx: ReturnType<typeof loadEntityIndex>) => ({
+  people: Object.keys(idx.people).length,
+  companies: Object.keys(idx.companies).length,
+  links: Object.keys(idx.links).length,
+  sources: Object.keys(idx.sources).length,
+});
+const cb = counts(before);
 
 const result = processEntities(
   {
@@ -65,16 +74,18 @@ const result = processEntities(
       domain: string | null;
       [key: string]: unknown;
     }>,
+    links: data.links as Array<{ url: string; [key: string]: unknown }>,
+    sources: data.sources as Array<{
+      url: string | null;
+      author: string | null;
+      publication: string | null;
+      [key: string]: unknown;
+    }>,
   },
   sourceId
 );
 
-const after = loadEntityIndex();
-const peopleAfter = Object.keys(after.people).length;
-const companiesAfter = Object.keys(after.companies).length;
-
-const newPeople = peopleAfter - peopleBefore;
-const newCompanies = companiesAfter - companiesBefore;
+const ca = counts(loadEntityIndex());
 
 console.log(
   JSON.stringify(
@@ -82,13 +93,16 @@ console.log(
       saved: {
         people: result.people.length,
         companies: result.companies.length,
+        links: result.links.length,
+        sources: result.sources.length,
       },
-      new: { people: newPeople, companies: newCompanies },
-      existing: {
-        people: result.people.length - newPeople,
-        companies: result.companies.length - newCompanies,
+      new: {
+        people: ca.people - cb.people,
+        companies: ca.companies - cb.companies,
+        links: ca.links - cb.links,
+        sources: ca.sources - cb.sources,
       },
-      total: { people: peopleAfter, companies: companiesAfter },
+      total: ca,
     },
     null,
     2
