@@ -18,7 +18,9 @@
     "lint-staged": "lint-staged",
     "prepare": "husky",
     "install:all": "bun run install.ts",
-    "uninstall": "bun run uninstall.ts"
+    "uninstall": "bun run uninstall.ts",
+    "tool:patterns": "bun run tools/pattern-synthesis.ts",
+    "tool:reflect": "bun run tools/relationship-reflect.ts"
   },
   "lint-staged": {
     "*.ts": [
