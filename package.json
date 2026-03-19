@@ -20,6 +20,7 @@
     "install:all": "bun run install.ts",
     "uninstall": "bun run uninstall.ts",
     "tool:entity-save": "bun run tools/entity-save.ts",
+    "tool:fyzz-api": "bun run tools/fyzz-api.ts",
     "tool:patterns": "bun run tools/pattern-synthesis.ts",
     "tool:reflect": "bun run tools/relationship-reflect.ts",
     "export": "bun run tools/export.ts",
