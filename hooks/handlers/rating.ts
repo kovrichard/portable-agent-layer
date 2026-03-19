@@ -1,12 +1,18 @@
 /**
  * UserPromptSubmit handler: detects explicit and implicit ratings.
- * Extracted from RatingCapture.ts — pure handler function.
+ * Ported from original PAI's RatingCapture.hook.ts with rich sentiment analysis.
+ *
+ * - Explicit: "7", "8 - great work", "rating: 8"
+ * - Implicit: Haiku-powered sentiment inference on every user message
+ * - Low ratings (<5) write detailed learning markdown
+ * - Very low ratings (<=3) write pending-failure.json for Stop handler
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { inference } from "../lib/inference";
-import { paths } from "../lib/paths";
+import { categorizeLearning } from "../lib/learning-category";
+import { ensureDir, paths } from "../lib/paths";
 import { emitRating } from "../lib/signals";
 import { fileTimestamp, monthPath, now } from "../lib/time";
 
@@ -21,96 +27,289 @@ function getLastResponse(): string {
   return "";
 }
 
-// Match: "8", "8/10", "8 - great work", "rating: 8", "score: 8"
-const EXPLICIT_RE = /(?:^|rating:?\s*|score:?\s*)(\d|10)(?:\s*(?:\/10|[-.])|$|\s)/i;
+// ── Explicit Rating Detection ──
 
-const PRAISE_PATTERNS =
-  /^(great\s*job|nice|perfect|awesome|excellent|thanks|thank\s*you|well\s*done|good\s*job|love\s*it|amazing|brilliant|fantastic|wonderful|superb|nailed\s*it)[.!]?$/i;
+/**
+ * Parse explicit rating pattern from prompt.
+ * Matches: "7", "8 - good work", "6: needs work", "9 excellent", "10!"
+ * Rejects: "3 items", "5 things to fix", "7th thing", "10/10"
+ */
+function parseExplicitRating(
+  prompt: string
+): { rating: number; comment?: string } | null {
+  const trimmed = prompt.trim();
+  const match = trimmed.match(/^(10|[1-9])(?:\s*[-:]\s*|\s+)?(.*)$/);
+  if (!match) return null;
 
-function handleRating(rating: number, context: string, source: string): void {
-  const responsePreview = getLastResponse().slice(0, 500);
-  emitRating(rating, context, source, responsePreview);
+  const rating = parseInt(match[1], 10);
+  if (rating < 1 || rating > 10) return null;
 
-  if (rating <= 3) {
-    // Deep failure — write pending file for Stop handler to pick up with full transcript
-    writeFileSync(
-      resolve(paths.state(), "pending-failure.json"),
-      JSON.stringify({ rating, context, source, ts: now() }, null, 2),
-      "utf-8"
-    );
-  } else if (rating < 6) {
-    // Low rating but not critical — write simple low-ratings note
-    const dir = resolve(paths.learning(), "low-ratings", monthPath());
-    mkdirSync(dir, { recursive: true });
+  // Reject if char after number is not a separator (catches "10/10", "3.5", "7th")
+  const afterNumber = trimmed.slice(match[1].length);
+  if (afterNumber.length > 0 && /^[/.\dA-Za-z]/.test(afterNumber)) return null;
 
-    writeFileSync(
-      resolve(dir, `${fileTimestamp()}.md`),
-      [
-        `# Low Rating: ${rating}/10`,
-        `**Source:** ${source}`,
-        `**User said:** ${context}`,
-        `**Last response:** ${responsePreview.slice(0, 200) || "(unavailable)"}`,
-        "",
-        "## What went wrong?",
-        "",
-        "## What should be done differently?",
-        "",
-      ].join("\n")
-    );
+  const rest = match[2]?.trim() || undefined;
+
+  // Reject if rest starts with words indicating a sentence, not a rating
+  if (rest) {
+    const sentenceStarters =
+      /^(items?|things?|steps?|files?|lines?|bugs?|issues?|errors?|times?|minutes?|hours?|days?|seconds?|percent|%|th\b|st\b|nd\b|rd\b|of\b|in\b|at\b|to\b|the\b|a\b|an\b)/i;
+    if (sentenceStarters.test(rest)) return null;
   }
+
+  return { rating, comment: rest };
 }
+
+// ── Praise Fast-Path ──
+
+const POSITIVE_PRAISE_WORDS = new Set([
+  "excellent",
+  "amazing",
+  "brilliant",
+  "fantastic",
+  "wonderful",
+  "incredible",
+  "awesome",
+  "perfect",
+  "great",
+  "nice",
+  "superb",
+  "outstanding",
+  "stellar",
+  "phenomenal",
+  "remarkable",
+  "terrific",
+  "splendid",
+]);
+
+const POSITIVE_PHRASES = new Set([
+  "great job",
+  "good job",
+  "nice work",
+  "well done",
+  "nice job",
+  "good work",
+  "love it",
+  "nailed it",
+  "looks great",
+  "looks good",
+  "rock solid",
+  "thats great",
+  "that works",
+  "thank you",
+  "thanks",
+]);
+
+function isPraise(prompt: string): boolean {
+  const normalized = prompt
+    .trim()
+    .toLowerCase()
+    .replace(/[.!?,'"]/g, "");
+  const words = normalized.split(/\s+/);
+  if (words.length > 3) return false;
+  return (
+    POSITIVE_PRAISE_WORDS.has(normalized) ||
+    POSITIVE_PHRASES.has(normalized) ||
+    (words.length === 2 && words.every((w) => POSITIVE_PRAISE_WORDS.has(w)))
+  );
+}
+
+// ── System Text Filters ──
+
+const SYSTEM_TEXT_PATTERNS = [
+  /^<task-notification>/i,
+  /^<system-reminder>/i,
+  /^This session is being continued from a previous conversation/i,
+  /^Please continue the conversation/i,
+  /^Note:.*was read before/i,
+];
+
+function isSystemText(prompt: string): boolean {
+  const trimmed = prompt.trim();
+  return SYSTEM_TEXT_PATTERNS.some((re) => re.test(trimmed));
+}
+
+// ── Sentiment Analysis ──
 
 const SENTIMENT_SCHEMA = {
   type: "object",
   properties: {
     rating: { type: ["number", "null"] },
-    sentiment: { type: "string" },
-    neutral: { type: "boolean" },
+    sentiment: { enum: ["positive", "negative", "neutral"] },
+    confidence: { type: "number" },
+    summary: { type: "string" },
+    detailed_context: { type: "string" },
   },
-  required: ["rating", "sentiment", "neutral"],
+  required: ["rating", "sentiment", "confidence", "summary", "detailed_context"],
   additionalProperties: false,
 } as const;
+
+interface SentimentResult {
+  rating: number | null;
+  sentiment: "positive" | "negative" | "neutral";
+  confidence: number;
+  summary: string;
+  detailed_context: string;
+}
+
+const SENTIMENT_SYSTEM_PROMPT = `Analyze the user's message for emotional sentiment toward the AI assistant.
+
+OUTPUT FORMAT (JSON only):
+{
+  "rating": <1-10 or null>,
+  "sentiment": "positive" | "negative" | "neutral",
+  "confidence": <0.0-1.0>,
+  "summary": "<brief explanation, 10 words max>",
+  "detailed_context": "<comprehensive analysis, 50-150 words>"
+}
+
+DETAILED_CONTEXT REQUIREMENTS:
+1. What the user was trying to accomplish
+2. What the AI did (or failed to do)
+3. Why the user reacted this way (root cause)
+4. What specific behavior triggered this reaction
+5. What the AI should do differently (negative) or what worked (positive)
+
+RATING SCALE:
+- 1-2: Strong frustration, anger, disappointment
+- 3-4: Mild frustration, dissatisfaction
+- 5: Neutral
+- 6-7: Satisfaction, approval
+- 8-9: Strong approval, impressed
+- 10: Extraordinary enthusiasm
+
+CRITICAL DISTINCTIONS:
+- Profanity can indicate EITHER frustration OR excitement — use context
+- Sarcasm: "Oh great, another error" = negative despite "great"
+- Short praise ("great job", "nice") = STRONG APPROVAL (8-9), not mild
+
+IMPLIED SENTIMENT (most feedback is implied, not explicit):
+
+Implied NEGATIVE (rate 2-4):
+- CORRECTIONS: "No, I meant..." / "That's not what I said" -> 3-4
+- REPEATED REQUESTS: Having to ask the same thing twice -> 2-3
+- BEHAVIORAL CORRECTIONS: "Don't do that" / "Stop doing X" -> 3
+- EXASPERATED QUESTIONS: "Why is this still broken?" -> 2-3
+- SHORT DISMISSALS: "whatever" / "fine" / "just do it" -> 3-4
+- POINTING OUT OMISSIONS: "What about X?" (obviously required) -> 4
+
+Implied POSITIVE (rate 6-8):
+- TRUST SIGNALS: "Alright, fix all of it" / "Go ahead" -> 7
+- BUILDING ON WORK: "Now also add..." / "Next, do..." -> 6-7
+- ENGAGED FOLLOW-UPS: "What about X?" (exploring, not correcting) -> 6
+- MOVING FORWARD: Accepting output and giving next task -> 6
+
+WHEN TO RETURN null FOR RATING:
+- Neutral technical questions ("Can you check the logs?")
+- Simple commands ("Do it", "Yes", "Continue")
+- No emotional indicators present`;
+
+const MIN_CONFIDENCE = 0.5;
+
+// ── Rating Handling ──
+
+function writeLearningMarkdown(
+  rating: number,
+  source: string,
+  context: string,
+  detailedContext: string
+): void {
+  const category = categorizeLearning(context, detailedContext);
+  const dir = ensureDir(resolve(paths.sessionLearning(), monthPath()));
+  const filename = `${fileTimestamp()}_${source}-rating-${rating}_${category}.md`;
+
+  const responsePreview = getLastResponse().slice(0, 400);
+
+  const content = [
+    `# ${source === "explicit" ? "Low Rating" : "Implicit Low Rating"}: ${rating}/10`,
+    `**Date:** ${new Date().toISOString().slice(0, 10)}`,
+    `**Rating:** ${rating}/10`,
+    `**Source:** ${source}`,
+    `**Category:** ${category.toUpperCase()}`,
+    "",
+    "## Context",
+    context || "*(unavailable)*",
+    "",
+    ...(detailedContext ? ["## Analysis", detailedContext, ""] : []),
+    "## Last Response",
+    responsePreview || "*(unavailable)*",
+    "",
+  ].join("\n");
+
+  writeFileSync(resolve(dir, filename), content, "utf-8");
+}
+
+function handleRating(
+  rating: number,
+  context: string,
+  source: string,
+  detailedContext?: string
+): void {
+  const responsePreview = getLastResponse().slice(0, 500);
+  emitRating(rating, context, source, responsePreview);
+
+  if (rating <= 3) {
+    // Deep failure — write pending file for Stop handler with full transcript
+    writeFileSync(
+      resolve(paths.state(), "pending-failure.json"),
+      JSON.stringify({ rating, context, source, detailedContext, ts: now() }, null, 2),
+      "utf-8"
+    );
+    // Also write learning markdown
+    writeLearningMarkdown(rating, source, context, detailedContext ?? "");
+  } else if (rating < 5) {
+    // Low but not critical — write learning markdown
+    writeLearningMarkdown(rating, source, context, detailedContext ?? "");
+  }
+}
+
+// ── Implicit Sentiment ──
 
 async function handleImplicitSentiment(message: string): Promise<void> {
   const trimmed = message.trim();
 
-  // Fast-path: short praise → rating 8
-  if (PRAISE_PATTERNS.test(trimmed)) {
-    handleRating(8, trimmed, "implicit");
+  // Fast-path: short praise -> rating 8
+  if (isPraise(trimmed)) {
+    handleRating(8, `Direct praise: "${trimmed}"`, "implicit");
     return;
   }
+
+  // Skip system-injected text
+  if (isSystemText(trimmed)) return;
 
   // Skip very short, very long, or code-like messages
   if (trimmed.length < 5 || trimmed.length > 500) return;
   if (/^[/$`{]/.test(trimmed) || trimmed.includes("\n\n")) return;
 
-  const result = await inference({
-    user: `Rate the sentiment of this user message toward an AI assistant. If the message has no clear sentiment toward the assistant, set neutral to true and rating to null. Otherwise, provide a rating (1=very negative, 5=neutral, 10=very positive) and a one-word sentiment description.
+  const lastResponse = getLastResponse().slice(0, 300);
+  const contextBlock = lastResponse
+    ? `CONTEXT (last AI response excerpt):\n${lastResponse}\n\nCURRENT USER MESSAGE:\n${trimmed.slice(0, 300)}`
+    : trimmed.slice(0, 300);
 
-Message: "${trimmed.slice(0, 300)}"`,
-    maxTokens: 100,
-    timeout: 5000,
+  const result = await inference({
+    system: SENTIMENT_SYSTEM_PROMPT,
+    user: contextBlock,
+    maxTokens: 500,
+    timeout: 8000,
     jsonSchema: SENTIMENT_SCHEMA,
   });
 
   if (!result.success || !result.output) return;
 
   try {
-    const parsed = JSON.parse(result.output) as {
-      rating: number | null;
-      sentiment: string;
-      neutral: boolean;
-    };
+    const parsed = JSON.parse(result.output) as SentimentResult;
 
-    // Skip if explicitly neutral or no valid rating
-    if (parsed.neutral || parsed.rating === null) return;
+    // Skip if no sentiment detected or low confidence
+    if (parsed.rating === null) return;
+    if (parsed.confidence < MIN_CONFIDENCE) return;
 
     const rating = parsed.rating;
     if (typeof rating === "number" && rating >= 1 && rating <= 10 && rating !== 5) {
       handleRating(
         rating,
-        `${parsed.sentiment ?? "inferred"}: ${trimmed.slice(0, 150)}`,
-        "implicit"
+        `${parsed.summary}: ${trimmed.slice(0, 150)}`,
+        "implicit",
+        parsed.detailed_context
       );
     }
   } catch (err) {
@@ -119,18 +318,22 @@ Message: "${trimmed.slice(0, 300)}"`,
   }
 }
 
+// ── Main Export ──
+
 export async function captureRating(message: string): Promise<void> {
-  const match = message.match(EXPLICIT_RE);
-  if (match) {
-    const rating = parseInt(match[1], 10);
-    if (rating >= 1 && rating <= 10) {
-      handleRating(rating, message.slice(0, 200), "explicit");
-      return;
-    }
+  // Path 1: Explicit rating
+  const explicit = parseExplicitRating(message);
+  if (explicit) {
+    const responseContext = getLastResponse().slice(0, 500);
+    handleRating(
+      explicit.rating,
+      explicit.comment || message.slice(0, 200),
+      "explicit",
+      responseContext
+    );
+    return;
   }
 
-  // Implicit sentiment: auto-enabled when ANTHROPIC_API_KEY is set
-  if (process.env.ANTHROPIC_API_KEY) {
-    await handleImplicitSentiment(message);
-  }
+  // Path 2: Implicit sentiment (requires ANTHROPIC_API_KEY — inference silently no-ops without it)
+  await handleImplicitSentiment(message);
 }

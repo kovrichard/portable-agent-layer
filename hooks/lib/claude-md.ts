@@ -91,7 +91,7 @@ function memoryPaths(): string {
     `- **Relationship notes**: \`${resolve(mem, "relationship")}/YYYY-MM/YYYY-MM-DD.md\` — daily interaction observations (loaded every session)`,
     `- **Session learnings**: \`${resolve(mem, "learning", "session")}/YYYY-MM/*.md\` — reusable insights from sessions (loaded every session)`,
     `- **Failure captures**: \`${resolve(mem, "learning", "failures")}/YYYY-MM/{timestamp}_{slug}/capture.md\` — what went wrong and why`,
-    `- **Signals**: \`${resolve(mem, "signals")}/ratings.jsonl\`, \`learnings.jsonl\` — append-only signal logs (do not edit directly)`,
+    `- **Signals**: \`${resolve(mem, "signals")}/ratings.jsonl\` — append-only rating signal log (do not edit directly)`,
   ].join("\n");
 }
 

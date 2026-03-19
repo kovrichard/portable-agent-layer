@@ -32,7 +32,8 @@ function slugify(text: string): string {
 export async function captureFailure(
   rating: number,
   context: string,
-  transcript: string
+  transcript: string,
+  detailedContext?: string
 ): Promise<void> {
   const messages = parseMessages(transcript);
   const lastUser = extractContent(extractLastUser(messages)).slice(0, 400);
@@ -56,6 +57,7 @@ export async function captureFailure(
       "## Last Assistant Response",
       lastAssistant || "*(unavailable)*",
       "",
+      ...(detailedContext ? ["## Detailed Analysis", detailedContext, ""] : []),
       "## What Went Wrong?",
       "",
       "## What Should Be Done Differently?",

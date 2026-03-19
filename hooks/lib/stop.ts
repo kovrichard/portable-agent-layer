@@ -6,7 +6,6 @@
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { captureFailure } from "../handlers/failure";
-import { captureLearning } from "../handlers/learning";
 import { captureRelationship } from "../handlers/relationship";
 import { resetTab } from "../handlers/tab";
 import { updateCounts } from "../handlers/update-counts";
@@ -36,7 +35,6 @@ export async function runStopHandlers(
 
   // Run all handlers concurrently (manual wisdom extraction only - no automatic extraction)
   const results = await Promise.allSettled([
-    captureLearning(transcript, options.sessionId),
     captureWorkSession(transcript, options.sessionId),
     resetTab(),
     captureRelationship(transcript, options.sessionId),
@@ -46,7 +44,6 @@ export async function runStopHandlers(
   ]);
 
   const handlerNames = [
-    "learning",
     "work-session",
     "tab",
     "relationship",
@@ -91,9 +88,15 @@ async function checkPendingFailure(transcript: string): Promise<void> {
     const pending = JSON.parse(readFileSync(pendingPath, "utf-8")) as {
       rating: number;
       context: string;
+      detailedContext?: string;
     };
     unlinkSync(pendingPath);
-    await captureFailure(pending.rating, pending.context, transcript);
+    await captureFailure(
+      pending.rating,
+      pending.context,
+      transcript,
+      pending.detailedContext
+    );
   } catch {
     // Non-critical
   }

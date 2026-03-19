@@ -35,17 +35,3 @@ export function emitRating(
   };
   emitSignal("ratings.jsonl", data);
 }
-
-/** Append a learning signal */
-export function emitLearning(
-  summary: string,
-  category: string = "general",
-  sessionId?: string
-): void {
-  emitSignal("learnings.jsonl", {
-    type: "learning",
-    summary,
-    category,
-    ...(sessionId ? { sessionId } : {}),
-  });
-}

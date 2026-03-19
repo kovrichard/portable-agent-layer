@@ -37,9 +37,7 @@ function countMdFiles(dir: string): number {
 
 function getCounts(): Counts {
   const signalsDir = paths.signals();
-  const signals =
-    countJsonlLines(resolve(signalsDir, "ratings.jsonl")) +
-    countJsonlLines(resolve(signalsDir, "learnings.jsonl"));
+  const signals = countJsonlLines(resolve(signalsDir, "ratings.jsonl"));
 
   const telos = countMdFiles(paths.telos());
 

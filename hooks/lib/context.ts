@@ -162,7 +162,7 @@ function loadCachedCounts(): {
   }
   // Fallback: count live (first session before any stop has run)
   return {
-    signals: countSignals("ratings.jsonl") + countSignals("learnings.jsonl"),
+    signals: countSignals("ratings.jsonl"),
     telos: 0,
     skills: 0,
     sessions: 0,
