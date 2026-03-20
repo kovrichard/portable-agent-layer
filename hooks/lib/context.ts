@@ -220,18 +220,27 @@ export function loadLearningDigest(): string {
     if (!existsSync(sessionDir)) return "";
 
     const files: { path: string; category: string }[] = [];
-    for (const month of readdirSync(sessionDir).sort().reverse()) {
-      const monthDir = resolve(sessionDir, month);
+    // Structure: session/{year}/{month}/*.md
+    for (const year of readdirSync(sessionDir).sort().reverse()) {
+      const yearDir = resolve(sessionDir, year);
       try {
-        const monthFiles = readdirSync(monthDir)
-          .filter((f) => f.endsWith(".md"))
-          .sort()
-          .reverse()
-          .map((f) => {
-            const category = f.includes("_system") ? "system" : "algorithm";
-            return { path: resolve(monthDir, f), category };
-          });
-        files.push(...monthFiles);
+        for (const month of readdirSync(yearDir).sort().reverse()) {
+          const monthDir = resolve(yearDir, month);
+          try {
+            const monthFiles = readdirSync(monthDir)
+              .filter((f) => f.endsWith(".md"))
+              .sort()
+              .reverse()
+              .map((f) => {
+                const category = f.includes("_system") ? "system" : "algorithm";
+                return { path: resolve(monthDir, f), category };
+              });
+            files.push(...monthFiles);
+          } catch {
+            /* skip */
+          }
+          if (files.length >= 6) break;
+        }
       } catch {
         /* skip */
       }
