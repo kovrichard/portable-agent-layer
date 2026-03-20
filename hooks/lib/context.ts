@@ -321,6 +321,56 @@ export function loadFailurePatterns(): string {
   }
 }
 
+/** Load recommendations from the most recent synthesis report */
+export function loadSynthesisRecommendations(): string {
+  try {
+    const synthDir = paths.synthesis();
+    if (!existsSync(synthDir)) return "";
+
+    // Find most recent month directory
+    const months = readdirSync(synthDir).sort().reverse();
+    for (const month of months) {
+      const monthDir = resolve(synthDir, month);
+      try {
+        const files = readdirSync(monthDir)
+          .filter((f) => f.endsWith(".md"))
+          .sort()
+          .reverse();
+        if (files.length === 0) continue;
+
+        const content = readFileSync(resolve(monthDir, files[0]), "utf-8");
+
+        // Extract recommendations section
+        const recMatch = content.match(/## Recommendations\n\n([\s\S]*?)(?:\n##|\n$|$)/);
+        if (!recMatch?.[1]?.trim()) continue;
+
+        const recs = recMatch[1]
+          .trim()
+          .split("\n")
+          .filter((l) => l.trim())
+          .slice(0, 4);
+
+        if (recs.length === 0) continue;
+
+        // Extract metadata
+        const periodMatch = content.match(/\*\*Period:\*\* (.+)/);
+        const avgMatch = content.match(/\*\*Average Rating:\*\* (.+)/);
+        const header = [
+          "## Pattern Synthesis",
+          periodMatch ? `*${periodMatch[1]} — ${avgMatch?.[1] ?? ""}*` : "",
+        ]
+          .filter(Boolean)
+          .join("\n");
+
+        return [header, ...recs].join("\n");
+      } catch {}
+    }
+    return "";
+  } catch {
+    return "";
+  }
+}
+
 /** Load signal trends as a formatted string */
 export function loadSignalTrends(): string {
   try {
@@ -355,10 +405,12 @@ export function buildSystemReminder(): string {
   const digest = loadLearningDigest();
   const trends = loadSignalTrends();
   const failures = loadFailurePatterns();
+  const synthesis = loadSynthesisRecommendations();
   const parts: string[] = [];
   if (wisdom) parts.push(wisdom);
   if (relationship) parts.push(relationship);
   if (digest) parts.push(digest);
+  if (synthesis) parts.push(synthesis);
   if (trends) parts.push(trends);
   if (failures) parts.push(failures);
   if (work) parts.push(work.text);

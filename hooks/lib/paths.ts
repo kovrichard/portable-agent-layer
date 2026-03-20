@@ -34,4 +34,5 @@ export const paths = {
   entities: () => ensureDir(paiPath("memory", "entities")),
   failures: () => ensureDir(paiPath("memory", "learning", "failures")),
   sessionLearning: () => ensureDir(paiPath("memory", "learning", "session")),
+  synthesis: () => ensureDir(paiPath("memory", "learning", "synthesis")),
 } as const;

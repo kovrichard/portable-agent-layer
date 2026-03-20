@@ -114,7 +114,98 @@ function toPatternGroups(
 
 // ── Analysis ──
 
-function analyzeRatings(ratings: Rating[], period: string): SynthesisResult {
+async function generateRecommendations(
+  frustrations: PatternGroup[],
+  successes: PatternGroup[],
+  avgRating: number
+): Promise<string[]> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey || frustrations.length === 0) {
+    // Fallback: generic recommendations
+    if (frustrations.length === 0)
+      return ["Continue current patterns - no major issues detected"];
+    return frustrations
+      .slice(0, 3)
+      .map(
+        (f) =>
+          `Address "${f.pattern}" (${f.count} occurrences, avg ${f.avgRating.toFixed(1)}/10)`
+      );
+  }
+
+  try {
+    const context = [
+      `Average rating: ${avgRating.toFixed(1)}/10`,
+      "",
+      "Top frustration patterns:",
+      ...frustrations
+        .slice(0, 5)
+        .map(
+          (f) =>
+            `- ${f.pattern} (${f.count}x, avg ${f.avgRating.toFixed(1)}): ${f.examples.slice(0, 2).join("; ")}`
+        ),
+      "",
+      successes.length > 0 ? "Success patterns:" : "",
+      ...successes
+        .slice(0, 3)
+        .map((s) => `- ${s.pattern} (${s.count}x, avg ${s.avgRating.toFixed(1)})`),
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 300,
+        messages: [{ role: "user", content: context }],
+        system:
+          "You analyze AI assistant interaction patterns. Given frustration and success patterns from user ratings, generate 3-5 recommendations. Each MUST reference a specific example from the data — no generic advice like 'ask clarifying questions' or 'communicate better'. Every recommendation should name the concrete situation and the concrete fix. One sentence each. Return a JSON array of strings.",
+        output_config: {
+          format: {
+            type: "json_schema",
+            schema: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                recommendations: {
+                  type: "array",
+                  items: { type: "string" },
+                },
+              },
+              required: ["recommendations"],
+            },
+          },
+        },
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (response.ok) {
+      const data = (await response.json()) as { content?: Array<{ text?: string }> };
+      const text = data?.content?.[0]?.text?.trim();
+      if (text) {
+        const parsed = JSON.parse(text) as { recommendations: string[] };
+        if (parsed.recommendations?.length > 0) return parsed.recommendations.slice(0, 5);
+      }
+    }
+  } catch {
+    // Fallback silently
+  }
+
+  return frustrations
+    .slice(0, 3)
+    .map((f) => `Address "${f.pattern}" (${f.count} occurrences)`);
+}
+
+async function analyzeRatings(
+  ratings: Rating[],
+  period: string
+): Promise<SynthesisResult> {
   if (ratings.length === 0) {
     return {
       period,
@@ -150,26 +241,11 @@ function analyzeRatings(ratings: Rating[], period: string): SynthesisResult {
       (f) => `${f.pattern} (${f.count} occurrences, avg rating ${f.avgRating.toFixed(1)})`
     );
 
-  const recommendations: string[] = [];
-  if (frustrations.some((f) => f.pattern === "Time/Performance Issues")) {
-    recommendations.push(
-      "Consider setting clearer time expectations and progress updates"
-    );
-  }
-  if (frustrations.some((f) => f.pattern === "Wrong Approach")) {
-    recommendations.push("Ask clarifying questions before starting complex tasks");
-  }
-  if (frustrations.some((f) => f.pattern === "Over-engineering")) {
-    recommendations.push(
-      "Default to simpler solutions; only add complexity when justified"
-    );
-  }
-  if (frustrations.some((f) => f.pattern === "Communication Problems")) {
-    recommendations.push("Summarize understanding before implementation");
-  }
-  if (recommendations.length === 0) {
-    recommendations.push("Continue current patterns - no major issues detected");
-  }
+  const recommendations = await generateRecommendations(
+    frustrations,
+    successes,
+    avgRating
+  );
 
   return {
     period,
@@ -336,7 +412,7 @@ if (filtered.length === 0) {
   process.exit(0);
 }
 
-const result = analyzeRatings(filtered, period);
+const result = await analyzeRatings(filtered, period);
 
 console.log(`\nAverage Rating: ${result.avgRating.toFixed(1)}/10`);
 console.log(`Frustration Patterns: ${result.frustrations.length}`);

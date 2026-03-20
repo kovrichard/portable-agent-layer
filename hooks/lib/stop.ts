@@ -8,6 +8,7 @@ import { resolve } from "node:path";
 import { autoBackup } from "../handlers/backup";
 import { captureFailure } from "../handlers/failure";
 import { captureRelationship } from "../handlers/relationship";
+import { checkSynthesisTrigger } from "../handlers/synthesis";
 import { resetTab } from "../handlers/tab";
 import { updateCounts } from "../handlers/update-counts";
 import { captureWorkLearning } from "../handlers/work-learning";
@@ -43,6 +44,7 @@ export async function runStopHandlers(
     checkPendingFailure(transcript),
     updateCounts(),
     autoBackup(),
+    checkSynthesisTrigger(),
   ]);
 
   const handlerNames = [
@@ -53,6 +55,7 @@ export async function runStopHandlers(
     "pending-failure",
     "update-counts",
     "backup",
+    "synthesis",
   ];
   for (let i = 0; i < results.length; i++) {
     const r = results[i];
