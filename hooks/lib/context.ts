@@ -249,14 +249,14 @@ export function loadLearningDigest(): string {
   }
 }
 
-/** Load 5 most recent failure slugs as an "avoid" list */
+/** Load 5 most recent failure contexts as an "avoid" list */
 export function loadFailurePatterns(): string {
   try {
     const failuresDir = paths.failures();
     if (!existsSync(failuresDir)) return "";
 
     // Structure: failures/{year}/{month}/{timestamp}_{slug}/
-    const slugs: string[] = [];
+    const failures: string[] = [];
     for (const year of readdirSync(failuresDir).sort().reverse()) {
       const yearPath = resolve(failuresDir, year);
       for (const month of readdirSync(yearPath).sort().reverse()) {
@@ -264,20 +264,38 @@ export function loadFailurePatterns(): string {
         try {
           const dirs = readdirSync(monthPath).sort().reverse();
           for (const dir of dirs) {
-            const slug = dir.replace(/^\d{8}-\d{6}_/, "");
-            if (slug !== dir) slugs.push(slug);
-            if (slugs.length >= 5) break;
+            if (!/^\d{8}-\d{6}_/.test(dir)) continue;
+            // Read context from sentiment.json for a meaningful description
+            const sentimentPath = resolve(monthPath, dir, "sentiment.json");
+            if (existsSync(sentimentPath)) {
+              try {
+                const data = JSON.parse(readFileSync(sentimentPath, "utf-8")) as {
+                  rating?: number;
+                  context?: string;
+                };
+                if (data.context) {
+                  const label = data.rating ? `[${data.rating}/10]` : "";
+                  failures.push(`${label} ${data.context}`.trim());
+                }
+              } catch {
+                // Fall back to slug from directory name
+                failures.push(dir.replace(/^\d{8}-\d{6}_/, ""));
+              }
+            } else {
+              failures.push(dir.replace(/^\d{8}-\d{6}_/, ""));
+            }
+            if (failures.length >= 5) break;
           }
         } catch {
           /* skip */
         }
-        if (slugs.length >= 5) break;
+        if (failures.length >= 5) break;
       }
-      if (slugs.length >= 5) break;
+      if (failures.length >= 5) break;
     }
 
-    if (slugs.length === 0) return "";
-    return ["## Recent Failure Patterns (Avoid)", ...slugs.map((s) => `- ${s}`)].join(
+    if (failures.length === 0) return "";
+    return ["## Recent Failure Patterns (Avoid)", ...failures.map((f) => `- ${f}`)].join(
       "\n"
     );
   } catch {

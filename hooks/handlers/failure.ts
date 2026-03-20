@@ -24,7 +24,7 @@ function slugify(text: string): string {
       .replace(/[^a-z0-9\s]/g, "")
       .trim()
       .split(/\s+/)
-      .slice(0, 4)
+      .slice(0, 8)
       .join("-") || "failure"
   );
 }
