@@ -24,7 +24,6 @@ memory/signals/ratings.jsonl
 memory/signals/learnings.jsonl
 
 # Auto-generated learning artifacts
-memory/learning/low-ratings/
 memory/learning/failures/
 memory/learning/session/
 

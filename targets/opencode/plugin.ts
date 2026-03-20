@@ -76,15 +76,51 @@ const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       .filter((m) => m.content.length > 0);
   }
 
+  const { categorizeLearning } =
+    await lib<typeof import("../../hooks/lib/learning-category")>("learning-category.ts");
+
   // Local helpers for rating (thin wrappers around shared signals)
-  function handleRating(rating: number, context: string, source: string): void {
+  function handleRating(
+    rating: number,
+    context: string,
+    source: string,
+    detailedContext?: string,
+    userMessage?: string
+  ): void {
     emitRating(rating, context, source);
 
-    if (rating < 6) {
-      const dir = ensureDir(resolve(paths.learning(), "low-ratings", monthPath()));
+    if (rating < 5) {
+      const category = categorizeLearning(context, detailedContext ?? "");
+      const dir = ensureDir(resolve(paths.sessionLearning(), monthPath()));
+      const filename = `${fileTimestamp()}_${source}-rating-${rating}_${category}.md`;
       writeFileSync(
-        resolve(dir, `${fileTimestamp()}.md`),
-        `# Low Rating: ${rating}/10\n**Source:** ${source}\n**User said:** ${context}\n\n## What went wrong?\n\n## What should be done differently?\n`
+        resolve(dir, filename),
+        [
+          `# ${source === "explicit" ? "Low Rating" : "Implicit Low Rating"}: ${rating}/10`,
+          `**Title:** ${context.slice(0, 100) || "(low rating)"}`,
+          `**Date:** ${new Date().toISOString().slice(0, 10)}`,
+          `**Rating:** ${rating}/10`,
+          `**Source:** ${source}`,
+          `**Category:** ${category.toUpperCase()}`,
+          "",
+          "## Context",
+          context || "*(unavailable)*",
+          "",
+          ...(detailedContext ? ["## Analysis", detailedContext, ""] : []),
+        ].join("\n")
+      );
+    }
+
+    if (rating <= 3) {
+      const userPreview = userMessage?.slice(0, 400);
+      writeFileSync(
+        resolve(paths.state(), "pending-failure.json"),
+        JSON.stringify(
+          { rating, context, source, detailedContext, userPreview, ts: now() },
+          null,
+          2
+        ),
+        "utf-8"
       );
     }
   }
@@ -153,7 +189,7 @@ const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       if (match) {
         const rating = parseInt(match[1], 10);
         if (rating >= 1 && rating <= 10) {
-          handleRating(rating, text.slice(0, 200), "explicit");
+          handleRating(rating, text.slice(0, 200), "explicit", undefined, text);
           return;
         }
       }
@@ -162,7 +198,7 @@ const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       if (process.env.ANTHROPIC_API_KEY) {
         const trimmed = text.trim();
         if (PRAISE_PATTERNS.test(trimmed)) {
-          handleRating(8, trimmed, "implicit");
+          handleRating(8, trimmed, "implicit", undefined, trimmed);
           return;
         }
 
@@ -215,7 +251,9 @@ const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
                       handleRating(
                         parsed.rating,
                         `${parsed.sentiment || "inferred"}: ${trimmed.slice(0, 150)}`,
-                        "implicit"
+                        "implicit",
+                        undefined,
+                        trimmed
                       );
                     }
                   } catch {
