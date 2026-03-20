@@ -7,6 +7,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { inference } from "../lib/inference";
 import { categorizeLearning } from "../lib/learning-category";
 import { ensureDir, paths } from "../lib/paths";
 import { fileTimestamp, monthPath } from "../lib/time";
@@ -67,8 +68,30 @@ export async function captureWorkLearning(
   const lastUser = extractLastUser(messages);
   const lastAssistant = extractLastAssistant(messages);
 
-  const title = extractContent(lastUser).slice(0, 80) || "session";
+  const rawTitle = extractContent(lastUser).slice(0, 80) || "session";
   const summary = extractContent(lastAssistant).slice(0, 600);
+
+  // Generate a meaningful title from the session context
+  let title = rawTitle;
+  try {
+    const userMessages = messages
+      .filter((m) => m.role === "user")
+      .map((m) => extractContent(m).slice(0, 100))
+      .slice(0, 5)
+      .join("\n");
+    const result = await inference({
+      system:
+        "Summarize what was accomplished in this AI coding session in one short phrase (5-10 words). No quotes, no punctuation at the end. Examples: 'Fixed PDF download and archive pipeline', 'Refactored rating handler to save response context'.",
+      user: `User messages:\n${userMessages}\n\nLast assistant summary:\n${summary.slice(0, 300)}`,
+      maxTokens: 30,
+      timeout: 5000,
+    });
+    if (result.success && result.output) {
+      title = result.output.replace(/^["']|["']$/g, "").slice(0, 100);
+    }
+  } catch {
+    // Fallback to raw title
+  }
   const category = categorizeLearning(title, summary);
 
   const slug = slugify(title);
