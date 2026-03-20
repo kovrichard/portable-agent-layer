@@ -246,6 +246,7 @@ function writeLearningMarkdown(
 
   const content = [
     `# ${source === "explicit" ? "Low Rating" : "Implicit Low Rating"}: ${rating}/10`,
+    `**Title:** ${context.slice(0, 100) || "(low rating)"}`,
     `**Date:** ${new Date().toISOString().slice(0, 10)}`,
     `**Rating:** ${rating}/10`,
     `**Source:** ${source}`,
@@ -268,16 +269,30 @@ function handleRating(
   context: string,
   source: string,
   detailedContext?: string,
-  sessionId?: string
+  sessionId?: string,
+  userMessage?: string
 ): void {
   const responsePreview = getLastResponse(sessionId).slice(0, 500);
   emitRating(rating, context, source, responsePreview);
 
   if (rating <= 3) {
     // Deep failure — write pending file for Stop handler with full transcript
+    const userPreview = userMessage?.slice(0, 400);
     writeFileSync(
       resolve(paths.state(), "pending-failure.json"),
-      JSON.stringify({ rating, context, source, detailedContext, ts: now() }, null, 2),
+      JSON.stringify(
+        {
+          rating,
+          context,
+          source,
+          detailedContext,
+          responsePreview,
+          userPreview,
+          ts: now(),
+        },
+        null,
+        2
+      ),
       "utf-8"
     );
     // Also write learning markdown
@@ -298,7 +313,14 @@ async function handleImplicitSentiment(
 
   // Fast-path: short praise -> rating 8
   if (isPraise(trimmed)) {
-    handleRating(8, `Direct praise: "${trimmed}"`, "implicit", undefined, sessionId);
+    handleRating(
+      8,
+      `Direct praise: "${trimmed}"`,
+      "implicit",
+      undefined,
+      sessionId,
+      trimmed
+    );
     return;
   }
 
@@ -338,7 +360,8 @@ async function handleImplicitSentiment(
         `${parsed.summary}: ${trimmed.slice(0, 150)}`,
         "implicit",
         parsed.detailed_context,
-        sessionId
+        sessionId,
+        trimmed
       );
     }
   } catch (err) {
@@ -356,13 +379,13 @@ export async function captureRating(message: string, sessionId?: string): Promis
   // Path 1: Explicit rating
   const explicit = parseExplicitRating(cleaned);
   if (explicit) {
-    const responseContext = getLastResponse(sessionId).slice(0, 500);
     handleRating(
       explicit.rating,
       explicit.comment || cleaned.slice(0, 200),
       "explicit",
-      responseContext,
-      sessionId
+      undefined,
+      sessionId,
+      cleaned
     );
     return;
   }

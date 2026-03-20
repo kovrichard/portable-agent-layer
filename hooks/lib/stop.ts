@@ -134,13 +134,17 @@ async function checkPendingFailure(transcript: string): Promise<void> {
       rating: number;
       context: string;
       detailedContext?: string;
+      responsePreview?: string;
+      userPreview?: string;
     };
     unlinkSync(pendingPath);
     await captureFailure(
       pending.rating,
       pending.context,
       transcript,
-      pending.detailedContext
+      pending.detailedContext,
+      pending.responsePreview,
+      pending.userPreview
     );
   } catch {
     // Non-critical

@@ -213,37 +213,55 @@ export function loadWisdomContext(): string {
   }
 }
 
-/** Load 3 most recent session learning files as digest */
+/** Load recent session learning files as digest, split by category */
 export function loadLearningDigest(): string {
   try {
     const sessionDir = paths.sessionLearning();
     if (!existsSync(sessionDir)) return "";
 
-    const files: string[] = [];
+    const files: { path: string; category: string }[] = [];
     for (const month of readdirSync(sessionDir).sort().reverse()) {
-      const monthPath = resolve(sessionDir, month);
+      const monthDir = resolve(sessionDir, month);
       try {
-        const monthFiles = readdirSync(monthPath)
+        const monthFiles = readdirSync(monthDir)
           .filter((f) => f.endsWith(".md"))
           .sort()
           .reverse()
-          .map((f) => resolve(monthPath, f));
+          .map((f) => {
+            const category = f.includes("_system") ? "system" : "algorithm";
+            return { path: resolve(monthDir, f), category };
+          });
         files.push(...monthFiles);
       } catch {
         /* skip */
       }
-      if (files.length >= 3) break;
+      if (files.length >= 6) break;
     }
 
-    const excerpts = files.slice(0, 3).map((f) => {
-      const content = readFileSync(f, "utf-8").trim();
-      // Extract title line
-      const titleLine = content.split("\n").find((l) => l.startsWith("**Title:**")) ?? "";
-      return titleLine || content.slice(0, 80);
-    });
+    function extractTitle(filePath: string): string {
+      const content = readFileSync(filePath, "utf-8").trim();
+      const titleLine = content.split("\n").find((l) => l.startsWith("**Title:**"));
+      if (titleLine) return titleLine;
+      // Fallback: first non-heading, non-empty line
+      const fallback = content.split("\n").find((l) => l.trim() && !l.startsWith("#"));
+      return fallback?.slice(0, 100) ?? content.slice(0, 80);
+    }
 
-    if (excerpts.length === 0) return "";
-    return ["## Recent Session Learnings", ...excerpts.map((e) => `- ${e}`)].join("\n");
+    const algorithm = files.filter((f) => f.category === "algorithm").slice(0, 2);
+    const system = files.filter((f) => f.category === "system").slice(0, 2);
+
+    if (algorithm.length === 0 && system.length === 0) return "";
+
+    const lines: string[] = ["## Recent Session Learnings"];
+    if (algorithm.length > 0) {
+      lines.push("### Approach");
+      for (const f of algorithm) lines.push(`- ${extractTitle(f.path)}`);
+    }
+    if (system.length > 0) {
+      lines.push("### System");
+      for (const f of system) lines.push(`- ${extractTitle(f.path)}`);
+    }
+    return lines.join("\n");
   } catch {
     return "";
   }

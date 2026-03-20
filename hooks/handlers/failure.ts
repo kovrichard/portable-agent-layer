@@ -8,6 +8,7 @@
 
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { inference } from "../lib/inference";
 import { ensureDir, paths } from "../lib/paths";
 import { fileTimestamp, monthPath } from "../lib/time";
 import {
@@ -33,19 +34,67 @@ export async function captureFailure(
   rating: number,
   context: string,
   transcript: string,
-  detailedContext?: string
+  detailedContext?: string,
+  savedResponse?: string,
+  savedUserMessage?: string
 ): Promise<void> {
   const messages = parseMessages(transcript);
-  const lastUser = extractContent(extractLastUser(messages)).slice(0, 400);
-  const lastAssistant = extractContent(extractLastAssistant(messages)).slice(0, 600);
+  // Prefer messages saved at rating time (before the AI replied to the rating)
+  const lastUser =
+    savedUserMessage?.slice(0, 400) ||
+    extractContent(extractLastUser(messages)).slice(0, 400);
+  const lastAssistant =
+    savedResponse?.slice(0, 600) ||
+    extractContent(extractLastAssistant(messages)).slice(0, 600);
 
   const slug = slugify(context);
   const dir = ensureDir(
     resolve(paths.failures(), monthPath(), `${fileTimestamp()}_${slug}`)
   );
 
+  // Attempt inference to fill root cause analysis
+  let whatWentWrong = "";
+  let whatToDoDifferently = "";
+  try {
+    const analysisResult = await inference({
+      system:
+        "You are analyzing a failed AI assistant interaction. Based on the context, identify what went wrong and what should be done differently. Be specific and actionable.",
+      user: [
+        `Rating: ${rating}/10`,
+        `Context: ${context}`,
+        detailedContext ? `Analysis: ${detailedContext}` : "",
+        `User said: ${lastUser}`,
+        `Assistant said: ${lastAssistant}`,
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      maxTokens: 300,
+      timeout: 8000,
+      jsonSchema: {
+        type: "object" as const,
+        additionalProperties: false,
+        properties: {
+          what_went_wrong: { type: "string" as const },
+          what_to_do_differently: { type: "string" as const },
+        },
+        required: ["what_went_wrong", "what_to_do_differently"],
+      },
+    });
+    if (analysisResult.success && analysisResult.output) {
+      const parsed = JSON.parse(analysisResult.output) as {
+        what_went_wrong?: string;
+        what_to_do_differently?: string;
+      };
+      whatWentWrong = parsed.what_went_wrong ?? "";
+      whatToDoDifferently = parsed.what_to_do_differently ?? "";
+    }
+  } catch {
+    // Graceful fallback — empty sections are still useful with the other context
+  }
+
+  const contextMdPath = resolve(dir, "CONTEXT.md");
   writeFileSync(
-    resolve(dir, "CONTEXT.md"),
+    contextMdPath,
     [
       `# Failure Capture — Rating ${rating}/10`,
       `**Date:** ${new Date().toISOString().slice(0, 10)}`,
@@ -57,10 +106,12 @@ export async function captureFailure(
       "## Last Assistant Response",
       lastAssistant || "*(unavailable)*",
       "",
-      ...(detailedContext ? ["## Detailed Analysis", detailedContext, ""] : []),
+      ...(detailedContext ? ["## AI Response Context", detailedContext, ""] : []),
       "## What Went Wrong?",
+      whatWentWrong || "",
       "",
       "## What Should Be Done Differently?",
+      whatToDoDifferently || "",
       "",
     ].join("\n"),
     "utf-8"
