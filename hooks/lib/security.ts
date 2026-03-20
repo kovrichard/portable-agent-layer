@@ -27,6 +27,16 @@ export const HOOK_MANAGED_FILES = [
   "debug.log",
   "last-responses.json",
   "signal-cache.json",
+  "pending-failure.json",
+];
+
+/** Hook-managed directories — AI must not write to or delete from these */
+export const HOOK_MANAGED_DIRS = [
+  "memory/signals",
+  "memory/learning/failures",
+  "memory/learning/session",
+  "memory/learning/synthesis",
+  "memory/relationship",
 ];
 
 /** Escape a string for use in a RegExp */
@@ -75,17 +85,33 @@ export function checkBashCommand(cmd: string): string | null {
       }
     }
   }
+  // If command mentions a hook-managed directory, block unless it's read-only
+  for (const dir of HOOK_MANAGED_DIRS) {
+    if (cmd.includes(dir)) {
+      const segments = cmd.split(/[|;&&]/).map((s) => s.trim());
+      const allReadOnly = segments
+        .filter((s) => s.includes(dir))
+        .every((s) => READ_ONLY_COMMANDS.test(s));
+      if (!allReadOnly) {
+        return `${dir} is managed automatically by hooks — do not edit directly`;
+      }
+    }
+  }
   return null;
 }
 
 /** Check a file path against protected patterns. Returns a reason string or null. */
 export function checkFilePath(filePath: string): string | null {
+  const normalized = filePath.replace(/\\/g, "/");
   // Check hook-managed files first (more specific message)
-  const matchedFile = HOOK_MANAGED_FILES.find((name) =>
-    filePath.replace(/\\/g, "/").endsWith(`/${name}`)
-  );
+  const matchedFile = HOOK_MANAGED_FILES.find((name) => normalized.endsWith(`/${name}`));
   if (matchedFile) {
     return `${matchedFile} is managed automatically by hooks — do not edit directly`;
+  }
+  // Check hook-managed directories
+  const matchedDir = HOOK_MANAGED_DIRS.find((dir) => normalized.includes(`/${dir}/`));
+  if (matchedDir) {
+    return `${matchedDir}/ is managed automatically by hooks — do not edit directly`;
   }
   // Check system-protected paths
   if (PROTECTED_PATHS.some((pattern) => pattern.test(filePath))) {
