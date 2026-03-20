@@ -92,6 +92,24 @@ settings.env.PAI_CLAUDE_DIR = CLAUDE_DIR;
 settings.env.PAI_OPENCODE_DIR = process.env.PAI_OPENCODE_DIR!;
 settings.env.PAI_AGENTS_DIR = process.env.PAI_AGENTS_DIR!;
 
+// --- Add PAI tool permissions (auto-allow ai: scripts) ---
+type SettingsWithPermissions = Settings & { permissions?: { allow?: string[] } };
+const s = settings as SettingsWithPermissions;
+if (!s.permissions) s.permissions = {};
+if (!s.permissions.allow) s.permissions.allow = [];
+const aiTools = [
+  "ai:entity-save",
+  "ai:fyzz-api",
+  "ai:pdf-download",
+  "ai:youtube-analyze",
+];
+for (const tool of aiTools) {
+  const perm = `Bash(bun run ${tool} *)`;
+  if (!s.permissions.allow.includes(perm)) {
+    s.permissions.allow.push(perm);
+  }
+}
+
 writeJson(SETTINGS, settings);
 log.success("Merged hooks into settings.json");
 

@@ -7,7 +7,7 @@
  * Requires GEMINI_API_KEY environment variable.
  *
  * Usage:
- *   bun run tool:youtube-analyze -- <youtube-url> [--prompt "your question"]
+ *   bun run ai:youtube-analyze -- <youtube-url> [--prompt "your question"]
  *
  * Default prompt extracts a structured summary with key insights.
  */
@@ -45,7 +45,7 @@ async function main() {
   const url = positionals[0];
   if (!url) {
     console.error(
-      'Usage: bun run tool:youtube-analyze -- <youtube-url> [--prompt "your question"]'
+      'Usage: bun run ai:youtube-analyze -- <youtube-url> [--prompt "your question"]'
     );
     process.exit(1);
   }

@@ -50,6 +50,17 @@ if (settings.env) {
   if (Object.keys(settings.env).length === 0) delete settings.env;
 }
 
+// --- Remove PAI tool permissions ---
+type SettingsWithPermissions = Settings & { permissions?: { allow?: string[] } };
+const s = settings as SettingsWithPermissions;
+if (s.permissions?.allow) {
+  s.permissions.allow = s.permissions.allow.filter(
+    (p) => !p.includes(PAI_DIR) && !p.startsWith("Bash(bun run ai:")
+  );
+  if (s.permissions.allow.length === 0) delete s.permissions.allow;
+  if (Object.keys(s.permissions).length === 0) delete s.permissions;
+}
+
 writeJson(SETTINGS, settings);
 log.success("Removed PAI hooks and env from settings.json");
 

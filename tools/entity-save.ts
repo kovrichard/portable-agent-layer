@@ -6,8 +6,8 @@
  * deduplicates against the entity index, and saves.
  *
  * Usage:
- *   echo '{"people":[...],"companies":[...]}' | bun run tool:entity-save -- --source "https://example.com"
- *   bun run tool:entity-save -- --file /path/to/extracted.json --source "https://example.com"
+ *   echo '{"people":[...],"companies":[...]}' | bun run ai:entity-save -- --source "https://example.com"
+ *   bun run ai:entity-save -- --file /path/to/extracted.json --source "https://example.com"
  */
 
 import { readFileSync } from "node:fs";

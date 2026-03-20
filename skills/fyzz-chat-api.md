@@ -3,26 +3,26 @@ name: fyzz-chat-api
 description: Query Fyzz Chat conversations and projects via the REST API (API key is handled securely by the CLI tool)
 ---
 
-When you need to access the user's Fyzz Chat conversations or projects, use the `tool:fyzz-api` CLI tool. The tool reads the API key from the `FYZZ_API_KEY` environment variable automatically — never attempt to read, print, or reference the API key or the env var directly.
+When you need to access the user's Fyzz Chat conversations or projects, use the `ai:fyzz-api` CLI tool. The tool reads the API key from the `FYZZ_API_KEY` environment variable automatically — never attempt to read, print, or reference the API key or the env var directly.
 
 ## Available commands
 
 ### List conversations
 
 ```bash
-bun run tool:fyzz-api -- conversations [--limit 20] [--search "query"] [--project-id <id>] [--cursor <cursor>]
+bun run ai:fyzz-api -- conversations [--limit 20] [--search "query"] [--project-id <id>] [--cursor <cursor>]
 ```
 
 ### Get a single conversation with messages
 
 ```bash
-bun run tool:fyzz-api -- conversations <conversation-id>
+bun run ai:fyzz-api -- conversations <conversation-id>
 ```
 
 ### List projects
 
 ```bash
-bun run tool:fyzz-api -- projects
+bun run ai:fyzz-api -- projects
 ```
 
 ## Setup
@@ -35,7 +35,7 @@ If the tool reports a missing API key:
 
 ## Guidelines
 
-- Always run the tool from the PAI directory (the `tool:fyzz-api` script is registered there)
+- Always run the tool from the PAI directory (the `ai:fyzz-api` script is registered there)
 - The API key is never visible in this conversation — that is by design
 - Use `--search` for keyword-based lookup across titles and message content
 - Use `--project-id` to scope results to a specific project

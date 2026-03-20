@@ -6,7 +6,7 @@
  * Saves to: {PAI_ROOT}/memory/downloads/{YYYY}/{MM}/{DD}/{filename}.pdf
  *
  * Usage:
- *   bun run tool:pdf-download -- <url> [--filename <name.pdf>]
+ *   bun run ai:pdf-download -- <url> [--filename <name.pdf>]
  *
  * Returns JSON with the saved file path for downstream reading.
  */
@@ -45,7 +45,7 @@ async function main() {
 
   const url = positionals[0];
   if (!url) {
-    console.error("Usage: bun run tool:pdf-download -- <url> [--filename <name.pdf>]");
+    console.error("Usage: bun run ai:pdf-download -- <url> [--filename <name.pdf>]");
     process.exit(1);
   }
 

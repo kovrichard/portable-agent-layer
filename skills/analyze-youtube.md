@@ -7,10 +7,10 @@ When the user asks to analyze, summarize, or extract information from a YouTube 
 
 ## How to analyze
 
-Use the `tool:youtube-analyze` CLI tool. It sends the video to Gemini, which processes both visual and audio content natively.
+Use the `ai:youtube-analyze` CLI tool. It sends the video to Gemini, which processes both visual and audio content natively.
 
 ```bash
-bun run tool:youtube-analyze -- <youtube-url> [--prompt "your question"]
+bun run ai:youtube-analyze -- <youtube-url> [--prompt "your question"]
 ```
 
 - Without `--prompt`, it returns a structured summary with key insights, topics, people, and quotes.
@@ -28,6 +28,7 @@ Follow the user's request. Common tasks:
 
 ## Guidelines
 
+- Always run the tool from the PAI directory (the `ai:youtube-analyze` script is registered there)
 - For long videos, consider asking a focused question via `--prompt` rather than a full analysis
 - Gemini sees both visuals and audio — mention on-screen content (slides, code, diagrams) when relevant
 - Quote speakers verbatim when the user asks about specific statements

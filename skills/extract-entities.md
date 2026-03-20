@@ -52,10 +52,12 @@ Return structured JSON:
 
 ## Persistence
 
+Always run the tool from the PAI directory (the `ai:entity-save` script is registered there).
+
 After displaying results, ask the user if they want to save. When saving, pipe the JSON output through the entity-save tool which handles deduplication automatically:
 
 ```bash
-echo '<the JSON output>' | bun run tool:entity-save -- --source "<URL or content origin>"
+echo '<the JSON output>' | bun run ai:entity-save -- --source "<URL or content origin>"
 ```
 
 The tool deduplicates against the entity index (`memory/entities/entity-index.json`), assigns stable UUIDs, tracks occurrences, and reports what was new vs existing.
