@@ -252,8 +252,9 @@ const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       if (toolName === "write" || toolName === "edit" || toolName === "patch") {
         const args = output.args as Record<string, string>;
         const filePath = args?.file_path ?? args?.filePath ?? args?.path ?? "";
-        if (checkFilePath(filePath)) {
-          throw new Error(`PAI Security: Protected path — ${filePath}`);
+        const fileReason = checkFilePath(filePath);
+        if (fileReason) {
+          throw new Error(`PAI Security: ${fileReason}`);
         }
       }
     },

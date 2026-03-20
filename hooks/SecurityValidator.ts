@@ -40,13 +40,9 @@ try {
 
   // Check file path operations (Write, Edit)
   if ((tool_name === "Write" || tool_name === "Edit") && tool_input.file_path) {
-    if (checkFilePath(tool_input.file_path)) {
-      console.log(
-        JSON.stringify({
-          decision: "block",
-          reason: `Protected path: ${tool_input.file_path}`,
-        })
-      );
+    const fileReason = checkFilePath(tool_input.file_path);
+    if (fileReason) {
+      console.log(JSON.stringify({ decision: "block", reason: fileReason }));
       process.exit(0);
     }
   }

@@ -15,6 +15,25 @@ export const BLOCKED_COMMANDS: [RegExp, string][] = [
   [/wget.*\|\s*(?:ba)?sh/, "Pipe to shell"],
 ];
 
+/** Hook-managed files — single source of truth */
+export const HOOK_MANAGED_FILES = [
+  "CLAUDE.md",
+  "AGENTS.md",
+  "ratings.jsonl",
+  "sessions.json",
+  "captured-learnings.json",
+  "counts.json",
+  "session-names.json",
+  "debug.log",
+  "last-responses.json",
+  "signal-cache.json",
+];
+
+/** Escape a string for use in a RegExp */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 /** Paths that should never be written to */
 export const PROTECTED_PATHS: RegExp[] = [
   /^\/etc\//,
@@ -22,6 +41,8 @@ export const PROTECTED_PATHS: RegExp[] = [
   /^\/System\//,
   /\.ssh\/(?!config)/,
   /\.gnupg\//,
+  // Derived from HOOK_MANAGED_FILES
+  ...HOOK_MANAGED_FILES.map((name) => new RegExp(`[/\\\\]${escapeRegExp(name)}$`)),
 ];
 
 /** Patterns that warrant a warning (logged but not blocked) */
@@ -32,15 +53,43 @@ export const WARN_COMMANDS: RegExp[] = [
   /truncate\s+table/i,
 ];
 
+/** Read-only commands allowed to reference protected files */
+const READ_ONLY_COMMANDS =
+  /^\s*(?:cat|head|tail|less|more|grep|rg|wc|diff|stat|file|ls|dir|git\s+(?:log|diff|blame|show|status)|bat)\b/;
+
 /** Check a bash command against blocked patterns. Returns reason string or null. */
 export function checkBashCommand(cmd: string): string | null {
   for (const [pattern, reason] of BLOCKED_COMMANDS) {
     if (pattern.test(cmd)) return reason;
   }
+  // If command mentions a protected file, block unless it's read-only
+  for (const name of HOOK_MANAGED_FILES) {
+    if (cmd.includes(name)) {
+      // Check each piped segment — if any segment is not read-only, block
+      const segments = cmd.split(/[|;&&]/).map((s) => s.trim());
+      const allReadOnly = segments
+        .filter((s) => s.includes(name))
+        .every((s) => READ_ONLY_COMMANDS.test(s));
+      if (!allReadOnly) {
+        return `${name} is managed automatically by hooks — do not edit directly`;
+      }
+    }
+  }
   return null;
 }
 
-/** Check a file path against protected patterns. Returns true if protected. */
-export function checkFilePath(filePath: string): boolean {
-  return PROTECTED_PATHS.some((pattern) => pattern.test(filePath));
+/** Check a file path against protected patterns. Returns a reason string or null. */
+export function checkFilePath(filePath: string): string | null {
+  // Check hook-managed files first (more specific message)
+  const matchedFile = HOOK_MANAGED_FILES.find((name) =>
+    filePath.replace(/\\/g, "/").endsWith(`/${name}`)
+  );
+  if (matchedFile) {
+    return `${matchedFile} is managed automatically by hooks — do not edit directly`;
+  }
+  // Check system-protected paths
+  if (PROTECTED_PATHS.some((pattern) => pattern.test(filePath))) {
+    return `Protected path: ${filePath}`;
+  }
+  return null;
 }
