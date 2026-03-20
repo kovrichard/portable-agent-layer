@@ -5,7 +5,7 @@
  * Output: memory/learning/session/YYYY-MM/{datetime}_work_{slug}.md
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { inference } from "../lib/inference";
 import { categorizeLearning } from "../lib/learning-category";
@@ -28,69 +28,118 @@ function slugify(text: string): string {
     .join("-");
 }
 
-/** Track which sessions already have learning files */
-function alreadyCaptured(sessionId: string): boolean {
+const MIN_NEW_MESSAGES = 10;
+
+interface CaptureEntry {
+  filepath: string;
+  messageCount: number;
+}
+
+/** Get the previously captured entry for a session, if any */
+function getPreviousCapture(sessionId: string): CaptureEntry | null {
   const markerPath = resolve(paths.state(), "captured-learnings.json");
-  if (!existsSync(markerPath)) return false;
+  if (!existsSync(markerPath)) return null;
   try {
-    const data = JSON.parse(readFileSync(markerPath, "utf-8"));
-    return Array.isArray(data) && data.includes(sessionId);
+    const raw = JSON.parse(readFileSync(markerPath, "utf-8"));
+    if (Array.isArray(raw)) return null;
+    const entry = raw[sessionId];
+    if (!entry) return null;
+    // Migrate old string format
+    if (typeof entry === "string") return { filepath: entry, messageCount: 0 };
+    return entry as CaptureEntry;
   } catch {
-    return false;
+    return null;
   }
 }
 
-function markCaptured(sessionId: string): void {
+function markCaptured(sessionId: string, filepath: string, messageCount: number): void {
   const markerPath = resolve(paths.state(), "captured-learnings.json");
-  let data: string[] = [];
+  let data: Record<string, CaptureEntry> = {};
   try {
     if (existsSync(markerPath)) {
-      data = JSON.parse(readFileSync(markerPath, "utf-8"));
+      const raw = JSON.parse(readFileSync(markerPath, "utf-8"));
+      if (!Array.isArray(raw) && typeof raw === "object") {
+        for (const [k, v] of Object.entries(raw)) {
+          if (typeof v === "string") {
+            data[k] = { filepath: v, messageCount: 0 };
+          } else {
+            data[k] = v as CaptureEntry;
+          }
+        }
+      }
     }
   } catch {
     /* start fresh */
   }
-  data.push(sessionId);
+  data[sessionId] = { filepath, messageCount };
   // Keep last 50
-  writeFileSync(markerPath, JSON.stringify(data.slice(-50)), "utf-8");
+  const entries = Object.entries(data);
+  if (entries.length > 50) {
+    data = Object.fromEntries(entries.slice(-50));
+  }
+  writeFileSync(markerPath, JSON.stringify(data, null, 2), "utf-8");
 }
 
 export async function captureWorkLearning(
   transcript: string,
   sessionId?: string
 ): Promise<void> {
-  if (sessionId && alreadyCaptured(sessionId)) return;
   if (transcript.length < 2000) return;
 
   const messages = parseMessages(transcript);
   if (messages.length < 6) return;
 
+  // Skip if not enough new messages since last capture
+  if (sessionId) {
+    const prev = getPreviousCapture(sessionId);
+    if (prev && messages.length - prev.messageCount < MIN_NEW_MESSAGES) return;
+  }
+
   const lastUser = extractLastUser(messages);
   const lastAssistant = extractLastAssistant(messages);
 
   const rawTitle = extractContent(lastUser).slice(0, 80) || "session";
-  const summary = extractContent(lastAssistant).slice(0, 600);
+  const rawSummary = extractContent(lastAssistant).slice(0, 600);
 
-  // Generate a meaningful title from the session context
+  // Generate title, summary, and insights in a single inference call
   let title = rawTitle;
+  let summary = rawSummary;
+  let insights = "";
   try {
     const userMessages = messages
       .filter((m) => m.role === "user")
       .map((m) => extractContent(m).slice(0, 100))
-      .slice(0, 5)
+      .slice(-8)
       .join("\n");
     const result = await inference({
       system:
-        "Summarize what was accomplished in this AI coding session in one short phrase (5-10 words). No quotes, no punctuation at the end. Examples: 'Fixed PDF download and archive pipeline', 'Refactored rating handler to save response context'.",
-      user: `User messages:\n${userMessages}\n\nLast assistant summary:\n${summary.slice(0, 300)}`,
-      maxTokens: 30,
-      timeout: 5000,
+        "You summarize AI coding sessions between a human user and an AI assistant. The 'Human messages' are what the user said. The 'AI response' is what the assistant said. Produce: 1) a short title (5-10 words) describing what was accomplished, 2) a summary of what the AI assistant did for the user (2-4 sentences, write from the AI's perspective using 'we'), 3) insights — what worked well, what was surprising, or what should be done differently next time (2-3 bullet points, no markdown).",
+      user: `Human messages:\n${userMessages}\n\nAI response:\n${rawSummary.slice(0, 400)}`,
+      maxTokens: 250,
+      timeout: 8000,
+      jsonSchema: {
+        type: "object" as const,
+        additionalProperties: false,
+        properties: {
+          title: { type: "string" as const },
+          summary: { type: "string" as const },
+          insights: { type: "string" as const },
+        },
+        required: ["title", "summary", "insights"],
+      },
     });
     if (result.success && result.output) {
-      title = result.output.replace(/^["']|["']$/g, "").slice(0, 100);
+      const parsed = JSON.parse(result.output) as {
+        title?: string;
+        summary?: string;
+        insights?: string;
+      };
+      if (parsed.title) title = parsed.title.slice(0, 100);
+      if (parsed.summary) summary = parsed.summary;
+      if (parsed.insights) insights = parsed.insights;
     }
   } catch {
-    // Fallback to raw title
+    // Fallback to raw values
   }
   const category = categorizeLearning(title, summary);
 
@@ -109,11 +158,24 @@ export async function captureWorkLearning(
     summary,
     "",
     "## Insights",
-    "*Auto-captured. What made this effective? Any blockers or surprises?*",
+    insights || "*No insights captured.*",
     "",
   ].join("\n");
 
-  writeFileSync(resolve(dir, filename), content, "utf-8");
+  // Remove previous capture for this session (overwrite on continued conversations)
+  if (sessionId) {
+    const prev = getPreviousCapture(sessionId);
+    if (prev?.filepath && existsSync(prev.filepath)) {
+      try {
+        unlinkSync(prev.filepath);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
 
-  if (sessionId) markCaptured(sessionId);
+  const filepath = resolve(dir, filename);
+  writeFileSync(filepath, content, "utf-8");
+
+  if (sessionId) markCaptured(sessionId, filepath, messages.length);
 }
