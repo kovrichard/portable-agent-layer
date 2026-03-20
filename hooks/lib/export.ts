@@ -26,7 +26,8 @@ export function collectExportFiles(): string[] {
         !f.startsWith(".") &&
         !f.startsWith("node_modules/") &&
         !f.startsWith("pai-export-") &&
-        !f.startsWith("backups/")
+        !f.startsWith("backups/") &&
+        !f.startsWith("memory/downloads/")
     );
 }
 

@@ -33,6 +33,9 @@ memory/wisdom/frames/
 memory/relationship/
 memory/entities/entity-index.json
 
+# Downloaded files (PDFs, etc.)
+memory/downloads/
+
 # Export archives
 pai-export-*.zip
 

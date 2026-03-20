@@ -21,10 +21,11 @@
     "uninstall": "bun run uninstall.ts",
     "tool:entity-save": "bun run tools/entity-save.ts",
     "tool:fyzz-api": "bun run tools/fyzz-api.ts",
+    "tool:pdf-download": "bun run tools/pdf-download.ts",
     "tool:patterns": "bun run tools/pattern-synthesis.ts",
     "tool:reflect": "bun run tools/relationship-reflect.ts",
-    "export": "bun run tools/export.ts",
-    "import": "bun run tools/import.ts"
+    "tool:export": "bun run tools/export.ts",
+    "tool:import": "bun run tools/import.ts"
   },
   "lint-staged": {
     "*.ts": [

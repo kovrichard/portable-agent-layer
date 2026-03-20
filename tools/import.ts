@@ -2,9 +2,9 @@
  * PAI Import — Extracts a PAI export archive into the repo,
  * restoring personal files (memory, telos, state).
  *
- * Usage: bun run tools/import.ts [path-to-zip] [--dry-run]
+ * Usage: bun run tool:import [path-to-zip] [--dry-run]
  * If no path is given, finds the latest pai-export-*.zip and asks for confirmation.
- * Then run: bun run install.ts to re-create symlinks and hooks.
+ * Then run: bun run install:all to re-create symlinks and hooks.
  */
 
 import { readdirSync, statSync } from "node:fs";
@@ -86,7 +86,7 @@ if (pathArg) {
   const latest = findLatestExport();
   if (!latest) {
     console.error(
-      "No export or backup files found. Provide a path: bun run import <path-to-zip>"
+      "No export or backup files found. Provide a path: bun run tool:import <path-to-zip>"
     );
     process.exit(1);
   }
@@ -119,5 +119,5 @@ if (dryRun) {
 } else {
   zip.extractAllTo(repoRoot, true);
   console.log(`Imported ${entries.length} files → ${repoRoot}`);
-  console.log("\nRun 'bun run install.ts' to re-create symlinks and hooks.");
+  console.log("\nRun 'bun run install:all' to re-create symlinks and hooks.");
 }

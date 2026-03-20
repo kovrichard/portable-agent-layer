@@ -2,7 +2,7 @@
  * PAI Export — Zips all gitignored personal files (memory, telos, state)
  * into a portable archive for transfer between machines.
  *
- * Usage: bun run tools/export.ts [output-path] [--dry-run]
+ * Usage: bun run tool:export [output-path] [--dry-run]
  * Default output: pai-export-YYYYMMDD-HHmmss.zip in the repo root.
  */
 
