@@ -236,13 +236,12 @@ function writeLearningMarkdown(
   rating: number,
   source: string,
   context: string,
-  detailedContext: string
+  detailedContext: string,
+  responsePreview: string
 ): void {
   const category = categorizeLearning(context, detailedContext);
   const dir = ensureDir(resolve(paths.sessionLearning(), monthPath()));
   const filename = `${fileTimestamp()}_${source}-rating-${rating}_${category}.md`;
-
-  const responsePreview = getLastResponse().slice(0, 400);
 
   const content = [
     `# ${source === "explicit" ? "Low Rating" : "Implicit Low Rating"}: ${rating}/10`,
@@ -296,10 +295,22 @@ function handleRating(
       "utf-8"
     );
     // Also write learning markdown
-    writeLearningMarkdown(rating, source, context, detailedContext ?? "");
+    writeLearningMarkdown(
+      rating,
+      source,
+      context,
+      detailedContext ?? "",
+      responsePreview
+    );
   } else if (rating < 5) {
     // Low but not critical — write learning markdown
-    writeLearningMarkdown(rating, source, context, detailedContext ?? "");
+    writeLearningMarkdown(
+      rating,
+      source,
+      context,
+      detailedContext ?? "",
+      responsePreview
+    );
   }
 }
 
