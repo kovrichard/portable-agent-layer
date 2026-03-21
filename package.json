@@ -26,7 +26,8 @@
     "tool:patterns": "bun run tools/pattern-synthesis.ts",
     "tool:reflect": "bun run tools/relationship-reflect.ts",
     "tool:export": "bun run tools/export.ts",
-    "tool:import": "bun run tools/import.ts"
+    "tool:import": "bun run tools/import.ts",
+    "tool:tokens": "bun run tools/token-cost.ts"
   },
   "lint-staged": {
     "*.ts": [

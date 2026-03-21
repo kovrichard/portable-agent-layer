@@ -220,7 +220,7 @@ const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
                   "content-type": "application/json",
                 },
                 body: JSON.stringify({
-                  model: "claude-haiku-4-5-20251001",
+                  model: (await lib<{ HAIKU_MODEL: string }>("models")).HAIKU_MODEL,
                   max_tokens: 100,
                   messages: [
                     {

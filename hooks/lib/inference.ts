@@ -2,6 +2,8 @@
  * Lightweight Anthropic API wrapper used by session naming, failure capture, etc.
  */
 
+import { HAIKU_MODEL } from "./models";
+
 export interface InferenceOptions {
   system?: string;
   user: string;
@@ -25,7 +27,7 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
   const {
     system,
     user,
-    model = "claude-haiku-4-5-20251001",
+    model = HAIKU_MODEL,
     maxTokens = 200,
     timeout = 5000,
     jsonSchema,

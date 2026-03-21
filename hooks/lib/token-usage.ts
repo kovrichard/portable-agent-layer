@@ -5,6 +5,7 @@
 
 import { appendFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { HAIKU_MODEL } from "./models";
 import { ensureDir, paths } from "./paths";
 
 export type TokenCaller =
@@ -22,8 +23,6 @@ interface TokenUsageEntry {
   outputTokens: number;
 }
 
-const DEFAULT_MODEL = "claude-haiku-4-5-20251001";
-
 export function logTokenUsage(
   caller: TokenCaller,
   usage: { inputTokens: number; outputTokens: number },
@@ -32,7 +31,7 @@ export function logTokenUsage(
   const entry: TokenUsageEntry = {
     ts: new Date().toISOString(),
     caller,
-    model: model ?? DEFAULT_MODEL,
+    model: model ?? HAIKU_MODEL,
     inputTokens: usage.inputTokens,
     outputTokens: usage.outputTokens,
   };

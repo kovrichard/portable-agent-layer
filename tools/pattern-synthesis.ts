@@ -15,6 +15,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { HAIKU_MODEL } from "../hooks/lib/models";
 
 // ── Paths ──
 
@@ -160,7 +161,7 @@ async function generateRecommendations(
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
+        model: HAIKU_MODEL,
         max_tokens: 300,
         messages: [{ role: "user", content: context }],
         system:
