@@ -1,30 +1,24 @@
 #!/usr/bin/env bash
 # Jarvis — Claude Code wrapper with session summary on exit.
 #
-# Claude Code writes a session file at ~/.claude/sessions/<PID>.json
-# containing the sessionId. We capture this while Claude is running,
-# then pass it to the summary script after Claude exits so it can
-# filter the transcript to only this session's messages.
+# After Claude exits, finds the most recently modified transcript JSONL
+# in ~/.claude/projects/ and extracts the sessionId from its last line.
 
-# Start Claude in the background so we can read the PID
-claude "$@" &
-CLAUDE_PID=$!
+PAI_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
-# Poll for the session file (Claude creates it shortly after starting)
-SESSION_ID=""
-SESSION_FILE="$HOME/.claude/sessions/${CLAUDE_PID}.json"
-for i in 1 2 3 4 5; do
-  if [[ -f "$SESSION_FILE" ]]; then
-    SESSION_ID=$(python3 -c "import json; print(json.load(open('$SESSION_FILE'))['sessionId'])" 2>/dev/null)
-    break
+# Run Claude (blocking — keeps the interactive terminal)
+claude "$@"
+EXIT_CODE=$?
+
+# Find the most recently modified transcript and extract its session ID
+LATEST=$(find "$HOME/.claude/projects" -name '*.jsonl' -type f -print0 2>/dev/null \
+  | xargs -0 ls -t 2>/dev/null | head -1)
+
+if [ -n "$LATEST" ]; then
+  SESSION_ID=$(tail -1 "$LATEST" | python3 -c "import sys,json; print(json.loads(sys.stdin.readline()).get('sessionId',''))" 2>/dev/null)
+  if [ -n "$SESSION_ID" ]; then
+    bun run "$PAI_DIR/tools/session-summary.ts" -- --session "$SESSION_ID" 2>/dev/null
   fi
-  sleep 0.5
-done
-
-# Wait for Claude to finish (user pressed ctrl+c or /exit)
-wait $CLAUDE_PID
-
-# Print session cost summary
-if [[ -n "$SESSION_ID" ]]; then
-  bun run "$(dirname "$0")/../tools/session-summary.ts" -- --session "$SESSION_ID" 2>/dev/null
 fi
+
+exit $EXIT_CODE
