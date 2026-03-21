@@ -30,12 +30,12 @@ bun run ai:fyzz-api -- projects
 If the tool reports a missing API key:
 
 1. Ask the user to create one in Fyzz Chat → Settings → API Keys
-2. They should set `FYZZ_API_KEY` in their shell profile or in PAI's `settings.json` env section
+2. They should set `FYZZ_API_KEY` in their shell profile or in PAL's `settings.json` env section
 3. Optionally set `FYZZ_BASE_URL` (defaults to `http://localhost:3000`)
 
 ## Guidelines
 
-- Always run the tool from the PAI directory (the `ai:fyzz-api` script is registered there)
+- Always run the tool from the PAL directory (the `ai:fyzz-api` script is registered there)
 - The API key is never visible in this conversation — that is by design
 - Use `--search` for keyword-based lookup across titles and message content
 - Use `--project-id` to scope results to a specific project

@@ -52,7 +52,7 @@ Return structured JSON:
 
 ## Persistence
 
-Always run the tool from the PAI directory (the `ai:entity-save` script is registered there).
+Always run the tool from the PAL directory (the `ai:entity-save` script is registered there).
 
 After displaying results, ask the user if they want to save. When saving, pipe the JSON output through the entity-save tool which handles deduplication automatically:
 

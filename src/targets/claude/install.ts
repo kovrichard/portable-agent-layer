@@ -1,13 +1,13 @@
 /**
- * PAI — Claude Code target installer (TypeScript)
+ * PAL — Claude Code target installer (TypeScript)
  * Merges hooks into existing settings.json (never overwrites).
  * Copies skills additively. Generates CLAUDE.md from TELOS.
  */
 
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
-import { palHome } from "../../hooks/lib/paths";
+import { palHome, palPkg } from "../../hooks/lib/paths";
 import {
   copyAgents,
   copySkills,
@@ -19,8 +19,8 @@ import {
   writeJson,
 } from "../lib";
 
-const PAI_DIR = resolve(dirname(import.meta.dir), "..", "..").replaceAll("\\", "/");
-const CLAUDE_DIR = process.env.PAI_CLAUDE_DIR!;
+const PAL_DIR = palPkg().replaceAll("\\", "/");
+const CLAUDE_DIR = process.env.PAL_CLAUDE_DIR!;
 const SETTINGS = resolve(CLAUDE_DIR, "settings.json");
 
 // --- Ensure settings.json exists ---
@@ -42,7 +42,7 @@ const hooksPayload = {
       {
         matcher: "",
         hooks: [
-          { type: "command", command: `bun run ${PAI_DIR}/src/hooks/LoadContext.ts` },
+          { type: "command", command: `bun run ${PAL_DIR}/src/hooks/LoadContext.ts` },
         ],
       },
     ],
@@ -52,7 +52,7 @@ const hooksPayload = {
         hooks: [
           {
             type: "command",
-            command: `bun run ${PAI_DIR}/src/hooks/UserPromptOrchestrator.ts`,
+            command: `bun run ${PAL_DIR}/src/hooks/UserPromptOrchestrator.ts`,
           },
         ],
       },
@@ -63,14 +63,14 @@ const hooksPayload = {
         hooks: [
           {
             type: "command",
-            command: `bun run ${PAI_DIR}/src/hooks/SecurityValidator.ts`,
+            command: `bun run ${PAL_DIR}/src/hooks/SecurityValidator.ts`,
           },
         ],
       },
       {
         matcher: "Skill",
         hooks: [
-          { type: "command", command: `bun run ${PAI_DIR}/src/hooks/SkillGuard.ts` },
+          { type: "command", command: `bun run ${PAL_DIR}/src/hooks/SkillGuard.ts` },
         ],
       },
     ],
@@ -80,7 +80,7 @@ const hooksPayload = {
         hooks: [
           {
             type: "command",
-            command: `bun run ${PAI_DIR}/src/hooks/StopOrchestrator.ts`,
+            command: `bun run ${PAL_DIR}/src/hooks/StopOrchestrator.ts`,
           },
         ],
       },
@@ -107,12 +107,12 @@ for (const [event, entries] of Object.entries(hooksPayload.hooks)) {
 
 // --- Set env (persist platform paths from shell scripts so hooks get them) ---
 if (!settings.env) settings.env = {};
-settings.env.PAI_DIR = PAI_DIR;
-settings.env.PAI_CLAUDE_DIR = CLAUDE_DIR;
-settings.env.PAI_OPENCODE_DIR = process.env.PAI_OPENCODE_DIR!;
-settings.env.PAI_AGENTS_DIR = process.env.PAI_AGENTS_DIR!;
+settings.env.PAL_DIR = PAL_DIR;
+settings.env.PAL_CLAUDE_DIR = CLAUDE_DIR;
+settings.env.PAL_OPENCODE_DIR = process.env.PAL_OPENCODE_DIR!;
+settings.env.PAL_AGENTS_DIR = process.env.PAL_AGENTS_DIR!;
 
-// --- Add PAI tool permissions (auto-allow ai: scripts) ---
+// --- Add PAL tool permissions (auto-allow ai: scripts) ---
 type SettingsWithPermissions = Settings & { permissions?: { allow?: string[] } };
 const s = settings as SettingsWithPermissions;
 if (!s.permissions) s.permissions = {};

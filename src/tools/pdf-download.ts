@@ -3,7 +3,7 @@
 /**
  * PDF Download — Downloads a PDF from a URL and saves it to an organized local archive.
  *
- * Saves to: {PAI_ROOT}/memory/downloads/{YYYY}/{MM}/{DD}/{filename}.pdf
+ * Saves to: {PAL_ROOT}/memory/downloads/{YYYY}/{MM}/{DD}/{filename}.pdf
  *
  * Usage:
  *   bun run ai:pdf-download -- <url> [--filename <name.pdf>]
@@ -14,9 +14,9 @@
 import { mkdir } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { parseArgs } from "node:util";
+import { palHome } from "../hooks/lib/paths";
 
-const PAI_ROOT = import.meta.dirname.replace(/\/tools$/, "");
-const DOWNLOADS_DIR = join(PAI_ROOT, "memory", "downloads");
+const DOWNLOADS_DIR = join(palHome(), "memory", "downloads");
 
 function buildDatePath(): string {
   const now = new Date();

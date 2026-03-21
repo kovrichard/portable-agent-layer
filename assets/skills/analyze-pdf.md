@@ -33,7 +33,7 @@ Follow the user's request. Common tasks:
 
 ## Guidelines
 
-- Always run the tool from the PAI directory (the `ai:pdf-download` script is registered there)
+- Always run the tool from the PAL directory (the `ai:pdf-download` script is registered there)
 - For large PDFs, read specific page ranges rather than the entire document
 - Preserve the original structure (headings, lists, tables) when relevant
 - Quote verbatim when the user asks about specific content

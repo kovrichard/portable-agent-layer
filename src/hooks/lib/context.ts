@@ -181,11 +181,11 @@ export function buildGreeting(): string[] {
   if (setupPrompt) {
     const done = STEP_ORDER.length - (setupState ? remainingSteps(setupState).length : 0);
     greeting.push(
-      `🔧 PAI setup ${done}/${STEP_ORDER.length} | ${counts.signals} signals`
+      `🔧 PAL setup ${done}/${STEP_ORDER.length} | ${counts.signals} signals`
     );
   } else {
     greeting.push(
-      `✅ PAI ready | ${counts.telos} TELOS | ${counts.skills} skills | ${counts.signals} signals | ${counts.sessions} sessions`
+      `✅ PAL ready | ${counts.telos} TELOS | ${counts.skills} skills | ${counts.signals} signals | ${counts.sessions} sessions`
     );
   }
 

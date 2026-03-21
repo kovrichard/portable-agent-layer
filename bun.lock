@@ -2,7 +2,7 @@
   "lockfileVersion": 1,
   "workspaces": {
     "": {
-      "name": "pai",
+      "name": "portable-agent-layer",
       "dependencies": {
         "adm-zip": "^0.5.16",
       },

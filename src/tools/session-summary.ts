@@ -1,6 +1,6 @@
 /**
  * CLI tool: print a brief session summary after Claude Code exits.
- * Designed to be called from the `pai` wrapper script.
+ * Designed to be called from the `pal` wrapper script.
  *
  * Usage: bun run tools/session-summary.ts --session <sessionId>
  */

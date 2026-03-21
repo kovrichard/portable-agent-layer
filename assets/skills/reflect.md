@@ -1,21 +1,21 @@
 ---
 name: reflect
-description: Diagnose why a PAI behavior did not trigger as expected — trace hooks, instructions, and logic to find the gap
+description: Diagnose why a PAL behavior did not trigger as expected — trace hooks, instructions, and logic to find the gap
 ---
 
 When the user invokes `/reflect [optional: description of what didn't happen]`:
 
-You are debugging PAI itself. The user noticed that something PAI should have done — automatically or via instructions — did not happen. Your job is to trace the full execution path and find where it broke.
+You are debugging PAL itself. The user noticed that something PAL should have done — automatically or via instructions — did not happen. Your job is to trace the full execution path and find where it broke.
 
 ## 1. Identify the expected behavior
 
 If the user described it, restate it clearly. If not, ask:
-- **What did you expect PAI to do?** (e.g., update projects.json, write a relationship note, extract wisdom, trigger a hook)
+- **What did you expect PAL to do?** (e.g., update projects.json, write a relationship note, extract wisdom, trigger a hook)
 - **When should it have happened?** (during the session, at stop, on prompt submit, on session start)
 
 ## 2. Classify the behavior type
 
-Determine which PAI subsystem owns this behavior:
+Determine which PAL subsystem owns this behavior:
 
 | Type | Mechanism | Key files |
 |------|-----------|-----------|
@@ -32,7 +32,7 @@ Based on the type, investigate the relevant chain:
 1. Read the relevant handler source code in `hooks/handlers/`
 2. Check the orchestrator that calls it (`StopOrchestrator.ts` or `UserPromptOrchestrator.ts`)
 3. Check `~/.claude/settings.json` to confirm the hook is registered
-4. Check PAI logs at `portable-agent-layer/memory/state/debug.log` for errors
+4. Check PAL logs at `portable-agent-layer/memory/state/debug.log` for errors
 5. Check if the handler has conditions that weren't met (e.g., message count < 2, missing session_id)
 
 ### For instruction-driven behaviors:

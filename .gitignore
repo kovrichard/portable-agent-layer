@@ -37,7 +37,7 @@ memory/entities/entity-index.json
 memory/downloads/
 
 # Export archives
-pai-export-*.zip
+pal-export-*.zip
 
 # Automatic backups
 backups/

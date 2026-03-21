@@ -1,5 +1,5 @@
 /**
- * Shared utilities for PAI installers.
+ * Shared utilities for PAL installers.
  */
 
 import {
@@ -20,10 +20,10 @@ import { assets, palHome } from "../hooks/lib/paths";
 // --- Colored logging ---
 
 export const log = {
-  info: (msg: string) => console.log(`\x1b[34m[pai]\x1b[0m ${msg}`),
-  success: (msg: string) => console.log(`\x1b[32m[pai]\x1b[0m ${msg}`),
-  warn: (msg: string) => console.log(`\x1b[33m[pai]\x1b[0m ${msg}`),
-  error: (msg: string) => console.error(`\x1b[31m[pai]\x1b[0m ${msg}`),
+  info: (msg: string) => console.log(`\x1b[34m[pal]\x1b[0m ${msg}`),
+  success: (msg: string) => console.log(`\x1b[32m[pal]\x1b[0m ${msg}`),
+  warn: (msg: string) => console.log(`\x1b[33m[pal]\x1b[0m ${msg}`),
+  error: (msg: string) => console.error(`\x1b[31m[pal]\x1b[0m ${msg}`),
 };
 
 // --- JSON helpers ---
@@ -61,10 +61,10 @@ export function scaffoldTelos(): void {
 
 // --- Skills ---
 
-const AGENTS_SKILLS_DIR = resolve(process.env.PAI_AGENTS_DIR!, "skills");
+const AGENTS_SKILLS_DIR = resolve(process.env.PAL_AGENTS_DIR!, "skills");
 
 /**
- * Install PAI skills into the shared ~/.agents/skills/<name>/SKILL.md standard,
+ * Install PAL skills into the shared ~/.agents/skills/<name>/SKILL.md standard,
  * then symlink ~/.claude/skills/<name> → ../../.agents/skills/<name>.
  * Additive — skips skills already installed.
  */
@@ -115,7 +115,7 @@ export function copySkills(claudeSkillsDir: string): number {
   return count;
 }
 
-/** Remove PAI skills from ~/.agents/skills/ and their symlinks from ~/.claude/skills/ */
+/** Remove PAL skills from ~/.agents/skills/ and their symlinks from ~/.claude/skills/ */
 export function removeSkills(claudeSkillsDir: string): string[] {
   const skillsDir = assets.skills();
   if (!existsSync(skillsDir)) return [];
@@ -143,10 +143,10 @@ export function removeSkills(claudeSkillsDir: string): string[] {
 
 // --- Agents ---
 
-const CLAUDE_AGENTS_DIR = resolve(process.env.PAI_CLAUDE_DIR!, "agents");
+const CLAUDE_AGENTS_DIR = resolve(process.env.PAL_CLAUDE_DIR!, "agents");
 
 /**
- * Install PAI agent definitions into ~/.claude/agents/.
+ * Install PAL agent definitions into ~/.claude/agents/.
  * Additive — skips agents already installed.
  */
 export function copyAgents(): number {
@@ -171,7 +171,7 @@ export function copyAgents(): number {
   return count;
 }
 
-/** Remove PAI agents from ~/.claude/agents/ */
+/** Remove PAL agents from ~/.claude/agents/ */
 export function removeAgents(): string[] {
   const agentsDir = assets.agents();
   if (!existsSync(agentsDir)) return [];
@@ -253,7 +253,7 @@ export function translateAgentForOpencode(content: string): string {
 }
 
 /**
- * Install PAI agent definitions into an opencode agents directory.
+ * Install PAL agent definitions into an opencode agents directory.
  * Translates frontmatter from Claude Code format to opencode format.
  */
 export function copyAgentsForOpencode(ocAgentsDir: string): number {
@@ -278,7 +278,7 @@ export function copyAgentsForOpencode(ocAgentsDir: string): number {
   return count;
 }
 
-/** Remove PAI agents from an opencode agents directory */
+/** Remove PAL agents from an opencode agents directory */
 export function removeAgentsFromOpencode(ocAgentsDir: string): string[] {
   const agentsDir = assets.agents();
   if (!existsSync(agentsDir)) return [];

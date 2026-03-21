@@ -4,7 +4,7 @@
 # After Claude exits, finds the most recently modified transcript JSONL
 # in ~/.claude/projects/ and extracts the sessionId from its last line.
 
-PAI_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+PAL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 # Run Claude (blocking — keeps the interactive terminal)
 claude "$@"
@@ -17,7 +17,7 @@ LATEST=$(find "$HOME/.claude/projects" -name '*.jsonl' -type f -print0 2>/dev/nu
 if [ -n "$LATEST" ]; then
   SESSION_ID=$(tail -1 "$LATEST" | python3 -c "import sys,json; print(json.loads(sys.stdin.readline()).get('sessionId',''))" 2>/dev/null)
   if [ -n "$SESSION_ID" ]; then
-    bun run "$PAI_DIR/src/tools/session-summary.ts" -- --session "$SESSION_ID" 2>/dev/null
+    bun run "$PAL_DIR/src/tools/session-summary.ts" -- --session "$SESSION_ID" 2>/dev/null
   fi
 fi
 

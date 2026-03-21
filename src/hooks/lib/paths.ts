@@ -10,7 +10,7 @@ import { dirname, resolve } from "node:path";
 export function palPkg(): string {
   return (
     process.env.PAL_PKG ||
-    process.env.PAI_DIR ||
+    process.env.PAL_DIR ||
     resolve(dirname(import.meta.dir), "..", "..", "..")
   );
 }
@@ -21,17 +21,7 @@ export function palPkg(): string {
  * In package mode: ~/.pal/ (or PAL_HOME override).
  */
 export function palHome(): string {
-  return process.env.PAL_HOME || process.env.PAI_DIR || resolve(homedir(), ".pal");
-}
-
-/** @deprecated Use palPkg() or palHome() instead */
-export function paiDir(): string {
-  return palHome();
-}
-
-/** @deprecated Use palPkg() or palHome() with resolve() instead */
-export function paiPath(...segments: string[]): string {
-  return resolve(palHome(), ...segments);
+  return process.env.PAL_HOME || process.env.PAL_DIR || resolve(homedir(), ".pal");
 }
 
 /** Ensure a directory exists, creating it recursively if needed */

@@ -1,12 +1,10 @@
 /**
- * PAI — main uninstaller entry point (TypeScript)
+ * PAL — main uninstaller entry point (TypeScript)
  * Usage: bun run uninstall.ts [--claude] [--opencode] [--all]
  */
 
-import { dirname, resolve } from "node:path";
+import { palHome } from "./src/hooks/lib/paths";
 import { log } from "./src/targets/lib";
-
-const PAI_DIR = resolve(dirname(import.meta.path));
 
 const args = process.argv.slice(2);
 let removeClaude = false;
@@ -44,4 +42,4 @@ if (removeOpencode) {
   console.log("");
 }
 
-log.success(`PAI uninstalled. Your TELOS, skills, and memory are still in ${PAI_DIR}.`);
+log.success(`PAL uninstalled. Your TELOS, skills, and memory are still in ${palHome()}.`);

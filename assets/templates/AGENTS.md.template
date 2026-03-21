@@ -1,6 +1,6 @@
-# PAI — Personal AI Infrastructure
+# PAL — Portable Agent Layer
 
-You have PAI installed. PAI provides persistent personal context across sessions — the user's identity, goals, projects, beliefs, and challenges are stored in TELOS files and loaded into your context automatically. Use this information to tailor your responses to who they are and what they care about.
+You have PA installed. PAL provides persistent personal context across sessions — the user's identity, goals, projects, beliefs, and challenges are stored in TELOS files and loaded into your context automatically. Use this information to tailor your responses to who they are and what they care about.
 
 When TELOS is populated, you already know the user. When it's empty, first-run setup is required — follow the setup instructions below.
 
@@ -8,7 +8,7 @@ When TELOS is populated, you already know the user. When it's empty, first-run s
 {{TELOS}}
 ## Memory
 
-PAI has its own memory system that persists across sessions AND across tools (Claude Code, opencode). Always prefer PAI memory over any tool-native memory system.
+PAL has its own memory system that persists across sessions AND across tools (Claude Code, opencode). Always prefer PAL memory over any tool-native memory system.
 
 ### Where to write
 
@@ -23,7 +23,7 @@ PAI has its own memory system that persists across sessions AND across tools (Cl
 
 ## Work Tracking
 
-PAI tracks your work across sessions in `memory/state/sessions.json` (auto-captured) and `memory/state/projects.json` (AI-managed).
+PAL tracks your work across sessions in `memory/state/sessions.json` (auto-captured) and `memory/state/projects.json` (AI-managed).
 
 ### Projects
 

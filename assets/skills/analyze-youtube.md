@@ -28,8 +28,8 @@ Follow the user's request. Common tasks:
 
 ## Guidelines
 
-- Always run the tool from the PAI directory (the `ai:youtube-analyze` script is registered there)
+- Always run the tool from the PAL directory (the `ai:youtube-analyze` script is registered there)
 - For long videos, consider asking a focused question via `--prompt` rather than a full analysis
 - Gemini sees both visuals and audio — mention on-screen content (slides, code, diagrams) when relevant
 - Quote speakers verbatim when the user asks about specific statements
-- If the tool reports a missing API key, tell the user to get one at https://aistudio.google.com/apikey and set `GEMINI_API_KEY` in their shell profile or PAI settings
+- If the tool reports a missing API key, tell the user to get one at https://aistudio.google.com/apikey and set `GEMINI_API_KEY` in their shell profile or PAL settings

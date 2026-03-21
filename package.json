@@ -1,7 +1,7 @@
 {
-  "name": "pai",
+  "name": "portable-agent-layer",
   "version": "0.1.0",
-  "description": "PAI — Personal AI Infrastructure",
+  "description": "PAL — Portable Agent Layer",
   "private": true,
   "engines": {
     "bun": ">=1.3.0"

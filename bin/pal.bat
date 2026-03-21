@@ -5,4 +5,4 @@ REM Uses PowerShell to start Claude, capture its PID, read the session ID
 REM from %USERPROFILE%\.claude\sessions\<PID>.json, then show a cost
 REM summary after Claude exits.
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0pai.ps1" %*
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0pal.ps1" %*

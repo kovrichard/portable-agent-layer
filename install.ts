@@ -1,14 +1,11 @@
 /**
- * PAI — main installer entry point (TypeScript)
+ * PAL — main installer entry point (TypeScript)
  * Usage: bun run install.ts [--claude] [--opencode] [--all]
  * Default: installs for both targets.
  */
 
-import { dirname, resolve } from "node:path";
 import { ensureSetupState, isSetupComplete } from "./src/hooks/lib/setup";
 import { log, scaffoldTelos } from "./src/targets/lib";
-
-const PAI_DIR = resolve(dirname(import.meta.path));
 
 // --- Parse args ---
 const args = process.argv.slice(2);
@@ -51,7 +48,7 @@ if (installClaude) {
 
 console.log("");
 console.log("  ╔═══════════════════════════════════╗");
-console.log("  ║  PAI — Personal AI Infra          ║");
+console.log("  ║  PAL — Portable Agent Layer       ║");
 console.log("  ║  Non-destructive · Modular        ║");
 console.log("  ╚═══════════════════════════════════╝");
 console.log("");
@@ -79,7 +76,7 @@ log.info("Next steps:");
 
 const state = ensureSetupState();
 if (!isSetupComplete(state)) {
-  log.info("  1. Start a session — PAI will guide you through first-run setup");
+  log.info("  1. Start a session — PAL will guide you through first-run setup");
   log.info("  2. Or fill in telos/*.md manually, then re-run install.ts");
 } else {
   log.info("  1. Fill in telos/*.md with your info (if not already done)");

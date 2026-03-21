@@ -3,7 +3,7 @@
  *
  * Reads from two sources:
  * 1. Claude Code session transcripts (~/.claude/projects/)
- * 2. PAI Haiku inference logs (memory/signals/token-usage.jsonl)
+ * 2. PAL Haiku inference logs (memory/signals/token-usage.jsonl)
  *
  * Usage: bun run tool:tokens [--today|--week|--month|--all] [--project <name>]
  */
@@ -12,6 +12,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { MODEL_PRICING } from "../hooks/lib/models";
+import { palHome } from "../hooks/lib/paths";
 
 // ── Args ──
 
@@ -217,19 +218,13 @@ function readClaudeCode(): {
   return { buckets, byModel, byProject };
 }
 
-// ── PAI Haiku inference ──
+// ── PAL Haiku inference ──
 
-function readPaiInference(): { buckets: TimeBuckets; byCaller: Record<string, Bucket> } {
+function readPalInference(): { buckets: TimeBuckets; byCaller: Record<string, Bucket> } {
   const buckets = emptyTimeBuckets();
   const byCaller: Record<string, Bucket> = {};
 
-  const filepath = resolve(
-    import.meta.dir,
-    "..",
-    "memory",
-    "signals",
-    "token-usage.jsonl"
-  );
+  const filepath = resolve(palHome(), "memory", "signals", "token-usage.jsonl");
   if (!existsSync(filepath)) return { buckets, byCaller };
 
   const content = readFileSync(filepath, "utf-8").trim();
@@ -258,7 +253,7 @@ function readPaiInference(): { buckets: TimeBuckets; byCaller: Record<string, Bu
 // ── Main ──
 
 const cc = readClaudeCode();
-const pai = readPaiInference();
+const pal = readPalInference();
 
 console.log("\n  Claude Code Usage\n");
 printRow("Today", cc.buckets.today);
@@ -284,17 +279,17 @@ if (Object.keys(cc.byProject).length > 1) {
   }
 }
 
-if (pai.buckets.total.calls > 0) {
-  console.log("\n  PAI Inference (Haiku)\n");
-  printRow("Today", pai.buckets.today);
-  printRow("7d", pai.buckets.week);
-  printRow("30d", pai.buckets.month);
-  printRow("Total", pai.buckets.total);
+if (pal.buckets.total.calls > 0) {
+  console.log("\n  PAL Inference (Haiku)\n");
+  printRow("Today", pal.buckets.today);
+  printRow("7d", pal.buckets.week);
+  printRow("30d", pal.buckets.month);
+  printRow("Total", pal.buckets.total);
 }
 
 // Grand total
 const grand = emptyBucket();
-for (const b of [cc.buckets.total, pai.buckets.total]) {
+for (const b of [cc.buckets.total, pal.buckets.total]) {
   grand.input += b.input;
   grand.output += b.output;
   grand.cacheWrite += b.cacheWrite;

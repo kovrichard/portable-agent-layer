@@ -7,7 +7,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { logDebug } from "../lib/log";
-import { paths } from "../lib/paths";
+import { palPkg, paths } from "../lib/paths";
 
 const MIN_DAYS_BETWEEN = 7;
 const MIN_NEW_RATINGS = 20;
@@ -93,9 +93,9 @@ export async function checkSynthesisTrigger(): Promise<void> {
 
   // Spawn synthesis as a detached process so it doesn't block the Stop handler
   try {
-    const paiDir = resolve(import.meta.dir, "../..");
+    const repoDir = palPkg();
     const proc = Bun.spawn(["bun", "run", "tool:patterns"], {
-      cwd: paiDir,
+      cwd: repoDir,
       stdout: "ignore",
       stderr: "ignore",
       stdin: "ignore",

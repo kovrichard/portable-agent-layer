@@ -1,9 +1,9 @@
 /**
- * PAI Import — Extracts a PAI export archive into the repo,
+ * PAL Import — Extracts a PAL export archive into the repo,
  * restoring personal files (memory, telos, state).
  *
  * Usage: bun run tool:import [path-to-zip] [--dry-run]
- * If no path is given, finds the latest pai-export-*.zip and asks for confirmation.
+ * If no path is given, finds the latest pal-export-*.zip and asks for confirmation.
  * Then run: bun run install:all to re-create symlinks and hooks.
  */
 
@@ -30,7 +30,7 @@ async function confirm(message: string): Promise<boolean> {
 
 function findLatestExport(): string | null {
   const files = readdirSync(repoRoot)
-    .filter((f) => f.startsWith("pai-export-") && f.endsWith(".zip"))
+    .filter((f) => f.startsWith("pal-export-") && f.endsWith(".zip"))
     .sort()
     .reverse();
 
@@ -40,7 +40,7 @@ function findLatestExport(): string | null {
     const backups = readdirSync(backupDir)
       .filter(
         (f) =>
-          (f.startsWith("pai-export-") || f.startsWith("pai-backup-")) &&
+          (f.startsWith("pal-export-") || f.startsWith("pal-backup-")) &&
           f.endsWith(".zip")
       )
       .map((f) => ({ name: f, path: resolve(backupDir, f) }))
@@ -55,7 +55,7 @@ function findLatestExport(): string | null {
   // Find the most recent by mtime across both locations
   const candidates = [
     ...readdirSync(repoRoot)
-      .filter((f) => f.startsWith("pai-export-") && f.endsWith(".zip"))
+      .filter((f) => f.startsWith("pal-export-") && f.endsWith(".zip"))
       .map((f) => resolve(repoRoot, f)),
   ];
   try {
@@ -64,7 +64,7 @@ function findLatestExport(): string | null {
       ...readdirSync(backupDir)
         .filter(
           (f) =>
-            (f.startsWith("pai-export-") || f.startsWith("pai-backup-")) &&
+            (f.startsWith("pal-export-") || f.startsWith("pal-backup-")) &&
             f.endsWith(".zip")
         )
         .map((f) => resolve(backupDir, f))

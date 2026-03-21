@@ -1,5 +1,6 @@
 #!/bin/bash
-export PAI_CLAUDE_DIR="$HOME/.claude"
-export PAI_OPENCODE_DIR="$HOME/.config/opencode"
-export PAI_AGENTS_DIR="$HOME/.agents"
+export PAL_DIR="$(cd "$(dirname "$0")" && pwd)"
+export PAL_CLAUDE_DIR="$HOME/.claude"
+export PAL_OPENCODE_DIR="$HOME/.config/opencode"
+export PAL_AGENTS_DIR="$HOME/.agents"
 exec bun run "$(dirname "$0")/install.ts" "$@"

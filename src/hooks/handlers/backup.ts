@@ -17,7 +17,7 @@ export async function autoBackup(): Promise<void> {
 
   // Check most recent backup
   const existing = readdirSync(backupDir)
-    .filter((f) => f.startsWith("pai-backup-") && f.endsWith(".zip"))
+    .filter((f) => f.startsWith("pal-backup-") && f.endsWith(".zip"))
     .sort()
     .reverse();
 
@@ -30,7 +30,7 @@ export async function autoBackup(): Promise<void> {
     }
   }
 
-  const outputPath = resolve(backupDir, `pai-backup-${timestamp()}.zip`);
+  const outputPath = resolve(backupDir, `pal-backup-${timestamp()}.zip`);
   const count = exportZip(outputPath);
 
   if (count === 0) {

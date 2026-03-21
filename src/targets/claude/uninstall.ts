@@ -1,14 +1,15 @@
 /**
- * PAI — Claude Code uninstaller (TypeScript)
- * Removes PAI hooks, skills, and env from settings.json.
+ * PAL — Claude Code uninstaller (TypeScript)
+ * Removes PAL hooks, skills, and env from settings.json.
  */
 
 import { copyFileSync, existsSync, unlinkSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
+import { palPkg } from "../../hooks/lib/paths";
 import { log, readJson, removeAgents, removeSkills, writeJson } from "../lib";
 
-const PAI_DIR = resolve(dirname(import.meta.dir), "..", "..");
-const CLAUDE_DIR = process.env.PAI_CLAUDE_DIR!;
+const PAL_DIR = palPkg();
+const CLAUDE_DIR = process.env.PAL_CLAUDE_DIR!;
 const SETTINGS = resolve(CLAUDE_DIR, "settings.json");
 
 if (!existsSync(SETTINGS)) {
@@ -20,7 +21,7 @@ if (!existsSync(SETTINGS)) {
 copyFileSync(SETTINGS, `${SETTINGS}.bak.${Date.now()}`);
 log.info("Backed up settings.json");
 
-// --- Remove PAI hooks ---
+// --- Remove PAL hooks ---
 type HookEntry = {
   matcher?: string;
   hooks?: Array<{ command?: string }>;
@@ -34,9 +35,9 @@ if (settings.hooks) {
   for (const [event, entries] of Object.entries(settings.hooks)) {
     settings.hooks[event] = entries.filter((entry) => {
       // New format: { matcher, hooks: [{ command }] }
-      if (entry.hooks) return !entry.hooks.some((h) => h.command?.includes(PAI_DIR));
+      if (entry.hooks) return !entry.hooks.some((h) => h.command?.includes(PAL_DIR));
       // Old flat format: { type, command }
-      if (entry.command) return !entry.command.includes(PAI_DIR);
+      if (entry.command) return !entry.command.includes(PAL_DIR);
       return true;
     });
     if (settings.hooks[event].length === 0) delete settings.hooks[event];
@@ -46,42 +47,42 @@ if (settings.hooks) {
 
 // --- Remove env ---
 if (settings.env) {
-  delete settings.env.PAI_DIR;
+  delete settings.env.PAL_DIR;
   if (Object.keys(settings.env).length === 0) delete settings.env;
 }
 
-// --- Remove PAI tool permissions ---
+// --- Remove PAL tool permissions ---
 type SettingsWithPermissions = Settings & { permissions?: { allow?: string[] } };
 const s = settings as SettingsWithPermissions;
 if (s.permissions?.allow) {
   s.permissions.allow = s.permissions.allow.filter(
-    (p) => !p.includes(PAI_DIR) && !p.startsWith("Bash(bun run ai:")
+    (p) => !p.includes(PAL_DIR) && !p.startsWith("Bash(bun run ai:")
   );
   if (s.permissions.allow.length === 0) delete s.permissions.allow;
   if (Object.keys(s.permissions).length === 0) delete s.permissions;
 }
 
 writeJson(SETTINGS, settings);
-log.success("Removed PAI hooks and env from settings.json");
+log.success("Removed PAL hooks and env from settings.json");
 
-// --- Remove PAI skills ---
+// --- Remove PAL skills ---
 const removed = removeSkills(resolve(CLAUDE_DIR, "skills"));
 if (removed.length > 0) {
   log.success(`Removed ${removed.length} skill(s): ${removed.join(", ")}`);
 } else {
-  log.info("No PAI skills found");
+  log.info("No PAL skills found");
 }
 
-// --- Remove PAI agents ---
+// --- Remove PAL agents ---
 const removedAgents = removeAgents();
 if (removedAgents.length > 0) {
   log.success(`Removed ${removedAgents.length} agent(s): ${removedAgents.join(", ")}`);
 } else {
-  log.info("No PAI agents found");
+  log.info("No PAL agents found");
 }
 
 // --- Remove AGENTS.md and CLAUDE.md symlink ---
-const agentsMd = resolve(process.env.PAI_OPENCODE_DIR!, "AGENTS.md");
+const agentsMd = resolve(process.env.PAL_OPENCODE_DIR!, "AGENTS.md");
 const claudeMd = resolve(CLAUDE_DIR, "CLAUDE.md");
 try {
   unlinkSync(claudeMd);

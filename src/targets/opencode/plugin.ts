@@ -1,5 +1,5 @@
 /**
- * PAI plugin for opencode — thin adapter over shared hooks/lib/ modules.
+ * PAL plugin for opencode — thin adapter over shared hooks/lib/ modules.
  *
  * All business logic lives in hooks/lib/ so it stays in sync with Claude Code hooks.
  * This plugin just wires opencode's hook API to those shared functions.
@@ -9,16 +9,16 @@ import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Plugin, PluginInput } from "@opencode-ai/plugin";
 
-const PAI_DIR = process.env.PAI_DIR || resolve(import.meta.dir, "../../..");
+const PAL_DIR = process.env.PAL_DIR || resolve(import.meta.dir, "../../..");
 
-// Dynamic imports from shared lib — resolved at runtime via PAI_DIR
+// Dynamic imports from shared lib — resolved at runtime via PAL_DIR
 async function lib<T>(mod: string): Promise<T> {
-  return await import(resolve(PAI_DIR, "src", "hooks", "lib", mod));
+  return await import(resolve(PAL_DIR, "src", "hooks", "lib", mod));
 }
 
 type TranscriptMessage = { role: string; content: string };
 
-const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
+const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   // Pre-load shared modules
   const { buildGreeting, buildSystemReminder } =
     await lib<typeof import("../../hooks/lib/context")>("context.ts");
@@ -283,7 +283,7 @@ const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
             : ((output.args?.command as string) ?? "");
         const reason = checkBashCommand(cmd);
         if (reason) {
-          throw new Error(`PAI Security: Blocked — ${reason}`);
+          throw new Error(`PAL Security: Blocked — ${reason}`);
         }
       }
 
@@ -292,7 +292,7 @@ const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
         const filePath = args?.file_path ?? args?.filePath ?? args?.path ?? "";
         const fileReason = checkFilePath(filePath);
         if (fileReason) {
-          throw new Error(`PAI Security: ${fileReason}`);
+          throw new Error(`PAL Security: ${fileReason}`);
         }
       }
     },
@@ -312,17 +312,17 @@ const PAIPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       }
     },
 
-    // --- Inject PAI_DIR into shell environment ---
+    // --- Inject PAL_DIR into shell environment ---
     "shell.env": async (
       _input: { cwd: string; sessionID?: string; callID?: string },
       output: { env: Record<string, string> }
     ) => {
-      output.env.PAI_DIR = PAI_DIR;
-      if (process.env.PAI_DEBUG) {
-        output.env.PAI_DEBUG = process.env.PAI_DEBUG;
+      output.env.PAL_DIR = PAL_DIR;
+      if (process.env.PAL_DEBUG) {
+        output.env.PAL_DEBUG = process.env.PAL_DEBUG;
       }
     },
   };
 };
 
-export default PAIPlugin;
+export default PALPlugin;

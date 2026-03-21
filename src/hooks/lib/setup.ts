@@ -1,5 +1,5 @@
 /**
- * Setup state management for PAI first-run wizard.
+ * Setup state management for PAL first-run wizard.
  *
  * State lives in memory/state/setup.json. Each step maps to a TELOS file.
  * The AI is instructed to mark steps done after writing each file.
@@ -150,11 +150,11 @@ export function buildSetupPrompt(state: SetupState): string | null {
   const totalSteps = STEP_ORDER.length;
 
   const lines: string[] = [
-    "## IMPORTANT: PAI First-Run Setup Required",
+    "## IMPORTANT: PAL First-Run Setup Required",
     "",
     "TELOS files are empty — this user has not been set up yet.",
     "You MUST start the setup process immediately, regardless of what the user says.",
-    "Greet them, explain that PAI needs to learn about them to personalize future sessions,",
+    "Greet them, explain that PAL needs to learn about them to personalize future sessions,",
     "and ask the first remaining question below. Do NOT wait for the user to ask about setup.",
     "",
   ];

@@ -24,10 +24,10 @@ import { buildSetupPrompt, readSetupState } from "./setup";
 const TEMPLATE_PATH = assets.agentsMdTemplate();
 
 function getOutputPaths() {
-  const opencodeDir = process.env.PAI_OPENCODE_DIR;
-  const claudeDir = process.env.PAI_CLAUDE_DIR;
+  const opencodeDir = process.env.PAL_OPENCODE_DIR;
+  const claudeDir = process.env.PAL_CLAUDE_DIR;
   if (!opencodeDir || !claudeDir) {
-    throw new Error("PAI_OPENCODE_DIR or PAI_CLAUDE_DIR not set");
+    throw new Error("PAL_OPENCODE_DIR or PAL_CLAUDE_DIR not set");
   }
   return {
     outputPath: resolve(opencodeDir, "AGENTS.md"),
@@ -99,7 +99,7 @@ function memoryPaths(): string {
 export function buildClaudeMd(): string {
   const template = existsSync(TEMPLATE_PATH)
     ? readFileSync(TEMPLATE_PATH, "utf-8")
-    : "# PAI Context\n\n{{SETUP_PROMPT}}\n{{TELOS}}\n## Memory\n\n{{MEMORY_PATHS}}\n";
+    : "# PAL Context\n\n{{SETUP_PROMPT}}\n{{TELOS}}\n## Memory\n\n{{MEMORY_PATHS}}\n";
 
   const state = readSetupState();
   const setupPrompt = state ? buildSetupPrompt(state) : null;

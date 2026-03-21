@@ -3,7 +3,7 @@
 # After Claude exits, finds the most recently modified transcript JSONL
 # in ~/.claude/projects/ and extracts the sessionId from its last line.
 
-$paiDir = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+$palDir = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 
 # Run Claude (blocking — keeps the interactive terminal)
 & claude @args
@@ -20,7 +20,7 @@ if ($latest) {
         try {
             $sessionId = ($lastLine | ConvertFrom-Json).sessionId
             if ($sessionId) {
-                $summaryScript = Join-Path $paiDir "src" "tools" "session-summary.ts"
+                $summaryScript = Join-Path $palDir "src" "tools" "session-summary.ts"
                 & bun run $summaryScript -- --session $sessionId 2>$null
             }
         } catch {}

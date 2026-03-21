@@ -1,9 +1,9 @@
 /**
- * PAI Export — Zips all gitignored personal files (memory, telos, state)
+ * PAL Export — Zips all gitignored personal files (memory, telos, state)
  * into a portable archive for transfer between machines.
  *
  * Usage: bun run tool:export [output-path] [--dry-run]
- * Default output: pai-export-YYYYMMDD-HHmmss.zip in the repo root.
+ * Default output: pal-export-YYYYMMDD-HHmmss.zip in the repo root.
  */
 
 import { resolve } from "node:path";
@@ -14,7 +14,7 @@ const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
 const pathArg = args.find((a) => a !== "--dry-run");
 
-const outputPath = pathArg || resolve(palHome(), `pai-export-${timestamp()}.zip`);
+const outputPath = pathArg || resolve(palHome(), `pal-export-${timestamp()}.zip`);
 
 if (dryRun) {
   const files = collectExportFiles();

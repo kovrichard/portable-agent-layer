@@ -25,7 +25,7 @@ export function collectExportFiles(): string[] {
         f.length > 0 &&
         !f.startsWith(".") &&
         !f.startsWith("node_modules/") &&
-        !f.startsWith("pai-export-") &&
+        !f.startsWith("pal-export-") &&
         !f.startsWith("backups/") &&
         !f.startsWith("memory/downloads/")
     );

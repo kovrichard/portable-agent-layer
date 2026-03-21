@@ -108,7 +108,7 @@ function getCounts(): Counts {
 
   const telos = countMdFiles(paths.telos());
 
-  // Count skills in the PAI skills dir
+  // Count skills in the PAL skills dir
   let skills = 0;
   const skillsDir = assets.skills();
   try {

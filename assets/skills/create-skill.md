@@ -1,6 +1,6 @@
 ---
 name: create-skill
-description: Scaffold a new PAI skill from a description
+description: Scaffold a new PAL skill from a description
 ---
 
 When the user invokes /create-skill <name> <description>:

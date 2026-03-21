@@ -1,26 +1,27 @@
 /**
- * PAI — opencode target installer (TypeScript)
+ * PAL — opencode target installer (TypeScript)
  * Deploys plugin, installs skills, generates AGENTS.md.
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
+import { palPkg } from "../../hooks/lib/paths";
 import { copyAgentsForOpencode, copySkills, countSkills, log, writeJson } from "../lib";
 
-const PAI_DIR = resolve(dirname(import.meta.dir), "..", "..");
-const OC_GLOBAL_DIR = process.env.PAI_OPENCODE_DIR!;
+const PAL_DIR = palPkg();
+const OC_GLOBAL_DIR = process.env.PAL_OPENCODE_DIR!;
 const OC_PLUGINS_DIR = resolve(OC_GLOBAL_DIR, "plugins");
 
 mkdirSync(OC_PLUGINS_DIR, { recursive: true });
 
 // --- 1. Deploy plugin ---
-const pluginSrc = resolve(PAI_DIR, "src", "targets", "opencode", "plugin.ts");
-const pluginDst = resolve(OC_PLUGINS_DIR, "pai-plugin.ts");
-// Embed PAI_DIR as a hardcoded constant so no env config is needed
+const pluginSrc = resolve(PAL_DIR, "src", "targets", "opencode", "plugin.ts");
+const pluginDst = resolve(OC_PLUGINS_DIR, "pal-plugin.ts");
+// Embed PAL_DIR as a hardcoded constant so no env config is needed
 const pluginContent = readFileSync(pluginSrc, "utf-8").replace(
-  /const PAI_DIR = process\.env\.PAI_DIR \|\| resolve\(import\.meta\.dir, "\.\.\/\.\.\/\.\."\);/,
-  `const PAI_DIR = ${JSON.stringify(PAI_DIR)};`
+  /const PAL_DIR = process\.env\.PAL_DIR \|\| resolve\(import\.meta\.dir, "\.\.\/\.\.\/\.\."\);/,
+  `const PAL_DIR = ${JSON.stringify(PAL_DIR)};`
 );
 writeFileSync(pluginDst, pluginContent, "utf-8");
 log.success(`Deployed plugin to ${pluginDst}`);
@@ -40,7 +41,7 @@ try {
 }
 
 // --- 3. Install skills into ~/.agents/skills/ ---
-const claudeSkillsDir = resolve(process.env.PAI_CLAUDE_DIR!, "skills");
+const claudeSkillsDir = resolve(process.env.PAL_CLAUDE_DIR!, "skills");
 copySkills(claudeSkillsDir);
 log.success("Installed skills to ~/.agents/skills/");
 
