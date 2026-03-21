@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Jarvis — Claude Code wrapper with session summary on exit.
+#
+# Claude Code writes a session file at ~/.claude/sessions/<PID>.json
+# containing the sessionId. We capture this while Claude is running,
+# then pass it to the summary script after Claude exits so it can
+# filter the transcript to only this session's messages.
+
+# Start Claude in the background so we can read the PID
+claude "$@" &
+CLAUDE_PID=$!
+
+# Poll for the session file (Claude creates it shortly after starting)
+SESSION_ID=""
+SESSION_FILE="$HOME/.claude/sessions/${CLAUDE_PID}.json"
+for i in 1 2 3 4 5; do
+  if [[ -f "$SESSION_FILE" ]]; then
+    SESSION_ID=$(python3 -c "import json; print(json.load(open('$SESSION_FILE'))['sessionId'])" 2>/dev/null)
+    break
+  fi
+  sleep 0.5
+done
+
+# Wait for Claude to finish (user pressed ctrl+c or /exit)
+wait $CLAUDE_PID
+
+# Print session cost summary
+if [[ -n "$SESSION_ID" ]]; then
+  bun run "$(dirname "$0")/../tools/session-summary.ts" -- --session "$SESSION_ID" 2>/dev/null
+fi
