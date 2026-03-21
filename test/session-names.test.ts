@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { extractFallbackName } from "../hooks/lib/session-names";
+import { extractFallbackName } from "../src/hooks/lib/session-names";
 
 describe("extractFallbackName", () => {
   test("extracts meaningful keywords", () => {

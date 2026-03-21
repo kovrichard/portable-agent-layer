@@ -9,11 +9,11 @@ import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Plugin, PluginInput } from "@opencode-ai/plugin";
 
-const PAI_DIR = process.env.PAI_DIR || resolve(import.meta.dir, "../..");
+const PAI_DIR = process.env.PAI_DIR || resolve(import.meta.dir, "../../..");
 
 // Dynamic imports from shared lib — resolved at runtime via PAI_DIR
 async function lib<T>(mod: string): Promise<T> {
-  return await import(resolve(PAI_DIR, "hooks", "lib", mod));
+  return await import(resolve(PAI_DIR, "src", "hooks", "lib", mod));
 }
 
 type TranscriptMessage = { role: string; content: string };

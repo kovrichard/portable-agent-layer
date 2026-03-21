@@ -7,7 +7,7 @@ import { unlinkSync } from "node:fs";
 import { resolve } from "node:path";
 import { log, removeAgentsFromOpencode, removeSkills } from "../lib";
 
-const PAI_DIR = resolve(import.meta.dir, "..", "..");
+const PAI_DIR = resolve(import.meta.dir, "..", "..", "..");
 const OC_GLOBAL_DIR = process.env.PAI_OPENCODE_DIR || "";
 
 const PAI_CLAUDE_DIR = process.env.PAI_CLAUDE_DIR || "";

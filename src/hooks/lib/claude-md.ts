@@ -21,7 +21,7 @@ import { loadTelos } from "./context";
 import { paiPath, paths } from "./paths";
 import { buildSetupPrompt, readSetupState } from "./setup";
 
-const TEMPLATE_PATH = paiPath("AGENTS.md.template");
+const TEMPLATE_PATH = paiPath("assets", "templates", "AGENTS.md.template");
 
 function getOutputPaths() {
   const opencodeDir = process.env.PAI_OPENCODE_DIR;

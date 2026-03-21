@@ -7,7 +7,7 @@ import { copyFileSync, existsSync, unlinkSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { log, readJson, removeAgents, removeSkills, writeJson } from "../lib";
 
-const PAI_DIR = resolve(dirname(import.meta.dir), "..");
+const PAI_DIR = resolve(dirname(import.meta.dir), "..", "..");
 const CLAUDE_DIR = process.env.PAI_CLAUDE_DIR!;
 const SETTINGS = resolve(CLAUDE_DIR, "settings.json");
 

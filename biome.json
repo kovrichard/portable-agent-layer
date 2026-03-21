@@ -7,15 +7,7 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": [
-      "tools/**",
-      "hooks/**",
-      "targets/**",
-      "*.ts",
-      "!node_modules",
-      "!memory",
-      "!telos"
-    ]
+    "includes": ["src/**", "*.ts", "!node_modules", "!memory", "!telos"]
   },
   "formatter": {
     "enabled": true,

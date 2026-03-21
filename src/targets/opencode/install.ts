@@ -8,18 +8,18 @@ import { dirname, resolve } from "node:path";
 import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
 import { copyAgentsForOpencode, copySkills, countSkills, log, writeJson } from "../lib";
 
-const PAI_DIR = resolve(dirname(import.meta.dir), "..");
+const PAI_DIR = resolve(dirname(import.meta.dir), "..", "..");
 const OC_GLOBAL_DIR = process.env.PAI_OPENCODE_DIR!;
 const OC_PLUGINS_DIR = resolve(OC_GLOBAL_DIR, "plugins");
 
 mkdirSync(OC_PLUGINS_DIR, { recursive: true });
 
 // --- 1. Deploy plugin ---
-const pluginSrc = resolve(PAI_DIR, "targets", "opencode", "plugin.ts");
+const pluginSrc = resolve(PAI_DIR, "src", "targets", "opencode", "plugin.ts");
 const pluginDst = resolve(OC_PLUGINS_DIR, "pai-plugin.ts");
 // Embed PAI_DIR as a hardcoded constant so no env config is needed
 const pluginContent = readFileSync(pluginSrc, "utf-8").replace(
-  /const PAI_DIR = process\.env\.PAI_DIR \|\| resolve\(import\.meta\.dir, "\.\.\/\.\."\);/,
+  /const PAI_DIR = process\.env\.PAI_DIR \|\| resolve\(import\.meta\.dir, "\.\.\/\.\.\/\.\."\);/,
   `const PAI_DIR = ${JSON.stringify(PAI_DIR)};`
 );
 writeFileSync(pluginDst, pluginContent, "utf-8");

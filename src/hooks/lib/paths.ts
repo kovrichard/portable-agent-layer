@@ -3,7 +3,7 @@ import { dirname, resolve } from "node:path";
 
 /** Root of the PAI installation */
 export function paiDir(): string {
-  return process.env.PAI_DIR || resolve(dirname(import.meta.dir), "..");
+  return process.env.PAI_DIR || resolve(dirname(import.meta.dir), "..", "..", "..");
 }
 
 /** Resolve a path relative to PAI root */
@@ -25,8 +25,8 @@ export const paths = {
   signals: () => ensureDir(paiPath("memory", "signals")),
   state: () => ensureDir(paiPath("memory", "state")),
   research: () => ensureDir(paiPath("memory", "research")),
-  skills: () => paiPath("skills"),
-  hooks: () => paiPath("hooks"),
+  skills: () => paiPath("assets", "skills"),
+  hooks: () => paiPath("src", "hooks"),
   // New memory subsystems
   wisdom: () => ensureDir(paiPath("memory", "wisdom", "frames")),
   wisdomState: () => ensureDir(paiPath("memory", "wisdom", "state")),

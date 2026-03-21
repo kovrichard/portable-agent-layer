@@ -20,7 +20,7 @@ if ($latest) {
         try {
             $sessionId = ($lastLine | ConvertFrom-Json).sessionId
             if ($sessionId) {
-                $summaryScript = Join-Path $paiDir "tools" "session-summary.ts"
+                $summaryScript = Join-Path $paiDir "src" "tools" "session-summary.ts"
                 & bun run $summaryScript -- --session $sessionId 2>$null
             }
         } catch {}

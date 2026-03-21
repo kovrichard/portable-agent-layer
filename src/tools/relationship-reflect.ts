@@ -20,7 +20,7 @@ import { parseArgs } from "node:util";
 // ── Paths ──
 
 function paiDir(): string {
-  return process.env.PAI_DIR || resolve(import.meta.dir, "..");
+  return process.env.PAI_DIR || resolve(import.meta.dir, "..", "..");
 }
 
 const RATINGS_FILE = resolve(paiDir(), "memory", "signals", "ratings.jsonl");

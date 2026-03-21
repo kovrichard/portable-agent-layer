@@ -5,8 +5,8 @@
  */
 
 import { dirname, resolve } from "node:path";
-import { ensureSetupState, isSetupComplete } from "./hooks/lib/setup";
-import { log, scaffoldTelos } from "./targets/lib";
+import { ensureSetupState, isSetupComplete } from "./src/hooks/lib/setup";
+import { log, scaffoldTelos } from "./src/targets/lib";
 
 const PAI_DIR = resolve(dirname(import.meta.path));
 
@@ -63,13 +63,13 @@ ensureSetupState();
 // --- Run target installers ---
 if (installClaude) {
   console.log("━━━ Claude Code ━━━");
-  await import("./targets/claude/install");
+  await import("./src/targets/claude/install");
   console.log("");
 }
 
 if (installOpencode) {
   console.log("━━━ opencode ━━━");
-  await import("./targets/opencode/install");
+  await import("./src/targets/opencode/install");
   console.log("");
 }
 

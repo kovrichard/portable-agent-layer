@@ -18,7 +18,7 @@ import {
   writeJson,
 } from "../lib";
 
-const PAI_DIR = resolve(dirname(import.meta.dir), "..").replaceAll("\\", "/");
+const PAI_DIR = resolve(dirname(import.meta.dir), "..", "..").replaceAll("\\", "/");
 const CLAUDE_DIR = process.env.PAI_CLAUDE_DIR!;
 const SETTINGS = resolve(CLAUDE_DIR, "settings.json");
 
@@ -40,7 +40,9 @@ const hooksPayload = {
     SessionStart: [
       {
         matcher: "",
-        hooks: [{ type: "command", command: `bun run ${PAI_DIR}/hooks/LoadContext.ts` }],
+        hooks: [
+          { type: "command", command: `bun run ${PAI_DIR}/src/hooks/LoadContext.ts` },
+        ],
       },
     ],
     UserPromptSubmit: [
@@ -49,7 +51,7 @@ const hooksPayload = {
         hooks: [
           {
             type: "command",
-            command: `bun run ${PAI_DIR}/hooks/UserPromptOrchestrator.ts`,
+            command: `bun run ${PAI_DIR}/src/hooks/UserPromptOrchestrator.ts`,
           },
         ],
       },
@@ -58,19 +60,27 @@ const hooksPayload = {
       {
         matcher: "Bash|Write|Edit",
         hooks: [
-          { type: "command", command: `bun run ${PAI_DIR}/hooks/SecurityValidator.ts` },
+          {
+            type: "command",
+            command: `bun run ${PAI_DIR}/src/hooks/SecurityValidator.ts`,
+          },
         ],
       },
       {
         matcher: "Skill",
-        hooks: [{ type: "command", command: `bun run ${PAI_DIR}/hooks/SkillGuard.ts` }],
+        hooks: [
+          { type: "command", command: `bun run ${PAI_DIR}/src/hooks/SkillGuard.ts` },
+        ],
       },
     ],
     Stop: [
       {
         matcher: "",
         hooks: [
-          { type: "command", command: `bun run ${PAI_DIR}/hooks/StopOrchestrator.ts` },
+          {
+            type: "command",
+            command: `bun run ${PAI_DIR}/src/hooks/StopOrchestrator.ts`,
+          },
         ],
       },
     ],

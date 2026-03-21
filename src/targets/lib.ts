@@ -44,7 +44,7 @@ export function writeJson(path: string, data: unknown): void {
 
 /** Copy template files into telos/ without overwriting existing ones */
 export function scaffoldTelos(paiDir: string): void {
-  const templatesDir = resolve(paiDir, "telos", "templates");
+  const templatesDir = resolve(paiDir, "assets", "templates", "telos");
   const telosDir = resolve(paiDir, "telos");
   if (!existsSync(templatesDir)) return;
 
@@ -68,7 +68,7 @@ const AGENTS_SKILLS_DIR = resolve(process.env.PAI_AGENTS_DIR!, "skills");
  * Additive — skips skills already installed.
  */
 export function copySkills(paiDir: string, claudeSkillsDir: string): number {
-  const skillsDir = resolve(paiDir, "skills");
+  const skillsDir = resolve(paiDir, "assets", "skills");
   if (!existsSync(skillsDir)) return 0;
 
   mkdirSync(AGENTS_SKILLS_DIR, { recursive: true });
@@ -116,7 +116,7 @@ export function copySkills(paiDir: string, claudeSkillsDir: string): number {
 
 /** Remove PAI skills from ~/.agents/skills/ and their symlinks from ~/.claude/skills/ */
 export function removeSkills(paiDir: string, claudeSkillsDir: string): string[] {
-  const skillsDir = resolve(paiDir, "skills");
+  const skillsDir = resolve(paiDir, "assets", "skills");
   if (!existsSync(skillsDir)) return [];
 
   const removed: string[] = [];
@@ -149,7 +149,7 @@ const CLAUDE_AGENTS_DIR = resolve(process.env.PAI_CLAUDE_DIR!, "agents");
  * Additive — skips agents already installed.
  */
 export function copyAgents(paiDir: string): number {
-  const agentsDir = resolve(paiDir, "agents");
+  const agentsDir = resolve(paiDir, "assets", "agents");
   if (!existsSync(agentsDir)) return 0;
 
   mkdirSync(CLAUDE_AGENTS_DIR, { recursive: true });
@@ -172,7 +172,7 @@ export function copyAgents(paiDir: string): number {
 
 /** Remove PAI agents from ~/.claude/agents/ */
 export function removeAgents(paiDir: string): string[] {
-  const agentsDir = resolve(paiDir, "agents");
+  const agentsDir = resolve(paiDir, "assets", "agents");
   if (!existsSync(agentsDir)) return [];
 
   const removed: string[] = [];
@@ -256,7 +256,7 @@ export function translateAgentForOpencode(content: string): string {
  * Translates frontmatter from Claude Code format to opencode format.
  */
 export function copyAgentsForOpencode(paiDir: string, ocAgentsDir: string): number {
-  const agentsDir = resolve(paiDir, "agents");
+  const agentsDir = resolve(paiDir, "assets", "agents");
   if (!existsSync(agentsDir)) return 0;
 
   mkdirSync(ocAgentsDir, { recursive: true });
@@ -279,7 +279,7 @@ export function copyAgentsForOpencode(paiDir: string, ocAgentsDir: string): numb
 
 /** Remove PAI agents from an opencode agents directory */
 export function removeAgentsFromOpencode(paiDir: string, ocAgentsDir: string): string[] {
-  const agentsDir = resolve(paiDir, "agents");
+  const agentsDir = resolve(paiDir, "assets", "agents");
   if (!existsSync(agentsDir)) return [];
 
   const removed: string[] = [];

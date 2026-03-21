@@ -4,7 +4,7 @@
  */
 
 import { dirname, resolve } from "node:path";
-import { log } from "./targets/lib";
+import { log } from "./src/targets/lib";
 
 const PAI_DIR = resolve(dirname(import.meta.path));
 
@@ -34,13 +34,13 @@ for (const arg of args) {
 
 if (removeClaude) {
   console.log("━━━ Claude Code ━━━");
-  await import("./targets/claude/uninstall");
+  await import("./src/targets/claude/uninstall");
   console.log("");
 }
 
 if (removeOpencode) {
   console.log("━━━ opencode ━━━");
-  await import("./targets/opencode/uninstall");
+  await import("./src/targets/opencode/uninstall");
   console.log("");
 }
 
