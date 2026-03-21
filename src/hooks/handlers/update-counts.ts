@@ -6,7 +6,7 @@
 
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ensureDir, paths } from "../lib/paths";
+import { assets, ensureDir, paths } from "../lib/paths";
 
 interface TokenSummary {
   input: number;
@@ -110,7 +110,7 @@ function getCounts(): Counts {
 
   // Count skills in the PAI skills dir
   let skills = 0;
-  const skillsDir = paths.skills();
+  const skillsDir = assets.skills();
   try {
     if (existsSync(skillsDir)) {
       skills = readdirSync(skillsDir, { withFileTypes: true }).filter((e) =>

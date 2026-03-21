@@ -18,10 +18,10 @@ import {
 } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { loadTelos } from "./context";
-import { paiPath, paths } from "./paths";
+import { assets, palHome, paths } from "./paths";
 import { buildSetupPrompt, readSetupState } from "./setup";
 
-const TEMPLATE_PATH = paiPath("assets", "templates", "AGENTS.md.template");
+const TEMPLATE_PATH = assets.agentsMdTemplate();
 
 function getOutputPaths() {
   const opencodeDir = process.env.PAI_OPENCODE_DIR;
@@ -85,7 +85,7 @@ export function needsRebuild(): boolean {
 }
 
 function memoryPaths(): string {
-  const mem = paiPath("memory");
+  const mem = resolve(palHome(), "memory");
   return [
     `- **Wisdom frames**: \`${resolve(mem, "wisdom", "frames")}/\` — crystallized principles per domain (loaded every session)`,
     `- **Relationship notes**: \`${resolve(mem, "relationship")}/YYYY-MM/YYYY-MM-DD.md\` — daily interaction observations (loaded every session)`,

@@ -7,6 +7,7 @@
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
+import { palHome } from "../../hooks/lib/paths";
 import {
   copyAgents,
   copySkills,
@@ -134,10 +135,10 @@ log.success("Merged hooks into settings.json");
 
 // --- Copy skills ---
 const skillsDir = resolve(CLAUDE_DIR, "skills");
-copySkills(PAI_DIR, skillsDir);
+copySkills(skillsDir);
 
 // --- Copy agents ---
-copyAgents(PAI_DIR);
+copyAgents();
 
 // --- Generate ~/.claude/AGENTS.md and symlink ~/.claude/CLAUDE.md → AGENTS.md ---
 regenerateIfNeeded();
@@ -148,4 +149,4 @@ console.log("");
 log.info(`Hooks: 5 (SessionStart, UserPromptSubmit, PreToolUse×2, Stop)`);
 log.info(`Skills: ${countSkills()}`);
 log.info(`Agents: ${countAgents()}`);
-log.info(`TELOS: ${countMd(resolve(PAI_DIR, "telos"))} files`);
+log.info(`TELOS: ${countMd(resolve(palHome(), "telos"))} files`);

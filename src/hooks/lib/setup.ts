@@ -7,7 +7,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ensureDir, paiPath, paths } from "./paths";
+import { ensureDir, palHome, paths } from "./paths";
 
 export interface SetupStep {
   done: boolean;
@@ -94,7 +94,7 @@ function hasRealContent(filePath: string): boolean {
 export function createInitialState(): SetupState {
   const steps: Record<string, SetupStep> = {};
   for (const [key, def] of Object.entries(SETUP_STEPS)) {
-    const populated = hasRealContent(paiPath(def.file));
+    const populated = hasRealContent(resolve(palHome(), def.file));
     steps[key] = { done: populated, ...def };
   }
   const allDone = Object.values(steps).every((s) => s.done);

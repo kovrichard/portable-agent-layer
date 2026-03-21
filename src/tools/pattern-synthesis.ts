@@ -16,15 +16,12 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { HAIKU_MODEL } from "../hooks/lib/models";
+import { palHome } from "../hooks/lib/paths";
 
 // ── Paths ──
 
-function paiDir(): string {
-  return process.env.PAI_DIR || resolve(import.meta.dir, "..");
-}
-
-const RATINGS_FILE = resolve(paiDir(), "memory", "signals", "ratings.jsonl");
-const SYNTHESIS_DIR = resolve(paiDir(), "memory", "learning", "synthesis");
+const RATINGS_FILE = resolve(palHome(), "memory", "signals", "ratings.jsonl");
+const SYNTHESIS_DIR = resolve(palHome(), "memory", "learning", "synthesis");
 
 // ── Types ──
 

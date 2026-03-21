@@ -38,5 +38,5 @@ export function logTokenUsage(
 
   const dir = ensureDir(paths.signals());
   const filepath = resolve(dir, "token-usage.jsonl");
-  appendFileSync(filepath, JSON.stringify(entry) + "\n", "utf-8");
+  appendFileSync(filepath, `${JSON.stringify(entry)}\n`, "utf-8");
 }

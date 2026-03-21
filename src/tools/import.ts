@@ -11,9 +11,9 @@ import { readdirSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { createInterface } from "node:readline";
 import AdmZip from "adm-zip";
-import { paiDir } from "../hooks/lib/paths";
+import { palHome } from "../hooks/lib/paths";
 
-const repoRoot = paiDir();
+const repoRoot = palHome();
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
 const pathArg = args.find((a) => a !== "--dry-run");

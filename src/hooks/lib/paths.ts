@@ -1,14 +1,37 @@
 import { existsSync, mkdirSync } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, resolve } from "node:path";
 
-/** Root of the PAI installation */
-export function paiDir(): string {
-  return process.env.PAI_DIR || resolve(dirname(import.meta.dir), "..", "..", "..");
+/**
+ * Root of the PAL package (engine code + shipped assets).
+ * In repo mode: the repo root.
+ * In package mode: the global node_modules package directory.
+ */
+export function palPkg(): string {
+  return (
+    process.env.PAL_PKG ||
+    process.env.PAI_DIR ||
+    resolve(dirname(import.meta.dir), "..", "..", "..")
+  );
 }
 
-/** Resolve a path relative to PAI root */
+/**
+ * Root of the user's personal state (telos, memory, etc.).
+ * In repo mode: same as palPkg() (the repo root).
+ * In package mode: ~/.pal/ (or PAL_HOME override).
+ */
+export function palHome(): string {
+  return process.env.PAL_HOME || process.env.PAI_DIR || resolve(homedir(), ".pal");
+}
+
+/** @deprecated Use palPkg() or palHome() instead */
+export function paiDir(): string {
+  return palHome();
+}
+
+/** @deprecated Use palPkg() or palHome() with resolve() instead */
 export function paiPath(...segments: string[]): string {
-  return resolve(paiDir(), ...segments);
+  return resolve(palHome(), ...segments);
 }
 
 /** Ensure a directory exists, creating it recursively if needed */
@@ -17,22 +40,39 @@ export function ensureDir(path: string): string {
   return path;
 }
 
-// Common paths
+/** Resolve a path relative to the user's home */
+function home(...segments: string[]): string {
+  return resolve(palHome(), ...segments);
+}
+
+/** Resolve a path relative to the package root */
+function pkg(...segments: string[]): string {
+  return resolve(palPkg(), ...segments);
+}
+
+// User state paths (in PAL_HOME / repo root)
 export const paths = {
-  telos: () => paiPath("telos"),
-  memory: () => paiPath("memory"),
-  learning: () => ensureDir(paiPath("memory", "learning")),
-  signals: () => ensureDir(paiPath("memory", "signals")),
-  state: () => ensureDir(paiPath("memory", "state")),
-  research: () => ensureDir(paiPath("memory", "research")),
-  skills: () => paiPath("assets", "skills"),
-  hooks: () => paiPath("src", "hooks"),
-  // New memory subsystems
-  wisdom: () => ensureDir(paiPath("memory", "wisdom", "frames")),
-  wisdomState: () => ensureDir(paiPath("memory", "wisdom", "state")),
-  relationship: () => ensureDir(paiPath("memory", "relationship")),
-  entities: () => ensureDir(paiPath("memory", "entities")),
-  failures: () => ensureDir(paiPath("memory", "learning", "failures")),
-  sessionLearning: () => ensureDir(paiPath("memory", "learning", "session")),
-  synthesis: () => ensureDir(paiPath("memory", "learning", "synthesis")),
+  telos: () => home("telos"),
+  memory: () => home("memory"),
+  learning: () => ensureDir(home("memory", "learning")),
+  signals: () => ensureDir(home("memory", "signals")),
+  state: () => ensureDir(home("memory", "state")),
+  research: () => ensureDir(home("memory", "research")),
+  wisdom: () => ensureDir(home("memory", "wisdom", "frames")),
+  wisdomState: () => ensureDir(home("memory", "wisdom", "state")),
+  relationship: () => ensureDir(home("memory", "relationship")),
+  entities: () => ensureDir(home("memory", "entities")),
+  failures: () => ensureDir(home("memory", "learning", "failures")),
+  sessionLearning: () => ensureDir(home("memory", "learning", "session")),
+  synthesis: () => ensureDir(home("memory", "learning", "synthesis")),
+  backups: () => ensureDir(home("backups")),
+} as const;
+
+// Engine/asset paths (in PAL_PKG / repo root)
+export const assets = {
+  skills: () => pkg("assets", "skills"),
+  agents: () => pkg("assets", "agents"),
+  hooks: () => pkg("src", "hooks"),
+  telosTemplates: () => pkg("assets", "templates", "telos"),
+  agentsMdTemplate: () => pkg("assets", "templates", "AGENTS.md.template"),
 } as const;

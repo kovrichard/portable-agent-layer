@@ -16,16 +16,13 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { palHome } from "../hooks/lib/paths";
 
 // ── Paths ──
 
-function paiDir(): string {
-  return process.env.PAI_DIR || resolve(import.meta.dir, "..", "..");
-}
-
-const RATINGS_FILE = resolve(paiDir(), "memory", "signals", "ratings.jsonl");
-const RELATIONSHIP_DIR = resolve(paiDir(), "memory", "relationship");
-const REFLECTION_DIR = resolve(paiDir(), "memory", "relationship", "reflections");
+const RATINGS_FILE = resolve(palHome(), "memory", "signals", "ratings.jsonl");
+const RELATIONSHIP_DIR = resolve(palHome(), "memory", "relationship");
+const REFLECTION_DIR = resolve(palHome(), "memory", "relationship", "reflections");
 
 // ── Types ──
 

@@ -8,13 +8,13 @@
 
 import { resolve } from "node:path";
 import { collectExportFiles, exportZip, timestamp } from "../hooks/lib/export";
-import { paiDir } from "../hooks/lib/paths";
+import { palHome } from "../hooks/lib/paths";
 
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
 const pathArg = args.find((a) => a !== "--dry-run");
 
-const outputPath = pathArg || resolve(paiDir(), `pai-export-${timestamp()}.zip`);
+const outputPath = pathArg || resolve(palHome(), `pai-export-${timestamp()}.zip`);
 
 if (dryRun) {
   const files = collectExportFiles();

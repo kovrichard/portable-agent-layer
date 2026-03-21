@@ -7,7 +7,6 @@ import { unlinkSync } from "node:fs";
 import { resolve } from "node:path";
 import { log, removeAgentsFromOpencode, removeSkills } from "../lib";
 
-const PAI_DIR = resolve(import.meta.dir, "..", "..", "..");
 const OC_GLOBAL_DIR = process.env.PAI_OPENCODE_DIR || "";
 
 const PAI_CLAUDE_DIR = process.env.PAI_CLAUDE_DIR || "";
@@ -27,12 +26,12 @@ try {
 }
 
 // --- Remove skills ---
-const removed = removeSkills(PAI_DIR, resolve(PAI_CLAUDE_DIR, "skills"));
+const removed = removeSkills(resolve(PAI_CLAUDE_DIR, "skills"));
 if (removed.length > 0)
   log.success(`Removed ${removed.length} skill(s): ${removed.join(", ")}`);
 
 // --- Remove agents ---
-const removedAgents = removeAgentsFromOpencode(PAI_DIR, resolve(OC_GLOBAL_DIR, "agents"));
+const removedAgents = removeAgentsFromOpencode(resolve(OC_GLOBAL_DIR, "agents"));
 if (removedAgents.length > 0)
   log.success(
     `Removed ${removedAgents.length} opencode agent(s): ${removedAgents.join(", ")}`

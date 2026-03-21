@@ -6,11 +6,11 @@
 import { execSync } from "node:child_process";
 import { resolve } from "node:path";
 import AdmZip from "adm-zip";
-import { paiDir } from "./paths";
+import { palHome } from "./paths";
 
 /** Collect the list of gitignored personal files to export. */
 export function collectExportFiles(): string[] {
-  const repoRoot = paiDir();
+  const repoRoot = palHome();
 
   const raw = execSync("git ls-files --others --ignored --exclude-standard", {
     cwd: repoRoot,
@@ -33,7 +33,7 @@ export function collectExportFiles(): string[] {
 
 /** Zip the given files and write to outputPath. Returns file count. */
 export function exportZip(outputPath: string): number {
-  const repoRoot = paiDir();
+  const repoRoot = palHome();
   const files = collectExportFiles();
   if (files.length === 0) return 0;
 

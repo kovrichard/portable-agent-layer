@@ -15,6 +15,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
+import { assets, palHome } from "../hooks/lib/paths";
 
 // --- Colored logging ---
 
@@ -43,9 +44,9 @@ export function writeJson(path: string, data: unknown): void {
 // --- TELOS scaffolding ---
 
 /** Copy template files into telos/ without overwriting existing ones */
-export function scaffoldTelos(paiDir: string): void {
-  const templatesDir = resolve(paiDir, "assets", "templates", "telos");
-  const telosDir = resolve(paiDir, "telos");
+export function scaffoldTelos(): void {
+  const templatesDir = assets.telosTemplates();
+  const telosDir = resolve(palHome(), "telos");
   if (!existsSync(templatesDir)) return;
 
   for (const file of readdirSync(templatesDir).filter((f) => f.endsWith(".md"))) {
@@ -67,8 +68,8 @@ const AGENTS_SKILLS_DIR = resolve(process.env.PAI_AGENTS_DIR!, "skills");
  * then symlink ~/.claude/skills/<name> → ../../.agents/skills/<name>.
  * Additive — skips skills already installed.
  */
-export function copySkills(paiDir: string, claudeSkillsDir: string): number {
-  const skillsDir = resolve(paiDir, "assets", "skills");
+export function copySkills(claudeSkillsDir: string): number {
+  const skillsDir = assets.skills();
   if (!existsSync(skillsDir)) return 0;
 
   mkdirSync(AGENTS_SKILLS_DIR, { recursive: true });
@@ -115,8 +116,8 @@ export function copySkills(paiDir: string, claudeSkillsDir: string): number {
 }
 
 /** Remove PAI skills from ~/.agents/skills/ and their symlinks from ~/.claude/skills/ */
-export function removeSkills(paiDir: string, claudeSkillsDir: string): string[] {
-  const skillsDir = resolve(paiDir, "assets", "skills");
+export function removeSkills(claudeSkillsDir: string): string[] {
+  const skillsDir = assets.skills();
   if (!existsSync(skillsDir)) return [];
 
   const removed: string[] = [];
@@ -148,8 +149,8 @@ const CLAUDE_AGENTS_DIR = resolve(process.env.PAI_CLAUDE_DIR!, "agents");
  * Install PAI agent definitions into ~/.claude/agents/.
  * Additive — skips agents already installed.
  */
-export function copyAgents(paiDir: string): number {
-  const agentsDir = resolve(paiDir, "assets", "agents");
+export function copyAgents(): number {
+  const agentsDir = assets.agents();
   if (!existsSync(agentsDir)) return 0;
 
   mkdirSync(CLAUDE_AGENTS_DIR, { recursive: true });
@@ -171,8 +172,8 @@ export function copyAgents(paiDir: string): number {
 }
 
 /** Remove PAI agents from ~/.claude/agents/ */
-export function removeAgents(paiDir: string): string[] {
-  const agentsDir = resolve(paiDir, "assets", "agents");
+export function removeAgents(): string[] {
+  const agentsDir = assets.agents();
   if (!existsSync(agentsDir)) return [];
 
   const removed: string[] = [];
@@ -255,8 +256,8 @@ export function translateAgentForOpencode(content: string): string {
  * Install PAI agent definitions into an opencode agents directory.
  * Translates frontmatter from Claude Code format to opencode format.
  */
-export function copyAgentsForOpencode(paiDir: string, ocAgentsDir: string): number {
-  const agentsDir = resolve(paiDir, "assets", "agents");
+export function copyAgentsForOpencode(ocAgentsDir: string): number {
+  const agentsDir = assets.agents();
   if (!existsSync(agentsDir)) return 0;
 
   mkdirSync(ocAgentsDir, { recursive: true });
@@ -278,8 +279,8 @@ export function copyAgentsForOpencode(paiDir: string, ocAgentsDir: string): numb
 }
 
 /** Remove PAI agents from an opencode agents directory */
-export function removeAgentsFromOpencode(paiDir: string, ocAgentsDir: string): string[] {
-  const agentsDir = resolve(paiDir, "assets", "agents");
+export function removeAgentsFromOpencode(ocAgentsDir: string): string[] {
+  const agentsDir = assets.agents();
   if (!existsSync(agentsDir)) return [];
 
   const removed: string[] = [];

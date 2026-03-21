@@ -41,12 +41,12 @@ try {
 
 // --- 3. Install skills into ~/.agents/skills/ ---
 const claudeSkillsDir = resolve(process.env.PAI_CLAUDE_DIR!, "skills");
-copySkills(PAI_DIR, claudeSkillsDir);
+copySkills(claudeSkillsDir);
 log.success("Installed skills to ~/.agents/skills/");
 
 // --- 4. Install agents into ~/.config/opencode/agents/ ---
 const ocAgentsDir = resolve(OC_GLOBAL_DIR, "agents");
-copyAgentsForOpencode(PAI_DIR, ocAgentsDir);
+copyAgentsForOpencode(ocAgentsDir);
 
 // --- 5. Generate ~/.config/opencode/AGENTS.md ---
 regenerateIfNeeded();

@@ -8,12 +8,12 @@ import { readdirSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { exportZip, timestamp } from "../lib/export";
 import { logDebug } from "../lib/log";
-import { ensureDir, paiDir } from "../lib/paths";
+import { paths } from "../lib/paths";
 
 const BACKUP_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export async function autoBackup(): Promise<void> {
-  const backupDir = ensureDir(resolve(paiDir(), "backups"));
+  const backupDir = paths.backups();
 
   // Check most recent backup
   const existing = readdirSync(backupDir)

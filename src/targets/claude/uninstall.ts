@@ -65,7 +65,7 @@ writeJson(SETTINGS, settings);
 log.success("Removed PAI hooks and env from settings.json");
 
 // --- Remove PAI skills ---
-const removed = removeSkills(PAI_DIR, resolve(CLAUDE_DIR, "skills"));
+const removed = removeSkills(resolve(CLAUDE_DIR, "skills"));
 if (removed.length > 0) {
   log.success(`Removed ${removed.length} skill(s): ${removed.join(", ")}`);
 } else {
@@ -73,7 +73,7 @@ if (removed.length > 0) {
 }
 
 // --- Remove PAI agents ---
-const removedAgents = removeAgents(PAI_DIR);
+const removedAgents = removeAgents();
 if (removedAgents.length > 0) {
   log.success(`Removed ${removedAgents.length} agent(s): ${removedAgents.join(", ")}`);
 } else {

@@ -57,7 +57,7 @@ console.log("  ╚════════════════════�
 console.log("");
 
 // --- Scaffold TELOS + seed setup state ---
-scaffoldTelos(PAI_DIR);
+scaffoldTelos();
 ensureSetupState();
 
 // --- Run target installers ---

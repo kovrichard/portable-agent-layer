@@ -88,7 +88,7 @@ export async function checkSynthesisTrigger(): Promise<void> {
 
   logDebug(
     "synthesis",
-    `Triggering: ${newRatings} new ratings, ${lastDate ? "last report: " + lastDate.toISOString().slice(0, 10) : "no previous report"}`
+    `Triggering: ${newRatings} new ratings, ${lastDate ? `last report: ${lastDate.toISOString().slice(0, 10)}` : "no previous report"}`
   );
 
   // Spawn synthesis as a detached process so it doesn't block the Stop handler
