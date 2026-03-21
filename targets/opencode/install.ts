@@ -6,7 +6,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
-import { copySkills, countSkills, log, writeJson } from "../lib";
+import { copyAgentsForOpencode, copySkills, countSkills, log, writeJson } from "../lib";
 
 const PAI_DIR = resolve(dirname(import.meta.dir), "..");
 const OC_GLOBAL_DIR = process.env.PAI_OPENCODE_DIR!;
@@ -44,7 +44,11 @@ const claudeSkillsDir = resolve(process.env.PAI_CLAUDE_DIR!, "skills");
 copySkills(PAI_DIR, claudeSkillsDir);
 log.success("Installed skills to ~/.agents/skills/");
 
-// --- 4. Generate ~/.config/opencode/AGENTS.md ---
+// --- 4. Install agents into ~/.config/opencode/agents/ ---
+const ocAgentsDir = resolve(OC_GLOBAL_DIR, "agents");
+copyAgentsForOpencode(PAI_DIR, ocAgentsDir);
+
+// --- 5. Generate ~/.config/opencode/AGENTS.md ---
 regenerateIfNeeded();
 log.success("Generated ~/.config/opencode/AGENTS.md");
 

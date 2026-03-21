@@ -198,6 +198,103 @@ export function countAgents(): number {
   }
 }
 
+// --- Opencode agent translation ---
+
+/** Map Claude Code tool names to opencode permission keys */
+const TOOL_TO_PERMISSION: Record<string, string> = {
+  WebSearch: "webfetch",
+  WebFetch: "webfetch",
+  Read: "read",
+  Grep: "read",
+  Glob: "read",
+  Write: "edit",
+  Edit: "edit",
+  Bash: "bash",
+};
+
+/**
+ * Translate a Claude Code agent .md file to opencode format.
+ * - `tools: X, Y` → `permission: { x: allow, ... }`
+ * - Adds `mode: subagent`
+ * - Keeps everything else (name, description, model, body)
+ */
+export function translateAgentForOpencode(content: string): string {
+  const parts = content.split(/^---\s*$/m);
+  if (parts.length < 3) return content;
+
+  const frontmatter = parts[1];
+  const body = parts.slice(2).join("---");
+
+  // Extract tools line
+  const toolsMatch = frontmatter.match(/^tools:\s*(.+)$/m);
+  const tools = toolsMatch ? toolsMatch[1].split(",").map((t) => t.trim()) : [];
+
+  // Build opencode permissions (deduplicated)
+  const perms = new Set<string>();
+  for (const tool of tools) {
+    const perm = TOOL_TO_PERMISSION[tool];
+    if (perm) perms.add(perm);
+  }
+
+  // Build new frontmatter: remove tools line, add mode + permission
+  let newFrontmatter = frontmatter.replace(/^tools:\s*.+$/m, "").trim();
+  newFrontmatter += "\nmode: subagent";
+  if (perms.size > 0) {
+    const permObj = Object.fromEntries([...perms].map((p) => [p, "allow"]));
+    // Inline YAML object
+    const permYaml = Object.entries(permObj)
+      .map(([k, v]) => `  ${k}: ${v}`)
+      .join("\n");
+    newFrontmatter += `\npermission:\n${permYaml}`;
+  }
+
+  return `---\n${newFrontmatter}\n---\n${body}`;
+}
+
+/**
+ * Install PAI agent definitions into an opencode agents directory.
+ * Translates frontmatter from Claude Code format to opencode format.
+ */
+export function copyAgentsForOpencode(paiDir: string, ocAgentsDir: string): number {
+  const agentsDir = resolve(paiDir, "agents");
+  if (!existsSync(agentsDir)) return 0;
+
+  mkdirSync(ocAgentsDir, { recursive: true });
+  let count = 0;
+
+  for (const file of readdirSync(agentsDir).filter((f) => f.endsWith(".md"))) {
+    const dst = resolve(ocAgentsDir, file);
+    if (!existsSync(dst)) {
+      const src = resolve(agentsDir, file);
+      const content = readFileSync(src, "utf-8");
+      writeFileSync(dst, translateAgentForOpencode(content), "utf-8");
+      log.info(`Added opencode agent: ${file.replace(/\.md$/, "")}`);
+      count++;
+    } else {
+      log.warn(`Opencode agent exists, skipping: ${file.replace(/\.md$/, "")}`);
+    }
+  }
+  return count;
+}
+
+/** Remove PAI agents from an opencode agents directory */
+export function removeAgentsFromOpencode(paiDir: string, ocAgentsDir: string): string[] {
+  const agentsDir = resolve(paiDir, "agents");
+  if (!existsSync(agentsDir)) return [];
+
+  const removed: string[] = [];
+  for (const file of readdirSync(agentsDir).filter((f) => f.endsWith(".md"))) {
+    const dst = resolve(ocAgentsDir, file);
+    if (existsSync(dst)) {
+      unlinkSync(dst);
+      const name = file.replace(/\.md$/, "");
+      removed.push(name);
+      log.info(`Removed opencode agent: ${name}`);
+    }
+  }
+  return removed;
+}
+
 /** Count skill subdirectories in ~/.agents/skills/ */
 export function countSkills(): number {
   if (!existsSync(AGENTS_SKILLS_DIR)) return 0;

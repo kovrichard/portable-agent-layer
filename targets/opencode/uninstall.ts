@@ -5,7 +5,7 @@
 
 import { unlinkSync } from "node:fs";
 import { resolve } from "node:path";
-import { log, removeSkills } from "../lib";
+import { log, removeAgentsFromOpencode, removeSkills } from "../lib";
 
 const PAI_DIR = resolve(import.meta.dir, "..", "..");
 const OC_GLOBAL_DIR = process.env.PAI_OPENCODE_DIR || "";
@@ -30,6 +30,13 @@ try {
 const removed = removeSkills(PAI_DIR, resolve(PAI_CLAUDE_DIR, "skills"));
 if (removed.length > 0)
   log.success(`Removed ${removed.length} skill(s): ${removed.join(", ")}`);
+
+// --- Remove agents ---
+const removedAgents = removeAgentsFromOpencode(PAI_DIR, resolve(OC_GLOBAL_DIR, "agents"));
+if (removedAgents.length > 0)
+  log.success(
+    `Removed ${removedAgents.length} opencode agent(s): ${removedAgents.join(", ")}`
+  );
 
 // --- Remove AGENTS.md and CLAUDE.md symlink ---
 const agentsMd = resolve(OC_GLOBAL_DIR, "AGENTS.md");

@@ -14,27 +14,17 @@ Choose 3-5 perspectives relevant to the topic. Each should represent a genuinely
 
 ## Step 2: Round 1 — Opening Positions (Parallel)
 
-Launch one agent per perspective **IN A SINGLE MESSAGE** for parallel execution:
+Spawn one subagent per perspective **in parallel (in a single message)**.
 
-```
-Agent({
-  subagent_type: "general-purpose",
-  prompt: "You are arguing from the perspective of [PERSPECTIVE]. The question is: [QUESTION]. State your position and primary argument in 100-200 words. Be specific and opinionated — do not hedge."
-})
-```
-
-Repeat for each perspective. All in one message.
+Each subagent should be a general-purpose agent with this prompt:
+> You are arguing from the perspective of [PERSPECTIVE]. The question is: [QUESTION]. State your position and primary argument in 100-200 words. Be specific and opinionated — do not hedge.
 
 ## Step 3: Round 2 — Challenges (Parallel)
 
-After collecting Round 1 results, launch another batch **IN A SINGLE MESSAGE**. Each perspective challenges the weakest point of another's argument:
+After collecting Round 1 results, spawn another batch of subagents **in parallel (in a single message)**. Each perspective challenges the weakest point of another's argument:
 
-```
-Agent({
-  subagent_type: "general-purpose",
-  prompt: "You are [PERSPECTIVE A]. Here are the opening positions:\n[all Round 1 results]\n\nChallenge the weakest point of [PERSPECTIVE B]'s argument in 100 words. Be direct."
-})
-```
+Each subagent prompt:
+> You are [PERSPECTIVE A]. Here are the opening positions: [all Round 1 results]. Challenge the weakest point of [PERSPECTIVE B]'s argument in 100 words. Be direct.
 
 ## Step 4: Synthesis (You, Not Agents)
 
@@ -48,6 +38,6 @@ As the orchestrating agent, synthesize the debate:
 
 ## Important
 
-- All Agent calls per round MUST be in a **single message** for parallel execution
+- All subagent spawns per round MUST be in a **single message** for parallel execution
 - Perspectives should be genuinely diverse, not strawmen
-- The synthesis is YOUR job — do not ask an agent to synthesize
+- The synthesis is YOUR job — do not ask a subagent to synthesize

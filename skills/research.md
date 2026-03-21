@@ -11,24 +11,26 @@ description: Multi-agent parallel research — quick/standard/extensive modes wi
 | "research" / "do research" (default) | Standard | 2 parallel agents |
 | "extensive research" / "deep research" | Extensive | 6 parallel agents |
 
+## Available Researcher Agents
+
+- **claude-researcher** — academic depth, query decomposition, scholarly synthesis
+- **multi-perspective-researcher** — breadth, multiple angles, diverse viewpoints
+- **investigative-researcher** — verification rigor, triple-checks, source credibility
+
 ## Quick Mode
 
-Launch **1 agent** for a focused answer:
+Spawn **1 subagent** for a focused answer:
 
-```
-Agent({ subagent_type: "claude-researcher", prompt: "[full query with context]" })
-```
+- Spawn `claude-researcher` with the full query and context
 
 Wait for the result, then deliver it directly with light formatting.
 
 ## Standard Mode (Default)
 
-Craft **2 different queries** optimized for each researcher's strengths, then launch both **IN A SINGLE MESSAGE** for parallel execution:
+Craft **2 different queries** optimized for each researcher's strengths, then spawn both **in parallel (in a single message)**:
 
-```
-Agent({ subagent_type: "claude-researcher", prompt: "[query optimized for depth/analysis]" })
-Agent({ subagent_type: "multi-perspective-researcher", prompt: "[query optimized for breadth/perspectives]" })
-```
+- Spawn `claude-researcher` with a query optimized for depth/analysis
+- Spawn `multi-perspective-researcher` with a query optimized for breadth/perspectives
 
 **Query design:**
 - claude-researcher: focus on authoritative sources, technical depth, how/why
@@ -36,16 +38,14 @@ Agent({ subagent_type: "multi-perspective-researcher", prompt: "[query optimized
 
 ## Extensive Mode
 
-Craft **6 queries** (2 per researcher type, each from a different angle), then launch all **IN A SINGLE MESSAGE**:
+Craft **6 queries** (2 per researcher type, each from a different angle), then spawn all **in parallel (in a single message)**:
 
-```
-Agent({ subagent_type: "claude-researcher", prompt: "[angle 1: core technical depth]" })
-Agent({ subagent_type: "claude-researcher", prompt: "[angle 2: historical context / evolution]" })
-Agent({ subagent_type: "multi-perspective-researcher", prompt: "[angle 3: stakeholder perspectives]" })
-Agent({ subagent_type: "multi-perspective-researcher", prompt: "[angle 4: cross-domain connections]" })
-Agent({ subagent_type: "investigative-researcher", prompt: "[angle 5: verify key claims]" })
-Agent({ subagent_type: "investigative-researcher", prompt: "[angle 6: find contradictions / counter-evidence]" })
-```
+- Spawn `claude-researcher` — angle 1: core technical depth
+- Spawn `claude-researcher` — angle 2: historical context / evolution
+- Spawn `multi-perspective-researcher` — angle 3: stakeholder perspectives
+- Spawn `multi-perspective-researcher` — angle 4: cross-domain connections
+- Spawn `investigative-researcher` — angle 5: verify key claims
+- Spawn `investigative-researcher` — angle 6: find contradictions / counter-evidence
 
 ## Synthesis (All Modes)
 
@@ -62,7 +62,7 @@ Keep total output under 1500 words unless the user asks for more.
 
 ## Important
 
-- All Agent calls for a given mode MUST be in a **single message** for true parallel execution
+- All subagent spawns for a given mode MUST be in a **single message** for true parallel execution
 - Do NOT run agents sequentially — that defeats the purpose
 - Each agent returns independently — expect different formats and overlapping findings
 - The synthesis step is YOUR job as the orchestrating agent, not the subagents'
