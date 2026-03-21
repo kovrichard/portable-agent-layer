@@ -32,7 +32,7 @@ Based on the type, investigate the relevant chain:
 1. Read the relevant handler source code in `hooks/handlers/`
 2. Check the orchestrator that calls it (`StopOrchestrator.ts` or `UserPromptOrchestrator.ts`)
 3. Check `~/.claude/settings.json` to confirm the hook is registered
-4. Check PAI logs at `~/git/pai-lite/memory/state/logs/` for errors
+4. Check PAI logs at `portable-agent-layer/memory/state/debug.log` for errors
 5. Check if the handler has conditions that weren't met (e.g., message count < 2, missing session_id)
 
 ### For instruction-driven behaviors:
