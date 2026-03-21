@@ -15,6 +15,7 @@ export interface InferenceOptions {
 export interface InferenceResult {
   success: boolean;
   output?: string;
+  usage?: { inputTokens: number; outputTokens: number };
 }
 
 export async function inference(opts: InferenceOptions): Promise<InferenceResult> {
@@ -67,11 +68,19 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
     }
 
     const data = (await response.json()) as Record<string, unknown>;
+    const rawUsage = data?.usage as
+      | { input_tokens?: number; output_tokens?: number }
+      | undefined;
+    const usage =
+      rawUsage?.input_tokens != null && rawUsage?.output_tokens != null
+        ? { inputTokens: rawUsage.input_tokens, outputTokens: rawUsage.output_tokens }
+        : undefined;
+
     const content = data?.content as Array<{ text?: string }> | undefined;
     const text = content?.[0]?.text?.trim();
-    if (!text) return { success: false };
+    if (!text) return { success: false, usage };
 
-    return { success: true, output: text };
+    return { success: true, output: text, usage };
   } catch (err) {
     const { logError } = await import("./log");
     logError("inference", err);

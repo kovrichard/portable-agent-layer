@@ -15,6 +15,7 @@ import { categorizeLearning } from "../lib/learning-category";
 import { ensureDir, paths } from "../lib/paths";
 import { emitRating } from "../lib/signals";
 import { fileTimestamp, monthPath, now } from "../lib/time";
+import { logTokenUsage } from "../lib/token-usage";
 
 /** Read cached last assistant response (written by StopOrchestrator), looked up by session */
 function getLastResponse(sessionId?: string): string {
@@ -354,6 +355,8 @@ async function handleImplicitSentiment(
     timeout: 8000,
     jsonSchema: SENTIMENT_SCHEMA,
   });
+
+  if (result.usage) logTokenUsage("rating", result.usage);
 
   if (!result.success || !result.output) return;
 

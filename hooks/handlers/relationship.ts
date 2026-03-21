@@ -7,6 +7,7 @@
 import { inference } from "../lib/inference";
 import { logDebug, logError } from "../lib/log";
 import { appendNotes, hasSessionNotes, type RelationshipNote } from "../lib/relationship";
+import { logTokenUsage } from "../lib/token-usage";
 import { extractContent, parseMessages } from "../lib/transcript";
 
 const OBSERVATION_SCHEMA = {
@@ -81,6 +82,8 @@ export async function captureRelationship(
     timeout: 8000,
     jsonSchema: OBSERVATION_SCHEMA,
   });
+
+  if (result.usage) logTokenUsage("relationship", result.usage);
 
   logDebug("relationship", `Inference result: success=${result.success}`);
   if (!result.success || !result.output) {

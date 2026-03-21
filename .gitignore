@@ -21,6 +21,7 @@ memory/state/debug.log.prev
 
 # Signal logs (append-only, machine-local)
 memory/signals/ratings.jsonl
+memory/signals/token-usage.jsonl
 
 # Auto-generated learning artifacts
 memory/learning/failures/

@@ -11,6 +11,7 @@ import { resolve } from "node:path";
 import { inference } from "../lib/inference";
 import { ensureDir, paths } from "../lib/paths";
 import { fileTimestamp, monthPath } from "../lib/time";
+import { logTokenUsage } from "../lib/token-usage";
 import {
   extractContent,
   extractLastAssistant,
@@ -80,6 +81,7 @@ export async function captureFailure(
         required: ["what_went_wrong", "what_to_do_differently"],
       },
     });
+    if (analysisResult.usage) logTokenUsage("failure", analysisResult.usage);
     if (analysisResult.success && analysisResult.output) {
       const parsed = JSON.parse(analysisResult.output) as {
         what_went_wrong?: string;

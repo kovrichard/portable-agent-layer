@@ -11,6 +11,7 @@ import { inference } from "../lib/inference";
 import { categorizeLearning } from "../lib/learning-category";
 import { ensureDir, paths } from "../lib/paths";
 import { fileTimestamp, monthPath } from "../lib/time";
+import { logTokenUsage } from "../lib/token-usage";
 import {
   extractContent,
   extractLastAssistant,
@@ -128,6 +129,7 @@ export async function captureWorkLearning(
         required: ["title", "summary", "insights"],
       },
     });
+    if (result.usage) logTokenUsage("work-learning", result.usage);
     if (result.success && result.output) {
       const parsed = JSON.parse(result.output) as {
         title?: string;
