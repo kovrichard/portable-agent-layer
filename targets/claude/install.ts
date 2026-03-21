@@ -7,7 +7,16 @@
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
-import { copySkills, countMd, countSkills, log, readJson, writeJson } from "../lib";
+import {
+  copyAgents,
+  copySkills,
+  countAgents,
+  countMd,
+  countSkills,
+  log,
+  readJson,
+  writeJson,
+} from "../lib";
 
 const PAI_DIR = resolve(dirname(import.meta.dir), "..").replaceAll("\\", "/");
 const CLAUDE_DIR = process.env.PAI_CLAUDE_DIR!;
@@ -117,6 +126,9 @@ log.success("Merged hooks into settings.json");
 const skillsDir = resolve(CLAUDE_DIR, "skills");
 copySkills(PAI_DIR, skillsDir);
 
+// --- Copy agents ---
+copyAgents(PAI_DIR);
+
 // --- Generate ~/.claude/AGENTS.md and symlink ~/.claude/CLAUDE.md → AGENTS.md ---
 regenerateIfNeeded();
 log.success("Generated ~/.config/opencode/AGENTS.md (→ ~/.claude/CLAUDE.md symlink)");
@@ -125,4 +137,5 @@ log.success("Claude Code installation complete");
 console.log("");
 log.info(`Hooks: 5 (SessionStart, UserPromptSubmit, PreToolUse×2, Stop)`);
 log.info(`Skills: ${countSkills()}`);
+log.info(`Agents: ${countAgents()}`);
 log.info(`TELOS: ${countMd(resolve(PAI_DIR, "telos"))} files`);

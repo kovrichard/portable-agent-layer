@@ -140,6 +140,64 @@ export function removeSkills(paiDir: string, claudeSkillsDir: string): string[] 
   return removed;
 }
 
+// --- Agents ---
+
+const CLAUDE_AGENTS_DIR = resolve(process.env.PAI_CLAUDE_DIR!, "agents");
+
+/**
+ * Install PAI agent definitions into ~/.claude/agents/.
+ * Additive — skips agents already installed.
+ */
+export function copyAgents(paiDir: string): number {
+  const agentsDir = resolve(paiDir, "agents");
+  if (!existsSync(agentsDir)) return 0;
+
+  mkdirSync(CLAUDE_AGENTS_DIR, { recursive: true });
+  let count = 0;
+
+  for (const file of readdirSync(agentsDir).filter((f) => f.endsWith(".md"))) {
+    const src = resolve(agentsDir, file);
+    const dst = resolve(CLAUDE_AGENTS_DIR, file);
+
+    if (!existsSync(dst)) {
+      copyFileSync(src, dst);
+      log.info(`Added agent: ${file.replace(/\.md$/, "")}`);
+      count++;
+    } else {
+      log.warn(`Agent exists, skipping: ${file.replace(/\.md$/, "")}`);
+    }
+  }
+  return count;
+}
+
+/** Remove PAI agents from ~/.claude/agents/ */
+export function removeAgents(paiDir: string): string[] {
+  const agentsDir = resolve(paiDir, "agents");
+  if (!existsSync(agentsDir)) return [];
+
+  const removed: string[] = [];
+  for (const file of readdirSync(agentsDir).filter((f) => f.endsWith(".md"))) {
+    const dst = resolve(CLAUDE_AGENTS_DIR, file);
+    if (existsSync(dst)) {
+      unlinkSync(dst);
+      const name = file.replace(/\.md$/, "");
+      removed.push(name);
+      log.info(`Removed agent: ${name}`);
+    }
+  }
+  return removed;
+}
+
+/** Count agent .md files in ~/.claude/agents/ */
+export function countAgents(): number {
+  if (!existsSync(CLAUDE_AGENTS_DIR)) return 0;
+  try {
+    return readdirSync(CLAUDE_AGENTS_DIR).filter((f) => f.endsWith(".md")).length;
+  } catch {
+    return 0;
+  }
+}
+
 /** Count skill subdirectories in ~/.agents/skills/ */
 export function countSkills(): number {
   if (!existsSync(AGENTS_SKILLS_DIR)) return 0;

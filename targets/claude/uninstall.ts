@@ -5,7 +5,7 @@
 
 import { copyFileSync, existsSync, unlinkSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { log, readJson, removeSkills, writeJson } from "../lib";
+import { log, readJson, removeAgents, removeSkills, writeJson } from "../lib";
 
 const PAI_DIR = resolve(dirname(import.meta.dir), "..");
 const CLAUDE_DIR = process.env.PAI_CLAUDE_DIR!;
@@ -70,6 +70,14 @@ if (removed.length > 0) {
   log.success(`Removed ${removed.length} skill(s): ${removed.join(", ")}`);
 } else {
   log.info("No PAI skills found");
+}
+
+// --- Remove PAI agents ---
+const removedAgents = removeAgents(PAI_DIR);
+if (removedAgents.length > 0) {
+  log.success(`Removed ${removedAgents.length} agent(s): ${removedAgents.join(", ")}`);
+} else {
+  log.info("No PAI agents found");
 }
 
 // --- Remove AGENTS.md and CLAUDE.md symlink ---
