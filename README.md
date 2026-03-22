@@ -26,6 +26,91 @@ With PAL, you can:
 
 ---
 
+## Install
+
+### Prerequisites
+
+- [Bun](https://bun.sh) >= 1.3.0
+
+### Package mode (recommended)
+
+```bash
+bun add -g portable-agent-layer
+pal cli init
+```
+
+### Repo mode (for development / contributors)
+
+```bash
+git clone https://github.com/kovrichard/portable-agent-layer.git
+cd portable-agent-layer
+bun install
+bun run install:all
+```
+
+In repo mode, add an alias to your shell profile:
+
+```bash
+alias pal="bun run ~/path/to/portable-agent-layer/src/cli/index.ts"
+```
+
+---
+
+## Quick start
+
+```bash
+pal cli init          # scaffold home, install hooks for all targets
+pal                   # start a Claude session (with session summary on exit)
+pal cli status        # check your setup
+```
+
+---
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `pal` | Start a Claude session with session summary on exit |
+| `pal cli init` | Scaffold PAL home directory and install hooks |
+| `pal cli install` | Register hooks/skills for targets |
+| `pal cli uninstall` | Remove hooks/skills for targets |
+| `pal cli export` | Export user state (telos, memory) to a zip |
+| `pal cli import` | Import user state from a zip |
+| `pal cli status` | Show current PAL configuration |
+
+### Target flags
+
+`init`, `install`, and `uninstall` accept target flags:
+
+```bash
+pal cli install --claude      # Claude Code only
+pal cli install --opencode    # opencode only
+pal cli install               # both (default)
+```
+
+---
+
+## Environment variables
+
+### Required
+
+| Variable | Description |
+|----------|-------------|
+| `ANTHROPIC_API_KEY` | Required for PAL's hook inference (sentiment analysis, session naming). Uses Haiku for low-cost background calls. |
+
+### Optional
+
+| Variable | Description |
+|----------|-------------|
+| `GEMINI_API_KEY` | For YouTube video analysis skill |
+| `PAL_HOME` | Override user state directory (default: `~/.pal` or repo root) |
+| `PAL_PKG` | Override package root |
+| `PAL_CLAUDE_DIR` | Override Claude config dir (default: `~/.claude`) |
+| `PAL_OPENCODE_DIR` | Override opencode config dir (default: `~/.config/opencode`) |
+| `PAL_AGENTS_DIR` | Override agents dir (default: `~/.agents`) |
+
+---
+
 ## Core idea
 
 PAL stands for **Portable Agent Layer**.
@@ -78,3 +163,9 @@ PAL is for people who want:
 - to move between machines without rebuilding everything
 - a durable way to store and reuse context
 - an open foundation for portable agent workflows
+
+---
+
+## License
+
+[MIT](LICENSE)
