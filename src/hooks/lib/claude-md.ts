@@ -18,7 +18,7 @@ import {
 } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { loadTelos } from "./context";
-import { assets, palHome, paths, platform } from "./paths";
+import { assets, ensureDir, palHome, paths, platform } from "./paths";
 import { buildSetupPrompt, readSetupState } from "./setup";
 
 const TEMPLATE_PATH = assets.agentsMdTemplate();
@@ -116,6 +116,7 @@ export function regenerateIfNeeded(): boolean {
   const { outputPath } = getOutputPaths();
   ensureSymlink();
   if (!needsRebuild()) return false;
+  ensureDir(dirname(outputPath));
   writeFileSync(outputPath, buildClaudeMd(), "utf-8");
   return true;
 }

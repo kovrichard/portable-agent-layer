@@ -48,6 +48,7 @@ export function scaffoldTelos(): void {
   const templatesDir = assets.telosTemplates();
   const telosDir = resolve(palHome(), "telos");
   if (!existsSync(templatesDir)) return;
+  mkdirSync(telosDir, { recursive: true });
 
   for (const file of readdirSync(templatesDir).filter((f) => f.endsWith(".md"))) {
     const src = resolve(templatesDir, file);

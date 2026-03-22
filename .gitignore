@@ -45,3 +45,4 @@ backups/
 node_modules/
 
 .test-tmp/
+.test-home/
