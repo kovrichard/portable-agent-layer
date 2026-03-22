@@ -111,6 +111,27 @@ pal cli install               # both (default)
 
 ---
 
+## Skills
+
+PAL ships with built-in skills that extend your agent's capabilities:
+
+| Skill | Description |
+|-------|-------------|
+| `analyze-pdf` | Download and analyze PDF files |
+| `analyze-youtube` | Analyze YouTube videos using Gemini |
+| `council` | Multi-perspective parallel debate on decisions |
+| `create-skill` | Scaffold a new skill from a description |
+| `extract-entities` | Extract people and companies from content |
+| `extract-wisdom` | Extract structured insights from content |
+| `first-principles` | Break down problems to fundamentals |
+| `fyzz-chat-api` | Query Fyzz Chat conversations via API |
+| `reflect` | Diagnose why a PAL behavior didn't trigger |
+| `research` | Multi-agent parallel research |
+| `review` | Security-focused code review |
+| `summarize` | Structured summarization |
+
+---
+
 ## Core idea
 
 PAL stands for **Portable Agent Layer**.

@@ -6,6 +6,7 @@
  * Transcript is read from the file at transcript_path, NOT from stdin.
  */
 
+import { checkReadmeSync } from "./handlers/readme-sync";
 import { logError } from "./lib/log";
 import { readStdinJSON } from "./lib/stdin";
 import { runStopHandlers } from "./lib/stop";
@@ -15,6 +16,17 @@ interface StopHookInput {
   session_id: string;
   transcript_path: string;
   last_assistant_message?: string;
+}
+
+// Check README sync before anything else — may block the session
+try {
+  const decision = checkReadmeSync();
+  if (decision.decision === "block") {
+    console.log(JSON.stringify(decision));
+    process.exit(0);
+  }
+} catch (err) {
+  logError("StopOrchestrator:readme-sync", err);
 }
 
 const input = await readStdinJSON<StopHookInput>();
