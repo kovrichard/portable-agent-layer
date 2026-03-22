@@ -1,5 +1,4 @@
 #!/bin/bash
-export PAL_DIR="$(cd "$(dirname "$0")" && pwd)"
 export PAL_CLAUDE_DIR="$HOME/.claude"
 export PAL_OPENCODE_DIR="$HOME/.config/opencode"
 export PAL_AGENTS_DIR="$HOME/.agents"

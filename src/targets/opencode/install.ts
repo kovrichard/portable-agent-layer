@@ -9,19 +9,19 @@ import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
 import { palPkg } from "../../hooks/lib/paths";
 import { copyAgentsForOpencode, copySkills, countSkills, log, writeJson } from "../lib";
 
-const PAL_DIR = palPkg();
+const PKG_ROOT = palPkg();
 const OC_GLOBAL_DIR = process.env.PAL_OPENCODE_DIR!;
 const OC_PLUGINS_DIR = resolve(OC_GLOBAL_DIR, "plugins");
 
 mkdirSync(OC_PLUGINS_DIR, { recursive: true });
 
 // --- 1. Deploy plugin ---
-const pluginSrc = resolve(PAL_DIR, "src", "targets", "opencode", "plugin.ts");
+const pluginSrc = resolve(PKG_ROOT, "src", "targets", "opencode", "plugin.ts");
 const pluginDst = resolve(OC_PLUGINS_DIR, "pal-plugin.ts");
-// Embed PAL_DIR as a hardcoded constant so no env config is needed
+// Embed PKG_ROOT as a hardcoded constant so no env config is needed
 const pluginContent = readFileSync(pluginSrc, "utf-8").replace(
   /const PAL_DIR = process\.env\.PAL_DIR \|\| resolve\(import\.meta\.dir, "\.\.\/\.\.\/\.\."\);/,
-  `const PAL_DIR = ${JSON.stringify(PAL_DIR)};`
+  `const PAL_DIR = ${JSON.stringify(PKG_ROOT)};`
 );
 writeFileSync(pluginDst, pluginContent, "utf-8");
 log.success(`Deployed plugin to ${pluginDst}`);

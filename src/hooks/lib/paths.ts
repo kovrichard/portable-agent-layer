@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 
 /**
  * Root of the PAL package (engine code + shipped assets).
@@ -8,20 +8,24 @@ import { dirname, resolve } from "node:path";
  * In package mode: the global node_modules package directory.
  */
 export function palPkg(): string {
-  return (
-    process.env.PAL_PKG ||
-    process.env.PAL_DIR ||
-    resolve(dirname(import.meta.dir), "..", "..", "..")
-  );
+  return process.env.PAL_PKG || resolve(import.meta.dir, "..", "..", "..");
 }
 
 /**
  * Root of the user's personal state (telos, memory, etc.).
  * In repo mode: same as palPkg() (the repo root).
  * In package mode: ~/.pal/ (or PAL_HOME override).
+ *
+ * Repo mode is detected by the presence of .palroot next to the package.
+ * This file is not included in the npm package, so it only exists in cloned repos.
  */
 export function palHome(): string {
-  return process.env.PAL_HOME || process.env.PAL_DIR || resolve(homedir(), ".pal");
+  if (process.env.PAL_HOME) return process.env.PAL_HOME;
+
+  const pkgRoot = palPkg();
+  if (existsSync(resolve(pkgRoot, ".palroot"))) return pkgRoot;
+
+  return resolve(homedir(), ".pal");
 }
 
 /** Ensure a directory exists, creating it recursively if needed */

@@ -8,7 +8,7 @@ import { resolve } from "node:path";
 import { palPkg } from "../../hooks/lib/paths";
 import { log, readJson, removeAgents, removeSkills, writeJson } from "../lib";
 
-const PAL_DIR = palPkg();
+const PKG_ROOT = palPkg();
 const CLAUDE_DIR = process.env.PAL_CLAUDE_DIR!;
 const SETTINGS = resolve(CLAUDE_DIR, "settings.json");
 
@@ -35,9 +35,9 @@ if (settings.hooks) {
   for (const [event, entries] of Object.entries(settings.hooks)) {
     settings.hooks[event] = entries.filter((entry) => {
       // New format: { matcher, hooks: [{ command }] }
-      if (entry.hooks) return !entry.hooks.some((h) => h.command?.includes(PAL_DIR));
+      if (entry.hooks) return !entry.hooks.some((h) => h.command?.includes(PKG_ROOT));
       // Old flat format: { type, command }
-      if (entry.command) return !entry.command.includes(PAL_DIR);
+      if (entry.command) return !entry.command.includes(PKG_ROOT);
       return true;
     });
     if (settings.hooks[event].length === 0) delete settings.hooks[event];
@@ -47,6 +47,7 @@ if (settings.hooks) {
 
 // --- Remove env ---
 if (settings.env) {
+  // Clean up env vars
   delete settings.env.PAL_DIR;
   if (Object.keys(settings.env).length === 0) delete settings.env;
 }
@@ -56,7 +57,7 @@ type SettingsWithPermissions = Settings & { permissions?: { allow?: string[] } }
 const s = settings as SettingsWithPermissions;
 if (s.permissions?.allow) {
   s.permissions.allow = s.permissions.allow.filter(
-    (p) => !p.includes(PAL_DIR) && !p.startsWith("Bash(bun run ai:")
+    (p) => !p.includes(PKG_ROOT) && !p.startsWith("Bash(bun run ai:")
   );
   if (s.permissions.allow.length === 0) delete s.permissions.allow;
   if (Object.keys(s.permissions).length === 0) delete s.permissions;
