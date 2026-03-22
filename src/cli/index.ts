@@ -35,18 +35,41 @@ if (allArgs[0] === "cli") {
   await session(allArgs);
 }
 
-// ── Session: pal [claude-args] ──
+// ── Session: pal [args] ──
 
-async function session(claudeArgs: string[]) {
-  // Run claude with all args, inheriting stdio for interactive TTY
-  const result = spawnSync("claude", claudeArgs, {
+function detectAgent(): string | null {
+  const hasClaude =
+    spawnSync("claude", ["--version"], {
+      stdio: "ignore",
+      shell: true,
+    }).status === 0;
+  const hasOpencode =
+    spawnSync("opencode", ["--version"], {
+      stdio: "ignore",
+      shell: true,
+    }).status === 0;
+
+  if (hasClaude) return "claude";
+  if (hasOpencode) return "opencode";
+  return null;
+}
+
+async function session(sessionArgs: string[]) {
+  const agent = detectAgent();
+  if (!agent) {
+    log.error("No supported agent found. Install Claude Code or opencode.");
+    process.exit(1);
+  }
+
+  const result = spawnSync(agent, sessionArgs, {
     stdio: "inherit",
     shell: true,
   });
 
   const exitCode = result.status ?? 1;
 
-  // Find the most recent transcript and extract session ID
+  // Session summary (Claude only)
+  if (agent !== "claude") process.exit(exitCode);
   try {
     const projectsDir = resolve(homedir(), ".claude", "projects");
     if (!existsSync(projectsDir)) process.exit(exitCode);
