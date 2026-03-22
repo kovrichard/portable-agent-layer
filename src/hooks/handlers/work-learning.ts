@@ -119,8 +119,8 @@ export async function captureWorkLearning(
     const result = await inference({
       system: `You summarize AI coding sessions between a human user and an AI assistant. The 'Human messages' are what the user said. The 'AI response' is what the assistant said. Produce: 1) a short title (5-10 words) describing what was accomplished, 2) a summary of what the AI assistant did for the user (2-4 sentences, write from the AI's perspective using 'we'), 3) insights — what worked well, what was surprising, or what should be done differently next time (2-3 bullet points, no markdown), 4) tags — pick 1-3 from this list: [${vocab.join(", ")}]. If none fit, leave tags empty and put your suggested tag in suggested_tag.`,
       user: `Human messages:\n${userMessages}\n\nAI response:\n${rawSummary.slice(0, 400)}`,
-      maxTokens: 300,
-      timeout: 8000,
+      maxTokens: 350,
+      timeout: 15000,
       jsonSchema: {
         type: "object" as const,
         additionalProperties: false,

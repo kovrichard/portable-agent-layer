@@ -72,8 +72,8 @@ export async function captureFailure(
       ]
         .filter(Boolean)
         .join("\n"),
-      maxTokens: 350,
-      timeout: 8000,
+      maxTokens: 400,
+      timeout: 15000,
       jsonSchema: {
         type: "object" as const,
         additionalProperties: false,
