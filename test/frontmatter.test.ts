@@ -62,6 +62,21 @@ Something.
     expect(result.body).toBe(content);
   });
 
+  test("parses quoted strings with colons", () => {
+    const content = `---
+context: "User frustrated by inconsistency: why didn't you remember?"
+rating: 2
+---
+
+Body.
+`;
+    const result = parse<{ context: string; rating: number }>(content);
+    expect(result.meta.context).toBe(
+      "User frustrated by inconsistency: why didn't you remember?"
+    );
+    expect(result.meta.rating).toBe(2);
+  });
+
   test("handles content with --- inside body", () => {
     const content = `---
 title: Test
@@ -82,8 +97,8 @@ describe("stringify", () => {
       "Body content."
     );
     expect(result).toBe(`---
-title: My Title
-category: algorithm
+title: "My Title"
+category: "algorithm"
 ---
 
 Body content.
@@ -92,7 +107,7 @@ Body content.
 
   test("skips undefined and null values", () => {
     const result = stringify({ title: "Test", session: undefined, extra: null }, "Body.");
-    expect(result).toContain("title: Test");
+    expect(result).toContain('title: "Test"');
     expect(result).not.toContain("session");
     expect(result).not.toContain("extra");
   });
@@ -101,6 +116,11 @@ Body content.
     const result = stringify({ rating: 3, completed: true }, "Body.");
     expect(result).toContain("rating: 3");
     expect(result).toContain("completed: true");
+  });
+
+  test("quotes strings with colons", () => {
+    const result = stringify({ context: "User frustrated: why not?" }, "Body.");
+    expect(result).toContain('context: "User frustrated: why not?"');
   });
 });
 

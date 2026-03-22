@@ -35,6 +35,15 @@ export function parse<T = Record<string, string>>(content: string): Parsed<T> {
     const [, key, rawValue] = match;
     const value = rawValue.trim();
 
+    // Strip quotes
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      meta[key] = value.slice(1, -1).replace(/\\"/g, '"');
+      continue;
+    }
+
     // Type coercion
     if (value === "true") meta[key] = true;
     else if (value === "false") meta[key] = false;
@@ -55,7 +64,11 @@ export function stringify(meta: Record<string, unknown>, body: string): string {
 
   for (const [key, value] of Object.entries(meta)) {
     if (value === undefined || value === null) continue;
-    lines.push(`${key}: ${String(value)}`);
+    if (typeof value === "string") {
+      lines.push(`${key}: "${value.replace(/"/g, '\\"')}"`);
+    } else {
+      lines.push(`${key}: ${String(value)}`);
+    }
   }
 
   lines.push("---");
