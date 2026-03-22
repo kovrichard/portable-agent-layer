@@ -67,8 +67,8 @@ export async function captureFailure(
         `Rating: ${rating}/10`,
         `Context: ${context}`,
         detailedContext ? `Analysis: ${detailedContext}` : "",
-        `User said: ${lastUser}`,
-        `Assistant said: ${lastAssistant}`,
+        `Assistant response (what the user reacted to): ${lastAssistant}`,
+        `User reaction (the frustrated message): ${lastUser}`,
       ]
         .filter(Boolean)
         .join("\n"),
