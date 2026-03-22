@@ -26,7 +26,7 @@ describe("extractFallbackName", () => {
 
   test("strips system-reminder blocks", () => {
     const name = extractFallbackName(
-      "<system-reminder>lots of noise here</system-reminder>fix the migration script",
+      "<system-reminder>lots of noise here</system-reminder>fix the migration script"
     );
     expect(name).not.toContain("Noise");
     expect(name).toContain("Migration");
@@ -34,7 +34,7 @@ describe("extractFallbackName", () => {
 
   test("strips UUIDs and hex IDs", () => {
     const name = extractFallbackName(
-      "fix 550e8400-e29b-41d4-a716-446655440000 deployment issue",
+      "fix 550e8400-e29b-41d4-a716-446655440000 deployment issue"
     );
     expect(name).toContain("Deployment");
     expect(name).not.toContain("550e8400");
@@ -42,7 +42,7 @@ describe("extractFallbackName", () => {
 
   test("strips file paths", () => {
     const name = extractFallbackName(
-      "update /Users/rico/Development/git/portable-agent-layer/src/hooks/lib/context.ts exports",
+      "update /Users/rico/Development/git/portable-agent-layer/src/hooks/lib/context.ts exports"
     );
     expect(name).toContain("Exports");
     expect(name).not.toContain("Users");
@@ -50,7 +50,7 @@ describe("extractFallbackName", () => {
 
   test("caps at 4 words", () => {
     const name = extractFallbackName(
-      "refactor database connection pooling configuration settings module",
+      "refactor database connection pooling configuration settings module"
     );
     const words = name.split(" ");
     expect(words.length).toBeLessThanOrEqual(4);

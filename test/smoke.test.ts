@@ -1,14 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { readFramePrinciples } from "../src/hooks/lib/wisdom";
 import {
   buildSystemReminder,
-  loadWisdomContext,
   loadActiveWork,
-  loadLearningDigest,
   loadFailurePatterns,
-  loadSignalTrends,
+  loadLearningDigest,
   loadRelationshipContext,
+  loadSignalTrends,
+  loadWisdomContext,
 } from "../src/hooks/lib/context";
+import { readFramePrinciples } from "../src/hooks/lib/wisdom";
 
 describe("wisdom", () => {
   test("readFramePrinciples returns array", () => {
