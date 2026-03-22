@@ -403,12 +403,28 @@ export function loadSynthesisRecommendations(): string {
 
         if (recs.length === 0) continue;
 
-        // Extract metadata
-        const periodMatch = content.match(/\*\*Period:\*\* (.+)/);
-        const avgMatch = content.match(/\*\*Average Rating:\*\* (.+)/);
+        // Extract metadata — frontmatter or legacy
+        let period = "";
+        let avgRating = "";
+
+        if (hasFrontmatter(content)) {
+          const { meta } = parse<{
+            period?: string;
+            average_rating?: string;
+          }>(content);
+          period = meta.period || "";
+          avgRating = meta.average_rating ? `${meta.average_rating}/10` : "";
+        } else {
+          // DEPRECATED: legacy **Key:** format
+          const periodMatch = content.match(/\*\*Period:\*\* (.+)/);
+          const avgMatch = content.match(/\*\*Average Rating:\*\* (.+)/);
+          period = periodMatch?.[1] || "";
+          avgRating = avgMatch?.[1] || "";
+        }
+
         const header = [
           "## Pattern Synthesis",
-          periodMatch ? `*${periodMatch[1]} — ${avgMatch?.[1] ?? ""}*` : "",
+          period ? `*${period} — ${avgRating}*` : "",
         ]
           .filter(Boolean)
           .join("\n");

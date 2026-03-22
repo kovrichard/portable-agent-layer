@@ -15,6 +15,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { stringify } from "../hooks/lib/frontmatter";
 import { HAIKU_MODEL } from "../hooks/lib/models";
 import { palHome } from "../hooks/lib/paths";
 
@@ -260,19 +261,15 @@ async function analyzeRatings(
 
 function formatReport(result: SynthesisResult): string {
   const date = new Date().toISOString().slice(0, 10);
-  const lines: string[] = [
-    "# Learning Pattern Synthesis",
-    "",
-    `**Period:** ${result.period}`,
-    `**Generated:** ${date}`,
-    `**Total Ratings:** ${result.totalRatings}`,
-    `**Average Rating:** ${result.avgRating.toFixed(1)}/10`,
-    "",
-    "---",
-    "",
-    "## Top Issues",
-    "",
-  ];
+
+  const meta: Record<string, unknown> = {
+    period: result.period,
+    date,
+    total_ratings: result.totalRatings,
+    average_rating: result.avgRating.toFixed(1),
+  };
+
+  const lines: string[] = ["## Top Issues", ""];
 
   if (result.topIssues.length > 0) {
     for (let i = 0; i < result.topIssues.length; i++) {
@@ -324,7 +321,7 @@ function formatReport(result: SynthesisResult): string {
     ""
   );
 
-  return lines.join("\n");
+  return stringify(meta, lines.join("\n"));
 }
 
 function writeReport(result: SynthesisResult, period: string): string {
