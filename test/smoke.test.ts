@@ -21,7 +21,7 @@ describe("wisdom", () => {
     for (const p of result) {
       const match = p.match(/\((\d+)%\)$/);
       expect(match).toBeTruthy();
-      expect(parseInt(match![1], 10)).toBeGreaterThanOrEqual(85);
+      expect(parseInt(match?.[1] ?? "0", 10)).toBeGreaterThanOrEqual(85);
     }
   });
 });

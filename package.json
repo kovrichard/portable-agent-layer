@@ -9,7 +9,6 @@
   "files": [
     "src/",
     "assets/",
-    "bin/",
     "README.md",
     "LICENSE"
   ],

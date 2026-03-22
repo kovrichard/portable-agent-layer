@@ -2,23 +2,129 @@
 /**
  * PAL CLI — Portable Agent Layer
  *
- * Usage: pal <command> [options]
+ * Usage:
+ *   pal [claude-args...]              Start a Claude session with session summary on exit
+ *   pal cli <command> [options]       Admin commands
  *
- * Commands:
- *   init                 Scaffold PAL home, install hooks for all targets
- *   install              Register hooks/skills for targets
- *   uninstall            Remove hooks/skills for targets
- *   export               Export user state (telos, memory) to a zip
- *   import               Import user state from a zip
- *   status               Show current PAL configuration
+ * Admin commands (pal cli ...):
+ *   init                              Scaffold PAL home, install hooks for all targets
+ *   install [--claude] [--opencode]   Register hooks/skills for targets
+ *   uninstall [--claude] [--opencode] Remove hooks/skills for targets
+ *   export [path] [--dry-run]         Export user state to zip
+ *   import [path] [--dry-run]         Import user state from zip
+ *   status                            Show current PAL configuration
  */
 
-import { existsSync, mkdirSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { palHome, palPkg, platform } from "../hooks/lib/paths";
 import { log } from "../targets/lib";
 
-const [command, ...args] = process.argv.slice(2);
+const allArgs = process.argv.slice(2);
+
+// ── Route: pal cli <command> or pal [claude-args] ──
+
+if (allArgs[0] === "cli") {
+  const [, command, ...args] = allArgs;
+  await runCli(command, args);
+} else if (allArgs[0] === "--help" || allArgs[0] === "-h" || allArgs[0] === "help") {
+  showHelp();
+} else {
+  await session(allArgs);
+}
+
+// ── Session: pal [claude-args] ──
+
+async function session(claudeArgs: string[]) {
+  // Run claude with all args, inheriting stdio for interactive TTY
+  const result = spawnSync("claude", claudeArgs, {
+    stdio: "inherit",
+    shell: true,
+  });
+
+  const exitCode = result.status ?? 1;
+
+  // Find the most recent transcript and extract session ID
+  try {
+    const projectsDir = resolve(homedir(), ".claude", "projects");
+    if (!existsSync(projectsDir)) process.exit(exitCode);
+
+    // Find most recently modified .jsonl file
+    let latestFile = "";
+    let latestMtime = 0;
+
+    for (const project of readdirSync(projectsDir, { withFileTypes: true })) {
+      if (!project.isDirectory()) continue;
+      const dir = resolve(projectsDir, project.name);
+      for (const file of readdirSync(dir)) {
+        if (!file.endsWith(".jsonl")) continue;
+        const filepath = resolve(dir, file);
+        const { mtimeMs } = statSync(filepath);
+        if (mtimeMs > latestMtime) {
+          latestMtime = mtimeMs;
+          latestFile = filepath;
+        }
+      }
+    }
+
+    if (latestFile) {
+      const content = readFileSync(latestFile, "utf-8").trim();
+      const lastLine = content.split("\n").pop();
+      if (lastLine) {
+        const sessionId = JSON.parse(lastLine).sessionId;
+        if (sessionId) {
+          const summaryScript = resolve(palPkg(), "src", "tools", "session-summary.ts");
+          spawnSync("bun", ["run", summaryScript, "--", "--session", sessionId], {
+            stdio: "inherit",
+          });
+        }
+      }
+    }
+  } catch {
+    // Silently ignore summary errors
+  }
+
+  process.exit(exitCode);
+}
+
+// ── CLI dispatcher ──
+
+async function runCli(command: string | undefined, args: string[]) {
+  switch (command) {
+    case "init":
+      await init(args);
+      break;
+    case "install":
+      banner();
+      await install(parseTargets(args));
+      break;
+    case "uninstall":
+      await uninstall(args);
+      break;
+    case "export":
+      await exportState(args);
+      break;
+    case "import":
+      await importState(args);
+      break;
+    case "status":
+      await status();
+      break;
+    case "--help":
+    case "-h":
+    case "help":
+      showHelp();
+      break;
+    default:
+      if (command) log.error(`Unknown command: ${command}`);
+      showHelp();
+      process.exit(command ? 1 : 0);
+  }
+}
+
+// ── Helpers ──
 
 function banner() {
   console.log("");
@@ -31,15 +137,18 @@ function banner() {
 
 function showHelp() {
   console.log(`
-  Usage: pal <command> [options]
+  Usage:
+    pal [claude-args...]                    Start a Claude session
+    pal cli <command> [options]             Admin commands
 
-  Commands:
-    init [--claude] [--opencode] [--all]    Scaffold and install (default: all)
-    install [--claude] [--opencode] [--all]  Register hooks for targets
-    uninstall [--claude] [--opencode] [--all] Remove hooks for targets
-    export [path] [--dry-run]               Export state to zip
-    import [path] [--dry-run]               Import state from zip
-    status                                  Show PAL configuration
+  Admin commands:
+    pal cli init [--claude] [--opencode]    Scaffold and install (default: all)
+    pal cli install [--claude] [--opencode] Register hooks for targets
+    pal cli uninstall [--claude] [--opencode] Remove hooks for targets
+    pal cli export [path] [--dry-run]       Export state to zip
+    pal cli import [path] [--dry-run]       Import state from zip
+    pal cli status                          Show PAL configuration
+
   Environment:
     PAL_HOME              Override user state directory (default: ~/.pal or repo root)
     PAL_PKG               Override package root
@@ -53,8 +162,6 @@ function parseTargets(args: string[]): {
   claude: boolean;
   opencode: boolean;
 } {
-  if (args.length === 0) return { claude: true, opencode: true };
-
   let claude = false;
   let opencode = false;
   for (const arg of args) {
@@ -65,14 +172,13 @@ function parseTargets(args: string[]): {
       opencode = true;
     }
   }
-  // If no target flags, default to all
   if (!claude && !opencode) return { claude: true, opencode: true };
   return { claude, opencode };
 }
 
 // ── Commands ──
 
-async function init() {
+async function init(args: string[]) {
   const { ensureSetupState, isSetupComplete } = await import("../hooks/lib/setup");
   const { scaffoldTelos } = await import("../targets/lib");
 
@@ -82,7 +188,6 @@ async function init() {
   const isRepo = existsSync(resolve(palPkg(), ".palroot"));
 
   if (!isRepo) {
-    // Package mode — scaffold ~/.pal/
     log.info(`Creating PAL home at ${home}`);
     mkdirSync(resolve(home, "telos"), { recursive: true });
     mkdirSync(resolve(home, "memory"), { recursive: true });
@@ -91,8 +196,7 @@ async function init() {
   scaffoldTelos();
   ensureSetupState();
 
-  const targets = parseTargets(args);
-  await install(targets);
+  await install(parseTargets(args));
 
   console.log("");
   const state = ensureSetupState();
@@ -101,16 +205,14 @@ async function init() {
   }
 }
 
-async function install(targets?: { claude: boolean; opencode: boolean }) {
-  const t = targets || parseTargets(args);
-
-  if (t.claude) {
+async function install(targets: { claude: boolean; opencode: boolean }) {
+  if (targets.claude) {
     console.log("━━━ Claude Code ━━━");
     await import("../targets/claude/install");
     console.log("");
   }
 
-  if (t.opencode) {
+  if (targets.opencode) {
     console.log("━━━ opencode ━━━");
     await import("../targets/opencode/install");
     console.log("");
@@ -119,7 +221,7 @@ async function install(targets?: { claude: boolean; opencode: boolean }) {
   log.success("Done. Existing config was preserved — only new entries were added.");
 }
 
-async function uninstall() {
+async function uninstall(args: string[]) {
   const targets = parseTargets(args);
 
   if (targets.claude) {
@@ -139,13 +241,13 @@ async function uninstall() {
   );
 }
 
-async function exportState() {
+async function exportState(args: string[]) {
   const { collectExportFiles, exportZip, timestamp } = await import(
     "../hooks/lib/export"
   );
 
   const dryRun = args.includes("--dry-run");
-  const pathArg = args.find((a) => !a.startsWith("-") && a !== "export");
+  const pathArg = args.find((a) => !a.startsWith("-"));
   const outputPath = pathArg || resolve(palHome(), `pal-export-${timestamp()}.zip`);
 
   if (dryRun) {
@@ -166,14 +268,14 @@ async function exportState() {
   }
 }
 
-async function importState() {
-  const { readdirSync, statSync } = await import("node:fs");
+async function importState(args: string[]) {
+  const { statSync } = await import("node:fs");
   const { createInterface } = await import("node:readline");
   const AdmZip = (await import("adm-zip")).default;
 
   const home = palHome();
   const dryRun = args.includes("--dry-run");
-  const pathArg = args.find((a) => !a.startsWith("-") && a !== "import");
+  const pathArg = args.find((a) => !a.startsWith("-"));
 
   function findLatest(): string | null {
     const candidates: string[] = [];
@@ -214,7 +316,7 @@ async function importState() {
   } else {
     const latest = findLatest();
     if (!latest) {
-      log.error("No export or backup files found. Provide a path: pal import <path>");
+      log.error("No export or backup files found. Provide a path: pal cli import <path>");
       process.exit(1);
     }
     console.log(`Found: ${latest}`);
@@ -254,13 +356,11 @@ async function importState() {
   } else {
     zip.extractAllTo(home, true);
     console.log(`Imported ${entries.length} files → ${home}`);
-    log.info("Run 'pal install' to re-register hooks.");
+    log.info("Run 'pal cli install' to re-register hooks.");
   }
 }
 
 async function status() {
-  const { existsSync, readdirSync, readFileSync } = await import("node:fs");
-
   const home = palHome();
   const pkg = palPkg();
   const isRepo = existsSync(resolve(pkg, ".palroot"));
@@ -274,13 +374,11 @@ async function status() {
   log.info(`Home:     ${home}`);
   console.log("");
 
-  // Platform dirs
   log.info(`Claude:   ${platform.claudeDir()}`);
   log.info(`opencode: ${platform.opencodeDir()}`);
   log.info(`Agents:   ${platform.agentsDir()}`);
   console.log("");
 
-  // Counts
   const count = (dir: string, ext?: string) => {
     try {
       const files = readdirSync(dir);
@@ -298,7 +396,6 @@ async function status() {
   const agentsDir = resolve(platform.claudeDir(), "agents");
   log.info(`Agents:   ${count(agentsDir, ".md")} installed`);
 
-  // Check if hooks are registered
   const settingsPath = resolve(platform.claudeDir(), "settings.json");
   try {
     const settings = JSON.parse(readFileSync(settingsPath, "utf-8"));
@@ -308,37 +405,4 @@ async function status() {
     log.info(`Hooks:    not configured`);
   }
   console.log("");
-}
-
-// ── Dispatch ──
-
-switch (command) {
-  case "init":
-    await init();
-    break;
-  case "install":
-    banner();
-    await install();
-    break;
-  case "uninstall":
-    await uninstall();
-    break;
-  case "export":
-    await exportState();
-    break;
-  case "import":
-    await importState();
-    break;
-  case "status":
-    await status();
-    break;
-  case "--help":
-  case "-h":
-  case "help":
-    showHelp();
-    break;
-  default:
-    if (command) log.error(`Unknown command: ${command}`);
-    showHelp();
-    process.exit(command ? 1 : 0);
 }
