@@ -5,6 +5,7 @@
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { hasFrontmatter, parse } from "./frontmatter";
 import { paths } from "./paths";
 import { loadRecentNotes } from "./relationship";
 import { readSessionNames } from "./session-names";
@@ -247,28 +248,53 @@ export function loadLearningDigest(): string {
       if (files.length >= 6) break;
     }
 
-    function extractTitle(filePath: string): string {
+    function extractMeta(filePath: string): {
+      title: string;
+      category: string;
+    } {
       const content = readFileSync(filePath, "utf-8").trim();
+
+      // Frontmatter format (new)
+      if (hasFrontmatter(content)) {
+        const { meta } = parse<{ title?: string; category?: string }>(content);
+        return {
+          title: meta.title ? `**Title:** ${meta.title}` : content.slice(0, 80),
+          category: meta.category || "algorithm",
+        };
+      }
+
+      // Legacy format: **Title:** inline
       const titleLine = content.split("\n").find((l) => l.startsWith("**Title:**"));
-      if (titleLine) return titleLine;
-      // Fallback: first non-heading, non-empty line
       const fallback = content.split("\n").find((l) => l.trim() && !l.startsWith("#"));
-      return fallback?.slice(0, 100) ?? content.slice(0, 80);
+      return {
+        title: titleLine ?? fallback?.slice(0, 100) ?? content.slice(0, 80),
+        category: "algorithm", // legacy files use filename for category
+      };
     }
 
-    const algorithm = files.filter((f) => f.category === "algorithm").slice(0, 2);
-    const system = files.filter((f) => f.category === "system").slice(0, 2);
+    // Extract metadata, preferring frontmatter over filename for category
+    const enriched = files.map((f) => {
+      const meta = extractMeta(f.path);
+      return {
+        ...f,
+        title: meta.title,
+        category: meta.category !== "algorithm" ? meta.category : f.category,
+      };
+    });
+
+    const algorithm = enriched.filter((f) => f.category === "algorithm").slice(0, 2);
+    const system = enriched.filter((f) => f.category === "system").slice(0, 2);
 
     if (algorithm.length === 0 && system.length === 0) return "";
 
     const lines: string[] = ["## Recent Session Learnings"];
     if (algorithm.length > 0) {
       lines.push("### Approach");
-      for (const f of algorithm) lines.push(`- ${extractTitle(f.path)}`);
+      for (const f of algorithm) lines.push(`- ${f.title}`);
     }
     if (system.length > 0) {
       lines.push("### System");
-      for (const f of system) lines.push(`- ${extractTitle(f.path)}`);
+      for (const f of system) lines.push(`- ${f.title}`);
     }
     return lines.join("\n");
   } catch {

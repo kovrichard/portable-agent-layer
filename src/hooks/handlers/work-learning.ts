@@ -7,6 +7,7 @@
 
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { stringify } from "../lib/frontmatter";
 import { inference } from "../lib/inference";
 import { categorizeLearning } from "../lib/learning-category";
 import { ensureDir, paths } from "../lib/paths";
@@ -149,20 +150,22 @@ export async function captureWorkLearning(
   const dir = ensureDir(resolve(paths.sessionLearning(), monthPath()));
   const filename = `${fileTimestamp()}_${category}_${slug}.md`;
 
-  const content = [
-    "# Work Completion Learning",
-    `**Title:** ${title}`,
-    `**Category:** ${category.toUpperCase()}`,
-    `**Date:** ${new Date().toISOString().slice(0, 10)}`,
-    ...(sessionId ? [`**Session:** ${sessionId}`] : []),
-    "",
+  const meta: Record<string, unknown> = {
+    title,
+    category,
+    date: new Date().toISOString().slice(0, 10),
+  };
+  if (sessionId) meta.session = sessionId;
+
+  const body = [
     "## What Was Done",
     summary,
     "",
     "## Insights",
     insights || "*No insights captured.*",
-    "",
   ].join("\n");
+
+  const content = stringify(meta, body);
 
   // Remove previous capture for this session (overwrite on continued conversations)
   if (sessionId) {

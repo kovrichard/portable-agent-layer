@@ -11,6 +11,7 @@
 
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { hasFrontmatter, parse } from "./frontmatter";
 import { logDebug } from "./log";
 import { ensureDir, paths } from "./paths";
 
@@ -232,11 +233,24 @@ function collectLearnings(): LearningEntry[] {
         for (const file of readdirSync(monthDir).filter((f) => f.endsWith(".md"))) {
           try {
             const content = readFileSync(resolve(monthDir, file), "utf-8");
-            const titleMatch = content.match(/\*\*Title:\*\*\s*(.+)/);
-            const insightsMatch = content.match(/## Insights\n([\s\S]*?)(?=\n##|$)/);
-            const text = [titleMatch?.[1] || "", insightsMatch?.[1]?.trim() || ""]
-              .filter(Boolean)
-              .join(" ");
+            let title = "";
+            let insights = "";
+
+            if (hasFrontmatter(content)) {
+              // New format
+              const { meta, body } = parse<{ title?: string }>(content);
+              title = meta.title || "";
+              const insightsMatch = body.match(/## Insights\n([\s\S]*?)(?=\n##|$)/);
+              insights = insightsMatch?.[1]?.trim() || "";
+            } else {
+              // Legacy format
+              const titleMatch = content.match(/\*\*Title:\*\*\s*(.+)/);
+              title = titleMatch?.[1] || "";
+              const insightsMatch = content.match(/## Insights\n([\s\S]*?)(?=\n##|$)/);
+              insights = insightsMatch?.[1]?.trim() || "";
+            }
+
+            const text = [title, insights].filter(Boolean).join(" ");
             if (text.length >= MIN_TEXT_LENGTH) {
               const dateMatch = file.match(/^(\d{8})/);
               const date = dateMatch
