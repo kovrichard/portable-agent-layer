@@ -252,6 +252,43 @@ function resolveTargets(
   return targets;
 }
 
+// ── Hook health ──
+
+interface HookHealth {
+  totalErrors: number;
+  lastError: string | null;
+}
+
+function checkHookHealth(home: string): HookHealth {
+  const logPath = resolve(home, "memory", "state", "debug.log");
+
+  try {
+    if (!existsSync(logPath)) return { totalErrors: 0, lastError: null };
+
+    const content = readFileSync(logPath, "utf-8");
+    const lines = content.split("\n").filter((l) => l.includes("] ERROR "));
+
+    // Filter to last 24h
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recentErrors = lines.filter((line) => {
+      const match = line.match(/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]/);
+      if (!match) return false;
+      return new Date(match[1]) > cutoff;
+    });
+
+    const lastError =
+      recentErrors.length > 0
+        ? recentErrors[recentErrors.length - 1]
+            .replace(/^\[.*?\] ERROR /, "")
+            .slice(0, 120)
+        : null;
+
+    return { totalErrors: recentErrors.length, lastError };
+  } catch {
+    return { totalErrors: 0, lastError: null };
+  }
+}
+
 // ── Doctor ──
 
 interface DoctorResult {
@@ -288,8 +325,9 @@ function doctor(silent = false): DoctorResult {
   })();
 
   if (!silent) {
-    const ok = (msg: string) => log.info(`  \u2713 ${msg}`);
-    const fail = (msg: string) => log.warn(`  \u2717 ${msg}`);
+    const ok = (msg: string) => console.log(`  \x1b[32m\u2713\x1b[0m ${msg}`);
+    const warn = (msg: string) => console.log(`  \x1b[33m\u26A0\x1b[0m ${msg}`);
+    const fail = (msg: string) => console.log(`  \x1b[31m\u2717\x1b[0m ${msg}`);
 
     console.log("");
     log.info("Doctor");
@@ -302,6 +340,25 @@ function doctor(silent = false): DoctorResult {
       : fail("opencode — not found");
     ok(`PAL home: ${home} (${isRepo ? "repo" : "package"} mode)`);
     telosCount > 0 ? ok(`TELOS: ${telosCount} files`) : fail("TELOS: not scaffolded");
+
+    // API key checks
+    process.env.ANTHROPIC_API_KEY
+      ? ok("ANTHROPIC_API_KEY is set")
+      : fail("ANTHROPIC_API_KEY — not set (hooks need it for inference)");
+    process.env.GEMINI_API_KEY
+      ? ok("GEMINI_API_KEY is set")
+      : warn("GEMINI_API_KEY — not set (optional, for YouTube analysis)");
+
+    // Hook health from debug.log
+    const hookHealth = checkHookHealth(home);
+    if (hookHealth.totalErrors === 0) {
+      ok("Hooks: no recent errors");
+    } else {
+      fail(`Hooks: ${hookHealth.totalErrors} error(s) in last 24h`);
+      if (hookHealth.lastError) {
+        log.warn(`    Last: ${hookHealth.lastError}`);
+      }
+    }
 
     if (!hasAgent) {
       console.log("");
