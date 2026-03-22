@@ -15,9 +15,9 @@ import {
   normalizeUrl,
   processEntities,
   saveEntityIndex,
-} from "./entities";
+} from "../src/hooks/lib/entities";
 
-const TEST_DIR = resolve(import.meta.dir, "../../.test-tmp");
+const TEST_DIR = resolve(import.meta.dir, "../.test-tmp");
 const TEST_INDEX = resolve(TEST_DIR, "entity-index.json");
 
 beforeEach(() => {
