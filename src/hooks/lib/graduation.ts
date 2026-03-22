@@ -478,28 +478,31 @@ export function graduate(dryRun = false): GraduationResult {
 
 // ── Threshold Check (for Stop hook) ──
 
-const GRADUATION_INTERVAL_DAYS = 14;
+const GRADUATION_INTERVAL_DAYS = 7;
 const MIN_NEW_ENTRIES = 10;
 
 export function shouldRunGraduation(): boolean {
   const state = readState();
 
-  // Check time since last run
-  if (state.lastRun) {
+  // Enough time passed since last run?
+  let timeThreshold = false;
+  if (!state.lastRun) {
+    timeThreshold = true;
+  } else {
     const daysSince =
       (Date.now() - new Date(state.lastRun).getTime()) / (1000 * 60 * 60 * 24);
-    if (daysSince < GRADUATION_INTERVAL_DAYS) return false;
+    timeThreshold = daysSince >= GRADUATION_INTERVAL_DAYS;
   }
 
-  // Check if enough new material
+  // Enough new material?
   const failures = collectFailures();
   const learnings = collectLearnings();
-
-  // Compare against graduated count to estimate new entries
   const graduatedSources = new Set(state.graduated.flatMap((g) => g.sources));
   const newEntries = [...failures, ...learnings].filter(
     (e) => !graduatedSources.has(e.source)
   ).length;
+  const entryThreshold = newEntries >= MIN_NEW_ENTRIES;
 
-  return newEntries >= MIN_NEW_ENTRIES;
+  // Run if either condition is met
+  return timeThreshold || entryThreshold;
 }
