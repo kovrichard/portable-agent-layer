@@ -4,8 +4,8 @@
  * Default: installs for both targets.
  */
 
-import { ensureSetupState, isSetupComplete } from "./src/hooks/lib/setup";
-import { log, scaffoldTelos } from "./src/targets/lib";
+import { ensureSetupState, isSetupComplete } from "../hooks/lib/setup";
+import { log, scaffoldTelos } from "../targets/lib";
 
 // --- Parse args ---
 const args = process.argv.slice(2);
@@ -60,13 +60,13 @@ ensureSetupState();
 // --- Run target installers ---
 if (installClaude) {
   console.log("━━━ Claude Code ━━━");
-  await import("./src/targets/claude/install");
+  await import("../targets/claude/install");
   console.log("");
 }
 
 if (installOpencode) {
   console.log("━━━ opencode ━━━");
-  await import("./src/targets/opencode/install");
+  await import("../targets/opencode/install");
   console.log("");
 }
 

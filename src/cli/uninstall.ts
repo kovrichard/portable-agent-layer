@@ -3,8 +3,8 @@
  * Usage: bun run uninstall.ts [--claude] [--opencode] [--all]
  */
 
-import { palHome } from "./src/hooks/lib/paths";
-import { log } from "./src/targets/lib";
+import { palHome } from "../hooks/lib/paths";
+import { log } from "../targets/lib";
 
 const args = process.argv.slice(2);
 let removeClaude = false;
@@ -32,13 +32,13 @@ for (const arg of args) {
 
 if (removeClaude) {
   console.log("━━━ Claude Code ━━━");
-  await import("./src/targets/claude/uninstall");
+  await import("../targets/claude/uninstall");
   console.log("");
 }
 
 if (removeOpencode) {
   console.log("━━━ opencode ━━━");
-  await import("./src/targets/opencode/uninstall");
+  await import("../targets/opencode/uninstall");
   console.log("");
 }
 
