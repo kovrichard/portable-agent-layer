@@ -10,6 +10,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { stringify } from "../lib/frontmatter";
 import { inference } from "../lib/inference";
 import { categorizeLearning } from "../lib/learning-category";
 import { ensureDir, paths } from "../lib/paths";
@@ -244,24 +245,24 @@ function writeLearningMarkdown(
   const dir = ensureDir(resolve(paths.sessionLearning(), monthPath()));
   const filename = `${fileTimestamp()}_${source}-rating-${rating}_${category}.md`;
 
-  const content = [
-    `# ${source === "explicit" ? "Low Rating" : "Implicit Low Rating"}: ${rating}/10`,
-    `**Title:** ${context.slice(0, 100) || "(low rating)"}`,
-    `**Date:** ${new Date().toISOString().slice(0, 10)}`,
-    `**Rating:** ${rating}/10`,
-    `**Source:** ${source}`,
-    `**Category:** ${category.toUpperCase()}`,
-    "",
+  const meta: Record<string, unknown> = {
+    title: context.slice(0, 100) || "(low rating)",
+    category,
+    date: new Date().toISOString().slice(0, 10),
+    rating,
+    source,
+  };
+
+  const body = [
     "## Context",
     context || "*(unavailable)*",
     "",
     ...(detailedContext ? ["## Analysis", detailedContext, ""] : []),
     "## Last Response",
     responsePreview || "*(unavailable)*",
-    "",
   ].join("\n");
 
-  writeFileSync(resolve(dir, filename), content, "utf-8");
+  writeFileSync(resolve(dir, filename), stringify(meta, body), "utf-8");
 }
 
 function handleRating(
