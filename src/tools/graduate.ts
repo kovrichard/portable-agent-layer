@@ -1,52 +1,51 @@
 #!/usr/bin/env bun
 /**
- * Wisdom Graduation — promote recurring patterns into permanent wisdom frames.
+ * Graduation Report — surface recurring patterns for manual crystallization.
  *
  * Reads failures and session learnings, finds patterns that recur 3+ times,
- * and graduates them into wisdom frames with confidence tracking.
+ * and generates a readable report with context for each candidate.
+ * You decide what to add to wisdom frames.
  *
- * Usage:
- *   bun run tool:graduate              # Run graduation
- *   bun run tool:graduate -- --dry-run # Preview without writing
+ * Usage: bun run tool:graduate
  */
 
 import { graduate } from "../hooks/lib/graduation";
 
-const dryRun = process.argv.includes("--dry-run");
-const result = graduate(dryRun);
+const result = graduate();
 
-if (
-  result.candidates.length === 0 &&
-  result.graduated.length === 0 &&
-  result.updated.length === 0
-) {
-  console.log("No patterns with 3+ occurrences found. Nothing to graduate.");
+if (result.candidates.length === 0) {
+  console.log("\n  No recurring patterns found (need 3+ similar entries).\n");
   process.exit(0);
 }
 
-if (result.candidates.length > 0) {
-  console.log(`\n  Found ${result.candidates.length} pattern(s) with 3+ occurrences:\n`);
-  for (const c of result.candidates) {
-    console.log(`  [${c.domain}] ${c.pattern.slice(0, 80)} (${c.entries.length}x)`);
-  }
-}
+console.log(`\n  Graduation Report — ${result.candidates.length} pattern(s) detected\n`);
+console.log("  ─────────────────────────────────────────────────\n");
 
-if (result.graduated.length > 0) {
+for (const candidate of result.candidates) {
+  // Collect unique tags across all entries
+  const allTags = [...new Set(candidate.entries.flatMap((e) => e.tags))];
+
+  console.log(`  [${candidate.domain}] ${candidate.entries.length}x occurrences`);
+  if (allTags.length > 0) {
+    console.log(`  Tags: ${allTags.join(", ")}`);
+  }
+  console.log("");
+
+  // Show each entry with date and source
+  for (const entry of candidate.entries) {
+    const sourceType = entry.source.startsWith("failure:") ? "failure" : "learning";
+    console.log(
+      `    ${entry.date || "unknown"} [${sourceType}] ${entry.text.slice(0, 100)}`
+    );
+  }
+
+  console.log("");
   console.log(
-    `\n  ${dryRun ? "Would graduate" : "Graduated"} ${result.graduated.length} new pattern(s):\n`
+    "  → Consider adding a principle to:",
+    `memory/wisdom/frames/${candidate.domain}.md`
   );
-  for (const g of result.graduated) {
-    console.log(`  [${g.domain}] ${g.pattern.slice(0, 80)} → ${g.confidence}%`);
-  }
+  console.log("  ─────────────────────────────────────────────────\n");
 }
 
-if (result.updated.length > 0) {
-  console.log(
-    `\n  ${dryRun ? "Would update" : "Updated"} ${result.updated.length} existing pattern(s):\n`
-  );
-  for (const u of result.updated) {
-    console.log(`  [${u.domain}] ${u.pattern.slice(0, 80)} → ${u.confidence}%`);
-  }
-}
-
-console.log("");
+console.log("  To crystallize: add a line to the wisdom frame file.");
+console.log("  Format: - Your principle here [CRYSTAL: 85%]\n");

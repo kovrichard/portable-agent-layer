@@ -393,50 +393,6 @@ function writeState(state: GraduationState): void {
   writeFileSync(stateFilePath(), JSON.stringify(state, null, 2), "utf-8");
 }
 
-// ── Frame Writing ──
-
-function appendToFrame(domain: string, principle: string, confidence: number): void {
-  const framesDir = paths.wisdom();
-  const framePath = resolve(framesDir, `${domain}.md`);
-
-  const tag = confidence >= 85 ? ` [CRYSTAL: ${confidence}%]` : ` (${confidence}%)`;
-  const line = `- ${principle}${tag}\n`;
-
-  if (existsSync(framePath)) {
-    const content = readFileSync(framePath, "utf-8");
-    // Don't duplicate
-    if (content.includes(principle)) return;
-    writeFileSync(framePath, `${content.trimEnd()}\n${line}`, "utf-8");
-  } else {
-    writeFileSync(framePath, line, "utf-8");
-  }
-}
-
-function updateFrameConfidence(
-  domain: string,
-  principle: string,
-  newConfidence: number
-): void {
-  const framePath = resolve(paths.wisdom(), `${domain}.md`);
-  if (!existsSync(framePath)) return;
-
-  let content = readFileSync(framePath, "utf-8");
-  // Match the principle with any existing tag
-  const escaped = principle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = new RegExp(
-    `^(- ${escaped})\\s*(?:\\[CRYSTAL: \\d+%\\]|\\(\\d+%\\))`,
-    "m"
-  );
-
-  const tag =
-    newConfidence >= 85 ? ` [CRYSTAL: ${newConfidence}%]` : ` (${newConfidence}%)`;
-
-  if (pattern.test(content)) {
-    content = content.replace(pattern, `$1${tag}`);
-    writeFileSync(framePath, content, "utf-8");
-  }
-}
-
 // ── Main Graduation Logic ──
 
 /**
@@ -458,7 +414,7 @@ function synthesizePrinciple(group: PatternGroup): string {
   return principle.trim();
 }
 
-export function graduate(dryRun = false): GraduationResult {
+export function graduate(): GraduationResult {
   const state = readState();
   const failures = collectFailures();
   const learnings = collectLearnings();
@@ -478,70 +434,35 @@ export function graduate(dryRun = false): GraduationResult {
 
   if (candidates.length === 0) {
     logDebug("graduation", "No patterns with 3+ occurrences found");
-    if (!dryRun) {
-      state.lastRun = new Date().toISOString();
-      writeState(state);
-    }
+    state.lastRun = new Date().toISOString();
+    writeState(state);
     return result;
   }
 
+  // Report candidates — no auto-writing, user decides what to crystallize
   for (const group of candidates) {
     const principle = synthesizePrinciple(group);
     const sources = group.entries.map((e) => e.source);
-    const existing = state.graduated.find(
-      (g) => similarity(g.pattern, principle) >= SIMILARITY_THRESHOLD
-    );
+    const confidence = Math.min(95, 60 + (group.entries.length - MIN_OCCURRENCES) * 10);
 
-    if (existing) {
-      // Update existing — bump confidence
-      const newOccurrences = group.entries.length;
-      if (newOccurrences > existing.occurrences) {
-        const bump = (newOccurrences - existing.occurrences) * 10;
-        const newConfidence = Math.min(95, existing.confidence + bump);
-
-        if (!dryRun) {
-          existing.occurrences = newOccurrences;
-          existing.confidence = newConfidence;
-          existing.sources = sources;
-          updateFrameConfidence(existing.domain, existing.pattern, newConfidence);
-        }
-
-        result.updated.push({
-          ...existing,
-          confidence: Math.min(95, existing.confidence + bump),
-          occurrences: newOccurrences,
-        });
-      }
-    } else {
-      // New graduation
-      const confidence = Math.min(95, 60 + (group.entries.length - MIN_OCCURRENCES) * 10);
-      const entry: GraduatedEntry = {
-        pattern: principle,
-        domain: group.domain,
-        confidence,
-        occurrences: group.entries.length,
-        sources,
-        graduatedAt: new Date().toISOString(),
-      };
-
-      if (!dryRun) {
-        appendToFrame(group.domain, principle, confidence);
-        state.graduated.push(entry);
-      }
-
-      result.graduated.push(entry);
-    }
+    result.graduated.push({
+      pattern: principle,
+      domain: group.domain,
+      confidence,
+      occurrences: group.entries.length,
+      sources,
+      graduatedAt: new Date().toISOString(),
+    });
   }
 
-  if (!dryRun) {
-    state.lastRun = new Date().toISOString();
-    writeState(state);
+  // Update lastRun to prevent re-running immediately
+  state.lastRun = new Date().toISOString();
+  writeState(state);
 
-    logDebug(
-      "graduation",
-      `Graduated ${result.graduated.length} new, updated ${result.updated.length} existing`
-    );
-  }
+  logDebug(
+    "graduation",
+    `Found ${result.graduated.length} candidate(s) for manual crystallization`
+  );
 
   return result;
 }

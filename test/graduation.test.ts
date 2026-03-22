@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const TEST_HOME = resolve(import.meta.dir, "../.test-home-graduation");
@@ -16,7 +16,7 @@ beforeAll(() => {
       resolve(dir, "sentiment.json"),
       JSON.stringify({
         rating: 2,
-        context: `semantic-release published wrong version number again`,
+        context: "semantic-release published wrong version number again",
         ts: `2026-03-${20 + i}T10:00:0${i}.000Z`,
         slug,
       })
@@ -44,17 +44,16 @@ beforeAll(() => {
     const slug = `20260322-30000${i}_tagged-failure-${i}`;
     const dir = resolve(TEST_HOME, "memory", "learning", "failures", "2026", "03", slug);
     mkdirSync(dir, { recursive: true });
-    // New format: capture.md with frontmatter + tags
     writeFileSync(
       resolve(dir, "capture.md"),
       [
         "---",
-        `rating: 2`,
+        "rating: 2",
         `context: "npm versioning went wrong in different ways each time"`,
         `date: "2026-03-2${i}"`,
         `ts: "2026-03-2${i}T12:00:0${i}.000Z"`,
         `slug: "${slug}"`,
-        `tags: ["versioning", "deployment"]`,
+        'tags: ["versioning", "deployment"]',
         "---",
         "",
         "## What Went Wrong?",
@@ -79,13 +78,12 @@ afterAll(() => {
   if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
 });
 
-describe("graduation", () => {
+describe("graduation report", () => {
   test("detects patterns with 3+ occurrences", async () => {
     const { graduate } = await import("../src/hooks/lib/graduation");
-    const result = graduate(true); // dry run
+    const result = graduate();
 
     expect(result.candidates.length).toBeGreaterThanOrEqual(1);
-    // The 4x "semantic-release" pattern should be found
     const semrelPattern = result.candidates.find((c) =>
       c.pattern.toLowerCase().includes("semantic-release")
     );
@@ -93,73 +91,46 @@ describe("graduation", () => {
     expect(semrelPattern?.entries.length).toBeGreaterThanOrEqual(3);
   });
 
-  test("does not graduate patterns with <3 occurrences", async () => {
+  test("does not include patterns with <3 occurrences", async () => {
     const { graduate } = await import("../src/hooks/lib/graduation");
-    const result = graduate(true);
+    const result = graduate();
 
-    // The 2x "UI rendering" pattern should NOT be a candidate
     const uiPattern = result.candidates.find((c) =>
       c.pattern.toLowerCase().includes("ui rendering")
     );
     expect(uiPattern).toBeUndefined();
   });
 
-  test("dry run does not write files", async () => {
+  test("does not write to wisdom frames", async () => {
     const { graduate } = await import("../src/hooks/lib/graduation");
-    graduate(true);
+    graduate();
 
-    const stateFile = resolve(TEST_HOME, "memory", "wisdom", "state", "graduated.json");
-    // State file should not exist after dry run
-    expect(existsSync(stateFile)).toBe(false);
+    // No frame files should be created — report only
+    const framesDir = resolve(TEST_HOME, "memory", "wisdom", "frames");
+    const frames = existsSync(framesDir)
+      ? readdirSync(framesDir).filter((f) => f.endsWith(".md"))
+      : [];
+    expect(frames).toHaveLength(0);
   });
 
-  test("graduates patterns into wisdom frames", async () => {
+  test("reports correct confidence for occurrences", async () => {
     const { graduate } = await import("../src/hooks/lib/graduation");
-    const result = graduate(false); // real run
+    const result = graduate();
 
-    expect(result.graduated.length).toBeGreaterThanOrEqual(1);
-
-    // Check that a frame file was created
-    const domain = result.graduated[0].domain;
-    const framePath = resolve(TEST_HOME, "memory", "wisdom", "frames", `${domain}.md`);
-    expect(existsSync(framePath)).toBe(true);
-
-    const content = readFileSync(framePath, "utf-8");
-    expect(content).toContain("semantic-release");
-  });
-
-  test("writes graduation state", async () => {
-    const stateFile = resolve(TEST_HOME, "memory", "wisdom", "state", "graduated.json");
-    expect(existsSync(stateFile)).toBe(true);
-
-    const state = JSON.parse(readFileSync(stateFile, "utf-8"));
-    expect(state.lastRun).toBeTruthy();
-    expect(state.graduated.length).toBeGreaterThanOrEqual(1);
-    expect(state.graduated[0].confidence).toBeGreaterThanOrEqual(60);
-  });
-
-  test("confidence starts at 60% for 3 occurrences", async () => {
-    const stateFile = resolve(TEST_HOME, "memory", "wisdom", "state", "graduated.json");
-    const state = JSON.parse(readFileSync(stateFile, "utf-8"));
     // 4 occurrences: 60 + (4-3)*10 = 70%
-    const entry = state.graduated.find((g: { pattern: string }) =>
-      g.pattern.toLowerCase().includes("semantic-release")
+    const candidate = result.graduated.find((g) =>
+      g.sources.some((s) => s.includes("test-failure"))
     );
-    expect(entry).toBeTruthy();
-    expect(entry.confidence).toBe(70);
+    expect(candidate).toBeTruthy();
+    expect(candidate?.confidence).toBe(70);
   });
 });
 
 describe("tag-based grouping", () => {
   test("groups entries by shared tags", async () => {
     const { graduate } = await import("../src/hooks/lib/graduation");
-    // Reset state so graduation runs fresh
-    const statePath = resolve(TEST_HOME, "memory", "wisdom", "state", "graduated.json");
-    if (existsSync(statePath)) rmSync(statePath);
+    const result = graduate();
 
-    const result = graduate(true);
-
-    // Should find the tagged "versioning" group (3 entries with shared tag)
     const versioningGroup = result.candidates.find((c) =>
       c.entries.some((e) => e.tags.includes("versioning"))
     );
@@ -171,9 +142,7 @@ describe("tag-based grouping", () => {
 describe("shouldRunGraduation", () => {
   test("returns false right after a run", async () => {
     const { shouldRunGraduation } = await import("../src/hooks/lib/graduation");
-    // Run graduation to set lastRun
-    const { graduate } = await import("../src/hooks/lib/graduation");
-    graduate(false);
+    // graduate() writes lastRun to state
     expect(shouldRunGraduation()).toBe(false);
   });
 });
