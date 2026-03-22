@@ -62,6 +62,8 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.7",
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
     "@opencode-ai/plugin": "latest",
     "@types/adm-zip": "^0.5.8",
     "@types/bun": "latest",
