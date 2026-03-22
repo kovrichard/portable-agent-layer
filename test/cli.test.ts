@@ -11,6 +11,7 @@ function pal(...args: string[]) {
     env: {
       ...process.env,
       PAL_HOME: TEST_HOME,
+      PAL_SKIP_DOCTOR: "1",
       // Prevent writing to real claude/opencode/agents dirs
       PAL_CLAUDE_DIR: resolve(TEST_HOME, ".claude"),
       PAL_OPENCODE_DIR: resolve(TEST_HOME, ".opencode"),

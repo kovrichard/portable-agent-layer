@@ -262,6 +262,16 @@ interface DoctorResult {
 }
 
 function doctor(silent = false): DoctorResult {
+  // Allow CI/tests to skip agent detection
+  if (process.env.PAL_SKIP_DOCTOR === "1") {
+    return {
+      bun: { name: "bun", available: true, version: Bun.version },
+      claude: { name: "claude", available: true },
+      opencode: { name: "opencode", available: true },
+      hasAgent: true,
+    };
+  }
+
   const bun = { name: "bun", available: true, version: Bun.version };
   const claude = checkTool("claude");
   const opencode = checkTool("opencode");
