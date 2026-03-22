@@ -1,13 +1,36 @@
 {
   "name": "portable-agent-layer",
   "version": "0.1.0",
-  "description": "PAL — Portable Agent Layer",
-  "private": true,
+  "description": "PAL — Portable Agent Layer: persistent personal context for AI coding assistants",
+  "type": "module",
   "bin": {
     "pal": "src/cli/index.ts"
   },
+  "files": [
+    "src/",
+    "assets/",
+    "bin/",
+    "README.md",
+    "LICENSE"
+  ],
   "engines": {
     "bun": ">=1.3.0"
+  },
+  "keywords": [
+    "ai",
+    "claude",
+    "opencode",
+    "personal-ai",
+    "context",
+    "memory",
+    "telos",
+    "agent",
+    "portable"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kovrichard/portable-agent-layer"
   },
   "scripts": {
     "type-check": "tsc --noEmit",
