@@ -13,6 +13,7 @@
  *   export [path] [--dry-run]         Export user state to zip
  *   import [path] [--dry-run]         Import user state from zip
  *   status                            Show current PAL configuration
+ *   doctor                            Check prerequisites and system health
  */
 
 import { spawnSync } from "node:child_process";
@@ -37,20 +38,32 @@ if (allArgs[0] === "cli") {
 
 // ── Session: pal [args] ──
 
-function detectAgent(): string | null {
-  const hasClaude =
-    spawnSync("claude", ["--version"], {
-      stdio: "ignore",
-      shell: true,
-    }).status === 0;
-  const hasOpencode =
-    spawnSync("opencode", ["--version"], {
-      stdio: "ignore",
-      shell: true,
-    }).status === 0;
+interface ToolCheck {
+  name: string;
+  available: boolean;
+  version?: string;
+}
 
-  if (hasClaude) return "claude";
-  if (hasOpencode) return "opencode";
+function checkTool(cmd: string, versionArgs: string[] = ["--version"]): ToolCheck {
+  try {
+    const result = spawnSync(cmd, versionArgs, {
+      stdio: ["ignore", "pipe", "pipe"],
+      shell: true,
+      timeout: 5000,
+    });
+    if (result.status === 0) {
+      const version = (result.stdout?.toString() || "").trim().split("\n")[0];
+      return { name: cmd, available: true, version };
+    }
+  } catch {
+    // not found
+  }
+  return { name: cmd, available: false };
+}
+
+function detectAgent(): string | null {
+  if (checkTool("claude").available) return "claude";
+  if (checkTool("opencode").available) return "opencode";
   return null;
 }
 
@@ -121,7 +134,7 @@ async function runCli(command: string | undefined, args: string[]) {
       break;
     case "install":
       banner();
-      await install(parseTargets(args));
+      await install(resolveTargets(args));
       break;
     case "uninstall":
       await uninstall(args);
@@ -134,6 +147,9 @@ async function runCli(command: string | undefined, args: string[]) {
       break;
     case "status":
       await status();
+      break;
+    case "doctor":
+      doctor();
       break;
     case "--help":
     case "-h":
@@ -171,6 +187,7 @@ function showHelp() {
     pal cli export [path] [--dry-run]       Export state to zip
     pal cli import [path] [--dry-run]       Import state from zip
     pal cli status                          Show PAL configuration
+    pal cli doctor                          Check prerequisites and health
 
   Environment:
     PAL_HOME              Override user state directory (default: ~/.pal or repo root)
@@ -199,6 +216,93 @@ function parseTargets(args: string[]): {
   return { claude, opencode };
 }
 
+/** Resolve targets against available agents. Errors if explicitly requested but missing. */
+function resolveTargets(
+  args: string[],
+  health?: DoctorResult
+): { claude: boolean; opencode: boolean } {
+  const requested = parseTargets(args);
+  const h = health || doctor(true);
+  const explicit = args.some(
+    (a) => a === "--claude" || a === "--opencode" || a === "--all"
+  );
+
+  if (explicit) {
+    // User explicitly requested — error if not available
+    if (requested.claude && !h.claude.available) {
+      log.error("Claude Code is not installed. Run 'pal cli doctor' for details.");
+      process.exit(1);
+    }
+    if (requested.opencode && !h.opencode.available) {
+      log.error("opencode is not installed. Run 'pal cli doctor' for details.");
+      process.exit(1);
+    }
+    return requested;
+  }
+
+  // Default (no flags) — install for available agents only
+  const targets = {
+    claude: h.claude.available,
+    opencode: h.opencode.available,
+  };
+
+  if (!targets.claude) log.info("Skipping Claude Code (not installed)");
+  if (!targets.opencode) log.info("Skipping opencode (not installed)");
+
+  return targets;
+}
+
+// ── Doctor ──
+
+interface DoctorResult {
+  bun: ToolCheck;
+  claude: ToolCheck;
+  opencode: ToolCheck;
+  hasAgent: boolean;
+}
+
+function doctor(silent = false): DoctorResult {
+  const bun = { name: "bun", available: true, version: Bun.version };
+  const claude = checkTool("claude");
+  const opencode = checkTool("opencode");
+  const hasAgent = claude.available || opencode.available;
+
+  const home = palHome();
+  const isRepo = existsSync(resolve(palPkg(), ".palroot"));
+  const telosCount = (() => {
+    try {
+      return readdirSync(resolve(home, "telos")).filter((f) => f.endsWith(".md")).length;
+    } catch {
+      return 0;
+    }
+  })();
+
+  if (!silent) {
+    const ok = (msg: string) => log.info(`  \u2713 ${msg}`);
+    const fail = (msg: string) => log.warn(`  \u2717 ${msg}`);
+
+    console.log("");
+    log.info("Doctor");
+    ok(`Bun ${bun.version}`);
+    claude.available
+      ? ok(`Claude Code ${claude.version || ""}`.trim())
+      : fail("Claude Code — not found");
+    opencode.available
+      ? ok(`opencode ${opencode.version || ""}`.trim())
+      : fail("opencode — not found");
+    ok(`PAL home: ${home} (${isRepo ? "repo" : "package"} mode)`);
+    telosCount > 0 ? ok(`TELOS: ${telosCount} files`) : fail("TELOS: not scaffolded");
+
+    if (!hasAgent) {
+      console.log("");
+      log.error("No supported agent found. Install Claude Code or opencode.");
+    }
+    console.log("");
+  }
+
+  return { bun, claude, opencode, hasAgent };
+}
+
 // ── Commands ──
 
 async function init(args: string[]) {
@@ -206,6 +310,12 @@ async function init(args: string[]) {
   const { scaffoldTelos } = await import("../targets/lib");
 
   banner();
+
+  // Run doctor first — abort if no agents available
+  const health = doctor(false);
+  if (!health.hasAgent) {
+    process.exit(1);
+  }
 
   const home = palHome();
   const isRepo = existsSync(resolve(palPkg(), ".palroot"));
@@ -219,7 +329,9 @@ async function init(args: string[]) {
   scaffoldTelos();
   ensureSetupState();
 
-  await install(parseTargets(args));
+  // Auto-detect available targets
+  const targets = resolveTargets(args, health);
+  await install(targets);
 
   console.log("");
   const state = ensureSetupState();

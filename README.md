@@ -77,6 +77,7 @@ pal cli status        # check your setup
 | `pal cli export` | Export user state (telos, memory) to a zip |
 | `pal cli import` | Import user state from a zip |
 | `pal cli status` | Show current PAL configuration |
+| `pal cli doctor` | Check prerequisites and system health |
 
 ### Target flags
 
