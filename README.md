@@ -30,7 +30,10 @@ With PAL, you can:
 
 ### Prerequisites
 
+> **Bun is required.** PAL is built on [Bun](https://bun.sh) and will not work with Node.js or other runtimes. Install it with `curl -fsSL https://bun.sh/install | bash`.
+
 - [Bun](https://bun.sh) >= 1.3.0
+- At least one of: [Claude Code](https://claude.ai/code) or [opencode](https://opencode.ai)
 
 ### Package mode (recommended)
 
