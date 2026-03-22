@@ -1,3 +1,17 @@
+## [0.2.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.2.0...v0.2.1) (2026-03-22)
+
+
+### Bug Fixes
+
+* **ci:** add back id-token permission ([f8a3535](https://github.com/kovrichard/portable-agent-layer/commit/f8a353525003295d4a6447956828365836d89cf2))
+* **ci:** add missing token to checkout ([a35b296](https://github.com/kovrichard/portable-agent-layer/commit/a35b2968d225b86b4f8340a36238ba942dd04608))
+* use app token for release ([38ab974](https://github.com/kovrichard/portable-agent-layer/commit/38ab97451e5580880014bed927368d061e88c636))
+
+
+### Performance Improvements
+
+* merge pal runner and cli into a single script ([08fe475](https://github.com/kovrichard/portable-agent-layer/commit/08fe475359008765112e2e0ec4d2daa77ff27b36))
+
 # [0.2.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.1.0...v0.2.0) (2026-03-22)
 
 
