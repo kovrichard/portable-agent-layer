@@ -1,3 +1,23 @@
+# [0.4.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.3.0...v0.4.0) (2026-03-22)
+
+
+### Bug Fixes
+
+* **failure:** correctly order assistant and user messages in the prompt ([4019c14](https://github.com/kovrichard/portable-agent-layer/commit/4019c1425115353f306c37db9a9d49f49467b73a))
+* **failures:** add quotes to front matter strings ([9f3bd06](https://github.com/kovrichard/portable-agent-layer/commit/9f3bd069b5424d00f19edde7044731bac06a5a3a))
+* **inference:** increase maxTokens and timeout for failure and work-learning handlers ([9199ef1](https://github.com/kovrichard/portable-agent-layer/commit/9199ef178a9e036e326a42d28564ab6b268f8fa2))
+
+
+### Features
+
+* add wisdom graduation logic ([ed4d083](https://github.com/kovrichard/portable-agent-layer/commit/ed4d0835d9658dd015850c7d81026b326cef9cdd))
+* **cli:** add hook health check and env var check to doctor command ([67ed313](https://github.com/kovrichard/portable-agent-layer/commit/67ed313932190b2da28f0815676032520752d1de))
+* **frontmatter:** implement lightweight YAML frontmatter parser and serializer ([7ad9151](https://github.com/kovrichard/portable-agent-layer/commit/7ad91512575e1378e8ea62ecdfe07bf54cedc533))
+* **pricing:** add model pricing configuration and enhance cost calculation logic ([9d93b71](https://github.com/kovrichard/portable-agent-layer/commit/9d93b7111f523eb432e7d49c86c55510277b5878))
+* **security:** add new hook-managed files for tags and graduated data ([0a743c9](https://github.com/kovrichard/portable-agent-layer/commit/0a743c9376140fcbd30a1210244858bf288820d6))
+* **tags:** add pending tag suggestions to doctor command output ([7938729](https://github.com/kovrichard/portable-agent-layer/commit/79387293d016c7abbc00500137d6491ecde47c28))
+* **tags:** implement tag management for semantic grouping and enhance inference prompts ([b7a5810](https://github.com/kovrichard/portable-agent-layer/commit/b7a58107f41a748eb3e224afa786e5983b8676fc))
+
 # [0.3.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.2.1...v0.3.0) (2026-03-22)
 
 
