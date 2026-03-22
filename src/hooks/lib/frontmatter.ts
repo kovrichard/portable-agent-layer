@@ -2,7 +2,7 @@
  * Lightweight YAML frontmatter parser/serializer.
  *
  * No external dependencies — parses simple key: value YAML between --- delimiters.
- * Supports strings, numbers, booleans. No nested objects or arrays.
+ * Supports strings, numbers, booleans, and inline JSON arrays.
  */
 
 export interface Parsed<T = Record<string, string>> {
@@ -35,6 +35,16 @@ export function parse<T = Record<string, string>>(content: string): Parsed<T> {
     const [, key, rawValue] = match;
     const value = rawValue.trim();
 
+    // Inline JSON array
+    if (value.startsWith("[") && value.endsWith("]")) {
+      try {
+        meta[key] = JSON.parse(value);
+        continue;
+      } catch {
+        // Fall through to string handling
+      }
+    }
+
     // Strip quotes
     if (
       (value.startsWith('"') && value.endsWith('"')) ||
@@ -64,7 +74,9 @@ export function stringify(meta: Record<string, unknown>, body: string): string {
 
   for (const [key, value] of Object.entries(meta)) {
     if (value === undefined || value === null) continue;
-    if (typeof value === "string") {
+    if (Array.isArray(value)) {
+      lines.push(`${key}: ${JSON.stringify(value)}`);
+    } else if (typeof value === "string") {
       lines.push(`${key}: "${value.replace(/"/g, '\\"')}"`);
     } else {
       lines.push(`${key}: ${String(value)}`);

@@ -21,6 +21,7 @@ interface LearningEntry {
   source: string; // "failure:{slug}" or "learning:{filename}"
   text: string; // context or title+insights
   date: string; // YYYY-MM-DD
+  tags: string[]; // semantic tags from inference
 }
 
 interface PatternGroup {
@@ -198,6 +199,7 @@ function collectFailures(): LearningEntry[] {
         for (const slug of readdirSync(monthDir)) {
           let context = "";
           let ts = "";
+          let entryTags: string[] = [];
 
           // Try capture.md (new format)
           const capturePath = resolve(monthDir, slug, "capture.md");
@@ -207,9 +209,11 @@ function collectFailures(): LearningEntry[] {
               const { meta } = parse<{
                 context?: string;
                 ts?: string;
+                tags?: string[];
               }>(content);
               context = meta.context || "";
               ts = (meta.ts as string) || "";
+              if (Array.isArray(meta.tags)) entryTags = meta.tags;
             } catch {
               /* fallback below */
             }
@@ -233,6 +237,7 @@ function collectFailures(): LearningEntry[] {
               source: `failure:${slug}`,
               text: context.slice(0, 300),
               date: ts.slice(0, 10),
+              tags: entryTags,
             });
           }
         }
@@ -260,11 +265,16 @@ function collectLearnings(): LearningEntry[] {
             const content = readFileSync(resolve(monthDir, file), "utf-8");
             let title = "";
             let insights = "";
+            let entryTags: string[] = [];
 
             if (hasFrontmatter(content)) {
               // New format
-              const { meta, body } = parse<{ title?: string }>(content);
+              const { meta, body } = parse<{
+                title?: string;
+                tags?: string[];
+              }>(content);
               title = meta.title || "";
+              if (Array.isArray(meta.tags)) entryTags = meta.tags;
               const insightsMatch = body.match(/## Insights\n([\s\S]*?)(?=\n##|$)/);
               insights = insightsMatch?.[1]?.trim() || "";
             } else {
@@ -285,6 +295,7 @@ function collectLearnings(): LearningEntry[] {
                 source: `learning:${file}`,
                 text: text.slice(0, 300),
                 date,
+                tags: entryTags,
               });
             }
           } catch {
@@ -318,6 +329,12 @@ function isActionable(text: string): boolean {
   return true;
 }
 
+/** Check if two entries share at least one tag. */
+function hasSharedTag(a: string[], b: string[]): boolean {
+  if (a.length === 0 || b.length === 0) return false;
+  return a.some((t) => b.includes(t));
+}
+
 function groupPatterns(entries: LearningEntry[]): PatternGroup[] {
   const groups: PatternGroup[] = [];
   const actionable = entries.filter((e) => isActionable(e.text));
@@ -325,7 +342,20 @@ function groupPatterns(entries: LearningEntry[]): PatternGroup[] {
   for (const entry of actionable) {
     let matched = false;
     for (const group of groups) {
-      if (similarity(entry.text, group.pattern) >= SIMILARITY_THRESHOLD) {
+      // Tag-based matching (preferred — entries with shared tags)
+      if (
+        entry.tags.length > 0 &&
+        group.entries.some((e) => hasSharedTag(e.tags, entry.tags))
+      ) {
+        group.entries.push(entry);
+        matched = true;
+        break;
+      }
+      // Text similarity fallback (for untagged/legacy entries)
+      if (
+        entry.tags.length === 0 &&
+        similarity(entry.text, group.pattern) >= SIMILARITY_THRESHOLD
+      ) {
         group.entries.push(entry);
         matched = true;
         break;
@@ -506,6 +536,7 @@ export function graduate(dryRun = false): GraduationResult {
   if (!dryRun) {
     state.lastRun = new Date().toISOString();
     writeState(state);
+
     logDebug(
       "graduation",
       `Graduated ${result.graduated.length} new, updated ${result.updated.length} existing`

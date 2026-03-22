@@ -11,6 +11,7 @@ import { stringify } from "../lib/frontmatter";
 import { inference } from "../lib/inference";
 import { categorizeLearning } from "../lib/learning-category";
 import { ensureDir, paths } from "../lib/paths";
+import { getVocabulary, recordSuggestedTag } from "../lib/tags";
 import { fileTimestamp, monthPath } from "../lib/time";
 import { logTokenUsage } from "../lib/token-usage";
 import {
@@ -107,17 +108,18 @@ export async function captureWorkLearning(
   let title = rawTitle;
   let summary = rawSummary;
   let insights = "";
+  let tags: string[] = [];
   try {
+    const vocab = getVocabulary();
     const userMessages = messages
       .filter((m) => m.role === "user")
       .map((m) => extractContent(m).slice(0, 100))
       .slice(-8)
       .join("\n");
     const result = await inference({
-      system:
-        "You summarize AI coding sessions between a human user and an AI assistant. The 'Human messages' are what the user said. The 'AI response' is what the assistant said. Produce: 1) a short title (5-10 words) describing what was accomplished, 2) a summary of what the AI assistant did for the user (2-4 sentences, write from the AI's perspective using 'we'), 3) insights — what worked well, what was surprising, or what should be done differently next time (2-3 bullet points, no markdown).",
+      system: `You summarize AI coding sessions between a human user and an AI assistant. The 'Human messages' are what the user said. The 'AI response' is what the assistant said. Produce: 1) a short title (5-10 words) describing what was accomplished, 2) a summary of what the AI assistant did for the user (2-4 sentences, write from the AI's perspective using 'we'), 3) insights — what worked well, what was surprising, or what should be done differently next time (2-3 bullet points, no markdown), 4) tags — pick 1-3 from this list: [${vocab.join(", ")}]. If none fit, leave tags empty and put your suggested tag in suggested_tag.`,
       user: `Human messages:\n${userMessages}\n\nAI response:\n${rawSummary.slice(0, 400)}`,
-      maxTokens: 250,
+      maxTokens: 300,
       timeout: 8000,
       jsonSchema: {
         type: "object" as const,
@@ -126,8 +128,13 @@ export async function captureWorkLearning(
           title: { type: "string" as const },
           summary: { type: "string" as const },
           insights: { type: "string" as const },
+          tags: {
+            type: "array" as const,
+            items: { type: "string" as const },
+          },
+          suggested_tag: { type: "string" as const },
         },
-        required: ["title", "summary", "insights"],
+        required: ["title", "summary", "insights", "tags"],
       },
     });
     if (result.usage) logTokenUsage("work-learning", result.usage);
@@ -136,10 +143,14 @@ export async function captureWorkLearning(
         title?: string;
         summary?: string;
         insights?: string;
+        tags?: string[];
+        suggested_tag?: string;
       };
       if (parsed.title) title = parsed.title.slice(0, 100);
       if (parsed.summary) summary = parsed.summary;
       if (parsed.insights) insights = parsed.insights;
+      if (parsed.tags?.length) tags = parsed.tags;
+      if (parsed.suggested_tag) recordSuggestedTag(parsed.suggested_tag);
     }
   } catch {
     // Fallback to raw values
@@ -155,6 +166,7 @@ export async function captureWorkLearning(
     category,
     date: new Date().toISOString().slice(0, 10),
   };
+  if (tags.length > 0) meta.tags = tags;
   if (sessionId) meta.session = sessionId;
 
   const body = [

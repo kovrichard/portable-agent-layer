@@ -29,6 +29,30 @@ Body.
     expect(result.meta.confidence).toBe(85);
   });
 
+  test("parses inline JSON arrays", () => {
+    const content = `---
+tags: ["versioning", "deployment", "ci-cd"]
+rating: 2
+---
+
+Body.
+`;
+    const result = parse<{ tags: string[]; rating: number }>(content);
+    expect(result.meta.tags).toEqual(["versioning", "deployment", "ci-cd"]);
+    expect(result.meta.rating).toBe(2);
+  });
+
+  test("parses empty arrays", () => {
+    const content = `---
+tags: []
+---
+
+Body.
+`;
+    const result = parse<{ tags: string[] }>(content);
+    expect(result.meta.tags).toEqual([]);
+  });
+
   test("parses boolean values", () => {
     const content = `---
 completed: true
@@ -116,6 +140,11 @@ Body content.
     const result = stringify({ rating: 3, completed: true }, "Body.");
     expect(result).toContain("rating: 3");
     expect(result).toContain("completed: true");
+  });
+
+  test("serializes arrays as JSON inline", () => {
+    const result = stringify({ tags: ["versioning", "deployment"] }, "Body.");
+    expect(result).toContain('tags: ["versioning","deployment"]');
   });
 
   test("quotes strings with colons", () => {
