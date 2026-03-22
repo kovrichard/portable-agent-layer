@@ -30,6 +30,7 @@ memory/learning/synthesis/
 
 # New memory subsystems
 memory/wisdom/frames/
+memory/wisdom/state/
 memory/relationship/
 memory/entities/entity-index.json
 

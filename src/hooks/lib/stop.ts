@@ -7,6 +7,7 @@ import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { autoBackup } from "../handlers/backup";
 import { captureFailure } from "../handlers/failure";
+import { checkGraduationTrigger } from "../handlers/graduation";
 import { captureRelationship } from "../handlers/relationship";
 import { checkSynthesisTrigger } from "../handlers/synthesis";
 import { resetTab } from "../handlers/tab";
@@ -45,6 +46,7 @@ export async function runStopHandlers(
     updateCounts(),
     autoBackup(),
     checkSynthesisTrigger(),
+    checkGraduationTrigger(),
   ]);
 
   const handlerNames = [
@@ -56,6 +58,7 @@ export async function runStopHandlers(
     "update-counts",
     "backup",
     "synthesis",
+    "graduation",
   ];
   for (let i = 0; i < results.length; i++) {
     const r = results[i];
