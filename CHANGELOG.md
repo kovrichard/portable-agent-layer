@@ -1,3 +1,16 @@
+# [0.3.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.2.1...v0.3.0) (2026-03-22)
+
+
+### Bug Fixes
+
+* **cli:** allow CI/tests to skip agent detection in doctor command ([a2eac5f](https://github.com/kovrichard/portable-agent-layer/commit/a2eac5f55f55ea753c95022f1aae8f440d43b97b))
+
+
+### Features
+
+* **cli:** add 'doctor' command to check system health and prerequisites ([894f1a1](https://github.com/kovrichard/portable-agent-layer/commit/894f1a153665d29d77790604fd56c96ca3accf1a))
+* implement README sync validation to ensure documentation reflects code changes ([4a5721b](https://github.com/kovrichard/portable-agent-layer/commit/4a5721b8de5958a9175a5dd499c46447e991d448))
+
 ## [0.2.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.2.0...v0.2.1) (2026-03-22)
 
 
