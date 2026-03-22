@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "PAL — Portable Agent Layer",
   "private": true,
+  "bin": {
+    "pal": "src/cli/index.ts"
+  },
   "engines": {
     "bun": ">=1.3.0"
   },
