@@ -47,6 +47,16 @@ function emptyBucket(): Bucket {
   return { input: 0, output: 0, cacheWrite: 0, cacheRead: 0, cost: 0, calls: 0 };
 }
 
+function findPricing(model: string): (typeof MODEL_PRICING)[string] | null {
+  // Exact match first
+  if (MODEL_PRICING[model]) return MODEL_PRICING[model];
+  // Prefix match (e.g. "claude-sonnet-4-5-20250929" matches "claude-sonnet-4-5")
+  for (const key of Object.keys(MODEL_PRICING)) {
+    if (model.startsWith(key)) return MODEL_PRICING[key];
+  }
+  return null;
+}
+
 function costForUsage(
   model: string,
   input: number,
@@ -54,7 +64,7 @@ function costForUsage(
   cacheWrite: number,
   cacheRead: number
 ): number {
-  const p = MODEL_PRICING[model];
+  const p = findPricing(model);
   if (!p) return 0;
   return (
     (input * p.input +
@@ -159,14 +169,34 @@ function readClaudeCode(): {
 
   for (const projDir of projectDirs) {
     const projPath = resolve(claudeDir, projDir);
-    const projName = projDir.split("-").pop() ?? projDir;
+    // Project dir is like "-Users-rico-Development-git-myproject" — extract last meaningful segment
+    const segments = projDir.replace(/^-/, "").split("-");
+    const projName = segments.length > 1 ? segments.slice(-1)[0] : projDir;
 
     if (typeof args.project === "string" && !projName.includes(args.project)) continue;
 
-    const jsonlFiles = readdirSync(projPath).filter((f) => f.endsWith(".jsonl"));
+    // Collect all JSONL files: top-level + subagent directories
+    const jsonlFiles: string[] = [];
 
-    for (const file of jsonlFiles) {
-      const filepath = resolve(projPath, file);
+    for (const entry of readdirSync(projPath, { withFileTypes: true })) {
+      if (entry.isFile() && entry.name.endsWith(".jsonl")) {
+        jsonlFiles.push(resolve(projPath, entry.name));
+      } else if (entry.isDirectory()) {
+        // Check for subagent transcripts inside session directories
+        const subagentsDir = resolve(projPath, entry.name, "subagents");
+        try {
+          for (const sub of readdirSync(subagentsDir)) {
+            if (sub.endsWith(".jsonl")) {
+              jsonlFiles.push(resolve(subagentsDir, sub));
+            }
+          }
+        } catch {
+          /* no subagents dir */
+        }
+      }
+    }
+
+    for (const filepath of jsonlFiles) {
       let content: string;
       try {
         content = readFileSync(filepath, "utf-8");
