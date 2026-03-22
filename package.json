@@ -30,7 +30,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/kovrichard/portable-agent-layer"
+    "url": "git+https://github.com/kovrichard/portable-agent-layer.git"
   },
   "scripts": {
     "type-check": "tsc --noEmit",
