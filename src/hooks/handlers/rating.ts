@@ -296,14 +296,7 @@ function handleRating(
       ),
       "utf-8"
     );
-    // Also write learning markdown
-    writeLearningMarkdown(
-      rating,
-      source,
-      context,
-      detailedContext ?? "",
-      responsePreview
-    );
+    // No learning markdown for ≤3 — failure capture covers it with richer analysis + tags
   } else if (rating < 5) {
     // Low but not critical — write learning markdown
     writeLearningMarkdown(
