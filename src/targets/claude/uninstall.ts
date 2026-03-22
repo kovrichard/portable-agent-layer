@@ -5,11 +5,11 @@
 
 import { copyFileSync, existsSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
-import { palPkg } from "../../hooks/lib/paths";
+import { palPkg, platform } from "../../hooks/lib/paths";
 import { log, readJson, removeAgents, removeSkills, writeJson } from "../lib";
 
 const PKG_ROOT = palPkg();
-const CLAUDE_DIR = process.env.PAL_CLAUDE_DIR!;
+const CLAUDE_DIR = platform.claudeDir();
 const SETTINGS = resolve(CLAUDE_DIR, "settings.json");
 
 if (!existsSync(SETTINGS)) {
@@ -83,7 +83,7 @@ if (removedAgents.length > 0) {
 }
 
 // --- Remove AGENTS.md and CLAUDE.md symlink ---
-const agentsMd = resolve(process.env.PAL_OPENCODE_DIR!, "AGENTS.md");
+const agentsMd = resolve(platform.opencodeDir(), "AGENTS.md");
 const claudeMd = resolve(CLAUDE_DIR, "CLAUDE.md");
 try {
   unlinkSync(claudeMd);

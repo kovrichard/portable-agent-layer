@@ -62,6 +62,14 @@ export const paths = {
   backups: () => ensureDir(home("backups")),
 } as const;
 
+// Platform directories (env override or cross-platform defaults)
+const h = homedir();
+export const platform = {
+  claudeDir: () => process.env.PAL_CLAUDE_DIR || resolve(h, ".claude"),
+  opencodeDir: () => process.env.PAL_OPENCODE_DIR || resolve(h, ".config", "opencode"),
+  agentsDir: () => process.env.PAL_AGENTS_DIR || resolve(h, ".agents"),
+} as const;
+
 // Engine/asset paths (in PAL_PKG / repo root)
 export const assets = {
   skills: () => pkg("assets", "skills"),

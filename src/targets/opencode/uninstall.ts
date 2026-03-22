@@ -5,11 +5,12 @@
 
 import { unlinkSync } from "node:fs";
 import { resolve } from "node:path";
+import { platform } from "../../hooks/lib/paths";
 import { log, removeAgentsFromOpencode, removeSkills } from "../lib";
 
-const OC_GLOBAL_DIR = process.env.PAL_OPENCODE_DIR || "";
+const OC_GLOBAL_DIR = platform.opencodeDir() || "";
 
-const PAL_CLAUDE_DIR = process.env.PAL_CLAUDE_DIR || "";
+const PAL_CLAUDE_DIR = platform.claudeDir() || "";
 
 if (!OC_GLOBAL_DIR || !PAL_CLAUDE_DIR) {
   log.error("PAL_OPENCODE_DIR or PAL_CLAUDE_DIR not set");

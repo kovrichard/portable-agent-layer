@@ -15,7 +15,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
-import { assets, palHome } from "../hooks/lib/paths";
+import { assets, palHome, platform } from "../hooks/lib/paths";
 
 // --- Colored logging ---
 
@@ -61,7 +61,7 @@ export function scaffoldTelos(): void {
 
 // --- Skills ---
 
-const AGENTS_SKILLS_DIR = resolve(process.env.PAL_AGENTS_DIR!, "skills");
+const AGENTS_SKILLS_DIR = resolve(platform.agentsDir(), "skills");
 
 /**
  * Install PAL skills into the shared ~/.agents/skills/<name>/SKILL.md standard,
@@ -143,7 +143,7 @@ export function removeSkills(claudeSkillsDir: string): string[] {
 
 // --- Agents ---
 
-const CLAUDE_AGENTS_DIR = resolve(process.env.PAL_CLAUDE_DIR!, "agents");
+const CLAUDE_AGENTS_DIR = resolve(platform.claudeDir(), "agents");
 
 /**
  * Install PAL agent definitions into ~/.claude/agents/.

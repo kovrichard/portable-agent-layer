@@ -7,7 +7,7 @@
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
-import { palHome, palPkg } from "../../hooks/lib/paths";
+import { palHome, palPkg, platform } from "../../hooks/lib/paths";
 import {
   copyAgents,
   copySkills,
@@ -20,7 +20,7 @@ import {
 } from "../lib";
 
 const PKG_ROOT = palPkg().replaceAll("\\", "/");
-const CLAUDE_DIR = process.env.PAL_CLAUDE_DIR!;
+const CLAUDE_DIR = platform.claudeDir();
 const SETTINGS = resolve(CLAUDE_DIR, "settings.json");
 
 // --- Ensure settings.json exists ---
@@ -104,12 +104,6 @@ for (const [event, entries] of Object.entries(hooksPayload.hooks)) {
   }
   settings.hooks[event] = existing;
 }
-
-// --- Set env (persist platform paths from shell scripts so hooks get them) ---
-if (!settings.env) settings.env = {};
-settings.env.PAL_CLAUDE_DIR = CLAUDE_DIR;
-settings.env.PAL_OPENCODE_DIR = process.env.PAL_OPENCODE_DIR!;
-settings.env.PAL_AGENTS_DIR = process.env.PAL_AGENTS_DIR!;
 
 // --- Add PAL tool permissions (auto-allow ai: scripts) ---
 type SettingsWithPermissions = Settings & { permissions?: { allow?: string[] } };

@@ -18,14 +18,14 @@ import {
 } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { loadTelos } from "./context";
-import { assets, palHome, paths } from "./paths";
+import { assets, palHome, paths, platform } from "./paths";
 import { buildSetupPrompt, readSetupState } from "./setup";
 
 const TEMPLATE_PATH = assets.agentsMdTemplate();
 
 function getOutputPaths() {
-  const opencodeDir = process.env.PAL_OPENCODE_DIR;
-  const claudeDir = process.env.PAL_CLAUDE_DIR;
+  const opencodeDir = platform.opencodeDir();
+  const claudeDir = platform.claudeDir();
   if (!opencodeDir || !claudeDir) {
     throw new Error("PAL_OPENCODE_DIR or PAL_CLAUDE_DIR not set");
   }

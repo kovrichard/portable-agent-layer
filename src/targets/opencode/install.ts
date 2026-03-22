@@ -6,11 +6,11 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
-import { palPkg } from "../../hooks/lib/paths";
+import { palPkg, platform } from "../../hooks/lib/paths";
 import { copyAgentsForOpencode, copySkills, countSkills, log, writeJson } from "../lib";
 
 const PKG_ROOT = palPkg();
-const OC_GLOBAL_DIR = process.env.PAL_OPENCODE_DIR!;
+const OC_GLOBAL_DIR = platform.opencodeDir();
 const OC_PLUGINS_DIR = resolve(OC_GLOBAL_DIR, "plugins");
 
 mkdirSync(OC_PLUGINS_DIR, { recursive: true });
@@ -41,7 +41,7 @@ try {
 }
 
 // --- 3. Install skills into ~/.agents/skills/ ---
-const claudeSkillsDir = resolve(process.env.PAL_CLAUDE_DIR!, "skills");
+const claudeSkillsDir = resolve(platform.claudeDir(), "skills");
 copySkills(claudeSkillsDir);
 log.success("Installed skills to ~/.agents/skills/");
 
