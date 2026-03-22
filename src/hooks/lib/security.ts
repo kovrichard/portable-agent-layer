@@ -29,6 +29,8 @@ export const HOOK_MANAGED_FILES = [
   "signal-cache.json",
   "pending-failure.json",
   "token-usage.jsonl",
+  "tags.json",
+  "graduated.json",
 ];
 
 /** Hook-managed directories — AI must not write to or delete from these */
