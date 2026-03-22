@@ -263,7 +263,7 @@ export function loadLearningDigest(): string {
         };
       }
 
-      // Legacy format: **Title:** inline
+      // DEPRECATED: legacy **Title:** inline format — remove once old learning files are migrated
       const titleLine = content.split("\n").find((l) => l.startsWith("**Title:**"));
       const fallback = content.split("\n").find((l) => l.trim() && !l.startsWith("#"));
       return {
@@ -318,22 +318,38 @@ export function loadFailurePatterns(): string {
           const dirs = readdirSync(monthPath).sort().reverse();
           for (const dir of dirs) {
             if (!/^\d{8}-\d{6}_/.test(dir)) continue;
-            // Read context from sentiment.json for a meaningful description
+            // Try capture.md (new format), fall back to sentiment.json (legacy)
+            const capturePath = resolve(monthPath, dir, "capture.md");
             const sentimentPath = resolve(monthPath, dir, "sentiment.json");
-            if (existsSync(sentimentPath)) {
+
+            let rating: number | undefined;
+            let ctx: string | undefined;
+
+            if (existsSync(capturePath)) {
               try {
-                const data = JSON.parse(readFileSync(sentimentPath, "utf-8")) as {
-                  rating?: number;
-                  context?: string;
-                };
-                if (data.context) {
-                  const label = data.rating ? `[${data.rating}/10]` : "";
-                  failures.push(`${label} ${data.context}`.trim());
-                }
+                const content = readFileSync(capturePath, "utf-8");
+                const { meta } = parse<{ rating?: number; context?: string }>(content);
+                rating = meta.rating;
+                ctx = meta.context;
               } catch {
-                // Fall back to slug from directory name
-                failures.push(dir.replace(/^\d{8}-\d{6}_/, ""));
+                /* fallback below */
               }
+            }
+
+            // DEPRECATED: legacy sentiment.json fallback — remove once old failures have capture.md
+            if (!ctx && existsSync(sentimentPath)) {
+              try {
+                const data = JSON.parse(readFileSync(sentimentPath, "utf-8"));
+                rating = data.rating;
+                ctx = data.context;
+              } catch {
+                /* skip */
+              }
+            }
+
+            if (ctx) {
+              const label = rating ? `[${rating}/10]` : "";
+              failures.push(`${label} ${ctx}`.trim());
             } else {
               failures.push(dir.replace(/^\d{8}-\d{6}_/, ""));
             }

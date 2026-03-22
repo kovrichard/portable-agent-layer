@@ -196,19 +196,44 @@ function collectFailures(): LearningEntry[] {
       for (const month of readdirSync(yearDir)) {
         const monthDir = resolve(yearDir, month);
         for (const slug of readdirSync(monthDir)) {
-          const sentimentPath = resolve(monthDir, slug, "sentiment.json");
-          if (!existsSync(sentimentPath)) continue;
-          try {
-            const sentiment = JSON.parse(readFileSync(sentimentPath, "utf-8"));
-            if (sentiment.context && sentiment.context.length >= MIN_TEXT_LENGTH) {
-              entries.push({
-                source: `failure:${slug}`,
-                text: sentiment.context.slice(0, 300),
-                date: sentiment.ts?.slice(0, 10) || "",
-              });
+          let context = "";
+          let ts = "";
+
+          // Try capture.md (new format)
+          const capturePath = resolve(monthDir, slug, "capture.md");
+          if (existsSync(capturePath)) {
+            try {
+              const content = readFileSync(capturePath, "utf-8");
+              const { meta } = parse<{
+                context?: string;
+                ts?: string;
+              }>(content);
+              context = meta.context || "";
+              ts = (meta.ts as string) || "";
+            } catch {
+              /* fallback below */
             }
-          } catch {
-            /* skip corrupt files */
+          }
+
+          // DEPRECATED: legacy sentiment.json fallback — remove once old failures have capture.md
+          if (!context) {
+            const sentimentPath = resolve(monthDir, slug, "sentiment.json");
+            if (!existsSync(sentimentPath)) continue;
+            try {
+              const sentiment = JSON.parse(readFileSync(sentimentPath, "utf-8"));
+              context = sentiment.context || "";
+              ts = sentiment.ts || "";
+            } catch {
+              continue;
+            }
+          }
+
+          if (context.length >= MIN_TEXT_LENGTH) {
+            entries.push({
+              source: `failure:${slug}`,
+              text: context.slice(0, 300),
+              date: ts.slice(0, 10),
+            });
           }
         }
       }
@@ -243,7 +268,7 @@ function collectLearnings(): LearningEntry[] {
               const insightsMatch = body.match(/## Insights\n([\s\S]*?)(?=\n##|$)/);
               insights = insightsMatch?.[1]?.trim() || "";
             } else {
-              // Legacy format
+              // DEPRECATED: legacy **Title:** format — remove once old learning files are migrated
               const titleMatch = content.match(/\*\*Title:\*\*\s*(.+)/);
               title = titleMatch?.[1] || "";
               const insightsMatch = content.match(/## Insights\n([\s\S]*?)(?=\n##|$)/);

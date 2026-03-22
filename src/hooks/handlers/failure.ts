@@ -2,12 +2,13 @@
  * Deep Failure Capture — full context dump for ratings 1–3.
  *
  * Writes to memory/learning/failures/YYYY-MM/{timestamp}_{slug}/
- *   CONTEXT.md    — full failure context with transcript excerpt
- *   sentiment.json — structured rating + metadata
+ *   capture.md     — frontmatter metadata + failure context body
+ *   sentiment.json — DEPRECATED legacy format (kept for backward compat)
  */
 
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { stringify } from "../lib/frontmatter";
 import { inference } from "../lib/inference";
 import { ensureDir, paths } from "../lib/paths";
 import { fileTimestamp, monthPath } from "../lib/time";
@@ -94,43 +95,35 @@ export async function captureFailure(
     // Graceful fallback — empty sections are still useful with the other context
   }
 
-  const contextMdPath = resolve(dir, "CONTEXT.md");
-  writeFileSync(
-    contextMdPath,
-    [
-      `# Failure Capture — Rating ${rating}/10`,
-      `**Date:** ${new Date().toISOString().slice(0, 10)}`,
-      `**Context:** ${context}`,
-      "",
-      "## Last User Message",
-      lastUser || "*(unavailable)*",
-      "",
-      "## Last Assistant Response",
-      lastAssistant || "*(unavailable)*",
-      "",
-      ...(detailedContext ? ["## AI Response Context", detailedContext, ""] : []),
-      "## What Went Wrong?",
-      whatWentWrong || "",
-      "",
-      "## What Should Be Done Differently?",
-      whatToDoDifferently || "",
-      "",
-    ].join("\n"),
-    "utf-8"
-  );
+  const meta: Record<string, unknown> = {
+    rating,
+    context,
+    date: new Date().toISOString().slice(0, 10),
+    ts: new Date().toISOString(),
+    slug,
+  };
 
+  const body = [
+    "## Last User Message",
+    lastUser || "*(unavailable)*",
+    "",
+    "## Last Assistant Response",
+    lastAssistant || "*(unavailable)*",
+    "",
+    ...(detailedContext ? ["## AI Response Context", detailedContext, ""] : []),
+    "## What Went Wrong?",
+    whatWentWrong || "",
+    "",
+    "## What Should Be Done Differently?",
+    whatToDoDifferently || "",
+  ].join("\n");
+
+  writeFileSync(resolve(dir, "capture.md"), stringify(meta, body), "utf-8");
+
+  // DEPRECATED: legacy sentiment.json — remove once all readers use capture.md frontmatter
   writeFileSync(
     resolve(dir, "sentiment.json"),
-    JSON.stringify(
-      {
-        rating,
-        context,
-        ts: new Date().toISOString(),
-        slug,
-      },
-      null,
-      2
-    ),
+    JSON.stringify({ rating, context, ts: new Date().toISOString(), slug }, null, 2),
     "utf-8"
   );
 }
