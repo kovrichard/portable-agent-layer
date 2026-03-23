@@ -30,6 +30,7 @@ export const HOOK_MANAGED_FILES = [
   "pending-failure.json",
   "token-usage.jsonl",
   "graduated.json",
+  "update-available.json",
 ];
 
 /** Hook-managed directories — AI must not write to or delete from these */

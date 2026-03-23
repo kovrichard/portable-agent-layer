@@ -13,6 +13,7 @@ memory/state/setup.json
 memory/state/session-names.json
 memory/state/signal-cache.json
 memory/state/pending-failure.json
+memory/state/update-available.json
 memory/state/last-responses.json
 memory/state/counts.json
 memory/state/captured-learnings.json

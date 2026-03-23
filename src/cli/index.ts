@@ -122,6 +122,18 @@ async function session(sessionArgs: string[]) {
     // Silently ignore summary errors
   }
 
+  // Check for updates and display notice
+  try {
+    const { checkForUpdate, getUpdateNotice } = await import(
+      "../hooks/handlers/update-check"
+    );
+    await checkForUpdate();
+    const notice = getUpdateNotice();
+    if (notice) console.log(`\n${notice}`);
+  } catch {
+    // Non-critical
+  }
+
   process.exit(exitCode);
 }
 
