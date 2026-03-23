@@ -11,6 +11,7 @@ import { stringify } from "../lib/frontmatter";
 import { inference } from "../lib/inference";
 import { categorizeLearning } from "../lib/learning-category";
 import { ensureDir, paths } from "../lib/paths";
+import { LEARNING_PRINCIPLE_PROMPT } from "../lib/prompts";
 import { fileTimestamp, monthPath } from "../lib/time";
 import { logTokenUsage } from "../lib/token-usage";
 import {
@@ -115,8 +116,7 @@ export async function captureWorkLearning(
       .slice(-8)
       .join("\n");
     const result = await inference({
-      system:
-        "You summarize AI coding sessions between a human user and an AI assistant. The 'Human messages' are what the user said. The 'AI response' is what the assistant said. Produce: 1) a short title (5-10 words) describing what was accomplished, 2) a summary of what the AI assistant did for the user (2-4 sentences, write from the AI's perspective using 'we'), 3) insights — what worked well, what was surprising, or what should be done differently next time (2-3 bullet points, no markdown), 4) principle — if this session taught a reusable lesson, write one actionable sentence that would prevent the same issue in the future. If no clear lesson, leave empty.",
+      system: `You summarize AI coding sessions between a human user and an AI assistant. The 'Human messages' are what the user said. The 'AI response' is what the assistant said. Produce: 1) a short title (5-10 words) describing what was accomplished, 2) a summary of what the AI assistant did for the user (2-4 sentences, write from the AI's perspective using 'we'), 3) insights — what worked well, what was surprising, or what should be done differently next time (2-3 bullet points, no markdown), 4) principle — ${LEARNING_PRINCIPLE_PROMPT}`,
       user: `Human messages:\n${userMessages}\n\nAI response:\n${rawSummary.slice(0, 400)}`,
       maxTokens: 350,
       timeout: 15000,

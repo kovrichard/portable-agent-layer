@@ -11,6 +11,7 @@ import { resolve } from "node:path";
 import { stringify } from "../lib/frontmatter";
 import { inference } from "../lib/inference";
 import { ensureDir, paths } from "../lib/paths";
+import { FAILURE_PRINCIPLE_PROMPT } from "../lib/prompts";
 import { fileTimestamp, monthPath } from "../lib/time";
 import { logTokenUsage } from "../lib/token-usage";
 import {
@@ -60,8 +61,7 @@ export async function captureFailure(
   let principle = "";
   try {
     const analysisResult = await inference({
-      system:
-        "You are analyzing a failed AI assistant interaction. Based on the context, identify what went wrong and what should be done differently. Be specific and actionable. Also write a principle — one actionable sentence that would prevent this issue from happening again. If no clear lesson, leave principle empty.",
+      system: `You are analyzing a failed AI assistant interaction. Based on the context, identify what went wrong and what should be done differently. Be specific and actionable. Also write a principle — ${FAILURE_PRINCIPLE_PROMPT}`,
       user: [
         `Rating: ${rating}/10`,
         `Context: ${context}`,
