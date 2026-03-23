@@ -68,7 +68,7 @@ function loadNotes(daysBack: number): ParsedNote[] {
   const notes: ParsedNote[] = [];
 
   for (const monthDir of readdirSync(RELATIONSHIP_DIR).sort().reverse()) {
-    if (monthDir === "reflections") continue;
+    if (!/^\d{4}-\d{2}$/.test(monthDir)) continue;
     const monthPath = resolve(RELATIONSHIP_DIR, monthDir);
 
     let files: string[];

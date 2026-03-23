@@ -104,8 +104,8 @@ export function loadRecentNotes(days: number = 2): string {
   const sections: string[] = [];
 
   for (const monthDir of readdirSync(relDir).sort().reverse()) {
+    if (!/^\d{4}-\d{2}$/.test(monthDir)) continue;
     const monthPath = resolve(relDir, monthDir);
-    if (!existsSync(monthPath)) continue;
 
     let files: string[];
     try {
