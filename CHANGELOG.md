@@ -1,3 +1,18 @@
+# [0.9.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.8.1...v0.9.0) (2026-03-23)
+
+
+### Bug Fixes
+
+* **log:** adjust import format ([25e1df7](https://github.com/kovrichard/portable-agent-layer/commit/25e1df74b859dac3c7b2b61c28c779754e4e9599))
+* **opencode:** clean up legacy files ([fdb59b7](https://github.com/kovrichard/portable-agent-layer/commit/fdb59b773d93c532f6f19925510085cf104a2cb9))
+* **opencode:** make it align with claude code's way of rating ([403f9b4](https://github.com/kovrichard/portable-agent-layer/commit/403f9b4f62efd7cba87153480354f495c3baf1c0))
+
+
+### Features
+
+* **rating:** better categorize explicit ratings ([4904cf2](https://github.com/kovrichard/portable-agent-layer/commit/4904cf250b3a14e9b254b4877534831d7c2dd44a))
+* **security:** add new hook-managed files and directories ([14429fc](https://github.com/kovrichard/portable-agent-layer/commit/14429fc26964191a6b211e10a845f8a86ec9536f))
+
 ## [0.8.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.8.0...v0.8.1) (2026-03-23)
 
 
