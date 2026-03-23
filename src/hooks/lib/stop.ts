@@ -7,6 +7,7 @@ import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { autoBackup } from "../handlers/backup";
 import { captureFailure } from "../handlers/failure";
+import { checkReflectTrigger } from "../handlers/reflect-trigger";
 import { captureRelationship } from "../handlers/relationship";
 import { resetTab } from "../handlers/tab";
 import { updateCounts } from "../handlers/update-counts";
@@ -43,6 +44,7 @@ export async function runStopHandlers(
     checkPendingFailure(transcript),
     updateCounts(),
     autoBackup(),
+    checkReflectTrigger(),
   ]);
 
   const handlerNames = [
@@ -53,6 +55,7 @@ export async function runStopHandlers(
     "pending-failure",
     "update-counts",
     "backup",
+    "reflect-trigger",
   ];
   for (let i = 0; i < results.length; i++) {
     const r = results[i];
