@@ -1,3 +1,10 @@
+# [0.5.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.4.0...v0.5.0) (2026-03-23)
+
+
+### Features
+
+* **principles:** add evaluation tool for generating and comparing principles ([53c0a2e](https://github.com/kovrichard/portable-agent-layer/commit/53c0a2ec16be154e5d6cc19a78319e7a8b3fa624))
+
 # [0.4.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.3.0...v0.4.0) (2026-03-22)
 
 
