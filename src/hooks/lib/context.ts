@@ -5,7 +5,8 @@
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { hasFrontmatter, parse } from "./frontmatter";
+import { parse } from "./frontmatter";
+import { readFailures, readLearnings } from "./learning-store";
 import { paths } from "./paths";
 import { loadRecentNotes } from "./relationship";
 import { readSessionNames } from "./session-names";
@@ -217,84 +218,22 @@ export function loadWisdomContext(): string {
 /** Load recent session learning files as digest, split by category */
 export function loadLearningDigest(): string {
   try {
-    const sessionDir = paths.sessionLearning();
-    if (!existsSync(sessionDir)) return "";
+    const entries = readLearnings(paths.sessionLearning(), 6);
+    if (entries.length === 0) return "";
 
-    const files: { path: string; category: string }[] = [];
-    // Structure: session/{year}/{month}/*.md
-    for (const year of readdirSync(sessionDir).sort().reverse()) {
-      const yearDir = resolve(sessionDir, year);
-      try {
-        for (const month of readdirSync(yearDir).sort().reverse()) {
-          const monthDir = resolve(yearDir, month);
-          try {
-            const monthFiles = readdirSync(monthDir)
-              .filter((f) => f.endsWith(".md"))
-              .sort()
-              .reverse()
-              .map((f) => {
-                const category = f.includes("_system") ? "system" : "algorithm";
-                return { path: resolve(monthDir, f), category };
-              });
-            files.push(...monthFiles);
-          } catch {
-            /* skip */
-          }
-          if (files.length >= 6) break;
-        }
-      } catch {
-        /* skip */
-      }
-      if (files.length >= 6) break;
-    }
+    const approach = entries.filter((e) => e.category !== "system").slice(0, 2);
+    const system = entries.filter((e) => e.category === "system").slice(0, 2);
 
-    function extractMeta(filePath: string): {
-      title: string;
-      category: string;
-    } {
-      const content = readFileSync(filePath, "utf-8").trim();
-
-      // Frontmatter format (new)
-      if (hasFrontmatter(content)) {
-        const { meta } = parse<{ title?: string; category?: string }>(content);
-        return {
-          title: meta.title ? `**Title:** ${meta.title}` : content.slice(0, 80),
-          category: meta.category || "algorithm",
-        };
-      }
-
-      // DEPRECATED: legacy **Title:** inline format — remove once old learning files are migrated
-      const titleLine = content.split("\n").find((l) => l.startsWith("**Title:**"));
-      const fallback = content.split("\n").find((l) => l.trim() && !l.startsWith("#"));
-      return {
-        title: titleLine ?? fallback?.slice(0, 100) ?? content.slice(0, 80),
-        category: "algorithm", // legacy files use filename for category
-      };
-    }
-
-    // Extract metadata, preferring frontmatter over filename for category
-    const enriched = files.map((f) => {
-      const meta = extractMeta(f.path);
-      return {
-        ...f,
-        title: meta.title,
-        category: meta.category !== "algorithm" ? meta.category : f.category,
-      };
-    });
-
-    const algorithm = enriched.filter((f) => f.category === "algorithm").slice(0, 2);
-    const system = enriched.filter((f) => f.category === "system").slice(0, 2);
-
-    if (algorithm.length === 0 && system.length === 0) return "";
+    if (approach.length === 0 && system.length === 0) return "";
 
     const lines: string[] = ["## Recent Session Learnings"];
-    if (algorithm.length > 0) {
+    if (approach.length > 0) {
       lines.push("### Approach");
-      for (const f of algorithm) lines.push(`- ${f.title}`);
+      for (const e of approach) lines.push(`- **Title:** ${e.title}`);
     }
     if (system.length > 0) {
       lines.push("### System");
-      for (const f of system) lines.push(`- ${f.title}`);
+      for (const e of system) lines.push(`- **Title:** ${e.title}`);
     }
     return lines.join("\n");
   } catch {
@@ -305,68 +244,15 @@ export function loadLearningDigest(): string {
 /** Load 5 most recent failure contexts as an "avoid" list */
 export function loadFailurePatterns(): string {
   try {
-    const failuresDir = paths.failures();
-    if (!existsSync(failuresDir)) return "";
+    const entries = readFailures(paths.failures(), 5);
+    if (entries.length === 0) return "";
 
-    // Structure: failures/{year}/{month}/{timestamp}_{slug}/
-    const failures: string[] = [];
-    for (const year of readdirSync(failuresDir).sort().reverse()) {
-      const yearPath = resolve(failuresDir, year);
-      for (const month of readdirSync(yearPath).sort().reverse()) {
-        const monthPath = resolve(yearPath, month);
-        try {
-          const dirs = readdirSync(monthPath).sort().reverse();
-          for (const dir of dirs) {
-            if (!/^\d{8}-\d{6}_/.test(dir)) continue;
-            // Try capture.md (new format), fall back to sentiment.json (legacy)
-            const capturePath = resolve(monthPath, dir, "capture.md");
-            const sentimentPath = resolve(monthPath, dir, "sentiment.json");
+    const lines = entries.map((e) => {
+      const label = e.rating ? `[${e.rating}/10]` : "";
+      return `- ${label} ${e.context}`.trim();
+    });
 
-            let rating: number | undefined;
-            let ctx: string | undefined;
-
-            if (existsSync(capturePath)) {
-              try {
-                const content = readFileSync(capturePath, "utf-8");
-                const { meta } = parse<{ rating?: number; context?: string }>(content);
-                rating = meta.rating;
-                ctx = meta.context;
-              } catch {
-                /* fallback below */
-              }
-            }
-
-            // DEPRECATED: legacy sentiment.json fallback — remove once old failures have capture.md
-            if (!ctx && existsSync(sentimentPath)) {
-              try {
-                const data = JSON.parse(readFileSync(sentimentPath, "utf-8"));
-                rating = data.rating;
-                ctx = data.context;
-              } catch {
-                /* skip */
-              }
-            }
-
-            if (ctx) {
-              const label = rating ? `[${rating}/10]` : "";
-              failures.push(`${label} ${ctx}`.trim());
-            } else {
-              failures.push(dir.replace(/^\d{8}-\d{6}_/, ""));
-            }
-            if (failures.length >= 5) break;
-          }
-        } catch {
-          /* skip */
-        }
-        if (failures.length >= 5) break;
-      }
-      if (failures.length >= 5) break;
-    }
-
-    if (failures.length === 0) return "";
-    return ["## Recent Failure Patterns (Avoid)", ...failures.map((f) => `- ${f}`)].join(
-      "\n"
-    );
+    return ["## Recent Failure Patterns (Avoid)", ...lines].join("\n");
   } catch {
     return "";
   }
@@ -403,24 +289,12 @@ export function loadSynthesisRecommendations(): string {
 
         if (recs.length === 0) continue;
 
-        // Extract metadata — frontmatter or legacy
-        let period = "";
-        let avgRating = "";
-
-        if (hasFrontmatter(content)) {
-          const { meta } = parse<{
-            period?: string;
-            average_rating?: string;
-          }>(content);
-          period = meta.period || "";
-          avgRating = meta.average_rating ? `${meta.average_rating}/10` : "";
-        } else {
-          // DEPRECATED: legacy **Key:** format
-          const periodMatch = content.match(/\*\*Period:\*\* (.+)/);
-          const avgMatch = content.match(/\*\*Average Rating:\*\* (.+)/);
-          period = periodMatch?.[1] || "";
-          avgRating = avgMatch?.[1] || "";
-        }
+        const { meta } = parse<{
+          period?: string;
+          average_rating?: string;
+        }>(content);
+        const period = meta.period || "";
+        const avgRating = meta.average_rating ? `${meta.average_rating}/10` : "";
 
         const header = [
           "## Pattern Synthesis",

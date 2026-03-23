@@ -11,7 +11,6 @@ import { stringify } from "../lib/frontmatter";
 import { inference } from "../lib/inference";
 import { categorizeLearning } from "../lib/learning-category";
 import { ensureDir, paths } from "../lib/paths";
-import { LEARNING_PRINCIPLE_PROMPT } from "../lib/prompts";
 import { fileTimestamp, monthPath } from "../lib/time";
 import { logTokenUsage } from "../lib/token-usage";
 import {
@@ -108,7 +107,6 @@ export async function captureWorkLearning(
   let title = rawTitle;
   let summary = rawSummary;
   let insights = "";
-  let principle = "";
   try {
     const userMessages = messages
       .filter((m) => m.role === "user")
@@ -116,9 +114,10 @@ export async function captureWorkLearning(
       .slice(-8)
       .join("\n");
     const result = await inference({
-      system: `You summarize AI coding sessions between a human user and an AI assistant. The 'Human messages' are what the user said. The 'AI response' is what the assistant said. Produce: 1) a short title (5-10 words) describing what was accomplished, 2) a summary of what the AI assistant did for the user (2-4 sentences, write from the AI's perspective using 'we'), 3) insights — what worked well, what was surprising, or what should be done differently next time (2-3 bullet points, no markdown), 4) principle — ${LEARNING_PRINCIPLE_PROMPT}`,
+      system:
+        "You summarize AI coding sessions between a human user and an AI assistant. The 'Human messages' are what the user said. The 'AI response' is what the assistant said. Produce: 1) a short title (5-10 words) describing what was accomplished, 2) a summary of what the AI assistant did for the user (2-4 sentences, write from the AI's perspective using 'we'), 3) insights — what worked well, what was surprising, or what should be done differently next time (2-3 bullet points, no markdown).",
       user: `Human messages:\n${userMessages}\n\nAI response:\n${rawSummary.slice(0, 400)}`,
-      maxTokens: 350,
+      maxTokens: 300,
       timeout: 15000,
       jsonSchema: {
         type: "object" as const,
@@ -127,9 +126,8 @@ export async function captureWorkLearning(
           title: { type: "string" as const },
           summary: { type: "string" as const },
           insights: { type: "string" as const },
-          principle: { type: "string" as const },
         },
-        required: ["title", "summary", "insights", "principle"],
+        required: ["title", "summary", "insights"],
       },
     });
     if (result.usage) logTokenUsage("work-learning", result.usage);
@@ -138,12 +136,10 @@ export async function captureWorkLearning(
         title?: string;
         summary?: string;
         insights?: string;
-        principle?: string;
       };
       if (parsed.title) title = parsed.title.slice(0, 100);
       if (parsed.summary) summary = parsed.summary;
       if (parsed.insights) insights = parsed.insights;
-      if (parsed.principle) principle = parsed.principle;
     }
   } catch {
     // Fallback to raw values
@@ -159,7 +155,6 @@ export async function captureWorkLearning(
     category,
     date: new Date().toISOString().slice(0, 10),
   };
-  if (principle) meta.principle = principle;
   if (sessionId) meta.session = sessionId;
 
   const body = [

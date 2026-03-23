@@ -365,7 +365,7 @@ async function handleImplicitSentiment(
     if (typeof rating === "number" && rating >= 1 && rating <= 10 && rating !== 5) {
       handleRating(
         rating,
-        `${parsed.summary}: ${trimmed.slice(0, 150)}`,
+        `${parsed.summary}: ${trimmed.slice(0, 200)}`,
         "implicit",
         parsed.detailed_context,
         sessionId,

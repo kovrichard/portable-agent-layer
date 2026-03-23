@@ -1,25 +1,18 @@
 /**
  * Deep Failure Capture — full context dump for ratings 1–3.
  *
- * Writes to memory/learning/failures/YYYY-MM/{timestamp}_{slug}/
- *   capture.md     — frontmatter metadata + failure context body
- *   sentiment.json — DEPRECATED legacy format (kept for backward compat)
+ * Stores raw conversation data for later review, matching the original PAI pattern:
+ *   capture.md — frontmatter metadata + conversation summary
+ *
+ * Analysis is left to the human or the graduation pipeline, not auto-generated.
  */
 
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { stringify } from "../lib/frontmatter";
-import { inference } from "../lib/inference";
 import { ensureDir, paths } from "../lib/paths";
-import { FAILURE_PRINCIPLE_PROMPT } from "../lib/prompts";
 import { fileTimestamp, monthPath } from "../lib/time";
-import { logTokenUsage } from "../lib/token-usage";
-import {
-  extractContent,
-  extractLastAssistant,
-  extractLastUser,
-  parseMessages,
-} from "../lib/transcript";
+import { extractContent, parseMessages } from "../lib/transcript";
 
 function slugify(text: string): string {
   return (
@@ -37,67 +30,23 @@ export async function captureFailure(
   rating: number,
   context: string,
   transcript: string,
-  detailedContext?: string,
-  savedResponse?: string,
-  savedUserMessage?: string
+  detailedContext?: string
 ): Promise<void> {
   const messages = parseMessages(transcript);
-  // Prefer messages saved at rating time (before the AI replied to the rating)
-  const lastUser =
-    savedUserMessage?.slice(0, 400) ||
-    extractContent(extractLastUser(messages)).slice(0, 400);
-  const lastAssistant =
-    savedResponse?.slice(0, 600) ||
-    extractContent(extractLastAssistant(messages)).slice(0, 600);
+
+  // Conversation summary — last 10 exchanges, like the original PAI
+  const recentMessages = messages.slice(-10);
+  const conversationSummary = recentMessages
+    .map((m) => {
+      const text = extractContent(m).slice(0, 500);
+      return `**${m.role.toUpperCase()}:** ${text}`;
+    })
+    .join("\n\n");
 
   const slug = slugify(context);
   const dir = ensureDir(
     resolve(paths.failures(), monthPath(), `${fileTimestamp()}_${slug}`)
   );
-
-  // Attempt inference to fill root cause analysis + candidate principle
-  let whatWentWrong = "";
-  let whatToDoDifferently = "";
-  let principle = "";
-  try {
-    const analysisResult = await inference({
-      system: `You are analyzing a failed AI assistant interaction. Based on the context, identify what went wrong and what should be done differently. Be specific and actionable. Also write a principle — ${FAILURE_PRINCIPLE_PROMPT}`,
-      user: [
-        `Rating: ${rating}/10`,
-        `Context: ${context}`,
-        detailedContext ? `Analysis: ${detailedContext}` : "",
-        `Assistant response (what the user reacted to): ${lastAssistant}`,
-        `User reaction (the frustrated message): ${lastUser}`,
-      ]
-        .filter(Boolean)
-        .join("\n"),
-      maxTokens: 400,
-      timeout: 15000,
-      jsonSchema: {
-        type: "object" as const,
-        additionalProperties: false,
-        properties: {
-          what_went_wrong: { type: "string" as const },
-          what_to_do_differently: { type: "string" as const },
-          principle: { type: "string" as const },
-        },
-        required: ["what_went_wrong", "what_to_do_differently", "principle"],
-      },
-    });
-    if (analysisResult.usage) logTokenUsage("failure", analysisResult.usage);
-    if (analysisResult.success && analysisResult.output) {
-      const parsed = JSON.parse(analysisResult.output) as {
-        what_went_wrong?: string;
-        what_to_do_differently?: string;
-        principle?: string;
-      };
-      whatWentWrong = parsed.what_went_wrong ?? "";
-      whatToDoDifferently = parsed.what_to_do_differently ?? "";
-      principle = parsed.principle ?? "";
-    }
-  } catch {
-    // Graceful fallback — empty sections are still useful with the other context
-  }
 
   const meta: Record<string, unknown> = {
     rating,
@@ -106,29 +55,17 @@ export async function captureFailure(
     ts: new Date().toISOString(),
     slug,
   };
-  if (principle) meta.principle = principle;
 
   const body = [
-    "## Last User Message",
-    lastUser || "*(unavailable)*",
+    "## What Happened",
     "",
-    "## Last Assistant Response",
-    lastAssistant || "*(unavailable)*",
+    detailedContext ||
+      "No detailed analysis available. Review the conversation for context.",
     "",
-    ...(detailedContext ? ["## AI Response Context", detailedContext, ""] : []),
-    "## What Went Wrong?",
-    whatWentWrong || "",
+    "## Conversation Summary",
     "",
-    "## What Should Be Done Differently?",
-    whatToDoDifferently || "",
+    conversationSummary || "*(unavailable)*",
   ].join("\n");
 
   writeFileSync(resolve(dir, "capture.md"), stringify(meta, body), "utf-8");
-
-  // DEPRECATED: legacy sentiment.json — remove once all readers use capture.md frontmatter
-  writeFileSync(
-    resolve(dir, "sentiment.json"),
-    JSON.stringify({ rating, context, ts: new Date().toISOString(), slug }, null, 2),
-    "utf-8"
-  );
 }
