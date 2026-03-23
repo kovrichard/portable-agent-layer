@@ -26,6 +26,7 @@ import { extractKeywords, similarity } from "./text-similarity";
 
 export interface AnalysisEntry {
   source: string;
+  path: string;
   text: string;
   date: string;
 }
@@ -98,6 +99,7 @@ function toAnalysisEntries(
     if (f.context.length >= MIN_TEXT_LENGTH) {
       entries.push({
         source: `failure:${f.slug}`,
+        path: f.path,
         text: f.context.slice(0, 300),
         date: f.date,
       });
@@ -109,6 +111,7 @@ function toAnalysisEntries(
     if (text.length >= MIN_TEXT_LENGTH) {
       entries.push({
         source: `learning:${l.filename}`,
+        path: l.path,
         text: text.slice(0, 300),
         date: l.date,
       });

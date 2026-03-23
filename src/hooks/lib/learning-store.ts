@@ -13,6 +13,7 @@ import { parse } from "./frontmatter";
 
 export interface FailureEntry {
   slug: string;
+  path: string;
   rating: number;
   context: string;
   principle: string;
@@ -22,6 +23,7 @@ export interface FailureEntry {
 
 export interface LearningEntry {
   filename: string;
+  path: string;
   title: string;
   category: string;
   principle: string;
@@ -79,6 +81,7 @@ export function readFailures(baseDir: string, limit?: number): FailureEntry[] {
 
           entries.push({
             slug: meta.slug || slug,
+            path: capturePath,
             rating: meta.rating ?? 0,
             context: meta.context,
             principle: meta.principle || "",
@@ -127,6 +130,7 @@ export function readLearnings(baseDir: string, limit?: number): LearningEntry[] 
 
           entries.push({
             filename: file,
+            path: resolve(monthDir, file),
             title: meta.title,
             category: meta.category || "algorithm",
             principle: meta.principle || "",

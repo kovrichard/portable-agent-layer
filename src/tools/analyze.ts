@@ -11,6 +11,18 @@
 import { parseArgs } from "node:util";
 import { analyze } from "../hooks/lib/graduation";
 
+// ── ANSI Colors ──
+
+const c = {
+  bold: (s: string) => `\x1b[1m${s}\x1b[0m`,
+  dim: (s: string) => `\x1b[2m${s}\x1b[0m`,
+  cyan: (s: string) => `\x1b[36m${s}\x1b[0m`,
+  yellow: (s: string) => `\x1b[33m${s}\x1b[0m`,
+  green: (s: string) => `\x1b[32m${s}\x1b[0m`,
+  red: (s: string) => `\x1b[31m${s}\x1b[0m`,
+  magenta: (s: string) => `\x1b[35m${s}\x1b[0m`,
+};
+
 const { values } = parseArgs({
   args: Bun.argv.slice(2),
   options: {
@@ -57,46 +69,68 @@ if (!hasPatterns && !hasRatings) {
 
 if (result.ratings) {
   const r = result.ratings;
-  console.log(`\n  Ratings: ${r.average.toFixed(1)}/10 avg (${r.total} total)`);
-  console.log(`  Low (≤4): ${r.low.count} | High (≥7): ${r.high.count}`);
+  const avgColor = r.average >= 7 ? c.green : r.average <= 4 ? c.red : c.yellow;
+  console.log(
+    `\n  ${c.bold("Ratings:")} ${avgColor(`${r.average.toFixed(1)}/10`)} avg (${r.total} total)`
+  );
+  console.log(
+    `  ${c.red(`Low (≤4): ${r.low.count}`)} | ${c.green(`High (≥7): ${r.high.count}`)}`
+  );
 }
 
 // ── Graduation Candidates ──
 
 if (result.candidates.length > 0) {
   console.log(
-    `\n  Graduation Report — ${result.candidates.length} pattern(s) detected\n`
+    `\n  ${c.bold(c.green(`Graduation Report — ${result.candidates.length} pattern(s) detected`))}\n`
   );
-  console.log("  ─────────────────────────────────────────────────\n");
+  console.log(`  ${c.dim("─────────────────────────────────────────────────")}\n`);
 
   for (const candidate of result.candidates) {
-    console.log(`  [${candidate.domain}] ${candidate.entries.length}x occurrences`);
+    console.log(
+      `  ${c.cyan(`[${candidate.domain}]`)} ${c.bold(`${candidate.entries.length}x`)} occurrences`
+    );
     console.log("");
 
     for (const entry of candidate.entries) {
       const sourceType = entry.source.startsWith("failure:") ? "failure" : "learning";
+      const tag =
+        sourceType === "failure" ? c.red(`[${sourceType}]`) : c.yellow(`[${sourceType}]`);
       console.log(
-        `    ${entry.date || "unknown"} [${sourceType}] ${entry.text.slice(0, 100)}`
+        `    ${c.dim(entry.date || "unknown")} ${tag} ${entry.text.slice(0, 100)}`
       );
     }
 
+    console.log(`\n  ${c.dim("Files:")}`);
+    for (const entry of candidate.entries) {
+      console.log(`    ${c.dim(entry.path)}`);
+    }
+
     console.log("");
-    console.log("  Target frame:", `memory/wisdom/frames/${candidate.domain}.md`);
-    console.log("  ─────────────────────────────────────────────────\n");
+    console.log(
+      `  Target frame: ${c.magenta(`memory/wisdom/frames/${candidate.domain}.md`)}`
+    );
+    console.log(`  ${c.dim("─────────────────────────────────────────────────")}\n`);
   }
 }
 
 // ── Emerging Patterns ──
 
 if (result.emerging.length > 0) {
-  console.log(`  Emerging (2x — one more to graduate)\n`);
+  console.log(`  ${c.bold(c.yellow("Emerging (2x — one more to graduate)"))}\n`);
   for (const group of result.emerging) {
-    console.log(`  [${group.domain}] ${group.entries.length}x`);
+    console.log(`  ${c.cyan(`[${group.domain}]`)} ${c.bold(`${group.entries.length}x`)}`);
     for (const entry of group.entries) {
       const sourceType = entry.source.startsWith("failure:") ? "failure" : "learning";
+      const tag =
+        sourceType === "failure" ? c.red(`[${sourceType}]`) : c.yellow(`[${sourceType}]`);
       console.log(
-        `    ${entry.date || "unknown"} [${sourceType}] ${entry.text.slice(0, 80)}`
+        `    ${c.dim(entry.date || "unknown")} ${tag} ${entry.text.slice(0, 80)}`
       );
+    }
+    console.log("  Files:");
+    for (const entry of group.entries) {
+      console.log(`    ${c.dim(entry.path)}`);
     }
     console.log("");
   }
@@ -105,7 +139,7 @@ if (result.emerging.length > 0) {
 // ── Recommendations ──
 
 if (result.recommendations.length > 0) {
-  console.log("  Recommendations:\n");
+  console.log(`  ${c.bold("Recommendations:")}\n`);
   for (const rec of result.recommendations) {
     console.log(`    ${rec}`);
   }
@@ -113,6 +147,6 @@ if (result.recommendations.length > 0) {
 }
 
 if (result.candidates.length > 0) {
-  console.log("  To crystallize: add a line to the wisdom frame file.");
-  console.log("  Format: - Your principle here [CRYSTAL: 85%]\n");
+  console.log(`  To crystallize: add a line to the wisdom frame file.`);
+  console.log(`  Format: ${c.green("- Your principle here [CRYSTAL: 85%]")}\n`);
 }
