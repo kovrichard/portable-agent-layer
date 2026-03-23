@@ -183,10 +183,7 @@ export function getUpdateNotice(): string | null {
     const cache = JSON.parse(readFileSync(fp, "utf-8")) as UpdateCache;
     if (!cache.available) return null;
 
-    if (cache.mode === "repo") {
-      return `📦 Update available: ${cache.current} → ${cache.latest} (git pull)`;
-    }
-    return `📦 Update available: ${cache.current} → ${cache.latest} (bun update -g portable-agent-layer)`;
+    return `📦 Update available: ${cache.current} → ${cache.latest} (pal cli update)`;
   } catch {
     return null;
   }
