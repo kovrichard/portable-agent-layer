@@ -1,3 +1,10 @@
+## [0.8.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.8.0...v0.8.1) (2026-03-23)
+
+
+### Bug Fixes
+
+* **update-check:** update notice message to reflect new `pal cli update` command ([c9702d0](https://github.com/kovrichard/portable-agent-layer/commit/c9702d00a5af6ca2cdb43a77b02ac5a07040fa35))
+
 # [0.8.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.7.0...v0.8.0) (2026-03-23)
 
 
