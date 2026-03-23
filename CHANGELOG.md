@@ -1,3 +1,10 @@
+# [0.8.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.7.0...v0.8.0) (2026-03-23)
+
+
+### Features
+
+* **cli:** add `pal cli update` command to update PAL and reinstall hooks ([dffa191](https://github.com/kovrichard/portable-agent-layer/commit/dffa19138643a00633bcc770f22df2d3dbf22c7d))
+
 # [0.7.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.6.2...v0.7.0) (2026-03-23)
 
 
