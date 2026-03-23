@@ -13,8 +13,8 @@ import { graduate } from "../hooks/lib/graduation";
 
 const result = graduate();
 
-if (result.candidates.length === 0) {
-  console.log("\n  No recurring patterns found (need 3+ similar entries).\n");
+if (result.candidates.length === 0 && result.emerging.length === 0) {
+  console.log("\n  No recurring patterns found.\n");
   process.exit(0);
 }
 
@@ -51,5 +51,29 @@ for (const candidate of result.candidates) {
   console.log("  ─────────────────────────────────────────────────\n");
 }
 
-console.log("  To crystallize: add a line to the wisdom frame file.");
-console.log("  Format: - Your principle here [CRYSTAL: 85%]\n");
+if (result.emerging.length > 0) {
+  console.log(`  Emerging (2x — one more to graduate)\n`);
+  for (const group of result.emerging) {
+    const principles = [
+      ...new Set(group.entries.map((e) => e.principle).filter((p) => p.length > 0)),
+    ];
+    console.log(`  [${group.domain}] ${group.entries.length}x`);
+    for (const entry of group.entries) {
+      const sourceType = entry.source.startsWith("failure:") ? "failure" : "learning";
+      console.log(
+        `    ${entry.date || "unknown"} [${sourceType}] ${entry.text.slice(0, 80)}`
+      );
+    }
+    if (principles.length > 0) {
+      for (const p of principles) {
+        console.log(`    → ${p}`);
+      }
+    }
+    console.log("");
+  }
+}
+
+if (result.candidates.length > 0) {
+  console.log("  To crystallize: add a line to the wisdom frame file.");
+  console.log("  Format: - Your principle here [CRYSTAL: 85%]\n");
+}

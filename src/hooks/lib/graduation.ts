@@ -46,6 +46,7 @@ interface GraduationState {
 
 export interface GraduationResult {
   candidates: PatternGroup[];
+  emerging: PatternGroup[];
   graduated: GraduatedEntry[];
   updated: GraduatedEntry[];
 }
@@ -354,7 +355,7 @@ function groupPatterns(entries: LearningEntry[]): PatternGroup[] {
     }
   }
 
-  return groups.filter((g) => g.entries.length >= MIN_OCCURRENCES);
+  return groups.filter((g) => g.entries.length >= 2);
 }
 
 // ── State Management ──
@@ -409,9 +410,12 @@ export function graduate(): GraduationResult {
     `Collected ${failures.length} failures, ${learnings.length} learnings`
   );
 
-  const candidates = groupPatterns(all);
+  const allGroups = groupPatterns(all);
+  const candidates = allGroups.filter((g) => g.entries.length >= MIN_OCCURRENCES);
+  const emerging = allGroups.filter((g) => g.entries.length === 2);
   const result: GraduationResult = {
     candidates,
+    emerging,
     graduated: [],
     updated: [],
   };
