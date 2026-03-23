@@ -11,7 +11,6 @@ import { resolve } from "node:path";
 import { stringify } from "../lib/frontmatter";
 import { inference } from "../lib/inference";
 import { ensureDir, paths } from "../lib/paths";
-import { getVocabulary, recordSuggestedTag } from "../lib/tags";
 import { fileTimestamp, monthPath } from "../lib/time";
 import { logTokenUsage } from "../lib/token-usage";
 import {
@@ -55,14 +54,14 @@ export async function captureFailure(
     resolve(paths.failures(), monthPath(), `${fileTimestamp()}_${slug}`)
   );
 
-  // Attempt inference to fill root cause analysis + tags
+  // Attempt inference to fill root cause analysis + candidate principle
   let whatWentWrong = "";
   let whatToDoDifferently = "";
-  let tags: string[] = [];
+  let principle = "";
   try {
-    const vocab = getVocabulary();
     const analysisResult = await inference({
-      system: `You are analyzing a failed AI assistant interaction. Based on the context, identify what went wrong and what should be done differently. Be specific and actionable. Also pick 1-3 tags from this list: [${vocab.join(", ")}]. If none fit, leave tags empty and put your suggested tag in suggested_tag.`,
+      system:
+        "You are analyzing a failed AI assistant interaction. Based on the context, identify what went wrong and what should be done differently. Be specific and actionable. Also write a principle — one actionable sentence that would prevent this issue from happening again. If no clear lesson, leave principle empty.",
       user: [
         `Rating: ${rating}/10`,
         `Context: ${context}`,
@@ -80,13 +79,9 @@ export async function captureFailure(
         properties: {
           what_went_wrong: { type: "string" as const },
           what_to_do_differently: { type: "string" as const },
-          tags: {
-            type: "array" as const,
-            items: { type: "string" as const },
-          },
-          suggested_tag: { type: "string" as const },
+          principle: { type: "string" as const },
         },
-        required: ["what_went_wrong", "what_to_do_differently", "tags"],
+        required: ["what_went_wrong", "what_to_do_differently", "principle"],
       },
     });
     if (analysisResult.usage) logTokenUsage("failure", analysisResult.usage);
@@ -94,13 +89,11 @@ export async function captureFailure(
       const parsed = JSON.parse(analysisResult.output) as {
         what_went_wrong?: string;
         what_to_do_differently?: string;
-        tags?: string[];
-        suggested_tag?: string;
+        principle?: string;
       };
       whatWentWrong = parsed.what_went_wrong ?? "";
       whatToDoDifferently = parsed.what_to_do_differently ?? "";
-      if (parsed.tags?.length) tags = parsed.tags;
-      if (parsed.suggested_tag) recordSuggestedTag(parsed.suggested_tag);
+      principle = parsed.principle ?? "";
     }
   } catch {
     // Graceful fallback — empty sections are still useful with the other context
@@ -113,7 +106,7 @@ export async function captureFailure(
     ts: new Date().toISOString(),
     slug,
   };
-  if (tags.length > 0) meta.tags = tags;
+  if (principle) meta.principle = principle;
 
   const body = [
     "## Last User Message",

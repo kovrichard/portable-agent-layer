@@ -21,7 +21,6 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { palHome, palPkg, platform } from "../hooks/lib/paths";
-import { getPendingSuggestions } from "../hooks/lib/tags";
 import { log } from "../targets/lib";
 
 const allArgs = process.argv.slice(2);
@@ -359,18 +358,6 @@ function doctor(silent = false): DoctorResult {
       if (hookHealth.lastError) {
         log.warn(`    Last: ${hookHealth.lastError}`);
       }
-    }
-
-    // Pending tag suggestions
-    const pending = getPendingSuggestions();
-    const pendingEntries = Object.entries(pending).sort((a, b) => b[1] - a[1]);
-    if (pendingEntries.length > 0) {
-      warn(`Tags: ${pendingEntries.length} pending suggestion(s)`);
-      for (const [tag, count] of pendingEntries.slice(0, 5)) {
-        log.info(`    "${tag}" (${count}/3 to promote)`);
-      }
-    } else {
-      ok("Tags: no pending suggestions");
     }
 
     if (!hasAgent) {

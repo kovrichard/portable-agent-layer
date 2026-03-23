@@ -39,9 +39,9 @@ beforeAll(() => {
     );
   }
 
-  // Create tagged failure entries (3x with shared "versioning" tag)
+  // Create principle-based failure entries (3x with similar principles)
   for (let i = 1; i <= 3; i++) {
-    const slug = `20260322-30000${i}_tagged-failure-${i}`;
+    const slug = `20260322-30000${i}_principle-failure-${i}`;
     const dir = resolve(TEST_HOME, "memory", "learning", "failures", "2026", "03", slug);
     mkdirSync(dir, { recursive: true });
     writeFileSync(
@@ -53,7 +53,7 @@ beforeAll(() => {
         `date: "2026-03-2${i}"`,
         `ts: "2026-03-2${i}T12:00:0${i}.000Z"`,
         `slug: "${slug}"`,
-        'tags: ["versioning", "deployment"]',
+        `principle: "Always verify package version before publishing to npm registry"`,
         "---",
         "",
         "## What Went Wrong?",
@@ -126,16 +126,80 @@ describe("graduation report", () => {
   });
 });
 
-describe("tag-based grouping", () => {
-  test("groups entries by shared tags", async () => {
+describe("principle-based grouping", () => {
+  test("groups entries by similar principles", async () => {
     const { graduate } = await import("../src/hooks/lib/graduation");
     const result = graduate();
 
-    const versioningGroup = result.candidates.find((c) =>
-      c.entries.some((e) => e.tags.includes("versioning"))
+    const principleGroup = result.candidates.find((c) =>
+      c.entries.some((e) => e.principle.includes("verify package version"))
     );
-    expect(versioningGroup).toBeTruthy();
-    expect(versioningGroup?.entries.length).toBeGreaterThanOrEqual(3);
+    expect(principleGroup).toBeTruthy();
+    expect(principleGroup?.entries.length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe("similarity (Jaccard)", () => {
+  test("identical strings return 1", async () => {
+    const { similarity } = await import("../src/hooks/lib/graduation");
+    expect(
+      similarity(
+        "always verify version before release",
+        "always verify version before release"
+      )
+    ).toBe(1);
+  });
+
+  test("completely different strings return 0", async () => {
+    const { similarity } = await import("../src/hooks/lib/graduation");
+    expect(similarity("deploy production server", "bake chocolate cake")).toBe(0);
+  });
+
+  test("similar principles match above threshold", async () => {
+    const { similarity, SIMILARITY_THRESHOLD } = await import(
+      "../src/hooks/lib/graduation"
+    );
+    const score = similarity(
+      "Always verify package version before publishing to npm registry",
+      "Verify npm package version matches git tag before release"
+    );
+    expect(score).toBeGreaterThanOrEqual(SIMILARITY_THRESHOLD);
+  });
+
+  test("related but different wording still matches", async () => {
+    const { similarity, SIMILARITY_THRESHOLD } = await import(
+      "../src/hooks/lib/graduation"
+    );
+    const score = similarity(
+      "Always create a git tag before the first semantic-release run",
+      "Create git tag for initial version before running semantic-release"
+    );
+    expect(score).toBeGreaterThanOrEqual(SIMILARITY_THRESHOLD);
+  });
+
+  test("unrelated principles do not match", async () => {
+    const { similarity, SIMILARITY_THRESHOLD } = await import(
+      "../src/hooks/lib/graduation"
+    );
+    const score = similarity(
+      "Always verify package version before publishing",
+      "Use clear error messages when validation fails"
+    );
+    expect(score).toBeLessThan(SIMILARITY_THRESHOLD);
+  });
+
+  test("short vague texts can match (filtered by isActionable instead)", async () => {
+    const { similarity } = await import("../src/hooks/lib/graduation");
+    const score = similarity("this doesn't work", "it still doesn't work");
+    // These share keywords after stop word removal — similarity is high
+    // Quality filtering happens via isActionable(), not similarity
+    expect(score).toBeGreaterThan(0.5);
+  });
+
+  test("empty strings return 0", async () => {
+    const { similarity } = await import("../src/hooks/lib/graduation");
+    expect(similarity("", "")).toBe(0);
+    expect(similarity("hello world", "")).toBe(0);
   });
 });
 

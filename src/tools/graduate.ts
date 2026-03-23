@@ -22,13 +22,12 @@ console.log(`\n  Graduation Report — ${result.candidates.length} pattern(s) de
 console.log("  ─────────────────────────────────────────────────\n");
 
 for (const candidate of result.candidates) {
-  // Collect unique tags across all entries
-  const allTags = [...new Set(candidate.entries.flatMap((e) => e.tags))];
+  // Collect unique candidate principles
+  const principles = [
+    ...new Set(candidate.entries.map((e) => e.principle).filter((p) => p.length > 0)),
+  ];
 
   console.log(`  [${candidate.domain}] ${candidate.entries.length}x occurrences`);
-  if (allTags.length > 0) {
-    console.log(`  Tags: ${allTags.join(", ")}`);
-  }
   console.log("");
 
   // Show each entry with date and source
@@ -39,11 +38,16 @@ for (const candidate of result.candidates) {
     );
   }
 
+  // Show candidate principles from Haiku
+  if (principles.length > 0) {
+    console.log("\n  Suggested principles:");
+    for (const p of principles) {
+      console.log(`    → ${p}`);
+    }
+  }
+
   console.log("");
-  console.log(
-    "  → Consider adding a principle to:",
-    `memory/wisdom/frames/${candidate.domain}.md`
-  );
+  console.log("  Target frame:", `memory/wisdom/frames/${candidate.domain}.md`);
   console.log("  ─────────────────────────────────────────────────\n");
 }
 
