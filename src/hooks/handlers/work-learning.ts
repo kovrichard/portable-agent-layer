@@ -154,6 +154,7 @@ export async function captureWorkLearning(
     title,
     category,
     date: new Date().toISOString().slice(0, 10),
+    cwd: process.cwd(),
   };
   if (sessionId) meta.session = sessionId;
 

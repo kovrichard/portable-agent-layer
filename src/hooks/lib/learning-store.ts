@@ -29,6 +29,7 @@ export interface LearningEntry {
   principle: string;
   date: string;
   insights: string;
+  cwd: string;
 }
 
 // ── Shared Directory Walker ──
@@ -122,6 +123,7 @@ export function readLearnings(baseDir: string, limit?: number): LearningEntry[] 
             category?: string;
             principle?: string;
             date?: string;
+            cwd?: string;
           }>(content);
 
           if (!meta.title) continue;
@@ -136,6 +138,7 @@ export function readLearnings(baseDir: string, limit?: number): LearningEntry[] 
             principle: meta.principle || "",
             date: meta.date || "",
             insights: insightsMatch?.[1]?.trim() || "",
+            cwd: meta.cwd || "",
           });
 
           if (limit && entries.length >= limit) return entries;

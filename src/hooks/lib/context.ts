@@ -63,22 +63,21 @@ export function countSignals(filename: string): number {
 /** Load structured session history + project dashboard */
 export function loadActiveWork(): { text: string; summary: string | null } | null {
   try {
-    const recent = recentSessions(48);
+    const cwd = process.cwd();
+    const allRecent = recentSessions(48);
     const projects = activeProjects();
     const stale = staleProjects(7);
 
-    if (recent.length === 0 && projects.length === 0) return null;
+    if (allRecent.length === 0 && projects.length === 0) return null;
 
     const lines: string[] = [];
 
-    if (recent.length > 0) {
+    if (allRecent.length > 0) {
       lines.push("## Recent Work (last 48h)");
-      for (const s of recent.slice(-10).reverse()) {
+      for (const s of allRecent.slice(-10).reverse()) {
         const ago = formatAgo(s.ts);
-        lines.push(`- [${s.status}] ${s.name} — ${ago}`);
-        if (s.handoff) {
-          lines.push(`  Handoff: ${s.handoff.split("\n")[0].slice(0, 120)}`);
-        }
+        const here = s.cwd === cwd ? " *" : "";
+        lines.push(`- [${s.status}] ${s.name} — ${ago}${here}`);
       }
     }
 
@@ -107,7 +106,8 @@ export function loadActiveWork(): { text: string; summary: string | null } | nul
     }
 
     // Summary from most recent session
-    const last = recent.length > 0 ? recent[recent.length - 1] : null;
+    const cwdSessions = allRecent.filter((s) => s.cwd === cwd);
+    const last = cwdSessions.length > 0 ? cwdSessions[cwdSessions.length - 1] : null;
     const summary = last?.summary?.slice(0, 60) || null;
 
     return {
@@ -216,26 +216,33 @@ export function loadWisdomContext(): string {
   }
 }
 
-/** Load recent session learning files as digest, split by category */
+/** Load recent session learning files as digest, with detail for current project */
 export function loadLearningDigest(): string {
   try {
-    const entries = readLearnings(paths.sessionLearning(), 6);
+    const cwd = process.cwd();
+    const entries = readLearnings(paths.sessionLearning(), 10);
     if (entries.length === 0) return "";
 
-    const approach = entries.filter((e) => e.category !== "system").slice(0, 2);
-    const system = entries.filter((e) => e.category === "system").slice(0, 2);
+    const thisProject = entries.filter((e) => e.cwd === cwd).slice(0, 4);
+    const other = entries.filter((e) => e.cwd !== cwd).slice(0, 3);
 
-    if (approach.length === 0 && system.length === 0) return "";
+    if (thisProject.length === 0 && other.length === 0) return "";
 
-    const lines: string[] = ["## Recent Session Learnings"];
-    if (approach.length > 0) {
-      lines.push("### Approach");
-      for (const e of approach) lines.push(`- **Title:** ${e.title}`);
+    const lines: string[] = [];
+
+    if (thisProject.length > 0) {
+      lines.push("## This Project — Recent Sessions");
+      for (const e of thisProject) {
+        lines.push(`- **${e.title}**`);
+        if (e.insights) lines.push(`  ${e.insights.split("\n")[0].slice(0, 150)}`);
+      }
     }
-    if (system.length > 0) {
-      lines.push("### System");
-      for (const e of system) lines.push(`- **Title:** ${e.title}`);
+
+    if (other.length > 0) {
+      lines.push(thisProject.length > 0 ? "" : "", "## Other Recent Learnings");
+      for (const e of other) lines.push(`- ${e.title}`);
     }
+
     return lines.join("\n");
   } catch {
     return "";
