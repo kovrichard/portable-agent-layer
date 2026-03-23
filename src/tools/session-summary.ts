@@ -18,8 +18,9 @@ const { values: args } = parseArgs({
 const sessionId = args.session;
 if (!sessionId) process.exit(0);
 
-const HOME = process.env.HOME ?? "~";
-const claudeDir = resolve(HOME, ".claude", "projects");
+import { homedir } from "node:os";
+
+const claudeDir = resolve(homedir(), ".claude", "projects");
 
 // ── Find the JSONL file containing this session ──
 
