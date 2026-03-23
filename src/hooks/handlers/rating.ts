@@ -10,12 +10,10 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { stringify } from "../lib/frontmatter";
 import { inference } from "../lib/inference";
-import { categorizeLearning } from "../lib/learning-category";
-import { ensureDir, paths } from "../lib/paths";
+import { paths } from "../lib/paths";
 import { emitRating } from "../lib/signals";
-import { fileTimestamp, monthPath, now } from "../lib/time";
+import { now } from "../lib/time";
 import { logTokenUsage } from "../lib/token-usage";
 
 /** Read cached last assistant response (written by StopOrchestrator), looked up by session */
@@ -237,37 +235,6 @@ const MIN_CONFIDENCE = 0.5;
 
 // ── Rating Handling ──
 
-function writeLearningMarkdown(
-  rating: number,
-  source: string,
-  context: string,
-  detailedContext: string,
-  responsePreview: string
-): void {
-  const category = categorizeLearning(context, detailedContext);
-  const dir = ensureDir(resolve(paths.sessionLearning(), monthPath()));
-  const filename = `${fileTimestamp()}_${source}-rating-${rating}_${category}.md`;
-
-  const meta: Record<string, unknown> = {
-    title: context.slice(0, 100) || "(low rating)",
-    category,
-    date: new Date().toISOString().slice(0, 10),
-    rating,
-    source,
-  };
-
-  const body = [
-    "## Context",
-    context || "*(unavailable)*",
-    "",
-    ...(detailedContext ? ["## Analysis", detailedContext, ""] : []),
-    "## Last Response",
-    responsePreview || "*(unavailable)*",
-  ].join("\n");
-
-  writeFileSync(resolve(dir, filename), stringify(meta, body), "utf-8");
-}
-
 function handleRating(
   rating: number,
   context: string,
@@ -279,8 +246,8 @@ function handleRating(
   const responsePreview = getLastResponse(sessionId).slice(0, 500);
   emitRating(rating, context, source, responsePreview);
 
-  if (rating <= 3) {
-    // Deep failure — write pending file for Stop handler with full transcript
+  if (rating <= 4) {
+    // Low rating — write pending file for Stop handler with full transcript
     const userPreview = userMessage?.slice(0, 400);
     writeFileSync(
       resolve(paths.state(), "pending-failure.json"),
@@ -298,16 +265,6 @@ function handleRating(
         2
       ),
       "utf-8"
-    );
-    // No learning markdown for ≤3 — failure capture covers it with richer analysis + tags
-  } else if (rating < 5) {
-    // Low but not critical — write learning markdown
-    writeLearningMarkdown(
-      rating,
-      source,
-      context,
-      detailedContext ?? "",
-      responsePreview
     );
   }
 }
