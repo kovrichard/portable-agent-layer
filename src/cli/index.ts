@@ -10,6 +10,7 @@
  *   init                              Scaffold PAL home, install hooks for all targets
  *   install [--claude] [--opencode]   Register hooks/skills for targets
  *   uninstall [--claude] [--opencode] Remove hooks/skills for targets
+ *   update                             Update PAL (git pull or npm update)
  *   export [path] [--dry-run]         Export user state to zip
  *   import [path] [--dry-run]         Import user state from zip
  *   status                            Show current PAL configuration
@@ -157,6 +158,9 @@ async function runCli(command: string | undefined, args: string[]) {
     case "import":
       await importState(args);
       break;
+    case "update":
+      await update();
+      break;
     case "status":
       await status();
       break;
@@ -196,6 +200,7 @@ function showHelp() {
     pal cli init [--claude] [--opencode]    Scaffold and install (default: all)
     pal cli install [--claude] [--opencode] Register hooks for targets
     pal cli uninstall [--claude] [--opencode] Remove hooks for targets
+    pal cli update                          Update PAL (git pull or npm update)
     pal cli export [path] [--dry-run]       Export state to zip
     pal cli import [path] [--dry-run]       Import state from zip
     pal cli status                          Show PAL configuration
@@ -572,6 +577,45 @@ async function importState(args: string[]) {
     console.log(`Imported ${entries.length} files → ${home}`);
     log.info("Run 'pal cli install' to re-register hooks.");
   }
+}
+
+async function update() {
+  const { checkForUpdate } = await import("../hooks/handlers/update-check");
+  const result = await checkForUpdate(true);
+
+  log.info(`Current: ${result.current} (${result.mode} mode)`);
+
+  if (!result.available) {
+    log.success("Already up to date.");
+    return;
+  }
+
+  log.info(`Available: ${result.latest}`);
+
+  const pkg = palPkg();
+  if (result.mode === "repo") {
+    log.info("Pulling updates...");
+    const pull = spawnSync("git", ["pull", "--ff-only"], { cwd: pkg, stdio: "inherit" });
+    if (pull.status !== 0) {
+      log.error("git pull failed. You may have local changes — try pulling manually.");
+      process.exit(1);
+    }
+  } else {
+    log.info("Updating via npm...");
+    const up = spawnSync("bun", ["update", "-g", "portable-agent-layer"], {
+      stdio: "inherit",
+    });
+    if (up.status !== 0) {
+      log.error("Update failed. Try: bun update -g portable-agent-layer");
+      process.exit(1);
+    }
+  }
+
+  const newPkg = JSON.parse(readFileSync(resolve(pkg, "package.json"), "utf-8"));
+  log.success(`Updated: ${result.current} → ${newPkg.version}`);
+
+  log.info("Reinstalling...");
+  await install(resolveTargets([]));
 }
 
 async function status() {

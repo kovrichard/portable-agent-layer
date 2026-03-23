@@ -152,12 +152,14 @@ async function checkNpm(): Promise<UpdateCache> {
   }
 }
 
-/** Run update check on Stop (non-blocking). Caches result for greeting. */
-export async function checkForUpdate(): Promise<void> {
-  const cached = readCache();
-  if (cached) {
-    logDebug("update-check", "Using cached result");
-    return;
+/** Run update check. Caches result. Use force=true to skip cache (e.g. for `pal cli update`). */
+export async function checkForUpdate(force = false): Promise<UpdateCache> {
+  if (!force) {
+    const cached = readCache();
+    if (cached) {
+      logDebug("update-check", "Using cached result");
+      return cached;
+    }
   }
 
   const result = isRepoMode() ? await checkRepo() : await checkNpm();
@@ -169,6 +171,8 @@ export async function checkForUpdate(): Promise<void> {
       `Update available: ${result.current} → ${result.latest} (${result.mode})`
     );
   }
+
+  return result;
 }
 
 /** Read cached update status for greeting display. Returns null if no update. */

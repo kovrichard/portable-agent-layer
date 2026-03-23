@@ -77,6 +77,7 @@ pal cli status        # check your setup
 | `pal cli init` | Scaffold PAL home directory and install hooks |
 | `pal cli install` | Register hooks/skills for targets |
 | `pal cli uninstall` | Remove hooks/skills for targets |
+| `pal cli update` | Update PAL (git pull or npm update) and reinstall hooks |
 | `pal cli export` | Export user state (telos, memory) to a zip |
 | `pal cli import` | Import user state from a zip |
 | `pal cli status` | Show current PAL configuration |
