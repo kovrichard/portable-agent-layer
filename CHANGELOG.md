@@ -1,3 +1,10 @@
+# [0.6.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.5.0...v0.6.0) (2026-03-23)
+
+
+### Features
+
+* **graduation:** add emerging patterns to graduation results and update filtering logic ([05495e9](https://github.com/kovrichard/portable-agent-layer/commit/05495e9cd17d03d93b0132b7244b8330e68884e6))
+
 # [0.5.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.4.0...v0.5.0) (2026-03-23)
 
 
