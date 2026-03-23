@@ -3,7 +3,11 @@
  * Replaces the old work.ts handler.
  */
 
-import { readSessionNames } from "../lib/session-names";
+import {
+  extractFallbackName,
+  readSessionNames,
+  writeSessionName,
+} from "../lib/session-names";
 import { now } from "../lib/time";
 import {
   extractContent,
@@ -29,9 +33,18 @@ export async function captureWorkSession(
 
     const id = sessionId || `session-${Date.now()}`;
 
-    // Look up session name
+    // Name the session if still untitled and enough messages
     const names = readSessionNames();
-    const name = names[id] || "untitled session";
+    let name = names[id] || "";
+    if ((!name || name === "untitled session") && messages.length >= 6) {
+      const userTexts = messages
+        .filter((m) => m.role === "user")
+        .map((m) => extractContent(m))
+        .join(" ");
+      name = extractFallbackName(userTexts);
+      if (name !== "untitled session") writeSessionName(id, name);
+    }
+    if (!name || name === "untitled session") name = "untitled session";
 
     // Extract content
     const lastUser = extractLastUser(messages);

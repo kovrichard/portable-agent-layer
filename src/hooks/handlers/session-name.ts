@@ -30,14 +30,16 @@ export async function captureSessionName(
 ): Promise<void> {
   if (!sessionId) return;
 
-  // Skip if this session is already named
+  // Skip if this session is already named (non-untitled)
   const names = readSessionNames();
-  if (names[sessionId]) return;
+  const existing = names[sessionId];
+  if (existing && existing !== "untitled session") return;
 
-  // 1. Instant deterministic name from keywords
-  const fallback = extractFallbackName(message);
-  writeSessionName(sessionId, fallback);
-  logDebug("session-name", `Deterministic name: "${fallback}"`);
+  // Try deterministic name from this message's keywords
+  const name = extractFallbackName(message);
+  if (name === "untitled session") return; // not enough keywords yet
+  writeSessionName(sessionId, name);
+  logDebug("session-name", `Named from prompt: "${name}"`);
 
   // TODO: re-enable when a consumer exists (tab titles, dashboard)
   // // 2. Spawn detached background process to upgrade with inference
