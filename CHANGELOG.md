@@ -1,3 +1,10 @@
+# [0.7.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.6.2...v0.7.0) (2026-03-23)
+
+
+### Features
+
+* **update-check:** implement update checker to notify users of available updates ([67e30be](https://github.com/kovrichard/portable-agent-layer/commit/67e30bed75145951625aca4d14c5e1c7bf2ae598))
+
 ## [0.6.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.6.1...v0.6.2) (2026-03-23)
 
 
