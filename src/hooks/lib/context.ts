@@ -7,6 +7,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parse } from "./frontmatter";
 import { readFailures, readLearnings } from "./learning-store";
+import { loadOpinionContext } from "./opinions";
 import { paths } from "./paths";
 import { loadRecentNotes } from "./relationship";
 import { readSessionNames } from "./session-names";
@@ -347,8 +348,10 @@ export function buildSystemReminder(): string {
   const trends = loadSignalTrends();
   const failures = loadFailurePatterns();
   const synthesis = loadSynthesisRecommendations();
+  const opinions = loadOpinionContext();
   const parts: string[] = [];
   if (wisdom) parts.push(wisdom);
+  if (opinions) parts.push(opinions);
   if (relationship) parts.push(relationship);
   if (digest) parts.push(digest);
   if (synthesis) parts.push(synthesis);

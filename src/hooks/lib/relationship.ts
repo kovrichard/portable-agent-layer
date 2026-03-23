@@ -80,8 +80,8 @@ export function appendNotes(notes: RelationshipNote[], sessionId?: string): void
   if (sessionId) lines.push(`<!-- session:${sessionId} -->`);
 
   for (const note of fresh) {
-    if (note.type === "O" && note.confidence !== undefined) {
-      lines.push(`- O(c=${note.confidence}): ${note.text}`);
+    if ((note.type === "O" || note.type === "B") && note.confidence !== undefined) {
+      lines.push(`- ${note.type}(c=${note.confidence}): ${note.text}`);
     } else {
       lines.push(`- ${note.type}: ${note.text}`);
     }

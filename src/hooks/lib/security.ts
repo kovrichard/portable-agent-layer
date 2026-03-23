@@ -32,6 +32,7 @@ export const HOOK_MANAGED_FILES = [
   "graduated.json",
   "update-available.json",
   "debug.log.prev",
+  "opinions.json",
 ];
 
 /** Hook-managed directories — AI must not write to or delete from these */

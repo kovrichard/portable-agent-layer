@@ -2,10 +2,10 @@
 /**
  * RelationshipReflect — Periodic reflection on relationship patterns.
  *
- * Reads recent relationship notes and ratings to surface:
- * - Opinion confidence trends (which observations keep recurring?)
- * - Rating correlation (what interaction patterns correlate with low/high ratings?)
- * - Summary of the relationship state
+ * Reads recent relationship notes and ratings to:
+ * - Promote recurring O/B notes into tracked opinions with confidence
+ * - Update confidence on existing opinions via supporting evidence
+ * - Generate a summary report
  *
  * Usage:
  *   bun run tool:reflect              # Reflect on last 7 days
@@ -16,7 +16,17 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
+import {
+  addEvidence,
+  createOpinion,
+  findSimilarOpinion,
+  getLastReflectDate,
+  readOpinions,
+  saveOpinion,
+  setLastReflectDate,
+} from "../hooks/lib/opinions";
 import { palHome } from "../hooks/lib/paths";
+import { similarity } from "../hooks/lib/text-similarity";
 
 // ── Paths ──
 
@@ -34,28 +44,18 @@ interface Rating {
 }
 
 interface ParsedNote {
-  type: "W" | "O";
+  type: "W" | "O" | "B";
   text: string;
   confidence?: number;
   date: string;
   time: string;
 }
 
-interface ReflectionResult {
-  period: string;
-  totalNotes: number;
-  totalRatings: number;
-  avgRating: number;
-  opinions: OpinionSummary[];
-  worldFacts: string[];
-  ratingCorrelation: string[];
-}
-
-interface OpinionSummary {
-  text: string;
-  occurrences: number;
-  avgConfidence: number;
-  dates: string[];
+interface OpinionChange {
+  statement: string;
+  action: "created" | "strengthened";
+  oldConfidence?: number;
+  newConfidence: number;
 }
 
 // ── Note Parsing ──
@@ -96,13 +96,13 @@ function loadNotes(daysBack: number): ParsedNote[] {
             continue;
           }
 
-          // O(c=0.85): text
-          const opinionMatch = line.match(/^- O\(c=([\d.]+)\):\s*(.+)$/);
-          if (opinionMatch) {
+          // O(c=0.85): text or B(c=0.85): text
+          const obMatch = line.match(/^- ([OB])\(c=([\d.]+)\):\s*(.+)$/);
+          if (obMatch) {
             notes.push({
-              type: "O",
-              confidence: Number.parseFloat(opinionMatch[1]),
-              text: opinionMatch[2],
+              type: obMatch[1] as "O" | "B",
+              confidence: Number.parseFloat(obMatch[2]),
+              text: obMatch[3],
               date: dateStr,
               time: currentTime,
             });
@@ -152,39 +152,115 @@ function loadRatings(daysBack: number): Rating[] {
     );
 }
 
+// ── Opinion Promotion ──
+
+function promoteToOpinions(notes: ParsedNote[], dryRun: boolean): OpinionChange[] {
+  const changes: OpinionChange[] = [];
+  const opinions = readOpinions();
+  const lastReflect = getLastReflectDate();
+
+  // Only O and B notes become opinions, skip already-processed notes
+  const opinionNotes = notes.filter(
+    (n) => (n.type === "O" || n.type === "B") && (!lastReflect || n.date > lastReflect)
+  );
+
+  // Group similar notes together
+  const groups = new Map<string, ParsedNote[]>();
+  for (const note of opinionNotes) {
+    let matched = false;
+    for (const [key, group] of groups) {
+      if (similarity(note.text, key) >= 0.3) {
+        group.push(note);
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) {
+      groups.set(note.text, [note]);
+    }
+  }
+
+  for (const [representative, group] of groups) {
+    // Check against existing opinions
+    const existing = findSimilarOpinion(representative, opinions);
+
+    if (existing) {
+      // Add supporting evidence for each new note
+      let updated = existing;
+      for (const note of group) {
+        updated = addEvidence(updated, "supporting", note.text.slice(0, 120));
+      }
+
+      if (updated.confidence !== existing.confidence) {
+        changes.push({
+          statement: existing.statement,
+          action: "strengthened",
+          oldConfidence: existing.confidence,
+          newConfidence: updated.confidence,
+        });
+        if (!dryRun) saveOpinion(updated);
+      }
+    } else if (group.length >= 2) {
+      // New opinion — requires at least 2 occurrences
+      const opinion = createOpinion(representative, `${group.length}x in reflect period`);
+      changes.push({
+        statement: representative,
+        action: "created",
+        newConfidence: opinion.confidence,
+      });
+      if (!dryRun) saveOpinion(opinion);
+    }
+  }
+
+  return changes;
+}
+
 // ── Analysis ──
 
-function groupOpinions(notes: ParsedNote[]): OpinionSummary[] {
-  const opinions = notes.filter((n) => n.type === "O");
-  const groups = new Map<string, { confidences: number[]; dates: string[] }>();
+interface OpinionSummary {
+  text: string;
+  occurrences: number;
+  avgConfidence: number;
+  dates: string[];
+}
 
-  for (const op of opinions) {
-    // Normalize text for grouping (lowercase, trim)
-    const key = op.text.toLowerCase().slice(0, 100);
-    const existing = groups.get(key) ?? { confidences: [], dates: [] };
-    if (op.confidence !== undefined) existing.confidences.push(op.confidence);
-    existing.dates.push(op.date);
-    groups.set(key, existing);
+function groupNoteOccurrences(notes: ParsedNote[]): OpinionSummary[] {
+  const opNotes = notes.filter((n) => n.type === "O" || n.type === "B");
+  const groups = new Map<
+    string,
+    { confidences: number[]; dates: string[]; text: string }
+  >();
+
+  for (const note of opNotes) {
+    let matched = false;
+    for (const [key, group] of groups) {
+      if (similarity(note.text, key) >= 0.3) {
+        if (note.confidence !== undefined) group.confidences.push(note.confidence);
+        group.dates.push(note.date);
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) {
+      groups.set(note.text, {
+        text: note.text,
+        confidences: note.confidence !== undefined ? [note.confidence] : [],
+        dates: [note.date],
+      });
+    }
   }
 
-  const summaries: OpinionSummary[] = [];
-  for (const [, data] of groups) {
-    const originalNote = opinions.find(
-      (n) => n.text.toLowerCase().slice(0, 100) === [...groups.keys()][summaries.length]
-    );
-    const avgConf =
-      data.confidences.length > 0
-        ? data.confidences.reduce((a, b) => a + b, 0) / data.confidences.length
-        : 0;
-    summaries.push({
-      text: originalNote?.text ?? "",
-      occurrences: data.dates.length,
-      avgConfidence: avgConf,
-      dates: [...new Set(data.dates)],
-    });
-  }
-
-  return summaries.sort((a, b) => b.occurrences - a.occurrences);
+  return [...groups.values()]
+    .map((g) => ({
+      text: g.text,
+      occurrences: g.dates.length,
+      avgConfidence:
+        g.confidences.length > 0
+          ? g.confidences.reduce((a, b) => a + b, 0) / g.confidences.length
+          : 0,
+      dates: [...new Set(g.dates)],
+    }))
+    .sort((a, b) => b.occurrences - a.occurrences);
 }
 
 function correlateRatings(ratings: Rating[]): string[] {
@@ -219,48 +295,53 @@ function correlateRatings(ratings: Rating[]): string[] {
   return correlations;
 }
 
-function analyze(
-  notes: ParsedNote[],
-  ratings: Rating[],
-  period: string
-): ReflectionResult {
-  const avgRating =
-    ratings.length > 0 ? ratings.reduce((s, r) => s + r.rating, 0) / ratings.length : 0;
-
-  return {
-    period,
-    totalNotes: notes.length,
-    totalRatings: ratings.length,
-    avgRating,
-    opinions: groupOpinions(notes),
-    worldFacts: notes
-      .filter((n) => n.type === "W")
-      .map((n) => n.text)
-      .slice(0, 10),
-    ratingCorrelation: correlateRatings(ratings),
-  };
-}
-
 // ── Report ──
 
-function formatReport(result: ReflectionResult): string {
+function formatReport(
+  period: string,
+  notes: ParsedNote[],
+  ratings: Rating[],
+  opinionChanges: OpinionChange[]
+): string {
   const date = new Date().toISOString().slice(0, 10);
+  const avgRating =
+    ratings.length > 0 ? ratings.reduce((s, r) => s + r.rating, 0) / ratings.length : 0;
+  const summaries = groupNoteOccurrences(notes);
+  const worldFacts = notes.filter((n) => n.type === "W").map((n) => n.text);
+  const ratingInsights = correlateRatings(ratings);
+
   const lines: string[] = [
     "# Relationship Reflection",
     "",
-    `**Period:** ${result.period}`,
+    `**Period:** ${period}`,
     `**Generated:** ${date}`,
-    `**Notes analyzed:** ${result.totalNotes}`,
-    `**Ratings analyzed:** ${result.totalRatings}`,
-    `**Average Rating:** ${result.avgRating.toFixed(1)}/10`,
+    `**Notes analyzed:** ${notes.length}`,
+    `**Ratings analyzed:** ${ratings.length}`,
+    `**Average Rating:** ${avgRating.toFixed(1)}/10`,
     "",
     "---",
     "",
   ];
 
-  if (result.opinions.length > 0) {
+  if (opinionChanges.length > 0) {
+    lines.push("## Opinion Changes", "");
+    for (const change of opinionChanges) {
+      if (change.action === "created") {
+        lines.push(
+          `- **NEW** (${Math.round(change.newConfidence * 100)}%): ${change.statement}`
+        );
+      } else {
+        lines.push(
+          `- **+** ${Math.round(change.oldConfidence ?? 0 * 100)}% → ${Math.round(change.newConfidence * 100)}%: ${change.statement}`
+        );
+      }
+    }
+    lines.push("");
+  }
+
+  if (summaries.length > 0) {
     lines.push("## Recurring Opinions", "");
-    for (const op of result.opinions) {
+    for (const op of summaries) {
       lines.push(
         `- **${op.text}**`,
         `  Seen ${op.occurrences}x | Avg confidence: ${op.avgConfidence.toFixed(2)} | Dates: ${op.dates.join(", ")}`,
@@ -269,17 +350,17 @@ function formatReport(result: ReflectionResult): string {
     }
   }
 
-  if (result.worldFacts.length > 0) {
+  if (worldFacts.length > 0) {
     lines.push("## World Facts Observed", "");
-    for (const fact of result.worldFacts) {
+    for (const fact of worldFacts.slice(0, 10)) {
       lines.push(`- ${fact}`);
     }
     lines.push("");
   }
 
-  if (result.ratingCorrelation.length > 0) {
+  if (ratingInsights.length > 0) {
     lines.push("## Rating Insights", "");
-    for (const c of result.ratingCorrelation) {
+    for (const c of ratingInsights) {
       lines.push(`- ${c}`);
     }
     lines.push("");
@@ -288,7 +369,7 @@ function formatReport(result: ReflectionResult): string {
   return lines.join("\n");
 }
 
-function writeReport(result: ReflectionResult, period: string): string {
+function writeReport(report: string, period: string): string {
   if (!existsSync(REFLECTION_DIR)) mkdirSync(REFLECTION_DIR, { recursive: true });
 
   const date = new Date().toISOString().slice(0, 10);
@@ -296,7 +377,7 @@ function writeReport(result: ReflectionResult, period: string): string {
   const filename = `${date}_${slug}-reflection.md`;
   const filepath = resolve(REFLECTION_DIR, filename);
 
-  writeFileSync(filepath, formatReport(result), "utf-8");
+  writeFileSync(filepath, report, "utf-8");
   return filepath;
 }
 
@@ -313,50 +394,79 @@ const { values } = parseArgs({
 
 if (values.help) {
   console.log(`
-RelationshipReflect — Periodic reflection on relationship patterns
+RelationshipReflect — Periodic reflection + opinion promotion
+
+Reads recent relationship notes and ratings. Promotes recurring
+observations (O/B types) into tracked opinions with confidence scoring.
 
 Usage:
   bun run tool:reflect              Reflect on last 7 days (default)
   bun run tool:reflect -- --month   Reflect on last 30 days
   bun run tool:reflect -- --dry-run Preview without writing
 
-Output: Creates reflection report in memory/relationship/reflections/
+Output:
+  - Updates memory/relationship/opinions.json (confidence tracking)
+  - Creates reflection report in memory/relationship/reflections/
 `);
   process.exit(0);
 }
 
 const daysBack = values.month ? 30 : 7;
 const period = values.month ? "Monthly" : "Weekly";
+const dryRun = values["dry-run"] ?? false;
 
 const notes = loadNotes(daysBack);
 const ratings = loadRatings(daysBack);
 
-console.log(`Loaded ${notes.length} relationship notes from last ${daysBack} days`);
-console.log(`Loaded ${ratings.length} ratings from last ${daysBack} days`);
+console.log(`Loaded ${notes.length} notes from last ${daysBack} days`);
+console.log(`Loaded ${ratings.length} ratings`);
 
 if (notes.length === 0 && ratings.length === 0) {
   console.log("No data to analyze");
   process.exit(0);
 }
 
-const result = analyze(notes, ratings, period);
+// Promote notes to opinions
+const opinionChanges = promoteToOpinions(notes, dryRun);
 
-console.log(`\nAverage Rating: ${result.avgRating.toFixed(1)}/10`);
-console.log(`Opinions tracked: ${result.opinions.length}`);
-console.log(`World facts: ${result.worldFacts.length}`);
+const avgRating =
+  ratings.length > 0 ? ratings.reduce((s, r) => s + r.rating, 0) / ratings.length : 0;
+console.log(`\nAverage Rating: ${avgRating.toFixed(1)}/10`);
 
-if (result.opinions.length > 0) {
-  console.log("\nTop recurring opinions:");
-  for (const op of result.opinions.slice(0, 5)) {
-    console.log(
-      `  - [${op.occurrences}x, c=${op.avgConfidence.toFixed(2)}] ${op.text.slice(0, 80)}`
-    );
+const summaries = groupNoteOccurrences(notes);
+console.log(`Observations: ${summaries.length} unique`);
+
+if (opinionChanges.length > 0) {
+  console.log(`\nOpinion changes:`);
+  for (const change of opinionChanges) {
+    if (change.action === "created") {
+      console.log(
+        `  + NEW (${Math.round(change.newConfidence * 100)}%) ${change.statement.slice(0, 80)}`
+      );
+    } else {
+      console.log(
+        `  ~ ${Math.round(change.oldConfidence ?? 0 * 100)}% → ${Math.round(change.newConfidence * 100)}% ${change.statement.slice(0, 80)}`
+      );
+    }
   }
+} else {
+  console.log("\nNo opinion changes");
 }
 
-if (values["dry-run"]) {
-  console.log("\n[DRY RUN] Would write reflection report");
+if (dryRun) {
+  console.log("\n[DRY RUN] Would write reflection report + update opinions");
 } else {
-  const filepath = writeReport(result, period);
+  const report = formatReport(period, notes, ratings, opinionChanges);
+  const filepath = writeReport(report, period);
+  setLastReflectDate(new Date().toISOString().slice(0, 10));
   console.log(`\nCreated reflection report: ${filepath}`);
+
+  const opinions = readOpinions();
+  const high = opinions.filter((o) => o.confidence >= 0.85);
+  if (high.length > 0) {
+    console.log(`\nHigh-confidence opinions (injected into context):`);
+    for (const o of high) {
+      console.log(`  [${Math.round(o.confidence * 100)}%] ${o.statement.slice(0, 80)}`);
+    }
+  }
 }
