@@ -1,3 +1,10 @@
+## [0.6.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.6.0...v0.6.1) (2026-03-23)
+
+
+### Bug Fixes
+
+* **summary:** make it work on windows ([163f3a8](https://github.com/kovrichard/portable-agent-layer/commit/163f3a81e83bf33271f01431644f9ad55bb8fced))
+
 # [0.6.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.5.0...v0.6.0) (2026-03-23)
 
 
