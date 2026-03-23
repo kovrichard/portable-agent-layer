@@ -1,3 +1,22 @@
+# [0.10.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.9.0...v0.10.0) (2026-03-23)
+
+
+### Bug Fixes
+
+* do not include analysis reports in the context ([2cecef7](https://github.com/kovrichard/portable-agent-layer/commit/2cecef744fb579bef4c378ac4a137e713ada03b5))
+
+
+### Features
+
+* **graduation:** add path property to analysis entries and enhance logging in analyze tool ([403e0b9](https://github.com/kovrichard/portable-agent-layer/commit/403e0b94b6aefaa91a143ce2dd0bbe9a7d6d46df))
+* **opinion:** add opinion tracking tool and update documentation ([951c802](https://github.com/kovrichard/portable-agent-layer/commit/951c80261176652b086b9ab83b4f295dab6c512f))
+* **opinions:** implement opinion management system with CRUD operations and context loading ([a084230](https://github.com/kovrichard/portable-agent-layer/commit/a0842305a4da2b255ec3321ed3082d15cc41e256))
+* **reflect:** implement auto-trigger for relationship reflect ([fc53354](https://github.com/kovrichard/portable-agent-layer/commit/fc53354b4ba70bef20ecb5412e4dac637b7f3f29))
+* **relationship:** add belief type to observations ([3f69de3](https://github.com/kovrichard/portable-agent-layer/commit/3f69de3d06a0e794ae74bf6c40b09f4633babb41))
+* **session:** enhance session naming logic to avoid duplicates and improve keyword extraction ([3096da5](https://github.com/kovrichard/portable-agent-layer/commit/3096da5a31a5a223b00954a15b9ce27fef3c026d))
+* **steering:** add steering rules template and integrate into AGENTS.md ([f961f1d](https://github.com/kovrichard/portable-agent-layer/commit/f961f1df82f356bddb384c5a5a39c55e71aa2890))
+* **work-learning:** add current working directory to work learning capture ([f28975b](https://github.com/kovrichard/portable-agent-layer/commit/f28975b25c96256f324ebfdc30e81fabc3d39cbc))
+
 # [0.9.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.8.1...v0.9.0) (2026-03-23)
 
 
