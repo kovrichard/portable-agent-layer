@@ -24,7 +24,7 @@ if (values.help) {
   PAL Learning Analysis — unified graduation + ratings report
 
   Reads all captured failures (rating ≤3) and session learnings,
-  groups recurring patterns via Jaccard similarity on context text,
+  groups recurring patterns via Dice similarity on context text,
   and summarizes rating trends.
 
   Sections:

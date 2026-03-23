@@ -2,7 +2,7 @@
  * Unified Learning Analysis — graduation + ratings summary in one pipeline.
  *
  * Reads failures and session learnings via learning-store, detects recurring
- * patterns via Jaccard similarity on context text, and generates a ratings summary
+ * patterns via Dice similarity on context text, and generates a ratings summary
  * with recommendations via Haiku inference.
  *
  * A pattern qualifies for graduation when it appears 3+ times across different sessions.
@@ -13,15 +13,14 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
-  extractKeywords,
   type FailureEntry,
   type LearningEntry,
   readFailures,
   readLearnings,
-  similarity,
 } from "./learning-store";
 import { logDebug } from "./log";
 import { ensureDir, paths } from "./paths";
+import { extractKeywords, similarity } from "./text-similarity";
 
 // ── Types ──
 
@@ -86,7 +85,7 @@ function classifyDomain(text: string): string {
 // ── Data Collection ──
 
 const MIN_TEXT_LENGTH = 30;
-export const SIMILARITY_THRESHOLD = 0.35;
+export const SIMILARITY_THRESHOLD = 0.3;
 const MIN_OCCURRENCES = 3;
 
 function toAnalysisEntries(

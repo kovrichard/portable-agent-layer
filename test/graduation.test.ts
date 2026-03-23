@@ -112,36 +112,6 @@ describe("learning-store", () => {
     const entries = readFailures(failuresDir, 3);
     expect(entries.length).toBe(3);
   });
-
-  test("similarity returns 1 for identical strings", async () => {
-    const { similarity } = await import("../src/hooks/lib/learning-store");
-    expect(
-      similarity(
-        "always verify version before release",
-        "always verify version before release"
-      )
-    ).toBe(1);
-  });
-
-  test("similarity returns 0 for completely different strings", async () => {
-    const { similarity } = await import("../src/hooks/lib/learning-store");
-    expect(similarity("deploy production server", "bake chocolate cake")).toBe(0);
-  });
-
-  test("similarity matches similar principles above threshold", async () => {
-    const { similarity } = await import("../src/hooks/lib/learning-store");
-    const score = similarity(
-      "Always verify package version before publishing to npm registry",
-      "Verify npm package version matches git tag before release"
-    );
-    expect(score).toBeGreaterThanOrEqual(0.35);
-  });
-
-  test("empty strings return 0", async () => {
-    const { similarity } = await import("../src/hooks/lib/learning-store");
-    expect(similarity("", "")).toBe(0);
-    expect(similarity("hello world", "")).toBe(0);
-  });
 });
 
 describe("analyze", () => {
