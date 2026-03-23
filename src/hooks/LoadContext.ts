@@ -7,7 +7,7 @@
  */
 
 import { regenerateIfNeeded } from "./lib/claude-md";
-import { buildGreeting, buildSystemReminder } from "./lib/context";
+import { buildSystemReminder } from "./lib/context";
 import { logDebug, logError } from "./lib/log";
 
 // --- Skip heavy context for subagents ---
@@ -27,9 +27,6 @@ try {
 } catch (err) {
   logError("LoadContext:regenerate", err);
 }
-
-// --- Visible greeting to stderr ---
-process.stderr.write(`${buildGreeting().join("\n")}\n`);
 
 // --- Dynamic system-reminder to stdout (empty = nothing injected) ---
 try {

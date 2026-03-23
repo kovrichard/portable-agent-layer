@@ -19,7 +19,7 @@ type TranscriptMessage = { role: string; content: string };
 
 const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   // Pre-load shared modules
-  const { buildGreeting, buildSystemReminder } =
+  const { buildSystemReminder } =
     await lib<typeof import("../../hooks/lib/context")>("context.ts");
   const { checkBashCommand, checkFilePath } =
     await lib<typeof import("../../hooks/lib/security")>("security.ts");
@@ -86,7 +86,6 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
         const { regenerateIfNeeded } =
           await lib<typeof import("../../hooks/lib/claude-md")>("claude-md.ts");
         regenerateIfNeeded();
-        console.log(buildGreeting().join("\n"));
       }
 
       if (event.type === "session.idle" || event.type === "session.diff") {
@@ -103,13 +102,15 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
           logDebug("opencode:event", `Got ${messages.length} transcript messages`);
           if (messages.length < 2) return;
 
-          // Name session from first user message (if not already named)
-          const firstUser = messages.find((m: TranscriptMessage) => m.role === "user");
-          if (firstUser) {
-            await captureSessionName(firstUser.content, sessionID);
-          }
+          // Extract last assistant message for response caching (parity with Claude Code)
+          const lastAssistant = messages
+            .filter((m: TranscriptMessage) => m.role === "assistant")
+            .pop();
 
-          await runStopHandlers(JSON.stringify(messages), { sessionId: sessionID });
+          await runStopHandlers(JSON.stringify(messages), {
+            sessionId: sessionID,
+            lastAssistantMessage: lastAssistant?.content,
+          });
           logDebug("opencode:event", "Stop handlers complete");
         } catch (err) {
           logError("opencode:session.stop", err);
@@ -117,7 +118,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       }
     },
 
-    // --- Capture ratings from user messages (shared handler) ---
+    // --- Capture ratings + session naming from user messages (shared handlers) ---
     "chat.message": async (input, output) => {
       const text =
         output.parts
@@ -126,7 +127,10 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
           .join(" ") ?? "";
 
       if (text.trim()) {
-        await captureRating(text, input.sessionID);
+        await Promise.allSettled([
+          captureRating(text, input.sessionID),
+          captureSessionName(text, input.sessionID),
+        ]);
       }
     },
 
