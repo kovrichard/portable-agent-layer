@@ -72,7 +72,11 @@ export function needsRebuild(): boolean {
   const outputMtime = statSync(outputPath).mtimeMs;
 
   // Collect source files: template + setup.json + all telos/*.md
-  const sources: string[] = [TEMPLATE_PATH, resolve(paths.state(), "setup.json")];
+  const sources: string[] = [
+    TEMPLATE_PATH,
+    resolve(dirname(TEMPLATE_PATH), "STEERING-RULES.md"),
+    resolve(paths.state(), "setup.json"),
+  ];
 
   const telosDir = paths.telos();
   if (existsSync(telosDir)) {
@@ -105,10 +109,16 @@ export function buildClaudeMd(): string {
   const setupPrompt = state ? buildSetupPrompt(state) : null;
   const telos = loadTelos();
 
+  const steeringPath = resolve(dirname(TEMPLATE_PATH), "STEERING-RULES.md");
+  const steeringRules = existsSync(steeringPath)
+    ? readFileSync(steeringPath, "utf-8").trim()
+    : "";
+
   return template
     .replace("{{SETUP_PROMPT}}", setupPrompt ? `${setupPrompt}\n` : "")
     .replace("{{TELOS}}", telos ? `${telos}\n` : "")
-    .replace("{{MEMORY_PATHS}}", memoryPaths());
+    .replace("{{MEMORY_PATHS}}", memoryPaths())
+    .replace("{{STEERING_RULES}}", steeringRules);
 }
 
 /** Regenerate AGENTS.md if any source file is newer, and ensure CLAUDE.md symlink exists. Returns true if rebuilt. */
