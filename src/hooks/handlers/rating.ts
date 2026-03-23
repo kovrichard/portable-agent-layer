@@ -46,11 +46,11 @@ function getLastResponse(sessionId?: string): string {
  * Matches: "7", "8 - good work", "6: needs work", "9 excellent", "10!"
  * Rejects: "3 items", "5 things to fix", "7th thing", "10/10"
  */
-function parseExplicitRating(
+export function parseExplicitRating(
   prompt: string
 ): { rating: number; comment?: string } | null {
   const trimmed = prompt.trim();
-  const match = trimmed.match(/^(10|[1-9])(?:\s*[-:]\s*|\s+)?(.*)$/);
+  const match = trimmed.match(/^(10|[1-9])(?:\s*[-:,]\s*|\s+)?(.*)$/);
   if (!match) return null;
 
   const rating = parseInt(match[1], 10);
@@ -67,6 +67,9 @@ function parseExplicitRating(
     const sentenceStarters =
       /^(items?|things?|steps?|files?|lines?|bugs?|issues?|errors?|times?|minutes?|hours?|days?|seconds?|percent|%|th\b|st\b|nd\b|rd\b|of\b|in\b|at\b|to\b|the\b|a\b|an\b)/i;
     if (sentenceStarters.test(rest)) return null;
+
+    // Reject item selections: "1 and 2", "2 3 5", "1, 3, 5", "1-3"
+    if (/^(and\b|\d|,\s*\d|-\d)/.test(rest)) return null;
   }
 
   return { rating, comment: rest };
