@@ -20,8 +20,9 @@ const OBSERVATION_SCHEMA = {
         properties: {
           type: {
             type: "string",
-            enum: ["O", "W"],
-            description: "O=opinion/preference, W=factual observation",
+            enum: ["O", "W", "B"],
+            description:
+              "O=opinion/preference, W=factual observation, B=belief/behavioral pattern",
           },
           text: { type: "string" },
           confidence: { type: "number" },
@@ -74,8 +75,10 @@ export async function captureRelationship(
   const result = await inference({
     system:
       "You analyze user messages from an AI coding session to extract relationship observations. " +
-      "Focus on: preferences (how they like to work), corrections (what they pushed back on), " +
-      "frustrations, positive reactions, communication style patterns. " +
+      "Types: O=opinions/preferences (how they like to work, what they want), " +
+      "B=beliefs/behavioral patterns (how they approach problems, decision-making style, recurring habits), " +
+      "W=world facts (their situation, projects, tools they use). " +
+      "Focus on: preferences, corrections, frustrations, positive reactions, communication style, problem-solving approach. " +
       "Return 0-3 observations. If nothing notable, return empty observations array. Be concise.",
     user: `User messages from this session:\n${userMessages.map((m, i) => `${i + 1}. ${m}`).join("\n")}`,
     maxTokens: 300,
@@ -93,7 +96,7 @@ export async function captureRelationship(
 
   try {
     const parsed = JSON.parse(result.output) as {
-      observations: Array<{ type: "O" | "W"; text: string; confidence: number }>;
+      observations: Array<{ type: "O" | "W" | "B"; text: string; confidence: number }>;
     };
 
     logDebug("relationship", `Parsed ${parsed.observations?.length ?? 0} observations`);

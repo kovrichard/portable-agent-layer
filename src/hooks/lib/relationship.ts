@@ -5,6 +5,7 @@
  * Notes live at memory/relationship/YYYY-MM/YYYY-MM-DD.md
  * W = world (facts about user's situation)
  * O = opinion (preference with confidence)
+ * B = belief (behavioral pattern with confidence)
  *
  * Extraction is handled by the relationship handler via Haiku inference.
  * This lib provides storage and reading utilities only.
@@ -14,7 +15,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ensureDir, paths } from "./paths";
 
-export type NoteType = "W" | "O";
+export type NoteType = "W" | "O" | "B";
 
 export interface RelationshipNote {
   type: NoteType;
