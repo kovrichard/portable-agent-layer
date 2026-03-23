@@ -5,7 +5,6 @@
  * This plugin just wires opencode's hook API to those shared functions.
  */
 
-import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Plugin, PluginInput } from "@opencode-ai/plugin";
 
@@ -24,21 +23,17 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
     await lib<typeof import("../../hooks/lib/context")>("context.ts");
   const { checkBashCommand, checkFilePath } =
     await lib<typeof import("../../hooks/lib/security")>("security.ts");
-  const { paths, ensureDir } =
-    await lib<typeof import("../../hooks/lib/paths")>("paths.ts");
-  const { emitRating } =
-    await lib<typeof import("../../hooks/lib/signals")>("signals.ts");
-  const { now } = await lib<typeof import("../../hooks/lib/time")>("time.ts");
-  const { monthPath, fileTimestamp } =
-    await lib<typeof import("../../hooks/lib/time")>("time.ts");
   const { logDebug, logError } =
     await lib<typeof import("../../hooks/lib/log")>("log.ts");
 
-  // Load shared stop-orchestrator handler
+  // Load shared handlers
   const { runStopHandlers } = await lib<typeof import("../../hooks/lib/stop")>("stop.ts");
   const { captureSessionName } = await lib<
     typeof import("../../hooks/handlers/session-name")
   >("../handlers/session-name.ts");
+  const { captureRating } = await lib<typeof import("../../hooks/handlers/rating")>(
+    "../handlers/rating.ts"
+  );
 
   function partsToText(parts: Array<Record<string, unknown>>): string {
     return parts
@@ -75,59 +70,6 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       })
       .filter((m) => m.content.length > 0);
   }
-
-  const { categorizeLearning } =
-    await lib<typeof import("../../hooks/lib/learning-category")>("learning-category.ts");
-
-  // Local helpers for rating (thin wrappers around shared signals)
-  function handleRating(
-    rating: number,
-    context: string,
-    source: string,
-    detailedContext?: string,
-    userMessage?: string
-  ): void {
-    emitRating(rating, context, source);
-
-    if (rating < 5) {
-      const category = categorizeLearning(context, detailedContext ?? "");
-      const dir = ensureDir(resolve(paths.sessionLearning(), monthPath()));
-      const filename = `${fileTimestamp()}_${source}-rating-${rating}_${category}.md`;
-      writeFileSync(
-        resolve(dir, filename),
-        [
-          "---",
-          `title: "${(context.slice(0, 100) || "(low rating)").replace(/"/g, '\\"')}"`,
-          `category: "${category}"`,
-          `date: "${new Date().toISOString().slice(0, 10)}"`,
-          `rating: ${rating}`,
-          `source: "${source}"`,
-          "---",
-          "",
-          "## Context",
-          context || "*(unavailable)*",
-          "",
-          ...(detailedContext ? ["## Analysis", detailedContext, ""] : []),
-        ].join("\n")
-      );
-    }
-
-    if (rating <= 3) {
-      const userPreview = userMessage?.slice(0, 400);
-      writeFileSync(
-        resolve(paths.state(), "pending-failure.json"),
-        JSON.stringify(
-          { rating, context, source, detailedContext, userPreview, ts: now() },
-          null,
-          2
-        ),
-        "utf-8"
-      );
-    }
-  }
-
-  const PRAISE_PATTERNS =
-    /^(great\s*job|nice|perfect|awesome|excellent|thanks|thank\s*you|well\s*done|good\s*job|love\s*it|amazing|brilliant|fantastic|wonderful|superb|nailed\s*it)[.!?]?$/i;
 
   return {
     // --- Per-message: Inject dynamic system reminder ---
@@ -175,98 +117,16 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       }
     },
 
-    // --- Capture ratings from user messages ---
-    "chat.message": async (_input, output) => {
+    // --- Capture ratings from user messages (shared handler) ---
+    "chat.message": async (input, output) => {
       const text =
         output.parts
           ?.filter((p) => p.type === "text")
           .map((p) => p.text || "")
           .join(" ") ?? "";
 
-      // Explicit rating
-      const match = text.match(
-        /(?:^|rating:?\s*|score:?\s*)(\d|10)(?:\s*(?:\/10|[-.])|$|\s)/i
-      );
-      if (match) {
-        const rating = parseInt(match[1], 10);
-        if (rating >= 1 && rating <= 10) {
-          handleRating(rating, text.slice(0, 200), "explicit", undefined, text);
-          return;
-        }
-      }
-
-      // Implicit sentiment: auto-enabled when ANTHROPIC_API_KEY is set
-      if (process.env.ANTHROPIC_API_KEY) {
-        const trimmed = text.trim();
-        if (PRAISE_PATTERNS.test(trimmed)) {
-          handleRating(8, trimmed, "implicit", undefined, trimmed);
-          return;
-        }
-
-        // Full implicit via API — only for medium-length messages
-        if (
-          trimmed.length >= 5 &&
-          trimmed.length <= 500 &&
-          !/^[/$`{]/.test(trimmed) &&
-          !trimmed.includes("\n\n")
-        ) {
-          const apiKey = process.env.ANTHROPIC_API_KEY;
-          if (apiKey) {
-            try {
-              const response = await fetch("https://api.anthropic.com/v1/messages", {
-                method: "POST",
-                headers: {
-                  "x-api-key": apiKey,
-                  "anthropic-version": "2023-06-01",
-                  "content-type": "application/json",
-                },
-                body: JSON.stringify({
-                  model: (await lib<{ HAIKU_MODEL: string }>("models")).HAIKU_MODEL,
-                  max_tokens: 100,
-                  messages: [
-                    {
-                      role: "user",
-                      content: `Rate the sentiment of this user message toward an AI assistant on a 1-10 scale (1=very negative, 5=neutral, 10=very positive). If the message has no clear sentiment toward the assistant, respond with just "neutral". Otherwise respond with just a JSON object: {"rating": N, "sentiment": "one-word"}\n\nMessage: "${trimmed.slice(0, 300)}"`,
-                    },
-                  ],
-                }),
-              });
-
-              if (response.ok) {
-                const data = (await response.json()) as {
-                  content?: Array<{ text?: string }>;
-                };
-                const rText = data?.content?.[0]?.text?.trim();
-                if (rText && rText !== "neutral") {
-                  try {
-                    const parsed = JSON.parse(rText) as {
-                      rating?: number;
-                      sentiment?: string;
-                    };
-                    if (
-                      typeof parsed.rating === "number" &&
-                      parsed.rating >= 1 &&
-                      parsed.rating <= 10 &&
-                      parsed.rating !== 5
-                    ) {
-                      handleRating(
-                        parsed.rating,
-                        `${parsed.sentiment || "inferred"}: ${trimmed.slice(0, 150)}`,
-                        "implicit",
-                        undefined,
-                        trimmed
-                      );
-                    }
-                  } catch {
-                    // Ignore parse errors
-                  }
-                }
-              }
-            } catch {
-              // Ignore API errors
-            }
-          }
-        }
+      if (text.trim()) {
+        await captureRating(text, input.sessionID);
       }
     },
 
@@ -295,21 +155,6 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
         if (fileReason) {
           throw new Error(`PAL Security: ${fileReason}`);
         }
-      }
-    },
-
-    // --- Capture work state after tool use ---
-    "tool.execute.after": async (
-      input: { tool: string; sessionID: string; callID: string; args: unknown },
-      _output: { title: string; output: string; metadata: unknown }
-    ) => {
-      try {
-        writeFileSync(
-          resolve(ensureDir(paths.state()), "current-work.json"),
-          JSON.stringify({ ts: now(), tool: input.tool, cwd: directory }, null, 2)
-        );
-      } catch {
-        // Ignore write errors
       }
     },
 

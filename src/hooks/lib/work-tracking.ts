@@ -1,6 +1,6 @@
 /**
  * Structured work tracking: session history + persistent projects.
- * Replaces the single-file current-work.json approach.
+ * Used by both Claude Code (StopOrchestrator) and opencode (plugin).
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
