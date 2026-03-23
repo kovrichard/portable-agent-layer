@@ -1,3 +1,10 @@
+## [0.6.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.6.1...v0.6.2) (2026-03-23)
+
+
+### Bug Fixes
+
+* **failure:** streamline failure capture process and update conversation summary format ([f921ecb](https://github.com/kovrichard/portable-agent-layer/commit/f921ecbc29eceeee844a648865d6309a85afdef1))
+
 ## [0.6.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.6.0...v0.6.1) (2026-03-23)
 
 
