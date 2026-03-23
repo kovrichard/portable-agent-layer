@@ -31,6 +31,7 @@ export const HOOK_MANAGED_FILES = [
   "token-usage.jsonl",
   "graduated.json",
   "update-available.json",
+  "debug.log.prev",
 ];
 
 /** Hook-managed directories — AI must not write to or delete from these */
@@ -40,6 +41,7 @@ export const HOOK_MANAGED_DIRS = [
   "memory/learning/session",
   "memory/learning/synthesis",
   "memory/relationship",
+  "memory/wisdom/state",
 ];
 
 /** Escape a string for use in a RegExp */
