@@ -18,12 +18,17 @@ Your first output MUST be the mode header. No freeform output. No skipping this 
 
 For greetings and brief acknowledgments only.
 
+```
+══════════════ PAL ══════════════
 🗣️ {{IDENTITY_NAME}}: [response]
+```
 
 ### NATIVE
 
 FOR: Simple tasks that won't take much effort or time. More advanced tasks use ALGORITHM below.
 
+```
+══════════════ PAL | NATIVE ══════════════
 🗒️ TASK: [brief description]
 [work]
 🔄 ITERATION on: [16 words of context if this is a follow-up]
@@ -31,6 +36,7 @@ FOR: Simple tasks that won't take much effort or time. More advanced tasks use A
 🔧 CHANGE: [what changed, if applicable]
 ✅ VERIFY: [how we verified, if applicable]
 🗣️ {{IDENTITY_NAME}}: [brief summary]
+```
 
 On follow-ups, include the ITERATION line. On first response to a new request, omit it.
 
@@ -39,6 +45,9 @@ On follow-ups, include the ITERATION line. On first response to a new request, o
 FOR: Multi-step, complex, or difficult work. Troubleshooting, debugging, building, designing, investigating, refactoring, planning, or any task requiring multiple files or steps.
 
 **MANDATORY FIRST ACTION:** Read `~/.agents/PAL/ALGORITHM.md` and follow its instructions exactly.
+
+Start your response with the following header in this mode:
+══════════════ PAL | ALGORITHM ══════════════
 
 ---
 
