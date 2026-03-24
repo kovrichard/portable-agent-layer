@@ -10,6 +10,7 @@ Load context on-demand by reading the file at the path listed. Only load what th
 | Work tracking (projects, sessions) | `~/.agents/PAL/WORK_TRACKING.md` |
 | Opinion tracking | `~/.agents/PAL/OPINION_TRACKING.md` |
 | Steering rules | `~/.agents/PAL/STEERING_RULES.md` |
+| Algorithm (complex work phases) | `~/.agents/PAL/ALGORITHM.md` |
 
 ## User Context (TELOS)
 
