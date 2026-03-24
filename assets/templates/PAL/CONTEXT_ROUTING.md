@@ -6,6 +6,8 @@ Load context on-demand by reading the file at the path listed. Only load what th
 
 | Topic | Path |
 |-------|------|
+| PAL system overview | `~/.agents/PAL/README.md` |
+| System architecture | `~/.agents/PAL/SYSTEM_ARCHITECTURE.md` |
 | Memory format & guidelines | `~/.agents/PAL/MEMORY_SYSTEM.md` |
 | Work tracking (projects, sessions) | `~/.agents/PAL/WORK_TRACKING.md` |
 | Opinion tracking | `~/.agents/PAL/OPINION_TRACKING.md` |
