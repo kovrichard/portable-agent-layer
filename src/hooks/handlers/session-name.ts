@@ -9,7 +9,7 @@
  * This avoids the 1-5s inference latency that previously blocked every first prompt.
  */
 
-// import { spawn } from "node:child_process";
+import { spawn } from "node:child_process";
 import { inference } from "../lib/inference";
 import { logDebug, logError } from "../lib/log";
 import {
@@ -41,25 +41,24 @@ export async function captureSessionName(
   writeSessionName(sessionId, name);
   logDebug("session-name", `Named from prompt: "${name}"`);
 
-  // TODO: re-enable when a consumer exists (tab titles, dashboard)
-  // // 2. Spawn detached background process to upgrade with inference
-  // if (!process.env.ANTHROPIC_API_KEY) return;
-  // try {
-  //   const promptB64 = Buffer.from(message.slice(0, 800)).toString("base64");
-  //   const child = spawn(
-  //     "bun",
-  //     [import.meta.filename, "--upgrade", sessionId, promptB64, fallback],
-  //     {
-  //       detached: true,
-  //       stdio: "ignore",
-  //       env: { ...process.env, CLAUDECODE: undefined },
-  //     }
-  //   );
-  //   child.unref();
-  //   logDebug("session-name", "Spawned background inference upgrade");
-  // } catch {
-  //   // Non-critical — deterministic name is already stored
-  // }
+  // Spawn detached background process to upgrade with Haiku inference
+  if (!process.env.ANTHROPIC_API_KEY) return;
+  try {
+    const promptB64 = Buffer.from(message.slice(0, 800)).toString("base64");
+    const child = spawn(
+      "bun",
+      [import.meta.filename, "--upgrade", sessionId, promptB64, name],
+      {
+        detached: true,
+        stdio: "ignore",
+        env: { ...process.env, CLAUDECODE: undefined },
+      }
+    );
+    child.unref();
+    logDebug("session-name", "Spawned background Haiku upgrade");
+  } catch {
+    // Non-critical — deterministic name is already stored
+  }
 }
 
 /**
