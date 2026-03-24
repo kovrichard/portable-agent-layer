@@ -17,7 +17,6 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
-import { loadTelos } from "./context";
 import { assets, ensureDir, palHome, paths, platform } from "./paths";
 import { buildSetupPrompt, readSetupState } from "./setup";
 
@@ -71,7 +70,7 @@ export function needsRebuild(): boolean {
 
   const outputMtime = statSync(outputPath).mtimeMs;
 
-  // Collect source files: template + setup.json + all telos/*.md + PAL docs
+  // Collect source files: template + setup.json + PAL docs
   const sources: string[] = [TEMPLATE_PATH, resolve(paths.state(), "setup.json")];
 
   // Track PAL doc sources for rebuild detection
@@ -79,13 +78,6 @@ export function needsRebuild(): boolean {
   if (existsSync(palDocsDir)) {
     for (const f of readdirSync(palDocsDir).filter((f) => f.endsWith(".md"))) {
       sources.push(resolve(palDocsDir, f));
-    }
-  }
-
-  const telosDir = paths.telos();
-  if (existsSync(telosDir)) {
-    for (const f of readdirSync(telosDir).filter((f) => f.endsWith(".md"))) {
-      sources.push(resolve(telosDir, f));
     }
   }
 
@@ -107,15 +99,13 @@ function memoryPaths(): string {
 export function buildClaudeMd(): string {
   const template = existsSync(TEMPLATE_PATH)
     ? readFileSync(TEMPLATE_PATH, "utf-8")
-    : "# PAL Context\n\n{{SETUP_PROMPT}}\n{{TELOS}}\n## Memory\n\n{{MEMORY_PATHS}}\n";
+    : "# PAL Context\n\n{{SETUP_PROMPT}}\n## Memory\n\n{{MEMORY_PATHS}}\n";
 
   const state = readSetupState();
   const setupPrompt = state ? buildSetupPrompt(state) : null;
-  const telos = loadTelos();
 
   return template
     .replace("{{SETUP_PROMPT}}", setupPrompt ? `${setupPrompt}\n` : "")
-    .replace("{{TELOS}}", telos ? `${telos}\n` : "")
     .replace("{{MEMORY_PATHS}}", memoryPaths());
 }
 

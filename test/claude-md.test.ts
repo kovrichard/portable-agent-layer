@@ -42,12 +42,12 @@ afterAll(() => {
 });
 
 describe("buildClaudeMd", () => {
-  test("renders template with TELOS content", async () => {
+  test("renders template with context routing and memory paths", async () => {
     const { buildClaudeMd } = await import("../src/hooks/lib/claude-md");
     const result = buildClaudeMd();
 
-    expect(result).toContain("Test mission content");
-    expect(result).toContain("Ship PAL");
+    expect(result).toContain("Context Routing");
+    expect(result).toContain("Memory");
   });
 
   test("includes memory paths section", async () => {
