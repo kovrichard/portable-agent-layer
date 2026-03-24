@@ -1,5 +1,15 @@
 # Memory System
 
+PAL has its own memory system that persists across sessions AND across tools (Claude Code, opencode). Always prefer PAL memory over any tool-native memory system.
+
+## Where to write
+
+- **Wisdom frames**: `~/.agents/PAL/memory/wisdom/frames/` — crystallized principles per domain (loaded every session)
+- **Relationship notes**: `~/.agents/PAL/memory/relationship/YYYY-MM/YYYY-MM-DD.md` — daily interaction observations (loaded every session)
+- **Session learnings**: `~/.agents/PAL/memory/learning/session/YYYY-MM/*.md` — reusable insights from sessions (loaded every session)
+- **Failure captures**: `~/.agents/PAL/memory/learning/failures/YYYY-MM/{timestamp}_{slug}/capture.md` — what went wrong and why
+- **Signals**: `~/.agents/PAL/memory/signals/ratings.jsonl` — append-only rating signal log (do not edit directly)
+
 ## Format
 
 - **Wisdom frames**: One `.md` file per domain/topic. Each file contains bullet-point principles the user has validated or you've learned. Append new principles to existing files or create new domain files.

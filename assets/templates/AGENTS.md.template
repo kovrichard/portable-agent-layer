@@ -5,14 +5,6 @@ You have PAL installed. PAL provides persistent personal context across sessions
 When TELOS is populated, you already know the user. When it's empty, first-run setup is required — follow the setup instructions below.
 
 {{SETUP_PROMPT}}
-## Memory
-
-PAL has its own memory system that persists across sessions AND across tools (Claude Code, opencode). Always prefer PAL memory over any tool-native memory system.
-
-### Where to write
-
-{{MEMORY_PATHS}}
-
 ## Context Routing
 
 When you need context about any of these topics, read `~/.agents/PAL/CONTEXT_ROUTING.md` for the file path:

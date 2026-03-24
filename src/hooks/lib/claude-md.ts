@@ -17,7 +17,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
-import { assets, ensureDir, palHome, paths, platform } from "./paths";
+import { assets, ensureDir, paths, platform } from "./paths";
 import { buildSetupPrompt, readSetupState } from "./setup";
 
 const TEMPLATE_PATH = assets.agentsMdTemplate();
@@ -84,29 +84,16 @@ export function needsRebuild(): boolean {
   return latestMtime(...sources) > outputMtime;
 }
 
-function memoryPaths(): string {
-  const mem = resolve(palHome(), "memory");
-  return [
-    `- **Wisdom frames**: \`${resolve(mem, "wisdom", "frames")}/\` — crystallized principles per domain (loaded every session)`,
-    `- **Relationship notes**: \`${resolve(mem, "relationship")}/YYYY-MM/YYYY-MM-DD.md\` — daily interaction observations (loaded every session)`,
-    `- **Session learnings**: \`${resolve(mem, "learning", "session")}/YYYY-MM/*.md\` — reusable insights from sessions (loaded every session)`,
-    `- **Failure captures**: \`${resolve(mem, "learning", "failures")}/YYYY-MM/{timestamp}_{slug}/capture.md\` — what went wrong and why`,
-    `- **Signals**: \`${resolve(mem, "signals")}/ratings.jsonl\` — append-only rating signal log (do not edit directly)`,
-  ].join("\n");
-}
-
 /** Render AGENTS.md from the template using current state */
 export function buildClaudeMd(): string {
   const template = existsSync(TEMPLATE_PATH)
     ? readFileSync(TEMPLATE_PATH, "utf-8")
-    : "# PAL Context\n\n{{SETUP_PROMPT}}\n## Memory\n\n{{MEMORY_PATHS}}\n";
+    : "# PAL Context\n\n{{SETUP_PROMPT}}\n";
 
   const state = readSetupState();
   const setupPrompt = state ? buildSetupPrompt(state) : null;
 
-  return template
-    .replace("{{SETUP_PROMPT}}", setupPrompt ? `${setupPrompt}\n` : "")
-    .replace("{{MEMORY_PATHS}}", memoryPaths());
+  return template.replace("{{SETUP_PROMPT}}", setupPrompt ? `${setupPrompt}\n` : "");
 }
 
 /** Regenerate AGENTS.md if any source file is newer, and ensure CLAUDE.md symlink exists. Returns true if rebuilt. */

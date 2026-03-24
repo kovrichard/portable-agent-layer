@@ -7,21 +7,7 @@ const TEST_HOME = resolve(import.meta.dir, "../.test-home-claude-md");
 beforeAll(() => {
   if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
 
-  // Scaffold telos with content
-  mkdirSync(resolve(TEST_HOME, "telos"), { recursive: true });
   mkdirSync(resolve(TEST_HOME, "memory", "state"), { recursive: true });
-  mkdirSync(resolve(TEST_HOME, "memory", "wisdom", "frames"), {
-    recursive: true,
-  });
-
-  writeFileSync(
-    resolve(TEST_HOME, "telos", "MISSION.md"),
-    "# Mission\n\nTest mission content\n"
-  );
-  writeFileSync(
-    resolve(TEST_HOME, "telos", "GOALS.md"),
-    "# Goals\n\n## Short-term\n- Ship PAL\n"
-  );
 
   // Mark setup as complete so buildSetupPrompt returns null
   writeFileSync(
@@ -42,44 +28,19 @@ afterAll(() => {
 });
 
 describe("buildClaudeMd", () => {
-  test("renders template with context routing and memory paths", async () => {
+  test("renders template with context routing", async () => {
     const { buildClaudeMd } = await import("../src/hooks/lib/claude-md");
     const result = buildClaudeMd();
 
     expect(result).toContain("Context Routing");
-    expect(result).toContain("Memory");
+    expect(result).toContain("CONTEXT_ROUTING.md");
   });
 
-  test("includes memory paths section", async () => {
+  test("omits setup prompt when setup is complete", async () => {
     const { buildClaudeMd } = await import("../src/hooks/lib/claude-md");
     const result = buildClaudeMd();
 
-    expect(result).toContain("Wisdom frames");
-    expect(result).toContain("Relationship notes");
-    expect(result).toContain("Session learnings");
-    expect(result).toContain("Failure captures");
-    expect(result).toContain("Signals");
-  });
-
-  test("paths in output point to PAL_HOME", async () => {
-    const { buildClaudeMd } = await import("../src/hooks/lib/claude-md");
-    const result = buildClaudeMd();
-
-    expect(result).toContain(TEST_HOME);
-  });
-
-  test("skips empty telos files", async () => {
-    // Write an empty telos file (just template header)
-    writeFileSync(
-      resolve(TEST_HOME, "telos", "IDEAS.md"),
-      "# Ideas\n\n<!-- Jot down ideas as they come. -->\n"
-    );
-
-    const { buildClaudeMd } = await import("../src/hooks/lib/claude-md");
-    const result = buildClaudeMd();
-
-    // Should not include the empty ideas template
-    expect(result).not.toContain("Jot down ideas as they come");
+    expect(result).not.toContain("SETUP_PROMPT");
   });
 });
 
