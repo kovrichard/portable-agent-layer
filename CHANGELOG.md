@@ -1,3 +1,13 @@
+# [0.11.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.10.0...v0.11.0) (2026-03-24)
+
+
+### Features
+
+* **PAL:** add settings template for Claude integration and implement merge/unmerge functionality ([d59f1f4](https://github.com/kovrichard/portable-agent-layer/commit/d59f1f4c046f68f909ceb993e0da9d620c0e194d))
+* **PAL:** introduce modular context routing ([ada64aa](https://github.com/kovrichard/portable-agent-layer/commit/ada64aa8b4392308ec9761349f7746067a4f85b6))
+* **skills:** use self-contained skill scripts ([dd5bdb7](https://github.com/kovrichard/portable-agent-layer/commit/dd5bdb7ca24a06e1dbf46140a27892e524406cac))
+* **telos:** implement update tool for TELOS files ([8ca8373](https://github.com/kovrichard/portable-agent-layer/commit/8ca83737c419747cefb2a23abc5e49f6957d6d67))
+
 # [0.10.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.9.0...v0.10.0) (2026-03-23)
 
 
