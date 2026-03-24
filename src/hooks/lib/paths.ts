@@ -77,5 +77,6 @@ export const assets = {
   hooks: () => pkg("src", "hooks"),
   telosTemplates: () => pkg("assets", "templates", "telos"),
   agentsMdTemplate: () => pkg("assets", "templates", "AGENTS.md.template"),
+  claudeSettingsTemplate: () => pkg("assets", "templates", "settings.claude.json"),
   palDocs: () => pkg("assets", "templates", "PAL"),
 } as const;

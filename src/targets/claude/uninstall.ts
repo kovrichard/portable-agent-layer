@@ -1,21 +1,23 @@
 /**
  * PAL — Claude Code uninstaller (TypeScript)
- * Removes PAL hooks, skills, and env from settings.json.
+ * Removes exactly what the settings template added, plus skills, agents, and PAL docs.
  */
 
 import { copyFileSync, existsSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
-import { palPkg, platform } from "../../hooks/lib/paths";
+import { assets, palPkg, platform } from "../../hooks/lib/paths";
 import {
+  loadSettingsTemplate,
   log,
   readJson,
   removeAgents,
   removePalDocs,
   removeSkills,
+  unmergeSettings,
   writeJson,
 } from "../lib";
 
-const PKG_ROOT = palPkg();
+const PKG_ROOT = palPkg().replaceAll("\\", "/");
 const CLAUDE_DIR = platform.claudeDir();
 const SETTINGS = resolve(CLAUDE_DIR, "settings.json");
 
@@ -28,50 +30,13 @@ if (!existsSync(SETTINGS)) {
 copyFileSync(SETTINGS, `${SETTINGS}.bak.${Date.now()}`);
 log.info("Backed up settings.json");
 
-// --- Remove PAL hooks ---
-type HookEntry = {
-  matcher?: string;
-  hooks?: Array<{ command?: string }>;
-  command?: string;
-};
-type Settings = { hooks?: Record<string, HookEntry[]>; env?: Record<string, string> };
+// --- Load template and unmerge from existing settings ---
+const template = loadSettingsTemplate(assets.claudeSettingsTemplate(), PKG_ROOT);
+const existing = readJson<Record<string, unknown>>(SETTINGS, {});
+const cleaned = unmergeSettings(existing, template);
 
-const settings = readJson<Settings>(SETTINGS, {});
-
-if (settings.hooks) {
-  for (const [event, entries] of Object.entries(settings.hooks)) {
-    settings.hooks[event] = entries.filter((entry) => {
-      // New format: { matcher, hooks: [{ command }] }
-      if (entry.hooks) return !entry.hooks.some((h) => h.command?.includes(PKG_ROOT));
-      // Old flat format: { type, command }
-      if (entry.command) return !entry.command.includes(PKG_ROOT);
-      return true;
-    });
-    if (settings.hooks[event].length === 0) delete settings.hooks[event];
-  }
-  if (Object.keys(settings.hooks).length === 0) delete settings.hooks;
-}
-
-// --- Remove env ---
-if (settings.env) {
-  // Clean up env vars
-  delete settings.env.PAL_DIR;
-  if (Object.keys(settings.env).length === 0) delete settings.env;
-}
-
-// --- Remove PAL tool permissions ---
-type SettingsWithPermissions = Settings & { permissions?: { allow?: string[] } };
-const s = settings as SettingsWithPermissions;
-if (s.permissions?.allow) {
-  s.permissions.allow = s.permissions.allow.filter(
-    (p) => !p.includes(PKG_ROOT) && !p.startsWith("Bash(bun run ai:")
-  );
-  if (s.permissions.allow.length === 0) delete s.permissions.allow;
-  if (Object.keys(s.permissions).length === 0) delete s.permissions;
-}
-
-writeJson(SETTINGS, settings);
-log.success("Removed PAL hooks and env from settings.json");
+writeJson(SETTINGS, cleaned);
+log.success("Removed PAL settings from settings.json");
 
 // --- Remove PAL skills ---
 const removed = removeSkills(resolve(CLAUDE_DIR, "skills"));

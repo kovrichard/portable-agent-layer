@@ -41,6 +41,101 @@ export function writeJson(path: string, data: unknown): void {
   writeFileSync(path, `${JSON.stringify(data, null, 2)}\n`, "utf-8");
 }
 
+// --- Settings template merge/unmerge ---
+
+type HookEntry = { matcher?: string; hooks?: Array<{ type: string; command: string }> };
+type Settings = Record<string, unknown> & {
+  hooks?: Record<string, HookEntry[]>;
+  permissions?: { allow?: string[]; deny?: string[]; ask?: string[] };
+};
+
+/**
+ * Load a settings template, replacing {{PKG_ROOT}} with the actual path.
+ */
+export function loadSettingsTemplate(templatePath: string, pkgRoot: string): Settings {
+  const raw = readFileSync(templatePath, "utf-8");
+  const resolved = raw.replaceAll("{{PKG_ROOT}}", pkgRoot);
+  return JSON.parse(resolved) as Settings;
+}
+
+/**
+ * Merge a PAL settings template into existing settings.
+ * - hooks: deduplicate by command string
+ * - permissions.allow: deduplicate by value
+ * - other keys: template values are added if not already present
+ */
+export function mergeSettings(existing: Settings, template: Settings): Settings {
+  const result = { ...existing };
+
+  // Merge hooks (deduplicate by command)
+  if (template.hooks) {
+    if (!result.hooks) result.hooks = {};
+    for (const [event, entries] of Object.entries(template.hooks)) {
+      const current = result.hooks[event] ?? [];
+      for (const entry of entries) {
+        const cmd = entry.hooks?.[0]?.command;
+        if (cmd && !current.some((e) => e.hooks?.[0]?.command === cmd)) {
+          current.push(entry);
+        }
+      }
+      result.hooks[event] = current;
+    }
+  }
+
+  // Merge permissions.allow (deduplicate)
+  if (template.permissions?.allow) {
+    if (!result.permissions) result.permissions = {};
+    if (!result.permissions.allow) result.permissions.allow = [];
+    for (const perm of template.permissions.allow) {
+      if (!result.permissions.allow.includes(perm)) {
+        result.permissions.allow.push(perm);
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Remove everything a PAL settings template added from existing settings.
+ * - hooks: remove entries whose command matches any template command
+ * - permissions.allow: remove entries that appear in the template
+ * - cleans up empty arrays/objects
+ */
+export function unmergeSettings(existing: Settings, template: Settings): Settings {
+  const result = { ...existing };
+
+  // Collect all PAL hook commands from template
+  if (template.hooks && result.hooks) {
+    const palCommands = new Set<string>();
+    for (const entries of Object.values(template.hooks)) {
+      for (const entry of entries) {
+        const cmd = entry.hooks?.[0]?.command;
+        if (cmd) palCommands.add(cmd);
+      }
+    }
+
+    for (const [event, entries] of Object.entries(result.hooks)) {
+      result.hooks[event] = entries.filter((e) => {
+        const cmd = e.hooks?.[0]?.command;
+        return !cmd || !palCommands.has(cmd);
+      });
+      if (result.hooks[event].length === 0) delete result.hooks[event];
+    }
+    if (Object.keys(result.hooks).length === 0) delete result.hooks;
+  }
+
+  // Remove PAL permissions
+  if (template.permissions?.allow && result.permissions?.allow) {
+    const palPerms = new Set(template.permissions.allow);
+    result.permissions.allow = result.permissions.allow.filter((p) => !palPerms.has(p));
+    if (result.permissions.allow.length === 0) delete result.permissions.allow;
+    if (Object.keys(result.permissions).length === 0) delete result.permissions;
+  }
+
+  return result;
+}
+
 // --- TELOS scaffolding ---
 
 /** Copy template files into telos/ without overwriting existing ones */
