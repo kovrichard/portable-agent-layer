@@ -1,6 +1,6 @@
 ---
 name: think
-description: Thinking mode router — selects the right analytical approach for a question. Use when thinking through a problem, analyzing deeply, brainstorming ideas, debating options, red teaming, stress testing, critiquing, poking holes, playing devil's advocate, decomposing to root cause, challenging assumptions, or exploring from multiple perspectives.
+description: Thinking mode router — selects the right analytical approach for a question. Use when thinking through a problem, analyzing deeply, brainstorming ideas, debating options, decomposing to root cause, challenging assumptions, or exploring from multiple perspectives.
 argument-hint: <question or topic>
 ---
 
@@ -12,24 +12,10 @@ Route $ARGUMENTS to the right thinking mode based on intent. Detect the mode fro
 |---------------|------|---------------|
 | decompose, root cause, fundamental, challenge assumptions, first principles | **First Principles** | Use the Skill tool to invoke `first-principles` with $ARGUMENTS |
 | debate, weigh options, multiple viewpoints, perspectives, deliberate | **Council** | Use the Skill tool to invoke `council` with $ARGUMENTS |
-| critique, stress test, poke holes, devil's advocate, red team, attack this | **Red Team** | Follow the Red Team steps below with $ARGUMENTS |
 | brainstorm, creative, divergent, ideas, what if, possibilities | **Creative** | Follow the Creative steps below with $ARGUMENTS |
 | think through, analyze, explore deeply, examine from angles | **Deep Analysis** | Follow the Deep Analysis steps below with $ARGUMENTS |
 
 If intent is ambiguous, default to **Deep Analysis**.
-
----
-
-## Red Team
-
-Adversarial validation of an idea, plan, or decision.
-
-1. **Steel-man** — state the idea in its strongest form
-2. **Attack surface** — 3-5 weaknesses, blind spots, or failure modes
-3. **Severity rank** each (critical / significant / minor)
-4. **Exploit scenario** — for the top 2, a realistic scenario where it fails
-5. **Mitigations** — what would defend against each attack
-6. **Verdict** — robust, fragile, or fixable? One sentence.
 
 ---
 
