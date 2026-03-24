@@ -7,9 +7,9 @@ When the user asks to analyze, read, or extract information from a PDF:
 
 ## How to get the PDF
 
-- **URL**: Use the `ai:pdf-download` CLI tool to download and archive the PDF:
+- **URL**: Use the `pdf-download` CLI tool to download and archive the PDF:
   ```bash
-  bun run ai:pdf-download -- <url> [--filename <name.pdf>]
+  bun ~/.agents/skills/analyze-pdf/tools/pdf-download.ts -- <url> [--filename <name.pdf>]
   ```
   The tool downloads the file, saves it to `memory/downloads/{YYYY}/{MM}/{DD}/{filename}.pdf`, and returns JSON with the saved `path`.
 
@@ -33,7 +33,6 @@ Follow the user's request. Common tasks:
 
 ## Guidelines
 
-- Always run the tool from the PAL directory (the `ai:pdf-download` script is registered there)
 - For large PDFs, read specific page ranges rather than the entire document
 - Preserve the original structure (headings, lists, tables) when relevant
 - Quote verbatim when the user asks about specific content

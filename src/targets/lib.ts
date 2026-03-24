@@ -4,7 +4,6 @@
 
 import {
   copyFileSync,
-  cpSync,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -177,6 +176,13 @@ export function copyPalDocs(): number {
     copyFileSync(src, dst);
     count++;
   }
+
+  // Symlink ~/.agents/PAL/telos → <palHome>/telos/
+  const telosLink = resolve(PAL_DOCS_DIR, "telos");
+  const telosDir = resolve(palHome(), "telos");
+  const linkType = process.platform === "win32" ? "junction" : "dir";
+  ensureSymlink(telosLink, telosDir, linkType);
+
   return count;
 }
 
@@ -203,8 +209,12 @@ export function removePalDocs(): void {
 const AGENTS_SKILLS_DIR = resolve(platform.agentsDir(), "skills");
 
 /**
- * Install PAL skills into ~/.agents/skills/, then symlink from ~/.claude/skills/.
- * Copies the entire assets/skills/ tree, skipping skills that already exist.
+ * Install PAL skills by symlinking:
+ *   ~/.agents/skills/<name> → <repo>/assets/skills/<name>  (source of truth)
+ *   ~/.claude/skills/<name> → ~/.agents/skills/<name>       (Claude Code discovery)
+ *
+ * Symlinks mean tools inside skills can import from the repo (src/hooks/lib/*)
+ * and everything resolves naturally. Additive — skips skills already installed.
  */
 export function copySkills(claudeSkillsDir: string): number {
   const skillsDir = assets.skills();
@@ -212,63 +222,65 @@ export function copySkills(claudeSkillsDir: string): number {
 
   mkdirSync(AGENTS_SKILLS_DIR, { recursive: true });
   mkdirSync(claudeSkillsDir, { recursive: true });
+  const linkType = process.platform === "win32" ? "junction" : "dir";
   let count = 0;
 
   for (const name of readdirSync(skillsDir)) {
-    if (!existsSync(resolve(skillsDir, name, "SKILL.md"))) continue;
+    const srcDir = resolve(skillsDir, name);
+    if (!existsSync(resolve(srcDir, "SKILL.md"))) continue;
 
-    const agentSkillDir = resolve(AGENTS_SKILLS_DIR, name);
-    if (!existsSync(agentSkillDir)) {
-      cpSync(resolve(skillsDir, name), agentSkillDir, { recursive: true });
-      log.info(`Added skill: ${name}`);
-      count++;
-    } else {
-      log.warn(`Skill exists, skipping: ${name}`);
-    }
+    // ~/.agents/skills/<name> → <repo>/assets/skills/<name>
+    const agentLink = resolve(AGENTS_SKILLS_DIR, name);
+    ensureSymlink(agentLink, srcDir, linkType);
 
-    // Symlink ~/.claude/skills/<name> → ~/.agents/skills/<name>
+    // ~/.claude/skills/<name> → ~/.agents/skills/<name>
     const claudeLink = resolve(claudeSkillsDir, name);
-    const linkType = process.platform === "win32" ? "junction" : "dir";
-    try {
-      if (!lstatSync(claudeLink).isSymbolicLink()) {
-        rmSync(claudeLink, { recursive: true, force: true });
-        symlinkSync(`../../.agents/skills/${name}`, claudeLink, linkType);
-      }
-    } catch {
-      try {
-        rmSync(claudeLink, { recursive: true, force: true });
-      } catch {
-        /* gone */
-      }
-      symlinkSync(`../../.agents/skills/${name}`, claudeLink, linkType);
-    }
+    ensureSymlink(claudeLink, agentLink, linkType);
+
+    log.info(`Linked skill: ${name}`);
+    count++;
   }
   return count;
 }
 
-/** Remove PAL skills from ~/.agents/skills/ and their symlinks from ~/.claude/skills/ */
+/** Create or update a symlink/junction, replacing any non-symlink entry. */
+function ensureSymlink(link: string, target: string, type: "dir" | "junction"): void {
+  try {
+    const st = lstatSync(link);
+    if (st.isSymbolicLink()) return; // already a symlink, leave it
+    rmSync(link, { recursive: true, force: true });
+  } catch {
+    // doesn't exist or broken — clean up just in case
+    try {
+      rmSync(link, { recursive: true, force: true });
+    } catch {
+      /* gone */
+    }
+  }
+  symlinkSync(target, link, type);
+}
+
+/** Remove PAL skill symlinks from ~/.agents/skills/ and ~/.claude/skills/ */
 export function removeSkills(claudeSkillsDir: string): string[] {
   const skillsDir = assets.skills();
   if (!existsSync(skillsDir)) return [];
 
   const removed: string[] = [];
   for (const name of readdirSync(skillsDir)) {
-    const srcSkillFile = resolve(skillsDir, name, "SKILL.md");
-    if (!existsSync(srcSkillFile)) continue;
+    if (!existsSync(resolve(skillsDir, name, "SKILL.md"))) continue;
 
-    const agentSkillDir = resolve(AGENTS_SKILLS_DIR, name);
-    if (existsSync(agentSkillDir)) {
-      rmSync(agentSkillDir, { recursive: true });
-      removed.push(name);
-      log.info(`Removed skill: ${name}`);
+    for (const link of [
+      resolve(AGENTS_SKILLS_DIR, name),
+      resolve(claudeSkillsDir, name),
+    ]) {
+      try {
+        unlinkSync(link);
+      } catch {
+        /* already gone */
+      }
     }
-
-    const claudeLink = resolve(claudeSkillsDir, name);
-    try {
-      unlinkSync(claudeLink);
-    } catch {
-      /* already gone */
-    }
+    removed.push(name);
+    log.info(`Removed skill: ${name}`);
   }
   return removed;
 }

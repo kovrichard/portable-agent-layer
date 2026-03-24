@@ -6,9 +6,9 @@
  * Returns JSON responses from the Fyzz Chat REST API.
  *
  * Usage:
- *   bun run ai:fyzz-api -- conversations [--limit 20] [--search "query"] [--project-id <id>] [--cursor <cursor>]
- *   bun run ai:fyzz-api -- conversations <id>
- *   bun run ai:fyzz-api -- projects
+ *   bun fyzz-api.ts -- conversations [--limit 20] [--search "query"] [--project-id <id>] [--cursor <cursor>]
+ *   bun fyzz-api.ts -- conversations <id>
+ *   bun fyzz-api.ts -- projects
  */
 
 import { parseArgs } from "node:util";
@@ -53,11 +53,11 @@ const command = args[0];
 
 if (!command || command === "--help" || command === "-h") {
   console.log("Usage:");
-  console.log("  bun run ai:fyzz-api -- conversations                List conversations");
+  console.log("  bun fyzz-api.ts -- conversations                List conversations");
   console.log(
-    "  bun run ai:fyzz-api -- conversations <id>           Get conversation with messages"
+    "  bun fyzz-api.ts -- conversations <id>           Get conversation with messages"
   );
-  console.log("  bun run ai:fyzz-api -- projects                     List projects");
+  console.log("  bun fyzz-api.ts -- projects                     List projects");
   console.log("");
   console.log("Options for 'conversations' (list mode):");
   console.log("  --limit <n>          Max results (default 20)");

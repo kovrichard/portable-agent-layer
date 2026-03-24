@@ -6,13 +6,13 @@
  * deduplicates against the entity index, and saves.
  *
  * Usage:
- *   echo '{"people":[...],"companies":[...]}' | bun run ai:entity-save -- --source "https://example.com"
- *   bun run ai:entity-save -- --file /path/to/extracted.json --source "https://example.com"
+ *   echo '{"people":[...],"companies":[...]}' | bun entity-save.ts -- --source "https://example.com"
+ *   bun entity-save.ts -- --file /path/to/extracted.json --source "https://example.com"
  */
 
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
-import { loadEntityIndex, processEntities } from "../hooks/lib/entities";
+import { loadEntityIndex, processEntities } from "../../../../src/hooks/lib/entities";
 
 const { values } = parseArgs({
   args: Bun.argv.slice(2),

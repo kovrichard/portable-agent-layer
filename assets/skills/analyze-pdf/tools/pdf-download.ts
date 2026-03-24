@@ -6,7 +6,7 @@
  * Saves to: {PAL_ROOT}/memory/downloads/{YYYY}/{MM}/{DD}/{filename}.pdf
  *
  * Usage:
- *   bun run ai:pdf-download -- <url> [--filename <name.pdf>]
+ *   bun pdf-download.ts -- <url> [--filename <name.pdf>]
  *
  * Returns JSON with the saved file path for downstream reading.
  */
@@ -14,7 +14,7 @@
 import { mkdir } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { parseArgs } from "node:util";
-import { palHome } from "../hooks/lib/paths";
+import { palHome } from "../../../../src/hooks/lib/paths";
 
 const DOWNLOADS_DIR = join(palHome(), "memory", "downloads");
 
@@ -45,7 +45,7 @@ async function main() {
 
   const url = positionals[0];
   if (!url) {
-    console.error("Usage: bun run ai:pdf-download -- <url> [--filename <name.pdf>]");
+    console.error("Usage: bun pdf-download.ts -- <url> [--filename <name.pdf>]");
     process.exit(1);
   }
 

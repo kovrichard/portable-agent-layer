@@ -11,10 +11,7 @@
       "Bash(tail:*)",
       "Bash(wc:*)",
       "Bash(diff:*)",
-      "Bash(bun run ai:entity-save *)",
-      "Bash(bun run ai:fyzz-api *)",
-      "Bash(bun run ai:pdf-download *)",
-      "Bash(bun run ai:youtube-analyze *)"
+      "Bash(bun ~/.agents/skills/*/tools/*.ts *)"
     ]
   },
   "hooks": {
