@@ -5,7 +5,7 @@
  * Notes live at memory/relationship/YYYY-MM/YYYY-MM-DD.md
  * W = world (facts about user's situation)
  * O = opinion (preference with confidence)
- * B = belief (behavioral pattern with confidence)
+ * B = biographical (what the AI did this session, first-person)
  *
  * Extraction is handled by the relationship handler via Haiku inference.
  * This lib provides storage and reading utilities only.
@@ -80,7 +80,7 @@ export function appendNotes(notes: RelationshipNote[], sessionId?: string): void
   if (sessionId) lines.push(`<!-- session:${sessionId} -->`);
 
   for (const note of fresh) {
-    if ((note.type === "O" || note.type === "B") && note.confidence !== undefined) {
+    if (note.type === "O" && note.confidence !== undefined) {
       lines.push(`- ${note.type}(c=${note.confidence}): ${note.text}`);
     } else {
       lines.push(`- ${note.type}: ${note.text}`);

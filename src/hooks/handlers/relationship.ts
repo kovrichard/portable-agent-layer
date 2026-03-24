@@ -22,7 +22,7 @@ const OBSERVATION_SCHEMA = {
             type: "string",
             enum: ["O", "W", "B"],
             description:
-              "O=opinion/preference, W=factual observation, B=belief/behavioral pattern",
+              "O=opinion/preference, W=factual observation, B=biographical (what the AI did this session)",
           },
           text: { type: "string" },
           confidence: { type: "number" },
@@ -74,11 +74,11 @@ export async function captureRelationship(
   logDebug("relationship", "Calling inference...");
   const result = await inference({
     system:
-      "You analyze user messages from an AI coding session to extract relationship observations. " +
-      "Types: O=opinions/preferences (how they like to work, what they want), " +
-      "B=beliefs/behavioral patterns (how they approach problems, decision-making style, recurring habits), " +
-      "W=world facts (their situation, projects, tools they use). " +
-      "Focus on: preferences, corrections, frustrations, positive reactions, communication style, problem-solving approach. " +
+      "You analyze messages from an AI coding session to extract relationship observations. " +
+      "Types: O=opinions/preferences (how the user likes to work, what they want), " +
+      "B=biographical (what the AI accomplished this session, written in first-person), " +
+      "W=world facts (user's situation, projects, tools they use). " +
+      "Focus on: preferences, corrections, frustrations, positive reactions, communication style, and session accomplishments. " +
       "Return 0-3 observations. If nothing notable, return empty observations array. Be concise.",
     user: `User messages from this session:\n${userMessages.map((m, i) => `${i + 1}. ${m}`).join("\n")}`,
     maxTokens: 300,

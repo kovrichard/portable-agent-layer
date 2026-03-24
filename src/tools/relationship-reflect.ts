@@ -3,7 +3,7 @@
  * RelationshipReflect — Periodic reflection on relationship patterns.
  *
  * Reads recent relationship notes and ratings to:
- * - Promote recurring O/B notes into tracked opinions with confidence
+ * - Promote recurring O notes into tracked opinions with confidence
  * - Update confidence on existing opinions via supporting evidence
  * - Generate a summary report
  *
@@ -159,9 +159,9 @@ function promoteToOpinions(notes: ParsedNote[], dryRun: boolean): OpinionChange[
   const opinions = readOpinions();
   const lastReflect = getLastReflectDate();
 
-  // Only O and B notes become opinions, skip already-processed notes
+  // Only O notes become opinions (B=biographical, about the AI, not user preferences)
   const opinionNotes = notes.filter(
-    (n) => (n.type === "O" || n.type === "B") && (!lastReflect || n.date > lastReflect)
+    (n) => n.type === "O" && (!lastReflect || n.date > lastReflect)
   );
 
   // Group similar notes together
@@ -225,7 +225,7 @@ interface OpinionSummary {
 }
 
 function groupNoteOccurrences(notes: ParsedNote[]): OpinionSummary[] {
-  const opNotes = notes.filter((n) => n.type === "O" || n.type === "B");
+  const opNotes = notes.filter((n) => n.type === "O");
   const groups = new Map<
     string,
     { confidences: number[]; dates: string[]; text: string }
@@ -397,7 +397,7 @@ if (values.help) {
 RelationshipReflect — Periodic reflection + opinion promotion
 
 Reads recent relationship notes and ratings. Promotes recurring
-observations (O/B types) into tracked opinions with confidence scoring.
+observations (O type) into tracked opinions with confidence scoring.
 
 Usage:
   bun run tool:reflect              Reflect on last 7 days (default)
