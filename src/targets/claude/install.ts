@@ -19,6 +19,7 @@ import {
   log,
   mergeSettings,
   readJson,
+  scaffoldPalSettings,
   writeJson,
 } from "../lib";
 
@@ -56,6 +57,9 @@ copyAgents();
 // --- Copy PAL system docs ---
 const palDocsCount = copyPalDocs();
 log.success(`Installed ${palDocsCount} PAL docs to ~/.agents/PAL/`);
+
+// --- Scaffold PAL settings ---
+scaffoldPalSettings();
 
 // --- Generate ~/.claude/AGENTS.md and symlink ~/.claude/CLAUDE.md → AGENTS.md ---
 regenerateIfNeeded();

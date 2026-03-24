@@ -155,6 +155,23 @@ export function scaffoldTelos(): void {
   }
 }
 
+// --- PAL settings scaffolding ---
+
+/** Copy pal-settings.json template to memory/ without overwriting */
+export function scaffoldPalSettings(): void {
+  const src = resolve(assets.skills(), "..", "templates", "pal-settings.json");
+  if (!existsSync(src)) return;
+
+  const memDir = resolve(palHome(), "memory");
+  mkdirSync(memDir, { recursive: true });
+
+  const dst = resolve(memDir, "pal-settings.json");
+  if (!existsSync(dst)) {
+    copyFileSync(src, dst);
+    log.info("Created pal-settings.json from template");
+  }
+}
+
 // --- PAL docs (modular context routing files) ---
 
 const PAL_DOCS_DIR = resolve(platform.agentsDir(), "PAL");

@@ -4,6 +4,7 @@
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { parse } from "./frontmatter";
 import { readFailures, readLearnings } from "./learning-store";
@@ -20,6 +21,49 @@ import {
   recentSessions,
   staleProjects,
 } from "./work-tracking";
+
+interface PalSettings {
+  loadAtStartup?: { files?: string[] };
+  dynamicContext?: Record<string, boolean>;
+}
+
+/** Load pal-settings.json from memory/ */
+function loadPalSettings(): PalSettings {
+  const p = resolve(paths.memory(), "pal-settings.json");
+  if (!existsSync(p)) return {};
+  try {
+    return JSON.parse(readFileSync(p, "utf-8"));
+  } catch {
+    return {};
+  }
+}
+
+/** Check if a dynamic context section is enabled (defaults to true) */
+function isEnabled(settings: PalSettings, key: string): boolean {
+  return settings.dynamicContext?.[key] !== false;
+}
+
+/** Load and concatenate loadAtStartup files */
+function loadStartupFiles(settings: PalSettings): string {
+  const files = settings.loadAtStartup?.files;
+  if (!files || files.length === 0) return "";
+
+  const home = homedir();
+  const sections: string[] = [];
+
+  for (const file of files) {
+    const resolved = file.replace("~", home);
+    if (!existsSync(resolved)) continue;
+    try {
+      const content = readFileSync(resolved, "utf-8").trim();
+      if (content) sections.push(content);
+    } catch {
+      /* skip unreadable files */
+    }
+  }
+
+  return sections.join("\n\n---\n\n");
+}
 
 /** Count lines in a signals JSONL file */
 export function countSignals(filename: string): number {
@@ -321,15 +365,22 @@ export function loadRelationshipContext(): string {
  * things that change per-session and can't live in a static file.
  */
 export function buildSystemReminder(): string {
-  const work = loadActiveWork();
-  const wisdom = loadWisdomContext();
-  const relationship = loadRelationshipContext();
-  const digest = loadLearningDigest();
-  const trends = loadSignalTrends();
-  const failures = loadFailurePatterns();
-  const synthesis = loadSynthesisRecommendations();
-  const opinions = loadOpinionContext();
+  const settings = loadPalSettings();
+  const startup = loadStartupFiles(settings);
+  const work = isEnabled(settings, "activeWork") ? loadActiveWork() : null;
+  const wisdom = isEnabled(settings, "wisdom") ? loadWisdomContext() : "";
+  const relationship = isEnabled(settings, "relationship")
+    ? loadRelationshipContext()
+    : "";
+  const digest = isEnabled(settings, "learningDigest") ? loadLearningDigest() : "";
+  const trends = isEnabled(settings, "signalTrends") ? loadSignalTrends() : "";
+  const failures = isEnabled(settings, "failurePatterns") ? loadFailurePatterns() : "";
+  const synthesis = isEnabled(settings, "synthesis")
+    ? loadSynthesisRecommendations()
+    : "";
+  const opinions = isEnabled(settings, "opinions") ? loadOpinionContext() : "";
   const parts: string[] = [];
+  if (startup) parts.push(startup);
   if (wisdom) parts.push(wisdom);
   if (opinions) parts.push(opinions);
   if (relationship) parts.push(relationship);
