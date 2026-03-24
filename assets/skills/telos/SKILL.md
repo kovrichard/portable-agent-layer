@@ -25,7 +25,7 @@ All files live in `~/.agents/PAL/telos/`:
 
 ## Reading
 
-Read the file directly from `~/.agents/PAL/telos/` when the user asks about any area.
+Read the file directly from `~/.agents/PAL/telos/` when the user asks about any area. Summarize what's relevant — don't dump the entire file unless asked.
 
 ## Updating
 
@@ -35,25 +35,60 @@ Use the update tool for all changes. It validates the file, creates a backup, ap
 bun ~/.agents/skills/telos/tools/update-telos.ts <FILE> "<content>" "<description>"
 ```
 
-**Example:**
-```bash
-bun ~/.agents/skills/telos/tools/update-telos.ts PROJECTS.md "| New Project | In progress | High | Description |" "Added New Project"
-```
-
 ## Routing
 
 | Intent | Action |
 |--------|--------|
-| "what am I working on", "my projects", "priorities" | Read `PROJECTS.md`, summarize |
+| "what am I working on", "my projects", "priorities" | Read `PROJECTS.md`, summarize active work |
 | "my goals", "what are my goals" | Read `GOALS.md`, present current state |
 | "update goals/projects/beliefs/challenges" | Read the target file, discuss changes with user, then run update tool |
 | "add a project", "new project" | Read `PROJECTS.md`, confirm with user, run update tool |
+| "complete/remove a project" | Read `PROJECTS.md`, confirm with user, update status via tool |
 | "what do I believe", "my principles" | Read `BELIEFS.md` |
 | "current obstacles", "challenges" | Read `CHALLENGES.md` |
+| "I learned something", "lesson" | Discuss, then append to `LEARNED.md` via tool |
+| "I have an idea" | Discuss, then append to `IDEAS.md` via tool |
 | General "update telos", "telos" | Ask which area to review/update |
+
+## Examples
+
+**Example 1: Checking projects**
+```
+User: "what am I working on?"
+→ Read PROJECTS.md
+→ Summarize active work by priority — don't list every column
+→ Highlight status changes, blockers, what needs attention
+```
+
+**Example 2: Adding a project**
+```
+User: "add my new side project"
+→ Ask: "What's the project name, status, and priority?"
+→ User provides details
+→ Show the row you'll add, confirm
+→ Run: bun ~/.agents/skills/telos/tools/update-telos.ts PROJECTS.md "| Side Project | In progress | Medium | Description |" "Added Side Project"
+```
+
+**Example 3: Updating goals**
+```
+User: "I finished the migration, update my goals"
+→ Read GOALS.md to see current state
+→ Discuss what changed — what's done, what's next
+→ Run tool to append updated goals
+→ Remind: CLAUDE.md regenerates next session
+```
+
+## Anti-patterns
+
+- **Don't dump raw file contents.** Summarize what's relevant to the user's question. They can ask for the full file if needed.
+- **Don't update without confirming.** Always show what you'll change and get a "yes" before running the tool.
+- **Don't create new TELOS files.** Only the 10 listed files are valid. If something doesn't fit, suggest the closest match.
+- **Don't mix TELOS with identity.** AI/principal identity lives in `pal-settings.json`, not TELOS. TELOS is personal context — goals, beliefs, projects.
+- **Don't reference stale data.** If TELOS was loaded earlier in the session via context routing, re-read the file before updating — it may have changed.
 
 ## Rules
 
 - **Always read the file first** before making changes — match the existing format exactly
 - **Confirm changes** with the user before running the update tool
 - **Always use the tool** for writes — never edit TELOS files directly
+- CLAUDE.md auto-regenerates from these files on next session start
