@@ -9,6 +9,22 @@ beforeAll(() => {
 
   mkdirSync(resolve(TEST_HOME, "memory", "state"), { recursive: true });
 
+  writeFileSync(
+    resolve(TEST_HOME, "memory", "identity.json"),
+    JSON.stringify({
+      ai: {
+        name: "TestBot",
+        fullName: "Test Bot System",
+        displayName: "TESTBOT",
+        catchphrase: "{name} here, ready to test.",
+      },
+      principal: {
+        name: "TestUser",
+        timezone: "UTC",
+      },
+    })
+  );
+
   // Mark setup as complete so buildSetupPrompt returns null
   writeFileSync(
     resolve(TEST_HOME, "memory", "state", "setup.json"),
@@ -28,7 +44,24 @@ afterAll(() => {
 });
 
 describe("buildClaudeMd", () => {
-  test("renders template with context routing", async () => {
+  test("resolves identity variables from identity.json", async () => {
+    const { buildClaudeMd } = await import("../src/hooks/lib/claude-md");
+    const result = buildClaudeMd();
+
+    expect(result).toContain("You are TestBot");
+    expect(result).toContain("TESTBOT");
+    expect(result).toContain("TestBot here, ready to test.");
+  });
+
+  test("includes mode definitions", async () => {
+    const { buildClaudeMd } = await import("../src/hooks/lib/claude-md");
+    const result = buildClaudeMd();
+
+    expect(result).toContain("MINIMAL");
+    expect(result).toContain("NATIVE");
+  });
+
+  test("includes context routing", async () => {
     const { buildClaudeMd } = await import("../src/hooks/lib/claude-md");
     const result = buildClaudeMd();
 
@@ -41,6 +74,32 @@ describe("buildClaudeMd", () => {
     const result = buildClaudeMd();
 
     expect(result).not.toContain("SETUP_PROMPT");
+  });
+});
+
+describe("loadIdentity", () => {
+  test("parses AI and principal identity from JSON", async () => {
+    const { loadIdentity } = await import("../src/hooks/lib/claude-md");
+    const id = loadIdentity();
+
+    expect(id.ai.name).toBe("TestBot");
+    expect(id.ai.displayName).toBe("TESTBOT");
+    expect(id.ai.catchphrase).toBe("TestBot here, ready to test.");
+    expect(id.principal.name).toBe("TestUser");
+  });
+
+  test("returns defaults when identity.json is missing", async () => {
+    const origHome = process.env.PAL_HOME;
+    process.env.PAL_HOME = "/nonexistent";
+
+    const { loadIdentity } = await import("../src/hooks/lib/claude-md");
+    const id = loadIdentity();
+
+    expect(id.ai.name).toBe("Assistant");
+    expect(id.ai.displayName).toBe("ASSISTANT");
+    expect(id.principal.name).toBe("");
+
+    process.env.PAL_HOME = origHome;
   });
 });
 

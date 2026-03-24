@@ -7,6 +7,9 @@ telos/updates.md
 CLAUDE.md
 AGENTS.md
 
+# Identity (personal — filled during setup)
+memory/identity.json
+
 # Runtime state
 memory/state/sessions.json
 memory/state/projects.json

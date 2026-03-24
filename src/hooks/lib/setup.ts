@@ -29,17 +29,22 @@ const SETUP_STEPS: Record<string, Omit<SetupStep, "done">> = {
     question: "What's your name and what do you do?",
     hint: "Write their name, role, and core purpose to telos/MISSION.md",
   },
+  principal_name: {
+    file: "memory/identity.json",
+    question: "What's your name?",
+    hint: "Read memory/identity.json, set principal.name to their name, write it back.",
+  },
   ai_name: {
-    file: "telos/IDENTITY.md",
+    file: "memory/identity.json",
     question:
       "What would you like to call your AI? (Pick a name — this is how I'll identify myself.)",
-    hint: "Write the chosen AI name and identity to telos/IDENTITY.md with fields: name, fullName (name — Personal AI), displayName (UPPERCASED)",
+    hint: 'Read memory/identity.json, set ai.name, ai.fullName ("{name} — Personal AI"), ai.displayName (UPPERCASED), write it back.',
   },
   catchphrase: {
-    file: "telos/IDENTITY.md",
+    file: "memory/identity.json",
     question:
       'What should your AI\'s startup catchphrase be? (e.g. "{name} here, ready to go" — {name} gets replaced with the AI name.)',
-    hint: "Append the catchphrase to telos/IDENTITY.md under a ## Catchphrase heading. Support {name} as a placeholder.",
+    hint: "Read memory/identity.json, set ai.catchphrase (support {name} as placeholder), write it back.",
   },
   goals: {
     file: "telos/GOALS.md",

@@ -30,7 +30,6 @@ const VALID_FILES = [
   "CHALLENGES.md",
   "GOALS.md",
   "IDEAS.md",
-  "IDENTITY.md",
   "LEARNED.md",
   "MISSION.md",
   "MODELS.md",

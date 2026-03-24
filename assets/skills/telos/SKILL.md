@@ -16,7 +16,6 @@ All files live in `~/.agents/PAL/telos/`:
 | `PROJECTS.md` | Active projects, status, priority |
 | `BELIEFS.md` | Core principles and values |
 | `CHALLENGES.md` | Current obstacles |
-| `IDENTITY.md` | AI identity and personality |
 | `MISSION.md` | Purpose and direction |
 | `STRATEGIES.md` | Approaches and plans |
 | `IDEAS.md` | Ideas to explore |
