@@ -10,17 +10,19 @@ beforeAll(() => {
   mkdirSync(resolve(TEST_HOME, "memory", "state"), { recursive: true });
 
   writeFileSync(
-    resolve(TEST_HOME, "memory", "identity.json"),
+    resolve(TEST_HOME, "memory", "pal-settings.json"),
     JSON.stringify({
-      ai: {
-        name: "TestBot",
-        fullName: "Test Bot System",
-        displayName: "TESTBOT",
-        catchphrase: "{name} here, ready to test.",
-      },
-      principal: {
-        name: "TestUser",
-        timezone: "UTC",
+      identity: {
+        ai: {
+          name: "TestBot",
+          fullName: "Test Bot System",
+          displayName: "TESTBOT",
+          catchphrase: "{name} here, ready to test.",
+        },
+        principal: {
+          name: "TestUser",
+          timezone: "UTC",
+        },
       },
     })
   );
@@ -44,7 +46,7 @@ afterAll(() => {
 });
 
 describe("buildClaudeMd", () => {
-  test("resolves identity variables from identity.json", async () => {
+  test("resolves identity variables from pal-settings.json", async () => {
     const { buildClaudeMd } = await import("../src/hooks/lib/claude-md");
     const result = buildClaudeMd();
 
@@ -78,7 +80,7 @@ describe("buildClaudeMd", () => {
 });
 
 describe("loadIdentity", () => {
-  test("parses AI and principal identity from JSON", async () => {
+  test("parses AI and principal identity from pal-settings.json", async () => {
     const { loadIdentity } = await import("../src/hooks/lib/claude-md");
     const id = loadIdentity();
 
@@ -88,7 +90,7 @@ describe("loadIdentity", () => {
     expect(id.principal.name).toBe("TestUser");
   });
 
-  test("returns defaults when identity.json is missing", async () => {
+  test("returns defaults when pal-settings.json is missing", async () => {
     const origHome = process.env.PAL_HOME;
     process.env.PAL_HOME = "/nonexistent";
 

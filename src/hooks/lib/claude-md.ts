@@ -74,7 +74,7 @@ export function needsRebuild(): boolean {
   const sources: string[] = [
     TEMPLATE_PATH,
     resolve(paths.state(), "setup.json"),
-    identityPath(),
+    palSettingsPath(),
   ];
 
   // Track PAL doc sources for rebuild detection
@@ -98,19 +98,19 @@ const IDENTITY_DEFAULTS: Identity = {
   principal: { name: "" },
 };
 
-function identityPath(): string {
-  return resolve(palHome(), "memory", "identity.json");
+function palSettingsPath(): string {
+  return resolve(palHome(), "memory", "pal-settings.json");
 }
 
-/** Load identity from memory/identity.json */
+/** Load identity from pal-settings.json */
 export function loadIdentity(): Identity {
-  const p = identityPath();
+  const p = palSettingsPath();
   if (!existsSync(p)) return IDENTITY_DEFAULTS;
 
   try {
     const data = JSON.parse(readFileSync(p, "utf-8"));
-    const ai = data.ai ?? {};
-    const principal = data.principal ?? {};
+    const ai = data.identity?.ai ?? {};
+    const principal = data.identity?.principal ?? {};
     const name = ai.name || IDENTITY_DEFAULTS.ai.name;
     const catchphrase = (ai.catchphrase || "").replace("{name}", name);
 

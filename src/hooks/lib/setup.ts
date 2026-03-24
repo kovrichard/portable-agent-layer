@@ -26,25 +26,8 @@ export interface SetupState {
 const SETUP_STEPS: Record<string, Omit<SetupStep, "done">> = {
   mission: {
     file: "telos/MISSION.md",
-    question: "What's your name and what do you do?",
-    hint: "Write their name, role, and core purpose to telos/MISSION.md",
-  },
-  principal_name: {
-    file: "memory/identity.json",
-    question: "What's your name?",
-    hint: "Read memory/identity.json, set principal.name to their name, write it back.",
-  },
-  ai_name: {
-    file: "memory/identity.json",
-    question:
-      "What would you like to call your AI? (Pick a name — this is how I'll identify myself.)",
-    hint: 'Read memory/identity.json, set ai.name, ai.fullName ("{name} — Personal AI"), ai.displayName (UPPERCASED), write it back.',
-  },
-  catchphrase: {
-    file: "memory/identity.json",
-    question:
-      'What should your AI\'s startup catchphrase be? (e.g. "{name} here, ready to go" — {name} gets replaced with the AI name.)',
-    hint: "Read memory/identity.json, set ai.catchphrase (support {name} as placeholder), write it back.",
+    question: "What do you do? What's your role and core purpose?",
+    hint: "Write their role and core purpose to telos/MISSION.md",
   },
   goals: {
     file: "telos/GOALS.md",
@@ -157,8 +140,8 @@ export function buildSetupPrompt(state: SetupState): string | null {
   const lines: string[] = [
     "## IMPORTANT: PAL First-Run Setup Required",
     "",
-    "TELOS files are empty — this user has not been set up yet.",
-    "You MUST start the setup process immediately, regardless of what the user says.",
+    "TELOS files are empty — the user's identity is already configured (via the installer),",
+    "but personal context is still needed. You MUST start the setup process immediately.",
     "Greet them, explain that PAL needs to learn about them to personalize future sessions,",
     "and ask the first remaining question below. Do NOT wait for the user to ask about setup.",
     "",

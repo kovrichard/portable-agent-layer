@@ -33,6 +33,7 @@ export const HOOK_MANAGED_FILES = [
   "update-available.json",
   "debug.log.prev",
   "opinions.json",
+  "pal-settings.json",
 ];
 
 /** Hook-managed directories — AI must not write to or delete from these */

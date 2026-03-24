@@ -425,6 +425,13 @@ async function init(args: string[]) {
 }
 
 async function install(targets: { claude: boolean; opencode: boolean }) {
+  // Scaffold TELOS + PAL settings, then prompt for missing identity
+  const { scaffoldTelos, scaffoldPalSettings } = await import("../targets/lib");
+  const { promptIdentity } = await import("./setup-identity");
+  scaffoldTelos();
+  scaffoldPalSettings();
+  await promptIdentity();
+
   if (targets.claude) {
     console.log("━━━ Claude Code ━━━");
     await import("../targets/claude/install");

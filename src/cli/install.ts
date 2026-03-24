@@ -4,8 +4,8 @@
  * Default: installs for both targets.
  */
 
-import { ensureSetupState, isSetupComplete } from "../hooks/lib/setup";
-import { log, scaffoldTelos } from "../targets/lib";
+import { log, scaffoldPalSettings, scaffoldTelos } from "../targets/lib";
+import { promptIdentity } from "./setup-identity";
 
 // --- Parse args ---
 const args = process.argv.slice(2);
@@ -53,9 +53,12 @@ console.log("  ║  Non-destructive · Modular        ║");
 console.log("  ╚═══════════════════════════════════╝");
 console.log("");
 
-// --- Scaffold TELOS + seed setup state ---
+// --- Scaffold TELOS + PAL settings ---
 scaffoldTelos();
-ensureSetupState();
+scaffoldPalSettings();
+
+// --- Interactive identity setup (prompts only for missing fields) ---
+await promptIdentity();
 
 // --- Run target installers ---
 if (installClaude) {
@@ -73,14 +76,7 @@ if (installOpencode) {
 log.success("Done. Existing config was preserved — only new entries were added.");
 console.log("");
 log.info("Next steps:");
-
-const state = ensureSetupState();
-if (!isSetupComplete(state)) {
-  log.info("  1. Start a session — PAL will guide you through first-run setup");
-  log.info("  2. Or fill in telos/*.md manually, then re-run install.ts");
-} else {
-  log.info("  1. Fill in telos/*.md with your info (if not already done)");
-  log.info("  2. Re-run install.ts to regenerate context files");
-}
+log.info("  1. Fill in telos/*.md with your info (if not already done)");
+log.info("  2. Re-run install to regenerate context files");
 log.info("  3. Add skills by dropping .md files into skills/");
 log.info("  4. Uninstall: bun run uninstall.ts [--claude] [--opencode]");

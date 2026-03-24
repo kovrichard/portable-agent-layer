@@ -1,4 +1,16 @@
 {
+  "identity": {
+    "ai": {
+      "name": "",
+      "fullName": "",
+      "displayName": "",
+      "catchphrase": ""
+    },
+    "principal": {
+      "name": "",
+      "timezone": ""
+    }
+  },
   "loadAtStartup": {
     "_docs": "Files force-loaded into session context at startup. Injected as <system-reminder> blocks.",
     "files": [
