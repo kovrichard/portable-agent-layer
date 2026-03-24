@@ -1,3 +1,12 @@
+# [0.12.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.11.0...v0.12.0) (2026-03-24)
+
+
+### Features
+
+* **PAL:** enhance identity setup with interactive prompts and update configuration handling ([c04e9aa](https://github.com/kovrichard/portable-agent-layer/commit/c04e9aad251873965efe6f8c13cb6e9d0eac1b12))
+* **PAL:** introduce algorithm mode for complex work ([3d8f8ac](https://github.com/kovrichard/portable-agent-layer/commit/3d8f8acad6376590aac7bdaffcd87a522c61b777))
+* **PAL:** introduce pal-settings.json for dynamic context and startup file loading ([dcdf7b7](https://github.com/kovrichard/portable-agent-layer/commit/dcdf7b749e8d14e47298e9f609350453c8d3f381))
+
 # [0.11.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.10.0...v0.11.0) (2026-03-24)
 
 

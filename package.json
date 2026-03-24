@@ -1,6 +1,6 @@
 {
   "name": "portable-agent-layer",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "PAL — Portable Agent Layer: persistent personal context for AI coding assistants",
   "type": "module",
   "bin": {
