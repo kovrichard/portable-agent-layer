@@ -7,7 +7,14 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": ["src/**", "test/**", "*.ts", "!node_modules", "!memory", "!telos"]
+    "includes": [
+      "src/**",
+      "test/**",
+      "assets/**/*.ts",
+      "!node_modules",
+      "!memory",
+      "!telos"
+    ]
   },
   "formatter": {
     "enabled": true,

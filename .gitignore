@@ -1,5 +1,7 @@
 # User content (filled-in TELOS files) — templates are in telos/templates/
 telos/*.md
+telos/backups/
+telos/updates.md
 
 # Generated context (contains user-specific content)
 CLAUDE.md
