@@ -1,3 +1,19 @@
+# [0.13.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.12.0...v0.13.0) (2026-03-24)
+
+
+### Bug Fixes
+
+* **session-name:** enable detached background process for Haiku inference upgrade ([5db86fb](https://github.com/kovrichard/portable-agent-layer/commit/5db86fb040ca339145fb327befea955125d41241))
+* update opinion tracking docs ([f4748c4](https://github.com/kovrichard/portable-agent-layer/commit/f4748c43bbd91fcb89c5fbfdd652cd0c73ce3edc))
+
+
+### Features
+
+* **opinion:** introduce Opinion Tracker skill and tool ([03899c7](https://github.com/kovrichard/portable-agent-layer/commit/03899c7f868e528de0f26ea34edbf373e820a194))
+* **routing:** add system architecture content ([c0d59d0](https://github.com/kovrichard/portable-agent-layer/commit/c0d59d05f014723de32fdc4e87c7051827df8d2d))
+* **routing:** add system readme and architecture template ([c8bba51](https://github.com/kovrichard/portable-agent-layer/commit/c8bba5181ec79916d16608dd767f9ac09d086023))
+* **routing:** add system readme content ([b6c3413](https://github.com/kovrichard/portable-agent-layer/commit/b6c3413dde923ece13b043e088c1de9273b55979))
+
 # [0.12.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.11.0...v0.12.0) (2026-03-24)
 
 

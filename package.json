@@ -1,6 +1,6 @@
 {
   "name": "portable-agent-layer",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "PAL — Portable Agent Layer: persistent personal context for AI coding assistants",
   "type": "module",
   "bin": {
@@ -45,7 +45,7 @@
     "install:all": "bun run src/cli/index.ts cli install",
     "uninstall": "bun run src/cli/index.ts cli uninstall",
     "tool:analyze": "bun run src/tools/analyze.ts",
-"tool:reflect": "bun run src/tools/relationship-reflect.ts",
+    "tool:reflect": "bun run src/tools/relationship-reflect.ts",
     "tool:export": "bun run src/tools/export.ts",
     "tool:import": "bun run src/tools/import.ts",
     "tool:tokens": "bun run src/tools/token-cost.ts"
