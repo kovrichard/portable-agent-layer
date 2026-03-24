@@ -1,9 +1,10 @@
 ---
 name: extract-entities
-description: Extract people and companies from content (articles, videos, URLs, pasted text)
+description: Extract people and companies from content (articles, videos, URLs, pasted text). Use when identifying who and what organizations are mentioned in content.
+argument-hint: <content, URL, or pasted text>
 ---
 
-When the user invokes /extract-entities <content, URL, or pasted text>:
+Extract people and companies from $ARGUMENTS:
 
 1. Read/fetch the content
 2. Extract ALL people and companies mentioned

@@ -1,6 +1,7 @@
 ---
 name: create-skill
-description: Scaffold a new PAL skill from a description
+description: Scaffold a new PAL skill from a description. Use when creating a new skill, adding a capability, or building a custom command.
+argument-hint: <skill description>
 ---
 
 When the user invokes /create-skill <name> <description>:

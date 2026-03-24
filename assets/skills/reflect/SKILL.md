@@ -1,6 +1,7 @@
 ---
 name: reflect
-description: Diagnose why a PAL behavior did not trigger as expected — trace hooks, instructions, and logic to find the gap
+description: Diagnose why a PAL behavior did not trigger as expected — trace hooks, instructions, and logic to find the gap. Use when a hook, skill, or automation didn't fire or behaved unexpectedly.
+argument-hint: <what went wrong>
 ---
 
 When the user invokes `/reflect [optional: description of what didn't happen]`:

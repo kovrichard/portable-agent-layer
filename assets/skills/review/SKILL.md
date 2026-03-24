@@ -1,6 +1,7 @@
 ---
 name: review
-description: Security-focused code review with severity ratings
+description: Security-focused code review with severity ratings. Use when reviewing code for security issues, vulnerabilities, or OWASP concerns.
+argument-hint: [file or directory]
 ---
 
 When the user invokes /review <file, diff, or PR>:

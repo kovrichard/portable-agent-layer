@@ -1,9 +1,10 @@
 ---
 name: summarize
-description: Structured summarization of documents, URLs, or conversations
+description: Structured summarization of documents, URLs, or conversations. Use when summarizing content, creating overviews, or distilling key points.
+argument-hint: <document, URL, or topic>
 ---
 
-When the user invokes /summarize <target>:
+Summarize $ARGUMENTS:
 
 1. Fetch or read the target content
 2. Produce:

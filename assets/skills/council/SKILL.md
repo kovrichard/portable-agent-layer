@@ -1,9 +1,10 @@
 ---
 name: council
-description: Multi-perspective parallel debate on a decision — 3-5 independent perspectives argue in parallel, then synthesize into a verdict
+description: Multi-perspective parallel debate on a decision — 3-5 independent perspectives argue in parallel, then synthesize into a verdict. Use when debating, weighing options, or needing multiple viewpoints on a question.
+argument-hint: <question or decision>
 ---
 
-When the user invokes /council <question or decision>:
+Debate $ARGUMENTS from multiple perspectives:
 
 ## Step 1: Define Perspectives
 

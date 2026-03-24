@@ -1,9 +1,10 @@
 ---
 name: extract-wisdom
-description: Extract structured insights from content (articles, videos, podcasts)
+description: Extract structured insights from content (articles, videos, podcasts). Use when extracting wisdom, key takeaways, or structured insights from any content.
+argument-hint: <content or URL>
 ---
 
-When the user invokes /extract-wisdom <content or URL>:
+Extract structured insights from $ARGUMENTS:
 
 1. Read/fetch the content
 2. Extract:

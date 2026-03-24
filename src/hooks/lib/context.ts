@@ -21,33 +21,6 @@ import {
   staleProjects,
 } from "./work-tracking";
 
-/** Load all populated TELOS files as a single markdown string */
-export function loadTelos(): string {
-  const telosDir = paths.telos();
-  if (!existsSync(telosDir)) return "";
-
-  const files = readdirSync(telosDir)
-    .filter((f) => f.endsWith(".md"))
-    .sort();
-
-  const sections: string[] = [];
-
-  for (const file of files) {
-    const content = readFileSync(resolve(telosDir, file), "utf-8").trim();
-    // Skip empty templates (only have a heading and comment)
-    const realLines = content
-      .split("\n")
-      .filter(
-        (l) =>
-          !l.startsWith("#") && !l.startsWith("<!--") && !l.startsWith("-->") && l.trim()
-      );
-    if (realLines.length === 0) continue;
-    sections.push(content);
-  }
-
-  return sections.join("\n\n---\n\n");
-}
-
 /** Count lines in a signals JSONL file */
 export function countSignals(filename: string): number {
   const filepath = resolve(paths.signals(), filename);

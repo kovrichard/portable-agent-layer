@@ -1,6 +1,7 @@
 ---
 name: analyze-pdf
-description: Download and analyze PDF files from URLs or local paths — extract text, answer questions, summarize content
+description: Download and analyze PDF files from URLs or local paths — extract text, answer questions, summarize content. Use when analyzing, reading, or extracting information from a PDF.
+argument-hint: <URL or file path>
 ---
 
 When the user asks to analyze, read, or extract information from a PDF:

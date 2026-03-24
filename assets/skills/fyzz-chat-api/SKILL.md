@@ -1,6 +1,7 @@
 ---
 name: fyzz-chat-api
-description: Query Fyzz Chat conversations and projects via the REST API (API key is handled securely by the CLI tool)
+description: Query Fyzz Chat conversations and projects via the REST API. Use when looking up conversations, searching chat history, or listing projects in Fyzz Chat.
+argument-hint: <conversations|projects> [options]
 ---
 
 When you need to access the user's Fyzz Chat conversations or projects, use the `fyzz-api` CLI tool. The tool reads the API key from the `FYZZ_API_KEY` environment variable automatically — never attempt to read, print, or reference the API key or the env var directly.
