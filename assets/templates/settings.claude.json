@@ -1,10 +1,16 @@
 {
   "permissions": {
     "allow": [
-      "Bash(grep *)",
-      "Bash(rg *)",
-      "Bash(find *)",
-      "Bash(ls *)",
+      "Read",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(wc:*)",
+      "Bash(diff:*)",
       "Bash(bun run ai:entity-save *)",
       "Bash(bun run ai:fyzz-api *)",
       "Bash(bun run ai:pdf-download *)",

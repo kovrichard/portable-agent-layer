@@ -4,6 +4,7 @@
 
 import {
   copyFileSync,
+  cpSync,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -202,9 +203,8 @@ export function removePalDocs(): void {
 const AGENTS_SKILLS_DIR = resolve(platform.agentsDir(), "skills");
 
 /**
- * Install PAL skills into the shared ~/.agents/skills/<name>/SKILL.md standard,
- * then symlink ~/.claude/skills/<name> → ../../.agents/skills/<name>.
- * Additive — skips skills already installed.
+ * Install PAL skills into ~/.agents/skills/, then symlink from ~/.claude/skills/.
+ * Copies the entire assets/skills/ tree, skipping skills that already exist.
  */
 export function copySkills(claudeSkillsDir: string): number {
   const skillsDir = assets.skills();
@@ -214,34 +214,27 @@ export function copySkills(claudeSkillsDir: string): number {
   mkdirSync(claudeSkillsDir, { recursive: true });
   let count = 0;
 
-  for (const file of readdirSync(skillsDir).filter((f) => f.endsWith(".md"))) {
-    const name = file.replace(/\.md$/, "");
-    const src = resolve(skillsDir, file);
-    const agentSkillDir = resolve(AGENTS_SKILLS_DIR, name);
-    const agentSkillFile = resolve(agentSkillDir, "SKILL.md");
-    const claudeLink = resolve(claudeSkillsDir, name);
+  for (const name of readdirSync(skillsDir)) {
+    if (!existsSync(resolve(skillsDir, name, "SKILL.md"))) continue;
 
-    // Install into ~/.agents/skills/<name>/SKILL.md
-    if (!existsSync(agentSkillFile)) {
-      mkdirSync(agentSkillDir, { recursive: true });
-      copyFileSync(src, agentSkillFile);
+    const agentSkillDir = resolve(AGENTS_SKILLS_DIR, name);
+    if (!existsSync(agentSkillDir)) {
+      cpSync(resolve(skillsDir, name), agentSkillDir, { recursive: true });
       log.info(`Added skill: ${name}`);
       count++;
     } else {
       log.warn(`Skill exists, skipping: ${name}`);
     }
 
-    // Create ~/.claude/skills/<name> symlink if missing or not a symlink
-    // Use 'junction' on Windows (no admin required), 'dir' symlink on Unix
+    // Symlink ~/.claude/skills/<name> → ~/.agents/skills/<name>
+    const claudeLink = resolve(claudeSkillsDir, name);
     const linkType = process.platform === "win32" ? "junction" : "dir";
     try {
-      const st = lstatSync(claudeLink);
-      if (!st.isSymbolicLink()) {
+      if (!lstatSync(claudeLink).isSymbolicLink()) {
         rmSync(claudeLink, { recursive: true, force: true });
         symlinkSync(`../../.agents/skills/${name}`, claudeLink, linkType);
       }
     } catch {
-      // Entry might exist but lstatSync failed (broken symlink/junction on Windows)
       try {
         rmSync(claudeLink, { recursive: true, force: true });
       } catch {
@@ -259,8 +252,9 @@ export function removeSkills(claudeSkillsDir: string): string[] {
   if (!existsSync(skillsDir)) return [];
 
   const removed: string[] = [];
-  for (const file of readdirSync(skillsDir).filter((f) => f.endsWith(".md"))) {
-    const name = file.replace(/\.md$/, "");
+  for (const name of readdirSync(skillsDir)) {
+    const srcSkillFile = resolve(skillsDir, name, "SKILL.md");
+    if (!existsSync(srcSkillFile)) continue;
 
     const agentSkillDir = resolve(AGENTS_SKILLS_DIR, name);
     if (existsSync(agentSkillDir)) {
