@@ -6,13 +6,13 @@
  * contradictions, or new behavioral patterns.
  *
  * Usage:
- *   bun run tool:opinion -- list                                      List all opinions
- *   bun run tool:opinion -- show "statement"                          Show opinion details
- *   bun run tool:opinion -- add "statement" [--category workflow]     Add new opinion
- *   bun run tool:opinion -- evidence "statement" --supporting "why"   Add supporting evidence
- *   bun run tool:opinion -- evidence "statement" --counter "why"      Add counter evidence
- *   bun run tool:opinion -- evidence "statement" --confirmation "why" Explicit user confirmation
- *   bun run tool:opinion -- evidence "statement" --contradiction "why" Explicit user contradiction
+ *   bun opinion.ts list                                      List all opinions
+ *   bun opinion.ts show "statement"                          Show opinion details
+ *   bun opinion.ts add "statement" [--category workflow]     Add new opinion
+ *   bun opinion.ts evidence "statement" --supporting "why"   Add supporting evidence
+ *   bun opinion.ts evidence "statement" --counter "why"      Add counter evidence
+ *   bun opinion.ts evidence "statement" --confirmation "why" Explicit user confirmation
+ *   bun opinion.ts evidence "statement" --contradiction "why" Explicit user contradiction
  */
 
 import {
@@ -23,7 +23,7 @@ import {
   type OpinionCategory,
   readOpinions,
   saveOpinion,
-} from "../hooks/lib/opinions";
+} from "../../../../src/hooks/lib/opinions";
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -82,7 +82,7 @@ switch (command) {
   case "show": {
     const statement = args[1];
     if (!statement) {
-      console.error('Usage: bun run tool:opinion -- show "statement"');
+      console.error('Usage: bun opinion.ts show "statement"');
       process.exit(1);
     }
 
@@ -128,9 +128,7 @@ switch (command) {
   case "add": {
     const statement = args[1];
     if (!statement) {
-      console.error(
-        'Usage: bun run tool:opinion -- add "statement" [--category workflow]'
-      );
+      console.error('Usage: bun opinion.ts add "statement" [--category workflow]');
       process.exit(1);
     }
 
@@ -156,7 +154,7 @@ switch (command) {
     const statement = args[1];
     if (!statement) {
       console.error(
-        'Usage: bun run tool:opinion -- evidence "statement" --supporting "description"'
+        'Usage: bun opinion.ts evidence "statement" --supporting "description"'
       );
       process.exit(1);
     }
@@ -226,20 +224,6 @@ switch (command) {
     evidence "keywords" --contradiction "why" User explicitly contradicted (-20%)
 
   Categories: communication, technical, workflow, general
-
-  Examples:
-    bun run tool:opinion -- list
-    bun run tool:opinion -- evidence "concise direct responses" --confirmation "User said: keep it short"
-    bun run tool:opinion -- evidence "concise direct responses" --contradiction "User asked for detailed explanation"
-    bun run tool:opinion -- add "User prefers iterative development" --category workflow
-    bun run tool:opinion -- show "iterative development"
-
-  Confidence lifecycle:
-    New opinions start at 50%. Supporting notes from reflect add +2% each.
-    Explicit confirmations jump +10%, contradictions drop -20%.
-    At >=85%, opinions are auto-injected into every session context.
-
-  Usage: bun run tool:opinion -- <command> [args]
 `);
     break;
   }

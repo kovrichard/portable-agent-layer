@@ -45,8 +45,7 @@
     "install:all": "bun run src/cli/index.ts cli install",
     "uninstall": "bun run src/cli/index.ts cli uninstall",
     "tool:analyze": "bun run src/tools/analyze.ts",
-    "tool:opinion": "bun run src/tools/opinion.ts",
-    "tool:reflect": "bun run src/tools/relationship-reflect.ts",
+"tool:reflect": "bun run src/tools/relationship-reflect.ts",
     "tool:export": "bun run src/tools/export.ts",
     "tool:import": "bun run src/tools/import.ts",
     "tool:tokens": "bun run src/tools/token-cost.ts"
