@@ -6,7 +6,7 @@
 import { unlinkSync } from "node:fs";
 import { resolve } from "node:path";
 import { platform } from "../../hooks/lib/paths";
-import { log, removeAgentsFromOpencode, removeSkills } from "../lib";
+import { log, removeAgentsFromOpencode, removePalDocs, removeSkills } from "../lib";
 
 const OC_GLOBAL_DIR = platform.opencodeDir() || "";
 
@@ -37,6 +37,9 @@ if (removedAgents.length > 0)
   log.success(
     `Removed ${removedAgents.length} opencode agent(s): ${removedAgents.join(", ")}`
   );
+
+// --- Remove PAL system docs ---
+removePalDocs();
 
 // --- Remove AGENTS.md and CLAUDE.md symlink ---
 const agentsMd = resolve(OC_GLOBAL_DIR, "AGENTS.md");

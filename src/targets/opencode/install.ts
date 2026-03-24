@@ -7,7 +7,14 @@ import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "
 import { resolve } from "node:path";
 import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
 import { palPkg, platform } from "../../hooks/lib/paths";
-import { copyAgentsForOpencode, copySkills, countSkills, log, writeJson } from "../lib";
+import {
+  copyAgentsForOpencode,
+  copyPalDocs,
+  copySkills,
+  countSkills,
+  log,
+  writeJson,
+} from "../lib";
 
 const PKG_ROOT = palPkg();
 const OC_GLOBAL_DIR = platform.opencodeDir();
@@ -53,7 +60,11 @@ log.success("Installed skills to ~/.agents/skills/");
 const ocAgentsDir = resolve(OC_GLOBAL_DIR, "agents");
 copyAgentsForOpencode(ocAgentsDir);
 
-// --- 5. Generate ~/.config/opencode/AGENTS.md ---
+// --- 5. Copy PAL system docs ---
+const palDocsCount = copyPalDocs();
+log.success(`Installed ${palDocsCount} PAL docs to ~/.agents/PAL/`);
+
+// --- 6. Generate ~/.config/opencode/AGENTS.md ---
 regenerateIfNeeded();
 log.success("Generated ~/.config/opencode/AGENTS.md");
 

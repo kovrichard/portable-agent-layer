@@ -43,6 +43,7 @@ export const HOOK_MANAGED_DIRS = [
   "memory/learning/synthesis",
   "memory/relationship",
   "memory/wisdom/state",
+  ".agents/PAL",
 ];
 
 /** Escape a string for use in a RegExp */

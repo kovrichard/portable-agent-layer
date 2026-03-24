@@ -60,6 +60,48 @@ export function scaffoldTelos(): void {
   }
 }
 
+// --- PAL docs (modular context routing files) ---
+
+const PAL_DOCS_DIR = resolve(platform.agentsDir(), "PAL");
+
+/**
+ * Install PAL system docs into ~/.agents/PAL/.
+ * Always overwrites — these are engine-managed, not user-editable.
+ */
+export function copyPalDocs(): number {
+  const srcDir = assets.palDocs();
+  if (!existsSync(srcDir)) return 0;
+
+  mkdirSync(PAL_DOCS_DIR, { recursive: true });
+  let count = 0;
+
+  for (const file of readdirSync(srcDir).filter((f) => f.endsWith(".md"))) {
+    const src = resolve(srcDir, file);
+    const dst = resolve(PAL_DOCS_DIR, file);
+    copyFileSync(src, dst);
+    count++;
+  }
+  return count;
+}
+
+/** Remove PAL system docs from ~/.agents/PAL/ */
+export function removePalDocs(): void {
+  if (!existsSync(PAL_DOCS_DIR)) return;
+  for (const file of readdirSync(PAL_DOCS_DIR).filter((f) => f.endsWith(".md"))) {
+    try {
+      unlinkSync(resolve(PAL_DOCS_DIR, file));
+    } catch {
+      /* gone */
+    }
+  }
+  try {
+    rmSync(PAL_DOCS_DIR, { recursive: true });
+    log.info("Removed ~/.agents/PAL/");
+  } catch {
+    /* gone */
+  }
+}
+
 // --- Skills ---
 
 const AGENTS_SKILLS_DIR = resolve(platform.agentsDir(), "skills");

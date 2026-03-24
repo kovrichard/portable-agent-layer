@@ -1,4 +1,4 @@
-## Steering Rules
+# Steering Rules
 
 Behavioral directives — act on these, don't just know them.
 

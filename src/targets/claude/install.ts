@@ -10,6 +10,7 @@ import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
 import { palHome, palPkg, platform } from "../../hooks/lib/paths";
 import {
   copyAgents,
+  copyPalDocs,
   copySkills,
   countAgents,
   countMd,
@@ -132,6 +133,10 @@ copySkills(skillsDir);
 
 // --- Copy agents ---
 copyAgents();
+
+// --- Copy PAL system docs ---
+const palDocsCount = copyPalDocs();
+log.success(`Installed ${palDocsCount} PAL docs to ~/.agents/PAL/`);
 
 // --- Generate ~/.claude/AGENTS.md and symlink ~/.claude/CLAUDE.md → AGENTS.md ---
 regenerateIfNeeded();

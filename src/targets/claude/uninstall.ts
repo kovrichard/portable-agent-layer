@@ -6,7 +6,14 @@
 import { copyFileSync, existsSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
 import { palPkg, platform } from "../../hooks/lib/paths";
-import { log, readJson, removeAgents, removeSkills, writeJson } from "../lib";
+import {
+  log,
+  readJson,
+  removeAgents,
+  removePalDocs,
+  removeSkills,
+  writeJson,
+} from "../lib";
 
 const PKG_ROOT = palPkg();
 const CLAUDE_DIR = platform.claudeDir();
@@ -81,6 +88,9 @@ if (removedAgents.length > 0) {
 } else {
   log.info("No PAL agents found");
 }
+
+// --- Remove PAL system docs ---
+removePalDocs();
 
 // --- Remove AGENTS.md and CLAUDE.md symlink ---
 const agentsMd = resolve(platform.opencodeDir(), "AGENTS.md");

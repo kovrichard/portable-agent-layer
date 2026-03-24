@@ -71,12 +71,16 @@ export function needsRebuild(): boolean {
 
   const outputMtime = statSync(outputPath).mtimeMs;
 
-  // Collect source files: template + setup.json + all telos/*.md
-  const sources: string[] = [
-    TEMPLATE_PATH,
-    resolve(dirname(TEMPLATE_PATH), "STEERING-RULES.md"),
-    resolve(paths.state(), "setup.json"),
-  ];
+  // Collect source files: template + setup.json + all telos/*.md + PAL docs
+  const sources: string[] = [TEMPLATE_PATH, resolve(paths.state(), "setup.json")];
+
+  // Track PAL doc sources for rebuild detection
+  const palDocsDir = assets.palDocs();
+  if (existsSync(palDocsDir)) {
+    for (const f of readdirSync(palDocsDir).filter((f) => f.endsWith(".md"))) {
+      sources.push(resolve(palDocsDir, f));
+    }
+  }
 
   const telosDir = paths.telos();
   if (existsSync(telosDir)) {
@@ -109,16 +113,10 @@ export function buildClaudeMd(): string {
   const setupPrompt = state ? buildSetupPrompt(state) : null;
   const telos = loadTelos();
 
-  const steeringPath = resolve(dirname(TEMPLATE_PATH), "STEERING-RULES.md");
-  const steeringRules = existsSync(steeringPath)
-    ? readFileSync(steeringPath, "utf-8").trim()
-    : "";
-
   return template
     .replace("{{SETUP_PROMPT}}", setupPrompt ? `${setupPrompt}\n` : "")
     .replace("{{TELOS}}", telos ? `${telos}\n` : "")
-    .replace("{{MEMORY_PATHS}}", memoryPaths())
-    .replace("{{STEERING_RULES}}", steeringRules);
+    .replace("{{MEMORY_PATHS}}", memoryPaths());
 }
 
 /** Regenerate AGENTS.md if any source file is newer, and ensure CLAUDE.md symlink exists. Returns true if rebuilt. */

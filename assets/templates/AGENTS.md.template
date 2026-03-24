@@ -14,38 +14,12 @@ PAL has its own memory system that persists across sessions AND across tools (Cl
 
 {{MEMORY_PATHS}}
 
-### Format
+## Context Routing
 
-- **Wisdom frames**: One `.md` file per domain/topic. Each file contains bullet-point principles the user has validated or you've learned. Append new principles to existing files or create new domain files.
-- **Relationship notes**: Daily `.md` file with bullet-point observations about the interaction (tone, preferences, corrections).
-- **Session learnings**: One `.md` file per session with a `**Title:**` line summarizing what was learned.
-- **Failure captures**: One directory per failure, named `{YYYYMMDD-HHmmss}_{slug}/`, containing a `capture.md` with what went wrong and why.
+When you need context about any of these topics, read `~/.agents/PAL/CONTEXT_ROUTING.md` for the file path:
 
-## Work Tracking
-
-PAL tracks your work across sessions in `memory/state/sessions.json` (auto-captured) and `memory/state/projects.json` (AI-managed).
-
-### Projects
-
-Update `projects.json` via the work-tracking library when:
-- **Starting sustained multi-session work** → create a project with objectives and an id (slugified, e.g. "pdf-template-engine")
-- **Making a key decision** → add to the project's `decisions` array
-- **Completing a milestone** → add to `completed`, remove from `nextSteps`
-- **Session ends with open work** → update `nextSteps` and `handoff`
-- **Work is done** → set status to "completed"
-
-Do not create projects for one-off questions or quick fixes.
-
-### When to write
-
-- When the user corrects you or gives feedback → wisdom frame
-- When you learn something about how the user prefers to work → relationship note
-- When a session produces reusable insights → session learning
-- When something fails significantly (rating < 6) → failure capture
-- Do NOT write memories about trivial exchanges or things already captured in TELOS.
-
-## Opinion Tracking
-
-PAL tracks confidence-scored opinions about the user. When you notice the user confirming or contradicting a behavioral pattern, update it via `bun run tool:opinion`. Run `bun run tool:opinion -- --help` for full usage and examples. Opinions at ≥85% confidence are automatically injected into every session context.
-
-{{STEERING_RULES}}
+- PAL internals
+- The user, their life and work, etc
+- Your own personality and rules
+- Any project referenced, any work, etc.
+- Basically anything that's specialized
