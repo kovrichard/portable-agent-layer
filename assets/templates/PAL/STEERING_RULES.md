@@ -22,9 +22,13 @@ Correct: Read the handler, imports, and patterns first → integrate with what's
 Bad: Page broken → change CSS, API, config, and routes at once. Still broken, now you don't know which change helped or hurt.
 Correct: Dev tools → 404 on API → fix the route → verify → move to next issue.
 
-**Minimal scope.** Only change what was asked. No bonus refactoring, no extra cleanup, no unsolicited improvements.
-Bad: Fix bug on line 42, also refactor the whole file → 200-line diff for a one-line fix.
-Correct: Fix the bug → 1-line diff.
+**Minimal scope.** Only change what was asked. No bonus features, no unsolicited additions.
+Bad: Fix bug on line 42, also add a new logging framework → 200-line diff for a one-line fix.
+Correct: Fix the bug → focused diff.
+
+**Cleanup on touch.** When modifying a file, assess it for dead code, unnecessary complexity, or poor organization. Offer to clean it up — don't silently refactor, flag what you found and ask. This applies to the file being edited, not neighboring files.
+Bad: Editing a handler → silently rewrite the whole file and three others.
+Correct: Editing a handler → notice dead imports and a 200-line function → "This file has dead imports and a function that could be split — want me to clean it up?"
 
 **Ask before destructive actions.** Deletes, force pushes, production deploys — always ask first.
 Bad: "Clean up cruft" → delete 15 files including backups without asking.
