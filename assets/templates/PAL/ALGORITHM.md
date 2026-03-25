@@ -99,7 +99,7 @@ Reflect on the work and capture reusable knowledge. Skip this phase when the wor
 **2. Wisdom Frame** — if the session produced a genuine, reusable insight:
 
 ```bash
-bun run tool:wisdom-frame --domain <domain> --observation "insight" [--type principle|contextual-rule|anti-pattern|evolution]
+bun ~/.agents/PAL/tools/wisdom-frame.ts --domain <domain> --observation "insight" [--type principle|contextual-rule|anti-pattern|evolution]
 ```
 
 Domains: `development`, `workflow`, `communication`, `infrastructure`, `integration`, or any fitting domain.

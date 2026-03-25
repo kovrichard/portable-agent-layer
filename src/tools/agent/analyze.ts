@@ -9,7 +9,7 @@
  */
 
 import { parseArgs } from "node:util";
-import { type AnalysisResult, analyze } from "../hooks/lib/graduation";
+import { type AnalysisResult, analyze } from "../../hooks/lib/graduation";
 
 // ── ANSI Colors ──
 

@@ -24,7 +24,7 @@ afterAll(() => {
 // Dynamic import to pick up PAL_HOME
 async function loadModule() {
   // Clear module cache by using a unique query string
-  const mod = await import(`../src/tools/wisdom-frame.ts?t=${Date.now()}`);
+  const mod = await import(`../src/tools/agent/wisdom-frame.ts?t=${Date.now()}`);
   return mod.updateFrame as (
     domain: string,
     observation: string,

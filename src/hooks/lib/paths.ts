@@ -81,5 +81,6 @@ export const assets = {
   agentsMdTemplate: () => pkg("assets", "templates", "AGENTS.md.template"),
   claudeSettingsTemplate: () => pkg("assets", "templates", "settings.claude.json"),
   cursorHooksTemplate: () => pkg("assets", "templates", "hooks.cursor.json"),
+  agentTools: () => pkg("src", "tools", "agent"),
   palDocs: () => pkg("assets", "templates", "PAL"),
 } as const;

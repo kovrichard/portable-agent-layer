@@ -273,10 +273,11 @@ export function copyPalDocs(): number {
     count++;
   }
 
-  // Symlink ~/.agents/PAL/telos and ~/.agents/PAL/memory → <palHome>/...
+  // Symlink ~/.agents/PAL/{telos,memory,tools} → source locations
   const linkType = process.platform === "win32" ? "junction" : "dir";
   ensureSymlink(resolve(PAL_DOCS_DIR, "telos"), resolve(palHome(), "telos"), linkType);
   ensureSymlink(resolve(PAL_DOCS_DIR, "memory"), resolve(palHome(), "memory"), linkType);
+  ensureSymlink(resolve(PAL_DOCS_DIR, "tools"), assets.agentTools(), linkType);
 
   return count;
 }

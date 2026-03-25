@@ -18,7 +18,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { paths } from "../hooks/lib/paths";
+import { paths } from "../../hooks/lib/paths";
 
 // ── Types ──
 

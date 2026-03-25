@@ -44,12 +44,12 @@
     "prepare": "husky",
     "install:all": "bun run src/cli/index.ts cli install",
     "uninstall": "bun run src/cli/index.ts cli uninstall",
-    "tool:analyze": "bun run src/tools/analyze.ts",
+    "tool:analyze": "bun run src/tools/agent/analyze.ts",
+    "tool:wisdom-frame": "bun run src/tools/agent/wisdom-frame.ts",
     "tool:reflect": "bun run src/tools/relationship-reflect.ts",
     "tool:export": "bun run src/tools/export.ts",
     "tool:import": "bun run src/tools/import.ts",
-    "tool:tokens": "bun run src/tools/token-cost.ts",
-    "tool:wisdom-frame": "bun run src/tools/wisdom-frame.ts"
+    "tool:tokens": "bun run src/tools/token-cost.ts"
   },
   "lint-staged": {
     "*.ts": [
