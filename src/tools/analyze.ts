@@ -9,7 +9,7 @@
  */
 
 import { parseArgs } from "node:util";
-import { analyze } from "../hooks/lib/graduation";
+import { type AnalysisResult, analyze } from "../hooks/lib/graduation";
 
 // ── ANSI Colors ──
 
@@ -23,16 +23,111 @@ const c = {
   magenta: (s: string) => `\x1b[35m${s}\x1b[0m`,
 };
 
-const { values } = parseArgs({
-  args: Bun.argv.slice(2),
-  options: {
-    help: { type: "boolean", short: "h" },
-    actionable: { type: "boolean", short: "a" },
-  },
-});
+export function printReport(result: AnalysisResult): void {
+  const hasPatterns = result.candidates.length > 0 || result.emerging.length > 0;
+  const hasRatings = result.ratings !== null;
 
-if (values.help) {
-  console.log(`
+  if (!hasPatterns && !hasRatings) {
+    console.log("\n  No patterns or ratings data found.\n");
+    return;
+  }
+
+  if (result.ratings) {
+    const r = result.ratings;
+    const avgColor = r.average >= 7 ? c.green : r.average <= 4 ? c.red : c.yellow;
+    console.log(
+      `\n  ${c.bold("Ratings:")} ${avgColor(`${r.average.toFixed(1)}/10`)} avg (${r.total} total)`
+    );
+    console.log(
+      `  ${c.red(`Low (≤4): ${r.low.count}`)} | ${c.green(`High (≥7): ${r.high.count}`)}`
+    );
+  }
+
+  if (result.candidates.length > 0) {
+    console.log(
+      `\n  ${c.bold(c.green(`Graduation Report — ${result.candidates.length} pattern(s) detected`))}\n`
+    );
+    console.log(`  ${c.dim("─────────────────────────────────────────────────")}\n`);
+
+    for (const candidate of result.candidates) {
+      console.log(
+        `  ${c.cyan(`[${candidate.domain}]`)} ${c.bold(`${candidate.entries.length}x`)} occurrences`
+      );
+      console.log("");
+
+      for (const entry of candidate.entries) {
+        const sourceType = entry.source.startsWith("failure:") ? "failure" : "learning";
+        const tag =
+          sourceType === "failure"
+            ? c.red(`[${sourceType}]`)
+            : c.yellow(`[${sourceType}]`);
+        console.log(
+          `    ${c.dim(entry.date || "unknown")} ${tag} ${entry.text.slice(0, 100)}`
+        );
+      }
+
+      console.log(`\n  ${c.dim("Files:")}`);
+      for (const entry of candidate.entries) {
+        console.log(`    ${c.dim(entry.path)}`);
+      }
+
+      console.log("");
+      console.log(
+        `  Target frame: ${c.magenta(`memory/wisdom/frames/${candidate.domain}.md`)}`
+      );
+      console.log(`  ${c.dim("─────────────────────────────────────────────────")}\n`);
+    }
+  }
+
+  if (result.emerging.length > 0) {
+    console.log(`  ${c.bold(c.yellow("Emerging (2x — one more to graduate)"))}\n`);
+    for (const group of result.emerging) {
+      console.log(
+        `  ${c.cyan(`[${group.domain}]`)} ${c.bold(`${group.entries.length}x`)}`
+      );
+      for (const entry of group.entries) {
+        const sourceType = entry.source.startsWith("failure:") ? "failure" : "learning";
+        const tag =
+          sourceType === "failure"
+            ? c.red(`[${sourceType}]`)
+            : c.yellow(`[${sourceType}]`);
+        console.log(
+          `    ${c.dim(entry.date || "unknown")} ${tag} ${entry.text.slice(0, 80)}`
+        );
+      }
+      console.log("  Files:");
+      for (const entry of group.entries) {
+        console.log(`    ${c.dim(entry.path)}`);
+      }
+      console.log("");
+    }
+  }
+
+  if (result.recommendations.length > 0) {
+    console.log(`  ${c.bold("Recommendations:")}\n`);
+    for (const rec of result.recommendations) {
+      console.log(`    ${rec}`);
+    }
+    console.log("");
+  }
+
+  if (result.candidates.length > 0) {
+    console.log(`  To crystallize: add a line to the wisdom frame file.`);
+    console.log(`  Format: ${c.green("- Your principle here [CRYSTAL: 85%]")}\n`);
+  }
+}
+
+async function run() {
+  const { values } = parseArgs({
+    args: Bun.argv.slice(2),
+    options: {
+      help: { type: "boolean", short: "h" },
+      actionable: { type: "boolean", short: "a" },
+    },
+  });
+
+  if (values.help) {
+    console.log(`
   PAL Learning Analysis — unified graduation + ratings report
 
   Reads all captured failures (rating ≤3) and session learnings,
@@ -52,101 +147,11 @@ if (values.help) {
 
   Usage: bun run tool:analyze [--actionable] [--help]
 `);
-  process.exit(0);
-}
-
-const result = await analyze({ actionable: values.actionable });
-
-const hasPatterns = result.candidates.length > 0 || result.emerging.length > 0;
-const hasRatings = result.ratings !== null;
-
-if (!hasPatterns && !hasRatings) {
-  console.log("\n  No patterns or ratings data found.\n");
-  process.exit(0);
-}
-
-// ── Ratings Summary ──
-
-if (result.ratings) {
-  const r = result.ratings;
-  const avgColor = r.average >= 7 ? c.green : r.average <= 4 ? c.red : c.yellow;
-  console.log(
-    `\n  ${c.bold("Ratings:")} ${avgColor(`${r.average.toFixed(1)}/10`)} avg (${r.total} total)`
-  );
-  console.log(
-    `  ${c.red(`Low (≤4): ${r.low.count}`)} | ${c.green(`High (≥7): ${r.high.count}`)}`
-  );
-}
-
-// ── Graduation Candidates ──
-
-if (result.candidates.length > 0) {
-  console.log(
-    `\n  ${c.bold(c.green(`Graduation Report — ${result.candidates.length} pattern(s) detected`))}\n`
-  );
-  console.log(`  ${c.dim("─────────────────────────────────────────────────")}\n`);
-
-  for (const candidate of result.candidates) {
-    console.log(
-      `  ${c.cyan(`[${candidate.domain}]`)} ${c.bold(`${candidate.entries.length}x`)} occurrences`
-    );
-    console.log("");
-
-    for (const entry of candidate.entries) {
-      const sourceType = entry.source.startsWith("failure:") ? "failure" : "learning";
-      const tag =
-        sourceType === "failure" ? c.red(`[${sourceType}]`) : c.yellow(`[${sourceType}]`);
-      console.log(
-        `    ${c.dim(entry.date || "unknown")} ${tag} ${entry.text.slice(0, 100)}`
-      );
-    }
-
-    console.log(`\n  ${c.dim("Files:")}`);
-    for (const entry of candidate.entries) {
-      console.log(`    ${c.dim(entry.path)}`);
-    }
-
-    console.log("");
-    console.log(
-      `  Target frame: ${c.magenta(`memory/wisdom/frames/${candidate.domain}.md`)}`
-    );
-    console.log(`  ${c.dim("─────────────────────────────────────────────────")}\n`);
+    process.exit(0);
   }
+
+  const result = await analyze({ actionable: values.actionable });
+  printReport(result);
 }
 
-// ── Emerging Patterns ──
-
-if (result.emerging.length > 0) {
-  console.log(`  ${c.bold(c.yellow("Emerging (2x — one more to graduate)"))}\n`);
-  for (const group of result.emerging) {
-    console.log(`  ${c.cyan(`[${group.domain}]`)} ${c.bold(`${group.entries.length}x`)}`);
-    for (const entry of group.entries) {
-      const sourceType = entry.source.startsWith("failure:") ? "failure" : "learning";
-      const tag =
-        sourceType === "failure" ? c.red(`[${sourceType}]`) : c.yellow(`[${sourceType}]`);
-      console.log(
-        `    ${c.dim(entry.date || "unknown")} ${tag} ${entry.text.slice(0, 80)}`
-      );
-    }
-    console.log("  Files:");
-    for (const entry of group.entries) {
-      console.log(`    ${c.dim(entry.path)}`);
-    }
-    console.log("");
-  }
-}
-
-// ── Recommendations ──
-
-if (result.recommendations.length > 0) {
-  console.log(`  ${c.bold("Recommendations:")}\n`);
-  for (const rec of result.recommendations) {
-    console.log(`    ${rec}`);
-  }
-  console.log("");
-}
-
-if (result.candidates.length > 0) {
-  console.log(`  To crystallize: add a line to the wisdom frame file.`);
-  console.log(`  Format: ${c.green("- Your principle here [CRYSTAL: 85%]")}\n`);
-}
+if (import.meta.main) run();

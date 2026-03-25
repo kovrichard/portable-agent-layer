@@ -6,25 +6,30 @@
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { MODEL_PRICING } from "../hooks/lib/models";
 
-const { values: args } = parseArgs({
-  options: { session: { type: "string" } },
-  strict: false,
-});
+// ── Types ──
 
-const sessionId = args.session;
-if (!sessionId) process.exit(0);
+interface Usage {
+  input: number;
+  output: number;
+  cacheWrite: number;
+  cacheRead: number;
+  cost: number;
+  calls: number;
+  models: Set<string>;
+  durationMs: number;
+}
 
-import { homedir } from "node:os";
+// ── Core Functions ──
 
-const claudeDir = resolve(homedir(), ".claude", "projects");
-
-// ── Find the JSONL file containing this session ──
-
-function findSessionFile(): { filepath: string; project: string } | null {
+export function findSessionFile(
+  sessionId: string,
+  claudeDir: string
+): { filepath: string; project: string } | null {
   if (!existsSync(claudeDir)) return null;
 
   const projectDirs = readdirSync(claudeDir, { withFileTypes: true }).filter((d) =>
@@ -35,7 +40,6 @@ function findSessionFile(): { filepath: string; project: string } | null {
     const projPath = resolve(claudeDir, dir.name);
     const projName = dir.name.split("-").pop() ?? dir.name;
 
-    // Session ID is often the filename
     const directFile = resolve(projPath, `${sessionId}.jsonl`);
     if (existsSync(directFile)) {
       return { filepath: directFile, project: projName };
@@ -74,20 +78,7 @@ function findSessionFile(): { filepath: string; project: string } | null {
   return latest;
 }
 
-// ── Parse only messages belonging to this session ──
-
-interface Usage {
-  input: number;
-  output: number;
-  cacheWrite: number;
-  cacheRead: number;
-  cost: number;
-  calls: number;
-  models: Set<string>;
-  durationMs: number;
-}
-
-function parseSession(filepath: string): Usage {
+export function parseSession(filepath: string, sessionId: string): Usage {
   const usage: Usage = {
     input: 0,
     output: 0,
@@ -122,7 +113,6 @@ function parseSession(filepath: string): Usage {
         };
       };
 
-      // Only count messages from this session
       if (d.sessionId !== sessionId) continue;
 
       if (d.timestamp) {
@@ -187,21 +177,34 @@ function fmtDuration(ms: number): string {
   return rem > 0 ? `${hrs}h ${rem}m` : `${hrs}h`;
 }
 
-// ── Main ──
+// ── CLI ──
 
-const file = findSessionFile();
-if (!file) process.exit(0);
+function run() {
+  const { values: args } = parseArgs({
+    options: { session: { type: "string" } },
+    strict: false,
+  });
 
-const usage = parseSession(file.filepath);
-if (usage.calls === 0) process.exit(0);
+  const sessionId = typeof args.session === "string" ? args.session : "";
+  if (!sessionId) process.exit(0);
 
-const totalTokens = usage.input + usage.output + usage.cacheWrite + usage.cacheRead;
-const model = [...usage.models].map((m) => m.replace("claude-", "")).join(", ");
+  const claudeDir = resolve(homedir(), ".claude", "projects");
+  const file = findSessionFile(sessionId, claudeDir);
+  if (!file) process.exit(0);
 
-const dim = "\x1b[2m";
-const reset = "\x1b[0m";
-const cyan = "\x1b[36m";
+  const usage = parseSession(file.filepath, sessionId);
+  if (usage.calls === 0) process.exit(0);
 
-console.log(
-  `\n${dim}Session: ${file.project} · ${model} · ${fmtDuration(usage.durationMs)} · ${fmtTokens(totalTokens)} tokens · ${usage.calls} calls · ${cyan}${fmtCost(usage.cost)}${reset}`
-);
+  const totalTokens = usage.input + usage.output + usage.cacheWrite + usage.cacheRead;
+  const model = [...usage.models].map((m) => m.replace("claude-", "")).join(", ");
+
+  const dim = "\x1b[2m";
+  const reset = "\x1b[0m";
+  const cyan = "\x1b[36m";
+
+  console.log(
+    `\n${dim}Session: ${file.project} · ${model} · ${fmtDuration(usage.durationMs)} · ${fmtTokens(totalTokens)} tokens · ${usage.calls} calls · ${cyan}${fmtCost(usage.cost)}${reset}`
+  );
+}
+
+if (import.meta.main) run();

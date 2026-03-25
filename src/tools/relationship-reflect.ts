@@ -27,12 +27,6 @@ import {
 import { palHome } from "../hooks/lib/paths";
 import { similarity } from "../hooks/lib/text-similarity";
 
-// ── Paths ──
-
-const RATINGS_FILE = resolve(palHome(), "memory", "signals", "ratings.jsonl");
-const RELATIONSHIP_DIR = resolve(palHome(), "memory", "relationship");
-const REFLECTION_DIR = resolve(palHome(), "memory", "relationship", "reflections");
-
 // ── Types ──
 
 interface Rating {
@@ -59,16 +53,17 @@ interface OpinionChange {
 
 // ── Note Parsing ──
 
-function loadNotes(daysBack: number): ParsedNote[] {
-  if (!existsSync(RELATIONSHIP_DIR)) return [];
+export function loadNotes(daysBack: number): ParsedNote[] {
+  const relationshipDir = resolve(palHome(), "memory", "relationship");
+  if (!existsSync(relationshipDir)) return [];
 
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - daysBack);
   const notes: ParsedNote[] = [];
 
-  for (const monthDir of readdirSync(RELATIONSHIP_DIR).sort().reverse()) {
+  for (const monthDir of readdirSync(relationshipDir).sort().reverse()) {
     if (!/^\d{4}-\d{2}$/.test(monthDir)) continue;
-    const monthPath = resolve(RELATIONSHIP_DIR, monthDir);
+    const monthPath = resolve(relationshipDir, monthDir);
 
     let files: string[];
     try {
@@ -130,13 +125,14 @@ function loadNotes(daysBack: number): ParsedNote[] {
 
 // ── Ratings ──
 
-function loadRatings(daysBack: number): Rating[] {
-  if (!existsSync(RATINGS_FILE)) return [];
+export function loadRatings(daysBack: number): Rating[] {
+  const ratingsFile = resolve(palHome(), "memory", "signals", "ratings.jsonl");
+  if (!existsSync(ratingsFile)) return [];
 
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - daysBack);
 
-  return readFileSync(RATINGS_FILE, "utf-8")
+  return readFileSync(ratingsFile, "utf-8")
     .split("\n")
     .filter((l) => l.trim())
     .map((l) => {
@@ -153,11 +149,10 @@ function loadRatings(daysBack: number): Rating[] {
 
 // ── Opinion Promotion ──
 
-function promoteToOpinions(notes: ParsedNote[], dryRun: boolean): OpinionChange[] {
+export function promoteToOpinions(notes: ParsedNote[], dryRun: boolean): OpinionChange[] {
   const changes: OpinionChange[] = [];
   const opinions = readOpinions();
 
-  // All O notes in the window — deduplication happens at the evidence level
   const opinionNotes = notes.filter((n) => n.type === "O");
 
   // Group similar notes together
@@ -177,11 +172,9 @@ function promoteToOpinions(notes: ParsedNote[], dryRun: boolean): OpinionChange[
   }
 
   for (const [representative, group] of groups) {
-    // Check against existing opinions
     const existing = findSimilarOpinion(representative, opinions);
 
     if (existing) {
-      // Add supporting evidence for each new note
       let updated = existing;
       for (const note of group) {
         updated = addEvidence(updated, "supporting", note.text.slice(0, 120));
@@ -197,8 +190,6 @@ function promoteToOpinions(notes: ParsedNote[], dryRun: boolean): OpinionChange[
         if (!dryRun) saveOpinion(updated);
       }
     } else if (group.length >= 2) {
-      // New opinion — requires at least 2 occurrences
-      // Store individual note texts as evidence so re-runs deduplicate correctly
       let opinion = createOpinion(representative, group[0].text.slice(0, 120));
       for (const note of group.slice(1)) {
         opinion = addEvidence(opinion, "supporting", note.text.slice(0, 120));
@@ -224,7 +215,7 @@ interface OpinionSummary {
   dates: string[];
 }
 
-function groupNoteOccurrences(notes: ParsedNote[]): OpinionSummary[] {
+export function groupNoteOccurrences(notes: ParsedNote[]): OpinionSummary[] {
   const opNotes = notes.filter((n) => n.type === "O");
   const groups = new Map<
     string,
@@ -297,7 +288,7 @@ function correlateRatings(ratings: Rating[]): string[] {
 
 // ── Report ──
 
-function formatReport(
+export function formatReport(
   period: string,
   notes: ParsedNote[],
   ratings: Rating[],
@@ -360,8 +351,8 @@ function formatReport(
 
   if (ratingInsights.length > 0) {
     lines.push("## Rating Insights", "");
-    for (const c of ratingInsights) {
-      lines.push(`- ${c}`);
+    for (const insight of ratingInsights) {
+      lines.push(`- ${insight}`);
     }
     lines.push("");
   }
@@ -369,13 +360,14 @@ function formatReport(
   return lines.join("\n");
 }
 
-function writeReport(report: string, period: string): string {
-  if (!existsSync(REFLECTION_DIR)) mkdirSync(REFLECTION_DIR, { recursive: true });
+export function writeReport(report: string, period: string): string {
+  const reflectionDir = resolve(palHome(), "memory", "relationship", "reflections");
+  if (!existsSync(reflectionDir)) mkdirSync(reflectionDir, { recursive: true });
 
   const date = new Date().toISOString().slice(0, 10);
   const slug = period.toLowerCase().replace(/\s+/g, "-");
   const filename = `${date}_${slug}-reflection.md`;
-  const filepath = resolve(REFLECTION_DIR, filename);
+  const filepath = resolve(reflectionDir, filename);
 
   writeFileSync(filepath, report, "utf-8");
   return filepath;
@@ -383,17 +375,18 @@ function writeReport(report: string, period: string): string {
 
 // ── CLI ──
 
-const { values } = parseArgs({
-  args: Bun.argv.slice(2),
-  options: {
-    month: { type: "boolean" },
-    "dry-run": { type: "boolean" },
-    help: { type: "boolean", short: "h" },
-  },
-});
+function run() {
+  const { values } = parseArgs({
+    args: Bun.argv.slice(2),
+    options: {
+      month: { type: "boolean" },
+      "dry-run": { type: "boolean" },
+      help: { type: "boolean", short: "h" },
+    },
+  });
 
-if (values.help) {
-  console.log(`
+  if (values.help) {
+    console.log(`
 RelationshipReflect — Periodic reflection + opinion promotion
 
 Reads recent relationship notes and ratings. Promotes recurring
@@ -408,65 +401,67 @@ Output:
   - Updates memory/relationship/opinions.json (confidence tracking)
   - Creates reflection report in memory/relationship/reflections/
 `);
-  process.exit(0);
-}
+    process.exit(0);
+  }
 
-const daysBack = values.month ? 30 : 7;
-const period = values.month ? "Monthly" : "Weekly";
-const dryRun = values["dry-run"] ?? false;
+  const daysBack = values.month ? 30 : 7;
+  const period = values.month ? "Monthly" : "Weekly";
+  const dryRun = values["dry-run"] ?? false;
 
-const notes = loadNotes(daysBack);
-const ratings = loadRatings(daysBack);
+  const notes = loadNotes(daysBack);
+  const ratings = loadRatings(daysBack);
 
-console.log(`Loaded ${notes.length} notes from last ${daysBack} days`);
-console.log(`Loaded ${ratings.length} ratings`);
+  console.log(`Loaded ${notes.length} notes from last ${daysBack} days`);
+  console.log(`Loaded ${ratings.length} ratings`);
 
-if (notes.length === 0 && ratings.length === 0) {
-  console.log("No data to analyze");
-  process.exit(0);
-}
+  if (notes.length === 0 && ratings.length === 0) {
+    console.log("No data to analyze");
+    process.exit(0);
+  }
 
-// Promote notes to opinions
-const opinionChanges = promoteToOpinions(notes, dryRun);
+  const opinionChanges = promoteToOpinions(notes, dryRun);
 
-const avgRating =
-  ratings.length > 0 ? ratings.reduce((s, r) => s + r.rating, 0) / ratings.length : 0;
-console.log(`\nAverage Rating: ${avgRating.toFixed(1)}/10`);
+  const avgRating =
+    ratings.length > 0 ? ratings.reduce((s, r) => s + r.rating, 0) / ratings.length : 0;
+  console.log(`\nAverage Rating: ${avgRating.toFixed(1)}/10`);
 
-const summaries = groupNoteOccurrences(notes);
-console.log(`Observations: ${summaries.length} unique`);
+  const summaries = groupNoteOccurrences(notes);
+  console.log(`Observations: ${summaries.length} unique`);
 
-if (opinionChanges.length > 0) {
-  console.log(`\nOpinion changes:`);
-  for (const change of opinionChanges) {
-    if (change.action === "created") {
-      console.log(
-        `  + NEW (${Math.round(change.newConfidence * 100)}%) ${change.statement.slice(0, 80)}`
-      );
-    } else {
-      console.log(
-        `  ~ ${Math.round(change.oldConfidence ?? 0 * 100)}% → ${Math.round(change.newConfidence * 100)}% ${change.statement.slice(0, 80)}`
-      );
+  if (opinionChanges.length > 0) {
+    console.log("\nOpinion changes:");
+    for (const change of opinionChanges) {
+      if (change.action === "created") {
+        console.log(
+          `  + NEW (${Math.round(change.newConfidence * 100)}%) ${change.statement.slice(0, 80)}`
+        );
+      } else {
+        console.log(
+          `  ~ ${Math.round(change.oldConfidence ?? 0 * 100)}% → ${Math.round(change.newConfidence * 100)}% ${change.statement.slice(0, 80)}`
+        );
+      }
+    }
+  } else {
+    console.log("\nNo opinion changes");
+  }
+
+  if (dryRun) {
+    console.log("\n[DRY RUN] Would write reflection report + update opinions");
+  } else {
+    const report = formatReport(period, notes, ratings, opinionChanges);
+    const filepath = writeReport(report, period);
+    setLastReflectDate(new Date().toISOString().slice(0, 10));
+    console.log(`\nCreated reflection report: ${filepath}`);
+
+    const opinions = readOpinions();
+    const high = opinions.filter((o) => o.confidence >= 0.85);
+    if (high.length > 0) {
+      console.log("\nHigh-confidence opinions (injected into context):");
+      for (const o of high) {
+        console.log(`  [${Math.round(o.confidence * 100)}%] ${o.statement.slice(0, 80)}`);
+      }
     }
   }
-} else {
-  console.log("\nNo opinion changes");
 }
 
-if (dryRun) {
-  console.log("\n[DRY RUN] Would write reflection report + update opinions");
-} else {
-  const report = formatReport(period, notes, ratings, opinionChanges);
-  const filepath = writeReport(report, period);
-  setLastReflectDate(new Date().toISOString().slice(0, 10));
-  console.log(`\nCreated reflection report: ${filepath}`);
-
-  const opinions = readOpinions();
-  const high = opinions.filter((o) => o.confidence >= 0.85);
-  if (high.length > 0) {
-    console.log(`\nHigh-confidence opinions (injected into context):`);
-    for (const o of high) {
-      console.log(`  [${Math.round(o.confidence * 100)}%] ${o.statement.slice(0, 80)}`);
-    }
-  }
-}
+if (import.meta.main) run();
