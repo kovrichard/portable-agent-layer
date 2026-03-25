@@ -67,6 +67,7 @@ const h = homedir();
 export const platform = {
   claudeDir: () => process.env.PAL_CLAUDE_DIR || resolve(h, ".claude"),
   opencodeDir: () => process.env.PAL_OPENCODE_DIR || resolve(h, ".config", "opencode"),
+  cursorDir: () => process.env.PAL_CURSOR_DIR || resolve(h, ".cursor"),
   agentsDir: () => process.env.PAL_AGENTS_DIR || resolve(h, ".agents"),
 } as const;
 
@@ -78,5 +79,6 @@ export const assets = {
   telosTemplates: () => pkg("assets", "templates", "telos"),
   agentsMdTemplate: () => pkg("assets", "templates", "AGENTS.md.template"),
   claudeSettingsTemplate: () => pkg("assets", "templates", "settings.claude.json"),
+  cursorHooksTemplate: () => pkg("assets", "templates", "hooks.cursor.json"),
   palDocs: () => pkg("assets", "templates", "PAL"),
 } as const;

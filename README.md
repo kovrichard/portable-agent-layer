@@ -90,7 +90,8 @@ pal cli status        # check your setup
 ```bash
 pal cli install --claude      # Claude Code only
 pal cli install --opencode    # opencode only
-pal cli install               # both (default)
+pal cli install --cursor      # Cursor only
+pal cli install               # all available (default)
 ```
 
 ---
@@ -112,6 +113,7 @@ pal cli install               # both (default)
 | `PAL_PKG` | Override package root |
 | `PAL_CLAUDE_DIR` | Override Claude config dir (default: `~/.claude`) |
 | `PAL_OPENCODE_DIR` | Override opencode config dir (default: `~/.config/opencode`) |
+| `PAL_CURSOR_DIR` | Override Cursor config dir (default: `~/.cursor`) |
 | `PAL_AGENTS_DIR` | Override agents dir (default: `~/.agents`) |
 
 ---

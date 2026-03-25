@@ -136,6 +136,85 @@ export function unmergeSettings(existing: Settings, template: Settings): Setting
   return result;
 }
 
+// --- Cursor hooks.json merge/unmerge ---
+
+type CursorHookEntry = {
+  type: string;
+  command: string;
+  matcher?: string;
+  timeout?: number;
+};
+type CursorHooks = {
+  version?: number;
+  hooks?: Record<string, CursorHookEntry[]>;
+};
+
+/**
+ * Load a Cursor hooks template, replacing {{PKG_ROOT}} with the actual path.
+ */
+export function loadCursorHooksTemplate(
+  templatePath: string,
+  pkgRoot: string
+): CursorHooks {
+  const raw = readFileSync(templatePath, "utf-8");
+  const resolved = raw.replaceAll("{{PKG_ROOT}}", pkgRoot);
+  return JSON.parse(resolved) as CursorHooks;
+}
+
+/**
+ * Merge PAL hooks into an existing Cursor hooks.json.
+ * Deduplicates by command string within each event.
+ */
+export function mergeCursorHooks(
+  existing: CursorHooks,
+  template: CursorHooks
+): CursorHooks {
+  const result: CursorHooks = { ...existing, version: existing.version ?? 1 };
+
+  if (template.hooks) {
+    if (!result.hooks) result.hooks = {};
+    for (const [event, entries] of Object.entries(template.hooks)) {
+      const current = result.hooks[event] ?? [];
+      for (const entry of entries) {
+        if (!current.some((e) => e.command === entry.command)) {
+          current.push(entry);
+        }
+      }
+      result.hooks[event] = current;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Remove PAL hooks from an existing Cursor hooks.json.
+ * Only removes entries whose command matches the template. Preserves user hooks.
+ */
+export function unmergeCursorHooks(
+  existing: CursorHooks,
+  template: CursorHooks
+): CursorHooks {
+  const result: CursorHooks = { ...existing };
+
+  if (template.hooks && result.hooks) {
+    const palCommands = new Set<string>();
+    for (const entries of Object.values(template.hooks)) {
+      for (const entry of entries) {
+        palCommands.add(entry.command);
+      }
+    }
+
+    for (const [event, entries] of Object.entries(result.hooks)) {
+      result.hooks[event] = entries.filter((e) => !palCommands.has(e.command));
+      if (result.hooks[event].length === 0) delete result.hooks[event];
+    }
+    if (Object.keys(result.hooks).length === 0) delete result.hooks;
+  }
+
+  return result;
+}
+
 // --- TELOS scaffolding ---
 
 /** Copy template files into telos/ without overwriting existing ones */

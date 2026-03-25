@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "command": "bun run {{PKG_ROOT}}/src/hooks/LoadContext.ts"
+      }
+    ],
+    "beforeSubmitPrompt": [
+      {
+        "type": "command",
+        "command": "bun run {{PKG_ROOT}}/src/hooks/UserPromptOrchestrator.ts"
+      }
+    ],
+    "preToolUse": [
+      {
+        "type": "command",
+        "command": "bun run {{PKG_ROOT}}/src/hooks/SecurityValidator.ts"
+      },
+      {
+        "type": "command",
+        "command": "bun run {{PKG_ROOT}}/src/hooks/SkillGuard.ts"
+      }
+    ],
+    "stop": [
+      {
+        "type": "command",
+        "command": "bun run {{PKG_ROOT}}/src/hooks/StopOrchestrator.ts"
+      }
+    ]
+  }
+}

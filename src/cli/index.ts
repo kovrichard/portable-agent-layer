@@ -8,8 +8,8 @@
  *
  * Admin commands (pal cli ...):
  *   init                              Scaffold PAL home, install hooks for all targets
- *   install [--claude] [--opencode]   Register hooks/skills for targets
- *   uninstall [--claude] [--opencode] Remove hooks/skills for targets
+ *   install [--claude] [--opencode] [--cursor]   Register hooks/skills for targets
+ *   uninstall [--claude] [--opencode] [--cursor] Remove hooks/skills for targets
  *   update                             Update PAL (git pull or npm update)
  *   export [path] [--dry-run]         Export user state to zip
  *   import [path] [--dry-run]         Import user state from zip
@@ -197,9 +197,9 @@ function showHelp() {
     pal cli <command> [options]             Admin commands
 
   Admin commands:
-    pal cli init [--claude] [--opencode]    Scaffold and install (default: all)
-    pal cli install [--claude] [--opencode] Register hooks for targets
-    pal cli uninstall [--claude] [--opencode] Remove hooks for targets
+    pal cli init [--claude] [--opencode] [--cursor]    Scaffold and install (default: all)
+    pal cli install [--claude] [--opencode] [--cursor] Register hooks for targets
+    pal cli uninstall [--claude] [--opencode] [--cursor] Remove hooks for targets
     pal cli update                          Update PAL (git pull or npm update)
     pal cli export [path] [--dry-run]       Export state to zip
     pal cli import [path] [--dry-run]       Import state from zip
@@ -211,6 +211,7 @@ function showHelp() {
     PAL_PKG               Override package root
     PAL_CLAUDE_DIR        Override Claude config dir (default: ~/.claude)
     PAL_OPENCODE_DIR      Override opencode config dir (default: ~/.config/opencode)
+    PAL_CURSOR_DIR        Override Cursor config dir (default: ~/.cursor)
     PAL_AGENTS_DIR        Override agents dir (default: ~/.agents)
 `);
 }
@@ -218,30 +219,35 @@ function showHelp() {
 function parseTargets(args: string[]): {
   claude: boolean;
   opencode: boolean;
+  cursor: boolean;
 } {
   let claude = false;
   let opencode = false;
+  let cursor = false;
   for (const arg of args) {
     if (arg === "--claude") claude = true;
     else if (arg === "--opencode") opencode = true;
+    else if (arg === "--cursor") cursor = true;
     else if (arg === "--all") {
       claude = true;
       opencode = true;
+      cursor = true;
     }
   }
-  if (!claude && !opencode) return { claude: true, opencode: true };
-  return { claude, opencode };
+  if (!claude && !opencode && !cursor)
+    return { claude: true, opencode: true, cursor: true };
+  return { claude, opencode, cursor };
 }
 
 /** Resolve targets against available agents. Errors if explicitly requested but missing. */
 function resolveTargets(
   args: string[],
   health?: DoctorResult
-): { claude: boolean; opencode: boolean } {
+): { claude: boolean; opencode: boolean; cursor: boolean } {
   const requested = parseTargets(args);
   const h = health || doctor(true);
   const explicit = args.some(
-    (a) => a === "--claude" || a === "--opencode" || a === "--all"
+    (a) => a === "--claude" || a === "--opencode" || a === "--cursor" || a === "--all"
   );
 
   if (explicit) {
@@ -254,6 +260,10 @@ function resolveTargets(
       log.error("opencode is not installed. Run 'pal cli doctor' for details.");
       process.exit(1);
     }
+    if (requested.cursor && !h.cursor.available) {
+      log.error("Cursor is not installed. Run 'pal cli doctor' for details.");
+      process.exit(1);
+    }
     return requested;
   }
 
@@ -261,10 +271,12 @@ function resolveTargets(
   const targets = {
     claude: h.claude.available,
     opencode: h.opencode.available,
+    cursor: h.cursor.available,
   };
 
   if (!targets.claude) log.info("Skipping Claude Code (not installed)");
   if (!targets.opencode) log.info("Skipping opencode (not installed)");
+  if (!targets.cursor) log.info("Skipping Cursor (not installed)");
 
   return targets;
 }
@@ -312,6 +324,7 @@ interface DoctorResult {
   bun: ToolCheck;
   claude: ToolCheck;
   opencode: ToolCheck;
+  cursor: ToolCheck;
   hasAgent: boolean;
 }
 
@@ -322,6 +335,7 @@ function doctor(silent = false): DoctorResult {
       bun: { name: "bun", available: true, version: Bun.version },
       claude: { name: "claude", available: true },
       opencode: { name: "opencode", available: true },
+      cursor: { name: "cursor", available: true },
       hasAgent: true,
     };
   }
@@ -329,7 +343,8 @@ function doctor(silent = false): DoctorResult {
   const bun = { name: "bun", available: true, version: Bun.version };
   const claude = checkTool("claude");
   const opencode = checkTool("opencode");
-  const hasAgent = claude.available || opencode.available;
+  const cursor = checkTool("cursor");
+  const hasAgent = claude.available || opencode.available || cursor.available;
 
   const home = palHome();
   const isRepo = existsSync(resolve(palPkg(), ".palroot"));
@@ -355,6 +370,9 @@ function doctor(silent = false): DoctorResult {
     opencode.available
       ? ok(`opencode ${opencode.version || ""}`.trim())
       : fail("opencode — not found");
+    cursor.available
+      ? ok(`Cursor ${cursor.version || ""}`.trim())
+      : fail("Cursor — not found");
     ok(`PAL home: ${home} (${isRepo ? "repo" : "package"} mode)`);
     telosCount > 0 ? ok(`TELOS: ${telosCount} files`) : fail("TELOS: not scaffolded");
 
@@ -384,7 +402,7 @@ function doctor(silent = false): DoctorResult {
     console.log("");
   }
 
-  return { bun, claude, opencode, hasAgent };
+  return { bun, claude, opencode, cursor, hasAgent };
 }
 
 // ── Commands ──
@@ -424,7 +442,7 @@ async function init(args: string[]) {
   }
 }
 
-async function install(targets: { claude: boolean; opencode: boolean }) {
+async function install(targets: { claude: boolean; opencode: boolean; cursor: boolean }) {
   // Scaffold TELOS + PAL settings, then prompt for missing identity
   const { scaffoldTelos, scaffoldPalSettings } = await import("../targets/lib");
   const { promptIdentity } = await import("./setup-identity");
@@ -444,6 +462,12 @@ async function install(targets: { claude: boolean; opencode: boolean }) {
     console.log("");
   }
 
+  if (targets.cursor) {
+    console.log("━━━ Cursor ━━━");
+    await import("../targets/cursor/install");
+    console.log("");
+  }
+
   log.success("Done. Existing config was preserved — only new entries were added.");
 }
 
@@ -459,6 +483,12 @@ async function uninstall(args: string[]) {
   if (targets.opencode) {
     console.log("━━━ opencode ━━━");
     await import("../targets/opencode/uninstall");
+    console.log("");
+  }
+
+  if (targets.cursor) {
+    console.log("━━━ Cursor ━━━");
+    await import("../targets/cursor/uninstall");
     console.log("");
   }
 
@@ -641,6 +671,7 @@ async function status() {
 
   log.info(`Claude:   ${platform.claudeDir()}`);
   log.info(`opencode: ${platform.opencodeDir()}`);
+  log.info(`Cursor:   ${platform.cursorDir()}`);
   log.info(`Agents:   ${platform.agentsDir()}`);
   console.log("");
 
