@@ -19,7 +19,8 @@
       "Bash(file //*)",
       "Bash(stat //*)",
       "Bash(readlink //*)",
-      "Bash(bun ~/.agents/skills/*/tools/*.ts *)"
+      "Bash(bun ~/.agents/skills/*/tools/*.ts *)",
+      "Bash(bun run tool:wisdom-frame *)"
     ]
   },
   "hooks": {

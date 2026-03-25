@@ -2,11 +2,11 @@
 
 Core: transition from CURRENT STATE to IDEAL STATE using verifiable criteria. Every criterion is atomic, binary testable, and checked off with evidence.
 
-## The Four Phases
+## The Five Phases
 
 All work happens inside these phases. No work outside the phase structure until the Algorithm completes.
 
-### ━━━ 👁️ OBSERVE ━━━ 1/4
+### ━━━ 👁️ OBSERVE ━━━ 1/5
 
 Thinking-only. No tool calls except context recovery (Grep/Glob/Read).
 
@@ -44,7 +44,7 @@ Output:
 🏹 CAPABILITIES: [list each selected skill/tool and why]
 ```
 
-### ━━━ 🧠 PLAN ━━━ 2/4
+### ━━━ 🧠 PLAN ━━━ 2/5
 
 **Pressure test the criteria:**
 
@@ -59,7 +59,7 @@ Refine criteria if the pressure test reveals gaps. Add criteria for uncovered fa
 - Decide execution order — what's serial, what can parallelize
 - If Advanced+ complexity, use EnterPlanMode for user alignment
 
-### ━━━ ⚡ EXECUTE ━━━ 3/4
+### ━━━ ⚡ EXECUTE ━━━ 3/5
 
 Do the work. Invoke selected capabilities via tool calls.
 
@@ -67,7 +67,7 @@ Do the work. Invoke selected capabilities via tool calls.
 - If a criterion can't be met, flag it immediately — don't defer to VERIFY
 - Make decisions explicit — state why you chose approach A over B
 
-### ━━━ ✅ VERIFY ━━━ 4/4
+### ━━━ ✅ VERIFY ━━━ 4/5
 
 No rubber-stamping. Each criterion needs specific evidence.
 
@@ -88,13 +88,30 @@ For EACH criterion:
 
 If any criteria failed, fix and re-verify before completing.
 
+### ━━━ 📚 LEARN ━━━ 5/5
+
+Reflect on the work and capture reusable knowledge. Skip this phase when the work was trivial or purely mechanical.
+
+**1. Reflection** (one sentence each):
+- What would I do differently next time?
+- What would a better algorithm have done differently?
+
+**2. Wisdom Frame** — if the session produced a genuine, reusable insight:
+
+```bash
+bun run tool:wisdom-frame --domain <domain> --observation "insight" [--type principle|contextual-rule|anti-pattern|evolution]
+```
+
+Domains: `development`, `workflow`, `communication`, `infrastructure`, `integration`, or any fitting domain.
+Only write if the insight is **genuine and reusable** — not every session produces one. When in doubt, skip.
+
 ## Output Format
 
 ```
 ♻️ ALGORITHM ═══════════════════════════
 🗒️ TASK: [brief description]
 
-━━━ 👁️ OBSERVE ━━━ 1/4
+━━━ 👁️ OBSERVE ━━━ 1/5
 🔎 REVERSE ENGINEERING:
 [reverse engineering output]
 
@@ -103,18 +120,22 @@ If any criteria failed, fix and re-verify before completing.
 
 🏹 CAPABILITIES: [selected capabilities]
 
-━━━ 🧠 PLAN ━━━ 2/4
+━━━ 🧠 PLAN ━━━ 2/5
 🧠 RISKS: [risks]
 🧠 PREMORTEM: [failure modes]
 📐 APPROACH: [execution plan]
 
-━━━ ⚡ EXECUTE ━━━ 3/4
+━━━ ⚡ EXECUTE ━━━ 3/5
 [work happens here]
 
-━━━ ✅ VERIFY ━━━ 4/4
+━━━ ✅ VERIFY ━━━ 4/5
 ✅ VERIFICATION:
 [criterion-by-criterion evidence]
 
 🔧 CHANGE: [what changed]
 🗣️ {{IDENTITY_NAME}}: [summary]
+
+━━━ 📚 LEARN ━━━ 5/5
+🪞 REFLECT: [what I'd do differently]
+📝 WISDOM: [frame update if genuine insight, or "No new insight"]
 ```
