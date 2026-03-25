@@ -6,7 +6,7 @@
  * learning digest, signal trends, failure patterns, active work state.
  */
 
-import { regenerateIfNeeded } from "./lib/claude-md";
+import { buildClaudeMd, regenerateIfNeeded } from "./lib/claude-md";
 import { buildSystemReminder } from "./lib/context";
 import { logDebug, logError } from "./lib/log";
 
@@ -34,8 +34,10 @@ try {
   if (!reminder) process.exit(0);
 
   if (process.env.CURSOR_VERSION) {
-    // Cursor: JSON with additional_context field
-    process.stdout.write(JSON.stringify({ additional_context: reminder }));
+    // Cursor: no native user-level rules — inject AGENTS.md + dynamic context
+    const agentsMd = buildClaudeMd();
+    const context = [agentsMd, reminder].filter(Boolean).join("\n\n");
+    process.stdout.write(JSON.stringify({ additional_context: context }));
   } else {
     // Claude Code: raw text
     console.log(reminder);
