@@ -16,10 +16,10 @@ afterAll(() => {
 });
 
 describe("opinions", () => {
-  test("createOpinion starts at 0.50 confidence", async () => {
+  test("createOpinion starts at 0.60 confidence", async () => {
     const { createOpinion } = await import("../src/hooks/lib/opinions");
     const op = createOpinion("User prefers concise responses", "test");
-    expect(op.confidence).toBe(0.5);
+    expect(op.confidence).toBe(0.6);
     expect(op.evidence).toHaveLength(1);
     expect(op.evidence[0].type).toBe("supporting");
   });
@@ -28,7 +28,7 @@ describe("opinions", () => {
     const { createOpinion, addEvidence } = await import("../src/hooks/lib/opinions");
     const op = createOpinion("User prefers concise responses", "test");
     const updated = addEvidence(op, "supporting", "another instance");
-    expect(updated.confidence).toBe(0.52);
+    expect(updated.confidence).toBe(0.65);
     expect(updated.evidence).toHaveLength(2);
   });
 
@@ -36,21 +36,21 @@ describe("opinions", () => {
     const { createOpinion, addEvidence } = await import("../src/hooks/lib/opinions");
     const op = createOpinion("User prefers verbose output", "test");
     const updated = addEvidence(op, "counter", "contradicted");
-    expect(updated.confidence).toBe(0.45);
+    expect(updated.confidence).toBe(0.5);
   });
 
   test("addEvidence jumps for confirmation", async () => {
     const { createOpinion, addEvidence } = await import("../src/hooks/lib/opinions");
     const op = createOpinion("User values direct feedback", "test");
     const updated = addEvidence(op, "confirmation", "user said yes");
-    expect(updated.confidence).toBe(0.6);
+    expect(updated.confidence).toBe(0.7);
   });
 
   test("addEvidence drops for contradiction", async () => {
     const { createOpinion, addEvidence } = await import("../src/hooks/lib/opinions");
     const op = createOpinion("User avoids long sessions", "test");
     const updated = addEvidence(op, "contradiction", "user disagreed");
-    expect(updated.confidence).toBe(0.3);
+    expect(updated.confidence).toBe(0.4);
   });
 
   test("confidence clamps to 0.01-0.99", async () => {
@@ -102,7 +102,7 @@ describe("opinions", () => {
     const all = readOpinions();
     const matches = all.filter((o) => o.statement === "User likes iterative work");
     expect(matches).toHaveLength(1);
-    expect(matches[0].confidence).toBe(0.52);
+    expect(matches[0].confidence).toBe(0.65);
   });
 
   test("findSimilarOpinion matches with Dice", async () => {
@@ -126,7 +126,7 @@ describe("opinions", () => {
   test("loadOpinionContext returns empty for low confidence", async () => {
     const { loadOpinionContext } = await import("../src/hooks/lib/opinions");
     const ctx = loadOpinionContext();
-    // All test opinions are at 0.50-0.52, below 0.85 threshold
+    // All test opinions are at 0.60-0.65, below 0.85 threshold
     expect(ctx).toBe("");
   });
 });

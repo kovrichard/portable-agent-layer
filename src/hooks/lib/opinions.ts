@@ -37,8 +37,8 @@ export interface Opinion {
 // ── Confidence Deltas (matching original PAI) ──
 
 const CONFIDENCE_DELTAS: Record<EvidenceType, number> = {
-  supporting: 0.02,
-  counter: -0.05,
+  supporting: 0.05,
+  counter: -0.1,
   confirmation: 0.1,
   contradiction: -0.2,
 };
@@ -130,13 +130,13 @@ export function findSimilarOpinion(
   return null;
 }
 
-/** Create a new opinion from a recurring note. Starts at confidence 0.50. */
+/** Create a new opinion from a recurring note. Starts at confidence 0.60. */
 export function createOpinion(statement: string, source: string): Opinion {
   const now = new Date().toISOString().slice(0, 10);
   return {
     id: slugify(statement),
     statement,
-    confidence: 0.5,
+    confidence: 0.6,
     category: classifyCategory(statement),
     evidence: [{ date: now, type: "supporting", source }],
     created: now,
