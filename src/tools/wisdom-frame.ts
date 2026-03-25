@@ -78,7 +78,7 @@ function appendToSection(
 
 // ── Core Update ──
 
-function updateFrame(
+export function updateFrame(
   domain: string,
   observation: string,
   type: ObservationType = "evolution"
@@ -187,18 +187,19 @@ ${type === "anti-pattern" ? `### ${observation}\n- **Severity:** Medium\n- **Fre
 
 // ── CLI ──
 
-const { values } = parseArgs({
-  args: Bun.argv.slice(2),
-  options: {
-    domain: { type: "string", short: "d" },
-    observation: { type: "string", short: "o" },
-    type: { type: "string", short: "t" },
-    help: { type: "boolean", short: "h" },
-  },
-});
+function run() {
+  const { values } = parseArgs({
+    args: Bun.argv.slice(2),
+    options: {
+      domain: { type: "string", short: "d" },
+      observation: { type: "string", short: "o" },
+      type: { type: "string", short: "t" },
+      help: { type: "boolean", short: "h" },
+    },
+  });
 
-if (values.help) {
-  console.log(`
+  if (values.help) {
+    console.log(`
 WisdomFrameUpdater — Update wisdom frames with observations
 
 Usage:
@@ -218,14 +219,17 @@ Examples:
   bun run tool:wisdom-frame -d development -o "mocking DB hides migration bugs" -t anti-pattern
   bun run tool:wisdom-frame -d communication -o "user prefers terse summaries" -t principle
 `);
-  process.exit(0);
+    process.exit(0);
+  }
+
+  if (!values.domain || !values.observation) {
+    console.error("Required: --domain and --observation");
+    process.exit(1);
+  }
+
+  const cliType = (values.type || "evolution") as ObservationType;
+  const result = updateFrame(values.domain, values.observation, cliType);
+  console.log(JSON.stringify(result, null, 2));
 }
 
-if (!values.domain || !values.observation) {
-  console.error("Required: --domain and --observation");
-  process.exit(1);
-}
-
-const type = (values.type || "evolution") as ObservationType;
-const result = updateFrame(values.domain, values.observation, type);
-console.log(JSON.stringify(result, null, 2));
+if (import.meta.main) run();
