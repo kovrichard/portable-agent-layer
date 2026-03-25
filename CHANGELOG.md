@@ -1,3 +1,16 @@
+# [0.18.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.17.0...v0.18.0) (2026-03-25)
+
+
+### Bug Fixes
+
+* **tools:** make the wisdom frame and analyze tools symlinks to be callable from anywhere ([248a03c](https://github.com/kovrichard/portable-agent-layer/commit/248a03c64cbbda2d7cd730b961ecbf0b7575b769))
+
+
+### Features
+
+* add 5th step to algorithm, add wisdom frame updater ([b29a5f4](https://github.com/kovrichard/portable-agent-layer/commit/b29a5f4efdc495a4746ab66fda413c3b5e19c97f))
+* add tests to wisdom frame updater ([2455f63](https://github.com/kovrichard/portable-agent-layer/commit/2455f63b2c87e62c4191897e600dd6077d6f92ab))
+
 # [0.17.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.16.0...v0.17.0) (2026-03-25)
 
 
