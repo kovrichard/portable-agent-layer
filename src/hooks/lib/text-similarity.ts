@@ -100,6 +100,32 @@ const STOP_WORDS = new Set([
   "own",
 ]);
 
+/** Strip common English suffixes to normalize word forms. Applied twice to handle stacked suffixes. */
+function stemOnce(word: string): string {
+  if (word.length <= 4) return word;
+  return word
+    .replace(/(?<=.{4})tion$/, "")
+    .replace(/(?<=.{4})sion$/, "")
+    .replace(/(?<=.{4})ment$/, "")
+    .replace(/(?<=.{3})ness$/, "")
+    .replace(/(?<=.{3})ings$/, "")
+    .replace(/(?<=.{3})ing$/, "")
+    .replace(/(?<=.{3})ies$/, "y")
+    .replace(/(?<=.{3})ive$/, "")
+    .replace(/(?<=.{3})ous$/, "")
+    .replace(/(?<=.{3})ful$/, "")
+    .replace(/(?<=.{3})ally$/, "")
+    .replace(/(?<=.{3})ly$/, "")
+    .replace(/(?<=.{3})ed$/, "")
+    .replace(/(?<=.{3})er$/, "")
+    .replace(/(?<=.{3})es$/, "")
+    .replace(/(?<=.{3})s$/, "");
+}
+
+function stem(word: string): string {
+  return stemOnce(stemOnce(word));
+}
+
 export function extractKeywords(text: string): Set<string> {
   return new Set(
     text
@@ -107,6 +133,8 @@ export function extractKeywords(text: string): Set<string> {
       .replace(/[^a-z0-9\s-]/g, " ")
       .split(/\s+/)
       .filter((w) => w.length > 2 && !STOP_WORDS.has(w))
+      .map((w) => stem(w))
+      .filter((w) => w.length > 2)
   );
 }
 

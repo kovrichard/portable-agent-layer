@@ -66,7 +66,7 @@ beforeAll(() => {
       [
         "---",
         "rating: 2",
-        `context: "npm versioning went wrong in different ways each time"`,
+        `context: "npm package registry upload kept failing silently"`,
         `date: "2026-03-2${i}"`,
         `ts: "2026-03-2${i}T12:00:0${i}.000Z"`,
         `slug: "${slug}"`,
@@ -167,7 +167,7 @@ describe("analyze", () => {
     const result = await analyze();
 
     const npmGroup = result.candidates.find((c) =>
-      c.entries.some((e) => e.text.includes("npm versioning"))
+      c.entries.some((e) => e.text.includes("npm package registry"))
     );
     expect(npmGroup).toBeTruthy();
     expect(npmGroup?.entries.length).toBeGreaterThanOrEqual(3);
