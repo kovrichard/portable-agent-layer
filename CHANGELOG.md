@@ -1,3 +1,10 @@
+# [0.19.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.18.1...v0.19.0) (2026-03-25)
+
+
+### Features
+
+* **research:** introduce grok researcher subagent ([216392b](https://github.com/kovrichard/portable-agent-layer/commit/216392b28e08d7ad2565d9fcf7a599ee9209bf95))
+
 ## [0.18.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.18.0...v0.18.1) (2026-03-25)
 
 
