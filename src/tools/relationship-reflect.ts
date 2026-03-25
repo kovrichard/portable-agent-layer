@@ -22,6 +22,7 @@ import {
   findSimilarOpinion,
   readOpinions,
   saveOpinion,
+  setLastReflectDate,
 } from "../hooks/lib/opinions";
 import { palHome } from "../hooks/lib/paths";
 import { similarity } from "../hooks/lib/text-similarity";
@@ -457,6 +458,7 @@ if (dryRun) {
 } else {
   const report = formatReport(period, notes, ratings, opinionChanges);
   const filepath = writeReport(report, period);
+  setLastReflectDate(new Date().toISOString().slice(0, 10));
   console.log(`\nCreated reflection report: ${filepath}`);
 
   const opinions = readOpinions();
