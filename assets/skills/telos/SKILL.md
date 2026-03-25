@@ -29,21 +29,23 @@ Read the file directly from `~/.agents/PAL/telos/` when the user asks about any 
 
 ## Updating
 
-Use the update tool for all changes. It validates the file, creates a backup, and logs the change:
+### General TELOS files (append)
+
+For all files except PROJECTS.md — appends content, creates backup, logs the change:
 
 ```bash
-# Append (no deduplication)
 bun ~/.agents/skills/telos/tools/update-telos.ts <FILE> "<content>" "<description>"
-
-# Upsert by ID (replaces existing entry with same ID, or appends if new)
-bun ~/.agents/skills/telos/tools/update-telos.ts <FILE> "<content>" "<description>" --id <id>
 ```
 
-### IDs and deduplication
+### Projects (upsert by ID)
 
-Use `--id` for any entry that may be updated later (projects, goals, beliefs, etc.). The ID must be the first column of the table row (e.g., `| pal | ...`). When the same `--id` is used again, the script finds the row starting with that ID and replaces it instead of appending a duplicate.
+For PROJECTS.md — upserts a row by the ID column. Replaces if the ID exists, appends if new:
 
-**Always use `--id` when updating existing entries.** Use a short, lowercase, kebab-case slug (e.g., `--id pal`, `--id my-project`). The content must include the ID as the first column.
+```bash
+bun ~/.agents/skills/telos/tools/update-projects.ts <id> "<row>" "<description>"
+```
+
+The ID is the first column of the table. Use short, lowercase, kebab-case slugs (e.g., `my-project`, `side-gig`).
 
 ## Routing
 
@@ -76,15 +78,15 @@ User: "add my new side project"
 → Ask: "What's the project name, status, and priority?"
 → User provides details
 → Show the row you'll add, confirm
-→ Run: bun ~/.agents/skills/telos/tools/update-telos.ts PROJECTS.md "| side-project | Side Project | In progress | Medium | Description |" "Added Side Project" --id side-project
+→ Run: bun ~/.agents/skills/telos/tools/update-projects.ts side-project "| side-project | Side Project | In progress | Medium | Description |" "Added Side Project"
 ```
 
 **Example 3: Updating a project**
 ```
-User: "mark PAL as complete"
-→ Read PROJECTS.md, find the PAL entry and its ID
+User: "mark X as complete"
+→ Read PROJECTS.md, find the entry and its ID
 → Show updated row, confirm
-→ Run: bun ~/.agents/skills/telos/tools/update-telos.ts PROJECTS.md "| pal | PAL | Complete | High | ... |" "Marked PAL as complete" --id pal
+→ Run: bun ~/.agents/skills/telos/tools/update-projects.ts some-id "| some-id | Project Name | Complete | High | ... |" "Marked project as complete"
 → The existing row is replaced, not duplicated
 ```
 
