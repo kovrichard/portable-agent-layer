@@ -2,7 +2,7 @@
 
 A cross-platform, cross-agent layer for portable AI workflows, memory, and accumulated knowledge.
 
-PAL lets you carry your agent context across **Windows**, **macOS**, and **Linux**, and work across different agent runtimes and interfaces such as **Claude** and **OpenCode**. Its core idea is simple: your knowledge and workflows should belong to **you**, not to a single machine, tool, or vendor.
+PAL lets you carry your agent context across **Windows**, **macOS**, and **Linux**, and work across different agent runtimes and interfaces such as **Claude Code**, **opencode**, **Cursor**, and **Codex**. Its core idea is simple: your knowledge and workflows should belong to **you**, not to a single machine, tool, or vendor.
 
 > Inspired in part by [Daniel Miessler](https://danielmiessler.com)'s work on [Personal AI Infrastructure](https://github.com/danielmiessler/Personal_AI_Infrastructure). PAL is an independent open-source implementation focused on portability across platforms and agents. It is not affiliated with or endorsed by Daniel Miessler.
 
@@ -33,7 +33,7 @@ With PAL, you can:
 > **Bun is required.** PAL is built on [Bun](https://bun.sh) and will not work with Node.js or other runtimes. Install it with `curl -fsSL https://bun.sh/install | bash`.
 
 - [Bun](https://bun.sh) >= 1.3.0
-- At least one of: [Claude Code](https://claude.ai/code) or [opencode](https://opencode.ai)
+- At least one of: [Claude Code](https://claude.ai/code), [opencode](https://opencode.ai), [Cursor](https://cursor.com), or [Codex](https://openai.com/index/introducing-codex/)
 
 ### Package mode (recommended)
 
@@ -93,6 +93,15 @@ pal cli install --opencode    # opencode only
 pal cli install --cursor      # Cursor only
 pal cli install               # all available (default)
 ```
+
+### Supported agents
+
+| Agent | Support | Skills | Hooks | AGENTS.md | Subagents |
+|-------|---------|--------|-------|-----------|-----------|
+| Claude Code | Full | Yes | Yes | Yes | Yes |
+| opencode | Full | Yes | Yes (plugin) | Yes | Yes |
+| Cursor | Full | Yes | Yes | Yes (injected via hook) | Yes |
+| Codex | Partial | Yes | No | Yes | No |
 
 ---
 
@@ -163,7 +172,7 @@ Your setup should be able to travel with you.
 ## Features
 
 - **Cross-platform**: works on Windows, macOS, and Linux
-- **Cross-agent**: designed to work across multiple agent ecosystems
+- **Cross-agent**: full support for Claude Code, opencode, and Cursor; partial support for Codex
 - **Portable knowledge**: export and import accumulated knowledge
 - **TypeScript-first**: built in TypeScript from day one
 - **Open source**: hackable, inspectable, extensible

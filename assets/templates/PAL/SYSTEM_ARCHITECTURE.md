@@ -433,8 +433,13 @@ src/targets/
 │   ├── install.ts   # Register hooks + skills in opencode config
 │   ├── uninstall.ts
 │   └── plugin.ts    # opencode plugin interface
+├── cursor/          # Cursor specific
+│   ├── install.ts   # Register hooks + skills in ~/.cursor/
+│   └── uninstall.ts
 └── lib.ts           # Shared: JSON read/write, settings merge, TELOS scaffold
 ```
+
+Codex support is partial — AGENTS.md is symlinked to `~/.codex/AGENTS.md` automatically (no dedicated target installer needed).
 
 ### Path Resolution
 
@@ -446,6 +451,8 @@ All paths resolve through `src/hooks/lib/paths.ts`:
 | PAL package | Auto-detected from source | `PAL_PKG` |
 | Claude config | `~/.claude` | `PAL_CLAUDE_DIR` |
 | opencode config | `~/.config/opencode` | `PAL_OPENCODE_DIR` |
+| Cursor config | `~/.cursor` | `PAL_CURSOR_DIR` |
+| Codex config | `~/.codex` | `PAL_CODEX_DIR` |
 | Agents dir | `~/.agents` | `PAL_AGENTS_DIR` |
 
 ### Portability Contract

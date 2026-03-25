@@ -1,12 +1,12 @@
 # PAL — Portable Agent Layer
 
-PAL is a persistent, cross-platform, cross-agent layer for portable AI workflows, memory, and accumulated knowledge. It runs inside any compatible AI coding agent (Claude Code, opencode) as an interconnected set of skills, hooks, tools, memory, and configuration — all orchestrated by The Algorithm.
+PAL is a persistent, cross-platform, cross-agent layer for portable AI workflows, memory, and accumulated knowledge. It runs inside any compatible AI coding agent (Claude Code, opencode, Cursor, Codex) as an interconnected set of skills, hooks, tools, memory, and configuration — all orchestrated by The Algorithm.
 
 ## How It Works
 
 **CLAUDE.md** (or the agent equivalent) is the entry point — generated from a template by the CLI installer. It defines execution modes, The Algorithm routing, and the context routing table. The agent loads it natively every session. A SessionStart hook keeps it fresh automatically.
 
-**The PAL home directory (`~/.agents/PAL/`)** contains all system documentation, user context (TELOS), and routing files. The rest of the system lives in the PAL package (`src/`) and the agent's config directory (`~/.claude/` or `~/.config/opencode/`).
+**The PAL home directory (`~/.agents/PAL/`)** contains all system documentation, user context (TELOS), and routing files. The rest of the system lives in the PAL package (`src/`) and the agent's config directory (`~/.claude/`, `~/.config/opencode/`, `~/.cursor/`, or `~/.codex/`).
 
 ## Directory Structure
 
@@ -29,7 +29,7 @@ PAL is a persistent, cross-platform, cross-agent layer for portable AI workflows
     hooks/                         # Session lifecycle hooks
       handlers/                    # Individual stop/prompt handlers
       lib/                         # Shared utilities
-    targets/                       # Agent-specific installers (Claude, opencode)
+    targets/                       # Agent-specific installers (Claude, opencode, Cursor)
     tools/                         # Standalone CLI tools
   assets/
     skills/                        # Bundled skills (16+)
@@ -104,6 +104,7 @@ pal                          # Start agent session with auto-summary on exit
 pal cli init                 # Scaffold PAL home + install hooks
 pal cli install [--claude]   # Register hooks/skills for Claude Code
 pal cli install [--opencode] # Register hooks/skills for opencode
+pal cli install [--cursor]   # Register hooks/skills for Cursor
 pal cli uninstall            # Remove hooks/skills
 pal cli status               # Show configuration
 pal cli doctor               # Check prerequisites and health
@@ -116,8 +117,8 @@ pal cli update               # Update PAL
 
 PAL is designed to work identically across:
 - **Platforms:** macOS, Linux, Windows
-- **Agents:** Claude Code, opencode (and future tools)
-- **Environment overrides:** `PAL_HOME`, `PAL_PKG`, `PAL_CLAUDE_DIR`, `PAL_OPENCODE_DIR`, `PAL_AGENTS_DIR`
+- **Agents:** Claude Code (full), opencode (full), Cursor (full), Codex (partial — AGENTS.md and skills only, no hooks or subagents)
+- **Environment overrides:** `PAL_HOME`, `PAL_PKG`, `PAL_CLAUDE_DIR`, `PAL_OPENCODE_DIR`, `PAL_CURSOR_DIR`, `PAL_CODEX_DIR`, `PAL_AGENTS_DIR`
 
 ## Extending PAL
 
