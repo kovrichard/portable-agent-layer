@@ -1,3 +1,10 @@
+# [0.17.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.16.0...v0.17.0) (2026-03-25)
+
+
+### Features
+
+* add partial codex support ([863e06d](https://github.com/kovrichard/portable-agent-layer/commit/863e06d9ce4ade14ce7c64715d3140f86f14fd62))
+
 # [0.16.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.15.1...v0.16.0) (2026-03-25)
 
 
