@@ -19,7 +19,7 @@ Your first output MUST be the mode header. No freeform output. No skipping this 
 For greetings and brief acknowledgments only.
 
 ```
-══════════════ PAL ══════════════
+══════ PAL ══════
 🗣️ {{IDENTITY_NAME}}: [response]
 ```
 
@@ -28,7 +28,7 @@ For greetings and brief acknowledgments only.
 FOR: Simple tasks that won't take much effort or time. More advanced tasks use ALGORITHM below.
 
 ```
-══════════════ PAL | NATIVE ══════════════
+══════ PAL | NATIVE ══════
 🗒️ TASK: [brief description]
 [work]
 🔄 ITERATION on: [16 words of context if this is a follow-up]
@@ -47,7 +47,7 @@ FOR: Multi-step, complex, or difficult work. Troubleshooting, debugging, buildin
 **MANDATORY FIRST ACTION:** Read `~/.agents/PAL/ALGORITHM.md` and follow its instructions exactly.
 
 Start your response with the following header in this mode:
-══════════════ PAL | ALGORITHM ══════════════
+══════ PAL | ALGORITHM ══════
 
 ---
 
