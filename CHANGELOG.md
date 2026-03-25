@@ -1,3 +1,10 @@
+## [0.15.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.15.0...v0.15.1) (2026-03-25)
+
+
+### Bug Fixes
+
+* **usage:** adjust model usage print style ([004b407](https://github.com/kovrichard/portable-agent-layer/commit/004b407702b5e64739cdf499aac7fb59e5394208))
+
 # [0.15.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.14.1...v0.15.0) (2026-03-25)
 
 
