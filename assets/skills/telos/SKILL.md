@@ -29,11 +29,21 @@ Read the file directly from `~/.agents/PAL/telos/` when the user asks about any 
 
 ## Updating
 
-Use the update tool for all changes. It validates the file, creates a backup, appends content, and logs the change:
+Use the update tool for all changes. It validates the file, creates a backup, and logs the change:
 
 ```bash
+# Append (no deduplication)
 bun ~/.agents/skills/telos/tools/update-telos.ts <FILE> "<content>" "<description>"
+
+# Upsert by ID (replaces existing entry with same ID, or appends if new)
+bun ~/.agents/skills/telos/tools/update-telos.ts <FILE> "<content>" "<description>" --id <id>
 ```
+
+### IDs and deduplication
+
+Use `--id` for any entry that may be updated later (projects, goals, beliefs, etc.). The ID must be the first column of the table row (e.g., `| pal | ...`). When the same `--id` is used again, the script finds the row starting with that ID and replaces it instead of appending a duplicate.
+
+**Always use `--id` when updating existing entries.** Use a short, lowercase, kebab-case slug (e.g., `--id pal`, `--id my-project`). The content must include the ID as the first column.
 
 ## Routing
 
@@ -66,15 +76,24 @@ User: "add my new side project"
 → Ask: "What's the project name, status, and priority?"
 → User provides details
 → Show the row you'll add, confirm
-→ Run: bun ~/.agents/skills/telos/tools/update-telos.ts PROJECTS.md "| Side Project | In progress | Medium | Description |" "Added Side Project"
+→ Run: bun ~/.agents/skills/telos/tools/update-telos.ts PROJECTS.md "| side-project | Side Project | In progress | Medium | Description |" "Added Side Project" --id side-project
 ```
 
-**Example 3: Updating goals**
+**Example 3: Updating a project**
+```
+User: "mark PAL as complete"
+→ Read PROJECTS.md, find the PAL entry and its ID
+→ Show updated row, confirm
+→ Run: bun ~/.agents/skills/telos/tools/update-telos.ts PROJECTS.md "| pal | PAL | Complete | High | ... |" "Marked PAL as complete" --id pal
+→ The existing row is replaced, not duplicated
+```
+
+**Example 4: Updating goals**
 ```
 User: "I finished the migration, update my goals"
 → Read GOALS.md to see current state
 → Discuss what changed — what's done, what's next
-→ Run tool to append updated goals
+→ Run tool with --id to update existing goal entry
 → Remind: CLAUDE.md regenerates next session
 ```
 
