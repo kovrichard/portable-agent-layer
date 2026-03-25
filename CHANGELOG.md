@@ -1,3 +1,17 @@
+# [0.16.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.15.1...v0.16.0) (2026-03-25)
+
+
+### Bug Fixes
+
+* **cursor:** make agents.md work ([d93e4fa](https://github.com/kovrichard/portable-agent-layer/commit/d93e4fa606248165c0fec98d3877cec3cdc89adf))
+* **cursor:** make context injection work ([39efb5c](https://github.com/kovrichard/portable-agent-layer/commit/39efb5c3774d6597697464336977f8e7f0f3efdd))
+
+
+### Features
+
+* **agent:** implement agent detection and response formatting for Cursor and Claude Code ([193894b](https://github.com/kovrichard/portable-agent-layer/commit/193894b578c43166d0c99ce294f3e67f5a7d3060))
+* introduce cursor skill and agent support ([09e4a92](https://github.com/kovrichard/portable-agent-layer/commit/09e4a92752c304c2f4f10ee42897eae01378a137))
+
 ## [0.15.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.15.0...v0.15.1) (2026-03-25)
 
 
