@@ -1,3 +1,16 @@
+# [0.14.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.13.0...v0.14.0) (2026-03-25)
+
+
+### Bug Fixes
+
+* **opinion:** update confidence values in opinion creation and evidence addition ([eb827be](https://github.com/kovrichard/portable-agent-layer/commit/eb827be5af66b8000c008b270188307fd36dab86))
+
+
+### Features
+
+* **opinion:** add deduplication in opinion management ([dd8aebd](https://github.com/kovrichard/portable-agent-layer/commit/dd8aebd3776ac71a9f7a87fa7f7b570876f3e4fe))
+* **text-similarity:** add stemming functions to normalize keywords in text extraction ([fedc22c](https://github.com/kovrichard/portable-agent-layer/commit/fedc22c1871bcdd4995c43d7f664b7868e95bdc9))
+
 # [0.13.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.12.0...v0.13.0) (2026-03-24)
 
 
