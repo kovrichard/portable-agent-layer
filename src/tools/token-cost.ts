@@ -9,6 +9,7 @@
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { MODEL_PRICING } from "../hooks/lib/models";
@@ -104,16 +105,16 @@ function fmtCost(n: number): string {
   return `$${n.toFixed(4)}`;
 }
 
-function printRow(label: string, b: Bucket): void {
+function printRow(label: string, b: Bucket, labelWidth = 14): void {
   const tokens = b.input + b.output + b.cacheWrite + b.cacheRead;
   console.log(
-    `  ${label.padEnd(14)} ${fmt(tokens).padStart(8)} tok  ${fmt(b.calls).padStart(5)} calls  ${fmtCost(b.cost).padStart(8)}`
+    `  ${label.padEnd(labelWidth)} ${fmt(tokens).padStart(8)} tok  ${fmt(b.calls).padStart(5)} calls  ${fmtCost(b.cost).padStart(8)}`
   );
 }
 
-function printDetailed(label: string, b: Bucket): void {
+function printDetailed(label: string, b: Bucket, labelWidth = 14): void {
   console.log(
-    `  ${label.padEnd(14)} ${fmt(b.input).padStart(8)} in  ${fmt(b.output).padStart(8)} out  ${fmt(b.cacheWrite).padStart(8)} cw  ${fmt(b.cacheRead).padStart(8)} cr  ${fmtCost(b.cost).padStart(8)}`
+    `  ${label.padEnd(labelWidth)} ${fmt(b.input).padStart(8)} in  ${fmt(b.output).padStart(8)} out  ${fmt(b.cacheWrite).padStart(8)} cw  ${fmt(b.cacheRead).padStart(8)} cr  ${fmtCost(b.cost).padStart(8)}`
   );
 }
 
@@ -160,7 +161,7 @@ function readClaudeCode(): {
   const byModel: Record<string, Bucket> = {};
   const byProject: Record<string, TimeBuckets> = {};
 
-  const claudeDir = resolve(process.env.HOME ?? "~", ".claude", "projects");
+  const claudeDir = resolve(homedir(), ".claude", "projects");
   if (!existsSync(claudeDir)) return { buckets, byModel, byProject };
 
   const projectDirs = readdirSync(claudeDir, { withFileTypes: true })
@@ -294,8 +295,10 @@ printRow("Total", cc.buckets.total);
 if (Object.keys(cc.byModel).length > 0) {
   console.log("\n  By Model (all time)\n");
   const sorted = Object.entries(cc.byModel).sort((a, b) => b[1].cost - a[1].cost);
-  for (const [model, bucket] of sorted) {
-    printDetailed(model.replace("claude-", ""), bucket);
+  const modelNames = sorted.map(([m]) => m.replace("claude-", ""));
+  const modelWidth = Math.max(14, ...modelNames.map((n) => n.length + 2));
+  for (let i = 0; i < sorted.length; i++) {
+    printDetailed(modelNames[i], sorted[i][1], modelWidth);
   }
 }
 
