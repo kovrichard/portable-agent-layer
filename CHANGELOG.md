@@ -1,3 +1,10 @@
+# [0.15.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.14.1...v0.15.0) (2026-03-25)
+
+
+### Features
+
+* **telos:** enhance update tool with ID support for deduplication and replacement ([2c602db](https://github.com/kovrichard/portable-agent-layer/commit/2c602dbacd067ed242384172cb4b0a97b1cb8945))
+
 ## [0.14.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.14.0...v0.14.1) (2026-03-25)
 
 
