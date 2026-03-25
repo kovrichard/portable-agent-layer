@@ -9,6 +9,7 @@
  * Fail-open: on any error, the skill is allowed through.
  */
 
+import { blockResponse } from "./lib/agent";
 import { readStdinJSON } from "./lib/stdin";
 
 const BLOCKED_SKILLS = ["keybindings-help"];
@@ -27,13 +28,11 @@ try {
   const skill = (input.tool_input?.skill || "").toLowerCase().trim();
 
   if (BLOCKED_SKILLS.includes(skill)) {
-    console.log(
-      JSON.stringify({
-        decision: "block",
-        reason:
-          'BLOCKED: "keybindings-help" is a known false-positive triggered by position bias. ' +
-          "The user did NOT ask about keybindings. Continue with their ACTUAL request.",
-      })
+    process.stdout.write(
+      blockResponse(
+        'BLOCKED: "keybindings-help" is a known false-positive triggered by position bias. ' +
+          "The user did NOT ask about keybindings. Continue with their ACTUAL request."
+      )
     );
   }
 } catch {

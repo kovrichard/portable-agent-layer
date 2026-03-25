@@ -7,6 +7,7 @@
  */
 
 import { checkReadmeSync } from "./handlers/readme-sync";
+import { isCursor } from "./lib/agent";
 import { logError } from "./lib/log";
 import { readStdinJSON } from "./lib/stdin";
 import { runStopHandlers } from "./lib/stop";
@@ -22,7 +23,13 @@ interface StopHookInput {
 try {
   const decision = checkReadmeSync();
   if (decision.decision === "block") {
-    console.log(JSON.stringify(decision));
+    if (isCursor()) {
+      // Cursor stop hook: followup_message auto-sends to the agent
+      process.stdout.write(JSON.stringify({ followup_message: decision.reason }));
+    } else {
+      // Claude Code: block decision
+      process.stdout.write(JSON.stringify(decision));
+    }
     process.exit(0);
   }
 } catch (err) {
