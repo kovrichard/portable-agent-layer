@@ -68,6 +68,7 @@ export const platform = {
   claudeDir: () => process.env.PAL_CLAUDE_DIR || resolve(h, ".claude"),
   opencodeDir: () => process.env.PAL_OPENCODE_DIR || resolve(h, ".config", "opencode"),
   cursorDir: () => process.env.PAL_CURSOR_DIR || resolve(h, ".cursor"),
+  codexDir: () => process.env.PAL_CODEX_DIR || resolve(h, ".codex"),
   agentsDir: () => process.env.PAL_AGENTS_DIR || resolve(h, ".agents"),
 } as const;
 

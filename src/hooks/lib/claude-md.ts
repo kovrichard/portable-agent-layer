@@ -48,19 +48,25 @@ function latestMtime(...filePaths: string[]): number {
   return latest;
 }
 
-/** Ensure CLAUDE.md is a symlink pointing to AGENTS.md */
-function ensureSymlink(): void {
-  const { outputPath, symlinkPath } = getOutputPaths();
+/** Create or verify a symlink pointing to AGENTS.md */
+function ensureOneSymlink(linkPath: string, targetPath: string): void {
   try {
-    const stat = lstatSync(symlinkPath);
-    // If it exists but isn't a symlink (e.g. old generated file), remove it
-    if (!stat.isSymbolicLink()) unlinkSync(symlinkPath);
+    const stat = lstatSync(linkPath);
+    if (!stat.isSymbolicLink()) unlinkSync(linkPath);
     else return; // already a symlink, leave it
   } catch {
     // doesn't exist — create it
   }
-  const relTarget = relative(dirname(symlinkPath), outputPath).replaceAll("\\", "/");
-  symlinkSync(relTarget, symlinkPath);
+  ensureDir(dirname(linkPath));
+  const relTarget = relative(dirname(linkPath), targetPath).replaceAll("\\", "/");
+  symlinkSync(relTarget, linkPath);
+}
+
+/** Ensure all agent symlinks point to the canonical AGENTS.md */
+function ensureSymlinks(): void {
+  const { outputPath, symlinkPath } = getOutputPaths();
+  ensureOneSymlink(symlinkPath, outputPath);
+  ensureOneSymlink(resolve(platform.codexDir(), "AGENTS.md"), outputPath);
 }
 
 /** Returns true if AGENTS.md needs to be regenerated */
@@ -150,7 +156,7 @@ export function buildClaudeMd(): string {
 /** Regenerate AGENTS.md if any source file is newer, and ensure CLAUDE.md symlink exists. Returns true if rebuilt. */
 export function regenerateIfNeeded(): boolean {
   const { outputPath } = getOutputPaths();
-  ensureSymlink();
+  ensureSymlinks();
   if (!needsRebuild()) return false;
   ensureDir(dirname(outputPath));
   writeFileSync(outputPath, buildClaudeMd(), "utf-8");
