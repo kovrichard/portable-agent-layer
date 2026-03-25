@@ -20,10 +20,8 @@ import {
   addEvidence,
   createOpinion,
   findSimilarOpinion,
-  getLastReflectDate,
   readOpinions,
   saveOpinion,
-  setLastReflectDate,
 } from "../hooks/lib/opinions";
 import { palHome } from "../hooks/lib/paths";
 import { similarity } from "../hooks/lib/text-similarity";
@@ -157,12 +155,9 @@ function loadRatings(daysBack: number): Rating[] {
 function promoteToOpinions(notes: ParsedNote[], dryRun: boolean): OpinionChange[] {
   const changes: OpinionChange[] = [];
   const opinions = readOpinions();
-  const lastReflect = getLastReflectDate();
 
-  // Only O notes become opinions (B=biographical, about the AI, not user preferences)
-  const opinionNotes = notes.filter(
-    (n) => n.type === "O" && (!lastReflect || n.date > lastReflect)
-  );
+  // All O notes in the window — deduplication happens at the evidence level
+  const opinionNotes = notes.filter((n) => n.type === "O");
 
   // Group similar notes together
   const groups = new Map<string, ParsedNote[]>();
@@ -202,7 +197,11 @@ function promoteToOpinions(notes: ParsedNote[], dryRun: boolean): OpinionChange[
       }
     } else if (group.length >= 2) {
       // New opinion — requires at least 2 occurrences
-      const opinion = createOpinion(representative, `${group.length}x in reflect period`);
+      // Store individual note texts as evidence so re-runs deduplicate correctly
+      let opinion = createOpinion(representative, group[0].text.slice(0, 120));
+      for (const note of group.slice(1)) {
+        opinion = addEvidence(opinion, "supporting", note.text.slice(0, 120));
+      }
       changes.push({
         statement: representative,
         action: "created",
@@ -458,7 +457,6 @@ if (dryRun) {
 } else {
   const report = formatReport(period, notes, ratings, opinionChanges);
   const filepath = writeReport(report, period);
-  setLastReflectDate(new Date().toISOString().slice(0, 10));
   console.log(`\nCreated reflection report: ${filepath}`);
 
   const opinions = readOpinions();

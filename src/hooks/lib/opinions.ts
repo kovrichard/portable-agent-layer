@@ -144,12 +144,19 @@ export function createOpinion(statement: string, source: string): Opinion {
   };
 }
 
-/** Add evidence to an opinion and adjust its confidence. */
+/** Check if an opinion already has evidence with this exact source text. */
+export function hasEvidence(opinion: Opinion, source: string): boolean {
+  return opinion.evidence.some((e) => e.source === source);
+}
+
+/** Add evidence to an opinion and adjust its confidence. No-op if duplicate. */
 export function addEvidence(
   opinion: Opinion,
   type: EvidenceType,
   source: string
 ): Opinion {
+  if (hasEvidence(opinion, source)) return opinion;
+
   const now = new Date().toISOString().slice(0, 10);
   const delta = CONFIDENCE_DELTAS[type];
   const newConfidence = Math.min(
