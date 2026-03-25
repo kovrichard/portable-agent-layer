@@ -28,11 +28,19 @@ try {
   logError("LoadContext:regenerate", err);
 }
 
-// --- Dynamic system-reminder to stdout (empty = nothing injected) ---
+// --- Context to stdout ---
 try {
   const reminder = buildSystemReminder();
-  if (reminder) console.log(reminder);
-  logDebug("LoadContext", `Reminder injected: ${reminder ? reminder.length : 0} chars`);
+  if (!reminder) process.exit(0);
+
+  if (process.env.CURSOR_VERSION) {
+    // Cursor: JSON with additional_context field
+    process.stdout.write(JSON.stringify({ additional_context: reminder }));
+  } else {
+    // Claude Code: raw text
+    console.log(reminder);
+  }
+  logDebug("LoadContext", `Reminder injected: ${reminder.length} chars`);
 } catch (err) {
   logError("LoadContext:reminder", err);
 }
