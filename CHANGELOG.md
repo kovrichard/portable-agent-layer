@@ -1,3 +1,10 @@
+## [0.18.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.18.0...v0.18.1) (2026-03-25)
+
+
+### Bug Fixes
+
+* **tools:** allowlist agent tools ([3e458d6](https://github.com/kovrichard/portable-agent-layer/commit/3e458d63cd27ab31cb3332d858ba742ca2210382))
+
 # [0.18.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.17.0...v0.18.0) (2026-03-25)
 
 
