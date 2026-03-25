@@ -1,3 +1,10 @@
+## [0.14.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.14.0...v0.14.1) (2026-03-25)
+
+
+### Bug Fixes
+
+* **relationship:** set last reflection date again when creating report ([c64a56f](https://github.com/kovrichard/portable-agent-layer/commit/c64a56f444b41d9b3ef3e458310ab9cf11930670))
+
 # [0.14.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.13.0...v0.14.0) (2026-03-25)
 
 
