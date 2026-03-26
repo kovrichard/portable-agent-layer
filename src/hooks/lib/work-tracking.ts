@@ -3,7 +3,7 @@
  * Used by both Claude Code (StopOrchestrator) and opencode (plugin).
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ensureDir, paths } from "./paths";
 import { now } from "./time";
@@ -141,6 +141,43 @@ export function extractHandoff(lastAssistant: string): string {
   if (paragraphs.length > 0) return paragraphs[paragraphs.length - 1];
   if (cleaned.length > 200) return cleaned.slice(-200).trim();
   return cleaned;
+}
+
+// ── Per-Project History ──────────────────────────────────────────
+
+export interface ProjectHistoryEntry {
+  date: string;
+  title: string;
+  summary: string;
+  insights: string;
+}
+
+/** Convert a cwd path to a filesystem-safe slug (last directory segment) */
+export function cwdToSlug(cwd: string): string {
+  const normalized = cwd.replace(/\\/g, "/").replace(/\/+$/, "");
+  return normalized.split("/").pop() || "unknown";
+}
+
+/** Append a learning entry to the project's history.jsonl */
+export function appendProjectHistory(cwd: string, entry: ProjectHistoryEntry): void {
+  const slug = cwdToSlug(cwd);
+  const dir = ensureDir(resolve(paths.projectHistory(), slug));
+  const historyPath = resolve(dir, "history.jsonl");
+  const line = `${JSON.stringify(entry)}\n`;
+  appendFileSync(historyPath, line, "utf-8");
+}
+
+/** Read the project history for a given cwd */
+export function readProjectHistory(cwd: string, limit = 15): ProjectHistoryEntry[] {
+  const slug = cwdToSlug(cwd);
+  const historyPath = resolve(paths.projectHistory(), slug, "history.jsonl");
+  if (!existsSync(historyPath)) return [];
+  try {
+    const lines = readFileSync(historyPath, "utf-8").trim().split("\n").filter(Boolean);
+    return lines.slice(-limit).map((line) => JSON.parse(line) as ProjectHistoryEntry);
+  } catch {
+    return [];
+  }
 }
 
 // ── Persistent Projects ──────────────────────────────────────────

@@ -84,3 +84,12 @@ If the grok-search tool fails (missing `XAI_API_KEY` or API error), fall back to
 
 [What couldn't be confirmed or needs monitoring as the situation develops]
 ```
+
+## Fallback Footnote (MANDATORY when using WebSearch fallback)
+
+If you fell back to WebSearch because the Grok API was unavailable, you MUST append this footnote at the very end of your output:
+
+```markdown
+---
+> **Note:** This research used WebSearch fallback instead of Grok Search. The `XAI_API_KEY` environment variable is not set. To enable Grok real-time search, set the key: `export XAI_API_KEY=...` (get one at https://console.x.ai/)
+```

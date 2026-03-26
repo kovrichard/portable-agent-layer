@@ -39,6 +39,9 @@ memory/wisdom/state/
 memory/relationship/
 memory/entities/entity-index.json
 
+# Per-project session history
+memory/projects/
+
 # Downloaded files (PDFs, etc.)
 memory/downloads/
 

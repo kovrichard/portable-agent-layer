@@ -167,8 +167,6 @@ ${type === "anti-pattern" ? `### ${observation}\n- **Severity:** Medium\n- **Fre
         `- ${date()}: Principle candidate — ${observation}`
       );
       break;
-
-    case "evolution":
     default:
       content = appendToSection(content, "## Evolution Log", evolutionEntry);
       break;

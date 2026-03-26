@@ -19,6 +19,7 @@ import {
   extractLastUser,
   parseMessages,
 } from "../lib/transcript";
+import { appendProjectHistory } from "../lib/work-tracking";
 
 function slugify(text: string): string {
   return text
@@ -182,6 +183,14 @@ export async function captureWorkLearning(
 
   const filepath = resolve(dir, filename);
   writeFileSync(filepath, content, "utf-8");
+
+  // Append to per-project history (agent-agnostic recall)
+  appendProjectHistory(process.cwd(), {
+    date: new Date().toISOString().slice(0, 10),
+    title,
+    summary,
+    insights,
+  });
 
   if (sessionId) markCaptured(sessionId, filepath, messages.length);
 }

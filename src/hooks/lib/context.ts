@@ -17,6 +17,7 @@ import { computeSignalTrends, formatTrends } from "./signal-trends";
 import { readFramePrinciples } from "./wisdom";
 import {
   activeProjects,
+  readProjectHistory,
   readSessions,
   recentSessions,
   staleProjects,
@@ -240,25 +241,15 @@ export function loadLearningDigest(): string {
     const entries = readLearnings(paths.sessionLearning(), 10);
     if (entries.length === 0) return "";
 
-    const thisProject = entries.filter((e) => e.cwd === cwd).slice(0, 4);
-    const other = entries.filter((e) => e.cwd !== cwd).slice(0, 3);
+    // This-project learnings are now in loadProjectHistoryContext(); only show cross-project here
+    const other = entries.filter((e) => e.cwd !== cwd).slice(0, 5);
 
-    if (thisProject.length === 0 && other.length === 0) return "";
+    if (other.length === 0) return "";
 
     const lines: string[] = [];
 
-    if (thisProject.length > 0) {
-      lines.push("## This Project — Recent Sessions");
-      for (const e of thisProject) {
-        lines.push(`- **${e.title}**`);
-        if (e.insights) lines.push(`  ${e.insights.split("\n")[0].slice(0, 150)}`);
-      }
-    }
-
-    if (other.length > 0) {
-      lines.push(thisProject.length > 0 ? "" : "", "## Other Recent Learnings");
-      for (const e of other) lines.push(`- ${e.title}`);
-    }
+    lines.push("## Other Recent Learnings");
+    for (const e of other) lines.push(`- ${e.title}`);
 
     return lines.join("\n");
   } catch {
@@ -346,6 +337,25 @@ export function loadSignalTrends(): string {
   }
 }
 
+/** Load per-project session history for the current working directory */
+export function loadProjectHistoryContext(): string {
+  try {
+    const cwd = process.cwd();
+    const entries = readProjectHistory(cwd, 15);
+    if (entries.length === 0) return "";
+
+    const lines: string[] = ["## This Project — Session History"];
+    for (const e of entries) {
+      lines.push(`- **${e.title}** (${e.date})`);
+      if (e.summary) lines.push(`  ${e.summary.split("\n")[0].slice(0, 150)}`);
+    }
+
+    return lines.join("\n");
+  } catch {
+    return "";
+  }
+}
+
 /** Load recent relationship notes (today + yesterday) */
 export function loadRelationshipContext(): string {
   try {
@@ -373,6 +383,9 @@ export function buildSystemReminder(): string {
     ? loadRelationshipContext()
     : "";
   const digest = isEnabled(settings, "learningDigest") ? loadLearningDigest() : "";
+  const projectHistory = isEnabled(settings, "projectHistory")
+    ? loadProjectHistoryContext()
+    : "";
   const trends = isEnabled(settings, "signalTrends") ? loadSignalTrends() : "";
   const failures = isEnabled(settings, "failurePatterns") ? loadFailurePatterns() : "";
   const synthesis = isEnabled(settings, "synthesis")
@@ -384,6 +397,7 @@ export function buildSystemReminder(): string {
   if (wisdom) parts.push(wisdom);
   if (opinions) parts.push(opinions);
   if (relationship) parts.push(relationship);
+  if (projectHistory) parts.push(projectHistory);
   if (digest) parts.push(digest);
   if (synthesis) parts.push(synthesis);
   if (trends) parts.push(trends);

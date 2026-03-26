@@ -7,6 +7,7 @@
  */
 
 import {
+  copyFileSync,
   existsSync,
   lstatSync,
   readdirSync,
@@ -48,7 +49,7 @@ function latestMtime(...filePaths: string[]): number {
   return latest;
 }
 
-/** Create or verify a symlink pointing to AGENTS.md */
+/** Create or verify a symlink pointing to AGENTS.md (falls back to copy on Windows EPERM) */
 function ensureOneSymlink(linkPath: string, targetPath: string): void {
   try {
     const stat = lstatSync(linkPath);
@@ -58,8 +59,16 @@ function ensureOneSymlink(linkPath: string, targetPath: string): void {
     // doesn't exist — create it
   }
   ensureDir(dirname(linkPath));
-  const relTarget = relative(dirname(linkPath), targetPath).replaceAll("\\", "/");
-  symlinkSync(relTarget, linkPath);
+  try {
+    const relTarget = relative(dirname(linkPath), targetPath).replaceAll("\\", "/");
+    symlinkSync(relTarget, linkPath);
+  } catch (e: unknown) {
+    if ((e as NodeJS.ErrnoException).code === "EPERM") {
+      copyFileSync(targetPath, linkPath);
+    } else {
+      throw e;
+    }
+  }
 }
 
 /** Ensure all agent symlinks point to the canonical AGENTS.md */
@@ -156,9 +165,12 @@ export function buildClaudeMd(): string {
 /** Regenerate AGENTS.md if any source file is newer, and ensure CLAUDE.md symlink exists. Returns true if rebuilt. */
 export function regenerateIfNeeded(): boolean {
   const { outputPath } = getOutputPaths();
-  ensureSymlinks();
-  if (!needsRebuild()) return false;
+  if (!needsRebuild()) {
+    ensureSymlinks();
+    return false;
+  }
   ensureDir(dirname(outputPath));
   writeFileSync(outputPath, buildClaudeMd(), "utf-8");
+  ensureSymlinks();
   return true;
 }

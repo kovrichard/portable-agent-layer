@@ -443,6 +443,18 @@ async function init(args: string[]) {
 }
 
 async function install(targets: { claude: boolean; opencode: boolean; cursor: boolean }) {
+  // Ensure dependencies are installed
+  const pkg = palPkg();
+  log.info("Installing dependencies...");
+  const deps = spawnSync("bun", ["install", "--frozen-lockfile"], {
+    cwd: pkg,
+    stdio: "inherit",
+    shell: true,
+  });
+  if (deps.status !== 0) {
+    log.warn("bun install failed — continuing anyway, but hooks may not work");
+  }
+
   // Scaffold TELOS + PAL settings, then prompt for missing identity
   const { scaffoldTelos, scaffoldPalSettings } = await import("../targets/lib");
   const { promptIdentity } = await import("./setup-identity");

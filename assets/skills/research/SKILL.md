@@ -14,16 +14,16 @@ argument-hint: <topic or question>
 
 ## Available Researcher Agents
 
-- **claude-researcher** — academic depth, query decomposition, scholarly synthesis
+- **gemini-researcher** — academic depth via Gemini grounding, query decomposition, scholarly synthesis (falls back to WebSearch if no API key)
 - **multi-perspective-researcher** — breadth, multiple angles, diverse viewpoints
-- **investigative-researcher** — verification rigor, triple-checks, source credibility
+- **perplexity-researcher** — investigative rigor via Perplexity grounding, source cross-referencing, credibility assessment (falls back to WebSearch if no API key)
 - **grok-researcher** — real-time data via Grok/X API, breaking news, social sentiment (falls back to WebSearch with recency focus if no API key)
 
 ## Quick Mode
 
 Spawn **1 subagent** for a focused answer:
 
-- Spawn `claude-researcher` with the full query and context
+- Spawn `gemini-researcher` with the full query and context
 
 Wait for the result, then deliver it directly with light formatting.
 
@@ -31,12 +31,12 @@ Wait for the result, then deliver it directly with light formatting.
 
 Craft **3 different queries** optimized for each researcher's strengths, then spawn all **in parallel (in a single message)**:
 
-- Spawn `claude-researcher` with a query optimized for depth/analysis
+- Spawn `gemini-researcher` with a query optimized for depth/analysis
 - Spawn `multi-perspective-researcher` with a query optimized for breadth/perspectives
 - Spawn `grok-researcher` with a query optimized for real-time data, recent developments, current state
 
 **Query design:**
-- claude-researcher: focus on authoritative sources, technical depth, how/why
+- gemini-researcher: focus on authoritative sources, technical depth, how/why
 - multi-perspective-researcher: focus on different stakeholder views, trade-offs, alternatives
 - grok-researcher: focus on latest news, breaking developments, social sentiment, what's happening right now
 
@@ -44,12 +44,12 @@ Craft **3 different queries** optimized for each researcher's strengths, then sp
 
 Craft **8 queries** (2 per researcher type, each from a different angle), then spawn all **in parallel (in a single message)**:
 
-- Spawn `claude-researcher` — angle 1: core technical depth
-- Spawn `claude-researcher` — angle 2: historical context / evolution
+- Spawn `gemini-researcher` — angle 1: core technical depth
+- Spawn `gemini-researcher` — angle 2: historical context / evolution
 - Spawn `multi-perspective-researcher` — angle 3: stakeholder perspectives
 - Spawn `multi-perspective-researcher` — angle 4: cross-domain connections
-- Spawn `investigative-researcher` — angle 5: verify key claims
-- Spawn `investigative-researcher` — angle 6: find contradictions / counter-evidence
+- Spawn `perplexity-researcher` — angle 5: verify key claims
+- Spawn `perplexity-researcher` — angle 6: find contradictions / counter-evidence
 - Spawn `grok-researcher` — angle 7: real-time developments and breaking news
 - Spawn `grok-researcher` — angle 8: social sentiment, public reaction, trending discourse
 

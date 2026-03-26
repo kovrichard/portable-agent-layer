@@ -44,6 +44,7 @@ export const HOOK_MANAGED_DIRS = [
   "memory/learning/synthesis",
   "memory/relationship",
   "memory/wisdom/state",
+  "memory/projects",
   ".agents/PAL",
 ];
 

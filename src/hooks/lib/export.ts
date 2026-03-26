@@ -15,7 +15,8 @@ const EXPORT_DIRS = ["telos", "memory"];
 const SKIP_PATTERNS = ["memory/downloads"];
 
 function shouldSkip(relPath: string): boolean {
-  return SKIP_PATTERNS.some((p) => relPath.startsWith(p));
+  const normalized = relPath.replaceAll("\\", "/");
+  return SKIP_PATTERNS.some((p) => normalized.startsWith(p));
 }
 
 /** Recursively collect all files under a directory, returning paths relative to root. */
@@ -32,7 +33,7 @@ function walkDir(dir: string, root: string): string[] {
     if (entry.isDirectory()) {
       files.push(...walkDir(fullPath, root));
     } else if (entry.isFile()) {
-      files.push(relPath);
+      files.push(relPath.replaceAll("\\", "/"));
     }
   }
   return files;
