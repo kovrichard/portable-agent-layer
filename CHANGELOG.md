@@ -1,3 +1,10 @@
+# [0.21.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.20.0...v0.21.0) (2026-03-26)
+
+
+### Features
+
+* introduce new agents, store project memory ([2c21b9c](https://github.com/kovrichard/portable-agent-layer/commit/2c21b9cae17a4df7639e4333a3a8275d1bd1207e))
+
 # [0.20.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.19.0...v0.20.0) (2026-03-26)
 
 
