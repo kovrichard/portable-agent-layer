@@ -1,12 +1,11 @@
 /**
- * Structured work tracking: session history + persistent projects.
+ * Structured work tracking: session history + per-project history.
  * Used by both Claude Code (StopOrchestrator) and opencode (plugin).
  */
 
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ensureDir, paths } from "./paths";
-import { now } from "./time";
 
 // ── Session Records ──────────────────────────────────────────────
 
@@ -178,53 +177,4 @@ export function readProjectHistory(cwd: string, limit = 15): ProjectHistoryEntry
   } catch {
     return [];
   }
-}
-
-// ── Persistent Projects ──────────────────────────────────────────
-
-export interface Project {
-  id: string;
-  name: string;
-  created: string;
-  updated: string;
-  status: "active" | "paused" | "completed";
-  objectives: string[];
-  decisions: string[];
-  completed: string[];
-  blockers: string[];
-  nextSteps: string[];
-  handoff: string;
-  sessions: string[];
-}
-
-function projectsPath(): string {
-  return resolve(ensureDir(paths.state()), "projects.json");
-}
-
-export function readProjects(): Record<string, Project> {
-  const p = projectsPath();
-  if (!existsSync(p)) return {};
-  try {
-    return JSON.parse(readFileSync(p, "utf-8"));
-  } catch {
-    return {};
-  }
-}
-
-export function writeProject(project: Project): void {
-  const projects = readProjects();
-  project.updated = now();
-  projects[project.id] = project;
-  writeFileSync(projectsPath(), JSON.stringify(projects, null, 2), "utf-8");
-}
-
-export function activeProjects(): Project[] {
-  return Object.values(readProjects()).filter((p) => p.status === "active");
-}
-
-export function staleProjects(days = 7): Project[] {
-  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-  return Object.values(readProjects()).filter(
-    (p) => p.status === "active" && new Date(p.updated).getTime() < cutoff
-  );
 }

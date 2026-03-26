@@ -15,13 +15,7 @@ import { readSessionNames } from "./session-names";
 import { buildSetupPrompt, readSetupState, remainingSteps, STEP_ORDER } from "./setup";
 import { computeSignalTrends, formatTrends } from "./signal-trends";
 import { readFramePrinciples } from "./wisdom";
-import {
-  activeProjects,
-  readProjectHistory,
-  readSessions,
-  recentSessions,
-  staleProjects,
-} from "./work-tracking";
+import { readProjectHistory, readSessions, recentSessions } from "./work-tracking";
 
 interface PalSettings {
   loadAtStartup?: { files?: string[] };
@@ -83,44 +77,16 @@ export function loadActiveWork(): { text: string; summary: string | null } | nul
   try {
     const cwd = process.cwd();
     const allRecent = recentSessions(48);
-    const projects = activeProjects();
-    const stale = staleProjects(7);
 
-    if (allRecent.length === 0 && projects.length === 0) return null;
+    if (allRecent.length === 0) return null;
 
     const lines: string[] = [];
 
-    if (allRecent.length > 0) {
-      lines.push("## Recent Work (last 48h)");
-      for (const s of allRecent.slice(-10).reverse()) {
-        const ago = formatAgo(s.ts);
-        const here = s.cwd === cwd ? " *" : "";
-        lines.push(`- [${s.status}] ${s.name} — ${ago}${here}`);
-      }
-    }
-
-    if (projects.length > 0) {
-      lines.push("", "### Active Projects");
-      for (const p of projects) {
-        const sessionCount = p.sessions.length;
-        const ago = formatAgo(p.updated);
-        lines.push(`- **${p.name}** (${sessionCount} sessions, last: ${ago})`);
-        if (p.nextSteps.length > 0) {
-          lines.push(`  Next: ${p.nextSteps[0]}`);
-        }
-        if (p.blockers.length > 0) {
-          lines.push(`  Blockers: ${p.blockers.join(", ")}`);
-        } else {
-          lines.push("  Blockers: None");
-        }
-      }
-    }
-
-    if (stale.length > 0) {
-      lines.push("", "### Stale Projects (>7d inactive)");
-      for (const p of stale) {
-        lines.push(`- **${p.name}** — last active ${formatAgo(p.updated)}`);
-      }
+    lines.push("## Recent Work (last 48h)");
+    for (const s of allRecent.slice(-10).reverse()) {
+      const ago = formatAgo(s.ts);
+      const here = s.cwd === cwd ? " *" : "";
+      lines.push(`- [${s.status}] ${s.name} — ${ago}${here}`);
     }
 
     // Summary from most recent session
