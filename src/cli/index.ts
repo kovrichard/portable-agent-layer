@@ -380,9 +380,9 @@ function doctor(silent = false): DoctorResult {
     process.env.ANTHROPIC_API_KEY
       ? ok("ANTHROPIC_API_KEY is set")
       : fail("ANTHROPIC_API_KEY — not set (hooks need it for inference)");
-    process.env.GEMINI_API_KEY
-      ? ok("GEMINI_API_KEY is set")
-      : warn("GEMINI_API_KEY — not set (optional, for YouTube analysis)");
+    process.env.PAL_GEMINI_API_KEY
+      ? ok("PAL_GEMINI_API_KEY is set")
+      : warn("PAL_GEMINI_API_KEY — not set (optional, for YouTube analysis)");
 
     // Hook health from debug.log
     const hookHealth = checkHookHealth(home);

@@ -4,7 +4,7 @@
  * YouTube Analyze — Sends a YouTube URL + prompt to Gemini for video analysis.
  *
  * Gemini can natively process YouTube videos (visual + audio).
- * Requires GEMINI_API_KEY environment variable.
+ * Requires PAL_GEMINI_API_KEY environment variable.
  *
  * Usage:
  *   bun youtube-analyze.ts -- <youtube-url> [--prompt "your question"]
@@ -25,9 +25,9 @@ const DEFAULT_PROMPT = `Analyze this video and provide:
 const MODEL = "gemini-3.1-flash-lite-preview";
 
 function loadApiKey(): string {
-  const key = process.env.GEMINI_API_KEY;
+  const key = process.env.PAL_GEMINI_API_KEY;
   if (!key) {
-    console.error("Error: GEMINI_API_KEY environment variable is not set.");
+    console.error("Error: PAL_GEMINI_API_KEY environment variable is not set.");
     console.error("Get a free key at https://aistudio.google.com/apikey");
     process.exit(1);
   }

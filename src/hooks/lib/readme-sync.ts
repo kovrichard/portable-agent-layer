@@ -67,12 +67,12 @@ function extractEnvVars(): string[] {
     }
   }
 
-  // GEMINI_API_KEY from youtube-analyze.ts
+  // PAL_GEMINI_API_KEY from youtube-analyze.ts
   const youtubeFile = resolve(pkg, "src", "tools", "youtube-analyze.ts");
   if (existsSync(youtubeFile)) {
     const content = readFileSync(youtubeFile, "utf-8");
-    if (content.includes("GEMINI_API_KEY")) {
-      vars.add("GEMINI_API_KEY");
+    if (content.includes("PAL_GEMINI_API_KEY")) {
+      vars.add("PAL_GEMINI_API_KEY");
     }
   }
 

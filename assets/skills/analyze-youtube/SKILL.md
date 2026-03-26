@@ -32,4 +32,4 @@ Follow the user's request. Common tasks:
 - For long videos, consider asking a focused question via `--prompt` rather than a full analysis
 - Gemini sees both visuals and audio — mention on-screen content (slides, code, diagrams) when relevant
 - Quote speakers verbatim when the user asks about specific statements
-- If the tool reports a missing API key, tell the user to get one at https://aistudio.google.com/apikey and set `GEMINI_API_KEY` in their shell profile or PAL settings
+- If the tool reports a missing API key, tell the user to get one at https://aistudio.google.com/apikey and set `PAL_GEMINI_API_KEY` in their shell profile or PAL settings
