@@ -1,3 +1,10 @@
+# [0.20.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.19.0...v0.20.0) (2026-03-26)
+
+
+### Features
+
+* add pdf creator script ([a0608c9](https://github.com/kovrichard/portable-agent-layer/commit/a0608c9956a333508d1919530c8f1d0bfaba6bc2))
+
 # [0.19.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.18.1...v0.19.0) (2026-03-25)
 
 
