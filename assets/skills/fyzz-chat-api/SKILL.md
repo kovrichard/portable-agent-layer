@@ -4,7 +4,7 @@ description: Query Fyzz Chat conversations and projects via the REST API. Use wh
 argument-hint: <conversations|projects> [options]
 ---
 
-When you need to access the user's Fyzz Chat conversations or projects, use the `fyzz-api` CLI tool. The tool reads the API key from the `FYZZ_API_KEY` environment variable automatically — never attempt to read, print, or reference the API key or the env var directly.
+When you need to access the user's Fyzz Chat conversations or projects, use the `fyzz-api` CLI tool. The tool reads the API key from the `PAL_FYZZ_API_KEY` environment variable automatically — never attempt to read, print, or reference the API key or the env var directly.
 
 ## Available commands
 
@@ -31,8 +31,8 @@ bun ~/.agents/skills/fyzz-chat-api/tools/fyzz-api.ts -- projects
 If the tool reports a missing API key:
 
 1. Ask the user to create one in Fyzz Chat → Settings → API Keys
-2. They should set `FYZZ_API_KEY` in their shell profile or in PAL's `settings.json` env section
-3. Optionally set `FYZZ_BASE_URL` (defaults to `http://localhost:3000`)
+2. They should set `PAL_FYZZ_API_KEY` in their shell profile or in PAL's `settings.json` env section
+3. Optionally set `PAL_FYZZ_BASE_URL` (defaults to `http://localhost:3000`)
 
 ## Guidelines
 

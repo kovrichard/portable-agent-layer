@@ -2,7 +2,7 @@
 /**
  * Fyzz Chat API — CLI wrapper for programmatic conversation access.
  *
- * Reads the API key from FYZZ_API_KEY env var (never printed to stdout).
+ * Reads the API key from PAL_FYZZ_API_KEY env var (never printed to stdout).
  * Returns JSON responses from the Fyzz Chat REST API.
  *
  * Usage:
@@ -14,9 +14,9 @@
 import { parseArgs } from "node:util";
 
 function loadApiKey(): string {
-  const key = process.env.FYZZ_API_KEY;
+  const key = process.env.PAL_FYZZ_API_KEY;
   if (!key) {
-    console.error("Error: FYZZ_API_KEY environment variable is not set.");
+    console.error("Error: PAL_FYZZ_API_KEY environment variable is not set.");
     console.error("Set it in your shell profile or PAL settings.json env section.");
     process.exit(1);
   }
@@ -25,7 +25,7 @@ function loadApiKey(): string {
 
 async function apiFetch(path: string, params?: Record<string, string>): Promise<unknown> {
   const apiKey = loadApiKey();
-  const baseUrl = process.env.FYZZ_BASE_URL ?? "http://localhost:3000";
+  const baseUrl = process.env.PAL_FYZZ_BASE_URL ?? "http://localhost:3000";
 
   const url = new URL(`/api/v1${path}`, baseUrl);
   if (params) {
