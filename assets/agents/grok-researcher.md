@@ -33,7 +33,7 @@ The tool outputs findings as markdown with a `## Sources` section listing URLs a
 
 ## Fallback Path — WebSearch
 
-If the grok-search tool fails (missing `XAI_API_KEY` or API error), fall back to WebSearch and WebFetch with a **recency focus**:
+If the grok-search tool fails (missing `PAL_XAI_API_KEY` or API error), fall back to WebSearch and WebFetch with a **recency focus**:
 
 1. **Search** using WebSearch with time-sensitive queries — prepend "2026" or "latest" or "today" to queries
 2. **Prioritize** news sources, social media aggregators, and live blogs
@@ -91,5 +91,5 @@ If you fell back to WebSearch because the Grok API was unavailable, you MUST app
 
 ```markdown
 ---
-> **Note:** This research used WebSearch fallback instead of Grok Search. The `XAI_API_KEY` environment variable is not set. To enable Grok real-time search, set the key: `export XAI_API_KEY=...` (get one at https://console.x.ai/)
+> **Note:** This research used WebSearch fallback instead of Grok Search. The `PAL_XAI_API_KEY` environment variable is not set. To enable Grok real-time search, set the key: `export PAL_XAI_API_KEY=...` (get one at https://console.x.ai/)
 ```

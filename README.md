@@ -118,7 +118,7 @@ pal cli install               # all available (default)
 | Variable | Description |
 |----------|-------------|
 | `PAL_GEMINI_API_KEY` | For YouTube video analysis skill |
-| `XAI_API_KEY` | For Grok real-time research skill (X/web search) |
+| `PAL_XAI_API_KEY` | For Grok real-time research skill (X/web search) |
 | `PAL_HOME` | Override user state directory (default: `~/.pal` or repo root) |
 | `PAL_PKG` | Override package root |
 | `PAL_CLAUDE_DIR` | Override Claude config dir (default: `~/.claude`) |

@@ -5,7 +5,7 @@
  * Uses the Grok Responses API with web_search and x_search tools
  * to fetch real-time information from the web and X (Twitter).
  *
- * Requires XAI_API_KEY environment variable.
+ * Requires PAL_XAI_API_KEY environment variable.
  *
  * Usage:
  *   bun grok-search.ts -- <query> [--sources web,x] [--max-tokens 2048]
@@ -45,9 +45,9 @@ interface GrokResponse {
 }
 
 function loadApiKey(): string {
-  const key = process.env.XAI_API_KEY;
+  const key = process.env.PAL_XAI_API_KEY;
   if (!key) {
-    console.error("Error: XAI_API_KEY environment variable is not set.");
+    console.error("Error: PAL_XAI_API_KEY environment variable is not set.");
     console.error("Get an API key at https://console.x.ai/");
     process.exit(1);
   }
