@@ -134,11 +134,25 @@ If any criteria failed, fix and re-verify before completing.
 
 Reflect on the work and capture reusable knowledge. Skip this phase when the work was trivial or purely mechanical.
 
-**1. Reflection** (one sentence each):
-- What would I do differently next time?
-- What would a better algorithm have done differently?
+**1. Algorithm Reflection** (one sentence each — reflect on ALGORITHM PERFORMANCE, not task subject matter):
 
-**2. Wisdom Frame** — if the session produced a genuine, reusable insight:
+**Q1 — Self:** "What would I have done differently in this Algorithm run?"
+Focus: phase execution, criteria quality, capability selection decisions.
+
+**Q2 — Algorithm:** "What would a smarter algorithm have done differently?"
+Focus: structural improvements — missing phases, better gating, capability triggers, ISC patterns.
+
+**Q3 — AI:** "What would a fundamentally smarter AI have done differently?"
+Focus: reasoning approach, problem decomposition, anticipation, blind spots.
+
+**2. Reflection Log** — record algorithm performance:
+
+```bash
+bun ~/.agents/PAL/tools/algorithm-reflect.ts --task "description" --criteria N --passed N --failed N --sentiment 1-10 \
+  --q1 "self reflection" --q2 "algorithm reflection" --q3 "AI reflection"
+```
+
+**3. Wisdom Frame** — if the session produced a genuine, reusable insight:
 
 ```bash
 bun ~/.agents/PAL/tools/wisdom-frame.ts --domain <domain> --observation "insight" [--type principle|contextual-rule|anti-pattern|evolution]
@@ -181,6 +195,9 @@ N/A: [rest]
 🗣️ {{IDENTITY_NAME}}: [summary]
 
 ━━━ 📚 LEARN ━━━ 5/5
-🪞 REFLECT: [what I'd do differently]
+🪞 Q1 — Self: [what I'd do differently]
+🪞 Q2 — Algorithm: [structural improvement]
+🪞 Q3 — AI: [reasoning blind spot]
+📊 REFLECTION LOG: [appended to algorithm-reflections.jsonl]
 📝 WISDOM: [frame update if genuine insight, or "No new insight"]
 ```

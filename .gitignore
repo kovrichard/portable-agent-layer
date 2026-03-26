@@ -32,6 +32,7 @@ memory/signals/token-usage.jsonl
 # Auto-generated learning artifacts
 memory/learning/failures/
 memory/learning/session/
+memory/learning/reflections/
 memory/learning/synthesis/
 
 # New memory subsystems
