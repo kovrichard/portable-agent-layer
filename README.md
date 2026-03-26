@@ -111,7 +111,7 @@ pal cli install               # all available (default)
 
 | Variable | Description |
 |----------|-------------|
-| `ANTHROPIC_API_KEY` | Required for PAL's hook inference (sentiment analysis, session naming). Uses Haiku for low-cost background calls. |
+| `PAL_ANTHROPIC_API_KEY` | Required for PAL's hook inference (sentiment analysis, session naming). Uses Haiku for low-cost background calls. |
 
 ### Optional
 

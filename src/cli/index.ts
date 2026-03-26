@@ -377,9 +377,9 @@ function doctor(silent = false): DoctorResult {
     telosCount > 0 ? ok(`TELOS: ${telosCount} files`) : fail("TELOS: not scaffolded");
 
     // API key checks
-    process.env.ANTHROPIC_API_KEY
-      ? ok("ANTHROPIC_API_KEY is set")
-      : fail("ANTHROPIC_API_KEY — not set (hooks need it for inference)");
+    process.env.PAL_ANTHROPIC_API_KEY
+      ? ok("PAL_ANTHROPIC_API_KEY is set")
+      : fail("PAL_ANTHROPIC_API_KEY — not set (hooks need it for inference)");
     process.env.PAL_GEMINI_API_KEY
       ? ok("PAL_GEMINI_API_KEY is set")
       : warn("PAL_GEMINI_API_KEY — not set (optional, for YouTube analysis)");

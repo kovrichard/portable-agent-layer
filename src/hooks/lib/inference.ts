@@ -21,7 +21,7 @@ export interface InferenceResult {
 }
 
 export async function inference(opts: InferenceOptions): Promise<InferenceResult> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.PAL_ANTHROPIC_API_KEY;
   if (!apiKey) return { success: false };
 
   const {

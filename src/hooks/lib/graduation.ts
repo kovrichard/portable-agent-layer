@@ -214,7 +214,7 @@ async function generateRecommendations(
   ratings: RatingsSummary | null
 ): Promise<string[]> {
   if (candidates.length === 0 && !ratings) return [];
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!process.env.PAL_ANTHROPIC_API_KEY) {
     return candidates
       .slice(0, 3)
       .map(

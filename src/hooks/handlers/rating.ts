@@ -358,6 +358,6 @@ export async function captureRating(message: string, sessionId?: string): Promis
     return;
   }
 
-  // Path 2: Implicit sentiment (requires ANTHROPIC_API_KEY — inference silently no-ops without it)
+  // Path 2: Implicit sentiment (requires PAL_ANTHROPIC_API_KEY — inference silently no-ops without it)
   await handleImplicitSentiment(cleaned, sessionId);
 }

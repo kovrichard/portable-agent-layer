@@ -7,8 +7,8 @@ const TEST_HOME = resolve(import.meta.dir, "../.test-home-graduation");
 let savedApiKey: string | undefined;
 
 beforeAll(() => {
-  savedApiKey = process.env.ANTHROPIC_API_KEY;
-  delete process.env.ANTHROPIC_API_KEY;
+  savedApiKey = process.env.PAL_ANTHROPIC_API_KEY;
+  delete process.env.PAL_ANTHROPIC_API_KEY;
   if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
 
   // Create failure entries with capture.md (need 3+ similar ones to trigger graduation)
@@ -92,7 +92,7 @@ beforeAll(() => {
 
 afterAll(() => {
   delete process.env.PAL_HOME;
-  if (savedApiKey) process.env.ANTHROPIC_API_KEY = savedApiKey;
+  if (savedApiKey) process.env.PAL_ANTHROPIC_API_KEY = savedApiKey;
   if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
 });
 

@@ -42,7 +42,7 @@ export async function captureSessionName(
   logDebug("session-name", `Named from prompt: "${name}"`);
 
   // Spawn detached background process to upgrade with Haiku inference
-  if (!process.env.ANTHROPIC_API_KEY) return;
+  if (!process.env.PAL_ANTHROPIC_API_KEY) return;
   try {
     const promptB64 = Buffer.from(message.slice(0, 800)).toString("base64");
     const child = spawn(

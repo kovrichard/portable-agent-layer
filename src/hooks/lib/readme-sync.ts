@@ -58,12 +58,12 @@ function extractEnvVars(): string[] {
     }
   }
 
-  // ANTHROPIC_API_KEY from inference.ts
+  // PAL_ANTHROPIC_API_KEY from inference.ts
   const inferenceFile = resolve(pkg, "src", "hooks", "lib", "inference.ts");
   if (existsSync(inferenceFile)) {
     const content = readFileSync(inferenceFile, "utf-8");
-    if (content.includes("ANTHROPIC_API_KEY")) {
-      vars.add("ANTHROPIC_API_KEY");
+    if (content.includes("PAL_ANTHROPIC_API_KEY")) {
+      vars.add("PAL_ANTHROPIC_API_KEY");
     }
   }
 

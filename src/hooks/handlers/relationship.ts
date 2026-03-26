@@ -52,8 +52,8 @@ export async function captureRelationship(
     return;
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    logDebug("relationship", "Skipped: no ANTHROPIC_API_KEY");
+  if (!process.env.PAL_ANTHROPIC_API_KEY) {
+    logDebug("relationship", "Skipped: no PAL_ANTHROPIC_API_KEY");
     return;
   }
 
