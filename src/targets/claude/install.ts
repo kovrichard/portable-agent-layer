@@ -15,6 +15,7 @@ import {
   countAgents,
   countMd,
   countSkills,
+  generateSkillIndex,
   loadSettingsTemplate,
   log,
   mergeSettings,
@@ -50,6 +51,7 @@ log.success("Merged PAL settings into settings.json");
 // --- Copy skills ---
 const skillsDir = resolve(CLAUDE_DIR, "skills");
 copySkills(skillsDir);
+generateSkillIndex();
 
 // --- Copy agents ---
 copyAgents();

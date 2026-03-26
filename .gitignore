@@ -21,6 +21,7 @@ memory/state/update-available.json
 memory/state/last-responses.json
 memory/state/counts.json
 memory/state/captured-learnings.json
+memory/state/skill-index.json
 memory/state/debug.log
 memory/state/debug.log.prev
 

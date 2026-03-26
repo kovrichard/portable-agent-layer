@@ -12,6 +12,7 @@ import {
   copyPalDocs,
   copySkills,
   countSkills,
+  generateSkillIndex,
   log,
   writeJson,
 } from "../lib";
@@ -54,6 +55,7 @@ try {
 // --- 3. Install skills into ~/.agents/skills/ ---
 const claudeSkillsDir = resolve(platform.claudeDir(), "skills");
 copySkills(claudeSkillsDir);
+generateSkillIndex();
 log.success("Installed skills to ~/.agents/skills/");
 
 // --- 4. Install agents into ~/.config/opencode/agents/ ---

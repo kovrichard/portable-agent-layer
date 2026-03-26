@@ -35,13 +35,55 @@ Format:
 
 Include at least one anti-criterion (C-A prefix).
 
-**3. Select capabilities:**
+**3. Capability audit:**
 
-Scan the available skills listing. Select skills and tools you'll invoke during EXECUTE. Selecting a capability = commitment to invoke it via tool call. Don't select what you won't use.
+Scan ALL 14 capabilities below. For each, assign exactly one disposition:
+- **USE** — will invoke during a specific phase. State which.
+- **DECLINE** — would help but not worth it for this task's scope.
+- **N/A** — genuinely irrelevant to this task.
+
+**A: Foundation**
+
+| # | Capability | Invocation |
+|---|-----------|------------|
+| 1 | Task Tool | TaskCreate, TaskUpdate, TaskList |
+| 2 | AskUserQuestion | Built-in tool |
+| 3 | Skills (ACTIVE SCAN) | Read `skill-index.json`, match triggers against task |
+
+**B: Thinking & Analysis**
+
+| # | Capability | Invocation |
+|---|-----------|------------|
+| 4 | Think (analysis router) | `think` skill |
+| 5 | First Principles | `first-principles` skill |
+| 6 | Council (multi-perspective) | `council` skill |
+| 7 | Plan Mode | EnterPlanMode tool |
+
+**C: Agents & Research**
+
+| # | Capability | Invocation |
+|---|-----------|------------|
+| 8 | Research (multi-agent) | `research` skill |
+| 9 | Subagents | Agent tool (Explore, Plan, general-purpose) |
+| 10 | Background agents | Agent tool with `run_in_background: true` |
+
+**D: Execution & Verification**
+
+| # | Capability | Invocation |
+|---|-----------|------------|
+| 11 | Git worktree isolation | `isolation: "worktree"` on Agent |
+| 12 | Test runner | `bun test`, vitest, jest, pytest |
+| 13 | Static analysis | `tsc --noEmit`, biome, eslint |
+| 14 | CLI probes | curl, diff, jq, exit codes |
+
+**Capability #3 (Skills) requires active scanning.** Read `skill-index.json` and match the task against skill triggers. "Skills — N/A" without evidence of scanning is an error.
 
 Output:
 ```
-🏹 CAPABILITIES: [list each selected skill/tool and why]
+🏹 CAPABILITIES (14/14):
+USE: [#, #, #] — [reason (phase: WHICH)]
+DECLINE: [#, #] — [reason]
+N/A: [rest]
 ```
 
 ### ━━━ 🧠 PLAN ━━━ 2/5
@@ -118,7 +160,10 @@ Only write if the insight is **genuine and reusable** — not every session prod
 📋 CRITERIA:
 [criteria checklist]
 
-🏹 CAPABILITIES: [selected capabilities]
+🏹 CAPABILITIES (14/14):
+USE: [#, #] — [reason]
+DECLINE: [#] — [reason]
+N/A: [rest]
 
 ━━━ 🧠 PLAN ━━━ 2/5
 🧠 RISKS: [risks]

@@ -536,6 +536,99 @@ export function removeAgentsFromOpencode(ocAgentsDir: string): string[] {
   return removed;
 }
 
+// --- Skill Index ---
+
+interface SkillIndexEntry {
+  name: string;
+  description: string;
+  triggers: string[];
+}
+
+interface SkillIndex {
+  generated: string;
+  totalSkills: number;
+  skills: Record<string, SkillIndexEntry>;
+}
+
+/** Extract trigger keywords from a skill description */
+function extractTriggers(description: string): string[] {
+  // Extract "Use when ..." phrases and key terms
+  const triggers = new Set<string>();
+
+  const useWhen = description.match(/Use when\s+(.+?)(?:\.|$)/i);
+  if (useWhen) {
+    const words = useWhen[1]
+      .toLowerCase()
+      .split(/[,\s]+/)
+      .filter(
+        (w) =>
+          w.length > 3 &&
+          !["when", "this", "that", "with", "from", "about", "your", "the"].includes(w)
+      );
+    for (const w of words) triggers.add(w);
+  }
+
+  // Extract domain terms from full description
+  const terms = description
+    .toLowerCase()
+    .match(
+      /\b(research|analyze|extract|summarize|review|debug|reflect|council|debate|brainstorm|first.principles|security|pdf|youtube|telos|goals|projects|beliefs|challenges|opinion|skill|create)\b/g
+    );
+  if (terms) for (const t of terms) triggers.add(t);
+
+  return [...triggers];
+}
+
+/**
+ * Generate skill-index.json from installed skills in ~/.agents/skills/.
+ * Called during install after skills are symlinked.
+ */
+export function generateSkillIndex(): number {
+  if (!existsSync(AGENTS_SKILLS_DIR)) return 0;
+
+  const index: SkillIndex = {
+    generated: new Date().toISOString(),
+    totalSkills: 0,
+    skills: {},
+  };
+
+  for (const name of readdirSync(AGENTS_SKILLS_DIR)) {
+    const skillMd = resolve(AGENTS_SKILLS_DIR, name, "SKILL.md");
+    if (!existsSync(skillMd)) continue;
+
+    try {
+      const content = readFileSync(skillMd, "utf-8");
+      const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
+      if (!fmMatch) continue;
+
+      const fm = fmMatch[1];
+      const nameMatch = fm.match(/^name:\s*(.+)$/m);
+      const descMatch = fm.match(/^description:\s*"?(.+?)"?\s*$/m);
+      if (!nameMatch) continue;
+
+      const skillName = nameMatch[1].trim();
+      const description = descMatch?.[1]?.trim() ?? "";
+
+      index.skills[skillName] = {
+        name: skillName,
+        description,
+        triggers: extractTriggers(description),
+      };
+      index.totalSkills++;
+    } catch {
+      /* skip unreadable skills */
+    }
+  }
+
+  // Write to state directory
+  const stateDir = resolve(palHome(), "memory", "state");
+  mkdirSync(stateDir, { recursive: true });
+  writeJson(resolve(stateDir, "skill-index.json"), index);
+  log.info(`Skill index: ${index.totalSkills} skills indexed`);
+
+  return index.totalSkills;
+}
+
 /** Count skill subdirectories in ~/.agents/skills/ */
 export function countSkills(): number {
   if (!existsSync(AGENTS_SKILLS_DIR)) return 0;

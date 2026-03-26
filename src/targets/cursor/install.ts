@@ -12,6 +12,7 @@ import {
   copyPalDocs,
   copySkills,
   countSkills,
+  generateSkillIndex,
   loadCursorHooksTemplate,
   log,
   mergeCursorHooks,
@@ -44,6 +45,7 @@ log.success("Merged PAL hooks into hooks.json");
 // --- Symlink skills to ~/.cursor/skills/ ---
 const cursorSkillsDir = resolve(CURSOR_DIR, "skills");
 copySkills(cursorSkillsDir);
+generateSkillIndex();
 
 // --- Copy PAL system docs ---
 const palDocsCount = copyPalDocs();
