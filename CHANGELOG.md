@@ -1,3 +1,16 @@
+# [0.22.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.21.0...v0.22.0) (2026-03-26)
+
+
+### Bug Fixes
+
+* remove dead code ([53e4d40](https://github.com/kovrichard/portable-agent-layer/commit/53e4d4029db75701865ec5176b84b47eee149acd))
+
+
+### Features
+
+* add algorithm reflection logging and update documentation ([5416c9d](https://github.com/kovrichard/portable-agent-layer/commit/5416c9db8e877899f62fafe2ae5dfc0c35b9ed65))
+* implement skill index generation for the algorithm, enrich observe step ([1ca0a16](https://github.com/kovrichard/portable-agent-layer/commit/1ca0a1686ed18a54b0d32a98b038d7a07d638a23))
+
 # [0.21.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.20.0...v0.21.0) (2026-03-26)
 
 
