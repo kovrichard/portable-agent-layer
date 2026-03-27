@@ -3,6 +3,7 @@
  */
 
 export const HAIKU_MODEL = "claude-haiku-4-5-20251001";
+export const SONNET_MODEL = "claude-sonnet-4-6";
 
 /** Pricing per million tokens (USD) — from https://platform.claude.com/docs/en/about-claude/pricing */
 export const MODEL_PRICING: Record<
