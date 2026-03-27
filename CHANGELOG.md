@@ -1,3 +1,18 @@
+# [0.24.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.23.1...v0.24.0) (2026-03-27)
+
+
+### Bug Fixes
+
+* remove dead code ([36d087b](https://github.com/kovrichard/portable-agent-layer/commit/36d087b905d6924b0478b1906cffd82362875a5a))
+
+
+### Features
+
+* add SONNET_MODEL and implement self-model synthesis tool ([324fb5e](https://github.com/kovrichard/portable-agent-layer/commit/324fb5e37509183639451aab82651a19ce5ee704))
+* **self-model:** add self-model auto-trigger and enhance synthesis with previous model comparison ([ea90d48](https://github.com/kovrichard/portable-agent-layer/commit/ea90d48043d4e2f185e72395200b1c8751ce878d))
+* **self-model:** add self-model loading functionality and integrate into system reminder ([dedb211](https://github.com/kovrichard/portable-agent-layer/commit/dedb2111e75c69ab0952e4950eb97ba592a8371b))
+* **self-model:** implement archiving for self-model updates and refactor paths ([0c10906](https://github.com/kovrichard/portable-agent-layer/commit/0c1090660cb7ccf53f6457ceaed9f9aef4ec9967))
+
 ## [0.23.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.23.0...v0.23.1) (2026-03-27)
 
 
