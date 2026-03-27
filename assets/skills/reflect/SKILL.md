@@ -23,7 +23,7 @@ Determine which PAL subsystem owns this behavior:
 | **Hook-automated** | Runs automatically via StopOrchestrator or UserPromptOrchestrator | `hooks/StopOrchestrator.ts`, `hooks/UserPromptOrchestrator.ts`, `hooks/lib/stop.ts` |
 | **Instruction-driven** | AI is told to do it via CLAUDE.md / AGENTS.md instructions | `~/.claude/CLAUDE.md`, project CLAUDE.md files |
 | **Context-dependent** | Requires specific context to be loaded at session start | `hooks/LoadContext.ts`, `hooks/lib/context.ts` |
-| **Skill-triggered** | Should have been invoked via a skill | `~/.agents/skills/*/SKILL.md` |
+| **Skill-triggered** | Should have been invoked via a skill | `~/.pal/skills/*/SKILL.md` |
 
 ## 3. Trace the execution path
 
@@ -48,7 +48,7 @@ Based on the type, investigate the relevant chain:
 3. Check if context was truncated or missing
 
 ### For skill-triggered behaviors:
-1. Verify the skill exists in `~/.agents/skills/`
+1. Verify the skill exists in `~/.pal/skills/`
 2. Check if SkillGuard blocked it
 3. Check if the skill's trigger conditions match what happened
 

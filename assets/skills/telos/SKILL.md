@@ -8,7 +8,7 @@ Manage the user's TELOS files — the persistent personal context that drives PA
 
 ## TELOS Files
 
-All files live in `~/.agents/PAL/telos/`:
+All files live in `~/.pal/telos/`:
 
 | File | Contains |
 |------|----------|
@@ -25,7 +25,7 @@ All files live in `~/.agents/PAL/telos/`:
 
 ## Reading
 
-Read the file directly from `~/.agents/PAL/telos/` when the user asks about any area. Summarize what's relevant — don't dump the entire file unless asked.
+Read the file directly from `~/.pal/telos/` when the user asks about any area. Summarize what's relevant — don't dump the entire file unless asked.
 
 ## Updating
 
@@ -34,7 +34,7 @@ Read the file directly from `~/.agents/PAL/telos/` when the user asks about any 
 For all files except PROJECTS.md — appends content, creates backup, logs the change:
 
 ```bash
-bun ~/.agents/skills/telos/tools/update-telos.ts <FILE> "<content>" "<description>"
+bun ~/.pal/skills/telos/tools/update-telos.ts <FILE> "<content>" "<description>"
 ```
 
 ### Projects (upsert by ID)
@@ -42,7 +42,7 @@ bun ~/.agents/skills/telos/tools/update-telos.ts <FILE> "<content>" "<descriptio
 For PROJECTS.md — upserts a row by the ID column. Replaces if the ID exists, appends if new:
 
 ```bash
-bun ~/.agents/skills/telos/tools/update-projects.ts <id> "<row>" "<description>"
+bun ~/.pal/skills/telos/tools/update-projects.ts <id> "<row>" "<description>"
 ```
 
 The ID is the first column of the table. Use short, lowercase, kebab-case slugs (e.g., `my-project`, `side-gig`).
@@ -78,7 +78,7 @@ User: "add my new side project"
 → Ask: "What's the project name, status, and priority?"
 → User provides details
 → Show the row you'll add, confirm
-→ Run: bun ~/.agents/skills/telos/tools/update-projects.ts side-project "| side-project | Side Project | In progress | Medium | Description |" "Added Side Project"
+→ Run: bun ~/.pal/skills/telos/tools/update-projects.ts side-project "| side-project | Side Project | In progress | Medium | Description |" "Added Side Project"
 ```
 
 **Example 3: Updating a project**
@@ -86,7 +86,7 @@ User: "add my new side project"
 User: "mark X as complete"
 → Read PROJECTS.md, find the entry and its ID
 → Show updated row, confirm
-→ Run: bun ~/.agents/skills/telos/tools/update-projects.ts some-id "| some-id | Project Name | Complete | High | ... |" "Marked project as complete"
+→ Run: bun ~/.pal/skills/telos/tools/update-projects.ts some-id "| some-id | Project Name | Complete | High | ... |" "Marked project as complete"
 → The existing row is replaced, not duplicated
 ```
 

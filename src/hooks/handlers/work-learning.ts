@@ -116,7 +116,7 @@ export async function captureWorkLearning(
       .join("\n");
     const result = await inference({
       system:
-        "You summarize AI coding sessions between a human user and an AI assistant. The 'Human messages' are what the user said. The 'AI response' is what the assistant said. Produce: 1) a short title (5-10 words) describing what was accomplished, 2) a summary of what the AI assistant did for the user (2-4 sentences, write from the AI's perspective using 'we'), 3) insights — what worked well, what was surprising, or what should be done differently next time (2-3 bullet points, no markdown).",
+        "You summarize sessions between a human user and an AI assistant. Sessions may involve coding, research, writing, planning, analysis, or any other task. The 'Human messages' are what the user said. The 'AI response' is what the assistant said. Produce: 1) a short title (5-10 words) describing what was accomplished, 2) a summary of what the AI assistant did for the user (2-4 sentences, write from the AI's perspective using 'we'), 3) insights — what worked well, what was surprising, or what should be done differently next time (2-3 bullet points, no markdown).",
       user: `Human messages:\n${userMessages}\n\nAI response:\n${rawSummary.slice(0, 400)}`,
       maxTokens: 300,
       timeout: 15000,

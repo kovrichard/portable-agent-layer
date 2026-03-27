@@ -12,20 +12,12 @@ export function palPkg(): string {
 }
 
 /**
- * Root of the user's personal state (telos, memory, etc.).
- * In repo mode: same as palPkg() (the repo root).
- * In package mode: ~/.pal/ (or PAL_HOME override).
- *
- * Repo mode is detected by the presence of .palroot next to the package.
- * This file is not included in the npm package, so it only exists in cloned repos.
+ * Root of the user's personal state (telos, memory, docs, tools, skills).
+ * Always resolves to ~/.pal/ regardless of where the package lives.
+ * Power users who want memory/telos versioned in a repo can override via PAL_HOME.
  */
 export function palHome(): string {
-  if (process.env.PAL_HOME) return process.env.PAL_HOME;
-
-  const pkgRoot = palPkg();
-  if (existsSync(resolve(pkgRoot, ".palroot"))) return pkgRoot;
-
-  return resolve(homedir(), ".pal");
+  return process.env.PAL_HOME || resolve(homedir(), ".pal");
 }
 
 /** Ensure a directory exists, creating it recursively if needed */

@@ -8,10 +8,10 @@ import { resolve } from "node:path";
 import { autoBackup } from "../handlers/backup";
 import { captureFailure } from "../handlers/failure";
 import { checkReflectTrigger } from "../handlers/reflect-trigger";
-import { captureRelationship } from "../handlers/relationship";
+import { captureSessionIntelligence } from "../handlers/session-intelligence";
+import { runSynthesis } from "../handlers/synthesis";
 import { resetTab } from "../handlers/tab";
 import { updateCounts } from "../handlers/update-counts";
-import { captureWorkLearning } from "../handlers/work-learning";
 import { captureWorkSession } from "../handlers/work-session";
 import { logDebug, logError } from "./log";
 import { ensureDir, paths } from "./paths";
@@ -39,23 +39,23 @@ export async function runStopHandlers(
   const results = await Promise.allSettled([
     captureWorkSession(transcript, options.sessionId),
     resetTab(),
-    captureRelationship(transcript, options.sessionId),
-    captureWorkLearning(transcript, options.sessionId),
+    captureSessionIntelligence(transcript, options.sessionId),
     checkPendingFailure(transcript),
     updateCounts(),
     autoBackup(),
     checkReflectTrigger(),
+    runSynthesis(),
   ]);
 
   const handlerNames = [
     "work-session",
     "tab",
-    "relationship",
-    "work-learning",
+    "session-intelligence",
     "pending-failure",
     "update-counts",
     "backup",
     "reflect-trigger",
+    "synthesis",
   ];
   for (let i = 0; i < results.length; i++) {
     const r = results[i];

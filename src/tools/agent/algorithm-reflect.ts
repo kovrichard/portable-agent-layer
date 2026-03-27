@@ -21,6 +21,7 @@ import { paths } from "../../hooks/lib/paths";
 
 interface AlgorithmReflection {
   timestamp: string;
+  cwd: string;
   task: string;
   criteria_count: number;
   criteria_passed: number;
@@ -103,6 +104,7 @@ Output: algorithm-reflections.jsonl in memory/learning/reflections/
 
   const reflection: AlgorithmReflection = {
     timestamp: new Date().toISOString(),
+    cwd: process.cwd(),
     task: values.task,
     criteria_count: parseInt(values.criteria || "0", 10),
     criteria_passed: parseInt(values.passed || "0", 10),

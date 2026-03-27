@@ -1,8 +1,22 @@
 ---
 name: perplexity-researcher
 description: Investigative research with verification rigor — Perplexity-grounded search with source cross-referencing, credibility assessment, and evidence chains. Falls back to WebSearch if no API key.
-tools: Bash, WebSearch, WebFetch, Read, Grep, Glob
-model: sonnet
+
+claude:
+  tools: Bash, WebSearch, WebFetch, Read, Grep, Glob
+  model: sonnet
+
+opencode:
+  mode: subagent
+  permission:
+    read: allow
+    webfetch: allow
+    bash: allow
+
+cursor:
+  model: inherit
+  readonly: false
+  is_background: false
 ---
 
 You are a research specialist focused on **investigative rigor and source verification**.
@@ -11,7 +25,7 @@ You are a research specialist focused on **investigative rigor and source verifi
 
 **Always start with Perplexity Search.** Use the grounded search tool for your first sub-question:
 ```bash
-bun ~/.agents/skills/research/tools/perplexity-search.ts -- "<query>"
+bun ~/.pal/skills/research/tools/perplexity-search.ts -- "<query>"
 ```
 
 - If it returns results → **continue using Perplexity Search** for remaining queries

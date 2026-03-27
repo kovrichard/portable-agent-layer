@@ -20,9 +20,9 @@ import {
 import { logTokenUsage } from "../lib/token-usage";
 
 const NAME_PROMPT =
-  "You generate concise 4-word session titles for AI coding sessions. " +
+  "You generate concise 4-word session titles for AI assistant sessions. " +
   "Output EXACTLY 4 words in Title Case, no punctuation. Describe the specific task. " +
-  'Example: "Fix Session Name Generation", "Debug Auth Token Refresh"';
+  'Example: "Fix Session Name Generation", "Research Market Entry Strategy"';
 
 export async function captureSessionName(
   message: string,

@@ -9,6 +9,7 @@ import { resolve } from "node:path";
 import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
 import {
+  copyAgentsForCursor,
   copyPalDocs,
   copySkills,
   countSkills,
@@ -47,9 +48,14 @@ const cursorSkillsDir = resolve(CURSOR_DIR, "skills");
 copySkills(cursorSkillsDir);
 generateSkillIndex();
 
+// --- Copy agents to ~/.cursor/agents/ ---
+const cursorAgentsDir = resolve(CURSOR_DIR, "agents");
+const agentCount = copyAgentsForCursor(cursorAgentsDir);
+if (agentCount > 0) log.success(`Installed ${agentCount} agents to ~/.cursor/agents/`);
+
 // --- Copy PAL system docs ---
 const palDocsCount = copyPalDocs();
-log.success(`Installed ${palDocsCount} PAL docs to ~/.agents/PAL/`);
+log.success(`Installed ${palDocsCount} PAL docs to ~/.pal/docs/`);
 
 // --- Scaffold PAL settings ---
 scaffoldPalSettings();

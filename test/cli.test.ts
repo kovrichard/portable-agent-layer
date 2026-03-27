@@ -42,24 +42,6 @@ describe("pal help", () => {
   });
 });
 
-describe("pal cli status", () => {
-  test("shows version and mode", () => {
-    const result = pal("cli", "status");
-    expect(result.status).toBe(0);
-    const output = result.stdout + result.stderr;
-    expect(output).toContain("Version:");
-    expect(output).toContain("Mode:");
-    expect(output).toContain("Home:");
-    expect(output).toContain(TEST_HOME);
-  });
-
-  test("shows repo mode when .palroot exists", () => {
-    const result = pal("cli", "status");
-    const output = result.stdout + result.stderr;
-    expect(output).toContain("repo");
-  });
-});
-
 describe("pal cli init", () => {
   test("scaffolds telos and memory directories", () => {
     const result = pal("cli", "init");

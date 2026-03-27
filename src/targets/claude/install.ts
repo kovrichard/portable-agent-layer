@@ -58,7 +58,7 @@ copyAgents();
 
 // --- Copy PAL system docs ---
 const palDocsCount = copyPalDocs();
-log.success(`Installed ${palDocsCount} PAL docs to ~/.agents/PAL/`);
+log.success(`Installed ${palDocsCount} PAL docs to ~/.pal/docs/`);
 
 // --- Scaffold PAL settings ---
 scaffoldPalSettings();

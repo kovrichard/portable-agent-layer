@@ -447,7 +447,7 @@ All paths resolve through `src/hooks/lib/paths.ts`:
 
 | Path | Default | Override |
 |------|---------|----------|
-| PAL home | `~/.agents/PAL` | `PAL_HOME` |
+| PAL home | `~/.pal` | `PAL_HOME` |
 | PAL package | Auto-detected from source | `PAL_PKG` |
 | Claude config | `~/.claude` | `PAL_CLAUDE_DIR` |
 | opencode config | `~/.config/opencode` | `PAL_OPENCODE_DIR` |

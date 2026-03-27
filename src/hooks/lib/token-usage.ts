@@ -13,6 +13,7 @@ export type TokenCaller =
   | "failure"
   | "work-learning"
   | "session-name"
+  | "session-intelligence"
   | "relationship";
 
 interface TokenUsageEntry {

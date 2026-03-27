@@ -14,8 +14,8 @@
   "loadAtStartup": {
     "_docs": "Files force-loaded into session context at startup. Injected as <system-reminder> blocks.",
     "files": [
-      "~/.agents/PAL/STEERING_RULES.md",
-      "~/.agents/PAL/telos/PROJECTS.md"
+      "~/.pal/docs/STEERING_RULES.md",
+      "~/.pal/telos/PROJECTS.md"
     ]
   },
   "dynamicContext": {
@@ -27,6 +27,9 @@
     "synthesis": true,
     "signalTrends": true,
     "failurePatterns": true,
-    "activeWork": true
+    "activeWork": true,
+    "projectHistory": true,
+    "sessionIntelligence": true,
+    "handoff": true
   }
 }

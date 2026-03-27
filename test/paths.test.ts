@@ -26,18 +26,8 @@ describe("palHome", () => {
     delete process.env.PAL_HOME;
   });
 
-  test(".palroot detection returns package root", async () => {
+  test("falls back to ~/.pal without env", async () => {
     delete process.env.PAL_HOME;
-    const { palHome, palPkg } = await import("../src/hooks/lib/paths");
-    const pkg = palPkg();
-    // .palroot exists in our repo
-    expect(existsSync(resolve(pkg, ".palroot"))).toBe(true);
-    expect(palHome()).toBe(pkg);
-  });
-
-  test("falls back to ~/.pal without .palroot or env", async () => {
-    delete process.env.PAL_HOME;
-    // Point PAL_PKG to a dir without .palroot
     process.env.PAL_PKG = TEST_DIR;
     const { palHome } = await import("../src/hooks/lib/paths");
     expect(palHome()).toBe(resolve(homedir(), ".pal"));
@@ -59,7 +49,6 @@ describe("palPkg", () => {
     const pkg = palPkg();
     // Should contain package.json
     expect(existsSync(resolve(pkg, "package.json"))).toBe(true);
-    expect(existsSync(resolve(pkg, ".palroot"))).toBe(true);
   });
 });
 

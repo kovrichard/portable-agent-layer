@@ -132,7 +132,9 @@ If any criteria failed, fix and re-verify before completing.
 
 ### ━━━ 📚 LEARN ━━━ 5/5
 
-Reflect on the work and capture reusable knowledge. Skip this phase when the work was trivial or purely mechanical.
+Reflect on the work and capture reusable knowledge.
+
+**Skip only if:** the entire task was a single edit or lookup with zero decisions made (e.g. a typo fix, reading a file). Any task involving planning, debugging, multiple steps, or judgment calls requires LEARN — no exceptions.
 
 **1. Algorithm Reflection** (one sentence each — reflect on ALGORITHM PERFORMANCE, not task subject matter):
 
@@ -148,14 +150,26 @@ Focus: reasoning approach, problem decomposition, anticipation, blind spots.
 **2. Reflection Log** — record algorithm performance:
 
 ```bash
-bun ~/.agents/PAL/tools/algorithm-reflect.ts --task "description" --criteria N --passed N --failed N --sentiment 1-10 \
+bun ~/.pal/tools/algorithm-reflect.ts --task "description" --criteria N --passed N --failed N --sentiment 1-10 \
   --q1 "self reflection" --q2 "algorithm reflection" --q3 "AI reflection"
 ```
 
-**3. Wisdom Frame** — if the session produced a genuine, reusable insight:
+**3. Open Threads** — for each unresolved question, decision, or follow-up that came up during this session:
 
 ```bash
-bun ~/.agents/PAL/tools/wisdom-frame.ts --domain <domain> --observation "insight" [--type principle|contextual-rule|anti-pattern|evolution]
+bun ~/.pal/tools/thread.ts --add --title "brief title" --context "why it matters, what needs to happen"
+```
+
+Only add threads that genuinely need follow-up. Resolve existing threads if this session closed them:
+
+```bash
+bun ~/.pal/tools/thread.ts --resolve --id <id>
+```
+
+**4. Wisdom Frame** — if the session produced a genuine, reusable insight:
+
+```bash
+bun ~/.pal/tools/wisdom-frame.ts --domain <domain> --observation "insight" [--type principle|contextual-rule|anti-pattern|evolution]
 ```
 
 Domains: `development`, `workflow`, `communication`, `infrastructure`, `integration`, or any fitting domain.

@@ -52,11 +52,11 @@ try {
   log.warn(`Could not install plugin deps — run 'bun install' in ${OC_PLUGINS_DIR}`);
 }
 
-// --- 3. Install skills into ~/.agents/skills/ ---
+// --- 3. Install skills into ~/.pal/skills/ ---
 const claudeSkillsDir = resolve(platform.claudeDir(), "skills");
 copySkills(claudeSkillsDir);
 generateSkillIndex();
-log.success("Installed skills to ~/.agents/skills/");
+log.success("Installed skills to ~/.pal/skills/");
 
 // --- 4. Install agents into ~/.config/opencode/agents/ ---
 const ocAgentsDir = resolve(OC_GLOBAL_DIR, "agents");
@@ -64,7 +64,7 @@ copyAgentsForOpencode(ocAgentsDir);
 
 // --- 5. Copy PAL system docs ---
 const palDocsCount = copyPalDocs();
-log.success(`Installed ${palDocsCount} PAL docs to ~/.agents/PAL/`);
+log.success(`Installed ${palDocsCount} PAL docs to ~/.pal/docs/`);
 
 // --- 6. Generate ~/.config/opencode/AGENTS.md ---
 regenerateIfNeeded();
@@ -73,4 +73,4 @@ log.success("Generated ~/.config/opencode/AGENTS.md");
 log.success("opencode installation complete");
 console.log("");
 log.info(`Plugin: ${pluginDst}`);
-log.info(`Skills: ${countSkills()} (native via ~/.agents/skills/)`);
+log.info(`Skills: ${countSkills()} (native via ~/.pal/skills/)`);

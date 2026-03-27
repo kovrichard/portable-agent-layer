@@ -10,7 +10,7 @@ When the user asks to analyze, read, or extract information from a PDF:
 
 - **URL**: Use the `pdf-download` CLI tool to download and archive the PDF:
   ```bash
-  bun ~/.agents/skills/analyze-pdf/tools/pdf-download.ts -- <url> [--filename <name.pdf>]
+  bun ~/.pal/skills/analyze-pdf/tools/pdf-download.ts -- <url> [--filename <name.pdf>]
   ```
   The tool downloads the file, saves it to `memory/downloads/{YYYY}/{MM}/{DD}/{filename}.pdf`, and returns JSON with the saved `path`.
 

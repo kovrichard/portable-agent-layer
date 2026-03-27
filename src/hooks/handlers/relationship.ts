@@ -74,7 +74,7 @@ export async function captureRelationship(
   logDebug("relationship", "Calling inference...");
   const result = await inference({
     system:
-      "You analyze messages from an AI coding session to extract relationship observations. " +
+      "You analyze messages from an AI assistant session to extract relationship observations. " +
       "Types: O=opinions/preferences (how the user likes to work, what they want), " +
       "B=biographical (what the AI accomplished this session, written in first-person), " +
       "W=world facts (user's situation, projects, tools they use). " +

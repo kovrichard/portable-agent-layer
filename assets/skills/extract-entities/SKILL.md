@@ -56,7 +56,7 @@ Return structured JSON:
 After displaying results, ask the user if they want to save. When saving, pipe the JSON output through the entity-save tool which handles deduplication automatically:
 
 ```bash
-echo '<the JSON output>' | bun ~/.agents/skills/extract-entities/tools/entity-save.ts -- --source "<URL or content origin>"
+echo '<the JSON output>' | bun ~/.pal/skills/extract-entities/tools/entity-save.ts -- --source "<URL or content origin>"
 ```
 
 The tool deduplicates against the entity index (`memory/entities/entity-index.json`), assigns stable UUIDs, tracks occurrences, and reports what was new vs existing.

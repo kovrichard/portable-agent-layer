@@ -6,18 +6,21 @@ PAL is a persistent, cross-platform, cross-agent layer for portable AI workflows
 
 **CLAUDE.md** (or the agent equivalent) is the entry point — generated from a template by the CLI installer. It defines execution modes, The Algorithm routing, and the context routing table. The agent loads it natively every session. A SessionStart hook keeps it fresh automatically.
 
-**The PAL home directory (`~/.agents/PAL/`)** contains all system documentation, user context (TELOS), and routing files. The rest of the system lives in the PAL package (`src/`) and the agent's config directory (`~/.claude/`, `~/.config/opencode/`, `~/.cursor/`, or `~/.codex/`).
+**The PAL home directory (`~/.pal/`)** contains all system documentation, user context (TELOS), memory, and tools. The rest of the system lives in the PAL package (`src/`) and the agent's config directory (`~/.claude/`, `~/.config/opencode/`, `~/.cursor/`, or `~/.codex/`).
 
 ## Directory Structure
 
 ```
-~/.agents/PAL/                     # PAL home — user context + routing
-  ALGORITHM.md                     # The execution engine (4-phase)
-  CONTEXT_ROUTING.md               # On-demand context routing table
-  MEMORY_SYSTEM.md                 # Memory guidelines
-  OPINION_TRACKING.md              # Opinion system reference
-  STEERING_RULES.md                # Behavioral rules
-  WORK_TRACKING.md                 # Work tracking reference
+~/.pal/                            # PAL home
+  docs/                            # System documentation (engine-managed)
+    ALGORITHM.md                   # The execution engine (4-phase)
+    CONTEXT_ROUTING.md             # On-demand context routing table
+    MEMORY_SYSTEM.md               # Memory guidelines
+    OPINION_TRACKING.md            # Opinion system reference
+    STEERING_RULES.md              # Behavioral rules
+    WORK_TRACKING.md               # Work tracking reference
+  tools/                           # Agent CLI tools (symlink → repo src/tools/agent/)
+  skills/                          # Installed skills (symlinks → assets/skills/)
   telos/                           # User life context (TELOS)
     MISSION.md, GOALS.md, PROJECTS.md, BELIEFS.md,
     CHALLENGES.md, STRATEGIES.md, IDEAS.md, LEARNED.md,
@@ -124,5 +127,5 @@ PAL is designed to work identically across:
 
 - **Add a skill:** Use the `create-skill` skill or manually create `assets/skills/<name>/SKILL.md`
 - **Add startup files:** Append to `pal-settings.json → loadAtStartup.files`
-- **Add user context:** Create files in `~/.agents/PAL/telos/`
+- **Add user context:** Create files in `~/.pal/telos/`
 - **Toggle dynamic context:** Set keys in `pal-settings.json → dynamicContext` to `false`

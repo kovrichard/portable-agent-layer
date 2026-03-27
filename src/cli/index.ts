@@ -347,7 +347,6 @@ function doctor(silent = false): DoctorResult {
   const hasAgent = claude.available || opencode.available || cursor.available;
 
   const home = palHome();
-  const isRepo = existsSync(resolve(palPkg(), ".palroot"));
   const telosCount = (() => {
     try {
       return readdirSync(resolve(home, "telos")).filter((f) => f.endsWith(".md")).length;
@@ -373,7 +372,7 @@ function doctor(silent = false): DoctorResult {
     cursor.available
       ? ok(`Cursor ${cursor.version || ""}`.trim())
       : fail("Cursor — not found");
-    ok(`PAL home: ${home} (${isRepo ? "repo" : "package"} mode)`);
+    ok(`PAL home: ${home}`);
     telosCount > 0 ? ok(`TELOS: ${telosCount} files`) : fail("TELOS: not scaffolded");
 
     // API key checks
@@ -420,13 +419,9 @@ async function init(args: string[]) {
   }
 
   const home = palHome();
-  const isRepo = existsSync(resolve(palPkg(), ".palroot"));
-
-  if (!isRepo) {
-    log.info(`Creating PAL home at ${home}`);
-    mkdirSync(resolve(home, "telos"), { recursive: true });
-    mkdirSync(resolve(home, "memory"), { recursive: true });
-  }
+  log.info(`Creating PAL home at ${home}`);
+  mkdirSync(resolve(home, "telos"), { recursive: true });
+  mkdirSync(resolve(home, "memory"), { recursive: true });
 
   scaffoldTelos();
   ensureSetupState();
@@ -670,13 +665,11 @@ async function update() {
 async function status() {
   const home = palHome();
   const pkg = palPkg();
-  const isRepo = existsSync(resolve(pkg, ".palroot"));
 
   const pkgJson = JSON.parse(readFileSync(resolve(pkg, "package.json"), "utf-8"));
 
   console.log("");
   log.info(`Version:  ${pkgJson.version}`);
-  log.info(`Mode:     ${isRepo ? "repo" : "package"}`);
   log.info(`Package:  ${pkg}`);
   log.info(`Home:     ${home}`);
   console.log("");

@@ -2,7 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { checkBashCommand, checkFilePath } from "../src/hooks/lib/security";
 
 describe("checkBashCommand", () => {
-  // Blocked commands
+  // --- Dangerous commands (always blocked) ---
+
   test("blocks rm -rf /", () => {
     expect(checkBashCommand("rm -rf /")).toBeTruthy();
   });
@@ -32,7 +33,8 @@ describe("checkBashCommand", () => {
     expect(checkBashCommand("dd if=/dev/zero of=/dev/sda")).toBeTruthy();
   });
 
-  // Safe commands
+  // --- Safe commands ---
+
   test("allows normal commands", () => {
     expect(checkBashCommand("ls -la")).toBeNull();
     expect(checkBashCommand("git status")).toBeNull();
@@ -45,31 +47,75 @@ describe("checkBashCommand", () => {
     expect(checkBashCommand("rm -rf ./build")).toBeNull();
   });
 
-  // Hook-managed files
-  test("blocks writing to hook-managed files", () => {
-    expect(checkBashCommand("echo 'x' > sessions.json")).toBeTruthy();
-    expect(checkBashCommand("echo 'x' > ratings.jsonl")).toBeTruthy();
+  // --- Managed file scoping ---
+
+  test("blocks writing to managed files under managed roots", () => {
+    expect(checkBashCommand("echo 'x' > ~/.pal/memory/sessions.json")).toBeTruthy();
+    expect(checkBashCommand("echo 'x' > ~/.claude/ratings.jsonl")).toBeTruthy();
+    expect(checkBashCommand("echo 'x' > ~/.agents/CLAUDE.md")).toBeTruthy();
   });
 
-  test("allows reading hook-managed files", () => {
+  test("allows reading managed files under managed roots", () => {
+    expect(checkBashCommand("cat ~/.pal/memory/sessions.json")).toBeNull();
+    expect(checkBashCommand("grep pattern ~/.claude/ratings.jsonl")).toBeNull();
+    expect(checkBashCommand("head ~/.pal/memory/sessions.json")).toBeNull();
+    expect(checkBashCommand("find ~/.pal/memory -name sessions.json")).toBeNull();
+  });
+
+  test("allows editing managed files in repo templates", () => {
+    expect(checkBashCommand("echo 'x' > assets/templates/pal-settings.json")).toBeNull();
+    expect(
+      checkBashCommand("sed -i 's/foo/bar/' assets/templates/pal-settings.json")
+    ).toBeNull();
+  });
+
+  test("allows mentioning managed filenames in arguments", () => {
+    expect(
+      checkBashCommand('bun tool.ts --context "references pal-settings.json"')
+    ).toBeNull();
+    expect(checkBashCommand('echo "check sessions.json"')).toBeNull();
+  });
+
+  test("allows commands that mention managed root in one arg and managed filename in another", () => {
+    // This is the real-world case: a test script that references both template and live paths
+    expect(
+      checkBashCommand(
+        "bun test.ts --template assets/templates/pal-settings.json --live ~/.pal/docs/foo.md"
+      )
+    ).toBeNull();
+    // Tool that writes to a non-managed file but mentions a managed root in another arg
+    expect(
+      checkBashCommand(
+        'bun ~/.pal/tools/thread.ts --add --title "fix pal-settings.json scoping"'
+      )
+    ).toBeNull();
+  });
+
+  test("allows bare managed filenames without managed root", () => {
     expect(checkBashCommand("cat sessions.json")).toBeNull();
     expect(checkBashCommand("grep pattern ratings.jsonl")).toBeNull();
-    expect(checkBashCommand("head sessions.json")).toBeNull();
   });
 
-  // Hook-managed directories
-  test("blocks writing to hook-managed directories", () => {
-    expect(checkBashCommand("echo 'x' > memory/signals/foo.txt")).toBeTruthy();
+  // --- Managed directory scoping ---
+
+  test("blocks writing to managed dirs under managed roots", () => {
+    expect(checkBashCommand("echo 'x' > ~/.pal/memory/signals/foo.txt")).toBeTruthy();
   });
 
-  test("allows reading from hook-managed directories", () => {
+  test("allows reading from managed dirs under managed roots", () => {
+    expect(checkBashCommand("cat ~/.pal/memory/signals/ratings.jsonl")).toBeNull();
+    expect(checkBashCommand("ls ~/.pal/memory/learning/session")).toBeNull();
+  });
+
+  test("allows mentioning managed dirs without managed root", () => {
     expect(checkBashCommand("cat memory/signals/ratings.jsonl")).toBeNull();
     expect(checkBashCommand("ls memory/learning/session")).toBeNull();
   });
 });
 
 describe("checkFilePath", () => {
-  // Protected system paths
+  // --- System paths (always blocked) ---
+
   test("blocks system paths", () => {
     expect(checkFilePath("/etc/passwd")).toBeTruthy();
     expect(checkFilePath("/boot/grub")).toBeTruthy();
@@ -85,20 +131,40 @@ describe("checkFilePath", () => {
     expect(checkFilePath("/home/user/.gnupg/key")).toBeTruthy();
   });
 
-  // Hook-managed files
-  test("blocks hook-managed files", () => {
-    expect(checkFilePath("/some/path/CLAUDE.md")).toBeTruthy();
-    expect(checkFilePath("/some/path/sessions.json")).toBeTruthy();
-    expect(checkFilePath("/some/path/ratings.jsonl")).toBeTruthy();
+  // --- Managed file scoping ---
+
+  test("blocks managed files under managed roots", () => {
+    expect(checkFilePath("/home/user/.pal/memory/sessions.json")).toBeTruthy();
+    expect(checkFilePath("/home/user/.claude/CLAUDE.md")).toBeTruthy();
+    expect(checkFilePath("/home/user/.agents/ratings.jsonl")).toBeTruthy();
   });
 
-  // Hook-managed directories
-  test("blocks hook-managed directories", () => {
-    expect(checkFilePath("/some/path/memory/signals/foo.txt")).toBeTruthy();
-    expect(checkFilePath("/some/path/memory/learning/session/file.md")).toBeTruthy();
+  test("blocks managed files under managed roots (Windows paths)", () => {
+    expect(
+      checkFilePath("C:\\Users\\testuser\\.pal\\memory\\pal-settings.json")
+    ).toBeTruthy();
   });
 
-  // Safe paths
+  test("allows managed files in repo templates", () => {
+    expect(
+      checkFilePath("/home/user/git/pal/assets/templates/pal-settings.json")
+    ).toBeNull();
+  });
+
+  test("allows managed filenames in unrelated paths", () => {
+    expect(checkFilePath("/some/random/path/CLAUDE.md")).toBeNull();
+    expect(checkFilePath("/some/path/sessions.json")).toBeNull();
+  });
+
+  // --- Managed directory scoping ---
+
+  test("blocks managed directories under managed roots", () => {
+    expect(checkFilePath("/home/user/.pal/memory/signals/foo.txt")).toBeTruthy();
+    expect(checkFilePath("/home/user/.pal/memory/learning/session/file.md")).toBeTruthy();
+  });
+
+  // --- Safe paths ---
+
   test("allows normal file paths", () => {
     expect(checkFilePath("/home/user/project/src/index.ts")).toBeNull();
     expect(checkFilePath("/tmp/foo.txt")).toBeNull();

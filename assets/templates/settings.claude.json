@@ -19,8 +19,8 @@
       "Bash(file //*)",
       "Bash(stat //*)",
       "Bash(readlink //*)",
-      "Bash(bun ~/.agents/skills/*/tools/*.ts *)",
-      "Bash(bun ~/.agents/PAL/tools/*.ts *)"
+      "Bash(bun ~/.pal/skills/*/tools/*.ts *)",
+      "Bash(bun ~/.pal/tools/*.ts *)"
     ]
   },
   "hooks": {

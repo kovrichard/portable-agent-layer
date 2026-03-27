@@ -333,6 +333,116 @@ export function loadRelationshipContext(): string {
   }
 }
 
+/** Load session intelligence from compact synthesis state */
+export function loadSessionIntelligence(): string {
+  try {
+    const p = resolve(paths.state(), "synthesis.json");
+    if (!existsSync(p)) return "";
+    const state = JSON.parse(readFileSync(p, "utf-8"));
+
+    const lines: string[] = ["## Session Intelligence"];
+
+    // Open Threads — project-specific first, then global
+    if (state.threads?.length > 0) {
+      const cwd = process.cwd();
+      const here = state.threads.filter((t: { cwd?: string }) => t.cwd === cwd);
+      const other = state.threads.filter((t: { cwd?: string }) => t.cwd !== cwd);
+
+      if (here.length > 0) {
+        lines.push("");
+        lines.push(`**Open threads — this project (${here.length}):**`);
+        for (const t of here) {
+          lines.push(`- ${t.title} (opened ${t.opened})`);
+          if (t.context) lines.push(`  ${t.context}`);
+        }
+        lines.push("→ These are directly relevant to your current work.");
+      }
+      if (other.length > 0) {
+        lines.push("");
+        lines.push(`**Open threads — other projects (${other.length}):**`);
+        for (const t of other) {
+          lines.push(`- ${t.title} (opened ${t.opened})`);
+        }
+      }
+    }
+
+    // Rating Trend
+    if (state.ratings?.count > 0) {
+      const r = state.ratings;
+      lines.push("");
+      lines.push(
+        `**Rating trend:** ${r.avg}/10 avg (last 10: ${r.recentAvg}/10, ${r.trend}).${r.lowCount > 0 ? ` ${r.lowCount} low ratings.` : ""}`
+      );
+      if (r.trend === "declining") {
+        lines.push(
+          "→ Trend is declining. Be extra careful with assumptions. Confirm before acting."
+        );
+      } else if (r.trend === "improving") {
+        lines.push("→ Trend is improving. Maintain current approach.");
+      } else if (r.lowCount > 5) {
+        lines.push(
+          "→ Multiple low ratings. Slow down, verify before acting, ask when uncertain."
+        );
+      }
+    }
+
+    // Algorithm Performance
+    if (state.algorithm?.reflectionCount > 0) {
+      const a = state.algorithm;
+      lines.push("");
+      lines.push(
+        `**Algorithm:** ${a.reflectionCount} reflections, ${a.passRate}% criteria pass rate, ${a.avgSentiment}/10 sentiment.`
+      );
+      if (a.passRate < 80) {
+        lines.push(
+          "→ Criteria pass rate is low. Invest more time in OBSERVE and PLAN phases."
+        );
+      }
+      if (a.recentObservations?.length > 0) {
+        const cwd = process.cwd();
+        const relevant = a.recentObservations.filter(
+          (o: { cwd?: string }) => !o.cwd || o.cwd === cwd
+        );
+        if (relevant.length > 0) {
+          lines.push("Recent self-observations (this project):");
+          for (const o of relevant) {
+            lines.push(`- [${o.date}] ${o.task}: "${o.observation}"`);
+          }
+        }
+      }
+    }
+
+    return lines.length > 1 ? lines.join("\n") : "";
+  } catch {
+    return "";
+  }
+}
+
+/** Load handoff state for the current project */
+export function loadHandoff(): string {
+  try {
+    const p = resolve(paths.state(), "last-handoff.json");
+    if (!existsSync(p)) return "";
+    const handoffs = JSON.parse(readFileSync(p, "utf-8"));
+    const cwd = process.cwd();
+    const entry = handoffs[cwd];
+    if (!entry?.handoff || entry.status !== "in-progress") return "";
+
+    const age = Date.now() - new Date(entry.timestamp).getTime();
+    if (age > 7 * 24 * 60 * 60 * 1000) return ""; // stale after 7 days
+
+    return [
+      "## Pick Up Where You Left Off",
+      `*Previous session: ${entry.title}*`,
+      "",
+      entry.handoff,
+      "→ Continue this work or explicitly close it before starting something new.",
+    ].join("\n");
+  } catch {
+    return "";
+  }
+}
+
 /**
  * Build the <system-reminder> content for the AI.
  *
@@ -358,10 +468,16 @@ export function buildSystemReminder(): string {
     ? loadSynthesisRecommendations()
     : "";
   const opinions = isEnabled(settings, "opinions") ? loadOpinionContext() : "";
+  const intelligence = isEnabled(settings, "sessionIntelligence")
+    ? loadSessionIntelligence()
+    : "";
+  const handoff = isEnabled(settings, "handoff") ? loadHandoff() : "";
   const parts: string[] = [];
   if (startup) parts.push(startup);
+  if (handoff) parts.push(handoff);
   if (wisdom) parts.push(wisdom);
   if (opinions) parts.push(opinions);
+  if (intelligence) parts.push(intelligence);
   if (relationship) parts.push(relationship);
   if (projectHistory) parts.push(projectHistory);
   if (digest) parts.push(digest);

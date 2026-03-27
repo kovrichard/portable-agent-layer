@@ -11,6 +11,7 @@ import {
   loadCursorHooksTemplate,
   log,
   readJson,
+  removeAgentsFromCursor,
   removePalDocs,
   removeSkills,
   unmergeCursorHooks,
@@ -44,6 +45,12 @@ if (removed.length > 0) {
   log.success(`Removed ${removed.length} skill(s): ${removed.join(", ")}`);
 } else {
   log.info("No PAL skills found");
+}
+
+// --- Remove PAL agents ---
+const removedAgents = removeAgentsFromCursor(resolve(CURSOR_DIR, "agents"));
+if (removedAgents.length > 0) {
+  log.success(`Removed ${removedAgents.length} agent(s): ${removedAgents.join(", ")}`);
 }
 
 // --- Remove PAL system docs ---

@@ -44,7 +44,7 @@ On follow-ups, include the ITERATION line. On first response to a new request, o
 
 FOR: Multi-step, complex, or difficult work. Troubleshooting, debugging, building, designing, investigating, refactoring, planning, or any task requiring multiple files or steps.
 
-**MANDATORY FIRST ACTION:** Read `~/.agents/PAL/ALGORITHM.md` and follow its instructions exactly.
+**MANDATORY FIRST ACTION:** Read `~/.pal/docs/ALGORITHM.md` and follow its instructions exactly.
 
 Start your response with the following header in this mode:
 ══════ PAL | ALGORITHM ══════
@@ -61,7 +61,7 @@ Start your response with the following header in this mode:
 {{SETUP_PROMPT}}
 ## Context Routing
 
-When you need context about any of these topics, read `~/.agents/PAL/CONTEXT_ROUTING.md` for the file path:
+When you need context about any of these topics, read `~/.pal/docs/CONTEXT_ROUTING.md` for the file path:
 
 - PAL internals
 - The user, their life and work, etc

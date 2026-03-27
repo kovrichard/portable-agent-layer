@@ -253,11 +253,13 @@ export function scaffoldPalSettings(): void {
 
 // --- PAL docs (modular context routing files) ---
 
-const PAL_DOCS_DIR = resolve(platform.agentsDir(), "PAL");
+const PAL_DOCS_DIR = resolve(palHome(), "docs");
+const PAL_TOOLS_DIR = resolve(palHome(), "tools");
 
 /**
- * Install PAL system docs into ~/.agents/PAL/.
+ * Install PAL system docs into ~/.pal/docs/.
  * Always overwrites — these are engine-managed, not user-editable.
+ * Also creates ~/.pal/tools/ → repo agent tools (symlink).
  */
 export function copyPalDocs(): number {
   const srcDir = assets.palDocs();
@@ -273,28 +275,25 @@ export function copyPalDocs(): number {
     count++;
   }
 
-  // Symlink ~/.agents/PAL/{telos,memory,tools} → source locations
+  // ~/.pal/tools/ → repo agent tools
   const linkType = process.platform === "win32" ? "junction" : "dir";
-  ensureSymlink(resolve(PAL_DOCS_DIR, "telos"), resolve(palHome(), "telos"), linkType);
-  ensureSymlink(resolve(PAL_DOCS_DIR, "memory"), resolve(palHome(), "memory"), linkType);
-  ensureSymlink(resolve(PAL_DOCS_DIR, "tools"), assets.agentTools(), linkType);
+  ensureSymlink(PAL_TOOLS_DIR, assets.agentTools(), linkType);
 
   return count;
 }
 
-/** Remove PAL system docs from ~/.agents/PAL/ */
+/** Remove PAL system docs from ~/.pal/docs/ */
 export function removePalDocs(): void {
-  if (!existsSync(PAL_DOCS_DIR)) return;
-  for (const file of readdirSync(PAL_DOCS_DIR).filter((f) => f.endsWith(".md"))) {
-    try {
-      unlinkSync(resolve(PAL_DOCS_DIR, file));
-    } catch {
-      /* gone */
-    }
+  // Remove tools symlink
+  try {
+    unlinkSync(PAL_TOOLS_DIR);
+  } catch {
+    /* gone */
   }
+  if (!existsSync(PAL_DOCS_DIR)) return;
   try {
     rmSync(PAL_DOCS_DIR, { recursive: true });
-    log.info("Removed ~/.agents/PAL/");
+    log.info("Removed ~/.pal/docs/");
   } catch {
     /* gone */
   }
@@ -302,12 +301,12 @@ export function removePalDocs(): void {
 
 // --- Skills ---
 
-const AGENTS_SKILLS_DIR = resolve(platform.agentsDir(), "skills");
+const PAL_SKILLS_DIR = resolve(palHome(), "skills");
 
 /**
  * Install PAL skills by symlinking:
- *   ~/.agents/skills/<name> → <repo>/assets/skills/<name>  (source of truth)
- *   ~/.claude/skills/<name> → ~/.agents/skills/<name>       (Claude Code discovery)
+ *   ~/.pal/skills/<name> → <repo>/assets/skills/<name>  (source of truth)
+ *   ~/.claude/skills/<name> → ~/.pal/skills/<name>       (agent discovery)
  *
  * Symlinks mean tools inside skills can import from the repo (src/hooks/lib/*)
  * and everything resolves naturally. Additive — skips skills already installed.
@@ -316,7 +315,7 @@ export function copySkills(claudeSkillsDir: string): number {
   const skillsDir = assets.skills();
   if (!existsSync(skillsDir)) return 0;
 
-  mkdirSync(AGENTS_SKILLS_DIR, { recursive: true });
+  mkdirSync(PAL_SKILLS_DIR, { recursive: true });
   mkdirSync(claudeSkillsDir, { recursive: true });
   const linkType = process.platform === "win32" ? "junction" : "dir";
   let count = 0;
@@ -325,17 +324,22 @@ export function copySkills(claudeSkillsDir: string): number {
     const srcDir = resolve(skillsDir, name);
     if (!existsSync(resolve(srcDir, "SKILL.md"))) continue;
 
-    // ~/.agents/skills/<name> → <repo>/assets/skills/<name>
-    const agentLink = resolve(AGENTS_SKILLS_DIR, name);
-    ensureSymlink(agentLink, srcDir, linkType);
+    // ~/.pal/skills/<name> → <repo>/assets/skills/<name>
+    const palLink = resolve(PAL_SKILLS_DIR, name);
+    ensureSymlink(palLink, srcDir, linkType);
 
-    // ~/.claude/skills/<name> → ~/.agents/skills/<name>
+    // ~/.claude/skills/<name> → ~/.pal/skills/<name>
     const claudeLink = resolve(claudeSkillsDir, name);
-    ensureSymlink(claudeLink, agentLink, linkType);
+    ensureSymlink(claudeLink, palLink, linkType);
 
     log.info(`Linked skill: ${name}`);
     count++;
   }
+
+  // ~/.agents/skills/ → ~/.pal/skills/
+  mkdirSync(platform.agentsDir(), { recursive: true });
+  ensureSymlink(resolve(platform.agentsDir(), "skills"), PAL_SKILLS_DIR, linkType);
+
   return count;
 }
 
@@ -356,7 +360,7 @@ function ensureSymlink(link: string, target: string, type: "dir" | "junction"): 
   symlinkSync(target, link, type);
 }
 
-/** Remove PAL skill symlinks from ~/.agents/skills/ and ~/.claude/skills/ */
+/** Remove PAL skill symlinks from ~/.pal/skills/ and ~/.claude/skills/ */
 export function removeSkills(claudeSkillsDir: string): string[] {
   const skillsDir = assets.skills();
   if (!existsSync(skillsDir)) return [];
@@ -365,10 +369,7 @@ export function removeSkills(claudeSkillsDir: string): string[] {
   for (const name of readdirSync(skillsDir)) {
     if (!existsSync(resolve(skillsDir, name, "SKILL.md"))) continue;
 
-    for (const link of [
-      resolve(AGENTS_SKILLS_DIR, name),
-      resolve(claudeSkillsDir, name),
-    ]) {
+    for (const link of [resolve(PAL_SKILLS_DIR, name), resolve(claudeSkillsDir, name)]) {
       try {
         unlinkSync(link);
       } catch {
@@ -378,6 +379,14 @@ export function removeSkills(claudeSkillsDir: string): string[] {
     removed.push(name);
     log.info(`Removed skill: ${name}`);
   }
+
+  // Remove ~/.agents/skills/ → ~/.pal/skills/ symlink
+  try {
+    unlinkSync(resolve(platform.agentsDir(), "skills"));
+  } catch {
+    /* gone */
+  }
+
   return removed;
 }
 
@@ -387,28 +396,10 @@ const CLAUDE_AGENTS_DIR = resolve(platform.claudeDir(), "agents");
 
 /**
  * Install PAL agent definitions into ~/.claude/agents/.
- * Additive — skips agents already installed.
+ * Always overwrites — engine-managed, not user-editable.
  */
 export function copyAgents(): number {
-  const agentsDir = assets.agents();
-  if (!existsSync(agentsDir)) return 0;
-
-  mkdirSync(CLAUDE_AGENTS_DIR, { recursive: true });
-  let count = 0;
-
-  for (const file of readdirSync(agentsDir).filter((f) => f.endsWith(".md"))) {
-    const src = resolve(agentsDir, file);
-    const dst = resolve(CLAUDE_AGENTS_DIR, file);
-
-    if (!existsSync(dst)) {
-      copyFileSync(src, dst);
-      log.info(`Added agent: ${file.replace(/\.md$/, "")}`);
-      count++;
-    } else {
-      log.warn(`Agent exists, skipping: ${file.replace(/\.md$/, "")}`);
-    }
-  }
-  return count;
+  return installAgents(CLAUDE_AGENTS_DIR, "claude");
 }
 
 /** Remove PAL agents from ~/.claude/agents/ */
@@ -439,101 +430,120 @@ export function countAgents(): number {
   }
 }
 
-// --- Opencode agent translation ---
+// --- Agent platform extraction ---
 
-/** Map Claude Code tool names to opencode permission keys */
-const TOOL_TO_PERMISSION: Record<string, string> = {
-  WebSearch: "webfetch",
-  WebFetch: "webfetch",
-  Read: "read",
-  Grep: "read",
-  Glob: "read",
-  Write: "edit",
-  Edit: "edit",
-  Bash: "bash",
-};
+const AGENT_PLATFORMS = ["claude", "opencode", "cursor"] as const;
+type AgentPlatform = (typeof AGENT_PLATFORMS)[number];
 
 /**
- * Translate a Claude Code agent .md file to opencode format.
- * - `tools: X, Y` → `permission: { x: allow, ... }`
- * - Adds `mode: subagent`
- * - Keeps everything else (name, description, model, body)
+ * Extract a platform-specific agent file from the unified agent format.
+ *
+ * Each agent .md defines platform blocks at the top level:
+ *   claude:     → fields for Claude Code
+ *   opencode:   → fields for opencode
+ *   cursor:     → fields for Cursor
+ *
+ * Global fields (name, description) are always included.
+ * The target platform block is un-indented and merged into the root.
+ * All other platform blocks are stripped.
  */
-export function translateAgentForOpencode(content: string): string {
+export function extractAgentForPlatform(
+  content: string,
+  platform: AgentPlatform
+): string {
   const parts = content.split(/^---\s*$/m);
   if (parts.length < 3) return content;
 
   const frontmatter = parts[1];
   const body = parts.slice(2).join("---");
 
-  // Extract tools line
-  const toolsMatch = frontmatter.match(/^tools:\s*(.+)$/m);
-  const tools = toolsMatch ? toolsMatch[1].split(",").map((t) => t.trim()) : [];
+  const globalLines: string[] = [];
+  const platformLines: Record<AgentPlatform, string[]> = {
+    claude: [],
+    opencode: [],
+    cursor: [],
+  };
+  let currentPlatform: AgentPlatform | null = null;
 
-  // Build opencode permissions (deduplicated)
-  const perms = new Set<string>();
-  for (const tool of tools) {
-    const perm = TOOL_TO_PERMISSION[tool];
-    if (perm) perms.add(perm);
+  for (const line of frontmatter.split("\n")) {
+    if (!line.trim()) continue;
+
+    const platformMatch = line.match(/^(claude|opencode|cursor):\s*$/);
+    if (platformMatch) {
+      currentPlatform = platformMatch[1] as AgentPlatform;
+      continue;
+    }
+
+    if (currentPlatform) {
+      if (line.match(/^ {2}/)) {
+        platformLines[currentPlatform].push(line.slice(2)); // un-indent one level
+        continue;
+      }
+      currentPlatform = null; // end of platform block
+    }
+
+    globalLines.push(line);
   }
 
-  // Build new frontmatter: remove tools line, add mode + permission
-  let newFrontmatter = frontmatter.replace(/^tools:\s*.+$/m, "").trim();
-  newFrontmatter += "\nmode: subagent";
-  if (perms.size > 0) {
-    const permObj = Object.fromEntries([...perms].map((p) => [p, "allow"]));
-    // Inline YAML object
-    const permYaml = Object.entries(permObj)
-      .map(([k, v]) => `  ${k}: ${v}`)
-      .join("\n");
-    newFrontmatter += `\npermission:\n${permYaml}`;
-  }
+  const newFrontmatter = [...globalLines, ...platformLines[platform]]
+    .filter((l) => l.trim())
+    .join("\n");
 
   return `---\n${newFrontmatter}\n---\n${body}`;
 }
 
-/**
- * Install PAL agent definitions into an opencode agents directory.
- * Translates frontmatter from Claude Code format to opencode format.
- */
-export function copyAgentsForOpencode(ocAgentsDir: string): number {
+/** Install agents for a platform into a target directory. Always overwrites. */
+function installAgents(targetDir: string, platform: AgentPlatform): number {
   const agentsDir = assets.agents();
   if (!existsSync(agentsDir)) return 0;
 
-  mkdirSync(ocAgentsDir, { recursive: true });
+  mkdirSync(targetDir, { recursive: true });
   let count = 0;
 
   for (const file of readdirSync(agentsDir).filter((f) => f.endsWith(".md"))) {
-    const dst = resolve(ocAgentsDir, file);
-    if (!existsSync(dst)) {
-      const src = resolve(agentsDir, file);
-      const content = readFileSync(src, "utf-8");
-      writeFileSync(dst, translateAgentForOpencode(content), "utf-8");
-      log.info(`Added opencode agent: ${file.replace(/\.md$/, "")}`);
-      count++;
-    } else {
-      log.warn(`Opencode agent exists, skipping: ${file.replace(/\.md$/, "")}`);
-    }
+    const content = readFileSync(resolve(agentsDir, file), "utf-8");
+    writeFileSync(
+      resolve(targetDir, file),
+      extractAgentForPlatform(content, platform),
+      "utf-8"
+    );
+    log.info(`Installed ${platform} agent: ${file.replace(/\.md$/, "")}`);
+    count++;
   }
   return count;
 }
 
-/** Remove PAL agents from an opencode agents directory */
-export function removeAgentsFromOpencode(ocAgentsDir: string): string[] {
+/** Remove PAL agents from a directory. */
+function uninstallAgents(targetDir: string, label: string): string[] {
   const agentsDir = assets.agents();
   if (!existsSync(agentsDir)) return [];
 
   const removed: string[] = [];
   for (const file of readdirSync(agentsDir).filter((f) => f.endsWith(".md"))) {
-    const dst = resolve(ocAgentsDir, file);
+    const dst = resolve(targetDir, file);
     if (existsSync(dst)) {
       unlinkSync(dst);
-      const name = file.replace(/\.md$/, "");
-      removed.push(name);
-      log.info(`Removed opencode agent: ${name}`);
+      removed.push(file.replace(/\.md$/, ""));
+      log.info(`Removed ${label} agent: ${file.replace(/\.md$/, "")}`);
     }
   }
   return removed;
+}
+
+export function copyAgentsForOpencode(ocAgentsDir: string): number {
+  return installAgents(ocAgentsDir, "opencode");
+}
+
+export function removeAgentsFromOpencode(ocAgentsDir: string): string[] {
+  return uninstallAgents(ocAgentsDir, "opencode");
+}
+
+export function copyAgentsForCursor(cursorAgentsDir: string): number {
+  return installAgents(cursorAgentsDir, "cursor");
+}
+
+export function removeAgentsFromCursor(cursorAgentsDir: string): string[] {
+  return uninstallAgents(cursorAgentsDir, "cursor");
 }
 
 // --- Skill Index ---
@@ -580,11 +590,11 @@ function extractTriggers(description: string): string[] {
 }
 
 /**
- * Generate skill-index.json from installed skills in ~/.agents/skills/.
+ * Generate skill-index.json from installed skills in ~/.pal/skills/.
  * Called during install after skills are symlinked.
  */
 export function generateSkillIndex(): number {
-  if (!existsSync(AGENTS_SKILLS_DIR)) return 0;
+  if (!existsSync(PAL_SKILLS_DIR)) return 0;
 
   const index: SkillIndex = {
     generated: new Date().toISOString(),
@@ -592,8 +602,8 @@ export function generateSkillIndex(): number {
     skills: {},
   };
 
-  for (const name of readdirSync(AGENTS_SKILLS_DIR)) {
-    const skillMd = resolve(AGENTS_SKILLS_DIR, name, "SKILL.md");
+  for (const name of readdirSync(PAL_SKILLS_DIR)) {
+    const skillMd = resolve(PAL_SKILLS_DIR, name, "SKILL.md");
     if (!existsSync(skillMd)) continue;
 
     try {
@@ -629,12 +639,12 @@ export function generateSkillIndex(): number {
   return index.totalSkills;
 }
 
-/** Count skill subdirectories in ~/.agents/skills/ */
+/** Count skill subdirectories in ~/.pal/skills/ */
 export function countSkills(): number {
-  if (!existsSync(AGENTS_SKILLS_DIR)) return 0;
+  if (!existsSync(PAL_SKILLS_DIR)) return 0;
   try {
-    return readdirSync(AGENTS_SKILLS_DIR).filter((f) =>
-      existsSync(resolve(AGENTS_SKILLS_DIR, f, "SKILL.md"))
+    return readdirSync(PAL_SKILLS_DIR).filter((f) =>
+      existsSync(resolve(PAL_SKILLS_DIR, f, "SKILL.md"))
     ).length;
   } catch {
     return 0;
