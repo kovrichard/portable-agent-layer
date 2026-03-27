@@ -1,3 +1,12 @@
+## [0.23.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.23.0...v0.23.1) (2026-03-27)
+
+
+### Bug Fixes
+
+* add principle field to failure and rating handlers for enhanced context ([c0c4bbc](https://github.com/kovrichard/portable-agent-layer/commit/c0c4bbc2bdd6b7e309092fac5604f5746272c2f9))
+* add principle to explicit ratings to ([096a667](https://github.com/kovrichard/portable-agent-layer/commit/096a667c3186b0cf61e95bd8d6f3d32d2162842b))
+* **relationship:** collect opinions faster ([7648909](https://github.com/kovrichard/portable-agent-layer/commit/7648909b82499211db56a3a0691bc200fc31ba8e))
+
 # [0.23.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.22.0...v0.23.0) (2026-03-27)
 
 
