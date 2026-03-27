@@ -166,8 +166,16 @@ const SENTIMENT_SCHEMA = {
     confidence: { type: "number" },
     summary: { type: "string" },
     detailed_context: { type: "string" },
+    principle: { type: "string" },
   },
-  required: ["rating", "sentiment", "confidence", "summary", "detailed_context"],
+  required: [
+    "rating",
+    "sentiment",
+    "confidence",
+    "summary",
+    "detailed_context",
+    "principle",
+  ],
   additionalProperties: false,
 } as const;
 
@@ -177,6 +185,7 @@ interface SentimentResult {
   confidence: number;
   summary: string;
   detailed_context: string;
+  principle: string;
 }
 
 const SENTIMENT_SYSTEM_PROMPT = `Analyze the user's message for emotional sentiment toward the AI assistant.
@@ -187,7 +196,8 @@ OUTPUT FORMAT (JSON only):
   "sentiment": "positive" | "negative" | "neutral",
   "confidence": <0.0-1.0>,
   "summary": "<brief explanation, 10 words max>",
-  "detailed_context": "<comprehensive analysis, 50-150 words>"
+  "detailed_context": "<comprehensive analysis, 50-150 words>",
+  "principle": "<one actionable rule the AI should follow to avoid this failure or repeat this success, 10-20 words. Start with a verb: 'Verify...', 'Always...', 'Never...', 'Ask before...'>"
 }
 
 DETAILED_CONTEXT REQUIREMENTS:
@@ -240,6 +250,7 @@ function handleRating(
   context: string,
   source: string,
   detailedContext?: string,
+  principle?: string,
   sessionId?: string,
   userMessage?: string
 ): void {
@@ -257,6 +268,7 @@ function handleRating(
           context,
           source,
           detailedContext,
+          principle,
           responsePreview,
           userPreview,
           ts: now(),
@@ -283,6 +295,7 @@ async function handleImplicitSentiment(
       8,
       `Direct praise: "${trimmed}"`,
       "implicit",
+      undefined,
       undefined,
       sessionId,
       trimmed
@@ -328,6 +341,7 @@ async function handleImplicitSentiment(
         `${parsed.summary}: ${trimmed.slice(0, 200)}`,
         "implicit",
         parsed.detailed_context,
+        parsed.principle,
         sessionId,
         trimmed
       );
@@ -351,6 +365,7 @@ export async function captureRating(message: string, sessionId?: string): Promis
       explicit.rating,
       explicit.comment || cleaned.slice(0, 200),
       "explicit",
+      undefined,
       undefined,
       sessionId,
       cleaned

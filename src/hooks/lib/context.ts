@@ -231,10 +231,11 @@ export function loadFailurePatterns(): string {
 
     const lines = entries.map((e) => {
       const label = e.rating ? `[${e.rating}/10]` : "";
-      return `- ${label} ${e.context}`.trim();
+      const text = e.principle || e.context;
+      return `- ${label} ${text}`.trim();
     });
 
-    return ["## Recent Failure Patterns (Avoid)", ...lines].join("\n");
+    return ["## Lessons from Recent Failures — Apply These Now", ...lines].join("\n");
   } catch {
     return "";
   }

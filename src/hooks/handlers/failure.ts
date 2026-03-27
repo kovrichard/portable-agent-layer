@@ -30,7 +30,8 @@ export async function captureFailure(
   rating: number,
   context: string,
   transcript: string,
-  detailedContext?: string
+  detailedContext?: string,
+  principle?: string
 ): Promise<void> {
   const messages = parseMessages(transcript);
 
@@ -55,6 +56,7 @@ export async function captureFailure(
     ts: new Date().toISOString(),
     slug,
   };
+  if (principle) meta.principle = principle;
 
   const body = [
     "## What Happened",

@@ -137,6 +137,7 @@ async function checkPendingFailure(transcript: string): Promise<void> {
       rating: number;
       context: string;
       detailedContext?: string;
+      principle?: string;
       responsePreview?: string;
       userPreview?: string;
     };
@@ -145,7 +146,8 @@ async function checkPendingFailure(transcript: string): Promise<void> {
       pending.rating,
       pending.context,
       transcript,
-      pending.detailedContext
+      pending.detailedContext,
+      pending.principle
     );
   } catch {
     // Non-critical
