@@ -514,6 +514,7 @@ Where are you heading? Improving, declining, stagnating? What's the single most 
 - Write in first person, present tense
 - Be honest — if the data shows you're bad at something, say so
 - Synthesize, don't list — find the pattern behind the data points
+- If a previous self-model is provided, address what changed in the Trajectory section: what improved, what got worse, what stayed the same
 - Keep it under 500 words total
 - End with a meta line: *N ratings, N sessions, N reflections...*`;
 }
@@ -525,9 +526,24 @@ export async function composeSelfModel(days: number): Promise<string> {
   const rawData = formatDataForInference(data);
   const { aiName, principalName } = loadIdentity();
 
+  // Include previous self-model for trajectory comparison
+  let previousModel = "";
+  const currentPath = selfModelPath();
+  if (existsSync(currentPath)) {
+    try {
+      previousModel = readFileSync(currentPath, "utf-8");
+    } catch {
+      /* best effort */
+    }
+  }
+
+  const userContent = previousModel
+    ? `${rawData}\n\n---\n\n## Previous Self-Model (compare against this — what changed?)\n\n${previousModel}`
+    : rawData;
+
   const result = await inference({
     system: buildPrompt(aiName, principalName),
-    user: rawData,
+    user: userContent,
     model: SONNET_MODEL,
     maxTokens: 1500,
     timeout: 30000,
@@ -554,8 +570,13 @@ export async function composeSelfModel(days: number): Promise<string> {
 // ── Write ──
 
 export async function writeSelfModel(
-  days: number
-): Promise<{ path: string; content: string }> {
+  days: number,
+  force = false
+): Promise<{ path: string; content: string; skipped?: boolean }> {
+  if (!shouldRun(force)) {
+    return { path: selfModelPath(), content: "", skipped: true };
+  }
+
   const content = await composeSelfModel(days);
   const modelPath = selfModelPath();
   const metaPath = selfModelMetaPath();
@@ -621,8 +642,16 @@ Output: ~/.pal/memory/self-model.md (synthesized by Sonnet)
 
   const force = values.force ?? false;
   const dryRun = values["dry-run"] ?? false;
+  const days = parseInt(values.days ?? "30", 10);
 
-  if (!shouldRun(force) && !dryRun) {
+  if (dryRun) {
+    console.log(await composeSelfModel(days));
+    return;
+  }
+
+  const result = await writeSelfModel(days, force);
+
+  if (result.skipped) {
     console.log(
       JSON.stringify({
         skipped: true,
@@ -632,14 +661,7 @@ Output: ~/.pal/memory/self-model.md (synthesized by Sonnet)
     return;
   }
 
-  const days = parseInt(values.days ?? "30", 10);
-
-  if (dryRun) {
-    console.log(await composeSelfModel(days));
-    return;
-  }
-
-  const { path } = await writeSelfModel(days);
+  const { path } = result;
 
   console.log(
     JSON.stringify(

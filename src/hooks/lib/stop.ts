@@ -8,6 +8,7 @@ import { resolve } from "node:path";
 import { autoBackup } from "../handlers/backup";
 import { captureFailure } from "../handlers/failure";
 import { checkReflectTrigger } from "../handlers/reflect-trigger";
+import { checkSelfModelTrigger } from "../handlers/self-model-trigger";
 import { captureSessionIntelligence } from "../handlers/session-intelligence";
 import { runSynthesis } from "../handlers/synthesis";
 import { resetTab } from "../handlers/tab";
@@ -45,6 +46,7 @@ export async function runStopHandlers(
     updateCounts(),
     autoBackup(),
     checkReflectTrigger(),
+    checkSelfModelTrigger(),
     runSynthesis(),
   ]);
 
