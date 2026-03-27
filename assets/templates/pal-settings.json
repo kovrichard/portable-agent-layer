@@ -30,6 +30,7 @@
     "activeWork": true,
     "projectHistory": true,
     "sessionIntelligence": true,
-    "handoff": true
+    "handoff": true,
+    "selfModel": true
   }
 }

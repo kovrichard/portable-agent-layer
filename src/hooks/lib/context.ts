@@ -223,6 +223,19 @@ export function loadLearningDigest(): string {
   }
 }
 
+/** Load self-model for session context injection */
+export function loadSelfModel(): string {
+  try {
+    const p = resolve(paths.memory(), "self-model", "current.md");
+    if (!existsSync(p)) return "";
+    const content = readFileSync(p, "utf-8").trim();
+    if (!content) return "";
+    return content;
+  } catch {
+    return "";
+  }
+}
+
 /** Load 5 most recent failure contexts as an "avoid" list */
 export function loadFailurePatterns(): string {
   try {
@@ -469,6 +482,7 @@ export function buildSystemReminder(): string {
     ? loadSynthesisRecommendations()
     : "";
   const opinions = isEnabled(settings, "opinions") ? loadOpinionContext() : "";
+  const selfModel = isEnabled(settings, "selfModel") ? loadSelfModel() : "";
   const intelligence = isEnabled(settings, "sessionIntelligence")
     ? loadSessionIntelligence()
     : "";
@@ -476,6 +490,7 @@ export function buildSystemReminder(): string {
   const parts: string[] = [];
   if (startup) parts.push(startup);
   if (handoff) parts.push(handoff);
+  if (selfModel) parts.push(selfModel);
   if (wisdom) parts.push(wisdom);
   if (opinions) parts.push(opinions);
   if (intelligence) parts.push(intelligence);
