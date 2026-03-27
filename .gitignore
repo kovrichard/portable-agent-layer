@@ -40,6 +40,7 @@ memory/wisdom/frames/
 memory/wisdom/state/
 memory/relationship/
 memory/entities/entity-index.json
+memory/self-model/
 
 # Per-project session history
 memory/projects/

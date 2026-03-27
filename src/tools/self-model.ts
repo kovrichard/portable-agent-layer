@@ -77,12 +77,20 @@ interface RelationshipNote {
 
 // ── Helpers ──
 
+function selfModelDir(): string {
+  return ensureDir(resolve(paths.memory(), "self-model"));
+}
+
 function selfModelPath(): string {
-  return resolve(paths.memory(), "self-model.md");
+  return resolve(selfModelDir(), "current.md");
 }
 
 function selfModelMetaPath(): string {
-  return resolve(paths.state(), "self-model-meta.json");
+  return resolve(selfModelDir(), "meta.json");
+}
+
+function archiveDir(): string {
+  return ensureDir(resolve(selfModelDir(), "archive"));
 }
 
 function shouldRun(force: boolean): boolean {
@@ -551,6 +559,25 @@ export async function writeSelfModel(
   const content = await composeSelfModel(days);
   const modelPath = selfModelPath();
   const metaPath = selfModelMetaPath();
+
+  // Archive previous self-model before overwriting
+  if (existsSync(modelPath)) {
+    try {
+      const meta = existsSync(metaPath)
+        ? (JSON.parse(readFileSync(metaPath, "utf-8")) as { timestamp?: string })
+        : {};
+      const date = meta.timestamp
+        ? meta.timestamp.slice(0, 10)
+        : new Date().toISOString().slice(0, 10);
+      const archivePath = resolve(archiveDir(), `${date}.md`);
+      if (!existsSync(archivePath)) {
+        const { copyFileSync } = await import("node:fs");
+        copyFileSync(modelPath, archivePath);
+      }
+    } catch {
+      /* archive is best-effort */
+    }
+  }
 
   writeFileSync(modelPath, content, "utf-8");
   writeFileSync(
