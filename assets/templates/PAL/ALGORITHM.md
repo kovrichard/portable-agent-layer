@@ -2,6 +2,26 @@
 
 Core: transition from CURRENT STATE to IDEAL STATE using verifiable criteria. Every criterion is atomic, binary testable, and checked off with evidence.
 
+## Effort Levels
+
+Assign ONE tier at the start of OBSERVE. Default is Standard — only escalate if the request demands depth.
+
+| Tier | Criteria | Min Capabilities | When |
+|------|----------|-----------------|------|
+| **Standard** | 3-8 | 1-2 | Normal request, single concern |
+| **Extended** | 8-16 | 3-5 | Multi-file, quality must be high |
+| **Advanced** | 16-32 | 5-8 | Substantial design or refactoring |
+| **Deep** | 32+ | 8+ | Complex architecture, no time pressure |
+
+**What scales by effort level:**
+
+| Element | Standard | Extended+ |
+|---------|----------|-----------|
+| Capability audit format | One-line summary | Full USE/DECLINE/N/A |
+| Plan Mode (EnterPlanMode) | Skip | Use for user alignment |
+| LEARN phase | Reflection log + threads | + Wisdom frame |
+| Constraint extraction | Inline in reverse engineering | Numbered [EX-N] list |
+
 ## The Five Phases
 
 All work happens inside these phases. No work outside the phase structure until the Algorithm completes.
@@ -9,6 +29,11 @@ All work happens inside these phases. No work outside the phase structure until 
 ### ━━━ 👁️ OBSERVE ━━━ 1/5
 
 Thinking-only. No tool calls except context recovery (Grep/Glob/Read).
+
+**0. Assign effort level** — classify the request using the table above. Output:
+```
+⏱️ EFFORT: [Standard | Extended | Advanced | Deep] — [one-line reason]
+```
 
 **1. Reverse engineer the request:**
 
@@ -18,6 +43,24 @@ Thinking-only. No tool calls except context recovery (Grep/Glob/Read).
 - What did they explicitly say they don't want?
 - What is obvious they don't want that they didn't say?
 - What are common gotchas for this type of work?
+
+**1.5. Extract constraints:**
+
+**Standard:** Note constraints inline in the reverse engineering bullets above — e.g. "[Constraint: max 3 retries, timeout 30s]". No separate section needed.
+
+**Extended+:** Extract numbered constraints from the request. Scan for:
+- **Quantitative** — numbers, limits, thresholds, ranges
+- **Prohibitions** — "don't", "never", "must not", "avoid"
+- **Requirements** — "must", "always", "required", "needs to"
+- **Implicit** — conventions, patterns, or standards obvious from context
+
+```
+🔬 CONSTRAINTS:
+- [EX-1]: [constraint]
+- [EX-2]: [constraint]
+```
+
+Every constraint must map to at least one criterion in step 2. A constraint without a covering criterion is a gap.
 
 **2. Define verifiable criteria:**
 
@@ -78,7 +121,14 @@ Scan ALL 14 capabilities below. For each, assign exactly one disposition:
 
 **Capability #3 (Skills) requires active scanning.** Read `skill-index.json` and match the task against skill triggers. "Skills — N/A" without evidence of scanning is an error.
 
-Output:
+Output — scales by effort level:
+
+**Standard:**
+```
+🏹 CAPABILITIES: #1 Task, #3 Skills (matched: research) | 14/14 scanned, USE: 2
+```
+
+**Extended+:**
 ```
 🏹 CAPABILITIES (14/14):
 USE: [#, #, #] — [reason (phase: WHICH)]
@@ -99,7 +149,7 @@ Refine criteria if the pressure test reveals gaps. Add criteria for uncovered fa
 **Plan the execution:**
 - Validate prerequisites (env vars, dependencies, files, state)
 - Decide execution order — what's serial, what can parallelize
-- If Advanced+ complexity, use EnterPlanMode for user alignment
+- **Extended+:** use EnterPlanMode for user alignment before executing
 
 ### ━━━ ⚡ EXECUTE ━━━ 3/5
 
@@ -166,7 +216,7 @@ Only add threads that genuinely need follow-up. Resolve existing threads if this
 bun ~/.pal/tools/thread.ts --resolve --id <id>
 ```
 
-**4. Wisdom Frame** — if the session produced a genuine, reusable insight:
+**4. Wisdom Frame** (Extended+ only) — if the session produced a genuine, reusable insight:
 
 ```bash
 bun ~/.pal/tools/wisdom-frame.ts --domain <domain> --observation "insight" [--type principle|contextual-rule|anti-pattern|evolution]
@@ -180,18 +230,18 @@ Only write if the insight is **genuine and reusable** — not every session prod
 ```
 ♻️ ALGORITHM ═══════════════════════════
 🗒️ TASK: [brief description]
+⏱️ EFFORT: [tier] — [reason]
 
 ━━━ 👁️ OBSERVE ━━━ 1/5
 🔎 REVERSE ENGINEERING:
 [reverse engineering output]
 
+🔬 CONSTRAINTS: [Extended+: EX-1, EX-2... | Standard: inline above]
+
 📋 CRITERIA:
 [criteria checklist]
 
-🏹 CAPABILITIES (14/14):
-USE: [#, #] — [reason]
-DECLINE: [#] — [reason]
-N/A: [rest]
+🏹 CAPABILITIES: [format scales by effort level]
 
 ━━━ 🧠 PLAN ━━━ 2/5
 🧠 RISKS: [risks]
