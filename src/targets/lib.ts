@@ -660,21 +660,3 @@ export function countMd(dir: string): number {
     return 0;
   }
 }
-
-/** Read skill frontmatter field */
-export function readSkillField(skillPath: string, field: string): string {
-  try {
-    const content = readFileSync(skillPath, "utf-8");
-    const match = content.match(new RegExp(`^${field}:\\s*(.+)$`, "m"));
-    return match?.[1]?.trim() ?? "";
-  } catch {
-    return "";
-  }
-}
-
-/** Strip frontmatter from a skill file (content after second ---) */
-export function skillBody(skillPath: string): string {
-  const content = readFileSync(skillPath, "utf-8");
-  const parts = content.split(/^---\s*$/m);
-  return parts.length >= 3 ? parts.slice(2).join("---").trim() : content.trim();
-}
