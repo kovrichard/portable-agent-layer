@@ -3,43 +3,19 @@
  * Called during `pal install`. Skips fields that already have values.
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
 import * as clack from "@clack/prompts";
-import { palHome } from "../hooks/lib/paths";
-
-interface PalSettings {
-  identity?: {
-    ai?: { name?: string; fullName?: string; displayName?: string; catchphrase?: string };
-    principal?: { name?: string; timezone?: string };
-  };
-  [key: string]: unknown;
-}
-
-function settingsPath(): string {
-  return resolve(palHome(), "memory", "pal-settings.json");
-}
-
-function readSettings(): PalSettings {
-  const p = settingsPath();
-  if (!existsSync(p)) return {};
-  try {
-    return JSON.parse(readFileSync(p, "utf-8"));
-  } catch {
-    return {};
-  }
-}
-
-function writeSettings(settings: PalSettings): void {
-  writeFileSync(settingsPath(), `${JSON.stringify(settings, null, 2)}\n`, "utf-8");
-}
+import {
+  type PalSettingsData,
+  raw as readSettings,
+  write as writeSettings,
+} from "../hooks/lib/settings";
 
 /** Prompt for missing identity fields. Skips any field that already has a value. */
 export async function promptIdentity(): Promise<void> {
   // Skip interactive prompts in non-TTY environments (tests, CI)
   if (!process.stdin.isTTY) return;
 
-  const settings = readSettings();
+  const settings: PalSettingsData = { ...readSettings() };
   if (!settings.identity) settings.identity = {};
   if (!settings.identity.ai) settings.identity.ai = {};
   if (!settings.identity.principal) settings.identity.principal = {};

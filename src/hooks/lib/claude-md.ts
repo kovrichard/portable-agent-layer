@@ -18,7 +18,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
-import { assets, ensureDir, palHome, paths, platform } from "./paths";
+import { assets, ensureDir, paths, platform } from "./paths";
 import { buildSetupPrompt, readSetupState } from "./setup";
 
 const TEMPLATE_PATH = assets.agentsMdTemplate();
@@ -89,7 +89,7 @@ export function needsRebuild(): boolean {
   const sources: string[] = [
     TEMPLATE_PATH,
     resolve(paths.state(), "setup.json"),
-    palSettingsPath(),
+    resolve(paths.memory(), "pal-settings.json"),
   ];
 
   // Track PAL doc sources for rebuild detection
@@ -103,46 +103,7 @@ export function needsRebuild(): boolean {
   return latestMtime(...sources) > outputMtime;
 }
 
-interface Identity {
-  ai: { name: string; displayName: string; catchphrase: string };
-  principal: { name: string };
-}
-
-const IDENTITY_DEFAULTS: Identity = {
-  ai: { name: "Assistant", displayName: "ASSISTANT", catchphrase: "" },
-  principal: { name: "" },
-};
-
-function palSettingsPath(): string {
-  return resolve(palHome(), "memory", "pal-settings.json");
-}
-
-/** Load identity from pal-settings.json */
-export function loadIdentity(): Identity {
-  const p = palSettingsPath();
-  if (!existsSync(p)) return IDENTITY_DEFAULTS;
-
-  try {
-    const data = JSON.parse(readFileSync(p, "utf-8"));
-    const ai = data.identity?.ai ?? {};
-    const principal = data.identity?.principal ?? {};
-    const name = ai.name || IDENTITY_DEFAULTS.ai.name;
-    const catchphrase = (ai.catchphrase || "").replace("{name}", name);
-
-    return {
-      ai: {
-        name,
-        displayName: ai.displayName || IDENTITY_DEFAULTS.ai.displayName,
-        catchphrase,
-      },
-      principal: {
-        name: principal.name || IDENTITY_DEFAULTS.principal.name,
-      },
-    };
-  } catch {
-    return IDENTITY_DEFAULTS;
-  }
-}
+import { identity } from "./settings";
 
 /** Render AGENTS.md from the template using current state */
 export function buildClaudeMd(): string {
@@ -152,14 +113,14 @@ export function buildClaudeMd(): string {
 
   const state = readSetupState();
   const setupPrompt = state ? buildSetupPrompt(state) : null;
-  const identity = loadIdentity();
+  const id = identity();
 
   return template
     .replace("{{SETUP_PROMPT}}", setupPrompt ? `${setupPrompt}\n` : "")
-    .replaceAll("{{IDENTITY_NAME}}", identity.ai.name)
-    .replaceAll("{{IDENTITY_DISPLAY}}", identity.ai.displayName)
-    .replaceAll("{{IDENTITY_CATCHPHRASE}}", identity.ai.catchphrase)
-    .replaceAll("{{PRINCIPAL_NAME}}", identity.principal.name);
+    .replaceAll("{{IDENTITY_NAME}}", id.ai.name)
+    .replaceAll("{{IDENTITY_DISPLAY}}", id.ai.displayName)
+    .replaceAll("{{IDENTITY_CATCHPHRASE}}", id.ai.catchphrase)
+    .replaceAll("{{PRINCIPAL_NAME}}", id.principal.name);
 }
 
 /** Regenerate AGENTS.md if any source file is newer, and ensure CLAUDE.md symlink exists. Returns true if rebuilt. */

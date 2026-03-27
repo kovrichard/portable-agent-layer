@@ -12,36 +12,16 @@ import { loadOpinionContext } from "./opinions";
 import { paths } from "./paths";
 import { loadRecentNotes } from "./relationship";
 import { readSessionNames } from "./session-names";
+import * as settings from "./settings";
 import { buildSetupPrompt, readSetupState, remainingSteps, STEP_ORDER } from "./setup";
 import { computeSignalTrends, formatTrends } from "./signal-trends";
 import { readFramePrinciples } from "./wisdom";
 import { readProjectHistory, readSessions, recentSessions } from "./work-tracking";
 
-interface PalSettings {
-  loadAtStartup?: { files?: string[] };
-  dynamicContext?: Record<string, boolean>;
-}
-
-/** Load pal-settings.json from memory/ */
-function loadPalSettings(): PalSettings {
-  const p = resolve(paths.memory(), "pal-settings.json");
-  if (!existsSync(p)) return {};
-  try {
-    return JSON.parse(readFileSync(p, "utf-8"));
-  } catch {
-    return {};
-  }
-}
-
-/** Check if a dynamic context section is enabled (defaults to true) */
-function isEnabled(settings: PalSettings, key: string): boolean {
-  return settings.dynamicContext?.[key] !== false;
-}
-
 /** Load and concatenate loadAtStartup files */
-function loadStartupFiles(settings: PalSettings): string {
-  const files = settings.loadAtStartup?.files;
-  if (!files || files.length === 0) return "";
+function loadStartupFiles(): string {
+  const files = settings.startupFiles();
+  if (files.length === 0) return "";
 
   const home = homedir();
   const sections: string[] = [];
@@ -465,28 +445,25 @@ export function loadHandoff(): string {
  * things that change per-session and can't live in a static file.
  */
 export function buildSystemReminder(): string {
-  const settings = loadPalSettings();
-  const startup = loadStartupFiles(settings);
-  const work = isEnabled(settings, "activeWork") ? loadActiveWork() : null;
-  const wisdom = isEnabled(settings, "wisdom") ? loadWisdomContext() : "";
-  const relationship = isEnabled(settings, "relationship")
+  const startup = loadStartupFiles();
+  const work = settings.isEnabled("activeWork") ? loadActiveWork() : null;
+  const wisdom = settings.isEnabled("wisdom") ? loadWisdomContext() : "";
+  const relationship = settings.isEnabled("relationship")
     ? loadRelationshipContext()
     : "";
-  const digest = isEnabled(settings, "learningDigest") ? loadLearningDigest() : "";
-  const projectHistory = isEnabled(settings, "projectHistory")
+  const digest = settings.isEnabled("learningDigest") ? loadLearningDigest() : "";
+  const projectHistory = settings.isEnabled("projectHistory")
     ? loadProjectHistoryContext()
     : "";
-  const trends = isEnabled(settings, "signalTrends") ? loadSignalTrends() : "";
-  const failures = isEnabled(settings, "failurePatterns") ? loadFailurePatterns() : "";
-  const synthesis = isEnabled(settings, "synthesis")
-    ? loadSynthesisRecommendations()
-    : "";
-  const opinions = isEnabled(settings, "opinions") ? loadOpinionContext() : "";
-  const selfModel = isEnabled(settings, "selfModel") ? loadSelfModel() : "";
-  const intelligence = isEnabled(settings, "sessionIntelligence")
+  const trends = settings.isEnabled("signalTrends") ? loadSignalTrends() : "";
+  const failures = settings.isEnabled("failurePatterns") ? loadFailurePatterns() : "";
+  const synthesis = settings.isEnabled("synthesis") ? loadSynthesisRecommendations() : "";
+  const opinions = settings.isEnabled("opinions") ? loadOpinionContext() : "";
+  const selfModel = settings.isEnabled("selfModel") ? loadSelfModel() : "";
+  const intelligence = settings.isEnabled("sessionIntelligence")
     ? loadSessionIntelligence()
     : "";
-  const handoff = isEnabled(settings, "handoff") ? loadHandoff() : "";
+  const handoff = settings.isEnabled("handoff") ? loadHandoff() : "";
   const parts: string[] = [];
   if (startup) parts.push(startup);
   if (handoff) parts.push(handoff);

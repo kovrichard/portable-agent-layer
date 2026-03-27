@@ -464,21 +464,7 @@ function formatDataForInference(data: SelfModelData): string {
   return sections.join("\n");
 }
 
-function loadIdentity(): { aiName: string; principalName: string } {
-  const settingsPath = resolve(paths.memory(), "pal-settings.json");
-  try {
-    if (existsSync(settingsPath)) {
-      const settings = JSON.parse(readFileSync(settingsPath, "utf-8"));
-      return {
-        aiName: settings.identity?.ai?.name || "Assistant",
-        principalName: settings.identity?.principal?.name || "User",
-      };
-    }
-  } catch {
-    /* fallback */
-  }
-  return { aiName: "Assistant", principalName: "User" };
-}
+import { identity as loadSettingsIdentity } from "../hooks/lib/settings";
 
 function buildPrompt(aiName: string, principalName: string): string {
   return `You are writing a self-model for an AI assistant named ${aiName}. You ARE ${aiName}. Write in first person.
@@ -524,7 +510,9 @@ Where are you heading? Improving, declining, stagnating? What's the single most 
 export async function composeSelfModel(days: number): Promise<string> {
   const data = gatherData(days);
   const rawData = formatDataForInference(data);
-  const { aiName, principalName } = loadIdentity();
+  const id = loadSettingsIdentity();
+  const aiName = id.ai.name;
+  const principalName = id.principal.name;
 
   // Include previous self-model for trajectory comparison
   let previousModel = "";

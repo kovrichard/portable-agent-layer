@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 
 const TEST_HOME = resolve(import.meta.dir, "../.test-home-claude-md");
 
-beforeAll(() => {
+beforeAll(async () => {
   if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
 
   mkdirSync(resolve(TEST_HOME, "memory", "state"), { recursive: true });
@@ -38,10 +38,14 @@ beforeAll(() => {
   );
 
   process.env.PAL_HOME = TEST_HOME;
+  const { reload } = await import("../src/hooks/lib/settings");
+  reload();
 });
 
-afterAll(() => {
+afterAll(async () => {
   delete process.env.PAL_HOME;
+  const { reload } = await import("../src/hooks/lib/settings");
+  reload();
   if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
 });
 
@@ -76,32 +80,6 @@ describe("buildClaudeMd", () => {
     const result = buildClaudeMd();
 
     expect(result).not.toContain("SETUP_PROMPT");
-  });
-});
-
-describe("loadIdentity", () => {
-  test("parses AI and principal identity from pal-settings.json", async () => {
-    const { loadIdentity } = await import("../src/hooks/lib/claude-md");
-    const id = loadIdentity();
-
-    expect(id.ai.name).toBe("TestBot");
-    expect(id.ai.displayName).toBe("TESTBOT");
-    expect(id.ai.catchphrase).toBe("TestBot here, ready to test.");
-    expect(id.principal.name).toBe("TestUser");
-  });
-
-  test("returns defaults when pal-settings.json is missing", async () => {
-    const origHome = process.env.PAL_HOME;
-    process.env.PAL_HOME = "/nonexistent";
-
-    const { loadIdentity } = await import("../src/hooks/lib/claude-md");
-    const id = loadIdentity();
-
-    expect(id.ai.name).toBe("Assistant");
-    expect(id.ai.displayName).toBe("ASSISTANT");
-    expect(id.principal.name).toBe("");
-
-    process.env.PAL_HOME = origHome;
   });
 });
 
