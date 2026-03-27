@@ -216,7 +216,26 @@ Only add threads that genuinely need follow-up. Resolve existing threads if this
 bun ~/.pal/tools/thread.ts --resolve --id <id>
 ```
 
-**4. Wisdom Frame** (Extended+ only) — if the session produced a genuine, reusable insight:
+**4. Opinion capture** — scan the conversation for moments where the user:
+- Confirmed something you did: "yes exactly", "keep doing that", "10 rated", accepted without pushback
+- Corrected something you did: "no", "don't do that", "stop", "that's not what I meant"
+- Revealed a preference by repeating a pattern (asked for concise answers twice, always checked PAI first, etc.)
+
+For each, invoke the opinion tool:
+```bash
+# User confirmed a preference
+bun ~/.pal/skills/opinion/tools/opinion.ts evidence "matching keywords" --confirmation "what they confirmed"
+
+# User corrected a preference
+bun ~/.pal/skills/opinion/tools/opinion.ts evidence "matching keywords" --contradiction "what they corrected"
+
+# New pattern observed (no existing opinion matches)
+bun ~/.pal/skills/opinion/tools/opinion.ts add "the preference" --category communication|technical|workflow|general
+```
+
+Skip if nothing in the conversation touched preferences or working style.
+
+**5. Wisdom Frame** (Extended+ only) — if the session produced a genuine, reusable insight:
 
 ```bash
 bun ~/.pal/tools/wisdom-frame.ts --domain <domain> --observation "insight" [--type principle|contextual-rule|anti-pattern|evolution]

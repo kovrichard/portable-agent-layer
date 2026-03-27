@@ -1,7 +1,7 @@
 /**
  * Auto-trigger for relationship reflect — runs when conditions are met:
- * - 7+ days since last reflect
- * - 10+ new relationship notes since last reflect
+ * - 1+ days since last reflect
+ * - 5+ new relationship notes since last reflect
  *
  * Spawns `bun run tool:reflect` as a detached background process.
  */
@@ -12,8 +12,8 @@ import { logDebug } from "../lib/log";
 import { getLastReflectDate } from "../lib/opinions";
 import { palPkg, paths } from "../lib/paths";
 
-const MIN_DAYS_BETWEEN = 7;
-const MIN_NEW_NOTES = 10;
+const MIN_DAYS_BETWEEN = 1;
+const MIN_NEW_NOTES = 5;
 
 function countNotesSince(since: string): number {
   const relDir = paths.relationship();
