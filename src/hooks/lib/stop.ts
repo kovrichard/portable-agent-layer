@@ -13,6 +13,7 @@ import { runSynthesis } from "../handlers/synthesis";
 import { resetTab } from "../handlers/tab";
 import { updateCounts } from "../handlers/update-counts";
 import { captureWorkSession } from "../handlers/work-session";
+import { inference } from "./inference";
 import { logDebug, logError } from "./log";
 import { ensureDir, paths } from "./paths";
 import { extractContent, extractLastAssistant, parseMessages } from "./transcript";
@@ -142,12 +143,58 @@ async function checkPendingFailure(transcript: string): Promise<void> {
       userPreview?: string;
     };
     unlinkSync(pendingPath);
+
+    // Extract principle from full transcript if not already present
+    let { principle, detailedContext } = pending;
+    if (!principle) {
+      try {
+        const msgs = parseMessages(transcript);
+        const recent = msgs
+          .slice(-10)
+          .map((m) => `${m.role.toUpperCase()}: ${extractContent(m).slice(0, 300)}`)
+          .join("\n\n");
+
+        const result = await inference({
+          system: `Analyze this failed AI interaction. The user rated it ${pending.rating}/10.
+
+Return JSON:
+{
+  "principle": "<one actionable rule the AI should follow, 10-20 words. Start with a verb: 'Verify...', 'Always...', 'Never...', 'Ask before...'>",
+  "detailed_context": "<what went wrong and why, 50-150 words>"
+}`,
+          user: `User feedback: ${pending.context}\n\nConversation:\n${recent}`,
+          maxTokens: 400,
+          timeout: 10000,
+          jsonSchema: {
+            type: "object" as const,
+            properties: {
+              principle: { type: "string" as const },
+              detailed_context: { type: "string" as const },
+            },
+            required: ["principle", "detailed_context"],
+            additionalProperties: false,
+          },
+        });
+
+        if (result.success && result.output) {
+          const parsed = JSON.parse(result.output) as {
+            principle?: string;
+            detailed_context?: string;
+          };
+          principle = parsed.principle || undefined;
+          if (!detailedContext) detailedContext = parsed.detailed_context || undefined;
+        }
+      } catch {
+        /* graceful fallback — capture without principle */
+      }
+    }
+
     await captureFailure(
       pending.rating,
       pending.context,
       transcript,
-      pending.detailedContext,
-      pending.principle
+      detailedContext,
+      principle
     );
   } catch {
     // Non-critical
