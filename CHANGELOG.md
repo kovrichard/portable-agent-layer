@@ -1,3 +1,11 @@
+# [0.23.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.22.0...v0.23.0) (2026-03-27)
+
+
+### Features
+
+* **algorithm:** introduce effort levels ([d4eb705](https://github.com/kovrichard/portable-agent-layer/commit/d4eb70557ab48c0801233d8113c01a43d5fe7171))
+* introduce .pal home, generalize subagents, merge session end logic ([7c25065](https://github.com/kovrichard/portable-agent-layer/commit/7c25065d8dd70b1fe3745374b72e9331f16fc7bb))
+
 # [0.22.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.21.0...v0.22.0) (2026-03-26)
 
 
