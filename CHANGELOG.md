@@ -1,3 +1,10 @@
+# [0.25.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.24.2...v0.25.0) (2026-04-03)
+
+
+### Features
+
+* **copilot:** add Copilot support ([ded1bfb](https://github.com/kovrichard/portable-agent-layer/commit/ded1bfb545ab05e565515d2779623123c89f88c2))
+
 ## [0.24.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.24.1...v0.24.2) (2026-04-03)
 
 
