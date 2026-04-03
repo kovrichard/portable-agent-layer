@@ -258,10 +258,11 @@ export function readClaudeCode(projectFilter?: string): {
   return { buckets, byModel, byProject };
 }
 
-// ── PAL Haiku inference ──
+// ── PAL inference ──
 
 export function readPalInference(): {
   buckets: TimeBuckets;
+  byModel: Record<string, TimeBuckets>;
   byCaller: Record<string, Bucket>;
 } {
   const now = new Date();
@@ -270,13 +271,14 @@ export function readPalInference(): {
   const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
   const buckets = emptyTimeBuckets();
+  const byModel: Record<string, TimeBuckets> = {};
   const byCaller: Record<string, Bucket> = {};
 
   const filepath = resolve(palHome(), "memory", "signals", "token-usage.jsonl");
-  if (!existsSync(filepath)) return { buckets, byCaller };
+  if (!existsSync(filepath)) return { buckets, byModel, byCaller };
 
   const content = readFileSync(filepath, "utf-8").trim();
-  if (!content) return { buckets, byCaller };
+  if (!content) return { buckets, byModel, byCaller };
 
   for (const line of content.split("\n")) {
     try {
@@ -299,6 +301,19 @@ export function readPalInference(): {
         weekAgo,
         monthAgo
       );
+      if (!byModel[e.model]) byModel[e.model] = emptyTimeBuckets();
+      addToTimeBuckets(
+        byModel[e.model],
+        e.ts,
+        e.model,
+        e.inputTokens,
+        e.outputTokens,
+        0,
+        0,
+        todayPrefix,
+        weekAgo,
+        monthAgo
+      );
       if (!byCaller[e.caller]) byCaller[e.caller] = emptyBucket();
       addToBucket(byCaller[e.caller], e.model, e.inputTokens, e.outputTokens, 0, 0);
     } catch {
@@ -306,7 +321,7 @@ export function readPalInference(): {
     }
   }
 
-  return { buckets, byCaller };
+  return { buckets, byModel, byCaller };
 }
 
 // ── CLI ──
@@ -352,12 +367,18 @@ function run() {
     }
   }
 
-  if (pal.buckets.total.calls > 0) {
-    console.log("\n  PAL Inference (Haiku)\n");
-    printRow("Today", pal.buckets.today);
-    printRow("7d", pal.buckets.week);
-    printRow("30d", pal.buckets.month);
-    printRow("Total", pal.buckets.total);
+  for (const [model, tb] of Object.entries(pal.byModel)) {
+    if (tb.total.calls === 0) continue;
+    const label = model.includes("haiku")
+      ? "Haiku"
+      : model.includes("sonnet")
+        ? "Sonnet"
+        : model.replace("claude-", "");
+    console.log(`\n  PAL Inference (${label})\n`);
+    printRow("Today", tb.today);
+    printRow("7d", tb.week);
+    printRow("30d", tb.month);
+    printRow("Total", tb.total);
   }
 
   const grand = emptyBucket();

@@ -14,7 +14,8 @@ export type TokenCaller =
   | "work-learning"
   | "session-name"
   | "session-intelligence"
-  | "relationship";
+  | "relationship"
+  | "self-model";
 
 interface TokenUsageEntry {
   ts: string;
