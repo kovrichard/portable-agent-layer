@@ -288,6 +288,38 @@ interface HookHealth {
   lastError: string | null;
 }
 
+function checkClaudeHooksRegistered(): boolean {
+  const settingsPath = resolve(platform.claudeDir(), "settings.json");
+  if (!existsSync(settingsPath)) return false;
+  try {
+    const settings = JSON.parse(readFileSync(settingsPath, "utf-8"));
+    const groups = settings?.hooks?.SessionStart;
+    if (!Array.isArray(groups)) return false;
+    return groups.some((g: { hooks?: { command?: string }[] }) =>
+      g?.hooks?.some((h) => h?.command?.includes("LoadContext"))
+    );
+  } catch {
+    return false;
+  }
+}
+
+function checkCursorHooksRegistered(): boolean {
+  const hooksPath = resolve(platform.cursorDir(), "hooks.json");
+  if (!existsSync(hooksPath)) return false;
+  try {
+    const data = JSON.parse(readFileSync(hooksPath, "utf-8"));
+    const hooks = data?.hooks?.sessionStart;
+    if (!Array.isArray(hooks)) return false;
+    return hooks.some((h: { command?: string }) => h?.command?.includes("LoadContext"));
+  } catch {
+    return false;
+  }
+}
+
+function checkOpencodePluginInstalled(): boolean {
+  return existsSync(resolve(platform.opencodeDir(), "plugins", "pal-plugin.ts"));
+}
+
 function checkHookHealth(home: string): HookHealth {
   const logPath = resolve(home, "memory", "state", "debug.log");
 
@@ -374,6 +406,23 @@ function doctor(silent = false): DoctorResult {
       : fail("Cursor — not found");
     ok(`PAL home: ${home}`);
     telosCount > 0 ? ok(`TELOS: ${telosCount} files`) : fail("TELOS: not scaffolded");
+
+    // Hook registration (per installed agent)
+    if (claude.available) {
+      checkClaudeHooksRegistered()
+        ? ok("Claude Code hooks registered")
+        : fail("Claude Code hooks — not registered (run 'pal cli install --claude')");
+    }
+    if (opencode.available) {
+      checkOpencodePluginInstalled()
+        ? ok("opencode plugin installed")
+        : fail("opencode plugin — not installed (run 'pal cli install --opencode')");
+    }
+    if (cursor.available) {
+      checkCursorHooksRegistered()
+        ? ok("Cursor hooks registered")
+        : fail("Cursor hooks — not registered (run 'pal cli install --cursor')");
+    }
 
     // API key checks
     process.env.PAL_ANTHROPIC_API_KEY
