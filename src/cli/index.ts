@@ -407,6 +407,80 @@ function doctor(silent = false): DoctorResult {
     ok(`PAL home: ${home}`);
     telosCount > 0 ? ok(`TELOS: ${telosCount} files`) : fail("TELOS: not scaffolded");
 
+    // Identity
+    const palSettingsPath = resolve(home, "memory", "pal-settings.json");
+    if (existsSync(palSettingsPath)) {
+      try {
+        const s = JSON.parse(readFileSync(palSettingsPath, "utf-8"));
+        const hasIdentity = s?.identity?.principal?.name && s?.identity?.ai?.name;
+        hasIdentity
+          ? ok("Identity configured")
+          : warn("Identity — incomplete (run 'pal cli install')");
+      } catch {
+        warn("Identity — could not read pal-settings.json");
+      }
+    } else {
+      warn("Identity — pal-settings.json missing (run 'pal cli install')");
+    }
+
+    // AGENTS.md
+    const agentsMdPath = resolve(platform.opencodeDir(), "AGENTS.md");
+    existsSync(agentsMdPath)
+      ? ok("AGENTS.md present")
+      : fail("AGENTS.md — missing (run 'pal cli install')");
+
+    if (claude.available) {
+      const claudeMdPath = resolve(platform.claudeDir(), "CLAUDE.md");
+      existsSync(claudeMdPath)
+        ? ok("CLAUDE.md present")
+        : fail("CLAUDE.md — missing (run 'pal cli install --claude')");
+    }
+
+    // Setup state
+    const setupPath = resolve(home, "memory", "state", "setup.json");
+    if (existsSync(setupPath)) {
+      try {
+        const setup = JSON.parse(readFileSync(setupPath, "utf-8"));
+        setup?.completed
+          ? ok("TELOS setup complete")
+          : warn("TELOS setup incomplete — run 'pal cli install' or start a session");
+      } catch {
+        warn("TELOS setup — could not read setup.json");
+      }
+    } else {
+      warn("TELOS setup — setup.json missing (run 'pal cli install')");
+    }
+
+    // Skills (per installed agent)
+    const countSkillsIn = (dir: string) =>
+      existsSync(dir)
+        ? readdirSync(dir).filter((f) => existsSync(resolve(dir, f, "SKILL.md"))).length
+        : 0;
+    if (claude.available) {
+      const n = countSkillsIn(resolve(platform.claudeDir(), "skills"));
+      n > 0
+        ? ok(`Claude Code skills: ${n}`)
+        : warn("Claude Code skills — none found (run 'pal cli install --claude')");
+    }
+    if (opencode.available) {
+      const n = countSkillsIn(resolve(platform.agentsDir(), "skills"));
+      n > 0
+        ? ok(`opencode skills: ${n}`)
+        : warn("opencode skills — none found (run 'pal cli install --opencode')");
+    }
+    if (cursor.available) {
+      const n = countSkillsIn(resolve(platform.cursorDir(), "skills"));
+      n > 0
+        ? ok(`Cursor skills: ${n}`)
+        : warn("Cursor skills — none found (run 'pal cli install --cursor')");
+    }
+
+    // Dependencies
+    const nodeModulesPath = resolve(palPkg(), "node_modules");
+    existsSync(nodeModulesPath)
+      ? ok("Dependencies installed")
+      : fail("Dependencies missing — run 'pal cli install'");
+
     // Hook registration (per installed agent)
     if (claude.available) {
       checkClaudeHooksRegistered()
