@@ -1,3 +1,10 @@
+## [0.24.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.24.0...v0.24.1) (2026-04-03)
+
+
+### Bug Fixes
+
+* **doctor:** add missing api keys to it ([9ecf45d](https://github.com/kovrichard/portable-agent-layer/commit/9ecf45d8210f37e6c90daf2eec289f06eac6a272))
+
 # [0.24.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.23.1...v0.24.0) (2026-03-27)
 
 
