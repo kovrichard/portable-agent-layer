@@ -1,3 +1,11 @@
+## [0.24.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.24.1...v0.24.2) (2026-04-03)
+
+
+### Bug Fixes
+
+* **doctor:** add checks for hook registrations and plugin installations ([45d22e7](https://github.com/kovrichard/portable-agent-layer/commit/45d22e79b6734e10d587593530d5272a2e3a46ad))
+* **doctor:** add package, skill, settings, agents.md, and claude.md check to doctor ([3dfdd92](https://github.com/kovrichard/portable-agent-layer/commit/3dfdd9206ecf1428d00a2376d2bcb5a384df2c02))
+
 ## [0.24.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.24.0...v0.24.1) (2026-04-03)
 
 
