@@ -382,6 +382,12 @@ function doctor(silent = false): DoctorResult {
     process.env.PAL_GEMINI_API_KEY
       ? ok("PAL_GEMINI_API_KEY is set")
       : warn("PAL_GEMINI_API_KEY — not set (optional, for YouTube analysis)");
+    process.env.PAL_XAI_API_KEY
+      ? ok("PAL_XAI_API_KEY is set")
+      : warn("PAL_XAI_API_KEY — not set (optional, for Grok researcher)");
+    process.env.PAL_PERPLEXITY_API_KEY
+      ? ok("PAL_PERPLEXITY_API_KEY is set")
+      : warn("PAL_PERPLEXITY_API_KEY — not set (optional, for Perplexity researcher)");
 
     // Hook health from debug.log
     const hookHealth = checkHookHealth(home);
