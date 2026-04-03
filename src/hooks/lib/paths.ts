@@ -61,6 +61,7 @@ export const platform = {
   claudeDir: () => process.env.PAL_CLAUDE_DIR || resolve(h, ".claude"),
   opencodeDir: () => process.env.PAL_OPENCODE_DIR || resolve(h, ".config", "opencode"),
   cursorDir: () => process.env.PAL_CURSOR_DIR || resolve(h, ".cursor"),
+  copilotDir: () => process.env.PAL_COPILOT_DIR || resolve(h, ".copilot"),
   codexDir: () => process.env.PAL_CODEX_DIR || resolve(h, ".codex"),
   agentsDir: () => process.env.PAL_AGENTS_DIR || resolve(h, ".agents"),
 } as const;
@@ -74,6 +75,7 @@ export const assets = {
   agentsMdTemplate: () => pkg("assets", "templates", "AGENTS.md.template"),
   claudeSettingsTemplate: () => pkg("assets", "templates", "settings.claude.json"),
   cursorHooksTemplate: () => pkg("assets", "templates", "hooks.cursor.json"),
+  copilotHooksTemplate: () => pkg("assets", "templates", "hooks.copilot.json"),
   agentTools: () => pkg("src", "tools", "agent"),
   palDocs: () => pkg("assets", "templates", "PAL"),
 } as const;

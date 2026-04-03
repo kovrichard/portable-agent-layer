@@ -432,7 +432,7 @@ export function countAgents(): number {
 
 // --- Agent platform extraction ---
 
-const AGENT_PLATFORMS = ["claude", "opencode", "cursor"] as const;
+const AGENT_PLATFORMS = ["claude", "opencode", "cursor", "copilot"] as const;
 type AgentPlatform = (typeof AGENT_PLATFORMS)[number];
 
 /**
@@ -462,6 +462,7 @@ export function extractAgentForPlatform(
     claude: [],
     opencode: [],
     cursor: [],
+    copilot: [],
   };
   let currentPlatform: AgentPlatform | null = null;
 
@@ -542,8 +543,23 @@ export function copyAgentsForCursor(cursorAgentsDir: string): number {
   return installAgents(cursorAgentsDir, "cursor");
 }
 
+export function copyAgentsForCopilot(copilotAgentsDir: string): number {
+  return installAgents(copilotAgentsDir, "copilot");
+}
+
 export function removeAgentsFromCursor(cursorAgentsDir: string): string[] {
   return uninstallAgents(cursorAgentsDir, "cursor");
+}
+
+export function removeAgentsFromCopilot(copilotAgentsDir: string): string[] {
+  return uninstallAgents(copilotAgentsDir, "copilot");
+}
+
+/** Load and resolve the Copilot hooks template, substituting PKG_ROOT */
+export function loadCopilotHooksTemplate(templatePath: string, pkgRoot: string): unknown {
+  return JSON.parse(
+    readFileSync(templatePath, "utf-8").replaceAll("{{PKG_ROOT}}", pkgRoot)
+  );
 }
 
 // --- Skill Index ---

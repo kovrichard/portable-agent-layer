@@ -76,6 +76,11 @@ function ensureSymlinks(): void {
   const { outputPath, symlinkPath } = getOutputPaths();
   ensureOneSymlink(symlinkPath, outputPath);
   ensureOneSymlink(resolve(platform.codexDir(), "AGENTS.md"), outputPath);
+  // Copilot instructions — only create if ~/.copilot/ already exists (i.e. Copilot is installed)
+  const copilotDir = platform.copilotDir();
+  if (existsSync(copilotDir)) {
+    ensureOneSymlink(resolve(copilotDir, "copilot-instructions.md"), outputPath);
+  }
 }
 
 /** Returns true if AGENTS.md needs to be regenerated */

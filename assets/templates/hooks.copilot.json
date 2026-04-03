@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "bash": "PAL_AGENT=copilot bun run {{PKG_ROOT}}/src/hooks/LoadContext.ts"
+      }
+    ],
+    "userPromptSubmitted": [
+      {
+        "type": "command",
+        "bash": "bun run {{PKG_ROOT}}/src/hooks/UserPromptOrchestrator.ts"
+      }
+    ],
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "bun run {{PKG_ROOT}}/src/hooks/SecurityValidator.ts"
+      },
+      {
+        "type": "command",
+        "bash": "bun run {{PKG_ROOT}}/src/hooks/SkillGuard.ts"
+      }
+    ],
+    "agentStop": [
+      {
+        "type": "command",
+        "bash": "bun run {{PKG_ROOT}}/src/hooks/StopOrchestrator.ts"
+      }
+    ]
+  }
+}

@@ -101,6 +101,7 @@ pal cli install               # all available (default)
 | Claude Code | Full | Yes | Yes | Yes | Yes |
 | opencode | Full | Yes | Yes (plugin) | Yes | Yes |
 | Cursor | Full | Yes | Yes | Yes (injected via hook) | Yes |
+| GitHub Copilot | Full | Yes | Yes | Yes (via copilot-instructions.md) | Yes |
 | Codex | Partial | Yes | No | Yes | No |
 
 ---
@@ -125,6 +126,7 @@ pal cli install               # all available (default)
 | `PAL_CLAUDE_DIR` | Override Claude config dir (default: `~/.claude`) |
 | `PAL_OPENCODE_DIR` | Override opencode config dir (default: `~/.config/opencode`) |
 | `PAL_CURSOR_DIR` | Override Cursor config dir (default: `~/.cursor`) |
+| `PAL_COPILOT_DIR` | Override Copilot config dir (default: `~/.copilot`) |
 | `PAL_CODEX_DIR` | Override Codex config dir (default: `~/.codex`) |
 | `PAL_AGENTS_DIR` | Override agents dir (default: `~/.agents`) |
 
