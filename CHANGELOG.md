@@ -1,3 +1,11 @@
+# [0.26.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.25.0...v0.26.0) (2026-04-04)
+
+
+### Features
+
+* **setup:** implement interactive TELOS setup with project prompts and context management ([267cc63](https://github.com/kovrichard/portable-agent-layer/commit/267cc63191723f821d697b52d209d2d8c8e21ad0))
+* **token-usage:** add self-model to TokenCaller and log usage in self-model composition ([2bd345f](https://github.com/kovrichard/portable-agent-layer/commit/2bd345f75ede802012bad926f8897ab3c34d4256))
+
 # [0.25.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.24.2...v0.25.0) (2026-04-03)
 
 
