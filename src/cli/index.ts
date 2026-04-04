@@ -22,6 +22,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { palHome, palPkg, platform } from "../hooks/lib/paths";
+import { hasRealContent, SETUP_STEPS, STEP_ORDER } from "../hooks/lib/setup";
 import { log } from "../targets/lib";
 
 const allArgs = process.argv.slice(2);
@@ -460,19 +461,16 @@ function doctor(silent = false): DoctorResult {
         : fail("CLAUDE.md — missing (run 'pal cli install --claude')");
     }
 
-    // Setup state
-    const setupPath = resolve(home, "memory", "state", "setup.json");
-    if (existsSync(setupPath)) {
-      try {
-        const setup = JSON.parse(readFileSync(setupPath, "utf-8"));
-        setup?.completed
-          ? ok("TELOS setup complete")
-          : warn("TELOS setup incomplete — run 'pal cli install' or start a session");
-      } catch {
-        warn("TELOS setup — could not read setup.json");
-      }
-    } else {
-      warn("TELOS setup — setup.json missing (run 'pal cli install')");
+    // Setup state — check file content directly (no setup.json dependency)
+    {
+      const missing = STEP_ORDER.filter(
+        (key) => !hasRealContent(resolve(home, SETUP_STEPS[key].file))
+      );
+      missing.length === 0
+        ? ok("TELOS setup complete")
+        : warn(
+            `TELOS setup incomplete — ${missing.join(", ")} missing (run 'pal cli install')`
+          );
     }
 
     // Skills (per installed agent)
