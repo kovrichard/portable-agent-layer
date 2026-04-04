@@ -13,7 +13,7 @@ import { paths } from "./paths";
 import { loadRecentNotes } from "./relationship";
 import { readSessionNames } from "./session-names";
 import * as settings from "./settings";
-import { buildSetupPrompt, readSetupState, remainingSteps, STEP_ORDER } from "./setup";
+import { isSetupComplete, readSetupState, remainingSteps, STEP_ORDER } from "./setup";
 import { computeSignalTrends, formatTrends } from "./signal-trends";
 import { readFramePrinciples } from "./wisdom";
 import { readProjectHistory, readSessions, recentSessions } from "./work-tracking";
@@ -141,12 +141,12 @@ export function buildGreeting(): string[] {
   const counts = loadCachedCounts();
   const work = loadActiveWork();
   const setupState = readSetupState();
-  const setupPrompt = setupState ? buildSetupPrompt(setupState) : null;
+  const setupIncomplete = setupState && !isSetupComplete(setupState);
 
   const greeting: string[] = [];
 
-  if (setupPrompt) {
-    const done = STEP_ORDER.length - (setupState ? remainingSteps(setupState).length : 0);
+  if (setupIncomplete) {
+    const done = STEP_ORDER.length - remainingSteps(setupState).length;
     greeting.push(
       `🔧 PAL setup ${done}/${STEP_ORDER.length} | ${counts.signals} signals`
     );

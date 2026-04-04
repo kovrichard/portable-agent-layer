@@ -23,31 +23,33 @@ export interface SetupState {
 }
 
 /** Ordered setup steps — defines the wizard flow */
-const SETUP_STEPS: Record<string, Omit<SetupStep, "done">> = {
+export const SETUP_STEPS: Record<string, Omit<SetupStep, "done">> = {
   mission: {
     file: "telos/MISSION.md",
-    question: "What do you do? What's your role and core purpose?",
-    hint: "Write their role and core purpose to telos/MISSION.md",
+    question:
+      "What do you do? What's your role and core purpose? (~/.pal/telos/MISSION.md)",
+    hint: "e.g. Senior software engineer building developer tooling at Acme Corp",
   },
   goals: {
     file: "telos/GOALS.md",
-    question: "What are your current goals? (short-term, medium-term, long-term)",
-    hint: "Write goals organized by timeframe to telos/GOALS.md",
+    question:
+      "What are your current goals? (short-term, medium-term, long-term) (~/.pal/telos/GOALS.md)",
+    hint: "e.g. Ship v2 by Q3, learn Rust, get promoted to staff engineer",
   },
   projects: {
     file: "telos/PROJECTS.md",
-    question: "What projects are you currently working on?",
-    hint: "Write to telos/PROJECTS.md using table format: | Project | Status | Priority | Notes |",
+    question: "What projects are you currently working on? (~/.pal/telos/PROJECTS.md)",
+    hint: "e.g. PAL (active, high priority), personal blog (paused), side SaaS (early stage)",
   },
   beliefs: {
     file: "telos/BELIEFS.md",
-    question: "What principles or values guide your work?",
-    hint: "Write their values and principles to telos/BELIEFS.md",
+    question: "What principles or values guide your work? (~/.pal/telos/BELIEFS.md)",
+    hint: "e.g. Simple code > clever code, ship early and iterate, always write tests",
   },
   challenges: {
     file: "telos/CHALLENGES.md",
-    question: "What are your biggest current challenges?",
-    hint: "Write their challenges and obstacles to telos/CHALLENGES.md",
+    question: "What are your biggest current challenges? (~/.pal/telos/CHALLENGES.md)",
+    hint: "e.g. Context switching between projects, unclear requirements, work-life balance",
   },
 };
 
@@ -58,21 +60,17 @@ function setupPath(): string {
 }
 
 /** Check if a TELOS file has real content (not just template scaffolding) */
-function hasRealContent(filePath: string): boolean {
+export function hasRealContent(filePath: string): boolean {
   if (!existsSync(filePath)) return false;
   try {
     const content = readFileSync(filePath, "utf-8").trim();
-    return content
-      .split("\n")
-      .some(
-        (l) =>
-          !l.startsWith("#") &&
-          !l.startsWith("<!--") &&
-          !l.startsWith("-->") &&
-          l.trim() &&
-          !/^\s*-\s*$/.test(l) &&
-          !/^\s*\|/.test(l)
-      );
+    return content.split("\n").some((l) => {
+      if (!l.trim()) return false;
+      if (l.startsWith("#")) return false;
+      if (l.startsWith("<!--") || l.startsWith("-->")) return false;
+      if (/^\s*-\s*$/.test(l)) return false;
+      return true; // includes table rows (| ... |) — counts as real content
+    });
   } catch {
     return false;
   }
@@ -122,56 +120,4 @@ export function remainingSteps(state: SetupState): string[] {
 /** Check if setup is fully completed */
 export function isSetupComplete(state: SetupState): boolean {
   return state.completed;
-}
-
-/**
- * Build the system-prompt instructions for the current setup state.
- * Returns null if setup is already complete.
- */
-export function buildSetupPrompt(state: SetupState): string | null {
-  if (state.completed) return null;
-
-  const remaining = remainingSteps(state);
-  if (remaining.length === 0) return null;
-
-  const completedSteps = STEP_ORDER.filter((k) => state.steps[k]?.done);
-  const totalSteps = STEP_ORDER.length;
-
-  const lines: string[] = [
-    "## IMPORTANT: PAL First-Run Setup Required",
-    "",
-    "TELOS files are empty — the user's identity is already configured (via the installer),",
-    "but personal context is still needed. You MUST start the setup process immediately.",
-    "Greet them, explain that PAL needs to learn about them to personalize future sessions,",
-    "and ask the first remaining question below. Do NOT wait for the user to ask about setup.",
-    "",
-  ];
-
-  if (completedSteps.length > 0) {
-    lines.push(
-      `Setup in progress — ${completedSteps.length}/${totalSteps} steps complete. Continue from the next remaining step.`,
-      ""
-    );
-  }
-
-  lines.push("### Steps to complete (ask one at a time):", "");
-
-  for (const key of remaining) {
-    const step = state.steps[key];
-    lines.push(`- **${key}** — Ask: "${step.question}" → ${step.hint}`);
-  }
-
-  lines.push(
-    "",
-    "### After each answer:",
-    "1. Write the user's answer to the corresponding TELOS file.",
-    `2. Read \`memory/state/setup.json\`, set \`steps.<key>.done = true\`, and write it back.`,
-    "3. Ask the next remaining question.",
-    "",
-    `When all steps are done (or the user wants to skip), set \`completed: true\` in setup.json.`,
-    "",
-    "Keep it conversational and natural. If the user wants to skip a step, mark it done and move on."
-  );
-
-  return lines.join("\n");
 }

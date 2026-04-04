@@ -19,7 +19,6 @@ import {
 } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { assets, ensureDir, paths, platform } from "./paths";
-import { buildSetupPrompt, readSetupState } from "./setup";
 
 const TEMPLATE_PATH = assets.agentsMdTemplate();
 
@@ -114,14 +113,11 @@ import { identity } from "./settings";
 export function buildClaudeMd(): string {
   const template = existsSync(TEMPLATE_PATH)
     ? readFileSync(TEMPLATE_PATH, "utf-8")
-    : "# PAL Context\n\n{{SETUP_PROMPT}}\n";
+    : "# PAL Context\n";
 
-  const state = readSetupState();
-  const setupPrompt = state ? buildSetupPrompt(state) : null;
   const id = identity();
 
   return template
-    .replace("{{SETUP_PROMPT}}", setupPrompt ? `${setupPrompt}\n` : "")
     .replaceAll("{{IDENTITY_NAME}}", id.ai.name)
     .replaceAll("{{IDENTITY_DISPLAY}}", id.ai.displayName)
     .replaceAll("{{IDENTITY_CATCHPHRASE}}", id.ai.catchphrase)

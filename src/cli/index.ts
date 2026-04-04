@@ -574,7 +574,6 @@ function doctor(silent = false): DoctorResult {
 // ── Commands ──
 
 async function init(args: string[]) {
-  const { ensureSetupState, isSetupComplete } = await import("../hooks/lib/setup");
   const { scaffoldTelos } = await import("../targets/lib");
 
   banner();
@@ -591,17 +590,10 @@ async function init(args: string[]) {
   mkdirSync(resolve(home, "memory"), { recursive: true });
 
   scaffoldTelos();
-  ensureSetupState();
 
   // Auto-detect available targets
   const targets = resolveTargets(args, health);
   await install(targets);
-
-  console.log("");
-  const state = ensureSetupState();
-  if (!isSetupComplete(state)) {
-    log.info("Start a session — PAL will guide you through first-run setup");
-  }
 }
 
 async function install(targets: Targets) {
@@ -620,9 +612,11 @@ async function install(targets: Targets) {
   // Scaffold TELOS + PAL settings, then prompt for missing identity
   const { scaffoldTelos, scaffoldPalSettings } = await import("../targets/lib");
   const { promptIdentity } = await import("./setup-identity");
+  const { promptTelos } = await import("./setup-telos");
   scaffoldTelos();
   scaffoldPalSettings();
   await promptIdentity();
+  await promptTelos();
 
   if (targets.claude) {
     console.log("━━━ Claude Code ━━━");
