@@ -1,3 +1,10 @@
+## [0.26.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.26.0...v0.26.1) (2026-04-04)
+
+
+### Bug Fixes
+
+* remove setup.json from doctor ([79fc3a8](https://github.com/kovrichard/portable-agent-layer/commit/79fc3a8484dc9636bbbb51257222413e0bf90826))
+
 # [0.26.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.25.0...v0.26.0) (2026-04-04)
 
 
