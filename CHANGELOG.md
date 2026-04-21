@@ -1,3 +1,10 @@
+## [0.27.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.27.0...v0.27.1) (2026-04-21)
+
+
+### Bug Fixes
+
+* update playwright install command ([922113d](https://github.com/kovrichard/portable-agent-layer/commit/922113d3ea75723c2481a15806361c9f8d2f98b7))
+
 # [0.27.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.26.1...v0.27.0) (2026-04-21)
 
 
