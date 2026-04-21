@@ -608,15 +608,18 @@ async function install(targets: Targets) {
   }
 
   // Fetch the Chromium build Playwright uses for PDF rendering (create-pdf skill).
-  // Idempotent — skipped if already cached.
-  log.info("Installing Playwright Chromium...");
-  const pw = spawnSync("bunx", ["playwright", "install", "chromium"], {
-    cwd: pkg,
-    stdio: "inherit",
-    shell: true,
-  });
-  if (pw.status !== 0) {
-    log.warn("playwright install chromium failed — create-pdf skill will not work");
+  // Idempotent — skipped if already cached. Skipped entirely under PAL_SKIP_BROWSER_INSTALL=1
+  // (used by tests to avoid a ~150MB download on every run).
+  if (process.env.PAL_SKIP_BROWSER_INSTALL !== "1") {
+    log.info("Installing Playwright Chromium...");
+    const pw = spawnSync("bunx", ["playwright", "install", "chromium"], {
+      cwd: pkg,
+      stdio: "inherit",
+      shell: true,
+    });
+    if (pw.status !== 0) {
+      log.warn("playwright install chromium failed — create-pdf skill will not work");
+    }
   }
 
   // Scaffold TELOS + PAL settings, then prompt for missing identity
