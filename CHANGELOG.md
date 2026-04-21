@@ -1,3 +1,17 @@
+# [0.27.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.26.1...v0.27.0) (2026-04-21)
+
+
+### Bug Fixes
+
+* ignore playwright install in tests ([51f4d1a](https://github.com/kovrichard/portable-agent-layer/commit/51f4d1a85621b95c41a24f63544f04d751086917))
+
+
+### Features
+
+* **consulting-report:** add scaffolding and PDF generation tools for consulting reports ([d1bb28b](https://github.com/kovrichard/portable-agent-layer/commit/d1bb28bc952984bebc4612c8c29a0609a2602715))
+* **create-pdf:** add markdown to PDF conversion tool using Playwright ([db4eba4](https://github.com/kovrichard/portable-agent-layer/commit/db4eba46aaa255eb5a3544079ac7b7d7e99adfe6))
+* **doctor:** check playwright ([dbf7793](https://github.com/kovrichard/portable-agent-layer/commit/dbf779384056ee25d7be393dc87fcf7c3925f775))
+
 ## [0.26.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.26.0...v0.26.1) (2026-04-04)
 
 
