@@ -635,15 +635,18 @@ async function install(targets: Targets) {
   // Fetch the Chromium build Playwright uses for PDF rendering (create-pdf skill).
   // Idempotent — skipped if already cached. Skipped entirely under PAL_SKIP_BROWSER_INSTALL=1
   // (used by tests to avoid a ~150MB download on every run).
+  // Uses `bun x` (not `bunx`) for Windows compatibility — bunx resolves unreliably under cmd.exe.
   if (process.env.PAL_SKIP_BROWSER_INSTALL !== "1") {
     log.info("Installing Playwright Chromium...");
-    const pw = spawnSync("bunx", ["playwright", "install", "chromium"], {
+    const pw = spawnSync("bun", ["x", "playwright", "install", "chromium"], {
       cwd: pkg,
       stdio: "inherit",
       shell: true,
     });
     if (pw.status !== 0) {
-      log.warn("playwright install chromium failed — create-pdf skill will not work");
+      log.warn(
+        `playwright install chromium failed (exit ${pw.status}) — create-pdf and consulting-report skills won't work. Retry manually: bun x playwright install chromium`
+      );
     }
   }
 
