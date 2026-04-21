@@ -607,6 +607,18 @@ async function install(targets: Targets) {
     log.warn("bun install failed — continuing anyway, but hooks may not work");
   }
 
+  // Fetch the Chromium build Playwright uses for PDF rendering (create-pdf skill).
+  // Idempotent — skipped if already cached.
+  log.info("Installing Playwright Chromium...");
+  const pw = spawnSync("bunx", ["playwright", "install", "chromium"], {
+    cwd: pkg,
+    stdio: "inherit",
+    shell: true,
+  });
+  if (pw.status !== 0) {
+    log.warn("playwright install chromium failed — create-pdf skill will not work");
+  }
+
   // Scaffold TELOS + PAL settings, then prompt for missing identity
   const { scaffoldTelos, scaffoldPalSettings } = await import("../targets/lib");
   const { promptIdentity } = await import("./setup-identity");
