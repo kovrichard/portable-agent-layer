@@ -338,6 +338,24 @@ function checkCopilotInstructionsPresent(): boolean {
   return existsSync(resolve(platform.copilotDir(), "copilot-instructions.md"));
 }
 
+function playwrightBrowsersPath(): string {
+  if (process.env.PLAYWRIGHT_BROWSERS_PATH) return process.env.PLAYWRIGHT_BROWSERS_PATH;
+  const home = homedir();
+  if (process.platform === "darwin") return resolve(home, "Library/Caches/ms-playwright");
+  if (process.platform === "win32") return resolve(home, "AppData/Local/ms-playwright");
+  return resolve(home, ".cache/ms-playwright");
+}
+
+function checkPlaywrightChromium(): boolean {
+  const base = playwrightBrowsersPath();
+  if (!existsSync(base)) return false;
+  try {
+    return readdirSync(base).some((f) => f.startsWith("chromium-"));
+  } catch {
+    return false;
+  }
+}
+
 function checkHookHealth(home: string): HookHealth {
   const logPath = resolve(home, "memory", "state", "debug.log");
 
@@ -508,6 +526,13 @@ function doctor(silent = false): DoctorResult {
     existsSync(nodeModulesPath)
       ? ok("Dependencies installed")
       : fail("Dependencies missing — run 'pal cli install'");
+
+    // Playwright Chromium (required by create-pdf + consulting-report skills)
+    checkPlaywrightChromium()
+      ? ok("Playwright Chromium installed")
+      : fail(
+          "Playwright Chromium — not found (run 'pal cli install' or 'bunx playwright install chromium')"
+        );
 
     // Hook registration (per installed agent)
     if (claude.available) {
