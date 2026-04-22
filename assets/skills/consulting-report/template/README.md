@@ -10,7 +10,7 @@
 ## Render
 
 ```
-bun ~/.pal/skills/consulting-report/tools/generate-pdf.ts .
+node --experimental-strip-types ~/.pal/skills/consulting-report/tools/generate-pdf.ts .
 ```
 
 Output goes into this directory as `<client>-<title>-<date>.{pdf,html}` unless you pass `--pdf <path>` or `--html <path>`.

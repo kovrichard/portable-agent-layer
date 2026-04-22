@@ -1,10 +1,14 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 
 // consulting-report skill tool: render a structured report directory to a branded PDF.
 // Pipeline: report-data.ts + section markdown + diagrams -> HTML -> PDF (Playwright).
 //
+// Run with Node (not Bun) — Playwright's chromium.launch hangs under Bun on Windows
+// because it uses --remote-debugging-pipe over stdio and Bun's Windows child-process
+// pipe handling doesn't complete the CDP handshake.
+//
 // Usage:
-//   bun ~/.pal/skills/consulting-report/tools/generate-pdf.ts <report-dir> [--pdf <out>] [--html <out>]
+//   node --experimental-strip-types ~/.pal/skills/consulting-report/tools/generate-pdf.ts <report-dir> [--pdf <out>] [--html <out>]
 //
 // <report-dir> must contain content/report-data.ts (default export or named `report`).
 
@@ -12,6 +16,7 @@ import { spawnSync } from "node:child_process";
 import { constants as fsConstants } from "node:fs";
 import { access, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { marked } from "marked";
 import { chromium } from "playwright";
 
@@ -403,7 +408,7 @@ async function renderPdf(
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage();
-    await page.goto(`file://${htmlPath}`, { waitUntil: "networkidle" });
+    await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "networkidle" });
 
     // Wait for all images
     await page.evaluate(async () => {
@@ -459,7 +464,7 @@ async function loadReport(
     throw new Error(`report-data.ts not found at ${dataPath}`);
   }
   const mod: { default?: ConsultingReport; report?: ConsultingReport } = await import(
-    dataPath
+    pathToFileURL(dataPath).href
   );
   const report = mod.default || mod.report;
   if (!report) {

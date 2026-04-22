@@ -48,7 +48,7 @@ Edit:
 ### Step 3: Render
 
 ```bash
-bun ~/.pal/skills/consulting-report/tools/generate-pdf.ts <report-dir>
+node --experimental-strip-types ~/.pal/skills/consulting-report/tools/generate-pdf.ts <report-dir>
 ```
 
 Output: `<dir>/<client-slug>-<title-slug>-<date>.pdf` and matching `.html`. Override with `--pdf <path>` / `--html <path>`.
@@ -101,7 +101,7 @@ Do NOT combine CSS `@page` margin-box rules with the Playwright `displayHeaderFo
 A runnable demo lives at `~/.pal/skills/consulting-report/demo/`:
 
 ```bash
-bun ~/.pal/skills/consulting-report/tools/generate-pdf.ts ~/.pal/skills/consulting-report/demo
+node --experimental-strip-types ~/.pal/skills/consulting-report/tools/generate-pdf.ts ~/.pal/skills/consulting-report/demo
 ```
 
 Inspect the produced PDF to see the full layout (cover, TOC, sections, findings, recommendations, conclusion, appendix) before writing your own report.

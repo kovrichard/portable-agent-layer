@@ -70,5 +70,5 @@ console.log(`  2. Fill ${join(targetDir, "content")} with your section markdown 
 console.log(`  3. Drop images into ${join(targetDir, "diagrams")}`);
 console.log(`  4. Render:`);
 console.log(
-  `       bun ~/.pal/skills/consulting-report/tools/generate-pdf.ts ${targetDir}`
+  `       node --experimental-strip-types ~/.pal/skills/consulting-report/tools/generate-pdf.ts ${targetDir}`
 );

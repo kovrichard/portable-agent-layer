@@ -1,12 +1,17 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 // create-pdf skill tool: Markdown -> HTML (marked, GFM) -> PDF (Playwright).
 // Self-contained HTML: all CSS inlined, no CDN at render time.
 //
+// Run with Node (not Bun) — Playwright's chromium.launch hangs under Bun on Windows
+// because it uses --remote-debugging-pipe over stdio and Bun's Windows child-process
+// pipe handling doesn't complete the CDP handshake.
+//
 // Usage:
-//   bun ~/.pal/skills/create-pdf/tools/md-to-html-pdf.ts <input.md> [--html <out.html>] [--pdf <out.pdf>]
+//   node --experimental-strip-types ~/.pal/skills/create-pdf/tools/md-to-html-pdf.ts <input.md> [--html <out.html>] [--pdf <out.pdf>]
 
 import { readFile, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { marked } from "marked";
 import { chromium } from "playwright";
 
@@ -74,7 +79,7 @@ await writeFile(htmlOut, html, "utf8");
 const browser = await chromium.launch();
 try {
   const page = await browser.newPage();
-  await page.goto(`file://${htmlOut}`, { waitUntil: "networkidle" });
+  await page.goto(pathToFileURL(htmlOut).href, { waitUntil: "networkidle" });
   await page.pdf({
     path: pdfOut,
     format: "A4",

@@ -356,6 +356,39 @@ function checkPlaywrightChromium(): boolean {
   }
 }
 
+interface NodeCheck {
+  available: boolean;
+  version?: string;
+  meetsMinimum?: boolean;
+}
+
+// Minimum Node version with `--experimental-strip-types` is 22.6.0 — required
+// by the consulting-report skill, which runs under Node on Windows because
+// Playwright's chromium.launch() hangs under Bun.
+function checkNode(): NodeCheck {
+  const minMajor = 22;
+  const minMinor = 6;
+  const result = checkTool("node");
+  if (!result.available) return { available: false };
+  const raw = (result.version || "").replace(/^v/, "");
+  const [majorStr = "", minorStr = ""] = raw.split(".");
+  const major = Number(majorStr);
+  const minor = Number(minorStr);
+  const meetsMinimum =
+    Number.isFinite(major) &&
+    Number.isFinite(minor) &&
+    (major > minMajor || (major === minMajor && minor >= minMinor));
+  return { available: true, version: raw, meetsMinimum };
+}
+
+function nodeInstallHint(): string {
+  if (process.platform === "win32")
+    return "install Node ≥ 22.6 (`winget install OpenJS.NodeJS.LTS` or https://nodejs.org)";
+  if (process.platform === "darwin")
+    return "install Node ≥ 22.6 (`brew install node` or https://nodejs.org)";
+  return "install Node ≥ 22.6 (see https://nodejs.org or your package manager)";
+}
+
 function checkHookHealth(home: string): HookHealth {
   const logPath = resolve(home, "memory", "state", "debug.log");
 
@@ -435,6 +468,18 @@ function doctor(silent = false): DoctorResult {
     console.log("");
     log.info("Doctor");
     ok(`Bun ${bun.version}`);
+    const node = checkNode();
+    if (!node.available) {
+      warn(
+        `Node — not found; consulting-report PDF skill will not work. ${nodeInstallHint()}`
+      );
+    } else if (!node.meetsMinimum) {
+      warn(
+        `Node ${node.version} — too old for consulting-report PDF skill (needs ≥ 22.6 for --experimental-strip-types). ${nodeInstallHint()}`
+      );
+    } else {
+      ok(`Node ${node.version}`);
+    }
     claude.available
       ? ok(`Claude Code ${claude.version || ""}`.trim())
       : fail("Claude Code — not found");
@@ -648,6 +693,20 @@ async function install(targets: Targets) {
         `playwright install chromium failed (exit ${pw.status}) — create-pdf and consulting-report skills won't work. Retry manually: bun x playwright install chromium`
       );
     }
+  }
+
+  // Node check — the consulting-report skill runs under `node --experimental-strip-types`
+  // because Playwright's chromium.launch() hangs under Bun on Windows (CDP handshake over
+  // stdio pipes). Node ≥ 22.6 is required for --experimental-strip-types.
+  const node = checkNode();
+  if (!node.available) {
+    log.warn(
+      `Node not found — consulting-report PDF skill will not work. ${nodeInstallHint()}`
+    );
+  } else if (!node.meetsMinimum) {
+    log.warn(
+      `Node ${node.version} is older than 22.6 — consulting-report PDF skill will not work (needs --experimental-strip-types). ${nodeInstallHint()}`
+    );
   }
 
   // Scaffold TELOS + PAL settings, then prompt for missing identity

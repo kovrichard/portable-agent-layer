@@ -55,13 +55,13 @@ Invoke the skill tool. Flags:
 Single-file example:
 
 ```bash
-bun ~/.pal/skills/create-pdf/tools/md-to-html-pdf.ts /path/to/report.md --pdf /path/to/report.pdf
+node --experimental-strip-types ~/.pal/skills/create-pdf/tools/md-to-html-pdf.ts /path/to/report.md --pdf /path/to/report.pdf
 ```
 
 Multi-file example (after Step 2):
 
 ```bash
-bun ~/.pal/skills/create-pdf/tools/md-to-html-pdf.ts /tmp/combined.md --pdf /path/to/report.pdf --html /path/to/report.html
+node --experimental-strip-types ~/.pal/skills/create-pdf/tools/md-to-html-pdf.ts /tmp/combined.md --pdf /path/to/report.pdf --html /path/to/report.html
 ```
 
 The tool writes the self-contained HTML (inline CSS, UTF-8) and the PDF, and prints both paths + sizes on stdout.
