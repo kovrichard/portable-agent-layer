@@ -6,6 +6,7 @@
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { autoBackup } from "../handlers/backup";
+import { notifyDesktop } from "../handlers/desktop-notify";
 import { captureFailure } from "../handlers/failure";
 import { checkReflectTrigger } from "../handlers/reflect-trigger";
 import { checkSelfModelTrigger } from "../handlers/self-model-trigger";
@@ -48,6 +49,7 @@ export async function runStopHandlers(
     checkReflectTrigger(),
     checkSelfModelTrigger(),
     runSynthesis(),
+    notifyDesktop(options.sessionId),
   ]);
 
   const handlerNames = [
@@ -58,7 +60,9 @@ export async function runStopHandlers(
     "update-counts",
     "backup",
     "reflect-trigger",
+    "self-model-trigger",
     "synthesis",
+    "desktop-notify",
   ];
   for (let i = 0; i < results.length; i++) {
     const r = results[i];
