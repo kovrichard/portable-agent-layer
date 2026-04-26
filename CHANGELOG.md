@@ -1,3 +1,15 @@
+# [0.28.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.27.1...v0.28.0) (2026-04-26)
+
+
+### Bug Fixes
+
+* update cache write metrics to cover opus 4.7, fix caching costs ([e0061b1](https://github.com/kovrichard/portable-agent-layer/commit/e0061b158f7dc68b12f42058b2d2beca92276184))
+
+
+### Features
+
+* add cross-platform desktop notification support ([2b47209](https://github.com/kovrichard/portable-agent-layer/commit/2b47209f708c1d822e66ebf140713118e2ca7bf1))
+
 ## [0.27.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.27.0...v0.27.1) (2026-04-21)
 
 
