@@ -16,7 +16,8 @@ import { MODEL_PRICING } from "../hooks/lib/models";
 interface Usage {
   input: number;
   output: number;
-  cacheWrite: number;
+  cacheWrite5m: number;
+  cacheWrite1h: number;
   cacheRead: number;
   cost: number;
   calls: number;
@@ -82,7 +83,8 @@ export function parseSession(filepath: string, sessionId: string): Usage {
   const usage: Usage = {
     input: 0,
     output: 0,
-    cacheWrite: 0,
+    cacheWrite5m: 0,
+    cacheWrite1h: 0,
     cacheRead: 0,
     cost: 0,
     calls: 0,
@@ -109,6 +111,10 @@ export function parseSession(filepath: string, sessionId: string): Usage {
             output_tokens?: number;
             cache_creation_input_tokens?: number;
             cache_read_input_tokens?: number;
+            cache_creation?: {
+              ephemeral_5m_input_tokens?: number;
+              ephemeral_1h_input_tokens?: number;
+            };
           };
         };
       };
@@ -127,19 +133,30 @@ export function parseSession(filepath: string, sessionId: string): Usage {
 
       const input = u.input_tokens ?? 0;
       const output = u.output_tokens ?? 0;
-      const cw = u.cache_creation_input_tokens ?? 0;
       const cr = u.cache_read_input_tokens ?? 0;
+      const cw5m = u.cache_creation?.ephemeral_5m_input_tokens;
+      const cw1h = u.cache_creation?.ephemeral_1h_input_tokens;
+      const hasBreakdown = cw5m !== undefined || cw1h !== undefined;
+      const cacheWrite5m = hasBreakdown
+        ? (cw5m ?? 0)
+        : (u.cache_creation_input_tokens ?? 0);
+      const cacheWrite1h = cw1h ?? 0;
 
       const p = MODEL_PRICING[model];
       if (p) {
         usage.cost +=
-          (input * p.input + output * p.output + cw * p.cacheWrite + cr * p.cacheRead) /
+          (input * p.input +
+            output * p.output +
+            cacheWrite5m * p.cacheWrite5m +
+            cacheWrite1h * p.cacheWrite1h +
+            cr * p.cacheRead) /
           1_000_000;
       }
 
       usage.input += input;
       usage.output += output;
-      usage.cacheWrite += cw;
+      usage.cacheWrite5m += cacheWrite5m;
+      usage.cacheWrite1h += cacheWrite1h;
       usage.cacheRead += cr;
       usage.calls++;
       usage.models.add(model);
@@ -195,7 +212,12 @@ function run() {
   const usage = parseSession(file.filepath, sessionId);
   if (usage.calls === 0) process.exit(0);
 
-  const totalTokens = usage.input + usage.output + usage.cacheWrite + usage.cacheRead;
+  const totalTokens =
+    usage.input +
+    usage.output +
+    usage.cacheWrite5m +
+    usage.cacheWrite1h +
+    usage.cacheRead;
   const model = [...usage.models].map((m) => m.replace("claude-", "")).join(", ");
 
   const dim = "\x1b[2m";

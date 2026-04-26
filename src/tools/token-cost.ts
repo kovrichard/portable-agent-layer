@@ -20,14 +20,23 @@ import { palHome } from "../hooks/lib/paths";
 export interface Bucket {
   input: number;
   output: number;
-  cacheWrite: number;
+  cacheWrite5m: number;
+  cacheWrite1h: number;
   cacheRead: number;
   cost: number;
   calls: number;
 }
 
 export function emptyBucket(): Bucket {
-  return { input: 0, output: 0, cacheWrite: 0, cacheRead: 0, cost: 0, calls: 0 };
+  return {
+    input: 0,
+    output: 0,
+    cacheWrite5m: 0,
+    cacheWrite1h: 0,
+    cacheRead: 0,
+    cost: 0,
+    calls: 0,
+  };
 }
 
 export interface TimeBuckets {
@@ -60,7 +69,8 @@ function costForUsage(
   model: string,
   input: number,
   output: number,
-  cacheWrite: number,
+  cacheWrite5m: number,
+  cacheWrite1h: number,
   cacheRead: number
 ): number {
   const p = findPricing(model);
@@ -68,7 +78,8 @@ function costForUsage(
   return (
     (input * p.input +
       output * p.output +
-      cacheWrite * p.cacheWrite +
+      cacheWrite5m * p.cacheWrite5m +
+      cacheWrite1h * p.cacheWrite1h +
       cacheRead * p.cacheRead) /
     1_000_000
   );
@@ -79,14 +90,23 @@ export function addToBucket(
   model: string,
   input: number,
   output: number,
-  cacheWrite: number,
+  cacheWrite5m: number,
+  cacheWrite1h: number,
   cacheRead: number
 ): void {
   bucket.input += input;
   bucket.output += output;
-  bucket.cacheWrite += cacheWrite;
+  bucket.cacheWrite5m += cacheWrite5m;
+  bucket.cacheWrite1h += cacheWrite1h;
   bucket.cacheRead += cacheRead;
-  bucket.cost += costForUsage(model, input, output, cacheWrite, cacheRead);
+  bucket.cost += costForUsage(
+    model,
+    input,
+    output,
+    cacheWrite5m,
+    cacheWrite1h,
+    cacheRead
+  );
   bucket.calls++;
 }
 
@@ -104,7 +124,7 @@ function fmtCost(n: number): string {
 }
 
 function printRow(label: string, b: Bucket, labelWidth = 14): void {
-  const tokens = b.input + b.output + b.cacheWrite + b.cacheRead;
+  const tokens = b.input + b.output + b.cacheWrite5m + b.cacheWrite1h + b.cacheRead;
   console.log(
     `  ${label.padEnd(labelWidth)} ${fmt(tokens).padStart(8)} tok  ${fmt(b.calls).padStart(5)} calls  ${fmtCost(b.cost).padStart(8)}`
   );
@@ -112,7 +132,7 @@ function printRow(label: string, b: Bucket, labelWidth = 14): void {
 
 function printDetailed(label: string, b: Bucket, labelWidth = 14): void {
   console.log(
-    `  ${label.padEnd(labelWidth)} ${fmt(b.input).padStart(8)} in  ${fmt(b.output).padStart(8)} out  ${fmt(b.cacheWrite).padStart(8)} cw  ${fmt(b.cacheRead).padStart(8)} cr  ${fmtCost(b.cost).padStart(8)}`
+    `  ${label.padEnd(labelWidth)} ${fmt(b.input).padStart(8)} in  ${fmt(b.output).padStart(8)} out  ${fmt(b.cacheWrite5m).padStart(7)} cw5m  ${fmt(b.cacheWrite1h).padStart(7)} cw1h  ${fmt(b.cacheRead).padStart(8)} cr  ${fmtCost(b.cost).padStart(8)}`
   );
 }
 
@@ -124,17 +144,20 @@ function addToTimeBuckets(
   model: string,
   input: number,
   output: number,
-  cacheWrite: number,
+  cacheWrite5m: number,
+  cacheWrite1h: number,
   cacheRead: number,
   todayPrefix: string,
   weekAgo: string,
   monthAgo: string
 ): void {
-  addToBucket(tb.total, model, input, output, cacheWrite, cacheRead);
-  if (ts >= monthAgo) addToBucket(tb.month, model, input, output, cacheWrite, cacheRead);
-  if (ts >= weekAgo) addToBucket(tb.week, model, input, output, cacheWrite, cacheRead);
+  addToBucket(tb.total, model, input, output, cacheWrite5m, cacheWrite1h, cacheRead);
+  if (ts >= monthAgo)
+    addToBucket(tb.month, model, input, output, cacheWrite5m, cacheWrite1h, cacheRead);
+  if (ts >= weekAgo)
+    addToBucket(tb.week, model, input, output, cacheWrite5m, cacheWrite1h, cacheRead);
   if (ts.startsWith(todayPrefix))
-    addToBucket(tb.today, model, input, output, cacheWrite, cacheRead);
+    addToBucket(tb.today, model, input, output, cacheWrite5m, cacheWrite1h, cacheRead);
 }
 
 export function readClaudeCode(projectFilter?: string): {
@@ -205,6 +228,10 @@ export function readClaudeCode(projectFilter?: string): {
                 output_tokens?: number;
                 cache_creation_input_tokens?: number;
                 cache_read_input_tokens?: number;
+                cache_creation?: {
+                  ephemeral_5m_input_tokens?: number;
+                  ephemeral_1h_input_tokens?: number;
+                };
               };
             };
           };
@@ -216,8 +243,15 @@ export function readClaudeCode(projectFilter?: string): {
 
           const input = usage.input_tokens ?? 0;
           const output = usage.output_tokens ?? 0;
-          const cw = usage.cache_creation_input_tokens ?? 0;
           const cr = usage.cache_read_input_tokens ?? 0;
+          const cw5m = usage.cache_creation?.ephemeral_5m_input_tokens;
+          const cw1h = usage.cache_creation?.ephemeral_1h_input_tokens;
+          // Older transcripts only have the summed cache_creation_input_tokens — bill as 5m.
+          const hasBreakdown = cw5m !== undefined || cw1h !== undefined;
+          const cacheWrite5m = hasBreakdown
+            ? (cw5m ?? 0)
+            : (usage.cache_creation_input_tokens ?? 0);
+          const cacheWrite1h = cw1h ?? 0;
 
           addToTimeBuckets(
             buckets,
@@ -225,7 +259,8 @@ export function readClaudeCode(projectFilter?: string): {
             model,
             input,
             output,
-            cw,
+            cacheWrite5m,
+            cacheWrite1h,
             cr,
             todayPrefix,
             weekAgo,
@@ -233,7 +268,15 @@ export function readClaudeCode(projectFilter?: string): {
           );
 
           if (!byModel[model]) byModel[model] = emptyBucket();
-          addToBucket(byModel[model], model, input, output, cw, cr);
+          addToBucket(
+            byModel[model],
+            model,
+            input,
+            output,
+            cacheWrite5m,
+            cacheWrite1h,
+            cr
+          );
 
           if (!byProject[projName]) byProject[projName] = emptyTimeBuckets();
           addToTimeBuckets(
@@ -242,7 +285,8 @@ export function readClaudeCode(projectFilter?: string): {
             model,
             input,
             output,
-            cw,
+            cacheWrite5m,
+            cacheWrite1h,
             cr,
             todayPrefix,
             weekAgo,
@@ -297,6 +341,7 @@ export function readPalInference(): {
         e.outputTokens,
         0,
         0,
+        0,
         todayPrefix,
         weekAgo,
         monthAgo
@@ -310,12 +355,13 @@ export function readPalInference(): {
         e.outputTokens,
         0,
         0,
+        0,
         todayPrefix,
         weekAgo,
         monthAgo
       );
       if (!byCaller[e.caller]) byCaller[e.caller] = emptyBucket();
-      addToBucket(byCaller[e.caller], e.model, e.inputTokens, e.outputTokens, 0, 0);
+      addToBucket(byCaller[e.caller], e.model, e.inputTokens, e.outputTokens, 0, 0, 0);
     } catch {
       /* skip */
     }
@@ -385,7 +431,8 @@ function run() {
   for (const b of [cc.buckets.total, pal.buckets.total]) {
     grand.input += b.input;
     grand.output += b.output;
-    grand.cacheWrite += b.cacheWrite;
+    grand.cacheWrite5m += b.cacheWrite5m;
+    grand.cacheWrite1h += b.cacheWrite1h;
     grand.cacheRead += b.cacheRead;
     grand.cost += b.cost;
     grand.calls += b.calls;
