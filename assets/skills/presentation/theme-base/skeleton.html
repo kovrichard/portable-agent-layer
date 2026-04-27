@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="{{LANG}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{TITLE}}</title>
+{{FONTS_LINK}}
+<style>{{REVEAL_CSS}}</style>
+<style>{{HIGHLIGHT_CSS}}</style>
+<style>{{BASE_CSS}}</style>
+<style>{{LAYOUTS_CSS}}</style>
+<style>{{TEMPLATE_CSS}}</style>
+<style>:root { --brand-logo: {{LOGO_DATA_URI}}; }</style>
+{{DECK_OVERRIDES_CSS}}
+</head>
+<body>
+<div class="reveal">
+  <div class="slides">
+    <section data-markdown
+             data-separator="^---$"
+             data-separator-vertical="^--$"
+             data-separator-notes="^Note:">
+      <textarea data-template>
+{{CONTENT_MD}}
+      </textarea>
+    </section>
+  </div>
+</div>
+<script>{{REVEAL_JS}}</script>
+<script>{{MARKDOWN_PLUGIN_JS}}</script>
+<script>{{HIGHLIGHT_PLUGIN_JS}}</script>
+<script>{{NOTES_PLUGIN_JS}}</script>
+<script>
+Reveal.initialize({
+  hash: true,
+  width: {{WIDTH}},
+  height: {{HEIGHT}},
+  margin: 0.05,
+  controls: false,
+  progress: true,
+  slideNumber: 'c/t',
+  plugins: [RevealMarkdown, RevealHighlight, RevealNotes],
+  markdown: { smartypants: true }
+}).then(() => {
+  // Re-parent Reveal's .slide-number element into .slides so it shares the canvas
+  // coordinate system with the logo (.slides::after) and moves with `margin` changes.
+  const sn = document.querySelector('.reveal > .slide-number');
+  const slides = document.querySelector('.reveal .slides');
+  if (sn && slides) slides.appendChild(sn);
+});
+</script>
+</body>
+</html>

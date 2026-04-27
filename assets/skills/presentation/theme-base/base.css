@@ -1,0 +1,167 @@
+/* presentation skill — theme-base/base.css
+ * Brand-neutral base. Templates override the --brand-* custom properties.
+ * Do not put brand colours here — only neutral defaults. */
+
+:root {
+  --brand-primary: #0E1335;
+  --brand-accent: #2563EB;
+  --brand-bg: #FFFFFF;
+  --brand-fg: #111827;
+  --brand-muted: #6B7280;
+  --brand-surface: #F9FAFB;
+  --brand-divider: #E5E7EB;
+
+  --brand-logo: none;
+
+  --font-display: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-body:    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono:    "JetBrains Mono", "Menlo", "Consolas", monospace;
+
+  --space-1: 0.5rem;
+  --space-2: 1rem;
+  --space-3: 1.5rem;
+  --space-4: 2.5rem;
+  --space-5: 4rem;
+}
+
+.reveal {
+  font-family: var(--font-body);
+  font-size: 48px;
+  font-weight: 400;
+  color: var(--brand-fg);
+}
+.reveal-viewport { background: var(--brand-bg); }
+
+/* Default content padding inside every slide. Distinct from Reveal's `margin` config:
+ *   `margin` (Reveal) = letterbox between canvas and viewport
+ *   this padding   = inset between section content and canvas edge
+ * Bottom reserve protects the chrome (logo + slide-number) anchored at canvas-bottom.
+ * Special layouts (title/section/quote/closing) override below in layouts.css. */
+.reveal .slides > section {
+  padding: 2.5rem 5rem 4.5rem;
+  box-sizing: border-box;
+}
+
+
+.reveal h1, .reveal h2, .reveal h3, .reveal h4, .reveal h5, .reveal h6 {
+  font-family: var(--font-display);
+  color: var(--brand-fg);
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+  margin: 0 0 var(--space-3) 0;
+  text-transform: none;
+}
+.reveal h1 { font-size: 2.6em; font-weight: 700; }
+.reveal h2 { font-size: 2.0em; font-weight: 600; }
+.reveal h3 { font-size: 1.5em; font-weight: 600; }
+.reveal h4 { font-size: 1.2em; font-weight: 600; }
+
+.reveal p { line-height: 1.5; margin: 0 0 var(--space-2) 0; }
+
+.reveal ul, .reveal ol {
+  margin: 0 0 var(--space-2) 1.4em;
+  line-height: 1.5;
+}
+.reveal li { margin-bottom: var(--space-1); }
+.reveal li > ul, .reveal li > ol { margin-top: var(--space-1); margin-bottom: 0; }
+
+.reveal a {
+  color: var(--brand-accent);
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+}
+
+.reveal blockquote {
+  border-left: 4px solid var(--brand-accent);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--brand-surface);
+  font-style: italic;
+}
+
+.reveal pre {
+  background: #1E1E1E;
+  border-radius: 4px;
+  font-size: 0.7em;
+  line-height: 1.5;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.reveal pre code {
+  padding: var(--space-2);
+  display: block;
+  font-family: var(--font-mono);
+}
+.reveal :not(pre) > code {
+  background: var(--brand-surface);
+  padding: 0.1em 0.4em;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: var(--brand-primary);
+}
+
+.reveal table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--space-2) 0;
+  font-size: 0.8em;
+}
+.reveal th {
+  background: var(--brand-primary);
+  color: #fff;
+  text-align: left;
+  padding: var(--space-1) var(--space-2);
+  font-weight: 600;
+}
+.reveal td {
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--brand-divider);
+}
+.reveal tr:nth-child(even) td { background: var(--brand-surface); }
+
+/* Footer logo — pseudo on .slides (the canvas) so it inherits Reveal's scale+translate
+ * transforms and stays at canvas-bottom-right regardless of the configured `margin`. */
+.reveal .slides::after {
+  content: '';
+  position: absolute;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  width: 90px;
+  height: 28px;
+  background: var(--brand-logo) no-repeat right bottom / contain;
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Slide number — JS hook in skeleton.html re-parents Reveal's .slide-number into .slides,
+ * so it shares the same canvas coordinate system as the logo. */
+.reveal .slides > .slide-number {
+  position: absolute;
+  bottom: 1.5rem;
+  left: 1.5rem;
+  right: auto;
+  top: auto;
+  background: transparent;
+  color: var(--brand-muted);
+  font-family: var(--font-body);
+  font-size: 0.55em;
+  font-weight: 400;
+  line-height: 28px;
+  letter-spacing: 0.05em;
+  padding: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Hide both chrome elements on cover, divider, and closing layouts.
+ * !important is required because Reveal sets style="display: block" inline on .slide-number
+ * via JS — only !important beats inline styles. */
+.reveal .slides:has(> section.present[data-layout="title"])::after,
+.reveal .slides:has(> section.present[data-layout="title"]) > .slide-number,
+.reveal .slides:has(> section.present[data-layout="section"])::after,
+.reveal .slides:has(> section.present[data-layout="section"]) > .slide-number,
+.reveal .slides:has(> section.present[data-layout="closing"])::after,
+.reveal .slides:has(> section.present[data-layout="closing"]) > .slide-number {
+  display: none !important;
+}

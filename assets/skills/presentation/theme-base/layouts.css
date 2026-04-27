@@ -1,0 +1,216 @@
+/* presentation skill — theme-base/layouts.css
+ * Per-layout styling via [data-layout="..."] attribute selectors.
+ * 11 layouts. Brand-neutral — templates override colours via --brand-* vars. */
+
+/* Reveal default is centered text; we want left for content slides. */
+.reveal .slides > section { text-align: left; }
+
+/* ── 1. title ── Cover slide */
+.reveal section[data-layout="title"] {
+  text-align: center !important;
+  display: flex !important;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: var(--space-5) var(--space-4);
+}
+.reveal section[data-layout="title"] h1 {
+  font-size: 3.0em;
+  margin-bottom: var(--space-2);
+  color: var(--brand-primary);
+}
+.reveal section[data-layout="title"] h2 {
+  font-size: 1.4em;
+  font-weight: 400;
+  color: var(--brand-muted);
+  margin-bottom: var(--space-4);
+}
+.reveal section[data-layout="title"]::before {
+  content: '';
+  background: var(--brand-logo) no-repeat center / contain;
+  width: 320px;
+  height: 96px;
+  margin-bottom: var(--space-4);
+  display: block;
+}
+
+/* ── 2. section ── Section divider, full-bleed */
+.reveal section[data-layout="section"] {
+  background: var(--brand-primary);
+  color: #fff;
+  text-align: left !important;
+  display: flex !important;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--space-5);
+}
+.reveal section[data-layout="section"] h1 {
+  color: #fff;
+  font-size: 2.8em;
+  font-weight: 700;
+  margin-bottom: var(--space-2);
+}
+.reveal section[data-layout="section"] h2,
+.reveal section[data-layout="section"] h3 {
+  color: rgba(255,255,255,0.7);
+  font-size: 1.3em;
+  font-weight: 400;
+  margin-bottom: var(--space-2);
+}
+.reveal section[data-layout="section"] p {
+  color: rgba(255,255,255,0.85);
+  font-size: 1.1em;
+}
+.reveal section[data-layout="section"]::after { display: none !important; }
+
+/* ── 3. content ── default; no overrides needed */
+
+/* ── 4. two-column ── */
+.reveal section[data-layout="two-column"] .col-left,
+.reveal section[data-layout="two-column"] .col-right {
+  display: inline-block;
+  width: 47%;
+  vertical-align: top;
+  font-size: 0.9em;
+}
+.reveal section[data-layout="two-column"] .col-left { padding-right: var(--space-3); }
+.reveal section[data-layout="two-column"] .col-right {
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--brand-divider);
+}
+
+/* ── 5. image-text ── */
+.reveal section[data-layout="image-text"] .image,
+.reveal section[data-layout="image-text"] .text {
+  display: inline-block;
+  width: 47%;
+  vertical-align: middle;
+}
+.reveal section[data-layout="image-text"] .image { padding-right: var(--space-3); }
+.reveal section[data-layout="image-text"] .image img,
+.reveal section[data-layout="image-text"] .image svg {
+  width: 100%; height: auto; max-height: 60vh; object-fit: contain;
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  display: block;
+}
+.reveal section[data-layout="image-text"] .text { padding-left: var(--space-3); }
+
+/* ── 6. quote ── */
+.reveal section[data-layout="quote"] {
+  text-align: center !important;
+  display: flex !important;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--space-5);
+}
+.reveal section[data-layout="quote"] blockquote {
+  border-left: none;
+  background: transparent;
+  font-size: 1.4em;
+  font-style: italic;
+  color: var(--brand-fg);
+  padding: 0;
+  margin: 0 auto;
+  max-width: 80%;
+  position: relative;
+}
+.reveal section[data-layout="quote"] blockquote::before {
+  content: '"';
+  font-family: Georgia, serif;
+  font-size: 4em;
+  color: var(--brand-accent);
+  position: absolute;
+  top: -0.5em;
+  left: -0.4em;
+  line-height: 1;
+}
+
+/* ── 7. closing ── */
+.reveal section[data-layout="closing"] {
+  text-align: center !important;
+  display: flex !important;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: var(--space-5) var(--space-4);
+  background: var(--brand-primary);
+  color: #fff;
+}
+.reveal section[data-layout="closing"] h1 {
+  color: #fff;
+  font-size: 3.4em;
+  margin-bottom: var(--space-2);
+}
+.reveal section[data-layout="closing"] h2 {
+  color: rgba(255,255,255,0.85);
+  font-weight: 400;
+  font-size: 1.4em;
+}
+.reveal section[data-layout="closing"] p { color: rgba(255,255,255,0.85); }
+.reveal section[data-layout="closing"]::after { display: none !important; }
+
+/* ── 8. agenda ── */
+.reveal section[data-layout="agenda"] ol {
+  margin: var(--space-2) 0 0 0;
+  padding-left: 0;
+  list-style: none;
+  counter-reset: agenda;
+}
+.reveal section[data-layout="agenda"] ol li {
+  counter-increment: agenda;
+  font-size: 0.85em;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--brand-divider);
+  position: relative;
+  padding-left: 2.6em;
+  margin-bottom: 0;
+}
+.reveal section[data-layout="agenda"] ol li::before {
+  content: counter(agenda, decimal-leading-zero);
+  position: absolute;
+  left: 0;
+  top: 0.6rem;
+  color: var(--brand-accent);
+  font-weight: 700;
+  font-size: 1.0em;
+  font-family: var(--font-display);
+  letter-spacing: 0.05em;
+}
+
+/* ── 9. table ── styling already in base; just ensure breathing room */
+.reveal section[data-layout="table"] table {
+  margin-top: var(--space-3);
+}
+
+/* ── 10. comparison ── */
+.reveal section[data-layout="comparison"] .compare {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  align-items: stretch;
+}
+.reveal section[data-layout="comparison"] .option {
+  flex: 1;
+  background: var(--brand-surface);
+  padding: var(--space-3);
+  border-radius: 6px;
+  border-top: 4px solid var(--brand-accent);
+  font-size: 0.85em;
+}
+.reveal section[data-layout="comparison"] .option:nth-child(1) { border-top-color: var(--brand-primary); }
+.reveal section[data-layout="comparison"] .option p:first-child strong:first-child,
+.reveal section[data-layout="comparison"] .option > strong:first-child {
+  display: block;
+  font-size: 1.3em;
+  margin-bottom: var(--space-2);
+  color: var(--brand-primary);
+}
+
+/* ── 11. code ── code-focused; pre fills more vertical space */
+.reveal section[data-layout="code"] pre {
+  width: 100%;
+  max-height: 65vh;
+  margin: var(--space-2) 0;
+}
+.reveal section[data-layout="code"] pre code { font-size: 0.9em; }
