@@ -1,3 +1,10 @@
+## [0.28.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.28.0...v0.28.1) (2026-04-27)
+
+
+### Bug Fixes
+
+* do not break package mode when .git is missing ([b33baea](https://github.com/kovrichard/portable-agent-layer/commit/b33baea3dc66040c2a9b777d1075733637fab7de))
+
 # [0.28.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.27.1...v0.28.0) (2026-04-26)
 
 
