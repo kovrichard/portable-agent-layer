@@ -41,7 +41,7 @@
     "check": "biome check",
     "check-write": "biome check --write",
     "lint-staged": "lint-staged",
-    "prepare": "husky",
+    "prepare": "bun .husky/install.mjs",
     "install:all": "bun run src/cli/index.ts cli install",
     "uninstall": "bun run src/cli/index.ts cli uninstall",
     "tool:synthesize": "bun run src/tools/agent/synthesize.ts",
