@@ -1,3 +1,11 @@
+# [0.29.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.28.1...v0.29.0) (2026-04-28)
+
+
+### Features
+
+* **hooks:** add PreCompact and CompactRecover hooks for session state management ([3c5142b](https://github.com/kovrichard/portable-agent-layer/commit/3c5142b9faba9b13a072b8dad654c361aac3171e))
+* **presentation:** add new skill for creating branded HTML presentations from markdown ([0d236fb](https://github.com/kovrichard/portable-agent-layer/commit/0d236fb6f471f62446abbed5cc741ad4bd589afa))
+
 ## [0.28.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.28.0...v0.28.1) (2026-04-27)
 
 
