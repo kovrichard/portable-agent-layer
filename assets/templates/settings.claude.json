@@ -33,6 +33,26 @@
             "command": "bun run {{PKG_ROOT}}/src/hooks/LoadContext.ts"
           }
         ]
+      },
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/CompactRecover.ts"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/PreCompactPersist.ts"
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
