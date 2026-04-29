@@ -918,12 +918,12 @@ async function update() {
       process.exit(1);
     }
   } else {
-    log.info("Updating via npm...");
-    const up = spawnSync("bun", ["update", "-g", "portable-agent-layer"], {
+    log.info("Updating via bun...");
+    const up = spawnSync("bun", ["add", "-g", `portable-agent-layer@${result.latest}`], {
       stdio: "inherit",
     });
     if (up.status !== 0) {
-      log.error("Update failed. Try: bun update -g portable-agent-layer");
+      log.error(`Update failed. Try: bun add -g portable-agent-layer@${result.latest}`);
       process.exit(1);
     }
   }
