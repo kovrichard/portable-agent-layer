@@ -1,3 +1,10 @@
+## [0.29.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.29.0...v0.29.1) (2026-04-29)
+
+
+### Bug Fixes
+
+* make update work on npm ([b2a06cb](https://github.com/kovrichard/portable-agent-layer/commit/b2a06cb204407a04e4b63d580b735b5187c7f210))
+
 # [0.29.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.28.1...v0.29.0) (2026-04-28)
 
 
