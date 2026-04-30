@@ -22,3 +22,14 @@ describe("pal cli update — package mode command shape", () => {
     );
   });
 });
+
+// Repo mode is the other half of update(): a clone next to package.json is
+// updated via `git pull --ff-only`. Locking this prevents accidental swaps to
+// `git pull` (allows merges) or `git fetch` + reset (loses local commits).
+describe("pal cli update — repo mode command shape", () => {
+  const src = readFileSync(resolve(import.meta.dir, "../src/cli/index.ts"), "utf-8");
+
+  test("uses 'git pull --ff-only'", () => {
+    expect(src).toMatch(/spawnSync\(\s*"git"\s*,\s*\[\s*"pull"\s*,\s*"--ff-only"\s*\]/);
+  });
+});
