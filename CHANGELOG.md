@@ -1,3 +1,10 @@
+## [0.30.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.30.0...v0.30.1) (2026-04-30)
+
+
+### Bug Fixes
+
+* **ci:** use client id instead of app id ([16ae715](https://github.com/kovrichard/portable-agent-layer/commit/16ae71536124b1ba6676b0d4b80a43fa1e9f57df))
+
 # [0.30.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.29.1...v0.30.0) (2026-04-30)
 
 
