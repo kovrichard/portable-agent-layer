@@ -1,3 +1,10 @@
+# [0.30.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.29.1...v0.30.0) (2026-04-30)
+
+
+### Features
+
+* enhance presentation skill, introduce knip, organize ci actions ([735dfdb](https://github.com/kovrichard/portable-agent-layer/commit/735dfdbf5aedfd99f69a68855741c8afbef65f3c))
+
 ## [0.29.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.29.0...v0.29.1) (2026-04-29)
 
 
