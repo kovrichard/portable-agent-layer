@@ -8,6 +8,7 @@ node_modules/
 
 .test-tmp/
 .test-home/
+.test-install-home/
 
 # macOS debris
 .DS_Store
