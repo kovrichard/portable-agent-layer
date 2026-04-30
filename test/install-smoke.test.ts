@@ -53,6 +53,22 @@ describe("pal cli install (smoke)", () => {
     const result = pal("cli", "install", "--opencode");
     expect(result.status).toBe(0);
     expect(existsSync(OPENCODE_DIR)).toBe(true);
+    expect(existsSync(resolve(OPENCODE_DIR, "plugins", "pal-plugin.ts"))).toBe(true);
+  }, 90000);
+
+  test("install --cursor wires hooks, skills, agents", () => {
+    const result = pal("cli", "install", "--cursor");
+    expect(result.status).toBe(0);
+
+    expect(existsSync(resolve(CURSOR_DIR, "hooks.json"))).toBe(true);
+
+    const skills = resolve(CURSOR_DIR, "skills");
+    expect(existsSync(skills)).toBe(true);
+    expect(readdirSync(skills).length).toBeGreaterThan(0);
+
+    const agents = resolve(CURSOR_DIR, "agents");
+    expect(existsSync(agents)).toBe(true);
+    expect(readdirSync(agents).length).toBeGreaterThan(0);
   }, 90000);
 
   test("install is idempotent — second run preserves files", () => {
