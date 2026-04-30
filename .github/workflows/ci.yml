@@ -41,6 +41,14 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Audit dependencies
+        # Informational only — bun audit lacks a --production flag, and all
+        # current advisories are in dev-only deps (semantic-release, knip,
+        # lint-staged) that never ship to users. Flip to blocking once bun
+        # supports prod-only filtering.
+        continue-on-error: true
+        run: bun audit --audit-level=high
+
       - name: Check (lint + format)
         run: bun run check
 
