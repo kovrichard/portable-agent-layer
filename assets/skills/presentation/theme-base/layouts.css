@@ -1,11 +1,12 @@
 /* presentation skill — theme-base/layouts.css
  * Per-layout styling via [data-layout="..."] attribute selectors.
- * 11 layouts. Brand-neutral — templates override colours via --brand-* vars. */
+ * 15 layouts. Brand-neutral — every color references --brand-* / --neutral-* tokens.
+ */
 
 /* Reveal default is centered text; we want left for content slides. */
 .reveal .slides > section { text-align: left; }
 
-/* ── 1. title ── Cover slide */
+/* ── 1. title ── Cover slide (centered, brand mark + accent rule under title) */
 .reveal section[data-layout="title"] {
   text-align: center !important;
   display: flex !important;
@@ -13,17 +14,6 @@
   justify-content: center;
   align-items: center;
   padding: var(--space-5) var(--space-4);
-}
-.reveal section[data-layout="title"] h1 {
-  font-size: 3.0em;
-  margin-bottom: var(--space-2);
-  color: var(--brand-primary);
-}
-.reveal section[data-layout="title"] h2 {
-  font-size: 1.4em;
-  font-weight: 400;
-  color: var(--brand-muted);
-  margin-bottom: var(--space-4);
 }
 .reveal section[data-layout="title"]::before {
   content: '';
@@ -33,10 +23,32 @@
   margin-bottom: var(--space-4);
   display: block;
 }
+.reveal section[data-layout="title"] h1 {
+  font-size: var(--text-4xl);
+  margin-bottom: var(--space-2);
+  color: var(--brand-primary);
+  letter-spacing: var(--tracking-tighter);
+}
+.reveal section[data-layout="title"] h1::after {
+  content: '';
+  display: block;
+  width: 64px;
+  height: 4px;
+  background: var(--brand-accent);
+  margin: var(--space-2) auto 0;
+  border-radius: var(--radius-full);
+}
+.reveal section[data-layout="title"] h2 {
+  font-size: var(--text-lg);
+  font-weight: 400;
+  color: var(--brand-muted);
+  margin-bottom: var(--space-4);
+  letter-spacing: var(--tracking-normal);
+}
 
-/* ── 2. section ── Section divider, full-bleed */
+/* ── 2. section ── Section divider, gradient bg, accent rule */
 .reveal section[data-layout="section"] {
-  background: var(--brand-primary);
+  background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-800) 100%);
   color: #fff;
   text-align: left !important;
   display: flex !important;
@@ -44,26 +56,35 @@
   justify-content: center;
   padding: var(--space-5);
 }
+.reveal section[data-layout="section"]::before {
+  content: '';
+  display: block;
+  width: 64px;
+  height: 4px;
+  background: var(--brand-accent);
+  margin-bottom: var(--space-3);
+  border-radius: var(--radius-full);
+}
 .reveal section[data-layout="section"] h1 {
   color: #fff;
-  font-size: 2.8em;
+  font-size: var(--text-3xl);
   font-weight: 700;
   margin-bottom: var(--space-2);
+  letter-spacing: var(--tracking-tighter);
 }
 .reveal section[data-layout="section"] h2,
 .reveal section[data-layout="section"] h3 {
   color: rgba(255,255,255,0.7);
-  font-size: 1.3em;
+  font-size: var(--text-lg);
   font-weight: 400;
   margin-bottom: var(--space-2);
 }
 .reveal section[data-layout="section"] p {
   color: rgba(255,255,255,0.85);
-  font-size: 1.1em;
+  font-size: var(--text-lg);
 }
-.reveal section[data-layout="section"]::after { display: none !important; }
 
-/* ── 3. content ── default; no overrides needed */
+/* ── 3. content ── default; styled in base.css */
 
 /* ── 4. two-column ── */
 .reveal section[data-layout="two-column"] .col-left,
@@ -90,13 +111,12 @@
 .reveal section[data-layout="image-text"] .image img,
 .reveal section[data-layout="image-text"] .image svg {
   width: 100%; height: auto; max-height: 60vh; object-fit: contain;
-  border-radius: 4px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  border-radius: var(--radius-md);
   display: block;
 }
 .reveal section[data-layout="image-text"] .text { padding-left: var(--space-3); }
 
-/* ── 6. quote ── */
+/* ── 6. quote ── Centered quote with oversized accent glyph */
 .reveal section[data-layout="quote"] {
   text-align: center !important;
   display: flex !important;
@@ -107,26 +127,30 @@
 .reveal section[data-layout="quote"] blockquote {
   border-left: none;
   background: transparent;
-  font-size: 1.4em;
+  font-size: var(--text-xl);
   font-style: italic;
   color: var(--brand-fg);
   padding: 0;
   margin: 0 auto;
   max-width: 80%;
   position: relative;
+  line-height: var(--leading-snug);
+  border-radius: 0;
 }
 .reveal section[data-layout="quote"] blockquote::before {
   content: '"';
   font-family: Georgia, serif;
-  font-size: 4em;
-  color: var(--brand-accent);
+  font-size: 5em;
+  color: var(--brand-accent-300);
   position: absolute;
   top: -0.5em;
-  left: -0.4em;
+  left: -0.5em;
   line-height: 1;
+  z-index: 0;
 }
+.reveal section[data-layout="quote"] blockquote > * { position: relative; z-index: 1; }
 
-/* ── 7. closing ── */
+/* ── 7. closing ── Thank-you / Q&A on gradient brand BG */
 .reveal section[data-layout="closing"] {
   text-align: center !important;
   display: flex !important;
@@ -134,23 +158,33 @@
   justify-content: center;
   align-items: center;
   padding: var(--space-5) var(--space-4);
-  background: var(--brand-primary);
+  background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-800) 100%);
   color: #fff;
 }
 .reveal section[data-layout="closing"] h1 {
   color: #fff;
-  font-size: 3.4em;
+  font-size: var(--text-4xl);
   margin-bottom: var(--space-2);
+  letter-spacing: var(--tracking-tighter);
+}
+.reveal section[data-layout="closing"] h1::after {
+  content: '';
+  display: block;
+  width: 64px;
+  height: 4px;
+  background: var(--brand-accent);
+  margin: var(--space-2) auto 0;
+  border-radius: var(--radius-full);
 }
 .reveal section[data-layout="closing"] h2 {
   color: rgba(255,255,255,0.85);
   font-weight: 400;
-  font-size: 1.4em;
+  font-size: var(--text-xl);
 }
 .reveal section[data-layout="closing"] p { color: rgba(255,255,255,0.85); }
-.reveal section[data-layout="closing"]::after { display: none !important; }
 
-/* ── 8. agenda ── */
+/* ── 8. agenda ── Numbered ol, generous whitespace.
+ * Sized so 10 items fit comfortably; if you have more, split into two slides. */
 .reveal section[data-layout="agenda"] ol {
   margin: var(--space-2) 0 0 0;
   padding-left: 0;
@@ -159,8 +193,9 @@
 }
 .reveal section[data-layout="agenda"] ol li {
   counter-increment: agenda;
-  font-size: 0.85em;
-  padding: 0.6rem 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  padding: 0.5rem 0;
   border-bottom: 1px solid var(--brand-divider);
   position: relative;
   padding-left: 2.6em;
@@ -170,12 +205,12 @@
   content: counter(agenda, decimal-leading-zero);
   position: absolute;
   left: 0;
-  top: 0.6rem;
+  top: 0.5rem;
   color: var(--brand-accent);
   font-weight: 700;
-  font-size: 1.0em;
+  font-size: var(--text-sm);
   font-family: var(--font-display);
-  letter-spacing: 0.05em;
+  letter-spacing: var(--tracking-wide);
 }
 
 /* ── 9. table ── styling already in base; just ensure breathing room */
@@ -183,34 +218,181 @@
   margin-top: var(--space-3);
 }
 
-/* ── 10. comparison ── */
+/* ── 10. comparison ── 2-3 option boxes with numbered badge + top stripe */
 .reveal section[data-layout="comparison"] .compare {
   display: flex;
   gap: var(--space-3);
   margin-top: var(--space-3);
   align-items: stretch;
+  counter-reset: cmp;
 }
 .reveal section[data-layout="comparison"] .option {
   flex: 1;
   background: var(--brand-surface);
   padding: var(--space-3);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   border-top: 4px solid var(--brand-accent);
-  font-size: 0.85em;
+  font-size: var(--text-sm);
+  position: relative;
+  counter-increment: cmp;
+  box-shadow: var(--shadow-sm);
+}
+.reveal section[data-layout="comparison"] .option::before {
+  content: counter(cmp, decimal-leading-zero);
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-2);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--brand-accent);
+  letter-spacing: var(--tracking-wide);
+  opacity: 0.6;
 }
 .reveal section[data-layout="comparison"] .option:nth-child(1) { border-top-color: var(--brand-primary); }
+.reveal section[data-layout="comparison"] .option:nth-child(1)::before { color: var(--brand-primary); }
 .reveal section[data-layout="comparison"] .option p:first-child strong:first-child,
 .reveal section[data-layout="comparison"] .option > strong:first-child {
   display: block;
-  font-size: 1.3em;
+  font-size: var(--text-lg);
   margin-bottom: var(--space-2);
   color: var(--brand-primary);
 }
 
-/* ── 11. code ── code-focused; pre fills more vertical space */
+/* ── 11. code ── Code-focused; pre fills more vertical space */
 .reveal section[data-layout="code"] pre {
   width: 100%;
   max-height: 65vh;
   margin: var(--space-2) 0;
 }
 .reveal section[data-layout="code"] pre code { font-size: 0.9em; }
+
+/* ── 12. big-stat ── One giant number + a muted caption beneath. Use sparingly.
+ * Author surface:
+ *   <!-- .slide: data-layout="big-stat" -->
+ *   # 87%
+ *   ## of customers retained YoY
+ */
+.reveal section[data-layout="big-stat"] {
+  text-align: center !important;
+  display: flex !important;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: var(--space-5);
+}
+.reveal section[data-layout="big-stat"] h1 {
+  font-family: var(--font-display);
+  font-size: var(--text-display);
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: var(--tracking-tighter);
+  color: var(--brand-primary);
+  margin: 0 0 var(--space-2) 0;
+  font-feature-settings: "tnum";
+}
+.reveal section[data-layout="big-stat"] h2,
+.reveal section[data-layout="big-stat"] p {
+  font-size: var(--text-lg);
+  color: var(--brand-muted);
+  font-weight: 400;
+  max-width: 70%;
+  margin: 0 0 var(--space-1) 0;
+  line-height: var(--leading-snug);
+  text-align: center;
+}
+.reveal section[data-layout="big-stat"] em.unit {
+  font-size: 0.4em;
+  color: var(--brand-accent);
+  font-weight: 600;
+  font-style: normal;
+  margin-left: 0.1em;
+  letter-spacing: var(--tracking-normal);
+  vertical-align: top;
+}
+
+/* ── 13. metric-grid ── 3-up KPI cards. Wrap in <div class="metrics"> with .metric children.
+ * Author surface (HTML inside markdown):
+ *   <div class="metrics">
+ *     <div class="metric"><p class="label">MRR</p><p class="value">$48k</p><p class="delta up">+12%</p></div>
+ *     ...
+ *   </div>
+ */
+.reveal section[data-layout="metric-grid"] .metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+.reveal section[data-layout="metric-grid"] .metric {
+  background: var(--brand-surface);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  box-shadow: var(--shadow-sm);
+  border-top: 3px solid var(--brand-accent);
+}
+.reveal section[data-layout="metric-grid"] .metric:nth-child(3n+1) { border-top-color: var(--brand-primary); }
+.reveal section[data-layout="metric-grid"] .metric:nth-child(3n+2) { border-top-color: var(--brand-accent); }
+.reveal section[data-layout="metric-grid"] .metric:nth-child(3n)   { border-top-color: var(--brand-primary-700); }
+.reveal section[data-layout="metric-grid"] .metric .value {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--brand-primary);
+  margin: 0 0 var(--space-1) 0;
+  letter-spacing: var(--tracking-tight);
+}
+.reveal section[data-layout="metric-grid"] .metric .label {
+  font-size: var(--text-xs);
+  color: var(--brand-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  margin: 0 0 var(--space-1) 0;
+  font-weight: 600;
+}
+.reveal section[data-layout="metric-grid"] .metric .delta {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  display: inline-block;
+  margin: 0;
+}
+.reveal section[data-layout="metric-grid"] .metric .delta.up   { color: #16A34A; }
+.reveal section[data-layout="metric-grid"] .metric .delta.down { color: #DC2626; }
+
+/* ── 14. pull-quote ── Oversized italic with accent rule + attribution
+ * Author surface:
+ *   <!-- .slide: data-layout="pull-quote" -->
+ *   > Big sentence.
+ *
+ *   — Attribution name, role
+ */
+.reveal section[data-layout="pull-quote"] {
+  display: flex !important;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--space-5);
+}
+.reveal section[data-layout="pull-quote"] blockquote {
+  font-size: var(--text-2xl);
+  font-style: italic;
+  font-weight: 300;
+  font-family: var(--font-display);
+  color: var(--brand-fg);
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-tight);
+  border-left: 4px solid var(--brand-accent);
+  background: transparent;
+  padding: 0 0 0 var(--space-3);
+  margin: 0;
+  border-radius: 0;
+  max-width: 90%;
+}
+.reveal section[data-layout="pull-quote"] blockquote + p {
+  margin-top: var(--space-3);
+  margin-left: calc(4px + var(--space-3));
+  font-size: var(--text-base);
+  font-style: normal;
+  color: var(--brand-muted);
+  font-weight: 500;
+}

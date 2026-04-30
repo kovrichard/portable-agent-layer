@@ -447,10 +447,7 @@ type AgentPlatform = (typeof AGENT_PLATFORMS)[number];
  * The target platform block is un-indented and merged into the root.
  * All other platform blocks are stripped.
  */
-export function extractAgentForPlatform(
-  content: string,
-  platform: AgentPlatform
-): string {
+function extractAgentForPlatform(content: string, platform: AgentPlatform): string {
   const parts = content.split(/^---\s*$/m);
   if (parts.length < 3) return content;
 

@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "hooks": {
+    "stop": [
+      { "command": "bun .agents/hooks/check.ts" },
+      { "command": "bun .agents/hooks/type-check.ts" },
+      { "command": "bun .agents/hooks/knip.ts" }
+    ]
+  }
+}

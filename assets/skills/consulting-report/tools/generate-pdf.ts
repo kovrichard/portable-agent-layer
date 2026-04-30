@@ -251,7 +251,7 @@ async function renderSections(
     const tag = depth === 1 ? "h1" : depth === 2 ? "h2" : "h3";
     out.push(`<${tag} id="${s.id}">${escapeHtml(s.title)}</${tag}>`);
     out.push(htmlBody as string);
-    if (s.subsections && s.subsections.length) {
+    if (s.subsections?.length) {
       out.push(await renderSections(s.subsections, contentDir, depth + 1));
     }
   }
@@ -273,10 +273,9 @@ function renderToc(sections: Section[]): string {
 }
 
 function renderCover(r: ConsultingReport, brand: Brand): string {
-  const logo =
-    brand.logoPath && brand.logoPath.length
-      ? `<img class="logo" src="file://${brand.logoPath}" alt="${escapeHtml(brand.businessName)}">`
-      : "";
+  const logo = brand.logoPath?.length
+    ? `<img class="logo" src="file://${brand.logoPath}" alt="${escapeHtml(brand.businessName)}">`
+    : "";
   const brandLabel = brand.brandLabel || `${brand.businessName} Assessment`;
   return `
 <div class="cover">

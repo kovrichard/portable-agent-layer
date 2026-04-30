@@ -6,7 +6,7 @@
 
 import { constants as fsConst } from "node:fs";
 import { access, copyFile, mkdir, readdir, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { SKILL_DEMO, SKILL_TEMPLATE } from "./lib/paths";
 import { listTemplates } from "./lib/registry";
 
@@ -84,7 +84,13 @@ lang: en
     await copyFile(join(sourceSlidesDir, f), join(slidesDir, f));
   }
 
-  await writeFile(join(target, ".gitignore"), "dist/\n", "utf8");
+  // If the user happens to run build/present from inside this deck-dir, the output
+  // subdir lands here too. Pre-ignore it so it doesn't get accidentally committed.
+  const slug =
+    basename(target)
+      .replace(/[^a-zA-Z0-9._-]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "deck";
+  await writeFile(join(target, ".gitignore"), `${slug}/\n`, "utf8");
 
   console.log(`✓ deck scaffolded at ${target}`);
   console.log(`  template:   ${templateName}`);
@@ -93,6 +99,7 @@ lang: en
   console.log(`\nNext:`);
   console.log(`  $EDITOR ${slidesDir}/`);
   console.log(`  bun ~/.pal/skills/presentation/tools/build.ts ${target}`);
+  console.log(`  # output → <cwd>/${slug}/${slug}.html  (override with --out <dir>)`);
 }
 
 main().catch((e) => {

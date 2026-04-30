@@ -1,7 +1,7 @@
 ---
 name: presentation
-description: Build branded HTML presentations from markdown using Reveal.js. Multi-template registry per user (each template = brand color, logo, fonts, footer, aspect). Per-deck workflow: scaffold → edit one markdown file per slide in slides/ → build → present. Output: single self-contained HTML. Use when creating slide decks, talks, workshop slides, lectures, or pitch decks.
-argument-hint: <deck-dir> to build, OR `setup-template` to add a brand template, OR `new <deck-dir> --template <name>` to scaffold a deck, OR `list-templates`, OR `present <deck-dir>`
+description: Build branded HTML presentations from markdown using Reveal.js. Multi-template registry per user (each template = brand color, logo, fonts, footer, aspect). Per-deck workflow: scaffold → edit one markdown file per slide in slides/ → build → present. Output: a `<deck-name>/` subdir with a self-contained HTML and a concatenated markdown sibling. 14 layouts including data-display patterns (big-stat, metric-grid). Use when creating slide decks, talks, workshop slides, lectures, or pitch decks.
+argument-hint: <deck-dir> to build, OR `setup-template` to add a brand template, OR `new <deck-dir> --template <name>` to scaffold a deck, OR `list-templates`
 ---
 
 ## Overview
@@ -66,18 +66,38 @@ Backwards compatible: if `slides/` doesn't exist, the build falls back to a sing
 ### Step 3: Build
 
 ```bash
-bun ~/.pal/skills/presentation/tools/build.ts <deck-dir>
+bun ~/.pal/skills/presentation/tools/build.ts <deck-dir> [--out <dir>] [--force]
 ```
 
-Produces `<deck-dir>/dist/index.html` — a single self-contained HTML file (CSS, JS, fonts, logo all inlined). Email it, USB-stick it, host it anywhere.
+Output goes to `<out>/<deck-name>/`, where `<deck-name>` = the basename of `<deck-dir>`:
 
-### Step 4: Present
+- `<deck-name>.md` — the concatenated source (all `slides/*.md` joined with `---` separators), written to disk **first** so you can inspect, diff, or feed it into other tooling.
+- `<deck-name>.html` — the self-contained presentation (CSS, JS, fonts, logo all inlined). Email it, USB-stick it, host it anywhere.
+
+Defaults: `--out` defaults to the current working directory. The `<deck-name>/` subdir is always created — even when `--out` is explicit — so multiple decks can coexist in one folder.
+
+`--force` overwrites an existing build. Without it, the build refuses to clobber `<deck-name>.{md,html}`.
+
+### Step 3.5 (optional but recommended): Lint with the doctor
 
 ```bash
-bun ~/.pal/skills/presentation/tools/present.ts <deck-dir>
+bun ~/.pal/skills/presentation/tools/doctor.ts <deck-dir> [--strict]
 ```
 
-Builds (if missing or stale) and opens in the default browser. `F` = fullscreen, `S` = speaker notes window, `?` = keyboard shortcuts.
+Catches authoring failures before you ever open the browser:
+
+- Slide missing `data-layout` directive (silently defaults to `content`).
+- Title or subtitle exceeding the visual budget (h1 > 60 chars, h2 > 100).
+- Layout-content mismatch — `comparison` without a `<div class="compare">`, `metric-grid` without `<div class="metrics">`, `two-column` missing column wrappers, etc.
+- Overflow heuristics — `agenda` > 10 items, `content` > 7 bullets, `code` block > 25 lines, `table` > 10 rows, `metric-grid` ≠ 3 metrics.
+- Image referenced via `![](assets/...)` but the file is missing.
+- Layout requirements — `big-stat` without an h1, `quote` / `pull-quote` without a `> blockquote`.
+
+Exit codes: `0` = clean, `1` = errors found (or warnings under `--strict`), `2` = usage error. Run before each build in your iteration loop, or wire it into a pre-commit hook.
+
+### Step 4: Open
+
+Open `<out>/<deck-name>/<deck-name>.html` in your browser. Iterate by editing a slide, re-running the build, and refreshing the tab. Reveal shortcuts: `F` = fullscreen, `S` = speaker notes window, `?` = keyboard shortcuts, `Esc` = overview.
 
 ## Deck folder layout
 
@@ -89,10 +109,10 @@ Builds (if missing or stale) and opens in the default browser. `F` = fullscreen,
 │   ├── 002.md
 │   └── …
 ├── overrides.css           # optional — per-deck CSS overrides
-├── assets/                 # images / videos referenced from slides/*.md
-└── dist/                   # build output (gitignored automatically)
-    └── index.html
+└── assets/                 # images / videos referenced from slides/*.md
 ```
+
+Build output is **never** written inside `<deck-dir>` — it lands in `<out>/<deck-name>/` (default `<cwd>/<deck-name>/`). The scaffolder's `.gitignore` covers the case of running build from inside the deck-dir.
 
 (Legacy: a single `content.md` at the deck root still works — see Step 2.)
 
@@ -137,21 +157,77 @@ Right content.
 ## Questions?
 ```
 
-## Layouts (v1)
+## Layouts (v2 — 14 total)
 
 | Layout | When | Notes |
 |---|---|---|
-| `title` | Cover slide | Big title, optional subtitle, brand logo prominent |
-| `section` | Section divider | Full-bleed accent background, large white title |
+| `title` | Cover slide | Big title, accent rule, brand logo prominent |
+| `section` | Section divider | Full-bleed brand-primary gradient + accent rule |
 | `content` | Default | Title + bullets / paragraphs |
 | `two-column` | Side-by-side content | Use `<div class="col-left">` / `<div class="col-right">` |
 | `image-text` | Image + text combo | Use `<div class="image">` / `<div class="text">` |
-| `quote` | Big italic blockquote | Use markdown `>` syntax |
-| `closing` | Thank-you / Q&A | Mirrors title styling on accent BG |
+| `quote` | Big italic blockquote | Use markdown `>` syntax; oversized accent glyph |
+| `closing` | Thank-you / Q&A | Mirrors title styling on gradient brand BG |
 | `agenda` | Numbered list | Numbered ol, large type, generous whitespace |
-| `table` | Tabular data | Markdown tables, styled with zebra rows + accent header |
-| `comparison` | 2–3 option boxes side-by-side | Use `<div class="compare">` with `<div class="option">` children |
+| `table` | Tabular data | Markdown tables with zebra rows + accent header |
+| `comparison` | 2–3 option boxes side-by-side | Use `<div class="compare">` + `<div class="option">` children |
 | `code` | Code-focused | Triple-backtick fenced blocks with language tag |
+| `big-stat` | One number does the work | `# 87%` + `## caption`. Wrap unit in `<em class="unit">%</em>` |
+| `metric-grid` | 3-up KPI cards | `<div class="metrics">` with `<div class="metric">` children (`.label`, `.value`, `.delta.up\|.down`) |
+| `pull-quote` | Oversized in-line quote | Display-font italic, accent rule on left, em-dashed attribution on a paragraph after |
+
+## Image utility classes
+
+Composable on any `<img>` or wrapper element:
+
+| Class | Effect |
+|---|---|
+| `image-rounded` | `--radius-md` corners |
+| `image-shadow` | `--shadow-lg` drop |
+| `image-bleed` | Fill container, `object-fit: cover` |
+| `image-duotone` | Brand-tinted monochrome via filter chain |
+| `image-overlay` | Adds a brand-gradient scrim from transparent → primary at 75% bottom |
+
+## Design tokens
+
+The skill ships a token system in `theme-base/base.css`. Templates only declare two anchors (`--brand-primary`, `--brand-accent`); the rest derives via `color-mix(in oklch, …)`.
+
+| Token group | Values |
+|---|---|
+| Color scales | `--brand-primary-{50..900}`, `--brand-accent-{50..900}`, `--neutral-{50..950}` |
+| Semantic | `--brand-bg`, `--brand-fg`, `--brand-muted`, `--brand-surface`, `--brand-divider` |
+| Type | `--text-{xs..6xl}`, `--text-display`, `--leading-*`, `--tracking-*` |
+| Spacing | `--space-{0,px,0.5,1..7}` |
+| Radius | `--radius-{sm,md,lg,xl,full}` |
+| Shadow | `--shadow-{sm,md,lg,xl}` |
+| Motion | `--duration-{fast,base,slow}`, `--ease-{out,in-out}` |
+
+Templates that need to override a derived token (dark theme, brand-tinted surface) can do so in `template.css`.
+
+## After authoring slides — always surface the run commands
+
+When you (the assistant) author or edit slides for the user, **end your response with the exact `build` command** the user can run themselves. The user's iteration loop is small manual edits in `slides/*.md` plus a browser refresh; they need the command in the conversation, not buried in docs.
+
+Print this block as the closing of any turn that touches slides:
+
+```bash
+# lint — catches overflow, missing assets, layout-content mismatches
+# bash / PowerShell / Git Bash:
+bun ~/.pal/skills/presentation/tools/doctor.ts <deck-dir>
+# Windows cmd.exe:
+bun %USERPROFILE%\.pal\skills\presentation\tools\doctor.ts <deck-dir>
+
+# build — writes <cwd>/<deck-name>/<deck-name>.{html,md}
+# bash / PowerShell / Git Bash:
+bun ~/.pal/skills/presentation/tools/build.ts <deck-dir>
+# Windows cmd.exe (no ~ expansion):
+bun %USERPROFILE%\.pal\skills\presentation\tools\build.ts <deck-dir>
+
+# add --out <dir> to override the output parent, --force to overwrite an existing build
+# add --strict to doctor to promote warnings to errors
+```
+
+Substitute `<deck-dir>` with the actual deck path. Do this even when you also ran the build yourself — the user wants the command on hand for their own re-runs. **On Windows, check the user's shell before printing**: `cmd.exe` does not expand `~`, so if the user runs commands from a `C:\…>` prompt, print the `%USERPROFILE%` form. PowerShell, Git Bash, WSL, and Mac/Linux all expand `~` correctly.
 
 ## Other commands
 

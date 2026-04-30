@@ -44,6 +44,9 @@ describe("pal help", () => {
 });
 
 describe("pal cli init", () => {
+  // `pal cli init` runs `bun install --frozen-lockfile` + telos scaffolding +
+  // doctor pre-flight; on Windows this is ~5–6s, occasionally over bun-test's
+  // 5s default. Bump to match the spawnSync timeout so we test the real path.
   test("scaffolds telos and memory directories", () => {
     const result = pal("cli", "init");
     expect(result.status).toBe(0);
@@ -54,7 +57,7 @@ describe("pal cli init", () => {
     // Should have scaffolded telos templates
     const telosFiles = readdirSync(telosDir).filter((f) => f.endsWith(".md"));
     expect(telosFiles.length).toBeGreaterThan(0);
-  });
+  }, 15000);
 
   test("creates memory state directory", () => {
     const stateDir = resolve(TEST_HOME, "memory", "state");

@@ -11,6 +11,8 @@
       "src/**",
       "test/**",
       "assets/**/*.ts",
+      ".agents/**/*.ts",
+      ".opencode/**/*.ts",
       "!node_modules",
       "!memory",
       "!telos"

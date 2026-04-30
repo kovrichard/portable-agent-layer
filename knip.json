@@ -1,0 +1,24 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "src/tools/**/*.ts",
+    "src/hooks/**/*.ts",
+    "src/targets/**/install.ts",
+    "src/targets/**/uninstall.ts",
+    "src/targets/opencode/plugin.ts",
+    "test/**/*.test.ts",
+    ".agents/hooks/*.ts",
+    "assets/skills/*/tools/*.ts",
+    ".opencode/plugins/*.ts"
+  ],
+  "project": [
+    "src/**/*.ts",
+    "test/**/*.ts",
+    ".agents/hooks/*.ts",
+    "assets/skills/*/tools/*.ts"
+  ],
+  "ignore": [],
+  "ignoreDependencies": [
+    "@semantic-release/github"
+  ]
+}

@@ -1,34 +1,134 @@
 /* presentation skill — theme-base/base.css
- * Brand-neutral base. Templates override the --brand-* custom properties.
- * Do not put brand colours here — only neutral defaults. */
+ * Brand-neutral design system. Templates declare two anchors (--brand-primary,
+ * --brand-accent) and the rest of the system derives from them via color-mix.
+ *
+ * Token layers (low → high specificity):
+ *   1. Anchor      — template-supplied (--brand-primary, --brand-accent, --brand-logo)
+ *   2. Neutral     — pure greys, brand-agnostic
+ *   3. Brand scales— derived from anchors via color-mix(in oklch, ...)
+ *   4. Semantic    — bg/fg/muted/surface/divider, point at neutral by default
+ *   5. Type/space/radius/shadow/motion — primitives consumed by all layouts
+ */
 
 :root {
+  /* ── 1. Anchors ── overridable by template */
   --brand-primary: #0E1335;
-  --brand-accent: #2563EB;
-  --brand-bg: #FFFFFF;
-  --brand-fg: #111827;
-  --brand-muted: #6B7280;
-  --brand-surface: #F9FAFB;
-  --brand-divider: #E5E7EB;
+  --brand-accent:  #2563EB;
+  --brand-logo:    none;
 
-  --brand-logo: none;
+  /* ── 2. Neutral scale ── pure grey, never branded */
+  --neutral-50:  #FAFAFA;
+  --neutral-100: #F4F4F5;
+  --neutral-200: #E4E4E7;
+  --neutral-300: #D4D4D8;
+  --neutral-400: #A1A1AA;
+  --neutral-500: #71717A;
+  --neutral-600: #52525B;
+  --neutral-700: #3F3F46;
+  --neutral-800: #27272A;
+  --neutral-900: #18181B;
+  --neutral-950: #09090B;
 
+  /* ── 3. Brand scales ── derived from anchor via color-mix
+   * 50–400 lighten toward white, 600–900 darken toward black, 500 = anchor. */
+  --brand-primary-50:  color-mix(in oklch, var(--brand-primary)  6%, white);
+  --brand-primary-100: color-mix(in oklch, var(--brand-primary) 12%, white);
+  --brand-primary-200: color-mix(in oklch, var(--brand-primary) 24%, white);
+  --brand-primary-300: color-mix(in oklch, var(--brand-primary) 40%, white);
+  --brand-primary-400: color-mix(in oklch, var(--brand-primary) 60%, white);
+  --brand-primary-500: var(--brand-primary);
+  --brand-primary-600: color-mix(in oklch, var(--brand-primary) 92%, black);
+  --brand-primary-700: color-mix(in oklch, var(--brand-primary) 80%, black);
+  --brand-primary-800: color-mix(in oklch, var(--brand-primary) 65%, black);
+  --brand-primary-900: color-mix(in oklch, var(--brand-primary) 50%, black);
+
+  --brand-accent-50:  color-mix(in oklch, var(--brand-accent)  6%, white);
+  --brand-accent-100: color-mix(in oklch, var(--brand-accent) 12%, white);
+  --brand-accent-200: color-mix(in oklch, var(--brand-accent) 24%, white);
+  --brand-accent-300: color-mix(in oklch, var(--brand-accent) 40%, white);
+  --brand-accent-400: color-mix(in oklch, var(--brand-accent) 60%, white);
+  --brand-accent-500: var(--brand-accent);
+  --brand-accent-600: color-mix(in oklch, var(--brand-accent) 92%, black);
+  --brand-accent-700: color-mix(in oklch, var(--brand-accent) 80%, black);
+  --brand-accent-800: color-mix(in oklch, var(--brand-accent) 65%, black);
+  --brand-accent-900: color-mix(in oklch, var(--brand-accent) 50%, black);
+
+  /* ── 4. Semantic colors ── named for intent, point at neutrals by default
+   * Templates may override directly for dark themes, brand-tinted surfaces, etc. */
+  --brand-bg:      #FFFFFF;
+  --brand-fg:      var(--neutral-900);
+  --brand-muted:   var(--neutral-500);
+  --brand-surface: var(--neutral-100);
+  --brand-divider: var(--neutral-200);
+
+  /* ── 5. Typography */
   --font-display: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-body:    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono:    "JetBrains Mono", "Menlo", "Consolas", monospace;
 
-  --space-1: 0.5rem;
-  --space-2: 1rem;
-  --space-3: 1.5rem;
-  --space-4: 2.5rem;
-  --space-5: 4rem;
+  --text-xs:    0.65em;
+  --text-sm:    0.8em;
+  --text-base:  1em;
+  --text-lg:    1.2em;
+  --text-xl:    1.5em;
+  --text-2xl:   2em;
+  --text-3xl:   2.6em;
+  --text-4xl:   3.2em;
+  --text-5xl:   4em;
+  --text-6xl:   5em;
+  --text-display: 7em;
+
+  --leading-tight:    1.15;
+  --leading-snug:     1.3;
+  --leading-normal:   1.5;
+  --leading-relaxed:  1.7;
+
+  --tracking-tighter: -0.025em;
+  --tracking-tight:   -0.015em;
+  --tracking-normal:  0;
+  --tracking-wide:    0.05em;
+
+  /* ── 6. Spacing */
+  --space-0:   0;
+  --space-px:  1px;
+  --space-0\.5: 0.25rem;
+  --space-1:   0.5rem;
+  --space-2:   1rem;
+  --space-3:   1.5rem;
+  --space-4:   2.5rem;
+  --space-5:   4rem;
+  --space-6:   6rem;
+  --space-7:   8rem;
+
+  /* ── 7. Radius */
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   16px;
+  --radius-xl:   24px;
+  --radius-full: 9999px;
+
+  /* ── 8. Shadows */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.05), 0 10px 15px rgba(0,0,0,0.10);
+  --shadow-lg: 0 10px 25px rgba(0,0,0,0.10), 0 20px 50px rgba(0,0,0,0.15);
+  --shadow-xl: 0 20px 50px rgba(0,0,0,0.20), 0 30px 60px rgba(0,0,0,0.25);
+
+  /* ── 9. Motion */
+  --duration-fast:  120ms;
+  --duration-base:  240ms;
+  --duration-slow:  480ms;
+  --ease-out:       cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out:    cubic-bezier(0.65, 0, 0.35, 1);
 }
 
+/* ── Base reveal */
 .reveal {
   font-family: var(--font-body);
   font-size: 48px;
   font-weight: 400;
   color: var(--brand-fg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 .reveal-viewport { background: var(--brand-bg); }
 
@@ -38,53 +138,70 @@
  * Bottom reserve protects the chrome (logo + slide-number) anchored at canvas-bottom.
  * Special layouts (title/section/quote/closing) override below in layouts.css. */
 .reveal .slides > section {
-  padding: 2.5rem 5rem 4.5rem;
+  padding: var(--space-4) var(--space-5) var(--space-5);
   box-sizing: border-box;
 }
 
-
+/* ── Typography */
 .reveal h1, .reveal h2, .reveal h3, .reveal h4, .reveal h5, .reveal h6 {
   font-family: var(--font-display);
   color: var(--brand-fg);
-  letter-spacing: -0.015em;
-  line-height: 1.15;
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
   margin: 0 0 var(--space-3) 0;
   text-transform: none;
+  font-feature-settings: "ss01", "cv11";
 }
-.reveal h1 { font-size: 2.6em; font-weight: 700; }
-.reveal h2 { font-size: 2.0em; font-weight: 600; }
-.reveal h3 { font-size: 1.5em; font-weight: 600; }
-.reveal h4 { font-size: 1.2em; font-weight: 600; }
+.reveal h1 { font-size: var(--text-3xl); font-weight: 700; letter-spacing: var(--tracking-tighter); }
+.reveal h2 { font-size: var(--text-2xl); font-weight: 600; }
+.reveal h3 { font-size: var(--text-xl); font-weight: 600; }
+.reveal h4 { font-size: var(--text-lg); font-weight: 600; }
+.reveal h5 { font-size: var(--text-base); font-weight: 600; }
+.reveal h6 { font-size: var(--text-sm);  font-weight: 600; text-transform: uppercase; letter-spacing: var(--tracking-wide); color: var(--brand-muted); }
 
-.reveal p { line-height: 1.5; margin: 0 0 var(--space-2) 0; }
+.reveal p { line-height: var(--leading-normal); margin: 0 0 var(--space-2) 0; }
 
 .reveal ul, .reveal ol {
   margin: 0 0 var(--space-2) 1.4em;
-  line-height: 1.5;
+  line-height: var(--leading-normal);
 }
 .reveal li { margin-bottom: var(--space-1); }
 .reveal li > ul, .reveal li > ol { margin-top: var(--space-1); margin-bottom: 0; }
+.reveal ul li::marker { color: var(--brand-accent); }
 
 .reveal a {
   color: var(--brand-accent);
   text-decoration: none;
   border-bottom: 1px solid currentColor;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+.reveal a:hover { color: var(--brand-accent-700); }
+
+.reveal strong { color: var(--brand-primary); font-weight: 700; }
+.reveal em     { font-style: italic; }
+.reveal small  { font-size: var(--text-sm); color: var(--brand-muted); }
+.reveal hr     {
+  border: 0;
+  border-top: 1px solid var(--brand-divider);
+  margin: var(--space-3) 0;
 }
 
 .reveal blockquote {
-  border-left: 4px solid var(--brand-accent);
-  margin: 0;
+  border-left: 3px solid var(--brand-accent);
+  margin: 0 0 var(--space-2) 0;
   padding: var(--space-2) var(--space-3);
   background: var(--brand-surface);
   font-style: italic;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
 }
 
+/* ── Code */
 .reveal pre {
-  background: #1E1E1E;
-  border-radius: 4px;
+  background: var(--neutral-900);
+  border-radius: var(--radius-md);
   font-size: 0.7em;
-  line-height: 1.5;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  line-height: var(--leading-normal);
+  box-shadow: var(--shadow-md);
 }
 .reveal pre code {
   padding: var(--space-2);
@@ -94,17 +211,21 @@
 .reveal :not(pre) > code {
   background: var(--brand-surface);
   padding: 0.1em 0.4em;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   font-family: var(--font-mono);
   font-size: 0.85em;
   color: var(--brand-primary);
 }
 
+/* ── Tables */
 .reveal table {
   width: 100%;
   border-collapse: collapse;
   margin: var(--space-2) 0;
-  font-size: 0.8em;
+  font-size: var(--text-sm);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
 .reveal th {
   background: var(--brand-primary);
@@ -112,14 +233,45 @@
   text-align: left;
   padding: var(--space-1) var(--space-2);
   font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
 }
 .reveal td {
   padding: var(--space-1) var(--space-2);
   border-bottom: 1px solid var(--brand-divider);
 }
 .reveal tr:nth-child(even) td { background: var(--brand-surface); }
+.reveal tr:last-child td { border-bottom: 0; }
 
-/* Footer logo — pseudo on .slides (the canvas) so it inherits Reveal's scale+translate
+/* ── Image utilities (composable on any <img> or wrapper) */
+.reveal .image-rounded img,
+.reveal img.image-rounded { border-radius: var(--radius-md); }
+.reveal .image-shadow img,
+.reveal img.image-shadow  { box-shadow: var(--shadow-lg); }
+.reveal .image-bleed img,
+.reveal img.image-bleed   { width: 100%; height: 100%; object-fit: cover; }
+/* Duotone — converts image to brand-primary tinted monochrome via filter chain */
+.reveal .image-duotone img,
+.reveal img.image-duotone {
+  filter: grayscale(1) contrast(1.1);
+  mix-blend-mode: multiply;
+  background: var(--brand-primary-200);
+}
+/* Overlay — for headline-image style, applies a brand gradient scrim */
+.reveal .image-overlay { position: relative; }
+.reveal .image-overlay::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 40%,
+    color-mix(in oklch, var(--brand-primary) 75%, transparent) 100%
+  );
+  pointer-events: none;
+}
+
+/* ── Footer logo — pseudo on .slides (the canvas) so it inherits Reveal's scale+translate
  * transforms and stays at canvas-bottom-right regardless of the configured `margin`. */
 .reveal .slides::after {
   content: '';
@@ -134,7 +286,7 @@
   z-index: 10;
 }
 
-/* Slide number — JS hook in skeleton.html re-parents Reveal's .slide-number into .slides,
+/* ── Slide number — JS hook in skeleton.html re-parents Reveal's .slide-number into .slides,
  * so it shares the same canvas coordinate system as the logo. */
 .reveal .slides > .slide-number {
   position: absolute;
@@ -148,7 +300,7 @@
   font-size: 0.55em;
   font-weight: 400;
   line-height: 28px;
-  letter-spacing: 0.05em;
+  letter-spacing: var(--tracking-wide);
   padding: 0;
   pointer-events: none;
   z-index: 10;
@@ -164,4 +316,10 @@
 .reveal .slides:has(> section.present[data-layout="closing"])::after,
 .reveal .slides:has(> section.present[data-layout="closing"]) > .slide-number {
   display: none !important;
+}
+
+/* ── Progress bar (Reveal's built-in, themed to brand) */
+.reveal .progress {
+  color: var(--brand-accent);
+  height: 2px;
 }

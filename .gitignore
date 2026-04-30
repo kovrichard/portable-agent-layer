@@ -1,53 +1,3 @@
-# User content (filled-in TELOS files) — templates are in telos/templates/
-telos/*.md
-telos/backups/
-telos/updates.md
-
-# Generated context (contains user-specific content)
-CLAUDE.md
-AGENTS.md
-
-# Personal config (filled during install)
-memory/pal-settings.json
-
-# Runtime state
-memory/state/sessions.json
-memory/state/projects.json
-memory/state/setup.json
-memory/state/session-names.json
-memory/state/signal-cache.json
-memory/state/pending-failure.json
-memory/state/update-available.json
-memory/state/last-responses.json
-memory/state/counts.json
-memory/state/captured-learnings.json
-memory/state/skill-index.json
-memory/state/debug.log
-memory/state/debug.log.prev
-
-# Signal logs (append-only, machine-local)
-memory/signals/ratings.jsonl
-memory/signals/token-usage.jsonl
-
-# Auto-generated learning artifacts
-memory/learning/failures/
-memory/learning/session/
-memory/learning/reflections/
-memory/learning/synthesis/
-
-# New memory subsystems
-memory/wisdom/frames/
-memory/wisdom/state/
-memory/relationship/
-memory/entities/entity-index.json
-memory/self-model/
-
-# Per-project session history
-memory/projects/
-
-# Downloaded files (PDFs, etc.)
-memory/downloads/
-
 # Export archives
 pal-export-*.zip
 
@@ -66,4 +16,3 @@ node_modules/
 assets/skills/consulting-report/demo/*.pdf
 assets/skills/consulting-report/demo/*.html
 assets/skills/consulting-report/demo/diagrams-compressed/
-

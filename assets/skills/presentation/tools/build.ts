@@ -1,12 +1,20 @@
 #!/usr/bin/env bun
-// presentation skill — build a deck folder to a single self-contained HTML.
+// presentation skill — build a deck folder to a self-contained HTML.
 //
 // Usage:
-//   bun build.ts <deck-dir>
+//   bun build.ts <deck-dir> [--out <dir>] [--force]
+//
+// Output:
+//   <out>/<deck-name>/<deck-name>.md     concatenated slides (written first)
+//   <out>/<deck-name>/<deck-name>.html   self-contained presentation
+//
+// --out defaults to process.cwd(). The deck-name subdir is always created
+// inside --out, even when --out is explicitly provided. Existing files in
+// the subdir are preserved unless --force is passed.
 
 import { constants as fsConst } from "node:fs";
-import { access, mkdir, readdir, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { basename, join, resolve } from "node:path";
 import { dataUri, escapeForTextarea, readText } from "./lib/inline";
 import { THEME_BASE, VENDOR_REVEAL } from "./lib/paths";
 import { getTemplate } from "./lib/registry";
@@ -50,13 +58,44 @@ async function exists(p: string): Promise<boolean> {
   }
 }
 
+function deckSlug(deckDir: string): string {
+  // Filesystem-safe name. Falls back to "deck" if basename is empty (shouldn't happen).
+  const raw = basename(resolve(deckDir));
+  const slug = raw.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+  return slug || "deck";
+}
+
+async function buildConcat(deckDir: string): Promise<string> {
+  const slidesDir = join(deckDir, "slides");
+  if (await exists(slidesDir)) {
+    const files = (await readdir(slidesDir)).filter((f) => f.endsWith(".md")).sort();
+    if (files.length === 0) {
+      throw new Error(`slides/ is empty at ${slidesDir}`);
+    }
+    const parts = await Promise.all(files.map((f) => readText(join(slidesDir, f))));
+    return `${parts.map((p) => p.trim()).join("\n\n---\n\n")}\n`;
+  }
+  const legacy = join(deckDir, "content.md");
+  if (await exists(legacy)) {
+    return await readText(legacy);
+  }
+  throw new Error(`no slides/ directory or content.md found in ${deckDir}`);
+}
+
 async function main() {
   const argv = process.argv.slice(2);
   if (argv.length === 0) {
-    console.error("usage: build.ts <deck-dir>");
+    console.error("usage: build.ts <deck-dir> [--out <dir>] [--force]");
     process.exit(1);
   }
   const deckDir = resolve(argv[0]);
+
+  let outRoot = process.cwd();
+  let force = false;
+  for (let i = 1; i < argv.length; i++) {
+    if (argv[i] === "--out") outRoot = resolve(argv[++i]);
+    else if (argv[i] === "--force") force = true;
+  }
 
   const cfgPath = join(deckDir, "slides.config.yml");
   if (!(await exists(cfgPath))) {
@@ -70,6 +109,28 @@ async function main() {
     process.exit(1);
   }
 
+  const slug = deckSlug(deckDir);
+  const outDir = join(outRoot, slug);
+  const concatPath = join(outDir, `${slug}.md`);
+  const htmlPath = join(outDir, `${slug}.html`);
+
+  if (!force) {
+    const collisions: string[] = [];
+    if (await exists(concatPath)) collisions.push(concatPath);
+    if (await exists(htmlPath)) collisions.push(htmlPath);
+    if (collisions.length > 0) {
+      console.error("refusing to overwrite existing output (pass --force to replace):");
+      for (const p of collisions) console.error(`  - ${p}`);
+      process.exit(1);
+    }
+  }
+
+  // Step 1 — concatenate slides to a single on-disk markdown artifact.
+  const concatMd = await buildConcat(deckDir);
+  await mkdir(outDir, { recursive: true });
+  await writeFile(concatPath, concatMd, "utf8");
+
+  // Step 2 — build self-contained HTML, sourcing content from the on-disk concat.
   const template = await getTemplate(templateName);
   const tplYml = parseSimpleYaml(await readText(join(template.path, "template.yml")));
   const tplCss = await readText(join(template.path, "template.css"));
@@ -95,21 +156,7 @@ async function main() {
   );
   const notesJs = await readText(join(VENDOR_REVEAL, "plugin", "notes", "notes.js"));
 
-  // Author surface: either a slides/ folder (preferred — many small files) or a single content.md.
-  // slides/ wins if present. Files inside are sorted by filename, then joined with the slide separator.
-  const slidesDir = join(deckDir, "slides");
-  let contentMd: string;
-  if (await exists(slidesDir)) {
-    const files = (await readdir(slidesDir)).filter((f) => f.endsWith(".md")).sort();
-    if (files.length === 0) {
-      console.error(`slides/ is empty at ${slidesDir}`);
-      process.exit(1);
-    }
-    const parts = await Promise.all(files.map((f) => readText(join(slidesDir, f))));
-    contentMd = parts.map((p) => p.trim()).join("\n\n---\n\n") + "\n";
-  } else {
-    contentMd = await readText(join(deckDir, "content.md"));
-  }
+  const contentMd = await readFile(concatPath, "utf8");
 
   let deckOverridesCss = "";
   const overridesPath = join(deckDir, "overrides.css");
@@ -144,14 +191,11 @@ async function main() {
   };
 
   const html = skeleton.replace(/\{\{(\w+)\}\}/g, (_, k) => subs[k] ?? "");
-
-  const distDir = join(deckDir, "dist");
-  await mkdir(distDir, { recursive: true });
-  const outPath = join(distDir, "index.html");
-  await writeFile(outPath, html, "utf8");
+  await writeFile(htmlPath, html, "utf8");
 
   const sizeMb = (Buffer.byteLength(html) / 1024 / 1024).toFixed(2);
-  console.log(`✓ built ${outPath}  (${sizeMb} MB self-contained)`);
+  console.log(`✓ concat   ${concatPath}`);
+  console.log(`✓ html     ${htmlPath}  (${sizeMb} MB self-contained)`);
 }
 
 main().catch((e) => {

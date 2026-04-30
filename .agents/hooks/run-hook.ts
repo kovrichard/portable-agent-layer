@@ -1,0 +1,34 @@
+import { spawnSync } from "node:child_process";
+
+// Helper for agent hook scripts. Each hook file (lint.ts, test.ts, ...) is a
+// thin wrapper that calls runHook(["bun", "run", "<script>"]). We capture
+// stdout+stderr, return them on success in a JSON envelope (so Claude/opencode
+// can show "(no output)" cleanly), and exit with code 2 on failure so the
+// agent treats the hook as blocking.
+export function runHook(args: string[]): number {
+  if (args.length === 0) {
+    process.stderr.write("run-hook: no command provided");
+    process.exit(2);
+  }
+  const command = args.join(" ");
+  const r = spawnSync(command, {
+    encoding: "utf8",
+    shell: true,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  const out = [r.stdout, r.stderr].filter(Boolean).join("\n").trim();
+  const output = out || "(no output)";
+  const ok = (r.status ?? -1) === 0;
+
+  if (ok) {
+    process.stdout.write(JSON.stringify({ output }));
+    return 0;
+  }
+  process.stderr.write(output);
+  return 2;
+}
+
+if (import.meta.main) {
+  const exitCode = runHook(process.argv.slice(2));
+  process.exit(exitCode);
+}
