@@ -32,7 +32,7 @@ bun ~/.pal/skills/presentation/tools/setup-template.ts \
   --logo <abs-path-to-logo.svg> \
   --primary "#0E1335" \
   [--accent "#FFB84D"] \
-  [--footer "Konvert7 · 2026"] \
+  [--footer "Your Brand · 2026"] \
   [--logo-placement "footer"] \
   [--fonts "system"] \
   [--aspect "16:9"] \

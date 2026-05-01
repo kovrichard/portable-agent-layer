@@ -10,7 +10,7 @@ Renders a structured consulting-report directory to a branded PDF: cover page, l
 
 Each report lives in its own directory with data (TypeScript) + narrative (Markdown) + diagrams (images). The skill provides a scaffolder to spin up new reports from a template and a generator to render them.
 
-**Default brand:** Konvert7. Override per report via the `brand` block in `report-data.ts`.
+**Branding:** Set per report via the `consultancyName` field in `lib/report-data.ts`.
 
 ## Report Directory Layout
 

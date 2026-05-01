@@ -151,16 +151,16 @@ export async function renderPdf(
     });
 
     const header = `
-<div style="width:100%; font-family:Inter,'Helvetica Neue',Arial,sans-serif; font-size:7.5pt; padding:0 0.7in 4px; display:flex; justify-content:space-between; align-items:center; border-bottom:0.5px solid #d0d5dd;">
+<div style="width:100%; font-family:Inter,'Helvetica Neue',Arial,sans-serif; font-size:7.5pt; padding:0 0.7in; display:flex; justify-content:space-between; align-items:center;">
   <span style="font-weight:600; color:${COLOR.navy}; letter-spacing:0.05em;">${escapeHtml(meta.clientName.toUpperCase())}</span>
   <span style="color:#94a3b8;">${escapeHtml(meta.reportTitle)}</span>
 </div>`;
 
     const footer = `
-<div style="width:100%; font-family:Inter,'Helvetica Neue',Arial,sans-serif; font-size:7.5pt; padding:4px 0.7in 0; display:flex; justify-content:space-between; align-items:center; border-top:0.5px solid #d0d5dd;">
+<div style="width:100%; font-family:Inter,'Helvetica Neue',Arial,sans-serif; font-size:7.5pt; padding:0 0.7in; display:flex; justify-content:space-between; align-items:center;">
   <span style="color:${COLOR.red}; font-weight:600; letter-spacing:0.05em;">${escapeHtml(meta.classification)}</span>
   <span style="color:${COLOR.navy};">${escapeHtml(meta.consultancyName)}</span>
-  <span style="color:${COLOR.navy};">Page <span class="pageNumber"></span></span>
+  <span style="color:${COLOR.navy};"><span class="pageNumber"></span></span>
 </div>`;
 
     await page.pdf({

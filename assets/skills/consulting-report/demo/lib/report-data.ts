@@ -78,7 +78,7 @@ export const reportData: ReportData = {
   reportTitle: "Operational Readiness Assessment",
   reportDate: "April 21, 2026",
   classification: "CONFIDENTIAL",
-  consultancyName: "Konvert7 Consulting",
+  consultancyName: "Northbridge Advisory",
   preTitle: "Operational Assessment",
 
   executiveSummary: {
