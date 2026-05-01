@@ -1,3 +1,17 @@
+# [0.31.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.30.1...v0.31.0) (2026-05-01)
+
+
+### Bug Fixes
+
+* **consulting-report:** update branding field and remove outdated template files ([88563a3](https://github.com/kovrichard/portable-agent-layer/commit/88563a38b2eab3b870e58008cbce3a4f294d6f7f))
+
+
+### Features
+
+* **consulting-report:** add dev server tool for live preview and enhance scaffold options ([3bbf651](https://github.com/kovrichard/portable-agent-layer/commit/3bbf65179578aa1113713ae44640727dbefdad0b))
+* **consulting-report:** create consulting report demo with structured components and styles ([c167e0b](https://github.com/kovrichard/portable-agent-layer/commit/c167e0b492222d1c067606b71eb7fcdb48d5dfae))
+* **consulting-report:** implement comprehensive report template with dynamic components ([19bdd76](https://github.com/kovrichard/portable-agent-layer/commit/19bdd76c5c09c14152b09636e4671f2a7ebd63a5))
+
 ## [0.30.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.30.0...v0.30.1) (2026-04-30)
 
 
