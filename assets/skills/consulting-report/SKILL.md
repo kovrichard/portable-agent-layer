@@ -1,115 +1,109 @@
 ---
 name: consulting-report
-description: Produce branded consulting-report PDFs from a structured report directory (cover page, linked TOC, headers/footers with page numbers, typography system, callout boxes, findings + recommendations). Use when generating an assessment report, strategic review, or consulting deliverable PDF.
-argument-hint: <report-dir> OR `scaffold <target-dir>` to start a new report
+description: Build a beautifully-typeset consulting-report PDF from a typed data file and a React layout. Use when generating an assessment, strategic review, operational readiness check, or any McKinsey-style consulting deliverable as a PDF.
+argument-hint: scaffold <target-dir> | dev <report-dir> | <report-dir> (render PDF)
 ---
 
 ## Overview
 
-Renders a structured consulting-report directory to a branded PDF: cover page, linked table of contents, page-numbered headers/footers, typography system (Georgia body + Inter headings), colored callout boxes for findings and recommendations, tables with zebra striping.
-
-Each report lives in its own directory with data (TypeScript) + narrative (Markdown) + diagrams (images). The skill provides a scaffolder to spin up new reports from a template and a generator to render them.
-
-**Branding:** Set per report via the `consultancyName` field in `lib/report-data.ts`.
-
-## Report Directory Layout
-
-```
-<report-dir>/
-├── content/
-│   ├── report-data.ts          # report structure (schema: ConsultingReport)
-│   ├── executive-summary.md    # narrative sections
-│   └── …
-├── diagrams/                   # source images (PNG/JPG)
-├── diagrams-compressed/        # generated — ignore
-└── <client>-<title>-<date>.{pdf,html}  # output
-```
+Every report is a self-contained Next.js app: typed report data in `lib/report-data.ts`, layout composed from React components in `app/page.tsx`, fonts via `next/font/google` (Source Serif 4 + Inter), Tailwind v4 for styling. `bun run dev` gives a live preview while authoring; the PDF is rendered by Playwright against a static export.
 
 ## Workflow
 
-### Step 1: Scaffold a new report (skip if the report directory already exists)
+### 1. Scaffold a new report
 
 ```bash
 bun ~/.pal/skills/consulting-report/tools/scaffold.ts <target-dir> \
-  --client "Client Name" \
-  --title "Report Title"
+  [--client "Client Name"] [--title "Report Title"] [--no-install]
 ```
 
-Creates the directory, stamps today's date + client + title into `report-data.ts`, and writes a starter `executive-summary.md`. If the target directory already exists, the command errors — move or remove first.
+Creates `<target-dir>` from the template and runs `bun install` inside. If `--client` / `--title` are passed, they're stamped into `lib/report-data.ts`. The scaffolder refuses to overwrite an existing directory.
 
-### Step 2: Fill in content
+### 2. Fill in the content
 
-Edit:
+Two files do the work:
 
-- `<dir>/content/report-data.ts` — cover metadata, sections list, optional findings / recommendations / conclusion / appendix. Each `section.content` is either an inline markdown string OR a `.md` filename relative to `content/`.
-- `<dir>/content/*.md` — the narrative sections referenced from `report-data.ts`.
-- `<dir>/diagrams/` — drop PNG/JPG images. Reference them from markdown with relative paths, e.g. `![alt](../diagrams-compressed/architecture.jpg)`.
+- **`lib/report-data.ts`** — typed metadata: client, title, date, classification, consultancy name, executive summary, situation assessment, findings, risk analysis, strategic opportunity, recommendations, target state, roadmap, call to action. The `ReportData` interface guides what's required.
+- **`app/page.tsx`** — the layout. Composes `<CoverPage/>`, `<Section/>`, `<Exhibit/>`, `<FindingCard/>`, `<RecommendationCard/>`, `<Callout/>`, `<Timeline/>`, etc. against the data. Edit freely — section titles, intros, ordering, custom JSX, anything.
 
-### Step 3: Render
+Static images go in `public/`; reference them from JSX as `<img src="/your-image.png">`.
+
+### 3. Live preview while authoring
+
+```bash
+bun ~/.pal/skills/consulting-report/tools/dev.ts <report-dir>
+```
+
+Wraps `bun run dev` in the report directory. Open the URL printed by Next, edit `app/page.tsx` or `lib/report-data.ts`, browser hot-reloads.
+
+### 4. Render the PDF
 
 ```bash
 node --experimental-strip-types ~/.pal/skills/consulting-report/tools/generate-pdf.ts <report-dir>
 ```
 
-Output: `<dir>/<client-slug>-<title-slug>-<date>.pdf` and matching `.html`. Override with `--pdf <path>` / `--html <path>`.
+Runs `next build` (which produces a static export at `out/`), then Playwright loads it via a tiny in-process HTTP server and prints the PDF with page-numbered header/footer. Output:
 
-The generator:
-- Loads `content/report-data.ts` dynamically
-- Compresses `diagrams/*` to JPEG 70% / 1200px via `sips` (macOS); silently skips if `sips` is absent
-- Renders cover, auto-generated linked TOC, sections, findings, recommendations, conclusion, appendix
-- Prints via Playwright with page-numbered header/footer templates
-
-### Step 4: Verify
-
-```bash
-ls -lh <dir>/*.pdf
+```
+<report-dir>/<client-slug>-<title-slug>-<date>.pdf
 ```
 
-Open the PDF. Check: cover centered and branded; TOC links jump; findings render in red/amber boxes by severity; recommendations in blue boxes with priority badges; every page has the CONFIDENTIAL footer and page number.
+Override with `--pdf <path>`. Pass `--skip-build` to re-render the PDF from the existing `out/` without re-building.
 
-## Report Schema
+Run with **Node**, not Bun — Playwright's `chromium.launch()` hangs under Bun on Windows.
 
-```ts
-interface ConsultingReport {
-  clientName: string;
-  reportTitle: string;
-  reportDate: string;
-  classification: string;          // e.g., "CONFIDENTIAL"
-  version: string;
-  brand?: { businessName: string; brandLabel?: string; logoPath?: string; };
-  sections: Section[];
-  findings?: Finding[];            // renders as red/amber/blue boxes by severity
-  recommendations?: Recommendation[];  // blue boxes with priority badges
-  conclusion?: Conclusion;
-  supportingEvidence?: Record<string, string[]>;  // appendix
-}
+## Directory Layout
 
-interface Section { id: string; title: string; content: string; subsections?: Section[]; }
-interface Finding { id: string; title: string; severity: "critical"|"high"|"medium"|"low"; evidence: string; impact?: string; }
-interface Recommendation { id: string; title: string; priority: "immediate"|"short-term"|"long-term"; detail: string; owner?: string; }
-interface Conclusion { assessorNote?: string; contextNote?: string; closingRemarks?: string; }
+```
+<report-dir>/
+├── app/
+│   ├── layout.tsx        # font wiring (Inter + Source Serif 4)
+│   ├── page.tsx          # the report's layout — edit freely
+│   └── globals.css       # design tokens via @theme + custom CSS
+├── components/           # 9 ported components — edit if you need new shapes
+│   ├── cover-page.tsx
+│   ├── section.tsx
+│   ├── exhibit.tsx
+│   ├── finding-card.tsx
+│   ├── recommendation-card.tsx
+│   ├── severity-badge.tsx
+│   ├── callout.tsx
+│   ├── quote-block.tsx
+│   └── timeline.tsx
+├── lib/
+│   ├── report-data.ts    # all your content
+│   └── utils.ts
+├── public/               # static images, optional
+├── package.json          # exact-pinned: next, react, tailwindcss, etc.
+├── tsconfig.json
+├── next.config.js
+└── postcss.config.mjs
 ```
 
-## Styling
+## Component Cheatsheet
 
-The typography system (Georgia body 10.5pt / Inter headings), color palette (navy #1B2A4A, blue #2E5090, red #DC2626, amber #D97706, green #059669), callout boxes, badges, table styling, cover layout, and header/footer templates are baked into `tools/generate-pdf.ts`. To customize: edit the `css()` function and the `renderPdf()` header/footer strings in one place.
-
-Do NOT combine CSS `@page` margin-box rules with the Playwright `displayHeaderFooter` templates — they duplicate.
+- `<CoverPage clientName reportTitle reportDate classification consultancyName preTitle />` — full-bleed cover
+- `<Section title>` — top-level section with bottom-rule heading
+- `<Exhibit number title source?>` — bordered card for figures, tables, side data
+- `<FindingCard finding={f} index={i} />` — driven by `Finding` type, includes severity badge
+- `<RecommendationCard recommendation={r} index={i} />` — driven by `Recommendation` type, includes priority badge
+- `<Callout label?>` — left-rule emphasis block (default label "Key Takeaway")
+- `<QuoteBlock quote attribution role? />` — pull-quote with serif quote mark
+- `<Timeline phases={r.roadmap} />` — vertical timeline with dotted line
+- `<SeverityBadge severity />` — pill badge: critical / high / medium / low
 
 ## Demo
-
-A runnable demo lives at `~/.pal/skills/consulting-report/demo/`:
 
 ```bash
 node --experimental-strip-types ~/.pal/skills/consulting-report/tools/generate-pdf.ts ~/.pal/skills/consulting-report/demo
 ```
 
-Inspect the produced PDF to see the full layout (cover, TOC, sections, findings, recommendations, conclusion, appendix) before writing your own report.
+Renders the bundled Acme Industries example end-to-end. Inspect the resulting PDF to see the full layout before authoring your own.
 
 ## Important
 
-- Reports live wherever you want; the skill only needs the `<report-dir>` path
-- The scaffolder refuses to overwrite an existing directory
-- Images go in `diagrams/`; reference them from markdown via `diagrams-compressed/<name>.jpg` so the compressed output is used
-- Heading anchor IDs come from `section.id` — keep them unique and slug-safe
-- Every report re-renders deterministically from source; the PDF and HTML are disposable artifacts
+- Run on Node ≥ 22.6 (Playwright + `--experimental-strip-types`)
+- Bundled fonts come from Google Fonts via `next/font/google` — no licensing surface, no CDN at runtime, glyphs embedded at build time
+- Reports are disposable artifacts of `lib/report-data.ts` + `app/page.tsx`; commit the source, not the PDF
+- The scaffolder runs `bun install` inside the target by default — pass `--no-install` to skip
+- Header/footer templates render with `displayHeaderFooter: true` in Playwright; don't combine with CSS `@page` margin-box rules
