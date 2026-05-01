@@ -1,3 +1,10 @@
+# [0.32.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.31.0...v0.32.0) (2026-05-01)
+
+
+### Features
+
+* **consulting-report:** add three new components ([2299f98](https://github.com/kovrichard/portable-agent-layer/commit/2299f98f8cccf061359114bc94bbc00128bc6e59))
+
 # [0.31.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.30.1...v0.31.0) (2026-05-01)
 
 
