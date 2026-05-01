@@ -236,14 +236,15 @@ body {
 .timeline-item::before {
   content: "";
   position: absolute;
-  left: -1.625rem;
-  top: 0.25rem;
+  /* Center dot on the vertical line: line is at left:0.5rem (8px) +1px,
+     timeline-item starts at padding 2rem (32px). Dot half-width 6px → place
+     left at -1.8125rem so dot center lands at 9px from .timeline left. */
+  left: -1.8125rem;
+  top: 0.4rem;
   width: 0.75rem;
   height: 0.75rem;
   border-radius: 50%;
   background: var(--color-primary);
-  border: 2px solid var(--color-background);
-  box-shadow: 0 0 0 2px var(--color-primary);
 }
 .timeline-phase {
   font-family: var(--font-sans);
@@ -302,7 +303,7 @@ body {
 }
 .cover-meta {
   margin-top: auto;
-  padding-top: 4rem;
+  padding-top: 1.5rem;
   border-top: 1px solid var(--color-border);
 }
 .cover-date {

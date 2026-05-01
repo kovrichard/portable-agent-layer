@@ -33,7 +33,7 @@ export function RecommendationCard({ recommendation, index }: RecommendationCard
     <div className="finding-card">
       <div className="finding-header">
         <div className="flex items-start gap-3">
-          <span className="text-primary font-bold text-lg">{index + 1}</span>
+          <span className="text-primary font-bold font-sans text-lg">{index + 1}</span>
           <span className="finding-title">{recommendation.title}</span>
         </div>
         <span

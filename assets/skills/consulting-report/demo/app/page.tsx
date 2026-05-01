@@ -53,7 +53,7 @@ export default function ReportPage() {
             <ul className="space-y-2">
               {data.executiveSummary.keyFindings.map((finding, i) => (
                 <li key={finding} className="flex items-start gap-3">
-                  <span className="text-primary font-bold">{i + 1}.</span>
+                  <span className="text-primary font-bold font-sans">{i + 1}.</span>
                   <span>{finding}</span>
                 </li>
               ))}
@@ -128,7 +128,7 @@ export default function ReportPage() {
               <ul className="space-y-2">
                 {data.riskAnalysis.competitiveThreats.map((threat, i) => (
                   <li key={threat} className="flex items-start gap-3">
-                    <span className="text-warning font-bold">{i + 1}.</span>
+                    <span className="text-warning font-bold font-sans">{i + 1}.</span>
                     <span>{threat}</span>
                   </li>
                 ))}
@@ -155,7 +155,7 @@ export default function ReportPage() {
                 key={req}
                 className="flex items-start gap-3 p-3 bg-accent/5 rounded-lg border border-accent/20"
               >
-                <span className="text-accent font-bold">{i + 1}.</span>
+                <span className="text-accent font-bold font-sans">{i + 1}.</span>
                 <span>{req}</span>
               </li>
             ))}

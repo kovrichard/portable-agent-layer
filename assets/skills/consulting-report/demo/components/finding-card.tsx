@@ -11,7 +11,9 @@ export function FindingCard({ finding, index }: FindingCardProps) {
     <div className="finding-card">
       <div className="finding-header">
         <div className="flex items-center gap-4">
-          <span className="text-primary font-bold text-2xl min-w-8">{index + 1}.</span>
+          <span className="text-primary font-bold font-sans text-2xl min-w-8">
+            {index + 1}.
+          </span>
           <span className="finding-title">{finding.title}</span>
         </div>
         <SeverityBadge severity={finding.severity} />

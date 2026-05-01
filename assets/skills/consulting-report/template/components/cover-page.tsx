@@ -19,17 +19,15 @@ export function CoverPage({
     <div className="cover-page">
       <div className="cover-classification">{classification}</div>
 
-      <div className="flex-1 flex flex-col justify-center">
-        <div className="text-sm tracking-[0.25em] text-primary uppercase mb-4 font-semibold">
-          {preTitle}
-        </div>
-        <h1 className="cover-title">{reportTitle}</h1>
-        <p className="cover-subtitle">Prepared for {clientName}</p>
+      <div className="text-sm tracking-[0.25em] text-primary uppercase mb-4 font-semibold font-sans">
+        {preTitle}
       </div>
+      <h1 className="cover-title">{reportTitle}</h1>
+      <p className="cover-subtitle">Prepared for {clientName}</p>
 
       <div className="cover-meta">
         <p className="cover-date">{reportDate}</p>
-        <p className="text-muted-dark text-sm mt-2">{consultancyName}</p>
+        <p className="text-muted-dark text-sm mt-2 font-sans">{consultancyName}</p>
       </div>
     </div>
   );
