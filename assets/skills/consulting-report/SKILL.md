@@ -60,10 +60,13 @@ Run with **Node**, not Bun — Playwright's `chromium.launch()` hangs under Bun 
 │   ├── layout.tsx        # font wiring (Inter + Source Serif 4)
 │   ├── page.tsx          # the report's layout — edit freely
 │   └── globals.css       # design tokens via @theme + custom CSS
-├── components/           # 9 ported components — edit if you need new shapes
+├── components/           # report primitives — edit if you need new shapes
 │   ├── cover-page.tsx
+│   ├── table-of-contents.tsx
 │   ├── section.tsx
 │   ├── exhibit.tsx
+│   ├── stat-grid.tsx
+│   ├── comparison-table.tsx
 │   ├── finding-card.tsx
 │   ├── recommendation-card.tsx
 │   ├── severity-badge.tsx
@@ -83,8 +86,11 @@ Run with **Node**, not Bun — Playwright's `chromium.launch()` hangs under Bun 
 ## Component Cheatsheet
 
 - `<CoverPage clientName reportTitle reportDate classification consultancyName preTitle />` — full-bleed cover
-- `<Section title>` — top-level section with bottom-rule heading
+- `<TableOfContents items={[{id, title}, …]} title?>` — linked TOC, anchors to section IDs
+- `<Section id title>` — top-level section with bottom-rule heading; `id` enables TOC links
 - `<Exhibit number title source?>` — bordered card for figures, tables, side data
+- `<StatGrid stats={[{value, label, caption?}, …]} />` — large-number grid for executive summary
+- `<ComparisonTable leftLabel rightLabel rows={[{metric, left, right}, …]} metricLabel?>` — current vs. target side-by-side
 - `<FindingCard finding={f} index={i} />` — driven by `Finding` type, includes severity badge
 - `<RecommendationCard recommendation={r} index={i} />` — driven by `Recommendation` type, includes priority badge
 - `<Callout label?>` — left-rule emphasis block (default label "Key Takeaway")

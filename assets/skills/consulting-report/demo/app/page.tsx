@@ -1,12 +1,27 @@
 import { AlertTriangle, CheckCircle2, Lightbulb, Target } from "lucide-react";
 import { Callout } from "@/components/callout";
+import { ComparisonTable } from "@/components/comparison-table";
 import { CoverPage } from "@/components/cover-page";
 import { Exhibit } from "@/components/exhibit";
 import { FindingCard } from "@/components/finding-card";
 import { RecommendationCard } from "@/components/recommendation-card";
 import { Section } from "@/components/section";
+import { StatGrid } from "@/components/stat-grid";
+import { TableOfContents } from "@/components/table-of-contents";
 import { Timeline } from "@/components/timeline";
 import { reportData } from "@/lib/report-data";
+
+const sections = [
+  { id: "executive-summary", title: "Executive Summary" },
+  { id: "situation-assessment", title: "Situation Assessment" },
+  { id: "key-findings", title: "Key Findings" },
+  { id: "risk-analysis", title: "Risk Analysis" },
+  { id: "strategic-opportunity", title: "Strategic Opportunity" },
+  { id: "recommendations", title: "Strategic Recommendations" },
+  { id: "target-state", title: "Target State Vision" },
+  { id: "roadmap", title: "Implementation Roadmap" },
+  { id: "call-to-action", title: "Call to Action" },
+];
 
 export default function ReportPage() {
   const data = reportData;
@@ -23,29 +38,34 @@ export default function ReportPage() {
       />
 
       <div className="report-container">
-        <Section title="Executive Summary">
+        <TableOfContents items={sections} />
+
+        <Section id="executive-summary" title="Executive Summary">
           <p className="text-lg mb-6">{data.executiveSummary.context}</p>
 
-          <Exhibit number={1} title="Assessment Methodology">
-            <div className="flex items-start gap-8">
-              <div>
-                <p className="text-3xl font-bold text-primary">
-                  {data.executiveSummary.methodology.interviewCount}
+          <StatGrid
+            stats={[
+              {
+                value: String(data.executiveSummary.methodology.interviewCount),
+                label: "Interviews",
+                caption: "across leadership and engineering",
+              },
+              { value: "3×", label: "MTTR", caption: "vs. peer benchmark" },
+              {
+                value: "71%",
+                label: "Concentration",
+                caption: "on-call held by 3 engineers",
+              },
+            ]}
+          />
+
+          <Exhibit number={1} title="Roles Interviewed">
+            <div className="grid grid-cols-2 gap-1">
+              {data.executiveSummary.methodology.roles.map((role) => (
+                <p key={role} className="text-sm text-muted">
+                  {role}
                 </p>
-                <p className="text-sm text-muted">Interviews Conducted</p>
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-foreground mb-2">
-                  Roles Interviewed:
-                </p>
-                <div className="grid grid-cols-2 gap-1">
-                  {data.executiveSummary.methodology.roles.map((role) => (
-                    <p key={role} className="text-sm text-muted">
-                      {role}
-                    </p>
-                  ))}
-                </div>
-              </div>
+              ))}
             </div>
           </Exhibit>
 
@@ -75,7 +95,7 @@ export default function ReportPage() {
           </ul>
         </Section>
 
-        <Section title="Situation Assessment">
+        <Section id="situation-assessment" title="Situation Assessment">
           <div className="grid gap-6">
             <div>
               <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
@@ -95,7 +115,7 @@ export default function ReportPage() {
           </div>
         </Section>
 
-        <Section title="Key Findings">
+        <Section id="key-findings" title="Key Findings">
           <p className="text-muted mb-6">
             Our analysis identified {data.findings.length} significant findings that
             require attention. Each finding is supported by evidence gathered during our
@@ -108,7 +128,7 @@ export default function ReportPage() {
           </div>
         </Section>
 
-        <Section title="Risk Analysis">
+        <Section id="risk-analysis" title="Risk Analysis">
           <div className="grid gap-6">
             <Exhibit number={3} title="Existential Risks">
               <div className="space-y-3">
@@ -142,7 +162,7 @@ export default function ReportPage() {
           </div>
         </Section>
 
-        <Section title="Strategic Opportunity">
+        <Section id="strategic-opportunity" title="Strategic Opportunity">
           <Callout label="The Path Forward">{data.strategicOpportunity.goodNews}</Callout>
 
           <h3 className="text-lg font-semibold mt-6 mb-3 flex items-center gap-2">
@@ -162,7 +182,7 @@ export default function ReportPage() {
           </ul>
         </Section>
 
-        <Section title="Strategic Recommendations">
+        <Section id="recommendations" title="Strategic Recommendations">
           <p className="text-muted mb-6">
             Recommendations are prioritized by urgency and impact.
           </p>
@@ -173,8 +193,35 @@ export default function ReportPage() {
           </div>
         </Section>
 
-        <Section title="Target State Vision">
+        <Section id="target-state" title="Target State Vision">
           <p className="text-lg mb-6">{data.targetState.description}</p>
+
+          <ComparisonTable
+            leftLabel="Today"
+            rightLabel="Target"
+            rows={[
+              {
+                metric: "MTTR",
+                left: "3× peer benchmark",
+                right: "Within 1.5× peer benchmark",
+              },
+              {
+                metric: "Rollback path",
+                left: "Manual, untested",
+                right: "Single-command, validated monthly",
+              },
+              {
+                metric: "On-call coverage",
+                left: "3 engineers carry 71%",
+                right: "8 engineers, max 15% each",
+              },
+              {
+                metric: "Runbook freshness",
+                left: "7 of 14 stale (>18 months)",
+                right: "Tracked as service-owner KPI",
+              },
+            ]}
+          />
 
           <Exhibit number={5} title="Key Capabilities Enabled">
             <div className="grid md:grid-cols-3 gap-4">
@@ -201,7 +248,7 @@ export default function ReportPage() {
           </ul>
         </Section>
 
-        <Section title="Implementation Roadmap">
+        <Section id="roadmap" title="Implementation Roadmap">
           <p className="text-muted mb-6">
             The transformation should be executed in phases, with clear milestones and
             decision points.
@@ -211,7 +258,7 @@ export default function ReportPage() {
           </Exhibit>
         </Section>
 
-        <Section title="Call to Action">
+        <Section id="call-to-action" title="Call to Action">
           <div className="bg-primary/5 rounded-2xl p-8 border border-primary/20">
             <h3 className="text-xl font-semibold mb-4">Immediate Next Steps</h3>
             <ol className="space-y-3 mb-6">
