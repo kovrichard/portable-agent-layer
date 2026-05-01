@@ -12,9 +12,10 @@
 //   node --experimental-strip-types ~/.pal/skills/consulting-report/tools/generate-pdf.ts <report-dir> [--pdf <out>] [--html <out>] [--skip-build]
 
 import { spawnSync } from "node:child_process";
-import { constants as fsConstants } from "node:fs";
+import { createReadStream, constants as fsConstants } from "node:fs";
 import { access, stat } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { createServer, type Server } from "node:http";
+import { extname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { chromium } from "playwright";
 
@@ -80,15 +81,57 @@ export function buildNext(reportDir: string): void {
   }
 }
 
+// Static export uses absolute paths (e.g. /_next/static/...). Loading via
+// file:// breaks those because `/` resolves to the filesystem root. Spin up a
+// tiny HTTP server rooted at out/ so Playwright sees real URLs.
+function serveStatic(rootDir: string): Promise<{ server: Server; url: string }> {
+  const MIME: Record<string, string> = {
+    ".html": "text/html; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".js": "application/javascript; charset=utf-8",
+    ".json": "application/json; charset=utf-8",
+    ".woff": "font/woff",
+    ".woff2": "font/woff2",
+    ".svg": "image/svg+xml",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".ico": "image/x-icon",
+  };
+  return new Promise((res) => {
+    const server = createServer((req, response) => {
+      const urlPath = decodeURIComponent((req.url ?? "/").split("?")[0]);
+      let filePath = join(rootDir, urlPath === "/" ? "/index.html" : urlPath);
+      if (filePath.endsWith("/")) filePath = join(filePath, "index.html");
+      const ext = extname(filePath).toLowerCase();
+      response.setHeader("Content-Type", MIME[ext] ?? "application/octet-stream");
+      const stream = createReadStream(filePath);
+      stream.on("error", () => {
+        response.statusCode = 404;
+        response.end();
+      });
+      stream.pipe(response);
+    });
+    server.listen(0, "127.0.0.1", () => {
+      const addr = server.address();
+      const port = typeof addr === "object" && addr ? addr.port : 0;
+      res({ server, url: `http://127.0.0.1:${port}/` });
+    });
+  });
+}
+
 export async function renderPdf(
   htmlPath: string,
   pdfPath: string,
   meta: ReportMeta
 ): Promise<void> {
+  const outDir = resolve(htmlPath, "..");
+  const { server, url } = await serveStatic(outDir);
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage();
-    await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "networkidle" });
+    await page.goto(url, { waitUntil: "networkidle" });
 
     // Wait for fonts and images to settle
     await page.evaluate(async () => {
@@ -132,6 +175,7 @@ export async function renderPdf(
     });
   } finally {
     await browser.close();
+    server.close();
   }
 }
 

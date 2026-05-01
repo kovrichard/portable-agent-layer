@@ -11,9 +11,14 @@
       "src/**",
       "test/**",
       "assets/**/*.ts",
+      "assets/**/*.tsx",
       ".agents/**/*.ts",
       ".opencode/**/*.ts",
       "!node_modules",
+      "!**/node_modules",
+      "!**/.next",
+      "!**/out",
+      "!**/next-env.d.ts",
       "!memory",
       "!telos"
     ]
