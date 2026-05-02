@@ -116,6 +116,72 @@ Build output is **never** written inside `<deck-dir>` — it lands in `<out>/<de
 
 (Legacy: a single `content.md` at the deck root still works — see Step 2.)
 
+## Content principles
+
+The doctor enforces *structural* discipline (slide budgets, layout-content match, missing assets). These rules are about *content* — what goes on the slide and in the notes. They apply to every deck regardless of type. For type-specific rules, see the "see also" links at the bottom of this section.
+
+### Core rules
+
+- **A slide carries what the *learner* takes away — never what happens in the room.** "We will discuss CI/CD agents" is not a slide; "CodeRabbit and CodeAnt cost ~$15/dev/mo at this scale" is.
+- **Less is more on bullets.** The doctor caps `content` at 7 bullets; the content rule is stricter — 3–5 is usually right. One bullet is not a slide; either expand or fold into the previous one.
+- **Two ideas → two slides.** If a slide carries two takeaways, split.
+- **No sentences on slides or in notes.** Exceptions: quotes, code comments, single callout sentences. Everything else is bullets, including notes.
+- **Notes are nested bullets.** Top-level bullets = explanation beats. Indented bullets = answers to common questions, edge cases, "what they'll ask." Never prose paragraphs.
+- **Source links go *first* in notes, not as footnotes.** When the speaker diverts to the browser to show a case study, they shouldn't have to scroll. Format: `- [EchoLeak (CVE-2025-32711) — Microsoft writeup](https://...)` then the explanation bullets.
+- **A title-only slide is valid only as a `section` divider.** Single-word slides and single-bullet slides are not valid — split or expand.
+- **Vocabulary consistency.** Pick one word per concept ("agent" vs "assistant", "tool" vs "capability") and use it everywhere. Drift confuses the audience.
+- **Layout choice = content choice, not decoration.** `big-stat` says "this number *is* the point." `comparison` says "you have to choose between these." `quote` says "someone earned the right to say this." Wrong layout muddies the message.
+- **Define jargon before using it.** First use of a non-obvious term gets a parenthesized gloss or its own glossary slide. After that, no.
+
+### Examples
+
+**Bad slide — describes the room, not the takeaway:**
+
+```markdown
+<!-- .slide: data-layout="content" -->
+## Code Review Agents
+
+- We will look at three vendors
+- Pricing comparison
+- Live demo of CodeRabbit
+```
+
+**Good slide — what the learner walks away with:**
+
+```markdown
+<!-- .slide: data-layout="content" -->
+## Code review agents — when each wins
+
+- CodeRabbit: best for large PRs, weakest at C# specifics
+- CodeAnt: tightest C# rules, no PR summary
+- Custom (Claude Code in CI): controllable, you pay per token
+```
+
+**Bad notes — prose, no source link:**
+
+```markdown
+Note: We should talk about EchoLeak here. It was a vulnerability in Microsoft 365 Copilot discovered in 2025 that allowed prompt injection through email content. The attack worked by sending a crafted email that the Copilot assistant would later read and execute instructions from. This is a good example of why we need to think about prompt injection in agentic systems.
+```
+
+**Good notes — link first, bullets, anticipated questions:**
+
+```markdown
+Note:
+- [EchoLeak (CVE-2025-32711) — Microsoft writeup](https://msrc.microsoft.com/...)
+- Zero-click prompt injection in M365 Copilot via crafted email
+- Attack surface: any agent that reads attacker-controlled content
+- Mitigations
+  - Tool allowlists, not denylists
+  - Human-in-loop on data exfil tools
+- "Could this happen with Claude Code?" — yes, via any tool that reads external text (web fetch, MCP server, log file)
+```
+
+### See also (type-specific rules)
+
+- **Workshops, training, hands-on sessions:** [`WORKSHOP.md`](WORKSHOP.md)
+
+(Future: `PITCH.md`, `LECTURE.md`, `INTERNAL_REVIEW.md` — coming soon.)
+
 ## Content conventions
 
 ```markdown
