@@ -69,12 +69,14 @@ Backwards compatible: if `slides/` doesn't exist, the build falls back to a sing
 bun ~/.pal/skills/presentation/tools/build.ts <deck-dir> [--out <dir>] [--force]
 ```
 
-Output goes to `<out>/<deck-name>/`, where `<deck-name>` = the basename of `<deck-dir>`:
+Output files (where `<deck-name>` = basename of `<deck-dir>`):
 
 - `<deck-name>.md` — the concatenated source (all `slides/*.md` joined with `---` separators), written to disk **first** so you can inspect, diff, or feed it into other tooling.
 - `<deck-name>.html` — the self-contained presentation (CSS, JS, fonts, logo all inlined). Email it, USB-stick it, host it anywhere.
 
-Defaults: `--out` defaults to the current working directory. The `<deck-name>/` subdir is always created — even when `--out` is explicit — so multiple decks can coexist in one folder.
+Default location: `--out` defaults to the **deck-dir itself**, and the files land flat at `<deck-dir>/<deck-name>.{html,md}` — next to your slides, regardless of where you ran the build from. The scaffolder's `.gitignore` already covers them.
+
+Override: pass `--out <dir>` to redirect elsewhere. When `--out` is *not* the deck-dir, a `<deck-name>/` subdir is created under it so multiple decks can coexist in one collection folder.
 
 `--force` overwrites an existing build. Without it, the build refuses to clobber `<deck-name>.{md,html}`.
 
@@ -112,7 +114,7 @@ Open `<out>/<deck-name>/<deck-name>.html` in your browser. Iterate by editing a 
 └── assets/                 # images / videos referenced from slides/*.md
 ```
 
-Build output is **never** written inside `<deck-dir>` — it lands in `<out>/<deck-name>/` (default `<cwd>/<deck-name>/`). The scaffolder's `.gitignore` covers the case of running build from inside the deck-dir.
+Build output lands flat inside the deck-dir by default (`<deck-dir>/<deck-name>.{html,md}`), or under `<out>/<deck-name>/` when `--out` is explicit. Both shapes are covered by the scaffolder's `.gitignore`.
 
 (Legacy: a single `content.md` at the deck root still works — see Step 2.)
 
@@ -126,12 +128,41 @@ The doctor enforces *structural* discipline (slide budgets, layout-content match
 - **Less is more on bullets.** The doctor caps `content` at 7 bullets; the content rule is stricter — 3–5 is usually right. One bullet is not a slide; either expand or fold into the previous one.
 - **Two ideas → two slides.** If a slide carries two takeaways, split.
 - **No sentences on slides or in notes.** Exceptions: quotes, code comments, single callout sentences. Everything else is bullets, including notes.
-- **Notes are nested bullets.** Top-level bullets = explanation beats. Indented bullets = answers to common questions, edge cases, "what they'll ask." Never prose paragraphs.
-- **Source links go *first* in notes, not as footnotes.** When the speaker diverts to the browser to show a case study, they shouldn't have to scroll. Format: `- [EchoLeak (CVE-2025-32711) — Microsoft writeup](https://...)` then the explanation bullets.
 - **A title-only slide is valid only as a `section` divider.** Single-word slides and single-bullet slides are not valid — split or expand.
 - **Vocabulary consistency.** Pick one word per concept ("agent" vs "assistant", "tool" vs "capability") and use it everywhere. Drift confuses the audience.
 - **Layout choice = content choice, not decoration.** `big-stat` says "this number *is* the point." `comparison` says "you have to choose between these." `quote` says "someone earned the right to say this." Wrong layout muddies the message.
 - **Define jargon before using it.** First use of a non-obvious term gets a parenthesized gloss or its own glossary slide. After that, no.
+
+### Bullet & sub-bullet structure
+
+- **Top-level bullet = one fact or one claim.** 6–12 words. If you need more, split or use a sub-bullet.
+- **Sub-bullets = elaboration of the parent.** A list, an example, a clarification. 2–8 words each. Don't start a new claim at a sub-bullet — that's a top-level bullet.
+- **Never use em-dash continuations to extend a bullet.** `- Foo — bar — baz` is prose pretending to be a bullet. Convert to:
+  ```markdown
+  - Foo
+    - bar
+    - baz
+  ```
+  Em-dash is reserved for: title qualifiers ("Block 4 — Landscape"), and anticipated Q&A in notes (`"Question?" — short answer`).
+- **Stable parallel structure inside a bullet group.** If bullet 1 starts with a verb, bullets 2–N start with verbs. If bullet 1 is `Name: description`, the rest match.
+- **Concrete over abstract.** Show paths, file names, numbers, command snippets in backticks. "the project file" is weaker than `./CLAUDE.md`.
+
+### Notes structure
+
+Notes are the speaker's working surface during delivery. They must be scannable, not readable. Strict format:
+
+1. **Source links first**, one per line, before any explanation. Multiple links are fine if the slide cites multiple sources. The speaker should never scroll to find a link they're about to open in the browser.
+2. **Named beats as top-level bullets.** A "beat" is a named chunk of context — `Eval setup`, `Headline numbers`, `Why X wins`, `Common output`, `Anticipated questions`. The beat name lets the speaker jump.
+3. **Sub-bullets under each beat.** Same 2–8 word budget. Lists, edge cases, examples. No prose.
+4. **Quotes nest under a `- Quote` beat** as a markdown blockquote (`>`). Quotes are the only place full sentences are allowed in notes.
+5. **Anticipated Q&A near the end.** Format: `- "Question?" — short answer`. The em-dash here separates the quote from the answer; this is the legal use.
+6. **Forward references are terse.** "more in Day 2 when you build your own", "see Block 2 for X". Not "we'll discuss this later" prose.
+
+### Voice
+
+- **Declarative, not hedging.** "Anthropic's holdout" beats "Anthropic has chosen a different approach." If you mean it, say it; if you don't, cut it.
+- **Opinionated where the room expects opinion.** Workshops are taught, not narrated. State which option you'd pick and why.
+- **Concrete identifiers visible.** File paths, version numbers, URLs, exact tool names. The audience should be able to type what's on the slide and have it work.
 
 ### Examples
 
