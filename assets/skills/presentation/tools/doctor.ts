@@ -72,6 +72,16 @@ function countTopLevelListItems(body: string): number {
   return n;
 }
 
+function countAllListItems(body: string): number {
+  // Count all list items at any indentation (top-level + sub-bullets).
+  // The visual budget is "lines you read on the slide" — sub-bullets count.
+  let n = 0;
+  for (const line of body.split("\n")) {
+    if (/^\s*(?:[-*]\s+|\d+\.\s+)/.test(line)) n++;
+  }
+  return n;
+}
+
 function findImageRefs(body: string): string[] {
   // Skip lines inside fenced code blocks — they're examples, not references.
   const out: string[] = [];
@@ -157,6 +167,26 @@ export async function lintSlide(
         rule: "missing-asset",
         severity: "E",
         msg: `image referenced but not found: ${ref}`,
+      });
+    }
+  }
+
+  // Visual-line budget — flattened list items (top-level + sub-bullets).
+  // 10 fits cleanly on a slide; 11+ overflows even when each line is short.
+  // Section/title/closing/big-stat/quote/code/table layouts are bullet-light by
+  // design and won't trip this; only enforce on bullet-bearing layouts.
+  if (
+    layout === "content" ||
+    layout === "agenda" ||
+    layout === "comparison" ||
+    layout === "two-column"
+  ) {
+    const all = countAllListItems(body);
+    if (all > 10) {
+      findings.push({
+        rule: "slide-line-budget",
+        severity: "W",
+        msg: `${all} list lines (top-level + sub-bullets) — slide fits 10 cleanly`,
       });
     }
   }

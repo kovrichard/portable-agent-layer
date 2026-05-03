@@ -92,6 +92,7 @@ Catches authoring failures before you ever open the browser:
 - Title or subtitle exceeding the visual budget (h1 > 60 chars, h2 > 100).
 - Layout-content mismatch — `comparison` without a `<div class="compare">`, `metric-grid` without `<div class="metrics">`, `two-column` missing column wrappers, etc.
 - Overflow heuristics — `agenda` > 10 items, `content` > 7 bullets, `code` block > 25 lines, `table` > 10 rows, `metric-grid` ≠ 3 metrics.
+- **Visual-line budget**: any bullet-bearing slide (`content`, `agenda`, `comparison`, `two-column`) with > 10 flattened list lines (top-level + sub-bullets combined). 10 fits cleanly; 11+ overflows even when each line is short.
 - Image referenced via `![](assets/...)` but the file is missing.
 - Layout requirements — `big-stat` without an h1, `quote` / `pull-quote` without a `> blockquote`.
 
