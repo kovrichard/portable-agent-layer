@@ -8,7 +8,8 @@
 //   <out>/<deck-name>/<deck-name>.md     concatenated slides (written first)
 //   <out>/<deck-name>/<deck-name>.html   self-contained presentation
 //
-// --out defaults to process.cwd(). The deck-name subdir is always created
+// --out defaults to the deck-dir itself (output lands at <deck-dir>/<deck-name>/,
+// which the scaffolder gitignores). The deck-name subdir is always created
 // inside --out, even when --out is explicitly provided. Existing files in
 // the subdir are preserved unless --force is passed.
 
@@ -90,7 +91,7 @@ async function main() {
   }
   const deckDir = resolve(argv[0]);
 
-  let outRoot = process.cwd();
+  let outRoot = deckDir;
   let force = false;
   for (let i = 1; i < argv.length; i++) {
     if (argv[i] === "--out") outRoot = resolve(argv[++i]);
@@ -110,7 +111,10 @@ async function main() {
   }
 
   const slug = deckSlug(deckDir);
-  const outDir = join(outRoot, slug);
+  // When --out is the deck-dir itself (the default), write directly into it —
+  // no extra <slug>/ subdir. Otherwise create the subdir so multiple decks
+  // can coexist under one shared --out.
+  const outDir = resolve(outRoot) === deckDir ? deckDir : join(outRoot, slug);
   const concatPath = join(outDir, `${slug}.md`);
   const htmlPath = join(outDir, `${slug}.html`);
 

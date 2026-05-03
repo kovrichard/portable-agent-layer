@@ -84,13 +84,18 @@ lang: en
     await copyFile(join(sourceSlidesDir, f), join(slidesDir, f));
   }
 
-  // If the user happens to run build/present from inside this deck-dir, the output
-  // subdir lands here too. Pre-ignore it so it doesn't get accidentally committed.
+  // Build output lands in this deck-dir by default — flat (slug.html, slug.md)
+  // when --out defaults to the deck-dir, or under slug/ when --out is explicit.
+  // Pre-ignore both shapes.
   const slug =
     basename(target)
       .replace(/[^a-zA-Z0-9._-]+/g, "-")
       .replace(/^-+|-+$/g, "") || "deck";
-  await writeFile(join(target, ".gitignore"), `${slug}/\n`, "utf8");
+  await writeFile(
+    join(target, ".gitignore"),
+    `${slug}.html\n${slug}.md\n${slug}/\n`,
+    "utf8"
+  );
 
   console.log(`✓ deck scaffolded at ${target}`);
   console.log(`  template:   ${templateName}`);
@@ -99,7 +104,7 @@ lang: en
   console.log(`\nNext:`);
   console.log(`  $EDITOR ${slidesDir}/`);
   console.log(`  bun ~/.pal/skills/presentation/tools/build.ts ${target}`);
-  console.log(`  # output → <cwd>/${slug}/${slug}.html  (override with --out <dir>)`);
+  console.log(`  # output → ${target}/${slug}.html  (override with --out <dir>)`);
 }
 
 main().catch((e) => {
