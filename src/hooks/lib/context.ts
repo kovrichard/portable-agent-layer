@@ -301,7 +301,7 @@ export function loadSignalTrends(): string {
 export function loadProjectHistoryContext(): string {
   try {
     const cwd = process.cwd();
-    const entries = readProjectHistory(cwd, 15);
+    const entries = readProjectHistory(cwd, 3);
     if (entries.length === 0) return "";
 
     const lines: string[] = ["## This Project — Session History"];
@@ -351,13 +351,9 @@ export function loadSessionIntelligence(): string {
         }
         lines.push("→ These are directly relevant to your current work.");
       }
-      if (other.length > 0) {
-        lines.push("");
-        lines.push(`**Open threads — other projects (${other.length}):**`);
-        for (const t of other) {
-          lines.push(`- ${t.title} (opened ${t.opened})`);
-        }
-      }
+      // Cross-project threads intentionally omitted — they were noise in 90%+ of sessions.
+      // To surface them on demand, add a `threads` slash-command or a flag in pal-settings.
+      void other;
     }
 
     // Rating Trend
