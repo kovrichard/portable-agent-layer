@@ -130,7 +130,21 @@ export function stripCodeAndLinks(s: string): string {
 }
 
 export function wordCount(s: string): number {
-  const cleaned = stripCodeAndLinks(s).trim();
+  // Count each inline code span as 1 word — preserves "label: `value`" patterns
+  // where the substantive content is in the code span. Strip markdown link
+  // bodies so links count as their visible text, not the URL.
+  const withCodeAsWords = s.replace(/`[^`]*`/g, "CODESPAN");
+  const withoutLinks = withCodeAsWords.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1");
+  const cleaned = withoutLinks.trim();
   if (!cleaned) return 0;
   return cleaned.split(/\s+/).length;
+}
+
+export function hasNestedChildren(items: ListItem[], parentIndex: number): boolean {
+  // Returns true if the item at parentIndex has any directly-following items
+  // at greater indent (i.e., it acts as a parent to a sub-bullet group).
+  const parent = items[parentIndex];
+  if (!parent) return false;
+  const next = items[parentIndex + 1];
+  return !!next && next.indent > parent.indent;
 }

@@ -12,11 +12,15 @@ import {
   countAllListItems,
   countAtxHeading,
   countTopLevelListItems,
+  extractNotes,
   fileExists,
   findImageRefs,
   hasLayoutDirective,
+  hasNestedChildren,
+  listItems,
   stripCodeAndLinks,
   tableRowCount,
+  wordCount,
 } from "./lint-helpers";
 import type { Finding, Rule, SlideContext } from "./lint-types";
 
@@ -138,6 +142,159 @@ export const RULES: Rule[] = [
           rule: "slide-line-budget",
           severity: "W",
           msg: `${all} list lines (top-level + sub-bullets) — slide fits 10 cleanly`,
+        },
+      ];
+    },
+  },
+
+  // ── Content-quality rules (Tier 1) ──────────────────────────────────────
+
+  {
+    // Top-level bullets should land 2–15 words. Below 2 = stub; above 15 =
+    // prose pretending to be a bullet. SKILL.md's stricter target is 6–12;
+    // the doctor uses looser bounds to flag only egregious cases.
+    //
+    // Two carve-outs:
+    //   1. A bullet with nested children is a "label" — minimum doesn't apply.
+    //      "Locations" → sub-bullets is fine.
+    //   2. Comparison layout has its own visual rhythm (column labels under
+    //      headers); skip the rule there entirely.
+    name: "bullet-length-top-level",
+    scope: "slide",
+    appliesTo: (ctx) => isBulletLayout(ctx) && ctx.layout !== "comparison",
+    check: (ctx) => {
+      const findings: Finding[] = [];
+      const items = listItems(ctx.bodyNoNotes);
+      items.forEach((item, idx) => {
+        if (item.indent !== 0) return;
+        const wc = wordCount(item.content);
+        const isLabel = hasNestedChildren(items, idx);
+        const tooShort = wc < 2 && !isLabel;
+        const tooLong = wc > 15;
+        if (tooShort || tooLong) {
+          findings.push({
+            rule: "bullet-length-top-level",
+            severity: "W",
+            msg: `top-level bullet has ${wc} words (target 2–15): "${item.content.trim().slice(0, 50)}…"`,
+          });
+        }
+      });
+      return findings;
+    },
+  },
+
+  {
+    // Sub-bullets should land 2–10 words. They are elaborations of the parent,
+    // not new claims, so they stay short.
+    name: "bullet-length-sub",
+    scope: "slide",
+    appliesTo: isBulletLayout,
+    check: (ctx) => {
+      const findings: Finding[] = [];
+      for (const item of listItems(ctx.bodyNoNotes)) {
+        if (item.indent === 0) continue;
+        const wc = wordCount(item.content);
+        if (wc < 2 || wc > 10) {
+          findings.push({
+            rule: "bullet-length-sub",
+            severity: "W",
+            msg: `sub-bullet has ${wc} words (target 2–10): "${item.content.trim().slice(0, 50)}…"`,
+          });
+        }
+      }
+      return findings;
+    },
+  },
+
+  {
+    // If notes contain source links, the FIRST bullet should be one (or a
+    // "Sources" parent whose children are links). The rule is "if you cite,
+    // cite first" — slides without any source link are exempt because the
+    // content is analysis, not citation.
+    name: "notes-link-first",
+    scope: "slide",
+    appliesTo: (ctx) =>
+      ctx.layout === "content" ||
+      ctx.layout === "big-stat" ||
+      ctx.layout === "comparison" ||
+      ctx.layout === "table",
+    check: (ctx) => {
+      const notes = extractNotes(ctx.body);
+      if (!notes.trim()) return [];
+      // No links anywhere = analysis-only notes; rule doesn't apply.
+      if (!/\[[^\]]+\]\([^)]+\)/.test(notes)) return [];
+      const items = listItems(notes);
+      if (items.length === 0) return [];
+      const first = items[0].content.trim();
+      if (/^\[[^\]]+\]\([^)]+\)/.test(first)) return [];
+      // "Sources" / "Per-X sources" parent whose children are links — allowed.
+      if (/^(per-\w+ )?sources?\b/i.test(first)) {
+        const sub = items.slice(1).find((it) => it.indent > items[0].indent);
+        if (sub && /^\[[^\]]+\]\([^)]+\)/.test(sub.content.trim())) return [];
+      }
+      return [
+        {
+          rule: "notes-link-first",
+          severity: "W",
+          msg: `notes have a source link, but first bullet isn't one: "${first.slice(0, 50)}…"`,
+        },
+      ];
+    },
+  },
+
+  {
+    // Body should be bullets + headings + blockquotes + HTML wrappers + code.
+    // A bare prose paragraph in body usually means "what happens in the room"
+    // narration leaked onto the slide. Only enforced on content/agenda where
+    // prose is least legitimate; two-column and image-text legitimately host
+    // prose inside their wrappers.
+    name: "prose-paragraph-in-body",
+    scope: "slide",
+    appliesTo: (ctx) => ctx.layout === "content" || ctx.layout === "agenda",
+    check: (ctx) => {
+      const findings: Finding[] = [];
+      const lines = ctx.bodyNoNotes.split("\n");
+      let inFence = false;
+      for (const line of lines) {
+        if (/^```/.test(line)) {
+          inFence = !inFence;
+          continue;
+        }
+        if (inFence) continue;
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        if (/^#/.test(trimmed)) continue; // heading
+        if (/^\s*(?:[-*]\s|\d+\.\s)/.test(line)) continue; // any-indent bullet
+        if (/^>/.test(trimmed)) continue; // blockquote
+        if (/^<!--/.test(trimmed)) continue; // comment
+        if (/^<\/?\w/.test(trimmed)) continue; // html tag
+        if (trimmed.length > 80) {
+          findings.push({
+            rule: "prose-paragraph-in-body",
+            severity: "W",
+            msg: `prose paragraph in body (${trimmed.length} chars): "${trimmed.slice(0, 60)}…"`,
+          });
+        }
+      }
+      return findings;
+    },
+  },
+
+  {
+    // big-stat is for numbers. The h1 must contain a digit; if it doesn't,
+    // the wrong layout was probably chosen.
+    name: "big-stat-needs-digit",
+    scope: "slide",
+    appliesTo: (ctx) => ctx.layout === "big-stat",
+    check: (ctx) => {
+      if (ctx.heads1.length === 0) return []; // covered by big-stat-no-h1
+      const h1 = ctx.heads1[0];
+      if (/\d/.test(h1)) return [];
+      return [
+        {
+          rule: "big-stat-needs-digit",
+          severity: "W",
+          msg: `big-stat h1 has no digit: "${h1}" — big-stat is for numbers`,
         },
       ];
     },
