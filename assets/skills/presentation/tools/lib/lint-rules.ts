@@ -631,49 +631,73 @@ export const RULES: Rule[] = [
   // ── Deck-scope rules (Tier 3) ───────────────────────────────────────────
 
   {
-    // Visual rhythm check. 4+ consecutive `content` slides with the same
-    // top-level bullet count read as monotone — the audience cannot scan to
-    // "what kind of slide is this." Vary layout (big-stat, comparison, quote)
-    // or vary bullet count to break the run. 3 in a row is fine; 4 warns.
+    // Visual rhythm check (period-aware). Each slide gets a shape signature:
+    // - non-content slides → just their layout name (interleaving naturally
+    //   breaks runs)
+    // - content slides → `content:<top-count>:<flat|nested>` so a flat slide
+    //   and a nested slide count as different shapes even at the same count
+    //
+    // Detects periodic patterns of length 1, 2, or 3:
+    //   period 1: 4+ same in a row (e.g., `5-flat, 5-flat, 5-flat, 5-flat`)
+    //   period 2: 3+ AB cycles, 6+ slides (e.g., `4-flat, 5-flat, 4-flat...`)
+    //   period 3: 3+ ABC cycles, 9+ slides
+    //
+    // When multiple periods fit a run, the smallest wins. Adding a single
+    // nested slide to a flat stretch breaks the run.
     name: "monotone-rhythm",
     scope: "deck",
     check: (ctx) => {
-      const findings: Finding[] = [];
-      let runStart = 0;
-      let runCount = 0;
-      let runBulletCount = -1;
-
-      const flush = (endIdx: number) => {
-        if (runCount >= 4 && runBulletCount > 0) {
-          const startName = ctx.slides[runStart].name;
-          const endName = ctx.slides[endIdx - 1].name;
-          findings.push({
-            rule: "monotone-rhythm",
-            severity: "W",
-            msg: `${runCount} consecutive content slides with ${runBulletCount} top-level bullets (${startName} → ${endName}) — vary layout`,
-          });
-        }
+      const shape = (s: SlideContext): string => {
+        if (s.layout !== "content") return s.layout;
+        const items = listItems(s.bodyNoNotes);
+        const top = items.filter((it) => it.indent === 0).length;
+        const hasSubs = items.some((it) => it.indent > 0);
+        return `content:${top}:${hasSubs ? "nested" : "flat"}`;
       };
 
-      for (let i = 0; i < ctx.slides.length; i++) {
-        const slide = ctx.slides[i];
-        if (slide.layout !== "content") {
-          flush(i);
-          runCount = 0;
-          runBulletCount = -1;
-          continue;
+      const shapes = ctx.slides.map(shape);
+      const used = new Array(shapes.length).fill(false);
+      const minLength: Record<number, number> = { 1: 4, 2: 6, 3: 9 };
+      const findings: Finding[] = [];
+
+      for (let i = 0; i < shapes.length; i++) {
+        if (used[i]) continue;
+
+        let chosenPeriod = -1;
+        let chosenLen = 0;
+
+        for (const p of [1, 2, 3]) {
+          let runLen = p;
+          while (
+            i + runLen < shapes.length &&
+            shapes[i + runLen] === shapes[i + runLen - p]
+          ) {
+            runLen++;
+          }
+          if (runLen >= minLength[p]) {
+            chosenPeriod = p;
+            chosenLen = runLen;
+            break; // smallest period wins
+          }
         }
-        const bullets = countTopLevelListItems(slide.bodyNoNotes);
-        if (bullets === runBulletCount) {
-          runCount++;
-        } else {
-          flush(i);
-          runStart = i;
-          runCount = 1;
-          runBulletCount = bullets;
-        }
+
+        if (chosenPeriod < 0) continue;
+
+        const startName = ctx.slides[i].name;
+        const endName = ctx.slides[i + chosenLen - 1].name;
+        const cycles = Math.floor(chosenLen / chosenPeriod);
+        const sig =
+          chosenPeriod === 1
+            ? `shape "${shapes[i]}"`
+            : `period ${chosenPeriod} pattern (${shapes.slice(i, i + chosenPeriod).join(" → ")})`;
+        findings.push({
+          rule: "monotone-rhythm",
+          severity: "W",
+          msg: `${cycles} cycles of ${sig} across ${chosenLen} slides (${startName} → ${endName}) — vary layout or nest some bullets`,
+        });
+
+        for (let k = i; k < i + chosenLen; k++) used[k] = true;
       }
-      flush(ctx.slides.length);
       return findings;
     },
   },
