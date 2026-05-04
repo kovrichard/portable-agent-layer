@@ -36,6 +36,7 @@ export const HOOK_MANAGED_FILES = [
   "pal-settings.json",
   "skill-index.json",
   "algorithm-reflections.jsonl",
+  ".retrieval-index.json",
 ];
 
 /** Hook-managed directories — AI must not write to or delete from these */

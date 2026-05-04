@@ -126,16 +126,20 @@ function stem(word: string): string {
   return stemOnce(stemOnce(word));
 }
 
+/** Lowercase → strip punctuation → split → drop stop-words and shorts → stem → drop shorts.
+ *  Returns the token stream WITH duplicates (needed for term-frequency counting). */
+export function tokenize(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !STOP_WORDS.has(w))
+    .map((w) => stem(w))
+    .filter((w) => w.length > 2);
+}
+
 export function extractKeywords(text: string): Set<string> {
-  return new Set(
-    text
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, " ")
-      .split(/\s+/)
-      .filter((w) => w.length > 2 && !STOP_WORDS.has(w))
-      .map((w) => stem(w))
-      .filter((w) => w.length > 2)
-  );
+  return new Set(tokenize(text));
 }
 
 /** Dice coefficient on keyword sets. Returns 0-1. */

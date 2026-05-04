@@ -49,6 +49,7 @@ export const paths = {
   relationship: () => ensureDir(home("memory", "relationship")),
   entities: () => ensureDir(home("memory", "entities")),
   failures: () => ensureDir(home("memory", "learning", "failures")),
+  retrievalIndex: () => home("memory", "learning", ".retrieval-index.json"),
   projectHistory: () => ensureDir(home("memory", "projects")),
   sessionLearning: () => ensureDir(home("memory", "learning", "session")),
   synthesis: () => ensureDir(home("memory", "learning", "synthesis")),
