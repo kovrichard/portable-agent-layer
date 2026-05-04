@@ -66,6 +66,34 @@ function deckSlug(deckDir: string): string {
   return slug || "deck";
 }
 
+// Build-time injection: code-layout slides with > 15 lines of code get a
+// `style="--code-scale: X"` attribute baked into the slide directive. CSS in
+// layouts.css multiplies the base code font by this variable. Linear from 1.0
+// at 15 lines to 0.6 at 25 lines; clamped at 0.6 beyond. Build-time keeps the
+// attribute on the rendered <section>, so navigation/Highlight re-runs cannot
+// strip it.
+function injectCodeScale(slideMarkdown: string): string {
+  const layoutRe = /<!--\s*\.slide:\s*data-layout="code"([^>]*)-->/i;
+  const layoutMatch = layoutRe.exec(slideMarkdown);
+  if (!layoutMatch) return slideMarkdown;
+
+  const codeRe = /```[^\n]*\n([\s\S]*?)\n```/;
+  const codeMatch = codeRe.exec(slideMarkdown);
+  if (!codeMatch) return slideMarkdown;
+
+  const lines = codeMatch[1].split("\n").length;
+  if (lines <= 15) return slideMarkdown;
+
+  const scale = Math.max(0.6, 1 - (lines - 15) * 0.04).toFixed(2);
+  // Don't double-inject if a previous build already set it.
+  const extras = layoutMatch[1].replace(/\s+style="--code-scale:\s*[^"]+"/i, "").trim();
+  const attrs = extras
+    ? `${extras} style="--code-scale: ${scale}"`
+    : `style="--code-scale: ${scale}"`;
+  const newDirective = `<!-- .slide: data-layout="code" ${attrs} -->`;
+  return slideMarkdown.replace(layoutMatch[0], newDirective);
+}
+
 async function buildConcat(deckDir: string): Promise<string> {
   const slidesDir = join(deckDir, "slides");
   if (await exists(slidesDir)) {
@@ -74,7 +102,7 @@ async function buildConcat(deckDir: string): Promise<string> {
       throw new Error(`slides/ is empty at ${slidesDir}`);
     }
     const parts = await Promise.all(files.map((f) => readText(join(slidesDir, f))));
-    return `${parts.map((p) => p.trim()).join("\n\n---\n\n")}\n`;
+    return `${parts.map((p) => injectCodeScale(p.trim())).join("\n\n---\n\n")}\n`;
   }
   const legacy = join(deckDir, "content.md");
   if (await exists(legacy)) {

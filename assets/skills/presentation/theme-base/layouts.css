@@ -265,7 +265,12 @@
   max-height: 65vh;
   margin: var(--space-2) 0;
 }
-.reveal section[data-layout="code"] pre code { font-size: 0.9em; }
+/* Code font size scales down for long blocks. The build script sets
+   --code-scale on each code-layout section based on line count: 1.0 for ≤15
+   lines, 0.6 for ≥25 lines, linear in between. Defaults to 1.0 if unset. */
+.reveal section[data-layout="code"] pre code {
+  font-size: calc(0.9em * var(--code-scale, 1));
+}
 
 /* ── 12. big-stat ── One giant number + a muted caption beneath. Use sparingly.
  * Author surface:
