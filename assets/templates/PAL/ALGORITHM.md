@@ -178,6 +178,8 @@ For EACH criterion:
 
 **Capability check:** Confirm every selected capability was actually invoked via tool call. Text output alone does not count.
 
+**Demonstrate, don't assert.** When verifying a new check / rule / behavior on a system that already passes, "existing inputs still pass" is not evidence the new logic works — the existing inputs would pass even if your code did nothing. Construct a deliberately-broken minimal example (a fake bad slide, a known-failing input, a unit test that should now fail without your change) and run it through to prove the new behavior actually fires. Show the failure happening in the verification output, not just the success case.
+
 If any criteria failed, fix and re-verify before completing.
 
 ### ━━━ 📚 LEARN ━━━ 5/5
