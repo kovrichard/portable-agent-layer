@@ -30,6 +30,13 @@ function isBulletLayout(ctx: SlideContext): boolean {
   return BULLET_LAYOUTS.has(ctx.layout);
 }
 
+function isExerciseSlide(ctx: SlideContext): boolean {
+  // Detect by filename (what I see) OR by h2 prefix (what the room sees).
+  if (/exercise/i.test(ctx.name)) return true;
+  if (ctx.heads2.some((h) => /^Exercise\b/i.test(h))) return true;
+  return false;
+}
+
 export const RULES: Rule[] = [
   // ── Global rules (run on every slide) ───────────────────────────────────
 
@@ -273,6 +280,66 @@ export const RULES: Rule[] = [
             rule: "prose-paragraph-in-body",
             severity: "W",
             msg: `prose paragraph in body (${trimmed.length} chars): "${trimmed.slice(0, 60)}…"`,
+          });
+        }
+      }
+      return findings;
+    },
+  },
+
+  {
+    // Exercise slides should have h2 starting with "Exercise — " so the room
+    // can see they've changed mode. The em-dash here is a legal title
+    // qualifier (per SKILL.md), not a continuation.
+    name: "exercise-title-prefix",
+    scope: "slide",
+    appliesTo: isExerciseSlide,
+    check: (ctx) => {
+      const h2 = ctx.heads2[0];
+      if (!h2) {
+        return [
+          {
+            rule: "exercise-title-prefix",
+            severity: "W",
+            msg: "exercise slide has no h2 title",
+          },
+        ];
+      }
+      if (/^Exercise\s+—\s+\S/.test(h2)) return [];
+      return [
+        {
+          rule: "exercise-title-prefix",
+          severity: "W",
+          msg: `exercise title should start with "Exercise — ": "${h2.slice(0, 50)}"`,
+        },
+      ];
+    },
+  },
+
+  {
+    // Exercise notes should have the four standard facilitation beats so the
+    // speaker can scan during delivery. Each missing beat is its own warning.
+    // Beats live as top-level bullets in the Note: section; sub-bullets carry
+    // the actual content under each beat.
+    name: "exercise-note-beats",
+    scope: "slide",
+    appliesTo: isExerciseSlide,
+    check: (ctx) => {
+      const notes = extractNotes(ctx.body);
+      const findings: Finding[] = [];
+      const required = [
+        "Facilitation",
+        "Common output",
+        "Common mistakes",
+        "Anticipated questions",
+      ];
+      for (const beat of required) {
+        const re = new RegExp(`^[-*]\\s+${beat.replace(/\s+/g, "\\s+")}\\b`, "im");
+        if (!re.test(notes)) {
+          findings.push({
+            rule: "exercise-note-beats",
+            severity: "W",
+            msg: `exercise notes missing beat: "${beat}"`,
           });
         }
       }
