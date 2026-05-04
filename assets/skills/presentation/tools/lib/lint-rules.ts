@@ -627,6 +627,89 @@ export const RULES: Rule[] = [
       ];
     },
   },
+
+  // ── Deck-scope rules (Tier 3) ───────────────────────────────────────────
+
+  {
+    // Visual rhythm check. 4+ consecutive `content` slides with the same
+    // top-level bullet count read as monotone — the audience cannot scan to
+    // "what kind of slide is this." Vary layout (big-stat, comparison, quote)
+    // or vary bullet count to break the run. 3 in a row is fine; 4 warns.
+    name: "monotone-rhythm",
+    scope: "deck",
+    check: (ctx) => {
+      const findings: Finding[] = [];
+      let runStart = 0;
+      let runCount = 0;
+      let runBulletCount = -1;
+
+      const flush = (endIdx: number) => {
+        if (runCount >= 4 && runBulletCount > 0) {
+          const startName = ctx.slides[runStart].name;
+          const endName = ctx.slides[endIdx - 1].name;
+          findings.push({
+            rule: "monotone-rhythm",
+            severity: "W",
+            msg: `${runCount} consecutive content slides with ${runBulletCount} top-level bullets (${startName} → ${endName}) — vary layout`,
+          });
+        }
+      };
+
+      for (let i = 0; i < ctx.slides.length; i++) {
+        const slide = ctx.slides[i];
+        if (slide.layout !== "content") {
+          flush(i);
+          runCount = 0;
+          runBulletCount = -1;
+          continue;
+        }
+        const bullets = countTopLevelListItems(slide.bodyNoNotes);
+        if (bullets === runBulletCount) {
+          runCount++;
+        } else {
+          flush(i);
+          runStart = i;
+          runCount = 1;
+          runBulletCount = bullets;
+        }
+      }
+      flush(ctx.slides.length);
+      return findings;
+    },
+  },
+
+  {
+    // Each section divider opens a block; the slide after it should earn the
+    // block. Strict check here only flags structural failures: a section as
+    // the last slide, or two section slides in a row (empty block). The
+    // qualitative "earn-it" judgement stays human.
+    name: "block-needs-opener",
+    scope: "deck",
+    check: (ctx) => {
+      const findings: Finding[] = [];
+      for (let i = 0; i < ctx.slides.length; i++) {
+        const slide = ctx.slides[i];
+        if (slide.layout !== "section") continue;
+        const next = ctx.slides[i + 1];
+        if (!next) {
+          findings.push({
+            rule: "block-needs-opener",
+            severity: "W",
+            msg: `section "${slide.name}" is the last slide — no opener follows`,
+          });
+          continue;
+        }
+        if (next.layout === "section") {
+          findings.push({
+            rule: "block-needs-opener",
+            severity: "W",
+            msg: `section "${slide.name}" followed by another section "${next.name}" — empty block`,
+          });
+        }
+      }
+      return findings;
+    },
+  },
 ];
 
 // Helpers also exported for tests / external runners.
