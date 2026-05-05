@@ -17,6 +17,7 @@ You (the AI) own the project lifecycle. The user no longer hand-edits a single P
 | "let's also add X" / "we should handle Y next" | `add-next <name> "..."` |
 | "we're blocked on Z" / "Z is blocking this" | `add-blocker <name> "..."` |
 | "the objective here is to ship X by Y" | `add-objective <name> "..."` |
+| "the API base is at Z" / "PAI source lives at X" / "tech stack is Bun + TS" — stable, reference-flavored facts | `add-fact <name> "..."` |
 | "we decided to use A because B" | `add-decision <name> "A" "B"` |
 | "let's pause this" / "shelve it" | `pause <name>` |
 | "we shipped" / "this is done" | `complete <name>` |
@@ -37,10 +38,10 @@ list                                          show all projects
 create [name] [--path PATH] [--objectives X]  register (defaults: name=basename(cwd), path=cwd)
 resume <name>                                 print full project JSON
 complete | archive | pause | unpause <name>   change status
-add-objective | add-next | add-blocker <name> "text"
+add-fact | add-objective | add-next | add-blocker <name> "text"
 add-decision <name> "decision" "rationale"
 add-handoff <name> "text"
-rm-objective | rm-next | rm-blocker <name> <index>
+rm-fact | rm-objective | rm-next | rm-blocker <name> <index>
 rm <name>                                     delete the project file (rare; prefer archive)
 ```
 

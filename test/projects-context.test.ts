@@ -89,6 +89,41 @@ describe("loadActiveProjectsContext", () => {
     expect(out).not.toContain("💡");
   });
 
+  test("facts surface in the cwd-resolved project block", async () => {
+    const lib = await freshLib();
+    const cwd = fixtureRepoDir("with-facts");
+    lib.writeProject({
+      name: "with-facts",
+      path: cwd,
+      status: "active",
+      created: nowIso(),
+      updated: nowIso(),
+      facts: ["Upstream lives at /repos/upstream", "Tech stack: Bun + TS"],
+    });
+    const out = lib.loadActiveProjectsContext(cwd);
+    expect(out).toContain("Facts:");
+    expect(out).toContain("Upstream lives at /repos/upstream");
+    expect(out).toContain("Tech stack: Bun + TS");
+  });
+
+  test("facts do NOT surface in compact one-liner for non-resolved projects", async () => {
+    const lib = await freshLib();
+    const otherRepo = fixtureRepoDir("other");
+    lib.writeProject({
+      name: "other",
+      path: otherRepo,
+      status: "active",
+      created: nowIso(),
+      updated: nowIso(),
+      facts: ["Some private fact"],
+    });
+    // cwd is a plain dir, not the registered project
+    const out = lib.loadActiveProjectsContext(fixturePlainDir("notes"));
+    expect(out).toContain("**other**");
+    expect(out).not.toContain("Facts:");
+    expect(out).not.toContain("Some private fact");
+  });
+
   test("cwd is parent of registered projects → no → here, no hint (browse mode)", async () => {
     const lib = await freshLib();
     const a = fixtureRepoDir("multi/a");

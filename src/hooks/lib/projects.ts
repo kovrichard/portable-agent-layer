@@ -34,6 +34,7 @@ export interface ProjectProgress {
   status: ProjectStatus;
   created: string;
   updated: string;
+  facts?: string[];
   objectives?: string[];
   next_steps?: string[];
   blockers?: string[];
@@ -234,6 +235,9 @@ export function loadActiveProjectsContext(cwd: string = process.cwd()): string {
 
       if (isResolved) {
         lines.push(`- **${p.name}** (${statusPrefix}${ago})${stale}${here}`);
+        if (p.facts?.length) {
+          lines.push(`  Facts: ${p.facts.slice(0, MAX_INLINE_BULLETS).join("; ")}`);
+        }
         if (p.objectives?.length) {
           lines.push(
             `  Objectives: ${p.objectives.slice(0, MAX_INLINE_BULLETS).join("; ")}`

@@ -14,12 +14,13 @@
  *   bun ~/.pal/tools/project.ts create [name] [--path PATH] [--objectives "..."]
  *   bun ~/.pal/tools/project.ts resume <name>
  *   bun ~/.pal/tools/project.ts complete | archive | pause | unpause <name>
+ *   bun ~/.pal/tools/project.ts add-fact <name> "text"
  *   bun ~/.pal/tools/project.ts add-objective <name> "text"
  *   bun ~/.pal/tools/project.ts add-next <name> "text"
  *   bun ~/.pal/tools/project.ts add-blocker <name> "text"
  *   bun ~/.pal/tools/project.ts add-decision <name> "decision" "rationale"
  *   bun ~/.pal/tools/project.ts add-handoff <name> "text"
- *   bun ~/.pal/tools/project.ts rm-objective | rm-next | rm-blocker <name> <index>
+ *   bun ~/.pal/tools/project.ts rm-fact | rm-objective | rm-next | rm-blocker <name> <index>
  */
 
 import { resolve } from "node:path";
@@ -140,7 +141,7 @@ function setStatus(name: string, status: ProjectStatus): void {
 
 function appendItem(
   name: string,
-  field: "objectives" | "next_steps" | "blockers",
+  field: "facts" | "objectives" | "next_steps" | "blockers",
   text: string
 ): void {
   if (!text?.trim()) fail(`Empty ${field.replace("_", " ")} text.`);
@@ -155,7 +156,7 @@ function appendItem(
 
 function removeItem(
   name: string,
-  field: "objectives" | "next_steps" | "blockers",
+  field: "facts" | "objectives" | "next_steps" | "blockers",
   indexArg: string
 ): void {
   const idx = parseInt(indexArg, 10);
@@ -213,11 +214,13 @@ Commands:
   complete <name>                               mark complete
   archive <name>                                mark archived
   pause <name> | unpause <name>                 toggle paused/active
+  add-fact <name> "text"                        append a stable fact / reference
   add-objective <name> "text"                   append objective
   add-next <name> "text"                        append next step
   add-blocker <name> "text"                     append blocker
   add-decision <name> "decision" "rationale"    log a decision
   add-handoff <name> "text"                     overwrite handoff field
+  rm-fact <name> <index>                        remove fact by index
   rm-objective <name> <index>                   remove objective by index
   rm-next <name> <index>                        remove next step by index
   rm-blocker <name> <index>                     remove blocker by index
@@ -253,6 +256,13 @@ export function run(): void {
     case "unpause":
       setStatus(rest[0] ?? fail("Usage: unpause <name>"), "active");
       return;
+    case "add-fact":
+      appendItem(
+        rest[0] ?? fail("Usage: add-fact <name> <text>"),
+        "facts",
+        rest.slice(1).join(" ")
+      );
+      return;
     case "add-objective":
       appendItem(
         rest[0] ?? fail("Usage: add-objective <name> <text>"),
@@ -285,6 +295,13 @@ export function run(): void {
       addHandoff(
         rest[0] ?? fail("Usage: add-handoff <name> <text>"),
         rest.slice(1).join(" ")
+      );
+      return;
+    case "rm-fact":
+      removeItem(
+        rest[0] ?? fail("Usage: rm-fact <name> <index>"),
+        "facts",
+        rest[1] ?? ""
       );
       return;
     case "rm-objective":

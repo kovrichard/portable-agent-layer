@@ -105,6 +105,29 @@ describe("project CLI", () => {
     expect(list.project.objectives).toEqual(["Ship Tier 1"]);
   });
 
+  test("add-fact appends a stable reference fact, persists count", async () => {
+    await runCli(["create", "p", "--path", "/tmp/p"]);
+    const r = await runCli(["add-fact", "p", "PAI", "source:", "/repos/pai"]);
+    expect(r.code).toBe(0);
+    const got = JSON.parse(r.stdout);
+    expect(got.field).toBe("facts");
+    expect(got.count).toBe(1);
+    const list = JSON.parse((await runCli(["resume", "p"])).stdout);
+    expect(list.project.facts).toEqual(["PAI source: /repos/pai"]);
+  });
+
+  test("rm-fact by index removes the right entry", async () => {
+    await runCli(["create", "p", "--path", "/tmp/p"]);
+    await runCli(["add-fact", "p", "first-fact"]);
+    await runCli(["add-fact", "p", "second-fact"]);
+    const r = await runCli(["rm-fact", "p", "0"]);
+    expect(r.code).toBe(0);
+    const out = JSON.parse(r.stdout);
+    expect(out.removed).toBe("first-fact");
+    const after = JSON.parse((await runCli(["resume", "p"])).stdout);
+    expect(after.project.facts).toEqual(["second-fact"]);
+  });
+
   test("add-decision logs ts + decision + rationale", async () => {
     await runCli(["create", "p", "--path", "/tmp/p"]);
     await runCli(["add-decision", "p", "use-bm25", "small-corpus-makes-it-fine"]);
