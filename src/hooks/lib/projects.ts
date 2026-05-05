@@ -201,7 +201,9 @@ const MAX_INLINE_BULLETS = 3;
  * Output is empty when there's nothing to say (no active/paused projects AND
  * no project-shaped unregistered cwd). When non-empty, includes:
  *  - A `## Active Projects` block listing every active/paused project
- *  - A `→ here` marker on the project the cwd resolves into (if any)
+ *  - Full Objectives / Next / Blockers detail ONLY for the cwd-resolved project
+ *    (`→ here`); every other project renders as a one-liner with next/blocker
+ *    counts, to keep the section bounded as the project corpus grows
  *  - A `⚠ stale` flag for projects updated > threshold days ago
  *  - A trailing AI-visible hint when cwd resolves to no project but
  *    `findProjectRoot(cwd)` reveals a project-shaped ancestor
@@ -226,19 +228,29 @@ export function loadActiveProjectsContext(cwd: string = process.cwd()): string {
     for (const p of sorted) {
       const ago = formatAgo(p.updated);
       const stale = isStale(p) ? " ⚠ stale" : "";
-      const here = resolved && p.name === resolved.name ? " → here" : "";
+      const isResolved = resolved !== null && p.name === resolved.name;
+      const here = isResolved ? " → here" : "";
       const statusPrefix = p.status === "paused" ? "paused, " : "";
-      lines.push(`- **${p.name}** (${statusPrefix}${ago})${stale}${here}`);
-      if (p.objectives?.length) {
-        lines.push(
-          `  Objectives: ${p.objectives.slice(0, MAX_INLINE_BULLETS).join("; ")}`
-        );
-      }
-      if (p.next_steps?.length) {
-        lines.push(`  Next: ${p.next_steps.slice(0, MAX_INLINE_BULLETS).join("; ")}`);
-      }
-      if (p.blockers?.length) {
-        lines.push(`  Blockers: ${p.blockers.slice(0, MAX_INLINE_BULLETS).join("; ")}`);
+
+      if (isResolved) {
+        lines.push(`- **${p.name}** (${statusPrefix}${ago})${stale}${here}`);
+        if (p.objectives?.length) {
+          lines.push(
+            `  Objectives: ${p.objectives.slice(0, MAX_INLINE_BULLETS).join("; ")}`
+          );
+        }
+        if (p.next_steps?.length) {
+          lines.push(`  Next: ${p.next_steps.slice(0, MAX_INLINE_BULLETS).join("; ")}`);
+        }
+        if (p.blockers?.length) {
+          lines.push(`  Blockers: ${p.blockers.slice(0, MAX_INLINE_BULLETS).join("; ")}`);
+        }
+      } else {
+        const counts: string[] = [];
+        if (p.next_steps?.length) counts.push(`${p.next_steps.length} next`);
+        if (p.blockers?.length) counts.push(`${p.blockers.length} blockers`);
+        const countsSuffix = counts.length > 0 ? ` — ${counts.join(", ")}` : "";
+        lines.push(`- **${p.name}** (${statusPrefix}${ago})${countsSuffix}${stale}`);
       }
     }
   }

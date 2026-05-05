@@ -187,6 +187,59 @@ describe("loadActiveProjectsContext", () => {
     expect(out).toContain(cwd);
   });
 
+  test("non-resolved projects render as one-liners with counts, not full blocks", async () => {
+    const lib = await freshLib();
+    lib.writeProject({
+      name: "verbose",
+      path: fixtureRepoDir("verbose"),
+      status: "active",
+      created: nowIso(),
+      updated: nowIso(),
+      objectives: ["should not appear", "neither this"],
+      next_steps: ["a", "b", "c", "d"],
+      blockers: ["x"],
+    });
+    const out = lib.loadActiveProjectsContext(fixturePlainDir("notes"));
+    expect(out).toContain("**verbose**");
+    expect(out).toContain("4 next");
+    expect(out).toContain("1 blockers");
+    expect(out).not.toContain("Objectives:");
+    expect(out).not.toContain("Next:");
+    expect(out).not.toContain("Blockers:");
+    expect(out).not.toContain("should not appear");
+  });
+
+  test("resolved project shows full detail; siblings stay one-liner", async () => {
+    const lib = await freshLib();
+    const here = fixtureRepoDir("focus");
+    lib.writeProject({
+      name: "focus",
+      path: here,
+      status: "active",
+      created: nowIso(),
+      updated: nowIso(),
+      objectives: ["land tier 4"],
+      next_steps: ["one", "two"],
+    });
+    lib.writeProject({
+      name: "sidekick",
+      path: fixtureRepoDir("sidekick"),
+      status: "active",
+      created: nowIso(),
+      updated: nowIso(-60_000),
+      objectives: ["unrelated work"],
+      next_steps: ["x", "y", "z"],
+    });
+    const out = lib.loadActiveProjectsContext(here);
+    expect(out).toContain("**focus**");
+    expect(out).toContain("→ here");
+    expect(out).toContain("Objectives: land tier 4");
+    expect(out).toContain("Next: one; two");
+    expect(out).toContain("**sidekick**");
+    expect(out).toContain("3 next");
+    expect(out).not.toContain("unrelated work");
+  });
+
   test("notes folder (no project markers) → no hint even when projects exist elsewhere", async () => {
     const lib = await freshLib();
     lib.writeProject({
