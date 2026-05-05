@@ -50,6 +50,7 @@ export const paths = {
   entities: () => ensureDir(home("memory", "entities")),
   failures: () => ensureDir(home("memory", "learning", "failures")),
   retrievalIndex: () => home("memory", "learning", ".retrieval-index.json"),
+  progress: () => ensureDir(home("memory", "state", "progress")),
   projectHistory: () => ensureDir(home("memory", "projects")),
   sessionLearning: () => ensureDir(home("memory", "learning", "session")),
   synthesis: () => ensureDir(home("memory", "learning", "synthesis")),

@@ -42,10 +42,10 @@ describe("extractFallbackName", () => {
 
   test("strips file paths", () => {
     const name = extractFallbackName(
-      "update /Users/rico/Development/git/portable-agent-layer/src/hooks/lib/context.ts exports"
+      "update /repos/portable-agent-layer/src/hooks/lib/context.ts exports"
     );
     expect(name).toContain("Exports");
-    expect(name).not.toContain("Users");
+    expect(name).not.toContain("repos");
   });
 
   test("caps at 4 words", () => {

@@ -13,6 +13,7 @@ Load context on-demand by reading the file at the path listed. Only load what th
 | Opinion tracking | `~/.pal/docs/OPINION_TRACKING.md` |
 | Steering rules | `~/.pal/docs/STEERING_RULES.md` |
 | Algorithm (complex work phases) | `~/.pal/docs/ALGORITHM.md` |
+| Project lifecycle (when/how to register projects) | `~/.pal/docs/PROJECT_LIFECYCLE.md` |
 
 ## User Context (TELOS)
 
