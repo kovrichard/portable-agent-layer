@@ -5,6 +5,7 @@
 
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { autoGraduate } from "../handlers/auto-graduate";
 import { autoBackup } from "../handlers/backup";
 import { notifyDesktop } from "../handlers/desktop-notify";
 import { captureFailure } from "../handlers/failure";
@@ -38,7 +39,8 @@ export async function runStopHandlers(
   // Cache last assistant response (session-scoped)
   cacheLastResponse(messages, options.lastAssistantMessage, options.sessionId);
 
-  // Run all handlers concurrently (manual wisdom extraction only - no automatic extraction)
+  // Run all handlers concurrently. Auto-graduate is idempotent (24h TTL +
+  // state-dedup + content-dedup) so it's safe to fire on every Stop.
   const results = await Promise.allSettled([
     captureWorkSession(transcript, options.sessionId),
     resetTab(),
@@ -49,6 +51,7 @@ export async function runStopHandlers(
     checkReflectTrigger(),
     checkSelfModelTrigger(),
     runSynthesis(),
+    autoGraduate(),
     notifyDesktop(options.sessionId),
   ]);
 
@@ -62,6 +65,7 @@ export async function runStopHandlers(
     "reflect-trigger",
     "self-model-trigger",
     "synthesis",
+    "auto-graduate",
     "desktop-notify",
   ];
   for (let i = 0; i < results.length; i++) {

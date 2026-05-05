@@ -8,9 +8,120 @@
  * not auto-extracted from transcripts.
  */
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { paths } from "./paths";
+import { similarity } from "./text-similarity";
+
+/** Dice-similarity floor for "principle already represented" — matches graduation.ts. */
+const PRINCIPLE_DEDUP_THRESHOLD = 0.3;
+const PRINCIPLES_PLACEHOLDER =
+  "*No crystallized principles yet. Observations accumulating.*";
+
+function today(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function scaffoldFrame(domain: string): string {
+  const t = today();
+  return `# Frame: ${domain.charAt(0).toUpperCase() + domain.slice(1)}
+
+## Meta
+- **Domain:** ${domain}
+- **Observation Count:** 0
+- **Last Updated:** ${t}
+
+---
+
+## Core Principles
+
+${PRINCIPLES_PLACEHOLDER}
+
+---
+
+## Contextual Rules
+
+*None yet.*
+
+---
+
+## Anti-Patterns
+
+*None yet.*
+
+---
+
+## Evolution Log
+- ${t}: Frame scaffolded by auto-graduate
+`;
+}
+
+/** Existing CRYSTAL principle texts in the frame content (both v4 heading + legacy bullet). */
+function existingCrystalPrinciples(content: string): string[] {
+  const out: string[] = [];
+  for (const m of content.matchAll(/^### (.+?) \[CRYSTAL:\s*\d+%\]/gm)) {
+    if (m[1]) out.push(m[1].trim());
+  }
+  for (const line of content.split("\n")) {
+    const m = line.match(/^\s*-\s*(.+?)\s*\[CRYSTAL:\s*\d+%\]\s*$/);
+    if (m?.[1]) out.push(m[1].trim());
+  }
+  return out;
+}
+
+export interface PromoteCrystalResult {
+  domain: string;
+  principle: string;
+  confidence: number;
+  framePath: string;
+  /** "duplicate" → a Dice-similar CRYSTAL line already existed; nothing written. */
+  skipped: "duplicate" | null;
+}
+
+/**
+ * Idempotently promote a graduated principle to a wisdom-frame CRYSTAL line.
+ *
+ * Content-dedup: if any existing CRYSTAL line in the frame is Dice-similar
+ * (≥0.3) to `principle`, the call is a no-op. Combined with the auto-graduate
+ * handler's TTL guard and state-dedup, this means N rapid calls with the same
+ * input produce ≤1 file write — the property the past failed attempt missed.
+ */
+export function promoteCrystal(
+  domain: string,
+  principle: string,
+  confidence: number
+): PromoteCrystalResult {
+  const framesDir = paths.wisdom();
+  mkdirSync(framesDir, { recursive: true });
+  const framePath = resolve(framesDir, `${domain}.md`);
+
+  if (!existsSync(framePath)) {
+    writeFileSync(framePath, scaffoldFrame(domain));
+  }
+
+  let content = readFileSync(framePath, "utf-8");
+
+  for (const existing of existingCrystalPrinciples(content)) {
+    if (similarity(principle, existing) >= PRINCIPLE_DEDUP_THRESHOLD) {
+      return { domain, principle, confidence, framePath, skipped: "duplicate" };
+    }
+  }
+
+  const newLine = `### ${principle} [CRYSTAL: ${confidence}%]`;
+
+  if (content.includes(PRINCIPLES_PLACEHOLDER)) {
+    content = content.replace(PRINCIPLES_PLACEHOLDER, newLine);
+  } else {
+    content = content.replace(/(## Core Principles\n+)/, `$1${newLine}\n\n`);
+  }
+
+  content = content.replace(/(\*\*Last Updated:\*\*\s*)\S+/, `$1${today()}`);
+  const evolutionEntry = `- ${today()}: Auto-promoted to CRYSTAL ${confidence}% — ${principle}`;
+  content = content.replace(/(## Evolution Log\n)/, `$1${evolutionEntry}\n`);
+
+  writeFileSync(framePath, content);
+  return { domain, principle, confidence, framePath, skipped: null };
+}
 
 export interface FrameDoc {
   domain: string;
