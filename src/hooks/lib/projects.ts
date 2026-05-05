@@ -17,7 +17,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { basename, resolve, sep } from "node:path";
+import { basename, dirname, parse as parsePath, resolve, sep } from "node:path";
 import { paths } from "./paths";
 
 export type ProjectStatus = "active" | "paused" | "complete" | "archived";
@@ -164,4 +164,91 @@ export function isStale(
   const age = Date.now() - new Date(p.updated).getTime();
   if (!Number.isFinite(age) || age < 0) return false;
   return age > thresholdDays * 86_400_000;
+}
+
+/**
+ * Walk up from `cwd` looking for the nearest dir with a project marker.
+ * Returns absolute path or null. Bounded at 12 levels to avoid runaway walks.
+ */
+export function findProjectRoot(cwd: string): string | null {
+  let dir = resolve(cwd);
+  const fsRoot = parsePath(dir).root;
+  for (let i = 0; i < 12; i++) {
+    if (looksLikeProjectRoot(dir)) return dir;
+    if (dir === fsRoot) return null;
+    dir = dirname(dir);
+  }
+  return null;
+}
+
+function formatAgo(ts: string): string {
+  if (!ts) return "?";
+  const age = Date.now() - new Date(ts).getTime();
+  if (!Number.isFinite(age)) return "?";
+  if (age < 60_000) return "just now";
+  if (age < 3_600_000) return `${Math.floor(age / 60_000)}m ago`;
+  if (age < 86_400_000) return "today";
+  const days = Math.floor(age / 86_400_000);
+  if (days < 30) return `${days}d ago`;
+  return `${Math.floor(days / 30)}mo ago`;
+}
+
+const MAX_INLINE_BULLETS = 3;
+
+/**
+ * Format the SessionStart "Active Projects" section.
+ *
+ * Output is empty when there's nothing to say (no active/paused projects AND
+ * no project-shaped unregistered cwd). When non-empty, includes:
+ *  - A `## Active Projects` block listing every active/paused project
+ *  - A `→ here` marker on the project the cwd resolves into (if any)
+ *  - A `⚠ stale` flag for projects updated > threshold days ago
+ *  - A trailing AI-visible hint when cwd resolves to no project but
+ *    `findProjectRoot(cwd)` reveals a project-shaped ancestor
+ */
+export function loadActiveProjectsContext(cwd: string = process.cwd()): string {
+  const all = readAllProjects();
+  const visible = all.filter((p) => p.status === "active" || p.status === "paused");
+  const resolved = resolveProjectFromCwd(cwd, visible);
+  const projectRoot = findProjectRoot(cwd);
+  const alreadyRegistered =
+    projectRoot !== null && all.some((p) => resolve(p.path) === projectRoot);
+  const showHint = resolved === null && projectRoot !== null && !alreadyRegistered;
+
+  if (visible.length === 0 && !showHint) return "";
+
+  const lines: string[] = [];
+
+  if (visible.length > 0) {
+    lines.push("## Active Projects");
+    lines.push("");
+    const sorted = [...visible].sort((a, b) => b.updated.localeCompare(a.updated));
+    for (const p of sorted) {
+      const ago = formatAgo(p.updated);
+      const stale = isStale(p) ? " ⚠ stale" : "";
+      const here = resolved && p.name === resolved.name ? " → here" : "";
+      const statusPrefix = p.status === "paused" ? "paused, " : "";
+      lines.push(`- **${p.name}** (${statusPrefix}${ago})${stale}${here}`);
+      if (p.objectives?.length) {
+        lines.push(
+          `  Objectives: ${p.objectives.slice(0, MAX_INLINE_BULLETS).join("; ")}`
+        );
+      }
+      if (p.next_steps?.length) {
+        lines.push(`  Next: ${p.next_steps.slice(0, MAX_INLINE_BULLETS).join("; ")}`);
+      }
+      if (p.blockers?.length) {
+        lines.push(`  Blockers: ${p.blockers.slice(0, MAX_INLINE_BULLETS).join("; ")}`);
+      }
+    }
+  }
+
+  if (showHint) {
+    if (visible.length > 0) lines.push("");
+    lines.push(
+      `💡 \`${projectRoot}\` looks like a project but isn't registered. If substantive work starts here, suggest registering it via \`bun ~/.pal/tools/project.ts create\`.`
+    );
+  }
+
+  return lines.join("\n");
 }

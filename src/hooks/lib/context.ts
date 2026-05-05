@@ -10,6 +10,7 @@ import { parse } from "./frontmatter";
 import { readFailures, readLearnings } from "./learning-store";
 import { loadOpinionContext } from "./opinions";
 import { paths } from "./paths";
+import { loadActiveProjectsContext } from "./projects";
 import { loadRecentNotes } from "./relationship";
 import { readSessionNames } from "./session-names";
 import * as settings from "./settings";
@@ -451,6 +452,9 @@ export function buildSystemReminder(): string {
   const projectHistory = settings.isEnabled("projectHistory")
     ? loadProjectHistoryContext()
     : "";
+  const activeProjects = settings.isEnabled("projects")
+    ? loadActiveProjectsContext()
+    : "";
   const trends = settings.isEnabled("signalTrends") ? loadSignalTrends() : "";
   const failures = settings.isEnabled("failurePatterns") ? loadFailurePatterns() : "";
   const synthesis = settings.isEnabled("synthesis") ? loadSynthesisRecommendations() : "";
@@ -468,6 +472,7 @@ export function buildSystemReminder(): string {
   if (opinions) parts.push(opinions);
   if (intelligence) parts.push(intelligence);
   if (relationship) parts.push(relationship);
+  if (activeProjects) parts.push(activeProjects);
   if (projectHistory) parts.push(projectHistory);
   if (digest) parts.push(digest);
   if (synthesis) parts.push(synthesis);
