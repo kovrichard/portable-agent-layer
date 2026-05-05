@@ -271,7 +271,7 @@ async function main() {
   const skeleton = await readText(join(THEME_BASE, "skeleton.html"));
   const revealCss = await readText(join(VENDOR_REVEAL, "reveal.css"));
   const highlightCss = await readText(
-    join(VENDOR_REVEAL, "plugin", "highlight", "monokai.css")
+    join(VENDOR_REVEAL, "plugin", "highlight", "github-dark.css")
   );
   const revealJs = await readText(join(VENDOR_REVEAL, "reveal.js"));
   const markdownJs = await readText(
