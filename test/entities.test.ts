@@ -88,30 +88,30 @@ describe("loadEntityIndex", () => {
 describe("getOrCreatePerson", () => {
   test("creates new person with UUID", () => {
     const index = loadEntityIndex(TEST_INDEX);
-    const id = getOrCreatePerson({ name: "Rico" }, index, "src-1");
+    const id = getOrCreatePerson({ name: "Alex" }, index, "src-1");
 
     expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
-    expect(index.people.rico.occurrences).toBe(1);
-    expect(index.people.rico.source_ids).toEqual(["src-1"]);
+    expect(index.people.alex.occurrences).toBe(1);
+    expect(index.people.alex.source_ids).toEqual(["src-1"]);
   });
 
   test("deduplicates by normalized name", () => {
     const index = loadEntityIndex(TEST_INDEX);
-    const id1 = getOrCreatePerson({ name: "Rico" }, index, "src-1");
-    const id2 = getOrCreatePerson({ name: "  rico  " }, index, "src-2");
+    const id1 = getOrCreatePerson({ name: "Alex" }, index, "src-1");
+    const id2 = getOrCreatePerson({ name: "  alex  " }, index, "src-2");
 
     expect(id1).toBe(id2);
-    expect(index.people.rico.occurrences).toBe(2);
-    expect(index.people.rico.source_ids).toEqual(["src-1", "src-2"]);
+    expect(index.people.alex.occurrences).toBe(2);
+    expect(index.people.alex.source_ids).toEqual(["src-1", "src-2"]);
   });
 
   test("does not double-count same source", () => {
     const index = loadEntityIndex(TEST_INDEX);
-    getOrCreatePerson({ name: "Rico" }, index, "src-1");
-    getOrCreatePerson({ name: "Rico" }, index, "src-1");
+    getOrCreatePerson({ name: "Alex" }, index, "src-1");
+    getOrCreatePerson({ name: "Alex" }, index, "src-1");
 
-    expect(index.people.rico.occurrences).toBe(1);
-    expect(index.people.rico.source_ids).toEqual(["src-1"]);
+    expect(index.people.alex.occurrences).toBe(1);
+    expect(index.people.alex.source_ids).toEqual(["src-1"]);
   });
 });
 

@@ -21,6 +21,7 @@ import { parseArgs } from "node:util";
 import { inference } from "../hooks/lib/inference";
 import { SONNET_MODEL } from "../hooks/lib/models";
 import { ensureDir, paths } from "../hooks/lib/paths";
+import { identity as loadSettingsIdentity } from "../hooks/lib/settings";
 import { logTokenUsage } from "../hooks/lib/token-usage";
 
 // ── Config ──
@@ -397,7 +398,8 @@ function formatDataForInference(data: SelfModelData): string {
   );
 
   if (data.opinions.length > 0) {
-    sections.push(`\n### Opinions about Rico (confidence-scored)`);
+    const principalName = loadSettingsIdentity().principal.name;
+    sections.push(`\n### Opinions about ${principalName} (confidence-scored)`);
     for (const o of data.opinions.filter((o) => o.confidence >= 0.6)) {
       sections.push(
         `- [${o.category}] ${o.statement} (${Math.round(o.confidence * 100)}%)`
@@ -464,8 +466,6 @@ function formatDataForInference(data: SelfModelData): string {
 
   return sections.join("\n");
 }
-
-import { identity as loadSettingsIdentity } from "../hooks/lib/settings";
 
 function buildPrompt(aiName: string, principalName: string): string {
   return `You are writing a self-model for an AI assistant named ${aiName}. You ARE ${aiName}. Write in first person.
