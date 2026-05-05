@@ -9,6 +9,7 @@ import { autoGraduate } from "../handlers/auto-graduate";
 import { autoBackup } from "../handlers/backup";
 import { notifyDesktop } from "../handlers/desktop-notify";
 import { captureFailure } from "../handlers/failure";
+import { projectTouch } from "../handlers/project-touch";
 import { checkReflectTrigger } from "../handlers/reflect-trigger";
 import { checkSelfModelTrigger } from "../handlers/self-model-trigger";
 import { captureSessionIntelligence } from "../handlers/session-intelligence";
@@ -41,6 +42,7 @@ export async function runStopHandlers(
 
   // Run all handlers concurrently. Auto-graduate is idempotent (24h TTL +
   // state-dedup + content-dedup) so it's safe to fire on every Stop.
+  // project-touch only fires when cwd resolves to an active registered project.
   const results = await Promise.allSettled([
     captureWorkSession(transcript, options.sessionId),
     resetTab(),
@@ -52,6 +54,7 @@ export async function runStopHandlers(
     checkSelfModelTrigger(),
     runSynthesis(),
     autoGraduate(),
+    projectTouch(options.lastAssistantMessage),
     notifyDesktop(options.sessionId),
   ]);
 
@@ -66,6 +69,7 @@ export async function runStopHandlers(
     "self-model-trigger",
     "synthesis",
     "auto-graduate",
+    "project-touch",
     "desktop-notify",
   ];
   for (let i = 0; i < results.length; i++) {
