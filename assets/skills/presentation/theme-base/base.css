@@ -244,6 +244,14 @@
 .reveal tr:nth-child(even) td { background: var(--brand-surface); }
 .reveal tr:last-child td { border-bottom: 0; }
 
+/* ── Text alignment utilities — composable on any block element.
+ * `!important` is needed because Reveal's print stylesheet forces
+ * `text-align: left !important` on every div/p/ol/ul, which would otherwise
+ * override author intent (inline styles or any non-`!important` rule). */
+.reveal .text-center { text-align: center !important; }
+.reveal .text-right  { text-align: right !important; }
+.reveal .text-left   { text-align: left !important; }
+
 /* ── Image utilities (composable on any <img> or wrapper) */
 .reveal .image-rounded img,
 .reveal img.image-rounded { border-radius: var(--radius-md); }
@@ -322,4 +330,109 @@
 .reveal .progress {
   color: var(--brand-accent);
   height: 2px;
+}
+
+/* ── Print
+ * Reveal's vendored print stylesheet (`@media print { html:not(.print-pdf) … }`)
+ * forces every heading to `color:#000!important` and `p/li/td` to `#000`. That
+ * inverts the white-on-brand text we use on `section` and `closing` dividers
+ * (whose gradient background is on the section element itself, so it still
+ * renders blue) — producing black-on-blue when the user hits Cmd+P without
+ * `?print-pdf`. Restore brand text colors here, and force color-adjust:exact
+ * so the gradient prints reliably. */
+@media print {
+  .reveal section[data-layout="section"],
+  .reveal section[data-layout="closing"] {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .reveal section[data-layout="section"] h1,
+  .reveal section[data-layout="section"] h4,
+  .reveal section[data-layout="closing"] h1 {
+    color: #fff !important;
+  }
+  .reveal section[data-layout="section"] h2,
+  .reveal section[data-layout="section"] h3 {
+    color: rgba(255, 255, 255, 0.7) !important;
+  }
+  .reveal section[data-layout="section"] p,
+  .reveal section[data-layout="section"] li,
+  .reveal section[data-layout="closing"] h2,
+  .reveal section[data-layout="closing"] p,
+  .reveal section[data-layout="closing"] li {
+    color: rgba(255, 255, 255, 0.85) !important;
+  }
+  .reveal section[data-layout="title"] h1 {
+    color: var(--brand-primary) !important;
+  }
+
+  /* ── Cmd+P scope (browser print on the regular URL, NOT ?print-pdf)
+   * Reveal forces every section to `display:block; position:static; padding:60px 20px;
+   * transform:none`, which strips the flex centering from title/section/closing/quote/
+   * big-stat/pull-quote and leaves their content top-aligned. Restore centering, then
+   * frame every printed page with a hairline so it reads like a printed sheet. */
+
+  /* Hairline frame — inset so it lives inside the printable area and survives
+   * the printer's unprintable-margin clipping. */
+  html:not(.print-pdf) .reveal .slides section {
+    box-shadow: inset 0 0 0 1px var(--neutral-300) !important;
+  }
+
+  /* Make every section fill the printable page. Two effects, no layout
+   * coercion:
+   *   1. The inset frame above wraps the full page edge instead of
+   *      shrink-wrapping content.
+   *   2. The flex-centered layouts below have a tall container to center
+   *      within (without a tall container, `justify-content: center` has
+   *      nothing to center against). */
+  html:not(.print-pdf) .reveal .slides section {
+    min-height: 100vh !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Apply `--table-scale` to td/th in print. Reveal's print stylesheet forces
+   * `font-size: 20pt !important` on all td, which would otherwise override
+   * the screen rule. Scale font AND padding together — scaling font alone
+   * leaves the row height dominated by static cell padding, dampening the
+   * shrink effect. */
+  html:not(.print-pdf) .reveal section[data-layout="table"] td,
+  html:not(.print-pdf) .reveal section[data-layout="table"] th {
+    font-size: calc(20pt * var(--table-scale, 1)) !important;
+    padding: calc(0.5rem * var(--table-scale, 1)) calc(1rem * var(--table-scale, 1)) !important;
+  }
+
+  /* Reveal's print stylesheet forces every section to `display: block`,
+   * stripping the on-screen flex centering from the layouts that use it.
+   * Restore `display: flex` for those layouts ONLY — `flex-direction`,
+   * `justify-content`, and `align-items` come from layouts.css unchanged.
+   * Layouts not listed here stay as `display: block` and sit at the top of
+   * the page; that preserves the natural flow of layouts that depend on it
+   * (image-text and two-column rely on inline-block siblings, content/agenda/
+   * comparison/metric-grid/code/table all flow as block stacks). */
+  html:not(.print-pdf) .reveal .slides section[data-layout="title"],
+  html:not(.print-pdf) .reveal .slides section[data-layout="section"],
+  html:not(.print-pdf) .reveal .slides section[data-layout="closing"],
+  html:not(.print-pdf) .reveal .slides section[data-layout="quote"],
+  html:not(.print-pdf) .reveal .slides section[data-layout="big-stat"],
+  html:not(.print-pdf) .reveal .slides section[data-layout="pull-quote"] {
+    display: flex !important;
+  }
+}
+
+/* ── Print-view polish (`?print-pdf` URL — Reveal stacks each slide as a `.pdf-page`)
+ * Reveal sizes `.pdf-page` to slide dims and stacks them flush-left with no
+ * separation. Center each one and draw a hairline frame so the print preview
+ * reads like a sheaf of printed pages, not a left-aligned wall of slides.
+ *
+ * Why box-shadow inset and not `border`: Reveal forces `@page { margin: 0 }`,
+ * so an outside border would land at the edge of paper and be clipped by the
+ * printer's unprintable margin. An inset shadow draws the line *inside* the
+ * page box and survives the print. */
+html.print-pdf .reveal .slides .pdf-page {
+  box-shadow: inset 0 0 0 1px var(--neutral-300);
+}
+@media screen {
+  html.print-pdf .reveal .slides .pdf-page {
+    margin: 16px auto !important;
+  }
 }

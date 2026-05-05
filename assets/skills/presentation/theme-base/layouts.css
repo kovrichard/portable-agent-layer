@@ -213,9 +213,13 @@
   letter-spacing: var(--tracking-wide);
 }
 
-/* ── 9. table ── styling already in base; just ensure breathing room */
+/* ── 9. table ── styling already in base; just ensure breathing room.
+ * `--table-scale` is set per-slide by build.ts (`injectTableScale`) when row
+ * count exceeds 6 — multiplies the cell font-size to keep dense tables on a
+ * single page. Defaults to 1 (no change) when the var is unset. */
 .reveal section[data-layout="table"] table {
   margin-top: var(--space-3);
+  font-size: calc(var(--text-sm) * var(--table-scale, 1));
 }
 
 /* ── 10. comparison ── 2-3 option boxes with numbered badge + top stripe */

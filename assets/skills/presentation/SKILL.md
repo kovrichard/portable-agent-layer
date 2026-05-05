@@ -59,9 +59,10 @@ Authoring this way means: a malformed edit only takes down its own slide, slides
 Per-slide conventions (inside each file):
 - Speaker notes: lines starting with `Note:`.
 - Layout directive: `<!-- .slide: data-layout="..." -->` at the top.
+- Image references: `![alt](../assets/foo.png)` — the natural relative path from `slides/*.md` to the deck's `assets/` folder. The build rewrites this to `assets/foo.png` in the concatenated `<deck-name>.md` (which sits at the deck root, so the path stays valid for direct preview), and inlines the image bytes as a `data:` URI in the HTML so the output is truly self-contained (emailable, USB-stickable). Remote refs (`https://…`) and `data:` URIs pass through untouched.
 - See "Layouts" below for the available layout names.
 
-Backwards compatible: if `slides/` doesn't exist, the build falls back to a single `<deck-dir>/content.md` with `---` separators between slides.
+Backwards compatible: if `slides/` doesn't exist, the build falls back to a single `<deck-dir>/content.md` with `---` separators between slides. Image refs there should use `assets/foo.png` (root-relative), since `content.md` already lives at the deck root.
 
 ### Step 3: Build
 
@@ -93,7 +94,7 @@ Catches authoring failures before you ever open the browser:
 - Layout-content mismatch — `comparison` without a `<div class="compare">`, `metric-grid` without `<div class="metrics">`, `two-column` missing column wrappers, etc.
 - Overflow heuristics — `agenda` > 10 items, `content` > 7 bullets, `code` block > 25 lines, `table` > 10 rows, `metric-grid` ≠ 3 metrics.
 - **Visual-line budget**: any bullet-bearing slide (`content`, `agenda`, `comparison`, `two-column`) with > 10 flattened list lines (top-level + sub-bullets combined). 10 fits cleanly; 11+ overflows even when each line is short.
-- Image referenced via `![](assets/...)` but the file is missing.
+- Image referenced via `![](../assets/...)` (slide-relative) or `![](assets/...)` (root-relative, for legacy `content.md` decks) but the file is missing.
 - Layout requirements — `big-stat` without an h1, `quote` / `pull-quote` without a `> blockquote`.
 
 Exit codes: `0` = clean, `1` = errors found (or warnings under `--strict`), `2` = usage error. Run before each build in your iteration loop, or wire it into a pre-commit hook.
@@ -285,6 +286,26 @@ Composable on any `<img>` or wrapper element:
 | `image-bleed` | Fill container, `object-fit: cover` |
 | `image-duotone` | Brand-tinted monochrome via filter chain |
 | `image-overlay` | Adds a brand-gradient scrim from transparent → primary at 75% bottom |
+
+## Text-alignment utilities
+
+Composable on any block element. Use these instead of inline `style="text-align: …"` — Reveal's print stylesheet forces `text-align: left !important` on every `div`/`p`/`ol`/`ul`, which silently kills inline alignment styles in print (the on-screen view looks fine, the printed PDF lands left-aligned).
+
+| Class | Effect |
+|---|---|
+| `text-center` | Center inline content (typical use: wrapping a centered `<img>` or caption) |
+| `text-right` | Right-align inline content |
+| `text-left` | Left-align inline content (rarely needed; default) |
+
+Example — centering an image on a `content` slide:
+
+```markdown
+<div class="text-center">
+
+![Waldo](../assets/waldo.png)
+
+</div>
+```
 
 ## Design tokens
 

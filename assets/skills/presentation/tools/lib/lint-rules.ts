@@ -97,7 +97,11 @@ export const RULES: Rule[] = [
     check: async (ctx) => {
       const findings: Finding[] = [];
       for (const ref of findImageRefs(ctx.bodyNoNotes)) {
-        const abs = resolve(ctx.deckDir, ref);
+        // `../assets/X` is the natural relative path from a slides/*.md file —
+        // resolve it from inside `slides/`. Plain `assets/X` (deck-root style)
+        // resolves from the deck root. Both resolve to the same file on disk.
+        const base = ref.startsWith("../") ? resolve(ctx.deckDir, "slides") : ctx.deckDir;
+        const abs = resolve(base, ref);
         if (!(await fileExists(abs))) {
           findings.push({
             rule: "missing-asset",

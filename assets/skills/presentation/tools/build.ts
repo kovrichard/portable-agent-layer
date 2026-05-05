@@ -20,6 +20,71 @@ import { dataUri, escapeForTextarea, readText } from "./lib/inline";
 import { THEME_BASE, VENDOR_REVEAL } from "./lib/paths";
 import { getTemplate } from "./lib/registry";
 
+// Walk markdown line-by-line, skipping fenced code blocks, applying `transform`
+// to each non-fenced line. Used by both the concat-step path rewrite and the
+// HTML-step image inliner so neither touches example image syntax inside ``` blocks.
+async function mapMarkdownOutsideFences(
+  md: string,
+  transform: (line: string) => string | Promise<string>
+): Promise<string> {
+  const out: string[] = [];
+  let inFence = false;
+  for (const line of md.split("\n")) {
+    if (/^```/.test(line)) {
+      inFence = !inFence;
+      out.push(line);
+      continue;
+    }
+    out.push(inFence ? line : await transform(line));
+  }
+  return out.join("\n");
+}
+
+// Rewrite `../assets/X` (the natural relative path from a `slides/*.md` file)
+// to `assets/X` so the concatenated markdown — which lives at the deck root —
+// resolves images correctly when previewed directly. Bare `X.png` references
+// (no path) are left to the doctor to flag; we don't guess where they live.
+function rewriteImageRefsForConcat(md: string): Promise<string> {
+  return mapMarkdownOutsideFences(md, (line) =>
+    line.replace(/(!\[[^\]]*\]\()([^)]+)(\))/g, (whole, open, ref, close) => {
+      const trimmed = ref.trim();
+      if (/^(https?:|data:)/i.test(trimmed)) return whole;
+      if (trimmed.startsWith("../assets/")) {
+        return `${open}${trimmed.slice(3)}${close}`;
+      }
+      return whole;
+    })
+  );
+}
+
+// Inline every local image reference in the concatenated markdown as a data: URI
+// so the resulting HTML is truly self-contained (emailable, USB-stickable).
+// Resolves refs against `deckDir` (the concat-md's location). Missing files are
+// left untouched — the doctor flags them; build doesn't crash on author errors.
+async function inlineImagesInMarkdown(md: string, deckDir: string): Promise<string> {
+  return mapMarkdownOutsideFences(md, async (line) => {
+    const matches = [...line.matchAll(/(!\[[^\]]*\]\()([^)]+)(\))/g)];
+    if (matches.length === 0) return line;
+    let result = line;
+    for (const m of matches) {
+      const [whole, open, ref, close] = m;
+      const trimmed = ref.trim();
+      if (/^(https?:|data:)/i.test(trimmed)) continue;
+      const abs = resolve(deckDir, trimmed);
+      try {
+        await access(abs, fsConst.F_OK);
+      } catch {
+        continue;
+      }
+      // dataUri returns `url("data:...")` for CSS use; strip the `url("…")` wrapper for <img>.
+      const wrapped = await dataUri(abs);
+      const inner = wrapped.replace(/^url\("/, "").replace(/"\)$/, "");
+      result = result.replace(whole, `${open}${inner}${close}`);
+    }
+    return result;
+  });
+}
+
 const ASPECTS: Record<string, [number, number]> = {
   "16:9": [1920, 1080],
   "16:10": [1920, 1200],
@@ -94,6 +159,34 @@ function injectCodeScale(slideMarkdown: string): string {
   return slideMarkdown.replace(layoutMatch[0], newDirective);
 }
 
+// Build-time injection: table-layout slides with > 4 rows get a
+// `style="--table-scale: X"` attribute baked into the slide directive. CSS
+// multiplies cell font-size AND cell padding by this var so both shrink
+// together (font-only shrinking is dampened by static padding). Linear from
+// 1.0 at 4 rows to 0.6 at ≥10 rows. Mirrors `injectCodeScale`.
+function injectTableScale(slideMarkdown: string): string {
+  const layoutRe = /<!--\s*\.slide:\s*data-layout="table"([^>]*)-->/i;
+  const layoutMatch = layoutRe.exec(slideMarkdown);
+  if (!layoutMatch) return slideMarkdown;
+
+  // Count markdown table rows (lines starting with `|`) excluding the
+  // separator (`| --- | --- |`) which doesn't render as a row.
+  const sepRe = /^\s*\|(\s*:?-+:?\s*\|)+\s*$/;
+  let rows = 0;
+  for (const line of slideMarkdown.split("\n")) {
+    if (/^\s*\|/.test(line) && !sepRe.test(line)) rows++;
+  }
+  if (rows <= 4) return slideMarkdown;
+
+  const scale = Math.max(0.6, 1 - (rows - 4) * 0.067).toFixed(2);
+  const extras = layoutMatch[1].replace(/\s+style="--table-scale:\s*[^"]+"/i, "").trim();
+  const attrs = extras
+    ? `${extras} style="--table-scale: ${scale}"`
+    : `style="--table-scale: ${scale}"`;
+  const newDirective = `<!-- .slide: data-layout="table" ${attrs} -->`;
+  return slideMarkdown.replace(layoutMatch[0], newDirective);
+}
+
 async function buildConcat(deckDir: string): Promise<string> {
   const slidesDir = join(deckDir, "slides");
   if (await exists(slidesDir)) {
@@ -102,7 +195,8 @@ async function buildConcat(deckDir: string): Promise<string> {
       throw new Error(`slides/ is empty at ${slidesDir}`);
     }
     const parts = await Promise.all(files.map((f) => readText(join(slidesDir, f))));
-    return `${parts.map((p) => injectCodeScale(p.trim())).join("\n\n---\n\n")}\n`;
+    const joined = `${parts.map((p) => injectTableScale(injectCodeScale(p.trim()))).join("\n\n---\n\n")}\n`;
+    return rewriteImageRefsForConcat(joined);
   }
   const legacy = join(deckDir, "content.md");
   if (await exists(legacy)) {
@@ -188,7 +282,11 @@ async function main() {
   );
   const notesJs = await readText(join(VENDOR_REVEAL, "plugin", "notes", "notes.js"));
 
-  const contentMd = await readFile(concatPath, "utf8");
+  // Read the concat back from disk, then inline image refs as data: URIs so
+  // the HTML is self-contained. The on-disk concat keeps plain `assets/X` paths
+  // for direct markdown preview; only the HTML embeds full image bytes.
+  const contentMdRaw = await readFile(concatPath, "utf8");
+  const contentMd = await inlineImagesInMarkdown(contentMdRaw, deckDir);
 
   let deckOverridesCss = "";
   const overridesPath = join(deckDir, "overrides.css");
