@@ -1,8 +1,11 @@
 ---
 name: telos
-description: Personal and project context management. Use when discussing goals, projects, beliefs, challenges, identity, updating telos, life context, what am I working on, adding a project, changing a goal, priorities, what do I believe, current obstacles, mission, or strategies.
+description: Personal context management. Use when discussing goals, beliefs, challenges, identity, updating telos, life context, changing a goal, priorities, what do I believe, current obstacles, mission, or strategies.
 argument-hint: [area to view or update]
 ---
+
+> ⚠️ **DEPRECATION NOTICE — Project management has moved.**
+> Project tracking is now handled by the `projects` skill, backed by `~/.pal/tools/project.ts` and per-project state in `~/.pal/memory/state/progress/`. **Do not use this skill for projects.** The `PROJECTS.md` references and `update-projects.ts` tool below are legacy and slated for removal — they remain only because the initial setup wizard (`src/cli/setup-telos.ts`) still depends on them. For anything project-related, invoke the `projects` skill.
 
 Manage the user's TELOS files — the persistent personal context that drives PAL.
 

@@ -14,7 +14,6 @@ PAL is a persistent, cross-platform, cross-agent layer for portable AI workflows
 ~/.pal/                            # PAL home
   docs/                            # System documentation (engine-managed)
     ALGORITHM.md                   # The execution engine (4-phase)
-    CONTEXT_ROUTING.md             # On-demand context routing table
     MEMORY_SYSTEM.md               # Memory guidelines
     OPINION_TRACKING.md            # Opinion system reference
     STEERING_RULES.md              # Behavioral rules

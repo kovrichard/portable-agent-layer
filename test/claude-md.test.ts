@@ -71,8 +71,10 @@ describe("buildClaudeMd", () => {
     const { buildClaudeMd } = await import("../src/hooks/lib/claude-md");
     const result = buildClaudeMd();
 
+    // Context routing is now inlined in AGENTS.md.template (no separate file).
     expect(result).toContain("Context Routing");
-    expect(result).toContain("CONTEXT_ROUTING.md");
+    expect(result).toContain("~/.pal/docs/ALGORITHM.md");
+    expect(result).toContain("~/.pal/telos/GOALS.md");
   });
 
   test("omits setup prompt when setup is complete", async () => {

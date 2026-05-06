@@ -475,4 +475,4 @@ All paths resolve through `src/hooks/lib/paths.ts`:
 | Library files | kebab-case | `text-similarity.ts`, `signal-trends.ts` |
 | Tool files | kebab-case | `relationship-reflect.ts`, `token-cost.ts` |
 | Memory files | date-prefixed | `2026-03-24.md`, `2026-03-24_weekly.md` |
-| Template files | UPPER_SNAKE | `ALGORITHM.md`, `CONTEXT_ROUTING.md` |
+| Template files | UPPER_SNAKE | `ALGORITHM.md`, `MEMORY_SYSTEM.md` |
