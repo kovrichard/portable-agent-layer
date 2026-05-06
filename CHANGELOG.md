@@ -1,3 +1,32 @@
+# [0.33.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.32.0...v0.33.0) (2026-05-06)
+
+
+### Bug Fixes
+
+* **presentation:** update build output behavior ([563c0db](https://github.com/kovrichard/portable-agent-layer/commit/563c0db813a9b28c599691dddbcbce0e934f19ff))
+* remove pii from code ([f7a883c](https://github.com/kovrichard/portable-agent-layer/commit/f7a883c7792a771dedf509b09b2d6c7ff16cac61))
+
+
+### Features
+
+* **algorithm:** add guidance on demonstrating new checks with minimal examples ([e2390d8](https://github.com/kovrichard/portable-agent-layer/commit/e2390d88a360c0cadb5eff343f4accf40f3053bd))
+* **auto-graduate:** implement auto-graduation handler for promoting patterns to wisdom-frame ([c312ca5](https://github.com/kovrichard/portable-agent-layer/commit/c312ca5cb5f225b3e3f1cb824a36e70e255cbde3))
+* **presentation:** add linting rules for exercise slides to enforce title format and required notes ([9bc8757](https://github.com/kovrichard/portable-agent-layer/commit/9bc875776e9c49e53508dc40055ad675bb368987))
+* **presentation:** add visual-line budget check for bullet-bearing slides ([31eca32](https://github.com/kovrichard/portable-agent-layer/commit/31eca323998d000faf0ebc8a349d37b02d81850f))
+* **presentation:** enhance image handling and print styles in slides ([2b7f0f5](https://github.com/kovrichard/portable-agent-layer/commit/2b7f0f5e3cbfc1e622d502e018f319d1d7ce9eac))
+* **presentation:** enhance linting rules for bullet length and note citations ([58a3053](https://github.com/kovrichard/portable-agent-layer/commit/58a3053eb967d78b597bee365dc76e778b1c70b3))
+* **presentation:** implement dynamic code font scaling based on line count in slides ([f5b6b97](https://github.com/kovrichard/portable-agent-layer/commit/f5b6b97792b9e540b755831ceabceb4a689dc9ce))
+* **presentation:** introduce new deck-scope linting rules for visual rhythm and block structure ([c686aa8](https://github.com/kovrichard/portable-agent-layer/commit/c686aa8e34b03507644d444b358c250d546b47ef))
+* **presentation:** refine monotone rhythm check to detect periodic patterns in slide layouts ([52d2845](https://github.com/kovrichard/portable-agent-layer/commit/52d2845bcea82e09b7e1b72d551909b3ec0ad2bb))
+* **presentation:** update syntax highlighting theme to GitHub Dark ([9f21a3d](https://github.com/kovrichard/portable-agent-layer/commit/9f21a3dddf9d1d2b1cb7c4bd29b881aff0c41707))
+* **project:** add projectTouch handler on stop ([b6c9a1e](https://github.com/kovrichard/portable-agent-layer/commit/b6c9a1e1d267e8e206852f8e5b36af3541a78d20))
+* **project:** introduce project lifecycle management with CLI integration and state persistence ([9a2a5c6](https://github.com/kovrichard/portable-agent-layer/commit/9a2a5c6ae6bf2d9788b4015cdd33afbe6734712f))
+* **projects:** add support for stable facts in project lifecycle management ([6f2ba2a](https://github.com/kovrichard/portable-agent-layer/commit/6f2ba2a437221f550e5f2ae688661bc10d0c0269))
+* **projects:** implement active projects context loading and update project settings ([fe14fd6](https://github.com/kovrichard/portable-agent-layer/commit/fe14fd6bb3a1de72f3c51c418e74f13cdf049e4e))
+* **projects:** introduce new project management skill ([4f38795](https://github.com/kovrichard/portable-agent-layer/commit/4f387950ffd723c4cee2fdcb901ae00e75c7ebe5))
+* **projects:** show limited context when not in the directory of the project ([4161713](https://github.com/kovrichard/portable-agent-layer/commit/41617132f737783ef818a0b0ce48d3a128a73c38))
+* **retrieval:** implement retrieval index and scoring mechanism for prompt context injection ([377006b](https://github.com/kovrichard/portable-agent-layer/commit/377006b2ab678493a752da8c672c15d893c74d36))
+
 # [0.32.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.31.0...v0.32.0) (2026-05-01)
 
 
