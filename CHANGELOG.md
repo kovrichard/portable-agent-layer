@@ -1,3 +1,10 @@
+# [0.34.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.33.0...v0.34.0) (2026-05-07)
+
+
+### Features
+
+* **cli:** add 'usage' command to summarize token usage and cost; update documentation ([cd049fe](https://github.com/kovrichard/portable-agent-layer/commit/cd049fe1ca323b3b13d1da69ee341d780b2991d6))
+
 # [0.33.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.32.0...v0.33.0) (2026-05-06)
 
 
