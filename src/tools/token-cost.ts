@@ -1,11 +1,11 @@
 /**
- * CLI tool: summarize token usage and estimated cost.
+ * Summarize token usage and estimated cost.
  *
  * Reads from two sources:
  * 1. Claude Code session transcripts (~/.claude/projects/)
  * 2. PAL Haiku inference logs (memory/signals/token-usage.jsonl)
  *
- * Usage: bun run tool:tokens [--today|--week|--month|--all] [--project <name>]
+ * Invoked via `pal cli usage [--today|--week|--month|--all] [--project <name>]`.
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -372,7 +372,7 @@ export function readPalInference(): {
 
 // ── CLI ──
 
-function run() {
+export function usage() {
   parseArgs({
     options: {
       today: { type: "boolean", default: false },
@@ -441,4 +441,4 @@ function run() {
   console.log(`\n  Grand Total: ${fmtCost(grand.cost)}\n`);
 }
 
-if (import.meta.main) run();
+if (import.meta.main) usage();

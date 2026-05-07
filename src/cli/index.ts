@@ -15,6 +15,7 @@
  *   import [path] [--dry-run]         Import user state from zip
  *   status                            Show current PAL configuration
  *   doctor                            Check prerequisites and system health
+ *   usage                             Summarize token usage and cost
  */
 
 import { spawnSync } from "node:child_process";
@@ -168,6 +169,11 @@ async function runCli(command: string | undefined, args: string[]) {
     case "doctor":
       doctor();
       break;
+    case "usage": {
+      const { usage } = await import("../tools/token-cost");
+      usage();
+      break;
+    }
     case "--help":
     case "-h":
     case "help":
@@ -206,6 +212,7 @@ function showHelp() {
     pal cli import [path] [--dry-run]       Import state from zip
     pal cli status                          Show PAL configuration
     pal cli doctor                          Check prerequisites and health
+    pal cli usage                           Summarize token usage and cost
 
   Environment:
     PAL_HOME              Override user state directory (default: ~/.pal or repo root)

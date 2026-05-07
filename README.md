@@ -82,6 +82,7 @@ pal cli status        # check your setup
 | `pal cli import` | Import user state from a zip |
 | `pal cli status` | Show current PAL configuration |
 | `pal cli doctor` | Check prerequisites and system health |
+| `pal cli usage` | Summarize token usage and estimated cost |
 
 ### Target flags
 
