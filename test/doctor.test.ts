@@ -237,6 +237,31 @@ describe("code rules", () => {
   });
 });
 
+describe("notes-code-too-long", () => {
+  test("fires for code blocks in notes over 30 lines", async () => {
+    const lines = Array.from({ length: 35 }, (_, i) => `line ${i}`).join("\n");
+    const f = await lint(
+      `<!-- .slide: data-layout="content" -->\n## c\n- bullet here\n\nNote:\n- intro\n\n\`\`\`ts\n${lines}\n\`\`\``
+    );
+    expect(ruleNames(f)).toContain("notes-code-too-long");
+  });
+
+  test("does not fire for code blocks in body (handled by code-too-long)", async () => {
+    const lines = Array.from({ length: 35 }, (_, i) => `line ${i}`).join("\n");
+    const f = await lint(
+      `<!-- .slide: data-layout="code" -->\n\`\`\`ts\n${lines}\n\`\`\``
+    );
+    expect(ruleNames(f)).not.toContain("notes-code-too-long");
+  });
+
+  test("does not fire when notes have no code blocks", async () => {
+    const f = await lint(
+      `<!-- .slide: data-layout="content" -->\n## c\n- bullet\n\nNote:\n- just bullets`
+    );
+    expect(ruleNames(f)).not.toContain("notes-code-too-long");
+  });
+});
+
 describe("table rules", () => {
   test("table-rows fires for tables over 10 rows", async () => {
     const rows = Array.from({ length: 12 }, (_, i) => `| ${i} | x |`).join("\n");

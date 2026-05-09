@@ -47,6 +47,43 @@ Reveal.initialize({
   const sn = document.querySelector('.reveal > .slide-number');
   const slides = document.querySelector('.reveal .slides');
   if (sn && slides) slides.appendChild(sn);
+
+  // Inject a `.print-notes-page` div after each slide that has speaker notes.
+  // These are invisible on screen; Cmd+P produces [Slide N][Notes N]… ordering.
+  const sections = document.querySelectorAll('.reveal .slides > section');
+  let slideNum = 0;
+  for (const section of sections) {
+    slideNum++;
+    const notesEl = section.querySelector('aside.notes');
+    if (!notesEl?.innerHTML.trim()) continue;
+
+    const heading = section.querySelector('h1, h2, h3');
+    const title = heading ? heading.textContent.trim() : '';
+
+    const page = document.createElement('div');
+    page.className = 'print-notes-page';
+
+    const hdr = document.createElement('header');
+    hdr.className = 'print-notes-header';
+    const label = document.createElement('span');
+    label.className = 'print-notes-label';
+    label.textContent = `Notes — slide ${slideNum}`;
+    hdr.appendChild(label);
+    if (title) {
+      const titleSpan = document.createElement('span');
+      titleSpan.className = 'print-notes-title';
+      titleSpan.textContent = title;
+      hdr.appendChild(titleSpan);
+    }
+    page.appendChild(hdr);
+
+    const body = document.createElement('div');
+    body.className = 'print-notes-content';
+    body.innerHTML = notesEl.innerHTML;
+    page.appendChild(body);
+
+    section.insertAdjacentElement('afterend', page);
+  }
 });
 </script>
 </body>

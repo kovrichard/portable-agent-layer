@@ -436,3 +436,113 @@ html.print-pdf .reveal .slides .pdf-page {
     margin: 16px auto !important;
   }
 }
+
+/* ── Trainer notes in print (Cmd+P on the regular URL)
+ * skeleton.html injects a `.print-notes-page` div after each slide section that
+ * has speaker notes. On screen they are invisible; Cmd+P produces the ordering
+ * [Slide N][Notes N][Slide N+1][Notes N+1]…. Long notes flow across multiple
+ * pages. Slides with no Note: block produce no extra page.
+ *
+ * Key mechanics:
+ *   • `page-break-after: always` on sections forces each slide to end at a page
+ *     boundary even if its content is shorter than the page height.
+ *   • `page-break-before/after: always` on .print-notes-page ensures the notes
+ *     block starts on a fresh page and the next slide starts on a fresh page.
+ *   • `break-inside: auto` lets long notes flow across pages naturally. */
+@media print {
+  html:not(.print-pdf) .reveal .slides > section {
+    page-break-after: always !important;
+    break-after: always !important;
+  }
+
+  html:not(.print-pdf) .reveal .slides > .print-notes-page {
+    display: block !important;
+    page-break-before: always !important;
+    break-before: always !important;
+    page-break-after: always !important;
+    break-after: always !important;
+    page-break-inside: auto;
+    break-inside: auto;
+    overflow: visible !important;
+    position: static !important;
+    min-height: 0 !important;
+    padding: 36px 56px 56px 56px;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      "Helvetica Neue", Arial, sans-serif;
+    font-size: 13pt;
+    line-height: 1.5;
+    color: #111;
+    background: #fff;
+  }
+
+  html:not(.print-pdf) .reveal .slides > .print-notes-page ul,
+  html:not(.print-pdf) .reveal .slides > .print-notes-page ol {
+    margin: 0.4em 0 0.8em 0;
+    padding-left: 1.4em;
+  }
+  html:not(.print-pdf) .reveal .slides > .print-notes-page li {
+    margin: 0.15em 0;
+  }
+  html:not(.print-pdf) .reveal .slides > .print-notes-page a {
+    color: var(--brand-primary, #0040c2);
+    text-decoration: underline;
+  }
+  html:not(.print-pdf) .reveal .slides > .print-notes-page code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.92em;
+    background: #f4f4f4;
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+  html:not(.print-pdf) .reveal .slides > .print-notes-page pre {
+    font-size: 0.92em;
+    line-height: 1.4;
+    background: #f4f4f4;
+    padding: 8px 12px;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    overflow: visible;
+  }
+  html:not(.print-pdf) .reveal .slides > .print-notes-page blockquote {
+    margin: 0.6em 0 0.6em 1em;
+    padding-left: 0.8em;
+    border-left: 2px solid #a0a0a0;
+    color: #444;
+    font-style: italic;
+  }
+
+  /* Slide-context header: "Notes — slide N  <slide title>" */
+  html:not(.print-pdf) .reveal .slides > .print-notes-page .print-notes-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.8em;
+    margin: 0 0 24px 0;
+    padding: 0 0 10px 0;
+    border-bottom: 1.5pt solid var(--brand-primary, #0040c2);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  html:not(.print-pdf) .reveal .slides > .print-notes-page .print-notes-label {
+    font-size: 11pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--brand-primary, #0040c2);
+    white-space: nowrap;
+  }
+  html:not(.print-pdf) .reveal .slides > .print-notes-page .print-notes-title {
+    font-size: 13pt;
+    font-weight: 500;
+    color: #222;
+  }
+}
+
+/* Screen: injected notes pages are invisible. The `@media print` block above
+ * restores display:block. Using !important because Reveal may globally set
+ * visibility rules on .slides children. */
+@media screen {
+  .reveal .slides > .print-notes-page {
+    display: none !important;
+  }
+}

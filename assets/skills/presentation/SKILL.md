@@ -103,6 +103,8 @@ Exit codes: `0` = clean, `1` = errors found (or warnings under `--strict`), `2` 
 
 Open `<out>/<deck-name>/<deck-name>.html` in your browser. Iterate by editing a slide, re-running the build, and refreshing the tab. Reveal shortcuts: `F` = fullscreen, `S` = speaker notes window, `?` = keyboard shortcuts, `Esc` = overview.
 
+**Print / PDF view with trainer notes.** Open the built HTML in your browser and press Cmd/Ctrl-P (no special URL param needed). The print stream interleaves trainer notes between slides — `[Slide 1][Notes 1][Slide 2][Notes 2]…` — so flipping pages reads in delivery order. Long notes flow across multiple pages. Slides without a `Note:` block produce no extra page. Each notes page carries a header identifying the source slide. Limitation: a single fenced code block inside notes cannot break across pages — the doctor warns at 30 lines (`notes-code-too-long`); split the block or shorten the example.
+
 ## Deck folder layout
 
 ```

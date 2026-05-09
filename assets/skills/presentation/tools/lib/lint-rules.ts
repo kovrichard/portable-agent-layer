@@ -632,6 +632,31 @@ export const RULES: Rule[] = [
     },
   },
 
+  {
+    // Notes get printed as separate pages with `showNotes: 'separate-page'`.
+    // Browsers split long *list* content across pages cleanly, but a single
+    // fenced code block inside notes is one indivisible element — if it runs
+    // longer than one printed page it gets clipped. Warn at 30 lines so the
+    // author can split or shorten before the trainer discovers it on paper.
+    name: "notes-code-too-long",
+    scope: "slide",
+    check: (ctx) => {
+      const notes = extractNotes(ctx.body);
+      if (!notes.trim()) return [];
+      const findings: Finding[] = [];
+      for (const n of codeBlockLineCounts(notes)) {
+        if (n > 30) {
+          findings.push({
+            rule: "notes-code-too-long",
+            severity: "W",
+            msg: `notes code block has ${n} lines — won't break across printed pages cleanly (limit 30)`,
+          });
+        }
+      }
+      return findings;
+    },
+  },
+
   // ── Deck-scope rules (Tier 3) ───────────────────────────────────────────
 
   {
