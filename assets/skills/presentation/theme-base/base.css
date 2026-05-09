@@ -538,11 +538,67 @@ html.print-pdf .reveal .slides .pdf-page {
   }
 }
 
+/* ── Per-slide print chrome (logo + slide number)
+ * skeleton.html injects `.print-logo` and `.print-slide-number` into every
+ * section. On screen: invisible. In Cmd+P print: positioned at the same
+ * bottom corners as the screen-mode chrome, once per slide page.
+ *
+ * The screen-mode equivalents (.slides::after logo and .slides > .slide-number)
+ * are suppressed in print because they are positioned relative to .slides — a
+ * container that spans all pages in Cmd+P mode, putting them at the very end
+ * of the document rather than on each individual slide. */
+@media print {
+  /* Suppress the screen-mode global chrome */
+  html:not(.print-pdf) .reveal .slides::after,
+  html:not(.print-pdf) .reveal .slides > .slide-number {
+    display: none !important;
+  }
+
+  /* Sections must be position:relative so absolute children anchor to the
+   * slide page, not to the full-document .slides container. */
+  html:not(.print-pdf) .reveal .slides > section {
+    position: relative !important;
+    /* Ensure background images (logos) print on all browsers. */
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  html:not(.print-pdf) .reveal .slides > section .print-logo {
+    display: block !important;
+    position: absolute;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    width: 90px;
+    height: 28px;
+    background: var(--brand-logo) no-repeat right bottom / contain;
+    opacity: 0.55;
+    pointer-events: none;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  html:not(.print-pdf) .reveal .slides > section .print-slide-number {
+    display: block !important;
+    position: absolute;
+    bottom: 1.5rem;
+    left: 1.5rem;
+    font-family: var(--font-body, sans-serif);
+    font-size: 9pt;
+    font-weight: 400;
+    line-height: 28px;
+    color: #71717A;
+    letter-spacing: 0.05em;
+    pointer-events: none;
+  }
+}
+
 /* Screen: injected notes pages are invisible. The `@media print` block above
  * restores display:block. Using !important because Reveal may globally set
  * visibility rules on .slides children. */
 @media screen {
-  .reveal .slides > .print-notes-page {
+  .reveal .slides > .print-notes-page,
+  .reveal .slides > section .print-logo,
+  .reveal .slides > section .print-slide-number {
     display: none !important;
   }
 }

@@ -48,12 +48,24 @@ Reveal.initialize({
   const slides = document.querySelector('.reveal .slides');
   if (sn && slides) slides.appendChild(sn);
 
-  // Inject a `.print-notes-page` div after each slide that has speaker notes.
-  // These are invisible on screen; Cmd+P produces [Slide N][Notes N]… ordering.
+  // Inject print-only chrome (logo + slide number) into every section, and a
+  // `.print-notes-page` after each section that has notes. All injected elements
+  // are display:none on screen; Cmd+P produces [Slide N][Notes N]… ordering.
   const sections = document.querySelectorAll('.reveal .slides > section');
+  const totalSlides = sections.length;
   let slideNum = 0;
   for (const section of sections) {
     slideNum++;
+
+    const logoEl = document.createElement('div');
+    logoEl.className = 'print-logo';
+    section.appendChild(logoEl);
+
+    const numEl = document.createElement('div');
+    numEl.className = 'print-slide-number';
+    numEl.textContent = `${slideNum} / ${totalSlides}`;
+    section.appendChild(numEl);
+
     const notesEl = section.querySelector('aside.notes');
     if (!notesEl?.innerHTML.trim()) continue;
 
