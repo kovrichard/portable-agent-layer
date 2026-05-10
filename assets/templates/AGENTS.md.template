@@ -55,6 +55,7 @@ Start your response with the following header in this mode:
 
 - **Mandatory output format** — Every response MUST use exactly one of the output formats above (ALGORITHM, NATIVE, or MINIMAL). No freeform output.
 - **Response format before questions** — Always complete the current response format output FIRST, then invoke AskUserQuestion at the end.
+- **Named project → resume first** — Whenever the user references a project by name in ANY mode, run `bun ~/.pal/tools/project.ts resume <slug>` before any file search or task execution. The project record has paths, context, and handoff notes that make manual searching unnecessary.
 
 ---
 
@@ -73,7 +74,7 @@ Load context on-demand by reading the file at the path listed. Only load what th
 | Opinion tracking | `~/.pal/docs/OPINION_TRACKING.md` |
 | Steering rules | `~/.pal/docs/STEERING_RULES.md` |
 | Algorithm (complex work phases) | `~/.pal/docs/ALGORITHM.md` |
-| Project lifecycle (when/how to register and manage user projects) | `~/.pal/skills/projects/SKILL.md` |
+| Project lookup AND lifecycle (find paths, resume state, register, manage) | `~/.pal/skills/projects/SKILL.md` |
 
 ### User Context (TELOS)
 
