@@ -1,3 +1,13 @@
+# [0.35.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.34.0...v0.35.0) (2026-05-10)
+
+
+### Features
+
+* **presentation:** add print-specific elements for slide number and logo ([0c5abc4](https://github.com/kovrichard/portable-agent-layer/commit/0c5abc4aa5aee0e8d1c82d5bb2d057bb62c176f2))
+* **presentation:** add print-specific styles to enhance layout for big-stat and quote sections ([d6b688c](https://github.com/kovrichard/portable-agent-layer/commit/d6b688c759abba63ff2161c51dbf51a898cbb8b6))
+* **presentation:** implement print view for trainer notes ([4f8183a](https://github.com/kovrichard/portable-agent-layer/commit/4f8183aad2c6684cc08fd40f5fc81fc5cbe2b3cf))
+* **templates:** update AGENTS.md.template to include project resume command ([de99b6c](https://github.com/kovrichard/portable-agent-layer/commit/de99b6cc8d76cda059ad38eb4787aedae97d981f))
+
 # [0.34.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.33.0...v0.34.0) (2026-05-07)
 
 
