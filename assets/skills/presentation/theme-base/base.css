@@ -592,6 +592,46 @@ html.print-pdf .reveal .slides .pdf-page {
   }
 }
 
+/* ── Layout-specific print overrides
+ * Reveal's vendored print CSS forces several properties with !important on
+ * heading and paragraph elements, which clobbers layout-specific design intent:
+ *   • h1-h6: font-size (28–20pt), color (#000), text-align (left),
+ *             letter-spacing (normal), line-height (normal)
+ *   • p, li, td: font-size (20pt), color (#000)
+ *
+ * We beat these by pairing higher-specificity selectors with !important.
+ * Reveal's rules are scoped to `html:not(.print-pdf) .reveal h1` — specificity
+ * (0,2,1). Our layout-scoped rules use `html:not(.print-pdf) .reveal
+ * section[data-layout="…"] h1` — specificity (0,3,2), which wins. */
+@media print {
+  /* big-stat — restore the dominant number that Reveal shrinks to 28pt */
+  html:not(.print-pdf) .reveal section[data-layout="big-stat"] h1 {
+    font-size: 96pt !important;
+    color: var(--brand-primary, #0E1335) !important;
+    text-align: center !important;
+    letter-spacing: -0.025em !important;
+    line-height: 0.9 !important;
+    font-weight: 800 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  html:not(.print-pdf) .reveal section[data-layout="big-stat"] h2,
+  html:not(.print-pdf) .reveal section[data-layout="big-stat"] p {
+    color: #71717A !important;
+    text-align: center !important;
+    font-weight: 400 !important;
+  }
+
+  /* quote / pull-quote — Reveal forces p { font-size: 20pt !important }, but
+   * blockquote text lives in p elements. `inherit` re-derives the size from the
+   * blockquote element (var(--text-xl) / var(--text-2xl)), restoring design intent. */
+  html:not(.print-pdf) .reveal section[data-layout="quote"] blockquote p,
+  html:not(.print-pdf) .reveal section[data-layout="pull-quote"] blockquote p {
+    font-size: inherit !important;
+    color: inherit !important;
+  }
+}
+
 /* Screen: injected notes pages are invisible. The `@media print` block above
  * restores display:block. Using !important because Reveal may globally set
  * visibility rules on .slides children. */
