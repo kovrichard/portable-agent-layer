@@ -101,7 +101,6 @@ User: "mark <project> as complete"
 - **Don't dump the full JSON.** Summarize. The user can ask for the raw payload.
 - **Don't write without confirming the field choice on ambiguous "store" requests.** A "fact" sticks forever; a "next step" implies follow-up — these are different commitments.
 - **Don't edit the JSON files directly.** Always use the CLI — it timestamps `updated` and keeps the schema valid.
-- **Don't re-introduce `~/.pal/telos/PROJECTS.md`.** That file and its `update-projects.ts` tool are deprecated. The legacy `telos` skill carries a deprecation notice for this reason.
 - **Don't confuse `add-fact` with the `telos` skill's `LEARNED.md` or `IDEAS.md`.** Project facts are scoped to one project; TELOS lessons are cross-cutting.
 
 ## Rules

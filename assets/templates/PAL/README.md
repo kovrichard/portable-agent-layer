@@ -21,7 +21,7 @@ PAL is a persistent, cross-platform, cross-agent layer for portable AI workflows
   tools/                           # Agent CLI tools (symlink → repo src/tools/agent/)
   skills/                          # Installed skills (symlinks → assets/skills/)
   telos/                           # User life context (TELOS)
-    MISSION.md, GOALS.md, PROJECTS.md, BELIEFS.md,
+    MISSION.md, GOALS.md, BELIEFS.md,
     CHALLENGES.md, STRATEGIES.md, IDEAS.md, LEARNED.md,
     MODELS.md, NARRATIVES.md
 
