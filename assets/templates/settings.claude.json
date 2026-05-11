@@ -97,5 +97,6 @@
         ]
       }
     ]
-  }
+  },
+  "autoMemoryEnabled": false
 }

@@ -63,6 +63,8 @@ export const PROTECTED_PATHS: RegExp[] = [
   /^\/System\//,
   /\.ssh\/(?!config)/,
   /\.gnupg\//,
+  // Claude Code auto-memory — PAL owns memory; writes here indicate wrong system is being used
+  /\.claude\/projects\/[^/]+\/memory\//,
   // Derived from HOOK_MANAGED_FILES — scoped to managed roots only
   ...HOOK_MANAGED_FILES.map(
     (name) =>
