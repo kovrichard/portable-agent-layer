@@ -276,7 +276,12 @@ export function loadRelationshipContext(): string {
   try {
     const notes = loadRecentNotes(2);
     if (!notes) return "";
-    return `## Recent Interaction Notes\n${notes}`;
+    // Strip O entries (opinions loaded natively via digest) and HTML comment lines
+    const filtered = notes
+      .split("\n")
+      .filter((l) => !/^\s*- O\(/.test(l) && !/^\s*<!--/.test(l))
+      .join("\n");
+    return capSection(`## Recent Interaction Notes\n${filtered}`, 1500);
   } catch {
     return "";
   }
@@ -357,7 +362,7 @@ export function loadSessionIntelligence(): string {
       }
     }
 
-    return lines.length > 1 ? lines.join("\n") : "";
+    return lines.length > 1 ? capSection(lines.join("\n"), 2000) : "";
   } catch {
     return "";
   }
@@ -386,6 +391,21 @@ export function loadHandoff(): string {
   } catch {
     return "";
   }
+}
+
+/** Truncate text to maxChars at the last complete line boundary */
+function capSection(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text;
+  const lines = text.split("\n");
+  const kept: string[] = [];
+  let total = 0;
+  for (const line of lines) {
+    const next = total + line.length + 1;
+    if (next > maxChars) break;
+    kept.push(line);
+    total = next;
+  }
+  return kept.join("\n");
 }
 
 /** Agent targets — determines which context sections are skipped due to native loading. */
