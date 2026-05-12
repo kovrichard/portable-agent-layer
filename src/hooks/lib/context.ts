@@ -6,12 +6,12 @@
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
-import { readFailures, readLearnings } from "./learning-store";
+import { readLearnings } from "./learning-store";
 import { loadOpinionContext } from "./opinions";
 import { paths } from "./paths";
 import { loadActiveProjectsContext } from "./projects";
 import { loadRecentNotes } from "./relationship";
-import { loadSynthesisRecommendations } from "./semi-static";
+import { loadFailurePatterns, loadSynthesisRecommendations } from "./semi-static";
 import { readSessionNames } from "./session-names";
 import * as settings from "./settings";
 import { isSetupComplete, readSetupState, remainingSteps, STEP_ORDER } from "./setup";
@@ -171,24 +171,6 @@ export function loadSelfModel(): string {
   }
 }
 
-/** Load 5 most recent failure contexts as an "avoid" list */
-export function loadFailurePatterns(): string {
-  try {
-    const entries = readFailures(paths.failures(), 5);
-    if (entries.length === 0) return "";
-
-    const lines = entries.map((e) => {
-      const label = e.rating ? `[${e.rating}/10]` : "";
-      const text = e.principle || e.context;
-      return `- ${label} ${text}`.trim();
-    });
-
-    return ["## Lessons from Recent Failures — Apply These Now", ...lines].join("\n");
-  } catch {
-    return "";
-  }
-}
-
 /** Load signal trends as a formatted string */
 export function loadSignalTrends(): string {
   try {
@@ -242,11 +224,10 @@ export function loadSessionIntelligence(): string {
 
     const lines: string[] = ["## Session Intelligence"];
 
-    // Open Threads — project-specific first, then global
+    // Open Threads — project-specific only
     if (state.threads?.length > 0) {
       const cwd = process.cwd();
       const here = state.threads.filter((t: { cwd?: string }) => t.cwd === cwd);
-      const other = state.threads.filter((t: { cwd?: string }) => t.cwd !== cwd);
 
       if (here.length > 0) {
         lines.push("");
@@ -255,11 +236,10 @@ export function loadSessionIntelligence(): string {
           lines.push(`- ${t.title} (opened ${t.opened})`);
           if (t.context) lines.push(`  ${t.context}`);
         }
-        lines.push("→ These are directly relevant to your current work.");
+        lines.push(
+          "→ Continue this work or explicitly close it before starting something new."
+        );
       }
-      // Cross-project threads intentionally omitted — they were noise in 90%+ of sessions.
-      // To surface them on demand, add a `threads` slash-command or a flag in pal-settings.
-      void other;
     }
 
     // Rating Trend
@@ -390,7 +370,8 @@ export function buildSystemReminder(opts: { agent?: AgentTarget } = {}): string 
     ? loadActiveProjectsContext()
     : "";
   const trends = settings.isEnabled("signalTrends") ? loadSignalTrends() : "";
-  const failures = settings.isEnabled("failurePatterns") ? loadFailurePatterns() : "";
+  const failures =
+    settings.isEnabled("failurePatterns") && !skipSemiStatic ? loadFailurePatterns() : "";
   const synthesis =
     settings.isEnabled("synthesis") && !skipSemiStatic
       ? loadSynthesisRecommendations()

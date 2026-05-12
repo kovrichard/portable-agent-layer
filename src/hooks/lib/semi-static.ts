@@ -9,6 +9,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parse } from "./frontmatter";
+import { readFailures } from "./learning-store";
 import { loadOpinionContext } from "./opinions";
 import { palHome, paths } from "./paths";
 import { readFramePrinciples } from "./wisdom";
@@ -97,6 +98,24 @@ export function loadSynthesisRecommendations(): string {
   }
 }
 
+/** Build the 5 most recent failure lessons as an avoid-list. */
+export function loadFailurePatterns(): string {
+  try {
+    const entries = readFailures(paths.failures(), 5);
+    if (entries.length === 0) return "";
+
+    const lines = entries.map((e) => {
+      const label = e.rating ? `[${e.rating}/10]` : "";
+      const text = e.principle || e.context;
+      return `- ${label} ${text}`.trim();
+    });
+
+    return ["## Lessons from Recent Failures — Apply These Now", ...lines].join("\n");
+  } catch {
+    return "";
+  }
+}
+
 /**
  * All semi-static context sources in load order.
  * Adding one entry here is the only change needed to extend coverage to all consumers.
@@ -148,6 +167,13 @@ export function getSemiStaticSources(): SemiStaticSource[] {
       load: loadSynthesisRecommendations,
       slug: "synthesis",
       description: "PAL pattern synthesis",
+    },
+    {
+      path: resolve(memory, "learning", "failures-digest.md"),
+      writesDigest: true,
+      load: loadFailurePatterns,
+      slug: "failures",
+      description: "PAL recent failure lessons",
     },
     {
       path: resolve(home, "docs", "STEERING_RULES.md"),

@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import {
   buildSystemReminder,
-  loadFailurePatterns,
   loadLearningDigest,
   loadRelationshipContext,
   loadSignalTrends,
   loadWisdomContext,
 } from "../src/hooks/lib/context";
+import { loadFailurePatterns } from "../src/hooks/lib/semi-static";
 import { readFramePrinciples } from "../src/hooks/lib/wisdom";
 
 describe("wisdom", () => {
