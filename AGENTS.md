@@ -43,7 +43,7 @@ When PAL is installed, `~/.pal/skills/<name>/` may be a directory junction back 
 │   │   ├── setup-identity.ts
 │   │   └── setup-telos.ts
 │   ├── hooks/                # PAL runtime hooks (installed into target agents)
-│   │   └── lib/              # shared hook helpers (claude-md.ts, security.ts, …)
+│   │   └── lib/              # shared hook helpers; semi-static.ts is the single registry for context sources
 │   ├── targets/              # per-agent install/uninstall logic
 │   │   ├── claude/
 │   │   ├── opencode/
@@ -72,7 +72,7 @@ This repo uses [Bun](https://bun.sh) ≥ 1.3.0 — never `npm`, `pnpm`, or `node
 # install deps (frozen on CI)
 bun install
 
-# run the full test suite (currently ~17 files, ~210 tests)
+# run the full test suite (currently ~26 files, ~304 tests)
 bun test
 
 # run a single test file
@@ -160,6 +160,18 @@ The same applies to optional method calls (`obj?.method?.()`), array indexing (`
 - No personal information (usernames, real names, employer/project codenames, absolute home paths) in any file under `assets/skills/` or `src/`. Personal context belongs in private memory only — see `assets/skills/create-skill/SKILL.md` for the rule.
 - One skill = one job. If a skill needs branching like "for case A do X, for case B do Y," it's two skills.
 
+## Context injection architecture
+
+PAL uses a 3-tier system to keep the hook's dynamic output small while ensuring each agent receives full context natively.
+
+| Tier | What | How | Written |
+| ---- | ---- | --- | ------- |
+| **1 — Operational** | CLAUDE.md / AGENTS.md — identity, modes, routing | Loaded natively by each agent at startup | On install / AGENTS.md change |
+| **2 — Semi-static** | Self-model, wisdom, opinions, synthesis, failures, steering | `@imports` (Claude Code), `instructions[]` (opencode), `.mdc` rules (Cursor), `.instructions.md` (Copilot) | Written at session stop by `writeContextDigests()` |
+| **3 — Dynamic** | Handoff, session intelligence, threads, relationship notes, project history | Hook stdout via `LoadContext` → `buildSystemReminder()` | Injected fresh each session |
+
+**Single registry.** All semi-static sources are defined in `src/hooks/lib/semi-static.ts` via `getSemiStaticSources()`. Adding one entry there propagates automatically to: CLAUDE.md `@imports`, opencode `instructions[]`, Cursor `.mdc` filenames, Copilot `.instructions.md` filenames, and the session-stop digest writer. No other files need touching.
+
 ## Common workflows
 
 | Task | Where to look |
@@ -168,4 +180,5 @@ The same applies to optional method calls (`obj?.method?.()`), array indexing (`
 | Add a new agent target | `src/targets/<agent>/install.ts` + `uninstall.ts`; register in `src/cli/index.ts`. |
 | Add a new tool | `src/tools/<area>/<tool>.ts` with `import.meta.main` guard so it stays testable. |
 | Add a runtime PAL hook | `src/hooks/<name>.ts`; the install routine in `src/targets/*/install.ts` wires it into the target agent's config. |
+| Add a semi-static context source | Add one entry to `getSemiStaticSources()` in `src/hooks/lib/semi-static.ts`. That's it. |
 | Run only doctor on a deck | `bun assets/skills/presentation/tools/doctor.ts <deck-dir>` |

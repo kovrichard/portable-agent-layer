@@ -102,7 +102,7 @@ pal cli install               # all available (default)
 | Claude Code | Full | Yes | Yes | Yes | Yes |
 | opencode | Full | Yes | Yes (plugin) | Yes | Yes |
 | Cursor | Full | Yes | Yes | Yes (injected via hook) | Yes |
-| GitHub Copilot | Full | Yes | Yes | Yes (via copilot-instructions.md) | Yes |
+| GitHub Copilot | Full | Yes | Yes | Yes (via `~/.copilot/instructions/*.instructions.md`) | Yes |
 | Codex | Partial | Yes | No | Yes | No |
 
 ---

@@ -233,6 +233,7 @@ Brief description.
 │                     │    - Work learning capture
 │                     │    - Failure logging
 │                     │    - Reflect trigger check
+│                     │    - Write context digests (semi-static sources)
 │                     │    - Auto-backup
 │                     │    - Count updates
 │                     │    - Tab reset
@@ -357,34 +358,44 @@ Relationship notes (O/B types)
 
 ## Context Loading Architecture
 
-### Two-Layer Design
+### Three-Tier Design
 
-**Static context** (loaded natively by the agent):
-- CLAUDE.md — identity, modes, context routing table
-- Loaded once at session start, always available
+**Tier 1 — Operational** (loaded natively at agent startup):
+- CLAUDE.md / AGENTS.md — identity, modes, context routing table
+- Loaded once per session, always available, never re-fetched
 
-**Dynamic context** (injected by LoadContext hook):
-- Changes per-session, can't live in a static file
-- Injected as `<system-reminder>` block to stdout
+**Tier 2 — Semi-static** (pre-compiled at previous session stop, loaded natively):
+- Self-model, wisdom, opinions, synthesis, failures, steering rules
+- Written to disk by `writeContextDigests()` at Stop time
+- Loaded natively per-agent: `@imports` in CLAUDE.md (Claude Code), `instructions[]` in opencode config, `.mdc` rules in `~/.cursor/rules/` (Cursor), `.instructions.md` in `~/.copilot/instructions/` (Copilot)
+- Content is global/user-level — safe to pre-compile (not project-scoped)
+
+**Tier 3 — Dynamic** (injected fresh each session by LoadContext hook):
+- Handoff notes, session intelligence, open threads, relationship notes, project history
+- Changes per-session or is project-scoped — can't be pre-compiled
+- Injected as `<system-reminder>` block via stdout
 - Each section independently toggleable in `pal-settings.json → dynamicContext`
 
-### Injection Order
+### Semi-Static Registry
+
+All semi-static sources are defined in `src/hooks/lib/semi-static.ts` via `getSemiStaticSources()`. Adding one entry there propagates automatically to every consumer — no other files need to change.
+
+### Dynamic Injection Order
 
 ```
 LoadContext.ts
   │
   ├─► Regenerate CLAUDE.md if template/telos changed
   │
-  └─► Build system-reminder:
+  └─► Build system-reminder (dynamic sections only):
       1. loadAtStartup files (user-configured)
-      2. Crystallized principles (wisdom frames)
-      3. Tracked opinions (≥85% confidence)
-      4. Recent interaction notes (last 2 days)
-      5. Learning digest (this project + other recent)
-      6. Pattern synthesis recommendations
-      7. Signal trends (today/week/trend)
-      8. Failure patterns (last 5 low-rating contexts)
-      9. Active work summary (sessions + projects)
+      2. Handoff note (in-progress work from last session)
+      3. Session intelligence (rating trend, algorithm performance)
+      4. Open threads (current project only)
+      5. Recent interaction notes (last 2 days)
+      6. Active projects
+      7. Project session history (this project)
+      8. Signal trends (today/week/trend)
 ```
 
 ### On-Demand Context
@@ -436,6 +447,9 @@ src/targets/
 ├── cursor/          # Cursor specific
 │   ├── install.ts   # Register hooks + skills in ~/.cursor/
 │   └── uninstall.ts
+├── copilot/         # GitHub Copilot specific
+│   ├── install.ts   # Write instruction files + update VS Code settings
+│   └── uninstall.ts
 └── lib.ts           # Shared: JSON read/write, settings merge, TELOS scaffold
 ```
 
@@ -452,6 +466,7 @@ All paths resolve through `src/hooks/lib/paths.ts`:
 | Claude config | `~/.claude` | `PAL_CLAUDE_DIR` |
 | opencode config | `~/.config/opencode` | `PAL_OPENCODE_DIR` |
 | Cursor config | `~/.cursor` | `PAL_CURSOR_DIR` |
+| Copilot config | `~/.copilot` | `PAL_COPILOT_DIR` |
 | Codex config | `~/.codex` | `PAL_CODEX_DIR` |
 | Agents dir | `~/.agents` | `PAL_AGENTS_DIR` |
 
