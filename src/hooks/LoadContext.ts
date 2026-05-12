@@ -9,7 +9,7 @@
  * context directly to ~/.copilot/copilot-instructions.md so it is picked up on load.
  */
 
-import { existsSync, lstatSync, unlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { buildClaudeMd, regenerateIfNeeded } from "./lib/claude-md";
 import { type AgentTarget, buildSystemReminder } from "./lib/context";
@@ -44,15 +44,23 @@ try {
   if (!reminder) process.exit(0);
 
   if (process.env.PAL_AGENT === "copilot") {
-    // Copilot: sessionStart output is ignored — write merged context to copilot-instructions.md
-    const instructionsPath = resolve(platform.copilotDir(), "copilot-instructions.md");
+    // Copilot: semi-static in ~/.copilot/instructions/pal-*.instructions.md (written at stop).
+    // Write AGENTS.md + dynamic context to pal-session.instructions.md on each session start.
+    const instructionsDir = resolve(platform.copilotDir(), "instructions");
+    mkdirSync(instructionsDir, { recursive: true });
     const agentsMd = buildClaudeMd();
     const context = [agentsMd, reminder].filter(Boolean).join("\n\n");
-    if (existsSync(instructionsPath) && lstatSync(instructionsPath).isSymbolicLink()) {
-      unlinkSync(instructionsPath);
+    if (context) {
+      writeFileSync(
+        resolve(instructionsDir, "pal-session.instructions.md"),
+        `---\napplyTo: "**"\n---\n\n${context}`,
+        "utf-8"
+      );
     }
-    writeFileSync(instructionsPath, context, "utf-8");
-    logDebug("LoadContext", `Copilot instructions written: ${context.length} chars`);
+    logDebug(
+      "LoadContext",
+      `Copilot session instructions written: ${context.length} chars`
+    );
   } else if (process.env.CURSOR_VERSION) {
     // Cursor: semi-static in ~/.cursor/rules/pal-context.mdc; inject AGENTS.md + dynamic here
     const agentsMd = buildClaudeMd();

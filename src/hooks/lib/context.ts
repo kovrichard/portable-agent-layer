@@ -405,7 +405,10 @@ export function buildSystemReminder(opts: { agent?: AgentTarget } = {}): string 
   // Semi-static sections loaded natively via @imports (Claude Code) or
   // instructions[] (opencode). Skip them from hook output for those agents.
   const skipSemiStatic =
-    opts.agent === "claude" || opts.agent === "opencode" || opts.agent === "cursor";
+    opts.agent === "claude" ||
+    opts.agent === "opencode" ||
+    opts.agent === "cursor" ||
+    opts.agent === "copilot";
 
   const startup = loadStartupFiles();
   const wisdom =

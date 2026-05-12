@@ -14,6 +14,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
+import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { assets, palHome, platform } from "../hooks/lib/paths";
 
@@ -39,6 +40,31 @@ export function readJson<T = Record<string, unknown>>(path: string, fallback: T)
 
 export function writeJson(path: string, data: unknown): void {
   writeFileSync(path, `${JSON.stringify(data, null, 2)}\n`, "utf-8");
+}
+
+/** Resolve the VS Code user settings.json path cross-platform. Returns null on unknown platforms. */
+export function vscodeSettingsFile(): string | null {
+  const h = homedir();
+  if (process.platform === "darwin") {
+    return resolve(h, "Library", "Application Support", "Code", "User", "settings.json");
+  }
+  if (process.platform === "linux") {
+    return resolve(
+      process.env.XDG_CONFIG_HOME ?? resolve(h, ".config"),
+      "Code",
+      "User",
+      "settings.json"
+    );
+  }
+  if (process.platform === "win32") {
+    return resolve(
+      process.env.APPDATA ?? resolve(h, "AppData", "Roaming"),
+      "Code",
+      "User",
+      "settings.json"
+    );
+  }
+  return null;
 }
 
 // --- Settings template merge/unmerge ---

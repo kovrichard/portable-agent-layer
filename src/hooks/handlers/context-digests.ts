@@ -52,6 +52,42 @@ export function writeContextDigests(): void {
     /* non-fatal */
   }
 
+  // Copilot instruction files — written if ~/.copilot/ exists (Copilot is installed)
+  try {
+    const copilotDir = platform.copilotDir();
+    if (existsSync(copilotDir)) {
+      const instructionsDir = ensureDir(resolve(copilotDir, "instructions"));
+      const selfModelPath = resolve(memory, "self-model", "current.md");
+      const selfModel = existsSync(selfModelPath)
+        ? readFileSync(selfModelPath, "utf-8").trim()
+        : "";
+
+      if (selfModel) {
+        writeFileSync(
+          resolve(instructionsDir, "pal-self-model.instructions.md"),
+          `---\napplyTo: "**"\n---\n\n${selfModel}`,
+          "utf-8"
+        );
+      }
+      if (wisdomContent) {
+        writeFileSync(
+          resolve(instructionsDir, "pal-wisdom.instructions.md"),
+          `---\napplyTo: "**"\n---\n\n${wisdomContent}`,
+          "utf-8"
+        );
+      }
+      if (opinionsContent) {
+        writeFileSync(
+          resolve(instructionsDir, "pal-opinions.instructions.md"),
+          `---\napplyTo: "**"\n---\n\n${opinionsContent}`,
+          "utf-8"
+        );
+      }
+    }
+  } catch {
+    /* non-fatal */
+  }
+
   // Cursor rules files — written if ~/.cursor/ exists (Cursor is installed)
   try {
     const cursorDir = platform.cursorDir();

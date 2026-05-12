@@ -1,12 +1,21 @@
 /**
  * PAL — Copilot uninstaller
- * Removes pal-hooks.json, skill symlinks, agents, and copilot-instructions.md symlink.
+ * Removes pal-hooks.json, skill symlinks, agents, instruction files,
+ * and the VS Code chat.instructionsFilesLocations entry.
  */
 
 import { copyFileSync, existsSync, lstatSync, readlinkSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
 import { platform } from "../../hooks/lib/paths";
-import { log, removeAgentsFromCopilot, removePalDocs, removeSkills } from "../lib";
+import {
+  log,
+  readJson,
+  removeAgentsFromCopilot,
+  removePalDocs,
+  removeSkills,
+  vscodeSettingsFile,
+  writeJson,
+} from "../lib";
 
 const COPILOT_DIR = platform.copilotDir();
 const HOOKS_FILE = resolve(COPILOT_DIR, "hooks", "pal-hooks.json");
@@ -35,26 +44,56 @@ if (removedAgents.length > 0) {
   log.success(`Removed ${removedAgents.length} agent(s): ${removedAgents.join(", ")}`);
 }
 
-// --- Remove copilot-instructions.md symlink (only if it points to AGENTS.md) ---
-const instructionsPath = resolve(COPILOT_DIR, "copilot-instructions.md");
-if (existsSync(instructionsPath)) {
+// --- Remove PAL docs ---
+removePalDocs();
+
+// --- Remove ~/.copilot/instructions/pal-*.instructions.md ---
+for (const f of [
+  "pal-self-model.instructions.md",
+  "pal-wisdom.instructions.md",
+  "pal-opinions.instructions.md",
+  "pal-session.instructions.md",
+]) {
   try {
-    const stat = lstatSync(instructionsPath);
-    if (stat.isSymbolicLink()) {
-      const target = readlinkSync(instructionsPath);
-      if (target.includes("AGENTS.md")) {
-        unlinkSync(instructionsPath);
-        log.success("Removed copilot-instructions.md symlink");
-      } else {
-        log.info("copilot-instructions.md is not a PAL symlink — leaving it");
-      }
+    unlinkSync(resolve(COPILOT_DIR, "instructions", f));
+  } catch {
+    /* gone */
+  }
+}
+log.success("Removed ~/.copilot/instructions/pal-*.instructions.md");
+
+// --- Backward compat: remove old copilot-instructions.md symlink if present ---
+const legacyPath = resolve(COPILOT_DIR, "copilot-instructions.md");
+if (existsSync(legacyPath)) {
+  try {
+    if (
+      lstatSync(legacyPath).isSymbolicLink() &&
+      readlinkSync(legacyPath).includes("AGENTS.md")
+    ) {
+      unlinkSync(legacyPath);
+      log.success("Removed legacy copilot-instructions.md symlink");
     }
   } catch {
-    // ignore
+    /* ignore */
   }
 }
 
-// --- Remove PAL docs ---
-removePalDocs();
+// --- Remove ~/.copilot/instructions entry from VS Code settings ---
+const vsSettingsPath = vscodeSettingsFile();
+if (vsSettingsPath && existsSync(vsSettingsPath)) {
+  const settings = readJson<Record<string, unknown>>(vsSettingsPath, {});
+  const locs = settings["chat.instructionsFilesLocations"];
+  if (typeof locs === "object" && locs !== null) {
+    const obj = locs as Record<string, unknown>;
+    delete obj["~/.copilot/instructions"];
+    if (Object.keys(obj).length === 0) {
+      delete settings["chat.instructionsFilesLocations"];
+    } else {
+      settings["chat.instructionsFilesLocations"] = obj;
+    }
+    writeJson(vsSettingsPath, settings);
+    log.success("Removed ~/.copilot/instructions from VS Code settings");
+  }
+}
 
 log.success("Copilot uninstall complete");

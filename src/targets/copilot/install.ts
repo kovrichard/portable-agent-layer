@@ -1,11 +1,13 @@
 /**
  * PAL — Copilot target installer
  * Writes hooks to ~/.copilot/hooks/pal-hooks.json.
- * Copies skills and agents. Symlinks copilot-instructions.md to AGENTS.md.
+ * Copies skills and agents. Writes ~/.copilot/instructions/pal-*.instructions.md.
+ * Enables ~/.copilot/instructions in VS Code chat.instructionsFilesLocations.
  */
 
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { writeContextDigests } from "../../hooks/handlers/context-digests";
 import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
 import {
@@ -16,7 +18,10 @@ import {
   generateSkillIndex,
   loadCopilotHooksTemplate,
   log,
+  readJson,
   scaffoldPalSettings,
+  vscodeSettingsFile,
+  writeJson,
 } from "../lib";
 
 const PKG_ROOT = palPkg().replaceAll("\\", "/");
@@ -50,15 +55,37 @@ log.success(`Installed ${palDocsCount} PAL docs to ~/.pal/docs/`);
 // --- Scaffold PAL settings ---
 scaffoldPalSettings();
 
-// --- Generate AGENTS.md + copilot-instructions.md symlink ---
-// ensureSymlinks() inside regenerateIfNeeded() handles the symlink once ~/.copilot/ exists
+// --- Generate AGENTS.md ---
 regenerateIfNeeded();
-const instructionsPath = resolve(COPILOT_DIR, "copilot-instructions.md");
+log.success("Generated AGENTS.md");
+
+// --- Write ~/.copilot/instructions/pal-*.instructions.md ---
+mkdirSync(resolve(COPILOT_DIR, "instructions"), { recursive: true });
+writeContextDigests();
 log.success(
-  existsSync(instructionsPath)
-    ? "copilot-instructions.md symlink present"
-    : "Generated AGENTS.md (copilot-instructions.md symlink will be created on next session)"
+  "Written ~/.copilot/instructions/pal-self-model + pal-wisdom + pal-opinions.instructions.md"
 );
+
+// --- Enable ~/.copilot/instructions in VS Code settings ---
+const vsSettingsPath = vscodeSettingsFile();
+if (vsSettingsPath) {
+  const settings = readJson<Record<string, unknown>>(vsSettingsPath, {});
+  const existing =
+    typeof settings["chat.instructionsFilesLocations"] === "object" &&
+    settings["chat.instructionsFilesLocations"] !== null
+      ? (settings["chat.instructionsFilesLocations"] as Record<string, unknown>)
+      : {};
+  settings["chat.instructionsFilesLocations"] = {
+    ...existing,
+    "~/.copilot/instructions": true,
+  };
+  writeJson(vsSettingsPath, settings);
+  log.success("Enabled ~/.copilot/instructions in VS Code settings");
+} else {
+  log.warn(
+    'Could not detect VS Code settings path — add manually: { "chat.instructionsFilesLocations": { "~/.copilot/instructions": true } }'
+  );
+}
 
 log.success("Copilot installation complete");
 console.log("");

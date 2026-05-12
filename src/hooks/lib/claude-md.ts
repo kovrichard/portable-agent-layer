@@ -71,16 +71,12 @@ function ensureOneSymlink(linkPath: string, targetPath: string): void {
   }
 }
 
-/** Ensure codex and copilot symlinks point to the canonical AGENTS.md.
- *  CLAUDE.md for Claude Code is a real file written by ensureClaudeCodeMd(). */
+/** Ensure codex symlink points to the canonical AGENTS.md.
+ *  CLAUDE.md for Claude Code is a real file written by ensureClaudeCodeMd().
+ *  Copilot uses ~/.copilot/instructions/*.instructions.md — no symlink needed. */
 function ensureSymlinks(): void {
   const { outputPath } = getOutputPaths();
   ensureOneSymlink(resolve(platform.codexDir(), "AGENTS.md"), outputPath);
-  // Copilot instructions — only create if ~/.copilot/ already exists (i.e. Copilot is installed)
-  const copilotDir = platform.copilotDir();
-  if (existsSync(copilotDir)) {
-    ensureOneSymlink(resolve(copilotDir, "copilot-instructions.md"), outputPath);
-  }
 }
 
 /** Returns true if AGENTS.md needs to be regenerated */
