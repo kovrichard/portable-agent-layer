@@ -52,6 +52,8 @@ for (const f of [
   "pal-self-model.instructions.md",
   "pal-wisdom.instructions.md",
   "pal-opinions.instructions.md",
+  "pal-synthesis.instructions.md",
+  "pal-steering.instructions.md",
   "pal-session.instructions.md",
 ]) {
   try {

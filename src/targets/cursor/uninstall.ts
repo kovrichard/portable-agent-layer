@@ -62,6 +62,8 @@ for (const f of [
   "pal-self-model.mdc",
   "pal-wisdom.mdc",
   "pal-opinions.mdc",
+  "pal-synthesis.mdc",
+  "pal-steering.mdc",
 ]) {
   try {
     unlinkSync(resolve(CURSOR_DIR, "rules", f));

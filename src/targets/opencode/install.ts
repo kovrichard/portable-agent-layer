@@ -84,6 +84,8 @@ const staticFiles = [
   resolve(memory, "self-model", "current.md"),
   resolve(memory, "wisdom", "context.md"),
   resolve(memory, "relationship", "opinions-context.md"),
+  resolve(memory, "learning", "synthesis-digest.md"),
+  resolve(palHome(), "docs", "STEERING_RULES.md"),
 ];
 let ocConfig: Record<string, unknown> = {};
 if (existsSync(configPath) && statSync(configPath).size > 0) {

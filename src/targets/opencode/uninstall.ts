@@ -71,6 +71,8 @@ if (existsSync(configPath) && statSync(configPath).size > 0) {
         resolve(memory, "self-model", "current.md"),
         resolve(memory, "wisdom", "context.md"),
         resolve(memory, "relationship", "opinions-context.md"),
+        resolve(memory, "learning", "synthesis-digest.md"),
+        resolve(palHome(), "docs", "STEERING_RULES.md"),
       ]);
       const filtered = (ocConfig.instructions as string[]).filter(
         (p) => !palFiles.has(p)

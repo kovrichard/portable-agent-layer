@@ -19,7 +19,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
-import { assets, ensureDir, paths, platform } from "./paths";
+import { assets, ensureDir, palHome, paths, platform } from "./paths";
 
 const TEMPLATE_PATH = assets.agentsMdTemplate();
 
@@ -86,11 +86,16 @@ export function needsRebuild(): boolean {
 
   const outputMtime = statSync(outputPath).mtimeMs;
 
-  // Collect source files: template + setup.json + identity + PAL docs
+  // Collect source files: template + setup.json + identity + PAL docs + @import candidates
   const sources: string[] = [
     TEMPLATE_PATH,
     resolve(paths.state(), "setup.json"),
     resolve(paths.memory(), "pal-settings.json"),
+    resolve(paths.memory(), "self-model", "current.md"),
+    resolve(paths.memory(), "wisdom", "context.md"),
+    resolve(paths.memory(), "relationship", "opinions-context.md"),
+    resolve(paths.memory(), "learning", "synthesis-digest.md"),
+    resolve(palHome(), "docs", "STEERING_RULES.md"),
   ];
 
   // Track PAL doc sources for rebuild detection
@@ -130,6 +135,8 @@ function buildClaudeCodeImports(): string {
     resolve(memory, "self-model", "current.md"),
     resolve(memory, "wisdom", "context.md"),
     resolve(memory, "relationship", "opinions-context.md"),
+    resolve(memory, "learning", "synthesis-digest.md"),
+    resolve(palHome(), "docs", "STEERING_RULES.md"),
   ];
 
   const lines = candidates
@@ -144,20 +151,27 @@ export function buildClaudeCodeMd(): string {
   return buildClaudeCodeImports() + buildClaudeMd();
 }
 
-/** Write ~/.claude/CLAUDE.md as a real file (upgrading from symlink if needed). */
+/** Write ~/.claude/CLAUDE.md as a real file (upgrading from symlink if needed).
+ *  Also rewrites if the @import header has changed (new digest files appeared). */
 function ensureClaudeCodeMd(): void {
   const claudeDir = platform.claudeDir();
   if (!claudeDir) return;
   const claudeMdPath = resolve(claudeDir, "CLAUDE.md");
+  const expected = buildClaudeCodeMd();
   try {
-    if (existsSync(claudeMdPath) && !lstatSync(claudeMdPath).isSymbolicLink()) return;
-    if (existsSync(claudeMdPath)) unlinkSync(claudeMdPath);
+    if (existsSync(claudeMdPath) && !lstatSync(claudeMdPath).isSymbolicLink()) {
+      const current = readFileSync(claudeMdPath, "utf-8");
+      if (current === expected) return; // no change needed
+      // @imports changed — rewrite
+    } else if (existsSync(claudeMdPath)) {
+      unlinkSync(claudeMdPath); // remove symlink
+    }
   } catch {
     /* fall through */
   }
   try {
     ensureDir(claudeDir);
-    writeFileSync(claudeMdPath, buildClaudeCodeMd(), "utf-8");
+    writeFileSync(claudeMdPath, expected, "utf-8");
   } catch {
     /* ignore write errors — non-fatal */
   }

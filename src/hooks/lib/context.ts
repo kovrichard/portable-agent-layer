@@ -445,7 +445,10 @@ export function buildSystemReminder(opts: { agent?: AgentTarget } = {}): string 
     : "";
   const trends = settings.isEnabled("signalTrends") ? loadSignalTrends() : "";
   const failures = settings.isEnabled("failurePatterns") ? loadFailurePatterns() : "";
-  const synthesis = settings.isEnabled("synthesis") ? loadSynthesisRecommendations() : "";
+  const synthesis =
+    settings.isEnabled("synthesis") && !skipSemiStatic
+      ? loadSynthesisRecommendations()
+      : "";
   const opinions =
     !skipSemiStatic && settings.isEnabled("opinions") ? loadOpinionContext() : "";
   const selfModel =

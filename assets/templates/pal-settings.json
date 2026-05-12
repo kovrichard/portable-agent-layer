@@ -13,9 +13,7 @@
   },
   "loadAtStartup": {
     "_docs": "Files force-loaded into session context at startup. Injected as <system-reminder> blocks.",
-    "files": [
-      "~/.pal/docs/STEERING_RULES.md"
-    ]
+    "files": []
   },
   "dynamicContext": {
     "_docs": "Dynamic context sections injected at session start. Set to false to disable.",

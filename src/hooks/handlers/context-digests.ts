@@ -5,12 +5,14 @@
  * at the next session start, keeping hook stdout small.
  *
  * Output files:
- *   ~/.pal/memory/wisdom/context.md         — high-confidence wisdom principles
+ *   ~/.pal/memory/wisdom/context.md              — high-confidence wisdom principles
  *   ~/.pal/memory/relationship/opinions-context.md — high-confidence opinions
+ *   ~/.pal/memory/learning/synthesis-digest.md   — latest pattern synthesis recommendations
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { loadSynthesisRecommendations } from "../lib/context";
 import { loadOpinionContext } from "../lib/opinions";
 import { ensureDir, paths, platform } from "../lib/paths";
 import { readFramePrinciples } from "../lib/wisdom";
@@ -19,6 +21,7 @@ export function writeContextDigests(): void {
   const memory = paths.memory();
   let wisdomContent = "";
   let opinionsContent = "";
+  let synthesisContent = "";
 
   // Wisdom digest
   try {
@@ -52,7 +55,27 @@ export function writeContextDigests(): void {
     /* non-fatal */
   }
 
-  // Copilot instruction files — written if ~/.copilot/ exists (Copilot is installed)
+  // Pattern synthesis digest
+  try {
+    synthesisContent = loadSynthesisRecommendations();
+    if (synthesisContent) {
+      writeFileSync(
+        resolve(ensureDir(resolve(memory, "learning")), "synthesis-digest.md"),
+        synthesisContent,
+        "utf-8"
+      );
+    }
+  } catch {
+    /* non-fatal */
+  }
+
+  // Steering rules content (static PAL doc, refreshed on reinstall)
+  const steeringPath = resolve(paths.memory(), "..", "docs", "STEERING_RULES.md");
+  const steeringContent = existsSync(steeringPath)
+    ? readFileSync(steeringPath, "utf-8").trim()
+    : "";
+
+  // Copilot instruction files — written if ~/.copilot/ exists
   try {
     const copilotDir = platform.copilotDir();
     if (existsSync(copilotDir)) {
@@ -83,21 +106,35 @@ export function writeContextDigests(): void {
           "utf-8"
         );
       }
+      if (synthesisContent) {
+        writeFileSync(
+          resolve(instructionsDir, "pal-synthesis.instructions.md"),
+          `---\napplyTo: "**"\n---\n\n${synthesisContent}`,
+          "utf-8"
+        );
+      }
+      if (steeringContent) {
+        writeFileSync(
+          resolve(instructionsDir, "pal-steering.instructions.md"),
+          `---\napplyTo: "**"\n---\n\n${steeringContent}`,
+          "utf-8"
+        );
+      }
     }
   } catch {
     /* non-fatal */
   }
 
-  // Cursor rules files — written if ~/.cursor/ exists (Cursor is installed)
+  // Cursor rules files — written if ~/.cursor/ exists
   try {
     const cursorDir = platform.cursorDir();
     if (existsSync(cursorDir)) {
       const rulesDir = ensureDir(resolve(cursorDir, "rules"));
-
       const selfModelPath = resolve(memory, "self-model", "current.md");
       const selfModel = existsSync(selfModelPath)
         ? readFileSync(selfModelPath, "utf-8").trim()
         : "";
+
       if (selfModel) {
         writeFileSync(
           resolve(rulesDir, "pal-self-model.mdc"),
@@ -105,7 +142,6 @@ export function writeContextDigests(): void {
           "utf-8"
         );
       }
-
       if (wisdomContent) {
         writeFileSync(
           resolve(rulesDir, "pal-wisdom.mdc"),
@@ -113,11 +149,24 @@ export function writeContextDigests(): void {
           "utf-8"
         );
       }
-
       if (opinionsContent) {
         writeFileSync(
           resolve(rulesDir, "pal-opinions.mdc"),
           `---\ndescription: PAL opinions\nalwaysApply: true\n---\n\n${opinionsContent}`,
+          "utf-8"
+        );
+      }
+      if (synthesisContent) {
+        writeFileSync(
+          resolve(rulesDir, "pal-synthesis.mdc"),
+          `---\ndescription: PAL pattern synthesis\nalwaysApply: true\n---\n\n${synthesisContent}`,
+          "utf-8"
+        );
+      }
+      if (steeringContent) {
+        writeFileSync(
+          resolve(rulesDir, "pal-steering.mdc"),
+          `---\ndescription: PAL steering rules\nalwaysApply: true\n---\n\n${steeringContent}`,
           "utf-8"
         );
       }
