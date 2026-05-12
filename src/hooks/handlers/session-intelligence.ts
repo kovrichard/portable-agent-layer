@@ -1,12 +1,11 @@
 /**
  * Stop handler: unified session intelligence capture.
  *
- * Merges work-learning + handoff into a single Haiku call.
- * Produces: title, summary, insights, handoff.
- * Writes: session learning file, project history, last-handoff.
+ * Produces: title, summary, insights via Haiku.
+ * Writes: session learning file, project history.
  *
- * Relationship notes (B entries) are now written in the ALGORITHM LEARN phase
- * via relationship-note.ts — no inference call needed.
+ * Relationship notes → written in ALGORITHM LEARN phase via relationship-note.ts
+ * Handoff notes     → written in ALGORITHM LEARN phase via handoff-note.ts
  *
  * Replaces: work-learning.ts (still exists but is bypassed).
  */
@@ -195,8 +194,6 @@ export async function captureSessionIntelligence(
   const title = output?.title || extractContent(lastUser).slice(0, 80) || "session";
   const summary = output?.summary || lastAssistantText.slice(0, 600);
   const insights = output?.insights || "";
-  const handoff = output?.handoff || "";
-
   // ── Write session learning file ──
 
   const category = categorizeLearning(title, summary);
@@ -218,7 +215,6 @@ export async function captureSessionIntelligence(
     "",
     "## Insights",
     insights || "*No insights captured.*",
-    ...(handoff ? ["", "## Handoff", handoff] : []),
   ].join("\n");
 
   const content = stringify(meta, body);
@@ -248,35 +244,4 @@ export async function captureSessionIntelligence(
 
   if (sessionId) markCaptured(sessionId, filepath, messages.length);
   logDebug("session-intelligence", `Learning captured: ${title}`);
-
-  // ── Write handoff state ──
-
-  if (handoff && status === "in-progress") {
-    try {
-      const handoffPath = resolve(ensureDir(paths.state()), "last-handoff.json");
-      let handoffs: Record<string, unknown> = {};
-      if (existsSync(handoffPath)) {
-        try {
-          handoffs = JSON.parse(readFileSync(handoffPath, "utf-8"));
-        } catch {
-          /* fresh */
-        }
-      }
-      handoffs[process.cwd()] = {
-        timestamp: new Date().toISOString(),
-        sessionId,
-        title,
-        status,
-        handoff,
-        artifacts: [],
-      };
-      // Keep last 20 projects
-      const entries = Object.entries(handoffs);
-      if (entries.length > 20) handoffs = Object.fromEntries(entries.slice(-20));
-      writeFileSync(handoffPath, JSON.stringify(handoffs, null, 2), "utf-8");
-      logDebug("session-intelligence", "Handoff state written");
-    } catch (err) {
-      logError("session-intelligence:handoff", err);
-    }
-  }
 }

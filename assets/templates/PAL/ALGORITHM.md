@@ -217,7 +217,21 @@ bun ~/.pal/tools/relationship-note.ts --b "description"
 - ✗ "Helped with memory improvements" — too vague, no system named
 - Skip only if the session was a trivial lookup or typo fix (same rule as step 2)
 
-**4. Open Threads** — for each unresolved question, decision, or follow-up that came up during this session:
+**4. Handoff note** — if work is unfinished, write what remains so the next session can pick up immediately:
+
+```bash
+# Work still in progress:
+bun ~/.pal/tools/handoff-note.ts --title "what we were doing" --text "what remains, decisions made, next steps"
+
+# Session completed — clear any previous in-progress handoff:
+bun ~/.pal/tools/handoff-note.ts --done --title "what we completed"
+```
+
+- Write if anything is left mid-flight: unfinished implementation, open decision, partially debugged issue
+- Skip if the session fully resolved everything it set out to do
+- `--text` should answer: what's next, what was decided, what to watch out for
+
+**5. Open Threads** — for each unresolved question, decision, or follow-up that came up during this session:
 
 ```bash
 bun ~/.pal/tools/thread.ts --add --title "brief title" --context "why it matters, what needs to happen"
@@ -229,7 +243,7 @@ Only add threads that genuinely need follow-up. Resolve existing threads if this
 bun ~/.pal/tools/thread.ts --resolve --id <id>
 ```
 
-**4. Opinion capture** — scan the conversation for moments where the user:
+**6. Opinion capture** — scan the conversation for moments where the user:
 - Confirmed something you did: "yes exactly", "keep doing that", "10 rated", accepted without pushback
 - Corrected something you did: "no", "don't do that", "stop", "that's not what I meant"
 - Revealed a preference by repeating a pattern (asked for concise answers twice, always checked PAI first, etc.)
@@ -248,7 +262,7 @@ bun ~/.pal/skills/opinion/tools/opinion.ts add "the preference" --category commu
 
 Skip if nothing in the conversation touched preferences or working style.
 
-**5. Wisdom Frame** (Extended+ only) — if the session produced a genuine, reusable insight:
+**7. Wisdom Frame** (Extended+ only) — if the session produced a genuine, reusable insight:
 
 ```bash
 bun ~/.pal/tools/wisdom-frame.ts --domain <domain> --observation "insight" [--type principle|contextual-rule|anti-pattern|evolution]
