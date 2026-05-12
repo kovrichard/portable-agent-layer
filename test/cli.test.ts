@@ -13,9 +13,11 @@ function pal(...args: string[]) {
       PAL_HOME: TEST_HOME,
       PAL_SKIP_DOCTOR: "1",
       PAL_SKIP_BROWSER_INSTALL: "1",
-      // Prevent writing to real claude/opencode/agents dirs
+      // Prevent writing to real agent config dirs
       PAL_CLAUDE_DIR: resolve(TEST_HOME, ".claude"),
       PAL_OPENCODE_DIR: resolve(TEST_HOME, ".opencode"),
+      PAL_CURSOR_DIR: resolve(TEST_HOME, ".cursor"),
+      PAL_COPILOT_DIR: resolve(TEST_HOME, ".copilot"),
       PAL_AGENTS_DIR: resolve(TEST_HOME, ".agents"),
     },
     encoding: "utf-8",

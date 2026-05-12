@@ -68,23 +68,27 @@ log.success(
 
 // --- Enable ~/.copilot/instructions in VS Code settings ---
 const vsSettingsPath = vscodeSettingsFile();
+const manualHint =
+  'Add manually: { "chat.instructionsFilesLocations": { "~/.copilot/instructions": true } }';
 if (vsSettingsPath) {
-  const settings = readJson<Record<string, unknown>>(vsSettingsPath, {});
-  const existing =
-    typeof settings["chat.instructionsFilesLocations"] === "object" &&
-    settings["chat.instructionsFilesLocations"] !== null
-      ? (settings["chat.instructionsFilesLocations"] as Record<string, unknown>)
-      : {};
-  settings["chat.instructionsFilesLocations"] = {
-    ...existing,
-    "~/.copilot/instructions": true,
-  };
-  writeJson(vsSettingsPath, settings);
-  log.success("Enabled ~/.copilot/instructions in VS Code settings");
+  try {
+    const settings = readJson<Record<string, unknown>>(vsSettingsPath, {});
+    const existing =
+      typeof settings["chat.instructionsFilesLocations"] === "object" &&
+      settings["chat.instructionsFilesLocations"] !== null
+        ? (settings["chat.instructionsFilesLocations"] as Record<string, unknown>)
+        : {};
+    settings["chat.instructionsFilesLocations"] = {
+      ...existing,
+      "~/.copilot/instructions": true,
+    };
+    writeJson(vsSettingsPath, settings);
+    log.success("Enabled ~/.copilot/instructions in VS Code settings");
+  } catch {
+    log.warn(`Could not update VS Code settings — ${manualHint}`);
+  }
 } else {
-  log.warn(
-    'Could not detect VS Code settings path — add manually: { "chat.instructionsFilesLocations": { "~/.copilot/instructions": true } }'
-  );
+  log.warn(`Could not detect VS Code settings path — ${manualHint}`);
 }
 
 log.success("Copilot installation complete");
