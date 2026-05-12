@@ -7,71 +7,8 @@
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import * as clack from "@clack/prompts";
-import { upsertProject } from "../../assets/skills/telos/tools/update-projects";
 import { palHome } from "../hooks/lib/paths";
 import { hasRealContent, SETUP_STEPS, STEP_ORDER } from "../hooks/lib/setup";
-
-function toKebabCase(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
-
-async function promptProjectsLoop(): Promise<void> {
-  const addFirst = await clack.confirm({
-    message: "Do you want to add any projects now?",
-    initialValue: true,
-  });
-  if (clack.isCancel(addFirst) || !addFirst) return;
-
-  let addMore = true;
-  while (addMore) {
-    const name = await clack.text({
-      message: "Project name?",
-      placeholder: "e.g. PAL, My SaaS, Work Dashboard",
-    });
-    if (clack.isCancel(name)) return;
-
-    const status = await clack.select({
-      message: "Status?",
-      options: [
-        { value: "Active", label: "Active" },
-        { value: "Planning", label: "Planning" },
-        { value: "Paused", label: "Paused" },
-        { value: "Complete", label: "Complete" },
-      ],
-    });
-    if (clack.isCancel(status)) return;
-
-    const priority = await clack.select({
-      message: "Priority?",
-      options: [
-        { value: "High", label: "High" },
-        { value: "Medium", label: "Medium" },
-        { value: "Low", label: "Low" },
-      ],
-    });
-    if (clack.isCancel(priority)) return;
-
-    const notes = await clack.text({
-      message: "Notes? (optional — leave blank to skip)",
-      placeholder: "e.g. Building the v2 API, blocked on design review",
-    });
-    if (clack.isCancel(notes)) return;
-
-    const id = toKebabCase(name as string);
-    const row = `| ${id} | ${name} | ${status} | ${priority} | ${notes || ""} |`;
-    upsertProject(id, row, `Added ${name} during PAL setup`);
-    clack.log.success(`Added: ${name}`);
-
-    const again = await clack.confirm({
-      message: "Add another project?",
-      initialValue: false,
-    });
-    if (clack.isCancel(again) || !again) addMore = false;
-  }
-}
 
 /** Prompt for missing TELOS context. Skips any step whose file already has real content. */
 export async function promptTelos(): Promise<void> {
@@ -95,25 +32,21 @@ export async function promptTelos(): Promise<void> {
   );
 
   for (const key of pending) {
-    if (key === "projects") {
-      await promptProjectsLoop();
-    } else {
-      const step = SETUP_STEPS[key];
-      const title = key.charAt(0).toUpperCase() + key.slice(1);
+    const step = SETUP_STEPS[key];
+    const title = key.charAt(0).toUpperCase() + key.slice(1);
 
-      const answer = await clack.text({
-        message: step.question,
-        placeholder: step.hint,
-      });
+    const answer = await clack.text({
+      message: step.question,
+      placeholder: step.hint,
+    });
 
-      if (clack.isCancel(answer)) {
-        clack.cancel("Setup cancelled");
-        return;
-      }
-
-      const filePath = resolve(home, step.file);
-      writeFileSync(filePath, `# ${title}\n\n${answer}\n`, "utf-8");
+    if (clack.isCancel(answer)) {
+      clack.cancel("Setup cancelled");
+      return;
     }
+
+    const filePath = resolve(home, step.file);
+    writeFileSync(filePath, `# ${title}\n\n${answer}\n`, "utf-8");
   }
 
   clack.outro("Personal context saved ✓");

@@ -52,20 +52,36 @@ export function writeContextDigests(): void {
     /* non-fatal */
   }
 
-  // Cursor rules file — written if ~/.cursor/ exists (Cursor is installed)
+  // Cursor rules files — written if ~/.cursor/ exists (Cursor is installed)
   try {
     const cursorDir = platform.cursorDir();
     if (existsSync(cursorDir)) {
+      const rulesDir = ensureDir(resolve(cursorDir, "rules"));
+
       const selfModelPath = resolve(memory, "self-model", "current.md");
       const selfModel = existsSync(selfModelPath)
         ? readFileSync(selfModelPath, "utf-8").trim()
         : "";
-      const sections = [selfModel, wisdomContent, opinionsContent].filter(Boolean);
-      if (sections.length > 0) {
-        const mdc = `---\ndescription: PAL context\nalwaysApply: true\n---\n\n${sections.join("\n\n")}`;
+      if (selfModel) {
         writeFileSync(
-          resolve(ensureDir(resolve(cursorDir, "rules")), "pal-context.mdc"),
-          mdc,
+          resolve(rulesDir, "pal-self-model.mdc"),
+          `---\ndescription: PAL self-model\nalwaysApply: true\n---\n\n${selfModel}`,
+          "utf-8"
+        );
+      }
+
+      if (wisdomContent) {
+        writeFileSync(
+          resolve(rulesDir, "pal-wisdom.mdc"),
+          `---\ndescription: PAL wisdom\nalwaysApply: true\n---\n\n${wisdomContent}`,
+          "utf-8"
+        );
+      }
+
+      if (opinionsContent) {
+        writeFileSync(
+          resolve(rulesDir, "pal-opinions.mdc"),
+          `---\ndescription: PAL opinions\nalwaysApply: true\n---\n\n${opinionsContent}`,
           "utf-8"
         );
       }

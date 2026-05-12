@@ -56,12 +56,19 @@ if (removedAgents.length > 0) {
 // --- Remove PAL system docs ---
 removePalDocs();
 
-// --- Remove ~/.cursor/rules/pal-context.mdc ---
-try {
-  unlinkSync(resolve(CURSOR_DIR, "rules", "pal-context.mdc"));
-  log.success("Removed ~/.cursor/rules/pal-context.mdc");
-} catch {
-  /* gone */
+// --- Remove ~/.cursor/rules/pal-*.mdc ---
+for (const f of [
+  "pal-context.mdc",
+  "pal-self-model.mdc",
+  "pal-wisdom.mdc",
+  "pal-opinions.mdc",
+]) {
+  try {
+    unlinkSync(resolve(CURSOR_DIR, "rules", f));
+  } catch {
+    /* gone */
+  }
 }
+log.success("Removed ~/.cursor/rules/pal-*.mdc");
 
 log.success("Cursor uninstall complete");

@@ -36,11 +36,6 @@ export const SETUP_STEPS: Record<string, Omit<SetupStep, "done">> = {
       "What are your current goals? (short-term, medium-term, long-term) (~/.pal/telos/GOALS.md)",
     hint: "e.g. Ship v2 by Q3, learn Rust, get promoted to staff engineer",
   },
-  projects: {
-    file: "telos/PROJECTS.md",
-    question: "What projects are you currently working on? (~/.pal/telos/PROJECTS.md)",
-    hint: "e.g. PAL (active, high priority), personal blog (paused), side SaaS (early stage)",
-  },
   beliefs: {
     file: "telos/BELIEFS.md",
     question: "What principles or values guide your work? (~/.pal/telos/BELIEFS.md)",

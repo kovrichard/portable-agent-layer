@@ -65,10 +65,12 @@ scaffoldPalSettings();
 regenerateIfNeeded();
 log.success("Generated AGENTS.md");
 
-// --- Write ~/.cursor/rules/pal-context.mdc ---
+// --- Write ~/.cursor/rules/pal-*.mdc ---
 mkdirSync(resolve(CURSOR_DIR, "rules"), { recursive: true });
 writeContextDigests();
-log.success("Written ~/.cursor/rules/pal-context.mdc");
+log.success(
+  "Written ~/.cursor/rules/pal-self-model.mdc + pal-wisdom.mdc + pal-opinions.mdc"
+);
 
 log.success("Cursor installation complete");
 console.log("");

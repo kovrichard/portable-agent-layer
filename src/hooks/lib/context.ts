@@ -53,16 +53,6 @@ export function countSignals(filename: string): number {
   }
 }
 
-/** Format a timestamp as a human-readable "X ago" string */
-function formatAgo(ts: string): string {
-  const diff = Date.now() - new Date(ts).getTime();
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  if (hours < 1) return "just now";
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
 /** Load the N most recent session names (fallback for greeting) */
 export function loadRecentSessions(count: number): string[] {
   try {
