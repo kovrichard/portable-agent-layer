@@ -1,9 +1,10 @@
 /**
- * Dynamic AGENTS.md generation.
+ * Dynamic AGENTS.md / CLAUDE.md generation.
  *
- * AGENTS.md is regenerated when setup.json or any telos file is newer than
- * the existing AGENTS.md. The template lives at AGENTS.md.template.
- * CLAUDE.md is kept as a symlink pointing to AGENTS.md.
+ * AGENTS.md (opencode, codex, copilot) is regenerated when setup.json or any
+ * telos file is newer. CLAUDE.md (Claude Code) is a real file — not a symlink —
+ * and prepends an @import for the self-model so that large static context loads
+ * natively rather than through the hook's stdout.
  */
 
 import {
@@ -70,10 +71,10 @@ function ensureOneSymlink(linkPath: string, targetPath: string): void {
   }
 }
 
-/** Ensure all agent symlinks point to the canonical AGENTS.md */
+/** Ensure codex and copilot symlinks point to the canonical AGENTS.md.
+ *  CLAUDE.md for Claude Code is a real file written by ensureClaudeCodeMd(). */
 function ensureSymlinks(): void {
-  const { outputPath, symlinkPath } = getOutputPaths();
-  ensureOneSymlink(symlinkPath, outputPath);
+  const { outputPath } = getOutputPaths();
   ensureOneSymlink(resolve(platform.codexDir(), "AGENTS.md"), outputPath);
   // Copilot instructions — only create if ~/.copilot/ already exists (i.e. Copilot is installed)
   const copilotDir = platform.copilotDir();
@@ -124,15 +125,61 @@ export function buildClaudeMd(): string {
     .replaceAll("{{PRINCIPAL_NAME}}", id.principal.name);
 }
 
-/** Regenerate AGENTS.md if any source file is newer, and ensure CLAUDE.md symlink exists. Returns true if rebuilt. */
+/** Build @import header lines for CLAUDE.md — points to self-model if it exists. */
+function buildClaudeCodeImports(): string {
+  const selfModelPath = resolve(paths.memory(), "self-model", "current.md");
+  if (!existsSync(selfModelPath)) return "";
+  const claudeDir = platform.claudeDir();
+  const rel = relative(claudeDir, selfModelPath).replaceAll("\\", "/");
+  return `@${rel}\n\n`;
+}
+
+/** Build CLAUDE.md content for Claude Code — prepends @import for self-model. */
+export function buildClaudeCodeMd(): string {
+  return buildClaudeCodeImports() + buildClaudeMd();
+}
+
+/** Write ~/.claude/CLAUDE.md as a real file (upgrading from symlink if needed). */
+function ensureClaudeCodeMd(): void {
+  const claudeDir = platform.claudeDir();
+  if (!claudeDir) return;
+  const claudeMdPath = resolve(claudeDir, "CLAUDE.md");
+  try {
+    if (existsSync(claudeMdPath) && !lstatSync(claudeMdPath).isSymbolicLink()) return;
+    if (existsSync(claudeMdPath)) unlinkSync(claudeMdPath);
+  } catch {
+    /* fall through */
+  }
+  try {
+    ensureDir(claudeDir);
+    writeFileSync(claudeMdPath, buildClaudeCodeMd(), "utf-8");
+  } catch {
+    /* ignore write errors — non-fatal */
+  }
+}
+
+/** Regenerate AGENTS.md if any source file is newer, write real CLAUDE.md, ensure other symlinks. Returns true if rebuilt. */
 export function regenerateIfNeeded(): boolean {
   const { outputPath } = getOutputPaths();
   if (!needsRebuild()) {
     ensureSymlinks();
+    ensureClaudeCodeMd();
     return false;
   }
   ensureDir(dirname(outputPath));
   writeFileSync(outputPath, buildClaudeMd(), "utf-8");
+  // Write Claude Code's CLAUDE.md as a real file (removing any existing symlink)
+  const claudeDir = platform.claudeDir();
+  if (claudeDir) {
+    const claudeMdPath = resolve(claudeDir, "CLAUDE.md");
+    try {
+      if (existsSync(claudeMdPath)) unlinkSync(claudeMdPath);
+      ensureDir(claudeDir);
+      writeFileSync(claudeMdPath, buildClaudeCodeMd(), "utf-8");
+    } catch {
+      /* ignore — CLAUDE.md write failure is non-fatal */
+    }
+  }
   ensureSymlinks();
   return true;
 }

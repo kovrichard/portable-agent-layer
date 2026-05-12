@@ -36,7 +36,10 @@ try {
 
 // --- Context to stdout (or file for Copilot) ---
 try {
-  const reminder = buildSystemReminder();
+  // Claude Code loads self-model via @import in CLAUDE.md — skip it from hook output.
+  // Cursor and Copilot have no @import support, so they receive it in the hook payload.
+  const isClaude = !process.env.PAL_AGENT && !process.env.CURSOR_VERSION;
+  const reminder = buildSystemReminder(isClaude ? { skipSelfModel: true } : {});
   if (!reminder) process.exit(0);
 
   if (process.env.PAL_AGENT === "copilot") {

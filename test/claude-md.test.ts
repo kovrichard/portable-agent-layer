@@ -85,6 +85,33 @@ describe("buildClaudeMd", () => {
   });
 });
 
+describe("buildClaudeCodeMd", () => {
+  test("includes template content", async () => {
+    const { buildClaudeCodeMd } = await import("../src/hooks/lib/claude-md");
+    const result = buildClaudeCodeMd();
+    expect(result).toContain("You are TestBot");
+    expect(result).toContain("MINIMAL");
+  });
+
+  test("prepends @import for self-model when file exists", async () => {
+    const selfModelDir = resolve(TEST_HOME, "memory", "self-model");
+    mkdirSync(selfModelDir, { recursive: true });
+    writeFileSync(resolve(selfModelDir, "current.md"), "# Self Model\ntest content");
+
+    const { buildClaudeCodeMd } = await import("../src/hooks/lib/claude-md");
+    const result = buildClaudeCodeMd();
+    expect(result).toMatch(/^@.*self-model.*current\.md/);
+
+    rmSync(selfModelDir, { recursive: true });
+  });
+
+  test("omits @import when self-model does not exist", async () => {
+    const { buildClaudeCodeMd } = await import("../src/hooks/lib/claude-md");
+    const result = buildClaudeCodeMd();
+    expect(result).not.toContain("@");
+  });
+});
+
 describe("needsRebuild", () => {
   test("returns true when no AGENTS.md exists", async () => {
     process.env.PAL_CLAUDE_DIR = resolve(TEST_HOME, ".claude");

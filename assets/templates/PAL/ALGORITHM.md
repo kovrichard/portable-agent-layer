@@ -223,7 +223,7 @@ bun ~/.pal/tools/relationship-note.ts --b "description"
 # Work still in progress:
 bun ~/.pal/tools/handoff-note.ts --title "what we were doing" --text "what remains, decisions made, next steps"
 
-# Session completed — clear any previous in-progress handoff:
+# Work finished — clear any previous in-progress handoff:
 bun ~/.pal/tools/handoff-note.ts --done --title "what we completed"
 ```
 

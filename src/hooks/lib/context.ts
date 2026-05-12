@@ -404,8 +404,11 @@ export function loadHandoff(): string {
  * Static context (TELOS, setup prompt) lives in AGENTS.md / CLAUDE.md and is
  * loaded natively by Claude Code / opencode. This injects dynamic context only —
  * things that change per-session and can't live in a static file.
+ *
+ * opts.skipSelfModel — set true for Claude Code, which loads self-model via
+ * @import in CLAUDE.md and doesn't need it repeated in the hook output.
  */
-export function buildSystemReminder(): string {
+export function buildSystemReminder(opts: { skipSelfModel?: boolean } = {}): string {
   const startup = loadStartupFiles();
   const wisdom = settings.isEnabled("wisdom") ? loadWisdomContext() : "";
   const relationship = settings.isEnabled("relationship")
@@ -422,7 +425,8 @@ export function buildSystemReminder(): string {
   const failures = settings.isEnabled("failurePatterns") ? loadFailurePatterns() : "";
   const synthesis = settings.isEnabled("synthesis") ? loadSynthesisRecommendations() : "";
   const opinions = settings.isEnabled("opinions") ? loadOpinionContext() : "";
-  const selfModel = settings.isEnabled("selfModel") ? loadSelfModel() : "";
+  const selfModel =
+    !opts.skipSelfModel && settings.isEnabled("selfModel") ? loadSelfModel() : "";
   const intelligence = settings.isEnabled("sessionIntelligence")
     ? loadSessionIntelligence()
     : "";
