@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
   buildSystemReminder,
-  loadActiveWork,
   loadFailurePatterns,
   loadLearningDigest,
   loadRelationshipContext,
@@ -29,14 +28,6 @@ describe("wisdom", () => {
 describe("context builders", () => {
   test("loadWisdomContext returns string", () => {
     expect(typeof loadWisdomContext()).toBe("string");
-  });
-
-  test("loadActiveWork returns null or object", () => {
-    const result = loadActiveWork();
-    if (result !== null) {
-      expect(result).toHaveProperty("text");
-      expect(result).toHaveProperty("summary");
-    }
   });
 
   test("loadLearningDigest returns string", () => {

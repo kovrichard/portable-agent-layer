@@ -17,7 +17,7 @@ import * as settings from "./settings";
 import { isSetupComplete, readSetupState, remainingSteps, STEP_ORDER } from "./setup";
 import { computeSignalTrends, formatTrends } from "./signal-trends";
 import { readFramePrinciples } from "./wisdom";
-import { readProjectHistory, readSessions, recentSessions } from "./work-tracking";
+import { readProjectHistory, readSessions } from "./work-tracking";
 
 /** Load and concatenate loadAtStartup files */
 function loadStartupFiles(): string {
@@ -50,37 +50,6 @@ export function countSignals(filename: string): number {
     return content ? content.split("\n").length : 0;
   } catch {
     return 0;
-  }
-}
-
-/** Load structured session history + project dashboard */
-export function loadActiveWork(): { text: string; summary: string | null } | null {
-  try {
-    const cwd = process.cwd();
-    const allRecent = recentSessions(48);
-
-    if (allRecent.length === 0) return null;
-
-    const lines: string[] = [];
-
-    lines.push("## Recent Work (last 48h)");
-    for (const s of allRecent.slice(-10).reverse()) {
-      const ago = formatAgo(s.ts);
-      const here = s.cwd === cwd ? " *" : "";
-      lines.push(`- [${s.status}] ${s.name} — ${ago}${here}`);
-    }
-
-    // Summary from most recent session
-    const cwdSessions = allRecent.filter((s) => s.cwd === cwd);
-    const last = cwdSessions.length > 0 ? cwdSessions[cwdSessions.length - 1] : null;
-    const summary = last?.summary?.slice(0, 60) || null;
-
-    return {
-      text: lines.join("\n"),
-      summary: summary ? `"${summary}"` : null,
-    };
-  } catch {
-    return null;
   }
 }
 
@@ -140,7 +109,6 @@ function loadCachedCounts(): {
 /** Build the visible greeting lines for stderr */
 export function buildGreeting(): string[] {
   const counts = loadCachedCounts();
-  const work = loadActiveWork();
   const setupState = readSetupState();
   const setupIncomplete = setupState && !isSetupComplete(setupState);
 
@@ -155,10 +123,6 @@ export function buildGreeting(): string[] {
     greeting.push(
       `✅ PAL ready | ${counts.telos} TELOS | ${counts.skills} skills | ${counts.signals} signals | ${counts.sessions} sessions`
     );
-  }
-
-  if (work?.summary) {
-    greeting.push(`📋 Previous: ${work.summary}`);
   }
 
   // Show recent session names for quick context
@@ -443,7 +407,6 @@ export function loadHandoff(): string {
  */
 export function buildSystemReminder(): string {
   const startup = loadStartupFiles();
-  const work = settings.isEnabled("activeWork") ? loadActiveWork() : null;
   const wisdom = settings.isEnabled("wisdom") ? loadWisdomContext() : "";
   const relationship = settings.isEnabled("relationship")
     ? loadRelationshipContext()
@@ -478,8 +441,6 @@ export function buildSystemReminder(): string {
   if (synthesis) parts.push(synthesis);
   if (trends) parts.push(trends);
   if (failures) parts.push(failures);
-  if (work) parts.push(work.text);
-
   if (parts.length === 0) return "";
 
   const now = new Date();
