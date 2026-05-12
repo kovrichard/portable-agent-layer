@@ -206,7 +206,18 @@ bun ~/.pal/tools/algorithm-reflect.ts --task "description" --criteria N --passed
   --q1 "self reflection" --q2 "algorithm reflection" --q3 "AI reflection"
 ```
 
-**3. Open Threads** — for each unresolved question, decision, or follow-up that came up during this session:
+**3. Relationship note** — write one Session entry capturing what was done this session:
+
+```bash
+bun ~/.pal/tools/relationship-note.ts --b "description"
+```
+
+- 1-2 sentences, first-person, specific — name the actual system/file/concept worked on
+- ✓ "Debugged the React Query cache split logic and resolved stuck message state in the onFinish callback"
+- ✗ "Helped with memory improvements" — too vague, no system named
+- Skip only if the session was a trivial lookup or typo fix (same rule as step 2)
+
+**4. Open Threads** — for each unresolved question, decision, or follow-up that came up during this session:
 
 ```bash
 bun ~/.pal/tools/thread.ts --add --title "brief title" --context "why it matters, what needs to happen"

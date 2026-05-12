@@ -37,7 +37,7 @@ interface Rating {
 }
 
 interface ParsedNote {
-  type: "W" | "O" | "B";
+  type: "W" | "O" | "Session";
   text: string;
   confidence?: number;
   date: string;
@@ -94,7 +94,7 @@ export function loadNotes(daysBack: number): ParsedNote[] {
           const obMatch = line.match(/^- ([OB])\(c=([\d.]+)\):\s*(.+)$/);
           if (obMatch) {
             notes.push({
-              type: obMatch[1] as "O" | "B",
+              type: obMatch[1] as "O" | "Session",
               confidence: Number.parseFloat(obMatch[2]),
               text: obMatch[3],
               date: dateStr,

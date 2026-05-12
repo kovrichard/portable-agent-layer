@@ -71,7 +71,7 @@ interface AlgorithmReflection {
 }
 
 interface RelationshipNote {
-  type: "O" | "W" | "B";
+  type: "O" | "W" | "Session";
   content: string;
   confidence?: number;
   date: string;
@@ -292,9 +292,9 @@ function readRelationshipNotes(since: Date): RelationshipNote[] {
           continue;
         }
 
-        const behaviorMatch = noteContent.match(/^B:\s*(.+)$/);
+        const behaviorMatch = noteContent.match(/^Session:\s*(.+)$/);
         if (behaviorMatch) {
-          notes.push({ type: "B", content: behaviorMatch[1], date: dateStr });
+          notes.push({ type: "Session", content: behaviorMatch[1], date: dateStr });
         }
       }
     }
@@ -376,7 +376,7 @@ function gatherData(days: number): SelfModelData {
     wisdomFrames,
     graduated,
     reflections,
-    behaviorNotes: relNotes.filter((n) => n.type === "B").map((n) => n.content),
+    behaviorNotes: relNotes.filter((n) => n.type === "Session").map((n) => n.content),
     wisdomNotes: relNotes.filter((n) => n.type === "W").map((n) => n.content),
     selfObservations: reflections.map((r) => r.q1).filter(Boolean),
     algorithmObservations: reflections.map((r) => r.q2).filter(Boolean),

@@ -5,7 +5,7 @@
  * Notes live at memory/relationship/YYYY-MM/YYYY-MM-DD.md
  * W = world (facts about user's situation)
  * O = opinion (preference with confidence)
- * B = biographical (what the AI did this session, first-person)
+ * Session = what the AI did this session (first-person)
  *
  * Extraction is handled by the relationship handler via Haiku inference.
  * This lib provides storage and reading utilities only.
@@ -15,7 +15,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ensureDir, paths } from "./paths";
 
-export type NoteType = "W" | "O" | "B";
+export type NoteType = "W" | "O" | "Session";
 
 export interface RelationshipNote {
   type: NoteType;
@@ -31,7 +31,7 @@ function dailyFilePath(date: Date): string {
   return resolve(monthDir, `${yyyy}-${mm}-${dd}.md`);
 }
 
-/** Check if a session already has notes in today's file */
+/** @deprecated No longer called — relationship notes are written in ALGORITHM LEARN phase */
 export function hasSessionNotes(sessionId: string): boolean {
   const filepath = dailyFilePath(new Date());
   if (!existsSync(filepath)) return false;

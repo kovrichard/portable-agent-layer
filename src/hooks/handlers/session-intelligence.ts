@@ -1,11 +1,14 @@
 /**
  * Stop handler: unified session intelligence capture.
  *
- * Merges work-learning + relationship + handoff into a single Haiku call.
- * Produces: title, summary, insights, handoff, relationship observations.
- * Writes: session learning file, project history, relationship notes, last-handoff.
+ * Merges work-learning + handoff into a single Haiku call.
+ * Produces: title, summary, insights, handoff.
+ * Writes: session learning file, project history, last-handoff.
  *
- * Replaces: work-learning.ts + relationship.ts (both still exist but are bypassed).
+ * Relationship notes (B entries) are now written in the ALGORITHM LEARN phase
+ * via relationship-note.ts — no inference call needed.
+ *
+ * Replaces: work-learning.ts (still exists but is bypassed).
  */
 
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
@@ -15,7 +18,6 @@ import { inference } from "../lib/inference";
 import { categorizeLearning } from "../lib/learning-category";
 import { logDebug, logError } from "../lib/log";
 import { ensureDir, paths } from "../lib/paths";
-import { appendNotes, hasSessionNotes, type RelationshipNote } from "../lib/relationship";
 import { fileTimestamp, monthPath } from "../lib/time";
 import { logTokenUsage } from "../lib/token-usage";
 import {
@@ -110,25 +112,8 @@ const INTELLIGENCE_SCHEMA = {
       description:
         "If status is in-progress: what remains to be done, key decisions made, blockers. If completed: empty string.",
     },
-    observations: {
-      type: "array" as const,
-      items: {
-        type: "object" as const,
-        additionalProperties: false,
-        properties: {
-          type: {
-            type: "string" as const,
-            enum: ["O", "W", "B"],
-            description: "O=preference, W=world fact, B=what AI did",
-          },
-          text: { type: "string" as const },
-          confidence: { type: "number" as const },
-        },
-        required: ["type", "text", "confidence"] as const,
-      },
-    },
   },
-  required: ["title", "summary", "insights", "handoff", "observations"] as const,
+  required: ["title", "summary", "insights", "handoff"] as const,
 };
 
 interface IntelligenceOutput {
@@ -136,7 +121,6 @@ interface IntelligenceOutput {
   summary: string;
   insights: string;
   handoff: string;
-  observations: Array<{ type: "O" | "W" | "B"; text: string; confidence: number }>;
 }
 
 // ── Main handler ──
@@ -160,9 +144,6 @@ export async function captureSessionIntelligence(
     return;
   }
 
-  // Relationship dedup — skip relationship capture if already done for this session
-  const skipRelationship = sessionId ? hasSessionNotes(sessionId) : false;
-
   // Extract transcript windows
   const userMessages = messages
     .filter((m) => m.role === "user")
@@ -174,8 +155,7 @@ export async function captureSessionIntelligence(
   const lastUser = extractLastUser(messages);
   const status = detectStatus(lastAssistantText);
 
-  // Wider window: 15 user msgs at 200 chars (relationship needs more context)
-  const userWindow = userMessages.slice(-15).map((t) => t.slice(0, 200));
+  const userWindow = userMessages.slice(-10).map((t) => t.slice(0, 200));
   const assistantWindow = lastAssistantText.slice(0, 600);
 
   if (userWindow.length < 3) return;
@@ -195,12 +175,9 @@ export async function captureSessionIntelligence(
         status === "in-progress"
           ? "4. handoff: what remains unfinished — decisions made so far, next steps, blockers (2-4 sentences)"
           : "4. handoff: empty string (session completed)",
-        skipRelationship
-          ? "5. observations: empty array (already captured)"
-          : "5. observations: 0-3 relationship observations. O=preference/opinion, W=world fact, B=what AI did this session (first-person). Be concise.",
       ].join("\n"),
       user: `User messages:\n${userWindow.map((m, i) => `${i + 1}. ${m}`).join("\n")}\n\nLast AI response:\n${assistantWindow}`,
-      maxTokens: 500,
+      maxTokens: 350,
       timeout: 15000,
       jsonSchema: INTELLIGENCE_SCHEMA,
     });
@@ -271,25 +248,6 @@ export async function captureSessionIntelligence(
 
   if (sessionId) markCaptured(sessionId, filepath, messages.length);
   logDebug("session-intelligence", `Learning captured: ${title}`);
-
-  // ── Write relationship notes ──
-
-  if (!skipRelationship && output?.observations && output.observations.length > 0) {
-    try {
-      const notes: RelationshipNote[] = output.observations.map((o) => ({
-        type: o.type,
-        text: o.text,
-        confidence: o.confidence,
-      }));
-      appendNotes(notes, sessionId);
-      logDebug(
-        "session-intelligence",
-        `${notes.length} relationship observations captured`
-      );
-    } catch (err) {
-      logError("session-intelligence:relationship", err);
-    }
-  }
 
   // ── Write handoff state ──
 
