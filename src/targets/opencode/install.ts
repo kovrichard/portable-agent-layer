@@ -3,10 +3,17 @@
  * Deploys plugin, installs skills, generates AGENTS.md.
  */
 
-import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { resolve } from "node:path";
 import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
-import { palPkg, platform } from "../../hooks/lib/paths";
+import { palHome, palPkg, platform } from "../../hooks/lib/paths";
 import {
   copyAgentsForOpencode,
   copyPalDocs,
@@ -69,6 +76,31 @@ log.success(`Installed ${palDocsCount} PAL docs to ~/.pal/docs/`);
 // --- 6. Generate ~/.config/opencode/AGENTS.md ---
 regenerateIfNeeded();
 log.success("Generated ~/.config/opencode/AGENTS.md");
+
+// --- 7. Add semi-static digest files to instructions[] in config.json ---
+const configPath = resolve(OC_GLOBAL_DIR, "config.json");
+const memory = resolve(palHome(), "memory");
+const staticFiles = [
+  resolve(memory, "self-model", "current.md"),
+  resolve(memory, "wisdom", "context.md"),
+  resolve(memory, "relationship", "opinions-context.md"),
+];
+let ocConfig: Record<string, unknown> = {};
+if (existsSync(configPath) && statSync(configPath).size > 0) {
+  try {
+    ocConfig = JSON.parse(readFileSync(configPath, "utf-8"));
+  } catch {
+    /* start fresh */
+  }
+}
+const existingInstructions = Array.isArray(ocConfig.instructions)
+  ? (ocConfig.instructions as string[])
+  : [];
+ocConfig.instructions = [...new Set([...existingInstructions, ...staticFiles])];
+writeFileSync(configPath, `${JSON.stringify(ocConfig, null, 2)}\n`, "utf-8");
+log.success(
+  `Updated config.json: ${(ocConfig.instructions as string[]).length} instructions`
+);
 
 log.success("opencode installation complete");
 console.log("");

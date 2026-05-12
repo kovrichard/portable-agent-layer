@@ -57,7 +57,7 @@ if (removedAgents.length > 0) {
 // --- Remove PAL system docs ---
 removePalDocs();
 
-// --- Remove AGENTS.md and CLAUDE.md symlink ---
+// --- Remove AGENTS.md and CLAUDE.md ---
 const agentsMd = resolve(platform.opencodeDir(), "AGENTS.md");
 const claudeMd = resolve(CLAUDE_DIR, "CLAUDE.md");
 try {
