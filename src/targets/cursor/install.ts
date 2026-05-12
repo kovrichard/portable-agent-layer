@@ -6,6 +6,7 @@
 
 import { copyFileSync, existsSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
+import { writeContextDigests } from "../../hooks/handlers/context-digests";
 import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
 import {
@@ -63,6 +64,11 @@ scaffoldPalSettings();
 // --- Generate AGENTS.md ---
 regenerateIfNeeded();
 log.success("Generated AGENTS.md");
+
+// --- Write ~/.cursor/rules/pal-context.mdc ---
+mkdirSync(resolve(CURSOR_DIR, "rules"), { recursive: true });
+writeContextDigests();
+log.success("Written ~/.cursor/rules/pal-context.mdc");
 
 log.success("Cursor installation complete");
 console.log("");

@@ -4,7 +4,7 @@
  * Removes PAL skill symlinks.
  */
 
-import { copyFileSync, existsSync } from "node:fs";
+import { copyFileSync, existsSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
 import {
@@ -55,5 +55,13 @@ if (removedAgents.length > 0) {
 
 // --- Remove PAL system docs ---
 removePalDocs();
+
+// --- Remove ~/.cursor/rules/pal-context.mdc ---
+try {
+  unlinkSync(resolve(CURSOR_DIR, "rules", "pal-context.mdc"));
+  log.success("Removed ~/.cursor/rules/pal-context.mdc");
+} catch {
+  /* gone */
+}
 
 log.success("Cursor uninstall complete");

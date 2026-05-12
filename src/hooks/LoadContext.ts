@@ -54,7 +54,7 @@ try {
     writeFileSync(instructionsPath, context, "utf-8");
     logDebug("LoadContext", `Copilot instructions written: ${context.length} chars`);
   } else if (process.env.CURSOR_VERSION) {
-    // Cursor: no native user-level rules — inject AGENTS.md + dynamic context
+    // Cursor: semi-static in ~/.cursor/rules/pal-context.mdc; inject AGENTS.md + dynamic here
     const agentsMd = buildClaudeMd();
     const context = [agentsMd, reminder].filter(Boolean).join("\n\n");
     process.stdout.write(JSON.stringify({ additional_context: context }));
