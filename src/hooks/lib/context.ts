@@ -398,6 +398,9 @@ export function loadHandoff(): string {
   }
 }
 
+/** Agent targets — determines which context sections are skipped due to native loading. */
+export type AgentTarget = "claude" | "opencode" | "cursor" | "copilot";
+
 /**
  * Build the <system-reminder> content for the AI.
  *
@@ -405,12 +408,17 @@ export function loadHandoff(): string {
  * loaded natively by Claude Code / opencode. This injects dynamic context only —
  * things that change per-session and can't live in a static file.
  *
- * opts.skipSelfModel — set true for Claude Code, which loads self-model via
- * @import in CLAUDE.md and doesn't need it repeated in the hook output.
+ * opts.agent — agent target; Claude Code skips semi-static sections (self-model,
+ * wisdom, opinions) that load natively via @imports in CLAUDE.md.
  */
-export function buildSystemReminder(opts: { skipSelfModel?: boolean } = {}): string {
+export function buildSystemReminder(opts: { agent?: AgentTarget } = {}): string {
+  // Semi-static sections loaded natively via @imports (Claude Code) or
+  // instructions[] (opencode, future). Skip them from hook output for those agents.
+  const skipSemiStatic = opts.agent === "claude";
+
   const startup = loadStartupFiles();
-  const wisdom = settings.isEnabled("wisdom") ? loadWisdomContext() : "";
+  const wisdom =
+    !skipSemiStatic && settings.isEnabled("wisdom") ? loadWisdomContext() : "";
   const relationship = settings.isEnabled("relationship")
     ? loadRelationshipContext()
     : "";
@@ -424,9 +432,10 @@ export function buildSystemReminder(opts: { skipSelfModel?: boolean } = {}): str
   const trends = settings.isEnabled("signalTrends") ? loadSignalTrends() : "";
   const failures = settings.isEnabled("failurePatterns") ? loadFailurePatterns() : "";
   const synthesis = settings.isEnabled("synthesis") ? loadSynthesisRecommendations() : "";
-  const opinions = settings.isEnabled("opinions") ? loadOpinionContext() : "";
+  const opinions =
+    !skipSemiStatic && settings.isEnabled("opinions") ? loadOpinionContext() : "";
   const selfModel =
-    !opts.skipSelfModel && settings.isEnabled("selfModel") ? loadSelfModel() : "";
+    !skipSemiStatic && settings.isEnabled("selfModel") ? loadSelfModel() : "";
   const intelligence = settings.isEnabled("sessionIntelligence")
     ? loadSessionIntelligence()
     : "";

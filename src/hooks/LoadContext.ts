@@ -12,7 +12,7 @@
 import { existsSync, lstatSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { buildClaudeMd, regenerateIfNeeded } from "./lib/claude-md";
-import { buildSystemReminder } from "./lib/context";
+import { type AgentTarget, buildSystemReminder } from "./lib/context";
 import { logDebug, logError } from "./lib/log";
 import { platform } from "./lib/paths";
 
@@ -36,10 +36,11 @@ try {
 
 // --- Context to stdout (or file for Copilot) ---
 try {
-  // Claude Code loads self-model via @import in CLAUDE.md — skip it from hook output.
-  // Cursor and Copilot have no @import support, so they receive it in the hook payload.
-  const isClaude = !process.env.PAL_AGENT && !process.env.CURSOR_VERSION;
-  const reminder = buildSystemReminder(isClaude ? { skipSelfModel: true } : {});
+  // Determine agent target — controls which sections are skipped (loaded natively instead).
+  let agent: AgentTarget = "claude";
+  if (process.env.PAL_AGENT === "copilot") agent = "copilot";
+  else if (process.env.CURSOR_VERSION) agent = "cursor";
+  const reminder = buildSystemReminder({ agent });
   if (!reminder) process.exit(0);
 
   if (process.env.PAL_AGENT === "copilot") {

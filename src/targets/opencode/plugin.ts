@@ -74,7 +74,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   return {
     // --- Per-message: Inject dynamic system reminder ---
     "experimental.chat.system.transform": async (_input, output) => {
-      const reminder = buildSystemReminder();
+      const reminder = buildSystemReminder({ agent: "opencode" });
       if (reminder) output.system.push(reminder);
     },
 

@@ -125,13 +125,22 @@ export function buildClaudeMd(): string {
     .replaceAll("{{PRINCIPAL_NAME}}", id.principal.name);
 }
 
-/** Build @import header lines for CLAUDE.md — points to self-model if it exists. */
+/** Build @import header lines for CLAUDE.md — one line per semi-static file that exists. */
 function buildClaudeCodeImports(): string {
-  const selfModelPath = resolve(paths.memory(), "self-model", "current.md");
-  if (!existsSync(selfModelPath)) return "";
+  const memory = paths.memory();
   const claudeDir = platform.claudeDir();
-  const rel = relative(claudeDir, selfModelPath).replaceAll("\\", "/");
-  return `@${rel}\n\n`;
+
+  const candidates = [
+    resolve(memory, "self-model", "current.md"),
+    resolve(memory, "wisdom", "context.md"),
+    resolve(memory, "relationship", "opinions-context.md"),
+  ];
+
+  const lines = candidates
+    .filter((p) => existsSync(p))
+    .map((p) => `@${relative(claudeDir, p).replaceAll("\\", "/")}`);
+
+  return lines.length > 0 ? `${lines.join("\n")}\n\n` : "";
 }
 
 /** Build CLAUDE.md content for Claude Code — prepends @import for self-model. */

@@ -7,6 +7,7 @@ import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { autoGraduate } from "../handlers/auto-graduate";
 import { autoBackup } from "../handlers/backup";
+import { writeContextDigests } from "../handlers/context-digests";
 import { notifyDesktop } from "../handlers/desktop-notify";
 import { captureFailure } from "../handlers/failure";
 import { projectTouch } from "../handlers/project-touch";
@@ -56,6 +57,7 @@ export async function runStopHandlers(
     autoGraduate(),
     projectTouch(options.lastAssistantMessage),
     notifyDesktop(options.sessionId),
+    Promise.resolve(writeContextDigests()),
   ]);
 
   const handlerNames = [
@@ -71,6 +73,7 @@ export async function runStopHandlers(
     "auto-graduate",
     "project-touch",
     "desktop-notify",
+    "context-digests",
   ];
   for (let i = 0; i < results.length; i++) {
     const r = results[i];
