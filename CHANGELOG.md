@@ -1,3 +1,25 @@
+# [0.36.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.35.0...v0.36.0) (2026-05-12)
+
+
+### Bug Fixes
+
+* **vscode:** tests do not write outside the sandbox ([524ef78](https://github.com/kovrichard/portable-agent-layer/commit/524ef789becde3cd190f3757063a79ff6dda7b4a))
+
+
+### Features
+
+* **context-digests:** implement context digest handler and enhance system reminder ([0dde590](https://github.com/kovrichard/portable-agent-layer/commit/0dde590666e886041a3cd7421bb58664c488fc39))
+* **context:** add synthesis digest handling and update settings management ([98ca655](https://github.com/kovrichard/portable-agent-layer/commit/98ca655d836fec904c7cfd04f9e6323ed745cc08))
+* **context:** filter recent interaction notes and implement text truncation ([2937b11](https://github.com/kovrichard/portable-agent-layer/commit/2937b1179963d28b27d43dda233c31ad1447b826))
+* **copilot:** enhance instruction file management and VS Code integration ([2aa556b](https://github.com/kovrichard/portable-agent-layer/commit/2aa556b39e3e3cdbd6d0f41bbb0aad8cd3c11fc8))
+* **cursor:** implement context digest writing for Cursor installation and removal ([30b36fd](https://github.com/kovrichard/portable-agent-layer/commit/30b36fd894c21957afd391f5a17212df600a2f16))
+* **handoff:** implement handoff note tool and update session intelligence capture ([18f7592](https://github.com/kovrichard/portable-agent-layer/commit/18f7592c149373f32335358785ae4ca84c9f682e))
+* **opencode:** enhance installation and uninstallation processes with config.json updates ([cdbe1be](https://github.com/kovrichard/portable-agent-layer/commit/cdbe1bee774d927629c5d4c4c2d85c7dcfa777b6))
+* **relationship:** introduce relationship-note tool for capturing session entries ([f489ed8](https://github.com/kovrichard/portable-agent-layer/commit/f489ed8f513a4ad0a64cd2e5d4a15c6df5341e8d))
+* **semi-static:** reintroduce failure patterns loading and update context handling ([a5ad21e](https://github.com/kovrichard/portable-agent-layer/commit/a5ad21e355988e84b96446bf9771cf073f251853))
+* **settings:** disable claude memory ([6814394](https://github.com/kovrichard/portable-agent-layer/commit/6814394c88d6952916703ef83ecb66c890a6514c))
+* **steering-rules:** add guidelines for testing and verification practices ([f3de904](https://github.com/kovrichard/portable-agent-layer/commit/f3de90416d8f533648d4be59d97e8992e1e161e1))
+
 # [0.35.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.34.0...v0.35.0) (2026-05-10)
 
 
