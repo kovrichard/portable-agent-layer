@@ -19,7 +19,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
-import { assets, ensureDir, palHome, paths, platform } from "./paths";
+import { assets, ensureDir, paths, platform } from "./paths";
+import { getSemiStaticSources } from "./semi-static";
 
 const TEMPLATE_PATH = assets.agentsMdTemplate();
 
@@ -91,11 +92,7 @@ export function needsRebuild(): boolean {
     TEMPLATE_PATH,
     resolve(paths.state(), "setup.json"),
     resolve(paths.memory(), "pal-settings.json"),
-    resolve(paths.memory(), "self-model", "current.md"),
-    resolve(paths.memory(), "wisdom", "context.md"),
-    resolve(paths.memory(), "relationship", "opinions-context.md"),
-    resolve(paths.memory(), "learning", "synthesis-digest.md"),
-    resolve(palHome(), "docs", "STEERING_RULES.md"),
+    ...getSemiStaticSources().map((s) => s.path),
   ];
 
   // Track PAL doc sources for rebuild detection
@@ -128,18 +125,10 @@ export function buildClaudeMd(): string {
 
 /** Build @import header lines for CLAUDE.md — one line per semi-static file that exists. */
 function buildClaudeCodeImports(): string {
-  const memory = paths.memory();
   const claudeDir = platform.claudeDir();
 
-  const candidates = [
-    resolve(memory, "self-model", "current.md"),
-    resolve(memory, "wisdom", "context.md"),
-    resolve(memory, "relationship", "opinions-context.md"),
-    resolve(memory, "learning", "synthesis-digest.md"),
-    resolve(palHome(), "docs", "STEERING_RULES.md"),
-  ];
-
-  const lines = candidates
+  const lines = getSemiStaticSources()
+    .map((s) => s.path)
     .filter((p) => existsSync(p))
     .map((p) => `@${relative(claudeDir, p).replaceAll("\\", "/")}`);
 

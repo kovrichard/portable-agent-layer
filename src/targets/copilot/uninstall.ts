@@ -7,6 +7,7 @@
 import { copyFileSync, existsSync, lstatSync, readlinkSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
 import { platform } from "../../hooks/lib/paths";
+import { copilotFilename, getSemiStaticSources } from "../../hooks/lib/semi-static";
 import {
   log,
   readJson,
@@ -48,19 +49,18 @@ if (removedAgents.length > 0) {
 removePalDocs();
 
 // --- Remove ~/.copilot/instructions/pal-*.instructions.md ---
-for (const f of [
-  "pal-self-model.instructions.md",
-  "pal-wisdom.instructions.md",
-  "pal-opinions.instructions.md",
-  "pal-synthesis.instructions.md",
-  "pal-steering.instructions.md",
-  "pal-session.instructions.md",
-]) {
+for (const src of getSemiStaticSources()) {
   try {
-    unlinkSync(resolve(COPILOT_DIR, "instructions", f));
+    unlinkSync(resolve(COPILOT_DIR, "instructions", copilotFilename(src)));
   } catch {
     /* gone */
   }
+}
+// pal-session.instructions.md is written by LoadContext (not a semi-static source)
+try {
+  unlinkSync(resolve(COPILOT_DIR, "instructions", "pal-session.instructions.md"));
+} catch {
+  /* gone */
 }
 log.success("Removed ~/.copilot/instructions/pal-*.instructions.md");
 

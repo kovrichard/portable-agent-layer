@@ -4,174 +4,71 @@
  * Runs at session stop so that CLAUDE.md can @import these files natively
  * at the next session start, keeping hook stdout small.
  *
- * Output files:
- *   ~/.pal/memory/wisdom/context.md              — high-confidence wisdom principles
- *   ~/.pal/memory/relationship/opinions-context.md — high-confidence opinions
- *   ~/.pal/memory/learning/synthesis-digest.md   — latest pattern synthesis recommendations
+ * Sources are defined in src/hooks/lib/semi-static.ts — add one entry there
+ * to extend coverage to all consumers (CLAUDE.md, opencode, Cursor, Copilot).
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { loadSynthesisRecommendations } from "../lib/context";
-import { loadOpinionContext } from "../lib/opinions";
-import { ensureDir, paths, platform } from "../lib/paths";
-import { readFramePrinciples } from "../lib/wisdom";
+import { existsSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { ensureDir, platform } from "../lib/paths";
+import {
+  copilotFilename,
+  cursorFilename,
+  getSemiStaticSources,
+} from "../lib/semi-static";
 
 export function writeContextDigests(): void {
-  const memory = paths.memory();
-  let wisdomContent = "";
-  let opinionsContent = "";
-  let synthesisContent = "";
+  const sources = getSemiStaticSources();
 
-  // Wisdom digest
-  try {
-    const principles = readFramePrinciples();
-    if (principles.length > 0) {
-      wisdomContent = [
-        "## Crystallized Principles",
-        ...principles.map((p) => `- ${p}`),
-      ].join("\n");
-      writeFileSync(
-        resolve(ensureDir(resolve(memory, "wisdom")), "context.md"),
-        wisdomContent,
-        "utf-8"
-      );
-    }
-  } catch {
-    /* non-fatal */
-  }
+  // Resolve Cursor/Copilot destination dirs once (null if agent not installed)
+  let rulesDir: string | null = null;
+  let instructionsDir: string | null = null;
 
-  // Opinions digest
-  try {
-    opinionsContent = loadOpinionContext();
-    if (opinionsContent) {
-      writeFileSync(
-        resolve(ensureDir(resolve(memory, "relationship")), "opinions-context.md"),
-        opinionsContent,
-        "utf-8"
-      );
-    }
-  } catch {
-    /* non-fatal */
-  }
-
-  // Pattern synthesis digest
-  try {
-    synthesisContent = loadSynthesisRecommendations();
-    if (synthesisContent) {
-      writeFileSync(
-        resolve(ensureDir(resolve(memory, "learning")), "synthesis-digest.md"),
-        synthesisContent,
-        "utf-8"
-      );
-    }
-  } catch {
-    /* non-fatal */
-  }
-
-  // Steering rules content (static PAL doc, refreshed on reinstall)
-  const steeringPath = resolve(paths.memory(), "..", "docs", "STEERING_RULES.md");
-  const steeringContent = existsSync(steeringPath)
-    ? readFileSync(steeringPath, "utf-8").trim()
-    : "";
-
-  // Copilot instruction files — written if ~/.copilot/ exists
-  try {
-    const copilotDir = platform.copilotDir();
-    if (existsSync(copilotDir)) {
-      const instructionsDir = ensureDir(resolve(copilotDir, "instructions"));
-      const selfModelPath = resolve(memory, "self-model", "current.md");
-      const selfModel = existsSync(selfModelPath)
-        ? readFileSync(selfModelPath, "utf-8").trim()
-        : "";
-
-      if (selfModel) {
-        writeFileSync(
-          resolve(instructionsDir, "pal-self-model.instructions.md"),
-          `---\napplyTo: "**"\n---\n\n${selfModel}`,
-          "utf-8"
-        );
-      }
-      if (wisdomContent) {
-        writeFileSync(
-          resolve(instructionsDir, "pal-wisdom.instructions.md"),
-          `---\napplyTo: "**"\n---\n\n${wisdomContent}`,
-          "utf-8"
-        );
-      }
-      if (opinionsContent) {
-        writeFileSync(
-          resolve(instructionsDir, "pal-opinions.instructions.md"),
-          `---\napplyTo: "**"\n---\n\n${opinionsContent}`,
-          "utf-8"
-        );
-      }
-      if (synthesisContent) {
-        writeFileSync(
-          resolve(instructionsDir, "pal-synthesis.instructions.md"),
-          `---\napplyTo: "**"\n---\n\n${synthesisContent}`,
-          "utf-8"
-        );
-      }
-      if (steeringContent) {
-        writeFileSync(
-          resolve(instructionsDir, "pal-steering.instructions.md"),
-          `---\napplyTo: "**"\n---\n\n${steeringContent}`,
-          "utf-8"
-        );
-      }
-    }
-  } catch {
-    /* non-fatal */
-  }
-
-  // Cursor rules files — written if ~/.cursor/ exists
   try {
     const cursorDir = platform.cursorDir();
     if (existsSync(cursorDir)) {
-      const rulesDir = ensureDir(resolve(cursorDir, "rules"));
-      const selfModelPath = resolve(memory, "self-model", "current.md");
-      const selfModel = existsSync(selfModelPath)
-        ? readFileSync(selfModelPath, "utf-8").trim()
-        : "";
-
-      if (selfModel) {
-        writeFileSync(
-          resolve(rulesDir, "pal-self-model.mdc"),
-          `---\ndescription: PAL self-model\nalwaysApply: true\n---\n\n${selfModel}`,
-          "utf-8"
-        );
-      }
-      if (wisdomContent) {
-        writeFileSync(
-          resolve(rulesDir, "pal-wisdom.mdc"),
-          `---\ndescription: PAL wisdom\nalwaysApply: true\n---\n\n${wisdomContent}`,
-          "utf-8"
-        );
-      }
-      if (opinionsContent) {
-        writeFileSync(
-          resolve(rulesDir, "pal-opinions.mdc"),
-          `---\ndescription: PAL opinions\nalwaysApply: true\n---\n\n${opinionsContent}`,
-          "utf-8"
-        );
-      }
-      if (synthesisContent) {
-        writeFileSync(
-          resolve(rulesDir, "pal-synthesis.mdc"),
-          `---\ndescription: PAL pattern synthesis\nalwaysApply: true\n---\n\n${synthesisContent}`,
-          "utf-8"
-        );
-      }
-      if (steeringContent) {
-        writeFileSync(
-          resolve(rulesDir, "pal-steering.mdc"),
-          `---\ndescription: PAL steering rules\nalwaysApply: true\n---\n\n${steeringContent}`,
-          "utf-8"
-        );
-      }
+      rulesDir = ensureDir(resolve(cursorDir, "rules"));
     }
   } catch {
     /* non-fatal */
+  }
+
+  try {
+    const copilotDir = platform.copilotDir();
+    if (existsSync(copilotDir)) {
+      instructionsDir = ensureDir(resolve(copilotDir, "instructions"));
+    }
+  } catch {
+    /* non-fatal */
+  }
+
+  for (const src of sources) {
+    try {
+      const content = src.load();
+      if (!content) continue;
+
+      if (src.writesDigest) {
+        ensureDir(dirname(src.path));
+        writeFileSync(src.path, content, "utf-8");
+      }
+
+      if (rulesDir) {
+        writeFileSync(
+          resolve(rulesDir, cursorFilename(src)),
+          `---\ndescription: ${src.description}\nalwaysApply: true\n---\n\n${content}`,
+          "utf-8"
+        );
+      }
+
+      if (instructionsDir) {
+        writeFileSync(
+          resolve(instructionsDir, copilotFilename(src)),
+          `---\napplyTo: "**"\n---\n\n${content}`,
+          "utf-8"
+        );
+      }
+    } catch {
+      /* non-fatal */
+    }
   }
 }

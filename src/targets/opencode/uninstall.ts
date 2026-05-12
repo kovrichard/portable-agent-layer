@@ -5,7 +5,8 @@
 
 import { existsSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { palHome, platform } from "../../hooks/lib/paths";
+import { platform } from "../../hooks/lib/paths";
+import { getSemiStaticSources } from "../../hooks/lib/semi-static";
 import { log, removeAgentsFromOpencode, removePalDocs, removeSkills } from "../lib";
 
 const OC_GLOBAL_DIR = platform.opencodeDir() || "";
@@ -66,14 +67,7 @@ if (existsSync(configPath) && statSync(configPath).size > 0) {
       unknown
     >;
     if (Array.isArray(ocConfig.instructions)) {
-      const memory = resolve(palHome(), "memory");
-      const palFiles = new Set([
-        resolve(memory, "self-model", "current.md"),
-        resolve(memory, "wisdom", "context.md"),
-        resolve(memory, "relationship", "opinions-context.md"),
-        resolve(memory, "learning", "synthesis-digest.md"),
-        resolve(palHome(), "docs", "STEERING_RULES.md"),
-      ]);
+      const palFiles = new Set(getSemiStaticSources().map((s) => s.path));
       const filtered = (ocConfig.instructions as string[]).filter(
         (p) => !palFiles.has(p)
       );

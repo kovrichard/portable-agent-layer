@@ -7,6 +7,7 @@
 import { copyFileSync, existsSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
+import { cursorFilename, getSemiStaticSources } from "../../hooks/lib/semi-static";
 import {
   loadCursorHooksTemplate,
   log,
@@ -57,19 +58,18 @@ if (removedAgents.length > 0) {
 removePalDocs();
 
 // --- Remove ~/.cursor/rules/pal-*.mdc ---
-for (const f of [
-  "pal-context.mdc",
-  "pal-self-model.mdc",
-  "pal-wisdom.mdc",
-  "pal-opinions.mdc",
-  "pal-synthesis.mdc",
-  "pal-steering.mdc",
-]) {
+for (const src of getSemiStaticSources()) {
   try {
-    unlinkSync(resolve(CURSOR_DIR, "rules", f));
+    unlinkSync(resolve(CURSOR_DIR, "rules", cursorFilename(src)));
   } catch {
     /* gone */
   }
+}
+// Backward compat: remove legacy merged file if present
+try {
+  unlinkSync(resolve(CURSOR_DIR, "rules", "pal-context.mdc"));
+} catch {
+  /* gone */
 }
 log.success("Removed ~/.cursor/rules/pal-*.mdc");
 

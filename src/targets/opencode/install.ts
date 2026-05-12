@@ -13,7 +13,8 @@ import {
 } from "node:fs";
 import { resolve } from "node:path";
 import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
-import { palHome, palPkg, platform } from "../../hooks/lib/paths";
+import { palPkg, platform } from "../../hooks/lib/paths";
+import { getSemiStaticSources } from "../../hooks/lib/semi-static";
 import {
   copyAgentsForOpencode,
   copyPalDocs,
@@ -79,14 +80,7 @@ log.success("Generated ~/.config/opencode/AGENTS.md");
 
 // --- 7. Add semi-static digest files to instructions[] in config.json ---
 const configPath = resolve(OC_GLOBAL_DIR, "config.json");
-const memory = resolve(palHome(), "memory");
-const staticFiles = [
-  resolve(memory, "self-model", "current.md"),
-  resolve(memory, "wisdom", "context.md"),
-  resolve(memory, "relationship", "opinions-context.md"),
-  resolve(memory, "learning", "synthesis-digest.md"),
-  resolve(palHome(), "docs", "STEERING_RULES.md"),
-];
+const staticFiles = getSemiStaticSources().map((s) => s.path);
 let ocConfig: Record<string, unknown> = {};
 if (existsSync(configPath) && statSync(configPath).size > 0) {
   try {

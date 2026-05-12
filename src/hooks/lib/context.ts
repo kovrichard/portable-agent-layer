@@ -3,15 +3,15 @@
  * Used by LoadContext.ts (Claude Code) and the opencode plugin.
  */
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
-import { parse } from "./frontmatter";
 import { readFailures, readLearnings } from "./learning-store";
 import { loadOpinionContext } from "./opinions";
 import { paths } from "./paths";
 import { loadActiveProjectsContext } from "./projects";
 import { loadRecentNotes } from "./relationship";
+import { loadSynthesisRecommendations } from "./semi-static";
 import { readSessionNames } from "./session-names";
 import * as settings from "./settings";
 import { isSetupComplete, readSetupState, remainingSteps, STEP_ORDER } from "./setup";
@@ -184,60 +184,6 @@ export function loadFailurePatterns(): string {
     });
 
     return ["## Lessons from Recent Failures — Apply These Now", ...lines].join("\n");
-  } catch {
-    return "";
-  }
-}
-
-/** Load recommendations from the most recent synthesis report */
-export function loadSynthesisRecommendations(): string {
-  try {
-    const synthDir = paths.synthesis();
-    if (!existsSync(synthDir)) return "";
-
-    // Find most recent month directory
-    const months = readdirSync(synthDir).sort().reverse();
-    for (const month of months) {
-      const monthDir = resolve(synthDir, month);
-      try {
-        const files = readdirSync(monthDir)
-          .filter((f) => f.endsWith(".md"))
-          .sort()
-          .reverse();
-        if (files.length === 0) continue;
-
-        const content = readFileSync(resolve(monthDir, files[0]), "utf-8");
-
-        // Extract recommendations section
-        const recMatch = content.match(/## Recommendations\n\n([\s\S]*?)(?:\n##|\n$|$)/);
-        if (!recMatch?.[1]?.trim()) continue;
-
-        const recs = recMatch[1]
-          .trim()
-          .split("\n")
-          .filter((l) => l.trim())
-          .slice(0, 4);
-
-        if (recs.length === 0) continue;
-
-        const { meta } = parse<{
-          period?: string;
-          average_rating?: string;
-        }>(content);
-        const period = meta.period || "";
-        const avgRating = meta.average_rating ? `${meta.average_rating}/10` : "";
-
-        const header = [
-          "## Pattern Synthesis",
-          period ? `*${period} — ${avgRating}*` : "",
-        ]
-          .filter(Boolean)
-          .join("\n");
-
-        return [header, ...recs].join("\n");
-      } catch {}
-    }
-    return "";
   } catch {
     return "";
   }
