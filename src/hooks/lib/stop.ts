@@ -158,6 +158,7 @@ async function checkPendingFailure(transcript: string): Promise<void> {
       principle?: string;
       responsePreview?: string;
       userPreview?: string;
+      cwd?: string;
     };
     unlinkSync(pendingPath);
 
@@ -211,7 +212,8 @@ Return JSON:
       pending.context,
       transcript,
       detailedContext,
-      principle
+      principle,
+      pending.cwd
     );
   } catch {
     // Non-critical

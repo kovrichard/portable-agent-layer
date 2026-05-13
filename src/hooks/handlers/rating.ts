@@ -271,6 +271,7 @@ function handleRating(
           principle,
           responsePreview,
           userPreview,
+          cwd: process.cwd(),
           ts: now(),
         },
         null,

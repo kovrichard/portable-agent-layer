@@ -31,7 +31,8 @@ export async function captureFailure(
   context: string,
   transcript: string,
   detailedContext?: string,
-  principle?: string
+  principle?: string,
+  cwd?: string
 ): Promise<void> {
   const messages = parseMessages(transcript);
 
@@ -57,6 +58,7 @@ export async function captureFailure(
     slug,
   };
   if (principle) meta.principle = principle;
+  if (cwd) meta.cwd = cwd;
 
   const body = [
     "## What Happened",

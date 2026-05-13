@@ -92,7 +92,10 @@ export function rank(query: string, index: RetrievalIndex, cwd: string): ScoredD
   for (const doc of index.docs) {
     const raw = scoreDoc(queryTerms, doc, index.df, N);
     if (raw === 0) continue;
-    const scopeMatch = [...scopeTokens].some((t) => scopeMatches(doc, t));
+    // Exact cwd match when available; fingerprint heuristic for older captures.
+    const scopeMatch = doc.cwd
+      ? doc.cwd === cwd
+      : [...scopeTokens].some((t) => scopeMatches(doc, t));
     const boosted = raw * (scopeMatch ? SCOPE_BOOST : 1) * ageDecay(doc.ts);
     const confidence = boosted / self;
     if (confidence < CONFIDENCE_THRESHOLD) continue;

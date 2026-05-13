@@ -29,6 +29,7 @@ export interface IndexedDoc {
   len: number;
   displayPrinciple: string;
   displayContext: string;
+  cwd?: string;
 }
 
 export interface RetrievalIndex {
@@ -116,6 +117,7 @@ export function buildIndex(): RetrievalIndex {
       len,
       displayPrinciple: f.principle,
       displayContext: f.context,
+      cwd: f.cwd || undefined,
     });
   }
 

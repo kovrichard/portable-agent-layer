@@ -19,6 +19,7 @@ export interface FailureEntry {
   principle: string;
   date: string;
   ts: string;
+  cwd: string;
 }
 
 export interface LearningEntry {
@@ -76,6 +77,7 @@ export function readFailures(baseDir: string, limit?: number): FailureEntry[] {
             date?: string;
             ts?: string;
             slug?: string;
+            cwd?: string;
           }>(content);
 
           if (!meta.context) continue;
@@ -88,6 +90,7 @@ export function readFailures(baseDir: string, limit?: number): FailureEntry[] {
             principle: meta.principle || "",
             date: meta.date || (meta.ts ? String(meta.ts).slice(0, 10) : ""),
             ts: meta.ts ? String(meta.ts) : "",
+            cwd: meta.cwd || "",
           });
 
           if (limit && entries.length >= limit) return entries;
