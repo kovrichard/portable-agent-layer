@@ -56,6 +56,9 @@ function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+/** PAL-deployed dirs — engine-managed, overwritten on every `pal install` */
+export const PAL_INSTALLED_DIRS_RE = /[/\\]\.pal[/\\](?:docs|skills|tools)[/\\]/;
+
 /** Paths that should never be written to */
 export const PROTECTED_PATHS: RegExp[] = [
   /^\/etc\//,
@@ -65,8 +68,7 @@ export const PROTECTED_PATHS: RegExp[] = [
   /\.gnupg\//,
   // Claude Code auto-memory — PAL owns memory; writes here indicate wrong system is being used
   /\.claude\/projects\/[^/]+\/memory\//,
-  // PAL-deployed dirs — engine-managed, overwritten on every `pal install`
-  /[/\\]\.pal[/\\](?:docs|skills|tools)[/\\]/,
+  PAL_INSTALLED_DIRS_RE,
   // Derived from HOOK_MANAGED_FILES — scoped to managed roots only
   ...HOOK_MANAGED_FILES.map(
     (name) =>
@@ -142,7 +144,13 @@ export function checkFilePath(filePath: string): string | null {
   if (matchedDir) {
     return `${matchedDir}/ is managed automatically by hooks — do not edit directly`;
   }
-  // Check system-protected paths
+  // PAL-deployed dirs — edit source in the PAL repo, not the installed copy
+  if (PAL_INSTALLED_DIRS_RE.test(normalized)) {
+    const match = normalized.match(/\.pal[/\\](docs|skills|tools)/);
+    const dir = match ? match[1] : "docs/skills/tools";
+    return `~/.pal/${dir}/ is managed by 'pal install' — edit the source in the PAL repo instead`;
+  }
+  // Check remaining system-protected paths
   if (PROTECTED_PATHS.some((pattern) => pattern.test(filePath))) {
     return `Protected path: ${filePath}`;
   }
