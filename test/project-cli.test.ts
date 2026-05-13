@@ -259,6 +259,17 @@ describe("project CLI", () => {
     expect(r.stderr).toContain("Invalid project name");
   });
 
+  test("set-path updates the registered path", async () => {
+    await runCli(["create", "p", "--path", "/tmp/original"]);
+    const r = await runCli(["set-path", "p", "/tmp/updated"]);
+    expect(r.code).toBe(0);
+    const out = JSON.parse(r.stdout);
+    expect(out.updated).toBe(true);
+    expect(out.path).toContain("updated");
+    const after = JSON.parse((await runCli(["resume", "p"])).stdout);
+    expect(after.project.path).toContain("updated");
+  });
+
   test("unknown command exits 1 with helpful stderr", async () => {
     const r = await runCli(["frobnicate"]);
     expect(r.code).toBe(1);

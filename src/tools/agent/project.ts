@@ -189,6 +189,19 @@ function addHandoff(name: string, text: string): void {
   ok({ updated: true, name });
 }
 
+// ── set-path ──────────────────────────────────────────────────────
+
+function cmdSetPath(args: string[]): void {
+  const [name, ...rest] = args;
+  if (!name || rest.length === 0) fail("Usage: set-path <name> <new-path>");
+  const newPath = resolve(rest.join(" ").trim());
+  const p = requireProject(name);
+  p.path = newPath;
+  p.updated = now();
+  writeProject(p);
+  ok({ updated: true, name, path: newPath });
+}
+
 // ── update-section ────────────────────────────────────────────────
 
 const VALID_SECTIONS = [
@@ -372,6 +385,7 @@ Commands:
   complete <name>                               mark complete
   archive <name>                                mark archived
   pause <name> | unpause <name>                 toggle paused/active
+  set-path <name> <new-path>                    update the registered path
   add-next <name> "text"                        append next step
   add-blocker <name> "text"                     append blocker
   add-decision <name> "decision" "rationale"    log a dated decision entry
@@ -462,6 +476,9 @@ export function run(): void {
       return;
     case "migrate":
       cmdMigrate();
+      return;
+    case "set-path":
+      cmdSetPath(rest);
       return;
     case "rm":
       cmdRm(rest);
