@@ -9,9 +9,10 @@ import { blockResponse } from "./lib/agent";
 import { checkBashCommand, checkFilePath } from "./lib/security";
 import { readStdinJSON } from "./lib/stdin";
 
-// preToolUse shape (Claude Code + Cursor)
+// preToolUse shape (Claude Code + Cursor + Codex)
 interface ToolUseInput {
   tool_name: string;
+  hook_event_name?: string; // Codex includes this in all hook inputs
   tool_input: {
     command?: string;
     file_path?: string;
@@ -43,14 +44,23 @@ try {
     process.exit(0);
   }
 
-  // preToolUse — Claude uses "Bash", Cursor uses "Shell"
-  const isBash = input.tool_name === "Bash" || input.tool_name === "Shell";
-  const isFileWrite = input.tool_name === "Write" || input.tool_name === "Edit";
+  const hookEventName = input.hook_event_name;
+
+  // preToolUse — Claude: "Bash", Cursor: "Shell", Codex: "shell"
+  const isBash =
+    input.tool_name === "Bash" ||
+    input.tool_name === "Shell" ||
+    input.tool_name === "shell";
+  const isFileWrite =
+    input.tool_name === "Write" ||
+    input.tool_name === "Edit" ||
+    input.tool_name === "write_file" ||
+    input.tool_name === "apply_patch";
 
   if (isBash && input.tool_input.command) {
     const reason = checkBashCommand(input.tool_input.command);
     if (reason) {
-      process.stdout.write(blockResponse(`Blocked: ${reason}`));
+      process.stdout.write(blockResponse(`Blocked: ${reason}`, hookEventName));
       process.exit(0);
     }
   }
@@ -58,7 +68,7 @@ try {
   if (isFileWrite && input.tool_input.file_path) {
     const reason = checkFilePath(input.tool_input.file_path);
     if (reason) {
-      process.stdout.write(blockResponse(reason));
+      process.stdout.write(blockResponse(reason, hookEventName));
       process.exit(0);
     }
   }

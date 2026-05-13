@@ -8,8 +8,8 @@
  *
  * Admin commands (pal cli ...):
  *   init                              Scaffold PAL home, install hooks for all targets
- *   install [--claude] [--opencode] [--cursor]   Register hooks/skills for targets
- *   uninstall [--claude] [--opencode] [--cursor] Remove hooks/skills for targets
+ *   install [--claude] [--opencode] [--cursor] [--codex]   Register hooks/skills for targets
+ *   uninstall [--claude] [--opencode] [--cursor] [--codex] Remove hooks/skills for targets
  *   update                             Update PAL (git pull or npm update)
  *   export [path] [--dry-run]         Export user state to zip
  *   import [path] [--dry-run]         Import user state from zip
@@ -204,9 +204,9 @@ function showHelp() {
     pal cli <command> [options]             Admin commands
 
   Admin commands:
-    pal cli init [--claude] [--opencode] [--cursor]    Scaffold and install (default: all)
-    pal cli install [--claude] [--opencode] [--cursor] Register hooks for targets
-    pal cli uninstall [--claude] [--opencode] [--cursor] Remove hooks for targets
+    pal cli init [--claude] [--opencode] [--cursor] [--codex]    Scaffold and install (default: all)
+    pal cli install [--claude] [--opencode] [--cursor] [--codex] Register hooks for targets
+    pal cli uninstall [--claude] [--opencode] [--cursor] [--codex] Remove hooks for targets
     pal cli update                          Update PAL (git pull or npm update)
     pal cli export [path] [--dry-run]       Export state to zip
     pal cli import [path] [--dry-run]       Import state from zip
@@ -221,32 +221,42 @@ function showHelp() {
     PAL_OPENCODE_DIR      Override opencode config dir (default: ~/.config/opencode)
     PAL_CURSOR_DIR        Override Cursor config dir (default: ~/.cursor)
     PAL_COPILOT_DIR       Override Copilot config dir (default: ~/.copilot)
+    PAL_CODEX_DIR         Override Codex config dir (default: ~/.codex)
     PAL_AGENTS_DIR        Override agents dir (default: ~/.agents)
 `);
 }
 
-type Targets = { claude: boolean; opencode: boolean; cursor: boolean; copilot: boolean };
+type Targets = {
+  claude: boolean;
+  opencode: boolean;
+  cursor: boolean;
+  copilot: boolean;
+  codex: boolean;
+};
 
 function parseTargets(args: string[]): Targets {
   let claude = false;
   let opencode = false;
   let cursor = false;
   let copilot = false;
+  let codex = false;
   for (const arg of args) {
     if (arg === "--claude") claude = true;
     else if (arg === "--opencode") opencode = true;
     else if (arg === "--cursor") cursor = true;
     else if (arg === "--copilot") copilot = true;
+    else if (arg === "--codex") codex = true;
     else if (arg === "--all") {
       claude = true;
       opencode = true;
       cursor = true;
       copilot = true;
+      codex = true;
     }
   }
-  if (!claude && !opencode && !cursor && !copilot)
-    return { claude: true, opencode: true, cursor: true, copilot: true };
-  return { claude, opencode, cursor, copilot };
+  if (!claude && !opencode && !cursor && !copilot && !codex)
+    return { claude: true, opencode: true, cursor: true, copilot: true, codex: true };
+  return { claude, opencode, cursor, copilot, codex };
 }
 
 /** Resolve targets against available agents. Errors if explicitly requested but missing. */
@@ -259,6 +269,7 @@ function resolveTargets(args: string[], health?: DoctorResult): Targets {
       a === "--opencode" ||
       a === "--cursor" ||
       a === "--copilot" ||
+      a === "--codex" ||
       a === "--all"
   );
 
@@ -279,6 +290,10 @@ function resolveTargets(args: string[], health?: DoctorResult): Targets {
       log.error("Copilot is not installed. Run 'pal cli doctor' for details.");
       process.exit(1);
     }
+    if (requested.codex && !h.codex.available) {
+      log.error("Codex is not installed. Run 'pal cli doctor' for details.");
+      process.exit(1);
+    }
     return requested;
   }
 
@@ -288,12 +303,14 @@ function resolveTargets(args: string[], health?: DoctorResult): Targets {
     opencode: h.opencode.available,
     cursor: h.cursor.available,
     copilot: h.copilot.available,
+    codex: h.codex.available,
   };
 
   if (!targets.claude) log.info("Skipping Claude Code (not installed)");
   if (!targets.opencode) log.info("Skipping opencode (not installed)");
   if (!targets.cursor) log.info("Skipping Cursor (not installed)");
   if (!targets.copilot) log.info("Skipping Copilot (not installed)");
+  if (!targets.codex) log.info("Skipping Codex (not installed)");
 
   return targets;
 }
@@ -339,6 +356,19 @@ function checkOpencodePluginInstalled(): boolean {
 
 function checkCopilotHooksRegistered(): boolean {
   return existsSync(resolve(platform.copilotDir(), "hooks", "pal-hooks.json"));
+}
+
+function checkCodexHooksRegistered(): boolean {
+  const hooksPath = resolve(platform.codexDir(), "hooks.json");
+  if (!existsSync(hooksPath)) return false;
+  try {
+    const data = JSON.parse(readFileSync(hooksPath, "utf-8"));
+    const hooks = data?.hooks?.SessionStart;
+    if (!Array.isArray(hooks)) return false;
+    return hooks.some((h: { command?: string }) => h?.command?.includes("LoadContext"));
+  } catch {
+    return false;
+  }
 }
 
 function checkCopilotInstructionsPresent(): boolean {
@@ -434,6 +464,7 @@ interface DoctorResult {
   opencode: ToolCheck;
   cursor: ToolCheck;
   copilot: ToolCheck;
+  codex: ToolCheck;
   hasAgent: boolean;
 }
 
@@ -446,6 +477,7 @@ function doctor(silent = false): DoctorResult {
       opencode: { name: "opencode", available: true },
       cursor: { name: "cursor", available: true },
       copilot: { name: "copilot", available: true },
+      codex: { name: "codex", available: true },
       hasAgent: true,
     };
   }
@@ -455,8 +487,13 @@ function doctor(silent = false): DoctorResult {
   const opencode = checkTool("opencode");
   const cursor = checkTool("cursor");
   const copilot = checkTool("copilot", ["version"]);
+  const codex = checkTool("codex");
   const hasAgent =
-    claude.available || opencode.available || cursor.available || copilot.available;
+    claude.available ||
+    opencode.available ||
+    cursor.available ||
+    copilot.available ||
+    codex.available;
 
   const home = palHome();
   const telosCount = (() => {
@@ -499,6 +536,9 @@ function doctor(silent = false): DoctorResult {
     copilot.available
       ? ok(`Copilot ${copilot.version || ""}`.trim())
       : fail("Copilot — not found");
+    codex.available
+      ? ok(`Codex ${codex.version || ""}`.trim())
+      : fail("Codex — not found");
     ok(`PAL home: ${home}`);
     telosCount > 0 ? ok(`TELOS: ${telosCount} files`) : fail("TELOS: not scaffolded");
 
@@ -572,6 +612,12 @@ function doctor(silent = false): DoctorResult {
         ? ok(`Copilot skills: ${n}`)
         : warn("Copilot skills — none found (run 'pal cli install --copilot')");
     }
+    if (codex.available) {
+      const n = countSkillsIn(resolve(platform.codexDir(), "skills"));
+      n > 0
+        ? ok(`Codex skills: ${n}`)
+        : warn("Codex skills — none found (run 'pal cli install --codex')");
+    }
 
     // Dependencies
     const nodeModulesPath = resolve(palPkg(), "node_modules");
@@ -610,6 +656,11 @@ function doctor(silent = false): DoctorResult {
         ? ok("copilot-instructions.md present")
         : warn("copilot-instructions.md missing (run 'pal cli install --copilot')");
     }
+    if (codex.available) {
+      checkCodexHooksRegistered()
+        ? ok("Codex hooks registered")
+        : fail("Codex hooks — not registered (run 'pal cli install --codex')");
+    }
 
     // API key checks
     process.env.PAL_ANTHROPIC_API_KEY
@@ -643,7 +694,7 @@ function doctor(silent = false): DoctorResult {
     console.log("");
   }
 
-  return { bun, claude, opencode, cursor, copilot, hasAgent };
+  return { bun, claude, opencode, cursor, copilot, codex, hasAgent };
 }
 
 // ── Commands ──
@@ -749,6 +800,12 @@ async function install(targets: Targets) {
     console.log("");
   }
 
+  if (targets.codex) {
+    console.log("━━━ Codex ━━━");
+    await import("../targets/codex/install");
+    console.log("");
+  }
+
   log.success("Done. Existing config was preserved — only new entries were added.");
 }
 
@@ -776,6 +833,12 @@ async function uninstall(args: string[]) {
   if (targets.copilot) {
     console.log("━━━ Copilot ━━━");
     await import("../targets/copilot/uninstall");
+    console.log("");
+  }
+
+  if (targets.codex) {
+    console.log("━━━ Codex ━━━");
+    await import("../targets/codex/uninstall");
     console.log("");
   }
 

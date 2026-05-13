@@ -241,6 +241,74 @@ export function unmergeCursorHooks(
   return result;
 }
 
+// --- Codex hooks (nested group format, distinct from Cursor's flat format) ---
+
+type CodexHookCommand = { type: string; command: string; timeout?: number };
+type CodexHookGroup = { matcher?: string; hooks: CodexHookCommand[] };
+type CodexHooks = { hooks?: Record<string, CodexHookGroup[]> };
+
+export function loadCodexHooksTemplate(
+  templatePath: string,
+  pkgRoot: string
+): CodexHooks {
+  const raw = readFileSync(templatePath, "utf-8");
+  const resolved = raw.replaceAll("{{PKG_ROOT}}", pkgRoot);
+  return JSON.parse(resolved) as CodexHooks;
+}
+
+/** Merge PAL hooks into an existing Codex hooks.json. Deduplicates by command string. */
+export function mergeCodexHooks(existing: CodexHooks, template: CodexHooks): CodexHooks {
+  const result: CodexHooks = { ...existing };
+  if (!template.hooks) return result;
+  if (!result.hooks) result.hooks = {};
+
+  const existingCommands = new Set(
+    Object.values(result.hooks).flatMap((groups) =>
+      groups.flatMap((g) => (g.hooks ?? []).map((h) => h.command))
+    )
+  );
+
+  for (const [event, groups] of Object.entries(template.hooks)) {
+    const current = result.hooks[event] ?? [];
+    for (const group of groups) {
+      const newCmds = group.hooks.filter((h) => !existingCommands.has(h.command));
+      if (newCmds.length > 0) {
+        current.push({ ...group, hooks: newCmds });
+        for (const h of newCmds) existingCommands.add(h.command);
+      }
+    }
+    result.hooks[event] = current;
+  }
+  return result;
+}
+
+/** Remove PAL hooks from an existing Codex hooks.json. Preserves user hooks. */
+export function unmergeCodexHooks(
+  existing: CodexHooks,
+  template: CodexHooks
+): CodexHooks {
+  const result: CodexHooks = { ...existing };
+  if (!template.hooks || !result.hooks) return result;
+
+  const palCommands = new Set(
+    Object.values(template.hooks).flatMap((groups) =>
+      groups.flatMap((g) => (g.hooks ?? []).map((h) => h.command))
+    )
+  );
+
+  for (const [event, groups] of Object.entries(result.hooks)) {
+    result.hooks[event] = groups
+      .map((g) => ({
+        ...g,
+        hooks: (g.hooks ?? []).filter((h) => !palCommands.has(h.command)),
+      }))
+      .filter((g) => g.hooks.length > 0);
+    if (result.hooks[event].length === 0) delete result.hooks[event];
+  }
+  if (Object.keys(result.hooks).length === 0) delete result.hooks;
+  return result;
+}
+
 // --- TELOS scaffolding ---
 
 /** Copy template files into telos/ without overwriting existing ones */
