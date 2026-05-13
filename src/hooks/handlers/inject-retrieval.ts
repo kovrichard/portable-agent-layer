@@ -29,9 +29,10 @@ function withTimeout<T>(work: () => T, ms: number): Promise<T | null> {
   });
 }
 
-export async function injectRetrieval(prompt: string): Promise<void> {
-  if (!prompt?.trim()) return;
-  if (!isEnabled("learningInjection")) return;
+/** Returns the retrieval reminder string, or null if nothing to inject. */
+export async function getRetrievalReminder(prompt: string): Promise<string | null> {
+  if (!prompt?.trim()) return null;
+  if (!isEnabled("learningInjection")) return null;
 
   const result = await withTimeout(() => {
     const index = ensureIndex();
@@ -39,12 +40,19 @@ export async function injectRetrieval(prompt: string): Promise<void> {
     return runRetrieval(prompt, index, process.cwd());
   }, TIMEOUT_MS);
 
-  if (!result?.reminder) return;
+  if (!result?.reminder) return null;
 
   logDebug(
     "inject-retrieval",
-    `injected ${result.matches.length} matches; top score=${result.matches[0]?.confidence.toFixed(3)}`
+    `${result.matches.length} matches; top score=${result.matches[0]?.confidence.toFixed(3)}`
   );
 
-  process.stdout.write(`${result.reminder}\n`);
+  return result.reminder;
+}
+
+/** Claude Code / Cursor path: write reminder to stdout for hook prepend. */
+export async function injectRetrieval(prompt: string): Promise<void> {
+  const reminder = await getRetrievalReminder(prompt);
+  if (!reminder) return;
+  process.stdout.write(`${reminder}\n`);
 }

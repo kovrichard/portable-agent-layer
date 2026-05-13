@@ -53,10 +53,15 @@ async function setSettings(data: Record<string, unknown>) {
   settings.reload();
 }
 
-async function loadHandler() {
+async function loadHandlers() {
   const t = Date.now();
   const mod = await import(`../src/hooks/handlers/inject-retrieval.ts?t=${t}`);
-  return mod.injectRetrieval as (prompt: string) => Promise<void>;
+  return {
+    injectRetrieval: mod.injectRetrieval as (prompt: string) => Promise<void>,
+    getRetrievalReminder: mod.getRetrievalReminder as (
+      prompt: string
+    ) => Promise<string | null>,
+  };
 }
 
 async function captureStdout(work: () => Promise<void>): Promise<string> {
@@ -77,8 +82,8 @@ async function captureStdout(work: () => Promise<void>): Promise<string> {
 
 describe("injectRetrieval handler", () => {
   test("emits empty when prompt is empty", async () => {
-    const fn = await loadHandler();
-    const out = await captureStdout(() => fn(""));
+    const { injectRetrieval } = await loadHandlers();
+    const out = await captureStdout(() => injectRetrieval(""));
     expect(out).toBe("");
   });
 
@@ -89,14 +94,16 @@ describe("injectRetrieval handler", () => {
       "Never mock the database"
     );
     await setSettings({ dynamicContext: { learningInjection: false } });
-    const fn = await loadHandler();
-    const out = await captureStdout(() => fn("should I mock the database in this test"));
+    const { injectRetrieval } = await loadHandlers();
+    const out = await captureStdout(() =>
+      injectRetrieval("should I mock the database in this test")
+    );
     expect(out).toBe("");
   });
 
   test("emits empty when corpus is empty", async () => {
-    const fn = await loadHandler();
-    const out = await captureStdout(() => fn("anything goes here"));
+    const { injectRetrieval } = await loadHandlers();
+    const out = await captureStdout(() => injectRetrieval("anything goes here"));
     expect(out).toBe("");
   });
 
@@ -106,9 +113,9 @@ describe("injectRetrieval handler", () => {
       "Mocked database hid a migration bug",
       "Never mock the database in integration tests"
     );
-    const fn = await loadHandler();
+    const { injectRetrieval } = await loadHandlers();
     const out = await captureStdout(() =>
-      fn("should I mock the database in this integration test")
+      injectRetrieval("should I mock the database in this integration test")
     );
     expect(out).toContain("<system-reminder>");
     expect(out).toContain("Never mock the database");
@@ -121,10 +128,62 @@ describe("injectRetrieval handler", () => {
       "Mocked database hid a migration bug",
       "Never mock the database in integration tests"
     );
-    const fn = await loadHandler();
+    const { injectRetrieval } = await loadHandlers();
     const out = await captureStdout(() =>
-      fn("kubernetes autoscaler manifests in helm chart")
+      injectRetrieval("kubernetes autoscaler manifests in helm chart")
     );
     expect(out).toBe("");
+  });
+});
+
+describe("getRetrievalReminder", () => {
+  test("returns null when prompt is empty", async () => {
+    const { getRetrievalReminder } = await loadHandlers();
+    expect(await getRetrievalReminder("")).toBeNull();
+  });
+
+  test("returns null when settings flag disabled", async () => {
+    seedCapture(
+      "20260415-100000_db-mock",
+      "DB mock test failed",
+      "Never mock the database"
+    );
+    await setSettings({ dynamicContext: { learningInjection: false } });
+    const { getRetrievalReminder } = await loadHandlers();
+    expect(
+      await getRetrievalReminder("should I mock the database in this test")
+    ).toBeNull();
+  });
+
+  test("returns null when corpus is empty", async () => {
+    const { getRetrievalReminder } = await loadHandlers();
+    expect(await getRetrievalReminder("anything goes here")).toBeNull();
+  });
+
+  test("returns reminder string when query matches a capture", async () => {
+    seedCapture(
+      "20260415-100000_db-mock",
+      "Mocked database hid a migration bug",
+      "Never mock the database in integration tests"
+    );
+    const { getRetrievalReminder } = await loadHandlers();
+    const result = await getRetrievalReminder(
+      "should I mock the database in this integration test"
+    );
+    expect(result).not.toBeNull();
+    expect(result).toContain("<system-reminder>");
+    expect(result).toContain("Never mock the database");
+  });
+
+  test("returns null when query is unrelated to corpus", async () => {
+    seedCapture(
+      "20260415-100000_db-mock",
+      "Mocked database hid a migration bug",
+      "Never mock the database in integration tests"
+    );
+    const { getRetrievalReminder } = await loadHandlers();
+    expect(
+      await getRetrievalReminder("kubernetes autoscaler manifests in helm chart")
+    ).toBeNull();
   });
 });

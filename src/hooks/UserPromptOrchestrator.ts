@@ -16,15 +16,17 @@ import { readStdinJSON } from "./lib/stdin";
 interface PromptSubmitInput {
   prompt: string;
   session_id?: string;
+  conversation_id?: string; // Cursor sends this instead of session_id
 }
 
 const input = await readStdinJSON<PromptSubmitInput>();
 logDebug("UserPromptOrchestrator", `Input: ${JSON.stringify(input).slice(0, 200)}`);
 if (!input?.prompt) process.exit(0);
 
+const sessionId = input.session_id ?? input.conversation_id;
 const results = await Promise.allSettled([
-  captureRating(input.prompt, input.session_id),
-  captureSessionName(input.prompt, input.session_id ?? ""),
+  captureRating(input.prompt, sessionId),
+  captureSessionName(input.prompt, sessionId ?? ""),
   injectRetrieval(input.prompt),
 ]);
 

@@ -34,6 +34,9 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   const { captureRating } = await lib<typeof import("../../hooks/handlers/rating")>(
     "../handlers/rating.ts"
   );
+  const { getRetrievalReminder } = await lib<
+    typeof import("../../hooks/handlers/inject-retrieval")
+  >("../handlers/inject-retrieval.ts");
 
   function partsToText(parts: Array<Record<string, unknown>>): string {
     return parts
@@ -120,17 +123,25 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
 
     // --- Capture ratings + session naming from user messages (shared handlers) ---
     "chat.message": async (input, output) => {
-      const text =
-        output.parts
-          ?.filter((p) => p.type === "text")
-          .map((p) => p.text || "")
-          .join(" ") ?? "";
+      const text = partsToText(output.parts ?? []);
+      if (!text.trim()) return;
 
-      if (text.trim()) {
-        await Promise.allSettled([
-          captureRating(text, input.sessionID),
-          captureSessionName(text, input.sessionID),
-        ]);
+      const [, , retrievalResult] = await Promise.allSettled([
+        captureRating(text, input.sessionID),
+        captureSessionName(text, input.sessionID),
+        getRetrievalReminder(text),
+      ]);
+
+      if (retrievalResult.status === "fulfilled" && retrievalResult.value) {
+        const injected = {
+          id: `pal-retrieval-${Date.now()}`,
+          sessionID: input.sessionID,
+          messageID: input.messageID ?? `pal-msg-${Date.now()}`,
+          type: "text" as const,
+          text: retrievalResult.value,
+          synthetic: true,
+        };
+        output.parts = [injected, ...(output.parts ?? [])];
       }
     },
 
