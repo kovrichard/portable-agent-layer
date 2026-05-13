@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const TEST_HOME = resolve(import.meta.dir, "../.test-home-project-cli");
@@ -15,8 +15,10 @@ afterAll(() => {
 });
 
 beforeEach(() => {
-  const dir = resolve(TEST_HOME, "memory", "state", "progress");
-  if (existsSync(dir)) rmSync(dir, { recursive: true });
+  const isaDir = resolve(TEST_HOME, "memory", "projects");
+  if (existsSync(isaDir)) rmSync(isaDir, { recursive: true });
+  const legacyDir = resolve(TEST_HOME, "memory", "state", "progress");
+  if (existsSync(legacyDir)) rmSync(legacyDir, { recursive: true });
 });
 
 async function runCli(
@@ -35,10 +37,10 @@ async function runCli(
   return { code, stdout, stderr };
 }
 
-function progressFiles(): string[] {
-  const dir = resolve(TEST_HOME, "memory", "state", "progress");
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir);
+function isaFiles(): string[] {
+  const base = resolve(TEST_HOME, "memory", "projects");
+  if (!existsSync(base)) return [];
+  return readdirSync(base).filter((slug) => existsSync(resolve(base, slug, "ISA.md")));
 }
 
 describe("project CLI", () => {
@@ -47,17 +49,17 @@ describe("project CLI", () => {
     expect(r.code).toBe(0);
     expect(r.stdout).toContain("Project — manage PAL project state");
     expect(r.stdout).toContain("create");
-    expect(r.stdout).toContain("add-objective");
+    expect(r.stdout).toContain("update-section");
   });
 
-  test("create with explicit name + path → writes JSON", async () => {
+  test("create with explicit name + path → writes ISA.md", async () => {
     const r = await runCli(["create", "pal", "--path", "/tmp/pal-fake"]);
     expect(r.code).toBe(0);
     const out = JSON.parse(r.stdout);
     expect(out.created).toBe(true);
     expect(out.project.name).toBe("pal");
     expect(out.project.status).toBe("active");
-    expect(progressFiles()).toContain("pal.json");
+    expect(isaFiles()).toContain("pal");
   });
 
   test("create defaults the name to basename of cwd (full segment, NOT split)", async () => {
@@ -94,47 +96,43 @@ describe("project CLI", () => {
     ]);
   });
 
-  test("add-objective appends, updates 'updated', persists count", async () => {
+  test("update-section sets a body section, round-trips via resume", async () => {
     await runCli(["create", "p", "--path", "/tmp/p"]);
-    const r = await runCli(["add-objective", "p", "Ship", "Tier", "1"]);
+    const r = await runCli(["update-section", "p", "goal", "Ship Tier 1"]);
     expect(r.code).toBe(0);
     const got = JSON.parse(r.stdout);
     expect(got.updated).toBe(true);
-    expect(got.count).toBe(1);
     const list = JSON.parse((await runCli(["resume", "p"])).stdout);
-    expect(list.project.objectives).toEqual(["Ship Tier 1"]);
+    expect(list.project.goal).toBe("Ship Tier 1");
   });
 
-  test("add-fact appends a stable reference fact, persists count", async () => {
+  test("update-section sets context section", async () => {
     await runCli(["create", "p", "--path", "/tmp/p"]);
-    const r = await runCli(["add-fact", "p", "PAI", "source:", "/repos/pai"]);
+    const r = await runCli(["update-section", "p", "context", "PAI source: /repos/pai"]);
     expect(r.code).toBe(0);
     const got = JSON.parse(r.stdout);
-    expect(got.field).toBe("facts");
-    expect(got.count).toBe(1);
+    expect(got.section).toBe("context");
     const list = JSON.parse((await runCli(["resume", "p"])).stdout);
-    expect(list.project.facts).toEqual(["PAI source: /repos/pai"]);
+    expect(list.project.context).toBe("PAI source: /repos/pai");
   });
 
-  test("rm-fact by index removes the right entry", async () => {
-    await runCli(["create", "p", "--path", "/tmp/p"]);
-    await runCli(["add-fact", "p", "first-fact"]);
-    await runCli(["add-fact", "p", "second-fact"]);
-    const r = await runCli(["rm-fact", "p", "0"]);
-    expect(r.code).toBe(0);
-    const out = JSON.parse(r.stdout);
-    expect(out.removed).toBe("first-fact");
-    const after = JSON.parse((await runCli(["resume", "p"])).stdout);
-    expect(after.project.facts).toEqual(["second-fact"]);
-  });
-
-  test("add-decision logs ts + decision + rationale", async () => {
+  test("add-decision appends dated entry to decisions section", async () => {
     await runCli(["create", "p", "--path", "/tmp/p"]);
     await runCli(["add-decision", "p", "use-bm25", "small-corpus-makes-it-fine"]);
     const r = await runCli(["resume", "p"]);
     const got = JSON.parse(r.stdout);
-    expect(got.project.decisions?.[0].decision).toBe("use-bm25");
-    expect(got.project.decisions?.[0].rationale).toBe("small-corpus-makes-it-fine");
+    expect(got.project.decisions).toContain("use-bm25");
+    expect(got.project.decisions).toContain("small-corpus-makes-it-fine");
+  });
+
+  test("add-decision appends multiple dated entries", async () => {
+    await runCli(["create", "p", "--path", "/tmp/p"]);
+    await runCli(["add-decision", "p", "decision-one", "reason-one"]);
+    await runCli(["add-decision", "p", "decision-two", "reason-two"]);
+    const r = await runCli(["resume", "p"]);
+    const got = JSON.parse(r.stdout);
+    expect(got.project.decisions).toContain("decision-one");
+    expect(got.project.decisions).toContain("decision-two");
   });
 
   test("status transitions: complete / archive / pause / unpause", async () => {
@@ -149,16 +147,110 @@ describe("project CLI", () => {
     expect(JSON.parse(r.stdout).status).toBe("archived");
   });
 
-  test("rm-objective by index removes the right entry", async () => {
+  test("add-next appends and persists count", async () => {
     await runCli(["create", "p", "--path", "/tmp/p"]);
-    await runCli(["add-objective", "p", "first"]);
-    await runCli(["add-objective", "p", "second"]);
-    const r = await runCli(["rm-objective", "p", "0"]);
+    const r = await runCli(["add-next", "p", "Ship", "Tier", "1"]);
+    expect(r.code).toBe(0);
+    const got = JSON.parse(r.stdout);
+    expect(got.updated).toBe(true);
+    expect(got.count).toBe(1);
+    const list = JSON.parse((await runCli(["resume", "p"])).stdout);
+    expect(list.project.next).toEqual(["Ship Tier 1"]);
+  });
+
+  test("rm-next by index removes the right entry", async () => {
+    await runCli(["create", "p", "--path", "/tmp/p"]);
+    await runCli(["add-next", "p", "first-next"]);
+    await runCli(["add-next", "p", "second-next"]);
+    const r = await runCli(["rm-next", "p", "0"]);
     expect(r.code).toBe(0);
     const out = JSON.parse(r.stdout);
-    expect(out.removed).toBe("first");
+    expect(out.removed).toBe("first-next");
     const after = JSON.parse((await runCli(["resume", "p"])).stdout);
-    expect(after.project.objectives).toEqual(["second"]);
+    expect(after.project.next).toEqual(["second-next"]);
+  });
+
+  test("criteria returns the criteria section", async () => {
+    await runCli(["create", "p", "--path", "/tmp/p"]);
+    await runCli([
+      "update-section",
+      "p",
+      "criteria",
+      "- All tests pass\n- ISA.md written",
+    ]);
+    const r = await runCli(["criteria", "p"]);
+    expect(r.code).toBe(0);
+    const got = JSON.parse(r.stdout);
+    expect(got.criteria).toContain("All tests pass");
+  });
+
+  test("migrate converts old JSON files to ISA.md and removes them", async () => {
+    const oldDir = resolve(TEST_HOME, "memory", "state", "progress");
+    if (!existsSync(oldDir)) mkdirSync(oldDir, { recursive: true });
+    const legacy = {
+      name: "legacy-proj",
+      path: "/tmp/legacy",
+      status: "active",
+      created: "2026-01-01T00:00:00Z",
+      updated: "2026-01-02T00:00:00Z",
+      facts: ["ref at ~/pai"],
+      objectives: ["Ship it"],
+      next_steps: ["do the thing"],
+      blockers: ["waiting on review"],
+      handoff: "pick up at step 3",
+      decisions: [
+        { ts: "2026-01-01T00:00:00Z", decision: "use ISA", rationale: "clean" },
+      ],
+    };
+    writeFileSync(resolve(oldDir, "legacy-proj.json"), JSON.stringify(legacy));
+
+    const r = await runCli(["migrate"]);
+    expect(r.code).toBe(0);
+    const out = JSON.parse(r.stdout);
+    expect(out.migrated).toBe(1);
+    expect(out.skipped).toBe(0);
+
+    // Old JSON removed
+    expect(existsSync(resolve(oldDir, "legacy-proj.json"))).toBe(false);
+    // New ISA.md created with migrated data
+    expect(isaFiles()).toContain("legacy-proj");
+    const resumed = JSON.parse((await runCli(["resume", "legacy-proj"])).stdout);
+    expect(resumed.project.next).toEqual(["do the thing"]);
+    expect(resumed.project.blockers).toEqual(["waiting on review"]);
+    expect(resumed.project.handoff).toBe("pick up at step 3");
+    expect(resumed.project.context).toContain("ref at ~/pai");
+    expect(resumed.project.goal).toContain("Ship it");
+    expect(resumed.project.decisions).toContain("use ISA");
+  });
+
+  test("migrate skips already-migrated projects", async () => {
+    await runCli(["create", "existing", "--path", "/tmp/existing"]);
+    const oldDir = resolve(TEST_HOME, "memory", "state", "progress");
+    if (!existsSync(oldDir)) mkdirSync(oldDir, { recursive: true });
+    writeFileSync(
+      resolve(oldDir, "existing.json"),
+      JSON.stringify({
+        name: "existing",
+        path: "/tmp/existing",
+        status: "active",
+        created: "2026-01-01T00:00:00Z",
+        updated: "2026-01-01T00:00:00Z",
+      })
+    );
+    const r = await runCli(["migrate"]);
+    expect(r.code).toBe(0);
+    const out = JSON.parse(r.stdout);
+    expect(out.skipped).toBe(1);
+    // JSON still present (not deleted since we skipped)
+    expect(existsSync(resolve(oldDir, "existing.json"))).toBe(true);
+  });
+
+  test("migrate with empty old dir returns zero counts", async () => {
+    const r = await runCli(["migrate"]);
+    expect(r.code).toBe(0);
+    const out = JSON.parse(r.stdout);
+    expect(out.migrated).toBe(0);
+    expect(out.skipped).toBe(0);
   });
 
   test("invalid name is rejected", async () => {

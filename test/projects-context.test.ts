@@ -17,7 +17,7 @@ afterAll(() => {
 });
 
 beforeEach(() => {
-  const dir = resolve(TEST_HOME, "memory", "state", "progress");
+  const dir = resolve(TEST_HOME, "memory", "projects");
   if (existsSync(dir)) rmSync(dir, { recursive: true });
 });
 
@@ -79,7 +79,7 @@ describe("loadActiveProjectsContext", () => {
       status: "active",
       created: nowIso(),
       updated: nowIso(),
-      objectives: ["ship tier 2"],
+      goal: "ship tier 2",
     });
     const out = lib.loadActiveProjectsContext(cwd);
     expect(out).toContain("## Active Projects");
@@ -98,7 +98,7 @@ describe("loadActiveProjectsContext", () => {
       status: "active",
       created: nowIso(),
       updated: nowIso(),
-      facts: ["Upstream lives at /repos/upstream", "Tech stack: Bun + TS"],
+      context: "Upstream lives at /repos/upstream\nTech stack: Bun + TS",
     });
     const out = lib.loadActiveProjectsContext(cwd);
     expect(out).toContain("Facts:");
@@ -115,7 +115,7 @@ describe("loadActiveProjectsContext", () => {
       status: "active",
       created: nowIso(),
       updated: nowIso(),
-      facts: ["Some private fact"],
+      context: "Some private fact",
     });
     // cwd is a plain dir, not the registered project
     const out = lib.loadActiveProjectsContext(fixturePlainDir("notes"));
@@ -230,8 +230,8 @@ describe("loadActiveProjectsContext", () => {
       status: "active",
       created: nowIso(),
       updated: nowIso(),
-      objectives: ["should not appear", "neither this"],
-      next_steps: ["a", "b", "c", "d"],
+      goal: "should not appear\nneither this",
+      next: ["a", "b", "c", "d"],
       blockers: ["x"],
     });
     const out = lib.loadActiveProjectsContext(fixturePlainDir("notes"));
@@ -253,8 +253,8 @@ describe("loadActiveProjectsContext", () => {
       status: "active",
       created: nowIso(),
       updated: nowIso(),
-      objectives: ["land tier 4"],
-      next_steps: ["one", "two"],
+      goal: "land tier 4",
+      next: ["one", "two"],
     });
     lib.writeProject({
       name: "sidekick",
@@ -262,8 +262,8 @@ describe("loadActiveProjectsContext", () => {
       status: "active",
       created: nowIso(),
       updated: nowIso(-60_000),
-      objectives: ["unrelated work"],
-      next_steps: ["x", "y", "z"],
+      goal: "unrelated work",
+      next: ["x", "y", "z"],
     });
     const out = lib.loadActiveProjectsContext(here);
     expect(out).toContain("**focus**");

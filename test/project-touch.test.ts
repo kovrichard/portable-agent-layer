@@ -31,7 +31,7 @@ afterAll(() => {
 });
 
 beforeEach(() => {
-  const dir = resolve(TEST_HOME, "memory", "state", "progress");
+  const dir = resolve(TEST_HOME, "memory", "projects");
   if (existsSync(dir)) rmSync(dir, { recursive: true });
 });
 
@@ -241,10 +241,9 @@ describe("projectTouch — auto-write contract", () => {
     const after = readProject("rapid");
     expect(after).not.toBeNull();
     expect(after?.handoff).toBe("Next steps: keep iterating");
-    expect(after?.objectives ?? []).toEqual([]);
-    expect(after?.next_steps ?? []).toEqual([]);
+    expect(after?.next ?? []).toEqual([]);
     expect(after?.blockers ?? []).toEqual([]);
-    // decisions[] should never be touched by project-touch
-    expect(after?.decisions ?? []).toEqual([]);
+    // decisions body section should never be touched by project-touch
+    expect(after?.decisions).toBeUndefined();
   });
 });

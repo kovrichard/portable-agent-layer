@@ -1,10 +1,10 @@
 ---
 name: projects
 description: Project context management. PROACTIVE — use when the user references a project (by name or as "this repo", "current work"), asks to add/update/complete a project, says "store under <project>", "track this", "what am I working on", "my projects", "my priorities".
-argument-hint: [list | create | resume | add-fact | add-objective | add-next | add-blocker | add-decision | add-handoff | complete | archive | pause]
+argument-hint: [list | create | resume | add-next | add-blocker | add-decision | add-handoff | update-section | criteria | isa-init | complete | archive | pause]
 ---
 
-Manage the user's project registry. Each project has its own state file at `~/.pal/memory/state/progress/{slug}.json`. The Stop hook auto-touches `updated` whenever the cwd resolves into a registered project — so just *being* in the project keeps it warm.
+Manage the user's project registry. Each project lives at `~/.pal/memory/projects/{slug}/ISA.md`. Frontmatter holds operational state (next steps, blockers, handoff); the body holds ISA spec sections (Problem, Goal, Criteria, Context, Decisions, etc.). The Stop hook auto-touches `updated` whenever the cwd resolves into a registered project — just *being* in the project keeps it warm.
 
 ## CLI
 
@@ -20,16 +20,33 @@ Output is JSON.
 |---------|---------|
 | `list` | All registered projects with status, path, updated, stale flag, and counts |
 | `create [name] [--path PATH] [--objectives "a;b;c"]` | Register a project. Defaults: name=basename(cwd), path=cwd. Slug must be `[a-z0-9_-]+` |
-| `resume <name>` | Print the full project JSON — facts, objectives, next steps, blockers, decisions, handoff |
-| `add-fact <name> "text"` | Append a stable fact / reference (e.g., "reference impl lives in this repo") |
-| `add-objective <name> "text"` | Append an objective |
-| `add-next <name> "text"` | Append a next step |
-| `add-blocker <name> "text"` | Append a blocker |
-| `add-decision <name> "decision" "rationale"` | Log a timestamped decision |
-| `add-handoff <name> "text"` | Overwrite the handoff field (single-value) |
-| `rm-fact \| rm-objective \| rm-next \| rm-blocker <name> <index>` | Remove an entry by zero-based index |
+| `resume <name>` | Print the full project ISA — all frontmatter and body sections |
+| `add-next <name> "text"` | Append a next step (array, instantly appendable) |
+| `add-blocker <name> "text"` | Append a blocker (array, instantly appendable) |
+| `add-decision <name> "decision" "rationale"` | Log a timestamped decision entry to the Decisions section |
+| `add-handoff <name> "text"` | Overwrite the handoff field (single-value, replaces) |
+| `rm-next \| rm-blocker <name> <index>` | Remove a next/blocker entry by zero-based index |
+| `update-section <name> <section> "content"` | Set an ISA body section (problem, goal, criteria, vision, constraints, out_of_scope, context, decisions, changelog) |
+| `criteria <name>` | Print the Criteria section (verifiable success conditions) |
+| `isa-init <name>` | Mark a project as ISA-initialized |
 | `complete <name>` / `archive <name>` / `pause <name>` / `unpause <name>` | Status transitions |
-| `rm <name>` | Delete the project state file entirely |
+| `rm <name>` | Delete the project directory entirely |
+
+## ISA Sections
+
+The body of each ISA.md holds spec sections. Use `update-section` to set them:
+
+| Section | Key | What goes here |
+|---------|-----|---------------|
+| Problem | `problem` | Why this project exists; the pain or gap being addressed |
+| Goal | `goal` | What success looks like (may be bullet list) |
+| Criteria | `criteria` | Verifiable done conditions — testable ISCs (Ideal State Criteria) |
+| Vision | `vision` | Long-horizon aspiration beyond the immediate goal |
+| Constraints | `constraints` | Non-negotiable limits (budget, time, tech, compatibility) |
+| Out of Scope | `out_of_scope` | What this project explicitly does NOT cover |
+| Context | `context` | Stable facts / references (e.g. "reference impl lives at ~/pai") |
+| Decisions | `decisions` | Auto-managed by `add-decision`; dated bullet list |
+| Changelog | `changelog` | Summary of completed milestones |
 
 ## Routing
 
@@ -38,9 +55,11 @@ Output is JSON.
 | "what am I working on", "my projects", "priorities" | `list` — summarize active and recently-touched projects |
 | "tell me about <project>" | `resume <name>` — present current state, highlight blockers and next steps |
 | "register this" / "track this" / cwd is unregistered work | `create` (default the name from cwd basename, confirm before writing) |
-| "store under <project>: X" / "note on <project>: X" | Pick the field — durable reference → `add-fact`, work item → `add-next`, obstacle → `add-blocker`. If unclear, ask. |
+| "store under <project>: X" / "note on <project>: X" | Pick the field — durable reference → `update-section <slug> context "..."`, work item → `add-next`, obstacle → `add-blocker`. If unclear, ask. |
 | "we decided X because Y" | `add-decision <name> "X" "Y"` |
 | "handoff for <project>" / "next session pick up at X" | `add-handoff <name> "<text>"` |
+| "set the goal for <project>" / "describe the problem" | `update-section <name> goal "..."` or `update-section <name> problem "..."` |
+| "what are the criteria for <project>" / "what counts as done" | `criteria <name>` |
 | "mark X complete" / "X is done" | `complete <name>` |
 | "park <project>" / "pause <project>" | `pause <name>` |
 | "archive <project>" | `archive <name>` |
@@ -53,7 +72,7 @@ When SessionStart context flags the current cwd as unregistered (e.g. `💡 cwd 
 
 - **Default name** = the FULL last path segment of cwd, lowercased. For `/repos/portable-agent-layer` → `portable-agent-layer`. Never split on `-`.
 - **Confirm before creating.** Never auto-create without explicit user approval ("yes", "do it", "register").
-- **Capture objectives in conversation.** If the user accepts but doesn't volunteer objectives, ask one short question, or infer from the last few messages and confirm.
+- **Capture context in conversation.** If the user accepts but doesn't volunteer a goal, ask one short question, or infer from the last few messages and confirm.
 
 ### When NOT to suggest registration
 
@@ -64,7 +83,7 @@ When SessionStart context flags the current cwd as unregistered (e.g. `💡 cwd 
 
 ## Append-as-you-go
 
-When the user describes plans, blockers, or decisions during normal work, invoke the relevant subcommand to keep state current — that's the dynamism this system is built for. Don't invoke for fleeting comments, hypotheticals, or things the user is just thinking through. Wait for a clear declarative ("let's add X", "Z is blocking us"), not a question or musing.
+When the user describes next steps, blockers, or decisions during normal work, invoke the relevant subcommand to keep state current — that's the dynamism this system is built for. Don't invoke for fleeting comments, hypotheticals, or things the user is just thinking through. Wait for a clear declarative ("let's add X", "Z is blocking us"), not a question or musing.
 
 ## Examples
 
@@ -72,8 +91,8 @@ When the user describes plans, blockers, or decisions during normal work, invoke
 ```
 User: "store under <project> that a reference implementation exists in this repo"
 → Identify the project from `list` (or by name)
-→ Durable reference, not a task → add-fact
-→ bun ~/.pal/tools/project.ts add-fact <slug> "Reference implementation lives in this repo"
+→ Durable reference, not a task → update-section
+→ bun ~/.pal/tools/project.ts update-section <slug> context "Reference implementation lives in this repo"
 ```
 
 **Registering the current repo**
@@ -89,6 +108,12 @@ User: "we decided <decision> because <reason>"
 → bun ~/.pal/tools/project.ts add-decision <slug> "<decision>" "<reason>"
 ```
 
+**Setting the goal and criteria**
+```
+User: "set the goal for pal to 'ship ISA support with full test coverage'"
+→ bun ~/.pal/tools/project.ts update-section pal goal "ship ISA support with full test coverage"
+```
+
 **Completing a project**
 ```
 User: "mark <project> as complete"
@@ -98,10 +123,9 @@ User: "mark <project> as complete"
 
 ## Anti-patterns
 
-- **Don't dump the full JSON.** Summarize. The user can ask for the raw payload.
-- **Don't write without confirming the field choice on ambiguous "store" requests.** A "fact" sticks forever; a "next step" implies follow-up — these are different commitments.
-- **Don't edit the JSON files directly.** Always use the CLI — it timestamps `updated` and keeps the schema valid.
-- **Don't confuse `add-fact` with the `telos` skill's `LEARNED.md` or `IDEAS.md`.** Project facts are scoped to one project; TELOS lessons are cross-cutting.
+- **Don't dump the full ISA.md.** Summarize. The user can ask for the raw payload.
+- **Don't write without confirming the field choice on ambiguous "store" requests.** A context fact sticks forever; a next step implies follow-up — these are different commitments.
+- **Don't edit ISA.md files directly.** Always use the CLI — it timestamps `updated` and keeps the schema valid.
 
 ## Rules
 

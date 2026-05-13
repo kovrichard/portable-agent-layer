@@ -1,30 +1,30 @@
 #!/usr/bin/env bun
 /**
- * Project — register and manage user projects via per-project progress JSONs.
+ * Project — register and manage user projects via ISA.md files.
  *
- * Replaces the hand-edited `~/.pal/telos/PROJECTS.md`. The AI is the primary
- * caller (proactive registration on unregistered cwds, append-as-you-go updates);
- * the user is the escape hatch for fine-grained control.
- *
- * State: `~/.pal/memory/state/progress/{slug}.json`. Auto-touched on Stop hook
- * when cwd resolves into a registered project.
+ * Each project is stored at `~/.pal/memory/projects/{slug}/ISA.md`.
+ * Frontmatter holds operational state; body holds ISA spec sections.
  *
  * Usage:
  *   bun ~/.pal/tools/project.ts list
  *   bun ~/.pal/tools/project.ts create [name] [--path PATH] [--objectives "..."]
  *   bun ~/.pal/tools/project.ts resume <name>
  *   bun ~/.pal/tools/project.ts complete | archive | pause | unpause <name>
- *   bun ~/.pal/tools/project.ts add-fact <name> "text"
- *   bun ~/.pal/tools/project.ts add-objective <name> "text"
  *   bun ~/.pal/tools/project.ts add-next <name> "text"
  *   bun ~/.pal/tools/project.ts add-blocker <name> "text"
  *   bun ~/.pal/tools/project.ts add-decision <name> "decision" "rationale"
  *   bun ~/.pal/tools/project.ts add-handoff <name> "text"
- *   bun ~/.pal/tools/project.ts rm-fact | rm-objective | rm-next | rm-blocker <name> <index>
+ *   bun ~/.pal/tools/project.ts rm-next | rm-blocker <name> <index>
+ *   bun ~/.pal/tools/project.ts update-section <name> <section> "content"
+ *   bun ~/.pal/tools/project.ts criteria <name>
+ *   bun ~/.pal/tools/project.ts isa-init <name>
+ *   bun ~/.pal/tools/project.ts migrate
  */
 
+import { existsSync, readdirSync, readFileSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { paths } from "../../hooks/lib/paths";
 import {
   defaultSlug,
   deleteProject,
@@ -65,8 +65,7 @@ function cmdList(): void {
     path: p.path,
     updated: p.updated,
     stale: isStale(p),
-    objectives: p.objectives?.length ?? 0,
-    next_steps: p.next_steps?.length ?? 0,
+    next: p.next?.length ?? 0,
     blockers: p.blockers?.length ?? 0,
   }));
   ok({ count: all.length, projects: rows });
@@ -100,11 +99,13 @@ function cmdCreate(args: string[]): void {
     );
   }
 
-  const objectives = values.objectives
+  const goalLines = values.objectives
     ? values.objectives
         .split(/[\n;|]/)
         .map((s) => s.trim())
         .filter(Boolean)
+        .map((s) => `- ${s}`)
+        .join("\n")
     : undefined;
 
   const project: ProjectProgress = {
@@ -113,7 +114,7 @@ function cmdCreate(args: string[]): void {
     status: "active",
     created: now(),
     updated: now(),
-    objectives,
+    ...(goalLines ? { goal: goalLines } : {}),
   };
   writeProject(project);
   ok({ created: true, project });
@@ -137,14 +138,10 @@ function setStatus(name: string, status: ProjectStatus): void {
   ok({ updated: true, name, status });
 }
 
-// ── append helpers ────────────────────────────────────────────────
+// ── append/remove for array fields ───────────────────────────────
 
-function appendItem(
-  name: string,
-  field: "facts" | "objectives" | "next_steps" | "blockers",
-  text: string
-): void {
-  if (!text?.trim()) fail(`Empty ${field.replace("_", " ")} text.`);
+function appendItem(name: string, field: "next" | "blockers", text: string): void {
+  if (!text?.trim()) fail(`Empty ${field} text.`);
   const p = requireProject(name);
   const list = p[field] ?? [];
   list.push(text.trim());
@@ -154,11 +151,7 @@ function appendItem(
   ok({ updated: true, name, field, count: list.length });
 }
 
-function removeItem(
-  name: string,
-  field: "facts" | "objectives" | "next_steps" | "blockers",
-  indexArg: string
-): void {
+function removeItem(name: string, field: "next" | "blockers", indexArg: string): void {
   const idx = parseInt(indexArg, 10);
   if (!Number.isInteger(idx) || idx < 0) fail(`Invalid index "${indexArg}".`);
   const p = requireProject(name);
@@ -171,17 +164,21 @@ function removeItem(
   ok({ updated: true, name, field, removed, count: list.length });
 }
 
+// ── decisions (body section append) ──────────────────────────────
+
 function addDecision(name: string, decision: string, rationale: string): void {
   if (!decision?.trim() || !rationale?.trim())
     fail("Usage: add-decision <name> <decision> <rationale>");
   const p = requireProject(name);
-  const list = p.decisions ?? [];
-  list.push({ ts: now(), decision: decision.trim(), rationale: rationale.trim() });
-  p.decisions = list;
+  const date = new Date().toISOString().slice(0, 10);
+  const line = `- ${date}: ${decision.trim()} (${rationale.trim()})`;
+  p.decisions = p.decisions ? `${p.decisions}\n${line}` : line;
   p.updated = now();
   writeProject(p);
-  ok({ updated: true, name, count: list.length });
+  ok({ updated: true, name });
 }
+
+// ── handoff ───────────────────────────────────────────────────────
 
 function addHandoff(name: string, text: string): void {
   if (!text?.trim()) fail("Empty handoff text.");
@@ -192,11 +189,172 @@ function addHandoff(name: string, text: string): void {
   ok({ updated: true, name });
 }
 
+// ── update-section ────────────────────────────────────────────────
+
+const VALID_SECTIONS = [
+  "problem",
+  "goal",
+  "criteria",
+  "vision",
+  "constraints",
+  "out_of_scope",
+  "context",
+  "decisions",
+  "changelog",
+] as const;
+type Section = (typeof VALID_SECTIONS)[number];
+
+function cmdUpdateSection(args: string[]): void {
+  const [name, section, ...rest] = args;
+  if (!name || !section) fail("Usage: update-section <name> <section> <content>");
+  const key = section.toLowerCase().replace(/\s+/g, "_") as Section;
+  if (!(VALID_SECTIONS as readonly string[]).includes(key)) {
+    fail(`Unknown section "${section}". Valid: ${VALID_SECTIONS.join(", ")}`);
+  }
+  const content = rest.join(" ").trim();
+  if (!content) fail("Empty content.");
+  const p = requireProject(name);
+  (p as unknown as Record<string, unknown>)[key] = content;
+  p.updated = now();
+  writeProject(p);
+  ok({ updated: true, name, section: key });
+}
+
+// ── criteria ──────────────────────────────────────────────────────
+
+function cmdCriteria(args: string[]): void {
+  const name = args[0];
+  if (!name) fail("Usage: criteria <name>");
+  const p = requireProject(name);
+  ok({ name, criteria: p.criteria ?? "" });
+}
+
+// ── isa-init ──────────────────────────────────────────────────────
+
+function cmdIsaInit(args: string[]): void {
+  const name = args[0];
+  if (!name) fail("Usage: isa-init <name>");
+  const p = requireProject(name);
+  const sections: Array<keyof ProjectProgress> = [
+    "problem",
+    "goal",
+    "criteria",
+    "vision",
+    "constraints",
+    "out_of_scope",
+    "context",
+  ];
+  let scaffolded = 0;
+  const pr = p as unknown as Record<string, unknown>;
+  for (const s of sections) {
+    if (!pr[s as string]) {
+      pr[s as string] = "";
+      scaffolded++;
+    }
+  }
+  // Remove empty strings so they don't clutter the ISA body
+  for (const s of sections) {
+    if (pr[s as string] === "") pr[s as string] = undefined;
+  }
+  p.updated = now();
+  writeProject(p);
+  ok({ initialized: true, name, scaffolded });
+}
+
+// ── migrate (from old JSON format) ───────────────────────────────
+
+interface LegacyDecision {
+  ts: string;
+  decision: string;
+  rationale: string;
+}
+
+interface LegacyProject {
+  name: string;
+  path: string;
+  status: ProjectStatus;
+  created: string;
+  updated: string;
+  facts?: string[];
+  objectives?: string[];
+  next_steps?: string[];
+  blockers?: string[];
+  handoff?: string;
+  decisions?: LegacyDecision[];
+}
+
+function cmdMigrate(): void {
+  const progressDir = paths.progress();
+  if (!existsSync(progressDir)) {
+    ok({ migrated: 0, skipped: 0, results: [] });
+    return;
+  }
+
+  const files = readdirSync(progressDir).filter((f) => f.endsWith(".json"));
+  if (files.length === 0) {
+    ok({ migrated: 0, skipped: 0, results: [] });
+    return;
+  }
+
+  let migrated = 0;
+  let skipped = 0;
+  const results: string[] = [];
+
+  for (const file of files) {
+    const slug = file.slice(0, -5);
+    const filePath = resolve(progressDir, file);
+
+    if (readProject(slug)) {
+      skipped++;
+      results.push(`${slug}: skipped (ISA.md already exists)`);
+      continue;
+    }
+
+    try {
+      const raw = JSON.parse(readFileSync(filePath, "utf-8")) as LegacyProject;
+      if (!raw?.name || !raw?.path || !raw?.status) {
+        skipped++;
+        results.push(`${slug}: skipped (malformed JSON)`);
+        continue;
+      }
+
+      const p: ProjectProgress = {
+        name: raw.name,
+        path: raw.path,
+        status: raw.status,
+        created: raw.created,
+        updated: raw.updated,
+        ...(raw.handoff ? { handoff: raw.handoff } : {}),
+        ...(raw.next_steps?.length ? { next: raw.next_steps } : {}),
+        ...(raw.blockers?.length ? { blockers: raw.blockers } : {}),
+      };
+
+      if (raw.facts?.length) p.context = raw.facts.join("\n");
+      if (raw.objectives?.length) p.goal = raw.objectives.map((o) => `- ${o}`).join("\n");
+      if (raw.decisions?.length) {
+        p.decisions = raw.decisions
+          .map((d) => `- ${d.ts.slice(0, 10)}: ${d.decision} (${d.rationale})`)
+          .join("\n");
+      }
+
+      writeProject(p);
+      unlinkSync(filePath);
+      migrated++;
+      results.push(`${slug}: migrated`);
+    } catch {
+      skipped++;
+      results.push(`${slug}: skipped (read/write error)`);
+    }
+  }
+
+  ok({ migrated, skipped, results });
+}
+
 // ── rm (project) ──────────────────────────────────────────────────
 
 function cmdRm(args: string[]): void {
   const name = args[0];
-  if (!name) fail("Usage: rm <name>  (deletes the entire project state file)");
+  if (!name) fail("Usage: rm <name>  (deletes the entire project directory)");
   const removed = deleteProject(name);
   if (!removed) fail(`No project named "${name}".`);
   ok({ deleted: true, name });
@@ -205,26 +363,26 @@ function cmdRm(args: string[]): void {
 // ── dispatch ──────────────────────────────────────────────────────
 
 function help(): void {
-  console.log(`Project — manage PAL project state.
+  console.log(`Project — manage PAL project state (ISA.md backed).
 
 Commands:
   list                                          show all registered projects
-  create [name] [--path PATH] [--objectives X]  register a project (defaults: name=basename(cwd), path=cwd)
-  resume <name>                                 print full project JSON
+  create [name] [--path PATH] [--objectives X]  register a project
+  resume <name>                                 print full project ISA
   complete <name>                               mark complete
   archive <name>                                mark archived
   pause <name> | unpause <name>                 toggle paused/active
-  add-fact <name> "text"                        append a stable fact / reference
-  add-objective <name> "text"                   append objective
   add-next <name> "text"                        append next step
   add-blocker <name> "text"                     append blocker
-  add-decision <name> "decision" "rationale"    log a decision
+  add-decision <name> "decision" "rationale"    log a dated decision entry
   add-handoff <name> "text"                     overwrite handoff field
-  rm-fact <name> <index>                        remove fact by index
-  rm-objective <name> <index>                   remove objective by index
   rm-next <name> <index>                        remove next step by index
   rm-blocker <name> <index>                     remove blocker by index
-  rm <name>                                     delete the entire project file
+  update-section <name> <section> "content"     set an ISA body section
+  criteria <name>                               print the Criteria section
+  isa-init <name>                               mark project as ISA-initialized
+  migrate                                       migrate old JSON progress files → ISA.md
+  rm <name>                                     delete the entire project
 `);
 }
 
@@ -256,24 +414,10 @@ export function run(): void {
     case "unpause":
       setStatus(rest[0] ?? fail("Usage: unpause <name>"), "active");
       return;
-    case "add-fact":
-      appendItem(
-        rest[0] ?? fail("Usage: add-fact <name> <text>"),
-        "facts",
-        rest.slice(1).join(" ")
-      );
-      return;
-    case "add-objective":
-      appendItem(
-        rest[0] ?? fail("Usage: add-objective <name> <text>"),
-        "objectives",
-        rest.slice(1).join(" ")
-      );
-      return;
     case "add-next":
       appendItem(
         rest[0] ?? fail("Usage: add-next <name> <text>"),
-        "next_steps",
+        "next",
         rest.slice(1).join(" ")
       );
       return;
@@ -297,26 +441,8 @@ export function run(): void {
         rest.slice(1).join(" ")
       );
       return;
-    case "rm-fact":
-      removeItem(
-        rest[0] ?? fail("Usage: rm-fact <name> <index>"),
-        "facts",
-        rest[1] ?? ""
-      );
-      return;
-    case "rm-objective":
-      removeItem(
-        rest[0] ?? fail("Usage: rm-objective <name> <index>"),
-        "objectives",
-        rest[1] ?? ""
-      );
-      return;
     case "rm-next":
-      removeItem(
-        rest[0] ?? fail("Usage: rm-next <name> <index>"),
-        "next_steps",
-        rest[1] ?? ""
-      );
+      removeItem(rest[0] ?? fail("Usage: rm-next <name> <index>"), "next", rest[1] ?? "");
       return;
     case "rm-blocker":
       removeItem(
@@ -324,6 +450,18 @@ export function run(): void {
         "blockers",
         rest[1] ?? ""
       );
+      return;
+    case "update-section":
+      cmdUpdateSection(rest);
+      return;
+    case "criteria":
+      cmdCriteria(rest);
+      return;
+    case "isa-init":
+      cmdIsaInit(rest);
+      return;
+    case "migrate":
+      cmdMigrate();
       return;
     case "rm":
       cmdRm(rest);

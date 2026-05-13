@@ -1,12 +1,10 @@
 /**
- * Projects — registry of user-curated projects with auto-managed state.
+ * Projects — registry of user-curated projects backed by ISA.md files.
  *
- * Each project lives in `~/.pal/memory/state/progress/{slug}.json`. The CLI
- * (`src/tools/agent/project.ts`) is the user/AI-facing writer; the Stop hook
+ * Each project lives in `~/.pal/memory/projects/{slug}/ISA.md`. Frontmatter
+ * holds operational state; the body holds ISA spec sections. The CLI
+ * (`src/tools/agent/project.ts`) is the primary writer; the Stop hook
  * auto-touches `updated` when cwd resolves into a registered project.
- *
- * Replaces the hand-edited `~/.pal/telos/PROJECTS.md` — see plan
- * `~/.claude/plans/clever-frolicking-harp.md` for context.
  */
 
 import {
@@ -14,19 +12,15 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  rmdirSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, parse as parsePath, resolve, sep } from "node:path";
+import { parse, stringify } from "./frontmatter";
 import { paths } from "./paths";
 
 export type ProjectStatus = "active" | "paused" | "complete" | "archived";
-
-export interface Decision {
-  ts: string;
-  decision: string;
-  rationale: string;
-}
 
 export interface ProjectProgress {
   name: string;
@@ -34,12 +28,19 @@ export interface ProjectProgress {
   status: ProjectStatus;
   created: string;
   updated: string;
-  facts?: string[];
-  objectives?: string[];
-  next_steps?: string[];
+  next?: string[];
   blockers?: string[];
   handoff?: string;
-  decisions?: Decision[];
+  // ISA body sections
+  problem?: string;
+  goal?: string;
+  criteria?: string;
+  vision?: string;
+  constraints?: string;
+  out_of_scope?: string;
+  context?: string;
+  decisions?: string;
+  changelog?: string;
 }
 
 export const PROJECT_STALE_DAYS_DEFAULT = 14;
@@ -54,23 +55,69 @@ const PROJECT_MARKERS = [
   "Gemfile",
 ];
 
-function progressDir(): string {
-  const dir = paths.progress();
-  mkdirSync(dir, { recursive: true });
-  return dir;
+type IsaMeta = {
+  name: string;
+  path: string;
+  status: ProjectStatus;
+  created: string;
+  updated: string;
+  next?: string[];
+  blockers?: string[];
+  handoff?: string;
+};
+
+const BODY_SECTIONS: Array<[string, keyof ProjectProgress]> = [
+  ["Problem", "problem"],
+  ["Goal", "goal"],
+  ["Criteria", "criteria"],
+  ["Vision", "vision"],
+  ["Constraints", "constraints"],
+  ["Out of Scope", "out_of_scope"],
+  ["Context", "context"],
+  ["Decisions", "decisions"],
+  ["Changelog", "changelog"],
+];
+
+const HEADER_TO_FIELD: Record<string, keyof ProjectProgress> = Object.fromEntries(
+  BODY_SECTIONS.map(([h, k]) => [h.toLowerCase(), k])
+);
+
+function buildBody(p: ProjectProgress): string {
+  return BODY_SECTIONS.filter(([, k]) => (p[k] as string | undefined)?.trim())
+    .map(([h, k]) => `## ${h}\n\n${(p[k] as string).trim()}`)
+    .join("\n\n");
 }
 
-function progressFile(slug: string): string {
-  return resolve(progressDir(), `${slug}.json`);
+function extractSections(body: string): Partial<ProjectProgress> {
+  const out: Partial<ProjectProgress> = {};
+  for (const part of body.split(/^## /m).slice(1)) {
+    const nl = part.indexOf("\n");
+    if (nl === -1) continue;
+    const header = part.slice(0, nl).trim().toLowerCase();
+    const content = part.slice(nl + 1).trim();
+    if (!content) continue;
+    const field = HEADER_TO_FIELD[header];
+    if (field) (out as Record<string, string>)[field as string] = content;
+  }
+  return out;
+}
+
+function isaFilePath(slug: string): string {
+  return resolve(paths.projectHistory(), slug, "ISA.md");
+}
+
+function ensureAndGetIsaFile(slug: string): string {
+  const dir = resolve(paths.projectHistory(), slug);
+  mkdirSync(dir, { recursive: true });
+  return resolve(dir, "ISA.md");
 }
 
 /**
  * Compute the default project slug from a cwd.
  *
  * Returns the FULL last path segment, lowercased, with non-[a-z0-9_-] chars
- * collapsed to a single hyphen. Critically: never split on `-` or any
- * separator within the basename. `/repos/portable-agent-layer` →
- * `portable-agent-layer`, NOT `layer`.
+ * collapsed to a single hyphen. Never splits on `-`. `/repos/portable-agent-layer`
+ * → `portable-agent-layer`, NOT `layer`.
  */
 export function defaultSlug(cwd: string): string {
   const base = basename(resolve(cwd));
@@ -83,8 +130,6 @@ export function defaultSlug(cwd: string): string {
 
 /**
  * Heuristic: does this directory look like a project root (has a project marker)?
- * Used by the SessionStart loader to hint the AI when an unregistered cwd is
- * project-shaped, so registration can be suggested in conversation.
  */
 export function looksLikeProjectRoot(cwd: string): boolean {
   const cwdAbs = resolve(cwd);
@@ -92,56 +137,62 @@ export function looksLikeProjectRoot(cwd: string): boolean {
 }
 
 export function readAllProjects(): ProjectProgress[] {
-  const dir = progressDir();
-  if (!existsSync(dir)) return [];
+  const base = paths.projectHistory();
+  if (!existsSync(base)) return [];
   const out: ProjectProgress[] = [];
-  for (const file of readdirSync(dir).filter((f) => f.endsWith(".json"))) {
-    try {
-      const parsed = JSON.parse(
-        readFileSync(resolve(dir, file), "utf-8")
-      ) as ProjectProgress;
-      if (parsed?.name && parsed?.path && parsed?.status) out.push(parsed);
-    } catch {
-      /* skip malformed */
-    }
+  for (const slug of readdirSync(base)) {
+    const file = resolve(base, slug, "ISA.md");
+    if (!existsSync(file)) continue;
+    const p = readProject(slug);
+    if (p) out.push(p);
   }
   return out;
 }
 
 export function readProject(name: string): ProjectProgress | null {
-  const file = progressFile(name);
+  const file = isaFilePath(name);
   if (!existsSync(file)) return null;
   try {
-    return JSON.parse(readFileSync(file, "utf-8")) as ProjectProgress;
+    const content = readFileSync(file, "utf-8");
+    const { meta, body } = parse<IsaMeta>(content);
+    if (!meta?.name || !meta?.path || !meta?.status) return null;
+    return { ...meta, ...extractSections(body) };
   } catch {
     return null;
   }
 }
 
 export function writeProject(p: ProjectProgress): void {
-  writeFileSync(progressFile(p.name), `${JSON.stringify(p, null, 2)}\n`, "utf-8");
+  const meta: Record<string, unknown> = {
+    name: p.name,
+    path: p.path,
+    status: p.status,
+    created: p.created,
+    updated: p.updated,
+  };
+  if (p.next?.length) meta.next = p.next;
+  if (p.blockers?.length) meta.blockers = p.blockers;
+  if (p.handoff) meta.handoff = p.handoff;
+  writeFileSync(ensureAndGetIsaFile(p.name), stringify(meta, buildBody(p)), "utf-8");
 }
 
 export function deleteProject(name: string): boolean {
-  const file = progressFile(name);
+  const file = isaFilePath(name);
   if (!existsSync(file)) return false;
   unlinkSync(file);
+  try {
+    rmdirSync(resolve(paths.projectHistory(), name));
+  } catch {
+    /* dir not empty or already gone */
+  }
   return true;
 }
 
 /**
  * Resolve `cwd` to the registered project that contains it, if any.
  *
- * Rules:
- *  - Exact-match registered path → that project.
- *  - Descendant of exactly one registered path → that project.
- *  - Descendant of multiple (nested) → longest registered path wins.
- *  - Ancestor of registered project (parent-dir browse mode) → null.
- *  - Unrelated cwd → null.
- *
- * The parent-dir case is the load-bearing one: opening `/repos/` (an ancestor
- * of multiple registered repos) MUST return null so the Stop-hook auto-write
- * doesn't ambiguously bump one of N children.
+ * Parent-dir browse mode (cwd is an ancestor of a registered project) → null.
+ * Multiple nested projects → longest registered path wins.
  */
 export function resolveProjectFromCwd(
   cwd: string,
@@ -199,15 +250,9 @@ const MAX_INLINE_BULLETS = 3;
 /**
  * Format the SessionStart "Active Projects" section.
  *
- * Output is empty when there's nothing to say (no active/paused projects AND
- * no project-shaped unregistered cwd). When non-empty, includes:
- *  - A `## Active Projects` block listing every active/paused project
- *  - Full Objectives / Next / Blockers detail ONLY for the cwd-resolved project
- *    (`→ here`); every other project renders as a one-liner with next/blocker
- *    counts, to keep the section bounded as the project corpus grows
- *  - A `⚠ stale` flag for projects updated > threshold days ago
- *  - A trailing AI-visible hint when cwd resolves to no project but
- *    `findProjectRoot(cwd)` reveals a project-shaped ancestor
+ * For the cwd-resolved project (`→ here`): full detail with Context, Objectives
+ * (from goal section), Next, and Blockers. For all others: compact one-liner with
+ * next/blocker counts only. Stale flag (>14d) and browse-mode hint included.
  */
 export function loadActiveProjectsContext(cwd: string = process.cwd()): string {
   const all = readAllProjects();
@@ -235,23 +280,29 @@ export function loadActiveProjectsContext(cwd: string = process.cwd()): string {
 
       if (isResolved) {
         lines.push(`- **${p.name}** (${statusPrefix}${ago})${stale}${here}`);
-        if (p.facts?.length) {
-          lines.push(`  Facts: ${p.facts.slice(0, MAX_INLINE_BULLETS).join("; ")}`);
+        if (p.context) {
+          const bullets = p.context
+            .split("\n")
+            .map((l) => l.replace(/^[-*]\s*/, "").trim())
+            .filter(Boolean);
+          lines.push(`  Facts: ${bullets.slice(0, MAX_INLINE_BULLETS).join("; ")}`);
         }
-        if (p.objectives?.length) {
-          lines.push(
-            `  Objectives: ${p.objectives.slice(0, MAX_INLINE_BULLETS).join("; ")}`
-          );
+        if (p.goal) {
+          const bullets = p.goal
+            .split("\n")
+            .map((l) => l.replace(/^[-*]\s*/, "").trim())
+            .filter(Boolean);
+          lines.push(`  Objectives: ${bullets.slice(0, MAX_INLINE_BULLETS).join("; ")}`);
         }
-        if (p.next_steps?.length) {
-          lines.push(`  Next: ${p.next_steps.slice(0, MAX_INLINE_BULLETS).join("; ")}`);
+        if (p.next?.length) {
+          lines.push(`  Next: ${p.next.slice(0, MAX_INLINE_BULLETS).join("; ")}`);
         }
         if (p.blockers?.length) {
           lines.push(`  Blockers: ${p.blockers.slice(0, MAX_INLINE_BULLETS).join("; ")}`);
         }
       } else {
         const counts: string[] = [];
-        if (p.next_steps?.length) counts.push(`${p.next_steps.length} next`);
+        if (p.next?.length) counts.push(`${p.next.length} next`);
         if (p.blockers?.length) counts.push(`${p.blockers.length} blockers`);
         const countsSuffix = counts.length > 0 ? ` — ${counts.join(", ")}` : "";
         lines.push(`- **${p.name}** (${statusPrefix}${ago})${countsSuffix}${stale}`);

@@ -16,7 +16,7 @@ afterAll(() => {
 });
 
 beforeEach(() => {
-  const dir = resolve(TEST_HOME, "memory", "state", "progress");
+  const dir = resolve(TEST_HOME, "memory", "projects");
   if (existsSync(dir)) rmSync(dir, { recursive: true });
 });
 
@@ -107,6 +107,22 @@ describe("read/write/delete", () => {
     expect(got).toEqual(p);
   });
 
+  test("write then read round-trips with ISA body sections", async () => {
+    const lib = await freshLib();
+    const p = fakeProject({
+      name: "rich",
+      path: "/tmp/rich",
+      goal: "Ship ISA support",
+      criteria: "- All tests pass\n- ISA.md is created on create",
+      context: "PAL source repo\nReference: ~/pai",
+      next: ["Build it", "Test it"],
+      blockers: ["Need design approval"],
+    });
+    lib.writeProject(p);
+    const got = lib.readProject("rich");
+    expect(got).toEqual(p);
+  });
+
   test("readAllProjects returns all written projects", async () => {
     const lib = await freshLib();
     lib.writeProject(fakeProject({ name: "a", path: "/tmp/a" }));
@@ -132,11 +148,12 @@ describe("read/write/delete", () => {
     expect(lib.deleteProject("ghost")).toBe(false);
   });
 
-  test("malformed JSON in progress dir is skipped, not crashed on", async () => {
+  test("malformed ISA.md in projects dir is skipped, not crashed on", async () => {
     const lib = await freshLib();
     lib.writeProject(fakeProject({ name: "valid", path: "/tmp/v" }));
-    const dir = resolve(TEST_HOME, "memory", "state", "progress");
-    writeFileSync(resolve(dir, "broken.json"), "not json {{{");
+    const dir = resolve(TEST_HOME, "memory", "projects", "broken");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(resolve(dir, "ISA.md"), "not valid frontmatter {{{");
     const all = lib.readAllProjects();
     expect(all.length).toBe(1);
     expect(all[0].name).toBe("valid");
