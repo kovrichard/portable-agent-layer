@@ -1,7 +1,6 @@
 /**
  * Interactive TELOS setup — prompts for personal context during `pal install`.
  * Skips any step whose TELOS file already has real content.
- * Projects use the upsertProject tool directly with a structured add-another loop.
  */
 
 import { writeFileSync } from "node:fs";

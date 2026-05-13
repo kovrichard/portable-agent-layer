@@ -10,7 +10,6 @@
  * - Appends content (preserves existing)
  * - Logs the change to updates.md
  *
- * For PROJECTS.md upserts (add/update by ID), use update-projects.ts instead.
  */
 
 import {

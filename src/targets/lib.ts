@@ -275,6 +275,21 @@ export function scaffoldPalSettings(): void {
     copyFileSync(src, dst);
     log.info("Created pal-settings.json from template");
   }
+
+  // Strip deprecated loadAtStartup.files entries from existing installs.
+  // mergeSettings only adds, never removes — deprecated entries persist indefinitely otherwise.
+  try {
+    const raw = JSON.parse(readFileSync(dst, "utf-8"));
+    const files: string[] = raw?.loadAtStartup?.files ?? [];
+    const cleaned = files.filter((f: string) => !f.endsWith("PROJECTS.md"));
+    if (cleaned.length !== files.length) {
+      raw.loadAtStartup.files = cleaned;
+      writeFileSync(dst, `${JSON.stringify(raw, null, 2)}\n`, "utf-8");
+      log.info("Removed deprecated PROJECTS.md from loadAtStartup.files");
+    }
+  } catch {
+    /* non-fatal — malformed settings left as-is */
+  }
 }
 
 // --- PAL docs (modular context routing files) ---
