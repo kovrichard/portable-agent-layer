@@ -275,6 +275,39 @@ describe("loadActiveProjectsContext", () => {
     expect(out).not.toContain("unrelated work");
   });
 
+  test("constraints surface in the cwd-resolved project block", async () => {
+    const lib = await freshLib();
+    const cwd = fixtureRepoDir("constrained");
+    lib.writeProject({
+      name: "constrained",
+      path: cwd,
+      status: "active",
+      created: nowIso(),
+      updated: nowIso(),
+      constraints:
+        "- Bun >= 1.3.0 only\n- No agent-specific imports in core logic\n- PAL_HOME override must work everywhere",
+    });
+    const out = lib.loadActiveProjectsContext(cwd);
+    expect(out).toContain("Constraints:");
+    expect(out).toContain("Bun >= 1.3.0 only");
+    expect(out).toContain("No agent-specific imports in core logic");
+  });
+
+  test("constraints do NOT surface in compact one-liner for non-resolved projects", async () => {
+    const lib = await freshLib();
+    lib.writeProject({
+      name: "other-constrained",
+      path: fixtureRepoDir("other-constrained"),
+      status: "active",
+      created: nowIso(),
+      updated: nowIso(),
+      constraints: "- Secret constraint",
+    });
+    const out = lib.loadActiveProjectsContext(fixturePlainDir("notes"));
+    expect(out).not.toContain("Constraints:");
+    expect(out).not.toContain("Secret constraint");
+  });
+
   test("notes folder (no project markers) → no hint even when projects exist elsewhere", async () => {
     const lib = await freshLib();
     lib.writeProject({

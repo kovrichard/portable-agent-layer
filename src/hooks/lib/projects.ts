@@ -294,6 +294,13 @@ export function loadActiveProjectsContext(cwd: string = process.cwd()): string {
             .filter(Boolean);
           lines.push(`  Objectives: ${bullets.slice(0, MAX_INLINE_BULLETS).join("; ")}`);
         }
+        if (p.constraints) {
+          const bullets = p.constraints
+            .split("\n")
+            .map((l) => l.replace(/^[-*]\s*/, "").trim())
+            .filter(Boolean);
+          lines.push(`  Constraints: ${bullets.slice(0, MAX_INLINE_BULLETS).join("; ")}`);
+        }
         if (p.next?.length) {
           lines.push(`  Next: ${p.next.slice(0, MAX_INLINE_BULLETS).join("; ")}`);
         }
