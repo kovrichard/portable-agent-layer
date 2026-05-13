@@ -23,6 +23,12 @@
         "command": "bun run {{PKG_ROOT}}/src/hooks/SkillGuard.ts"
       }
     ],
+    "beforeShellExecution": [
+      {
+        "type": "command",
+        "command": "bun run {{PKG_ROOT}}/src/hooks/SecurityValidator.ts"
+      }
+    ],
     "stop": [
       {
         "type": "command",

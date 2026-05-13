@@ -6,9 +6,10 @@
  */
 
 import { blockResponse } from "./lib/agent";
-import { checkBashCommand, checkFilePath, WARN_COMMANDS } from "./lib/security";
+import { checkBashCommand, checkFilePath } from "./lib/security";
 import { readStdinJSON } from "./lib/stdin";
 
+// preToolUse shape (Claude Code + Cursor)
 interface ToolUseInput {
   tool_name: string;
   tool_input: {
@@ -17,36 +18,47 @@ interface ToolUseInput {
   };
 }
 
+// beforeShellExecution shape (Cursor only) — flat, no tool_name wrapper
+interface ShellExecInput {
+  command: string;
+  sandbox?: boolean;
+}
+
+type SecurityInput = ToolUseInput | ShellExecInput;
+
+function isShellExec(input: SecurityInput): input is ShellExecInput {
+  return !("tool_name" in input) && "command" in input;
+}
+
 try {
-  const input = await readStdinJSON<ToolUseInput>();
+  const input = await readStdinJSON<SecurityInput>();
   if (!input) process.exit(0);
 
-  const { tool_name, tool_input } = input;
+  if (isShellExec(input)) {
+    // beforeShellExecution — command is always a shell command
+    const reason = checkBashCommand(input.command);
+    if (reason) {
+      process.stdout.write(blockResponse(`Blocked: ${reason}`));
+    }
+    process.exit(0);
+  }
 
-  // Normalize tool names: Claude uses "Bash", Cursor uses "Shell"
-  const isBash = tool_name === "Bash" || tool_name === "Shell";
-  const isFileWrite = tool_name === "Write" || tool_name === "Edit";
+  // preToolUse — Claude uses "Bash", Cursor uses "Shell"
+  const isBash = input.tool_name === "Bash" || input.tool_name === "Shell";
+  const isFileWrite = input.tool_name === "Write" || input.tool_name === "Edit";
 
-  // Check shell commands
-  if (isBash && tool_input.command) {
-    const reason = checkBashCommand(tool_input.command);
+  if (isBash && input.tool_input.command) {
+    const reason = checkBashCommand(input.tool_input.command);
     if (reason) {
       process.stdout.write(blockResponse(`Blocked: ${reason}`));
       process.exit(0);
     }
-
-    for (const pattern of WARN_COMMANDS) {
-      if (pattern.test(tool_input.command)) {
-        break;
-      }
-    }
   }
 
-  // Check file path operations
-  if (isFileWrite && tool_input.file_path) {
-    const fileReason = checkFilePath(tool_input.file_path);
-    if (fileReason) {
-      process.stdout.write(blockResponse(fileReason));
+  if (isFileWrite && input.tool_input.file_path) {
+    const reason = checkFilePath(input.tool_input.file_path);
+    if (reason) {
+      process.stdout.write(blockResponse(reason));
       process.exit(0);
     }
   }
