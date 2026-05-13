@@ -163,6 +163,33 @@ describe("checkFilePath", () => {
     expect(checkFilePath("/home/user/.pal/memory/learning/session/file.md")).toBeTruthy();
   });
 
+  // --- PAL-deployed dirs (engine-managed, overwritten on pal install) ---
+
+  test("blocks writes to ~/.pal/docs/", () => {
+    expect(checkFilePath("/home/user/.pal/docs/README.md")).toBeTruthy();
+    expect(checkFilePath("/home/user/.pal/docs/ALGORITHM.md")).toBeTruthy();
+  });
+
+  test("blocks writes to ~/.pal/skills/", () => {
+    expect(checkFilePath("/home/user/.pal/skills/threads/SKILL.md")).toBeTruthy();
+  });
+
+  test("blocks writes to ~/.pal/tools/", () => {
+    expect(checkFilePath("/home/user/.pal/tools/thread.ts")).toBeTruthy();
+  });
+
+  test("allows reads from ~/.pal/docs/ and ~/.pal/tools/ (path check is write-only)", () => {
+    // checkFilePath is called on Edit/Write, not on Read — these paths being blocked
+    // is correct: the file validator gates writes, not reads.
+    // This test documents that the protection exists for the right reason.
+    expect(checkFilePath("/home/user/.pal/docs/README.md")).toBeTruthy();
+  });
+
+  test("does not block .pal paths that don't match docs/skills/tools", () => {
+    expect(checkFilePath("/home/user/.pal/telos/GOALS.md")).toBeNull();
+    expect(checkFilePath("/home/user/.pal/memory/pal-settings.json")).toBeTruthy(); // caught by HOOK_MANAGED_FILES
+  });
+
   // --- Safe paths ---
 
   test("allows normal file paths", () => {

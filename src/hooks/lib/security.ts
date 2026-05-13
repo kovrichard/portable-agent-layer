@@ -65,6 +65,8 @@ export const PROTECTED_PATHS: RegExp[] = [
   /\.gnupg\//,
   // Claude Code auto-memory — PAL owns memory; writes here indicate wrong system is being used
   /\.claude\/projects\/[^/]+\/memory\//,
+  // PAL-deployed dirs — engine-managed, overwritten on every `pal install`
+  /[/\\]\.pal[/\\](?:docs|skills|tools)[/\\]/,
   // Derived from HOOK_MANAGED_FILES — scoped to managed roots only
   ...HOOK_MANAGED_FILES.map(
     (name) =>
