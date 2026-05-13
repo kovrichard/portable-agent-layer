@@ -11,7 +11,7 @@
  * is currently a Claude Code event.
  */
 
-import { writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { logDebug, logError } from "./lib/log";
 import { ensureDir, paths } from "./lib/paths";
@@ -54,7 +54,7 @@ const main = async () => {
       process.exit(0);
     }
 
-    const sessionId = input.session_id || "unknown";
+    const sessionId = input.session_id ?? "unknown";
     const payload = {
       sessionId,
       timestamp: new Date().toISOString(),
@@ -76,6 +76,54 @@ const main = async () => {
       "PreCompactPersist",
       `Saved last exchange (user=${lastUser.length}ch, assistant=${lastAssistant.length}ch) for session ${sessionId}`
     );
+
+    // Write a compaction-derived handoff note if no in-progress one already exists.
+    // LEARN-phase handoffs are more precise — never overwrite them.
+    const cwd = input.cwd ?? process.cwd();
+    const handoffFilePath = resolve(paths.state(), "last-handoff.json");
+    try {
+      type HandoffEntry = {
+        timestamp: string;
+        title: string;
+        status: "in-progress" | "completed";
+        handoff: string;
+        artifacts: string[];
+      };
+      const existing: Record<string, HandoffEntry> = existsSync(handoffFilePath)
+        ? JSON.parse(readFileSync(handoffFilePath, "utf-8"))
+        : {};
+      const current = existing[cwd];
+      if (!current || current.status !== "in-progress" || !current.handoff) {
+        const title = (
+          lastUser.slice(0, 80).replace(/\n/g, " ") || "Compacted session"
+        ).trim();
+        const body = [
+          "Auto-generated at compaction — LEARN phase did not run.",
+          lastUser ? `\nLast user message:\n${lastUser.slice(0, 500)}` : "",
+          lastAssistant
+            ? `\nLast assistant response:\n${lastAssistant.slice(0, 500)}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("");
+        existing[cwd] = {
+          timestamp: new Date().toISOString(),
+          title,
+          status: "in-progress",
+          handoff: body,
+          artifacts: [],
+        };
+        writeFileSync(handoffFilePath, JSON.stringify(existing, null, 2), "utf-8");
+        logDebug("PreCompactPersist", `Wrote compaction handoff for ${cwd}`);
+      } else {
+        logDebug(
+          "PreCompactPersist",
+          "In-progress handoff already exists — skipping auto-write"
+        );
+      }
+    } catch (err) {
+      logError("PreCompactPersist:handoff", err);
+    }
   } catch (err) {
     logError("PreCompactPersist", err);
   }
