@@ -11,8 +11,11 @@
  * is currently a Claude Code event.
  */
 
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { persistLastExchange } from "./handlers/persist-last-exchange";
 import { logDebug, logError } from "./lib/log";
+import { paths } from "./lib/paths";
 import { readStdinJSON } from "./lib/stdin";
 import { readTranscriptFile } from "./lib/transcript";
 
@@ -40,6 +43,25 @@ const main = async () => {
     }
     const sessionId = input.session_id ?? "unknown";
     const cwd = input.cwd ?? process.cwd();
+
+    // Stop fires after every response and is authoritative. Skip if it already
+    // wrote latest.json for this session — PreCompact is a safety net only.
+    const latestPath = resolve(paths.state(), "last-exchange", "latest.json");
+    if (existsSync(latestPath)) {
+      try {
+        const latest = JSON.parse(readFileSync(latestPath, "utf-8"));
+        if (latest?.sessionId === sessionId) {
+          logDebug(
+            "PreCompactPersist",
+            `Stop already persisted session ${sessionId} — skipping`
+          );
+          process.exit(0);
+        }
+      } catch {
+        /* unreadable — fall through and write */
+      }
+    }
+
     persistLastExchange(messages, sessionId, cwd);
     logDebug(
       "PreCompactPersist",
