@@ -139,20 +139,6 @@ To add a new gate (say, a security audit), add a script to `package.json`, a wra
 
 These are project-wide. Every PR follows them; agents enforce them as they write code.
 
-### Optional chaining over guarded access
-
-Use `a?.b?.c` instead of `a && a.b && a.b.c`.
-
-```ts
-// ✗ avoid — verbose, easy to typo, can collapse `0` and `""` to falsy
-const role = user && user.profile && user.profile.role;
-
-// ✓ prefer
-const role = user?.profile?.role;
-```
-
-The same applies to optional method calls (`obj?.method?.()`), array indexing (`arr?.[0]`), and chained assignments (`obj?.x?.y ?? fallback`). Optional chaining short-circuits on `null`/`undefined` only — it does **not** treat `0`, `""`, or `false` as missing, which is usually what you want. The `&& chain` pattern can silently turn a valid falsy value into the absence of a value.
-
 ### Other house rules (already enforced by tooling)
 
 - No assignment in expressions (e.g. `while ((m = re.exec(s)) !== null)` — Biome catches it; use `Array.from(s.matchAll(re), ...)` or `for (const m of s.matchAll(re))`).
