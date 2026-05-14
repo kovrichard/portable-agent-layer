@@ -247,6 +247,11 @@ type CodexHookCommand = { type: string; command: string; timeout?: number };
 type CodexHookGroup = { matcher?: string; hooks: CodexHookCommand[] };
 type CodexHooks = { hooks?: Record<string, CodexHookGroup[]> };
 
+/** Strip leading env-var assignments so "PAL_AGENT=x bun run ..." → "bun run ..." */
+function canonicalCmd(cmd: string): string {
+  return cmd.replace(/^(?:\w+=\S+\s+)+/, "");
+}
+
 export function loadCodexHooksTemplate(
   templatePath: string,
   pkgRoot: string
@@ -256,27 +261,40 @@ export function loadCodexHooksTemplate(
   return JSON.parse(resolved) as CodexHooks;
 }
 
-/** Merge PAL hooks into an existing Codex hooks.json. Deduplicates by command string. */
+/** Merge PAL hooks into an existing Codex hooks.json. Deduplicates by canonical command path. */
 export function mergeCodexHooks(existing: CodexHooks, template: CodexHooks): CodexHooks {
   const result: CodexHooks = { ...existing };
   if (!template.hooks) return result;
   if (!result.hooks) result.hooks = {};
 
-  const existingCommands = new Set(
-    Object.values(result.hooks).flatMap((groups) =>
-      groups.flatMap((g) => (g.hooks ?? []).map((h) => h.command))
+  // Collect canonical paths of PAL template commands so we can evict stale variants
+  const palCanonical = new Set(
+    Object.values(template.hooks).flatMap((groups) =>
+      groups.flatMap((g) => g.hooks.map((h) => canonicalCmd(h.command)))
     )
   );
 
+  // Strip any existing entries (nested or flat) whose canonical path matches a PAL command
+  for (const event of Object.keys(result.hooks)) {
+    result.hooks[event] = (result.hooks[event] ?? [])
+      .map((g) => {
+        const flat = g as unknown as CodexHookCommand;
+        if (!g.hooks && flat.command && palCanonical.has(canonicalCmd(flat.command))) {
+          return null;
+        }
+        const filtered = (g.hooks ?? []).filter(
+          (h) => !palCanonical.has(canonicalCmd(h.command))
+        );
+        return filtered.length > 0 ? { ...g, hooks: filtered } : null;
+      })
+      .filter((g): g is CodexHookGroup => g !== null);
+    if (result.hooks[event].length === 0) delete result.hooks[event];
+  }
+
+  // Add fresh template entries
   for (const [event, groups] of Object.entries(template.hooks)) {
     const current = result.hooks[event] ?? [];
-    for (const group of groups) {
-      const newCmds = group.hooks.filter((h) => !existingCommands.has(h.command));
-      if (newCmds.length > 0) {
-        current.push({ ...group, hooks: newCmds });
-        for (const h of newCmds) existingCommands.add(h.command);
-      }
-    }
+    for (const group of groups) current.push(group);
     result.hooks[event] = current;
   }
   return result;
@@ -290,19 +308,26 @@ export function unmergeCodexHooks(
   const result: CodexHooks = { ...existing };
   if (!template.hooks || !result.hooks) return result;
 
-  const palCommands = new Set(
+  // Match by canonical path so prefix variants (PAL_AGENT=codex, etc.) are all removed
+  const palCanonical = new Set(
     Object.values(template.hooks).flatMap((groups) =>
-      groups.flatMap((g) => (g.hooks ?? []).map((h) => h.command))
+      groups.flatMap((g) => g.hooks.map((h) => canonicalCmd(h.command)))
     )
   );
 
-  for (const [event, groups] of Object.entries(result.hooks)) {
-    result.hooks[event] = groups
-      .map((g) => ({
-        ...g,
-        hooks: (g.hooks ?? []).filter((h) => !palCommands.has(h.command)),
-      }))
-      .filter((g) => g.hooks.length > 0);
+  for (const event of Object.keys(result.hooks)) {
+    result.hooks[event] = (result.hooks[event] ?? [])
+      .map((g) => {
+        const flat = g as unknown as CodexHookCommand;
+        if (!g.hooks && flat.command && palCanonical.has(canonicalCmd(flat.command))) {
+          return null;
+        }
+        const filtered = (g.hooks ?? []).filter(
+          (h) => !palCanonical.has(canonicalCmd(h.command))
+        );
+        return filtered.length > 0 ? { ...g, hooks: filtered } : null;
+      })
+      .filter((g): g is CodexHookGroup => g !== null);
     if (result.hooks[event].length === 0) delete result.hooks[event];
   }
   if (Object.keys(result.hooks).length === 0) delete result.hooks;

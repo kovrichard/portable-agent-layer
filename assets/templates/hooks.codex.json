@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run {{PKG_ROOT}}/src/hooks/LoadContext.ts"
+            "command": "PAL_AGENT=codex bun run {{PKG_ROOT}}/src/hooks/LoadContext.ts"
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run {{PKG_ROOT}}/src/hooks/UserPromptOrchestrator.ts"
+            "command": "PAL_AGENT=codex bun run {{PKG_ROOT}}/src/hooks/UserPromptOrchestrator.ts"
           }
         ]
       }
@@ -25,7 +25,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run {{PKG_ROOT}}/src/hooks/SecurityValidator.ts"
+            "command": "PAL_AGENT=codex bun run {{PKG_ROOT}}/src/hooks/SecurityValidator.ts"
           }
         ]
       }
@@ -35,7 +35,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run {{PKG_ROOT}}/src/hooks/StopOrchestrator.ts"
+            "command": "PAL_AGENT=codex bun run {{PKG_ROOT}}/src/hooks/StopOrchestrator.ts"
           }
         ]
       }

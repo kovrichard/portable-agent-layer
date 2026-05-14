@@ -67,6 +67,17 @@ try {
     const context = [agentsMd, reminder].filter(Boolean).join("\n\n");
     process.stdout.write(JSON.stringify({ additional_context: context }));
     logDebug("LoadContext", `Reminder injected: ${reminder.length} chars`);
+  } else if (process.env.PAL_AGENT === "codex") {
+    // Codex: AGENTS.md already loaded via symlink; inject only dynamic context
+    process.stdout.write(
+      JSON.stringify({
+        hookSpecificOutput: {
+          hookEventName: "SessionStart",
+          additionalContext: reminder,
+        },
+      })
+    );
+    logDebug("LoadContext", `Codex reminder injected: ${reminder.length} chars`);
   } else {
     // Claude Code: raw text
     console.log(reminder);

@@ -9,8 +9,10 @@ export type AgentType = "claude" | "cursor" | "codex";
 
 /** Detect which agent is running via environment variables */
 export function detectAgent(): AgentType {
+  // PAL_AGENT is set explicitly in hook command prefixes — most reliable signal
+  if (process.env.PAL_AGENT === "codex") return "codex";
   if (process.env.CURSOR_VERSION) return "cursor";
-  // Codex CLI sets CODEX_CLI_VERSION; env name may vary — also check OPENAI_CODEX
+  // Fallback: Codex may set these env vars depending on version
   if (process.env.CODEX_CLI_VERSION ?? process.env.OPENAI_CODEX) return "codex";
   return "claude";
 }
@@ -47,7 +49,9 @@ export function sessionStartOutput(context: string): string {
     return JSON.stringify({ additional_context: context });
   }
   if (isCodex()) {
-    return JSON.stringify({ additionalContext: context });
+    return JSON.stringify({
+      hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: context },
+    });
   }
   return context;
 }

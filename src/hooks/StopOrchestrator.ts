@@ -7,7 +7,7 @@
  */
 
 import { checkReadmeSync } from "./handlers/readme-sync";
-import { isCursor } from "./lib/agent";
+import { isCodex, isCursor } from "./lib/agent";
 import { logError } from "./lib/log";
 import { readStdinJSON } from "./lib/stdin";
 import { runStopHandlers } from "./lib/stop";
@@ -26,6 +26,9 @@ try {
     if (isCursor()) {
       // Cursor stop hook: followup_message auto-sends to the agent
       process.stdout.write(JSON.stringify({ followup_message: decision.reason }));
+    } else if (isCodex()) {
+      // Codex stop hook: additionalContext re-queues as next prompt
+      process.stdout.write(JSON.stringify({ additionalContext: decision.reason }));
     } else {
       // Claude Code: block decision
       process.stdout.write(JSON.stringify(decision));
