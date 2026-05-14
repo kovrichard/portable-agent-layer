@@ -415,11 +415,10 @@ export function usage() {
 
   for (const [model, tb] of Object.entries(pal.byModel)) {
     if (tb.total.calls === 0) continue;
-    const label = model.includes("haiku")
-      ? "Haiku"
-      : model.includes("sonnet")
-        ? "Sonnet"
-        : model.replace("claude-", "");
+    let label: string;
+    if (model.includes("haiku")) label = "Haiku";
+    else if (model.includes("sonnet")) label = "Sonnet";
+    else label = model.replace("claude-", "");
     console.log(`\n  PAL Inference (${label})\n`);
     printRow("Today", tb.today);
     printRow("7d", tb.week);

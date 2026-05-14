@@ -392,12 +392,10 @@ function gatherData(days: number): SelfModelData {
 function formatDataForInference(data: SelfModelData): string {
   const sections: string[] = [];
 
-  sections.push(`## Raw Data — ${data.days}-day window, ${data.now}`);
-  sections.push(`Sessions: ${data.sessionCount}`);
   sections.push(
-    `Ratings: ${data.ratings.count} total, ${data.ratings.avg}/10 avg, recent ${data.ratings.recentAvg}/10, trend ${data.ratings.trend}`
-  );
-  sections.push(
+    `## Raw Data — ${data.days}-day window, ${data.now}`,
+    `Sessions: ${data.sessionCount}`,
+    `Ratings: ${data.ratings.count} total, ${data.ratings.avg}/10 avg, recent ${data.ratings.recentAvg}/10, trend ${data.ratings.trend}`,
     `${data.ratings.highCount} high (8+), ${data.ratings.lowCount} low (<=3)`
   );
 

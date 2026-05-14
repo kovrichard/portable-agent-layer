@@ -34,7 +34,8 @@ export function printReport(result: AnalysisResult): void {
 
   if (result.ratings) {
     const r = result.ratings;
-    const avgColor = r.average >= 7 ? c.green : r.average <= 4 ? c.red : c.yellow;
+    const lowOrMid = r.average <= 4 ? c.red : c.yellow;
+    const avgColor = r.average >= 7 ? c.green : lowOrMid;
     const ratingStr = `${r.average.toFixed(1)}/10`;
     const lowStr = `Low (≤4): ${r.low.count}`;
     const highStr = `High (≥7): ${r.high.count}`;

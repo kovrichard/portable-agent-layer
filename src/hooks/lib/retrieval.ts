@@ -123,12 +123,8 @@ function formatAgo(ts: string): string {
 }
 
 function formatLine(s: ScoredDoc): string {
-  const tag =
-    s.doc.source === "wisdom"
-      ? `[${s.doc.displayContext}]`
-      : s.scopeMatch
-        ? "[project]"
-        : "[global]";
+  const scopeTag = s.scopeMatch ? "[project]" : "[global]";
+  const tag = s.doc.source === "wisdom" ? `[${s.doc.displayContext}]` : scopeTag;
   const text = s.doc.displayPrinciple || s.doc.displayContext || "";
   const principle = truncate(text, PRINCIPLE_TRUNC);
   if (s.doc.source === "wisdom") {

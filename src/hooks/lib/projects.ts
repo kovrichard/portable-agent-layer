@@ -268,8 +268,7 @@ export function loadActiveProjectsContext(cwd: string = process.cwd()): string {
   const lines: string[] = [];
 
   if (visible.length > 0) {
-    lines.push("## Active Projects");
-    lines.push("");
+    lines.push("## Active Projects", "");
     const sorted = [...visible].sort((a, b) => b.updated.localeCompare(a.updated));
     for (const p of sorted) {
       const ago = formatAgo(p.updated);

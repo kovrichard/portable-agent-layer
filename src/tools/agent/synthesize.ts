@@ -180,12 +180,9 @@ function getRatingStats(since: Date): SynthesisState["ratings"] {
   const secondHalf = ratings.slice(mid);
   const firstAvg = firstHalf.reduce((s, r) => s + r.rating, 0) / firstHalf.length;
   const secondAvg = secondHalf.reduce((s, r) => s + r.rating, 0) / secondHalf.length;
-  const trend =
-    secondAvg - firstAvg > 0.5
-      ? "improving"
-      : secondAvg - firstAvg < -0.5
-        ? "declining"
-        : "stable";
+  const diff = secondAvg - firstAvg;
+  const decliningOrStable = diff < -0.5 ? "declining" : "stable";
+  const trend = diff > 0.5 ? "improving" : decliningOrStable;
 
   return {
     count: ratings.length,

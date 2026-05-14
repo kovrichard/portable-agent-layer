@@ -10,7 +10,9 @@
     "no-optional-chain-on-non-nullable",
     "no-object-in-template",
     "prefer-optional-chain",
-    "no-nested-template-literals"
+    "no-nested-template-literals",
+    "no-nested-ternary",
+    "no-consecutive-array-push"
   ],
   "customRules": [
     "no-console-in-hook-lib",

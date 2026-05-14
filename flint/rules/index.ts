@@ -1,9 +1,11 @@
 import type { FlintRule } from "../core/types";
 import { noAsyncPredicate } from "./no-async-predicate";
+import { noConsecutiveArrayPush } from "./no-consecutive-array-push";
 import { noDateEquality } from "./no-date-equality";
 import { noFloatingPromise } from "./no-floating-promise";
 import { noMisusedPromises } from "./no-misused-promises";
 import { noNestedTemplateLiterals } from "./no-nested-template-literals";
+import { noNestedTernary } from "./no-nested-ternary";
 import { noObjectInTemplate } from "./no-object-in-template";
 import { noOptionalChainOnNonNullable } from "./no-optional-chain-on-non-nullable";
 import { noSyncInAsync } from "./no-sync-in-async";
@@ -23,4 +25,6 @@ export const BUILT_IN_RULES: Record<string, FlintRule> = {
   "no-object-in-template": noObjectInTemplate,
   "prefer-optional-chain": preferOptionalChain,
   "no-nested-template-literals": noNestedTemplateLiterals,
+  "no-nested-ternary": noNestedTernary,
+  "no-consecutive-array-push": noConsecutiveArrayPush,
 };

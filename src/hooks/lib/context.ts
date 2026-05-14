@@ -173,8 +173,8 @@ function loadSessionIntelligence(): string {
     if (state.ratings?.count > 0) {
       const r = state.ratings;
       const lowNote = r.lowCount > 0 ? ` ${r.lowCount} low ratings.` : "";
-      lines.push("");
       lines.push(
+        "",
         `**Rating trend:** ${r.avg}/10 avg (last 10: ${r.recentAvg}/10, ${r.trend}).${lowNote}`
       );
       if (r.trend === "declining") {
@@ -193,8 +193,8 @@ function loadSessionIntelligence(): string {
     // Algorithm Performance
     if (state.algorithm?.reflectionCount > 0) {
       const a = state.algorithm;
-      lines.push("");
       lines.push(
+        "",
         `**Algorithm:** ${a.reflectionCount} reflections, ${a.passRate}% criteria pass rate, ${a.avgSentiment}/10 sentiment.`
       );
       if (a.passRate < 80) {

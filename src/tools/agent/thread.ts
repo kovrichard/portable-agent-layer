@@ -114,13 +114,10 @@ function run() {
     },
   });
 
-  const cmd = values.add
-    ? "add"
-    : values.resolve
-      ? "resolve"
-      : values.list
-        ? "list"
-        : null;
+  let cmd: string | null = null;
+  if (values.add) cmd = "add";
+  else if (values.resolve) cmd = "resolve";
+  else if (values.list) cmd = "list";
 
   if (values.help || !cmd) {
     console.log(`
