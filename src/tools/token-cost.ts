@@ -17,7 +17,7 @@ import { palHome } from "../hooks/lib/paths";
 
 // ── Types ──
 
-export interface Bucket {
+interface Bucket {
   input: number;
   output: number;
   cacheWrite5m: number;
@@ -27,7 +27,7 @@ export interface Bucket {
   calls: number;
 }
 
-export function emptyBucket(): Bucket {
+function emptyBucket(): Bucket {
   return {
     input: 0,
     output: 0,
@@ -39,14 +39,14 @@ export function emptyBucket(): Bucket {
   };
 }
 
-export interface TimeBuckets {
+interface TimeBuckets {
   today: Bucket;
   week: Bucket;
   month: Bucket;
   total: Bucket;
 }
 
-export function emptyTimeBuckets(): TimeBuckets {
+function emptyTimeBuckets(): TimeBuckets {
   return {
     today: emptyBucket(),
     week: emptyBucket(),
@@ -85,7 +85,7 @@ function costForUsage(
   );
 }
 
-export function addToBucket(
+function addToBucket(
   bucket: Bucket,
   model: string,
   input: number,
@@ -160,7 +160,7 @@ function addToTimeBuckets(
     addToBucket(tb.today, model, input, output, cacheWrite5m, cacheWrite1h, cacheRead);
 }
 
-export function readClaudeCode(projectFilter?: string): {
+function readClaudeCode(projectFilter?: string): {
   buckets: TimeBuckets;
   byModel: Record<string, Bucket>;
   byProject: Record<string, TimeBuckets>;
@@ -304,7 +304,7 @@ export function readClaudeCode(projectFilter?: string): {
 
 // ── PAL inference ──
 
-export function readPalInference(): {
+function readPalInference(): {
   buckets: TimeBuckets;
   byModel: Record<string, TimeBuckets>;
   byCaller: Record<string, Bucket>;

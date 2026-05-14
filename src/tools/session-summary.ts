@@ -27,7 +27,7 @@ interface Usage {
 
 // ── Core Functions ──
 
-export function findSessionFile(
+function findSessionFile(
   sessionId: string,
   claudeDir: string
 ): { filepath: string; project: string } | null {
@@ -79,7 +79,7 @@ export function findSessionFile(
   return latest;
 }
 
-export function parseSession(filepath: string, sessionId: string): Usage {
+function parseSession(filepath: string, sessionId: string): Usage {
   const usage: Usage = {
     input: 0,
     output: 0,

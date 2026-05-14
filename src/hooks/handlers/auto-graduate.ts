@@ -77,12 +77,12 @@ function alreadyPromoted(state: GraduationState, pattern: string): boolean {
   return state.graduated.some((g) => g.pattern === pattern);
 }
 
-export interface AutoGraduateOptions {
+interface AutoGraduateOptions {
   /** Bypass the 24h TTL guard. State + content dedup still apply. */
   force?: boolean;
 }
 
-export interface AutoGraduateResult {
+interface AutoGraduateResult {
   ranAnalysis: boolean;
   candidatesAtFloor: number;
   promoted: number;

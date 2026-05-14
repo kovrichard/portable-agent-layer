@@ -530,7 +530,7 @@ Commands:
 `);
 }
 
-export function run(): void {
+function run(): void {
   const [cmd, ...rest] = Bun.argv.slice(2);
   if (!cmd || cmd === "help" || cmd === "--help" || cmd === "-h") {
     help();

@@ -70,7 +70,7 @@ function sourcesToTools(sources: SourceType[]): ToolType[] {
   return sources.map((s) => map[s]);
 }
 
-export async function grokSearch(
+async function grokSearch(
   query: string,
   sources: SourceType[],
   maxTokens: number

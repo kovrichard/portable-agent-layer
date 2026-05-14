@@ -30,7 +30,7 @@ function withTimeout<T>(work: () => T, ms: number): Promise<T | null> {
   });
 }
 
-/** Returns the retrieval reminder string, or null if nothing to inject. */
+/** Returns the retrieval reminder string, or null if nothing to inject. @lintignore dynamically imported by opencode plugin */
 export async function getRetrievalReminder(prompt: string): Promise<string | null> {
   if (!prompt?.trim()) return null;
   if (!isEnabled("learningInjection")) return null;

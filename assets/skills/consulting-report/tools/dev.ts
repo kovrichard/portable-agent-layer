@@ -19,7 +19,7 @@ async function exists(p: string): Promise<boolean> {
   }
 }
 
-export async function dev(reportDir: string): Promise<number> {
+async function dev(reportDir: string): Promise<number> {
   const dir = resolve(reportDir);
   const pkg = join(dir, "package.json");
   if (!(await exists(pkg))) {
@@ -33,7 +33,7 @@ export async function dev(reportDir: string): Promise<number> {
   return result.status ?? 1;
 }
 
-export async function run(argv: string[] = process.argv.slice(2)): Promise<void> {
+async function run(argv: string[] = process.argv.slice(2)): Promise<void> {
   if (argv.length === 0) {
     console.error("usage: dev.ts <report-dir>");
     process.exit(1);

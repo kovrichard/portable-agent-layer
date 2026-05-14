@@ -33,7 +33,7 @@ function hasDocumentableChanges(): boolean {
   }
 }
 
-export interface ReadmeSyncDecision {
+interface ReadmeSyncDecision {
   decision?: "block";
   reason?: string;
 }

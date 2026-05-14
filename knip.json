@@ -16,9 +16,15 @@
     "src/**/*.ts",
     "test/**/*.ts",
     ".agents/hooks/*.ts",
-    "assets/skills/*/tools/*.ts"
+    "assets/skills/*/tools/*.ts",
+    ".opencode/plugins/*.ts"
   ],
-  "ignore": [],
+  "includeEntryExports": true,
+  "tags": ["-lintignore"],
+  "ignore": [
+    ".opencode/plugins/lint.ts",
+    "src/targets/opencode/plugin.ts"
+  ],
   "ignoreDependencies": [
     "@semantic-release/github"
   ]

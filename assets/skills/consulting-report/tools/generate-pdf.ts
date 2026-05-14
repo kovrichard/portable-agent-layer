@@ -56,7 +56,7 @@ function slugify(s: string): string {
     .replace(/^-|-$/g, "");
 }
 
-export async function loadMeta(reportDir: string): Promise<ReportMeta> {
+async function loadMeta(reportDir: string): Promise<ReportMeta> {
   const dataPath = join(reportDir, "lib", "report-data.ts");
   if (!(await exists(dataPath))) {
     throw new Error(`lib/report-data.ts not found at ${dataPath}`);
@@ -70,7 +70,7 @@ export async function loadMeta(reportDir: string): Promise<ReportMeta> {
   return mod.reportData;
 }
 
-export function buildNext(reportDir: string): void {
+function buildNext(reportDir: string): void {
   const result = spawnSync("bun", ["run", "build"], {
     cwd: reportDir,
     stdio: "inherit",
@@ -121,7 +121,7 @@ function serveStatic(rootDir: string): Promise<{ server: Server; url: string }> 
   });
 }
 
-export async function renderPdf(
+async function renderPdf(
   htmlPath: string,
   pdfPath: string,
   meta: ReportMeta
@@ -186,7 +186,7 @@ interface GenerateOptions {
   skipBuild?: boolean;
 }
 
-export async function generate(opts: GenerateOptions): Promise<{
+async function generate(opts: GenerateOptions): Promise<{
   htmlPath: string;
   pdfPath: string;
 }> {
@@ -227,7 +227,7 @@ function parseArgs(argv: string[]): GenerateOptions {
   return opts;
 }
 
-export async function run(argv: string[] = process.argv.slice(2)): Promise<void> {
+async function run(argv: string[] = process.argv.slice(2)): Promise<void> {
   const opts = parseArgs(argv);
   const { htmlPath, pdfPath } = await generate(opts);
   const [htmlStat, pdfStat] = await Promise.all([stat(htmlPath), stat(pdfPath)]);

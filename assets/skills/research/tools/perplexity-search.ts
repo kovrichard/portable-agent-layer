@@ -58,7 +58,7 @@ Distinguish between confirmed facts, single-source claims, and unverified allega
 Flag contradictions between sources.
 Be thorough but concise.`;
 
-export async function perplexitySearch(query: string, maxTokens: number): Promise<void> {
+async function perplexitySearch(query: string, maxTokens: number): Promise<void> {
   const apiKey = loadApiKey();
 
   const body = {

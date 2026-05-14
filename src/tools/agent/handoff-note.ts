@@ -43,7 +43,7 @@ function writeHandoffs(handoffs: Record<string, HandoffEntry>): void {
   writeFileSync(handoffPath(), JSON.stringify(trimmed, null, 2), "utf-8");
 }
 
-export function writeHandoffNote(
+function writeHandoffNote(
   cwd: string,
   title: string,
   text: string,

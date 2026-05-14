@@ -40,7 +40,7 @@ function reflectionsPath(): string {
   return resolve(dir, "algorithm-reflections.jsonl");
 }
 
-export function appendReflection(reflection: AlgorithmReflection): {
+function appendReflection(reflection: AlgorithmReflection): {
   success: boolean;
   message: string;
   path: string;

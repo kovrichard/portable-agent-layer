@@ -508,7 +508,7 @@ Where are you heading? Improving, declining, stagnating? What's the single most 
 
 // ── Narrative Composer ──
 
-export async function composeSelfModel(days: number): Promise<string> {
+async function composeSelfModel(days: number): Promise<string> {
   const data = gatherData(days);
   const rawData = formatDataForInference(data);
   const id = loadSettingsIdentity();

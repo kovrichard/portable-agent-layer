@@ -70,7 +70,7 @@ Distinguish between peer-reviewed findings and preprints/working papers.
 Note methodology limitations and sample sizes when relevant.
 Be thorough but concise.`;
 
-export async function geminiSearch(query: string, maxTokens: number): Promise<void> {
+async function geminiSearch(query: string, maxTokens: number): Promise<void> {
   const apiKey = loadApiKey();
 
   const body = {

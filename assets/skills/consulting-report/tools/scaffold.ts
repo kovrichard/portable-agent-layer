@@ -34,7 +34,7 @@ function templateDir(): string {
   return resolve(here, "..", "template");
 }
 
-export async function scaffold(opts: ScaffoldOptions): Promise<void> {
+async function scaffold(opts: ScaffoldOptions): Promise<void> {
   const tpl = templateDir();
   if (!(await exists(tpl))) {
     throw new Error(`template not found at ${tpl}`);
@@ -91,7 +91,7 @@ function parseArgs(argv: string[]): ScaffoldOptions {
   return opts;
 }
 
-export async function run(argv: string[] = process.argv.slice(2)): Promise<void> {
+async function run(argv: string[] = process.argv.slice(2)): Promise<void> {
   const opts = parseArgs(argv);
   await scaffold(opts);
   console.log(`Scaffolded: ${opts.targetDir}`);

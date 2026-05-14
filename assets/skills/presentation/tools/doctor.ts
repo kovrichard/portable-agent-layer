@@ -23,10 +23,8 @@ import {
 import { RULES } from "./lib/lint-rules";
 import type { DeckContext, Finding, SlideContext, SlideReport } from "./lib/lint-types";
 
-// Re-export for backward compatibility with external callers (tests, etc.)
-// that imported these directly from doctor.ts.
 export { extractLayout } from "./lib/lint-helpers";
-export type { DeckContext, Finding, SlideContext, SlideReport } from "./lib/lint-types";
+export type { Finding } from "./lib/lint-types";
 
 async function loadSlides(deckDir: string): Promise<{ name: string; body: string }[]> {
   const slidesDir = join(deckDir, "slides");
@@ -64,7 +62,7 @@ function buildSlideContext(
   };
 }
 
-export async function lintDeck(deckDir: string): Promise<{
+async function lintDeck(deckDir: string): Promise<{
   slides: SlideContext[];
   reports: SlideReport[];
   deckFindings: Finding[];
@@ -95,7 +93,6 @@ export async function lintDeck(deckDir: string): Promise<{
   return { slides, reports, deckFindings };
 }
 
-// Public: kept for any external caller that imported `lintSlide` directly.
 export async function lintSlide(
   slide: { name: string; body: string },
   deckDir: string
