@@ -39,7 +39,7 @@ export function extractNotes(body: string): string {
 }
 
 export function countAtxHeading(body: string, level: 1 | 2): string[] {
-  const re = new RegExp(`^#{${level}}\\s+(.+?)\\s*$`, "gm");
+  const re = new RegExp(String.raw`^#{${level}}\s+(.+?)\s*$`, "gm");
   return Array.from(body.matchAll(re), (m) => m[1]);
 }
 
@@ -71,7 +71,7 @@ export type ListItem = {
 export function listItems(body: string): ListItem[] {
   const out: ListItem[] = [];
   for (const line of body.split("\n")) {
-    const m = line.match(/^(\s*)(?:[-*]\s+|\d+\.\s+)(.*)$/);
+    const m = new RegExp(/^(\s*)(?:[-*]\s+|\d+\.\s+)(.*)$/).exec(line);
     if (!m) continue;
     out.push({ indent: m[1].length, content: m[2], raw: line });
   }

@@ -125,7 +125,7 @@ export const RULES: Rule[] = [
       // pretending to be a bullet. Convert to a sub-bullet instead.
       const findings: Finding[] = [];
       for (const line of ctx.bodyNoNotes.split("\n")) {
-        const m = line.match(/^(\s*)(?:[-*]\s+|\d+\.\s+)(.*)$/);
+        const m = new RegExp(/^(\s*)(?:[-*]\s+|\d+\.\s+)(.*)$/).exec(line);
         if (!m) continue;
         const stripped = stripCodeAndLinks(m[2]);
         if (/\s—\s/.test(stripped)) {
@@ -338,7 +338,10 @@ export const RULES: Rule[] = [
         "Anticipated questions",
       ];
       for (const beat of required) {
-        const re = new RegExp(`^[-*]\\s+${beat.replace(/\s+/g, "\\s+")}\\b`, "im");
+        const re = new RegExp(
+          String.raw`^[-*]\s+${beat.replace(/\s+/g, "\\s+")}\b`,
+          "im"
+        );
         if (!re.test(notes)) {
           findings.push({
             rule: "exercise-note-beats",

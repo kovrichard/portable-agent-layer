@@ -69,12 +69,23 @@ export async function main(opts: CliOptions = {}): Promise<void> {
   );
 
   if (fix) {
-    const applied = applyFixes(violations, root);
-    const unfixed = violations.filter((v) => !v.fix).length;
+    let totalApplied = 0;
+    let current = violations;
+    while (true) {
+      const applied = applyFixes(current, root);
+      totalApplied += applied;
+      if (applied === 0) break;
+      current = runFlint(
+        { root, include: raw.include ?? ["."], rules: allRules },
+        customRules
+      );
+      if (current.every((v) => !v.fix)) break;
+    }
+    const unfixed = current.filter((v) => !v.fix).length;
     const msg =
       unfixed > 0
-        ? `flint: applied ${applied} fix(es). ${unfixed} violation(s) require manual attention.`
-        : `flint: applied ${applied} fix(es). No remaining violations.`;
+        ? `flint: applied ${totalApplied} fix(es). ${unfixed} violation(s) require manual attention.`
+        : `flint: applied ${totalApplied} fix(es). No remaining violations.`;
     process.stdout.write(JSON.stringify({ output: msg }));
     process.exit(0);
   }

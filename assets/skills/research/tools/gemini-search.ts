@@ -183,4 +183,4 @@ Examples:
   await geminiSearch(query, maxTokens);
 }
 
-if (import.meta.main) run();
+if (import.meta.main) void run();

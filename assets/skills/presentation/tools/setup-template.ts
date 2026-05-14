@@ -234,7 +234,7 @@ async function main() {
       ["cover-only", "footer", "both", "none"].includes(a) ? a : "footer"
     ) as LogoPlacement;
   }
-  if (!logoPlacement) logoPlacement = "footer";
+  logoPlacement ??= "footer";
 
   // 8. Fonts
   const fonts =
@@ -247,7 +247,7 @@ async function main() {
     const a = await ask(rl, "Aspect ratio [16:9 / 4:3 / 16:10]:", "16:9");
     aspect = (["16:9", "4:3", "16:10"].includes(a) ? a : "16:9") as Aspect;
   }
-  if (!aspect) aspect = "16:9";
+  aspect ??= "16:9";
 
   // 10. Showcase deck?
   let showcase = args.showcase;

@@ -16,7 +16,7 @@ export async function dataUri(path: string): Promise<string> {
   if (ext === ".svg") {
     // Inline SVGs as URL-encoded text — smaller than base64 and renders crisply at any size.
     const svg = await readFile(path, "utf8");
-    const enc = encodeURIComponent(svg).replace(/'/g, "%27").replace(/"/g, "%22");
+    const enc = encodeURIComponent(svg).replaceAll("'", "%27").replaceAll('"', "%22");
     return `url("data:${mime};utf8,${enc}")`;
   }
 

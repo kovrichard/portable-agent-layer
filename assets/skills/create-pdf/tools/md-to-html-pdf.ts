@@ -30,8 +30,8 @@ for (let i = 1; i < args.length; i++) {
 }
 const stem = basename(input, extname(input));
 const dir = dirname(input);
-if (!htmlOut) htmlOut = resolve(dir, `${stem}.html`);
-if (!pdfOut) pdfOut = resolve(dir, `${stem}.pdf`);
+htmlOut ??= resolve(dir, `${stem}.html`);
+pdfOut ??= resolve(dir, `${stem}.pdf`);
 
 const md = await readFile(input, "utf8");
 marked.setOptions({ gfm: true, breaks: false });

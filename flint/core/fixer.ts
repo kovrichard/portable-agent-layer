@@ -20,14 +20,20 @@ export function applyFixes(violations: Violation[], root: string): number {
   let applied = 0;
   for (const [absPath, fileViolations] of byFile) {
     const lines = readFileSync(absPath, "utf-8").split("\n");
+    // Sort by endLine descending so the largest-range fix at any position wins.
+    // This handles bottom-to-top ordering (higher lines first) AND ensures outer
+    // fixes beat inner/overlapping fixes when chained calls share a start position.
     const sorted = [...fileViolations].sort(
-      (a, b) => (b.fix?.startLine ?? 0) - (a.fix?.startLine ?? 0)
+      (a, b) => (b.fix?.endLine ?? 0) - (a.fix?.endLine ?? 0)
     );
 
+    const used: Array<{ start: number; end: number }> = [];
     for (const v of sorted) {
       if (!v.fix) continue;
       const { startLine, endLine, replacement } = v.fix;
+      if (used.some((r) => startLine <= r.end && endLine >= r.start)) continue;
       lines.splice(startLine - 1, endLine - startLine + 1, ...replacement.split("\n"));
+      used.push({ start: startLine, end: endLine });
       applied++;
     }
 

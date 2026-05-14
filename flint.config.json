@@ -1,5 +1,5 @@
 {
-  "include": ["src", "flint"],
+  "include": ["src", "flint", "assets", "!**/node_modules/**"],
   "rules": [
     "no-unguarded-json-parse",
     { "rule": "no-sync-in-async", "include": ["src/hooks/**"] },

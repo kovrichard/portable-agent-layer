@@ -102,4 +102,4 @@ async function main() {
   console.log(text);
 }
 
-main();
+void main();

@@ -6,6 +6,7 @@ import type { FlintConfig, FlintRule, RuleEntry, Violation } from "./types";
 function walk(dir: string): string[] {
   const out: string[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name === "node_modules") continue;
     const full = join(dir, entry.name);
     if (entry.isDirectory()) out.push(...walk(full));
     else if (entry.name.endsWith(".ts")) out.push(full);
