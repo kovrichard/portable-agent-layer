@@ -199,16 +199,46 @@ export function loadProjectHistoryContext(): string {
   }
 }
 
-/** Load recent relationship notes (today + yesterday) */
+/**
+ * Filter raw relationship note lines:
+ * - O entries: stripped (loaded natively via digest)
+ * - HTML comments: stripped, but cwd is extracted from session comments
+ * - Session entries: kept only if block cwd matches current project (or legacy with no cwd)
+ * - W entries and structural lines: always kept
+ */
+function filterRelationshipNotes(notes: string, cwd: string): string {
+  const lines = notes.split("\n");
+  const out: string[] = [];
+  let blockCwd: string | null = null;
+
+  for (const line of lines) {
+    if (/^## \d{2}:\d{2}/.test(line)) {
+      blockCwd = null;
+      out.push(line);
+      continue;
+    }
+    const cwdMatch = line.match(/<!--.*cwd:(\S+)/);
+    if (cwdMatch) {
+      blockCwd = cwdMatch[1];
+      continue;
+    }
+    if (/^\s*<!--/.test(line)) continue;
+    if (/^\s*- O\(/.test(line)) continue;
+    if (/^\s*- Session:/.test(line)) {
+      if (blockCwd === null || blockCwd === cwd) out.push(line);
+      continue;
+    }
+    out.push(line);
+  }
+  return out.join("\n");
+}
+
+/** Load recent relationship notes (today + yesterday), scoped to current project */
 export function loadRelationshipContext(): string {
   try {
     const notes = loadRecentNotes(2);
     if (!notes) return "";
-    // Strip O entries (opinions loaded natively via digest) and HTML comment lines
-    const filtered = notes
-      .split("\n")
-      .filter((l) => !/^\s*- O\(/.test(l) && !/^\s*<!--/.test(l))
-      .join("\n");
+    const filtered = filterRelationshipNotes(notes, process.cwd());
     return capSection(`## Recent Interaction Notes\n${filtered}`, 1500);
   } catch {
     return "";
