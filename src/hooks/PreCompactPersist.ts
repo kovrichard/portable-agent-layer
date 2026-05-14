@@ -11,17 +11,10 @@
  * is currently a Claude Code event.
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { persistLastExchange } from "./handlers/persist-last-exchange";
 import { logDebug, logError } from "./lib/log";
-import { ensureDir, paths } from "./lib/paths";
 import { readStdinJSON } from "./lib/stdin";
-import {
-  extractContent,
-  extractLastAssistant,
-  extractLastUser,
-  readTranscriptFile,
-} from "./lib/transcript";
+import { readTranscriptFile } from "./lib/transcript";
 
 interface PreCompactInput {
   session_id?: string;
@@ -45,85 +38,13 @@ const main = async () => {
       logDebug("PreCompactPersist", "Transcript empty or unreadable");
       process.exit(0);
     }
-
-    const lastUser = extractContent(extractLastUser(messages));
-    const lastAssistant = extractContent(extractLastAssistant(messages));
-
-    if (!lastUser && !lastAssistant) {
-      logDebug("PreCompactPersist", "No user/assistant text found in transcript");
-      process.exit(0);
-    }
-
     const sessionId = input.session_id ?? "unknown";
-    const payload = {
-      sessionId,
-      timestamp: new Date().toISOString(),
-      trigger: input.trigger ?? null,
-      customInstructions: input.custom_instructions || null,
-      userMessage: lastUser,
-      assistantMessage: lastAssistant,
-    };
-
-    const stateDir = ensureDir(resolve(paths.state(), "last-exchange"));
-    const sessionFile = resolve(stateDir, `${sessionId}.json`);
-    const latestFile = resolve(stateDir, "latest.json");
-    const json = `${JSON.stringify(payload, null, 2)}\n`;
-
-    writeFileSync(sessionFile, json, "utf-8");
-    writeFileSync(latestFile, json, "utf-8");
-
+    const cwd = input.cwd ?? process.cwd();
+    persistLastExchange(messages, sessionId, cwd);
     logDebug(
       "PreCompactPersist",
-      `Saved last exchange (user=${lastUser.length}ch, assistant=${lastAssistant.length}ch) for session ${sessionId}`
+      `Persisted exchange before compaction for session ${sessionId}`
     );
-
-    // Write a compaction-derived handoff note if no in-progress one already exists.
-    // LEARN-phase handoffs are more precise — never overwrite them.
-    const cwd = input.cwd ?? process.cwd();
-    const handoffFilePath = resolve(paths.state(), "last-handoff.json");
-    try {
-      type HandoffEntry = {
-        timestamp: string;
-        title: string;
-        status: "in-progress" | "completed";
-        handoff: string;
-        artifacts: string[];
-      };
-      const existing: Record<string, HandoffEntry> = existsSync(handoffFilePath)
-        ? JSON.parse(readFileSync(handoffFilePath, "utf-8"))
-        : {};
-      const current = existing[cwd];
-      if (!current || current.status !== "in-progress" || !current.handoff) {
-        const title = (
-          lastUser.slice(0, 80).replace(/\n/g, " ") || "Compacted session"
-        ).trim();
-        const body = [
-          "Auto-generated at compaction — LEARN phase did not run.",
-          lastUser ? `\nLast user message:\n${lastUser.slice(0, 500)}` : "",
-          lastAssistant
-            ? `\nLast assistant response:\n${lastAssistant.slice(0, 500)}`
-            : "",
-        ]
-          .filter(Boolean)
-          .join("");
-        existing[cwd] = {
-          timestamp: new Date().toISOString(),
-          title,
-          status: "in-progress",
-          handoff: body,
-          artifacts: [],
-        };
-        writeFileSync(handoffFilePath, JSON.stringify(existing, null, 2), "utf-8");
-        logDebug("PreCompactPersist", `Wrote compaction handoff for ${cwd}`);
-      } else {
-        logDebug(
-          "PreCompactPersist",
-          "In-progress handoff already exists — skipping auto-write"
-        );
-      }
-    } catch (err) {
-      logError("PreCompactPersist:handoff", err);
-    }
   } catch (err) {
     logError("PreCompactPersist", err);
   }

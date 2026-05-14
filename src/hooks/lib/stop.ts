@@ -10,6 +10,7 @@ import { autoBackup } from "../handlers/backup";
 import { writeContextDigests } from "../handlers/context-digests";
 import { notifyDesktop } from "../handlers/desktop-notify";
 import { captureFailure } from "../handlers/failure";
+import { persistLastExchange } from "../handlers/persist-last-exchange";
 import { projectTouch } from "../handlers/project-touch";
 import { checkReflectTrigger } from "../handlers/reflect-trigger";
 import { checkSelfModelTrigger } from "../handlers/self-model-trigger";
@@ -40,6 +41,9 @@ export async function runStopHandlers(
 
   // Cache last assistant response (session-scoped)
   cacheLastResponse(messages, options.lastAssistantMessage, options.sessionId);
+
+  // Always persist last exchange — drives CompactRecover + "Pick Up Where You Left Off"
+  if (options.sessionId) persistLastExchange(messages, options.sessionId);
 
   // Run all handlers concurrently. Auto-graduate is idempotent (24h TTL +
   // state-dedup + content-dedup) so it's safe to fire on every Stop.
