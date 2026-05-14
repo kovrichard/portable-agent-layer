@@ -81,7 +81,11 @@ type Settings = Record<string, unknown> & {
 export function loadSettingsTemplate(templatePath: string, pkgRoot: string): Settings {
   const raw = readFileSync(templatePath, "utf-8");
   const resolved = raw.replaceAll("{{PKG_ROOT}}", pkgRoot);
-  return JSON.parse(resolved) as Settings;
+  try {
+    return JSON.parse(resolved) as Settings;
+  } catch (e) {
+    throw new Error(`Failed to parse settings template at ${templatePath}: ${e}`);
+  }
 }
 
 /**
@@ -184,7 +188,11 @@ export function loadCursorHooksTemplate(
 ): CursorHooks {
   const raw = readFileSync(templatePath, "utf-8");
   const resolved = raw.replaceAll("{{PKG_ROOT}}", pkgRoot);
-  return JSON.parse(resolved) as CursorHooks;
+  try {
+    return JSON.parse(resolved) as CursorHooks;
+  } catch (e) {
+    throw new Error(`Failed to parse Cursor hooks template at ${templatePath}: ${e}`);
+  }
 }
 
 /**
@@ -258,7 +266,11 @@ export function loadCodexHooksTemplate(
 ): CodexHooks {
   const raw = readFileSync(templatePath, "utf-8");
   const resolved = raw.replaceAll("{{PKG_ROOT}}", pkgRoot);
-  return JSON.parse(resolved) as CodexHooks;
+  try {
+    return JSON.parse(resolved) as CodexHooks;
+  } catch (e) {
+    throw new Error(`Failed to parse Codex hooks template at ${templatePath}: ${e}`);
+  }
 }
 
 /** Merge PAL hooks into an existing Codex hooks.json. Deduplicates by canonical command path. */
@@ -688,9 +700,15 @@ export function removeAgentsFromCopilot(copilotAgentsDir: string): string[] {
 
 /** Load and resolve the Copilot hooks template, substituting PKG_ROOT */
 export function loadCopilotHooksTemplate(templatePath: string, pkgRoot: string): unknown {
-  return JSON.parse(
-    readFileSync(templatePath, "utf-8").replaceAll("{{PKG_ROOT}}", pkgRoot)
+  const resolved = readFileSync(templatePath, "utf-8").replaceAll(
+    "{{PKG_ROOT}}",
+    pkgRoot
   );
+  try {
+    return JSON.parse(resolved);
+  } catch (e) {
+    throw new Error(`Failed to parse Copilot hooks template at ${templatePath}: ${e}`);
+  }
 }
 
 // --- Skill Index ---

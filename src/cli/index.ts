@@ -1019,7 +1019,14 @@ async function update() {
     }
   }
 
-  const newPkg = JSON.parse(readFileSync(resolve(pkg, "package.json"), "utf-8"));
+  let newPkg: { version: string };
+  try {
+    newPkg = JSON.parse(readFileSync(resolve(pkg, "package.json"), "utf-8")) as {
+      version: string;
+    };
+  } catch (e) {
+    throw new Error(`Failed to read updated package.json: ${e}`);
+  }
   log.success(`Updated: ${result.current} → ${newPkg.version}`);
 
   log.info("Reinstalling...");
@@ -1030,7 +1037,14 @@ async function status() {
   const home = palHome();
   const pkg = palPkg();
 
-  const pkgJson = JSON.parse(readFileSync(resolve(pkg, "package.json"), "utf-8"));
+  let pkgJson: { version: string };
+  try {
+    pkgJson = JSON.parse(readFileSync(resolve(pkg, "package.json"), "utf-8")) as {
+      version: string;
+    };
+  } catch (e) {
+    throw new Error(`Failed to read package.json: ${e}`);
+  }
 
   console.log("");
   log.info(`Version:  ${pkgJson.version}`);

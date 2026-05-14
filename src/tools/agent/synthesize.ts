@@ -75,10 +75,14 @@ function shouldRun(force: boolean): boolean {
 
 function readJsonl<T>(path: string): T[] {
   if (!existsSync(path)) return [];
-  return readFileSync(path, "utf-8")
-    .split("\n")
-    .filter((l) => l.trim())
-    .map((l) => JSON.parse(l) as T);
+  try {
+    return readFileSync(path, "utf-8")
+      .split("\n")
+      .filter((l) => l.trim())
+      .map((l) => JSON.parse(l) as T);
+  } catch {
+    return [];
+  }
 }
 
 function daysAgo(days: number): Date {

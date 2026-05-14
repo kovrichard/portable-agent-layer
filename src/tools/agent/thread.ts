@@ -41,10 +41,14 @@ function generateId(): string {
 function readThreads(): Thread[] {
   const p = threadsPath();
   if (!existsSync(p)) return [];
-  return readFileSync(p, "utf-8")
-    .split("\n")
-    .filter((l) => l.trim())
-    .map((l) => JSON.parse(l) as Thread);
+  try {
+    return readFileSync(p, "utf-8")
+      .split("\n")
+      .filter((l) => l.trim())
+      .map((l) => JSON.parse(l) as Thread);
+  } catch {
+    return [];
+  }
 }
 
 function writeThreads(threads: Thread[]): void {
