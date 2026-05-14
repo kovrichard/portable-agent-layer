@@ -370,9 +370,12 @@ function checkCodexHooksRegistered(): boolean {
   if (!existsSync(hooksPath)) return false;
   try {
     const data = JSON.parse(readFileSync(hooksPath, "utf-8"));
-    const hooks = data?.hooks?.SessionStart;
-    if (!Array.isArray(hooks)) return false;
-    return hooks.some((h: { command?: string }) => h?.command?.includes("LoadContext"));
+    const entries = data?.hooks?.SessionStart;
+    if (!Array.isArray(entries)) return false;
+    return entries.some((entry: { command?: string; hooks?: { command?: string }[] }) => {
+      if (entry?.command?.includes("LoadContext")) return true;
+      return entry?.hooks?.some((h) => h?.command?.includes("LoadContext")) ?? false;
+    });
   } catch {
     return false;
   }
