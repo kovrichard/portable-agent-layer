@@ -8,10 +8,12 @@
     "src/targets/**/uninstall.ts",
     ".agents/hooks/*.ts",
     "assets/skills/*/tools/*.ts",
-    ".opencode/plugins/*.ts"
+    ".opencode/plugins/*.ts",
+    "flint/cli.ts"
   ],
   "project": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "flint/**/*.ts"
   ],
   "includeEntryExports": true,
   "tags": ["-lintignore"],
