@@ -1,5 +1,15 @@
 import ts from "typescript";
 
+export function createProgram(files: string[], root: string): ts.Program {
+  const configPath = ts.findConfigFile(root, ts.sys.fileExists);
+  let options: ts.CompilerOptions = { target: ts.ScriptTarget.Latest, strict: true };
+  if (configPath) {
+    const { config } = ts.readConfigFile(configPath, ts.sys.readFile);
+    options = ts.parseJsonConfigFileContent(config, ts.sys, root).options;
+  }
+  return ts.createProgram(files, options);
+}
+
 export function nearestFunctionIsAsync(node: ts.Node): boolean {
   let cur: ts.Node | undefined = node.parent;
   while (cur) {

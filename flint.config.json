@@ -2,6 +2,7 @@
   "include": ["src"],
   "rules": [
     "no-unguarded-json-parse",
+    "no-floating-promise",
     { "rule": "no-sync-in-async", "include": ["src/hooks/**"] },
     "no-console-in-hook-lib",
     "no-raw-anthropic-fetch",
