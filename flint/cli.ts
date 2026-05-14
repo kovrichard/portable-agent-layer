@@ -44,8 +44,12 @@ export async function main(opts: CliOptions = {}): Promise<void> {
     customRules = (mod.default ?? []) as FlintRule[];
   }
 
+  const allRules: FlintConfig["rules"] = [
+    ...(raw.rules ?? []),
+    ...(raw.customRules ?? []),
+  ];
   const violations = runFlint(
-    { root, include: raw.include, rules: raw.rules as FlintConfig["rules"] },
+    { root, include: raw.include, rules: allRules },
     customRules
   );
 

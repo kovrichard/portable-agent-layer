@@ -2,9 +2,11 @@
   "include": ["src"],
   "rules": [
     "no-unguarded-json-parse",
-    "no-floating-promise",
-    "no-misused-promises",
     { "rule": "no-sync-in-async", "include": ["src/hooks/**"] },
+    "no-floating-promise",
+    "no-misused-promises"
+  ],
+  "customRules": [
     "no-console-in-hook-lib",
     "no-raw-anthropic-fetch",
     "no-raw-api-key-access",
