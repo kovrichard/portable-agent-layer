@@ -27,7 +27,7 @@ export async function main(opts: CliOptions = {}): Promise<void> {
     }
   }
 
-  if (!configDir) configDir = process.cwd();
+  configDir ??= process.cwd();
 
   const configPath = resolve(configDir, "flint.config.json");
   if (!existsSync(configPath)) {
@@ -35,7 +35,19 @@ export async function main(opts: CliOptions = {}): Promise<void> {
     process.exit(1);
   }
 
-  const raw = JSON.parse(readFileSync(configPath, "utf-8"));
+  interface RawConfig {
+    root?: string;
+    include?: string[];
+    rules?: FlintConfig["rules"];
+    customRules?: string[];
+  }
+  let raw: RawConfig;
+  try {
+    raw = JSON.parse(readFileSync(configPath, "utf-8")) as RawConfig;
+  } catch {
+    process.stderr.write(`flint: failed to parse ${configPath}\n`);
+    process.exit(1);
+  }
   const root = resolve(configDir, raw.root ?? ".");
 
   let customRules: FlintRule[] = [];
@@ -52,7 +64,7 @@ export async function main(opts: CliOptions = {}): Promise<void> {
     ...(raw.customRules ?? []),
   ];
   const violations = runFlint(
-    { root, include: raw.include, rules: allRules },
+    { root, include: raw.include ?? ["."], rules: allRules },
     customRules
   );
 

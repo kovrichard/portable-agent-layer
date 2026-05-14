@@ -1,5 +1,5 @@
 {
-  "include": ["src"],
+  "include": ["src", "flint"],
   "rules": [
     "no-unguarded-json-parse",
     { "rule": "no-sync-in-async", "include": ["src/hooks/**"] },
@@ -12,7 +12,8 @@
     "no-consecutive-array-push",
     "no-string-match",
     "prefer-nullish-coalescing-assign",
-    "prefer-string-raw-regexp"
+    "prefer-string-raw-regexp",
+    "prefer-string-replaceall"
   ],
   "customRules": [
     "no-console-in-hook-lib",

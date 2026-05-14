@@ -77,7 +77,7 @@ export function stringify(meta: Record<string, unknown>, body: string): string {
     if (Array.isArray(value)) {
       lines.push(`${key}: ${JSON.stringify(value)}`);
     } else if (typeof value === "string") {
-      lines.push(`${key}: "${value.replace(/"/g, '\\"')}"`);
+      lines.push(`${key}: "${value.replaceAll('"', '\\"')}"`);
     } else {
       lines.push(`${key}: ${String(value)}`);
     }

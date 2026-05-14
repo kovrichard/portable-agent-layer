@@ -20,11 +20,11 @@ function spawnSilent(cmd: string, args: string[]): Promise<void> {
 }
 
 function escapeAppleScript(s: string): string {
-  return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  return s.replace(/\\/g, "\\\\").replaceAll('"', '\\"');
 }
 
 function escapePowerShellSingle(s: string): string {
-  return s.replace(/'/g, "''");
+  return s.replaceAll("'", "''");
 }
 
 export async function notify(title: string, body: string): Promise<void> {
