@@ -4,35 +4,35 @@
     "sessionStart": [
       {
         "type": "command",
-        "command": "bun run {{PKG_ROOT}}/src/hooks/LoadContext.ts"
+        "command": "PAL_AGENT=cursor bun run {{PKG_ROOT}}/src/hooks/LoadContext.ts"
       }
     ],
     "beforeSubmitPrompt": [
       {
         "type": "command",
-        "command": "bun run {{PKG_ROOT}}/src/hooks/UserPromptOrchestrator.ts"
+        "command": "PAL_AGENT=cursor bun run {{PKG_ROOT}}/src/hooks/UserPromptOrchestrator.ts"
       }
     ],
     "preToolUse": [
       {
         "type": "command",
-        "command": "bun run {{PKG_ROOT}}/src/hooks/SecurityValidator.ts"
+        "command": "PAL_AGENT=cursor bun run {{PKG_ROOT}}/src/hooks/SecurityValidator.ts"
       },
       {
         "type": "command",
-        "command": "bun run {{PKG_ROOT}}/src/hooks/SkillGuard.ts"
+        "command": "PAL_AGENT=cursor bun run {{PKG_ROOT}}/src/hooks/SkillGuard.ts"
       }
     ],
     "beforeShellExecution": [
       {
         "type": "command",
-        "command": "bun run {{PKG_ROOT}}/src/hooks/SecurityValidator.ts"
+        "command": "PAL_AGENT=cursor bun run {{PKG_ROOT}}/src/hooks/SecurityValidator.ts"
       }
     ],
     "stop": [
       {
         "type": "command",
-        "command": "bun run {{PKG_ROOT}}/src/hooks/StopOrchestrator.ts"
+        "command": "PAL_AGENT=cursor bun run {{PKG_ROOT}}/src/hooks/StopOrchestrator.ts"
       }
     ]
   }

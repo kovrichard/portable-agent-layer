@@ -7,7 +7,7 @@
  * timeout produces empty output, never blocks the prompt.
  */
 
-import { isCodex } from "../lib/agent";
+import { isCodex, isCursor } from "../lib/agent";
 import { logDebug, logError } from "../lib/log";
 import { runRetrieval } from "../lib/retrieval";
 import { ensureIndex } from "../lib/retrieval-index";
@@ -52,11 +52,13 @@ export async function getRetrievalReminder(prompt: string): Promise<string | nul
 }
 
 /** Write retrieval reminder to stdout in the correct format for the current agent.
- *  Claude Code: plain text (hook prepend). Codex: hookSpecificOutput JSON (silent inject). */
+ *  Claude Code: plain text. Cursor: { additional_context }. Codex: hookSpecificOutput JSON. */
 export async function injectRetrieval(prompt: string): Promise<void> {
   const reminder = await getRetrievalReminder(prompt);
   if (!reminder) return;
-  if (isCodex()) {
+  if (isCursor()) {
+    process.stdout.write(JSON.stringify({ additional_context: reminder }));
+  } else if (isCodex()) {
     process.stdout.write(
       JSON.stringify({
         hookSpecificOutput: {

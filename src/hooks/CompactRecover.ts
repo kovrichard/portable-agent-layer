@@ -10,6 +10,7 @@
 
 import { existsSync, readFileSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
+import { isCursor } from "./lib/agent";
 import { logDebug, logError } from "./lib/log";
 import { paths } from "./lib/paths";
 import { readStdinJSON } from "./lib/stdin";
@@ -81,7 +82,11 @@ const main = async () => {
       "</system-reminder>",
     ].join("\n");
 
-    process.stdout.write(out);
+    if (isCursor()) {
+      process.stdout.write(JSON.stringify({ additional_context: out }));
+    } else {
+      process.stdout.write(out);
+    }
     logDebug("CompactRecover", `Re-injected ${out.length} chars from ${file}`);
 
     // Consume-on-read: drop the session-keyed file after a successful injection so it

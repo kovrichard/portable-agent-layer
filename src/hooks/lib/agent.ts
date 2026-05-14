@@ -9,10 +9,13 @@ export type AgentType = "claude" | "cursor" | "codex";
 
 /** Detect which agent is running via environment variables */
 export function detectAgent(): AgentType {
-  // PAL_AGENT is set explicitly in hook command prefixes — most reliable signal
+  // PAL_AGENT is set explicitly in hook command prefixes — most reliable signal.
+  // IDE env vars (CURSOR_VERSION, CODEX_CLI_VERSION) are NOT reliably forwarded to
+  // hook subprocesses, so PAL_AGENT is the primary detection mechanism.
+  if (process.env.PAL_AGENT === "cursor") return "cursor";
   if (process.env.PAL_AGENT === "codex") return "codex";
+  // Fallbacks for environments that do forward IDE env vars
   if (process.env.CURSOR_VERSION) return "cursor";
-  // Fallback: Codex may set these env vars depending on version
   if (process.env.CODEX_CLI_VERSION ?? process.env.OPENAI_CODEX) return "codex";
   return "claude";
 }

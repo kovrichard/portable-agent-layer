@@ -39,7 +39,8 @@ try {
   // Determine agent target — controls which sections are skipped (loaded natively instead).
   let agent: AgentTarget = "claude";
   if (process.env.PAL_AGENT === "copilot") agent = "copilot";
-  else if (process.env.CURSOR_VERSION) agent = "cursor";
+  else if (process.env.PAL_AGENT === "cursor" || process.env.CURSOR_VERSION)
+    agent = "cursor";
   const reminder = buildSystemReminder({ agent });
   if (!reminder) process.exit(0);
 
@@ -61,7 +62,7 @@ try {
       "LoadContext",
       `Copilot session instructions written: ${context.length} chars`
     );
-  } else if (process.env.CURSOR_VERSION) {
+  } else if (process.env.PAL_AGENT === "cursor" || process.env.CURSOR_VERSION) {
     // Cursor: semi-static in ~/.cursor/rules/pal-context.mdc; inject AGENTS.md + dynamic here
     const agentsMd = buildClaudeMd();
     const context = [agentsMd, reminder].filter(Boolean).join("\n\n");
