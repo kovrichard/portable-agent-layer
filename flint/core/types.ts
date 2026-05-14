@@ -15,11 +15,20 @@ export interface FlintRule {
   check: (ctx: RuleContext, violations: Violation[]) => void;
 }
 
+/** @lintignore — public API for rule authors; referenced through RuleEntry union */
+export interface RuleScopedEntry {
+  rule: string;
+  include: string[];
+}
+
+export type RuleEntry = FlintRule | RuleScopedEntry | string;
+
 export interface FlintConfig {
   root: string;
   include: string[];
-  rules: (FlintRule | string)[];
+  rules: RuleEntry[];
 }
 
 export const defineRule = (r: FlintRule): FlintRule => r;
+/** @lintignore — public API for TypeScript config authors */
 export const defineConfig = (c: FlintConfig): FlintConfig => c;

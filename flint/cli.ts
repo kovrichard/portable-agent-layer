@@ -1,18 +1,79 @@
 #!/usr/bin/env bun
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { runFlint } from "./core/runner";
 import { BUILT_IN_RULES } from "./rules/index";
+import type { FlintConfig, FlintRule } from "./core/types";
 
-function main() {
+interface CliOptions {
+  configDir?: string;
+  rulesFile?: string;
+}
+
+export async function main(opts: CliOptions = {}): Promise<void> {
+  const args = process.argv.slice(2);
+  let configDir = opts.configDir;
+  let rulesFile = opts.rulesFile;
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--config" && args[i + 1]) configDir = resolve(args[++i]);
+    else if (args[i] === "--rules" && args[i + 1]) rulesFile = resolve(args[++i]);
+    else if (args[i] === "--help" || args[i] === "-h") {
+      printHelp();
+      process.exit(0);
+    }
+  }
+
+  if (!configDir) configDir = process.cwd();
+
+  const configPath = resolve(configDir, "flint.config.json");
+  if (!existsSync(configPath)) {
+    process.stderr.write(`flint: no flint.config.json found at ${configPath}\n`);
+    process.exit(1);
+  }
+
+  const raw = JSON.parse(readFileSync(configPath, "utf-8"));
+  const root = resolve(configDir, raw.root ?? ".");
+
+  let customRules: FlintRule[] = [];
+  const defaultRulesPath = resolve(configDir, "flint.rules.ts");
+  const rulesPath = rulesFile ?? (existsSync(defaultRulesPath) ? defaultRulesPath : undefined);
+  if (rulesPath) {
+    const mod = await import(rulesPath);
+    customRules = (mod.default ?? []) as FlintRule[];
+  }
+
+  const violations = runFlint(
+    { root, include: raw.include, rules: raw.rules as FlintConfig["rules"] },
+    customRules
+  );
+
+  if (violations.length === 0) {
+    process.stdout.write(JSON.stringify({ output: "flint: 0 violations" }));
+    process.exit(0);
+  }
+
+  const lines = violations.map((v) => `${v.file}:${v.line}  [${v.rule}]`);
+  process.stderr.write(`flint: ${violations.length} violation(s)\n${lines.join("\n")}\n`);
+  process.exit(2);
+}
+
+function printHelp(): void {
   const rules = Object.keys(BUILT_IN_RULES);
   process.stdout.write(
     [
       "flint — type-aware lint rules for TypeScript, written in TypeScript",
       "",
+      "Usage: flint [--config <dir>] [--rules <file>]",
+      "",
+      "  --config <dir>   directory containing flint.config.json (default: cwd)",
+      "  --rules  <file>  custom rules file (default: <configDir>/flint.rules.ts if present)",
+      "",
       `Built-in rules (${rules.length}):`,
       ...rules.map((r) => `  ${r}`),
       "",
-      "Usage: import { runFlint } from './flint/core/runner' and provide a FlintConfig.",
-    ].join("\n") + "\n"
+    ].join("\n")
   );
 }
 
-if (import.meta.main) main();
+if (import.meta.main) await main();

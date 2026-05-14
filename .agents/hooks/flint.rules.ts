@@ -1,8 +1,7 @@
 import { readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import type { Violation } from "../../flint/core/types";
-import { defineConfig, defineRule } from "../../flint/core/types";
-import { noSyncInAsync } from "../../flint/rules/no-sync-in-async";
+import { defineRule } from "../../flint/core/types";
 
 function scanPattern(
   files: string[],
@@ -77,26 +76,4 @@ const noRawApiKeyAccess = defineRule({
   },
 });
 
-// Scope no-sync-in-async to src/hooks/ — CLI and tool scripts are short-lived processes
-const noSyncInAsyncHooks = defineRule({
-  name: "no-sync-in-async",
-  check({ files, root }, violations) {
-    const hooksDir = resolve(root, "src/hooks");
-    noSyncInAsync.check(
-      { files: files.filter((f) => f.startsWith(hooksDir)), root },
-      violations
-    );
-  },
-});
-
-export default defineConfig({
-  root: resolve(import.meta.dir, "../.."),
-  include: ["src"],
-  rules: [
-    "no-unguarded-json-parse",
-    noSyncInAsyncHooks,
-    noConsoleInHookLib,
-    noRawAnthropicFetch,
-    noRawApiKeyAccess,
-  ],
-});
+export default [noConsoleInHookLib, noRawAnthropicFetch, noRawApiKeyAccess];

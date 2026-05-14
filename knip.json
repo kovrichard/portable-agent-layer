@@ -19,7 +19,8 @@
   "tags": ["-lintignore"],
   "ignore": [
     ".opencode/plugins/lint.ts",
-    "src/targets/opencode/plugin.ts"
+    "src/targets/opencode/plugin.ts",
+    ".agents/hooks/flint.rules.ts"
   ],
   "ignoreDependencies": [
     "@semantic-release/github"
