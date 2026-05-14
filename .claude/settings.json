@@ -18,7 +18,8 @@
       "Bash(bun run check-write *)",
       "Bash(bun run type-check *)",
       "Bash(bun run knip *)",
-      "Bash(bun test *)"
+      "Bash(bun test *)",
+      "Bash(bun flint/cli.ts *)"
     ]
   }
 }

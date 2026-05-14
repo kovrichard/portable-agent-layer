@@ -72,7 +72,9 @@ const PROTECTED_PATHS: RegExp[] = [
   // Derived from HOOK_MANAGED_FILES — scoped to managed roots only
   ...HOOK_MANAGED_FILES.map(
     (name) =>
-      new RegExp(`[/\\\\]\\.(?:pal|claude|agents|cursor)[/\\\\].*${escapeRegExp(name)}$`)
+      new RegExp(
+        String.raw`[/\\]\.(?:pal|claude|agents|cursor)[/\\].*${escapeRegExp(name)}$`
+      )
   ),
 ];
 
@@ -100,7 +102,7 @@ export function checkBashCommand(cmd: string): string | null {
   const segments = cmd.split(/[|;&&]/).map((s) => s.trim());
   for (const name of HOOK_MANAGED_FILES) {
     const pattern = new RegExp(
-      `\\.(?:pal|claude|agents|cursor|config/opencode)[/\\\\]\\S*${escapeRegExp(name)}`
+      String.raw`\.(?:pal|claude|agents|cursor|config/opencode)[/\\]\S*${escapeRegExp(name)}`
     );
     const managed = segments.filter((s) => pattern.test(s));
     if (managed.length > 0 && !managed.every((s) => READ_ONLY_COMMANDS.test(s))) {
@@ -109,7 +111,7 @@ export function checkBashCommand(cmd: string): string | null {
   }
   for (const dir of HOOK_MANAGED_DIRS) {
     const pattern = new RegExp(
-      `\\.(?:pal|claude|agents|cursor|config/opencode)[/\\\\]\\S*${escapeRegExp(dir)}`
+      String.raw`\.(?:pal|claude|agents|cursor|config/opencode)[/\\]\S*${escapeRegExp(dir)}`
     );
     const managed = segments.filter((s) => pattern.test(s));
     if (managed.length > 0 && !managed.every((s) => READ_ONLY_COMMANDS.test(s))) {

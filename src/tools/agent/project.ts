@@ -397,7 +397,7 @@ function nextIscId(criteria: string): number {
 function patchIsc(criteria: string, id: number, checked: boolean): string {
   const marker = checked ? "[x]" : "[ ]";
   return criteria.replace(
-    new RegExp(`^(-\\s+)\\[[ x]\\](\\s+ISC-${id}:)`, "m"),
+    new RegExp(String.raw`^(-\s+)\[[ x]\](\s+ISC-${id}:)`, "m"),
     `$1${marker}$2`
   );
 }

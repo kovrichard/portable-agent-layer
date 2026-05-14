@@ -59,7 +59,8 @@
       "style": {
         "noNestedTernary": "error",
         "useThrowOnlyError": "error",
-        "useConsistentBuiltinInstantiation": "error"
+        "useConsistentBuiltinInstantiation": "error",
+        "useTemplate": "error"
       }
     }
   },

@@ -11,7 +11,8 @@
     "no-nested-template-literals",
     "no-consecutive-array-push",
     "no-string-match",
-    "prefer-nullish-coalescing-assign"
+    "prefer-nullish-coalescing-assign",
+    "prefer-string-raw-regexp"
   ],
   "customRules": [
     "no-console-in-hook-lib",

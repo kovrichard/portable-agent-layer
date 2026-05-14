@@ -11,6 +11,7 @@ import { noStringMatch } from "./no-string-match";
 import { noSyncInAsync } from "./no-sync-in-async";
 import { noUnguardedJsonParse } from "./no-unguarded-json-parse";
 import { preferNullishCoalescingAssign } from "./prefer-nullish-coalescing-assign";
+import { preferStringRawRegexp } from "./prefer-string-raw-regexp";
 
 export const BUILT_IN_RULES: Record<string, FlintRule> = {
   "no-unguarded-json-parse": noUnguardedJsonParse,
@@ -25,4 +26,5 @@ export const BUILT_IN_RULES: Record<string, FlintRule> = {
   "no-consecutive-array-push": noConsecutiveArrayPush,
   "no-string-match": noStringMatch,
   "prefer-nullish-coalescing-assign": preferNullishCoalescingAssign,
+  "prefer-string-raw-regexp": preferStringRawRegexp,
 };
