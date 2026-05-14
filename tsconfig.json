@@ -22,7 +22,8 @@
       "@/*": [
         "./*"
       ]
-    }
+    },
+    "verbatimModuleSyntax": true
   },
   "include": [
     "**/*.ts"
