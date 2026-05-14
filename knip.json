@@ -8,19 +8,16 @@
     "src/targets/**/uninstall.ts",
     ".agents/hooks/*.ts",
     "assets/skills/*/tools/*.ts",
-    ".opencode/plugins/*.ts",
-    "flint/cli.ts"
+    ".opencode/plugins/*.ts"
   ],
   "project": [
-    "src/**/*.ts",
-    "flint/**/*.ts"
+    "src/**/*.ts"
   ],
   "includeEntryExports": true,
   "tags": ["-lintignore"],
   "ignore": [
     ".opencode/plugins/lint.ts",
-    "src/targets/opencode/plugin.ts",
-    ".agents/hooks/flint.rules.ts"
+    "src/targets/opencode/plugin.ts"
   ],
   "ignoreDependencies": [
     "@semantic-release/github"

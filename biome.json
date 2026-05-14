@@ -20,7 +20,9 @@
       "!**/out",
       "!**/next-env.d.ts",
       "!memory",
-      "!telos"
+      "!telos",
+      "flint.rules.ts",
+      "flint/**"
     ]
   },
   "formatter": {

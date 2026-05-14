@@ -1,5 +1,4 @@
 {
-  "root": "../..",
   "include": ["src"],
   "rules": [
     "no-unguarded-json-parse",

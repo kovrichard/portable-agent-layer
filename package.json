@@ -41,7 +41,7 @@
     "check": "biome check",
     "check-write": "biome check --write",
     "knip": "knip-bun",
-    "arch-check": "bun .agents/hooks/arch-check.ts",
+    "arch-check": "bun flint/cli.ts",
     "lint-staged": "lint-staged",
     "prepare": "bun .husky/install.mjs",
     "install:all": "bun run src/cli/index.ts cli install",

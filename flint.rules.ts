@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
-import type { Violation } from "../../flint/core/types";
-import { defineRule } from "../../flint/core/types";
+import type { Violation } from "./flint/core/types";
+import { defineRule } from "./flint/core/types";
 
 function scanPattern(
   files: string[],

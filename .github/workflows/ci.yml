@@ -58,7 +58,7 @@ jobs:
       - name: Knip
         run: bun run knip
 
-      - name: Arch-check
+      - name: Flint
         run: bun run arch-check
 
       - name: Test

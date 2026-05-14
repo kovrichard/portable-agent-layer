@@ -2,8 +2,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runFlint } from "./core/runner";
-import { BUILT_IN_RULES } from "./rules/index";
 import type { FlintConfig, FlintRule } from "./core/types";
+import { BUILT_IN_RULES } from "./rules/index";
 
 interface CliOptions {
   configDir?: string;
@@ -37,7 +37,8 @@ export async function main(opts: CliOptions = {}): Promise<void> {
 
   let customRules: FlintRule[] = [];
   const defaultRulesPath = resolve(configDir, "flint.rules.ts");
-  const rulesPath = rulesFile ?? (existsSync(defaultRulesPath) ? defaultRulesPath : undefined);
+  const rulesPath =
+    rulesFile ?? (existsSync(defaultRulesPath) ? defaultRulesPath : undefined);
   if (rulesPath) {
     const mod = await import(rulesPath);
     customRules = (mod.default ?? []) as FlintRule[];

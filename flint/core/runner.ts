@@ -29,9 +29,9 @@ function resolveFiles(include: string[], root: string): string[] {
 function matchPattern(relPath: string, pattern: string): boolean {
   const norm = relPath.replaceAll("\\", "/");
   const p = pattern.replaceAll("\\", "/");
-  if (p.endsWith("/**")) return norm.startsWith(p.slice(0, -3) + "/");
+  if (p.endsWith("/**")) return norm.startsWith(`${p.slice(0, -3)}/`);
   if (p.startsWith("**/")) return norm.endsWith(p.slice(2));
-  return norm === p || norm.startsWith(p + "/");
+  return norm === p || norm.startsWith(`${p}/`);
 }
 
 function applyPatterns(files: string[], patterns: string[], root: string): string[] {
@@ -60,7 +60,10 @@ function resolveRule(
   return { rule, include: entry.include };
 }
 
-export function runFlint(config: FlintConfig, customRules: FlintRule[] = []): Violation[] {
+export function runFlint(
+  config: FlintConfig,
+  customRules: FlintRule[] = []
+): Violation[] {
   const registry: Record<string, FlintRule> = customRules.length
     ? { ...BUILT_IN_RULES, ...Object.fromEntries(customRules.map((r) => [r.name, r])) }
     : BUILT_IN_RULES;
