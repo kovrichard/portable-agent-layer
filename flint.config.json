@@ -11,6 +11,7 @@
     "no-raw-anthropic-fetch",
     "no-raw-api-key-access",
     "no-agent-import-in-core",
-    "no-hardcoded-pal-home"
+    "no-hardcoded-pal-home",
+    "no-raw-exit-in-lib"
   ]
 }

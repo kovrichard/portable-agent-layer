@@ -103,6 +103,22 @@ const noAgentImportInCore = defineRule({
   },
 });
 
+const noRawExitInLib = defineRule({
+  name: "no-raw-exit-in-lib",
+  check({ files, root }, violations) {
+    const lib = resolve(root, "src/hooks/lib");
+    const scope = files.filter((f) => f.startsWith(lib));
+    scanPattern(
+      scope,
+      /process\.exit\(/,
+      "no-raw-exit-in-lib",
+      "process.exit() called inside a library module — library functions should return or throw, not terminate the process.",
+      root,
+      violations
+    );
+  },
+});
+
 const noHardcodedPalHome = defineRule({
   name: "no-hardcoded-pal-home",
   check({ files, root }, violations) {
@@ -126,4 +142,5 @@ export default [
   noRawApiKeyAccess,
   noAgentImportInCore,
   noHardcodedPalHome,
+  noRawExitInLib,
 ];
