@@ -1,6 +1,7 @@
 import { readdirSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { BUILT_IN_RULES } from "../rules/index";
+import { clearAstCache } from "./ast";
 import type { FlintConfig, FlintRule, RuleEntry, Violation } from "./types";
 
 function walk(dir: string): string[] {
@@ -65,6 +66,7 @@ export function runFlint(
   config: FlintConfig,
   customRules: FlintRule[] = []
 ): Violation[] {
+  clearAstCache();
   const registry: Record<string, FlintRule> = customRules.length
     ? { ...BUILT_IN_RULES, ...Object.fromEntries(customRules.map((r) => [r.name, r])) }
     : BUILT_IN_RULES;
