@@ -25,6 +25,7 @@ import { resolve } from "node:path";
 import { palHome, palPkg, platform } from "../hooks/lib/paths";
 import { hasRealContent, SETUP_STEPS, STEP_ORDER } from "../hooks/lib/setup";
 import { log } from "../targets/lib";
+import { checkPendingMigrations } from "./migrate";
 
 const allArgs = process.argv.slice(2);
 
@@ -169,6 +170,11 @@ async function runCli(command: string | undefined, args: string[]) {
     case "doctor":
       doctor();
       break;
+    case "migrate": {
+      const { runMigrate } = await import("./migrate");
+      runMigrate(args);
+      break;
+    }
     case "usage": {
       const { usage } = await import("../tools/token-cost");
       usage();
@@ -212,6 +218,7 @@ function showHelp() {
     pal cli import [path] [--dry-run]       Import state from zip
     pal cli status                          Show PAL configuration
     pal cli doctor                          Check prerequisites and health
+    pal cli migrate [--list] [--dry-run]    Run pending data migrations
     pal cli usage                           Summarize token usage and cost
 
   Environment:
@@ -684,6 +691,17 @@ function doctor(silent = false): DoctorResult {
       fail(`Hooks: ${hookHealth.totalErrors} error(s) in last 24h`);
       if (hookHealth.lastError) {
         log.warn(`    Last: ${hookHealth.lastError}`);
+      }
+    }
+
+    // Pending migrations
+    const pendingMigrations = checkPendingMigrations();
+    if (pendingMigrations.length > 0) {
+      for (const m of pendingMigrations) {
+        const detail = m.detail ? ` (${m.detail})` : "";
+        warn(
+          `Migration pending: ${m.id} — ${m.description}${detail} → run 'pal cli migrate'`
+        );
       }
     }
 

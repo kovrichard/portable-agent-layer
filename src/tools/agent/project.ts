@@ -21,7 +21,7 @@
  *   bun ~/.pal/tools/project.ts migrate
  */
 
-import { existsSync, readdirSync, readFileSync, unlinkSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { paths } from "../../hooks/lib/paths";
@@ -351,7 +351,6 @@ function cmdMigrate(): void {
       }
 
       writeProject(p);
-      unlinkSync(filePath);
       migrated++;
       results.push(`${slug}: migrated`);
     } catch {

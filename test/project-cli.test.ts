@@ -184,7 +184,7 @@ describe("project CLI", () => {
     expect(got.criteria).toContain("All tests pass");
   });
 
-  test("migrate converts old JSON files to ISA.md and removes them", async () => {
+  test("migrate converts old JSON files to ISA.md and preserves source", async () => {
     const oldDir = resolve(TEST_HOME, "memory", "state", "progress");
     if (!existsSync(oldDir)) mkdirSync(oldDir, { recursive: true });
     const legacy = {
@@ -210,8 +210,8 @@ describe("project CLI", () => {
     expect(out.migrated).toBe(1);
     expect(out.skipped).toBe(0);
 
-    // Old JSON removed
-    expect(existsSync(resolve(oldDir, "legacy-proj.json"))).toBe(false);
+    // Old JSON preserved (migrate never deletes source)
+    expect(existsSync(resolve(oldDir, "legacy-proj.json"))).toBe(true);
     // New ISA.md created with migrated data
     expect(isaFiles()).toContain("legacy-proj");
     const resumed = JSON.parse((await runCli(["resume", "legacy-proj"])).stdout);
