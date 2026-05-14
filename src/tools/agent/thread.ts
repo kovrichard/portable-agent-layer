@@ -18,7 +18,7 @@ import { ensureDir, paths } from "../../hooks/lib/paths";
 
 // ── Types ──
 
-interface Thread {
+export interface Thread {
   id: string;
   cwd: string;
   title: string;
@@ -38,7 +38,7 @@ function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 }
 
-function readThreads(): Thread[] {
+export function readThreads(): Thread[] {
   const p = threadsPath();
   if (!existsSync(p)) return [];
   try {
@@ -51,7 +51,7 @@ function readThreads(): Thread[] {
   }
 }
 
-function writeThreads(threads: Thread[]): void {
+export function writeThreads(threads: Thread[]): void {
   writeFileSync(
     threadsPath(),
     `${threads.map((t) => JSON.stringify(t)).join("\n")}\n`,

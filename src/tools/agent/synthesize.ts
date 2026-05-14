@@ -17,6 +17,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { ensureDir, paths } from "../../hooks/lib/paths";
+import { readJsonl } from "../self-model";
 
 // ── Config ──
 
@@ -70,18 +71,6 @@ function shouldRun(force: boolean): boolean {
     return Date.now() - new Date(data.timestamp).getTime() > SYNTHESIS_TTL_MS;
   } catch {
     return true;
-  }
-}
-
-function readJsonl<T>(path: string): T[] {
-  if (!existsSync(path)) return [];
-  try {
-    return readFileSync(path, "utf-8")
-      .split("\n")
-      .filter((l) => l.trim())
-      .map((l) => JSON.parse(l) as T);
-  } catch {
-    return [];
   }
 }
 

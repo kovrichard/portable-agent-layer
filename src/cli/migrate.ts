@@ -10,7 +10,7 @@
  * pending work without running anything.
  */
 
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { paths } from "../hooks/lib/paths";
 import {
@@ -20,6 +20,7 @@ import {
   readProject,
   writeProject,
 } from "../hooks/lib/projects";
+import { readThreads, type Thread, writeThreads } from "../tools/agent/thread";
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -135,37 +136,6 @@ const v1Projects: Migration = {
 };
 
 // ── v2-threads-to-isc: open threads → ISCs on matching project ────
-
-interface Thread {
-  id: string;
-  cwd: string;
-  title: string;
-  context: string;
-  status: "open" | "resolved";
-  created: string;
-  resolved: string | null;
-}
-
-function readThreads(): Thread[] {
-  const p = resolve(paths.state(), "threads.jsonl");
-  if (!existsSync(p)) return [];
-  try {
-    return readFileSync(p, "utf-8")
-      .split("\n")
-      .filter((l) => l.trim())
-      .map((l) => JSON.parse(l) as Thread);
-  } catch {
-    return [];
-  }
-}
-
-function writeThreads(threads: Thread[]): void {
-  writeFileSync(
-    resolve(paths.state(), "threads.jsonl"),
-    `${threads.map((t) => JSON.stringify(t)).join("\n")}\n`,
-    "utf-8"
-  );
-}
 
 function nextIscId(criteria: string): number {
   const ids: number[] = [];

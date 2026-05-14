@@ -107,7 +107,7 @@ function shouldRun(force: boolean): boolean {
   }
 }
 
-function readJsonl<T>(path: string): T[] {
+export function readJsonl<T>(path: string): T[] {
   if (!existsSync(path)) return [];
   try {
     return readFileSync(path, "utf-8")
