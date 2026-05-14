@@ -2,7 +2,8 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": [
     "src/tools/**/*.ts",
-    "src/hooks/**/*.ts",
+    "src/hooks/*.ts",
+    "src/hooks/handlers/*.ts",
     "src/targets/**/install.ts",
     "src/targets/**/uninstall.ts",
     "src/targets/opencode/plugin.ts",

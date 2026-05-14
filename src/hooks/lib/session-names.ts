@@ -6,7 +6,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { paths } from "./paths";
 
-export interface SessionNames {
+interface SessionNames {
   [sessionId: string]: string;
 }
 

@@ -43,7 +43,7 @@ export interface ProjectProgress {
   changelog?: string;
 }
 
-export const PROJECT_STALE_DAYS_DEFAULT = 14;
+const PROJECT_STALE_DAYS_DEFAULT = 14;
 
 const PROJECT_MARKERS = [
   ".git",
@@ -222,7 +222,7 @@ export function isStale(
  * Walk up from `cwd` looking for the nearest dir with a project marker.
  * Returns absolute path or null. Bounded at 12 levels to avoid runaway walks.
  */
-export function findProjectRoot(cwd: string): string | null {
+function findProjectRoot(cwd: string): string | null {
   let dir = resolve(cwd);
   const fsRoot = parsePath(dir).root;
   for (let i = 0; i < 12; i++) {

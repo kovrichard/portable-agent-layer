@@ -18,13 +18,13 @@ import { similarity } from "./text-similarity";
 export type EvidenceType = "supporting" | "counter" | "confirmation" | "contradiction";
 export type OpinionCategory = "communication" | "technical" | "workflow" | "general";
 
-export interface Evidence {
+interface Evidence {
   date: string;
   type: EvidenceType;
   source: string;
 }
 
-export interface Opinion {
+interface Opinion {
   id: string;
   statement: string;
   confidence: number;
@@ -145,7 +145,7 @@ export function createOpinion(statement: string, source: string): Opinion {
 }
 
 /** Check if an opinion already has evidence with this exact source text. */
-export function hasEvidence(opinion: Opinion, source: string): boolean {
+function hasEvidence(opinion: Opinion, source: string): boolean {
   return opinion.evidence.some((e) => e.source === source);
 }
 

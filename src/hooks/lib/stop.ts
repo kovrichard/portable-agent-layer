@@ -24,7 +24,7 @@ import { logDebug, logError } from "./log";
 import { ensureDir, paths } from "./paths";
 import { extractContent, extractLastAssistant, parseMessages } from "./transcript";
 
-export interface RunStopHandlersOptions {
+interface RunStopHandlersOptions {
   lastAssistantMessage?: string;
   sessionId?: string;
 }

@@ -69,7 +69,7 @@ function existingCrystalPrinciples(content: string): string[] {
   return out;
 }
 
-export interface PromoteCrystalResult {
+interface PromoteCrystalResult {
   domain: string;
   principle: string;
   confidence: number;
@@ -123,7 +123,7 @@ export function promoteCrystal(
   return { domain, principle, confidence, framePath, skipped: null };
 }
 
-export interface FrameDoc {
+interface FrameDoc {
   domain: string;
   principle: string;
   body: string;

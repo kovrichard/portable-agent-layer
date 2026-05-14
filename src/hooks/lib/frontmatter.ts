@@ -5,7 +5,7 @@
  * Supports strings, numbers, booleans, and inline JSON arrays.
  */
 
-export interface Parsed<T = Record<string, string>> {
+interface Parsed<T = Record<string, string>> {
   meta: T;
   body: string;
 }

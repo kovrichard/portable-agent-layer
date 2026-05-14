@@ -5,10 +5,10 @@
  * These helpers normalize the differences so hook handlers stay clean.
  */
 
-export type AgentType = "claude" | "cursor" | "codex";
+type AgentType = "claude" | "cursor" | "codex";
 
 /** Detect which agent is running via environment variables */
-export function detectAgent(): AgentType {
+function detectAgent(): AgentType {
   // PAL_AGENT is set explicitly in hook command prefixes — most reliable signal.
   // IDE env vars (CURSOR_VERSION, CODEX_CLI_VERSION) are NOT reliably forwarded to
   // hook subprocesses, so PAL_AGENT is the primary detection mechanism.
@@ -39,22 +39,4 @@ export function blockResponse(reason: string, hookEventName?: string): string {
     });
   }
   return JSON.stringify({ decision: "block", reason });
-}
-
-/**
- * Format sessionStart context injection for the current agent.
- * Claude Code: raw text to stdout
- * Cursor:      { additional_context: "..." }  (snake_case)
- * Codex:       { additionalContext: "..." }   (camelCase)
- */
-export function sessionStartOutput(context: string): string {
-  if (isCursor()) {
-    return JSON.stringify({ additional_context: context });
-  }
-  if (isCodex()) {
-    return JSON.stringify({
-      hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: context },
-    });
-  }
-  return context;
 }

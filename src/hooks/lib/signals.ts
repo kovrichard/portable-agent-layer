@@ -3,14 +3,14 @@ import { resolve } from "node:path";
 import { paths } from "./paths";
 import { now } from "./time";
 
-export interface Signal {
+interface Signal {
   ts: string;
   type: string;
   [key: string]: unknown;
 }
 
 /** Append a signal to a JSONL file in the signals directory */
-export function emitSignal(
+function emitSignal(
   filename: string,
   data: { type: string; [key: string]: unknown }
 ): void {

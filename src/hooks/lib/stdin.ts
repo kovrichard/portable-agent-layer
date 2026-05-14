@@ -1,5 +1,5 @@
 /** Read all of stdin as a string */
-export async function readStdin(): Promise<string> {
+async function readStdin(): Promise<string> {
   const chunks: Buffer[] = [];
   for await (const chunk of Bun.stdin.stream()) {
     chunks.push(Buffer.from(chunk));

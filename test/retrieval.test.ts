@@ -1,6 +1,13 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { runRetrieval } from "../src/hooks/lib/retrieval";
+import {
+  buildIndex,
+  ensureIndex,
+  isStale,
+  readIndex,
+} from "../src/hooks/lib/retrieval-index";
 
 const TEST_HOME = resolve(import.meta.dir, "../.test-home-retrieval");
 
@@ -64,23 +71,14 @@ function fixtureFrame(domain: string, principle: string, pct: number) {
   );
 }
 
-async function freshLib() {
-  const t = Date.now();
-  const idx = await import(`../src/hooks/lib/retrieval-index.ts?t=${t}`);
-  const ret = await import(`../src/hooks/lib/retrieval.ts?t=${t}`);
-  return { ...idx, ...ret } as typeof import("../src/hooks/lib/retrieval-index") &
-    typeof import("../src/hooks/lib/retrieval");
-}
-
 describe("retrieval index — build + read", () => {
-  test("buildIndex over empty corpus returns zero docs", async () => {
-    const lib = await freshLib();
-    const idx = lib.buildIndex();
+  test("buildIndex over empty corpus returns zero docs", () => {
+    const idx = buildIndex();
     expect(idx.corpusSize).toBe(0);
     expect(idx.docs).toEqual([]);
   });
 
-  test("buildIndex tokenizes failures + frames with weighted fields", async () => {
+  test("buildIndex tokenizes failures + frames with weighted fields", () => {
     fixtureCapture(
       "2026/04",
       "20260415-100000_database-migration-broke-prod",
@@ -94,8 +92,7 @@ describe("retrieval index — build + read", () => {
     );
     fixtureFrame("development", "Always run migrations against a real database", 90);
 
-    const lib = await freshLib();
-    const idx = lib.buildIndex();
+    const idx = buildIndex();
     expect(idx.corpusSize).toBe(2);
     expect(idx.docs.find((d) => d.source === "failure")?.tf.database).toBeGreaterThan(0);
     expect(idx.docs.find((d) => d.source === "wisdom")?.displayContext).toBe(
@@ -105,7 +102,7 @@ describe("retrieval index — build + read", () => {
 });
 
 describe("retrieval ranker — correctness", () => {
-  test("ranks the lexically-overlapping doc highest", async () => {
+  test("ranks the lexically-overlapping doc highest", () => {
     fixtureCapture("2026/04", "20260410-090000_typo-in-doc", {
       rating: 4,
       context: "Fixed a typo in README",
@@ -118,9 +115,8 @@ describe("retrieval ranker — correctness", () => {
       principle: "Never mock the database in integration tests",
       ts: "2026-04-20T09:00:00Z",
     });
-    const lib = await freshLib();
-    const idx = lib.buildIndex();
-    const result = lib.runRetrieval(
+    const idx = buildIndex();
+    const result = runRetrieval(
       "should I mock the database in this integration test?",
       idx,
       "/tmp"
@@ -130,26 +126,24 @@ describe("retrieval ranker — correctness", () => {
     expect(result.reminder).toContain("Never mock the database");
   });
 
-  test("rejects below-threshold matches — empty reminder for unrelated query", async () => {
+  test("rejects below-threshold matches — empty reminder for unrelated query", () => {
     fixtureCapture("2026/04", "20260410-090000_typo-in-doc", {
       rating: 4,
       context: "Fixed a typo in README",
       principle: "Run spell-check before pushing docs",
       ts: "2026-04-10T09:00:00Z",
     });
-    const lib = await freshLib();
-    const idx = lib.buildIndex();
-    const result = lib.runRetrieval(
+    const idx = buildIndex();
+    const result = runRetrieval(
       "deploy kubernetes cluster autoscaler manifests",
       idx,
       "/tmp"
     );
-    // Demonstrate, don't assert: the rejection logic must fire on a deliberately-unrelated query
     expect(result.matches).toEqual([]);
     expect(result.reminder).toBe("");
   });
 
-  test("project-scope boost surfaces project-tagged docs", async () => {
+  test("project-scope boost surfaces project-tagged docs", () => {
     fixtureCapture("2026/04", "20260415-100000_pal-deploy-issue", {
       rating: 3,
       context: "PAL hook handler regressed",
@@ -162,10 +156,9 @@ describe("retrieval ranker — correctness", () => {
       principle: "Test deploy scripts in isolation before wiring",
       ts: "2026-04-16T10:00:00Z",
     });
-    const lib = await freshLib();
-    const idx = lib.buildIndex();
+    const idx = buildIndex();
 
-    const inPal = lib.runRetrieval(
+    const inPal = runRetrieval(
       "regression in deploy handler test wiring",
       idx,
       "/Users/x/code/pal"
@@ -175,8 +168,7 @@ describe("retrieval ranker — correctness", () => {
     expect(inPal.matches[0].doc.id).toContain("pal-deploy");
   });
 
-  test("formatReminder caps output below MAX_REMINDER_BYTES", async () => {
-    // Stuff lots of long-keyword captures; ensure block stays ≤500 bytes
+  test("formatReminder caps output below MAX_REMINDER_BYTES", () => {
     for (let i = 0; i < 5; i++) {
       fixtureCapture("2026/04", `2026041${i}-100000_long-principle-${i}`, {
         rating: 3,
@@ -186,9 +178,8 @@ describe("retrieval ranker — correctness", () => {
         ts: `2026-04-1${i}T10:00:00Z`,
       });
     }
-    const lib = await freshLib();
-    const idx = lib.buildIndex();
-    const result = lib.runRetrieval(
+    const idx = buildIndex();
+    const result = runRetrieval(
       "distributed consensus quorum reads partition split-brain",
       idx,
       "/tmp"
@@ -198,7 +189,7 @@ describe("retrieval ranker — correctness", () => {
 });
 
 describe("retrieval index — dedup against graduated frames", () => {
-  test("excludes failures whose principle has graduated to a wisdom frame", async () => {
+  test("excludes failures whose principle has graduated to a wisdom frame", () => {
     fixtureCapture("2026/04", "20260415-100000_clarify-intent", {
       rating: 3,
       context: "User had to repeat the requirement twice",
@@ -211,11 +202,9 @@ describe("retrieval index — dedup against graduated frames", () => {
       principle: "Verify pod readiness probes match container startup time",
       ts: "2026-04-20T10:00:00Z",
     });
-    // The "clarify intent" capture has a Dice-similar twin in the graduated frame
     fixtureFrame("communication", "Always clarify intent before answering", 90);
 
-    const lib = await freshLib();
-    const idx = lib.buildIndex();
+    const idx = buildIndex();
 
     const ids = idx.docs.map((d) => d.id);
     expect(ids).not.toContain("20260415-100000_clarify-intent");
@@ -225,7 +214,7 @@ describe("retrieval index — dedup against graduated frames", () => {
     );
   });
 
-  test("keeps failures with principles dissimilar to all frames", async () => {
+  test("keeps failures with principles dissimilar to all frames", () => {
     fixtureCapture("2026/04", "20260415-100000_kafka-lag", {
       rating: 3,
       context: "Kafka consumer lag spiked under load",
@@ -234,12 +223,11 @@ describe("retrieval index — dedup against graduated frames", () => {
     });
     fixtureFrame("communication", "Always clarify intent before answering", 90);
 
-    const lib = await freshLib();
-    const idx = lib.buildIndex();
+    const idx = buildIndex();
     expect(idx.docs.some((d) => d.id.includes("kafka-lag"))).toBe(true);
   });
 
-  test("keeps failures with no principle field", async () => {
+  test("keeps failures with no principle field", () => {
     fixtureCapture("2026/04", "20260415-100000_no-principle", {
       rating: 3,
       context: "Some failure context",
@@ -248,38 +236,34 @@ describe("retrieval index — dedup against graduated frames", () => {
     });
     fixtureFrame("communication", "Always clarify intent before answering", 90);
 
-    const lib = await freshLib();
-    const idx = lib.buildIndex();
+    const idx = buildIndex();
     expect(idx.docs.some((d) => d.id.includes("no-principle"))).toBe(true);
   });
 });
 
 describe("retrieval index — staleness", () => {
-  test("isStale flags index when failures dir is newer than index", async () => {
+  test("isStale flags index when failures dir is newer than index", () => {
     fixtureCapture("2026/04", "20260415-100000_initial", {
       rating: 3,
       context: "initial capture",
       principle: "first principle",
       ts: "2026-04-15T10:00:00Z",
     });
-    const lib = await freshLib();
-    const idx = lib.buildIndex();
-    // Force index "older" than the dir by pinning builtAt to 1970
+    const idx = buildIndex();
     const stale = { ...idx, builtAt: "1970-01-01T00:00:00Z" };
-    expect(lib.isStale(stale)).toBe(true);
+    expect(isStale(stale)).toBe(true);
   });
 
-  test("ensureIndex builds + writes when missing", async () => {
+  test("ensureIndex builds + writes when missing", () => {
     fixtureCapture("2026/04", "20260415-100000_initial", {
       rating: 3,
       context: "initial",
       principle: "first principle",
       ts: "2026-04-15T10:00:00Z",
     });
-    const lib = await freshLib();
-    const idx = lib.ensureIndex();
+    const idx = ensureIndex();
     expect(idx.corpusSize).toBe(1);
-    const onDisk = lib.readIndex();
+    const onDisk = readIndex();
     expect(onDisk?.corpusSize).toBe(1);
   });
 });

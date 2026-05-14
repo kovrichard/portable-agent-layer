@@ -5,7 +5,7 @@
 
 import { readFileSync } from "node:fs";
 
-export interface Message {
+interface Message {
   role: string;
   content: string | unknown;
 }

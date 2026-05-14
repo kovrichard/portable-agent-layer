@@ -18,7 +18,7 @@ const MAX_MATCHES = 2;
 const MAX_REMINDER_BYTES = 500;
 const PRINCIPLE_TRUNC = 200;
 
-export interface ScoredDoc {
+interface ScoredDoc {
   doc: IndexedDoc;
   score: number;
   confidence: number;
@@ -38,7 +38,7 @@ function ageDecay(ts: string): number {
 }
 
 /** Raw IDF-weighted overlap score, capped tf, sqrt-length-normalized. */
-export function scoreDoc(
+function scoreDoc(
   queryTerms: Set<string>,
   doc: IndexedDoc,
   df: Record<string, number>,
@@ -56,7 +56,7 @@ export function scoreDoc(
 }
 
 /** Upper bound: query treated as a doc with tf=1 per unique term. */
-export function selfScore(
+function selfScore(
   queryTerms: Set<string>,
   df: Record<string, number>,
   N: number
@@ -75,7 +75,7 @@ function scopeMatches(doc: IndexedDoc, scopeKey: string): boolean {
 
 /** Rank the index against `query`. Returns docs above the confidence threshold,
  *  scope-boosted and age-decayed, sorted high-to-low, capped at MAX_MATCHES. */
-export function rank(query: string, index: RetrievalIndex, cwd: string): ScoredDoc[] {
+function rank(query: string, index: RetrievalIndex, cwd: string): ScoredDoc[] {
   const queryTerms = extractKeywords(query);
   if (queryTerms.size === 0) return [];
 
@@ -140,7 +140,7 @@ function formatLine(s: ScoredDoc): string {
 }
 
 /** Build the `<system-reminder>` block. Drops lowest-ranked lines until ≤500 bytes. */
-export function formatReminder(matches: ScoredDoc[]): string {
+function formatReminder(matches: ScoredDoc[]): string {
   if (matches.length === 0) return "";
   let lines = matches.map(formatLine);
 

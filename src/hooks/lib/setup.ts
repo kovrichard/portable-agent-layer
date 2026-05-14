@@ -5,21 +5,13 @@
  * The AI is instructed to mark steps done after writing each file.
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { ensureDir, palHome, paths } from "./paths";
+import { existsSync, readFileSync } from "node:fs";
 
-export interface SetupStep {
+interface SetupStep {
   done: boolean;
   file: string;
   question: string;
   hint: string;
-}
-
-export interface SetupState {
-  version: number;
-  completed: boolean;
-  steps: Record<string, SetupStep>;
 }
 
 /** Ordered setup steps — defines the wizard flow */
@@ -50,10 +42,6 @@ export const SETUP_STEPS: Record<string, Omit<SetupStep, "done">> = {
 
 export const STEP_ORDER = Object.keys(SETUP_STEPS);
 
-function setupPath(): string {
-  return resolve(ensureDir(paths.state()), "setup.json");
-}
-
 /** Check if a TELOS file has real content (not just template scaffolding) */
 export function hasRealContent(filePath: string): boolean {
   if (!existsSync(filePath)) return false;
@@ -69,50 +57,4 @@ export function hasRealContent(filePath: string): boolean {
   } catch {
     return false;
   }
-}
-
-/** Create initial setup state, auto-detecting already-populated TELOS files */
-export function createInitialState(): SetupState {
-  const steps: Record<string, SetupStep> = {};
-  for (const [key, def] of Object.entries(SETUP_STEPS)) {
-    const populated = hasRealContent(resolve(palHome(), def.file));
-    steps[key] = { done: populated, ...def };
-  }
-  const allDone = Object.values(steps).every((s) => s.done);
-  return { version: 1, completed: allDone, steps };
-}
-
-/** Read setup state, or return null if no setup.json exists */
-export function readSetupState(): SetupState | null {
-  const p = setupPath();
-  if (!existsSync(p)) return null;
-  try {
-    return JSON.parse(readFileSync(p, "utf-8"));
-  } catch {
-    return null;
-  }
-}
-
-/** Write setup state to disk */
-export function writeSetupState(state: SetupState): void {
-  writeFileSync(setupPath(), `${JSON.stringify(state, null, 2)}\n`);
-}
-
-/** Seed setup.json if it doesn't exist yet. Returns the state. */
-export function ensureSetupState(): SetupState {
-  const existing = readSetupState();
-  if (existing) return existing;
-  const fresh = createInitialState();
-  writeSetupState(fresh);
-  return fresh;
-}
-
-/** Get the list of remaining (not done) step keys, in order */
-export function remainingSteps(state: SetupState): string[] {
-  return STEP_ORDER.filter((k) => !state.steps[k]?.done);
-}
-
-/** Check if setup is fully completed */
-export function isSetupComplete(state: SetupState): boolean {
-  return state.completed;
 }

@@ -12,7 +12,7 @@ import { ensureDir, paths } from "./paths";
 
 // --- Types ---
 
-export interface PersonEntity {
+interface PersonEntity {
   id: string;
   name: string;
   first_seen: string;
@@ -20,7 +20,7 @@ export interface PersonEntity {
   source_ids: string[];
 }
 
-export interface CompanyEntity {
+interface CompanyEntity {
   id: string;
   name: string;
   domain: string | null;
@@ -29,7 +29,7 @@ export interface CompanyEntity {
   source_ids: string[];
 }
 
-export interface LinkEntity {
+interface LinkEntity {
   id: string;
   url: string;
   first_seen: string;
@@ -37,7 +37,7 @@ export interface LinkEntity {
   source_ids: string[];
 }
 
-export interface SourceEntity {
+interface SourceEntity {
   id: string;
   url: string | null;
   author: string | null;
@@ -47,7 +47,7 @@ export interface SourceEntity {
   source_ids: string[];
 }
 
-export interface EntityIndex {
+interface EntityIndex {
   version: string;
   last_updated: string;
   people: Record<string, PersonEntity>;

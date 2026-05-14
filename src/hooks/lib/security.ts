@@ -4,7 +4,7 @@
  */
 
 /** Dangerous command patterns — always blocked */
-export const BLOCKED_COMMANDS: [RegExp, string][] = [
+const BLOCKED_COMMANDS: [RegExp, string][] = [
   [/rm\s+-rf\s+[/~]/, "Recursive delete of root or home"],
   [/mkfs\./, "Filesystem format"],
   [/dd\s+if=.*of=\/dev\//, "Raw disk write"],
@@ -16,7 +16,7 @@ export const BLOCKED_COMMANDS: [RegExp, string][] = [
 ];
 
 /** Hook-managed files — single source of truth */
-export const HOOK_MANAGED_FILES = [
+const HOOK_MANAGED_FILES = [
   "CLAUDE.md",
   "AGENTS.md",
   "ratings.jsonl",
@@ -40,7 +40,7 @@ export const HOOK_MANAGED_FILES = [
 ];
 
 /** Hook-managed directories — AI must not write to or delete from these */
-export const HOOK_MANAGED_DIRS = [
+const HOOK_MANAGED_DIRS = [
   "memory/signals",
   "memory/learning/failures",
   "memory/learning/session",
@@ -57,10 +57,10 @@ function escapeRegExp(s: string): string {
 }
 
 /** PAL-deployed dirs — engine-managed, overwritten on every `pal install` */
-export const PAL_INSTALLED_DIRS_RE = /[/\\]\.pal[/\\](?:docs|skills|tools)[/\\]/;
+const PAL_INSTALLED_DIRS_RE = /[/\\]\.pal[/\\](?:docs|skills|tools)[/\\]/;
 
 /** Paths that should never be written to */
-export const PROTECTED_PATHS: RegExp[] = [
+const PROTECTED_PATHS: RegExp[] = [
   /^\/etc\//,
   /^\/boot\//,
   /^\/System\//,
@@ -74,14 +74,6 @@ export const PROTECTED_PATHS: RegExp[] = [
     (name) =>
       new RegExp(`[/\\\\]\\.(?:pal|claude|agents|cursor)[/\\\\].*${escapeRegExp(name)}$`)
   ),
-];
-
-/** Patterns that warrant a warning (logged but not blocked) */
-export const WARN_COMMANDS: RegExp[] = [
-  /git\s+push\s+.*--force/,
-  /git\s+reset\s+--hard/,
-  /drop\s+(?:table|database)/i,
-  /truncate\s+table/i,
 ];
 
 /** Roots where managed files/dirs are protected (user state, not repo templates) */

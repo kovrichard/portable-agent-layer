@@ -11,7 +11,7 @@ import { paths } from "./paths";
 
 // ── Types ──
 
-export interface Identity {
+interface Identity {
   ai: { name: string; fullName: string; displayName: string; catchphrase: string };
   principal: { name: string; timezone: string };
 }

@@ -15,9 +15,9 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ensureDir, paths } from "./paths";
 
-export type NoteType = "W" | "O" | "Session";
+type NoteType = "W" | "O" | "Session";
 
-export interface RelationshipNote {
+interface RelationshipNote {
   type: NoteType;
   text: string;
   confidence?: number;

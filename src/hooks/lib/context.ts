@@ -12,12 +12,10 @@ import { paths } from "./paths";
 import { loadActiveProjectsContext } from "./projects";
 import { loadRecentNotes } from "./relationship";
 import { loadFailurePatterns, loadSynthesisRecommendations } from "./semi-static";
-import { readSessionNames } from "./session-names";
 import * as settings from "./settings";
-import { isSetupComplete, readSetupState, remainingSteps, STEP_ORDER } from "./setup";
 import { computeSignalTrends, formatTrends } from "./signal-trends";
 import { readFramePrinciples } from "./wisdom";
-import { readProjectHistory, readSessions } from "./work-tracking";
+import { readProjectHistory } from "./work-tracking";
 
 /** Load and concatenate loadAtStartup files */
 function loadStartupFiles(): string {
@@ -39,89 +37,6 @@ function loadStartupFiles(): string {
   }
 
   return sections.join("\n\n---\n\n");
-}
-
-/** Count lines in a signals JSONL file */
-export function countSignals(filename: string): number {
-  const filepath = resolve(paths.signals(), filename);
-  if (!existsSync(filepath)) return 0;
-  try {
-    const content = readFileSync(filepath, "utf-8").trim();
-    return content ? content.split("\n").length : 0;
-  } catch {
-    return 0;
-  }
-}
-
-/** Load the N most recent session names (fallback for greeting) */
-export function loadRecentSessions(count: number): string[] {
-  try {
-    const sessions = readSessions();
-    if (sessions.length > 0) {
-      return sessions
-        .slice(-count)
-        .reverse()
-        .map((s) => s.name);
-    }
-    // Fallback to session-names.json for backwards compat
-    const names = readSessionNames();
-    const entries = Object.values(names);
-    return entries.slice(-count).reverse();
-  } catch {
-    return [];
-  }
-}
-
-/** Read cached counts from counts.json, falling back to live counting */
-function loadCachedCounts(): {
-  signals: number;
-  telos: number;
-  skills: number;
-  sessions: number;
-} {
-  try {
-    const countsPath = resolve(paths.state(), "counts.json");
-    if (existsSync(countsPath)) {
-      return JSON.parse(readFileSync(countsPath, "utf-8"));
-    }
-  } catch {
-    /* fall through */
-  }
-  // Fallback: count live (first session before any stop has run)
-  return {
-    signals: countSignals("ratings.jsonl"),
-    telos: 0,
-    skills: 0,
-    sessions: 0,
-  };
-}
-
-/** Build the visible greeting lines for stderr */
-export function buildGreeting(): string[] {
-  const counts = loadCachedCounts();
-  const setupState = readSetupState();
-  const setupIncomplete = setupState && !isSetupComplete(setupState);
-
-  const greeting: string[] = [];
-
-  if (setupIncomplete) {
-    const done = STEP_ORDER.length - remainingSteps(setupState).length;
-    greeting.push(
-      `🔧 PAL setup ${done}/${STEP_ORDER.length} | ${counts.signals} signals`
-    );
-  } else {
-    greeting.push(
-      `✅ PAL ready | ${counts.telos} TELOS | ${counts.skills} skills | ${counts.signals} signals | ${counts.sessions} sessions`
-    );
-  }
-
-  // Show recent session names for quick context
-  const recent = loadRecentSessions(3);
-  if (recent.length > 0) {
-    greeting.push(`📂 Recent: ${recent.join(" | ")}`);
-  }
-
-  return greeting;
 }
 
 /** Load high-confidence wisdom principles for injection into system-reminder */
@@ -159,7 +74,7 @@ export function loadLearningDigest(): string {
 }
 
 /** Load self-model for session context injection */
-export function loadSelfModel(): string {
+function loadSelfModel(): string {
   try {
     const p = resolve(paths.memory(), "self-model", "current.md");
     if (!existsSync(p)) return "";
@@ -181,7 +96,7 @@ export function loadSignalTrends(): string {
 }
 
 /** Load per-project session history for the current working directory */
-export function loadProjectHistoryContext(): string {
+function loadProjectHistoryContext(): string {
   try {
     const cwd = process.cwd();
     const entries = readProjectHistory(cwd, 3);
@@ -246,7 +161,7 @@ export function loadRelationshipContext(): string {
 }
 
 /** Load session intelligence from compact synthesis state */
-export function loadSessionIntelligence(): string {
+function loadSessionIntelligence(): string {
   try {
     const p = resolve(paths.state(), "synthesis.json");
     if (!existsSync(p)) return "";
@@ -307,7 +222,7 @@ export function loadSessionIntelligence(): string {
 }
 
 /** Load handoff state for the current project */
-export function loadHandoff(): string {
+function loadHandoff(): string {
   try {
     const p = resolve(paths.state(), "last-handoff.json");
     if (!existsSync(p)) return "";

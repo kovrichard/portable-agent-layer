@@ -17,7 +17,7 @@ import { palPkg, paths } from "./paths";
 import { similarity, tokenize } from "./text-similarity";
 import { readFramesForRetrieval } from "./wisdom";
 
-export const INDEX_VERSION = 1;
+const INDEX_VERSION = 1;
 
 export interface IndexedDoc {
   id: string;
@@ -153,7 +153,7 @@ export function buildIndex(): RetrievalIndex {
   };
 }
 
-export function writeIndex(index: RetrievalIndex): void {
+function writeIndex(index: RetrievalIndex): void {
   writeFileSync(paths.retrievalIndex(), JSON.stringify(index));
 }
 
@@ -184,7 +184,7 @@ export function isStale(index: RetrievalIndex): boolean {
 }
 
 /** Detached background rebuild — fire and forget, never throws. */
-export function spawnBackgroundRebuild(): void {
+function spawnBackgroundRebuild(): void {
   try {
     const script = resolve(palPkg(), "src", "hooks", "lib", "retrieval-index.ts");
     const child = spawn("bun", ["run", script, "--rebuild"], {

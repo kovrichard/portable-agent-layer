@@ -15,7 +15,7 @@ import { palHome, paths } from "./paths";
 import { readFramePrinciples } from "./wisdom";
 
 /** A single semi-static context source — built at session stop, loaded natively at session start. */
-export interface SemiStaticSource {
+interface SemiStaticSource {
   /** Absolute path used in @imports (CLAUDE.md), instructions[] (opencode), and digest writes. */
   readonly path: string;
   /** When true, session-stop handler writes build result to path. */

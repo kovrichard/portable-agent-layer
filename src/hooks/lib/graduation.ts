@@ -24,14 +24,14 @@ import { extractKeywords, similarity } from "./text-similarity";
 
 // ── Types ──
 
-export interface AnalysisEntry {
+interface AnalysisEntry {
   source: string;
   path: string;
   text: string;
   date: string;
 }
 
-export interface PatternGroup {
+interface PatternGroup {
   pattern: string;
   entries: AnalysisEntry[];
   domain: string;
@@ -51,7 +51,7 @@ interface GraduationState {
   graduated: GraduatedEntry[];
 }
 
-export interface RatingsSummary {
+interface RatingsSummary {
   total: number;
   average: number;
   low: { count: number; examples: string[] };
@@ -306,7 +306,7 @@ function synthesizePrinciple(group: PatternGroup): string {
 
 // ── Main Analysis ──
 
-export interface AnalyzeOptions {
+interface AnalyzeOptions {
   /** Generate actionable recommendations via inference. Default: false (patterns only). */
   actionable?: boolean;
 }

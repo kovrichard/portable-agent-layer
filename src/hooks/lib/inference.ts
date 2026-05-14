@@ -4,7 +4,7 @@
 
 import { HAIKU_MODEL } from "./models";
 
-export interface InferenceOptions {
+interface InferenceOptions {
   system?: string;
   user: string;
   model?: string;
@@ -14,7 +14,7 @@ export interface InferenceOptions {
   jsonSchema?: Record<string, unknown>;
 }
 
-export interface InferenceResult {
+interface InferenceResult {
   success: boolean;
   output?: string;
   usage?: { inputTokens: number; outputTokens: number };

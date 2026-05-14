@@ -8,7 +8,7 @@ import { resolve } from "node:path";
 import { HAIKU_MODEL } from "./models";
 import { ensureDir, paths } from "./paths";
 
-export type TokenCaller =
+type TokenCaller =
   | "rating"
   | "failure"
   | "session-name"

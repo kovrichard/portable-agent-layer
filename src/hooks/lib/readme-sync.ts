@@ -9,7 +9,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { palPkg } from "./paths";
 
-export interface SyncResult {
+interface SyncResult {
   ok: boolean;
   issues: string[];
 }

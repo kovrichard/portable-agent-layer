@@ -29,7 +29,7 @@ function sessionsPath(): string {
   return resolve(ensureDir(paths.state()), "sessions.json");
 }
 
-export function readSessions(): SessionRecord[] {
+function readSessions(): SessionRecord[] {
   const p = sessionsPath();
   if (!existsSync(p)) return [];
   try {
@@ -52,12 +52,6 @@ export function writeSession(record: SessionRecord): void {
   // Prune to last N
   const pruned = sessions.slice(-MAX_SESSIONS);
   writeFileSync(sessionsPath(), JSON.stringify(pruned, null, 2), "utf-8");
-}
-
-/** Filter sessions within the last N hours */
-export function recentSessions(hours: number): SessionRecord[] {
-  const cutoff = Date.now() - hours * 60 * 60 * 1000;
-  return readSessions().filter((s) => new Date(s.ts).getTime() > cutoff);
 }
 
 /** Detect session completion status from last assistant message */
@@ -144,7 +138,7 @@ export function extractHandoff(lastAssistant: string): string {
 
 // ── Per-Project History ──────────────────────────────────────────
 
-export interface ProjectHistoryEntry {
+interface ProjectHistoryEntry {
   date: string;
   title: string;
   summary: string;
@@ -152,7 +146,7 @@ export interface ProjectHistoryEntry {
 }
 
 /** Convert a cwd path to a filesystem-safe slug (last directory segment) */
-export function cwdToSlug(cwd: string): string {
+function cwdToSlug(cwd: string): string {
   const normalized = cwd.replace(/\\/g, "/").replace(/\/+$/, "");
   return normalized.split("/").pop() || "unknown";
 }
