@@ -44,11 +44,12 @@
       },
       "correctness": {
         "noUnusedImports": "error",
-        "noUndeclaredVariables": "off"
+        "noUndeclaredVariables": "error"
       }
     }
   },
   "javascript": {
+    "globals": ["Bun"],
     "formatter": {
       "jsxQuoteStyle": "double",
       "quoteProperties": "asNeeded",
