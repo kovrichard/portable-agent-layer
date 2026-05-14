@@ -42,7 +42,12 @@
         "noUnknownAtRules": "warn",
         "noExplicitAny": "error",
         "noEmptyBlockStatements": "off",
-        "useBiomeIgnoreFolder": "error"
+        "useBiomeIgnoreFolder": "error",
+        "noSkippedTests": "error",
+        "noFocusedTests": "error"
+      },
+      "performance": {
+        "noAccumulatingSpread": "error"
       },
       "correctness": {
         "noUnusedImports": "error",
@@ -53,7 +58,8 @@
       },
       "style": {
         "noNestedTernary": "error",
-        "useThrowOnlyError": "error"
+        "useThrowOnlyError": "error",
+        "useConsistentBuiltinInstantiation": "error"
       }
     }
   },
