@@ -21,7 +21,7 @@
  *   bun ~/.pal/tools/project.ts migrate
  */
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { paths } from "../../hooks/lib/paths";
@@ -443,6 +443,61 @@ function cmdListIsc(args: string[]): void {
   ok({ name, total: iscs.length, open: open.length, done: done.length, iscs });
 }
 
+// ── Task ISA (work/) ──────────────────────────────────────────────
+
+function taskSlug(title: string): string {
+  const sanitized = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+  return `${sanitized}-${Date.now().toString(36)}`;
+}
+
+function taskIsaPath(slug: string): string {
+  const dir = resolve(paths.work(), slug);
+  mkdirSync(dir, { recursive: true });
+  return resolve(dir, "ISA.md");
+}
+
+function cmdScaffoldTaskIsa(args: string[]): void {
+  const title = args.join(" ").trim();
+  if (!title) fail("Usage: scaffold-task-isa <title>");
+  const slug = taskSlug(title);
+  const ts = new Date().toISOString();
+  const content = [
+    "---",
+    `task: "${title}"`,
+    `slug: "${slug}"`,
+    "phase: active",
+    `started: "${ts}"`,
+    `updated: "${ts}"`,
+    "---",
+    "",
+    "## Goal",
+    "",
+    "",
+    "## Criteria",
+    "",
+    "",
+  ].join("\n");
+  const filePath = taskIsaPath(slug);
+  writeFileSync(filePath, content, "utf-8");
+  ok({ created: true, slug, path: filePath });
+}
+
+function cmdCompleteTaskIsa(args: string[]): void {
+  const slug = args[0] ?? fail("Usage: complete-task-isa <slug>");
+  const filePath = resolve(paths.work(), slug, "ISA.md");
+  if (!existsSync(filePath)) fail(`Task ISA not found: ${slug}`);
+  const content = readFileSync(filePath, "utf-8");
+  const updated = content
+    .replace(/^phase: .+$/m, "phase: complete")
+    .replace(/^updated: .+$/m, `updated: "${new Date().toISOString()}"`);
+  writeFileSync(filePath, updated, "utf-8");
+  ok({ completed: true, slug });
+}
+
 // ── dispatch ──────────────────────────────────────────────────────
 
 function help(): void {
@@ -468,6 +523,8 @@ Commands:
   check-isc <name> <id>                         mark ISC-N as done
   list-isc <name>                               list all ISCs with open/done status
   isa-init <name>                               mark project as ISA-initialized
+  scaffold-task-isa <title>                     create a one-shot task ISA in memory/work/
+  complete-task-isa <slug>                      mark a task ISA as complete
   migrate                                       migrate old JSON progress files → ISA.md
   rm <name>                                     delete the entire project
 `);
@@ -555,6 +612,12 @@ export function run(): void {
       return;
     case "isa-init":
       cmdIsaInit(rest);
+      return;
+    case "scaffold-task-isa":
+      cmdScaffoldTaskIsa(rest);
+      return;
+    case "complete-task-isa":
+      cmdCompleteTaskIsa(rest);
       return;
     case "migrate":
       cmdMigrate();

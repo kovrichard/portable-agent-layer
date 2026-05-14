@@ -35,6 +35,18 @@ Thinking-only. No tool calls except context recovery (Grep/Glob/Read).
 ⏱️ EFFORT: [Standard | Extended | Advanced | Deep] — [one-line reason]
 ```
 
+**0.5. ISA context** — before reverse engineering, orient against the ISA:
+
+```bash
+# If cwd matches a registered project — read its open ISCs:
+bun ~/.pal/tools/project.ts list-isc <project-name>
+
+# If this is ad-hoc work with no registered project — scaffold a task ISA:
+bun ~/.pal/tools/project.ts scaffold-task-isa "<task title>"
+```
+
+Surface any open ISCs as live context: they are unfinished criteria from prior sessions. New criteria defined in this session extend them (use `add-isc`), not replace them.
+
 **1. Reverse engineer the request:**
 
 🔎 REVERSE ENGINEERING:
@@ -231,15 +243,25 @@ bun ~/.pal/tools/handoff-note.ts --done --title "what we completed"
 - Skip if the session fully resolved everything it set out to do
 - `--text` should answer: what's next, what was decided, what to watch out for
 
-**5. Open Threads** — for each unresolved question, decision, or follow-up that came up during this session:
+**5. Open work** — close what this session finished; open what it didn't:
 
+**Project work** — use ISCs, not threads:
 ```bash
-bun ~/.pal/tools/thread.ts --add --title "brief title" --context "why it matters, what needs to happen"
+# Close completed ISCs:
+bun ~/.pal/tools/project.ts check-isc <project-name> <id>
+
+# Open new ISCs for unfinished work:
+bun ~/.pal/tools/project.ts add-isc <project-name> "what remains"
 ```
 
-Only add threads that genuinely need follow-up. Resolve existing threads if this session closed them:
-
+**Task ISA (one-shot work)** — mark complete when done:
 ```bash
+bun ~/.pal/tools/project.ts complete-task-isa <slug>
+```
+
+**Cross-project or non-project follow-ups** — use threads:
+```bash
+bun ~/.pal/tools/thread.ts --add --title "brief title" --context "why it matters, what needs to happen"
 bun ~/.pal/tools/thread.ts --resolve --id <id>
 ```
 

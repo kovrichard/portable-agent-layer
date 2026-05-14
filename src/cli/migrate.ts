@@ -10,12 +10,13 @@
  * pending work without running anything.
  */
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { paths } from "../hooks/lib/paths";
 import {
   type ProjectProgress,
   type ProjectStatus,
+  readAllProjects,
   readProject,
   writeProject,
 } from "../hooks/lib/projects";
@@ -133,9 +134,119 @@ const v1Projects: Migration = {
   },
 };
 
+// ── v2-threads-to-isc: open threads → ISCs on matching project ────
+
+interface Thread {
+  id: string;
+  cwd: string;
+  title: string;
+  context: string;
+  status: "open" | "resolved";
+  created: string;
+  resolved: string | null;
+}
+
+function readThreads(): Thread[] {
+  const p = resolve(paths.state(), "threads.jsonl");
+  if (!existsSync(p)) return [];
+  return readFileSync(p, "utf-8")
+    .split("\n")
+    .filter((l) => l.trim())
+    .map((l) => JSON.parse(l) as Thread);
+}
+
+function writeThreads(threads: Thread[]): void {
+  writeFileSync(
+    resolve(paths.state(), "threads.jsonl"),
+    `${threads.map((t) => JSON.stringify(t)).join("\n")}\n`,
+    "utf-8"
+  );
+}
+
+function nextIscId(criteria: string): number {
+  const ids: number[] = [];
+  for (const line of criteria.split("\n")) {
+    const m = line.match(/^-\s+\[[ x]\]\s+ISC-(\d+):/i);
+    if (m) ids.push(Number(m[1]));
+  }
+  return ids.length > 0 ? Math.max(...ids) + 1 : 1;
+}
+
+function pendingThreadsForProjects(): { thread: Thread; project: ProjectProgress }[] {
+  const threads = readThreads().filter((t) => t.status === "open");
+  if (threads.length === 0) return [];
+  const projects = readAllProjects();
+  const results: { thread: Thread; project: ProjectProgress }[] = [];
+  for (const thread of threads) {
+    const project = projects.find((p) => resolve(p.path) === resolve(thread.cwd));
+    if (project) results.push({ thread, project });
+  }
+  return results;
+}
+
+const v2ThreadsToIsc: Migration = {
+  id: "v2-threads-to-isc",
+  description: "Migrate open project-scoped threads to ISCs on their project ISA",
+
+  check() {
+    const pending = pendingThreadsForProjects();
+    return {
+      pending: pending.length > 0,
+      detail: pending.length > 0 ? `${pending.length} thread(s) to migrate` : undefined,
+    };
+  },
+
+  run(dryRun = false): MigrationResult {
+    const pending = pendingThreadsForProjects();
+    let migrated = 0;
+    let skipped = 0;
+    const results: string[] = [];
+
+    const threadUpdates: Map<string, Thread> = new Map();
+
+    for (const { thread, project } of pending) {
+      try {
+        if (!dryRun) {
+          const p = readProject(project.name);
+          if (!p) {
+            skipped++;
+            results.push(`${thread.id}: skipped (project "${project.name}" unreadable)`);
+            continue;
+          }
+          const current = p.criteria ?? "";
+          const id = nextIscId(current);
+          const newLine = `- [ ] ISC-${id}: ${thread.title}`;
+          p.criteria = current ? `${current.trimEnd()}\n${newLine}` : newLine;
+          p.updated = new Date().toISOString();
+          writeProject(p);
+          threadUpdates.set(thread.id, {
+            ...thread,
+            status: "resolved",
+            resolved: new Date().toISOString(),
+          });
+        }
+        migrated++;
+        results.push(
+          `${thread.id} → ${project.name} ISC: ${dryRun ? "would add" : "added"} "${thread.title}" (thread source kept)`
+        );
+      } catch {
+        skipped++;
+        results.push(`${thread.id}: skipped (error)`);
+      }
+    }
+
+    if (!dryRun && threadUpdates.size > 0) {
+      const all = readThreads().map((t) => threadUpdates.get(t.id) ?? t);
+      writeThreads(all);
+    }
+
+    return { migrated, skipped, results };
+  },
+};
+
 // ── Registry ──────────────────────────────────────────────────────
 
-const MIGRATIONS: Migration[] = [v1Projects];
+const MIGRATIONS: Migration[] = [v1Projects, v2ThreadsToIsc];
 
 // ── Public API ────────────────────────────────────────────────────
 
