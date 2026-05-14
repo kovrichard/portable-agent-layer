@@ -10,6 +10,7 @@
     "no-console-in-hook-lib",
     "no-raw-anthropic-fetch",
     "no-raw-api-key-access",
-    "no-agent-import-in-core"
+    "no-agent-import-in-core",
+    "no-hardcoded-pal-home"
   ]
 }

@@ -103,10 +103,27 @@ const noAgentImportInCore = defineRule({
   },
 });
 
+const noHardcodedPalHome = defineRule({
+  name: "no-hardcoded-pal-home",
+  check({ files, root }, violations) {
+    const paths = resolve(root, "src/hooks/lib/paths.ts");
+    const scope = files.filter((f) => f.startsWith(resolve(root, "src")) && f !== paths);
+    scanPattern(
+      scope,
+      /process\.env\.PAL_HOME/,
+      "no-hardcoded-pal-home",
+      "PAL home path accessed directly — use the paths module (src/hooks/lib/paths.ts) instead.",
+      root,
+      violations
+    );
+  },
+});
+
 /** @lintignore — loaded via dynamic import by flint/cli.ts */
 export default [
   noConsoleInHookLib,
   noRawAnthropicFetch,
   noRawApiKeyAccess,
   noAgentImportInCore,
+  noHardcodedPalHome,
 ];
