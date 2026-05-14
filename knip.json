@@ -6,18 +6,12 @@
     "src/hooks/handlers/*.ts",
     "src/targets/**/install.ts",
     "src/targets/**/uninstall.ts",
-    "src/targets/opencode/plugin.ts",
-    "test/**/*.test.ts",
     ".agents/hooks/*.ts",
     "assets/skills/*/tools/*.ts",
     ".opencode/plugins/*.ts"
   ],
   "project": [
-    "src/**/*.ts",
-    "test/**/*.ts",
-    ".agents/hooks/*.ts",
-    "assets/skills/*/tools/*.ts",
-    ".opencode/plugins/*.ts"
+    "src/**/*.ts"
   ],
   "includeEntryExports": true,
   "tags": ["-lintignore"],
