@@ -4,7 +4,8 @@
     "no-unguarded-json-parse",
     { "rule": "no-sync-in-async", "include": ["src/hooks/**"] },
     "no-floating-promise",
-    "no-misused-promises"
+    "no-misused-promises",
+    "no-throw-string"
   ],
   "customRules": [
     "no-console-in-hook-lib",
