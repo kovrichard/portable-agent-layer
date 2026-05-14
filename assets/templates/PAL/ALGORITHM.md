@@ -47,6 +47,8 @@ bun ~/.pal/tools/project.ts scaffold-task-isa "<task title>"
 
 Surface any open ISCs as live context: they are unfinished criteria from prior sessions. New criteria defined in this session extend them (use `add-isc`), not replace them.
 
+**Off-topic detection:** if the task description references a different registered project than the cwd project (e.g., working on project-a while inside project-b's directory), use `AskUserQuestion` to ask which project the ISC belongs to before writing anything. `add-isc` takes a project name as its first argument, so routing to any project is a one-word change.
+
 **1. Reverse engineer the request:**
 
 🔎 REVERSE ENGINEERING:
