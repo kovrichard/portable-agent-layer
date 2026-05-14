@@ -54,6 +54,7 @@ export const paths = {
   projectHistory: () => ensureDir(home("memory", "projects")),
   sessionLearning: () => ensureDir(home("memory", "learning", "session")),
   synthesis: () => ensureDir(home("memory", "learning", "synthesis")),
+  work: () => ensureDir(home("memory", "work")),
   backups: () => ensureDir(home("backups")),
 } as const;
 

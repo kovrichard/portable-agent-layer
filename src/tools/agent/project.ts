@@ -372,6 +372,77 @@ function cmdRm(args: string[]): void {
   ok({ deleted: true, name });
 }
 
+// ── ISC helpers ──────────────────────────────────────────────────
+
+interface Isc {
+  id: number;
+  text: string;
+  checked: boolean;
+}
+
+function parseIscs(criteria: string): Isc[] {
+  const out: Isc[] = [];
+  for (const line of criteria.split("\n")) {
+    const m = line.match(/^-\s+\[( |x)\]\s+ISC-(\d+):\s+(.+)$/i);
+    if (m) out.push({ id: Number(m[2]), text: m[3].trim(), checked: m[1] === "x" });
+  }
+  return out;
+}
+
+function nextIscId(criteria: string): number {
+  const ids = parseIscs(criteria).map((i) => i.id);
+  return ids.length > 0 ? Math.max(...ids) + 1 : 1;
+}
+
+function patchIsc(criteria: string, id: number, checked: boolean): string {
+  const marker = checked ? "[x]" : "[ ]";
+  return criteria.replace(
+    new RegExp(`^(-\\s+)\\[[ x]\\](\\s+ISC-${id}:)`, "m"),
+    `$1${marker}$2`
+  );
+}
+
+function cmdAddIsc(args: string[]): void {
+  const name = args[0] ?? fail("Usage: add-isc <name> <title>");
+  const title = args.slice(1).join(" ").trim();
+  if (!title) fail("Usage: add-isc <name> <title>");
+  const p = requireProject(name);
+  const current = p.criteria ?? "";
+  const id = nextIscId(current);
+  const newLine = `- [ ] ISC-${id}: ${title}`;
+  p.criteria = current ? `${current.trimEnd()}\n${newLine}` : newLine;
+  p.updated = now();
+  writeProject(p);
+  ok({ added: true, id, title });
+}
+
+function cmdCheckIsc(args: string[]): void {
+  const name = args[0] ?? fail("Usage: check-isc <name> <id>");
+  const id = Number(args[1] ?? fail("Usage: check-isc <name> <id>"));
+  if (!Number.isInteger(id) || id < 1) fail("ISC id must be a positive integer");
+  const p = requireProject(name);
+  const current = p.criteria ?? "";
+  const existing = parseIscs(current).find((i) => i.id === id);
+  if (!existing) fail(`ISC-${id} not found in project "${name}"`);
+  if (existing.checked) {
+    ok({ checked: true, id, alreadyDone: true });
+    return;
+  }
+  p.criteria = patchIsc(current, id, true);
+  p.updated = now();
+  writeProject(p);
+  ok({ checked: true, id });
+}
+
+function cmdListIsc(args: string[]): void {
+  const name = args[0] ?? fail("Usage: list-isc <name>");
+  const p = requireProject(name);
+  const iscs = parseIscs(p.criteria ?? "");
+  const open = iscs.filter((i) => !i.checked);
+  const done = iscs.filter((i) => i.checked);
+  ok({ name, total: iscs.length, open: open.length, done: done.length, iscs });
+}
+
 // ── dispatch ──────────────────────────────────────────────────────
 
 function help(): void {
@@ -393,6 +464,9 @@ Commands:
   rm-blocker <name> <index>                     remove blocker by index
   update-section <name> <section> "content"     set an ISA body section
   criteria <name>                               print the Criteria section
+  add-isc <name> "title"                        append a new open ISC to Criteria
+  check-isc <name> <id>                         mark ISC-N as done
+  list-isc <name>                               list all ISCs with open/done status
   isa-init <name>                               mark project as ISA-initialized
   migrate                                       migrate old JSON progress files → ISA.md
   rm <name>                                     delete the entire project
@@ -469,6 +543,15 @@ export function run(): void {
       return;
     case "criteria":
       cmdCriteria(rest);
+      return;
+    case "add-isc":
+      cmdAddIsc(rest);
+      return;
+    case "check-isc":
+      cmdCheckIsc(rest);
+      return;
+    case "list-isc":
+      cmdListIsc(rest);
       return;
     case "isa-init":
       cmdIsaInit(rest);
