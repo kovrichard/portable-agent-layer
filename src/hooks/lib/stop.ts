@@ -205,7 +205,7 @@ Return JSON:
             detailed_context?: string;
           };
           principle = parsed.principle || undefined;
-          if (!detailedContext) detailedContext = parsed.detailed_context || undefined;
+          detailedContext ??= parsed.detailed_context || undefined;
         }
       } catch {
         /* graceful fallback — capture without principle */

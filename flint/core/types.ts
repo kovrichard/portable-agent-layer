@@ -1,8 +1,15 @@
+export interface ViolationFix {
+  startLine: number;
+  endLine: number;
+  replacement: string;
+}
+
 export interface Violation {
   file: string;
   line: number;
   rule: string;
   message: string;
+  fix?: ViolationFix;
 }
 
 export interface RuleContext {

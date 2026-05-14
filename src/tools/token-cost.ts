@@ -267,7 +267,7 @@ function readClaudeCode(projectFilter?: string): {
             monthAgo
           );
 
-          if (!byModel[model]) byModel[model] = emptyBucket();
+          byModel[model] ??= emptyBucket();
           addToBucket(
             byModel[model],
             model,
@@ -278,7 +278,7 @@ function readClaudeCode(projectFilter?: string): {
             cr
           );
 
-          if (!byProject[projName]) byProject[projName] = emptyTimeBuckets();
+          byProject[projName] ??= emptyTimeBuckets();
           addToTimeBuckets(
             byProject[projName],
             ts,
@@ -346,7 +346,7 @@ function readPalInference(): {
         weekAgo,
         monthAgo
       );
-      if (!byModel[e.model]) byModel[e.model] = emptyTimeBuckets();
+      byModel[e.model] ??= emptyTimeBuckets();
       addToTimeBuckets(
         byModel[e.model],
         e.ts,
@@ -360,7 +360,7 @@ function readPalInference(): {
         weekAgo,
         monthAgo
       );
-      if (!byCaller[e.caller]) byCaller[e.caller] = emptyBucket();
+      byCaller[e.caller] ??= emptyBucket();
       addToBucket(byCaller[e.caller], e.model, e.inputTokens, e.outputTokens, 0, 0, 0);
     } catch {
       /* skip */

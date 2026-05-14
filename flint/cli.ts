@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { applyFixes } from "./core/fixer";
 import { runFlint } from "./core/runner";
 import type { FlintConfig, FlintRule } from "./core/types";
 import { BUILT_IN_RULES } from "./rules/index";
@@ -14,10 +15,12 @@ export async function main(opts: CliOptions = {}): Promise<void> {
   const args = process.argv.slice(2);
   let configDir = opts.configDir;
   let rulesFile = opts.rulesFile;
+  let fix = false;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--config" && args[i + 1]) configDir = resolve(args[++i]);
     else if (args[i] === "--rules" && args[i + 1]) rulesFile = resolve(args[++i]);
+    else if (args[i] === "--fix") fix = true;
     else if (args[i] === "--help" || args[i] === "-h") {
       printHelp();
       process.exit(0);
@@ -53,6 +56,17 @@ export async function main(opts: CliOptions = {}): Promise<void> {
     customRules
   );
 
+  if (fix) {
+    const applied = applyFixes(violations, root);
+    const unfixed = violations.filter((v) => !v.fix).length;
+    const msg =
+      unfixed > 0
+        ? `flint: applied ${applied} fix(es). ${unfixed} violation(s) require manual attention.`
+        : `flint: applied ${applied} fix(es). No remaining violations.`;
+    process.stdout.write(JSON.stringify({ output: msg }));
+    process.exit(0);
+  }
+
   if (violations.length === 0) {
     process.stdout.write(JSON.stringify({ output: "flint: 0 violations" }));
     process.exit(0);
@@ -75,10 +89,11 @@ function printHelp(): void {
     [
       "flint — type-aware lint rules for TypeScript, written in TypeScript",
       "",
-      "Usage: flint [--config <dir>] [--rules <file>]",
+      "Usage: flint [--config <dir>] [--rules <file>] [--fix]",
       "",
       "  --config <dir>   directory containing flint.config.json (default: cwd)",
       "  --rules  <file>  custom rules file (default: <configDir>/flint.rules.ts if present)",
+      "  --fix            apply auto-fixes for fixable violations in-place",
       "",
       `Built-in rules (${rules.length}):`,
       ...rules.map((r) => `  ${r}`),

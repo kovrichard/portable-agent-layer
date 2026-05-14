@@ -100,8 +100,8 @@ function emptyIndex(): EntityIndex {
 
 /** Migrate older indexes that lack links/sources. */
 function ensureShape(index: EntityIndex): EntityIndex {
-  if (!index.links) index.links = {};
-  if (!index.sources) index.sources = {};
+  index.links ??= {};
+  index.sources ??= {};
   return index;
 }
 

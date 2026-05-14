@@ -16,9 +16,9 @@ export async function promptIdentity(): Promise<void> {
   if (!process.stdin.isTTY) return;
 
   const settings: PalSettingsData = { ...readSettings() };
-  if (!settings.identity) settings.identity = {};
-  if (!settings.identity.ai) settings.identity.ai = {};
-  if (!settings.identity.principal) settings.identity.principal = {};
+  settings.identity ??= {};
+  settings.identity.ai ??= {};
+  settings.identity.principal ??= {};
 
   const ai = settings.identity.ai;
   const principal = settings.identity.principal;

@@ -122,7 +122,7 @@ function parseSession(filepath: string, sessionId: string): Usage {
       if (d.sessionId !== sessionId) continue;
 
       if (d.timestamp) {
-        if (!firstTs) firstTs = d.timestamp;
+        firstTs ??= d.timestamp;
         lastTs = d.timestamp;
       }
 

@@ -99,7 +99,7 @@ export function mergeSettings(existing: Settings, template: Settings): Settings 
 
   // Merge hooks (deduplicate by command)
   if (template.hooks) {
-    if (!result.hooks) result.hooks = {};
+    result.hooks ??= {};
     for (const [event, entries] of Object.entries(template.hooks)) {
       const current = result.hooks[event] ?? [];
       for (const entry of entries) {
@@ -114,8 +114,8 @@ export function mergeSettings(existing: Settings, template: Settings): Settings 
 
   // Merge permissions.allow (deduplicate)
   if (template.permissions?.allow) {
-    if (!result.permissions) result.permissions = {};
-    if (!result.permissions.allow) result.permissions.allow = [];
+    result.permissions ??= {};
+    result.permissions.allow ??= [];
     for (const perm of template.permissions.allow) {
       if (!result.permissions.allow.includes(perm)) {
         result.permissions.allow.push(perm);
@@ -206,7 +206,7 @@ export function mergeCursorHooks(
   const result: CursorHooks = { ...existing, version: existing.version ?? 1 };
 
   if (template.hooks) {
-    if (!result.hooks) result.hooks = {};
+    result.hooks ??= {};
     for (const [event, entries] of Object.entries(template.hooks)) {
       const current = result.hooks[event] ?? [];
       for (const entry of entries) {
@@ -277,7 +277,7 @@ export function loadCodexHooksTemplate(
 export function mergeCodexHooks(existing: CodexHooks, template: CodexHooks): CodexHooks {
   const result: CodexHooks = { ...existing };
   if (!template.hooks) return result;
-  if (!result.hooks) result.hooks = {};
+  result.hooks ??= {};
 
   // Collect canonical paths of PAL template commands so we can evict stale variants
   const palCanonical = new Set(
