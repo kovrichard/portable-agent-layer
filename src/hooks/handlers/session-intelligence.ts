@@ -12,7 +12,7 @@
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { stringify } from "../lib/frontmatter";
-import { inference } from "../lib/inference";
+import { hasApiKey, inference } from "../lib/inference";
 import { categorizeLearning } from "../lib/learning-category";
 import { logDebug, logError } from "../lib/log";
 import { ensureDir, paths } from "../lib/paths";
@@ -137,7 +137,7 @@ export async function captureSessionIntelligence(
   }
 
   // Skip if no API key
-  if (!process.env.PAL_ANTHROPIC_API_KEY) {
+  if (!hasApiKey()) {
     logDebug("session-intelligence", "Skipped: no PAL_ANTHROPIC_API_KEY");
     return;
   }

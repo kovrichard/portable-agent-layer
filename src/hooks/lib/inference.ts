@@ -4,6 +4,10 @@
 
 import { HAIKU_MODEL } from "./models";
 
+export function hasApiKey(): boolean {
+  return !!process.env.PAL_ANTHROPIC_API_KEY;
+}
+
 interface InferenceOptions {
   system?: string;
   user: string;

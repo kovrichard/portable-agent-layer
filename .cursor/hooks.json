@@ -4,7 +4,8 @@
     "stop": [
       { "command": "bun .agents/hooks/check.ts" },
       { "command": "bun .agents/hooks/type-check.ts" },
-      { "command": "bun .agents/hooks/knip.ts" }
+      { "command": "bun .agents/hooks/knip.ts" },
+      { "command": "bun .agents/hooks/arch-check.ts" }
     ]
   }
 }
