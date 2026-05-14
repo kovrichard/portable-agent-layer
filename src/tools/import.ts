@@ -108,4 +108,4 @@ async function run() {
   importZip(zipPath, repoRoot, dryRun);
 }
 
-if (import.meta.main) run();
+if (import.meta.main) await run();

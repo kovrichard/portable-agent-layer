@@ -154,4 +154,4 @@ async function run() {
   printReport(result);
 }
 
-if (import.meta.main) run();
+if (import.meta.main) await run();

@@ -672,4 +672,4 @@ Output: ~/.pal/memory/self-model.md (synthesized by Sonnet)
   );
 }
 
-if (import.meta.main) run();
+if (import.meta.main) await run();
