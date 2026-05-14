@@ -172,9 +172,10 @@ function loadSessionIntelligence(): string {
     // Rating Trend
     if (state.ratings?.count > 0) {
       const r = state.ratings;
+      const lowNote = r.lowCount > 0 ? ` ${r.lowCount} low ratings.` : "";
       lines.push("");
       lines.push(
-        `**Rating trend:** ${r.avg}/10 avg (last 10: ${r.recentAvg}/10, ${r.trend}).${r.lowCount > 0 ? ` ${r.lowCount} low ratings.` : ""}`
+        `**Rating trend:** ${r.avg}/10 avg (last 10: ${r.recentAvg}/10, ${r.trend}).${lowNote}`
       );
       if (r.trend === "declining") {
         lines.push(

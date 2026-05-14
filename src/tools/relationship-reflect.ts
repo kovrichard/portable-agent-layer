@@ -261,19 +261,21 @@ function correlateRatings(ratings: Rating[]): string[] {
   const highRatings = ratings.filter((r) => r.rating >= 7);
 
   if (lowRatings.length > 0) {
+    const lowContexts = lowRatings
+      .slice(0, 3)
+      .map((r) => `"${r.context.slice(0, 60)}"`)
+      .join(", ");
     correlations.push(
-      `${lowRatings.length} low ratings (<=4) — common contexts: ${lowRatings
-        .slice(0, 3)
-        .map((r) => `"${r.context.slice(0, 60)}"`)
-        .join(", ")}`
+      `${lowRatings.length} low ratings (<=4) — common contexts: ${lowContexts}`
     );
   }
   if (highRatings.length > 0) {
+    const highContexts = highRatings
+      .slice(0, 3)
+      .map((r) => `"${r.context.slice(0, 60)}"`)
+      .join(", ");
     correlations.push(
-      `${highRatings.length} high ratings (>=7) — common contexts: ${highRatings
-        .slice(0, 3)
-        .map((r) => `"${r.context.slice(0, 60)}"`)
-        .join(", ")}`
+      `${highRatings.length} high ratings (>=7) — common contexts: ${highContexts}`
     );
   }
 

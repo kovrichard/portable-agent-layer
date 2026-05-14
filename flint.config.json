@@ -9,7 +9,8 @@
     "no-date-equality",
     "no-optional-chain-on-non-nullable",
     "no-object-in-template",
-    "prefer-optional-chain"
+    "prefer-optional-chain",
+    "no-nested-template-literals"
   ],
   "customRules": [
     "no-console-in-hook-lib",

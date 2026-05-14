@@ -90,6 +90,12 @@ export function updateFrame(
   if (!existsSync(framePath)) {
     mkdirSync(framesDir, { recursive: true });
 
+    const contextualRuleEntry =
+      type === "contextual-rule" ? `- ${observation} (${date()})` : "*None yet.*";
+    const antiPatternEntry =
+      type === "anti-pattern"
+        ? `### ${observation}\n- **Severity:** Medium\n- **Frequency:** Observed`
+        : "*None yet.*";
     const content = `# Frame: ${domain.charAt(0).toUpperCase() + domain.slice(1)}
 
 ## Meta
@@ -107,13 +113,13 @@ export function updateFrame(
 
 ## Contextual Rules
 
-${type === "contextual-rule" ? `- ${observation} (${date()})` : "*None yet.*"}
+${contextualRuleEntry}
 
 ---
 
 ## Anti-Patterns
 
-${type === "anti-pattern" ? `### ${observation}\n- **Severity:** Medium\n- **Frequency:** Observed` : "*None yet.*"}
+${antiPatternEntry}
 
 ---
 

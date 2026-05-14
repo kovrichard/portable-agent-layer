@@ -161,6 +161,7 @@ export async function captureSessionIntelligence(
 
   // Single Haiku call
   logDebug("session-intelligence", "Calling inference...");
+  const numberedMessages = userWindow.map((m, i) => `${i + 1}. ${m}`).join("\n");
   let output: IntelligenceOutput | null = null;
   try {
     const result = await inference({
@@ -175,7 +176,7 @@ export async function captureSessionIntelligence(
           ? "4. handoff: what remains unfinished — decisions made so far, next steps, blockers (2-4 sentences)"
           : "4. handoff: empty string (session completed)",
       ].join("\n"),
-      user: `User messages:\n${userWindow.map((m, i) => `${i + 1}. ${m}`).join("\n")}\n\nLast AI response:\n${assistantWindow}`,
+      user: `User messages:\n${numberedMessages}\n\nLast AI response:\n${assistantWindow}`,
       maxTokens: 350,
       timeout: 15000,
       jsonSchema: INTELLIGENCE_SCHEMA,

@@ -50,9 +50,10 @@ export function checkReadmeSync(): ReadmeSyncDecision {
 
   if (!result.ok) {
     logDebug("readme-sync", `README out of sync: ${result.issues.join("; ")}`);
+    const issueList = result.issues.map((i) => `- ${i}`).join("\n");
     return {
       decision: "block",
-      reason: `README.md is out of date. Please update it before finishing:\n${result.issues.map((i) => `- ${i}`).join("\n")}`,
+      reason: `README.md is out of date. Please update it before finishing:\n${issueList}`,
     };
   }
 

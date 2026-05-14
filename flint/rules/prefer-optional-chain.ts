@@ -23,12 +23,13 @@ export const preferOptionalChain: FlintRule = {
           rightText.startsWith(`${leftText}.`) ||
           rightText.startsWith(`${leftText}[`)
         ) {
+          const suggestion = rightText.replace(`${leftText}.`, `${leftText}?.`);
           const { line } = src.getLineAndCharacterOfPosition(node.getStart());
           violations.push({
             file: relative(root, file),
             line: line + 1,
             rule: "prefer-optional-chain",
-            message: `Use optional chaining instead of && guard — \`${leftText} && ${rightText}\` can be written as \`${rightText.replace(`${leftText}.`, `${leftText}?.`)}\`.`,
+            message: `Use optional chaining instead of && guard — \`${leftText} && ${rightText}\` can be written as \`${suggestion}\`.`,
           });
         }
       });

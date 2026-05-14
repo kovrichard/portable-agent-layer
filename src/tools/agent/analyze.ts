@@ -35,24 +35,24 @@ export function printReport(result: AnalysisResult): void {
   if (result.ratings) {
     const r = result.ratings;
     const avgColor = r.average >= 7 ? c.green : r.average <= 4 ? c.red : c.yellow;
+    const ratingStr = `${r.average.toFixed(1)}/10`;
+    const lowStr = `Low (≤4): ${r.low.count}`;
+    const highStr = `High (≥7): ${r.high.count}`;
     console.log(
-      `\n  ${c.bold("Ratings:")} ${avgColor(`${r.average.toFixed(1)}/10`)} avg (${r.total} total)`
+      `\n  ${c.bold("Ratings:")} ${avgColor(ratingStr)} avg (${r.total} total)`
     );
-    console.log(
-      `  ${c.red(`Low (≤4): ${r.low.count}`)} | ${c.green(`High (≥7): ${r.high.count}`)}`
-    );
+    console.log(`  ${c.red(lowStr)} | ${c.green(highStr)}`);
   }
 
   if (result.candidates.length > 0) {
-    console.log(
-      `\n  ${c.bold(c.green(`Graduation Report — ${result.candidates.length} pattern(s) detected`))}\n`
-    );
+    const graduationHeader = `Graduation Report — ${result.candidates.length} pattern(s) detected`;
+    console.log(`\n  ${c.bold(c.green(graduationHeader))}\n`);
     console.log(`  ${c.dim("─────────────────────────────────────────────────")}\n`);
 
     for (const candidate of result.candidates) {
-      console.log(
-        `  ${c.cyan(`[${candidate.domain}]`)} ${c.bold(`${candidate.entries.length}x`)} occurrences`
-      );
+      const domain = `[${candidate.domain}]`;
+      const count = `${candidate.entries.length}x`;
+      console.log(`  ${c.cyan(domain)} ${c.bold(count)} occurrences`);
       console.log("");
 
       for (const entry of candidate.entries) {
@@ -72,9 +72,8 @@ export function printReport(result: AnalysisResult): void {
       }
 
       console.log("");
-      console.log(
-        `  Target frame: ${c.magenta(`memory/wisdom/frames/${candidate.domain}.md`)}`
-      );
+      const framePath = `memory/wisdom/frames/${candidate.domain}.md`;
+      console.log(`  Target frame: ${c.magenta(framePath)}`);
       console.log(`  ${c.dim("─────────────────────────────────────────────────")}\n`);
     }
   }
@@ -82,9 +81,9 @@ export function printReport(result: AnalysisResult): void {
   if (result.emerging.length > 0) {
     console.log(`  ${c.bold(c.yellow("Emerging (2x — one more to graduate)"))}\n`);
     for (const group of result.emerging) {
-      console.log(
-        `  ${c.cyan(`[${group.domain}]`)} ${c.bold(`${group.entries.length}x`)}`
-      );
+      const domain = `[${group.domain}]`;
+      const count = `${group.entries.length}x`;
+      console.log(`  ${c.cyan(domain)} ${c.bold(count)}`);
       for (const entry of group.entries) {
         const sourceType = entry.source.startsWith("failure:") ? "failure" : "learning";
         const tag =

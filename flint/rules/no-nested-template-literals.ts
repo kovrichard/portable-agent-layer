@@ -1,0 +1,45 @@
+import { readFileSync } from "node:fs";
+import { relative } from "node:path";
+import ts from "typescript";
+import { walkAst } from "../core/ast";
+import type { FlintRule } from "../core/types";
+
+export const noNestedTemplateLiterals: FlintRule = {
+  name: "no-nested-template-literals",
+  check({ files, root }, violations) {
+    for (const file of files) {
+      const content = readFileSync(file, "utf-8");
+      walkAst(file, content, (node, src) => {
+        if (!ts.isTemplateExpression(node)) return;
+        for (const span of node.templateSpans) {
+          findNestedTemplate(span.expression, src, file, root, violations);
+        }
+      });
+    }
+  },
+};
+
+function findNestedTemplate(
+  node: ts.Node,
+  src: ts.SourceFile,
+  file: string,
+  root: string,
+  violations: ReturnType<typeof Array.prototype.slice>
+): void {
+  if (ts.isTemplateExpression(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+    const { line } = src.getLineAndCharacterOfPosition(node.getStart());
+    violations.push({
+      file: relative(root, file),
+      line: line + 1,
+      rule: "no-nested-template-literals",
+      message:
+        "Nested template literal — extract the inner template to a variable to improve readability.",
+    });
+    return;
+  }
+  // Don't descend into tagged templates — they are a single semantic unit
+  if (ts.isTaggedTemplateExpression(node)) return;
+  ts.forEachChild(node, (child) =>
+    findNestedTemplate(child, src, file, root, violations)
+  );
+}
