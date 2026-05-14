@@ -1,6 +1,8 @@
 {
   "compilerOptions": {
-    "lib": ["esnext"],
+    "lib": [
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -11,10 +13,15 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "target": "ES2022",
-    "types": ["bun", "node"],
+    "types": [
+      "bun",
+      "node"
+    ],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": [
+        "./*"
+      ]
     }
   },
   "include": [

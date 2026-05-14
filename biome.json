@@ -38,7 +38,7 @@
       "recommended": true,
       "suspicious": {
         "noUnknownAtRules": "warn",
-        "noExplicitAny": "warn",
+        "noExplicitAny": "error",
         "noEmptyBlockStatements": "off",
         "useBiomeIgnoreFolder": "error"
       },
