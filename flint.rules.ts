@@ -87,4 +87,26 @@ const noRawApiKeyAccess = defineRule({
   },
 });
 
-export default [noConsoleInHookLib, noRawAnthropicFetch, noRawApiKeyAccess];
+const noAgentImportInCore = defineRule({
+  name: "no-agent-import-in-core",
+  check({ files, root }, violations) {
+    const core = [resolve(root, "src/hooks/lib"), resolve(root, "src/tools")];
+    const scope = files.filter((f) => core.some((dir) => f.startsWith(dir)));
+    scanPattern(
+      scope,
+      /from\s+["'][^"']*\/targets\//,
+      "no-agent-import-in-core",
+      "Core module imports from src/targets/ — agent-specific code must not leak into the shared core library.",
+      root,
+      violations
+    );
+  },
+});
+
+/** @lintignore — loaded via dynamic import by flint/cli.ts */
+export default [
+  noConsoleInHookLib,
+  noRawAnthropicFetch,
+  noRawApiKeyAccess,
+  noAgentImportInCore,
+];
