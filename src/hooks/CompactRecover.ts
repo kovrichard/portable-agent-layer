@@ -8,7 +8,8 @@
  * Storage: ~/.pal/memory/state/last-exchange/{session_id}.json (with latest.json fallback).
  */
 
-import { existsSync, readFileSync, unlinkSync } from "node:fs";
+import { existsSync } from "node:fs";
+import { readFile, unlink } from "node:fs/promises";
 import { resolve } from "node:path";
 import { isCursor } from "./lib/agent";
 import { logDebug, logError } from "./lib/log";
@@ -62,7 +63,7 @@ const main = async () => {
       process.exit(0);
     }
 
-    const saved = JSON.parse(readFileSync(file, "utf-8")) as SavedExchange;
+    const saved = JSON.parse(await readFile(file, "utf-8")) as SavedExchange;
     const userBudget = Math.floor(MAX_OUTPUT * 0.4);
     const assistantBudget = MAX_OUTPUT - userBudget - 300; // reserve for framing
 
@@ -95,7 +96,7 @@ const main = async () => {
     const sessionFile = sessionId ? resolve(stateDir, `${sessionId}.json`) : null;
     if (sessionFile && file === sessionFile) {
       try {
-        unlinkSync(sessionFile);
+        await unlink(sessionFile);
       } catch (err) {
         logError("CompactRecover:cleanup", err);
       }

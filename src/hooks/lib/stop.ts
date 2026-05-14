@@ -3,7 +3,8 @@
  * Used by StopOrchestrator.ts (Claude Code) and opencode plugin.
  */
 
-import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { readFile, unlink } from "node:fs/promises";
 import { resolve } from "node:path";
 import { autoGraduate } from "../handlers/auto-graduate";
 import { autoBackup } from "../handlers/backup";
@@ -155,7 +156,7 @@ async function checkPendingFailure(transcript: string): Promise<void> {
   if (!existsSync(pendingPath)) return;
 
   try {
-    const pending = JSON.parse(readFileSync(pendingPath, "utf-8")) as {
+    const pending = JSON.parse(await readFile(pendingPath, "utf-8")) as {
       rating: number;
       context: string;
       detailedContext?: string;
@@ -164,7 +165,7 @@ async function checkPendingFailure(transcript: string): Promise<void> {
       userPreview?: string;
       cwd?: string;
     };
-    unlinkSync(pendingPath);
+    await unlink(pendingPath);
 
     // Extract principle from full transcript if not already present
     let { principle, detailedContext } = pending;

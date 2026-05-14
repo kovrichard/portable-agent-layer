@@ -4,7 +4,8 @@
  * scanning directories and JSONL files.
  */
 
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { assets, ensureDir, paths } from "../lib/paths";
 
@@ -147,5 +148,5 @@ function getCounts(): Counts {
 export async function updateCounts(): Promise<void> {
   const counts = getCounts();
   const countsPath = resolve(ensureDir(paths.state()), "counts.json");
-  writeFileSync(countsPath, JSON.stringify(counts, null, 2), "utf-8");
+  await writeFile(countsPath, JSON.stringify(counts, null, 2), "utf-8");
 }

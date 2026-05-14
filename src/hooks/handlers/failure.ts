@@ -7,7 +7,7 @@
  * Analysis is left to the human or the graduation pipeline, not auto-generated.
  */
 
-import { writeFileSync } from "node:fs";
+import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { stringify } from "../lib/frontmatter";
 import { ensureDir, paths } from "../lib/paths";
@@ -71,5 +71,5 @@ export async function captureFailure(
     conversationSummary || "*(unavailable)*",
   ].join("\n");
 
-  writeFileSync(resolve(dir, "capture.md"), stringify(meta, body), "utf-8");
+  await writeFile(resolve(dir, "capture.md"), stringify(meta, body), "utf-8");
 }

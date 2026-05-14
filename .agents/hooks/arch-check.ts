@@ -6,6 +6,7 @@
  *   no-raw-anthropic-fetch      api.anthropic.com fetch outside inference.ts
  *   no-raw-api-key-access       PAL_ANTHROPIC_API_KEY env read outside inference.ts
  *   no-unguarded-json-parse     JSON.parse() in src/ not wrapped in a try/catch (AST)
+ *   no-sync-in-async            *Sync fs calls inside async functions block the event loop (AST)
  */
 
 import { readdirSync, readFileSync } from "node:fs";
@@ -42,6 +43,54 @@ function scan(
         violations.push({ file: relative(root, file), line: i + 1, rule });
       }
     }
+  }
+}
+
+function nearestFunctionIsAsync(node: ts.Node): boolean {
+  let cur: ts.Node | undefined = node.parent;
+  while (cur) {
+    if (
+      ts.isFunctionDeclaration(cur) ||
+      ts.isFunctionExpression(cur) ||
+      ts.isArrowFunction(cur)
+    ) {
+      return cur.modifiers?.some((m) => m.kind === ts.SyntaxKind.AsyncKeyword) ?? false;
+    }
+    cur = cur.parent;
+  }
+  return false;
+}
+
+function scanSyncInAsync(files: string[], root: string, violations: Violation[]) {
+  for (const file of files) {
+    const content = readFileSync(file, "utf-8");
+    const src = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true);
+
+    function walkAst(node: ts.Node) {
+      if (ts.isCallExpression(node)) {
+        const callee = node.expression;
+        const name = ts.isIdentifier(callee)
+          ? callee.text
+          : ts.isPropertyAccessExpression(callee)
+            ? callee.name.text
+            : null;
+        if (
+          name?.endsWith("Sync") &&
+          name !== "existsSync" &&
+          nearestFunctionIsAsync(node)
+        ) {
+          const { line } = src.getLineAndCharacterOfPosition(node.getStart());
+          violations.push({
+            file: relative(root, file),
+            line: line + 1,
+            rule: "no-sync-in-async",
+          });
+        }
+      }
+      ts.forEachChild(node, walkAst);
+    }
+
+    walkAst(src);
   }
 }
 
@@ -121,6 +170,9 @@ export function runArchCheck(root: string): Violation[] {
 
   // Rule 4: JSON.parse without try/catch — AST walk across all of src/
   scanJsonParse(walk(resolve(root, "src")), root, violations);
+
+  // Rule 5: *Sync fs calls inside async functions — blocks the event loop
+  scanSyncInAsync(walk(resolve(root, "src/hooks")), root, violations);
 
   return violations;
 }

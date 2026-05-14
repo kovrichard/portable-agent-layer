@@ -9,7 +9,8 @@
  *
  */
 
-import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { unlink, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { stringify } from "../lib/frontmatter";
 import { hasApiKey, inference } from "../lib/inference";
@@ -223,7 +224,7 @@ export async function captureSessionIntelligence(
     const prev = getPreviousCapture(sessionId);
     if (prev?.filepath && existsSync(prev.filepath)) {
       try {
-        unlinkSync(prev.filepath);
+        await unlink(prev.filepath);
       } catch {
         /* ignore */
       }
@@ -231,7 +232,7 @@ export async function captureSessionIntelligence(
   }
 
   const filepath = resolve(dir, filename);
-  writeFileSync(filepath, content, "utf-8");
+  await writeFile(filepath, content, "utf-8");
 
   // Append to per-project history
   appendProjectHistory(process.cwd(), {

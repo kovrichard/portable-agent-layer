@@ -3,7 +3,8 @@
  * Imports synthesize logic directly — no subprocess needed.
  */
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { logDebug } from "../lib/log";
 import { paths } from "../lib/paths";
@@ -16,7 +17,9 @@ export async function runSynthesis(): Promise<void> {
   // Check 24h guard
   if (existsSync(statePath)) {
     try {
-      const data = JSON.parse(readFileSync(statePath, "utf-8")) as { timestamp: string };
+      const data = JSON.parse(await readFile(statePath, "utf-8")) as {
+        timestamp: string;
+      };
       if (Date.now() - new Date(data.timestamp).getTime() < SYNTHESIS_TTL_MS) {
         logDebug("synthesis", "Skipped — last synthesis < 24h ago");
         return;

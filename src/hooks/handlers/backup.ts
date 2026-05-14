@@ -4,7 +4,7 @@
  * is older than 7 days, or if no backup exists yet.
  */
 
-import { readdirSync, statSync } from "node:fs";
+import { readdir, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 import { exportZip, timestamp } from "../lib/export";
 import { logDebug } from "../lib/log";
@@ -16,14 +16,14 @@ export async function autoBackup(): Promise<void> {
   const backupDir = paths.backups();
 
   // Check most recent backup
-  const existing = readdirSync(backupDir)
+  const existing = (await readdir(backupDir))
     .filter((f) => f.startsWith("pal-backup-") && f.endsWith(".zip"))
     .sort()
     .reverse();
 
   if (existing.length > 0) {
     const latestPath = resolve(backupDir, existing[0]);
-    const latestMtime = statSync(latestPath).mtimeMs;
+    const latestMtime = (await stat(latestPath)).mtimeMs;
     if (Date.now() - latestMtime < BACKUP_INTERVAL_MS) {
       logDebug("backup", "Skipping — last backup is less than 7 days old");
       return;

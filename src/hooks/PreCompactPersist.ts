@@ -11,7 +11,8 @@
  * is currently a Claude Code event.
  */
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { persistLastExchange } from "./handlers/persist-last-exchange";
 import { logDebug, logError } from "./lib/log";
@@ -49,7 +50,7 @@ const main = async () => {
     const latestPath = resolve(paths.state(), "last-exchange", "latest.json");
     if (existsSync(latestPath)) {
       try {
-        const latest = JSON.parse(readFileSync(latestPath, "utf-8"));
+        const latest = JSON.parse(await readFile(latestPath, "utf-8"));
         if (latest?.sessionId === sessionId) {
           logDebug(
             "PreCompactPersist",
