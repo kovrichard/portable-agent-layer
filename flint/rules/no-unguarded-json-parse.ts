@@ -23,6 +23,8 @@ export const noUnguardedJsonParse: FlintRule = {
             file: relative(root, file),
             line: line + 1,
             rule: "no-unguarded-json-parse",
+            message:
+              "JSON.parse() called without a surrounding try/catch — a malformed payload will throw an unhandled exception.",
           });
         }
       });

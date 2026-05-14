@@ -27,6 +27,7 @@ export const noSyncInAsync: FlintRule = {
               file: relative(root, file),
               line: line + 1,
               rule: "no-sync-in-async",
+              message: `${name}() blocks the event loop inside an async function — use the async equivalent from node:fs/promises.`,
             });
           }
         }

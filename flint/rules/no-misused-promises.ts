@@ -43,6 +43,8 @@ function visitFile(
               file: relative(root, sourceFile.fileName),
               line: line + 1,
               rule: "no-misused-promises",
+              message:
+                "Async function passed where a sync callback is expected — the caller cannot await it and errors will be silently lost.",
             });
           }
         }

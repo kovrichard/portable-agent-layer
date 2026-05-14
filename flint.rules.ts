@@ -7,6 +7,7 @@ function scanPattern(
   files: string[],
   pattern: RegExp,
   rule: string,
+  message: string,
   root: string,
   violations: Violation[]
 ) {
@@ -14,7 +15,7 @@ function scanPattern(
     const lines = readFileSync(file, "utf-8").split("\n");
     for (let i = 0; i < lines.length; i++) {
       if (pattern.test(lines[i])) {
-        violations.push({ file: relative(root, file), line: i + 1, rule });
+        violations.push({ file: relative(root, file), line: i + 1, rule, message });
       }
     }
   }
@@ -34,6 +35,8 @@ const noConsoleInHookLib = defineRule({
               file: relative(root, file),
               line: i + 1,
               rule: "no-console-in-hook-lib",
+              message:
+                "console.log() in hook library code leaks output into the agent's event stream — use the hook output API instead.",
             });
           }
         }
@@ -52,7 +55,14 @@ const noRawAnthropicFetch = defineRule({
           f.startsWith(resolve(root, "src/tools"))) &&
         f !== inference
     );
-    scanPattern(scope, /api\.anthropic\.com/, "no-raw-anthropic-fetch", root, violations);
+    scanPattern(
+      scope,
+      /api\.anthropic\.com/,
+      "no-raw-anthropic-fetch",
+      "Direct fetch to api.anthropic.com bypasses PAL's inference layer — use the inference module instead.",
+      root,
+      violations
+    );
   },
 });
 
@@ -70,6 +80,7 @@ const noRawApiKeyAccess = defineRule({
       scope,
       /process\.env\.PAL_ANTHROPIC_API_KEY/,
       "no-raw-api-key-access",
+      "Direct access to PAL_ANTHROPIC_API_KEY bypasses the inference layer — use the inference module instead.",
       root,
       violations
     );

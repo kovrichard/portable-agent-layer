@@ -54,8 +54,14 @@ export async function main(opts: CliOptions = {}): Promise<void> {
     process.exit(0);
   }
 
-  const lines = violations.map((v) => `${v.file}:${v.line}  [${v.rule}]`);
-  process.stderr.write(`flint: ${violations.length} violation(s)\n${lines.join("\n")}\n`);
+  const blocks = violations.map((v) => {
+    const header = `${v.file}:${v.line}  [${v.rule}]`;
+    const sep = "━".repeat(Math.max(0, 80 - header.length));
+    return `${header} ${sep}\n\n  × ${v.message}\n`;
+  });
+  process.stderr.write(
+    `flint: ${violations.length} violation(s)\n\n${blocks.join("\n")}`
+  );
   process.exit(2);
 }
 

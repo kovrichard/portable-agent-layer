@@ -37,6 +37,8 @@ function visitFile(
           file: relative(root, sourceFile.fileName),
           line: line + 1,
           rule: "no-floating-promise",
+          message:
+            "Promise-returning call is not awaited — errors will be silently discarded and execution order is unpredictable. Use await, void, or .catch().",
         });
       }
     }
