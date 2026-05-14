@@ -19,13 +19,34 @@ export const noStringMatch: FlintRule = {
         ) {
           const flags = regexFlags(node.arguments[0].text);
           if (!flags.includes("g")) {
-            const { line } = src.getLineAndCharacterOfPosition(node.getStart());
+            const strText = (
+              node.expression as ts.PropertyAccessExpression
+            ).expression.getText(src);
+            const regexText = node.arguments[0].getText(src);
+            const { line: s } = src.getLineAndCharacterOfPosition(node.getStart());
+            const { line: e } = src.getLineAndCharacterOfPosition(node.getEnd());
+            const fix =
+              s === e
+                ? (() => {
+                    const lineStart = src.getPositionOfLineAndCharacter(s, 0);
+                    const nlPos = src.text.indexOf("\n", lineStart);
+                    const lineText = src.text.slice(
+                      lineStart,
+                      nlPos === -1 ? undefined : nlPos
+                    );
+                    const fixed = lineText.replace(
+                      node.getText(src),
+                      `new RegExp(${regexText}).exec(${strText})`
+                    );
+                    return { startLine: s + 1, endLine: e + 1, replacement: fixed };
+                  })()
+                : undefined;
             violations.push({
               file: relative(root, file),
-              line: line + 1,
+              line: s + 1,
               rule: "no-string-match",
-              message:
-                "Use RegExp.exec() instead of String.match() for non-global regexes — use new RegExp(/pattern/).exec(str) instead of str.match(/pattern/).",
+              message: `Use RegExp.exec() instead of String.match() for non-global regexes — use new RegExp(${regexText}).exec(${strText}) instead.`,
+              fix,
             });
           }
         }
