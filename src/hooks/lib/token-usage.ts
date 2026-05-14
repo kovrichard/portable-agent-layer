@@ -11,7 +11,6 @@ import { ensureDir, paths } from "./paths";
 export type TokenCaller =
   | "rating"
   | "failure"
-  | "work-learning"
   | "session-name"
   | "session-intelligence"
   | "relationship"

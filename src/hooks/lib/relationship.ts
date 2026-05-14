@@ -31,18 +31,6 @@ function dailyFilePath(date: Date): string {
   return resolve(monthDir, `${yyyy}-${mm}-${dd}.md`);
 }
 
-/** @deprecated No longer called — relationship notes are written in ALGORITHM LEARN phase */
-export function hasSessionNotes(sessionId: string): boolean {
-  const filepath = dailyFilePath(new Date());
-  if (!existsSync(filepath)) return false;
-  try {
-    const content = readFileSync(filepath, "utf-8");
-    return content.includes(`<!-- session:${sessionId} -->`);
-  } catch {
-    return false;
-  }
-}
-
 /** Deduplicate notes against what's already in today's file */
 function dedup(notes: RelationshipNote[], filepath: string): RelationshipNote[] {
   if (!existsSync(filepath)) return notes;

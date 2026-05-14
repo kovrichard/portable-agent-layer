@@ -7,7 +7,6 @@
  * Relationship notes → written in ALGORITHM LEARN phase via relationship-note.ts
  * Handoff notes     → written in ALGORITHM LEARN phase via handoff-note.ts
  *
- * Replaces: work-learning.ts (still exists but is bypassed).
  */
 
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
@@ -27,7 +26,7 @@ import {
 } from "../lib/transcript";
 import { appendProjectHistory, detectStatus } from "../lib/work-tracking";
 
-// ── Dedup tracking (same as work-learning) ──
+// ── Dedup tracking ──
 
 interface CaptureEntry {
   filepath: string;
