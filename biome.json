@@ -47,6 +47,13 @@
       "correctness": {
         "noUnusedImports": "error",
         "noUndeclaredVariables": "error"
+      },
+      "complexity": {
+        "useOptionalChain": "error"
+      },
+      "style": {
+        "noNestedTernary": "error",
+        "useThrowOnlyError": "error"
       }
     }
   },

@@ -70,8 +70,9 @@ switch (command) {
       console.log(`  ${c.cyan(category)}`);
       for (const op of ops.sort((a, b) => b.confidence - a.confidence)) {
         const pct = `${Math.round(op.confidence * 100)}%`;
-        const color =
-          op.confidence >= 0.85 ? c.green : op.confidence <= 0.3 ? c.red : c.yellow;
+        let color = c.yellow;
+        if (op.confidence >= 0.85) color = c.green;
+        else if (op.confidence <= 0.3) color = c.red;
         console.log(`    [${bar(op.confidence)}] ${color(pct)} ${op.statement}`);
       }
       console.log("");

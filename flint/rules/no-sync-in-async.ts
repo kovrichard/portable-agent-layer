@@ -12,11 +12,12 @@ export const noSyncInAsync: FlintRule = {
       walkAst(file, content, (node, src) => {
         if (ts.isCallExpression(node)) {
           const callee = node.expression;
-          const name = ts.isIdentifier(callee)
-            ? callee.text
-            : ts.isPropertyAccessExpression(callee)
-              ? callee.name.text
-              : null;
+          let name: string | null = null;
+          if (ts.isIdentifier(callee)) {
+            name = callee.text;
+          } else if (ts.isPropertyAccessExpression(callee)) {
+            name = callee.name.text;
+          }
           if (
             name?.endsWith("Sync") &&
             name !== "existsSync" &&

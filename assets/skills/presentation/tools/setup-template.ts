@@ -167,11 +167,14 @@ async function main() {
 
   // 2. Path
   const defaultPath = join(TEMPLATES_ROOT, name);
-  const tplPath = args.path
-    ? resolve(args.path)
-    : rl
-      ? resolve(await ask(rl, "Storage path:", defaultPath))
-      : defaultPath;
+  let tplPath: string;
+  if (args.path) {
+    tplPath = resolve(args.path);
+  } else if (rl) {
+    tplPath = resolve(await ask(rl, "Storage path:", defaultPath));
+  } else {
+    tplPath = defaultPath;
+  }
 
   // 3. Logo
   let logo = args.logo;

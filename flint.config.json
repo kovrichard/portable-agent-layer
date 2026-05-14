@@ -5,13 +5,10 @@
     { "rule": "no-sync-in-async", "include": ["src/hooks/**"] },
     "no-floating-promise",
     "no-misused-promises",
-    "no-throw-string",
     "no-date-equality",
     "no-optional-chain-on-non-nullable",
     "no-object-in-template",
-    "prefer-optional-chain",
     "no-nested-template-literals",
-    "no-nested-ternary",
     "no-consecutive-array-push"
   ],
   "customRules": [

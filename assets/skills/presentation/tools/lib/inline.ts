@@ -7,16 +7,11 @@ export async function readText(path: string): Promise<string> {
 
 export async function dataUri(path: string): Promise<string> {
   const ext = extname(path).toLowerCase();
-  const mime =
-    ext === ".svg"
-      ? "image/svg+xml"
-      : ext === ".png"
-        ? "image/png"
-        : ext === ".jpg" || ext === ".jpeg"
-          ? "image/jpeg"
-          : ext === ".webp"
-            ? "image/webp"
-            : "application/octet-stream";
+  let mime = "application/octet-stream";
+  if (ext === ".svg") mime = "image/svg+xml";
+  else if (ext === ".png") mime = "image/png";
+  else if (ext === ".jpg" || ext === ".jpeg") mime = "image/jpeg";
+  else if (ext === ".webp") mime = "image/webp";
 
   if (ext === ".svg") {
     // Inline SVGs as URL-encoded text — smaller than base64 and renders crisply at any size.
