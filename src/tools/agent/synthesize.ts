@@ -27,7 +27,6 @@ const SYNTHESIS_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 interface SynthesisState {
   timestamp: string;
   days: number;
-  threads: { id: string; cwd?: string; title: string; context: string; opened: string }[];
   sessions: { date: string; titles: string[] }[];
   sessionCount: number;
   ratings: {
@@ -99,28 +98,6 @@ function safeReaddir(dir: string): string[] {
 }
 
 // ── Data readers ──
-
-interface Thread {
-  id: string;
-  cwd?: string;
-  title: string;
-  context: string;
-  status: string;
-  created: string;
-}
-
-function getOpenThreads(): SynthesisState["threads"] {
-  const threads = readJsonl<Thread>(resolve(stateDir(), "threads.jsonl"));
-  return threads
-    .filter((t) => t.status === "open")
-    .map((t) => ({
-      id: t.id,
-      cwd: t.cwd,
-      title: t.title,
-      context: t.context,
-      opened: formatDate(t.created),
-    }));
-}
 
 interface Reflection {
   timestamp: string;
@@ -280,7 +257,6 @@ export function writeSynthesis(state: SynthesisState): string {
 
 export function synthesize(days: number): SynthesisState {
   const since = daysAgo(days);
-  const threads = getOpenThreads();
   const { sessions, count: sessionCount } = getRecentSessions(since);
   const ratings = getRatingStats(since);
   const algorithm = getAlgorithmStats(since);
@@ -288,7 +264,6 @@ export function synthesize(days: number): SynthesisState {
   return {
     timestamp: new Date().toISOString(),
     days,
-    threads,
     sessions,
     sessionCount,
     ratings,
@@ -346,7 +321,6 @@ Output: ~/.pal/memory/state/synthesis.json
       {
         success: true,
         path: sp,
-        threads: state.threads.length,
         sessions: state.sessionCount,
         ratings: state.ratings.count,
         reflections: state.algorithm.reflectionCount,

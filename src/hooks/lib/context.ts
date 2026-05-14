@@ -254,24 +254,6 @@ export function loadSessionIntelligence(): string {
 
     const lines: string[] = ["## Session Intelligence"];
 
-    // Open Threads — project-specific only
-    if (state.threads?.length > 0) {
-      const cwd = process.cwd();
-      const here = state.threads.filter((t: { cwd?: string }) => t.cwd === cwd);
-
-      if (here.length > 0) {
-        lines.push("");
-        lines.push(`**Open threads — this project (${here.length}):**`);
-        for (const t of here) {
-          lines.push(`- ${t.title} (opened ${t.opened})`);
-          if (t.context) lines.push(`  ${t.context}`);
-        }
-        lines.push(
-          "→ Continue this work or explicitly close it before starting something new."
-        );
-      }
-    }
-
     // Rating Trend
     if (state.ratings?.count > 0) {
       const r = state.ratings;
