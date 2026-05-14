@@ -48,7 +48,7 @@ export function parseExplicitRating(
   prompt: string
 ): { rating: number; comment?: string } | null {
   const trimmed = prompt.trim();
-  const match = trimmed.match(/^(10|[1-9])(?:\s*[-:,]\s*|\s+)?(.*)$/);
+  const match = new RegExp(/^(10|[1-9])(?:\s*[-:,]\s*|\s+)?(.*)$/).exec(trimmed);
   if (!match) return null;
 
   const rating = parseInt(match[1], 10);

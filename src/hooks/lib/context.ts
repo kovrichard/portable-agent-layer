@@ -132,7 +132,7 @@ function filterRelationshipNotes(notes: string, cwd: string): string {
       out.push(line);
       continue;
     }
-    const cwdMatch = line.match(/<!--.*cwd:(\S+)/);
+    const cwdMatch = new RegExp(/<!--.*cwd:(\S+)/).exec(line);
     if (cwdMatch) {
       blockCwd = cwdMatch[1];
       continue;

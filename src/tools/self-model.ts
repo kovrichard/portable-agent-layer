@@ -265,7 +265,9 @@ function readRelationshipNotes(since: Date): RelationshipNote[] {
   const notes: RelationshipNote[] = [];
   const sinceStr = formatDate(since.toISOString());
 
-  for (const monthDir of safeReaddir(baseDir).filter((d) => d.match(/^\d{4}-\d{2}$/))) {
+  for (const monthDir of safeReaddir(baseDir).filter((d) =>
+    new RegExp(/^\d{4}-\d{2}$/).exec(d)
+  )) {
     const fullMonthDir = resolve(baseDir, monthDir);
     for (const file of safeReaddir(fullMonthDir).filter((f) => f.endsWith(".md"))) {
       const dateStr = file.replace(/\.md$/, "");
@@ -279,7 +281,7 @@ function readRelationshipNotes(since: Date): RelationshipNote[] {
         const noteContent = trimmed.substring(2);
 
         // Parse O(c=X.XX): ..., W: ..., B: ...
-        const opinionMatch = noteContent.match(/^O\(c=([\d.]+)\):\s*(.+)$/);
+        const opinionMatch = new RegExp(/^O\(c=([\d.]+)\):\s*(.+)$/).exec(noteContent);
         if (opinionMatch) {
           notes.push({
             type: "O",
@@ -290,13 +292,13 @@ function readRelationshipNotes(since: Date): RelationshipNote[] {
           continue;
         }
 
-        const wisdomMatch = noteContent.match(/^W:\s*(.+)$/);
+        const wisdomMatch = new RegExp(/^W:\s*(.+)$/).exec(noteContent);
         if (wisdomMatch) {
           notes.push({ type: "W", content: wisdomMatch[1], date: dateStr });
           continue;
         }
 
-        const behaviorMatch = noteContent.match(/^Session:\s*(.+)$/);
+        const behaviorMatch = new RegExp(/^Session:\s*(.+)$/).exec(noteContent);
         if (behaviorMatch) {
           notes.push({ type: "Session", content: behaviorMatch[1], date: dateStr });
         }

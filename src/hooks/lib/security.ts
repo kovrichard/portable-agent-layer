@@ -138,7 +138,7 @@ export function checkFilePath(filePath: string): string | null {
   }
   // PAL-deployed dirs — edit source in the PAL repo, not the installed copy
   if (PAL_INSTALLED_DIRS_RE.test(normalized)) {
-    const match = normalized.match(/\.pal[/\\](docs|skills|tools)/);
+    const match = new RegExp(/\.pal[/\\](docs|skills|tools)/).exec(normalized);
     const dir = match ? match[1] : "docs/skills/tools";
     return `~/.pal/${dir}/ is managed by 'pal install' — edit the source in the PAL repo instead`;
   }

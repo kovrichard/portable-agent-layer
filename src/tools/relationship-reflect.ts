@@ -84,14 +84,14 @@ export function loadNotes(daysBack: number): ParsedNote[] {
         let currentTime = "";
 
         for (const line of content.split("\n")) {
-          const timeMatch = line.match(/^## (\d{2}:\d{2})/);
+          const timeMatch = new RegExp(/^## (\d{2}:\d{2})/).exec(line);
           if (timeMatch) {
             currentTime = timeMatch[1];
             continue;
           }
 
           // O(c=0.85): text or B(c=0.85): text
-          const obMatch = line.match(/^- ([OB])\(c=([\d.]+)\):\s*(.+)$/);
+          const obMatch = new RegExp(/^- ([OB])\(c=([\d.]+)\):\s*(.+)$/).exec(line);
           if (obMatch) {
             notes.push({
               type: obMatch[1] as "O" | "Session",
@@ -104,7 +104,7 @@ export function loadNotes(daysBack: number): ParsedNote[] {
           }
 
           // W: text
-          const worldMatch = line.match(/^- W:\s*(.+)$/);
+          const worldMatch = new RegExp(/^- W:\s*(.+)$/).exec(line);
           if (worldMatch) {
             notes.push({
               type: "W",

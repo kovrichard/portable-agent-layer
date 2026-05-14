@@ -30,7 +30,7 @@ export function parse<T = Record<string, string>>(content: string): Parsed<T> {
 
   const meta: Record<string, unknown> = {};
   for (const line of rawMeta.split("\n")) {
-    const match = line.match(/^(\w[\w-]*)\s*:\s*(.*)$/);
+    const match = new RegExp(/^(\w[\w-]*)\s*:\s*(.*)$/).exec(line);
     if (!match) continue;
     const [, key, rawValue] = match;
     const value = rawValue.trim();

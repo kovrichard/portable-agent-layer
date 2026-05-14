@@ -448,7 +448,7 @@ function checkHookHealth(home: string): HookHealth {
     // Filter to last 24h
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const recentErrors = lines.filter((line) => {
-      const match = line.match(/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]/);
+      const match = new RegExp(/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]/).exec(line);
       if (!match) return false;
       return new Date(match[1]) > cutoff;
     });

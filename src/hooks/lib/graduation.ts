@@ -299,7 +299,7 @@ function writeState(state: GraduationState): void {
 function synthesizePrinciple(group: PatternGroup): string {
   const sorted = [...group.entries].sort((a, b) => a.text.length - b.text.length);
   let principle = sorted[0].text;
-  const firstSentence = principle.match(/^[^.!?]+[.!?]?/);
+  const firstSentence = new RegExp(/^[^.!?]+[.!?]?/).exec(principle);
   if (firstSentence) principle = firstSentence[0];
   if (principle.length > 120) principle = `${principle.slice(0, 117)}...`;
   return principle.trim();

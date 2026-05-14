@@ -218,8 +218,8 @@ function getRecentSessions(since: Date): {
 
         const content = readFileSync(resolve(monthDir, file), "utf-8");
         const titleMatch =
-          content.match(/^title:\s*"?(.+?)"?\s*$/m) ??
-          content.match(/^\*\*Title:\*\*\s*(.+?)\s*$/m);
+          new RegExp(/^title:\s*"?(.+?)"?\s*$/m).exec(content) ??
+          new RegExp(/^\*\*Title:\*\*\s*(.+?)\s*$/m).exec(content);
         const title = titleMatch?.[1] ?? file.replace(/\.md$/, "");
 
         const existing = byDate.get(isoDate) ?? [];

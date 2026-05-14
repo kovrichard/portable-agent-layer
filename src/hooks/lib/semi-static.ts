@@ -65,7 +65,9 @@ export function loadSynthesisRecommendations(): string {
 
         const content = readFileSync(resolve(monthDir, files[0]), "utf-8");
 
-        const recMatch = content.match(/## Recommendations\n\n([\s\S]*?)(?:\n##|\n$|$)/);
+        const recMatch = new RegExp(
+          /## Recommendations\n\n([\s\S]*?)(?:\n##|\n$|$)/
+        ).exec(content);
         if (!recMatch?.[1]?.trim()) continue;
 
         const recs = recMatch[1]

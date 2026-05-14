@@ -112,15 +112,15 @@ function cleanForHandoff(text: string): string {
 /** Extract handoff notes from last assistant message */
 export function extractHandoff(lastAssistant: string): string {
   // Look for explicit next-steps / TODO / remaining sections
-  const sectionMatch = lastAssistant.match(
+  const sectionMatch = new RegExp(
     /(?:next steps?|todo|remaining|what's left|still need|want me to)[:\s]*\n([\s\S]{10,300}?)(?:\n\n|\n(?=[A-Z#]))/i
-  );
+  ).exec(lastAssistant);
   if (sectionMatch) return cleanForHandoff(sectionMatch[1]);
 
   // Look for closing question/offer (common assistant pattern)
-  const closingMatch = lastAssistant.match(
+  const closingMatch = new RegExp(
     /(?:want (?:me to|to)|shall I|should I|ready to|anything else|let me know)[^\n]*$/im
-  );
+  ).exec(lastAssistant);
 
   const cleaned = cleanForHandoff(lastAssistant);
 

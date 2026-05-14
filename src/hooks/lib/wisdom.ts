@@ -63,7 +63,7 @@ function existingCrystalPrinciples(content: string): string[] {
     if (m[1]) out.push(m[1].trim());
   }
   for (const line of content.split("\n")) {
-    const m = line.match(/^\s*-\s*(.+?)\s*\[CRYSTAL:\s*\d+%\]\s*$/);
+    const m = new RegExp(/^\s*-\s*(.+?)\s*\[CRYSTAL:\s*\d+%\]\s*$/).exec(line);
     if (m?.[1]) out.push(m[1].trim());
   }
   return out;
@@ -153,7 +153,7 @@ export function readFramesForRetrieval(): FrameDoc[] {
     }
 
     for (const line of content.split("\n")) {
-      const m = line.match(/^\s*-\s*(.+?)\s*\[CRYSTAL:\s*(\d+)%\]\s*$/);
+      const m = new RegExp(/^\s*-\s*(.+?)\s*\[CRYSTAL:\s*(\d+)%\]\s*$/).exec(line);
       if (!m) continue;
       const name = m[1]?.trim();
       const pct = parseInt(m[2] ?? "", 10);
@@ -188,7 +188,7 @@ export function readFramePrinciples(): string[] {
 
     // legacy fallback: bullet lines "- X [CRYSTAL: N%]"
     for (const line of content.split("\n")) {
-      const match = line.match(/^\s*-\s*(.+?)\s*\[CRYSTAL:\s*(\d+)%\]\s*$/);
+      const match = new RegExp(/^\s*-\s*(.+?)\s*\[CRYSTAL:\s*(\d+)%\]\s*$/).exec(line);
       if (!match) continue;
       const name = match[1]?.trim();
       const pct = parseInt(match[2] ?? "", 10);

@@ -612,14 +612,14 @@ function extractAgentForPlatform(content: string, platform: AgentPlatform): stri
   for (const line of frontmatter.split("\n")) {
     if (!line.trim()) continue;
 
-    const platformMatch = line.match(/^(claude|opencode|cursor):\s*$/);
+    const platformMatch = new RegExp(/^(claude|opencode|cursor):\s*$/).exec(line);
     if (platformMatch) {
       currentPlatform = platformMatch[1] as AgentPlatform;
       continue;
     }
 
     if (currentPlatform) {
-      if (line.match(/^ {2}/)) {
+      if (new RegExp(/^ {2}/).exec(line)) {
         platformLines[currentPlatform].push(line.slice(2)); // un-indent one level
         continue;
       }
@@ -730,7 +730,7 @@ function extractTriggers(description: string): string[] {
   // Extract "Use when ..." phrases and key terms
   const triggers = new Set<string>();
 
-  const useWhen = description.match(/Use when\s+(.+?)(?:\.|$)/i);
+  const useWhen = new RegExp(/Use when\s+(.+?)(?:\.|$)/i).exec(description);
   if (useWhen) {
     const words = useWhen[1]
       .toLowerCase()
@@ -773,12 +773,12 @@ export function generateSkillIndex(): number {
 
     try {
       const content = readFileSync(skillMd, "utf-8");
-      const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
+      const fmMatch = new RegExp(/^---\n([\s\S]*?)\n---/).exec(content);
       if (!fmMatch) continue;
 
       const fm = fmMatch[1];
-      const nameMatch = fm.match(/^name:\s*(.+)$/m);
-      const descMatch = fm.match(/^description:\s*"?(.+?)"?\s*$/m);
+      const nameMatch = new RegExp(/^name:\s*(.+)$/m).exec(fm);
+      const descMatch = new RegExp(/^description:\s*"?(.+?)"?\s*$/m).exec(fm);
       if (!nameMatch) continue;
 
       const skillName = nameMatch[1].trim();

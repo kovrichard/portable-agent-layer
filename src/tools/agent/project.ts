@@ -383,7 +383,7 @@ interface Isc {
 function parseIscs(criteria: string): Isc[] {
   const out: Isc[] = [];
   for (const line of criteria.split("\n")) {
-    const m = line.match(/^-\s+\[( |x)\]\s+ISC-(\d+):\s+(.+)$/i);
+    const m = new RegExp(/^-\s+\[( |x)\]\s+ISC-(\d+):\s+(.+)$/i).exec(line);
     if (m) out.push({ id: Number(m[2]), text: m[3].trim(), checked: m[1] === "x" });
   }
   return out;

@@ -131,7 +131,9 @@ export function readLearnings(baseDir: string, limit?: number): LearningEntry[] 
 
           if (!meta.title) continue;
 
-          const insightsMatch = body.match(/## Insights\n([\s\S]*?)(?=\n##|$)/);
+          const insightsMatch = new RegExp(/## Insights\n([\s\S]*?)(?=\n##|$)/).exec(
+            body
+          );
 
           entries.push({
             filename: file,

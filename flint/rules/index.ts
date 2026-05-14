@@ -7,6 +7,7 @@ import { noMisusedPromises } from "./no-misused-promises";
 import { noNestedTemplateLiterals } from "./no-nested-template-literals";
 import { noObjectInTemplate } from "./no-object-in-template";
 import { noOptionalChainOnNonNullable } from "./no-optional-chain-on-non-nullable";
+import { noStringMatch } from "./no-string-match";
 import { noSyncInAsync } from "./no-sync-in-async";
 import { noUnguardedJsonParse } from "./no-unguarded-json-parse";
 
@@ -21,4 +22,5 @@ export const BUILT_IN_RULES: Record<string, FlintRule> = {
   "no-object-in-template": noObjectInTemplate,
   "no-nested-template-literals": noNestedTemplateLiterals,
   "no-consecutive-array-push": noConsecutiveArrayPush,
+  "no-string-match": noStringMatch,
 };

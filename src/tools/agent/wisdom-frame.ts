@@ -39,7 +39,7 @@ function date(): string {
 }
 
 function parseObservationCount(content: string): number {
-  const match = content.match(/\*\*Observation Count:\*\*\s*(\d+)/);
+  const match = new RegExp(/\*\*Observation Count:\*\*\s*(\d+)/).exec(content);
   return match ? parseInt(match[1], 10) : 0;
 }
 
