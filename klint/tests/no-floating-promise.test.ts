@@ -7,7 +7,11 @@ import { runKlint } from "../core/runner";
 function lint(code: string) {
   const root = mkdtempSync(join(tmpdir(), "klint-test-"));
   writeFileSync(join(root, "subject.ts"), code);
-  const violations = runKlint({ root, include: ["."], rules: ["no-floating-promise"] });
+  const violations = runKlint({
+    root,
+    include: ["."],
+    rules: { "no-floating-promise": "error" },
+  });
   rmSync(root, { recursive: true });
   return violations;
 }

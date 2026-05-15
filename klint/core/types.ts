@@ -1,15 +1,25 @@
-/** @lintignore */
-export interface ViolationFix {
+interface ViolationFix {
   startLine: number;
   endLine: number;
   replacement: string;
 }
+
+export type Severity = "error" | "warn" | "off";
+
+/** @lintignore */
+export interface RuleOptions {
+  severity?: Severity;
+  include?: string[];
+}
+
+export type RuleConfigValue = Severity | RuleOptions;
 
 export interface Violation {
   file: string;
   line: number;
   rule: string;
   message: string;
+  severity: Severity;
   fix?: ViolationFix;
 }
 
@@ -20,23 +30,25 @@ export interface RuleContext {
   fileContents: Map<string, string>;
 }
 
+/** Violation as emitted by a rule — severity is added by the runner. */
+export type RawViolation = Omit<Violation, "severity">;
+
 export interface KlintRule {
   name: string;
-  check: (ctx: RuleContext, violations: Violation[]) => void;
+  check: (ctx: RuleContext, violations: RawViolation[]) => void;
 }
 
-/** @lintignore */
-export interface RuleScopedEntry {
-  rule: string;
-  include: string[];
+/** A named bundle of rules with their default severities. */
+export interface KlintPlugin {
+  name: string;
+  rules: Record<string, RuleConfigValue>;
 }
-
-export type RuleEntry = KlintRule | RuleScopedEntry | string;
 
 export interface KlintConfig {
   root: string;
   include: string[];
-  rules: RuleEntry[];
+  plugins?: string[];
+  rules: Record<string, RuleConfigValue>;
 }
 
 export const defineRule = (r: KlintRule): KlintRule => r;

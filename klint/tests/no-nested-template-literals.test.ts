@@ -10,7 +10,7 @@ function lint(code: string) {
   const violations = runKlint({
     root,
     include: ["."],
-    rules: ["no-nested-template-literals"],
+    rules: { "no-nested-template-literals": "error" },
   });
   rmSync(root, { recursive: true });
   return violations;

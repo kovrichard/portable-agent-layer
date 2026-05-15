@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { applyFixes } from "./core/fixer";
 import { runKlint } from "./core/runner";
-import type { KlintConfig, KlintRule } from "./core/types";
+import type { KlintConfig, KlintRule, RuleConfigValue } from "./core/types";
 import { BUILT_IN_RULES } from "./rules/index";
 
 interface CliOptions {
@@ -38,7 +38,8 @@ export async function main(opts: CliOptions = {}): Promise<void> {
   interface RawConfig {
     root?: string;
     include?: string[];
-    rules?: KlintConfig["rules"];
+    plugins?: string[];
+    rules?: Record<string, RuleConfigValue>;
     customRules?: string[];
   }
   let raw: RawConfig;
@@ -59,12 +60,14 @@ export async function main(opts: CliOptions = {}): Promise<void> {
     customRules = (mod.default ?? []) as KlintRule[];
   }
 
-  const allRules: KlintConfig["rules"] = [
-    ...(raw.rules ?? []),
-    ...(raw.customRules ?? []),
-  ];
+  // customRules names default to "error" severity; explicit rules override
+  const customRulesMap: Record<string, RuleConfigValue> = Object.fromEntries(
+    (raw.customRules ?? []).map((name) => [name, "error" as const])
+  );
+  const allRules: KlintConfig["rules"] = { ...customRulesMap, ...(raw.rules ?? {}) };
+
   const violations = runKlint(
-    { root, include: raw.include ?? ["."], rules: allRules },
+    { root, include: raw.include ?? ["."], plugins: raw.plugins, rules: allRules },
     customRules
   );
 
@@ -76,7 +79,7 @@ export async function main(opts: CliOptions = {}): Promise<void> {
       totalApplied += applied;
       if (applied === 0) break;
       current = runKlint(
-        { root, include: raw.include ?? ["."], rules: allRules },
+        { root, include: raw.include ?? ["."], plugins: raw.plugins, rules: allRules },
         customRules
       );
       if (current.every((v) => !v.fix)) break;
@@ -90,27 +93,40 @@ export async function main(opts: CliOptions = {}): Promise<void> {
     process.exit(0);
   }
 
-  if (violations.length === 0) {
+  const errors = violations.filter((v) => v.severity === "error");
+  const warns = violations.filter((v) => v.severity === "warn");
+
+  if (errors.length === 0 && warns.length === 0) {
     process.stdout.write(JSON.stringify({ output: "klint: 0 violations" }));
     process.exit(0);
   }
 
-  const blocks = violations.map((v) => {
+  const formatBlock = (v: (typeof violations)[number]) => {
+    const prefix = v.severity === "warn" ? "⚠" : "×";
     const header = `${v.file}:${v.line}  [${v.rule}]`;
     const sep = "━".repeat(Math.max(0, 80 - header.length));
-    return `${header} ${sep}\n\n  × ${v.message}\n`;
-  });
-  process.stderr.write(
-    `klint: ${violations.length} violation(s)\n\n${blocks.join("\n")}`
-  );
-  process.exit(2);
+    return `${header} ${sep}\n\n  ${prefix} ${v.message}\n`;
+  };
+
+  if (warns.length > 0) {
+    process.stderr.write(
+      `klint: ${warns.length} warning(s)\n\n${warns.map(formatBlock).join("\n")}`
+    );
+  }
+  if (errors.length > 0) {
+    process.stderr.write(
+      `klint: ${errors.length} error(s)\n\n${errors.map(formatBlock).join("\n")}`
+    );
+    process.exit(2);
+  }
+  process.exit(0);
 }
 
 function printHelp(): void {
   const rules = Object.keys(BUILT_IN_RULES);
   process.stdout.write(
     [
-      "klint — type-aware lint rules for TypeScript, written in TypeScript",
+      "klint — agent harness for TypeScript architecture rules",
       "",
       "Usage: klint [--config <dir>] [--rules <file>] [--fix]",
       "",

@@ -11,7 +11,7 @@ function lint(code: string) {
   const violations = runKlint({
     root,
     include: ["."],
-    rules: ["prefer-nullish-coalescing-assign"],
+    rules: { "prefer-nullish-coalescing-assign": "error" },
   });
   rmSync(root, { recursive: true });
   return violations;
@@ -24,7 +24,7 @@ function lintAndFix(code: string): string {
   const violations = runKlint({
     root,
     include: ["."],
-    rules: ["prefer-nullish-coalescing-assign"],
+    rules: { "prefer-nullish-coalescing-assign": "error" },
   });
   applyFixes(violations, root);
   const result = readFileSync(file, "utf-8");
@@ -89,7 +89,7 @@ describe("prefer-nullish-coalescing-assign", () => {
     const violations = runKlint({
       root,
       include: ["."],
-      rules: ["prefer-nullish-coalescing-assign"],
+      rules: { "prefer-nullish-coalescing-assign": "error" },
     });
     rmSync(root, { recursive: true });
     expect(violations[0].fix).toBeDefined();

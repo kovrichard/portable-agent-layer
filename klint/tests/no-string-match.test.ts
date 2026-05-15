@@ -8,7 +8,11 @@ import { runKlint } from "../core/runner";
 function lint(code: string) {
   const root = mkdtempSync(join(tmpdir(), "klint-test-"));
   writeFileSync(join(root, "subject.ts"), code);
-  const violations = runKlint({ root, include: ["."], rules: ["no-string-match"] });
+  const violations = runKlint({
+    root,
+    include: ["."],
+    rules: { "no-string-match": "error" },
+  });
   rmSync(root, { recursive: true });
   return violations;
 }
@@ -44,7 +48,11 @@ describe("no-string-match", () => {
     const root = mkdtempSync(join(tmpdir(), "klint-test-"));
     const file = join(root, "subject.ts");
     writeFileSync(file, "declare const line: string;\nconst m = line.match(/foo/);\n");
-    const violations = runKlint({ root, include: ["."], rules: ["no-string-match"] });
+    const violations = runKlint({
+      root,
+      include: ["."],
+      rules: { "no-string-match": "error" },
+    });
     applyFixes(violations, root);
     const result = readFileSync(file, "utf-8");
     rmSync(root, { recursive: true });

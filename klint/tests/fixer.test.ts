@@ -26,6 +26,7 @@ function v(
     line: startLine,
     rule: "test",
     message: "test",
+    severity: "error",
     fix: { startLine, endLine, replacement },
   };
 }

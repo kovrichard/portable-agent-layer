@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
-import type { Violation } from "./klint/core/types";
+import type { RawViolation } from "./klint/core/types";
 import { defineRule } from "./klint/core/types";
 
 function scanPattern(
@@ -9,7 +9,7 @@ function scanPattern(
   rule: string,
   message: string,
   root: string,
-  violations: Violation[]
+  violations: RawViolation[]
 ) {
   for (const file of files) {
     const lines = readFileSync(file, "utf-8").split("\n");

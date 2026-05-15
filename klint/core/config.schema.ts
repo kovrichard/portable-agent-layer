@@ -1,7 +1,15 @@
 import { z } from "zod";
+import { BUILT_IN_PLUGINS } from "../plugins/index";
 import { BUILT_IN_RULES } from "../rules/index";
 
-const builtInRuleNames = Object.keys(BUILT_IN_RULES);
+const builtInRuleNames = Object.keys(BUILT_IN_RULES) as [string, ...string[]];
+const builtInPluginNames = Object.keys(BUILT_IN_PLUGINS) as [string, ...string[]];
+
+const SeveritySchema = z
+  .enum(["error", "warn", "off"])
+  .describe(
+    'Rule severity. "error" exits with code 2; "warn" reports but exits 0; "off" silences.'
+  );
 
 const RuleNameSchema = z
   .union([z.enum(builtInRuleNames), z.string()])
@@ -9,24 +17,19 @@ const RuleNameSchema = z
     "Built-in rule name (with autocomplete) or a custom rule name defined in klint.rules.ts."
   );
 
-const RuleScopedEntrySchema = z
+const RuleOptionsSchema = z
   .object({
-    rule: RuleNameSchema.describe("Name of the built-in or custom rule to apply."),
+    severity: SeveritySchema.optional(),
     include: z
       .array(z.string())
+      .optional()
       .describe(
         'Glob patterns scoping this rule to a subset of files. Prefix with ! to exclude. Example: ["src/hooks/**", "!src/hooks/scripts/**"]'
       ),
   })
   .strict()
   .describe(
-    "A rule entry that applies a named rule only to files matching the given include patterns."
-  );
-
-const RuleEntrySchema = z
-  .union([RuleNameSchema, RuleScopedEntrySchema])
-  .describe(
-    "Either a rule name (string) or an object scoping a named rule to specific files."
+    'Rule options object. Omit severity to default to "error". Add include to scope the rule to specific files.'
   );
 
 export const KlintConfigSchema = z
@@ -49,11 +52,17 @@ export const KlintConfigSchema = z
       .describe(
         'Glob patterns selecting which TypeScript files to lint. Prefix with ! to exclude. Defaults to ["."] which lints all .ts files under root. Example: ["src", "klint", "!**/node_modules/**"]'
       ),
-    rules: z
-      .array(RuleEntrySchema)
+    plugins: z
+      .array(z.enum(builtInPluginNames))
       .optional()
       .describe(
-        "Built-in rules to enforce. Each entry is either a rule name string or a scoped object restricting the rule to a file subset. Run `klint --help` for the full rule list."
+        'Named rule bundles to enable. Each plugin applies a default set of rules at "error" severity. Individual rules from the bundle can be overridden or silenced via the rules map. Available: "sonar".'
+      ),
+    rules: z
+      .record(RuleNameSchema, z.union([SeveritySchema, RuleOptionsSchema]))
+      .optional()
+      .describe(
+        'Map of rule name → severity or options. Example: { "no-floating-promise": "error", "no-sync-in-async": { "severity": "warn", "include": ["src/hooks/**"] } }. Run `klint --help` for the full rule list.'
       ),
     customRules: z
       .array(z.string())

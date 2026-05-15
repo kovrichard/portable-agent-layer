@@ -1,21 +1,21 @@
 {
   "$schema": "./klint.schema.json",
   "include": ["src", "klint", "assets", "!**/node_modules/**"],
-  "rules": [
-    "no-unguarded-json-parse",
-    { "rule": "no-sync-in-async", "include": ["src/hooks/**"] },
-    "no-floating-promise",
-    "no-misused-promises",
-    "no-date-equality",
-    "no-optional-chain-on-non-nullable",
-    "no-object-in-template",
-    "no-nested-template-literals",
-    "no-consecutive-array-push",
-    "no-string-match",
-    "prefer-nullish-coalescing-assign",
-    "prefer-string-raw-regexp",
-    "prefer-string-replaceall"
-  ],
+  "rules": {
+    "no-unguarded-json-parse": "error",
+    "no-sync-in-async": { "severity": "error", "include": ["src/hooks/**"] },
+    "no-floating-promise": "error",
+    "no-misused-promises": "error",
+    "no-date-equality": "error",
+    "no-optional-chain-on-non-nullable": "error",
+    "no-object-in-template": "error",
+    "no-nested-template-literals": "error",
+    "no-consecutive-array-push": "error",
+    "no-string-match": "error",
+    "prefer-nullish-coalescing-assign": "error",
+    "prefer-string-raw-regexp": "error",
+    "prefer-string-replaceall": "error"
+  },
   "customRules": [
     "no-console-in-hook-lib",
     "no-raw-anthropic-fetch",

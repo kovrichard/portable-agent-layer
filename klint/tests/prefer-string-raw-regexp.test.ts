@@ -11,7 +11,7 @@ function lint(code: string) {
   const violations = runKlint({
     root,
     include: ["."],
-    rules: ["prefer-string-raw-regexp"],
+    rules: { "prefer-string-raw-regexp": "error" },
   });
   rmSync(root, { recursive: true });
   return violations;
@@ -24,7 +24,7 @@ function lintAndFix(code: string): string {
   const violations = runKlint({
     root,
     include: ["."],
-    rules: ["prefer-string-raw-regexp"],
+    rules: { "prefer-string-raw-regexp": "error" },
   });
   applyFixes(violations, root);
   const result = readFileSync(file, "utf-8");

@@ -1,8 +1,15 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
+import { BUILT_IN_PLUGINS } from "../plugins/index";
 import { BUILT_IN_RULES } from "../rules/index";
 import { clearAstCache } from "./ast";
-import type { KlintConfig, KlintRule, RuleEntry, Violation } from "./types";
+import type {
+  KlintConfig,
+  KlintRule,
+  RuleConfigValue,
+  Severity,
+  Violation,
+} from "./types";
 
 function walk(dir: string): string[] {
   const out: string[] = [];
@@ -47,19 +54,12 @@ function applyPatterns(files: string[], patterns: string[], root: string): strin
   });
 }
 
-function resolveRule(
-  entry: RuleEntry,
-  registry: Record<string, KlintRule>
-): { rule: KlintRule; include?: string[] } {
-  if (typeof entry === "string") {
-    const rule = registry[entry];
-    if (!rule) throw new Error(`Unknown klint rule: "${entry}"`);
-    return { rule };
-  }
-  if ("check" in entry) return { rule: entry };
-  const rule = registry[entry.rule];
-  if (!rule) throw new Error(`Unknown klint rule: "${entry.rule}"`);
-  return { rule, include: entry.include };
+function resolveSeverity(value: RuleConfigValue): Severity {
+  return typeof value === "string" ? value : (value.severity ?? "error");
+}
+
+function resolveInclude(value: RuleConfigValue): string[] | undefined {
+  return typeof value === "object" ? value.include : undefined;
 }
 
 export function runKlint(
@@ -70,14 +70,36 @@ export function runKlint(
   const registry: Record<string, KlintRule> = customRules.length
     ? { ...BUILT_IN_RULES, ...Object.fromEntries(customRules.map((r) => [r.name, r])) }
     : BUILT_IN_RULES;
+
+  // Plugin defaults applied first; explicit rules take precedence
+  const pluginDefaults: Record<string, RuleConfigValue> = {};
+  for (const pluginName of config.plugins ?? []) {
+    const plugin = BUILT_IN_PLUGINS[pluginName];
+    if (!plugin) throw new Error(`Unknown klint plugin: "${pluginName}"`);
+    Object.assign(pluginDefaults, plugin.rules);
+  }
+  const effectiveRules: Record<string, RuleConfigValue> = {
+    ...pluginDefaults,
+    ...config.rules,
+  };
+
   const allFiles = resolveFiles(config.include, config.root);
   const fileContents = new Map(allFiles.map((f) => [f, readFileSync(f, "utf-8")]));
   const violations: Violation[] = [];
 
-  for (const entry of config.rules) {
-    const { rule, include } = resolveRule(entry, registry);
+  for (const [ruleName, configValue] of Object.entries(effectiveRules)) {
+    const severity = resolveSeverity(configValue);
+    if (severity === "off") continue;
+
+    const rule = registry[ruleName];
+    if (!rule) throw new Error(`Unknown klint rule: "${ruleName}"`);
+
+    const include = resolveInclude(configValue);
     const files = include ? applyPatterns(allFiles, include, config.root) : allFiles;
-    rule.check({ files, root: config.root, fileContents }, violations);
+
+    const batch: Omit<Violation, "severity">[] = [];
+    rule.check({ files, root: config.root, fileContents }, batch);
+    for (const v of batch) violations.push({ ...v, severity });
   }
 
   return violations;

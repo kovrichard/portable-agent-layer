@@ -10,7 +10,7 @@ function lint(code: string) {
   const violations = runKlint({
     root,
     include: ["."],
-    rules: ["no-consecutive-array-push"],
+    rules: { "no-consecutive-array-push": "error" },
   });
   rmSync(root, { recursive: true });
   return violations;

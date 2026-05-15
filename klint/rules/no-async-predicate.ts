@@ -1,7 +1,7 @@
 import { relative } from "node:path";
 import ts from "typescript";
 import { createProgram } from "../core/ast";
-import type { Violation } from "../core/types";
+import type { RawViolation } from "../core/types";
 import { defineRule } from "../core/types";
 
 const PREDICATE_METHODS = new Set(["filter", "some", "every", "find", "findIndex"]);
@@ -24,7 +24,7 @@ function visitFile(
   sourceFile: ts.SourceFile,
   checker: ts.TypeChecker,
   root: string,
-  violations: Violation[]
+  violations: RawViolation[]
 ): void {
   function visit(node: ts.Node): void {
     if (

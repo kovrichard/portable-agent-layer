@@ -18,85 +18,81 @@
         "type": "string"
       }
     },
-    "rules": {
-      "description": "Built-in rules to enforce. Each entry is either a rule name string or a scoped object restricting the rule to a file subset. Run `klint --help` for the full rule list.",
+    "plugins": {
+      "description": "Named rule bundles to enable. Each plugin applies a default set of rules at \"error\" severity. Individual rules from the bundle can be overridden or silenced via the rules map. Available: \"sonar\".",
       "type": "array",
       "items": {
+        "type": "string",
+        "enum": [
+          "sonar"
+        ]
+      }
+    },
+    "rules": {
+      "description": "Map of rule name → severity or options. Example: { \"no-floating-promise\": \"error\", \"no-sync-in-async\": { \"severity\": \"warn\", \"include\": [\"src/hooks/**\"] } }. Run `klint --help` for the full rule list.",
+      "type": "object",
+      "propertyNames": {
         "anyOf": [
           {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "no-unguarded-json-parse",
-                  "no-sync-in-async",
-                  "no-floating-promise",
-                  "no-misused-promises",
-                  "no-async-predicate",
-                  "no-date-equality",
-                  "no-optional-chain-on-non-nullable",
-                  "no-object-in-template",
-                  "no-nested-template-literals",
-                  "no-consecutive-array-push",
-                  "no-string-match",
-                  "prefer-nullish-coalescing-assign",
-                  "prefer-string-raw-regexp",
-                  "prefer-string-replaceall"
-                ]
-              },
-              {
-                "type": "string"
-              }
+            "type": "string",
+            "enum": [
+              "no-unguarded-json-parse",
+              "no-sync-in-async",
+              "no-floating-promise",
+              "no-misused-promises",
+              "no-async-predicate",
+              "no-date-equality",
+              "no-optional-chain-on-non-nullable",
+              "no-object-in-template",
+              "no-nested-template-literals",
+              "no-consecutive-array-push",
+              "no-string-match",
+              "prefer-nullish-coalescing-assign",
+              "prefer-string-raw-regexp",
+              "prefer-string-replaceall"
+            ]
+          },
+          {
+            "type": "string"
+          }
+        ],
+        "description": "Built-in rule name (with autocomplete) or a custom rule name defined in klint.rules.ts."
+      },
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "error",
+              "warn",
+              "off"
             ],
-            "description": "Built-in rule name (with autocomplete) or a custom rule name defined in klint.rules.ts."
+            "description": "Rule severity. \"error\" exits with code 2; \"warn\" reports but exits 0; \"off\" silences."
           },
           {
             "type": "object",
             "properties": {
-              "rule": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "enum": [
-                      "no-unguarded-json-parse",
-                      "no-sync-in-async",
-                      "no-floating-promise",
-                      "no-misused-promises",
-                      "no-async-predicate",
-                      "no-date-equality",
-                      "no-optional-chain-on-non-nullable",
-                      "no-object-in-template",
-                      "no-nested-template-literals",
-                      "no-consecutive-array-push",
-                      "no-string-match",
-                      "prefer-nullish-coalescing-assign",
-                      "prefer-string-raw-regexp",
-                      "prefer-string-replaceall"
-                    ]
-                  },
-                  {
-                    "type": "string"
-                  }
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "error",
+                  "warn",
+                  "off"
                 ],
-                "description": "Name of the built-in or custom rule to apply."
+                "description": "Rule severity. \"error\" exits with code 2; \"warn\" reports but exits 0; \"off\" silences."
               },
               "include": {
+                "description": "Glob patterns scoping this rule to a subset of files. Prefix with ! to exclude. Example: [\"src/hooks/**\", \"!src/hooks/scripts/**\"]",
                 "type": "array",
                 "items": {
                   "type": "string"
-                },
-                "description": "Glob patterns scoping this rule to a subset of files. Prefix with ! to exclude. Example: [\"src/hooks/**\", \"!src/hooks/scripts/**\"]"
+                }
               }
             },
-            "required": [
-              "rule",
-              "include"
-            ],
             "additionalProperties": false,
-            "description": "A rule entry that applies a named rule only to files matching the given include patterns."
+            "description": "Rule options object. Omit severity to default to \"error\". Add include to scope the rule to specific files."
           }
-        ],
-        "description": "Either a rule name (string) or an object scoping a named rule to specific files."
+        ]
       }
     },
     "customRules": {
