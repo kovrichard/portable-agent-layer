@@ -1,3 +1,63 @@
+# [0.37.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.36.0...v0.37.0) (2026-05-15)
+
+
+### Bug Fixes
+
+* apply flint fixes ([1391267](https://github.com/kovrichard/portable-agent-layer/commit/1391267ce1898f6989d55ed79976331ebb270c64))
+* **doctor:** check codex hooks correctly ([a4b0a0d](https://github.com/kovrichard/portable-agent-layer/commit/a4b0a0d648cbeeabf7fcdb9f6ca35f3634e551bc))
+* **flint:** make runner platform independent ([7e32a49](https://github.com/kovrichard/portable-agent-layer/commit/7e32a49ba9db2f5123fb6c96f52c58fbf84ebb9e))
+* **presentation:** wrap description with double quotes ([a88b63a](https://github.com/kovrichard/portable-agent-layer/commit/a88b63adc4ad2e809c4cdcc36c5b71a8b8ad83ee))
+
+
+### Features
+
+* **algorithm:** enhance ISA context and ISC management with new commands for task scaffolding ([734e450](https://github.com/kovrichard/portable-agent-layer/commit/734e450df6cde03345683f58792e139d696d00d9))
+* **algorithm:** handle cross-project isa management ([ad3eb0f](https://github.com/kovrichard/portable-agent-layer/commit/ad3eb0fca702b9ae857c0793d5f67802407068d5))
+* **arch-check:** add architectural linting rules and integrate into CI/CD pipeline ([103084e](https://github.com/kovrichard/portable-agent-layer/commit/103084e58a30c4523abebc558f14c99473fb0f04))
+* **arch-check:** add rule to detect synchronous fs calls in async functions ([0625a1c](https://github.com/kovrichard/portable-agent-layer/commit/0625a1c160805420adc9f9099229f0dc3452da43))
+* **capture-failure:** add cwd parameter to captureFailure and related functions ([d4fe323](https://github.com/kovrichard/portable-agent-layer/commit/d4fe323b56c58b76d68539aa0b02af1b0c73c454))
+* **codex:** enhance Codex hook commands and context handling ([82d09ee](https://github.com/kovrichard/portable-agent-layer/commit/82d09ee968c032c102f75b6a86e0c562097fc55d))
+* **codex:** implement Codex hooks integration ([14d4983](https://github.com/kovrichard/portable-agent-layer/commit/14d4983bfd1d1479da212a170f0bf7a9043e2275))
+* **cursor:** update hook commands to include PAL_AGENT for cursor and enhance hook context handling ([2637b96](https://github.com/kovrichard/portable-agent-layer/commit/2637b9655c724ea73190beef5f46d478c69d6e9b))
+* **flint:** add custom linting rules and enhance CLI configuration options ([2dc53d4](https://github.com/kovrichard/portable-agent-layer/commit/2dc53d4059e56e86bd12bacbe4c671663163eb1c))
+* **flint:** add new linting rules for skipped and focused tests, and performance improvements ([a248154](https://github.com/kovrichard/portable-agent-layer/commit/a248154153d7056417244a7b54782fd02a956171))
+* **flint:** add no-agent-import-in-core rule to stop core module imports leak agent-specific code ([7eba9f0](https://github.com/kovrichard/portable-agent-layer/commit/7eba9f0143bc50a0cf58fbc4676d602e54809b36))
+* **flint:** add no-async-predicate rule to prevent async callbacks in array methods ([d10bba5](https://github.com/kovrichard/portable-agent-layer/commit/d10bba5be4bbb57eae4c10533d1701b5b8ec7402))
+* **flint:** add no-consecutive-array-push and no-nested-ternary rules for improved code clarity ([6ef9269](https://github.com/kovrichard/portable-agent-layer/commit/6ef9269ba9c940cd35fc5da69ab268460c6706eb))
+* **flint:** add no-floating-promise rule to prevent unhandled promise rejections ([665accd](https://github.com/kovrichard/portable-agent-layer/commit/665accd180fc9a44e26cc151b06069b59e160ce5))
+* **flint:** add no-hardcoded-pal-home rule to enforce usage of paths module for PAL_HOME ([b51085d](https://github.com/kovrichard/portable-agent-layer/commit/b51085dd98b99d12248fabbee43b9a8a4268b92f))
+* **flint:** add no-misused-promises rule to prevent misuse of async functions in non-async contexts ([91cdbca](https://github.com/kovrichard/portable-agent-layer/commit/91cdbca776da5f15c1171cc4a7d9207d72cac67d))
+* **flint:** add no-nested-template-literals rule to prevent nested template literals ([f99d62f](https://github.com/kovrichard/portable-agent-layer/commit/f99d62f1f1cd8534c559d4ed405b47d852dfa420))
+* **flint:** add no-raw-exit-in-lib rule to prevent process termination in library modules ([9f2e941](https://github.com/kovrichard/portable-agent-layer/commit/9f2e941775bf72b77d8a810adb2d507e2ef43f26))
+* **flint:** add no-throw-string rule to prevent throwing plain strings ([92d0419](https://github.com/kovrichard/portable-agent-layer/commit/92d0419d8a04dc45253894675d78bef6028e032d))
+* **flint:** add prefer-string-raw-regexp rule to enforce String.raw usage in RegExp templates ([5f8c06d](https://github.com/kovrichard/portable-agent-layer/commit/5f8c06dfac5821b161574acdcaa72c6da8ad2b1e))
+* **flint:** add prefer-string-replaceall rule to encourage use of String.prototype.replaceAll ([6de2856](https://github.com/kovrichard/portable-agent-layer/commit/6de2856014ec043056f76a70142a266f428d7dd8))
+* **flint:** enhance no-string-match rule to include auto-fix ([e60db36](https://github.com/kovrichard/portable-agent-layer/commit/e60db36866b2d4c8fd4b67e22d7df87ba4101b23))
+* **flint:** enhance rule checks to utilize pre-read file contents for improved performance ([9eb1bd1](https://github.com/kovrichard/portable-agent-layer/commit/9eb1bd101039cbbd2eee3b6a16ad14b15e45cc16))
+* **flint:** enhance violation reporting with detailed messages for linting rules ([801ff8e](https://github.com/kovrichard/portable-agent-layer/commit/801ff8e67bd5043f952d3db3f1a816f5a8b8ce19))
+* **flint:** implement AST caching for improved performance and add cache clearing functionality ([78bbd71](https://github.com/kovrichard/portable-agent-layer/commit/78bbd7188a72f869308555974d7ed3bd42e864cd))
+* **flint:** implement Flint linting framework with custom rules for TypeScript ([3243c56](https://github.com/kovrichard/portable-agent-layer/commit/3243c5610951324ac40feb590bd2c4f4a8642950))
+* **flint:** implement prefer-nullish-coalescing-assign rule and auto-fix option ([85d800a](https://github.com/kovrichard/portable-agent-layer/commit/85d800a19667a134b4fa6144bf9400b80c07d211))
+* **flint:** introduce flint.config.json and flint.rules.ts for custom linting rules ([5ce9674](https://github.com/kovrichard/portable-agent-layer/commit/5ce96745e9aa41840cbd51d51b1a94491b261ce8))
+* **flint:** introduce new linting rules for optional chaining and date equality checks ([4ebde2c](https://github.com/kovrichard/portable-agent-layer/commit/4ebde2cca4e6c05981aa46e71c08f36eff735d6e))
+* **flint:** introduce no-string-match rule to enforce usage of RegExp.exec() for non-global regexes ([9857f6d](https://github.com/kovrichard/portable-agent-layer/commit/9857f6d0ec858d3a6b45f927b662221d42c79037))
+* **flint:** run on assets ([09de6e6](https://github.com/kovrichard/portable-agent-layer/commit/09de6e6011f1331e7f481565b1ae30a785a77c78))
+* **flint:** use biome where possible ([3513c3f](https://github.com/kovrichard/portable-agent-layer/commit/3513c3fd685b0be21536d9382f7ec73061a5b0c4))
+* **inject-retrieval:** enhance retrieval reminder functionality for opencode and cursor ([b8b8feb](https://github.com/kovrichard/portable-agent-layer/commit/b8b8feb1a4e9bb83fd07688638d3eeaccd45dd33))
+* **isc:** add ISC management commands for adding, checking, and listing ISCs in project criteria ([ac4cbe5](https://github.com/kovrichard/portable-agent-layer/commit/ac4cbe57e055bab4b67ecdb5d9cee0009f965d20))
+* **migrate:** implement non-destructive data migration command and update CLI help ([d1b274a](https://github.com/kovrichard/portable-agent-layer/commit/d1b274abac1e14a86b3279aa2a074efd14366e87))
+* **persist:** add check to skip persisting if latest session already exists ([0703fea](https://github.com/kovrichard/portable-agent-layer/commit/0703fead4f520173b03bf1863fdb4c05c86a5ff2))
+* **persist:** always persist last exchange in stop ([c968764](https://github.com/kovrichard/portable-agent-layer/commit/c968764843bc424cf2e3d22d3a885e52e14c88d5))
+* **pre-compact-persist:** enhance handoff note generation and session management ([fefd400](https://github.com/kovrichard/portable-agent-layer/commit/fefd400703ef83d337fc16840520fd72c9554075))
+* **project:** add set-path command to update project paths ([33f51ab](https://github.com/kovrichard/portable-agent-layer/commit/33f51ab9792fde16fe46d69bfe8091d437b3f6c4))
+* **projects:** add support for displaying open ISCs in project criteria ([3f8517a](https://github.com/kovrichard/portable-agent-layer/commit/3f8517a74834def2f6fec9cd5dd91a73b94e1942))
+* **projects:** add support for project constraints in active projects context ([a12a91d](https://github.com/kovrichard/portable-agent-layer/commit/a12a91d387ea4bc33a307f69d993dbe64087904a))
+* **relationship:** enhance filtering of relationship notes and include cwd in session metadata ([a66c814](https://github.com/kovrichard/portable-agent-layer/commit/a66c81435c40b12f4d23b5fa5d81b6e3d0e9b4c5))
+* **security:** add beforeShellExecution command for SecurityValidator and enhance input handling ([780d60e](https://github.com/kovrichard/portable-agent-layer/commit/780d60e5e124b5b3ea1e8c848d7de363595fc4da))
+* **security:** add protection for PAL-deployed directories and enhance related tests ([bd73454](https://github.com/kovrichard/portable-agent-layer/commit/bd73454ba69d0a92be2c5c1d667d5f7e0eafa847))
+* **security:** introduce PAL_INSTALLED_DIRS_RE regex and enhance actionable messages ([1eddb19](https://github.com/kovrichard/portable-agent-layer/commit/1eddb19f4d166e397d6b99a8bc0fe2b9fb081d14))
+* **tests:** add comprehensive test suite for signals, time, token usage, and work tracking ([19cca44](https://github.com/kovrichard/portable-agent-layer/commit/19cca44c41aeae09e0a0d1c71e7af59d8c7f800c))
+
 # [0.36.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.35.0...v0.36.0) (2026-05-12)
 
 
