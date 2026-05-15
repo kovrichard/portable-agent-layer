@@ -1,6 +1,7 @@
 {
   "$schema": "./klint.schema.json",
   "include": ["src", "klint", "assets", "!**/node_modules/**"],
+  "plugins": ["sonar"],
   "rules": {
     "no-unguarded-json-parse": "error",
     "no-sync-in-async": { "severity": "error", "include": ["src/hooks/**"] },
@@ -11,10 +12,7 @@
     "no-object-in-template": "error",
     "no-nested-template-literals": "error",
     "no-consecutive-array-push": "error",
-    "no-string-match": "error",
-    "prefer-nullish-coalescing-assign": "error",
-    "prefer-string-raw-regexp": "error",
-    "prefer-string-replaceall": "error"
+    "no-string-match": "error"
   },
   "customRules": [
     "no-console-in-hook-lib",
