@@ -75,17 +75,17 @@ function toStringRaw(node: ts.TemplateLiteral, src: ts.SourceFile): string {
   if (ts.isNoSubstitutionTemplateLiteral(node)) {
     const raw = node.getText(src);
     const inner = raw.slice(1, -1);
-    return `String.raw\`${inner.replace(/\\\\/g, "\\")}\``;
+    return `String.raw\`${inner.replaceAll("\\\\", "\\")}\``;
   }
   let result = "String.raw`";
   const headSrc = node.head.getText(src);
-  result += `${headSrc.slice(1, -2).replace(/\\\\/g, "\\")}\${`;
+  result += `${headSrc.slice(1, -2).replaceAll("\\\\", "\\")}\${`;
   for (const span of node.templateSpans) {
     result += span.expression.getText(src);
     const litSrc = span.literal.getText(src);
     const isMiddle = ts.isTemplateMiddle(span.literal);
     const litContent = isMiddle ? litSrc.slice(1, -2) : litSrc.slice(1, -1);
-    result += `}${litContent.replace(/\\\\/g, "\\")}${isMiddle ? "${" : "`"}`;
+    result += `}${litContent.replaceAll("\\\\", "\\")}${isMiddle ? "${" : "`"}`;
   }
   return result;
 }

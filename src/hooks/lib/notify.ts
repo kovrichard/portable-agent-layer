@@ -20,7 +20,7 @@ function spawnSilent(cmd: string, args: string[]): Promise<void> {
 }
 
 function escapeAppleScript(s: string): string {
-  return s.replace(/\\/g, "\\\\").replaceAll('"', '\\"');
+  return s.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
 
 function escapePowerShellSingle(s: string): string {

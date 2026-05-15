@@ -147,7 +147,7 @@ interface ProjectHistoryEntry {
 
 /** Convert a cwd path to a filesystem-safe slug (last directory segment) */
 function cwdToSlug(cwd: string): string {
-  const normalized = cwd.replace(/\\/g, "/").replace(/\/+$/, "");
+  const normalized = cwd.replaceAll("\\", "/").replace(/\/+$/, "");
   return normalized.split("/").pop() || "unknown";
 }
 

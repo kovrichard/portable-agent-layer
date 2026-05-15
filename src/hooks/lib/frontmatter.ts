@@ -50,7 +50,7 @@ export function parse<T = Record<string, string>>(content: string): Parsed<T> {
       (value.startsWith('"') && value.endsWith('"')) ||
       (value.startsWith("'") && value.endsWith("'"))
     ) {
-      meta[key] = value.slice(1, -1).replace(/\\"/g, '"');
+      meta[key] = value.slice(1, -1).replaceAll('\\"', '"');
       continue;
     }
 

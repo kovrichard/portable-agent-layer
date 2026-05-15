@@ -73,5 +73,7 @@ function extractPattern(literal: string): string {
 }
 
 function isPlainLiteral(pattern: string): boolean {
-  return !/[.*+?[\]{}()|^$\\]/.test(pattern);
+  // Strip escaped-backslash pairs (\\) before checking — \\ is a plain literal, not a metachar
+  const stripped = pattern.replaceAll("\\\\", "");
+  return !/[.*+?[\]{}()|^$\\]/.test(stripped);
 }

@@ -84,6 +84,17 @@ describe("prefer-string-replaceall", () => {
     expect(v).toHaveLength(0);
   });
 
+  test("flags replace(/\\\\/g, x) — escaped backslash is a plain literal", () => {
+    const v = lint(`const r = path.replace(/\\\\/g, "/");`);
+    expect(v).toHaveLength(1);
+    expect(v[0].rule).toBe("prefer-string-replaceall");
+  });
+
+  test('fix rewrites replace(/\\\\/g, x) to replaceAll("x\\\\\\\\", x)', () => {
+    const result = lintAndFix(`const r = path.replace(/\\\\/g, "/");\n`);
+    expect(result).toBe(`const r = path.replaceAll("\\\\", "/");\n`);
+  });
+
   test("fix rewrites replace(/literal/g, x) to replaceAll(literal, x)", () => {
     const result = lintAndFix(`const r = "hello world".replace(/hello/g, "hi");\n`);
     expect(result).toBe(`const r = "hello world".replaceAll("hello", "hi");\n`);

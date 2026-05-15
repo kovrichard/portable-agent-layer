@@ -82,7 +82,7 @@ const PROTECTED_PATHS: RegExp[] = [
 const MANAGED_ROOTS = [".pal/", ".claude/", ".agents/", ".config/opencode/", ".cursor/"];
 
 function isUnderManagedRoot(path: string): boolean {
-  const normalized = path.replace(/\\/g, "/");
+  const normalized = path.replaceAll("\\", "/");
   return MANAGED_ROOTS.some(
     (root) => normalized.includes(`/${root}`) || normalized.includes(`\\.${root}`)
   );
@@ -123,7 +123,7 @@ export function checkBashCommand(cmd: string): string | null {
 
 /** Check a file path against protected patterns. Returns a reason string or null. */
 export function checkFilePath(filePath: string): string | null {
-  const normalized = filePath.replace(/\\/g, "/");
+  const normalized = filePath.replaceAll("\\", "/");
   // Check hook-managed files — only under managed roots (not repo templates)
   if (isUnderManagedRoot(normalized)) {
     const matchedFile = HOOK_MANAGED_FILES.find((name) =>
