@@ -4,7 +4,6 @@ import { isInsideTry, walkAst } from "../core/ast";
 import type { KlintRule } from "../core/types";
 
 export const noUnguardedJsonParse: KlintRule = {
-  name: "no-unguarded-json-parse",
   check({ files, root, fileContents }, violations) {
     for (const file of files) {
       const content = fileContents.get(file) ?? "";
@@ -21,7 +20,6 @@ export const noUnguardedJsonParse: KlintRule = {
           violations.push({
             file: relative(root, file),
             line: line + 1,
-            rule: "no-unguarded-json-parse",
             message:
               "JSON.parse() called without a surrounding try/catch — a malformed payload will throw an unhandled exception.",
           });

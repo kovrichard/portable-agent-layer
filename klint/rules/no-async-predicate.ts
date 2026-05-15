@@ -7,7 +7,6 @@ import { defineRule } from "../core/types";
 const PREDICATE_METHODS = new Set(["filter", "some", "every", "find", "findIndex"]);
 
 export const noAsyncPredicate = defineRule({
-  name: "no-async-predicate",
   check({ files, root }, violations) {
     const program = createProgram(files, root);
     const checker = program.getTypeChecker();
@@ -42,7 +41,6 @@ function visitFile(
         violations.push({
           file: relative(root, sourceFile.fileName),
           line: line + 1,
-          rule: "no-async-predicate",
           message: `Async callback passed to .${method}() — the returned Promise is always truthy, so the predicate never filters correctly. The array method cannot await it.`,
         });
       }

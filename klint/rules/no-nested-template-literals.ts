@@ -4,7 +4,6 @@ import { walkAst } from "../core/ast";
 import type { KlintRule } from "../core/types";
 
 export const noNestedTemplateLiterals: KlintRule = {
-  name: "no-nested-template-literals",
   check({ files, root, fileContents }, violations) {
     for (const file of files) {
       const content = fileContents.get(file) ?? "";
@@ -30,7 +29,6 @@ function findNestedTemplate(
     violations.push({
       file: relative(root, file),
       line: line + 1,
-      rule: "no-nested-template-literals",
       message:
         "Nested template literal — extract the inner template to a variable to improve readability.",
     });

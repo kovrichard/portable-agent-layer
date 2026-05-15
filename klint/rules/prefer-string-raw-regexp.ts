@@ -4,7 +4,6 @@ import { walkAst } from "../core/ast";
 import type { KlintRule } from "../core/types";
 
 export const preferStringRawRegexp: KlintRule = {
-  name: "prefer-string-raw-regexp",
   check({ files, root, fileContents }, violations) {
     for (const file of files) {
       const content = fileContents.get(file) ?? "";
@@ -45,7 +44,6 @@ export const preferStringRawRegexp: KlintRule = {
         violations.push({
           file: relative(root, file),
           line: line + 1,
-          rule: "prefer-string-raw-regexp",
           message:
             "Use String.raw`...` for RegExp template argument to avoid double backslashes (Sonar S7780).",
           fix: {

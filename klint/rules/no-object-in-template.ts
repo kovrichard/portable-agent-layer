@@ -22,7 +22,6 @@ const SAFE_SYMBOL_NAMES = new Set([
 ]);
 
 export const noObjectInTemplate = defineRule({
-  name: "no-object-in-template",
   check({ files, root }, violations) {
     const program = createProgram(files, root);
     const checker = program.getTypeChecker();
@@ -52,7 +51,6 @@ function visitFile(
           violations.push({
             file: relative(root, sourceFile.fileName),
             line: line + 1,
-            rule: "no-object-in-template",
             message:
               "Object interpolated in template literal has no custom toString() — it will render as [object Object]. Access a specific property or implement toString().",
           });

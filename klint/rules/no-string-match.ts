@@ -4,7 +4,6 @@ import { walkAst } from "../core/ast";
 import type { KlintRule } from "../core/types";
 
 export const noStringMatch: KlintRule = {
-  name: "no-string-match",
   check({ files, root, fileContents }, violations) {
     for (const file of files) {
       const content = fileContents.get(file) ?? "";
@@ -43,7 +42,6 @@ export const noStringMatch: KlintRule = {
             violations.push({
               file: relative(root, file),
               line: s + 1,
-              rule: "no-string-match",
               message: `Use RegExp.exec() instead of String.match() for non-global regexes — use new RegExp(${regexText}).exec(${strText}) instead.`,
               fix,
             });

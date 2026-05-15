@@ -11,16 +11,9 @@ export const sonarPlugin: KlintPlugin = {
     "sonar/prefer-nullish-coalescing-assign": "error",
   },
   implementations: {
-    "sonar/prefer-string-replaceall": {
-      name: "sonar/prefer-string-replaceall",
-      check: preferStringReplaceall.check,
-    },
-    "sonar/prefer-string-raw-regexp": {
-      name: "sonar/prefer-string-raw-regexp",
-      check: preferStringRawRegexp.check,
-    },
+    "sonar/prefer-string-replaceall": { check: preferStringReplaceall.check },
+    "sonar/prefer-string-raw-regexp": { check: preferStringRawRegexp.check },
     "sonar/prefer-nullish-coalescing-assign": {
-      name: "sonar/prefer-nullish-coalescing-assign",
       check: preferNullishCoalescingAssign.check,
     },
   },

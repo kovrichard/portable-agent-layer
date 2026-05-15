@@ -4,7 +4,6 @@ import { walkAst } from "../core/ast";
 import type { KlintRule } from "../core/types";
 
 export const preferStringReplaceall: KlintRule = {
-  name: "prefer-string-replaceall",
   check({ files, root, fileContents }, violations) {
     for (const file of files) {
       const content = fileContents.get(file) ?? "";
@@ -49,7 +48,6 @@ export const preferStringReplaceall: KlintRule = {
         violations.push({
           file: relative(root, file),
           line: s + 1,
-          rule: "prefer-string-replaceall",
           message: `Prefer \`${strText}.replaceAll(${patternLit}, ...)\` over \`.replace(/${pattern}/g, ...)\` — replaceAll() with a string is clearer and avoids regex escaping pitfalls.`,
           fix: {
             startLine: s + 1,

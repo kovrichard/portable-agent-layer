@@ -64,7 +64,7 @@ function resolveInclude(value: RuleConfigValue): string[] | undefined {
 
 export function runKlint(
   config: KlintConfig,
-  customRules: KlintRule[] = []
+  customRules: Record<string, KlintRule> = {}
 ): Violation[] {
   clearAstCache();
 
@@ -76,9 +76,7 @@ export function runKlint(
   const registry: Record<string, KlintRule> = {
     ...BUILT_IN_RULES,
     ...pluginImpls,
-    ...(customRules.length
-      ? Object.fromEntries(customRules.map((r) => [r.name, r]))
-      : {}),
+    ...customRules,
   };
 
   // Plugin defaults applied first; explicit rules take precedence

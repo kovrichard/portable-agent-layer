@@ -5,7 +5,6 @@ import type { RawViolation } from "../core/types";
 import { defineRule } from "../core/types";
 
 export const noDateEquality = defineRule({
-  name: "no-date-equality",
   check({ files, root }, violations) {
     const program = createProgram(files, root);
     const checker = program.getTypeChecker();
@@ -39,7 +38,6 @@ function visitFile(
           violations.push({
             file: relative(root, sourceFile.fileName),
             line: line + 1,
-            rule: "no-date-equality",
             message: `Date values compared with ${op} — this compares object references, not time values. Use .getTime() or .valueOf() instead.`,
           });
         }

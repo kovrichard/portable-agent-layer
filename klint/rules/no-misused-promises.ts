@@ -5,7 +5,6 @@ import type { RawViolation } from "../core/types";
 import { defineRule } from "../core/types";
 
 export const noMisusedPromises = defineRule({
-  name: "no-misused-promises",
   check({ files, root }, violations) {
     const program = createProgram(files, root);
     const checker = program.getTypeChecker();
@@ -42,7 +41,6 @@ function visitFile(
             violations.push({
               file: relative(root, sourceFile.fileName),
               line: line + 1,
-              rule: "no-misused-promises",
               message:
                 "Async function passed where a sync callback is expected — the caller cannot await it and errors will be silently lost.",
             });

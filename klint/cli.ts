@@ -52,13 +52,13 @@ export async function main(opts: CliOptions = {}): Promise<void> {
   }
   const root = resolve(configDir, raw.root ?? ".");
 
-  let customRules: KlintRule[] = [];
+  let customRules: Record<string, KlintRule> = {};
   const defaultRulesPath = resolve(configDir, "klint.rules.ts");
   const rulesPath =
     rulesFile ?? (existsSync(defaultRulesPath) ? defaultRulesPath : undefined);
   if (rulesPath) {
     const mod = await import(rulesPath);
-    customRules = (mod.default ?? []) as KlintRule[];
+    customRules = (mod.default ?? {}) as Record<string, KlintRule>;
   }
 
   // customRules names default to "error" severity; explicit rules override

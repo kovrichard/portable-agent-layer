@@ -30,11 +30,10 @@ export interface RuleContext {
   fileContents: Map<string, string>;
 }
 
-/** Violation as emitted by a rule — severity is added by the runner. */
-export type RawViolation = Omit<Violation, "severity">;
+/** Violation as emitted by a rule — rule name and severity are stamped by the runner. */
+export type RawViolation = Omit<Violation, "rule" | "severity">;
 
 export interface KlintRule {
-  name: string;
   check: (ctx: RuleContext, violations: RawViolation[]) => void;
 }
 

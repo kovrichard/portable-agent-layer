@@ -5,7 +5,6 @@ import type { RawViolation } from "../core/types";
 import { defineRule } from "../core/types";
 
 export const noFloatingPromise = defineRule({
-  name: "no-floating-promise",
   check({ files, root }, violations) {
     const program = createProgram(files, root);
     const checker = program.getTypeChecker();
@@ -36,7 +35,6 @@ function visitFile(
         violations.push({
           file: relative(root, sourceFile.fileName),
           line: line + 1,
-          rule: "no-floating-promise",
           message:
             "Promise-returning call is not awaited — errors will be silently discarded and execution order is unpredictable. Use await, void, or .catch().",
         });

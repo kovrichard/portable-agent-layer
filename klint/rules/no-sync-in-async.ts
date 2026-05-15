@@ -4,7 +4,6 @@ import { nearestFunctionIsAsync, walkAst } from "../core/ast";
 import type { KlintRule } from "../core/types";
 
 export const noSyncInAsync: KlintRule = {
-  name: "no-sync-in-async",
   check({ files, root, fileContents }, violations) {
     for (const file of files) {
       const content = fileContents.get(file) ?? "";
@@ -26,7 +25,6 @@ export const noSyncInAsync: KlintRule = {
             violations.push({
               file: relative(root, file),
               line: line + 1,
-              rule: "no-sync-in-async",
               message: `${name}() blocks the event loop inside an async function — use the async equivalent from node:fs/promises.`,
             });
           }

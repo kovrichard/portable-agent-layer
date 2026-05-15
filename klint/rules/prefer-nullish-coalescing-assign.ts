@@ -4,7 +4,6 @@ import { walkAst } from "../core/ast";
 import type { KlintRule } from "../core/types";
 
 export const preferNullishCoalescingAssign: KlintRule = {
-  name: "prefer-nullish-coalescing-assign",
   check({ files, root, fileContents }, violations) {
     for (const file of files) {
       const content = fileContents.get(file) ?? "";
@@ -31,7 +30,6 @@ export const preferNullishCoalescingAssign: KlintRule = {
         violations.push({
           file: relative(root, file),
           line: s + 1,
-          rule: "prefer-nullish-coalescing-assign",
           message: `Prefer \`${xText} ??= ${yText}\` over \`if (!${xText}) ${xText} = ${yText}\` — ??= only assigns when null or undefined.`,
           fix: {
             startLine: s + 1,

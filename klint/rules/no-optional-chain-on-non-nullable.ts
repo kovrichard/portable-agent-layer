@@ -5,7 +5,6 @@ import type { RawViolation } from "../core/types";
 import { defineRule } from "../core/types";
 
 export const noOptionalChainOnNonNullable = defineRule({
-  name: "no-optional-chain-on-non-nullable",
   check({ files, root }, violations) {
     const program = createProgram(files, root);
     const checker = program.getTypeChecker();
@@ -35,7 +34,6 @@ function visitFile(
         violations.push({
           file: relative(root, sourceFile.fileName),
           line: line + 1,
-          rule: "no-optional-chain-on-non-nullable",
           message:
             "Optional chain (?.) on a non-nullable type — the receiver can never be null or undefined here. Use . to remove misleading dead code.",
         });
