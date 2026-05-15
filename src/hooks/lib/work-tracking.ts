@@ -72,7 +72,7 @@ export function extractArtifacts(
     if (msg.role !== "assistant") continue;
     const text = typeof msg.content === "string" ? msg.content : "";
     // Match file paths: /absolute/paths and relative/paths with extensions
-    const pathMatches = text.match(/(?:\/[\w./-]+\.[\w]+|[\w./-]+\/[\w.-]+\.[\w]+)/g);
+    const pathMatches = text.match(/(?:\/[\w./-]+\.\w+|[\w./-]+\/[\w.-]+\.\w+)/g);
     if (!pathMatches) continue;
     for (const p of pathMatches) {
       // Skip URLs, common noise
@@ -97,10 +97,10 @@ function cleanForHandoff(text: string): string {
       // Remove inline code
       .replace(/`[^`]+`/g, "")
       // Remove file paths
-      .replace(/(?:\/[\w./-]+\.[\w]+)/g, "")
+      .replace(/(?:\/[\w./-]+\.\w+)/g, "")
       // Remove markdown formatting
       .replace(/\*\*([^*]+)\*\*/g, "$1")
-      .replace(/^[#]+\s*/gm, "")
+      .replace(/^#+\s*/gm, "")
       // Remove tool call artifacts
       .replace(/^\s*[-*]\s*`[^`]+`.*$/gm, "")
       // Collapse whitespace

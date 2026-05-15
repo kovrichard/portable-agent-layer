@@ -1,4 +1,5 @@
 import type { KlintPlugin } from "../core/types";
+import { noSingleCharClass } from "../rules/no-single-char-class";
 import { preferNullishCoalescingAssign } from "../rules/prefer-nullish-coalescing-assign";
 import { preferStringRaw } from "../rules/prefer-string-raw";
 import { preferStringRawRegexp } from "../rules/prefer-string-raw-regexp";
@@ -11,6 +12,7 @@ export const sonarPlugin: KlintPlugin = {
     "sonar/prefer-string-raw-regexp": "error",
     "sonar/prefer-string-raw": "error",
     "sonar/prefer-nullish-coalescing-assign": "error",
+    "sonar/no-single-char-class": "error",
   },
   implementations: {
     "sonar/prefer-string-replaceall": { check: preferStringReplaceall.check },
@@ -19,5 +21,6 @@ export const sonarPlugin: KlintPlugin = {
     "sonar/prefer-nullish-coalescing-assign": {
       check: preferNullishCoalescingAssign.check,
     },
+    "sonar/no-single-char-class": { check: noSingleCharClass.check },
   },
 };

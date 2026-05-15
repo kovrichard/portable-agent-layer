@@ -126,7 +126,7 @@ function toAnalysisEntries(
 
 function isActionable(text: string): boolean {
   const trimmed = text.trim();
-  if (/\?[\s]*$/.test(trimmed)) return false;
+  if (/\?\s*$/.test(trimmed)) return false;
   if (extractKeywords(trimmed).size < 4) return false;
   return true;
 }
