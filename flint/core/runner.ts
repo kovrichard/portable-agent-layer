@@ -1,4 +1,4 @@
-import { readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { BUILT_IN_RULES } from "../rules/index";
 import { clearAstCache } from "./ast";
@@ -71,12 +71,13 @@ export function runFlint(
     ? { ...BUILT_IN_RULES, ...Object.fromEntries(customRules.map((r) => [r.name, r])) }
     : BUILT_IN_RULES;
   const allFiles = resolveFiles(config.include, config.root);
+  const fileContents = new Map(allFiles.map((f) => [f, readFileSync(f, "utf-8")]));
   const violations: Violation[] = [];
 
   for (const entry of config.rules) {
     const { rule, include } = resolveRule(entry, registry);
     const files = include ? applyPatterns(allFiles, include, config.root) : allFiles;
-    rule.check({ files, root: config.root }, violations);
+    rule.check({ files, root: config.root, fileContents }, violations);
   }
 
   return violations;

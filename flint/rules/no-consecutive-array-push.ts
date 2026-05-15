@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { relative } from "node:path";
 import ts from "typescript";
 import { walkAst } from "../core/ast";
@@ -6,9 +5,9 @@ import type { FlintRule } from "../core/types";
 
 export const noConsecutiveArrayPush: FlintRule = {
   name: "no-consecutive-array-push",
-  check({ files, root }, violations) {
+  check({ files, root, fileContents }, violations) {
     for (const file of files) {
-      const content = readFileSync(file, "utf-8");
+      const content = fileContents.get(file) ?? "";
       walkAst(file, content, (node, src) => {
         const statements =
           ts.isBlock(node) || ts.isSourceFile(node) ? node.statements : null;

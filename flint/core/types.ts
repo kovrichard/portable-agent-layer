@@ -15,6 +15,7 @@ export interface Violation {
 export interface RuleContext {
   files: string[];
   root: string;
+  fileContents: Map<string, string>;
 }
 
 export interface FlintRule {
