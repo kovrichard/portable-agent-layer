@@ -12,7 +12,8 @@
     "no-object-in-template": "error",
     "no-nested-template-literals": "error",
     "no-consecutive-array-push": "error",
-    "no-string-match": "error"
+    "no-string-match": "error",
+    "sonar/prefer-string-raw": "off"
   },
   "customRules": [
     "no-console-in-hook-lib",

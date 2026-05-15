@@ -536,6 +536,42 @@
             }
           ]
         },
+        "sonar/prefer-string-raw": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "error",
+                "warn",
+                "off"
+              ],
+              "description": "Rule severity. \"error\" exits with code 2; \"warn\" reports but exits 0; \"off\" silences."
+            },
+            {
+              "type": "object",
+              "properties": {
+                "severity": {
+                  "type": "string",
+                  "enum": [
+                    "error",
+                    "warn",
+                    "off"
+                  ],
+                  "description": "Rule severity. \"error\" exits with code 2; \"warn\" reports but exits 0; \"off\" silences."
+                },
+                "include": {
+                  "description": "Glob patterns scoping this rule to a subset of files. Prefix with ! to exclude. Example: [\"src/hooks/**\", \"!src/hooks/scripts/**\"]",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "description": "Rule options object. Omit severity to default to \"error\". Add include to scope the rule to specific files."
+            }
+          ]
+        },
         "sonar/prefer-nullish-coalescing-assign": {
           "anyOf": [
             {
