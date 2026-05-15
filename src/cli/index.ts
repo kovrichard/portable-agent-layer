@@ -455,9 +455,7 @@ function checkHookHealth(home: string): HookHealth {
 
     const lastError =
       recentErrors.length > 0
-        ? recentErrors[recentErrors.length - 1]
-            .replace(/^\[.*?\] ERROR /, "")
-            .slice(0, 120)
+        ? (recentErrors.at(-1) ?? "").replace(/^\[.*?\] ERROR /, "").slice(0, 120)
         : null;
 
     return { totalErrors: recentErrors.length, lastError };

@@ -131,7 +131,8 @@ export function extractHandoff(lastAssistant: string): string {
     .filter((p) => p.length >= 15 && p.length <= 300);
 
   if (closingMatch) return closingMatch[0].trim();
-  if (paragraphs.length > 0) return paragraphs[paragraphs.length - 1];
+  const last = paragraphs.at(-1);
+  if (last !== undefined) return last;
   if (cleaned.length > 200) return cleaned.slice(-200).trim();
   return cleaned;
 }

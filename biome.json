@@ -58,6 +58,7 @@
       },
       "style": {
         "noNestedTernary": "error",
+        "noNonNullAssertion": "error",
         "useThrowOnlyError": "error",
         "useConsistentBuiltinInstantiation": "error",
         "useTemplate": "error"
