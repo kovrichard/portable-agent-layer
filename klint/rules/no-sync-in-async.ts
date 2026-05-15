@@ -1,9 +1,9 @@
 import { relative } from "node:path";
 import ts from "typescript";
 import { nearestFunctionIsAsync, walkAst } from "../core/ast";
-import type { FlintRule } from "../core/types";
+import type { KlintRule } from "../core/types";
 
-export const noSyncInAsync: FlintRule = {
+export const noSyncInAsync: KlintRule = {
   name: "no-sync-in-async",
   check({ files, root, fileContents }, violations) {
     for (const file of files) {

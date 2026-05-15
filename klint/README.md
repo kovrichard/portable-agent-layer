@@ -1,27 +1,30 @@
-# Flint
+# klint
 
-Type-aware lint rules for TypeScript, written in TypeScript.
+The bridge between vibe coding and agentic engineering.
 
 ## Why
 
-Biome and oxlint are fast and excellent for syntax-level rules. Flint fills the gap they can't: rules that require the TypeScript type graph. If a rule needs to know that `fetchUser()` returns `Promise<User>` — not just that it looks like a function call — that's a Flint rule.
+Biome and oxlint enforce syntax-level style. klint enforces architecture-level rules — the kind that require TypeScript's type graph, span multiple files, or encode constraints that an AI agent must not bypass. If a rule needs to know that `fetchUser()` returns `Promise<User>`, or that sync filesystem calls are banned inside async hooks, that's a klint rule.
+
+Rules give your agent freedom. Without constraints, every decision is a risk. With klint, your agent knows exactly where it can move fast — and where it can't.
 
 ## Usage
 
 ```sh
-bun flint/cli.ts [--config <dir>] [--rules <file>]
+bun klint/cli.ts [--config <dir>] [--rules <file>] [--fix]
 ```
 
 | Flag | Description |
 |------|-------------|
-| `--config <dir>` | Directory containing `flint.config.json` (default: cwd) |
+| `--config <dir>` | Directory containing `klint.config.json` (default: cwd) |
 | `--rules <file>` | Path to custom rules file (default: auto-discovered — see below) |
+| `--fix` | Apply auto-fixes for fixable violations in-place |
 
-If `--rules` is omitted, flint looks for `flint.rules.ts` next to `flint.config.json`. If the file exists it is loaded automatically; if it doesn't, no custom rules are used and no error is raised. Use `--rules` to point to a rules file in a non-default location.
+If `--rules` is omitted, klint looks for `klint.rules.ts` next to `klint.config.json`. If the file exists it is loaded automatically; if it doesn't, no custom rules are used and no error is raised.
 
 ## Configuration
 
-**`flint.config.json`** — lives at your project root alongside `biome.json` and `knip.json`:
+**`klint.config.json`** — lives at your project root alongside `biome.json` and `knip.json`:
 
 ```json
 {
@@ -39,7 +42,7 @@ If `--rules` is omitted, flint looks for `flint.rules.ts` next to `flint.config.
 ```
 
 `rules` — built-in rule names (strings) or scoped entries with per-rule `include`/exclude patterns.  
-`customRules` — names of rules defined in `flint.rules.ts`.
+`customRules` — names of rules defined in `klint.rules.ts`.
 
 ## Built-in Rules
 
@@ -52,19 +55,18 @@ If `--rules` is omitted, flint looks for `flint.rules.ts` next to `flint.config.
 
 ## Custom Rules
 
-Create `flint.rules.ts` at your project root and export a `FlintRule[]` as default:
+Create `klint.rules.ts` at your project root and export a `KlintRule[]` as default:
 
 ```ts
-import { readFileSync } from "node:fs";
 import { relative } from "node:path";
-import { defineRule } from "./flint/core/types";
+import { defineRule } from "./klint/core/types";
 
 export default [
   defineRule({
     name: "my-custom-rule",
-    check({ files, root }, violations) {
+    check({ files, root, fileContents }, violations) {
       for (const file of files) {
-        const lines = readFileSync(file, "utf-8").split("\n");
+        const lines = (fileContents.get(file) ?? "").split("\n");
         for (let i = 0; i < lines.length; i++) {
           if (/forbidden-pattern/.test(lines[i])) {
             violations.push({
@@ -81,12 +83,12 @@ export default [
 ];
 ```
 
-Reference the rule name in `customRules` inside `flint.config.json`.
+Reference the rule name in `customRules` inside `klint.config.json`.
 
-For type-aware rules, use `createProgram` from `flint/core/ast`:
+For type-aware rules, use `createProgram` from `klint/core/ast`:
 
 ```ts
-import { createProgram } from "./flint/core/ast";
+import { createProgram } from "./klint/core/ast";
 
 // inside check():
 const program = createProgram(files, root);
@@ -106,21 +108,18 @@ Patterns support `**` globs and negation with `!` — same syntax as Biome.
 ## Architecture
 
 ```
-flint/
+klint/
   cli.ts          — CLI entry point; discovers config + rules, reports violations
   core/
-    types.ts      — FlintRule, FlintConfig, Violation, RuleEntry
-    runner.ts     — runFlint(); resolves files, dispatches rules
+    types.ts      — KlintRule, KlintConfig, Violation, RuleEntry
+    runner.ts     — runKlint(); resolves files, dispatches rules
     ast.ts        — walkAst(), createProgram(), nearestFunctionIsAsync(), isInsideTry()
+    fixer.ts      — applyFixes(); bottom-up line-range patch with overlap detection
   rules/
     index.ts      — BUILT_IN_RULES registry
-    no-unguarded-json-parse.ts
-    no-sync-in-async.ts
-    no-floating-promise.ts
-    no-misused-promises.ts
+    ...
   tests/
-    no-floating-promise.test.ts
-    no-misused-promises.test.ts
+    ...
 ```
 
-The `flint/` directory is intentionally decoupled from the rest of the codebase — no imports cross the boundary in either direction. When it has enough rules, it ships as a standalone package.
+The `klint/` directory is intentionally decoupled from the rest of the codebase — no imports cross the boundary in either direction. When it has enough rules, it ships as a standalone package.

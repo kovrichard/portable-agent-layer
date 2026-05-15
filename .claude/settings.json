@@ -7,7 +7,7 @@
           { "type": "command", "command": "bun .agents/hooks/check.ts" },
           { "type": "command", "command": "bun .agents/hooks/type-check.ts" },
           { "type": "command", "command": "bun .agents/hooks/knip.ts" },
-          { "type": "command", "command": "bun flint/cli.ts" }
+          { "type": "command", "command": "bun klint/cli.ts" }
         ]
       }
     ]
@@ -19,7 +19,7 @@
       "Bash(bun run type-check *)",
       "Bash(bun run knip *)",
       "Bash(bun test *)",
-      "Bash(bun flint/cli.ts *)"
+      "Bash(bun klint/cli.ts *)"
     ]
   }
 }

@@ -2,12 +2,12 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runFlint } from "../core/runner";
+import { runKlint } from "../core/runner";
 
 function lint(code: string) {
-  const root = mkdtempSync(join(tmpdir(), "flint-test-"));
+  const root = mkdtempSync(join(tmpdir(), "klint-test-"));
   writeFileSync(join(root, "subject.ts"), code);
-  const violations = runFlint({
+  const violations = runKlint({
     root,
     include: ["."],
     rules: ["no-consecutive-array-push"],

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
-import type { Violation } from "./flint/core/types";
-import { defineRule } from "./flint/core/types";
+import type { Violation } from "./klint/core/types";
+import { defineRule } from "./klint/core/types";
 
 function scanPattern(
   files: string[],
@@ -135,7 +135,7 @@ const noHardcodedPalHome = defineRule({
   },
 });
 
-/** @lintignore — loaded via dynamic import by flint/cli.ts */
+/** @lintignore — loaded via dynamic import by klint/cli.ts */
 export default [
   noConsoleInHookLib,
   noRawAnthropicFetch,

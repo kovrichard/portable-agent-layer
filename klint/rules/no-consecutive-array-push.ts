@@ -1,9 +1,9 @@
 import { relative } from "node:path";
 import ts from "typescript";
 import { walkAst } from "../core/ast";
-import type { FlintRule } from "../core/types";
+import type { KlintRule } from "../core/types";
 
-export const noConsecutiveArrayPush: FlintRule = {
+export const noConsecutiveArrayPush: KlintRule = {
   name: "no-consecutive-array-push",
   check({ files, root, fileContents }, violations) {
     for (const file of files) {

@@ -18,7 +18,7 @@ export interface RuleContext {
   fileContents: Map<string, string>;
 }
 
-export interface FlintRule {
+export interface KlintRule {
   name: string;
   check: (ctx: RuleContext, violations: Violation[]) => void;
 }
@@ -28,13 +28,13 @@ export interface RuleScopedEntry {
   include: string[];
 }
 
-export type RuleEntry = FlintRule | RuleScopedEntry | string;
+export type RuleEntry = KlintRule | RuleScopedEntry | string;
 
-export interface FlintConfig {
+export interface KlintConfig {
   root: string;
   include: string[];
   rules: RuleEntry[];
 }
 
-export const defineRule = (r: FlintRule): FlintRule => r;
-export const defineConfig = (c: FlintConfig): FlintConfig => c;
+export const defineRule = (r: KlintRule): KlintRule => r;
+export const defineConfig = (c: KlintConfig): KlintConfig => c;

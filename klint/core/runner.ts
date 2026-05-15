@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { BUILT_IN_RULES } from "../rules/index";
 import { clearAstCache } from "./ast";
-import type { FlintConfig, FlintRule, RuleEntry, Violation } from "./types";
+import type { KlintConfig, KlintRule, RuleEntry, Violation } from "./types";
 
 function walk(dir: string): string[] {
   const out: string[] = [];
@@ -49,25 +49,25 @@ function applyPatterns(files: string[], patterns: string[], root: string): strin
 
 function resolveRule(
   entry: RuleEntry,
-  registry: Record<string, FlintRule>
-): { rule: FlintRule; include?: string[] } {
+  registry: Record<string, KlintRule>
+): { rule: KlintRule; include?: string[] } {
   if (typeof entry === "string") {
     const rule = registry[entry];
-    if (!rule) throw new Error(`Unknown flint rule: "${entry}"`);
+    if (!rule) throw new Error(`Unknown klint rule: "${entry}"`);
     return { rule };
   }
   if ("check" in entry) return { rule: entry };
   const rule = registry[entry.rule];
-  if (!rule) throw new Error(`Unknown flint rule: "${entry.rule}"`);
+  if (!rule) throw new Error(`Unknown klint rule: "${entry.rule}"`);
   return { rule, include: entry.include };
 }
 
-export function runFlint(
-  config: FlintConfig,
-  customRules: FlintRule[] = []
+export function runKlint(
+  config: KlintConfig,
+  customRules: KlintRule[] = []
 ): Violation[] {
   clearAstCache();
-  const registry: Record<string, FlintRule> = customRules.length
+  const registry: Record<string, KlintRule> = customRules.length
     ? { ...BUILT_IN_RULES, ...Object.fromEntries(customRules.map((r) => [r.name, r])) }
     : BUILT_IN_RULES;
   const allFiles = resolveFiles(config.include, config.root);

@@ -1,9 +1,9 @@
 import { relative } from "node:path";
 import ts from "typescript";
 import { isInsideTry, walkAst } from "../core/ast";
-import type { FlintRule } from "../core/types";
+import type { KlintRule } from "../core/types";
 
-export const noUnguardedJsonParse: FlintRule = {
+export const noUnguardedJsonParse: KlintRule = {
   name: "no-unguarded-json-parse",
   check({ files, root, fileContents }, violations) {
     for (const file of files) {

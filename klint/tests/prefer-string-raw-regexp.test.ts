@@ -3,12 +3,12 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { applyFixes } from "../core/fixer";
-import { runFlint } from "../core/runner";
+import { runKlint } from "../core/runner";
 
 function lint(code: string) {
-  const root = mkdtempSync(join(tmpdir(), "flint-test-"));
+  const root = mkdtempSync(join(tmpdir(), "klint-test-"));
   writeFileSync(join(root, "subject.ts"), code);
-  const violations = runFlint({
+  const violations = runKlint({
     root,
     include: ["."],
     rules: ["prefer-string-raw-regexp"],
@@ -18,10 +18,10 @@ function lint(code: string) {
 }
 
 function lintAndFix(code: string): string {
-  const root = mkdtempSync(join(tmpdir(), "flint-test-"));
+  const root = mkdtempSync(join(tmpdir(), "klint-test-"));
   const file = join(root, "subject.ts");
   writeFileSync(file, code);
-  const violations = runFlint({
+  const violations = runKlint({
     root,
     include: ["."],
     rules: ["prefer-string-raw-regexp"],

@@ -1,4 +1,4 @@
-import type { FlintRule } from "../core/types";
+import type { KlintRule } from "../core/types";
 import { noAsyncPredicate } from "./no-async-predicate";
 import { noConsecutiveArrayPush } from "./no-consecutive-array-push";
 import { noDateEquality } from "./no-date-equality";
@@ -14,7 +14,7 @@ import { preferNullishCoalescingAssign } from "./prefer-nullish-coalescing-assig
 import { preferStringRawRegexp } from "./prefer-string-raw-regexp";
 import { preferStringReplaceall } from "./prefer-string-replaceall";
 
-export const BUILT_IN_RULES: Record<string, FlintRule> = {
+export const BUILT_IN_RULES: Record<string, KlintRule> = {
   "no-unguarded-json-parse": noUnguardedJsonParse,
   "no-sync-in-async": noSyncInAsync,
   "no-floating-promise": noFloatingPromise,

@@ -21,8 +21,8 @@
       "!**/next-env.d.ts",
       "!memory",
       "!telos",
-      "flint.rules.ts",
-      "flint/**"
+      "klint.rules.ts",
+      "klint/**"
     ]
   },
   "formatter": {

@@ -1,9 +1,9 @@
 import { relative } from "node:path";
 import ts from "typescript";
 import { walkAst } from "../core/ast";
-import type { FlintRule } from "../core/types";
+import type { KlintRule } from "../core/types";
 
-export const preferStringRawRegexp: FlintRule = {
+export const preferStringRawRegexp: KlintRule = {
   name: "prefer-string-raw-regexp",
   check({ files, root, fileContents }, violations) {
     for (const file of files) {
