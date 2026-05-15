@@ -71,12 +71,6 @@ export const KlintConfigSchema = z
       .describe(
         'Map of rule name → severity or options. Example: { "no-floating-promise": "error", "no-sync-in-async": { "severity": "warn", "include": ["src/hooks/**"] } }. Run `klint --help` for the full rule list.'
       ),
-    customRules: z
-      .array(z.string())
-      .optional()
-      .describe(
-        "Names of custom rules exported from klint.rules.ts (or the file passed via --rules). Custom rules run after built-in rules."
-      ),
   })
   .strict()
   .describe(

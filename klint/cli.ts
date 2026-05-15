@@ -41,7 +41,6 @@ export async function main(opts: CliOptions = {}): Promise<void> {
     include?: string[];
     plugins?: string[];
     rules?: Record<string, RuleConfigValue>;
-    customRules?: string[];
   }
   let raw: RawConfig;
   try {
@@ -61,9 +60,8 @@ export async function main(opts: CliOptions = {}): Promise<void> {
     customRules = (mod.default ?? {}) as Record<string, KlintRule>;
   }
 
-  // customRules names default to "error" severity; explicit rules override
   const customRulesMap: Record<string, RuleConfigValue> = Object.fromEntries(
-    (raw.customRules ?? []).map((name) => [name, "error" as const])
+    Object.keys(customRules).map((name) => [name, "error" as const])
   );
   const allRules: KlintConfig["rules"] = { ...customRulesMap, ...(raw.rules ?? {}) };
 

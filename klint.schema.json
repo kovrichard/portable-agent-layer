@@ -681,13 +681,6 @@
           ]
         }
       }
-    },
-    "customRules": {
-      "description": "Names of custom rules exported from klint.rules.ts (or the file passed via --rules). Custom rules run after built-in rules.",
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
     }
   },
   "additionalProperties": false,

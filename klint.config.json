@@ -14,13 +14,5 @@
     "no-consecutive-array-push": "error",
     "no-string-match": "error",
     "sonar/prefer-string-raw": "off"
-  },
-  "customRules": [
-    "no-console-in-hook-lib",
-    "no-raw-anthropic-fetch",
-    "no-raw-api-key-access",
-    "no-agent-import-in-core",
-    "no-hardcoded-pal-home",
-    "no-raw-exit-in-lib"
-  ]
+  }
 }
