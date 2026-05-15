@@ -29,20 +29,19 @@ If `--rules` is omitted, klint looks for `klint.rules.ts` next to `klint.config.
 ```json
 {
   "include": ["src"],
-  "rules": [
-    "no-unguarded-json-parse",
-    { "rule": "no-sync-in-async", "include": ["src/hooks/**"] },
-    "no-floating-promise",
-    "no-misused-promises"
-  ],
-  "customRules": [
-    "my-custom-rule"
-  ]
+  "plugins": ["sonar"],
+  "rules": {
+    "no-unguarded-json-parse": "error",
+    "no-sync-in-async": { "severity": "error", "include": ["src/hooks/**"] },
+    "no-floating-promise": "error",
+    "my-custom-rule": "warn"
+  }
 }
 ```
 
-`rules` — built-in rule names (strings) or scoped entries with per-rule `include`/exclude patterns.  
-`customRules` — names of rules defined in `klint.rules.ts`.
+`include` — glob patterns selecting which `.ts` files to lint.  
+`plugins` — named rule bundles (`"sonar"`) that apply a default set of rules.  
+`rules` — map of rule name → `"error" | "warn" | "off"` or an options object with `severity` and/or `include`. Applies to both built-in and custom rules.
 
 ## Built-in Rules
 
@@ -55,55 +54,93 @@ If `--rules` is omitted, klint looks for `klint.rules.ts` next to `klint.config.
 
 ## Custom Rules
 
-Create `klint.rules.ts` at your project root and export a `KlintRule[]` as default:
+Create `klint.rules.ts` at your project root and export a `Record<string, KlintRule>` as default. Each key is the rule name:
 
 ```ts
 import { relative } from "node:path";
-import { defineRule } from "./klint/core/types";
+import type { KlintRule } from "./klint/core/types";
 
-export default [
-  defineRule({
-    name: "my-custom-rule",
-    check({ files, root, fileContents }, violations) {
-      for (const file of files) {
-        const lines = (fileContents.get(file) ?? "").split("\n");
-        for (let i = 0; i < lines.length; i++) {
-          if (/forbidden-pattern/.test(lines[i])) {
-            violations.push({
-              file: relative(root, file),
-              line: i + 1,
-              rule: "my-custom-rule",
-              message: "Explain what's wrong and how to fix it.",
-            });
-          }
+const myCustomRule: KlintRule = {
+  check({ files, root, fileContents }, violations) {
+    for (const file of files) {
+      const lines = (fileContents.get(file) ?? "").split("\n");
+      for (let i = 0; i < lines.length; i++) {
+        if (/forbidden-pattern/.test(lines[i])) {
+          violations.push({
+            file: relative(root, file),
+            line: i + 1,
+            message: "Explain what's wrong and how to fix it.",
+          });
         }
       }
-    },
-  }),
-];
+    }
+  },
+};
+
+export default {
+  "my-custom-rule": myCustomRule,
+};
 ```
 
-Reference the rule name in `customRules` inside `klint.config.json`.
-
-For type-aware rules, use `createProgram` from `klint/core/ast`:
-
-```ts
-import { createProgram } from "./klint/core/ast";
-
-// inside check():
-const program = createProgram(files, root);
-const checker = program.getTypeChecker();
-```
-
-## Scoped Includes
-
-Any rule can be restricted to a file subset using an object entry in `rules` or `customRules`:
+All exported rules run at `"error"` severity by default. Override severity or scope them to specific files via `rules` in `klint.config.json` — the same mechanism as built-in rules:
 
 ```json
-{ "rule": "no-sync-in-async", "include": ["src/hooks/**", "!src/hooks/scripts/**"] }
+{
+  "rules": {
+    "my-custom-rule": "warn",
+    "my-scoped-rule": { "severity": "error", "include": ["src/hooks/**"] }
+  }
+}
 ```
 
-Patterns support `**` globs and negation with `!` — same syntax as Biome.
+No separate registration step — everything exported from `klint.rules.ts` is picked up automatically.
+
+### Auto-fix support
+
+Add a `fix` field to a violation to make it auto-fixable with `--fix`. The fix replaces a line range with new text:
+
+```ts
+violations.push({
+  file: relative(root, file),
+  line: i + 1,
+  message: "Use foo() instead of bar().",
+  fix: {
+    startLine: i + 1,
+    endLine: i + 1,
+    replacement: lines[i].replace("bar()", "foo()"),
+  },
+});
+```
+
+### Type-aware rules
+
+For rules that need TypeScript's type checker, use `walkAst` from `klint/core/ast`:
+
+```ts
+import ts from "typescript";
+import { walkAst } from "./klint/core/ast";
+
+const myTypeAwareRule: KlintRule = {
+  check({ files, root, fileContents }, violations) {
+    for (const file of files) {
+      const content = fileContents.get(file) ?? "";
+      walkAst(file, content, (node, src) => {
+        if (ts.isCallExpression(node)) {
+          // inspect node using the TypeScript AST
+        }
+      });
+    }
+  },
+};
+```
+
+## Scoped includes
+
+Any rule can be restricted to a file subset via the `include` option. Patterns support `**` globs and negation with `!`:
+
+```json
+"no-sync-in-async": { "severity": "error", "include": ["src/hooks/**", "!src/hooks/scripts/**"] }
+```
 
 ## Architecture
 
