@@ -113,3 +113,67 @@ describe("prefer-string-replaceall", () => {
     expect(v[0].fix?.replacement).toContain("replaceAll");
   });
 });
+
+describe("severity", () => {
+  test("warn — violation is emitted with severity warn", () => {
+    const root = mkdtempSync(join(tmpdir(), "klint-test-"));
+    writeFileSync(join(root, "subject.ts"), `s.replace(/x/g, "y");\n`);
+    const violations = runKlint({
+      root,
+      include: ["."],
+      rules: { "prefer-string-replaceall": "warn" as const },
+    });
+    rmSync(root, { recursive: true });
+    expect(violations).toHaveLength(1);
+    expect(violations[0].severity).toBe("warn");
+  });
+
+  test("off — no violations emitted", () => {
+    const root = mkdtempSync(join(tmpdir(), "klint-test-"));
+    writeFileSync(join(root, "subject.ts"), `s.replace(/x/g, "y");\n`);
+    const violations = runKlint({
+      root,
+      include: ["."],
+      rules: { "prefer-string-replaceall": "off" as const },
+    });
+    rmSync(root, { recursive: true });
+    expect(violations).toHaveLength(0);
+  });
+});
+
+describe("chained fix", () => {
+  test("two-pass: outer fix wins round 1, inner fixed in round 2", () => {
+    // s.replace(/a/g, 'A').replace(/b/g, 'B') — both calls flagged.
+    // Outer spans lines 1-2, inner spans line 1 only.
+    // Pass 1: outer wins (larger range), inner skipped as overlapping.
+    //   → s.replace(/a/g, 'A').replaceAll("b", 'B');  (collapsed to one line)
+    // Pass 2: inner now stands alone on line 1, gets fixed.
+    //   → s.replaceAll("a", 'A').replaceAll("b", 'B');
+    const input = "s.replace(/a/g, 'A')\n  .replace(/b/g, 'B');\n";
+
+    const root = mkdtempSync(join(tmpdir(), "klint-test-"));
+    const file = join(root, "subject.ts");
+    writeFileSync(file, input);
+
+    const config = {
+      root,
+      include: ["."],
+      rules: { "prefer-string-replaceall": "error" as const },
+    };
+    let current = runKlint(config);
+    let totalApplied = 0;
+    while (true) {
+      const applied = applyFixes(current, root);
+      totalApplied += applied;
+      if (applied === 0) break;
+      current = runKlint(config);
+      if (current.every((v) => !v.fix)) break;
+    }
+
+    const result = readFileSync(file, "utf-8");
+    rmSync(root, { recursive: true });
+
+    expect(totalApplied).toBe(2);
+    expect(result).toBe(`s.replaceAll("a", 'A').replaceAll("b", 'B');\n`);
+  });
+});
