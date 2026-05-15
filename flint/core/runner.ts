@@ -10,7 +10,7 @@ function walk(dir: string): string[] {
     if (entry.name === "node_modules") continue;
     const full = join(dir, entry.name);
     if (entry.isDirectory()) out.push(...walk(full));
-    else if (entry.name.endsWith(".ts")) out.push(full);
+    else if (entry.name.endsWith(".ts")) out.push(full.replaceAll("\\", "/"));
   }
   return out;
 }
