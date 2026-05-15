@@ -1,3 +1,15 @@
+# [0.38.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.37.0...v0.38.0) (2026-05-15)
+
+
+### Features
+
+* **klint:** add built-in rule name enum to config schema ([4256f60](https://github.com/kovrichard/portable-agent-layer/commit/4256f60ee95bafccaf26f449863e5cb7f3bfb7da))
+* **klint:** add prefer-at rule for cleaner negative indexing with tests and schema updates ([4bd565a](https://github.com/kovrichard/portable-agent-layer/commit/4bd565a5da585b26e41d97ab736db55ccc292673))
+* **klint:** add prefer-string-raw rule for sonar ([e5b8122](https://github.com/kovrichard/portable-agent-layer/commit/e5b812238166521c9393111d2dced271285678a7))
+* **klint:** add Zod config schema with JSON Schema generation ([090c879](https://github.com/kovrichard/portable-agent-layer/commit/090c879a5b07832ba7413d361d39dc9ceec7268f))
+* **klint:** enhance plugin system with rule implementations and update schema ([071538f](https://github.com/kovrichard/portable-agent-layer/commit/071538f0f658de294a989b76ccab05b09db10952))
+* **klint:** implement no-single-char-class rule with tests and schema updates ([c0a1ebc](https://github.com/kovrichard/portable-agent-layer/commit/c0a1ebcab32d775bd483013d34512df6e99b5bf3))
+
 # [0.37.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.36.0...v0.37.0) (2026-05-15)
 
 
