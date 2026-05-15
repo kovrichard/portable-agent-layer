@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { applyFixes } from "./core/fixer";
 import { runKlint } from "./core/runner";
 import type { KlintConfig, KlintRule, RuleConfigValue } from "./core/types";
+import { BUILT_IN_PLUGINS } from "./plugins/index";
 import { BUILT_IN_RULES } from "./rules/index";
 
 interface CliOptions {
@@ -123,7 +124,12 @@ export async function main(opts: CliOptions = {}): Promise<void> {
 }
 
 function printHelp(): void {
-  const rules = Object.keys(BUILT_IN_RULES);
+  const pluginRules = new Set(
+    Object.values(BUILT_IN_PLUGINS).flatMap((p) => Object.keys(p.rules))
+  );
+  const standaloneRules = Object.keys(BUILT_IN_RULES).filter((r) => !pluginRules.has(r));
+  const pluginEntries = Object.entries(BUILT_IN_PLUGINS);
+
   process.stdout.write(
     [
       "klint — agent harness for TypeScript architecture rules",
@@ -134,8 +140,14 @@ function printHelp(): void {
       "  --rules  <file>  custom rules file (default: <configDir>/klint.rules.ts if present)",
       "  --fix            apply auto-fixes for fixable violations in-place",
       "",
-      `Built-in rules (${rules.length}):`,
-      ...rules.map((r) => `  ${r}`),
+      `Built-in rules (${standaloneRules.length}):`,
+      ...standaloneRules.map((r) => `  ${r}`),
+      "",
+      `Plugins (${pluginEntries.length}):`,
+      ...pluginEntries.flatMap(([name, plugin]) => [
+        `  ${name}`,
+        ...Object.keys(plugin.rules).map((r) => `    ${r}`),
+      ]),
       "",
     ].join("\n")
   );
