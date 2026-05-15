@@ -4,6 +4,13 @@ import { BUILT_IN_RULES } from "../rules/index";
 
 const builtInRuleNames = Object.keys(BUILT_IN_RULES) as [string, ...string[]];
 const builtInPluginNames = Object.keys(BUILT_IN_PLUGINS) as [string, ...string[]];
+const pluginRuleNames = [
+  ...new Set(Object.values(BUILT_IN_PLUGINS).flatMap((p) => Object.keys(p.rules))),
+] as [string, ...string[]];
+const allKnownRuleNames = [...new Set([...builtInRuleNames, ...pluginRuleNames])] as [
+  string,
+  ...string[],
+];
 
 const SeveritySchema = z
   .enum(["error", "warn", "off"])
@@ -12,9 +19,9 @@ const SeveritySchema = z
   );
 
 const RuleNameSchema = z
-  .union([z.enum(builtInRuleNames), z.string()])
+  .union([z.enum(allKnownRuleNames), z.string()])
   .describe(
-    "Built-in rule name (with autocomplete) or a custom rule name defined in klint.rules.ts."
+    "Built-in or plugin rule name (with autocomplete) or a custom rule name defined in klint.rules.ts."
   );
 
 const RuleOptionsSchema = z

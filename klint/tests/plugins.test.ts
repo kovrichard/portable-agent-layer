@@ -32,9 +32,9 @@ describe("plugin system", () => {
           rules: {},
         });
         const rules = violations.map((v) => v.rule);
-        expect(rules).toContain("prefer-string-replaceall");
-        expect(rules).toContain("prefer-string-raw-regexp");
-        expect(rules).toContain("prefer-nullish-coalescing-assign");
+        expect(rules).toContain("sonar/prefer-string-replaceall");
+        expect(rules).toContain("sonar/prefer-string-raw-regexp");
+        expect(rules).toContain("sonar/prefer-nullish-coalescing-assign");
         expect(violations.every((v) => v.severity === "error")).toBe(true);
       }
     );
@@ -46,10 +46,10 @@ describe("plugin system", () => {
         root,
         include: ["."],
         plugins: ["sonar"],
-        rules: { "prefer-string-replaceall": "off" },
+        rules: { "sonar/prefer-string-replaceall": "off" },
       });
       expect(
-        violations.filter((v) => v.rule === "prefer-string-replaceall")
+        violations.filter((v) => v.rule === "sonar/prefer-string-replaceall")
       ).toHaveLength(0);
     });
   });
@@ -60,9 +60,9 @@ describe("plugin system", () => {
         root,
         include: ["."],
         plugins: ["sonar"],
-        rules: { "prefer-string-replaceall": "warn" },
+        rules: { "sonar/prefer-string-replaceall": "warn" },
       });
-      const v = violations.find((v) => v.rule === "prefer-string-replaceall");
+      const v = violations.find((v) => v.rule === "sonar/prefer-string-replaceall");
       expect(v?.severity).toBe("warn");
     });
   });

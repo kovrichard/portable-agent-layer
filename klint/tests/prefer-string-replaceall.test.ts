@@ -11,7 +11,7 @@ function lint(code: string) {
   const violations = runKlint({
     root,
     include: ["."],
-    rules: { "prefer-string-replaceall": "error" },
+    rules: { "sonar/prefer-string-replaceall": "error" },
   });
   rmSync(root, { recursive: true });
   return violations;
@@ -24,7 +24,7 @@ function lintAndFix(code: string): string {
   const violations = runKlint({
     root,
     include: ["."],
-    rules: { "prefer-string-replaceall": "error" },
+    rules: { "sonar/prefer-string-replaceall": "error" },
   });
   applyFixes(violations, root);
   const result = readFileSync(file, "utf-8");
@@ -32,11 +32,11 @@ function lintAndFix(code: string): string {
   return result;
 }
 
-describe("prefer-string-replaceall", () => {
+describe("sonar/prefer-string-replaceall", () => {
   test("flags replace(/literal/g, x) with plain pattern", () => {
     const v = lint(`const r = "hello world".replace(/hello/g, "hi");`);
     expect(v).toHaveLength(1);
-    expect(v[0].rule).toBe("prefer-string-replaceall");
+    expect(v[0].rule).toBe("sonar/prefer-string-replaceall");
   });
 
   test("flags replace(/literal/g, x) with multi-word pattern", () => {
@@ -87,7 +87,7 @@ describe("prefer-string-replaceall", () => {
   test("flags replace(/\\\\/g, x) — escaped backslash is a plain literal", () => {
     const v = lint(`const r = path.replace(/\\\\/g, "/");`);
     expect(v).toHaveLength(1);
-    expect(v[0].rule).toBe("prefer-string-replaceall");
+    expect(v[0].rule).toBe("sonar/prefer-string-replaceall");
   });
 
   test('fix rewrites replace(/\\\\/g, x) to replaceAll("x\\\\\\\\", x)', () => {
@@ -121,7 +121,7 @@ describe("severity", () => {
     const violations = runKlint({
       root,
       include: ["."],
-      rules: { "prefer-string-replaceall": "warn" as const },
+      rules: { "sonar/prefer-string-replaceall": "warn" as const },
     });
     rmSync(root, { recursive: true });
     expect(violations).toHaveLength(1);
@@ -134,7 +134,7 @@ describe("severity", () => {
     const violations = runKlint({
       root,
       include: ["."],
-      rules: { "prefer-string-replaceall": "off" as const },
+      rules: { "sonar/prefer-string-replaceall": "off" as const },
     });
     rmSync(root, { recursive: true });
     expect(violations).toHaveLength(0);
@@ -158,7 +158,7 @@ describe("chained fix", () => {
     const config = {
       root,
       include: ["."],
-      rules: { "prefer-string-replaceall": "error" as const },
+      rules: { "sonar/prefer-string-replaceall": "error" as const },
     };
     let current = runKlint(config);
     let totalApplied = 0;

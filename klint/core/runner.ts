@@ -67,9 +67,19 @@ export function runKlint(
   customRules: KlintRule[] = []
 ): Violation[] {
   clearAstCache();
-  const registry: Record<string, KlintRule> = customRules.length
-    ? { ...BUILT_IN_RULES, ...Object.fromEntries(customRules.map((r) => [r.name, r])) }
-    : BUILT_IN_RULES;
+
+  // All plugin implementations are always available by their prefixed names
+  const pluginImpls: Record<string, KlintRule> = Object.assign(
+    {},
+    ...Object.values(BUILT_IN_PLUGINS).map((p) => p.implementations)
+  );
+  const registry: Record<string, KlintRule> = {
+    ...BUILT_IN_RULES,
+    ...pluginImpls,
+    ...(customRules.length
+      ? Object.fromEntries(customRules.map((r) => [r.name, r]))
+      : {}),
+  };
 
   // Plugin defaults applied first; explicit rules take precedence
   const pluginDefaults: Record<string, RuleConfigValue> = {};
@@ -99,7 +109,7 @@ export function runKlint(
 
     const batch: Omit<Violation, "severity">[] = [];
     rule.check({ files, root: config.root, fileContents }, batch);
-    for (const v of batch) violations.push({ ...v, severity });
+    for (const v of batch) violations.push({ ...v, rule: ruleName, severity });
   }
 
   return violations;

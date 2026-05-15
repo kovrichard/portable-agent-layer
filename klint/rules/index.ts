@@ -10,9 +10,6 @@ import { noOptionalChainOnNonNullable } from "./no-optional-chain-on-non-nullabl
 import { noStringMatch } from "./no-string-match";
 import { noSyncInAsync } from "./no-sync-in-async";
 import { noUnguardedJsonParse } from "./no-unguarded-json-parse";
-import { preferNullishCoalescingAssign } from "./prefer-nullish-coalescing-assign";
-import { preferStringRawRegexp } from "./prefer-string-raw-regexp";
-import { preferStringReplaceall } from "./prefer-string-replaceall";
 
 export const BUILT_IN_RULES: Record<string, KlintRule> = {
   "no-unguarded-json-parse": noUnguardedJsonParse,
@@ -26,7 +23,4 @@ export const BUILT_IN_RULES: Record<string, KlintRule> = {
   "no-nested-template-literals": noNestedTemplateLiterals,
   "no-consecutive-array-push": noConsecutiveArrayPush,
   "no-string-match": noStringMatch,
-  "prefer-nullish-coalescing-assign": preferNullishCoalescingAssign,
-  "prefer-string-raw-regexp": preferStringRawRegexp,
-  "prefer-string-replaceall": preferStringReplaceall,
 };

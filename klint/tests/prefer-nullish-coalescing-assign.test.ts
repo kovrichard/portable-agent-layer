@@ -11,7 +11,7 @@ function lint(code: string) {
   const violations = runKlint({
     root,
     include: ["."],
-    rules: { "prefer-nullish-coalescing-assign": "error" },
+    rules: { "sonar/prefer-nullish-coalescing-assign": "error" },
   });
   rmSync(root, { recursive: true });
   return violations;
@@ -24,7 +24,7 @@ function lintAndFix(code: string): string {
   const violations = runKlint({
     root,
     include: ["."],
-    rules: { "prefer-nullish-coalescing-assign": "error" },
+    rules: { "sonar/prefer-nullish-coalescing-assign": "error" },
   });
   applyFixes(violations, root);
   const result = readFileSync(file, "utf-8");
@@ -32,11 +32,11 @@ function lintAndFix(code: string): string {
   return result;
 }
 
-describe("prefer-nullish-coalescing-assign", () => {
+describe("sonar/prefer-nullish-coalescing-assign", () => {
   test("flags if (!x) x = value (single-statement form)", () => {
     const v = lint("let x: object | undefined; if (!x) x = {};");
     expect(v).toHaveLength(1);
-    expect(v[0].rule).toBe("prefer-nullish-coalescing-assign");
+    expect(v[0].rule).toBe("sonar/prefer-nullish-coalescing-assign");
   });
 
   test("flags if (!obj.prop) obj.prop = value", () => {
@@ -89,7 +89,7 @@ describe("prefer-nullish-coalescing-assign", () => {
     const violations = runKlint({
       root,
       include: ["."],
-      rules: { "prefer-nullish-coalescing-assign": "error" },
+      rules: { "sonar/prefer-nullish-coalescing-assign": "error" },
     });
     rmSync(root, { recursive: true });
     expect(violations[0].fix).toBeDefined();

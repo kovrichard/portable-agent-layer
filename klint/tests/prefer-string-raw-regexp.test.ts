@@ -11,7 +11,7 @@ function lint(code: string) {
   const violations = runKlint({
     root,
     include: ["."],
-    rules: { "prefer-string-raw-regexp": "error" },
+    rules: { "sonar/prefer-string-raw-regexp": "error" },
   });
   rmSync(root, { recursive: true });
   return violations;
@@ -24,7 +24,7 @@ function lintAndFix(code: string): string {
   const violations = runKlint({
     root,
     include: ["."],
-    rules: { "prefer-string-raw-regexp": "error" },
+    rules: { "sonar/prefer-string-raw-regexp": "error" },
   });
   applyFixes(violations, root);
   const result = readFileSync(file, "utf-8");
@@ -32,11 +32,11 @@ function lintAndFix(code: string): string {
   return result;
 }
 
-describe("prefer-string-raw-regexp", () => {
+describe("sonar/prefer-string-raw-regexp", () => {
   test("flags new RegExp(template) with double backslash in no-substitution literal", () => {
     const v = lint("const r = new RegExp(`\\\\.foo`);");
     expect(v).toHaveLength(1);
-    expect(v[0].rule).toBe("prefer-string-raw-regexp");
+    expect(v[0].rule).toBe("sonar/prefer-string-raw-regexp");
   });
 
   test("flags new RegExp(template) with double backslash in template expression", () => {

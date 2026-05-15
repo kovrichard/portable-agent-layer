@@ -38,10 +38,13 @@ export interface KlintRule {
   check: (ctx: RuleContext, violations: RawViolation[]) => void;
 }
 
-/** A named bundle of rules with their default severities. */
+/** A named bundle of rules with their default severities and implementations. */
 export interface KlintPlugin {
   name: string;
+  /** Default severity for each rule. Keys use the prefixed form e.g. "sonar/rule-name". */
   rules: Record<string, RuleConfigValue>;
+  /** Rule implementations keyed by the same prefixed names. */
+  implementations: Record<string, KlintRule>;
 }
 
 export interface KlintConfig {
