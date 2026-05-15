@@ -1,8 +1,17 @@
 import { z } from "zod";
+import { BUILT_IN_RULES } from "../rules/index";
+
+const builtInRuleNames = Object.keys(BUILT_IN_RULES);
+
+const RuleNameSchema = z
+  .union([z.enum(builtInRuleNames), z.string()])
+  .describe(
+    "Built-in rule name (with autocomplete) or a custom rule name defined in klint.rules.ts."
+  );
 
 const RuleScopedEntrySchema = z
   .object({
-    rule: z.string().describe("Name of the built-in or custom rule to apply."),
+    rule: RuleNameSchema.describe("Name of the built-in or custom rule to apply."),
     include: z
       .array(z.string())
       .describe(
@@ -15,7 +24,7 @@ const RuleScopedEntrySchema = z
   );
 
 const RuleEntrySchema = z
-  .union([z.string(), RuleScopedEntrySchema])
+  .union([RuleNameSchema, RuleScopedEntrySchema])
   .describe(
     "Either a rule name (string) or an object scoping a named rule to specific files."
   );
