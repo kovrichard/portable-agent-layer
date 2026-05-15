@@ -1,0 +1,65 @@
+{
+  "$id": "https://klint.dev/schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "description": "JSON Schema reference. Use ./klint.schema.json for local validation or https://klint.dev/schema.json for the published schema.",
+      "type": "string"
+    },
+    "root": {
+      "description": "Root directory used to resolve include paths and report relative file names. Defaults to the directory containing klint.config.json.",
+      "type": "string"
+    },
+    "include": {
+      "description": "Glob patterns selecting which TypeScript files to lint. Prefix with ! to exclude. Defaults to [\".\"] which lints all .ts files under root. Example: [\"src\", \"klint\", \"!**/node_modules/**\"]",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "rules": {
+      "description": "Built-in rules to enforce. Each entry is either a rule name string or a scoped object restricting the rule to a file subset. Run `klint --help` for the full rule list.",
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "rule": {
+                "type": "string",
+                "description": "Name of the built-in or custom rule to apply."
+              },
+              "include": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Glob patterns scoping this rule to a subset of files. Prefix with ! to exclude. Example: [\"src/hooks/**\", \"!src/hooks/scripts/**\"]"
+              }
+            },
+            "required": [
+              "rule",
+              "include"
+            ],
+            "additionalProperties": false,
+            "description": "A rule entry that applies a named rule only to files matching the given include patterns."
+          }
+        ],
+        "description": "Either a rule name (string) or an object scoping a named rule to specific files."
+      }
+    },
+    "customRules": {
+      "description": "Names of custom rules exported from klint.rules.ts (or the file passed via --rules). Custom rules run after built-in rules.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "description": "klint configuration. Lives at klint.config.json next to biome.json and knip.json."
+}

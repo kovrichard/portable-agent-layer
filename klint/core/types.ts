@@ -1,3 +1,4 @@
+/** @lintignore */
 export interface ViolationFix {
   startLine: number;
   endLine: number;
@@ -12,6 +13,7 @@ export interface Violation {
   fix?: ViolationFix;
 }
 
+/** @lintignore */
 export interface RuleContext {
   files: string[];
   root: string;
@@ -23,6 +25,7 @@ export interface KlintRule {
   check: (ctx: RuleContext, violations: Violation[]) => void;
 }
 
+/** @lintignore */
 export interface RuleScopedEntry {
   rule: string;
   include: string[];
@@ -37,4 +40,6 @@ export interface KlintConfig {
 }
 
 export const defineRule = (r: KlintRule): KlintRule => r;
+
+/** @lintignore */
 export const defineConfig = (c: KlintConfig): KlintConfig => c;

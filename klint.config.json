@@ -1,4 +1,5 @@
 {
+  "$schema": "./klint.schema.json",
   "include": ["src", "klint", "assets", "!**/node_modules/**"],
   "rules": [
     "no-unguarded-json-parse",
