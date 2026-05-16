@@ -3,6 +3,50 @@ import ts from "typescript";
 import { walkAst } from "./ast";
 import type { ArchConfig, Severity, Violation } from "./types";
 
+interface AliasEntry {
+  /** The prefix to match (pattern with `/*` stripped, e.g. `"@"` from `"@/*"`). */
+  prefix: string;
+  /** Resolved absolute base directory (target with `/*` stripped). */
+  base: string;
+  isWildcard: boolean;
+}
+
+function loadPathAliases(root: string): AliasEntry[] {
+  const tsconfigPath = resolve(root, "tsconfig.json");
+  const result = ts.readConfigFile(tsconfigPath, ts.sys.readFile);
+  if (result.error) return [];
+  const { paths, baseUrl } = (result.config?.compilerOptions ?? {}) as {
+    paths?: Record<string, string[]>;
+    baseUrl?: string;
+  };
+  if (!paths) return [];
+  const base = resolve(root, baseUrl ?? ".");
+  const entries: AliasEntry[] = [];
+  for (const [pattern, targets] of Object.entries(paths)) {
+    if (targets.length === 0) continue;
+    const isWildcard = pattern.endsWith("/*");
+    const prefix = isWildcard ? pattern.slice(0, -2) : pattern;
+    const targetStr = targets[0];
+    const targetBase = targetStr.endsWith("/*") ? targetStr.slice(0, -2) : targetStr;
+    entries.push({ prefix, base: resolve(base, targetBase), isWildcard });
+  }
+  return entries;
+}
+
+function resolveAlias(importPath: string, aliases: AliasEntry[]): string | undefined {
+  for (const alias of aliases) {
+    if (alias.isWildcard) {
+      const matchPrefix = `${alias.prefix}/`;
+      if (importPath.startsWith(matchPrefix)) {
+        return resolve(alias.base, importPath.slice(matchPrefix.length));
+      }
+    } else if (importPath === alias.prefix) {
+      return alias.base;
+    }
+  }
+  return undefined;
+}
+
 interface ImportRecord {
   path: string;
   resolved: string;
@@ -48,7 +92,11 @@ function inPrefixes(absPath: string, prefixes: string[]): boolean {
   return prefixes.some((p) => absPath === p || absPath.startsWith(`${p}/`));
 }
 
-function scanImports(file: string, content: string): ImportRecord[] {
+function scanImports(
+  file: string,
+  content: string,
+  aliases: AliasEntry[]
+): ImportRecord[] {
   const records: ImportRecord[] = [];
   const fileDir = dirname(file);
 
@@ -73,7 +121,12 @@ function scanImports(file: string, content: string): ImportRecord[] {
     if (!specifierNode) return;
 
     const path = specifierNode.text;
-    const resolved = isBareSpecifier(path) ? path : resolve(fileDir, path);
+    let resolved: string;
+    if (isBareSpecifier(path)) {
+      resolved = resolveAlias(path, aliases) ?? path;
+    } else {
+      resolved = resolve(fileDir, path);
+    }
     const { line } = src.getLineAndCharacterOfPosition(specifierNode.getStart());
     records.push({ path, resolved, isTypeOnly, line: line + 1 });
   });
@@ -89,6 +142,7 @@ export function runArchRules(
 ): Violation[] {
   const violations: Violation[] = [];
   const layers = arch.layers;
+  const aliases = loadPathAliases(root);
 
   for (const rule of arch.imports ?? []) {
     const severity: Severity = rule.severity ?? "error";
@@ -98,7 +152,7 @@ export function runArchRules(
       const content = fileContents.get(file);
       if (!content) continue;
 
-      for (const imp of scanImports(file, content)) {
+      for (const imp of scanImports(file, content, aliases)) {
         if (isBareSpecifier(imp.resolved)) continue;
         if (rule["type-only"] === "allow" && imp.isTypeOnly) continue;
 
