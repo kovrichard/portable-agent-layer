@@ -50,10 +50,7 @@ const fallbackStyle: BandStyle = {
   borderColor: "rgba(100,116,139,0.30)",
 };
 
-function resolveStyle(
-  band: string,
-  override?: Record<string, BandStyle>
-): BandStyle {
+function resolveStyle(band: string, override?: Record<string, BandStyle>): BandStyle {
   return override?.[band] ?? defaultBandStyles[band] ?? fallbackStyle;
 }
 

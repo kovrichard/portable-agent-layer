@@ -29,7 +29,11 @@ function step(score: number, maxScore: number, palette: typeof DEFAULT_STEPS) {
   return palette[idx];
 }
 
-export function ScoreBadge({ score, maxScore = 5, palette = DEFAULT_STEPS }: ScoreBadgeProps) {
+export function ScoreBadge({
+  score,
+  maxScore = 5,
+  palette = DEFAULT_STEPS,
+}: ScoreBadgeProps) {
   const s = step(score, maxScore, palette);
   const style: CSSProperties = {
     color: s.color,

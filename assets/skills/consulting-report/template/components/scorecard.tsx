@@ -130,7 +130,9 @@ export function Scorecard({ scorecard, bandStyles, maxScore = 5 }: ScorecardProp
       {/* Recommendation */}
       <div className="my-3 mt-4 pt-3 border-t border-border-subtle">
         <div className={sectionLabel}>Recommendation</div>
-        <p className="text-[0.9rem] leading-relaxed mt-1 mb-2.5">{scorecard.recommendation}</p>
+        <p className="text-[0.9rem] leading-relaxed mt-1 mb-2.5">
+          {scorecard.recommendation}
+        </p>
         <dl className="grid grid-cols-3 gap-x-4 gap-y-2 m-0 text-[0.8125rem]">
           {(
             [

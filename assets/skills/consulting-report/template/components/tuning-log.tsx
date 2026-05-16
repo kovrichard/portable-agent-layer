@@ -58,8 +58,8 @@ export function TuningLog({
         </tr>
       </thead>
       <tbody>
-        {entries.map((entry, i) => (
-          <tr key={`${entry.date}-${i}`}>
+        {entries.map((entry) => (
+          <tr key={`${entry.date}-${entry.parameter}`}>
             {columns.map((c) => (
               <td key={String(c.key)} className={`${tdClass} ${c.cellClassName ?? ""}`}>
                 {entry[c.key]}
@@ -67,16 +67,20 @@ export function TuningLog({
             ))}
           </tr>
         ))}
-        {Array.from({ length: emptyRows }, (_, i) => (
-          <tr key={`empty-${i}`}>
-            <td
-              colSpan={columns.length}
-              className="h-6 bg-background-secondary border-b border-border-subtle"
-            >
-              &nbsp;
-            </td>
-          </tr>
-        ))}
+        {Array.from({ length: emptyRows }, (_, i) => {
+          const row = (
+            // biome-ignore lint/suspicious/noArrayIndexKey: static padding rows, order is fixed
+            <tr key={`empty-${i}`}>
+              <td
+                colSpan={columns.length}
+                className="h-6 bg-background-secondary border-b border-border-subtle"
+              >
+                &nbsp;
+              </td>
+            </tr>
+          );
+          return row;
+        })}
       </tbody>
     </table>
   );
