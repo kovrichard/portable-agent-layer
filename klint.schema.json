@@ -681,8 +681,11 @@
           ]
         }
       }
+    },
+    "arch": {
+      "description": "Architecture as Code constraints — layers, import boundaries, forbidden patterns, singleton locations. Parsed by the arch engine (Phase 2)."
     }
   },
   "additionalProperties": false,
-  "description": "klint configuration. Lives at klint.config.json next to biome.json and knip.json."
+  "description": "klint configuration. Lives at klint.yaml (or klint.config.json) next to biome.json and knip.json."
 }

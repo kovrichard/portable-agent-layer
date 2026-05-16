@@ -71,10 +71,16 @@ export const KlintConfigSchema = z
       .describe(
         'Map of rule name → severity or options. Example: { "no-floating-promise": "error", "no-sync-in-async": { "severity": "warn", "include": ["src/hooks/**"] } }. Run `klint --help` for the full rule list.'
       ),
+    arch: z
+      .unknown()
+      .optional()
+      .describe(
+        "Architecture as Code constraints — layers, import boundaries, forbidden patterns, singleton locations. Parsed by the arch engine (Phase 2)."
+      ),
   })
   .strict()
   .describe(
-    "klint configuration. Lives at klint.config.json next to biome.json and knip.json."
+    "klint configuration. Lives at klint.yaml (or klint.config.json) next to biome.json and knip.json."
   );
 
 /** @lintignore */

@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { parse as parseYaml } from "yaml";
 import { applyFixes } from "./core/fixer";
 import { runKlint } from "./core/runner";
 import type { KlintConfig, KlintRule, RuleConfigValue } from "./core/types";
@@ -30,9 +31,15 @@ export async function main(opts: CliOptions = {}): Promise<void> {
 
   configDir ??= process.cwd();
 
-  const configPath = resolve(configDir, "klint.config.json");
+  const yamlPath = resolve(configDir, "klint.yaml");
+  const jsonPath = resolve(configDir, "klint.config.json");
+  const usingYaml = existsSync(yamlPath);
+  const configPath = usingYaml ? yamlPath : jsonPath;
+
   if (!existsSync(configPath)) {
-    process.stderr.write(`klint: no klint.config.json found at ${configPath}\n`);
+    process.stderr.write(
+      `klint: no config file found — create klint.yaml (or klint.config.json) at ${configDir}\n`
+    );
     process.exit(1);
   }
 
@@ -41,10 +48,12 @@ export async function main(opts: CliOptions = {}): Promise<void> {
     include?: string[];
     plugins?: string[];
     rules?: Record<string, RuleConfigValue>;
+    arch?: unknown;
   }
   let raw: RawConfig;
   try {
-    raw = JSON.parse(readFileSync(configPath, "utf-8")) as RawConfig;
+    const text = readFileSync(configPath, "utf-8");
+    raw = (usingYaml ? parseYaml(text) : JSON.parse(text)) as RawConfig;
   } catch {
     process.stderr.write(`klint: failed to parse ${configPath}\n`);
     process.exit(1);
@@ -134,7 +143,7 @@ function printHelp(): void {
       "",
       "Usage: klint [--config <dir>] [--rules <file>] [--fix]",
       "",
-      "  --config <dir>   directory containing klint.config.json (default: cwd)",
+      "  --config <dir>   directory containing klint.yaml or klint.config.json (default: cwd)",
       "  --rules  <file>  custom rules file (default: <configDir>/klint.rules.ts if present)",
       "  --fix            apply auto-fixes for fixable violations in-place",
       "",

@@ -1,0 +1,78 @@
+$schema: http://json-schema.org/draft-07/schema#
+$id: https://klint.dev/schema.json
+type: object
+properties:
+  $schema:
+    description: JSON Schema reference. Use ./klint.schema.json for local validation or https://klint.dev/schema.json for
+      the published schema.
+    type: string
+  root:
+    description: Root directory used to resolve include paths and report relative file names. Defaults to the directory
+      containing klint.config.json.
+    type: string
+  include:
+    description: 'Glob patterns selecting which TypeScript files to lint. Prefix with ! to exclude. Defaults to ["."] which
+      lints all .ts files under root. Example: ["src", "klint", "!**/node_modules/**"]'
+    type: array
+    items:
+      type: string
+  plugins:
+    description: 'Named rule bundles to enable. Each plugin applies a default set of rules at "error" severity. Individual
+      rules from the bundle can be overridden or silenced via the rules map. Available: "sonar".'
+    type: array
+    items:
+      type: string
+      enum:
+        - sonar
+  rules:
+    description: 'Map of rule name → severity or options. Example: { "no-floating-promise": "error", "no-sync-in-async": {
+      "severity": "warn", "include": ["src/hooks/**"] } }. Run `klint --help` for the full rule list.'
+    type: object
+    additionalProperties: &a1
+      anyOf:
+        - type: string
+          enum:
+            - error
+            - warn
+            - off
+          description: Rule severity. "error" exits with code 2; "warn" reports but exits 0; "off" silences.
+        - type: object
+          properties:
+            severity:
+              type: string
+              enum:
+                - error
+                - warn
+                - off
+              description: Rule severity. "error" exits with code 2; "warn" reports but exits 0; "off" silences.
+            include:
+              description: 'Glob patterns scoping this rule to a subset of files. Prefix with ! to exclude. Example: ["src/hooks/**",
+                "!src/hooks/scripts/**"]'
+              type: array
+              items:
+                type: string
+          additionalProperties: false
+          description: Rule options object. Omit severity to default to "error". Add include to scope the rule to specific files.
+    properties:
+      no-unguarded-json-parse: *a1
+      no-sync-in-async: *a1
+      no-floating-promise: *a1
+      no-misused-promises: *a1
+      no-async-predicate: *a1
+      no-date-equality: *a1
+      no-optional-chain-on-non-nullable: *a1
+      no-object-in-template: *a1
+      no-nested-template-literals: *a1
+      no-consecutive-array-push: *a1
+      no-string-match: *a1
+      sonar/prefer-string-replaceall: *a1
+      sonar/prefer-string-raw-regexp: *a1
+      sonar/prefer-string-raw: *a1
+      sonar/prefer-nullish-coalescing-assign: *a1
+      sonar/no-single-char-class: *a1
+      sonar/prefer-at: *a1
+  arch:
+    description: Architecture as Code constraints — layers, import boundaries, forbidden patterns, singleton locations.
+      Parsed by the arch engine (Phase 2).
+additionalProperties: false
+description: klint configuration. Lives at klint.yaml (or klint.config.json) next to biome.json and knip.json.

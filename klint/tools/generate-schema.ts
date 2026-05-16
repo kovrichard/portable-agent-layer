@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { stringify as toYaml } from "yaml";
 import { KlintConfigSchema } from "../core/config.schema";
 import { BUILT_IN_PLUGINS } from "../plugins/index";
 import { BUILT_IN_RULES } from "../rules/index";
@@ -31,6 +32,10 @@ const schema = {
   ...raw,
 };
 
-const outPath = resolve(import.meta.dir, "../../klint.schema.json");
-writeFileSync(outPath, `${JSON.stringify(schema, null, 2)}\n`);
-process.stdout.write(`Generated ${outPath}\n`);
+const jsonOutPath = resolve(import.meta.dir, "../../klint.schema.json");
+writeFileSync(jsonOutPath, `${JSON.stringify(schema, null, 2)}\n`);
+process.stdout.write(`Generated ${jsonOutPath}\n`);
+
+const yamlOutPath = resolve(import.meta.dir, "../../klint.schema.yaml");
+writeFileSync(yamlOutPath, toYaml(schema, { lineWidth: 120 }));
+process.stdout.write(`Generated ${yamlOutPath}\n`);

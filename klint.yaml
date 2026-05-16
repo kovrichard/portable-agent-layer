@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=./klint.schema.yaml
+
+include: ["src", "klint", "assets", "!**/node_modules/**"]
+plugins: [sonar]
+rules:
+  no-unguarded-json-parse: error
+  no-sync-in-async:
+    severity: error
+    include: ["src/hooks/**"]
+  no-floating-promise: error
+  no-misused-promises: error
+  no-date-equality: error
+  no-optional-chain-on-non-nullable: error
+  no-object-in-template: error
+  no-nested-template-literals: error
+  no-consecutive-array-push: error
+  no-string-match: error
+  sonar/prefer-string-raw: off
+  no-skill-src-import: warn
