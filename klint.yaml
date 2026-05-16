@@ -21,12 +21,22 @@ arch:
   layers:
     core: ["src/hooks/lib/**", "src/tools/**"]
     skills: ["assets/skills/**"]
+    targets: ["src/targets/**"]
+    cli: ["src/cli/**"]
 
   imports:
     - from: skills
       deny: ["src/**"]
       message: "Skill imports from the repo's src/ directory — skills must be self-contained and portable across machines."
       severity: warn
+
+    - from: core
+      deny: targets
+      message: "Core library modules must not import agent-specific code — that dependency belongs in src/targets/, not in the shared library."
+
+    - from: core
+      deny: cli
+      message: "Core library modules must not import from the CLI layer — the CLI depends on core, not the other way around."
 
   forbidden:
     - pattern: "process.exit("
@@ -43,3 +53,13 @@ arch:
       only: "src/hooks/lib/inference.ts"
       in: ["src/hooks/**", "src/tools/**"]
       message: "Direct access to PAL_ANTHROPIC_API_KEY bypasses the inference layer — use the inference module instead."
+
+    - pattern: "process.env.PAL_PKG"
+      only: "src/hooks/lib/paths.ts"
+      in: ["src/**"]
+      message: "Package root path accessed directly — use getPalPkg() from the paths module instead."
+
+    - pattern: "resolve(import.meta.dir"
+      only: "src/hooks/lib/paths.ts"
+      in: ["src/hooks/lib/**"]
+      message: "Package-relative path resolution in hook lib must go through the paths module — import getPalPkg() instead of navigating from import.meta.dir."
