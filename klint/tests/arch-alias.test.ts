@@ -162,6 +162,46 @@ describe("arch/imports — path alias resolution", () => {
     expect(violations).toHaveLength(1);
   });
 
+  test("resolves alias defined in extended tsconfig", () => {
+    const root = mkdtempSync(join(tmpdir(), "klint-arch-alias-extends-"));
+    // Base tsconfig defines the paths
+    writeFileSync(
+      join(root, "tsconfig.base.json"),
+      JSON.stringify({ compilerOptions: { baseUrl: ".", paths: { "@/*": ["src/*"] } } })
+    );
+    // Child tsconfig extends the base — no paths of its own
+    writeFileSync(
+      join(root, "tsconfig.json"),
+      JSON.stringify({ extends: "./tsconfig.base.json" })
+    );
+    mkdirSync(join(root, "assets", "skills", "my-skill", "tools"), { recursive: true });
+    writeFileSync(
+      join(root, "assets", "skills", "my-skill", "tools", "index.ts"),
+      `import { foo } from "@/lib/utils";`
+    );
+    mkdirSync(join(root, "src", "lib"), { recursive: true });
+    writeFileSync(join(root, "src", "lib", "utils.ts"), `export const foo = 1;`);
+
+    const violations = runKlint(
+      {
+        root,
+        include: ["."],
+        rules: {},
+        arch: {
+          layers: LAYERS,
+          imports: [
+            { from: "skills", deny: "core", message: "Skills must be self-contained" },
+          ],
+        },
+      },
+      {}
+    ).filter((v) => v.rule === "arch/imports");
+
+    rmSync(root, { recursive: true });
+    expect(violations).toHaveLength(1);
+    expect(violations[0].message).toContain("self-contained");
+  });
+
   test("exact alias (no wildcard) resolves correctly", () => {
     const v = lint(
       {

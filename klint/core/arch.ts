@@ -13,14 +13,15 @@ interface AliasEntry {
 
 function loadPathAliases(root: string): AliasEntry[] {
   const tsconfigPath = resolve(root, "tsconfig.json");
-  const result = ts.readConfigFile(tsconfigPath, ts.sys.readFile);
-  if (result.error) return [];
-  const { paths, baseUrl } = (result.config?.compilerOptions ?? {}) as {
-    paths?: Record<string, string[]>;
-    baseUrl?: string;
-  };
+  const parsed = ts.getParsedCommandLineOfConfigFile(tsconfigPath, undefined, {
+    ...ts.sys,
+    onUnRecoverableConfigFileDiagnostic: () => {},
+  });
+  if (!parsed) return [];
+  const { paths, baseUrl } = parsed.options;
   if (!paths) return [];
-  const base = resolve(root, baseUrl ?? ".");
+  // baseUrl is absolute when set; fall back to tsconfig dir for TS 5+ pathless baseUrl
+  const base = baseUrl ?? root;
   const entries: AliasEntry[] = [];
   for (const [pattern, targets] of Object.entries(paths)) {
     if (targets.length === 0) continue;
