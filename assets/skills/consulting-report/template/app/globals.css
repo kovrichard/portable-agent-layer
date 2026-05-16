@@ -56,7 +56,9 @@ body {
   margin: 1.5rem 0;
   font-family: var(--font-body);
   font-size: 0.9375rem;
-  page-break-inside: avoid;
+  /* No page-break-inside:avoid here — long tables must be allowed to break.
+     Short tables stay together naturally (browsers prefer not to break short
+     content). */
 }
 .comparison-table th {
   font-family: var(--font-sans);
@@ -97,6 +99,28 @@ body {
   a {
     text-decoration: none;
     color: var(--color-foreground);
+  }
+  /* No orphaned headings — if there isn't room for at least one line of
+     content after a heading, push the heading to the next page. */
+  h1, h2, h3, h4, h5, h6 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  /* Label-as-heading: a paragraph that contains only a <strong> child is
+     semantically a sub-heading (e.g., "Scoring guidance:"). Same orphan
+     treatment as real headings. */
+  p:has(> strong:only-child) {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  /* Don't break paragraphs across pages.
+     Chromium's PDF engine doesn't reliably honor `orphans`/`widows`, so we
+     use the stronger `break-inside: avoid`. Most paragraphs are short
+     enough to stay whole; very long ones (>1 page) will break anyway
+     because the browser has no choice. */
+  p {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 }
 

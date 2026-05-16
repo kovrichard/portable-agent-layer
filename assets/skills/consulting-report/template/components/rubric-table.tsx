@@ -37,7 +37,7 @@ export function RubricTable({ dimension, palette = DEFAULT_PALETTE }: RubricTabl
 
   return (
     <div className="my-5 break-inside-avoid">
-      <table className="w-full border-separate [border-spacing:0.4rem] font-body text-[0.85rem]">
+      <table className="w-full table-fixed border-separate [border-spacing:0.4rem] font-body text-[0.85rem]">
         <thead>
           <tr>
             {sorted.map((level, i) => {
@@ -50,7 +50,7 @@ export function RubricTable({ dimension, palette = DEFAULT_PALETTE }: RubricTabl
               return (
                 <th
                   key={level.score}
-                  className="text-center p-2 align-bottom bg-background-secondary rounded-md"
+                  className="text-center p-2 align-top bg-background-secondary rounded-md"
                   style={style}
                 >
                   <div className="font-sans text-2xl font-bold text-primary leading-none">

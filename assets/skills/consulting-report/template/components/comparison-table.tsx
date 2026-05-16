@@ -22,7 +22,7 @@ export function ComparisonTable({
   const tdClass =
     "px-4 py-3 border-b border-border-subtle align-top last:[&:last-child]:border-b-0";
   return (
-    <table className="w-full border-collapse my-6 font-body text-[0.9375rem] break-inside-avoid">
+    <table className="w-full border-collapse my-6 font-body text-[0.9375rem]">
       <thead>
         <tr>
           <th className={thClass}>{metricLabel}</th>

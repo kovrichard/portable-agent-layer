@@ -9,7 +9,7 @@ export function Callout({ label = "Key Takeaway", children }: CalloutProps) {
       <div className="font-sans font-semibold text-primary text-xs uppercase tracking-widest mb-2">
         {label}
       </div>
-      <div className="text-lg font-medium text-foreground">{children}</div>
+      <div className="text-foreground">{children}</div>
     </div>
   );
 }
