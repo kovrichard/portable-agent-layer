@@ -122,6 +122,20 @@ const noHardcodedPalHome = defineRule({
   },
 });
 
+const noSkillSrcImport = defineRule({
+  check({ files, root }, violations) {
+    const skillsDir = resolve(root, "assets/skills");
+    const scope = files.filter((f) => f.startsWith(skillsDir));
+    scanPattern(
+      scope,
+      /(?:from|import)\s*\(?\s*["'][^"']*\/src\//,
+      "Skill imports from the repo's src/ directory — skills must be self-contained and portable across machines.",
+      root,
+      violations
+    );
+  },
+});
+
 /** @lintignore — loaded via dynamic import by klint/cli.ts */
 export default {
   "no-console-in-hook-lib": noConsoleInHookLib,
@@ -130,4 +144,5 @@ export default {
   "no-agent-import-in-core": noAgentImportInCore,
   "no-hardcoded-pal-home": noHardcodedPalHome,
   "no-raw-exit-in-lib": noRawExitInLib,
+  "no-skill-src-import": noSkillSrcImport,
 };
