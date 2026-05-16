@@ -9,7 +9,7 @@ export const LintPlugin: Plugin = async ({ $ }) => {
       await $`bun run check`;
       await $`bun run type-check`;
       await $`bun run knip`;
-      await $`bun klint/cli.ts`;
+      await $`bun klint/cli.ts --json`;
     },
   };
 };

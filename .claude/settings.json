@@ -7,7 +7,7 @@
           { "type": "command", "command": "bun .agents/hooks/check.ts" },
           { "type": "command", "command": "bun .agents/hooks/type-check.ts" },
           { "type": "command", "command": "bun .agents/hooks/knip.ts" },
-          { "type": "command", "command": "bun klint/cli.ts" }
+          { "type": "command", "command": "bun .agents/hooks/klint.ts" }
         ]
       }
     ]

@@ -18,11 +18,13 @@ export async function main(opts: CliOptions = {}): Promise<void> {
   let configDir = opts.configDir;
   let rulesFile = opts.rulesFile;
   let fix = false;
+  let json = false;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--config" && args[i + 1]) configDir = resolve(args[++i]);
     else if (args[i] === "--rules" && args[i + 1]) rulesFile = resolve(args[++i]);
     else if (args[i] === "--fix") fix = true;
+    else if (args[i] === "--json") json = true;
     else if (args[i] === "--help" || args[i] === "-h") {
       printHelp();
       process.exit(0);
@@ -84,6 +86,17 @@ export async function main(opts: CliOptions = {}): Promise<void> {
     },
     customRules
   );
+
+  if (json) {
+    const errors = violations.filter((v) => v.severity === "error");
+    process.stdout.write(
+      JSON.stringify({
+        violations: violations.map((v) => ({ ...v, fix: v.fix ?? null })),
+        summary: { errors: errors.length, warnings: violations.length - errors.length },
+      })
+    );
+    process.exit(errors.length > 0 ? 2 : 0);
+  }
 
   if (fix) {
     let totalApplied = 0;
@@ -158,6 +171,7 @@ function printHelp(): void {
       "  --config <dir>   directory containing klint.yaml or klint.config.json (default: cwd)",
       "  --rules  <file>  custom rules file (default: <configDir>/klint.rules.ts if present)",
       "  --fix            apply auto-fixes for fixable violations in-place",
+      "  --json           emit structured JSON to stdout (for agent/CI consumption)",
       "",
       `Built-in rules (${standaloneRules.length}):`,
       ...standaloneRules.map((r) => `  ${r}`),
