@@ -28,16 +28,16 @@ const gateColor: Record<GateVerdict, string> = {
 function gateLabel(verdict: GateVerdict): string {
   if (verdict === "pass") return "Pass";
   if (verdict === "fail") return "Fail";
-  if (verdict === "flag") return "Flag for review";
+  if (verdict === "flag") return "Flag";
   return "N/A";
 }
 
 const sectionLabel =
-  "font-sans text-[0.68rem] font-bold uppercase tracking-widest text-primary mb-1.5";
+  "font-sans text-[0.68rem] font-bold uppercase tracking-widest text-primary mb-2.5";
 
 export function Scorecard({ scorecard, bandStyles, maxScore = 5 }: ScorecardProps) {
   const maxTotal = scorecard.maxTotal ?? 20;
-  const cellBase = "px-2.5 py-1.5 border-b border-border-subtle align-top";
+  const cellBase = "px-3 py-2 border-b border-border-subtle align-top";
 
   return (
     <div className="bg-background-secondary border border-border rounded-xl p-5 my-6 break-inside-avoid">
@@ -62,7 +62,7 @@ export function Scorecard({ scorecard, bandStyles, maxScore = 5 }: ScorecardProp
       </p>
 
       {/* Gates */}
-      <div className="my-3">
+      <div className="my-4">
         <div className={sectionLabel}>Pre-scoring gates</div>
         <table className="w-full border-collapse text-[0.85rem] font-body">
           <tbody>
@@ -86,7 +86,7 @@ export function Scorecard({ scorecard, bandStyles, maxScore = 5 }: ScorecardProp
       </div>
 
       {/* Scores */}
-      <div className="my-3">
+      <div className="my-4">
         <div className={sectionLabel}>Dimension scores</div>
         <table className="w-full border-collapse text-[0.85rem] font-body">
           <tbody>
@@ -108,11 +108,10 @@ export function Scorecard({ scorecard, bandStyles, maxScore = 5 }: ScorecardProp
       </div>
 
       {/* Total row */}
-      <div className="flex justify-between items-center gap-4 mt-4 mb-2 px-3 py-2 bg-background border border-border rounded-md">
-        <div className="font-sans text-[0.95rem] flex items-center gap-1.5">
+      <div className="flex justify-between items-center gap-4 mt-4 mb-2 px-4 py-2.5 bg-background border border-border rounded-md">
+        <div className="font-sans text-[0.95rem]">
           Total: <strong className="text-xl text-primary">{scorecard.total}</strong> /{" "}
-          {maxTotal} <span>&nbsp;→&nbsp;</span>{" "}
-          <BandBadge band={scorecard.band} bandStyles={bandStyles} />
+          {maxTotal}
         </div>
         {scorecard.vetoTriggered && (
           <div className="font-sans font-bold text-xs uppercase tracking-wide text-destructive">
@@ -122,18 +121,18 @@ export function Scorecard({ scorecard, bandStyles, maxScore = 5 }: ScorecardProp
       </div>
 
       {scorecard.weightingNote && (
-        <div className="text-[0.85rem] italic text-muted mt-2 px-3 py-2 bg-background border-l-[3px] border-accent rounded-r-md">
+        <div className="text-[0.85rem] italic text-muted mt-2 px-4 py-2.5 bg-background border-l-[3px] border-accent rounded-r-md">
           <span className={sectionLabel}>Weighting note:</span> {scorecard.weightingNote}
         </div>
       )}
 
       {/* Recommendation */}
-      <div className="my-3 mt-4 pt-3 border-t border-border-subtle">
+      <div className="mt-4 pt-3 border-t border-border-subtle">
         <div className={sectionLabel}>Recommendation</div>
-        <p className="text-[0.9rem] leading-relaxed mt-1 mb-2.5">
+        <p className="text-[0.9rem] leading-relaxed mt-1 mb-3">
           {scorecard.recommendation}
         </p>
-        <dl className="grid grid-cols-3 gap-x-4 gap-y-2 m-0 text-[0.8125rem]">
+        <dl className="grid grid-cols-3 gap-x-6 gap-y-3 m-0 text-[0.8125rem]">
           {(
             [
               ["First action", scorecard.firstAction],
@@ -142,7 +141,7 @@ export function Scorecard({ scorecard, bandStyles, maxScore = 5 }: ScorecardProp
             ] as const
           ).map(([label, value]) => (
             <div key={label}>
-              <dt className="font-sans text-[0.65rem] font-bold uppercase tracking-widest text-muted mb-0.5">
+              <dt className="font-sans text-[0.65rem] font-bold uppercase tracking-widest text-muted mb-1">
                 {label}
               </dt>
               <dd className="m-0 text-foreground">{value}</dd>

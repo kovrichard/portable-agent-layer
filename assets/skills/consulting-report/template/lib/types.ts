@@ -99,6 +99,11 @@ export interface RubricLevel {
   score: number;
   label: string;
   anchor: string;
+  /**
+   * If true, the row renders with a saturated-color border to draw attention
+   * (e.g., flagging a veto-trigger score).
+   */
+  highlight?: boolean;
 }
 
 export interface Dimension {

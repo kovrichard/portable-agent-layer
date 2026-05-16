@@ -40,6 +40,23 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Restore default list markers (Tailwind's preflight strips them).
+   Scoped to @layer base so Tailwind utilities (e.g., `list-none`, `m-0`)
+   on individual components still win. */
+@layer base {
+  ol, ul {
+    padding-left: 1.6rem;
+    margin: 0.75rem 0;
+  }
+  ol { list-style: decimal outside; }
+  ul { list-style: disc outside; }
+  li { margin: 0.25rem 0; }
+  li::marker {
+    color: var(--color-muted);
+    font-weight: 600;
+  }
+}
+
 /* Page-level wrapper used by every report's app/page.tsx. */
 .report-container {
   max-width: 850px;
