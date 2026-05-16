@@ -1,5 +1,5 @@
 import { ArrowRight, Clock, Zap } from "lucide-react";
-import type { Recommendation } from "@/lib/report-data";
+import type { Recommendation } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface RecommendationCardProps {

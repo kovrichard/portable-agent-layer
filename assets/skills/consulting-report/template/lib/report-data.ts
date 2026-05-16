@@ -1,77 +1,29 @@
-export interface Finding {
-  id: string;
-  title: string;
-  description: string;
-  evidence: string;
-  source: string;
-  severity: "critical" | "high" | "medium" | "low";
-}
+// Default placeholder report data.
+//
+// Each scaffolded project should REPLACE the contents of this file with its
+// own data. The shapes are defined in ./types.ts — only the data lives here.
+//
+// The scaffold tool substitutes [CLIENT NAME] and "Strategic Assessment &
+// Transformation Roadmap" when --client and --title are provided.
+//
+// Re-export the types from ./types here as well, so reports that import from
+// "@/lib/report-data" continue to work.
 
-export interface Recommendation {
-  id: string;
-  title: string;
-  description: string;
-  priority: "immediate" | "short-term" | "long-term";
-}
+export type {
+  ConfigurationParameter,
+  Dimension,
+  Finding,
+  Recommendation,
+  ReportData,
+  RubricLevel,
+  Scorecard,
+  ScorecardGate,
+  ScorecardScore,
+  TimelinePhase,
+  TuningLogEntry,
+} from "./types";
 
-export interface TimelinePhase {
-  phase: string;
-  title: string;
-  description: string;
-  duration: string;
-}
-
-export interface ReportData {
-  clientName: string;
-  reportTitle: string;
-  reportDate: string;
-  classification: string;
-  consultancyName: string;
-  preTitle?: string;
-
-  executiveSummary: {
-    context: string;
-    methodology: { interviewCount: number; roles: string[] };
-    keyFindings: string[];
-    primaryRecommendation: string;
-    expectedOutcomes: string[];
-  };
-
-  situationAssessment: {
-    currentState: string;
-    clientAsk: string;
-    whyNow: string;
-  };
-
-  findings: Finding[];
-
-  riskAnalysis: {
-    existentialRisks: string[];
-    competitiveThreats: string[];
-    timelinePressures: string;
-  };
-
-  strategicOpportunity: {
-    goodNews: string;
-    requirements: string[];
-  };
-
-  recommendations: Recommendation[];
-
-  targetState: {
-    description: string;
-    keyCapabilities: string[];
-    successMetrics: string[];
-  };
-
-  roadmap: TimelinePhase[];
-
-  callToAction: {
-    immediateSteps: string[];
-    decisionPoints: string[];
-    commitmentRequired: string;
-  };
-}
+import type { ReportData } from "./types";
 
 export const reportData: ReportData = {
   clientName: "[CLIENT NAME]",

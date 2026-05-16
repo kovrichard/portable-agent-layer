@@ -1,4 +1,4 @@
-import type { Finding } from "@/lib/report-data";
+import type { Finding } from "@/lib/types";
 import { SeverityBadge } from "./severity-badge";
 
 interface FindingCardProps {

@@ -6,7 +6,46 @@ argument-hint: scaffold <target-dir> | dev <report-dir> | <report-dir> (render P
 
 ## Overview
 
-Every report is a self-contained Next.js app: typed report data in `lib/report-data.ts`, layout composed from React components in `app/page.tsx`, fonts via `next/font/google` (Source Serif 4 + Inter), Tailwind v4 for styling. `bun run dev` gives a live preview while authoring; the PDF is rendered by Playwright against a static export.
+Every report is a self-contained Next.js app: typed report data in `lib/report-data.ts`, layout composed from React components in `app/page.tsx`, font via `next/font/google` (Inter), Tailwind v4 for styling. `bun run dev` gives a live preview while authoring; the PDF is rendered by Playwright against a static export.
+
+## Authoring contract — what belongs where
+
+The split is deliberate. Don't edit the template for one report; don't put report data in the template.
+
+| File | Lives in | Edited by |
+|------|----------|-----------|
+| `lib/types.ts` | Template | Skill maintainer only (when adding new section types) |
+| `lib/report-data.ts` | Project | **You.** Replace the scaffolded placeholder with your data. |
+| `app/page.tsx` | Project | **You.** Compose your layout from the components in `@/components`. |
+| `components/*.tsx` | Template | Skill maintainer only (when adding new primitives) |
+| `app/globals.css` | Project (copied from template) | Brand colors and project-specific overrides only. |
+
+**Tunable parameters** (e.g., the "TUNABLE" marker on configuration rows) take their label from the data:
+
+```ts
+// In your project's report-data.ts:
+{ name: "Decision band thresholds", currentValue: "16–20 strong …",
+  tunable: true, tunableLabel: "Owner edit" }
+```
+
+The component renders whatever `tunableLabel` you provide; the template never hardcodes a person's name.
+
+**Custom band labels** (Scorecard / BandBadge): the `band` field is a free-form string. Pass `bandStyles` to `<Scorecard>` to map your band labels to colors:
+
+```tsx
+<Scorecard
+  scorecard={...}
+  bandStyles={{
+    Greenlit: { color: "...", background: "...", borderColor: "..." },
+    Investigate: { ... },
+    Hold: { ... },
+  }}
+/>
+```
+
+**Configurable columns** (ConfigurationTable, TuningLog): pass a `columns` prop to override the default schema. See each component's source for the column type.
+
+**Rubric levels** (RubricTable): supports any number of levels — the colors sample the default palette evenly. Pass `palette` to override.
 
 ## Workflow
 
