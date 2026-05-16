@@ -20,6 +20,7 @@ function scanPattern(
   }
 }
 
+// import.meta.main guard cannot be expressed in arch.forbidden — kept as a custom rule
 const noConsoleInHookLib = defineRule({
   check({ files, root }, violations) {
     const hookLib = resolve(root, "src/hooks/lib");
@@ -61,25 +62,6 @@ const noRawAnthropicFetch = defineRule({
   },
 });
 
-const noRawApiKeyAccess = defineRule({
-  check({ files, root }, violations) {
-    const inference = resolve(root, "src/hooks/lib/inference.ts");
-    const scope = files.filter(
-      (f) =>
-        (f.startsWith(resolve(root, "src/hooks")) ||
-          f.startsWith(resolve(root, "src/tools"))) &&
-        f !== inference
-    );
-    scanPattern(
-      scope,
-      /process\.env\.PAL_ANTHROPIC_API_KEY/,
-      "Direct access to PAL_ANTHROPIC_API_KEY bypasses the inference layer — use the inference module instead.",
-      root,
-      violations
-    );
-  },
-});
-
 const noAgentImportInCore = defineRule({
   check({ files, root }, violations) {
     const core = [resolve(root, "src/hooks/lib"), resolve(root, "src/tools")];
@@ -94,55 +76,9 @@ const noAgentImportInCore = defineRule({
   },
 });
 
-const noRawExitInLib = defineRule({
-  check({ files, root }, violations) {
-    const lib = resolve(root, "src/hooks/lib");
-    const scope = files.filter((f) => f.startsWith(lib));
-    scanPattern(
-      scope,
-      /process\.exit\(/,
-      "process.exit() called inside a library module — library functions should return or throw, not terminate the process.",
-      root,
-      violations
-    );
-  },
-});
-
-const noHardcodedPalHome = defineRule({
-  check({ files, root }, violations) {
-    const paths = resolve(root, "src/hooks/lib/paths.ts");
-    const scope = files.filter((f) => f.startsWith(resolve(root, "src")) && f !== paths);
-    scanPattern(
-      scope,
-      /process\.env\.PAL_HOME/,
-      "PAL home path accessed directly — use the paths module (src/hooks/lib/paths.ts) instead.",
-      root,
-      violations
-    );
-  },
-});
-
-const noSkillSrcImport = defineRule({
-  check({ files, root }, violations) {
-    const skillsDir = resolve(root, "assets/skills");
-    const scope = files.filter((f) => f.startsWith(skillsDir));
-    scanPattern(
-      scope,
-      /(?:from|import)\s*\(?\s*["'][^"']*\/src\//,
-      "Skill imports from the repo's src/ directory — skills must be self-contained and portable across machines.",
-      root,
-      violations
-    );
-  },
-});
-
 /** @lintignore — loaded via dynamic import by klint/cli.ts */
 export default {
   "no-console-in-hook-lib": noConsoleInHookLib,
   "no-raw-anthropic-fetch": noRawAnthropicFetch,
-  "no-raw-api-key-access": noRawApiKeyAccess,
   "no-agent-import-in-core": noAgentImportInCore,
-  "no-hardcoded-pal-home": noHardcodedPalHome,
-  "no-raw-exit-in-lib": noRawExitInLib,
-  "no-skill-src-import": noSkillSrcImport,
 };

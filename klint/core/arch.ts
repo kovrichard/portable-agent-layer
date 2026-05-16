@@ -156,7 +156,10 @@ export function runArchRules(
   for (const rule of arch.singleton ?? []) {
     const severity: Severity = rule.severity ?? "error";
     const onlyFile = resolve(root, rule.only);
-    const scope = allFiles.filter((f) => f !== onlyFile);
+    const inFiles = rule.in
+      ? resolveLayerFiles(rule.in, layers, root, allFiles)
+      : allFiles;
+    const scope = inFiles.filter((f) => f !== onlyFile);
 
     for (const file of scope) {
       const content = fileContents.get(file);

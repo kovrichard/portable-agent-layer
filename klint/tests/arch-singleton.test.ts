@@ -135,4 +135,34 @@ describe("arch/singleton", () => {
     expect(v).toHaveLength(1);
     expect(v[0].severity).toBe("warn");
   });
+
+  test("in field limits scan to scoped files only", () => {
+    const v = lint(
+      {
+        singleton: [
+          {
+            pattern: "process.env.PAL_HOME",
+            only: "src/lib/paths.ts",
+            in: ["src/**"],
+            message: "Use the paths module",
+          },
+        ],
+      },
+      [
+        {
+          path: ["src", "lib", "paths.ts"],
+          content: `export const home = process.env.PAL_HOME;`,
+        },
+        // in src/ — should be flagged
+        { path: ["src", "other.ts"], content: `const h = process.env.PAL_HOME;` },
+        // outside src/ — should NOT be flagged even though it contains the pattern
+        {
+          path: ["klint", "tests", "fixture.ts"],
+          content: `const h = process.env.PAL_HOME;`,
+        },
+      ]
+    );
+    expect(v).toHaveLength(1);
+    expect(v[0].file).toBe("src/other.ts");
+  });
 });

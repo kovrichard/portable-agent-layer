@@ -16,4 +16,30 @@ rules:
   no-consecutive-array-push: error
   no-string-match: error
   sonar/prefer-string-raw: off
-  no-skill-src-import: warn
+
+arch:
+  layers:
+    core: ["src/hooks/lib/**", "src/tools/**"]
+    skills: ["assets/skills/**"]
+
+  imports:
+    - from: skills
+      deny: ["src/**"]
+      message: "Skill imports from the repo's src/ directory — skills must be self-contained and portable across machines."
+      severity: warn
+
+  forbidden:
+    - pattern: "process.exit("
+      in: ["src/hooks/lib/**"]
+      message: "process.exit() called inside a library module — library functions should return or throw, not terminate the process."
+
+  singleton:
+    - pattern: "process.env.PAL_HOME"
+      only: "src/hooks/lib/paths.ts"
+      in: ["src/**"]
+      message: "PAL home path accessed directly — use the paths module (src/hooks/lib/paths.ts) instead."
+
+    - pattern: "process.env.PAL_ANTHROPIC_API_KEY"
+      only: "src/hooks/lib/inference.ts"
+      in: ["src/hooks/**", "src/tools/**"]
+      message: "Direct access to PAL_ANTHROPIC_API_KEY bypasses the inference layer — use the inference module instead."

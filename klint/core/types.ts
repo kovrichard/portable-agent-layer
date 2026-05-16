@@ -66,6 +66,8 @@ interface ArchSingletonRule {
   pattern: string;
   only: string;
   message: string;
+  /** Limit scan to these files/layers. Defaults to all files. */
+  in?: string | string[];
   severity?: Exclude<Severity, "off">;
 }
 

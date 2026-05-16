@@ -19,7 +19,8 @@
       "Bash(bun run type-check *)",
       "Bash(bun run knip *)",
       "Bash(bun test *)",
-      "Bash(bun klint/cli.ts *)"
+      "Bash(bun klint/cli.ts *)",
+      "Bash(bun run klint *)"
     ]
   }
 }

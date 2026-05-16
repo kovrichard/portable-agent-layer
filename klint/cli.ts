@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { applyFixes } from "./core/fixer";
 import { runKlint } from "./core/runner";
-import type { KlintConfig, KlintRule, RuleConfigValue } from "./core/types";
+import type { ArchConfig, KlintConfig, KlintRule, RuleConfigValue } from "./core/types";
 import { BUILT_IN_PLUGINS } from "./plugins/index";
 import { BUILT_IN_RULES } from "./rules/index";
 
@@ -75,7 +75,13 @@ export async function main(opts: CliOptions = {}): Promise<void> {
   const allRules: KlintConfig["rules"] = { ...customRulesMap, ...(raw.rules ?? {}) };
 
   const violations = runKlint(
-    { root, include: raw.include ?? ["."], plugins: raw.plugins, rules: allRules },
+    {
+      root,
+      include: raw.include ?? ["."],
+      plugins: raw.plugins,
+      rules: allRules,
+      arch: raw.arch as ArchConfig | undefined,
+    },
     customRules
   );
 
@@ -87,7 +93,13 @@ export async function main(opts: CliOptions = {}): Promise<void> {
       totalApplied += applied;
       if (applied === 0) break;
       current = runKlint(
-        { root, include: raw.include ?? ["."], plugins: raw.plugins, rules: allRules },
+        {
+          root,
+          include: raw.include ?? ["."],
+          plugins: raw.plugins,
+          rules: allRules,
+          arch: raw.arch as ArchConfig | undefined,
+        },
         customRules
       );
       if (current.every((v) => !v.fix)) break;
