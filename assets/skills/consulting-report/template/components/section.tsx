@@ -13,6 +13,10 @@ export function Section({ id, title, children, className }: SectionProps) {
       id={id}
       className={cn(
         "mb-12",
+        // Each top-level Section starts on a new page in print/PDF output.
+        // Harmless for the first section (already at the top of a page after
+        // the TOC's break-after-page).
+        "break-before-page",
         // Descendant heading styles — applies to any h2..h4 inside the
         // section body without forcing callers to repeat utility classes.
         "[&_h2]:font-heading [&_h2]:text-3xl [&_h2]:font-semibold [&_h2]:text-foreground [&_h2]:mb-6 [&_h2]:pb-2 [&_h2]:border-b-2 [&_h2]:border-primary",
