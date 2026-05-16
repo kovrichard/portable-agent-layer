@@ -46,11 +46,42 @@ export interface KlintPlugin {
   implementations: Record<string, KlintRule>;
 }
 
+interface ArchImportRule {
+  from: string | string[];
+  deny?: string | string[];
+  allow?: string | string[];
+  "type-only"?: "allow";
+  message?: string;
+  severity?: Exclude<Severity, "off">;
+}
+
+interface ArchForbiddenRule {
+  pattern: string;
+  in: string | string[];
+  message: string;
+  severity?: Exclude<Severity, "off">;
+}
+
+interface ArchSingletonRule {
+  pattern: string;
+  only: string;
+  message: string;
+  severity?: Exclude<Severity, "off">;
+}
+
+export interface ArchConfig {
+  layers?: Record<string, string[]>;
+  imports?: ArchImportRule[];
+  forbidden?: ArchForbiddenRule[];
+  singleton?: ArchSingletonRule[];
+}
+
 export interface KlintConfig {
   root: string;
   include: string[];
   plugins?: string[];
   rules: Record<string, RuleConfigValue>;
+  arch?: ArchConfig;
 }
 
 export const defineRule = (r: KlintRule): KlintRule => r;

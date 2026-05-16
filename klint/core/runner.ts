@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { BUILT_IN_PLUGINS } from "../plugins/index";
 import { BUILT_IN_RULES } from "../rules/index";
+import { runArchRules } from "./arch";
 import { clearAstCache } from "./ast";
 import type {
   KlintConfig,
@@ -108,6 +109,10 @@ export function runKlint(
     const batch: Omit<Violation, "severity">[] = [];
     rule.check({ files, root: config.root, fileContents }, batch);
     for (const v of batch) violations.push({ ...v, rule: ruleName, severity });
+  }
+
+  if (config.arch) {
+    violations.push(...runArchRules(config.arch, allFiles, fileContents, config.root));
   }
 
   return violations;
