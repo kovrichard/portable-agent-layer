@@ -5,9 +5,11 @@ interface CalloutProps {
 
 export function Callout({ label = "Key Takeaway", children }: CalloutProps) {
   return (
-    <div className="callout">
-      <div className="callout-label">{label}</div>
-      <div className="callout-content">{children}</div>
+    <div className="bg-callout border-l-4 border-primary px-6 py-5 my-6 rounded-r-lg break-inside-avoid">
+      <div className="font-sans font-semibold text-primary text-xs uppercase tracking-widest mb-2">
+        {label}
+      </div>
+      <div className="text-lg font-medium text-foreground">{children}</div>
     </div>
   );
 }

@@ -30,11 +30,13 @@ export function RecommendationCard({ recommendation, index }: RecommendationCard
   const Icon = config.icon;
 
   return (
-    <div className="finding-card">
-      <div className="finding-header">
+    <div className="bg-background-secondary border border-border rounded-lg p-6 mb-4 break-inside-avoid">
+      <div className="flex justify-between items-start mb-3">
         <div className="flex items-start gap-3">
           <span className="text-primary font-bold font-sans text-lg">{index + 1}</span>
-          <span className="finding-title">{recommendation.title}</span>
+          <span className="font-heading font-semibold text-foreground text-base">
+            {recommendation.title}
+          </span>
         </div>
         <span
           className={cn(

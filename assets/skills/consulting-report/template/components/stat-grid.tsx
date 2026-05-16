@@ -11,14 +11,20 @@ interface StatGridProps {
 export function StatGrid({ stats }: StatGridProps) {
   return (
     <div
-      className="stat-grid"
+      className="grid gap-6 my-6 p-6 bg-background-secondary rounded-lg border border-border break-inside-avoid"
       style={{ gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))` }}
     >
       {stats.map((s) => (
-        <div key={s.label} className="stat">
-          <div className="stat-value">{s.value}</div>
-          <div className="stat-label">{s.label}</div>
-          {s.caption && <div className="stat-caption">{s.caption}</div>}
+        <div key={s.label} className="text-left">
+          <div className="font-sans text-4xl font-bold text-primary -tracking-wider leading-none">
+            {s.value}
+          </div>
+          <div className="mt-2 font-sans text-[0.8125rem] font-semibold text-foreground">
+            {s.label}
+          </div>
+          {s.caption && (
+            <div className="mt-1 font-body text-[0.8125rem] text-muted">{s.caption}</div>
+          )}
         </div>
       ))}
     </div>

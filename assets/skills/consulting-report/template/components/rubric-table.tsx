@@ -36,17 +36,29 @@ export function RubricTable({ dimension, palette = DEFAULT_PALETTE }: RubricTabl
   const sorted = [...levels].sort((a, b) => a.score - b.score);
 
   return (
-    <div className="rubric-table-container">
-      <table className="rubric-table">
+    <div className="my-5 break-inside-avoid">
+      <table className="w-full border-separate [border-spacing:0.4rem] font-body text-[0.85rem]">
         <thead>
           <tr>
             {sorted.map((level, i) => {
               const color = colorForLevel(i, sorted.length, palette);
-              const style: CSSProperties = { borderBottomColor: color };
+              const style: CSSProperties = {
+                borderBottomColor: color,
+                borderBottomWidth: "2px",
+                borderBottomStyle: "solid",
+              };
               return (
-                <th key={level.score} className="rubric-header" style={style}>
-                  <div className="rubric-score">{level.score}</div>
-                  <div className="rubric-label">{level.label}</div>
+                <th
+                  key={level.score}
+                  className="text-center p-2 align-bottom bg-background-secondary rounded-md"
+                  style={style}
+                >
+                  <div className="font-sans text-2xl font-bold text-primary leading-none">
+                    {level.score}
+                  </div>
+                  <div className="mt-1 font-sans text-[0.7rem] font-semibold uppercase tracking-wide text-foreground">
+                    {level.label}
+                  </div>
                 </th>
               );
             })}
@@ -55,7 +67,10 @@ export function RubricTable({ dimension, palette = DEFAULT_PALETTE }: RubricTabl
         <tbody>
           <tr>
             {sorted.map((level) => (
-              <td key={level.score} className="rubric-anchor">
+              <td
+                key={level.score}
+                className="p-2.5 bg-background-secondary rounded-md align-top leading-snug text-[0.8125rem]"
+              >
                 {level.anchor}
               </td>
             ))}

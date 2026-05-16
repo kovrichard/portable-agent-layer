@@ -37,7 +37,10 @@ export function ScoreBadge({ score, maxScore = 5, palette = DEFAULT_STEPS }: Sco
     borderColor: s.border,
   };
   return (
-    <span className="score-badge" style={style}>
+    <span
+      className="inline-flex items-center justify-center min-w-7 h-7 px-2 rounded-md font-sans text-sm font-bold border border-transparent"
+      style={style}
+    >
       {score}
     </span>
   );

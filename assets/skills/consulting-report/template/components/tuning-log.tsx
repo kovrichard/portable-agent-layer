@@ -10,7 +10,11 @@ export type TuningLogColumn = {
 };
 
 const defaultColumns: TuningLogColumn[] = [
-  { key: "date", header: "Date", cellClassName: "tuning-date" },
+  {
+    key: "date",
+    header: "Date",
+    cellClassName: "font-sans text-[0.75rem] text-muted whitespace-nowrap",
+  },
   { key: "parameter", header: "Parameter" },
   { key: "oldValue", header: "Old value" },
   { key: "newValue", header: "New value" },
@@ -38,12 +42,18 @@ export function TuningLog({
   columns = defaultColumns,
   emptyRows = 4,
 }: TuningLogProps) {
+  const thClass =
+    "font-sans text-[0.65rem] font-bold uppercase tracking-widest text-primary px-2 py-2 border-b-2 border-primary text-left bg-background-secondary";
+  const tdClass = "px-2 py-2 border-b border-border-subtle align-top";
+
   return (
-    <table className="tuning-log">
+    <table className="w-full border-collapse my-4 font-body text-[0.82rem] break-inside-avoid">
       <thead>
         <tr>
           {columns.map((c) => (
-            <th key={String(c.key)}>{c.header}</th>
+            <th key={String(c.key)} className={thClass}>
+              {c.header}
+            </th>
           ))}
         </tr>
       </thead>
@@ -51,15 +61,20 @@ export function TuningLog({
         {entries.map((entry, i) => (
           <tr key={`${entry.date}-${i}`}>
             {columns.map((c) => (
-              <td key={String(c.key)} className={c.cellClassName}>
+              <td key={String(c.key)} className={`${tdClass} ${c.cellClassName ?? ""}`}>
                 {entry[c.key]}
               </td>
             ))}
           </tr>
         ))}
         {Array.from({ length: emptyRows }, (_, i) => (
-          <tr key={`empty-${i}`} className="tuning-log-empty">
-            <td colSpan={columns.length}>&nbsp;</td>
+          <tr key={`empty-${i}`}>
+            <td
+              colSpan={columns.length}
+              className="h-6 bg-background-secondary border-b border-border-subtle"
+            >
+              &nbsp;
+            </td>
           </tr>
         ))}
       </tbody>
