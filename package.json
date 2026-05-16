@@ -41,7 +41,7 @@
     "check": "biome check",
     "check-write": "biome check --write",
     "knip": "knip-bun",
-    "arch-check": "bun klint/cli.ts",
+    "klint": "bun klint/cli.ts",
     "klint:schema": "bun klint/tools/generate-schema.ts",
     "lint-staged": "lint-staged",
     "prepare": "bun .husky/install.mjs",

@@ -59,7 +59,7 @@ jobs:
         run: bun run knip
 
       - name: Klint
-        run: bun run arch-check
+        run: bun run klint
 
       - name: Test
         run: bun run test
