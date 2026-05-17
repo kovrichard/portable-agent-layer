@@ -1,3 +1,24 @@
+# [0.39.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.38.0...v0.39.0) (2026-05-17)
+
+
+### Bug Fixes
+
+* **consulting-report:** minor visual fixes ([9c159d9](https://github.com/kovrichard/portable-agent-layer/commit/9c159d9c2d667233f71d051d4ec5c830f97fcc8b))
+* **consulting-report:** start top level sections on new pages ([e07d696](https://github.com/kovrichard/portable-agent-layer/commit/e07d6961cd372219af61927b2a610791a4134296))
+* **klint:** update path alias loading to support extended tsconfig and add corresponding test ([fe1d34e](https://github.com/kovrichard/portable-agent-layer/commit/fe1d34ec1bf597eb96f11196cad39b1295ea8749))
+
+
+### Features
+
+* **consulting-report:** introduce more components ([9c3e039](https://github.com/kovrichard/portable-agent-layer/commit/9c3e03908e08f3517cd1f3ed9da8b2f468cc81f7))
+* **klint:** add no-skill-src-import rule to prevent imports from repo src/ directory ([40cf6ea](https://github.com/kovrichard/portable-agent-layer/commit/40cf6ea484abd39044359d7d5199de6cf7a634bb))
+* **klint:** add path alias resolution for imports and corresponding tests ([fea545e](https://github.com/kovrichard/portable-agent-layer/commit/fea545e08ccc7f2eb41b9ae9dcd9bbde340f6f18))
+* **klint:** add support for YAML configuration and enhance schema with architecture constraints ([b302dcb](https://github.com/kovrichard/portable-agent-layer/commit/b302dcba107e46583fea7110141b34585cf2edb6))
+* **klint:** enhance architecture rules by adding target and CLI layer restrictions ([fe66639](https://github.com/kovrichard/portable-agent-layer/commit/fe666397b758b3feaa03560b51be534dcbe5d5c8))
+* **klint:** implement architecture rules for imports and singleton patterns with tests ([00a9efc](https://github.com/kovrichard/portable-agent-layer/commit/00a9efc40b96109dd59954df8845270e76f52dbd))
+* **klint:** introduce agent skill ([efdca4d](https://github.com/kovrichard/portable-agent-layer/commit/efdca4dd5dc994667b611283ebbb57b9b3f9589d))
+* **klint:** introduce klint hook for JSON output and update command references in settings ([094f686](https://github.com/kovrichard/portable-agent-layer/commit/094f6861c1fc37a35dfdf8a0d690e6a74745387d))
+
 # [0.38.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.37.0...v0.38.0) (2026-05-15)
 
 
