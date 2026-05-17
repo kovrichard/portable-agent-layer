@@ -1,6 +1,14 @@
 #!/usr/bin/env bun
-import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+} from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
+import * as clack from "@clack/prompts";
 import { parse as parseYaml } from "yaml";
 import { applyFixes } from "./core/fixer";
 import { runKlint } from "./core/runner";
@@ -15,6 +23,12 @@ interface CliOptions {
 
 export async function main(opts: CliOptions = {}): Promise<void> {
   const args = process.argv.slice(2);
+
+  if (args[0] === "install-skill") {
+    await installSkill(args.slice(1));
+    return;
+  }
+
   let configDir = opts.configDir;
   let rulesFile = opts.rulesFile;
   let fix = false;
@@ -155,6 +169,103 @@ export async function main(opts: CliOptions = {}): Promise<void> {
   process.exit(0);
 }
 
+const AGENT_TARGETS = [
+  { value: "claude", label: "Claude Code" },
+  { value: "opencode", label: "opencode" },
+  { value: "cursor", label: "Cursor" },
+  { value: "codex", label: "Codex" },
+] as const;
+
+type AgentKey = (typeof AGENT_TARGETS)[number]["value"];
+
+const AGENT_DIRS: Record<AgentKey, string> = {
+  claude: ".claude/skills",
+  opencode: ".agents/skills",
+  cursor: ".cursor/skills",
+  codex: ".agents/skills",
+};
+
+async function installSkill(args: string[]): Promise<void> {
+  const skillSrc = join(import.meta.dir, "skill", "klint-rules");
+  if (!existsSync(skillSrc)) {
+    process.stderr.write(`klint: skill source not found at ${skillSrc}\n`);
+    process.exit(1);
+  }
+
+  // Parse non-interactive flags
+  let flagAgents: AgentKey[] | undefined;
+  let flagSymlink: boolean | undefined;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--agents" && args[i + 1])
+      flagAgents = args[++i].split(",") as AgentKey[];
+    else if (args[i] === "--symlink") flagSymlink = true;
+    else if (args[i] === "--copy") flagSymlink = false;
+  }
+
+  let selectedAgents: AgentKey[];
+  let useSymlink: boolean;
+
+  if (!process.stdin.isTTY || flagAgents !== undefined || flagSymlink !== undefined) {
+    selectedAgents = flagAgents ?? (AGENT_TARGETS.map((a) => a.value) as AgentKey[]);
+    useSymlink = flagSymlink ?? false;
+  } else {
+    clack.intro("klint install-skill");
+
+    const agents = await clack.multiselect<AgentKey>({
+      message: "Which agents should the skill be installed for?",
+      options: AGENT_TARGETS.map((a) => ({ value: a.value, label: a.label })),
+      initialValues: AGENT_TARGETS.map((a) => a.value) as AgentKey[],
+    });
+    if (clack.isCancel(agents)) {
+      clack.cancel("Cancelled.");
+      process.exit(0);
+    }
+    selectedAgents = agents as AgentKey[];
+
+    const mode = await clack.select<"symlink" | "copy">({
+      message: "Install as symlink or copy?",
+      options: [
+        {
+          value: "symlink",
+          label: "Symlink",
+          hint: "stays in sync when klint updates",
+        },
+        {
+          value: "copy",
+          label: "Copy",
+          hint: "one-time snapshot, no ongoing dependency",
+        },
+      ],
+    });
+    if (clack.isCancel(mode)) {
+      clack.cancel("Cancelled.");
+      process.exit(0);
+    }
+    useSymlink = mode === "symlink";
+  }
+
+  const cwd = process.cwd();
+  const linkType = process.platform === "win32" ? "junction" : "dir";
+  for (const key of selectedAgents) {
+    const dest = resolve(cwd, AGENT_DIRS[key], "klint-rules");
+    mkdirSync(dirname(dest), { recursive: true });
+    try {
+      rmSync(dest, { recursive: true, force: true });
+    } catch {
+      /* already gone */
+    }
+    if (useSymlink) {
+      symlinkSync(relative(dirname(dest), skillSrc), dest, linkType);
+    } else {
+      cpSync(skillSrc, dest, { recursive: true });
+    }
+  }
+
+  if (process.stdin.isTTY) {
+    clack.outro("Done.");
+  }
+}
+
 function printHelp(): void {
   const pluginRules = new Set(
     Object.values(BUILT_IN_PLUGINS).flatMap((p) => Object.keys(p.rules))
@@ -166,12 +277,18 @@ function printHelp(): void {
     [
       "klint — agent harness for TypeScript architecture rules",
       "",
-      "Usage: klint [--config <dir>] [--rules <file>] [--fix]",
+      "Usage: klint [--config <dir>] [--rules <file>] [--fix] [--json]",
+      "       klint install-skill [--out <path>]",
       "",
       "  --config <dir>   directory containing klint.yaml or klint.config.json (default: cwd)",
       "  --rules  <file>  custom rules file (default: <configDir>/klint.rules.ts if present)",
       "  --fix            apply auto-fixes for fixable violations in-place",
       "  --json           emit structured JSON to stdout (for agent/CI consumption)",
+      "",
+      "  install-skill    install the rule-authoring skill into agent config directories",
+      "                   --agents <list>  comma-separated: claude,opencode,cursor,codex (default: all)",
+      "                   --symlink        install as symlink (stays in sync with updates)",
+      "                   --copy           install as copy (default in non-TTY)",
       "",
       `Built-in rules (${standaloneRules.length}):`,
       ...standaloneRules.map((r) => `  ${r}`),
