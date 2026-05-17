@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
-import type { RawViolation } from "./klint/core/types";
-import { defineRule } from "./klint/core/types";
+import type { RawViolation } from "@konvert7/klint/core/types";
+import { defineRule } from "@konvert7/klint/core/types";
 
 function scanPattern(
   files: string[],

@@ -41,8 +41,7 @@
     "check": "biome check",
     "check-write": "biome check --write",
     "knip": "knip-bun",
-    "klint": "bun klint/cli.ts",
-    "klint:schema": "bun klint/tools/generate-schema.ts",
+    "klint": "klint",
     "lint-staged": "lint-staged",
     "prepare": "bun .husky/install.mjs",
     "install:all": "bun run src/cli/index.ts cli install",
@@ -79,10 +78,9 @@
   },
   "dependencies": {
     "@clack/prompts": "^1.3.0",
+    "@konvert7/klint": "^0.2.0",
     "adm-zip": "^0.5.17",
     "marked": "^15.0.12",
-    "playwright": "^1.59.1",
-    "yaml": "^2.9.0",
-    "zod": "^4.4.3"
+    "playwright": "^1.59.1"
   }
 }

@@ -1,6 +1,7 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": [
+    "klint.rules.ts",
     "src/tools/**/*.ts",
     "src/hooks/*.ts",
     "src/hooks/handlers/*.ts",
@@ -8,12 +9,10 @@
     "src/targets/**/uninstall.ts",
     ".agents/hooks/*.ts",
     "assets/skills/*/tools/*.ts",
-    ".opencode/plugins/*.ts",
-    "klint/tools/*.ts"
+    ".opencode/plugins/*.ts"
   ],
   "project": [
-    "src/**/*.ts",
-    "klint/**/*.ts"
+    "src/**/*.ts"
   ],
   "includeEntryExports": true,
   "tags": ["-lintignore"],

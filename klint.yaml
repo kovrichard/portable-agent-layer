@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=./klint.schema.yaml
 
-include: ["src", "klint", "assets", "!**/node_modules/**"]
+include: ["src", "assets", "!**/node_modules/**"]
 plugins: [sonar]
 rules:
   no-unguarded-json-parse: error
