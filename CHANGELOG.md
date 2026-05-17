@@ -1,3 +1,10 @@
+# [0.40.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.39.0...v0.40.0) (2026-05-17)
+
+
+### Features
+
+* install klint skill ([4a10f62](https://github.com/kovrichard/portable-agent-layer/commit/4a10f6250251b7b8b9fbde48c1f60d2edcb874ac))
+
 # [0.39.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.38.0...v0.39.0) (2026-05-17)
 
 
