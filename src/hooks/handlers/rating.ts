@@ -8,9 +8,9 @@
  * - Very low ratings (<=3) write pending-failure.json for Stop handler
  */
 
-import { spawn } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { spawnDetachedInference } from "../lib/detached-inference";
 import { canInfer, inference } from "../lib/inference";
 import { paths } from "../lib/paths";
 import { emitRating } from "../lib/signals";
@@ -311,23 +311,14 @@ function handleImplicitSentiment(message: string, sessionId?: string): void {
 
   // Inference path — detach to background. claude --print has 3-5s of cold-start
   // overhead per call; running inline would block UserPromptSubmit and exceed
-  // any reasonable in-line budget. Mirrors the session-name --upgrade pattern.
+  // any reasonable in-line budget. Uses the shared detach helper.
   if (!canInfer()) return;
-  try {
-    const msgB64 = Buffer.from(trimmed.slice(0, 800)).toString("base64");
-    const child = spawn(
-      "bun",
-      [import.meta.filename, "--sentiment", sessionId ?? "", msgB64],
-      {
-        detached: true,
-        stdio: "ignore",
-        env: { ...process.env, CLAUDECODE: undefined },
-      }
-    );
-    child.unref();
-  } catch {
-    // non-critical — sentiment is best-effort
-  }
+  const msgB64 = Buffer.from(trimmed.slice(0, 800)).toString("base64");
+  spawnDetachedInference(
+    import.meta.filename,
+    ["--sentiment", sessionId ?? "", msgB64],
+    "rating"
+  );
 }
 
 /**

@@ -53,6 +53,11 @@ interface InferenceResult {
 }
 
 export async function inference(opts: InferenceOptions): Promise<InferenceResult> {
+  // Hard kill-switch — set by the test suite to guarantee no real inference
+  // ever fires from tests (no spawn, no API call). Production code never sets it.
+  if (process.env.PAL_INFERENCE_DISABLED === "1") {
+    return { success: false };
+  }
   const depth = getInferenceDepth();
   if (depth >= SPAWN_GUARD_ENV.MAX_DEPTH) {
     logDebug("inference", `refuse: depth=${depth} >= max=${SPAWN_GUARD_ENV.MAX_DEPTH}`);

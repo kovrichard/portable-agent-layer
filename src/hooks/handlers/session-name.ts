@@ -9,7 +9,7 @@
  * This avoids the 1-5s inference latency that previously blocked every first prompt.
  */
 
-import { spawn } from "node:child_process";
+import { spawnDetachedInference } from "../lib/detached-inference";
 import { canInfer, inference } from "../lib/inference";
 import { logDebug, logError } from "../lib/log";
 import {
@@ -41,24 +41,14 @@ export async function captureSessionName(
   writeSessionName(sessionId, name);
   logDebug("session-name", `Named from prompt: "${name}"`);
 
-  // Spawn detached background process to upgrade with Haiku inference
+  // Spawn detached background process to upgrade via inference
   if (!canInfer()) return;
-  try {
-    const promptB64 = Buffer.from(message.slice(0, 800)).toString("base64");
-    const child = spawn(
-      "bun",
-      [import.meta.filename, "--upgrade", sessionId, promptB64, name],
-      {
-        detached: true,
-        stdio: "ignore",
-        env: { ...process.env, CLAUDECODE: undefined },
-      }
-    );
-    child.unref();
-    logDebug("session-name", "Spawned background Haiku upgrade");
-  } catch {
-    // Non-critical — deterministic name is already stored
-  }
+  const promptB64 = Buffer.from(message.slice(0, 800)).toString("base64");
+  spawnDetachedInference(
+    import.meta.filename,
+    ["--upgrade", sessionId, promptB64, name],
+    "session-name"
+  );
 }
 
 /**
@@ -80,7 +70,7 @@ async function upgradeWithInference(
       system: NAME_PROMPT,
       user: `Generate a 4-word title for: "${promptText}"`,
       maxTokens: 20,
-      timeout: 10000,
+      timeout: 15000,
     });
 
     if (result.usage) logTokenUsage("session-name", result.usage);

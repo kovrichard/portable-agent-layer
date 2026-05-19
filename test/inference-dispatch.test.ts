@@ -149,11 +149,16 @@ describe("canInfer routing", () => {
 
 describe("inference dispatcher — depth limit refusal", () => {
   let saved: Record<string, string | undefined>;
+  let savedDisabled: string | undefined;
   beforeEach(() => {
     saved = savedEnv();
+    savedDisabled = process.env.PAL_INFERENCE_DISABLED;
+    delete process.env.PAL_INFERENCE_DISABLED;
   });
   afterEach(() => {
     restoreEnv(saved);
+    if (savedDisabled === undefined) delete process.env.PAL_INFERENCE_DISABLED;
+    else process.env.PAL_INFERENCE_DISABLED = savedDisabled;
   });
 
   test("returns failure when depth >= MAX_DEPTH (no spawn, no API call)", async () => {
@@ -165,12 +170,32 @@ describe("inference dispatcher — depth limit refusal", () => {
   });
 });
 
+describe("inference dispatcher — PAL_INFERENCE_DISABLED kill-switch", () => {
+  test("inference() returns failure immediately when PAL_INFERENCE_DISABLED=1", async () => {
+    const saved = process.env.PAL_INFERENCE_DISABLED;
+    process.env.PAL_INFERENCE_DISABLED = "1";
+    try {
+      const start = Date.now();
+      const result = await inference({ user: "hi", timeout: 30000 });
+      const elapsed = Date.now() - start;
+      expect(result.success).toBe(false);
+      expect(elapsed).toBeLessThan(50); // no spawn, no fetch
+    } finally {
+      if (saved === undefined) delete process.env.PAL_INFERENCE_DISABLED;
+      else process.env.PAL_INFERENCE_DISABLED = saved;
+    }
+  });
+});
+
 describe("inference dispatcher — claude spawn integration (fake binary)", () => {
   let saved: Record<string, string | undefined>;
+  let savedDisabled: string | undefined;
   let tmpBin: string;
 
   beforeEach(() => {
     saved = savedEnv();
+    savedDisabled = process.env.PAL_INFERENCE_DISABLED;
+    delete process.env.PAL_INFERENCE_DISABLED;
     tmpBin = mkdtempSync(resolve(tmpdir(), "pal-fake-claude-"));
     delete process.env.PAL_ANTHROPIC_API_KEY;
     delete process.env[SPAWN_GUARD_ENV.SENTINEL];
@@ -182,6 +207,8 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
   afterEach(() => {
     rmSync(tmpBin, { recursive: true, force: true });
     restoreEnv(saved);
+    if (savedDisabled === undefined) delete process.env.PAL_INFERENCE_DISABLED;
+    else process.env.PAL_INFERENCE_DISABLED = savedDisabled;
     _resetClaudeBinaryCache();
   });
 

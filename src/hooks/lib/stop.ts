@@ -4,25 +4,24 @@
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { readFile, unlink } from "node:fs/promises";
+import { mkdtemp, rename, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { autoGraduate } from "../handlers/auto-graduate";
 import { autoBackup } from "../handlers/backup";
 import { writeContextDigests } from "../handlers/context-digests";
 import { notifyDesktop } from "../handlers/desktop-notify";
-import { captureFailure } from "../handlers/failure";
 import { persistLastExchange } from "../handlers/persist-last-exchange";
 import { projectTouch } from "../handlers/project-touch";
 import { checkReflectTrigger } from "../handlers/reflect-trigger";
 import { checkSelfModelTrigger } from "../handlers/self-model-trigger";
-import { captureSessionIntelligence } from "../handlers/session-intelligence";
 import { runSynthesis } from "../handlers/synthesis";
 import { resetTab } from "../handlers/tab";
 import { updateCounts } from "../handlers/update-counts";
 import { captureWorkSession } from "../handlers/work-session";
-import { inference } from "./inference";
+import { spawnDetachedInference } from "./detached-inference";
 import { logDebug, logError } from "./log";
-import { ensureDir, paths } from "./paths";
+import { assets, ensureDir, paths } from "./paths";
 import { extractContent, extractLastAssistant, parseMessages } from "./transcript";
 
 interface RunStopHandlersOptions {
@@ -46,14 +45,19 @@ export async function runStopHandlers(
   // Always persist last exchange — drives CompactRecover + "Pick Up Where You Left Off"
   if (options.sessionId) persistLastExchange(messages, options.sessionId);
 
-  // Run all handlers concurrently. Auto-graduate is idempotent (24h TTL +
-  // state-dedup + content-dedup) so it's safe to fire on every Stop.
-  // project-touch only fires when cwd resolves to an active registered project.
+  // Detach inference-bearing handlers — claude --print cold-start can exceed
+  // any in-hook budget. These spawn detached bun subprocesses that run the
+  // inference and write results to disk; they don't block this hook.
+  await detachSessionIntelligence(transcript, options.sessionId);
+  await detachFailurePrinciple(transcript);
+
+  // Run remaining (non-inference) handlers concurrently. Auto-graduate is
+  // idempotent (24h TTL + state-dedup + content-dedup) so it's safe to fire
+  // on every Stop. project-touch only fires when cwd resolves to an active
+  // registered project.
   const results = await Promise.allSettled([
     captureWorkSession(transcript, options.sessionId),
     resetTab(),
-    captureSessionIntelligence(transcript, options.sessionId),
-    checkPendingFailure(transcript),
     updateCounts(),
     autoBackup(),
     checkReflectTrigger(),
@@ -68,8 +72,6 @@ export async function runStopHandlers(
   const handlerNames = [
     "work-session",
     "tab",
-    "session-intelligence",
-    "pending-failure",
     "update-counts",
     "backup",
     "reflect-trigger",
@@ -151,76 +153,55 @@ function cacheLastResponse(
   }
 }
 
-async function checkPendingFailure(transcript: string): Promise<void> {
+/** Write transcript to a fresh tmp file and return the path. Child unlinks it. */
+async function writeTranscriptTmp(transcript: string): Promise<string> {
+  const dir = await mkdtemp(resolve(tmpdir(), "pal-transcript-"));
+  const file = resolve(dir, "transcript.txt");
+  await writeFile(file, transcript, "utf-8");
+  return file;
+}
+
+/** Spawn a detached child to run session-intelligence on a tmp copy of the transcript. */
+async function detachSessionIntelligence(
+  transcript: string,
+  sessionId?: string
+): Promise<void> {
+  try {
+    const transcriptPath = await writeTranscriptTmp(transcript);
+    const scriptPath = resolve(assets.hooks(), "handlers", "session-intelligence.ts");
+    spawnDetachedInference(
+      scriptPath,
+      ["--run", sessionId ?? "", transcriptPath],
+      "session-intelligence"
+    );
+  } catch (err) {
+    logError("detachSessionIntelligence", err);
+  }
+}
+
+/**
+ * If a pending-failure exists, rename it to a unique path (race-free claim),
+ * write the transcript to tmp, spawn the failure-principle handler detached.
+ */
+async function detachFailurePrinciple(transcript: string): Promise<void> {
   const pendingPath = resolve(paths.state(), "pending-failure.json");
   if (!existsSync(pendingPath)) return;
 
   try {
-    const pending = JSON.parse(await readFile(pendingPath, "utf-8")) as {
-      rating: number;
-      context: string;
-      detailedContext?: string;
-      principle?: string;
-      responsePreview?: string;
-      userPreview?: string;
-      cwd?: string;
-    };
-    await unlink(pendingPath);
+    // Rename to claim the pending file atomically — prevents two Stop hooks
+    // racing on the same low rating.
+    const claimedDir = await mkdtemp(resolve(tmpdir(), "pal-pending-"));
+    const claimedPath = resolve(claimedDir, "pending.json");
+    await rename(pendingPath, claimedPath);
+    const transcriptPath = await writeTranscriptTmp(transcript);
 
-    // Extract principle from full transcript if not already present
-    let { principle, detailedContext } = pending;
-    if (!principle) {
-      try {
-        const msgs = parseMessages(transcript);
-        const recent = msgs
-          .slice(-10)
-          .map((m) => `${m.role.toUpperCase()}: ${extractContent(m).slice(0, 300)}`)
-          .join("\n\n");
-
-        const result = await inference({
-          system: `Analyze this failed AI interaction. The user rated it ${pending.rating}/10.
-
-Return JSON:
-{
-  "principle": "<one actionable rule the AI should follow, 10-20 words. Start with a verb: 'Verify...', 'Always...', 'Never...', 'Ask before...'>",
-  "detailed_context": "<what went wrong and why, 50-150 words>"
-}`,
-          user: `User feedback: ${pending.context}\n\nConversation:\n${recent}`,
-          maxTokens: 400,
-          timeout: 10000,
-          jsonSchema: {
-            type: "object" as const,
-            properties: {
-              principle: { type: "string" as const },
-              detailed_context: { type: "string" as const },
-            },
-            required: ["principle", "detailed_context"],
-            additionalProperties: false,
-          },
-        });
-
-        if (result.success && result.output) {
-          const parsed = JSON.parse(result.output) as {
-            principle?: string;
-            detailed_context?: string;
-          };
-          principle = parsed.principle || undefined;
-          detailedContext ??= parsed.detailed_context || undefined;
-        }
-      } catch {
-        /* graceful fallback — capture without principle */
-      }
-    }
-
-    await captureFailure(
-      pending.rating,
-      pending.context,
-      transcript,
-      detailedContext,
-      principle,
-      pending.cwd
+    const scriptPath = resolve(assets.hooks(), "handlers", "failure-principle.ts");
+    spawnDetachedInference(
+      scriptPath,
+      ["--run", claimedPath, transcriptPath],
+      "failure-principle"
     );
-  } catch {
-    // Non-critical
+  } catch (err) {
+    logError("detachFailurePrinciple", err);
   }
 }

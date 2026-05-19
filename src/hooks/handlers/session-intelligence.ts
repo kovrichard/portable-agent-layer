@@ -124,7 +124,7 @@ interface IntelligenceOutput {
 
 // ── Main handler ──
 
-export async function captureSessionIntelligence(
+async function captureSessionIntelligence(
   transcript: string,
   sessionId?: string
 ): Promise<void> {
@@ -178,7 +178,7 @@ export async function captureSessionIntelligence(
       ].join("\n"),
       user: `User messages:\n${numberedMessages}\n\nLast AI response:\n${assistantWindow}`,
       maxTokens: 350,
-      timeout: 15000,
+      timeout: 30000,
       jsonSchema: INTELLIGENCE_SCHEMA,
     });
 
@@ -245,4 +245,22 @@ export async function captureSessionIntelligence(
 
   if (sessionId) markCaptured(sessionId, filepath, messages.length);
   logDebug("session-intelligence", `Learning captured: ${title}`);
+}
+
+// Detached child entry point — re-reads transcript from tmp path, then unlinks it.
+if (process.argv[2] === "--run") {
+  const sid = process.argv[3];
+  const transcriptPath = process.argv[4];
+  if (transcriptPath) {
+    const { readFile, unlink } = await import("node:fs/promises");
+    try {
+      const transcript = await readFile(transcriptPath, "utf-8");
+      await captureSessionIntelligence(transcript, sid === "" ? undefined : sid);
+    } catch (err) {
+      logError("session-intelligence:run", err);
+    } finally {
+      await unlink(transcriptPath).catch(() => {});
+    }
+  }
+  process.exit(0);
 }
