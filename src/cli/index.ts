@@ -23,6 +23,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { inference, previewInferenceRoute } from "../hooks/lib/inference";
+import { DEBUG_LOG_MAX_ROTATED } from "../hooks/lib/log";
 import { palHome, palPkg, platform } from "../hooks/lib/paths";
 import { hasRealContent, SETUP_STEPS, STEP_ORDER } from "../hooks/lib/setup";
 import { log } from "../targets/lib";
@@ -572,12 +573,24 @@ function nodeInstallHint(): string {
 }
 
 function checkHookHealth(home: string): HookHealth {
-  const logPath = resolve(home, "memory", "state", "debug.log");
+  const stateDir = resolve(home, "memory", "state");
+  // Read current + all rotated logs (`.1`..`.5`) + legacy `.prev` so a recent
+  // rotation doesn't make the 24h window appear empty.
+  const candidates = [
+    resolve(stateDir, "debug.log"),
+    resolve(stateDir, "debug.log.prev"),
+    ...Array.from({ length: DEBUG_LOG_MAX_ROTATED }, (_, i) =>
+      resolve(stateDir, `debug.log.${i + 1}`)
+    ),
+  ];
 
   try {
-    if (!existsSync(logPath)) return { totalErrors: 0, lastError: null };
+    let content = "";
+    for (const path of candidates) {
+      if (existsSync(path)) content += `${readFileSync(path, "utf-8")}\n`;
+    }
+    if (!content) return { totalErrors: 0, lastError: null };
 
-    const content = readFileSync(logPath, "utf-8");
     const lines = content.split("\n").filter((l) => l.includes("] ERROR "));
 
     // Filter to last 24h
