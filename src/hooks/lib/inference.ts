@@ -41,6 +41,62 @@ export function hasOpenAiKey(): boolean {
   return !!process.env.PAL_OPENAI_API_KEY;
 }
 
+/**
+ * Preview what `inference()` would do RIGHT NOW given current env + binaries.
+ * Pure diagnostic — never spawns or fetches. Used by `pal cli doctor`.
+ */
+export function previewInferenceRoute(): {
+  agent: string;
+  route:
+    | "claude-spawn"
+    | "codex-spawn"
+    | "openai-api"
+    | "opencode-spawn"
+    | "copilot-spawn"
+    | "cursor-spawn"
+    | "anthropic-api"
+    | "disabled"
+    | "none";
+  reason: string;
+} {
+  const agent = getActiveAgent();
+  if (process.env.PAL_INFERENCE_DISABLED === "1") {
+    return {
+      agent,
+      route: "disabled",
+      reason: "PAL_INFERENCE_DISABLED=1 (test kill-switch)",
+    };
+  }
+  if (isClaude() && hasClaudeBinary())
+    return { agent, route: "claude-spawn", reason: "claude binary on PATH" };
+  if (isCodex() && hasCodexBinary())
+    return { agent, route: "codex-spawn", reason: "codex binary on PATH" };
+  if (isCodex() && hasOpenAiKey())
+    return {
+      agent,
+      route: "openai-api",
+      reason: "codex agent without codex binary; PAL_OPENAI_API_KEY set",
+    };
+  if (isOpencode() && hasOpencodeBinary())
+    return { agent, route: "opencode-spawn", reason: "opencode binary on PATH" };
+  if (isCopilot() && hasCopilotBinary())
+    return { agent, route: "copilot-spawn", reason: "copilot binary on PATH" };
+  if (isCursor() && hasCursorBinary())
+    return { agent, route: "cursor-spawn", reason: "cursor-agent binary on PATH" };
+  if (hasApiKey())
+    return {
+      agent,
+      route: "anthropic-api",
+      reason: "fallback — PAL_ANTHROPIC_API_KEY set",
+    };
+  return {
+    agent,
+    route: "none",
+    reason:
+      "no native CLI binary for active agent and no PAL_ANTHROPIC_API_KEY/PAL_OPENAI_API_KEY",
+  };
+}
+
 /** True if any inference path is currently usable (subscription CLI OR API key). */
 export function canInfer(): boolean {
   if (isClaude() && hasClaudeBinary()) return true;

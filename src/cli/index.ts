@@ -22,6 +22,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
+import { previewInferenceRoute } from "../hooks/lib/inference";
 import { palHome, palPkg, platform } from "../hooks/lib/paths";
 import { hasRealContent, SETUP_STEPS, STEP_ORDER } from "../hooks/lib/setup";
 import { log } from "../targets/lib";
@@ -670,10 +671,39 @@ function doctor(silent = false): DoctorResult {
         : fail("Codex hooks — not registered (run 'pal cli install --codex')");
     }
 
+    // Inference routing preview — what `inference()` would do RIGHT NOW
+    console.log("");
+    log.info("Inference");
+    {
+      const preview = previewInferenceRoute();
+      console.log(`  → Active agent: ${preview.agent}`);
+      if (preview.route === "none") {
+        fail(`Would route to: NONE — ${preview.reason}`);
+      } else if (preview.route === "disabled") {
+        warn(`Would route to: DISABLED — ${preview.reason}`);
+      } else if (preview.route.endsWith("-api")) {
+        warn(`Would route to: ${preview.route} (${preview.reason})`);
+      } else {
+        ok(`Would route to: ${preview.route} (${preview.reason})`);
+      }
+    }
+    if (process.env.PAL_INFERENCE_DISABLED === "1") {
+      warn(
+        "PAL_INFERENCE_DISABLED=1 — test kill-switch leaked into prod env; every inference call will return failure"
+      );
+    } else {
+      ok("PAL_INFERENCE_DISABLED is not set (production-safe)");
+    }
+
     // API key checks
     process.env.PAL_ANTHROPIC_API_KEY
-      ? ok("PAL_ANTHROPIC_API_KEY is set")
-      : fail("PAL_ANTHROPIC_API_KEY — not set (hooks need it for inference)");
+      ? ok("PAL_ANTHROPIC_API_KEY is set (anthropic-api fallback)")
+      : warn("PAL_ANTHROPIC_API_KEY — not set (anthropic-api fallback unavailable)");
+    process.env.PAL_OPENAI_API_KEY
+      ? ok("PAL_OPENAI_API_KEY is set (openai-api fallback for codex)")
+      : warn(
+          "PAL_OPENAI_API_KEY — not set (openai-api fallback unavailable for codex users without codex binary)"
+        );
     process.env.PAL_GEMINI_API_KEY
       ? ok("PAL_GEMINI_API_KEY is set")
       : warn("PAL_GEMINI_API_KEY — not set (optional, for YouTube analysis)");
