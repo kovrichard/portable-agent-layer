@@ -16,6 +16,7 @@ import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 const PRESERVED = [
   "PAL_AGENT",
   "PAL_ANTHROPIC_API_KEY",
+  "PAL_HOME",
   "PATH",
   "CLAUDECODE",
   SPAWN_GUARD_ENV.SENTINEL,
@@ -197,6 +198,9 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
     savedDisabled = process.env.PAL_INFERENCE_DISABLED;
     delete process.env.PAL_INFERENCE_DISABLED;
     tmpBin = mkdtempSync(resolve(tmpdir(), "pal-fake-claude-"));
+    // Isolate debug-log writes from production ~/.pal/ — inference() will
+    // log into tmpBin/memory/state/debug.log instead, cleaned up below.
+    process.env.PAL_HOME = tmpBin;
     delete process.env.PAL_ANTHROPIC_API_KEY;
     delete process.env[SPAWN_GUARD_ENV.SENTINEL];
     delete process.env[SPAWN_GUARD_ENV.DEPTH];

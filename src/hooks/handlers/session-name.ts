@@ -72,6 +72,7 @@ async function upgradeWithInference(
       maxTokens: 20,
       timeout: 15000,
       caller: "session-name",
+      sessionId,
     });
 
     if (result.usage) logTokenUsage("session-name", result.usage);

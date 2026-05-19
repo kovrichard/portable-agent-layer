@@ -13,6 +13,7 @@ import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 const PRESERVED = [
   "PAL_AGENT",
   "PAL_ANTHROPIC_API_KEY",
+  "PAL_HOME",
   "PAL_INFERENCE_DISABLED",
   "PATH",
   "CLAUDECODE",
@@ -109,6 +110,8 @@ describe("inference dispatcher — codex spawn integration (fake binary)", () =>
   beforeEach(() => {
     saved = savedEnv();
     tmpBin = mkdtempSync(resolve(tmpdir(), "pal-fake-codex-"));
+    // Isolate debug-log writes from production ~/.pal/.
+    process.env.PAL_HOME = tmpBin;
     delete process.env.PAL_ANTHROPIC_API_KEY;
     delete process.env[SPAWN_GUARD_ENV.SENTINEL];
     delete process.env[SPAWN_GUARD_ENV.DEPTH];

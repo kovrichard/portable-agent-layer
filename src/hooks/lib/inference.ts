@@ -52,6 +52,8 @@ interface InferenceOptions {
   jsonSchema?: Record<string, unknown>;
   /** Opaque label identifying the calling handler — appears in debug logs as caller=X */
   caller?: string;
+  /** Session ID the call is associated with — appears in debug logs as sessionId=X */
+  sessionId?: string;
 }
 
 interface InferenceResult {
@@ -73,28 +75,30 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
   }
   const agent = getActiveAgent();
   const caller = opts.caller ?? "anonymous";
+  const session = opts.sessionId ?? "-";
+  const tag = `caller=${caller} sessionId=${session}`;
   if (isClaude() && hasClaudeBinary()) {
     logDebug(
       "inference",
-      `caller=${caller} route=claude-spawn agent=${agent} model=${opts.model ?? HAIKU_MODEL}`
+      `${tag} route=claude-spawn agent=${agent} model=${opts.model ?? HAIKU_MODEL}`
     );
     return inferenceViaCliSpawn("claude", buildClaudeArgs(opts), opts.user, opts);
   }
   if (isCodex() && hasCodexBinary()) {
-    logDebug("inference", `caller=${caller} route=codex-spawn agent=${agent}`);
+    logDebug("inference", `${tag} route=codex-spawn agent=${agent}`);
     return inferenceViaCliSpawn("codex", buildCodexArgs(opts), "", opts);
   }
   if (isCodex() && hasOpenAiKey()) {
-    logDebug("inference", `caller=${caller} route=openai-api agent=${agent}`);
+    logDebug("inference", `${tag} route=openai-api agent=${agent}`);
     return inferenceViaOpenAiApi(opts);
   }
   if (hasApiKey()) {
-    logDebug("inference", `caller=${caller} route=anthropic-api agent=${agent}`);
+    logDebug("inference", `${tag} route=anthropic-api agent=${agent}`);
     return inferenceViaApi(opts);
   }
   logDebug(
     "inference",
-    `caller=${caller} route=none agent=${agent} hasApiKey=false hasOpenAiKey=${hasOpenAiKey()} hasClaude=${hasClaudeBinary()} hasCodex=${hasCodexBinary()}`
+    `${tag} route=none agent=${agent} hasApiKey=false hasOpenAiKey=${hasOpenAiKey()} hasClaude=${hasClaudeBinary()} hasCodex=${hasCodexBinary()}`
   );
   return { success: false };
 }
@@ -313,6 +317,8 @@ async function inferenceViaCliSpawn(
   const env = buildSpawnGuardEnv(process.env);
   const started = Date.now();
   const caller = opts.caller ?? "anonymous";
+  const session = opts.sessionId ?? "-";
+  const tag = `caller=${caller} sessionId=${session}`;
 
   // Attempt 1
   let attempt = await singleCliAttempt(binary, args, stdinInput, env, timeout);
@@ -329,7 +335,7 @@ async function inferenceViaCliSpawn(
     const jitterMs = 500 + Math.floor(Math.random() * 1000);
     logDebug(
       "inference:spawn",
-      `caller=${caller} retry: empty-abort binary=${binary} exit=${attempt.code} after ${Date.now() - started}ms, jitter=${jitterMs}ms`
+      `${tag} retry: empty-abort binary=${binary} exit=${attempt.code} after ${Date.now() - started}ms, jitter=${jitterMs}ms`
     );
     await new Promise((r) => setTimeout(r, jitterMs));
     attempt = await singleCliAttempt(binary, args, stdinInput, env, timeout);
@@ -339,7 +345,7 @@ async function inferenceViaCliSpawn(
   const finish = (result: InferenceResult): InferenceResult => {
     logDebug(
       "inference:spawn",
-      `caller=${caller} done binary=${binary} success=${result.success} bytes=${result.output?.length ?? 0} elapsedMs=${elapsedMs}`
+      `${tag} done binary=${binary} success=${result.success} bytes=${result.output?.length ?? 0} elapsedMs=${elapsedMs}`
     );
     return result;
   };
@@ -347,14 +353,14 @@ async function inferenceViaCliSpawn(
   if (attempt.timedOut) {
     void logError(
       "inference:spawn",
-      `caller=${caller} timeout binary=${binary} after ${timeout}ms`
+      `${tag} timeout binary=${binary} after ${timeout}ms`
     );
     return finish({ success: false });
   }
   if (attempt.code !== 0) {
     void logError(
       "inference:spawn",
-      `caller=${caller} exited=${attempt.code} binary=${binary} argv=${JSON.stringify(args)} stderr(${attempt.stderr.length})=${attempt.stderr.slice(0, 300)} stdout(${attempt.stdout.length})=${attempt.stdout.slice(0, 300)}`
+      `${tag} exited=${attempt.code} binary=${binary} argv=${JSON.stringify(args)} stderr(${attempt.stderr.length})=${attempt.stderr.slice(0, 300)} stdout(${attempt.stdout.length})=${attempt.stdout.slice(0, 300)}`
     );
     return finish({ success: false });
   }

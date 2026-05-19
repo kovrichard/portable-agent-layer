@@ -343,6 +343,7 @@ async function runSentimentInferenceAndStore(
       timeout: 60000,
       jsonSchema: SENTIMENT_SCHEMA,
       caller: "rating",
+      sessionId,
     });
 
     if (result.usage) logTokenUsage("rating", result.usage);
