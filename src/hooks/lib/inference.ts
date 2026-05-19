@@ -511,11 +511,14 @@ async function singleCliAttempt(
       }
     }, timeout);
 
-    const stdinWriter = proc.stdin as {
-      write: (s: string) => void;
-      end: () => void;
-      close?: () => void;
-    } | null;
+    const stdinWriter =
+      proc.stdin && typeof proc.stdin !== "number"
+        ? (proc.stdin as {
+            write: (s: string) => void;
+            end: () => void;
+            close?: () => void;
+          })
+        : null;
     if (stdinWriter) {
       try {
         if (stdinInput) stdinWriter.write(stdinInput);
@@ -526,8 +529,14 @@ async function singleCliAttempt(
     }
 
     void (async () => {
-      const stdoutStream = proc.stdout as ReadableStream<Uint8Array> | null;
-      const stderrStream = proc.stderr as ReadableStream<Uint8Array> | null;
+      const stdoutStream =
+        proc.stdout && typeof proc.stdout !== "number"
+          ? (proc.stdout as ReadableStream<Uint8Array>)
+          : null;
+      const stderrStream =
+        proc.stderr && typeof proc.stderr !== "number"
+          ? (proc.stderr as ReadableStream<Uint8Array>)
+          : null;
       try {
         if (stdoutStream) stdout = await new Response(stdoutStream).text();
       } catch {
