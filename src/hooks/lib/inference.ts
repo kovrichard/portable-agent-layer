@@ -21,7 +21,14 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { getActiveAgent, isClaude, isCodex, isCopilot, isOpencode } from "./agent";
+import {
+  getActiveAgent,
+  isClaude,
+  isCodex,
+  isCopilot,
+  isCursor,
+  isOpencode,
+} from "./agent";
 import { logDebug } from "./log";
 import { HAIKU_MODEL } from "./models";
 import { buildSpawnGuardEnv, getInferenceDepth, SPAWN_GUARD_ENV } from "./spawn-guard";
@@ -41,6 +48,7 @@ export function canInfer(): boolean {
   if (isCodex() && hasOpenAiKey()) return true;
   if (isOpencode() && hasOpencodeBinary()) return true;
   if (isCopilot() && hasCopilotBinary()) return true;
+  if (isCursor() && hasCursorBinary()) return true;
   return hasApiKey();
 }
 
@@ -108,13 +116,17 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
     logDebug("inference", `${tag} route=copilot-spawn agent=${agent}`);
     return inferenceViaCliSpawn("copilot", buildCopilotArgs(opts), "", opts);
   }
+  if (isCursor() && hasCursorBinary()) {
+    logDebug("inference", `${tag} route=cursor-spawn agent=${agent}`);
+    return inferenceViaCliSpawn("cursor-agent", buildCursorArgs(opts), "", opts);
+  }
   if (hasApiKey()) {
     logDebug("inference", `${tag} route=anthropic-api agent=${agent}`);
     return inferenceViaApi(opts);
   }
   logDebug(
     "inference",
-    `${tag} route=none agent=${agent} hasApiKey=false hasOpenAiKey=${hasOpenAiKey()} hasClaude=${hasClaudeBinary()} hasCodex=${hasCodexBinary()} hasOpencode=${hasOpencodeBinary()} hasCopilot=${hasCopilotBinary()}`
+    `${tag} route=none agent=${agent} hasApiKey=false hasOpenAiKey=${hasOpenAiKey()} hasClaude=${hasClaudeBinary()} hasCodex=${hasCodexBinary()} hasOpencode=${hasOpencodeBinary()} hasCopilot=${hasCopilotBinary()} hasCursor=${hasCursorBinary()}`
   );
   return { success: false };
 }
@@ -127,6 +139,7 @@ let claudeBinaryCache: boolean | null = null;
 let codexBinaryCache: boolean | null = null;
 let opencodeBinaryCache: boolean | null = null;
 let copilotBinaryCache: boolean | null = null;
+let cursorBinaryCache: boolean | null = null;
 
 function hasClaudeBinary(): boolean {
   if (claudeBinaryCache !== null) return claudeBinaryCache;
@@ -153,6 +166,13 @@ function hasCopilotBinary(): boolean {
   return copilotBinaryCache;
 }
 
+function hasCursorBinary(): boolean {
+  if (cursorBinaryCache !== null) return cursorBinaryCache;
+  cursorBinaryCache =
+    spawnSync("which", ["cursor-agent"], { stdio: "ignore" }).status === 0;
+  return cursorBinaryCache;
+}
+
 /** Test-only: reset the cached `which claude` result. */
 export function _resetClaudeBinaryCache(): void {
   claudeBinaryCache = null;
@@ -171,6 +191,11 @@ export function _resetOpencodeBinaryCache(): void {
 /** Test-only: reset the cached `which copilot` result. */
 export function _resetCopilotBinaryCache(): void {
   copilotBinaryCache = null;
+}
+
+/** Test-only: reset the cached `which cursor-agent` result. */
+export function _resetCursorBinaryCache(): void {
+  cursorBinaryCache = null;
 }
 
 /** Build the argv for `claude --print …` from inference options. Pure. */
@@ -258,6 +283,39 @@ export function buildOpencodeArgs(opts: InferenceOptions): string[] {
   }
   const prompt = parts.join("\n\n");
   return ["run", "--pure", "--format", "json", prompt];
+}
+
+/**
+ * Build the argv for `cursor-agent -p …` from inference options. Pure.
+ *
+ * Recursion + tool-use defense:
+ *   --mode ask          → read-only Q&A; the agent cannot edit files or run
+ *                          shell commands, eliminating any path back into our
+ *                          hooks. Cursor's equivalent of claude's `--tools ''`
+ *                          and codex's `--sandbox read-only`.
+ *   --output-format text → clean stdout (default but explicit)
+ *   --trust              → required for headless mode; without it, cursor-agent
+ *                          exits 0 with a "trust this directory" hint instead
+ *                          of running inference. Safe to pair with --mode ask
+ *                          because that mode disallows tool calls anyway.
+ *
+ * cursor-agent has no --system-prompt flag — system + user + JSON-schema are
+ * concatenated into a single positional prompt argument.
+ *
+ * Auth note: cursor-agent picks up either `cursor-agent login` credentials or
+ * `CURSOR_API_KEY` env var. PAL doesn't manage these — that's the user's setup.
+ */
+export function buildCursorArgs(opts: InferenceOptions): string[] {
+  const parts: string[] = [];
+  if (opts.system) parts.push(opts.system);
+  parts.push(opts.user);
+  if (opts.jsonSchema) {
+    parts.push(
+      `Respond with ONLY a JSON value matching this schema (no prose, no markdown): ${JSON.stringify(opts.jsonSchema)}`
+    );
+  }
+  const prompt = parts.join("\n\n");
+  return ["-p", "--mode", "ask", "--output-format", "text", "--trust", prompt];
 }
 
 /**
