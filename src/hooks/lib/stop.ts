@@ -195,14 +195,23 @@ async function detachFailurePrinciple(transcript: string): Promise<void> {
   const pendingPath = resolve(paths.state(), "pending-failure.json");
   if (!existsSync(pendingPath)) return;
 
+  // Rename to claim the pending file atomically — prevents two Stop hooks
+  // racing on the same low rating (opencode notably fires session.idle AND
+  // session.diff concurrently, so runStopHandlers runs twice in parallel).
+  const claimedDir = await mkdtemp(resolve(tmpdir(), "pal-pending-"));
+  const claimedPath = resolve(claimedDir, "pending.json");
   try {
-    // Rename to claim the pending file atomically — prevents two Stop hooks
-    // racing on the same low rating.
-    const claimedDir = await mkdtemp(resolve(tmpdir(), "pal-pending-"));
-    const claimedPath = resolve(claimedDir, "pending.json");
     await rename(pendingPath, claimedPath);
-    const transcriptPath = await writeTranscriptTmp(transcript);
+  } catch (err) {
+    // ENOENT means another concurrent Stop hook already claimed it. That's
+    // expected and benign — the other process will handle the failure.
+    if ((err as NodeJS.ErrnoException)?.code === "ENOENT") return;
+    logError("detachFailurePrinciple", err);
+    return;
+  }
 
+  try {
+    const transcriptPath = await writeTranscriptTmp(transcript);
     const scriptPath = resolve(assets.hooks(), "handlers", "failure-principle.ts");
     spawnDetachedInference(
       scriptPath,
