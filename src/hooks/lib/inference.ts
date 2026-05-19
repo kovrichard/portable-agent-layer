@@ -20,7 +20,6 @@
  * yet wired and currently fall through to the API path.
  */
 
-import { spawnSync } from "node:child_process";
 import {
   getActiveAgent,
   isClaude,
@@ -197,35 +196,36 @@ let opencodeBinaryCache: boolean | null = null;
 let copilotBinaryCache: boolean | null = null;
 let cursorBinaryCache: boolean | null = null;
 
+// Bun.which() is used instead of spawning `which` because Ubuntu 24.04's
+// debianutils dropped the `which` binary — the GitHub Actions Linux runner
+// then resolves `spawnSync("which", ...)` to ENOENT and every detection fails.
 function hasClaudeBinary(): boolean {
   if (claudeBinaryCache !== null) return claudeBinaryCache;
-  claudeBinaryCache = spawnSync("which", ["claude"], { stdio: "ignore" }).status === 0;
+  claudeBinaryCache = Bun.which("claude") !== null;
   return claudeBinaryCache;
 }
 
 function hasCodexBinary(): boolean {
   if (codexBinaryCache !== null) return codexBinaryCache;
-  codexBinaryCache = spawnSync("which", ["codex"], { stdio: "ignore" }).status === 0;
+  codexBinaryCache = Bun.which("codex") !== null;
   return codexBinaryCache;
 }
 
 function hasOpencodeBinary(): boolean {
   if (opencodeBinaryCache !== null) return opencodeBinaryCache;
-  opencodeBinaryCache =
-    spawnSync("which", ["opencode"], { stdio: "ignore" }).status === 0;
+  opencodeBinaryCache = Bun.which("opencode") !== null;
   return opencodeBinaryCache;
 }
 
 function hasCopilotBinary(): boolean {
   if (copilotBinaryCache !== null) return copilotBinaryCache;
-  copilotBinaryCache = spawnSync("which", ["copilot"], { stdio: "ignore" }).status === 0;
+  copilotBinaryCache = Bun.which("copilot") !== null;
   return copilotBinaryCache;
 }
 
 function hasCursorBinary(): boolean {
   if (cursorBinaryCache !== null) return cursorBinaryCache;
-  cursorBinaryCache =
-    spawnSync("which", ["cursor-agent"], { stdio: "ignore" }).status === 0;
+  cursorBinaryCache = Bun.which("cursor-agent") !== null;
   return cursorBinaryCache;
 }
 
