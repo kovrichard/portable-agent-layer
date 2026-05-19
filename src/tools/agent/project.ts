@@ -29,6 +29,7 @@ import {
   defaultSlug,
   deleteProject,
   isStale,
+  legacyJsonToProgress,
   type ProjectProgress,
   type ProjectStatus,
   readAllProjects,
@@ -276,26 +277,6 @@ function cmdIsaInit(args: string[]): void {
 
 // ── migrate (from old JSON format) ───────────────────────────────
 
-interface LegacyDecision {
-  ts: string;
-  decision: string;
-  rationale: string;
-}
-
-interface LegacyProject {
-  name: string;
-  path: string;
-  status: ProjectStatus;
-  created: string;
-  updated: string;
-  facts?: string[];
-  objectives?: string[];
-  next_steps?: string[];
-  blockers?: string[];
-  handoff?: string;
-  decisions?: LegacyDecision[];
-}
-
 function cmdMigrate(): void {
   const progressDir = paths.progress();
   if (!existsSync(progressDir)) {
@@ -324,32 +305,13 @@ function cmdMigrate(): void {
     }
 
     try {
-      const raw = JSON.parse(readFileSync(filePath, "utf-8")) as LegacyProject;
-      if (!raw?.name || !raw?.path || !raw?.status) {
+      const raw = JSON.parse(readFileSync(filePath, "utf-8"));
+      const p = legacyJsonToProgress(raw);
+      if (!p) {
         skipped++;
         results.push(`${slug}: skipped (malformed JSON)`);
         continue;
       }
-
-      const p: ProjectProgress = {
-        name: raw.name,
-        path: raw.path,
-        status: raw.status,
-        created: raw.created,
-        updated: raw.updated,
-        ...(raw.handoff ? { handoff: raw.handoff } : {}),
-        ...(raw.next_steps?.length ? { next: raw.next_steps } : {}),
-        ...(raw.blockers?.length ? { blockers: raw.blockers } : {}),
-      };
-
-      if (raw.facts?.length) p.context = raw.facts.join("\n");
-      if (raw.objectives?.length) p.goal = raw.objectives.map((o) => `- ${o}`).join("\n");
-      if (raw.decisions?.length) {
-        p.decisions = raw.decisions
-          .map((d) => `- ${d.ts.slice(0, 10)}: ${d.decision} (${d.rationale})`)
-          .join("\n");
-      }
-
       writeProject(p);
       migrated++;
       results.push(`${slug}: migrated`);

@@ -14,8 +14,8 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { paths } from "../hooks/lib/paths";
 import {
+  legacyJsonToProgress,
   type ProjectProgress,
-  type ProjectStatus,
   readAllProjects,
   readProject,
   writeProject,
@@ -38,26 +38,6 @@ interface Migration {
 }
 
 // ── v1-projects: JSON progress files → ISA.md ─────────────────────
-
-interface LegacyDecision {
-  ts: string;
-  decision: string;
-  rationale: string;
-}
-
-interface LegacyProject {
-  name: string;
-  path: string;
-  status: ProjectStatus;
-  created: string;
-  updated: string;
-  facts?: string[];
-  objectives?: string[];
-  next_steps?: string[];
-  blockers?: string[];
-  handoff?: string;
-  decisions?: LegacyDecision[];
-}
 
 function pendingJsonFiles(): string[] {
   const progressDir = paths.progress();
@@ -92,37 +72,14 @@ const v1Projects: Migration = {
       const filePath = resolve(progressDir, file);
 
       try {
-        const raw = JSON.parse(readFileSync(filePath, "utf-8")) as LegacyProject;
-        if (!raw?.name || !raw?.path || !raw?.status) {
+        const raw = JSON.parse(readFileSync(filePath, "utf-8"));
+        const p = legacyJsonToProgress(raw);
+        if (!p) {
           skipped++;
           results.push(`${slug}: skipped (malformed JSON)`);
           continue;
         }
-
-        if (!dryRun) {
-          const p: ProjectProgress = {
-            name: raw.name,
-            path: raw.path,
-            status: raw.status,
-            created: raw.created ?? new Date().toISOString(),
-            updated: raw.updated ?? new Date().toISOString(),
-            ...(raw.handoff ? { handoff: raw.handoff } : {}),
-            ...(raw.next_steps?.length ? { next: raw.next_steps } : {}),
-            ...(raw.blockers?.length ? { blockers: raw.blockers } : {}),
-          };
-
-          if (raw.facts?.length) p.context = raw.facts.join("\n");
-          if (raw.objectives?.length)
-            p.goal = raw.objectives.map((o) => `- ${o}`).join("\n");
-          if (raw.decisions?.length) {
-            p.decisions = raw.decisions
-              .map((d) => `- ${d.ts.slice(0, 10)}: ${d.decision} (${d.rationale})`)
-              .join("\n");
-          }
-
-          writeProject(p);
-        }
-
+        if (!dryRun) writeProject(p);
         migrated++;
         results.push(`${slug}: ${dryRun ? "would migrate" : "migrated"} (source kept)`);
       } catch {
