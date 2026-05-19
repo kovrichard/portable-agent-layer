@@ -143,6 +143,7 @@ PAL routes inference through the host agent's subscription CLI by default. API k
 |----------|-------------|
 | `PAL_DEBUG` | Set to `1` to emit verbose hook logs to `memory/state/debug.log` |
 | `PAL_INFERENCE_DISABLED` | Set to `1` to disable all inference (used by the test suite to prevent real CLI spawns) |
+| `PAL_NOTIFICATIONS_DISABLED` | Set to `1` to suppress desktop notifications (used by the test suite) |
 
 ---
 

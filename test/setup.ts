@@ -7,3 +7,4 @@
  * deleting this env var in their own beforeEach.
  */
 process.env.PAL_INFERENCE_DISABLED = "1";
+process.env.PAL_NOTIFICATIONS_DISABLED = "1";
