@@ -386,6 +386,80 @@ function checkCopilotInstructionsPresent(): boolean {
   return existsSync(resolve(platform.copilotDir(), "copilot-instructions.md"));
 }
 
+// ── Install integrity (Tier 2 doctor checks) ──
+
+/** Recursively collect every `command` or `bash` field value in a hook-config JSON. */
+function extractAllHookCommands(obj: unknown, out: string[] = []): string[] {
+  if (Array.isArray(obj)) {
+    for (const item of obj) extractAllHookCommands(item, out);
+  } else if (obj && typeof obj === "object") {
+    for (const [k, v] of Object.entries(obj)) {
+      if ((k === "command" || k === "bash") && typeof v === "string") {
+        out.push(v);
+      } else {
+        extractAllHookCommands(v, out);
+      }
+    }
+  }
+  return out;
+}
+
+interface HookPrefixCheck {
+  ok: boolean;
+  total: number;
+  missing: number;
+  firstMissing?: string;
+}
+
+/** Verify every command in an installed hook file starts with `PAL_AGENT=<agent>`. */
+function checkAgentHookPrefix(filePath: string, agentName: string): HookPrefixCheck {
+  if (!existsSync(filePath)) return { ok: false, total: 0, missing: 0 };
+  try {
+    const data = JSON.parse(readFileSync(filePath, "utf-8"));
+    const commands = extractAllHookCommands(data);
+    const prefix = `PAL_AGENT=${agentName} `;
+    const missing = commands.filter((c) => !c.startsWith(prefix));
+    return {
+      ok: commands.length > 0 && missing.length === 0,
+      total: commands.length,
+      missing: missing.length,
+      firstMissing: missing[0]?.slice(0, 80),
+    };
+  } catch {
+    return { ok: false, total: 0, missing: 0 };
+  }
+}
+
+interface FreshnessCheck {
+  ok: boolean;
+  reason?: string;
+}
+
+/**
+ * Verify the installed opencode plugin is at least as new as the source. Catches
+ * the "stale install" failure mode we hit live — plugin file is a copy, not a
+ * symlink, so source edits don't reach the running opencode until reinstall.
+ */
+function checkOpencodePluginFresh(): FreshnessCheck {
+  const installedPath = resolve(platform.opencodeDir(), "plugins", "pal-plugin.ts");
+  const sourcePath = resolve(palPkg(), "src", "targets", "opencode", "plugin.ts");
+  if (!existsSync(installedPath))
+    return { ok: false, reason: "installed plugin missing" };
+  if (!existsSync(sourcePath)) return { ok: true }; // can't compare; assume installed is fine
+  try {
+    const installedMtime = statSync(installedPath).mtimeMs;
+    const sourceMtime = statSync(sourcePath).mtimeMs;
+    if (installedMtime >= sourceMtime) return { ok: true };
+    const ageMin = Math.round((sourceMtime - installedMtime) / 60000);
+    return {
+      ok: false,
+      reason: `source is ${ageMin}m newer than installed — run 'pal cli install --opencode'`,
+    };
+  } catch {
+    return { ok: true };
+  }
+}
+
 function playwrightBrowsersPath(): string {
   if (process.env.PLAYWRIGHT_BROWSERS_PATH) return process.env.PLAYWRIGHT_BROWSERS_PATH;
   const home = homedir();
@@ -669,6 +743,66 @@ function doctor(silent = false): DoctorResult {
       checkCodexHooksRegistered()
         ? ok("Codex hooks registered")
         : fail("Codex hooks — not registered (run 'pal cli install --codex')");
+    }
+
+    // Install integrity — verify PAL_AGENT prefix on every command in installed
+    // hook files. Catches stale installs after template changes (the exact bug
+    // we hit live for opencode + copilot). opencode uses a plugin file instead
+    // of a hooks.json, so it gets a separate freshness check.
+    console.log("");
+    log.info("Install integrity");
+    const prefixCheck = (
+      filePath: string,
+      agentName: string,
+      installCmd: string
+    ): void => {
+      const r = checkAgentHookPrefix(filePath, agentName);
+      if (r.ok) {
+        ok(`${agentName}: PAL_AGENT=${agentName} on all ${r.total} hook commands`);
+      } else if (r.total === 0) {
+        fail(`${agentName}: hook file missing or unreadable at ${filePath}`);
+      } else {
+        fail(
+          `${agentName}: ${r.missing}/${r.total} hook commands missing PAL_AGENT=${agentName} prefix (run '${installCmd}')`
+        );
+        if (r.firstMissing) {
+          log.warn(`    First offender: ${r.firstMissing}…`);
+        }
+      }
+    };
+    if (claude.available) {
+      prefixCheck(
+        resolve(platform.claudeDir(), "settings.json"),
+        "claude",
+        "pal cli install --claude"
+      );
+    }
+    if (cursor.available) {
+      prefixCheck(
+        resolve(platform.cursorDir(), "hooks.json"),
+        "cursor",
+        "pal cli install --cursor"
+      );
+    }
+    if (copilot.available) {
+      prefixCheck(
+        resolve(platform.copilotDir(), "hooks", "pal-hooks.json"),
+        "copilot",
+        "pal cli install --copilot"
+      );
+    }
+    if (codex.available) {
+      prefixCheck(
+        resolve(platform.codexDir(), "hooks.json"),
+        "codex",
+        "pal cli install --codex"
+      );
+    }
+    if (opencode.available) {
+      const fresh = checkOpencodePluginFresh();
+      fresh.ok
+        ? ok("opencode plugin: source-and-installed in sync")
+        : fail(`opencode plugin: ${fresh.reason}`);
     }
 
     // Inference routing preview — what `inference()` would do RIGHT NOW
