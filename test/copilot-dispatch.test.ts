@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
@@ -8,6 +8,7 @@ import {
   inference,
 } from "../src/hooks/lib/inference";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
+import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 
 const PRESERVED = [
   "PAL_AGENT",
@@ -106,54 +107,47 @@ describe("inference dispatcher — copilot spawn integration (fake binary)", () 
   });
 
   test("end-to-end: fake copilot echoes prompt arg, dispatcher captures it", async () => {
-    // Fake copilot reads $2 (the value passed after -p) and echoes it.
-    const fakeBin = resolve(tmpBin, "copilot");
-    writeFileSync(fakeBin, '#!/bin/sh\necho "$2"\n', "utf-8");
-    chmodSync(fakeBin, 0o755);
-    process.env.PATH = `${tmpBin}:${process.env.PATH}`;
+    // Fake copilot reads argv[3] (the prompt passed after -p) and echoes it.
+    // Bun.argv: [bun, script.ts, "-p", "<prompt>", ...]
+    writeFakeBin(tmpBin, "copilot", `console.log(Bun.argv[3] ?? "");\n`);
+    prependPath(tmpBin);
 
-    const result = await inference({ user: "hello-copilot", timeout: 3000 });
+    const result = await inference({ user: "hello-copilot", timeout: 5000 });
     expect(result.success).toBe(true);
     expect(result.output).toBe("hello-copilot");
   });
 
   test("fake copilot sees PAL_SPAWNED_INFERENCE=1 and CLAUDECODE unset", async () => {
-    const fakeBin = resolve(tmpBin, "copilot");
-    writeFileSync(
-      fakeBin,
-      `#!/bin/sh\necho "sentinel=$${SPAWN_GUARD_ENV.SENTINEL} claudecode=[$CLAUDECODE]"\n`,
-      "utf-8"
+    writeFakeBin(
+      tmpBin,
+      "copilot",
+      `console.log(\`sentinel=\${process.env.${SPAWN_GUARD_ENV.SENTINEL}} claudecode=[\${process.env.CLAUDECODE ?? ""}]\`);\n`
     );
-    chmodSync(fakeBin, 0o755);
-    process.env.PATH = `${tmpBin}:${process.env.PATH}`;
+    prependPath(tmpBin);
     process.env.CLAUDECODE = "1";
 
-    const result = await inference({ user: "ignored", timeout: 3000 });
+    const result = await inference({ user: "ignored", timeout: 5000 });
     expect(result.success).toBe(true);
     expect(result.output).toBe("sentinel=1 claudecode=[]");
     expect(process.env.CLAUDECODE).toBe("1");
   });
 
   test("non-zero exit from fake copilot returns success: false", async () => {
-    const fakeBin = resolve(tmpBin, "copilot");
-    writeFileSync(fakeBin, "#!/bin/sh\nexit 1\n", "utf-8");
-    chmodSync(fakeBin, 0o755);
-    process.env.PATH = `${tmpBin}:${process.env.PATH}`;
+    writeFakeBin(tmpBin, "copilot", `process.exit(1);\n`);
+    prependPath(tmpBin);
 
-    const result = await inference({ user: "hi", timeout: 3000 });
+    const result = await inference({ user: "hi", timeout: 5000 });
     expect(result.success).toBe(false);
   });
 
   test("JSON-schema path parses fake copilot JSON output", async () => {
-    const fakeBin = resolve(tmpBin, "copilot");
-    writeFileSync(fakeBin, '#!/bin/sh\necho \'{"verdict":"ok"}\'\n', "utf-8");
-    chmodSync(fakeBin, 0o755);
-    process.env.PATH = `${tmpBin}:${process.env.PATH}`;
+    writeFakeBin(tmpBin, "copilot", `console.log('{"verdict":"ok"}');\n`);
+    prependPath(tmpBin);
 
     const result = await inference({
       user: "rate",
       jsonSchema: { type: "object", properties: { verdict: { type: "string" } } },
-      timeout: 3000,
+      timeout: 5000,
     });
     expect(result.success).toBe(true);
     expect(JSON.parse(result.output ?? "{}")).toEqual({ verdict: "ok" });

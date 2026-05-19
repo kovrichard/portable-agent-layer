@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
@@ -12,6 +12,7 @@ import {
   parseJsonFromOutput,
 } from "../src/hooks/lib/inference";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
+import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 
 const PRESERVED = [
   "PAL_AGENT",
@@ -209,30 +210,28 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
   });
 
   test("end-to-end: fake claude binary echoes stdin, dispatcher returns it", async () => {
-    // Fake claude: ignores all args, echoes stdin to stdout. Exits 0.
-    const fakeBin = resolve(tmpBin, "claude");
-    writeFileSync(fakeBin, "#!/bin/sh\ncat\n", "utf-8");
-    chmodSync(fakeBin, 0o755);
-    process.env.PATH = `${tmpBin}:${process.env.PATH}`;
+    // Fake claude: echoes stdin to stdout, exits 0.
+    writeFakeBin(
+      tmpBin,
+      "claude",
+      `for await (const c of Bun.stdin.stream()) Bun.write(Bun.stdout, c);\n`
+    );
+    prependPath(tmpBin);
 
-    const result = await inference({ user: "hello from PAL", timeout: 3000 });
+    const result = await inference({ user: "hello from PAL", timeout: 5000 });
     expect(result.success).toBe(true);
     expect(result.output).toBe("hello from PAL");
   });
 
   test("fake claude binary sees PAL_SPAWNED_INFERENCE=1 in its env", async () => {
-    // Fake claude: prints the sentinel value from env. Confirms the spawn-guard
-    // env additions propagate to the child.
-    const fakeBin = resolve(tmpBin, "claude");
-    writeFileSync(
-      fakeBin,
-      `#!/bin/sh\necho "sentinel=$${SPAWN_GUARD_ENV.SENTINEL} depth=$${SPAWN_GUARD_ENV.DEPTH}"\n`,
-      "utf-8"
+    writeFakeBin(
+      tmpBin,
+      "claude",
+      `console.log(\`sentinel=\${process.env.${SPAWN_GUARD_ENV.SENTINEL}} depth=\${process.env.${SPAWN_GUARD_ENV.DEPTH}}\`);\n`
     );
-    chmodSync(fakeBin, 0o755);
-    process.env.PATH = `${tmpBin}:${process.env.PATH}`;
+    prependPath(tmpBin);
 
-    const result = await inference({ user: "ignored", timeout: 3000 });
+    const result = await inference({ user: "ignored", timeout: 5000 });
     expect(result.success).toBe(true);
     expect(result.output).toBe("sentinel=1 depth=1");
   });
@@ -240,14 +239,16 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
   test("fake claude binary sees CLAUDECODE unset even when parent has it", async () => {
     // Parent env has CLAUDECODE="1" (as it would inside a real Claude Code session).
     // The child claude --print must see it absent so its nested-session guard
-    // doesn't fire. Fake binary prints CLAUDECODE; absent → empty string.
+    // doesn't fire.
     process.env.CLAUDECODE = "1";
-    const fakeBin = resolve(tmpBin, "claude");
-    writeFileSync(fakeBin, '#!/bin/sh\necho "claudecode=[$CLAUDECODE]"\n', "utf-8");
-    chmodSync(fakeBin, 0o755);
-    process.env.PATH = `${tmpBin}:${process.env.PATH}`;
+    writeFakeBin(
+      tmpBin,
+      "claude",
+      `console.log(\`claudecode=[\${process.env.CLAUDECODE ?? ""}]\`);\n`
+    );
+    prependPath(tmpBin);
 
-    const result = await inference({ user: "ignored", timeout: 3000 });
+    const result = await inference({ user: "ignored", timeout: 5000 });
     expect(result.success).toBe(true);
     expect(result.output).toBe("claudecode=[]");
     // Parent still has CLAUDECODE=1 — scoping confirmed.
@@ -255,10 +256,8 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
   });
 
   test("logDebug emits route=claude-spawn line when PAL_DEBUG=1", async () => {
-    const fakeBin = resolve(tmpBin, "claude");
-    writeFileSync(fakeBin, "#!/bin/sh\necho hello\n", "utf-8");
-    chmodSync(fakeBin, 0o755);
-    process.env.PATH = `${tmpBin}:${process.env.PATH}`;
+    writeFakeBin(tmpBin, "claude", `console.log("hello");\n`);
+    prependPath(tmpBin);
 
     const debugSaved = process.env.PAL_DEBUG;
     const palHomeSaved = process.env.PAL_HOME;
@@ -267,7 +266,7 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
     process.env.PAL_HOME = tmpHome;
 
     try {
-      const result = await inference({ user: "ping", timeout: 3000 });
+      const result = await inference({ user: "ping", timeout: 5000 });
       expect(result.success).toBe(true);
       const logPath = resolve(tmpHome, "memory", "state", "debug.log");
       const log = readFileSync(logPath, "utf-8");
@@ -283,25 +282,21 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
   });
 
   test("non-zero exit from fake claude returns success: false", async () => {
-    const fakeBin = resolve(tmpBin, "claude");
-    writeFileSync(fakeBin, "#!/bin/sh\nexit 2\n", "utf-8");
-    chmodSync(fakeBin, 0o755);
-    process.env.PATH = `${tmpBin}:${process.env.PATH}`;
+    writeFakeBin(tmpBin, "claude", `process.exit(2);\n`);
+    prependPath(tmpBin);
 
-    const result = await inference({ user: "hi", timeout: 3000 });
+    const result = await inference({ user: "hi", timeout: 5000 });
     expect(result.success).toBe(false);
   });
 
   test("JSON-schema path parses fake claude's JSON output", async () => {
-    const fakeBin = resolve(tmpBin, "claude");
-    writeFileSync(fakeBin, '#!/bin/sh\necho \'{"verdict":"good"}\'\n', "utf-8");
-    chmodSync(fakeBin, 0o755);
-    process.env.PATH = `${tmpBin}:${process.env.PATH}`;
+    writeFakeBin(tmpBin, "claude", `console.log('{"verdict":"good"}');\n`);
+    prependPath(tmpBin);
 
     const result = await inference({
       user: "rate this",
       jsonSchema: { type: "object", properties: { verdict: { type: "string" } } },
-      timeout: 3000,
+      timeout: 5000,
     });
     expect(result.success).toBe(true);
     expect(JSON.parse(result.output ?? "{}")).toEqual({ verdict: "good" });

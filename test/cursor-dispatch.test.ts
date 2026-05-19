@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
@@ -8,6 +8,7 @@ import {
   inference,
 } from "../src/hooks/lib/inference";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
+import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 
 const PRESERVED = [
   "PAL_AGENT",
@@ -108,54 +109,45 @@ describe("inference dispatcher — cursor spawn integration (fake binary)", () =
   });
 
   test("end-to-end: fake cursor-agent echoes positional prompt, dispatcher captures it", async () => {
-    const fakeBin = resolve(tmpBin, "cursor-agent");
-    // Echo the last argv (the prompt PAL constructed).
-    writeFileSync(fakeBin, "#!/bin/sh\necho \"$@\" | awk '{print $NF}'\n", "utf-8");
-    chmodSync(fakeBin, 0o755);
-    process.env.PATH = `${tmpBin}:${process.env.PATH}`;
+    writeFakeBin(tmpBin, "cursor-agent", `console.log(Bun.argv[Bun.argv.length - 1]);\n`);
+    prependPath(tmpBin);
 
-    const result = await inference({ user: "hello-cursor", timeout: 3000 });
+    const result = await inference({ user: "hello-cursor", timeout: 5000 });
     expect(result.success).toBe(true);
     expect(result.output).toBe("hello-cursor");
   });
 
   test("fake cursor-agent sees PAL_SPAWNED_INFERENCE=1 and CLAUDECODE unset", async () => {
-    const fakeBin = resolve(tmpBin, "cursor-agent");
-    writeFileSync(
-      fakeBin,
-      `#!/bin/sh\necho "sentinel=$${SPAWN_GUARD_ENV.SENTINEL} claudecode=[$CLAUDECODE]"\n`,
-      "utf-8"
+    writeFakeBin(
+      tmpBin,
+      "cursor-agent",
+      `console.log(\`sentinel=\${process.env.${SPAWN_GUARD_ENV.SENTINEL}} claudecode=[\${process.env.CLAUDECODE ?? ""}]\`);\n`
     );
-    chmodSync(fakeBin, 0o755);
-    process.env.PATH = `${tmpBin}:${process.env.PATH}`;
+    prependPath(tmpBin);
     process.env.CLAUDECODE = "1";
 
-    const result = await inference({ user: "ignored", timeout: 3000 });
+    const result = await inference({ user: "ignored", timeout: 5000 });
     expect(result.success).toBe(true);
     expect(result.output).toBe("sentinel=1 claudecode=[]");
     expect(process.env.CLAUDECODE).toBe("1");
   });
 
   test("non-zero exit returns success: false", async () => {
-    const fakeBin = resolve(tmpBin, "cursor-agent");
-    writeFileSync(fakeBin, "#!/bin/sh\nexit 1\n", "utf-8");
-    chmodSync(fakeBin, 0o755);
-    process.env.PATH = `${tmpBin}:${process.env.PATH}`;
+    writeFakeBin(tmpBin, "cursor-agent", `process.exit(1);\n`);
+    prependPath(tmpBin);
 
-    const result = await inference({ user: "hi", timeout: 3000 });
+    const result = await inference({ user: "hi", timeout: 5000 });
     expect(result.success).toBe(false);
   });
 
   test("JSON-schema path parses fake cursor JSON output", async () => {
-    const fakeBin = resolve(tmpBin, "cursor-agent");
-    writeFileSync(fakeBin, '#!/bin/sh\necho \'{"verdict":"ok"}\'\n', "utf-8");
-    chmodSync(fakeBin, 0o755);
-    process.env.PATH = `${tmpBin}:${process.env.PATH}`;
+    writeFakeBin(tmpBin, "cursor-agent", `console.log('{"verdict":"ok"}');\n`);
+    prependPath(tmpBin);
 
     const result = await inference({
       user: "rate",
       jsonSchema: { type: "object", properties: { verdict: { type: "string" } } },
-      timeout: 3000,
+      timeout: 5000,
     });
     expect(result.success).toBe(true);
     expect(JSON.parse(result.output ?? "{}")).toEqual({ verdict: "ok" });

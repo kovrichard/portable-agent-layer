@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
@@ -9,6 +9,7 @@ import {
   inference,
 } from "../src/hooks/lib/inference";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
+import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 
 const PRESERVED = [
   "PAL_AGENT",
@@ -123,66 +124,54 @@ describe("inference dispatcher — opencode spawn integration (fake binary)", ()
   });
 
   test("end-to-end: fake opencode emits a text event, dispatcher extracts it", async () => {
-    const fakeBin = resolve(tmpBin, "opencode");
     const event = JSON.stringify({
       type: "text",
       part: { type: "text", text: "hello-opencode" },
     });
-    writeFileSync(fakeBin, `#!/bin/sh\necho '${event}'\n`, "utf-8");
-    chmodSync(fakeBin, 0o755);
-    process.env.PATH = `${tmpBin}:${process.env.PATH}`;
+    writeFakeBin(tmpBin, "opencode", `console.log(${JSON.stringify(event)});\n`);
+    prependPath(tmpBin);
 
-    const result = await inference({ user: "anything", timeout: 3000 });
+    const result = await inference({ user: "anything", timeout: 5000 });
     expect(result.success).toBe(true);
     expect(result.output).toBe("hello-opencode");
   });
 
   test("fake opencode sees PAL_SPAWNED_INFERENCE=1 and CLAUDECODE unset", async () => {
-    const fakeBin = resolve(tmpBin, "opencode");
-    // The fake binary emits a text event whose content reports its observed env.
-    writeFileSync(
-      fakeBin,
-      `#!/bin/sh\ncat <<EOF
-{"type":"text","part":{"type":"text","text":"sentinel=$${SPAWN_GUARD_ENV.SENTINEL} claudecode=[$CLAUDECODE]"}}
-EOF
-`,
-      "utf-8"
+    writeFakeBin(
+      tmpBin,
+      "opencode",
+      `const text = \`sentinel=\${process.env.${SPAWN_GUARD_ENV.SENTINEL}} claudecode=[\${process.env.CLAUDECODE ?? ""}]\`;
+console.log(JSON.stringify({ type: "text", part: { type: "text", text } }));\n`
     );
-    chmodSync(fakeBin, 0o755);
-    process.env.PATH = `${tmpBin}:${process.env.PATH}`;
+    prependPath(tmpBin);
     process.env.CLAUDECODE = "1";
 
-    const result = await inference({ user: "ignored", timeout: 3000 });
+    const result = await inference({ user: "ignored", timeout: 5000 });
     expect(result.success).toBe(true);
     expect(result.output).toBe("sentinel=1 claudecode=[]");
     expect(process.env.CLAUDECODE).toBe("1");
   });
 
   test("non-zero exit from fake opencode returns success: false", async () => {
-    const fakeBin = resolve(tmpBin, "opencode");
-    writeFileSync(fakeBin, "#!/bin/sh\nexit 1\n", "utf-8");
-    chmodSync(fakeBin, 0o755);
-    process.env.PATH = `${tmpBin}:${process.env.PATH}`;
+    writeFakeBin(tmpBin, "opencode", `process.exit(1);\n`);
+    prependPath(tmpBin);
 
-    const result = await inference({ user: "hi", timeout: 3000 });
+    const result = await inference({ user: "hi", timeout: 5000 });
     expect(result.success).toBe(false);
   });
 
   test("JSON-schema path parses opencode text event containing JSON", async () => {
-    const fakeBin = resolve(tmpBin, "opencode");
-    // opencode emits a text event whose content is the JSON the schema asks for.
     const event = JSON.stringify({
       type: "text",
       part: { type: "text", text: '{"verdict":"ok"}' },
     });
-    writeFileSync(fakeBin, `#!/bin/sh\necho '${event}'\n`, "utf-8");
-    chmodSync(fakeBin, 0o755);
-    process.env.PATH = `${tmpBin}:${process.env.PATH}`;
+    writeFakeBin(tmpBin, "opencode", `console.log(${JSON.stringify(event)});\n`);
+    prependPath(tmpBin);
 
     const result = await inference({
       user: "rate",
       jsonSchema: { type: "object", properties: { verdict: { type: "string" } } },
-      timeout: 3000,
+      timeout: 5000,
     });
     expect(result.success).toBe(true);
     expect(JSON.parse(result.output ?? "{}")).toEqual({ verdict: "ok" });
