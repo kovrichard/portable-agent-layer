@@ -19,9 +19,12 @@ import { readTranscriptFile } from "./lib/transcript";
 if (isPalSpawnedInference()) process.exit(0);
 
 interface StopHookInput {
-  session_id: string;
-  transcript_path: string;
+  session_id?: string;
+  sessionId?: string; // Copilot uses camelCase
+  transcript_path?: string;
+  transcriptPath?: string; // Copilot uses camelCase
   last_assistant_message?: string;
+  lastAssistantMessage?: string; // Copilot uses camelCase
 }
 
 // Check README sync before anything else — may block the session
@@ -45,18 +48,22 @@ try {
 }
 
 const input = await readStdinJSON<StopHookInput>();
-if (!input?.transcript_path) {
+const transcriptPath = input?.transcript_path ?? input?.transcriptPath;
+const sessionId = input?.session_id ?? input?.sessionId;
+const lastAssistant = input?.last_assistant_message ?? input?.lastAssistantMessage;
+
+if (!transcriptPath) {
   logError("StopOrchestrator", "No transcript_path in hook input");
   process.exit(0);
 }
 
 // Read the actual transcript from the file on disk
-const messages = readTranscriptFile(input.transcript_path);
+const messages = readTranscriptFile(transcriptPath);
 if (messages.length < 2) process.exit(0);
 
 // Serialize and run handlers
 const transcript = JSON.stringify(messages);
 await runStopHandlers(transcript, {
-  lastAssistantMessage: input.last_assistant_message,
-  sessionId: input.session_id,
+  lastAssistantMessage: lastAssistant,
+  sessionId,
 });

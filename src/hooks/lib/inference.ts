@@ -21,7 +21,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { getActiveAgent, isClaude, isCodex, isOpencode } from "./agent";
+import { getActiveAgent, isClaude, isCodex, isCopilot, isOpencode } from "./agent";
 import { logDebug } from "./log";
 import { HAIKU_MODEL } from "./models";
 import { buildSpawnGuardEnv, getInferenceDepth, SPAWN_GUARD_ENV } from "./spawn-guard";
@@ -40,6 +40,7 @@ export function canInfer(): boolean {
   if (isCodex() && hasCodexBinary()) return true;
   if (isCodex() && hasOpenAiKey()) return true;
   if (isOpencode() && hasOpencodeBinary()) return true;
+  if (isCopilot() && hasCopilotBinary()) return true;
   return hasApiKey();
 }
 
@@ -103,13 +104,17 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
       extractOpencodeText
     );
   }
+  if (isCopilot() && hasCopilotBinary()) {
+    logDebug("inference", `${tag} route=copilot-spawn agent=${agent}`);
+    return inferenceViaCliSpawn("copilot", buildCopilotArgs(opts), "", opts);
+  }
   if (hasApiKey()) {
     logDebug("inference", `${tag} route=anthropic-api agent=${agent}`);
     return inferenceViaApi(opts);
   }
   logDebug(
     "inference",
-    `${tag} route=none agent=${agent} hasApiKey=false hasOpenAiKey=${hasOpenAiKey()} hasClaude=${hasClaudeBinary()} hasCodex=${hasCodexBinary()} hasOpencode=${hasOpencodeBinary()}`
+    `${tag} route=none agent=${agent} hasApiKey=false hasOpenAiKey=${hasOpenAiKey()} hasClaude=${hasClaudeBinary()} hasCodex=${hasCodexBinary()} hasOpencode=${hasOpencodeBinary()} hasCopilot=${hasCopilotBinary()}`
   );
   return { success: false };
 }
@@ -121,6 +126,7 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
 let claudeBinaryCache: boolean | null = null;
 let codexBinaryCache: boolean | null = null;
 let opencodeBinaryCache: boolean | null = null;
+let copilotBinaryCache: boolean | null = null;
 
 function hasClaudeBinary(): boolean {
   if (claudeBinaryCache !== null) return claudeBinaryCache;
@@ -141,6 +147,12 @@ function hasOpencodeBinary(): boolean {
   return opencodeBinaryCache;
 }
 
+function hasCopilotBinary(): boolean {
+  if (copilotBinaryCache !== null) return copilotBinaryCache;
+  copilotBinaryCache = spawnSync("which", ["copilot"], { stdio: "ignore" }).status === 0;
+  return copilotBinaryCache;
+}
+
 /** Test-only: reset the cached `which claude` result. */
 export function _resetClaudeBinaryCache(): void {
   claudeBinaryCache = null;
@@ -154,6 +166,11 @@ export function _resetCodexBinaryCache(): void {
 /** Test-only: reset the cached `which opencode` result. */
 export function _resetOpencodeBinaryCache(): void {
   opencodeBinaryCache = null;
+}
+
+/** Test-only: reset the cached `which copilot` result. */
+export function _resetCopilotBinaryCache(): void {
+  copilotBinaryCache = null;
 }
 
 /** Build the argv for `claude --print …` from inference options. Pure. */
@@ -241,6 +258,43 @@ export function buildOpencodeArgs(opts: InferenceOptions): string[] {
   }
   const prompt = parts.join("\n\n");
   return ["run", "--pure", "--format", "json", prompt];
+}
+
+/**
+ * Build the argv for `copilot -p …` from inference options. Pure.
+ *
+ * Recursion defense:
+ *   --no-custom-instructions  → don't load PAL's copilot custom instructions
+ *                                in the spawned child (equivalent to claude's
+ *                                `--setting-sources ''` and opencode's `--pure`)
+ *   --disable-builtin-mcps    → no MCP servers in the child (extra safety)
+ *   --no-auto-update          → prevent CLI self-update from delaying the spawn
+ *   --no-color                → clean stdout for capture
+ *   --allow-all-tools         → REQUIRED for non-interactive mode (without it,
+ *                                copilot prompts for tool-use confirmation)
+ *
+ * Copilot has no --system-prompt flag — system + user + JSON-schema are
+ * concatenated into a single prompt passed via -p.
+ */
+export function buildCopilotArgs(opts: InferenceOptions): string[] {
+  const parts: string[] = [];
+  if (opts.system) parts.push(opts.system);
+  parts.push(opts.user);
+  if (opts.jsonSchema) {
+    parts.push(
+      `Respond with ONLY a JSON value matching this schema (no prose, no markdown): ${JSON.stringify(opts.jsonSchema)}`
+    );
+  }
+  const prompt = parts.join("\n\n");
+  return [
+    "-p",
+    prompt,
+    "--no-custom-instructions",
+    "--disable-builtin-mcps",
+    "--no-auto-update",
+    "--no-color",
+    "--allow-all-tools",
+  ];
 }
 
 /**

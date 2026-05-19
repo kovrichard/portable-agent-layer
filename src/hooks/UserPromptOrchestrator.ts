@@ -21,6 +21,7 @@ if (isPalSpawnedInference()) process.exit(0);
 interface PromptSubmitInput {
   prompt: string;
   session_id?: string;
+  sessionId?: string; // Copilot sends this (camelCase) instead of session_id
   conversation_id?: string; // Cursor sends this instead of session_id
 }
 
@@ -28,7 +29,7 @@ const input = await readStdinJSON<PromptSubmitInput>();
 logDebug("UserPromptOrchestrator", `Input: ${JSON.stringify(input).slice(0, 200)}`);
 if (!input?.prompt) process.exit(0);
 
-const sessionId = input.session_id ?? input.conversation_id;
+const sessionId = input.session_id ?? input.sessionId ?? input.conversation_id;
 const results = await Promise.allSettled([
   captureRating(input.prompt, sessionId),
   captureSessionName(input.prompt, sessionId ?? ""),
