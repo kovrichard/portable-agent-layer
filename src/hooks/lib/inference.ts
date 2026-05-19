@@ -20,6 +20,8 @@
  * yet wired and currently fall through to the API path.
  */
 
+import { accessSync, constants, existsSync } from "node:fs";
+import { basename, delimiter, resolve as resolvePath } from "node:path";
 import {
   getActiveAgent,
   isClaude,
@@ -142,38 +144,53 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
   const caller = opts.caller ?? "anonymous";
   const session = opts.sessionId ?? "-";
   const tag = `caller=${caller} sessionId=${session}`;
-  if (isClaude() && hasClaudeBinary()) {
-    logDebug(
-      "inference",
-      `${tag} route=claude-spawn agent=${agent} model=${opts.model ?? HAIKU_MODEL}`
-    );
-    return inferenceViaCliSpawn("claude", buildClaudeArgs(opts), opts.user, opts);
+  if (isClaude()) {
+    const bin = getClaudeBinary();
+    if (bin) {
+      logDebug(
+        "inference",
+        `${tag} route=claude-spawn agent=${agent} model=${opts.model ?? HAIKU_MODEL}`
+      );
+      return inferenceViaCliSpawn(bin, buildClaudeArgs(opts), opts.user, opts);
+    }
   }
-  if (isCodex() && hasCodexBinary()) {
-    logDebug("inference", `${tag} route=codex-spawn agent=${agent}`);
-    return inferenceViaCliSpawn("codex", buildCodexArgs(opts), "", opts);
+  if (isCodex()) {
+    const bin = getCodexBinary();
+    if (bin) {
+      logDebug("inference", `${tag} route=codex-spawn agent=${agent}`);
+      return inferenceViaCliSpawn(bin, buildCodexArgs(opts), "", opts);
+    }
   }
   if (isCodex() && hasOpenAiKey()) {
     logDebug("inference", `${tag} route=openai-api agent=${agent}`);
     return inferenceViaOpenAiApi(opts);
   }
-  if (isOpencode() && hasOpencodeBinary()) {
-    logDebug("inference", `${tag} route=opencode-spawn agent=${agent}`);
-    return inferenceViaCliSpawn(
-      "opencode",
-      buildOpencodeArgs(opts),
-      "",
-      opts,
-      extractOpencodeText
-    );
+  if (isOpencode()) {
+    const bin = getOpencodeBinary();
+    if (bin) {
+      logDebug("inference", `${tag} route=opencode-spawn agent=${agent}`);
+      return inferenceViaCliSpawn(
+        bin,
+        buildOpencodeArgs(opts),
+        "",
+        opts,
+        extractOpencodeText
+      );
+    }
   }
-  if (isCopilot() && hasCopilotBinary()) {
-    logDebug("inference", `${tag} route=copilot-spawn agent=${agent}`);
-    return inferenceViaCliSpawn("copilot", buildCopilotArgs(opts), "", opts);
+  if (isCopilot()) {
+    const bin = getCopilotBinary();
+    if (bin) {
+      logDebug("inference", `${tag} route=copilot-spawn agent=${agent}`);
+      return inferenceViaCliSpawn(bin, buildCopilotArgs(opts), "", opts);
+    }
   }
-  if (isCursor() && hasCursorBinary()) {
-    logDebug("inference", `${tag} route=cursor-spawn agent=${agent}`);
-    return inferenceViaCliSpawn("cursor-agent", buildCursorArgs(opts), "", opts);
+  if (isCursor()) {
+    const bin = getCursorBinary();
+    if (bin) {
+      logDebug("inference", `${tag} route=cursor-spawn agent=${agent}`);
+      return inferenceViaCliSpawn(bin, buildCursorArgs(opts), "", opts);
+    }
   }
   if (hasApiKey()) {
     logDebug("inference", `${tag} route=anthropic-api agent=${agent}`);
@@ -190,74 +207,120 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
 // Per-agent CLI metadata — binary presence + argv builders
 // ─────────────────────────────────────────────────────────────────────────────
 
-let claudeBinaryCache: boolean | null = null;
-let codexBinaryCache: boolean | null = null;
-let opencodeBinaryCache: boolean | null = null;
-let copilotBinaryCache: boolean | null = null;
-let cursorBinaryCache: boolean | null = null;
+let claudeBinaryCache: string | null | undefined;
+let codexBinaryCache: string | null | undefined;
+let opencodeBinaryCache: string | null | undefined;
+let copilotBinaryCache: string | null | undefined;
+let cursorBinaryCache: string | null | undefined;
 
-// Bun.which() is used instead of spawning `which` because:
-// 1. Ubuntu 24.04's debianutils dropped the `which` binary, breaking CI.
-// 2. Windows has no `which` at all.
-// PATH is passed explicitly because Bun.which() snapshots process.env.PATH
-// at startup and won't see mid-test mutations otherwise.
-function hasBinaryOnPath(name: string): boolean {
-  return Bun.which(name, { PATH: process.env.PATH ?? "" }) !== null;
+/**
+ * Resolve a binary on PATH to its full absolute path.
+ *
+ * Manual PATH walk (instead of Bun.which / `which` subprocess) because:
+ * 1. Ubuntu 24.04 dropped the `which` binary entirely.
+ * 2. Windows has no `which` at all.
+ * 3. Bun.which snapshots PATH at startup and ignores mid-test mutations.
+ * 4. Bun.spawn on Windows is inconsistent at resolving PATHEXT for bare
+ *    names — passing the full `.cmd`/`.exe` path bypasses that fragility.
+ *
+ * Returns the resolved absolute path or null.
+ */
+function findBinaryOnPath(name: string): string | null {
+  const PATH = process.env.PATH;
+  if (!PATH) return null;
+  const exts =
+    process.platform === "win32"
+      ? (process.env.PATHEXT ?? ".COM;.EXE;.BAT;.CMD").split(";")
+      : [""];
+  for (const dir of PATH.split(delimiter)) {
+    if (!dir) continue;
+    for (const ext of exts) {
+      const candidate = resolvePath(dir, name + ext);
+      try {
+        if (process.platform === "win32") {
+          // Windows has no executable bit — existence in PATHEXT is enough.
+          if (existsSync(candidate)) return candidate;
+        } else {
+          accessSync(candidate, constants.X_OK);
+          return candidate;
+        }
+      } catch {
+        /* not here — try next */
+      }
+    }
+  }
+  return null;
 }
 
-function hasClaudeBinary(): boolean {
-  if (claudeBinaryCache !== null) return claudeBinaryCache;
-  claudeBinaryCache = hasBinaryOnPath("claude");
+function getClaudeBinary(): string | null {
+  if (claudeBinaryCache !== undefined) return claudeBinaryCache;
+  claudeBinaryCache = findBinaryOnPath("claude");
   return claudeBinaryCache;
 }
 
-function hasCodexBinary(): boolean {
-  if (codexBinaryCache !== null) return codexBinaryCache;
-  codexBinaryCache = hasBinaryOnPath("codex");
+function getCodexBinary(): string | null {
+  if (codexBinaryCache !== undefined) return codexBinaryCache;
+  codexBinaryCache = findBinaryOnPath("codex");
   return codexBinaryCache;
 }
 
-function hasOpencodeBinary(): boolean {
-  if (opencodeBinaryCache !== null) return opencodeBinaryCache;
-  opencodeBinaryCache = hasBinaryOnPath("opencode");
+function getOpencodeBinary(): string | null {
+  if (opencodeBinaryCache !== undefined) return opencodeBinaryCache;
+  opencodeBinaryCache = findBinaryOnPath("opencode");
   return opencodeBinaryCache;
 }
 
-function hasCopilotBinary(): boolean {
-  if (copilotBinaryCache !== null) return copilotBinaryCache;
-  copilotBinaryCache = hasBinaryOnPath("copilot");
+function getCopilotBinary(): string | null {
+  if (copilotBinaryCache !== undefined) return copilotBinaryCache;
+  copilotBinaryCache = findBinaryOnPath("copilot");
   return copilotBinaryCache;
 }
 
-function hasCursorBinary(): boolean {
-  if (cursorBinaryCache !== null) return cursorBinaryCache;
-  cursorBinaryCache = hasBinaryOnPath("cursor-agent");
+function getCursorBinary(): string | null {
+  if (cursorBinaryCache !== undefined) return cursorBinaryCache;
+  cursorBinaryCache = findBinaryOnPath("cursor-agent");
   return cursorBinaryCache;
 }
 
-/** Test-only: reset the cached `which claude` result. */
+function hasClaudeBinary(): boolean {
+  return getClaudeBinary() !== null;
+}
+function hasCodexBinary(): boolean {
+  return getCodexBinary() !== null;
+}
+function hasOpencodeBinary(): boolean {
+  return getOpencodeBinary() !== null;
+}
+function hasCopilotBinary(): boolean {
+  return getCopilotBinary() !== null;
+}
+function hasCursorBinary(): boolean {
+  return getCursorBinary() !== null;
+}
+
+/** Test-only: reset the cached claude-binary resolution. */
 export function _resetClaudeBinaryCache(): void {
-  claudeBinaryCache = null;
+  claudeBinaryCache = undefined;
 }
 
-/** Test-only: reset the cached `which codex` result. */
+/** Test-only: reset the cached codex-binary resolution. */
 export function _resetCodexBinaryCache(): void {
-  codexBinaryCache = null;
+  codexBinaryCache = undefined;
 }
 
-/** Test-only: reset the cached `which opencode` result. */
+/** Test-only: reset the cached opencode-binary resolution. */
 export function _resetOpencodeBinaryCache(): void {
-  opencodeBinaryCache = null;
+  opencodeBinaryCache = undefined;
 }
 
-/** Test-only: reset the cached `which copilot` result. */
+/** Test-only: reset the cached copilot-binary resolution. */
 export function _resetCopilotBinaryCache(): void {
-  copilotBinaryCache = null;
+  copilotBinaryCache = undefined;
 }
 
-/** Test-only: reset the cached `which cursor-agent` result. */
+/** Test-only: reset the cached cursor-binary resolution. */
 export function _resetCursorBinaryCache(): void {
-  cursorBinaryCache = null;
+  cursorBinaryCache = undefined;
 }
 
 /** Build the argv for `claude --print …` from inference options. Pure. */
@@ -578,6 +641,9 @@ async function inferenceViaCliSpawn(
   const caller = opts.caller ?? "anonymous";
   const session = opts.sessionId ?? "-";
   const tag = `caller=${caller} sessionId=${session}`;
+  // Friendly name for logs — strip path + extension so cross-platform diffs
+  // (e.g. C:\…\claude.cmd vs /usr/local/bin/claude) read the same in debug.log.
+  const binaryName = basename(binary).replace(/\.(cmd|bat|exe|com)$/i, "");
 
   // Attempt 1
   let attempt = await singleCliAttempt(binary, args, stdinInput, env, timeout);
@@ -594,7 +660,7 @@ async function inferenceViaCliSpawn(
     const jitterMs = 500 + Math.floor(Math.random() * 1000);
     logDebug(
       "inference:spawn",
-      `${tag} retry: empty-abort binary=${binary} exit=${attempt.code} after ${Date.now() - started}ms, jitter=${jitterMs}ms`
+      `${tag} retry: empty-abort binary=${binaryName} exit=${attempt.code} after ${Date.now() - started}ms, jitter=${jitterMs}ms`
     );
     await new Promise((r) => setTimeout(r, jitterMs));
     attempt = await singleCliAttempt(binary, args, stdinInput, env, timeout);
@@ -604,7 +670,7 @@ async function inferenceViaCliSpawn(
   const finish = (result: InferenceResult): InferenceResult => {
     logDebug(
       "inference:spawn",
-      `${tag} done binary=${binary} success=${result.success} bytes=${result.output?.length ?? 0} elapsedMs=${elapsedMs}`
+      `${tag} done binary=${binaryName} success=${result.success} bytes=${result.output?.length ?? 0} elapsedMs=${elapsedMs}`
     );
     return result;
   };
@@ -612,14 +678,14 @@ async function inferenceViaCliSpawn(
   if (attempt.timedOut) {
     void logError(
       "inference:spawn",
-      `${tag} timeout binary=${binary} after ${timeout}ms`
+      `${tag} timeout binary=${binaryName} after ${timeout}ms`
     );
     return finish({ success: false });
   }
   if (attempt.code !== 0) {
     void logError(
       "inference:spawn",
-      `${tag} exited=${attempt.code} binary=${binary} argv=${JSON.stringify(args)} stderr(${attempt.stderr.length})=${attempt.stderr.slice(0, 300)} stdout(${attempt.stdout.length})=${attempt.stdout.slice(0, 300)}`
+      `${tag} exited=${attempt.code} binary=${binaryName} argv=${JSON.stringify(args)} stderr(${attempt.stderr.length})=${attempt.stderr.slice(0, 300)} stdout(${attempt.stdout.length})=${attempt.stdout.slice(0, 300)}`
     );
     return finish({ success: false });
   }
@@ -631,7 +697,7 @@ async function inferenceViaCliSpawn(
     // no usable text. Log the raw stdout so we can see what was actually emitted.
     void logError(
       "inference:spawn",
-      `${tag} extract-empty binary=${binary} rawStdout(${rawText.length})=${rawText.slice(0, 500)}`
+      `${tag} extract-empty binary=${binaryName} rawStdout(${rawText.length})=${rawText.slice(0, 500)}`
     );
     return finish({ success: false });
   }

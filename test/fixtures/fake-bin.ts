@@ -29,15 +29,18 @@ export function writeFakeBin(dir: string, name: string, tsLogic: string): void {
 
   if (process.platform === "win32") {
     // Resolve bun.exe to an absolute path so the wrapper doesn't depend on
-    // cmd.exe's PATH lookup inside the spawned shell. Propagate the child's
-    // exit code with `exit /b` so non-zero outcomes surface to the dispatcher.
-    const bunExe = Bun.which("bun") ?? "bun";
+    // cmd.exe's PATH lookup inside the spawned shell. `setlocal` isolates env
+    // mutations; `exit /b` propagates bun's exit code back to Bun.spawn.
+    const bunExe = Bun.which("bun") ?? "bun.exe";
     const cmd = resolve(dir, `${name}.cmd`);
-    writeFileSync(
-      cmd,
-      `@echo off\r\n"${bunExe}" run "${tsFile}" %*\r\nexit /b %ERRORLEVEL%\r\n`,
-      "utf-8"
-    );
+    const body = [
+      "@echo off",
+      "setlocal",
+      `"${bunExe}" run "${tsFile}" %*`,
+      "exit /b %ERRORLEVEL%",
+      "",
+    ].join("\r\n");
+    writeFileSync(cmd, body, "utf-8");
     return;
   }
   const sh = resolve(dir, name);
