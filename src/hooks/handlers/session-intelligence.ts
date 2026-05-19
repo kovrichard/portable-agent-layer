@@ -137,9 +137,9 @@ async function captureSessionIntelligence(
     if (prev && messages.length - prev.messageCount < MIN_NEW_MESSAGES) return;
   }
 
-  // Skip if no API key
+  // Skip if no inference path is available (no CLI binary AND no API key)
   if (!canInfer()) {
-    logDebug("session-intelligence", "Skipped: no PAL_ANTHROPIC_API_KEY");
+    logDebug("session-intelligence", "Skipped: canInfer() false (no CLI + no API key)");
     return;
   }
 

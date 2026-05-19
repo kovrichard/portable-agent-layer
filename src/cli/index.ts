@@ -666,7 +666,7 @@ function doctor(silent = false): DoctorResult {
     const fail = (msg: string) => console.log(`  \x1b[31m\u2717\x1b[0m ${msg}`);
 
     console.log("");
-    log.info("Doctor");
+    log.info("Prerequisites");
     ok(`Bun ${bun.version}`);
     const node = checkNode();
     if (!node.available) {
@@ -695,6 +695,14 @@ function doctor(silent = false): DoctorResult {
     codex.available
       ? ok(`Codex ${codex.version || ""}`.trim())
       : fail("Codex — not found");
+    checkPlaywrightChromium()
+      ? ok("Playwright Chromium installed")
+      : fail(
+          "Playwright Chromium — not found (run 'pal cli install' or 'bunx playwright install chromium')"
+        );
+
+    console.log("");
+    log.info("PAL state");
     ok(`PAL home: ${home}`);
     telosCount > 0 ? ok(`TELOS: ${telosCount} files`) : fail("TELOS: not scaffolded");
 
@@ -739,7 +747,15 @@ function doctor(silent = false): DoctorResult {
           );
     }
 
+    // Dependencies (PAL's own npm packages)
+    const nodeModulesPath = resolve(palPkg(), "node_modules");
+    existsSync(nodeModulesPath)
+      ? ok("Dependencies installed")
+      : fail("Dependencies missing — run 'pal cli install'");
+
     // Skills (per installed agent)
+    console.log("");
+    log.info("Skills");
     const countSkillsIn = (dir: string) =>
       existsSync(dir)
         ? readdirSync(dir).filter((f) => existsSync(resolve(dir, f, "SKILL.md"))).length
@@ -775,20 +791,9 @@ function doctor(silent = false): DoctorResult {
         : warn("Codex skills — none found (run 'pal cli install --codex')");
     }
 
-    // Dependencies
-    const nodeModulesPath = resolve(palPkg(), "node_modules");
-    existsSync(nodeModulesPath)
-      ? ok("Dependencies installed")
-      : fail("Dependencies missing — run 'pal cli install'");
-
-    // Playwright Chromium (required by create-pdf + consulting-report skills)
-    checkPlaywrightChromium()
-      ? ok("Playwright Chromium installed")
-      : fail(
-          "Playwright Chromium — not found (run 'pal cli install' or 'bunx playwright install chromium')"
-        );
-
     // Hook registration (per installed agent)
+    console.log("");
+    log.info("Hooks");
     if (claude.available) {
       checkClaudeHooksRegistered()
         ? ok("Claude Code hooks registered")
