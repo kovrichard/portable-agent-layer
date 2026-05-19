@@ -83,6 +83,15 @@ describe("spawn-guard helpers", () => {
   test("MAX_DEPTH constant is exported for dispatcher use", () => {
     expect(SPAWN_GUARD_ENV.MAX_DEPTH).toBe(1);
   });
+
+  test("buildSpawnGuardEnv sets CLAUDECODE to undefined for the child", () => {
+    const parent = { CLAUDECODE: "1", FOO: "bar" } as NodeJS.ProcessEnv;
+    const child = buildSpawnGuardEnv(parent);
+    expect(child.CLAUDECODE).toBeUndefined();
+    expect(child.FOO).toBe("bar");
+    // Parent untouched — scoping is to the returned object only.
+    expect(parent.CLAUDECODE).toBe("1");
+  });
 });
 
 describe("spawn-guard integration — hook entry-points short-circuit when spawned", () => {

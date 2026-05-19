@@ -17,6 +17,7 @@ const PRESERVED = [
   "PAL_AGENT",
   "PAL_ANTHROPIC_API_KEY",
   "PATH",
+  "CLAUDECODE",
   SPAWN_GUARD_ENV.SENTINEL,
   SPAWN_GUARD_ENV.DEPTH,
 ] as const;
@@ -211,6 +212,23 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
     const result = await inference({ user: "ignored", timeout: 3000 });
     expect(result.success).toBe(true);
     expect(result.output).toBe("sentinel=1 depth=1");
+  });
+
+  test("fake claude binary sees CLAUDECODE unset even when parent has it", async () => {
+    // Parent env has CLAUDECODE="1" (as it would inside a real Claude Code session).
+    // The child claude --print must see it absent so its nested-session guard
+    // doesn't fire. Fake binary prints CLAUDECODE; absent → empty string.
+    process.env.CLAUDECODE = "1";
+    const fakeBin = resolve(tmpBin, "claude");
+    writeFileSync(fakeBin, '#!/bin/sh\necho "claudecode=[$CLAUDECODE]"\n', "utf-8");
+    chmodSync(fakeBin, 0o755);
+    process.env.PATH = `${tmpBin}:${process.env.PATH}`;
+
+    const result = await inference({ user: "ignored", timeout: 3000 });
+    expect(result.success).toBe(true);
+    expect(result.output).toBe("claudecode=[]");
+    // Parent still has CLAUDECODE=1 — scoping confirmed.
+    expect(process.env.CLAUDECODE).toBe("1");
   });
 
   test("non-zero exit from fake claude returns success: false", async () => {

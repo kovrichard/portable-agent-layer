@@ -44,8 +44,11 @@ export function getInferenceDepth(): number {
 }
 
 /**
- * Build the env mutation a dispatcher applies before spawn. Increments depth.
- * Returns an object suitable for merging into `spawn`'s env option.
+ * Build the env a dispatcher applies before spawn. Returns a new object;
+ * `parentEnv` is never mutated. Sets the recursion sentinel, increments depth,
+ * and unsets CLAUDECODE so the child claude CLI does not trip its
+ * nested-session guard. CLAUDECODE: undefined is scoped to the child only —
+ * the parent process and OS env are untouched.
  */
 export function buildSpawnGuardEnv(parentEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const nextDepth = getInferenceDepthFrom(parentEnv) + 1;
@@ -53,6 +56,7 @@ export function buildSpawnGuardEnv(parentEnv: NodeJS.ProcessEnv): NodeJS.Process
     ...parentEnv,
     [SPAWN_GUARD_ENV.SENTINEL]: "1",
     [SPAWN_GUARD_ENV.DEPTH]: String(nextDepth),
+    CLAUDECODE: undefined,
   };
 }
 
