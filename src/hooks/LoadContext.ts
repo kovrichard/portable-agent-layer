@@ -11,6 +11,7 @@
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { getActiveAgent, isCodex, isCopilot, isCursor } from "./lib/agent";
 import { buildClaudeMd, regenerateIfNeeded } from "./lib/claude-md";
 import { type AgentTarget, buildSystemReminder } from "./lib/context";
 import { logDebug, logError } from "./lib/log";
@@ -37,14 +38,13 @@ try {
 // --- Context to stdout (or file for Copilot) ---
 try {
   // Determine agent target — controls which sections are skipped (loaded natively instead).
-  let agent: AgentTarget = "claude";
-  if (process.env.PAL_AGENT === "copilot") agent = "copilot";
-  else if (process.env.PAL_AGENT === "cursor" || process.env.CURSOR_VERSION)
-    agent = "cursor";
+  const active = getActiveAgent();
+  const agent: AgentTarget =
+    active === "copilot" || active === "cursor" ? active : "claude";
   const reminder = buildSystemReminder({ agent });
   if (!reminder) process.exit(0);
 
-  if (process.env.PAL_AGENT === "copilot") {
+  if (isCopilot()) {
     // Copilot: semi-static in ~/.copilot/instructions/pal-*.instructions.md (written at stop).
     // Write AGENTS.md + dynamic context to pal-session.instructions.md on each session start.
     const instructionsDir = resolve(platform.copilotDir(), "instructions");
@@ -62,13 +62,13 @@ try {
       "LoadContext",
       `Copilot session instructions written: ${context.length} chars`
     );
-  } else if (process.env.PAL_AGENT === "cursor" || process.env.CURSOR_VERSION) {
+  } else if (isCursor()) {
     // Cursor: semi-static in ~/.cursor/rules/pal-context.mdc; inject AGENTS.md + dynamic here
     const agentsMd = buildClaudeMd();
     const context = [agentsMd, reminder].filter(Boolean).join("\n\n");
     process.stdout.write(JSON.stringify({ additional_context: context }));
     logDebug("LoadContext", `Reminder injected: ${reminder.length} chars`);
-  } else if (process.env.PAL_AGENT === "codex") {
+  } else if (isCodex()) {
     // Codex: AGENTS.md already loaded via symlink; inject only dynamic context
     process.stdout.write(
       JSON.stringify({
@@ -80,7 +80,7 @@ try {
     );
     logDebug("LoadContext", `Codex reminder injected: ${reminder.length} chars`);
   } else {
-    // Claude Code: raw text
+    // Claude Code (and opencode, which uses the plugin path not this hook): raw text
     console.log(reminder);
     logDebug("LoadContext", `Reminder injected: ${reminder.length} chars`);
   }

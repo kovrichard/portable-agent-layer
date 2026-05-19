@@ -10,6 +10,10 @@ import type { Plugin, PluginInput } from "@opencode-ai/plugin";
 
 const PAL_DIR = process.env.PAL_DIR || resolve(import.meta.dir, "../../..");
 
+// Identify ourselves as opencode for the shared detector in hooks/lib/agent.ts.
+// Set at module load so every shared-lib call below sees the correct value.
+process.env.PAL_AGENT ??= "opencode";
+
 // Dynamic imports from shared lib — resolved at runtime via PAL_DIR
 async function lib<T>(mod: string): Promise<T> {
   return await import(resolve(PAL_DIR, "src", "hooks", "lib", mod));
