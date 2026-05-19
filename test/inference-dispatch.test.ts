@@ -138,14 +138,6 @@ describe("canInfer routing", () => {
     process.env.PAL_ANTHROPIC_API_KEY = "sk-test";
     expect(canInfer()).toBe(true);
   });
-
-  test("canInfer is true when active=claude AND claude binary on PATH", () => {
-    process.env.PAL_AGENT = "claude";
-    // The dev machine running these tests has `claude` on PATH; if not, this
-    // would need a fake binary. The fake-binary test below covers that case
-    // explicitly via PATH override.
-    expect(canInfer()).toBe(true);
-  });
 });
 
 describe("inference dispatcher — depth limit refusal", () => {
