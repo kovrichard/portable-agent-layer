@@ -83,7 +83,7 @@
     "@clack/prompts": "^1.4.0",
     "@konvert7/klint": "0.4.0",
     "adm-zip": "^0.5.17",
-    "marked": "^15.0.12",
+    "marked": "18.0.4",
     "playwright": "^1.60.0"
   }
 }
