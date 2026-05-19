@@ -21,7 +21,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { getActiveAgent, isClaude, isCodex } from "./agent";
+import { getActiveAgent, isClaude, isCodex, isOpencode } from "./agent";
 import { logDebug } from "./log";
 import { HAIKU_MODEL } from "./models";
 import { buildSpawnGuardEnv, getInferenceDepth, SPAWN_GUARD_ENV } from "./spawn-guard";
@@ -39,6 +39,7 @@ export function canInfer(): boolean {
   if (isClaude() && hasClaudeBinary()) return true;
   if (isCodex() && hasCodexBinary()) return true;
   if (isCodex() && hasOpenAiKey()) return true;
+  if (isOpencode() && hasOpencodeBinary()) return true;
   return hasApiKey();
 }
 
@@ -92,13 +93,23 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
     logDebug("inference", `${tag} route=openai-api agent=${agent}`);
     return inferenceViaOpenAiApi(opts);
   }
+  if (isOpencode() && hasOpencodeBinary()) {
+    logDebug("inference", `${tag} route=opencode-spawn agent=${agent}`);
+    return inferenceViaCliSpawn(
+      "opencode",
+      buildOpencodeArgs(opts),
+      "",
+      opts,
+      extractOpencodeText
+    );
+  }
   if (hasApiKey()) {
     logDebug("inference", `${tag} route=anthropic-api agent=${agent}`);
     return inferenceViaApi(opts);
   }
   logDebug(
     "inference",
-    `${tag} route=none agent=${agent} hasApiKey=false hasOpenAiKey=${hasOpenAiKey()} hasClaude=${hasClaudeBinary()} hasCodex=${hasCodexBinary()}`
+    `${tag} route=none agent=${agent} hasApiKey=false hasOpenAiKey=${hasOpenAiKey()} hasClaude=${hasClaudeBinary()} hasCodex=${hasCodexBinary()} hasOpencode=${hasOpencodeBinary()}`
   );
   return { success: false };
 }
@@ -109,6 +120,7 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
 
 let claudeBinaryCache: boolean | null = null;
 let codexBinaryCache: boolean | null = null;
+let opencodeBinaryCache: boolean | null = null;
 
 function hasClaudeBinary(): boolean {
   if (claudeBinaryCache !== null) return claudeBinaryCache;
@@ -122,6 +134,13 @@ function hasCodexBinary(): boolean {
   return codexBinaryCache;
 }
 
+function hasOpencodeBinary(): boolean {
+  if (opencodeBinaryCache !== null) return opencodeBinaryCache;
+  opencodeBinaryCache =
+    spawnSync("which", ["opencode"], { stdio: "ignore" }).status === 0;
+  return opencodeBinaryCache;
+}
+
 /** Test-only: reset the cached `which claude` result. */
 export function _resetClaudeBinaryCache(): void {
   claudeBinaryCache = null;
@@ -130,6 +149,11 @@ export function _resetClaudeBinaryCache(): void {
 /** Test-only: reset the cached `which codex` result. */
 export function _resetCodexBinaryCache(): void {
   codexBinaryCache = null;
+}
+
+/** Test-only: reset the cached `which opencode` result. */
+export function _resetOpencodeBinaryCache(): void {
+  opencodeBinaryCache = null;
 }
 
 /** Build the argv for `claude --print …` from inference options. Pure. */
@@ -190,6 +214,57 @@ export function buildCodexArgs(opts: InferenceOptions): string[] {
     "--ephemeral",
     prompt,
   ];
+}
+
+/**
+ * Build the argv for `opencode run …` from inference options. Pure.
+ *
+ * Recursion defense:
+ *   --pure         → run WITHOUT external plugins → PAL's own opencode plugin
+ *                    doesn't load in the spawned child → no hook recursion.
+ *   --format json  → emits NDJSON events on stdout; we extract the agent's
+ *                    text via extractOpencodeText() rather than wading through
+ *                    decoration ("> build · provider/model" banner etc).
+ *
+ * opencode (like codex) has no --system-prompt equivalent — the full prompt is
+ * the positional message argv. System + user + JSON-schema are concatenated.
+ * Provider/model is left unset so opencode uses the user's configured default.
+ */
+export function buildOpencodeArgs(opts: InferenceOptions): string[] {
+  const parts: string[] = [];
+  if (opts.system) parts.push(opts.system);
+  parts.push(opts.user);
+  if (opts.jsonSchema) {
+    parts.push(
+      `Respond with ONLY a JSON value matching this schema (no prose, no markdown): ${JSON.stringify(opts.jsonSchema)}`
+    );
+  }
+  const prompt = parts.join("\n\n");
+  return ["run", "--pure", "--format", "json", prompt];
+}
+
+/**
+ * Extract the agent's text reply from opencode --format json NDJSON output.
+ * Concatenates all `type:"text"` event payloads in order. Returns empty
+ * string on parse failure or no text events.
+ */
+export function extractOpencodeText(rawStdout: string): string {
+  const texts: string[] = [];
+  for (const line of rawStdout.split("\n")) {
+    if (!line.trim()) continue;
+    try {
+      const event = JSON.parse(line) as {
+        type?: string;
+        part?: { type?: string; text?: string };
+      };
+      if (event.type === "text" && event.part?.type === "text" && event.part.text) {
+        texts.push(event.part.text);
+      }
+    } catch {
+      /* not a JSON line — opencode also emits non-JSON lines, skip them */
+    }
+  }
+  return texts.join("").trim();
 }
 
 /** Append a JSON-schema instruction to the system prompt (PAI pattern). */
@@ -311,7 +386,8 @@ async function inferenceViaCliSpawn(
   binary: string,
   args: string[],
   stdinInput: string,
-  opts: InferenceOptions
+  opts: InferenceOptions,
+  extractText?: (rawStdout: string) => string
 ): Promise<InferenceResult> {
   const timeout = opts.timeout ?? 15000;
   const env = buildSpawnGuardEnv(process.env);
@@ -364,8 +440,18 @@ async function inferenceViaCliSpawn(
     );
     return finish({ success: false });
   }
-  const text = attempt.stdout.trim();
-  if (!text) return finish({ success: false });
+  const rawText = attempt.stdout.trim();
+  if (!rawText) return finish({ success: false });
+  const text = extractText ? extractText(rawText) : rawText;
+  if (!text) {
+    // Extraction returned empty — the binary succeeded but our extractor found
+    // no usable text. Log the raw stdout so we can see what was actually emitted.
+    void logError(
+      "inference:spawn",
+      `${tag} extract-empty binary=${binary} rawStdout(${rawText.length})=${rawText.slice(0, 500)}`
+    );
+    return finish({ success: false });
+  }
   if (opts.jsonSchema) {
     const parsed = parseJsonFromOutput(text);
     if (parsed === null) return finish({ success: false, output: text });

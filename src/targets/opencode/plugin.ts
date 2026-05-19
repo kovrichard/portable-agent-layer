@@ -11,8 +11,11 @@ import type { Plugin, PluginInput } from "@opencode-ai/plugin";
 const PAL_DIR = process.env.PAL_DIR || resolve(import.meta.dir, "../../..");
 
 // Identify ourselves as opencode for the shared detector in hooks/lib/agent.ts.
-// Set at module load so every shared-lib call below sees the correct value.
-process.env.PAL_AGENT ??= "opencode";
+// Force-override (= not ??=) so an inherited PAL_AGENT from the parent shell
+// — common when launching opencode from a Claude Code terminal — doesn't make
+// the dispatcher route inference to the wrong agent's CLI. Mirrors how
+// .claude/settings.json template prefixes every hook command with PAL_AGENT=claude.
+process.env.PAL_AGENT = "opencode";
 
 // Dynamic imports from shared lib — resolved at runtime via PAL_DIR
 async function lib<T>(mod: string): Promise<T> {
