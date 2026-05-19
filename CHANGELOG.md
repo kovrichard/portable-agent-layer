@@ -1,3 +1,38 @@
+# [0.41.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.40.0...v0.41.0) (2026-05-19)
+
+
+### Bug Fixes
+
+* **claude:** unset CLAUDECODE in spawned envs ([33b3e87](https://github.com/kovrichard/portable-agent-layer/commit/33b3e87c6db75c5d8b785fb44079166e6cda2952))
+* **fake-bin:** resolve bun.exe path for cross-platform compatibility in command scripts ([a62a119](https://github.com/kovrichard/portable-agent-layer/commit/a62a119e1b29586da4675315a1eacb8ba81f883a))
+* **hooks:** improve atomic file handling in detachFailurePrinciple to prevent race conditions ([8bb4923](https://github.com/kovrichard/portable-agent-layer/commit/8bb49236f4fbc55d3e9d7d946d00ff63cfb10da0))
+* **inference:** refactor binary detection to return full paths for CLI agents ([ffecd92](https://github.com/kovrichard/portable-agent-layer/commit/ffecd920380b523d9f6b8e7c4044e1d4a5828968))
+* **inference:** use a common binary checker ([b575275](https://github.com/kovrichard/portable-agent-layer/commit/b57527589cd8e6d3a13837522c99085c27dc7b69))
+* **inference:** use Bun.which to be cross platform ([b6bb3f9](https://github.com/kovrichard/portable-agent-layer/commit/b6bb3f9570d0502e8f22b9f8f7cbab745db71c71))
+* **notifications:** add PAL_NOTIFICATIONS_DISABLED env var to suppress desktop notifications ([da541ab](https://github.com/kovrichard/portable-agent-layer/commit/da541ab6179cdb0e592014986200cbed4744a80e))
+* remove redundant test ([655d050](https://github.com/kovrichard/portable-agent-layer/commit/655d050842966336dc3cb4ef2699b486a863f07e))
+* type error fixes ([9385102](https://github.com/kovrichard/portable-agent-layer/commit/93851021dfaab6aa41813253f74fe8fdff8ab150))
+
+
+### Features
+
+* add detached autoGraduate handling to improve inference performance ([abe7d1c](https://github.com/kovrichard/portable-agent-layer/commit/abe7d1ce2f87260c3a0bb8052326efb479318f78))
+* **doctor:** add inference probing functionality to check agent routes ([182f80e](https://github.com/kovrichard/portable-agent-layer/commit/182f80ebfc48c087924307388b778659d3a1a4e6))
+* **doctor:** add informational logging for optional API key checks ([4c2ca75](https://github.com/kovrichard/portable-agent-layer/commit/4c2ca7541017d6ee1de4c55054206d925b66d073))
+* **doctor:** check inference related env vars ([a48b6cc](https://github.com/kovrichard/portable-agent-layer/commit/a48b6ccc4cadb8cacbb6480ee92aa1773c6c7517))
+* **doctor:** detect unnecessary env vars ([245bb0d](https://github.com/kovrichard/portable-agent-layer/commit/245bb0da8f49aa2ce1958b14e7a913b83a6df0d6))
+* **doctor:** implement install integrity checks for hook commands and opencode plugin freshness ([99d9424](https://github.com/kovrichard/portable-agent-layer/commit/99d94242b0180a312f76c5387c76827743ef0116))
+* implement detached inference handling for session intelligence and failure principle ([7d79291](https://github.com/kovrichard/portable-agent-layer/commit/7d792916ae7873c51f23efe2681779b0b4b9c1f7))
+* implement spawn-guard to prevent recursion in PAL inference subprocesses ([a2d0beb](https://github.com/kovrichard/portable-agent-layer/commit/a2d0beb89e7dcf163d36c2dd2e74a1c331be1ff2))
+* **inference:** add Opencode support with CLI integration and enhance argument handling ([faedef1](https://github.com/kovrichard/portable-agent-layer/commit/faedef1045387d84adf55cb152a1ba04c76f9a21))
+* **inference:** add sessionId to inference options and logging for better traceability ([34b24b0](https://github.com/kovrichard/portable-agent-layer/commit/34b24b085b1ed2102bae1d683aa8fe95fa027d55))
+* **inference:** add support for Codex integration and enhance inference logic ([7ee7f42](https://github.com/kovrichard/portable-agent-layer/commit/7ee7f424564e22bff336b3e83eba62e2e25cd8b4))
+* **inference:** add support for Cursor integration with argument handling and logging ([3274cc4](https://github.com/kovrichard/portable-agent-layer/commit/3274cc4e4287fe5fb7e9d2a5e1bd24351f332f72))
+* **inference:** integrate Copilot support with enhanced argument handling ([34a832b](https://github.com/kovrichard/portable-agent-layer/commit/34a832bf9f8611c0ed4ce09359ddab4a72ebd8b3))
+* **inference:** log the caller ([32e291f](https://github.com/kovrichard/portable-agent-layer/commit/32e291f01a72f7f53d59aa7ce7934c9fd4ec9fe3))
+* integrate jscpd for duplicate code detection and add configuration ([58be797](https://github.com/kovrichard/portable-agent-layer/commit/58be797681a5c92204b81e8459e29fb8f08080fe))
+* **logging:** enhance log rotation and health check to support multiple rotated log files ([cb0d6a1](https://github.com/kovrichard/portable-agent-layer/commit/cb0d6a1c0ca473162e5b8e940299049e4e717e50))
+
 # [0.40.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.39.0...v0.40.0) (2026-05-17)
 
 
