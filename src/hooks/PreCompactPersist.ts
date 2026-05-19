@@ -17,8 +17,12 @@ import { resolve } from "node:path";
 import { persistLastExchange } from "./handlers/persist-last-exchange";
 import { logDebug, logError } from "./lib/log";
 import { paths } from "./lib/paths";
+import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
 import { readTranscriptFile } from "./lib/transcript";
+
+// Recursion guard — spawned subprocesses don't compact, so nothing to persist.
+if (isPalSpawnedInference()) process.exit(0);
 
 interface PreCompactInput {
   session_id?: string;

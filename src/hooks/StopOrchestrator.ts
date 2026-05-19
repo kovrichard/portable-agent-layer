@@ -9,9 +9,14 @@
 import { checkReadmeSync } from "./handlers/readme-sync";
 import { isCodex, isCursor } from "./lib/agent";
 import { logError } from "./lib/log";
+import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
 import { runStopHandlers } from "./lib/stop";
 import { readTranscriptFile } from "./lib/transcript";
+
+// Recursion guard — spawned inference subprocesses must not record session
+// learning, ratings, or handoffs from their throwaway transcript.
+if (isPalSpawnedInference()) process.exit(0);
 
 interface StopHookInput {
   session_id: string;

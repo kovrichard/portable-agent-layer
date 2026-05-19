@@ -16,6 +16,11 @@ import { buildClaudeMd, regenerateIfNeeded } from "./lib/claude-md";
 import { type AgentTarget, buildSystemReminder } from "./lib/context";
 import { logDebug, logError } from "./lib/log";
 import { platform } from "./lib/paths";
+import { isPalSpawnedInference } from "./lib/spawn-guard";
+
+// Recursion guard — when this process is a PAL-spawned inference subprocess,
+// skip all context loading so we don't trigger another inference call.
+if (isPalSpawnedInference()) process.exit(0);
 
 // --- Skip heavy context for subagents ---
 const isSubagent =

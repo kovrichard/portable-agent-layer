@@ -78,15 +78,20 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       .filter((m) => m.content.length > 0);
   }
 
+  const { isPalSpawnedInference } =
+    await lib<typeof import("../../hooks/lib/spawn-guard")>("spawn-guard.ts");
+
   return {
     // --- Per-message: Inject dynamic system reminder ---
     "experimental.chat.system.transform": async (_input, output) => {
+      if (isPalSpawnedInference()) return;
       const reminder = buildSystemReminder({ agent: "opencode" });
       if (reminder) output.system.push(reminder);
     },
 
     // --- Session events: start and stop handling ---
     event: async ({ event }) => {
+      if (isPalSpawnedInference()) return;
       logDebug("opencode:event", `Event: ${event.type}`);
 
       if (event.type === "session.created" || event.type === "session.updated") {
@@ -127,6 +132,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
 
     // --- Capture ratings + session naming from user messages (shared handlers) ---
     "chat.message": async (input, output) => {
+      if (isPalSpawnedInference()) return;
       const text = partsToText(output.parts ?? []);
       if (!text.trim()) return;
 

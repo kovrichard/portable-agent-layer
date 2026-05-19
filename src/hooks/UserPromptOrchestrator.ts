@@ -11,7 +11,12 @@ import { injectRetrieval } from "./handlers/inject-retrieval";
 import { captureRating } from "./handlers/rating";
 import { captureSessionName } from "./handlers/session-name";
 import { logDebug, logError } from "./lib/log";
+import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
+
+// Recursion guard — the "prompt" inside a spawned inference is the dispatcher's
+// payload, not a real user message. Skip rating capture, session naming, etc.
+if (isPalSpawnedInference()) process.exit(0);
 
 interface PromptSubmitInput {
   prompt: string;
