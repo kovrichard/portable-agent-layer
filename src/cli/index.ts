@@ -22,7 +22,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
-import { previewInferenceRoute } from "../hooks/lib/inference";
+import { inference, previewInferenceRoute } from "../hooks/lib/inference";
 import { palHome, palPkg, platform } from "../hooks/lib/paths";
 import { hasRealContent, SETUP_STEPS, STEP_ORDER } from "../hooks/lib/setup";
 import { log } from "../targets/lib";
@@ -168,9 +168,13 @@ async function runCli(command: string | undefined, args: string[]) {
     case "status":
       await status();
       break;
-    case "doctor":
+    case "doctor": {
       doctor();
+      if (args.includes("--probe-inference") || args.includes("--probe")) {
+        await probeInference();
+      }
       break;
+    }
     case "migrate": {
       const { runMigrate } = await import("./migrate");
       runMigrate(args);
@@ -218,7 +222,7 @@ function showHelp() {
     pal cli export [path] [--dry-run]       Export state to zip
     pal cli import [path] [--dry-run]       Import state from zip
     pal cli status                          Show PAL configuration
-    pal cli doctor                          Check prerequisites and health
+    pal cli doctor [--probe-inference]      Check prerequisites and health (--probe fires real inference per route)
     pal cli migrate [--list] [--dry-run]    Run pending data migrations
     pal cli usage                           Summarize token usage and cost
 
@@ -440,6 +444,62 @@ interface FreshnessCheck {
  * the "stale install" failure mode we hit live — plugin file is a copy, not a
  * symlink, so source edits don't reach the running opencode until reinstall.
  */
+/**
+ * Probe every supported agent route with a tiny real inference call.
+ * Sequential (concurrent multi-CLI spawns trigger the empty-abort race we
+ * already mitigate but don't want to invite). Each probe temporarily sets
+ * PAL_AGENT then restores; doesn't pollute user shell.
+ *
+ * Triggered by `pal cli doctor --probe-inference` (opt-in: costs tokens).
+ */
+async function probeInference(): Promise<void> {
+  console.log("");
+  log.info("Inference probe (live calls, ~5-60s each)");
+  const green = "\x1b[32m";
+  const red = "\x1b[31m";
+  const yellow = "\x1b[33m";
+  const dim = "\x1b[90m";
+  const reset = "\x1b[0m";
+  const agents = ["claude", "codex", "opencode", "copilot", "cursor"] as const;
+  const savedAgent = process.env.PAL_AGENT;
+  try {
+    for (const agent of agents) {
+      process.env.PAL_AGENT = agent;
+      const preview = previewInferenceRoute();
+      const tag = `${agent.padEnd(10)} → ${preview.route.padEnd(15)}`;
+      if (preview.route === "none") {
+        console.log(`  ${dim}-${reset} ${tag} ${dim}(skip: ${preview.reason})${reset}`);
+        continue;
+      }
+      if (preview.route === "disabled") {
+        console.log(`  ${yellow}⚠${reset} ${tag} ${dim}${preview.reason}${reset}`);
+        continue;
+      }
+      const start = Date.now();
+      const r = await inference({
+        user: "Reply with exactly: OK",
+        system: "Reply in 3 words or fewer.",
+        caller: "doctor-probe",
+        timeout: 60_000,
+      });
+      const elapsedMs = Date.now() - start;
+      if (r.success) {
+        const bytes = r.output?.length ?? 0;
+        console.log(
+          `  ${green}✓${reset} ${tag} ${String(elapsedMs).padStart(6)}ms  bytes=${bytes}`
+        );
+      } else {
+        console.log(
+          `  ${red}✗${reset} ${tag} ${String(elapsedMs).padStart(6)}ms  ${dim}failed — see ~/.pal/memory/state/debug.log${reset}`
+        );
+      }
+    }
+  } finally {
+    if (savedAgent === undefined) delete process.env.PAL_AGENT;
+    else process.env.PAL_AGENT = savedAgent;
+  }
+}
+
 function checkOpencodePluginFresh(): FreshnessCheck {
   const installedPath = resolve(platform.opencodeDir(), "plugins", "pal-plugin.ts");
   const sourcePath = resolve(palPkg(), "src", "targets", "opencode", "plugin.ts");
