@@ -30,6 +30,7 @@ export function spawnDetachedInference(
       detached: true,
       stdio: "ignore",
       env: { ...process.env, CLAUDECODE: undefined },
+      windowsHide: true,
     });
     child.unref();
     logDebug(scope, `detached inference spawned: ${args[0] ?? "no-mode"}`);

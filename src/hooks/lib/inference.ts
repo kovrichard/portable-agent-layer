@@ -564,6 +564,7 @@ async function singleCliAttempt(
         stdin: "pipe",
         stdout: "pipe",
         stderr: "pipe",
+        windowsHide: true,
       });
     } catch (err) {
       void logError("inference:spawn", err);

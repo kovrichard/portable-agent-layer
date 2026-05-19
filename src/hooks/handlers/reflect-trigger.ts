@@ -74,6 +74,7 @@ export async function checkReflectTrigger(): Promise<void> {
       stdout: "ignore",
       stderr: "ignore",
       stdin: "ignore",
+      windowsHide: true,
     });
     proc.unref();
     logDebug("reflect-trigger", "Spawned reflect in background");

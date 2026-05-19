@@ -191,6 +191,7 @@ function spawnBackgroundRebuild(): void {
       detached: true,
       stdio: "ignore",
       env: process.env,
+      windowsHide: true,
     });
     child.unref();
   } catch (err) {

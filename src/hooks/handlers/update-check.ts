@@ -68,6 +68,7 @@ async function checkRepo(): Promise<UpdateCache> {
       cwd: repoDir,
       stdout: "ignore",
       stderr: "ignore",
+      windowsHide: true,
     });
     await fetch.exited;
 
@@ -75,6 +76,7 @@ async function checkRepo(): Promise<UpdateCache> {
       cwd: repoDir,
       stdout: "pipe",
       stderr: "ignore",
+      windowsHide: true,
     });
     const localHash = (await new Response(local.stdout).text()).trim();
 
@@ -82,6 +84,7 @@ async function checkRepo(): Promise<UpdateCache> {
       cwd: repoDir,
       stdout: "pipe",
       stderr: "ignore",
+      windowsHide: true,
     });
     const remoteHash = (await new Response(remote.stdout).text()).trim();
 
@@ -95,6 +98,7 @@ async function checkRepo(): Promise<UpdateCache> {
           cwd: repoDir,
           stdout: "pipe",
           stderr: "ignore",
+          windowsHide: true,
         });
         const remotePkg = JSON.parse(await new Response(show.stdout).text());
         latest = remotePkg.version || current;
