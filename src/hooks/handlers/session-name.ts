@@ -10,7 +10,7 @@
  */
 
 import { spawn } from "node:child_process";
-import { hasApiKey, inference } from "../lib/inference";
+import { canInfer, inference } from "../lib/inference";
 import { logDebug, logError } from "../lib/log";
 import {
   extractFallbackName,
@@ -42,7 +42,7 @@ export async function captureSessionName(
   logDebug("session-name", `Named from prompt: "${name}"`);
 
   // Spawn detached background process to upgrade with Haiku inference
-  if (!hasApiKey()) return;
+  if (!canInfer()) return;
   try {
     const promptB64 = Buffer.from(message.slice(0, 800)).toString("base64");
     const child = spawn(

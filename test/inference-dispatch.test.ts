@@ -1,0 +1,240 @@
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { resolve } from "node:path";
+import {
+  _resetClaudeBinaryCache,
+  buildClaudeArgs,
+  canInfer,
+  hasApiKey,
+  inference,
+  injectJsonSchemaInstruction,
+  parseJsonFromOutput,
+} from "../src/hooks/lib/inference";
+import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
+
+const PRESERVED = [
+  "PAL_AGENT",
+  "PAL_ANTHROPIC_API_KEY",
+  "PATH",
+  SPAWN_GUARD_ENV.SENTINEL,
+  SPAWN_GUARD_ENV.DEPTH,
+] as const;
+
+function savedEnv(): Record<string, string | undefined> {
+  const saved: Record<string, string | undefined> = {};
+  for (const k of PRESERVED) saved[k] = process.env[k];
+  return saved;
+}
+function restoreEnv(saved: Record<string, string | undefined>) {
+  for (const k of PRESERVED) {
+    if (saved[k] === undefined) delete process.env[k];
+    else process.env[k] = saved[k];
+  }
+}
+
+describe("buildClaudeArgs", () => {
+  test("includes core flags every time", () => {
+    const args = buildClaudeArgs({ user: "hi" });
+    expect(args).toContain("--print");
+    expect(args).toContain("--tools");
+    // "" must immediately follow --tools and --setting-sources
+    const toolsIdx = args.indexOf("--tools");
+    expect(args[toolsIdx + 1]).toBe("");
+    const ssIdx = args.indexOf("--setting-sources");
+    expect(args[ssIdx + 1]).toBe("");
+    expect(args).toContain("--output-format");
+    const ofIdx = args.indexOf("--output-format");
+    expect(args[ofIdx + 1]).toBe("text");
+  });
+
+  test("uses model from opts when provided", () => {
+    const args = buildClaudeArgs({ user: "hi", model: "sonnet" });
+    const idx = args.indexOf("--model");
+    expect(args[idx + 1]).toBe("sonnet");
+  });
+
+  test("adds --system-prompt when system provided", () => {
+    const args = buildClaudeArgs({ user: "hi", system: "be helpful" });
+    const idx = args.indexOf("--system-prompt");
+    expect(args[idx + 1]).toBe("be helpful");
+  });
+
+  test("omits --system-prompt when neither system nor jsonSchema provided", () => {
+    const args = buildClaudeArgs({ user: "hi" });
+    expect(args).not.toContain("--system-prompt");
+  });
+
+  test("injects schema into system prompt when jsonSchema provided", () => {
+    const schema = { type: "object", properties: { x: { type: "string" } } };
+    const args = buildClaudeArgs({ user: "hi", jsonSchema: schema });
+    const idx = args.indexOf("--system-prompt");
+    expect(args[idx + 1]).toContain('"type":"object"');
+  });
+
+  test("never includes --bare (PAI billing trap)", () => {
+    expect(buildClaudeArgs({ user: "hi" })).not.toContain("--bare");
+  });
+});
+
+describe("injectJsonSchemaInstruction", () => {
+  test("appends schema when system prompt exists", () => {
+    const result = injectJsonSchemaInstruction("be helpful", { type: "object" });
+    expect(result).toStartWith("be helpful");
+    expect(result).toContain('{"type":"object"}');
+  });
+
+  test("returns just the schema instruction when system prompt empty", () => {
+    const result = injectJsonSchemaInstruction("", { type: "object" });
+    expect(result).toContain('{"type":"object"}');
+  });
+});
+
+describe("parseJsonFromOutput", () => {
+  test("extracts a plain JSON object", () => {
+    expect(parseJsonFromOutput('{"a":1}')).toEqual({ a: 1 });
+  });
+
+  test("extracts JSON wrapped in prose", () => {
+    expect(parseJsonFromOutput('Here you go: {"a":2} done.')).toEqual({ a: 2 });
+  });
+
+  test("extracts JSON array", () => {
+    expect(parseJsonFromOutput("[1,2,3]")).toEqual([1, 2, 3]);
+  });
+
+  test("returns null on no JSON", () => {
+    expect(parseJsonFromOutput("just prose")).toBeNull();
+  });
+
+  test("returns null on malformed JSON", () => {
+    expect(parseJsonFromOutput("{not json")).toBeNull();
+  });
+});
+
+describe("canInfer routing", () => {
+  let saved: Record<string, string | undefined>;
+  beforeEach(() => {
+    saved = savedEnv();
+    delete process.env.PAL_ANTHROPIC_API_KEY;
+    delete process.env[SPAWN_GUARD_ENV.SENTINEL];
+    delete process.env[SPAWN_GUARD_ENV.DEPTH];
+    _resetClaudeBinaryCache();
+  });
+  afterEach(() => {
+    restoreEnv(saved);
+    _resetClaudeBinaryCache();
+  });
+
+  test("hasApiKey reflects PAL_ANTHROPIC_API_KEY presence", () => {
+    expect(hasApiKey()).toBe(false);
+    process.env.PAL_ANTHROPIC_API_KEY = "sk-test";
+    expect(hasApiKey()).toBe(true);
+  });
+
+  test("canInfer is true when API key set (any active agent)", () => {
+    process.env.PAL_ANTHROPIC_API_KEY = "sk-test";
+    expect(canInfer()).toBe(true);
+  });
+
+  test("canInfer is true when active=claude AND claude binary on PATH", () => {
+    process.env.PAL_AGENT = "claude";
+    // The dev machine running these tests has `claude` on PATH; if not, this
+    // would need a fake binary. The fake-binary test below covers that case
+    // explicitly via PATH override.
+    expect(canInfer()).toBe(true);
+  });
+});
+
+describe("inference dispatcher — depth limit refusal", () => {
+  let saved: Record<string, string | undefined>;
+  beforeEach(() => {
+    saved = savedEnv();
+  });
+  afterEach(() => {
+    restoreEnv(saved);
+  });
+
+  test("returns failure when depth >= MAX_DEPTH (no spawn, no API call)", async () => {
+    process.env[SPAWN_GUARD_ENV.DEPTH] = String(SPAWN_GUARD_ENV.MAX_DEPTH);
+    process.env.PAL_AGENT = "claude";
+    process.env.PAL_ANTHROPIC_API_KEY = "sk-test"; // would otherwise work
+    const result = await inference({ user: "hello", timeout: 100 });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("inference dispatcher — claude spawn integration (fake binary)", () => {
+  let saved: Record<string, string | undefined>;
+  let tmpBin: string;
+
+  beforeEach(() => {
+    saved = savedEnv();
+    tmpBin = mkdtempSync(resolve(tmpdir(), "pal-fake-claude-"));
+    delete process.env.PAL_ANTHROPIC_API_KEY;
+    delete process.env[SPAWN_GUARD_ENV.SENTINEL];
+    delete process.env[SPAWN_GUARD_ENV.DEPTH];
+    process.env.PAL_AGENT = "claude";
+    _resetClaudeBinaryCache();
+  });
+
+  afterEach(() => {
+    rmSync(tmpBin, { recursive: true, force: true });
+    restoreEnv(saved);
+    _resetClaudeBinaryCache();
+  });
+
+  test("end-to-end: fake claude binary echoes stdin, dispatcher returns it", async () => {
+    // Fake claude: ignores all args, echoes stdin to stdout. Exits 0.
+    const fakeBin = resolve(tmpBin, "claude");
+    writeFileSync(fakeBin, "#!/bin/sh\ncat\n", "utf-8");
+    chmodSync(fakeBin, 0o755);
+    process.env.PATH = `${tmpBin}:${process.env.PATH}`;
+
+    const result = await inference({ user: "hello from PAL", timeout: 3000 });
+    expect(result.success).toBe(true);
+    expect(result.output).toBe("hello from PAL");
+  });
+
+  test("fake claude binary sees PAL_SPAWNED_INFERENCE=1 in its env", async () => {
+    // Fake claude: prints the sentinel value from env. Confirms the spawn-guard
+    // env additions propagate to the child.
+    const fakeBin = resolve(tmpBin, "claude");
+    writeFileSync(
+      fakeBin,
+      `#!/bin/sh\necho "sentinel=$${SPAWN_GUARD_ENV.SENTINEL} depth=$${SPAWN_GUARD_ENV.DEPTH}"\n`,
+      "utf-8"
+    );
+    chmodSync(fakeBin, 0o755);
+    process.env.PATH = `${tmpBin}:${process.env.PATH}`;
+
+    const result = await inference({ user: "ignored", timeout: 3000 });
+    expect(result.success).toBe(true);
+    expect(result.output).toBe("sentinel=1 depth=1");
+  });
+
+  test("non-zero exit from fake claude returns success: false", async () => {
+    const fakeBin = resolve(tmpBin, "claude");
+    writeFileSync(fakeBin, "#!/bin/sh\nexit 2\n", "utf-8");
+    chmodSync(fakeBin, 0o755);
+    process.env.PATH = `${tmpBin}:${process.env.PATH}`;
+
+    const result = await inference({ user: "hi", timeout: 3000 });
+    expect(result.success).toBe(false);
+  });
+
+  test("JSON-schema path parses fake claude's JSON output", async () => {
+    const fakeBin = resolve(tmpBin, "claude");
+    writeFileSync(fakeBin, '#!/bin/sh\necho \'{"verdict":"good"}\'\n', "utf-8");
+    chmodSync(fakeBin, 0o755);
+    process.env.PATH = `${tmpBin}:${process.env.PATH}`;
+
+    const result = await inference({
+      user: "rate this",
+      jsonSchema: { type: "object", properties: { verdict: { type: "string" } } },
+      timeout: 3000,
+    });
+    expect(result.success).toBe(true);
+    expect(JSON.parse(result.output ?? "{}")).toEqual({ verdict: "good" });
+  });
+});
