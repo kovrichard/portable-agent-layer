@@ -276,7 +276,7 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
       const logPath = resolve(tmpHome, "memory", "state", "debug.log");
       const log = readFileSync(logPath, "utf-8");
       expect(log).toContain("route=claude-spawn");
-      expect(log).toContain("inference:spawn: done success=true");
+      expect(log).toContain("inference:spawn: done binary=claude success=true");
     } finally {
       if (debugSaved === undefined) delete process.env.PAL_DEBUG;
       else process.env.PAL_DEBUG = debugSaved;

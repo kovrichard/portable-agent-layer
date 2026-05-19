@@ -21,7 +21,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { getActiveAgent, isClaude } from "./agent";
+import { getActiveAgent, isClaude, isCodex } from "./agent";
 import { logDebug } from "./log";
 import { HAIKU_MODEL } from "./models";
 import { buildSpawnGuardEnv, getInferenceDepth, SPAWN_GUARD_ENV } from "./spawn-guard";
@@ -30,9 +30,15 @@ export function hasApiKey(): boolean {
   return !!process.env.PAL_ANTHROPIC_API_KEY;
 }
 
-/** True if any inference path is currently usable (claude-spawn OR API key). */
+export function hasOpenAiKey(): boolean {
+  return !!process.env.PAL_OPENAI_API_KEY;
+}
+
+/** True if any inference path is currently usable (subscription CLI OR API key). */
 export function canInfer(): boolean {
-  if (hasClaudeBinary() && isClaude()) return true;
+  if (isClaude() && hasClaudeBinary()) return true;
+  if (isCodex() && hasCodexBinary()) return true;
+  if (isCodex() && hasOpenAiKey()) return true;
   return hasApiKey();
 }
 
@@ -69,38 +75,54 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
       "inference",
       `route=claude-spawn agent=${agent} model=${opts.model ?? HAIKU_MODEL}`
     );
-    return inferenceViaClaudeSpawn(opts);
+    return inferenceViaCliSpawn("claude", buildClaudeArgs(opts), opts.user, opts);
+  }
+  if (isCodex() && hasCodexBinary()) {
+    logDebug("inference", `route=codex-spawn agent=${agent}`);
+    return inferenceViaCliSpawn("codex", buildCodexArgs(opts), "", opts);
+  }
+  if (isCodex() && hasOpenAiKey()) {
+    logDebug("inference", `route=openai-api agent=${agent}`);
+    return inferenceViaOpenAiApi(opts);
   }
   if (hasApiKey()) {
-    logDebug(
-      "inference",
-      `route=api agent=${agent} reason=${isClaude() ? "no-claude-binary" : "non-claude-agent"}`
-    );
+    logDebug("inference", `route=anthropic-api agent=${agent}`);
     return inferenceViaApi(opts);
   }
   logDebug(
     "inference",
-    `route=none agent=${agent} hasApiKey=false hasClaude=${hasClaudeBinary()}`
+    `route=none agent=${agent} hasApiKey=false hasOpenAiKey=${hasOpenAiKey()} hasClaude=${hasClaudeBinary()} hasCodex=${hasCodexBinary()}`
   );
   return { success: false };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// claude-spawn path — subscription-billed via the user's logged-in CLI
+// Per-agent CLI metadata — binary presence + argv builders
 // ─────────────────────────────────────────────────────────────────────────────
 
 let claudeBinaryCache: boolean | null = null;
+let codexBinaryCache: boolean | null = null;
 
 function hasClaudeBinary(): boolean {
   if (claudeBinaryCache !== null) return claudeBinaryCache;
-  const r = spawnSync("which", ["claude"], { stdio: "ignore" });
-  claudeBinaryCache = r.status === 0;
+  claudeBinaryCache = spawnSync("which", ["claude"], { stdio: "ignore" }).status === 0;
   return claudeBinaryCache;
+}
+
+function hasCodexBinary(): boolean {
+  if (codexBinaryCache !== null) return codexBinaryCache;
+  codexBinaryCache = spawnSync("which", ["codex"], { stdio: "ignore" }).status === 0;
+  return codexBinaryCache;
 }
 
 /** Test-only: reset the cached `which claude` result. */
 export function _resetClaudeBinaryCache(): void {
   claudeBinaryCache = null;
+}
+
+/** Test-only: reset the cached `which codex` result. */
+export function _resetCodexBinaryCache(): void {
+  codexBinaryCache = null;
 }
 
 /** Build the argv for `claude --print …` from inference options. Pure. */
@@ -124,6 +146,43 @@ export function buildClaudeArgs(opts: InferenceOptions): string[] {
     args.push("--system-prompt", system);
   }
   return args;
+}
+
+/**
+ * Build the argv for `codex exec …` from inference options. Pure.
+ *
+ * Recursion + tool-use defense (mirrors claude's `--setting-sources '' --tools ''`):
+ *   --ignore-user-config  → no ~/.codex/config.toml → no hooks load in the child
+ *   --ignore-rules        → no execpolicy .rules files load
+ *   --sandbox read-only   → child cannot execute shell commands even if it tries
+ *   --ephemeral           → no session persistence; one-shot only
+ *
+ * Codex has no --system-prompt equivalent — the full prompt is a single positional
+ * argv string. We concatenate system + user + JSON-schema instruction into one
+ * prompt. ARG_MAX is ~256KB on macOS; typical PAL prompts are 1-2KB.
+ */
+export function buildCodexArgs(opts: InferenceOptions): string[] {
+  const parts: string[] = [];
+  if (opts.system) parts.push(opts.system);
+  parts.push(opts.user);
+  if (opts.jsonSchema) {
+    parts.push(
+      `Respond with ONLY a JSON value matching this schema (no prose, no markdown): ${JSON.stringify(opts.jsonSchema)}`
+    );
+  }
+  const prompt = parts.join("\n\n");
+  return [
+    "exec",
+    "--color",
+    "never",
+    "--skip-git-repo-check",
+    "--ignore-user-config",
+    "--ignore-rules",
+    "--sandbox",
+    "read-only",
+    "--ephemeral",
+    prompt,
+  ];
 }
 
 /** Append a JSON-schema instruction to the system prompt (PAI pattern). */
@@ -157,11 +216,15 @@ interface RawSpawnResult {
   timedOut: boolean;
 }
 
-/** One claude --print invocation. Returns raw streams + exit info, no parsing. */
-async function singleClaudeAttempt(
+/**
+ * One CLI invocation. Returns raw streams + exit info, no parsing.
+ * Used by every per-agent dispatcher (claude --print, codex exec, etc).
+ */
+async function singleCliAttempt(
+  binary: string,
   args: string[],
+  stdinInput: string,
   env: NodeJS.ProcessEnv,
-  user: string,
   timeout: number
 ): Promise<RawSpawnResult> {
   return new Promise<RawSpawnResult>((resolve) => {
@@ -177,7 +240,7 @@ async function singleClaudeAttempt(
 
     let proc: ReturnType<typeof Bun.spawn>;
     try {
-      proc = Bun.spawn(["claude", ...args], {
+      proc = Bun.spawn([binary, ...args], {
         env,
         stdin: "pipe",
         stdout: "pipe",
@@ -205,7 +268,7 @@ async function singleClaudeAttempt(
     } | null;
     if (stdinWriter) {
       try {
-        stdinWriter.write(user);
+        if (stdinInput) stdinWriter.write(stdinInput);
         stdinWriter.end();
       } catch (err) {
         void logError("inference:stdin", err);
@@ -232,53 +295,59 @@ async function singleClaudeAttempt(
   });
 }
 
-async function inferenceViaClaudeSpawn(opts: InferenceOptions): Promise<InferenceResult> {
+/**
+ * Generic CLI dispatcher: spawn `binary args`, write stdinInput to stdin (may be
+ * empty for argv-only CLIs like codex), capture stdout, retry once on empty-abort.
+ * Mirrors PAI's universal pattern across all supported subscription CLIs.
+ */
+async function inferenceViaCliSpawn(
+  binary: string,
+  args: string[],
+  stdinInput: string,
+  opts: InferenceOptions
+): Promise<InferenceResult> {
   const timeout = opts.timeout ?? 15000;
-  const args = buildClaudeArgs(opts);
   const env = buildSpawnGuardEnv(process.env);
   const started = Date.now();
 
   // Attempt 1
-  let attempt = await singleClaudeAttempt(args, env, opts.user, timeout);
+  let attempt = await singleCliAttempt(binary, args, stdinInput, env, timeout);
 
   // Universal retry on empty-output exit≠0 (correlates strongly with burst-
-  // concurrency races on auth/credentials files — claude silently aborts
-  // without writing to either stream). One retry only, 200-300ms jitter.
+  // concurrency races — the binary silently aborts without writing to either
+  // stream). One retry only, 500-1500ms jitter so the burst settles.
   const isEmptyAbort =
     attempt.code !== 0 &&
     !attempt.timedOut &&
     attempt.stdout.length === 0 &&
     attempt.stderr.length === 0;
   if (isEmptyAbort) {
-    // 500-1500ms jitter — earlier 200-300ms wasn't enough; today's production
-    // log showed retries landing inside the same concurrency burst and failing
-    // identically. Wider window gives the burst time to settle.
     const jitterMs = 500 + Math.floor(Math.random() * 1000);
     logDebug(
       "inference:spawn",
-      `retry: empty-abort exit=${attempt.code} after ${Date.now() - started}ms, jitter=${jitterMs}ms`
+      `retry: empty-abort binary=${binary} exit=${attempt.code} after ${Date.now() - started}ms, jitter=${jitterMs}ms`
     );
     await new Promise((r) => setTimeout(r, jitterMs));
-    attempt = await singleClaudeAttempt(args, env, opts.user, timeout);
+    attempt = await singleCliAttempt(binary, args, stdinInput, env, timeout);
   }
 
   const elapsedMs = Date.now() - started;
   const finish = (result: InferenceResult): InferenceResult => {
     logDebug(
       "inference:spawn",
-      `done success=${result.success} bytes=${result.output?.length ?? 0} elapsedMs=${elapsedMs}`
+      `done binary=${binary} success=${result.success} bytes=${result.output?.length ?? 0} elapsedMs=${elapsedMs}`
     );
     return result;
   };
 
   if (attempt.timedOut) {
-    void logError("inference:spawn", `timeout after ${timeout}ms`);
+    void logError("inference:spawn", `timeout binary=${binary} after ${timeout}ms`);
     return finish({ success: false });
   }
   if (attempt.code !== 0) {
     void logError(
       "inference:spawn",
-      `exited=${attempt.code} argv=${JSON.stringify(args)} stderr(${attempt.stderr.length})=${attempt.stderr.slice(0, 300)} stdout(${attempt.stdout.length})=${attempt.stdout.slice(0, 300)}`
+      `exited=${attempt.code} binary=${binary} argv=${JSON.stringify(args)} stderr(${attempt.stderr.length})=${attempt.stderr.slice(0, 300)} stdout(${attempt.stdout.length})=${attempt.stdout.slice(0, 300)}`
     );
     return finish({ success: false });
   }
@@ -366,6 +435,94 @@ async function inferenceViaApi(opts: InferenceOptions): Promise<InferenceResult>
     return { success: true, output: text, usage };
   } catch (err) {
     await logError("inference", err);
+    return { success: false };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OpenAI API path — fallback for codex users without a codex binary on PATH.
+// Codex users almost always have an OpenAI key already; falling back to
+// Anthropic for them would be backwards. Uses chat/completions with the
+// structured-output schema for JSON-mode callers.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const OPENAI_DEFAULT_MODEL = "gpt-5.4-mini";
+
+async function inferenceViaOpenAiApi(opts: InferenceOptions): Promise<InferenceResult> {
+  const apiKey = process.env.PAL_OPENAI_API_KEY;
+  if (!apiKey) return { success: false };
+
+  const {
+    system,
+    user,
+    model = OPENAI_DEFAULT_MODEL,
+    maxTokens = 500,
+    timeout = 15000,
+    jsonSchema,
+  } = opts;
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
+
+    const messages: Array<{ role: string; content: string }> = [];
+    if (system) messages.push({ role: "system", content: system });
+    messages.push({ role: "user", content: user });
+
+    const body: Record<string, unknown> = {
+      model,
+      max_tokens: maxTokens,
+      messages,
+    };
+    if (jsonSchema) {
+      body.response_format = {
+        type: "json_schema",
+        json_schema: { name: "structured_response", strict: true, schema: jsonSchema },
+      };
+    }
+
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timer);
+
+    if (!response.ok) {
+      const errBody = await response.text().catch(() => "");
+      await logError(
+        "inference:openai",
+        `HTTP ${response.status}: ${errBody.slice(0, 200)}`
+      );
+      return { success: false };
+    }
+
+    const data = (await response.json()) as Record<string, unknown>;
+    const rawUsage = data?.usage as
+      | { prompt_tokens?: number; completion_tokens?: number }
+      | undefined;
+    const usage =
+      rawUsage?.prompt_tokens != null && rawUsage?.completion_tokens != null
+        ? {
+            inputTokens: rawUsage.prompt_tokens,
+            outputTokens: rawUsage.completion_tokens,
+          }
+        : undefined;
+
+    const choices = data?.choices as
+      | Array<{ message?: { content?: string } }>
+      | undefined;
+    const text = choices?.[0]?.message?.content?.trim();
+    if (!text) return { success: false, usage };
+
+    return { success: true, output: text, usage };
+  } catch (err) {
+    await logError("inference:openai", err);
     return { success: false };
   }
 }
