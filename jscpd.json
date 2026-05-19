@@ -1,0 +1,22 @@
+{
+  "$schema": "https://raw.githubusercontent.com/kucherenko/jscpd/master/packages/finder/schema.json",
+  "threshold": 2.5,
+  "reporters": ["threshold"],
+  "absolute": false,
+  "gitignore": true,
+  "minLines": 8,
+  "minTokens": 70,
+  "format": ["typescript", "javascript", "json"],
+  "ignore": [
+    "**/node_modules/**",
+    ".test-install-home/**",
+    ".test-home*/**",
+    "**/dist/**",
+    "**/.git/**",
+    "assets/skills/*/demo/**",
+    "assets/skills/*/template/**",
+    "assets/skills/presentation/vendor/**",
+    "assets/skills/presentation/theme-base/**",
+    "test/**"
+  ]
+}
