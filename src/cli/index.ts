@@ -829,6 +829,24 @@ function doctor(silent = false): DoctorResult {
       ok("PAL_INFERENCE_DISABLED is not set (production-safe)");
     }
 
+    // Spawn-guard env vars should never appear in the user's shell — they're
+    // set ONLY in PAL-spawned subprocesses. Leaks into the user shell cause
+    // every inference call to short-circuit silently.
+    if (process.env.PAL_SPAWNED_INFERENCE) {
+      fail(
+        `PAL_SPAWNED_INFERENCE=${process.env.PAL_SPAWNED_INFERENCE} leaked into shell — every inference call will refuse. Unset it.`
+      );
+    } else {
+      ok("PAL_SPAWNED_INFERENCE not leaked (recursion guard clean)");
+    }
+    if (process.env.PAL_INFERENCE_DEPTH) {
+      fail(
+        `PAL_INFERENCE_DEPTH=${process.env.PAL_INFERENCE_DEPTH} leaked into shell — depth circuit-breaker will fire. Unset it.`
+      );
+    } else {
+      ok("PAL_INFERENCE_DEPTH not leaked (depth counter clean)");
+    }
+
     // API key checks
     process.env.PAL_ANTHROPIC_API_KEY
       ? ok("PAL_ANTHROPIC_API_KEY is set (anthropic-api fallback)")
