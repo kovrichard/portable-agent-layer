@@ -227,7 +227,7 @@ async function inferenceViaClaudeSpawn(opts: InferenceOptions): Promise<Inferenc
       if (code !== 0) {
         void logError(
           "inference:spawn",
-          `claude exited ${code}: ${stderr.slice(0, 200)}`
+          `exited=${code} argv=${JSON.stringify(args)} stderr(${stderr.length})=${stderr.slice(0, 300)} stdout(${stdout.length})=${stdout.slice(0, 300)}`
         );
         finish({ success: false });
         return;
