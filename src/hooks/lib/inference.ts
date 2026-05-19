@@ -150,24 +150,29 @@ export function parseJsonFromOutput(output: string): unknown | null {
   return null;
 }
 
-async function inferenceViaClaudeSpawn(opts: InferenceOptions): Promise<InferenceResult> {
-  const timeout = opts.timeout ?? 15000;
-  const args = buildClaudeArgs(opts);
-  const env = buildSpawnGuardEnv(process.env);
-  const started = Date.now();
+interface RawSpawnResult {
+  code: number | null;
+  stdout: string;
+  stderr: string;
+  timedOut: boolean;
+}
 
-  return new Promise<InferenceResult>((resolve) => {
+/** One claude --print invocation. Returns raw streams + exit info, no parsing. */
+async function singleClaudeAttempt(
+  args: string[],
+  env: NodeJS.ProcessEnv,
+  user: string,
+  timeout: number
+): Promise<RawSpawnResult> {
+  return new Promise<RawSpawnResult>((resolve) => {
     let stdout = "";
     let stderr = "";
+    let timedOut = false;
     let settled = false;
-    const finish = (result: InferenceResult) => {
+    const finish = (r: RawSpawnResult) => {
       if (settled) return;
       settled = true;
-      logDebug(
-        "inference:spawn",
-        `done success=${result.success} bytes=${result.output?.length ?? 0} elapsedMs=${Date.now() - started}`
-      );
-      resolve(result);
+      resolve(r);
     };
 
     let proc: ReturnType<typeof Bun.spawn>;
@@ -180,18 +185,17 @@ async function inferenceViaClaudeSpawn(opts: InferenceOptions): Promise<Inferenc
       });
     } catch (err) {
       void logError("inference:spawn", err);
-      finish({ success: false });
+      finish({ code: null, stdout: "", stderr: "", timedOut: false });
       return;
     }
 
     const timer = setTimeout(() => {
+      timedOut = true;
       try {
         proc.kill();
       } catch {
         /* ignore */
       }
-      void logError("inference:spawn", `timeout after ${timeout}ms`);
-      finish({ success: false });
     }, timeout);
 
     const stdinWriter = proc.stdin as {
@@ -201,7 +205,7 @@ async function inferenceViaClaudeSpawn(opts: InferenceOptions): Promise<Inferenc
     } | null;
     if (stdinWriter) {
       try {
-        stdinWriter.write(opts.user);
+        stdinWriter.write(user);
         stdinWriter.end();
       } catch (err) {
         void logError("inference:stdin", err);
@@ -223,32 +227,65 @@ async function inferenceViaClaudeSpawn(opts: InferenceOptions): Promise<Inferenc
       }
       await proc.exited;
       clearTimeout(timer);
-      const code = proc.exitCode;
-      if (code !== 0) {
-        void logError(
-          "inference:spawn",
-          `exited=${code} argv=${JSON.stringify(args)} stderr(${stderr.length})=${stderr.slice(0, 300)} stdout(${stdout.length})=${stdout.slice(0, 300)}`
-        );
-        finish({ success: false });
-        return;
-      }
-      const text = stdout.trim();
-      if (!text) {
-        finish({ success: false });
-        return;
-      }
-      if (opts.jsonSchema) {
-        const parsed = parseJsonFromOutput(text);
-        if (parsed === null) {
-          finish({ success: false, output: text });
-          return;
-        }
-        finish({ success: true, output: JSON.stringify(parsed) });
-        return;
-      }
-      finish({ success: true, output: text });
+      finish({ code: proc.exitCode, stdout, stderr, timedOut });
     })();
   });
+}
+
+async function inferenceViaClaudeSpawn(opts: InferenceOptions): Promise<InferenceResult> {
+  const timeout = opts.timeout ?? 15000;
+  const args = buildClaudeArgs(opts);
+  const env = buildSpawnGuardEnv(process.env);
+  const started = Date.now();
+
+  // Attempt 1
+  let attempt = await singleClaudeAttempt(args, env, opts.user, timeout);
+
+  // Universal retry on empty-output exit≠0 (correlates strongly with burst-
+  // concurrency races on auth/credentials files — claude silently aborts
+  // without writing to either stream). One retry only, 200-300ms jitter.
+  const isEmptyAbort =
+    attempt.code !== 0 &&
+    !attempt.timedOut &&
+    attempt.stdout.length === 0 &&
+    attempt.stderr.length === 0;
+  if (isEmptyAbort) {
+    logDebug(
+      "inference:spawn",
+      `retry: empty-abort exit=${attempt.code} after ${Date.now() - started}ms`
+    );
+    await new Promise((r) => setTimeout(r, 200 + Math.floor(Math.random() * 100)));
+    attempt = await singleClaudeAttempt(args, env, opts.user, timeout);
+  }
+
+  const elapsedMs = Date.now() - started;
+  const finish = (result: InferenceResult): InferenceResult => {
+    logDebug(
+      "inference:spawn",
+      `done success=${result.success} bytes=${result.output?.length ?? 0} elapsedMs=${elapsedMs}`
+    );
+    return result;
+  };
+
+  if (attempt.timedOut) {
+    void logError("inference:spawn", `timeout after ${timeout}ms`);
+    return finish({ success: false });
+  }
+  if (attempt.code !== 0) {
+    void logError(
+      "inference:spawn",
+      `exited=${attempt.code} argv=${JSON.stringify(args)} stderr(${attempt.stderr.length})=${attempt.stderr.slice(0, 300)} stdout(${attempt.stdout.length})=${attempt.stdout.slice(0, 300)}`
+    );
+    return finish({ success: false });
+  }
+  const text = attempt.stdout.trim();
+  if (!text) return finish({ success: false });
+  if (opts.jsonSchema) {
+    const parsed = parseJsonFromOutput(text);
+    if (parsed === null) return finish({ success: false, output: text });
+    return finish({ success: true, output: JSON.stringify(parsed) });
+  }
+  return finish({ success: true, output: text });
 }
 
 async function logError(scope: string, err: unknown): Promise<void> {
