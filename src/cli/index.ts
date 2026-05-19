@@ -664,6 +664,7 @@ function doctor(silent = false): DoctorResult {
     const ok = (msg: string) => console.log(`  \x1b[32m\u2713\x1b[0m ${msg}`);
     const warn = (msg: string) => console.log(`  \x1b[33m\u26A0\x1b[0m ${msg}`);
     const fail = (msg: string) => console.log(`  \x1b[31m\u2717\x1b[0m ${msg}`);
+    const info = (msg: string) => console.log(`  \x1b[90m\u00B7\x1b[0m ${msg}`);
 
     console.log("");
     log.info("Prerequisites");
@@ -925,15 +926,14 @@ function doctor(silent = false): DoctorResult {
       ok("PAL_INFERENCE_DEPTH not leaked (depth counter clean)");
     }
 
-    // API key checks
+    // API key checks — both are optional safety-net fallbacks. Unset is normal
+    // for CLI-only setups; only matters if your native CLI breaks.
     process.env.PAL_ANTHROPIC_API_KEY
-      ? ok("PAL_ANTHROPIC_API_KEY is set (anthropic-api fallback)")
-      : warn("PAL_ANTHROPIC_API_KEY — not set (anthropic-api fallback unavailable)");
+      ? ok("PAL_ANTHROPIC_API_KEY set (anthropic-api fallback available)")
+      : info("PAL_ANTHROPIC_API_KEY unset (optional — anthropic-api fallback off)");
     process.env.PAL_OPENAI_API_KEY
-      ? ok("PAL_OPENAI_API_KEY is set (openai-api fallback for codex)")
-      : warn(
-          "PAL_OPENAI_API_KEY — not set (openai-api fallback unavailable for codex users without codex binary)"
-        );
+      ? ok("PAL_OPENAI_API_KEY set (openai-api fallback for codex available)")
+      : info("PAL_OPENAI_API_KEY unset (optional — openai-api fallback off)");
     process.env.PAL_GEMINI_API_KEY
       ? ok("PAL_GEMINI_API_KEY is set")
       : warn("PAL_GEMINI_API_KEY — not set (optional, for YouTube analysis)");
