@@ -1,3 +1,10 @@
+## [0.41.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.41.0...v0.41.1) (2026-05-19)
+
+
+### Bug Fixes
+
+* add windowsHide option to subprocesses for improved background process handling ([8e49b9b](https://github.com/kovrichard/portable-agent-layer/commit/8e49b9b168ecb1d27473bf25d6092db147636bd8))
+
 # [0.41.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.40.0...v0.41.0) (2026-05-19)
 
 
