@@ -76,6 +76,7 @@ Return JSON:
             required: ["principle", "detailed_context"],
             additionalProperties: false,
           },
+          caller: "failure-principle",
         });
 
         if (result.success && result.output) {

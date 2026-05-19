@@ -50,6 +50,8 @@ interface InferenceOptions {
   timeout?: number;
   /** JSON schema for structured output — guarantees valid JSON matching the schema */
   jsonSchema?: Record<string, unknown>;
+  /** Opaque label identifying the calling handler — appears in debug logs as caller=X */
+  caller?: string;
 }
 
 interface InferenceResult {
@@ -70,28 +72,29 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
     return { success: false };
   }
   const agent = getActiveAgent();
+  const caller = opts.caller ?? "anonymous";
   if (isClaude() && hasClaudeBinary()) {
     logDebug(
       "inference",
-      `route=claude-spawn agent=${agent} model=${opts.model ?? HAIKU_MODEL}`
+      `caller=${caller} route=claude-spawn agent=${agent} model=${opts.model ?? HAIKU_MODEL}`
     );
     return inferenceViaCliSpawn("claude", buildClaudeArgs(opts), opts.user, opts);
   }
   if (isCodex() && hasCodexBinary()) {
-    logDebug("inference", `route=codex-spawn agent=${agent}`);
+    logDebug("inference", `caller=${caller} route=codex-spawn agent=${agent}`);
     return inferenceViaCliSpawn("codex", buildCodexArgs(opts), "", opts);
   }
   if (isCodex() && hasOpenAiKey()) {
-    logDebug("inference", `route=openai-api agent=${agent}`);
+    logDebug("inference", `caller=${caller} route=openai-api agent=${agent}`);
     return inferenceViaOpenAiApi(opts);
   }
   if (hasApiKey()) {
-    logDebug("inference", `route=anthropic-api agent=${agent}`);
+    logDebug("inference", `caller=${caller} route=anthropic-api agent=${agent}`);
     return inferenceViaApi(opts);
   }
   logDebug(
     "inference",
-    `route=none agent=${agent} hasApiKey=false hasOpenAiKey=${hasOpenAiKey()} hasClaude=${hasClaudeBinary()} hasCodex=${hasCodexBinary()}`
+    `caller=${caller} route=none agent=${agent} hasApiKey=false hasOpenAiKey=${hasOpenAiKey()} hasClaude=${hasClaudeBinary()} hasCodex=${hasCodexBinary()}`
   );
   return { success: false };
 }
@@ -309,6 +312,7 @@ async function inferenceViaCliSpawn(
   const timeout = opts.timeout ?? 15000;
   const env = buildSpawnGuardEnv(process.env);
   const started = Date.now();
+  const caller = opts.caller ?? "anonymous";
 
   // Attempt 1
   let attempt = await singleCliAttempt(binary, args, stdinInput, env, timeout);
@@ -325,7 +329,7 @@ async function inferenceViaCliSpawn(
     const jitterMs = 500 + Math.floor(Math.random() * 1000);
     logDebug(
       "inference:spawn",
-      `retry: empty-abort binary=${binary} exit=${attempt.code} after ${Date.now() - started}ms, jitter=${jitterMs}ms`
+      `caller=${caller} retry: empty-abort binary=${binary} exit=${attempt.code} after ${Date.now() - started}ms, jitter=${jitterMs}ms`
     );
     await new Promise((r) => setTimeout(r, jitterMs));
     attempt = await singleCliAttempt(binary, args, stdinInput, env, timeout);
@@ -335,19 +339,22 @@ async function inferenceViaCliSpawn(
   const finish = (result: InferenceResult): InferenceResult => {
     logDebug(
       "inference:spawn",
-      `done binary=${binary} success=${result.success} bytes=${result.output?.length ?? 0} elapsedMs=${elapsedMs}`
+      `caller=${caller} done binary=${binary} success=${result.success} bytes=${result.output?.length ?? 0} elapsedMs=${elapsedMs}`
     );
     return result;
   };
 
   if (attempt.timedOut) {
-    void logError("inference:spawn", `timeout binary=${binary} after ${timeout}ms`);
+    void logError(
+      "inference:spawn",
+      `caller=${caller} timeout binary=${binary} after ${timeout}ms`
+    );
     return finish({ success: false });
   }
   if (attempt.code !== 0) {
     void logError(
       "inference:spawn",
-      `exited=${attempt.code} binary=${binary} argv=${JSON.stringify(args)} stderr(${attempt.stderr.length})=${attempt.stderr.slice(0, 300)} stdout(${attempt.stdout.length})=${attempt.stdout.slice(0, 300)}`
+      `caller=${caller} exited=${attempt.code} binary=${binary} argv=${JSON.stringify(args)} stderr(${attempt.stderr.length})=${attempt.stderr.slice(0, 300)} stdout(${attempt.stdout.length})=${attempt.stdout.slice(0, 300)}`
     );
     return finish({ success: false });
   }

@@ -180,6 +180,7 @@ async function captureSessionIntelligence(
       maxTokens: 350,
       timeout: 60000,
       jsonSchema: INTELLIGENCE_SCHEMA,
+      caller: "session-intelligence",
     });
 
     if (result.usage) logTokenUsage("session-intelligence", result.usage);

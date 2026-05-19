@@ -540,6 +540,7 @@ async function composeSelfModel(days: number): Promise<string> {
     model: SONNET_MODEL,
     maxTokens: 1500,
     timeout: 30000,
+    caller: "self-model",
   });
 
   if (result.usage) logTokenUsage("self-model", result.usage, SONNET_MODEL);

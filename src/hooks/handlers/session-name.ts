@@ -71,6 +71,7 @@ async function upgradeWithInference(
       user: `Generate a 4-word title for: "${promptText}"`,
       maxTokens: 20,
       timeout: 15000,
+      caller: "session-name",
     });
 
     if (result.usage) logTokenUsage("session-name", result.usage);

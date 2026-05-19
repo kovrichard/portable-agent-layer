@@ -259,6 +259,7 @@ async function generateRecommendations(
         },
         required: ["recommendations"],
       },
+      caller: "graduation",
     });
 
     if (result.success && result.output) {
