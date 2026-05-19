@@ -9,19 +9,23 @@ import { appendFileSync, existsSync, renameSync, statSync, writeFileSync } from 
 import { resolve } from "node:path";
 import { paths } from "./paths";
 
-const LOG_FILE = resolve(paths.state(), "debug.log");
 const MAX_LOG_SIZE = 50_000; // ~50KB, then rotate
+
+/** Resolved lazily so PAL_HOME overrides at runtime are honored. */
+function logFile(): string {
+  return resolve(paths.state(), "debug.log");
+}
 
 function timestamp(): string {
   return new Date().toISOString().replace("T", " ").slice(0, 19);
 }
 
-function rotateIfNeeded(): void {
+function rotateIfNeeded(path: string): void {
   try {
-    if (existsSync(LOG_FILE) && statSync(LOG_FILE).size > MAX_LOG_SIZE) {
-      const prev = `${LOG_FILE}.prev`;
+    if (existsSync(path) && statSync(path).size > MAX_LOG_SIZE) {
+      const prev = `${path}.prev`;
       writeFileSync(prev, "");
-      renameSync(LOG_FILE, prev);
+      renameSync(path, prev);
     }
   } catch {
     /* non-critical */
@@ -31,9 +35,10 @@ function rotateIfNeeded(): void {
 /** Log a debug message (only when PAL_DEBUG=1) */
 export function logDebug(source: string, message: string): void {
   if (process.env.PAL_DEBUG !== "1") return;
-  rotateIfNeeded();
+  const path = logFile();
+  rotateIfNeeded(path);
   try {
-    appendFileSync(LOG_FILE, `[${timestamp()}] DEBUG ${source}: ${message}\n`);
+    appendFileSync(path, `[${timestamp()}] DEBUG ${source}: ${message}\n`);
   } catch {
     /* non-critical */
   }
@@ -41,10 +46,11 @@ export function logDebug(source: string, message: string): void {
 
 /** Log an error (always written, regardless of PAL_DEBUG) */
 export function logError(source: string, error: unknown): void {
-  rotateIfNeeded();
+  const path = logFile();
+  rotateIfNeeded(path);
   const msg = error instanceof Error ? `${error.message}\n${error.stack}` : String(error);
   try {
-    appendFileSync(LOG_FILE, `[${timestamp()}] ERROR ${source}: ${msg}\n`);
+    appendFileSync(path, `[${timestamp()}] ERROR ${source}: ${msg}\n`);
   } catch {
     /* non-critical */
   }

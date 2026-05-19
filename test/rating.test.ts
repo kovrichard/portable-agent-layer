@@ -1,5 +1,47 @@
-import { describe, expect, test } from "bun:test";
-import { parseExplicitRating } from "../src/hooks/handlers/rating";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { captureRating, parseExplicitRating } from "../src/hooks/handlers/rating";
+
+describe("captureRating non-blocking contract", () => {
+  let savedKey: string | undefined;
+  let savedAgent: string | undefined;
+  beforeEach(() => {
+    savedKey = process.env.PAL_ANTHROPIC_API_KEY;
+    savedAgent = process.env.PAL_AGENT;
+    process.env.PAL_ANTHROPIC_API_KEY = "sk-test-would-route-to-api";
+    process.env.PAL_AGENT = "claude";
+  });
+  afterEach(() => {
+    if (savedKey === undefined) delete process.env.PAL_ANTHROPIC_API_KEY;
+    else process.env.PAL_ANTHROPIC_API_KEY = savedKey;
+    if (savedAgent === undefined) delete process.env.PAL_AGENT;
+    else process.env.PAL_AGENT = savedAgent;
+  });
+
+  test("returns synchronously when implicit-sentiment path is triggered", () => {
+    // A non-praise, non-system, sane-length message that previously would have
+    // awaited an inference call inline. After the detach refactor, the parent
+    // must return immediately — the inference happens in a spawned subprocess.
+    const start = Date.now();
+    captureRating("I really like the structure of this implementation", "sess-test");
+    const elapsed = Date.now() - start;
+    // Allow generous headroom for spawn() syscall itself; inference would be 3-30s.
+    expect(elapsed).toBeLessThan(100);
+  });
+
+  test("praise fast-path also returns synchronously", () => {
+    const start = Date.now();
+    captureRating("nice work", "sess-test");
+    const elapsed = Date.now() - start;
+    expect(elapsed).toBeLessThan(50);
+  });
+
+  test("explicit rating returns synchronously", () => {
+    const start = Date.now();
+    captureRating("8 great", "sess-test");
+    const elapsed = Date.now() - start;
+    expect(elapsed).toBeLessThan(50);
+  });
+});
 
 describe("parseExplicitRating", () => {
   // Valid ratings

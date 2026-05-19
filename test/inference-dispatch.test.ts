@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
@@ -229,6 +229,34 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
     expect(result.output).toBe("claudecode=[]");
     // Parent still has CLAUDECODE=1 — scoping confirmed.
     expect(process.env.CLAUDECODE).toBe("1");
+  });
+
+  test("logDebug emits route=claude-spawn line when PAL_DEBUG=1", async () => {
+    const fakeBin = resolve(tmpBin, "claude");
+    writeFileSync(fakeBin, "#!/bin/sh\necho hello\n", "utf-8");
+    chmodSync(fakeBin, 0o755);
+    process.env.PATH = `${tmpBin}:${process.env.PATH}`;
+
+    const debugSaved = process.env.PAL_DEBUG;
+    const palHomeSaved = process.env.PAL_HOME;
+    const tmpHome = mkdtempSync(resolve(tmpdir(), "pal-debug-home-"));
+    process.env.PAL_DEBUG = "1";
+    process.env.PAL_HOME = tmpHome;
+
+    try {
+      const result = await inference({ user: "ping", timeout: 3000 });
+      expect(result.success).toBe(true);
+      const logPath = resolve(tmpHome, "memory", "state", "debug.log");
+      const log = readFileSync(logPath, "utf-8");
+      expect(log).toContain("route=claude-spawn");
+      expect(log).toContain("inference:spawn: done success=true");
+    } finally {
+      if (debugSaved === undefined) delete process.env.PAL_DEBUG;
+      else process.env.PAL_DEBUG = debugSaved;
+      if (palHomeSaved === undefined) delete process.env.PAL_HOME;
+      else process.env.PAL_HOME = palHomeSaved;
+      rmSync(tmpHome, { recursive: true, force: true });
+    }
   });
 
   test("non-zero exit from fake claude returns success: false", async () => {

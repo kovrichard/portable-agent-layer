@@ -21,7 +21,8 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { isClaude } from "./agent";
+import { getActiveAgent, isClaude } from "./agent";
+import { logDebug } from "./log";
 import { HAIKU_MODEL } from "./models";
 import { buildSpawnGuardEnv, getInferenceDepth, SPAWN_GUARD_ENV } from "./spawn-guard";
 
@@ -52,15 +53,30 @@ interface InferenceResult {
 }
 
 export async function inference(opts: InferenceOptions): Promise<InferenceResult> {
-  if (getInferenceDepth() >= SPAWN_GUARD_ENV.MAX_DEPTH) {
+  const depth = getInferenceDepth();
+  if (depth >= SPAWN_GUARD_ENV.MAX_DEPTH) {
+    logDebug("inference", `refuse: depth=${depth} >= max=${SPAWN_GUARD_ENV.MAX_DEPTH}`);
     return { success: false };
   }
+  const agent = getActiveAgent();
   if (isClaude() && hasClaudeBinary()) {
+    logDebug(
+      "inference",
+      `route=claude-spawn agent=${agent} model=${opts.model ?? HAIKU_MODEL}`
+    );
     return inferenceViaClaudeSpawn(opts);
   }
   if (hasApiKey()) {
+    logDebug(
+      "inference",
+      `route=api agent=${agent} reason=${isClaude() ? "no-claude-binary" : "non-claude-agent"}`
+    );
     return inferenceViaApi(opts);
   }
+  logDebug(
+    "inference",
+    `route=none agent=${agent} hasApiKey=false hasClaude=${hasClaudeBinary()}`
+  );
   return { success: false };
 }
 
@@ -133,6 +149,7 @@ async function inferenceViaClaudeSpawn(opts: InferenceOptions): Promise<Inferenc
   const timeout = opts.timeout ?? 15000;
   const args = buildClaudeArgs(opts);
   const env = buildSpawnGuardEnv(process.env);
+  const started = Date.now();
 
   return new Promise<InferenceResult>((resolve) => {
     let stdout = "";
@@ -141,6 +158,10 @@ async function inferenceViaClaudeSpawn(opts: InferenceOptions): Promise<Inferenc
     const finish = (result: InferenceResult) => {
       if (settled) return;
       settled = true;
+      logDebug(
+        "inference:spawn",
+        `done success=${result.success} bytes=${result.output?.length ?? 0} elapsedMs=${Date.now() - started}`
+      );
       resolve(result);
     };
 

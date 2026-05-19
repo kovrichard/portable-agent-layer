@@ -8,9 +8,10 @@
  * - Very low ratings (<=3) write pending-failure.json for Stop handler
  */
 
+import { spawn } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { inference } from "../lib/inference";
+import { canInfer, inference } from "../lib/inference";
 import { paths } from "../lib/paths";
 import { emitRating } from "../lib/signals";
 import { now } from "../lib/time";
@@ -284,13 +285,10 @@ function handleRating(
 
 // ── Implicit Sentiment ──
 
-async function handleImplicitSentiment(
-  message: string,
-  sessionId?: string
-): Promise<void> {
+function handleImplicitSentiment(message: string, sessionId?: string): void {
   const trimmed = message.trim();
 
-  // Fast-path: short praise -> rating 8
+  // Fast-path: short praise -> rating 8 (synchronous, no inference)
   if (isPraise(trimmed)) {
     handleRating(
       8,
@@ -311,27 +309,55 @@ async function handleImplicitSentiment(
   if (trimmed.length < 5 || trimmed.length > 500) return;
   if (/^[/$`{]/.test(trimmed) || trimmed.includes("\n\n")) return;
 
-  const lastResponse = getLastResponse(sessionId).slice(0, 300);
-  const contextBlock = lastResponse
-    ? `CONTEXT (last AI response excerpt):\n${lastResponse}\n\nCURRENT USER MESSAGE:\n${trimmed.slice(0, 300)}`
-    : trimmed.slice(0, 300);
-
-  const result = await inference({
-    system: SENTIMENT_SYSTEM_PROMPT,
-    user: contextBlock,
-    maxTokens: 500,
-    timeout: 8000,
-    jsonSchema: SENTIMENT_SCHEMA,
-  });
-
-  if (result.usage) logTokenUsage("rating", result.usage);
-
-  if (!result.success || !result.output) return;
-
+  // Inference path — detach to background. claude --print has 3-5s of cold-start
+  // overhead per call; running inline would block UserPromptSubmit and exceed
+  // any reasonable in-line budget. Mirrors the session-name --upgrade pattern.
+  if (!canInfer()) return;
   try {
+    const msgB64 = Buffer.from(trimmed.slice(0, 800)).toString("base64");
+    const child = spawn(
+      "bun",
+      [import.meta.filename, "--sentiment", sessionId ?? "", msgB64],
+      {
+        detached: true,
+        stdio: "ignore",
+        env: { ...process.env, CLAUDECODE: undefined },
+      }
+    );
+    child.unref();
+  } catch {
+    // non-critical — sentiment is best-effort
+  }
+}
+
+/**
+ * Background sentiment mode: called via --sentiment flag from a detached subprocess.
+ * Runs the heavy inference, parses the result, and writes the rating if confident.
+ */
+async function runSentimentInferenceAndStore(
+  message: string,
+  sessionId?: string
+): Promise<void> {
+  try {
+    const trimmed = message.trim();
+    const lastResponse = getLastResponse(sessionId).slice(0, 300);
+    const contextBlock = lastResponse
+      ? `CONTEXT (last AI response excerpt):\n${lastResponse}\n\nCURRENT USER MESSAGE:\n${trimmed.slice(0, 300)}`
+      : trimmed.slice(0, 300);
+
+    const result = await inference({
+      system: SENTIMENT_SYSTEM_PROMPT,
+      user: contextBlock,
+      maxTokens: 500,
+      timeout: 30000,
+      jsonSchema: SENTIMENT_SCHEMA,
+    });
+
+    if (result.usage) logTokenUsage("rating", result.usage);
+    if (!result.success || !result.output) return;
+
     const parsed = JSON.parse(result.output) as SentimentResult;
 
-    // Skip if no sentiment detected or low confidence
     if (parsed.rating === null) return;
     if (parsed.confidence < MIN_CONFIDENCE) return;
 
@@ -349,13 +375,13 @@ async function handleImplicitSentiment(
     }
   } catch (err) {
     const { logError } = await import("../lib/log");
-    logError("rating:implicit", err);
+    logError("rating:sentiment-child", err);
   }
 }
 
 // ── Main Export ──
 
-export async function captureRating(message: string, sessionId?: string): Promise<void> {
+export function captureRating(message: string, sessionId?: string): void {
   // Strip IDE/system-injected tags to recover raw user text
   const cleaned = stripInjectedTags(message);
 
@@ -374,6 +400,18 @@ export async function captureRating(message: string, sessionId?: string): Promis
     return;
   }
 
-  // Path 2: Implicit sentiment (requires PAL_ANTHROPIC_API_KEY — inference silently no-ops without it)
-  await handleImplicitSentiment(cleaned, sessionId);
+  // Path 2: Implicit sentiment — fast-paths run synchronously, the inference
+  // path detaches to a background bun subprocess (mirrors session-name).
+  handleImplicitSentiment(cleaned, sessionId);
+}
+
+// Background sentiment entry point
+if (process.argv[2] === "--sentiment") {
+  const sid = process.argv[3];
+  const msgB64 = process.argv[4];
+  if (msgB64) {
+    const msg = Buffer.from(msgB64, "base64").toString("utf-8");
+    await runSentimentInferenceAndStore(msg, sid === "" ? undefined : sid);
+  }
+  process.exit(0);
 }
