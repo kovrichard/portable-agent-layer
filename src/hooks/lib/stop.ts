@@ -7,7 +7,6 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdtemp, rename, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { autoGraduate } from "../handlers/auto-graduate";
 import { autoBackup } from "../handlers/backup";
 import { writeContextDigests } from "../handlers/context-digests";
 import { notifyDesktop } from "../handlers/desktop-notify";
@@ -48,13 +47,14 @@ export async function runStopHandlers(
   // Detach inference-bearing handlers — claude --print cold-start can exceed
   // any in-hook budget. These spawn detached bun subprocesses that run the
   // inference and write results to disk; they don't block this hook.
+  // autoGraduate is idempotent (24h TTL + state-dedup + content-dedup), so
+  // concurrent or overlapping detached runs are safe.
   await detachSessionIntelligence(transcript, options.sessionId);
   await detachFailurePrinciple(transcript);
+  detachAutoGraduate();
 
-  // Run remaining (non-inference) handlers concurrently. Auto-graduate is
-  // idempotent (24h TTL + state-dedup + content-dedup) so it's safe to fire
-  // on every Stop. project-touch only fires when cwd resolves to an active
-  // registered project.
+  // Run remaining (non-inference) handlers concurrently.
+  // project-touch only fires when cwd resolves to an active registered project.
   const results = await Promise.allSettled([
     captureWorkSession(transcript, options.sessionId),
     resetTab(),
@@ -63,7 +63,6 @@ export async function runStopHandlers(
     checkReflectTrigger(),
     checkSelfModelTrigger(),
     runSynthesis(),
-    autoGraduate(),
     projectTouch(options.lastAssistantMessage),
     notifyDesktop(options.sessionId),
     Promise.resolve(writeContextDigests()),
@@ -77,7 +76,6 @@ export async function runStopHandlers(
     "reflect-trigger",
     "self-model-trigger",
     "synthesis",
-    "auto-graduate",
     "project-touch",
     "desktop-notify",
     "context-digests",
@@ -176,6 +174,16 @@ async function detachSessionIntelligence(
     );
   } catch (err) {
     logError("detachSessionIntelligence", err);
+  }
+}
+
+/** Spawn a detached child to run the full autoGraduate cycle. */
+function detachAutoGraduate(): void {
+  try {
+    const scriptPath = resolve(assets.hooks(), "handlers", "auto-graduate.ts");
+    spawnDetachedInference(scriptPath, ["--run"], "auto-graduate");
+  } catch (err) {
+    logError("detachAutoGraduate", err);
   }
 }
 

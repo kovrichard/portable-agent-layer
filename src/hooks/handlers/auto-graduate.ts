@@ -96,6 +96,7 @@ interface AutoGraduateResult {
  * Returns a summary of what happened so callers (handler, tests) can reason
  * about the run without re-reading state.
  */
+/** @lintignore — consumed by test/auto-graduate.test.ts via dynamic import */
 export async function autoGraduate(
   opts: AutoGraduateOptions = {}
 ): Promise<AutoGraduateResult> {
@@ -166,4 +167,11 @@ export async function autoGraduate(
     );
   }
   return result;
+}
+
+// Detached child entry point — runs the full autoGraduate cycle in isolation
+// so the parent Stop hook does not block on the inference step.
+if (process.argv[2] === "--run") {
+  await autoGraduate();
+  process.exit(0);
 }
