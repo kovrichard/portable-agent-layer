@@ -196,36 +196,42 @@ let opencodeBinaryCache: boolean | null = null;
 let copilotBinaryCache: boolean | null = null;
 let cursorBinaryCache: boolean | null = null;
 
-// Bun.which() is used instead of spawning `which` because Ubuntu 24.04's
-// debianutils dropped the `which` binary — the GitHub Actions Linux runner
-// then resolves `spawnSync("which", ...)` to ENOENT and every detection fails.
+// Bun.which() is used instead of spawning `which` because:
+// 1. Ubuntu 24.04's debianutils dropped the `which` binary, breaking CI.
+// 2. Windows has no `which` at all.
+// PATH is passed explicitly because Bun.which() snapshots process.env.PATH
+// at startup and won't see mid-test mutations otherwise.
+function hasBinaryOnPath(name: string): boolean {
+  return Bun.which(name, { PATH: process.env.PATH ?? "" }) !== null;
+}
+
 function hasClaudeBinary(): boolean {
   if (claudeBinaryCache !== null) return claudeBinaryCache;
-  claudeBinaryCache = Bun.which("claude") !== null;
+  claudeBinaryCache = hasBinaryOnPath("claude");
   return claudeBinaryCache;
 }
 
 function hasCodexBinary(): boolean {
   if (codexBinaryCache !== null) return codexBinaryCache;
-  codexBinaryCache = Bun.which("codex") !== null;
+  codexBinaryCache = hasBinaryOnPath("codex");
   return codexBinaryCache;
 }
 
 function hasOpencodeBinary(): boolean {
   if (opencodeBinaryCache !== null) return opencodeBinaryCache;
-  opencodeBinaryCache = Bun.which("opencode") !== null;
+  opencodeBinaryCache = hasBinaryOnPath("opencode");
   return opencodeBinaryCache;
 }
 
 function hasCopilotBinary(): boolean {
   if (copilotBinaryCache !== null) return copilotBinaryCache;
-  copilotBinaryCache = Bun.which("copilot") !== null;
+  copilotBinaryCache = hasBinaryOnPath("copilot");
   return copilotBinaryCache;
 }
 
 function hasCursorBinary(): boolean {
   if (cursorBinaryCache !== null) return cursorBinaryCache;
-  cursorBinaryCache = Bun.which("cursor-agent") !== null;
+  cursorBinaryCache = hasBinaryOnPath("cursor-agent");
   return cursorBinaryCache;
 }
 
