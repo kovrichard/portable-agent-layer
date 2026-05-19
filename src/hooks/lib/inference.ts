@@ -250,11 +250,15 @@ async function inferenceViaClaudeSpawn(opts: InferenceOptions): Promise<Inferenc
     attempt.stdout.length === 0 &&
     attempt.stderr.length === 0;
   if (isEmptyAbort) {
+    // 500-1500ms jitter — earlier 200-300ms wasn't enough; today's production
+    // log showed retries landing inside the same concurrency burst and failing
+    // identically. Wider window gives the burst time to settle.
+    const jitterMs = 500 + Math.floor(Math.random() * 1000);
     logDebug(
       "inference:spawn",
-      `retry: empty-abort exit=${attempt.code} after ${Date.now() - started}ms`
+      `retry: empty-abort exit=${attempt.code} after ${Date.now() - started}ms, jitter=${jitterMs}ms`
     );
-    await new Promise((r) => setTimeout(r, 200 + Math.floor(Math.random() * 100)));
+    await new Promise((r) => setTimeout(r, jitterMs));
     attempt = await singleClaudeAttempt(args, env, opts.user, timeout);
   }
 
