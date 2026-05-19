@@ -178,7 +178,7 @@ async function captureSessionIntelligence(
       ].join("\n"),
       user: `User messages:\n${numberedMessages}\n\nLast AI response:\n${assistantWindow}`,
       maxTokens: 350,
-      timeout: 30000,
+      timeout: 60000,
       jsonSchema: INTELLIGENCE_SCHEMA,
     });
 

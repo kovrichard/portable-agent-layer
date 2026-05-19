@@ -66,7 +66,7 @@ Return JSON:
 }`,
           user: `User feedback: ${pending.context}\n\nConversation:\n${recent}`,
           maxTokens: 400,
-          timeout: 30000,
+          timeout: 60000,
           jsonSchema: {
             type: "object" as const,
             properties: {
