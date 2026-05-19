@@ -2,7 +2,7 @@
 
 A cross-platform, cross-agent layer for portable AI workflows, memory, and accumulated knowledge.
 
-PAL lets you carry your agent context across **Windows**, **macOS**, and **Linux**, and work across different agent runtimes and interfaces such as **Claude Code**, **opencode**, **Cursor**, and **Codex**. Its core idea is simple: your knowledge and workflows should belong to **you**, not to a single machine, tool, or vendor.
+PAL lets you carry your agent context across **Windows**, **macOS**, and **Linux**, and work across different agent runtimes and interfaces such as **Claude Code**, **opencode**, **Cursor**, **GitHub Copilot**, and **Codex**. Its core idea is simple: your knowledge and workflows should belong to **you**, not to a single machine, tool, or vendor.
 
 > Inspired in part by [Daniel Miessler](https://danielmiessler.com)'s work on [Personal AI Infrastructure](https://github.com/danielmiessler/Personal_AI_Infrastructure). PAL is an independent open-source implementation focused on portability across platforms and agents. It is not affiliated with or endorsed by Daniel Miessler.
 
@@ -33,7 +33,7 @@ With PAL, you can:
 > **Bun is required.** PAL is built on [Bun](https://bun.sh) and will not work with Node.js or other runtimes. Install it with `curl -fsSL https://bun.sh/install | bash`.
 
 - [Bun](https://bun.sh) >= 1.3.0
-- At least one of: [Claude Code](https://claude.ai/code), [opencode](https://opencode.ai), [Cursor](https://cursor.com), or [Codex](https://openai.com/index/introducing-codex/)
+- At least one of: [Claude Code](https://claude.ai/code), [opencode](https://opencode.ai), [Cursor](https://cursor.com), [GitHub Copilot CLI](https://docs.github.com/en/copilot/github-copilot-in-the-cli), or [Codex](https://openai.com/index/introducing-codex/)
 
 ### Package mode (recommended)
 
@@ -98,31 +98,36 @@ pal cli install               # all available (default)
 
 ### Supported agents
 
-| Agent | Support | Skills | Hooks | AGENTS.md | Subagents |
-|-------|---------|--------|-------|-----------|-----------|
-| Claude Code | Full | Yes | Yes | Yes | Yes |
-| opencode | Full | Yes | Yes (plugin) | Yes | Yes |
-| Cursor | Full | Yes | Yes | Yes (injected via hook) | Yes |
-| GitHub Copilot | Full | Yes | Yes | Yes (via `~/.copilot/instructions/*.instructions.md`) | Yes |
-| Codex | Partial | Yes | No | Yes | No |
+| Agent | Support | Skills | Hooks | AGENTS.md | Subagents | Inference routing |
+|-------|---------|--------|-------|-----------|-----------|-------------------|
+| Claude Code | Full | Yes | Yes | Yes | Yes | `claude --print` |
+| opencode | Full | Yes | Yes (plugin) | Yes | Yes | `opencode run` |
+| Cursor | Full | Yes | Yes | Yes (injected via hook) | Yes | `cursor-agent` |
+| GitHub Copilot | Full | Yes | Yes | Yes (via `~/.copilot/instructions/*.instructions.md`) | Yes | `copilot` |
+| Codex | Full | Yes | Yes | Yes | No | `codex exec` |
+
+PAL's background inference (session naming, summaries, failure capture, etc.) runs through whichever subscription CLI is active — no API key required by default.
 
 ---
 
 ## Environment variables
 
-### Required
+### API keys (all optional)
+
+PAL routes inference through the host agent's subscription CLI by default. API keys are only needed as fallbacks when no CLI binary is available, or for skills that call non-Anthropic providers.
 
 | Variable | Description |
 |----------|-------------|
-| `PAL_ANTHROPIC_API_KEY` | Required for PAL's hook inference (sentiment analysis, session naming). Uses Haiku for low-cost background calls. |
-
-### Optional
-
-| Variable | Description |
-|----------|-------------|
-| `PAL_GEMINI_API_KEY` | For YouTube video analysis and web search skill  |
+| `PAL_ANTHROPIC_API_KEY` | Fallback for hook inference when no native CLI is available. Uses Haiku. |
+| `PAL_OPENAI_API_KEY` | Fallback for hook inference when Codex is active without the `codex` binary, or when no Anthropic key is set. |
+| `PAL_GEMINI_API_KEY` | For YouTube video analysis and web search skill |
 | `PAL_XAI_API_KEY` | For Grok real-time research skill (X/web search) |
 | `PAL_PERPLEXITY_API_KEY` | For Perplexity deep research skill |
+
+### Path overrides
+
+| Variable | Description |
+|----------|-------------|
 | `PAL_HOME` | Override user state directory (default: `~/.pal` or repo root) |
 | `PAL_PKG` | Override package root |
 | `PAL_CLAUDE_DIR` | Override Claude config dir (default: `~/.claude`) |
@@ -131,6 +136,13 @@ pal cli install               # all available (default)
 | `PAL_COPILOT_DIR` | Override Copilot config dir (default: `~/.copilot`) |
 | `PAL_CODEX_DIR` | Override Codex config dir (default: `~/.codex`) |
 | `PAL_AGENTS_DIR` | Override agents dir (default: `~/.agents`) |
+
+### Debug / test
+
+| Variable | Description |
+|----------|-------------|
+| `PAL_DEBUG` | Set to `1` to emit verbose hook logs to `memory/state/debug.log` |
+| `PAL_INFERENCE_DISABLED` | Set to `1` to disable all inference (used by the test suite to prevent real CLI spawns) |
 
 ---
 
@@ -142,16 +154,23 @@ PAL ships with built-in skills that extend your agent's capabilities:
 |-------|-------------|
 | `analyze-pdf` | Download and analyze PDF files |
 | `analyze-youtube` | Analyze YouTube videos using Gemini |
+| `consulting-report` | Generate consulting-style reports as PDFs |
 | `council` | Multi-perspective parallel debate on decisions |
+| `create-pdf` | Render structured content into a PDF |
 | `create-skill` | Scaffold a new skill from a description |
 | `extract-entities` | Extract people and companies from content |
 | `extract-wisdom` | Extract structured insights from content |
 | `first-principles` | Break down problems to fundamentals |
 | `fyzz-chat-api` | Query Fyzz Chat conversations via API |
+| `opinion` | Confirm or contradict tracked opinions (confidence-weighted) |
+| `presentation` | Build branded slide decks from outlines |
+| `projects` | Look up, resume, register, or manage tracked projects |
 | `reflect` | Diagnose why a PAL behavior didn't trigger |
 | `research` | Multi-agent parallel research |
 | `review` | Security-focused code review |
 | `summarize` | Structured summarization |
+| `telos` | Inspect or update goals, beliefs, strategies, narratives |
+| `think` | Structured first-pass reasoning on a problem |
 
 ---
 
@@ -178,7 +197,8 @@ Your setup should be able to travel with you.
 ## Features
 
 - **Cross-platform**: works on Windows, macOS, and Linux
-- **Cross-agent**: full support for Claude Code, opencode, and Cursor; partial support for Codex
+- **Cross-agent**: full support for Claude Code, opencode, Cursor, GitHub Copilot, and Codex (Codex still lacks subagents)
+- **Subscription-first inference**: background inference routes through whichever subscription CLI is active — no API key needed by default
 - **Portable knowledge**: export and import accumulated knowledge
 - **TypeScript-first**: built in TypeScript from day one
 - **Open source**: hackable, inspectable, extensible

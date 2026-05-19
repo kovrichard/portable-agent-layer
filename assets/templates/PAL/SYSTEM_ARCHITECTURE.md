@@ -227,12 +227,20 @@ Brief description.
 └─────────────────────┘
 
 ┌─────────────────────┐
-│       Stop          │──► StopOrchestrator.ts
+│       Stop          │──► StopOrchestrator.ts → runStopHandlers()
+│                     │    Detached (inference-bearing, fire-and-forget):
+│                     │    - Session intelligence (title, summary, insights, handoff)
+│                     │    - Failure principle extraction (low ratings)
+│                     │    - Auto-graduate wisdom (24h TTL, idempotent)
+│                     │    Concurrent (Promise.allSettled):
 │                     │    - Work session capture
-│                     │    - Relationship extraction (Haiku inference)
-│                     │    - Work learning capture
-│                     │    - Failure logging
+│                     │    - Project touch / history
+│                     │    - Persist last exchange (handoff seed)
+│                     │    - Cache last response (rating correlation)
 │                     │    - Reflect trigger check
+│                     │    - Self-model trigger check
+│                     │    - Synthesis pipeline
+│                     │    - Desktop notify
 │                     │    - Write context digests (semi-static sources)
 │                     │    - Auto-backup
 │                     │    - Count updates
@@ -243,9 +251,11 @@ Brief description.
 ### Design Principles
 
 - **Fail-open**: Hook errors never block the user's session
-- **Parallel execution**: Stop handlers run via `Promise.allSettled` — one failure doesn't block others
-- **Idempotent**: Handlers check for existing state before writing (e.g., session dedup)
-- **Timeout-aware**: Inference calls have hard timeouts (8s default)
+- **Detached inference**: Long inference calls (session intelligence, failure principle, auto-graduate) spawn detached child processes that survive the hook returning. The parent hook exits in milliseconds — cold-start latency for the subscription CLI no longer blocks the next prompt.
+- **Parallel execution**: Non-inference handlers run via `Promise.allSettled` — one failure doesn't block others
+- **Idempotent**: Handlers check for existing state before writing (auto-graduate uses 24h TTL + content dedup; session intelligence dedups by message count)
+- **Timeout-aware**: Inference calls have hard timeouts (60s default; longer because they run detached and don't block the user)
+- **Race-safe**: Detached claim files use atomic `rename()` with ENOENT treated as a benign "already claimed" signal (opencode fires `session.idle` + `session.diff` concurrently)
 - **Subagent-aware**: `LoadContext.ts` skips heavy context loading for subagent sessions
 
 ### Configuration
@@ -404,6 +414,66 @@ Everything else loads via the routing table in CLAUDE.md. The AI reads files onl
 
 ---
 
+## Inference Routing Architecture
+
+### Subscription-First Model
+
+PAL's background inference (session naming, summaries, failure capture, wisdom graduation, etc.) routes through whichever subscription CLI is currently hosting the session. No API key is required by default — the user already pays for the subscription that comes with their agent.
+
+### Routing Table
+
+The active agent is detected via `getActiveAgent()` in `src/hooks/lib/agent.ts` (driven by the `PAL_AGENT` env var set per-target). The dispatcher in `src/hooks/lib/inference.ts` then routes to the matching CLI:
+
+| Active agent | CLI invoked | Notes |
+|--------------|-------------|-------|
+| `claude` | `claude --print` | Inherits the user's Claude Code subscription |
+| `opencode` | `opencode run` | Output parsed via `extractOpencodeText()` |
+| `cursor` | `cursor-agent` | argv-only, no stdin |
+| `copilot` | `copilot` | GitHub Copilot CLI |
+| `codex` | `codex exec` | Falls back to `PAL_OPENAI_API_KEY` if the `codex` binary is missing |
+
+If no CLI binary is available, the dispatcher falls back to `PAL_ANTHROPIC_API_KEY` (Haiku via the Anthropic API) or `PAL_OPENAI_API_KEY` (OpenAI API). `canInfer()` returns `false` only when both routes are unavailable — handlers then skip silently.
+
+### Recursion Defense (Three Layers)
+
+Spawning a CLI from inside a hook risks the child re-triggering the same hooks, leading to an infinite spawn loop. Three defenses, all active at once:
+
+1. **CLI flags** — Mirrors PAI's pattern: `--setting-sources ''` and `--tools ''` strip the child of its hook config and tool access entirely (claude, opencode equivalents).
+2. **Sentinel env var** — `PAL_SPAWNED_INFERENCE=1` is set on every spawn. Hook entry points call `exitIfSpawnedInference()` and bail before doing any work.
+3. **Depth counter** — `PAL_SPAWN_DEPTH` increments per hop; the circuit breaks at `MAX_DEPTH=1`. Belt-and-suspenders for the above.
+
+The `CLAUDECODE` env var is unset *scoped to the child process only* (not deleted from the parent's environment) so the spawned `claude` CLI doesn't think it's nested inside another Claude session.
+
+### Detached Inference Pattern
+
+Long inference calls (session intelligence, failure principle extraction, auto-graduate) run via `spawnDetachedInference()`. The parent hook writes the transcript to a tmp file, spawns a detached child with `--run <args>`, and returns immediately. The child reads the tmp file, runs inference, writes results to disk, and unlinks the tmp file.
+
+```
+StopOrchestrator
+  │
+  ├─► detachSessionIntelligence(transcript, sessionId)
+  │     └─► [child] inference → session-learning/YYYY-MM/...
+  │
+  ├─► detachFailurePrinciple(transcript)
+  │     ├─► Atomic claim: rename pending-failure.json → tmp/pending.json
+  │     │   (ENOENT means another concurrent Stop hook claimed it — benign)
+  │     └─► [child] inference → failures/YYYY-MM/...
+  │
+  └─► detachAutoGraduate()
+        └─► [child] 24h TTL + content dedup → wisdom/frames/...
+```
+
+The orchestrator returns in milliseconds; subscription-CLI cold-start latency no longer blocks the user's next prompt.
+
+### Resilience
+
+- **Empty-abort retry** — If a CLI returns an empty stdout (burst-concurrency race), retry once with 500–1500ms jitter
+- **Test kill-switch** — `PAL_INFERENCE_DISABLED=1` (preloaded by `test/setup.ts`) short-circuits all inference so tests never spawn real CLIs
+- **Per-call attribution** — Every inference call logs `caller=X sessionId=Y` so debug.log makes routing trivially auditable
+- **Doctor probes** — `pal cli doctor` actually invokes each route and reports which agents are correctly wired
+
+---
+
 ## Security Architecture
 
 ### Fail-Open Design
@@ -450,10 +520,13 @@ src/targets/
 ├── copilot/         # GitHub Copilot specific
 │   ├── install.ts   # Write instruction files + update VS Code settings
 │   └── uninstall.ts
+├── codex/           # Codex specific
+│   ├── install.ts   # Merge hooks into ~/.codex/hooks.json + skills + AGENTS.md
+│   └── uninstall.ts
 └── lib.ts           # Shared: JSON read/write, settings merge, TELOS scaffold
 ```
 
-Codex support is partial — AGENTS.md is symlinked to `~/.codex/AGENTS.md` automatically (no dedicated target installer needed).
+All five targets install hooks, skills, and AGENTS.md. Codex does not yet support subagents.
 
 ### Path Resolution
 
