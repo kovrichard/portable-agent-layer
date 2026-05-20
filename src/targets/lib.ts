@@ -273,22 +273,22 @@ export function loadCodexHooksTemplate(
   }
 }
 
-/** Merge PAL hooks into an existing Codex hooks.json. Deduplicates by canonical command path. */
-export function mergeCodexHooks(existing: CodexHooks, template: CodexHooks): CodexHooks {
-  const result: CodexHooks = { ...existing };
-  if (!template.hooks) return result;
-  result.hooks ??= {};
-
-  // Collect canonical paths of PAL template commands so we can evict stale variants
-  const palCanonical = new Set(
-    Object.values(template.hooks).flatMap((groups) =>
+/** Collect canonical command paths from a Codex hooks template (PAL-managed commands). */
+function collectPalCanonical(template: CodexHooks): Set<string> {
+  return new Set(
+    Object.values(template.hooks ?? {}).flatMap((groups) =>
       groups.flatMap((g) => g.hooks.map((h) => canonicalCmd(h.command)))
     )
   );
+}
 
-  // Strip any existing entries (nested or flat) whose canonical path matches a PAL command
-  for (const event of Object.keys(result.hooks)) {
-    result.hooks[event] = (result.hooks[event] ?? [])
+/** Strip entries (nested or flat) whose canonical command matches a PAL-managed command. */
+function stripPalHooks(
+  hooks: Record<string, CodexHookGroup[]>,
+  palCanonical: Set<string>
+): void {
+  for (const event of Object.keys(hooks)) {
+    hooks[event] = (hooks[event] ?? [])
       .map((g) => {
         const flat = g as unknown as CodexHookCommand;
         if (!g.hooks && flat.command && palCanonical.has(canonicalCmd(flat.command))) {
@@ -300,10 +300,18 @@ export function mergeCodexHooks(existing: CodexHooks, template: CodexHooks): Cod
         return filtered.length > 0 ? { ...g, hooks: filtered } : null;
       })
       .filter((g): g is CodexHookGroup => g !== null);
-    if (result.hooks[event].length === 0) delete result.hooks[event];
+    if (hooks[event].length === 0) delete hooks[event];
   }
+}
 
-  // Add fresh template entries
+/** Merge PAL hooks into an existing Codex hooks.json. Deduplicates by canonical command path. */
+export function mergeCodexHooks(existing: CodexHooks, template: CodexHooks): CodexHooks {
+  const result: CodexHooks = { ...existing };
+  if (!template.hooks) return result;
+  result.hooks ??= {};
+
+  stripPalHooks(result.hooks, collectPalCanonical(template));
+
   for (const [event, groups] of Object.entries(template.hooks)) {
     const current = result.hooks[event] ?? [];
     for (const group of groups) current.push(group);
@@ -320,28 +328,7 @@ export function unmergeCodexHooks(
   const result: CodexHooks = { ...existing };
   if (!template.hooks || !result.hooks) return result;
 
-  // Match by canonical path so prefix variants (PAL_AGENT=codex, etc.) are all removed
-  const palCanonical = new Set(
-    Object.values(template.hooks).flatMap((groups) =>
-      groups.flatMap((g) => g.hooks.map((h) => canonicalCmd(h.command)))
-    )
-  );
-
-  for (const event of Object.keys(result.hooks)) {
-    result.hooks[event] = (result.hooks[event] ?? [])
-      .map((g) => {
-        const flat = g as unknown as CodexHookCommand;
-        if (!g.hooks && flat.command && palCanonical.has(canonicalCmd(flat.command))) {
-          return null;
-        }
-        const filtered = (g.hooks ?? []).filter(
-          (h) => !palCanonical.has(canonicalCmd(h.command))
-        );
-        return filtered.length > 0 ? { ...g, hooks: filtered } : null;
-      })
-      .filter((g): g is CodexHookGroup => g !== null);
-    if (result.hooks[event].length === 0) delete result.hooks[event];
-  }
+  stripPalHooks(result.hooks, collectPalCanonical(template));
   if (Object.keys(result.hooks).length === 0) delete result.hooks;
   return result;
 }

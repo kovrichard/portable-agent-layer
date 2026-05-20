@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=./klint.schema.yaml
+# yaml-language-server: $schema=https://raw.githubusercontent.com/konvert7/klint/refs/heads/main/klint.schema.json
 
 include: ["src", "assets", "!**/node_modules/**"]
 plugins: [sonar]
