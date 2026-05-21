@@ -39,7 +39,7 @@ describe("normalizeCompanyKey", () => {
   });
 
   test("falls back to name when no domain", () => {
-    expect(normalizeCompanyKey("Hiflylabs", null)).toBe("hiflylabs");
+    expect(normalizeCompanyKey("Acmelabs", null)).toBe("acmelabs");
   });
 });
 
@@ -138,8 +138,8 @@ describe("getOrCreateCompany", () => {
 
   test("deduplicates by name when no domain", () => {
     const index = loadEntityIndex(TEST_INDEX);
-    const id1 = getOrCreateCompany({ name: "Hiflylabs", domain: null }, index, "src-1");
-    const id2 = getOrCreateCompany({ name: "hiflylabs", domain: null }, index, "src-2");
+    const id1 = getOrCreateCompany({ name: "Acmelabs", domain: null }, index, "src-1");
+    const id2 = getOrCreateCompany({ name: "acmelabs", domain: null }, index, "src-2");
 
     expect(id1).toBe(id2);
   });
