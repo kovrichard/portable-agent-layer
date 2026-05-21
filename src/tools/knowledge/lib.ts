@@ -75,13 +75,11 @@ const CANONICAL_KEYS = new Set([
 
 // --- Types ------------------------------------------------------------------
 
-/** @lintignore — consumed by Phase 2 graph layer and Phase 3 extract-entities rewire */
 export interface Related {
   slug: string;
   type: RelationType;
 }
 
-/** @lintignore — consumed by Phase 3 extract-entities rewire */
 export interface EntityFrontmatter {
   title: string;
   type: string;

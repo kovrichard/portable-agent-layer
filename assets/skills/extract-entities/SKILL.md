@@ -53,10 +53,12 @@ Return structured JSON:
 
 ## Persistence
 
-After displaying results, ask the user if they want to save. When saving, pipe the JSON output through the entity-save tool which handles deduplication automatically:
+After displaying results, ask the user if they want to save. When saving, pipe the JSON output through the entity-save tool:
 
 ```bash
 echo '<the JSON output>' | bun ~/.pal/skills/extract-entities/tools/entity-save.ts -- --source "<URL or content origin>"
 ```
 
-The tool deduplicates against the entity index (`memory/entities/entity-index.json`), assigns stable UUIDs, tracks occurrences, and reports what was new vs existing.
+The tool writes one markdown file per entity under `~/.pal/memory/knowledge/{People,Companies}/<slug>.md`, preserving every extracted field (role, title, social, context, importance for people; domain, industry, sentiment, mentioned_as for companies) as frontmatter. When a person record includes a `company`, a `part-of` typed edge is auto-created from the person to the company (the company is stub-created if it doesn't exist yet). Each ingestion appends a per-source log section to the entity's body so the same source can be re-ingested safely (idempotent on `--source`).
+
+Output: JSON summary of `{created, updated, slugs}` counts per domain.

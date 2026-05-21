@@ -1,9 +1,12 @@
 #!/usr/bin/env bun
 /**
- * Entity Save — Deduplicate and persist extracted entities.
+ * Entity Save — ingest extracted entities into the knowledge store.
  *
- * Accepts extracted people/companies JSON via stdin or --file,
- * deduplicates against the entity index, and saves.
+ * Reads the extract-entities JSON shape from stdin (or --file), upserts each
+ * person and company into ~/.pal/memory/knowledge/{People,Companies}/<slug>.md,
+ * preserves all rich fields as frontmatter, auto-creates part-of edges when a
+ * person record carries a company affiliation, and appends a per-source log
+ * to each entity's body so the same source can be re-ingested safely.
  *
  * Usage:
  *   echo '{"people":[...],"companies":[...]}' | bun entity-save.ts -- --source "https://example.com"
@@ -12,7 +15,11 @@
 
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
-import { loadEntityIndex, processEntities } from "../../../../src/hooks/lib/entities";
+import {
+  type CompanyInput,
+  ingestEntities,
+  type PersonInput,
+} from "../../../../src/tools/knowledge/ingest";
 
 const { values } = parseArgs({
   args: Bun.argv.slice(2),
@@ -37,12 +44,7 @@ if (!raw.trim()) {
   process.exit(1);
 }
 
-let data: {
-  people: Array<Record<string, unknown>>;
-  companies: Array<Record<string, unknown>>;
-  links?: Array<Record<string, unknown>>;
-  sources?: Array<Record<string, unknown>>;
-};
+let data: { people?: PersonInput[]; companies?: CompanyInput[] };
 try {
   data = JSON.parse(raw);
 } catch {
@@ -50,61 +52,33 @@ try {
   process.exit(1);
 }
 
-if (!Array.isArray(data.people) || !Array.isArray(data.companies)) {
-  console.error('Error: JSON must have "people" and "companies" arrays.');
+if (!Array.isArray(data.people) && !Array.isArray(data.companies)) {
+  console.error('Error: JSON must have at least one of "people" or "companies" arrays.');
   process.exit(1);
 }
-data.links ??= [];
-data.sources ??= [];
 
-const before = loadEntityIndex();
-const counts = (idx: ReturnType<typeof loadEntityIndex>) => ({
-  people: Object.keys(idx.people).length,
-  companies: Object.keys(idx.companies).length,
-  links: Object.keys(idx.links).length,
-  sources: Object.keys(idx.sources).length,
-});
-const cb = counts(before);
-
-const result = processEntities(
+const result = ingestEntities(
   {
-    people: data.people as Array<{ name: string; [key: string]: unknown }>,
-    companies: data.companies as Array<{
-      name: string;
-      domain: string | null;
-      [key: string]: unknown;
-    }>,
-    links: data.links as Array<{ url: string; [key: string]: unknown }>,
-    sources: data.sources as Array<{
-      url: string | null;
-      author: string | null;
-      publication: string | null;
-      [key: string]: unknown;
-    }>,
+    people: data.people ?? [],
+    companies: data.companies ?? [],
   },
   sourceId
 );
 
-const ca = counts(loadEntityIndex());
+const summary = {
+  source: sourceId,
+  people: {
+    total: result.people.length,
+    created: result.people.filter((p) => p.created).length,
+    updated: result.people.filter((p) => !p.created).length,
+    slugs: result.people.map((p) => p.slug),
+  },
+  companies: {
+    total: result.companies.length,
+    created: result.companies.filter((c) => c.created).length,
+    updated: result.companies.filter((c) => !c.created).length,
+    slugs: result.companies.map((c) => c.slug),
+  },
+};
 
-console.log(
-  JSON.stringify(
-    {
-      saved: {
-        people: result.people.length,
-        companies: result.companies.length,
-        links: result.links.length,
-        sources: result.sources.length,
-      },
-      new: {
-        people: ca.people - cb.people,
-        companies: ca.companies - cb.companies,
-        links: ca.links - cb.links,
-        sources: ca.sources - cb.sources,
-      },
-      total: ca,
-    },
-    null,
-    2
-  )
-);
+console.log(JSON.stringify(summary, null, 2));
