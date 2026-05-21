@@ -20,9 +20,15 @@
  *   ls [domain]                   List entities, optionally by one domain
  */
 
+import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import * as clack from "@clack/prompts";
 import { buildGraph, resolveSlug, stats, traverse } from "../tools/knowledge/graph";
+import {
+  type CompanyInput,
+  ingestEntities,
+  type PersonInput,
+} from "../tools/knowledge/ingest";
 import {
   DOMAINS,
   type Domain,
@@ -58,6 +64,8 @@ export async function runKnowledge(args: string[]): Promise<number> {
       return cmdAdd(rest);
     case "ls":
       return cmdLs(rest);
+    case "ingest":
+      return cmdIngest(rest);
     case undefined:
     case "help":
     case "--help":
@@ -92,6 +100,8 @@ function showHelp(): void {
       --status seedling|budding|evergreen   Default seedling
       --type <subtype>              Free-form sub-type
     ls [domain]                List entities (optionally by one domain)
+    ingest [--file F]          Upsert JSON from stdin (or --file)
+      --source <id>                 Provenance tag (default "manual")
 
   Domains: People, Companies, Ideas, Research
   Relation types: ${RELATION_TYPES.join(", ")}
@@ -511,5 +521,79 @@ function cmdLs(args: string[]): number {
   console.log(`\n📁 ${entries.length} ${noun}${scope}\n`);
   for (const e of entries) console.log(shortLine(e));
   console.log();
+  return 0;
+}
+
+// ── ingest ─────────────────────────────────────────────────────────
+
+interface IngestPayload {
+  people?: PersonInput[];
+  companies?: CompanyInput[];
+}
+
+async function readIngestInput(file: string | undefined): Promise<string | null> {
+  if (file) return readFileSync(file, "utf-8");
+  if (process.stdin.isTTY) return null;
+  return await Bun.stdin.text();
+}
+
+async function cmdIngest(args: string[]): Promise<number> {
+  const { values } = parseArgs({
+    args,
+    options: {
+      source: { type: "string", short: "s", default: "manual" },
+      file: { type: "string", short: "f" },
+    },
+    strict: true,
+  });
+
+  const sourceId = values.source ?? "manual";
+  const raw = await readIngestInput(values.file);
+
+  if (raw === null || !raw.trim()) {
+    console.error(
+      "Usage: echo '<JSON>' | pal cli knowledge ingest --source <id>\n" +
+        "   or: pal cli knowledge ingest --file <path> --source <id>"
+    );
+    return 1;
+  }
+
+  let data: IngestPayload;
+  try {
+    data = JSON.parse(raw) as IngestPayload;
+  } catch {
+    console.error("Error: invalid JSON input.");
+    return 1;
+  }
+
+  if (!Array.isArray(data.people) && !Array.isArray(data.companies)) {
+    console.error(
+      'Error: JSON must include at least one of "people" or "companies" arrays.'
+    );
+    return 1;
+  }
+
+  const result = ingestEntities(
+    { people: data.people ?? [], companies: data.companies ?? [] },
+    sourceId
+  );
+
+  const summary = {
+    source: sourceId,
+    people: {
+      total: result.people.length,
+      created: result.people.filter((p) => p.created).length,
+      updated: result.people.filter((p) => !p.created).length,
+      slugs: result.people.map((p) => p.slug),
+    },
+    companies: {
+      total: result.companies.length,
+      created: result.companies.filter((c) => c.created).length,
+      updated: result.companies.filter((c) => !c.created).length,
+      slugs: result.companies.map((c) => c.slug),
+    },
+  };
+
+  console.log(JSON.stringify(summary, null, 2));
   return 0;
 }
