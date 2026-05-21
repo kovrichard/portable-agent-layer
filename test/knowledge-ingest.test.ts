@@ -138,6 +138,32 @@ describe("auto-edge person → company", () => {
     expect(rel?.slug).toBe("acme-example");
   });
 
+  test("re-ingest of person finds canonical company by title — no duplicate stub (ISC-21)", () => {
+    // Setup: company with a domain-derived slug.
+    ingestEntities(
+      { companies: [{ name: "Acme Labs", domain: "acme.example" }] },
+      "src-1",
+      ROOT
+    );
+    expect(exists("Companies", "acme-example", ROOT)).toBe(true);
+
+    // Now re-ingest ONLY a person referencing the same company by name —
+    // no company in this payload. nameToSlug is empty; the linker must
+    // consult the store and find acme-example by title, NOT stub acme-labs.
+    ingestEntities(
+      { people: [{ name: "Charlie Example", company: "Acme Labs" }] },
+      "src-2",
+      ROOT
+    );
+
+    // No duplicate stub created
+    expect(exists("Companies", "acme-labs", ROOT)).toBe(false);
+    // Person's part-of points to the canonical slug
+    const p = load("People", "charlie-example", ROOT);
+    const rel = p?.frontmatter.related.find((r) => r.type === "part-of");
+    expect(rel?.slug).toBe("acme-example");
+  });
+
   test("stub-creates company if missing, then edges to it", () => {
     ingestEntities(
       {

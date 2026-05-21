@@ -20,6 +20,7 @@
 import {
   type Entity,
   type EntityFrontmatter,
+  list,
   load,
   type Related,
   save,
@@ -322,6 +323,20 @@ function upsertCompany(
  * payload defines both. Falls back to slugify(name) when no match, and
  * stub-creates the company so the edge has a target.
  */
+/**
+ * Find an existing Companies entity whose frontmatter title matches `name`
+ * (case-insensitive). Used by `linkPersonToCompany` to avoid stubbing a
+ * duplicate when the canonical company already lives at a non-name-derived
+ * slug (e.g. domain-derived "acme-example" for "Acme Labs"). ISC-21.
+ */
+function findExistingCompanyByTitle(name: string, rootDir?: string): string | null {
+  const target = name.toLowerCase();
+  for (const e of list("Companies", rootDir)) {
+    if (e.frontmatter.title.toLowerCase() === target) return e.slug;
+  }
+  return null;
+}
+
 function linkPersonToCompany(
   personSlug: string,
   companyName: string,
@@ -329,8 +344,14 @@ function linkPersonToCompany(
   sourceId: string,
   rootDir?: string
 ): void {
-  const fallback = slugify(companyName);
-  const companySlug = nameToSlug.get(companyName.toLowerCase()) ?? fallback;
+  // Resolution order: (1) in-call lookup map (domain-derived slug wins when
+  // the same payload defines both), (2) existing-store title scan (ISC-21
+  // — re-ingest of a person referencing an already-known company), (3)
+  // fall back to slugify(name) and stub the company.
+  const companySlug =
+    nameToSlug.get(companyName.toLowerCase()) ??
+    findExistingCompanyByTitle(companyName, rootDir) ??
+    slugify(companyName);
   if (!companySlug) return;
   if (!load("Companies", companySlug, rootDir)) {
     upsertCompany({ name: companyName }, sourceId, rootDir);
