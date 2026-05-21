@@ -55,11 +55,9 @@ export const RELATION_TYPES = [
   "preceded-by",
   "related",
 ] as const;
-/** @lintignore — consumed by Phase 2 graph layer and Phase 3 extract-entities rewire */
 export type RelationType = (typeof RELATION_TYPES)[number];
 
 export const STATUSES = ["seedling", "budding", "evergreen"] as const;
-/** @lintignore — consumed by Phase 3 extract-entities rewire */
 export type Status = (typeof STATUSES)[number];
 
 const CANONICAL_KEYS = new Set([

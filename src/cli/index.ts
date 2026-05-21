@@ -186,6 +186,12 @@ async function runCli(command: string | undefined, args: string[]) {
       usage();
       break;
     }
+    case "knowledge": {
+      const { runKnowledge } = await import("./knowledge");
+      const code = await runKnowledge(args);
+      if (code !== 0) process.exit(code);
+      break;
+    }
     case "--help":
     case "-h":
     case "help":
@@ -226,6 +232,8 @@ function showHelp() {
     pal cli doctor [--probe-inference]      Check prerequisites and health (--probe fires real inference per route)
     pal cli migrate [--list] [--dry-run]    Run pending data migrations
     pal cli usage                           Summarize token usage and cost
+    pal cli knowledge <sub> [args]          Query & manage the knowledge store
+                                            (search · graph · stats · hubs · find · show · add · ls)
 
   Environment:
     PAL_HOME              Override user state directory (default: ~/.pal or repo root)

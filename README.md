@@ -84,6 +84,7 @@ pal cli status        # check your setup
 | `pal cli doctor` | Check prerequisites and system health |
 | `pal cli migrate` | Run pending data migrations (non-destructive) |
 | `pal cli usage` | Summarize token usage and estimated cost |
+| `pal cli knowledge` | Query & manage the knowledge store (search, graph, stats, hubs, find, show, add, ls) |
 
 ### Target flags
 
