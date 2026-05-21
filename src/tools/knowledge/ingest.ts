@@ -113,6 +113,23 @@ function addRelated(list: Related[], rel: Related): Related[] {
   return [...list, rel];
 }
 
+/**
+ * Split a company industry string into atomic tags. Whitespace and `/`
+ * are separators; hyphens are preserved so multi-word concepts like
+ * `ai-research` stay as one tag. Lowercased, deduped, empties dropped.
+ */
+function industryToTags(industry: string): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const token of industry.toLowerCase().split(/[\s/]+/)) {
+    if (token && !seen.has(token)) {
+      seen.add(token);
+      out.push(token);
+    }
+  }
+  return out;
+}
+
 // --- Source log -------------------------------------------------------------
 
 function sourceMarker(sourceId: string): string {
@@ -186,7 +203,7 @@ function newCompanyEntity(input: CompanyInput, slug: string): Entity {
   const fm: EntityFrontmatter = {
     title: input.name,
     type: "company",
-    tags: input.industry ? [input.industry.toLowerCase()] : [],
+    tags: input.industry ? industryToTags(input.industry) : [],
     created: now,
     updated: now,
     quality: 5,
@@ -230,7 +247,7 @@ function mergeCompany(prior: Entity, input: CompanyInput): Entity {
   fm.mentioned_as = mergeScalar(fm.mentioned_as, input.mentioned_as);
   fm.sentiment = mergeScalar(fm.sentiment, input.sentiment);
   if (input.industry) {
-    fm.tags = mergeStringArray(fm.tags, [input.industry.toLowerCase()]);
+    fm.tags = mergeStringArray(fm.tags, industryToTags(input.industry));
   }
   return { ...prior, frontmatter: fm };
 }

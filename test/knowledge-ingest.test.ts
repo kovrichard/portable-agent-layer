@@ -244,6 +244,47 @@ describe("merge — second ingest enriches without overwriting", () => {
     const aiTags = c?.frontmatter.tags.filter((t) => t === "ai-research");
     expect(aiTags?.length).toBe(1);
   });
+
+  test("multi-word industry splits into atomic tags", () => {
+    // Regression for ISC-17: industry "AI consulting" must NOT land as a
+    // single compound tag "ai consulting" — it should split into atomic
+    // tokens so `find ai` and `find consulting` both work.
+    ingestEntities(
+      {
+        companies: [
+          { name: "Acme Labs", industry: "AI consulting" },
+          { name: "Beta Corp", industry: "AI sales / marketing intelligence" },
+        ],
+      },
+      "src-1",
+      ROOT
+    );
+    const acme = load("Companies", "acme-labs", ROOT);
+    const beta = load("Companies", "beta-corp", ROOT);
+    expect(acme?.frontmatter.tags).toContain("ai");
+    expect(acme?.frontmatter.tags).toContain("consulting");
+    expect(acme?.frontmatter.tags).not.toContain("ai consulting");
+    expect(beta?.frontmatter.tags).toContain("ai");
+    expect(beta?.frontmatter.tags).toContain("sales");
+    expect(beta?.frontmatter.tags).toContain("marketing");
+    expect(beta?.frontmatter.tags).toContain("intelligence");
+    // The slash itself must not survive as a tag
+    expect(beta?.frontmatter.tags).not.toContain("/");
+    expect(beta?.frontmatter.tags).not.toContain("");
+  });
+
+  test("hyphenated industry stays as one atomic tag", () => {
+    // Anti-criterion: don't split on hyphens. "ai-research" is one concept.
+    ingestEntities(
+      { companies: [{ name: "Gamma Inc", industry: "ai-research" }] },
+      "src-1",
+      ROOT
+    );
+    const c = load("Companies", "gamma-inc", ROOT);
+    expect(c?.frontmatter.tags).toContain("ai-research");
+    expect(c?.frontmatter.tags).not.toContain("ai");
+    expect(c?.frontmatter.tags).not.toContain("research");
+  });
 });
 
 // --- Idempotent re-ingest ---------------------------------------------------
