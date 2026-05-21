@@ -8,10 +8,10 @@ import {
   spyOn,
   test,
 } from "bun:test";
-import { existsSync, mkdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runKnowledge } from "../src/cli/knowledge";
-import { getOrCreate, save } from "../src/tools/knowledge/lib";
+import { exists, getOrCreate, load, save } from "../src/tools/knowledge/lib";
 
 const ROOT = resolve(import.meta.dir, "../.test-tmp/cli-knowledge");
 const originalPalHome = process.env.PAL_HOME;
@@ -395,5 +395,69 @@ describe("PAL_HOME sandboxing", () => {
     expect(existsSync(aliceFile)).toBe(true);
     // And the save() reference is intact (no shadowing)
     expect(typeof save).toBe("function");
+  });
+});
+
+// ── ingest ─────────────────────────────────────────────────────────
+
+describe("ingest", () => {
+  test("happy path: --file writes entities + prints summary", async () => {
+    const payload = {
+      people: [{ name: "Carol Example", role: "author", company: "Gamma Inc" }],
+      companies: [{ name: "Gamma Inc", domain: "gamma.example" }],
+    };
+    const file = resolve(ROOT, "payload.json");
+    mkdirSync(ROOT, { recursive: true });
+    writeFileSync(file, JSON.stringify(payload));
+
+    const cap = captureOutput();
+    const code = await runKnowledge(["ingest", "--file", file, "--source", "test-src"]);
+    const out = cap.flush();
+    cap.logSpy.mockRestore();
+    cap.errSpy.mockRestore();
+
+    expect(code).toBe(0);
+    expect(exists("People", "carol-example")).toBe(true);
+    expect(exists("Companies", "gamma-example")).toBe(true);
+    // Summary JSON includes the source tag + slugs
+    expect(out).toContain('"source": "test-src"');
+    expect(out).toContain('"carol-example"');
+    expect(out).toContain('"gamma-example"');
+    // Auto-edge: person → company part-of
+    const carol = load("People", "carol-example");
+    expect(carol?.frontmatter.related).toContainEqual({
+      slug: "gamma-example",
+      type: "part-of",
+    });
+  });
+
+  test("bad JSON: exits 1 with invalid-JSON error", async () => {
+    const file = resolve(ROOT, "broken.json");
+    mkdirSync(ROOT, { recursive: true });
+    writeFileSync(file, "{ not valid json");
+
+    const cap = captureOutput();
+    const code = await runKnowledge(["ingest", "--file", file, "--source", "x"]);
+    const out = cap.flush();
+    cap.logSpy.mockRestore();
+    cap.errSpy.mockRestore();
+
+    expect(code).toBe(1);
+    expect(out.toLowerCase()).toContain("invalid json");
+  });
+
+  test("missing arrays: exits 1 with at-least-one error", async () => {
+    const file = resolve(ROOT, "empty-shape.json");
+    mkdirSync(ROOT, { recursive: true });
+    writeFileSync(file, JSON.stringify({ irrelevant: true }));
+
+    const cap = captureOutput();
+    const code = await runKnowledge(["ingest", "--file", file, "--source", "x"]);
+    const out = cap.flush();
+    cap.logSpy.mockRestore();
+    cap.errSpy.mockRestore();
+
+    expect(code).toBe(1);
+    expect(out).toContain("at least one");
   });
 });
