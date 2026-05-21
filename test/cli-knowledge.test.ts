@@ -154,6 +154,43 @@ describe("search", () => {
     cap.errSpy.mockRestore();
     expect(cap.flush()).toContain("No matches");
   });
+
+  test("source ID substring inside PAL markup is NOT counted (ISC-22)", async () => {
+    // Ingest an entity whose body contains a per-source section. The source
+    // ID has a unique sentinel string that does NOT appear in title/tags/prose.
+    // Search for the sentinel must return 0 matches — otherwise PAL's own
+    // bookkeeping markers leak into user-facing search results.
+    const { ingestEntities } = await import("../src/tools/knowledge/ingest");
+    ingestEntities(
+      { people: [{ name: "Alice Example", role: "author" }] },
+      "leakguard-sentinel-xyz",
+      undefined
+    );
+
+    const cap = captureOutput();
+    await runKnowledge(["search", "leakguard"]);
+    cap.logSpy.mockRestore();
+    cap.errSpy.mockRestore();
+    const out = cap.flush();
+    expect(out).toContain("No matches");
+  });
+
+  test("user-written ### headings still count toward body score (ISC-22)", async () => {
+    // Anti-criterion: only PAL-emitted date headings get stripped. User prose
+    // headings like '### Background' must remain in the search corpus.
+    const { save, getOrCreate } = await import("../src/tools/knowledge/lib");
+    const e = getOrCreate({ domain: "Ideas", name: "Note With Heading" });
+    save({
+      ...e,
+      body: "### Background\nThis is sentinel-userheading material.",
+    });
+
+    const cap = captureOutput();
+    await runKnowledge(["search", "sentinel-userheading"]);
+    cap.logSpy.mockRestore();
+    cap.errSpy.mockRestore();
+    expect(cap.flush()).toContain("note-with-heading");
+  });
 });
 
 // ── graph ──────────────────────────────────────────────────────────

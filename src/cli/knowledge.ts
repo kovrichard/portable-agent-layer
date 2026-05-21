@@ -135,6 +135,21 @@ interface SearchHit {
   score: number;
 }
 
+/**
+ * Strip PAL-emitted source markup lines from a body before search scoring.
+ * Keeps the markers on disk (for provenance + idempotency) but excludes
+ * them from the search corpus — otherwise source IDs leak into results
+ * and every entity from a batch matches substrings of the source ID.
+ * ISC-22.
+ */
+const PAL_HEADING_RE = /^### \d{4}-\d{2}-\d{2} — /;
+function bodyForSearch(body: string): string {
+  return body
+    .split("\n")
+    .filter((line) => !PAL_HEADING_RE.test(line) && !line.startsWith("<!-- src:"))
+    .join("\n");
+}
+
 function scoreEntity(entity: Entity, q: string): number {
   const lower = q.toLowerCase();
   let score = 0;
@@ -144,7 +159,7 @@ function scoreEntity(entity: Entity, q: string): number {
     if (tag.toLowerCase().includes(lower)) score += 2;
   }
   // Count body occurrences (cap at 10 to avoid runaway weighting on huge bodies)
-  const body = entity.body.toLowerCase();
+  const body = bodyForSearch(entity.body).toLowerCase();
   let pos = body.indexOf(lower);
   let bodyHits = 0;
   while (pos !== -1 && bodyHits < 10) {
