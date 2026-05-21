@@ -123,20 +123,27 @@ function bodyHasSource(body: string, sourceId: string): boolean {
   return body.includes(sourceMarker(sourceId));
 }
 
-/** Append a per-source section to the body. Idempotent on `sourceId`. */
-function appendSourceLog(
+/**
+ * Append a per-source section to the body. Idempotent on `sourceId`.
+ *
+ * `date` defaults to today's ISO date. The legacy-store migration overrides
+ * it with each entity's original `first_seen` so replayed provenance retains
+ * its real date instead of stamping today on every record.
+ */
+export function appendSourceLog(
   body: string,
   sourceId: string,
   contextSnippet: string | null | undefined,
-  attrs: Record<string, string | null | undefined>
+  attrs: Record<string, string | null | undefined>,
+  date?: string
 ): string {
   if (bodyHasSource(body, sourceId)) return body;
-  const date = new Date().toISOString().slice(0, 10);
+  const dateStr = (date ?? new Date().toISOString()).slice(0, 10);
   const attrLine = Object.entries(attrs)
     .filter(([, v]) => typeof v === "string" && v.length > 0)
     .map(([k, v]) => `${k}: ${v}`)
     .join(" · ");
-  const lines: string[] = ["", `### ${date} — ${sourceId}`, sourceMarker(sourceId)];
+  const lines: string[] = ["", `### ${dateStr} — ${sourceId}`, sourceMarker(sourceId)];
   if (attrLine) lines.push(attrLine);
   if (contextSnippet?.trim()) lines.push("", contextSnippet.trim());
   const prefix = body.endsWith("\n") || body === "" ? body : `${body}\n`;
