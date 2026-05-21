@@ -333,6 +333,23 @@ describe("traverse — BFS", () => {
     expect(acme?.viaEdge?.edgeType).toBe("related");
     expect(acme?.viaEdge?.weight).toBe(5);
   });
+
+  test("walks against edge direction: company reachable from its referencing people", () => {
+    // Regression for ISC-16: a node whose edges are all incoming (e.g. a
+    // company referenced by part-of edges from its people) should still be
+    // a valid BFS start that reaches those people.
+    fixture();
+    const g = buildGraph(ROOT);
+    // acme-labs has:
+    //   - incoming related from alice-example (instance-of, weight 5)
+    //   - incoming wikilink from bob-example (weight 3)
+    //   - bidirectional tag edge with beta-corp via "ai"
+    const r = traverse(g, "acme-labs", 1);
+    const reached = r.map((t) => t.node.slug).sort();
+    expect(reached).toContain("alice-example"); // via incoming related
+    expect(reached).toContain("bob-example"); // via incoming wikilink
+    expect(reached).toContain("beta-corp"); // via bidirectional tag
+  });
 });
 
 // --- stats ------------------------------------------------------------------

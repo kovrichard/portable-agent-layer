@@ -48,7 +48,15 @@ export interface GraphEdge {
 export interface KnowledgeGraph {
   nodes: Map<string, GraphNode>;
   edges: GraphEdge[];
+  /** Outgoing edges keyed by `edge.from` slug. */
   adjacency: Map<string, GraphEdge[]>;
+  /**
+   * Incoming edges keyed by `edge.to` slug. Lets BFS walk against edge
+   * direction (e.g. a company reached from its referencing people). The
+   * GraphEdge objects are SHARED with `adjacency` — direction info is
+   * preserved, not mirrored into reversed copies.
+   */
+  reverseAdjacency: Map<string, GraphEdge[]>;
 }
 
 export interface TraversalNode {
@@ -99,6 +107,14 @@ function pushEdge(graph: KnowledgeGraph, edge: GraphEdge, bidirectional = false)
   } else {
     graph.adjacency.set(edge.from, [edge]);
   }
+  // Mirror into reverse adjacency so traverse can walk against direction.
+  // Same edge object — no copies, no direction info lost.
+  const radj = graph.reverseAdjacency.get(edge.to);
+  if (radj) {
+    radj.push(edge);
+  } else {
+    graph.reverseAdjacency.set(edge.to, [edge]);
+  }
   if (!bidirectional) return;
   const back: GraphEdge = {
     from: edge.to,
@@ -113,6 +129,12 @@ function pushEdge(graph: KnowledgeGraph, edge: GraphEdge, bidirectional = false)
     backAdj.push(back);
   } else {
     graph.adjacency.set(back.from, [back]);
+  }
+  const backRadj = graph.reverseAdjacency.get(back.to);
+  if (backRadj) {
+    backRadj.push(back);
+  } else {
+    graph.reverseAdjacency.set(back.to, [back]);
   }
 }
 
@@ -205,6 +227,7 @@ export function buildGraph(rootDir?: string): KnowledgeGraph {
     nodes,
     edges: [],
     adjacency: new Map(),
+    reverseAdjacency: new Map(),
   };
   buildExplicitEdges(graph, entities);
   buildTagEdges(graph);
@@ -272,12 +295,22 @@ export function traverse(
     if (entry.hop >= maxHops) continue;
 
     const outgoing = graph.adjacency.get(entry.slug) ?? [];
+    const incoming = graph.reverseAdjacency.get(entry.slug) ?? [];
     const bestPerTarget = new Map<string, GraphEdge>();
     for (const edge of outgoing) {
       if (visited.has(edge.to)) continue;
       const existing = bestPerTarget.get(edge.to);
       if (!existing || edge.weight > existing.weight) {
         bestPerTarget.set(edge.to, edge);
+      }
+    }
+    for (const edge of incoming) {
+      // edge.to is the current node; edge.from is the "other" endpoint.
+      const other = edge.from;
+      if (visited.has(other) || other === entry.slug) continue;
+      const existing = bestPerTarget.get(other);
+      if (!existing || edge.weight > existing.weight) {
+        bestPerTarget.set(other, edge);
       }
     }
 
