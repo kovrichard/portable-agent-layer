@@ -459,8 +459,8 @@ export interface CreateInput {
  * (quality 5, status "seedling", today's ISO timestamps).
  *
  * Merging new attributes into an existing entity is intentionally NOT here —
- * that's Phase 3 (extract-entities rewire). Keeping this idempotent makes
- * Phase 1 a safe storage primitive.
+ * that lives in `ingest.ts`. Keeping `getOrCreate` idempotent makes it a safe
+ * storage primitive callable from anywhere.
  */
 export function getOrCreate(input: CreateInput, rootDir?: string): Entity {
   const slug = slugify(input.name);

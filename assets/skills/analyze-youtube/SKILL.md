@@ -23,7 +23,7 @@ Follow the user's request. Common tasks:
 
 - **Summarize** the video content
 - **Answer a specific question** about what's shown or discussed
-- **Extract entities** (defer to /extract-entities if installed)
+- **Extract entities** (defer to /entities if installed)
 - **Extract wisdom** (defer to /extract-wisdom if installed)
 - **Compare** with other content
 

@@ -160,7 +160,7 @@ PAL ships with built-in skills that extend your agent's capabilities:
 | `council` | Multi-perspective parallel debate on decisions |
 | `create-pdf` | Render structured content into a PDF |
 | `create-skill` | Scaffold a new skill from a description |
-| `extract-entities` | Extract people and companies from content |
+| `entities` | Detect, save, and query people & companies in the personal knowledge graph |
 | `extract-wisdom` | Extract structured insights from content |
 | `first-principles` | Break down problems to fundamentals |
 | `fyzz-chat-api` | Query Fyzz Chat conversations via API |

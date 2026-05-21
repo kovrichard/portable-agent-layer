@@ -1,15 +1,18 @@
 ---
-name: extract-entities
-description: Extract people and companies from content (articles, videos, URLs, pasted text). Use when identifying who and what organizations are mentioned in content.
+name: entities
+description: Maintain the personal knowledge graph of people and companies. Detect named entities in any content (article, video, paste, conversation), upsert them to ~/.pal/memory/knowledge/, and surface what's already known. Use proactively whenever named entities appear — don't wait to be asked.
 argument-hint: <content, URL, or pasted text>
 ---
 
-Extract people and companies from $ARGUMENTS:
+Detect, persist, and query people and companies referenced in $ARGUMENTS.
 
-1. Read/fetch the content
-2. Extract ALL people and companies mentioned
+The default workflow is **extract → save → show summary**, in that order. Saving is not optional: persistence is the point of the skill. Skip the save step only if the user explicitly said "don't save", "just look", or similar.
 
-## People
+## 1. Extract
+
+Read/fetch the content and extract ALL people and companies mentioned.
+
+### People
 
 For each person, extract:
 - **name**: Full name
@@ -20,7 +23,7 @@ For each person, extract:
 - **context**: Why this person is mentioned and their relevance
 - **importance**: primary (central to content) | secondary (supporting) | minor (brief mention)
 
-## Companies
+### Companies
 
 For each company/organization, extract:
 - **name**: Official name
@@ -30,18 +33,7 @@ For each company/organization, extract:
 - **mentioned_as**: subject | source | example | competitor | partner | acquisition | product | other
 - **sentiment**: positive | neutral | negative | mixed
 
-## Output
-
-Return structured JSON:
-
-```json
-{
-  "people": [...],
-  "companies": [...]
-}
-```
-
-## Guidelines
+### Extraction guidelines
 
 - Accuracy over quantity — use null for unknown fields, never guess
 - Include authors, subjects, quoted individuals, and anyone significantly mentioned
@@ -51,9 +43,18 @@ Return structured JSON:
 - Extract social handles from bios, signatures, or text body
 - Context fields should explain relevance, not just repeat the mention
 
-## Persistence
+### Output shape
 
-After displaying results, ask the user if they want to save. When saving, pipe the JSON output through the knowledge CLI:
+```json
+{
+  "people": [...],
+  "companies": [...]
+}
+```
+
+## 2. Save (default)
+
+Immediately persist the extracted JSON. Do not ask first — saving is the default:
 
 ```bash
 echo '<the JSON output>' | pal cli knowledge ingest --source "<URL or content origin>"
@@ -61,11 +62,13 @@ echo '<the JSON output>' | pal cli knowledge ingest --source "<URL or content or
 
 The CLI writes one markdown file per entity under `~/.pal/memory/knowledge/{People,Companies}/<slug>.md`, preserving every extracted field (role, title, social, context, importance for people; domain, industry, sentiment, mentioned_as for companies) as frontmatter. When a person record includes a `company`, a `part-of` typed edge is auto-created from the person to the company (the company is stub-created if it doesn't exist yet). Each ingestion appends a per-source log section to the entity's body so the same source can be re-ingested safely (idempotent on `--source`).
 
-Output: JSON summary of `{created, updated, slugs}` counts per domain.
+The CLI prints a JSON summary of `{created, updated, slugs}` counts per domain.
 
-## Reading what was saved
+**Opt-out:** if the user explicitly said not to save (e.g. "who's mentioned in this email — don't store anything"), skip step 2 entirely and just show the extracted JSON.
 
-After ingesting (or before re-scraping a known source), the same CLI exposes read commands:
+## 3. Query (read-back)
+
+Before scraping a known source, or after saving, surface what's already on file:
 
 ```bash
 pal cli knowledge search "<name>"   # substring across title, tags, body
@@ -75,4 +78,4 @@ pal cli knowledge ls People         # list a domain
 pal cli knowledge stats             # counts, hubs, isolated nodes
 ```
 
-Use `show` to confirm a save landed correctly; use `search` to check whether an entity is already on file before extracting again.
+Use `search` before extracting to detect duplicates; use `show` to confirm a save landed correctly; use `graph` to surface relationships the user may have forgotten.

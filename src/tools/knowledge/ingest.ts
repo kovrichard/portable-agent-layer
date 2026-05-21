@@ -1,8 +1,8 @@
 /**
  * Knowledge ingest — merge extracted entities into the markdown store.
  *
- * Called by `assets/skills/extract-entities/tools/entity-save.ts`. Accepts
- * the canonical extract-entities JSON shape and:
+ * Called by the `pal cli knowledge ingest` subcommand (which the `entities`
+ * skill drives). Accepts the canonical entity extraction JSON shape and:
  *
  *   1. Upserts each person and company as a markdown file (Phase 1 store).
  *   2. Preserves all rich fields (role, social, context, industry, etc.) as
