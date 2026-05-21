@@ -76,6 +76,20 @@ pal cli knowledge show <slug>       # full entity (frontmatter + body)
 pal cli knowledge graph <slug>      # related entities (BFS, default 2 hops)
 pal cli knowledge ls People         # list a domain
 pal cli knowledge stats             # counts, hubs, isolated nodes
+pal cli knowledge find <tag>        # entities tagged with <tag> (topic: prefix transparent)
 ```
 
 Use `search` before extracting to detect duplicates; use `show` to confirm a save landed correctly; use `graph` to surface relationships the user may have forgotten.
+
+## Tag conventions (important)
+
+Tags do two different jobs in the store, and PAL keeps them separated so the graph stays meaningful:
+
+| Tag form | Purpose | Example | Generates graph edges? |
+|---|---|---|---|
+| `topic:<token>` | **Facet** — for filtering / `find` | `topic:ai`, `topic:consulting` | **No** — two entities sharing `topic:ai` do NOT get linked |
+| Unprefixed | **Structural** — for navigation | `acme-labs`, `customer` | Yes — co-occurrence creates tag edges |
+
+**Industry inheritance.** When ingest sees a company `industry`, it splits the string on whitespace and `/` and writes `topic:<token>` tags for each piece. When a person is linked to a company, the person inherits **only** the company's `topic:*` tags — never structural ones. This keeps `find ai` useful (it surfaces every AI-industry company + their employees) without creating phantom graph edges between unrelated entities that merely share an industry word.
+
+Users can query with or without the prefix — `find ai` and `find topic:ai` are equivalent.

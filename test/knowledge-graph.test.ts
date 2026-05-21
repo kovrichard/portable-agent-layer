@@ -224,6 +224,16 @@ describe("buildGraph — tag edges (weight 1, bidirectional)", () => {
     expect(ab?.weight).toBe(1);
   });
 
+  test("topic:* tags do NOT create tag edges (ISC-18)", () => {
+    // Two entities share a topical tag; this must NOT generate a tag edge
+    // — topic:* tags are facet-style filters, not structural links.
+    seed({ domain: "Companies", name: "Acme One", tags: ["topic:ai"] });
+    seed({ domain: "Companies", name: "Beta Two", tags: ["topic:ai"] });
+    const g = buildGraph(ROOT);
+    const tagEdges = g.edges.filter((e) => e.edgeType === "tag");
+    expect(tagEdges.length).toBe(0);
+  });
+
   test("singleton tag creates no edge", () => {
     fixture();
     const g = buildGraph(ROOT);

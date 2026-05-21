@@ -114,17 +114,22 @@ function addRelated(list: Related[], rel: Related): Related[] {
 }
 
 /**
- * Split a company industry string into atomic tags. Whitespace and `/`
- * are separators; hyphens are preserved so multi-word concepts like
- * `ai-research` stay as one tag. Lowercased, deduped, empties dropped.
+ * Split a company industry string into atomic, topic-prefixed tags.
+ * Whitespace and `/` are separators; hyphens preserved (so `ai-research`
+ * stays one token). Each token gets the `topic:` prefix so the graph
+ * builder can recognize them as facet-style filters and skip them when
+ * generating tag co-occurrence edges (ISC-18 — prevents phantom edges
+ * between unrelated entities that merely share an industry word).
  */
-function industryToTags(industry: string): string[] {
+function industryToTopicTags(industry: string): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const token of industry.toLowerCase().split(/[\s/]+/)) {
-    if (token && !seen.has(token)) {
-      seen.add(token);
-      out.push(token);
+    if (!token) continue;
+    const prefixed = `topic:${token}`;
+    if (!seen.has(prefixed)) {
+      seen.add(prefixed);
+      out.push(prefixed);
     }
   }
   return out;
@@ -203,7 +208,7 @@ function newCompanyEntity(input: CompanyInput, slug: string): Entity {
   const fm: EntityFrontmatter = {
     title: input.name,
     type: "company",
-    tags: input.industry ? industryToTags(input.industry) : [],
+    tags: input.industry ? industryToTopicTags(input.industry) : [],
     created: now,
     updated: now,
     quality: 5,
@@ -227,9 +232,14 @@ function mergePerson(prior: Entity, input: PersonInput): Entity {
     Array.isArray(fm.socials)
       ? Object.fromEntries(
           (fm.socials as string[])
-            .map((entry) => entry.split(":"))
-            .filter((parts): parts is [string, string] => parts.length === 2)
-            .map(([k, v]) => [k, v])
+            .map((entry): [string, string] | null => {
+              // Split on FIRST ':' only — values like 'https://...' contain
+              // additional colons that must stay inside the value.
+              const idx = entry.indexOf(":");
+              if (idx <= 0) return null;
+              return [entry.slice(0, idx), entry.slice(idx + 1)];
+            })
+            .filter((kv): kv is [string, string] => kv !== null && kv[1].length > 0)
         )
       : (fm.socials ?? {}),
     input.social
@@ -247,7 +257,7 @@ function mergeCompany(prior: Entity, input: CompanyInput): Entity {
   fm.mentioned_as = mergeScalar(fm.mentioned_as, input.mentioned_as);
   fm.sentiment = mergeScalar(fm.sentiment, input.sentiment);
   if (input.industry) {
-    fm.tags = mergeStringArray(fm.tags, industryToTags(input.industry));
+    fm.tags = mergeStringArray(fm.tags, industryToTopicTags(input.industry));
   }
   return { ...prior, frontmatter: fm };
 }
@@ -327,6 +337,13 @@ function linkPersonToCompany(
   }
   const person = load("People", personSlug, rootDir);
   if (!person) return;
+  // ISC-18: inherit ONLY the company's topic:* tags. Structural tags stay
+  // company-scoped so we don't create phantom graph edges between unrelated
+  // people sharing only their employer's slug or other non-facet labels.
+  const company = load("Companies", companySlug, rootDir);
+  const inheritedTopicTags = company
+    ? company.frontmatter.tags.filter((t) => t.startsWith("topic:"))
+    : [];
   const updated: Entity = {
     ...person,
     frontmatter: {
@@ -335,6 +352,7 @@ function linkPersonToCompany(
         slug: companySlug,
         type: "part-of",
       }),
+      tags: mergeStringArray(person.frontmatter.tags, inheritedTopicTags),
     },
   };
   save(updated, rootDir);

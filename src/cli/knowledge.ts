@@ -292,8 +292,14 @@ function cmdFind(args: string[]): number {
     console.error("Usage: pal cli knowledge find <tag>");
     return 1;
   }
+  // Accept both the bare tag and the topic-prefixed form so users don't
+  // need to know which kind a given concept was stored as.
+  const prefixedTag = tag.startsWith("topic:") ? tag : `topic:${tag}`;
   const matches = list().filter((e) =>
-    e.frontmatter.tags.some((t) => t.toLowerCase() === tag)
+    e.frontmatter.tags.some((t) => {
+      const lower = t.toLowerCase();
+      return lower === tag || lower === prefixedTag;
+    })
   );
   console.log(
     `\n🏷  ${matches.length} entit${matches.length === 1 ? "y" : "ies"} tagged "${tag}":\n`

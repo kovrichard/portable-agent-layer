@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import { ingestEntities } from "../src/tools/knowledge/ingest";
-import { exists, load } from "../src/tools/knowledge/lib";
+import { exists, load, save } from "../src/tools/knowledge/lib";
 
 const ROOT = resolve(import.meta.dir, "../.test-tmp/knowledge-ingest");
 
@@ -96,7 +96,7 @@ describe("ingestEntities — fresh", () => {
     expect(c?.frontmatter.industry).toBe("ai-research");
     expect(c?.frontmatter.sentiment).toBe("neutral");
     expect(c?.frontmatter.mentioned_as).toBe("subject");
-    expect(c?.frontmatter.tags).toContain("ai-research");
+    expect(c?.frontmatter.tags).toContain("topic:ai-research");
   });
 
   test("person body contains source log with marker + context", () => {
@@ -202,6 +202,35 @@ describe("merge — second ingest enriches without overwriting", () => {
     expect(p?.frontmatter.company).toBe("Acme Labs"); // preserved
   });
 
+  test("URL socials survive re-ingest with no new social input (ISC-20)", () => {
+    // Regression: mergePerson used to split 'key:value' entries on every ':'
+    // and filter length===2, which dropped any value containing 'https://...'.
+    // A re-ingest without new social data should preserve all URL socials.
+    ingestEntities(
+      {
+        people: [
+          {
+            name: "Alice Example",
+            social: {
+              linkedin: "https://lk/alice",
+              twitter: "@alice",
+              website: "https://alice.example",
+            },
+          },
+        ],
+      },
+      "src-1",
+      ROOT
+    );
+    // Re-ingest with NO social field — exercises the merge re-parse path.
+    ingestEntities({ people: [{ name: "Alice Example" }] }, "src-2", ROOT);
+    const p = load("People", "alice-example", ROOT);
+    const socials = p?.frontmatter.socials as string[];
+    expect(socials).toContain("linkedin:https://lk/alice");
+    expect(socials).toContain("twitter:@alice");
+    expect(socials).toContain("website:https://alice.example");
+  });
+
   test("socials union across ingests, prefers new on key collision", () => {
     ingestEntities(
       {
@@ -241,14 +270,13 @@ describe("merge — second ingest enriches without overwriting", () => {
       ROOT
     );
     const c = load("Companies", "acme-labs", ROOT);
-    const aiTags = c?.frontmatter.tags.filter((t) => t === "ai-research");
+    const aiTags = c?.frontmatter.tags.filter((t) => t === "topic:ai-research");
     expect(aiTags?.length).toBe(1);
   });
 
-  test("multi-word industry splits into atomic tags", () => {
-    // Regression for ISC-17: industry "AI consulting" must NOT land as a
-    // single compound tag "ai consulting" — it should split into atomic
-    // tokens so `find ai` and `find consulting` both work.
+  test("multi-word industry splits into atomic topic-prefixed tags", () => {
+    // Combined regression: ISC-17 (atomic split) + ISC-18 (topic: prefix
+    // so the resulting tags are facet filters, not graph-edge generators).
     ingestEntities(
       {
         companies: [
@@ -261,16 +289,17 @@ describe("merge — second ingest enriches without overwriting", () => {
     );
     const acme = load("Companies", "acme-labs", ROOT);
     const beta = load("Companies", "beta-corp", ROOT);
-    expect(acme?.frontmatter.tags).toContain("ai");
-    expect(acme?.frontmatter.tags).toContain("consulting");
+    expect(acme?.frontmatter.tags).toContain("topic:ai");
+    expect(acme?.frontmatter.tags).toContain("topic:consulting");
     expect(acme?.frontmatter.tags).not.toContain("ai consulting");
-    expect(beta?.frontmatter.tags).toContain("ai");
-    expect(beta?.frontmatter.tags).toContain("sales");
-    expect(beta?.frontmatter.tags).toContain("marketing");
-    expect(beta?.frontmatter.tags).toContain("intelligence");
+    expect(acme?.frontmatter.tags).not.toContain("ai");
+    expect(beta?.frontmatter.tags).toContain("topic:ai");
+    expect(beta?.frontmatter.tags).toContain("topic:sales");
+    expect(beta?.frontmatter.tags).toContain("topic:marketing");
+    expect(beta?.frontmatter.tags).toContain("topic:intelligence");
     // The slash itself must not survive as a tag
     expect(beta?.frontmatter.tags).not.toContain("/");
-    expect(beta?.frontmatter.tags).not.toContain("");
+    expect(beta?.frontmatter.tags).not.toContain("topic:");
   });
 
   test("hyphenated industry stays as one atomic tag", () => {
@@ -281,9 +310,63 @@ describe("merge — second ingest enriches without overwriting", () => {
       ROOT
     );
     const c = load("Companies", "gamma-inc", ROOT);
-    expect(c?.frontmatter.tags).toContain("ai-research");
+    expect(c?.frontmatter.tags).toContain("topic:ai-research");
+    expect(c?.frontmatter.tags).not.toContain("topic:ai");
+    expect(c?.frontmatter.tags).not.toContain("topic:research");
+  });
+
+  test("company industry tags are topic-prefixed (ISC-18)", () => {
+    ingestEntities(
+      { companies: [{ name: "Acme Labs", industry: "AI consulting" }] },
+      "src-1",
+      ROOT
+    );
+    const c = load("Companies", "acme-labs", ROOT);
+    expect(c?.frontmatter.tags).toContain("topic:ai");
+    expect(c?.frontmatter.tags).toContain("topic:consulting");
+    // Unprefixed atomic tags must NOT be written by new ingests
     expect(c?.frontmatter.tags).not.toContain("ai");
-    expect(c?.frontmatter.tags).not.toContain("research");
+    expect(c?.frontmatter.tags).not.toContain("consulting");
+  });
+
+  test("person inherits topic:* tags from their company (ISC-18)", () => {
+    ingestEntities(
+      {
+        people: [{ name: "Alice Example", company: "Acme Labs" }],
+        companies: [{ name: "Acme Labs", industry: "AI consulting" }],
+      },
+      "src-1",
+      ROOT
+    );
+    const p = load("People", "alice-example", ROOT);
+    expect(p?.frontmatter.tags).toContain("topic:ai");
+    expect(p?.frontmatter.tags).toContain("topic:consulting");
+  });
+
+  test("person does NOT inherit non-topic tags from company (ISC-18)", () => {
+    // Pre-create a company with a mix of structural and topic tags; person
+    // should only get the topic:* ones, never structural slugs.
+    const acme = ingestEntities(
+      { companies: [{ name: "Acme Labs", industry: "AI consulting" }] },
+      "src-1",
+      ROOT
+    );
+    expect(acme.companies[0]?.slug).toBe("acme-labs");
+    // Now imagine the company gained an arbitrary structural tag elsewhere —
+    // we simulate by re-saving with an injected non-topic tag.
+    const c = load("Companies", "acme-labs", ROOT);
+    if (!c) throw new Error("seed failed");
+    c.frontmatter.tags = [...c.frontmatter.tags, "structural-marker"];
+    save(c, ROOT);
+
+    ingestEntities(
+      { people: [{ name: "Bob Example", company: "Acme Labs" }] },
+      "src-2",
+      ROOT
+    );
+    const p = load("People", "bob-example", ROOT);
+    expect(p?.frontmatter.tags).toContain("topic:ai");
+    expect(p?.frontmatter.tags).not.toContain("structural-marker");
   });
 });
 
