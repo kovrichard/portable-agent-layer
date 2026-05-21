@@ -53,12 +53,26 @@ Return structured JSON:
 
 ## Persistence
 
-After displaying results, ask the user if they want to save. When saving, pipe the JSON output through the entity-save tool:
+After displaying results, ask the user if they want to save. When saving, pipe the JSON output through the knowledge CLI:
 
 ```bash
-echo '<the JSON output>' | bun ~/.pal/skills/extract-entities/tools/entity-save.ts -- --source "<URL or content origin>"
+echo '<the JSON output>' | pal cli knowledge ingest --source "<URL or content origin>"
 ```
 
-The tool writes one markdown file per entity under `~/.pal/memory/knowledge/{People,Companies}/<slug>.md`, preserving every extracted field (role, title, social, context, importance for people; domain, industry, sentiment, mentioned_as for companies) as frontmatter. When a person record includes a `company`, a `part-of` typed edge is auto-created from the person to the company (the company is stub-created if it doesn't exist yet). Each ingestion appends a per-source log section to the entity's body so the same source can be re-ingested safely (idempotent on `--source`).
+The CLI writes one markdown file per entity under `~/.pal/memory/knowledge/{People,Companies}/<slug>.md`, preserving every extracted field (role, title, social, context, importance for people; domain, industry, sentiment, mentioned_as for companies) as frontmatter. When a person record includes a `company`, a `part-of` typed edge is auto-created from the person to the company (the company is stub-created if it doesn't exist yet). Each ingestion appends a per-source log section to the entity's body so the same source can be re-ingested safely (idempotent on `--source`).
 
 Output: JSON summary of `{created, updated, slugs}` counts per domain.
+
+## Reading what was saved
+
+After ingesting (or before re-scraping a known source), the same CLI exposes read commands:
+
+```bash
+pal cli knowledge search "<name>"   # substring across title, tags, body
+pal cli knowledge show <slug>       # full entity (frontmatter + body)
+pal cli knowledge graph <slug>      # related entities (BFS, default 2 hops)
+pal cli knowledge ls People         # list a domain
+pal cli knowledge stats             # counts, hubs, isolated nodes
+```
+
+Use `show` to confirm a save landed correctly; use `search` to check whether an entity is already on file before extracting again.
