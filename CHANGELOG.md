@@ -1,3 +1,26 @@
+# [0.42.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.41.1...v0.42.0) (2026-05-22)
+
+
+### Bug Fixes
+
+* **knowledge:** add reverse adjacency for directed edge traversal in knowledge graph ([8139e64](https://github.com/kovrichard/portable-agent-layer/commit/8139e64a58e1d100357cadbe34d04810f8c61f20))
+* **knowledge:** implement body filtering for search scoring to exclude PAL markup ([aa5aeea](https://github.com/kovrichard/portable-agent-layer/commit/aa5aeeaf36dd9a2811fc46568a72422f3862660b))
+* **knowledge:** split industry to different tags if possible ([42c9ce5](https://github.com/kovrichard/portable-agent-layer/commit/42c9ce5a18d4668721e974c607e3d0f27d06d1cc))
+* **package:** add .husky/install.mjs to package files to fix package mode install warnings ([3d063e3](https://github.com/kovrichard/portable-agent-layer/commit/3d063e3f26796bfb4f6fb81c79b10cd1be6130a8))
+
+
+### Features
+
+* **entities:** introduce new skill for entity detection and management ([06bb897](https://github.com/kovrichard/portable-agent-layer/commit/06bb8972748fec9dabdba20a0b77a997985efb97))
+* **extract-entities:** introduce cli in skill ([96b7e59](https://github.com/kovrichard/portable-agent-layer/commit/96b7e59f4e833decf71f743fa2a9f2d8da32352a))
+* **knowledge:** add CLI command for knowledge management ([67383be](https://github.com/kovrichard/portable-agent-layer/commit/67383be56bba8d9d3c4beec2eb94d55cb7879030))
+* **knowledge:** add function to find existing company by title and update linking logic ([f10c828](https://github.com/kovrichard/portable-agent-layer/commit/f10c828ae81b896605449b045e00ed9babfdb022))
+* **knowledge:** add ingest command for bulk entity input from JSON ([a6a7999](https://github.com/kovrichard/portable-agent-layer/commit/a6a7999e257198b863a10cd60af93dfe65a2279e))
+* **knowledge:** add knowledge management functionality with entity serialization and validation ([7bc4577](https://github.com/kovrichard/portable-agent-layer/commit/7bc4577f18cd1d0fd1e72ab8acefacec16b836f6))
+* **knowledge:** enhance entity ingestion process with detailed logging and rich field preservation ([ef5b742](https://github.com/kovrichard/portable-agent-layer/commit/ef5b742e2abee4d2f311e7ed6e8448cb3bd87b27))
+* **knowledge:** implement knowledge graph functionality with node and edge management ([93acc31](https://github.com/kovrichard/portable-agent-layer/commit/93acc312c384470e41ea94b8557d894d8d868b67))
+* **migrate:** implement migration from legacy entity-index.json to knowledge markdown files ([86c3c13](https://github.com/kovrichard/portable-agent-layer/commit/86c3c136de1da4455108a642aa3e935d35b7b7f0))
+
 ## [0.41.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.41.0...v0.41.1) (2026-05-19)
 
 
