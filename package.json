@@ -9,6 +9,7 @@
   "files": [
     "src/",
     "assets/",
+    ".husky/install.mjs",
     "README.md",
     "LICENSE"
   ],
