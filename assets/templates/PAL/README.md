@@ -82,7 +82,7 @@ Persistent storage across sessions:
 - **state/** — Session registry, counts cache, debug logs
 
 ### Tools (`src/tools/`)
-CLI utilities: `tool:opinion` (manage opinions), `tool:reflect` (relationship reflection), `tool:analyze` (learning analysis), `pal cli usage` (token usage tracking), `tool:export` / `tool:import` (state portability).
+CLI utilities: `tool:opinion` (manage opinions), `tool:reflect` (relationship reflection), `tool:analyze` (learning analysis), `pal cli usage` (token usage tracking), `pal cli export` / `pal cli import` (state portability).
 
 ### TELOS (`telos/`)
 Personal context system — mission, goals, projects, beliefs, challenges, strategies, ideas, learnings, mental models, narratives. Managed via the telos skill.

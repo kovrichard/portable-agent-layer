@@ -52,9 +52,7 @@
     "tool:thread": "bun run src/tools/agent/thread.ts",
     "tool:analyze": "bun run src/tools/agent/analyze.ts",
     "tool:wisdom-frame": "bun run src/tools/agent/wisdom-frame.ts",
-    "tool:reflect": "bun run src/tools/relationship-reflect.ts",
-    "tool:export": "bun run src/tools/export.ts",
-    "tool:import": "bun run src/tools/import.ts"
+    "tool:reflect": "bun run src/tools/relationship-reflect.ts"
   },
   "lint-staged": {
     "*.ts": [

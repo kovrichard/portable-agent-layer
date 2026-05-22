@@ -1,6 +1,6 @@
 /**
  * Shared export logic — zips user state directories.
- * Used by tools/export.ts (manual) and handlers/backup.ts (automatic).
+ * Used by cli/index.ts (pal cli export) and handlers/backup.ts (automatic).
  */
 
 import { existsSync, readdirSync } from "node:fs";
