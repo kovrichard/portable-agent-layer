@@ -20,7 +20,8 @@
       "Bash(stat //*)",
       "Bash(readlink //*)",
       "Bash(bun ~/.pal/skills/*/tools/*.ts *)",
-      "Bash(bun ~/.pal/tools/*.ts *)"
+      "Bash(bun ~/.pal/tools/*.ts *)",
+      "Bash(node --experimental-strip-types ~/.pal/skills/consulting-report/tools/generate-pdf.ts *)"
     ]
   },
   "hooks": {
