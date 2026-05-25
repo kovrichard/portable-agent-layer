@@ -1,6 +1,12 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/konvert7/klint/refs/heads/main/klint.schema.json
 
-include: ["src", "assets", "!**/node_modules/**"]
+include:
+  - src
+  - assets
+  - "!**/node_modules/**"
+  - "!**/.next/**"
+  - "!**/out/**"
+  - "!**/vendor/**"
 plugins: [sonar]
 rules:
   no-unguarded-json-parse: error

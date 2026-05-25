@@ -12,7 +12,7 @@ const DEFAULT_PALETTE = [
 ];
 
 function colorForLevel(index: number, total: number, palette: string[]): string {
-  if (total <= 1) return palette[palette.length - 1];
+  if (total <= 1) return palette.at(-1) ?? palette[0];
   const t = index / (total - 1); // 0..1
   const pos = t * (palette.length - 1);
   return palette[Math.round(pos)];
@@ -20,7 +20,7 @@ function colorForLevel(index: number, total: number, palette: string[]): string 
 
 // Mix a hex color toward white by `amount` (0..1). 0.9 → soft tint.
 function lighten(hex: string, amount: number): string {
-  const m = hex.match(/^#([0-9a-f]{6})$/i);
+  const m = /^#([0-9a-f]{6})$/i.exec(hex);
   if (!m) return hex;
   const n = parseInt(m[1], 16);
   const r = (n >> 16) & 255;

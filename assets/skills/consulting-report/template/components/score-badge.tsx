@@ -22,7 +22,7 @@ interface ScoreBadgeProps {
 }
 
 function step(score: number, maxScore: number, palette: typeof DEFAULT_STEPS) {
-  if (maxScore <= 1) return palette[palette.length - 1];
+  if (maxScore <= 1) return palette.at(-1) ?? palette[0];
   const clamped = Math.max(1, Math.min(score, maxScore));
   const t = (clamped - 1) / (maxScore - 1);
   const idx = Math.round(t * (palette.length - 1));
