@@ -1,3 +1,21 @@
+# [0.43.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.42.0...v0.43.0) (2026-05-25)
+
+
+### Bug Fixes
+
+* **claude-md:** improve symlink handling to repair stale targets and add corresponding test ([7abf1b5](https://github.com/kovrichard/portable-agent-layer/commit/7abf1b5403b19faaa27d881d6bc16cb224339de2))
+* **dependencies:** add missing pdf-lib ([97d0a76](https://github.com/kovrichard/portable-agent-layer/commit/97d0a76b9396c14dfec20b199cdc841225538d74))
+* **hooks:** update run-hook to write error output to stderr for codex integration ([cda6835](https://github.com/kovrichard/portable-agent-layer/commit/cda68351f08865aff03437c503c01b1a31e0cb4a))
+
+
+### Features
+
+* **claude:** allowlist own consulting-report tool ([27f9854](https://github.com/kovrichard/portable-agent-layer/commit/27f98546ce436c38cb5ca018c477838db23900d7))
+* **codex:** add managed rules for PAL workflow and integrate into installation process ([6a8b98d](https://github.com/kovrichard/portable-agent-layer/commit/6a8b98d34e0608c05b87926fa02170094ea22e87))
+* **consulting-report:** add new and update existing components ([518f3cc](https://github.com/kovrichard/portable-agent-layer/commit/518f3cc7d1792127ec92f26bddc6996205753a56))
+* **consulting-report:** add process-guide shapes and enhance PDF generation with logo support ([d0598b7](https://github.com/kovrichard/portable-agent-layer/commit/d0598b7a87c8578cc6eb54f6fba28bf96646af84))
+* **hooks:** enhance jscpd and run-hook for codex integration ([de13795](https://github.com/kovrichard/portable-agent-layer/commit/de137958ae4891bb990f2547e6a8f60c6c95937d))
+
 # [0.42.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.41.1...v0.42.0) (2026-05-22)
 
 
