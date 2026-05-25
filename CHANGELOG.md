@@ -1,3 +1,10 @@
+## [0.43.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.43.0...v0.43.1) (2026-05-25)
+
+
+### Bug Fixes
+
+* **hooks:** enhance blockResponse for Codex PreToolUse to include permissionDecisionReason ([4bf17dd](https://github.com/kovrichard/portable-agent-layer/commit/4bf17dd8841aacc00209fe1ec84b9606fbc5ffe8))
+
 # [0.43.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.42.0...v0.43.0) (2026-05-25)
 
 
