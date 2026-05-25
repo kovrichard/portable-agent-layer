@@ -13,6 +13,7 @@ import {
   readJson,
   removeSkills,
   unmergeCodexHooks,
+  unmergeCodexRules,
   writeJson,
 } from "../lib";
 
@@ -38,6 +39,7 @@ function disableCodexHooks(configPath: string): void {
 const PKG_ROOT = palPkg().replaceAll("\\", "/");
 const CODEX_DIR = platform.codexDir();
 const HOOKS_FILE = resolve(CODEX_DIR, "hooks.json");
+const RULES_FILE = resolve(CODEX_DIR, "rules", "default.rules");
 
 // --- Remove PAL hooks from hooks.json ---
 if (existsSync(HOOKS_FILE)) {
@@ -52,6 +54,18 @@ if (existsSync(HOOKS_FILE)) {
   log.success("Removed PAL hooks from ~/.codex/hooks.json");
 } else {
   log.info("No hooks.json found, nothing to do");
+}
+
+// --- Remove PAL allowlist rules from default.rules ---
+if (existsSync(RULES_FILE)) {
+  copyFileSync(RULES_FILE, `${RULES_FILE}.bak.${Date.now()}`);
+  log.info("Backed up rules/default.rules");
+
+  const cleanedRules = unmergeCodexRules(readFileSync(RULES_FILE, "utf-8"));
+  writeFileSync(RULES_FILE, cleanedRules, "utf-8");
+  log.success("Removed PAL allowlist rules from ~/.codex/rules/default.rules");
+} else {
+  log.info("No default.rules found, nothing to do");
 }
 
 // --- Remove PAL skill symlinks ---

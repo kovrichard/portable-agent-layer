@@ -1,20 +1,32 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { existsSync, mkdirSync, rmSync } from "node:fs";
+import { resolve } from "node:path";
 import { captureRating, parseExplicitRating } from "../src/hooks/handlers/rating";
+
+const TEST_HOME = resolve(import.meta.dir, "../.test-home-rating");
 
 describe("captureRating non-blocking contract", () => {
   let savedKey: string | undefined;
   let savedAgent: string | undefined;
+  let savedHome: string | undefined;
   beforeEach(() => {
     savedKey = process.env.PAL_ANTHROPIC_API_KEY;
     savedAgent = process.env.PAL_AGENT;
+    savedHome = process.env.PAL_HOME;
+    if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+    mkdirSync(TEST_HOME, { recursive: true });
     process.env.PAL_ANTHROPIC_API_KEY = "sk-test-would-route-to-api";
     process.env.PAL_AGENT = "claude";
+    process.env.PAL_HOME = TEST_HOME;
   });
   afterEach(() => {
     if (savedKey === undefined) delete process.env.PAL_ANTHROPIC_API_KEY;
     else process.env.PAL_ANTHROPIC_API_KEY = savedKey;
     if (savedAgent === undefined) delete process.env.PAL_AGENT;
     else process.env.PAL_AGENT = savedAgent;
+    if (savedHome === undefined) delete process.env.PAL_HOME;
+    else process.env.PAL_HOME = savedHome;
+    if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
   });
 
   test("returns synchronously when implicit-sentiment path is triggered", () => {

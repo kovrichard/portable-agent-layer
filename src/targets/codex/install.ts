@@ -19,8 +19,10 @@ import {
   countSkills,
   generateSkillIndex,
   loadCodexHooksTemplate,
+  loadCodexRulesTemplate,
   log,
   mergeCodexHooks,
+  mergeCodexRules,
   readJson,
   scaffoldPalSettings,
   writeJson,
@@ -56,6 +58,7 @@ function enableCodexHooks(configPath: string): void {
 const PKG_ROOT = palPkg().replaceAll("\\", "/");
 const CODEX_DIR = platform.codexDir();
 const HOOKS_FILE = resolve(CODEX_DIR, "hooks.json");
+const RULES_FILE = resolve(CODEX_DIR, "rules", "default.rules");
 
 // --- Ensure ~/.codex/ exists ---
 mkdirSync(CODEX_DIR, { recursive: true });
@@ -72,6 +75,17 @@ const merged = mergeCodexHooks(existing, template);
 
 writeJson(HOOKS_FILE, merged);
 log.success("Merged PAL hooks into ~/.codex/hooks.json");
+
+// --- Merge allowlist rules ---
+mkdirSync(resolve(CODEX_DIR, "rules"), { recursive: true });
+if (existsSync(RULES_FILE)) {
+  copyFileSync(RULES_FILE, `${RULES_FILE}.bak.${Date.now()}`);
+  log.info("Backed up rules/default.rules");
+}
+const rulesTemplate = loadCodexRulesTemplate(assets.codexRulesTemplate());
+const existingRules = existsSync(RULES_FILE) ? readFileSync(RULES_FILE, "utf-8") : "";
+writeFileSync(RULES_FILE, mergeCodexRules(existingRules, rulesTemplate), "utf-8");
+log.success("Merged PAL allowlist rules into ~/.codex/rules/default.rules");
 
 // --- Symlink skills to ~/.codex/skills/ ---
 const codexSkillsDir = resolve(CODEX_DIR, "skills");

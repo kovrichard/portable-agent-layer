@@ -1,0 +1,64 @@
+# BEGIN PAL MANAGED CODEX RULES
+# Managed by PAL. Install replaces this block; uninstall removes only this block.
+prefix_rule(
+    pattern = ["bun", "~/.pal/tools/project.ts"],
+    decision = "allow",
+    justification = "PAL project state commands are part of the installed PAL workflow",
+    match = [
+        "bun ~/.pal/tools/project.ts resume portable-agent-layer",
+        "bun ~/.pal/tools/project.ts list-isc portable-agent-layer",
+        "bun ~/.pal/tools/project.ts add-next portable-agent-layer note",
+    ],
+    not_match = [
+        "bun ~/.pal/tools/other.ts",
+    ],
+)
+
+prefix_rule(
+    pattern = ["bun", "~/.pal/tools/algorithm-reflect.ts"],
+    decision = "allow",
+    justification = "PAL Algorithm reflection logging is part of the installed PAL workflow",
+    match = [
+        "bun ~/.pal/tools/algorithm-reflect.ts --task work --criteria 1 --passed 1 --failed 0 --sentiment 8",
+    ],
+    not_match = [
+        "bun ~/.pal/tools/project.ts list",
+    ],
+)
+
+prefix_rule(
+    pattern = [
+        "bun",
+        [
+            "~/.pal/tools/analyze.ts",
+            "~/.pal/tools/handoff-note.ts",
+            "~/.pal/tools/relationship-note.ts",
+            "~/.pal/tools/synthesize.ts",
+            "~/.pal/tools/thread.ts",
+            "~/.pal/tools/wisdom-frame.ts",
+        ],
+    ],
+    decision = "allow",
+    justification = "PAL installed agent tools are safe to run without repeated approval",
+    match = [
+        "bun ~/.pal/tools/thread.ts --list",
+        "bun ~/.pal/tools/wisdom-frame.ts --help",
+    ],
+    not_match = [
+        "bun ~/.pal/tools/project.ts list",
+        "bun ./local-script.ts",
+    ],
+)
+
+prefix_rule(
+    pattern = ["node", "--experimental-strip-types", "~/.pal/skills/consulting-report/tools/generate-pdf.ts"],
+    decision = "allow",
+    justification = "PAL consulting-report PDF generation requires Node for Playwright compatibility",
+    match = [
+        "node --experimental-strip-types ~/.pal/skills/consulting-report/tools/generate-pdf.ts ./report",
+    ],
+    not_match = [
+        "node ~/.pal/skills/consulting-report/tools/generate-pdf.ts ./report",
+    ],
+)
+# END PAL MANAGED CODEX RULES

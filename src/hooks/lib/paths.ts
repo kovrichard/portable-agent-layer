@@ -81,6 +81,7 @@ export const assets = {
   cursorHooksTemplate: () => pkg("assets", "templates", "hooks.cursor.json"),
   copilotHooksTemplate: () => pkg("assets", "templates", "hooks.copilot.json"),
   codexHooksTemplate: () => pkg("assets", "templates", "hooks.codex.json"),
+  codexRulesTemplate: () => pkg("assets", "templates", "rules.codex.rules"),
   agentTools: () => pkg("src", "tools", "agent"),
   palDocs: () => pkg("assets", "templates", "PAL"),
 } as const;
