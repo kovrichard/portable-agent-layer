@@ -82,6 +82,7 @@
     "@konvert7/klint": "0.4.0",
     "adm-zip": "^0.5.17",
     "marked": "18.0.4",
+    "pdf-lib": "1.17.1",
     "playwright": "^1.60.0"
   }
 }
