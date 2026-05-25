@@ -13,6 +13,7 @@ import {
   lstatSync,
   readdirSync,
   readFileSync,
+  readlinkSync,
   statSync,
   symlinkSync,
   unlinkSync,
@@ -54,8 +55,11 @@ function latestMtime(...filePaths: string[]): number {
 function ensureOneSymlink(linkPath: string, targetPath: string): void {
   try {
     const stat = lstatSync(linkPath);
-    if (!stat.isSymbolicLink()) unlinkSync(linkPath);
-    else return; // already a symlink, leave it
+    if (stat.isSymbolicLink()) {
+      const currentTarget = resolve(dirname(linkPath), readlinkSync(linkPath));
+      if (currentTarget === targetPath) return;
+    }
+    unlinkSync(linkPath);
   } catch {
     // doesn't exist — create it
   }
