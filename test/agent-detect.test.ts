@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
+  blockResponse,
   getActiveAgent,
   isClaude,
   isCodex,
@@ -97,5 +98,44 @@ describe("getActiveAgent — PAL_AGENT env signal", () => {
   test("unknown PAL_AGENT value falls back to claude", () => {
     process.env.PAL_AGENT = "bogus";
     expect(getActiveAgent()).toBe("claude");
+  });
+});
+
+describe("blockResponse", () => {
+  const saved: Record<string, string | undefined> = {};
+
+  beforeEach(() => {
+    for (const k of PRESERVED_ENV_KEYS) {
+      saved[k] = process.env[k];
+      delete process.env[k];
+    }
+  });
+
+  afterEach(() => {
+    for (const k of PRESERVED_ENV_KEYS) {
+      if (saved[k] === undefined) delete process.env[k];
+      else process.env[k] = saved[k];
+    }
+  });
+
+  test("codex PreToolUse deny includes a non-empty permissionDecisionReason", () => {
+    process.env.PAL_AGENT = "codex";
+
+    const payload = JSON.parse(blockResponse("Blocked: dangerous command", "PreToolUse"));
+
+    expect(payload.hookSpecificOutput).toEqual({
+      hookEventName: "PreToolUse",
+      permissionDecision: "deny",
+      permissionDecisionReason: "Blocked: dangerous command",
+    });
+  });
+
+  test("codex non-PreToolUse block keeps the generic block shape", () => {
+    process.env.PAL_AGENT = "codex";
+
+    expect(JSON.parse(blockResponse("Blocked elsewhere", "Stop"))).toEqual({
+      decision: "block",
+      reason: "Blocked elsewhere",
+    });
   });
 });

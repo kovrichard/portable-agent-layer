@@ -42,7 +42,7 @@ export const isOpencode = () => getActiveAgent() === "opencode";
  * Format a "block this action" response for the current agent.
  * Claude Code:       { decision: "block", reason }
  * Cursor preToolUse: { permission: "deny", user_message }
- * Codex PreToolUse:  { hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny" } }
+ * Codex PreToolUse:  { hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: reason } }
  */
 export function blockResponse(reason: string, hookEventName?: string): string {
   if (isCursor()) {
@@ -50,7 +50,11 @@ export function blockResponse(reason: string, hookEventName?: string): string {
   }
   if (isCodex() && hookEventName === "PreToolUse") {
     return JSON.stringify({
-      hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny" },
+      hookSpecificOutput: {
+        hookEventName: "PreToolUse",
+        permissionDecision: "deny",
+        permissionDecisionReason: reason,
+      },
     });
   }
   return JSON.stringify({ decision: "block", reason });
