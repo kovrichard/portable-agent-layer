@@ -1,14 +1,32 @@
 import { spawnSync } from "node:child_process";
 
+type HookFormat = "claude" | "cursor" | "opencode" | "codex";
+
+export function hookFormatFromArgs(args: string[] = process.argv.slice(2)): HookFormat {
+  if (args.includes("--codex")) return "codex";
+  if (args.includes("--cursor")) return "cursor";
+  if (args.includes("--opencode")) return "opencode";
+  return "claude";
+}
+
+function writeFailure(format: HookFormat, output: string): void {
+  if (format === "codex") {
+    process.stdout.write(JSON.stringify({ decision: "block", reason: output }));
+    return;
+  }
+  process.stderr.write(output);
+}
+
 // Helper for agent hook scripts. Each hook file (lint.ts, test.ts, ...) is a
 // thin wrapper that calls runHook(["bun", "run", "<script>"]). We capture
 // stdout+stderr, return them on success in a JSON envelope (so Claude/opencode
-// can show "(no output)" cleanly), and exit with code 2 on failure so the
-// agent treats the hook as blocking.
-export function runHook(args: string[]): number {
+// can show "(no output)" cleanly), and exit with code 2 on failure so the agent
+// treats the hook as blocking. Codex expects a different protocol: no stdout on
+// success, and a Stop hook JSON block decision on failure.
+export function runHook(args: string[], format = hookFormatFromArgs()): number {
   if (args.length === 0) {
-    process.stderr.write("run-hook: no command provided");
-    process.exit(2);
+    writeFailure(format, "run-hook: no command provided");
+    return 2;
   }
   const command = args.join(" ");
   const r = spawnSync(command, {
@@ -21,10 +39,11 @@ export function runHook(args: string[]): number {
   const ok = (r.status ?? -1) === 0;
 
   if (ok) {
+    if (format === "codex") return 0;
     process.stdout.write(JSON.stringify({ output }));
     return 0;
   }
-  process.stderr.write(output);
+  writeFailure(format, output);
   return 2;
 }
 
