@@ -11,7 +11,7 @@ export function hookFormatFromArgs(args: string[] = process.argv.slice(2)): Hook
 
 function writeFailure(format: HookFormat, output: string): void {
   if (format === "codex") {
-    process.stdout.write(JSON.stringify({ decision: "block", reason: output }));
+    process.stderr.write(output);
     return;
   }
   process.stderr.write(output);
@@ -22,7 +22,7 @@ function writeFailure(format: HookFormat, output: string): void {
 // stdout+stderr, return them on success in a JSON envelope (so Claude/opencode
 // can show "(no output)" cleanly), and exit with code 2 on failure so the agent
 // treats the hook as blocking. Codex expects a different protocol: no stdout on
-// success, and a Stop hook JSON block decision on failure.
+// success, and a continuation prompt written to stderr on failure.
 export function runHook(args: string[], format = hookFormatFromArgs()): number {
   if (args.length === 0) {
     writeFailure(format, "run-hook: no command provided");
