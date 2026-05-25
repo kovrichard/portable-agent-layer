@@ -4,7 +4,7 @@ description: Personal context management. Use when discussing goals, beliefs, ch
 argument-hint: [area to view or update]
 ---
 
-Manage the user's TELOS files — the persistent personal context that drives PAL.
+Manage the user's TELOS files — from Greek τέλος (télos), meaning end/purpose/goal. The persistent personal context that orients PAL around who the user is and what they're working toward.
 
 ## TELOS Files
 

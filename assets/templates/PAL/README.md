@@ -85,7 +85,7 @@ Persistent storage across sessions:
 CLI utilities: `tool:opinion` (manage opinions), `tool:reflect` (relationship reflection), `tool:analyze` (learning analysis), `pal cli usage` (token usage tracking), `pal cli export` / `pal cli import` (state portability).
 
 ### TELOS (`telos/`)
-Personal context system — mission, goals, projects, beliefs, challenges, strategies, ideas, learnings, mental models, narratives. Managed via the telos skill.
+From Greek τέλος (télos) — end, purpose, goal. The persistent personal context that orients PAL around who the user is and what they're working toward: mission, goals, beliefs, challenges, strategies, ideas, learnings, mental models, narratives. Managed via the telos skill.
 
 ### Security (`SecurityValidator.ts`)
 Hook-based security: validates Bash commands and file operations against dangerous patterns. Fail-open design — blocks known-dangerous operations without breaking legitimate work.

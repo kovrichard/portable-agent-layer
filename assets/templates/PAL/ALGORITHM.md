@@ -38,7 +38,7 @@ Thinking-only. No tool calls except context recovery (Grep/Glob/Read).
 **0.5. ISA context** — before reverse engineering, orient against the ISA:
 
 ```bash
-# If cwd matches a registered project — read its open ISCs:
+# If cwd matches a registered project — read its open ISCs (Ideal State Criteria):
 bun ~/.pal/tools/project.ts list-isc <project-name>
 
 # If this is ad-hoc work with no registered project — scaffold a task ISA:

@@ -41,7 +41,7 @@ AI agents come and go. Your accumulated knowledge, preferences, and workflows sh
 **What portability means in practice:**
 - No agent-specific assumptions in core logic
 - Agent-specific code isolated in `src/targets/`
-- Skills, memory, and TELOS are agent-agnostic
+- Skills, memory, and TELOS (Greek: τέλος — end/purpose/goal; the user's persistent life context) are agent-agnostic
 - A single `pal cli install --<agent>` registers everything
 
 ### 2. Cross-Platform by Default
