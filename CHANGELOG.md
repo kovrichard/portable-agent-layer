@@ -1,3 +1,10 @@
+# [0.45.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.44.0...v0.45.0) (2026-05-29)
+
+
+### Features
+
+* add frontend design skill ([09b39cc](https://github.com/kovrichard/portable-agent-layer/commit/09b39ccb092ec138ab475ba297da10a1836dd3b2))
+
 # [0.44.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.43.1...v0.44.0) (2026-05-26)
 
 
