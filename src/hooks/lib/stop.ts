@@ -47,11 +47,12 @@ export async function runStopHandlers(
   // Detach inference-bearing handlers — claude --print cold-start can exceed
   // any in-hook budget. These spawn detached bun subprocesses that run the
   // inference and write results to disk; they don't block this hook.
-  // autoGraduate is idempotent (24h TTL + state-dedup + content-dedup), so
-  // concurrent or overlapping detached runs are safe.
   await detachSessionIntelligence(transcript, options.sessionId);
   await detachFailurePrinciple(transcript);
-  detachAutoGraduate();
+  // Failure auto-graduation is intentionally NOT wired here: every pattern it
+  // ever promoted was a frustration log, not a principle. Wisdom frames are
+  // populated by Claude in-conversation (see wisdom.ts header). The handler
+  // (handlers/auto-graduate.ts) remains runnable manually via `--run`.
 
   // Run remaining (non-inference) handlers concurrently.
   // project-touch only fires when cwd resolves to an active registered project.
@@ -174,16 +175,6 @@ async function detachSessionIntelligence(
     );
   } catch (err) {
     logError("detachSessionIntelligence", err);
-  }
-}
-
-/** Spawn a detached child to run the full autoGraduate cycle. */
-function detachAutoGraduate(): void {
-  try {
-    const scriptPath = resolve(assets.hooks(), "handlers", "auto-graduate.ts");
-    spawnDetachedInference(scriptPath, ["--run"], "auto-graduate");
-  } catch (err) {
-    logError("detachAutoGraduate", err);
   }
 }
 
