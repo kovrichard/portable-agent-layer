@@ -83,5 +83,6 @@ export const assets = {
   codexHooksTemplate: () => pkg("assets", "templates", "hooks.codex.json"),
   codexRulesTemplate: () => pkg("assets", "templates", "rules.codex.rules"),
   agentTools: () => pkg("src", "tools", "agent"),
+  tools: () => pkg("src", "tools"),
   palDocs: () => pkg("assets", "templates", "PAL"),
 } as const;

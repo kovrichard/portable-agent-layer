@@ -524,7 +524,11 @@ async function composeSelfModel(days: number): Promise<string> {
   const currentPath = selfModelPath();
   if (existsSync(currentPath)) {
     try {
-      previousModel = readFileSync(currentPath, "utf-8");
+      const prev = readFileSync(currentPath, "utf-8");
+      // Never feed a failed-synthesis fallback back in — it is a raw data dump,
+      // not a model. Doing so bloats the prompt and drives the next run into the
+      // same timeout, a self-reinforcing failure loop. Skip it and synthesize fresh.
+      if (!prev.includes("Synthesis failed — raw data below")) previousModel = prev;
     } catch {
       /* best effort */
     }
@@ -539,7 +543,7 @@ async function composeSelfModel(days: number): Promise<string> {
     user: userContent,
     model: SONNET_MODEL,
     maxTokens: 1500,
-    timeout: 30000,
+    timeout: 90000,
     caller: "self-model",
   });
 
@@ -565,7 +569,7 @@ async function composeSelfModel(days: number): Promise<string> {
 
 // ── Write ──
 
-export async function writeSelfModel(
+async function writeSelfModel(
   days: number,
   force = false
 ): Promise<{ path: string; content: string; skipped?: boolean }> {
