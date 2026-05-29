@@ -1,3 +1,11 @@
+## [0.45.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.45.0...v0.45.1) (2026-05-29)
+
+
+### Bug Fixes
+
+* **self-model:** write self model detached ([c2b1cd3](https://github.com/kovrichard/portable-agent-layer/commit/c2b1cd34e07b9be938363c7fc776a13449d16998))
+* **wisdom:** do not auto-graduate failure patterns ([52b8dc8](https://github.com/kovrichard/portable-agent-layer/commit/52b8dc8457d58e0344e78ae1757d8ee27ff04590))
+
 # [0.45.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.44.0...v0.45.0) (2026-05-29)
 
 
