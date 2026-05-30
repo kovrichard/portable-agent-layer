@@ -1,3 +1,10 @@
+# [0.46.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.45.2...v0.46.0) (2026-05-30)
+
+
+### Features
+
+* **skills:** add playwright skill ([c44117c](https://github.com/kovrichard/portable-agent-layer/commit/c44117ce38599bdc7133735621da337fca4dece9))
+
 ## [0.45.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.45.1...v0.45.2) (2026-05-30)
 
 
