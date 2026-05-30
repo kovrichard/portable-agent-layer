@@ -1,3 +1,10 @@
+## [0.45.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.45.1...v0.45.2) (2026-05-30)
+
+
+### Bug Fixes
+
+* **claude:** enable running lsof ([7f6445b](https://github.com/kovrichard/portable-agent-layer/commit/7f6445bff516ee4f08adbd09c7960f653e256dcd))
+
 ## [0.45.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.45.0...v0.45.1) (2026-05-29)
 
 
