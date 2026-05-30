@@ -143,7 +143,7 @@ These are project-wide. Every PR follows them; agents enforce them as they write
 
 - No assignment in expressions (e.g. `while ((m = re.exec(s)) !== null)` — Biome catches it; use `Array.from(s.matchAll(re), ...)` or `for (const m of s.matchAll(re))`).
 - Bun stdlib APIs over Node-style polyfills where both exist.
-- No personal information (usernames, real names, employer/project codenames, absolute home paths) in any file under `assets/skills/` or `src/`. Personal context belongs in private memory only — see `assets/skills/create-skill/SKILL.md` for the rule.
+- No personal information (usernames, real names, employer/project codenames, absolute home paths) in any file under `assets/skills/` or `src/`. Personal context belongs in private memory only — see `.claude/skills/author-pal-skill/SKILL.md` for the rule.
 - One skill = one job. If a skill needs branching like "for case A do X, for case B do Y," it's two skills.
 
 ## Context injection architecture
@@ -162,7 +162,7 @@ PAL uses a 3-tier system to keep the hook's dynamic output small while ensuring 
 
 | Task | Where to look |
 | ---- | ------------- |
-| Add a new skill | `assets/skills/create-skill/SKILL.md` — the skill writer agent that scaffolds new ones with the project rules baked in. |
+| Add a new skill (shared, ships in repo) | `.claude/skills/author-pal-skill/SKILL.md` — repo-only scaffolder that writes into `assets/skills/` with the shared-skill rules baked in. (The shipped `create-skill` is the downstream counterpart: it scaffolds a user's *private* skill into `~/.pal/skills/`.) |
 | Add a new agent target | `src/targets/<agent>/install.ts` + `uninstall.ts`; register in `src/cli/index.ts`. |
 | Add a new tool | `src/tools/<area>/<tool>.ts` with `import.meta.main` guard so it stays testable. |
 | Add a runtime PAL hook | `src/hooks/<name>.ts`; the install routine in `src/targets/*/install.ts` wires it into the target agent's config. |

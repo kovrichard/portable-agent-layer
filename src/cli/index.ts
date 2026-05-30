@@ -16,6 +16,7 @@
  *   status                            Show current PAL configuration
  *   doctor                            Check prerequisites and system health
  *   usage                             Summarize token usage and cost
+ *   skill link <name>                 Link a personal ~/.pal/skills/<name>/ into installed agents
  */
 
 import { spawnSync } from "node:child_process";
@@ -192,6 +193,12 @@ async function runCli(command: string | undefined, args: string[]) {
       if (code !== 0) process.exit(code);
       break;
     }
+    case "skill": {
+      const { runSkill } = await import("./skill");
+      const code = await runSkill(args);
+      if (code !== 0) process.exit(code);
+      break;
+    }
     case "--help":
     case "-h":
     case "help":
@@ -234,6 +241,7 @@ function showHelp() {
     pal cli usage                           Summarize token usage and cost
     pal cli knowledge <sub> [args]          Query & manage the knowledge store
                                             (search · graph · stats · hubs · find · show · add · ls)
+    pal cli skill link <name>               Link a personal ~/.pal/skills/<name>/ into installed agents
 
   Environment:
     PAL_HOME              Override user state directory (default: ~/.pal or repo root)

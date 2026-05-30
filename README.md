@@ -85,6 +85,7 @@ pal cli status        # check your setup
 | `pal cli migrate` | Run pending data migrations (non-destructive) |
 | `pal cli usage` | Summarize token usage and estimated cost |
 | `pal cli knowledge` | Query & manage the knowledge store (search, graph, stats, hubs, find, show, add, ls, ingest) |
+| `pal cli skill link <name>` | Link a personal `~/.pal/skills/<name>/` into every installed agent so it is discoverable |
 
 ### Target flags
 

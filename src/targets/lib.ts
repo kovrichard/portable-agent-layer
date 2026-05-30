@@ -506,6 +506,46 @@ export function copySkills(claudeSkillsDir: string): number {
   return count;
 }
 
+/**
+ * Agent skills directories that need a per-skill discovery link.
+ *
+ * opencode is intentionally absent: it discovers the whole ~/.pal/skills/ tree
+ * via the ~/.agents/skills → ~/.pal/skills symlink, so any personal skill is
+ * picked up without a per-skill link.
+ */
+function perSkillAgentDirs(): { agent: string; dir: string }[] {
+  return [
+    { agent: "claude", dir: resolve(platform.claudeDir(), "skills") },
+    { agent: "cursor", dir: resolve(platform.cursorDir(), "skills") },
+    { agent: "copilot", dir: resolve(platform.copilotDir(), "skills") },
+    { agent: "codex", dir: resolve(platform.codexDir(), "skills") },
+  ];
+}
+
+/**
+ * Link a personal skill that already lives at ~/.pal/skills/<name>/ into every
+ * installed agent's skills directory so the agent discovers it. Mirrors the
+ * per-skill discovery link copySkills() creates for shipped skills.
+ *
+ * An agent counts as installed when its skills directory already exists.
+ * Returns the agents a discovery link was created for (opencode excluded — it
+ * is covered by the whole-dir ~/.agents/skills link).
+ */
+export function linkPersonalSkill(name: string): string[] {
+  const palLink = resolve(PAL_SKILLS_DIR, name);
+  if (!existsSync(resolve(palLink, "SKILL.md"))) {
+    throw new Error(`No skill found at ${palLink}/SKILL.md`);
+  }
+  const linkType = process.platform === "win32" ? "junction" : "dir";
+  const linked: string[] = [];
+  for (const { agent, dir } of perSkillAgentDirs()) {
+    if (!existsSync(dir)) continue; // agent not installed
+    ensureSymlink(resolve(dir, name), palLink, linkType);
+    linked.push(agent);
+  }
+  return linked;
+}
+
 /** Create or update a symlink/junction, replacing any non-symlink entry. */
 function ensureSymlink(link: string, target: string, type: "dir" | "junction"): void {
   try {
