@@ -13,7 +13,7 @@
 //   node --experimental-strip-types ~/.pal/skills/playwright/tools/shot.ts <url> [opts]
 
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { chooseTier, parseArgs, type ShotOptions } from "./shot-lib.ts";
@@ -27,13 +27,23 @@ function playwrightCliAvailable(): boolean {
 }
 
 function runViaCli(opts: ShotOptions, out: string): boolean {
-  const open = spawnSync("playwright-cli", ["open", opts.url], { stdio: "inherit" });
-  if (open.status !== 0) return false;
-  const args = ["screenshot", `--filename=${out}`];
-  if (opts.selector) args.push(opts.selector);
-  const shot = spawnSync("playwright-cli", args, { stdio: "inherit" });
-  spawnSync("playwright-cli", ["close"], { stdio: "ignore" });
-  return shot.status === 0 && existsSync(out);
+  // playwright-cli writes a `.playwright-cli/` session dir (logs + page snapshots)
+  // into its cwd. Run it inside a throwaway temp dir so nothing lands in the user's
+  // repo, then remove it. `out` is already absolute, so the screenshot is unaffected.
+  // Cross-platform: os.tmpdir + fs.mkdtemp/rm — no shell, no platform-specific paths.
+  const work = mkdtempSync(join(tmpdir(), "pal-pwcli-"));
+  const run = (args: string[], quiet = false) =>
+    spawnSync("playwright-cli", args, { stdio: quiet ? "ignore" : "inherit", cwd: work });
+  try {
+    if (run(["open", opts.url]).status !== 0) return false;
+    const args = ["screenshot", `--filename=${out}`];
+    if (opts.selector) args.push(opts.selector);
+    const shot = run(args);
+    run(["close"], true);
+    return shot.status === 0 && existsSync(out);
+  } finally {
+    rmSync(work, { recursive: true, force: true });
+  }
 }
 
 // "unavailable" = the engine itself can't run (package or Chromium missing) → MCP fallback.
