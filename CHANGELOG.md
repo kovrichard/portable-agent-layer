@@ -1,3 +1,10 @@
+# [0.47.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.46.0...v0.47.0) (2026-05-30)
+
+
+### Features
+
+* **skills:** separate author and distributed create skill ([6decef1](https://github.com/kovrichard/portable-agent-layer/commit/6decef14aae256d214ef9894ef75682b2ab8b8f9))
+
 # [0.46.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.45.2...v0.46.0) (2026-05-30)
 
 
