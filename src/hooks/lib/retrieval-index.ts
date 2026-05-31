@@ -1,6 +1,6 @@
 /**
  * Retrieval index — single JSON file with per-doc term-frequency vectors and a global
- * document-frequency table over the failures + wisdom-frames corpus.
+ * document-frequency table over the failures + wisdom-frames + reflections corpus.
  *
  * Built once on first read, rebuilt in the background when source dirs change.
  * Read by the UserPromptSubmit retrieval handler; written by ensureIndex (sync bootstrap)
@@ -11,17 +11,18 @@ import { spawn } from "node:child_process";
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { SIMILARITY_THRESHOLD } from "./graduation";
-import { readFailures } from "./learning-store";
+import { readFailures, readReflections } from "./learning-store";
 import { logDebug, logError } from "./log";
 import { palPkg, paths } from "./paths";
 import { similarity, tokenize } from "./text-similarity";
 import { readFramesForRetrieval } from "./wisdom";
 
-const INDEX_VERSION = 1;
+// v2: added "reflection" source — bump invalidates v1 caches so they rebuild with it.
+const INDEX_VERSION = 2;
 
 export interface IndexedDoc {
   id: string;
-  source: "failure" | "wisdom";
+  source: "failure" | "wisdom" | "reflection";
   path: string;
   rating: number;
   ts: string;
@@ -144,6 +145,32 @@ export function buildIndex(): RetrievalIndex {
     });
   }
 
+  // Reflections — each Algorithm run's self-observations. q1 ("what I'd do
+  // differently") is the actionable lesson; q2/q3 add process and reasoning signal.
+  for (const r of readReflections(paths.reflectionsFile())) {
+    const tokens = buildDocTokens([
+      { text: r.q1, weight: 3 },
+      { text: r.task, weight: 2 },
+      { text: r.q2, weight: 2 },
+      { text: r.q3, weight: 1 },
+    ]);
+    if (tokens.length === 0) continue;
+    const { tf, len } = buildTermFreq(tokens);
+    for (const term of Object.keys(tf)) df[term] = (df[term] ?? 0) + 1;
+    docs.push({
+      id: `reflect:${r.ts}`,
+      source: "reflection",
+      path: paths.reflectionsFile(),
+      rating: r.sentiment,
+      ts: r.ts,
+      tf,
+      len,
+      displayPrinciple: r.q1,
+      displayContext: r.task,
+      cwd: r.cwd || undefined,
+    });
+  }
+
   return {
     version: INDEX_VERSION,
     builtAt: new Date().toISOString(),
@@ -173,7 +200,7 @@ export function readIndex(): RetrievalIndex | null {
 export function isStale(index: RetrievalIndex): boolean {
   try {
     const builtMs = new Date(index.builtAt).getTime();
-    for (const dir of [paths.failures(), paths.wisdom()]) {
+    for (const dir of [paths.failures(), paths.wisdom(), paths.reflections()]) {
       if (!existsSync(dir)) continue;
       if (statSync(dir).mtimeMs > builtMs) return true;
     }

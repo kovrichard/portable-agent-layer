@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runRetrieval } from "../src/hooks/lib/retrieval";
 import {
@@ -25,6 +25,7 @@ afterAll(() => {
 beforeEach(() => {
   for (const dir of [
     resolve(TEST_HOME, "memory", "learning", "failures"),
+    resolve(TEST_HOME, "memory", "learning", "reflections"),
     resolve(TEST_HOME, "memory", "wisdom", "frames"),
   ]) {
     if (existsSync(dir)) rmSync(dir, { recursive: true });
@@ -68,6 +69,23 @@ function fixtureFrame(domain: string, principle: string, pct: number) {
   writeFileSync(
     resolve(dir, `${domain}.md`),
     `# ${domain}\n\n- ${principle} [CRYSTAL: ${pct}%]\n`
+  );
+}
+
+function fixtureReflection(entry: {
+  timestamp: string;
+  cwd: string;
+  task: string;
+  sentiment: number;
+  q1: string;
+  q2?: string;
+  q3?: string;
+}) {
+  const dir = resolve(TEST_HOME, "memory", "learning", "reflections");
+  mkdirSync(dir, { recursive: true });
+  appendFileSync(
+    resolve(dir, "algorithm-reflections.jsonl"),
+    `${JSON.stringify({ q2: "", q3: "", ...entry })}\n`
   );
 }
 
@@ -238,6 +256,58 @@ describe("retrieval index — dedup against graduated frames", () => {
 
     const idx = buildIndex();
     expect(idx.docs.some((d) => d.id.includes("no-principle"))).toBe(true);
+  });
+});
+
+describe("retrieval index — reflections", () => {
+  test("indexes reflections with q1 as the displayed principle", () => {
+    fixtureReflection({
+      timestamp: "2026-05-30T18:00:00Z",
+      cwd: "/Users/x/code/pal",
+      task: "Build the playwright visual-check skill",
+      sentiment: 8,
+      q1: "Verify the external tool's exact CLI contract before hardcoding the screenshot command",
+      q2: "Add a verify-CLI-contract step when a tier depends on a third-party binary",
+    });
+    const idx = buildIndex();
+    const doc = idx.docs.find((d) => d.source === "reflection");
+    expect(doc).toBeDefined();
+    expect(doc?.displayPrinciple).toContain("CLI contract");
+    expect(doc?.cwd).toBe("/Users/x/code/pal");
+    expect(doc?.rating).toBe(8);
+  });
+
+  test("surfaces a reflection on a lexically-matching query, labeled as a reflection", () => {
+    fixtureReflection({
+      timestamp: "2026-05-30T18:00:00Z",
+      cwd: "/Users/x/code/pal",
+      task: "Build the playwright visual-check skill",
+      sentiment: 8,
+      q1: "Verify the external tool's exact CLI contract before hardcoding the screenshot command",
+    });
+    const idx = buildIndex();
+    const result = runRetrieval(
+      "what is the exact CLI contract for this screenshot binary?",
+      idx,
+      "/Users/x/code/pal"
+    );
+    expect(result.matches.length).toBeGreaterThan(0);
+    expect(result.matches[0].doc.source).toBe("reflection");
+    expect(result.matches[0].scopeMatch).toBe(true);
+    expect(result.reminder).toContain("reflection 8/10");
+  });
+
+  test("isStale flags index when the reflections store is newer", () => {
+    fixtureReflection({
+      timestamp: "2026-05-30T18:00:00Z",
+      cwd: "/Users/x/code/pal",
+      task: "Some task",
+      sentiment: 7,
+      q1: "Some reflection",
+    });
+    const idx = buildIndex();
+    const stale = { ...idx, builtAt: "1970-01-01T00:00:00Z" };
+    expect(isStale(stale)).toBe(true);
   });
 });
 

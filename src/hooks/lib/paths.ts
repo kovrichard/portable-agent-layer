@@ -50,6 +50,9 @@ export const paths = {
   knowledge: () => ensureDir(home("memory", "knowledge")),
   knowledgeDomain: (d: string) => ensureDir(home("memory", "knowledge", d)),
   failures: () => ensureDir(home("memory", "learning", "failures")),
+  reflections: () => ensureDir(home("memory", "learning", "reflections")),
+  reflectionsFile: () =>
+    home("memory", "learning", "reflections", "algorithm-reflections.jsonl"),
   retrievalIndex: () => home("memory", "learning", ".retrieval-index.json"),
   progress: () => ensureDir(home("memory", "state", "progress")),
   projectHistory: () => ensureDir(home("memory", "projects")),

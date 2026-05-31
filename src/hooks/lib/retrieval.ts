@@ -131,7 +131,8 @@ function formatLine(s: ScoredDoc): string {
     return `- ${tag} ${principle} (CRYSTAL ${s.doc.rating}%)`;
   }
   const ago = formatAgo(s.doc.ts);
-  const meta = ago ? `rating ${s.doc.rating}/10, ${ago}` : `rating ${s.doc.rating}/10`;
+  const kind = s.doc.source === "reflection" ? "reflection" : "rating";
+  const meta = ago ? `${kind} ${s.doc.rating}/10, ${ago}` : `${kind} ${s.doc.rating}/10`;
   return `- ${tag} ${principle} (${meta})`;
 }
 

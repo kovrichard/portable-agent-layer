@@ -158,3 +158,44 @@ export function readLearnings(baseDir: string, limit?: number): LearningEntry[] 
 
   return entries;
 }
+
+// ── Reflections ──
+
+export interface ReflectionEntry {
+  ts: string;
+  cwd: string;
+  task: string;
+  sentiment: number;
+  q1: string;
+  q2: string;
+  q3: string;
+}
+
+/**
+ * Read algorithm reflections from the JSONL store, newest first. Each line is one
+ * reflection produced at the end of an Algorithm run (q1 = what I'd do differently,
+ * q2 = algorithm improvement, q3 = AI-level insight).
+ */
+export function readReflections(file: string, limit?: number): ReflectionEntry[] {
+  if (!existsSync(file)) return [];
+  const entries: ReflectionEntry[] = [];
+  for (const line of readFileSync(file, "utf-8").split("\n")) {
+    if (!line.trim()) continue;
+    try {
+      const o = JSON.parse(line);
+      entries.push({
+        ts: o.timestamp || "",
+        cwd: o.cwd || "",
+        task: o.task || "",
+        sentiment: typeof o.sentiment === "number" ? o.sentiment : 0,
+        q1: o.q1 || "",
+        q2: o.q2 || "",
+        q3: o.q3 || "",
+      });
+    } catch {
+      /* skip malformed line */
+    }
+  }
+  entries.reverse(); // JSONL is appended chronologically → newest first
+  return limit ? entries.slice(0, limit) : entries;
+}

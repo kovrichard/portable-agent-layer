@@ -12,8 +12,7 @@
  *     --q3 "Missed the implicit constraint about cross-platform"
  */
 
-import { appendFileSync, existsSync, mkdirSync } from "node:fs";
-import { resolve } from "node:path";
+import { appendFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { paths } from "../../hooks/lib/paths";
 
@@ -35,9 +34,8 @@ interface AlgorithmReflection {
 // ── Core ──
 
 function reflectionsPath(): string {
-  const dir = resolve(paths.learning(), "reflections");
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  return resolve(dir, "algorithm-reflections.jsonl");
+  paths.reflections(); // ensures the directory exists
+  return paths.reflectionsFile();
 }
 
 function appendReflection(reflection: AlgorithmReflection): {
