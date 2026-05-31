@@ -165,6 +165,18 @@ Refine criteria if the pressure test reveals gaps. Add criteria for uncovered fa
 - Decide execution order — what's serial, what can parallelize
 - **Extended+:** use EnterPlanMode for user alignment before executing
 
+**Grounding Gate — verify the premises before EXECUTE.**
+
+Don't just *list* what must be true — actively confirm the load-bearing facts the criteria rest on. For each premise (a reported behavior, a provider/API contract, an external tool's CLI, a file's contents, a claim about system state):
+- **Reproduce** the reported behavior before designing a fix — no fix on an unreproduced bug.
+- **Fetch the authoritative source** (live docs, the actual file, `gh api`) before asserting how something works.
+- **Probe the dependency/contract** (tool availability, MCP account, env var, DB connectivity, exact CLI) before building on it.
+- **Confirm one concrete artifact** (a commit, a shebang, a line of output) behind any external claim.
+
+No criterion may rest on an unverified premise. If a premise can't be verified now, mark it explicitly as an assumption and add a criterion to check it during EXECUTE. After 2 failed attempts at the same sub-problem, stop and re-ground — re-run OBSERVE rather than iterating on a bad premise.
+
+Output: `🧭 GROUNDING: [premises verified, or assumptions flagged]`
+
 ### ━━━ ⚡ EXECUTE ━━━ 3/5
 
 Do the work. Invoke selected capabilities via tool calls.
@@ -316,6 +328,7 @@ Only write if the insight is **genuine and reusable** — not every session prod
 ━━━ 🧠 PLAN ━━━ 2/5
 🧠 RISKS: [risks]
 🧠 PREMORTEM: [failure modes]
+🧭 GROUNDING: [premises verified, or assumptions flagged]
 📐 APPROACH: [execution plan]
 
 ━━━ ⚡ EXECUTE ━━━ 3/5
