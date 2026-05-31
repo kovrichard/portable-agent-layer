@@ -169,6 +169,8 @@ export interface ReflectionEntry {
   q1: string;
   q2: string;
   q3: string;
+  /** Whether the improvement ideas generalize to the algorithm, or are task-bound. */
+  scope: "general" | "task-specific";
 }
 
 /**
@@ -191,6 +193,8 @@ export function readReflections(file: string, limit?: number): ReflectionEntry[]
         q1: o.q1 || "",
         q2: o.q2 || "",
         q3: o.q3 || "",
+        // Untagged (e.g. the existing backlog) defaults to general — the common case.
+        scope: o.scope === "task-specific" ? "task-specific" : "general",
       });
     } catch {
       /* skip malformed line */

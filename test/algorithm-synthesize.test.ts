@@ -26,20 +26,19 @@ beforeEach(() => {
 
 function addReflection(
   q2: string,
-  opts: { cwd?: string; sentiment?: number; ts?: string } = {}
+  opts: { cwd?: string; sentiment?: number; ts?: string; scope?: string } = {}
 ) {
-  appendFileSync(
-    REFL_FILE,
-    `${JSON.stringify({
-      timestamp: opts.ts ?? "2026-05-30T10:00:00Z",
-      cwd: opts.cwd ?? "/Users/x/code/pal",
-      task: "t",
-      sentiment: opts.sentiment ?? 8,
-      q1: "",
-      q2,
-      q3: "",
-    })}\n`
-  );
+  const entry: Record<string, unknown> = {
+    timestamp: opts.ts ?? "2026-05-30T10:00:00Z",
+    cwd: opts.cwd ?? "/Users/x/code/pal",
+    task: "t",
+    sentiment: opts.sentiment ?? 8,
+    q1: "",
+    q2,
+    q3: "",
+  };
+  if (opts.scope) entry.scope = opts.scope;
+  appendFileSync(REFL_FILE, `${JSON.stringify(entry)}\n`);
 }
 
 describe("synthesizeAlgorithm", () => {
@@ -92,6 +91,32 @@ describe("synthesizeAlgorithm", () => {
     addReflection("verify the source first", { ts: "2026-05-30T00:00:00Z" });
     const s = synthesizeAlgorithm(new Date("2026-03-01T00:00:00Z"));
     expect(s.total).toBe(1);
+  });
+
+  test("task-specific Q2s are excluded from clustering but surfaced separately", () => {
+    addReflection("verify the contract before acting", { scope: "general" });
+    addReflection("add a criterion for vote-share vs seat-projection", {
+      scope: "task-specific",
+    });
+    const s = synthesizeAlgorithm();
+    // clustered total counts only the general one
+    expect(s.total).toBe(1);
+    expect(s.taskSpecific).toBe(1);
+    expect(s.taskSpecificQuotes).toContain(
+      "add a criterion for vote-share vs seat-projection"
+    );
+    // the task-specific text never lands in a bucket
+    expect(
+      s.buckets.every((b) => !b.quotes.some((q) => q.includes("seat-projection")))
+    ).toBe(true);
+    expect(formatAlgorithmReport(s)).toContain("Task-specific");
+  });
+
+  test("untagged reflections default to general (backlog compatibility)", () => {
+    addReflection("verify before acting"); // no scope field
+    const s = synthesizeAlgorithm();
+    expect(s.total).toBe(1);
+    expect(s.taskSpecific).toBe(0);
   });
 
   test("formatAlgorithmReport renders headers and the unbucketed line", () => {

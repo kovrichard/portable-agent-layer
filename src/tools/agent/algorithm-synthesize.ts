@@ -69,13 +69,18 @@ interface AlgorithmBucket {
 }
 
 export interface AlgorithmSynthesis {
+  /** Count of general Q2s clustered (task-specific ones are surfaced separately). */
   total: number;
   since: string | null;
   buckets: AlgorithmBucket[];
-  /** Count of Q2s the keyword pre-sort matched no bucket for. */
+  /** Count of general Q2s the keyword pre-sort matched no bucket for. */
   unbucketed: number;
-  /** Full deduped text of every unbucketed Q2 — the safety net, never just a count. */
+  /** Full deduped text of every unbucketed general Q2 — the safety net, never just a count. */
   unbucketedQuotes: string[];
+  /** Count of Q2s tagged task-specific (excluded from clustering, kept for review). */
+  taskSpecific: number;
+  /** Full deduped text of task-specific Q2s — surfaced, never dropped. */
+  taskSpecificQuotes: string[];
 }
 
 function projectOf(cwd: string): string {
@@ -90,7 +95,13 @@ function projectOf(cwd: string): string {
 export function synthesizeAlgorithm(since?: Date): AlgorithmSynthesis {
   const all = readReflections(paths.reflectionsFile());
   const filtered = since ? all.filter((r) => r.ts && new Date(r.ts) >= since) : all;
-  const q2s = filtered.filter((r) => r.q2.trim());
+  const withQ2 = filtered.filter((r) => r.q2.trim());
+  // Cluster only general ideas; task-specific ones don't generalize to the
+  // algorithm, so surface them separately rather than polluting the buckets.
+  const q2s = withQ2.filter((r) => r.scope !== "task-specific");
+  const taskSpecificQuotes = [
+    ...new Set(withQ2.filter((r) => r.scope === "task-specific").map((r) => r.q2.trim())),
+  ];
 
   const acc = new Map<
     string,
@@ -146,15 +157,18 @@ export function synthesizeAlgorithm(since?: Date): AlgorithmSynthesis {
     buckets,
     unbucketed,
     unbucketedQuotes: [...new Set(unbucketedQuotes)],
+    taskSpecific: taskSpecificQuotes.length,
+    taskSpecificQuotes,
   };
 }
 
 /** Render the synthesis as a markdown candidate-changes report. */
 export function formatAlgorithmReport(s: AlgorithmSynthesis): string {
   const sinceLabel = s.since ? ` since ${s.since.slice(0, 10)}` : " (all time)";
+  const tsLabel = s.taskSpecific > 0 ? ` (+${s.taskSpecific} task-specific, below)` : "";
   const lines = [
     "# Algorithm Update — Candidate Changes",
-    `Source: ${s.total} Q2 reflections${sinceLabel}`,
+    `Source: ${s.total} general Q2 reflections${sinceLabel}${tsLabel}`,
     "",
     "> The buckets below are a keyword pre-sort hint (biased to current wording).",
     "> Cluster semantically yourself — and read the Unbucketed section in full,",
@@ -173,10 +187,18 @@ export function formatAlgorithmReport(s: AlgorithmSynthesis): string {
     lines.push("");
   });
   lines.push(
-    `## Unbucketed — ${s.unbucketed} Q2s the pre-sort missed (cluster these by hand)`,
+    `## Unbucketed — ${s.unbucketed} general Q2s the pre-sort missed (cluster these by hand)`,
     ""
   );
   for (const q of s.unbucketedQuotes) lines.push(`- ${q}`);
+  if (s.taskSpecific > 0) {
+    lines.push(
+      "",
+      `## Task-specific — ${s.taskSpecific} Q2s tagged not-generalizable (review, don't fold into ALGORITHM.md)`,
+      ""
+    );
+    for (const q of s.taskSpecificQuotes) lines.push(`- ${q}`);
+  }
   return lines.join("\n");
 }
 

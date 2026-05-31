@@ -29,6 +29,8 @@ interface AlgorithmReflection {
   q1: string;
   q2: string;
   q3: string;
+  /** general = the improvement ideas generalize to the algorithm; task-specific = bound to this task. */
+  scope: "general" | "task-specific";
 }
 
 // ── Core ──
@@ -68,6 +70,7 @@ function run() {
       q1: { type: "string" },
       q2: { type: "string" },
       q3: { type: "string" },
+      scope: { type: "string" },
       help: { type: "boolean", short: "h" },
     },
   });
@@ -89,6 +92,7 @@ Arguments:
   --q1          Q1 — Self: what I'd do differently
   --q2          Q2 — Algorithm: structural improvement
   --q3          Q3 — AI: reasoning blind spot
+  --scope       general (default) | task-specific — is the algorithm idea reusable or task-bound?
 
 Output: algorithm-reflections.jsonl in memory/learning/reflections/
 `);
@@ -111,6 +115,9 @@ Output: algorithm-reflections.jsonl in memory/learning/reflections/
     q1: values.q1,
     q2: values.q2,
     q3: values.q3,
+    // Default to general (the ~94% case); only "task-specific" suppresses it
+    // from algorithm-update clustering.
+    scope: values.scope === "task-specific" ? "task-specific" : "general",
   };
 
   const result = appendReflection(reflection);

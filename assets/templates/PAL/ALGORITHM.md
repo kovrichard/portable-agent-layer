@@ -229,8 +229,10 @@ Focus: reasoning approach, problem decomposition, anticipation, blind spots.
 
 ```bash
 bun ~/.pal/tools/algorithm-reflect.ts --task "description" --criteria N --passed N --failed N --sentiment 1-10 \
-  --q1 "self reflection" --q2 "algorithm reflection" --q3 "AI reflection"
+  --q1 "self reflection" --q2 "algorithm reflection" --q3 "AI reflection" --scope general
 ```
+
+Set `--scope task-specific` when the Q2 idea is bound to this one task (e.g. a criterion that only matters for the specific file, API, or dataset you were handling) and would not generalize to the algorithm; use `general` (the default) for reusable structural improvements. This keeps the algorithm-update synthesis focused on changes worth folding into ALGORITHM.md.
 
 **3. Relationship note** — write one Session entry capturing what was done this session:
 
