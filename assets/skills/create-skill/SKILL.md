@@ -57,7 +57,12 @@ The `description` should state **both what the skill does and when to invoke it*
    pal cli skill link <name>
    ```
    This creates the per-skill discovery symlink in each installed agent's skills directory (Claude Code, Cursor, Copilot, Codex); opencode discovers it automatically via `~/.pal/skills/`.
-6. Validate before declaring done:
+6. Run the doctor and resolve every error it reports:
+   ```bash
+   pal cli skill doctor <name>
+   ```
+   It checks the mechanical rules (folder/file-name match, name length/charset, description length, point-of-view, body length, reference depth). Fix all `✗` errors; weigh each `⚠` warning. A name/folder mismatch or a misnamed file makes the skill silently fail to load, so never skip this.
+7. Validate the rest by hand — the doctor can't judge these:
    - **Trigger clarity** — could a model decide *not* to invoke this from the description alone? If so, tighten it.
    - **Step concreteness** — every step has a verb and an object.
    - **Output specification** — the caller knows what they get back.
