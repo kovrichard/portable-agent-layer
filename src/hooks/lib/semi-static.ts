@@ -9,7 +9,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parse } from "./frontmatter";
-import { readFailures } from "./learning-store";
+import { type FailureEntry, readFailures } from "./learning-store";
 import { loadOpinionContext } from "./opinions";
 import { palHome, paths } from "./paths";
 import { readFramePrinciples } from "./wisdom";
@@ -100,16 +100,39 @@ export function loadSynthesisRecommendations(): string {
   }
 }
 
-/** Build the 5 most recent failure lessons as an avoid-list. */
+/**
+ * Rank failures for injection: same-project (cwd match) first, then by recency.
+ * Project-relevant lessons are never crowded out by more-recent other-project
+ * ones — fixing the case where (e.g.) a web-app's cache lessons dominate a CLI
+ * session purely because they were logged last. Returns the top `limit`.
+ */
+export function rankFailures(
+  entries: FailureEntry[],
+  cwd: string,
+  limit = 5
+): FailureEntry[] {
+  return [...entries]
+    .sort((a, b) => {
+      const am = a.cwd === cwd;
+      const bm = b.cwd === cwd;
+      if (am !== bm) return am ? -1 : 1;
+      return (b.ts || "").localeCompare(a.ts || ""); // recency desc within a group
+    })
+    .slice(0, limit);
+}
+
+/** Build the failure avoid-list, prioritized by relevance to the current project. */
 export function loadFailurePatterns(): string {
   try {
-    const entries = readFailures(paths.failures(), 5);
-    if (entries.length === 0) return "";
+    const cwd = process.cwd();
+    const all = readFailures(paths.failures());
+    if (all.length === 0) return "";
 
-    const lines = entries.map((e) => {
+    const lines = rankFailures(all, cwd).map((e) => {
       const label = e.rating ? `[${e.rating}/10]` : "";
+      const tag = e.cwd === cwd ? "[project]" : "[other]";
       const text = e.principle || e.context;
-      return `- ${label} ${text}`.trim();
+      return `- ${label} ${tag} ${text}`.trim();
     });
 
     return ["## Lessons from Recent Failures — Apply These Now", ...lines].join("\n");
