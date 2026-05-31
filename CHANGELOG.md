@@ -1,3 +1,15 @@
+# [0.48.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.47.0...v0.48.0) (2026-05-31)
+
+
+### Features
+
+* **algorithm-reflection:** enhance algorithm reflection with task-specific scope ([fb2d7ec](https://github.com/kovrichard/portable-agent-layer/commit/fb2d7ec3005bcd8fb3e69545d35b4f519b2e86e2))
+* **algorithm-synthesis:** add grounding verification and synthesis tool for algorithm reflections ([7bc245b](https://github.com/kovrichard/portable-agent-layer/commit/7bc245b71f9ba0dca637371253d3438eb2709726))
+* **algorithm-update:** introduce algorithm-update skill and review nudge system ([da306e9](https://github.com/kovrichard/portable-agent-layer/commit/da306e945d00b5ea3eca4444e5ecc277c1a2f24e))
+* **failure-ranking:** implement ranking system for failure lessons based on project relevance ([d08cc64](https://github.com/kovrichard/portable-agent-layer/commit/d08cc64960be8e2299869588c542b3a731a8e584))
+* **reflections:** feed reflections into context ([426f17e](https://github.com/kovrichard/portable-agent-layer/commit/426f17ea13dd03f9dc6e27920e004228266a95cc))
+* **skills:** add skill doctor command to evaluate skills against authoring best practices ([aa4276e](https://github.com/kovrichard/portable-agent-layer/commit/aa4276ed79513e1278f3857174dd08a8f80a7074))
+
 # [0.47.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.46.0...v0.47.0) (2026-05-30)
 
 
