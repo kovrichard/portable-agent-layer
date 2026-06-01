@@ -47,6 +47,28 @@ chmod +x ~/.claude/statusline.sh
 
 The statusline script is at: `portable-agent-layer/assets/statusline.sh`
 
+### Cursor CLI
+
+1. Make the script executable:
+```bash
+chmod +x ~/.cursor/statusline.sh
+```
+
+2. Add to `~/.cursor/cli-config.json`:
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "~/.cursor/statusline.sh",
+    "padding": 2
+  }
+}
+```
+
+Copy `assets/statusline.sh` to `~/.cursor/statusline.sh` (or symlink). Restart the Cursor CLI after editing config.
+
+On Cursor, session cost and rate limits are usually absent from stdin — the script omits the cost segment and hides rate limits automatically. PAL indicators (hooks, ISCs, signal, update) still read from `~/.pal/memory/state/`.
+
 ### On Windows
 
 1. Add to `~/.claude/settings.json`:

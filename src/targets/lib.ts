@@ -955,17 +955,41 @@ export function loadCopilotHooksTemplate(templatePath: string, pkgRoot: string):
 
 // --- Statusline ---
 
-/** Copy statusline script to ~/.claude/ for the current platform */
-export function copyStatusline(): boolean {
-  const claudeDir = platform.claudeDir();
-  mkdirSync(claudeDir, { recursive: true });
+export type StatuslineTarget = "claude" | "cursor";
+
+function statuslineAgentDir(target: StatuslineTarget): string {
+  return target === "claude" ? platform.claudeDir() : platform.cursorDir();
+}
+
+function statuslineCommand(target: StatuslineTarget): string {
+  const isPlatformWin32 = process.platform === "win32";
+  if (target === "cursor") {
+    return isPlatformWin32
+      ? "powershell -NoProfile -File ~/.cursor/statusline.ps1"
+      : "~/.cursor/statusline.sh";
+  }
+  return isPlatformWin32
+    ? "powershell -NoProfile -File ~/.claude/statusline.ps1"
+    : "~/.claude/statusline.sh";
+}
+
+function isPalStatuslineCommand(cmd: string, target: StatuslineTarget): boolean {
+  return target === "claude"
+    ? cmd.includes(".claude/statusline")
+    : cmd.includes(".cursor/statusline");
+}
+
+/** Copy statusline script to ~/.claude/ or ~/.cursor/ for the current platform */
+export function copyStatusline(target: StatuslineTarget = "claude"): boolean {
+  const agentDir = statuslineAgentDir(target);
+  mkdirSync(agentDir, { recursive: true });
 
   const isPlatformWin32 = process.platform === "win32";
   const sourcePath = isPlatformWin32
     ? assets.statuslineScriptPs1()
     : assets.statuslineScriptBash();
   const scriptName = isPlatformWin32 ? "statusline.ps1" : "statusline.sh";
-  const destPath = resolve(claudeDir, scriptName);
+  const destPath = resolve(agentDir, scriptName);
 
   if (!existsSync(sourcePath)) {
     log.warn(`Statusline script not found at ${sourcePath}`);
@@ -975,7 +999,6 @@ export function copyStatusline(): boolean {
   try {
     copyFileSync(sourcePath, destPath);
 
-    // Make executable on Unix
     if (process.platform !== "win32") {
       chmodSync(destPath, 0o755);
     }
@@ -988,12 +1011,11 @@ export function copyStatusline(): boolean {
   }
 }
 
-/** Remove statusline script from ~/.claude/ */
-export function removeStatusline(): boolean {
-  const claudeDir = platform.claudeDir();
+/** Remove statusline script from ~/.claude/ or ~/.cursor/ */
+export function removeStatusline(target: StatuslineTarget = "claude"): boolean {
   const isPlatformWin32 = process.platform === "win32";
   const scriptName = isPlatformWin32 ? "statusline.ps1" : "statusline.sh";
-  const scriptPath = resolve(claudeDir, scriptName);
+  const scriptPath = resolve(statuslineAgentDir(target), scriptName);
 
   if (!existsSync(scriptPath)) {
     log.info("Statusline script not found, nothing to remove");
@@ -1010,40 +1032,56 @@ export function removeStatusline(): boolean {
   }
 }
 
-/** Add statusLine config to settings if not already present or if using old broken command */
+/** Add statusLine config if not already present or if using an old broken command */
 export function addStatuslineConfig(
-  settings: Record<string, unknown>
+  settings: Record<string, unknown>,
+  target: StatuslineTarget = "claude"
 ): Record<string, unknown> {
   const statusLine = settings.statusLine as Record<string, unknown> | undefined;
 
-  // Check if already configured with a valid command (not the old broken one)
   if (statusLine && typeof statusLine === "object" && statusLine.command) {
     const cmd = statusLine.command as string;
-    // Keep existing config unless it's the old broken Get-Content pattern
-    if (!cmd.includes("Get-Content -Raw")) {
+    if (target === "claude") {
+      // Keep existing config unless it's the old broken Get-Content pattern
+      if (!cmd.includes("Get-Content -Raw")) {
+        return settings;
+      }
+    } else if (!isPalStatuslineCommand(cmd, "cursor")) {
+      // Cursor: preserve user-defined statusLine commands
       return settings;
     }
   }
 
-  const isPlatformWin32 = process.platform === "win32";
-  const command = isPlatformWin32
-    ? "powershell -NoProfile -File ~/.claude/statusline.ps1"
-    : "~/.claude/statusline.sh";
-
+  const command = statuslineCommand(target);
   settings.statusLine = {
     type: "command",
     command,
     padding: 2,
+    ...(target === "cursor" ? { updateIntervalMs: 300, timeoutMs: 2000 } : {}),
   };
 
   return settings;
 }
 
-/** Remove statusLine config from settings */
+/** Remove statusLine config from settings (PAL-owned only for Cursor) */
 export function removeStatuslineConfig(
-  settings: Record<string, unknown>
+  settings: Record<string, unknown>,
+  target: StatuslineTarget = "claude"
 ): Record<string, unknown> {
-  delete settings.statusLine;
+  const statusLine = settings.statusLine as Record<string, unknown> | undefined;
+  if (!statusLine || typeof statusLine !== "object") {
+    return settings;
+  }
+
+  if (target === "claude") {
+    delete settings.statusLine;
+    return settings;
+  }
+
+  const cmd = statusLine.command as string | undefined;
+  if (cmd && isPalStatuslineCommand(cmd, "cursor")) {
+    delete settings.statusLine;
+  }
   return settings;
 }
 

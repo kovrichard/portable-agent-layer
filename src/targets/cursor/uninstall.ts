@@ -15,6 +15,8 @@ import {
   removeAgentsFromCursor,
   removePalDocs,
   removeSkills,
+  removeStatusline,
+  removeStatuslineConfig,
   unmergeCursorHooks,
   writeJson,
 } from "../lib";
@@ -22,6 +24,7 @@ import {
 const PKG_ROOT = palPkg().replaceAll("\\", "/");
 const CURSOR_DIR = platform.cursorDir();
 const HOOKS_FILE = resolve(CURSOR_DIR, "hooks.json");
+const CLI_CONFIG = resolve(CURSOR_DIR, "cli-config.json");
 
 // --- Remove PAL hooks from hooks.json ---
 if (existsSync(HOOKS_FILE)) {
@@ -56,6 +59,18 @@ if (removedAgents.length > 0) {
 
 // --- Remove PAL system docs ---
 removePalDocs();
+
+// --- Remove statusline script and cli-config statusLine ---
+if (existsSync(CLI_CONFIG)) {
+  copyFileSync(CLI_CONFIG, `${CLI_CONFIG}.bak.${Date.now()}`);
+  log.info("Backed up cli-config.json");
+  const cliConfig = readJson<Record<string, unknown>>(CLI_CONFIG, {});
+  writeJson(CLI_CONFIG, removeStatuslineConfig(cliConfig, "cursor"));
+  log.success("Removed PAL statusLine from cli-config.json");
+} else {
+  log.info("No cli-config.json found, skipping statusLine removal");
+}
+removeStatusline("cursor");
 
 // --- Remove ~/.cursor/rules/pal-*.mdc ---
 for (const src of getSemiStaticSources()) {

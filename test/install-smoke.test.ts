@@ -78,6 +78,12 @@ describe("pal cli install (smoke)", () => {
     const agents = resolve(CURSOR_DIR, "agents");
     expect(existsSync(agents)).toBe(true);
     expect(readdirSync(agents).length).toBeGreaterThan(0);
+
+    expect(existsSync(resolve(CURSOR_DIR, "statusline.sh"))).toBe(true);
+    const cliConfig = JSON.parse(
+      readFileSync(resolve(CURSOR_DIR, "cli-config.json"), "utf-8")
+    ) as { statusLine?: { command?: string } };
+    expect(cliConfig.statusLine?.command).toBe("~/.cursor/statusline.sh");
   }, 90000);
 
   test("install --codex manages only PAL-owned allowlist rules", () => {

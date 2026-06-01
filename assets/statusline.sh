@@ -1,49 +1,57 @@
 #!/bin/bash
 # PAL Status Line — macOS/Linux
-# Reads JSON from stdin (Claude Code session data) and prints a formatted status line
+# Reads JSON from stdin (Claude Code / Cursor CLI session data) and prints a formatted status line
 
 input=$(cat)
 
-# Extract data with fallbacks
+# Empty or invalid stdin — keep previous status line (Cursor may invoke early)
+if [ -z "$input" ] || ! echo "$input" | jq -e . >/dev/null 2>&1; then
+  exit 0
+fi
+
+# Extract data with fallbacks (Cursor: cwd, worktree.name; Claude: workspace, worktree.branch)
 MODEL=$(echo "$input" | jq -r '.model.display_name // "Unknown"')
 USED_RAW=$(echo "$input" | jq -r '.context_window.used_percentage // empty')
 REM_RAW=$(echo "$input" | jq -r '.context_window.remaining_percentage // empty')
 USED=$( [ -n "$USED_RAW" ] && echo "${USED_RAW%.*}" || echo 0 )
 REMAINING=$( [ -n "$REM_RAW" ] && echo "${REM_RAW%.*}" || echo 0 )
-COST=$(echo "$input" | jq -r '.cost.total_cost_usd // 0')
-CWD=$(echo "$input" | jq -r '.workspace.current_dir // "~"')
+CWD=$(echo "$input" | jq -r '.workspace.current_dir // .cwd // "~"')
 REPO=$(echo "$input" | jq -r '.workspace.repo.name // ""')
 
 # No data yet (pre-first API call)
 if [ -z "$USED_RAW" ] && [ -z "$REM_RAW" ]; then
-  USED=0; REMAINING=100
+  USED=0
+  REMAINING=100
 fi
 
-# Extract git branch — try multiple sources for robustness
-BRANCH=$(echo "$input" | jq -r '.worktree.branch // ""')
-if [ -z "$BRANCH" ]; then
+# Git branch — payload first, then git in cwd
+BRANCH=$(echo "$input" | jq -r '.worktree.branch // .worktree.name // ""')
+if [ -z "$BRANCH" ] || [ "$BRANCH" = "null" ]; then
   BRANCH=$(git -C "$CWD" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 fi
 
-# Format directory — show repo name if available, else just folder name
-if [ -n "$REPO" ]; then
+# Directory label
+if [ -n "$REPO" ] && [ "$REPO" != "null" ]; then
   DIR_DISPLAY="$REPO"
 else
   DIR_DISPLAY="${CWD##*/}"
 fi
 
-# Format git branch with emoji indicator
 if [ -n "$BRANCH" ]; then
   GIT_INDICATOR="  (🌿 ${BRANCH})"
 else
   GIT_INDICATOR=""
 fi
 
-# Format cost — show as $X.XX or 'free' if < $0.01
-if (( $(echo "$COST < 0.01" | bc -l) )); then
-  COST_STR="free"
-else
-  COST_STR=$(printf '$%.2f' "$COST")
+# Session cost — Claude only; omit segment when absent (Cursor does not send cost)
+COST_STR=""
+if echo "$input" | jq -e '.cost.total_cost_usd != null' >/dev/null 2>&1; then
+  COST=$(echo "$input" | jq -r '.cost.total_cost_usd')
+  if (( $(echo "$COST < 0.01" | bc -l) )); then
+    COST_STR="free"
+  else
+    COST_STR=$(printf '$%.2f' "$COST")
+  fi
 fi
 
 # PAL: Hook health — count ERROR lines in debug.log from last 24h
@@ -76,7 +84,7 @@ if [ -d "$PROJECTS_DIR" ]; then
   done
 fi
 
-# Rate limits (Pro/Max only — absent for other plans)
+# Rate limits (Pro/Max only — absent for other plans and on Cursor)
 FIVE_H=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty')
 SEVEN_D=$(echo "$input" | jq -r '.rate_limits.seven_day.used_percentage // empty')
 RATE_PARTS=()
@@ -159,8 +167,12 @@ ISC_STR=""
 # Line 1: Model, Directory, Git Branch, Hook Health, Open ISCs, Signal
 echo -e "${CYAN}[${MODEL}]${RESET} 📁 ${DIR_DISPLAY}${DIM}${GIT_INDICATOR}${RESET}${HOOK_STR}${ISC_STR}${SIGNAL_STR}"
 
-# Line 2: Context bar with usage percentage, cost, and rate limits
-echo -e "${CONTEXT_COLOR}${BAR}${RESET} ${USED}% │ ${COST_STR} │ ${REMAINING}% free${DIM}${RATE_STR}${RESET}"
+# Line 2: Context bar; cost segment only when Claude sends it
+if [ -n "$COST_STR" ]; then
+  echo -e "${CONTEXT_COLOR}${BAR}${RESET} ${USED}% │ ${COST_STR} │ ${REMAINING}% free${DIM}${RATE_STR}${RESET}"
+else
+  echo -e "${CONTEXT_COLOR}${BAR}${RESET} ${USED}% │ ${REMAINING}% free${DIM}${RATE_STR}${RESET}"
+fi
 
 # Line 3: Update available (only when cache says available AND versions differ)
 [ -n "$UPDATE_LINE" ] && echo -e "${YELLOW}${UPDATE_LINE}${RESET}"

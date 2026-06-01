@@ -4,15 +4,17 @@
  * Symlinks skills. Generates AGENTS.md.
  */
 
-import { copyFileSync, existsSync, mkdirSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { writeContextDigests } from "../../hooks/handlers/context-digests";
 import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
 import {
+  addStatuslineConfig,
   copyAgentsForCursor,
   copyPalDocs,
   copySkills,
+  copyStatusline,
   countSkills,
   generateSkillIndex,
   loadCursorHooksTemplate,
@@ -26,6 +28,7 @@ import {
 const PKG_ROOT = palPkg().replaceAll("\\", "/");
 const CURSOR_DIR = platform.cursorDir();
 const HOOKS_FILE = resolve(CURSOR_DIR, "hooks.json");
+const CLI_CONFIG = resolve(CURSOR_DIR, "cli-config.json");
 
 // --- Ensure ~/.cursor/ exists ---
 mkdirSync(CURSOR_DIR, { recursive: true });
@@ -60,6 +63,19 @@ log.success(`Installed ${palDocsCount} PAL docs to ~/.pal/docs/`);
 
 // --- Scaffold PAL settings ---
 scaffoldPalSettings();
+
+// --- Statusline script + cli-config.json statusLine ---
+copyStatusline("cursor");
+if (!existsSync(CLI_CONFIG)) {
+  writeFileSync(CLI_CONFIG, "{}\n", "utf-8");
+  log.info("Created new cli-config.json");
+} else {
+  copyFileSync(CLI_CONFIG, `${CLI_CONFIG}.bak.${Date.now()}`);
+  log.info("Backed up cli-config.json");
+}
+const cliConfig = readJson<Record<string, unknown>>(CLI_CONFIG, {});
+writeJson(CLI_CONFIG, addStatuslineConfig(cliConfig, "cursor"));
+log.success("Merged statusLine into cli-config.json");
 
 // --- Generate AGENTS.md ---
 regenerateIfNeeded();
