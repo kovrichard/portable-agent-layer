@@ -3,6 +3,7 @@
  */
 
 import {
+  chmodSync,
   copyFileSync,
   existsSync,
   lstatSync,
@@ -123,6 +124,65 @@ export function mergeSettings(existing: Settings, template: Settings): Settings 
     }
   }
 
+  // Merge skillOverrides (object with skill name keys, add if not present)
+  if (template.skillOverrides && typeof template.skillOverrides === "object") {
+    result.skillOverrides ??= {};
+    const resultOverrides = result.skillOverrides as Record<string, unknown>;
+    for (const [skill, value] of Object.entries(template.skillOverrides)) {
+      if (!(skill in resultOverrides)) {
+        resultOverrides[skill] = value;
+      }
+    }
+  }
+
+  // Merge attribution (object with commit/pr keys, add if not present)
+  if (template.attribution && typeof template.attribution === "object") {
+    if (!("attribution" in result)) {
+      result.attribution = template.attribution;
+    }
+  }
+
+  // Merge showClearContextOnPlanAccept (boolean, add if not present)
+  if ("showClearContextOnPlanAccept" in template) {
+    if (!("showClearContextOnPlanAccept" in result)) {
+      result.showClearContextOnPlanAccept = template.showClearContextOnPlanAccept;
+    }
+  }
+
+  // Merge respectGitignore (boolean, add if not present)
+  if ("respectGitignore" in template) {
+    if (!("respectGitignore" in result)) {
+      result.respectGitignore = template.respectGitignore;
+    }
+  }
+
+  // Merge spinnerTipsEnabled (boolean, add if not present)
+  if ("spinnerTipsEnabled" in template) {
+    if (!("spinnerTipsEnabled" in result)) {
+      result.spinnerTipsEnabled = template.spinnerTipsEnabled;
+    }
+  }
+
+  // Merge spinnerTipsOverride (merge tips array, deduplicate by content)
+  if (
+    template.spinnerTipsOverride &&
+    typeof template.spinnerTipsOverride === "object" &&
+    "tips" in template.spinnerTipsOverride &&
+    Array.isArray((template.spinnerTipsOverride as Record<string, unknown>).tips)
+  ) {
+    result.spinnerTipsOverride ??= { tips: [] };
+    const resultOverride = result.spinnerTipsOverride as Record<string, unknown>;
+    resultOverride.tips ??= [];
+    const tips = resultOverride.tips as string[];
+    const templateTips = (template.spinnerTipsOverride as Record<string, unknown>)
+      .tips as string[];
+    for (const tip of templateTips) {
+      if (typeof tip === "string" && !tips.includes(tip)) {
+        tips.push(tip);
+      }
+    }
+  }
+
   return result;
 }
 
@@ -161,6 +221,68 @@ export function unmergeSettings(existing: Settings, template: Settings): Setting
     result.permissions.allow = result.permissions.allow.filter((p) => !palPerms.has(p));
     if (result.permissions.allow.length === 0) delete result.permissions.allow;
     if (Object.keys(result.permissions).length === 0) delete result.permissions;
+  }
+
+  // Remove PAL skillOverrides (remove keys that appear in template)
+  if (
+    template.skillOverrides &&
+    typeof template.skillOverrides === "object" &&
+    result.skillOverrides &&
+    typeof result.skillOverrides === "object"
+  ) {
+    const palSkills = new Set(Object.keys(template.skillOverrides));
+    for (const skill of palSkills) {
+      delete (result.skillOverrides as Record<string, unknown>)[skill];
+    }
+    if (Object.keys(result.skillOverrides).length === 0) delete result.skillOverrides;
+  }
+
+  // Remove PAL attribution if it matches template structure
+  if (template.attribution && "attribution" in result) {
+    delete result.attribution;
+  }
+
+  // Remove PAL showClearContextOnPlanAccept
+  if (
+    "showClearContextOnPlanAccept" in template &&
+    "showClearContextOnPlanAccept" in result
+  ) {
+    delete result.showClearContextOnPlanAccept;
+  }
+
+  // Remove PAL respectGitignore
+  if ("respectGitignore" in template && "respectGitignore" in result) {
+    delete result.respectGitignore;
+  }
+
+  // Remove PAL spinnerTipsEnabled
+  if ("spinnerTipsEnabled" in template && "spinnerTipsEnabled" in result) {
+    delete result.spinnerTipsEnabled;
+  }
+
+  // Remove PAL spinnerTipsOverride (remove only template tips, preserve user tips)
+  if (
+    template.spinnerTipsOverride &&
+    typeof template.spinnerTipsOverride === "object" &&
+    "tips" in template.spinnerTipsOverride &&
+    Array.isArray((template.spinnerTipsOverride as Record<string, unknown>).tips) &&
+    result.spinnerTipsOverride &&
+    typeof result.spinnerTipsOverride === "object" &&
+    "tips" in result.spinnerTipsOverride &&
+    Array.isArray((result.spinnerTipsOverride as Record<string, unknown>).tips)
+  ) {
+    const templateTipsArray = (template.spinnerTipsOverride as Record<string, unknown>)
+      .tips as string[];
+    const templateTips = new Set(templateTipsArray);
+    const resultOverride = result.spinnerTipsOverride as Record<string, unknown>;
+    const tips = resultOverride.tips as string[];
+    resultOverride.tips = tips.filter((tip) => !templateTips.has(tip));
+    if (
+      (resultOverride.tips as string[]).length === 0 &&
+      Object.keys(resultOverride).length === 1
+    ) {
+      delete result.spinnerTipsOverride;
+    }
   }
 
   return result;
@@ -766,6 +888,100 @@ export function loadCopilotHooksTemplate(templatePath: string, pkgRoot: string):
   } catch (e) {
     throw new Error(`Failed to parse Copilot hooks template at ${templatePath}: ${e}`);
   }
+}
+
+// --- Statusline ---
+
+/** Copy statusline script to ~/.claude/ for the current platform */
+export function copyStatusline(): boolean {
+  const claudeDir = platform.claudeDir();
+  mkdirSync(claudeDir, { recursive: true });
+
+  const isPlatformWin32 = process.platform === "win32";
+  const sourcePath = isPlatformWin32
+    ? assets.statuslineScriptPs1()
+    : assets.statuslineScriptBash();
+  const scriptName = isPlatformWin32 ? "statusline.ps1" : "statusline.sh";
+  const destPath = resolve(claudeDir, scriptName);
+
+  if (!existsSync(sourcePath)) {
+    log.warn(`Statusline script not found at ${sourcePath}`);
+    return false;
+  }
+
+  try {
+    copyFileSync(sourcePath, destPath);
+
+    // Make executable on Unix
+    if (process.platform !== "win32") {
+      chmodSync(destPath, 0o755);
+    }
+
+    log.success(`Statusline installed to ${destPath}`);
+    return true;
+  } catch (e) {
+    log.warn(`Failed to copy statusline script: ${e}`);
+    return false;
+  }
+}
+
+/** Remove statusline script from ~/.claude/ */
+export function removeStatusline(): boolean {
+  const claudeDir = platform.claudeDir();
+  const isPlatformWin32 = process.platform === "win32";
+  const scriptName = isPlatformWin32 ? "statusline.ps1" : "statusline.sh";
+  const scriptPath = resolve(claudeDir, scriptName);
+
+  if (!existsSync(scriptPath)) {
+    log.info("Statusline script not found, nothing to remove");
+    return true;
+  }
+
+  try {
+    unlinkSync(scriptPath);
+    log.success(`Removed statusline script from ${scriptPath}`);
+    return true;
+  } catch (e) {
+    log.warn(`Failed to remove statusline script: ${e}`);
+    return false;
+  }
+}
+
+/** Add statusLine config to settings if not already present or if using old broken command */
+export function addStatuslineConfig(
+  settings: Record<string, unknown>
+): Record<string, unknown> {
+  const statusLine = settings.statusLine as Record<string, unknown> | undefined;
+
+  // Check if already configured with a valid command (not the old broken one)
+  if (statusLine && typeof statusLine === "object" && statusLine.command) {
+    const cmd = statusLine.command as string;
+    // Keep existing config unless it's the old broken Get-Content pattern
+    if (!cmd.includes("Get-Content -Raw")) {
+      return settings;
+    }
+  }
+
+  const isPlatformWin32 = process.platform === "win32";
+  const command = isPlatformWin32
+    ? "powershell -NoProfile -File ~/.claude/statusline.ps1"
+    : "~/.claude/statusline.sh";
+
+  settings.statusLine = {
+    type: "command",
+    command,
+    padding: 2,
+  };
+
+  return settings;
+}
+
+/** Remove statusLine config from settings */
+export function removeStatuslineConfig(
+  settings: Record<string, unknown>
+): Record<string, unknown> {
+  delete settings.statusLine;
+  return settings;
 }
 
 // --- Skill Index ---

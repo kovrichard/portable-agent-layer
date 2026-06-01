@@ -9,9 +9,11 @@ import { resolve } from "node:path";
 import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
 import { assets, palHome, palPkg, platform } from "../../hooks/lib/paths";
 import {
+  addStatuslineConfig,
   copyAgents,
   copyPalDocs,
   copySkills,
+  copyStatusline,
   countAgents,
   countMd,
   countSkills,
@@ -43,7 +45,10 @@ log.info("Backed up settings.json");
 // --- Load template and merge into existing settings ---
 const template = loadSettingsTemplate(assets.claudeSettingsTemplate(), PKG_ROOT);
 const existing = readJson<Record<string, unknown>>(SETTINGS, {});
-const merged = mergeSettings(existing, template);
+let merged = mergeSettings(existing, template);
+
+// Add platform-specific statusLine config
+merged = addStatuslineConfig(merged);
 
 writeJson(SETTINGS, merged);
 log.success("Merged PAL settings into settings.json");
@@ -55,6 +60,9 @@ generateSkillIndex();
 
 // --- Copy agents ---
 copyAgents();
+
+// --- Copy statusline script ---
+copyStatusline();
 
 // --- Copy PAL system docs ---
 const palDocsCount = copyPalDocs();

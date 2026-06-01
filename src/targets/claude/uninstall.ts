@@ -13,6 +13,8 @@ import {
   removeAgents,
   removePalDocs,
   removeSkills,
+  removeStatusline,
+  removeStatuslineConfig,
   unmergeSettings,
   writeJson,
 } from "../lib";
@@ -33,7 +35,10 @@ log.info("Backed up settings.json");
 // --- Load template and unmerge from existing settings ---
 const template = loadSettingsTemplate(assets.claudeSettingsTemplate(), PKG_ROOT);
 const existing = readJson<Record<string, unknown>>(SETTINGS, {});
-const cleaned = unmergeSettings(existing, template);
+let cleaned = unmergeSettings(existing, template);
+
+// Remove statusLine config
+cleaned = removeStatuslineConfig(cleaned);
 
 writeJson(SETTINGS, cleaned);
 log.success("Removed PAL settings from settings.json");
@@ -53,6 +58,9 @@ if (removedAgents.length > 0) {
 } else {
   log.info("No PAL agents found");
 }
+
+// --- Remove statusline script ---
+removeStatusline();
 
 // --- Remove PAL system docs ---
 removePalDocs();

@@ -25,6 +25,27 @@
       "Bash(node --experimental-strip-types ~/.pal/skills/consulting-report/tools/generate-pdf.ts *)"
     ]
   },
+  "skillOverrides": {
+    "claude-api": "off",
+    "update-config": "off",
+    "deep-research": "off",
+    "code-review": "off"
+  },
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "showClearContextOnPlanAccept": true,
+  "respectGitignore": true,
+  "spinnerTipsEnabled": true,
+  "spinnerTipsOverride": {
+    "tips": [
+      "Need something reusable? Use the /create-skill command.",
+      "PAL learns from your feedback and improves over time. Don't be shy to give feedback!",
+      "For simple PDFs use the /create-pdf skill. Need a styled one? Use /consulting-report instead.",
+      "Use the /research skill to run comprehensive web research with multiple parallel agents."
+    ]
+  },
   "hooks": {
     "SessionStart": [
       {
