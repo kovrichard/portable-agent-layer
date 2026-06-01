@@ -112,6 +112,7 @@ GREEN='\033[32m'
 YELLOW='\033[33m'
 RED='\033[31m'
 DIM='\033[90m'
+ITALIC='\033[3m'
 RESET='\033[0m'
 
 # Choose bar color based on context usage
@@ -176,4 +177,29 @@ fi
 
 # Line 3: Update available (only when cache says available AND versions differ)
 [ -n "$UPDATE_LINE" ] && echo -e "${YELLOW}${UPDATE_LINE}${RESET}"
+
+# Line 4: Rotating quote (changes every 30 minutes)
+QUOTES=(
+  "Make it work, make it right, make it fast.|Kent Beck"
+  "Simplicity is the soul of efficiency.|Austin Freeman"
+  "Talk is cheap. Show me the code.|Linus Torvalds"
+  "First, solve the problem. Then, write the code.|John Johnson"
+  "Premature optimization is the root of all evil.|Donald Knuth"
+  "The art of programming is organizing complexity.|Edsger Dijkstra"
+  "The best code is no code at all.|Jeff Atwood"
+  "Truth can only be found in one place: the code.|Robert C. Martin"
+  "A ship in harbor is safe — but that is not what ships are for.|John A. Shedd"
+  "Before software can be reusable, it first has to be usable.|Ralph Johnson"
+  "Good software makes the complex appear simple.|Grady Booch"
+  "Measure twice, cut once.|traditional"
+  "An expert has made all possible mistakes in a narrow field.|Niels Bohr"
+  "Give me six hours to chop down a tree and I will spend the first four sharpening the axe.|Abraham Lincoln"
+  "Good judgement is the result of experience and experience the result of bad judgement.|Mark Twain"
+)
+QUOTE_IDX=$(( ($(date +%s) / 1800) % ${#QUOTES[@]} ))
+QUOTE_ENTRY="${QUOTES[$QUOTE_IDX]}"
+QUOTE_TEXT="${QUOTE_ENTRY%|*}"
+QUOTE_AUTHOR="${QUOTE_ENTRY##*|}"
+echo -e "${DIM}${ITALIC}\"${QUOTE_TEXT}\" — ${QUOTE_AUTHOR}${RESET}"
+
 exit 0
