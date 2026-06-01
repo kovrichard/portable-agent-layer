@@ -209,10 +209,14 @@ QUOTES=(
   "A person who never made a mistake never tried anything new.|Albert Einstein"
   "The journey of a thousand miles begins with one step.|Lao Tzu"
 )
-QUOTE_IDX=$(( ($(date +%s) / 1800) % ${#QUOTES[@]} ))
-QUOTE_ENTRY="${QUOTES[$QUOTE_IDX]}"
-QUOTE_TEXT="${QUOTE_ENTRY%|*}"
-QUOTE_AUTHOR="${QUOTE_ENTRY##*|}"
-echo -e "${DIM}${ITALIC}\"${QUOTE_TEXT}\" — ${QUOTE_AUTHOR}${RESET}"
+SLOT=$(( $(date +%s) / 5400 ))
+SLOT_OFFSET=$(( $(date +%s) % 5400 ))
+if [ $SLOT_OFFSET -lt 900 ]; then
+  QUOTE_IDX=$(( SLOT % ${#QUOTES[@]} ))
+  QUOTE_ENTRY="${QUOTES[$QUOTE_IDX]}"
+  QUOTE_TEXT="${QUOTE_ENTRY%|*}"
+  QUOTE_AUTHOR="${QUOTE_ENTRY##*|}"
+  echo -e "${DIM}${ITALIC}\"${QUOTE_TEXT}\" — ${QUOTE_AUTHOR}${RESET}"
+fi
 
 exit 0

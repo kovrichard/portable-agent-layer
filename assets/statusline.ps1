@@ -173,6 +173,11 @@ $QUOTES = @(
   "A person who never made a mistake never tried anything new.|Albert Einstein"
   "The journey of a thousand miles begins with one step.|Lao Tzu"
 )
-$QUOTE_IDX = [int]([math]::Floor([DateTimeOffset]::UtcNow.ToUnixTimeSeconds() / 1800)) % $QUOTES.Count
-$QUOTE_PARTS = $QUOTES[$QUOTE_IDX] -split '\|'
-Write-Host ($DIM + $ITALIC + '"' + $QUOTE_PARTS[0] + '" - ' + $QUOTE_PARTS[1] + $RESET)
+$EPOCH = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+$SLOT = [int]([math]::Floor($EPOCH / 5400))
+$SLOT_OFFSET = $EPOCH % 5400
+if ($SLOT_OFFSET -lt 900) {
+  $QUOTE_IDX = $SLOT % $QUOTES.Count
+  $QUOTE_PARTS = $QUOTES[$QUOTE_IDX] -split '\|'
+  Write-Host ($DIM + $ITALIC + '"' + $QUOTE_PARTS[0] + '" - ' + $QUOTE_PARTS[1] + $RESET)
+}
