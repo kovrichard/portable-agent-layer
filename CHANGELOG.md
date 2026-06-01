@@ -1,3 +1,11 @@
+# [0.49.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.48.0...v0.49.0) (2026-06-01)
+
+
+### Features
+
+* **status:** add status line ([3f1cd70](https://github.com/kovrichard/portable-agent-layer/commit/3f1cd70fe3ca0053d41415cd688e86a49b48e8da))
+* **status:** update mac/linux status line ([ba0ad9c](https://github.com/kovrichard/portable-agent-layer/commit/ba0ad9c7c7254b610c17d5960ba6a359a13ef6b1))
+
 # [0.48.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.47.0...v0.48.0) (2026-05-31)
 
 
