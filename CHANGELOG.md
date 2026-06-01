@@ -1,3 +1,11 @@
+# [0.50.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.49.0...v0.50.0) (2026-06-01)
+
+
+### Features
+
+* **codex:** add and manage Codex TUI status line configuration ([fa2a143](https://github.com/kovrichard/portable-agent-layer/commit/fa2a143b8a02e40e06a601beb474ca3d971f2024))
+* **cursor:** enhance statusline integration with CLI configuration and script management ([28e3e2d](https://github.com/kovrichard/portable-agent-layer/commit/28e3e2d99df51b3cb06a60a3916a0622c3500be4))
+
 # [0.49.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.48.0...v0.49.0) (2026-06-01)
 
 
