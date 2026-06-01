@@ -1,3 +1,12 @@
+# [0.51.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.50.0...v0.51.0) (2026-06-01)
+
+
+### Features
+
+* add famous quotes ([bcf52d7](https://github.com/kovrichard/portable-agent-layer/commit/bcf52d7b0c66d1850c8df1485d652fefd0dddcd5))
+* **status:** add more quotes ([997ada2](https://github.com/kovrichard/portable-agent-layer/commit/997ada2fedc06ce52d34081a3911d6cd8a5c3557))
+* **status:** show quotes more randomly ([c2b5f01](https://github.com/kovrichard/portable-agent-layer/commit/c2b5f01c5729459a87adf57d08e90fab0b733dea))
+
 # [0.50.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.49.0...v0.50.0) (2026-06-01)
 
 
