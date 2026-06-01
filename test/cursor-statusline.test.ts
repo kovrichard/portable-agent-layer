@@ -1,12 +1,17 @@
 import { describe, expect, test } from "bun:test";
 import { addStatuslineConfig, removeStatuslineConfig } from "../src/targets/lib";
 
+const cursorStatuslineCommand =
+  process.platform === "win32"
+    ? "powershell -NoProfile -File ~/.cursor/statusline.ps1"
+    : "~/.cursor/statusline.sh";
+
 describe("cursor statusline config", () => {
   test("addStatuslineConfig sets PAL defaults when absent", () => {
     const updated = addStatuslineConfig({}, "cursor");
     expect(updated.statusLine).toEqual({
       type: "command",
-      command: "~/.cursor/statusline.sh",
+      command: cursorStatuslineCommand,
       padding: 2,
       updateIntervalMs: 300,
       timeoutMs: 2000,
@@ -34,7 +39,7 @@ describe("cursor statusline config", () => {
     const updated = addStatuslineConfig(config, "cursor");
     expect(updated.statusLine).toEqual({
       type: "command",
-      command: "~/.cursor/statusline.sh",
+      command: cursorStatuslineCommand,
       padding: 2,
       updateIntervalMs: 300,
       timeoutMs: 2000,
