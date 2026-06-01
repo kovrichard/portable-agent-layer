@@ -110,6 +110,12 @@ describe("pal cli install (smoke)", () => {
 
     expect(existsSync(resolve(CODEX_DIR, "hooks.json"))).toBe(true);
     expect(existsSync(resolve(CODEX_DIR, "skills"))).toBe(true);
+    const installedConfig = readFileSync(resolve(CODEX_DIR, "config.toml"), "utf-8");
+    expect(installedConfig).toContain('tui.status_line = ["model-with-reasoning"');
+    expect(installedConfig).toContain('"context-remaining"');
+    expect(installedConfig).toContain('"five-hour-limit"');
+    expect(installedConfig).toContain('"weekly-limit"');
+    expect(installedConfig).toContain('"codex-version"');
 
     const uninstallResult = pal("cli", "uninstall", "--codex");
     expect(uninstallResult.status).toBe(0);
@@ -120,6 +126,8 @@ describe("pal cli install (smoke)", () => {
     );
     expect(uninstalledRules).not.toContain("# BEGIN PAL MANAGED CODEX RULES");
     expect(uninstalledRules).not.toContain("~/.pal/tools/project.ts");
+    const uninstalledConfig = readFileSync(resolve(CODEX_DIR, "config.toml"), "utf-8");
+    expect(uninstalledConfig).not.toContain('tui.status_line = ["model-with-reasoning"');
   }, 90000);
 
   test("install is idempotent — second run preserves files", () => {

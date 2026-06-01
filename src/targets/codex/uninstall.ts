@@ -11,6 +11,7 @@ import {
   loadCodexHooksTemplate,
   log,
   readJson,
+  removeCodexStatuslineConfig,
   removeSkills,
   unmergeCodexHooks,
   unmergeCodexRules,
@@ -34,6 +35,15 @@ function disableCodexHooks(configPath: string): void {
 
   writeFileSync(configPath, content, "utf-8");
   log.success("Removed hooks from ~/.codex/config.toml");
+}
+
+function disableCodexStatusline(configPath: string): void {
+  if (!existsSync(configPath)) return;
+  const content = readFileSync(configPath, "utf-8");
+  const updated = removeCodexStatuslineConfig(content);
+  if (updated === content) return;
+  writeFileSync(configPath, updated, "utf-8");
+  log.success("Removed PAL Codex status line from ~/.codex/config.toml");
 }
 
 const PKG_ROOT = palPkg().replaceAll("\\", "/");
@@ -80,5 +90,6 @@ if (removed.length > 0) {
 // --- Disable hooks in config.toml ---
 const CONFIG_FILE = resolve(CODEX_DIR, "config.toml");
 disableCodexHooks(CONFIG_FILE);
+disableCodexStatusline(CONFIG_FILE);
 
 log.success("Codex uninstall complete");

@@ -9,6 +9,10 @@ import { resolve } from "node:path";
 // to re-pin via `bun add -g <pkg>@<latest>`.
 describe("pal cli update — package mode command shape", () => {
   const src = readFileSync(resolve(import.meta.dir, "../src/cli/index.ts"), "utf-8");
+  const updateCheckSrc = readFileSync(
+    resolve(import.meta.dir, "../src/hooks/handlers/update-check.ts"),
+    "utf-8"
+  );
 
   test("re-pins via 'bun add -g portable-agent-layer@<latest>'", () => {
     expect(src).toMatch(
@@ -20,6 +24,10 @@ describe("pal cli update — package mode command shape", () => {
     expect(src).not.toMatch(
       /spawnSync\(\s*"bun"\s*,\s*\[\s*"update"\s*,\s*"-g"\s*,\s*"portable-agent-layer"/
     );
+  });
+
+  test("defaults status/update checks to package mode", () => {
+    expect(updateCheckSrc).toContain('process.env.PAL_UPDATE_MODE === "repo"');
   });
 });
 

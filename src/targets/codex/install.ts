@@ -15,6 +15,7 @@ import { resolve } from "node:path";
 import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
 import {
+  addCodexStatuslineConfig,
   copySkills,
   countSkills,
   generateSkillIndex,
@@ -53,6 +54,17 @@ function enableCodexHooks(configPath: string): void {
   const block = `${content.endsWith("\n") || content === "" ? "" : "\n"}\n[features]\nhooks = true\n`;
   writeFileSync(configPath, content + block, "utf-8");
   log.success("Enabled hooks = true in ~/.codex/config.toml");
+}
+
+function enableCodexStatusline(configPath: string): void {
+  const content = existsSync(configPath) ? readFileSync(configPath, "utf-8") : "";
+  const updated = addCodexStatuslineConfig(content);
+  if (updated === content) {
+    log.info("Codex status line already configured in config.toml");
+    return;
+  }
+  writeFileSync(configPath, updated, "utf-8");
+  log.success("Configured Codex TUI status line in ~/.codex/config.toml");
 }
 
 const PKG_ROOT = palPkg().replaceAll("\\", "/");
@@ -102,6 +114,7 @@ log.success("Ensured AGENTS.md symlink at ~/.codex/AGENTS.md");
 // --- Enable hooks in config.toml ---
 const CONFIG_FILE = resolve(CODEX_DIR, "config.toml");
 enableCodexHooks(CONFIG_FILE);
+enableCodexStatusline(CONFIG_FILE);
 
 log.success("Codex installation complete");
 console.log("");

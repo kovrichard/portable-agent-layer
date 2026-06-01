@@ -1,8 +1,8 @@
 /**
  * Update checker — detects if a newer version of PAL is available.
  *
- * Repo mode (.git exists next to package): git fetch + compare HEAD vs origin/main
  * Package mode: fetch npm registry for latest version vs installed
+ * Repo mode: opt in with PAL_UPDATE_MODE=repo to compare HEAD vs origin/main
  *
  * Caches result in state/update-available.json. Checked at most once per hour.
  */
@@ -47,7 +47,7 @@ function writeCache(cache: UpdateCache): void {
 }
 
 function isRepoMode(): boolean {
-  return existsSync(resolve(palPkg(), ".git"));
+  return process.env.PAL_UPDATE_MODE === "repo" && existsSync(resolve(palPkg(), ".git"));
 }
 
 function getInstalledVersion(): string {
