@@ -158,7 +158,20 @@ $QUOTES = @(
   "Measure twice, cut once.|traditional"
   "An expert has made all possible mistakes in a narrow field.|Niels Bohr"
   "Give me six hours to chop down a tree and I will spend the first four sharpening the axe.|Abraham Lincoln"
+  "Don't believe everything you read on the internet.|Abraham Lincoln"
   "Good judgement is the result of experience and experience the result of bad judgement.|Mark Twain"
+  "We are what we repeatedly do. Excellence is not an act, but a habit.|Aristotle"
+  "Knowing yourself is the beginning of all wisdom.|Aristotle"
+  "Do what you can, with what you have, where you are.|Theodore Roosevelt"
+  "The two most powerful warriors are patience and time.|Leo Tolstoy"
+  "Comparison is the thief of joy.|Theodore Roosevelt"
+  "To improve is to change; to be perfect is to change often.|Winston Churchill"
+  "Absorb what is useful, discard what is useless, add what is essentially your own.|Bruce Lee"
+  "It is not what happens to you, but how you react that matters.|Epictetus"
+  "He who has a why can bear almost any how.|Friedrich Nietzsche"
+  "In the middle of difficulty lies opportunity.|Albert Einstein"
+  "A person who never made a mistake never tried anything new.|Albert Einstein"
+  "The journey of a thousand miles begins with one step.|Lao Tzu"
 )
 $QUOTE_IDX = [int]([math]::Floor([DateTimeOffset]::UtcNow.ToUnixTimeSeconds() / 1800)) % $QUOTES.Count
 $QUOTE_PARTS = $QUOTES[$QUOTE_IDX] -split '\|'
