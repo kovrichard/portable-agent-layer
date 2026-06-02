@@ -439,7 +439,7 @@ function checkAgentHookPrefix(filePath: string, agentName: string): HookPrefixCh
   if (!existsSync(filePath)) return { ok: false, total: 0, missing: 0 };
   try {
     const data = JSON.parse(readFileSync(filePath, "utf-8"));
-    const commands = extractAllHookCommands(data);
+    const commands = extractAllHookCommands(data.hooks ?? data);
     const prefix = `PAL_AGENT=${agentName} `;
     const missing = commands.filter((c) => !c.startsWith(prefix));
     return {
