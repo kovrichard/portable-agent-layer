@@ -208,6 +208,10 @@ QUOTES=(
   "In the middle of difficulty lies opportunity.|Albert Einstein"
   "A person who never made a mistake never tried anything new.|Albert Einstein"
   "The journey of a thousand miles begins with one step.|Lao Tzu"
+  "The obstacle is the way.|Marcus Aurelius"
+  "Whether you think you can or you think you can't — you are right.|Henry Ford"
+  "Everything should be made as simple as possible, but not simpler.|Albert Einstein"
+  "You miss 100% of the shots you don't take.|Wayne Gretzky"
 )
 SLOT=$(( $(date +%s) / 5400 ))
 SLOT_OFFSET=$(( $(date +%s) % 5400 ))
