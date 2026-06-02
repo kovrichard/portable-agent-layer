@@ -1,3 +1,11 @@
+## [0.51.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.51.0...v0.51.1) (2026-06-02)
+
+
+### Bug Fixes
+
+* **doctor:** check hooks correctly ([064b5a4](https://github.com/kovrichard/portable-agent-layer/commit/064b5a489454faaaa1bc94d583096598755d2c7f))
+* **status:** show for 30 minutes ([1035c74](https://github.com/kovrichard/portable-agent-layer/commit/1035c743639a7fcf4becfda64211397bc55aefcb))
+
 # [0.51.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.50.0...v0.51.0) (2026-06-01)
 
 
