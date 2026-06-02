@@ -176,7 +176,7 @@ $QUOTES = @(
 $EPOCH = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
 $SLOT = [int]([math]::Floor($EPOCH / 5400))
 $SLOT_OFFSET = $EPOCH % 5400
-if ($SLOT_OFFSET -lt 900) {
+if ($SLOT_OFFSET -lt 1800) {
   $QUOTE_IDX = $SLOT % $QUOTES.Count
   $QUOTE_PARTS = $QUOTES[$QUOTE_IDX] -split '\|'
   Write-Host ($DIM + $ITALIC + '"' + $QUOTE_PARTS[0] + '" - ' + $QUOTE_PARTS[1] + $RESET)

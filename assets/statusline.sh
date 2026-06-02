@@ -211,7 +211,7 @@ QUOTES=(
 )
 SLOT=$(( $(date +%s) / 5400 ))
 SLOT_OFFSET=$(( $(date +%s) % 5400 ))
-if [ $SLOT_OFFSET -lt 900 ]; then
+if [ $SLOT_OFFSET -lt 1800 ]; then
   QUOTE_IDX=$(( SLOT % ${#QUOTES[@]} ))
   QUOTE_ENTRY="${QUOTES[$QUOTE_IDX]}"
   QUOTE_TEXT="${QUOTE_ENTRY%|*}"
