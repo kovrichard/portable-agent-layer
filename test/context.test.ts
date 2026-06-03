@@ -3,7 +3,6 @@ import {
   buildSystemReminder,
   loadLearningDigest,
   loadRelationshipContext,
-  loadSignalTrends,
   loadWisdomContext,
 } from "../src/hooks/lib/context";
 import { loadFailurePatterns } from "../src/hooks/lib/semi-static";
@@ -36,10 +35,6 @@ describe("context builders", () => {
 
   test("loadFailurePatterns returns string", () => {
     expect(typeof loadFailurePatterns()).toBe("string");
-  });
-
-  test("loadSignalTrends returns string", () => {
-    expect(typeof loadSignalTrends()).toBe("string");
   });
 
   test("loadRelationshipContext returns string", () => {

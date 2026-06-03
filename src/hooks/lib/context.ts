@@ -14,7 +14,6 @@ import { loadActiveProjectsContext } from "./projects";
 import { loadRecentNotes } from "./relationship";
 import { loadFailurePatterns } from "./semi-static";
 import * as settings from "./settings";
-import { computeSignalTrends, formatTrends } from "./signal-trends";
 import { readFramePrinciples } from "./wisdom";
 import { readProjectHistory } from "./work-tracking";
 
@@ -82,15 +81,6 @@ function loadSelfModel(): string {
     const content = readFileSync(p, "utf-8").trim();
     if (!content) return "";
     return content;
-  } catch {
-    return "";
-  }
-}
-
-/** Load signal trends as a formatted string */
-export function loadSignalTrends(): string {
-  try {
-    return formatTrends(computeSignalTrends());
   } catch {
     return "";
   }
@@ -298,7 +288,6 @@ export function buildSystemReminder(opts: { agent?: AgentTarget } = {}): string 
   const activeProjects = settings.isEnabled("projects")
     ? loadActiveProjectsContext()
     : "";
-  const trends = settings.isEnabled("signalTrends") ? loadSignalTrends() : "";
   const failures =
     settings.isEnabled("failurePatterns") && !skipSemiStatic ? loadFailurePatterns() : "";
   const opinions =
@@ -323,7 +312,6 @@ export function buildSystemReminder(opts: { agent?: AgentTarget } = {}): string 
   if (activeProjects) parts.push(activeProjects);
   if (projectHistory) parts.push(projectHistory);
   if (digest) parts.push(digest);
-  if (trends) parts.push(trends);
   if (failures) parts.push(failures);
   if (parts.length === 0) return "";
 

@@ -242,7 +242,47 @@ function getRecentSessions(since: Date): {
 export function writeSynthesis(state: SynthesisState): string {
   const sp = synthesisPath();
   writeFileSync(sp, JSON.stringify(state, null, 2), "utf-8");
+  writeSignalCache();
   return sp;
+}
+
+function writeSignalCache(): void {
+  try {
+    const p = resolve(paths.signals(), "ratings.jsonl");
+    const all = readJsonl<Rating>(p);
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+
+    const avg = (rs: Rating[]) =>
+      rs.length === 0 ? null : round1(rs.reduce((s, r) => s + r.rating, 0) / rs.length);
+
+    const today = avg(all.filter((r) => r.ts.slice(0, 10) === todayStr));
+    const week = avg(all.filter((r) => new Date(r.ts) >= daysAgo(7)));
+    const month = avg(all.filter((r) => new Date(r.ts) >= daysAgo(30)));
+
+    const recent = all.slice(-20);
+    const mid = Math.floor(recent.length / 2);
+    let trend: "up" | "down" | "stable" = "stable";
+    if (mid >= 3) {
+      const a = avg(recent.slice(0, mid)) ?? 0;
+      const b = avg(recent.slice(mid)) ?? 0;
+      if (b - a > 0.5) trend = "up";
+      else if (a - b > 0.5) trend = "down";
+    }
+
+    const cache = resolve(paths.state(), "signal-cache.json");
+    writeFileSync(
+      cache,
+      JSON.stringify(
+        { computed_at: now.toISOString(), today, week, month, trend },
+        null,
+        2
+      ),
+      "utf-8"
+    );
+  } catch {
+    /* non-critical */
+  }
 }
 
 export function synthesize(days: number): SynthesisState {
