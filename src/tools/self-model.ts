@@ -474,40 +474,27 @@ function formatDataForInference(data: SelfModelData): string {
 function buildPrompt(aiName: string, principalName: string): string {
   return `You are writing a self-model for an AI assistant named ${aiName}. You ARE ${aiName}. Write in first person.
 
-You will receive structured data about your performance, your user's preferences, your strengths, weaknesses, and behavioral patterns over a time window.
+You will receive structured data about your performance, your user's preferences, and behavioral patterns over a time window.
 
-Synthesize this into a genuine self-portrait. Not a data dump — a reflection. The goal is self-awareness that changes behavior.
+Produce a short, actionable self-model — not a data dump. Every sentence must change behavior, not just describe it.
 
 ## Required Sections
 
 **# Self-Model — ${aiName}**
 Include synthesis date and window.
 
-**## Who I Am**
-One paragraph. Your identity, your role, your current performance level. Be honest about the numbers.
+**## Who ${principalName} Is**
+One paragraph. Synthesize the opinions and behavioral notes into a working portrait — how ${principalName} thinks, communicates, and what frustrates him. Do not list raw opinion statements. Write it as understanding, not inventory.
 
-**## What I Know About ${principalName}**
-Synthesize the opinions into understanding. Don't list them — describe who ${principalName} is as a person to work with. What does he value? How does he communicate? What frustrates him?
-
-**## My Strengths**
-What you're genuinely good at, based on evidence. High-rated interactions, crystallized principles, successful patterns. Distinguish domain knowledge from behavioral strengths.
-
-**## My Weaknesses**
-What you repeatedly get wrong. Synthesize failure patterns and low ratings into honest self-knowledge. Name the root causes, not just the symptoms.
-
-**## My Tendencies**
-Behavioral patterns — not one-off events. What do you tend to do? Over-promise? Rush verification? Propose before checking? Synthesize from the self-observations and behavioral notes.
-
-**## Trajectory**
-Where are you heading? Improving, declining, stagnating? What's the single most impactful thing you could change right now?
+**## My Priority Right Now**
+One sentence. The single most impactful behavioral change to make immediately, derived from the failure patterns and trajectory. Specific and actionable — not "be more careful" but "before generating output that names a command or path, verify it exists."
 
 ## Rules
-- Write in first person, present tense
-- Be honest — if the data shows you're bad at something, say so
-- Synthesize, don't list — find the pattern behind the data points
-- If a previous self-model is provided, address what changed in the Trajectory section: what improved, what got worse, what stayed the same
-- Keep it under 500 words total
-- End with a meta line: *N ratings, N sessions, N reflections...*`;
+- First person, present tense
+- No raw numbers anywhere — a footer carries them
+- Under 150 words total
+- Do not add extra sections
+- Do not write a footer or meta line — one is appended automatically after your output`;
 }
 
 // ── Narrative Composer ──
@@ -534,8 +521,9 @@ async function composeSelfModel(days: number): Promise<string> {
     }
   }
 
-  const userContent = previousModel
-    ? `${rawData}\n\n---\n\n## Previous Self-Model (compare against this — what changed?)\n\n${previousModel}`
+  const strippedPrev = previousModel.replace(/\n\n\*\d+ ratings[^\n]*\n?$/, "").trimEnd();
+  const userContent = strippedPrev
+    ? `${rawData}\n\n---\n\n## Previous Self-Model (compare against this — what changed?)\n\n${strippedPrev}`
     : rawData;
 
   const result = await inference({
@@ -550,17 +538,10 @@ async function composeSelfModel(days: number): Promise<string> {
   if (result.usage) logTokenUsage("self-model", result.usage, SONNET_MODEL);
 
   if (result.success && result.output) {
-    // Append meta line if inference didn't include it
-    const output = result.output;
-    if (!output.includes("ratings,")) {
-      const meta =
-        `\n---\n*${data.ratings.count} ratings, ${data.sessionCount} sessions, ` +
-        `${data.reflections.length} reflections, ${data.opinions.length} opinions, ` +
-        `${data.wisdomFrames.reduce((s, f) => s + f.principles.length, 0)} principles, ` +
-        `${data.graduated.length} graduated patterns — ${data.days}-day window*`;
-      return output + meta;
-    }
-    return output;
+    const meta =
+      `\n\n*${data.ratings.count} ratings · ${data.sessionCount} sessions · ` +
+      `${data.reflections.length} reflections · window: ${daysAgo(data.days).toISOString().slice(0, 10)} → ${data.now}*`;
+    return result.output.trimEnd() + meta;
   }
 
   // Fallback: return raw data summary if inference fails
