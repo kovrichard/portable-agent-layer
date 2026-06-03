@@ -358,17 +358,6 @@ export function loadActiveProjectsContext(cwd: string = process.cwd()): string {
         if (p.blockers?.length) {
           lines.push(`  Blockers: ${p.blockers.slice(0, MAX_INLINE_BULLETS).join("; ")}`);
         }
-        if (p.criteria) {
-          const openIscs = p.criteria
-            .split("\n")
-            .filter((l) => /^-\s+\[ \]\s+ISC-\d+:/i.test(l))
-            .map((l) => l.replace(/^-\s+\[ \]\s+/, "").trim());
-          if (openIscs.length > 0) {
-            lines.push(
-              `  Open ISCs (${openIscs.length}): ${openIscs.slice(0, MAX_INLINE_BULLETS).join("; ")}`
-            );
-          }
-        }
       } else {
         const counts: string[] = [];
         if (p.next?.length) counts.push(`${p.next.length} next`);
