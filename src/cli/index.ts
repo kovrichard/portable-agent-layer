@@ -34,7 +34,7 @@ import {
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { inference, previewInferenceRoute } from "../hooks/lib/inference";
-import { DEBUG_LOG_MAX_ROTATED } from "../hooks/lib/log";
+import { DEBUG_LOG_MAX_ROTATED, logDebug } from "../hooks/lib/log";
 import { palHome, palPkg, platform } from "../hooks/lib/paths";
 import { hasRealContent, SETUP_STEPS, STEP_ORDER } from "../hooks/lib/setup";
 import { log } from "../targets/lib";
@@ -1166,8 +1166,10 @@ async function exportState(args: string[]) {
   const pathArg = args.find((a) => !a.startsWith("-"));
   const outputPath = pathArg || resolve(palHome(), `pal-export-${timestamp()}.zip`);
 
+  logDebug("export", `start dryRun=${dryRun} outputPath=${outputPath}`);
   if (dryRun) {
     const files = collectExportFiles();
+    logDebug("export", `dry-run collected ${files.length} files`);
     if (files.length === 0) {
       console.log("Nothing to export.");
     } else {
@@ -1176,6 +1178,7 @@ async function exportState(args: string[]) {
     }
   } else {
     const count = exportZip(outputPath);
+    logDebug("export", `done count=${count} path=${outputPath}`);
     if (count === 0) {
       console.log("Nothing to export.");
     } else {
@@ -1192,6 +1195,7 @@ async function importState(args: string[]) {
   const home = palHome();
   const dryRun = args.includes("--dry-run");
   const pathArg = args.find((a) => !a.startsWith("-"));
+  logDebug("import", `start dryRun=${dryRun} pathArg=${pathArg ?? "(auto)"}`);
 
   function findLatest(): string | null {
     const candidates: string[] = [];
@@ -1229,12 +1233,15 @@ async function importState(args: string[]) {
 
   if (pathArg) {
     zipPath = resolve(pathArg);
+    logDebug("import", `using provided path=${zipPath}`);
   } else {
     const latest = findLatest();
     if (!latest) {
+      logDebug("import", "no export/backup files found");
       log.error("No export or backup files found. Provide a path: pal cli import <path>");
       process.exit(1);
     }
+    logDebug("import", `auto-selected latest=${latest}`);
     console.log(`Found: ${latest}`);
     const zip = new AdmZip(latest);
     console.log(
@@ -1266,11 +1273,13 @@ async function importState(args: string[]) {
     process.exit(0);
   }
 
+  logDebug("import", `zip=${zipPath} entries=${entries.length} dryRun=${dryRun}`);
   if (dryRun) {
     console.log(`Would import ${entries.length} files → ${home}\n`);
     for (const e of entries) console.log(`  ${e.entryName}`);
   } else {
     zip.extractAllTo(home, true);
+    logDebug("import", `done extracted=${entries.length} to=${home}`);
     console.log(`Imported ${entries.length} files → ${home}`);
     log.info("Run 'pal cli install' to re-register hooks.");
   }
