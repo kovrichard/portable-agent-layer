@@ -1164,7 +1164,14 @@ async function exportState(args: string[]) {
 
   const dryRun = args.includes("--dry-run");
   const pathArg = args.find((a) => !a.startsWith("-"));
-  const outputPath = pathArg || resolve(palHome(), `pal-export-${timestamp()}.zip`);
+  const resolvedArg = pathArg ? resolve(pathArg) : null;
+  const argIsDir =
+    resolvedArg !== null &&
+    existsSync(resolvedArg) &&
+    statSync(resolvedArg).isDirectory();
+  const outputPath = argIsDir
+    ? resolve(resolvedArg, `pal-export-${timestamp()}.zip`)
+    : (resolvedArg ?? resolve(palHome(), `pal-export-${timestamp()}.zip`));
 
   logDebug("export", `start dryRun=${dryRun} outputPath=${outputPath}`);
   if (dryRun) {
@@ -1197,45 +1204,42 @@ async function importState(args: string[]) {
   const pathArg = args.find((a) => !a.startsWith("-"));
   logDebug("import", `start dryRun=${dryRun} pathArg=${pathArg ?? "(auto)"}`);
 
-  function findLatest(): string | null {
+  function findLatestIn(dirs: string[]): string | null {
     const candidates: string[] = [];
-
-    try {
-      candidates.push(
-        ...readdirSync(home)
-          .filter((f) => f.startsWith("pal-export-") && f.endsWith(".zip"))
-          .map((f) => resolve(home, f))
-      );
-    } catch {
-      /* empty */
+    for (const dir of dirs) {
+      try {
+        candidates.push(
+          ...readdirSync(dir)
+            .filter(
+              (f) =>
+                (f.startsWith("pal-export-") || f.startsWith("pal-backup-")) &&
+                f.endsWith(".zip")
+            )
+            .map((f) => resolve(dir, f))
+        );
+      } catch {
+        /* empty */
+      }
     }
-
-    try {
-      const backupDir = resolve(home, "backups");
-      candidates.push(
-        ...readdirSync(backupDir)
-          .filter(
-            (f) =>
-              (f.startsWith("pal-export-") || f.startsWith("pal-backup-")) &&
-              f.endsWith(".zip")
-          )
-          .map((f) => resolve(backupDir, f))
-      );
-    } catch {
-      /* empty */
-    }
-
     if (candidates.length === 0) return null;
     return candidates.sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0];
   }
 
   let zipPath: string;
 
-  if (pathArg) {
-    zipPath = resolve(pathArg);
+  const resolvedArg = pathArg ? resolve(pathArg) : null;
+  const argIsDir =
+    resolvedArg !== null &&
+    existsSync(resolvedArg) &&
+    statSync(resolvedArg).isDirectory();
+
+  if (resolvedArg && !argIsDir) {
+    zipPath = resolvedArg;
     logDebug("import", `using provided path=${zipPath}`);
   } else {
-    const latest = findLatest();
+    const searchDirs = argIsDir ? [resolvedArg] : [home, resolve(home, "backups")];
+    logDebug("import", `searching dirs=${searchDirs.join(",")}`);
+    const latest = findLatestIn(searchDirs);
     if (!latest) {
       logDebug("import", "no export/backup files found");
       log.error("No export or backup files found. Provide a path: pal cli import <path>");

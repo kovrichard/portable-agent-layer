@@ -1,6 +1,26 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+
+const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
+
+function palCli(args: string[], opts: { input?: string } = {}) {
+  return spawnSync("bun", ["run", CLI, "cli", ...args], {
+    env: { ...process.env, PAL_HOME: TEST_HOME },
+    encoding: "utf-8",
+    input: opts.input,
+    timeout: 15000,
+  });
+}
 
 const TEST_HOME = resolve(import.meta.dir, "../.test-home-export");
 
@@ -79,5 +99,64 @@ describe("timestamp", () => {
     const ts = timestamp();
     expect(ts).toHaveLength(14);
     expect(/^\d{14}$/.test(ts)).toBe(true);
+  });
+});
+
+describe("cli export — folder arg", () => {
+  test("auto-names zip inside given directory", () => {
+    const outDir = mkdtempSync(resolve(tmpdir(), "pal-export-dir-"));
+    try {
+      const result = palCli(["export", outDir]);
+      expect(result.status).toBe(0);
+      const zips = readdirSync(outDir).filter(
+        (f) => f.startsWith("pal-export-") && f.endsWith(".zip")
+      );
+      expect(zips).toHaveLength(1);
+    } finally {
+      rmSync(outDir, { recursive: true, force: true });
+    }
+  });
+
+  test("dry-run with folder arg lists files without writing", () => {
+    const outDir = mkdtempSync(resolve(tmpdir(), "pal-export-dry-"));
+    try {
+      const result = palCli(["export", outDir, "--dry-run"]);
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain("Would export");
+      // No zip written in dry-run
+      const zips = readdirSync(outDir).filter((f) => f.endsWith(".zip"));
+      expect(zips).toHaveLength(0);
+    } finally {
+      rmSync(outDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("cli import — folder arg", () => {
+  test("finds latest zip in given directory and dry-runs import", () => {
+    const workDir = mkdtempSync(resolve(tmpdir(), "pal-import-dir-"));
+    try {
+      // Export to workDir first so there is a zip to find
+      const exportResult = palCli(["export", workDir]);
+      expect(exportResult.status).toBe(0);
+
+      // Import from workDir (folder arg) — pipe "y" to the confirmation prompt
+      const importResult = palCli(["import", workDir, "--dry-run"], { input: "y\n" });
+      expect(importResult.status).toBe(0);
+      expect(importResult.stdout).toContain("Would import");
+    } finally {
+      rmSync(workDir, { recursive: true, force: true });
+    }
+  });
+
+  test("exits non-zero when folder has no zip files", () => {
+    const emptyDir = mkdtempSync(resolve(tmpdir(), "pal-import-empty-"));
+    try {
+      const result = palCli(["import", emptyDir], { input: "y\n" });
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("No export or backup files found");
+    } finally {
+      rmSync(emptyDir, { recursive: true, force: true });
+    }
   });
 });
