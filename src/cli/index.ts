@@ -18,10 +18,19 @@
  *   usage                             Summarize token usage and cost
  *   skill link <name>                 Link a personal ~/.pal/skills/<name>/ into installed agents
  *   skill doctor <name>               Evaluate a skill against the authoring best practices
+ *   debug [on|off]                    Enable / disable verbose hook debug logging
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { inference, previewInferenceRoute } from "../hooks/lib/inference";
@@ -200,6 +209,9 @@ async function runCli(command: string | undefined, args: string[]) {
       if (code !== 0) process.exit(code);
       break;
     }
+    case "debug":
+      cliDebug(args);
+      break;
     case "--help":
     case "-h":
     case "help":
@@ -244,6 +256,7 @@ function showHelp() {
                                             (search · graph · stats · hubs · find · show · add · ls)
     pal cli skill link <name>               Link a personal ~/.pal/skills/<name>/ into installed agents
     pal cli skill doctor <name>             Evaluate a skill against the authoring best practices
+    pal cli debug [on|off]                  Enable/disable verbose hook debug logging (persisted)
 
   Environment:
     PAL_HOME              Override user state directory (default: ~/.pal or repo root)
@@ -1307,6 +1320,25 @@ async function update() {
 
   log.info("Reinstalling...");
   await install(resolveTargets([]));
+}
+
+function cliDebug(args: string[]) {
+  const stateDir = resolve(palHome(), "memory", "state");
+  const flagFile = resolve(stateDir, "debug-enabled");
+  const logFile = resolve(stateDir, "debug.log");
+  const sub = args[0];
+  if (sub === "on") {
+    mkdirSync(stateDir, { recursive: true });
+    writeFileSync(flagFile, "");
+    log.success(`Debug logging enabled → ${logFile}`);
+  } else if (sub === "off") {
+    rmSync(flagFile, { force: true });
+    log.success("Debug logging disabled");
+  } else {
+    const on = existsSync(flagFile);
+    console.log(`  Debug: ${on ? "ON" : "OFF"}`);
+    console.log(`  Log:   ${logFile}`);
+  }
 }
 
 async function status() {

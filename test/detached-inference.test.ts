@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { spawnDetachedInference } from "../src/hooks/lib/detached-inference";
@@ -7,25 +7,24 @@ import { spawnDetachedInference } from "../src/hooks/lib/detached-inference";
 describe("spawnDetachedInference", () => {
   let tmp: string;
   let savedHome: string | undefined;
-  let savedDebug: string | undefined;
   let savedClaudecode: string | undefined;
 
   beforeEach(() => {
     tmp = mkdtempSync(resolve(tmpdir(), "pal-detached-"));
     savedHome = process.env.PAL_HOME;
-    savedDebug = process.env.PAL_DEBUG;
     savedClaudecode = process.env.CLAUDECODE;
     process.env.PAL_HOME = tmp;
-    process.env.PAL_DEBUG = "1";
     process.env.CLAUDECODE = "1"; // parent has it set
+    // Enable debug logging for tests that assert on debug.log content.
+    const stateDir = resolve(tmp, "memory", "state");
+    mkdirSync(stateDir, { recursive: true });
+    writeFileSync(resolve(stateDir, "debug-enabled"), "");
   });
 
   afterEach(() => {
     rmSync(tmp, { recursive: true, force: true });
     if (savedHome === undefined) delete process.env.PAL_HOME;
     else process.env.PAL_HOME = savedHome;
-    if (savedDebug === undefined) delete process.env.PAL_DEBUG;
-    else process.env.PAL_DEBUG = savedDebug;
     if (savedClaudecode === undefined) delete process.env.CLAUDECODE;
     else process.env.CLAUDECODE = savedClaudecode;
   });

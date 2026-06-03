@@ -2,12 +2,12 @@
  * Simple file-based debug logger for PAL hooks.
  * Writes to memory/state/debug.log — rotated on each session start.
  *
- * Only writes when PAL_DEBUG=1 or when called via logError (always logged).
+ * Only writes when debug is enabled (`pal cli debug on`) or when called via logError (always logged).
  */
 
 import { appendFileSync, existsSync, renameSync, statSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
-import { paths } from "./paths";
+import { palHome, paths } from "./paths";
 
 const MAX_LOG_SIZE = 50_000; // ~50KB per file
 const MAX_ROTATED = 5; // keep up to 5 rotated files (.1 newest → .5 oldest)
@@ -74,9 +74,13 @@ function rotateIfNeeded(path: string): void {
 /** Test-only: max rotated count for callers that need to enumerate. */
 export const DEBUG_LOG_MAX_ROTATED = MAX_ROTATED;
 
-/** Log a debug message (only when PAL_DEBUG=1) */
+function isDebugEnabled(): boolean {
+  return existsSync(resolve(palHome(), "memory", "state", "debug-enabled"));
+}
+
+/** Log a debug message (only when debug is enabled via `pal cli debug on`) */
 export function logDebug(source: string, message: string): void {
-  if (process.env.PAL_DEBUG !== "1") return;
+  if (!isDebugEnabled()) return;
   const path = logFile();
   rotateIfNeeded(path);
   try {
@@ -86,7 +90,7 @@ export function logDebug(source: string, message: string): void {
   }
 }
 
-/** Log an error (always written, regardless of PAL_DEBUG) */
+/** Log an error (always written, regardless of debug mode) */
 export function logError(source: string, error: unknown): void {
   const path = logFile();
   rotateIfNeeded(path);

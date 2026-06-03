@@ -192,9 +192,6 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       output: { env: Record<string, string> }
     ) => {
       output.env.PAL_DIR = PAL_DIR;
-      if (process.env.PAL_DEBUG) {
-        output.env.PAL_DEBUG = process.env.PAL_DEBUG;
-      }
     },
   };
 };

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
@@ -255,14 +255,15 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
     expect(process.env.CLAUDECODE).toBe("1");
   });
 
-  test("logDebug emits route=claude-spawn line when PAL_DEBUG=1", async () => {
+  test("logDebug emits route=claude-spawn line when debug enabled", async () => {
     writeFakeBin(tmpBin, "claude", `console.log("hello");\n`);
     prependPath(tmpBin);
 
-    const debugSaved = process.env.PAL_DEBUG;
     const palHomeSaved = process.env.PAL_HOME;
     const tmpHome = mkdtempSync(resolve(tmpdir(), "pal-debug-home-"));
-    process.env.PAL_DEBUG = "1";
+    const stateDir = resolve(tmpHome, "memory", "state");
+    mkdirSync(stateDir, { recursive: true });
+    writeFileSync(resolve(stateDir, "debug-enabled"), "");
     process.env.PAL_HOME = tmpHome;
 
     try {
@@ -273,8 +274,6 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
       expect(log).toContain("route=claude-spawn");
       expect(log).toContain("done binary=claude success=true");
     } finally {
-      if (debugSaved === undefined) delete process.env.PAL_DEBUG;
-      else process.env.PAL_DEBUG = debugSaved;
       if (palHomeSaved === undefined) delete process.env.PAL_HOME;
       else process.env.PAL_HOME = palHomeSaved;
       rmSync(tmpHome, { recursive: true, force: true });
