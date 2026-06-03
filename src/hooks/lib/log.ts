@@ -5,7 +5,14 @@
  * Only writes when debug is enabled (`pal cli debug on`) or when called via logError (always logged).
  */
 
-import { appendFileSync, existsSync, renameSync, statSync, unlinkSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  renameSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { resolve } from "node:path";
 import { palHome, paths } from "./paths";
 
@@ -85,6 +92,17 @@ export function logDebug(source: string, message: string): void {
   rotateIfNeeded(path);
   try {
     appendFileSync(path, `[${timestamp()}] DEBUG ${source}: ${message}\n`);
+  } catch {
+    /* non-critical */
+  }
+}
+
+/** Write full context snapshot to context-snapshot.md (only when debug is enabled) */
+export function logContextSnapshot(content: string): void {
+  if (!isDebugEnabled()) return;
+  const path = resolve(paths.state(), "context-snapshot.md");
+  try {
+    writeFileSync(path, content, "utf-8");
   } catch {
     /* non-critical */
   }

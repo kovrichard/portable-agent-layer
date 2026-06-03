@@ -14,7 +14,7 @@ import { resolve } from "node:path";
 import { getActiveAgent, isCodex, isCopilot, isCursor } from "./lib/agent";
 import { buildClaudeMd, regenerateIfNeeded } from "./lib/claude-md";
 import { type AgentTarget, buildSystemReminder } from "./lib/context";
-import { logDebug, logError } from "./lib/log";
+import { logContextSnapshot, logDebug, logError } from "./lib/log";
 import { platform } from "./lib/paths";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
 
@@ -48,6 +48,7 @@ try {
     active === "copilot" || active === "cursor" ? active : "claude";
   const reminder = buildSystemReminder({ agent });
   if (!reminder) process.exit(0);
+  logContextSnapshot(reminder);
 
   if (isCopilot()) {
     // Copilot: semi-static in ~/.copilot/instructions/pal-*.instructions.md (written at stop).

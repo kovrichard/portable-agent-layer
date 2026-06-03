@@ -25,6 +25,7 @@ const HOOK_MANAGED_FILES = [
   "counts.json",
   "session-names.json",
   "debug.log",
+  "context-snapshot.md",
   "last-responses.json",
   "signal-cache.json",
   "pending-failure.json",
