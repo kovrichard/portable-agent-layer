@@ -1,3 +1,12 @@
+## [0.51.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.51.1...v0.51.2) (2026-06-03)
+
+
+### Bug Fixes
+
+* **cli:** enhance export and import functionality to support directory arguments ([536a2bc](https://github.com/kovrichard/portable-agent-layer/commit/536a2bc03782711466579d695de87b10a5941c22))
+* **debug:** add verbose logging functionality to CLI ([89d63db](https://github.com/kovrichard/portable-agent-layer/commit/89d63db0c5b5b05e5f12e3bedf720b9e1e78d4b8))
+* **logging:** enhance CLI with detailed debug logging for export and import operations ([bd7500d](https://github.com/kovrichard/portable-agent-layer/commit/bd7500da3437af7edb79665139e5c3de9ef799ad))
+
 ## [0.51.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.51.0...v0.51.1) (2026-06-02)
 
 
