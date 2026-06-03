@@ -12,7 +12,7 @@ import { loadOpinionContext } from "./opinions";
 import { paths } from "./paths";
 import { loadActiveProjectsContext } from "./projects";
 import { loadRecentNotes } from "./relationship";
-import { loadFailurePatterns, loadSynthesisRecommendations } from "./semi-static";
+import { loadFailurePatterns } from "./semi-static";
 import * as settings from "./settings";
 import { computeSignalTrends, formatTrends } from "./signal-trends";
 import { readFramePrinciples } from "./wisdom";
@@ -301,10 +301,6 @@ export function buildSystemReminder(opts: { agent?: AgentTarget } = {}): string 
   const trends = settings.isEnabled("signalTrends") ? loadSignalTrends() : "";
   const failures =
     settings.isEnabled("failurePatterns") && !skipSemiStatic ? loadFailurePatterns() : "";
-  const synthesis =
-    settings.isEnabled("synthesis") && !skipSemiStatic
-      ? loadSynthesisRecommendations()
-      : "";
   const opinions =
     !skipSemiStatic && settings.isEnabled("opinions") ? loadOpinionContext() : "";
   const selfModel =
@@ -327,7 +323,6 @@ export function buildSystemReminder(opts: { agent?: AgentTarget } = {}): string 
   if (activeProjects) parts.push(activeProjects);
   if (projectHistory) parts.push(projectHistory);
   if (digest) parts.push(digest);
-  if (synthesis) parts.push(synthesis);
   if (trends) parts.push(trends);
   if (failures) parts.push(failures);
   if (parts.length === 0) return "";

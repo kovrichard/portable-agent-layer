@@ -6,9 +6,8 @@
  * and the session-stop digest writer.
  */
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { parse } from "./frontmatter";
 import { type FailureEntry, readFailures } from "./learning-store";
 import { loadOpinionContext } from "./opinions";
 import { palHome, paths } from "./paths";
@@ -42,59 +41,6 @@ function readFileSafe(path: string): string {
   try {
     if (!existsSync(path)) return "";
     return readFileSync(path, "utf-8").trim();
-  } catch {
-    return "";
-  }
-}
-
-/** Build recommendations from the most recent synthesis report. */
-export function loadSynthesisRecommendations(): string {
-  try {
-    const synthDir = paths.synthesis();
-    if (!existsSync(synthDir)) return "";
-
-    const months = readdirSync(synthDir).sort().reverse();
-    for (const month of months) {
-      const monthDir = resolve(synthDir, month);
-      try {
-        const files = readdirSync(monthDir)
-          .filter((f) => f.endsWith(".md"))
-          .sort()
-          .reverse();
-        if (files.length === 0) continue;
-
-        const content = readFileSync(resolve(monthDir, files[0]), "utf-8");
-
-        const recMatch = new RegExp(
-          /## Recommendations\n\n([\s\S]*?)(?:\n##|\n$|$)/
-        ).exec(content);
-        if (!recMatch?.[1]?.trim()) continue;
-
-        const recs = recMatch[1]
-          .trim()
-          .split("\n")
-          .filter((l) => l.trim())
-          .slice(0, 4);
-
-        if (recs.length === 0) continue;
-
-        const { meta } = parse<{ period?: string; average_rating?: string }>(content);
-        const period = meta.period ?? "";
-        const avgRating = meta.average_rating ? `${meta.average_rating}/10` : "";
-
-        const header = [
-          "## Pattern Synthesis",
-          period ? `*${period} — ${avgRating}*` : "",
-        ]
-          .filter(Boolean)
-          .join("\n");
-
-        return [header, ...recs].join("\n");
-      } catch {
-        /* try next month */
-      }
-    }
-    return "";
   } catch {
     return "";
   }
@@ -185,13 +131,6 @@ export function getSemiStaticSources(): SemiStaticSource[] {
       },
       slug: "opinions",
       description: "PAL opinions",
-    },
-    {
-      path: resolve(memory, "learning", "synthesis-digest.md"),
-      writesDigest: true,
-      load: loadSynthesisRecommendations,
-      slug: "synthesis",
-      description: "PAL pattern synthesis",
     },
     {
       path: resolve(memory, "learning", "failures-digest.md"),
