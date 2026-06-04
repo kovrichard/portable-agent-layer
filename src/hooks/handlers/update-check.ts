@@ -1,8 +1,8 @@
 /**
  * Update checker — detects if a newer version of PAL is available.
  *
- * Package mode: fetch npm registry for latest version vs installed
- * Repo mode: opt in with PAL_UPDATE_MODE=repo to compare HEAD vs origin/main
+ * Repo mode: auto-detected when a .git directory exists at palPkg() root.
+ * Package mode: fallback when no .git is present (global bun install).
  *
  * Caches result in state/update-available.json. Checked at most once per hour.
  */

@@ -26,8 +26,9 @@ describe("pal cli update — package mode command shape", () => {
     );
   });
 
-  test("defaults status/update checks to package mode", () => {
-    expect(updateCheckSrc).toContain('process.env.PAL_UPDATE_MODE === "repo"');
+  test("auto-detects repo mode via .git — no env var required", () => {
+    expect(updateCheckSrc).not.toContain("PAL_UPDATE_MODE");
+    expect(updateCheckSrc).toContain('existsSync(resolve(palPkg(), ".git"))');
   });
 });
 
