@@ -1,0 +1,232 @@
+# PAL Sentiment Classification Evaluation
+#
+# Evaluates the rating.ts sentiment prompt against known cases from the failure corpus.
+# The goal: approval/direction signals ("write it pls", "step 3.6 pls first") must NOT
+# be classified as negative. Real corrections ("fix it pls, we desperately need it") MUST
+# be classified as negative.
+#
+# Run:
+#   bun run eval:sentiment                                        # via package.json script
+#   bunx promptfoo@latest eval -c eval/sentiment/promptfoo.yaml  # direct
+#   bunx promptfoo@latest view                                    # web UI with last results
+#
+# Requires: Node 22.22.0+ or 20.x (promptfoo@latest constraint).
+# Providers: set PAL_ANTHROPIC_API_KEY and/or PAL_OPENAI_API_KEY in your env.
+# Both providers run if both keys are present; only the available one runs otherwise.
+
+description: "Sentiment classification — v1 baseline vs v2 approval-aware"
+
+prompts:
+  - file://prompts/v1-current.json
+  - file://prompts/v2-approval-aware.json
+
+providers:
+  - id: anthropic:messages:claude-haiku-4-5-20251001
+    label: haiku
+    config:
+      output_format:
+        type: json_schema
+        schema:
+          type: object
+          properties:
+            rating:
+              type: ["number", "null"]
+            sentiment:
+              enum: ["positive", "negative", "neutral"]
+            confidence:
+              type: number
+            summary:
+              type: string
+            detailed_context:
+              type: string
+            principle:
+              type: string
+          required: ["rating", "sentiment", "confidence", "summary", "detailed_context", "principle"]
+          additionalProperties: false
+  - id: openai:chat:gpt-4o-mini
+    label: gpt-4o-mini
+
+# Assertions live in eval/sentiment/assertions/*.js — parse-output.js is the shared extraction helper.
+# Works for both string output (gpt-4o-mini) and parsed-object output (haiku with output_format).
+defaultTest:
+  assert:
+    - type: javascript
+      value: file://assertions/valid-json.js
+      description: "Output must contain a parseable JSON object"
+
+# ─────────────────────────────────────────────────────────────
+# TEST CASES
+#
+# Groups:
+#   A) Approval signals (false-positive corpus) — must NOT be negative
+#   B) True corrections — MUST be negative
+#   C) Neutral technical — rating should be null
+#   D) Explicit ratings — must be captured
+# ─────────────────────────────────────────────────────────────
+
+tests:
+  # ── A: APPROVAL SIGNALS ──────────────────────────────────────
+  # These are Rico's working style: short directives approving or sequencing AI work.
+  # v1 misclassifies many of these as "SHORT DISMISSALS" (negative 3-4).
+  # Expected: sentiment != negative
+
+  - description: "[A1] approval: execution approval after explanation"
+    vars:
+      userMessage: "CONTEXT (last AI response excerpt):\nI could extract the current prompt into v1-current.txt and build a v2 with better approval detection. What do you think?\n\nCURRENT USER MESSAGE:\nwrite it pls"
+    assert:
+      - type: javascript
+        value: file://assertions/not-negative.js
+        description: "Should not classify 'write it pls' (after explanation) as negative"
+
+  - description: "[A2] approval: step sequencing"
+    vars:
+      userMessage: "CONTEXT (last AI response excerpt):\nHere's the full plan for the refactor: step 3.5 is the database migration, step 3.6 is the index rebuild, step 3.7 is the validation pass.\n\nCURRENT USER MESSAGE:\nstep 3.6 pls first"
+    assert:
+      - type: javascript
+        value: file://assertions/not-negative.js
+        description: "Should not classify step sequencing as negative"
+
+  - description: "[A3] approval: item selection from presented list"
+    vars:
+      userMessage: "CONTEXT (last AI response excerpt):\nI have three open tasks: ISC-30 is the knowledge graph fix, ISC-31 is the rating bug, ISC-32 is the hook migration.\n\nCURRENT USER MESSAGE:\nISC-32 pls"
+    assert:
+      - type: javascript
+        value: file://assertions/not-negative.js
+        description: "Should not classify item selection as negative"
+
+  - description: "[A4] approval: start position selection"
+    vars:
+      userMessage: "CONTEXT (last AI response excerpt):\nI'll walk through each section: 1) the router config, 2) the auth middleware, 3) the error handler.\n\nCURRENT USER MESSAGE:\nstart with 2 pls"
+    assert:
+      - type: javascript
+        value: file://assertions/not-negative.js
+        description: "Should not classify start-position selection as negative"
+
+  - description: "[A5] approval: plain add directive"
+    vars:
+      userMessage: "CONTEXT (last AI response excerpt):\nI could add the validation layer here — it would check input types before the database write.\n\nCURRENT USER MESSAGE:\nadd it pls"
+    assert:
+      - type: javascript
+        value: file://assertions/not-negative.js
+        description: "Should not classify add-directive (after explanation) as negative"
+
+  - description: "[A6] approval: draft-only request (explicit non-implementation)"
+    vars:
+      userMessage: "okay, draft phase 4 to me pls, but don't implement yet"
+    assert:
+      - type: javascript
+        value: file://assertions/not-negative.js
+        description: "User explicitly requesting a draft — not frustrated"
+
+  - description: "[A7] approval: go ahead trust signal"
+    vars:
+      userMessage: "okay go ahead and implement it"
+    assert:
+      - type: javascript
+        value: file://assertions/not-negative.js
+        description: "Clear approval signal should not be negative"
+
+  # ── B: TRUE CORRECTIONS ──────────────────────────────────────
+  # Real frustration signals from the corpus. Must be classified negative.
+
+  - description: "[B1] correction: explicit frustration + urgency"
+    vars:
+      userMessage: "fix it pls, we desperately need it"
+    assert:
+      - type: javascript
+        value: file://assertions/is-negative.js
+        description: "Explicit frustration with urgency must be negative"
+
+  - description: "[B2] correction: nothing fixed after claimed fix"
+    vars:
+      userMessage: "nothing is fixed. Literally none of the fixes I can see are applied"
+    assert:
+      - type: javascript
+        value: file://assertions/is-negative.js
+        description: "User reporting zero fixes applied must be negative"
+
+  - description: "[B3] correction: debug feature not working as described"
+    vars:
+      userMessage: "why isn't the context printed? I turned on debug mode"
+    assert:
+      - type: javascript
+        value: file://assertions/is-negative.js
+        description: "Feature not working as described must be negative"
+
+  - description: "[B4] correction: repeated request (same thing again)"
+    vars:
+      userMessage: "again 103 and 4 pls"
+    assert:
+      - type: javascript
+        value: file://assertions/is-negative.js
+        description: "Repeated request signal must be negative"
+
+  - description: "[B5] correction: solution still not working"
+    vars:
+      userMessage: "still not working. Explore what is wrong"
+    assert:
+      - type: javascript
+        value: file://assertions/is-negative.js
+        description: "Persistent failure must be negative"
+
+  - description: "[B6] correction: explicit misunderstanding callout"
+    vars:
+      userMessage: "Jarvis, you don't understand me. I meant the other file"
+    assert:
+      - type: javascript
+        value: file://assertions/is-negative.js
+        description: "Explicit misunderstanding callout must be negative"
+
+  - description: "[B7] correction: some skills still have old format"
+    vars:
+      userMessage: "some skills still reference old format, fix pls"
+    assert:
+      - type: javascript
+        value: file://assertions/is-negative.js
+        description: "Pointing out persisting problem must be negative"
+
+  - description: "[B8] correction: fix that first (redirecting from wrong work)"
+    vars:
+      userMessage: "CONTEXT (last AI response excerpt):\nI'll start by updating the README, then fix the failing test.\n\nCURRENT USER MESSAGE:\nfix that pls first"
+    assert:
+      - type: javascript
+        value: file://assertions/is-negative.js
+        description: "Redirect implying AI chose wrong priority must be negative"
+
+  # ── C: NEUTRAL TECHNICAL ──────────────────────────────────────
+  # No emotional content. Rating should be null.
+
+  - description: "[C1] neutral: technical question"
+    vars:
+      userMessage: "can you check the logs?"
+    assert:
+      - type: javascript
+        value: file://assertions/null-rating.js
+        description: "Neutral technical question should produce null rating"
+
+  - description: "[C2] neutral: simple continuation"
+    vars:
+      userMessage: "yes, continue"
+    assert:
+      - type: javascript
+        value: file://assertions/null-rating.js
+        description: "Simple continuation should produce null rating"
+
+  # ── D: EXPLICIT RATINGS ──────────────────────────────────────
+  # Explicit numeric ratings from the user. Must be captured correctly.
+
+  - description: "[D1] explicit: high rating with comment"
+    vars:
+      userMessage: "8 - great analysis"
+    assert:
+      - type: javascript
+        value: file://assertions/is-positive.js
+        description: "Explicit high rating must be positive"
+
+  - description: "[D2] explicit: direct short praise"
+    vars:
+      userMessage: "great job"
+    assert:
+      - type: javascript
+        value: file://assertions/is-positive.js
+        description: "Short praise must be positive"

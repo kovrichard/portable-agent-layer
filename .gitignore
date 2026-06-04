@@ -8,6 +8,9 @@ node_modules/
 
 .test-tmp/
 .test-home/
+
+# Eval runner logs (promptfoo writes error/debug logs to cwd)
+eval/logs/
 .test-install-home/
 
 # macOS debris

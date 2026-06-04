@@ -21,6 +21,7 @@
     "src/targets/opencode/plugin.ts"
   ],
   "ignoreDependencies": [
-    "@semantic-release/github"
+    "@semantic-release/github",
+    "promptfoo"
   ]
 }
