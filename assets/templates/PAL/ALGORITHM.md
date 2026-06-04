@@ -21,6 +21,7 @@ Assign ONE tier at the start of OBSERVE. Default is Standard — only escalate i
 | Plan Mode (EnterPlanMode) | Skip | Use for user alignment |
 | LEARN phase | Reflection log + threads | + Wisdom frame |
 | Constraint extraction | Inline in reverse engineering | Numbered [EX-N] list |
+| Criteria tracking | Inline checklist only | + TaskCreate one task per criterion at end of OBSERVE |
 
 ## The Five Phases
 
@@ -207,6 +208,8 @@ For EACH criterion:
 **Capability check:** Confirm every selected capability was actually invoked via tool call. Text output alone does not count.
 
 **Demonstrate, don't assert.** When verifying a new check / rule / behavior on a system that already passes, "existing inputs still pass" is not evidence the new logic works — the existing inputs would pass even if your code did nothing. Construct a deliberately-broken minimal example (a fake bad slide, a known-failing input, a unit test that should now fail without your change) and run it through to prove the new behavior actually fires. Show the failure happening in the verification output, not just the success case.
+
+**Evidence gate:** A criterion with no evidence line is an automatic FAIL — list it explicitly, fix it, then re-verify. Do not advance to LEARN with any criterion unevidenced. "Looks correct" or "should work" does not count as evidence.
 
 If any criteria failed, fix and re-verify before completing.
 
