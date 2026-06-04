@@ -1,3 +1,16 @@
+# [0.53.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.52.0...v0.53.0) (2026-06-04)
+
+
+### Features
+
+* **analyze-reflect:** add new skills for learning analysis and relationship reflection ([dd647d8](https://github.com/kovrichard/portable-agent-layer/commit/dd647d8d41e42503cafbea28909541d280a982bb))
+* **analyze:** integrate analyze tool into CLI and update documentation ([1392d95](https://github.com/kovrichard/portable-agent-layer/commit/1392d95a71142adc117395ea439bdb9fe11a2852))
+* **eval:** add failure-principle extraction evaluation with assertions and test cases ([4f7fa15](https://github.com/kovrichard/portable-agent-layer/commit/4f7fa1556ab289c3a95562d155c4bce52ca0bfd6))
+* **eval:** add sentiment evaluation tool with prompt configurations and logging support ([10d6eb7](https://github.com/kovrichard/portable-agent-layer/commit/10d6eb76a83a1c1428f11279858c28d7da297c0a))
+* **eval:** enhance failure-principle extraction with new prompts and update evaluation logic ([6407c13](https://github.com/kovrichard/portable-agent-layer/commit/6407c1371f77d673964be1358a671d10987c7a39))
+* **eval:** introduce eval-prompt skill for evaluating PAL inference prompts ([fc0f41e](https://github.com/kovrichard/portable-agent-layer/commit/fc0f41eba59a8c724a0ba30e2b0f1d4697d59099))
+* **pdf:** add PDF reading tool and fallback mechanism for text extraction ([cb3ff8a](https://github.com/kovrichard/portable-agent-layer/commit/cb3ff8ac973163a3777b0dfa4bccf4bc0725d313))
+
 # [0.52.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.51.2...v0.52.0) (2026-06-04)
 
 
