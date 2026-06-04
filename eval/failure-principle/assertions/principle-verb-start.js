@@ -1,32 +1,27 @@
 const parse = require("../../lib/parse-output");
-const VERBS = new Set([
-  "Verify",
-  "Always",
-  "Never",
-  "Ask",
-  "Check",
-  "Confirm",
-  "Read",
-  "Avoid",
-  "Ensure",
-  "Test",
-  "Run",
-  "Prefer",
-  "Use",
-  "Stop",
-  "Request",
-  "Validate",
-  "Review",
-  "Require",
-  "Make",
-  "Keep",
-  "Treat",
-  "Do",
-  "Don't",
+const NON_VERBS = new Set([
+  "The",
+  "A",
+  "An",
+  "I",
+  "It",
+  "This",
+  "That",
+  "When",
+  "If",
+  "To",
+  "In",
+  "For",
+  "On",
+  "With",
+  "By",
+  "From",
+  "As",
+  "At",
 ]);
 module.exports = (output) => {
   const r = parse(output);
   if (!r || typeof r.principle !== "string") return false;
   const first = r.principle.trim().split(/\s+/)[0];
-  return VERBS.has(first);
+  return first.length > 0 && !NON_VERBS.has(first);
 };

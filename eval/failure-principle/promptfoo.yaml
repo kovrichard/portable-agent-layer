@@ -7,10 +7,12 @@
 # Run:
 #   bun eval/run.ts failure-principle --providers haiku --no-cache
 
-description: "Failure-principle extraction — v1 baseline"
+description: "Failure-principle extraction — v1 baseline vs v2 word-count-fix vs v3 compact"
 
 prompts:
   - file://prompts/v1-current.json
+  - file://prompts/v2-word-count-fix.json
+  - file://prompts/v3-compact.json
 
 providers:
   - id: anthropic:messages:claude-haiku-4-5-20251001

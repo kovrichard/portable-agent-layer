@@ -21,7 +21,8 @@
       "Bash(bun run knip *)",
       "Bash(bun test *)",
       "Bash(bun klint/cli.ts *)",
-      "Bash(bun run klint *)"
+      "Bash(bun run klint *)",
+      "Bash(bun eval/run.ts *)"
     ]
   }
 }

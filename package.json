@@ -52,7 +52,8 @@
     "tool:thread": "bun run src/tools/agent/thread.ts",
     "tool:wisdom-frame": "bun run src/tools/agent/wisdom-frame.ts",
     "tool:reflect": "bun run src/tools/relationship-reflect.ts",
-    "eval:sentiment": "bun eval/run.ts sentiment"
+    "eval:sentiment": "bun eval/run.ts sentiment",
+    "eval:failure-principle": "bun eval/run.ts failure-principle"
   },
   "lint-staged": {
     "*.ts": [
