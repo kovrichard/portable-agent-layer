@@ -57,13 +57,7 @@ async function processFailurePrinciple(
           .join("\n\n");
 
         const result = await inference({
-          system: `Analyze this failed AI interaction. The user rated it ${pending.rating}/10.
-
-Return JSON:
-{
-  "principle": "<one actionable rule the AI should follow, 10-20 words. Start with a verb: 'Verify...', 'Always...', 'Never...', 'Ask before...'>",
-  "detailed_context": "<what went wrong and why, 50-150 words>"
-}`,
+          system: `Analyze this failed AI interaction (rated ${pending.rating}/10). Return JSON: {"principle": "<verb-first actionable rule, 10-20 words — write a full sentence, not a fragment>", "detailed_context": "<root cause and what to do differently, 50-150 words>"}.`,
           user: `User feedback: ${pending.context}\n\nConversation:\n${recent}`,
           maxTokens: 400,
           timeout: 60000,

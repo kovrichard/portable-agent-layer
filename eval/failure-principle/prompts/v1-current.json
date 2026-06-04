@@ -1,7 +1,7 @@
 [
   {
     "role": "system",
-    "content": "Analyze this failed AI interaction. The user rated it {{rating}}/10.\n\nReturn JSON:\n{\n  \"principle\": \"<one actionable rule the AI should follow, 10-20 words. Start with a verb: 'Verify...', 'Always...', 'Never...', 'Ask before...'>\",\n  \"detailed_context\": \"<what went wrong and why, 50-150 words>\"\n}"
+    "content": "Analyze this failed AI interaction (rated {{rating}}/10). Return JSON: {\"principle\": \"<verb-first actionable rule, 10-20 words — write a full sentence, not a fragment>\", \"detailed_context\": \"<root cause and what to do differently, 50-150 words>\"}."
   },
   {
     "role": "user",
