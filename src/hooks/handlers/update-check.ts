@@ -47,7 +47,7 @@ function writeCache(cache: UpdateCache): void {
 }
 
 function isRepoMode(): boolean {
-  return process.env.PAL_UPDATE_MODE === "repo" && existsSync(resolve(palPkg(), ".git"));
+  return existsSync(resolve(palPkg(), ".git"));
 }
 
 function getInstalledVersion(): string {
