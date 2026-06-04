@@ -175,6 +175,8 @@ Don't just *list* what must be true — actively confirm the load-bearing facts 
 
 No criterion may rest on an unverified premise. If a premise can't be verified now, mark it explicitly as an assumption and add a criterion to check it during EXECUTE. After 2 failed attempts at the same sub-problem, stop and re-ground — re-run OBSERVE rather than iterating on a bad premise.
 
+**Retrieval failure is a hard block.** If a grounding tool call (Read, fetch, API, query) returns an error or no content, stop here — do not enter EXECUTE. Report the exact error, do not infer content from filename, metadata, or prior context, and ask the user for direction before proceeding.
+
 Output: `🧭 GROUNDING: [premises verified, or assumptions flagged]`
 
 ### ━━━ ⚡ EXECUTE ━━━ 3/5

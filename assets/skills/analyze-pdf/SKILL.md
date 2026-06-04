@@ -32,6 +32,8 @@ bun ~/.pal/skills/analyze-pdf/tools/pdf-read.ts -- <path>
 
 Use the stdout output as the document content and proceed with the user's request as normal.
 
+If `pdf-read.ts` also fails, stop completely — report the exact errors from both attempts and ask the user how to proceed. Never infer PDF content from filename, metadata, or assumptions.
+
 ## What to do with it
 
 Follow the user's request. Common tasks:
