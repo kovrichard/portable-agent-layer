@@ -22,6 +22,16 @@ Use your native PDF reading capability (e.g. a Read tool or equivalent). Most mo
 
 Do NOT install PDF processing tools (poppler, pdftotext, etc.) unless the user explicitly asks. Native reading is sufficient.
 
+### Fallback: when native Read fails
+
+If the Read tool fails to open the PDF (e.g. error mentioning `pdftoppm`, missing renderer, or unsupported format), fall back to the text-extraction CLI:
+
+```bash
+bun ~/.pal/skills/analyze-pdf/tools/pdf-read.ts -- <path>
+```
+
+Use the stdout output as the document content and proceed with the user's request as normal.
+
 ## What to do with it
 
 Follow the user's request. Common tasks:
