@@ -1,0 +1,155 @@
+# PAL Failure-Principle Extraction Evaluation
+#
+# Evaluates the failure-principle prompt against known failure patterns.
+# The goal: every generated principle must be verb-starting, 10-20 words,
+# and the detailed_context must be substantive (≥50 chars).
+#
+# Run:
+#   bun eval/run.ts failure-principle --providers haiku --no-cache
+
+description: "Failure-principle extraction — v1 baseline"
+
+prompts:
+  - file://prompts/v1-current.json
+
+providers:
+  - id: anthropic:messages:claude-haiku-4-5-20251001
+    label: haiku
+    config:
+      output_format:
+        type: json_schema
+        schema:
+          type: object
+          properties:
+            principle:
+              type: string
+            detailed_context:
+              type: string
+          required: ["principle", "detailed_context"]
+          additionalProperties: false
+  - id: openai:chat:gpt-4o-mini
+    label: gpt-4o-mini
+
+# All four assertions apply to every test case.
+defaultTest:
+  assert:
+    - type: javascript
+      value: file://assertions/valid-json.js
+      description: "Output must be a parseable JSON object"
+    - type: javascript
+      value: file://assertions/principle-verb-start.js
+      description: "Principle must start with a recognised imperative verb"
+    - type: javascript
+      value: file://assertions/principle-word-count.js
+      description: "Principle must be 10-20 words"
+    - type: javascript
+      value: file://assertions/context-not-empty.js
+      description: "detailed_context must be substantive (≥50 chars)"
+
+# ─────────────────────────────────────────────────────────────
+# TEST CASES
+#
+# Groups:
+#   A) Clear, specific failures — principle should be precise and actionable
+#   B) Harder cases — vaguer feedback where v1 is most likely to produce
+#      generic principles ("Be more careful", "Do better")
+# ─────────────────────────────────────────────────────────────
+
+tests:
+  # ── A: CLEAR FAILURES ────────────────────────────────────────
+  # Unambiguous failure signals. Principle should be specific.
+
+  - description: "[A1] wrong file edited"
+    vars:
+      rating: 3
+      feedback: "that's wrong, I meant the other file"
+      conversation: |
+        USER: can you update the database config
+        ASSISTANT: I've updated src/auth.ts with the new settings.
+        USER: that's wrong, I meant the other file
+
+  - description: "[A2] scope creep — changed more than asked"
+    vars:
+      rating: 3
+      feedback: "I asked for one thing and you changed 5 files"
+      conversation: |
+        USER: fix the typo in the README
+        ASSISTANT: Fixed the typo, also refactored the intro section, updated the links, and improved the examples.
+        USER: I asked for one thing and you changed 5 files
+
+  - description: "[A3] repeated same mistake after correction"
+    vars:
+      rating: 2
+      feedback: "I told you not to use that API and you used it again"
+      conversation: |
+        USER: don't use the v1 API
+        ASSISTANT: Understood, I'll use v2 going forward.
+        USER: why did you just call v1.users.get() again?
+        ASSISTANT: I apologize, here's the v1 fix
+        USER: I told you not to use that API and you used it again
+
+  - description: "[A4] claimed fix without verifying — tests still fail"
+    vars:
+      rating: 3
+      feedback: "you said it was fixed but the tests still fail"
+      conversation: |
+        USER: the test suite is failing
+        ASSISTANT: I've fixed the issue — the null check was missing on line 42.
+        USER: you said it was fixed but the tests still fail
+
+  - description: "[A5] wrong scope — answered dev setup instead of deployment"
+    vars:
+      rating: 2
+      feedback: "I asked about deployment, not development setup"
+      conversation: |
+        USER: how do I deploy this to production?
+        ASSISTANT: To set up your development environment, run bun install and then bun dev to start the server locally.
+        USER: I asked about deployment, not development setup
+
+  - description: "[A6] broke working code while fixing something else"
+    vars:
+      rating: 2
+      feedback: "the login worked before, now it's broken"
+      conversation: |
+        USER: fix the password reset flow
+        ASSISTANT: Fixed password reset. I also updated the auth middleware for consistency.
+        USER: the login worked before, now it's broken
+
+  # ── B: HARDER / VAGUER FAILURES ─────────────────────────────
+  # These have less context. v1's sparse prompt risks generic principles.
+
+  - description: "[B1] hallucinated a flag that doesn't exist"
+    vars:
+      rating: 2
+      feedback: "there's no --watch flag in this tool"
+      conversation: |
+        USER: how do I run this in watch mode?
+        ASSISTANT: Use the --watch flag: bun run dev --watch
+        USER: there's no --watch flag in this tool
+
+  - description: "[B2] ignored explicit language constraint"
+    vars:
+      rating: 3
+      feedback: "I said no TypeScript, you added types everywhere"
+      conversation: |
+        USER: add a utility function, keep it in plain JS
+        ASSISTANT: Here's the utility function with proper TypeScript interfaces and type annotations for safety.
+        USER: I said no TypeScript, you added types everywhere
+
+  - description: "[B3] over-explained when user wanted a direct answer"
+    vars:
+      rating: 3
+      feedback: "I just wanted a yes or no, not an essay"
+      conversation: |
+        USER: does this function handle null inputs?
+        ASSISTANT: Great question! Let me walk you through a comprehensive analysis of null handling in this context, covering edge cases, historical behavior, and recommended patterns...
+        USER: I just wanted a yes or no, not an essay
+
+  - description: "[B4] vague feedback with minimal context"
+    vars:
+      rating: 3
+      feedback: "this isn't right"
+      conversation: |
+        USER: write a summary
+        ASSISTANT: Here is a comprehensive 500-word summary of the document covering all major themes and subpoints.
+        USER: this isn't right
