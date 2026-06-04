@@ -1,3 +1,18 @@
+# [0.52.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.51.2...v0.52.0) (2026-06-04)
+
+
+### Bug Fixes
+
+* **projects:** do not load all ISCs automatically, only on resume ([9df63f0](https://github.com/kovrichard/portable-agent-layer/commit/9df63f014cc2df1bbcfe218489d6e64fe91a8a93))
+* **statusline:** change emdash to dash ([8ee23b4](https://github.com/kovrichard/portable-agent-layer/commit/8ee23b4984e7741dfb6fac9786bc273c8eeb7721))
+* **synthesis:** remove dead code ([78c8b78](https://github.com/kovrichard/portable-agent-layer/commit/78c8b7899a0df79c8190c48f182bbb4891b3e448))
+
+
+### Features
+
+* **hooks:** enhance command normalization and add tests for hook path migration ([d86b28f](https://github.com/kovrichard/portable-agent-layer/commit/d86b28f5c94db75e30280765cf75df1e233d9eae))
+* **logging:** add prompt snapshot logging and update retrieval injection function ([fa6bb93](https://github.com/kovrichard/portable-agent-layer/commit/fa6bb93f3eeec372ae62fd78502ac1fea3ccbe82))
+
 ## [0.51.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.51.1...v0.51.2) (2026-06-03)
 
 
