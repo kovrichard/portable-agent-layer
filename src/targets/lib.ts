@@ -98,17 +98,34 @@ export function loadSettingsTemplate(templatePath: string, pkgRoot: string): Set
 export function mergeSettings(existing: Settings, template: Settings): Settings {
   const result = { ...existing };
 
-  // Merge hooks (deduplicate by command)
+  // Merge hooks — strip old-path PAL entries first, then insert current template entries.
+  // This handles reinstalling from a different path (repo vs global install) without
+  // leaving orphan hook entries that fire twice per event.
   if (template.hooks) {
     result.hooks ??= {};
-    for (const [event, entries] of Object.entries(template.hooks)) {
-      const current = result.hooks[event] ?? [];
+
+    // Collect canonical forms of all template hook commands
+    const palCanonical = new Set<string>();
+    for (const entries of Object.values(template.hooks)) {
       for (const entry of entries) {
         const cmd = entry.hooks?.[0]?.command;
-        if (cmd && !current.some((e) => e.hooks?.[0]?.command === cmd)) {
-          current.push(entry);
-        }
+        if (cmd) palCanonical.add(canonicalPalCmd(cmd));
       }
+    }
+
+    // Strip existing PAL hooks that match canonically (removes old-path duplicates)
+    for (const [event, entries] of Object.entries(result.hooks)) {
+      result.hooks[event] = entries.filter((e) => {
+        const cmd = e.hooks?.[0]?.command;
+        return !cmd || !palCanonical.has(canonicalPalCmd(cmd));
+      });
+      if (result.hooks[event].length === 0) delete result.hooks[event];
+    }
+
+    // Insert template entries (old-path versions were just stripped)
+    for (const [event, entries] of Object.entries(template.hooks)) {
+      const current = result.hooks[event] ?? [];
+      for (const entry of entries) current.push(entry);
       result.hooks[event] = current;
     }
   }
@@ -195,20 +212,20 @@ export function mergeSettings(existing: Settings, template: Settings): Settings 
 export function unmergeSettings(existing: Settings, template: Settings): Settings {
   const result = { ...existing };
 
-  // Collect all PAL hook commands from template
+  // Collect canonical PAL hook commands from template (path-normalized)
   if (template.hooks && result.hooks) {
-    const palCommands = new Set<string>();
+    const palCanonical = new Set<string>();
     for (const entries of Object.values(template.hooks)) {
       for (const entry of entries) {
         const cmd = entry.hooks?.[0]?.command;
-        if (cmd) palCommands.add(cmd);
+        if (cmd) palCanonical.add(canonicalPalCmd(cmd));
       }
     }
 
     for (const [event, entries] of Object.entries(result.hooks)) {
       result.hooks[event] = entries.filter((e) => {
         const cmd = e.hooks?.[0]?.command;
-        return !cmd || !palCommands.has(cmd);
+        return !cmd || !palCanonical.has(canonicalPalCmd(cmd));
       });
       if (result.hooks[event].length === 0) delete result.hooks[event];
     }
@@ -377,11 +394,14 @@ type CodexHookCommand = { type: string; command: string; timeout?: number };
 type CodexHookGroup = { matcher?: string; hooks: CodexHookCommand[] };
 type CodexHooks = { hooks?: Record<string, CodexHookGroup[]> };
 
-/** Strip leading env-var assignments so "PAL_AGENT=x bun run ..." → "bun run ..." */
-function canonicalCmd(cmd: string): string {
+/**
+ * Normalize a PAL hook command for cross-path deduplication.
+ * Strips env-var prefix and normalizes the hook file path so reinstalling from
+ * a different location (repo vs global install) correctly strips old entries.
+ * "PAL_AGENT=x bun run /any/path/src/hooks/Foo.ts" → "bun run src/hooks/Foo.ts"
+ */
+function canonicalPalCmd(cmd: string): string {
   const withoutEnv = cmd.replace(/^(?:\w+=\S+\s+)+/, "");
-  // Normalize PAL hook paths so reinstalling from a new location strips old entries.
-  // "bun run /any/path/src/hooks/Foo.ts" → "bun run src/hooks/Foo.ts"
   const hookMatch = /bun\s+run\s+.+\/src\/hooks\/(\S+)/.exec(withoutEnv);
   if (hookMatch) return `bun run src/hooks/${hookMatch[1]}`;
   return withoutEnv;
@@ -404,7 +424,7 @@ export function loadCodexHooksTemplate(
 function collectPalCanonical(template: CodexHooks): Set<string> {
   return new Set(
     Object.values(template.hooks ?? {}).flatMap((groups) =>
-      groups.flatMap((g) => g.hooks.map((h) => canonicalCmd(h.command)))
+      groups.flatMap((g) => g.hooks.map((h) => canonicalPalCmd(h.command)))
     )
   );
 }
@@ -418,11 +438,11 @@ function stripPalHooks(
     hooks[event] = (hooks[event] ?? [])
       .map((g) => {
         const flat = g as unknown as CodexHookCommand;
-        if (!g.hooks && flat.command && palCanonical.has(canonicalCmd(flat.command))) {
+        if (!g.hooks && flat.command && palCanonical.has(canonicalPalCmd(flat.command))) {
           return null;
         }
         const filtered = (g.hooks ?? []).filter(
-          (h) => !palCanonical.has(canonicalCmd(h.command))
+          (h) => !palCanonical.has(canonicalPalCmd(h.command))
         );
         return filtered.length > 0 ? { ...g, hooks: filtered } : null;
       })

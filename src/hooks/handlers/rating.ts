@@ -64,7 +64,7 @@ export function parseExplicitRating(
   // Reject if rest starts with words indicating a sentence, not a rating
   if (rest) {
     const sentenceStarters =
-      /^(items?|things?|steps?|files?|lines?|bugs?|issues?|errors?|times?|minutes?|hours?|days?|seconds?|percent|%|th\b|st\b|nd\b|rd\b|of\b|in\b|at\b|to\b|the\b|a\b|an\b)/i;
+      /^(items?|things?|steps?|files?|lines?|bugs?|issues?|errors?|times?|minutes?|hours?|days?|seconds?|percent|%|th\b|st\b|nd\b|rd\b|of\b|in\b|at\b|to\b|the\b|a\b|an\b|then\b|also\b|next\b)/i;
     if (sentenceStarters.test(rest)) return null;
 
     // Reject item selections: "1 and 2", "2 3 5", "1, 3, 5", "1-3"
