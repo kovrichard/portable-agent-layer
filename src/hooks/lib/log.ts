@@ -21,7 +21,7 @@ const MAX_ROTATED = 5; // keep up to 5 rotated files (.1 newest → .5 oldest)
 
 /** Resolved lazily so PAL_HOME overrides at runtime are honored. */
 function logFile(): string {
-  return resolve(paths.state(), "debug.log");
+  return resolve(paths.debug(), "debug.log");
 }
 
 function timestamp(): string {
@@ -100,7 +100,7 @@ export function logDebug(source: string, message: string): void {
 /** Write full context snapshot to context-snapshot.md (only when debug is enabled) */
 export function logContextSnapshot(content: string): void {
   if (!isDebugEnabled()) return;
-  const path = resolve(paths.state(), "context-snapshot.md");
+  const path = resolve(paths.debug(), "context-snapshot.md");
   try {
     writeFileSync(path, content, "utf-8");
   } catch {

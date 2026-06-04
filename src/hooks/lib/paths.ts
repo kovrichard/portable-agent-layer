@@ -60,6 +60,7 @@ export const paths = {
   synthesis: () => ensureDir(home("memory", "learning", "synthesis")),
   work: () => ensureDir(home("memory", "work")),
   backups: () => ensureDir(home("backups")),
+  debug: () => ensureDir(home("debug")),
 } as const;
 
 // Platform directories (env override or cross-platform defaults)

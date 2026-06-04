@@ -269,7 +269,7 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
     try {
       const result = await inference({ user: "ping", timeout: 5000 });
       expect(result.success).toBe(true);
-      const logPath = resolve(tmpHome, "memory", "state", "debug.log");
+      const logPath = resolve(tmpHome, "debug", "debug.log");
       const log = readFileSync(logPath, "utf-8");
       expect(log).toContain("route=claude-spawn");
       expect(log).toContain("done binary=claude success=true");

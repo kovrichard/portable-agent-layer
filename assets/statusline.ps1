@@ -29,7 +29,7 @@ $COST_STR = '$' + ([math]::Round($COST, 2)).ToString("0.00")
 
 # PAL: Hook health - count ERROR lines in debug.log from last 24h
 $HOOK_ERRORS = 0
-$debugLog = Join-Path $env:USERPROFILE ".pal\memory\state\debug.log"
+$debugLog = Join-Path $env:USERPROFILE ".pal\debug\debug.log"
 if (Test-Path $debugLog) {
   $cutoff = (Get-Date).AddHours(-24)
   try {

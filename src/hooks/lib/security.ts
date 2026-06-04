@@ -24,20 +24,12 @@ const HOOK_MANAGED_FILES = [
   "captured-learnings.json",
   "counts.json",
   "session-names.json",
-  "debug.log",
-  "context-snapshot.md",
   "last-responses.json",
   "signal-cache.json",
   "pending-failure.json",
   "token-usage.jsonl",
   "graduated.json",
   "update-available.json",
-  "debug.log.prev",
-  "debug.log.1",
-  "debug.log.2",
-  "debug.log.3",
-  "debug.log.4",
-  "debug.log.5",
   "opinions.json",
   "pal-settings.json",
   "skill-index.json",
@@ -55,6 +47,7 @@ const HOOK_MANAGED_DIRS = [
   "memory/wisdom/state",
   "memory/projects",
   "memory/state/progress",
+  "debug",
 ];
 
 /** Escape a string for use in a RegExp */

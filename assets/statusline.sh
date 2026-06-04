@@ -56,7 +56,7 @@ fi
 
 # PAL: Hook health — count ERROR lines in debug.log from last 24h
 HOOK_ERRORS=0
-DEBUG_LOG="$HOME/.pal/memory/state/debug.log"
+DEBUG_LOG="$HOME/.pal/debug/debug.log"
 if [ -f "$DEBUG_LOG" ]; then
   # Cross-platform 24h cutoff: macOS uses date -v, GNU Linux uses date -d
   CUTOFF=$(date -v-24H "+%Y-%m-%d %H:%M:%S" 2>/dev/null || date -d '24 hours ago' "+%Y-%m-%d %H:%M:%S" 2>/dev/null)

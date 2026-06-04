@@ -72,7 +72,7 @@ writeFileSync(${JSON.stringify(markerFile)}, "claudecode=[" + (process.env.CLAUD
     writeFileSync(childScript, `process.exit(0);`, "utf-8");
     spawnDetachedInference(childScript, ["--mode-x", "arg1"], "test-scope");
 
-    const logPath = resolve(tmp, "memory", "state", "debug.log");
+    const logPath = resolve(tmp, "debug", "debug.log");
     let log = "";
     for (let i = 0; i < 20; i++) {
       try {
