@@ -52,10 +52,11 @@ export async function getRetrievalReminder(prompt: string): Promise<string | nul
 }
 
 /** Write retrieval reminder to stdout in the correct format for the current agent.
- *  Claude Code: plain text. Cursor: { additional_context }. Codex: hookSpecificOutput JSON. */
-export async function injectRetrieval(prompt: string): Promise<void> {
+ *  Claude Code: plain text. Cursor: { additional_context }. Codex: hookSpecificOutput JSON.
+ *  Returns the reminder string that was injected, or null if nothing was injected. */
+export async function injectRetrieval(prompt: string): Promise<string | null> {
   const reminder = await getRetrievalReminder(prompt);
-  if (!reminder) return;
+  if (!reminder) return null;
   if (isCursor()) {
     process.stdout.write(JSON.stringify({ additional_context: reminder }));
   } else if (isCodex()) {
@@ -70,4 +71,5 @@ export async function injectRetrieval(prompt: string): Promise<void> {
   } else {
     process.stdout.write(`${reminder}\n`);
   }
+  return reminder;
 }

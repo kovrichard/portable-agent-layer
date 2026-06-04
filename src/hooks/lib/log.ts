@@ -97,6 +97,20 @@ export function logDebug(source: string, message: string): void {
   }
 }
 
+/** Write last user prompt + retrieval injection to last-prompt.md (only when debug is enabled) */
+export function logPromptSnapshot(prompt: string, retrieval: string | null): void {
+  if (!isDebugEnabled()) return;
+  const path = resolve(paths.debug(), "last-prompt.md");
+  const content = retrieval
+    ? `## Prompt\n\n${prompt}\n\n## Retrieval Injection\n\n${retrieval}`
+    : `## Prompt\n\n${prompt}`;
+  try {
+    writeFileSync(path, content, "utf-8");
+  } catch {
+    /* non-critical */
+  }
+}
+
 /** Write full context snapshot to context-snapshot.md (only when debug is enabled) */
 export function logContextSnapshot(content: string): void {
   if (!isDebugEnabled()) return;

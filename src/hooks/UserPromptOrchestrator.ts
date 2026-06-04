@@ -10,7 +10,7 @@
 import { injectRetrieval } from "./handlers/inject-retrieval";
 import { captureRating } from "./handlers/rating";
 import { captureSessionName } from "./handlers/session-name";
-import { logDebug, logError } from "./lib/log";
+import { logDebug, logError, logPromptSnapshot } from "./lib/log";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
 
@@ -30,13 +30,15 @@ logDebug("UserPromptOrchestrator", `Input: ${JSON.stringify(input).slice(0, 200)
 if (!input?.prompt) process.exit(0);
 
 const sessionId = input.session_id ?? input.sessionId ?? input.conversation_id;
+const retrieval = await injectRetrieval(input.prompt);
+logPromptSnapshot(input.prompt, retrieval);
+
 const results = await Promise.allSettled([
   captureRating(input.prompt, sessionId),
   captureSessionName(input.prompt, sessionId ?? ""),
-  injectRetrieval(input.prompt),
 ]);
 
-const handlerNames = ["rating", "session-name", "inject-retrieval"];
+const handlerNames = ["rating", "session-name"];
 for (let i = 0; i < results.length; i++) {
   const r = results[i];
   if (r.status === "rejected") {

@@ -11,6 +11,7 @@ import {
   injectJsonSchemaInstruction,
   parseJsonFromOutput,
 } from "../src/hooks/lib/inference";
+import { logPromptSnapshot } from "../src/hooks/lib/log";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 
@@ -299,5 +300,40 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
     });
     expect(result.success).toBe(true);
     expect(JSON.parse(result.output ?? "{}")).toEqual({ verdict: "good" });
+  });
+});
+
+describe("logPromptSnapshot", () => {
+  test("writes last-prompt.md to debug folder when debug enabled", () => {
+    const tmpHome = mkdtempSync(resolve(tmpdir(), "pal-prompt-snap-"));
+    const stateDir = resolve(tmpHome, "memory", "state");
+    mkdirSync(stateDir, { recursive: true });
+    writeFileSync(resolve(stateDir, "debug-enabled"), "");
+    const palHomeSaved = process.env.PAL_HOME;
+    process.env.PAL_HOME = tmpHome;
+    try {
+      logPromptSnapshot("hello world", null);
+      const out = readFileSync(resolve(tmpHome, "debug", "last-prompt.md"), "utf-8");
+      expect(out).toBe("## Prompt\n\nhello world");
+    } finally {
+      if (palHomeSaved === undefined) delete process.env.PAL_HOME;
+      else process.env.PAL_HOME = palHomeSaved;
+      rmSync(tmpHome, { recursive: true, force: true });
+    }
+  });
+
+  test("does not write when debug disabled", () => {
+    const tmpHome = mkdtempSync(resolve(tmpdir(), "pal-prompt-snap-nodebug-"));
+    const palHomeSaved = process.env.PAL_HOME;
+    process.env.PAL_HOME = tmpHome;
+    try {
+      logPromptSnapshot("should not appear", null);
+      const exists = Bun.file(resolve(tmpHome, "debug", "last-prompt.md")).size;
+      expect(exists).toBe(0);
+    } finally {
+      if (palHomeSaved === undefined) delete process.env.PAL_HOME;
+      else process.env.PAL_HOME = palHomeSaved;
+      rmSync(tmpHome, { recursive: true, force: true });
+    }
   });
 });
