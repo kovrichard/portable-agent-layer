@@ -32,7 +32,7 @@ export function loadAnalyzeNudge(now: Date = new Date()): string {
   if (!last) {
     return [
       "## Learning Analysis Due",
-      "📊 Learning analysis has never been run — offer to run `/pal-analyze` for a health check on ratings, failure patterns, and graduation candidates.",
+      "📊 Learning analysis has never been run — offer to run `/pal-analyze` (`pal cli analyze`) for a health check on ratings, failure patterns, and graduation candidates.",
     ].join("\n");
   }
 

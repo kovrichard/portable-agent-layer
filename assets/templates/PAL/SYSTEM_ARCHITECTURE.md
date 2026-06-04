@@ -111,14 +111,13 @@ Before any code, before any architecture — there must be clear thinking:
 - Each tool is a standalone CLI program
 - Each skill is a self-contained capability
 - Hooks compose via `Promise.allSettled` — independent, parallel, isolated failures
-- Tools compose via `bun run tool:<name>` — standard I/O, exit codes
+- Tools compose via `pal cli <name>` — standard I/O, exit codes
 
 ### 9. CLI as Interface
 
 **Every operation should be accessible via command line.**
 
-- `pal cli <command>` for system management
-- `bun run tool:<name>` for utilities
+- `pal cli <command>` for system management and user-facing utilities
 - Skills triggered via agent slash commands
 - No hidden operations — everything is scriptable and testable
 

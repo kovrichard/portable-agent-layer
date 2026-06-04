@@ -24,7 +24,7 @@ const c = {
   magenta: (s: string) => `\x1b[35m${s}\x1b[0m`,
 };
 
-export function printReport(result: AnalysisResult): void {
+function printReport(result: AnalysisResult): void {
   const hasPatterns = result.candidates.length > 0 || result.emerging.length > 0;
   const hasRatings = result.ratings !== null;
 
@@ -118,9 +118,9 @@ export function printReport(result: AnalysisResult): void {
   }
 }
 
-async function run() {
+export async function run(argv: string[] = Bun.argv.slice(2)) {
   const { values } = parseArgs({
-    args: Bun.argv.slice(2),
+    args: argv,
     options: {
       help: { type: "boolean", short: "h" },
       actionable: { type: "boolean", short: "a" },
@@ -146,7 +146,7 @@ async function run() {
   To crystallize a graduated pattern, add it to the target wisdom frame:
     - Your principle here [CRYSTAL: 85%]
 
-  Usage: bun run tool:analyze [--actionable] [--help]
+  Usage: pal cli analyze [--actionable]
 `);
     process.exit(0);
   }

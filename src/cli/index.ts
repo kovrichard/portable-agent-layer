@@ -192,6 +192,11 @@ async function runCli(command: string | undefined, args: string[]) {
       runMigrate(args);
       break;
     }
+    case "analyze": {
+      const { run: runAnalyze } = await import("../tools/agent/analyze");
+      await runAnalyze(args);
+      break;
+    }
     case "usage": {
       const { usage } = await import("../tools/token-cost");
       usage();
@@ -251,6 +256,7 @@ function showHelp() {
     pal cli status                          Show PAL configuration
     pal cli doctor [--probe-inference]      Check prerequisites and health (--probe fires real inference per route)
     pal cli migrate [--list] [--dry-run]    Run pending data migrations
+    pal cli analyze [--actionable]          Learning analysis: ratings, failure patterns, graduation candidates
     pal cli usage                           Summarize token usage and cost
     pal cli knowledge <sub> [args]          Query & manage the knowledge store
                                             (search · graph · stats · hubs · find · show · add · ls)

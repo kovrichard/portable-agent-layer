@@ -50,7 +50,6 @@
     "uninstall": "bun run src/cli/index.ts cli uninstall",
     "tool:synthesize": "bun run src/tools/agent/synthesize.ts",
     "tool:thread": "bun run src/tools/agent/thread.ts",
-    "tool:analyze": "bun run src/tools/agent/analyze.ts",
     "tool:wisdom-frame": "bun run src/tools/agent/wisdom-frame.ts",
     "tool:reflect": "bun run src/tools/relationship-reflect.ts"
   },

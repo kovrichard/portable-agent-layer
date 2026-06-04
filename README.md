@@ -83,6 +83,7 @@ pal cli status        # check your setup
 | `pal cli status` | Show current PAL configuration |
 | `pal cli doctor` | Check prerequisites and system health |
 | `pal cli migrate` | Run pending data migrations (non-destructive) |
+| `pal cli analyze [--actionable]` | Learning analysis: rating trends, failure patterns, graduation candidates |
 | `pal cli usage` | Summarize token usage and estimated cost |
 | `pal cli knowledge` | Query & manage the knowledge store (search, graph, stats, hubs, find, show, add, ls, ingest) |
 | `pal cli skill link <name>` | Link a personal `~/.pal/skills/<name>/` into every installed agent so it is discoverable |

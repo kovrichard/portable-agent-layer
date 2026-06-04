@@ -9,10 +9,10 @@ When `/pal-analyze` is invoked (by you in response to a nudge, or by the user di
 ## 1. Run the analyze tool
 
 ```bash
-bun run tool:analyze
+pal cli analyze
 ```
 
-If the user passed `--actionable` or wants recommendations, append it: `bun run tool:analyze -- --actionable`
+If the user passed `--actionable` or wants recommendations, append it: `pal cli analyze --actionable`
 
 ## 2. Parse and present the output
 
