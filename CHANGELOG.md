@@ -1,3 +1,17 @@
+# [0.54.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.53.0...v0.54.0) (2026-06-04)
+
+
+### Bug Fixes
+
+* adjust tests ([6260281](https://github.com/kovrichard/portable-agent-layer/commit/6260281765d888d78792c3ad1411378d3f53b0f9))
+* **cursor:** clean up old hook formats on install ([3f5e0f9](https://github.com/kovrichard/portable-agent-layer/commit/3f5e0f9024979e91695053a37acb6a2acc8bfab7))
+* **install:** detect repo mode simpler ([a2f0d58](https://github.com/kovrichard/portable-agent-layer/commit/a2f0d5890bf657ce50e99a778e31ef1298b8aecd))
+
+
+### Features
+
+* **algorithm:** update verify gate ([e03c104](https://github.com/kovrichard/portable-agent-layer/commit/e03c104d61a46bcadfa3f7b1516b801050ea8229))
+
 # [0.53.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.52.0...v0.53.0) (2026-06-04)
 
 
