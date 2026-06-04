@@ -234,16 +234,43 @@ bun ~/.pal/tools/algorithm-reflect.ts --task "description" --criteria N --passed
 
 Set `--scope task-specific` when the Q2 idea is bound to this one task (e.g. a criterion that only matters for the specific file, API, or dataset you were handling) and would not generalize to the algorithm; use `general` (the default) for reusable structural improvements. This keeps the algorithm-update synthesis focused on changes worth folding into ALGORITHM.md.
 
-**3. Relationship note** — write one Session entry capturing what was done this session:
+**3. Relationship note** — write behavioral observations (O, W) and a session diary entry (--b).
+
+The goal is behavioral intelligence about the user, not a session log. Session logs belong in handoff notes and project history. This step captures *who the user is* — observable patterns, preferences, world facts.
 
 ```bash
-bun ~/.pal/tools/relationship-note.ts --b "description"
+# Opinion — behavioral observation about the user (what you noticed about how they work):
+bun ~/.pal/tools/relationship-note.ts --o "User prefers reviewing existing code before adding anything new" --confidence 0.80
+
+# World fact — objective fact about the user's situation (tech stack, project state, context):
+bun ~/.pal/tools/relationship-note.ts --w "User is building a backend service in TypeScript with Bun"
+
+# Session diary — what the agent did this session (first-person, specific):
+bun ~/.pal/tools/relationship-note.ts --b "Refactored the auth middleware to support refresh token rotation"
+
+# Multiple notes in one call:
+bun ~/.pal/tools/relationship-note.ts --o "User prefers one verified change at a time, not batches" --confidence 0.80 --b "Fixed the path-normalization bug in the hook merge logic"
 ```
 
-- 1-2 sentences, first-person, specific — name the actual system/file/concept worked on
-- ✓ "Debugged the React Query cache split logic and resolved stuck message state in the onFinish callback"
-- ✗ "Helped with memory improvements" — too vague, no system named
-- Skip only if the session was a trivial lookup or typo fix (same rule as step 2)
+**O (Opinion) — what to write:**
+- Preference patterns: "User prefers short answers with a recommendation over exhaustive options"
+- Correction patterns: "User redirects scope drift immediately without elaborating on why"
+- Working style: "User verifies each change before asking for the next one"
+- Confidence guide: 0.70 = single observation, 0.80 = confirmed twice, 0.85+ = established pattern
+
+**W (World) — what to write:**
+- Tech stack facts: "User's current project uses PostgreSQL, tRPC, and Next.js"
+- Situation facts: "User is in the middle of a database migration with live traffic"
+
+**--b (Session diary) — keep it sharp:**
+- ✓ "Debugged the race condition in the message queue consumer and fixed the ack logic"
+- ✗ "Helped with backend improvements" — too vague, no system named
+
+**When to write O vs use the opinion tool (step 6):**
+- O notes → subtle patterns you observed, not yet confirmed → goes into daily file → synthesis promotes to opinions.json over time
+- Opinion tool → explicit user confirmation/correction → goes directly to opinions.json immediately
+
+Skip only if the session was a trivial lookup or typo fix (same rule as step 2).
 
 **4. Handoff note** — if work is unfinished, write what remains so the next session can pick up immediately:
 
