@@ -379,7 +379,12 @@ type CodexHooks = { hooks?: Record<string, CodexHookGroup[]> };
 
 /** Strip leading env-var assignments so "PAL_AGENT=x bun run ..." → "bun run ..." */
 function canonicalCmd(cmd: string): string {
-  return cmd.replace(/^(?:\w+=\S+\s+)+/, "");
+  const withoutEnv = cmd.replace(/^(?:\w+=\S+\s+)+/, "");
+  // Normalize PAL hook paths so reinstalling from a new location strips old entries.
+  // "bun run /any/path/src/hooks/Foo.ts" → "bun run src/hooks/Foo.ts"
+  const hookMatch = /bun\s+run\s+.+\/src\/hooks\/(\S+)/.exec(withoutEnv);
+  if (hookMatch) return `bun run src/hooks/${hookMatch[1]}`;
+  return withoutEnv;
 }
 
 export function loadCodexHooksTemplate(

@@ -30,7 +30,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
     await lib<typeof import("../../hooks/lib/context")>("context.ts");
   const { checkBashCommand, checkFilePath } =
     await lib<typeof import("../../hooks/lib/security")>("security.ts");
-  const { logDebug, logError } =
+  const { logDebug, logError, logPromptSnapshot } =
     await lib<typeof import("../../hooks/lib/log")>("log.ts");
 
   // Load shared handlers
@@ -139,19 +139,21 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       const text = partsToText(output.parts ?? []);
       if (!text.trim()) return;
 
-      const [, , retrievalResult] = await Promise.allSettled([
+      const retrieval = await getRetrievalReminder(text);
+      logPromptSnapshot(text, retrieval);
+
+      await Promise.allSettled([
         captureRating(text, input.sessionID),
         captureSessionName(text, input.sessionID),
-        getRetrievalReminder(text),
       ]);
 
-      if (retrievalResult.status === "fulfilled" && retrievalResult.value) {
+      if (retrieval) {
         const injected = {
           id: `pal-retrieval-${Date.now()}`,
           sessionID: input.sessionID,
           messageID: input.messageID ?? `pal-msg-${Date.now()}`,
           type: "text" as const,
-          text: retrievalResult.value,
+          text: retrieval,
           synthetic: true,
         };
         output.parts = [injected, ...(output.parts ?? [])];
