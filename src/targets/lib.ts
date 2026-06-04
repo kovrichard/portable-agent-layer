@@ -346,13 +346,25 @@ export function mergeCursorHooks(
 
   if (template.hooks) {
     result.hooks ??= {};
+
+    // Collect canonical forms of all template hook commands
+    const palCanonical = new Set<string>();
+    for (const entries of Object.values(template.hooks)) {
+      for (const entry of entries) palCanonical.add(canonicalPalCmd(entry.command));
+    }
+
+    // Strip existing PAL hooks that match canonically (removes old-path duplicates)
+    for (const [event, entries] of Object.entries(result.hooks)) {
+      result.hooks[event] = entries.filter(
+        (e) => !palCanonical.has(canonicalPalCmd(e.command))
+      );
+      if (result.hooks[event].length === 0) delete result.hooks[event];
+    }
+
+    // Insert template entries (old-path versions were just stripped)
     for (const [event, entries] of Object.entries(template.hooks)) {
       const current = result.hooks[event] ?? [];
-      for (const entry of entries) {
-        if (!current.some((e) => e.command === entry.command)) {
-          current.push(entry);
-        }
-      }
+      for (const entry of entries) current.push(entry);
       result.hooks[event] = current;
     }
   }
