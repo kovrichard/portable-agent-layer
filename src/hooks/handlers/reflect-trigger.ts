@@ -43,6 +43,21 @@ function countNotesSince(since: string): number {
   return count;
 }
 
+/**
+ * Session-start nudge: surfaces when ≥5 new O/W/B notes are pending review.
+ * Returns a formatted reminder string, or "" when nothing is due.
+ */
+export function loadReflectNudge(): string {
+  const lastReflect = getLastReflectDate();
+  const newNotes = countNotesSince(lastReflect || "2000-01-01");
+  if (newNotes < MIN_NEW_NOTES) return "";
+  const since = lastReflect || "the start";
+  return [
+    "## Relationship Reflect Due",
+    `🔄 ${newNotes} new relationship observations since ${since} — offer to run \`/pal-reflect\` to promote recurring patterns into tracked opinions.`,
+  ].join("\n");
+}
+
 export async function checkReflectTrigger(): Promise<void> {
   const lastReflect = getLastReflectDate();
   const now = new Date();

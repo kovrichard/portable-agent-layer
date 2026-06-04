@@ -9,6 +9,7 @@
  */
 
 import { parseArgs } from "node:util";
+import { writeLastAnalyzeDate } from "../../hooks/lib/analyze-nudge";
 import { type AnalysisResult, analyze } from "../../hooks/lib/graduation";
 
 // ── ANSI Colors ──
@@ -152,6 +153,7 @@ async function run() {
 
   const result = await analyze({ actionable: values.actionable });
   printReport(result);
+  writeLastAnalyzeDate(new Date().toISOString());
 }
 
 if (import.meta.main) await run();

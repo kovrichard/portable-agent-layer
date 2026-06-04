@@ -6,7 +6,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
+import { loadReflectNudge } from "../handlers/reflect-trigger";
 import { loadAlgorithmReviewNudge } from "./algorithm-review";
+import { loadAnalyzeNudge } from "./analyze-nudge";
 import { readLearnings } from "./learning-store";
 import { loadOpinionContext } from "./opinions";
 import { paths } from "./paths";
@@ -300,10 +302,14 @@ export function buildSystemReminder(opts: { agent?: AgentTarget } = {}): string 
   const handoff = settings.isEnabled("handoff") ? loadHandoff() : "";
   // Maintainer-only: self-gates to a repo checkout, "" for everyone else.
   const algoReview = loadAlgorithmReviewNudge();
+  const reflectNudge = loadReflectNudge();
+  const analyzeNudge = loadAnalyzeNudge();
   const parts: string[] = [];
   if (startup) parts.push(startup);
   if (handoff) parts.push(handoff);
   if (algoReview) parts.push(algoReview);
+  if (reflectNudge) parts.push(reflectNudge);
+  if (analyzeNudge) parts.push(analyzeNudge);
   if (selfModel) parts.push(selfModel);
   if (wisdom) parts.push(wisdom);
   if (opinions) parts.push(opinions);
