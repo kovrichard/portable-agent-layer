@@ -1,5 +1,2 @@
-const parse = require("./parse-output");
-module.exports = (output) => {
-  const r = parse(output);
-  return r !== null && r.sentiment === "positive";
-};
+const { makeCheck } = require("../../lib/assert");
+module.exports = makeCheck("sentiment", "eq", "positive");
