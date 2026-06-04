@@ -14,11 +14,10 @@
 # Providers: set PAL_ANTHROPIC_API_KEY and/or PAL_OPENAI_API_KEY in your env.
 # Both providers run if both keys are present; only the available one runs otherwise.
 
-description: "Sentiment classification — v1 baseline vs v2 approval-aware"
+description: "Sentiment classification — v1 baseline (approval-aware)"
 
 prompts:
   - file://prompts/v1-current.json
-  - file://prompts/v2-approval-aware.json
 
 providers:
   - id: anthropic:messages:claude-haiku-4-5-20251001
