@@ -196,63 +196,21 @@ OUTPUT FORMAT (JSON only):
   "rating": <1-10 or null>,
   "sentiment": "positive" | "negative" | "neutral",
   "confidence": <0.0-1.0>,
-  "summary": "<brief explanation, 10 words max>",
-  "detailed_context": "<comprehensive analysis, 50-150 words>",
-  "principle": "<one actionable rule the AI should follow to avoid this failure or repeat this success, 10-20 words. Start with a verb: 'Verify...', 'Always...', 'Never...', 'Ask before...'>"
+  "summary": "<10 words max>",
+  "detailed_context": "<what the user wanted, what the AI did or failed to do, root cause, and what to do differently — 50-150 words>",
+  "principle": "<one actionable rule, 10-20 words, start with a verb: Verify / Always / Never / Ask>"
 }
 
-DETAILED_CONTEXT REQUIREMENTS:
-1. What the user was trying to accomplish
-2. What the AI did (or failed to do)
-3. Why the user reacted this way (root cause)
-4. What specific behavior triggered this reaction
-5. What the AI should do differently (negative) or what worked (positive)
+RATING SCALE: 1-2 strong frustration · 3-4 mild frustration · 5 neutral · 6-7 approval · 8-9 strong approval · 10 exceptional · null = no emotional signal
+Short praise ("great job", "nice") = STRONG APPROVAL (8-9), not mild.
 
-RATING SCALE:
-- 1-2: Strong frustration, anger, disappointment
-- 3-4: Mild frustration, dissatisfaction
-- 5: Neutral
-- 6-7: Satisfaction, approval
-- 8-9: Strong approval, impressed
-- 10: Extraordinary enthusiasm
+TASK DIRECTIVES — short imperatives with "pls" are approval or sequencing signals (null or 6-7, NOT negative):
+"write it pls" / "do it pls" / "step 3 pls" / "option 2 pls" = user directing or approving the AI's own proposal.
+EXCEPTION: "fix X pls" / "fix that pls" is always negative — "fix" implies a problem regardless of "pls".
 
-CRITICAL DISTINCTIONS:
-- Profanity can indicate EITHER frustration OR excitement — use context
-- Sarcasm: "Oh great, another error" = negative despite "great"
-- Short praise ("great job", "nice") = STRONG APPROVAL (8-9), not mild
-
-TASK DIRECTIVES — execution workflow signals (return null or rate 6-7, NOT negative):
-These are a user's style of approving and directing the AI's own proposals — not frustration.
-- STEP SEQUENCING: "step 3.6 pls first" / "start with 2 pls" → directing order of AI's own plan → null or 6
-- EXECUTION APPROVAL: "write it pls" / "do it pls" / "add it pls" → user approving AI's proposed action and asking to proceed → null or 6-7
-- ITEM SELECTION: "ISC-32 pls" / "option 2 pls" / "that one pls" → selecting from a list the AI presented → null or 6
-- CONTINUATION: "now also add X" / "add Y too" / "pls also" → user building on accepted output → null or 6
-KEY RULE: short imperative + "pls" with no evidence of prior failure in context = workflow signal, NOT sentiment.
-The presence of "pls" (polite) + lack of failure language ("still", "again", "broken", "doesn't work") = not frustration.
-EXCEPTION: "fix [something] pls" / "fix that pls" is NEVER a task directive — the word "fix" implies a problem or error regardless of "pls". Treat as negative (3-4).
-
-IMPLIED SENTIMENT (most feedback is implied, not explicit):
-
-Implied NEGATIVE (rate 2-4):
-- CORRECTIONS: "No, I meant..." / "That's not what I said" -> 3-4
-- REPEATED REQUESTS: "again pls" / "still broken" / "doesn't work again" -> 2-3
-- BEHAVIORAL CORRECTIONS: "Don't do that" / "Stop doing X" -> 3
-- EXASPERATED QUESTIONS: "Why is this still broken?" / "Why isn't X working?" -> 2-3
-- FAILURE CONFIRMATION: "nothing is fixed" / "still not working" -> 2-3
-- SHORT DISMISSALS WITH FAILURE CONTEXT: "whatever" / "fine" / "just fix it" ONLY when prior context shows repeated failure -> 3-4
-- POINTING OUT OMISSIONS: "What about X?" (obviously required, with frustration) -> 4
-
-Implied POSITIVE (rate 6-8):
-- TRUST SIGNALS: "Alright, fix all of it" / "Go ahead" -> 7
-- BUILDING ON WORK: "Now also add..." / "Next, do..." -> 6-7
-- ENGAGED FOLLOW-UPS: "What about X?" (exploring, not correcting) -> 6
-- MOVING FORWARD: Accepting output and giving next task -> 6
-
-WHEN TO RETURN null FOR RATING:
-- Neutral technical questions ("Can you check the logs?")
-- Simple commands ("Do it", "Yes", "Continue")
-- Task directives without emotional content (see TASK DIRECTIVES above)
-- No emotional indicators present`;
+IMPLIED NEGATIVE (rate 2-4): corrections ("that's wrong", "I meant..."), repeats ("again pls", "still broken", "doesn't work again"), behavioral corrections ("don't do that"), exasperated questions ("why is this still broken?"), failure confirmations ("nothing is fixed").
+IMPLIED POSITIVE (rate 6-8): trust signals ("go ahead", "fix all of it"), continuation ("now also add X", "next do..."), moving forward with the next task.
+NULL rating: neutral questions, simple continuations ("yes", "continue"), task directives without failure context.`;
 
 const MIN_CONFIDENCE = 0.5;
 
