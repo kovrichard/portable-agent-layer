@@ -43,7 +43,10 @@
       "Need something reusable? Use the /create-skill command.",
       "PAL learns from your feedback and improves over time. Don't be shy to give feedback!",
       "For simple PDFs use the /create-pdf skill. Need a styled one? Use /consulting-report instead.",
-      "Use the /research skill to run comprehensive web research with multiple parallel agents."
+      "Use the /research skill to run comprehensive web research with multiple parallel agents.",
+      "Create presentations in HTML using the /presentation skill.",
+      "PAL can \"see\" what you are doing in the browser with the /playwright skill.",
+      "Want PAL to watch a youtube video? There's /analyze-youtube for that."
     ]
   },
   "hooks": {
