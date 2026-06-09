@@ -378,9 +378,9 @@ function cmdAddIsc(args: string[]): void {
   ok({ added: true, id, title });
 }
 
-function cmdCheckIsc(args: string[]): void {
-  const name = args[0] ?? fail("Usage: check-isc <name> <id>");
-  const id = Number(args[1] ?? fail("Usage: check-isc <name> <id>"));
+function cmdCompleteIsc(args: string[]): void {
+  const name = args[0] ?? fail("Usage: complete-isc <name> <id>");
+  const id = Number(args[1] ?? fail("Usage: complete-isc <name> <id>"));
   if (!Number.isInteger(id) || id < 1) fail("ISC id must be a positive integer");
   const p = requireProject(name);
   const current = p.criteria ?? "";
@@ -394,6 +394,24 @@ function cmdCheckIsc(args: string[]): void {
   p.updated = now();
   writeProject(p);
   ok({ checked: true, id });
+}
+
+function cmdReopenIsc(args: string[]): void {
+  const name = args[0] ?? fail("Usage: reopen-isc <name> <id>");
+  const id = Number(args[1] ?? fail("Usage: reopen-isc <name> <id>"));
+  if (!Number.isInteger(id) || id < 1) fail("ISC id must be a positive integer");
+  const p = requireProject(name);
+  const current = p.criteria ?? "";
+  const existing = parseIscs(current).find((i) => i.id === id);
+  if (!existing) fail(`ISC-${id} not found in project "${name}"`);
+  if (!existing.checked) {
+    ok({ checked: false, id, alreadyOpen: true });
+    return;
+  }
+  p.criteria = patchIsc(current, id, false);
+  p.updated = now();
+  writeProject(p);
+  ok({ checked: false, id });
 }
 
 function cmdListIsc(args: string[]): void {
@@ -482,7 +500,8 @@ Commands:
   update-section <name> <section> "content"     set an ISA body section
   criteria <name>                               print the Criteria section
   add-isc <name> "title"                        append a new open ISC to Criteria
-  check-isc <name> <id>                         mark ISC-N as done
+  complete-isc <name> <id>                      mark ISC-N as done
+  reopen-isc <name> <id>                        reopen ISC-N (mark not done)
   list-isc <name>                               list all ISCs with open/done status
   isa-init <name>                               mark project as ISA-initialized
   scaffold-task-isa <title>                     create a one-shot task ISA in memory/work/
@@ -566,8 +585,11 @@ function run(): void {
     case "add-isc":
       cmdAddIsc(rest);
       return;
-    case "check-isc":
-      cmdCheckIsc(rest);
+    case "complete-isc":
+      cmdCompleteIsc(rest);
+      return;
+    case "reopen-isc":
+      cmdReopenIsc(rest);
       return;
     case "list-isc":
       cmdListIsc(rest);

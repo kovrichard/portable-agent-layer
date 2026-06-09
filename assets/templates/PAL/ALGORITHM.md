@@ -296,7 +296,7 @@ bun ~/.pal/tools/handoff-note.ts --done --title "what we completed"
 **Project work** — use ISCs, not threads:
 ```bash
 # Close completed ISCs:
-bun ~/.pal/tools/project.ts check-isc <project-name> <id>
+bun ~/.pal/tools/project.ts complete-isc <project-name> <id>
 
 # Open new ISCs for unfinished work:
 bun ~/.pal/tools/project.ts add-isc <project-name> "what remains"
