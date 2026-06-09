@@ -1,3 +1,10 @@
+## [0.54.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.54.0...v0.54.1) (2026-06-09)
+
+
+### Bug Fixes
+
+* **projects:** rename check-isc to complete-isc, introduce reopen-isc ([1dc69b7](https://github.com/kovrichard/portable-agent-layer/commit/1dc69b733a3f1df6d43b6713d08dbc5383f433b6))
+
 # [0.54.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.53.0...v0.54.0) (2026-06-04)
 
 
