@@ -1,3 +1,10 @@
+## [0.54.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.54.1...v0.54.2) (2026-06-09)
+
+
+### Bug Fixes
+
+* **steering-rules:** add code not comments rule ([2bb94b4](https://github.com/kovrichard/portable-agent-layer/commit/2bb94b4b548a63b5c550ebcf9505040d9f5ca96a))
+
 ## [0.54.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.54.0...v0.54.1) (2026-06-09)
 
 
