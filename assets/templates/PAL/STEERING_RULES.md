@@ -49,3 +49,8 @@ Correct: Memory says user dislikes verbose summaries → you keep the summary to
 **Don't trust, verify.** When adding a test or asserting a change works, prove it by making it fail first. A test that passes without ever being broken demonstrates nothing — it may be testing the wrong thing or nothing at all. Break it intentionally, confirm it fails for the right reason, then restore it.
 Bad: Add a test, see it green, move on. The test may pass vacuously.
 Correct: Add the test → run it green → break the code it covers → confirm it goes red → restore → now it's a real test.
+
+**Functions, not comments.** Encode intent in small, well-named, self-contained functions instead of explanatory comments. Comments cost tokens, drift from the code they describe, and can lie; a name is enforced by the call site. When tempted to write a comment explaining *why* a block does what it does, extract that block into a function whose name carries the why. The ONLY acceptable comment is a fact about an external system that code genuinely cannot encode — an SDK/protocol/service quirk (EventBridge, S3, a required HTTP header) — and even those should be rare and live at a single file location, not scattered.
+Bad: `// Mark scheduled BEFORE creating the schedule so a failed write can't orphan it` above an inline update + create + rollback block.
+Correct: `getOwnedPostState()` → `setPostState("scheduled")` → `registerSchedule()` → on failure `setPostState(previous)`. The ordering and rollback ARE the explanation.
+Exception: `// X-Restli-Protocol-Version: 2.0.0 — without it LinkedIn replies in Rest.li 1.0 shape` — an external contract the code can't express.
