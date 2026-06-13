@@ -43,6 +43,42 @@ export function writeJson(path: string, data: unknown): void {
   writeFileSync(path, `${JSON.stringify(data, null, 2)}\n`, "utf-8");
 }
 
+// --- Git attribution ---
+
+/** Public PAL repository — the link surfaced in commit/PR co-author credits. */
+export const PAL_REPO_URL = "https://github.com/kovrichard/portable-agent-layer";
+
+/** Build the commit footer (bare URL, autolinks on GitHub) and PR body line (markdown link). */
+export function buildAttributionText(
+  name: string,
+  repoUrl: string = PAL_REPO_URL
+): { commit: string; pr: string } {
+  return {
+    commit: `Co-authored by ${name} · ${repoUrl}`,
+    pr: `Co-authored by [${name}](${repoUrl})`,
+  };
+}
+
+/**
+ * Apply the user's git-attribution choice to a Claude settings object.
+ * Enabled → fill attribution.commit/pr and drop Claude's own byline (includeCoAuthoredBy:false).
+ * Disabled → clear PAL attribution and restore Claude's default byline.
+ */
+export function applyAttribution(
+  settings: Settings,
+  opts: { enabled: boolean; name: string; repoUrl?: string }
+): Settings {
+  const result = { ...settings };
+  if (opts.enabled) {
+    result.attribution = buildAttributionText(opts.name, opts.repoUrl);
+    result.includeCoAuthoredBy = false;
+  } else {
+    result.attribution = { commit: "", pr: "" };
+    if (result.includeCoAuthoredBy === false) delete result.includeCoAuthoredBy;
+  }
+  return result;
+}
+
 /** Resolve the VS Code user settings.json path cross-platform. Returns null on unknown platforms. */
 export function vscodeSettingsFile(): string | null {
   const h = homedir();

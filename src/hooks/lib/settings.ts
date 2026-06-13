@@ -23,6 +23,8 @@ export interface PalSettingsData {
   };
   loadAtStartup?: { files?: string[] };
   dynamicContext?: Record<string, boolean>;
+  /** Git co-author attribution opt-in. `decided` gates the one-time prompt. */
+  attribution?: { enabled?: boolean; decided?: boolean };
   [key: string]: unknown;
 }
 

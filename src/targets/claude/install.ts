@@ -8,8 +8,10 @@ import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
 import { assets, palHome, palPkg, platform } from "../../hooks/lib/paths";
+import { identity, raw as readPalSettings } from "../../hooks/lib/settings";
 import {
   addStatuslineConfig,
+  applyAttribution,
   copyAgents,
   copyPalDocs,
   copySkills,
@@ -49,6 +51,16 @@ let merged = mergeSettings(existing, template);
 
 // Add platform-specific statusLine config
 merged = addStatuslineConfig(merged);
+
+// Apply the user's git-attribution choice (composed from identity name at runtime —
+// never committed to assets). Only acts once the opt-in prompt has been answered.
+const attribution = readPalSettings().attribution;
+if (attribution?.decided) {
+  merged = applyAttribution(merged, {
+    enabled: attribution.enabled === true,
+    name: identity().ai.name,
+  });
+}
 
 writeJson(SETTINGS, merged);
 log.success("Merged PAL settings into settings.json");

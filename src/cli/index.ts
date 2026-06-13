@@ -1087,10 +1087,12 @@ async function install(targets: Targets) {
   const { scaffoldTelos, scaffoldPalSettings } = await import("../targets/lib");
   const { promptIdentity } = await import("./setup-identity");
   const { promptTelos } = await import("./setup-telos");
+  const { promptAttribution } = await import("./setup-attribution");
   scaffoldTelos();
   scaffoldPalSettings();
   await promptIdentity();
   await promptTelos();
+  await promptAttribution();
 
   if (targets.claude) {
     console.log("━━━ Claude Code ━━━");
