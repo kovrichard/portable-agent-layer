@@ -15,6 +15,8 @@ USED_RAW=$(echo "$input" | jq -r '.context_window.used_percentage // empty')
 REM_RAW=$(echo "$input" | jq -r '.context_window.remaining_percentage // empty')
 USED=$( [ -n "$USED_RAW" ] && echo "${USED_RAW%.*}" || echo 0 )
 REMAINING=$( [ -n "$REM_RAW" ] && echo "${REM_RAW%.*}" || echo 0 )
+TOTAL_INPUT=$(echo "$input" | jq -r '.context_window.total_input_tokens // empty')
+WINDOW_SIZE=$(echo "$input" | jq -r '.context_window.context_window_size // empty')
 CWD=$(echo "$input" | jq -r '.workspace.current_dir // .cwd // "~"')
 REPO=$(echo "$input" | jq -r '.workspace.repo.name // ""')
 
@@ -22,6 +24,27 @@ REPO=$(echo "$input" | jq -r '.workspace.repo.name // ""')
 if [ -z "$USED_RAW" ] && [ -z "$REM_RAW" ]; then
   USED=0
   REMAINING=100
+fi
+
+# Honor CLAUDE_CODE_AUTO_COMPACT_WINDOW: Claude's used_percentage is measured
+# against the full model window, but auto-compact triggers at this token cap —
+# so recompute usage against the effective (capped) window when it is set.
+# Gated on CLAUDECODE (injected only by Claude Code) — the cap is a user shell
+# export that would otherwise leak into Cursor, which does not auto-compact.
+if [ -n "$CLAUDECODE" ] && [ -n "$CLAUDE_CODE_AUTO_COMPACT_WINDOW" ] && [ "$CLAUDE_CODE_AUTO_COMPACT_WINDOW" -gt 0 ] 2>/dev/null; then
+  EFFECTIVE_WINDOW=$CLAUDE_CODE_AUTO_COMPACT_WINDOW
+  if [ -n "$WINDOW_SIZE" ] && [ "$EFFECTIVE_WINDOW" -gt "$WINDOW_SIZE" ] 2>/dev/null; then
+    EFFECTIVE_WINDOW=$WINDOW_SIZE
+  fi
+  USED_TOKENS="$TOTAL_INPUT"
+  if [ -z "$USED_TOKENS" ] && [ -n "$WINDOW_SIZE" ] && [ -n "$USED_RAW" ]; then
+    USED_TOKENS=$(( ${USED_RAW%.*} * WINDOW_SIZE / 100 ))
+  fi
+  if [ -n "$USED_TOKENS" ]; then
+    USED=$(( USED_TOKENS * 100 / EFFECTIVE_WINDOW ))
+    [ "$USED" -gt 100 ] && USED=100
+    REMAINING=$(( 100 - USED ))
+  fi
 fi
 
 # Git branch — payload first, then git in cwd

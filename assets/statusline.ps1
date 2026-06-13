@@ -9,6 +9,27 @@ $USED_RAW = $data.context_window.used_percentage
 $USED = if ($USED_RAW -ne $null) { [int]$USED_RAW } else { 0 }
 $REM_RAW = $data.context_window.remaining_percentage
 $REM = if ($REM_RAW -ne $null) { [int]$REM_RAW } else { 0 }
+$TOTAL_INPUT = $data.context_window.total_input_tokens
+$WINDOW_SIZE = $data.context_window.context_window_size
+
+# Honor CLAUDE_CODE_AUTO_COMPACT_WINDOW: Claude's used_percentage is measured
+# against the full model window, but auto-compact triggers at this token cap -
+# so recompute usage against the effective (capped) window when it is set.
+# Gated on CLAUDECODE (injected only by Claude Code) - the cap is a user shell
+# export that would otherwise leak into Cursor, which does not auto-compact.
+$autoCompact = $env:CLAUDE_CODE_AUTO_COMPACT_WINDOW
+if ($env:CLAUDECODE -and $autoCompact -and ($autoCompact -as [int]) -gt 0) {
+  $effectiveWindow = [int]$autoCompact
+  if (($WINDOW_SIZE -ne $null) -and ($effectiveWindow -gt [int]$WINDOW_SIZE)) { $effectiveWindow = [int]$WINDOW_SIZE }
+  $usedTokens = $null
+  if ($TOTAL_INPUT -ne $null) { $usedTokens = [int]$TOTAL_INPUT }
+  elseif (($WINDOW_SIZE -ne $null) -and ($USED_RAW -ne $null)) { $usedTokens = [int]([int]$USED_RAW * [int]$WINDOW_SIZE / 100) }
+  if ($usedTokens -ne $null) {
+    $USED = [int]($usedTokens * 100 / $effectiveWindow)
+    if ($USED -gt 100) { $USED = 100 }
+    $REM = 100 - $USED
+  }
+}
 $COST_RAW = $data.cost.total_cost_usd
 $COST = if ($COST_RAW -ne $null) { [double]$COST_RAW } else { 0 }
 $CWD = if ($data.workspace.current_dir) { $data.workspace.current_dir } else { "~" }
