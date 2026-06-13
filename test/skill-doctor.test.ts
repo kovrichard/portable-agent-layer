@@ -27,7 +27,7 @@ function fixture(skillMd: string, extra: Record<string, string> = {}): string {
 
 const GOOD = `---
 name: good-skill
-description: Summarizes a thing into a report. Use when the user asks to summarize a thing.
+description: "Summarizes a thing into a report. Use when the user asks to summarize a thing."
 ---
 
 # Good skill
@@ -111,6 +111,21 @@ describe("lintSkill", () => {
     );
     expect(levelOf(dir, "description.xml")).toBe("warn");
     expect(lintSkill(dir).errors).toBe(0);
+  });
+
+  test("unquoted description warns on quoting", () => {
+    const dir = fixture(
+      GOOD.replace(
+        /description: .*/,
+        "description: Summarizes a thing. Use when summarizing."
+      )
+    );
+    expect(levelOf(dir, "description.quoted")).toBe("warn");
+    expect(lintSkill(dir).errors).toBe(0);
+  });
+
+  test("double-quoted description passes the quoting check", () => {
+    expect(levelOf(fixture(GOOD), "description.quoted")).toBe("pass");
   });
 
   test("body over 500 lines warns", () => {

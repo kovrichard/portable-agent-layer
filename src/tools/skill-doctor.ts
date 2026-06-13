@@ -32,6 +32,7 @@ export interface DoctorReport {
 interface ParsedSkill {
   name: string | null;
   description: string | null;
+  descriptionQuoted: boolean;
   body: string;
 }
 
@@ -44,13 +45,19 @@ const MAX_BODY_LINES = 500;
 function parseSkill(content: string): ParsedSkill {
   const parts = content.split(/^---\s*$/m);
   if (parts.length < 3) {
-    return { name: null, description: null, body: content };
+    return { name: null, description: null, descriptionQuoted: false, body: content };
   }
   const frontmatter = parts[1];
   const body = parts.slice(2).join("---");
   const name = /^name:\s*"?(.+?)"?\s*$/m.exec(frontmatter)?.[1] ?? null;
-  const description = /^description:\s*"?(.+?)"?\s*$/m.exec(frontmatter)?.[1] ?? null;
-  return { name, description, body };
+  const rawDescription = /^description:[ \t]*(.*?)\s*$/m.exec(frontmatter)?.[1] ?? null;
+  const descriptionQuoted =
+    rawDescription !== null &&
+    rawDescription.length >= 2 &&
+    rawDescription.startsWith('"') &&
+    rawDescription.endsWith('"');
+  const description = descriptionQuoted ? rawDescription.slice(1, -1) : rawDescription;
+  return { name, description, descriptionQuoted, body };
 }
 
 /** Remove fenced and inline code so prose checks don't trip on examples. */
@@ -89,7 +96,7 @@ export function lintSkill(skillDir: string): DoctorReport {
         `skill file is "${skillFile}" — must be exactly "SKILL.md" or the skill is silently ignored`
       );
 
-  const { name, description, body } = parseSkill(
+  const { name, description, descriptionQuoted, body } = parseSkill(
     readFileSync(resolve(skillDir, skillFile), "utf-8")
   );
 
@@ -140,6 +147,13 @@ export function lintSkill(skillDir: string): DoctorReport {
           "error",
           "description.length",
           `${description.length} chars exceeds ${MAX_DESCRIPTION}`
+        );
+    descriptionQuoted
+      ? add("pass", "description.quoted", "value is wrapped in double quotes")
+      : add(
+          "warn",
+          "description.quoted",
+          'value is not wrapped in double quotes — unquoted YAML mis-parses on colons, commas, and quotes; wrap it in "..." (escaping any inner " as \\")'
         );
     /<[^>]+>/.test(description)
       ? add(
