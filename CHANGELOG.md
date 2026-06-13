@@ -1,3 +1,10 @@
+## [0.54.3](https://github.com/kovrichard/portable-agent-layer/compare/v0.54.2...v0.54.3) (2026-06-13)
+
+
+### Bug Fixes
+
+* **status-line:** respect claude's compact window env var ([20b5a88](https://github.com/kovrichard/portable-agent-layer/commit/20b5a882f38af2d29024c7d169d7b47a78e66d3c))
+
 ## [0.54.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.54.1...v0.54.2) (2026-06-09)
 
 
