@@ -1,3 +1,17 @@
+# [0.55.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.54.3...v0.55.0) (2026-06-13)
+
+
+### Bug Fixes
+
+* **skill-doctor:** improve link depth checking and handle Windows-style paths ([1e9bf76](https://github.com/kovrichard/portable-agent-layer/commit/1e9bf7604898242a7210a64acde0ac9c093d7d50))
+* **skill-doctor:** warn when skill description is not wrapped with double quotes ([bd81b90](https://github.com/kovrichard/portable-agent-layer/commit/bd81b90bb97c2149214f6267014eef5b5fc36813))
+* **skills:** use quotes around descriptions ([c31fe21](https://github.com/kovrichard/portable-agent-layer/commit/c31fe219f428b0d404a97108f3b86e0ffce29f72))
+
+
+### Features
+
+* **attribution:** add optional git co-author attribution prompt ([bdb21dd](https://github.com/kovrichard/portable-agent-layer/commit/bdb21ddbb27d7e99c2c7bd8a86b5c9f5ff82567a))
+
 ## [0.54.3](https://github.com/kovrichard/portable-agent-layer/compare/v0.54.2...v0.54.3) (2026-06-13)
 
 
