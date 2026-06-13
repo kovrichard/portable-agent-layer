@@ -203,15 +203,21 @@ export function lintSkill(skillDir: string): DoctorReport {
 
   // ── reference depth (one level deep) ──
   const linkRe = /\[[^\]]+\]\(([^)]+\.md)\)/g;
-  const hasMdLink = /\[[^\]]+\]\([^)]+\.md\)/;
+  const skillFilePath = resolve(skillDir, skillFile);
+  // A reference back to the entry SKILL.md is a return-link, not a deeper chain.
+  const isDeeperRef = (target: string) =>
+    !/^https?:/.test(target) && resolve(skillDir, target) !== skillFilePath;
   let nested = false;
   for (const m of body.matchAll(linkRe)) {
     const target = m[1];
-    if (/^https?:/.test(target)) continue;
+    if (!isDeeperRef(target)) continue;
     const targetPath = resolve(skillDir, target);
     if (!existsSync(targetPath)) continue;
     const refContent = readFileSync(targetPath, "utf-8");
-    if (hasMdLink.test(refContent)) {
+    const onward = [...refContent.matchAll(linkRe)]
+      .map((mm) => mm[1])
+      .filter(isDeeperRef);
+    if (onward.length > 0) {
       nested = true;
       add(
         "warn",
@@ -223,7 +229,12 @@ export function lintSkill(skillDir: string): DoctorReport {
   if (!nested) add("pass", "references.depth", "references are one level deep");
 
   // ── windows-style paths ──
-  /\b[\w.-]+\\[\w.-]+\.(py|ts|js|sh|md|json)\b/.test(body)
+  // Skip lines that are deliberate Windows examples (cmd.exe / %ENV% paths) —
+  // a cross-platform skill may legitimately document the Windows invocation.
+  const winPathRe = /\b[\w.-]+\\[\w.-]+\.(py|ts|js|sh|md|json)\b/;
+  const isIntentionalWindows = (line: string) =>
+    /%[A-Z_]+%/.test(line) || /cmd\.exe/i.test(line);
+  body.split("\n").some((l) => winPathRe.test(l) && !isIntentionalWindows(l))
     ? add("warn", "paths", "Windows-style backslash path found — use forward slashes")
     : add("pass", "paths", "forward-slash paths");
 
