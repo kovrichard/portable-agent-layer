@@ -1,6 +1,6 @@
 ---
 name: pal-reflect
-description: Run relationship reflect — promote recurring behavioral observations into tracked opinions. Use when relationship reflect is due, or when the user asks to review what patterns have been observed.
+description: "Run relationship reflect — promote recurring behavioral observations into tracked opinions. Use when relationship reflect is due, or when the user asks to review what patterns have been observed."
 argument-hint: [optional: --dry-run to preview without writing]
 ---
 

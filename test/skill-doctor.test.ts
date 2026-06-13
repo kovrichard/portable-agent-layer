@@ -146,9 +146,24 @@ describe("lintSkill", () => {
     expect(levelOf(dir, "references.depth")).toBe("pass");
   });
 
+  test("a reference that only links back to SKILL.md is not nested", () => {
+    const skill = `${GOOD}\nSee [advanced](advanced.md).\n`;
+    const dir = fixture(skill, {
+      "advanced.md": "Read [SKILL.md](SKILL.md) first, then follow these steps.\n",
+    });
+    expect(levelOf(dir, "references.depth")).toBe("pass");
+  });
+
   test("windows-style path in body warns", () => {
     const dir = fixture(`${GOOD}\nRun scripts\\helper.py to start.\n`);
     expect(levelOf(dir, "paths")).toBe("warn");
+  });
+
+  test("intentional Windows cmd.exe example does not warn on paths", () => {
+    const dir = fixture(
+      `${GOOD}\n# Windows cmd.exe:\nbun %USERPROFILE%\\.pal\\skills\\x\\tools\\build.ts deck\n`
+    );
+    expect(levelOf(dir, "paths")).toBe("pass");
   });
 
   test("name not matching the folder is an error", () => {

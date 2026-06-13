@@ -1,6 +1,6 @@
 ---
 name: telos
-description: Personal context management. Use when discussing goals, beliefs, challenges, identity, updating telos, life context, changing a goal, what do I believe, current obstacles, mission, or strategies.
+description: "Personal context management. Use when discussing goals, beliefs, challenges, identity, updating telos, life context, changing a goal, what do I believe, current obstacles, mission, or strategies."
 argument-hint: [area to view or update]
 ---
 

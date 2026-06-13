@@ -1,6 +1,6 @@
 ---
 name: fyzz-chat-api
-description: Query Fyzz Chat conversations and projects via the REST API. Use when looking up conversations, searching chat history, or listing projects in Fyzz Chat.
+description: "Query Fyzz Chat conversations and projects via the REST API. Use when looking up conversations, searching chat history, or listing projects in Fyzz Chat."
 argument-hint: <conversations|projects> [options]
 ---
 

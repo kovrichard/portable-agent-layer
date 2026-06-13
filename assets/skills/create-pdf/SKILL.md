@@ -1,6 +1,6 @@
 ---
 name: create-pdf
-description: Convert markdown files into a styled PDF. Use when creating a PDF from existing markdown files, combining markdown into a report, or converting .md to .pdf.
+description: "Convert markdown files into a styled PDF. Use when creating a PDF from existing markdown files, combining markdown into a report, or converting .md to .pdf."
 argument-hint: <file paths, glob pattern, or directory containing .md files>
 ---
 
