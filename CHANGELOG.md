@@ -1,3 +1,10 @@
+## [0.55.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.55.0...v0.55.1) (2026-06-17)
+
+
+### Bug Fixes
+
+* **isc:** introduce ticket emoji ([9aeadfc](https://github.com/kovrichard/portable-agent-layer/commit/9aeadfc974b1c910f6af94db6d927f32b20c8f27))
+
 # [0.55.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.54.3...v0.55.0) (2026-06-13)
 
 
