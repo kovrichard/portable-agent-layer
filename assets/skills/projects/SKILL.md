@@ -132,3 +132,4 @@ User: "mark <project> as complete"
 - Always check `list` (or `resume <name>`) before writing — match an existing project rather than spawning a near-duplicate.
 - Slugs are `[a-z0-9_-]+`. Never rename a slug; if the display name needs to change, that's a code-side concern, not a slug change.
 - The Stop hook handles `updated` automatically when cwd matches `path` — no manual touch needed just to mark a project alive.
+- **Always announce a new ISC with the 🎟️ emoji — every single time, no exceptions.** Whenever you open an ISC (`add-isc`), report it back to the user on its own line prefixed with the ticket emoji and the ISC number, e.g. `🎟️ ISC #71 — <title>`. This holds in every response mode and context (ALGORITHM, NATIVE, or a bare reply); opening an ISC without the 🎟️ marker is a defect.

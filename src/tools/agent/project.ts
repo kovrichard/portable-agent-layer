@@ -375,7 +375,14 @@ function cmdAddIsc(args: string[]): void {
   p.criteria = current ? `${current.trimEnd()}\n${newLine}` : newLine;
   p.updated = now();
   writeProject(p);
-  ok({ added: true, id, title });
+  ok({
+    added: true,
+    id,
+    title,
+    announce: `🎟️ ISC #${id} — ${title}`,
+    reminder:
+      "Surface the `announce` line to the user verbatim, on its own line. Every ISC you open MUST be announced with the 🎟️ ticket marker, in any response mode — omitting it is a defect.",
+  });
 }
 
 function cmdCompleteIsc(args: string[]): void {
