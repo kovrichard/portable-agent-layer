@@ -1,3 +1,10 @@
+## [0.55.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.55.1...v0.55.2) (2026-06-23)
+
+
+### Bug Fixes
+
+* **skills:** allow writing personal skills in .pal ([dfbdbed](https://github.com/kovrichard/portable-agent-layer/commit/dfbdbed78797d890efa6c33e176cc60a8b20852d))
+
 ## [0.55.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.55.0...v0.55.1) (2026-06-17)
 
 
