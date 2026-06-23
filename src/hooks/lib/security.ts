@@ -3,6 +3,8 @@
  * Used by SecurityValidator.ts (Claude Code) and the opencode plugin.
  */
 
+import { lstatSync } from "node:fs";
+
 /** Dangerous command patterns — always blocked */
 const BLOCKED_COMMANDS: [RegExp, string][] = [
   [/rm\s+-rf\s+[/~]/, "Recursive delete of root or home"],
@@ -67,7 +69,8 @@ const PROTECTED_PATHS: RegExp[] = [
   /\.gnupg\//,
   // Claude Code auto-memory — PAL owns memory; writes here indicate wrong system is being used
   /\.claude\/projects\/[^/]+\/memory\//,
-  PAL_INSTALLED_DIRS_RE,
+  // PAL_INSTALLED_DIRS_RE is enforced by the dedicated branch in checkFilePath
+  // (which exempts personal skill dirs); keeping it here would re-block them.
   // Derived from HOOK_MANAGED_FILES — scoped to managed roots only
   ...HOOK_MANAGED_FILES.map(
     (name) =>
@@ -120,6 +123,22 @@ export function checkBashCommand(cmd: string): string | null {
   return null;
 }
 
+/**
+ * Shipped skills are symlinks into the PAL repo (engine-managed); personal
+ * skills are real dirs authored in place. A not-yet-created skill dir is also
+ * personal (scaffolding). So: symlink → shipped/protected, otherwise → personal.
+ */
+function isShippedSkillPath(normalized: string): boolean {
+  const m = /\.pal\/skills\/([^/]+)/.exec(normalized);
+  if (!m) return false;
+  const skillRoot = normalized.slice(0, m.index + m[0].length);
+  try {
+    return lstatSync(skillRoot).isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+
 /** Check a file path against protected patterns. Returns a reason string or null. */
 export function checkFilePath(filePath: string): string | null {
   const normalized = filePath.replaceAll("\\", "/");
@@ -141,7 +160,10 @@ export function checkFilePath(filePath: string): string | null {
   if (PAL_INSTALLED_DIRS_RE.test(normalized)) {
     const match = new RegExp(/\.pal[/\\](docs|skills|tools)/).exec(normalized);
     const dir = match ? match[1] : "docs/skills/tools";
-    return `~/.pal/${dir}/ is managed by 'pal install' — edit the source in the PAL repo instead`;
+    const isPersonalSkill = dir === "skills" && !isShippedSkillPath(normalized);
+    if (!isPersonalSkill) {
+      return `~/.pal/${dir}/ is managed by 'pal install' — edit the source in the PAL repo instead`;
+    }
   }
   // Check remaining system-protected paths
   if (PROTECTED_PATHS.some((pattern) => pattern.test(filePath))) {

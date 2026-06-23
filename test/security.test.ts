@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { checkBashCommand, checkFilePath } from "../src/hooks/lib/security";
 
 describe("checkBashCommand", () => {
@@ -172,10 +175,25 @@ describe("checkFilePath", () => {
     expect(checkFilePath("/home/user/.pal/docs/ALGORITHM.md")).toMatch(/pal install/);
   });
 
-  test("blocks writes to ~/.pal/skills/ with actionable message", () => {
-    expect(checkFilePath("/home/user/.pal/skills/threads/SKILL.md")).toMatch(
-      /managed by 'pal install'.*PAL repo/
-    );
+  test("blocks shipped (symlinked) skills but allows personal skill dirs", () => {
+    const base = mkdtempSync(join(tmpdir(), "pal-skills-"));
+    const skills = join(base, ".pal", "skills");
+    mkdirSync(skills, { recursive: true });
+    // shipped skill = symlink into the repo; personal skill = real dir authored in place
+    const repoSkill = join(base, "repo-skill");
+    mkdirSync(repoSkill, { recursive: true });
+    symlinkSync(repoSkill, join(skills, "shipped"), "dir");
+    mkdirSync(join(skills, "personal"), { recursive: true });
+    try {
+      expect(checkFilePath(join(skills, "shipped", "SKILL.md"))).toMatch(
+        /managed by 'pal install'.*PAL repo/
+      );
+      expect(checkFilePath(join(skills, "personal", "SKILL.md"))).toBeNull();
+      // a not-yet-created personal skill is also allowed (scaffolding)
+      expect(checkFilePath(join(skills, "brandnew", "SKILL.md"))).toBeNull();
+    } finally {
+      rmSync(base, { recursive: true, force: true });
+    }
   });
 
   test("blocks writes to ~/.pal/tools/ with actionable message", () => {
