@@ -7,7 +7,9 @@
 // pipe handling doesn't complete the CDP handshake.
 //
 // Usage:
-//   node --experimental-strip-types ~/.pal/skills/create-pdf/tools/md-to-html-pdf.ts <input.md> [--html <out.html>] [--pdf <out.pdf>]
+//   node --experimental-strip-types ~/.pal/skills/create-pdf/tools/md-to-html-pdf.ts <input.md> \
+//     [--html <out.html>] [--pdf <out.pdf>] [--margin <css>] [--header <html|file>] [--footer <html|file>]
+//   --margin defaults to 25mm (all sides). --header/--footer accept inline HTML or a file path.
 
 import { readFile, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, resolve } from "node:path";
@@ -17,21 +19,44 @@ import { chromium } from "playwright";
 
 const args = process.argv.slice(2);
 if (args.length === 0) {
-  console.error("usage: md-to-html-pdf.ts <input.md> [--html <out>] [--pdf <out>]");
+  console.error(
+    "usage: md-to-html-pdf.ts <input.md> [--html <out>] [--pdf <out>] [--margin <css>] [--header <html|file>] [--footer <html|file>]"
+  );
   process.exit(1);
 }
 
 const input = resolve(args[0]);
 let htmlOut = "";
 let pdfOut = "";
+let margin = "25mm";
+let headerArg = "";
+let footerArg = "";
 for (let i = 1; i < args.length; i++) {
   if (args[i] === "--html") htmlOut = resolve(args[++i]);
   else if (args[i] === "--pdf") pdfOut = resolve(args[++i]);
+  else if (args[i] === "--margin") margin = args[++i];
+  else if (args[i] === "--header") headerArg = args[++i];
+  else if (args[i] === "--footer") footerArg = args[++i];
 }
 const stem = basename(input, extname(input));
 const dir = dirname(input);
-htmlOut ??= resolve(dir, `${stem}.html`);
-pdfOut ??= resolve(dir, `${stem}.pdf`);
+htmlOut ||= resolve(dir, `${stem}.html`);
+pdfOut ||= resolve(dir, `${stem}.pdf`);
+
+// --header/--footer take inline HTML or a path to an HTML file. Playwright renders
+// them inside the page margin, so widen --margin when you use them. Templates may use
+// Playwright's injected classes: pageNumber, totalPages, date, title, url.
+async function resolveTemplate(value: string): Promise<string> {
+  if (!value) return "";
+  try {
+    return await readFile(resolve(value), "utf8");
+  } catch {
+    return value;
+  }
+}
+const headerTemplate = await resolveTemplate(headerArg);
+const footerTemplate = await resolveTemplate(footerArg);
+const displayHeaderFooter = Boolean(headerTemplate || footerTemplate);
 
 const md = await readFile(input, "utf8");
 marked.setOptions({ gfm: true, breaks: false });
@@ -83,9 +108,12 @@ try {
   await page.pdf({
     path: pdfOut,
     format: "A4",
-    margin: { top: "25mm", right: "25mm", bottom: "25mm", left: "25mm" },
+    margin: { top: margin, right: margin, bottom: margin, left: margin },
     printBackground: true,
     preferCSSPageSize: false,
+    displayHeaderFooter,
+    headerTemplate: headerTemplate || "<span></span>",
+    footerTemplate: footerTemplate || "<span></span>",
   });
 } finally {
   await browser.close();

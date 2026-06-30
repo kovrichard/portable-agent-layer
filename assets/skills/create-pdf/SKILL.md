@@ -76,9 +76,19 @@ Report the file path and size to the user.
 
 ## Styling
 
-Default styling (A4, 25mm margins, GitHub-ish look, table-friendly, page-break-aware headings) is baked into the tool. To customize, edit `tools/md-to-html-pdf.ts` — the `css` string and the `page.pdf({...})` options live side-by-side so fonts, colors, margins, or header/footer templates can be tuned in one place.
+Default styling (A4, 25mm margins, GitHub-ish look, table-friendly, page-break-aware headings) is baked into the tool. Margins and header/footer are configurable per-render via flags — no source edits needed:
 
-For header/footer templates (page numbers, client name, CONFIDENTIAL markings, etc.), extend `page.pdf` with `displayHeaderFooter`, `headerTemplate`, and `footerTemplate` — do NOT combine with CSS `@page` margin-box rules, which duplicate.
+- `--margin <css>` — page margin on all four sides (default `25mm`). E.g. `--margin 12mm` for a denser one-pager.
+- `--header <html|file>` / `--footer <html|file>` — running header/footer on every page. The value is either an inline HTML string or a path to an HTML file. Templates may use Playwright's injected classes: `pageNumber`, `totalPages`, `date`, `title`, `url`.
+
+```bash
+node --experimental-strip-types ~/.pal/skills/create-pdf/tools/md-to-html-pdf.ts report.md --pdf report.pdf \
+  --margin 18mm \
+  --header '<div style="font-size:9px;width:100%;text-align:center;color:#888">CONFIDENTIAL</div>' \
+  --footer '<div style="font-size:9px;width:100%;text-align:right;padding-right:12mm;color:#888"><span class="pageNumber"></span>/<span class="totalPages"></span></div>'
+```
+
+Header/footer templates **need an explicit `font-size`** (Playwright defaults them to 0) and render *inside* the page margin — widen `--margin` so they have room. Do NOT also add CSS `@page` margin-box rules; they duplicate. For deeper changes (fonts, base CSS), edit the `css` string in `tools/md-to-html-pdf.ts`.
 
 ## Translation Variant
 
