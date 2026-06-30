@@ -1,3 +1,10 @@
+# [0.56.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.55.2...v0.56.0) (2026-06-30)
+
+
+### Features
+
+* **skills:** enhance create-pdf with customizable margins and header/footer templates ([bd483f7](https://github.com/kovrichard/portable-agent-layer/commit/bd483f7705bb7a0dd45f7c3ce0fb21fa3a1e1345))
+
 ## [0.55.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.55.1...v0.55.2) (2026-06-23)
 
 
