@@ -180,6 +180,15 @@ No criterion may rest on an unverified premise. If a premise can't be verified n
 
 Output: `🧭 GROUNDING: [premises verified, or assumptions flagged]`
 
+**Blast-radius & prior-art recon — for shared-code or multi-file changes.**
+
+Before changing a shared symbol, prop, or signature — or building a feature that may already partially exist:
+- **Grep every consumer/reference FIRST**, here in PLAN, not reactively via type-check in EXECUTE. A prop or signature change is a tracing task before it is an edit.
+- **Check what already exists** before writing new infrastructure — reuse beats rebuild. "Does this already partially exist?" is the cheapest scope error to catch.
+- **"Broken after rename"** → trace what external systems reference the old name (configs, imports, generated files, docs).
+
+Output: `🗺️ BLAST RADIUS: [consumers traced + prior art found, or "N/A — isolated change"]`
+
 ### ━━━ ⚡ EXECUTE ━━━ 3/5
 
 Do the work. Invoke selected capabilities via tool calls.
@@ -363,6 +372,7 @@ Only write if the insight is **genuine and reusable** — not every session prod
 🧠 RISKS: [risks]
 🧠 PREMORTEM: [failure modes]
 🧭 GROUNDING: [premises verified, or assumptions flagged]
+🗺️ BLAST RADIUS: [consumers traced + prior art found, or N/A]
 📐 APPROACH: [execution plan]
 
 ━━━ ⚡ EXECUTE ━━━ 3/5
