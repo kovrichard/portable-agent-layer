@@ -1,3 +1,10 @@
+# [0.57.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.56.0...v0.57.0) (2026-07-01)
+
+
+### Features
+
+* introduce blast radius check after grounding ([53e6dc0](https://github.com/kovrichard/portable-agent-layer/commit/53e6dc0f3f202c14f2f0aac91e7db370c79dc7e3))
+
 # [0.56.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.55.2...v0.56.0) (2026-06-30)
 
 
