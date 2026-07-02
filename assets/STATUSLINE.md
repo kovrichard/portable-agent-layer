@@ -71,18 +71,22 @@ On Cursor, session cost and rate limits are usually absent from stdin — the sc
 
 ### On Windows
 
-1. Add to `~/.claude/settings.json`:
+The installer does this automatically. To wire it manually, copy `statusline.ps1` to
+`~/.claude/statusline.ps1` and add to `~/.claude/settings.json`:
 ```json
 {
   "statusLine": {
     "type": "command",
-    "command": "powershell -NoProfile -Command \"Get-Content -Raw | & 'C:\\path\\to\\statusline.ps1'\"",
+    "command": "powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/statusline.ps1",
     "padding": 2
   }
 }
 ```
 
-Or copy `statusline.ps1` to `~/.claude/statusline.ps1` and reference it from settings.
+`-ExecutionPolicy Bypass` (which must precede `-File`) lets the unsigned script run under a
+`Restricted`/`AllSigned` machine policy — the common reason the status line silently fails to
+appear. It does **not** override a policy enforced via Group Policy (`MachinePolicy`/`UserPolicy`);
+run `Get-ExecutionPolicy -List` to check the scope, and if it's a GPO scope, that case needs IT.
 
 The statusline script is at: `portable-agent-layer/assets/statusline.ps1`
 
@@ -104,7 +108,7 @@ The statusline script is at: `portable-agent-layer/assets/statusline.ps1`
 ## Dependencies
 
 - **macOS/Linux:** `bash`, `jq`, `git` (for branch detection)
-- **Windows:** PowerShell 7+, `git` (for branch detection)
+- **Windows:** Windows PowerShell 5.1 (invoked as `powershell`; the script is 5.1-compatible) or PowerShell 7, `git` (for branch detection)
 
 ## Customization
 

@@ -65,3 +65,53 @@ describe("cursor statusline config", () => {
     expect(removeStatuslineConfig(config, "claude").statusLine).toBeUndefined();
   });
 });
+
+const onWindows = process.platform === "win32";
+
+describe("claude statusline config", () => {
+  test("addStatuslineConfig refreshes old Get-Content claude command", () => {
+    const config = {
+      statusLine: {
+        type: "command",
+        command:
+          'powershell -NoProfile -Command "Get-Content -Raw ~/.claude/statusline.ps1"',
+      },
+    };
+    const updated = addStatuslineConfig(config, "claude") as {
+      statusLine: { command: string };
+    };
+    expect(updated.statusLine.command).not.toContain("Get-Content -Raw");
+  });
+
+  test.if(onWindows)(
+    "addStatuslineConfig upgrades PAL command missing -ExecutionPolicy Bypass",
+    () => {
+      const config = {
+        statusLine: {
+          type: "command",
+          command: "powershell -NoProfile -File ~/.claude/statusline.ps1",
+        },
+      };
+      const updated = addStatuslineConfig(config, "claude") as {
+        statusLine: { command: string };
+      };
+      expect(updated.statusLine.command).toBe(
+        "powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/statusline.ps1"
+      );
+    }
+  );
+
+  test.if(onWindows)(
+    "addStatuslineConfig preserves a command that already has Bypass",
+    () => {
+      const config = {
+        statusLine: {
+          type: "command",
+          command:
+            "powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/statusline.ps1",
+        },
+      };
+      expect(addStatuslineConfig(config, "claude")).toBe(config);
+    }
+  );
+});

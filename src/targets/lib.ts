@@ -1042,7 +1042,7 @@ function statuslineCommand(target: StatuslineTarget): string {
       : "~/.cursor/statusline.sh";
   }
   return isPlatformWin32
-    ? "powershell -NoProfile -File ~/.claude/statusline.ps1"
+    ? "powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/statusline.ps1"
     : "~/.claude/statusline.sh";
 }
 
@@ -1105,6 +1105,23 @@ export function removeStatusline(target: StatuslineTarget = "claude"): boolean {
   }
 }
 
+function isOldGetContentClaudeCommand(cmd: string): boolean {
+  return cmd.includes("Get-Content -Raw");
+}
+
+function isPalWindowsClaudeCommandMissingBypass(cmd: string): boolean {
+  return (
+    process.platform === "win32" &&
+    isPalStatuslineCommand(cmd, "claude") &&
+    cmd.includes("powershell") &&
+    !cmd.includes("-ExecutionPolicy Bypass")
+  );
+}
+
+function claudeStatuslineNeedsRefresh(cmd: string): boolean {
+  return isOldGetContentClaudeCommand(cmd) || isPalWindowsClaudeCommandMissingBypass(cmd);
+}
+
 /** Add statusLine config if not already present or if using an old broken command */
 export function addStatuslineConfig(
   settings: Record<string, unknown>,
@@ -1115,8 +1132,7 @@ export function addStatuslineConfig(
   if (statusLine && typeof statusLine === "object" && statusLine.command) {
     const cmd = statusLine.command as string;
     if (target === "claude") {
-      // Keep existing config unless it's the old broken Get-Content pattern
-      if (!cmd.includes("Get-Content -Raw")) {
+      if (!claudeStatuslineNeedsRefresh(cmd)) {
         return settings;
       }
     } else if (!isPalStatuslineCommand(cmd, "cursor")) {
