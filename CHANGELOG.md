@@ -1,3 +1,10 @@
+## [0.57.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.57.0...v0.57.1) (2026-07-02)
+
+
+### Bug Fixes
+
+* **statusline:** make windows work ([d836bd1](https://github.com/kovrichard/portable-agent-layer/commit/d836bd1994b3d2bc7f718c5d748075f97b408d8b))
+
 # [0.57.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.56.0...v0.57.0) (2026-07-01)
 
 
