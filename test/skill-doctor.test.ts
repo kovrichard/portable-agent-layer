@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { lintSkill } from "../src/tools/skill-doctor";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
@@ -20,7 +20,9 @@ function fixture(skillMd: string, extra: Record<string, string> = {}): string {
   mkdirSync(dir, { recursive: true });
   writeFileSync(resolve(dir, "SKILL.md"), skillMd);
   for (const [file, content] of Object.entries(extra)) {
-    writeFileSync(resolve(dir, file), content);
+    const target = resolve(dir, file);
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, content);
   }
   return dir;
 }
@@ -164,6 +166,27 @@ describe("lintSkill", () => {
       `${GOOD}\n# Windows cmd.exe:\nbun %USERPROFILE%\\.pal\\skills\\x\\tools\\build.ts deck\n`
     );
     expect(levelOf(dir, "paths")).toBe("pass");
+  });
+
+  test("a machine-specific absolute path in a script warns (not error)", () => {
+    const dir = fixture(GOOD, {
+      "tools/build.ts": 'const VAULT = "/Users/someone/Drive/vault";\n',
+    });
+    expect(levelOf(dir, "paths.absolute")).toBe("warn");
+    expect(lintSkill(dir).errors).toBe(0);
+  });
+
+  test("absolute path in SKILL.md body itself is caught", () => {
+    const dir = fixture(`${GOOD}\nStore output under /home/someone/out.\n`);
+    expect(levelOf(dir, "paths.absolute")).toBe("warn");
+  });
+
+  test("portable $HOME and ~ paths do not trigger the absolute-path warning", () => {
+    const dir = fixture(GOOD, {
+      "tools/build.ts":
+        'const P = "~/.pal/x";\nconst Q = process.env.HOME + "/.pal/y";\n',
+    });
+    expect(levelOf(dir, "paths.absolute")).toBe("pass");
   });
 
   test("name not matching the folder is an error", () => {

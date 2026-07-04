@@ -10,7 +10,7 @@
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { basename, resolve } from "node:path";
+import { basename, extname, relative, resolve } from "node:path";
 import { palHome } from "../hooks/lib/paths";
 
 type Level = "pass" | "warn" | "error";
@@ -40,6 +40,44 @@ const RESERVED_WORDS = ["anthropic", "claude"];
 const MAX_NAME = 64;
 const MAX_DESCRIPTION = 1024;
 const MAX_BODY_LINES = 500;
+
+/** File extensions worth scanning for hardcoded paths (SKILL.md + its scripts). */
+const SCANNABLE_EXT = new Set([".md", ".ts", ".js", ".mjs", ".cjs", ".sh", ".py"]);
+
+/** Machine/user-specific absolute paths that will not survive an export to
+ * another machine or user: POSIX home dirs and Windows user profiles. Portable
+ * forms ($HOME, ~, %USERPROFILE%, env vars) are deliberately not matched. */
+const ABSOLUTE_PATH_RE =
+  /(?:\/(?:Users|home)\/[A-Za-z0-9._-]+|\/root\/[A-Za-z0-9._-]|[A-Za-z]:\\Users\\[A-Za-z0-9._-]+)/;
+
+/** Collect SKILL.md and sibling script files, skipping vendored/VCS trees. */
+function collectSkillFiles(skillDir: string): string[] {
+  const out: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name === "node_modules" || entry.name.startsWith(".")) continue;
+      const full = resolve(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.isFile() && SCANNABLE_EXT.has(extname(entry.name))) out.push(full);
+    }
+  };
+  walk(skillDir);
+  return out;
+}
+
+/** Find machine-specific absolute paths across a skill's files. */
+function findAbsolutePaths(skillDir: string): string[] {
+  const hits: string[] = [];
+  for (const file of collectSkillFiles(skillDir)) {
+    const rel = relative(skillDir, file).replaceAll("\\", "/");
+    const lines = readFileSync(file, "utf-8").split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      const m = ABSOLUTE_PATH_RE.exec(lines[i]);
+      if (m) hits.push(`${rel}:${i + 1} → ${m[0]}`);
+    }
+  }
+  return hits;
+}
 
 /** Split a SKILL.md into frontmatter fields and body. */
 function parseSkill(content: string): ParsedSkill {
@@ -237,6 +275,23 @@ export function lintSkill(skillDir: string): DoctorReport {
   body.split("\n").some((l) => winPathRe.test(l) && !isIntentionalWindows(l))
     ? add("warn", "paths", "Windows-style backslash path found — use forward slashes")
     : add("pass", "paths", "forward-slash paths");
+
+  // ── machine-specific absolute paths (portability) ──
+  // A personal skill MAY legitimately hardcode a machine-specific path (e.g. a
+  // cloud-mount vault), so this is a warning, never an error — it flags paths
+  // that will not survive being exported to another machine or user.
+  const absHits = findAbsolutePaths(skillDir);
+  if (absHits.length > 0) {
+    const shown = absHits.slice(0, 3).join("; ");
+    const more = absHits.length > 3 ? ` (+${absHits.length - 3} more)` : "";
+    add(
+      "warn",
+      "paths.absolute",
+      `hardcoded absolute path(s) that won't be portable across machines: ${shown}${more} — prefer $HOME/~ or an env var, or ignore if this is an intentional machine-specific mount`
+    );
+  } else {
+    add("pass", "paths.absolute", "no machine-specific absolute paths");
+  }
 
   const errors = findings.filter((f) => f.level === "error").length;
   const warnings = findings.filter((f) => f.level === "warn").length;
