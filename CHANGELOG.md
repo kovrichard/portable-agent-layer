@@ -1,3 +1,11 @@
+# [0.59.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.58.0...v0.59.0) (2026-07-04)
+
+
+### Features
+
+* **create-skill:** add note about self-contained skills ([134596e](https://github.com/kovrichard/portable-agent-layer/commit/134596e9d912fe904a685d02868b7e3962862170))
+* **skill-doctor:** implement detection of machine-specific absolute paths in skill files ([a900fac](https://github.com/kovrichard/portable-agent-layer/commit/a900facea69135d02e3295a70771003e4dccff70))
+
 # [0.58.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.57.1...v0.58.0) (2026-07-04)
 
 
