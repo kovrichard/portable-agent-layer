@@ -12,7 +12,9 @@ the single source of truth for skill quality.
 
 3. **Concise and concrete.** Assume the model is already smart — only add what it doesn't already know. Every step has a verb and an object; no "as needed" or "appropriately." Keep the SKILL.md body well under 500 lines; push long reference material into sibling files linked one level deep.
 
-A personal skill **may** contain this user's own context — their paths, project names, preferences, conventions. That is the point of a personal skill.
+4. **Self-contained and portable.** Everything the skill needs lives inside its own folder — `SKILL.md` plus a `tools/` subdir for scripts and any reference files — so it travels intact on export/import. Don't reach into sibling skills or reference files outside the folder. Prefer `$HOME`/`~` or an env var over a hardcoded absolute path like `/Users/you/…` so the skill still works on another machine; `pal cli skill doctor` warns (never errors) on machine-specific absolute paths.
+
+A personal skill **may** contain this user's own context — their paths, project names, preferences, conventions. That is the point of a personal skill; portability (rule 4) is a preference, not a hard rule — a deliberate machine-specific mount is fine.
 
 ## Skill anatomy
 
