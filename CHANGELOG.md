@@ -1,3 +1,10 @@
+# [0.58.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.57.1...v0.58.0) (2026-07-04)
+
+
+### Features
+
+* **skills:** add skill authoring capabilities and guide ([499709f](https://github.com/kovrichard/portable-agent-layer/commit/499709f9e8a53cdf9a68b68b68a3fa61f45b2d3b))
+
 ## [0.57.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.57.0...v0.57.1) (2026-07-02)
 
 
