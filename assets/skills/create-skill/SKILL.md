@@ -8,65 +8,28 @@ argument-hint: <skill name> <skill description>
 
 This scaffolds a personal skill into the user's own `~/.pal/skills/<name>/` and links it into every installed agent so it is immediately discoverable.
 
-## What makes a good skill
+The quality rules and the exact skill anatomy live in one place — read them before writing anything:
 
-1. **Pointed at the assistant, not the user.** A skill is *instructions you (the assistant) follow*. Write in second person addressing yourself ("read X", "run Y", "output Z"). Prescriptive verbs, deterministic flow — not a tutorial or marketing blurb.
-
-2. **One skill, one job.** A skill describes a single workflow. If it needs branches like "for case A do X, for case B do Y," it is two skills.
-
-3. **Concise and concrete.** Assume the model is already smart — only add what it doesn't already know. Every step has a verb and an object; no "as needed" or "appropriately." Keep the SKILL.md body well under 500 lines; push long reference material into sibling files linked one level deep.
-
-A personal skill **may** contain this user's own context — their paths, project names, preferences, conventions. That is the point of a personal skill.
-
-## Skill anatomy
-
-```markdown
----
-name: <slug>                           # the slash-command name; lowercase-kebab
-description: <what it does + WHEN to invoke>   # the dispatcher matches on this
-argument-hint: <args>                  # optional; how the user passes input
----
-
-## Overview / Workflow
-
-Numbered, concrete steps the assistant follows on invocation.
-
-## Output format
-
-Exactly what the assistant returns — structure if it will be parsed, tone if a human reads it.
-
-## When to use / Do NOT use
-
-Two short lists; the "do not" list disambiguates this skill from neighbours.
+```bash
+cat ~/.pal/skills/create-skill/authoring-guide.md
 ```
-
-The `description` should state **both what the skill does and when to invoke it**, in third person, with the trigger terms a model would match on. A vague description ("helps with documents") will not trigger reliably.
 
 ## Workflow when invoked with `<name> <description>`
 
-1. Validate the name: lowercase-kebab, no spaces, not colliding with an existing skill (check `~/.pal/skills/` and the active skill list).
-2. Confirm the trigger with the user if the description is ambiguous about *when* the skill should fire.
-3. Create the directory and SKILL.md at the user's PAL home:
+1. Check whether a flagship authoring model is configured for the current agent:
    ```bash
-   mkdir -p ~/.pal/skills/<name>
+   pal cli skill author-model
    ```
-   Write `~/.pal/skills/<name>/SKILL.md` populated from the anatomy above (frontmatter + Workflow + Output format + When to use).
-4. If the skill needs runtime tooling, scaffold a `tools/` subdir alongside SKILL.md and write the scripts there.
-5. Link the new skill into every installed agent so it is discoverable:
-   ```bash
-   pal cli skill link <name>
-   ```
-   This creates the per-skill discovery symlink in each installed agent's skills directory (Claude Code, Cursor, Copilot, Codex); opencode discovers it automatically via `~/.pal/skills/`.
-6. Run the doctor and resolve every error it reports:
-   ```bash
-   pal cli skill doctor <name>
-   ```
-   It checks the mechanical rules (folder/file-name match, name length/charset, description length, point-of-view, body length, reference depth). Fix all `✗` errors; weigh each `⚠` warning. A name/folder mismatch or a misnamed file makes the skill silently fail to load, so never skip this.
-7. Validate the rest by hand — the doctor can't judge these:
-   - **Trigger clarity** — could a model decide *not* to invoke this from the description alone? If so, tighten it.
-   - **Step concreteness** — every step has a verb and an object.
-   - **Output specification** — the caller knows what they get back.
-   - **Scope discipline** — one skill, one job.
+2. **If it prints a model** → delegate the authoring to the `skill-author` subagent. That subagent is preconfigured to run on that flagship model; hand it the skill name, description, and any trigger/tooling hints, and let it write the SKILL.md, scaffold tools, run `pal cli skill link`, and run the doctor. Relay its result.
+3. **If it prints nothing** → author the skill inline yourself:
+   - Read `authoring-guide.md` (above) and follow its anatomy.
+   - `mkdir -p ~/.pal/skills/<name>` and write `~/.pal/skills/<name>/SKILL.md`.
+   - If the skill needs runtime tooling, scaffold a `tools/` subdir and write the scripts there.
+   - Link it into every installed agent: `pal cli skill link <name>`.
+   - Run `pal cli skill doctor <name>` and fix every `✗`; weigh each `⚠`.
+   - Hand-check the items the doctor can't judge (see the guide's final section).
+
+Either path: validate the name first (lowercase-kebab, no spaces, not colliding with an existing skill in `~/.pal/skills/` or the active skill list), and confirm the trigger with the user if the description is ambiguous about *when* the skill should fire.
 
 ## Output format
 

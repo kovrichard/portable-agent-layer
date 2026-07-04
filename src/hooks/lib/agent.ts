@@ -11,7 +11,7 @@
  * vars are used as secondary fallbacks for environments that forward them.
  */
 
-type AgentType = "claude" | "cursor" | "codex" | "copilot" | "opencode";
+export type AgentType = "claude" | "cursor" | "codex" | "copilot" | "opencode";
 
 const KNOWN_AGENTS: ReadonlySet<AgentType> = new Set([
   "claude",

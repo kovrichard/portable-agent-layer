@@ -262,6 +262,7 @@ function showHelp() {
                                             (search · graph · stats · hubs · find · show · add · ls)
     pal cli skill link <name>               Link a personal ~/.pal/skills/<name>/ into installed agents
     pal cli skill doctor <name>             Evaluate a skill against the authoring best practices
+    pal cli skill author-model              Print the flagship model that authors skills for the active agent
     pal cli debug [on|off]                  Enable/disable verbose hook debug logging (persisted)
 
   Environment:
