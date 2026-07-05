@@ -21,6 +21,7 @@ interface HandoffEntry {
   status: "in-progress" | "completed";
   handoff: string;
   artifacts: string[];
+  source: "deliberate" | "auto";
 }
 
 function handoffPath(): string {
@@ -56,6 +57,7 @@ function writeHandoffNote(
     status: done ? "completed" : "in-progress",
     handoff: text,
     artifacts: [],
+    source: "deliberate",
   };
   writeHandoffs(handoffs);
   return {

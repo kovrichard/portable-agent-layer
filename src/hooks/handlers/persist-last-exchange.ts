@@ -7,9 +7,11 @@
  *  2. last-handoff.json keyed by cwd
  *     → read by loadHandoff() to surface "Pick Up Where You Left Off"
  *
- * Always overwrites — Stop is the source of truth for both. The LEARN-phase
- * handoff-note.ts tool may also write to last-handoff.json; whichever runs last wins,
- * but raw exchange is sufficient for continuity and costs nothing.
+ * last-exchange is always overwritten — Stop is its source of truth. last-handoff
+ * is NOT: a deliberate LEARN-phase note (written by handoff-note.ts with
+ * source:"deliberate") outranks this raw auto-snapshot, so we leave it intact
+ * while it is still fresh and in-progress. Otherwise the auto-snapshot would
+ * clobber the curated handoff the moment the session stopped (ISC-39).
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -20,6 +22,18 @@ import { extractContent, extractLastAssistant, extractLastUser } from "../lib/tr
 import { detectStatus } from "../lib/work-tracking";
 
 type ParsedMessage = { role: string; content: unknown };
+
+/** Matches loadHandoff()'s staleness window in hooks/lib/context.ts. */
+const HANDOFF_STALE_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** A fresh, in-progress deliberate note must not be overwritten by the auto-snapshot. */
+function isProtectedHandoff(entry: unknown): boolean {
+  if (!entry || typeof entry !== "object") return false;
+  const e = entry as { source?: string; status?: string; timestamp?: string };
+  if (e.source !== "deliberate" || e.status !== "in-progress" || !e.timestamp)
+    return false;
+  return Date.now() - new Date(e.timestamp).getTime() <= HANDOFF_STALE_MS;
+}
 
 export function persistLastExchange(
   messages: ParsedMessage[],
@@ -45,26 +59,30 @@ export function persistLastExchange(
     writeFileSync(resolve(stateDir, `${sessionId}.json`), json, "utf-8");
     writeFileSync(resolve(stateDir, "latest.json"), json, "utf-8");
 
-    // 2. Write last-handoff.json for "Pick Up Where You Left Off"
+    // 2. Write last-handoff.json for "Pick Up Where You Left Off" — unless a
+    //    fresh deliberate note already owns this cwd (ISC-39).
     const handoffPath = resolve(paths.state(), "last-handoff.json");
     const existing: Record<string, unknown> = existsSync(handoffPath)
       ? JSON.parse(readFileSync(handoffPath, "utf-8"))
       : {};
-    const title = (lastUser.slice(0, 80).replace(/\n/g, " ") || "Session").trim();
-    const handoff = [
-      lastUser ? `Last user message:\n${lastUser.slice(0, 500)}` : "",
-      lastAssistant ? `\nLast assistant response:\n${lastAssistant.slice(0, 500)}` : "",
-    ]
-      .filter(Boolean)
-      .join("");
-    existing[cwd] = {
-      timestamp: new Date().toISOString(),
-      title,
-      status: detectStatus(lastAssistant),
-      handoff,
-      artifacts: [],
-    };
-    writeFileSync(handoffPath, JSON.stringify(existing, null, 2), "utf-8");
+    if (!isProtectedHandoff(existing[cwd])) {
+      const title = (lastUser.slice(0, 80).replace(/\n/g, " ") || "Session").trim();
+      const handoff = [
+        lastUser ? `Last user message:\n${lastUser.slice(0, 500)}` : "",
+        lastAssistant ? `\nLast assistant response:\n${lastAssistant.slice(0, 500)}` : "",
+      ]
+        .filter(Boolean)
+        .join("");
+      existing[cwd] = {
+        timestamp: new Date().toISOString(),
+        title,
+        status: detectStatus(lastAssistant),
+        handoff,
+        artifacts: [],
+        source: "auto",
+      };
+      writeFileSync(handoffPath, JSON.stringify(existing, null, 2), "utf-8");
+    }
 
     logDebug(
       "persist-last-exchange",
