@@ -6,6 +6,7 @@ import {
   mkdtempSync,
   readdirSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -45,6 +46,28 @@ beforeAll(() => {
   );
   writeFileSync(resolve(TEST_HOME, "memory", "downloads", "2026", "file.pdf"), "pdf");
 
+  // A user-authored personal skill (real directory) — should be exported.
+  mkdirSync(resolve(TEST_HOME, "skills", "my-skill"), { recursive: true });
+  writeFileSync(resolve(TEST_HOME, "skills", "my-skill", "SKILL.md"), "# My Skill\n");
+
+  // A shipped skill, present only as a symlink back to the repo — must NOT be
+  // exported. The symlink target has a real file that would be picked up if
+  // walkDir ever followed symlinks.
+  mkdirSync(resolve(TEST_HOME, "shipped-source"), { recursive: true });
+  writeFileSync(resolve(TEST_HOME, "shipped-source", "SKILL.md"), "# Shipped\n");
+  symlinkSync(
+    resolve(TEST_HOME, "shipped-source"),
+    resolve(TEST_HOME, "skills", "shipped-skill"),
+    "dir"
+  );
+
+  // A user-authored personal subagent (real file) — should be exported.
+  mkdirSync(resolve(TEST_HOME, "agents"), { recursive: true });
+  writeFileSync(
+    resolve(TEST_HOME, "agents", "my-helper.md"),
+    "---\nname: my-helper\n---\n"
+  );
+
   process.env.PAL_HOME = TEST_HOME;
 });
 
@@ -69,6 +92,20 @@ describe("collectExportFiles", () => {
     const files = collectExportFiles();
     const downloads = files.filter((f) => f.startsWith("memory/downloads"));
     expect(downloads).toHaveLength(0);
+  });
+
+  test("collects user-authored personal skills and subagents", async () => {
+    const { collectExportFiles } = await import("../src/hooks/lib/export");
+    const files = collectExportFiles();
+    expect(files).toContain("skills/my-skill/SKILL.md");
+    expect(files).toContain("agents/my-helper.md");
+  });
+
+  test("excludes shipped-skill symlinks — only real user files travel", async () => {
+    const { collectExportFiles } = await import("../src/hooks/lib/export");
+    const files = collectExportFiles();
+    const shipped = files.filter((f) => f.startsWith("skills/shipped-skill"));
+    expect(shipped).toHaveLength(0);
   });
 });
 
@@ -157,6 +194,30 @@ describe("cli import — folder arg", () => {
       expect(result.stderr).toContain("No export or backup files found");
     } finally {
       rmSync(emptyDir, { recursive: true, force: true });
+    }
+  });
+
+  test("round-trips a personal skill and subagent into a fresh home", () => {
+    const workDir = mkdtempSync(resolve(tmpdir(), "pal-roundtrip-"));
+    const freshHome = mkdtempSync(resolve(tmpdir(), "pal-fresh-home-"));
+    try {
+      // Export the seeded TEST_HOME (has skills/my-skill + agents/my-helper).
+      const exportResult = palCli(["export", workDir]);
+      expect(exportResult.status).toBe(0);
+
+      // Import into an empty home — the personal files must materialize.
+      const importResult = spawnSync("bun", ["run", CLI, "cli", "import", workDir], {
+        env: { ...process.env, PAL_HOME: freshHome },
+        encoding: "utf-8",
+        input: "y\n",
+        timeout: 15000,
+      });
+      expect(importResult.status).toBe(0);
+      expect(existsSync(resolve(freshHome, "skills", "my-skill", "SKILL.md"))).toBe(true);
+      expect(existsSync(resolve(freshHome, "agents", "my-helper.md"))).toBe(true);
+    } finally {
+      rmSync(workDir, { recursive: true, force: true });
+      rmSync(freshHome, { recursive: true, force: true });
     }
   });
 });

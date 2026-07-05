@@ -8,8 +8,13 @@ import { relative, resolve } from "node:path";
 import AdmZip from "adm-zip";
 import { palHome } from "./paths";
 
-/** Directories within PAL_HOME that contain user state worth exporting. */
-const EXPORT_DIRS = ["telos", "memory"];
+/**
+ * Directories within PAL_HOME that contain user state worth exporting.
+ * `skills` and `agents` hold user-authored personal skills and subagents.
+ * Shipped skills live in `skills/` only as symlinks back to the repo, and
+ * walkDir skips symlinks (see below) — so only real, user-owned files travel.
+ */
+const EXPORT_DIRS = ["telos", "memory", "skills", "agents"];
 
 /** Subdirectories/files to skip during export. */
 const SKIP_PATTERNS = ["memory/downloads"];
@@ -30,6 +35,9 @@ function walkDir(dir: string, root: string): string[] {
 
     if (shouldSkip(relPath)) continue;
 
+    // Symlinks report neither isDirectory nor isFile, so they are skipped —
+    // this is what keeps shipped-skill symlinks (skills/<name> → repo) out of
+    // the export. Do not switch to stat()-based following.
     if (entry.isDirectory()) {
       files.push(...walkDir(fullPath, root));
     } else if (entry.isFile()) {
