@@ -18,6 +18,8 @@
  *   usage                             Summarize token usage and cost
  *   skill link <name>                 Link a personal ~/.pal/skills/<name>/ into installed agents
  *   skill doctor <name>               Evaluate a skill against the authoring best practices
+ *   subagent link <name>             Install a personal ~/.pal/agents/<name>.md into installed agents
+ *   subagent doctor <name>           Evaluate a subagent against the authoring best practices
  *   debug [on|off]                    Enable / disable verbose hook debug logging
  */
 
@@ -208,6 +210,12 @@ async function runCli(command: string | undefined, args: string[]) {
       if (code !== 0) process.exit(code);
       break;
     }
+    case "subagent": {
+      const { runSubagent } = await import("./subagent");
+      const code = await runSubagent(args);
+      if (code !== 0) process.exit(code);
+      break;
+    }
     case "skill": {
       const { runSkill } = await import("./skill");
       const code = await runSkill(args);
@@ -263,6 +271,10 @@ function showHelp() {
     pal cli skill link <name>               Link a personal ~/.pal/skills/<name>/ into installed agents
     pal cli skill doctor <name>             Evaluate a skill against the authoring best practices
     pal cli skill author-model              Print the flagship model that authors skills for the active agent
+    pal cli subagent link <name>            Install a personal ~/.pal/agents/<name>.md into installed agents
+    pal cli subagent doctor <name>          Evaluate a subagent against the authoring best practices
+    pal cli subagent list                   List the user-authored subagents in ~/.pal/agents/
+    pal cli subagent author-model           Print the flagship model that authors subagents for the active agent
     pal cli debug [on|off]                  Enable/disable verbose hook debug logging (persisted)
 
   Environment:

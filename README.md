@@ -88,6 +88,9 @@ pal cli status        # check your setup
 | `pal cli knowledge` | Query & manage the knowledge store (search, graph, stats, hubs, find, show, add, ls, ingest) |
 | `pal cli skill link <name>` | Link a personal `~/.pal/skills/<name>/` into every installed agent so it is discoverable |
 | `pal cli skill doctor <name>` | Evaluate a skill against the authoring best practices (folder/file-name match, name, description, body length, point-of-view, reference depth) |
+| `pal cli subagent link <name>` | Install a personal `~/.pal/agents/<name>.md` (merged multi-platform definition) into every installed agent, split per platform |
+| `pal cli subagent doctor <name>` | Evaluate a subagent definition against the authoring best practices (name/file match, per-platform blocks, model/tools/permission shape, shipped-name collision) |
+| `pal cli subagent list` | List the user-authored subagents in `~/.pal/agents/` |
 
 ### Target flags
 

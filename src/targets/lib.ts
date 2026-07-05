@@ -927,7 +927,7 @@ function extractAgentForPlatform(content: string, platform: AgentPlatform): stri
   for (const line of frontmatter.split("\n")) {
     if (!line.trim()) continue;
 
-    const platformMatch = new RegExp(/^(claude|opencode|cursor):\s*$/).exec(line);
+    const platformMatch = new RegExp(/^(claude|opencode|cursor|copilot):\s*$/).exec(line);
     if (platformMatch) {
       currentPlatform = platformMatch[1] as AgentPlatform;
       continue;
@@ -1011,6 +1011,79 @@ export function removeAgentsFromCursor(cursorAgentsDir: string): string[] {
 
 export function removeAgentsFromCopilot(copilotAgentsDir: string): string[] {
   return uninstallAgents(copilotAgentsDir, "copilot");
+}
+
+// --- Personal subagents (user-authored, under ~/.pal/agents/) ---
+
+/**
+ * Store for user-authored subagents: ~/.pal/agents/<name>.md — one merged
+ * multi-platform frontmatter file per subagent (same schema as assets/agents/).
+ */
+const PAL_AGENTS_STORE = resolve(palHome(), "agents");
+
+/**
+ * Each installed agent and the native agents directory a personal subagent is
+ * written into. An agent counts as installed when its agents directory already
+ * exists (mirrors linkPersonalSkill's per-agent gate).
+ */
+function personalSubagentTargets(): { agent: AgentPlatform; dir: string }[] {
+  return [
+    { agent: "claude", dir: resolve(platform.claudeDir(), "agents") },
+    { agent: "opencode", dir: resolve(platform.opencodeDir(), "agents") },
+    { agent: "cursor", dir: resolve(platform.cursorDir(), "agents") },
+    { agent: "copilot", dir: resolve(platform.copilotDir(), "agents") },
+  ];
+}
+
+/** Names of the subagents PAL ships (assets/agents/*.md). */
+function shippedAgentNames(): Set<string> {
+  const dir = assets.agents();
+  if (!existsSync(dir)) return new Set();
+  return new Set(
+    readdirSync(dir)
+      .filter((f) => f.endsWith(".md"))
+      .map((f) => f.replace(/\.md$/, ""))
+  );
+}
+
+/** List the user-authored subagents in ~/.pal/agents/. */
+export function listPersonalSubagents(): string[] {
+  if (!existsSync(PAL_AGENTS_STORE)) return [];
+  return readdirSync(PAL_AGENTS_STORE)
+    .filter((f) => f.endsWith(".md"))
+    .map((f) => f.replace(/\.md$/, ""))
+    .sort();
+}
+
+/**
+ * Install a personal subagent (~/.pal/agents/<name>.md) into every installed
+ * agent by splitting its merged frontmatter per platform and writing the
+ * result into that agent's native agents dir. Unlike personal skills (which are
+ * symlinked), subagents are transformed-and-copied because each platform needs
+ * its own frontmatter shape. Returns the agents it was installed into.
+ */
+export function installPersonalSubagent(name: string): string[] {
+  const src = resolve(PAL_AGENTS_STORE, `${name}.md`);
+  if (!existsSync(src)) {
+    throw new Error(`No subagent found at ${src}`);
+  }
+  if (shippedAgentNames().has(name)) {
+    throw new Error(
+      `'${name}' is a shipped PAL subagent — choose another name (a reinstall would overwrite it).`
+    );
+  }
+  const content = readFileSync(src, "utf-8");
+  const installed: string[] = [];
+  for (const { agent, dir } of personalSubagentTargets()) {
+    if (!existsSync(dir)) continue; // agent not installed
+    writeFileSync(
+      resolve(dir, `${name}.md`),
+      extractAgentForPlatform(content, agent),
+      "utf-8"
+    );
+    installed.push(agent);
+  }
+  return installed;
 }
 
 /** Load and resolve the Copilot hooks template, substituting PKG_ROOT */

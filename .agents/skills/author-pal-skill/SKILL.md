@@ -49,6 +49,16 @@ Description field — follow Anthropic's skill-authoring guidance: state **both 
 
 ## Workflow when invoked with `<name> <description>`
 
+First, check whether a flagship authoring model is configured for the current agent:
+
+```bash
+pal cli skill author-model
+```
+
+**If it prints a model** → delegate the authoring to the `repo-skill-author` subagent. That subagent is preconfigured to run on that flagship model and briefed on the three shared-skill rules; hand it the skill name, description, and any trigger/tooling hints, and let it write `assets/skills/<name>/SKILL.md`, scaffold any `tools/`, and run the repo doctor (`bun src/tools/skill-doctor.ts assets/skills/<name>`). Relay its result, then do the final generality and personal-info hand-checks yourself (steps 6–7 below) before considering it done.
+
+**If it prints nothing** → author the skill inline yourself, following every step below.
+
 1. Sanity-check the name and description against the three rules above. If the description leaks personal info ("a skill for me to clean my Notion db"), rewrite it to the general form ("clean a Notion database via the API") before scaffolding.
 2. Create `assets/skills/<name>/SKILL.md` in the repo (the canonical source — never edit the installed `~/.pal/skills/<name>` junction).
 3. Populate the SKILL.md from the anatomy above. Required: `name`, `description`, body sections (Workflow, Output format, When to use). Add `argument-hint` if the skill takes arguments.
