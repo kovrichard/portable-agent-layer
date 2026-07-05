@@ -1,3 +1,16 @@
+# [0.60.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.59.0...v0.60.0) (2026-07-05)
+
+
+### Bug Fixes
+
+* **last-exchange:** enhance handoff logic to prevent overwriting fresh deliberate notes ([fe8c717](https://github.com/kovrichard/portable-agent-layer/commit/fe8c71791b7787357699358066e9e8d2d7733aff))
+
+
+### Features
+
+* **export:** include user-authored skills and subagents in export process ([7443bca](https://github.com/kovrichard/portable-agent-layer/commit/7443bcad6a7c1d94d18e90fedd1f1a5d96466abf))
+* **subagent:** introduce creator skill ([f163d7a](https://github.com/kovrichard/portable-agent-layer/commit/f163d7a8549c27c4a03c4179bdee57b462cbe11d))
+
 # [0.59.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.58.0...v0.59.0) (2026-07-04)
 
 
