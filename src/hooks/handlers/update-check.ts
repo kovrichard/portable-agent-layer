@@ -7,7 +7,7 @@
  * Caches result in state/update-available.json. Checked at most once per hour.
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { logDebug } from "../lib/log";
 import { ensureDir, palPkg, paths } from "../lib/paths";
@@ -177,6 +177,15 @@ export async function checkForUpdate(force = false): Promise<UpdateCache> {
   }
 
   return result;
+}
+
+/** Invalidate the cached update status — call after a successful update so the notice clears immediately. */
+export function clearUpdateCache(): void {
+  try {
+    rmSync(cachePath(), { force: true });
+  } catch {
+    /* non-critical */
+  }
 }
 
 /** Read cached update status for greeting display. Returns null if no update. */

@@ -1,6 +1,9 @@
-import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { afterAll, describe, expect, test } from "bun:test";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { clearUpdateCache, getUpdateNotice } from "../src/hooks/handlers/update-check";
+import { paths } from "../src/hooks/lib/paths";
 
 // Locks in the fix for the package-mode update bug.
 // `bun update -g <pkg>` respects the caret range stored at install time, and on
@@ -40,5 +43,46 @@ describe("pal cli update — repo mode command shape", () => {
 
   test("uses 'git pull --ff-only'", () => {
     expect(src).toMatch(/spawnSync\(\s*"git"\s*,\s*\[\s*"pull"\s*,\s*"--ff-only"\s*\]/);
+  });
+});
+
+// After a successful update the cached update-available.json still says
+// available:true (checkForUpdate(true) wrote it moments earlier). Without
+// invalidation the greeting + CLI-close nag "Update available" for the full 1h
+// TTL even though the user just updated. update() must clear the cache.
+describe("pal cli update — clears stale update cache", () => {
+  const src = readFileSync(resolve(import.meta.dir, "../src/cli/index.ts"), "utf-8");
+  const prevHome = process.env.PAL_HOME;
+  const home = mkdtempSync(resolve(tmpdir(), "pal-update-cache-"));
+
+  afterAll(() => {
+    if (prevHome === undefined) delete process.env.PAL_HOME;
+    else process.env.PAL_HOME = prevHome;
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  test("update() calls clearUpdateCache after a successful update", () => {
+    expect(src).toContain("clearUpdateCache");
+  });
+
+  test("clearUpdateCache removes the cache so no stale notice remains", () => {
+    process.env.PAL_HOME = home;
+    const fp = resolve(paths.state(), "update-available.json");
+    writeFileSync(
+      fp,
+      JSON.stringify({
+        checkedAt: new Date().toISOString(),
+        available: true,
+        current: "0.59.0",
+        latest: "0.60.0",
+        mode: "package",
+      })
+    );
+    expect(getUpdateNotice()).toContain("Update available");
+
+    clearUpdateCache();
+
+    expect(existsSync(fp)).toBe(false);
+    expect(getUpdateNotice()).toBeNull();
   });
 });

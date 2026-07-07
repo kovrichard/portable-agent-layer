@@ -1311,7 +1311,9 @@ async function importState(args: string[]) {
 }
 
 async function update() {
-  const { checkForUpdate } = await import("../hooks/handlers/update-check");
+  const { checkForUpdate, clearUpdateCache } = await import(
+    "../hooks/handlers/update-check"
+  );
   const result = await checkForUpdate(true);
 
   log.info(`Current: ${result.current} (${result.mode} mode)`);
@@ -1351,6 +1353,7 @@ async function update() {
     throw new Error(`Failed to read updated package.json: ${e}`);
   }
   log.success(`Updated: ${result.current} → ${newPkg.version}`);
+  clearUpdateCache();
 
   log.info("Reinstalling...");
   await install(resolveTargets([]));
