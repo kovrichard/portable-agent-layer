@@ -1,3 +1,11 @@
+## [0.60.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.60.0...v0.60.1) (2026-07-07)
+
+
+### Bug Fixes
+
+* **models:** add new claude models to pricing calculator ([b24d7d7](https://github.com/kovrichard/portable-agent-layer/commit/b24d7d791f6c10f2368bf2e417b42987d801fc64))
+* **update:** clear update cache on update ([8e26447](https://github.com/kovrichard/portable-agent-layer/commit/8e2644707ba125706a4a7ac3b33cb27136d12e0b))
+
 # [0.60.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.59.0...v0.60.0) (2026-07-05)
 
 
