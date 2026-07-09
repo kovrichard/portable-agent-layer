@@ -1,3 +1,10 @@
+# [0.61.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.60.1...v0.61.0) (2026-07-09)
+
+
+### Features
+
+* **skills:** add distributable humanize skill ([b8bc673](https://github.com/kovrichard/portable-agent-layer/commit/b8bc673be3f70f523a895c2f69993344125c694d))
+
 ## [0.60.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.60.0...v0.60.1) (2026-07-07)
 
 
