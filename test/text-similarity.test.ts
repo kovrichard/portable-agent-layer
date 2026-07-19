@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { extractKeywords, similarity } from "../src/hooks/lib/text-similarity";
+import {
+  containment,
+  extractKeywords,
+  similarity,
+} from "../src/hooks/lib/text-similarity";
 
 describe("similarity (Dice coefficient)", () => {
   test("identical strings return 1", () => {
@@ -35,6 +39,33 @@ describe("similarity (Dice coefficient)", () => {
       "User frustrated by unexplained stale plugin"
     );
     expect(score).toBeGreaterThanOrEqual(0.4);
+  });
+});
+
+describe("containment (asymmetric)", () => {
+  const statement =
+    "Prefers detailed architectural explanations before any refactoring begins, including trade-offs, alternatives considered, and reasoning about long-term maintenance cost";
+
+  test("short keyword query fully contained in a long statement scores 1", () => {
+    expect(containment("architectural explanations", statement)).toBe(1);
+  });
+
+  test("is not penalized by statement length the way Dice is", () => {
+    // Dice caps a 2-keyword query against this 15-keyword statement below 0.3;
+    // containment reaches the default lookup threshold.
+    expect(similarity("architectural explanations", statement)).toBeLessThan(0.3);
+    expect(containment("architectural explanations", statement)).toBeGreaterThanOrEqual(
+      0.3
+    );
+  });
+
+  test("returns 0 when no query keyword is present", () => {
+    expect(containment("deploy production server", statement)).toBe(0);
+  });
+
+  test("empty inputs return 0", () => {
+    expect(containment("", statement)).toBe(0);
+    expect(containment("architectural", "")).toBe(0);
   });
 });
 

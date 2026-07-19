@@ -11,7 +11,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { paths } from "./paths";
-import { similarity } from "./text-similarity";
+import { containment, similarity } from "./text-similarity";
 
 // ── Types ──
 
@@ -127,7 +127,12 @@ export function findSimilarOpinion(
   let best: Opinion | null = null;
   let bestScore = 0;
   for (const op of opinions) {
-    const score = similarity(text, op.statement);
+    // Dice handles full-statement comparisons (dedup, reflect promotion);
+    // containment lets a short keyword query reach a long statement.
+    const score = Math.max(
+      similarity(text, op.statement),
+      containment(text, op.statement)
+    );
     if (score >= threshold && score > bestScore) {
       bestScore = score;
       best = op;

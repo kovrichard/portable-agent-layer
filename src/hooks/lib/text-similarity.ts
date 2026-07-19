@@ -155,3 +155,21 @@ export function similarity(a: string, b: string): number {
 
   return (2 * intersection) / (ka.size + kb.size);
 }
+
+/**
+ * Asymmetric containment: fraction of `query` keywords also present in `target`.
+ * Unlike Dice, it is not penalized by `target` being much longer, so a short
+ * keyword query can still match a full-sentence statement.
+ */
+export function containment(query: string, target: string): number {
+  const q = extractKeywords(query);
+  const t = extractKeywords(target);
+  if (q.size === 0 || t.size === 0) return 0;
+
+  let intersection = 0;
+  for (const w of q) {
+    if (t.has(w)) intersection++;
+  }
+
+  return intersection / q.size;
+}

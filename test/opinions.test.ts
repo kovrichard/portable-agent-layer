@@ -120,14 +120,26 @@ describe("opinions", () => {
     );
     // First in store order is a weaker (but above-threshold) match; second is stronger.
     const opinions = [
+      createOpinion("User prefers concise responses in general", "test"),
+      createOpinion("User prefers concise direct responses", "test"),
+    ];
+    const match = findSimilarOpinion("concise direct responses", opinions);
+    expect(match?.statement).toBe("User prefers concise direct responses");
+  });
+
+  test("findSimilarOpinion matches a full-sentence opinion via a short keyword query", async () => {
+    const { createOpinion, findSimilarOpinion } = await import(
+      "../src/hooks/lib/opinions"
+    );
+    const opinions = [
       createOpinion(
-        "User prefers concise responses but also enjoys thorough detailed technical explanations",
+        "Prefers detailed architectural explanations before any refactoring begins, including trade-offs, alternatives considered, and reasoning about long-term maintenance cost",
         "test"
       ),
-      createOpinion("User prefers concise responses", "test"),
     ];
-    const match = findSimilarOpinion("concise responses", opinions);
-    expect(match?.statement).toBe("User prefers concise responses");
+    const match = findSimilarOpinion("architectural explanations", opinions);
+    expect(match).toBeTruthy();
+    expect(match?.statement).toContain("architectural explanations");
   });
 
   test("findSimilarOpinion returns null for unrelated text", async () => {
