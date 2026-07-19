@@ -118,16 +118,22 @@ function slugify(text: string): string {
     .join("-");
 }
 
-/** Find an existing opinion similar to the given text. Returns the opinion or null. */
+/** Find the best-matching opinion for the given text. Returns the opinion or null. */
 export function findSimilarOpinion(
   text: string,
   opinions: Opinion[],
   threshold = 0.3
 ): Opinion | null {
+  let best: Opinion | null = null;
+  let bestScore = 0;
   for (const op of opinions) {
-    if (similarity(text, op.statement) >= threshold) return op;
+    const score = similarity(text, op.statement);
+    if (score >= threshold && score > bestScore) {
+      bestScore = score;
+      best = op;
+    }
   }
-  return null;
+  return best;
 }
 
 /** Create a new opinion from a recurring note. Starts at confidence 0.60. */
