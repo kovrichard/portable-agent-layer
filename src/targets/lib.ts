@@ -166,7 +166,7 @@ export function mergeSettings(existing: Settings, template: Settings): Settings 
     }
   }
 
-  // Merge permissions.allow (deduplicate)
+  // Merge permissions.allow (deduplicate), then drop deprecated entries.
   if (template.permissions?.allow) {
     result.permissions ??= {};
     result.permissions.allow ??= [];
@@ -175,6 +175,14 @@ export function mergeSettings(existing: Settings, template: Settings): Settings 
         result.permissions.allow.push(perm);
       }
     }
+  }
+  // Strip ineffective Grep(...)/Glob(...) rules left by older templates. Claude Code
+  // governs Grep/Glob via Read(...) rules, so a path-scoped Grep()/Glob() entry never
+  // matches and Claude Code warns about it on every prompt. Read(//*) already covers them.
+  if (result.permissions?.allow) {
+    result.permissions.allow = result.permissions.allow.filter(
+      (perm) => !isIneffectiveFileToolRule(perm)
+    );
   }
 
   // Merge skillOverrides (object with skill name keys, add if not present)
@@ -453,6 +461,15 @@ function canonicalPalCmd(cmd: string): string {
   const hookMatch = /bun\s+run\s+.+\/src\/hooks\/(\S+)/.exec(withoutEnv);
   if (hookMatch) return `bun run src/hooks/${hookMatch[1]}`;
   return withoutEnv;
+}
+
+/**
+ * True for path-scoped Grep()/Glob() allow rules, which Claude Code cannot honor —
+ * it resolves Grep/Glob permission through Read(...) rules, so these never match and
+ * trigger a warning on every prompt. Bare "Grep"/"Glob" tool allows are left intact.
+ */
+function isIneffectiveFileToolRule(perm: string): boolean {
+  return /^(?:Grep|Glob)\(/.test(perm);
 }
 
 export function loadCodexHooksTemplate(
