@@ -1,3 +1,10 @@
+## [0.61.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.61.0...v0.61.1) (2026-07-19)
+
+
+### Bug Fixes
+
+* **projects:** load only open ISCs, add flags for closed and all ([2f03baa](https://github.com/kovrichard/portable-agent-layer/commit/2f03baa3e06ac1e08c83e9bc0956b0c520cdc0d4))
+
 # [0.61.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.60.1...v0.61.0) (2026-07-09)
 
 
