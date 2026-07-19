@@ -60,7 +60,7 @@ async function processFailurePrinciple(
           system: `Analyze this failed AI interaction (rated ${pending.rating}/10). Return JSON: {"principle": "<verb-first actionable rule, 10-20 words — write a full sentence, not a fragment>", "detailed_context": "<root cause and what to do differently, 50-150 words>"}.`,
           user: `User feedback: ${pending.context}\n\nConversation:\n${recent}`,
           maxTokens: 400,
-          timeout: 60000,
+          timeout: 90000,
           jsonSchema: {
             type: "object" as const,
             properties: {

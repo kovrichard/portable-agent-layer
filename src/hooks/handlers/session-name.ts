@@ -70,7 +70,7 @@ async function upgradeWithInference(
       system: NAME_PROMPT,
       user: `Generate a 4-word title for: "${promptText}"`,
       maxTokens: 20,
-      timeout: 60000,
+      timeout: 90000,
       caller: "session-name",
       sessionId,
     });

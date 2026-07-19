@@ -310,7 +310,7 @@ async function runSentimentInferenceAndStore(
       system: SENTIMENT_SYSTEM_PROMPT,
       user: contextBlock,
       maxTokens: 500,
-      timeout: 60000,
+      timeout: 90000,
       jsonSchema: SENTIMENT_SCHEMA,
       caller: "rating",
       sessionId,
