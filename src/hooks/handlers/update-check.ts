@@ -72,14 +72,6 @@ async function checkRepo(): Promise<UpdateCache> {
     });
     await fetch.exited;
 
-    const local = Bun.spawn(["git", "rev-parse", "HEAD"], {
-      cwd: repoDir,
-      stdout: "pipe",
-      stderr: "ignore",
-      windowsHide: true,
-    });
-    const localHash = (await new Response(local.stdout).text()).trim();
-
     const remote = Bun.spawn(["git", "rev-parse", "origin/main"], {
       cwd: repoDir,
       stdout: "pipe",
@@ -88,7 +80,18 @@ async function checkRepo(): Promise<UpdateCache> {
     });
     const remoteHash = (await new Response(remote.stdout).text()).trim();
 
-    const available = localHash !== remoteHash && remoteHash.length > 0;
+    // "Ahead" (local unpushed commits) is not an update — only remote commits we
+    // lack are. Count HEAD..origin/main so being ahead or diverged never nags.
+    const behind = Bun.spawn(["git", "rev-list", "--count", "HEAD..origin/main"], {
+      cwd: repoDir,
+      stdout: "pipe",
+      stderr: "ignore",
+      windowsHide: true,
+    });
+    const behindCount =
+      Number.parseInt((await new Response(behind.stdout).text()).trim(), 10) || 0;
+
+    const available = behindCount > 0 && remoteHash.length > 0;
 
     // Get remote version from package.json on origin/main
     let latest = current;

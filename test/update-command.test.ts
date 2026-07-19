@@ -1,8 +1,13 @@
 import { afterAll, describe, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { clearUpdateCache, getUpdateNotice } from "../src/hooks/handlers/update-check";
+import {
+  checkForUpdate,
+  clearUpdateCache,
+  getUpdateNotice,
+} from "../src/hooks/handlers/update-check";
 import { paths } from "../src/hooks/lib/paths";
 
 // Locks in the fix for the package-mode update bug.
@@ -84,5 +89,61 @@ describe("pal cli update — clears stale update cache", () => {
 
     expect(existsSync(fp)).toBe(false);
     expect(getUpdateNotice()).toBeNull();
+  });
+});
+
+// Repo mode must not treat local unpushed commits as an available update.
+// Regression: `available = localHash !== remoteHash` reported an update whenever
+// HEAD diverged from origin/main in ANY direction — so a repo that was AHEAD of
+// origin (unpushed commits) nagged "Update available: X → X". The fix keys off
+// the behind-count (commits on origin/main we lack), not raw hash inequality.
+describe("pal cli update — repo mode ignores local unpushed commits", () => {
+  const prevHome = process.env.PAL_HOME;
+  const prevPkg = process.env.PAL_PKG;
+  const home = mkdtempSync(resolve(tmpdir(), "pal-update-home-"));
+  const origin = mkdtempSync(resolve(tmpdir(), "pal-update-origin-"));
+  const clone = mkdtempSync(resolve(tmpdir(), "pal-update-clone-"));
+
+  const git = (cwd: string, ...args: string[]) =>
+    spawnSync("git", args, { cwd, stdio: "ignore" });
+
+  const commit = (cwd: string, version: string, msg: string) => {
+    writeFileSync(resolve(cwd, "package.json"), JSON.stringify({ version }));
+    git(cwd, "add", "-A");
+    git(cwd, "commit", "-m", msg);
+  };
+
+  afterAll(() => {
+    if (prevHome === undefined) delete process.env.PAL_HOME;
+    else process.env.PAL_HOME = prevHome;
+    if (prevPkg === undefined) delete process.env.PAL_PKG;
+    else process.env.PAL_PKG = prevPkg;
+    for (const dir of [home, origin, clone])
+      rmSync(dir, { recursive: true, force: true });
+  });
+
+  test("a clone ahead of origin/main reports no update", () => {
+    git(origin, "init", "--bare", "-b", "main");
+    git(clone, "init", "-b", "main");
+    git(clone, "config", "user.email", "t@t.t");
+    git(clone, "config", "user.name", "t");
+    git(clone, "remote", "add", "origin", origin);
+    commit(clone, "0.61.3", "base");
+    git(clone, "push", "-u", "origin", "main");
+
+    // Diverge locally: unpushed commit, version unchanged — the exact bug shape.
+    // Touch a distinct file so the commit is real (identical package.json alone
+    // would be a no-op commit and create no divergence).
+    writeFileSync(resolve(clone, "work.txt"), "unpushed local change");
+    commit(clone, "0.61.3", "local unpushed work");
+
+    process.env.PAL_HOME = home;
+    process.env.PAL_PKG = clone;
+    clearUpdateCache();
+
+    return checkForUpdate(true).then((result) => {
+      expect(result.mode).toBe("repo");
+      expect(result.available).toBe(false);
+    });
   });
 });
