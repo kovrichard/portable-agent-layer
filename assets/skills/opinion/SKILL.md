@@ -7,7 +7,7 @@ description: "Opinion tracker for relationship notes. PROACTIVE: When the user c
 
 Tool: `tools/opinion.ts`
 
-Manage confidence-scored opinions about the user. Opinions are promoted from recurring relationship notes (the W/O/B observations captured at session end). This tool is the fast path to grow opinion confidence — relationship notes feed the slow path (+2% per reflect cycle), while explicit confirmations here jump +10%.
+Manage confidence-scored opinions about the user. Opinions are promoted from recurring relationship notes (the W/O/B observations captured at session end). This tool is the fast path to grow opinion confidence — relationship notes feed the slow path (+5% per reflect cycle), while explicit confirmations here jump +10%.
 
 Opinions at ≥85% confidence are automatically injected into every session context.
 
@@ -42,12 +42,12 @@ bun opinion.ts list
 # Show details for a specific opinion (fuzzy-matched)
 bun opinion.ts show "keywords"
 
-# Add a new opinion (starts at 50%)
+# Add a new opinion (starts at 60%)
 bun opinion.ts add "statement" [--category workflow]
 
 # Add evidence to an existing opinion
-bun opinion.ts evidence "keywords" --supporting "why"      # +2%
-bun opinion.ts evidence "keywords" --counter "why"         # -5%
+bun opinion.ts evidence "keywords" --supporting "why"      # +5%
+bun opinion.ts evidence "keywords" --counter "why"         # -10%
 bun opinion.ts evidence "keywords" --confirmation "why"    # +10%
 bun opinion.ts evidence "keywords" --contradiction "why"   # -20%
 ```
@@ -59,9 +59,9 @@ bun opinion.ts evidence "keywords" --contradiction "why"   # -20%
 ## Confidence Lifecycle
 
 ```
-New opinion (add) → 50%
-  ├── supporting evidence → +2% each
-  ├── counter evidence → -5% each
+New opinion (add) → 60%
+  ├── supporting evidence → +5% each
+  ├── counter evidence → -10% each
   ├── explicit confirmation → +10% each
   ├── explicit contradiction → -20% each
   └── at ≥85% → auto-injected into session context

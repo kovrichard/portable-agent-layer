@@ -147,7 +147,9 @@ switch (command) {
     const opinion = createOpinion(statement, "manual add");
     opinion.category = category;
     saveOpinion(opinion);
-    console.log(`  Added: "${statement}" [${category}] at 50%`);
+    console.log(
+      `  Added: "${statement}" [${category}] at ${Math.round(opinion.confidence * 100)}%`
+    );
     break;
   }
 
@@ -218,9 +220,9 @@ switch (command) {
   Commands:
     list                                      List all opinions with confidence bars
     show "keywords"                           Show opinion details + full evidence history
-    add "statement" [--category X]            Create new opinion (starts at 50%)
-    evidence "keywords" --supporting "why"    Supporting evidence (+2%)
-    evidence "keywords" --counter "why"       Counter evidence (-5%)
+    add "statement" [--category X]            Create new opinion (starts at 60%)
+    evidence "keywords" --supporting "why"    Supporting evidence (+5%)
+    evidence "keywords" --counter "why"       Counter evidence (-10%)
     evidence "keywords" --confirmation "why"  User explicitly confirmed (+10%)
     evidence "keywords" --contradiction "why" User explicitly contradicted (-20%)
 
