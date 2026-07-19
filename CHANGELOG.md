@@ -1,3 +1,10 @@
+## [0.61.3](https://github.com/kovrichard/portable-agent-layer/compare/v0.61.2...v0.61.3) (2026-07-19)
+
+
+### Bug Fixes
+
+* **projects:** clean up empty archived headers ([d8994c6](https://github.com/kovrichard/portable-agent-layer/commit/d8994c6508d6c05fb51a3d9c33b53d05f3f343f9))
+
 ## [0.61.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.61.1...v0.61.2) (2026-07-19)
 
 
