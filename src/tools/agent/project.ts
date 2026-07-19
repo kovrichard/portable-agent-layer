@@ -351,17 +351,38 @@ function parseIscs(criteria: string): Isc[] {
   return out;
 }
 
-function nextIscId(criteria: string): number {
-  const ids = parseIscs(criteria).map((i) => i.id);
+// Scans Criteria AND Changelog so an archived id can never be handed out again.
+function nextIscId(p: ProjectProgress): number {
+  const ids = [...parseIscs(p.criteria ?? ""), ...parseIscs(p.changelog ?? "")].map(
+    (i) => i.id
+  );
   return ids.length > 0 ? Math.max(...ids) + 1 : 1;
 }
 
-function patchIsc(criteria: string, id: number, checked: boolean): string {
-  const marker = checked ? "[x]" : "[ ]";
-  return criteria.replace(
-    new RegExp(String.raw`^(-\s+)\[[ x]\](\s+ISC-${id}:)`, "m"),
-    `$1${marker}$2`
+function removeIscLine(
+  section: string,
+  id: number
+): { line: string | null; rest: string } {
+  const lines = section.split("\n");
+  const idx = lines.findIndex((l) =>
+    new RegExp(String.raw`^-\s+\[[ x]\]\s+ISC-${id}:`).test(l)
   );
+  if (idx === -1) return { line: null, rest: section };
+  const [line] = lines.splice(idx, 1);
+  return {
+    line,
+    rest: lines
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim(),
+  };
+}
+
+function archiveLine(changelog: string | undefined, doneLine: string): string {
+  const heading = `### Archived ${new Date().toISOString().slice(0, 10)}`;
+  const base = (changelog ?? "").trim();
+  if (base.includes(heading)) return `${base}\n${doneLine}`;
+  return base ? `${base}\n\n${heading}\n${doneLine}` : `${heading}\n${doneLine}`;
 }
 
 function cmdAddIsc(args: string[]): void {
@@ -370,7 +391,7 @@ function cmdAddIsc(args: string[]): void {
   if (!title) fail("Usage: add-isc <name> <title>");
   const p = requireProject(name);
   const current = p.criteria ?? "";
-  const id = nextIscId(current);
+  const id = nextIscId(p);
   const newLine = `- [ ] ISC-${id}: ${title}`;
   p.criteria = current ? `${current.trimEnd()}\n${newLine}` : newLine;
   p.updated = now();
@@ -385,46 +406,56 @@ function cmdAddIsc(args: string[]): void {
   });
 }
 
+// Completing an ISC moves its line out of Criteria and into the dated Changelog
+// archive, so Criteria stays exactly the open set and never re-bloats context.
 function cmdCompleteIsc(args: string[]): void {
   const name = args[0] ?? fail("Usage: complete-isc <name> <id>");
   const id = Number(args[1] ?? fail("Usage: complete-isc <name> <id>"));
   if (!Number.isInteger(id) || id < 1) fail("ISC id must be a positive integer");
   const p = requireProject(name);
-  const current = p.criteria ?? "";
-  const existing = parseIscs(current).find((i) => i.id === id);
-  if (!existing) fail(`ISC-${id} not found in project "${name}"`);
-  if (existing.checked) {
+  if (parseIscs(p.changelog ?? "").some((i) => i.id === id)) {
     ok({ checked: true, id, alreadyDone: true });
     return;
   }
-  p.criteria = patchIsc(current, id, true);
+  const { line, rest } = removeIscLine(p.criteria ?? "", id);
+  if (!line) fail(`ISC-${id} not found in project "${name}"`);
+  p.criteria = rest;
+  p.changelog = archiveLine(p.changelog, line.replace("[ ]", "[x]"));
   p.updated = now();
   writeProject(p);
-  ok({ checked: true, id });
+  ok({ checked: true, id, archived: true });
 }
 
+// Reopening pulls the line back out of the Changelog (or legacy Criteria) into
+// the open set.
 function cmdReopenIsc(args: string[]): void {
   const name = args[0] ?? fail("Usage: reopen-isc <name> <id>");
   const id = Number(args[1] ?? fail("Usage: reopen-isc <name> <id>"));
   if (!Number.isInteger(id) || id < 1) fail("ISC id must be a positive integer");
   const p = requireProject(name);
-  const current = p.criteria ?? "";
-  const existing = parseIscs(current).find((i) => i.id === id);
-  if (!existing) fail(`ISC-${id} not found in project "${name}"`);
-  if (!existing.checked) {
+  if (parseIscs(p.criteria ?? "").some((i) => i.id === id && !i.checked)) {
     ok({ checked: false, id, alreadyOpen: true });
     return;
   }
-  p.criteria = patchIsc(current, id, false);
+  let removed = removeIscLine(p.changelog ?? "", id);
+  if (removed.line) {
+    p.changelog = removed.rest;
+  } else {
+    removed = removeIscLine(p.criteria ?? "", id);
+    if (removed.line) p.criteria = removed.rest;
+  }
+  if (!removed.line) fail(`ISC-${id} not found in project "${name}"`);
+  const openLine = removed.line.replace(/\[x\]/i, "[ ]");
+  p.criteria = p.criteria ? `${p.criteria.trimEnd()}\n${openLine}` : openLine;
   p.updated = now();
   writeProject(p);
   ok({ checked: false, id });
 }
 
-function selectIscs(all: Isc[], flags: Set<string>): Isc[] {
-  if (flags.has("--all")) return all;
-  if (flags.has("--closed")) return all.filter((i) => i.checked);
-  return all.filter((i) => !i.checked);
+function selectIscs(open: Isc[], done: Isc[], flags: Set<string>): Isc[] {
+  if (flags.has("--all")) return [...open, ...done];
+  if (flags.has("--closed")) return done;
+  return open;
 }
 
 function cmdListIsc(args: string[]): void {
@@ -433,15 +464,36 @@ function cmdListIsc(args: string[]): void {
     args.find((a) => !a.startsWith("--")) ??
     fail("Usage: list-isc <name> [--all | --closed]");
   const p = requireProject(name);
-  const all = parseIscs(p.criteria ?? "");
-  const open = all.filter((i) => !i.checked).length;
+  const criteria = parseIscs(p.criteria ?? "");
+  const open = criteria.filter((i) => !i.checked);
+  const done = [...criteria.filter((i) => i.checked), ...parseIscs(p.changelog ?? "")];
   ok({
     name,
-    total: all.length,
-    open,
-    done: all.length - open,
-    iscs: selectIscs(all, flags),
+    total: open.length + done.length,
+    open: open.length,
+    done: done.length,
+    iscs: selectIscs(open, done, flags),
   });
+}
+
+// Backfill: sweep any done ISCs still sitting in Criteria (legacy projects, or
+// completions from before archive-on-complete) into the Changelog in one pass.
+function cmdPruneIsc(args: string[]): void {
+  const name = args[0] ?? fail("Usage: prune-isc <name>");
+  const p = requireProject(name);
+  const done = parseIscs(p.criteria ?? "").filter((i) => i.checked);
+  for (const isc of done) {
+    const { line, rest } = removeIscLine(p.criteria ?? "", isc.id);
+    if (!line) continue;
+    p.criteria = rest;
+    p.changelog = archiveLine(p.changelog, line);
+  }
+  if (done.length > 0) {
+    p.updated = now();
+    writeProject(p);
+  }
+  const openLeft = parseIscs(p.criteria ?? "").filter((i) => !i.checked).length;
+  ok({ pruned: done.length, name, remaining_open: openLeft });
 }
 
 // ── Task ISA (work/) ──────────────────────────────────────────────
@@ -524,6 +576,7 @@ Commands:
   complete-isc <name> <id>                      mark ISC-N as done
   reopen-isc <name> <id>                        reopen ISC-N (mark not done)
   list-isc <name> [--all | --closed]           list open ISCs (default); --all or --closed for done
+  prune-isc <name>                              archive done ISCs from Criteria into the Changelog
   isa-init <name>                               mark project as ISA-initialized
   scaffold-task-isa <title>                     create a one-shot task ISA in memory/work/
   complete-task-isa <slug>                      mark a task ISA as complete
@@ -614,6 +667,9 @@ function run(): void {
       return;
     case "list-isc":
       cmdListIsc(rest);
+      return;
+    case "prune-isc":
+      cmdPruneIsc(rest);
       return;
     case "isa-init":
       cmdIsaInit(rest);

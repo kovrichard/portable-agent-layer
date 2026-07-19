@@ -40,13 +40,15 @@ The body of each ISA.md holds spec sections. Use `update-section` to set them:
 |---------|-----|---------------|
 | Problem | `problem` | Why this project exists; the pain or gap being addressed |
 | Goal | `goal` | What success looks like (may be bullet list) |
-| Criteria | `criteria` | Verifiable done conditions — testable ISCs (Ideal State Criteria) |
+| Criteria | `criteria` | Open ISCs (Ideal State Criteria) — testable done conditions. Holds only the open set; completing an ISC moves it to the Changelog |
 | Vision | `vision` | Long-horizon aspiration beyond the immediate goal |
 | Constraints | `constraints` | Non-negotiable limits (budget, time, tech, compatibility) |
 | Out of Scope | `out_of_scope` | What this project explicitly does NOT cover |
 | Context | `context` | Stable facts / references (e.g. "reference impl lives at ~/pai") |
 | Decisions | `decisions` | Auto-managed by `add-decision`; dated bullet list |
-| Changelog | `changelog` | Summary of completed milestones |
+| Changelog | `changelog` | Archive of completed ISCs (`complete-isc` moves them here under a dated `### Archived` heading) plus any milestone notes |
+
+**ISC archive model.** `complete-isc` does not just check a box — it moves the ISC line out of Criteria and into the Changelog archive, so Criteria always reflects exactly the open work and never bloats the context loaded at session start. `list-isc <name>` shows open ISCs by default; pass `--closed` (archived only) or `--all` (open + archived) to read finished ones. `reopen-isc` pulls an archived ISC back into the open set. `prune-isc <name>` backfills legacy projects by sweeping any done ISCs still sitting in Criteria into the archive in one pass.
 
 ## Routing
 

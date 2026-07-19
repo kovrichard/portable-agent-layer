@@ -298,4 +298,65 @@ describe("project CLI", () => {
     expect(closed.iscs[0].id).toBe(1);
     expect(closed.iscs[0].checked).toBe(true);
   });
+
+  test("complete-isc moves the line out of Criteria into the Changelog", async () => {
+    await runCli(["create", "arch", "--path", "/tmp/arch-fake"]);
+    await runCli(["add-isc", "arch", "ship it"]);
+    const done = JSON.parse((await runCli(["complete-isc", "arch", "1"])).stdout);
+    expect(done.checked).toBe(true);
+    expect(done.archived).toBe(true);
+
+    const proj = JSON.parse((await runCli(["resume", "arch"])).stdout).project;
+    expect(proj.criteria ?? "").not.toContain("ISC-1");
+    expect(proj.changelog).toContain("### Archived");
+    expect(proj.changelog).toContain("[x] ISC-1: ship it");
+  });
+
+  test("archived ISC ids are never reused by add-isc", async () => {
+    await runCli(["create", "reuse", "--path", "/tmp/reuse-fake"]);
+    await runCli(["add-isc", "reuse", "first"]);
+    await runCli(["complete-isc", "reuse", "1"]); // ISC-1 leaves Criteria
+    const added = JSON.parse((await runCli(["add-isc", "reuse", "second"])).stdout);
+    expect(added.id).toBe(2); // not 1, even though Criteria is empty of ISCs
+  });
+
+  test("reopen-isc pulls an archived ISC back into the open set", async () => {
+    await runCli(["create", "reopen", "--path", "/tmp/reopen-fake"]);
+    await runCli(["add-isc", "reopen", "the thing"]);
+    await runCli(["complete-isc", "reopen", "1"]);
+    const back = JSON.parse((await runCli(["reopen-isc", "reopen", "1"])).stdout);
+    expect(back.checked).toBe(false);
+
+    const proj = JSON.parse((await runCli(["resume", "reopen"])).stdout).project;
+    expect(proj.criteria).toContain("[ ] ISC-1: the thing");
+    expect(proj.changelog ?? "").not.toContain("ISC-1");
+
+    const list = JSON.parse((await runCli(["list-isc", "reopen"])).stdout);
+    expect(list.open).toBe(1);
+    expect(list.done).toBe(0);
+  });
+
+  test("prune-isc backfills legacy done ISCs sitting in Criteria", async () => {
+    await runCli(["create", "prune", "--path", "/tmp/prune-fake"]);
+    // Simulate a legacy project: done ISCs written directly into Criteria.
+    await runCli([
+      "update-section",
+      "prune",
+      "criteria",
+      "- [x] ISC-1: old done\n- [ ] ISC-2: still open\n- [x] ISC-3: also done",
+    ]);
+    const pruned = JSON.parse((await runCli(["prune-isc", "prune"])).stdout);
+    expect(pruned.pruned).toBe(2);
+    expect(pruned.remaining_open).toBe(1);
+
+    const proj = JSON.parse((await runCli(["resume", "prune"])).stdout).project;
+    expect(proj.criteria).toContain("[ ] ISC-2: still open");
+    expect(proj.criteria).not.toContain("ISC-1");
+    expect(proj.criteria).not.toContain("ISC-3");
+    expect(proj.changelog).toContain("[x] ISC-1: old done");
+    expect(proj.changelog).toContain("[x] ISC-3: also done");
+
+    const list = JSON.parse((await runCli(["list-isc", "prune", "--closed"])).stdout);
+    expect(list.iscs).toHaveLength(2);
+  });
 });
