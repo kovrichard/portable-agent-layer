@@ -1,3 +1,10 @@
+## [0.61.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.61.1...v0.61.2) (2026-07-19)
+
+
+### Bug Fixes
+
+* **projects:** move ISCs to changelog on completing them ([c8a3fa7](https://github.com/kovrichard/portable-agent-layer/commit/c8a3fa7feb62ae4e20b557f5772c652d0703f94e))
+
 ## [0.61.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.61.0...v0.61.1) (2026-07-19)
 
 
