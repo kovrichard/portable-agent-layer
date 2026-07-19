@@ -421,13 +421,27 @@ function cmdReopenIsc(args: string[]): void {
   ok({ checked: false, id });
 }
 
+function selectIscs(all: Isc[], flags: Set<string>): Isc[] {
+  if (flags.has("--all")) return all;
+  if (flags.has("--closed")) return all.filter((i) => i.checked);
+  return all.filter((i) => !i.checked);
+}
+
 function cmdListIsc(args: string[]): void {
-  const name = args[0] ?? fail("Usage: list-isc <name>");
+  const flags = new Set(args.filter((a) => a.startsWith("--")));
+  const name =
+    args.find((a) => !a.startsWith("--")) ??
+    fail("Usage: list-isc <name> [--all | --closed]");
   const p = requireProject(name);
-  const iscs = parseIscs(p.criteria ?? "");
-  const open = iscs.filter((i) => !i.checked);
-  const done = iscs.filter((i) => i.checked);
-  ok({ name, total: iscs.length, open: open.length, done: done.length, iscs });
+  const all = parseIscs(p.criteria ?? "");
+  const open = all.filter((i) => !i.checked).length;
+  ok({
+    name,
+    total: all.length,
+    open,
+    done: all.length - open,
+    iscs: selectIscs(all, flags),
+  });
 }
 
 // ── Task ISA (work/) ──────────────────────────────────────────────
@@ -509,7 +523,7 @@ Commands:
   add-isc <name> "title"                        append a new open ISC to Criteria
   complete-isc <name> <id>                      mark ISC-N as done
   reopen-isc <name> <id>                        reopen ISC-N (mark not done)
-  list-isc <name>                               list all ISCs with open/done status
+  list-isc <name> [--all | --closed]           list open ISCs (default); --all or --closed for done
   isa-init <name>                               mark project as ISA-initialized
   scaffold-task-isa <title>                     create a one-shot task ISA in memory/work/
   complete-task-isa <slug>                      mark a task ISA as complete

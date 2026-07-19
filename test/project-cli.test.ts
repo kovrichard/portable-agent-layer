@@ -275,4 +275,27 @@ describe("project CLI", () => {
     expect(r.code).toBe(1);
     expect(r.stderr).toContain("Unknown command");
   });
+
+  test("list-isc defaults to open ISCs only; --all / --closed reveal done ones", async () => {
+    await runCli(["create", "iscproj", "--path", "/tmp/iscproj-fake"]);
+    await runCli(["add-isc", "iscproj", "first thing"]);
+    await runCli(["add-isc", "iscproj", "second thing"]);
+    await runCli(["complete-isc", "iscproj", "1"]);
+
+    const def = JSON.parse((await runCli(["list-isc", "iscproj"])).stdout);
+    expect(def.total).toBe(2);
+    expect(def.open).toBe(1);
+    expect(def.done).toBe(1);
+    expect(def.iscs).toHaveLength(1);
+    expect(def.iscs[0].id).toBe(2);
+    expect(def.iscs.every((i: { checked: boolean }) => !i.checked)).toBe(true);
+
+    const all = JSON.parse((await runCli(["list-isc", "iscproj", "--all"])).stdout);
+    expect(all.iscs).toHaveLength(2);
+
+    const closed = JSON.parse((await runCli(["list-isc", "iscproj", "--closed"])).stdout);
+    expect(closed.iscs).toHaveLength(1);
+    expect(closed.iscs[0].id).toBe(1);
+    expect(closed.iscs[0].checked).toBe(true);
+  });
 });

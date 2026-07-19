@@ -40,6 +40,7 @@ Thinking-only. No tool calls except context recovery (Grep/Glob/Read).
 
 ```bash
 # If cwd matches a registered project — read its open ISCs (Ideal State Criteria):
+# list-isc returns OPEN criteria by default; pass --all or --closed to see finished ones.
 bun ~/.pal/tools/project.ts list-isc <project-name>
 
 # If this is ad-hoc work with no registered project — scaffold a task ISA:
