@@ -330,10 +330,30 @@ describe("project CLI", () => {
     const proj = JSON.parse((await runCli(["resume", "reopen"])).stdout).project;
     expect(proj.criteria).toContain("[ ] ISC-1: the thing");
     expect(proj.changelog ?? "").not.toContain("ISC-1");
+    // Reopening the only archived ISC must not leave a dangling empty date heading.
+    expect(proj.changelog ?? "").not.toContain("### Archived");
 
     const list = JSON.parse((await runCli(["list-isc", "reopen"])).stdout);
     expect(list.open).toBe(1);
     expect(list.done).toBe(0);
+  });
+
+  test("reopen drops the emptied date heading but keeps other dates intact", async () => {
+    await runCli(["create", "heads", "--path", "/tmp/heads-fake"]);
+    // Two ISCs archived on the same (today's) date, then reopen one.
+    await runCli(["add-isc", "heads", "alpha"]);
+    await runCli(["add-isc", "heads", "beta"]);
+    await runCli(["complete-isc", "heads", "1"]);
+    await runCli(["complete-isc", "heads", "2"]);
+    await runCli(["reopen-isc", "heads", "1"]);
+
+    const proj = JSON.parse((await runCli(["resume", "heads"])).stdout).project;
+    // Heading stays because ISC-2 is still filed under it.
+    expect(proj.changelog).toContain("### Archived");
+    expect(proj.changelog).toContain("[x] ISC-2: beta");
+    expect(proj.changelog).not.toContain("ISC-1");
+    // Exactly one heading, not a duplicate or orphan.
+    expect(proj.changelog.match(/### Archived/g)).toHaveLength(1);
   });
 
   test("prune-isc backfills legacy done ISCs sitting in Criteria", async () => {

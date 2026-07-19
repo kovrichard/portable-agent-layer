@@ -378,6 +378,23 @@ function removeIscLine(
   };
 }
 
+// Drops any "### Archived <date>" heading whose block has no content left —
+// e.g. after every ISC filed under that date has been reopened.
+function dropEmptyArchiveHeadings(changelog: string): string {
+  const lines = changelog.split("\n");
+  const blockHasContent = (headingIdx: number): boolean => {
+    for (let j = headingIdx + 1; j < lines.length && !lines[j].startsWith("### "); j++) {
+      if (lines[j].trim() !== "") return true;
+    }
+    return false;
+  };
+  return lines
+    .filter((l, i) => !(/^### Archived /.test(l) && !blockHasContent(i)))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function archiveLine(changelog: string | undefined, doneLine: string): string {
   const heading = `### Archived ${new Date().toISOString().slice(0, 10)}`;
   const base = (changelog ?? "").trim();
@@ -439,7 +456,7 @@ function cmdReopenIsc(args: string[]): void {
   }
   let removed = removeIscLine(p.changelog ?? "", id);
   if (removed.line) {
-    p.changelog = removed.rest;
+    p.changelog = dropEmptyArchiveHeadings(removed.rest);
   } else {
     removed = removeIscLine(p.criteria ?? "", id);
     if (removed.line) p.criteria = removed.rest;
