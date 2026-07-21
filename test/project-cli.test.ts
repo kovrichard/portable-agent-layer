@@ -1,5 +1,12 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { resolve } from "node:path";
 
 const TEST_HOME = resolve(import.meta.dir, "../.test-home-project-cli");
@@ -41,6 +48,18 @@ function isaFiles(): string[] {
   const base = resolve(TEST_HOME, "memory", "projects");
   if (!existsSync(base)) return [];
   return readdirSync(base).filter((slug) => existsSync(resolve(base, slug, "ISA.md")));
+}
+
+// Read a named ISA.md body section straight from disk. resume no longer exposes
+// the raw Criteria/Changelog blobs (it projects a lean view), so storage-format
+// assertions read the file directly, mirroring the production `^## ` split.
+function section(slug: string, heading: string): string {
+  const isa = readFileSync(
+    resolve(TEST_HOME, "memory", "projects", slug, "ISA.md"),
+    "utf-8"
+  );
+  const hit = isa.split(/^## /m).find((part) => part.startsWith(`${heading}\n`));
+  return hit ? hit.slice(heading.length).trim() : "";
 }
 
 describe("project CLI", () => {
@@ -306,10 +325,10 @@ describe("project CLI", () => {
     expect(done.checked).toBe(true);
     expect(done.archived).toBe(true);
 
-    const proj = JSON.parse((await runCli(["resume", "arch"])).stdout).project;
-    expect(proj.criteria ?? "").not.toContain("ISC-1");
-    expect(proj.changelog).toContain("### Archived");
-    expect(proj.changelog).toContain("[x] ISC-1: ship it");
+    expect(section("arch", "Criteria")).not.toContain("ISC-1");
+    const changelog = section("arch", "Changelog");
+    expect(changelog).toContain("### Archived");
+    expect(changelog).toContain("[x] ISC-1: ship it");
   });
 
   test("archived ISC ids are never reused by add-isc", async () => {
@@ -327,11 +346,10 @@ describe("project CLI", () => {
     const back = JSON.parse((await runCli(["reopen-isc", "reopen", "1"])).stdout);
     expect(back.checked).toBe(false);
 
-    const proj = JSON.parse((await runCli(["resume", "reopen"])).stdout).project;
-    expect(proj.criteria).toContain("[ ] ISC-1: the thing");
-    expect(proj.changelog ?? "").not.toContain("ISC-1");
+    expect(section("reopen", "Criteria")).toContain("[ ] ISC-1: the thing");
+    expect(section("reopen", "Changelog")).not.toContain("ISC-1");
     // Reopening the only archived ISC must not leave a dangling empty date heading.
-    expect(proj.changelog ?? "").not.toContain("### Archived");
+    expect(section("reopen", "Changelog")).not.toContain("### Archived");
 
     const list = JSON.parse((await runCli(["list-isc", "reopen"])).stdout);
     expect(list.open).toBe(1);
@@ -347,13 +365,13 @@ describe("project CLI", () => {
     await runCli(["complete-isc", "heads", "2"]);
     await runCli(["reopen-isc", "heads", "1"]);
 
-    const proj = JSON.parse((await runCli(["resume", "heads"])).stdout).project;
+    const changelog = section("heads", "Changelog");
     // Heading stays because ISC-2 is still filed under it.
-    expect(proj.changelog).toContain("### Archived");
-    expect(proj.changelog).toContain("[x] ISC-2: beta");
-    expect(proj.changelog).not.toContain("ISC-1");
+    expect(changelog).toContain("### Archived");
+    expect(changelog).toContain("[x] ISC-2: beta");
+    expect(changelog).not.toContain("ISC-1");
     // Exactly one heading, not a duplicate or orphan.
-    expect(proj.changelog.match(/### Archived/g)).toHaveLength(1);
+    expect(changelog.match(/### Archived/g)).toHaveLength(1);
   });
 
   test("prune-isc backfills legacy done ISCs sitting in Criteria", async () => {
@@ -369,14 +387,70 @@ describe("project CLI", () => {
     expect(pruned.pruned).toBe(2);
     expect(pruned.remaining_open).toBe(1);
 
-    const proj = JSON.parse((await runCli(["resume", "prune"])).stdout).project;
-    expect(proj.criteria).toContain("[ ] ISC-2: still open");
-    expect(proj.criteria).not.toContain("ISC-1");
-    expect(proj.criteria).not.toContain("ISC-3");
-    expect(proj.changelog).toContain("[x] ISC-1: old done");
-    expect(proj.changelog).toContain("[x] ISC-3: also done");
+    const criteria = section("prune", "Criteria");
+    expect(criteria).toContain("[ ] ISC-2: still open");
+    expect(criteria).not.toContain("ISC-1");
+    expect(criteria).not.toContain("ISC-3");
+    const changelog = section("prune", "Changelog");
+    expect(changelog).toContain("[x] ISC-1: old done");
+    expect(changelog).toContain("[x] ISC-3: also done");
 
     const list = JSON.parse((await runCli(["list-isc", "prune", "--closed"])).stdout);
     expect(list.iscs).toHaveLength(2);
+  });
+
+  test("resume projects a lean view: open-ISC titles, no raw criteria/changelog", async () => {
+    await runCli(["create", "lean", "--path", "/tmp/lean-fake"]);
+    await runCli(["add-isc", "lean", "first open thing"]);
+    await runCli(["add-isc", "lean", "second thing"]);
+    await runCli(["complete-isc", "lean", "2"]); // archived into Changelog
+    const project = JSON.parse((await runCli(["resume", "lean"])).stdout).project;
+    // The raw blobs are dropped — that IS the projection.
+    expect(project.criteria).toBeUndefined();
+    expect(project.changelog).toBeUndefined();
+    // Open ISCs surface as {id, title}; closed ones only as a count.
+    expect(project.open_iscs).toEqual([{ id: 1, title: "first open thing" }]);
+    expect(project.isc_summary).toEqual({ open: 1, done: 1 });
+  });
+
+  test("resume truncates a long ISC line to a glanceable title", async () => {
+    await runCli(["create", "trunc", "--path", "/tmp/trunc-fake"]);
+    await runCli([
+      "add-isc",
+      "trunc",
+      "short lead; then a long tail dropped from the title",
+    ]);
+    const project = JSON.parse((await runCli(["resume", "trunc"])).stdout).project;
+    expect(project.open_iscs[0].title).toBe("short lead");
+  });
+
+  test("show-isc returns the full text of an open ISC", async () => {
+    await runCli(["create", "show", "--path", "/tmp/show-fake"]);
+    const full = "detailed body; with clauses and (parens) and more";
+    await runCli(["add-isc", "show", full]);
+    const r = await runCli(["show-isc", "show", "1"]);
+    expect(r.code).toBe(0);
+    expect(JSON.parse(r.stdout)).toEqual({
+      name: "show",
+      id: 1,
+      status: "open",
+      text: full,
+    });
+  });
+
+  test("show-isc finds an archived (closed) ISC too", async () => {
+    await runCli(["create", "showc", "--path", "/tmp/showc-fake"]);
+    await runCli(["add-isc", "showc", "will be done"]);
+    await runCli(["complete-isc", "showc", "1"]);
+    const got = JSON.parse((await runCli(["show-isc", "showc", "1"])).stdout);
+    expect(got.status).toBe("closed");
+    expect(got.text).toBe("will be done");
+  });
+
+  test("show-isc fails on an unknown id", async () => {
+    await runCli(["create", "shownone", "--path", "/tmp/shownone-fake"]);
+    const r = await runCli(["show-isc", "shownone", "99"]);
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain("ISC-99 not found");
   });
 });

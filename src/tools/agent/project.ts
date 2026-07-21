@@ -123,10 +123,24 @@ function cmdCreate(args: string[]): void {
 
 // ── resume ────────────────────────────────────────────────────────
 
+// resume returns a lean orientation view: all narrative sections, but the
+// Criteria/Changelog blobs collapse to open-ISC titles + counts. Full ISC text
+// is fetched on demand via show-isc / list-isc, so resume stays cheap on
+// projects carrying a large backlog.
 function cmdResume(args: string[]): void {
   const name = args[0];
   if (!name) fail("Usage: resume <name>");
-  ok({ project: requireProject(name) });
+  const { criteria, changelog, ...project } = requireProject(name);
+  const iscs = parseIscs(criteria ?? "");
+  const openIscs = iscs.filter((i) => !i.checked);
+  const done = iscs.filter((i) => i.checked).length + parseIscs(changelog ?? "").length;
+  ok({
+    project: {
+      ...project,
+      open_iscs: openIscs.map((i) => ({ id: i.id, title: iscTitle(i.text) })),
+      isc_summary: { open: openIscs.length, done },
+    },
+  });
 }
 
 // ── status transitions ────────────────────────────────────────────
@@ -351,6 +365,14 @@ function parseIscs(criteria: string): Isc[] {
   return out;
 }
 
+// Collapse a full ISC line to a glanceable title for resume: cut at the first
+// clause boundary, then hard-cap length. Full text stays reachable via show-isc.
+function iscTitle(text: string): string {
+  const boundary = text.search(/; | — | \(|\. /);
+  const clause = (boundary > 0 ? text.slice(0, boundary) : text).trim();
+  return clause.length > 80 ? `${clause.slice(0, 79).trimEnd()}…` : clause;
+}
+
 // Scans Criteria AND Changelog so an archived id can never be handed out again.
 function nextIscId(p: ProjectProgress): number {
   const ids = [...parseIscs(p.criteria ?? ""), ...parseIscs(p.changelog ?? "")].map(
@@ -493,6 +515,20 @@ function cmdListIsc(args: string[]): void {
   });
 }
 
+// show-isc prints one ISC's full text on demand — the "detail" counterpart to
+// resume's titles. Scans Criteria (open + not-yet-archived) and Changelog.
+function cmdShowIsc(args: string[]): void {
+  const name = args[0];
+  const id = Number(args[1]);
+  if (!name || !Number.isInteger(id) || id < 1) fail("Usage: show-isc <name> <id>");
+  const p = requireProject(name);
+  const isc = [...parseIscs(p.criteria ?? ""), ...parseIscs(p.changelog ?? "")].find(
+    (i) => i.id === id
+  );
+  if (!isc) fail(`ISC-${id} not found in project "${name}".`);
+  ok({ name, id: isc.id, status: isc.checked ? "closed" : "open", text: isc.text });
+}
+
 // Backfill: sweep any done ISCs still sitting in Criteria (legacy projects, or
 // completions from before archive-on-complete) into the Changelog in one pass.
 function cmdPruneIsc(args: string[]): void {
@@ -576,7 +612,7 @@ function help(): void {
 Commands:
   list                                          show all registered projects
   create [name] [--path PATH] [--objectives X]  register a project
-  resume <name>                                 print full project ISA
+  resume <name>                                 print lean project view (open-ISC titles; full text via show-isc)
   complete <name>                               mark complete
   archive <name>                                mark archived
   pause <name> | unpause <name>                 toggle paused/active
@@ -593,6 +629,7 @@ Commands:
   complete-isc <name> <id>                      mark ISC-N as done
   reopen-isc <name> <id>                        reopen ISC-N (mark not done)
   list-isc <name> [--all | --closed]           list open ISCs (default); --all or --closed for done
+  show-isc <name> <id>                          print one ISC's full text
   prune-isc <name>                              archive done ISCs from Criteria into the Changelog
   isa-init <name>                               mark project as ISA-initialized
   scaffold-task-isa <title>                     create a one-shot task ISA in memory/work/
@@ -684,6 +721,9 @@ function run(): void {
       return;
     case "list-isc":
       cmdListIsc(rest);
+      return;
+    case "show-isc":
+      cmdShowIsc(rest);
       return;
     case "prune-isc":
       cmdPruneIsc(rest);
