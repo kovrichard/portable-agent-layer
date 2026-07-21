@@ -93,7 +93,9 @@ describe("injectPromptContext handler", () => {
       "DB mock test failed",
       "Never mock the database"
     );
-    await setSettings({ dynamicContext: { learningInjection: false } });
+    await setSettings({
+      dynamicContext: { learningInjection: false, contextualSteering: false },
+    });
     const { injectPromptContext } = await loadHandlers();
     const out = await captureStdout(() =>
       injectPromptContext("should I mock the database in this test")

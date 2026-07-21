@@ -14,7 +14,14 @@
 
 import { isEnabled } from "./settings";
 
-export type SteeringTag = "debugging" | "destructive" | "refactor";
+export type SteeringTag =
+  | "debugging"
+  | "destructive"
+  | "refactor"
+  | "planning"
+  | "testing"
+  | "committing"
+  | "secrets";
 
 interface SteeringRule {
   tag: SteeringTag;
@@ -46,6 +53,30 @@ const STEERING_RULES: SteeringRule[] = [
       /\b(refactor\w*|clean\s?up|simplif\w*|reorganiz\w*|restructur\w*|dead code|tech debt)\b/i,
     snippet:
       "Refactoring or cleaning up? If so, prefer first-principles simplification over adding new layers, and keep the change scoped to what was asked — flag dead code rather than silently rewriting neighboring files.",
+  },
+  {
+    tag: "planning",
+    pattern: /\b(plans?|planning|designs?|designing|architect\w*|roadmap)\b/i,
+    snippet:
+      "Planning or designing something? If you were asked to plan, present the approach and stop — wait for an explicit go-ahead before writing any code.",
+  },
+  {
+    tag: "testing",
+    pattern: /\b(tests?|testing|coverage|assertions?|vacuous)\b/i,
+    snippet:
+      "Adding or changing a test? Prove it isn't vacuous — make it fail first for the right reason, then restore it, so a green run actually means something.",
+  },
+  {
+    tag: "committing",
+    pattern: /\b(commits?|committing|pull requests?|cherry-pick|rebase|PR)\b|git push/i,
+    snippet:
+      "About to commit, push, or open a PR? Only if it was asked — and if you're on the default branch, branch first; keep the commit scoped to what was requested.",
+  },
+  {
+    tag: "secrets",
+    pattern: /\b(secrets?|api[\s-]?keys?|tokens?|passwords?|credentials?)\b|\.env\b/i,
+    snippet:
+      "Handling secrets, API keys, or credentials? Never hardcode them in source or commit them — keep them in env or private config, and never echo them into logs or output.",
   },
 ];
 

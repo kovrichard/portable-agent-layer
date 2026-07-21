@@ -20,6 +20,32 @@ describe("classifyPrompt", () => {
     );
   });
 
+  test("tags a planning prompt", () => {
+    expect(classifyPrompt("let's plan the migration and design the schema")).toContain(
+      "planning"
+    );
+  });
+
+  test("tags a testing prompt", () => {
+    expect(classifyPrompt("add a test for the parser and check coverage")).toContain(
+      "testing"
+    );
+  });
+
+  test("tags a committing prompt", () => {
+    expect(classifyPrompt("commit this and open a PR")).toContain("committing");
+    expect(classifyPrompt("git push the branch")).toContain("committing");
+  });
+
+  test("tags a secrets prompt", () => {
+    expect(classifyPrompt("store the api key and rotate the token")).toContain("secrets");
+  });
+
+  // Word-boundary guard: a "push notification" is not a git push.
+  test("'push notification' does not trigger committing", () => {
+    expect(classifyPrompt("I got a push notification on my phone")).toEqual([]);
+  });
+
   test("returns multiple tags in declaration order", () => {
     // debugging is declared before destructive → order is stable, not prompt order
     expect(classifyPrompt("remove the crashing handler")).toEqual([
