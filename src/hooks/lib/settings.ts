@@ -25,6 +25,11 @@ export interface PalSettingsData {
   dynamicContext?: Record<string, boolean>;
   /** Git co-author attribution opt-in. `decided` gates the one-time prompt. */
   attribution?: { enabled?: boolean; decided?: boolean };
+  /** Contextual-steering user extension: personal rules + shipped rules to suppress by tag. */
+  steering?: {
+    disable?: string[];
+    rules?: Array<{ tag: string; pattern: string; snippet: string }>;
+  };
   [key: string]: unknown;
 }
 

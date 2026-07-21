@@ -26,6 +26,13 @@
     "projects": true,
     "sessionIntelligence": true,
     "handoff": true,
-    "selfModel": true
+    "selfModel": true,
+    "contextualSteering": true,
+    "steeringTestReport": false
+  },
+  "steering": {
+    "_docs": "Contextual steering: PAL injects a short self-check into your prompt when it matches a task type. 'disable' removes shipped rules by tag (debugging, destructive, refactor, planning, testing, committing, secrets); 'rules' adds your own as [{ tag, pattern (JS regex, case-insensitive), snippet }]. A bad regex is skipped, never fatal. Toggle the whole feature via dynamicContext.contextualSteering.",
+    "disable": [],
+    "rules": []
   }
 }

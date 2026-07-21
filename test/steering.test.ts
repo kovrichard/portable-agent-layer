@@ -1,5 +1,35 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { classifyPrompt, getSteeringReminder } from "../src/hooks/lib/steering";
+
+// Steering reads user rules / disables from pal-settings.json, so these tests run
+// against an isolated PAL_HOME to stay deterministic regardless of the real config.
+const TEST_HOME = resolve(import.meta.dir, "../.test-home-steering");
+
+beforeAll(() => {
+  process.env.PAL_HOME = TEST_HOME;
+  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  mkdirSync(resolve(TEST_HOME, "memory"), { recursive: true });
+});
+
+afterAll(() => {
+  delete process.env.PAL_HOME;
+  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+});
+
+beforeEach(async () => {
+  const p = resolve(TEST_HOME, "memory", "pal-settings.json");
+  if (existsSync(p)) rmSync(p);
+  const settings = await import("../src/hooks/lib/settings");
+  settings.reload();
+});
+
+async function setSettings(data: Record<string, unknown>) {
+  writeFileSync(resolve(TEST_HOME, "memory", "pal-settings.json"), JSON.stringify(data));
+  const settings = await import("../src/hooks/lib/settings");
+  settings.reload();
+}
 
 describe("classifyPrompt", () => {
   test("tags a debugging prompt", () => {
@@ -47,7 +77,6 @@ describe("classifyPrompt", () => {
   });
 
   test("returns multiple tags in declaration order", () => {
-    // debugging is declared before destructive → order is stable, not prompt order
     expect(classifyPrompt("remove the crashing handler")).toEqual([
       "debugging",
       "destructive",
@@ -56,7 +85,7 @@ describe("classifyPrompt", () => {
 
   // Negative controls — proves the classifier isn't matching everything.
   test("greeting matches nothing", () => {
-    expect(classifyPrompt("hey Jarvis, good morning")).toEqual([]);
+    expect(classifyPrompt("hey there, good morning")).toEqual([]);
   });
 
   test("empty / whitespace matches nothing", () => {
@@ -87,5 +116,51 @@ describe("getSteeringReminder", () => {
     expect(out.match(/<system-reminder>/g)?.length).toBe(1);
     expect(out).toContain("Debugging something?");
     expect(out).toContain("force-push");
+  });
+
+  // The shipped committing rule must stay universal — no "branch first" opinion.
+  test("shipped committing rule is workflow-neutral", () => {
+    const out = getSteeringReminder("commit this") ?? "";
+    expect(out).toContain("Only do it if it was asked");
+    expect(out).not.toContain("branch first");
+  });
+});
+
+describe("user extension via pal-settings.json", () => {
+  test("a user rule from settings fires", async () => {
+    await setSettings({
+      steering: {
+        rules: [
+          {
+            tag: "deploy",
+            pattern: "deploy|ship to prod",
+            snippet: "Deploying? Confirm the target env first.",
+          },
+        ],
+      },
+    });
+    expect(classifyPrompt("deploy to prod now")).toContain("deploy");
+    expect(getSteeringReminder("deploy to prod now")).toContain(
+      "Confirm the target env first"
+    );
+  });
+
+  test("disable suppresses a shipped rule by tag", async () => {
+    await setSettings({ steering: { disable: ["committing"] } });
+    expect(classifyPrompt("commit this and open a PR")).toEqual([]);
+  });
+
+  test("malformed user rule (bad regex) is skipped, not thrown", async () => {
+    await setSettings({
+      steering: {
+        rules: [
+          { tag: "bad", pattern: "(", snippet: "unreachable" },
+          { tag: "widgets", pattern: "widget", snippet: "Widget rule fired." },
+        ],
+      },
+    });
+    // The bad regex must not crash classification, and the valid rule still works.
+    expect(() => classifyPrompt("a broken (paren")).not.toThrow();
+    expect(classifyPrompt("build a widget")).toEqual(["widgets"]);
   });
 });

@@ -12,9 +12,11 @@
  * only when the prompt matches that task type.
  */
 
-import { isEnabled } from "./settings";
+import { isEnabled, raw } from "./settings";
 
-export type SteeringTag =
+/** The tags shipped as built-in defaults. Users may add their own tags via
+ *  pal-settings.json `steering.rules`, so the effective tag set is open-ended. */
+type SteeringTag =
   | "debugging"
   | "destructive"
   | "refactor"
@@ -24,7 +26,7 @@ export type SteeringTag =
   | "secrets";
 
 interface SteeringRule {
-  tag: SteeringTag;
+  tag: string;
   pattern: RegExp;
   snippet: string;
 }
@@ -32,7 +34,7 @@ interface SteeringRule {
 // Ordered rule table. Multiple rules may match one prompt; classifyPrompt
 // returns every match in declaration order. Patterns are anchored on word
 // boundaries to avoid substring false-positives (e.g. "warm" ≠ "rm").
-const STEERING_RULES: SteeringRule[] = [
+const STEERING_RULES: Array<SteeringRule & { tag: SteeringTag }> = [
   {
     tag: "debugging",
     pattern:
@@ -70,7 +72,7 @@ const STEERING_RULES: SteeringRule[] = [
     tag: "committing",
     pattern: /\b(commits?|committing|pull requests?|cherry-pick|rebase|PR)\b|git push/i,
     snippet:
-      "About to commit, push, or open a PR? Only if it was asked — and if you're on the default branch, branch first; keep the commit scoped to what was requested.",
+      "About to commit, push, or open a PR? Only do it if it was asked, and keep the commit scoped to exactly what was requested.",
   },
   {
     tag: "secrets",
@@ -82,35 +84,62 @@ const STEERING_RULES: SteeringRule[] = [
 
 const MAX_STEERING_BYTES = 1000;
 
-/** Deterministically classify a prompt into steering tags. Pure, fail-open. */
-export function classifyPrompt(text: string): SteeringTag[] {
-  if (!text?.trim()) return [];
-  const tags: SteeringTag[] = [];
-  for (const rule of STEERING_RULES) {
-    if (rule.pattern.test(text)) tags.push(rule.tag);
+/** Merge shipped defaults with the user's pal-settings.json extension:
+ *  `steering.disable` removes built-ins by tag; `steering.rules` appends personal
+ *  rules. Malformed user entries (missing field or bad regex) are skipped, never
+ *  thrown — a broken personal rule must not disable steering for everyone. */
+function effectiveRules(): SteeringRule[] {
+  const cfg = raw().steering ?? {};
+  const disabled = new Set(cfg.disable ?? []);
+  const rules: SteeringRule[] = STEERING_RULES.filter((r) => !disabled.has(r.tag));
+  for (const u of cfg.rules ?? []) {
+    if (!u?.tag || !u?.pattern || !u?.snippet) continue;
+    let pattern: RegExp;
+    try {
+      pattern = new RegExp(u.pattern, "i");
+    } catch {
+      continue; // fail-open: skip malformed regex
+    }
+    rules.push({ tag: u.tag, pattern, snippet: u.snippet });
   }
-  return tags;
+  return rules;
+}
+
+/** Match a prompt against the effective rule set, one hit per tag, in order. */
+function matchRules(text: string): SteeringRule[] {
+  if (!text?.trim()) return [];
+  const matched: SteeringRule[] = [];
+  const seen = new Set<string>();
+  for (const rule of effectiveRules()) {
+    if (!seen.has(rule.tag) && rule.pattern.test(text)) {
+      seen.add(rule.tag);
+      matched.push(rule);
+    }
+  }
+  return matched;
+}
+
+/** Deterministically classify a prompt into steering tags. Pure, fail-open. */
+export function classifyPrompt(text: string): string[] {
+  return matchRules(text).map((r) => r.tag);
 }
 
 /** Build the steering <system-reminder> for a prompt, or null if nothing matches. */
 export function getSteeringReminder(prompt: string): string | null {
   if (!isEnabled("contextualSteering")) return null;
 
-  let tags: SteeringTag[];
+  let matched: SteeringRule[];
   try {
-    tags = classifyPrompt(prompt);
+    matched = matchRules(prompt);
   } catch {
     return null; // fail-open: never block a prompt on a classifier error
   }
-  if (tags.length === 0) return null;
+  if (matched.length === 0) return null;
 
-  const snippetByTag = new Map(STEERING_RULES.map((r) => [r.tag, r.snippet]));
   const lines: string[] = [];
   let budget = MAX_STEERING_BYTES;
-  for (const tag of tags) {
-    const snippet = snippetByTag.get(tag);
-    if (!snippet) continue;
-    const line = `- ${snippet}`;
+  for (const rule of matched) {
+    const line = `- ${rule.snippet}`;
     const cost = Buffer.byteLength(line);
     if (cost > budget) break; // byte-cap: drop the overflow tail, keep top matches
     lines.push(line);
