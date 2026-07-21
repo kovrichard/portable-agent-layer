@@ -8,12 +8,14 @@
  * Invoked via `pal cli usage [--today|--week|--month|--all] [--project <name>]`.
  */
 
+import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { MODEL_PRICING } from "../hooks/lib/models";
 import { palHome } from "../hooks/lib/paths";
+import { findBinaryOnPath } from "../hooks/lib/which";
 
 // ── Types ──
 
@@ -370,6 +372,51 @@ function readPalInference(): {
   return { buckets, byModel, byCaller };
 }
 
+// ── rtk compression savings ──
+
+interface RtkSummary {
+  total_commands: number;
+  total_saved: number;
+  avg_savings_pct: number;
+}
+
+/**
+ * Query rtk's own savings ledger. `installed: false` means rtk isn't on PATH;
+ * `summary: null` with `installed: true` means rtk is present but has no data
+ * (or errored) — the two cases print differently in the usage report.
+ */
+function readRtkGain(): { installed: boolean; summary: RtkSummary | null } {
+  const rtk = findBinaryOnPath("rtk");
+  if (!rtk) return { installed: false, summary: null };
+  try {
+    const r = spawnSync(rtk, ["gain", "--format", "json"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    if (r.status !== 0 || !r.stdout) return { installed: true, summary: null };
+    const parsed = JSON.parse(r.stdout) as { summary?: RtkSummary };
+    return { installed: true, summary: parsed.summary ?? null };
+  } catch {
+    return { installed: true, summary: null };
+  }
+}
+
+function printRtkGain(): void {
+  const { installed, summary } = readRtkGain();
+  console.log("\n  rtk Compression\n");
+  if (!installed) {
+    console.log("  rtk not installed");
+    return;
+  }
+  if (!summary || summary.total_commands === 0) {
+    console.log("  rtk installed — no savings recorded yet");
+    return;
+  }
+  console.log(
+    `  Tokens saved   ${fmt(summary.total_saved).padStart(8)} tok  ${summary.avg_savings_pct.toFixed(1)}% avg  across ${fmt(summary.total_commands)} commands`
+  );
+}
+
 // ── CLI ──
 
 export function usage() {
@@ -425,6 +472,8 @@ export function usage() {
     printRow("30d", tb.month);
     printRow("Total", tb.total);
   }
+
+  printRtkGain();
 
   const grand = emptyBucket();
   for (const b of [cc.buckets.total, pal.buckets.total]) {
