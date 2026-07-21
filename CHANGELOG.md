@@ -1,3 +1,15 @@
+## [0.61.4](https://github.com/kovrichard/portable-agent-layer/compare/v0.61.3...v0.61.4) (2026-07-21)
+
+
+### Bug Fixes
+
+* **claude:** remove obsolete permissions ([b880b42](https://github.com/kovrichard/portable-agent-layer/commit/b880b42e8bd4145139f1158f9513a01040eec013))
+* **inference:** raise timeouts to 90 seconds ([2b15fa9](https://github.com/kovrichard/portable-agent-layer/commit/2b15fa9c8056d77a27c6bea4af4cdf90f493231e))
+* **opinion:** align documented confidence figures with implementation ([7770474](https://github.com/kovrichard/portable-agent-layer/commit/7770474954adecb736e5298d2c06a7715bcda0e7))
+* **opinions:** match short keyword queries with containment scoring ([a84157e](https://github.com/kovrichard/portable-agent-layer/commit/a84157e4cf7f5facbb5803203154b16c3939eecb))
+* **opinions:** return best-scoring match not first above threshold ([b756ae2](https://github.com/kovrichard/portable-agent-layer/commit/b756ae2e35e721a054a08078c3adbbc0e6006989))
+* **update-check:** update logic to ignore local unpushed commits in repo mode ([9248552](https://github.com/kovrichard/portable-agent-layer/commit/9248552f67f254986294ebfcc6e7d808f48d167b))
+
 ## [0.61.3](https://github.com/kovrichard/portable-agent-layer/compare/v0.61.2...v0.61.3) (2026-07-19)
 
 
