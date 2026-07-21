@@ -26,6 +26,7 @@ import {
 } from "../hooks/lib/opinions";
 import { palHome } from "../hooks/lib/paths";
 import { similarity } from "../hooks/lib/text-similarity";
+import { emit } from "./lib/emit";
 
 // ── Types ──
 
@@ -413,11 +414,11 @@ Output:
   const notes = loadNotes(daysBack);
   const ratings = loadRatings(daysBack);
 
-  console.log(`Loaded ${notes.length} notes from last ${daysBack} days`);
-  console.log(`Loaded ${ratings.length} ratings`);
+  emit.ok(`Loaded ${notes.length} notes from last ${daysBack} days`);
+  emit.ok(`Loaded ${ratings.length} ratings`);
 
   if (notes.length === 0 && ratings.length === 0) {
-    console.log("No data to analyze");
+    emit.ok("No data to analyze");
     process.exit(0);
   }
 
@@ -425,42 +426,42 @@ Output:
 
   const avgRating =
     ratings.length > 0 ? ratings.reduce((s, r) => s + r.rating, 0) / ratings.length : 0;
-  console.log(`\nAverage Rating: ${avgRating.toFixed(1)}/10`);
+  emit.ok(`\nAverage Rating: ${avgRating.toFixed(1)}/10`);
 
   const summaries = groupNoteOccurrences(notes);
-  console.log(`Observations: ${summaries.length} unique`);
+  emit.ok(`Observations: ${summaries.length} unique`);
 
   if (opinionChanges.length > 0) {
-    console.log("\nOpinion changes:");
+    emit.ok("\nOpinion changes:");
     for (const change of opinionChanges) {
       if (change.action === "created") {
-        console.log(
+        emit.ok(
           `  + NEW (${Math.round(change.newConfidence * 100)}%) ${change.statement.slice(0, 80)}`
         );
       } else {
-        console.log(
+        emit.ok(
           `  ~ ${Math.round(change.oldConfidence ?? 0 * 100)}% → ${Math.round(change.newConfidence * 100)}% ${change.statement.slice(0, 80)}`
         );
       }
     }
   } else {
-    console.log("\nNo opinion changes");
+    emit.ok("\nNo opinion changes");
   }
 
   if (dryRun) {
-    console.log("\n[DRY RUN] Would write reflection report + update opinions");
+    emit.data("[DRY RUN] Would write reflection report + update opinions");
   } else {
     const report = formatReport(period, notes, ratings, opinionChanges);
     const filepath = writeReport(report, period);
     setLastReflectDate(new Date().toISOString().slice(0, 10));
-    console.log(`\nCreated reflection report: ${filepath}`);
+    emit.ok(`\nCreated reflection report: ${filepath}`);
 
     const opinions = readOpinions();
     const high = opinions.filter((o) => o.confidence >= 0.85);
     if (high.length > 0) {
-      console.log("\nHigh-confidence opinions (injected into context):");
+      emit.ok("\nHigh-confidence opinions (injected into context):");
       for (const o of high) {
-        console.log(`  [${Math.round(o.confidence * 100)}%] ${o.statement.slice(0, 80)}`);
+        emit.ok(`  [${Math.round(o.confidence * 100)}%] ${o.statement.slice(0, 80)}`);
       }
     }
   }

@@ -15,6 +15,7 @@
 import { appendFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { paths } from "../../hooks/lib/paths";
+import { emit } from "../lib/emit";
 
 // ── Types ──
 
@@ -121,7 +122,7 @@ Output: algorithm-reflections.jsonl in memory/learning/reflections/
   };
 
   const result = appendReflection(reflection);
-  console.log(JSON.stringify(result, null, 2));
+  emit.ok(result.message);
 }
 
 if (import.meta.main) run();

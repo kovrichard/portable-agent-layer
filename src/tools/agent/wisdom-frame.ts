@@ -19,6 +19,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { paths } from "../../hooks/lib/paths";
+import { emit } from "../lib/emit";
 
 // ── Types ──
 
@@ -233,7 +234,7 @@ Examples:
 
   const cliType = (values.type || "evolution") as ObservationType;
   const result = updateFrame(values.domain, values.observation, cliType);
-  console.log(JSON.stringify(result, null, 2));
+  emit.ok(result.message);
 }
 
 if (import.meta.main) run();

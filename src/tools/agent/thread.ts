@@ -15,6 +15,7 @@ import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { ensureDir, paths } from "../../hooks/lib/paths";
+import { emit } from "../lib/emit";
 
 // ── Types ──
 
@@ -137,13 +138,7 @@ Usage:
       process.exit(1);
     }
     const thread = addThread(values.title, values.context ?? "");
-    console.log(
-      JSON.stringify(
-        { success: true, id: thread.id, message: `Thread added: ${thread.title}` },
-        null,
-        2
-      )
-    );
+    emit.data(`Added with id ${thread.id}`);
   }
 
   if (cmd === "resolve") {
@@ -151,12 +146,14 @@ Usage:
       console.error("--id required");
       process.exit(1);
     }
-    console.log(JSON.stringify(resolveThread(values.id), null, 2));
+    const resolved = resolveThread(values.id);
+    if (resolved.success) emit.ok(resolved.message ?? "Thread resolved");
+    else emit.data(JSON.stringify(resolved, null, 2));
   }
 
   if (cmd === "list") {
     const threads = listThreads(values.all ?? false);
-    console.log(JSON.stringify({ count: threads.length, threads }, null, 2));
+    emit.data(JSON.stringify({ count: threads.length, threads }, null, 2));
   }
 }
 

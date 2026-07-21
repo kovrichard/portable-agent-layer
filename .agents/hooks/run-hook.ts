@@ -40,7 +40,7 @@ export function runHook(args: string[], format = hookFormatFromArgs()): number {
 
   if (ok) {
     if (format === "codex") return 0;
-    process.stdout.write(JSON.stringify({ output }));
+    process.stdout.write(JSON.stringify({ output: "ok" }));
     return 0;
   }
   writeFailure(format, output);

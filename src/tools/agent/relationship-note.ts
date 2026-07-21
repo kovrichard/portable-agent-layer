@@ -18,6 +18,7 @@
 
 import { parseArgs } from "node:util";
 import { appendNotes } from "../../hooks/lib/relationship";
+import { emit } from "../lib/emit";
 
 function run() {
   const { values } = parseArgs({
@@ -83,13 +84,7 @@ Output: appends to memory/relationship/YYYY-MM/YYYY-MM-DD.md
 
   appendNotes(notes);
 
-  console.log(
-    JSON.stringify(
-      { success: true, message: "Relationship note written", count: notes.length },
-      null,
-      2
-    )
-  );
+  emit.ok(`Relationship note written (${notes.length})`);
 }
 
 if (import.meta.main) run();

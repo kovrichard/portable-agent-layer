@@ -14,6 +14,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { ensureDir, paths } from "../../hooks/lib/paths";
+import { emit } from "../lib/emit";
 
 interface HandoffEntry {
   timestamp: string;
@@ -102,7 +103,7 @@ Output: writes to memory/state/last-handoff.json keyed by cwd
       values.text || "",
       true
     );
-    console.log(JSON.stringify(result, null, 2));
+    emit.ok(result.message);
     process.exit(0);
   }
 
@@ -112,7 +113,7 @@ Output: writes to memory/state/last-handoff.json keyed by cwd
   }
 
   const result = writeHandoffNote(process.cwd(), values.title, values.text, false);
-  console.log(JSON.stringify(result, null, 2));
+  emit.ok(result.message);
 }
 
 if (import.meta.main) run();
