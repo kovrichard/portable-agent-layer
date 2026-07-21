@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/kovrichard/portable-agent-layer/main/assets/schema/pal-settings.schema.json",
+  "title": "PAL settings",
+  "description": "Configuration for the Portable Agent Layer. Lives at ~/.pal/memory/pal-settings.json. All sections are optional; PAL falls back to defaults for anything absent.",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference — enables editor autocomplete, validation, and hover docs."
+    },
+    "identity": {
+      "type": "object",
+      "description": "Who the assistant is and who it serves.",
+      "additionalProperties": false,
+      "properties": {
+        "ai": {
+          "type": "object",
+          "description": "The assistant's persona.",
+          "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string", "description": "Short name (e.g. the name you call the assistant)." },
+            "fullName": { "type": "string", "description": "Full/formal name." },
+            "displayName": { "type": "string", "description": "Uppercase label used in headers." },
+            "catchphrase": { "type": "string", "description": "Greeting line. '{name}' is substituted with the ai.name value." }
+          }
+        },
+        "principal": {
+          "type": "object",
+          "description": "The human the assistant works for.",
+          "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string", "description": "The principal's name." },
+            "timezone": { "type": "string", "description": "IANA timezone (e.g. Europe/Budapest)." }
+          }
+        }
+      }
+    },
+    "loadAtStartup": {
+      "type": "object",
+      "description": "Files force-loaded into session context at startup. Injected as <system-reminder> blocks.",
+      "additionalProperties": false,
+      "properties": {
+        "files": {
+          "type": "array",
+          "description": "Absolute or PAL-relative file paths to inject at session start.",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "dynamicContext": {
+      "type": "object",
+      "description": "Dynamic context sections injected at session start. Set any key to false to disable it; absent keys default to enabled.",
+      "additionalProperties": { "type": "boolean" },
+      "properties": {
+        "wisdom": { "type": "boolean", "description": "Crystallized wisdom principles." },
+        "opinions": { "type": "boolean", "description": "Tracked user opinions." },
+        "relationship": { "type": "boolean", "description": "Recent relationship notes." },
+        "learningDigest": { "type": "boolean", "description": "Lessons-from-failures digest." },
+        "failurePatterns": { "type": "boolean", "description": "Recurring failure patterns." },
+        "projectHistory": { "type": "boolean", "description": "Per-project session history." },
+        "projects": { "type": "boolean", "description": "Active projects list." },
+        "sessionIntelligence": { "type": "boolean", "description": "Rating trends and session signals." },
+        "handoff": { "type": "boolean", "description": "Handoff note from the previous session." },
+        "selfModel": { "type": "boolean", "description": "The assistant's self-model synthesis." },
+        "contextualSteering": { "type": "boolean", "description": "Prompt-time steering self-checks (see the steering section)." },
+        "steeringTestReport": { "type": "boolean", "description": "When true, the assistant notes to the user which steering self-check fired. For the dual-live test period; ships false." }
+      }
+    },
+    "attribution": {
+      "type": "object",
+      "description": "Git co-author attribution opt-in.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "description": "Add the PAL co-author trailer to commits." },
+        "decided": { "type": "boolean", "description": "Gates the one-time attribution prompt." }
+      }
+    },
+    "steering": {
+      "type": "object",
+      "description": "Contextual steering: PAL injects a short self-check into your prompt when it matches a task type. Toggle the whole feature via dynamicContext.contextualSteering.",
+      "additionalProperties": false,
+      "properties": {
+        "disable": {
+          "type": "array",
+          "description": "Shipped steering rules to suppress, by tag.",
+          "items": {
+            "type": "string",
+            "enum": ["debugging", "destructive", "refactor", "planning", "testing", "committing", "secrets"]
+          },
+          "uniqueItems": true
+        },
+        "rules": {
+          "type": "array",
+          "description": "Personal steering rules appended to the shipped set. A malformed entry (missing field or bad regex) is skipped, never fatal.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["tag", "pattern", "snippet"],
+            "properties": {
+              "tag": { "type": "string", "description": "Short identifier for this rule (also used to dedupe matches)." },
+              "pattern": { "type": "string", "description": "JavaScript regex source, matched case-insensitively against the prompt." },
+              "snippet": { "type": "string", "description": "The self-check text injected when the pattern matches." }
+            }
+          }
+        }
+      }
+    }
+  }
+}

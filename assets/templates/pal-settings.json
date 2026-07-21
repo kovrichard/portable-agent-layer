@@ -1,4 +1,5 @@
 {
+  "$schema": "https://raw.githubusercontent.com/kovrichard/portable-agent-layer/main/assets/schema/pal-settings.schema.json",
   "identity": {
     "ai": {
       "name": "",
@@ -12,11 +13,9 @@
     }
   },
   "loadAtStartup": {
-    "_docs": "Files force-loaded into session context at startup. Injected as <system-reminder> blocks.",
     "files": []
   },
   "dynamicContext": {
-    "_docs": "Dynamic context sections injected at session start. Set to false to disable.",
     "wisdom": true,
     "opinions": true,
     "relationship": true,
@@ -31,7 +30,6 @@
     "steeringTestReport": false
   },
   "steering": {
-    "_docs": "Contextual steering: PAL injects a short self-check into your prompt when it matches a task type. 'disable' removes shipped rules by tag (debugging, destructive, refactor, planning, testing, committing, secrets); 'rules' adds your own as [{ tag, pattern (JS regex, case-insensitive), snippet }]. A bad regex is skipped, never fatal. Toggle the whole feature via dynamicContext.contextualSteering.",
     "disable": [],
     "rules": []
   }
