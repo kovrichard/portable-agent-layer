@@ -7,7 +7,7 @@
  *  - session-name: generate 4-word session headline on first prompt
  */
 
-import { injectRetrieval } from "./handlers/inject-retrieval";
+import { injectPromptContext } from "./handlers/inject-retrieval";
 import { captureRating } from "./handlers/rating";
 import { captureSessionName } from "./handlers/session-name";
 import { logDebug, logError, logPromptSnapshot } from "./lib/log";
@@ -30,8 +30,8 @@ logDebug("UserPromptOrchestrator", `Input: ${JSON.stringify(input).slice(0, 200)
 if (!input?.prompt) process.exit(0);
 
 const sessionId = input.session_id ?? input.sessionId ?? input.conversation_id;
-const retrieval = await injectRetrieval(input.prompt);
-logPromptSnapshot(input.prompt, retrieval);
+const injected = await injectPromptContext(input.prompt);
+logPromptSnapshot(input.prompt, injected);
 
 const results = await Promise.allSettled([
   captureRating(input.prompt, sessionId),

@@ -12,6 +12,7 @@ import { logDebug, logError } from "../lib/log";
 import { runRetrieval } from "../lib/retrieval";
 import { ensureIndex } from "../lib/retrieval-index";
 import { isEnabled } from "../lib/settings";
+import { getSteeringReminder } from "../lib/steering";
 
 const TIMEOUT_MS = 250;
 
@@ -51,12 +52,11 @@ export async function getRetrievalReminder(prompt: string): Promise<string | nul
   return result.reminder;
 }
 
-/** Write retrieval reminder to stdout in the correct format for the current agent.
+/** Write a reminder to stdout in the correct format for the current agent.
  *  Claude Code: plain text. Cursor: { additional_context }. Codex: hookSpecificOutput JSON.
- *  Returns the reminder string that was injected, or null if nothing was injected. */
-export async function injectRetrieval(prompt: string): Promise<string | null> {
-  const reminder = await getRetrievalReminder(prompt);
-  if (!reminder) return null;
+ *  MUST be called at most once per hook run — Cursor/Codex expect a single JSON
+ *  object on stdout, so all prompt-time context is merged before this call. */
+function writeForAgent(reminder: string): void {
   if (isCursor()) {
     process.stdout.write(JSON.stringify({ additional_context: reminder }));
   } else if (isCodex()) {
@@ -71,5 +71,17 @@ export async function injectRetrieval(prompt: string): Promise<string | null> {
   } else {
     process.stdout.write(`${reminder}\n`);
   }
-  return reminder;
+}
+
+/** Gather all prompt-time context — prior-lesson retrieval + contextual steering —
+ *  merge into a single payload, and do the one per-agent write. Returns the combined
+ *  reminder that was injected, or null if there was nothing to inject. */
+export async function injectPromptContext(prompt: string): Promise<string | null> {
+  const retrieval = await getRetrievalReminder(prompt);
+  const steering = getSteeringReminder(prompt);
+  const parts = [steering, retrieval].filter((p): p is string => Boolean(p));
+  if (parts.length === 0) return null;
+  const combined = parts.join("\n\n");
+  writeForAgent(combined);
+  return combined;
 }

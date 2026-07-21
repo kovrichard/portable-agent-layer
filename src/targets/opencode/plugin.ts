@@ -66,6 +66,8 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   const { getRetrievalReminder } = await lib<
     typeof import("../../hooks/handlers/inject-retrieval")
   >("../handlers/inject-retrieval.ts");
+  const { getSteeringReminder } =
+    await lib<typeof import("../../hooks/lib/steering")>("steering.ts");
 
   function partsToText(parts: Array<Record<string, unknown>>): string {
     return parts
@@ -162,20 +164,22 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       if (!text.trim()) return;
 
       const retrieval = await getRetrievalReminder(text);
-      logPromptSnapshot(text, retrieval);
+      const steering = getSteeringReminder(text);
+      const injectedText = [steering, retrieval].filter(Boolean).join("\n\n");
+      logPromptSnapshot(text, injectedText || null);
 
       await Promise.allSettled([
         captureRating(text, input.sessionID),
         captureSessionName(text, input.sessionID),
       ]);
 
-      if (retrieval) {
+      if (injectedText) {
         const injected = {
-          id: `pal-retrieval-${Date.now()}`,
+          id: `pal-promptctx-${Date.now()}`,
           sessionID: input.sessionID,
           messageID: input.messageID ?? `pal-msg-${Date.now()}`,
           type: "text" as const,
-          text: retrieval,
+          text: injectedText,
           synthetic: true,
         };
         output.parts = [injected, ...(output.parts ?? [])];

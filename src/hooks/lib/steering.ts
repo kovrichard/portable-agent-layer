@@ -87,10 +87,16 @@ export function getSteeringReminder(prompt: string): string | null {
   }
   if (lines.length === 0) return null;
 
-  return [
-    "<system-reminder>",
+  const inner = [
     "Heuristic self-checks auto-matched on your prompt — they may be off; ignore any that don't apply:",
     ...lines,
-    "</system-reminder>",
-  ].join("\n");
+  ];
+  // Dual-live test period: co-locate the report instruction with the trigger so
+  // it fires reliably across sessions/compaction. Flip steeringTestReport off to end it.
+  if (isEnabled("steeringTestReport")) {
+    inner.push(
+      "— Test period: assistant, briefly note to the user that a steering self-check fired, and which one(s)."
+    );
+  }
+  return ["<system-reminder>", ...inner, "</system-reminder>"].join("\n");
 }

@@ -57,7 +57,7 @@ async function loadHandlers() {
   const t = Date.now();
   const mod = await import(`../src/hooks/handlers/inject-retrieval.ts?t=${t}`);
   return {
-    injectRetrieval: mod.injectRetrieval as (prompt: string) => Promise<void>,
+    injectPromptContext: mod.injectPromptContext as (prompt: string) => Promise<void>,
     getRetrievalReminder: mod.getRetrievalReminder as (
       prompt: string
     ) => Promise<string | null>,
@@ -80,10 +80,10 @@ async function captureStdout(work: () => Promise<void>): Promise<string> {
   return captured;
 }
 
-describe("injectRetrieval handler", () => {
+describe("injectPromptContext handler", () => {
   test("emits empty when prompt is empty", async () => {
-    const { injectRetrieval } = await loadHandlers();
-    const out = await captureStdout(() => injectRetrieval(""));
+    const { injectPromptContext } = await loadHandlers();
+    const out = await captureStdout(() => injectPromptContext(""));
     expect(out).toBe("");
   });
 
@@ -94,16 +94,16 @@ describe("injectRetrieval handler", () => {
       "Never mock the database"
     );
     await setSettings({ dynamicContext: { learningInjection: false } });
-    const { injectRetrieval } = await loadHandlers();
+    const { injectPromptContext } = await loadHandlers();
     const out = await captureStdout(() =>
-      injectRetrieval("should I mock the database in this test")
+      injectPromptContext("should I mock the database in this test")
     );
     expect(out).toBe("");
   });
 
   test("emits empty when corpus is empty", async () => {
-    const { injectRetrieval } = await loadHandlers();
-    const out = await captureStdout(() => injectRetrieval("anything goes here"));
+    const { injectPromptContext } = await loadHandlers();
+    const out = await captureStdout(() => injectPromptContext("anything goes here"));
     expect(out).toBe("");
   });
 
@@ -113,9 +113,9 @@ describe("injectRetrieval handler", () => {
       "Mocked database hid a migration bug",
       "Never mock the database in integration tests"
     );
-    const { injectRetrieval } = await loadHandlers();
+    const { injectPromptContext } = await loadHandlers();
     const out = await captureStdout(() =>
-      injectRetrieval("should I mock the database in this integration test")
+      injectPromptContext("should I mock the database in this integration test")
     );
     expect(out).toContain("<system-reminder>");
     expect(out).toContain("Never mock the database");
@@ -128,11 +128,21 @@ describe("injectRetrieval handler", () => {
       "Mocked database hid a migration bug",
       "Never mock the database in integration tests"
     );
-    const { injectRetrieval } = await loadHandlers();
+    const { injectPromptContext } = await loadHandlers();
     const out = await captureStdout(() =>
-      injectRetrieval("kubernetes autoscaler manifests in helm chart")
+      injectPromptContext("kubernetes autoscaler manifests in helm chart")
     );
     expect(out).toBe("");
+  });
+
+  test("merges steering into the injection when the prompt matches (empty corpus)", async () => {
+    // No corpus seeded → retrieval is null; steering must still reach stdout.
+    const { injectPromptContext } = await loadHandlers();
+    const out = await captureStdout(() =>
+      injectPromptContext("the build is broken and tests are failing")
+    );
+    expect(out).toContain("<system-reminder>");
+    expect(out).toContain("Debugging something?");
   });
 });
 

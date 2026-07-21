@@ -6,8 +6,8 @@
  * the user (O, W) and session diary entries (--b).
  *
  * Usage:
- *   bun ~/.pal/tools/relationship-note.ts --o "Rico prefers X" --confidence 0.80
- *   bun ~/.pal/tools/relationship-note.ts --w "Rico is building X in TypeScript"
+ *   bun ~/.pal/tools/relationship-note.ts --o "User prefers X" --confidence 0.80
+ *   bun ~/.pal/tools/relationship-note.ts --w "User is building X in TypeScript"
  *   bun ~/.pal/tools/relationship-note.ts --b "Debugged the cache split logic"
  *
  * Note types:
@@ -37,8 +37,8 @@ function run() {
 RelationshipNote — Append W/O/Session entries to today's relationship log
 
 Usage:
-  bun ~/.pal/tools/relationship-note.ts --o "Rico prefers X" --confidence 0.80
-  bun ~/.pal/tools/relationship-note.ts --w "Rico is building X in TypeScript"
+  bun ~/.pal/tools/relationship-note.ts --o "User prefers X" --confidence 0.80
+  bun ~/.pal/tools/relationship-note.ts --w "User is building X in TypeScript"
   bun ~/.pal/tools/relationship-note.ts --b "Debugged the cache split logic"
 
 Flags:
