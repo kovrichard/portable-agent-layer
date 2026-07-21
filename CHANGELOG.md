@@ -1,3 +1,21 @@
+# [0.62.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.61.4...v0.62.0) (2026-07-21)
+
+
+### Bug Fixes
+
+* **projects:** make isc payload on resume leaner ([dbddd27](https://github.com/kovrichard/portable-agent-layer/commit/dbddd27eabbb1cbc896fbf2bf11368d1e3b4a51c))
+
+
+### Features
+
+* add pal-settings schema ([16459a2](https://github.com/kovrichard/portable-agent-layer/commit/16459a2a118daa9178262f2eef4e94401eeb0ef0))
+* **rtk:** add installation hints for rtk based on platform ([3028c59](https://github.com/kovrichard/portable-agent-layer/commit/3028c59d67c9c4096ea2e2ebf1b38314573df772))
+* **rtk:** add RtkWrap hook for Bash command output compression and integrate into agent commands ([370a382](https://github.com/kovrichard/portable-agent-layer/commit/370a3823913d33b99df1514367d6861581ef42cd))
+* **rtk:** show gain in pal cli usage if installed ([0307ddf](https://github.com/kovrichard/portable-agent-layer/commit/0307ddf5d6977fae625280df63929f9088cab4b6))
+* **steering:** add planning, testing, committing, secrets tags ([90e1080](https://github.com/kovrichard/portable-agent-layer/commit/90e108066b67f24eb25b191950dd597c792a078c))
+* **steering:** implement contextual steering for prompt classification and reminders ([a93ca24](https://github.com/kovrichard/portable-agent-layer/commit/a93ca245b06dea0405961d4099ca183d742d0dff))
+* **steering:** user-configurable rules via pal-settings.json ([f19e43e](https://github.com/kovrichard/portable-agent-layer/commit/f19e43e19e0081b6ad6cb6119b1a2196ad7326ca))
+
 ## [0.61.4](https://github.com/kovrichard/portable-agent-layer/compare/v0.61.3...v0.61.4) (2026-07-21)
 
 
