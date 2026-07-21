@@ -622,6 +622,13 @@ function nodeInstallHint(): string {
   return "install Node ≥ 22.6 (see https://nodejs.org or your package manager)";
 }
 
+function rtkInstallHint(): string {
+  if (process.platform === "win32")
+    return "download rtk.exe from https://github.com/rtk-ai/rtk/releases and add it to PATH";
+  if (process.platform === "darwin") return "`brew install rtk`";
+  return "`curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh`";
+}
+
 function checkHookHealth(home: string): HookHealth {
   const stateDir = resolve(home, "memory", "state");
   // Read current + all rotated logs (`.1`..`.5`) + legacy `.prev` so a recent
@@ -756,7 +763,9 @@ function doctor(silent = false): DoctorResult {
         );
     rtk.available
       ? ok(rtk.version || "rtk")
-      : info("rtk — not installed (optional; enables Bash output compression)");
+      : info(
+          `rtk — not installed (optional; enables Bash output compression — ${rtkInstallHint()})`
+        );
 
     console.log("");
     log.info("PAL state");
