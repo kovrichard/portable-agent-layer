@@ -108,6 +108,15 @@
             "command": "PAL_AGENT=claude bun run {{PKG_ROOT}}/src/hooks/SkillGuard.ts"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PAL_AGENT=claude bun run {{PKG_ROOT}}/src/hooks/RtkWrap.ts"
+          }
+        ]
       }
     ],
     "Stop": [

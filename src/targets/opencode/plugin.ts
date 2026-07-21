@@ -5,6 +5,7 @@
  * This plugin just wires opencode's hook API to those shared functions.
  */
 
+import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import type { Plugin, PluginInput } from "@opencode-ai/plugin";
 
@@ -30,6 +31,27 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
     await lib<typeof import("../../hooks/lib/context")>("context.ts");
   const { checkBashCommand, checkFilePath } =
     await lib<typeof import("../../hooks/lib/security")>("security.ts");
+  const { findBinaryOnPath } =
+    await lib<typeof import("../../hooks/lib/which")>("which.ts");
+
+  // rtk output compression — PAL gates on presence, rtk owns the rewrite.
+  // `rtk hook check <cmd>` prints the rewritten command (exit 0) or nothing
+  // (exit 1) when a command isn't worth wrapping. Fail-open: absent rtk or any
+  // error leaves the command untouched.
+  const rtkBin = findBinaryOnPath("rtk");
+  const rtkRewrite = (cmd: string): string | null => {
+    if (!rtkBin || !cmd) return null;
+    try {
+      const r = spawnSync(rtkBin, ["hook", "check", cmd], {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      });
+      const out = r.status === 0 ? (r.stdout ?? "").trim() : "";
+      return out && out !== cmd ? out : null;
+    } catch {
+      return null;
+    }
+  };
   const { logDebug, logError, logPromptSnapshot } =
     await lib<typeof import("../../hooks/lib/log")>("log.ts");
 
@@ -175,6 +197,11 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
         const reason = checkBashCommand(cmd);
         if (reason) {
           throw new Error(`PAL Security: Blocked — ${reason}`);
+        }
+        const rewritten = rtkRewrite(cmd);
+        if (rewritten) {
+          if (typeof output.args === "string") output.args = rewritten;
+          else (output.args as Record<string, unknown>).command = rewritten;
         }
       }
 

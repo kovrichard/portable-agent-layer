@@ -21,6 +21,10 @@
       {
         "type": "command",
         "bash": "PAL_AGENT=copilot bun run {{PKG_ROOT}}/src/hooks/SkillGuard.ts"
+      },
+      {
+        "type": "command",
+        "bash": "PAL_AGENT=copilot bun run {{PKG_ROOT}}/src/hooks/RtkWrap.ts"
       }
     ],
     "agentStop": [

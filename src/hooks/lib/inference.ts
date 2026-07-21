@@ -20,8 +20,7 @@
  * yet wired and currently fall through to the API path.
  */
 
-import { accessSync, constants, existsSync } from "node:fs";
-import { basename, delimiter, resolve as resolvePath } from "node:path";
+import { basename } from "node:path";
 import {
   getActiveAgent,
   isClaude,
@@ -33,6 +32,7 @@ import {
 import { logDebug } from "./log";
 import { HAIKU_MODEL } from "./models";
 import { buildSpawnGuardEnv, getInferenceDepth, SPAWN_GUARD_ENV } from "./spawn-guard";
+import { findBinaryOnPath } from "./which";
 
 export function hasApiKey(): boolean {
   return !!process.env.PAL_ANTHROPIC_API_KEY;
@@ -212,45 +212,6 @@ let codexBinaryCache: string | null | undefined;
 let opencodeBinaryCache: string | null | undefined;
 let copilotBinaryCache: string | null | undefined;
 let cursorBinaryCache: string | null | undefined;
-
-/**
- * Resolve a binary on PATH to its full absolute path.
- *
- * Manual PATH walk (instead of Bun.which / `which` subprocess) because:
- * 1. Ubuntu 24.04 dropped the `which` binary entirely.
- * 2. Windows has no `which` at all.
- * 3. Bun.which snapshots PATH at startup and ignores mid-test mutations.
- * 4. Bun.spawn on Windows is inconsistent at resolving PATHEXT for bare
- *    names — passing the full `.cmd`/`.exe` path bypasses that fragility.
- *
- * Returns the resolved absolute path or null.
- */
-function findBinaryOnPath(name: string): string | null {
-  const PATH = process.env.PATH;
-  if (!PATH) return null;
-  const exts =
-    process.platform === "win32"
-      ? (process.env.PATHEXT ?? ".COM;.EXE;.BAT;.CMD").split(";")
-      : [""];
-  for (const dir of PATH.split(delimiter)) {
-    if (!dir) continue;
-    for (const ext of exts) {
-      const candidate = resolvePath(dir, name + ext);
-      try {
-        if (process.platform === "win32") {
-          // Windows has no executable bit — existence in PATHEXT is enough.
-          if (existsSync(candidate)) return candidate;
-        } else {
-          accessSync(candidate, constants.X_OK);
-          return candidate;
-        }
-      } catch {
-        /* not here — try next */
-      }
-    }
-  }
-  return null;
-}
 
 function getClaudeBinary(): string | null {
   if (claudeBinaryCache !== undefined) return claudeBinaryCache;

@@ -21,6 +21,10 @@
       {
         "type": "command",
         "command": "PAL_AGENT=cursor bun run {{PKG_ROOT}}/src/hooks/SkillGuard.ts"
+      },
+      {
+        "type": "command",
+        "command": "PAL_AGENT=cursor bun run {{PKG_ROOT}}/src/hooks/RtkWrap.ts"
       }
     ],
     "beforeShellExecution": [

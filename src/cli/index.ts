@@ -671,6 +671,7 @@ interface DoctorResult {
   cursor: ToolCheck;
   copilot: ToolCheck;
   codex: ToolCheck;
+  rtk: ToolCheck;
   hasAgent: boolean;
 }
 
@@ -684,6 +685,7 @@ function doctor(silent = false): DoctorResult {
       cursor: { name: "cursor", available: true },
       copilot: { name: "copilot", available: true },
       codex: { name: "codex", available: true },
+      rtk: { name: "rtk", available: true },
       hasAgent: true,
     };
   }
@@ -694,6 +696,7 @@ function doctor(silent = false): DoctorResult {
   const cursor = checkTool("cursor");
   const copilot = checkTool("copilot", ["version"]);
   const codex = checkTool("codex");
+  const rtk = checkTool("rtk");
   const hasAgent =
     claude.available ||
     opencode.available ||
@@ -751,6 +754,9 @@ function doctor(silent = false): DoctorResult {
       : fail(
           "Playwright Chromium — not found (run 'pal cli install' or 'bunx playwright install chromium')"
         );
+    rtk.available
+      ? ok(rtk.version || "rtk")
+      : info("rtk — not installed (optional; enables Bash output compression)");
 
     console.log("");
     log.info("PAL state");
@@ -1023,7 +1029,7 @@ function doctor(silent = false): DoctorResult {
     console.log("");
   }
 
-  return { bun, claude, opencode, cursor, copilot, codex, hasAgent };
+  return { bun, claude, opencode, cursor, copilot, codex, rtk, hasAgent };
 }
 
 // ── Commands ──
