@@ -1,3 +1,10 @@
+## [0.62.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.62.0...v0.62.1) (2026-07-25)
+
+
+### Bug Fixes
+
+* **pricing:** enhance model pricing structure and introduce cost calculation functions ([9ead5b6](https://github.com/kovrichard/portable-agent-layer/commit/9ead5b64418b906a072c34f27a013037e88323bb))
+
 # [0.62.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.61.4...v0.62.0) (2026-07-21)
 
 
