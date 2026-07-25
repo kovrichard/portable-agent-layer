@@ -9,7 +9,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { MODEL_PRICING } from "../hooks/lib/models";
+import { costOfUsage } from "../hooks/lib/models";
 
 // ── Types ──
 
@@ -142,16 +142,13 @@ function parseSession(filepath: string, sessionId: string): Usage {
         : (u.cache_creation_input_tokens ?? 0);
       const cacheWrite1h = cw1h ?? 0;
 
-      const p = MODEL_PRICING[model];
-      if (p) {
-        usage.cost +=
-          (input * p.input +
-            output * p.output +
-            cacheWrite5m * p.cacheWrite5m +
-            cacheWrite1h * p.cacheWrite1h +
-            cr * p.cacheRead) /
-          1_000_000;
-      }
+      usage.cost += costOfUsage(model, {
+        input,
+        output,
+        cacheWrite5m,
+        cacheWrite1h,
+        cacheRead: cr,
+      });
 
       usage.input += input;
       usage.output += output;

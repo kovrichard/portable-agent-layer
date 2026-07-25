@@ -13,7 +13,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { MODEL_PRICING } from "../hooks/lib/models";
+import { costOfUsage } from "../hooks/lib/models";
 import { palHome } from "../hooks/lib/paths";
 import { findBinaryOnPath } from "../hooks/lib/which";
 
@@ -59,34 +59,6 @@ function emptyTimeBuckets(): TimeBuckets {
 
 // ── Helpers ──
 
-function findPricing(model: string): (typeof MODEL_PRICING)[string] | null {
-  if (MODEL_PRICING[model]) return MODEL_PRICING[model];
-  for (const key of Object.keys(MODEL_PRICING)) {
-    if (model.startsWith(key)) return MODEL_PRICING[key];
-  }
-  return null;
-}
-
-function costForUsage(
-  model: string,
-  input: number,
-  output: number,
-  cacheWrite5m: number,
-  cacheWrite1h: number,
-  cacheRead: number
-): number {
-  const p = findPricing(model);
-  if (!p) return 0;
-  return (
-    (input * p.input +
-      output * p.output +
-      cacheWrite5m * p.cacheWrite5m +
-      cacheWrite1h * p.cacheWrite1h +
-      cacheRead * p.cacheRead) /
-    1_000_000
-  );
-}
-
 function addToBucket(
   bucket: Bucket,
   model: string,
@@ -101,14 +73,13 @@ function addToBucket(
   bucket.cacheWrite5m += cacheWrite5m;
   bucket.cacheWrite1h += cacheWrite1h;
   bucket.cacheRead += cacheRead;
-  bucket.cost += costForUsage(
-    model,
+  bucket.cost += costOfUsage(model, {
     input,
     output,
     cacheWrite5m,
     cacheWrite1h,
-    cacheRead
-  );
+    cacheRead,
+  });
   bucket.calls++;
 }
 
