@@ -107,17 +107,6 @@ if [ -d "$PROJECTS_DIR" ]; then
   done
 fi
 
-# Rate limits (Pro/Max only — absent for other plans and on Cursor)
-FIVE_H=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty')
-SEVEN_D=$(echo "$input" | jq -r '.rate_limits.seven_day.used_percentage // empty')
-RATE_PARTS=()
-[ -n "$FIVE_H" ] && RATE_PARTS+=("5h: ${FIVE_H%.*}%")
-[ -n "$SEVEN_D" ] && RATE_PARTS+=("7d: ${SEVEN_D%.*}%")
-RATE_STR=""
-if [ ${#RATE_PARTS[@]} -gt 0 ]; then
-  RATE_STR=" │ $(IFS=" | "; echo "${RATE_PARTS[*]}")"
-fi
-
 # Create context progress bar (20 chars wide)
 FILLED=$((USED / 5))
 EMPTY=$((20 - FILLED))
@@ -145,6 +134,51 @@ elif [ "$USED" -gt 60 ]; then
   CONTEXT_COLOR=$YELLOW
 else
   CONTEXT_COLOR=$GREEN
+fi
+
+# Rate limits (Pro/Max only — absent for other plans and on Cursor)
+FIVE_H=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty')
+SEVEN_D=$(echo "$input" | jq -r '.rate_limits.seven_day.used_percentage // empty')
+
+# Daily soft limit — spending the weekly budget evenly is 100/7 ≈ 14% per day.
+# Shows what is still sustainable per day for the rest of the window: remaining
+# budget divided by days left. Dropping under the even-pace ideal means future
+# days have already been eaten into. Both inputs are server-reported for the
+# whole account, so every machine on the account computes the same figure.
+# resets_at is Unix epoch seconds.
+DAY_STR=""
+RESETS_AT=$(echo "$input" | jq -r '.rate_limits.seven_day.resets_at // empty')
+if [ -n "$SEVEN_D" ] && [ -n "$RESETS_AT" ]; then
+  DAYS_LEFT=$(echo "($RESETS_AT - $(date +%s)) / 86400" | bc -l)
+  if (( $(echo "$DAYS_LEFT > 0" | bc -l) )); then
+    DAY_IDEAL=$(echo "100 / 7" | bc -l)
+    DAY_RATE=$(echo "(100 - $SEVEN_D) / $DAYS_LEFT" | bc -l)
+    (( $(echo "$DAY_RATE < 0" | bc -l) )) && DAY_RATE=0
+    if (( $(echo "$DAY_RATE < $DAY_IDEAL" | bc -l) )); then
+      DAY_COLOR=$RED
+      DAY_FLAG=" ⚠️"
+    elif (( $(echo "$DAY_RATE < $DAY_IDEAL * 1.1" | bc -l) )); then
+      DAY_COLOR=$YELLOW
+      DAY_FLAG=""
+    else
+      DAY_COLOR=$GREEN
+      DAY_FLAG=""
+    fi
+    DAY_STR="${DAY_COLOR}day: $(printf '%.0f' "$DAY_RATE")/$(printf '%.0f' "$DAY_IDEAL")%${DAY_FLAG}${RESET}${DIM}"
+  fi
+fi
+
+RATE_PARTS=()
+[ -n "$FIVE_H" ] && RATE_PARTS+=("5h: ${FIVE_H%.*}%")
+[ -n "$SEVEN_D" ] && RATE_PARTS+=("7d: ${SEVEN_D%.*}%")
+[ -n "$DAY_STR" ] && RATE_PARTS+=("$DAY_STR")
+RATE_STR=""
+if [ ${#RATE_PARTS[@]} -gt 0 ]; then
+  RATE_JOINED="${RATE_PARTS[0]}"
+  for PART in "${RATE_PARTS[@]:1}"; do
+    RATE_JOINED="${RATE_JOINED} | ${PART}"
+  done
+  RATE_STR=" │ ${RATE_JOINED}"
 fi
 
 # PAL: Signal trend (reads 10-min cache written by session intelligence)

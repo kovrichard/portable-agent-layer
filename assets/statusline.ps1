@@ -87,14 +87,6 @@ if (Test-Path $projectsDir) {
   } catch { $OPEN_ISCS = 0 }
 }
 
-# Rate limits (Pro/Max only - absent for other plans)
-$FIVE_H_RAW = $data.rate_limits.five_hour.used_percentage
-$SEVEN_D_RAW = $data.rate_limits.seven_day.used_percentage
-$RATE_PARTS = @()
-if ($FIVE_H_RAW -ne $null) { $RATE_PARTS += "5h: $([int]$FIVE_H_RAW)%" }
-if ($SEVEN_D_RAW -ne $null) { $RATE_PARTS += "7d: $([int]$SEVEN_D_RAW)%" }
-$RATE_STR = if ($RATE_PARTS.Count -gt 0) { " - " + ($RATE_PARTS -join " | ") } else { "" }
-
 # Create context progress bar - if both are 0, data not yet available (pre-first API call)
 $NO_DATA = ($USED_RAW -eq $null -and $REM_RAW -eq $null)
 if ($NO_DATA) { $USED = 0; $REM = 100 }
@@ -114,6 +106,37 @@ $RESET  = $ESC + "[0m"
 
 # Choose bar color based on context usage
 $BAR_COLOR = if ($USED -gt 80) { $RED } elseif ($USED -gt 60) { $YELLOW } else { $GREEN }
+
+# Rate limits (Pro/Max only - absent for other plans)
+$FIVE_H_RAW = $data.rate_limits.five_hour.used_percentage
+$SEVEN_D_RAW = $data.rate_limits.seven_day.used_percentage
+
+# Daily soft limit - spending the weekly budget evenly is 100/7 ~ 14% per day.
+# Shows what is still sustainable per day for the rest of the window: remaining
+# budget divided by days left. Dropping under the even-pace ideal means future
+# days have already been eaten into. Both inputs are server-reported for the
+# whole account, so every machine on the account computes the same figure.
+# resets_at is Unix epoch seconds.
+$DAY_STR = ""
+$RESETS_AT = $data.rate_limits.seven_day.resets_at
+if (($SEVEN_D_RAW -ne $null) -and ($RESETS_AT -ne $null)) {
+  $now = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+  $daysLeft = ([double]$RESETS_AT - $now) / 86400
+  if ($daysLeft -gt 0) {
+    $dayIdeal = 100 / 7
+    $dayRate = (100 - [double]$SEVEN_D_RAW) / $daysLeft
+    if ($dayRate -lt 0) { $dayRate = 0 }
+    $DAY_COLOR = if ($dayRate -lt $dayIdeal) { $RED } elseif ($dayRate -lt ($dayIdeal * 1.1)) { $YELLOW } else { $GREEN }
+    $DAY_FLAG = if ($dayRate -lt $dayIdeal) { " !" } else { "" }
+    $DAY_STR = $DAY_COLOR + "day: $([int][math]::Round($dayRate))/$([int][math]::Round($dayIdeal))%$DAY_FLAG" + $RESET + $DIM
+  }
+}
+
+$RATE_PARTS = @()
+if ($FIVE_H_RAW -ne $null) { $RATE_PARTS += "5h: $([int]$FIVE_H_RAW)%" }
+if ($SEVEN_D_RAW -ne $null) { $RATE_PARTS += "7d: $([int]$SEVEN_D_RAW)%" }
+if ($DAY_STR) { $RATE_PARTS += $DAY_STR }
+$RATE_STR = if ($RATE_PARTS.Count -gt 0) { " - " + ($RATE_PARTS -join " | ") } else { "" }
 
 # PAL: Signal trend (reads 10-min cache written by session intelligence)
 $SIGNAL_STR = ""
