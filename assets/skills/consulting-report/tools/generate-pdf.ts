@@ -8,8 +8,11 @@
 // Windows because it uses --remote-debugging-pipe over stdio and Bun's Windows
 // child-process pipe handling doesn't complete the CDP handshake.
 //
+// pal-build:mjs — ships as a compiled generate-pdf.mjs sibling (scripts/build-skill-tools.ts)
+// and is invoked as that .mjs: a .ts under node_modules can't be type-stripped by Node.
+//
 // Usage:
-//   node --experimental-strip-types ~/.pal/skills/consulting-report/tools/generate-pdf.ts <report-dir> [--pdf <out>] [--html <out>] [--skip-build]
+//   node ~/.pal/skills/consulting-report/tools/generate-pdf.mjs <report-dir> [--pdf <out>] [--html <out>] [--skip-build]
 
 import { spawnSync } from "node:child_process";
 import { createReadStream, constants as fsConstants, realpathSync } from "node:fs";

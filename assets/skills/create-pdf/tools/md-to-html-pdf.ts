@@ -6,8 +6,11 @@
 // because it uses --remote-debugging-pipe over stdio and Bun's Windows child-process
 // pipe handling doesn't complete the CDP handshake.
 //
+// pal-build:mjs — ships as a compiled md-to-html-pdf.mjs sibling (scripts/build-skill-tools.ts)
+// and is invoked as that .mjs: a .ts under node_modules can't be type-stripped by Node.
+//
 // Usage:
-//   node --experimental-strip-types ~/.pal/skills/create-pdf/tools/md-to-html-pdf.ts <input.md> \
+//   node ~/.pal/skills/create-pdf/tools/md-to-html-pdf.mjs <input.md> \
 //     [--html <out.html>] [--pdf <out.pdf>] [--margin <css>] [--header <html|file>] [--footer <html|file>]
 //   --margin defaults to 25mm (all sides). --header/--footer accept inline HTML or a file path.
 

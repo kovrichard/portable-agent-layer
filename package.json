@@ -46,6 +46,8 @@
     "jscpd": "jscpd --noTips",
     "lint-staged": "lint-staged",
     "prepare": "bun .husky/install.mjs",
+    "build:skill-tools": "bun run scripts/build-skill-tools.ts",
+    "prepack": "bun run build:skill-tools",
     "install:all": "bun run src/cli/index.ts cli install",
     "uninstall": "bun run src/cli/index.ts cli uninstall",
     "tool:synthesize": "bun run src/tools/agent/synthesize.ts",

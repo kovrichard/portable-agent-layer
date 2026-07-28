@@ -100,7 +100,7 @@ async function run(argv: string[] = process.argv.slice(2)): Promise<void> {
   console.log(`  2. Edit lib/report-data.ts (metadata) and app/page.tsx (layout)`);
   console.log(`  3. Live preview:    bun run dev`);
   console.log(
-    `  4. Generate PDF:    node --experimental-strip-types ~/.pal/skills/consulting-report/tools/generate-pdf.ts ${opts.targetDir}`
+    `  4. Generate PDF:    node ~/.pal/skills/consulting-report/tools/generate-pdf.mjs ${opts.targetDir}`
   );
 }
 

@@ -23,7 +23,7 @@ If neither engine is usable, the tool prints `NO_PLAYWRIGHT_CLI` and exits non-z
 2. Run the tool (it prints the absolute PNG path as its last stdout line):
 
    ```bash
-   node --experimental-strip-types ~/.pal/skills/playwright/tools/shot.ts <url> \
+   node ~/.pal/skills/playwright/tools/shot.mjs <url> \
      [--viewport 1440x900] [--full-page] [--selector "<css>"] [-o <out.png>]
    ```
 

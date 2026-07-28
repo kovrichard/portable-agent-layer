@@ -78,7 +78,7 @@ Wraps `bun run dev` in the report directory. Open the URL printed by Next, edit 
 ### 4. Render the PDF
 
 ```bash
-node --experimental-strip-types ~/.pal/skills/consulting-report/tools/generate-pdf.ts <report-dir>
+node ~/.pal/skills/consulting-report/tools/generate-pdf.mjs <report-dir>
 ```
 
 Runs `next build` (which produces a static export at `out/`), then Playwright loads it via a tiny in-process HTTP server and prints the PDF with page-numbered header/footer. Output:
@@ -140,14 +140,14 @@ Run with **Node**, not Bun — Playwright's `chromium.launch()` hangs under Bun 
 ## Demo
 
 ```bash
-node --experimental-strip-types ~/.pal/skills/consulting-report/tools/generate-pdf.ts ~/.pal/skills/consulting-report/demo
+node ~/.pal/skills/consulting-report/tools/generate-pdf.mjs ~/.pal/skills/consulting-report/demo
 ```
 
 Renders the bundled Acme Industries example end-to-end. Inspect the resulting PDF to see the full layout before authoring your own.
 
 ## Important
 
-- Run on Node ≥ 22.6 (Playwright + `--experimental-strip-types`)
+- Run on Node (Playwright); the tool ships as a compiled `.mjs` so no `--experimental-strip-types` is needed
 - Bundled fonts come from Google Fonts via `next/font/google` — no licensing surface, no CDN at runtime, glyphs embedded at build time
 - Reports are disposable artifacts of `lib/report-data.ts` + `app/page.tsx`; commit the source, not the PDF
 - The scaffolder runs `bun install` inside the target by default — pass `--no-install` to skip

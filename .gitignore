@@ -20,3 +20,7 @@ eval/logs/
 assets/skills/consulting-report/demo/*.pdf
 assets/skills/consulting-report/demo/*.html
 assets/skills/consulting-report/demo/diagrams-compressed/
+
+# Skill tools compiled to .mjs for Node (scripts/build-skill-tools.ts). Generated at
+# `prepack` so the published tarball ships them; never committed. See the script header.
+assets/skills/*/tools/*.mjs

@@ -9,8 +9,10 @@
 // If neither engine works, prints NO_PLAYWRIGHT_CLI on stderr and exits non-zero so the
 // caller (SKILL.md) can fall back to the Playwright MCP.
 //
-// Run with Node:
-//   node --experimental-strip-types ~/.pal/skills/playwright/tools/shot.ts <url> [opts]
+// pal-build:mjs — ships as a compiled shot.mjs sibling (scripts/build-skill-tools.ts).
+// Run under Node via the compiled file (a .ts under node_modules can't be type-stripped;
+// plain .mjs needs no stripping and runs on every OS, keeping the Windows fallback):
+//   node ~/.pal/skills/playwright/tools/shot.mjs <url> [opts]
 
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";

@@ -55,13 +55,13 @@ Invoke the skill tool. Flags:
 Single-file example:
 
 ```bash
-node --experimental-strip-types ~/.pal/skills/create-pdf/tools/md-to-html-pdf.ts /path/to/report.md --pdf /path/to/report.pdf
+node ~/.pal/skills/create-pdf/tools/md-to-html-pdf.mjs /path/to/report.md --pdf /path/to/report.pdf
 ```
 
 Multi-file example (after Step 2):
 
 ```bash
-node --experimental-strip-types ~/.pal/skills/create-pdf/tools/md-to-html-pdf.ts /tmp/combined.md --pdf /path/to/report.pdf --html /path/to/report.html
+node ~/.pal/skills/create-pdf/tools/md-to-html-pdf.mjs /tmp/combined.md --pdf /path/to/report.pdf --html /path/to/report.html
 ```
 
 The tool writes the self-contained HTML (inline CSS, UTF-8) and the PDF, and prints both paths + sizes on stdout.
@@ -82,13 +82,13 @@ Default styling (A4, 25mm margins, GitHub-ish look, table-friendly, page-break-a
 - `--header <html|file>` / `--footer <html|file>` — running header/footer on every page. The value is either an inline HTML string or a path to an HTML file. Templates may use Playwright's injected classes: `pageNumber`, `totalPages`, `date`, `title`, `url`.
 
 ```bash
-node --experimental-strip-types ~/.pal/skills/create-pdf/tools/md-to-html-pdf.ts report.md --pdf report.pdf \
+node ~/.pal/skills/create-pdf/tools/md-to-html-pdf.mjs report.md --pdf report.pdf \
   --margin 18mm \
   --header '<div style="font-size:9px;width:100%;text-align:center;color:#888">CONFIDENTIAL</div>' \
   --footer '<div style="font-size:9px;width:100%;text-align:right;padding-right:12mm;color:#888"><span class="pageNumber"></span>/<span class="totalPages"></span></div>'
 ```
 
-Header/footer templates **need an explicit `font-size`** (Playwright defaults them to 0) and render *inside* the page margin — widen `--margin` so they have room. Do NOT also add CSS `@page` margin-box rules; they duplicate. For deeper changes (fonts, base CSS), edit the `css` string in `tools/md-to-html-pdf.ts`.
+Header/footer templates **need an explicit `font-size`** (Playwright defaults them to 0) and render *inside* the page margin — widen `--margin` so they have room. Do NOT also add CSS `@page` margin-box rules; they duplicate. For deeper changes (fonts, base CSS), edit the `css` string in `tools/md-to-html-pdf.ts` (the `.mjs` is generated from it — never edit the `.mjs`).
 
 ## Translation Variant
 
