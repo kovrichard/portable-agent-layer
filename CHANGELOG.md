@@ -1,3 +1,10 @@
+# [0.63.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.62.2...v0.63.0) (2026-07-28)
+
+
+### Features
+
+* enhance rate limit tracking in statusline scripts ([b66ec1d](https://github.com/kovrichard/portable-agent-layer/commit/b66ec1d41952424007898c188e770a6cd3aa8186))
+
 ## [0.62.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.62.1...v0.62.2) (2026-07-28)
 
 
