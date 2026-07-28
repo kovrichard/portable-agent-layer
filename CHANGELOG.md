@@ -1,3 +1,10 @@
+## [0.62.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.62.1...v0.62.2) (2026-07-28)
+
+
+### Bug Fixes
+
+* update playwright skill tools to use compiled .mjs files ([77f35cc](https://github.com/kovrichard/portable-agent-layer/commit/77f35cc3730fd557f896e0f1339462e35082ddc5))
+
 ## [0.62.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.62.0...v0.62.1) (2026-07-25)
 
 
