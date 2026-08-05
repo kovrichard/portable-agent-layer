@@ -1,3 +1,10 @@
+## [0.63.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.63.0...v0.63.1) (2026-08-05)
+
+
+### Bug Fixes
+
+* **copilot:** install correct hooks, clean up on uninstall ([10a65fc](https://github.com/kovrichard/portable-agent-layer/commit/10a65fc1738d0c93a68639e596bf6a38e683b4fb))
+
 # [0.63.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.62.2...v0.63.0) (2026-07-28)
 
 
