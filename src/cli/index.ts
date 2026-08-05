@@ -80,6 +80,20 @@ function checkTool(cmd: string, versionArgs: string[] = ["--version"]): ToolChec
   return { name: cmd, available: false };
 }
 
+/**
+ * Copilot ships as a VS Code extension as well as a CLI, and the extension puts
+ * no `copilot` binary on PATH — but both read hooks, skills and agents out of
+ * ~/.copilot. Fall back to that directory so PAL's copilot checks still run.
+ */
+function checkCopilot(): ToolCheck {
+  const cli = checkTool("copilot", ["version"]);
+  if (cli.available) return cli;
+  if (existsSync(platform.copilotDir())) {
+    return { name: "copilot", available: true, version: "~/.copilot (no CLI on PATH)" };
+  }
+  return cli;
+}
+
 function detectAgent(): string | null {
   if (checkTool("claude").available) return "claude";
   if (checkTool("opencode").available) return "opencode";
@@ -443,13 +457,18 @@ function checkCopilotInstructionsPresent(): boolean {
 
 // ── Install integrity (Tier 2 doctor checks) ──
 
-/** Recursively collect every `command` or `bash` field value in a hook-config JSON. */
+/** Hook-config keys that carry a shell command: cross-platform and per-shell variants. */
+function isHookCommandField(key: string): boolean {
+  return key === "command" || key === "bash" || key === "powershell";
+}
+
+/** Recursively collect every command-carrying field value in a hook-config JSON. */
 function extractAllHookCommands(obj: unknown, out: string[] = []): string[] {
   if (Array.isArray(obj)) {
     for (const item of obj) extractAllHookCommands(item, out);
   } else if (obj && typeof obj === "object") {
     for (const [k, v] of Object.entries(obj)) {
-      if ((k === "command" || k === "bash") && typeof v === "string") {
+      if (isHookCommandField(k) && typeof v === "string") {
         out.push(v);
       } else {
         extractAllHookCommands(v, out);
@@ -466,14 +485,21 @@ interface HookPrefixCheck {
   firstMissing?: string;
 }
 
-/** Verify every command in an installed hook file starts with `PAL_AGENT=<agent>`. */
+/** True when a hook command sets PAL_AGENT up front, in POSIX or PowerShell syntax. */
+function setsAgentEnvPrefix(cmd: string, agentName: string): boolean {
+  return (
+    cmd.startsWith(`PAL_AGENT=${agentName} `) ||
+    cmd.startsWith(`$env:PAL_AGENT='${agentName}'; `)
+  );
+}
+
+/** Verify every command in an installed hook file sets `PAL_AGENT=<agent>` first. */
 function checkAgentHookPrefix(filePath: string, agentName: string): HookPrefixCheck {
   if (!existsSync(filePath)) return { ok: false, total: 0, missing: 0 };
   try {
     const data = JSON.parse(readFileSync(filePath, "utf-8"));
     const commands = extractAllHookCommands(data.hooks ?? data);
-    const prefix = `PAL_AGENT=${agentName} `;
-    const missing = commands.filter((c) => !c.startsWith(prefix));
+    const missing = commands.filter((c) => !setsAgentEnvPrefix(c, agentName));
     return {
       ok: commands.length > 0 && missing.length === 0,
       total: commands.length,
@@ -701,7 +727,7 @@ function doctor(silent = false): DoctorResult {
   const claude = checkTool("claude");
   const opencode = checkTool("opencode");
   const cursor = checkTool("cursor");
-  const copilot = checkTool("copilot", ["version"]);
+  const copilot = checkCopilot();
   const codex = checkTool("codex");
   const rtk = checkTool("rtk");
   const hasAgent =

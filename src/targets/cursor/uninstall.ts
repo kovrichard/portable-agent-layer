@@ -4,15 +4,15 @@
  * Removes PAL skill symlinks.
  */
 
-import { copyFileSync, existsSync, unlinkSync } from "node:fs";
+import { copyFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
-import { cursorFilename, getSemiStaticSources } from "../../hooks/lib/semi-static";
 import {
   loadCursorHooksTemplate,
   log,
   readJson,
   removeAgentsFromCursor,
+  removePalContextFiles,
   removePalDocs,
   removeSkills,
   removeStatusline,
@@ -73,19 +73,7 @@ if (existsSync(CLI_CONFIG)) {
 removeStatusline("cursor");
 
 // --- Remove ~/.cursor/rules/pal-*.mdc ---
-for (const src of getSemiStaticSources()) {
-  try {
-    unlinkSync(resolve(CURSOR_DIR, "rules", cursorFilename(src)));
-  } catch {
-    /* gone */
-  }
-}
-// Backward compat: remove legacy merged file if present
-try {
-  unlinkSync(resolve(CURSOR_DIR, "rules", "pal-context.mdc"));
-} catch {
-  /* gone */
-}
-log.success("Removed ~/.cursor/rules/pal-*.mdc");
+const removedRules = removePalContextFiles(resolve(CURSOR_DIR, "rules"), ".mdc");
+log.success(`Removed ${removedRules.length} ~/.cursor/rules/pal-*.mdc`);
 
 log.success("Cursor uninstall complete");
