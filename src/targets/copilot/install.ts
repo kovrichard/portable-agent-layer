@@ -5,21 +5,16 @@
  * Enables ~/.copilot/instructions in VS Code chat.instructionsFilesLocations.
  */
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { writeContextDigests } from "../../hooks/handlers/context-digests";
-import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
 import {
   copyAgentsForCopilot,
-  copyPalDocs,
   copySkills,
   countSkills,
-  generateSkillIndex,
   loadCopilotHooksTemplate,
   log,
   readJson,
-  scaffoldPalSettings,
   vscodeSettingsFile,
   writeJson,
 } from "../lib";
@@ -28,6 +23,7 @@ const PKG_ROOT = palPkg().replaceAll("\\", "/");
 const COPILOT_DIR = platform.copilotDir();
 const HOOKS_DIR = resolve(COPILOT_DIR, "hooks");
 const HOOKS_FILE = resolve(HOOKS_DIR, "pal-hooks.json");
+const VSCODE_HOOKS_FILE = resolve(HOOKS_DIR, "pal-vscode-hooks.json");
 
 // --- Ensure dirs ---
 mkdirSync(HOOKS_DIR, { recursive: true });
@@ -37,34 +33,24 @@ const template = loadCopilotHooksTemplate(assets.copilotHooksTemplate(), PKG_ROO
 writeFileSync(HOOKS_FILE, `${JSON.stringify(template, null, 2)}\n`, "utf-8");
 log.success(`Written hooks to ${HOOKS_FILE}`);
 
+// --- Retire the separate VS Code hooks file ---
+// VS Code's own Copilot build already executes the PascalCase hooks in
+// ~/.claude/settings.json, so registering the same events here too ran every
+// hook twice per turn. One dual-shape block payload (see lib/agent.ts) now
+// serves both surfaces from that single registration.
+if (existsSync(VSCODE_HOOKS_FILE)) {
+  unlinkSync(VSCODE_HOOKS_FILE);
+  log.success("Removed pal-vscode-hooks.json (VS Code runs the Claude hooks)");
+}
+
 // --- Install skills ---
 const copilotSkillsDir = resolve(COPILOT_DIR, "skills");
 copySkills(copilotSkillsDir);
-generateSkillIndex();
-log.success("Installed skills to ~/.copilot/skills/");
 
 // --- Install agents ---
 const copilotAgentsDir = resolve(COPILOT_DIR, "agents");
 const agentCount = copyAgentsForCopilot(copilotAgentsDir);
-if (agentCount > 0) log.success(`Installed ${agentCount} agents to ~/.copilot/agents/`);
-
-// --- Copy PAL docs ---
-const palDocsCount = copyPalDocs();
-log.success(`Installed ${palDocsCount} PAL docs to ~/.pal/docs/`);
-
-// --- Scaffold PAL settings ---
-scaffoldPalSettings();
-
-// --- Generate AGENTS.md ---
-regenerateIfNeeded();
-log.success("Generated AGENTS.md");
-
-// --- Write ~/.copilot/instructions/pal-*.instructions.md ---
-mkdirSync(resolve(COPILOT_DIR, "instructions"), { recursive: true });
-writeContextDigests();
-log.success(
-  "Written ~/.copilot/instructions/pal-self-model + pal-wisdom + pal-opinions.instructions.md"
-);
+log.success(`${countSkills()} skills · ${agentCount} agents → ~/.copilot/`);
 
 // --- Enable ~/.copilot/instructions in VS Code settings ---
 const vsSettingsPath = vscodeSettingsFile();
@@ -90,8 +76,3 @@ if (vsSettingsPath) {
 } else {
   log.warn(`Could not detect VS Code settings path — ${manualHint}`);
 }
-
-log.success("Copilot installation complete");
-console.log("");
-log.info(`Skills: ${countSkills()}`);
-log.info(`Hooks: ${HOOKS_FILE}`);

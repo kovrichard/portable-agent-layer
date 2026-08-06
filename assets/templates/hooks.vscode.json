@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "hooks": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "bun run {{PKG_ROOT}}/src/hooks/LoadContext.ts --agent=vscode"
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "type": "command",
+        "command": "bun run {{PKG_ROOT}}/src/hooks/UserPromptOrchestrator.ts --agent=vscode"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "type": "command",
+        "command": "bun run {{PKG_ROOT}}/src/hooks/SecurityValidator.ts --agent=vscode"
+      },
+      {
+        "type": "command",
+        "command": "bun run {{PKG_ROOT}}/src/hooks/SkillGuard.ts --agent=vscode"
+      },
+      {
+        "type": "command",
+        "command": "bun run {{PKG_ROOT}}/src/hooks/RtkWrap.ts --agent=vscode"
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "bun run {{PKG_ROOT}}/src/hooks/StopOrchestrator.ts --agent=vscode"
+      }
+    ]
+  }
+}

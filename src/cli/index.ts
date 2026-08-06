@@ -37,7 +37,7 @@ import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { inference, previewInferenceRoute } from "../hooks/lib/inference";
 import { DEBUG_LOG_MAX_ROTATED, logDebug } from "../hooks/lib/log";
-import { palHome, palPkg, platform } from "../hooks/lib/paths";
+import { palHome, palPkg, paths, platform } from "../hooks/lib/paths";
 import { hasRealContent, SETUP_STEPS, STEP_ORDER } from "../hooks/lib/setup";
 import { log } from "../targets/lib";
 import { checkPendingMigrations } from "./migrate";
@@ -485,21 +485,27 @@ interface HookPrefixCheck {
   firstMissing?: string;
 }
 
-/** True when a hook command sets PAL_AGENT up front, in POSIX or PowerShell syntax. */
-function setsAgentEnvPrefix(cmd: string, agentName: string): boolean {
+/**
+ * True when a hook command names its agent, by env prefix or by argv flag.
+ *
+ * An env prefix only parses in one shell family, so hook configs whose host
+ * shell is unknown declare the agent with a shell-agnostic `--agent=` flag.
+ */
+function declaresAgent(cmd: string, agentName: string): boolean {
   return (
     cmd.startsWith(`PAL_AGENT=${agentName} `) ||
-    cmd.startsWith(`$env:PAL_AGENT='${agentName}'; `)
+    cmd.startsWith(`$env:PAL_AGENT='${agentName}'; `) ||
+    cmd.includes(`--agent=${agentName}`)
   );
 }
 
-/** Verify every command in an installed hook file sets `PAL_AGENT=<agent>` first. */
+/** Verify every command in an installed hook file names `<agent>` as its agent. */
 function checkAgentHookPrefix(filePath: string, agentName: string): HookPrefixCheck {
   if (!existsSync(filePath)) return { ok: false, total: 0, missing: 0 };
   try {
     const data = JSON.parse(readFileSync(filePath, "utf-8"));
     const commands = extractAllHookCommands(data.hooks ?? data);
-    const missing = commands.filter((c) => !setsAgentEnvPrefix(c, agentName));
+    const missing = commands.filter((c) => !declaresAgent(c, agentName));
     return {
       ok: commands.length > 0 && missing.length === 0,
       total: commands.length,
@@ -928,12 +934,12 @@ function doctor(silent = false): DoctorResult {
     ): void => {
       const r = checkAgentHookPrefix(filePath, agentName);
       if (r.ok) {
-        ok(`${agentName}: PAL_AGENT=${agentName} on all ${r.total} hook commands`);
+        ok(`${agentName}: declared on all ${r.total} hook commands`);
       } else if (r.total === 0) {
         fail(`${agentName}: hook file missing or unreadable at ${filePath}`);
       } else {
         fail(
-          `${agentName}: ${r.missing}/${r.total} hook commands missing PAL_AGENT=${agentName} prefix (run '${installCmd}')`
+          `${agentName}: ${r.missing}/${r.total} hook commands do not declare ${agentName} (run '${installCmd}')`
         );
         if (r.firstMissing) {
           log.warn(`    First offender: ${r.firstMissing}…`);
@@ -1084,6 +1090,10 @@ async function init(args: string[]) {
   log.info(`Creating PAL home at ${home}`);
   mkdirSync(resolve(home, "telos"), { recursive: true });
   mkdirSync(resolve(home, "memory"), { recursive: true });
+  // Scaffolded here, not left to generateSkillIndex: that returns early when
+  // ~/.pal/skills is absent, so an init that installs no skills would leave
+  // every writer of memory/state with nowhere to write.
+  mkdirSync(resolve(home, "memory", "state"), { recursive: true });
 
   scaffoldTelos();
 
@@ -1092,16 +1102,23 @@ async function init(args: string[]) {
   await install(targets);
 }
 
+/**
+ * Run a setup subprocess, showing its output only when it fails.
+ *
+ * These are idempotent and usually report "no changes", so their banners are
+ * pure noise on a re-install — but the moment one fails, the reason it gives
+ * is the only thing that explains the warning.
+ */
+function runQuietly(cmd: string, args: string[], cwd: string): number | null {
+  const r = spawnSync(cmd, args, { cwd, encoding: "utf-8", shell: true });
+  if (r.status !== 0) process.stderr.write((r.stdout ?? "") + (r.stderr ?? ""));
+  return r.status;
+}
+
 async function install(targets: Targets) {
   // Ensure dependencies are installed
   const pkg = palPkg();
-  log.info("Installing dependencies...");
-  const deps = spawnSync("bun", ["install", "--frozen-lockfile"], {
-    cwd: pkg,
-    stdio: "inherit",
-    shell: true,
-  });
-  if (deps.status !== 0) {
+  if (runQuietly("bun", ["install", "--frozen-lockfile"], pkg) !== 0) {
     log.warn("bun install failed — continuing anyway, but hooks may not work");
   }
 
@@ -1110,15 +1127,10 @@ async function install(targets: Targets) {
   // (used by tests to avoid a ~150MB download on every run).
   // Uses `bun x` (not `bunx`) for Windows compatibility — bunx resolves unreliably under cmd.exe.
   if (process.env.PAL_SKIP_BROWSER_INSTALL !== "1") {
-    log.info("Installing Playwright Chromium...");
-    const pw = spawnSync("bun", ["x", "playwright", "install", "chromium"], {
-      cwd: pkg,
-      stdio: "inherit",
-      shell: true,
-    });
-    if (pw.status !== 0) {
+    const pw = runQuietly("bun", ["x", "playwright", "install", "chromium"], pkg);
+    if (pw !== 0) {
       log.warn(
-        `playwright install chromium failed (exit ${pw.status}) — create-pdf and consulting-report skills won't work. Retry manually: bun x playwright install chromium`
+        `playwright install chromium failed (exit ${pw}) — create-pdf and consulting-report skills won't work. Retry manually: bun x playwright install chromium`
       );
     }
   }
@@ -1138,7 +1150,8 @@ async function install(targets: Targets) {
   }
 
   // Scaffold TELOS + PAL settings, then prompt for missing identity
-  const { scaffoldTelos, scaffoldPalSettings } = await import("../targets/lib");
+  const { scaffoldTelos, scaffoldPalSettings, copyPalDocs, generateSkillIndex } =
+    await import("../targets/lib");
   const { promptIdentity } = await import("./setup-identity");
   const { promptTelos } = await import("./setup-telos");
   const { promptAttribution } = await import("./setup-attribution");
@@ -1147,6 +1160,13 @@ async function install(targets: Targets) {
   await promptIdentity();
   await promptTelos();
   await promptAttribution();
+
+  // Shared, target-independent state. Every target installer used to repeat these
+  // identical calls; AGENTS.md in particular must exist before any target symlinks
+  // to it, so it runs once here rather than once per target.
+  const { regenerateIfNeeded } = await import("../hooks/lib/claude-md");
+  const palDocsCount = copyPalDocs();
+  regenerateIfNeeded();
 
   if (targets.claude) {
     console.log("━━━ Claude Code ━━━");
@@ -1177,6 +1197,16 @@ async function install(targets: Targets) {
     await import("../targets/codex/install");
     console.log("");
   }
+
+  // The rest of the shared work reads what the installers just wrote: the index
+  // walks ~/.pal/skills, and the digests land in ~/.cursor/rules and
+  // ~/.copilot/instructions, which are skipped when the agent's home is absent.
+  const { writeContextDigests } = await import("../hooks/handlers/context-digests");
+  const indexedSkills = generateSkillIndex();
+  writeContextDigests();
+  log.success(
+    `Shared: ${indexedSkills} skills indexed · ${palDocsCount} docs → ~/.pal/docs/ · AGENTS.md + context digests written`
+  );
 
   log.success("Done. Existing config was preserved — only new entries were added.");
 }
@@ -1403,7 +1433,9 @@ async function update() {
 function cliDebug(args: string[]) {
   const stateDir = resolve(palHome(), "memory", "state");
   const flagFile = resolve(stateDir, "debug-enabled");
-  const logFile = resolve(stateDir, "debug.log");
+  // Must match log.ts's logFile() — reporting a different path sends anyone
+  // debugging a hook to an empty file.
+  const logFile = resolve(paths.debug(), "debug.log");
   const sub = args[0];
   if (sub === "on") {
     mkdirSync(stateDir, { recursive: true });

@@ -20,15 +20,21 @@ import {
 
 const COPILOT_DIR = platform.copilotDir();
 const HOOKS_FILE = resolve(COPILOT_DIR, "hooks", "pal-hooks.json");
+const VSCODE_HOOKS_FILE = resolve(COPILOT_DIR, "hooks", "pal-vscode-hooks.json");
 
-// --- Remove hooks file ---
-if (existsSync(HOOKS_FILE)) {
-  copyFileSync(HOOKS_FILE, `${HOOKS_FILE}.bak.${Date.now()}`);
-  unlinkSync(HOOKS_FILE);
-  log.success("Removed pal-hooks.json");
-} else {
-  log.info("No pal-hooks.json found, nothing to do");
+// --- Remove hooks files ---
+function removeHooksFile(path: string, label: string): void {
+  if (!existsSync(path)) {
+    log.info(`No ${label} found, nothing to do`);
+    return;
+  }
+  copyFileSync(path, `${path}.bak.${Date.now()}`);
+  unlinkSync(path);
+  log.success(`Removed ${label}`);
 }
+
+removeHooksFile(HOOKS_FILE, "pal-hooks.json");
+removeHooksFile(VSCODE_HOOKS_FILE, "pal-vscode-hooks.json");
 
 // --- Remove skill symlinks ---
 const copilotSkillsDir = resolve(COPILOT_DIR, "skills");

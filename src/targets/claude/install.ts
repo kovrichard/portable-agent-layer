@@ -6,25 +6,21 @@
 
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
 import { assets, palHome, palPkg, platform } from "../../hooks/lib/paths";
 import { identity, raw as readPalSettings } from "../../hooks/lib/settings";
 import {
   addStatuslineConfig,
   applyAttribution,
   copyAgents,
-  copyPalDocs,
   copySkills,
   copyStatusline,
   countAgents,
   countMd,
   countSkills,
-  generateSkillIndex,
   loadSettingsTemplate,
   log,
   mergeSettings,
   readJson,
-  scaffoldPalSettings,
   writeJson,
 } from "../lib";
 
@@ -68,7 +64,6 @@ log.success("Merged PAL settings into settings.json");
 // --- Copy skills ---
 const skillsDir = resolve(CLAUDE_DIR, "skills");
 copySkills(skillsDir);
-generateSkillIndex();
 
 // --- Copy agents ---
 copyAgents();
@@ -76,19 +71,6 @@ copyAgents();
 // --- Copy statusline script ---
 copyStatusline();
 
-// --- Copy PAL system docs ---
-const palDocsCount = copyPalDocs();
-log.success(`Installed ${palDocsCount} PAL docs to ~/.pal/docs/`);
-
-// --- Scaffold PAL settings ---
-scaffoldPalSettings();
-
-// --- Generate ~/.claude/AGENTS.md and symlink ~/.claude/CLAUDE.md → AGENTS.md ---
-regenerateIfNeeded();
-log.success("Generated ~/.config/opencode/AGENTS.md (→ ~/.claude/CLAUDE.md symlink)");
-
-log.success("Claude Code installation complete");
-console.log("");
-log.info(`Skills: ${countSkills()}`);
-log.info(`Agents: ${countAgents()}`);
-log.info(`TELOS: ${countMd(resolve(palHome(), "telos"))} files`);
+log.success(
+  `${countSkills()} skills · ${countAgents()} agents · ${countMd(resolve(palHome(), "telos"))} TELOS files · CLAUDE.md → AGENTS.md`
+);

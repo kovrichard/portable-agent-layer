@@ -6,22 +6,17 @@
 
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { writeContextDigests } from "../../hooks/handlers/context-digests";
-import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
 import {
   addStatuslineConfig,
   copyAgentsForCursor,
-  copyPalDocs,
   copySkills,
   copyStatusline,
   countSkills,
-  generateSkillIndex,
   loadCursorHooksTemplate,
   log,
   mergeCursorHooks,
   readJson,
-  scaffoldPalSettings,
   writeJson,
 } from "../lib";
 
@@ -45,24 +40,16 @@ const existing = readJson<Record<string, unknown>>(HOOKS_FILE, {});
 const merged = mergeCursorHooks(existing, template);
 
 writeJson(HOOKS_FILE, merged);
-log.success("Merged PAL hooks into hooks.json");
+log.success(`Merged PAL hooks into ${HOOKS_FILE}`);
 
 // --- Symlink skills to ~/.cursor/skills/ ---
 const cursorSkillsDir = resolve(CURSOR_DIR, "skills");
 copySkills(cursorSkillsDir);
-generateSkillIndex();
 
 // --- Copy agents to ~/.cursor/agents/ ---
 const cursorAgentsDir = resolve(CURSOR_DIR, "agents");
 const agentCount = copyAgentsForCursor(cursorAgentsDir);
-if (agentCount > 0) log.success(`Installed ${agentCount} agents to ~/.cursor/agents/`);
-
-// --- Copy PAL system docs ---
-const palDocsCount = copyPalDocs();
-log.success(`Installed ${palDocsCount} PAL docs to ~/.pal/docs/`);
-
-// --- Scaffold PAL settings ---
-scaffoldPalSettings();
+log.success(`${countSkills()} skills · ${agentCount} agents → ~/.cursor/`);
 
 // --- Statusline script + cli-config.json statusLine ---
 copyStatusline("cursor");
@@ -77,21 +64,6 @@ const cliConfig = readJson<Record<string, unknown>>(CLI_CONFIG, {});
 writeJson(CLI_CONFIG, addStatuslineConfig(cliConfig, "cursor"));
 log.success("Merged statusLine into cli-config.json");
 
-// --- Generate AGENTS.md ---
-regenerateIfNeeded();
-log.success("Generated AGENTS.md");
-
-// --- Write ~/.cursor/rules/pal-*.mdc ---
-mkdirSync(resolve(CURSOR_DIR, "rules"), { recursive: true });
-writeContextDigests();
-log.success(
-  "Written ~/.cursor/rules/pal-self-model.mdc + pal-wisdom.mdc + pal-opinions.mdc"
-);
-
-log.success("Cursor installation complete");
-console.log("");
-log.info(`Skills: ${countSkills()}`);
-log.info(`Hooks: ${HOOKS_FILE}`);
 log.info(
   "Note: Cursor tool matchers may need tuning — verify hook behavior after first use"
 );

@@ -12,18 +12,9 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
-import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
 import { palPkg, platform } from "../../hooks/lib/paths";
 import { getSemiStaticSources } from "../../hooks/lib/semi-static";
-import {
-  copyAgentsForOpencode,
-  copyPalDocs,
-  copySkills,
-  countSkills,
-  generateSkillIndex,
-  log,
-  writeJson,
-} from "../lib";
+import { copyAgentsForOpencode, copySkills, countSkills, log, writeJson } from "../lib";
 
 const PKG_ROOT = palPkg();
 const OC_GLOBAL_DIR = platform.opencodeDir();
@@ -55,7 +46,6 @@ if (!existsSync(pkgPath)) {
 
 try {
   Bun.spawnSync(["bun", "install", "--silent"], { cwd: OC_PLUGINS_DIR });
-  log.success("Installed plugin dependencies");
 } catch {
   log.warn(`Could not install plugin deps — run 'bun install' in ${OC_PLUGINS_DIR}`);
 }
@@ -63,22 +53,13 @@ try {
 // --- 3. Install skills into ~/.pal/skills/ ---
 const claudeSkillsDir = resolve(platform.claudeDir(), "skills");
 copySkills(claudeSkillsDir);
-generateSkillIndex();
-log.success("Installed skills to ~/.pal/skills/");
 
 // --- 4. Install agents into ~/.config/opencode/agents/ ---
 const ocAgentsDir = resolve(OC_GLOBAL_DIR, "agents");
-copyAgentsForOpencode(ocAgentsDir);
+const agentCount = copyAgentsForOpencode(ocAgentsDir);
+log.success(`${countSkills()} skills · ${agentCount} agents → ~/.config/opencode/`);
 
-// --- 5. Copy PAL system docs ---
-const palDocsCount = copyPalDocs();
-log.success(`Installed ${palDocsCount} PAL docs to ~/.pal/docs/`);
-
-// --- 6. Generate ~/.config/opencode/AGENTS.md ---
-regenerateIfNeeded();
-log.success("Generated ~/.config/opencode/AGENTS.md");
-
-// --- 7. Add semi-static digest files to instructions[] in config.json ---
+// --- 5. Add semi-static digest files to instructions[] in config.json ---
 const configPath = resolve(OC_GLOBAL_DIR, "config.json");
 const staticFiles = getSemiStaticSources().map((s) => s.path);
 let ocConfig: Record<string, unknown> = {};
@@ -94,11 +75,3 @@ const existingInstructions = Array.isArray(ocConfig.instructions)
   : [];
 ocConfig.instructions = [...new Set([...existingInstructions, ...staticFiles])];
 writeFileSync(configPath, `${JSON.stringify(ocConfig, null, 2)}\n`, "utf-8");
-log.success(
-  `Updated config.json: ${(ocConfig.instructions as string[]).length} instructions`
-);
-
-log.success("opencode installation complete");
-console.log("");
-log.info(`Plugin: ${pluginDst}`);
-log.info(`Skills: ${countSkills()} (native via ~/.pal/skills/)`);

@@ -6,11 +6,11 @@ import {
   mkdtempSync,
   readdirSync,
   rmSync,
-  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { linkDir } from "./helpers/links";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 
@@ -55,10 +55,9 @@ beforeAll(() => {
   // walkDir ever followed symlinks.
   mkdirSync(resolve(TEST_HOME, "shipped-source"), { recursive: true });
   writeFileSync(resolve(TEST_HOME, "shipped-source", "SKILL.md"), "# Shipped\n");
-  symlinkSync(
+  linkDir(
     resolve(TEST_HOME, "shipped-source"),
-    resolve(TEST_HOME, "skills", "shipped-skill"),
-    "dir"
+    resolve(TEST_HOME, "skills", "shipped-skill")
   );
 
   // A user-authored personal subagent (real file) — should be exported.

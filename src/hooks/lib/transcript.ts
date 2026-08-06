@@ -20,9 +20,42 @@ export function parseMessages(raw: string): Message[] {
   }
 }
 
+function claudeCodeEntryText(msg: { content?: unknown }): string {
+  if (typeof msg.content === "string") return msg.content;
+  if (Array.isArray(msg.content)) {
+    return msg.content
+      .filter((c: { type: string }) => c.type === "text")
+      .map((c: { text: string }) => c.text)
+      .join(" ");
+  }
+  return "";
+}
+
+// Claude Code tags transcript lines `type: "user"|"assistant"` with the text
+// under `message.content`. VS Code Copilot's own event log instead uses
+// `type: "user.message"|"assistant.message"` with a flat `data.content`
+// string — two shapes sharing one transcript_path contract across agents.
+function parseTranscriptEntry(entry: {
+  type?: string;
+  message?: { content?: unknown };
+  data?: { content?: unknown };
+}): Message | null {
+  if (entry.type === "user" || entry.type === "assistant") {
+    const text = claudeCodeEntryText(entry.message ?? {});
+    return text ? { role: entry.type, content: text } : null;
+  }
+  if (entry.type === "user.message" || entry.type === "assistant.message") {
+    const text = entry.data?.content;
+    const role = entry.type === "user.message" ? "user" : "assistant";
+    return typeof text === "string" && text ? { role, content: text } : null;
+  }
+  return null;
+}
+
 /**
- * Read a Claude Code transcript JSONL file and extract user/assistant messages.
- * Each line is a JSON object; we extract entries with type "user" or "assistant".
+ * Read an agent transcript JSONL file and extract user/assistant messages.
+ * Supports Claude Code's `{type:"user"|"assistant", message:{content}}` shape
+ * and VS Code Copilot's `{type:"user.message"|"assistant.message", data:{content}}` shape.
  */
 export function readTranscriptFile(path: string): Message[] {
   try {
@@ -32,22 +65,8 @@ export function readTranscriptFile(path: string): Message[] {
     for (const line of content.split("\n")) {
       if (!line.trim()) continue;
       try {
-        const entry = JSON.parse(line);
-        if (entry.type === "user" || entry.type === "assistant") {
-          const msg = entry.message ?? {};
-          let text = "";
-          if (typeof msg.content === "string") {
-            text = msg.content;
-          } else if (Array.isArray(msg.content)) {
-            text = msg.content
-              .filter((c: { type: string }) => c.type === "text")
-              .map((c: { text: string }) => c.text)
-              .join(" ");
-          }
-          if (text) {
-            messages.push({ role: entry.type, content: text });
-          }
-        }
+        const parsed = parseTranscriptEntry(JSON.parse(line));
+        if (parsed) messages.push(parsed);
       } catch {
         /* skip malformed lines */
       }

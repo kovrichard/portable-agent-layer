@@ -9,29 +9,25 @@
  * Fail-open: on any error, the skill is allowed through.
  */
 
-import { blockResponse } from "./lib/agent";
+import { blockResponse, normalizeToolUse } from "./lib/agent";
 import { readStdinJSON } from "./lib/stdin";
 
 const BLOCKED_SKILLS = ["keybindings-help"];
 
-interface SkillInput {
-  tool_name: string;
-  tool_input: {
-    skill?: string;
-  };
-}
-
 try {
-  const input = await readStdinJSON<SkillInput>();
-  if (!input) process.exit(0);
+  const toolUse = normalizeToolUse(await readStdinJSON());
+  if (!toolUse) process.exit(0);
 
-  const skill = (input.tool_input?.skill || "").toLowerCase().trim();
+  const skill = String(toolUse.toolInput.skill ?? "")
+    .toLowerCase()
+    .trim();
 
   if (BLOCKED_SKILLS.includes(skill)) {
     process.stdout.write(
       blockResponse(
         'BLOCKED: "keybindings-help" is a known false-positive triggered by position bias. ' +
-          "The user did NOT ask about keybindings. Continue with their ACTUAL request."
+          "The user did NOT ask about keybindings. Continue with their ACTUAL request.",
+        toolUse.hookEventName
       )
     );
   }

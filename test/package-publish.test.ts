@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { resolve } from "node:path";
+import { basename, resolve } from "node:path";
 
 const REPO = resolve(import.meta.dir, "..");
 
@@ -47,7 +47,12 @@ describe("package publish surface", () => {
       const tarballPath = resolve(sandbox, tarball as string);
       expect(existsSync(tarballPath)).toBe(true);
 
-      const list = spawnSync("tar", ["-tzf", tarballPath], { encoding: "utf-8" });
+      // Listed by bare name from inside the sandbox: GNU tar reads the colon in
+      // a Windows path as a host:path remote spec and tries to open a connection.
+      const list = spawnSync("tar", ["-tzf", basename(tarballPath)], {
+        cwd: sandbox,
+        encoding: "utf-8",
+      });
       expect(list.status).toBe(0);
       expect(list.stdout).toContain("package/.husky/install.mjs");
     } finally {

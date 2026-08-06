@@ -742,6 +742,23 @@ export function removePalDocs(): void {
 const PAL_SKILLS_DIR = resolve(palHome(), "skills");
 
 /**
+ * Run one step of a bulk install, naming it only when it fails.
+ *
+ * Installs handle dozens of skills and agents; a line each buries the paths,
+ * backups and warnings that a reader actually has to act on. Returning false
+ * instead of throwing also keeps one unlinkable skill from aborting the rest.
+ */
+function reportOnlyOnFailure(label: string, install: () => void): boolean {
+  try {
+    install();
+    return true;
+  } catch (e) {
+    log.warn(`Could not install ${label} — ${(e as Error).message}`);
+    return false;
+  }
+}
+
+/**
  * Install PAL skills by symlinking:
  *   ~/.pal/skills/<name> → <repo>/assets/skills/<name>  (source of truth)
  *   ~/.claude/skills/<name> → ~/.pal/skills/<name>       (agent discovery)
@@ -762,16 +779,15 @@ export function copySkills(claudeSkillsDir: string): number {
     const srcDir = resolve(skillsDir, name);
     if (!existsSync(resolve(srcDir, "SKILL.md"))) continue;
 
-    // ~/.pal/skills/<name> → <repo>/assets/skills/<name>
     const palLink = resolve(PAL_SKILLS_DIR, name);
-    ensureSymlink(palLink, srcDir, linkType);
-
-    // ~/.claude/skills/<name> → ~/.pal/skills/<name>
     const claudeLink = resolve(claudeSkillsDir, name);
-    ensureSymlink(claudeLink, palLink, linkType);
-
-    log.info(`Linked skill: ${name}`);
-    count++;
+    const linked = reportOnlyOnFailure(`skill ${name}`, () => {
+      // ~/.pal/skills/<name> → <repo>/assets/skills/<name>
+      ensureSymlink(palLink, srcDir, linkType);
+      // ~/.claude/skills/<name> → ~/.pal/skills/<name>
+      ensureSymlink(claudeLink, palLink, linkType);
+    });
+    if (linked) count++;
   }
 
   // ~/.agents/skills/ → ~/.pal/skills/
@@ -1000,14 +1016,16 @@ function installAgents(targetDir: string, platform: AgentPlatform): number {
   let count = 0;
 
   for (const file of readdirSync(agentsDir).filter((f) => f.endsWith(".md"))) {
-    const content = readFileSync(resolve(agentsDir, file), "utf-8");
-    writeFileSync(
-      resolve(targetDir, file),
-      extractAgentForPlatform(content, platform),
-      "utf-8"
-    );
-    log.info(`Installed ${platform} agent: ${file.replace(/\.md$/, "")}`);
-    count++;
+    const name = file.replace(/\.md$/, "");
+    const installed = reportOnlyOnFailure(`${platform} agent ${name}`, () => {
+      const content = readFileSync(resolve(agentsDir, file), "utf-8");
+      writeFileSync(
+        resolve(targetDir, file),
+        extractAgentForPlatform(content, platform),
+        "utf-8"
+      );
+    });
+    if (installed) count++;
   }
   return count;
 }
@@ -1375,7 +1393,6 @@ export function generateSkillIndex(): number {
   const stateDir = resolve(palHome(), "memory", "state");
   mkdirSync(stateDir, { recursive: true });
   writeJson(resolve(stateDir, "skill-index.json"), index);
-  log.info(`Skill index: ${index.totalSkills} skills indexed`);
 
   return index.totalSkills;
 }

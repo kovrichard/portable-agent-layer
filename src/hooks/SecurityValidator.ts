@@ -1,34 +1,81 @@
 /**
  * Hook: PreToolUse — Guards against dangerous commands.
- * Returns JSON { decision: "block", reason: "..." } to block, or exits silently to allow.
+ * Emits the current agent's deny response to block, or exits silently to allow.
  *
  * Fail-open design: if anything goes wrong, the command is allowed through.
  */
 
-import { blockResponse } from "./lib/agent";
+import { blockResponse, normalizeToolUse } from "./lib/agent";
+import { logDebug } from "./lib/log";
 import { checkBashCommand, checkFilePath } from "./lib/security";
 import { readStdinJSON } from "./lib/stdin";
 
-// preToolUse shape (Claude Code + Cursor + Codex)
-interface ToolUseInput {
-  tool_name: string;
-  hook_event_name?: string; // Codex includes this in all hook inputs
-  tool_input: {
-    command?: string;
-    file_path?: string;
-  };
-}
-
-// beforeShellExecution shape (Cursor only) — flat, no tool_name wrapper
+// beforeShellExecution shape (Cursor only) — flat, no tool-name wrapper
 interface ShellExecInput {
   command: string;
   sandbox?: boolean;
 }
 
-type SecurityInput = ToolUseInput | ShellExecInput;
+type SecurityInput = Record<string, unknown> | ShellExecInput;
 
 function isShellExec(input: SecurityInput): input is ShellExecInput {
-  return !("tool_name" in input) && "command" in input;
+  return !("tool_name" in input) && !("toolName" in input) && "command" in input;
+}
+
+// A name this list misses is a command this hook waves through, so both sets mirror
+// the tool names VS Code's own Copilot build ships in its shell and edit tool sets.
+const SHELL_TOOLS = [
+  "bash",
+  "shell",
+  "powershell",
+  "local_shell",
+  "runinterminal",
+  "run_in_terminal",
+  "terminal",
+  "execute_command",
+];
+
+const FILE_WRITE_TOOLS = [
+  "write",
+  "edit",
+  "multiedit",
+  "write_file",
+  "apply_patch",
+  "applypatch",
+  "create",
+  "create_file",
+  "createfile",
+  "str_replace",
+  "str_replace_editor",
+  "insert",
+  "insert_edit_into_file",
+  "replace_string_in_file",
+  "multi_replace_string_in_file",
+  "replacestring",
+  "edit_notebook_file",
+  "notebookedit",
+];
+
+/** First of `keys` present as a non-empty string — agents disagree on argument spelling. */
+function firstStringArg(
+  args: Record<string, unknown>,
+  keys: string[]
+): string | undefined {
+  for (const key of keys) {
+    const value = args[key];
+    if (typeof value === "string" && value.length > 0) return value;
+  }
+  return undefined;
+}
+
+/** Tool names that run a shell command, across every agent's naming. */
+function runsShellCommand(toolName: string): boolean {
+  return SHELL_TOOLS.includes(toolName.toLowerCase());
+}
+
+/** Tool names that write to a file, across every agent's naming. */
+function writesFile(toolName: string): boolean {
+  return FILE_WRITE_TOOLS.includes(toolName.toLowerCase());
 }
 
 try {
@@ -44,31 +91,35 @@ try {
     process.exit(0);
   }
 
-  const hookEventName = input.hook_event_name;
+  const toolUse = normalizeToolUse(input);
+  if (!toolUse) process.exit(0);
 
-  // preToolUse — Claude: "Bash", Cursor: "Shell", Codex: "shell"
-  const isBash =
-    input.tool_name === "Bash" ||
-    input.tool_name === "Shell" ||
-    input.tool_name === "shell";
-  const isFileWrite =
-    input.tool_name === "Write" ||
-    input.tool_name === "Edit" ||
-    input.tool_name === "write_file" ||
-    input.tool_name === "apply_patch";
+  // Each agent names its shell/write tools differently; log the real name so an
+  // unrecognized one shows up here instead of silently skipping the check.
+  logDebug(
+    "SecurityValidator",
+    `toolName=${toolUse.toolName} args=${Object.keys(toolUse.toolInput).join(",")}`
+  );
 
-  if (isBash && input.tool_input.command) {
-    const reason = checkBashCommand(input.tool_input.command);
+  const command = firstStringArg(toolUse.toolInput, ["command", "commandLine", "script"]);
+  if (runsShellCommand(toolUse.toolName) && typeof command === "string") {
+    const reason = checkBashCommand(command);
+    const verdict = reason ? `BLOCK(${reason})` : "ALLOW";
+    // "No output" from a downstream tool is indistinguishable between "denied,
+    // never ran" and "ran, produced nothing" — logging the verdict here, next
+    // to the literal command, is what actually tells the two apart.
+    logDebug("SecurityValidator", `bashVerdict=${verdict} command=${command}`);
     if (reason) {
-      process.stdout.write(blockResponse(`Blocked: ${reason}`, hookEventName));
+      process.stdout.write(blockResponse(`Blocked: ${reason}`, toolUse.hookEventName));
       process.exit(0);
     }
   }
 
-  if (isFileWrite && input.tool_input.file_path) {
-    const reason = checkFilePath(input.tool_input.file_path);
+  const filePath = firstStringArg(toolUse.toolInput, ["file_path", "filePath", "path"]);
+  if (writesFile(toolUse.toolName) && typeof filePath === "string") {
+    const reason = checkFilePath(filePath);
     if (reason) {
-      process.stdout.write(blockResponse(reason, hookEventName));
+      process.stdout.write(blockResponse(reason, toolUse.hookEventName));
       process.exit(0);
     }
   }

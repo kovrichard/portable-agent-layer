@@ -8,19 +8,27 @@ import { delimiter, resolve } from "node:path";
 // deterministic and don't depend on a real rtk being installed on CI.
 //
 // Tests that must actually EXECUTE the fake prepend the temp dir to the real
-// PATH (so the fake shadows any real rtk while its bash shebang still resolves)
-// and are POSIX-only. The fail-open / no-op cases use an isolated PATH and run
-// everywhere — those paths never spawn a subprocess.
+// PATH, so the fake shadows any real rtk while `node` still resolves for the
+// launcher. The fake's logic is JavaScript on both platforms; only the launcher
+// differs — a shebang on POSIX, a .cmd shim on Windows, which is what
+// findBinaryOnPath resolves there via PATHEXT.
 
 const HOOK = resolve(import.meta.dir, "..", "src", "hooks", "RtkWrap.ts");
 const FAKE_OUTPUT = '{"hookSpecificOutput":{"updatedInput":{"command":"rtk FAKE"}}}';
-const POSIX = process.platform !== "win32";
+const WINDOWS = process.platform === "win32";
 
 let dir: string;
 
+/** Install a fake `rtk` on PATH whose body runs once stdin has been drained. */
 function writeFakeRtk(body: string): void {
+  const script = `const c=[];process.stdin.on("data",d=>c.push(d));process.stdin.on("end",()=>{${body}});`;
+  if (WINDOWS) {
+    writeFileSync(resolve(dir, "rtk.js"), script);
+    writeFileSync(resolve(dir, "rtk.cmd"), `@echo off\r\nnode "%~dp0rtk.js" %*\r\n`);
+    return;
+  }
   const p = resolve(dir, "rtk");
-  writeFileSync(p, `#!/usr/bin/env bash\n${body}\n`);
+  writeFileSync(p, `#!/usr/bin/env node\n${script}\n`);
   chmodSync(p, 0o755);
 }
 
@@ -49,16 +57,21 @@ afterEach(() => {
 });
 
 describe("RtkWrap", () => {
-  test.if(POSIX)("forwards rtk hook stdout verbatim when rtk is present", async () => {
+  test("forwards rtk hook stdout verbatim when rtk is present", async () => {
     writeFakeRtk(
-      `if [ "$1" = "hook" ]; then cat >/dev/null; echo -n '${FAKE_OUTPUT}'; fi`
+      `if(process.argv[2]==="hook")process.stdout.write(${JSON.stringify(FAKE_OUTPUT)});`
     );
     const out = await runHook({ PATH: shadowPath(), PAL_AGENT: "claude" });
     expect(out).toBe(FAKE_OUTPUT);
   });
 
-  test.if(POSIX)("fail-open: rtk exits non-zero → no output", async () => {
-    writeFakeRtk("cat >/dev/null; echo -n 'boom' 1>&2; exit 1");
+  // The fake writes a well-formed rewrite to stdout *and* fails. Only the exit
+  // code can suppress it, so this stays honest about what it is testing —
+  // a fake that failed silently would pass even with the guard removed.
+  test("fail-open: rtk exits non-zero → its stdout is discarded", async () => {
+    writeFakeRtk(
+      `process.stdout.write(${JSON.stringify(FAKE_OUTPUT)});process.stderr.write("boom");process.exitCode=1;`
+    );
     const out = await runHook({ PATH: shadowPath(), PAL_AGENT: "claude" });
     expect(out).toBe("");
   });
@@ -69,13 +82,13 @@ describe("RtkWrap", () => {
   });
 
   test("no-op for codex (allow/deny only — cannot rewrite)", async () => {
-    writeFakeRtk(`echo -n '${FAKE_OUTPUT}'`);
+    writeFakeRtk(`process.stdout.write(${JSON.stringify(FAKE_OUTPUT)});`);
     const out = await runHook({ PATH: shadowPath(), PAL_AGENT: "codex" });
     expect(out).toBe("");
   });
 
   test("no-op for opencode (handled by plugin, not this hook)", async () => {
-    writeFakeRtk(`echo -n '${FAKE_OUTPUT}'`);
+    writeFakeRtk(`process.stdout.write(${JSON.stringify(FAKE_OUTPUT)});`);
     const out = await runHook({ PATH: shadowPath(), PAL_AGENT: "opencode" });
     expect(out).toBe("");
   });

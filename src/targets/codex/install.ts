@@ -12,20 +12,17 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
-import { regenerateIfNeeded } from "../../hooks/lib/claude-md";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
 import {
   addCodexStatuslineConfig,
   copySkills,
   countSkills,
-  generateSkillIndex,
   loadCodexHooksTemplate,
   loadCodexRulesTemplate,
   log,
   mergeCodexHooks,
   mergeCodexRules,
   readJson,
-  scaffoldPalSettings,
   writeJson,
 } from "../lib";
 
@@ -86,7 +83,7 @@ const existing = readJson<Record<string, unknown>>(HOOKS_FILE, {});
 const merged = mergeCodexHooks(existing, template);
 
 writeJson(HOOKS_FILE, merged);
-log.success("Merged PAL hooks into ~/.codex/hooks.json");
+log.success(`Merged PAL hooks into ${HOOKS_FILE}`);
 
 // --- Merge allowlist rules ---
 mkdirSync(resolve(CODEX_DIR, "rules"), { recursive: true });
@@ -102,21 +99,9 @@ log.success("Merged PAL allowlist rules into ~/.codex/rules/default.rules");
 // --- Symlink skills to ~/.codex/skills/ ---
 const codexSkillsDir = resolve(CODEX_DIR, "skills");
 copySkills(codexSkillsDir);
-generateSkillIndex();
-
-// --- Scaffold PAL settings ---
-scaffoldPalSettings();
-
-// --- Generate / verify AGENTS.md symlink ---
-regenerateIfNeeded();
-log.success("Ensured AGENTS.md symlink at ~/.codex/AGENTS.md");
+log.success(`${countSkills()} skills → ~/.codex/skills/`);
 
 // --- Enable hooks in config.toml ---
 const CONFIG_FILE = resolve(CODEX_DIR, "config.toml");
 enableCodexHooks(CONFIG_FILE);
 enableCodexStatusline(CONFIG_FILE);
-
-log.success("Codex installation complete");
-console.log("");
-log.info(`Skills: ${countSkills()}`);
-log.info(`Hooks: ${HOOKS_FILE}`);
