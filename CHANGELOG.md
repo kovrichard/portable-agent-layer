@@ -1,3 +1,10 @@
+## [0.63.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.63.1...v0.63.2) (2026-08-06)
+
+
+### Bug Fixes
+
+* **vscode:** make transcript and hooks work ([e0cc666](https://github.com/kovrichard/portable-agent-layer/commit/e0cc666c7a1d5ea6cb019a990bbc007cf53a29a5))
+
 ## [0.63.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.63.0...v0.63.1) (2026-08-05)
 
 
