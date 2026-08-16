@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const TEST_HOME = resolve(import.meta.dir, "../.test-home-inject-retrieval");
@@ -61,7 +61,26 @@ async function loadHandlers() {
     getRetrievalReminder: mod.getRetrievalReminder as (
       prompt: string
     ) => Promise<string | null>,
+    withinBudget: mod.withinBudget as <T>(work: () => T, ms: number) => T | null,
   };
+}
+
+function enableDebugLogging() {
+  mkdirSync(resolve(TEST_HOME, "memory", "state"), { recursive: true });
+  writeFileSync(resolve(TEST_HOME, "memory", "state", "debug-enabled"), "");
+}
+
+function readDebugLog(): string {
+  const path = resolve(TEST_HOME, "debug", "debug.log");
+  return existsSync(path) ? readFileSync(path, "utf-8") : "";
+}
+
+function blockFor(ms: number): string {
+  const end = performance.now() + ms;
+  while (performance.now() < end) {
+    /* occupy the thread so no timer can interleave */
+  }
+  return "completed";
 }
 
 async function captureStdout(work: () => Promise<void>): Promise<string> {
@@ -197,5 +216,46 @@ describe("getRetrievalReminder", () => {
     expect(
       await getRetrievalReminder("kubernetes autoscaler manifests in helm chart")
     ).toBeNull();
+  });
+});
+
+describe("withinBudget", () => {
+  test("returns the value produced by the work", async () => {
+    const { withinBudget } = await loadHandlers();
+    expect(withinBudget(() => "value", 250)).toBe("value");
+  });
+
+  test("returns null when the work throws", async () => {
+    const { withinBudget } = await loadHandlers();
+    expect(
+      withinBudget(() => {
+        throw new Error("boom");
+      }, 250)
+    ).toBeNull();
+  });
+
+  test("returns the result of work that overruns the budget", async () => {
+    // Regression guard: a timer cannot preempt synchronous work, so an overrun must
+    // still yield its value. A racing setTimeout would discard it and return null.
+    const { withinBudget } = await loadHandlers();
+    expect(withinBudget(() => blockFor(60), 10)).toBe("completed");
+  });
+
+  test("logs an over-budget line when the work overruns", async () => {
+    enableDebugLogging();
+    const before = readDebugLog();
+    const { withinBudget } = await loadHandlers();
+    withinBudget(() => blockFor(60), 10);
+    const added = readDebugLog().slice(before.length);
+    expect(added).toContain("inject-retrieval: over budget:");
+    expect(added).toMatch(/over budget: \d+ms > 10ms/);
+  });
+
+  test("logs nothing when the work stays within budget", async () => {
+    enableDebugLogging();
+    const before = readDebugLog();
+    const { withinBudget } = await loadHandlers();
+    withinBudget(() => "fast", 250);
+    expect(readDebugLog().slice(before.length)).not.toContain("over budget");
   });
 });

@@ -3,8 +3,8 @@
  *
  * Called from UserPromptOrchestrator. Reads the retrieval index, ranks the prompt
  * against the corpus, prints a `<system-reminder>` block to stdout (Claude Code
- * prepends UserPromptSubmit hook stdout to the prompt). Fail-closed: any error or
- * timeout produces empty output, never blocks the prompt.
+ * prepends UserPromptSubmit hook stdout to the prompt). Fail-closed: any error
+ * produces empty output, never blocks the prompt.
  */
 
 import { isCodex, isCursor } from "../lib/agent";
@@ -14,21 +14,25 @@ import { ensureIndex } from "../lib/retrieval-index";
 import { isEnabled } from "../lib/settings";
 import { getSteeringReminder } from "../lib/steering";
 
-const TIMEOUT_MS = 250;
+const BUDGET_MS = 250;
 
-function withTimeout<T>(work: () => T, ms: number): Promise<T | null> {
-  return new Promise((resolve) => {
-    const timer = setTimeout(() => resolve(null), ms);
-    try {
-      const result = work();
-      clearTimeout(timer);
-      resolve(result);
-    } catch (err) {
-      clearTimeout(timer);
-      logError("inject-retrieval", err);
-      resolve(null);
+/** Run sync work on the prompt path, containing any throw. A synchronous call cannot
+ *  be preempted on a single thread, so the budget is measured and logged, never
+ *  enforced — an overrun still returns its result rather than being discarded.
+ *  @lintignore exported for test/inject-retrieval.test.ts */
+export function withinBudget<T>(work: () => T, ms: number): T | null {
+  const started = performance.now();
+  try {
+    return work();
+  } catch (err) {
+    logError("inject-retrieval", err);
+    return null;
+  } finally {
+    const elapsed = performance.now() - started;
+    if (elapsed > ms) {
+      logDebug("inject-retrieval", `over budget: ${elapsed.toFixed(0)}ms > ${ms}ms`);
     }
-  });
+  }
 }
 
 /** Returns the retrieval reminder string, or null if nothing to inject. @lintignore dynamically imported by opencode plugin */
@@ -36,11 +40,11 @@ export async function getRetrievalReminder(prompt: string): Promise<string | nul
   if (!prompt?.trim()) return null;
   if (!isEnabled("learningInjection")) return null;
 
-  const result = await withTimeout(() => {
+  const result = withinBudget(() => {
     const index = ensureIndex();
     if (index.corpusSize === 0) return null;
     return runRetrieval(prompt, index, process.cwd());
-  }, TIMEOUT_MS);
+  }, BUDGET_MS);
 
   if (!result?.reminder) return null;
 
