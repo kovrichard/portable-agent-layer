@@ -3,6 +3,7 @@
  * Used by StopOrchestrator.ts (Claude Code) and opencode plugin.
  */
 
+import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdtemp, rename, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -189,8 +190,10 @@ async function detachFailurePrinciple(transcript: string): Promise<void> {
   // Rename to claim the pending file atomically — prevents two Stop hooks
   // racing on the same low rating (opencode notably fires session.idle AND
   // session.diff concurrently, so runStopHandlers runs twice in parallel).
-  const claimedDir = await mkdtemp(resolve(tmpdir(), "pal-pending-"));
-  const claimedPath = resolve(claimedDir, "pending.json");
+  // The claim stays inside the state directory: rename fails with EXDEV across
+  // devices, and the OS temp dir is on another volume often enough to matter.
+  const claimId: string = randomUUID();
+  const claimedPath = resolve(paths.state(), `pending-failure.${claimId}.json`);
   try {
     await rename(pendingPath, claimedPath);
   } catch (err) {
