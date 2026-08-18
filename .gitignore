@@ -8,6 +8,8 @@ node_modules/
 
 .test-tmp/
 .test-home/
+# Per-suite sandboxes; a detached child can recreate one after its test cleans up
+.test-home-*/
 
 # Eval runner logs (promptfoo writes error/debug logs to cwd)
 eval/logs/
