@@ -50,6 +50,24 @@ export default {
     "!src/hooks/lib/notify.ts",
     "!src/hooks/lib/stdin.ts",
     "!src/hooks/lib/which.ts",
+    // Ratchet — every entry below measured >=90% no-coverage on 2026-08-18, meaning
+    // the in-process suite cannot reach it and its mutants only depress the score.
+    // Delete an entry the same commit that gives the module in-process tests, then
+    // re-measure and raise thresholds.break. Entries come off this list; they never
+    // go back on, and break never moves down without a reason recorded here.
+    "!src/hooks/lib/import-merge.ts",
+    "!src/hooks/lib/learning-category.ts",
+    "!src/tools/agent/algorithm-reflect.ts",
+    "!src/tools/agent/analyze.ts",
+    "!src/tools/agent/handoff-note.ts",
+    "!src/tools/agent/project.ts",
+    "!src/tools/agent/relationship-note.ts",
+    "!src/tools/agent/thread.ts",
+    "!src/tools/relationship-reflect.ts",
+    "!src/tools/self-model.ts",
+    "!src/tools/session-summary.ts",
+    "!src/tools/skill-doctor.ts",
+    "!src/tools/token-cost.ts",
   ],
   concurrency: Number(process.env.STRYKER_CONCURRENCY ?? 4),
   bun: {
@@ -61,11 +79,11 @@ export default {
     inspectorTimeout: 60000,
   },
   reporters: ["clear-text", "progress", "html"],
-  // Measured 2026-08-18 over the whole ring: 10823 mutants, 37.43% total / 70.90% of
-  // covered, 0 errors. `break` stays null until the CLI-entrypoint tools under
-  // src/tools/ have in-process tests — a threshold guessed before that just gets
-  // disabled the first time it fires. The PR gate reports; it does not yet block.
-  thresholds: { high: 80, low: 60, break: null },
+  // Ratchet rung 1, measured 2026-08-18 over the pruned ring: 7627 mutants,
+  // 54.87% total / 70.81% of covered, 0 errors. `break` sits one rung below the
+  // measurement so a normal change has headroom. Raise it only after a run beats
+  // the new number; lower it only with the reason written here.
+  thresholds: { high: 80, low: 60, break: 50 },
   // Stryker copies the project into a sandbox with fs.copyFile, which throws ENOTSUP on a
   // symlink. Every entry below is either a symlink farm (agent config dirs, the installed
   // test homes, the vendored skill node_modules) or bulk the suite never reads.
