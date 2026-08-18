@@ -453,4 +453,80 @@ describe("project CLI", () => {
     expect(r.code).toBe(1);
     expect(r.stderr).toContain("ISC-99 not found");
   });
+
+  test("edit-isc rewrites the text, keeping the id and open state", async () => {
+    await runCli(["create", "edit", "--path", "/tmp/edit-fake"]);
+    await runCli(["add-isc", "edit", "vague wording"]);
+
+    const r = await runCli([
+      "edit-isc",
+      "edit",
+      "1",
+      "sharp wording with a done-condition",
+    ]);
+
+    expect(r.code).toBe(0);
+    expect(JSON.parse(r.stdout)).toEqual({
+      edited: true,
+      id: 1,
+      status: "open",
+      previous: "vague wording",
+      text: "sharp wording with a done-condition",
+    });
+    expect(section("edit", "Criteria")).toContain(
+      "- [ ] ISC-1: sharp wording with a done-condition"
+    );
+    expect(section("edit", "Criteria")).not.toContain("vague wording");
+  });
+
+  test("edit-isc keeps a closed ISC closed and in the Changelog", async () => {
+    await runCli(["create", "editc", "--path", "/tmp/editc-fake"]);
+    await runCli(["add-isc", "editc", "before"]);
+    await runCli(["complete-isc", "editc", "1"]);
+
+    const got = JSON.parse((await runCli(["edit-isc", "editc", "1", "after"])).stdout);
+
+    expect(got.status).toBe("closed");
+    expect(section("editc", "Changelog")).toContain("- [x] ISC-1: after");
+    expect(section("editc", "Criteria")).not.toContain("ISC-1");
+  });
+
+  test("edit-isc leaves sibling ISCs untouched", async () => {
+    await runCli(["create", "editsib", "--path", "/tmp/editsib-fake"]);
+    await runCli(["add-isc", "editsib", "first"]);
+    await runCli(["add-isc", "editsib", "second"]);
+
+    await runCli(["edit-isc", "editsib", "1", "rewritten"]);
+
+    const criteria = section("editsib", "Criteria");
+    expect(criteria).toContain("- [ ] ISC-1: rewritten");
+    expect(criteria).toContain("- [ ] ISC-2: second");
+  });
+
+  test("an edited id is still reserved against reuse", async () => {
+    await runCli(["create", "editres", "--path", "/tmp/editres-fake"]);
+    await runCli(["add-isc", "editres", "first"]);
+    await runCli(["edit-isc", "editres", "1", "first, reworded"]);
+
+    const added = JSON.parse((await runCli(["add-isc", "editres", "second"])).stdout);
+
+    expect(added.id).toBe(2);
+  });
+
+  test("edit-isc fails on an unknown id", async () => {
+    await runCli(["create", "editnone", "--path", "/tmp/editnone-fake"]);
+    const r = await runCli(["edit-isc", "editnone", "99", "nope"]);
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain("ISC-99 not found");
+  });
+
+  test("edit-isc requires replacement text", async () => {
+    await runCli(["create", "editempty", "--path", "/tmp/editempty-fake"]);
+    await runCli(["add-isc", "editempty", "keep me"]);
+
+    const r = await runCli(["edit-isc", "editempty", "1", "   "]);
+
+    expect(r.code).toBe(1);
+    expect(section("editempty", "Criteria")).toContain("keep me");
+  });
 });

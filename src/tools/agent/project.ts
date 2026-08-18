@@ -529,6 +529,45 @@ function cmdShowIsc(args: string[]): void {
   ok({ name, id: isc.id, status: isc.checked ? "closed" : "open", text: isc.text });
 }
 
+// edit-isc rewrites one ISC's text in place, keeping its id and open/done state.
+// The id never leaves the record, so nextIscId still reserves it. Returns the
+// previous text because the ISA files carry no version history of their own.
+function cmdEditIsc(args: string[]): void {
+  const name = args[0];
+  const id = Number(args[1]);
+  const text = args.slice(2).join(" ").trim();
+  if (!name || !Number.isInteger(id) || id < 1 || !text) {
+    fail('Usage: edit-isc <name> <id> "new text"');
+  }
+  const p = requireProject(name);
+  const inCriteria = parseIscs(p.criteria ?? "").find((i) => i.id === id);
+  const isc = inCriteria ?? parseIscs(p.changelog ?? "").find((i) => i.id === id);
+  if (!isc) fail(`ISC-${id} not found in project "${name}".`);
+
+  const box = isc.checked ? "[x]" : "[ ]";
+  const rewrite = (section: string) =>
+    section
+      .split("\n")
+      .map((l) =>
+        new RegExp(String.raw`^-\s+\[[ x]\]\s+ISC-${id}:`, "i").test(l)
+          ? `- ${box} ISC-${id}: ${text}`
+          : l
+      )
+      .join("\n");
+
+  if (inCriteria) p.criteria = rewrite(p.criteria ?? "");
+  else p.changelog = rewrite(p.changelog ?? "");
+  p.updated = now();
+  writeProject(p);
+  ok({
+    edited: true,
+    id,
+    status: isc.checked ? "closed" : "open",
+    previous: isc.text,
+    text,
+  });
+}
+
 // Backfill: sweep any done ISCs still sitting in Criteria (legacy projects, or
 // completions from before archive-on-complete) into the Changelog in one pass.
 function cmdPruneIsc(args: string[]): void {
@@ -630,6 +669,7 @@ Commands:
   reopen-isc <name> <id>                        reopen ISC-N (mark not done)
   list-isc <name> [--all | --closed]           list open ISCs (default); --all or --closed for done
   show-isc <name> <id>                          print one ISC's full text
+  edit-isc <name> <id> "new text"               rewrite ISC-N's text, keeping its id and state
   prune-isc <name>                              archive done ISCs from Criteria into the Changelog
   isa-init <name>                               mark project as ISA-initialized
   scaffold-task-isa <title>                     create a one-shot task ISA in memory/work/
@@ -724,6 +764,9 @@ function run(): void {
       return;
     case "show-isc":
       cmdShowIsc(rest);
+      return;
+    case "edit-isc":
+      cmdEditIsc(rest);
       return;
     case "prune-isc":
       cmdPruneIsc(rest);
