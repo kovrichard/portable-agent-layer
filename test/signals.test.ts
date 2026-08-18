@@ -50,3 +50,29 @@ describe("emitRating", () => {
     expect(last.response_preview).toBeUndefined();
   });
 });
+
+describe("emitSignal — origin stamp", () => {
+  test("stamps the emitting machine's id on every signal", () => {
+    emitRating(8, "context", "explicit");
+
+    const logPath = resolve(TEST_HOME, "memory", "signals", "ratings.jsonl");
+    const entry = JSON.parse(readFileSync(logPath, "utf-8").trim());
+    const machineFile = JSON.parse(
+      readFileSync(resolve(TEST_HOME, "machine.json"), "utf-8")
+    );
+    expect(entry.m).toBe(machineFile.id);
+  });
+
+  test("stamps the SAME id across multiple signals in one session", () => {
+    emitRating(5, "first", "explicit");
+    emitRating(6, "second", "explicit");
+
+    const logPath = resolve(TEST_HOME, "memory", "signals", "ratings.jsonl");
+    const lines = readFileSync(logPath, "utf-8")
+      .trim()
+      .split("\n")
+      .map((l) => JSON.parse(l));
+    expect(lines[0].m).toBe(lines[1].m);
+    expect(lines[0].m.length).toBeGreaterThan(0);
+  });
+});
