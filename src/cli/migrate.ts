@@ -105,7 +105,7 @@ const v1Projects: Migration = {
 function nextIscId(criteria: string): number {
   const ids: number[] = [];
   for (const line of criteria.split("\n")) {
-    const m = new RegExp(/^-\s+\[[ x]\]\s+ISC-(\d+):/i).exec(line);
+    const m = new RegExp(/^-\s+\[[ x~]\]\s+ISC-(\d+):/i).exec(line);
     if (m) ids.push(Number(m[1]));
   }
   return ids.length > 0 ? Math.max(...ids) + 1 : 1;
