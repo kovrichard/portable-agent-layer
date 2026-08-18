@@ -17,6 +17,25 @@ function writeFailure(format: HookFormat, output: string): void {
   process.stderr.write(output);
 }
 
+function writeSuccess(format: HookFormat, output: string): number {
+  if (format === "codex") return 0;
+  process.stdout.write(JSON.stringify({ output }));
+  return 0;
+}
+
+// Fails closed: a non-zero git status (not a repo, git missing, index locked)
+// reports changes so the gates still run. Only a confirmed-empty status skips.
+// --porcelain=v1 lists untracked files too, so a new file counts as a change.
+function worktreeHasChanges(): boolean {
+  const r = spawnSync("git status --porcelain=v1", {
+    encoding: "utf8",
+    shell: true,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if ((r.status ?? -1) !== 0) return true;
+  return (r.stdout ?? "").trim().length > 0;
+}
+
 // Helper for agent hook scripts. Each hook file (lint.ts, test.ts, ...) is a
 // thin wrapper that calls runHook(["bun", "run", "<script>"]). We capture
 // stdout+stderr, return them on success in a JSON envelope (so Claude/opencode
@@ -28,6 +47,12 @@ export function runHook(args: string[], format = hookFormatFromArgs()): number {
     writeFailure(format, "run-hook: no command provided");
     return 2;
   }
+  if (!worktreeHasChanges()) {
+    return writeSuccess(
+      format,
+      "skipped: worktree clean, HEAD already gated by pre-commit and CI"
+    );
+  }
   const command = args.join(" ");
   const r = spawnSync(command, {
     encoding: "utf8",
@@ -38,11 +63,7 @@ export function runHook(args: string[], format = hookFormatFromArgs()): number {
   const output = out || "(no output)";
   const ok = (r.status ?? -1) === 0;
 
-  if (ok) {
-    if (format === "codex") return 0;
-    process.stdout.write(JSON.stringify({ output: "ok" }));
-    return 0;
-  }
+  if (ok) return writeSuccess(format, "ok");
   writeFailure(format, output);
   return 2;
 }
