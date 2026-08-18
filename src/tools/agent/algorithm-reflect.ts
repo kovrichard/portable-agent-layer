@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+
 /**
  * AlgorithmReflect — Append structured algorithm reflections to JSONL.
  *
@@ -14,6 +15,7 @@
 
 import { appendFileSync } from "node:fs";
 import { parseArgs } from "node:util";
+import { encodeAnchor } from "../../hooks/lib/anchor";
 import { paths } from "../../hooks/lib/paths";
 import { emit } from "../lib/emit";
 
@@ -107,7 +109,7 @@ Output: algorithm-reflections.jsonl in memory/learning/reflections/
 
   const reflection: AlgorithmReflection = {
     timestamp: new Date().toISOString(),
-    cwd: process.cwd(),
+    cwd: encodeAnchor(process.cwd()),
     task: values.task,
     criteria_count: parseInt(values.criteria || "0", 10),
     criteria_passed: parseInt(values.passed || "0", 10),

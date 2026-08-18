@@ -14,6 +14,7 @@
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { encodeAnchor } from "../../hooks/lib/anchor";
 import { ensureDir, paths } from "../../hooks/lib/paths";
 import { emit } from "../lib/emit";
 
@@ -65,7 +66,7 @@ export function writeThreads(threads: Thread[]): void {
 function addThread(title: string, context: string): Thread {
   const thread: Thread = {
     id: generateId(),
-    cwd: process.cwd(),
+    cwd: encodeAnchor(process.cwd()),
     title,
     context,
     status: "open",
