@@ -105,6 +105,22 @@ describe("appendNotes", () => {
     expect(readFileSync(todayFile(), "utf-8")).not.toContain("<!-- session:");
   });
 
+  test("anchors the cwd to {proj:slug} when it falls inside a registered project", () => {
+    const slug = "test-repo";
+    const dir = resolve(HOME, "memory", "projects", slug);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      resolve(dir, "ISA.md"),
+      `---\nname: "${slug}"\npath: "${process.cwd()}"\nstatus: "active"\ncreated: "2026-01-01"\nupdated: "2026-01-01"\n---\n\n## Goal\n`
+    );
+
+    appendNotes([{ type: "W", text: "a fact" }], "sess-456");
+
+    const content = readFileSync(todayFile(), "utf-8");
+    expect(content).toContain(`cwd:{proj:${slug}}`);
+    expect(content).not.toContain(`cwd:${process.cwd()}`);
+  });
+
   test("skips a note whose text is already present", () => {
     appendNotes([{ type: "W", text: "duplicated fact" }]);
     appendNotes([{ type: "W", text: "duplicated fact" }]);
