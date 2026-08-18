@@ -24,3 +24,8 @@ assets/skills/consulting-report/demo/diagrams-compressed/
 # Skill tools compiled to .mjs for Node (scripts/build-skill-tools.ts). Generated at
 # `prepack` so the published tarball ships them; never committed. See the script header.
 assets/skills/*/tools/*.mjs
+
+# Mutation testing sandbox + reports
+.stryker-tmp/
+stryker.log
+reports/

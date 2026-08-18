@@ -8,6 +8,7 @@
     "src/targets/**/install.ts",
     "src/targets/**/uninstall.ts",
     ".agents/hooks/*.ts",
+    ".agents/scripts/*.ts",
     "assets/skills/*/tools/*.ts",
     ".opencode/plugins/*.ts"
   ],
@@ -15,13 +16,17 @@
     "src/**/*.ts"
   ],
   "includeEntryExports": true,
-  "tags": ["-lintignore"],
+  "tags": [
+    "-lintignore"
+  ],
   "ignore": [
     ".opencode/plugins/lint.ts",
     "src/targets/opencode/plugin.ts"
   ],
   "ignoreDependencies": [
     "@semantic-release/github",
-    "promptfoo"
+    "promptfoo",
+    "@stryker-mutator/bun-runner",
+    "@stryker-mutator/api"
   ]
 }
