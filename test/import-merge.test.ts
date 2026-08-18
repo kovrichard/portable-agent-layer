@@ -4,6 +4,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -12,6 +13,18 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
+
+/** Every path named `name` under `dir`, sorted so the first hit is stable. */
+function findUnder(dir: string, name: string): string[] {
+  if (!existsSync(dir)) return [];
+  const hits: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true, recursive: true })) {
+    if (entry.isFile() && entry.name === name) {
+      hits.push(resolve(entry.parentPath, entry.name));
+    }
+  }
+  return hits.sort();
+}
 
 let SRC: string;
 let DST: string;
@@ -111,15 +124,9 @@ describe("import into a NON-EMPTY home", () => {
     // local wins in place
     expect(read(DST, "telos/GOALS.md")).toContain("linux version");
     // incoming is preserved somewhere under backups/, not silently dropped
-    const found = spawnSync(
-      "sh",
-      ["-c", `find ${DST}/backups -name GOALS.md | head -1`],
-      {
-        encoding: "utf-8",
-      }
-    ).stdout.trim();
+    const found = findUnder(resolve(DST, "backups"), "GOALS.md");
     expect(found.length).toBeGreaterThan(0);
-    expect(readFileSync(found, "utf-8")).toContain("mac version");
+    expect(readFileSync(found[0], "utf-8")).toContain("mac version");
   });
 
   test("is idempotent — importing twice does not duplicate records", () => {
