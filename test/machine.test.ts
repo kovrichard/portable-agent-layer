@@ -85,6 +85,42 @@ describe("loadMachine", () => {
   });
 });
 
+describe("loadMachine — id validity edge cases", () => {
+  test("an EMPTY id is not usable and is regenerated", async () => {
+    const { loadMachine, machineFilePath } = await lib();
+    writeFileSync(machineFilePath(HOME), JSON.stringify({ id: "", label: "x" }));
+    expect(loadMachine(HOME).id.length).toBeGreaterThan(0);
+  });
+
+  test("a non-string id is not usable and is regenerated", async () => {
+    const { loadMachine, machineFilePath } = await lib();
+    writeFileSync(machineFilePath(HOME), JSON.stringify({ id: 12345, label: "x" }));
+    const m = loadMachine(HOME);
+    expect(typeof m.id).toBe("string");
+    expect(m.id).not.toBe("12345");
+  });
+
+  test("an id that is not a string is rejected even when it has a length", async () => {
+    const { loadMachine, machineFilePath } = await lib();
+    writeFileSync(machineFilePath(HOME), JSON.stringify({ id: ["a", "b"], label: "x" }));
+    const m = loadMachine(HOME);
+    expect(typeof m.id).toBe("string");
+    expect(Array.isArray(m.id)).toBe(false);
+  });
+
+  test("a whitespace-only stored label falls back to the default", async () => {
+    const { loadMachine, machineFilePath, defaultLabel } = await lib();
+    writeFileSync(machineFilePath(HOME), JSON.stringify({ id: "kept-id", label: "   " }));
+    expect(loadMachine(HOME).label).toBe(defaultLabel("kept-id"));
+  });
+
+  test("a stored os of empty string is replaced with the real platform", async () => {
+    const { loadMachine, machineFilePath } = await lib();
+    writeFileSync(machineFilePath(HOME), JSON.stringify({ id: "kept-id", os: "" }));
+    expect(loadMachine(HOME).os.length).toBeGreaterThan(0);
+  });
+});
+
 describe("defaultLabel", () => {
   test("is derived from the id, never from the hostname", async () => {
     const { defaultLabel } = await lib();
@@ -158,6 +194,52 @@ describe("registry", () => {
     expect(raw).toContain("renamed");
   });
 
+  test("ignores non-markdown files in the machines directory", async () => {
+    const { writeRegistryEntry, readRegistry } = await lib();
+    writeRegistryEntry({ id: "id-a", label: "alpha", os: "linux" });
+    writeFileSync(
+      resolve(HOME, "memory", "machines", "notes.txt"),
+      "id: nope\nlabel: nope\n"
+    );
+    writeFileSync(resolve(HOME, "memory", "machines", "state.json"), '{"id":"x"}');
+    const reg = readRegistry();
+    expect(reg.length).toBe(1);
+    expect(reg[0].id).toBe("id-a");
+  });
+
+  test("only .md files count as registry entries, even with valid frontmatter", async () => {
+    const { writeRegistryEntry, readRegistry } = await lib();
+    writeRegistryEntry({ id: "id-a", label: "alpha", os: "linux" });
+    writeFileSync(
+      resolve(HOME, "memory", "machines", "decoy.txt"),
+      "---\nid: id-decoy\nlabel: phantom\nos: linux\n---\n"
+    );
+    const reg = readRegistry();
+    expect(reg.map((e) => e.id)).toEqual(["id-a"]);
+  });
+
+  test("drops an entry that has an id but no label", async () => {
+    const { writeRegistryEntry, readRegistry } = await lib();
+    writeRegistryEntry({ id: "id-a", label: "alpha", os: "linux" });
+    writeFileSync(
+      resolve(HOME, "memory", "machines", "half.md"),
+      "---\nid: id-half\n---\n"
+    );
+    const reg = readRegistry();
+    expect(reg.map((e) => e.id)).toEqual(["id-a"]);
+  });
+
+  test("defaults os to empty string when the entry omits it", async () => {
+    const { readRegistry } = await lib();
+    mkdirSync(resolve(HOME, "memory", "machines"), { recursive: true });
+    writeFileSync(
+      resolve(HOME, "memory", "machines", "noos.md"),
+      "---\nid: id-noos\nlabel: nameless\n---\n"
+    );
+    const reg = readRegistry();
+    expect(reg.find((e) => e.id === "id-noos")?.os).toBe("");
+  });
+
   test("skips a malformed entry without hiding the rest", async () => {
     const { writeRegistryEntry, readRegistry } = await lib();
     writeRegistryEntry({ id: "id-a", label: "alpha", os: "linux" });
@@ -196,6 +278,15 @@ describe("displayName", () => {
     ];
     expect(displayName("aaaa1111-0000-0000-0000-000000000000", reg)).toBe("macbook·aaaa");
     expect(displayName("bbbb2222-0000-0000-0000-000000000000", reg)).toBe("macbook·bbbb");
+  });
+
+  test("matches on id, not on position in the registry", async () => {
+    const { displayName } = await lib();
+    const reg = [
+      { id: "id-a", label: "alpha", os: "linux" },
+      { id: "id-b", label: "beta", os: "darwin" },
+    ];
+    expect(displayName("id-b", reg)).toBe("beta");
   });
 
   test("falls back to the short id when the machine is unknown", async () => {
