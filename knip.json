@@ -27,6 +27,7 @@
     "@semantic-release/github",
     "promptfoo",
     "@stryker-mutator/bun-runner",
-    "@stryker-mutator/api"
+    "@stryker-mutator/api",
+    "@secretlint/secretlint-rule-preset-recommend"
   ]
 }

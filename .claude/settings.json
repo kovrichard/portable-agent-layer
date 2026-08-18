@@ -4,11 +4,30 @@
     "Stop": [
       {
         "hooks": [
-          { "type": "command", "command": "bun .agents/hooks/check.ts" },
-          { "type": "command", "command": "bun .agents/hooks/type-check.ts" },
-          { "type": "command", "command": "bun .agents/hooks/knip.ts" },
-          { "type": "command", "command": "bun .agents/hooks/jscpd.ts" },
-          { "type": "command", "command": "bun .agents/hooks/klint.ts" }
+          {
+            "type": "command",
+            "command": "bun .agents/hooks/check.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun .agents/hooks/type-check.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun .agents/hooks/knip.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun .agents/hooks/jscpd.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun .agents/hooks/klint.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun .agents/hooks/secretlint.ts"
+          }
         ]
       }
     ]

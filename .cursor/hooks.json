@@ -2,11 +2,24 @@
   "version": 1,
   "hooks": {
     "stop": [
-      { "command": "bun .agents/hooks/check.ts" },
-      { "command": "bun .agents/hooks/type-check.ts" },
-      { "command": "bun .agents/hooks/knip.ts" },
-      { "command": "bun .agents/hooks/jscpd.ts" },
-      { "command": "bun .agents/hooks/klint.ts" }
+      {
+        "command": "bun .agents/hooks/check.ts"
+      },
+      {
+        "command": "bun .agents/hooks/type-check.ts"
+      },
+      {
+        "command": "bun .agents/hooks/knip.ts"
+      },
+      {
+        "command": "bun .agents/hooks/jscpd.ts"
+      },
+      {
+        "command": "bun .agents/hooks/klint.ts"
+      },
+      {
+        "command": "bun .agents/hooks/secretlint.ts"
+      }
     ]
   }
 }
