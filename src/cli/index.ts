@@ -35,9 +35,15 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
-import { appendImportLog, mergeArchive, summarize } from "../hooks/lib/import-merge";
+import {
+  appendImportLog,
+  mergeArchive,
+  readManifest,
+  summarize,
+} from "../hooks/lib/import-merge";
 import { inference, previewInferenceRoute } from "../hooks/lib/inference";
 import { DEBUG_LOG_MAX_ROTATED, logDebug } from "../hooks/lib/log";
+import { ensureRegistered, writeRegistryEntry } from "../hooks/lib/machine";
 import { palHome, palPkg, paths, platform } from "../hooks/lib/paths";
 import { hasRealContent, SETUP_STEPS, STEP_ORDER } from "../hooks/lib/setup";
 import { log } from "../targets/lib";
@@ -1403,6 +1409,7 @@ async function importState(args: string[]) {
     return;
   }
 
+  ensureRegistered(home);
   const quarantineDir = resolve(
     home,
     "backups",
@@ -1416,6 +1423,13 @@ async function importState(args: string[]) {
     home,
     quarantineDir
   );
+  const source = readManifest(
+    entries.map((e) => ({ path: e.entryName, data: () => e.getData() }))
+  );
+  if (source) {
+    writeRegistryEntry({ id: source.machineId, label: source.label, os: source.os });
+    console.log(`Source machine: ${source.label} (${source.machineId})`);
+  }
 
   appendImportLog(home, {
     ts: new Date().toISOString(),
@@ -1428,6 +1442,7 @@ async function importState(args: string[]) {
     skipped: result.skipped.length,
     linesAdded: result.linesAdded,
     quarantineDir: result.quarantineDir,
+    sourceMachineId: source?.machineId ?? null,
   });
 
   logDebug("import", `done merge ${summarize(result)} to=${home}`);

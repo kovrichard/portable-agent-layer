@@ -216,3 +216,26 @@ describe("isNeverImport", () => {
     expect(isNeverImport("skills/my-skill/SKILL.md")).toBe(false);
   });
 });
+
+describe("machine identity crosses on import", () => {
+  test("source machine is named and its label resolves afterwards", async () => {
+    cli(SRC, ["export", WORK]);
+    const srcId = JSON.parse(readFileSync(resolve(SRC, "machine.json"), "utf-8"))
+      .id as string;
+
+    const r = cli(DST, ["import", WORK]);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("Source machine:");
+
+    // DST keeps its own identity...
+    const dstId = JSON.parse(readFileSync(resolve(DST, "machine.json"), "utf-8"))
+      .id as string;
+    expect(dstId).not.toBe(srcId);
+
+    // ...and can now name the machine those records came from.
+    expect(existsSync(resolve(DST, "memory", "machines", `${srcId}.md`))).toBe(true);
+
+    const logged = lines(DST, "memory/state/import-log.jsonl").map((l) => JSON.parse(l));
+    expect(logged[0].sourceMachineId).toBe(srcId);
+  });
+});

@@ -18,6 +18,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { type ExportManifest, MANIFEST_NAME } from "./export";
 
 /** One file inside an export archive, decoupled from the zip library. */
 export interface ArchiveEntry {
@@ -40,7 +41,11 @@ export interface MergeResult {
  * identity — importing it would give two machines one id and silently break
  * every origin-scoped read. The retrieval index is rebuilt from its sources.
  */
-const NEVER_IMPORT = ["machine.json", "memory/learning/.retrieval-index.json"];
+const NEVER_IMPORT = [
+  "machine.json",
+  "export-manifest.json",
+  "memory/learning/.retrieval-index.json",
+];
 
 function normalize(path: string): string {
   return path.replaceAll("\\", "/").replace(/^\.\//, "");
@@ -154,6 +159,29 @@ export function mergeArchive(
   return result;
 }
 
+/**
+ * The source machine declared by an archive's manifest, or null when the
+ * archive predates manifests.
+ */
+export function readManifest(entries: ArchiveEntry[]): ExportManifest | null {
+  const hit = entries.find((e) => normalize(e.path) === MANIFEST_NAME);
+  if (!hit) return null;
+  try {
+    const parsed = JSON.parse(hit.data().toString("utf-8")) as Partial<ExportManifest>;
+    if (typeof parsed.machineId !== "string" || parsed.machineId.length === 0)
+      return null;
+    return {
+      machineId: parsed.machineId,
+      label: parsed.label ?? parsed.machineId,
+      os: parsed.os ?? "",
+      exportedAt: parsed.exportedAt ?? "",
+      fileCount: parsed.fileCount ?? 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export interface ImportLogEntry {
   ts: string;
   archive: string;
@@ -165,6 +193,7 @@ export interface ImportLogEntry {
   skipped: number;
   linesAdded: number;
   quarantineDir: string | null;
+  sourceMachineId?: string | null;
 }
 
 /** Append one record per import so a merged corpus stays attributable. */
