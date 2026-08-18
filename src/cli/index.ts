@@ -12,7 +12,7 @@
  *   uninstall [--claude] [--opencode] [--cursor] [--codex] Remove hooks/skills for targets
  *   update                             Update PAL (git pull or npm update)
  *   export [path] [--dry-run]         Export user state to zip
- *   import [path] [--dry-run]         Import user state from zip
+ *   import [path] [--dry-run] [--overwrite]  Merge user state from zip
  *   status                            Show current PAL configuration
  *   doctor                            Check prerequisites and system health
  *   usage                             Summarize token usage and cost
@@ -35,6 +35,7 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
+import { appendImportLog, mergeArchive, summarize } from "../hooks/lib/import-merge";
 import { inference, previewInferenceRoute } from "../hooks/lib/inference";
 import { DEBUG_LOG_MAX_ROTATED, logDebug } from "../hooks/lib/log";
 import { palHome, palPkg, paths, platform } from "../hooks/lib/paths";
@@ -274,7 +275,7 @@ function showHelp() {
     pal cli uninstall [--claude] [--opencode] [--cursor] [--codex] Remove hooks for targets
     pal cli update                          Update PAL (git pull or npm update)
     pal cli export [path] [--dry-run]       Export state to zip
-    pal cli import [path] [--dry-run]       Import state from zip
+    pal cli import [path] [--dry-run]       Merge state from zip (--overwrite to replace)
     pal cli status                          Show PAL configuration
     pal cli doctor [--probe-inference]      Check prerequisites and health (--probe fires real inference per route)
     pal cli migrate [--list] [--dry-run]    Run pending data migrations
@@ -1293,6 +1294,7 @@ async function importState(args: string[]) {
 
   const home = palHome();
   const dryRun = args.includes("--dry-run");
+  const overwrite = args.includes("--overwrite");
   const pathArg = args.find((a) => !a.startsWith("-"));
   logDebug("import", `start dryRun=${dryRun} pathArg=${pathArg ?? "(auto)"}`);
 
@@ -1369,16 +1371,74 @@ async function importState(args: string[]) {
     process.exit(0);
   }
 
-  logDebug("import", `zip=${zipPath} entries=${entries.length} dryRun=${dryRun}`);
+  logDebug(
+    "import",
+    `zip=${zipPath} entries=${entries.length} dryRun=${dryRun} overwrite=${overwrite}`
+  );
   if (dryRun) {
-    console.log(`Would import ${entries.length} files → ${home}\n`);
+    console.log(
+      `Would ${overwrite ? "overwrite with" : "merge"} ${entries.length} files → ${home}\n`
+    );
     for (const e of entries) console.log(`  ${e.entryName}`);
-  } else {
-    zip.extractAllTo(home, true);
-    logDebug("import", `done extracted=${entries.length} to=${home}`);
-    console.log(`Imported ${entries.length} files → ${home}`);
-    log.info("Run 'pal cli install' to re-register hooks.");
+    return;
   }
+
+  if (overwrite) {
+    zip.extractAllTo(home, true);
+    logDebug("import", `done overwrote=${entries.length} to=${home}`);
+    console.log(`Imported ${entries.length} files → ${home} (overwrite)`);
+    appendImportLog(home, {
+      ts: new Date().toISOString(),
+      archive: zipPath,
+      mode: "overwrite",
+      created: 0,
+      merged: 0,
+      identical: 0,
+      conflicts: 0,
+      skipped: 0,
+      linesAdded: 0,
+      quarantineDir: null,
+    });
+    log.info("Run 'pal cli install' to re-register hooks.");
+    return;
+  }
+
+  const quarantineDir = resolve(
+    home,
+    "backups",
+    `import-conflicts-${new Date()
+      .toISOString()
+      .replace(/[-:T.]/g, "")
+      .slice(0, 14)}`
+  );
+  const result = mergeArchive(
+    entries.map((e) => ({ path: e.entryName, data: () => e.getData() })),
+    home,
+    quarantineDir
+  );
+
+  appendImportLog(home, {
+    ts: new Date().toISOString(),
+    archive: zipPath,
+    mode: "merge",
+    created: result.created.length,
+    merged: result.merged.length,
+    identical: result.identical.length,
+    conflicts: result.conflicts.length,
+    skipped: result.skipped.length,
+    linesAdded: result.linesAdded,
+    quarantineDir: result.quarantineDir,
+  });
+
+  logDebug("import", `done merge ${summarize(result)} to=${home}`);
+  console.log(`Imported → ${home}: ${summarize(result)}`);
+  if (result.conflicts.length > 0) {
+    log.warn(
+      `${result.conflicts.length} file(s) diverged — local kept, incoming saved to ${result.quarantineDir}`
+    );
+    for (const c of result.conflicts) console.log(`  ${c}`);
+  }
+  log.info("Run 'pal cli install' to re-register hooks.");
 }
 
 async function update() {
