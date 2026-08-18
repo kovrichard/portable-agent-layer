@@ -144,10 +144,11 @@ describe("pal cli install (smoke)", () => {
   }, 90000);
 
   test("install is idempotent — second run preserves files", () => {
+    expect(pal("cli", "install", "--claude").status).toBe(0);
     const before = readdirSync(resolve(CLAUDE_DIR, "skills")).length;
     const result = pal("cli", "install", "--claude");
     expect(result.status).toBe(0);
     const after = readdirSync(resolve(CLAUDE_DIR, "skills")).length;
     expect(after).toBe(before);
-  }, 90000);
+  }, 180000);
 });

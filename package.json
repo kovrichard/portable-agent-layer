@@ -34,7 +34,7 @@
   },
   "scripts": {
     "type-check": "tsc --noEmit",
-    "test": "bun test",
+    "test": "bun test --randomize",
     "format": "biome format",
     "format-write": "biome format --write",
     "lint": "biome lint",

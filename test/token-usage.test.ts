@@ -1,11 +1,11 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import { logTokenUsage } from "../src/hooks/lib/token-usage";
 
 const TEST_HOME = resolve(import.meta.dir, "../.test-home-token-usage");
 
-beforeAll(() => {
+beforeEach(() => {
   process.env.PAL_HOME = TEST_HOME;
   if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
   mkdirSync(TEST_HOME, { recursive: true });
@@ -53,6 +53,8 @@ describe("logTokenUsage", () => {
   });
 
   test("appends multiple entries", () => {
+    logTokenUsage("rating", { inputTokens: 1, outputTokens: 1 });
+
     const logPath = resolve(TEST_HOME, "memory", "signals", "token-usage.jsonl");
     const before = readFileSync(logPath, "utf-8").trim().split("\n").length;
 

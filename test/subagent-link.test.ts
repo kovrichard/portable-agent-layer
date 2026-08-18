@@ -48,6 +48,8 @@ copilot:
 You are a test helper subagent.
 `;
 
+let firstLink: ReturnType<typeof subagentLink>;
+
 beforeAll(() => {
   if (existsSync(HOME)) rmSync(HOME, { recursive: true });
   // A personal subagent already authored under ~/.pal/agents/
@@ -57,6 +59,7 @@ beforeAll(() => {
   mkdirSync(resolve(HOME, ".claude/agents"), { recursive: true });
   mkdirSync(resolve(HOME, ".config/opencode/agents"), { recursive: true });
   mkdirSync(resolve(HOME, ".copilot/agents"), { recursive: true });
+  firstLink = subagentLink("my-helper");
 });
 
 afterAll(() => {
@@ -65,8 +68,7 @@ afterAll(() => {
 
 describe("pal cli subagent link", () => {
   test("installs a personal subagent into installed agents only", () => {
-    const res = subagentLink("my-helper");
-    expect(res.status).toBe(0);
+    expect(firstLink.status).toBe(0);
 
     expect(existsSync(claudeFile)).toBe(true);
     expect(existsSync(opencodeFile)).toBe(true);

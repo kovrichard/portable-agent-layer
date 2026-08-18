@@ -1,11 +1,11 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import { emitRating } from "../src/hooks/lib/signals";
 
 const TEST_HOME = resolve(import.meta.dir, "../.test-home-signals");
 
-beforeAll(() => {
+beforeEach(() => {
   process.env.PAL_HOME = TEST_HOME;
   if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
   mkdirSync(TEST_HOME, { recursive: true });

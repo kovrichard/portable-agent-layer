@@ -109,18 +109,22 @@ describe("collectExportFiles", () => {
 });
 
 describe("exportZip", () => {
-  test("creates a valid zip file", async () => {
-    const { exportZip } = await import("../src/hooks/lib/export");
-    const zipPath = resolve(TEST_HOME, "test-export.zip");
+  const zipPath = resolve(TEST_HOME, "test-export.zip");
 
-    const count = exportZip(zipPath);
+  async function writeZip() {
+    const { exportZip } = await import("../src/hooks/lib/export");
+    return exportZip(zipPath);
+  }
+
+  test("creates a valid zip file", async () => {
+    const count = await writeZip();
     expect(count).toBeGreaterThan(0);
     expect(existsSync(zipPath)).toBe(true);
   });
 
   test("zip contains expected files", async () => {
+    await writeZip();
     const AdmZip = (await import("adm-zip")).default;
-    const zipPath = resolve(TEST_HOME, "test-export.zip");
     const zip = new AdmZip(zipPath);
     const entries = zip.getEntries().map((e) => e.entryName);
 
