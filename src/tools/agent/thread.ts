@@ -15,6 +15,7 @@ import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { encodeAnchor } from "../../hooks/lib/anchor";
+import { loadMachine } from "../../hooks/lib/machine";
 import { ensureDir, paths } from "../../hooks/lib/paths";
 import { emit } from "../lib/emit";
 
@@ -23,6 +24,7 @@ import { emit } from "../lib/emit";
 export interface Thread {
   id: string;
   cwd: string;
+  m: string;
   title: string;
   context: string;
   status: "open" | "resolved";
@@ -63,10 +65,12 @@ export function writeThreads(threads: Thread[]): void {
 
 // ── Operations ──
 
-function addThread(title: string, context: string): Thread {
+/** Exported so the cwd-anchor and origin-stamp wiring is directly testable. */
+export function addThread(title: string, context: string): Thread {
   const thread: Thread = {
     id: generateId(),
     cwd: encodeAnchor(process.cwd()),
+    m: loadMachine().id,
     title,
     context,
     status: "open",
