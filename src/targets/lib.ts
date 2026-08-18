@@ -693,8 +693,8 @@ export function scaffoldPalSettings(): void {
 
 // --- PAL docs (modular context routing files) ---
 
-const PAL_DOCS_DIR = resolve(palHome(), "docs");
-const PAL_TOOLS_DIR = resolve(palHome(), "tools");
+const palDocsDir = () => resolve(palHome(), "docs");
+const palToolsDir = () => resolve(palHome(), "tools");
 
 /**
  * Install PAL system docs into ~/.pal/docs/.
@@ -705,19 +705,19 @@ export function copyPalDocs(): number {
   const srcDir = assets.palDocs();
   if (!existsSync(srcDir)) return 0;
 
-  mkdirSync(PAL_DOCS_DIR, { recursive: true });
+  mkdirSync(palDocsDir(), { recursive: true });
   let count = 0;
 
   for (const file of readdirSync(srcDir).filter((f) => f.endsWith(".md"))) {
     const src = resolve(srcDir, file);
-    const dst = resolve(PAL_DOCS_DIR, file);
+    const dst = resolve(palDocsDir(), file);
     copyFileSync(src, dst);
     count++;
   }
 
   // ~/.pal/tools/ → repo agent tools
   const linkType = process.platform === "win32" ? "junction" : "dir";
-  ensureSymlink(PAL_TOOLS_DIR, assets.agentTools(), linkType);
+  ensureSymlink(palToolsDir(), assets.agentTools(), linkType);
 
   return count;
 }
@@ -726,13 +726,13 @@ export function copyPalDocs(): number {
 export function removePalDocs(): void {
   // Remove tools symlink
   try {
-    unlinkSync(PAL_TOOLS_DIR);
+    unlinkSync(palToolsDir());
   } catch {
     /* gone */
   }
-  if (!existsSync(PAL_DOCS_DIR)) return;
+  if (!existsSync(palDocsDir())) return;
   try {
-    rmSync(PAL_DOCS_DIR, { recursive: true });
+    rmSync(palDocsDir(), { recursive: true });
     log.info("Removed ~/.pal/docs/");
   } catch {
     /* gone */
@@ -741,7 +741,7 @@ export function removePalDocs(): void {
 
 // --- Skills ---
 
-const PAL_SKILLS_DIR = resolve(palHome(), "skills");
+const palSkillsDir = () => resolve(palHome(), "skills");
 
 /**
  * Run one step of a bulk install, naming it only when it fails.
@@ -772,7 +772,7 @@ export function copySkills(claudeSkillsDir: string): number {
   const skillsDir = assets.skills();
   if (!existsSync(skillsDir)) return 0;
 
-  mkdirSync(PAL_SKILLS_DIR, { recursive: true });
+  mkdirSync(palSkillsDir(), { recursive: true });
   mkdirSync(claudeSkillsDir, { recursive: true });
   const linkType = process.platform === "win32" ? "junction" : "dir";
   let count = 0;
@@ -785,7 +785,7 @@ export function copySkills(claudeSkillsDir: string): number {
     const srcDir = resolve(skillsDir, name);
     if (!existsSync(resolve(srcDir, "SKILL.md"))) continue;
 
-    const palLink = resolve(PAL_SKILLS_DIR, name);
+    const palLink = resolve(palSkillsDir(), name);
     const claudeLink = resolve(claudeSkillsDir, name);
     const linked = reportOnlyOnFailure(`skill ${name}`, () => {
       // ~/.pal/skills/<name> → <repo>/assets/skills/<name>
@@ -798,7 +798,7 @@ export function copySkills(claudeSkillsDir: string): number {
 
   // ~/.agents/skills/ → ~/.pal/skills/
   mkdirSync(platform.agentsDir(), { recursive: true });
-  ensureSymlink(resolve(platform.agentsDir(), "skills"), PAL_SKILLS_DIR, linkType);
+  ensureSymlink(resolve(platform.agentsDir(), "skills"), palSkillsDir(), linkType);
 
   return count;
 }
@@ -878,7 +878,7 @@ function perSkillAgentDirs(): { agent: string; dir: string }[] {
  * is covered by the whole-dir ~/.agents/skills link).
  */
 export function linkPersonalSkill(name: string): string[] {
-  const palLink = resolve(PAL_SKILLS_DIR, name);
+  const palLink = resolve(palSkillsDir(), name);
   if (!existsSync(resolve(palLink, "SKILL.md"))) {
     throw new Error(`No skill found at ${palLink}/SKILL.md`);
   }
@@ -941,7 +941,7 @@ export function removeSkills(claudeSkillsDir: string): string[] {
   for (const name of readdirSync(skillsDir)) {
     if (!existsSync(resolve(skillsDir, name, "SKILL.md"))) continue;
 
-    for (const link of [resolve(PAL_SKILLS_DIR, name), resolve(claudeSkillsDir, name)]) {
+    for (const link of [resolve(palSkillsDir(), name), resolve(claudeSkillsDir, name)]) {
       try {
         unlinkSync(link);
       } catch {
@@ -964,14 +964,14 @@ export function removeSkills(claudeSkillsDir: string): string[] {
 
 // --- Agents ---
 
-const CLAUDE_AGENTS_DIR = resolve(platform.claudeDir(), "agents");
+const claudeAgentsDir = () => resolve(platform.claudeDir(), "agents");
 
 /**
  * Install PAL agent definitions into ~/.claude/agents/.
  * Always overwrites — engine-managed, not user-editable.
  */
 export function copyAgents(): number {
-  return installAgents(CLAUDE_AGENTS_DIR, "claude");
+  return installAgents(claudeAgentsDir(), "claude");
 }
 
 /** Remove PAL agents from ~/.claude/agents/ */
@@ -981,7 +981,7 @@ export function removeAgents(): string[] {
 
   const removed: string[] = [];
   for (const file of readdirSync(agentsDir).filter((f) => f.endsWith(".md"))) {
-    const dst = resolve(CLAUDE_AGENTS_DIR, file);
+    const dst = resolve(claudeAgentsDir(), file);
     if (existsSync(dst)) {
       unlinkSync(dst);
       const name = file.replace(/\.md$/, "");
@@ -994,9 +994,9 @@ export function removeAgents(): string[] {
 
 /** Count agent .md files in ~/.claude/agents/ */
 export function countAgents(): number {
-  if (!existsSync(CLAUDE_AGENTS_DIR)) return 0;
+  if (!existsSync(claudeAgentsDir())) return 0;
   try {
-    return readdirSync(CLAUDE_AGENTS_DIR).filter((f) => f.endsWith(".md")).length;
+    return readdirSync(claudeAgentsDir()).filter((f) => f.endsWith(".md")).length;
   } catch {
     return 0;
   }
@@ -1132,7 +1132,7 @@ export function removeAgentsFromCopilot(copilotAgentsDir: string): string[] {
  * Store for user-authored subagents: ~/.pal/agents/<name>.md — one merged
  * multi-platform frontmatter file per subagent (same schema as assets/agents/).
  */
-const PAL_AGENTS_STORE = resolve(palHome(), "agents");
+const palAgentsStore = () => resolve(palHome(), "agents");
 
 /**
  * Each installed agent and the native agents directory a personal subagent is
@@ -1161,8 +1161,8 @@ function shippedAgentNames(): Set<string> {
 
 /** List the user-authored subagents in ~/.pal/agents/. */
 export function listPersonalSubagents(): string[] {
-  if (!existsSync(PAL_AGENTS_STORE)) return [];
-  return readdirSync(PAL_AGENTS_STORE)
+  if (!existsSync(palAgentsStore())) return [];
+  return readdirSync(palAgentsStore())
     .filter((f) => f.endsWith(".md"))
     .map((f) => f.replace(/\.md$/, ""))
     .sort();
@@ -1176,7 +1176,7 @@ export function listPersonalSubagents(): string[] {
  * its own frontmatter shape. Returns the agents it was installed into.
  */
 export function installPersonalSubagent(name: string): string[] {
-  const src = resolve(PAL_AGENTS_STORE, `${name}.md`);
+  const src = resolve(palAgentsStore(), `${name}.md`);
   if (!existsSync(src)) {
     throw new Error(`No subagent found at ${src}`);
   }
@@ -1408,7 +1408,7 @@ function extractTriggers(description: string): string[] {
  * Called during install after skills are symlinked.
  */
 export function generateSkillIndex(): number {
-  if (!existsSync(PAL_SKILLS_DIR)) return 0;
+  if (!existsSync(palSkillsDir())) return 0;
 
   const index: SkillIndex = {
     generated: new Date().toISOString(),
@@ -1416,8 +1416,8 @@ export function generateSkillIndex(): number {
     skills: {},
   };
 
-  for (const name of readdirSync(PAL_SKILLS_DIR)) {
-    const skillMd = resolve(PAL_SKILLS_DIR, name, "SKILL.md");
+  for (const name of readdirSync(palSkillsDir())) {
+    const skillMd = resolve(palSkillsDir(), name, "SKILL.md");
     if (!existsSync(skillMd)) continue;
 
     try {
@@ -1456,10 +1456,10 @@ export function generateSkillIndex(): number {
 
 /** Count skill subdirectories in ~/.pal/skills/ */
 export function countSkills(): number {
-  if (!existsSync(PAL_SKILLS_DIR)) return 0;
+  if (!existsSync(palSkillsDir())) return 0;
   try {
-    return readdirSync(PAL_SKILLS_DIR).filter((f) =>
-      existsSync(resolve(PAL_SKILLS_DIR, f, "SKILL.md"))
+    return readdirSync(palSkillsDir()).filter((f) =>
+      existsSync(resolve(palSkillsDir(), f, "SKILL.md"))
     ).length;
   } catch {
     return 0;
