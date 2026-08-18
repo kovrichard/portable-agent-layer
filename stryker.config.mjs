@@ -79,14 +79,20 @@ export default {
     inspectorTimeout: 60000,
   },
   reporters: ["clear-text", "progress", "html"],
-  // Ratchet. `break` sits ~5 points below the last measured run so a normal change
-  // has headroom. Raise it only after a run beats the current number; lower it only
-  // with the reason written here.
-  //   rung 1 — 2026-08-18: 7627 mutants, 54.87% total / 70.81% covered -> break 50
-  //   rung 2 — 2026-08-18: 7627 mutants, 58.77% total / 70.74% covered -> break 54
+  // Ratchet. `break` applies to whatever a run mutates, and the only run that gates
+  // anything is the diff one — CI never runs the whole ring. Raise it after the
+  // modules a change touches measure above the new number
+  // (`bunx stryker run --mutate <file>`); lower it only with the reason written here.
+  //
+  // Do not re-baseline by running the whole ring: 766 of its mutants are static
+  // (module-load code Stryker cannot map perTest coverage onto), so it re-runs the
+  // full suite for each and takes ~45 minutes to move this number by ~3 points.
+  //   rung 1 — 2026-08-18: 54.87% ring -> break 50
+  //   rung 2 — 2026-08-18: 58.77% ring -> break 54
   //            (src/targets/lib.ts 16.45% -> 63.67%, no-coverage 875 -> 183)
-  //   rung 3 — 2026-08-18: 7627 mutants, 62.22% total / 72.44% covered -> break 57
+  //   rung 3 — 2026-08-18: 62.22% ring -> break 57  [last whole-ring measurement]
   //            (relationship.ts 0.00% -> 75.73%, synthesize.ts 1.79% -> 69.53%)
+  //            since: context.ts 2.70% -> 63.24%, stop.ts 1.82% -> 77.27%
   thresholds: { high: 80, low: 60, break: 57 },
   // Stryker copies the project into a sandbox with fs.copyFile, which throws ENOTSUP on a
   // symlink. Every entry below is either a symlink farm (agent config dirs, the installed
