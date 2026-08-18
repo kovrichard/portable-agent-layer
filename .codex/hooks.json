@@ -57,6 +57,14 @@
             "command": "bun .agents/hooks/madge.ts --codex"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun .agents/hooks/lf.ts --codex"
+          }
+        ]
       }
     ]
   }

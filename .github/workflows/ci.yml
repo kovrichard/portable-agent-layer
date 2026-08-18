@@ -67,6 +67,9 @@ jobs:
       - name: Madge
         run: bun run madge
 
+      - name: Line endings
+        run: bun run lf
+
       - name: Secretlint
         run: bun run secretlint
 

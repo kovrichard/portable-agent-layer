@@ -12,6 +12,7 @@ export const LintPlugin: Plugin = async ({ $ }) => {
       await $`bun run jscpd`;
       await $`bun klint/cli.ts --json`;
       await $`bun run madge`;
+      await $`bun run lf`;
       await $`bun run secretlint`;
     },
   };

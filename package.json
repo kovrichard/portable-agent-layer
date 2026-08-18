@@ -47,6 +47,8 @@
     "klint": "klint",
     "jscpd": "jscpd --noTips",
     "madge": "madge --circular --extensions ts --ts-config tsconfig.json src",
+    "lf": "bun .agents/scripts/check-lf.ts",
+    "lf:fix": "bun .agents/scripts/check-lf.ts --fix",
     "secretlint": "secretlint \"**/*\"",
     "lint-staged": "lint-staged",
     "prepare": "bun .husky/install.mjs",

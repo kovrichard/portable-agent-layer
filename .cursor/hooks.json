@@ -22,6 +22,9 @@
       },
       {
         "command": "bun .agents/hooks/madge.ts"
+      },
+      {
+        "command": "bun .agents/hooks/lf.ts"
       }
     ]
   }

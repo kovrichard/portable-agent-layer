@@ -31,6 +31,10 @@
           {
             "type": "command",
             "command": "bun .agents/hooks/madge.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun .agents/hooks/lf.ts"
           }
         ]
       }
