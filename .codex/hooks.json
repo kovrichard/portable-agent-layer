@@ -49,6 +49,14 @@
             "command": "bun .agents/hooks/secretlint.ts --codex"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun .agents/hooks/madge.ts --codex"
+          }
+        ]
       }
     ]
   }

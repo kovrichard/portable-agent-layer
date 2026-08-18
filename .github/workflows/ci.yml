@@ -64,6 +64,9 @@ jobs:
       - name: Klint
         run: bun run klint
 
+      - name: Madge
+        run: bun run madge
+
       - name: Secretlint
         run: bun run secretlint
 

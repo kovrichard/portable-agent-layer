@@ -19,6 +19,9 @@
       },
       {
         "command": "bun .agents/hooks/secretlint.ts"
+      },
+      {
+        "command": "bun .agents/hooks/madge.ts"
       }
     ]
   }
