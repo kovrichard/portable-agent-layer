@@ -79,11 +79,13 @@ export default {
     inspectorTimeout: 60000,
   },
   reporters: ["clear-text", "progress", "html"],
-  // Ratchet rung 1, measured 2026-08-18 over the pruned ring: 7627 mutants,
-  // 54.87% total / 70.81% of covered, 0 errors. `break` sits one rung below the
-  // measurement so a normal change has headroom. Raise it only after a run beats
-  // the new number; lower it only with the reason written here.
-  thresholds: { high: 80, low: 60, break: 50 },
+  // Ratchet. `break` sits ~5 points below the last measured run so a normal change
+  // has headroom. Raise it only after a run beats the current number; lower it only
+  // with the reason written here.
+  //   rung 1 — 2026-08-18: 7627 mutants, 54.87% total / 70.81% covered -> break 50
+  //   rung 2 — 2026-08-18: 7627 mutants, 58.77% total / 70.74% covered -> break 54
+  //            (src/targets/lib.ts 16.45% -> 63.67%, no-coverage 875 -> 183)
+  thresholds: { high: 80, low: 60, break: 54 },
   // Stryker copies the project into a sandbox with fs.copyFile, which throws ENOTSUP on a
   // symlink. Every entry below is either a symlink farm (agent config dirs, the installed
   // test homes, the vendored skill node_modules) or bulk the suite never reads.
