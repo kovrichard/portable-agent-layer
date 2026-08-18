@@ -24,7 +24,8 @@
       "!telos",
       "klint.rules.ts",
       "stryker.config.mjs",
-      "!.stryker-tmp"
+      "!.stryker-tmp",
+      "!.test-install-home"
     ]
   },
   "formatter": {
