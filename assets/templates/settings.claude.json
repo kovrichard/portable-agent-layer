@@ -45,7 +45,8 @@
   },
   "attribution": {
     "commit": "",
-    "pr": ""
+    "pr": "",
+    "sessionUrl": false
   },
   "showClearContextOnPlanAccept": true,
   "respectGitignore": true,

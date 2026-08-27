@@ -50,14 +50,20 @@ export function writeJson(path: string, data: unknown): void {
 /** Public PAL repository — the link surfaced in commit/PR co-author credits. */
 export const PAL_REPO_URL = "https://github.com/kovrichard/portable-agent-layer";
 
-/** Build the commit footer (bare URL, autolinks on GitHub) and PR body line (markdown link). */
+/**
+ * Build the commit footer (bare URL, autolinks on GitHub) and PR body line
+ * (markdown link). `sessionUrl` is off because Claude Code otherwise appends a
+ * claude.ai session link to commits made from web or Remote Control sessions,
+ * which puts a link to a private transcript in a public history.
+ */
 export function buildAttributionText(
   name: string,
   repoUrl: string = PAL_REPO_URL
-): { commit: string; pr: string } {
+): { commit: string; pr: string; sessionUrl: false } {
   return {
     commit: `Co-authored by ${name} · ${repoUrl}`,
     pr: `Co-authored by [${name}](${repoUrl})`,
+    sessionUrl: false,
   };
 }
 
@@ -75,7 +81,7 @@ export function applyAttribution(
     result.attribution = buildAttributionText(opts.name, opts.repoUrl);
     result.includeCoAuthoredBy = false;
   } else {
-    result.attribution = { commit: "", pr: "" };
+    result.attribution = { commit: "", pr: "", sessionUrl: false };
     if (result.includeCoAuthoredBy === false) delete result.includeCoAuthoredBy;
   }
   return result;
