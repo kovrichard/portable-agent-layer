@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 
@@ -23,6 +30,17 @@ async function addProject(name: string, path: string) {
   const { writeProject } = await import("../src/hooks/lib/projects");
   const now = new Date().toISOString();
   writeProject({ name, path, status: "active", created: now, updated: now });
+}
+
+/** A path that genuinely exists here — seeding refuses to adopt one that does not. */
+function checkout(name: string): string {
+  const dir = resolve(HOME, "checkouts", name);
+  mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+async function seedLib() {
+  return await import("../src/hooks/lib/projects");
 }
 
 describe("readBindings", () => {
@@ -96,25 +114,38 @@ describe("removeBinding", () => {
 
 describe("seedBindingsFromProjects", () => {
   test("adopts the path already stored on each project record", async () => {
-    await addProject("alpha", "/work/alpha");
-    await addProject("beta", "/work/beta");
-    const { seedBindingsFromProjects, readBindings } = await lib();
+    const alpha = checkout("alpha");
+    const beta = checkout("beta");
+    await addProject("alpha", alpha);
+    await addProject("beta", beta);
+    const { seedBindingsFromProjects } = await seedLib();
+    const { readBindings } = await lib();
 
     expect(seedBindingsFromProjects(HOME).sort()).toEqual(["alpha", "beta"]);
-    expect(readBindings(HOME)).toEqual({ alpha: "/work/alpha", beta: "/work/beta" });
+    expect(readBindings(HOME)).toEqual({ alpha, beta });
+  });
+
+  test("refuses a record whose path does not exist on this machine", async () => {
+    await addProject("from-the-mac", "/Users/someone/dev/from-the-mac");
+    const { seedBindingsFromProjects } = await seedLib();
+    const { bindingFor } = await lib();
+
+    expect(seedBindingsFromProjects(HOME)).toEqual([]);
+    expect(bindingFor("from-the-mac", HOME)).toBeNull();
   });
 
   test("is idempotent — a second run seeds nothing", async () => {
-    await addProject("alpha", "/work/alpha");
-    const { seedBindingsFromProjects } = await lib();
+    await addProject("alpha", checkout("alpha"));
+    const { seedBindingsFromProjects } = await seedLib();
 
     seedBindingsFromProjects(HOME);
     expect(seedBindingsFromProjects(HOME)).toEqual([]);
   });
 
   test("never overwrites a binding this machine already has", async () => {
-    await addProject("alpha", "/mac/path/alpha");
-    const { seedBindingsFromProjects, writeBinding, bindingFor } = await lib();
+    await addProject("alpha", checkout("alpha"));
+    const { seedBindingsFromProjects } = await seedLib();
+    const { writeBinding, bindingFor } = await lib();
 
     writeBinding("alpha", "/vps/path/alpha", HOME);
     expect(seedBindingsFromProjects(HOME)).toEqual([]);
@@ -122,7 +153,8 @@ describe("seedBindingsFromProjects", () => {
   });
 
   test("writes no file when there are no projects to seed", async () => {
-    const { seedBindingsFromProjects, bindingsFilePath } = await lib();
+    const { seedBindingsFromProjects } = await seedLib();
+    const { bindingsFilePath } = await lib();
     expect(seedBindingsFromProjects(HOME)).toEqual([]);
     expect(existsSync(bindingsFilePath(HOME))).toBe(false);
   });

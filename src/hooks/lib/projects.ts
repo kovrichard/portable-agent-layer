@@ -17,8 +17,9 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, parse as parsePath, resolve, sep } from "node:path";
+import { type Bindings, readBindings, writeBindings } from "./bindings";
 import { parse, stringify } from "./frontmatter";
-import { paths } from "./paths";
+import { palHome, paths } from "./paths";
 
 export type ProjectStatus = "active" | "paused" | "complete" | "archived";
 
@@ -246,18 +247,41 @@ export function deleteProject(name: string): boolean {
  * Parent-dir browse mode (cwd is an ancestor of a registered project) → null.
  * Multiple nested projects → longest registered path wins.
  */
+/**
+ * Where a project sits on THIS machine.
+ *
+ * A record's `path` is written by whichever machine last touched it and travels
+ * with the corpus, so on any other machine it is a claim rather than a fact. A
+ * binding is local by construction, so it wins; the record's path remains the
+ * fallback until this machine has bound the project.
+ *
+ * Note the fallback still trusts a foreign path — closing that is ISC-48 task 4
+ * proper, which requires seeding to be wired first.
+ */
+export function projectPathOnThisMachine(
+  project: ProjectProgress,
+  bindings: Bindings = readBindings()
+): string | null {
+  const bound = bindings[project.name];
+  return resolve(bound ?? project.path);
+}
+
 export function resolveProjectFromCwd(
   cwd: string,
-  projects: ProjectProgress[]
+  projects: ProjectProgress[],
+  bindings: Bindings = readBindings()
 ): ProjectProgress | null {
   const cwdAbs = resolve(cwd);
-  const matches = projects.filter((p) => {
-    const projAbs = resolve(p.path);
-    return cwdAbs === projAbs || cwdAbs.startsWith(projAbs + sep);
-  });
+  const matches: { project: ProjectProgress; path: string }[] = [];
+  for (const project of projects) {
+    const projAbs = projectPathOnThisMachine(project, bindings);
+    if (!projAbs) continue;
+    if (cwdAbs === projAbs || cwdAbs.startsWith(projAbs + sep))
+      matches.push({ project, path: projAbs });
+  }
   if (matches.length === 0) return null;
   matches.sort((a, b) => b.path.length - a.path.length);
-  return matches[0];
+  return matches[0].project;
 }
 
 export function isStale(
@@ -376,4 +400,36 @@ export function loadActiveProjectsContext(cwd: string = process.cwd()): string {
   }
 
   return lines.join("\n");
+}
+
+/**
+ * Adopt the `path` already stored on each project record, for projects not yet
+ * bound here.
+ *
+ * Two guards keep this from importing another machine's filesystem. An existing
+ * binding always wins, because a binding is what THIS machine knows while a
+ * record's path may belong to any machine that ever wrote it. And a path is
+ * adopted only if it exists locally — that is what makes seeding safe to run on
+ * a machine that just imported someone else's corpus: their paths are simply not
+ * here, so nothing binds and those projects stay correctly unbound.
+ *
+ * Seeding is inference, so it is conservative. `writeBinding` is a statement by
+ * the user and is trusted without an existence check — binding a path you are
+ * about to clone into has to work.
+ *
+ * Returns the names newly bound, so a caller can stay silent on the common no-op.
+ */
+export function seedBindingsFromProjects(home: string = palHome()): string[] {
+  const bindings = readBindings(home);
+  const seeded: string[] = [];
+  for (const project of readAllProjects()) {
+    if (!project.name || !project.path) continue;
+    if (project.name in bindings) continue;
+    if (!existsSync(project.path)) continue;
+    bindings[project.name] = resolve(project.path);
+    seeded.push(project.name);
+  }
+  if (seeded.length === 0) return [];
+  writeBindings(bindings, home);
+  return seeded;
 }

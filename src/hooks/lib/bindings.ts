@@ -20,7 +20,6 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { palHome } from "./paths";
-import { readAllProjects } from "./projects";
 
 /** Project name → absolute path on this machine. */
 export type Bindings = Record<string, string>;
@@ -78,26 +77,4 @@ export function removeBinding(project: string, home: string = palHome()): void {
   if (!(project in bindings)) return;
   delete bindings[project];
   writeBindings(bindings, home);
-}
-
-/**
- * Adopt the `path` already stored on each project record, for projects not yet
- * bound here. Lossless on the machine that wrote those records — the paths ARE
- * its truth — and safe everywhere else because an existing binding always wins:
- * a binding is what this machine knows, while a record's path may belong to
- * another machine entirely. Returns the names newly bound, so a caller can stay
- * silent on the common no-op.
- */
-export function seedBindingsFromProjects(home: string = palHome()): string[] {
-  const bindings = readBindings(home);
-  const seeded: string[] = [];
-  for (const project of readAllProjects()) {
-    if (!project.name || !project.path) continue;
-    if (project.name in bindings) continue;
-    bindings[project.name] = resolve(project.path);
-    seeded.push(project.name);
-  }
-  if (seeded.length === 0) return [];
-  writeBindings(bindings, home);
-  return seeded;
 }
