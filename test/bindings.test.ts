@@ -27,6 +27,15 @@ async function lib() {
   return await import("../src/hooks/lib/bindings");
 }
 
+/**
+ * A fixture path in this platform's own shape. Bindings are stored resolved, and
+ * on Windows `resolve("/srv/x")` is `D:\\srv\\x` — so an assertion written
+ * against the POSIX literal passes on macOS and Linux and fails on Windows.
+ */
+function elsewhere(path: string): string {
+  return resolve(path);
+}
+
 async function addProject(name: string, path: string) {
   const { writeProject } = await import("../src/hooks/lib/projects");
   const now = new Date().toISOString();
@@ -83,7 +92,7 @@ describe("writeBinding", () => {
   test("round-trips a project to an absolute path", async () => {
     const { writeBinding, bindingFor } = await lib();
     writeBinding("letterbox", "/srv/code/letterbox", HOME);
-    expect(bindingFor("letterbox", HOME)).toBe("/srv/code/letterbox");
+    expect(bindingFor("letterbox", HOME)).toBe(elsewhere("/srv/code/letterbox"));
   });
 
   test("stores a relative path as absolute", async () => {
@@ -96,7 +105,7 @@ describe("writeBinding", () => {
     const { writeBinding, bindingFor } = await lib();
     writeBinding("letterbox", "/old/letterbox", HOME);
     writeBinding("letterbox", "/new/letterbox", HOME);
-    expect(bindingFor("letterbox", HOME)).toBe("/new/letterbox");
+    expect(bindingFor("letterbox", HOME)).toBe(elsewhere("/new/letterbox"));
   });
 
   test("an unbound project reads as null, not a dead path", async () => {
@@ -119,7 +128,7 @@ describe("removeBinding", () => {
     writeBinding("a", "/a", HOME);
     writeBinding("b", "/b", HOME);
     removeBinding("a", HOME);
-    expect(readBindings(HOME)).toEqual({ b: "/b" });
+    expect(readBindings(HOME)).toEqual({ b: elsewhere("/b") });
   });
 
   test("removing an unbound project is a no-op", async () => {
@@ -212,7 +221,7 @@ describe("readProject resolves the path for this machine", () => {
     const { writeBinding } = await lib();
 
     writeBinding("alpha", "/vps/path/alpha", HOME);
-    expect(readProject("alpha")?.path).toBe("/vps/path/alpha");
+    expect(readProject("alpha")?.path).toBe(elsewhere("/vps/path/alpha"));
   });
 
   // Written by hand on purpose: writeProject no longer emits a path field, so
@@ -226,7 +235,7 @@ describe("readProject resolves the path for this machine", () => {
         "created: 2026-01-01\nupdated: 2026-01-01\n---\n"
     );
     const { readProject } = await seedLib();
-    expect(readProject("legacy")?.path).toBe("/mac/path/legacy");
+    expect(readProject("legacy")?.path).toBe(elsewhere("/mac/path/legacy"));
   });
 
   test("has no path at all when unbound and the record carries none", async () => {
@@ -251,7 +260,7 @@ describe("rolling backup", () => {
     writeBinding("beta", "/b", HOME);
 
     const backup = JSON.parse(readFileSync(bindingsBackupPath(HOME), "utf-8"));
-    expect(backup).toEqual({ alpha: "/a" });
+    expect(backup).toEqual({ alpha: elsewhere("/a") });
   });
 
   test("restoring is renaming the backup over the live file", async () => {
@@ -267,7 +276,10 @@ describe("rolling backup", () => {
 
     writeBindings({}, HOME);
     copyFileSync(bindingsBackupPath(HOME), bindingsFilePath(HOME));
-    expect(readBindings(HOME)).toEqual({ alpha: "/a", beta: "/b" });
+    expect(readBindings(HOME)).toEqual({
+      alpha: elsewhere("/a"),
+      beta: elsewhere("/b"),
+    });
   });
 });
 
