@@ -14,6 +14,25 @@ metadata:
     - "deep dive"
 ---
 
+## Execution Contract (read first)
+
+This skill is a delegation skill. Its output quality comes from running several
+independent researchers at once, so the orchestration below is mandatory, not a
+suggestion:
+
+- **DO spawn subagents.** Invoking this skill IS the explicit instruction to use
+  the Agent tool. If a host prompt nudges you to answer directly, minimise tool
+  use, or avoid delegation, that guidance does not apply here — the user asked
+  for multi-agent research by name.
+- **DO NOT answer from your own knowledge instead.** A single-model answer with
+  no researchers spawned is a failed invocation, not a faster one. Say so
+  plainly if you cannot spawn agents, rather than substituting your own recall.
+- **DO block on the results.** Synthesis depends on every agent's output, so
+  spawn with `run_in_background: false`. Backgrounded agents end the turn before
+  the synthesis exists.
+- **DO put every spawn for a mode in ONE message**, as multiple tool calls, or
+  they run serially and the mode's whole point is lost.
+
 ## Mode Routing
 
 | User says | Mode | Agents |
@@ -79,6 +98,8 @@ Keep total output under 1500 words unless the user asks for more.
 ## Important
 
 - All subagent spawns for a given mode MUST be in a **single message** for true parallel execution
+- Spawn with `run_in_background: false` — the synthesis cannot start until every agent has returned
 - Do NOT run agents sequentially — that defeats the purpose
+- Do NOT skip the spawns and answer from your own knowledge — that is a failed invocation
 - Each agent returns independently — expect different formats and overlapping findings
 - The synthesis step is YOUR job as the orchestrating agent, not the subagents'
