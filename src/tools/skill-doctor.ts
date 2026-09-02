@@ -12,6 +12,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, extname, relative, resolve } from "node:path";
 import { palHome } from "../hooks/lib/paths";
+import { declaredTriggers } from "../hooks/lib/skill-triggers";
 
 type Level = "pass" | "warn" | "error";
 
@@ -33,6 +34,7 @@ interface ParsedSkill {
   name: string | null;
   description: string | null;
   descriptionQuoted: boolean;
+  triggers: string[];
   body: string;
 }
 
@@ -40,6 +42,7 @@ const RESERVED_WORDS = ["anthropic", "claude"];
 const MAX_NAME = 64;
 const MAX_DESCRIPTION = 1024;
 const MAX_BODY_LINES = 500;
+const MIN_TRIGGERS = 3;
 
 /** File extensions worth scanning for hardcoded paths (SKILL.md + its scripts). */
 const SCANNABLE_EXT = new Set([".md", ".ts", ".js", ".mjs", ".cjs", ".sh", ".py"]);
@@ -83,7 +86,13 @@ function findAbsolutePaths(skillDir: string): string[] {
 function parseSkill(content: string): ParsedSkill {
   const parts = content.split(/^---\s*$/m);
   if (parts.length < 3) {
-    return { name: null, description: null, descriptionQuoted: false, body: content };
+    return {
+      name: null,
+      description: null,
+      descriptionQuoted: false,
+      triggers: [],
+      body: content,
+    };
   }
   const frontmatter = parts[1];
   const body = parts.slice(2).join("---");
@@ -95,7 +104,13 @@ function parseSkill(content: string): ParsedSkill {
     rawDescription.startsWith('"') &&
     rawDescription.endsWith('"');
   const description = descriptionQuoted ? rawDescription.slice(1, -1) : rawDescription;
-  return { name, description, descriptionQuoted, body };
+  return {
+    name,
+    description,
+    descriptionQuoted,
+    triggers: declaredTriggers(frontmatter),
+    body,
+  };
 }
 
 /** Remove fenced and inline code so prose checks don't trip on examples. */
@@ -134,7 +149,7 @@ export function lintSkill(skillDir: string): DoctorReport {
         `skill file is "${skillFile}" — must be exactly "SKILL.md" or the skill is silently ignored`
       );
 
-  const { name, description, descriptionQuoted, body } = parseSkill(
+  const { name, description, descriptionQuoted, triggers, body } = parseSkill(
     readFileSync(resolve(skillDir, skillFile), "utf-8")
   );
 
@@ -216,6 +231,23 @@ export function lintSkill(skillDir: string): DoctorReport {
           "reads first/second person — write descriptions in third person (e.g. 'Processes…', 'Generates…')"
         )
       : add("pass", "description.pov", "third person");
+  }
+
+  // ── triggers ──
+  if (triggers.length === 0) {
+    add(
+      "warn",
+      "metadata.triggers",
+      "no metadata.triggers declared — add the words and phrases a prompt would contain so the prompt-time matcher can surface this skill; without them it falls back to keywords mined from the description"
+    );
+  } else if (triggers.length < MIN_TRIGGERS) {
+    add(
+      "warn",
+      "metadata.triggers",
+      `only ${triggers.length} trigger(s) declared — aim for at least ${MIN_TRIGGERS}, mostly multi-word phrases`
+    );
+  } else {
+    add("pass", "metadata.triggers", `${triggers.length} triggers declared`);
   }
 
   // ── body ──

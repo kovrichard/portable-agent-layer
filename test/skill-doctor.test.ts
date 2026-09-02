@@ -30,6 +30,11 @@ function fixture(skillMd: string, extra: Record<string, string> = {}): string {
 const GOOD = `---
 name: good-skill
 description: "Summarizes a thing into a report. Use when the user asks to summarize a thing."
+metadata:
+  triggers:
+    - "summarize a thing"
+    - "thing report"
+    - "distill the thing"
 ---
 
 # Good skill
@@ -128,6 +133,28 @@ describe("lintSkill", () => {
 
   test("double-quoted description passes the quoting check", () => {
     expect(levelOf(fixture(GOOD), "description.quoted")).toBe("pass");
+  });
+
+  test("a skill with no declared triggers warns", () => {
+    const noTriggers = GOOD.replace(/metadata:\n(?: {2}.*\n| {4}.*\n)+/, "");
+
+    expect(levelOf(fixture(noTriggers), "metadata.triggers")).toBe("warn");
+  });
+
+  test("a thin trigger list warns", () => {
+    const thin = GOOD.replace(/ {4}- "thing report"\n {4}- "distill the thing"\n/, "");
+
+    expect(levelOf(fixture(thin), "metadata.triggers")).toBe("warn");
+  });
+
+  test("a full trigger list passes", () => {
+    expect(levelOf(fixture(GOOD), "metadata.triggers")).toBe("pass");
+  });
+
+  test("a top-level triggers key does not count as declared", () => {
+    const topLevel = GOOD.replace(/metadata:\n {2}triggers:/, "triggers:");
+
+    expect(levelOf(fixture(topLevel), "metadata.triggers")).toBe("warn");
   });
 
   test("body over 500 lines warns", () => {

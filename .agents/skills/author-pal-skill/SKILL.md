@@ -78,7 +78,7 @@ pal cli skill author-model
    ```bash
    bun src/tools/skill-doctor.ts assets/skills/<name>
    ```
-   It checks the mechanical rules (folder/file-name match, name length/charset, reserved words, description length/point-of-view, body length, reference depth). Fix all `✗` errors; weigh each `⚠` warning. A name/folder mismatch or a misnamed file makes the skill silently fail to load, so never skip this.
+   It checks the mechanical rules (folder/file-name match, name length/charset, reserved words, description length/point-of-view, declared `metadata.triggers`, body length, reference depth). Fix all `✗` errors; weigh each `⚠` warning. A name/folder mismatch or a misnamed file makes the skill silently fail to load, so never skip this.
 6. Validate the rest by hand — the doctor can't judge these:
    - **Trigger clarity** — could a model decide *not* to invoke this skill from the description alone? If yes, tighten the description.
    - **Step concreteness** — every step has a verb and an object; no "as needed" or "appropriately."
