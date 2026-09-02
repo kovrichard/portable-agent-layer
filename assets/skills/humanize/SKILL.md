@@ -77,6 +77,6 @@ Return, in order:
 
 ## Do NOT use
 
-- To condense or shorten content: that is `summarize`. Humanize preserves length and structure.
+- To condense or shorten content. Humanize preserves length and structure.
 - To pull insights, quotes, or ideas out of content: that is `extract-wisdom`. Humanize returns the whole text, rewritten in place.
 - To change the argument, add claims, or restructure a document. Humanize changes wording, never meaning.

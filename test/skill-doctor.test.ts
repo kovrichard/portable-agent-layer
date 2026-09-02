@@ -323,3 +323,31 @@ describe("pal cli skill doctor", () => {
     expect(r.status).toBe(1);
   });
 });
+
+const SHIPPED = GOOD.replace(
+  "metadata:\n",
+  "metadata:\n  source: portable-agent-layer\n"
+);
+
+describe("license provenance", () => {
+  test("shipped skill with no license and no derived-from warns", () => {
+    expect(levelOf(fixture(SHIPPED), "license")).toBe("warn");
+  });
+
+  test("shipped skill with a license passes", () => {
+    const md = SHIPPED.replace("name: good-skill\n", "name: good-skill\nlicense: MIT\n");
+    expect(levelOf(fixture(md), "license")).toBe("pass");
+  });
+
+  test("shipped skill that names its origin passes without a license", () => {
+    const md = SHIPPED.replace(
+      "  source: portable-agent-layer\n",
+      "  source: portable-agent-layer\n  derived-from: https://example.com/origin\n"
+    );
+    expect(levelOf(fixture(md), "license")).toBe("pass");
+  });
+
+  test("personal skill is not asked for a license", () => {
+    expect(levelOf(fixture(GOOD), "license")).toBeUndefined();
+  });
+});

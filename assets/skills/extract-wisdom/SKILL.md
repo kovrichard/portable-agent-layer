@@ -4,6 +4,7 @@ description: "Extract structured insights from content (articles, videos, podcas
 argument-hint: <content or URL>
 metadata:
   source: portable-agent-layer
+  derived-from: https://github.com/danielmiessler/LifeOS
   triggers:
     - "extract-wisdom"
     - "extract wisdom"

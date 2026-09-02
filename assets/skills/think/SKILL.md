@@ -4,6 +4,7 @@ description: "Thinking mode router — selects the right analytical approach for
 argument-hint: <question or topic>
 metadata:
   source: portable-agent-layer
+  derived-from: https://github.com/danielmiessler/LifeOS
   triggers:
     - "think"
     - "brainstorm"

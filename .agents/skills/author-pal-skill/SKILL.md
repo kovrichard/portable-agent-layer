@@ -34,11 +34,12 @@ Because the output ships to everyone, three rules are non-negotiable. A skill th
 ```markdown
 ---
 name: <slug>                           # the slash-command name; lowercase-kebab
-license: MIT                           # omit when the skill is derived from another project's idea
+license: MIT                           # omit when the idea comes from another project
 description: <what it does + WHEN to invoke>   # used by the dispatcher to trigger
 argument-hint: <args>                  # optional; how the user passes input
 metadata:                              # free-form map; the only key Anthropic's
   source: portable-agent-layer         # marks a shipped skill; never on a personal one
+  derived-from: <origin URL>           # only instead of license; the doctor warns if both are missing
   triggers:                            # spec reserves for third-party tooling
     - "<skill-name>"                   # always first
     - "<skill name>"                   # always second, hyphens as spaces

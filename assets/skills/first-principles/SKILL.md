@@ -4,6 +4,7 @@ description: "Break down a problem to its fundamental constraints and build up a
 argument-hint: <problem>
 metadata:
   source: portable-agent-layer
+  derived-from: https://github.com/danielmiessler/LifeOS
   triggers:
     - "first-principles"
     - "first principles"

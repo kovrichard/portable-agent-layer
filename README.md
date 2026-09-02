@@ -173,17 +173,21 @@ PAL ships with built-in skills that extend your agent's capabilities:
 | `council` | Multi-perspective parallel debate on decisions |
 | `create-pdf` | Render structured content into a PDF |
 | `create-skill` | Scaffold a new skill from a description |
+| `create-subagent` | Scaffold a subagent and install it into every agent |
+| `deep-research` | Multi-agent parallel research in quick, standard, or extensive mode |
 | `entities` | Detect, save, and query people & companies in the personal knowledge graph |
 | `extract-wisdom` | Extract structured insights from content |
 | `first-principles` | Break down problems to fundamentals |
+| `frontend-design` | Build production-grade frontend interfaces |
 | `fyzz-chat-api` | Query Fyzz Chat conversations via API |
+| `humanize` | Rewrite text to strip AI tells and read as human |
 | `opinion` | Confirm or contradict tracked opinions (confidence-weighted) |
+| `pal-analyze` | Surface rating trends, failure patterns, and graduation candidates |
+| `pal-reflect` | Promote recurring observations into tracked opinions |
+| `playwright` | Screenshot a page for a visual check |
 | `presentation` | Build branded slide decks from outlines |
 | `projects` | Look up, resume, register, or manage tracked projects |
 | `reflect` | Diagnose why a PAL behavior didn't trigger |
-| `research` | Multi-agent parallel research |
-| `review` | Security-focused code review |
-| `summarize` | Structured summarization |
 | `telos` | Inspect or update goals, beliefs, strategies, narratives |
 | `think` | Structured first-pass reasoning on a problem |
 

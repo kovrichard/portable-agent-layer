@@ -4,6 +4,7 @@ description: "Multi-agent parallel research — quick/standard/extensive modes w
 argument-hint: <topic or question>
 metadata:
   source: portable-agent-layer
+  derived-from: https://github.com/danielmiessler/LifeOS
   triggers:
     - "deep-research"
     - "deep research"

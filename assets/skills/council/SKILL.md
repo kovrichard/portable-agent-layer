@@ -4,6 +4,7 @@ description: "Multi-perspective parallel debate on a decision — 3-5 independen
 argument-hint: <question or decision>
 metadata:
   source: portable-agent-layer
+  derived-from: https://github.com/danielmiessler/LifeOS
   triggers:
     - "council"
     - "debate"

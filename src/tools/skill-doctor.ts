@@ -35,8 +35,13 @@ interface ParsedSkill {
   description: string | null;
   descriptionQuoted: boolean;
   triggers: string[];
+  shipped: boolean;
+  license: string | null;
+  derivedFrom: string | null;
   body: string;
 }
+
+const SHIPPED_SOURCE = "portable-agent-layer";
 
 const RESERVED_WORDS = ["anthropic", "claude"];
 const MAX_NAME = 64;
@@ -91,6 +96,9 @@ function parseSkill(content: string): ParsedSkill {
       description: null,
       descriptionQuoted: false,
       triggers: [],
+      shipped: false,
+      license: null,
+      derivedFrom: null,
       body: content,
     };
   }
@@ -109,8 +117,26 @@ function parseSkill(content: string): ParsedSkill {
     description,
     descriptionQuoted,
     triggers: declaredTriggers(frontmatter),
+    shipped: metadataField(frontmatter, "source") === SHIPPED_SOURCE,
+    license: topLevelField(frontmatter, "license"),
+    derivedFrom: metadataField(frontmatter, "derived-from"),
     body,
   };
+}
+
+/** Value of a top-level `key:` line in the frontmatter, unquoted. */
+function topLevelField(frontmatter: string, key: string): string | null {
+  return (
+    new RegExp(String.raw`^${key}:\s*"?(.+?)"?\s*$`, "m").exec(frontmatter)?.[1] ?? null
+  );
+}
+
+/** Value of an indented `key:` line under the `metadata:` block, unquoted. */
+function metadataField(frontmatter: string, key: string): string | null {
+  return (
+    new RegExp(String.raw`^[ \t]+${key}:\s*"?(.+?)"?\s*$`, "m").exec(frontmatter)?.[1] ??
+    null
+  );
 }
 
 /** Render triggers for a report line: `"a", "b"` or `"a" then "b"`. */
@@ -164,9 +190,29 @@ export function lintSkill(skillDir: string): DoctorReport {
         `skill file is "${skillFile}" — must be exactly "SKILL.md" or the skill is silently ignored`
       );
 
-  const { name, description, descriptionQuoted, triggers, body } = parseSkill(
-    readFileSync(resolve(skillDir, skillFile), "utf-8")
-  );
+  const {
+    name,
+    description,
+    descriptionQuoted,
+    triggers,
+    shipped,
+    license,
+    derivedFrom,
+    body,
+  } = parseSkill(readFileSync(resolve(skillDir, skillFile), "utf-8"));
+
+  // ── provenance (shipped skills only) ──
+  if (shipped) {
+    if (license) add("pass", "license", `licensed ${license}`);
+    else if (derivedFrom)
+      add("pass", "license", `unlicensed by design — derived from ${derivedFrom}`);
+    else
+      add(
+        "warn",
+        "license",
+        "shipped skill declares no license — add `license: MIT`, or `metadata.derived-from: <origin>` when the idea comes from another project"
+      );
+  }
 
   // The runtime keys a skill by its folder name; a mismatched frontmatter `name`
   // makes the skill silently fail to load.

@@ -4,6 +4,7 @@ description: "Personal context management. Use when discussing goals, beliefs, c
 argument-hint: [area to view or update]
 metadata:
   source: portable-agent-layer
+  derived-from: https://github.com/danielmiessler/LifeOS
   triggers:
     - "telos"
     - "my goals"
