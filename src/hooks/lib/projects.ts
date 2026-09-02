@@ -189,27 +189,42 @@ export function looksLikeProjectRoot(cwd: string): boolean {
   return PROJECT_MARKERS.some((marker) => existsSync(resolve(cwdAbs, marker)));
 }
 
+/**
+ * Every project record, with `path` resolved to this machine.
+ *
+ * Seeds bindings for any project not yet bound here, which is what makes the
+ * binding file self-maintaining: no install step, no migration, no command to
+ * remember. Seeding is idempotent and writes only when it actually binds
+ * something, so the steady-state cost is the one `bindings.json` read below.
+ */
 export function readAllProjects(): ProjectProgress[] {
   const base = paths.projectHistory();
   if (!existsSync(base)) return [];
+  const bindings = readBindings();
   const out: ProjectProgress[] = [];
   for (const slug of readdirSync(base)) {
     const file = resolve(base, slug, "ISA.md");
     if (!existsSync(file)) continue;
-    const p = readProject(slug);
+    const p = readProject(slug, bindings);
     if (p) out.push(p);
   }
+  seedBindings(out);
   return out;
 }
 
-export function readProject(name: string): ProjectProgress | null {
+export function readProject(
+  name: string,
+  bindings: Bindings = readBindings()
+): ProjectProgress | null {
   const file = isaFilePath(name);
   if (!existsSync(file)) return null;
   try {
     const content = readFileSync(file, "utf-8");
     const { meta, body } = parse<IsaMeta>(content);
     if (!meta?.name || !meta?.path || !meta?.status) return null;
-    return { ...meta, ...extractSections(body) };
+    const bound = bindings[meta.name];
+    const path = bound ? resolve(bound) : meta.path;
+    return { ...meta, path, ...extractSections(body) };
   } catch {
     return null;
   }
@@ -419,10 +434,13 @@ export function loadActiveProjectsContext(cwd: string = process.cwd()): string {
  *
  * Returns the names newly bound, so a caller can stay silent on the common no-op.
  */
-export function seedBindingsFromProjects(home: string = palHome()): string[] {
+export function seedBindings(
+  projects: ProjectProgress[],
+  home: string = palHome()
+): string[] {
   const bindings = readBindings(home);
   const seeded: string[] = [];
-  for (const project of readAllProjects()) {
+  for (const project of projects) {
     if (!project.name || !project.path) continue;
     if (project.name in bindings) continue;
     if (!existsSync(project.path)) continue;

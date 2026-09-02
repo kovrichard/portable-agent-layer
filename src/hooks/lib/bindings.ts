@@ -18,6 +18,7 @@
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { palHome } from "./paths";
 
@@ -50,7 +51,23 @@ export function readBindings(home: string = palHome()): Bindings {
   }
 }
 
+/**
+ * Seeding writes on the first project read, which makes an unsandboxed test a
+ * silent writer into the developer's own ~/.pal. The suite sets PAL_TEST_SANDBOX,
+ * so refuse there and name the file — a test that forgets to point PAL_HOME at a
+ * temp dir fails loudly instead of editing the machine running it.
+ */
+function assertNotRealHomeDuringTests(home: string): void {
+  if (!process.env.PAL_TEST_SANDBOX) return;
+  if (resolve(home) !== resolve(homedir(), ".pal")) return;
+  throw new Error(
+    "Refusing to write bindings.json into the real ~/.pal during a test run. " +
+      "Point PAL_HOME at a temp directory in this test's setup."
+  );
+}
+
 export function writeBindings(bindings: Bindings, home: string = palHome()): void {
+  assertNotRealHomeDuringTests(home);
   const sorted: Bindings = {};
   for (const key of Object.keys(bindings).sort()) sorted[key] = bindings[key];
   writeFileSync(bindingsFilePath(home), `${JSON.stringify(sorted, null, 2)}\n`);
