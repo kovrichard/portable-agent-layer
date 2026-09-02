@@ -18,6 +18,9 @@ metadata:
     - "where are we"
     - "open ticket"
     - "open iscs"
+    - "file ticket"
+    - "file it as a ticket"
+    - "file a ticket"
 ---
 
 Manage the user's project registry. Each project lives at `~/.pal/memory/projects/{slug}/ISA.md`. Frontmatter holds operational state (next steps, blockers, handoff); the body holds ISA spec sections (Problem, Goal, Criteria, Context, Decisions, etc.). The Stop hook auto-touches `updated` whenever the cwd resolves into a registered project — just *being* in the project keeps it warm.
