@@ -466,3 +466,56 @@ export function seedBindings(
   writeBindings(bindings, home);
   return seeded;
 }
+
+export type BindingIssue =
+  | { kind: "unlocatable"; project: string }
+  | { kind: "missing"; project: string; path: string }
+  | { kind: "shared"; path: string; projects: string[] };
+
+/**
+ * Health of this machine's project bindings.
+ *
+ * Three things can go wrong once a path is machine-local. A project can become
+ * unlocatable, which is what losing bindings.json looks like from the outside.
+ * A binding can outlive the directory it names. And two projects can end up on
+ * one directory — the shape that appears when a name is reused for a second
+ * checkout, where binding by name alone would silently repoint the first.
+ *
+ * Read-only by construction: it reports, it never repairs.
+ */
+export function auditBindings(
+  projects: ProjectProgress[] = readAllProjects(),
+  bindings: Bindings = readBindings()
+): BindingIssue[] {
+  const issues: BindingIssue[] = [];
+  const byPath = new Map<string, string[]>();
+
+  for (const project of projects) {
+    const path = projectPathOnThisMachine(project, bindings);
+    if (!path) {
+      issues.push({ kind: "unlocatable", project: project.name });
+      continue;
+    }
+    if (!existsSync(path)) {
+      issues.push({ kind: "missing", project: project.name, path });
+      continue;
+    }
+    byPath.set(path, [...(byPath.get(path) ?? []), project.name]);
+  }
+
+  for (const [path, names] of byPath) {
+    if (names.length > 1) issues.push({ kind: "shared", path, projects: names.sort() });
+  }
+
+  return issues;
+}
+
+export function describeBindingIssue(issue: BindingIssue): string {
+  if (issue.kind === "unlocatable")
+    return `${issue.project} — not checked out here (run 'project set-path ${issue.project} <path>')`;
+  // "points at" rather than "bound to": the path may equally have come from a
+  // legacy record's own field, which is not a binding.
+  if (issue.kind === "missing")
+    return `${issue.project} — points at ${issue.path}, which does not exist here`;
+  return `${issue.projects.join(" and ")} — both point at ${issue.path}`;
+}

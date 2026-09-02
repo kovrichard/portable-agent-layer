@@ -45,6 +45,7 @@ import { inference, previewInferenceRoute } from "../hooks/lib/inference";
 import { DEBUG_LOG_MAX_ROTATED, logDebug } from "../hooks/lib/log";
 import { ensureRegistered, writeRegistryEntry } from "../hooks/lib/machine";
 import { palHome, palPkg, paths, platform } from "../hooks/lib/paths";
+import { auditBindings, describeBindingIssue } from "../hooks/lib/projects";
 import { hasRealContent, SETUP_STEPS, STEP_ORDER } from "../hooks/lib/setup";
 import { log } from "../targets/lib";
 import { checkPendingMigrations } from "./migrate";
@@ -850,6 +851,16 @@ function doctor(silent = false): DoctorResult {
         : warn(
             `TELOS setup incomplete — ${missing.join(", ")} missing (run 'pal cli install')`
           );
+    }
+
+    // Project bindings — where each project lives on THIS machine
+    {
+      const issues = auditBindings();
+      if (issues.length === 0) {
+        ok("Project bindings healthy");
+      } else {
+        for (const issue of issues) warn(`Binding: ${describeBindingIssue(issue)}`);
+      }
     }
 
     // Dependencies (PAL's own npm packages)
