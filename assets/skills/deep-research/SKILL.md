@@ -4,7 +4,6 @@ description: "Multi-agent parallel research — quick/standard/extensive modes w
 argument-hint: <topic or question>
 metadata:
   triggers:
-    - "research"
     - "deep-research"
     - "deep research"
     - "investigate"
