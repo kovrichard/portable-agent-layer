@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -44,7 +44,11 @@ function isSymlink(path: string): boolean {
   }
 }
 
-beforeAll(() => {
+// Rebuilt before EVERY test, not once: the install case prunes `renamed-away`
+// and links every shipped skill into the store, so a shared fixture would leave
+// whichever test ran second asserting against the other's leftovers. Bun
+// randomises test order per seed, which turns that into an intermittent failure.
+beforeEach(() => {
   if (existsSync(HOME)) rmSync(HOME, { recursive: true });
   mkdirSync(PAL_SKILLS, { recursive: true });
   mkdirSync(CLAUDE_SKILLS, { recursive: true });
