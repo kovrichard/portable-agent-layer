@@ -213,6 +213,9 @@ Brief description.
 
 ┌─────────────────────┐
 │  User Prompt Submit │──► UserPromptOrchestrator.ts
+│                     │    - Prompt context (one merged system-reminder):
+│                     │      contextual steering, skill trigger matches,
+│                     │      prior-lesson retrieval
 │                     │    - Rating capture (explicit/implicit)
 │                     │    - Session naming (first prompt)
 └─────────────────────┘

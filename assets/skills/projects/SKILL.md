@@ -2,6 +2,17 @@
 name: projects
 description: "Project context management. PROACTIVE — use when the user references a project (by name or as \"this repo\", \"current work\"), asks to add/update/complete a project, says \"store under a named project\", \"track this\", \"what am I working on\", \"my projects\", \"my priorities\". Also triggered by ISC/ISA terminology — ISC stands for Ideal State Criteria, a project's verifiable done-conditions stored as `ISC-N:` lines in the Criteria section of its ISA.md spec. Phrases like \"ISC\", \"open/opening the ISC\", \"open ISCs\" (unfinished criteria), \"create/creating a ticket for a project\", \"new ticket\", or \"project ticket\" all map here: use `list-isc` to read them, `add-isc` to create one, `complete-isc`/`reopen-isc` to change status."
 argument-hint: [list | create | resume | add-next | add-blocker | add-decision | add-handoff | update-section | criteria | isa-init | complete | archive | pause]
+metadata:
+  triggers:
+    - "isc"
+    - "isa"
+    - "my projects"
+    - "what am i working on"
+    - "my priorities"
+    - "track this"
+    - "resume the project"
+    - "project ticket"
+    - "open iscs"
 ---
 
 Manage the user's project registry. Each project lives at `~/.pal/memory/projects/{slug}/ISA.md`. Frontmatter holds operational state (next steps, blockers, handoff); the body holds ISA spec sections (Problem, Goal, Criteria, Context, Decisions, etc.). The Stop hook auto-touches `updated` whenever the cwd resolves into a registered project — just *being* in the project keeps it warm.

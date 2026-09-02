@@ -2,6 +2,13 @@
 name: analyze-youtube
 description: "Analyze YouTube videos using Gemini's native video understanding — summarize, extract insights, answer questions. Use when analyzing, summarizing, or extracting information from a YouTube video."
 argument-hint: <YouTube URL>
+metadata:
+  triggers:
+    - "youtube"
+    - "youtu.be"
+    - "watch this video"
+    - "summarize the video"
+    - "video transcript"
 ---
 
 When the user asks to analyze, summarize, or extract information from a YouTube video:

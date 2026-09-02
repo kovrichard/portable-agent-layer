@@ -20,6 +20,7 @@ beforeEach(async () => {
   for (const dir of [
     resolve(TEST_HOME, "memory", "learning"),
     resolve(TEST_HOME, "memory", "wisdom"),
+    resolve(TEST_HOME, "memory", "state"),
   ]) {
     if (existsSync(dir)) rmSync(dir, { recursive: true });
   }
@@ -63,6 +64,22 @@ async function loadHandlers() {
     ) => Promise<string | null>,
     withinBudget: mod.withinBudget as <T>(work: () => T, ms: number) => T | null,
   };
+}
+
+function seedSkillIndex() {
+  mkdirSync(resolve(TEST_HOME, "memory", "state"), { recursive: true });
+  writeFileSync(
+    resolve(TEST_HOME, "memory", "state", "skill-index.json"),
+    JSON.stringify({
+      skills: {
+        presentation: {
+          name: "presentation",
+          description: "Build branded HTML presentations.",
+          triggers: ["slide deck"],
+        },
+      },
+    })
+  );
 }
 
 function enableDebugLogging() {
@@ -152,6 +169,25 @@ describe("injectPromptContext handler", () => {
     const { injectPromptContext } = await loadHandlers();
     const out = await captureStdout(() =>
       injectPromptContext("kubernetes autoscaler manifests in helm chart")
+    );
+    expect(out).toBe("");
+  });
+
+  test("merges a skill trigger match into the injection", async () => {
+    seedSkillIndex();
+    const { injectPromptContext } = await loadHandlers();
+    const out = await captureStdout(() =>
+      injectPromptContext("put together a slide deck for friday")
+    );
+    expect(out).toContain("Potential matching skills");
+    expect(out).toContain("presentation");
+  });
+
+  test("emits empty when the prompt hits no skill trigger", async () => {
+    seedSkillIndex();
+    const { injectPromptContext } = await loadHandlers();
+    const out = await captureStdout(() =>
+      injectPromptContext("rename the column in that table")
     );
     expect(out).toBe("");
   });

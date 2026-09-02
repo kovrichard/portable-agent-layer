@@ -63,11 +63,9 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   const { captureRating } = await lib<typeof import("../../hooks/handlers/rating")>(
     "../handlers/rating.ts"
   );
-  const { getRetrievalReminder } = await lib<
+  const { getPromptContext } = await lib<
     typeof import("../../hooks/handlers/inject-retrieval")
   >("../handlers/inject-retrieval.ts");
-  const { getSteeringReminder } =
-    await lib<typeof import("../../hooks/lib/steering")>("steering.ts");
 
   function partsToText(parts: Array<Record<string, unknown>>): string {
     return parts
@@ -163,9 +161,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       const text = partsToText(output.parts ?? []);
       if (!text.trim()) return;
 
-      const retrieval = await getRetrievalReminder(text);
-      const steering = getSteeringReminder(text);
-      const injectedText = [steering, retrieval].filter(Boolean).join("\n\n");
+      const injectedText = (await getPromptContext(text)) ?? "";
       logPromptSnapshot(text, injectedText || null);
 
       await Promise.allSettled([

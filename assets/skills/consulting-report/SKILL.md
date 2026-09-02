@@ -2,6 +2,14 @@
 name: consulting-report
 description: "Build a beautifully-typeset consulting-report PDF from a typed data file and a React layout. Use when generating an assessment, strategic review, operational readiness check, or any McKinsey-style consulting deliverable as a PDF."
 argument-hint: scaffold <target-dir> | dev <report-dir> | <report-dir> (render PDF)
+metadata:
+  triggers:
+    - "consulting report"
+    - "strategic review"
+    - "readiness assessment"
+    - "assessment report"
+    - "mckinsey"
+    - "consulting deliverable"
 ---
 
 ## Overview

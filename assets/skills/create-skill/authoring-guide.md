@@ -23,6 +23,9 @@ A personal skill **may** contain this user's own context — their paths, projec
 name: <slug>                           # the slash-command name; lowercase-kebab
 description: <what it does + WHEN to invoke>   # the dispatcher matches on this
 argument-hint: <args>                  # optional; how the user passes input
+metadata:                              # free-form map; the only key Anthropic's
+  triggers:                            # spec reserves for third-party tooling
+    - "<word or phrase a prompt would contain>"
 ---
 
 ## Overview / Workflow
@@ -39,6 +42,8 @@ Two short lists; the "do not" list disambiguates this skill from neighbours.
 ```
 
 The `description` should state **both what the skill does and when to invoke it**, in third person, with the trigger terms a model would match on. A vague description ("helps with documents") will not trigger reliably.
+
+`metadata.triggers` lists the literal words and phrases a prompt would contain when the user wants this skill. They are indexed into `skill-index.json`, and the prompt-submit hook injects a "Potential matching skills" hint whenever one appears in a prompt — a second chance for the skill to be noticed when the description alone didn't fire. Write 4-8: mostly multi-word phrases (they score higher than single words), plus a distinctive term or two, and nothing so common it fires on unrelated prompts. Only `name`, `description`, `license`, `allowed-tools`, `metadata`, and `compatibility` are valid frontmatter keys, so triggers live under `metadata`, never at the top level.
 
 ## Hand-checks the doctor can't judge
 

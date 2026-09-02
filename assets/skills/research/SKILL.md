@@ -2,6 +2,13 @@
 name: research
 description: "Multi-agent parallel research — quick/standard/extensive modes with specialized researcher agents for depth, breadth, and verification. Use when researching a topic, finding information, or investigating something thoroughly."
 argument-hint: <topic or question>
+metadata:
+  triggers:
+    - "research"
+    - "investigate"
+    - "look into"
+    - "find information"
+    - "deep dive"
 ---
 
 ## Mode Routing

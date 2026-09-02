@@ -2,6 +2,13 @@
 name: first-principles
 description: "Break down a problem to its fundamental constraints and build up a solution. Use when decomposing complexity, challenging assumptions, or finding root causes."
 argument-hint: <problem>
+metadata:
+  triggers:
+    - "first principles"
+    - "root cause"
+    - "fundamental constraints"
+    - "challenge assumptions"
+    - "break it down"
 ---
 
 Break down $ARGUMENTS to fundamentals:

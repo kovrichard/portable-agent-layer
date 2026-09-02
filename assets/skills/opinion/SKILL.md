@@ -1,6 +1,13 @@
 ---
 name: opinion
 description: "Opinion tracker for relationship notes. PROACTIVE: When the user confirms a preference ('yes exactly', 'keep doing that'), contradicts one ('no, don't do that', 'stop'), or you observe a recurring behavioral pattern — invoke this to update opinion confidence."
+metadata:
+  triggers:
+    - "opinion"
+    - "keep doing that"
+    - "yes exactly"
+    - "stop doing that"
+    - "my preference"
 ---
 
 # Opinion Tracker

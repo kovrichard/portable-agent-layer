@@ -2,6 +2,13 @@
 name: author-pal-skill
 description: Author a NEW skill that ships WITH the PAL repo (committed to assets/skills/ and installed for every downstream user). Use only when working inside the portable-agent-layer repo and adding a shared, general-purpose skill. For a user's own private skill, use create-skill instead.
 argument-hint: <skill name> <skill description>
+metadata:
+  triggers:
+    - "shared skill"
+    - "ship a skill"
+    - "repo skill"
+    - "author a pal skill"
+    - "skill that ships"
 ---
 
 # Author a PAL repo skill
@@ -27,6 +34,9 @@ Because the output ships to everyone, three rules are non-negotiable. A skill th
 name: <slug>                           # the slash-command name; lowercase-kebab
 description: <what it does + WHEN to invoke>   # used by the dispatcher to trigger
 argument-hint: <args>                  # optional; how the user passes input
+metadata:                              # free-form map; the only key Anthropic's
+  triggers:                            # spec reserves for third-party tooling
+    - "<word or phrase a prompt would contain>"
 ---
 
 ## Overview / Workflow
@@ -61,7 +71,8 @@ pal cli skill author-model
 
 1. Sanity-check the name and description against the three rules above. If the description leaks personal info ("a skill for me to clean my Notion db"), rewrite it to the general form ("clean a Notion database via the API") before scaffolding.
 2. Create `assets/skills/<name>/SKILL.md` in the repo (the canonical source — never edit the installed `~/.pal/skills/<name>` junction).
-3. Populate the SKILL.md from the anatomy above. Required: `name`, `description`, body sections (Workflow, Output format, When to use). Add `argument-hint` if the skill takes arguments.
+3. Populate the SKILL.md from the anatomy above. Required: `name`, `description`, `metadata.triggers`, body sections (Workflow, Output format, When to use). Add `argument-hint` if the skill takes arguments.
+   `metadata.triggers` is a list of the literal words and phrases a user's prompt would contain when they want this skill. `generateSkillIndex` copies them into `skill-index.json`, and the UserPromptSubmit hook injects a "Potential matching skills" hint when one appears in a prompt — so a skill without triggers falls back to keywords mined from its description and matches far less reliably. Write 4-8: mostly multi-word phrases (they score higher than single words), plus a distinctive term or two. Never a word so common it fires on unrelated prompts. Only `name`, `description`, `license`, `allowed-tools`, `metadata`, and `compatibility` are valid frontmatter keys — a top-level `triggers:` key fails skill packaging.
 4. If the skill needs runtime tooling (TypeScript, scripts, vendored assets), scaffold a `tools/` subdir alongside SKILL.md. Otherwise leave the skill markdown-only.
 5. Run the doctor against the new skill and resolve every error:
    ```bash

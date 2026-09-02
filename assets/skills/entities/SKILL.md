@@ -2,6 +2,13 @@
 name: entities
 description: "Maintain the personal knowledge graph of people and companies. Detect named entities in any content (article, video, paste, conversation), upsert them to ~/.pal/memory/knowledge/, and surface what's already known. Use proactively whenever named entities appear — don't wait to be asked."
 argument-hint: <content, URL, or pasted text>
+metadata:
+  triggers:
+    - "entities"
+    - "knowledge graph"
+    - "who is"
+    - "company profile"
+    - "people and companies"
 ---
 
 Detect, persist, and query people and companies referenced in $ARGUMENTS.

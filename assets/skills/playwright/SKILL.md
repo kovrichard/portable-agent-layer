@@ -2,6 +2,15 @@
 name: playwright
 description: "Capture a screenshot of a URL or local page and load it into context for a visual check. Use when asked to check visually, use playwright, screenshot a page, see or look at the design yourself, or verify a layout on desktop and mobile widths."
 argument-hint: <url> [--viewport WxH] [--full-page] [--selector <css>]
+metadata:
+  triggers:
+    - "playwright"
+    - "screenshot"
+    - "check visually"
+    - "look at the design"
+    - "verify the layout"
+    - "mobile viewport"
+    - "browser check"
 ---
 
 ## Overview

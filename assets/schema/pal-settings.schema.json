@@ -65,6 +65,10 @@
         "handoff": { "type": "boolean", "description": "Handoff note from the previous session." },
         "selfModel": { "type": "boolean", "description": "The assistant's self-model synthesis." },
         "contextualSteering": { "type": "boolean", "description": "Prompt-time steering self-checks (see the steering section)." },
+        "skillMatching": {
+          "type": "boolean",
+          "description": "Prompt-time \"Potential matching skills\" hints, matched from each skill's metadata.triggers."
+        },
         "steeringTestReport": { "type": "boolean", "description": "When true, the assistant notes to the user which steering self-check fired. For the dual-live test period; ships false." }
       }
     },

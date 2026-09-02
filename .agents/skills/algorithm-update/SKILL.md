@@ -2,6 +2,12 @@
 name: algorithm-update
 description: Run a maintainer algorithm-update session — synthesize the collected Q2 ("smarter algorithm") reflections, cluster the recurring ideas, and fold approved changes into ALGORITHM.md. Use when the session reminder shows "Algorithm Review Due", or when asked to review/update the algorithm from reflections.
 argument-hint: (none — reads ~/.pal reflections)
+metadata:
+  triggers:
+    - "algorithm update"
+    - "algorithm review due"
+    - "update the algorithm"
+    - "fold reflections"
 ---
 
 # Algorithm update session

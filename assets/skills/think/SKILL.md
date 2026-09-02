@@ -2,6 +2,13 @@
 name: think
 description: "Thinking mode router — selects the right analytical approach for a question. Use when thinking through a problem, analyzing deeply, brainstorming ideas, debating options, decomposing to root cause, challenging assumptions, or exploring from multiple perspectives."
 argument-hint: <question or topic>
+metadata:
+  triggers:
+    - "think through"
+    - "brainstorm"
+    - "analyze deeply"
+    - "think about this"
+    - "mental model"
 ---
 
 Route $ARGUMENTS to the right thinking mode based on intent. Detect the mode from context — do NOT ask.

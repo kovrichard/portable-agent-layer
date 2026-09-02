@@ -2,6 +2,13 @@
 name: extract-wisdom
 description: "Extract structured insights from content (articles, videos, podcasts). Use when extracting wisdom, key takeaways, or structured insights from any content."
 argument-hint: <content or URL>
+metadata:
+  triggers:
+    - "extract wisdom"
+    - "key takeaways"
+    - "insights from"
+    - "distill"
+    - "takeaways from this"
 ---
 
 Extract structured insights from $ARGUMENTS:

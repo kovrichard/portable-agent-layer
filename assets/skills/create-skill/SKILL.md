@@ -2,6 +2,14 @@
 name: create-skill
 description: "Create a new personal skill for this user, scaffolded into their own ~/.pal/skills/ and linked into every installed agent. Use when the user asks to create a skill, add a capability, build a custom command, or \"make a skill that…\"."
 argument-hint: <skill name> <skill description>
+metadata:
+  triggers:
+    - "create a skill"
+    - "new skill"
+    - "make a skill"
+    - "add a skill"
+    - "custom command"
+    - "personal skill"
 ---
 
 # Create a personal skill

@@ -2,6 +2,13 @@
 name: create-subagent
 description: "Create a user-scoped subagent for every installed agent (Claude Code, opencode, Cursor, Copilot) from one merged definition, then install and run the doctor on it. Use when the user asks to create a subagent, add a custom agent, delegate a role to a specialized agent, or \"make a subagent that…\"."
 argument-hint: <subagent name> <what it does + when to delegate>
+metadata:
+  triggers:
+    - "create a subagent"
+    - "new subagent"
+    - "make a subagent"
+    - "custom agent"
+    - "delegate to an agent"
 ---
 
 # Create a personal subagent

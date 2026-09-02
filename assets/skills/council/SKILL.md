@@ -2,6 +2,15 @@
 name: council
 description: "Multi-perspective parallel debate on a decision — 3-5 independent perspectives argue in parallel, then synthesize into a verdict. Use when debating, weighing options, or needing multiple viewpoints on a question."
 argument-hint: <question or decision>
+metadata:
+  triggers:
+    - "council"
+    - "debate"
+    - "weigh the options"
+    - "multiple perspectives"
+    - "argue both sides"
+    - "pros and cons"
+    - "second opinion"
 ---
 
 Debate $ARGUMENTS from multiple perspectives:
