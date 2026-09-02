@@ -1,9 +1,10 @@
 ---
-name: review
+name: security-review
 description: "Security-focused code review with severity ratings. Use when reviewing code for security issues, vulnerabilities, or OWASP concerns."
 argument-hint: [file or directory]
 metadata:
   triggers:
+    - "security-review"
     - "security review"
     - "code review"
     - "vulnerabilities"

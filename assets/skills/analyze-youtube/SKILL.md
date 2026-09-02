@@ -4,10 +4,13 @@ description: "Analyze YouTube videos using Gemini's native video understanding â
 argument-hint: <YouTube URL>
 metadata:
   triggers:
+    - "analyze-youtube"
+    - "analyze youtube"
     - "youtube"
     - "youtu.be"
     - "watch this video"
     - "summarize the video"
+    - "summarize this video"
     - "video transcript"
 ---
 

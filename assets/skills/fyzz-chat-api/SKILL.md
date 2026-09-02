@@ -4,10 +4,12 @@ description: "Query Fyzz Chat conversations and projects via the REST API. Use w
 argument-hint: <conversations|projects> [options]
 metadata:
   triggers:
-    - "fyzz"
+    - "fyzz-chat-api"
+    - "fyzz chat api"
     - "fyzz chat"
     - "chat history"
-    - "conversations api"
+    - "fyzz conversation"
+    - "fyzz convo"
 ---
 
 When you need to access the user's Fyzz Chat conversations or projects, use the `fyzz-api` CLI tool. The tool reads the API key from the `PAL_FYZZ_API_KEY` environment variable automatically — never attempt to read, print, or reference the API key or the env var directly.

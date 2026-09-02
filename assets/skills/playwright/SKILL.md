@@ -8,8 +8,10 @@ metadata:
     - "screenshot"
     - "check visually"
     - "look at the design"
+    - "look at this"
+    - "check yourself"
     - "verify the layout"
-    - "mobile viewport"
+    - "responsive"
     - "browser check"
 ---
 

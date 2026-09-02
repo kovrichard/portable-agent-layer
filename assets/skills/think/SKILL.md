@@ -4,7 +4,7 @@ description: "Thinking mode router — selects the right analytical approach for
 argument-hint: <question or topic>
 metadata:
   triggers:
-    - "think through"
+    - "think"
     - "brainstorm"
     - "analyze deeply"
     - "think about this"

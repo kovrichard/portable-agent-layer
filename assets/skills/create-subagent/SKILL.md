@@ -4,6 +4,8 @@ description: "Create a user-scoped subagent for every installed agent (Claude Co
 argument-hint: <subagent name> <what it does + when to delegate>
 metadata:
   triggers:
+    - "create-subagent"
+    - "create subagent"
     - "create a subagent"
     - "new subagent"
     - "make a subagent"

@@ -7,6 +7,7 @@ metadata:
     - "humanize"
     - "ai slop"
     - "em dash"
+    - "emdash"
     - "sound human"
     - "de-slop"
     - "remove ai tells"

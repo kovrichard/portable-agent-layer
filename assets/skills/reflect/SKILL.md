@@ -4,6 +4,7 @@ description: "Diagnose why a PAL behavior did not trigger as expected — trace 
 argument-hint: <what went wrong>
 metadata:
   triggers:
+    - "reflect"
     - "didn't fire"
     - "didn't trigger"
     - "didn't run"

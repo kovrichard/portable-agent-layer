@@ -4,11 +4,14 @@ description: "Extract structured insights from content (articles, videos, podcas
 argument-hint: <content or URL>
 metadata:
   triggers:
+    - "extract-wisdom"
     - "extract wisdom"
     - "key takeaways"
     - "insights from"
     - "distill"
     - "takeaways from this"
+    - "remember this"
+    - "note this"
 ---
 
 Extract structured insights from $ARGUMENTS:

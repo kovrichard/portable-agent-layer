@@ -5,6 +5,7 @@ argument-hint: <content, URL, or pasted text>
 metadata:
   triggers:
     - "entities"
+    - "extract entities"
     - "knowledge graph"
     - "who is"
     - "company profile"

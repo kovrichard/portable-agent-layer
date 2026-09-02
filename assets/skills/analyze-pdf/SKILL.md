@@ -4,11 +4,13 @@ description: "Download and analyze PDF files from URLs or local paths — extrac
 argument-hint: <URL or file path>
 metadata:
   triggers:
-    - "pdf"
+    - "analyze-pdf"
+    - "analyze pdf"
     - "read this pdf"
+    - "analyze this pdf"
     - "analyze the pdf"
     - "summarize this pdf"
-    - "extract text from the pdf"
+    - "parse this pdf"
 ---
 
 When the user asks to analyze, read, or extract information from a PDF:

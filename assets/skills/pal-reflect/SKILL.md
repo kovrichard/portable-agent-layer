@@ -4,10 +4,11 @@ description: "Run relationship reflect — promote recurring behavioral observat
 argument-hint: [optional: --dry-run to preview without writing]
 metadata:
   triggers:
+    - "pal-reflect"
+    - "pal reflect"
     - "relationship reflect"
     - "behavioral observations"
     - "tracked opinions"
-    - "pal reflect"
     - "patterns observed"
 ---
 

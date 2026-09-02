@@ -4,10 +4,9 @@ description: "Break down a problem to its fundamental constraints and build up a
 argument-hint: <problem>
 metadata:
   triggers:
+    - "first-principles"
     - "first principles"
     - "root cause"
-    - "fundamental constraints"
-    - "challenge assumptions"
     - "break it down"
 ---
 

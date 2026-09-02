@@ -4,12 +4,11 @@ description: "Build a beautifully-typeset consulting-report PDF from a typed dat
 argument-hint: scaffold <target-dir> | dev <report-dir> | <report-dir> (render PDF)
 metadata:
   triggers:
+    - "consulting-report"
     - "consulting report"
-    - "strategic review"
-    - "readiness assessment"
-    - "assessment report"
-    - "mckinsey"
-    - "consulting deliverable"
+    - "to pdf"
+    - "design a pdf"
+    - "beautiful pdf"
 ---
 
 ## Overview

@@ -4,15 +4,17 @@ description: "Create distinctive, production-grade frontend interfaces with high
 license: Complete terms in LICENSE.txt
 metadata:
   triggers:
+    - "frontend-design"
+    - "frontend design"
     - "landing page"
     - "ui design"
     - "react component"
     - "tailwind"
-    - "frontend"
     - "web page"
     - "dashboard ui"
-    - "style this page"
     - "css layout"
+    - "design a"
+    - "shadcn"
 ---
 
 This skill guides creation of distinctive, production-grade frontend interfaces that avoid generic "AI slop" aesthetics. Implement real working code with exceptional attention to aesthetic details and creative choices.

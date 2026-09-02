@@ -4,6 +4,8 @@ description: "Create a new personal skill for this user, scaffolded into their o
 argument-hint: <skill name> <skill description>
 metadata:
   triggers:
+    - "create-skill"
+    - "create skill"
     - "create a skill"
     - "new skill"
     - "make a skill"

@@ -4,6 +4,7 @@ description: "Project context management. PROACTIVE — use when the user refere
 argument-hint: [list | create | resume | add-next | add-blocker | add-decision | add-handoff | update-section | criteria | isa-init | complete | archive | pause]
 metadata:
   triggers:
+    - "projects"
     - "isc"
     - "isa"
     - "my projects"
@@ -11,7 +12,9 @@ metadata:
     - "my priorities"
     - "track this"
     - "resume the project"
-    - "project ticket"
+    - "resume project"
+    - "where are we"
+    - "open ticket"
     - "open iscs"
 ---
 

@@ -4,13 +4,14 @@ description: "Build branded HTML presentations from markdown using Reveal.js. Mu
 argument-hint: <deck-dir> to build, OR `setup-template` to add a brand template, OR `new <deck-dir> --template <name>` to scaffold a deck, OR `list-templates`
 metadata:
   triggers:
+    - "presentation"
     - "slide deck"
     - "slides"
-    - "presentation"
     - "pitch deck"
     - "reveal.js"
     - "workshop deck"
     - "talk slides"
+    - "ppt"
 ---
 
 ## Overview

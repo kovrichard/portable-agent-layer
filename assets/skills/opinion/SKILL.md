@@ -5,6 +5,8 @@ metadata:
   triggers:
     - "opinion"
     - "keep doing that"
+    - "stop doing that"
+    - "never do that"
     - "yes exactly"
     - "stop doing that"
     - "my preference"

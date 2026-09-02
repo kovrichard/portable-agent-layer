@@ -4,12 +4,13 @@ description: "Run learning analysis — surface rating trends, recurring failure
 argument-hint: [optional: --actionable for AI-generated recommendations]
 metadata:
   triggers:
+    - "pal-analyze"
+    - "pal analyze"
     - "learning analysis"
     - "rating trends"
     - "failure patterns"
     - "low ratings"
     - "what to improve"
-    - "pal analyze"
 ---
 
 When `/pal-analyze` is invoked (by you in response to a nudge, or by the user directly):

@@ -4,11 +4,15 @@ description: "Convert markdown files into a styled PDF. Use when creating a PDF 
 argument-hint: <file paths, glob pattern, or directory containing .md files>
 metadata:
   triggers:
+    - "create-pdf"
+    - "create pdf"
     - "create a pdf"
     - "make a pdf"
     - "markdown to pdf"
     - "convert to pdf"
     - "export as pdf"
+    - "a new pdf"
+    - "to pdf"
 ---
 
 ## Overview
