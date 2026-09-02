@@ -33,6 +33,7 @@ import {
   legacyJsonToProgress,
   type ProjectProgress,
   type ProjectStatus,
+  proposeBinding,
   readAllProjects,
   readProject,
   writeProject,
@@ -138,12 +139,23 @@ function cmdResume(args: string[]): void {
   const all = [...iscs, ...archived];
   const done = all.filter((i) => i.status === "done").length;
   const retired = all.filter((i) => i.status === "retired").length;
+  // Resuming a project PAL cannot locate is the natural moment to offer a
+  // binding: the user just named this project, so the suggestion is wanted rather
+  // than volunteered. It is only ever a command — nothing binds on its own.
+  const unlocatable = !project.path || !existsSync(project.path);
+  const binding = unlocatable
+    ? proposeBinding({ ...project, criteria, changelog })
+    : null;
+
   ok({
     project: {
       ...project,
       open_iscs: openIscs.map((i) => ({ id: i.id, title: iscTitle(i.text) })),
       isc_summary: { open: openIscs.length, done, retired },
     },
+    ...(unlocatable
+      ? { binding: binding ?? { state: "unbound", confidence: "none" } }
+      : {}),
   });
 }
 

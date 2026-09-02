@@ -20,6 +20,7 @@ import { basename, dirname, parse as parsePath, resolve, sep } from "node:path";
 import { type Bindings, readBindings, writeBinding, writeBindings } from "./bindings";
 import { parse, stringify } from "./frontmatter";
 import { palHome, paths } from "./paths";
+import { detectRemote } from "./remote";
 
 export type ProjectStatus = "active" | "paused" | "complete" | "archived";
 
@@ -27,6 +28,8 @@ export interface ProjectProgress {
   name: string;
   /** Resolved for this machine at read time; absent when not checked out here. */
   path?: string;
+  /** Normalized git origin — the same on every machine, so this one does travel. */
+  remote?: string;
   status: ProjectStatus;
   created: string;
   updated: string;
@@ -111,7 +114,9 @@ const PROJECT_MARKERS = [
 
 type IsaMeta = {
   name: string;
-  path: string;
+  /** Legacy only — records written since bindings landed carry no path. */
+  path?: string;
+  remote?: string;
   status: ProjectStatus;
   created: string;
   updated: string;
@@ -241,6 +246,12 @@ export function readProject(
  * has changed.
  */
 export function writeProject(p: ProjectProgress): void {
+  // Detected once and then kept: the remote is stable, and re-running git on
+  // every save would spawn a subprocess per project write for no new information.
+  if (!p.remote && p.path && existsSync(p.path)) {
+    const detected = detectRemote(p.path);
+    if (detected) p.remote = detected;
+  }
   // Only a path that exists here may be bound. Saving a record is not a claim
   // about this machine's disk — `path` may have arrived from an imported record
   // written elsewhere, and binding it would recreate the very leak bindings exist
@@ -252,6 +263,9 @@ export function writeProject(p: ProjectProgress): void {
     created: p.created,
     updated: p.updated,
   };
+  // Unlike `path`, this one is written into the record on purpose — it identifies
+  // the repository rather than one machine's copy of it.
+  if (p.remote) meta.remote = p.remote;
   if (p.next?.length) meta.next = p.next;
   if (p.blockers?.length) meta.blockers = p.blockers;
   if (p.handoff) meta.handoff = p.handoff;
@@ -510,12 +524,64 @@ export function auditBindings(
   return issues;
 }
 
+/**
+ * Every issue names the command that fixes it. PAL runs inside agents, where a
+ * hook cannot ask a question — so a suggestion is always a command the user can
+ * choose to run, never something applied on their behalf.
+ */
 export function describeBindingIssue(issue: BindingIssue): string {
+  const fix = (name: string) => `run 'project set-path ${name} <path>'`;
   if (issue.kind === "unlocatable")
-    return `${issue.project} — not checked out here (run 'project set-path ${issue.project} <path>')`;
+    return `${issue.project} — not checked out here (${fix(issue.project)})`;
   // "points at" rather than "bound to": the path may equally have come from a
   // legacy record's own field, which is not a binding.
   if (issue.kind === "missing")
-    return `${issue.project} — points at ${issue.path}, which does not exist here`;
-  return `${issue.projects.join(" and ")} — both point at ${issue.path}`;
+    return `${issue.project} — points at ${issue.path}, which does not exist here (${fix(issue.project)})`;
+  return `${issue.projects.join(" and ")} — both point at ${issue.path}; rebind whichever is wrong (${fix(issue.projects[0])})`;
+}
+
+export type BindingProposal = {
+  state: "unbound";
+  confidence: "strong" | "weak";
+  reason: string;
+  candidate: string;
+  command: string;
+};
+
+/**
+ * What PAL would suggest for a project it cannot locate, given where the user
+ * currently is. A matching git remote is strong evidence — two checkouts of one
+ * repository — while a matching directory name is only weak, because a name can
+ * be reused for an unrelated copy. Returns null when there is nothing worth
+ * saying, which is the common case.
+ */
+export function proposeBinding(
+  project: ProjectProgress,
+  cwd: string = process.cwd()
+): BindingProposal | null {
+  const command = `pal cli project set-path ${project.name} ${cwd}`;
+  const cwdRemote = detectRemote(cwd);
+
+  if (project.remote && cwdRemote === project.remote) {
+    return {
+      state: "unbound",
+      confidence: "strong",
+      reason: `the repository here is ${cwdRemote}, which is this project's recorded remote`,
+      candidate: cwd,
+      command,
+    };
+  }
+
+  if (basename(cwd) === project.name) {
+    return {
+      state: "unbound",
+      confidence: "weak",
+      reason:
+        "this directory shares the project's name, but nothing confirms it is the same one — a name can belong to more than one checkout",
+      candidate: cwd,
+      command,
+    };
+  }
+
+  return null;
 }

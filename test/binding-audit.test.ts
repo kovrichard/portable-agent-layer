@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
@@ -75,6 +76,53 @@ describe("auditBindings", () => {
     const { bindingsFilePath } = await import("../src/hooks/lib/bindings");
     auditBindings([project("alpha", checkout("alpha"))], {});
     expect(require("node:fs").existsSync(bindingsFilePath(HOME))).toBe(false);
+  });
+});
+
+describe("proposeBinding", () => {
+  function repoAt(name: string, origin?: string): string {
+    const dir = checkout(name);
+    spawnSync("git", ["init", "-q", dir]);
+    if (origin) spawnSync("git", ["-C", dir, "remote", "add", "origin", origin]);
+    return dir;
+  }
+
+  test("is strong when the repository here is the project's recorded remote", async () => {
+    const { proposeBinding } = await lib();
+    const dir = repoAt("anything", "git@github.com:a/b.git");
+    const p = { ...project("some-other-name"), remote: "github.com/a/b" };
+
+    const proposal = proposeBinding(p, dir);
+    expect(proposal?.confidence).toBe("strong");
+    expect(proposal?.command).toContain("set-path some-other-name");
+  });
+
+  // The transcend shape: a name can belong to more than one checkout, so a name
+  // match must never be presented as certain.
+  test("is only weak when nothing but the directory name agrees", async () => {
+    const { proposeBinding } = await lib();
+    const proposal = proposeBinding(project("transcend"), checkout("transcend"));
+    expect(proposal?.confidence).toBe("weak");
+    expect(proposal?.reason).toContain("more than one checkout");
+  });
+
+  test("stays silent when neither remote nor name matches", async () => {
+    const { proposeBinding } = await lib();
+    expect(proposeBinding(project("alpha"), checkout("something-else"))).toBeNull();
+  });
+
+  test("a differing remote does not get promoted by a matching name", async () => {
+    const { proposeBinding } = await lib();
+    const dir = repoAt("transcend", "git@github.com:someone/other.git");
+    const p = { ...project("transcend"), remote: "github.com/rico/transcend" };
+    expect(proposeBinding(p, dir)?.confidence).toBe("weak");
+  });
+
+  test("only ever suggests a command, never performs the binding", async () => {
+    const { proposeBinding } = await lib();
+    const { readBindings } = await import("../src/hooks/lib/bindings");
+    proposeBinding(project("transcend"), checkout("transcend"));
+    expect(readBindings(HOME)).toEqual({});
   });
 });
 
