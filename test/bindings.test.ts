@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
+  copyFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -232,6 +233,41 @@ describe("readProject resolves the path for this machine", () => {
     await addProject("alpha", "/mac/path/alpha");
     const { readProject } = await seedLib();
     expect(readProject("alpha")?.path).toBeUndefined();
+  });
+});
+
+describe("rolling backup", () => {
+  test("no backup exists before a second write", async () => {
+    const { writeBinding, bindingsBackupPath } = await lib();
+    writeBinding("alpha", "/a", HOME);
+    expect(existsSync(bindingsBackupPath(HOME))).toBe(false);
+  });
+
+  // The live file is the only record of where projects are, and it is excluded
+  // from exports — so the previous good copy is what makes losing it survivable.
+  test("keeps the previous contents when the file is overwritten", async () => {
+    const { writeBinding, bindingsBackupPath } = await lib();
+    writeBinding("alpha", "/a", HOME);
+    writeBinding("beta", "/b", HOME);
+
+    const backup = JSON.parse(readFileSync(bindingsBackupPath(HOME), "utf-8"));
+    expect(backup).toEqual({ alpha: "/a" });
+  });
+
+  test("restoring is renaming the backup over the live file", async () => {
+    const {
+      writeBinding,
+      writeBindings,
+      readBindings,
+      bindingsBackupPath,
+      bindingsFilePath,
+    } = await lib();
+    writeBinding("alpha", "/a", HOME);
+    writeBinding("beta", "/b", HOME);
+
+    writeBindings({}, HOME);
+    copyFileSync(bindingsBackupPath(HOME), bindingsFilePath(HOME));
+    expect(readBindings(HOME)).toEqual({ alpha: "/a", beta: "/b" });
   });
 });
 

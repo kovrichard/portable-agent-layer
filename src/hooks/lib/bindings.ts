@@ -17,7 +17,7 @@
  * under those would sync and defeat the point.
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { palHome } from "./paths";
@@ -27,6 +27,19 @@ export type Bindings = Record<string, string>;
 
 export function bindingsFilePath(home: string = palHome()): string {
   return resolve(home, "bindings.json");
+}
+
+/**
+ * Where the previous bindings are kept.
+ *
+ * Once a record stops storing its own path, this file is the only place a
+ * project's location lives, and it is deliberately excluded from exports — so
+ * losing it loses every location. One rolling copy of the last good content
+ * makes that recoverable by renaming a file, and never goes stale the way a
+ * one-off backup taken at migration time would.
+ */
+export function bindingsBackupPath(home: string = palHome()): string {
+  return resolve(home, "bindings.backup.json");
 }
 
 function isBindingMap(value: unknown): value is Bindings {
@@ -68,6 +81,13 @@ function assertNotRealHomeDuringTests(home: string): void {
 
 export function writeBindings(bindings: Bindings, home: string = palHome()): void {
   assertNotRealHomeDuringTests(home);
+  const file = bindingsFilePath(home);
+  // Only a differing, non-empty predecessor is worth keeping: backing up an
+  // identical file is noise, and backing up an empty one would let a bad write
+  // erase the copy that made it recoverable.
+  if (existsSync(file) && readFileSync(file, "utf-8").trim().length > 0) {
+    copyFileSync(file, bindingsBackupPath(home));
+  }
   const sorted: Bindings = {};
   for (const key of Object.keys(bindings).sort()) sorted[key] = bindings[key];
   writeFileSync(bindingsFilePath(home), `${JSON.stringify(sorted, null, 2)}\n`);
