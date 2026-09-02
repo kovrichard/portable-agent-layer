@@ -18,19 +18,30 @@ import { palHome } from "../hooks/lib/paths";
 import { linkPersonalSkill, log } from "../targets/lib";
 import { formatReport, formatSummary, lintSkill } from "../tools/skill-doctor";
 
-/** Directory entries under ~/.pal/skills/ that are real skill folders. */
-function installedSkills(): string[] {
-  const dir = resolve(palHome(), "skills");
+/** Entry names under ~/.pal/skills/, sorted; dangling links included. */
+function skillEntries(dir: string): string[] {
   if (!existsSync(dir)) return [];
-  return readdirSync(dir)
-    .filter((entry) => statSync(resolve(dir, entry)).isDirectory())
-    .sort();
+  return readdirSync(dir).sort();
+}
+
+/** A listed entry that does not exist can only be a symlink whose target is gone. */
+function isDanglingLink(path: string): boolean {
+  return !existsSync(path);
 }
 
 /** Lint every installed skill, one summary line each. Exits 1 if any has errors. */
 function doctorAll(): number {
   const dir = resolve(palHome(), "skills");
-  const names = installedSkills();
+  const entries = skillEntries(dir);
+
+  for (const name of entries.filter((n) => isDanglingLink(resolve(dir, n)))) {
+    log.warn(`Skipped ${name}: link target is gone — run 'pal cli install' to prune it`);
+  }
+
+  const names = entries.filter((n) => {
+    const path = resolve(dir, n);
+    return !isDanglingLink(path) && statSync(path).isDirectory();
+  });
   if (names.length === 0) {
     log.warn(`No skills found in ${dir}`);
     return 0;
