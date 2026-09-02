@@ -1,3 +1,23 @@
+# [0.64.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.63.3...v0.64.0) (2026-09-02)
+
+
+### Bug Fixes
+
+* **skill management:** enhance skill entry handling and prune stale links ([c904e4c](https://github.com/kovrichard/portable-agent-layer/commit/c904e4ca347d4a09fb9b128f26f410b76e55ba70))
+* update deep research skill triggers ([65d0bc3](https://github.com/kovrichard/portable-agent-layer/commit/65d0bc30ddc3fec055604285df06d5009e95648e))
+
+
+### Features
+
+* **cli:** add skill doctor --all to lint every installed skill ([501fcaa](https://github.com/kovrichard/portable-agent-layer/commit/501fcaa611bd06aab47c58185f18d3b04caad8e8))
+* **skill-doctor:** require the name and its spaced form as the first triggers ([0b1be80](https://github.com/kovrichard/portable-agent-layer/commit/0b1be809e9020142996d8d2d97677f56f0bf1e54))
+* **skill-doctor:** warn when a skill declares no metadata.triggers ([a2fe168](https://github.com/kovrichard/portable-agent-layer/commit/a2fe168cf20f9d413c1913e7723e54b0ef2335b7))
+* **skills:** add license and source ([ee501ba](https://github.com/kovrichard/portable-agent-layer/commit/ee501ba9a2abcabfdd3c04e1c67ea1e223f12d6e))
+* **skills:** clarify delegation requirements and execution contract for authoring and research skills ([a74443c](https://github.com/kovrichard/portable-agent-layer/commit/a74443c408d761efee3b96602d820e41f3d7c547))
+* **skills:** declare trigger phrases and surface matching skills at prompt time ([7d65e33](https://github.com/kovrichard/portable-agent-layer/commit/7d65e33c8a4b4cdabc05f8089227cd5dfcf65514))
+* **skills:** enforce delegation and execution guidelines for authoring and research skills ([441d521](https://github.com/kovrichard/portable-agent-layer/commit/441d521fb0a70bfa60abe0f30e7a2efb1f0210ae))
+* **skills:** enhance skill metadata and README documentation ([18f0b93](https://github.com/kovrichard/portable-agent-layer/commit/18f0b9388b5861ecbd5e9100815a1e5d887b8c9a))
+
 ## [0.63.3](https://github.com/kovrichard/portable-agent-layer/compare/v0.63.2...v0.63.3) (2026-08-16)
 
 
