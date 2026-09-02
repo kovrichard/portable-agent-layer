@@ -1,3 +1,10 @@
+## [0.63.3](https://github.com/kovrichard/portable-agent-layer/compare/v0.63.2...v0.63.3) (2026-08-16)
+
+
+### Bug Fixes
+
+* **hooks:** replace unenforceable retrieval timeout with measured budget ([9d67f16](https://github.com/kovrichard/portable-agent-layer/commit/9d67f160cdb8db1b557dc71c45d695d178443333))
+
 ## [0.63.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.63.1...v0.63.2) (2026-08-06)
 
 
