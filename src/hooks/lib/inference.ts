@@ -151,7 +151,7 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
         "inference",
         `${tag} route=claude-spawn agent=${agent} model=${opts.model ?? HAIKU_MODEL}`
       );
-      return inferenceViaCliSpawn(bin, buildClaudeArgs(opts), opts.user, opts);
+      return inferenceViaCliSpawn(bin, buildClaudeArgs(opts), buildCliPrompt(opts), opts);
     }
   }
   if (isCodex()) {
@@ -182,14 +182,19 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
     const bin = getCopilotBinary();
     if (bin) {
       logDebug("inference", `${tag} route=copilot-spawn agent=${agent}`);
-      return inferenceViaCliSpawn(bin, buildCopilotArgs(opts), "", opts);
+      return inferenceViaCliSpawn(
+        bin,
+        buildCopilotArgs(opts),
+        buildCliPrompt(opts),
+        opts
+      );
     }
   }
   if (isCursor()) {
     const bin = getCursorBinary();
     if (bin) {
       logDebug("inference", `${tag} route=cursor-spawn agent=${agent}`);
-      return inferenceViaCliSpawn(bin, buildCursorArgs(opts), "", opts);
+      return inferenceViaCliSpawn(bin, buildCursorArgs(opts), buildCliPrompt(opts), opts);
     }
   }
   if (hasApiKey()) {
@@ -284,16 +289,20 @@ export function _resetCursorBinaryCache(): void {
   cursorBinaryCache = undefined;
 }
 
-/** Build the argv for `claude --print …` from inference options. Pure. */
+/**
+ * Build the argv for `claude --print …`. Pure.
+ *
+ * `--system-prompt` is deliberately absent: PAL's system prompts run to several
+ * paragraphs, and an argv element cannot carry a newline on Windows once
+ * Bun.spawn resolves claude to its .cmd shim and cmd.exe re-parses the command
+ * line. System, user and any JSON-schema instruction all travel together on
+ * stdin instead, the same way every other agent receives them.
+ */
 export function buildClaudeArgs(opts: InferenceOptions): string[] {
-  const model = opts.model ?? HAIKU_MODEL;
-  const system = opts.jsonSchema
-    ? injectJsonSchemaInstruction(opts.system ?? "", opts.jsonSchema)
-    : opts.system;
-  const args = [
+  return [
     "--print",
     "--model",
-    model,
+    opts.model ?? HAIKU_MODEL,
     "--tools",
     "",
     "--output-format",
@@ -301,10 +310,6 @@ export function buildClaudeArgs(opts: InferenceOptions): string[] {
     "--setting-sources",
     "",
   ];
-  if (system) {
-    args.push("--system-prompt", system);
-  }
-  return args;
 }
 
 /**
@@ -373,21 +378,16 @@ export function buildOpencodeArgs(_opts: InferenceOptions): string[] {
  *                          of running inference. Safe to pair with --mode ask
  *                          because that mode disallows tool calls anyway.
  *
- * cursor-agent has no --system-prompt flag — system + user + JSON-schema are
- * concatenated into a single positional prompt argument.
+ * cursor-agent has no --system-prompt flag, so system + user + JSON-schema are
+ * concatenated into one prompt delivered on stdin rather than as the trailing
+ * positional argument: a multi-paragraph argv element cannot survive cmd.exe on
+ * Windows. `-p` stays because for cursor-agent it means --print, not --prompt.
  *
  * Auth note: cursor-agent picks up either `cursor-agent login` credentials or
  * `CURSOR_API_KEY` env var. PAL doesn't manage these — that's the user's setup.
  */
-export function buildCursorArgs(opts: InferenceOptions): string[] {
-  const parts: string[] = [];
-  if (opts.system) parts.push(opts.system);
-  parts.push(opts.user);
-  if (opts.jsonSchema) {
-    parts.push(schemaInstruction(opts.jsonSchema));
-  }
-  const prompt = parts.join("\n\n");
-  return ["-p", "--mode", "ask", "--output-format", "text", "--trust", prompt];
+export function buildCursorArgs(_opts: InferenceOptions): string[] {
+  return ["-p", "--mode", "ask", "--output-format", "text", "--trust"];
 }
 
 /**
@@ -403,20 +403,14 @@ export function buildCursorArgs(opts: InferenceOptions): string[] {
  *   --allow-all-tools         → REQUIRED for non-interactive mode (without it,
  *                                copilot prompts for tool-use confirmation)
  *
- * Copilot has no --system-prompt flag — system + user + JSON-schema are
- * concatenated into a single prompt passed via -p.
+ * Copilot has no --system-prompt flag, so system + user + JSON-schema are
+ * concatenated into one prompt delivered on stdin. `-p/--prompt` is deliberately
+ * absent: it takes the prompt inline, and a multi-paragraph argv element cannot
+ * survive cmd.exe when Bun.spawn resolves copilot to its Windows .cmd shim.
+ * Piping stdin keeps copilot non-interactive, so dropping -p costs nothing.
  */
-export function buildCopilotArgs(opts: InferenceOptions): string[] {
-  const parts: string[] = [];
-  if (opts.system) parts.push(opts.system);
-  parts.push(opts.user);
-  if (opts.jsonSchema) {
-    parts.push(schemaInstruction(opts.jsonSchema));
-  }
-  const prompt = parts.join("\n\n");
+export function buildCopilotArgs(_opts: InferenceOptions): string[] {
   return [
-    "-p",
-    prompt,
     "--no-custom-instructions",
     "--disable-builtin-mcps",
     "--no-auto-update",
