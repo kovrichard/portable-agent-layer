@@ -1,3 +1,47 @@
+# [0.65.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.64.0...v0.65.0) (2026-09-02)
+
+
+### Bug Fixes
+
+* **attribution:** keep the claude.ai session link out of commits ([71cf4e3](https://github.com/kovrichard/portable-agent-layer/commit/71cf4e344e4f297c9550a460118eb20eea84f5b5))
+* **cli:** merge on import instead of overwriting the receiving home ([61c13ae](https://github.com/kovrichard/portable-agent-layer/commit/61c13ae23fef273b69e62c1571f675a57f431a6b))
+* enhance Claude inference handling to support system prompts via file path ([cad6545](https://github.com/kovrichard/portable-agent-layer/commit/cad6545f43a9d3bb6060d8cd8fb52de6b0b11e17))
+* **generate-pdf:** windows path issue ([aa25768](https://github.com/kovrichard/portable-agent-layer/commit/aa2576866575fd6033bf9061c66f814ea88ed420))
+* **hooks:** claim a pending failure inside the state directory ([f96844a](https://github.com/kovrichard/portable-agent-layer/commit/f96844a75cd02b5362c5925419d8e71d89636b6a))
+* make tests cross platform ([63d2128](https://github.com/kovrichard/portable-agent-layer/commit/63d21280230eb5a3efad693dd6e630df343dca25))
+* **projects:** update skill triggers ([2b5e386](https://github.com/kovrichard/portable-agent-layer/commit/2b5e3862b4d2614e6e6ab2253d7ea3274bb62c5f))
+* rebuild folders for every test ([4dabac6](https://github.com/kovrichard/portable-agent-layer/commit/4dabac68bf01ae0b414a20ec2277cc37e9f2607d))
+* remove obsolete node error from skills ([b03679d](https://github.com/kovrichard/portable-agent-layer/commit/b03679dc402e953e3e0c71113fcdcb360b929379))
+* replace inline JSON schema string with schemaInstruction function ([45c9cff](https://github.com/kovrichard/portable-agent-layer/commit/45c9cff43377522edd2b48c441efa13b9fcfe70d))
+* **test:** locate the quarantined copy with a portable directory walk ([2af322d](https://github.com/kovrichard/portable-agent-layer/commit/2af322d16ebd5f92aa1c7a610fe3702a468dcf89))
+* update CLI argument handling to send prompts via stdin for both copilot and cursor agents ([191672a](https://github.com/kovrichard/portable-agent-layer/commit/191672a4c8343fc93fde57e19dec8f6218c7799c))
+* update inference CLI prompt handling to use stdin instead of argv ([a3a1641](https://github.com/kovrichard/portable-agent-layer/commit/a3a16411943bbef380fe0f2fad415db23315c695))
+* use dynamic paths ([b3a8732](https://github.com/kovrichard/portable-agent-layer/commit/b3a873228027d631c08ca2b06800d077792f8d8f))
+
+
+### Features
+
+* **algorithm-reflect:** stamp cwd anchor and machine id on every reflection ([a3aac1a](https://github.com/kovrichard/portable-agent-layer/commit/a3aac1a93dd3f7b3a8cb1dcb01bd07c8fbb82182))
+* **anchor:** resolve project-relative paths instead of raw absolute ones ([b3c50da](https://github.com/kovrichard/portable-agent-layer/commit/b3c50da147cf99b8bfcd64071b0db49616f47be9))
+* **bindings:** add auditBindings and describeBindingIssue functions for project binding health checks ([b93df23](https://github.com/kovrichard/portable-agent-layer/commit/b93df2314b427faa200050e8e2cd1d3b09ed734d))
+* **bindings:** add seeding functionality for project paths and enforce test sandboxing ([3bea461](https://github.com/kovrichard/portable-agent-layer/commit/3bea461bfc8ff855fd2017cd7cb128bab255f78b))
+* **bindings:** enhance project path resolution and enforce sandboxing during tests ([9e63fc7](https://github.com/kovrichard/portable-agent-layer/commit/9e63fc784b4cbf6a13112c70e7adb9a62bd5d703))
+* **bindings:** implement bindings management for project paths ([5f25195](https://github.com/kovrichard/portable-agent-layer/commit/5f2519541092c37511209c375e98d621d1019ba9))
+* **machine:** give each install a stable identity that records can reference ([e76755e](https://github.com/kovrichard/portable-agent-layer/commit/e76755eae545c7d259f83c641d00ffa4759bd9ca))
+* **migrate:** implement v4 migration to move project paths from records to machine-local bindings; add backup functionality for bindings ([6c21685](https://github.com/kovrichard/portable-agent-layer/commit/6c2168506b08de05cd36db5d880fd8a8367cc904))
+* **project:** add edit-isc to rewrite an ISC in place ([e08a587](https://github.com/kovrichard/portable-agent-layer/commit/e08a587a7c4dcfa6e5e18ab25034f4e73d637c99))
+* **project:** add retire-isc for criteria that stopped being valid ([cabb17e](https://github.com/kovrichard/portable-agent-layer/commit/cabb17e2177656b508825080c75e2651f2915886))
+* **projects:** refine project path handling and improve binding logic for local resolution ([991cb5e](https://github.com/kovrichard/portable-agent-layer/commit/991cb5e1582daa8e83c9a4c3bfed3a60455e46d4))
+* **relationship:** anchor the session comment's cwd stamp ([15bf423](https://github.com/kovrichard/portable-agent-layer/commit/15bf42383956644ae08dc42e94438154984eee8d))
+* **remote:** introduce remote detection and normalization for project identity; enhance project binding suggestions ([b421759](https://github.com/kovrichard/portable-agent-layer/commit/b4217593e2d5702233f234572ce7318b88af9fb6))
+* **signals:** stamp every signal with its emitting machine's id ([fd3d1cc](https://github.com/kovrichard/portable-agent-layer/commit/fd3d1cc5f5aaa84cde4e390e896f46ddd87f76fd))
+* **thread:** stamp cwd anchor and machine id on every thread ([15f84f0](https://github.com/kovrichard/portable-agent-layer/commit/15f84f0dec57b20ac4282498362e1ca3e456565e))
+
+
+### Performance Improvements
+
+* **hooks:** skip the session-end gates on a clean worktree ([4c2e7b5](https://github.com/kovrichard/portable-agent-layer/commit/4c2e7b5e558c05b2a80f2a3c5803e71dc95d2956))
+
 # [0.64.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.63.3...v0.64.0) (2026-09-02)
 
 
