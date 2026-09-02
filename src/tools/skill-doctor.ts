@@ -113,6 +113,21 @@ function parseSkill(content: string): ParsedSkill {
   };
 }
 
+/** Render triggers for a report line: `"a", "b"` or `"a" then "b"`. */
+function quoteList(triggers: string[], separator: string): string {
+  return triggers.map((trigger) => `"${trigger}"`).join(separator);
+}
+
+/**
+ * The triggers every skill must declare first: its own name, then the
+ * de-hyphenated form a user would actually type. A single-word name has only
+ * the one form, and the parser dedupes anyway, so it requires just itself.
+ */
+function leadTriggers(name: string): string[] {
+  const spaced = name.replaceAll("-", " ");
+  return spaced === name ? [name] : [name, spaced];
+}
+
 /** Remove fenced and inline code so prose checks don't trip on examples. */
 function stripCode(s: string): string {
   return s.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, "");
@@ -248,6 +263,20 @@ export function lintSkill(skillDir: string): DoctorReport {
     );
   } else {
     add("pass", "metadata.triggers", `${triggers.length} triggers declared`);
+  }
+
+  if (name && triggers.length > 0) {
+    const lead = leadTriggers(name);
+    const actual = triggers.slice(0, lead.length);
+    const wanted = quoteList(lead, " then ");
+    const found = quoteList(actual, ", ") || "nothing";
+    actual.join("\u0000") === lead.join("\u0000")
+      ? add("pass", "metadata.triggers.lead", `leads with ${wanted}`)
+      : add(
+          "warn",
+          "metadata.triggers.lead",
+          `triggers must lead with ${wanted} — found ${found}`
+        );
   }
 
   // ── body ──

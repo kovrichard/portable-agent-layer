@@ -32,9 +32,9 @@ name: good-skill
 description: "Summarizes a thing into a report. Use when the user asks to summarize a thing."
 metadata:
   triggers:
+    - "good-skill"
+    - "good skill"
     - "summarize a thing"
-    - "thing report"
-    - "distill the thing"
 ---
 
 # Good skill
@@ -142,7 +142,7 @@ describe("lintSkill", () => {
   });
 
   test("a thin trigger list warns", () => {
-    const thin = GOOD.replace(/ {4}- "thing report"\n {4}- "distill the thing"\n/, "");
+    const thin = GOOD.replace('    - "summarize a thing"\n', "");
 
     expect(levelOf(fixture(thin), "metadata.triggers")).toBe("warn");
   });
@@ -155,6 +155,31 @@ describe("lintSkill", () => {
     const topLevel = GOOD.replace(/metadata:\n {2}triggers:/, "triggers:");
 
     expect(levelOf(fixture(topLevel), "metadata.triggers")).toBe("warn");
+  });
+
+  test("triggers leading with the skill name then its de-hyphenated form pass", () => {
+    expect(levelOf(fixture(GOOD), "metadata.triggers.lead")).toBe("pass");
+  });
+
+  test("triggers not leading with the skill name warn", () => {
+    const wrongFirst = GOOD.replace('    - "good-skill"\n', "");
+
+    expect(levelOf(fixture(wrongFirst), "metadata.triggers.lead")).toBe("warn");
+  });
+
+  test("a missing de-hyphenated second trigger warns", () => {
+    const wrongSecond = GOOD.replace('    - "good skill"\n', "");
+
+    expect(levelOf(fixture(wrongSecond), "metadata.triggers.lead")).toBe("warn");
+  });
+
+  test("a single-word skill needs only its own name to lead", () => {
+    const oneWord = GOOD.replaceAll("good-skill", "goodskill").replace(
+      '    - "good skill"\n',
+      ""
+    );
+
+    expect(levelOf(fixture(oneWord), "metadata.triggers.lead")).toBe("pass");
   });
 
   test("body over 500 lines warns", () => {
@@ -241,10 +266,10 @@ describe("pal cli skill doctor", () => {
   }
 
   beforeAll(() => {
-    mkdirSync(resolve(ROOT, ".pal/skills/clean"), { recursive: true });
+    mkdirSync(resolve(ROOT, ".pal/skills/clean-skill"), { recursive: true });
     writeFileSync(
-      resolve(ROOT, ".pal/skills/clean/SKILL.md"),
-      GOOD.replace("good-skill", "clean")
+      resolve(ROOT, ".pal/skills/clean-skill/SKILL.md"),
+      GOOD.replaceAll("good-skill", "clean-skill").replaceAll("good skill", "clean skill")
     );
     mkdirSync(resolve(ROOT, ".pal/skills/Broken"), { recursive: true });
     writeFileSync(
@@ -254,7 +279,7 @@ describe("pal cli skill doctor", () => {
   });
 
   test("exits 0 for a clean skill", () => {
-    const r = doctor("clean");
+    const r = doctor("clean-skill");
     expect(r.status).toBe(0);
     expect(r.stdout).toContain("PASS");
   });
