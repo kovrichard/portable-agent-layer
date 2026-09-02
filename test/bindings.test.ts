@@ -43,6 +43,22 @@ async function seedLib() {
   return await import("../src/hooks/lib/projects");
 }
 
+/**
+ * A record in the pre-bindings shape, carrying its own `path`. writeProject no
+ * longer emits one and binds on save instead, so seeding only ever has work to do
+ * for records like these — written by an older PAL, or imported from a machine
+ * that wrote them.
+ */
+function legacyProject(name: string, path: string) {
+  const dir = resolve(HOME, "memory", "projects", name);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(
+    resolve(dir, "ISA.md"),
+    `---\nname: ${name}\npath: ${path}\nstatus: active\n` +
+      "created: 2026-01-01\nupdated: 2026-01-01\n---\n"
+  );
+}
+
 describe("readBindings", () => {
   test("is empty on a machine that has never bound anything", async () => {
     const { readBindings } = await lib();
@@ -113,11 +129,11 @@ describe("removeBinding", () => {
 });
 
 describe("seeding happens on the first read", () => {
-  test("the first readAllProjects binds every locally present project", async () => {
+  test("the first readAllProjects binds every locally present legacy project", async () => {
     const alpha = checkout("alpha");
     const beta = checkout("beta");
-    await addProject("alpha", alpha);
-    await addProject("beta", beta);
+    legacyProject("alpha", alpha);
+    legacyProject("beta", beta);
     const { readAllProjects } = await seedLib();
     const { readBindings, bindingsFilePath } = await lib();
 
@@ -127,7 +143,7 @@ describe("seeding happens on the first read", () => {
   });
 
   test("a later read binds nothing new", async () => {
-    await addProject("alpha", checkout("alpha"));
+    legacyProject("alpha", checkout("alpha"));
     const { readAllProjects, seedBindings } = await seedLib();
 
     readAllProjects();
@@ -147,7 +163,7 @@ describe("seeding happens on the first read", () => {
   });
 
   test("refuses a record whose path does not exist on this machine", async () => {
-    await addProject("from-the-mac", "/Users/someone/dev/from-the-mac");
+    legacyProject("from-the-mac", "/Users/someone/dev/from-the-mac");
     const { readAllProjects } = await seedLib();
     const { bindingFor } = await lib();
 
@@ -198,10 +214,24 @@ describe("readProject resolves the path for this machine", () => {
     expect(readProject("alpha")?.path).toBe("/vps/path/alpha");
   });
 
-  test("falls back to the record path while unbound", async () => {
+  // Written by hand on purpose: writeProject no longer emits a path field, so
+  // this is the only way to produce the shape records had before this change.
+  test("still reads a path from a record written before bindings existed", async () => {
+    const dir = resolve(HOME, "memory", "projects", "legacy");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      resolve(dir, "ISA.md"),
+      "---\nname: legacy\npath: /mac/path/legacy\nstatus: active\n" +
+        "created: 2026-01-01\nupdated: 2026-01-01\n---\n"
+    );
+    const { readProject } = await seedLib();
+    expect(readProject("legacy")?.path).toBe("/mac/path/legacy");
+  });
+
+  test("has no path at all when unbound and the record carries none", async () => {
     await addProject("alpha", "/mac/path/alpha");
     const { readProject } = await seedLib();
-    expect(readProject("alpha")?.path).toBe("/mac/path/alpha");
+    expect(readProject("alpha")?.path).toBeUndefined();
   });
 });
 
@@ -211,10 +241,33 @@ describe("test-sandbox guard", () => {
     const realHome = resolve(homedir(), ".pal");
 
     expect(process.env.PAL_TEST_SANDBOX).toBeTruthy();
+    // Only the refusal is asserted: ~/.pal/bindings.json is a file PAL creates in
+    // ordinary use, so its absence is not something a test may depend on.
     expect(() => writeBindings({ alpha: "/x" }, realHome)).toThrow(
       /Refusing to write bindings.json/
     );
-    expect(existsSync(resolve(realHome, "bindings.json"))).toBe(false);
+  });
+});
+
+describe("an export carries no filesystem paths", () => {
+  test("a project record written today contains no absolute path", async () => {
+    const dir = checkout("alpha");
+    await addProject("alpha", dir);
+
+    const record = readFileSync(
+      resolve(HOME, "memory", "projects", "alpha", "ISA.md"),
+      "utf-8"
+    );
+    expect(record).toContain('name: "alpha"');
+    expect(record).not.toContain(dir);
+    expect(record).not.toContain("path:");
+  });
+
+  test("the path is still recoverable locally, from the binding", async () => {
+    const dir = checkout("alpha");
+    await addProject("alpha", dir);
+    const { readProject } = await seedLib();
+    expect(readProject("alpha")?.path).toBe(dir);
   });
 });
 

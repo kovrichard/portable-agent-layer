@@ -17,7 +17,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, parse as parsePath, resolve, sep } from "node:path";
-import { type Bindings, readBindings, writeBindings } from "./bindings";
+import { type Bindings, readBindings, writeBinding, writeBindings } from "./bindings";
 import { parse, stringify } from "./frontmatter";
 import { palHome, paths } from "./paths";
 
@@ -25,7 +25,8 @@ export type ProjectStatus = "active" | "paused" | "complete" | "archived";
 
 export interface ProjectProgress {
   name: string;
-  path: string;
+  /** Resolved for this machine at read time; absent when not checked out here. */
+  path?: string;
   status: ProjectStatus;
   created: string;
   updated: string;
@@ -221,19 +222,32 @@ export function readProject(
   try {
     const content = readFileSync(file, "utf-8");
     const { meta, body } = parse<IsaMeta>(content);
-    if (!meta?.name || !meta?.path || !meta?.status) return null;
-    const bound = bindings[meta.name];
-    const path = bound ? resolve(bound) : meta.path;
+    if (!meta?.name || !meta?.status) return null;
+    // `path` is machine-local: the binding is the real source, and meta.path is
+    // only still read so records written before this change keep resolving.
+    const bound = bindings[meta.name] ?? meta.path;
+    const path = bound ? resolve(bound) : undefined;
     return { ...meta, path, ...extractSections(body) };
   } catch {
     return null;
   }
 }
 
+/**
+ * Persist a project. The `path` is deliberately NOT written into the record:
+ * records travel in an export, and one machine's disk layout is meaningless — or
+ * actively wrong — on another. It is recorded as a binding instead, which stays
+ * on this machine. Callers keep setting `p.path` as before; only where it lands
+ * has changed.
+ */
 export function writeProject(p: ProjectProgress): void {
+  // Only a path that exists here may be bound. Saving a record is not a claim
+  // about this machine's disk — `path` may have arrived from an imported record
+  // written elsewhere, and binding it would recreate the very leak bindings exist
+  // to prevent. An explicit `writeBinding` from the user stays unguarded.
+  if (p.path && existsSync(p.path)) writeBinding(p.name, p.path);
   const meta: Record<string, unknown> = {
     name: p.name,
-    path: p.path,
     status: p.status,
     created: p.created,
     updated: p.updated,
@@ -277,8 +291,8 @@ export function projectPathOnThisMachine(
   project: ProjectProgress,
   bindings: Bindings = readBindings()
 ): string | null {
-  const bound = bindings[project.name];
-  return resolve(bound ?? project.path);
+  const bound = bindings[project.name] ?? project.path;
+  return bound ? resolve(bound) : null;
 }
 
 export function resolveProjectFromCwd(
@@ -351,7 +365,8 @@ export function loadActiveProjectsContext(cwd: string = process.cwd()): string {
   const resolved = resolveProjectFromCwd(cwd, visible);
   const projectRoot = findProjectRoot(cwd);
   const alreadyRegistered =
-    projectRoot !== null && all.some((p) => resolve(p.path) === projectRoot);
+    projectRoot !== null &&
+    all.some((p) => p.path !== undefined && resolve(p.path) === projectRoot);
   const showHint = resolved === null && projectRoot !== null && !alreadyRegistered;
 
   if (visible.length === 0 && !showHint) return "";

@@ -11,7 +11,11 @@
 
 import { relative, resolve, sep } from "node:path";
 import type { ProjectProgress } from "./projects";
-import { readAllProjects, resolveProjectFromCwd } from "./projects";
+import {
+  projectPathOnThisMachine,
+  readAllProjects,
+  resolveProjectFromCwd,
+} from "./projects";
 
 const ANCHOR_RE = /^\{proj:([a-z0-9_-]+)\}(\/.*)?$/;
 
@@ -32,10 +36,13 @@ export function encodeAnchor(
   const proj = resolveProjectFromCwd(absPath, projects);
   if (!proj) return absPath;
 
-  // Defensive: resolveProjectFromCwd already guarantees absPath sits inside
-  // proj.path, so this is unreachable today. Kept as a guard against that
-  // contract changing rather than as covered behavior.
-  const rel = relative(resolve(proj.path), resolve(absPath));
+  // The same effective path the resolver matched on, not the record's own field:
+  // a bound project's path lives in bindings, so anchoring off proj.path directly
+  // would measure the relative segment against the wrong root.
+  const root = projectPathOnThisMachine(proj);
+  if (!root) return absPath;
+
+  const rel = relative(root, resolve(absPath));
   if (rel.startsWith("..")) return absPath;
 
   const relPosix = rel.split(sep).join("/");
@@ -65,7 +72,9 @@ export function resolveAnchor(
   const proj = projects.find((p) => p.name === slug);
   if (!proj) return { state: "unresolvable", slug };
 
-  const path = rel ? resolve(proj.path, `.${rel}`) : resolve(proj.path);
+  const root = projectPathOnThisMachine(proj);
+  if (!root) return { state: "unresolvable", slug };
+  const path = rel ? resolve(root, `.${rel}`) : root;
   return { state: "anchored", path };
 }
 

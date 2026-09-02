@@ -117,7 +117,9 @@ function pendingThreadsForProjects(): { thread: Thread; project: ProjectProgress
   const projects = readAllProjects();
   const results: { thread: Thread; project: ProjectProgress }[] = [];
   for (const thread of threads) {
-    const project = projects.find((p) => resolve(p.path) === resolve(thread.cwd));
+    const project = projects.find(
+      (p) => p.path !== undefined && resolve(p.path) === resolve(thread.cwd)
+    );
     if (project) results.push({ thread, project });
   }
   return results;

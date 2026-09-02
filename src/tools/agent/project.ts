@@ -24,6 +24,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { writeBinding } from "../../hooks/lib/bindings";
 import { paths } from "../../hooks/lib/paths";
 import {
   defaultSlug,
@@ -209,12 +210,15 @@ function addHandoff(name: string, text: string): void {
 
 // ── set-path ──────────────────────────────────────────────────────
 
+// Where a project lives is machine-local, so this writes a binding rather than a
+// field on the record. Unlike the save path it does not require the directory to
+// exist yet: naming where a repo is about to be cloned is a legitimate use.
 function cmdSetPath(args: string[]): void {
   const [name, ...rest] = args;
   if (!name || rest.length === 0) fail("Usage: set-path <name> <new-path>");
   const newPath = resolve(rest.join(" ").trim());
   const p = requireProject(name);
-  p.path = newPath;
+  writeBinding(p.name, newPath);
   p.updated = now();
   writeProject(p);
   ok({ updated: true, name, path: newPath });
