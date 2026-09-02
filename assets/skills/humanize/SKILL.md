@@ -1,8 +1,10 @@
 ---
 name: humanize
+license: MIT
 description: "Rewrites text to remove AI slop and make it sound human: eliminates em-dashes and en-dashes, LLM tell-words (delve, leverage, robust, seamless), 'not just X, it's Y' constructions, rule-of-three padding, boilerplate openers/closers, hedging, and decorative emoji, while preserving meaning and voice. Use when asked to humanize text, de-slop, remove AI dashes or em-dashes, strip AI tells, make writing sound human, or clean AI-generated prose."
 argument-hint: <text, or a file path, or empty to rewrite the previous message>
 metadata:
+  source: portable-agent-layer
   triggers:
     - "humanize"
     - "ai slop"

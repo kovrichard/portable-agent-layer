@@ -3,6 +3,7 @@ name: summarize
 description: "Structured summarization of documents, URLs, or conversations. Use when summarizing content, creating overviews, or distilling key points."
 argument-hint: <document, URL, or topic>
 metadata:
+  source: portable-agent-layer
   triggers:
     - "summarize"
     - "summary"

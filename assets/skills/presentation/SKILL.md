@@ -1,8 +1,10 @@
 ---
 name: presentation
+license: MIT
 description: "Build branded HTML presentations from markdown using Reveal.js. Multi-template registry per user (each template = brand color, logo, fonts, footer, aspect). Per-deck workflow: scaffold → edit one markdown file per slide in slides/ → build → present. Output: a per-deck subdir with a self-contained HTML and a concatenated markdown sibling. 14 layouts including data-display patterns (big-stat, metric-grid). Use when creating slide decks, talks, workshop slides, lectures, or pitch decks."
 argument-hint: <deck-dir> to build, OR `setup-template` to add a brand template, OR `new <deck-dir> --template <name>` to scaffold a deck, OR `list-templates`
 metadata:
+  source: portable-agent-layer
   triggers:
     - "presentation"
     - "slide deck"

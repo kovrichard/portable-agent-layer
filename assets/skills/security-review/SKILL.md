@@ -3,6 +3,7 @@ name: security-review
 description: "Security-focused code review with severity ratings. Use when reviewing code for security issues, vulnerabilities, or OWASP concerns."
 argument-hint: [file or directory]
 metadata:
+  source: portable-agent-layer
   triggers:
     - "security-review"
     - "security review"

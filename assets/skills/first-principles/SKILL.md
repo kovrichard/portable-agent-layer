@@ -3,6 +3,7 @@ name: first-principles
 description: "Break down a problem to its fundamental constraints and build up a solution. Use when decomposing complexity, challenging assumptions, or finding root causes."
 argument-hint: <problem>
 metadata:
+  source: portable-agent-layer
   triggers:
     - "first-principles"
     - "first principles"

@@ -1,8 +1,10 @@
 ---
 name: pal-analyze
+license: MIT
 description: "Run learning analysis — surface rating trends, recurring failure patterns, and graduation candidates. Use when learning analysis is due, or when the user asks about performance patterns, low ratings, or what to improve."
 argument-hint: [optional: --actionable for AI-generated recommendations]
 metadata:
+  source: portable-agent-layer
   triggers:
     - "pal-analyze"
     - "pal analyze"
