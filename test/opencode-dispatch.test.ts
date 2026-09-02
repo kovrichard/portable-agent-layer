@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
   _resetOpencodeBinaryCache,
+  buildCliPrompt,
   buildOpencodeArgs,
   extractOpencodeText,
   inference,
@@ -41,23 +42,24 @@ describe("buildOpencodeArgs", () => {
     expect(args).toContain("--pure");
   });
 
-  test("user prompt is the last positional argument", () => {
-    const args = buildOpencodeArgs({ user: "summarize this" });
-    expect(args[args.length - 1]).toBe("summarize this");
+  // The prompt travels on stdin, never in argv: a multi-paragraph argv element
+  // cannot survive cmd.exe when Bun.spawn resolves opencode to its .cmd shim.
+  test("no argv element carries the prompt or a newline", () => {
+    const args = buildOpencodeArgs({ system: "Be terse", user: "summarize this" });
+    expect(args).not.toContain("summarize this");
+    expect(args.filter((a) => a.includes("\n"))).toEqual([]);
   });
 
-  test("system + user are concatenated into the positional prompt", () => {
-    const args = buildOpencodeArgs({ system: "Be terse", user: "ping" });
-    const prompt = args[args.length - 1];
+  test("system + user are concatenated into the stdin prompt", () => {
+    const prompt = buildCliPrompt({ system: "Be terse", user: "ping" });
     expect(prompt).toContain("Be terse");
     expect(prompt).toContain("ping");
     expect(prompt.indexOf("Be terse")).toBeLessThan(prompt.indexOf("ping"));
   });
 
-  test("jsonSchema instruction is appended to the prompt", () => {
+  test("jsonSchema instruction is appended to the stdin prompt", () => {
     const schema = { type: "object", properties: { x: { type: "string" } } };
-    const args = buildOpencodeArgs({ user: "rate this", jsonSchema: schema });
-    const prompt = args[args.length - 1];
+    const prompt = buildCliPrompt({ user: "rate this", jsonSchema: schema });
     expect(prompt).toContain("'type':'object'");
     expect(prompt.toLowerCase()).toContain("json");
   });

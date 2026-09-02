@@ -158,7 +158,7 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
     const bin = getCodexBinary();
     if (bin) {
       logDebug("inference", `${tag} route=codex-spawn agent=${agent}`);
-      return inferenceViaCliSpawn(bin, buildCodexArgs(opts), "", opts);
+      return inferenceViaCliSpawn(bin, buildCodexArgs(opts), buildCliPrompt(opts), opts);
     }
   }
   if (isCodex() && hasOpenAiKey()) {
@@ -172,7 +172,7 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
       return inferenceViaCliSpawn(
         bin,
         buildOpencodeArgs(opts),
-        "",
+        buildCliPrompt(opts),
         opts,
         extractOpencodeText
       );
@@ -316,18 +316,16 @@ export function buildClaudeArgs(opts: InferenceOptions): string[] {
  *   --sandbox read-only   → child cannot execute shell commands even if it tries
  *   --ephemeral           → no session persistence; one-shot only
  *
- * Codex has no --system-prompt equivalent — the full prompt is a single positional
- * argv string. We concatenate system + user + JSON-schema instruction into one
- * prompt. ARG_MAX is ~256KB on macOS; typical PAL prompts are 1-2KB.
+ * Codex has no --system-prompt equivalent, so system + user + JSON-schema become
+ * one prompt. That prompt goes in on stdin, not as a positional argument, because
+ * a PAL prompt spans several paragraphs and an argv element cannot carry a
+ * newline on Windows: Bun.spawn resolves the CLI to its .cmd shim, cmd.exe
+ * re-parses the command line, and the child exits non-zero having written
+ * nothing. Codex reads its instructions from stdin when no positional prompt is
+ * given, so this costs nothing on POSIX and is the only thing that works on
+ * Windows. Do not move the prompt back into argv.
  */
-export function buildCodexArgs(opts: InferenceOptions): string[] {
-  const parts: string[] = [];
-  if (opts.system) parts.push(opts.system);
-  parts.push(opts.user);
-  if (opts.jsonSchema) {
-    parts.push(schemaInstruction(opts.jsonSchema));
-  }
-  const prompt = parts.join("\n\n");
+export function buildCodexArgs(_opts: InferenceOptions): string[] {
   return [
     "exec",
     "--color",
@@ -338,7 +336,6 @@ export function buildCodexArgs(opts: InferenceOptions): string[] {
     "--sandbox",
     "read-only",
     "--ephemeral",
-    prompt,
   ];
 }
 
@@ -352,19 +349,14 @@ export function buildCodexArgs(opts: InferenceOptions): string[] {
  *                    text via extractOpencodeText() rather than wading through
  *                    decoration ("> build · provider/model" banner etc).
  *
- * opencode (like codex) has no --system-prompt equivalent — the full prompt is
- * the positional message argv. System + user + JSON-schema are concatenated.
- * Provider/model is left unset so opencode uses the user's configured default.
+ * opencode (like codex) has no --system-prompt equivalent, so system + user +
+ * JSON-schema are concatenated and delivered on stdin rather than as the
+ * positional message, for the same reason as codex: a multi-paragraph argv
+ * element does not survive cmd.exe on Windows. Provider/model is left unset so
+ * opencode uses the user's configured default.
  */
-export function buildOpencodeArgs(opts: InferenceOptions): string[] {
-  const parts: string[] = [];
-  if (opts.system) parts.push(opts.system);
-  parts.push(opts.user);
-  if (opts.jsonSchema) {
-    parts.push(schemaInstruction(opts.jsonSchema));
-  }
-  const prompt = parts.join("\n\n");
-  return ["run", "--pure", "--format", "json", prompt];
+export function buildOpencodeArgs(_opts: InferenceOptions): string[] {
+  return ["run", "--pure", "--format", "json"];
 }
 
 /**
@@ -474,6 +466,15 @@ function schemaForPrompt(schema: Record<string, unknown>): string {
 /** The one instruction line that asks a CLI agent for schema-shaped JSON. */
 export function schemaInstruction(schema: Record<string, unknown>): string {
   return `Respond with ONLY a JSON value matching this schema (no prose, no markdown): ${schemaForPrompt(schema)}`;
+}
+
+/** system + user + schema instruction, the single prompt a CLI agent receives. */
+export function buildCliPrompt(opts: InferenceOptions): string {
+  const parts: string[] = [];
+  if (opts.system) parts.push(opts.system);
+  parts.push(opts.user);
+  if (opts.jsonSchema) parts.push(schemaInstruction(opts.jsonSchema));
+  return parts.join("\n\n");
 }
 
 /** Append a JSON-schema instruction to the system prompt (PAI pattern). */

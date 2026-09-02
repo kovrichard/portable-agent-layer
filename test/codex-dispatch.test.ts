@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
   _resetCodexBinaryCache,
+  buildCliPrompt,
   buildCodexArgs,
   hasOpenAiKey,
   inference,
@@ -52,23 +53,24 @@ describe("buildCodexArgs", () => {
     expect(buildCodexArgs({ user: "hi" })).not.toContain("--ask-for-approval");
   });
 
-  test("user prompt is the last positional argument", () => {
-    const args = buildCodexArgs({ user: "summarize this" });
-    expect(args[args.length - 1]).toBe("summarize this");
+  // The prompt travels on stdin, never in argv: a multi-paragraph argv element
+  // cannot survive cmd.exe when Bun.spawn resolves codex to its Windows .cmd shim.
+  test("no argv element carries the prompt or a newline", () => {
+    const args = buildCodexArgs({ system: "Be terse", user: "summarize this" });
+    expect(args).not.toContain("summarize this");
+    expect(args.filter((a) => a.includes("\n"))).toEqual([]);
   });
 
-  test("system + user are concatenated into the positional prompt", () => {
-    const args = buildCodexArgs({ system: "Be terse", user: "ping" });
-    const prompt = args[args.length - 1];
+  test("system + user are concatenated into the stdin prompt", () => {
+    const prompt = buildCliPrompt({ system: "Be terse", user: "ping" });
     expect(prompt).toContain("Be terse");
     expect(prompt).toContain("ping");
     expect(prompt.indexOf("Be terse")).toBeLessThan(prompt.indexOf("ping"));
   });
 
-  test("jsonSchema instruction is appended to the prompt", () => {
+  test("jsonSchema instruction is appended to the stdin prompt", () => {
     const schema = { type: "object", properties: { x: { type: "string" } } };
-    const args = buildCodexArgs({ user: "rate this", jsonSchema: schema });
-    const prompt = args[args.length - 1];
+    const prompt = buildCliPrompt({ user: "rate this", jsonSchema: schema });
     expect(prompt).toContain("'type':'object'");
     expect(prompt.toLowerCase()).toContain("json");
   });
@@ -127,8 +129,14 @@ describe("inference dispatcher — codex spawn integration (fake binary)", () =>
     _resetCodexBinaryCache();
   });
 
-  test("end-to-end: fake codex prints argv-tail (the prompt), dispatcher captures it", async () => {
-    writeFakeBin(tmpBin, "codex", `console.log(Bun.argv[Bun.argv.length - 1]);\n`);
+  test("end-to-end: fake codex echoes stdin (the prompt), dispatcher captures it", async () => {
+    // Reads stdin rather than argv: that is where the prompt now travels, so
+    // this fails if the prompt ever moves back into a positional argument.
+    writeFakeBin(
+      tmpBin,
+      "codex",
+      `for await (const c of Bun.stdin.stream()) Bun.write(Bun.stdout, c);\n`
+    );
     prependPath(tmpBin);
 
     const result = await inference({ user: "hello-codex", timeout: 5000 });
