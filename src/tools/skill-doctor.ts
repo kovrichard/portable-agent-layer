@@ -12,6 +12,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, extname, relative, resolve } from "node:path";
 import { palHome } from "../hooks/lib/paths";
+import { declaredTriggers } from "../hooks/lib/skill-triggers";
 
 type Level = "pass" | "warn" | "error";
 
@@ -33,13 +34,20 @@ interface ParsedSkill {
   name: string | null;
   description: string | null;
   descriptionQuoted: boolean;
+  triggers: string[];
+  shipped: boolean;
+  license: string | null;
+  derivedFrom: string | null;
   body: string;
 }
+
+const SHIPPED_SOURCE = "portable-agent-layer";
 
 const RESERVED_WORDS = ["anthropic", "claude"];
 const MAX_NAME = 64;
 const MAX_DESCRIPTION = 1024;
 const MAX_BODY_LINES = 500;
+const MIN_TRIGGERS = 3;
 
 /** File extensions worth scanning for hardcoded paths (SKILL.md + its scripts). */
 const SCANNABLE_EXT = new Set([".md", ".ts", ".js", ".mjs", ".cjs", ".sh", ".py"]);
@@ -83,7 +91,16 @@ function findAbsolutePaths(skillDir: string): string[] {
 function parseSkill(content: string): ParsedSkill {
   const parts = content.split(/^---\s*$/m);
   if (parts.length < 3) {
-    return { name: null, description: null, descriptionQuoted: false, body: content };
+    return {
+      name: null,
+      description: null,
+      descriptionQuoted: false,
+      triggers: [],
+      shipped: false,
+      license: null,
+      derivedFrom: null,
+      body: content,
+    };
   }
   const frontmatter = parts[1];
   const body = parts.slice(2).join("---");
@@ -95,7 +112,46 @@ function parseSkill(content: string): ParsedSkill {
     rawDescription.startsWith('"') &&
     rawDescription.endsWith('"');
   const description = descriptionQuoted ? rawDescription.slice(1, -1) : rawDescription;
-  return { name, description, descriptionQuoted, body };
+  return {
+    name,
+    description,
+    descriptionQuoted,
+    triggers: declaredTriggers(frontmatter),
+    shipped: metadataField(frontmatter, "source") === SHIPPED_SOURCE,
+    license: topLevelField(frontmatter, "license"),
+    derivedFrom: metadataField(frontmatter, "derived-from"),
+    body,
+  };
+}
+
+/** Value of a top-level `key:` line in the frontmatter, unquoted. */
+function topLevelField(frontmatter: string, key: string): string | null {
+  return (
+    new RegExp(String.raw`^${key}:\s*"?(.+?)"?\s*$`, "m").exec(frontmatter)?.[1] ?? null
+  );
+}
+
+/** Value of an indented `key:` line under the `metadata:` block, unquoted. */
+function metadataField(frontmatter: string, key: string): string | null {
+  return (
+    new RegExp(String.raw`^[ \t]+${key}:\s*"?(.+?)"?\s*$`, "m").exec(frontmatter)?.[1] ??
+    null
+  );
+}
+
+/** Render triggers for a report line: `"a", "b"` or `"a" then "b"`. */
+function quoteList(triggers: string[], separator: string): string {
+  return triggers.map((trigger) => `"${trigger}"`).join(separator);
+}
+
+/**
+ * The triggers every skill must declare first: its own name, then the
+ * de-hyphenated form a user would actually type. A single-word name has only
+ * the one form, and the parser dedupes anyway, so it requires just itself.
+ */
+function leadTriggers(name: string): string[] {
+  const spaced = name.replaceAll("-", " ");
+  return spaced === name ? [name] : [name, spaced];
 }
 
 /** Remove fenced and inline code so prose checks don't trip on examples. */
@@ -134,9 +190,29 @@ export function lintSkill(skillDir: string): DoctorReport {
         `skill file is "${skillFile}" — must be exactly "SKILL.md" or the skill is silently ignored`
       );
 
-  const { name, description, descriptionQuoted, body } = parseSkill(
-    readFileSync(resolve(skillDir, skillFile), "utf-8")
-  );
+  const {
+    name,
+    description,
+    descriptionQuoted,
+    triggers,
+    shipped,
+    license,
+    derivedFrom,
+    body,
+  } = parseSkill(readFileSync(resolve(skillDir, skillFile), "utf-8"));
+
+  // ── provenance (shipped skills only) ──
+  if (shipped) {
+    if (license) add("pass", "license", `licensed ${license}`);
+    else if (derivedFrom)
+      add("pass", "license", `unlicensed by design — derived from ${derivedFrom}`);
+    else
+      add(
+        "warn",
+        "license",
+        "shipped skill declares no license — add `license: MIT`, or `metadata.derived-from: <origin>` when the idea comes from another project"
+      );
+  }
 
   // The runtime keys a skill by its folder name; a mismatched frontmatter `name`
   // makes the skill silently fail to load.
@@ -216,6 +292,37 @@ export function lintSkill(skillDir: string): DoctorReport {
           "reads first/second person — write descriptions in third person (e.g. 'Processes…', 'Generates…')"
         )
       : add("pass", "description.pov", "third person");
+  }
+
+  // ── triggers ──
+  if (triggers.length === 0) {
+    add(
+      "warn",
+      "metadata.triggers",
+      "no metadata.triggers declared — add the words and phrases a prompt would contain so the prompt-time matcher can surface this skill; without them it falls back to keywords mined from the description"
+    );
+  } else if (triggers.length < MIN_TRIGGERS) {
+    add(
+      "warn",
+      "metadata.triggers",
+      `only ${triggers.length} trigger(s) declared — aim for at least ${MIN_TRIGGERS}, mostly multi-word phrases`
+    );
+  } else {
+    add("pass", "metadata.triggers", `${triggers.length} triggers declared`);
+  }
+
+  if (name && triggers.length > 0) {
+    const lead = leadTriggers(name);
+    const actual = triggers.slice(0, lead.length);
+    const wanted = quoteList(lead, " then ");
+    const found = quoteList(actual, ", ") || "nothing";
+    actual.join("\u0000") === lead.join("\u0000")
+      ? add("pass", "metadata.triggers.lead", `leads with ${wanted}`)
+      : add(
+          "warn",
+          "metadata.triggers.lead",
+          `triggers must lead with ${wanted} — found ${found}`
+        );
   }
 
   // ── body ──
@@ -299,6 +406,24 @@ export function lintSkill(skillDir: string): DoctorReport {
 }
 
 /** Render a report as a human-readable string. */
+/** One scannable line per skill for a whole-store run: verdict plus the checks that fired. */
+export function formatSummary(r: DoctorReport): string {
+  const fired = (level: Level) =>
+    r.findings.filter((f) => f.level === level).map((f) => f.check);
+  // The folder name, not the frontmatter name — the folder is what the reader
+  // passes back to `pal cli skill doctor <name>`, and a mismatch between the two
+  // is itself one of the errors this line reports.
+  const name = basename(r.dir).padEnd(20);
+
+  if (r.errors > 0) {
+    return `✗ ${name} ${r.errors} error(s): ${fired("error").join(", ")}`;
+  }
+  if (r.warnings > 0) {
+    return `⚠ ${name} ${r.warnings} warning(s): ${fired("warn").join(", ")}`;
+  }
+  return `✓ ${name} clean`;
+}
+
 export function formatReport(r: DoctorReport): string {
   const icon = { pass: "✓", warn: "⚠", error: "✗" } as const;
   const lines = [`skill-doctor: ${r.name ?? "(unparsed)"}  —  ${r.dir}`];

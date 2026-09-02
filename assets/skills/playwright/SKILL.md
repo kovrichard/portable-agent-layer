@@ -1,7 +1,20 @@
 ---
 name: playwright
+license: MIT
 description: "Capture a screenshot of a URL or local page and load it into context for a visual check. Use when asked to check visually, use playwright, screenshot a page, see or look at the design yourself, or verify a layout on desktop and mobile widths."
 argument-hint: <url> [--viewport WxH] [--full-page] [--selector <css>]
+metadata:
+  source: portable-agent-layer
+  triggers:
+    - "playwright"
+    - "screenshot"
+    - "check visually"
+    - "look at the design"
+    - "look at this"
+    - "check yourself"
+    - "verify the layout"
+    - "responsive"
+    - "browser check"
 ---
 
 ## Overview

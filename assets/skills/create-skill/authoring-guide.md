@@ -12,7 +12,7 @@ the single source of truth for skill quality.
 
 3. **Concise and concrete.** Assume the model is already smart — only add what it doesn't already know. Every step has a verb and an object; no "as needed" or "appropriately." Keep the SKILL.md body well under 500 lines; push long reference material into sibling files linked one level deep.
 
-4. **Self-contained and portable.** Everything the skill needs lives inside its own folder — `SKILL.md` plus a `tools/` subdir for scripts and any reference files — so it travels intact on export/import. Don't reach into sibling skills or reference files outside the folder. Prefer `$HOME`/`~` or an env var over a hardcoded absolute path like `/Users/you/…` so the skill still works on another machine; `pal cli skill doctor` warns (never errors) on machine-specific absolute paths.
+4. **Self-contained and portable.** Everything the skill needs lives inside its own folder — `SKILL.md` plus a `tools/` subdir for scripts and any reference files — so it travels intact on export/import. Don't reach into sibling skills or reference files outside the folder. Prefer `$HOME`/`~` or an env var over a hardcoded absolute path like `/Users/you/…` so the skill still works on another machine; `pal cli skill doctor` warns (never errors) on machine-specific absolute paths; `pal cli skill doctor --all` lints every installed skill at once, one line each.
 
 A personal skill **may** contain this user's own context — their paths, project names, preferences, conventions. That is the point of a personal skill; portability (rule 4) is a preference, not a hard rule — a deliberate machine-specific mount is fine.
 
@@ -23,6 +23,11 @@ A personal skill **may** contain this user's own context — their paths, projec
 name: <slug>                           # the slash-command name; lowercase-kebab
 description: <what it does + WHEN to invoke>   # the dispatcher matches on this
 argument-hint: <args>                  # optional; how the user passes input
+metadata:                              # free-form map; the only key Anthropic's
+  triggers:                            # spec reserves for third-party tooling
+    - "<skill-name>"                   # always first
+    - "<skill name>"                   # always second, hyphens as spaces
+    - "<word or phrase a prompt would contain>"
 ---
 
 ## Overview / Workflow
@@ -39,6 +44,10 @@ Two short lists; the "do not" list disambiguates this skill from neighbours.
 ```
 
 The `description` should state **both what the skill does and when to invoke it**, in third person, with the trigger terms a model would match on. A vague description ("helps with documents") will not trigger reliably.
+
+`metadata.triggers` lists the literal words and phrases a prompt would contain when the user wants this skill. They are indexed into `skill-index.json`, and the prompt-submit hook injects a "Potential matching skills" hint whenever one appears in a prompt — a second chance for the skill to be noticed when the description alone didn't fire. Write 4-8: mostly multi-word phrases (they score higher than single words), plus a distinctive term or two, and nothing so common it fires on unrelated prompts. Only `name`, `description`, `license`, `allowed-tools`, `metadata`, and `compatibility` are valid frontmatter keys, so triggers live under `metadata`, never at the top level.
+
+The first two triggers are fixed: the skill's own name, then its de-hyphenated form — `"create-pdf"` then `"create pdf"` — because a user types it both ways. A single-word name has only the one form, so it needs just itself. The doctor warns when they are missing or out of order.
 
 ## Hand-checks the doctor can't judge
 

@@ -2,6 +2,13 @@
 name: eval-prompt
 description: Evaluate a PAL inference prompt using the promptfoo harness in eval/. Use when a prompt constant in src/ has changed or may have regressed, when scaffolding a new prompt eval from scratch, or when comparing a v2 candidate against the current baseline.
 argument-hint: <prompt-name> [promptfoo-flags]
+metadata:
+  triggers:
+    - "eval-prompt"
+    - "eval prompt"
+    - "promptfoo"
+    - "prompt regression"
+    - "prompt eval"
 ---
 
 # eval-prompt

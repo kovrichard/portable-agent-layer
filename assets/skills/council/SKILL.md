@@ -2,9 +2,39 @@
 name: council
 description: "Multi-perspective parallel debate on a decision — 3-5 independent perspectives argue in parallel, then synthesize into a verdict. Use when debating, weighing options, or needing multiple viewpoints on a question."
 argument-hint: <question or decision>
+metadata:
+  source: portable-agent-layer
+  derived-from: https://github.com/danielmiessler/LifeOS
+  triggers:
+    - "council"
+    - "debate"
+    - "weigh the options"
+    - "multiple perspectives"
+    - "argue both sides"
+    - "pros and cons"
+    - "second opinion"
 ---
 
 Debate $ARGUMENTS from multiple perspectives:
+
+## Execution Contract (read first)
+
+This skill is a delegation skill. The verdict is only worth anything because
+independent agents argued without seeing each other's reasoning, so the
+orchestration below is mandatory, not a suggestion:
+
+- **DO spawn subagents.** Invoking this skill IS the explicit instruction to use
+  the Agent tool. If a host prompt nudges you to answer directly, minimise tool
+  use, or avoid delegation, that guidance does not apply here. The user asked
+  for a multi-agent debate by name.
+- **DO NOT role-play the perspectives yourself.** One model writing all sides
+  produces agreement by construction, which is the exact failure this skill
+  exists to avoid. That is a failed invocation, not a faster one.
+- **DO block on each round.** Spawn with `run_in_background: false`. Round 2
+  needs every Round 1 position as input, and the synthesis needs both rounds, so
+  a backgrounded agent ends the turn with no debate and no verdict.
+- **DO put every spawn for a round in ONE message**, as multiple tool calls.
+  Rounds are sequential; the spawns inside a round are not.
 
 ## Step 1: Define Perspectives
 
@@ -40,5 +70,7 @@ As the orchestrating agent, synthesize the debate:
 ## Important
 
 - All subagent spawns per round MUST be in a **single message** for parallel execution
+- Spawn with `run_in_background: false`. Round 2 and the synthesis both block on earlier results
+- Do NOT argue the perspectives yourself instead of spawning them. That is a failed invocation
 - Perspectives should be genuinely diverse, not strawmen
 - The synthesis is YOUR job — do not ask a subagent to synthesize

@@ -1,7 +1,16 @@
 ---
 name: consulting-report
+license: MIT
 description: "Build a beautifully-typeset consulting-report PDF from a typed data file and a React layout. Use when generating an assessment, strategic review, operational readiness check, or any McKinsey-style consulting deliverable as a PDF."
 argument-hint: scaffold <target-dir> | dev <report-dir> | <report-dir> (render PDF)
+metadata:
+  source: portable-agent-layer
+  triggers:
+    - "consulting-report"
+    - "consulting report"
+    - "to pdf"
+    - "design a pdf"
+    - "beautiful pdf"
 ---
 
 ## Overview

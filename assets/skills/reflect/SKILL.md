@@ -1,7 +1,20 @@
 ---
 name: reflect
+license: MIT
 description: "Diagnose why a PAL behavior did not trigger as expected — trace hooks, instructions, and logic to find the gap. Use when a hook, skill, or automation didn't fire or behaved unexpectedly."
 argument-hint: <what went wrong>
+metadata:
+  source: portable-agent-layer
+  triggers:
+    - "reflect"
+    - "didn't fire"
+    - "didn't trigger"
+    - "didn't run"
+    - "why didn't"
+    - "not triggering"
+    - "never fired"
+    - "should have fired"
+    - "behaved unexpectedly"
 ---
 
 When the user invokes `/reflect [optional: description of what didn't happen]`:

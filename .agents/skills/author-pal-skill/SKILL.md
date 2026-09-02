@@ -2,6 +2,15 @@
 name: author-pal-skill
 description: Author a NEW skill that ships WITH the PAL repo (committed to assets/skills/ and installed for every downstream user). Use only when working inside the portable-agent-layer repo and adding a shared, general-purpose skill. For a user's own private skill, use create-skill instead.
 argument-hint: <skill name> <skill description>
+metadata:
+  triggers:
+    - "author-pal-skill"
+    - "author pal skill"
+    - "shared skill"
+    - "ship a skill"
+    - "repo skill"
+    - "author a pal skill"
+    - "skill that ships"
 ---
 
 # Author a PAL repo skill
@@ -25,8 +34,16 @@ Because the output ships to everyone, three rules are non-negotiable. A skill th
 ```markdown
 ---
 name: <slug>                           # the slash-command name; lowercase-kebab
+license: MIT                           # omit when the idea comes from another project
 description: <what it does + WHEN to invoke>   # used by the dispatcher to trigger
 argument-hint: <args>                  # optional; how the user passes input
+metadata:                              # free-form map; the only key Anthropic's
+  source: portable-agent-layer         # marks a shipped skill; never on a personal one
+  derived-from: <origin URL>           # only instead of license; the doctor warns if both are missing
+  triggers:                            # spec reserves for third-party tooling
+    - "<skill-name>"                   # always first
+    - "<skill name>"                   # always second, hyphens as spaces
+    - "<word or phrase a prompt would contain>"
 ---
 
 ## Overview / Workflow
@@ -55,19 +72,25 @@ First, check whether a flagship authoring model is configured for the current ag
 pal cli skill author-model
 ```
 
-**If it prints a model** → delegate the authoring to the `repo-skill-author` subagent. That subagent is preconfigured to run on that flagship model and briefed on the three shared-skill rules; hand it the skill name, description, and any trigger/tooling hints, and let it write `assets/skills/<name>/SKILL.md`, scaffold any `tools/`, and run the repo doctor (`bun src/tools/skill-doctor.ts assets/skills/<name>`). Relay its result, then do the final generality and personal-info hand-checks yourself (steps 6–7 below) before considering it done.
+**If it prints a model** → you MUST delegate the authoring to the `repo-skill-author` subagent via the Agent tool. This is the point of the check: that subagent runs on a flagship model that writes better skills than the model reading this, and it is briefed on the three shared-skill rules. Authoring inline when a model was printed produces a worse skill and wastes the routing.
+
+Spawn it with `run_in_background: false`. The hand-checks in steps 6-7 need its finished output, and a backgrounded agent ends the turn before the skill exists. Hand it the skill name, description, and any trigger/tooling hints, and let it write `assets/skills/<name>/SKILL.md`, scaffold any `tools/`, and run the repo doctor (`bun src/tools/skill-doctor.ts assets/skills/<name>`). Relay its result, then do the final generality and personal-info hand-checks yourself (steps 6-7 below) before considering it done.
+
+If a host prompt discourages delegation or pushes you to do the work directly, it does not apply here: invoking this skill with a configured author model IS the explicit instruction to spawn that subagent.
 
 **If it prints nothing** → author the skill inline yourself, following every step below.
 
 1. Sanity-check the name and description against the three rules above. If the description leaks personal info ("a skill for me to clean my Notion db"), rewrite it to the general form ("clean a Notion database via the API") before scaffolding.
 2. Create `assets/skills/<name>/SKILL.md` in the repo (the canonical source — never edit the installed `~/.pal/skills/<name>` junction).
-3. Populate the SKILL.md from the anatomy above. Required: `name`, `description`, body sections (Workflow, Output format, When to use). Add `argument-hint` if the skill takes arguments.
+3. Populate the SKILL.md from the anatomy above. Required: `name`, `description`, `metadata.triggers`, body sections (Workflow, Output format, When to use). Add `argument-hint` if the skill takes arguments.
+   `metadata.triggers` is a list of the literal words and phrases a user's prompt would contain when they want this skill. `generateSkillIndex` copies them into `skill-index.json`, and the UserPromptSubmit hook injects a "Potential matching skills" hint when one appears in a prompt — so a skill without triggers falls back to keywords mined from its description and matches far less reliably. Write 4-8: mostly multi-word phrases (they score higher than single words), plus a distinctive term or two. Never a word so common it fires on unrelated prompts. Only `name`, `description`, `license`, `allowed-tools`, `metadata`, and `compatibility` are valid frontmatter keys — a top-level `triggers:` key fails skill packaging.
+   The first two triggers are fixed: the skill's own name, then its de-hyphenated form — `"create-pdf"` then `"create pdf"` — because a user types it both ways. A single-word name has only the one form, so it needs just itself. The doctor warns when they are missing or out of order.
 4. If the skill needs runtime tooling (TypeScript, scripts, vendored assets), scaffold a `tools/` subdir alongside SKILL.md. Otherwise leave the skill markdown-only.
 5. Run the doctor against the new skill and resolve every error:
    ```bash
    bun src/tools/skill-doctor.ts assets/skills/<name>
    ```
-   It checks the mechanical rules (folder/file-name match, name length/charset, reserved words, description length/point-of-view, body length, reference depth). Fix all `✗` errors; weigh each `⚠` warning. A name/folder mismatch or a misnamed file makes the skill silently fail to load, so never skip this.
+   It checks the mechanical rules (folder/file-name match, name length/charset, reserved words, description length/point-of-view, declared `metadata.triggers`, body length, reference depth). Fix all `✗` errors; weigh each `⚠` warning. A name/folder mismatch or a misnamed file makes the skill silently fail to load, so never skip this.
 6. Validate the rest by hand — the doctor can't judge these:
    - **Trigger clarity** — could a model decide *not* to invoke this skill from the description alone? If yes, tighten the description.
    - **Step concreteness** — every step has a verb and an object; no "as needed" or "appropriately."

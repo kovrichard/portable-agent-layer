@@ -1,7 +1,18 @@
 ---
 name: analyze-pdf
+license: MIT
 description: "Download and analyze PDF files from URLs or local paths — extract text, answer questions, summarize content. Use when analyzing, reading, or extracting information from a PDF."
 argument-hint: <URL or file path>
+metadata:
+  source: portable-agent-layer
+  triggers:
+    - "analyze-pdf"
+    - "analyze pdf"
+    - "read this pdf"
+    - "analyze this pdf"
+    - "analyze the pdf"
+    - "summarize this pdf"
+    - "parse this pdf"
 ---
 
 When the user asks to analyze, read, or extract information from a PDF:

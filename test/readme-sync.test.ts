@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { validateReadmeSync } from "../src/hooks/lib/readme-sync";
+import { shippedSkillNames, validateReadmeSync } from "../src/hooks/lib/readme-sync";
 
 describe("README sync", () => {
   test("README documents all CLI commands", () => {
@@ -28,5 +28,19 @@ describe("README sync", () => {
       );
     }
     expect(result.ok).toBe(true);
+  });
+});
+
+describe("skill extraction", () => {
+  test("finds the shipped skills", () => {
+    // Skills are directories holding a SKILL.md, not loose .md files. An empty
+    // list here means the skills check passes vacuously and never sees drift.
+    expect(shippedSkillNames().length).toBeGreaterThan(10);
+    expect(shippedSkillNames()).toContain("humanize");
+  });
+
+  test("flags a README row naming a skill that no longer ships", () => {
+    const issues = validateReadmeSync().issues.filter((i) => i.includes("no longer"));
+    expect(issues).toEqual([]);
   });
 });

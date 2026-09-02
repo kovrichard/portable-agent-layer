@@ -10,14 +10,16 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  readlinkSync,
   rmSync,
   symlinkSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { resolve } from "node:path";
+import { dirname, resolve, sep } from "node:path";
 import { assets, palHome, platform } from "../hooks/lib/paths";
+import { declaredTriggers } from "../hooks/lib/skill-triggers";
 
 // --- Colored logging ---
 
@@ -775,6 +777,10 @@ export function copySkills(claudeSkillsDir: string): number {
   const linkType = process.platform === "win32" ? "junction" : "dir";
   let count = 0;
 
+  for (const name of pruneStaleSkillLinks(claudeSkillsDir)) {
+    log.info(`Removed stale skill link: ${name}`);
+  }
+
   for (const name of readdirSync(skillsDir)) {
     const srcDir = resolve(skillsDir, name);
     if (!existsSync(resolve(srcDir, "SKILL.md"))) continue;
@@ -795,6 +801,55 @@ export function copySkills(claudeSkillsDir: string): number {
   ensureSymlink(resolve(platform.agentsDir(), "skills"), PAL_SKILLS_DIR, linkType);
 
   return count;
+}
+
+/** True when `link` is a symlink whose target no longer exists. */
+function isDanglingSymlink(link: string): boolean {
+  try {
+    return lstatSync(link).isSymbolicLink() && !existsSync(link);
+  } catch {
+    return false;
+  }
+}
+
+/** True when the symlink at `link` points at `root` or somewhere beneath it. */
+function symlinkPointsInto(link: string, root: string): boolean {
+  try {
+    const target = resolve(dirname(link), readlinkSync(link));
+    return target === root || target.startsWith(root + sep);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Remove discovery links left behind when a shipped skill is renamed or
+ * retired. Ownership is read from where a link points, not from metadata:
+ * a dead link has no SKILL.md to read, but its target path still says
+ * whether PAL created it.
+ *
+ *   ~/.pal/skills/<name>   → pruned when dangling and pointing into assets/skills/
+ *   <agent>/skills/<name>  → pruned when dangling and pointing into ~/.pal/skills/
+ *
+ * Personal skills are real directories, so they are never candidates, and a
+ * user's own symlinks to anywhere else are left alone even when broken.
+ */
+function pruneStaleSkillLinks(agentSkillsDir: string): string[] {
+  const ownedTrees = [
+    { dir: PAL_SKILLS_DIR, root: assets.skills() },
+    { dir: agentSkillsDir, root: PAL_SKILLS_DIR },
+  ];
+  const removed: string[] = [];
+  for (const { dir, root } of ownedTrees) {
+    if (!existsSync(dir)) continue;
+    for (const name of readdirSync(dir)) {
+      const link = resolve(dir, name);
+      if (!isDanglingSymlink(link) || !symlinkPointsInto(link, root)) continue;
+      unlinkSync(link);
+      removed.push(name);
+    }
+  }
+  return removed;
 }
 
 /**
@@ -1319,7 +1374,7 @@ interface SkillIndex {
   skills: Record<string, SkillIndexEntry>;
 }
 
-/** Extract trigger keywords from a skill description */
+/** Fallback triggers for a skill that declares none: keywords mined from its description. */
 function extractTriggers(description: string): string[] {
   // Extract "Use when ..." phrases and key terms
   const triggers = new Set<string>();
@@ -1378,10 +1433,12 @@ export function generateSkillIndex(): number {
       const skillName = nameMatch[1].trim();
       const description = descMatch?.[1]?.trim() ?? "";
 
+      const declared = declaredTriggers(fm);
+
       index.skills[skillName] = {
         name: skillName,
         description,
-        triggers: extractTriggers(description),
+        triggers: declared.length > 0 ? declared : extractTriggers(description),
       };
       index.totalSkills++;
     } catch {

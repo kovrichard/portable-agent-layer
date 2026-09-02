@@ -27,6 +27,7 @@
     "handoff": true,
     "selfModel": true,
     "contextualSteering": true,
+    "skillMatching": true,
     "steeringTestReport": false
   },
   "steering": {

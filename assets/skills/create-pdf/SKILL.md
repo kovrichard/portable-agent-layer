@@ -1,7 +1,20 @@
 ---
 name: create-pdf
+license: MIT
 description: "Convert markdown files into a styled PDF. Use when creating a PDF from existing markdown files, combining markdown into a report, or converting .md to .pdf."
 argument-hint: <file paths, glob pattern, or directory containing .md files>
+metadata:
+  source: portable-agent-layer
+  triggers:
+    - "create-pdf"
+    - "create pdf"
+    - "create a pdf"
+    - "make a pdf"
+    - "markdown to pdf"
+    - "convert to pdf"
+    - "export as pdf"
+    - "a new pdf"
+    - "to pdf"
 ---
 
 ## Overview

@@ -1,6 +1,17 @@
 ---
 name: opinion
+license: MIT
 description: "Opinion tracker for relationship notes. PROACTIVE: When the user confirms a preference ('yes exactly', 'keep doing that'), contradicts one ('no, don't do that', 'stop'), or you observe a recurring behavioral pattern — invoke this to update opinion confidence."
+metadata:
+  source: portable-agent-layer
+  triggers:
+    - "opinion"
+    - "keep doing that"
+    - "stop doing that"
+    - "never do that"
+    - "yes exactly"
+    - "stop doing that"
+    - "my preference"
 ---
 
 # Opinion Tracker

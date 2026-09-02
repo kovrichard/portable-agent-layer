@@ -12,6 +12,7 @@ import { logDebug, logError } from "../lib/log";
 import { runRetrieval } from "../lib/retrieval";
 import { ensureIndex } from "../lib/retrieval-index";
 import { isEnabled } from "../lib/settings";
+import { getSkillReminder } from "../lib/skill-match";
 import { getSteeringReminder } from "../lib/steering";
 
 const BUDGET_MS = 250;
@@ -35,7 +36,8 @@ export function withinBudget<T>(work: () => T, ms: number): T | null {
   }
 }
 
-/** Returns the retrieval reminder string, or null if nothing to inject. @lintignore dynamically imported by opencode plugin */
+/** Returns the retrieval reminder string, or null if nothing to inject.
+ *  @lintignore exercised directly by test/inject-retrieval.test.ts */
 export async function getRetrievalReminder(prompt: string): Promise<string | null> {
   if (!prompt?.trim()) return null;
   if (!isEnabled("learningInjection")) return null;
@@ -77,15 +79,23 @@ function writeForAgent(reminder: string): void {
   }
 }
 
-/** Gather all prompt-time context — prior-lesson retrieval + contextual steering —
- *  merge into a single payload, and do the one per-agent write. Returns the combined
- *  reminder that was injected, or null if there was nothing to inject. */
+/** Merge every prompt-time source — contextual steering, skill matches, prior-lesson
+ *  retrieval — into one payload, or null when none of them produced anything.
+ *  @lintignore dynamically imported by opencode plugin */
+export async function getPromptContext(prompt: string): Promise<string | null> {
+  const parts = [
+    getSteeringReminder(prompt),
+    getSkillReminder(prompt),
+    await getRetrievalReminder(prompt),
+  ].filter((p): p is string => Boolean(p));
+
+  return parts.length > 0 ? parts.join("\n\n") : null;
+}
+
+/** Gather all prompt-time context and do the one per-agent write. Returns the
+ *  combined reminder that was injected, or null if there was nothing to inject. */
 export async function injectPromptContext(prompt: string): Promise<string | null> {
-  const retrieval = await getRetrievalReminder(prompt);
-  const steering = getSteeringReminder(prompt);
-  const parts = [steering, retrieval].filter((p): p is string => Boolean(p));
-  if (parts.length === 0) return null;
-  const combined = parts.join("\n\n");
-  writeForAgent(combined);
+  const combined = await getPromptContext(prompt);
+  if (combined) writeForAgent(combined);
   return combined;
 }

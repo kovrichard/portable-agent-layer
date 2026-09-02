@@ -2,6 +2,14 @@
 name: first-principles
 description: "Break down a problem to its fundamental constraints and build up a solution. Use when decomposing complexity, challenging assumptions, or finding root causes."
 argument-hint: <problem>
+metadata:
+  source: portable-agent-layer
+  derived-from: https://github.com/danielmiessler/LifeOS
+  triggers:
+    - "first-principles"
+    - "first principles"
+    - "root cause"
+    - "break it down"
 ---
 
 Break down $ARGUMENTS to fundamentals:

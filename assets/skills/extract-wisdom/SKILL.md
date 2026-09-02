@@ -2,6 +2,18 @@
 name: extract-wisdom
 description: "Extract structured insights from content (articles, videos, podcasts). Use when extracting wisdom, key takeaways, or structured insights from any content."
 argument-hint: <content or URL>
+metadata:
+  source: portable-agent-layer
+  derived-from: https://github.com/danielmiessler/LifeOS
+  triggers:
+    - "extract-wisdom"
+    - "extract wisdom"
+    - "key takeaways"
+    - "insights from"
+    - "distill"
+    - "takeaways from this"
+    - "remember this"
+    - "note this"
 ---
 
 Extract structured insights from $ARGUMENTS:

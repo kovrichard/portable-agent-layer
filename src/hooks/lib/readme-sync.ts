@@ -79,15 +79,30 @@ function extractEnvVars(): string[] {
   return [...vars];
 }
 
-/** Extract skill names from assets/skills/ */
-function extractSkillNames(): string[] {
-  const pkg = palPkg();
-  const skillsDir = resolve(pkg, "assets", "skills");
+/**
+ * Names of the skills PAL ships — one directory per skill, each holding a
+ * SKILL.md. Reading the directory rather than loose `.md` files matters: the
+ * folder-per-skill layout is what the runtime loads, and matching on files
+ * silently yields nothing, which makes every skill check pass vacuously.
+ */
+export function shippedSkillNames(): string[] {
+  const skillsDir = resolve(palPkg(), "assets", "skills");
   if (!existsSync(skillsDir)) return [];
 
-  return readdirSync(skillsDir)
-    .filter((f) => f.endsWith(".md"))
-    .map((f) => f.replace(/\.md$/, ""));
+  return readdirSync(skillsDir, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && existsSync(resolve(skillsDir, e.name, "SKILL.md")))
+    .map((e) => e.name)
+    .sort();
+}
+
+/**
+ * Skill names the README's "## Skills" table claims PAL ships. Scoped to that
+ * one section: other tables list commands and agents in the same row shape, and
+ * matching them would report every command as a retired skill.
+ */
+function documentedSkillNames(readme: string): string[] {
+  const section = /^## Skills$([\s\S]*?)(?=^## )/m.exec(readme)?.[1] ?? "";
+  return Array.from(section.matchAll(/^\|\s*`([a-z0-9-]+)`\s*\|/gm), (m) => m[1]);
 }
 
 /** Validate that README.md documents all code surfaces. */
@@ -118,11 +133,16 @@ export function validateReadmeSync(): SyncResult {
     }
   }
 
-  // Check skills — just verify the count is mentioned or each name appears
-  const skills = extractSkillNames();
-  const undocumentedSkills = skills.filter((name) => !readme.includes(name));
+  // Check skills — every shipped skill has a row, and no row outlives its skill
+  const shipped = shippedSkillNames();
+  const undocumentedSkills = shipped.filter((name) => !readme.includes(name));
   if (undocumentedSkills.length > 0) {
     issues.push(`Skills not documented in README: ${undocumentedSkills.join(", ")}`);
+  }
+
+  const retired = documentedSkillNames(readme).filter((name) => !shipped.includes(name));
+  if (retired.length > 0) {
+    issues.push(`README documents skills that no longer ship: ${retired.join(", ")}`);
   }
 
   return { ok: issues.length === 0, issues };

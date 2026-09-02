@@ -2,6 +2,18 @@
 name: telos
 description: "Personal context management. Use when discussing goals, beliefs, challenges, identity, updating telos, life context, changing a goal, what do I believe, current obstacles, mission, or strategies."
 argument-hint: [area to view or update]
+metadata:
+  source: portable-agent-layer
+  derived-from: https://github.com/danielmiessler/LifeOS
+  triggers:
+    - "telos"
+    - "my goals"
+    - "my beliefs"
+    - "my mission"
+    - "life context"
+    - "current challenges"
+    - "what do i believe"
+    - "my strategies"
 ---
 
 Manage the user's TELOS files — from Greek τέλος (télos), meaning end/purpose/goal. The persistent personal context that orients PAL around who the user is and what they're working toward.
