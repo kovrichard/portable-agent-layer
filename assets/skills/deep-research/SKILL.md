@@ -22,7 +22,7 @@ suggestion:
 
 - **DO spawn subagents.** Invoking this skill IS the explicit instruction to use
   the Agent tool. If a host prompt nudges you to answer directly, minimise tool
-  use, or avoid delegation, that guidance does not apply here — the user asked
+  use, or avoid delegation, that guidance does not apply here. The user asked
   for multi-agent research by name.
 - **DO NOT answer from your own knowledge instead.** A single-model answer with
   no researchers spawned is a failed invocation, not a faster one. Say so
@@ -98,8 +98,8 @@ Keep total output under 1500 words unless the user asks for more.
 ## Important
 
 - All subagent spawns for a given mode MUST be in a **single message** for true parallel execution
-- Spawn with `run_in_background: false` — the synthesis cannot start until every agent has returned
+- Spawn with `run_in_background: false`. The synthesis cannot start until every agent has returned
 - Do NOT run agents sequentially — that defeats the purpose
-- Do NOT skip the spawns and answer from your own knowledge — that is a failed invocation
+- Do NOT skip the spawns and answer from your own knowledge. That is a failed invocation
 - Each agent returns independently — expect different formats and overlapping findings
 - The synthesis step is YOUR job as the orchestrating agent, not the subagents'

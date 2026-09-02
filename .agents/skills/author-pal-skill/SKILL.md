@@ -74,7 +74,7 @@ pal cli skill author-model
 
 **If it prints a model** → you MUST delegate the authoring to the `repo-skill-author` subagent via the Agent tool. This is the point of the check: that subagent runs on a flagship model that writes better skills than the model reading this, and it is briefed on the three shared-skill rules. Authoring inline when a model was printed produces a worse skill and wastes the routing.
 
-Spawn it with `run_in_background: false` — the hand-checks in steps 6-7 need its finished output, and a backgrounded agent ends the turn before the skill exists. Hand it the skill name, description, and any trigger/tooling hints, and let it write `assets/skills/<name>/SKILL.md`, scaffold any `tools/`, and run the repo doctor (`bun src/tools/skill-doctor.ts assets/skills/<name>`). Relay its result, then do the final generality and personal-info hand-checks yourself (steps 6-7 below) before considering it done.
+Spawn it with `run_in_background: false`. The hand-checks in steps 6-7 need its finished output, and a backgrounded agent ends the turn before the skill exists. Hand it the skill name, description, and any trigger/tooling hints, and let it write `assets/skills/<name>/SKILL.md`, scaffold any `tools/`, and run the repo doctor (`bun src/tools/skill-doctor.ts assets/skills/<name>`). Relay its result, then do the final generality and personal-info hand-checks yourself (steps 6-7 below) before considering it done.
 
 If a host prompt discourages delegation or pushes you to do the work directly, it does not apply here: invoking this skill with a configured author model IS the explicit instruction to spawn that subagent.
 
