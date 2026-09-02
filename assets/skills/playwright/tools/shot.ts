@@ -1,18 +1,17 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 // playwright skill tool: capture a screenshot of a URL and print its absolute path.
 //
 // Engine selection (see chooseTier):
 //   Tier 1 — system `playwright-cli` binary (Microsoft's stateful agent CLI), when on
 //            PATH and no exact viewport/full-page is requested.
-//   Tier 2 — PAL-installed Playwright, launched via Node. (Playwright's chromium.launch
-//            hangs under Bun on Windows — the same Node exception create-pdf relies on.)
+//   Tier 2 — PAL-installed Playwright, launched in-process.
 // If neither engine works, prints NO_PLAYWRIGHT_CLI on stderr and exits non-zero so the
 // caller (SKILL.md) can fall back to the Playwright MCP.
 //
-// pal-build:mjs — ships as a compiled shot.mjs sibling (scripts/build-skill-tools.ts).
-// Run under Node via the compiled file (a .ts under node_modules can't be type-stripped;
-// plain .mjs needs no stripping and runs on every OS, keeping the Windows fallback):
-//   node ~/.pal/skills/playwright/tools/shot.mjs <url> [opts]
+// Runs under Bun on every OS:
+//   bun ~/.pal/skills/playwright/tools/shot.ts <url> [opts]
+// It used to ship a Node-compiled .mjs sibling because chromium.launch hung under Bun on
+// Windows; bun 1.4.0 fixes that, so the Node hop and the build step are gone.
 
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
