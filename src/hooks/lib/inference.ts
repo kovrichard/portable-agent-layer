@@ -325,9 +325,7 @@ export function buildCodexArgs(opts: InferenceOptions): string[] {
   if (opts.system) parts.push(opts.system);
   parts.push(opts.user);
   if (opts.jsonSchema) {
-    parts.push(
-      `Respond with ONLY a JSON value matching this schema (no prose, no markdown): ${JSON.stringify(opts.jsonSchema)}`
-    );
+    parts.push(schemaInstruction(opts.jsonSchema));
   }
   const prompt = parts.join("\n\n");
   return [
@@ -363,9 +361,7 @@ export function buildOpencodeArgs(opts: InferenceOptions): string[] {
   if (opts.system) parts.push(opts.system);
   parts.push(opts.user);
   if (opts.jsonSchema) {
-    parts.push(
-      `Respond with ONLY a JSON value matching this schema (no prose, no markdown): ${JSON.stringify(opts.jsonSchema)}`
-    );
+    parts.push(schemaInstruction(opts.jsonSchema));
   }
   const prompt = parts.join("\n\n");
   return ["run", "--pure", "--format", "json", prompt];
@@ -396,9 +392,7 @@ export function buildCursorArgs(opts: InferenceOptions): string[] {
   if (opts.system) parts.push(opts.system);
   parts.push(opts.user);
   if (opts.jsonSchema) {
-    parts.push(
-      `Respond with ONLY a JSON value matching this schema (no prose, no markdown): ${JSON.stringify(opts.jsonSchema)}`
-    );
+    parts.push(schemaInstruction(opts.jsonSchema));
   }
   const prompt = parts.join("\n\n");
   return ["-p", "--mode", "ask", "--output-format", "text", "--trust", prompt];
@@ -425,9 +419,7 @@ export function buildCopilotArgs(opts: InferenceOptions): string[] {
   if (opts.system) parts.push(opts.system);
   parts.push(opts.user);
   if (opts.jsonSchema) {
-    parts.push(
-      `Respond with ONLY a JSON value matching this schema (no prose, no markdown): ${JSON.stringify(opts.jsonSchema)}`
-    );
+    parts.push(schemaInstruction(opts.jsonSchema));
   }
   const prompt = parts.join("\n\n");
   return [
@@ -465,12 +457,31 @@ export function extractOpencodeText(rawStdout: string): string {
   return texts.join("").trim();
 }
 
+/**
+ * Render a JSON schema for a prompt without double quotes.
+ *
+ * Bun.spawn resolves an agent CLI on Windows to its `.cmd` shim, which npm
+ * installs it as, and cmd.exe re-parses the command line it is handed. A double
+ * quote inside an argv element does not survive that round trip: the child exits
+ * non-zero having written nothing, so the dispatcher sees an empty abort and
+ * gives up. Single quotes carry the same shape to a model and are inert to
+ * cmd.exe, so the schema travels intact on every platform.
+ */
+function schemaForPrompt(schema: Record<string, unknown>): string {
+  return JSON.stringify(schema).replaceAll('"', "'");
+}
+
+/** The one instruction line that asks a CLI agent for schema-shaped JSON. */
+export function schemaInstruction(schema: Record<string, unknown>): string {
+  return `Respond with ONLY a JSON value matching this schema (no prose, no markdown): ${schemaForPrompt(schema)}`;
+}
+
 /** Append a JSON-schema instruction to the system prompt (PAI pattern). */
 export function injectJsonSchemaInstruction(
   systemPrompt: string,
   schema: Record<string, unknown>
 ): string {
-  const schemaLine = `Respond with ONLY a JSON value matching this schema (no prose, no markdown): ${JSON.stringify(schema)}`;
+  const schemaLine = schemaInstruction(schema);
   return systemPrompt ? `${systemPrompt}\n\n${schemaLine}` : schemaLine;
 }
 

@@ -58,7 +58,7 @@ describe("buildOpencodeArgs", () => {
     const schema = { type: "object", properties: { x: { type: "string" } } };
     const args = buildOpencodeArgs({ user: "rate this", jsonSchema: schema });
     const prompt = args[args.length - 1];
-    expect(prompt).toContain('"type":"object"');
+    expect(prompt).toContain("'type':'object'");
     expect(prompt.toLowerCase()).toContain("json");
   });
 

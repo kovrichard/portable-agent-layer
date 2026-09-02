@@ -69,7 +69,7 @@ describe("buildCodexArgs", () => {
     const schema = { type: "object", properties: { x: { type: "string" } } };
     const args = buildCodexArgs({ user: "rate this", jsonSchema: schema });
     const prompt = args[args.length - 1];
-    expect(prompt).toContain('"type":"object"');
+    expect(prompt).toContain("'type':'object'");
     expect(prompt.toLowerCase()).toContain("json");
   });
 

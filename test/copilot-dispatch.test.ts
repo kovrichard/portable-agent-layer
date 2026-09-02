@@ -68,7 +68,7 @@ describe("buildCopilotArgs", () => {
     const args = buildCopilotArgs({ user: "rate this", jsonSchema: schema });
     const pIdx = args.indexOf("-p");
     const prompt = args[pIdx + 1];
-    expect(prompt).toContain('"type":"object"');
+    expect(prompt).toContain("'type':'object'");
     expect(prompt.toLowerCase()).toContain("json");
   });
 

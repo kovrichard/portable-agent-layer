@@ -5,11 +5,16 @@ import { resolve } from "node:path";
 import {
   _resetClaudeBinaryCache,
   buildClaudeArgs,
+  buildCodexArgs,
+  buildCopilotArgs,
+  buildCursorArgs,
+  buildOpencodeArgs,
   canInfer,
   hasApiKey,
   inference,
   injectJsonSchemaInstruction,
   parseJsonFromOutput,
+  schemaInstruction,
 } from "../src/hooks/lib/inference";
 import { logPromptSnapshot } from "../src/hooks/lib/log";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
@@ -73,7 +78,7 @@ describe("buildClaudeArgs", () => {
     const schema = { type: "object", properties: { x: { type: "string" } } };
     const args = buildClaudeArgs({ user: "hi", jsonSchema: schema });
     const idx = args.indexOf("--system-prompt");
-    expect(args[idx + 1]).toContain('"type":"object"');
+    expect(args[idx + 1]).toContain("'type':'object'");
   });
 
   test("never includes --bare (PAI billing trap)", () => {
@@ -85,12 +90,12 @@ describe("injectJsonSchemaInstruction", () => {
   test("appends schema when system prompt exists", () => {
     const result = injectJsonSchemaInstruction("be helpful", { type: "object" });
     expect(result).toStartWith("be helpful");
-    expect(result).toContain('{"type":"object"}');
+    expect(result).toContain("{'type':'object'}");
   });
 
   test("returns just the schema instruction when system prompt empty", () => {
     const result = injectJsonSchemaInstruction("", { type: "object" });
-    expect(result).toContain('{"type":"object"}');
+    expect(result).toContain("{'type':'object'}");
   });
 });
 
@@ -335,5 +340,34 @@ describe("logPromptSnapshot", () => {
       else process.env.PAL_HOME = palHomeSaved;
       rmSync(tmpHome, { recursive: true, force: true });
     }
+  });
+});
+
+describe("schema instruction stays free of double quotes", () => {
+  const schema = { type: "object", properties: { verdict: { type: "string" } } };
+  const opts = { user: "rate this", jsonSchema: schema };
+  const builders: Array<[string, (o: typeof opts) => string[]]> = [
+    ["claude", buildClaudeArgs],
+    ["codex", buildCodexArgs],
+    ["opencode", buildOpencodeArgs],
+    ["copilot", buildCopilotArgs],
+    ["cursor", buildCursorArgs],
+  ];
+
+  // A double quote in an argv element does not survive cmd.exe when Bun.spawn
+  // resolves an agent CLI to its Windows .cmd shim: the child exits non-zero
+  // with no output. Keeping argv quote-free is what makes these paths work on
+  // Windows, so assert it per agent rather than trusting the shared helper.
+  for (const [name, build] of builders) {
+    test(`${name} argv carries no double quote`, () => {
+      expect(build(opts).filter((arg) => arg.includes('"'))).toEqual([]);
+    });
+  }
+
+  test("the schema shape still reaches the model", () => {
+    const line = schemaInstruction(schema);
+    expect(line).toContain("verdict");
+    expect(line).toContain("object");
+    expect(line).not.toContain('"');
   });
 });
