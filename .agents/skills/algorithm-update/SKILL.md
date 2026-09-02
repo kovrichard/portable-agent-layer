@@ -4,6 +4,7 @@ description: Run a maintainer algorithm-update session — synthesize the collec
 argument-hint: (none — reads ~/.pal reflections)
 metadata:
   triggers:
+    - "algorithm-update"
     - "algorithm update"
     - "algorithm review due"
     - "update the algorithm"

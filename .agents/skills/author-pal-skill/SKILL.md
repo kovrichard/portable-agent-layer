@@ -4,6 +4,8 @@ description: Author a NEW skill that ships WITH the PAL repo (committed to asset
 argument-hint: <skill name> <skill description>
 metadata:
   triggers:
+    - "author-pal-skill"
+    - "author pal skill"
     - "shared skill"
     - "ship a skill"
     - "repo skill"

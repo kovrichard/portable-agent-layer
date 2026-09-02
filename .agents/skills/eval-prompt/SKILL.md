@@ -4,6 +4,7 @@ description: Evaluate a PAL inference prompt using the promptfoo harness in eval
 argument-hint: <prompt-name> [promptfoo-flags]
 metadata:
   triggers:
+    - "eval-prompt"
     - "eval prompt"
     - "promptfoo"
     - "prompt regression"
