@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
   _resetCursorBinaryCache,
+  buildCliPrompt,
   buildCursorArgs,
   inference,
 } from "../src/hooks/lib/inference";
@@ -56,24 +57,25 @@ describe("buildCursorArgs", () => {
     expect(buildCursorArgs({ user: "hi" })).toContain("--trust");
   });
 
-  test("prompt is the last positional argument", () => {
-    const args = buildCursorArgs({ user: "summarize this" });
-    expect(args[args.length - 1]).toBe("summarize this");
+  test("no argv element carries the prompt or a newline", () => {
+    // The prompt travels on stdin: a multi-paragraph argv element cannot survive
+    // cmd.exe when Bun.spawn resolves cursor-agent to its Windows .cmd shim.
+    const args = buildCursorArgs({ system: "Be terse", user: "summarize this" });
+    expect(args).not.toContain("summarize this");
+    expect(args.filter((a) => a.includes("\n"))).toEqual([]);
   });
 
-  test("system + user are concatenated into the positional prompt", () => {
-    const args = buildCursorArgs({ system: "Be terse", user: "ping" });
-    const prompt = args[args.length - 1];
+  test("system + user are concatenated into the stdin prompt", () => {
+    const prompt = buildCliPrompt({ system: "Be terse", user: "ping" });
     expect(prompt).toContain("Be terse");
     expect(prompt).toContain("ping");
     expect(prompt.indexOf("Be terse")).toBeLessThan(prompt.indexOf("ping"));
   });
 
-  test("jsonSchema instruction appended to prompt", () => {
+  test("jsonSchema instruction appended to the stdin prompt", () => {
     const schema = { type: "object", properties: { x: { type: "string" } } };
-    const args = buildCursorArgs({ user: "rate this", jsonSchema: schema });
-    const prompt = args[args.length - 1];
-    expect(prompt).toContain('"type":"object"');
+    const prompt = buildCliPrompt({ user: "rate this", jsonSchema: schema });
+    expect(prompt).toContain("'type':'object'");
     expect(prompt.toLowerCase()).toContain("json");
   });
 
@@ -108,8 +110,12 @@ describe("inference dispatcher — cursor spawn integration (fake binary)", () =
     _resetCursorBinaryCache();
   });
 
-  test("end-to-end: fake cursor-agent echoes positional prompt, dispatcher captures it", async () => {
-    writeFakeBin(tmpBin, "cursor-agent", `console.log(Bun.argv[Bun.argv.length - 1]);\n`);
+  test("end-to-end: fake cursor-agent echoes stdin, dispatcher captures it", async () => {
+    writeFakeBin(
+      tmpBin,
+      "cursor-agent",
+      `for await (const c of Bun.stdin.stream()) Bun.write(Bun.stdout, c);\n`
+    );
     prependPath(tmpBin);
 
     const result = await inference({ user: "hello-cursor", timeout: 5000 });

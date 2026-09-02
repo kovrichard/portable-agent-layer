@@ -109,18 +109,22 @@ describe("collectExportFiles", () => {
 });
 
 describe("exportZip", () => {
-  test("creates a valid zip file", async () => {
-    const { exportZip } = await import("../src/hooks/lib/export");
-    const zipPath = resolve(TEST_HOME, "test-export.zip");
+  const zipPath = resolve(TEST_HOME, "test-export.zip");
 
-    const count = exportZip(zipPath);
+  async function writeZip() {
+    const { exportZip } = await import("../src/hooks/lib/export");
+    return exportZip(zipPath);
+  }
+
+  test("creates a valid zip file", async () => {
+    const count = await writeZip();
     expect(count).toBeGreaterThan(0);
     expect(existsSync(zipPath)).toBe(true);
   });
 
   test("zip contains expected files", async () => {
+    await writeZip();
     const AdmZip = (await import("adm-zip")).default;
-    const zipPath = resolve(TEST_HOME, "test-export.zip");
     const zip = new AdmZip(zipPath);
     const entries = zip.getEntries().map((e) => e.entryName);
 
@@ -176,10 +180,18 @@ describe("cli import — folder arg", () => {
       const exportResult = palCli(["export", workDir]);
       expect(exportResult.status).toBe(0);
 
-      // Import from workDir (folder arg) — pipe "y" to the confirmation prompt
+      // Import from workDir (folder arg) — pipe "y" to the confirmation prompt.
+      // Dry-run names the mode it would take, since merge and overwrite differ
+      // destructively.
       const importResult = palCli(["import", workDir, "--dry-run"], { input: "y\n" });
       expect(importResult.status).toBe(0);
-      expect(importResult.stdout).toContain("Would import");
+      expect(importResult.stdout).toContain("Would merge");
+
+      const overwriteDry = palCli(["import", workDir, "--dry-run", "--overwrite"], {
+        input: "y\n",
+      });
+      expect(overwriteDry.status).toBe(0);
+      expect(overwriteDry.stdout).toContain("Would overwrite with");
     } finally {
       rmSync(workDir, { recursive: true, force: true });
     }

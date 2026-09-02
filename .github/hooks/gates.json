@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "hooks": {
+    "agentStop": [
+      {
+        "type": "command",
+        "command": "bun .agents/hooks/check.ts",
+        "timeoutSec": 120
+      },
+      {
+        "type": "command",
+        "command": "bun .agents/hooks/type-check.ts",
+        "timeoutSec": 120
+      },
+      {
+        "type": "command",
+        "command": "bun .agents/hooks/knip.ts",
+        "timeoutSec": 120
+      },
+      {
+        "type": "command",
+        "command": "bun .agents/hooks/jscpd.ts",
+        "timeoutSec": 120
+      },
+      {
+        "type": "command",
+        "command": "bun .agents/hooks/klint.ts",
+        "timeoutSec": 120
+      },
+      {
+        "type": "command",
+        "command": "bun .agents/hooks/secretlint.ts",
+        "timeoutSec": 120
+      },
+      {
+        "type": "command",
+        "command": "bun .agents/hooks/madge.ts",
+        "timeoutSec": 120
+      },
+      {
+        "type": "command",
+        "command": "bun .agents/hooks/lf.ts",
+        "timeoutSec": 120
+      }
+    ]
+  }
+}

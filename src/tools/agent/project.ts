@@ -24,6 +24,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { writeBinding } from "../../hooks/lib/bindings";
 import { paths } from "../../hooks/lib/paths";
 import {
   defaultSlug,
@@ -32,6 +33,7 @@ import {
   legacyJsonToProgress,
   type ProjectProgress,
   type ProjectStatus,
+  proposeBinding,
   readAllProjects,
   readProject,
   writeProject,
@@ -132,14 +134,28 @@ function cmdResume(args: string[]): void {
   if (!name) fail("Usage: resume <name>");
   const { criteria, changelog, ...project } = requireProject(name);
   const iscs = parseIscs(criteria ?? "");
-  const openIscs = iscs.filter((i) => !i.checked);
-  const done = iscs.filter((i) => i.checked).length + parseIscs(changelog ?? "").length;
+  const archived = parseIscs(changelog ?? "");
+  const openIscs = iscs.filter((i) => i.status === "open");
+  const all = [...iscs, ...archived];
+  const done = all.filter((i) => i.status === "done").length;
+  const retired = all.filter((i) => i.status === "retired").length;
+  // Resuming a project PAL cannot locate is the natural moment to offer a
+  // binding: the user just named this project, so the suggestion is wanted rather
+  // than volunteered. It is only ever a command — nothing binds on its own.
+  const unlocatable = !project.path || !existsSync(project.path);
+  const binding = unlocatable
+    ? proposeBinding({ ...project, criteria, changelog })
+    : null;
+
   ok({
     project: {
       ...project,
       open_iscs: openIscs.map((i) => ({ id: i.id, title: iscTitle(i.text) })),
-      isc_summary: { open: openIscs.length, done },
+      isc_summary: { open: openIscs.length, done, retired },
     },
+    ...(unlocatable
+      ? { binding: binding ?? { state: "unbound", confidence: "none" } }
+      : {}),
   });
 }
 
@@ -206,12 +222,15 @@ function addHandoff(name: string, text: string): void {
 
 // ── set-path ──────────────────────────────────────────────────────
 
+// Where a project lives is machine-local, so this writes a binding rather than a
+// field on the record. Unlike the save path it does not require the directory to
+// exist yet: naming where a repo is about to be cloned is a legitimate use.
 function cmdSetPath(args: string[]): void {
   const [name, ...rest] = args;
   if (!name || rest.length === 0) fail("Usage: set-path <name> <new-path>");
   const newPath = resolve(rest.join(" ").trim());
   const p = requireProject(name);
-  p.path = newPath;
+  writeBinding(p.name, newPath);
   p.updated = now();
   writeProject(p);
   ok({ updated: true, name, path: newPath });
@@ -350,17 +369,34 @@ function cmdRm(args: string[]): void {
 
 // ── ISC helpers ──────────────────────────────────────────────────
 
+// Three states, not two: a retired ISC is one that stopped being valid, which the
+// record must not report as completed work. The box character is the storage form
+// and the id stays in it, so a retired line keeps reserving its id in nextIscId.
+type IscStatus = "open" | "done" | "retired";
+
+const ISC_BOX: Record<IscStatus, string> = {
+  open: "[ ]",
+  done: "[x]",
+  retired: "[~]",
+};
+
+function statusFromBox(box: string): IscStatus {
+  if (box.toLowerCase() === "x") return "done";
+  if (box === "~") return "retired";
+  return "open";
+}
+
 interface Isc {
   id: number;
   text: string;
-  checked: boolean;
+  status: IscStatus;
 }
 
 function parseIscs(criteria: string): Isc[] {
   const out: Isc[] = [];
   for (const line of criteria.split("\n")) {
-    const m = new RegExp(/^-\s+\[( |x)\]\s+ISC-(\d+):\s+(.+)$/i).exec(line);
-    if (m) out.push({ id: Number(m[2]), text: m[3].trim(), checked: m[1] === "x" });
+    const m = new RegExp(/^-\s+\[( |x|~)\]\s+ISC-(\d+):\s+(.+)$/i).exec(line);
+    if (m) out.push({ id: Number(m[2]), text: m[3].trim(), status: statusFromBox(m[1]) });
   }
   return out;
 }
@@ -387,7 +423,7 @@ function removeIscLine(
 ): { line: string | null; rest: string } {
   const lines = section.split("\n");
   const idx = lines.findIndex((l) =>
-    new RegExp(String.raw`^-\s+\[[ x]\]\s+ISC-${id}:`).test(l)
+    new RegExp(String.raw`^-\s+\[[ x~]\]\s+ISC-${id}:`).test(l)
   );
   if (idx === -1) return { line: null, rest: section };
   const [line] = lines.splice(idx, 1);
@@ -417,8 +453,12 @@ function dropEmptyArchiveHeadings(changelog: string): string {
     .trim();
 }
 
-function archiveLine(changelog: string | undefined, doneLine: string): string {
-  const heading = `### Archived ${new Date().toISOString().slice(0, 10)}`;
+function archiveLine(
+  changelog: string | undefined,
+  doneLine: string,
+  kind: "Archived" | "Retired" = "Archived"
+): string {
+  const heading = `### ${kind} ${new Date().toISOString().slice(0, 10)}`;
   const base = (changelog ?? "").trim();
   if (base.includes(heading)) return `${base}\n${doneLine}`;
   return base ? `${base}\n\n${heading}\n${doneLine}` : `${heading}\n${doneLine}`;
@@ -472,7 +512,7 @@ function cmdReopenIsc(args: string[]): void {
   const id = Number(args[1] ?? fail("Usage: reopen-isc <name> <id>"));
   if (!Number.isInteger(id) || id < 1) fail("ISC id must be a positive integer");
   const p = requireProject(name);
-  if (parseIscs(p.criteria ?? "").some((i) => i.id === id && !i.checked)) {
+  if (parseIscs(p.criteria ?? "").some((i) => i.id === id && i.status === "open")) {
     ok({ checked: false, id, alreadyOpen: true });
     return;
   }
@@ -484,16 +524,17 @@ function cmdReopenIsc(args: string[]): void {
     if (removed.line) p.criteria = removed.rest;
   }
   if (!removed.line) fail(`ISC-${id} not found in project "${name}"`);
-  const openLine = removed.line.replace(/\[x\]/i, "[ ]");
+  const openLine = removed.line.replace(/\[[x~]\]/i, "[ ]");
   p.criteria = p.criteria ? `${p.criteria.trimEnd()}\n${openLine}` : openLine;
   p.updated = now();
   writeProject(p);
   ok({ checked: false, id });
 }
 
-function selectIscs(open: Isc[], done: Isc[], flags: Set<string>): Isc[] {
-  if (flags.has("--all")) return [...open, ...done];
+function selectIscs(open: Isc[], done: Isc[], retired: Isc[], flags: Set<string>): Isc[] {
+  if (flags.has("--all")) return [...open, ...done, ...retired];
   if (flags.has("--closed")) return done;
+  if (flags.has("--retired")) return retired;
   return open;
 }
 
@@ -501,17 +542,20 @@ function cmdListIsc(args: string[]): void {
   const flags = new Set(args.filter((a) => a.startsWith("--")));
   const name =
     args.find((a) => !a.startsWith("--")) ??
-    fail("Usage: list-isc <name> [--all | --closed]");
+    fail("Usage: list-isc <name> [--all | --closed | --retired]");
   const p = requireProject(name);
   const criteria = parseIscs(p.criteria ?? "");
-  const open = criteria.filter((i) => !i.checked);
-  const done = [...criteria.filter((i) => i.checked), ...parseIscs(p.changelog ?? "")];
+  const all = [...criteria, ...parseIscs(p.changelog ?? "")];
+  const open = all.filter((i) => i.status === "open");
+  const done = all.filter((i) => i.status === "done");
+  const retired = all.filter((i) => i.status === "retired");
   ok({
     name,
-    total: open.length + done.length,
+    total: open.length + done.length + retired.length,
     open: open.length,
     done: done.length,
-    iscs: selectIscs(open, done, flags),
+    retired: retired.length,
+    iscs: selectIscs(open, done, retired, flags),
   });
 }
 
@@ -526,7 +570,80 @@ function cmdShowIsc(args: string[]): void {
     (i) => i.id === id
   );
   if (!isc) fail(`ISC-${id} not found in project "${name}".`);
-  ok({ name, id: isc.id, status: isc.checked ? "closed" : "open", text: isc.text });
+  ok({ name, id: isc.id, status: isc.status, text: isc.text });
+}
+
+// retire-isc closes an ISC that stopped being valid, which complete-isc cannot say:
+// completing files it as done work. The line moves to the Changelog under its own
+// heading as [~], so it still reserves its id and never reads as finished.
+function cmdRetireIsc(args: string[]): void {
+  const positional = args.filter((a) => !a.startsWith("--"));
+  const name = positional[0];
+  const id = Number(positional[1]);
+  if (!name || !Number.isInteger(id) || id < 1) {
+    fail("Usage: retire-isc <name> <id> [--by <supersedingId>]");
+  }
+  const byIndex = args.indexOf("--by");
+  const by = byIndex === -1 ? null : Number(args[byIndex + 1]);
+  if (byIndex !== -1 && (!Number.isInteger(by) || (by ?? 0) < 1)) {
+    fail("--by expects a positive ISC id");
+  }
+  const p = requireProject(name);
+  if (parseIscs(p.changelog ?? "").some((i) => i.id === id && i.status === "retired")) {
+    ok({ retired: true, id, alreadyRetired: true });
+    return;
+  }
+  const { line, rest } = removeIscLine(p.criteria ?? "", id);
+  if (!line) fail(`ISC-${id} not found in project "${name}"`);
+  const suffix = by ? ` (superseded by ISC-${by})` : "";
+  p.criteria = rest;
+  p.changelog = archiveLine(
+    p.changelog,
+    `${line.replace(/\[[ x]\]/i, "[~]")}${suffix}`,
+    "Retired"
+  );
+  p.updated = now();
+  writeProject(p);
+  ok({ retired: true, id, supersededBy: by, archived: true });
+}
+
+// edit-isc rewrites one ISC's text in place, keeping its id and open/done state.
+// The id never leaves the record, so nextIscId still reserves it. Returns the
+// previous text because the ISA files carry no version history of their own.
+function cmdEditIsc(args: string[]): void {
+  const name = args[0];
+  const id = Number(args[1]);
+  const text = args.slice(2).join(" ").trim();
+  if (!name || !Number.isInteger(id) || id < 1 || !text) {
+    fail('Usage: edit-isc <name> <id> "new text"');
+  }
+  const p = requireProject(name);
+  const inCriteria = parseIscs(p.criteria ?? "").find((i) => i.id === id);
+  const isc = inCriteria ?? parseIscs(p.changelog ?? "").find((i) => i.id === id);
+  if (!isc) fail(`ISC-${id} not found in project "${name}".`);
+
+  const box = ISC_BOX[isc.status];
+  const rewrite = (section: string) =>
+    section
+      .split("\n")
+      .map((l) =>
+        new RegExp(String.raw`^-\s+\[[ x~]\]\s+ISC-${id}:`, "i").test(l)
+          ? `- ${box} ISC-${id}: ${text}`
+          : l
+      )
+      .join("\n");
+
+  if (inCriteria) p.criteria = rewrite(p.criteria ?? "");
+  else p.changelog = rewrite(p.changelog ?? "");
+  p.updated = now();
+  writeProject(p);
+  ok({
+    edited: true,
+    id,
+    status: isc.status,
+    previous: isc.text,
+    text,
+  });
 }
 
 // Backfill: sweep any done ISCs still sitting in Criteria (legacy projects, or
@@ -534,7 +651,7 @@ function cmdShowIsc(args: string[]): void {
 function cmdPruneIsc(args: string[]): void {
   const name = args[0] ?? fail("Usage: prune-isc <name>");
   const p = requireProject(name);
-  const done = parseIscs(p.criteria ?? "").filter((i) => i.checked);
+  const done = parseIscs(p.criteria ?? "").filter((i) => i.status !== "open");
   for (const isc of done) {
     const { line, rest } = removeIscLine(p.criteria ?? "", isc.id);
     if (!line) continue;
@@ -545,7 +662,7 @@ function cmdPruneIsc(args: string[]): void {
     p.updated = now();
     writeProject(p);
   }
-  const openLeft = parseIscs(p.criteria ?? "").filter((i) => !i.checked).length;
+  const openLeft = parseIscs(p.criteria ?? "").filter((i) => i.status === "open").length;
   ok({ pruned: done.length, name, remaining_open: openLeft });
 }
 
@@ -628,8 +745,10 @@ Commands:
   add-isc <name> "title"                        append a new open ISC to Criteria
   complete-isc <name> <id>                      mark ISC-N as done
   reopen-isc <name> <id>                        reopen ISC-N (mark not done)
-  list-isc <name> [--all | --closed]           list open ISCs (default); --all or --closed for done
+  list-isc <name> [--all | --closed | --retired] list open ISCs (default); --all, --closed, or --retired
   show-isc <name> <id>                          print one ISC's full text
+  edit-isc <name> <id> "new text"               rewrite ISC-N's text, keeping its id and state
+  retire-isc <name> <id> [--by <id>]            close ISC-N as no longer valid, not as done
   prune-isc <name>                              archive done ISCs from Criteria into the Changelog
   isa-init <name>                               mark project as ISA-initialized
   scaffold-task-isa <title>                     create a one-shot task ISA in memory/work/
@@ -724,6 +843,12 @@ function run(): void {
       return;
     case "show-isc":
       cmdShowIsc(rest);
+      return;
+    case "retire-isc":
+      cmdRetireIsc(rest);
+      return;
+    case "edit-isc":
+      cmdEditIsc(rest);
       return;
     case "prune-isc":
       cmdPruneIsc(rest);

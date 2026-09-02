@@ -22,7 +22,10 @@
       "!**/next-env.d.ts",
       "!memory",
       "!telos",
-      "klint.rules.ts"
+      "klint.rules.ts",
+      "stryker.config.mjs",
+      "!.stryker-tmp",
+      "!.test-install-home"
     ]
   },
   "formatter": {

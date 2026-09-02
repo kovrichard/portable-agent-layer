@@ -307,7 +307,7 @@ describe("project CLI", () => {
     expect(def.done).toBe(1);
     expect(def.iscs).toHaveLength(1);
     expect(def.iscs[0].id).toBe(2);
-    expect(def.iscs.every((i: { checked: boolean }) => !i.checked)).toBe(true);
+    expect(def.iscs.every((i: { status: string }) => i.status === "open")).toBe(true);
 
     const all = JSON.parse((await runCli(["list-isc", "iscproj", "--all"])).stdout);
     expect(all.iscs).toHaveLength(2);
@@ -315,7 +315,7 @@ describe("project CLI", () => {
     const closed = JSON.parse((await runCli(["list-isc", "iscproj", "--closed"])).stdout);
     expect(closed.iscs).toHaveLength(1);
     expect(closed.iscs[0].id).toBe(1);
-    expect(closed.iscs[0].checked).toBe(true);
+    expect(closed.iscs[0].status).toBe("done");
   });
 
   test("complete-isc moves the line out of Criteria into the Changelog", async () => {
@@ -410,7 +410,7 @@ describe("project CLI", () => {
     expect(project.changelog).toBeUndefined();
     // Open ISCs surface as {id, title}; closed ones only as a count.
     expect(project.open_iscs).toEqual([{ id: 1, title: "first open thing" }]);
-    expect(project.isc_summary).toEqual({ open: 1, done: 1 });
+    expect(project.isc_summary).toEqual({ open: 1, done: 1, retired: 0 });
   });
 
   test("resume truncates a long ISC line to a glanceable title", async () => {
@@ -443,7 +443,7 @@ describe("project CLI", () => {
     await runCli(["add-isc", "showc", "will be done"]);
     await runCli(["complete-isc", "showc", "1"]);
     const got = JSON.parse((await runCli(["show-isc", "showc", "1"])).stdout);
-    expect(got.status).toBe("closed");
+    expect(got.status).toBe("done");
     expect(got.text).toBe("will be done");
   });
 
@@ -452,5 +452,210 @@ describe("project CLI", () => {
     const r = await runCli(["show-isc", "shownone", "99"]);
     expect(r.code).toBe(1);
     expect(r.stderr).toContain("ISC-99 not found");
+  });
+
+  test("edit-isc rewrites the text, keeping the id and open state", async () => {
+    await runCli(["create", "edit", "--path", "/tmp/edit-fake"]);
+    await runCli(["add-isc", "edit", "vague wording"]);
+
+    const r = await runCli([
+      "edit-isc",
+      "edit",
+      "1",
+      "sharp wording with a done-condition",
+    ]);
+
+    expect(r.code).toBe(0);
+    expect(JSON.parse(r.stdout)).toEqual({
+      edited: true,
+      id: 1,
+      status: "open",
+      previous: "vague wording",
+      text: "sharp wording with a done-condition",
+    });
+    expect(section("edit", "Criteria")).toContain(
+      "- [ ] ISC-1: sharp wording with a done-condition"
+    );
+    expect(section("edit", "Criteria")).not.toContain("vague wording");
+  });
+
+  test("edit-isc keeps a closed ISC closed and in the Changelog", async () => {
+    await runCli(["create", "editc", "--path", "/tmp/editc-fake"]);
+    await runCli(["add-isc", "editc", "before"]);
+    await runCli(["complete-isc", "editc", "1"]);
+
+    const got = JSON.parse((await runCli(["edit-isc", "editc", "1", "after"])).stdout);
+
+    expect(got.status).toBe("done");
+    expect(section("editc", "Changelog")).toContain("- [x] ISC-1: after");
+    expect(section("editc", "Criteria")).not.toContain("ISC-1");
+  });
+
+  test("edit-isc leaves sibling ISCs untouched", async () => {
+    await runCli(["create", "editsib", "--path", "/tmp/editsib-fake"]);
+    await runCli(["add-isc", "editsib", "first"]);
+    await runCli(["add-isc", "editsib", "second"]);
+
+    await runCli(["edit-isc", "editsib", "1", "rewritten"]);
+
+    const criteria = section("editsib", "Criteria");
+    expect(criteria).toContain("- [ ] ISC-1: rewritten");
+    expect(criteria).toContain("- [ ] ISC-2: second");
+  });
+
+  test("an edited id is still reserved against reuse", async () => {
+    await runCli(["create", "editres", "--path", "/tmp/editres-fake"]);
+    await runCli(["add-isc", "editres", "first"]);
+    await runCli(["edit-isc", "editres", "1", "first, reworded"]);
+
+    const added = JSON.parse((await runCli(["add-isc", "editres", "second"])).stdout);
+
+    expect(added.id).toBe(2);
+  });
+
+  test("edit-isc fails on an unknown id", async () => {
+    await runCli(["create", "editnone", "--path", "/tmp/editnone-fake"]);
+    const r = await runCli(["edit-isc", "editnone", "99", "nope"]);
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain("ISC-99 not found");
+  });
+
+  test("edit-isc requires replacement text", async () => {
+    await runCli(["create", "editempty", "--path", "/tmp/editempty-fake"]);
+    await runCli(["add-isc", "editempty", "keep me"]);
+
+    const r = await runCli(["edit-isc", "editempty", "1", "   "]);
+
+    expect(r.code).toBe(1);
+    expect(section("editempty", "Criteria")).toContain("keep me");
+  });
+
+  test("retire-isc files the ISC under Retired, not Archived", async () => {
+    await runCli(["create", "ret", "--path", "/tmp/ret-fake"]);
+    await runCli(["add-isc", "ret", "no longer valid"]);
+
+    const r = await runCli(["retire-isc", "ret", "1"]);
+
+    expect(r.code).toBe(0);
+    const changelog = section("ret", "Changelog");
+    expect(changelog).toContain("### Retired");
+    expect(changelog).toContain("- [~] ISC-1: no longer valid");
+    expect(changelog).not.toContain("### Archived");
+    expect(section("ret", "Criteria")).not.toContain("ISC-1");
+  });
+
+  test("retire-isc records the superseding id with --by", async () => {
+    await runCli(["create", "retby", "--path", "/tmp/retby-fake"]);
+    await runCli(["add-isc", "retby", "old framing"]);
+    await runCli(["add-isc", "retby", "new framing"]);
+
+    const got = JSON.parse(
+      (await runCli(["retire-isc", "retby", "1", "--by", "2"])).stdout
+    );
+
+    expect(got.supersededBy).toBe(2);
+    expect(section("retby", "Changelog")).toContain("(superseded by ISC-2)");
+  });
+
+  test("a retired id is never reused by add-isc", async () => {
+    await runCli(["create", "retres", "--path", "/tmp/retres-fake"]);
+    await runCli(["add-isc", "retres", "first"]);
+    await runCli(["retire-isc", "retres", "1"]);
+
+    const added = JSON.parse((await runCli(["add-isc", "retres", "second"])).stdout);
+
+    expect(added.id).toBe(2);
+  });
+
+  test("a retired ISC counts as neither open nor done", async () => {
+    await runCli(["create", "retcount", "--path", "/tmp/retcount-fake"]);
+    await runCli(["add-isc", "retcount", "stays open"]);
+    await runCli(["add-isc", "retcount", "gets done"]);
+    await runCli(["add-isc", "retcount", "gets retired"]);
+    await runCli(["complete-isc", "retcount", "2"]);
+    await runCli(["retire-isc", "retcount", "3"]);
+
+    const listed = JSON.parse((await runCli(["list-isc", "retcount"])).stdout);
+
+    expect(listed.open).toBe(1);
+    expect(listed.done).toBe(1);
+    expect(listed.retired).toBe(1);
+    expect(listed.iscs.map((i: { id: number }) => i.id)).toEqual([1]);
+  });
+
+  test("resume excludes retired ISCs from open work", async () => {
+    await runCli(["create", "retres2", "--path", "/tmp/retres2-fake"]);
+    await runCli(["add-isc", "retres2", "live work"]);
+    await runCli(["add-isc", "retres2", "dead work"]);
+    await runCli(["retire-isc", "retres2", "2"]);
+
+    const got = JSON.parse((await runCli(["resume", "retres2"])).stdout);
+
+    expect(got.project.open_iscs.map((i: { id: number }) => i.id)).toEqual([1]);
+    expect(got.project.isc_summary).toEqual({ open: 1, done: 0, retired: 1 });
+  });
+
+  test("list-isc --retired returns only retired, --all includes them", async () => {
+    await runCli(["create", "retflag", "--path", "/tmp/retflag-fake"]);
+    await runCli(["add-isc", "retflag", "open one"]);
+    await runCli(["add-isc", "retflag", "retired one"]);
+    await runCli(["retire-isc", "retflag", "2"]);
+
+    const only = JSON.parse((await runCli(["list-isc", "retflag", "--retired"])).stdout);
+    const all = JSON.parse((await runCli(["list-isc", "retflag", "--all"])).stdout);
+
+    expect(only.iscs.map((i: { id: number }) => i.id)).toEqual([2]);
+    expect(all.iscs.map((i: { id: number }) => i.id).sort()).toEqual([1, 2]);
+  });
+
+  test("show-isc reports retired status", async () => {
+    await runCli(["create", "retshow", "--path", "/tmp/retshow-fake"]);
+    await runCli(["add-isc", "retshow", "gone"]);
+    await runCli(["retire-isc", "retshow", "1"]);
+
+    const got = JSON.parse((await runCli(["show-isc", "retshow", "1"])).stdout);
+
+    expect(got.status).toBe("retired");
+    expect(got.text).toBe("gone");
+  });
+
+  test("reopen-isc brings a retired ISC back to open", async () => {
+    await runCli(["create", "retreopen", "--path", "/tmp/retreopen-fake"]);
+    await runCli(["add-isc", "retreopen", "back from the dead"]);
+    await runCli(["retire-isc", "retreopen", "1"]);
+
+    await runCli(["reopen-isc", "retreopen", "1"]);
+
+    expect(section("retreopen", "Criteria")).toContain("- [ ] ISC-1: back from the dead");
+    expect(section("retreopen", "Changelog")).not.toContain("ISC-1");
+  });
+
+  test("edit-isc preserves the retired state", async () => {
+    await runCli(["create", "retedit", "--path", "/tmp/retedit-fake"]);
+    await runCli(["add-isc", "retedit", "before"]);
+    await runCli(["retire-isc", "retedit", "1"]);
+
+    const got = JSON.parse((await runCli(["edit-isc", "retedit", "1", "after"])).stdout);
+
+    expect(got.status).toBe("retired");
+    expect(section("retedit", "Changelog")).toContain("- [~] ISC-1: after");
+  });
+
+  test("retire-isc fails on an unknown id", async () => {
+    await runCli(["create", "retnone", "--path", "/tmp/retnone-fake"]);
+    const r = await runCli(["retire-isc", "retnone", "99"]);
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain("ISC-99 not found");
+  });
+
+  test("complete-isc still archives as done, unaffected by retire", async () => {
+    await runCli(["create", "retdone", "--path", "/tmp/retdone-fake"]);
+    await runCli(["add-isc", "retdone", "genuinely finished"]);
+    await runCli(["complete-isc", "retdone", "1"]);
+
+    const changelog = section("retdone", "Changelog");
+    expect(changelog).toContain("### Archived");
+    expect(changelog).toContain("- [x] ISC-1: genuinely finished");
+    expect(changelog).not.toContain("[~]");
   });
 });

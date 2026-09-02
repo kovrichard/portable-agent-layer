@@ -13,6 +13,7 @@
 
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { encodeAnchor } from "./anchor";
 import { ensureDir, paths } from "./paths";
 
 type NoteType = "W" | "O" | "Session";
@@ -65,7 +66,8 @@ export function appendNotes(notes: RelationshipNote[], sessionId?: string): void
 
   const timestamp = new Date().toTimeString().slice(0, 5);
   lines.push(`## ${timestamp}`);
-  if (sessionId) lines.push(`<!-- session:${sessionId} cwd:${process.cwd()} -->`);
+  if (sessionId)
+    lines.push(`<!-- session:${sessionId} cwd:${encodeAnchor(process.cwd())} -->`);
 
   for (const note of fresh) {
     if (note.type === "O" && note.confidence !== undefined) {

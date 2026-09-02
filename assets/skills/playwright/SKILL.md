@@ -26,7 +26,7 @@ Take a screenshot of a running page and `Read` it into context so you can see th
 The bundled tool picks the best available local engine automatically:
 
 1. **System `playwright-cli`** (Microsoft's stateful agent CLI) — used when it is on `PATH` and no exact viewport/full-page is requested (its `screenshot` command can't set those).
-2. **PAL-installed Playwright, launched via Node** — the cross-platform-safe path (Playwright's Chromium hangs under Bun on Windows). Honors `--viewport`, `--full-page`, and `--selector` precisely.
+2. **PAL-installed Playwright, launched in-process** — the precise path. Honors `--viewport`, `--full-page`, and `--selector` precisely.
 
 If neither engine is usable, the tool prints `NO_PLAYWRIGHT_CLI` and exits non-zero — only then use the **Playwright MCP** (tier 3) in step 4.
 
@@ -36,7 +36,7 @@ If neither engine is usable, the tool prints `NO_PLAYWRIGHT_CLI` and exits non-z
 2. Run the tool (it prints the absolute PNG path as its last stdout line):
 
    ```bash
-   node ~/.pal/skills/playwright/tools/shot.mjs <url> \
+   bun ~/.pal/skills/playwright/tools/shot.ts <url> \
      [--viewport 1440x900] [--full-page] [--selector "<css>"] [-o <out.png>]
    ```
 

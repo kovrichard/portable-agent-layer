@@ -20,11 +20,17 @@ When PAL is installed, `~/.pal/skills/<name>/` may be a directory junction back 
 ```
 .
 ├── .agents/                  # this repo's dev hooks (not the PAL runtime hooks)
-│   └── hooks/                # bun-run TypeScript hooks called by Stop events
+│   ├── hooks/                # bun-run TypeScript hooks called by Stop events
+│   └── scripts/              # helpers the hooks and package scripts call
 ├── .claude/                  # project-level Claude Code config (committed)
 │   └── settings.json         # Stop hook + permission allowlist
+├── .codex/                   # project-level Codex config (committed)
+│   └── hooks.json            # Stop event → same hook chain, --codex output
 ├── .cursor/                  # project-level Cursor config (committed)
 │   └── hooks.json            # stop event → same hook chain
+├── .github/
+│   ├── hooks/gates.json      # Copilot agentStop → same hook chain
+│   └── workflows/            # ci + mutation pipelines
 ├── .opencode/                # opencode plugin folder (committed)
 │   └── plugins/lint.ts       # session.idle handler → same hook chain
 ├── .husky/                   # pre-commit / pre-push hooks (lint-staged + biome)
@@ -66,7 +72,7 @@ When PAL is installed, `~/.pal/skills/<name>/` may be a directory junction back 
 
 ## Running and testing
 
-This repo uses [Bun](https://bun.sh) ≥ 1.3.0 — never `npm`, `pnpm`, or `node`.
+This repo uses [Bun](https://bun.sh) ≥ 1.4.0 — never `npm`, `pnpm`, or `node`.
 
 ```bash
 # install deps (frozen on CI)
@@ -83,15 +89,22 @@ bun test test/doctor.test.ts
 bun test --test-name-pattern "scaffolds telos"
 ```
 
-Check, typecheck, knip, test — each script and its agent-hook wrapper:
+Each gate script and its agent-hook wrapper:
 
-| Script                | What it does                            | Hook wrapper                   |
-| --------------------- | --------------------------------------- | ------------------------------ |
-| `bun run check`       | Biome lint + format (read-only)         | `.agents/hooks/check.ts`       |
-| `bun run check-write` | Biome lint + format with `--write`      | (manual, not in stop chain)    |
-| `bun run type-check`  | `tsc --noEmit`                          | `.agents/hooks/type-check.ts`  |
-| `bun run knip`        | Knip dead-code / unused-deps scan       | `.agents/hooks/knip.ts`        |
-| `bun run test`        | Bun test runner                         | (run by CI; not in stop chain) |
+| Script                | What it does                             | Hook wrapper                   |
+| --------------------- | ---------------------------------------- | ------------------------------ |
+| `bun run check`       | Biome lint + format (read-only)          | `.agents/hooks/check.ts`       |
+| `bun run check-write` | Biome lint + format with `--write`       | (manual, not in stop chain)    |
+| `bun run type-check`  | `tsc --noEmit`                           | `.agents/hooks/type-check.ts`  |
+| `bun run knip`        | Knip dead-code / unused-deps scan        | `.agents/hooks/knip.ts`        |
+| `bun run jscpd`       | Copy-paste detection                     | `.agents/hooks/jscpd.ts`       |
+| `bun run klint`       | Architecture rules                       | `.agents/hooks/klint.ts`       |
+| `bun run madge`       | Circular-import detection                | `.agents/hooks/madge.ts`       |
+| `bun run lf`          | CRLF guard on tracked files              | `.agents/hooks/lf.ts`          |
+| `bun run lf:fix`      | Converts offenders to LF                 | (manual, not in stop chain)    |
+| `bun run secretlint`  | Secret scanning                          | `.agents/hooks/secretlint.ts`  |
+| `bun run test`        | Bun test runner (randomized)             | (pre-push and CI; not in stop) |
+| `bun run test:mutate:diff` | Stryker on the changed lines        | (CI on pull requests)          |
 
 Run the CLI itself in dev mode against a sandboxed home:
 
@@ -104,13 +117,21 @@ PAL_HOME=./.test-home bun src/cli/index.ts cli init
 
 ## The `.agents/hooks/` system
 
-All three checks above are wired into the **Stop / session-end** event of every agent that has a config file in this repo. When an agent stops generating in this repo, it runs:
+Every gate above is wired into the **Stop / session-end** event of each agent that has a config file in this repo. When an agent stops generating, it runs:
 
 ```
 bun .agents/hooks/check.ts
 bun .agents/hooks/type-check.ts
 bun .agents/hooks/knip.ts
+bun .agents/hooks/jscpd.ts
+bun .agents/hooks/klint.ts
+bun .agents/hooks/secretlint.ts
+bun .agents/hooks/madge.ts
+bun .agents/hooks/lf.ts
 ```
+
+`run-hook.ts` skips the whole chain when `git status` is empty, so a conversational
+turn that changed nothing costs a single git call.
 
 If any exits non-zero, the agent treats the session-end as blocked and the failure output is surfaced — the agent must fix the underlying issue before it can stop.
 
@@ -120,6 +141,8 @@ Per-agent wiring:
 | ----------- | ---------------------------- | -------------- |
 | Claude Code | `.claude/settings.json`      | `Stop`         |
 | Cursor      | `.cursor/hooks.json`         | `stop`         |
+| Codex       | `.codex/hooks.json`          | `Stop`         |
+| Copilot     | `.github/hooks/gates.json`   | `agentStop`    |
 | opencode    | `.opencode/plugins/lint.ts`  | `session.idle` |
 
 Each individual hook file is a thin wrapper:

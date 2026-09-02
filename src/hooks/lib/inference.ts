@@ -20,7 +20,9 @@
  * yet wired and currently fall through to the API path.
  */
 
-import { basename } from "node:path";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { basename, join } from "node:path";
 import {
   getActiveAgent,
   isClaude,
@@ -151,14 +153,14 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
         "inference",
         `${tag} route=claude-spawn agent=${agent} model=${opts.model ?? HAIKU_MODEL}`
       );
-      return inferenceViaCliSpawn(bin, buildClaudeArgs(opts), opts.user, opts);
+      return inferenceViaClaudeSpawn(bin, opts);
     }
   }
   if (isCodex()) {
     const bin = getCodexBinary();
     if (bin) {
       logDebug("inference", `${tag} route=codex-spawn agent=${agent}`);
-      return inferenceViaCliSpawn(bin, buildCodexArgs(opts), "", opts);
+      return inferenceViaCliSpawn(bin, buildCodexArgs(opts), buildCliPrompt(opts), opts);
     }
   }
   if (isCodex() && hasOpenAiKey()) {
@@ -172,7 +174,7 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
       return inferenceViaCliSpawn(
         bin,
         buildOpencodeArgs(opts),
-        "",
+        buildCliPrompt(opts),
         opts,
         extractOpencodeText
       );
@@ -182,14 +184,19 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
     const bin = getCopilotBinary();
     if (bin) {
       logDebug("inference", `${tag} route=copilot-spawn agent=${agent}`);
-      return inferenceViaCliSpawn(bin, buildCopilotArgs(opts), "", opts);
+      return inferenceViaCliSpawn(
+        bin,
+        buildCopilotArgs(opts),
+        buildCliPrompt(opts),
+        opts
+      );
     }
   }
   if (isCursor()) {
     const bin = getCursorBinary();
     if (bin) {
       logDebug("inference", `${tag} route=cursor-spawn agent=${agent}`);
-      return inferenceViaCliSpawn(bin, buildCursorArgs(opts), "", opts);
+      return inferenceViaCliSpawn(bin, buildCursorArgs(opts), buildCliPrompt(opts), opts);
     }
   }
   if (hasApiKey()) {
@@ -284,16 +291,23 @@ export function _resetCursorBinaryCache(): void {
   cursorBinaryCache = undefined;
 }
 
-/** Build the argv for `claude --print …` from inference options. Pure. */
-export function buildClaudeArgs(opts: InferenceOptions): string[] {
-  const model = opts.model ?? HAIKU_MODEL;
-  const system = opts.jsonSchema
-    ? injectJsonSchemaInstruction(opts.system ?? "", opts.jsonSchema)
-    : opts.system;
+/**
+ * Build the argv for `claude --print …`. Pure.
+ *
+ * `--system-prompt` is deliberately absent: PAL's system prompts run to several
+ * paragraphs, and an argv element cannot carry a newline on Windows once
+ * Bun.spawn resolves claude to its .cmd shim and cmd.exe re-parses the command
+ * line. System, user and any JSON-schema instruction all travel together on
+ * stdin instead, the same way every other agent receives them.
+ */
+export function buildClaudeArgs(
+  opts: InferenceOptions,
+  systemPromptFile?: string
+): string[] {
   const args = [
     "--print",
     "--model",
-    model,
+    opts.model ?? HAIKU_MODEL,
     "--tools",
     "",
     "--output-format",
@@ -301,10 +315,36 @@ export function buildClaudeArgs(opts: InferenceOptions): string[] {
     "--setting-sources",
     "",
   ];
-  if (system) {
-    args.push("--system-prompt", system);
-  }
+  if (systemPromptFile) args.push("--system-prompt-file", systemPromptFile);
   return args;
+}
+
+/**
+ * Claude keeps a real system prompt, unlike the other agents, so the system text
+ * reaches it through --system-prompt-file rather than --system-prompt. Only the
+ * path travels in argv, which is what makes this work on Windows: an argv
+ * element cannot carry a newline once Bun.spawn resolves claude to its .cmd
+ * shim, and PAL's system prompts run to several paragraphs. Folding the system
+ * text into the user message instead is not an option — Claude treats
+ * instructions embedded in message content as an injection attempt and refuses.
+ */
+async function inferenceViaClaudeSpawn(
+  bin: string,
+  opts: InferenceOptions
+): Promise<InferenceResult> {
+  const system = opts.jsonSchema
+    ? injectJsonSchemaInstruction(opts.system ?? "", opts.jsonSchema)
+    : opts.system;
+  if (!system) return inferenceViaCliSpawn(bin, buildClaudeArgs(opts), opts.user, opts);
+
+  const dir = await mkdtemp(join(tmpdir(), "pal-system-"));
+  try {
+    const file = join(dir, "system-prompt.md");
+    await writeFile(file, system, "utf-8");
+    return await inferenceViaCliSpawn(bin, buildClaudeArgs(opts, file), opts.user, opts);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 }
 
 /**
@@ -316,20 +356,16 @@ export function buildClaudeArgs(opts: InferenceOptions): string[] {
  *   --sandbox read-only   → child cannot execute shell commands even if it tries
  *   --ephemeral           → no session persistence; one-shot only
  *
- * Codex has no --system-prompt equivalent — the full prompt is a single positional
- * argv string. We concatenate system + user + JSON-schema instruction into one
- * prompt. ARG_MAX is ~256KB on macOS; typical PAL prompts are 1-2KB.
+ * Codex has no --system-prompt equivalent, so system + user + JSON-schema become
+ * one prompt. That prompt goes in on stdin, not as a positional argument, because
+ * a PAL prompt spans several paragraphs and an argv element cannot carry a
+ * newline on Windows: Bun.spawn resolves the CLI to its .cmd shim, cmd.exe
+ * re-parses the command line, and the child exits non-zero having written
+ * nothing. Codex reads its instructions from stdin when no positional prompt is
+ * given, so this costs nothing on POSIX and is the only thing that works on
+ * Windows. Do not move the prompt back into argv.
  */
-export function buildCodexArgs(opts: InferenceOptions): string[] {
-  const parts: string[] = [];
-  if (opts.system) parts.push(opts.system);
-  parts.push(opts.user);
-  if (opts.jsonSchema) {
-    parts.push(
-      `Respond with ONLY a JSON value matching this schema (no prose, no markdown): ${JSON.stringify(opts.jsonSchema)}`
-    );
-  }
-  const prompt = parts.join("\n\n");
+export function buildCodexArgs(_opts: InferenceOptions): string[] {
   return [
     "exec",
     "--color",
@@ -340,7 +376,6 @@ export function buildCodexArgs(opts: InferenceOptions): string[] {
     "--sandbox",
     "read-only",
     "--ephemeral",
-    prompt,
   ];
 }
 
@@ -354,21 +389,14 @@ export function buildCodexArgs(opts: InferenceOptions): string[] {
  *                    text via extractOpencodeText() rather than wading through
  *                    decoration ("> build · provider/model" banner etc).
  *
- * opencode (like codex) has no --system-prompt equivalent — the full prompt is
- * the positional message argv. System + user + JSON-schema are concatenated.
- * Provider/model is left unset so opencode uses the user's configured default.
+ * opencode (like codex) has no --system-prompt equivalent, so system + user +
+ * JSON-schema are concatenated and delivered on stdin rather than as the
+ * positional message, for the same reason as codex: a multi-paragraph argv
+ * element does not survive cmd.exe on Windows. Provider/model is left unset so
+ * opencode uses the user's configured default.
  */
-export function buildOpencodeArgs(opts: InferenceOptions): string[] {
-  const parts: string[] = [];
-  if (opts.system) parts.push(opts.system);
-  parts.push(opts.user);
-  if (opts.jsonSchema) {
-    parts.push(
-      `Respond with ONLY a JSON value matching this schema (no prose, no markdown): ${JSON.stringify(opts.jsonSchema)}`
-    );
-  }
-  const prompt = parts.join("\n\n");
-  return ["run", "--pure", "--format", "json", prompt];
+export function buildOpencodeArgs(_opts: InferenceOptions): string[] {
+  return ["run", "--pure", "--format", "json"];
 }
 
 /**
@@ -385,23 +413,16 @@ export function buildOpencodeArgs(opts: InferenceOptions): string[] {
  *                          of running inference. Safe to pair with --mode ask
  *                          because that mode disallows tool calls anyway.
  *
- * cursor-agent has no --system-prompt flag — system + user + JSON-schema are
- * concatenated into a single positional prompt argument.
+ * cursor-agent has no --system-prompt flag, so system + user + JSON-schema are
+ * concatenated into one prompt delivered on stdin rather than as the trailing
+ * positional argument: a multi-paragraph argv element cannot survive cmd.exe on
+ * Windows. `-p` stays because for cursor-agent it means --print, not --prompt.
  *
  * Auth note: cursor-agent picks up either `cursor-agent login` credentials or
  * `CURSOR_API_KEY` env var. PAL doesn't manage these — that's the user's setup.
  */
-export function buildCursorArgs(opts: InferenceOptions): string[] {
-  const parts: string[] = [];
-  if (opts.system) parts.push(opts.system);
-  parts.push(opts.user);
-  if (opts.jsonSchema) {
-    parts.push(
-      `Respond with ONLY a JSON value matching this schema (no prose, no markdown): ${JSON.stringify(opts.jsonSchema)}`
-    );
-  }
-  const prompt = parts.join("\n\n");
-  return ["-p", "--mode", "ask", "--output-format", "text", "--trust", prompt];
+export function buildCursorArgs(_opts: InferenceOptions): string[] {
+  return ["-p", "--mode", "ask", "--output-format", "text", "--trust"];
 }
 
 /**
@@ -417,22 +438,14 @@ export function buildCursorArgs(opts: InferenceOptions): string[] {
  *   --allow-all-tools         → REQUIRED for non-interactive mode (without it,
  *                                copilot prompts for tool-use confirmation)
  *
- * Copilot has no --system-prompt flag — system + user + JSON-schema are
- * concatenated into a single prompt passed via -p.
+ * Copilot has no --system-prompt flag, so system + user + JSON-schema are
+ * concatenated into one prompt delivered on stdin. `-p/--prompt` is deliberately
+ * absent: it takes the prompt inline, and a multi-paragraph argv element cannot
+ * survive cmd.exe when Bun.spawn resolves copilot to its Windows .cmd shim.
+ * Piping stdin keeps copilot non-interactive, so dropping -p costs nothing.
  */
-export function buildCopilotArgs(opts: InferenceOptions): string[] {
-  const parts: string[] = [];
-  if (opts.system) parts.push(opts.system);
-  parts.push(opts.user);
-  if (opts.jsonSchema) {
-    parts.push(
-      `Respond with ONLY a JSON value matching this schema (no prose, no markdown): ${JSON.stringify(opts.jsonSchema)}`
-    );
-  }
-  const prompt = parts.join("\n\n");
+export function buildCopilotArgs(_opts: InferenceOptions): string[] {
   return [
-    "-p",
-    prompt,
     "--no-custom-instructions",
     "--disable-builtin-mcps",
     "--no-auto-update",
@@ -465,12 +478,40 @@ export function extractOpencodeText(rawStdout: string): string {
   return texts.join("").trim();
 }
 
+/**
+ * Render a JSON schema for a prompt without double quotes.
+ *
+ * Bun.spawn resolves an agent CLI on Windows to its `.cmd` shim, which npm
+ * installs it as, and cmd.exe re-parses the command line it is handed. A double
+ * quote inside an argv element does not survive that round trip: the child exits
+ * non-zero having written nothing, so the dispatcher sees an empty abort and
+ * gives up. Single quotes carry the same shape to a model and are inert to
+ * cmd.exe, so the schema travels intact on every platform.
+ */
+function schemaForPrompt(schema: Record<string, unknown>): string {
+  return JSON.stringify(schema).replaceAll('"', "'");
+}
+
+/** The one instruction line that asks a CLI agent for schema-shaped JSON. */
+export function schemaInstruction(schema: Record<string, unknown>): string {
+  return `Respond with ONLY a JSON value matching this schema (no prose, no markdown): ${schemaForPrompt(schema)}`;
+}
+
+/** system + user + schema instruction, the single prompt a CLI agent receives. */
+export function buildCliPrompt(opts: InferenceOptions): string {
+  const parts: string[] = [];
+  if (opts.system) parts.push(opts.system);
+  parts.push(opts.user);
+  if (opts.jsonSchema) parts.push(schemaInstruction(opts.jsonSchema));
+  return parts.join("\n\n");
+}
+
 /** Append a JSON-schema instruction to the system prompt (PAI pattern). */
 export function injectJsonSchemaInstruction(
   systemPrompt: string,
   schema: Record<string, unknown>
 ): string {
-  const schemaLine = `Respond with ONLY a JSON value matching this schema (no prose, no markdown): ${JSON.stringify(schema)}`;
+  const schemaLine = schemaInstruction(schema);
   return systemPrompt ? `${systemPrompt}\n\n${schemaLine}` : schemaLine;
 }
 

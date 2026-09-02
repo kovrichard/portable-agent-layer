@@ -7,6 +7,8 @@
  */
 
 import { basename } from "node:path";
+import { anchorMatchesCwd } from "./anchor";
+import { readAllProjects } from "./projects";
 import type { IndexedDoc, RetrievalIndex } from "./retrieval-index";
 import { extractKeywords } from "./text-similarity";
 
@@ -87,14 +89,18 @@ function rank(query: string, index: RetrievalIndex, cwd: string): ScoredDoc[] {
     .toLowerCase()
     .replace(/[^a-z0-9-]/g, "");
   const scopeTokens = scopeKey ? extractKeywords(scopeKey) : new Set<string>();
+  // Loaded once per rank() call, not per doc — the registry rarely changes
+  // within a single retrieval pass.
+  const projects = readAllProjects();
 
   const scored: ScoredDoc[] = [];
   for (const doc of index.docs) {
     const raw = scoreDoc(queryTerms, doc, index.df, N);
     if (raw === 0) continue;
-    // Exact cwd match when available; fingerprint heuristic for older captures.
+    // Anchored or plain cwd resolved against the local registry when
+    // available; fingerprint heuristic for captures with no cwd at all.
     const scopeMatch = doc.cwd
-      ? doc.cwd === cwd
+      ? anchorMatchesCwd(doc.cwd, cwd, projects)
       : [...scopeTokens].some((t) => scopeMatches(doc, t));
     const boosted = raw * (scopeMatch ? SCOPE_BOOST : 1) * ageDecay(doc.ts);
     const confidence = boosted / self;

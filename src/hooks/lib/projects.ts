@@ -17,14 +17,19 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, parse as parsePath, resolve, sep } from "node:path";
+import { type Bindings, readBindings, writeBinding, writeBindings } from "./bindings";
 import { parse, stringify } from "./frontmatter";
-import { paths } from "./paths";
+import { palHome, paths } from "./paths";
+import { detectRemote } from "./remote";
 
 export type ProjectStatus = "active" | "paused" | "complete" | "archived";
 
 export interface ProjectProgress {
   name: string;
-  path: string;
+  /** Resolved for this machine at read time; absent when not checked out here. */
+  path?: string;
+  /** Normalized git origin — the same on every machine, so this one does travel. */
+  remote?: string;
   status: ProjectStatus;
   created: string;
   updated: string;
@@ -109,7 +114,9 @@ const PROJECT_MARKERS = [
 
 type IsaMeta = {
   name: string;
-  path: string;
+  /** Legacy only — records written since bindings landed carry no path. */
+  path?: string;
+  remote?: string;
   status: ProjectStatus;
   created: string;
   updated: string;
@@ -188,40 +195,77 @@ export function looksLikeProjectRoot(cwd: string): boolean {
   return PROJECT_MARKERS.some((marker) => existsSync(resolve(cwdAbs, marker)));
 }
 
+/**
+ * Every project record, with `path` resolved to this machine.
+ *
+ * Seeds bindings for any project not yet bound here, which is what makes the
+ * binding file self-maintaining: no install step, no migration, no command to
+ * remember. Seeding is idempotent and writes only when it actually binds
+ * something, so the steady-state cost is the one `bindings.json` read below.
+ */
 export function readAllProjects(): ProjectProgress[] {
   const base = paths.projectHistory();
   if (!existsSync(base)) return [];
+  const bindings = readBindings();
   const out: ProjectProgress[] = [];
   for (const slug of readdirSync(base)) {
     const file = resolve(base, slug, "ISA.md");
     if (!existsSync(file)) continue;
-    const p = readProject(slug);
+    const p = readProject(slug, bindings);
     if (p) out.push(p);
   }
+  seedBindings(out);
   return out;
 }
 
-export function readProject(name: string): ProjectProgress | null {
+export function readProject(
+  name: string,
+  bindings: Bindings = readBindings()
+): ProjectProgress | null {
   const file = isaFilePath(name);
   if (!existsSync(file)) return null;
   try {
     const content = readFileSync(file, "utf-8");
     const { meta, body } = parse<IsaMeta>(content);
-    if (!meta?.name || !meta?.path || !meta?.status) return null;
-    return { ...meta, ...extractSections(body) };
+    if (!meta?.name || !meta?.status) return null;
+    // `path` is machine-local: the binding is the real source, and meta.path is
+    // only still read so records written before this change keep resolving.
+    const bound = bindings[meta.name] ?? meta.path;
+    const path = bound ? resolve(bound) : undefined;
+    return { ...meta, path, ...extractSections(body) };
   } catch {
     return null;
   }
 }
 
+/**
+ * Persist a project. The `path` is deliberately NOT written into the record:
+ * records travel in an export, and one machine's disk layout is meaningless — or
+ * actively wrong — on another. It is recorded as a binding instead, which stays
+ * on this machine. Callers keep setting `p.path` as before; only where it lands
+ * has changed.
+ */
 export function writeProject(p: ProjectProgress): void {
+  // Detected once and then kept: the remote is stable, and re-running git on
+  // every save would spawn a subprocess per project write for no new information.
+  if (!p.remote && p.path && existsSync(p.path)) {
+    const detected = detectRemote(p.path);
+    if (detected) p.remote = detected;
+  }
+  // Only a path that exists here may be bound. Saving a record is not a claim
+  // about this machine's disk — `path` may have arrived from an imported record
+  // written elsewhere, and binding it would recreate the very leak bindings exist
+  // to prevent. An explicit `writeBinding` from the user stays unguarded.
+  if (p.path && existsSync(p.path)) writeBinding(p.name, p.path);
   const meta: Record<string, unknown> = {
     name: p.name,
-    path: p.path,
     status: p.status,
     created: p.created,
     updated: p.updated,
   };
+  // Unlike `path`, this one is written into the record on purpose — it identifies
+  // the repository rather than one machine's copy of it.
+  if (p.remote) meta.remote = p.remote;
   if (p.next?.length) meta.next = p.next;
   if (p.blockers?.length) meta.blockers = p.blockers;
   if (p.handoff) meta.handoff = p.handoff;
@@ -246,18 +290,41 @@ export function deleteProject(name: string): boolean {
  * Parent-dir browse mode (cwd is an ancestor of a registered project) → null.
  * Multiple nested projects → longest registered path wins.
  */
+/**
+ * Where a project sits on THIS machine.
+ *
+ * A record's `path` is written by whichever machine last touched it and travels
+ * with the corpus, so on any other machine it is a claim rather than a fact. A
+ * binding is local by construction, so it wins; the record's path remains the
+ * fallback until this machine has bound the project.
+ *
+ * Note the fallback still trusts a foreign path — closing that is ISC-48 task 4
+ * proper, which requires seeding to be wired first.
+ */
+export function projectPathOnThisMachine(
+  project: ProjectProgress,
+  bindings: Bindings = readBindings()
+): string | null {
+  const bound = bindings[project.name] ?? project.path;
+  return bound ? resolve(bound) : null;
+}
+
 export function resolveProjectFromCwd(
   cwd: string,
-  projects: ProjectProgress[]
+  projects: ProjectProgress[],
+  bindings: Bindings = readBindings()
 ): ProjectProgress | null {
   const cwdAbs = resolve(cwd);
-  const matches = projects.filter((p) => {
-    const projAbs = resolve(p.path);
-    return cwdAbs === projAbs || cwdAbs.startsWith(projAbs + sep);
-  });
+  const matches: { project: ProjectProgress; path: string }[] = [];
+  for (const project of projects) {
+    const projAbs = projectPathOnThisMachine(project, bindings);
+    if (!projAbs) continue;
+    if (cwdAbs === projAbs || cwdAbs.startsWith(projAbs + sep))
+      matches.push({ project, path: projAbs });
+  }
   if (matches.length === 0) return null;
   matches.sort((a, b) => b.path.length - a.path.length);
-  return matches[0];
+  return matches[0].project;
 }
 
 export function isStale(
@@ -312,7 +379,8 @@ export function loadActiveProjectsContext(cwd: string = process.cwd()): string {
   const resolved = resolveProjectFromCwd(cwd, visible);
   const projectRoot = findProjectRoot(cwd);
   const alreadyRegistered =
-    projectRoot !== null && all.some((p) => resolve(p.path) === projectRoot);
+    projectRoot !== null &&
+    all.some((p) => p.path !== undefined && resolve(p.path) === projectRoot);
   const showHint = resolved === null && projectRoot !== null && !alreadyRegistered;
 
   if (visible.length === 0 && !showHint) return "";
@@ -376,4 +444,144 @@ export function loadActiveProjectsContext(cwd: string = process.cwd()): string {
   }
 
   return lines.join("\n");
+}
+
+/**
+ * Adopt the `path` already stored on each project record, for projects not yet
+ * bound here.
+ *
+ * Two guards keep this from importing another machine's filesystem. An existing
+ * binding always wins, because a binding is what THIS machine knows while a
+ * record's path may belong to any machine that ever wrote it. And a path is
+ * adopted only if it exists locally — that is what makes seeding safe to run on
+ * a machine that just imported someone else's corpus: their paths are simply not
+ * here, so nothing binds and those projects stay correctly unbound.
+ *
+ * Seeding is inference, so it is conservative. `writeBinding` is a statement by
+ * the user and is trusted without an existence check — binding a path you are
+ * about to clone into has to work.
+ *
+ * Returns the names newly bound, so a caller can stay silent on the common no-op.
+ */
+export function seedBindings(
+  projects: ProjectProgress[],
+  home: string = palHome()
+): string[] {
+  const bindings = readBindings(home);
+  const seeded: string[] = [];
+  for (const project of projects) {
+    if (!project.name || !project.path) continue;
+    if (project.name in bindings) continue;
+    if (!existsSync(project.path)) continue;
+    bindings[project.name] = resolve(project.path);
+    seeded.push(project.name);
+  }
+  if (seeded.length === 0) return [];
+  writeBindings(bindings, home);
+  return seeded;
+}
+
+export type BindingIssue =
+  | { kind: "unlocatable"; project: string }
+  | { kind: "missing"; project: string; path: string }
+  | { kind: "shared"; path: string; projects: string[] };
+
+/**
+ * Health of this machine's project bindings.
+ *
+ * Three things can go wrong once a path is machine-local. A project can become
+ * unlocatable, which is what losing bindings.json looks like from the outside.
+ * A binding can outlive the directory it names. And two projects can end up on
+ * one directory — the shape that appears when a name is reused for a second
+ * checkout, where binding by name alone would silently repoint the first.
+ *
+ * Read-only by construction: it reports, it never repairs.
+ */
+export function auditBindings(
+  projects: ProjectProgress[] = readAllProjects(),
+  bindings: Bindings = readBindings()
+): BindingIssue[] {
+  const issues: BindingIssue[] = [];
+  const byPath = new Map<string, string[]>();
+
+  for (const project of projects) {
+    const path = projectPathOnThisMachine(project, bindings);
+    if (!path) {
+      issues.push({ kind: "unlocatable", project: project.name });
+      continue;
+    }
+    if (!existsSync(path)) {
+      issues.push({ kind: "missing", project: project.name, path });
+      continue;
+    }
+    byPath.set(path, [...(byPath.get(path) ?? []), project.name]);
+  }
+
+  for (const [path, names] of byPath) {
+    if (names.length > 1) issues.push({ kind: "shared", path, projects: names.sort() });
+  }
+
+  return issues;
+}
+
+/**
+ * Every issue names the command that fixes it. PAL runs inside agents, where a
+ * hook cannot ask a question — so a suggestion is always a command the user can
+ * choose to run, never something applied on their behalf.
+ */
+export function describeBindingIssue(issue: BindingIssue): string {
+  const fix = (name: string) => `run 'project set-path ${name} <path>'`;
+  if (issue.kind === "unlocatable")
+    return `${issue.project} — not checked out here (${fix(issue.project)})`;
+  // "points at" rather than "bound to": the path may equally have come from a
+  // legacy record's own field, which is not a binding.
+  if (issue.kind === "missing")
+    return `${issue.project} — points at ${issue.path}, which does not exist here (${fix(issue.project)})`;
+  return `${issue.projects.join(" and ")} — both point at ${issue.path}; rebind whichever is wrong (${fix(issue.projects[0])})`;
+}
+
+export type BindingProposal = {
+  state: "unbound";
+  confidence: "strong" | "weak";
+  reason: string;
+  candidate: string;
+  command: string;
+};
+
+/**
+ * What PAL would suggest for a project it cannot locate, given where the user
+ * currently is. A matching git remote is strong evidence — two checkouts of one
+ * repository — while a matching directory name is only weak, because a name can
+ * be reused for an unrelated copy. Returns null when there is nothing worth
+ * saying, which is the common case.
+ */
+export function proposeBinding(
+  project: ProjectProgress,
+  cwd: string = process.cwd()
+): BindingProposal | null {
+  const command = `pal cli project set-path ${project.name} ${cwd}`;
+  const cwdRemote = detectRemote(cwd);
+
+  if (project.remote && cwdRemote === project.remote) {
+    return {
+      state: "unbound",
+      confidence: "strong",
+      reason: `the repository here is ${cwdRemote}, which is this project's recorded remote`,
+      candidate: cwd,
+      command,
+    };
+  }
+
+  if (basename(cwd) === project.name) {
+    return {
+      state: "unbound",
+      confidence: "weak",
+      reason:
+        "this directory shares the project's name, but nothing confirms it is the same one — a name can belong to more than one checkout",
+      candidate: cwd,
+      command,
+    };
+  }
+
+  return null;
 }

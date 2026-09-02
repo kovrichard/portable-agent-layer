@@ -1,8 +1,7 @@
 #!/usr/bin/env bun
 // Transpile skill tools that must run under Node into plain-JS `.mjs` siblings.
 //
-// Why this exists: a few skill tools (Playwright-based) run under Node, not Bun —
-// Playwright's chromium.launch hangs under Bun on Windows. When PAL is installed as a
+// Why this exists: a few skill tools (the PDF generators) run under Node, not Bun. When PAL is installed as a
 // bun global, each skill's realpath lands under node_modules, and Node 24 refuses to
 // type-strip a `.ts` under node_modules (ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING).
 // So we ship a compiled `.mjs` beside the `.ts` and invoke that instead — plain JS needs

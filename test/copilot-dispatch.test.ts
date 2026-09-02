@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
   _resetCopilotBinaryCache,
+  buildCliPrompt,
   buildCopilotArgs,
   inference,
 } from "../src/hooks/lib/inference";
@@ -34,9 +35,13 @@ function restoreEnv(saved: Record<string, string | undefined>) {
 }
 
 describe("buildCopilotArgs", () => {
-  test("uses -p for non-interactive prompt mode", () => {
+  test("omits -p so the prompt can arrive on stdin", () => {
+    // -p/--prompt only takes the prompt inline, and a multi-paragraph argv
+    // element cannot survive cmd.exe when Bun.spawn resolves copilot to its
+    // Windows .cmd shim. Piping stdin keeps copilot non-interactive anyway.
     const args = buildCopilotArgs({ user: "hi" });
-    expect(args[0]).toBe("-p");
+    expect(args).not.toContain("-p");
+    expect(args).not.toContain("--prompt");
   });
 
   test("includes the recursion-defense + safety flags", () => {
@@ -48,27 +53,23 @@ describe("buildCopilotArgs", () => {
     expect(args).toContain("--allow-all-tools");
   });
 
-  test("prompt is the argument after -p", () => {
-    const args = buildCopilotArgs({ user: "summarize this" });
-    const pIdx = args.indexOf("-p");
-    expect(args[pIdx + 1]).toBe("summarize this");
+  test("no argv element carries the prompt or a newline", () => {
+    const args = buildCopilotArgs({ system: "Be terse", user: "summarize this" });
+    expect(args).not.toContain("summarize this");
+    expect(args.filter((a) => a.includes("\n"))).toEqual([]);
   });
 
-  test("system + user are concatenated", () => {
-    const args = buildCopilotArgs({ system: "Be terse", user: "ping" });
-    const pIdx = args.indexOf("-p");
-    const prompt = args[pIdx + 1];
+  test("system + user are concatenated into the stdin prompt", () => {
+    const prompt = buildCliPrompt({ system: "Be terse", user: "ping" });
     expect(prompt).toContain("Be terse");
     expect(prompt).toContain("ping");
     expect(prompt.indexOf("Be terse")).toBeLessThan(prompt.indexOf("ping"));
   });
 
-  test("jsonSchema instruction appended to prompt", () => {
+  test("jsonSchema instruction appended to the stdin prompt", () => {
     const schema = { type: "object", properties: { x: { type: "string" } } };
-    const args = buildCopilotArgs({ user: "rate this", jsonSchema: schema });
-    const pIdx = args.indexOf("-p");
-    const prompt = args[pIdx + 1];
-    expect(prompt).toContain('"type":"object"');
+    const prompt = buildCliPrompt({ user: "rate this", jsonSchema: schema });
+    expect(prompt).toContain("'type':'object'");
     expect(prompt.toLowerCase()).toContain("json");
   });
 
@@ -106,10 +107,13 @@ describe("inference dispatcher — copilot spawn integration (fake binary)", () 
     _resetCopilotBinaryCache();
   });
 
-  test("end-to-end: fake copilot echoes prompt arg, dispatcher captures it", async () => {
-    // Fake copilot reads argv[3] (the prompt passed after -p) and echoes it.
-    // Bun.argv: [bun, script.ts, "-p", "<prompt>", ...]
-    writeFakeBin(tmpBin, "copilot", `console.log(Bun.argv[3] ?? "");\n`);
+  test("end-to-end: fake copilot echoes stdin, dispatcher captures it", async () => {
+    // Reads stdin rather than argv: that is where the prompt now travels.
+    writeFakeBin(
+      tmpBin,
+      "copilot",
+      `for await (const c of Bun.stdin.stream()) Bun.write(Bun.stdout, c);\n`
+    );
     prependPath(tmpBin);
 
     const result = await inference({ user: "hello-copilot", timeout: 5000 });

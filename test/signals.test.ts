@@ -1,11 +1,11 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import { emitRating } from "../src/hooks/lib/signals";
 
 const TEST_HOME = resolve(import.meta.dir, "../.test-home-signals");
 
-beforeAll(() => {
+beforeEach(() => {
   process.env.PAL_HOME = TEST_HOME;
   if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
   mkdirSync(TEST_HOME, { recursive: true });
@@ -48,5 +48,31 @@ describe("emitRating", () => {
     const lines = readFileSync(logPath, "utf-8").trim().split("\n");
     const last = JSON.parse(lines[lines.length - 1]);
     expect(last.response_preview).toBeUndefined();
+  });
+});
+
+describe("emitSignal — origin stamp", () => {
+  test("stamps the emitting machine's id on every signal", () => {
+    emitRating(8, "context", "explicit");
+
+    const logPath = resolve(TEST_HOME, "memory", "signals", "ratings.jsonl");
+    const entry = JSON.parse(readFileSync(logPath, "utf-8").trim());
+    const machineFile = JSON.parse(
+      readFileSync(resolve(TEST_HOME, "machine.json"), "utf-8")
+    );
+    expect(entry.m).toBe(machineFile.id);
+  });
+
+  test("stamps the SAME id across multiple signals in one session", () => {
+    emitRating(5, "first", "explicit");
+    emitRating(6, "second", "explicit");
+
+    const logPath = resolve(TEST_HOME, "memory", "signals", "ratings.jsonl");
+    const lines = readFileSync(logPath, "utf-8")
+      .trim()
+      .split("\n")
+      .map((l) => JSON.parse(l));
+    expect(lines[0].m).toBe(lines[1].m);
+    expect(lines[0].m.length).toBeGreaterThan(0);
   });
 });

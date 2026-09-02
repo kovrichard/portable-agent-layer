@@ -18,6 +18,9 @@ metadata:
     - "where are we"
     - "open ticket"
     - "open iscs"
+    - "file ticket"
+    - "file it as a ticket"
+    - "file a ticket"
 ---
 
 Manage the user's project registry. Each project lives at `~/.pal/memory/projects/{slug}/ISA.md`. Frontmatter holds operational state (next steps, blockers, handoff); the body holds ISA spec sections (Problem, Goal, Criteria, Context, Decisions, etc.). The Stop hook auto-touches `updated` whenever the cwd resolves into a registered project — just *being* in the project keeps it warm.
@@ -64,7 +67,7 @@ The body of each ISA.md holds spec sections. Use `update-section` to set them:
 | Decisions | `decisions` | Auto-managed by `add-decision`; dated bullet list |
 | Changelog | `changelog` | Archive of completed ISCs (`complete-isc` moves them here under a dated `### Archived` heading) plus any milestone notes |
 
-**ISC archive model.** `complete-isc` does not just check a box — it moves the ISC line out of Criteria and into the Changelog archive, so Criteria always reflects exactly the open work and never bloats the context loaded at session start. `list-isc <name>` shows open ISCs by default; pass `--closed` (archived only) or `--all` (open + archived) to read finished ones. `reopen-isc` pulls an archived ISC back into the open set. `prune-isc <name>` backfills legacy projects by sweeping any done ISCs still sitting in Criteria into the archive in one pass.
+**ISC archive model.** `complete-isc` does not just check a box — it moves the ISC line out of Criteria and into the Changelog archive, so Criteria always reflects exactly the open work and never bloats the context loaded at session start. `list-isc <name>` shows open ISCs by default; pass `--closed` (archived only) or `--all` (open + archived) to read finished ones. `reopen-isc` pulls an archived or retired ISC back into the open set. `edit-isc <name> <id> "new text"` rewrites an ISC's wording in place, keeping its id and state — use it to sharpen a vague criterion instead of closing and refiling. `retire-isc <name> <id> [--by <id>]` closes an ISC that stopped being valid: it files under a `### Retired` heading as `[~]` rather than claiming the work was done, and `--by` records the superseding ISC. A retired ISC counts as neither open nor done, is listed with `--retired`, and keeps its id reserved so no future ISC can reuse it. `prune-isc <name>` backfills legacy projects by sweeping any done ISCs still sitting in Criteria into the archive in one pass.
 
 ## Routing
 

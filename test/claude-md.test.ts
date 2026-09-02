@@ -121,10 +121,12 @@ describe("buildClaudeCodeMd", () => {
 
 describe("needsRebuild", () => {
   test("returns true when no AGENTS.md exists", async () => {
-    process.env.PAL_CLAUDE_DIR = resolve(TEST_HOME, ".claude");
-    process.env.PAL_OPENCODE_DIR = resolve(TEST_HOME, ".opencode");
-    mkdirSync(resolve(TEST_HOME, ".claude"), { recursive: true });
-    mkdirSync(resolve(TEST_HOME, ".opencode"), { recursive: true });
+    // Dirs of its own: the sibling symlink-repair test calls regenerateIfNeeded(),
+    // which writes an AGENTS.md into the shared .claude/.opencode pair.
+    process.env.PAL_CLAUDE_DIR = resolve(TEST_HOME, ".claude-empty");
+    process.env.PAL_OPENCODE_DIR = resolve(TEST_HOME, ".opencode-empty");
+    mkdirSync(resolve(TEST_HOME, ".claude-empty"), { recursive: true });
+    mkdirSync(resolve(TEST_HOME, ".opencode-empty"), { recursive: true });
 
     const { needsRebuild } = await import("../src/hooks/lib/claude-md");
     expect(needsRebuild()).toBe(true);

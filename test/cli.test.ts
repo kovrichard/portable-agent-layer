@@ -26,10 +26,15 @@ function pal(...args: string[]) {
   });
 }
 
+let init: ReturnType<typeof pal>;
+
+// `pal cli init` runs `bun install --frozen-lockfile` + telos scaffolding + doctor
+// pre-flight; on Windows this is ~5–6s, occasionally over bun-test's 5s default.
 beforeAll(() => {
   if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
   mkdirSync(TEST_HOME, { recursive: true });
-});
+  init = pal("cli", "init");
+}, 30000);
 
 describe("pal help", () => {
   test("shows help text", () => {
@@ -47,12 +52,8 @@ describe("pal help", () => {
 });
 
 describe("pal cli init", () => {
-  // `pal cli init` runs `bun install --frozen-lockfile` + telos scaffolding +
-  // doctor pre-flight; on Windows this is ~5–6s, occasionally over bun-test's
-  // 5s default. Bump to match the spawnSync timeout so we test the real path.
   test("scaffolds telos and memory directories", () => {
-    const result = pal("cli", "init");
-    expect(result.status).toBe(0);
+    expect(init.status).toBe(0);
 
     const telosDir = resolve(TEST_HOME, "telos");
     expect(existsSync(telosDir)).toBe(true);

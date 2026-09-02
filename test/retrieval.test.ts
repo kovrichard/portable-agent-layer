@@ -259,6 +259,73 @@ describe("retrieval index — dedup against graduated frames", () => {
   });
 });
 
+describe("retrieval index — anchored cwd (cross-machine scope)", () => {
+  function fixtureProject(name: string, path: string) {
+    const dir = resolve(TEST_HOME, "memory", "projects", name);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      resolve(dir, "ISA.md"),
+      `---\nname: "${name}"\npath: "${path}"\nstatus: "active"\ncreated: "2026-01-01"\nupdated: "2026-01-01"\n---\n\n## Goal\n`
+    );
+  }
+
+  test("an anchored reflection scope-matches against the LOCAL registered path, not the path it was captured under", () => {
+    // Registered here at a path different from wherever it was captured —
+    // exactly what happens after an import from another machine.
+    fixtureProject("sample", "/opt/build/sample");
+    fixtureReflection({
+      timestamp: "2026-05-30T18:00:00Z",
+      cwd: "{proj:sample}/src",
+      task: "Build the playwright visual-check skill",
+      sentiment: 8,
+      q1: "Verify the external tool's exact CLI contract before hardcoding the screenshot command",
+    });
+    const idx = buildIndex();
+    const result = runRetrieval(
+      "what is the exact CLI contract for this screenshot binary?",
+      idx,
+      "/opt/build/sample/src"
+    );
+    expect(result.matches[0].scopeMatch).toBe(true);
+  });
+
+  test("does not scope-match a different local cwd under the same project", () => {
+    fixtureProject("sample", "/opt/build/sample");
+    fixtureReflection({
+      timestamp: "2026-05-30T18:00:00Z",
+      cwd: "{proj:sample}/src",
+      task: "Build the playwright visual-check skill",
+      sentiment: 8,
+      q1: "Verify the external tool's exact CLI contract before hardcoding the screenshot command",
+    });
+    const idx = buildIndex();
+    const result = runRetrieval(
+      "what is the exact CLI contract for this screenshot binary?",
+      idx,
+      "/opt/build/sample/test"
+    );
+    expect(result.matches[0]?.scopeMatch ?? false).toBe(false);
+  });
+
+  test("an anchor whose project is not registered here never scope-matches", () => {
+    // No fixtureProject call — the slug is unknown on this "machine".
+    fixtureReflection({
+      timestamp: "2026-05-30T18:00:00Z",
+      cwd: "{proj:gizmo}/src",
+      task: "Build the playwright visual-check skill",
+      sentiment: 8,
+      q1: "Verify the external tool's exact CLI contract before hardcoding the screenshot command",
+    });
+    const idx = buildIndex();
+    const result = runRetrieval(
+      "what is the exact CLI contract for this screenshot binary?",
+      idx,
+      "/opt/build/gizmo/src"
+    );
+    expect(result.matches[0]?.scopeMatch ?? false).toBe(false);
+  });
+});
+
 describe("retrieval index — reflections", () => {
   test("indexes reflections with q1 as the displayed principle", () => {
     fixtureReflection({

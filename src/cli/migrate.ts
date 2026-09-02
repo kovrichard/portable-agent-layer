@@ -105,7 +105,7 @@ const v1Projects: Migration = {
 function nextIscId(criteria: string): number {
   const ids: number[] = [];
   for (const line of criteria.split("\n")) {
-    const m = new RegExp(/^-\s+\[[ x]\]\s+ISC-(\d+):/i).exec(line);
+    const m = new RegExp(/^-\s+\[[ x~]\]\s+ISC-(\d+):/i).exec(line);
     if (m) ids.push(Number(m[1]));
   }
   return ids.length > 0 ? Math.max(...ids) + 1 : 1;
@@ -117,7 +117,9 @@ function pendingThreadsForProjects(): { thread: Thread; project: ProjectProgress
   const projects = readAllProjects();
   const results: { thread: Thread; project: ProjectProgress }[] = [];
   for (const thread of threads) {
-    const project = projects.find((p) => resolve(p.path) === resolve(thread.cwd));
+    const project = projects.find(
+      (p) => p.path !== undefined && resolve(p.path) === resolve(thread.cwd)
+    );
     if (project) results.push({ thread, project });
   }
   return results;
@@ -362,7 +364,71 @@ const v3EntitiesToKnowledge: Migration = {
 
 // ── Registry ──────────────────────────────────────────────────────
 
-const MIGRATIONS: Migration[] = [v1Projects, v2ThreadsToIsc, v3EntitiesToKnowledge];
+// ── v4: project paths out of records, into machine-local bindings ──
+
+/** Records written before bindings existed carry their own `path:` in frontmatter. */
+function recordsCarryingAPath(): string[] {
+  const base = paths.projectHistory();
+  if (!existsSync(base)) return [];
+  const out: string[] = [];
+  for (const slug of readdirSync(base)) {
+    const file = resolve(base, slug, "ISA.md");
+    if (!existsSync(file)) continue;
+    const frontmatter = readFileSync(file, "utf-8").split("---")[1] ?? "";
+    if (/^path:/m.test(frontmatter)) out.push(slug);
+  }
+  return out;
+}
+
+const v4PathsToBindings: Migration = {
+  id: "v4-paths-to-bindings",
+  description: "Move project paths out of records into machine-local bindings",
+
+  check() {
+    const stale = recordsCarryingAPath();
+    return {
+      pending: stale.length > 0,
+      detail:
+        stale.length > 0 ? `${stale.length} record(s) still store a path` : undefined,
+    };
+  },
+
+  // Reading a record and writing it straight back is the whole migration: the
+  // writer already routes the path to a binding, drops the field, and picks up
+  // the git remote. Nothing here reimplements that, so the two cannot drift.
+  run(dryRun = false): MigrationResult {
+    const stale = recordsCarryingAPath();
+    const results: string[] = [];
+    let migrated = 0;
+    let skipped = 0;
+
+    for (const slug of stale) {
+      const project = readProject(slug);
+      if (!project) {
+        skipped++;
+        results.push(`${slug}: unreadable, left untouched`);
+        continue;
+      }
+      if (dryRun) {
+        migrated++;
+        results.push(`${slug}: would move ${project.path ?? "(no path)"} to a binding`);
+        continue;
+      }
+      writeProject(project);
+      migrated++;
+      results.push(`${slug}: path moved to a binding`);
+    }
+
+    return { migrated, skipped, results };
+  },
+};
+
+const MIGRATIONS: Migration[] = [
+  v1Projects,
+  v2ThreadsToIsc,
+  v3EntitiesToKnowledge,
+  v4PathsToBindings,
+];
 
 // ── Public API ────────────────────────────────────────────────────
 

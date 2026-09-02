@@ -8,6 +8,8 @@ node_modules/
 
 .test-tmp/
 .test-home/
+# Per-suite sandboxes; a detached child can recreate one after its test cleans up
+.test-home-*/
 
 # Eval runner logs (promptfoo writes error/debug logs to cwd)
 eval/logs/
@@ -24,3 +26,8 @@ assets/skills/consulting-report/demo/diagrams-compressed/
 # Skill tools compiled to .mjs for Node (scripts/build-skill-tools.ts). Generated at
 # `prepack` so the published tarball ships them; never committed. See the script header.
 assets/skills/*/tools/*.mjs
+
+# Mutation testing sandbox + reports
+.stryker-tmp/
+stryker.log
+reports/

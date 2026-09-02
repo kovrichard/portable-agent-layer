@@ -6,6 +6,7 @@
 import { existsSync, readdirSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import AdmZip from "adm-zip";
+import { ensureRegistered } from "./machine";
 import { palHome } from "./paths";
 
 /**
@@ -59,9 +60,41 @@ export function collectExportFiles(): string[] {
   return files;
 }
 
-/** Zip the given files and write to outputPath. Returns file count. */
+/** Archive metadata naming the machine that produced it. */
+export const MANIFEST_NAME = "export-manifest.json";
+
+export interface ExportManifest {
+  machineId: string;
+  label: string;
+  os: string;
+  exportedAt: string;
+  fileCount: number;
+}
+
+export function buildManifest(
+  identity: { id: string; label: string; os: string },
+  fileCount: number
+): ExportManifest {
+  return {
+    machineId: identity.id,
+    label: identity.label,
+    os: identity.os,
+    exportedAt: new Date().toISOString(),
+    fileCount,
+  };
+}
+
+/**
+ * Zip the given files and write to outputPath. Returns file count.
+ *
+ * The archive declares its source machine in a manifest. Registry entries under
+ * memory/machines/ travel with the corpus, so the manifest exists to say which
+ * machine produced THIS archive — after a merge an archive can carry entries
+ * for several machines.
+ */
 export function exportZip(outputPath: string): number {
   const root = palHome();
+  const identity = ensureRegistered(root);
   const files = collectExportFiles();
   if (files.length === 0) return 0;
 
@@ -71,6 +104,10 @@ export function exportZip(outputPath: string): number {
     const dir = file.includes("/") ? file.slice(0, file.lastIndexOf("/")) : "";
     zip.addLocalFile(fullPath, dir);
   }
+  zip.addFile(
+    MANIFEST_NAME,
+    Buffer.from(`${JSON.stringify(buildManifest(identity, files.length), null, 2)}\n`)
+  );
 
   zip.writeZip(outputPath);
   return files.length;
