@@ -20,7 +20,9 @@
  * yet wired and currently fall through to the API path.
  */
 
-import { basename } from "node:path";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { basename, join } from "node:path";
 import {
   getActiveAgent,
   isClaude,
@@ -151,7 +153,7 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
         "inference",
         `${tag} route=claude-spawn agent=${agent} model=${opts.model ?? HAIKU_MODEL}`
       );
-      return inferenceViaCliSpawn(bin, buildClaudeArgs(opts), buildCliPrompt(opts), opts);
+      return inferenceViaClaudeSpawn(bin, opts);
     }
   }
   if (isCodex()) {
@@ -298,8 +300,11 @@ export function _resetCursorBinaryCache(): void {
  * line. System, user and any JSON-schema instruction all travel together on
  * stdin instead, the same way every other agent receives them.
  */
-export function buildClaudeArgs(opts: InferenceOptions): string[] {
-  return [
+export function buildClaudeArgs(
+  opts: InferenceOptions,
+  systemPromptFile?: string
+): string[] {
+  const args = [
     "--print",
     "--model",
     opts.model ?? HAIKU_MODEL,
@@ -310,6 +315,36 @@ export function buildClaudeArgs(opts: InferenceOptions): string[] {
     "--setting-sources",
     "",
   ];
+  if (systemPromptFile) args.push("--system-prompt-file", systemPromptFile);
+  return args;
+}
+
+/**
+ * Claude keeps a real system prompt, unlike the other agents, so the system text
+ * reaches it through --system-prompt-file rather than --system-prompt. Only the
+ * path travels in argv, which is what makes this work on Windows: an argv
+ * element cannot carry a newline once Bun.spawn resolves claude to its .cmd
+ * shim, and PAL's system prompts run to several paragraphs. Folding the system
+ * text into the user message instead is not an option — Claude treats
+ * instructions embedded in message content as an injection attempt and refuses.
+ */
+async function inferenceViaClaudeSpawn(
+  bin: string,
+  opts: InferenceOptions
+): Promise<InferenceResult> {
+  const system = opts.jsonSchema
+    ? injectJsonSchemaInstruction(opts.system ?? "", opts.jsonSchema)
+    : opts.system;
+  if (!system) return inferenceViaCliSpawn(bin, buildClaudeArgs(opts), opts.user, opts);
+
+  const dir = await mkdtemp(join(tmpdir(), "pal-system-"));
+  try {
+    const file = join(dir, "system-prompt.md");
+    await writeFile(file, system, "utf-8");
+    return await inferenceViaCliSpawn(bin, buildClaudeArgs(opts, file), opts.user, opts);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 }
 
 /**

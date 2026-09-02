@@ -63,22 +63,29 @@ describe("buildClaudeArgs", () => {
     expect(args[idx + 1]).toBe("sonnet");
   });
 
-  test("adds --system-prompt when system provided", () => {
-    const args = buildClaudeArgs({ user: "hi", system: "be helpful" });
-    const idx = args.indexOf("--system-prompt");
-    expect(args[idx + 1]).toBe("be helpful");
+  // The system text goes to a file and only the path rides in argv, so a
+  // multi-paragraph system prompt survives cmd.exe on Windows.
+  test("points --system-prompt-file at the given path", () => {
+    const args = buildClaudeArgs({ user: "hi" }, "/tmp/pal/system-prompt.md");
+    const idx = args.indexOf("--system-prompt-file");
+    expect(args[idx + 1]).toBe("/tmp/pal/system-prompt.md");
   });
 
-  test("omits --system-prompt when neither system nor jsonSchema provided", () => {
+  test("never passes the system text inline", () => {
+    const args = buildClaudeArgs({ user: "hi", system: "be helpful" }, "/tmp/s.md");
+    expect(args).not.toContain("--system-prompt");
+    expect(args).not.toContain("be helpful");
+  });
+
+  test("omits the system flag entirely when no file is given", () => {
     const args = buildClaudeArgs({ user: "hi" });
     expect(args).not.toContain("--system-prompt");
+    expect(args).not.toContain("--system-prompt-file");
   });
 
-  test("injects schema into system prompt when jsonSchema provided", () => {
+  test("the schema instruction is what lands in that file", () => {
     const schema = { type: "object", properties: { x: { type: "string" } } };
-    const args = buildClaudeArgs({ user: "hi", jsonSchema: schema });
-    const idx = args.indexOf("--system-prompt");
-    expect(args[idx + 1]).toContain("'type':'object'");
+    expect(injectJsonSchemaInstruction("", schema)).toContain("'type':'object'");
   });
 
   test("never includes --bare (PAI billing trap)", () => {
