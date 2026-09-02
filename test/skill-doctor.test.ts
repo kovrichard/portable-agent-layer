@@ -289,6 +289,31 @@ describe("pal cli skill doctor", () => {
     expect(r.status).toBe(1);
   });
 
+  test("--all reports every installed skill", () => {
+    const r = doctor("--all");
+
+    expect(r.stdout).toContain("clean-skill");
+    expect(r.stdout).toContain("Broken");
+    expect(r.stdout).toContain("2 skills");
+  });
+
+  test("--all exits 1 when any skill has errors", () => {
+    expect(doctor("--all").status).toBe(1);
+  });
+
+  test("--all exits 0 and says so when there are no skills", () => {
+    const emptyHome = resolve(ROOT, "empty-home");
+    mkdirSync(resolve(emptyHome, "skills"), { recursive: true });
+    const r = spawnSync("bun", ["run", CLI, "cli", "skill", "doctor", "--all"], {
+      env: { ...process.env, PAL_HOME: emptyHome },
+      encoding: "utf-8",
+      timeout: 15000,
+    });
+
+    expect(r.status).toBe(0);
+    expect(`${r.stdout}${r.stderr}`).toContain("No skills found");
+  });
+
   test("exits 1 with usage when no name is given", () => {
     const r = spawnSync("bun", ["run", CLI, "cli", "skill", "doctor"], {
       env: { ...process.env, PAL_HOME: resolve(ROOT, ".pal") },

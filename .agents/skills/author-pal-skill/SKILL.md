@@ -36,6 +36,8 @@ description: <what it does + WHEN to invoke>   # used by the dispatcher to trigg
 argument-hint: <args>                  # optional; how the user passes input
 metadata:                              # free-form map; the only key Anthropic's
   triggers:                            # spec reserves for third-party tooling
+    - "<skill-name>"                   # always first
+    - "<skill name>"                   # always second, hyphens as spaces
     - "<word or phrase a prompt would contain>"
 ---
 
@@ -73,6 +75,7 @@ pal cli skill author-model
 2. Create `assets/skills/<name>/SKILL.md` in the repo (the canonical source — never edit the installed `~/.pal/skills/<name>` junction).
 3. Populate the SKILL.md from the anatomy above. Required: `name`, `description`, `metadata.triggers`, body sections (Workflow, Output format, When to use). Add `argument-hint` if the skill takes arguments.
    `metadata.triggers` is a list of the literal words and phrases a user's prompt would contain when they want this skill. `generateSkillIndex` copies them into `skill-index.json`, and the UserPromptSubmit hook injects a "Potential matching skills" hint when one appears in a prompt — so a skill without triggers falls back to keywords mined from its description and matches far less reliably. Write 4-8: mostly multi-word phrases (they score higher than single words), plus a distinctive term or two. Never a word so common it fires on unrelated prompts. Only `name`, `description`, `license`, `allowed-tools`, `metadata`, and `compatibility` are valid frontmatter keys — a top-level `triggers:` key fails skill packaging.
+   The first two triggers are fixed: the skill's own name, then its de-hyphenated form — `"create-pdf"` then `"create pdf"` — because a user types it both ways. A single-word name has only the one form, so it needs just itself. The doctor warns when they are missing or out of order.
 4. If the skill needs runtime tooling (TypeScript, scripts, vendored assets), scaffold a `tools/` subdir alongside SKILL.md. Otherwise leave the skill markdown-only.
 5. Run the doctor against the new skill and resolve every error:
    ```bash

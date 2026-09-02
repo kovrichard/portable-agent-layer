@@ -360,6 +360,24 @@ export function lintSkill(skillDir: string): DoctorReport {
 }
 
 /** Render a report as a human-readable string. */
+/** One scannable line per skill for a whole-store run: verdict plus the checks that fired. */
+export function formatSummary(r: DoctorReport): string {
+  const fired = (level: Level) =>
+    r.findings.filter((f) => f.level === level).map((f) => f.check);
+  // The folder name, not the frontmatter name — the folder is what the reader
+  // passes back to `pal cli skill doctor <name>`, and a mismatch between the two
+  // is itself one of the errors this line reports.
+  const name = basename(r.dir).padEnd(20);
+
+  if (r.errors > 0) {
+    return `✗ ${name} ${r.errors} error(s): ${fired("error").join(", ")}`;
+  }
+  if (r.warnings > 0) {
+    return `⚠ ${name} ${r.warnings} warning(s): ${fired("warn").join(", ")}`;
+  }
+  return `✓ ${name} clean`;
+}
+
 export function formatReport(r: DoctorReport): string {
   const icon = { pass: "✓", warn: "⚠", error: "✗" } as const;
   const lines = [`skill-doctor: ${r.name ?? "(unparsed)"}  —  ${r.dir}`];

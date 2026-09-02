@@ -17,7 +17,7 @@
  *   doctor                            Check prerequisites and system health
  *   usage                             Summarize token usage and cost
  *   skill link <name>                 Link a personal ~/.pal/skills/<name>/ into installed agents
- *   skill doctor <name>               Evaluate a skill against the authoring best practices
+ *   skill doctor <name|--all>         Evaluate one skill, or every installed skill, against the authoring best practices
  *   subagent link <name>             Install a personal ~/.pal/agents/<name>.md into installed agents
  *   subagent doctor <name>           Evaluate a subagent against the authoring best practices
  *   debug [on|off]                    Enable / disable verbose hook debug logging
@@ -283,7 +283,7 @@ function showHelp() {
     pal cli knowledge <sub> [args]          Query & manage the knowledge store
                                             (search · graph · stats · hubs · find · show · add · ls)
     pal cli skill link <name>               Link a personal ~/.pal/skills/<name>/ into installed agents
-    pal cli skill doctor <name>             Evaluate a skill against the authoring best practices
+    pal cli skill doctor <name|--all>       Evaluate one skill, or every installed skill
     pal cli skill author-model              Print the flagship model that authors skills for the active agent
     pal cli subagent link <name>            Install a personal ~/.pal/agents/<name>.md into installed agents
     pal cli subagent doctor <name>          Evaluate a subagent against the authoring best practices

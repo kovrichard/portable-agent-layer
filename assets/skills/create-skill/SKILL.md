@@ -36,7 +36,7 @@ cat ~/.pal/skills/create-skill/authoring-guide.md
    - `mkdir -p ~/.pal/skills/<name>` and write `~/.pal/skills/<name>/SKILL.md`.
    - If the skill needs runtime tooling, scaffold a `tools/` subdir and write the scripts there.
    - Link it into every installed agent: `pal cli skill link <name>`.
-   - Run `pal cli skill doctor <name>` and fix every `✗`; weigh each `⚠`.
+   - Run `pal cli skill doctor <name>` and fix every `✗`; weigh each `⚠`. (`pal cli skill doctor --all` lints every installed skill, one line each.)
    - Hand-check the items the doctor can't judge (see the guide's final section).
 
 Either path: validate the name first (lowercase-kebab, no spaces, not colliding with an existing skill in `~/.pal/skills/` or the active skill list), and confirm the trigger with the user if the description is ambiguous about *when* the skill should fire.
