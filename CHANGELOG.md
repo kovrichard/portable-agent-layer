@@ -1,3 +1,19 @@
+# [0.67.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.66.1...v0.67.0) (2026-09-04)
+
+
+### Bug Fixes
+
+* **targets:** drop per-item uninstall narration under the test runner ([b2b1d9b](https://github.com/kovrichard/portable-agent-layer/commit/b2b1d9bdec841593bb0d40952f20985152bb0947))
+
+
+### Features
+
+* **gates:** name the files check-write rewrote ([aad4eff](https://github.com/kovrichard/portable-agent-layer/commit/aad4eff1cf37008d5b7543d5d2b8b2907fd78357))
+* **ledger:** record Edit and Write actions with both sides of the change ([9c0256e](https://github.com/kovrichard/portable-agent-layer/commit/9c0256eafe1f81be55d13fa745e4a262b013c000))
+* **ledger:** record failed and denied edits, and keep the two apart ([3bda57f](https://github.com/kovrichard/portable-agent-layer/commit/3bda57f008c0334cbf0c8ede1e8994df20893e95))
+* **ledger:** record what an edit changed by pairing a pre-tool snapshot with its result ([6c8fdac](https://github.com/kovrichard/portable-agent-layer/commit/6c8fdac9f531005dafd3a5d5b4bb12783a6dced2))
+* **ledger:** store the change itself instead of both whole files ([b6d8050](https://github.com/kovrichard/portable-agent-layer/commit/b6d8050572b1e594259d660655fc0782d591c196))
+
 ## [0.66.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.66.0...v0.66.1) (2026-09-04)
 
 
