@@ -27,6 +27,7 @@ import {
 } from "./identity-store";
 import { loadMachine } from "./machine";
 import { palHome, paths } from "./paths";
+import { identity } from "./settings";
 import { isPalSpawnedInference } from "./spawn-guard";
 
 export type ActorIdentity = IdentityBase;
@@ -126,6 +127,21 @@ export function ensureActorRegistered(home: string = palHome()): ActorIdentity {
   const actor = loadActor(home);
   writeActorEntry({ id: actor.id, label: actor.label });
   return actor;
+}
+
+/**
+ * Adopt the principal's name as the actor label, but only while the label is
+ * still the generated default — a chosen label is never overwritten. Runs at
+ * install rather than at mint, so an actor created before the name was known
+ * still picks it up. The settings default of "User" names nobody, so it is not
+ * adopted.
+ */
+export function seedActorLabel(home: string = palHome()): ActorIdentity {
+  const actor = loadActor(home);
+  if (actor.label !== defaultActorLabel(actor.id)) return actor;
+  const name = identity().principal.name.trim();
+  if (!name || name === "User") return actor;
+  return setActorLabel(name, home);
 }
 
 /** Authority behind the call currently executing. */
