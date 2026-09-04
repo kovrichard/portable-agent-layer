@@ -47,16 +47,26 @@ function dedup(notes: RelationshipNote[], filepath: string): RelationshipNote[] 
   }
 }
 
-/** Append notes to today's relationship file */
-export function appendNotes(notes: RelationshipNote[], sessionId?: string): void {
-  if (notes.length === 0) return;
+/** What an append actually did — `written` is the count after deduplication. */
+export interface AppendResult {
+  file: string;
+  written: number;
+}
 
+/**
+ * Append notes to today's relationship file. Reports the file and the number of
+ * notes that survived deduplication, which is what a caller must report rather
+ * than the count it passed in.
+ */
+export function appendNotes(notes: RelationshipNote[], sessionId?: string): AppendResult {
   const filepath = dailyFilePath(new Date());
+  if (notes.length === 0) return { file: filepath, written: 0 };
+
   const today = new Date().toISOString().slice(0, 10);
 
   // Deduplicate against existing content
   const fresh = dedup(notes, filepath);
-  if (fresh.length === 0) return;
+  if (fresh.length === 0) return { file: filepath, written: 0 };
 
   const lines: string[] = [];
 
@@ -81,6 +91,7 @@ export function appendNotes(notes: RelationshipNote[], sessionId?: string): void
 
   const existing = existsSync(filepath) ? readFileSync(filepath, "utf-8") : "";
   writeFileSync(filepath, existing + lines.join("\n"), "utf-8");
+  return { file: filepath, written: fresh.length };
 }
 
 /** Load notes from the last N days as a single string */

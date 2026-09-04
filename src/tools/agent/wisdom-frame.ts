@@ -234,7 +234,7 @@ Examples:
 
   const cliType = (values.type || "evolution") as ObservationType;
   const result = updateFrame(values.domain, values.observation, cliType);
-  emit.ok(result.message);
+  emit.receipt(result.framePath, { domain: result.domain, type: result.type });
 }
 
 if (import.meta.main) run();

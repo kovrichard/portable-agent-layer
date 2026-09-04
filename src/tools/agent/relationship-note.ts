@@ -82,9 +82,8 @@ Output: appends to memory/relationship/YYYY-MM/YYYY-MM-DD.md
     notes.push({ type: "Session" as const, text: values.b });
   }
 
-  appendNotes(notes);
-
-  emit.ok(`Relationship note written (${notes.length})`);
+  const { file, written } = appendNotes(notes);
+  emit.receipt(file, { written, deduped: notes.length - written });
 }
 
 if (import.meta.main) run();

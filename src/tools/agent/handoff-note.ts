@@ -39,10 +39,12 @@ function readHandoffs(): Record<string, HandoffEntry> {
   }
 }
 
-function writeHandoffs(handoffs: Record<string, HandoffEntry>): void {
+/** Returns how many entries survived the trim, which is what the receipt reports. */
+function writeHandoffs(handoffs: Record<string, HandoffEntry>): number {
   const entries = Object.entries(handoffs);
   const trimmed = entries.length > 20 ? Object.fromEntries(entries.slice(-20)) : handoffs;
   writeFileSync(handoffPath(), JSON.stringify(trimmed, null, 2), "utf-8");
+  return Object.keys(trimmed).length;
 }
 
 function writeHandoffNote(
@@ -50,7 +52,7 @@ function writeHandoffNote(
   title: string,
   text: string,
   done: boolean
-): { success: boolean; message: string } {
+): { file: string; status: HandoffEntry["status"]; kept: number } {
   const handoffs = readHandoffs();
   handoffs[cwd] = {
     timestamp: new Date().toISOString(),
@@ -60,11 +62,8 @@ function writeHandoffNote(
     artifacts: [],
     source: "deliberate",
   };
-  writeHandoffs(handoffs);
-  return {
-    success: true,
-    message: done ? "Handoff cleared (marked completed)" : "Handoff note written",
-  };
+  const kept = writeHandoffs(handoffs);
+  return { file: handoffPath(), status: handoffs[cwd].status, kept };
 }
 
 function run() {
@@ -103,7 +102,7 @@ Output: writes to memory/state/last-handoff.json keyed by cwd
       values.text || "",
       true
     );
-    emit.ok(result.message);
+    emit.receipt(result.file, { status: result.status, entries: result.kept });
     process.exit(0);
   }
 
@@ -113,7 +112,7 @@ Output: writes to memory/state/last-handoff.json keyed by cwd
   }
 
   const result = writeHandoffNote(process.cwd(), values.title, values.text, false);
-  emit.ok(result.message);
+  emit.receipt(result.file, { status: result.status, entries: result.kept });
 }
 
 if (import.meta.main) run();

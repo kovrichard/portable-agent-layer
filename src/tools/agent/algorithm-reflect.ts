@@ -155,7 +155,11 @@ Output: algorithm-reflections.jsonl in memory/learning/reflections/
   });
 
   const result = appendReflection(reflection);
-  emit.ok(result.message);
+  emit.receipt(result.path, {
+    passed: reflection.criteria_passed,
+    of: reflection.criteria_count,
+    scope: reflection.scope,
+  });
 }
 
 if (import.meta.main) run();
