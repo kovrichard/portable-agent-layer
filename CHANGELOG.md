@@ -1,3 +1,12 @@
+# [0.66.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.65.0...v0.66.0) (2026-09-04)
+
+
+### Features
+
+* **actor:** actor identity distinct from machine identity ([aa61d07](https://github.com/kovrichard/portable-agent-layer/commit/aa61d070a884ae39c96085d4f19054d32dafd8c8))
+* **cli:** seed the actor label at install and expose identity renaming ([a761a0a](https://github.com/kovrichard/portable-agent-layer/commit/a761a0a24fbc15841692b978d71799e5d529269a))
+* **emit:** receipts for state-changing tools, enforced by klint ([3fa3ad3](https://github.com/kovrichard/portable-agent-layer/commit/3fa3ad392e61cb0d83056d9a71f27df6a64881d3))
+
 # [0.65.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.64.0...v0.65.0) (2026-09-02)
 
 
