@@ -35,7 +35,7 @@ Each gate, its script, and its wrapper in `.agents/hooks/`:
 | Script                     | What it does                       | Wrapper           |
 | -------------------------- | ---------------------------------- | ----------------- |
 | `bun run check`            | Biome lint + format (read-only)    | `check.ts`        |
-| `bun run check-write`      | Biome lint + format with `--write` | (manual)          |
+| `bun run check-write`      | Biome `--write`, naming what it rewrote | (manual)     |
 | `bun run type-check`       | `tsc --noEmit`                     | `type-check.ts`   |
 | `bun run knip`             | Dead-code / unused-deps scan       | `knip.ts`         |
 | `bun run jscpd`            | Copy-paste detection               | `jscpd.ts`        |
