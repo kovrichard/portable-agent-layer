@@ -50,6 +50,18 @@
       "Bash(bun klint/cli.ts *)",
       "Bash(bun run klint *)",
       "Bash(bun eval/run.ts *)"
+    ],
+    "deny": [
+      "Bash(sed -i:*)",
+      "Bash(gsed -i:*)",
+      "Bash(perl -i:*)",
+      "Bash(perl -pi:*)",
+      "Bash(perl -ni:*)",
+      "Bash(ed:*)",
+      "Bash(ex:*)",
+      "Bash(patch:*)",
+      "Bash(truncate:*)",
+      "Bash(dd:*)"
     ]
   }
 }

@@ -54,6 +54,7 @@ export const paths = {
   reflectionsFile: () =>
     home("memory", "learning", "reflections", "algorithm-reflections.jsonl"),
   retrievalIndex: () => home("memory", "learning", ".retrieval-index.json"),
+  ledger: () => ensureDir(home("memory", "ledger")),
   progress: () => ensureDir(home("memory", "state", "progress")),
   projectHistory: () => ensureDir(home("memory", "projects")),
   sessionLearning: () => ensureDir(home("memory", "learning", "session")),

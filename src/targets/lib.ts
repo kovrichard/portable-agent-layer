@@ -23,11 +23,27 @@ import { declaredTriggers } from "../hooks/lib/skill-triggers";
 
 // --- Colored logging ---
 
+function runningUnderTest(): boolean {
+  return process.env.PAL_TEST_SANDBOX === "1";
+}
+
 export const log = {
   info: (msg: string) => console.log(`\x1b[34m[pal]\x1b[0m ${msg}`),
   success: (msg: string) => console.log(`\x1b[32m[pal]\x1b[0m ${msg}`),
   warn: (msg: string) => console.log(`\x1b[33m[pal]\x1b[0m ${msg}`),
   error: (msg: string) => console.error(`\x1b[31m[pal]\x1b[0m ${msg}`),
+
+  /**
+   * Per-item narration from inside a loop, where the caller already reports the
+   * total. Silent under the test runner: the suite drives these installers by
+   * the hundred against temp directories, so the lines name files that were
+   * never on this machine — and they are the only output no caller asserts on,
+   * precisely because the summary is what carries the result.
+   */
+  detail: (msg: string) => {
+    if (runningUnderTest()) return;
+    console.log(`\x1b[34m[pal]\x1b[0m ${msg}`);
+  },
 };
 
 // --- JSON helpers ---
@@ -784,7 +800,7 @@ export function copySkills(claudeSkillsDir: string): number {
   let count = 0;
 
   for (const name of pruneStaleSkillLinks(claudeSkillsDir)) {
-    log.info(`Removed stale skill link: ${name}`);
+    log.detail(`Removed stale skill link: ${name}`);
   }
 
   for (const name of readdirSync(skillsDir)) {
@@ -994,7 +1010,7 @@ export function removeSkills(claudeSkillsDir: string): string[] {
       }
     }
     removed.push(name);
-    log.info(`Removed skill: ${name}`);
+    log.detail(`Removed skill: ${name}`);
   }
 
   // Remove ~/.agents/skills/ → ~/.pal/skills/ symlink
@@ -1031,7 +1047,7 @@ export function removeAgents(): string[] {
       unlinkSync(dst);
       const name = file.replace(/\.md$/, "");
       removed.push(name);
-      log.info(`Removed agent: ${name}`);
+      log.detail(`Removed agent: ${name}`);
     }
   }
   return removed;
@@ -1141,7 +1157,7 @@ function uninstallAgents(targetDir: string, label: string): string[] {
     if (existsSync(dst)) {
       unlinkSync(dst);
       removed.push(file.replace(/\.md$/, ""));
-      log.info(`Removed ${label} agent: ${file.replace(/\.md$/, "")}`);
+      log.detail(`Removed ${label} agent: ${file.replace(/\.md$/, "")}`);
     }
   }
   return removed;
