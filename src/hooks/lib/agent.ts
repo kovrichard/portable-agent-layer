@@ -78,8 +78,25 @@ function firstString(...values: unknown[]): string | undefined {
 
 function firstObject(...values: unknown[]): Record<string, unknown> | undefined {
   return values.find(
-    (v): v is Record<string, unknown> => typeof v === "object" && v !== null
+    (v): v is Record<string, unknown> =>
+      typeof v === "object" && v !== null && !Array.isArray(v)
   );
+}
+
+/** Copilot's CLI sends toolArgs as JSON text where the others send an object. */
+function parsedObject(value: unknown): Record<string, unknown> | undefined {
+  if (typeof value !== "string") return undefined;
+  try {
+    const parsed = JSON.parse(value);
+    return firstObject(parsed);
+  } catch {
+    return undefined;
+  }
+}
+
+function toolInputOf(payload: Record<string, unknown>): Record<string, unknown> {
+  const candidates = [payload.tool_input, payload.toolArgs, payload.toolInput];
+  return firstObject(...candidates) ?? candidates.map(parsedObject).find(Boolean) ?? {};
 }
 
 /**
@@ -97,7 +114,7 @@ export function normalizeToolUse(raw: unknown): ToolUseRequest | null {
   if (!toolName) return null;
   return {
     toolName,
-    toolInput: firstObject(payload.tool_input, payload.toolArgs, payload.toolInput) ?? {},
+    toolInput: toolInputOf(payload),
     hookEventName: firstString(payload.hook_event_name, payload.hookEventName),
   };
 }
