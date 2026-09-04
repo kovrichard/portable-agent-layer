@@ -194,6 +194,32 @@ describe("currentAttribution", () => {
     expect(currentAttribution().authority).toBe("agent");
   });
 
+  test("stamps unknown when no agent declared itself, rather than guessing", async () => {
+    const { currentAttribution } = await lib();
+    const sniffed = ["CURSOR_VERSION", "CODEX_CLI_VERSION", "OPENAI_CODEX"];
+    const saved = sniffed.map((k) => [k, process.env[k]] as const);
+    for (const k of sniffed) delete process.env[k];
+
+    expect(currentAttribution().runtime).toBe("unknown");
+
+    for (const [k, v] of saved) if (v !== undefined) process.env[k] = v;
+  });
+
+  test("an undeclared stamp stays distinguishable from a declared claude one", async () => {
+    const { currentAttribution } = await lib();
+    const undeclared = currentAttribution().runtime;
+    process.env.PAL_AGENT = "claude";
+    expect(currentAttribution().runtime).toBe("claude");
+    expect(undeclared).not.toBe("claude");
+  });
+
+  test("behaviour routing still assumes claude while the stamp says unknown", async () => {
+    const { currentAttribution } = await lib();
+    const { getActiveAgent } = await import("../src/hooks/lib/agent");
+    expect(getActiveAgent()).toBe("claude");
+    expect(currentAttribution().runtime).toBe("unknown");
+  });
+
   test("the same actor is stamped regardless of which runtime is driving", async () => {
     const { currentAttribution } = await lib();
     process.env.PAL_AGENT = "claude";

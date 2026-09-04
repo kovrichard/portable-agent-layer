@@ -42,13 +42,20 @@ function agentFromArgv(): AgentType | undefined {
   return value && KNOWN_AGENTS.has(value as AgentType) ? (value as AgentType) : undefined;
 }
 
-/** Detect which agent is currently running PAL. Defaults to "claude". */
-export function getActiveAgent(): AgentType {
-  const declared = agentFromArgv() ?? agentFromEnv();
-  if (declared) return declared;
+function agentFromRuntimeEnv(): AgentType | undefined {
   if (process.env.CURSOR_VERSION) return "cursor";
   if (process.env.CODEX_CLI_VERSION ?? process.env.OPENAI_CODEX) return "codex";
-  return "claude";
+  return undefined;
+}
+
+/** The agent something actually said was running, or undefined if nothing did. */
+export function declaredAgent(): AgentType | undefined {
+  return agentFromArgv() ?? agentFromEnv() ?? agentFromRuntimeEnv();
+}
+
+/** Which agent's conventions to follow. Assumes "claude" when undeclared. */
+export function getActiveAgent(): AgentType {
+  return declaredAgent() ?? "claude";
 }
 
 export const isClaude = () => getActiveAgent() === "claude";
