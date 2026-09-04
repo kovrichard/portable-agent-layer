@@ -91,11 +91,30 @@ function repairActor(stored: Partial<ActorIdentity> & { id: string }): ActorIden
 }
 
 /**
+ * The name the principal already told PAL, or nothing. The settings default of
+ * "User" names nobody, so it never becomes a label.
+ */
+function principalName(): string {
+  const name = identity().principal.name.trim();
+  return !name || name === "User" ? "" : name;
+}
+
+/**
  * This person's identity, minted on first call and stable afterwards — across
  * machines, once an export has carried it there.
+ *
+ * The label is derived, not stored-at-mint: while it is still the generated
+ * default, the principal's configured name wins. Seeding it once at install
+ * only held for installs that ran the seeding step, so an actor minted by an
+ * upgrade kept a neutral label forever while settings knew the name all along.
+ * Deriving on read makes the name hold on every install without a step anyone
+ * has to remember. A label the user chose is stored, and is never overridden.
  */
 export function loadActor(home: string = palHome()): ActorIdentity {
-  return loadIdentity(actorFilePath(home), newActor, repairActor);
+  const actor = loadIdentity(actorFilePath(home), newActor, repairActor);
+  if (actor.label !== defaultActorLabel(actor.id)) return actor;
+  const name = principalName();
+  return name ? { ...actor, label: name } : actor;
 }
 
 /** Rename this actor. No stored record is touched — labels resolve on read. */
@@ -131,21 +150,6 @@ export function ensureActorRegistered(home: string = palHome()): ActorIdentity {
   const actor = loadActor(home);
   writeActorEntry({ id: actor.id, label: actor.label });
   return actor;
-}
-
-/**
- * Adopt the principal's name as the actor label, but only while the label is
- * still the generated default — a chosen label is never overwritten. Runs at
- * install rather than at mint, so an actor created before the name was known
- * still picks it up. The settings default of "User" names nobody, so it is not
- * adopted.
- */
-export function seedActorLabel(home: string = palHome()): ActorIdentity {
-  const actor = loadActor(home);
-  if (actor.label !== defaultActorLabel(actor.id)) return actor;
-  const name = identity().principal.name.trim();
-  if (!name || name === "User") return actor;
-  return setActorLabel(name, home);
 }
 
 /** Authority behind the call currently executing. */

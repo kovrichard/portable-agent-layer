@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 
@@ -15,9 +15,11 @@ function writeSettings(principalName: string | undefined): void {
   );
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   HOME = mkdtempSync(resolve(tmpdir(), "pal-identity-cli-"));
   process.env.PAL_HOME = HOME;
+  // settings caches per process and bun shares one across test files.
+  (await import("../src/hooks/lib/settings")).reload();
 });
 
 afterEach(() => {
@@ -29,69 +31,90 @@ async function actorLib() {
   return await import("../src/hooks/lib/actor");
 }
 
-describe("seedActorLabel", () => {
+describe("actor label derivation", () => {
   test("adopts the principal's name while the label is still the default", async () => {
     writeSettings("Ada");
-    const { seedActorLabel, loadActor } = await actorLib();
+    const { loadActor } = await actorLib();
     const { reload } = await import("../src/hooks/lib/settings");
     reload();
-    expect(seedActorLabel(HOME).label).toBe("Ada");
+    expect(loadActor(HOME).label).toBe("Ada");
+  });
+
+  test("holds on an install that never ran the seeding step", async () => {
+    writeSettings("Ada");
+    const { loadActor, actorFilePath, defaultActorLabel } = await actorLib();
+    const { reload } = await import("../src/hooks/lib/settings");
+    reload();
+    // An actor minted by an upgrade: on disk it still carries the default label.
+    const minted = loadActor(HOME);
+    const raw = JSON.parse(readFileSync(actorFilePath(HOME), "utf-8"));
+    expect(raw.label).toBe(defaultActorLabel(minted.id));
     expect(loadActor(HOME).label).toBe("Ada");
   });
 
   test("never overwrites a label the user already chose", async () => {
     writeSettings("Ada");
-    const { seedActorLabel, setActorLabel } = await actorLib();
+    const { loadActor, setActorLabel } = await actorLib();
     const { reload } = await import("../src/hooks/lib/settings");
     reload();
     setActorLabel("chosen", HOME);
-    expect(seedActorLabel(HOME).label).toBe("chosen");
+    expect(loadActor(HOME).label).toBe("chosen");
   });
 
   test("does NOT adopt the settings placeholder 'User' as a name", async () => {
     writeSettings("User");
-    const { seedActorLabel, defaultActorLabel } = await actorLib();
+    const { loadActor, defaultActorLabel } = await actorLib();
     const { reload } = await import("../src/hooks/lib/settings");
     reload();
-    const actor = seedActorLabel(HOME);
+    const actor = loadActor(HOME);
     expect(actor.label).toBe(defaultActorLabel(actor.id));
   });
 
   test("leaves the default in place when no name is configured", async () => {
     writeSettings(undefined);
-    const { seedActorLabel, defaultActorLabel } = await actorLib();
+    const { loadActor, defaultActorLabel } = await actorLib();
     const { reload } = await import("../src/hooks/lib/settings");
     reload();
-    const actor = seedActorLabel(HOME);
+    const actor = loadActor(HOME);
     expect(actor.label).toBe(defaultActorLabel(actor.id));
   });
 
   test("rejects the 'User' placeholder even when it arrives padded", async () => {
     writeSettings("  User  ");
-    const { seedActorLabel, defaultActorLabel } = await actorLib();
+    const { loadActor, defaultActorLabel } = await actorLib();
     const { reload } = await import("../src/hooks/lib/settings");
     reload();
-    const actor = seedActorLabel(HOME);
+    const actor = loadActor(HOME);
     expect(actor.label).toBe(defaultActorLabel(actor.id));
   });
 
   test("trims a padded name rather than labelling the actor with whitespace", async () => {
     writeSettings("  Ada  ");
-    const { seedActorLabel } = await actorLib();
+    const { loadActor } = await actorLib();
     const { reload } = await import("../src/hooks/lib/settings");
     reload();
-    expect(seedActorLabel(HOME).label).toBe("Ada");
+    expect(loadActor(HOME).label).toBe("Ada");
   });
 
-  test("is idempotent — a second run changes nothing", async () => {
+  test("derives without writing — the stored label is untouched", async () => {
     writeSettings("Ada");
-    const { seedActorLabel } = await actorLib();
+    const { loadActor, actorFilePath, defaultActorLabel } = await actorLib();
     const { reload } = await import("../src/hooks/lib/settings");
     reload();
-    const first = seedActorLabel(HOME);
-    const second = seedActorLabel(HOME);
-    expect(second.label).toBe("Ada");
-    expect(second.id).toBe(first.id);
+    const id = loadActor(HOME).id;
+    const before = readFileSync(actorFilePath(HOME), "utf-8");
+    loadActor(HOME);
+    expect(readFileSync(actorFilePath(HOME), "utf-8")).toBe(before);
+    expect(JSON.parse(before).label).toBe(defaultActorLabel(id));
+  });
+
+  test("the registry entry carries the derived name, so it travels on export", async () => {
+    writeSettings("Ada");
+    const { ensureActorRegistered, readActorRegistry } = await actorLib();
+    const { reload } = await import("../src/hooks/lib/settings");
+    reload();
+    ensureActorRegistered(HOME);
+    expect(readActorRegistry().map((e) => e.label)).toContain("Ada");
   });
 });
 

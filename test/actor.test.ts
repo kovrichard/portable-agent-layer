@@ -5,11 +5,13 @@ import { resolve } from "node:path";
 
 let HOME: string;
 
-beforeEach(() => {
+beforeEach(async () => {
   HOME = mkdtempSync(resolve(tmpdir(), "pal-actor-"));
   process.env.PAL_HOME = HOME;
   delete process.env.PAL_SPAWNED_INFERENCE;
   delete process.env.PAL_AGENT;
+  // settings caches per process and bun shares one across test files.
+  (await import("../src/hooks/lib/settings")).reload();
 });
 
 afterEach(() => {

@@ -1188,9 +1188,8 @@ async function install(targets: Targets) {
   await promptTelos();
   await promptAttribution();
 
-  // After promptIdentity, so an actor minted before the name was known adopts it.
-  const { seedActorLabel, ensureActorRegistered } = await import("../hooks/lib/actor");
-  seedActorLabel();
+  // Registers the label loadActor derives, so it travels on the next export.
+  const { ensureActorRegistered } = await import("../hooks/lib/actor");
   ensureActorRegistered();
 
   // Shared, target-independent state. Every target installer used to repeat these
