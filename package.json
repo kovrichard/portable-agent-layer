@@ -96,6 +96,7 @@
   "dependencies": {
     "@clack/prompts": "^1.4.0",
     "adm-zip": "^0.5.17",
+    "fast-myers-diff": "^3.2.0",
     "marked": "18.0.4",
     "pdf-lib": "1.17.1",
     "playwright": "^1.60.0",

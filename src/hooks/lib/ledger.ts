@@ -31,6 +31,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
+import { calcPatch } from "fast-myers-diff";
 import { currentAttribution, type RecordAttribution } from "./actor";
 import { encodeAnchor } from "./anchor";
 import { ensureDir, paths } from "./paths";
@@ -48,15 +49,38 @@ import { ensureDir, paths } from "./paths";
 export type LedgerOutcome = "applied" | "failed" | "denied";
 
 /**
- * One side of a change. The hash is always present so an entry can be checked
- * against a file later even when the content itself was too large to keep; the
- * text is the evidence of what changed, kept only while it stays small.
+ * One side of a change, identified rather than reproduced. The hash ties the
+ * entry to a real file — apply the delta to something matching `before.hash`
+ * and you must land on `after.hash` — and the byte count says how big that file
+ * was without keeping it.
  */
 export interface LedgerState {
   hash: string;
   bytes: number;
-  text?: string;
-  /** Set when the text was dropped for size. Its absence means the text is complete. */
+}
+
+/**
+ * One contiguous replacement. `at` and `remove` index the before-state and are
+ * not shifted by earlier hunks in the same delta, which is what the diff
+ * produces and what applying them in order with a running offset expects.
+ */
+export interface LedgerHunk {
+  at: number;
+  remove: number;
+  insert: string[];
+}
+
+/**
+ * What changed, at line granularity.
+ *
+ * Storing this rather than both whole files is what lets the record scale with
+ * the size of the change instead of the size of the file. Under the old shape a
+ * four-line edit to a large file kept two hashes and nothing else, so the
+ * entries that said least were the ones about the biggest files.
+ */
+export interface LedgerDelta {
+  hunks: LedgerHunk[];
+  /** Set when the change itself was too large to keep. Its absence means the hunks are complete. */
   truncated?: boolean;
 }
 
@@ -72,6 +96,12 @@ export interface LedgerEntry extends RecordAttribution {
   before: LedgerState | null;
   /** Null when nothing landed, which is what a failed or denied action means. */
   after: LedgerState | null;
+  /**
+   * The change from one side to the other. Absent when nothing landed: an
+   * action that was refused did not empty the file, and a delta saying it did
+   * would be the ledger stating something that never happened.
+   */
+  delta?: LedgerDelta;
   /** Why the action did not land. Absent on an applied one. */
   reason?: string;
 }
@@ -89,12 +119,11 @@ export interface RecordActionInput {
 }
 
 /**
- * Content above this is recorded as hash and size only. Both sides are whole
- * files read off disk, not the changed region, so the hash is checkable against
- * the file later — and most files clear this, meaning the common entry keeps
- * its size and hash but not its text.
+ * A change larger than this is recorded as having happened without being kept.
+ * It caps the delta rather than the files, so what fits is decided by how much
+ * an action changed, not by how big the thing it changed happened to be.
  */
-const MAX_INLINE_BYTES = 4096;
+const MAX_DELTA_BYTES = 4096;
 
 /** Size at which the active file is rotated aside. */
 const MAX_LEDGER_BYTES = 4 * 1024 * 1024;
@@ -111,10 +140,57 @@ function hash(content: string): string {
 
 function stateOf(content: string | null): LedgerState | null {
   if (content === null) return null;
-  const bytes = Buffer.byteLength(content, "utf-8");
-  const state: LedgerState = { hash: hash(content), bytes };
-  if (bytes > MAX_INLINE_BYTES) return { ...state, truncated: true };
-  return { ...state, text: content };
+  return { hash: hash(content), bytes: Buffer.byteLength(content, "utf-8") };
+}
+
+/**
+ * Splitting on newlines keeps the trailing one: "a\n" becomes ["a", ""], and
+ * joining puts it back. A file and its line list round-trip exactly, which is
+ * what makes a reconstructed after-state hash-identical to the real one.
+ */
+function toLines(content: string | null): string[] {
+  return content === null ? [] : content.split("\n");
+}
+
+/**
+ * The change between two states, or nothing when there was no transition to
+ * describe. An action that did not land has no delta — see LedgerEntry.delta.
+ */
+function deltaOf(before: string | null, after: string | null): LedgerDelta | undefined {
+  if (after === null) return undefined;
+
+  const hunks: LedgerHunk[] = [];
+  for (const [at, end, insert] of calcPatch(toLines(before), toLines(after))) {
+    hunks.push({ at, remove: end - at, insert: [...insert] });
+  }
+  if (hunks.length === 0) return undefined;
+
+  const delta: LedgerDelta = { hunks };
+  return Buffer.byteLength(JSON.stringify(delta), "utf-8") > MAX_DELTA_BYTES
+    ? { hunks: [], truncated: true }
+    : delta;
+}
+
+/**
+ * Rebuild the after-state from the before-state and the delta, or nothing when
+ * the delta was too large to keep.
+ *
+ * This is what makes an entry checkable rather than merely plausible: the hash
+ * of what this returns must equal the entry's `after.hash`. It is also the read
+ * side of the ledger — a stored change is only evidence if it can be replayed.
+ */
+export function applyDelta(before: string | null, delta: LedgerDelta): string | null {
+  if (delta.truncated) return null;
+
+  const lines = toLines(before);
+  const out: string[] = [];
+  let cursor = 0;
+  for (const hunk of delta.hunks) {
+    out.push(...lines.slice(cursor, hunk.at), ...hunk.insert);
+    cursor = hunk.at + hunk.remove;
+  }
+  out.push(...lines.slice(cursor));
+  return out.join("\n");
 }
 
 function generateId(): string {
@@ -154,6 +230,7 @@ function freeArchivePath(stamp: string): string {
  * being asked of it.
  */
 export function recordAction(input: RecordActionInput): LedgerEntry {
+  const delta = deltaOf(input.before, input.after);
   const entry: LedgerEntry = {
     id: generateId(),
     ts: new Date().toISOString(),
@@ -163,6 +240,7 @@ export function recordAction(input: RecordActionInput): LedgerEntry {
     outcome: input.outcome,
     before: stateOf(input.before),
     after: stateOf(input.after),
+    ...(delta ? { delta } : {}),
     ...(input.reason ? { reason: input.reason } : {}),
   };
 

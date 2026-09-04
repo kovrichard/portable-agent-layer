@@ -79,12 +79,11 @@ describe("recordAction", () => {
     expect(all[0].id).toBe(first);
   });
 
-  test("keeps both sides of the change as text while they are small", async () => {
-    const { recordAction } = await lib();
+  test("records the change itself, not either whole side", async () => {
+    const { recordAction, applyDelta } = await lib();
     const entry = recordAction(APPLIED);
-    expect(entry.before?.text).toBe("const a = 1;");
-    expect(entry.after?.text).toBe("const a = 2;");
-    expect(entry.before?.truncated).toBeUndefined();
+    expect(entry.delta?.hunks).toHaveLength(1);
+    expect(applyDelta("const a = 1;", entry.delta as never)).toBe("const a = 2;");
   });
 
   test("hashes both sides, and different content hashes differently", async () => {
@@ -113,22 +112,23 @@ describe("recordAction", () => {
     for (const id of ids) expect(id.length).toBeGreaterThan(0);
   });
 
-  test("keeps text sitting exactly on the inline cap, drops it one byte past", async () => {
+  // The cap is on the change now, so what decides is how much an action altered,
+  // not how big the file it altered happened to be.
+  test("keeps a small change to a huge file", async () => {
     const { recordAction } = await lib();
-    const atCap = recordAction({ ...APPLIED, after: "x".repeat(4096) });
-    const pastCap = recordAction({ ...APPLIED, after: "x".repeat(4097) });
-    expect(atCap.after?.text).toHaveLength(4096);
-    expect(atCap.after?.truncated).toBeUndefined();
-    expect(pastCap.after?.text).toBeUndefined();
+    const huge = `${"filler line\n".repeat(5000)}tail`;
+    const entry = recordAction({ ...APPLIED, before: huge, after: `${huge} touched` });
+    expect(entry.before?.bytes).toBeGreaterThan(4096);
+    expect(entry.delta?.truncated).toBeUndefined();
   });
 
-  test("drops oversized text but still hashes and measures it", async () => {
+  test("drops an oversized change but still hashes and measures both sides", async () => {
     const { recordAction } = await lib();
-    const huge = "x".repeat(5000);
-    const entry = recordAction({ ...APPLIED, after: huge });
-    expect(entry.after?.text).toBeUndefined();
-    expect(entry.after?.truncated).toBe(true);
-    expect(entry.after?.bytes).toBe(5000);
+    const huge = "new line\n".repeat(1000);
+    const entry = recordAction({ ...APPLIED, before: "", after: huge });
+    expect(entry.delta?.truncated).toBe(true);
+    expect(entry.delta?.hunks).toEqual([]);
+    expect(entry.after?.bytes).toBe(Buffer.byteLength(huge, "utf-8"));
     expect(entry.after?.hash).toHaveLength(64);
   });
 

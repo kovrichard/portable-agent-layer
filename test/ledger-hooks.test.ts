@@ -10,6 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { applyDelta } from "../src/hooks/lib/ledger";
 
 // The two hooks are only correct together, and only as separate processes:
 // the whole point is that the before-state survives from one invocation to the
@@ -47,6 +48,11 @@ function payload(event: string, target: string, id = "toolu_01ABC") {
   };
 }
 
+/** Entries identify their sides by hash now, so that is how a test names content. */
+function hashOf(content: string): string {
+  return new Bun.CryptoHasher("sha256").update(content, "utf-8").digest("hex");
+}
+
 function entries(): Record<string, unknown>[] {
   const file = resolve(HOME, "memory", "ledger", "actions.jsonl");
   if (!existsSync(file)) return [];
@@ -68,8 +74,10 @@ describe("the snapshot/commit pair", () => {
 
     const all = entries();
     expect(all).toHaveLength(1);
-    expect((all[0].before as { text: string }).text).toBe("const a = 1;");
-    expect((all[0].after as { text: string }).text).toBe("const a = 2;");
+    expect((all[0].before as { hash: string }).hash).toBe(hashOf("const a = 1;"));
+    expect((all[0].after as { hash: string }).hash).toBe(hashOf("const a = 2;"));
+    // The delta survived the process boundary and still replays.
+    expect(applyDelta("const a = 1;", all[0].delta as never)).toBe("const a = 2;");
     expect(all[0].outcome).toBe("applied");
     expect(all[0].tool).toBe("Edit");
   });
@@ -83,7 +91,8 @@ describe("the snapshot/commit pair", () => {
 
     const [entry] = entries();
     expect(entry.before).toBeNull();
-    expect((entry.after as { text: string }).text).toBe("fresh");
+    expect((entry.after as { hash: string }).hash).toBe(hashOf("fresh"));
+    expect(applyDelta(null, entry.delta as never)).toBe("fresh");
   });
 
   test("writes nothing at all when the commit half never runs", () => {
@@ -120,10 +129,10 @@ describe("the snapshot/commit pair", () => {
     runHook("LedgerCommit", payload("PostToolUse", one, "toolu_one"));
 
     const byTarget = new Map(
-      entries().map((e) => [String(e.target), (e.before as { text: string }).text])
+      entries().map((e) => [String(e.target), (e.before as { hash: string }).hash])
     );
-    expect(byTarget.get(one)).toBe("ONE-before");
-    expect(byTarget.get(two)).toBe("TWO-before");
+    expect(byTarget.get(one)).toBe(hashOf("ONE-before"));
+    expect(byTarget.get(two)).toBe(hashOf("TWO-before"));
   });
 });
 
@@ -155,7 +164,9 @@ describe("the snapshot/unapplied pair", () => {
     const [entry] = entries();
     expect(entry.outcome).toBe("failed");
     expect(entry.reason).toContain("has not been read yet");
-    expect((entry.before as { text: string }).text).toBe("const a = 1;");
+    expect((entry.before as { hash: string }).hash).toBe(hashOf("const a = 1;"));
+    // Nothing landed, so there is no change to describe.
+    expect(entry.delta).toBeUndefined();
   });
 
   test("records an auto-mode denial as denied, not as failed", () => {
@@ -202,7 +213,7 @@ describe("the snapshot/unapplied pair", () => {
 
     const [entry] = entries();
     expect(entry.outcome).toBe("failed");
-    expect((entry.before as { text: string }).text).toBe("const a = 1;");
+    expect((entry.before as { hash: string }).hash).toBe(hashOf("const a = 1;"));
   });
 
   test("spends the snapshot, so a later commit cannot record the same call again", () => {
