@@ -96,6 +96,13 @@ build output, so the rule above is what actually governs.
 - No personal information (usernames, real names, employer/project codenames, absolute home paths) in any file under `assets/skills/` or `src/`. Personal context belongs in private memory only — see `.agents/skills/author-pal-skill/SKILL.md` for the rule.
 - One skill = one job. If a skill needs branching like "for case A do X, for case B do Y," it's two skills.
 
+## Documenting code
+
+- Writing comments is generally discouraged.
+- Writing comments longer than the code they describe is forbidden.
+- Use descriptive variable and function names instead.
+- Klint breaks if code is overly commented. Violating this rule just wastes tokens and time.
+
 ## Context injection architecture
 
 PAL uses a 3-tier system to keep the hook's dynamic output small while ensuring each agent receives full context natively.
