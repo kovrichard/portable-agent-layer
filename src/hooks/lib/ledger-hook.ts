@@ -7,6 +7,7 @@
  */
 
 import { normalizeToolUse } from "./agent";
+import type { LedgerOutcome } from "./ledger";
 
 /**
  * Edits and writes, which carry their own target in the call. A shell command's
@@ -39,6 +40,46 @@ export function ledgeredCall(payload: Record<string, unknown>): LedgeredCall | n
 
   const target = ledgeredTarget(toolUse.toolName, toolUse.toolInput);
   return target ? { toolUseId, tool: toolUse.toolName, target } : null;
+}
+
+/**
+ * How a call that did not land reports itself. Two events, because the runtime
+ * treats the two endings as different things and so does the ledger: a tool
+ * that ran and errored is not a call something refused to run.
+ *
+ * They carry the same fact under different keys, which is the whole reason this
+ * mapping is written down in one place rather than read twice.
+ */
+const UNAPPLIED_EVENTS: Record<string, { outcome: LedgerOutcome; reasonKey: string }> = {
+  PostToolUseFailure: { outcome: "failed", reasonKey: "error" },
+  PermissionDenied: { outcome: "denied", reasonKey: "reason" },
+};
+
+export interface UnappliedVerdict {
+  outcome: LedgerOutcome;
+  reason?: string;
+}
+
+/**
+ * What became of a call, for the events that mean it did not land — or nothing
+ * when the payload is some other event, so one hook can be registered on both
+ * without having to be told which one it is being run for.
+ */
+export function unappliedVerdictOf(
+  payload: Record<string, unknown>
+): UnappliedVerdict | null {
+  const event = payload.hook_event_name ?? payload.hookEventName;
+  if (typeof event !== "string") return null;
+
+  const mapping = UNAPPLIED_EVENTS[event];
+  if (!mapping) return null;
+
+  const reason = payload[mapping.reasonKey];
+  // A reason the runtime did not send is left absent rather than invented: an
+  // entry that states a cause it does not have is worse than one that admits none.
+  return typeof reason === "string" && reason.length > 0
+    ? { outcome: mapping.outcome, reason }
+    : { outcome: mapping.outcome };
 }
 
 export function toolUseIdOf(payload: Record<string, unknown>): string | null {

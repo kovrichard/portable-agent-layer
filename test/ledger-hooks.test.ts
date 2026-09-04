@@ -92,8 +92,8 @@ describe("the snapshot/commit pair", () => {
 
     runHook("LedgerSnapshot", payload("PreToolUse", target));
 
-    // A denied call fires the snapshot and never the commit — no action happened,
-    // so no entry may claim one did.
+    // A snapshot on its own is half a record. Until some second half claims it,
+    // nothing is known to have happened and no entry may claim otherwise.
     expect(entries()).toEqual([]);
   });
 
@@ -124,6 +124,126 @@ describe("the snapshot/commit pair", () => {
     );
     expect(byTarget.get(one)).toBe("ONE-before");
     expect(byTarget.get(two)).toBe("TWO-before");
+  });
+});
+
+// An attempt that did not land is still an attempt. A log that kept only what
+// succeeded could not answer what was tried, which is usually what is being
+// asked of it.
+describe("the snapshot/unapplied pair", () => {
+  function failure(target: string, id = "toolu_01ABC") {
+    return {
+      ...payload("PostToolUseFailure", target, id),
+      error: "File has not been read yet. Read it first before writing to it.",
+    };
+  }
+
+  function denial(target: string, id = "toolu_01ABC") {
+    return {
+      ...payload("PermissionDenied", target, id),
+      reason: "Blocked by classifier",
+    };
+  }
+
+  test("records a failed edit as failed, with the error the runtime gave", () => {
+    const target = resolve(work, "index.ts");
+    writeFileSync(target, "const a = 1;", "utf-8");
+
+    runHook("LedgerSnapshot", payload("PreToolUse", target));
+    runHook("LedgerUnapplied", failure(target));
+
+    const [entry] = entries();
+    expect(entry.outcome).toBe("failed");
+    expect(entry.reason).toContain("has not been read yet");
+    expect((entry.before as { text: string }).text).toBe("const a = 1;");
+  });
+
+  test("records an auto-mode denial as denied, not as failed", () => {
+    const target = resolve(work, "index.ts");
+    writeFileSync(target, "const a = 1;", "utf-8");
+
+    runHook("LedgerSnapshot", payload("PreToolUse", target));
+    runHook("LedgerUnapplied", denial(target));
+
+    const [entry] = entries();
+    expect(entry.outcome).toBe("denied");
+    expect(entry.reason).toBe("Blocked by classifier");
+  });
+
+  // The distinction is the point: one is the agent's attempt breaking, the
+  // other is something refusing to let it run.
+  test("keeps the two endings apart in the record", () => {
+    const target = resolve(work, "index.ts");
+    writeFileSync(target, "const a = 1;", "utf-8");
+
+    runHook("LedgerUnapplied", failure(target, "toolu_f"));
+    runHook("LedgerUnapplied", denial(target, "toolu_d"));
+
+    expect(entries().map((e) => e.outcome)).toEqual(["failed", "denied"]);
+  });
+
+  test("leaves after null, because nothing landed", () => {
+    const target = resolve(work, "index.ts");
+    writeFileSync(target, "const a = 1;", "utf-8");
+
+    runHook("LedgerSnapshot", payload("PreToolUse", target));
+    runHook("LedgerUnapplied", failure(target));
+
+    expect(entries()[0].after).toBeNull();
+  });
+
+  // Nothing landed, so the file on disk is still the before-state — the one
+  // case where a missing snapshot is recoverable.
+  test("still records the before-state when no snapshot was parked", () => {
+    const target = resolve(work, "index.ts");
+    writeFileSync(target, "const a = 1;", "utf-8");
+
+    runHook("LedgerUnapplied", failure(target, "toolu_unpaired"));
+
+    const [entry] = entries();
+    expect(entry.outcome).toBe("failed");
+    expect((entry.before as { text: string }).text).toBe("const a = 1;");
+  });
+
+  test("spends the snapshot, so a later commit cannot record the same call again", () => {
+    const target = resolve(work, "index.ts");
+    writeFileSync(target, "const a = 1;", "utf-8");
+
+    runHook("LedgerSnapshot", payload("PreToolUse", target));
+    runHook("LedgerUnapplied", failure(target));
+    runHook("LedgerCommit", payload("PostToolUse", target));
+
+    expect(entries()).toHaveLength(1);
+    expect(entries()[0].outcome).toBe("failed");
+  });
+
+  test("declines an event that does not mean the call ended", () => {
+    const target = resolve(work, "index.ts");
+    writeFileSync(target, "const a = 1;", "utf-8");
+
+    runHook("LedgerUnapplied", payload("PostToolUse", target));
+
+    expect(entries()).toEqual([]);
+  });
+
+  test("records a denial with no reason rather than inventing one", () => {
+    const target = resolve(work, "index.ts");
+    writeFileSync(target, "const a = 1;", "utf-8");
+
+    runHook("LedgerUnapplied", payload("PermissionDenied", target));
+
+    const [entry] = entries();
+    expect(entry.outcome).toBe("denied");
+    expect(entry.reason).toBeUndefined();
+  });
+
+  test("stays silent and exits 0, like the other halves", () => {
+    const target = resolve(work, "index.ts");
+    writeFileSync(target, "const a = 1;", "utf-8");
+
+    const res = runHook("LedgerUnapplied", failure(target));
+    expect(res.status).toBe(0);
+    expect(res.stdout).toBe("");
   });
 });
 

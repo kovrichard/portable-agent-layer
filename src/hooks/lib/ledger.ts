@@ -35,8 +35,17 @@ import { currentAttribution, type RecordAttribution } from "./actor";
 import { encodeAnchor } from "./anchor";
 import { ensureDir, paths } from "./paths";
 
-/** Whether the action actually happened, or was stopped before it could. */
-export type LedgerOutcome = "applied" | "denied";
+/**
+ * What became of the action.
+ *
+ * `failed` and `denied` are kept apart because they answer different questions.
+ * A failure is the agent's own attempt not working — a bad path, a stale match,
+ * a permission on disk. A denial is a human refusing it. Collapsing them would
+ * lose the only signal in the record that says where the boundary was drawn,
+ * and "what did I try that was refused" is a question worth being able to ask
+ * separately from "what did I try that broke".
+ */
+export type LedgerOutcome = "applied" | "failed" | "denied";
 
 /**
  * One side of a change. The hash is always present so an entry can be checked
@@ -61,9 +70,9 @@ export interface LedgerEntry extends RecordAttribution {
   outcome: LedgerOutcome;
   /** Null when nothing was there before: a file creation has no prior state. */
   before: LedgerState | null;
-  /** Null when nothing landed, which is what a denied action means. */
+  /** Null when nothing landed, which is what a failed or denied action means. */
   after: LedgerState | null;
-  /** Why a denied action was stopped. Absent on an applied one. */
+  /** Why the action did not land. Absent on an applied one. */
   reason?: string;
 }
 
@@ -140,8 +149,8 @@ function freeArchivePath(stamp: string): string {
 /**
  * Append one action to the ledger and return the entry as written.
  *
- * A denied action is recorded like any other: an audit log that keeps only what
- * succeeded cannot answer what was attempted, which is usually the question
+ * An action that did not land is recorded like any other: a log that keeps only
+ * what succeeded cannot answer what was attempted, which is usually the question
  * being asked of it.
  */
 export function recordAction(input: RecordActionInput): LedgerEntry {
@@ -178,7 +187,7 @@ export interface PendingSnapshot {
   ts: string;
 }
 
-/** Snapshots older than this were never claimed — the call was denied or it failed. */
+/** How long a snapshot waits for a second half that may never come. */
 const PENDING_TTL_MS = 60 * 60 * 1000;
 
 function pendingDir(): string {
@@ -217,9 +226,16 @@ export function claimPending(toolUseId: string): PendingSnapshot | null {
 }
 
 /**
- * Drop snapshots nothing ever claimed. A denied or failed call fires the
- * pre-tool half and never the post-tool one, so its snapshot would otherwise
- * sit here forever — the action did not happen, and the ledger records actions.
+ * Drop snapshots nothing ever claimed.
+ *
+ * Applying, failing and being denied by auto mode all fire a second half that
+ * claims the snapshot. What is left here is the endings that fire nothing after
+ * the pre-tool half — a manual denial at the permission dialog, a deny rule, a
+ * pre-tool hook's own block — plus anything interrupted mid-call.
+ *
+ * They are dropped rather than recorded because the ledger would have to invent
+ * which of those it was. The attempt is real and currently goes unrecorded; see
+ * the manual-denial gap in the project's ISCs.
  */
 export function reapStalePending(now: number = Date.now()): number {
   const dir = pendingDir();

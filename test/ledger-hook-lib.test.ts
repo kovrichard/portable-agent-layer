@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { ledgeredCall, ledgeredTarget, toolUseIdOf } from "../src/hooks/lib/ledger-hook";
+import {
+  ledgeredCall,
+  ledgeredTarget,
+  toolUseIdOf,
+  unappliedVerdictOf,
+} from "../src/hooks/lib/ledger-hook";
 
 // Both hooks ask these two questions of every payload, and they must answer
 // identically: a snapshot taken for a call the commit half ignores is a
@@ -107,6 +112,75 @@ describe("ledgeredCall", () => {
       toolUseId: "id-1",
       tool: "Write",
       target: "/x.ts",
+    });
+  });
+});
+
+// The two endings carry the same fact under different keys. Reading the wrong
+// key loses the reason silently — the entry still writes, just without the one
+// field that explains it.
+describe("unappliedVerdictOf", () => {
+  test("reads a tool failure as failed, taking the reason from error", () => {
+    expect(
+      unappliedVerdictOf({
+        hook_event_name: "PostToolUseFailure",
+        error: "Exit code 1",
+      })
+    ).toEqual({ outcome: "failed", reason: "Exit code 1" });
+  });
+
+  test("reads an auto-mode denial as denied, taking the reason from reason", () => {
+    expect(
+      unappliedVerdictOf({
+        hook_event_name: "PermissionDenied",
+        reason: "Blocked by classifier",
+      })
+    ).toEqual({ outcome: "denied", reason: "Blocked by classifier" });
+  });
+
+  // The keys are not interchangeable: each event carries only its own.
+  test("does not read a failure's reason out of the denial key", () => {
+    expect(
+      unappliedVerdictOf({
+        hook_event_name: "PostToolUseFailure",
+        reason: "Blocked by classifier",
+      })
+    ).toEqual({ outcome: "failed" });
+  });
+
+  test("does not read a denial's reason out of the failure key", () => {
+    expect(
+      unappliedVerdictOf({ hook_event_name: "PermissionDenied", error: "Exit code 1" })
+    ).toEqual({ outcome: "denied" });
+  });
+
+  test("omits a reason the runtime did not send rather than inventing one", () => {
+    expect(unappliedVerdictOf({ hook_event_name: "PostToolUseFailure" })).toEqual({
+      outcome: "failed",
+    });
+    expect(
+      unappliedVerdictOf({ hook_event_name: "PostToolUseFailure", error: "" })
+    ).toEqual({
+      outcome: "failed",
+    });
+    expect(
+      unappliedVerdictOf({ hook_event_name: "PermissionDenied", reason: 42 })
+    ).toEqual({
+      outcome: "denied",
+    });
+  });
+
+  test("declines the events that mean the call did land, or no event at all", () => {
+    expect(unappliedVerdictOf({ hook_event_name: "PostToolUse" })).toBeNull();
+    expect(unappliedVerdictOf({ hook_event_name: "PreToolUse" })).toBeNull();
+    expect(unappliedVerdictOf({ hook_event_name: "Stop" })).toBeNull();
+    expect(unappliedVerdictOf({})).toBeNull();
+    expect(unappliedVerdictOf({ hook_event_name: 7 })).toBeNull();
+  });
+
+  test("accepts the camelCase event key other agents use", () => {
+    expect(unappliedVerdictOf({ hookEventName: "PermissionDenied" })).toEqual({
+      outcome: "denied",
     });
   });
 });
