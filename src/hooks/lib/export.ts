@@ -6,6 +6,7 @@
 import { existsSync, readdirSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import AdmZip from "adm-zip";
+import { ensureActorRegistered } from "./actor";
 import { ensureRegistered } from "./machine";
 import { palHome } from "./paths";
 
@@ -95,6 +96,7 @@ export function buildManifest(
 export function exportZip(outputPath: string): number {
   const root = palHome();
   const identity = ensureRegistered(root);
+  ensureActorRegistered(root);
   const files = collectExportFiles();
   if (files.length === 0) return 0;
 

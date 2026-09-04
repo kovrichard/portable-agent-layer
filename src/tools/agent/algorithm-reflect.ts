@@ -15,17 +15,16 @@
 
 import { appendFileSync } from "node:fs";
 import { parseArgs } from "node:util";
+import { currentAttribution, type RecordAttribution } from "../../hooks/lib/actor";
 import { encodeAnchor } from "../../hooks/lib/anchor";
-import { loadMachine } from "../../hooks/lib/machine";
 import { paths } from "../../hooks/lib/paths";
 import { emit } from "../lib/emit";
 
 // ── Types ──
 
-interface AlgorithmReflection {
+interface AlgorithmReflection extends RecordAttribution {
   timestamp: string;
   cwd: string;
-  m: string;
   task: string;
   criteria_count: number;
   criteria_passed: number;
@@ -64,7 +63,7 @@ export function buildReflection(input: {
   return {
     timestamp: new Date().toISOString(),
     cwd: encodeAnchor(process.cwd()),
-    m: loadMachine().id,
+    ...currentAttribution(),
     task: input.task,
     criteria_count: input.criteria_count ?? 0,
     criteria_passed: input.criteria_passed ?? 0,

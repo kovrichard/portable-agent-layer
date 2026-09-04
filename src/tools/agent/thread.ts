@@ -14,17 +14,16 @@
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { currentAttribution, type RecordAttribution } from "../../hooks/lib/actor";
 import { encodeAnchor } from "../../hooks/lib/anchor";
-import { loadMachine } from "../../hooks/lib/machine";
 import { ensureDir, paths } from "../../hooks/lib/paths";
 import { emit } from "../lib/emit";
 
 // ── Types ──
 
-export interface Thread {
+export interface Thread extends RecordAttribution {
   id: string;
   cwd: string;
-  m: string;
   title: string;
   context: string;
   status: "open" | "resolved";
@@ -70,7 +69,7 @@ export function addThread(title: string, context: string): Thread {
   const thread: Thread = {
     id: generateId(),
     cwd: encodeAnchor(process.cwd()),
-    m: loadMachine().id,
+    ...currentAttribution(),
     title,
     context,
     status: "open",

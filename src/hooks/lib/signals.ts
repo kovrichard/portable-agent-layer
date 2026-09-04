@@ -1,6 +1,6 @@
 import { appendFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { loadMachine } from "./machine";
+import { currentAttribution } from "./actor";
 import { paths } from "./paths";
 import { now } from "./time";
 
@@ -15,7 +15,7 @@ function emitSignal(
   filename: string,
   data: { type: string; [key: string]: unknown }
 ): void {
-  const signal: Signal = { ts: now(), m: loadMachine().id, ...data };
+  const signal: Signal = { ts: now(), ...currentAttribution(), ...data };
   const filepath = resolve(paths.signals(), filename);
   appendFileSync(filepath, `${JSON.stringify(signal)}\n`);
 }
