@@ -60,7 +60,7 @@ describe("emitSignal — origin stamp", () => {
     const machineFile = JSON.parse(
       readFileSync(resolve(TEST_HOME, "machine.json"), "utf-8")
     );
-    expect(entry.m).toBe(machineFile.id);
+    expect(entry.machine).toBe(machineFile.id);
   });
 
   test("stamps the SAME id across multiple signals in one session", () => {
@@ -72,7 +72,7 @@ describe("emitSignal — origin stamp", () => {
       .trim()
       .split("\n")
       .map((l) => JSON.parse(l));
-    expect(lines[0].m).toBe(lines[1].m);
-    expect(lines[0].m.length).toBeGreaterThan(0);
+    expect(lines[0].machine).toBe(lines[1].machine);
+    expect(lines[0].machine.length).toBeGreaterThan(0);
   });
 });

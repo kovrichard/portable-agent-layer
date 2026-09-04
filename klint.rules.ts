@@ -76,9 +76,51 @@ const noAgentImportInCore = defineRule({
   },
 });
 
+/**
+ * A tool that writes to disk must not report the write only through emit.ok().
+ *
+ * emit.ok() is TTY-gated (see src/tools/lib/emit.ts), so a tool that confirms a
+ * write through it says nothing at all when an agent runs it over a pipe. The
+ * caller then re-reads the file to learn what happened, which costs far more
+ * context than the receipt would have. emit.receipt() and emit.data() are
+ * ungated; either satisfies this rule.
+ *
+ * Scoped to files that use the emit convention at all — a tool printing its own
+ * ungated output is already telling the caller what landed.
+ */
+const noSilentWrite = defineRule({
+  check({ files, root }, violations) {
+    const toolDirs = [resolve(root, "src/tools"), resolve(root, "assets/skills")];
+    const writeCall = /\b(writeFileSync|appendFileSync)\s*\(/;
+
+    const scope = files.filter(
+      (f) =>
+        toolDirs.some((dir) => f.startsWith(dir)) &&
+        f.endsWith(".ts") &&
+        !f.endsWith("emit.ts")
+    );
+
+    for (const file of scope) {
+      const content = readFileSync(file, "utf-8");
+      if (!writeCall.test(content)) continue;
+      if (!/emit\.ok\s*\(/.test(content)) continue;
+      if (/emit\.(receipt|data)\s*\(/.test(content)) continue;
+
+      const lines = content.split("\n");
+      violations.push({
+        file: relative(root, file),
+        line: lines.findIndex((l) => /emit\.ok\s*\(/.test(l)) + 1,
+        message:
+          "Tool writes to disk but confirms it only via emit.ok(), which is TTY-gated and silent over a pipe — a caller cannot tell what landed or where. Use emit.receipt(path, {...}).",
+      });
+    }
+  },
+});
+
 /** @lintignore — loaded via dynamic import by klint/cli.ts */
 export default {
   "no-console-in-hook-lib": noConsoleInHookLib,
   "no-raw-anthropic-fetch": noRawAnthropicFetch,
   "no-agent-import-in-core": noAgentImportInCore,
+  "no-silent-write": noSilentWrite,
 };

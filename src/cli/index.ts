@@ -244,6 +244,13 @@ async function runCli(command: string | undefined, args: string[]) {
       if (code !== 0) process.exit(code);
       break;
     }
+    case "actor":
+    case "machine": {
+      const { runIdentity } = await import("./identity");
+      const code = runIdentity(command, args);
+      if (code !== 0) process.exit(code);
+      break;
+    }
     case "debug":
       cliDebug(args);
       break;
@@ -288,6 +295,8 @@ function showHelp() {
     pal cli migrate [--list] [--dry-run]    Run pending data migrations
     pal cli analyze [--actionable]          Learning analysis: ratings, failure patterns, graduation candidates
     pal cli usage                           Summarize token usage and cost
+    pal cli actor [label <name>]            Show or rename this actor (who caused a record)
+    pal cli machine [label <name>]          Show or rename this install (where it was written)
     pal cli knowledge <sub> [args]          Query & manage the knowledge store
                                             (search · graph · stats · hubs · find · show · add · ls)
     pal cli skill link <name>               Link a personal ~/.pal/skills/<name>/ into installed agents
@@ -1178,6 +1187,11 @@ async function install(targets: Targets) {
   await promptIdentity();
   await promptTelos();
   await promptAttribution();
+
+  // After promptIdentity, so an actor minted before the name was known adopts it.
+  const { seedActorLabel, ensureActorRegistered } = await import("../hooks/lib/actor");
+  seedActorLabel();
+  ensureActorRegistered();
 
   // Shared, target-independent state. Every target installer used to repeat these
   // identical calls; AGENTS.md in particular must exist before any target symlinks

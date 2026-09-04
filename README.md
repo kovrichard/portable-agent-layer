@@ -85,6 +85,8 @@ pal cli status        # check your setup
 | `pal cli migrate` | Run pending data migrations (non-destructive) |
 | `pal cli analyze [--actionable]` | Learning analysis: rating trends, failure patterns, graduation candidates |
 | `pal cli usage` | Summarize token usage and estimated cost |
+| `pal cli actor [label <name>]` | Show or rename the actor — who caused a record. Travels with an export, so a shared memory can tell two people apart |
+| `pal cli machine [label <name>]` | Show or rename this install — where a record was written. Never leaves the machine |
 | `pal cli knowledge` | Query & manage the knowledge store (search, graph, stats, hubs, find, show, add, ls, ingest) |
 | `pal cli skill link <name>` | Link a personal `~/.pal/skills/<name>/` into every installed agent so it is discoverable |
 | `pal cli skill doctor <name>` | Evaluate a skill against the authoring best practices (folder/file-name match, name, description, body length, point-of-view, reference depth) |

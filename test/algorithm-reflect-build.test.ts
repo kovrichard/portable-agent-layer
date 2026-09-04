@@ -26,7 +26,7 @@ describe("buildReflection", () => {
     const { buildReflection } = await lib();
     const r = buildReflection(MIN_INPUT);
     const machineFile = JSON.parse(readFileSync(resolve(HOME, "machine.json"), "utf-8"));
-    expect(r.m).toBe(machineFile.id);
+    expect(r.machine).toBe(machineFile.id);
   });
 
   test("anchors the cwd when it falls inside a registered project", async () => {
