@@ -6,157 +6,62 @@ Working notes for any AI agent contributing to this repository.
 
 ## What is PAL
 
-The Portable Agent Layer is a cross-platform, cross-agent infrastructure for carrying personal AI context (TELOS, memory, skills, hooks) between machines and between AI runtimes (Claude Code, opencode, Cursor, Codex). It ships as a CLI (`pal`) plus a curated set of skills, hooks, and tooling that targets each agent's native config format.
+The Portable Agent Layer is cross-platform, cross-agent infrastructure for carrying personal AI context (TELOS, memory, skills, hooks) between machines and between AI runtimes (Claude Code, opencode, Cursor, Codex). It ships as a CLI (`pal`) plus a curated set of skills, hooks, and tooling that targets each agent's native config format.
 
-The repo has two layers you'll spend most of your time in:
+Two layers carry most of the work:
 
-- **`src/`** — the CLI, the runtime hooks PAL itself installs (security validators, session-end handlers, etc.), and tools for managing memory, telos, threads, wisdom frames, opinion tracking, etc.
-- **`assets/skills/<name>/`** — the skills PAL ships. Each skill is a self-contained folder with a `SKILL.md`, often a `tools/` subdir with TypeScript scripts, plus optional `template/`, `demo/`, and `theme-base/` subdirs (e.g. for the presentation skill).
+- **`src/`** — the `pal` CLI (entrypoint `src/cli/index.ts`), the runtime hooks PAL installs into other agents (`src/hooks/`, shared helpers in `src/hooks/lib/`), per-agent install/uninstall logic (`src/targets/<agent>/`), and the tools an agent invokes at runtime (`src/tools/`).
+- **`assets/skills/<name>/`** — the skills PAL ships. Each is self-contained: `SKILL.md` (the spec YOU follow), a human-facing `README.md`, usually `tools/*.ts`, and optional `template/`, `demo/`, `theme-base/`, `vendor/`.
+
+One directory is easy to misread: `.agents/` holds *this repo's* dev gates and is not the PAL runtime hooks in `src/hooks/`.
 
 When PAL is installed, `~/.pal/skills/<name>/` may be a directory junction back to `assets/skills/<name>/`. Edit at the repo source path, never the `~/.pal/...` path — the junction can mask whether you're touching tracked files.
-
-## Repository layout
-
-```
-.
-├── .agents/                  # this repo's dev hooks (not the PAL runtime hooks)
-│   ├── hooks/                # bun-run TypeScript hooks called by Stop events
-│   └── scripts/              # helpers the hooks and package scripts call
-├── .claude/                  # project-level Claude Code config (committed)
-│   └── settings.json         # Stop hook + permission allowlist
-├── .codex/                   # project-level Codex config (committed)
-│   └── hooks.json            # Stop event → same hook chain, --codex output
-├── .cursor/                  # project-level Cursor config (committed)
-│   └── hooks.json            # stop event → same hook chain
-├── .github/
-│   ├── hooks/gates.json      # Copilot agentStop → same hook chain
-│   └── workflows/            # ci + mutation pipelines
-├── .opencode/                # opencode plugin folder (committed)
-│   └── plugins/lint.ts       # session.idle handler → same hook chain
-├── .husky/                   # pre-commit / pre-push hooks (lint-staged + biome)
-├── assets/
-│   └── skills/               # all PAL-shipped skills
-│       └── <name>/
-│           ├── SKILL.md      # agent-facing skill spec (instructions YOU follow)
-│           ├── README.md     # human-facing skill blurb
-│           ├── tools/*.ts    # bun-run scripts the skill exposes
-│           ├── template/     # scaffolding for new artefacts (optional)
-│           ├── demo/         # showcase content (optional)
-│           ├── theme-base/   # brand-neutral assets (presentation skill)
-│           └── vendor/       # vendored 3rd-party libs (presentation skill)
-├── src/
-│   ├── cli/                  # `pal` CLI — entrypoint at src/cli/index.ts
-│   │   ├── setup-identity.ts
-│   │   └── setup-telos.ts
-│   ├── hooks/                # PAL runtime hooks (installed into target agents)
-│   │   └── lib/              # shared hook helpers; semi-static.ts is the single registry for context sources
-│   ├── targets/              # per-agent install/uninstall logic
-│   │   ├── claude/
-│   │   ├── opencode/
-│   │   ├── cursor/
-│   │   ├── copilot/
-│   │   └── lib.ts
-│   └── tools/                # tools the agent invokes at runtime
-│       ├── agent/            # synthesize, thread, wisdom-frame, analyze
-│       ├── self-model.ts
-│       ├── relationship-reflect.ts
-│       └── token-cost.ts
-├── test/                     # bun test files; one per concern
-├── biome.json                # lint + format config
-├── knip.json                 # dead-code/dep checker config
-├── package.json
-├── AGENTS.md                 # ← you are here
-├── CLAUDE.md                 # symlink → AGENTS.md
-└── README.md                 # user-facing intro
-```
 
 ## Running and testing
 
 This repo uses [Bun](https://bun.sh) ≥ 1.4.0 — never `npm`, `pnpm`, or `node`.
 
 ```bash
-# install deps (frozen on CI)
-bun install
-
-# run the full test suite (currently ~26 files, ~304 tests)
-bun test
-
-# run a single test file
-bun test test/cli.test.ts
-bun test test/doctor.test.ts
-
-# run one test by name pattern
-bun test --test-name-pattern "scaffolds telos"
+bun install                                     # frozen on CI
+bun test                                        # full suite
+bun test test/cli.test.ts                       # one file
+bun test --test-name-pattern "scaffolds telos"  # one test by name
 ```
 
-Each gate script and its agent-hook wrapper:
+Run the CLI against a sandboxed home with `PAL_HOME=./.test-home bun src/cli/index.ts cli init`. `.test-home/` is wiped at the start of `bun test test/cli.test.ts`.
 
-| Script                | What it does                             | Hook wrapper                   |
-| --------------------- | ---------------------------------------- | ------------------------------ |
-| `bun run check`       | Biome lint + format (read-only)          | `.agents/hooks/check.ts`       |
-| `bun run check-write` | Biome lint + format with `--write`       | (manual, not in stop chain)    |
-| `bun run type-check`  | `tsc --noEmit`                           | `.agents/hooks/type-check.ts`  |
-| `bun run knip`        | Knip dead-code / unused-deps scan        | `.agents/hooks/knip.ts`        |
-| `bun run jscpd`       | Copy-paste detection                     | `.agents/hooks/jscpd.ts`       |
-| `bun run klint`       | Architecture rules                       | `.agents/hooks/klint.ts`       |
-| `bun run madge`       | Circular-import detection                | `.agents/hooks/madge.ts`       |
-| `bun run lf`          | CRLF guard on tracked files              | `.agents/hooks/lf.ts`          |
-| `bun run lf:fix`      | Converts offenders to LF                 | (manual, not in stop chain)    |
-| `bun run secretlint`  | Secret scanning                          | `.agents/hooks/secretlint.ts`  |
-| `bun run test`        | Bun test runner (randomized)             | (pre-push and CI; not in stop) |
-| `bun run test:mutate:diff` | Stryker on the changed lines        | (CI on pull requests)          |
+Each gate, its script, and its wrapper in `.agents/hooks/`:
 
-Run the CLI itself in dev mode against a sandboxed home:
-
-```bash
-PAL_HOME=./.test-home bun src/cli/index.ts cli help
-PAL_HOME=./.test-home bun src/cli/index.ts cli init
-```
-
-`.test-home/` is wiped at the start of `bun test test/cli.test.ts`.
+| Script                     | What it does                       | Wrapper           |
+| -------------------------- | ---------------------------------- | ----------------- |
+| `bun run check`            | Biome lint + format (read-only)    | `check.ts`        |
+| `bun run check-write`      | Biome lint + format with `--write` | (manual)          |
+| `bun run type-check`       | `tsc --noEmit`                     | `type-check.ts`   |
+| `bun run knip`             | Dead-code / unused-deps scan       | `knip.ts`         |
+| `bun run jscpd`            | Copy-paste detection               | `jscpd.ts`        |
+| `bun run klint`            | Architecture rules                 | `klint.ts`        |
+| `bun run madge`            | Circular-import detection          | `madge.ts`        |
+| `bun run lf`               | CRLF guard on tracked files        | `lf.ts`           |
+| `bun run lf:fix`           | Converts offenders to LF           | (manual)          |
+| `bun run secretlint`       | Secret scanning                    | `secretlint.ts`   |
+| `bun run test`             | Bun test runner (randomized)       | (pre-push and CI) |
+| `bun run test:mutate:diff` | Stryker on the changed lines       | (CI on PRs)       |
 
 ## The `.agents/hooks/` system
 
-Every gate above is wired into the **Stop / session-end** event of each agent that has a config file in this repo. When an agent stops generating, it runs:
+Every wrapper above is wired into the Stop / session-end event of each agent configured here. Each wrapper is a thin call into `run-hook.ts`, which does the subprocess plumbing and skips the whole chain when `git status` is empty — so a conversational turn that changed nothing costs a single git call. A failing gate makes `run-hook.ts` exit 2, which the agent treats as a blocked session-end: it must fix the underlying issue before it can stop.
 
-```
-bun .agents/hooks/check.ts
-bun .agents/hooks/type-check.ts
-bun .agents/hooks/knip.ts
-bun .agents/hooks/jscpd.ts
-bun .agents/hooks/klint.ts
-bun .agents/hooks/secretlint.ts
-bun .agents/hooks/madge.ts
-bun .agents/hooks/lf.ts
-```
+| Agent       | Config file                 | Event          |
+| ----------- | --------------------------- | -------------- |
+| Claude Code | `.claude/settings.json`     | `Stop`         |
+| Cursor      | `.cursor/hooks.json`        | `stop`         |
+| Codex       | `.codex/hooks.json`         | `Stop`         |
+| Copilot     | `.github/hooks/gates.json`  | `agentStop`    |
+| opencode    | `.opencode/plugins/lint.ts` | `session.idle` |
 
-`run-hook.ts` skips the whole chain when `git status` is empty, so a conversational
-turn that changed nothing costs a single git call.
+To add a gate: a script in `package.json`, a wrapper in `.agents/hooks/`, and an entry in each agent config above.
 
-If any exits non-zero, the agent treats the session-end as blocked and the failure output is surfaced — the agent must fix the underlying issue before it can stop.
-
-Per-agent wiring:
-
-| Agent       | Config file                  | Event used     |
-| ----------- | ---------------------------- | -------------- |
-| Claude Code | `.claude/settings.json`      | `Stop`         |
-| Cursor      | `.cursor/hooks.json`         | `stop`         |
-| Codex       | `.codex/hooks.json`          | `Stop`         |
-| Copilot     | `.github/hooks/gates.json`   | `agentStop`    |
-| opencode    | `.opencode/plugins/lint.ts`  | `session.idle` |
-
-Each individual hook file is a thin wrapper:
-
-```ts
-// .agents/hooks/check.ts
-import { runHook } from "./run-hook";
-const exitCode = runHook(["bun", "run", "check"]);
-process.exit(exitCode);
-```
-
-`run-hook.ts` does the actual subprocess plumbing (capture stdout+stderr, return JSON envelope on success, exit 2 on failure so the agent knows to block).
-
-To add a new gate (say, a security audit), add a script to `package.json`, a wrapper to `.agents/hooks/<name>.ts`, and append it to the three agent configs.
+Git hooks in `.husky/` enforce the same gates independently of any agent: `pre-commit` runs lint-staged plus every gate except the test suite, `pre-push` runs `bun run test`, and `commit-msg` runs commitlint — so commit messages must be conventional commits.
 
 ## Coding rules
 
