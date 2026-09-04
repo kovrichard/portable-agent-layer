@@ -25,6 +25,22 @@
       {
         "type": "command",
         "command": "PAL_AGENT=cursor bun run {{PKG_ROOT}}/src/hooks/RtkWrap.ts"
+      },
+      {
+        "type": "command",
+        "command": "PAL_AGENT=cursor bun run {{PKG_ROOT}}/src/hooks/LedgerSnapshot.ts"
+      }
+    ],
+    "postToolUse": [
+      {
+        "type": "command",
+        "command": "PAL_AGENT=cursor bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts"
+      }
+    ],
+    "postToolUseFailure": [
+      {
+        "type": "command",
+        "command": "PAL_AGENT=cursor bun run {{PKG_ROOT}}/src/hooks/LedgerUnapplied.ts"
       }
     ],
     "beforeShellExecution": [

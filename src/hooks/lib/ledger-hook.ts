@@ -53,7 +53,12 @@ export function ledgeredCall(payload: Record<string, unknown>): LedgeredCall | n
 const UNAPPLIED_EVENTS: Record<string, { outcome: LedgerOutcome; reasonKey: string }> = {
   PostToolUseFailure: { outcome: "failed", reasonKey: "error" },
   PermissionDenied: { outcome: "denied", reasonKey: "reason" },
+  postToolUseFailure: { outcome: "failed", reasonKey: "error_message" },
 };
+
+function deniedByFailureType(payload: Record<string, unknown>): boolean {
+  return payload.failure_type === "permission_denied";
+}
 
 export interface UnappliedVerdict {
   outcome: LedgerOutcome;
@@ -74,12 +79,11 @@ export function unappliedVerdictOf(
   const mapping = UNAPPLIED_EVENTS[event];
   if (!mapping) return null;
 
+  const outcome = deniedByFailureType(payload) ? "denied" : mapping.outcome;
   const reason = payload[mapping.reasonKey];
-  // A reason the runtime did not send is left absent rather than invented: an
-  // entry that states a cause it does not have is worse than one that admits none.
   return typeof reason === "string" && reason.length > 0
-    ? { outcome: mapping.outcome, reason }
-    : { outcome: mapping.outcome };
+    ? { outcome, reason }
+    : { outcome };
 }
 
 export function toolUseIdOf(payload: Record<string, unknown>): string | null {
