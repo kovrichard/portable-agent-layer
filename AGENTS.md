@@ -162,6 +162,28 @@ To add a new gate (say, a security audit), add a script to `package.json`, a wra
 
 These are project-wide. Every PR follows them; agents enforce them as they write code.
 
+### File edits go through the edit tools, never through the shell
+
+Change files with the `Edit` / `Write` tools (or your agent's equivalent). Do not
+edit files with `sed -i`, `perl -i`, `patch`, an interpreter heredoc, or a shell
+redirect into a tracked file. Reading, searching and running commands through the
+shell is unchanged — this rule is about writes only.
+
+Two reasons, and the second is the one that matters here:
+
+- A shell write is opaque. `sed -i` and a `python3` heredoc leave no record of what
+  the file looked like before, so nothing downstream can say what changed. An `Edit`
+  call carries `old_string` and `new_string`, which is a before/after state for free.
+  This repo is building an action ledger (ISC-3) that depends on exactly that.
+- On Claude Code these are not equally scrutinised. Working-directory edits are
+  auto-approved, while every shell command goes to the auto-mode classifier — so a
+  shell write is the slower path *and* the invisible one.
+
+`.claude/settings.json` denies the unambiguous in-place editors (`sed -i`, `perl -i`,
+`patch`, `truncate`, `dd`, `ed`). That list is a backstop, not the rule — it cannot
+catch an interpreter heredoc or a redirect without also blocking legitimate reads and
+build output, so the rule above is what actually governs.
+
 ### Other house rules (already enforced by tooling)
 
 - No assignment in expressions (e.g. `while ((m = re.exec(s)) !== null)` — Biome catches it; use `Array.from(s.matchAll(re), ...)` or `for (const m of s.matchAll(re))`).
