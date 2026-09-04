@@ -40,16 +40,20 @@ export type ActorIdentity = IdentityBase;
  */
 export type Authority = "user" | "agent";
 
-/** The origin fields every attributable record carries. */
+/**
+ * The origin fields every attributable record carries. Spelled out rather than
+ * abbreviated: these rows are meant to be read by whoever is auditing them, and
+ * a key nobody can decode is the same as no key at all.
+ */
 export interface RecordAttribution {
-  /** Machine id — which install wrote it. */
-  m: string;
-  /** Actor id — which person caused it. */
-  a: string;
-  /** Agent runtime the actor was driving. */
-  rt: AgentType;
+  /** Which install wrote it. */
+  machine: string;
+  /** Which person caused it. */
+  actor: string;
+  /** Which agent the actor was driving — claude, codex, cursor, copilot, opencode. */
+  runtime: AgentType;
   /** Whether a human turn was behind the call. */
-  au: Authority;
+  authority: Authority;
 }
 
 /**
@@ -155,9 +159,9 @@ export function currentAuthority(): Authority {
  */
 export function currentAttribution(): RecordAttribution {
   return {
-    m: loadMachine().id,
-    a: loadActor().id,
-    rt: getActiveAgent(),
-    au: currentAuthority(),
+    machine: loadMachine().id,
+    actor: loadActor().id,
+    runtime: getActiveAgent(),
+    authority: currentAuthority(),
   };
 }

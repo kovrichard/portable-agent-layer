@@ -179,17 +179,17 @@ describe("currentAttribution", () => {
     const { loadMachine } = await import("../src/hooks/lib/machine");
     process.env.PAL_AGENT = "codex";
     const stamp = currentAttribution();
-    expect(stamp.m).toBe(loadMachine(HOME).id);
-    expect(stamp.a.length).toBeGreaterThan(0);
-    expect(stamp.rt).toBe("codex");
-    expect(stamp.au).toBe("user");
+    expect(stamp.machine).toBe(loadMachine(HOME).id);
+    expect(stamp.actor.length).toBeGreaterThan(0);
+    expect(stamp.runtime).toBe("codex");
+    expect(stamp.authority).toBe("user");
   });
 
   test("authority is 'agent' inside a PAL-spawned inference", async () => {
     const { currentAttribution, currentAuthority } = await lib();
     process.env.PAL_SPAWNED_INFERENCE = "1";
     expect(currentAuthority()).toBe("agent");
-    expect(currentAttribution().au).toBe("agent");
+    expect(currentAttribution().authority).toBe("agent");
   });
 
   test("the same actor is stamped regardless of which runtime is driving", async () => {
@@ -198,8 +198,8 @@ describe("currentAttribution", () => {
     const fromClaude = currentAttribution();
     process.env.PAL_AGENT = "cursor";
     const fromCursor = currentAttribution();
-    expect(fromCursor.a).toBe(fromClaude.a);
-    expect(fromCursor.rt).not.toBe(fromClaude.rt);
+    expect(fromCursor.actor).toBe(fromClaude.actor);
+    expect(fromCursor.runtime).not.toBe(fromClaude.runtime);
   });
 });
 
@@ -209,9 +209,9 @@ describe("records carry the attribution stamp", () => {
     const { loadActor } = await lib();
     process.env.PAL_AGENT = "claude";
     const t = addThread("a title", "some context");
-    expect(t.a).toBe(loadActor(HOME).id);
-    expect(t.m.length).toBeGreaterThan(0);
-    expect(t.rt).toBe("claude");
-    expect(t.au).toBe("user");
+    expect(t.actor).toBe(loadActor(HOME).id);
+    expect(t.machine.length).toBeGreaterThan(0);
+    expect(t.runtime).toBe("claude");
+    expect(t.authority).toBe("user");
   });
 });

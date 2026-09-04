@@ -24,7 +24,7 @@ describe("addThread", () => {
     const { addThread } = await lib();
     const t = addThread("a title", "some context");
     const machineFile = JSON.parse(readFileSync(resolve(HOME, "machine.json"), "utf-8"));
-    expect(t.m).toBe(machineFile.id);
+    expect(t.machine).toBe(machineFile.id);
   });
 
   test("anchors the cwd when it falls inside a registered project", async () => {
@@ -55,7 +55,7 @@ describe("addThread", () => {
       .map((l) => JSON.parse(l));
     expect(lines).toHaveLength(1);
     expect(lines[0].id).toBe(t.id);
-    expect(lines[0].m).toBe(t.m);
+    expect(lines[0].machine).toBe(t.machine);
   });
 
   test("starts a new thread as open with no resolved timestamp", async () => {
