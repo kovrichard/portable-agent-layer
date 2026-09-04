@@ -6,8 +6,16 @@
  * tool the post-tool half ignores leaves a snapshot nothing ever claims.
  */
 
+import { existsSync, readFileSync } from "node:fs";
 import { normalizeToolUse } from "./agent";
-import type { LedgerOutcome } from "./ledger";
+import {
+  claimPending,
+  type LedgerEntry,
+  type LedgerOutcome,
+  reapStalePending,
+  recordAction,
+  savePending,
+} from "./ledger";
 
 /**
  * Edits and writes, which carry their own target in the call. A shell command's
@@ -84,6 +92,32 @@ export function unappliedVerdictOf(
   return typeof reason === "string" && reason.length > 0
     ? { outcome, reason }
     : { outcome };
+}
+
+function contentsOf(path: string): string | null {
+  return existsSync(path) ? readFileSync(path, "utf-8") : null;
+}
+
+/** Park the target's current contents, the last moment they still exist. */
+export function snapshotCall(call: LedgeredCall): void {
+  savePending({ ...call, before: contentsOf(call.target), ts: new Date().toISOString() });
+}
+
+/** Pair a parked before-state with the result, or nothing if none was parked. */
+export function commitApplied(call: LedgeredCall): LedgerEntry | null {
+  const pending = claimPending(call.toolUseId);
+  if (!pending) return null;
+
+  const entry = recordAction({
+    tool: pending.tool,
+    target: pending.target,
+    outcome: "applied",
+    before: pending.before,
+    beforeState: pending.beforeState,
+    after: contentsOf(call.target),
+  });
+  reapStalePending();
+  return entry;
 }
 
 export function toolUseIdOf(payload: Record<string, unknown>): string | null {

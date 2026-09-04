@@ -10,9 +10,7 @@
  * Silent and fail-open, for the same reason as its other half.
  */
 
-import { existsSync, readFileSync } from "node:fs";
-import { claimPending, reapStalePending, recordAction } from "./lib/ledger";
-import { ledgeredCall } from "./lib/ledger-hook";
+import { commitApplied, ledgeredCall } from "./lib/ledger-hook";
 import { logDebug } from "./lib/log";
 import { readStdinJSON } from "./lib/stdin";
 
@@ -23,21 +21,9 @@ try {
   const call = ledgeredCall(input);
   if (!call) process.exit(0);
 
-  // No snapshot means no before-state, and an entry claiming one it never had
-  // would be worse than the missing entry.
-  const pending = claimPending(call.toolUseId);
-  if (!pending) process.exit(0);
+  const entry = commitApplied(call);
+  if (!entry) process.exit(0);
 
-  const entry = recordAction({
-    tool: pending.tool,
-    target: pending.target,
-    outcome: "applied",
-    before: pending.before,
-    beforeState: pending.beforeState,
-    after: existsSync(call.target) ? readFileSync(call.target, "utf-8") : null,
-  });
-
-  reapStalePending();
   logDebug("LedgerCommit", `recorded ${entry.id} ${entry.tool} ${entry.target}`);
 } catch {
   process.exit(0);

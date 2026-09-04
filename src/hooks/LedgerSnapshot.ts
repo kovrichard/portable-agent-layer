@@ -10,9 +10,7 @@
  * that could block an edit would be a worse thing than a ledger with a gap.
  */
 
-import { existsSync, readFileSync } from "node:fs";
-import { savePending } from "./lib/ledger";
-import { ledgeredCall } from "./lib/ledger-hook";
+import { ledgeredCall, snapshotCall } from "./lib/ledger-hook";
 import { logDebug } from "./lib/log";
 import { readStdinJSON } from "./lib/stdin";
 
@@ -23,13 +21,7 @@ try {
   const call = ledgeredCall(input);
   if (!call) process.exit(0);
 
-  savePending({
-    ...call,
-    // Absent rather than empty: a file that does not exist yet is a creation,
-    // which is a different event from a write over an empty file.
-    before: existsSync(call.target) ? readFileSync(call.target, "utf-8") : null,
-    ts: new Date().toISOString(),
-  });
+  snapshotCall(call);
 
   logDebug("LedgerSnapshot", `captured ${call.tool} ${call.toolUseId}`);
 } catch {
