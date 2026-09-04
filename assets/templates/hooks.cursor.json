@@ -4,55 +4,55 @@
     "sessionStart": [
       {
         "type": "command",
-        "command": "PAL_AGENT=cursor bun run {{PKG_ROOT}}/src/hooks/LoadContext.ts"
+        "command": "bun run {{PKG_ROOT}}/src/hooks/LoadContext.ts --agent=cursor"
       }
     ],
     "beforeSubmitPrompt": [
       {
         "type": "command",
-        "command": "PAL_AGENT=cursor bun run {{PKG_ROOT}}/src/hooks/UserPromptOrchestrator.ts"
+        "command": "bun run {{PKG_ROOT}}/src/hooks/UserPromptOrchestrator.ts --agent=cursor"
       }
     ],
     "preToolUse": [
       {
         "type": "command",
-        "command": "PAL_AGENT=cursor bun run {{PKG_ROOT}}/src/hooks/SecurityValidator.ts"
+        "command": "bun run {{PKG_ROOT}}/src/hooks/SecurityValidator.ts --agent=cursor"
       },
       {
         "type": "command",
-        "command": "PAL_AGENT=cursor bun run {{PKG_ROOT}}/src/hooks/SkillGuard.ts"
+        "command": "bun run {{PKG_ROOT}}/src/hooks/SkillGuard.ts --agent=cursor"
       },
       {
         "type": "command",
-        "command": "PAL_AGENT=cursor bun run {{PKG_ROOT}}/src/hooks/RtkWrap.ts"
+        "command": "bun run {{PKG_ROOT}}/src/hooks/RtkWrap.ts --agent=cursor"
       },
       {
         "type": "command",
-        "command": "PAL_AGENT=cursor bun run {{PKG_ROOT}}/src/hooks/LedgerSnapshot.ts"
+        "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerSnapshot.ts --agent=cursor"
       }
     ],
     "postToolUse": [
       {
         "type": "command",
-        "command": "PAL_AGENT=cursor bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts"
+        "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts --agent=cursor"
       }
     ],
     "postToolUseFailure": [
       {
         "type": "command",
-        "command": "PAL_AGENT=cursor bun run {{PKG_ROOT}}/src/hooks/LedgerUnapplied.ts"
+        "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerUnapplied.ts --agent=cursor"
       }
     ],
     "beforeShellExecution": [
       {
         "type": "command",
-        "command": "PAL_AGENT=cursor bun run {{PKG_ROOT}}/src/hooks/SecurityValidator.ts"
+        "command": "bun run {{PKG_ROOT}}/src/hooks/SecurityValidator.ts --agent=cursor"
       }
     ],
     "stop": [
       {
         "type": "command",
-        "command": "PAL_AGENT=cursor bun run {{PKG_ROOT}}/src/hooks/StopOrchestrator.ts"
+        "command": "bun run {{PKG_ROOT}}/src/hooks/StopOrchestrator.ts --agent=cursor"
       }
     ]
   }

@@ -139,10 +139,11 @@ describe("the shipped Cursor hooks template", () => {
     expect(pre.length).toBeGreaterThan(1);
   });
 
-  test("every ledger hook runs under PAL_AGENT=cursor so entries name the runtime", () => {
+  test("every ledger hook declares --agent=cursor so entries name the runtime", () => {
     for (const event of ["preToolUse", "postToolUse", "postToolUseFailure"]) {
       for (const command of commandsFor(event)) {
-        expect(command).toStartWith("PAL_AGENT=cursor ");
+        expect(command).toContain("--agent=cursor");
+        expect(command).not.toContain("PAL_AGENT=");
       }
     }
   });
