@@ -1,3 +1,11 @@
+## [0.66.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.66.0...v0.66.1) (2026-09-04)
+
+
+### Bug Fixes
+
+* **actor:** derive the label on read instead of seeding it at install ([899df90](https://github.com/kovrichard/portable-agent-layer/commit/899df90f4c6865674548d06ec5ea8d346328f45f))
+* **emit:** judge no-silent-write per function and fix two silent writers ([ec8183b](https://github.com/kovrichard/portable-agent-layer/commit/ec8183b691802ea455f4616eb9ed34417dc743a6))
+
 # [0.66.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.65.0...v0.66.0) (2026-09-04)
 
 
