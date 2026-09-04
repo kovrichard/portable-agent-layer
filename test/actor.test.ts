@@ -56,6 +56,13 @@ describe("loadActor", () => {
     expect(Number.isNaN(Date.parse(a.createdAt))).toBe(false);
   });
 
+  test("a whitespace-only stored label falls back to the default", async () => {
+    const { loadActor, actorFilePath, defaultActorLabel } = await lib();
+    mkdirSync(resolve(HOME, "memory"), { recursive: true });
+    writeFileSync(actorFilePath(HOME), JSON.stringify({ id: "kept-id", label: "   " }));
+    expect(loadActor(HOME).label).toBe(defaultActorLabel("kept-id"));
+  });
+
   test("an empty id is not usable and is regenerated", async () => {
     const { loadActor, actorFilePath } = await lib();
     mkdirSync(resolve(HOME, "memory"), { recursive: true });
