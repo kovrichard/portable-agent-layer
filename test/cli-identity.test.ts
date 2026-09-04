@@ -31,16 +31,16 @@ async function actorLib() {
 
 describe("seedActorLabel", () => {
   test("adopts the principal's name while the label is still the default", async () => {
-    writeSettings("Rico");
+    writeSettings("Ada");
     const { seedActorLabel, loadActor } = await actorLib();
     const { reload } = await import("../src/hooks/lib/settings");
     reload();
-    expect(seedActorLabel(HOME).label).toBe("Rico");
-    expect(loadActor(HOME).label).toBe("Rico");
+    expect(seedActorLabel(HOME).label).toBe("Ada");
+    expect(loadActor(HOME).label).toBe("Ada");
   });
 
   test("never overwrites a label the user already chose", async () => {
-    writeSettings("Rico");
+    writeSettings("Ada");
     const { seedActorLabel, setActorLabel } = await actorLib();
     const { reload } = await import("../src/hooks/lib/settings");
     reload();
@@ -76,21 +76,21 @@ describe("seedActorLabel", () => {
   });
 
   test("trims a padded name rather than labelling the actor with whitespace", async () => {
-    writeSettings("  Rico  ");
+    writeSettings("  Ada  ");
     const { seedActorLabel } = await actorLib();
     const { reload } = await import("../src/hooks/lib/settings");
     reload();
-    expect(seedActorLabel(HOME).label).toBe("Rico");
+    expect(seedActorLabel(HOME).label).toBe("Ada");
   });
 
   test("is idempotent — a second run changes nothing", async () => {
-    writeSettings("Rico");
+    writeSettings("Ada");
     const { seedActorLabel } = await actorLib();
     const { reload } = await import("../src/hooks/lib/settings");
     reload();
     const first = seedActorLabel(HOME);
     const second = seedActorLabel(HOME);
-    expect(second.label).toBe("Rico");
+    expect(second.label).toBe("Ada");
     expect(second.id).toBe(first.id);
   });
 });
@@ -107,10 +107,10 @@ describe("pal cli actor / machine", () => {
   });
 
   test("label renames the actor and registers the new label", async () => {
-    expect(await run("actor", ["label", "Rico"])).toBe(0);
+    expect(await run("actor", ["label", "Ada"])).toBe(0);
     const { loadActor, readActorRegistry } = await actorLib();
-    expect(loadActor(HOME).label).toBe("Rico");
-    expect(readActorRegistry().map((e) => e.label)).toContain("Rico");
+    expect(loadActor(HOME).label).toBe("Ada");
+    expect(readActorRegistry().map((e) => e.label)).toContain("Ada");
   });
 
   test("label renames the machine and registers the new label", async () => {
@@ -121,15 +121,15 @@ describe("pal cli actor / machine", () => {
   });
 
   test("joins a multi-word name rather than taking only the first token", async () => {
-    expect(await run("actor", ["label", "Rico", "K"])).toBe(0);
+    expect(await run("actor", ["label", "Ada", "L"])).toBe(0);
     const { loadActor } = await actorLib();
-    expect(loadActor(HOME).label).toBe("Rico K");
+    expect(loadActor(HOME).label).toBe("Ada L");
   });
 
   test("renaming does not change the id, so existing records still resolve", async () => {
     const { loadActor } = await actorLib();
     const before = loadActor(HOME).id;
-    await run("actor", ["label", "Rico"]);
+    await run("actor", ["label", "Ada"]);
     expect(loadActor(HOME).id).toBe(before);
   });
 
@@ -141,10 +141,10 @@ describe("pal cli actor / machine", () => {
   });
 
   test("renaming to the current name is idempotent, not an error", async () => {
-    expect(await run("actor", ["label", "Rico"])).toBe(0);
-    expect(await run("actor", ["label", "Rico"])).toBe(0);
+    expect(await run("actor", ["label", "Ada"])).toBe(0);
+    expect(await run("actor", ["label", "Ada"])).toBe(0);
     const { loadActor } = await actorLib();
-    expect(loadActor(HOME).label).toBe("Rico");
+    expect(loadActor(HOME).label).toBe("Ada");
   });
 
   test("a missing name is refused", async () => {
@@ -152,7 +152,7 @@ describe("pal cli actor / machine", () => {
   });
 
   test("an unknown action is refused", async () => {
-    expect(await run("actor", ["rename", "Rico"])).toBe(1);
+    expect(await run("actor", ["rename", "Ada"])).toBe(1);
     expect(await run("machine", ["delete"])).toBe(1);
   });
 });

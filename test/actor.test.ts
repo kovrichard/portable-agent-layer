@@ -82,16 +82,16 @@ describe("setActorLabel", () => {
   test("changes the label while keeping the id", async () => {
     const { loadActor, setActorLabel } = await lib();
     const before = loadActor(HOME);
-    const after = setActorLabel("rico", HOME);
-    expect(after.label).toBe("rico");
+    const after = setActorLabel("ada", HOME);
+    expect(after.label).toBe("ada");
     expect(after.id).toBe(before.id);
-    expect(loadActor(HOME).label).toBe("rico");
+    expect(loadActor(HOME).label).toBe("ada");
   });
 
   test("ignores an empty label instead of clearing the name", async () => {
     const { setActorLabel } = await lib();
-    setActorLabel("rico", HOME);
-    expect(setActorLabel("   ", HOME).label).toBe("rico");
+    setActorLabel("ada", HOME);
+    expect(setActorLabel("   ", HOME).label).toBe("ada");
   });
 });
 
@@ -104,18 +104,18 @@ describe("actor registry", () => {
 
   test("readActorRegistry returns every written actor", async () => {
     const { writeActorEntry, readActorRegistry } = await lib();
-    writeActorEntry({ id: "id-a", label: "rico" });
-    writeActorEntry({ id: "id-b", label: "mate" });
+    writeActorEntry({ id: "id-a", label: "ada" });
+    writeActorEntry({ id: "id-b", label: "grace" });
     expect(
       readActorRegistry()
         .map((e) => e.label)
         .sort()
-    ).toEqual(["mate", "rico"]);
+    ).toEqual(["ada", "grace"]);
   });
 
   test("re-registering updates the label without duplicating the entry", async () => {
     const { writeActorEntry, readActorRegistry } = await lib();
-    writeActorEntry({ id: "id-a", label: "rico" });
+    writeActorEntry({ id: "id-a", label: "ada" });
     writeActorEntry({ id: "id-a", label: "renamed" });
     const reg = readActorRegistry();
     expect(reg.length).toBe(1);
@@ -124,19 +124,19 @@ describe("actor registry", () => {
 
   test("actorDisplayName resolves a known id and falls back to the short id", async () => {
     const { actorDisplayName } = await lib();
-    const reg = [{ id: "id-a", label: "rico" }];
-    expect(actorDisplayName("id-a", reg)).toBe("rico");
+    const reg = [{ id: "id-a", label: "ada" }];
+    expect(actorDisplayName("id-a", reg)).toBe("ada");
     expect(actorDisplayName("ffff9999-0000-0000-0000-000000000000", [])).toBe("ffff");
   });
 
   test("suffixes with the short id when two actors share a label", async () => {
     const { actorDisplayName } = await lib();
     const reg = [
-      { id: "aaaa1111-0000-0000-0000-000000000000", label: "rico" },
-      { id: "bbbb2222-0000-0000-0000-000000000000", label: "rico" },
+      { id: "aaaa1111-0000-0000-0000-000000000000", label: "ada" },
+      { id: "bbbb2222-0000-0000-0000-000000000000", label: "ada" },
     ];
     expect(actorDisplayName("aaaa1111-0000-0000-0000-000000000000", reg)).toBe(
-      "rico·aaaa"
+      "ada·aaaa"
     );
   });
 });
