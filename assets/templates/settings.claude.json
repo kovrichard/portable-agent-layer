@@ -132,6 +132,26 @@
             "command": "PAL_AGENT=claude bun run {{PKG_ROOT}}/src/hooks/RtkWrap.ts"
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PAL_AGENT=claude bun run {{PKG_ROOT}}/src/hooks/LedgerSnapshot.ts"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PAL_AGENT=claude bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts"
+          }
+        ]
       }
     ],
     "Stop": [

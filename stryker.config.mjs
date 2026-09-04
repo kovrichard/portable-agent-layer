@@ -10,6 +10,7 @@ const SUBPROCESS_SUITES = new Set([
   "test/flagship-author.test.ts",
   "test/import-merge.test.ts",
   "test/install-smoke.test.ts",
+  "test/ledger-hooks.test.ts",
   "test/package-publish.test.ts",
   "test/project-cli.test.ts",
   "test/rtk-wrap.test.ts",

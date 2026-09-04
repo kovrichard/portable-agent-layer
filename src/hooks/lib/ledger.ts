@@ -20,11 +20,20 @@
  * caller.
  */
 
-import { appendFileSync, existsSync, renameSync, statSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { resolve } from "node:path";
 import { currentAttribution, type RecordAttribution } from "./actor";
 import { encodeAnchor } from "./anchor";
-import { paths } from "./paths";
+import { ensureDir, paths } from "./paths";
 
 /** Whether the action actually happened, or was stopped before it could. */
 export type LedgerOutcome = "applied" | "denied";
@@ -71,9 +80,10 @@ export interface RecordActionInput {
 }
 
 /**
- * Content above this is recorded as hash and size only. An Edit's before/after
- * is the changed region rather than the whole file, so it stays well under;
- * a Write carries an entire file and often will not.
+ * Content above this is recorded as hash and size only. Both sides are whole
+ * files read off disk, not the changed region, so the hash is checkable against
+ * the file later — and most files clear this, meaning the common entry keeps
+ * its size and hash but not its text.
  */
 const MAX_INLINE_BYTES = 4096;
 
@@ -151,4 +161,74 @@ export function recordAction(input: RecordActionInput): LedgerEntry {
   rotateIfFull(file);
   appendFileSync(file, `${JSON.stringify(entry)}\n`, "utf-8");
   return entry;
+}
+
+/**
+ * The before-state, held between the two halves of one tool call.
+ *
+ * A post-tool event alone cannot produce it: by the time the tool has run, the
+ * prior contents are gone. So the pre-tool half reads the file and parks it
+ * here, and the post-tool half claims it back and pairs it with the result.
+ */
+export interface PendingSnapshot {
+  toolUseId: string;
+  tool: string;
+  target: string;
+  before: string | null;
+  ts: string;
+}
+
+/** Snapshots older than this were never claimed — the call was denied or it failed. */
+const PENDING_TTL_MS = 60 * 60 * 1000;
+
+function pendingDir(): string {
+  return ensureDir(resolve(paths.ledger(), "pending"));
+}
+
+/**
+ * A tool-call id is an identifier from another system, and it lands here as a
+ * filename — so it is reduced to characters that cannot climb out of the
+ * directory rather than trusted to be well-formed.
+ */
+function pendingPath(toolUseId: string): string {
+  return resolve(pendingDir(), `${toolUseId.replace(/[^A-Za-z0-9_-]/g, "")}.json`);
+}
+
+export function savePending(snapshot: PendingSnapshot): void {
+  writeFileSync(pendingPath(snapshot.toolUseId), JSON.stringify(snapshot), "utf-8");
+}
+
+/**
+ * Take the snapshot for this tool call, removing it in the same step. Claiming
+ * is one-shot on purpose: a snapshot that stayed put after being read could be
+ * paired with a second result and record a change that never happened.
+ */
+export function claimPending(toolUseId: string): PendingSnapshot | null {
+  const file = pendingPath(toolUseId);
+  if (!existsSync(file)) return null;
+  try {
+    const snapshot = JSON.parse(readFileSync(file, "utf-8")) as PendingSnapshot;
+    unlinkSync(file);
+    return snapshot;
+  } catch {
+    unlinkSync(file);
+    return null;
+  }
+}
+
+/**
+ * Drop snapshots nothing ever claimed. A denied or failed call fires the
+ * pre-tool half and never the post-tool one, so its snapshot would otherwise
+ * sit here forever — the action did not happen, and the ledger records actions.
+ */
+export function reapStalePending(now: number = Date.now()): number {
+  const dir = pendingDir();
+  let reaped = 0;
+  for (const name of readdirSync(dir)) {
+    const file = resolve(dir, name);
+    if (now - statSync(file).mtimeMs < PENDING_TTL_MS) continue;
+    unlinkSync(file);
+    reaped++;
+  }
+  return reaped;
 }
