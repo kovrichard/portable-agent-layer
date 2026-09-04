@@ -33,6 +33,7 @@ try {
     target: pending.target,
     outcome: "applied",
     before: pending.before,
+    beforeState: pending.beforeState,
     after: existsSync(call.target) ? readFileSync(call.target, "utf-8") : null,
   });
 

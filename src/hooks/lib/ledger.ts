@@ -35,6 +35,7 @@ import { calcPatch } from "fast-myers-diff";
 import { currentAttribution, type RecordAttribution } from "./actor";
 import { encodeAnchor } from "./anchor";
 import { ensureDir, paths } from "./paths";
+import { isSensitivePath } from "./sensitive-path";
 
 /**
  * What became of the action.
@@ -82,6 +83,8 @@ export interface LedgerDelta {
   hunks: LedgerHunk[];
   /** Set when the change itself was too large to keep. Its absence means the hunks are complete. */
   truncated?: boolean;
+  /** Set when the target is one whose contents the ledger never keeps. */
+  redacted?: boolean;
 }
 
 export interface LedgerEntry extends RecordAttribution {
@@ -111,8 +114,10 @@ export interface RecordActionInput {
   /** Absolute path of the file the action targeted. */
   target: string;
   outcome: LedgerOutcome;
-  /** Prior content; null for a file creation. */
+  /** Prior content; null for a file creation, and withheld for a sensitive target. */
   before: string | null;
+  /** Identity of the prior content, when the content itself was withheld. */
+  beforeState?: LedgerState;
   /** Resulting content; null when nothing landed. */
   after: string | null;
   reason?: string;
@@ -156,6 +161,13 @@ function toLines(content: string | null): string[] {
  * The change between two states, or nothing when there was no transition to
  * describe. An action that did not land has no delta — see LedgerEntry.delta.
  */
+const WITHHELD: LedgerDelta = { hunks: [], redacted: true };
+
+function deltaFor(input: RecordActionInput): LedgerDelta | undefined {
+  if (isSensitivePath(input.target)) return WITHHELD;
+  return deltaOf(input.before, input.after);
+}
+
 function deltaOf(before: string | null, after: string | null): LedgerDelta | undefined {
   if (after === null) return undefined;
 
@@ -180,7 +192,7 @@ function deltaOf(before: string | null, after: string | null): LedgerDelta | und
  * side of the ledger — a stored change is only evidence if it can be replayed.
  */
 export function applyDelta(before: string | null, delta: LedgerDelta): string | null {
-  if (delta.truncated) return null;
+  if (delta.truncated || delta.redacted) return null;
 
   const lines = toLines(before);
   const out: string[] = [];
@@ -230,7 +242,7 @@ function freeArchivePath(stamp: string): string {
  * being asked of it.
  */
 export function recordAction(input: RecordActionInput): LedgerEntry {
-  const delta = deltaOf(input.before, input.after);
+  const delta = deltaFor(input);
   const entry: LedgerEntry = {
     id: generateId(),
     ts: new Date().toISOString(),
@@ -238,7 +250,7 @@ export function recordAction(input: RecordActionInput): LedgerEntry {
     tool: input.tool,
     target: encodeAnchor(input.target),
     outcome: input.outcome,
-    before: stateOf(input.before),
+    before: input.beforeState ?? stateOf(input.before),
     after: stateOf(input.after),
     ...(delta ? { delta } : {}),
     ...(input.reason ? { reason: input.reason } : {}),
@@ -262,6 +274,7 @@ export interface PendingSnapshot {
   tool: string;
   target: string;
   before: string | null;
+  beforeState?: LedgerState;
   ts: string;
 }
 
@@ -281,8 +294,15 @@ function pendingPath(toolUseId: string): string {
   return resolve(pendingDir(), `${toolUseId.replace(/[^A-Za-z0-9_-]/g, "")}.json`);
 }
 
+function withheldWhenSensitive(snapshot: PendingSnapshot): PendingSnapshot {
+  if (snapshot.before === null || !isSensitivePath(snapshot.target)) return snapshot;
+  const state = stateOf(snapshot.before);
+  return { ...snapshot, before: null, ...(state ? { beforeState: state } : {}) };
+}
+
 export function savePending(snapshot: PendingSnapshot): void {
-  writeFileSync(pendingPath(snapshot.toolUseId), JSON.stringify(snapshot), "utf-8");
+  const withheld = withheldWhenSensitive(snapshot);
+  writeFileSync(pendingPath(withheld.toolUseId), JSON.stringify(withheld), "utf-8");
 }
 
 /**
