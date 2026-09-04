@@ -142,7 +142,11 @@ Usage:
       process.exit(1);
     }
     const thread = addThread(values.title, values.context ?? "");
-    emit.data(`Added with id ${thread.id}`);
+    emit.receipt(threadsPath(), {
+      id: thread.id,
+      title: thread.title,
+      status: thread.status,
+    });
   }
 
   if (cmd === "resolve") {
@@ -151,8 +155,15 @@ Usage:
       process.exit(1);
     }
     const resolved = resolveThread(values.id);
-    if (resolved.success) emit.ok(resolved.message ?? "Thread resolved");
-    else emit.data(JSON.stringify(resolved, null, 2));
+    if (!resolved.success) {
+      console.error(resolved.message);
+      process.exit(1);
+    }
+    emit.receipt(threadsPath(), {
+      id: values.id,
+      status: "resolved",
+      title: resolved.thread?.title,
+    });
   }
 
   if (cmd === "list") {

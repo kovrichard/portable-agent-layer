@@ -454,7 +454,12 @@ Output:
     const report = formatReport(period, notes, ratings, opinionChanges);
     const filepath = writeReport(report, period);
     setLastReflectDate(new Date().toISOString().slice(0, 10));
-    emit.ok(`\nCreated reflection report: ${filepath}`);
+    emit.receipt(filepath, {
+      period,
+      notes: notes.length,
+      ratings: ratings.length,
+      opinionChanges: opinionChanges.length,
+    });
 
     const opinions = readOpinions();
     const high = opinions.filter((o) => o.confidence >= 0.85);
