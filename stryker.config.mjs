@@ -6,6 +6,7 @@ import { readdirSync } from "node:fs";
 // honest instead of padding it with phantom survivors.
 const SUBPROCESS_SUITES = new Set([
   "test/cli.test.ts",
+  "test/copilot-context-injection.test.ts",
   "test/export.test.ts",
   "test/flagship-author.test.ts",
   "test/import-merge.test.ts",

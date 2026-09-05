@@ -30,6 +30,8 @@ describe("Copilot hooks template", () => {
     };
     expect(Object.keys(cfg.hooks).sort()).toEqual([
       "agentStop",
+      "postToolUse",
+      "postToolUseFailure",
       "preToolUse",
       "sessionStart",
       "userPromptSubmitted",
@@ -50,12 +52,17 @@ describe("Copilot hooks template", () => {
     }
   });
 
-  test("both shells set PAL_AGENT=copilot in their own syntax", () => {
+  test("both shells declare the agent by flag, which needs no shell syntax", () => {
     for (const { event, entry } of entries()) {
-      expect(`${event}:${entry.bash}`).toContain("PAL_AGENT=copilot bun run");
-      expect(`${event}:${entry.powershell}`).toContain(
-        "$env:PAL_AGENT='copilot'; bun run"
-      );
+      expect(`${event}:${entry.bash}`).toContain("--agent=copilot");
+      expect(`${event}:${entry.powershell}`).toContain("--agent=copilot");
+    }
+    expect(readFileSync(TEMPLATE, "utf-8")).not.toContain("PAL_AGENT");
+  });
+
+  test("the two shells run byte-identical commands now nothing is shell-specific", () => {
+    for (const { event, entry } of entries()) {
+      expect(`${event}:${entry.powershell}`).toBe(`${event}:${entry.bash}`);
     }
   });
 

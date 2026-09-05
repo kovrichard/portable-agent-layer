@@ -106,6 +106,14 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   const { isPalSpawnedInference } =
     await lib<typeof import("../../hooks/lib/spawn-guard")>("spawn-guard.ts");
 
+  const { commitApplied, ledgeredTarget, snapshotCall } =
+    await lib<typeof import("../../hooks/lib/ledger-hook")>("ledger-hook.ts");
+
+  const ledgeredOpencodeCall = (tool: string, callID: string, args: unknown) => {
+    const target = ledgeredTarget(tool, (args ?? {}) as Record<string, unknown>);
+    return target ? { toolUseId: callID, tool, target } : null;
+  };
+
   return {
     // --- Per-message: Inject dynamic system reminder ---
     "experimental.chat.system.transform": async (_input, output) => {
@@ -213,6 +221,20 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
           throw new Error(`PAL Security: ${fileReason}`);
         }
       }
+
+      const call = ledgeredOpencodeCall(toolName, _input.callID, output.args);
+      if (call) snapshotCall(call);
+    },
+
+    "tool.execute.after": async (
+      input: { tool: string; sessionID: string; callID: string; args: unknown },
+      _output: { title: string; output: string; metadata: unknown }
+    ) => {
+      const call = ledgeredOpencodeCall(input.tool, input.callID, input.args);
+      if (!call) return;
+
+      const entry = commitApplied(call);
+      if (entry) logDebug("opencode:ledger", `recorded ${entry.id} ${entry.target}`);
     },
 
     // --- Inject PAL_DIR into shell environment ---

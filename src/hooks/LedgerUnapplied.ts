@@ -27,7 +27,7 @@ import {
   reapStalePending,
   recordAction,
 } from "./lib/ledger";
-import { ledgeredCall, unappliedVerdictOf } from "./lib/ledger-hook";
+import { ledgeredCalls, unappliedVerdictOf } from "./lib/ledger-hook";
 import { logDebug } from "./lib/log";
 import { readStdinJSON } from "./lib/stdin";
 
@@ -45,23 +45,25 @@ try {
   const input = await readStdinJSON<Record<string, unknown>>();
   if (!input) process.exit(0);
 
-  const call = ledgeredCall(input);
-  const verdict = call && unappliedVerdictOf(input);
-  if (!call || !verdict) process.exit(0);
+  const calls = ledgeredCalls(input);
+  const verdict = calls.length > 0 && unappliedVerdictOf(input);
+  if (!verdict) process.exit(0);
 
-  const entry = recordAction({
-    tool: call.tool,
-    target: call.target,
-    outcome: verdict.outcome,
-    before: beforeState(claimPending(call.toolUseId), call.target),
-    // Nothing landed. That is what this event means, and it is the difference
-    // between this entry and an applied one.
-    after: null,
-    reason: verdict.reason,
-  });
+  for (const call of calls) {
+    const entry = recordAction({
+      tool: call.tool,
+      target: call.target,
+      outcome: verdict.outcome,
+      before: beforeState(claimPending(call.toolUseId), call.target),
+      // Nothing landed. That is what this event means, and it is the difference
+      // between this entry and an applied one.
+      after: null,
+      reason: verdict.reason,
+    });
+    logDebug("LedgerUnapplied", `recorded ${entry.id} ${entry.outcome} ${entry.target}`);
+  }
 
   reapStalePending();
-  logDebug("LedgerUnapplied", `recorded ${entry.id} ${entry.outcome} ${entry.target}`);
 } catch {
   process.exit(0);
 }

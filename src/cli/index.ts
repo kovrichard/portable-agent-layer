@@ -469,7 +469,11 @@ function checkCodexHooksRegistered(): boolean {
 }
 
 function checkCopilotInstructionsPresent(): boolean {
-  return existsSync(resolve(platform.copilotDir(), "copilot-instructions.md"));
+  const instructionsDir = resolve(platform.copilotDir(), "instructions");
+  if (!existsSync(instructionsDir)) return false;
+  return readdirSync(instructionsDir).some(
+    (f) => f.startsWith("pal-") && f.endsWith(".instructions.md")
+  );
 }
 
 // ── Install integrity (Tier 2 doctor checks) ──
@@ -939,8 +943,8 @@ function doctor(silent = false): DoctorResult {
         ? ok("Copilot hooks registered")
         : fail("Copilot hooks — not registered (run 'pal cli install --copilot')");
       checkCopilotInstructionsPresent()
-        ? ok("copilot-instructions.md present")
-        : warn("copilot-instructions.md missing (run 'pal cli install --copilot')");
+        ? ok("Copilot instructions present")
+        : warn("Copilot instructions missing (written at first session stop)");
     }
     if (codex.available) {
       checkCodexHooksRegistered()

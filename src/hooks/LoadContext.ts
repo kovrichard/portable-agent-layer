@@ -5,8 +5,9 @@
  * This hook injects dynamic context only: wisdom principles, relationship notes,
  * learning digest, signal trends, failure patterns, active work state.
  *
- * Copilot: sessionStart output is ignored by the runtime. Instead, we write the merged
- * context directly to ~/.copilot/copilot-instructions.md so it is picked up on load.
+ * Copilot: the CLI reads additionalContext from this hook's stdout, while
+ * ~/.copilot/instructions/ is read only by the VS Code extension. The merged
+ * context goes to both so either surface picks it up.
  */
 
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -63,6 +64,7 @@ try {
         `---\napplyTo: "**"\n---\n\n${context}`,
         "utf-8"
       );
+      process.stdout.write(JSON.stringify({ additionalContext: context }));
     }
     logDebug(
       "LoadContext",

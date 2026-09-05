@@ -69,7 +69,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "PAL_AGENT=claude bun run {{PKG_ROOT}}/src/hooks/LoadContext.ts"
+            "command": "bun run {{PKG_ROOT}}/src/hooks/LoadContext.ts --agent=claude"
           }
         ]
       },
@@ -78,7 +78,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "PAL_AGENT=claude bun run {{PKG_ROOT}}/src/hooks/CompactRecover.ts"
+            "command": "bun run {{PKG_ROOT}}/src/hooks/CompactRecover.ts --agent=claude"
           }
         ]
       }
@@ -89,7 +89,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "PAL_AGENT=claude bun run {{PKG_ROOT}}/src/hooks/PreCompactPersist.ts"
+            "command": "bun run {{PKG_ROOT}}/src/hooks/PreCompactPersist.ts --agent=claude"
           }
         ]
       }
@@ -100,7 +100,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "PAL_AGENT=claude bun run {{PKG_ROOT}}/src/hooks/UserPromptOrchestrator.ts"
+            "command": "bun run {{PKG_ROOT}}/src/hooks/UserPromptOrchestrator.ts --agent=claude"
           }
         ]
       }
@@ -111,7 +111,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "PAL_AGENT=claude bun run {{PKG_ROOT}}/src/hooks/SecurityValidator.ts"
+            "command": "bun run {{PKG_ROOT}}/src/hooks/SecurityValidator.ts --agent=claude"
           }
         ]
       },
@@ -120,7 +120,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "PAL_AGENT=claude bun run {{PKG_ROOT}}/src/hooks/SkillGuard.ts"
+            "command": "bun run {{PKG_ROOT}}/src/hooks/SkillGuard.ts --agent=claude"
           }
         ]
       },
@@ -129,7 +129,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "PAL_AGENT=claude bun run {{PKG_ROOT}}/src/hooks/RtkWrap.ts"
+            "command": "bun run {{PKG_ROOT}}/src/hooks/RtkWrap.ts --agent=claude"
           }
         ]
       },
@@ -138,7 +138,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "PAL_AGENT=claude bun run {{PKG_ROOT}}/src/hooks/LedgerSnapshot.ts"
+            "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerSnapshot.ts --agent=claude"
           }
         ]
       }
@@ -149,7 +149,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "PAL_AGENT=claude bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts"
+            "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts --agent=claude"
           }
         ]
       }
@@ -160,7 +160,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "PAL_AGENT=claude bun run {{PKG_ROOT}}/src/hooks/LedgerUnapplied.ts"
+            "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerUnapplied.ts --agent=claude"
           }
         ]
       }
@@ -171,7 +171,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "PAL_AGENT=claude bun run {{PKG_ROOT}}/src/hooks/LedgerUnapplied.ts"
+            "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerUnapplied.ts --agent=claude"
           }
         ]
       }
@@ -182,7 +182,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "PAL_AGENT=claude bun run {{PKG_ROOT}}/src/hooks/StopOrchestrator.ts"
+            "command": "bun run {{PKG_ROOT}}/src/hooks/StopOrchestrator.ts --agent=claude"
           }
         ]
       }

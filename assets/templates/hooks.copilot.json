@@ -4,39 +4,58 @@
     "sessionStart": [
       {
         "type": "command",
-        "bash": "PAL_AGENT=copilot bun run {{PKG_ROOT}}/src/hooks/LoadContext.ts",
-        "powershell": "$env:PAL_AGENT='copilot'; bun run {{PKG_ROOT}}/src/hooks/LoadContext.ts"
+        "bash": "bun run {{PKG_ROOT}}/src/hooks/LoadContext.ts --agent=copilot",
+        "powershell": "bun run {{PKG_ROOT}}/src/hooks/LoadContext.ts --agent=copilot"
       }
     ],
     "userPromptSubmitted": [
       {
         "type": "command",
-        "bash": "PAL_AGENT=copilot bun run {{PKG_ROOT}}/src/hooks/UserPromptOrchestrator.ts",
-        "powershell": "$env:PAL_AGENT='copilot'; bun run {{PKG_ROOT}}/src/hooks/UserPromptOrchestrator.ts"
+        "bash": "bun run {{PKG_ROOT}}/src/hooks/UserPromptOrchestrator.ts --agent=copilot",
+        "powershell": "bun run {{PKG_ROOT}}/src/hooks/UserPromptOrchestrator.ts --agent=copilot"
       }
     ],
     "preToolUse": [
       {
         "type": "command",
-        "bash": "PAL_AGENT=copilot bun run {{PKG_ROOT}}/src/hooks/SecurityValidator.ts",
-        "powershell": "$env:PAL_AGENT='copilot'; bun run {{PKG_ROOT}}/src/hooks/SecurityValidator.ts"
+        "bash": "bun run {{PKG_ROOT}}/src/hooks/SecurityValidator.ts --agent=copilot",
+        "powershell": "bun run {{PKG_ROOT}}/src/hooks/SecurityValidator.ts --agent=copilot"
       },
       {
         "type": "command",
-        "bash": "PAL_AGENT=copilot bun run {{PKG_ROOT}}/src/hooks/SkillGuard.ts",
-        "powershell": "$env:PAL_AGENT='copilot'; bun run {{PKG_ROOT}}/src/hooks/SkillGuard.ts"
+        "bash": "bun run {{PKG_ROOT}}/src/hooks/SkillGuard.ts --agent=copilot",
+        "powershell": "bun run {{PKG_ROOT}}/src/hooks/SkillGuard.ts --agent=copilot"
       },
       {
         "type": "command",
-        "bash": "PAL_AGENT=copilot bun run {{PKG_ROOT}}/src/hooks/RtkWrap.ts",
-        "powershell": "$env:PAL_AGENT='copilot'; bun run {{PKG_ROOT}}/src/hooks/RtkWrap.ts"
+        "bash": "bun run {{PKG_ROOT}}/src/hooks/RtkWrap.ts --agent=copilot",
+        "powershell": "bun run {{PKG_ROOT}}/src/hooks/RtkWrap.ts --agent=copilot"
+      },
+      {
+        "type": "command",
+        "bash": "bun run {{PKG_ROOT}}/src/hooks/LedgerSnapshot.ts --agent=copilot",
+        "powershell": "bun run {{PKG_ROOT}}/src/hooks/LedgerSnapshot.ts --agent=copilot"
+      }
+    ],
+    "postToolUse": [
+      {
+        "type": "command",
+        "bash": "bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts --agent=copilot",
+        "powershell": "bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts --agent=copilot"
+      }
+    ],
+    "postToolUseFailure": [
+      {
+        "type": "command",
+        "bash": "bun run {{PKG_ROOT}}/src/hooks/LedgerUnapplied.ts --agent=copilot --event=postToolUseFailure",
+        "powershell": "bun run {{PKG_ROOT}}/src/hooks/LedgerUnapplied.ts --agent=copilot --event=postToolUseFailure"
       }
     ],
     "agentStop": [
       {
         "type": "command",
-        "bash": "PAL_AGENT=copilot bun run {{PKG_ROOT}}/src/hooks/StopOrchestrator.ts",
-        "powershell": "$env:PAL_AGENT='copilot'; bun run {{PKG_ROOT}}/src/hooks/StopOrchestrator.ts"
+        "bash": "bun run {{PKG_ROOT}}/src/hooks/StopOrchestrator.ts --agent=copilot",
+        "powershell": "bun run {{PKG_ROOT}}/src/hooks/StopOrchestrator.ts --agent=copilot"
       }
     ]
   }

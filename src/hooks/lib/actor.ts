@@ -15,7 +15,7 @@
  */
 
 import { resolve } from "node:path";
-import { type AgentType, getActiveAgent } from "./agent";
+import { type AgentType, declaredAgent } from "./agent";
 import {
   type IdentityBase,
   loadIdentity,
@@ -50,8 +50,8 @@ export interface RecordAttribution {
   machine: string;
   /** Which person caused it. */
   actor: string;
-  /** Which agent the actor was driving — claude, codex, cursor, copilot, opencode. */
-  runtime: AgentType;
+  /** Which agent the actor was driving, or "unknown" when none declared itself. */
+  runtime: AgentType | "unknown";
   /** Whether a human turn was behind the call. */
   authority: Authority;
 }
@@ -165,7 +165,7 @@ export function currentAttribution(): RecordAttribution {
   return {
     machine: loadMachine().id,
     actor: loadActor().id,
-    runtime: getActiveAgent(),
+    runtime: declaredAgent() ?? "unknown",
     authority: currentAuthority(),
   };
 }
