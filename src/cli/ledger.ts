@@ -16,6 +16,7 @@ import type { LedgerEntry } from "../hooks/lib/ledger";
 import {
   type ChainVerdict,
   chainVerdict,
+  changedLines,
   changeShape,
   findEntry,
   type LedgerFilter,
@@ -143,23 +144,6 @@ function parseFilters(args: string[]): { filter: LedgerFilter; json: boolean } |
 
 function shortId(id: string): string {
   return id.slice(0, 11).padEnd(11);
-}
-
-function changedLines(entry: LedgerEntry): string {
-  const shape = changeShape(entry);
-  switch (shape.kind) {
-    case "redacted":
-      return "withheld";
-    case "truncated":
-      return "too large";
-    case "none":
-      return "no change";
-    default: {
-      const added = shape.delta.hunks.reduce((n, h) => n + h.insert.length, 0);
-      const removed = shape.delta.hunks.reduce((n, h) => n + h.remove, 0);
-      return `+${added} -${removed}`;
-    }
-  }
 }
 
 function cmdLog(args: string[]): number {

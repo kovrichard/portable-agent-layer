@@ -158,6 +158,24 @@ export function changeShape(entry: LedgerEntry): ChangeShape {
  * its before-state again. `reverted` is exactly that case, and there the delta
  * can be run forward for real, which is why it reports whether it did.
  */
+/** The change as a reader would want it summarised: a line count, or why there is none. */
+export function changedLines(entry: LedgerEntry): string {
+  const shape = changeShape(entry);
+  switch (shape.kind) {
+    case "redacted":
+      return "withheld";
+    case "truncated":
+      return "too large";
+    case "none":
+      return "no change";
+    default: {
+      const added = shape.delta.hunks.reduce((n, h) => n + h.insert.length, 0);
+      const removed = shape.delta.hunks.reduce((n, h) => n + h.remove, 0);
+      return `+${added} -${removed}`;
+    }
+  }
+}
+
 export type Standing =
   | { state: "in-place" }
   | { state: "reverted"; replays: boolean }

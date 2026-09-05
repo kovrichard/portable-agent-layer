@@ -62,6 +62,7 @@ export const paths = {
   work: () => ensureDir(home("memory", "work")),
   backups: () => ensureDir(home("backups")),
   debug: () => ensureDir(home("debug")),
+  serverState: () => home("server.json"),
 } as const;
 
 // Platform directories (env override or cross-platform defaults)
@@ -87,6 +88,7 @@ export const assets = {
   copilotHooksTemplate: () => pkg("assets", "templates", "hooks.copilot.json"),
   codexHooksTemplate: () => pkg("assets", "templates", "hooks.codex.json"),
   codexRulesTemplate: () => pkg("assets", "templates", "rules.codex.rules"),
+  ledgerPageTemplate: () => pkg("assets", "templates", "ledger-page.html"),
   statuslineScriptBash: () => pkg("assets", "statusline.sh"),
   statuslineScriptPs1: () => pkg("assets", "statusline.ps1"),
   agentTools: () => pkg("src", "tools", "agent"),

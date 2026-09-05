@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Action Ledger</title>
+<style>
+  :root {
+    --bg: #eef0f2;
+    --panel: #ffffff;
+    --ink: #1b2026;
+    --muted: #6b7480;
+    --line: #d5dae0;
+    --accent: #0f6e6e;
+    --accent-ink: #ffffff;
+    --block: #b4471c;
+    --block-bg: #fbf0ea;
+    --ok: #2f7a3e;
+    --ok-bg: #edf6ee;
+    --pending: #8a6d00;
+    --pending-bg: #fbf5df;
+    --agent: #4a3fa3;
+    --agent-bg: #efedf9;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 13px/1.45 var(--sans); }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line);
+  }
+  header h1 { font-size: 14px; margin: 0; font-weight: 600; letter-spacing: .01em; }
+  header .model { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  header .who { font-size: 12px; color: var(--muted); }
+  header .who b { color: var(--ink); font-weight: 600; }
+
+  main { background: var(--panel); min-height: calc(100% - 45px); }
+  h2 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+    margin: 0; padding: 12px 14px 8px; font-weight: 600;
+  }
+
+  .filters { display: flex; gap: 10px; padding: 0 14px 12px; flex-wrap: wrap; align-items: end; }
+  .filters label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  select, input { font: inherit; padding: 4px 6px; border: 1px solid var(--line); border-radius: 3px; }
+
+  .stats { display: grid; grid-template-columns: 1.4fr repeat(4, 1fr); gap: 1px; background: var(--line); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .stat { background: var(--panel); padding: 12px 14px; }
+  .stat label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .stat .n { font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.2; }
+  .stat.headline { background: var(--block-bg); }
+  .stat.headline .n { font-size: 40px; color: var(--block); }
+  .stat.applied .n { color: var(--ok); }
+  .stat.failed .n { color: var(--pending); }
+  .stat.denied .n, .stat.blocked .n { color: var(--block); }
+  .st { font-size: 11px; color: var(--muted); }
+
+  table { width: 100%; border-collapse: collapse; }
+  td, th { text-align: left; padding: 7px 14px; border-top: 1px solid var(--line); vertical-align: top; font-variant-numeric: tabular-nums; }
+  th { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); border-top: 0; font-weight: 600; }
+  td.ts { font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap; }
+  td.target { font-family: var(--mono); font-size: 11px; word-break: break-all; }
+  td.diff { font-family: var(--mono); font-size: 11px; }
+  .actor { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; }
+  .actor.human { background: #eef0f2; }
+  .actor.agent { background: var(--agent-bg); color: var(--agent); }
+  .out { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 600; }
+  .out.applied { background: var(--ok-bg); color: var(--ok); }
+  .out.failed { background: var(--pending-bg); color: var(--pending); }
+  .out.denied { background: var(--block-bg); color: var(--block); }
+  .out.blocked { background: var(--block-bg); color: var(--block); }
+  footer { font-family: var(--mono); font-size: 10.5px; color: var(--muted); padding: 10px 14px; border-top: 1px solid var(--line); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Action Ledger</h1>
+  <span class="model" id="modelLine"></span>
+  <span class="who" id="who"></span>
+</header>
+
+<main>
+  <h2>Window</h2>
+  <div class="filters">
+    <div><label for="project">Project</label><select id="project"><option value="">all projects</option></select></div>
+    <div><label for="since">From</label><input type="date" id="since"></div>
+    <div><label for="until">To</label><input type="date" id="until"></div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <h2>Action log</h2>
+  <table>
+    <thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Target</th><th>Change</th><th>Outcome</th></tr></thead>
+    <tbody id="log"></tbody>
+  </table>
+  <footer id="footer">Every row is one action an agent tried to make. The ledger saw each from both sides, before and after. Nothing here was written by hand.</footer>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const OUTCOMES = ['applied', 'failed', 'denied', 'blocked'];
+let ledgerFiles = 0;
+
+function el(tag, cls, text) {
+  const node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+const pad = n => String(n).padStart(2, '0');
+function when(ts) {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+const authorityWord = key => key === 'user' ? 'human' : key;
+function tally(counts, word = k => k) {
+  const parts = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${word(k)} ${v}`);
+  return parts.length ? parts.join(' · ') : '—';
+}
+
+function query() {
+  const p = new URLSearchParams();
+  if ($('project').value) p.set('project', $('project').value);
+  if ($('since').value) p.set('since', $('since').value);
+  if ($('until').value) p.set('until', `${$('until').value}T23:59:59.999Z`);
+  return p.toString();
+}
+
+function windowText() {
+  const from = $('since').value, to = $('until').value;
+  if (!from && !to) return 'all time';
+  return `${from || 'start'} → ${to || 'now'}`;
+}
+
+function renderStats(s) {
+  const strip = $('stats');
+  strip.replaceChildren();
+  const headline = el('div', 'stat headline');
+  headline.append(el('label', '', 'Refusals'), el('div', 'n', String(s.refusals)),
+    el('div', 'st', `denied ${s.outcomes.denied.total} · blocked ${s.outcomes.blocked.total}`));
+  strip.append(headline);
+  for (const key of OUTCOMES) {
+    const o = s.outcomes[key];
+    const card = el('div', `stat ${key}`);
+    card.append(el('label', '', key), el('div', 'n', String(o.total)),
+      el('div', 'st', tally(o.byAuthority, authorityWord)), el('div', 'st', tally(o.byRuntime)));
+    strip.append(card);
+  }
+}
+
+function actorCell(r) {
+  const td = el('td');
+  const agent = r.authority === 'agent';
+  td.append(el('span', `actor ${agent ? 'agent' : 'human'}`, agent ? `agent · ${r.runtime}` : r.actor));
+  td.append(el('div', 'st', agent ? `on behalf of ${r.actor}` : `via ${r.runtime}`));
+  return td;
+}
+
+function changeCell(r) {
+  const td = el('td', 'diff');
+  td.append(r.reason ? el('span', 'st', r.reason) : document.createTextNode(r.change));
+  return td;
+}
+
+function renderRows(rows) {
+  const body = $('log');
+  body.replaceChildren();
+  if (!rows.length) {
+    const td = el('td', 'st', 'No actions in this window.');
+    td.colSpan = 6;
+    const tr = el('tr'); tr.append(td); body.append(tr);
+    return;
+  }
+  for (const r of rows) {
+    const tr = el('tr');
+    const outcome = el('td'); outcome.append(el('span', `out ${r.outcome}`, r.outcome));
+    tr.append(el('td', 'ts', when(r.ts)), actorCell(r), el('td', '', r.tool), el('td', 'target', r.target), changeCell(r), outcome);
+    body.append(tr);
+  }
+}
+
+async function load() {
+  const res = await fetch(`/api/ledger?${query()}`);
+  const body = await res.json();
+  if (!res.ok) { $('modelLine').textContent = body.error; return; }
+  renderStats(body.stats);
+  renderRows(body.rows);
+  $('modelLine').textContent = `${body.stats.total} actions · ${windowText()} · ${ledgerFiles} ledger file(s)`;
+}
+
+async function loadProjects() {
+  const list = await (await fetch('/api/projects')).json();
+  for (const { slug } of list) {
+    const o = el('option', '', slug); o.value = slug; $('project').append(o);
+  }
+}
+
+async function loadStatus() {
+  const s = await (await fetch('/api/status')).json();
+  ledgerFiles = s.ledgerFiles;
+  $('who').replaceChildren('machine ', Object.assign(el('b', '', s.machine)));
+}
+
+for (const id of ['project', 'since', 'until']) $(id).addEventListener('change', load);
+Promise.all([loadProjects(), loadStatus()]).then(load);
+</script>
+</body>
+</html>
