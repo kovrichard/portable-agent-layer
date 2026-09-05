@@ -5,11 +5,28 @@ import { resolve } from "node:path";
 
 let HOME: string;
 
+/** Every signal declaredAgent reads; a host var inherited from the session that
+ * runs the suite would declare an agent these cases mean to leave undeclared. */
+const AGENT_SIGNALS = [
+  "PAL_AGENT",
+  "CURSOR_AGENT",
+  "CURSOR_VERSION",
+  "CURSOR_INVOKED_AS",
+  "CLAUDE_CODE_ENTRYPOINT",
+  "CODEX_CLI_VERSION",
+  "OPENAI_CODEX",
+] as const;
+
+const savedSignals: Record<string, string | undefined> = {};
+
 beforeEach(async () => {
   HOME = mkdtempSync(resolve(tmpdir(), "pal-actor-"));
   process.env.PAL_HOME = HOME;
   delete process.env.PAL_SPAWNED_INFERENCE;
-  delete process.env.PAL_AGENT;
+  for (const key of AGENT_SIGNALS) {
+    savedSignals[key] = process.env[key];
+    delete process.env[key];
+  }
   // settings caches per process and bun shares one across test files.
   (await import("../src/hooks/lib/settings")).reload();
 });
@@ -17,7 +34,10 @@ beforeEach(async () => {
 afterEach(() => {
   delete process.env.PAL_HOME;
   delete process.env.PAL_SPAWNED_INFERENCE;
-  delete process.env.PAL_AGENT;
+  for (const key of AGENT_SIGNALS) {
+    if (savedSignals[key] === undefined) delete process.env[key];
+    else process.env[key] = savedSignals[key];
+  }
   rmSync(HOME, { recursive: true, force: true });
 });
 

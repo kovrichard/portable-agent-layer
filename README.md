@@ -88,6 +88,7 @@ pal cli status        # check your setup
 | `pal cli actor [label <name>]` | Show or rename the actor — who caused a record. Travels with an export, so a shared memory can tell two people apart |
 | `pal cli machine [label <name>]` | Show or rename this install — where a record was written. Never leaves the machine |
 | `pal cli knowledge` | Query & manage the knowledge store (search, graph, stats, hubs, find, show, add, ls, ingest) |
+| `pal cli ledger` | Query the action ledger — `log`, `show <id>`, `stats`, filtered by `--project`, `--since`, `--actor`, `--machine`, `--runtime`, `--outcome`, `--tool`, `--target` |
 | `pal cli skill link <name>` | Link a personal `~/.pal/skills/<name>/` into every installed agent so it is discoverable |
 | `pal cli skill doctor <name>` | Evaluate a skill against the authoring best practices (folder/file-name match, name, description, body length, point-of-view, reference depth) |
 | `pal cli subagent link <name>` | Install a personal `~/.pal/agents/<name>.md` (merged multi-platform definition) into every installed agent, split per platform |

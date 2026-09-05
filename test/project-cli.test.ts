@@ -479,6 +479,62 @@ describe("project CLI", () => {
     expect(section("edit", "Criteria")).not.toContain("vague wording");
   });
 
+  /**
+   * An ISC is one markdown line. Before this was encoded, a paragraph break
+   * ended the record and every paragraph after it was stranded in the file as
+   * unparseable debris — silently, because the command echoed back the text it
+   * had been handed rather than the text it stored.
+   */
+  const MULTI = "First paragraph.\n\nSecond paragraph.\n\nThird paragraph.";
+
+  test("add-isc keeps every paragraph of a multi-paragraph ISC", async () => {
+    await runCli(["create", "multi", "--path", "/tmp/multi-fake"]);
+    await runCli(["add-isc", "multi", MULTI]);
+
+    const shown = JSON.parse((await runCli(["show-isc", "multi", "1"])).stdout);
+    expect(shown.text).toBe(MULTI);
+  });
+
+  test("edit-isc keeps every paragraph of a multi-paragraph ISC", async () => {
+    await runCli(["create", "multie", "--path", "/tmp/multie-fake"]);
+    await runCli(["add-isc", "multie", "one line"]);
+    await runCli(["edit-isc", "multie", "1", MULTI]);
+
+    const shown = JSON.parse((await runCli(["show-isc", "multie", "1"])).stdout);
+    expect(shown.text).toBe(MULTI);
+  });
+
+  test("a multi-paragraph ISC still occupies exactly one line in the file", async () => {
+    await runCli(["create", "oneline", "--path", "/tmp/oneline-fake"]);
+    await runCli(["add-isc", "oneline", MULTI]);
+
+    const iscLines = section("oneline", "Criteria")
+      .split("\n")
+      .filter((l) => l.trim().length > 0);
+    expect(iscLines).toEqual([
+      "- [ ] ISC-1: First paragraph.\\n\\nSecond paragraph.\\n\\nThird paragraph.",
+    ]);
+  });
+
+  test("a literal backslash-n in an ISC is not decoded into a line break", async () => {
+    await runCli(["create", "esc", "--path", "/tmp/esc-fake"]);
+    const withRegex = String.raw`deny pattern: kubectl\s+prod and a literal \n sequence`;
+    await runCli(["add-isc", "esc", withRegex]);
+
+    const shown = JSON.parse((await runCli(["show-isc", "esc", "1"])).stdout);
+    expect(shown.text).toBe(withRegex);
+    expect(shown.text).not.toContain("\n");
+  });
+
+  test("a multi-paragraph ISC survives being completed and shown from the Changelog", async () => {
+    await runCli(["create", "multidone", "--path", "/tmp/multidone-fake"]);
+    await runCli(["add-isc", "multidone", MULTI]);
+    await runCli(["complete-isc", "multidone", "1"]);
+
+    const shown = JSON.parse((await runCli(["show-isc", "multidone", "1"])).stdout);
+    expect(shown.text).toBe(MULTI);
+  });
+
   test("edit-isc keeps a closed ISC closed and in the Changelog", async () => {
     await runCli(["create", "editc", "--path", "/tmp/editc-fake"]);
     await runCli(["add-isc", "editc", "before"]);
