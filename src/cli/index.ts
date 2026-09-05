@@ -48,7 +48,7 @@ import { DEBUG_LOG_MAX_ROTATED, logDebug } from "../hooks/lib/log";
 import { ensureRegistered, writeRegistryEntry } from "../hooks/lib/machine";
 import { palHome, palPkg, paths, platform } from "../hooks/lib/paths";
 import { auditBindings, describeBindingIssue } from "../hooks/lib/projects";
-import { hasRealContent, SETUP_STEPS, STEP_ORDER } from "../hooks/lib/setup";
+import { telosStatus } from "../hooks/lib/telos-topics";
 import { log } from "../targets/lib";
 import { checkPendingMigrations } from "./migrate";
 
@@ -265,6 +265,18 @@ async function runCli(command: string | undefined, args: string[]) {
       if (code !== 0) process.exit(code);
       break;
     }
+    case "telos": {
+      const { runTelos } = await import("./personal-context");
+      const code = runTelos(args);
+      if (code !== 0) process.exit(code);
+      break;
+    }
+    case "timezone": {
+      const { runTimezone } = await import("./personal-context");
+      const code = runTimezone(args);
+      if (code !== 0) process.exit(code);
+      break;
+    }
     case "debug":
       cliDebug(args);
       break;
@@ -291,6 +303,19 @@ function banner() {
   console.log("");
 }
 
+/**
+ * Install asks for identity and stops. TELOS is a conversation, not a form: a
+ * user who has just installed a tool cannot yet say what they want from it, and
+ * answers given under that pressure are worse than none.
+ */
+function pointAtOnboarding(): void {
+  const unanswered = telosStatus().filter((topic) => topic.priority && !topic.answered);
+  if (unanswered.length === 0) return;
+  log.info(
+    `PAL knows nothing about you yet (${unanswered.length} topics open). When you have half an hour, ask your agent to onboard you.`
+  );
+}
+
 function showHelp() {
   console.log(`
   Usage:
@@ -311,6 +336,8 @@ function showHelp() {
     pal cli usage                           Summarize token usage and cost
     pal cli actor [label <name>]            Show or rename this actor (who caused a record)
     pal cli machine [label <name>]          Show or rename this install (where it was written)
+    pal cli telos                           Which TELOS topics are answered, in interview order
+    pal cli timezone [<zone>]               Show or set your timezone (IANA name)
     pal cli knowledge <sub> [args]          Query & manage the knowledge store
                                             (search · graph · stats · hubs · find · show · add · ls)
     pal cli ledger <sub> [filters]          Query the action ledger (log · show · stats)
@@ -871,15 +898,16 @@ function doctor(silent = false): DoctorResult {
         : fail("CLAUDE.md — missing (run 'pal cli install --claude')");
     }
 
-    // Setup state — check file content directly (no setup.json dependency)
+    // An empty TELOS is a normal state, not a broken install: the onboarding
+    // skill fills it whenever the user is ready, which may be months from now.
     {
-      const missing = STEP_ORDER.filter(
-        (key) => !hasRealContent(resolve(home, SETUP_STEPS[key].file))
-      );
-      missing.length === 0
-        ? ok("TELOS setup complete")
+      const unanswered = telosStatus(home)
+        .filter((topic) => topic.priority && !topic.answered)
+        .map((topic) => topic.key);
+      unanswered.length === 0
+        ? ok("TELOS answered")
         : warn(
-            `TELOS setup incomplete — ${missing.join(", ")} missing (run 'pal cli install')`
+            `TELOS unanswered — ${unanswered.join(", ")} (ask your agent to onboard you)`
           );
     }
 
@@ -1201,13 +1229,12 @@ async function install(targets: Targets) {
   const { scaffoldTelos, scaffoldPalSettings, copyPalDocs, generateSkillIndex } =
     await import("../targets/lib");
   const { promptIdentity } = await import("./setup-identity");
-  const { promptTelos } = await import("./setup-telos");
   const { promptAttribution } = await import("./setup-attribution");
   scaffoldTelos();
   scaffoldPalSettings();
   await promptIdentity();
-  await promptTelos();
   await promptAttribution();
+  pointAtOnboarding();
 
   // Registers the label loadActor derives, so it travels on the next export.
   const { ensureActorRegistered } = await import("../hooks/lib/actor");

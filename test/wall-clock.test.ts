@@ -70,6 +70,22 @@ describe("the line", () => {
   });
 });
 
+describe("the timezone check the install prompt shares", () => {
+  test("canonicalises a zone Intl accepts", async () => {
+    const { canonicalTimeZone } = await load();
+
+    expect(canonicalTimeZone("europe/budapest")).toBe("Europe/Budapest");
+  });
+
+  test("returns null rather than throwing on a zone Intl rejects", async () => {
+    const { canonicalTimeZone, isValidTimeZone } = await load();
+
+    expect(canonicalTimeZone("Mars/Olympus_Mons")).toBeNull();
+    expect(isValidTimeZone("Mars/Olympus_Mons")).toBe(false);
+    expect(isValidTimeZone("Asia/Tokyo")).toBe(true);
+  });
+});
+
 describe("the reminder", () => {
   test("wraps the line and reads the configured timezone", async () => {
     await setSettings({ identity: { principal: { timezone: "America/New_York" } } });

@@ -26,15 +26,22 @@ function fieldsIn(now: Date, timeZone: string): Record<string, string> {
   return Object.fromEntries(parts.map((p) => [p.type, p.value]));
 }
 
+/** The IANA name Intl settles on, or null when it does not recognise the input. */
+export function canonicalTimeZone(timeZone: string): string | null {
+  try {
+    return new Intl.DateTimeFormat("en-US", { timeZone }).resolvedOptions().timeZone;
+  } catch {
+    return null;
+  }
+}
+
+export function isValidTimeZone(timeZone: string): boolean {
+  return canonicalTimeZone(timeZone) !== null;
+}
+
 /** A configured timezone is user input, and Intl throws on a bad one. UTC is always true. */
 function zoneOrUtc(timeZone: string): string {
-  if (!timeZone) return "UTC";
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone });
-    return timeZone;
-  } catch {
-    return "UTC";
-  }
+  return timeZone && isValidTimeZone(timeZone) ? timeZone : "UTC";
 }
 
 /** @lintignore exercised directly by test/wall-clock.test.ts */

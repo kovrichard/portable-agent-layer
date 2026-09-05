@@ -87,6 +87,8 @@ pal cli status        # check your setup
 | `pal cli usage` | Summarize token usage and estimated cost |
 | `pal cli actor [label <name>]` | Show or rename the actor — who caused a record. Travels with an export, so a shared memory can tell two people apart |
 | `pal cli machine [label <name>]` | Show or rename this install — where a record was written. Never leaves the machine |
+| `pal cli telos` | Which TELOS topics are answered, in interview order, and which one comes next |
+| `pal cli timezone [<zone>]` | Show or set your timezone. IANA names only, validated before it is stored |
 | `pal cli knowledge` | Query & manage the knowledge store (search, graph, stats, hubs, find, show, add, ls, ingest) |
 | `pal cli ledger` | Query the action ledger — `log`, `show <id>`, `stats`, filtered by `--project`, `--since`, `--actor`, `--machine`, `--runtime`, `--outcome`, `--tool`, `--target` |
 | `pal cli server` | The control room: a local page to open before a terminal — projects asking for you, where you left off, the feedback signal, agents at work, and the action ledger — `start [--port <n>]`, `stop`, `status`. Loopback only, default port 7250 |
@@ -185,6 +187,7 @@ PAL ships with built-in skills that extend your agent's capabilities:
 | `frontend-design` | Build production-grade frontend interfaces |
 | `fyzz-chat-api` | Query Fyzz Chat conversations via API |
 | `humanize` | Rewrite text to strip AI tells and read as human |
+| `onboarding` | Interview the user to fill empty TELOS topics and the timezone, one topic at a time |
 | `opinion` | Confirm or contradict tracked opinions (confidence-weighted) |
 | `pal-analyze` | Surface rating trends, failure patterns, and graduation candidates |
 | `pal-reflect` | Promote recurring observations into tracked opinions |
