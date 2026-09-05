@@ -1,3 +1,24 @@
+# [0.68.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.67.0...v0.68.0) (2026-09-05)
+
+
+### Bug Fixes
+
+* **copilot:** deliver session context through the channel the CLI reads ([4414c4f](https://github.com/kovrichard/portable-agent-layer/commit/4414c4fdcc19ca3839524fdd13fa176406c80731))
+* **hooks:** declare the agent by flag instead of a shell prefix ([584c68e](https://github.com/kovrichard/portable-agent-layer/commit/584c68ecc9ac56cd13aa1841ad6f05de874ccb1c))
+* **ledger:** parse correct payload for copilot ([a93bea3](https://github.com/kovrichard/portable-agent-layer/commit/a93bea359c320c5c8f928d86577d5963b5f1ab04))
+* **ledger:** stamp an undeclared runtime as unknown instead of claude ([9781ae7](https://github.com/kovrichard/portable-agent-layer/commit/9781ae716fcc26997c0154524176dfb7299a1afb))
+* **skills:** quote argument hints that YAML was reading as lists ([e8c0ab4](https://github.com/kovrichard/portable-agent-layer/commit/e8c0ab41d33f6259a9d91466a3d8da6127f7c471))
+
+
+### Features
+
+* **klint:** budget explanatory comments, warning for now ([e0727f6](https://github.com/kovrichard/portable-agent-layer/commit/e0727f6d713e902afc1e52fb9b934d8436dbb27b))
+* **ledger:** keep sensitive-path contents out of the record ([dd70db1](https://github.com/kovrichard/portable-agent-layer/commit/dd70db1da31d4f4ca2f63a45ca05de0807ec5751))
+* **ledger:** record applied edits on Codex, and unblock its hooks config ([0f5aa35](https://github.com/kovrichard/portable-agent-layer/commit/0f5aa3574f7e6fefbd9bb0522cc60bec8cddf0c6)), closes [#18391](https://github.com/kovrichard/portable-agent-layer/issues/18391)
+* **ledger:** record applied edits on opencode ([11e9fe9](https://github.com/kovrichard/portable-agent-layer/commit/11e9fe93f187aaa9f73fb0c602596fd7786b70ba))
+* **ledger:** record Cursor edits, splitting denial from failure ([edbd951](https://github.com/kovrichard/portable-agent-layer/commit/edbd9516a5bfb02565c77470d81927067c8129b1))
+* **ledger:** record edits on Copilot, and fix the args its hooks never saw ([e5f2924](https://github.com/kovrichard/portable-agent-layer/commit/e5f292414b75a7d9380611905673f6457c0d5d2a))
+
 # [0.67.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.66.1...v0.67.0) (2026-09-04)
 
 
