@@ -472,7 +472,21 @@ export function unmergeCursorHooks(
 
 type CodexHookCommand = { type: string; command: string; timeout?: number };
 type CodexHookGroup = { matcher?: string; hooks: CodexHookCommand[] };
-type CodexHooks = { hooks?: Record<string, CodexHookGroup[]> };
+type CodexHooks = {
+  hooks?: Record<string, CodexHookGroup[]>;
+  description?: string;
+  version?: unknown;
+};
+
+/**
+ * Codex parses hooks.json strictly and accepts only `description` and `hooks`.
+ * A stale `version` makes it reject the whole file — every PAL hook silently
+ * stops — and merging preserves what it finds, so it must be dropped by name.
+ */
+function withoutRejectedFields(config: CodexHooks): CodexHooks {
+  const { version: _version, ...accepted } = config;
+  return accepted;
+}
 
 /**
  * Normalize a PAL hook command for cross-path deduplication.
@@ -542,7 +556,7 @@ function stripPalHooks(
 
 /** Merge PAL hooks into an existing Codex hooks.json. Deduplicates by canonical command path. */
 export function mergeCodexHooks(existing: CodexHooks, template: CodexHooks): CodexHooks {
-  const result: CodexHooks = { ...existing };
+  const result: CodexHooks = withoutRejectedFields(existing);
   if (!template.hooks) return result;
   result.hooks ??= {};
 
@@ -561,7 +575,7 @@ export function unmergeCodexHooks(
   existing: CodexHooks,
   template: CodexHooks
 ): CodexHooks {
-  const result: CodexHooks = { ...existing };
+  const result: CodexHooks = withoutRejectedFields(existing);
   if (!template.hooks || !result.hooks) return result;
 
   stripPalHooks(result.hooks, collectPalCanonical(template));

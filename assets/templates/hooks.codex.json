@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "PAL_AGENT=codex bun run {{PKG_ROOT}}/src/hooks/LoadContext.ts"
+            "command": "bun run {{PKG_ROOT}}/src/hooks/LoadContext.ts --agent=codex"
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "PAL_AGENT=codex bun run {{PKG_ROOT}}/src/hooks/UserPromptOrchestrator.ts"
+            "command": "bun run {{PKG_ROOT}}/src/hooks/UserPromptOrchestrator.ts --agent=codex"
           }
         ]
       }
@@ -25,7 +25,21 @@
         "hooks": [
           {
             "type": "command",
-            "command": "PAL_AGENT=codex bun run {{PKG_ROOT}}/src/hooks/SecurityValidator.ts"
+            "command": "bun run {{PKG_ROOT}}/src/hooks/SecurityValidator.ts --agent=codex"
+          },
+          {
+            "type": "command",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerSnapshot.ts --agent=codex"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts --agent=codex"
           }
         ]
       }
@@ -35,7 +49,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "PAL_AGENT=codex bun run {{PKG_ROOT}}/src/hooks/StopOrchestrator.ts"
+            "command": "bun run {{PKG_ROOT}}/src/hooks/StopOrchestrator.ts --agent=codex"
           }
         ]
       }

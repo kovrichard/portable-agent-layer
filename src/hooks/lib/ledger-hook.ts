@@ -44,7 +44,7 @@ const LEDGERED_TOOLS = new Set([
  * many files the patch names. Its targets live in the patch body rather than in
  * an argument, so it is filtered separately and read by patchedTargets.
  */
-const PATCHING_TOOLS = new Set(["apply_patch"]);
+const PATCHING_TOOLS = new Set(["apply_patch", "applypatch"]);
 
 /**
  * The editor tool that changes a file also reads one, under a command argument.
@@ -123,7 +123,15 @@ function patchedTargets(payload: Record<string, unknown>, toolName: string): str
 /** Its arguments are the patch itself, rather than JSON naming a file. */
 function patchBodyOf(payload: Record<string, unknown>): string | null {
   const args = payload.toolArgs ?? payload.tool_input ?? payload.toolInput;
-  return typeof args === "string" && args.length > 0 ? args : null;
+  if (typeof args === "string") return args.length > 0 ? args : null;
+  return patchCommandOf(args);
+}
+
+/** Codex carries the patch under a command key instead of sending it as the arguments. */
+function patchCommandOf(args: unknown): string | null {
+  if (typeof args !== "object" || args === null || Array.isArray(args)) return null;
+  const command = (args as Record<string, unknown>).command;
+  return typeof command === "string" && command.length > 0 ? command : null;
 }
 
 function absoluteFrom(base: string, path: string): string {
