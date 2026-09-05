@@ -1,3 +1,17 @@
+# [0.69.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.68.0...v0.69.0) (2026-09-05)
+
+
+### Bug Fixes
+
+* **hooks:** identify the running agent from the host, not the config file that registered the hook ([20ad4a0](https://github.com/kovrichard/portable-agent-layer/commit/20ad4a04f40f8c5d791c3bb00f8885b362872898))
+* **project:** keep every paragraph of a multi-paragraph ISC instead of silently storing the first ([df96efb](https://github.com/kovrichard/portable-agent-layer/commit/df96efbf9efbe9fe9527bf38cf2391611065adda))
+
+
+### Features
+
+* **ledger:** query the ledger by project, window and actor ([187de45](https://github.com/kovrichard/portable-agent-layer/commit/187de45f62e9d38bb7efcdc7969915b8d986554b))
+* **ledger:** say which action undid a change, not just that one did ([9a52478](https://github.com/kovrichard/portable-agent-layer/commit/9a52478b8be7273859084984c78e8aca316a928d))
+
 # [0.68.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.67.0...v0.68.0) (2026-09-05)
 
 
