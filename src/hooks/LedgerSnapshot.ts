@@ -10,7 +10,7 @@
  * that could block an edit would be a worse thing than a ledger with a gap.
  */
 
-import { ledgeredCall, snapshotCall } from "./lib/ledger-hook";
+import { ledgeredCalls, snapshotCall } from "./lib/ledger-hook";
 import { logDebug } from "./lib/log";
 import { readStdinJSON } from "./lib/stdin";
 
@@ -18,12 +18,13 @@ try {
   const input = await readStdinJSON<Record<string, unknown>>();
   if (!input) process.exit(0);
 
-  const call = ledgeredCall(input);
-  if (!call) process.exit(0);
+  const calls = ledgeredCalls(input);
+  if (calls.length === 0) process.exit(0);
 
-  snapshotCall(call);
-
-  logDebug("LedgerSnapshot", `captured ${call.tool} ${call.toolUseId}`);
+  for (const call of calls) {
+    snapshotCall(call);
+    logDebug("LedgerSnapshot", `captured ${call.tool} ${call.toolUseId}`);
+  }
 } catch {
   process.exit(0);
 }

@@ -10,7 +10,7 @@
  * Silent and fail-open, for the same reason as its other half.
  */
 
-import { commitApplied, ledgeredCall } from "./lib/ledger-hook";
+import { commitApplied, ledgeredCalls } from "./lib/ledger-hook";
 import { logDebug } from "./lib/log";
 import { readStdinJSON } from "./lib/stdin";
 
@@ -18,13 +18,12 @@ try {
   const input = await readStdinJSON<Record<string, unknown>>();
   if (!input) process.exit(0);
 
-  const call = ledgeredCall(input);
-  if (!call) process.exit(0);
-
-  const entry = commitApplied(call);
-  if (!entry) process.exit(0);
-
-  logDebug("LedgerCommit", `recorded ${entry.id} ${entry.tool} ${entry.target}`);
+  for (const call of ledgeredCalls(input)) {
+    const entry = commitApplied(call);
+    if (entry) {
+      logDebug("LedgerCommit", `recorded ${entry.id} ${entry.tool} ${entry.target}`);
+    }
+  }
 } catch {
   process.exit(0);
 }

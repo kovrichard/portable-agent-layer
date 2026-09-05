@@ -2,29 +2,42 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { normalizeToolUse } from "../src/hooks/lib/agent";
-import { ledgeredCall, unappliedVerdictOf } from "../src/hooks/lib/ledger-hook";
+import { ledgeredCalls, unappliedVerdictOf } from "../src/hooks/lib/ledger-hook";
 
-const COPILOT_WRITE = {
-  sessionId: "sess_1",
-  timestamp: 1704614400000,
+// Every payload below was captured from GitHub Copilot CLI 1.0.17 by registering
+// a hook that wrote its stdin to disk. An invented fixture here proves only that
+// the code agrees with the assumption it was written from — which is how the
+// ledger came to record nothing at all on Copilot.
+
+const COPILOT_PATCH = {
+  sessionId: "4b0a1f8c-61fb-41e6-b79f-b2471866a16b",
+  timestamp: 1788591800149,
   cwd: "/work/app",
-  toolName: "write",
-  toolArgs: JSON.stringify({ file_path: "/work/app/src/index.ts", content: "x" }),
+  toolName: "apply_patch",
+  toolArgs:
+    "*** Begin Patch\n*** Update File: existing.txt\n@@\n-beta\n+BETA\n*** Add File: one.txt\n+1\n*** Add File: two.txt\n+2\n*** End Patch\n",
 };
 
-describe("Copilot sends its tool arguments as JSON text, not an object", () => {
-  test("the arguments are read rather than silently seen as empty", () => {
-    expect(normalizeToolUse(COPILOT_WRITE)?.toolInput).toEqual({
-      file_path: "/work/app/src/index.ts",
-      content: "x",
-    });
+const COPILOT_VIEW = {
+  sessionId: "4b0a1f8c-61fb-41e6-b79f-b2471866a16b",
+  timestamp: 1788591552196,
+  cwd: "/work/app",
+  toolName: "view",
+  toolArgs: { path: "/work/app/existing.txt" },
+};
+
+const targetsOf = (payload: Record<string, unknown>) =>
+  ledgeredCalls(payload).map((call) => call.target);
+
+describe("Copilot writes files through a patch, whose arguments are not JSON", () => {
+  test("the patch body yields no tool arguments, so no path can be read from them", () => {
+    expect(normalizeToolUse(COPILOT_PATCH)?.toolInput).toEqual({});
   });
 
-  test("an object stays an object, so the other agents are unaffected", () => {
-    expect(
-      normalizeToolUse({ toolName: "write", tool_input: { file_path: "/a.ts" } })
-        ?.toolInput
-    ).toEqual({ file_path: "/a.ts" });
+  test("its keyed tools do send an object, which passes through untouched", () => {
+    expect(normalizeToolUse(COPILOT_VIEW)?.toolInput).toEqual({
+      path: "/work/app/existing.txt",
+    });
   });
 
   test("text that is not JSON yields no arguments rather than throwing", () => {
@@ -40,39 +53,101 @@ describe("Copilot sends its tool arguments as JSON text, not an object", () => {
   });
 });
 
+describe("one patch call changes a set of files, and the ledger records each", () => {
+  test("every file the patch names is a target", () => {
+    expect(targetsOf(COPILOT_PATCH)).toEqual([
+      "/work/app/existing.txt",
+      "/work/app/one.txt",
+      "/work/app/two.txt",
+    ]);
+  });
+
+  test("a deletion is a change to the file, so its header counts too", () => {
+    const deletion = {
+      ...COPILOT_PATCH,
+      toolArgs: "*** Begin Patch\n*** Delete File: gone.txt\n*** End Patch\n",
+    };
+    expect(targetsOf(deletion)).toEqual(["/work/app/gone.txt"]);
+  });
+
+  test("a path already absolute is left as it is", () => {
+    const absolute = {
+      ...COPILOT_PATCH,
+      toolArgs: "*** Begin Patch\n*** Add File: /elsewhere/x.txt\n+1\n*** End Patch\n",
+    };
+    expect(targetsOf(absolute)).toEqual(["/elsewhere/x.txt"]);
+  });
+
+  test("the patch's own context lines are not mistaken for headers", () => {
+    const quoted = {
+      ...COPILOT_PATCH,
+      toolArgs:
+        "*** Begin Patch\n*** Add File: doc.md\n+*** Update File: not-a-target.txt\n*** End Patch\n",
+    };
+    expect(targetsOf(quoted)).toEqual(["/work/app/doc.md"]);
+  });
+
+  test("a patch naming nothing records nothing", () => {
+    const empty = { ...COPILOT_PATCH, toolArgs: "*** Begin Patch\n*** End Patch\n" };
+    expect(ledgeredCalls(empty)).toEqual([]);
+  });
+});
+
 describe("Copilot publishes no call id, so the halves pair on what it does send", () => {
-  test("a write is ledgered despite the missing id", () => {
-    const call = ledgeredCall(COPILOT_WRITE);
-    expect(call?.tool).toBe("write");
-    expect(call?.target).toBe("/work/app/src/index.ts");
-    expect(call?.toolUseId).toMatch(/^derived-[0-9a-f]{32}$/);
-  });
-
-  test("the pre and post halves of one call derive the same key", () => {
-    const post = { ...COPILOT_WRITE, toolResult: { resultType: "success" } };
-    expect(ledgeredCall(post)?.toolUseId).toBe(ledgeredCall(COPILOT_WRITE)?.toolUseId);
-  });
-
-  test("a different session, tool or file derives a different key", () => {
-    const base = ledgeredCall(COPILOT_WRITE)?.toolUseId;
-    const other = (patch: Record<string, unknown>) =>
-      ledgeredCall({ ...COPILOT_WRITE, ...patch })?.toolUseId;
-
-    expect(other({ sessionId: "sess_2" })).not.toBe(base);
-    expect(other({ toolName: "edit" })).not.toBe(base);
-    expect(other({ toolArgs: JSON.stringify({ file_path: "/work/app/b.ts" }) })).not.toBe(
-      base
+  test("the pre and post halves of one patch derive the same keys", () => {
+    const post = { ...COPILOT_PATCH, toolResult: { resultType: "success" } };
+    expect(ledgeredCalls(post).map((c) => c.toolUseId)).toEqual(
+      ledgeredCalls(COPILOT_PATCH).map((c) => c.toolUseId)
     );
   });
 
-  test("without a session there is no key, so nothing is recorded on a guess", () => {
-    const { sessionId, ...anonymous } = COPILOT_WRITE;
-    expect(ledgeredCall(anonymous)).toBeNull();
+  test("each file in one patch gets its own key, or two would claim one snapshot", () => {
+    const keys = ledgeredCalls(COPILOT_PATCH).map((call) => call.toolUseId);
+    expect(new Set(keys).size).toBe(keys.length);
+    for (const key of keys) expect(key).toMatch(/^derived-[0-9a-f]{32}$/);
   });
 
-  test("an explicit id still wins over the derived one", () => {
-    const withId = { ...COPILOT_WRITE, tool_use_id: "tu_real" };
-    expect(ledgeredCall(withId)?.toolUseId).toBe("tu_real");
+  test("an explicit id does not collapse the files onto one key either", () => {
+    const withId = { ...COPILOT_PATCH, tool_use_id: "tu_real" };
+    const keys = ledgeredCalls(withId).map((call) => call.toolUseId);
+    expect(new Set(keys).size).toBe(3);
+  });
+
+  test("a different session or file derives a different key", () => {
+    const first = (payload: Record<string, unknown>) =>
+      ledgeredCalls(payload)[0]?.toolUseId;
+    expect(first({ ...COPILOT_PATCH, sessionId: "sess_2" })).not.toBe(
+      first(COPILOT_PATCH)
+    );
+    expect(first({ ...COPILOT_PATCH, cwd: "/other" })).not.toBe(first(COPILOT_PATCH));
+  });
+
+  test("without a session there is no key, so nothing is recorded on a guess", () => {
+    const { sessionId, ...anonymous } = COPILOT_PATCH;
+    expect(ledgeredCalls(anonymous)).toEqual([]);
+  });
+});
+
+describe("Copilot's keyed editing tools reach the ledger, and its reads do not", () => {
+  test("the commands it sends as tool names are recorded", () => {
+    for (const tool of ["create", "str_replace", "insert", "str_replace_editor"]) {
+      expect(
+        targetsOf({ sessionId: "s", toolName: tool, toolArgs: { path: "/a.ts" } })
+      ).toEqual(["/a.ts"]);
+    }
+  });
+
+  test("view is a query, so it is not an entry in a log of changes", () => {
+    expect(ledgeredCalls(COPILOT_VIEW)).toEqual([]);
+  });
+
+  test("the editor tool reading under a command argument is declined too", () => {
+    const reading = {
+      sessionId: "s",
+      toolName: "str_replace_editor",
+      toolArgs: { command: "view", path: "/a.ts" },
+    };
+    expect(ledgeredCalls(reading)).toEqual([]);
   });
 });
 

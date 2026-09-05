@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
-  ledgeredCall,
+  ledgeredCalls,
   ledgeredTarget,
   toolUseIdOf,
   unappliedVerdictOf,
@@ -67,7 +67,7 @@ describe("ledgeredTarget", () => {
 
 // Each half of the pair runs this once and acts on its answer. What matters is
 // that one payload cannot be a call to one half and not to the other.
-describe("ledgeredCall", () => {
+describe("ledgeredCalls", () => {
   const PAYLOAD = {
     tool_use_id: "toolu_01ABC",
     tool_name: "Edit",
@@ -75,44 +75,48 @@ describe("ledgeredCall", () => {
   };
 
   test("reads a real edit payload into the three things both halves need", () => {
-    expect(ledgeredCall(PAYLOAD)).toEqual({
-      toolUseId: "toolu_01ABC",
-      tool: "Edit",
-      target: "/a/b.ts",
-    });
+    expect(ledgeredCalls(PAYLOAD)).toEqual([
+      {
+        toolUseId: "toolu_01ABC",
+        tool: "Edit",
+        target: "/a/b.ts",
+      },
+    ]);
   });
 
   test("declines a payload missing the id that would pair the two halves", () => {
     expect(
-      ledgeredCall({ tool_name: "Edit", tool_input: { file_path: "/a/b.ts" } })
-    ).toBeNull();
+      ledgeredCalls({ tool_name: "Edit", tool_input: { file_path: "/a/b.ts" } })
+    ).toEqual([]);
   });
 
   test("declines a payload with no tool name", () => {
-    expect(ledgeredCall({ tool_use_id: "toolu_01ABC" })).toBeNull();
+    expect(ledgeredCalls({ tool_use_id: "toolu_01ABC" })).toEqual([]);
   });
 
   test("declines a tool the ledger does not record", () => {
-    expect(ledgeredCall({ ...PAYLOAD, tool_name: "Read" })).toBeNull();
-    expect(ledgeredCall({ ...PAYLOAD, tool_name: "Bash" })).toBeNull();
+    expect(ledgeredCalls({ ...PAYLOAD, tool_name: "Read" })).toEqual([]);
+    expect(ledgeredCalls({ ...PAYLOAD, tool_name: "Bash" })).toEqual([]);
   });
 
   test("declines an edit whose payload carries no path", () => {
-    expect(ledgeredCall({ ...PAYLOAD, tool_input: {} })).toBeNull();
+    expect(ledgeredCalls({ ...PAYLOAD, tool_input: {} })).toEqual([]);
   });
 
   test("reads the camelCase payload shape other agents send", () => {
     expect(
-      ledgeredCall({
+      ledgeredCalls({
         toolUseId: "id-1",
         toolName: "Write",
         toolArgs: { filePath: "/x.ts" },
       })
-    ).toEqual({
-      toolUseId: "id-1",
-      tool: "Write",
-      target: "/x.ts",
-    });
+    ).toEqual([
+      {
+        toolUseId: "id-1",
+        tool: "Write",
+        target: "/x.ts",
+      },
+    ]);
   });
 });
 

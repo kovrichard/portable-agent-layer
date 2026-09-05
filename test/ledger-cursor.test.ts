@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
-  ledgeredCall,
+  ledgeredCalls,
   ledgeredTarget,
   unappliedVerdictOf,
 } from "../src/hooks/lib/ledger-hook";
@@ -19,13 +19,15 @@ const CURSOR_WRITE = {
   cwd: "/work/app",
 };
 
-describe("ledgeredCall on Cursor payloads", () => {
+describe("ledgeredCalls on Cursor payloads", () => {
   test("reads a Write call, which is how Cursor edits files at all", () => {
-    expect(ledgeredCall(CURSOR_WRITE)).toEqual({
-      toolUseId: "tu_cursor_1",
-      tool: "Write",
-      target: "/work/app/src/index.ts",
-    });
+    expect(ledgeredCalls(CURSOR_WRITE)).toEqual([
+      {
+        toolUseId: "tu_cursor_1",
+        tool: "Write",
+        target: "/work/app/src/index.ts",
+      },
+    ]);
   });
 
   test("ignores the tools Cursor has that the ledger does not record", () => {
@@ -36,7 +38,7 @@ describe("ledgeredCall on Cursor payloads", () => {
 
   test("a Cursor call without a tool_use_id is not ledgered", () => {
     const { tool_use_id, ...missing } = CURSOR_WRITE;
-    expect(ledgeredCall(missing)).toBeNull();
+    expect(ledgeredCalls(missing)).toEqual([]);
   });
 });
 
