@@ -1,8 +1,12 @@
 {
   "compilerOptions": {
     "lib": [
-      "esnext"
+      "esnext",
+      "dom",
+      "dom.iterable",
+      "dom.asynciterable"
     ],
+    "jsx": "react-jsx",
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -28,7 +32,8 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": [
-    "**/*.ts"
+    "**/*.ts",
+    "**/*.tsx"
   ],
   "exclude": [
     "node_modules",

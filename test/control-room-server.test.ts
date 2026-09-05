@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import type { ServerStatus } from "../src/tools/ledger/server";
+import type { AgentsView, ProjectCard, SignalView } from "../src/tools/control-room/data";
+import type { ServerStatus } from "../src/tools/control-room/server";
 import type { LedgerView } from "../src/tools/ledger/view";
 
 // The HTTP surface is small enough to pin completely: where it listens, what
@@ -12,7 +13,7 @@ let HOME: string;
 let server: ReturnType<typeof Bun.serve> | null = null;
 
 beforeEach(() => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-ledger-server-"));
+  HOME = mkdtempSync(resolve(tmpdir(), "pal-control-room-"));
   process.env.PAL_HOME = HOME;
   mkdirSync(resolve(HOME, "memory", "ledger"), { recursive: true });
 });
@@ -25,13 +26,13 @@ afterEach(() => {
 });
 
 async function listen(): Promise<string> {
-  const { startLedgerServer } = await import("../src/tools/ledger/server");
-  server = startLedgerServer(0);
+  const { startControlRoom } = await import("../src/tools/control-room/server");
+  server = startControlRoom(0);
   return `http://127.0.0.1:${server.port}`;
 }
 
-async function getView(url: string): Promise<LedgerView> {
-  return (await (await fetch(url)).json()) as LedgerView;
+async function getJson<T>(url: string): Promise<T> {
+  return (await (await fetch(url)).json()) as T;
 }
 
 function writeLedger(rows: Record<string, unknown>[]): void {
@@ -78,18 +79,20 @@ describe("where it listens", () => {
 });
 
 describe("what each route answers", () => {
-  test("/ is the page", async () => {
+  test("/ is the bundled page, not a template", async () => {
     const base = await listen();
     const res = await fetch(`${base}/`);
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("text/html");
-    expect(await res.text()).toContain("<table");
+    const html = await res.text();
+    expect(html).toContain('id="root"');
+    expect(html).not.toContain("app.tsx");
   });
 
   test("/api/ledger is the view", async () => {
     writeLedger([entry()]);
     const base = await listen();
-    const body = await getView(`${base}/api/ledger`);
+    const body = await getJson<LedgerView>(`${base}/api/ledger`);
     expect(body.stats.outcomes.applied.total).toBe(1);
     expect(body.rows[0].target).toBe("demo /src/a.ts");
     expect(body.window).toEqual({ since: null, until: null });
@@ -106,7 +109,9 @@ describe("what each route answers", () => {
       }),
     ]);
     const base = await listen();
-    const body = await getView(`${base}/api/ledger?since=2026-09-01&project=demo`);
+    const body = await getJson<LedgerView>(
+      `${base}/api/ledger?since=2026-09-01&project=demo`
+    );
     expect(body.rows.map((r) => r.id)).toEqual(["new"]);
     expect(body.window.since).toBe("2026-09-01T00:00:00.000Z");
   });
@@ -123,15 +128,48 @@ describe("what each route answers", () => {
     registerProject("zeta");
     registerProject("alpha");
     const base = await listen();
-    expect(await (await fetch(`${base}/api/projects`)).json()).toEqual([
+    expect(await getJson<{ slug: string }[]>(`${base}/api/projects`)).toEqual([
       { slug: "alpha" },
       { slug: "zeta" },
     ]);
   });
 
+  test("/api/board is one card per registered project", async () => {
+    registerProject("alpha");
+    const base = await listen();
+    const cards = await getJson<ProjectCard[]>(`${base}/api/board`);
+    expect(cards.map((c) => c.slug)).toEqual(["alpha"]);
+    expect(cards[0].path).toBe(HOME);
+  });
+
+  test("/api/handoffs is empty when nothing is in progress", async () => {
+    const base = await listen();
+    expect(await getJson<unknown[]>(`${base}/api/handoffs`)).toEqual([]);
+  });
+
+  test("/api/signal always carries the three badges", async () => {
+    const base = await listen();
+    const body = await getJson<SignalView>(`${base}/api/signal`);
+    expect(Object.keys(body.due).sort()).toEqual([
+      "algorithmReview",
+      "analysis",
+      "relationshipReflect",
+    ]);
+    expect(body.series).toEqual([]);
+  });
+
+  test("/api/agents takes the same window as the ledger", async () => {
+    writeLedger([entry({ ts: "2026-09-04T00:00:00.000Z" })]);
+    const base = await listen();
+    const body = await getJson<AgentsView>(`${base}/api/agents?since=2026-09-01`);
+    expect(body.since).toBe("2026-09-01T00:00:00.000Z");
+    expect(body.projects.map((p) => p.slug)).toEqual(["demo"]);
+    expect((await fetch(`${base}/api/agents?since=nonsense`)).status).toBe(400);
+  });
+
   test("/api/status names this process and port", async () => {
     const base = await listen();
-    const body = (await (await fetch(`${base}/api/status`)).json()) as ServerStatus;
+    const body = await getJson<ServerStatus>(`${base}/api/status`);
     expect(body.pid).toBe(process.pid);
     expect(body.port).toBe(server?.port ?? -1);
     expect(typeof body.startedAt).toBe("string");

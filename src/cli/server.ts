@@ -1,7 +1,7 @@
 /**
- * pal cli server — start, stop and inspect the local ledger page.
+ * pal cli server — start, stop and inspect the local control room.
  *
- * The server itself is src/tools/ledger/server.ts, run detached so it
+ * The server itself is src/tools/control-room/server.ts, run detached so it
  * outlives the shell that started it. This file only owns the lifecycle:
  * spawning, waiting for it to answer, remembering its pid, and killing it.
  */
@@ -11,7 +11,7 @@ import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { spawnDetachedInference } from "../hooks/lib/detached-inference";
 import { paths } from "../hooks/lib/paths";
-import { DEFAULT_PORT, LOOPBACK, type ServerStatus } from "../tools/ledger/server";
+import { DEFAULT_PORT, LOOPBACK, type ServerStatus } from "../tools/control-room/server";
 
 interface ServerState {
   pid: number;
@@ -19,7 +19,13 @@ interface ServerState {
   startedAt: string;
 }
 
-const SERVER_SCRIPT = resolve(import.meta.dir, "..", "tools", "ledger", "server.ts");
+const SERVER_SCRIPT = resolve(
+  import.meta.dir,
+  "..",
+  "tools",
+  "control-room",
+  "server.ts"
+);
 const STARTUP_TIMEOUT_MS = 3000;
 const PROBE_TIMEOUT_MS = 500;
 
@@ -51,7 +57,7 @@ function showHelp(): void {
     pal cli server <subcommand>
 
   Subcommands:
-    start [--port <n>]         Start the ledger page in the background (default port ${DEFAULT_PORT})
+    start [--port <n>]         Start the control room in the background (default port ${DEFAULT_PORT})
     stop                       Stop it
     status                     Show whether it is running, and where
 
@@ -131,11 +137,11 @@ async function cmdStart(args: string[]): Promise<number> {
     return 0;
   }
 
-  spawnDetachedInference(SERVER_SCRIPT, [`--port=${port}`], "ledger-server");
+  spawnDetachedInference(SERVER_SCRIPT, [`--port=${port}`], "control-room");
   const status = await waitUntilAnswering(port);
   if (!status)
     return fail(
-      `The ledger page did not answer on port ${port} within ${STARTUP_TIMEOUT_MS / 1000}s. Is the port free?`
+      `The control room did not answer on port ${port} within ${STARTUP_TIMEOUT_MS / 1000}s. Is the port free?`
     );
 
   writeState({ pid: status.pid, port, startedAt: status.startedAt });

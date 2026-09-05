@@ -89,7 +89,7 @@ pal cli status        # check your setup
 | `pal cli machine [label <name>]` | Show or rename this install — where a record was written. Never leaves the machine |
 | `pal cli knowledge` | Query & manage the knowledge store (search, graph, stats, hubs, find, show, add, ls, ingest) |
 | `pal cli ledger` | Query the action ledger — `log`, `show <id>`, `stats`, filtered by `--project`, `--since`, `--actor`, `--machine`, `--runtime`, `--outcome`, `--tool`, `--target` |
-| `pal cli server` | Local page over the action ledger for showing the log to a person — `start [--port <n>]`, `stop`, `status`. Loopback only, default port 7250; project and date window are chosen on the page |
+| `pal cli server` | The control room: a local page to open before a terminal — projects asking for you, where you left off, the feedback signal, agents at work, and the action ledger — `start [--port <n>]`, `stop`, `status`. Loopback only, default port 7250 |
 | `pal cli skill link <name>` | Link a personal `~/.pal/skills/<name>/` into every installed agent so it is discoverable |
 | `pal cli skill doctor <name>` | Evaluate a skill against the authoring best practices (folder/file-name match, name, description, body length, point-of-view, reference depth) |
 | `pal cli subagent link <name>` | Install a personal `~/.pal/agents/<name>.md` (merged multi-platform definition) into every installed agent, split per platform |

@@ -386,7 +386,7 @@ function statusFromBox(box: string): IscStatus {
   return "open";
 }
 
-interface Isc {
+export interface Isc {
   id: number;
   text: string;
   status: IscStatus;
@@ -412,7 +412,7 @@ function decodeIscText(stored: string): string {
   return stored.replaceAll(/\\(.)/g, (whole, ch) => ISC_UNESCAPE[ch] ?? whole);
 }
 
-function parseIscs(criteria: string): Isc[] {
+export function parseIscs(criteria: string): Isc[] {
   const out: Isc[] = [];
   for (const line of criteria.split("\n")) {
     const m = new RegExp(/^-\s+\[( |x|~)\]\s+ISC-(\d+):\s+(.+)$/i).exec(line);

@@ -16,7 +16,7 @@ import { parseArgs } from "node:util";
 import { ensureDir, paths } from "../../hooks/lib/paths";
 import { emit } from "../lib/emit";
 
-interface HandoffEntry {
+export interface HandoffEntry {
   timestamp: string;
   title: string;
   status: "in-progress" | "completed";
@@ -29,7 +29,7 @@ function handoffPath(): string {
   return resolve(ensureDir(paths.state()), "last-handoff.json");
 }
 
-function readHandoffs(): Record<string, HandoffEntry> {
+export function readHandoffs(): Record<string, HandoffEntry> {
   const p = handoffPath();
   if (!existsSync(p)) return {};
   try {

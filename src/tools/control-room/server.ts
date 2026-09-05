@@ -1,19 +1,17 @@
 /**
- * A local page over the ledger, for showing the action log to someone who
- * will not read a terminal.
+ * The control room — one local page over ~/.pal, meant to be opened before a
+ * terminal. Loopback only, read only, no state of its own: every request goes
+ * back to the files.
  *
- * Loopback only, stateless, no store of its own: every request reads the
- * ledger afresh through the same query the CLI uses, so the page and
- * `pal cli ledger` can never disagree. The browser holds nothing but the
- * current filter selection.
+ * `pal cli server start|stop|status` owns the process; this file only serves.
  */
 
-import { readFileSync } from "node:fs";
 import { loadMachine } from "../../hooks/lib/machine";
-import { assets } from "../../hooks/lib/paths";
 import { readAllProjects } from "../../hooks/lib/projects";
-import { type LedgerFilter, ledgerFiles, parseSince } from "./query";
-import { ledgerView } from "./view";
+import { type LedgerFilter, ledgerFiles, parseSince } from "../ledger/query";
+import { ledgerView } from "../ledger/view";
+import { agentsAtWork, board, handoffs, signal } from "./data";
+import index from "./ui/index.html";
 
 export const DEFAULT_PORT = 7250;
 export const LOOPBACK = "127.0.0.1";
@@ -45,12 +43,6 @@ function filterFromQuery(params: URLSearchParams): LedgerFilter | string {
   return filter;
 }
 
-function page(): Response {
-  return new Response(readFileSync(assets.ledgerPageTemplate()), {
-    headers: { "content-type": "text/html; charset=utf-8" },
-  });
-}
-
 function projects(): Response {
   const slugs = readAllProjects()
     .map((p) => p.name)
@@ -58,10 +50,10 @@ function projects(): Response {
   return json(slugs.map((slug) => ({ slug })));
 }
 
-function ledger(url: URL): Response {
+function withFilter(url: URL, view: (filter: LedgerFilter) => unknown): Response {
   const filter = filterFromQuery(url.searchParams);
   if (typeof filter === "string") return json({ error: filter }, 400);
-  return json(ledgerView(filter));
+  return json(view(filter));
 }
 
 function status(port: number, startedAt: string): Response {
@@ -75,19 +67,27 @@ function status(port: number, startedAt: string): Response {
   return json(body);
 }
 
-export function startLedgerServer(port: number = DEFAULT_PORT) {
+export function startControlRoom(port: number = DEFAULT_PORT) {
   const startedAt = new Date().toISOString();
   return Bun.serve({
     hostname: LOOPBACK,
     port,
+    development: false,
+    routes: { "/": index },
     fetch(request, server) {
       if (request.method !== "GET") return json({ error: "read only" }, 405);
       const url = new URL(request.url);
       switch (url.pathname) {
-        case "/":
-          return page();
+        case "/api/board":
+          return json(board());
+        case "/api/handoffs":
+          return json(handoffs());
+        case "/api/signal":
+          return json(signal());
+        case "/api/agents":
+          return withFilter(url, agentsAtWork);
         case "/api/ledger":
-          return ledger(url);
+          return withFilter(url, ledgerView);
         case "/api/projects":
           return projects();
         case "/api/status":
@@ -106,6 +106,6 @@ function portFromArgv(argv: string[]): number {
 }
 
 if (import.meta.main) {
-  const server = startLedgerServer(portFromArgv(process.argv.slice(2)));
+  const server = startControlRoom(portFromArgv(process.argv.slice(2)));
   console.log(`http://${LOOPBACK}:${server.port}/`);
 }
