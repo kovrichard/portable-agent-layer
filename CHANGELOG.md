@@ -1,3 +1,10 @@
+# [0.70.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.69.0...v0.70.0) (2026-09-05)
+
+
+### Features
+
+* **ledger:** serve the action ledger as a local page: pal cli server start|stop|status ([8aa4e7c](https://github.com/kovrichard/portable-agent-layer/commit/8aa4e7c5eace7575af64bad87f801d42cc511bc0))
+
 # [0.69.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.68.0...v0.69.0) (2026-09-05)
 
 
