@@ -29,6 +29,9 @@ const COPILOT_VIEW = {
 const targetsOf = (payload: Record<string, unknown>) =>
   ledgeredCalls(payload).map((call) => call.target);
 
+/** A patch names files relative to cwd, so expectations resolve as the platform does. */
+const inCwd = (name: string) => resolve(COPILOT_PATCH.cwd, name);
+
 describe("Copilot writes files through a patch, whose arguments are not JSON", () => {
   test("the patch body yields no tool arguments, so no path can be read from them", () => {
     expect(normalizeToolUse(COPILOT_PATCH)?.toolInput).toEqual({});
@@ -56,9 +59,9 @@ describe("Copilot writes files through a patch, whose arguments are not JSON", (
 describe("one patch call changes a set of files, and the ledger records each", () => {
   test("every file the patch names is a target", () => {
     expect(targetsOf(COPILOT_PATCH)).toEqual([
-      "/work/app/existing.txt",
-      "/work/app/one.txt",
-      "/work/app/two.txt",
+      inCwd("existing.txt"),
+      inCwd("one.txt"),
+      inCwd("two.txt"),
     ]);
   });
 
@@ -67,7 +70,7 @@ describe("one patch call changes a set of files, and the ledger records each", (
       ...COPILOT_PATCH,
       toolArgs: "*** Begin Patch\n*** Delete File: gone.txt\n*** End Patch\n",
     };
-    expect(targetsOf(deletion)).toEqual(["/work/app/gone.txt"]);
+    expect(targetsOf(deletion)).toEqual([inCwd("gone.txt")]);
   });
 
   test("a path already absolute is left as it is", () => {
@@ -84,7 +87,7 @@ describe("one patch call changes a set of files, and the ledger records each", (
       toolArgs:
         "*** Begin Patch\n*** Add File: doc.md\n+*** Update File: not-a-target.txt\n*** End Patch\n",
     };
-    expect(targetsOf(quoted)).toEqual(["/work/app/doc.md"]);
+    expect(targetsOf(quoted)).toEqual([inCwd("doc.md")]);
   });
 
   test("a patch naming nothing records nothing", () => {
