@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
   blockResponse,
+  declaredAgent,
   getActiveAgent,
   isClaude,
   isCodex,
@@ -13,6 +14,11 @@ import {
 const PRESERVED_ENV_KEYS = [
   "PAL_AGENT",
   "CURSOR_VERSION",
+  "CURSOR_AGENT",
+  "CURSOR_INVOKED_AS",
+  "CURSOR_SPAWN_CHAIN",
+  "CURSOR_SPAWNED_BY_EXTENSION_ID",
+  "CLAUDE_CODE_ENTRYPOINT",
   "CODEX_CLI_VERSION",
   "OPENAI_CODEX",
 ] as const;
@@ -265,10 +271,16 @@ describe("getActiveAgent — --agent= argv flag", () => {
     expect(getActiveAgent()).toBe("vscode");
   });
 
-  test("argv wins over PAL_AGENT, so one file cannot be mislabelled by a stale env", () => {
+  test("PAL_AGENT wins over argv, because argv names the config not the process", () => {
     process.argv = ["bun", "hook.ts", "--agent=vscode"];
     process.env.PAL_AGENT = "copilot";
-    expect(getActiveAgent()).toBe("vscode");
+    expect(getActiveAgent()).toBe("copilot");
+  });
+
+  test("host evidence wins over argv, so the registration file cannot mislabel", () => {
+    process.argv = ["bun", "hook.ts", "--agent=claude"];
+    process.env.CURSOR_AGENT = "1";
+    expect(getActiveAgent()).toBe("cursor");
   });
 
   test("falls back to PAL_AGENT when the flag is absent", () => {
@@ -281,6 +293,106 @@ describe("getActiveAgent — --agent= argv flag", () => {
     process.argv = ["bun", "hook.ts", "--agent=bogus"];
     process.env.PAL_AGENT = "copilot";
     expect(getActiveAgent()).toBe("copilot");
+  });
+});
+
+/**
+ * Every environment below is a live `env` dump from a real host, reduced to the
+ * variables detection reads. The argv flag on each case is the one the install
+ * templates actually register, so a case that resolves by argv alone is a case
+ * where the ledger recorded the wrong runtime.
+ */
+describe("getActiveAgent — the four hosts PAL actually runs under", () => {
+  const saved: Record<string, string | undefined> = {};
+  const savedArgv = process.argv;
+
+  beforeEach(() => {
+    for (const k of PRESERVED_ENV_KEYS) {
+      saved[k] = process.env[k];
+      delete process.env[k];
+    }
+  });
+
+  afterEach(() => {
+    process.argv = savedArgv;
+    for (const k of PRESERVED_ENV_KEYS) {
+      if (saved[k] === undefined) delete process.env[k];
+      else process.env[k] = saved[k];
+    }
+  });
+
+  test("cursor-agent is cursor even when registered as --agent=claude", () => {
+    process.argv = ["bun", "hook.ts", "--agent=claude"];
+    process.env.CURSOR_AGENT = "1";
+    process.env.CURSOR_INVOKED_AS = "cursor-agent";
+    expect(getActiveAgent()).toBe("cursor");
+  });
+
+  test("one cursor-agent edit labels both racing hook processes the same", () => {
+    process.env.CURSOR_AGENT = "1";
+    process.argv = ["bun", "hook.ts", "--agent=cursor"];
+    const fromCursorConfig = getActiveAgent();
+    process.argv = ["bun", "hook.ts", "--agent=claude"];
+    expect(getActiveAgent()).toBe(fromCursorConfig);
+  });
+
+  test("the Claude extension inside Cursor is claude, not cursor", () => {
+    process.argv = ["bun", "hook.ts", "--agent=claude"];
+    process.env.CLAUDE_CODE_ENTRYPOINT = "claude-vscode";
+    process.env.CURSOR_SPAWN_CHAIN = "anthropic.claude-code";
+    process.env.CURSOR_SPAWNED_BY_EXTENSION_ID = "anthropic.claude-code";
+    expect(declaredAgent()).toBe("claude");
+  });
+
+  test("Claude Desktop is identified, not defaulted to", () => {
+    process.argv = ["bun", "hook.ts"];
+    process.env.CLAUDE_CODE_ENTRYPOINT = "claude-desktop";
+    expect(declaredAgent()).toBe("claude");
+  });
+
+  test("a pal-launched CLI session is identified, not defaulted to", () => {
+    process.argv = ["bun", "hook.ts"];
+    process.env.CLAUDE_CODE_ENTRYPOINT = "cli";
+    expect(declaredAgent()).toBe("claude");
+  });
+
+  test("nothing at all stays undeclared rather than claiming a host", () => {
+    process.argv = ["bun", "hook.ts"];
+    expect(declaredAgent()).toBeUndefined();
+    expect(getActiveAgent()).toBe("claude");
+  });
+
+  test("cursor-agent emulating Claude Code still reads as cursor", () => {
+    process.env.CURSOR_AGENT = "1";
+    process.env.CLAUDE_CODE_ENTRYPOINT = "cli";
+    expect(getActiveAgent()).toBe("cursor");
+  });
+
+  test("copilot started from a Claude Code terminal keeps its own registration", () => {
+    process.argv = ["bun", "hook.ts", "--agent=copilot"];
+    process.env.CLAUDE_CODE_ENTRYPOINT = "cli";
+    expect(getActiveAgent()).toBe("copilot");
+  });
+
+  test("codex started from a Claude Code terminal keeps its own registration", () => {
+    process.argv = ["bun", "hook.ts", "--agent=codex"];
+    process.env.CLAUDE_CODE_ENTRYPOINT = "cli";
+    expect(getActiveAgent()).toBe("codex");
+  });
+
+  test("a Cursor spawn chain alone is not evidence of cursor-agent", () => {
+    process.argv = ["bun", "hook.ts", "--agent=claude"];
+    process.env.CURSOR_SPAWN_CHAIN = "anthropic.claude-code";
+    expect(getActiveAgent()).toBe("claude");
+  });
+
+  test("cursor-agent denies in Cursor's shape despite the claude registration", () => {
+    process.argv = ["bun", "hook.ts", "--agent=claude"];
+    process.env.CURSOR_AGENT = "1";
+    expect(JSON.parse(blockResponse("nope", "PreToolUse"))).toEqual({
+      permission: "deny",
+      user_message: "nope",
+    });
   });
 });
 
