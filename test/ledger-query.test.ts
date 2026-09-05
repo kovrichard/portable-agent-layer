@@ -333,6 +333,126 @@ describe("whether a recorded change is still the state of the file", () => {
   });
 });
 
+describe("what the record says became of a change", () => {
+  const A = "hash-a";
+  const B = "hash-b";
+  const C = "hash-c";
+
+  function link(id: string, before: string | null, after: string | null): EntryOverrides {
+    return {
+      id,
+      before: before === null ? null : { hash: before, bytes: 1 },
+      after: after === null ? null : { hash: after, bytes: 1 },
+    };
+  }
+
+  async function verdictFor(id: string) {
+    const q = await query();
+    const found = q.findEntry(id);
+    if (!found) throw new Error(`no entry ${id}`);
+    return q.chainVerdict(found);
+  }
+
+  test("the newest action on a target is the latest", async () => {
+    writeLedger("actions.jsonl", [entry(link("only", A, B))]);
+    expect(await verdictFor("only")).toEqual({ state: "latest" });
+  });
+
+  test("a later action restoring the before-state is named as the undo", async () => {
+    writeLedger("actions.jsonl", [
+      entry(link("first", A, B)),
+      entry({ ...link("undo", B, A), ts: "2026-09-04T13:00:00.000Z" }),
+    ]);
+    expect(await verdictFor("first")).toEqual({
+      state: "undone",
+      by: "undo",
+      at: "2026-09-04T13:00:00.000Z",
+    });
+  });
+
+  test("a later action that changed it again is followed, not undone", async () => {
+    writeLedger("actions.jsonl", [
+      entry(link("first", A, B)),
+      entry({ ...link("onward", B, C), ts: "2026-09-04T13:00:00.000Z" }),
+    ]);
+    expect(await verdictFor("first")).toEqual({
+      state: "followed",
+      by: "onward",
+      at: "2026-09-04T13:00:00.000Z",
+    });
+  });
+
+  /** Naming a later undo would date the revert to the wrong action. */
+  test("the first undo is named, not a later one", async () => {
+    writeLedger("actions.jsonl", [
+      entry(link("first", A, B)),
+      entry({ ...link("undo", B, A), ts: "2026-09-04T13:00:00.000Z" }),
+      entry({ ...link("again", A, B), ts: "2026-09-04T14:00:00.000Z" }),
+      entry({ ...link("undo2", B, A), ts: "2026-09-04T15:00:00.000Z" }),
+    ]);
+    expect(await verdictFor("first")).toMatchObject({ state: "undone", by: "undo" });
+  });
+
+  test("another target's actions are not part of this chain", async () => {
+    writeLedger("actions.jsonl", [
+      entry(link("first", A, B)),
+      entry({
+        ...link("elsewhere", B, A),
+        target: "{proj:demo}/other.ts",
+        ts: "2026-09-04T13:00:00.000Z",
+      }),
+    ]);
+    expect(await verdictFor("first")).toEqual({ state: "latest" });
+  });
+
+  /**
+   * The later action lands on the refused one's before-hash, which is what an
+   * undo looks like — but a refused action changed nothing, so there was
+   * nothing for it to undo.
+   */
+  test("an action that never landed has nothing to undo", async () => {
+    writeLedger("actions.jsonl", [
+      entry({ ...link("denied", A, null), outcome: "denied", delta: undefined }),
+      entry({ ...link("next", B, A), ts: "2026-09-04T13:00:00.000Z" }),
+    ]);
+    expect(await verdictFor("denied")).toMatchObject({ state: "followed", by: "next" });
+  });
+
+  test("a file creation is not undone by a later write", async () => {
+    writeLedger("actions.jsonl", [
+      entry({ ...link("created", null, B), tool: "Write" }),
+      entry({ ...link("after", B, C), ts: "2026-09-04T13:00:00.000Z" }),
+    ]);
+    expect(await verdictFor("created")).toMatchObject({ state: "followed" });
+  });
+
+  /** Independence from disk is the whole point: it stays true after the file moves on. */
+  test("the verdict holds with no file on disk at all", async () => {
+    writeLedger("actions.jsonl", [
+      entry(link("first", A, B)),
+      entry({ ...link("undo", B, A), ts: "2026-09-04T13:00:00.000Z" }),
+    ]);
+    registerProject("demo", PROJECT);
+
+    const q = await query();
+    const found = q.findEntry("first");
+    if (!found) throw new Error("missing");
+    expect(q.standing(found).state).toBe("missing");
+    expect(q.chainVerdict(found)).toMatchObject({ state: "undone", by: "undo" });
+  });
+
+  /** The chain must span the whole ledger, not whatever a filter left behind. */
+  test("an undo living in a rotated archive is still found", async () => {
+    writeLedger("actions-2026-09-01T00-00-00-000Z.jsonl", [
+      entry(link("archived", A, B)),
+    ]);
+    writeLedger("actions.jsonl", [
+      entry({ ...link("undo", B, A), ts: "2026-09-04T13:00:00.000Z" }),
+    ]);
+    expect(await verdictFor("archived")).toMatchObject({ state: "undone", by: "undo" });
+  });
+});
+
 describe("counts over a set of actions", () => {
   test("groups by every dimension the ledger records", async () => {
     writeLedger("actions.jsonl", [

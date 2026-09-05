@@ -191,6 +191,50 @@ export function standing(entry: LedgerEntry): Standing {
   return { state: "superseded", hash };
 }
 
+/**
+ * What the record itself says became of a change, as opposed to what the disk
+ * says now.
+ *
+ * `standing` can only describe the present, so any entry that is not the newest
+ * for its target reads as superseded — true, and nearly content-free, since it
+ * says only that something happened afterwards. The ledger already holds the
+ * whole per-target chain, and that answers the question worth asking: whether a
+ * later action put the file back the way this one found it, and which action
+ * that was. It stays true no matter how many edits come after.
+ */
+export type ChainVerdict =
+  | { state: "latest" }
+  | { state: "undone"; by: string; at: string }
+  | { state: "followed"; by: string; at: string };
+
+/**
+ * Deliberately takes no entry list. A chain computed over a filtered query
+ * would report `latest` for an entry the filter merely hid the successor of,
+ * so there is no parameter here through which that mistake can be made.
+ */
+export function chainVerdict(entry: LedgerEntry): ChainVerdict {
+  const all = readLedger();
+  const position = all.findIndex((candidate) => candidate.id === entry.id);
+  const later = all
+    .slice(position + 1)
+    .filter((candidate) => candidate.target === entry.target);
+  if (later.length === 0) return { state: "latest" };
+
+  const undo = undoingEntry(entry, later);
+  const next = undo ?? later[0];
+  return { state: undo ? "undone" : "followed", by: next.id, at: next.ts };
+}
+
+/**
+ * The first later action that left the file as this one found it. An action
+ * that never landed changed nothing to undo, and one that created the file is
+ * undone by a deletion, which this ledger does not record.
+ */
+function undoingEntry(entry: LedgerEntry, later: LedgerEntry[]): LedgerEntry | undefined {
+  if (!entry.before || !entry.after) return undefined;
+  return later.find((candidate) => candidate.after?.hash === entry.before?.hash);
+}
+
 export interface LedgerStats {
   total: number;
   span: { first: string; last: string } | null;

@@ -14,6 +14,8 @@
 import { parseArgs } from "node:util";
 import type { LedgerEntry } from "../hooks/lib/ledger";
 import {
+  type ChainVerdict,
+  chainVerdict,
   changeShape,
   findEntry,
   type LedgerFilter,
@@ -203,6 +205,17 @@ function describeStanding(verdict: Standing): string {
   }
 }
 
+function describeChain(verdict: ChainVerdict): string {
+  switch (verdict.state) {
+    case "latest":
+      return "the newest recorded action on this target";
+    case "undone":
+      return `undone by ${verdict.by} at ${verdict.at}, which put the file back as this one found it`;
+    default:
+      return `changed again by ${verdict.by} at ${verdict.at}`;
+  }
+}
+
 const UNKEPT_CHANGE: Record<string, string> = {
   redacted: "contents withheld — the target is one the ledger never keeps",
   truncated: "the change was too large to keep; its size and hashes remain",
@@ -231,7 +244,12 @@ function cmdShow(args: string[]): number {
   if (rest.includes("--json")) {
     console.log(
       JSON.stringify(
-        { ...entry, resolved: locate(entry), standing: standing(entry) },
+        {
+          ...entry,
+          resolved: locate(entry),
+          standing: standing(entry),
+          chain: chainVerdict(entry),
+        },
         null,
         2
       )
@@ -249,6 +267,7 @@ function cmdShow(args: string[]): number {
   machine     ${entry.machine}
   size        ${sizeOf(entry.before, "created")} → ${sizeOf(entry.after, "nothing landed")}
   standing    ${describeStanding(standing(entry))}
+  in ledger   ${describeChain(chainVerdict(entry))}
 
   change`);
   printChange(entry);
