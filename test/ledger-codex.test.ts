@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ledgeredCalls } from "../src/hooks/lib/ledger-hook";
 import { loadCodexHooksTemplate, mergeCodexHooks } from "../src/targets/lib";
@@ -175,14 +175,19 @@ describe("upgrading a Codex install that predates the agent flag", () => {
 });
 
 describe("every Codex hooks config this repo ships", () => {
-  const configs = [TEMPLATE, resolve(import.meta.dir, "../.codex/hooks.json")];
+  const REPO_GATES = resolve(import.meta.dir, "../.codex/hooks.json");
 
-  test("uses only the top-level fields Codex accepts", () => {
-    for (const path of configs) {
-      const keys = Object.keys(JSON.parse(readFileSync(path, "utf-8")));
-      expect(`${path}: ${keys.filter((k) => k !== "hooks" && k !== "description")}`).toBe(
-        `${path}: `
-      );
-    }
+  function rejectedKeys(path: string): string[] {
+    const keys = Object.keys(JSON.parse(readFileSync(path, "utf-8")));
+    return keys.filter((key) => key !== "hooks" && key !== "description");
+  }
+
+  test("the shipped template uses only the fields Codex accepts", () => {
+    expect(rejectedKeys(TEMPLATE)).toEqual([]);
+  });
+
+  /** Stryker's sandbox omits .codex, a symlink farm its file copy cannot follow. */
+  test.skipIf(!existsSync(REPO_GATES))("so does this repo's own gates config", () => {
+    expect(rejectedKeys(REPO_GATES)).toEqual([]);
   });
 });
