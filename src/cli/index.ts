@@ -16,6 +16,7 @@
  *   status                            Show current PAL configuration
  *   doctor                            Check prerequisites and system health
  *   usage                             Summarize token usage and cost
+ *   ledger <sub> [filters]            Query the action ledger (log · show · stats)
  *   skill link <name>                 Link a personal ~/.pal/skills/<name>/ into installed agents
  *   skill doctor <name|--all>         Evaluate one skill, or every installed skill, against the authoring best practices
  *   subagent link <name>             Install a personal ~/.pal/agents/<name>.md into installed agents
@@ -232,6 +233,12 @@ async function runCli(command: string | undefined, args: string[]) {
       if (code !== 0) process.exit(code);
       break;
     }
+    case "ledger": {
+      const { runLedger } = await import("./ledger");
+      const code = await runLedger(args);
+      if (code !== 0) process.exit(code);
+      break;
+    }
     case "subagent": {
       const { runSubagent } = await import("./subagent");
       const code = await runSubagent(args);
@@ -299,6 +306,8 @@ function showHelp() {
     pal cli machine [label <name>]          Show or rename this install (where it was written)
     pal cli knowledge <sub> [args]          Query & manage the knowledge store
                                             (search · graph · stats · hubs · find · show · add · ls)
+    pal cli ledger <sub> [filters]          Query the action ledger (log · show · stats)
+                                            e.g. ledger log --project X --since 7d
     pal cli skill link <name>               Link a personal ~/.pal/skills/<name>/ into installed agents
     pal cli skill doctor <name|--all>       Evaluate one skill, or every installed skill
     pal cli skill author-model              Print the flagship model that authors skills for the active agent
