@@ -392,11 +392,36 @@ interface Isc {
   status: IscStatus;
 }
 
+/**
+ * An ISC is one markdown line, so a newline in its text would end the record
+ * and strand every paragraph after it as unparseable debris. Backslashes are
+ * escaped first so that decoding a literal "\n" in a regex cannot be mistaken
+ * for the separator.
+ */
+function encodeIscText(text: string): string {
+  return text
+    .replaceAll("\\", "\\\\")
+    .replaceAll("\r\n", "\n")
+    .replaceAll("\r", "\n")
+    .replaceAll("\n", "\\n");
+}
+
+const ISC_UNESCAPE: Record<string, string> = { n: "\n", "\\": "\\" };
+
+function decodeIscText(stored: string): string {
+  return stored.replaceAll(/\\(.)/g, (whole, ch) => ISC_UNESCAPE[ch] ?? whole);
+}
+
 function parseIscs(criteria: string): Isc[] {
   const out: Isc[] = [];
   for (const line of criteria.split("\n")) {
     const m = new RegExp(/^-\s+\[( |x|~)\]\s+ISC-(\d+):\s+(.+)$/i).exec(line);
-    if (m) out.push({ id: Number(m[2]), text: m[3].trim(), status: statusFromBox(m[1]) });
+    if (m)
+      out.push({
+        id: Number(m[2]),
+        text: decodeIscText(m[3].trim()),
+        status: statusFromBox(m[1]),
+      });
   }
   return out;
 }
@@ -471,7 +496,7 @@ function cmdAddIsc(args: string[]): void {
   const p = requireProject(name);
   const current = p.criteria ?? "";
   const id = nextIscId(p);
-  const newLine = `- [ ] ISC-${id}: ${title}`;
+  const newLine = `- [ ] ISC-${id}: ${encodeIscText(title)}`;
   p.criteria = current ? `${current.trimEnd()}\n${newLine}` : newLine;
   p.updated = now();
   writeProject(p);
@@ -628,7 +653,7 @@ function cmdEditIsc(args: string[]): void {
       .split("\n")
       .map((l) =>
         new RegExp(String.raw`^-\s+\[[ x~]\]\s+ISC-${id}:`, "i").test(l)
-          ? `- ${box} ISC-${id}: ${text}`
+          ? `- ${box} ISC-${id}: ${encodeIscText(text)}`
           : l
       )
       .join("\n");
