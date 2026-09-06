@@ -60,6 +60,7 @@ export default {
     "!src/tools/agent/analyze.ts",
     "!src/tools/token-cost.ts",
     "!src/tools/relationship-reflect.ts",
+    "!src/tools/self-model.ts",
     // Ratchet — every entry below measured >=90% no-coverage on 2026-08-18, meaning
     // the in-process suite cannot reach it and its mutants only depress the score.
     // Delete an entry the same commit that gives the module in-process tests, then
@@ -70,7 +71,6 @@ export default {
     "!src/tools/agent/handoff-note.ts",
     "!src/tools/agent/project.ts",
     "!src/tools/agent/thread.ts",
-    "!src/tools/self-model.ts",
     "!src/tools/skill-doctor.ts",
   ],
   concurrency: Number(process.env.STRYKER_CONCURRENCY ?? 4),

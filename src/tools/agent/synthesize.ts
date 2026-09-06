@@ -17,7 +17,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { ensureDir, paths } from "../../hooks/lib/paths";
-import { readJsonl } from "../self-model";
+import { readJsonl } from "../lib/self-model";
 
 // ── Config ──
 
