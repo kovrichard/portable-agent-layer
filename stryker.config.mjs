@@ -63,7 +63,6 @@ export default {
     // re-measure and raise thresholds.break. Entries come off this list; they never
     // go back on, and break never moves down without a reason recorded here.
     "!src/hooks/lib/import-merge.ts",
-    "!src/hooks/lib/learning-category.ts",
     "!src/tools/agent/algorithm-reflect.ts",
     "!src/tools/agent/analyze.ts",
     "!src/tools/agent/handoff-note.ts",
