@@ -26,7 +26,6 @@ import {
   readProject,
   writeProject,
 } from "../hooks/lib/projects";
-import { readThreads, type Thread, writeThreads } from "../tools/agent/thread";
 import { appendSourceLog } from "../tools/knowledge/ingest";
 import {
   type Entity,
@@ -35,6 +34,7 @@ import {
   save as knowledgeSave,
   slugify,
 } from "../tools/knowledge/lib";
+import { readThreads, type Thread, writeThreads } from "../tools/lib/thread";
 
 // ── Types ─────────────────────────────────────────────────────────
 

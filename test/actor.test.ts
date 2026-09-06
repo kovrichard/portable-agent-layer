@@ -253,7 +253,7 @@ describe("currentAttribution", () => {
 
 describe("records carry the attribution stamp", () => {
   test("a thread records actor, runtime and authority alongside the machine", async () => {
-    const { addThread } = await import("../src/tools/agent/thread");
+    const { addThread } = await import("../src/tools/lib/thread");
     const { loadActor } = await lib();
     process.env.PAL_AGENT = "claude";
     const t = addThread("a title", "some context");
