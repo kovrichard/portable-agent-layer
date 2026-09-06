@@ -11,24 +11,22 @@
 
 import { existsSync } from "node:fs";
 import { readFile, unlink } from "node:fs/promises";
-import { extractContent, parseMessages } from "../lib/transcript";
+import {
+  mergeInferredPrinciple,
+  needsInference,
+  type PendingFailure,
+  principleRequest,
+  recentExchange,
+} from "../lib/failure-principle";
 import { captureFailure } from "./failure";
-
-interface PendingFailure {
-  rating: number;
-  context: string;
-  detailedContext?: string;
-  principle?: string;
-  responsePreview?: string;
-  userPreview?: string;
-  cwd?: string;
-}
 
 /**
  * Inference the principle (if missing) and persist the failure record.
  * Reads pending data + transcript from the provided tmp paths and unlinks them.
+ *
+ * @lintignore exercised directly by test/failure-principle.test.ts
  */
-async function processFailurePrinciple(
+export async function processFailurePrinciple(
   pendingPath: string,
   transcriptPath: string
 ): Promise<void> {
@@ -47,42 +45,19 @@ async function processFailurePrinciple(
     logDebug("failure-principle", `processing rating=${pending.rating}`);
 
     let { principle, detailedContext } = pending;
-    if (!principle) {
+    if (needsInference(pending)) {
       try {
         const { inference } = await import("../lib/inference");
-        const msgs = parseMessages(transcript);
-        const recent = msgs
-          .slice(-10)
-          .map((m) => `${m.role.toUpperCase()}: ${extractContent(m).slice(0, 300)}`)
-          .join("\n\n");
-
-        const result = await inference({
-          system: `Analyze this failed AI interaction (rated ${pending.rating}/10). Return JSON: {"principle": "<verb-first actionable rule, 10-20 words — write a full sentence, not a fragment>", "detailed_context": "<root cause and what to do differently, 50-150 words>"}.`,
-          user: `User feedback: ${pending.context}\n\nConversation:\n${recent}`,
-          maxTokens: 400,
-          timeout: 90000,
-          jsonSchema: {
-            type: "object" as const,
-            properties: {
-              principle: { type: "string" as const },
-              detailed_context: { type: "string" as const },
-            },
-            required: ["principle", "detailed_context"],
-            additionalProperties: false,
-          },
-          caller: "failure-principle",
-        });
-
-        if (result.success && result.output) {
-          const parsed = JSON.parse(result.output) as {
-            principle?: string;
-            detailed_context?: string;
-          };
-          principle = parsed.principle || undefined;
-          detailedContext ??= parsed.detailed_context || undefined;
-        } else {
+        const result = await inference(
+          principleRequest(pending, recentExchange(transcript))
+        );
+        if (!result.success || !result.output) {
           logError("failure-principle", `inference failed (no output)`);
         }
+        ({ principle, detailedContext } = mergeInferredPrinciple(
+          pending,
+          result.output ?? null
+        ));
       } catch (err) {
         logError("failure-principle:inference", err);
       }
