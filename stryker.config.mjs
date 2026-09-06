@@ -52,10 +52,11 @@ export default {
     "!src/hooks/lib/notify.ts",
     "!src/hooks/lib/stdin.ts",
     "!src/hooks/lib/which.ts",
-    // A tool that is only ever spawned, and now holds nothing but argv and a
-    // console.log — the same case as src/cli and src/hooks/*.ts above. Its
-    // decisions are in src/tools/lib/session-usage.ts, which is measured.
+    // Tools that are only ever spawned and now hold nothing but argv and one
+    // library call — the same case as src/cli and src/hooks/*.ts above. Their
+    // decisions live in src/tools/lib/, which is measured.
     "!src/tools/session-summary.ts",
+    "!src/tools/agent/relationship-note.ts",
     // Ratchet — every entry below measured >=90% no-coverage on 2026-08-18, meaning
     // the in-process suite cannot reach it and its mutants only depress the score.
     // Delete an entry the same commit that gives the module in-process tests, then
@@ -67,7 +68,6 @@ export default {
     "!src/tools/agent/analyze.ts",
     "!src/tools/agent/handoff-note.ts",
     "!src/tools/agent/project.ts",
-    "!src/tools/agent/relationship-note.ts",
     "!src/tools/agent/thread.ts",
     "!src/tools/relationship-reflect.ts",
     "!src/tools/self-model.ts",
