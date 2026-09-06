@@ -10,12 +10,22 @@ let sandbox = "";
 let copilotDir = "";
 let result: { status: number | null; stdout: string; stderr: string };
 
+/**
+ * Every agent directory is redirected, not just Copilot's. LoadContext rebuilds
+ * CLAUDE.md wherever claudeDir resolves to, and that falls back to the real
+ * ~/.claude — so leaving one unset rewrites the developer's own identity file
+ * with the sandbox's empty settings.
+ */
 function runLoadContext() {
   return spawnSync("bun", ["run", LOAD_CONTEXT, "--agent=copilot"], {
     env: {
       ...process.env,
       PAL_HOME: resolve(sandbox, "home"),
       PAL_COPILOT_DIR: copilotDir,
+      PAL_CLAUDE_DIR: resolve(sandbox, "claude"),
+      PAL_OPENCODE_DIR: resolve(sandbox, "opencode"),
+      PAL_CODEX_DIR: resolve(sandbox, "codex"),
+      PAL_CURSOR_DIR: resolve(sandbox, "cursor"),
     },
     input: "",
     encoding: "utf-8",
