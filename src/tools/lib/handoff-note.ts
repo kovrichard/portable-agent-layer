@@ -86,3 +86,17 @@ export function recordNote(
 ): HandoffStore {
   return trimHandoffs({ ...store, [note.cwd]: entryFor(note, now) });
 }
+
+/**
+ * Fills in the one field an auto handoff cannot write for itself. Never
+ * overwrites an answer already on the entry, and never invents an entry.
+ */
+export function withWaitingOn(
+  store: HandoffStore,
+  cwd: string,
+  question: string
+): HandoffStore {
+  const entry = store[cwd];
+  if (!entry || entry.waitingOn) return store;
+  return { ...store, [cwd]: { ...entry, waitingOn: question } };
+}

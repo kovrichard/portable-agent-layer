@@ -1,7 +1,7 @@
 {
   "name": "portable-agent-layer",
   "version": "0.72.0",
-  "description": "PAL — Portable Agent Layer: persistent personal context for AI coding assistants",
+  "description": "PAL \u2014 Portable Agent Layer: persistent personal context for AI coding assistants",
   "type": "module",
   "bin": {
     "pal": "src/cli/index.ts"
@@ -12,6 +12,9 @@
     ".husky/install.mjs",
     "README.md",
     "LICENSE"
+  ],
+  "workspaces": [
+    "src/tools/control-room/ui"
   ],
   "engines": {
     "bun": ">=1.4.0"
@@ -53,7 +56,9 @@
     "lint-staged": "lint-staged",
     "prepare": "bun .husky/install.mjs",
     "build:skill-tools": "bun run scripts/build-skill-tools.ts",
-    "prepack": "bun run build:skill-tools",
+    "build:ui": "bun run --filter @pal/control-room-ui build",
+    "dev:ui": "bun run --filter @pal/control-room-ui dev",
+    "prepack": "bun run build:skill-tools && bun run build:ui",
     "install:all": "bun run src/cli/index.ts cli install",
     "uninstall": "bun run src/cli/index.ts cli uninstall",
     "tool:synthesize": "bun run src/tools/agent/synthesize.ts",
@@ -61,7 +66,9 @@
     "tool:wisdom-frame": "bun run src/tools/agent/wisdom-frame.ts",
     "tool:reflect": "bun run src/tools/relationship-reflect.ts",
     "eval:sentiment": "bun eval/run.ts sentiment",
-    "eval:failure-principle": "bun eval/run.ts failure-principle"
+    "eval:failure-principle": "bun eval/run.ts failure-principle",
+    "eval:goal-links": "bun eval/run.ts goal-links",
+    "eval:waiting-on": "bun eval/run.ts waiting-on"
   },
   "lint-staged": {
     "*.ts": [
@@ -83,8 +90,6 @@
     "@types/adm-zip": "^0.5.8",
     "@types/bun": "latest",
     "@types/node": "latest",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.7",
     "husky": "^9.1.7",
     "jscpd": "^4.2.3",
     "knip": "^6.14.1",
@@ -102,8 +107,6 @@
     "marked": "18.0.4",
     "pdf-lib": "1.17.1",
     "playwright": "^1.60.0",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
     "unpdf": "^0.12.0"
   }
 }

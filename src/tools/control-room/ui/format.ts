@@ -6,10 +6,6 @@ export function age(days: number): string {
   return `${Math.floor(days / 30)}mo`;
 }
 
-export function plural(n: number, one: string, many = `${one}s`): string {
-  return `${n} ${n === 1 ? one : many}`;
-}
-
 export function clock(iso: string): string {
   const at = new Date(iso);
   if (Number.isNaN(at.getTime())) return iso;
@@ -18,14 +14,6 @@ export function clock(iso: string): string {
   return `${day} ${time}`;
 }
 
-export function isoDay(at: Date): string {
-  return at.toISOString().slice(0, 10);
-}
-
 export function tenths(n: number): string {
   return n.toFixed(1);
-}
-
-export function percent(alreadyPercent: number): string {
-  return `${Math.round(alreadyPercent)}%`;
 }

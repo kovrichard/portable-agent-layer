@@ -82,6 +82,11 @@ function isScaffolding(line: string): boolean {
   return !l || l.startsWith("<!--") || l.startsWith("-->") || /^(-{3,}|_{3,})$/.test(l);
 }
 
+/** A scaffold's empty bullet is punctuation, not a goal you stated. */
+function hasWords(text: string): boolean {
+  return /[a-z0-9]/i.test(text);
+}
+
 /**
  * Bullets are entries when a block has them; otherwise the paragraph is the
  * entry. Both shapes ship — the scaffold offers horizon headings with bullets,
@@ -90,10 +95,11 @@ function isScaffolding(line: string): boolean {
 function entriesIn(lines: string[]): string[] {
   const bullets = lines
     .filter((l) => /^\s*[-*+]\s+\S/.test(l))
-    .map((l) => l.replace(/^\s*[-*+]\s+/, "").trim());
+    .map((l) => l.replace(/^\s*[-*+]\s+/, "").trim())
+    .filter(hasWords);
   if (bullets.length > 0) return bullets;
   const paragraph = lines.join(" ").trim();
-  return paragraph ? [paragraph] : [];
+  return hasWords(paragraph) ? [paragraph] : [];
 }
 
 function goalsFrom(content: string): TelosGoal[] {

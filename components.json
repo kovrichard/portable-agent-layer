@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "new-york",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "src/tools/control-room/ui/theme.css",
+    "baseColor": "stone",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "aliases": {
+    "components": "@/src/tools/control-room/ui/components",
+    "ui": "@/src/tools/control-room/ui/components",
+    "utils": "@/src/tools/control-room/ui/lib/cn",
+    "lib": "@/src/tools/control-room/ui/lib",
+    "hooks": "@/src/tools/control-room/ui/lib"
+  }
+}

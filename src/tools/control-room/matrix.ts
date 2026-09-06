@@ -12,7 +12,11 @@
  */
 
 import {
-  PROJECT_STALE_DAYS_DEFAULT,
+  type GoalProgress,
+  progressFor,
+  readGoalLinks,
+} from "../../hooks/lib/goal-links";
+import {
   type ProjectProgress,
   readAllProjects,
   type ServesAuthority,
@@ -21,9 +25,11 @@ import {
 import { isImportant, SERVES_MEANING } from "../../hooks/lib/serves";
 import { dueFrom, readTelosGoals, type TelosGoal } from "../../hooks/lib/telos-goals";
 import type { HandoffEntry } from "../lib/handoff-note";
+import { parseIscs } from "../lib/project-isc";
 import { freshHandoffs } from "./data";
+import { type ControlRoomPrefs, readPrefs } from "./prefs";
+import { readSnoozes, snoozedUntil } from "./snooze";
 
-const URGENT_WITHIN_DAYS = 14;
 const RANKED_STATUSES = new Set(["active", "paused"]);
 
 export interface MatrixItem {
@@ -33,12 +39,16 @@ export interface MatrixItem {
   detail: string;
   urgent: boolean;
   important: boolean;
+  /** The quadrant the user pinned this to, which overrules both guesses. */
+  placed: string | null;
   urgentBecause: string[];
   importantBecause: string;
   serves: ServesKind | null;
   servesBy: ServesAuthority | null;
   due: string | null;
   waitingOn: string | null;
+  /** Counted from the criteria of the projects serving it, or null when none does. */
+  progress: { projects: string[]; closed: number; written: number } | null;
 }
 
 export interface Matrix {
@@ -50,11 +60,11 @@ export interface Matrix {
   unranked: number;
 }
 
-function dueSoon(due: string | null, now: Date): boolean {
+function dueSoon(due: string | null, now: Date, withinDays: number): boolean {
   if (!due) return false;
   const at = new Date(`${due}T23:59:59Z`).getTime();
   if (!Number.isFinite(at)) return false;
-  return at - now.getTime() <= URGENT_WITHIN_DAYS * 86_400_000;
+  return at - now.getTime() <= withinDays * 86_400_000;
 }
 
 function earliestDue(lines: string[]): string | null {
@@ -67,10 +77,10 @@ function plural(count: number, noun: string): string {
 }
 
 /** Measured against the grid's own clock, so a placement can be pinned in a test. */
-function quietSince(updated: string | undefined, now: Date): boolean {
+function quietSince(updated: string | undefined, now: Date, afterDays: number): boolean {
   if (!updated) return false;
   const age = now.getTime() - new Date(updated).getTime();
-  return Number.isFinite(age) && age > PROJECT_STALE_DAYS_DEFAULT * 86_400_000;
+  return Number.isFinite(age) && age > afterDays * 86_400_000;
 }
 
 /**
@@ -83,15 +93,20 @@ function projectUrgency(
   waiting: string | null,
   due: string | null,
   hasHandoff: boolean,
-  now: Date
+  now: Date,
+  prefs: ControlRoomPrefs
 ): string[] {
   const reasons: string[] = [];
   const blockers = p.blockers?.length ?? 0;
   if (blockers > 0) reasons.push(plural(blockers, "blocker"));
   if (waiting) reasons.push("waiting on you");
   else if (hasHandoff) reasons.push("handoff in progress");
-  if (dueSoon(due, now)) reasons.push(`next step dated ${due}`);
-  if (important && p.status === "active" && quietSince(p.updated, now)) {
+  if (dueSoon(due, now, prefs.urgentWithinDays)) reasons.push(`next step dated ${due}`);
+  if (
+    important &&
+    p.status === "active" &&
+    quietSince(p.updated, now, prefs.quietAfterDays)
+  ) {
     reasons.push("gone quiet");
   }
   return reasons;
@@ -100,7 +115,8 @@ function projectUrgency(
 function projectItem(
   p: ProjectProgress,
   handoffs: Map<string, HandoffEntry>,
-  now: Date
+  now: Date,
+  prefs: ControlRoomPrefs
 ): MatrixItem {
   const entry = p.path ? handoffs.get(p.path) : undefined;
   const waiting = entry?.waitingOn ?? null;
@@ -112,17 +128,20 @@ function projectItem(
     waiting,
     due,
     entry !== undefined,
-    now
+    now,
+    prefs
   );
 
+  const placed = placementOf(p.placed);
   return {
     kind: "project",
     id: p.name,
     label: p.name,
     detail: p.serves_note ?? p.next?.[0] ?? "",
-    urgent: urgentBecause.length > 0,
-    important,
-    urgentBecause,
+    urgent: placed ? placed.urgent : urgentBecause.length > 0,
+    important: placed ? placed.important : important,
+    placed: p.placed ?? null,
+    urgentBecause: placed ? ["placed by you", ...urgentBecause] : urgentBecause,
     importantBecause: p.serves
       ? SERVES_MEANING[p.serves]
       : "no purpose on record yet — set one to rank it",
@@ -130,11 +149,17 @@ function projectItem(
     servesBy: p.serves_by ?? null,
     due,
     waitingOn: waiting,
+    progress: null,
   };
 }
 
-function goalItem(goal: TelosGoal, now: Date): MatrixItem {
-  const urgent = dueSoon(goal.due, now);
+function goalItem(
+  goal: TelosGoal,
+  now: Date,
+  prefs: ControlRoomPrefs,
+  progress: GoalProgress | null
+): MatrixItem {
+  const urgent = dueSoon(goal.due, now, prefs.urgentWithinDays);
   return {
     kind: "goal",
     id: goal.id,
@@ -142,13 +167,52 @@ function goalItem(goal: TelosGoal, now: Date): MatrixItem {
     detail: goal.horizon ?? goal.text,
     urgent,
     important: true,
+    placed: null,
     urgentBecause: urgent ? [`dated ${goal.due}`] : [],
     importantBecause: "a goal you stated",
     serves: null,
     servesBy: null,
     due: goal.due,
     waitingOn: null,
+    progress,
   };
+}
+
+/** The user's placement, translated back into the two axes it stands for. */
+function placementOf(
+  placed: string | undefined
+): { urgent: boolean; important: boolean } | null {
+  switch (placed) {
+    case "now":
+      return { urgent: true, important: true };
+    case "plan":
+      return { urgent: false, important: true };
+    case "noise":
+      return { urgent: true, important: false };
+    case "later":
+      return { urgent: false, important: false };
+    default:
+      return null;
+  }
+}
+
+/** Criteria closed over criteria written, with snoozed and retired ones left out. */
+function criteriaBySlug(
+  projects: ProjectProgress[],
+  snoozes: Record<string, string>
+): Map<string, { closed: number; written: number }> {
+  return new Map(
+    projects.map((p) => {
+      const iscs = [
+        ...parseIscs(p.criteria ?? ""),
+        ...parseIscs(p.changelog ?? ""),
+      ].filter((i) => i.status !== "retired" && !snoozedUntil(p.name, i.id, snoozes));
+      return [
+        p.name,
+        { closed: iscs.filter((i) => i.status === "done").length, written: iscs.length },
+      ];
+    })
+  );
 }
 
 function quadrant(items: MatrixItem[], urgent: boolean, important: boolean) {
@@ -172,11 +236,19 @@ export function buildMatrix(items: MatrixItem[], unranked: number): Matrix {
 }
 
 export function matrix(now: Date = new Date()): Matrix {
+  const prefs = readPrefs();
   const handoffs = new Map(freshHandoffs(now));
-  const ranked = readAllProjects().filter((p) => RANKED_STATUSES.has(p.status));
+  const all = readAllProjects();
+  const ranked = all.filter((p) => RANKED_STATUSES.has(p.status));
+  const links = readGoalLinks();
+  const criteria = criteriaBySlug(all, readSnoozes(now));
   const items = [
-    ...ranked.map((p) => projectItem(p, handoffs, now)),
-    ...readTelosGoals().map((g) => goalItem(g, now)),
+    ...ranked.map((p) => projectItem(p, handoffs, now, prefs)),
+    ...(prefs.rankGoals
+      ? readTelosGoals().map((g) =>
+          goalItem(g, now, prefs, progressFor(g.id, links, criteria))
+        )
+      : []),
   ];
   return buildMatrix(items, ranked.filter((p) => !p.serves).length);
 }

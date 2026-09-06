@@ -1,7 +1,8 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { reload } from "../src/hooks/lib/settings";
 import type {
   AgendaView,
   AgentsView,
@@ -18,10 +19,21 @@ import type { LedgerView } from "../src/tools/ledger/view";
 let HOME: string;
 let server: ReturnType<typeof Bun.serve> | null = null;
 
+// The page is a build artifact rather than source, so the suite builds it once
+// instead of asserting against whatever a previous run happened to leave behind.
+beforeAll(async () => {
+  const { buildPage, isBuilt } = await import("../src/tools/control-room/static");
+  if (!isBuilt()) expect(buildPage()).toBe(true);
+});
+
 beforeEach(() => {
   HOME = mkdtempSync(resolve(tmpdir(), "pal-control-room-"));
   process.env.PAL_HOME = HOME;
   mkdirSync(resolve(HOME, "memory", "ledger"), { recursive: true });
+  // Settings are cached for the process lifetime, which is right in production
+  // and wrong here: a test that writes prefs would hand them to every test that
+  // ran after it, under a PAL_HOME those prefs never belonged to.
+  reload();
 });
 
 afterEach(() => {
@@ -67,12 +79,16 @@ function entry(overrides: Record<string, unknown> = {}): Record<string, unknown>
   };
 }
 
-function registerProject(slug: string): void {
+function registerProject(
+  slug: string,
+  body = "## Goal\n\nnone\n",
+  updated = "2026-09-01T00:00:00.000Z"
+): void {
   const dir = resolve(HOME, "memory", "projects", slug);
   mkdirSync(dir, { recursive: true });
   writeFileSync(
     resolve(dir, "ISA.md"),
-    `---\nname: ${slug}\nstatus: active\ncreated: 2026-09-01T00:00:00.000Z\nupdated: 2026-09-01T00:00:00.000Z\npath: ${HOME}\n---\n\n## Goal\n\nnone\n`,
+    `---\nname: ${slug}\nstatus: active\ncreated: 2026-09-01T00:00:00.000Z\nupdated: ${updated}\npath: ${HOME}\n---\n\n${body}`,
     "utf-8"
   );
 }
@@ -81,6 +97,15 @@ describe("where it listens", () => {
   test("loopback only", async () => {
     await listen();
     expect(server?.hostname).toBe("127.0.0.1");
+  });
+
+  test("vite proxies /api to the port the server actually uses", async () => {
+    const { DEFAULT_PORT } = await import("../src/tools/control-room/server-config");
+    const config = readFileSync(
+      resolve(import.meta.dir, "..", "src/tools/control-room/ui/vite.config.ts"),
+      "utf-8"
+    );
+    expect(config).toContain(`127.0.0.1:${DEFAULT_PORT}`);
   });
 });
 
@@ -222,6 +247,391 @@ describe("what each route answers", () => {
   test("anything else is a 404", async () => {
     const base = await listen();
     expect((await fetch(`${base}/api/nope`)).status).toBe(404);
+  });
+
+  test("/api/ledger narrows by runtime, machine and authority", async () => {
+    writeLedger([
+      entry({ id: "a", runtime: "claude", machine: "mbp", authority: "user" }),
+      entry({ id: "b", runtime: "codex", machine: "mbp", authority: "agent" }),
+      entry({ id: "c", runtime: "claude", machine: "studio", authority: "agent" }),
+    ]);
+    const base = await listen();
+    const ids = async (query: string) =>
+      (await getJson<LedgerView>(`${base}/api/ledger?${query}`)).rows
+        .map((r) => r.id)
+        .sort();
+
+    expect(await ids("runtime=claude")).toEqual(["a", "c"]);
+    expect(await ids("machine=mbp")).toEqual(["a", "b"]);
+    expect(await ids("authority=agent")).toEqual(["b", "c"]);
+    expect(await ids("runtime=claude&authority=agent")).toEqual(["c"]);
+  });
+
+  test("a value outside a closed set is a 400, not an empty answer", async () => {
+    writeLedger([entry()]);
+    const base = await listen();
+    expect((await fetch(`${base}/api/ledger?outcome=exploded`)).status).toBe(400);
+    expect((await fetch(`${base}/api/ledger?authority=nobody`)).status).toBe(400);
+    expect((await fetch(`${base}/api/ledger?outcome=blocked`)).status).toBe(200);
+  });
+
+  test("a ledger row names the machine that wrote it", async () => {
+    writeLedger([entry({ machine: "machine-a" })]);
+    const base = await listen();
+    const body = await getJson<LedgerView>(`${base}/api/ledger`);
+    expect(body.rows[0].machine).toBeTruthy();
+  });
+
+  test("/api/summary counts one window", async () => {
+    const justNow = new Date().toISOString();
+    writeLedger([
+      entry({ id: "kept", ts: justNow }),
+      entry({ id: "refused", ts: justNow, outcome: "denied" }),
+    ]);
+    const base = await listen();
+    const body = await getJson<{ days: number; actions: number; refusals: number }>(
+      `${base}/api/summary?days=30`
+    );
+    expect(body.actions).toBe(2);
+    expect(body.refusals).toBe(1);
+  });
+
+  test("/api/summary refuses a window it cannot count", async () => {
+    const base = await listen();
+    expect((await fetch(`${base}/api/summary?days=0`)).status).toBe(400);
+    expect((await fetch(`${base}/api/summary?days=half`)).status).toBe(400);
+  });
+});
+
+describe("one project", () => {
+  test("/api/project carries the criteria, decisions and context", async () => {
+    registerProject(
+      "demo",
+      [
+        "## Goal",
+        "",
+        "Ship the thing.",
+        "",
+        "## Criteria",
+        "",
+        "- [ ] ISC-1: still open",
+        "- [x] ISC-2: finished",
+        "",
+        "## Decisions",
+        "",
+        "- 2026-09-04: Paths live in bindings.json (records travel, disks don't)",
+        "",
+        "## Context",
+        "",
+        "- Bun only, no Node",
+        "",
+      ].join("\n")
+    );
+    const base = await listen();
+    const body = await getJson<{
+      slug: string;
+      iscs: { id: number; status: string }[];
+      decisions: { date: string | null; text: string; why: string | null }[];
+      context: string[];
+    }>(`${base}/api/project?slug=demo`);
+
+    expect(body.slug).toBe("demo");
+    expect(body.iscs.map((i) => i.status)).toEqual(["open", "done"]);
+    expect(body.decisions[0]).toEqual({
+      date: "2026-09-04",
+      text: "Paths live in bindings.json",
+      why: "records travel, disks don't",
+    });
+    expect(body.context).toEqual(["Bun only, no Node"]);
+  });
+
+  test("an unknown slug is a 404, and a missing one a 400", async () => {
+    const base = await listen();
+    expect((await fetch(`${base}/api/project?slug=ghost`)).status).toBe(404);
+    expect((await fetch(`${base}/api/project`)).status).toBe(400);
+  });
+});
+
+async function post(base: string, path: string, body: unknown): Promise<Response> {
+  return fetch(`${base}${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+interface DetailBody {
+  iscs: { id: number; status: string }[];
+  placed: string | null;
+}
+
+describe("what the page may change", () => {
+  const withCriteria =
+    "## Criteria\n\n- [ ] ISC-1: the open one\n- [ ] ISC-2: the other\n";
+
+  test("closing an ISC archives it, and reopening walks it back", async () => {
+    registerProject("demo", withCriteria);
+    const base = await listen();
+    const statuses = async () =>
+      (await getJson<DetailBody>(`${base}/api/project?slug=demo`)).iscs.map(
+        (i) => `${i.id}:${i.status}`
+      );
+
+    expect(await statuses()).toEqual(["1:open", "2:open"]);
+
+    expect(
+      (await post(base, "/api/isc", { project: "demo", id: 1, status: "done" })).ok
+    ).toBe(true);
+    expect(await statuses()).toEqual(["2:open", "1:done"]);
+
+    expect(
+      (await post(base, "/api/isc", { project: "demo", id: 1, status: "open" })).ok
+    ).toBe(true);
+    expect(await statuses()).toEqual(["2:open", "1:open"]);
+  });
+
+  test("closing one that is already closed changes nothing and says so", async () => {
+    registerProject("demo", withCriteria);
+    const base = await listen();
+    await post(base, "/api/isc", { project: "demo", id: 1, status: "done" });
+    const again = await post(base, "/api/isc", {
+      project: "demo",
+      id: 1,
+      status: "done",
+    });
+    expect(await again.json()).toMatchObject({ changed: false });
+  });
+
+  test("an ISC write refuses what it cannot act on", async () => {
+    registerProject("demo", withCriteria);
+    const base = await listen();
+    expect((await post(base, "/api/isc", { id: 1, status: "done" })).status).toBe(400);
+    expect(
+      (await post(base, "/api/isc", { project: "demo", id: 0, status: "done" })).status
+    ).toBe(400);
+    expect(
+      (await post(base, "/api/isc", { project: "demo", id: 1, status: "maybe" })).status
+    ).toBe(400);
+    expect(
+      (await post(base, "/api/isc", { project: "ghost", id: 1, status: "done" })).status
+    ).toBe(404);
+    expect(
+      (await post(base, "/api/isc", { project: "demo", id: 99, status: "done" })).status
+    ).toBe(404);
+  });
+
+  test("a placement overrules the grid's own guess and survives on the record", async () => {
+    registerProject("demo", withCriteria);
+    const base = await listen();
+    const quadrantOf = async () => {
+      const grid = await getJson<Matrix>(`${base}/api/matrix`);
+      for (const key of ["now", "plan", "noise", "later"] as const) {
+        if (grid[key].some((i) => i.id === "demo")) return key;
+      }
+      return null;
+    };
+
+    expect(await quadrantOf()).toBe("later");
+    expect(
+      (await post(base, "/api/placement", { project: "demo", quadrant: "now" })).ok
+    ).toBe(true);
+    expect(await quadrantOf()).toBe("now");
+
+    const detail = await getJson<DetailBody>(`${base}/api/project?slug=demo`);
+    expect(detail.placed).toBe("now");
+
+    await post(base, "/api/placement", { project: "demo", quadrant: null });
+    expect(await quadrantOf()).toBe("later");
+  });
+
+  test("a placement refuses a quadrant that is not one", async () => {
+    registerProject("demo", withCriteria);
+    const base = await listen();
+    expect(
+      (await post(base, "/api/placement", { project: "demo", quadrant: "soon" })).status
+    ).toBe(400);
+    expect(
+      (await post(base, "/api/placement", { project: "ghost", quadrant: "now" })).status
+    ).toBe(404);
+  });
+
+  test("settings read back what they were given, and refuse a bad timezone", async () => {
+    const base = await listen();
+    const saved = await post(base, "/api/settings", {
+      actor: "richard",
+      timezone: "Europe/Budapest",
+    });
+    expect(await saved.json()).toEqual({ actor: "richard", timezone: "Europe/Budapest" });
+    expect(await getJson<Record<string, string>>(`${base}/api/settings`)).toEqual({
+      actor: "richard",
+      timezone: "Europe/Budapest",
+    });
+    expect(
+      (await post(base, "/api/settings", { timezone: "Mars/Olympus_Mons" })).status
+    ).toBe(400);
+  });
+});
+
+interface AttentionBody {
+  unread: number;
+  items: { id: string; source: string; title: string; read: boolean }[];
+}
+
+describe("what needs your attention", () => {
+  test("a refusal, an unanswered handoff and an unranked project all light it", async () => {
+    const justNow = new Date().toISOString();
+    writeLedger([
+      entry({ id: "refused", ts: justNow, outcome: "denied", reason: "you said no" }),
+    ]);
+    registerProject("demo");
+    mkdirSync(resolve(HOME, "memory", "state"), { recursive: true });
+    writeFileSync(
+      resolve(HOME, "memory", "state", "last-handoff.json"),
+      JSON.stringify({
+        [HOME]: {
+          timestamp: justNow,
+          title: "t",
+          status: "in-progress",
+          handoff: "mid-flight",
+          artifacts: [],
+          source: "deliberate",
+          waitingOn: "which policy?",
+        },
+      })
+    );
+
+    const base = await listen();
+    const body = await getJson<AttentionBody>(`${base}/api/attention`);
+    expect([...new Set(body.items.map((i) => i.source))].sort()).toEqual([
+      "refusals",
+      "unranked",
+      "waiting",
+    ]);
+    expect(body.unread).toBe(body.items.length);
+  });
+
+  test("marking one read leaves the rest unread", async () => {
+    registerProject("demo");
+    const base = await listen();
+    const before = await getJson<AttentionBody>(`${base}/api/attention`);
+    expect(before.unread).toBeGreaterThan(0);
+
+    await post(base, "/api/attention/read", { ids: [before.items[0].id] });
+    const after = await getJson<AttentionBody>(`${base}/api/attention`);
+    expect(after.unread).toBe(before.unread - 1);
+    expect(after.items.find((i) => i.id === before.items[0].id)?.read).toBe(true);
+  });
+
+  test("a source switched off stops contributing", async () => {
+    registerProject("demo");
+    const base = await listen();
+    expect(
+      (await getJson<AttentionBody>(`${base}/api/attention`)).items.some(
+        (i) => i.source === "unranked"
+      )
+    ).toBe(true);
+
+    await post(base, "/api/prefs", { attention: { unranked: false } });
+    expect(
+      (await getJson<AttentionBody>(`${base}/api/attention`)).items.some(
+        (i) => i.source === "unranked"
+      )
+    ).toBe(false);
+  });
+});
+
+describe("the knobs behind the grid", () => {
+  test("the quiet threshold is the user's, not a constant", async () => {
+    // serves is written into the record rather than posted, because setServes
+    // bumps `updated` — which is the very thing "gone quiet" measures.
+    const dir = resolve(HOME, "memory", "projects", "demo");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      resolve(dir, "ISA.md"),
+      `---\nname: demo\nstatus: active\ncreated: 2026-08-01T00:00:00.000Z\nupdated: 2026-08-25T00:00:00.000Z\nserves: goal\nserves_by: user\npath: ${HOME}\n---\n\n## Goal\n\nnone\n`,
+      "utf-8"
+    );
+    const base = await listen();
+
+    const quietAt = async () => {
+      const grid = await getJson<Matrix>(`${base}/api/matrix`);
+      return (
+        [...grid.now, ...grid.plan].find((i) => i.id === "demo")?.urgentBecause ?? []
+      );
+    };
+
+    await post(base, "/api/prefs", { quietAfterDays: 365 });
+    expect(await quietAt()).not.toContain("gone quiet");
+
+    await post(base, "/api/prefs", { quietAfterDays: 1 });
+    expect(await quietAt()).toContain("gone quiet");
+  });
+
+  test("goals leave the grid when they are switched off", async () => {
+    const base = await listen();
+    await post(base, "/api/prefs", { rankGoals: false });
+    const grid = await getJson<Matrix>(`${base}/api/matrix`);
+    const all = [...grid.now, ...grid.plan, ...grid.noise, ...grid.later];
+    expect(all.some((i) => i.kind === "goal")).toBe(false);
+  });
+
+  test("a threshold outside its range is refused", async () => {
+    const base = await listen();
+    expect((await post(base, "/api/prefs", { quietAfterDays: 0 })).status).toBe(400);
+    expect((await post(base, "/api/prefs", { rankGoals: "yes" })).status).toBe(400);
+    expect(
+      (await post(base, "/api/prefs", { attention: { nonsense: true } })).status
+    ).toBe(400);
+  });
+});
+
+describe("snoozing a criterion", () => {
+  test("a snoozed ISC stops counting as open, and waking it restores the count", async () => {
+    registerProject("demo", "## Criteria\n\n- [ ] ISC-1: one\n- [ ] ISC-2: two\n");
+    const base = await listen();
+    const openCount = async () =>
+      (await getJson<ProjectCard[]>(`${base}/api/board`))[0].openIscs;
+
+    expect(await openCount()).toBe(2);
+
+    await post(base, "/api/snooze", { project: "demo", id: 1, days: 7 });
+    expect(await openCount()).toBe(1);
+
+    const detail = await getJson<{ iscs: { id: number; snoozedUntil: string | null }[] }>(
+      `${base}/api/project?slug=demo`
+    );
+    expect(detail.iscs.find((i) => i.id === 1)?.snoozedUntil).toBeTruthy();
+
+    await post(base, "/api/snooze", { project: "demo", id: 1, days: 0 });
+    expect(await openCount()).toBe(2);
+  });
+
+  test("a snooze longer than the cap is refused", async () => {
+    registerProject("demo", "## Criteria\n\n- [ ] ISC-1: one\n");
+    const base = await listen();
+    expect(
+      (await post(base, "/api/snooze", { project: "demo", id: 1, days: 400 })).status
+    ).toBe(400);
+    expect(
+      (await post(base, "/api/snooze", { project: "demo", id: 1, days: -1 })).status
+    ).toBe(400);
+  });
+});
+
+describe("how the page itself is served", () => {
+  test("a deep link into the page is served the page, not a 404", async () => {
+    const base = await listen();
+    for (const path of ["/", "/projects", "/projects/portable-agent-layer", "/log"]) {
+      const res = await fetch(`${base}${path}`);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("content-type")).toContain("text/html");
+    }
+  });
+
+  test("the page routes never shadow the API", async () => {
+    const base = await listen();
+    const res = await fetch(`${base}/api/status`);
+    expect(res.headers.get("content-type")).toContain("application/json");
   });
 
   test("it is read only apart from the one override", async () => {

@@ -1,35 +1,34 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": [
-    "klint.rules.ts",
-    "src/tools/**/*.ts",
-    "src/tools/control-room/ui/app.tsx",
-    "src/hooks/*.ts",
-    "src/hooks/handlers/*.ts",
-    "src/targets/**/install.ts",
-    "src/targets/**/uninstall.ts",
-    ".agents/hooks/*.ts",
-    ".agents/scripts/*.ts",
-    "assets/skills/*/tools/*.ts",
-    ".opencode/plugins/*.ts"
-  ],
-  "project": [
-    "src/**/*.ts",
-    "src/**/*.tsx"
-  ],
   "includeEntryExports": true,
-  "tags": [
-    "-lintignore"
-  ],
-  "ignore": [
-    ".opencode/plugins/lint.ts",
-    "src/targets/opencode/plugin.ts"
-  ],
-  "ignoreDependencies": [
-    "@semantic-release/github",
-    "promptfoo",
-    "@stryker-mutator/bun-runner",
-    "@stryker-mutator/api",
-    "@secretlint/secretlint-rule-preset-recommend"
-  ]
+  "tags": ["-lintignore"],
+  "workspaces": {
+    ".": {
+      "entry": [
+        "klint.rules.ts",
+        "src/tools/**/*.ts",
+        "src/hooks/*.ts",
+        "src/hooks/handlers/*.ts",
+        "src/targets/**/install.ts",
+        "src/targets/**/uninstall.ts",
+        ".agents/hooks/*.ts",
+        ".agents/scripts/*.ts",
+        "assets/skills/*/tools/*.ts",
+        ".opencode/plugins/*.ts"
+      ],
+      "project": ["src/**/*.ts", "!src/tools/control-room/ui/**"],
+      "ignore": [".opencode/plugins/lint.ts", "src/targets/opencode/plugin.ts"],
+      "ignoreDependencies": [
+        "@semantic-release/github",
+        "promptfoo",
+        "@stryker-mutator/bun-runner",
+        "@stryker-mutator/api",
+        "@secretlint/secretlint-rule-preset-recommend"
+      ]
+    },
+    "src/tools/control-room/ui": {
+      "project": ["**/*.ts", "**/*.tsx", "!dist/**"],
+      "ignoreDependencies": ["tailwindcss"]
+    }
+  }
 }
