@@ -1,17 +1,17 @@
 # PAL waitingOn extraction evaluation
 #
-# Evaluates the prompt in src/hooks/handlers/agenda.ts (extractWaitingOn). The
-# system text below is that prompt verbatim — the JSON shape is enforced by the
-# provider's output_format rather than written into the prompt, which is how the
-# inference layer does it too (it appends schemaInstruction() from a jsonSchema).
+# Evaluates the prompt in src/hooks/handlers/agenda.ts (extractWaitingOn), as the
+# model actually receives it.
 #
 # The interesting failure is NOT missing a blocker — it is inventing one. A model
 # asked "what is this waiting on?" will always find something, and a bell that
 # lights on every session is a bell nobody reads. Most cases here expect "".
 #
-# Production runs this on Haiku (buildClaudeArgs defaults to HAIKU_MODEL), which
-# is why haiku is the first provider. Sonnet is here to answer "would a bigger
-# model be more restrained?" with evidence rather than a guess.
+# The provider spawns the `claude` CLI the way PAL's inference layer does, so the
+# prompt below is the whole thing the model receives — system, user, and the
+# schema instruction buildCliPrompt() appends. Haiku is what ships today;
+# sonnet-5 is here to answer "would a bigger model be more restrained?" with
+# evidence rather than a guess.
 #
 # Run:
 #   bun run eval:waiting-on
@@ -29,22 +29,15 @@ prompts:
 
       {{handoff}}
 
+      Respond with ONLY a JSON value matching this schema (no prose, no markdown): {'type':'object','additionalProperties':false,'properties':{'question':{'type':'string','description':'The one thing the work needs from the person before it can move, in their own terms. Empty string when the handoff asks nothing of them.'}},'required':['question']}
+
 providers:
-  - id: anthropic:messages:claude-haiku-4-5-20251001
+  - id: file://../lib/claude-cli.js
     label: haiku
-    config: &waiting_schema
-      output_format:
-        type: json_schema
-        schema:
-          type: object
-          properties:
-            question:
-              type: string
-          required: ["question"]
-          additionalProperties: false
-  - id: anthropic:messages:claude-sonnet-4-6
-    label: sonnet
-    config: *waiting_schema
+    config: { model: claude-haiku-4-5-20251001 }
+  - id: file://../lib/claude-cli.js
+    label: sonnet-5
+    config: { model: claude-sonnet-5 }
 
 defaultTest:
   assert:

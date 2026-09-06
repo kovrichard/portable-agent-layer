@@ -1,9 +1,10 @@
 # PAL goal-to-project linkage evaluation
 #
-# Evaluates the prompt in src/hooks/handlers/agenda.ts (refreshGoalLinks). The
-# system text below is that prompt verbatim — the JSON shape is enforced by the
-# provider's output_format rather than written into the prompt, which is how the
-# inference layer does it too (it appends schemaInstruction() from a jsonSchema).
+# Evaluates the prompt in src/hooks/handlers/agenda.ts (refreshGoalLinks), as the
+# model actually receives it: the provider spawns the `claude` CLI the way PAL's
+# inference layer does, so the prompt below is the whole thing — system, user and
+# the schema instruction buildCliPrompt() appends. Haiku is what ships today;
+# sonnet-5 answers "would a bigger model judge better?" with evidence.
 #
 # Two failures matter and they pull in opposite directions: linking a project
 # that merely shares a subject with a goal (a chat client is not "land two
@@ -30,33 +31,15 @@ prompts:
       Their active projects:
       {{projects}}
 
+      Respond with ONLY a JSON value matching this schema (no prose, no markdown): {'type':'object','additionalProperties':false,'properties':{'links':{'type':'array','description':'One entry per goal you were given, no others','items':{'type':'object','additionalProperties':false,'properties':{'goalId':{'type':'string'},'projects':{'type':'array','description':'Slugs of the projects that move this goal forward, copied exactly. Empty when none does.','items':{'type':'string'}}},'required':['goalId','projects']}}},'required':['links']}
+
 providers:
-  - id: anthropic:messages:claude-haiku-4-5-20251001
+  - id: file://../lib/claude-cli.js
     label: haiku
-    config: &links_schema
-      output_format:
-        type: json_schema
-        schema:
-          type: object
-          properties:
-            links:
-              type: array
-              items:
-                type: object
-                properties:
-                  goalId:
-                    type: string
-                  projects:
-                    type: array
-                    items:
-                      type: string
-                required: ["goalId", "projects"]
-                additionalProperties: false
-          required: ["links"]
-          additionalProperties: false
-  - id: anthropic:messages:claude-sonnet-4-6
-    label: sonnet
-    config: *links_schema
+    config: { model: claude-haiku-4-5-20251001 }
+  - id: file://../lib/claude-cli.js
+    label: sonnet-5
+    config: { model: claude-sonnet-5 }
 
 defaultTest:
   assert:

@@ -17,6 +17,7 @@ import { type AgendaMove, readAgenda, writeAgenda } from "../lib/agenda-store";
 import { linkInputs, readGoalLinks, writeGoalLinks } from "../lib/goal-links";
 import { canInfer, inference } from "../lib/inference";
 import { logDebug, logError } from "../lib/log";
+import { SONNET_MODEL } from "../lib/models";
 import { readAllProjects } from "../lib/projects";
 import { isServesKind, SERVES_KINDS, setServes } from "../lib/serves";
 import { readTelosGoals } from "../lib/telos-goals";
@@ -177,10 +178,11 @@ async function guessMissingServes(sessionId?: string): Promise<number> {
     maxTokens: 700,
     timeout: 90000,
     jsonSchema: SERVES_SCHEMA,
+    model: SONNET_MODEL,
     caller: "agenda-serves",
     sessionId,
   });
-  if (result.usage) logTokenUsage("agenda-serves", result.usage);
+  if (result.usage) logTokenUsage("agenda-serves", result.usage, SONNET_MODEL);
   if (!result.success || !result.output) return 0;
 
   const parsed = parsePayload<{
@@ -250,10 +252,11 @@ async function refreshGoalLinks(
     maxTokens: 600,
     timeout: 90000,
     jsonSchema: LINKS_SCHEMA,
+    model: SONNET_MODEL,
     caller: "agenda-goal-links",
     sessionId,
   });
-  if (result.usage) logTokenUsage("agenda-goal-links", result.usage);
+  if (result.usage) logTokenUsage("agenda-goal-links", result.usage, SONNET_MODEL);
   if (!result.success || !result.output) return "failed";
 
   const parsed = parsePayload<{ links: { goalId: string; projects: unknown }[] }>(
@@ -303,10 +306,11 @@ async function extractWaitingOn(sessionId?: string): Promise<number> {
       maxTokens: 120,
       timeout: 60000,
       jsonSchema: WAITING_SCHEMA,
+      model: SONNET_MODEL,
       caller: "agenda-waiting-on",
       sessionId,
     });
-    if (result.usage) logTokenUsage("agenda-waiting-on", result.usage);
+    if (result.usage) logTokenUsage("agenda-waiting-on", result.usage, SONNET_MODEL);
     if (!result.success || !result.output) continue;
 
     const parsed = parsePayload<{ question: string }>(result.output, "agenda:waiting-on");
@@ -348,10 +352,11 @@ async function writeMoves(sessionId?: string): Promise<boolean> {
     maxTokens: 400,
     timeout: 90000,
     jsonSchema: MOVES_SCHEMA,
+    model: SONNET_MODEL,
     caller: "agenda-moves",
     sessionId,
   });
-  if (result.usage) logTokenUsage("agenda-moves", result.usage);
+  if (result.usage) logTokenUsage("agenda-moves", result.usage, SONNET_MODEL);
   if (!result.success || !result.output) return false;
 
   const parsed = parsePayload<{ moves: (AgendaMove & { project?: unknown })[] }>(
