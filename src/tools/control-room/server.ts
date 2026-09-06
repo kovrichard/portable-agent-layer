@@ -9,15 +9,16 @@
 import { loadMachine } from "../../hooks/lib/machine";
 import { readAllProjects } from "../../hooks/lib/projects";
 import { isServesKind, setServes } from "../../hooks/lib/serves";
+import { PAGE_OUTCOMES } from "../ledger/outcomes";
 import { type LedgerFilter, ledgerFiles, parseSince } from "../ledger/query";
-import { ledgerView, PAGE_OUTCOMES } from "../ledger/view";
+import { ledgerView } from "../ledger/view";
 import { agenda, agentsAtWork, board, handoffs, signal, summary } from "./data";
 import { projectDetail } from "./detail";
 import { matrix } from "./matrix";
-import index from "./ui/index.html";
+import { DEFAULT_PORT, LOOPBACK } from "./server-config";
+import { indexHtml, staticAsset } from "./static";
 
-export const DEFAULT_PORT = 7250;
-export const LOOPBACK = "127.0.0.1";
+export { DEFAULT_PORT, LOOPBACK };
 
 /**
  * Every path the single-page app owns. Listed rather than wildcarded, because a
@@ -155,13 +156,16 @@ export function startControlRoom(port: number = DEFAULT_PORT) {
     hostname: LOOPBACK,
     port,
     development: false,
-    routes: Object.fromEntries(PAGE_ROUTES.map((path) => [path, index])),
+    routes: Object.fromEntries(PAGE_ROUTES.map((path) => [path, () => indexHtml()])),
     fetch(request, server) {
       const url = new URL(request.url);
       if (request.method === "POST" && url.pathname === "/api/serves") {
         return overrideServes(request);
       }
       if (request.method !== "GET") return json({ error: "read only" }, 405);
+      if (!url.pathname.startsWith("/api/")) {
+        return staticAsset(url.pathname) ?? json({ error: "not found" }, 404);
+      }
       switch (url.pathname) {
         case "/api/agenda":
           return json(agenda());

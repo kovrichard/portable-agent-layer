@@ -27,7 +27,7 @@
       "!.stryker-tmp",
       "!.test-install-home",
       "!src/tools/control-room/ui/theme.css",
-      "!src/tools/control-room/ui/tailwind.css"
+      "!src/tools/control-room/ui/dist"
     ]
   },
   "formatter": {

@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import type {
@@ -17,6 +17,13 @@ import type { LedgerView } from "../src/tools/ledger/view";
 
 let HOME: string;
 let server: ReturnType<typeof Bun.serve> | null = null;
+
+// The page is a build artifact rather than source, so the suite builds it once
+// instead of asserting against whatever a previous run happened to leave behind.
+beforeAll(async () => {
+  const { buildPage, isBuilt } = await import("../src/tools/control-room/static");
+  if (!isBuilt()) expect(buildPage()).toBe(true);
+});
 
 beforeEach(() => {
   HOME = mkdtempSync(resolve(tmpdir(), "pal-control-room-"));
@@ -81,6 +88,15 @@ describe("where it listens", () => {
   test("loopback only", async () => {
     await listen();
     expect(server?.hostname).toBe("127.0.0.1");
+  });
+
+  test("vite proxies /api to the port the server actually uses", async () => {
+    const { DEFAULT_PORT } = await import("../src/tools/control-room/server-config");
+    const config = readFileSync(
+      resolve(import.meta.dir, "..", "src/tools/control-room/ui/vite.config.ts"),
+      "utf-8"
+    );
+    expect(config).toContain(`127.0.0.1:${DEFAULT_PORT}`);
   });
 });
 

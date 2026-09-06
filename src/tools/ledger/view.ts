@@ -18,10 +18,10 @@ import {
   type RegistryEntry,
   readRegistry as readMachineRegistry,
 } from "../../hooks/lib/machine";
+import { PAGE_OUTCOMES, type PageOutcome } from "./outcomes";
 import { anchorSlugOf, changedLines, type LedgerFilter, queryLedger } from "./query";
 
-export const PAGE_OUTCOMES = ["applied", "failed", "denied", "blocked"] as const;
-export type PageOutcome = (typeof PAGE_OUTCOMES)[number];
+export { PAGE_OUTCOMES, type PageOutcome };
 
 export interface OutcomeCount {
   total: number;

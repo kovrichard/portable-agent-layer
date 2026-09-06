@@ -1,6 +1,6 @@
 import { useId, useState } from "react";
-import type { LedgerView, LedgerViewRow, PageOutcome } from "../../../ledger/view";
-import { PAGE_OUTCOMES } from "../../../ledger/view";
+import { PAGE_OUTCOMES, type PageOutcome } from "../../../ledger/outcomes";
+import type { LedgerView, LedgerViewRow } from "../../../ledger/view";
 import { Badge } from "../components/badge";
 import { Button } from "../components/button";
 import { Input, NativeSelect } from "../components/input";

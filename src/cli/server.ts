@@ -12,6 +12,7 @@ import { parseArgs } from "node:util";
 import { spawnDetachedInference } from "../hooks/lib/detached-inference";
 import { paths } from "../hooks/lib/paths";
 import { DEFAULT_PORT, LOOPBACK, type ServerStatus } from "../tools/control-room/server";
+import { BUILD_COMMAND, buildPage, isBuilt } from "../tools/control-room/static";
 
 interface ServerState {
   pid: number;
@@ -135,6 +136,12 @@ async function cmdStart(args: string[]): Promise<number> {
   if (running) {
     console.log(`Already running at ${url(running.port)} (pid ${running.pid})`);
     return 0;
+  }
+
+  if (!isBuilt() && !buildPage()) {
+    return fail(
+      `The control room's page is not built and could not be. Run: ${BUILD_COMMAND}`
+    );
   }
 
   spawnDetachedInference(SERVER_SCRIPT, [`--port=${port}`], "control-room");

@@ -1,7 +1,7 @@
 {
   "name": "portable-agent-layer",
   "version": "0.72.0",
-  "description": "PAL — Portable Agent Layer: persistent personal context for AI coding assistants",
+  "description": "PAL \u2014 Portable Agent Layer: persistent personal context for AI coding assistants",
   "type": "module",
   "bin": {
     "pal": "src/cli/index.ts"
@@ -12,6 +12,9 @@
     ".husky/install.mjs",
     "README.md",
     "LICENSE"
+  ],
+  "workspaces": [
+    "src/tools/control-room/ui"
   ],
   "engines": {
     "bun": ">=1.4.0"
@@ -53,7 +56,8 @@
     "lint-staged": "lint-staged",
     "prepare": "bun .husky/install.mjs",
     "build:skill-tools": "bun run scripts/build-skill-tools.ts",
-    "build:ui": "bun run scripts/build-ui.ts",
+    "build:ui": "bun run --filter @pal/control-room-ui build",
+    "dev:ui": "bun run --filter @pal/control-room-ui dev",
     "prepack": "bun run build:skill-tools && bun run build:ui",
     "install:all": "bun run src/cli/index.ts cli install",
     "uninstall": "bun run src/cli/index.ts cli uninstall",
@@ -81,12 +85,9 @@
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^12.0.8",
     "@stryker-mutator/core": "9.6.1",
-    "@tailwindcss/cli": "4.3.3",
     "@types/adm-zip": "^0.5.8",
     "@types/bun": "latest",
     "@types/node": "latest",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.7",
     "husky": "^9.1.7",
     "jscpd": "^4.2.3",
     "knip": "^6.14.1",
@@ -95,23 +96,15 @@
     "promptfoo": "0.121.14",
     "secretlint": "13.0.2",
     "semantic-release": "^25.0.3",
-    "tailwindcss": "4.3.3",
     "typescript": "^5.9.3"
   },
   "dependencies": {
     "@clack/prompts": "^1.4.0",
     "adm-zip": "^0.5.17",
-    "class-variance-authority": "0.7.1",
-    "clsx": "2.1.1",
     "fast-myers-diff": "^3.2.0",
     "marked": "18.0.4",
     "pdf-lib": "1.17.1",
     "playwright": "^1.60.0",
-    "radix-ui": "1.6.7",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "react-router": "8.3.1",
-    "tailwind-merge": "3.6.0",
     "unpdf": "^0.12.0"
   }
 }

@@ -6,6 +6,9 @@ backups/
 
 node_modules/
 
+# The control room's page is built by vite, emitted at prepack, never committed
+src/tools/control-room/ui/dist/
+
 .test-tmp/
 .test-home/
 # Per-suite sandboxes; a detached child can recreate one after its test cleans up
