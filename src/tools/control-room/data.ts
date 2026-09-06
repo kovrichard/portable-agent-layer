@@ -26,6 +26,7 @@ import { anchorSlugOf, type LedgerFilter, queryLedger } from "../ledger/query";
 import { viewStats } from "../ledger/view";
 import { type HandoffEntry, readHandoffs } from "../lib/handoff-note";
 import { parseIscs } from "../lib/project-isc";
+import { readSnoozes, snoozedUntil } from "./snooze";
 
 const DAY_MS = 86_400_000;
 const HANDOFF_FRESH_DAYS = 7;
@@ -183,7 +184,8 @@ function toCard(
   p: ProjectProgress,
   handoff: HandoffEntry | undefined,
   now: Date,
-  runtimes: Record<string, number>
+  runtimes: Record<string, number>,
+  snoozes: Record<string, string>
 ): ProjectCard {
   const path = p.path ?? null;
   const stale = isStale(p);
@@ -196,7 +198,9 @@ function toCard(
     updated: p.updated,
     ageDays: daysBetween(p.updated, now),
     stale,
-    openIscs: parseIscs(p.criteria ?? "").filter((i) => i.status === "open").length,
+    openIscs: parseIscs(p.criteria ?? "").filter(
+      (i) => i.status === "open" && !snoozedUntil(p.name, i.id, snoozes)
+    ).length,
     next: p.next ?? [],
     blockers: p.blockers ?? [],
     lastSession: last ? { date: last.date, title: last.title } : null,
@@ -220,13 +224,15 @@ export function sortBoard(cards: ProjectCard[]): ProjectCard[] {
 export function board(now: Date = new Date()): ProjectCard[] {
   const handoffs = new Map(freshHandoffs(now));
   const runtimes = runtimesBySlug(new Date(now.getTime() - SESSION_WINDOW_DAYS * DAY_MS));
+  const snoozes = readSnoozes(now);
   return sortBoard(
     readAllProjects().map((p) =>
       toCard(
         p,
         p.path ? handoffs.get(p.path) : undefined,
         now,
-        runtimes.get(p.name) ?? {}
+        runtimes.get(p.name) ?? {},
+        snoozes
       )
     )
   );

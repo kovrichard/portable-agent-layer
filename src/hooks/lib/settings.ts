@@ -30,6 +30,8 @@ export interface PalSettingsData {
    * paths whose contents are never stored; it cannot shrink it.
    */
   ledger?: { redactPaths?: string[] };
+  /** Control-room ranking knobs and attention sources — see src/tools/control-room/prefs.ts. */
+  controlRoom?: Record<string, unknown>;
   /** Contextual-steering user extension: personal rules + shipped rules to suppress by tag. */
   steering?: {
     disable?: string[];

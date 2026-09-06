@@ -1,17 +1,23 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import type { LedgerViewRow } from "../../../ledger/view";
-import type { Isc } from "../../../lib/project-isc";
-import type { Decision, ProjectDetailView } from "../../detail";
+import type { Decision, ProjectDetailView, SnoozableIsc } from "../../detail";
 import { Badge } from "../components/badge";
+import { Button } from "../components/button";
 import { Separator } from "../components/separator";
 import { clock } from "../format";
 import { Empty, Panel, Pending } from "../frame";
 import { useLoaded } from "../lib/api";
 import { cn } from "../lib/cn";
-import { setIsc } from "../lib/write";
+import { setIsc, setSnooze } from "../lib/write";
 
-const ISC_MARK: Record<Isc["status"], string> = { open: "", done: "✓", retired: "~" };
+const ISC_MARK: Record<SnoozableIsc["status"], string> = {
+  open: "",
+  done: "✓",
+  retired: "~",
+};
+
+const SNOOZE_DAYS = 7;
 
 function outcomeVariant(outcome: string) {
   if (outcome === "applied") return "neutral" as const;
@@ -26,13 +32,13 @@ function Criteria({
   onChanged,
 }: {
   slug: string;
-  iscs: Isc[];
+  iscs: SnoozableIsc[];
   onChanged: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
   if (iscs.length === 0) return <Empty>No criteria written yet.</Empty>;
 
-  const toggle = (isc: Isc) => {
+  const toggle = (isc: SnoozableIsc) => {
     void setIsc(slug, isc.id, isc.status === "open" ? "done" : "open").then((failure) => {
       setError(failure);
       if (!failure) onChanged();
@@ -51,7 +57,7 @@ function Criteria({
           <li
             key={isc.id}
             className={cn(
-              "grid grid-cols-[18px_58px_1fr] items-start gap-3 border-b border-divider/60 py-2 last:border-b-0",
+              "grid grid-cols-[18px_58px_minmax(0,1fr)] items-start gap-3 border-b border-divider/60 py-2 last:border-b-0",
               isc.status !== "open" && "opacity-60"
             )}
           >
@@ -70,7 +76,32 @@ function Criteria({
               <span className="sr-only">{isc.status}</span>
             </button>
             <span className="pt-px text-[11.5px] text-neutral-600">ISC-{isc.id}</span>
-            <span className="text-pretty">{isc.text}</span>
+            <span className="flex items-start justify-between gap-3">
+              <span className="text-pretty">
+                {isc.text}
+                {isc.snoozedUntil && (
+                  <span className="block text-[11.5px] text-neutral-600">
+                    snoozed until {isc.snoozedUntil}
+                  </span>
+                )}
+              </span>
+              {isc.status === "open" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    void setSnooze(slug, isc.id, isc.snoozedUntil ? 0 : SNOOZE_DAYS).then(
+                      (failure) => {
+                        setError(failure);
+                        if (!failure) onChanged();
+                      }
+                    );
+                  }}
+                >
+                  {isc.snoozedUntil ? "wake" : `snooze ${SNOOZE_DAYS}d`}
+                </Button>
+              )}
+            </span>
           </li>
         ))}
       </ul>

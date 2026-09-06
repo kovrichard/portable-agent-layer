@@ -19,6 +19,7 @@ import { type LedgerViewRow, viewRows } from "../ledger/view";
 import type { HandoffEntry } from "../lib/handoff-note";
 import { type Isc, parseIscs } from "../lib/project-isc";
 import { freshHandoffs, handoffSentence } from "./data";
+import { readSnoozes, snoozedUntil } from "./snooze";
 
 const DAY_MS = 86_400_000;
 const RECENT_ACTIONS = 8;
@@ -38,6 +39,10 @@ interface DetailHandoff {
   waitingOn: string | null;
 }
 
+export interface SnoozableIsc extends Isc {
+  snoozedUntil: string | null;
+}
+
 export interface ProjectDetailView {
   slug: string;
   status: string;
@@ -49,7 +54,7 @@ export interface ProjectDetailView {
   servesBy: ServesAuthority | null;
   placed: string | null;
   updated: string;
-  iscs: Isc[];
+  iscs: SnoozableIsc[];
   next: string[];
   blockers: string[];
   decisions: Decision[];
@@ -119,6 +124,7 @@ export function projectDetail(
   if (!project) return null;
 
   const handoffs = new Map(freshHandoffs(now));
+  const snoozes = readSnoozes(now);
   const { runtimes, recent } = activity(
     slug,
     new Date(now.getTime() - ACTIVITY_WINDOW_DAYS * DAY_MS)
@@ -137,7 +143,10 @@ export function projectDetail(
     servesBy: project.serves_by ?? null,
     placed: project.placed ?? null,
     updated: project.updated,
-    iscs: [...parseIscs(project.criteria ?? ""), ...parseIscs(project.changelog ?? "")],
+    iscs: [
+      ...parseIscs(project.criteria ?? ""),
+      ...parseIscs(project.changelog ?? ""),
+    ].map((isc) => ({ ...isc, snoozedUntil: snoozedUntil(slug, isc.id, snoozes) })),
     next: project.next ?? [],
     blockers: project.blockers ?? [],
     decisions: parseDecisions(project.decisions),

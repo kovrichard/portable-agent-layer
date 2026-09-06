@@ -3,7 +3,7 @@
  * server's own error text, so a refusal reads the same wherever it surfaces.
  */
 
-async function post(path: string, body: unknown): Promise<string | null> {
+export async function post(path: string, body: unknown): Promise<string | null> {
   try {
     const res = await fetch(path, {
       method: "POST",
@@ -32,4 +32,12 @@ export function setServes(project: string, serves: string) {
 
 export function setInstallSettings(update: Record<string, string>) {
   return post("/api/settings", update);
+}
+
+export function setSnooze(project: string, id: number, days: number) {
+  return post("/api/snooze", { project, id, days });
+}
+
+export function setPrefs(update: Record<string, unknown>) {
+  return post("/api/prefs", update);
 }

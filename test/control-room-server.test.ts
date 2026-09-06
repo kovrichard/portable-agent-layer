@@ -74,12 +74,16 @@ function entry(overrides: Record<string, unknown> = {}): Record<string, unknown>
   };
 }
 
-function registerProject(slug: string, body = "## Goal\n\nnone\n"): void {
+function registerProject(
+  slug: string,
+  body = "## Goal\n\nnone\n",
+  updated = "2026-09-01T00:00:00.000Z"
+): void {
   const dir = resolve(HOME, "memory", "projects", slug);
   mkdirSync(dir, { recursive: true });
   writeFileSync(
     resolve(dir, "ISA.md"),
-    `---\nname: ${slug}\nstatus: active\ncreated: 2026-09-01T00:00:00.000Z\nupdated: 2026-09-01T00:00:00.000Z\npath: ${HOME}\n---\n\n${body}`,
+    `---\nname: ${slug}\nstatus: active\ncreated: 2026-09-01T00:00:00.000Z\nupdated: ${updated}\npath: ${HOME}\n---\n\n${body}`,
     "utf-8"
   );
 }
@@ -459,6 +463,152 @@ describe("what the page may change", () => {
     });
     expect(
       (await post(base, "/api/settings", { timezone: "Mars/Olympus_Mons" })).status
+    ).toBe(400);
+  });
+});
+
+interface AttentionBody {
+  unread: number;
+  items: { id: string; source: string; title: string; read: boolean }[];
+}
+
+describe("what needs your attention", () => {
+  test("a refusal, an unanswered handoff and an unranked project all light it", async () => {
+    const justNow = new Date().toISOString();
+    writeLedger([
+      entry({ id: "refused", ts: justNow, outcome: "denied", reason: "you said no" }),
+    ]);
+    registerProject("demo");
+    mkdirSync(resolve(HOME, "memory", "state"), { recursive: true });
+    writeFileSync(
+      resolve(HOME, "memory", "state", "last-handoff.json"),
+      JSON.stringify({
+        [HOME]: {
+          timestamp: justNow,
+          title: "t",
+          status: "in-progress",
+          handoff: "mid-flight",
+          artifacts: [],
+          source: "deliberate",
+          waitingOn: "which policy?",
+        },
+      })
+    );
+
+    const base = await listen();
+    const body = await getJson<AttentionBody>(`${base}/api/attention`);
+    expect([...new Set(body.items.map((i) => i.source))].sort()).toEqual([
+      "refusals",
+      "unranked",
+      "waiting",
+    ]);
+    expect(body.unread).toBe(body.items.length);
+  });
+
+  test("marking one read leaves the rest unread", async () => {
+    registerProject("demo");
+    const base = await listen();
+    const before = await getJson<AttentionBody>(`${base}/api/attention`);
+    expect(before.unread).toBeGreaterThan(0);
+
+    await post(base, "/api/attention/read", { ids: [before.items[0].id] });
+    const after = await getJson<AttentionBody>(`${base}/api/attention`);
+    expect(after.unread).toBe(before.unread - 1);
+    expect(after.items.find((i) => i.id === before.items[0].id)?.read).toBe(true);
+  });
+
+  test("a source switched off stops contributing", async () => {
+    registerProject("demo");
+    const base = await listen();
+    expect(
+      (await getJson<AttentionBody>(`${base}/api/attention`)).items.some(
+        (i) => i.source === "unranked"
+      )
+    ).toBe(true);
+
+    await post(base, "/api/prefs", { attention: { unranked: false } });
+    expect(
+      (await getJson<AttentionBody>(`${base}/api/attention`)).items.some(
+        (i) => i.source === "unranked"
+      )
+    ).toBe(false);
+  });
+});
+
+describe("the knobs behind the grid", () => {
+  test("the quiet threshold is the user's, not a constant", async () => {
+    // serves is written into the record rather than posted, because setServes
+    // bumps `updated` — which is the very thing "gone quiet" measures.
+    const dir = resolve(HOME, "memory", "projects", "demo");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      resolve(dir, "ISA.md"),
+      `---\nname: demo\nstatus: active\ncreated: 2026-08-01T00:00:00.000Z\nupdated: 2026-08-25T00:00:00.000Z\nserves: goal\nserves_by: user\npath: ${HOME}\n---\n\n## Goal\n\nnone\n`,
+      "utf-8"
+    );
+    const base = await listen();
+
+    const quietAt = async () => {
+      const grid = await getJson<Matrix>(`${base}/api/matrix`);
+      return (
+        [...grid.now, ...grid.plan].find((i) => i.id === "demo")?.urgentBecause ?? []
+      );
+    };
+
+    await post(base, "/api/prefs", { quietAfterDays: 365 });
+    expect(await quietAt()).not.toContain("gone quiet");
+
+    await post(base, "/api/prefs", { quietAfterDays: 1 });
+    expect(await quietAt()).toContain("gone quiet");
+  });
+
+  test("goals leave the grid when they are switched off", async () => {
+    const base = await listen();
+    await post(base, "/api/prefs", { rankGoals: false });
+    const grid = await getJson<Matrix>(`${base}/api/matrix`);
+    const all = [...grid.now, ...grid.plan, ...grid.noise, ...grid.later];
+    expect(all.some((i) => i.kind === "goal")).toBe(false);
+  });
+
+  test("a threshold outside its range is refused", async () => {
+    const base = await listen();
+    expect((await post(base, "/api/prefs", { quietAfterDays: 0 })).status).toBe(400);
+    expect((await post(base, "/api/prefs", { rankGoals: "yes" })).status).toBe(400);
+    expect(
+      (await post(base, "/api/prefs", { attention: { nonsense: true } })).status
+    ).toBe(400);
+  });
+});
+
+describe("snoozing a criterion", () => {
+  test("a snoozed ISC stops counting as open, and waking it restores the count", async () => {
+    registerProject("demo", "## Criteria\n\n- [ ] ISC-1: one\n- [ ] ISC-2: two\n");
+    const base = await listen();
+    const openCount = async () =>
+      (await getJson<ProjectCard[]>(`${base}/api/board`))[0].openIscs;
+
+    expect(await openCount()).toBe(2);
+
+    await post(base, "/api/snooze", { project: "demo", id: 1, days: 7 });
+    expect(await openCount()).toBe(1);
+
+    const detail = await getJson<{ iscs: { id: number; snoozedUntil: string | null }[] }>(
+      `${base}/api/project?slug=demo`
+    );
+    expect(detail.iscs.find((i) => i.id === 1)?.snoozedUntil).toBeTruthy();
+
+    await post(base, "/api/snooze", { project: "demo", id: 1, days: 0 });
+    expect(await openCount()).toBe(2);
+  });
+
+  test("a snooze longer than the cap is refused", async () => {
+    registerProject("demo", "## Criteria\n\n- [ ] ISC-1: one\n");
+    const base = await listen();
+    expect(
+      (await post(base, "/api/snooze", { project: "demo", id: 1, days: 400 })).status
+    ).toBe(400);
+    expect(
+      (await post(base, "/api/snooze", { project: "demo", id: 1, days: -1 })).status
     ).toBe(400);
   });
 });

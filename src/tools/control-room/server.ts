@@ -12,10 +12,13 @@ import { isServesKind, setServes } from "../../hooks/lib/serves";
 import { PAGE_OUTCOMES } from "../ledger/outcomes";
 import { type LedgerFilter, ledgerFiles, parseSince } from "../ledger/query";
 import { ledgerView } from "../ledger/view";
+import { attention, markRead } from "./attention";
 import { agenda, agentsAtWork, board, handoffs, signal, summary } from "./data";
 import { projectDetail } from "./detail";
 import { matrix } from "./matrix";
+import { type PrefUpdate, readPrefs, validatePrefs, writePrefs } from "./prefs";
 import { DEFAULT_PORT, LOOPBACK } from "./server-config";
+import { MAX_SNOOZE_DAYS, setSnooze } from "./snooze";
 import { indexHtml, staticAsset } from "./static";
 import {
   type InstallSettings,
@@ -221,11 +224,52 @@ async function settingsWrite(request: Request): Promise<Response> {
   return outcome.ok ? json(readInstallSettings()) : answer(outcome, {});
 }
 
+async function snoozeWrite(request: Request): Promise<Response> {
+  const body = await readBody(request);
+  if (!body) return json({ error: "expected a JSON body" }, 400);
+  const { project, id, days } = body;
+  if (typeof project !== "string" || !project) {
+    return json({ error: "project is required" }, 400);
+  }
+  if (typeof id !== "number" || !Number.isInteger(id) || id < 1) {
+    return json({ error: "id must be a positive integer" }, 400);
+  }
+  if (
+    typeof days !== "number" ||
+    !Number.isInteger(days) ||
+    days < 0 ||
+    days > MAX_SNOOZE_DAYS
+  ) {
+    return json({ error: `days must be a whole number of 0..${MAX_SNOOZE_DAYS}` }, 400);
+  }
+  return json({ project, id, until: setSnooze(project, id, days) });
+}
+
+async function readWrite(request: Request): Promise<Response> {
+  const body = await readBody(request);
+  if (!body) return json({ error: "expected a JSON body" }, 400);
+  const ids = body.all === true ? attention().items.map((i) => i.id) : body.ids;
+  if (!Array.isArray(ids) || ids.some((id) => typeof id !== "string")) {
+    return json({ error: "ids must be an array of strings, or all must be true" }, 400);
+  }
+  return json({ marked: markRead(ids as string[]) });
+}
+
+async function prefsWrite(request: Request): Promise<Response> {
+  const body = await readBody(request);
+  if (!body) return json({ error: "expected a JSON body" }, 400);
+  const failure = validatePrefs(body as PrefUpdate);
+  return failure ? json({ error: failure }, 400) : json(writePrefs(body as PrefUpdate));
+}
+
 const WRITES: Record<string, (request: Request) => Promise<Response>> = {
   "/api/serves": overrideServes,
   "/api/isc": iscWrite,
   "/api/placement": placementWrite,
   "/api/settings": settingsWrite,
+  "/api/snooze": snoozeWrite,
+  "/api/attention/read": readWrite,
+  "/api/prefs": prefsWrite,
 };
 
 export function startControlRoom(port: number = DEFAULT_PORT) {
@@ -266,6 +310,10 @@ export function startControlRoom(port: number = DEFAULT_PORT) {
           return projects();
         case "/api/settings":
           return json(readInstallSettings());
+        case "/api/prefs":
+          return json(readPrefs());
+        case "/api/attention":
+          return json(attention());
         case "/api/status":
           return status(server.port ?? port, startedAt);
         default:

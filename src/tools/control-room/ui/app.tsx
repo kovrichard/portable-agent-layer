@@ -10,6 +10,7 @@ import {
   useSearchParams,
 } from "react-router";
 import type { ServerStatus } from "../server";
+import { AttentionBell } from "./attention-bell";
 import { Screen, Scroller, Seg } from "./frame";
 import { useLoaded } from "./lib/api";
 import { cn } from "./lib/cn";
@@ -168,13 +169,14 @@ function Header({ status }: { status: ServerStatus | null }) {
           </NavLink>
         ))}
       </nav>
-      <div className="ml-auto flex items-center gap-2 text-[12px] text-neutral-700">
+      <div className="ml-auto flex items-center gap-3 text-[12px] text-neutral-700">
         <span className="inline-block size-1.5 bg-accent" />
         <b className="font-medium text-ink">{status?.machine ?? "…"}</b>
         <span>
           · {status ? `${status.ledgerFiles} ledger file(s)` : "…"} · port{" "}
           {status?.port ?? "…"}
         </span>
+        <AttentionBell />
       </div>
     </header>
   );
