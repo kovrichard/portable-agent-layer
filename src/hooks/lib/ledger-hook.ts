@@ -13,6 +13,7 @@ import {
   claimPending,
   type LedgerEntry,
   type LedgerOutcome,
+  type PendingSnapshot,
   reapStalePending,
   recordAction,
   savePending,
@@ -243,6 +244,40 @@ export function commitApplied(call: LedgeredCall): LedgerEntry | null {
   });
   reapStalePending();
   return entry;
+}
+
+/**
+ * The snapshot is the trustworthy source, but its absence is recoverable here in
+ * a way it never is after a successful edit: nothing landed, so whatever is on
+ * disk now is still the before-state.
+ */
+export function unappliedBefore(
+  pending: PendingSnapshot | null,
+  target: string
+): string | null {
+  if (pending) return pending.before;
+  return contentsOf(target);
+}
+
+/**
+ * Record a call that did not land. Unlike the applied half this writes with or
+ * without a parked snapshot, because a missing snapshot here is recoverable and
+ * dropping the entry would lose the only record that the attempt happened.
+ */
+export function commitUnapplied(
+  call: LedgeredCall,
+  verdict: UnappliedVerdict
+): LedgerEntry {
+  return recordAction({
+    tool: call.tool,
+    target: call.target,
+    outcome: verdict.outcome,
+    before: unappliedBefore(claimPending(call.toolUseId), call.target),
+    // Nothing landed. That is what this event means, and it is the difference
+    // between this entry and an applied one.
+    after: null,
+    reason: verdict.reason,
+  });
 }
 
 export function toolUseIdOf(payload: Record<string, unknown>): string | null {

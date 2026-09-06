@@ -20,26 +20,10 @@
  * Silent and fail-open, for the same reason as the other halves.
  */
 
-import { existsSync, readFileSync } from "node:fs";
-import {
-  claimPending,
-  type PendingSnapshot,
-  reapStalePending,
-  recordAction,
-} from "./lib/ledger";
-import { ledgeredCalls, unappliedVerdictOf } from "./lib/ledger-hook";
+import { reapStalePending } from "./lib/ledger";
+import { commitUnapplied, ledgeredCalls, unappliedVerdictOf } from "./lib/ledger-hook";
 import { logDebug } from "./lib/log";
 import { readStdinJSON } from "./lib/stdin";
-
-/**
- * The snapshot is the trustworthy source, but its absence is recoverable here
- * in a way it never is after a successful edit: nothing landed, so whatever is
- * on disk now is still the before-state.
- */
-function beforeState(pending: PendingSnapshot | null, target: string): string | null {
-  if (pending) return pending.before;
-  return existsSync(target) ? readFileSync(target, "utf-8") : null;
-}
 
 try {
   const input = await readStdinJSON<Record<string, unknown>>();
@@ -50,16 +34,7 @@ try {
   if (!verdict) process.exit(0);
 
   for (const call of calls) {
-    const entry = recordAction({
-      tool: call.tool,
-      target: call.target,
-      outcome: verdict.outcome,
-      before: beforeState(claimPending(call.toolUseId), call.target),
-      // Nothing landed. That is what this event means, and it is the difference
-      // between this entry and an applied one.
-      after: null,
-      reason: verdict.reason,
-    });
+    const entry = commitUnapplied(call, verdict);
     logDebug("LedgerUnapplied", `recorded ${entry.id} ${entry.outcome} ${entry.target}`);
   }
 
