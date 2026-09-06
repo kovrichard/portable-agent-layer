@@ -64,12 +64,12 @@ arch:
   # to stdin -> parse -> one exported library call -> stdout. Scoped to the
   # entrypoints alone: src/hooks/handlers/** export their entry point, so their
   # private helpers are ordinary encapsulation and are none of this rule's business.
-  # severity: warn until Tier 1 of ISC-21 is clear, then both flip to error.
+  # Both were severity: warn while ISC-21 emptied the backlog they described.
+  # Every entrypoint is under the limit as of 2026-09-06, so they block now.
   maxLines:
     - limit: 90
       in: ["src/hooks/*.ts", "!src/hooks/handlers/**", "!src/hooks/lib/**"]
       message: "Hook entrypoint is too long to be only glue — move the logic to src/hooks/lib/ where a test can import it."
-      severity: warn
 
   forbidden:
     - pattern: "process.exit("
@@ -86,7 +86,6 @@ arch:
         - "!src/hooks/lib/**"
         - "!src/hooks/RtkWrap.ts"
       message: "Unexported function in a hook entrypoint — nothing can import it, so nothing can test it. Move it to src/hooks/lib/."
-      severity: warn
 
   singleton:
     - pattern: "process.env.PAL_HOME"
