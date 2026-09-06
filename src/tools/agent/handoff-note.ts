@@ -10,70 +10,38 @@
  *   bun ~/.pal/tools/handoff-note.ts --done   # mark completed, suppress next-session injection
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { writeFileSync } from "node:fs";
 import { parseArgs } from "node:util";
-import { ensureDir, paths } from "../../hooks/lib/paths";
 import { emit } from "../lib/emit";
+import {
+  handoffFile,
+  type NoteInput,
+  readHandoffs,
+  recordNote,
+  statusOf,
+} from "../lib/handoff-note";
 
-export interface HandoffEntry {
-  timestamp: string;
-  title: string;
-  status: "in-progress" | "completed";
-  handoff: string;
-  artifacts: string[];
-  source: "deliberate" | "auto";
-  /** What the work needs from the human before it can move — the one thing an agent cannot unblock. */
-  waitingOn?: string;
-}
+const HELP = `
+HandoffNote — Write a handoff note for the current project
 
-function handoffPath(): string {
-  return resolve(ensureDir(paths.state()), "last-handoff.json");
-}
+Usage:
+  bun ~/.pal/tools/handoff-note.ts --title "what we were doing" --text "what remains"
+  bun ~/.pal/tools/handoff-note.ts --done    # mark session completed
 
-export function readHandoffs(): Record<string, HandoffEntry> {
-  const p = handoffPath();
-  if (!existsSync(p)) return {};
-  try {
-    return JSON.parse(readFileSync(p, "utf-8"));
-  } catch {
-    return {};
-  }
-}
+Arguments:
+  --title   Brief title of what was being worked on (5-10 words)
+  --text    What remains unfinished — decisions made, next steps, blockers
+  --waiting What this needs from you before it can move (a decision, an answer, access)
+  --done    Mark as completed; suppresses "pick up where you left off" injection
 
-/** Returns how many entries survived the trim, which is what the receipt reports. */
-function writeHandoffs(handoffs: Record<string, HandoffEntry>): number {
-  const entries = Object.entries(handoffs);
-  const trimmed = entries.length > 20 ? Object.fromEntries(entries.slice(-20)) : handoffs;
-  writeFileSync(handoffPath(), JSON.stringify(trimmed, null, 2), "utf-8");
-  return Object.keys(trimmed).length;
-}
+Output: writes to memory/state/last-handoff.json keyed by cwd
+`;
 
-interface NoteInput {
-  cwd: string;
-  title: string;
-  text: string;
-  done: boolean;
-  waitingOn?: string;
-}
-
-function writeHandoffNote(note: NoteInput): {
-  file: string;
-  status: HandoffEntry["status"];
-  kept: number;
-} {
-  const handoffs = readHandoffs();
-  handoffs[note.cwd] = {
-    timestamp: new Date().toISOString(),
-    title: note.title,
-    status: note.done ? "completed" : "in-progress",
-    handoff: note.text,
-    artifacts: [],
-    source: "deliberate",
-    ...(note.waitingOn ? { waitingOn: note.waitingOn } : {}),
-  };
-  const kept = writeHandoffs(handoffs);
-  return { file: handoffPath(), status: handoffs[note.cwd].status, kept };
+function saveNote(note: NoteInput): void {
+  const file = handoffFile();
+  const store = recordNote(readHandoffs(file), note, new Date());
+  writeFileSync(file, JSON.stringify(store, null, 2), "utf-8");
+  emit.receipt(file, { status: statusOf(note), entries: Object.keys(store).length });
 }
 
 function run() {
@@ -89,32 +57,17 @@ function run() {
   });
 
   if (values.help) {
-    console.log(`
-HandoffNote — Write a handoff note for the current project
-
-Usage:
-  bun ~/.pal/tools/handoff-note.ts --title "what we were doing" --text "what remains"
-  bun ~/.pal/tools/handoff-note.ts --done    # mark session completed
-
-Arguments:
-  --title   Brief title of what was being worked on (5-10 words)
-  --text    What remains unfinished — decisions made, next steps, blockers
-  --waiting What this needs from you before it can move (a decision, an answer, access)
-  --done    Mark as completed; suppresses "pick up where you left off" injection
-
-Output: writes to memory/state/last-handoff.json keyed by cwd
-`);
+    console.log(HELP);
     process.exit(0);
   }
 
   if (values.done) {
-    const result = writeHandoffNote({
+    saveNote({
       cwd: process.cwd(),
       title: values.title || "session",
       text: values.text || "",
       done: true,
     });
-    emit.receipt(result.file, { status: result.status, entries: result.kept });
     process.exit(0);
   }
 
@@ -123,14 +76,13 @@ Output: writes to memory/state/last-handoff.json keyed by cwd
     process.exit(1);
   }
 
-  const result = writeHandoffNote({
+  saveNote({
     cwd: process.cwd(),
     title: values.title,
     text: values.text,
     done: false,
     waitingOn: values.waiting,
   });
-  emit.receipt(result.file, { status: result.status, entries: result.kept });
 }
 
 if (import.meta.main) run();

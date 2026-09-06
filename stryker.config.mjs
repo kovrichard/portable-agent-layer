@@ -61,6 +61,7 @@ export default {
     "!src/tools/token-cost.ts",
     "!src/tools/relationship-reflect.ts",
     "!src/tools/self-model.ts",
+    "!src/tools/agent/handoff-note.ts",
     // Ratchet — every entry below measured >=90% no-coverage on 2026-08-18, meaning
     // the in-process suite cannot reach it and its mutants only depress the score.
     // Delete an entry the same commit that gives the module in-process tests, then
@@ -68,7 +69,6 @@ export default {
     // go back on, and break never moves down without a reason recorded here.
     "!src/hooks/lib/import-merge.ts",
     "!src/tools/agent/algorithm-reflect.ts",
-    "!src/tools/agent/handoff-note.ts",
     "!src/tools/agent/project.ts",
     "!src/tools/agent/thread.ts",
     "!src/tools/skill-doctor.ts",
