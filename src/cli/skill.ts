@@ -16,7 +16,7 @@ import { getActiveAgent } from "../hooks/lib/agent";
 import { flagshipAuthorModel } from "../hooks/lib/models";
 import { palHome } from "../hooks/lib/paths";
 import { linkPersonalSkill, log } from "../targets/lib";
-import { formatReport, formatSummary, lintSkill } from "../tools/skill-doctor";
+import { formatReport, formatSummary, lintSkill } from "../tools/lib/skill-doctor";
 
 /** Entry names under ~/.pal/skills/, sorted; dangling links included. */
 function skillEntries(dir: string): string[] {

@@ -16,7 +16,7 @@ const SUBPROCESS_SUITES = new Set([
   "test/project-cli.test.ts",
   "test/rtk-wrap.test.ts",
   "test/security-tool-names.test.ts",
-  "test/skill-doctor.test.ts",
+  "test/skill-doctor-cli.test.ts",
   "test/skill-link.test.ts",
   "test/spawn-guard.test.ts",
   "test/subagent-link.test.ts",
@@ -64,13 +64,13 @@ export default {
     "!src/tools/agent/handoff-note.ts",
     "!src/tools/agent/algorithm-reflect.ts",
     "!src/tools/agent/thread.ts",
+    "!src/tools/skill-doctor.ts",
     // Ratchet — every entry below measured >=90% no-coverage on 2026-08-18, meaning
     // the in-process suite cannot reach it and its mutants only depress the score.
     // Delete an entry the same commit that gives the module in-process tests, then
     // re-measure and raise thresholds.break. Entries come off this list; they never
     // go back on, and break never moves down without a reason recorded here.
     "!src/tools/agent/project.ts",
-    "!src/tools/skill-doctor.ts",
   ],
   concurrency: Number(process.env.STRYKER_CONCURRENCY ?? 4),
   bun: {
