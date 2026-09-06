@@ -2,6 +2,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:te
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { reload } from "../src/hooks/lib/settings";
 import type {
   AgendaView,
   AgentsView,
@@ -29,6 +30,10 @@ beforeEach(() => {
   HOME = mkdtempSync(resolve(tmpdir(), "pal-control-room-"));
   process.env.PAL_HOME = HOME;
   mkdirSync(resolve(HOME, "memory", "ledger"), { recursive: true });
+  // Settings are cached for the process lifetime, which is right in production
+  // and wrong here: a test that writes prefs would hand them to every test that
+  // ran after it, under a PAL_HOME those prefs never belonged to.
+  reload();
 });
 
 afterEach(() => {
