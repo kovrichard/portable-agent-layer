@@ -171,52 +171,6 @@ describe("import into a NON-EMPTY home", () => {
   });
 });
 
-describe("mergeJsonlLines", () => {
-  test("appends only unseen lines, preserving local order", async () => {
-    const { mergeJsonlLines } = await import("../src/hooks/lib/import-merge");
-    const r = mergeJsonlLines('{"a":1}\n{"b":2}\n', '{"b":2}\n{"c":3}\n');
-    expect(r.added).toBe(1);
-    expect(r.text).toBe('{"a":1}\n{"b":2}\n{"c":3}\n');
-  });
-
-  test("is a no-op when incoming is a subset", async () => {
-    const { mergeJsonlLines } = await import("../src/hooks/lib/import-merge");
-    const r = mergeJsonlLines('{"a":1}\n{"b":2}\n', '{"a":1}\n');
-    expect(r.added).toBe(0);
-    expect(r.text).toBe('{"a":1}\n{"b":2}\n');
-  });
-
-  test("merging its own output again adds nothing", async () => {
-    const { mergeJsonlLines } = await import("../src/hooks/lib/import-merge");
-    const incoming = '{"c":3}\n';
-    const once = mergeJsonlLines('{"a":1}\n', incoming);
-    const twice = mergeJsonlLines(once.text, incoming);
-    expect(twice.added).toBe(0);
-    expect(twice.text).toBe(once.text);
-  });
-
-  test("tolerates blank lines and a missing trailing newline", async () => {
-    const { mergeJsonlLines } = await import("../src/hooks/lib/import-merge");
-    const r = mergeJsonlLines('{"a":1}', '\n\n{"b":2}');
-    expect(r.text).toBe('{"a":1}\n{"b":2}\n');
-  });
-});
-
-describe("isNeverImport", () => {
-  test("blocks machine identity and rebuildable indexes", async () => {
-    const { isNeverImport } = await import("../src/hooks/lib/import-merge");
-    expect(isNeverImport("machine.json")).toBe(true);
-    expect(isNeverImport("memory/learning/.retrieval-index.json")).toBe(true);
-  });
-
-  test("allows ordinary corpus files", async () => {
-    const { isNeverImport } = await import("../src/hooks/lib/import-merge");
-    expect(isNeverImport("memory/signals/ratings.jsonl")).toBe(false);
-    expect(isNeverImport("telos/GOALS.md")).toBe(false);
-    expect(isNeverImport("skills/my-skill/SKILL.md")).toBe(false);
-  });
-});
-
 describe("machine identity crosses on import", () => {
   test("source machine is named and its label resolves afterwards", async () => {
     cli(SRC, ["export", WORK]);

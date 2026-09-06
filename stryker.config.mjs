@@ -69,7 +69,6 @@ export default {
     // Delete an entry the same commit that gives the module in-process tests, then
     // re-measure and raise thresholds.break. Entries come off this list; they never
     // go back on, and break never moves down without a reason recorded here.
-    "!src/hooks/lib/import-merge.ts",
     "!src/tools/agent/project.ts",
     "!src/tools/skill-doctor.ts",
   ],
