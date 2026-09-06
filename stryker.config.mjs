@@ -57,6 +57,7 @@ export default {
     // decisions live in src/tools/lib/, which is measured.
     "!src/tools/session-summary.ts",
     "!src/tools/agent/relationship-note.ts",
+    "!src/tools/agent/analyze.ts",
     // Ratchet — every entry below measured >=90% no-coverage on 2026-08-18, meaning
     // the in-process suite cannot reach it and its mutants only depress the score.
     // Delete an entry the same commit that gives the module in-process tests, then
@@ -64,7 +65,6 @@ export default {
     // go back on, and break never moves down without a reason recorded here.
     "!src/hooks/lib/import-merge.ts",
     "!src/tools/agent/algorithm-reflect.ts",
-    "!src/tools/agent/analyze.ts",
     "!src/tools/agent/handoff-note.ts",
     "!src/tools/agent/project.ts",
     "!src/tools/agent/thread.ts",
