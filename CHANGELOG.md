@@ -1,3 +1,18 @@
+# [0.71.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.70.0...v0.71.0) (2026-09-06)
+
+
+### Bug Fixes
+
+* **test:** key the handoff-note fixture by the resolved cwd ([d1cc313](https://github.com/kovrichard/portable-agent-layer/commit/d1cc313a79d2147de1631a8f33decc0d39e28930))
+
+
+### Features
+
+* **control-room:** make the page a morning screen, ranked from files ([e2afec4](https://github.com/kovrichard/portable-agent-layer/commit/e2afec49ac6ce289375f7fef0da427cfbea4ed2a))
+* **control-room:** replace the ledger page with a control room to open before a terminal ([9acc744](https://github.com/kovrichard/portable-agent-layer/commit/9acc7449173869242e06e93c08e0868852fa51fe))
+* **hooks:** carry the wall clock on every prompt, not just at session start ([bb5775e](https://github.com/kovrichard/portable-agent-layer/commit/bb5775ec4e1d942dfba8c0adcabac6d9d9c24c05))
+* **onboarding:** move personal context out of install and into an interview ([7fc8e14](https://github.com/kovrichard/portable-agent-layer/commit/7fc8e14e4b38e9c0074614c3bb7d14d23343692e))
+
 # [0.70.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.69.0...v0.70.0) (2026-09-05)
 
 
