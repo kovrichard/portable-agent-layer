@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import type { HandoffEntry } from "../src/tools/agent/handoff-note";
@@ -14,7 +14,9 @@ let CWD: string;
 
 beforeEach(() => {
   HOME = mkdtempSync(resolve(tmpdir(), "pal-handoff-"));
-  CWD = mkdtempSync(resolve(tmpdir(), "pal-handoff-cwd-"));
+  // The note is keyed by the child's own process.cwd(), which is always the
+  // resolved path — and on macOS the temp dir reaches us through a symlink.
+  CWD = realpathSync(mkdtempSync(resolve(tmpdir(), "pal-handoff-cwd-")));
 });
 
 afterEach(() => {
@@ -32,12 +34,16 @@ async function runCli(args: string[]): Promise<number> {
   return proc.exited;
 }
 
+/** Throws rather than returning undefined, so a missed key cannot pass a test. */
 function stored(): HandoffEntry {
   const raw = readFileSync(
     resolve(HOME, "memory", "state", "last-handoff.json"),
     "utf-8"
   );
-  return (JSON.parse(raw) as Record<string, HandoffEntry>)[CWD];
+  const notes = JSON.parse(raw) as Record<string, HandoffEntry>;
+  const entry = notes[CWD];
+  if (!entry) throw new Error(`no note for ${CWD} — file holds ${Object.keys(notes)}`);
+  return entry;
 }
 
 describe("handoff-note --waiting", () => {
