@@ -341,7 +341,129 @@ describe("one project", () => {
     expect((await fetch(`${base}/api/project?slug=ghost`)).status).toBe(404);
     expect((await fetch(`${base}/api/project`)).status).toBe(400);
   });
+});
 
+async function post(base: string, path: string, body: unknown): Promise<Response> {
+  return fetch(`${base}${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+interface DetailBody {
+  iscs: { id: number; status: string }[];
+  placed: string | null;
+}
+
+describe("what the page may change", () => {
+  const withCriteria =
+    "## Criteria\n\n- [ ] ISC-1: the open one\n- [ ] ISC-2: the other\n";
+
+  test("closing an ISC archives it, and reopening walks it back", async () => {
+    registerProject("demo", withCriteria);
+    const base = await listen();
+    const statuses = async () =>
+      (await getJson<DetailBody>(`${base}/api/project?slug=demo`)).iscs.map(
+        (i) => `${i.id}:${i.status}`
+      );
+
+    expect(await statuses()).toEqual(["1:open", "2:open"]);
+
+    expect(
+      (await post(base, "/api/isc", { project: "demo", id: 1, status: "done" })).ok
+    ).toBe(true);
+    expect(await statuses()).toEqual(["2:open", "1:done"]);
+
+    expect(
+      (await post(base, "/api/isc", { project: "demo", id: 1, status: "open" })).ok
+    ).toBe(true);
+    expect(await statuses()).toEqual(["2:open", "1:open"]);
+  });
+
+  test("closing one that is already closed changes nothing and says so", async () => {
+    registerProject("demo", withCriteria);
+    const base = await listen();
+    await post(base, "/api/isc", { project: "demo", id: 1, status: "done" });
+    const again = await post(base, "/api/isc", {
+      project: "demo",
+      id: 1,
+      status: "done",
+    });
+    expect(await again.json()).toMatchObject({ changed: false });
+  });
+
+  test("an ISC write refuses what it cannot act on", async () => {
+    registerProject("demo", withCriteria);
+    const base = await listen();
+    expect((await post(base, "/api/isc", { id: 1, status: "done" })).status).toBe(400);
+    expect(
+      (await post(base, "/api/isc", { project: "demo", id: 0, status: "done" })).status
+    ).toBe(400);
+    expect(
+      (await post(base, "/api/isc", { project: "demo", id: 1, status: "maybe" })).status
+    ).toBe(400);
+    expect(
+      (await post(base, "/api/isc", { project: "ghost", id: 1, status: "done" })).status
+    ).toBe(404);
+    expect(
+      (await post(base, "/api/isc", { project: "demo", id: 99, status: "done" })).status
+    ).toBe(404);
+  });
+
+  test("a placement overrules the grid's own guess and survives on the record", async () => {
+    registerProject("demo", withCriteria);
+    const base = await listen();
+    const quadrantOf = async () => {
+      const grid = await getJson<Matrix>(`${base}/api/matrix`);
+      for (const key of ["now", "plan", "noise", "later"] as const) {
+        if (grid[key].some((i) => i.id === "demo")) return key;
+      }
+      return null;
+    };
+
+    expect(await quadrantOf()).toBe("later");
+    expect(
+      (await post(base, "/api/placement", { project: "demo", quadrant: "now" })).ok
+    ).toBe(true);
+    expect(await quadrantOf()).toBe("now");
+
+    const detail = await getJson<DetailBody>(`${base}/api/project?slug=demo`);
+    expect(detail.placed).toBe("now");
+
+    await post(base, "/api/placement", { project: "demo", quadrant: null });
+    expect(await quadrantOf()).toBe("later");
+  });
+
+  test("a placement refuses a quadrant that is not one", async () => {
+    registerProject("demo", withCriteria);
+    const base = await listen();
+    expect(
+      (await post(base, "/api/placement", { project: "demo", quadrant: "soon" })).status
+    ).toBe(400);
+    expect(
+      (await post(base, "/api/placement", { project: "ghost", quadrant: "now" })).status
+    ).toBe(404);
+  });
+
+  test("settings read back what they were given, and refuse a bad timezone", async () => {
+    const base = await listen();
+    const saved = await post(base, "/api/settings", {
+      actor: "richard",
+      timezone: "Europe/Budapest",
+    });
+    expect(await saved.json()).toEqual({ actor: "richard", timezone: "Europe/Budapest" });
+    expect(await getJson<Record<string, string>>(`${base}/api/settings`)).toEqual({
+      actor: "richard",
+      timezone: "Europe/Budapest",
+    });
+    expect(
+      (await post(base, "/api/settings", { timezone: "Mars/Olympus_Mons" })).status
+    ).toBe(400);
+  });
+});
+
+describe("how the page itself is served", () => {
   test("a deep link into the page is served the page, not a 404", async () => {
     const base = await listen();
     for (const path of ["/", "/projects", "/projects/portable-agent-layer", "/log"]) {

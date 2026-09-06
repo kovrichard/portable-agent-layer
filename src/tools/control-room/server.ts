@@ -17,6 +17,16 @@ import { projectDetail } from "./detail";
 import { matrix } from "./matrix";
 import { DEFAULT_PORT, LOOPBACK } from "./server-config";
 import { indexHtml, staticAsset } from "./static";
+import {
+  type InstallSettings,
+  isQuadrant,
+  QUADRANTS,
+  readInstallSettings,
+  setIscStatus,
+  setPlacement,
+  type WriteOutcome,
+  writeInstallSettings,
+} from "./writes";
 
 export { DEFAULT_PORT, LOOPBACK };
 
@@ -24,7 +34,7 @@ export { DEFAULT_PORT, LOOPBACK };
  * Every path the single-page app owns. Listed rather than wildcarded, because a
  * blanket "/*" outranks the fetch handler and would swallow /api as well.
  */
-const PAGE_ROUTES = ["/", "/projects", "/projects/:slug", "/log"];
+const PAGE_ROUTES = ["/", "/projects", "/projects/:slug", "/log", "/settings"];
 
 export interface ServerStatus {
   pid: number;
@@ -150,6 +160,74 @@ async function overrideServes(request: Request): Promise<Response> {
   return json({ project, serves, by: "user" });
 }
 
+async function readBody(request: Request): Promise<Record<string, unknown> | null> {
+  try {
+    return ((await request.json()) ?? {}) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function answer(outcome: WriteOutcome, body: Record<string, unknown>): Response {
+  return outcome.ok
+    ? json({ ...body, changed: outcome.changed })
+    : json({ error: outcome.error }, outcome.status);
+}
+
+/** Close or reopen one criterion — the same rule `complete-isc` reaches. */
+async function iscWrite(request: Request): Promise<Response> {
+  const body = await readBody(request);
+  if (!body) return json({ error: "expected a JSON body" }, 400);
+  const { project, id, status } = body;
+  if (typeof project !== "string" || !project) {
+    return json({ error: "project is required" }, 400);
+  }
+  if (typeof id !== "number" || !Number.isInteger(id) || id < 1) {
+    return json({ error: "id must be a positive integer" }, 400);
+  }
+  if (status !== "open" && status !== "done") {
+    return json({ error: "status must be open or done" }, 400);
+  }
+  return answer(setIscStatus(project, id, status === "done"), { project, id, status });
+}
+
+async function placementWrite(request: Request): Promise<Response> {
+  const body = await readBody(request);
+  if (!body) return json({ error: "expected a JSON body" }, 400);
+  const { project, quadrant } = body;
+  if (typeof project !== "string" || !project) {
+    return json({ error: "project is required" }, 400);
+  }
+  if (quadrant !== null && !isQuadrant(quadrant)) {
+    return json(
+      { error: `quadrant must be null or one of ${QUADRANTS.join(", ")}` },
+      400
+    );
+  }
+  return answer(setPlacement(project, quadrant), { project, quadrant });
+}
+
+async function settingsWrite(request: Request): Promise<Response> {
+  const body = await readBody(request);
+  if (!body) return json({ error: "expected a JSON body" }, 400);
+  const update: Partial<InstallSettings> = {};
+  for (const key of ["actor", "timezone"] as const) {
+    const value = body[key];
+    if (value === undefined) continue;
+    if (typeof value !== "string") return json({ error: `${key} must be a string` }, 400);
+    update[key] = value;
+  }
+  const outcome = writeInstallSettings(update);
+  return outcome.ok ? json(readInstallSettings()) : answer(outcome, {});
+}
+
+const WRITES: Record<string, (request: Request) => Promise<Response>> = {
+  "/api/serves": overrideServes,
+  "/api/isc": iscWrite,
+  "/api/placement": placementWrite,
+  "/api/settings": settingsWrite,
+};
+
 export function startControlRoom(port: number = DEFAULT_PORT) {
   const startedAt = new Date().toISOString();
   return Bun.serve({
@@ -159,9 +237,8 @@ export function startControlRoom(port: number = DEFAULT_PORT) {
     routes: Object.fromEntries(PAGE_ROUTES.map((path) => [path, () => indexHtml()])),
     fetch(request, server) {
       const url = new URL(request.url);
-      if (request.method === "POST" && url.pathname === "/api/serves") {
-        return overrideServes(request);
-      }
+      const write = WRITES[url.pathname];
+      if (request.method === "POST" && write) return write(request);
       if (request.method !== "GET") return json({ error: "read only" }, 405);
       if (!url.pathname.startsWith("/api/")) {
         return staticAsset(url.pathname) ?? json({ error: "not found" }, 404);
@@ -187,6 +264,8 @@ export function startControlRoom(port: number = DEFAULT_PORT) {
           return summaryFor(url.searchParams.get("days"));
         case "/api/projects":
           return projects();
+        case "/api/settings":
+          return json(readInstallSettings());
         case "/api/status":
           return status(server.port ?? port, startedAt);
         default:

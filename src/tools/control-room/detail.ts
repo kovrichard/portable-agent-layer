@@ -47,6 +47,7 @@ export interface ProjectDetailView {
   purpose: string;
   serves: ServesKind | null;
   servesBy: ServesAuthority | null;
+  placed: string | null;
   updated: string;
   iscs: Isc[];
   next: string[];
@@ -134,8 +135,9 @@ export function projectDetail(
       : "no purpose on record yet — set one to rank it",
     serves: project.serves ?? null,
     servesBy: project.serves_by ?? null,
+    placed: project.placed ?? null,
     updated: project.updated,
-    iscs: parseIscs(project.criteria ?? ""),
+    iscs: [...parseIscs(project.criteria ?? ""), ...parseIscs(project.changelog ?? "")],
     next: project.next ?? [],
     blockers: project.blockers ?? [],
     decisions: parseDecisions(project.decisions),

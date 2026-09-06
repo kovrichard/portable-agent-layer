@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router";
 import type { LedgerViewRow } from "../../../ledger/view";
 import type { Isc } from "../../../lib/project-isc";
@@ -8,6 +9,7 @@ import { clock } from "../format";
 import { Empty, Panel, Pending } from "../frame";
 import { useLoaded } from "../lib/api";
 import { cn } from "../lib/cn";
+import { setIsc } from "../lib/write";
 
 const ISC_MARK: Record<Isc["status"], string> = { open: "", done: "✓", retired: "~" };
 
@@ -17,34 +19,62 @@ function outcomeVariant(outcome: string) {
   return "alarm" as const;
 }
 
-function Criteria({ iscs }: { iscs: Isc[] }) {
+/** Retired is a decision, not a checkbox — only open and done toggle here. */
+function Criteria({
+  slug,
+  iscs,
+  onChanged,
+}: {
+  slug: string;
+  iscs: Isc[];
+  onChanged: () => void;
+}) {
+  const [error, setError] = useState<string | null>(null);
   if (iscs.length === 0) return <Empty>No criteria written yet.</Empty>;
+
+  const toggle = (isc: Isc) => {
+    void setIsc(slug, isc.id, isc.status === "open" ? "done" : "open").then((failure) => {
+      setError(failure);
+      if (!failure) onChanged();
+    });
+  };
+
   return (
-    <ul className="m-0 flex list-none flex-col p-0">
-      {iscs.map((isc) => (
-        <li
-          key={isc.id}
-          className={cn(
-            "grid grid-cols-[18px_58px_1fr] items-start gap-3 border-b border-divider/60 py-2 last:border-b-0",
-            isc.status !== "open" && "opacity-60"
-          )}
-        >
-          <span
-            title={isc.status}
+    <>
+      {error && (
+        <p className="mb-2 border-l-2 border-alarm bg-alarm/10 px-3 py-2 text-[12px] text-alarm">
+          {error}
+        </p>
+      )}
+      <ul className="m-0 flex list-none flex-col p-0">
+        {iscs.map((isc) => (
+          <li
+            key={isc.id}
             className={cn(
-              "mt-0.5 grid size-3.5 place-items-center border border-neutral-500 text-[10px] leading-none text-bg",
-              isc.status === "done" && "bg-accent",
-              isc.status === "retired" && "bg-neutral-400"
+              "grid grid-cols-[18px_58px_1fr] items-start gap-3 border-b border-divider/60 py-2 last:border-b-0",
+              isc.status !== "open" && "opacity-60"
             )}
           >
-            {ISC_MARK[isc.status]}
-            <span className="sr-only">{isc.status}</span>
-          </span>
-          <span className="pt-px text-[11.5px] text-neutral-600">ISC-{isc.id}</span>
-          <span className="text-pretty">{isc.text}</span>
-        </li>
-      ))}
-    </ul>
+            <button
+              type="button"
+              disabled={isc.status === "retired"}
+              onClick={() => toggle(isc)}
+              title={isc.status === "open" ? "close this criterion" : "reopen it"}
+              className={cn(
+                "mt-0.5 grid size-3.5 cursor-pointer place-items-center border border-neutral-500 text-[10px] leading-none text-bg hover:border-accent disabled:cursor-default",
+                isc.status === "done" && "bg-accent",
+                isc.status === "retired" && "bg-neutral-400"
+              )}
+            >
+              {ISC_MARK[isc.status]}
+              <span className="sr-only">{isc.status}</span>
+            </button>
+            <span className="pt-px text-[11.5px] text-neutral-600">ISC-{isc.id}</span>
+            <span className="text-pretty">{isc.text}</span>
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }
 
@@ -142,19 +172,24 @@ function Head({ d }: { d: ProjectDetailView }) {
 }
 
 export function ProjectDetail({ slug }: { slug: string }) {
+  const [nonce, setNonce] = useState(0);
   const view = useLoaded<ProjectDetailView>(
-    `/api/project?slug=${encodeURIComponent(slug)}`
+    `/api/project?slug=${encodeURIComponent(slug)}&v=${nonce}`
   );
   if (view.state !== "ready") return <Pending value={view} />;
   const d = view.data;
+  const reload = () => setNonce((n) => n + 1);
 
   return (
     <section>
       <Head d={d} />
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex flex-col gap-6">
-          <Panel title="Ideal state criteria" aside={`${d.iscs.length} on record`}>
-            <Criteria iscs={d.iscs} />
+          <Panel
+            title="Ideal state criteria"
+            aside="changes here write to the record directly · no agent, no tokens"
+          >
+            <Criteria slug={d.slug} iscs={d.iscs} onChanged={reload} />
           </Panel>
           <div className="grid gap-6 md:grid-cols-2">
             <Panel title="Next">

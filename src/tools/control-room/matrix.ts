@@ -33,6 +33,8 @@ export interface MatrixItem {
   detail: string;
   urgent: boolean;
   important: boolean;
+  /** The quadrant the user pinned this to, which overrules both guesses. */
+  placed: string | null;
   urgentBecause: string[];
   importantBecause: string;
   serves: ServesKind | null;
@@ -115,14 +117,16 @@ function projectItem(
     now
   );
 
+  const placed = placementOf(p.placed);
   return {
     kind: "project",
     id: p.name,
     label: p.name,
     detail: p.serves_note ?? p.next?.[0] ?? "",
-    urgent: urgentBecause.length > 0,
-    important,
-    urgentBecause,
+    urgent: placed ? placed.urgent : urgentBecause.length > 0,
+    important: placed ? placed.important : important,
+    placed: p.placed ?? null,
+    urgentBecause: placed ? ["placed by you", ...urgentBecause] : urgentBecause,
     importantBecause: p.serves
       ? SERVES_MEANING[p.serves]
       : "no purpose on record yet — set one to rank it",
@@ -142,6 +146,7 @@ function goalItem(goal: TelosGoal, now: Date): MatrixItem {
     detail: goal.horizon ?? goal.text,
     urgent,
     important: true,
+    placed: null,
     urgentBecause: urgent ? [`dated ${goal.due}`] : [],
     importantBecause: "a goal you stated",
     serves: null,
@@ -149,6 +154,24 @@ function goalItem(goal: TelosGoal, now: Date): MatrixItem {
     due: goal.due,
     waitingOn: null,
   };
+}
+
+/** The user's placement, translated back into the two axes it stands for. */
+function placementOf(
+  placed: string | undefined
+): { urgent: boolean; important: boolean } | null {
+  switch (placed) {
+    case "now":
+      return { urgent: true, important: true };
+    case "plan":
+      return { urgent: false, important: true };
+    case "noise":
+      return { urgent: true, important: false };
+    case "later":
+      return { urgent: false, important: false };
+    default:
+      return null;
+  }
 }
 
 function quadrant(items: MatrixItem[], urgent: boolean, important: boolean) {

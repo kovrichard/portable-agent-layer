@@ -7,17 +7,9 @@ import { NativeSelect } from "./components/input";
 import { age } from "./format";
 import { Empty } from "./frame";
 import { cn } from "./lib/cn";
+import { setPlacement, setServes } from "./lib/write";
 
 const SERVES_KINDS = ["goal", "revenue", "fun"] as const;
-
-async function saveServes(project: string, serves: string): Promise<void> {
-  const res = await fetch("/api/serves", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ project, serves }),
-  });
-  if (!res.ok) throw new Error(`override answered ${res.status}`);
-}
 
 function ServesSelect({ item, onSaved }: { item: MatrixItem; onSaved: () => void }) {
   if (item.kind !== "project") return null;
@@ -29,7 +21,7 @@ function ServesSelect({ item, onSaved }: { item: MatrixItem; onSaved: () => void
         item.servesBy === "user" ? "your answer" : "PAL's guess — change it to correct it"
       }
       onChange={(e) => {
-        saveServes(item.id, e.target.value).then(onSaved).catch(onSaved);
+        void setServes(item.id, e.target.value).then(onSaved);
       }}
       className={cn(
         "h-auto py-0.5 text-[10px]",
@@ -42,6 +34,39 @@ function ServesSelect({ item, onSaved }: { item: MatrixItem; onSaved: () => void
       {SERVES_KINDS.map((kind) => (
         <option key={kind} value={kind}>
           {kind}
+        </option>
+      ))}
+    </NativeSelect>
+  );
+}
+
+const PLACEMENTS = [
+  { value: "", label: "let PAL place it" },
+  { value: "now", label: "Do now" },
+  { value: "plan", label: "Give it a slot" },
+  { value: "noise", label: "Loud, not load-bearing" },
+  { value: "later", label: "Let it sit" },
+] as const;
+
+/** Overrules the grid's own reading. The correction survives the next guess. */
+function PlacementSelect({ item, onSaved }: { item: MatrixItem; onSaved: () => void }) {
+  if (item.kind !== "project") return null;
+  return (
+    <NativeSelect
+      aria-label={`where ${item.label} belongs`}
+      value={item.placed ?? ""}
+      title={item.placed ? "your placement" : "placed by PAL — change it to overrule"}
+      onChange={(e) => {
+        void setPlacement(item.id, e.target.value || null).then(onSaved);
+      }}
+      className={cn(
+        "h-auto py-0.5 text-[10px]",
+        item.placed && "border-accent bg-accent-100 text-accent-900"
+      )}
+    >
+      {PLACEMENTS.map((p) => (
+        <option key={p.value} value={p.value}>
+          {p.label}
         </option>
       ))}
     </NativeSelect>
@@ -94,6 +119,12 @@ export function ItemCard({ item, onSaved }: { item: MatrixItem; onSaved: () => v
       )}
       {item.detail && <p className="text-[12px] text-neutral-800">{item.detail}</p>}
       <ReasonTags item={item} />
+      {isProject && (
+        <div className="flex items-center gap-2 border-t border-divider/60 pt-2">
+          <span className="eyebrow">placed</span>
+          <PlacementSelect item={item} onSaved={onSaved} />
+        </div>
+      )}
     </article>
   );
 }

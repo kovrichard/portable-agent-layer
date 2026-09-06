@@ -103,6 +103,7 @@ describe("buildMatrix", () => {
       detail: "",
       urgent: false,
       important: false,
+      placed: null,
       urgentBecause: [],
       importantBecause: "",
       serves: null,
