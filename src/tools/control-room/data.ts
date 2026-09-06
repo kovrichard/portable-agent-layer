@@ -91,7 +91,7 @@ export interface SignalView {
   };
 }
 
-export interface AgentsRow {
+interface AgentsRow {
   slug: string;
   actions: number;
   runtimes: Record<string, number>;

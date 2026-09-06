@@ -18,6 +18,12 @@ import index from "./ui/index.html";
 export const DEFAULT_PORT = 7250;
 export const LOOPBACK = "127.0.0.1";
 
+/**
+ * Every path the single-page app owns. Listed rather than wildcarded, because a
+ * blanket "/*" outranks the fetch handler and would swallow /api as well.
+ */
+const PAGE_ROUTES = ["/", "/projects", "/projects/:slug", "/log"];
+
 export interface ServerStatus {
   pid: number;
   port: number;
@@ -105,7 +111,7 @@ export function startControlRoom(port: number = DEFAULT_PORT) {
     hostname: LOOPBACK,
     port,
     development: false,
-    routes: { "/": index },
+    routes: Object.fromEntries(PAGE_ROUTES.map((path) => [path, index])),
     fetch(request, server) {
       const url = new URL(request.url);
       if (request.method === "POST" && url.pathname === "/api/serves") {

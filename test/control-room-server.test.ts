@@ -224,6 +224,21 @@ describe("what each route answers", () => {
     expect((await fetch(`${base}/api/nope`)).status).toBe(404);
   });
 
+  test("a deep link into the page is served the page, not a 404", async () => {
+    const base = await listen();
+    for (const path of ["/", "/projects", "/projects/portable-agent-layer", "/log"]) {
+      const res = await fetch(`${base}${path}`);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("content-type")).toContain("text/html");
+    }
+  });
+
+  test("the page routes never shadow the API", async () => {
+    const base = await listen();
+    const res = await fetch(`${base}/api/status`);
+    expect(res.headers.get("content-type")).toContain("application/json");
+  });
+
   test("it is read only apart from the one override", async () => {
     const base = await listen();
     expect((await fetch(`${base}/api/ledger`, { method: "POST" })).status).toBe(405);

@@ -1,67 +1,185 @@
-import { StrictMode, useEffect, useState } from "react";
+import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import {
+  BrowserRouter,
+  Navigate,
+  NavLink,
+  Route,
+  Routes,
+  useParams,
+  useSearchParams,
+} from "react-router";
 import type { ServerStatus } from "../server";
-import { Agenda } from "./agenda";
-import { Agents } from "./agents";
-import { Board } from "./board";
-import { Handoffs } from "./handoffs";
-import { Ledger } from "./ledger";
-import { MatrixGrid } from "./matrix";
-import { getJson } from "./panel";
-import { Signal } from "./signal";
+import { Seg } from "./frame";
+import { useLoaded } from "./lib/api";
+import { cn } from "./lib/cn";
+import { Log, type LogFilter } from "./screens/log";
+import { ProjectDetail } from "./screens/project-detail";
+import {
+  isStatusFilter,
+  Projects,
+  STATUS_FILTERS,
+  type StatusFilter,
+} from "./screens/projects";
+import { isLayout, LAYOUTS, type Layout, Today } from "./screens/today";
 
-function Masthead({ status }: { status: ServerStatus | null }) {
+const LAYOUT_KEY = "pal.control-room.layout";
+
+function rememberedLayout(): Layout {
+  try {
+    const stored = localStorage.getItem(LAYOUT_KEY);
+    return isLayout(stored) ? stored : "matrix";
+  } catch {
+    return "matrix";
+  }
+}
+
+function remember(layout: Layout): void {
+  try {
+    localStorage.setItem(LAYOUT_KEY, layout);
+  } catch {}
+}
+
+function TodayRoute() {
+  const [params, setParams] = useSearchParams();
+  const asked = params.get("layout");
+  const layout = isLayout(asked) ? asked : rememberedLayout();
   return (
-    <div className="masthead">
-      <h1>
-        PAL <em>this morning</em>
-      </h1>
-      <div className="meta">
-        <span>
-          machine <b>{status?.machine ?? "…"}</b>
-        </span>
-        <span>
-          ledger <b>{status ? `${status.ledgerFiles} file(s)` : "…"}</b>
-        </span>
-        <span>
-          port <b>{status?.port ?? "…"}</b>
+    <>
+      <div className="mb-4 flex justify-end">
+        <Seg
+          label="layout"
+          options={LAYOUTS}
+          value={layout}
+          onPick={(next) => {
+            remember(next);
+            setParams({ layout: next });
+          }}
+        />
+      </div>
+      <Today layout={layout} />
+    </>
+  );
+}
+
+function ProjectsRoute() {
+  const [params, setParams] = useSearchParams();
+  const asked = params.get("status");
+  const filter: StatusFilter = isStatusFilter(asked) ? asked : "ranked";
+  return (
+    <>
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+        <h1 className="m-0 text-[34px]">Projects</h1>
+        <Seg
+          label="status"
+          options={STATUS_FILTERS}
+          value={filter}
+          onPick={(next) => setParams({ status: next })}
+        />
+      </div>
+      <Projects filter={filter} />
+    </>
+  );
+}
+
+function ProjectDetailRoute() {
+  const { slug } = useParams();
+  return <ProjectDetail slug={slug ?? ""} />;
+}
+
+function LogRoute() {
+  const [params, setParams] = useSearchParams();
+  const filter: LogFilter = {
+    project: params.get("project") ?? "",
+    since: params.get("since") ?? "",
+    until: params.get("until") ?? "",
+  };
+  const update = (next: Partial<LogFilter>) => {
+    const merged = { ...filter, ...next };
+    setParams(Object.fromEntries(Object.entries(merged).filter(([, v]) => v)));
+  };
+  return (
+    <>
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+        <h1 className="m-0 text-[34px]">Action log</h1>
+        <span className="text-[12px] text-neutral-700">
+          every tool call this install recorded
         </span>
       </div>
-    </div>
+      <Log filter={filter} onFilter={update} />
+    </>
+  );
+}
+
+const TABS = [
+  { to: "/", label: "Today", end: true },
+  { to: "/projects", label: "Projects", end: false },
+  { to: "/log", label: "Action log", end: false },
+] as const;
+
+function Header({ status }: { status: ServerStatus | null }) {
+  return (
+    <header className="sticky top-0 z-10 flex flex-wrap items-center gap-5 border-b border-divider bg-bg px-7 py-2.5">
+      <div className="flex min-w-[120px] items-baseline gap-2">
+        <span className="font-heading text-[22px] font-semibold tracking-wide">PAL</span>
+        <span className="eyebrow">control</span>
+      </div>
+      <nav className="-mb-[11px] flex gap-0.5">
+        {TABS.map((tab) => (
+          <NavLink
+            key={tab.to}
+            to={tab.to}
+            end={tab.end}
+            className={({ isActive }) =>
+              cn(
+                "font-heading border-b-2 px-3 py-2 text-[15px] font-semibold whitespace-nowrap",
+                isActive
+                  ? "border-accent text-ink"
+                  : "border-transparent text-neutral-600 hover:text-accent"
+              )
+            }
+          >
+            {tab.label}
+          </NavLink>
+        ))}
+      </nav>
+      <div className="ml-auto flex items-center gap-2 text-[12px] text-neutral-700">
+        <span className="inline-block size-1.5 bg-accent" />
+        <b className="font-medium text-ink">{status?.machine ?? "…"}</b>
+        <span>
+          · {status ? `${status.ledgerFiles} ledger file(s)` : "…"} · port{" "}
+          {status?.port ?? "…"}
+        </span>
+      </div>
+    </header>
   );
 }
 
 function App() {
-  const [status, setStatus] = useState<ServerStatus | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  useEffect(() => {
-    getJson<ServerStatus>("/api/status")
-      .then(setStatus)
-      .catch((e: Error) => setError(e.message));
-  }, []);
+  const status = useLoaded<ServerStatus>("/api/status");
   return (
-    <div className="room">
-      <Masthead status={status} />
-      {error && <div className="error">{error}</div>}
-      <Agenda />
-      <MatrixGrid />
-      <div className="grid">
-        <Handoffs />
+    <BrowserRouter>
+      <div className="flex min-h-screen flex-col">
+        <Header status={status.state === "ready" ? status.data : null} />
+        <main className="mx-auto w-full max-w-[1480px] flex-1 px-7 pt-6 pb-10">
+          <Routes>
+            <Route path="/" element={<TodayRoute />} />
+            <Route path="/projects" element={<ProjectsRoute />} />
+            <Route path="/projects/:slug" element={<ProjectDetailRoute />} />
+            <Route path="/log" element={<LogRoute />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
+        <footer className="flex flex-wrap justify-between gap-4 border-t border-divider px-7 py-3 text-[11px] text-neutral-600">
+          <span>
+            loopback only · every number from ~/.pal · no model runs on this page
+          </span>
+          <span>
+            {status.state === "ready" ? `up since ${status.data.startedAt}` : ""}
+          </span>
+        </footer>
       </div>
-      <details className="drawer">
-        <summary>When something breaks — projects, agents, signal, ledger</summary>
-        <div className="grid">
-          <Board />
-          <Signal />
-          <Agents />
-          <Ledger />
-        </div>
-      </details>
-      <div className="foot">
-        <span>loopback only · every number from ~/.pal · no model runs on this page</span>
-        <span>{status ? `up since ${status.startedAt}` : ""}</span>
-      </div>
-    </div>
+    </BrowserRouter>
   );
 }
 
