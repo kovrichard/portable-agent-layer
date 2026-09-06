@@ -2,7 +2,13 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import type { AgentsView, ProjectCard, SignalView } from "../src/tools/control-room/data";
+import type {
+  AgendaView,
+  AgentsView,
+  ProjectCard,
+  SignalView,
+} from "../src/tools/control-room/data";
+import type { Matrix } from "../src/tools/control-room/matrix";
 import type { ServerStatus } from "../src/tools/control-room/server";
 import type { LedgerView } from "../src/tools/ledger/view";
 
@@ -176,13 +182,95 @@ describe("what each route answers", () => {
     expect(body.ledgerFiles).toBe(0);
   });
 
+  test("/api/agenda says how old the file on disk is", async () => {
+    const base = await listen();
+    const empty = await getJson<AgendaView>(`${base}/api/agenda`);
+    expect(empty).toEqual({
+      moves: [],
+      generatedAt: null,
+      ageHours: null,
+      stale: true,
+    });
+
+    writeFileSync(
+      resolve(HOME, "memory", "state", "agenda.json"),
+      JSON.stringify({
+        generatedAt: new Date().toISOString(),
+        moves: [{ move: "Send the one-pager", because: "blocked on you" }],
+      }),
+      "utf-8"
+    );
+    const fresh = await getJson<AgendaView>(`${base}/api/agenda`);
+    expect(fresh.moves).toHaveLength(1);
+    expect(fresh.stale).toBe(false);
+  });
+
+  test("/api/matrix is the four quadrants", async () => {
+    registerProject("alpha");
+    const base = await listen();
+    const grid = await getJson<Matrix>(`${base}/api/matrix`);
+    expect(Object.keys(grid).sort()).toEqual([
+      "later",
+      "noise",
+      "now",
+      "plan",
+      "unranked",
+    ]);
+    expect(grid.unranked).toBe(1);
+  });
+
   test("anything else is a 404", async () => {
     const base = await listen();
     expect((await fetch(`${base}/api/nope`)).status).toBe(404);
   });
 
-  test("it is read only", async () => {
+  test("it is read only apart from the one override", async () => {
     const base = await listen();
     expect((await fetch(`${base}/api/ledger`, { method: "POST" })).status).toBe(405);
+    expect((await fetch(`${base}/api/serves`, { method: "DELETE" })).status).toBe(405);
+  });
+});
+
+describe("the one thing the page may change", () => {
+  async function post(base: string, body: unknown): Promise<Response> {
+    return fetch(`${base}/api/serves`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: typeof body === "string" ? body : JSON.stringify(body),
+    });
+  }
+
+  test("an override is written as the user's own answer", async () => {
+    registerProject("alpha");
+    const base = await listen();
+    const res = await post(base, { project: "alpha", serves: "revenue", note: "a bet" });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ project: "alpha", serves: "revenue", by: "user" });
+
+    const grid = await getJson<Matrix>(`${base}/api/matrix`);
+    const item = grid.plan.find((i) => i.id === "alpha");
+    expect(item?.serves).toBe("revenue");
+    expect(item?.servesBy).toBe("user");
+    expect(grid.unranked).toBe(0);
+  });
+
+  test("it refuses a kind that is not one of the three", async () => {
+    registerProject("alpha");
+    const base = await listen();
+    const res = await post(base, { project: "alpha", serves: "important" });
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toContain("goal, revenue");
+  });
+
+  test("it refuses a body with no project", async () => {
+    const base = await listen();
+    expect((await post(base, { serves: "fun" })).status).toBe(400);
+    expect((await post(base, "not json at all")).status).toBe(400);
+  });
+
+  test("an unknown project is a 404, not a new record", async () => {
+    const base = await listen();
+    expect((await post(base, { project: "ghost", serves: "fun" })).status).toBe(404);
+    expect(await getJson<{ slug: string }[]>(`${base}/api/projects`)).toEqual([]);
   });
 });

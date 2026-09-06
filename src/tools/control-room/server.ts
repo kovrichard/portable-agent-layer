@@ -8,9 +8,11 @@
 
 import { loadMachine } from "../../hooks/lib/machine";
 import { readAllProjects } from "../../hooks/lib/projects";
+import { isServesKind, setServes } from "../../hooks/lib/serves";
 import { type LedgerFilter, ledgerFiles, parseSince } from "../ledger/query";
 import { ledgerView } from "../ledger/view";
-import { agentsAtWork, board, handoffs, signal } from "./data";
+import { agenda, agentsAtWork, board, handoffs, signal } from "./data";
+import { matrix } from "./matrix";
 import index from "./ui/index.html";
 
 export const DEFAULT_PORT = 7250;
@@ -67,6 +69,36 @@ function status(port: number, startedAt: string): Response {
   return json(body);
 }
 
+/**
+ * The one thing the page may change. Importance is a guess until the user
+ * corrects it, and a correction is worth one click — but this stays a single
+ * named field on a single record, not a write surface over ~/.pal.
+ */
+async function overrideServes(request: Request): Promise<Response> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "expected a JSON body" }, 400);
+  }
+  const { project, serves, note } = (body ?? {}) as Record<string, unknown>;
+  if (typeof project !== "string" || !project) {
+    return json({ error: "project is required" }, 400);
+  }
+  if (!isServesKind(serves)) {
+    return json({ error: "serves must be goal, revenue or fun" }, 400);
+  }
+
+  const outcome = setServes({
+    name: project,
+    kind: serves,
+    note: typeof note === "string" && note ? note : undefined,
+    by: "user",
+  });
+  if (outcome === "missing") return json({ error: `no such project: ${project}` }, 404);
+  return json({ project, serves, by: "user" });
+}
+
 export function startControlRoom(port: number = DEFAULT_PORT) {
   const startedAt = new Date().toISOString();
   return Bun.serve({
@@ -75,9 +107,16 @@ export function startControlRoom(port: number = DEFAULT_PORT) {
     development: false,
     routes: { "/": index },
     fetch(request, server) {
-      if (request.method !== "GET") return json({ error: "read only" }, 405);
       const url = new URL(request.url);
+      if (request.method === "POST" && url.pathname === "/api/serves") {
+        return overrideServes(request);
+      }
+      if (request.method !== "GET") return json({ error: "read only" }, 405);
       switch (url.pathname) {
+        case "/api/agenda":
+          return json(agenda());
+        case "/api/matrix":
+          return json(matrix());
         case "/api/board":
           return json(board());
         case "/api/handoffs":

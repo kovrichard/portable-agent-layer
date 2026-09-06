@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { assets } from "../src/hooks/lib/paths";
 import { runStopHandlers } from "../src/hooks/lib/stop";
 
 describe("runStopHandlers — Stop hook non-blocking contract", () => {
@@ -64,4 +65,16 @@ describe("runStopHandlers — Stop hook non-blocking contract", () => {
     const elapsed = Date.now() - start;
     expect(elapsed).toBeLessThan(10_000);
   }, 15_000);
+
+  // Each detached handler is spawned by path, so a rename is invisible to the
+  // type checker and only shows up as a hook that quietly stopped running.
+  test("every handler the stop hook spawns by path is on disk", () => {
+    const spawned = ["agenda", "session-intelligence", "failure-principle"];
+    for (const name of spawned) {
+      expect(
+        existsSync(resolve(assets.hooks(), "handlers", `${name}.ts`)),
+        `handlers/${name}.ts`
+      ).toBe(true);
+    }
+  });
 });

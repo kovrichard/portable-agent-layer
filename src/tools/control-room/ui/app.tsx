@@ -1,10 +1,12 @@
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { ServerStatus } from "../server";
+import { Agenda } from "./agenda";
 import { Agents } from "./agents";
 import { Board } from "./board";
 import { Handoffs } from "./handoffs";
 import { Ledger } from "./ledger";
+import { MatrixGrid } from "./matrix";
 import { getJson } from "./panel";
 import { Signal } from "./signal";
 
@@ -12,7 +14,7 @@ function Masthead({ status }: { status: ServerStatus | null }) {
   return (
     <div className="masthead">
       <h1>
-        PAL <em>control room</em>
+        PAL <em>this morning</em>
       </h1>
       <div className="meta">
         <span>
@@ -41,15 +43,22 @@ function App() {
     <div className="room">
       <Masthead status={status} />
       {error && <div className="error">{error}</div>}
+      <Agenda />
+      <MatrixGrid />
       <div className="grid">
-        <Board />
-        <Signal />
         <Handoffs />
-        <Agents />
-        <Ledger />
       </div>
+      <details className="drawer">
+        <summary>When something breaks — projects, agents, signal, ledger</summary>
+        <div className="grid">
+          <Board />
+          <Signal />
+          <Agents />
+          <Ledger />
+        </div>
+      </details>
       <div className="foot">
-        <span>read only · loopback only · every number from ~/.pal</span>
+        <span>loopback only · every number from ~/.pal · no model runs on this page</span>
         <span>{status ? `up since ${status.startedAt}` : ""}</span>
       </div>
     </div>

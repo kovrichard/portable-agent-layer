@@ -23,6 +23,8 @@ export interface HandoffEntry {
   handoff: string;
   artifacts: string[];
   source: "deliberate" | "auto";
+  /** What the work needs from the human before it can move — the one thing an agent cannot unblock. */
+  waitingOn?: string;
 }
 
 function handoffPath(): string {
@@ -47,23 +49,31 @@ function writeHandoffs(handoffs: Record<string, HandoffEntry>): number {
   return Object.keys(trimmed).length;
 }
 
-function writeHandoffNote(
-  cwd: string,
-  title: string,
-  text: string,
-  done: boolean
-): { file: string; status: HandoffEntry["status"]; kept: number } {
+interface NoteInput {
+  cwd: string;
+  title: string;
+  text: string;
+  done: boolean;
+  waitingOn?: string;
+}
+
+function writeHandoffNote(note: NoteInput): {
+  file: string;
+  status: HandoffEntry["status"];
+  kept: number;
+} {
   const handoffs = readHandoffs();
-  handoffs[cwd] = {
+  handoffs[note.cwd] = {
     timestamp: new Date().toISOString(),
-    title,
-    status: done ? "completed" : "in-progress",
-    handoff: text,
+    title: note.title,
+    status: note.done ? "completed" : "in-progress",
+    handoff: note.text,
     artifacts: [],
     source: "deliberate",
+    ...(note.waitingOn ? { waitingOn: note.waitingOn } : {}),
   };
   const kept = writeHandoffs(handoffs);
-  return { file: handoffPath(), status: handoffs[cwd].status, kept };
+  return { file: handoffPath(), status: handoffs[note.cwd].status, kept };
 }
 
 function run() {
@@ -72,6 +82,7 @@ function run() {
     options: {
       title: { type: "string" },
       text: { type: "string" },
+      waiting: { type: "string" },
       done: { type: "boolean" },
       help: { type: "boolean", short: "h" },
     },
@@ -88,6 +99,7 @@ Usage:
 Arguments:
   --title   Brief title of what was being worked on (5-10 words)
   --text    What remains unfinished — decisions made, next steps, blockers
+  --waiting What this needs from you before it can move (a decision, an answer, access)
   --done    Mark as completed; suppresses "pick up where you left off" injection
 
 Output: writes to memory/state/last-handoff.json keyed by cwd
@@ -96,12 +108,12 @@ Output: writes to memory/state/last-handoff.json keyed by cwd
   }
 
   if (values.done) {
-    const result = writeHandoffNote(
-      process.cwd(),
-      values.title || "session",
-      values.text || "",
-      true
-    );
+    const result = writeHandoffNote({
+      cwd: process.cwd(),
+      title: values.title || "session",
+      text: values.text || "",
+      done: true,
+    });
     emit.receipt(result.file, { status: result.status, entries: result.kept });
     process.exit(0);
   }
@@ -111,7 +123,13 @@ Output: writes to memory/state/last-handoff.json keyed by cwd
     process.exit(1);
   }
 
-  const result = writeHandoffNote(process.cwd(), values.title, values.text, false);
+  const result = writeHandoffNote({
+    cwd: process.cwd(),
+    title: values.title,
+    text: values.text,
+    done: false,
+    waitingOn: values.waiting,
+  });
   emit.receipt(result.file, { status: result.status, entries: result.kept });
 }
 

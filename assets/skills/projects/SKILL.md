@@ -38,7 +38,8 @@ Output is JSON.
 | Command | Purpose |
 |---------|---------|
 | `list` | All registered projects with status, path, updated, stale flag, and counts |
-| `create [name] [--path PATH] [--objectives "a;b;c"]` | Register a project. Defaults: name=basename(cwd), path=cwd. Slug must be `[a-z0-9_-]+` |
+| `create [name] [--path PATH] [--objectives "a;b;c"] [--serves KIND] [--serves-note "..."]` | Register a project. Defaults: name=basename(cwd), path=cwd. Slug must be `[a-z0-9_-]+`. KIND is `goal`, `revenue` or `fun` |
+| `serves <name> <goal\|revenue\|fun> [note]` | Set what the project is for, after the fact |
 | `resume <name>` | Print the full project ISA — all frontmatter and body sections |
 | `add-next <name> "text"` | Append a next step (array, instantly appendable) |
 | `add-blocker <name> "text"` | Append a blocker (array, instantly appendable) |
@@ -94,6 +95,7 @@ When SessionStart context flags the current cwd as unregistered (e.g. `💡 cwd 
 - **Default name** = the FULL last path segment of cwd, lowercased. For `/repos/portable-agent-layer` → `portable-agent-layer`. Never split on `-`.
 - **Confirm before creating.** Never auto-create without explicit user approval ("yes", "do it", "register").
 - **Capture context in conversation.** If the user accepts but doesn't volunteer a goal, ask one short question, or infer from the last few messages and confirm.
+- **Ask what it serves.** One question, at registration: is this moving a stated goal forward, a way the work could pay, or kept for its own sake? Pass the answer as `--serves goal|revenue|fun` with a six-word `--serves-note`. It is the only thing that ranks the project against the others, and PAL will guess it later if you skip it — a guess the user then has to correct.
 
 ### When NOT to suggest registration
 
@@ -120,7 +122,14 @@ User: "store under <project> that a reference implementation exists in this repo
 ```
 User: "track this project"
 → Default name from cwd basename, confirm with user
-→ bun ~/.pal/tools/project.ts create --path "$(pwd)" --objectives "first objective; second objective"
+→ Ask what it serves: a goal, a way it could pay, or fun
+→ bun ~/.pal/tools/project.ts create --path "$(pwd)" --objectives "first objective; second objective" --serves revenue --serves-note "could be sold as a service"
+```
+
+**Correcting what a project is for**
+```
+User: "<project> isn't a toy, it's the thing I'd actually sell"
+→ bun ~/.pal/tools/project.ts serves <slug> revenue "the one I would sell"
 ```
 
 **Logging a decision**

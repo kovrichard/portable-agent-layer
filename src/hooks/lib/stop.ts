@@ -50,6 +50,7 @@ export async function runStopHandlers(
   // inference and write results to disk; they don't block this hook.
   await detachSessionIntelligence(transcript, options.sessionId);
   await detachFailurePrinciple(transcript);
+  detachAgenda(options.sessionId);
   // Failure auto-graduation is intentionally NOT wired here: every pattern it
   // ever promoted was a frustration log, not a principle. Wisdom frames are
   // populated by Claude in-conversation (see wisdom.ts header). The handler
@@ -159,6 +160,19 @@ async function writeTranscriptTmp(transcript: string): Promise<string> {
   const file = resolve(dir, "transcript.txt");
   await writeFile(file, transcript, "utf-8");
   return file;
+}
+
+/**
+ * The agenda reads files, not the transcript, so it needs no tmp copy — but it
+ * calls a model, so it detaches like the others. It no-ops on a fresh agenda.
+ */
+function detachAgenda(sessionId?: string): void {
+  try {
+    const scriptPath = resolve(assets.hooks(), "handlers", "agenda.ts");
+    spawnDetachedInference(scriptPath, ["--run", sessionId ?? ""], "agenda");
+  } catch (err) {
+    logError("detachAgenda", err);
+  }
 }
 
 /** Spawn a detached child to run session-intelligence on a tmp copy of the transcript. */

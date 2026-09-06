@@ -7,6 +7,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import { loadReflectNudge } from "../../hooks/handlers/reflect-trigger";
+import { type AgendaMove, readAgenda } from "../../hooks/lib/agenda-store";
 import {
   isMaintainerEnv,
   loadAlgorithmReviewNudge,
@@ -49,6 +50,13 @@ export interface HandoffCard {
   at: string;
   ageDays: number;
   source: HandoffEntry["source"];
+}
+
+export interface AgendaView {
+  generatedAt: string | null;
+  ageHours: number | null;
+  stale: boolean;
+  moves: AgendaMove[];
 }
 
 export interface DueBadge {
@@ -112,7 +120,7 @@ function sessionsSince(path: string | null, since: Date): number {
   return readProjectHistory(path, 200).filter((h) => h.date >= floor).length;
 }
 
-function freshHandoffs(now: Date): [string, HandoffEntry][] {
+export function freshHandoffs(now: Date): [string, HandoffEntry][] {
   return Object.entries(readHandoffs()).filter(
     ([, h]) =>
       h.status === "in-progress" &&
@@ -209,6 +217,22 @@ export function handoffs(now: Date = new Date()): HandoffCard[] {
       source: h.source,
     }))
     .sort((a, b) => b.at.localeCompare(a.at));
+}
+
+/**
+ * The page never writes the agenda — it says how old the one on disk is, so a
+ * morning reading yesterday's three moves knows that is what it is looking at.
+ */
+export function agenda(now: Date = new Date()): AgendaView {
+  const stored = readAgenda();
+  if (!stored) return { generatedAt: null, ageHours: null, stale: true, moves: [] };
+  const ageHours = (now.getTime() - new Date(stored.generatedAt).getTime()) / 3_600_000;
+  return {
+    generatedAt: stored.generatedAt,
+    ageHours: Math.max(0, Math.round(ageHours)),
+    stale: !(ageHours < 24),
+    moves: stored.moves,
+  };
 }
 
 /** The nudge text is the verdict; the badge only strips its heading and emoji. */

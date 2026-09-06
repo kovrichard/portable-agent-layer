@@ -580,6 +580,247 @@ input:focus {
   color: var(--bad);
 }
 
+/* ── Today ── */
+
+.agenda {
+  margin-bottom: 30px;
+}
+
+.agenda header,
+.matrix header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.agenda > header h2,
+.matrix > header h2 {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+}
+
+.agenda-age {
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.agenda-age.stale {
+  color: var(--amber);
+}
+
+.agenda-empty {
+  margin: 0;
+  color: var(--muted);
+  border-left: 2px solid var(--line-strong);
+  padding-left: 14px;
+}
+
+.moves {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.moves li {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0 12px;
+  padding: 14px 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+
+.moves li:first-child {
+  border-left: 2px solid var(--amber);
+}
+
+.moves .rank {
+  font-family: var(--serif);
+  font-size: 24px;
+  color: var(--muted);
+}
+
+.moves .move {
+  font-family: var(--serif);
+  font-size: 19px;
+  line-height: 1.35;
+}
+
+.moves .because {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+/* ── The grid ── */
+
+.matrix {
+  margin-bottom: 30px;
+}
+
+.quadrants {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.quadrant {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  padding: 14px 16px 16px;
+  min-height: 130px;
+}
+
+.quadrant.q-now {
+  border-top: 2px solid var(--amber);
+  background: var(--panel-raised);
+}
+
+.quadrant.q-plan {
+  border-top: 2px solid var(--good);
+}
+
+.quadrant.q-noise {
+  border-top: 2px solid var(--wait);
+}
+
+.q-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.q-head h3 {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 16px;
+}
+
+.q-head span {
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.quadrant ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.m-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.m-label {
+  font-size: 13px;
+}
+
+.m-item.goal .m-label {
+  font-family: var(--serif);
+  font-size: 15px;
+  color: var(--amber);
+}
+
+.m-detail {
+  color: var(--ink-soft);
+  margin-top: 3px;
+}
+
+.waiting {
+  color: var(--wait);
+  margin-top: 3px;
+}
+
+.m-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.m-reasons span {
+  font-size: 10px;
+  padding: 1px 7px;
+  border: 1px solid var(--line-strong);
+  color: var(--muted);
+}
+
+.m-reasons .why-urgent {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+select.serves {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--line-strong);
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 1px 4px;
+}
+
+select.serves.mine {
+  color: var(--ink);
+  border-color: var(--ink-soft);
+}
+
+/* ── The drawer ── */
+
+.drawer {
+  border-top: 1px solid var(--line-strong);
+  padding-top: 16px;
+}
+
+.drawer > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  list-style: none;
+}
+
+.drawer > summary::before {
+  content: "▸ ";
+}
+
+.drawer[open] > summary::before {
+  content: "▾ ";
+}
+
+.drawer > summary:hover {
+  color: var(--ink);
+}
+
+.drawer .grid {
+  margin-top: 18px;
+}
+
 .foot {
   margin-top: 28px;
   color: var(--muted);
@@ -600,6 +841,10 @@ input:focus {
 @media (max-width: 1100px) {
   .panel {
     grid-column: span 12;
+  }
+
+  .quadrants {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .project {
