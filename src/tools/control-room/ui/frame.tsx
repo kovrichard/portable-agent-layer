@@ -93,6 +93,46 @@ export function Seg<T extends string>({
   );
 }
 
+/**
+ * A screen whose frame stays put: the title and whatever toolbar it carries
+ * hold their place, and only `children` scrolls. Children are handed a region
+ * that is already the right height, so a table inside it scrolls its own rows
+ * rather than the window.
+ */
+export function Screen({
+  title,
+  aside,
+  toolbar,
+  children,
+}: {
+  title: string;
+  aside?: ReactNode;
+  toolbar?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+        <h1 className="m-0 text-[34px]">{title}</h1>
+        {aside}
+      </div>
+      {toolbar}
+      <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+    </div>
+  );
+}
+
+/** The scroll region itself — one per screen, and the only thing that moves. */
+export function Scroller({
+  className,
+  children,
+}: {
+  className?: string;
+  children: ReactNode;
+}) {
+  return <div className={cn("min-h-0 flex-1 overflow-auto", className)}>{children}</div>;
+}
+
 export function Pending({ value }: { value: Loaded<unknown> }) {
   if (value.state === "loading")
     return <div className="py-2 text-[12px] text-neutral-500">reading…</div>;

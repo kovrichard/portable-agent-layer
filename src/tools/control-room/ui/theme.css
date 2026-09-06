@@ -57,7 +57,11 @@
   --shadow-md: 0 3px 10px color-mix(in srgb, #2b2b2d 16%, transparent);
   --shadow-lg: 0 12px 32px color-mix(in srgb, #2b2b2d 22%, transparent);
 
-  --registration-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9'%3E%3Cpath d='M4.5 0v9M0 4.5h9' stroke='%235980a6' stroke-width='1'/%3E%3C/svg%3E");
+  /* Industry draws an 11px crosshair in 55% ink whose centre sits on the
+     border line — .corner is 11px at top/left -6px over a 1px border. */
+  --registration-size: 11px;
+  --registration-inset: -6px;
+  --registration-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11'%3E%3Cpath d='M5.5 0v11M0 5.5h11' stroke='%231d1f20' stroke-opacity='.55' stroke-width='1'/%3E%3C/svg%3E");
 }
 
 @layer base {
@@ -104,12 +108,12 @@
   &::after {
     content: "";
     position: absolute;
-    inset: calc(var(--spacing) * -1);
+    inset: var(--registration-inset);
     pointer-events: none;
     background-image: var(--registration-mark), var(--registration-mark),
       var(--registration-mark), var(--registration-mark);
     background-repeat: no-repeat;
-    background-size: 9px 9px;
+    background-size: var(--registration-size) var(--registration-size);
     background-position: left top, right top, left bottom, right bottom;
   }
 }

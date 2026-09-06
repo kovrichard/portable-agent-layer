@@ -2,11 +2,19 @@ import type { ReactNode } from "react";
 import type { LedgerView, LedgerViewRow, PageOutcome } from "../../../ledger/view";
 import { PAGE_OUTCOMES } from "../../../ledger/view";
 import { clock } from "../format";
-import { Empty, Pending, Tag } from "../frame";
+import { Empty, Pending, Scroller, Tag } from "../frame";
 import { useLoaded } from "../lib/api";
 import { cn } from "../lib/cn";
 
 const MAX_ROWS = 200;
+
+const COLUMNS = ["when", "actor", "action", "target", "change", "outcome"] as const;
+
+/** Sticky through the scroller, so the border has to be drawn rather than collapsed. */
+const HEAD_CELL =
+  "eyebrow sticky top-0 z-10 bg-bg px-3 py-2 shadow-[0_1px_0_var(--color-divider)]";
+
+const CELL = "border-b border-divider/60 px-3 py-2 align-top";
 
 export interface LogFilter {
   project: string;
@@ -64,20 +72,20 @@ function Stats({ view }: { view: LedgerView }) {
 
 function Row({ r }: { r: LedgerViewRow }) {
   return (
-    <tr className="border-b border-divider/60 last:border-b-0">
-      <td className="px-3 py-2 whitespace-nowrap text-neutral-700">{clock(r.ts)}</td>
-      <td className="px-3 py-2">
+    <tr className="hover:bg-neutral-200/50">
+      <td className={cn(CELL, "whitespace-nowrap text-neutral-700")}>{clock(r.ts)}</td>
+      <td className={CELL}>
         {r.actor}
         <span className="block text-[11px] text-neutral-600">
           {r.authority} · {r.runtime}
         </span>
       </td>
-      <td className="px-3 py-2 font-mono text-[11.5px]">{r.tool}</td>
-      <td className="px-3 py-2" title={r.target}>
+      <td className={cn(CELL, "font-mono text-[11.5px]")}>{r.tool}</td>
+      <td className={CELL} title={r.target}>
         {r.target}
       </td>
-      <td className="px-3 py-2 whitespace-nowrap text-neutral-700">{r.change}</td>
-      <td className="px-3 py-2">
+      <td className={cn(CELL, "whitespace-nowrap text-neutral-700")}>{r.change}</td>
+      <td className={CELL}>
         <Tag tone={outcomeTone(r.outcome)}>{r.outcome}</Tag>
         {r.reason && (
           <span className="block max-w-[220px] text-[11px] text-neutral-700">
@@ -100,7 +108,7 @@ export function Log({
   const view = useLoaded<LedgerView>(ledgerQuery(filter));
 
   return (
-    <section>
+    <section className="flex min-h-0 flex-1 flex-col">
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <Field label="project">
           <select
@@ -149,34 +157,35 @@ export function Log({
       {view.state === "ready" && (
         <>
           <Stats view={view.data} />
-          <div className="blueprint overflow-x-auto bg-bg">
+          <div className="blueprint flex min-h-0 flex-1 flex-col bg-bg">
             {view.data.rows.length === 0 ? (
               <Empty>No actions in this window.</Empty>
             ) : (
-              <table className="w-full min-w-[880px] border-collapse text-[12.5px]">
-                <thead>
-                  <tr className="border-b border-divider text-left">
-                    <th className="eyebrow px-3 py-2">when</th>
-                    <th className="eyebrow px-3 py-2">actor</th>
-                    <th className="eyebrow px-3 py-2">action</th>
-                    <th className="eyebrow px-3 py-2">target</th>
-                    <th className="eyebrow px-3 py-2">change</th>
-                    <th className="eyebrow px-3 py-2">outcome</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {view.data.rows.slice(0, MAX_ROWS).map((r) => (
-                    <Row key={r.id} r={r} />
-                  ))}
-                </tbody>
-              </table>
+              <Scroller>
+                <table className="w-full min-w-[880px] border-separate border-spacing-0 text-[12.5px]">
+                  <thead>
+                    <tr className="text-left">
+                      {COLUMNS.map((column) => (
+                        <th key={column} className={HEAD_CELL}>
+                          {column}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {view.data.rows.slice(0, MAX_ROWS).map((r) => (
+                      <Row key={r.id} r={r} />
+                    ))}
+                  </tbody>
+                </table>
+              </Scroller>
             )}
           </div>
           {view.data.rows.length > MAX_ROWS && (
-            <Empty>
+            <p className="pt-2 text-[12px] text-neutral-500">
               Newest {MAX_ROWS} of {view.data.rows.length}. Narrow the window for the
               rest.
-            </Empty>
+            </p>
           )}
         </>
       )}

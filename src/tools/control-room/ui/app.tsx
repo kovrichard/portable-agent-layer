@@ -10,7 +10,7 @@ import {
   useSearchParams,
 } from "react-router";
 import type { ServerStatus } from "../server";
-import { Seg } from "./frame";
+import { Screen, Scroller, Seg } from "./frame";
 import { useLoaded } from "./lib/api";
 import { cn } from "./lib/cn";
 import { Log, type LogFilter } from "./screens/log";
@@ -24,6 +24,13 @@ import {
 import { isLayout, LAYOUTS, type Layout, Today } from "./screens/today";
 
 const LAYOUT_KEY = "pal.control-room.layout";
+
+/**
+ * A blueprint's registration marks are drawn 6px outside its border, so a scroll
+ * box whose children are blueprints would count them as overflow. The negative
+ * margin borrows that room back from the page gutter, leaving content aligned.
+ */
+const MARK_ROOM = "-m-2 p-2";
 
 function rememberedLayout(): Layout {
   try {
@@ -45,7 +52,7 @@ function TodayRoute() {
   const asked = params.get("layout");
   const layout = isLayout(asked) ? asked : rememberedLayout();
   return (
-    <>
+    <div className="flex min-h-0 flex-1 flex-col">
       <div className="mb-4 flex justify-end">
         <Seg
           label="layout"
@@ -57,8 +64,10 @@ function TodayRoute() {
           }}
         />
       </div>
-      <Today layout={layout} />
-    </>
+      <Scroller className={MARK_ROOM}>
+        <Today layout={layout} />
+      </Scroller>
+    </div>
   );
 }
 
@@ -67,24 +76,29 @@ function ProjectsRoute() {
   const asked = params.get("status");
   const filter: StatusFilter = isStatusFilter(asked) ? asked : "ranked";
   return (
-    <>
-      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="m-0 text-[34px]">Projects</h1>
+    <Screen
+      title="Projects"
+      aside={
         <Seg
           label="status"
           options={STATUS_FILTERS}
           value={filter}
           onPick={(next) => setParams({ status: next })}
         />
-      </div>
+      }
+    >
       <Projects filter={filter} />
-    </>
+    </Screen>
   );
 }
 
 function ProjectDetailRoute() {
   const { slug } = useParams();
-  return <ProjectDetail slug={slug ?? ""} />;
+  return (
+    <Scroller className={MARK_ROOM}>
+      <ProjectDetail slug={slug ?? ""} />
+    </Scroller>
+  );
 }
 
 function LogRoute() {
@@ -99,15 +113,16 @@ function LogRoute() {
     setParams(Object.fromEntries(Object.entries(merged).filter(([, v]) => v)));
   };
   return (
-    <>
-      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="m-0 text-[34px]">Action log</h1>
+    <Screen
+      title="Action log"
+      aside={
         <span className="text-[12px] text-neutral-700">
           every tool call this install recorded
         </span>
-      </div>
+      }
+    >
       <Log filter={filter} onFilter={update} />
-    </>
+    </Screen>
   );
 }
 
@@ -119,7 +134,7 @@ const TABS = [
 
 function Header({ status }: { status: ServerStatus | null }) {
   return (
-    <header className="sticky top-0 z-10 flex flex-wrap items-center gap-5 border-b border-divider bg-bg px-7 py-2.5">
+    <header className="flex flex-wrap items-center gap-5 border-b border-divider bg-bg px-7 py-2.5">
       <div className="flex min-w-[120px] items-baseline gap-2">
         <span className="font-heading text-[22px] font-semibold tracking-wide">PAL</span>
         <span className="eyebrow">control</span>
@@ -159,9 +174,9 @@ function App() {
   const status = useLoaded<ServerStatus>("/api/status");
   return (
     <BrowserRouter>
-      <div className="flex min-h-screen flex-col">
+      <div className="flex h-screen flex-col overflow-hidden">
         <Header status={status.state === "ready" ? status.data : null} />
-        <main className="mx-auto w-full max-w-[1480px] flex-1 px-7 pt-6 pb-10">
+        <main className="mx-auto flex w-full max-w-[1480px] min-h-0 flex-1 flex-col px-7 pt-6 pb-6">
           <Routes>
             <Route path="/" element={<TodayRoute />} />
             <Route path="/projects" element={<ProjectsRoute />} />

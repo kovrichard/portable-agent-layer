@@ -78,7 +78,7 @@ function Quadrant({
       className={cn(
         "blueprint flex flex-col gap-2 p-4",
         lit ? "bg-accent-100" : "bg-transparent",
-        compact ? "min-h-[120px]" : "min-h-[280px]"
+        compact ? "min-h-[120px]" : "min-h-[160px]"
       )}
     >
       <div className="flex items-baseline justify-between gap-2">
@@ -187,7 +187,7 @@ function MatrixLayout({
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-[18px_1fr_1fr] grid-rows-[auto_1fr_1fr]">
+        <div className="grid grid-cols-[18px_minmax(0,1fr)_minmax(0,1fr)]">
           <div />
           <div className="eyebrow pb-1.5 pl-3">urgent</div>
           <div className="eyebrow pb-1.5 pl-3">not urgent</div>

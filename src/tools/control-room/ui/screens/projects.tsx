@@ -2,8 +2,9 @@ import { Link } from "react-router";
 import type { AgentsView, ProjectCard } from "../../data";
 import type { Matrix, MatrixItem } from "../../matrix";
 import { age } from "../format";
-import { Empty, Pending, Tag } from "../frame";
+import { Empty, Pending, Scroller, Tag } from "../frame";
 import { useLoaded } from "../lib/api";
+import { cn } from "../lib/cn";
 
 export const STATUS_FILTERS = [
   { value: "ranked", label: "active + paused" },
@@ -19,6 +20,23 @@ export function isStatusFilter(value: string | null): value is StatusFilter {
 }
 
 const RANKED = new Set(["active", "paused"]);
+
+const COLUMNS = [
+  { label: "Project", numeric: false },
+  { label: "Status", numeric: false },
+  { label: "Serves", numeric: false },
+  { label: "Open ISCs", numeric: true },
+  { label: "Sessions / 30d", numeric: true },
+  { label: "Agents", numeric: false },
+  { label: "Here", numeric: false },
+  { label: "Touched", numeric: true },
+] as const;
+
+/** Sticky through the scroller, so the border has to be drawn rather than collapsed. */
+const HEAD_CELL =
+  "eyebrow sticky top-0 z-10 bg-bg px-3 py-2 shadow-[0_1px_0_var(--color-divider)]";
+
+const CELL = "border-b border-divider/60 px-3 py-2 align-top";
 
 function keep(card: ProjectCard, filter: StatusFilter): boolean {
   if (filter === "all") return true;
@@ -41,8 +59,8 @@ function Row({
   runtimes: string[];
 }) {
   return (
-    <tr className="border-b border-divider/60 last:border-b-0 hover:bg-neutral-200/50">
-      <td className="px-3 py-2">
+    <tr className="hover:bg-neutral-200/50">
+      <td className={CELL}>
         <Link
           to={`/projects/${card.slug}`}
           className="font-heading text-[15px] font-semibold text-ink hover:text-accent"
@@ -53,20 +71,25 @@ function Row({
           <span className="block text-[11.5px] text-neutral-700">{card.next[0]}</span>
         )}
       </td>
-      <td className="px-3 py-2">
+      <td className={CELL}>
         <Tag tone="neutral">{card.status}</Tag>
       </td>
-      <td className="px-3 py-2 text-[12px]">
+      <td className={cn(CELL, "text-[12px]")}>
         {item?.serves ?? "unranked"}
         {item?.servesBy && (
           <span className="ml-1 text-[10.5px] text-neutral-600">· {item.servesBy}</span>
         )}
       </td>
-      <td className="font-heading px-3 py-2 text-right text-[16px] font-semibold tabular-nums">
+      <td
+        className={cn(
+          CELL,
+          "font-heading text-right text-[16px] font-semibold tabular-nums"
+        )}
+      >
         {card.openIscs}
       </td>
-      <td className="px-3 py-2 text-right tabular-nums">{card.sessions30d}</td>
-      <td className="px-3 py-2">
+      <td className={cn(CELL, "text-right tabular-nums")}>{card.sessions30d}</td>
+      <td className={CELL}>
         <span className="flex flex-wrap gap-1">
           {runtimes.map((runtime) => (
             <Tag key={runtime} tone="outline">
@@ -75,10 +98,12 @@ function Row({
           ))}
         </span>
       </td>
-      <td className="px-3 py-2 text-[12px] text-neutral-700">
+      <td className={cn(CELL, "text-[12px] text-neutral-700")}>
         {card.path ?? "not checked out here"}
       </td>
-      <td className="px-3 py-2 text-right text-[12px] whitespace-nowrap text-neutral-700">
+      <td
+        className={cn(CELL, "text-right text-[12px] whitespace-nowrap text-neutral-700")}
+      >
         {age(card.ageDays)}
       </td>
     </tr>
@@ -99,34 +124,36 @@ export function Projects({ filter }: { filter: StatusFilter }) {
 
   const rows = board.data.filter((card) => keep(card, filter));
   return (
-    <div className="blueprint overflow-x-auto bg-bg">
+    <div className="blueprint flex min-h-0 flex-1 flex-col bg-bg">
       {rows.length === 0 ? (
         <Empty>No project matches this filter.</Empty>
       ) : (
-        <table className="w-full min-w-[880px] border-collapse text-[13px]">
-          <thead>
-            <tr className="border-b border-divider text-left">
-              <th className="eyebrow px-3 py-2">Project</th>
-              <th className="eyebrow px-3 py-2">Status</th>
-              <th className="eyebrow px-3 py-2">Serves</th>
-              <th className="eyebrow px-3 py-2 text-right">Open ISCs</th>
-              <th className="eyebrow px-3 py-2 text-right">Sessions / 30d</th>
-              <th className="eyebrow px-3 py-2">Agents</th>
-              <th className="eyebrow px-3 py-2">Here</th>
-              <th className="eyebrow px-3 py-2 text-right">Touched</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((card) => (
-              <Row
-                key={card.slug}
-                card={card}
-                item={serves.get(card.slug)}
-                runtimes={runtimesFor(card.slug)}
-              />
-            ))}
-          </tbody>
-        </table>
+        <Scroller>
+          <table className="w-full min-w-[880px] border-separate border-spacing-0 text-[13px]">
+            <thead>
+              <tr className="text-left">
+                {COLUMNS.map((column) => (
+                  <th
+                    key={column.label}
+                    className={cn(HEAD_CELL, column.numeric && "text-right")}
+                  >
+                    {column.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((card) => (
+                <Row
+                  key={card.slug}
+                  card={card}
+                  item={serves.get(card.slug)}
+                  runtimes={runtimesFor(card.slug)}
+                />
+              ))}
+            </tbody>
+          </table>
+        </Scroller>
       )}
     </div>
   );
