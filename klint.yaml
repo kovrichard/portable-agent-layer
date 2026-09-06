@@ -76,8 +76,15 @@ arch:
       in: ["src/hooks/lib/**"]
       message: "process.exit() called inside a library module — library functions should return or throw, not terminate the process."
 
+    # RtkWrap's run() is the spawn seam itself — it forwards stdin to `rtk hook`
+    # and its stdout back, and what is left after removing the spawn is nothing a
+    # test would assert. Extracting it would move the seam, not shrink it.
     - pattern: 're:^(?:async )?function '
-      in: ["src/hooks/*.ts", "!src/hooks/handlers/**", "!src/hooks/lib/**"]
+      in:
+        - "src/hooks/*.ts"
+        - "!src/hooks/handlers/**"
+        - "!src/hooks/lib/**"
+        - "!src/hooks/RtkWrap.ts"
       message: "Unexported function in a hook entrypoint — nothing can import it, so nothing can test it. Move it to src/hooks/lib/."
       severity: warn
 
