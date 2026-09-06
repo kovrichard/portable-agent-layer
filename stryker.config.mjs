@@ -65,12 +65,14 @@ export default {
     "!src/tools/agent/algorithm-reflect.ts",
     "!src/tools/agent/thread.ts",
     "!src/tools/skill-doctor.ts",
-    // Ratchet — every entry below measured >=90% no-coverage on 2026-08-18, meaning
-    // the in-process suite cannot reach it and its mutants only depress the score.
-    // Delete an entry the same commit that gives the module in-process tests, then
-    // re-measure and raise thresholds.break. Entries come off this list; they never
-    // go back on, and break never moves down without a reason recorded here.
+    // Not glue: ~25 spawned subcommands that read a project, transform it, write
+    // it back and print. The transforms they call are in src/tools/lib/project-isc.ts,
+    // which is measured; what stays here is the read/write/print around them.
     "!src/tools/agent/project.ts",
+    // The ratchet that stood here is empty as of 2026-09-06 (ISC-21): every module
+    // that measured >=90% no-coverage on 2026-08-18 has since been given in-process
+    // tests. Nothing goes back on it — a module that cannot be reached in-process
+    // gets a library extracted from it instead.
   ],
   concurrency: Number(process.env.STRYKER_CONCURRENCY ?? 4),
   bun: {

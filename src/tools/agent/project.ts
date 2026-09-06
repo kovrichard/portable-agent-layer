@@ -40,6 +40,18 @@ import {
   writeProject,
 } from "../../hooks/lib/projects";
 import { isServesKind, SERVES_KINDS, setServes } from "../../hooks/lib/serves";
+import {
+  archiveLine,
+  dropEmptyArchiveHeadings,
+  encodeIscText,
+  ISC_BOX,
+  iscTitle,
+  nextIscId,
+  parseIscs,
+  removeIscLine,
+  selectIscs,
+  taskSlug,
+} from "../lib/project-isc";
 
 function now(): string {
   return new Date().toISOString();
@@ -400,130 +412,13 @@ function cmdRm(args: string[]): void {
 // Three states, not two: a retired ISC is one that stopped being valid, which the
 // record must not report as completed work. The box character is the storage form
 // and the id stays in it, so a retired line keeps reserving its id in nextIscId.
-type IscStatus = "open" | "done" | "retired";
-
-const ISC_BOX: Record<IscStatus, string> = {
-  open: "[ ]",
-  done: "[x]",
-  retired: "[~]",
-};
-
-function statusFromBox(box: string): IscStatus {
-  if (box.toLowerCase() === "x") return "done";
-  if (box === "~") return "retired";
-  return "open";
-}
-
-export interface Isc {
-  id: number;
-  text: string;
-  status: IscStatus;
-}
-
-/**
- * An ISC is one markdown line, so a newline in its text would end the record
- * and strand every paragraph after it as unparseable debris. Backslashes are
- * escaped first so that decoding a literal "\n" in a regex cannot be mistaken
- * for the separator.
- */
-function encodeIscText(text: string): string {
-  return text
-    .replaceAll("\\", "\\\\")
-    .replaceAll("\r\n", "\n")
-    .replaceAll("\r", "\n")
-    .replaceAll("\n", "\\n");
-}
-
-const ISC_UNESCAPE: Record<string, string> = { n: "\n", "\\": "\\" };
-
-function decodeIscText(stored: string): string {
-  return stored.replaceAll(/\\(.)/g, (whole, ch) => ISC_UNESCAPE[ch] ?? whole);
-}
-
-export function parseIscs(criteria: string): Isc[] {
-  const out: Isc[] = [];
-  for (const line of criteria.split("\n")) {
-    const m = new RegExp(/^-\s+\[( |x|~)\]\s+ISC-(\d+):\s+(.+)$/i).exec(line);
-    if (m)
-      out.push({
-        id: Number(m[2]),
-        text: decodeIscText(m[3].trim()),
-        status: statusFromBox(m[1]),
-      });
-  }
-  return out;
-}
-
-// Collapse a full ISC line to a glanceable title for resume: cut at the first
-// clause boundary, then hard-cap length. Full text stays reachable via show-isc.
-function iscTitle(text: string): string {
-  const boundary = text.search(/; | — | \(|\. /);
-  const clause = (boundary > 0 ? text.slice(0, boundary) : text).trim();
-  return clause.length > 80 ? `${clause.slice(0, 79).trimEnd()}…` : clause;
-}
-
-// Scans Criteria AND Changelog so an archived id can never be handed out again.
-function nextIscId(p: ProjectProgress): number {
-  const ids = [...parseIscs(p.criteria ?? ""), ...parseIscs(p.changelog ?? "")].map(
-    (i) => i.id
-  );
-  return ids.length > 0 ? Math.max(...ids) + 1 : 1;
-}
-
-function removeIscLine(
-  section: string,
-  id: number
-): { line: string | null; rest: string } {
-  const lines = section.split("\n");
-  const idx = lines.findIndex((l) =>
-    new RegExp(String.raw`^-\s+\[[ x~]\]\s+ISC-${id}:`).test(l)
-  );
-  if (idx === -1) return { line: null, rest: section };
-  const [line] = lines.splice(idx, 1);
-  return {
-    line,
-    rest: lines
-      .join("\n")
-      .replace(/\n{3,}/g, "\n\n")
-      .trim(),
-  };
-}
-
-// Drops any "### Archived <date>" heading whose block has no content left —
-// e.g. after every ISC filed under that date has been reopened.
-function dropEmptyArchiveHeadings(changelog: string): string {
-  const lines = changelog.split("\n");
-  const blockHasContent = (headingIdx: number): boolean => {
-    for (let j = headingIdx + 1; j < lines.length && !lines[j].startsWith("### "); j++) {
-      if (lines[j].trim() !== "") return true;
-    }
-    return false;
-  };
-  return lines
-    .filter((l, i) => !(/^### Archived /.test(l) && !blockHasContent(i)))
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
-
-function archiveLine(
-  changelog: string | undefined,
-  doneLine: string,
-  kind: "Archived" | "Retired" = "Archived"
-): string {
-  const heading = `### ${kind} ${new Date().toISOString().slice(0, 10)}`;
-  const base = (changelog ?? "").trim();
-  if (base.includes(heading)) return `${base}\n${doneLine}`;
-  return base ? `${base}\n\n${heading}\n${doneLine}` : `${heading}\n${doneLine}`;
-}
-
 function cmdAddIsc(args: string[]): void {
   const name = args[0] ?? fail("Usage: add-isc <name> <title>");
   const title = args.slice(1).join(" ").trim();
   if (!title) fail("Usage: add-isc <name> <title>");
   const p = requireProject(name);
   const current = p.criteria ?? "";
-  const id = nextIscId(p);
+  const id = nextIscId(current, p.changelog ?? "");
   const newLine = `- [ ] ISC-${id}: ${encodeIscText(title)}`;
   p.criteria = current ? `${current.trimEnd()}\n${newLine}` : newLine;
   p.updated = now();
@@ -582,13 +477,6 @@ function cmdReopenIsc(args: string[]): void {
   p.updated = now();
   writeProject(p);
   ok({ checked: false, id });
-}
-
-function selectIscs(open: Isc[], done: Isc[], retired: Isc[], flags: Set<string>): Isc[] {
-  if (flags.has("--all")) return [...open, ...done, ...retired];
-  if (flags.has("--closed")) return done;
-  if (flags.has("--retired")) return retired;
-  return open;
 }
 
 function cmdListIsc(args: string[]): void {
@@ -720,15 +608,6 @@ function cmdPruneIsc(args: string[]): void {
 }
 
 // ── Task ISA (work/) ──────────────────────────────────────────────
-
-function taskSlug(title: string): string {
-  const sanitized = title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 40);
-  return `${sanitized}-${Date.now().toString(36)}`;
-}
 
 function taskIsaPath(slug: string): string {
   const dir = resolve(paths.work(), slug);
