@@ -6,7 +6,8 @@
  */
 
 import { blockResponse, normalizeToolUse } from "./lib/agent";
-import { logDebug } from "./lib/log";
+import { recordBlocked } from "./lib/ledger";
+import { logDebug, logError } from "./lib/log";
 import { checkBashCommand, checkFilePath } from "./lib/security";
 import { readStdinJSON } from "./lib/stdin";
 
@@ -78,6 +79,19 @@ function writesFile(toolName: string): boolean {
   return FILE_WRITE_TOOLS.includes(toolName.toLowerCase());
 }
 
+/**
+ * The refusal, written down. Its own try/catch and always called after the deny
+ * has gone out: this hook is fail-open, and a ledger that threw on its way to
+ * recording a block would turn the block into an allow.
+ */
+function noteRefusal(tool: string, target: string, reason: string, command?: string) {
+  try {
+    recordBlocked({ tool, target, reason, ...(command ? { command } : {}) });
+  } catch (err) {
+    logError("SecurityValidator:ledger", err);
+  }
+}
+
 try {
   const input = await readStdinJSON<SecurityInput>();
   if (!input) process.exit(0);
@@ -87,6 +101,7 @@ try {
     const reason = checkBashCommand(input.command);
     if (reason) {
       process.stdout.write(blockResponse(`Blocked: ${reason}`));
+      noteRefusal("shell", process.cwd(), reason, input.command);
     }
     process.exit(0);
   }
@@ -111,6 +126,7 @@ try {
     logDebug("SecurityValidator", `bashVerdict=${verdict} command=${command}`);
     if (reason) {
       process.stdout.write(blockResponse(`Blocked: ${reason}`, toolUse.hookEventName));
+      noteRefusal(toolUse.toolName, process.cwd(), reason, command);
       process.exit(0);
     }
   }
@@ -120,6 +136,7 @@ try {
     const reason = checkFilePath(filePath);
     if (reason) {
       process.stdout.write(blockResponse(reason, toolUse.hookEventName));
+      noteRefusal(toolUse.toolName, filePath, reason);
       process.exit(0);
     }
   }
