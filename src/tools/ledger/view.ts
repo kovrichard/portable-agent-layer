@@ -12,6 +12,12 @@ import {
   readActorRegistry,
 } from "../../hooks/lib/actor";
 import type { LedgerEntry } from "../../hooks/lib/ledger";
+import {
+  loadMachine,
+  displayName as machineDisplayName,
+  type RegistryEntry,
+  readRegistry as readMachineRegistry,
+} from "../../hooks/lib/machine";
 import { anchorSlugOf, changedLines, type LedgerFilter, queryLedger } from "./query";
 
 export const PAGE_OUTCOMES = ["applied", "failed", "denied", "blocked"] as const;
@@ -32,6 +38,8 @@ export interface LedgerViewStats {
 export interface LedgerViewRow {
   id: string;
   ts: string;
+  /** Where the record was written. Local-only in the record; the page names it. */
+  machine: string;
   actor: string;
   authority: string;
   runtime: string;
@@ -89,11 +97,17 @@ export function displayTarget(target: string): string {
   return rest ? `${slug} ${rest}` : slug;
 }
 
-function toRow(entry: LedgerEntry, registry: ActorRegistryEntry[]): LedgerViewRow {
+interface Names {
+  actors: ActorRegistryEntry[];
+  machines: RegistryEntry[];
+}
+
+function toRow(entry: LedgerEntry, { actors, machines }: Names): LedgerViewRow {
   const row: LedgerViewRow = {
     id: entry.id,
     ts: entry.ts,
-    actor: actorDisplayName(entry.actor, registry),
+    machine: machineDisplayName(entry.machine, machines),
+    actor: actorDisplayName(entry.actor, actors),
     authority: entry.authority,
     runtime: entry.runtime,
     tool: entry.tool,
@@ -106,18 +120,25 @@ function toRow(entry: LedgerEntry, registry: ActorRegistryEntry[]): LedgerViewRo
   return row;
 }
 
-/** The local actor first: on a fresh install the registry may not list them yet. */
-function knownActors(): ActorRegistryEntry[] {
-  const self = loadActor();
-  return [{ id: self.id, label: self.label }, ...readActorRegistry()];
+/** This install first: on a fresh machine the registries may not list it yet. */
+function knownNames(): Names {
+  const actor = loadActor();
+  const machine = loadMachine();
+  return {
+    actors: [{ id: actor.id, label: actor.label }, ...readActorRegistry()],
+    machines: [
+      { id: machine.id, label: machine.label, os: machine.os },
+      ...readMachineRegistry(),
+    ],
+  };
 }
 
 export function viewRows(entries: LedgerEntry[]): LedgerViewRow[] {
-  const registry = knownActors();
+  const names = knownNames();
   return entries
     .slice()
     .reverse()
-    .map((entry) => toRow(entry, registry));
+    .map((entry) => toRow(entry, names));
 }
 
 export function ledgerView(filter: LedgerFilter = {}): LedgerView {

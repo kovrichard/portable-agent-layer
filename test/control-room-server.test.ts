@@ -67,12 +67,12 @@ function entry(overrides: Record<string, unknown> = {}): Record<string, unknown>
   };
 }
 
-function registerProject(slug: string): void {
+function registerProject(slug: string, body = "## Goal\n\nnone\n"): void {
   const dir = resolve(HOME, "memory", "projects", slug);
   mkdirSync(dir, { recursive: true });
   writeFileSync(
     resolve(dir, "ISA.md"),
-    `---\nname: ${slug}\nstatus: active\ncreated: 2026-09-01T00:00:00.000Z\nupdated: 2026-09-01T00:00:00.000Z\npath: ${HOME}\n---\n\n## Goal\n\nnone\n`,
+    `---\nname: ${slug}\nstatus: active\ncreated: 2026-09-01T00:00:00.000Z\nupdated: 2026-09-01T00:00:00.000Z\npath: ${HOME}\n---\n\n${body}`,
     "utf-8"
   );
 }
@@ -222,6 +222,108 @@ describe("what each route answers", () => {
   test("anything else is a 404", async () => {
     const base = await listen();
     expect((await fetch(`${base}/api/nope`)).status).toBe(404);
+  });
+
+  test("/api/ledger narrows by runtime, machine and authority", async () => {
+    writeLedger([
+      entry({ id: "a", runtime: "claude", machine: "mbp", authority: "user" }),
+      entry({ id: "b", runtime: "codex", machine: "mbp", authority: "agent" }),
+      entry({ id: "c", runtime: "claude", machine: "studio", authority: "agent" }),
+    ]);
+    const base = await listen();
+    const ids = async (query: string) =>
+      (await getJson<LedgerView>(`${base}/api/ledger?${query}`)).rows
+        .map((r) => r.id)
+        .sort();
+
+    expect(await ids("runtime=claude")).toEqual(["a", "c"]);
+    expect(await ids("machine=mbp")).toEqual(["a", "b"]);
+    expect(await ids("authority=agent")).toEqual(["b", "c"]);
+    expect(await ids("runtime=claude&authority=agent")).toEqual(["c"]);
+  });
+
+  test("a value outside a closed set is a 400, not an empty answer", async () => {
+    writeLedger([entry()]);
+    const base = await listen();
+    expect((await fetch(`${base}/api/ledger?outcome=exploded`)).status).toBe(400);
+    expect((await fetch(`${base}/api/ledger?authority=nobody`)).status).toBe(400);
+    expect((await fetch(`${base}/api/ledger?outcome=blocked`)).status).toBe(200);
+  });
+
+  test("a ledger row names the machine that wrote it", async () => {
+    writeLedger([entry({ machine: "machine-a" })]);
+    const base = await listen();
+    const body = await getJson<LedgerView>(`${base}/api/ledger`);
+    expect(body.rows[0].machine).toBeTruthy();
+  });
+
+  test("/api/summary counts one window", async () => {
+    const justNow = new Date().toISOString();
+    writeLedger([
+      entry({ id: "kept", ts: justNow }),
+      entry({ id: "refused", ts: justNow, outcome: "denied" }),
+    ]);
+    const base = await listen();
+    const body = await getJson<{ days: number; actions: number; refusals: number }>(
+      `${base}/api/summary?days=30`
+    );
+    expect(body.actions).toBe(2);
+    expect(body.refusals).toBe(1);
+  });
+
+  test("/api/summary refuses a window it cannot count", async () => {
+    const base = await listen();
+    expect((await fetch(`${base}/api/summary?days=0`)).status).toBe(400);
+    expect((await fetch(`${base}/api/summary?days=half`)).status).toBe(400);
+  });
+});
+
+describe("one project", () => {
+  test("/api/project carries the criteria, decisions and context", async () => {
+    registerProject(
+      "demo",
+      [
+        "## Goal",
+        "",
+        "Ship the thing.",
+        "",
+        "## Criteria",
+        "",
+        "- [ ] ISC-1: still open",
+        "- [x] ISC-2: finished",
+        "",
+        "## Decisions",
+        "",
+        "- 2026-09-04: Paths live in bindings.json (records travel, disks don't)",
+        "",
+        "## Context",
+        "",
+        "- Bun only, no Node",
+        "",
+      ].join("\n")
+    );
+    const base = await listen();
+    const body = await getJson<{
+      slug: string;
+      iscs: { id: number; status: string }[];
+      decisions: { date: string | null; text: string; why: string | null }[];
+      context: string[];
+    }>(`${base}/api/project?slug=demo`);
+
+    expect(body.slug).toBe("demo");
+    expect(body.iscs.map((i) => i.status)).toEqual(["open", "done"]);
+    expect(body.decisions[0]).toEqual({
+      date: "2026-09-04",
+      text: "Paths live in bindings.json",
+      why: "records travel, disks don't",
+    });
+    expect(body.context).toEqual(["Bun only, no Node"]);
+  });
+
+  test("an unknown slug is a 404, and a missing one a 400", async () => {
+    const base = await listen();
+    expect((await fetch(`${base}/api/project?slug=ghost`)).status).toBe(404);
+    expect((await fetch(`${base}/api/project`)).status).toBe(400);
   });
 
   test("a deep link into the page is served the page, not a 404", async () => {

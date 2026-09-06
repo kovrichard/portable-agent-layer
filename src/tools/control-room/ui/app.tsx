@@ -13,7 +13,7 @@ import type { ServerStatus } from "../server";
 import { Screen, Scroller, Seg } from "./frame";
 import { useLoaded } from "./lib/api";
 import { cn } from "./lib/cn";
-import { Log, type LogFilter } from "./screens/log";
+import { LOG_KEYS, Log, type LogFilter } from "./screens/log";
 import { ProjectDetail } from "./screens/project-detail";
 import {
   isStatusFilter,
@@ -103,11 +103,9 @@ function ProjectDetailRoute() {
 
 function LogRoute() {
   const [params, setParams] = useSearchParams();
-  const filter: LogFilter = {
-    project: params.get("project") ?? "",
-    since: params.get("since") ?? "",
-    until: params.get("until") ?? "",
-  };
+  const filter = Object.fromEntries(
+    LOG_KEYS.map((key) => [key, params.get(key) ?? ""])
+  ) as LogFilter;
   const update = (next: Partial<LogFilter>) => {
     const merged = { ...filter, ...next };
     setParams(Object.fromEntries(Object.entries(merged).filter(([, v]) => v)));

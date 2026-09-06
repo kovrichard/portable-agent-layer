@@ -107,6 +107,9 @@ function card(overrides: Partial<ProjectCard>): ProjectCard {
     lastSession: null,
     sessions30d: 0,
     asking: [],
+    serves: null,
+    servesBy: null,
+    runtimes: {},
     ...overrides,
   };
 }

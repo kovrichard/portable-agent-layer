@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, useState } from "react";
 import type { LedgerView, LedgerViewRow, PageOutcome } from "../../../ledger/view";
 import { PAGE_OUTCOMES } from "../../../ledger/view";
 import { Badge } from "../components/badge";
@@ -15,16 +15,49 @@ import {
 } from "../components/table";
 import { clock } from "../format";
 import { Empty, Pending, Scroller } from "../frame";
-import { useLoaded } from "../lib/api";
+import { type Loaded, useLoaded } from "../lib/api";
 
 const MAX_ROWS = 200;
 
-const COLUMNS = ["when", "actor", "action", "target", "change", "outcome"] as const;
+const COLUMNS = [
+  "when",
+  "machine",
+  "actor",
+  "action",
+  "target",
+  "change",
+  "outcome",
+] as const;
 
-export interface LogFilter {
-  project: string;
-  since: string;
-  until: string;
+export const LOG_KEYS = [
+  "project",
+  "runtime",
+  "machine",
+  "authority",
+  "outcome",
+  "since",
+  "until",
+] as const;
+
+export type LogFilter = Record<(typeof LOG_KEYS)[number], string>;
+
+const AUTHORITIES = ["user", "agent"] as const;
+const RUNTIMES = ["claude", "cursor", "codex", "copilot", "opencode", "unknown"] as const;
+
+const EMPTY_FILTER: LogFilter = {
+  project: "",
+  runtime: "",
+  machine: "",
+  authority: "",
+  outcome: "",
+  since: "",
+  until: "",
+};
+
+/** The machines a row could name are whatever the window actually contains. */
+function machinesIn(view: Loaded<LedgerView>): string[] {
+  if (view.state !== "ready") return [];
+  return [...new Set(view.data.rows.map((r) => r.machine))].filter(Boolean).sort();
 }
 
 function ledgerQuery(filter: LogFilter): string {
@@ -79,28 +112,52 @@ function Stats({ view }: { view: LedgerView }) {
   );
 }
 
-function Row({ r }: { r: LedgerViewRow }) {
+/** A refusal carries the command it stopped; an edit carries its line counts. */
+function Row({
+  r,
+  open,
+  onToggle,
+}: {
+  r: LedgerViewRow;
+  open: boolean;
+  onToggle: () => void;
+}) {
   return (
-    <TableRow>
-      <TableCell className="whitespace-nowrap text-neutral-700">{clock(r.ts)}</TableCell>
-      <TableCell>
-        {r.actor}
-        <span className="block text-[11px] text-neutral-600">
-          {r.authority} · {r.runtime}
-        </span>
-      </TableCell>
-      <TableCell className="font-mono text-[11.5px]">{r.tool}</TableCell>
-      <TableCell title={r.target}>{r.target}</TableCell>
-      <TableCell className="whitespace-nowrap text-neutral-700">{r.change}</TableCell>
-      <TableCell>
-        <Badge variant={outcomeVariant(r.outcome)}>{r.outcome}</Badge>
-        {r.reason && (
-          <span className="block max-w-[220px] text-[11px] text-neutral-700">
-            {r.reason}
+    <>
+      <TableRow className="cursor-pointer" onClick={onToggle}>
+        <TableCell className="whitespace-nowrap text-neutral-700">
+          {clock(r.ts)}
+        </TableCell>
+        <TableCell className="whitespace-nowrap">{r.machine}</TableCell>
+        <TableCell>
+          {r.actor}
+          <span className="block text-[11px] text-neutral-600">
+            {r.authority} · {r.runtime}
           </span>
-        )}
-      </TableCell>
-    </TableRow>
+        </TableCell>
+        <TableCell className="font-mono text-[11.5px]">{r.tool}</TableCell>
+        <TableCell title={r.target}>{r.target}</TableCell>
+        <TableCell className="whitespace-nowrap text-neutral-700">{r.change}</TableCell>
+        <TableCell>
+          <Badge variant={outcomeVariant(r.outcome)}>{r.outcome}</Badge>
+          {r.reason && (
+            <span className="block max-w-[220px] text-[11px] text-neutral-700">
+              {r.reason}
+            </span>
+          )}
+        </TableCell>
+      </TableRow>
+      {open && (r.command || r.reason) && (
+        <TableRow>
+          <TableCell colSpan={COLUMNS.length} className="bg-neutral-200">
+            <pre className="m-0 font-mono text-[11.5px] whitespace-pre-wrap">
+              {r.command ? `$ ${r.command}\n` : ""}
+              {r.reason ?? ""}
+            </pre>
+          </TableCell>
+        </TableRow>
+      )}
+    </>
   );
 }
 
@@ -113,28 +170,39 @@ export function Log({
 }) {
   const projects = useLoaded<{ slug: string }[]>("/api/projects");
   const view = useLoaded<LedgerView>(ledgerQuery(filter));
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  const choices = (key: keyof LogFilter, values: readonly string[], all = "all") => (
+    <Field
+      label={key}
+      control={(id) => (
+        <NativeSelect
+          id={id}
+          value={filter[key]}
+          onChange={(e) => onFilter({ [key]: e.target.value })}
+        >
+          <option value="">{all}</option>
+          {values.map((value) => (
+            <option key={value} value={value}>
+              {value}
+            </option>
+          ))}
+        </NativeSelect>
+      )}
+    />
+  );
 
   return (
     <section className="flex min-h-0 flex-1 flex-col">
       <div className="mb-4 flex flex-wrap items-end gap-3">
-        <Field
-          label="project"
-          control={(id) => (
-            <NativeSelect
-              id={id}
-              value={filter.project}
-              onChange={(e) => onFilter({ project: e.target.value })}
-            >
-              <option value="">all</option>
-              {projects.state === "ready" &&
-                projects.data.map((p) => (
-                  <option key={p.slug} value={p.slug}>
-                    {p.slug}
-                  </option>
-                ))}
-            </NativeSelect>
-          )}
-        />
+        {choices(
+          "project",
+          projects.state === "ready" ? projects.data.map((p) => p.slug) : []
+        )}
+        {choices("runtime", RUNTIMES)}
+        {choices("machine", machinesIn(view), "both")}
+        {choices("authority", AUTHORITIES)}
+        {choices("outcome", PAGE_OUTCOMES)}
         <Field
           label="since"
           control={(id) => (
@@ -157,10 +225,7 @@ export function Log({
             />
           )}
         />
-        <Button
-          variant="secondary"
-          onClick={() => onFilter({ project: "", since: "", until: "" })}
-        >
+        <Button variant="secondary" onClick={() => onFilter(EMPTY_FILTER)}>
           reset
         </Button>
       </div>
@@ -184,7 +249,12 @@ export function Log({
                   </TableHeader>
                   <TableBody>
                     {view.data.rows.slice(0, MAX_ROWS).map((r) => (
-                      <Row key={r.id} r={r} />
+                      <Row
+                        key={r.id}
+                        r={r}
+                        open={expanded === r.id}
+                        onToggle={() => setExpanded(expanded === r.id ? null : r.id)}
+                      />
                     ))}
                   </TableBody>
                 </Table>

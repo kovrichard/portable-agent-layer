@@ -14,9 +14,16 @@ import {
 } from "../../hooks/lib/algorithm-review";
 import { loadAnalyzeNudge } from "../../hooks/lib/analyze-nudge";
 import { paths } from "../../hooks/lib/paths";
-import { isStale, type ProjectProgress, readAllProjects } from "../../hooks/lib/projects";
+import {
+  isStale,
+  type ProjectProgress,
+  readAllProjects,
+  type ServesAuthority,
+  type ServesKind,
+} from "../../hooks/lib/projects";
 import { readProjectHistory } from "../../hooks/lib/work-tracking";
 import { anchorSlugOf, type LedgerFilter, queryLedger } from "../ledger/query";
+import { viewStats } from "../ledger/view";
 import { type HandoffEntry, readHandoffs } from "../lib/handoff-note";
 import { parseIscs } from "../lib/project-isc";
 
@@ -38,6 +45,19 @@ export interface ProjectCard {
   lastSession: { date: string; title: string } | null;
   sessions30d: number;
   asking: string[];
+  /** What the project is for, and who decided — the fact importance is ranked from. */
+  serves: ServesKind | null;
+  servesBy: ServesAuthority | null;
+  /** Which agents touched it, and how often, over the same 30 days. */
+  runtimes: Record<string, number>;
+}
+
+export interface SummaryView {
+  since: string;
+  days: number;
+  actions: number;
+  refusals: number;
+  rating: number | null;
 }
 
 export interface HandoffCard {
@@ -142,10 +162,28 @@ export function askingReasons(
   return reasons;
 }
 
+function runtimesBySlug(since: Date): Map<string, Record<string, number>> {
+  const bySlug = Map.groupBy(
+    queryLedger({ since }),
+    (e) => anchorSlugOf(e.target) ?? "unanchored"
+  );
+  return new Map(
+    [...bySlug.entries()].map(([slug, entries]) => [
+      slug,
+      Object.fromEntries(
+        Map.groupBy(entries, (e) => e.runtime)
+          .entries()
+          .map(([runtime, group]) => [runtime, group.length])
+      ),
+    ])
+  );
+}
+
 function toCard(
   p: ProjectProgress,
   handoff: HandoffEntry | undefined,
-  now: Date
+  now: Date,
+  runtimes: Record<string, number>
 ): ProjectCard {
   const path = p.path ?? null;
   const stale = isStale(p);
@@ -167,6 +205,9 @@ function toCard(
       new Date(now.getTime() - SESSION_WINDOW_DAYS * DAY_MS)
     ),
     asking: askingReasons(p, handoff, stale),
+    serves: p.serves ?? null,
+    servesBy: p.serves_by ?? null,
+    runtimes,
   };
 }
 
@@ -178,9 +219,15 @@ export function sortBoard(cards: ProjectCard[]): ProjectCard[] {
 
 export function board(now: Date = new Date()): ProjectCard[] {
   const handoffs = new Map(freshHandoffs(now));
+  const runtimes = runtimesBySlug(new Date(now.getTime() - SESSION_WINDOW_DAYS * DAY_MS));
   return sortBoard(
     readAllProjects().map((p) =>
-      toCard(p, p.path ? handoffs.get(p.path) : undefined, now)
+      toCard(
+        p,
+        p.path ? handoffs.get(p.path) : undefined,
+        now,
+        runtimes.get(p.name) ?? {}
+      )
     )
   );
 }
@@ -293,6 +340,24 @@ export function signal(now: Date = new Date()): SignalView {
       : null,
     series: ratingSeries(),
     due: dueBadges(now),
+  };
+}
+
+/**
+ * The morning tile: how much happened, how much was refused, and how it was
+ * rated — three numbers over one window, so the page asks once instead of
+ * pulling the whole ledger down to count it in the browser.
+ */
+export function summary(days: number, now: Date = new Date()): SummaryView {
+  const since = new Date(now.getTime() - days * DAY_MS);
+  const stats = viewStats(queryLedger({ since }));
+  const ratings = readSynthesis()?.ratings as SignalView["ratings"] | undefined;
+  return {
+    since: since.toISOString(),
+    days,
+    actions: stats.total,
+    refusals: stats.refusals,
+    rating: ratings?.recentAvg ?? null,
   };
 }
 

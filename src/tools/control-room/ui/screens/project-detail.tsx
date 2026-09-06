@@ -1,14 +1,15 @@
 import { Link } from "react-router";
-import type { LedgerView } from "../../../ledger/view";
-import type { AgentsView, HandoffCard, ProjectCard } from "../../data";
-import type { Matrix, MatrixItem } from "../../matrix";
+import type { LedgerViewRow } from "../../../ledger/view";
+import type { Isc } from "../../../lib/project-isc";
+import type { Decision, ProjectDetailView } from "../../detail";
 import { Badge } from "../components/badge";
 import { Separator } from "../components/separator";
-import { age, clock } from "../format";
+import { clock } from "../format";
 import { Empty, Panel, Pending } from "../frame";
 import { useLoaded } from "../lib/api";
+import { cn } from "../lib/cn";
 
-const RECENT_ROWS = 6;
+const ISC_MARK: Record<Isc["status"], string> = { open: "", done: "✓", retired: "~" };
 
 function outcomeVariant(outcome: string) {
   if (outcome === "applied") return "neutral" as const;
@@ -16,13 +17,61 @@ function outcomeVariant(outcome: string) {
   return "alarm" as const;
 }
 
-function Runtimes({ view, slug }: { view: AgentsView | null; slug: string }) {
-  const row = view?.projects.find((p) => p.slug === slug);
-  if (!row) return <Empty>No recorded actions in the window.</Empty>;
-  const max = Math.max(1, ...Object.values(row.runtimes));
+function Criteria({ iscs }: { iscs: Isc[] }) {
+  if (iscs.length === 0) return <Empty>No criteria written yet.</Empty>;
+  return (
+    <ul className="m-0 flex list-none flex-col p-0">
+      {iscs.map((isc) => (
+        <li
+          key={isc.id}
+          className={cn(
+            "grid grid-cols-[18px_58px_1fr] items-start gap-3 border-b border-divider/60 py-2 last:border-b-0",
+            isc.status !== "open" && "opacity-60"
+          )}
+        >
+          <span
+            title={isc.status}
+            className={cn(
+              "mt-0.5 grid size-3.5 place-items-center border border-neutral-500 text-[10px] leading-none text-bg",
+              isc.status === "done" && "bg-accent",
+              isc.status === "retired" && "bg-neutral-400"
+            )}
+          >
+            {ISC_MARK[isc.status]}
+            <span className="sr-only">{isc.status}</span>
+          </span>
+          <span className="pt-px text-[11.5px] text-neutral-600">ISC-{isc.id}</span>
+          <span className="text-pretty">{isc.text}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Decisions({ decisions }: { decisions: Decision[] }) {
+  if (decisions.length === 0) return <Empty>Nothing recorded.</Empty>;
+  return (
+    <div className="flex flex-col gap-1.5 text-[12.5px]">
+      {decisions.map((d) => (
+        <div key={d.text} className="grid grid-cols-[78px_1fr] gap-3">
+          <span className="text-[11.5px] text-neutral-600">{d.date ?? "—"}</span>
+          <span>
+            {d.text}
+            {d.why && <span className="text-neutral-600"> — {d.why}</span>}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Runtimes({ runtimes }: { runtimes: Record<string, number> }) {
+  const entries = Object.entries(runtimes);
+  if (entries.length === 0) return <Empty>No recorded actions in the window.</Empty>;
+  const max = Math.max(1, ...entries.map(([, n]) => n));
   return (
     <div className="flex flex-col gap-1.5">
-      {Object.entries(row.runtimes).map(([runtime, n]) => (
+      {entries.map(([runtime, n]) => (
         <div
           key={runtime}
           className="grid grid-cols-[70px_1fr_32px] items-center gap-2 text-[12px]"
@@ -41,11 +90,11 @@ function Runtimes({ view, slug }: { view: AgentsView | null; slug: string }) {
   );
 }
 
-function RecentActions({ rows }: { rows: LedgerView["rows"] }) {
+function RecentActions({ rows }: { rows: LedgerViewRow[] }) {
   if (rows.length === 0) return <Empty>Nothing recorded yet.</Empty>;
   return (
     <div className="flex flex-col gap-1.5">
-      {rows.slice(0, RECENT_ROWS).map((r) => (
+      {rows.map((r) => (
         <div key={r.id} className="grid grid-cols-[86px_1fr_auto] gap-2 text-[11.5px]">
           <span className="text-neutral-600">{clock(r.ts).slice(5)}</span>
           <span className="truncate">
@@ -59,29 +108,32 @@ function RecentActions({ rows }: { rows: LedgerView["rows"] }) {
   );
 }
 
-function Head({ card, item }: { card: ProjectCard; item: MatrixItem | undefined }) {
+function Head({ d }: { d: ProjectDetailView }) {
+  const open = d.iscs.filter((i) => i.status === "open").length;
   return (
     <>
       <nav className="mb-1.5 text-[12px] text-neutral-600">
         <Link to="/projects" className="hover:text-accent">
           projects
         </Link>{" "}
-        / {card.slug}
+        / {d.slug}
       </nav>
       <div className="mb-5 flex flex-wrap items-start justify-between gap-6">
         <div>
           <h1 className="m-0 flex items-center gap-3 text-[38px]">
-            {card.slug}
-            <Badge variant="neutral">{card.status}</Badge>
+            {d.slug}
+            <Badge variant="neutral">{d.status}</Badge>
           </h1>
           <p className="max-w-[760px] text-[13px] text-pretty text-neutral-800">
-            {item?.importantBecause ?? "no purpose on record yet"}
+            {d.goal || d.purpose}
           </p>
         </div>
         <div className="text-right text-[11.5px] text-neutral-600">
-          <div>{card.path ?? "not checked out here"}</div>
+          <div>{d.remote ?? "no remote on record"}</div>
+          <div>{d.path ?? "not checked out here"}</div>
           <div>
-            {card.openIscs} open · {card.sessions30d} sessions / 30d · {age(card.ageDays)}
+            {open} open · serves {d.serves ?? "nothing on record"}
+            {d.servesBy && ` · ${d.servesBy}`}
           </div>
         </div>
       </div>
@@ -90,67 +142,38 @@ function Head({ card, item }: { card: ProjectCard; item: MatrixItem | undefined 
 }
 
 export function ProjectDetail({ slug }: { slug: string }) {
-  const board = useLoaded<ProjectCard[]>("/api/board");
-  const matrix = useLoaded<Matrix>("/api/matrix");
-  const handoffs = useLoaded<HandoffCard[]>("/api/handoffs");
-  const agents = useLoaded<AgentsView>("/api/agents");
-  const ledger = useLoaded<LedgerView>(`/api/ledger?project=${encodeURIComponent(slug)}`);
-
-  if (board.state !== "ready") return <Pending value={board} />;
-  const card = board.data.find((p) => p.slug === slug);
-  if (!card) {
-    return (
-      <Empty>
-        No project called <b>{slug}</b> is registered.
-      </Empty>
-    );
-  }
-
-  const all =
-    matrix.state === "ready"
-      ? [
-          ...matrix.data.now,
-          ...matrix.data.plan,
-          ...matrix.data.noise,
-          ...matrix.data.later,
-        ]
-      : [];
-  const item = all.find((i) => i.kind === "project" && i.id === slug);
-  const handoff =
-    handoffs.state === "ready" ? handoffs.data.find((h) => h.slug === slug) : undefined;
+  const view = useLoaded<ProjectDetailView>(
+    `/api/project?slug=${encodeURIComponent(slug)}`
+  );
+  if (view.state !== "ready") return <Pending value={view} />;
+  const d = view.data;
 
   return (
     <section>
-      <Head card={card} item={item} />
+      <Head d={d} />
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex flex-col gap-6">
-          <Panel
-            title="Ideal state criteria"
-            aside={`${card.openIscs} open — the list itself arrives with the detail endpoint`}
-          >
-            <Empty>
-              Counts read off the record today; the criteria themselves are not on the
-              wire yet.
-            </Empty>
+          <Panel title="Ideal state criteria" aside={`${d.iscs.length} on record`}>
+            <Criteria iscs={d.iscs} />
           </Panel>
           <div className="grid gap-6 md:grid-cols-2">
             <Panel title="Next">
-              {card.next.length === 0 ? (
+              {d.next.length === 0 ? (
                 <Empty>nothing queued</Empty>
               ) : (
                 <ol className="m-0 flex list-decimal flex-col gap-1.5 pl-5 text-[12.5px]">
-                  {card.next.map((n) => (
+                  {d.next.map((n) => (
                     <li key={n}>{n}</li>
                   ))}
                 </ol>
               )}
             </Panel>
             <Panel title="Blockers">
-              {card.blockers.length === 0 ? (
+              {d.blockers.length === 0 ? (
                 <Empty>none</Empty>
               ) : (
                 <div className="flex flex-col gap-1.5 text-[12.5px]">
-                  {card.blockers.map((b) => (
+                  {d.blockers.map((b) => (
                     <p key={b} className="bg-accent-100 px-2 py-1.5 text-accent-900">
                       {b}
                     </p>
@@ -159,15 +182,20 @@ export function ProjectDetail({ slug }: { slug: string }) {
               )}
             </Panel>
           </div>
+          <Panel title="Decisions">
+            <Decisions decisions={d.decisions} />
+          </Panel>
         </div>
         <aside className="flex flex-col gap-6">
           <Panel title="Handoff">
-            {handoff ? (
+            {d.handoff ? (
               <>
-                <p className="text-[12.5px] text-pretty">{handoff.sentence}</p>
-                {item?.waitingOn && (
+                <p className="text-[12.5px] text-pretty" title={d.handoff.full}>
+                  {d.handoff.sentence}
+                </p>
+                {d.handoff.waitingOn && (
                   <p className="mt-2 bg-accent-100 px-2 py-1.5 text-[12px] text-accent-900">
-                    waiting on you · {item.waitingOn}
+                    waiting on you · {d.handoff.waitingOn}
                   </p>
                 )}
               </>
@@ -176,33 +204,29 @@ export function ProjectDetail({ slug }: { slug: string }) {
             )}
           </Panel>
           <Panel
-            title="Agents on this project"
+            title="Agents on this project · 14d"
             aside={
               <Link
-                to={`/log?project=${encodeURIComponent(slug)}`}
+                to={`/log?project=${encodeURIComponent(d.slug)}`}
                 className="hover:text-accent"
               >
                 full log →
               </Link>
             }
           >
-            <Runtimes view={agents.state === "ready" ? agents.data : null} slug={slug} />
+            <Runtimes runtimes={d.runtimes} />
             <Separator className="my-3" />
-            <div>
-              <RecentActions rows={ledger.state === "ready" ? ledger.data.rows : []} />
-            </div>
+            <RecentActions rows={d.recent} />
           </Panel>
-          <Panel title="Asking for you">
-            {card.asking.length === 0 ? (
-              <Empty>nothing</Empty>
+          <Panel title="Context">
+            {d.context.length === 0 ? (
+              <Empty>nothing recorded</Empty>
             ) : (
-              <div className="flex flex-wrap gap-1">
-                {card.asking.map((reason) => (
-                  <Badge key={reason} variant="accent">
-                    {reason}
-                  </Badge>
+              <ul className="m-0 flex list-disc flex-col gap-1 pl-4 text-[12.5px]">
+                {d.context.map((c) => (
+                  <li key={c}>{c}</li>
                 ))}
-              </div>
+              </ul>
             )}
           </Panel>
         </aside>

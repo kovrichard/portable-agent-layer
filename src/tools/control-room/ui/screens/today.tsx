@@ -1,6 +1,5 @@
 import { useState } from "react";
-import type { LedgerView } from "../../../ledger/view";
-import type { AgendaView, HandoffCard, SignalView } from "../../data";
+import type { AgendaView, HandoffCard, SignalView, SummaryView } from "../../data";
 import type { Matrix, MatrixItem } from "../../matrix";
 import { Badge } from "../components/badge";
 import {
@@ -47,13 +46,6 @@ const QUADRANTS = [
 ] as const;
 
 const FORTNIGHT_DAYS = 14;
-
-function fortnightQuery(): string {
-  const since = new Date(Date.now() - FORTNIGHT_DAYS * 86_400_000)
-    .toISOString()
-    .slice(0, 10);
-  return `/api/ledger?since=${since}`;
-}
 
 function goalsOf(matrix: Matrix): MatrixItem[] {
   return [...matrix.now, ...matrix.plan, ...matrix.noise, ...matrix.later].filter(
@@ -106,16 +98,17 @@ function Quadrant({
 }
 
 function Fortnight() {
-  const ledger = useLoaded<LedgerView>(fortnightQuery());
-  const signal = useLoaded<SignalView>("/api/signal");
-  const stats = ledger.state === "ready" ? ledger.data.stats : null;
-  const rating = signal.state === "ready" ? signal.data.ratings : null;
+  const view = useLoaded<SummaryView>(`/api/summary?days=${FORTNIGHT_DAYS}`);
+  const s = view.state === "ready" ? view.data : null;
   return (
     <Panel title={`Last ${FORTNIGHT_DAYS} days`}>
       <dl className="m-0 grid grid-cols-3 gap-2">
-        <Figure n={stats ? String(stats.total) : "—"} label="actions" />
-        <Figure n={stats ? String(stats.refusals) : "—"} label="refusals" />
-        <Figure n={rating ? tenths(rating.recentAvg) : "—"} label="rating, last 10" />
+        <Figure n={s ? String(s.actions) : "—"} label="actions" />
+        <Figure n={s ? String(s.refusals) : "—"} label="refusals" />
+        <Figure
+          n={s?.rating === null || !s ? "—" : tenths(s.rating)}
+          label="rating, last 10"
+        />
       </dl>
     </Panel>
   );

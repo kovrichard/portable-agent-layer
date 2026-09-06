@@ -10,8 +10,9 @@ import { loadMachine } from "../../hooks/lib/machine";
 import { readAllProjects } from "../../hooks/lib/projects";
 import { isServesKind, setServes } from "../../hooks/lib/serves";
 import { type LedgerFilter, ledgerFiles, parseSince } from "../ledger/query";
-import { ledgerView } from "../ledger/view";
-import { agenda, agentsAtWork, board, handoffs, signal } from "./data";
+import { ledgerView, PAGE_OUTCOMES } from "../ledger/view";
+import { agenda, agentsAtWork, board, handoffs, signal, summary } from "./data";
+import { projectDetail } from "./detail";
 import { matrix } from "./matrix";
 import index from "./ui/index.html";
 
@@ -36,17 +37,43 @@ function json(body: unknown, status = 200): Response {
   return Response.json(body, { status });
 }
 
-/** A window the page cannot parse is an error, not the whole ledger. */
+const AUTHORITIES: readonly string[] = ["user", "agent"];
+
+/**
+ * Free-form on the record, so the page may name any of them: a runtime or
+ * machine label PAL has never seen simply matches nothing.
+ */
+const PASSTHROUGH = ["project", "runtime", "machine", "actor", "tool"] as const;
+
+/**
+ * A window the page cannot parse is an error, not the whole ledger. The same
+ * goes for a closed set it spells wrong — silently answering with every row
+ * would read as "no such filter" rather than "no such value".
+ */
 function filterFromQuery(params: URLSearchParams): LedgerFilter | string {
   const filter: LedgerFilter = {};
-  const project = params.get("project");
-  if (project) filter.project = project;
+  for (const key of PASSTHROUGH) {
+    const value = params.get(key);
+    if (value) filter[key] = value;
+  }
   for (const key of ["since", "until"] as const) {
     const spec = params.get(key);
     if (!spec) continue;
     const at = parseSince(spec);
     if (!at) return `Unrecognised ${key}: ${spec}`;
     filter[key] = at;
+  }
+  const outcome = params.get("outcome");
+  if (outcome) {
+    if (!(PAGE_OUTCOMES as readonly string[]).includes(outcome)) {
+      return `Unrecognised outcome: ${outcome}`;
+    }
+    filter.outcome = outcome;
+  }
+  const authority = params.get("authority");
+  if (authority) {
+    if (!AUTHORITIES.includes(authority)) return `Unrecognised authority: ${authority}`;
+    filter.authority = authority;
   }
   return filter;
 }
@@ -56,6 +83,23 @@ function projects(): Response {
     .map((p) => p.name)
     .sort((a, b) => a.localeCompare(b));
   return json(slugs.map((slug) => ({ slug })));
+}
+
+function oneProject(slug: string | null): Response {
+  if (!slug) return json({ error: "slug is required" }, 400);
+  const detail = projectDetail(slug);
+  return detail ? json(detail) : json({ error: `no such project: ${slug}` }, 404);
+}
+
+const SUMMARY_DAYS_DEFAULT = 14;
+const SUMMARY_DAYS_MAX = 365;
+
+function summaryFor(spec: string | null): Response {
+  const days = spec ? Number(spec) : SUMMARY_DAYS_DEFAULT;
+  if (!Number.isInteger(days) || days < 1 || days > SUMMARY_DAYS_MAX) {
+    return json({ error: `days must be a whole number of 1..${SUMMARY_DAYS_MAX}` }, 400);
+  }
+  return json(summary(days));
 }
 
 function withFilter(url: URL, view: (filter: LedgerFilter) => unknown): Response {
@@ -133,6 +177,10 @@ export function startControlRoom(port: number = DEFAULT_PORT) {
           return withFilter(url, agentsAtWork);
         case "/api/ledger":
           return withFilter(url, ledgerView);
+        case "/api/project":
+          return oneProject(url.searchParams.get("slug"));
+        case "/api/summary":
+          return summaryFor(url.searchParams.get("days"));
         case "/api/projects":
           return projects();
         case "/api/status":

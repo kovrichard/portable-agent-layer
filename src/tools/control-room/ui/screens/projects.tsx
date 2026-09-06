@@ -1,6 +1,5 @@
 import { Link } from "react-router";
-import type { AgentsView, ProjectCard } from "../../data";
-import type { Matrix, MatrixItem } from "../../matrix";
+import type { ProjectCard } from "../../data";
 import { Badge } from "../components/badge";
 import {
   Table,
@@ -47,20 +46,7 @@ function keep(card: ProjectCard, filter: StatusFilter): boolean {
   return card.status === filter;
 }
 
-function servesByProject(matrix: Matrix): Map<string, MatrixItem> {
-  const all = [...matrix.now, ...matrix.plan, ...matrix.noise, ...matrix.later];
-  return new Map(all.filter((i) => i.kind === "project").map((i) => [i.id, i]));
-}
-
-function Row({
-  card,
-  item,
-  runtimes,
-}: {
-  card: ProjectCard;
-  item: MatrixItem | undefined;
-  runtimes: string[];
-}) {
+function Row({ card }: { card: ProjectCard }) {
   return (
     <TableRow>
       <TableCell>
@@ -78,9 +64,9 @@ function Row({
         <Badge variant="neutral">{card.status}</Badge>
       </TableCell>
       <TableCell className="text-[12px]">
-        {item?.serves ?? "unranked"}
-        {item?.servesBy && (
-          <span className="ml-1 text-[10.5px] text-neutral-600">· {item.servesBy}</span>
+        {card.serves ?? "unranked"}
+        {card.servesBy && (
+          <span className="ml-1 text-[10.5px] text-neutral-600">· {card.servesBy}</span>
         )}
       </TableCell>
       <TableCell className="font-heading text-right text-[16px] font-semibold tabular-nums">
@@ -89,9 +75,9 @@ function Row({
       <TableCell className="text-right tabular-nums">{card.sessions30d}</TableCell>
       <TableCell>
         <span className="flex flex-wrap gap-1">
-          {runtimes.map((runtime) => (
+          {Object.entries(card.runtimes).map(([runtime, n]) => (
             <Badge key={runtime} variant="outline">
-              {runtime}
+              {runtime} {n}
             </Badge>
           ))}
         </span>
@@ -108,16 +94,7 @@ function Row({
 
 export function Projects({ filter }: { filter: StatusFilter }) {
   const board = useLoaded<ProjectCard[]>("/api/board");
-  const matrix = useLoaded<Matrix>("/api/matrix");
-  const agents = useLoaded<AgentsView>("/api/agents");
-
   if (board.state !== "ready") return <Pending value={board} />;
-  const serves = matrix.state === "ready" ? servesByProject(matrix.data) : new Map();
-  const runtimesFor = (slug: string) =>
-    agents.state === "ready"
-      ? Object.keys(agents.data.projects.find((p) => p.slug === slug)?.runtimes ?? {})
-      : [];
-
   const rows = board.data.filter((card) => keep(card, filter));
   return (
     <div className="blueprint flex min-h-0 flex-1 flex-col bg-bg">
@@ -140,12 +117,7 @@ export function Projects({ filter }: { filter: StatusFilter }) {
             </TableHeader>
             <TableBody>
               {rows.map((card) => (
-                <Row
-                  key={card.slug}
-                  card={card}
-                  item={serves.get(card.slug)}
-                  runtimes={runtimesFor(card.slug)}
-                />
+                <Row key={card.slug} card={card} />
               ))}
             </TableBody>
           </Table>
