@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { createOpinion } from "../src/hooks/lib/opinions";
 import {
   averageRating,
@@ -668,9 +668,10 @@ describe("formatReport", () => {
 });
 
 describe("reportPath", () => {
+  // Built with resolve, not a literal, so the separator is the platform's.
   test("names the file by date and period", () => {
     expect(reportPath("/reports", "Weekly", NOW)).toBe(
-      "/reports/2026-09-06_weekly-reflection.md"
+      resolve("/reports", "2026-09-06_weekly-reflection.md")
     );
   });
 
