@@ -89,6 +89,22 @@ Two reasons, and the second is the one that matters here:
 catch an interpreter heredoc or a redirect without also blocking legitimate reads and
 build output, so the rule above is what actually governs.
 
+### A subprocess entrypoint is glue, not logic
+
+A file at the top level of `src/hooks/` is only ever spawned by an agent. It exports
+nothing, so no test can import it and Stryker's instrumentation never sees it run —
+its logic can be deleted outright and the suite stays green.
+
+So an entrypoint is: read stdin → parse → **one call to an exported library
+function** → write stdout. Everything else belongs in `src/hooks/lib/`, where the
+suite imports it directly. The spawn seam still earns one smoke test per entrypoint;
+it stops being the only test. `src/hooks/LedgerCommit.ts` is the pattern in four lines.
+
+Two klint rules hold the line, both scoped to `src/hooks/*.ts` alone: no unexported
+`function` declaration, and a 90-line ceiling. `src/hooks/handlers/**` is deliberately
+out of scope — a handler exports its entry point, so its private helpers are ordinary
+encapsulation.
+
 ### Other house rules (already enforced by tooling)
 
 - No assignment in expressions (e.g. `while ((m = re.exec(s)) !== null)` — Biome catches it; use `Array.from(s.matchAll(re), ...)` or `for (const m of s.matchAll(re))`).

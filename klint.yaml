@@ -58,10 +58,28 @@ arch:
       message: "Extract a well-named function instead of stacking comment lines — see the Documenting code rules in AGENTS.md."
       severity: warn
 
+  # A hook entrypoint is only ever spawned, so it exports nothing and no test can
+  # import it — Stryker's instrumentation never sees it run and its logic can be
+  # deleted outright with the suite still green (ISC-21). Both rules below hold it
+  # to stdin -> parse -> one exported library call -> stdout. Scoped to the
+  # entrypoints alone: src/hooks/handlers/** export their entry point, so their
+  # private helpers are ordinary encapsulation and are none of this rule's business.
+  # severity: warn until Tier 1 of ISC-21 is clear, then both flip to error.
+  maxLines:
+    - limit: 90
+      in: ["src/hooks/*.ts", "!src/hooks/handlers/**", "!src/hooks/lib/**"]
+      message: "Hook entrypoint is too long to be only glue — move the logic to src/hooks/lib/ where a test can import it."
+      severity: warn
+
   forbidden:
     - pattern: "process.exit("
       in: ["src/hooks/lib/**"]
       message: "process.exit() called inside a library module — library functions should return or throw, not terminate the process."
+
+    - pattern: 're:^(?:async )?function '
+      in: ["src/hooks/*.ts", "!src/hooks/handlers/**", "!src/hooks/lib/**"]
+      message: "Unexported function in a hook entrypoint — nothing can import it, so nothing can test it. Move it to src/hooks/lib/."
+      severity: warn
 
   singleton:
     - pattern: "process.env.PAL_HOME"
