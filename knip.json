@@ -30,6 +30,8 @@
     "promptfoo",
     "@stryker-mutator/bun-runner",
     "@stryker-mutator/api",
-    "@secretlint/secretlint-rule-preset-recommend"
+    "@secretlint/secretlint-rule-preset-recommend",
+    "tailwindcss",
+    "@tailwindcss/cli"
   ]
 }
