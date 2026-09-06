@@ -1,3 +1,16 @@
+# [0.72.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.71.0...v0.72.0) (2026-09-06)
+
+
+### Bug Fixes
+
+* **test:** build the expected report path with the platform's separator ([55aeb09](https://github.com/kovrichard/portable-agent-layer/commit/55aeb095284aa2d0f4ba2f911c3742c0e33931f4))
+* **test:** stop the Copilot context test writing to the real home ([144217a](https://github.com/kovrichard/portable-agent-layer/commit/144217a4aef96b30cc8229f19bdc34e0ec30c3b4))
+
+
+### Features
+
+* **ledger:** record refusals as a blocked outcome ([082ac26](https://github.com/kovrichard/portable-agent-layer/commit/082ac260ddea0f59bec8dd2712aa05865bd5062e))
+
 # [0.71.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.70.0...v0.71.0) (2026-09-06)
 
 
