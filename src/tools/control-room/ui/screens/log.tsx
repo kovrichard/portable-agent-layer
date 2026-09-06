@@ -1,20 +1,25 @@
-import type { ReactNode } from "react";
+import { useId } from "react";
 import type { LedgerView, LedgerViewRow, PageOutcome } from "../../../ledger/view";
 import { PAGE_OUTCOMES } from "../../../ledger/view";
+import { Badge } from "../components/badge";
+import { Button } from "../components/button";
+import { Input, NativeSelect } from "../components/input";
+import { Label } from "../components/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../components/table";
 import { clock } from "../format";
-import { Empty, Pending, Scroller, Tag } from "../frame";
+import { Empty, Pending, Scroller } from "../frame";
 import { useLoaded } from "../lib/api";
-import { cn } from "../lib/cn";
 
 const MAX_ROWS = 200;
 
 const COLUMNS = ["when", "actor", "action", "target", "change", "outcome"] as const;
-
-/** Sticky through the scroller, so the border has to be drawn rather than collapsed. */
-const HEAD_CELL =
-  "eyebrow sticky top-0 z-10 bg-bg px-3 py-2 shadow-[0_1px_0_var(--color-divider)]";
-
-const CELL = "border-b border-divider/60 px-3 py-2 align-top";
 
 export interface LogFilter {
   project: string;
@@ -29,23 +34,27 @@ function ledgerQuery(filter: LogFilter): string {
   return query ? `/api/ledger?${query}` : "/api/ledger";
 }
 
-function outcomeTone(outcome: string) {
+function outcomeVariant(outcome: string) {
   if (outcome === "applied") return "neutral" as const;
   if (outcome === "failed") return "outline" as const;
   return "alarm" as const;
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
+function Field({
+  label,
+  control,
+}: {
+  label: string;
+  control: (id: string) => React.ReactNode;
+}) {
+  const id = useId();
   return (
     <div className="flex flex-col gap-1">
-      <span className="eyebrow">{label}</span>
-      {children}
+      <Label htmlFor={id}>{label}</Label>
+      {control(id)}
     </div>
   );
 }
-
-const CONTROL =
-  "border border-divider bg-bg px-2 py-1.5 text-[12px] text-ink focus-visible:border-accent";
 
 function Stats({ view }: { view: LedgerView }) {
   const cells: { n: number; label: string }[] = [
@@ -72,28 +81,26 @@ function Stats({ view }: { view: LedgerView }) {
 
 function Row({ r }: { r: LedgerViewRow }) {
   return (
-    <tr className="hover:bg-neutral-200/50">
-      <td className={cn(CELL, "whitespace-nowrap text-neutral-700")}>{clock(r.ts)}</td>
-      <td className={CELL}>
+    <TableRow>
+      <TableCell className="whitespace-nowrap text-neutral-700">{clock(r.ts)}</TableCell>
+      <TableCell>
         {r.actor}
         <span className="block text-[11px] text-neutral-600">
           {r.authority} · {r.runtime}
         </span>
-      </td>
-      <td className={cn(CELL, "font-mono text-[11.5px]")}>{r.tool}</td>
-      <td className={CELL} title={r.target}>
-        {r.target}
-      </td>
-      <td className={cn(CELL, "whitespace-nowrap text-neutral-700")}>{r.change}</td>
-      <td className={CELL}>
-        <Tag tone={outcomeTone(r.outcome)}>{r.outcome}</Tag>
+      </TableCell>
+      <TableCell className="font-mono text-[11.5px]">{r.tool}</TableCell>
+      <TableCell title={r.target}>{r.target}</TableCell>
+      <TableCell className="whitespace-nowrap text-neutral-700">{r.change}</TableCell>
+      <TableCell>
+        <Badge variant={outcomeVariant(r.outcome)}>{r.outcome}</Badge>
         {r.reason && (
           <span className="block max-w-[220px] text-[11px] text-neutral-700">
             {r.reason}
           </span>
         )}
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -110,47 +117,52 @@ export function Log({
   return (
     <section className="flex min-h-0 flex-1 flex-col">
       <div className="mb-4 flex flex-wrap items-end gap-3">
-        <Field label="project">
-          <select
-            aria-label="filter by project"
-            className={CONTROL}
-            value={filter.project}
-            onChange={(e) => onFilter({ project: e.target.value })}
-          >
-            <option value="">all</option>
-            {projects.state === "ready" &&
-              projects.data.map((p) => (
-                <option key={p.slug} value={p.slug}>
-                  {p.slug}
-                </option>
-              ))}
-          </select>
-        </Field>
-        <Field label="since">
-          <input
-            type="date"
-            aria-label="actions since"
-            className={CONTROL}
-            value={filter.since}
-            onChange={(e) => onFilter({ since: e.target.value })}
-          />
-        </Field>
-        <Field label="until">
-          <input
-            type="date"
-            aria-label="actions until"
-            className={CONTROL}
-            value={filter.until}
-            onChange={(e) => onFilter({ until: e.target.value })}
-          />
-        </Field>
-        <button
-          type="button"
-          className={cn(CONTROL, "cursor-pointer hover:bg-neutral-200")}
+        <Field
+          label="project"
+          control={(id) => (
+            <NativeSelect
+              id={id}
+              value={filter.project}
+              onChange={(e) => onFilter({ project: e.target.value })}
+            >
+              <option value="">all</option>
+              {projects.state === "ready" &&
+                projects.data.map((p) => (
+                  <option key={p.slug} value={p.slug}>
+                    {p.slug}
+                  </option>
+                ))}
+            </NativeSelect>
+          )}
+        />
+        <Field
+          label="since"
+          control={(id) => (
+            <Input
+              id={id}
+              type="date"
+              value={filter.since}
+              onChange={(e) => onFilter({ since: e.target.value })}
+            />
+          )}
+        />
+        <Field
+          label="until"
+          control={(id) => (
+            <Input
+              id={id}
+              type="date"
+              value={filter.until}
+              onChange={(e) => onFilter({ until: e.target.value })}
+            />
+          )}
+        />
+        <Button
+          variant="secondary"
           onClick={() => onFilter({ project: "", since: "", until: "" })}
         >
           reset
-        </button>
+        </Button>
       </div>
 
       <Pending value={view} />
@@ -162,22 +174,20 @@ export function Log({
               <Empty>No actions in this window.</Empty>
             ) : (
               <Scroller>
-                <table className="w-full min-w-[880px] border-separate border-spacing-0 text-[12.5px]">
-                  <thead>
-                    <tr className="text-left">
+                <Table className="min-w-[880px] text-[12.5px]">
+                  <TableHeader>
+                    <tr>
                       {COLUMNS.map((column) => (
-                        <th key={column} className={HEAD_CELL}>
-                          {column}
-                        </th>
+                        <TableHead key={column}>{column}</TableHead>
                       ))}
                     </tr>
-                  </thead>
-                  <tbody>
+                  </TableHeader>
+                  <TableBody>
                     {view.data.rows.slice(0, MAX_ROWS).map((r) => (
                       <Row key={r.id} r={r} />
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </Scroller>
             )}
           </div>

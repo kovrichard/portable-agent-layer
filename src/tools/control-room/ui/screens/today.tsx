@@ -2,8 +2,17 @@ import { useState } from "react";
 import type { LedgerView } from "../../../ledger/view";
 import type { AgendaView, HandoffCard, SignalView } from "../../data";
 import type { Matrix, MatrixItem } from "../../matrix";
+import { Badge } from "../components/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../components/table";
 import { tenths } from "../format";
-import { Empty, Panel, Pending, Tag } from "../frame";
+import { Empty, Panel, Pending } from "../frame";
 import { type Loaded, useLoaded } from "../lib/api";
 import { cn } from "../lib/cn";
 import { GoalsList, HandoffList, ItemCard, MovesList, ReasonTags } from "../parts";
@@ -132,7 +141,7 @@ function DueBadges() {
     <div className="flex flex-col gap-2">
       {due.map(([name, badge]) => (
         <div key={name} className="text-[12px]">
-          <Tag tone="accent">{name}</Tag>
+          <Badge variant="accent">{name}</Badge>
           <span className="ml-2 text-neutral-700">{badge.detail}</span>
         </div>
       ))}
@@ -233,37 +242,33 @@ function ListLayout({
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_260px]">
       <div className="blueprint overflow-x-auto bg-bg">
-        <table className="w-full min-w-[720px] border-collapse text-[13px]">
-          <thead>
-            <tr className="border-b border-divider text-left">
-              <th className="eyebrow px-3 py-2">Item</th>
-              <th className="eyebrow px-3 py-2">Placed</th>
-              <th className="eyebrow px-3 py-2">Why</th>
-              <th className="eyebrow px-3 py-2">Next</th>
+        <Table className="min-w-[720px] text-[13px]">
+          <TableHeader>
+            <tr>
+              {["Item", "Placed", "Why", "Next"].map((column) => (
+                <TableHead key={column}>{column}</TableHead>
+              ))}
             </tr>
-          </thead>
-          <tbody>
+          </TableHeader>
+          <TableBody>
             {rankedOf(matrix).map(({ item, quadrant }) => (
-              <tr
-                key={`${item.kind}:${item.id}`}
-                className="border-b border-divider/60 last:border-b-0"
-              >
-                <td className="px-3 py-2">
+              <TableRow key={`${item.kind}:${item.id}`}>
+                <TableCell>
                   <span className="font-heading text-[15px] font-semibold">
                     {item.label}
                   </span>
-                </td>
-                <td className="px-3 py-2 whitespace-nowrap">{quadrant}</td>
-                <td className="min-w-[200px] px-3 py-2">
+                </TableCell>
+                <TableCell className="whitespace-nowrap">{quadrant}</TableCell>
+                <TableCell className="min-w-[200px]">
                   <ReasonTags item={item} />
-                </td>
-                <td className="max-w-[320px] px-3 py-2 text-[12px] text-neutral-800">
+                </TableCell>
+                <TableCell className="max-w-[320px] text-[12px] text-neutral-800">
                   {item.detail}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
       <aside className="flex flex-col gap-6">
         <Panel title="Three moves">

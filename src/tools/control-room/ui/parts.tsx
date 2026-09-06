@@ -2,8 +2,10 @@ import { Link } from "react-router";
 import type { AgendaMove } from "../../../hooks/lib/agenda-store";
 import type { HandoffCard } from "../data";
 import type { MatrixItem } from "../matrix";
+import { Badge } from "./components/badge";
+import { NativeSelect } from "./components/input";
 import { age } from "./format";
-import { Empty, Tag } from "./frame";
+import { Empty } from "./frame";
 import { cn } from "./lib/cn";
 
 const SERVES_KINDS = ["goal", "revenue", "fun"] as const;
@@ -20,7 +22,8 @@ async function saveServes(project: string, serves: string): Promise<void> {
 function ServesSelect({ item, onSaved }: { item: MatrixItem; onSaved: () => void }) {
   if (item.kind !== "project") return null;
   return (
-    <select
+    <NativeSelect
+      aria-label={`what ${item.label} serves`}
       value={item.serves ?? ""}
       title={
         item.servesBy === "user" ? "your answer" : "PAL's guess — change it to correct it"
@@ -29,10 +32,8 @@ function ServesSelect({ item, onSaved }: { item: MatrixItem; onSaved: () => void
         saveServes(item.id, e.target.value).then(onSaved).catch(onSaved);
       }}
       className={cn(
-        "cursor-pointer border px-2 py-0.5 text-[10px]",
-        item.servesBy === "user"
-          ? "border-accent bg-accent-100 text-accent-900"
-          : "border-divider bg-transparent text-neutral-700"
+        "h-auto py-0.5 text-[10px]",
+        item.servesBy === "user" && "border-accent bg-accent-100 text-accent-900"
       )}
     >
       <option value="" disabled>
@@ -43,7 +44,7 @@ function ServesSelect({ item, onSaved }: { item: MatrixItem; onSaved: () => void
           {kind}
         </option>
       ))}
-    </select>
+    </NativeSelect>
   );
 }
 
@@ -51,11 +52,11 @@ export function ReasonTags({ item }: { item: MatrixItem }) {
   return (
     <div className="flex flex-wrap gap-1">
       {item.urgentBecause.map((reason) => (
-        <Tag key={reason} tone="accent">
+        <Badge key={reason} variant="accent">
           {reason}
-        </Tag>
+        </Badge>
       ))}
-      <Tag tone="neutral">{item.importantBecause}</Tag>
+      <Badge variant="neutral">{item.importantBecause}</Badge>
     </div>
   );
 }
@@ -80,7 +81,7 @@ export function ItemCard({ item, onSaved }: { item: MatrixItem; onSaved: () => v
         {isProject ? (
           <ServesSelect item={item} onSaved={onSaved} />
         ) : (
-          <Tag tone="accent">goal</Tag>
+          <Badge variant="accent">goal</Badge>
         )}
         <span className="ml-auto text-[11px] whitespace-nowrap text-neutral-600">
           {item.due ?? ""}

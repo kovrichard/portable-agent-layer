@@ -2,14 +2,15 @@ import { Link } from "react-router";
 import type { LedgerView } from "../../../ledger/view";
 import type { AgentsView, HandoffCard, ProjectCard } from "../../data";
 import type { Matrix, MatrixItem } from "../../matrix";
+import { Badge } from "../components/badge";
+import { Separator } from "../components/separator";
 import { age, clock } from "../format";
-import { Empty, Panel, Pending, Tag } from "../frame";
+import { Empty, Panel, Pending } from "../frame";
 import { useLoaded } from "../lib/api";
-import { cn } from "../lib/cn";
 
 const RECENT_ROWS = 6;
 
-function outcomeTone(outcome: string) {
+function outcomeVariant(outcome: string) {
   if (outcome === "applied") return "neutral" as const;
   if (outcome === "failed") return "outline" as const;
   return "alarm" as const;
@@ -51,7 +52,7 @@ function RecentActions({ rows }: { rows: LedgerView["rows"] }) {
             <b className="font-medium">{r.tool}</b>{" "}
             <span className="text-neutral-700">{r.target}</span>
           </span>
-          <Tag tone={outcomeTone(r.outcome)}>{r.outcome}</Tag>
+          <Badge variant={outcomeVariant(r.outcome)}>{r.outcome}</Badge>
         </div>
       ))}
     </div>
@@ -71,7 +72,7 @@ function Head({ card, item }: { card: ProjectCard; item: MatrixItem | undefined 
         <div>
           <h1 className="m-0 flex items-center gap-3 text-[38px]">
             {card.slug}
-            <Tag tone="neutral">{card.status}</Tag>
+            <Badge variant="neutral">{card.status}</Badge>
           </h1>
           <p className="max-w-[760px] text-[13px] text-pretty text-neutral-800">
             {item?.importantBecause ?? "no purpose on record yet"}
@@ -186,7 +187,8 @@ export function ProjectDetail({ slug }: { slug: string }) {
             }
           >
             <Runtimes view={agents.state === "ready" ? agents.data : null} slug={slug} />
-            <div className={cn("mt-3 border-t border-divider pt-2.5")}>
+            <Separator className="my-3" />
+            <div>
               <RecentActions rows={ledger.state === "ready" ? ledger.data.rows : []} />
             </div>
           </Panel>
@@ -196,9 +198,9 @@ export function ProjectDetail({ slug }: { slug: string }) {
             ) : (
               <div className="flex flex-wrap gap-1">
                 {card.asking.map((reason) => (
-                  <Tag key={reason} tone="accent">
+                  <Badge key={reason} variant="accent">
                     {reason}
-                  </Tag>
+                  </Badge>
                 ))}
               </div>
             )}

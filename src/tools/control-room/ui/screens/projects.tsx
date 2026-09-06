@@ -1,8 +1,17 @@
 import { Link } from "react-router";
 import type { AgentsView, ProjectCard } from "../../data";
 import type { Matrix, MatrixItem } from "../../matrix";
+import { Badge } from "../components/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../components/table";
 import { age } from "../format";
-import { Empty, Pending, Scroller, Tag } from "../frame";
+import { Empty, Pending, Scroller } from "../frame";
 import { useLoaded } from "../lib/api";
 import { cn } from "../lib/cn";
 
@@ -32,12 +41,6 @@ const COLUMNS = [
   { label: "Touched", numeric: true },
 ] as const;
 
-/** Sticky through the scroller, so the border has to be drawn rather than collapsed. */
-const HEAD_CELL =
-  "eyebrow sticky top-0 z-10 bg-bg px-3 py-2 shadow-[0_1px_0_var(--color-divider)]";
-
-const CELL = "border-b border-divider/60 px-3 py-2 align-top";
-
 function keep(card: ProjectCard, filter: StatusFilter): boolean {
   if (filter === "all") return true;
   if (filter === "ranked") return RANKED.has(card.status);
@@ -59,8 +62,8 @@ function Row({
   runtimes: string[];
 }) {
   return (
-    <tr className="hover:bg-neutral-200/50">
-      <td className={CELL}>
+    <TableRow>
+      <TableCell>
         <Link
           to={`/projects/${card.slug}`}
           className="font-heading text-[15px] font-semibold text-ink hover:text-accent"
@@ -70,43 +73,36 @@ function Row({
         {card.next[0] && (
           <span className="block text-[11.5px] text-neutral-700">{card.next[0]}</span>
         )}
-      </td>
-      <td className={CELL}>
-        <Tag tone="neutral">{card.status}</Tag>
-      </td>
-      <td className={cn(CELL, "text-[12px]")}>
+      </TableCell>
+      <TableCell>
+        <Badge variant="neutral">{card.status}</Badge>
+      </TableCell>
+      <TableCell className="text-[12px]">
         {item?.serves ?? "unranked"}
         {item?.servesBy && (
           <span className="ml-1 text-[10.5px] text-neutral-600">· {item.servesBy}</span>
         )}
-      </td>
-      <td
-        className={cn(
-          CELL,
-          "font-heading text-right text-[16px] font-semibold tabular-nums"
-        )}
-      >
+      </TableCell>
+      <TableCell className="font-heading text-right text-[16px] font-semibold tabular-nums">
         {card.openIscs}
-      </td>
-      <td className={cn(CELL, "text-right tabular-nums")}>{card.sessions30d}</td>
-      <td className={CELL}>
+      </TableCell>
+      <TableCell className="text-right tabular-nums">{card.sessions30d}</TableCell>
+      <TableCell>
         <span className="flex flex-wrap gap-1">
           {runtimes.map((runtime) => (
-            <Tag key={runtime} tone="outline">
+            <Badge key={runtime} variant="outline">
               {runtime}
-            </Tag>
+            </Badge>
           ))}
         </span>
-      </td>
-      <td className={cn(CELL, "text-[12px] text-neutral-700")}>
+      </TableCell>
+      <TableCell className="text-[12px] text-neutral-700">
         {card.path ?? "not checked out here"}
-      </td>
-      <td
-        className={cn(CELL, "text-right text-[12px] whitespace-nowrap text-neutral-700")}
-      >
+      </TableCell>
+      <TableCell className="text-right text-[12px] whitespace-nowrap text-neutral-700">
         {age(card.ageDays)}
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -129,20 +125,20 @@ export function Projects({ filter }: { filter: StatusFilter }) {
         <Empty>No project matches this filter.</Empty>
       ) : (
         <Scroller>
-          <table className="w-full min-w-[880px] border-separate border-spacing-0 text-[13px]">
-            <thead>
-              <tr className="text-left">
+          <Table className="min-w-[880px] text-[13px]">
+            <TableHeader>
+              <tr>
                 {COLUMNS.map((column) => (
-                  <th
+                  <TableHead
                     key={column.label}
-                    className={cn(HEAD_CELL, column.numeric && "text-right")}
+                    className={cn(column.numeric && "text-right")}
                   >
                     {column.label}
-                  </th>
+                  </TableHead>
                 ))}
               </tr>
-            </thead>
-            <tbody>
+            </TableHeader>
+            <TableBody>
               {rows.map((card) => (
                 <Row
                   key={card.slug}
@@ -151,8 +147,8 @@ export function Projects({ filter }: { filter: StatusFilter }) {
                   runtimes={runtimesFor(card.slug)}
                 />
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </Scroller>
       )}
     </div>
