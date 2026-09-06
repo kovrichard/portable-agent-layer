@@ -1,10 +1,14 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { lintSkill } from "../src/tools/skill-doctor";
+import { basename, dirname, resolve } from "node:path";
+import {
+  type DoctorReport,
+  formatReport,
+  formatSummary,
+  lintSkill,
+  resolveSkillDir,
+} from "../src/tools/lib/skill-doctor";
 
-const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 const ROOT = resolve(import.meta.dir, "../.test-home-skill-doctor");
 
 let counter = 0;
@@ -256,74 +260,6 @@ describe("lintSkill", () => {
   });
 });
 
-describe("pal cli skill doctor", () => {
-  function doctor(name: string) {
-    return spawnSync("bun", ["run", CLI, "cli", "skill", "doctor", name], {
-      env: { ...process.env, PAL_HOME: resolve(ROOT, ".pal") },
-      encoding: "utf-8",
-      timeout: 15000,
-    });
-  }
-
-  beforeAll(() => {
-    mkdirSync(resolve(ROOT, ".pal/skills/clean-skill"), { recursive: true });
-    writeFileSync(
-      resolve(ROOT, ".pal/skills/clean-skill/SKILL.md"),
-      GOOD.replaceAll("good-skill", "clean-skill").replaceAll("good skill", "clean skill")
-    );
-    mkdirSync(resolve(ROOT, ".pal/skills/Broken"), { recursive: true });
-    writeFileSync(
-      resolve(ROOT, ".pal/skills/Broken/SKILL.md"),
-      GOOD.replace("good-skill", "UPPER")
-    );
-  });
-
-  test("exits 0 for a clean skill", () => {
-    const r = doctor("clean-skill");
-    expect(r.status).toBe(0);
-    expect(r.stdout).toContain("PASS");
-  });
-
-  test("exits 1 when a skill has errors", () => {
-    const r = doctor("Broken");
-    expect(r.status).toBe(1);
-  });
-
-  test("--all reports every installed skill", () => {
-    const r = doctor("--all");
-
-    expect(r.stdout).toContain("clean-skill");
-    expect(r.stdout).toContain("Broken");
-    expect(r.stdout).toContain("2 skills");
-  });
-
-  test("--all exits 1 when any skill has errors", () => {
-    expect(doctor("--all").status).toBe(1);
-  });
-
-  test("--all exits 0 and says so when there are no skills", () => {
-    const emptyHome = resolve(ROOT, "empty-home");
-    mkdirSync(resolve(emptyHome, "skills"), { recursive: true });
-    const r = spawnSync("bun", ["run", CLI, "cli", "skill", "doctor", "--all"], {
-      env: { ...process.env, PAL_HOME: emptyHome },
-      encoding: "utf-8",
-      timeout: 15000,
-    });
-
-    expect(r.status).toBe(0);
-    expect(`${r.stdout}${r.stderr}`).toContain("No skills found");
-  });
-
-  test("exits 1 with usage when no name is given", () => {
-    const r = spawnSync("bun", ["run", CLI, "cli", "skill", "doctor"], {
-      env: { ...process.env, PAL_HOME: resolve(ROOT, ".pal") },
-      encoding: "utf-8",
-      timeout: 15000,
-    });
-    expect(r.status).toBe(1);
-  });
-});
-
 const SHIPPED = GOOD.replace(
   "metadata:\n",
   "metadata:\n  source: portable-agent-layer\n"
@@ -349,5 +285,118 @@ describe("license provenance", () => {
 
   test("personal skill is not asked for a license", () => {
     expect(levelOf(fixture(GOOD), "license")).toBeUndefined();
+  });
+});
+
+describe("resolveSkillDir", () => {
+  test("takes a directory that holds a SKILL.md as given", () => {
+    const dir = fixture(GOOD);
+    expect(resolveSkillDir(dir)).toBe(dir);
+  });
+
+  // The bare name is what the reader saw in a --all summary line.
+  test("resolves a bare name against the skills directory", () => {
+    const home = resolve(ROOT, "resolve-home");
+    mkdirSync(resolve(home, "skills", "installed"), { recursive: true });
+    writeFileSync(resolve(home, "skills", "installed", "SKILL.md"), GOOD);
+    process.env.PAL_HOME = home;
+    expect(resolveSkillDir("installed")).toBe(resolve(home, "skills", "installed"));
+    delete process.env.PAL_HOME;
+  });
+
+  // Falling back to the path keeps the report naming what the caller asked for.
+  test("an argument matching neither resolves as a path", () => {
+    expect(resolveSkillDir("no-such-skill")).toBe(resolve("no-such-skill"));
+  });
+
+  test("prefers the path over a same-named installed skill", () => {
+    const dir = fixture(GOOD);
+    const home = resolve(ROOT, "shadow-home");
+    mkdirSync(resolve(home, "skills", basename(dir)), { recursive: true });
+    writeFileSync(resolve(home, "skills", basename(dir), "SKILL.md"), GOOD);
+    process.env.PAL_HOME = home;
+    expect(resolveSkillDir(dir)).toBe(dir);
+    delete process.env.PAL_HOME;
+  });
+});
+
+function report(over: Partial<DoctorReport> = {}): DoctorReport {
+  return {
+    dir: resolve("/skills/my-skill"),
+    name: "my-skill",
+    findings: [],
+    errors: 0,
+    warnings: 0,
+    ...over,
+  };
+}
+
+const PASSING = { level: "pass" as const, check: "name", message: "fine" };
+const WARNING = { level: "warn" as const, check: "triggers", message: "too few" };
+const FAILING = { level: "error" as const, check: "body", message: "too long" };
+
+describe("formatSummary", () => {
+  // The name is padded to a fixed column so a --all run reads as a table.
+  test("a clean skill is one line naming the folder", () => {
+    expect(formatSummary(report({ findings: [PASSING] }))).toBe(
+      `✓ ${"my-skill".padEnd(20)} clean`
+    );
+  });
+
+  // Errors outrank warnings — the line reports the blocking problem, not both.
+  test("errors are reported over warnings when both fired", () => {
+    const line = formatSummary(
+      report({ findings: [FAILING, WARNING], errors: 1, warnings: 1 })
+    );
+    expect(line).toContain("✗");
+    expect(line).toContain("1 error(s): body");
+    expect(line).not.toContain("triggers");
+  });
+
+  test("warnings are named when nothing errored", () => {
+    const line = formatSummary(report({ findings: [WARNING], warnings: 1 }));
+    expect(line).toContain("⚠");
+    expect(line).toContain("1 warning(s): triggers");
+  });
+
+  // The folder is what the reader types back; the frontmatter name may disagree,
+  // and that disagreement is itself one of the errors this line reports.
+  test("names the folder, not the frontmatter name", () => {
+    expect(formatSummary(report({ name: "declared" }))).toContain("my-skill");
+  });
+
+  test("lists every check of the reported level", () => {
+    const other = { ...FAILING, check: "description" };
+    expect(formatSummary(report({ findings: [FAILING, other], errors: 2 }))).toContain(
+      "2 error(s): body, description"
+    );
+  });
+});
+
+describe("formatReport", () => {
+  test("heads with the name and directory, then one line per finding", () => {
+    const lines = formatReport(report({ findings: [PASSING, WARNING] })).split("\n");
+    expect(lines[0]).toBe(`skill-doctor: my-skill  —  ${resolve("/skills/my-skill")}`);
+    expect(lines[1]).toBe("  ✓ name: fine");
+    expect(lines[2]).toBe("  ⚠ triggers: too few");
+  });
+
+  test("says so when the frontmatter could not be parsed", () => {
+    expect(formatReport(report({ name: null }))).toContain("(unparsed)");
+  });
+
+  test("the verdict counts both levels when anything errored", () => {
+    const out = formatReport(report({ errors: 2, warnings: 1 }));
+    expect(out.endsWith("  FAIL — 2 error(s), 1 warning(s)")).toBe(true);
+  });
+
+  test("warnings alone are an OK verdict, not a failure", () => {
+    const out = formatReport(report({ warnings: 3 }));
+    expect(out.endsWith("  OK with 3 warning(s)")).toBe(true);
+    expect(out).not.toContain("FAIL");
+  });
+
+  test("a clean report ends on PASS", () => {
+    expect(formatReport(report()).endsWith("  PASS — all checks clean")).toBe(true);
   });
 });

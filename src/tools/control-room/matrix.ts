@@ -20,7 +20,7 @@ import {
 } from "../../hooks/lib/projects";
 import { isImportant, SERVES_MEANING } from "../../hooks/lib/serves";
 import { dueFrom, readTelosGoals, type TelosGoal } from "../../hooks/lib/telos-goals";
-import type { HandoffEntry } from "../agent/handoff-note";
+import type { HandoffEntry } from "../lib/handoff-note";
 import { freshHandoffs } from "./data";
 
 const URGENT_WITHIN_DAYS = 14;

@@ -1,97 +1,70 @@
 /**
  * Hook: SessionStart — Injects dynamic context + regenerates AGENTS.md if stale.
  *
- * Static context (TELOS, setup prompt) is loaded natively from AGENTS.md / CLAUDE.md.
- * This hook injects dynamic context only: wisdom principles, relationship notes,
- * learning digest, signal trends, failure patterns, active work state.
+ * Static context (TELOS, setup prompt) is loaded natively from AGENTS.md /
+ * CLAUDE.md. This hook injects dynamic context only: wisdom principles,
+ * relationship notes, learning digest, signal trends, failure patterns, work state.
  *
- * Copilot: the CLI reads additionalContext from this hook's stdout, while
- * ~/.copilot/instructions/ is read only by the VS Code extension. The merged
- * context goes to both so either surface picks it up.
+ * Which agent gets what, in which envelope, is in lib/session-context.ts.
  */
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { getActiveAgent, isCodex, isCopilot, isCursor } from "./lib/agent";
+import { getActiveAgent } from "./lib/agent";
 import { buildClaudeMd, regenerateIfNeeded } from "./lib/claude-md";
 import { type AgentTarget, buildSystemReminder } from "./lib/context";
 import { logContextSnapshot, logDebug, logError } from "./lib/log";
 import { platform } from "./lib/paths";
+import {
+  contextEnvelope,
+  copilotInstructions,
+  isSubagentSession,
+  needsAgentsMd,
+} from "./lib/session-context";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
 
 // Recursion guard — when this process is a PAL-spawned inference subprocess,
 // skip all context loading so we don't trigger another inference call.
 if (isPalSpawnedInference()) process.exit(0);
 
-// --- Skip heavy context for subagents ---
-const isSubagent =
-  process.env.CLAUDE_PROJECT_DIR?.includes("/.claude/Agents/") ||
-  process.env.CLAUDE_AGENT_TYPE !== undefined;
-
-if (isSubagent) {
+if (isSubagentSession(process.env)) {
   logDebug("LoadContext", "Subagent session — skipping context loading");
   process.exit(0);
 }
 
-// --- Regenerate CLAUDE.md if telos or setup changed ---
 try {
-  const rebuilt = regenerateIfNeeded();
-  if (rebuilt) logDebug("LoadContext", "AGENTS.md regenerated");
+  if (regenerateIfNeeded()) logDebug("LoadContext", "AGENTS.md regenerated");
 } catch (err) {
   logError("LoadContext:regenerate", err);
 }
 
-// --- Context to stdout (or file for Copilot) ---
 try {
-  // Determine agent target — controls which sections are skipped (loaded natively instead).
   const active = getActiveAgent();
-  const agent: AgentTarget =
+  // The reminder is built for one of three targets; every other agent reads the
+  // same shape Claude Code does.
+  const target: AgentTarget =
     active === "copilot" || active === "cursor" ? active : "claude";
-  const reminder = buildSystemReminder({ agent });
+  const reminder = buildSystemReminder({ agent: target });
   if (!reminder) process.exit(0);
   logContextSnapshot(reminder);
 
-  if (isCopilot()) {
-    // Copilot: semi-static in ~/.copilot/instructions/pal-*.instructions.md (written at stop).
-    // Write AGENTS.md + dynamic context to pal-session.instructions.md on each session start.
-    const instructionsDir = resolve(platform.copilotDir(), "instructions");
-    mkdirSync(instructionsDir, { recursive: true });
-    const agentsMd = buildClaudeMd();
-    const context = [agentsMd, reminder].filter(Boolean).join("\n\n");
-    if (context) {
-      writeFileSync(
-        resolve(instructionsDir, "pal-session.instructions.md"),
-        `---\napplyTo: "**"\n---\n\n${context}`,
-        "utf-8"
-      );
-      process.stdout.write(JSON.stringify({ additionalContext: context }));
-    }
-    logDebug(
-      "LoadContext",
-      `Copilot session instructions written: ${context.length} chars`
-    );
-  } else if (isCursor()) {
-    // Cursor: semi-static in ~/.cursor/rules/pal-context.mdc; inject AGENTS.md + dynamic here
-    const agentsMd = buildClaudeMd();
-    const context = [agentsMd, reminder].filter(Boolean).join("\n\n");
-    process.stdout.write(JSON.stringify({ additional_context: context }));
-    logDebug("LoadContext", `Reminder injected: ${reminder.length} chars`);
-  } else if (isCodex()) {
-    // Codex: AGENTS.md already loaded via symlink; inject only dynamic context
-    process.stdout.write(
-      JSON.stringify({
-        hookSpecificOutput: {
-          hookEventName: "SessionStart",
-          additionalContext: reminder,
-        },
-      })
-    );
-    logDebug("LoadContext", `Codex reminder injected: ${reminder.length} chars`);
-  } else {
-    // Claude Code (and opencode, which uses the plugin path not this hook): raw text
-    console.log(reminder);
-    logDebug("LoadContext", `Reminder injected: ${reminder.length} chars`);
+  const envelope = contextEnvelope(
+    active,
+    reminder,
+    needsAgentsMd(active) ? buildClaudeMd() : ""
+  );
+  if (!envelope) process.exit(0);
+
+  if (envelope.file) {
+    const dir = resolve(platform.copilotDir(), "instructions");
+    mkdirSync(dir, { recursive: true });
+    const path = resolve(dir, "pal-session.instructions.md");
+    writeFileSync(path, copilotInstructions(envelope.file), "utf-8");
   }
+
+  if (envelope.kind === "text") console.log(envelope.payload);
+  else process.stdout.write(envelope.payload);
+  logDebug("LoadContext", `Reminder injected: ${reminder.length} chars`);
 } catch (err) {
   logError("LoadContext:reminder", err);
 }

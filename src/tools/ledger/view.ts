@@ -40,6 +40,8 @@ export interface LedgerViewRow {
   change: string;
   outcome: string;
   reason?: string;
+  /** Present only on a blocked shell action, where the target is a directory. */
+  command?: string;
 }
 
 export interface LedgerView {
@@ -100,6 +102,7 @@ function toRow(entry: LedgerEntry, registry: ActorRegistryEntry[]): LedgerViewRo
     outcome: entry.outcome,
   };
   if (entry.reason) row.reason = entry.reason;
+  if (entry.command) row.command = entry.command;
   return row;
 }
 

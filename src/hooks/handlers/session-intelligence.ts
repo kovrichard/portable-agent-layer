@@ -9,9 +9,15 @@
  *
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { unlink, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import {
+  isRecaptureWorthwhile,
+  learningSlug,
+  markCaptured,
+  readCapture,
+} from "../lib/capture-store";
 import { stringify } from "../lib/frontmatter";
 import { canInfer, inference } from "../lib/inference";
 import { categorizeLearning } from "../lib/learning-category";
@@ -26,68 +32,6 @@ import {
   parseMessages,
 } from "../lib/transcript";
 import { appendProjectHistory, detectStatus } from "../lib/work-tracking";
-
-// ── Dedup tracking ──
-
-interface CaptureEntry {
-  filepath: string;
-  messageCount: number;
-}
-
-const MIN_NEW_MESSAGES = 10;
-
-function capturedPath(): string {
-  return resolve(paths.state(), "captured-learnings.json");
-}
-
-function getPreviousCapture(sessionId: string): CaptureEntry | null {
-  const p = capturedPath();
-  if (!existsSync(p)) return null;
-  try {
-    const raw = JSON.parse(readFileSync(p, "utf-8"));
-    if (Array.isArray(raw)) return null;
-    const entry = raw[sessionId];
-    if (!entry) return null;
-    if (typeof entry === "string") return { filepath: entry, messageCount: 0 };
-    return entry as CaptureEntry;
-  } catch {
-    return null;
-  }
-}
-
-function markCaptured(sessionId: string, filepath: string, messageCount: number): void {
-  const p = capturedPath();
-  let data: Record<string, CaptureEntry> = {};
-  try {
-    if (existsSync(p)) {
-      const raw = JSON.parse(readFileSync(p, "utf-8"));
-      if (!Array.isArray(raw) && typeof raw === "object") {
-        for (const [k, v] of Object.entries(raw)) {
-          data[k] =
-            typeof v === "string"
-              ? { filepath: v, messageCount: 0 }
-              : (v as CaptureEntry);
-        }
-      }
-    }
-  } catch {
-    /* start fresh */
-  }
-  data[sessionId] = { filepath, messageCount };
-  const entries = Object.entries(data);
-  if (entries.length > 50) data = Object.fromEntries(entries.slice(-50));
-  writeFileSync(p, JSON.stringify(data, null, 2), "utf-8");
-}
-
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, "")
-    .trim()
-    .split(/\s+/)
-    .slice(0, 4)
-    .join("-");
-}
 
 // ── JSON schema for merged Haiku call ──
 
@@ -124,17 +68,16 @@ interface IntelligenceOutput {
 
 // ── Main handler ──
 
-async function captureSessionIntelligence(
+/** @lintignore exercised directly by test/session-intelligence.test.ts */
+export async function captureSessionIntelligence(
   transcript: string,
   sessionId?: string
 ): Promise<void> {
   const messages = parseMessages(transcript);
   if (messages.length < 6 || transcript.length < 2000) return;
 
-  // Dedup check
-  if (sessionId) {
-    const prev = getPreviousCapture(sessionId);
-    if (prev && messages.length - prev.messageCount < MIN_NEW_MESSAGES) return;
+  if (sessionId && !isRecaptureWorthwhile(readCapture(sessionId), messages.length)) {
+    return;
   }
 
   // Skip if no inference path is available (no CLI binary AND no API key)
@@ -200,7 +143,7 @@ async function captureSessionIntelligence(
   // ── Write session learning file ──
 
   const category = categorizeLearning(title, summary);
-  const slug = slugify(title);
+  const slug = learningSlug(title);
   const dir = ensureDir(resolve(paths.sessionLearning(), monthPath()));
   const filename = `${fileTimestamp()}_${category}_${slug}.md`;
 
@@ -224,7 +167,7 @@ async function captureSessionIntelligence(
 
   // Remove previous capture for this session
   if (sessionId) {
-    const prev = getPreviousCapture(sessionId);
+    const prev = readCapture(sessionId);
     if (prev?.filepath && existsSync(prev.filepath)) {
       try {
         await unlink(prev.filepath);

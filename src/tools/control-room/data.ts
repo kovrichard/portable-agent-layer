@@ -16,9 +16,9 @@ import { loadAnalyzeNudge } from "../../hooks/lib/analyze-nudge";
 import { paths } from "../../hooks/lib/paths";
 import { isStale, type ProjectProgress, readAllProjects } from "../../hooks/lib/projects";
 import { readProjectHistory } from "../../hooks/lib/work-tracking";
-import { type HandoffEntry, readHandoffs } from "../agent/handoff-note";
-import { parseIscs } from "../agent/project";
 import { anchorSlugOf, type LedgerFilter, queryLedger } from "../ledger/query";
+import { type HandoffEntry, readHandoffs } from "../lib/handoff-note";
+import { parseIscs } from "../lib/project-isc";
 
 const DAY_MS = 86_400_000;
 const HANDOFF_FRESH_DAYS = 7;

@@ -11,98 +11,53 @@
  *   bun ~/.pal/tools/thread.ts --list [--all]
  */
 
-import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { currentAttribution, type RecordAttribution } from "../../hooks/lib/actor";
-import { encodeAnchor } from "../../hooks/lib/anchor";
-import { ensureDir, paths } from "../../hooks/lib/paths";
 import { emit } from "../lib/emit";
+import {
+  addThread,
+  readThreads,
+  resolveThreadIn,
+  threadsFile,
+  visibleThreads,
+  writeThreads,
+} from "../lib/thread";
 
-// ── Types ──
+const HELP = `
+Thread — Manage open threads across sessions
 
-export interface Thread extends RecordAttribution {
-  id: string;
-  cwd: string;
-  title: string;
-  context: string;
-  status: "open" | "resolved";
-  created: string;
-  resolved: string | null;
-}
+Usage:
+  thread.ts --add --title "..." [--context "..."]
+  thread.ts --resolve --id <id>
+  thread.ts --list [--all]
+`;
 
-// ── Storage ──
-
-function threadsPath(): string {
-  return resolve(ensureDir(paths.state()), "threads.jsonl");
-}
-
-function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-}
-
-export function readThreads(): Thread[] {
-  const p = threadsPath();
-  if (!existsSync(p)) return [];
-  try {
-    return readFileSync(p, "utf-8")
-      .split("\n")
-      .filter((l) => l.trim())
-      .map((l) => JSON.parse(l) as Thread);
-  } catch {
-    return [];
+function add(title: string | undefined, context: string | undefined) {
+  if (!title) {
+    console.error("--title required");
+    process.exit(1);
   }
+  const thread = addThread(title, context ?? "");
+  emit.receipt(threadsFile(), {
+    id: thread.id,
+    title: thread.title,
+    status: thread.status,
+  });
 }
 
-export function writeThreads(threads: Thread[]): void {
-  writeFileSync(
-    threadsPath(),
-    `${threads.map((t) => JSON.stringify(t)).join("\n")}\n`,
-    "utf-8"
-  );
+function markResolved(id: string | undefined) {
+  if (!id) {
+    console.error("--id required");
+    process.exit(1);
+  }
+  const file = threadsFile();
+  const resolution = resolveThreadIn(readThreads(file), id, new Date());
+  if (!resolution) {
+    console.error(`Thread not found: ${id}`);
+    process.exit(1);
+  }
+  writeThreads(resolution.threads, file);
+  emit.receipt(file, { id, status: "resolved", title: resolution.thread.title });
 }
-
-// ── Operations ──
-
-/** Exported so the cwd-anchor and origin-stamp wiring is directly testable. */
-export function addThread(title: string, context: string): Thread {
-  const thread: Thread = {
-    id: generateId(),
-    cwd: encodeAnchor(process.cwd()),
-    ...currentAttribution(),
-    title,
-    context,
-    status: "open",
-    created: new Date().toISOString(),
-    resolved: null,
-  };
-  appendFileSync(threadsPath(), `${JSON.stringify(thread)}\n`, "utf-8");
-  return thread;
-}
-
-function resolveThread(id: string): {
-  success: boolean;
-  thread?: Thread;
-  message: string;
-} {
-  const threads = readThreads();
-  const idx = threads.findIndex((t) => t.id === id);
-  if (idx === -1) return { success: false, message: `Thread not found: ${id}` };
-  threads[idx].status = "resolved";
-  threads[idx].resolved = new Date().toISOString();
-  writeThreads(threads);
-  return {
-    success: true,
-    thread: threads[idx],
-    message: `Resolved: ${threads[idx].title}`,
-  };
-}
-
-function listThreads(all: boolean): Thread[] {
-  return all ? readThreads() : readThreads().filter((t) => t.status === "open");
-}
-
-// ── CLI ──
 
 function run() {
   const { values } = parseArgs({
@@ -125,49 +80,14 @@ function run() {
   else if (values.list) cmd = "list";
 
   if (values.help || !cmd) {
-    console.log(`
-Thread — Manage open threads across sessions
-
-Usage:
-  thread.ts --add --title "..." [--context "..."]
-  thread.ts --resolve --id <id>
-  thread.ts --list [--all]
-`);
+    console.log(HELP);
     process.exit(cmd ? 0 : 1);
   }
 
-  if (cmd === "add") {
-    if (!values.title) {
-      console.error("--title required");
-      process.exit(1);
-    }
-    const thread = addThread(values.title, values.context ?? "");
-    emit.receipt(threadsPath(), {
-      id: thread.id,
-      title: thread.title,
-      status: thread.status,
-    });
-  }
-
-  if (cmd === "resolve") {
-    if (!values.id) {
-      console.error("--id required");
-      process.exit(1);
-    }
-    const resolved = resolveThread(values.id);
-    if (!resolved.success) {
-      console.error(resolved.message);
-      process.exit(1);
-    }
-    emit.receipt(threadsPath(), {
-      id: values.id,
-      status: "resolved",
-      title: resolved.thread?.title,
-    });
-  }
-
+  if (cmd === "add") add(values.title, values.context);
+  if (cmd === "resolve") markResolved(values.id);
   if (cmd === "list") {
-    const threads = listThreads(values.all ?? false);
+    const threads = visibleThreads(readThreads(), values.all ?? false);
     emit.data(JSON.stringify({ count: threads.length, threads }, null, 2));
   }
 }

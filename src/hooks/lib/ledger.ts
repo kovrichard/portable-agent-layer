@@ -46,8 +46,14 @@ import { isSensitivePath } from "./sensitive-path";
  * lose the only signal in the record that says where the boundary was drawn,
  * and "what did I try that was refused" is a question worth being able to ask
  * separately from "what did I try that broke".
+ *
+ * `blocked` is a rule refusing, on the same reasoning: a person can be asked to
+ * reconsider and a rule cannot, so "PAL would not let me" and "you would not
+ * let me" are different facts about where the boundary sits. It is also the
+ * only outcome PAL itself decides, which is what makes the declare-enforce-record
+ * triad demonstrable rather than merely wired.
  */
-export type LedgerOutcome = "applied" | "failed" | "denied";
+export type LedgerOutcome = "applied" | "failed" | "denied" | "blocked";
 
 /**
  * One side of a change, identified rather than reproduced. The hash ties the
@@ -107,6 +113,12 @@ export interface LedgerEntry extends RecordAttribution {
   delta?: LedgerDelta;
   /** Why the action did not land. Absent on an applied one. */
   reason?: string;
+  /**
+   * The shell command a rule refused. Only a blocked shell action carries one:
+   * it has no file to name, so without this the entry could say a command was
+   * refused but not which.
+   */
+  command?: string;
 }
 
 export interface RecordActionInput {
@@ -121,6 +133,7 @@ export interface RecordActionInput {
   /** Resulting content; null when nothing landed. */
   after: string | null;
   reason?: string;
+  command?: string;
 }
 
 /**
@@ -254,12 +267,46 @@ export function recordAction(input: RecordActionInput): LedgerEntry {
     after: stateOf(input.after),
     ...(delta ? { delta } : {}),
     ...(input.reason ? { reason: input.reason } : {}),
+    ...(input.command ? { command: input.command } : {}),
   };
 
   const file = ledgerPath();
   rotateIfFull(file);
   appendFileSync(file, `${JSON.stringify(entry)}\n`, "utf-8");
   return entry;
+}
+
+/** A refused command is quoted back, not stored whole. */
+const MAX_COMMAND_CHARS = 500;
+
+export interface RecordBlockedInput {
+  tool: string;
+  /** Absolute path of the file, or of the directory a refused command ran in. */
+  target: string;
+  /** The refused command, when the tool was a shell rather than an editor. */
+  command?: string;
+  /** What the rule told the agent — the same words, so both records agree. */
+  reason: string;
+}
+
+/**
+ * A rule refused this before it ran. Written by whoever enforces the rule, at
+ * the moment it fires, because a refusal produces no other event: nothing runs,
+ * so no post-tool hook reports it and nothing downstream can infer it happened.
+ *
+ * There is no before or after. The file is untouched, and a delta claiming
+ * otherwise would be the ledger describing a change that never occurred.
+ */
+export function recordBlocked(input: RecordBlockedInput): LedgerEntry {
+  return recordAction({
+    tool: input.tool,
+    target: input.target,
+    outcome: "blocked",
+    before: null,
+    after: null,
+    reason: input.reason,
+    ...(input.command ? { command: input.command.slice(0, MAX_COMMAND_CHARS) } : {}),
+  });
 }
 
 /**

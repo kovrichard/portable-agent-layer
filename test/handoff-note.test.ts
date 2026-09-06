@@ -1,8 +1,18 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import type { HandoffEntry } from "../src/tools/agent/handoff-note";
+import {
+  entryFor,
+  type HandoffEntry,
+  type HandoffStore,
+  type NoteInput,
+  parseHandoffs,
+  readHandoffs,
+  recordNote,
+  statusOf,
+  trimHandoffs,
+} from "../src/tools/lib/handoff-note";
 
 // The handoff note is where an agent says what it could not finish. One of those
 // reasons — waiting on the human — is the only one the morning screen can act on,
@@ -79,5 +89,143 @@ describe("handoff-note --waiting", () => {
 
   test("a note still needs both a title and text", async () => {
     expect(await runCli(["--waiting", "an answer"])).toBe(1);
+  });
+});
+
+const NOW = new Date("2026-09-06T12:00:00.000Z");
+
+const input = (over: Partial<NoteInput> = {}): NoteInput => ({
+  cwd: "/work/here",
+  title: "the pricing page",
+  text: "copy is drafted, the numbers are not",
+  done: false,
+  ...over,
+});
+
+const entry = (over: Partial<HandoffEntry> = {}): HandoffEntry => ({
+  timestamp: "2026-09-01T00:00:00.000Z",
+  title: "t",
+  status: "in-progress",
+  handoff: "h",
+  artifacts: [],
+  source: "deliberate",
+  ...over,
+});
+
+describe("parseHandoffs", () => {
+  test("reads the store back", () => {
+    const store: HandoffStore = { "/a": entry() };
+    expect(parseHandoffs(JSON.stringify(store))).toEqual(store);
+  });
+
+  // A corrupt store loses the notes, not the session that was writing one.
+  test("unreadable content is an empty store, not a throw", () => {
+    expect(parseHandoffs("{not json")).toEqual({});
+  });
+});
+
+describe("readHandoffs", () => {
+  test("a store that was never written is empty", () => {
+    expect(readHandoffs(resolve(HOME, "nope.json"))).toEqual({});
+  });
+
+  test("reads the file it is pointed at", () => {
+    const file = resolve(HOME, "store.json");
+    writeFileSync(file, JSON.stringify({ "/a": entry({ title: "kept" }) }));
+    expect(readHandoffs(file)["/a"].title).toBe("kept");
+  });
+
+  // A path that exists but is not a readable file loses the notes, not the run.
+  test("a store that cannot be read at all is empty, not a throw", () => {
+    expect(readHandoffs(HOME)).toEqual({});
+  });
+});
+
+describe("entryFor", () => {
+  test("stamps the note with the clock it was handed", () => {
+    expect(entryFor(input(), NOW).timestamp).toBe("2026-09-06T12:00:00.000Z");
+  });
+
+  test("an unfinished note is in progress", () => {
+    expect(entryFor(input(), NOW).status).toBe("in-progress");
+    expect(statusOf(input())).toBe("in-progress");
+  });
+
+  test("a closed note is completed", () => {
+    expect(entryFor(input({ done: true }), NOW).status).toBe("completed");
+    expect(statusOf(input({ done: true }))).toBe("completed");
+  });
+
+  test("carries the waiting line when there is one", () => {
+    expect(entryFor(input({ waitingOn: "a decision" }), NOW).waitingOn).toBe(
+      "a decision"
+    );
+  });
+
+  // Absent, not empty — the morning screen tests for the key.
+  test("omits the waiting line entirely when there is none", () => {
+    expect(entryFor(input(), NOW)).not.toHaveProperty("waitingOn");
+  });
+
+  test("an empty waiting line is no waiting line", () => {
+    expect(entryFor(input({ waitingOn: "" }), NOW)).not.toHaveProperty("waitingOn");
+  });
+
+  test("a deliberate note records no artifacts and says who wrote it", () => {
+    expect(entryFor(input(), NOW)).toEqual({
+      timestamp: "2026-09-06T12:00:00.000Z",
+      title: "the pricing page",
+      status: "in-progress",
+      handoff: "copy is drafted, the numbers are not",
+      artifacts: [],
+      source: "deliberate",
+    });
+  });
+});
+
+describe("trimHandoffs", () => {
+  const store = (n: number): HandoffStore =>
+    Object.fromEntries(
+      Array.from({ length: n }, (_, i) => [`/dir/${i}`, entry({ title: `t${i}` })])
+    );
+
+  test("leaves a store under the cap alone", () => {
+    const under = store(20);
+    expect(trimHandoffs(under)).toBe(under);
+  });
+
+  test("keeps the twenty most recent keys", () => {
+    const trimmed = trimHandoffs(store(21));
+    expect(Object.keys(trimmed)).toHaveLength(20);
+    expect(trimmed["/dir/0"]).toBeUndefined();
+    expect(trimmed["/dir/20"]).toBeDefined();
+  });
+});
+
+describe("recordNote", () => {
+  test("files the note under the directory the work happened in", () => {
+    const store = recordNote({}, input({ cwd: "/work/here" }), NOW);
+    expect(Object.keys(store)).toEqual(["/work/here"]);
+  });
+
+  test("leaves the other directories' notes alone", () => {
+    const store = recordNote({ "/elsewhere": entry() }, input(), NOW);
+    expect(store["/elsewhere"]).toEqual(entry());
+  });
+
+  // A directory has one note: the newest, whatever it said before.
+  test("replaces the note for a directory rather than stacking one", () => {
+    const first = recordNote({}, input({ waitingOn: "an answer" }), NOW);
+    const second = recordNote(first, input({ done: true, text: "" }), NOW);
+    expect(Object.keys(second)).toEqual(["/work/here"]);
+    expect(second["/work/here"].status).toBe("completed");
+    expect(second["/work/here"]).not.toHaveProperty("waitingOn");
+  });
+
+  test("trims the store as it writes", () => {
+    const full = Object.fromEntries(
+      Array.from({ length: 20 }, (_, i) => [`/dir/${i}`, entry()])
+    );
+    expect(Object.keys(recordNote(full, input(), NOW))).toHaveLength(20);
   });
 });

@@ -28,8 +28,9 @@ function Row({ r }: { r: LedgerViewRow }) {
         </span>
       </td>
       <td>{r.tool}</td>
-      <td className="target" title={r.target}>
+      <td className="target" title={r.command ?? r.target}>
         <b>{slug}</b> {rest.join(" ")}
+        {r.command && <span className="reason">{r.command}</span>}
       </td>
       <td>{r.change}</td>
       <td>
