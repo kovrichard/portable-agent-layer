@@ -1,13 +1,20 @@
 # PAL waitingOn extraction evaluation
 #
-# Evaluates the agenda handler's waiting-on prompt. The interesting failure is
-# NOT missing a blocker — it is inventing one. A model asked "what is this
-# waiting on?" will always find something, and a bell that lights on every
-# session is a bell nobody reads. So most cases here expect an empty answer.
+# Evaluates the prompt in src/hooks/handlers/agenda.ts (extractWaitingOn). The
+# system text below is that prompt verbatim — the JSON shape is enforced by the
+# provider's output_format rather than written into the prompt, which is how the
+# inference layer does it too (it appends schemaInstruction() from a jsonSchema).
+#
+# The interesting failure is NOT missing a blocker — it is inventing one. A model
+# asked "what is this waiting on?" will always find something, and a bell that
+# lights on every session is a bell nobody reads. Most cases here expect "".
+#
+# Production runs this on Haiku (buildClaudeArgs defaults to HAIKU_MODEL), which
+# is why haiku is the first provider. Sonnet is here to answer "would a bigger
+# model be more restrained?" with evidence rather than a guess.
 #
 # Run:
 #   bun run eval:waiting-on
-#   bunx promptfoo@latest eval -c eval/waiting-on/promptfoo.yaml
 
 description: waitingOn — does the handoff ask the person for anything?
 
@@ -20,83 +27,98 @@ prompts:
       When it is blocked, answer with the question in their own terms, under fifteen words.
       When it is not, answer with an empty string. That is the ordinary answer.
 
-      Answer as JSON: {"question": "..."}
-
-      Handoff:
       {{handoff}}
 
 providers:
   - id: anthropic:messages:claude-haiku-4-5-20251001
+    label: haiku
+    config: &waiting_schema
+      output_format:
+        type: json_schema
+        schema:
+          type: object
+          properties:
+            question:
+              type: string
+          required: ["question"]
+          additionalProperties: false
+  - id: anthropic:messages:claude-sonnet-4-6
+    label: sonnet
+    config: *waiting_schema
 
 defaultTest:
-  options:
-    transform: JSON.parse(output).question.trim()
+  assert:
+    - type: javascript
+      value: file://../lib/valid-json.js
+      description: "Output must carry a question field"
 
 tests:
   # ── blocked on the person: a question was asked and left unanswered ──
-  - vars:
+  - description: an unanswered decision about conflict policy
+    vars:
       handoff: >-
         Stopped mid-way through the machine-sync spike. Pull from studio works; a
         concurrent write to bindings.json on both machines produced a merge conflict
         I did not resolve. Last user message: which policy do we want here?
     assert:
       - type: javascript
-        value: output.length > 0
-      - type: llm-rubric
-        value: names a choice about conflict policy that the person has to make
+        value: file://assertions/is-blocked.js
 
-  - vars:
+  - description: an approval the work cannot give itself
+    vars:
       handoff: >-
         The auth refactor is ready to merge but it changes the session cookie name,
         which logs everyone out on deploy. I have not pushed. Do you want that now
         or after the release?
     assert:
       - type: javascript
-        value: output.length > 0
+        value: file://assertions/is-blocked.js
 
-  # ── not blocked: work simply stopped ──
-  - vars:
-      handoff: >-
-        Auth flow refactor is green; release notes not written.
+  # ── not blocked: the work simply stopped ──
+  - description: unfinished, but nothing is being asked
+    vars:
+      handoff: "Auth flow refactor is green; release notes not written."
     assert:
       - type: javascript
-        value: output === ""
+        value: file://assertions/not-blocked.js
 
-  - vars:
-      handoff: >-
-        Thread view half-rendered; the query works, the component doesn't.
+  - description: a half-built component is not a question
+    vars:
+      handoff: "Thread view half-rendered; the query works, the component doesn't."
     assert:
       - type: javascript
-        value: output === ""
+        value: file://assertions/not-blocked.js
 
-  - vars:
+  - description: a clean stop
+    vars:
       handoff: >-
         Ran the full suite, 2612 pass, 0 fail. Gates all green. Committed nothing.
     assert:
       - type: javascript
-        value: output === ""
+        value: file://assertions/not-blocked.js
 
-  - vars:
+  - description: finished one thing and named the next
+    vars:
       handoff: >-
         Fixed the path-normalisation bug in the hook merge logic and added a test
         that fails without the fix. Moving on to the ledger next.
     assert:
       - type: javascript
-        value: output === ""
+        value: file://assertions/not-blocked.js
 
-  # ── the trap: a question the AGENT asked itself, not the person ──
-  - vars:
+  # ── the traps ──
+  - description: a question the agent asked itself, and answered
+    vars:
       handoff: >-
         I was deciding whether to use a Map or an object for the runtime counts.
         Went with Map.groupBy in the end. Next: wire it into the board.
     assert:
       - type: javascript
-        value: output === ""
+        value: file://assertions/not-blocked.js
 
-  # ── the trap: waiting on a machine, not a person ──
-  - vars:
-      handoff: >-
-        Kicked off the release build; waiting for CI to finish before tagging.
+  - description: waiting on a machine is not waiting on a person
+    vars:
+      handoff: "Kicked off the release build; waiting for CI to finish before tagging."
     assert:
       - type: javascript
-        value: output === ""
+        value: file://assertions/not-blocked.js

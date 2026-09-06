@@ -1,13 +1,17 @@
 # PAL goal-to-project linkage evaluation
 #
-# Evaluates the agenda handler's linkage prompt. Two failures matter and they
-# pull in opposite directions: linking a project that merely shares a subject
-# with a goal (a chat client is not "land two clients"), and refusing to link a
-# project that plainly moves one. An empty list is a real answer, not a miss.
+# Evaluates the prompt in src/hooks/handlers/agenda.ts (refreshGoalLinks). The
+# system text below is that prompt verbatim — the JSON shape is enforced by the
+# provider's output_format rather than written into the prompt, which is how the
+# inference layer does it too (it appends schemaInstruction() from a jsonSchema).
+#
+# Two failures matter and they pull in opposite directions: linking a project
+# that merely shares a subject with a goal (a chat client is not "land two
+# clients"), and refusing to link one that plainly moves it. An empty list is a
+# real answer, not a miss.
 #
 # Run:
 #   bun run eval:goal-links
-#   bunx promptfoo@latest eval -c eval/goal-links/promptfoo.yaml
 
 description: goal links — which projects actually move a stated goal forward?
 
@@ -20,8 +24,6 @@ prompts:
       A goal that nothing serves gets an empty list, and that is a useful answer rather than a failure.
       Copy project slugs exactly. Return one entry per goal you were given.
 
-      Answer as JSON: {"links": [{"goalId": "...", "projects": ["..."]}]}
-
       Their goals:
       {{goals}}
 
@@ -30,6 +32,37 @@ prompts:
 
 providers:
   - id: anthropic:messages:claude-haiku-4-5-20251001
+    label: haiku
+    config: &links_schema
+      output_format:
+        type: json_schema
+        schema:
+          type: object
+          properties:
+            links:
+              type: array
+              items:
+                type: object
+                properties:
+                  goalId:
+                    type: string
+                  projects:
+                    type: array
+                    items:
+                      type: string
+                required: ["goalId", "projects"]
+                additionalProperties: false
+          required: ["links"]
+          additionalProperties: false
+  - id: anthropic:messages:claude-sonnet-4-6
+    label: sonnet
+    config: *links_schema
+
+defaultTest:
+  assert:
+    - type: javascript
+      value: file://../lib/valid-json.js
+      description: "Output must carry a links array"
 
 tests:
   - description: a starter kit that pays the bills serves the client goal
@@ -43,12 +76,14 @@ tests:
         - fyzz-chat: A chat client I like using.
     assert:
       - type: javascript
-        value: |
-          const l = JSON.parse(output).links;
-          const by = Object.fromEntries(l.map(x => [x.goalId, x.projects]));
-          return by.clients.includes("catalyst")
-            && by.pal1.includes("portable-agent-layer")
-            && !by.pal1.includes("fyzz-chat");
+        value: file://assertions/serves.js
+        config:
+          clients: ["catalyst"]
+          pal1: ["portable-agent-layer"]
+      - type: javascript
+        value: file://assertions/does-not-serve.js
+        config:
+          pal1: ["fyzz-chat"]
 
   - description: sharing a subject is not serving — a chat client is not a client goal
     vars:
@@ -59,7 +94,8 @@ tests:
         - home-server: Keep the NAS alive.
     assert:
       - type: javascript
-        value: JSON.parse(output).links[0].projects.length === 0
+        value: file://assertions/serves-nothing.js
+        config: { goalId: clients }
 
   - description: a goal nothing serves gets an empty list rather than a stretch
     vars:
@@ -69,7 +105,8 @@ tests:
         - konvert7-billing: Invoices and Stripe webhooks for every Konvert7 product.
     assert:
       - type: javascript
-        value: JSON.parse(output).links[0].projects.length === 0
+        value: file://assertions/serves-nothing.js
+        config: { goalId: talk }
 
   - description: one goal can be served by several projects
     vars:
@@ -81,9 +118,13 @@ tests:
         - notes-cli: A small note taker.
     assert:
       - type: javascript
-        value: |
-          const p = JSON.parse(output).links[0].projects;
-          return p.includes("portable-agent-layer") && !p.includes("notes-cli");
+        value: file://assertions/serves.js
+        config:
+          pal1: ["portable-agent-layer"]
+      - type: javascript
+        value: file://assertions/does-not-serve.js
+        config:
+          pal1: ["notes-cli"]
 
   - description: every goal it was given comes back, none invented
     vars:
@@ -95,6 +136,5 @@ tests:
         - catalyst: The starter that pays for the rest.
     assert:
       - type: javascript
-        value: |
-          const ids = JSON.parse(output).links.map(x => x.goalId).sort();
-          return JSON.stringify(ids) === JSON.stringify(["a","b","c"]);
+        value: file://assertions/covers-goals.js
+        config: { goalIds: ["a", "b", "c"] }
