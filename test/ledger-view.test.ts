@@ -155,6 +155,16 @@ describe("the rows", () => {
     expect(row.reason).toBe("the user said no");
   });
 
+  test("a blocked shell row names the command, and only it carries one", async () => {
+    writeLedger([entry(), refused({ outcome: "blocked", command: "ls /etc" })]);
+
+    const [blocked, applied] = (await view()).ledgerView().rows;
+    expect(blocked.command).toBe("ls /etc");
+    // Absent, not undefined: the page tests `r.command` to decide whether to
+    // render the second line, and a key set to undefined is still a key.
+    expect("command" in applied).toBe(false);
+  });
+
   test("the window is echoed back so the page can say what it shows", async () => {
     const since = new Date("2026-09-01T00:00:00.000Z");
     const { window } = (await view()).ledgerView({ since });
