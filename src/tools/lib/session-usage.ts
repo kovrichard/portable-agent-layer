@@ -10,6 +10,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { costOfUsage } from "../../hooks/lib/models";
+import { cacheWritesOf, type TranscriptUsage } from "./transcript-usage";
 
 export interface SessionUsage {
   input: number;
@@ -89,17 +90,6 @@ export function findSessionFile(
   return mostRecentTranscript(claudeDir);
 }
 
-interface TranscriptUsage {
-  input_tokens?: number;
-  output_tokens?: number;
-  cache_creation_input_tokens?: number;
-  cache_read_input_tokens?: number;
-  cache_creation?: {
-    ephemeral_5m_input_tokens?: number;
-    ephemeral_1h_input_tokens?: number;
-  };
-}
-
 interface TranscriptLine {
   type?: string;
   timestamp?: string;
@@ -118,23 +108,6 @@ function emptyUsage(): SessionUsage {
     calls: 0,
     models: new Set(),
     durationMs: 0,
-  };
-}
-
-/**
- * Older transcripts report one cache-write total; newer ones break it into the
- * two TTLs, which are priced differently. Reading the total as well as the
- * breakdown would count those tokens twice.
- */
-function cacheWritesOf(usage: TranscriptUsage) {
-  const fiveMinute = usage.cache_creation?.ephemeral_5m_input_tokens;
-  const oneHour = usage.cache_creation?.ephemeral_1h_input_tokens;
-  const hasBreakdown = fiveMinute !== undefined || oneHour !== undefined;
-  return {
-    cacheWrite5m: hasBreakdown
-      ? (fiveMinute ?? 0)
-      : (usage.cache_creation_input_tokens ?? 0),
-    cacheWrite1h: oneHour ?? 0,
   };
 }
 
