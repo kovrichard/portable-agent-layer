@@ -1,0 +1,100 @@
+# PAL goal-to-project linkage evaluation
+#
+# Evaluates the agenda handler's linkage prompt. Two failures matter and they
+# pull in opposite directions: linking a project that merely shares a subject
+# with a goal (a chat client is not "land two clients"), and refusing to link a
+# project that plainly moves one. An empty list is a real answer, not a miss.
+#
+# Run:
+#   bun run eval:goal-links
+#   bunx promptfoo@latest eval -c eval/goal-links/promptfoo.yaml
+
+description: goal links — which projects actually move a stated goal forward?
+
+prompts:
+  - label: goal-links
+    raw: |
+      You are told a person's stated goals and their active projects.
+      For each goal, name the projects that move it forward.
+      Judge from the goal and the project description only. A project that merely resembles a goal in subject does not serve it — it has to move it.
+      A goal that nothing serves gets an empty list, and that is a useful answer rather than a failure.
+      Copy project slugs exactly. Return one entry per goal you were given.
+
+      Answer as JSON: {"links": [{"goalId": "...", "projects": ["..."]}]}
+
+      Their goals:
+      {{goals}}
+
+      Their active projects:
+      {{projects}}
+
+providers:
+  - id: anthropic:messages:claude-haiku-4-5-20251001
+
+tests:
+  - description: a starter kit that pays the bills serves the client goal
+    vars:
+      goals: |
+        - clients: Land two retained consulting clients by December.
+        - pal1: Ship PAL 1.0 with cross-machine sync.
+      projects: |
+        - catalyst: The Next.js starter that pays for the rest — every client project begins here.
+        - portable-agent-layer: Cross-agent memory and a ledger of what the agents did.
+        - fyzz-chat: A chat client I like using.
+    assert:
+      - type: javascript
+        value: |
+          const l = JSON.parse(output).links;
+          const by = Object.fromEntries(l.map(x => [x.goalId, x.projects]));
+          return by.clients.includes("catalyst")
+            && by.pal1.includes("portable-agent-layer")
+            && !by.pal1.includes("fyzz-chat");
+
+  - description: sharing a subject is not serving — a chat client is not a client goal
+    vars:
+      goals: |
+        - clients: Land two retained consulting clients by December.
+      projects: |
+        - fyzz-chat: A chat client I like using.
+        - home-server: Keep the NAS alive.
+    assert:
+      - type: javascript
+        value: JSON.parse(output).links[0].projects.length === 0
+
+  - description: a goal nothing serves gets an empty list rather than a stretch
+    vars:
+      goals: |
+        - talk: Give one talk about personal AI infrastructure.
+      projects: |
+        - konvert7-billing: Invoices and Stripe webhooks for every Konvert7 product.
+    assert:
+      - type: javascript
+        value: JSON.parse(output).links[0].projects.length === 0
+
+  - description: one goal can be served by several projects
+    vars:
+      goals: |
+        - pal1: Ship PAL 1.0 with cross-machine sync.
+      projects: |
+        - portable-agent-layer: Cross-agent memory and a ledger of what the agents did.
+        - pal-site: pal.konvert7.com explains what PAL does today.
+        - notes-cli: A small note taker.
+    assert:
+      - type: javascript
+        value: |
+          const p = JSON.parse(output).links[0].projects;
+          return p.includes("portable-agent-layer") && !p.includes("notes-cli");
+
+  - description: every goal it was given comes back, none invented
+    vars:
+      goals: |
+        - a: Land two retained consulting clients.
+        - b: Ship PAL 1.0.
+        - c: Give one talk.
+      projects: |
+        - catalyst: The starter that pays for the rest.
+    assert:
+      - type: javascript
+        value: |
+          const ids = JSON.parse(output).links.map(x => x.goalId).sort();
+          return JSON.stringify(ids) === JSON.stringify(["a","b","c"]);

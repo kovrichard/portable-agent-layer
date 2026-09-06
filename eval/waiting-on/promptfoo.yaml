@@ -1,0 +1,102 @@
+# PAL waitingOn extraction evaluation
+#
+# Evaluates the agenda handler's waiting-on prompt. The interesting failure is
+# NOT missing a blocker — it is inventing one. A model asked "what is this
+# waiting on?" will always find something, and a bell that lights on every
+# session is a bell nobody reads. So most cases here expect an empty answer.
+#
+# Run:
+#   bun run eval:waiting-on
+#   bunx promptfoo@latest eval -c eval/waiting-on/promptfoo.yaml
+
+description: waitingOn — does the handoff ask the person for anything?
+
+prompts:
+  - label: waiting-on
+    raw: |
+      You are given the last exchange of a coding session that stopped mid-work.
+      Decide whether the work is blocked on the person — a decision only they can make, a question they were asked and did not answer, an approval the work needs.
+      Most sessions are not blocked on anyone. Waiting for an agent to continue is not being blocked on the person.
+      When it is blocked, answer with the question in their own terms, under fifteen words.
+      When it is not, answer with an empty string. That is the ordinary answer.
+
+      Answer as JSON: {"question": "..."}
+
+      Handoff:
+      {{handoff}}
+
+providers:
+  - id: anthropic:messages:claude-haiku-4-5-20251001
+
+defaultTest:
+  options:
+    transform: JSON.parse(output).question.trim()
+
+tests:
+  # ── blocked on the person: a question was asked and left unanswered ──
+  - vars:
+      handoff: >-
+        Stopped mid-way through the machine-sync spike. Pull from studio works; a
+        concurrent write to bindings.json on both machines produced a merge conflict
+        I did not resolve. Last user message: which policy do we want here?
+    assert:
+      - type: javascript
+        value: output.length > 0
+      - type: llm-rubric
+        value: names a choice about conflict policy that the person has to make
+
+  - vars:
+      handoff: >-
+        The auth refactor is ready to merge but it changes the session cookie name,
+        which logs everyone out on deploy. I have not pushed. Do you want that now
+        or after the release?
+    assert:
+      - type: javascript
+        value: output.length > 0
+
+  # ── not blocked: work simply stopped ──
+  - vars:
+      handoff: >-
+        Auth flow refactor is green; release notes not written.
+    assert:
+      - type: javascript
+        value: output === ""
+
+  - vars:
+      handoff: >-
+        Thread view half-rendered; the query works, the component doesn't.
+    assert:
+      - type: javascript
+        value: output === ""
+
+  - vars:
+      handoff: >-
+        Ran the full suite, 2612 pass, 0 fail. Gates all green. Committed nothing.
+    assert:
+      - type: javascript
+        value: output === ""
+
+  - vars:
+      handoff: >-
+        Fixed the path-normalisation bug in the hook merge logic and added a test
+        that fails without the fix. Moving on to the ledger next.
+    assert:
+      - type: javascript
+        value: output === ""
+
+  # ── the trap: a question the AGENT asked itself, not the person ──
+  - vars:
+      handoff: >-
+        I was deciding whether to use a Map or an object for the runtime counts.
+        Went with Map.groupBy in the end. Next: wire it into the board.
+    assert:
+      - type: javascript
+        value: output === ""
+
+  # ── the trap: waiting on a machine, not a person ──
+  - vars:
+      handoff: >-
+        Kicked off the release build; waiting for CI to finish before tagging.
+    assert:
+      - type: javascript
+        value: output === ""

@@ -98,6 +98,13 @@ describe("readTelosGoals", () => {
     expect(readTelosGoals()).toEqual([]);
   });
 
+  test("a scaffold's empty bullets are punctuation, not goals", () => {
+    writeGoals(
+      "# Goals\n\n## Short-term\n\n- A real goal\n\n## Medium-term\n\n-\n\n## Long-term\n\n-\n"
+    );
+    expect(readTelosGoals().map((g) => g.title)).toEqual(["A real goal"]);
+  });
+
   test("ids are stable slugs and never collide on empty titles", () => {
     writeGoals("# Goals\n\n- Find three clients\n- ...\n- ...\n");
     const ids = readTelosGoals().map((g) => g.id);

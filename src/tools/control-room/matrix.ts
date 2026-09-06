@@ -12,6 +12,11 @@
  */
 
 import {
+  type GoalProgress,
+  progressFor,
+  readGoalLinks,
+} from "../../hooks/lib/goal-links";
+import {
   type ProjectProgress,
   readAllProjects,
   type ServesAuthority,
@@ -20,8 +25,10 @@ import {
 import { isImportant, SERVES_MEANING } from "../../hooks/lib/serves";
 import { dueFrom, readTelosGoals, type TelosGoal } from "../../hooks/lib/telos-goals";
 import type { HandoffEntry } from "../lib/handoff-note";
+import { parseIscs } from "../lib/project-isc";
 import { freshHandoffs } from "./data";
 import { type ControlRoomPrefs, readPrefs } from "./prefs";
+import { readSnoozes, snoozedUntil } from "./snooze";
 
 const RANKED_STATUSES = new Set(["active", "paused"]);
 
@@ -40,6 +47,8 @@ export interface MatrixItem {
   servesBy: ServesAuthority | null;
   due: string | null;
   waitingOn: string | null;
+  /** Counted from the criteria of the projects serving it, or null when none does. */
+  progress: { projects: string[]; closed: number; written: number } | null;
 }
 
 export interface Matrix {
@@ -140,10 +149,16 @@ function projectItem(
     servesBy: p.serves_by ?? null,
     due,
     waitingOn: waiting,
+    progress: null,
   };
 }
 
-function goalItem(goal: TelosGoal, now: Date, prefs: ControlRoomPrefs): MatrixItem {
+function goalItem(
+  goal: TelosGoal,
+  now: Date,
+  prefs: ControlRoomPrefs,
+  progress: GoalProgress | null
+): MatrixItem {
   const urgent = dueSoon(goal.due, now, prefs.urgentWithinDays);
   return {
     kind: "goal",
@@ -159,6 +174,7 @@ function goalItem(goal: TelosGoal, now: Date, prefs: ControlRoomPrefs): MatrixIt
     servesBy: null,
     due: goal.due,
     waitingOn: null,
+    progress,
   };
 }
 
@@ -178,6 +194,25 @@ function placementOf(
     default:
       return null;
   }
+}
+
+/** Criteria closed over criteria written, with snoozed and retired ones left out. */
+function criteriaBySlug(
+  projects: ProjectProgress[],
+  snoozes: Record<string, string>
+): Map<string, { closed: number; written: number }> {
+  return new Map(
+    projects.map((p) => {
+      const iscs = [
+        ...parseIscs(p.criteria ?? ""),
+        ...parseIscs(p.changelog ?? ""),
+      ].filter((i) => i.status !== "retired" && !snoozedUntil(p.name, i.id, snoozes));
+      return [
+        p.name,
+        { closed: iscs.filter((i) => i.status === "done").length, written: iscs.length },
+      ];
+    })
+  );
 }
 
 function quadrant(items: MatrixItem[], urgent: boolean, important: boolean) {
@@ -203,10 +238,17 @@ export function buildMatrix(items: MatrixItem[], unranked: number): Matrix {
 export function matrix(now: Date = new Date()): Matrix {
   const prefs = readPrefs();
   const handoffs = new Map(freshHandoffs(now));
-  const ranked = readAllProjects().filter((p) => RANKED_STATUSES.has(p.status));
+  const all = readAllProjects();
+  const ranked = all.filter((p) => RANKED_STATUSES.has(p.status));
+  const links = readGoalLinks();
+  const criteria = criteriaBySlug(all, readSnoozes(now));
   const items = [
     ...ranked.map((p) => projectItem(p, handoffs, now, prefs)),
-    ...(prefs.rankGoals ? readTelosGoals().map((g) => goalItem(g, now, prefs)) : []),
+    ...(prefs.rankGoals
+      ? readTelosGoals().map((g) =>
+          goalItem(g, now, prefs, progressFor(g.id, links, criteria))
+        )
+      : []),
   ];
   return buildMatrix(items, ranked.filter((p) => !p.serves).length);
 }

@@ -13,6 +13,8 @@ import { paths } from "./paths";
 export interface AgendaMove {
   move: string;
   because: string;
+  /** The project the move belongs to, when it belongs to one the page can open. */
+  project?: string;
 }
 
 export interface Agenda {

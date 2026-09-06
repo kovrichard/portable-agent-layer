@@ -222,11 +222,12 @@ export function GoalsList({ goals }: { goals: MatrixItem[] }) {
               {goal.due ?? goal.detail}
             </span>
           </div>
-          {goal.urgentBecause.length > 0 && (
-            <div className="mt-1 text-[11px] text-neutral-600">
-              {goal.urgentBecause.join(" · ")}
-            </div>
-          )}
+          <div className="mt-1 text-[11px] text-neutral-600">
+            {goal.progress
+              ? `${goal.progress.closed} of ${goal.progress.written} criteria closed · served by ${goal.progress.projects.join(", ")}`
+              : "no project serves this yet"}
+            {goal.urgentBecause.length > 0 && ` · ${goal.urgentBecause.join(" · ")}`}
+          </div>
         </div>
       ))}
     </div>
