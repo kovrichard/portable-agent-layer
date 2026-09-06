@@ -88,7 +88,6 @@ export const assets = {
   copilotHooksTemplate: () => pkg("assets", "templates", "hooks.copilot.json"),
   codexHooksTemplate: () => pkg("assets", "templates", "hooks.codex.json"),
   codexRulesTemplate: () => pkg("assets", "templates", "rules.codex.rules"),
-  ledgerPageTemplate: () => pkg("assets", "templates", "ledger-page.html"),
   statuslineScriptBash: () => pkg("assets", "statusline.sh"),
   statuslineScriptPs1: () => pkg("assets", "statusline.ps1"),
   agentTools: () => pkg("src", "tools", "agent"),

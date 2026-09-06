@@ -14,7 +14,9 @@ type TokenCaller =
   | "session-name"
   | "session-intelligence"
   | "relationship"
-  | "self-model";
+  | "self-model"
+  | "agenda-serves"
+  | "agenda-moves";
 
 interface TokenUsageEntry {
   ts: string;

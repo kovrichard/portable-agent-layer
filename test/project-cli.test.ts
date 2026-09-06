@@ -714,4 +714,81 @@ describe("project CLI", () => {
     expect(changelog).toContain("- [x] ISC-1: genuinely finished");
     expect(changelog).not.toContain("[~]");
   });
+
+  describe("what a project serves", () => {
+    function frontmatter(slug: string): string {
+      return readFileSync(
+        resolve(TEST_HOME, "memory", "projects", slug, "ISA.md"),
+        "utf-8"
+      );
+    }
+
+    test("create takes the answer and records it as the user's", async () => {
+      await runCli([
+        "create",
+        "servcreate",
+        "--path",
+        "/tmp/servcreate-fake",
+        "--serves",
+        "revenue",
+        "--serves-note",
+        "a SaaS bet",
+      ]);
+      const raw = frontmatter("servcreate");
+      expect(raw).toContain('serves: "revenue"');
+      expect(raw).toContain('serves_by: "user"');
+      expect(raw).toContain('serves_note: "a SaaS bet"');
+    });
+
+    test("create without the flag leaves the record unranked", async () => {
+      await runCli(["create", "servnone", "--path", "/tmp/servnone-fake"]);
+      expect(frontmatter("servnone")).not.toContain("serves:");
+    });
+
+    test("create refuses a kind outside the three", async () => {
+      const r = await runCli([
+        "create",
+        "servbad",
+        "--path",
+        "/tmp/servbad-fake",
+        "--serves",
+        "important",
+      ]);
+      expect(r.code).toBe(1);
+      expect(r.stderr).toContain("goal, revenue, fun");
+      expect(isaFiles()).not.toContain("servbad");
+    });
+
+    test("serves sets it after the fact, note and all", async () => {
+      await runCli(["create", "servlater", "--path", "/tmp/servlater-fake"]);
+      const r = await runCli(["serves", "servlater", "goal", "feeds", "the", "pitch"]);
+      expect(r.code).toBe(0);
+      expect(JSON.parse(r.stdout)).toMatchObject({
+        project: "servlater",
+        serves: "goal",
+        by: "user",
+      });
+      expect(frontmatter("servlater")).toContain('serves_note: "feeds the pitch"');
+    });
+
+    test("serves refuses a kind outside the three", async () => {
+      await runCli(["create", "servkind", "--path", "/tmp/servkind-fake"]);
+      const r = await runCli(["serves", "servkind", "critical"]);
+      expect(r.code).toBe(1);
+      expect(r.stderr).toContain("goal, revenue, fun");
+    });
+
+    test("serves on an unknown project fails rather than creating one", async () => {
+      const r = await runCli(["serves", "servghost", "fun"]);
+      expect(r.code).toBe(1);
+      expect(r.stderr).toContain("servghost");
+      expect(isaFiles()).not.toContain("servghost");
+    });
+
+    test("serves needs both a name and a kind", async () => {
+      const r = await runCli(["serves", "servlonely"]);
+      expect(r.code).toBe(1);
+      expect(r.stderr).toContain("Usage: serves");
+    });
+  });
 });

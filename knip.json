@@ -3,6 +3,7 @@
   "entry": [
     "klint.rules.ts",
     "src/tools/**/*.ts",
+    "src/tools/control-room/ui/app.tsx",
     "src/hooks/*.ts",
     "src/hooks/handlers/*.ts",
     "src/targets/**/install.ts",
@@ -13,7 +14,8 @@
     ".opencode/plugins/*.ts"
   ],
   "project": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "src/**/*.tsx"
   ],
   "includeEntryExports": true,
   "tags": [

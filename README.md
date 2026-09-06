@@ -87,9 +87,11 @@ pal cli status        # check your setup
 | `pal cli usage` | Summarize token usage and estimated cost |
 | `pal cli actor [label <name>]` | Show or rename the actor — who caused a record. Travels with an export, so a shared memory can tell two people apart |
 | `pal cli machine [label <name>]` | Show or rename this install — where a record was written. Never leaves the machine |
+| `pal cli telos` | Which TELOS topics are answered, in interview order, and which one comes next |
+| `pal cli timezone [<zone>]` | Show or set your timezone. IANA names only, validated before it is stored |
 | `pal cli knowledge` | Query & manage the knowledge store (search, graph, stats, hubs, find, show, add, ls, ingest) |
 | `pal cli ledger` | Query the action ledger — `log`, `show <id>`, `stats`, filtered by `--project`, `--since`, `--actor`, `--machine`, `--runtime`, `--outcome`, `--tool`, `--target` |
-| `pal cli server` | Local page over the action ledger for showing the log to a person — `start [--port <n>]`, `stop`, `status`. Loopback only, default port 7250; project and date window are chosen on the page |
+| `pal cli server` | The morning screen: a local page to open before a terminal — three moves for today, an urgent/important grid over every project *and* every stated goal, where you left off, and a drawer holding the signal and the action ledger — `start [--port <n>]`, `stop`, `status`. Loopback only, default port 7250. No model runs on page load |
 | `pal cli skill link <name>` | Link a personal `~/.pal/skills/<name>/` into every installed agent so it is discoverable |
 | `pal cli skill doctor <name>` | Evaluate a skill against the authoring best practices (folder/file-name match, name, description, body length, point-of-view, reference depth) |
 | `pal cli subagent link <name>` | Install a personal `~/.pal/agents/<name>.md` (merged multi-platform definition) into every installed agent, split per platform |
@@ -185,6 +187,7 @@ PAL ships with built-in skills that extend your agent's capabilities:
 | `frontend-design` | Build production-grade frontend interfaces |
 | `fyzz-chat-api` | Query Fyzz Chat conversations via API |
 | `humanize` | Rewrite text to strip AI tells and read as human |
+| `onboarding` | Interview the user to fill empty TELOS topics and the timezone, one topic at a time |
 | `opinion` | Confirm or contradict tracked opinions (confidence-weighted) |
 | `pal-analyze` | Surface rating trends, failure patterns, and graduation candidates |
 | `pal-reflect` | Promote recurring observations into tracked opinions |
@@ -223,6 +226,7 @@ Your setup should be able to travel with you.
 - **Cross-agent**: full support for Claude Code, opencode, Cursor, GitHub Copilot, and Codex (Codex still lacks subagents)
 - **Subscription-first inference**: background inference routes through whichever subscription CLI is active — no API key needed by default
 - **Portable knowledge**: export and import accumulated knowledge
+- **A morning screen, not a dashboard**: `pal cli server` ranks your projects *and* your written goals in one urgent/important grid. Urgency is read off the files — blockers, an unfinished handoff, a date in a next step, an important thing gone quiet. Importance comes from one fact per project: whether it serves a goal you wrote down, is a way the work could pay, or is kept for its own sake. PAL guesses that once at session stop; you correct it on the page or with `project.ts serves <name> goal|revenue|fun`, and the correction survives every later guess
 - **TypeScript-first**: built in TypeScript from day one
 - **Open source**: hackable, inspectable, extensible
 - **Composable**: intended to fit into real developer workflows

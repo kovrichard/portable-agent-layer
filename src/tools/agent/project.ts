@@ -7,7 +7,8 @@
  *
  * Usage:
  *   bun ~/.pal/tools/project.ts list
- *   bun ~/.pal/tools/project.ts create [name] [--path PATH] [--objectives "..."]
+ *   bun ~/.pal/tools/project.ts create [name] [--path PATH] [--objectives "..."] [--serves goal|revenue|fun]
+ *   bun ~/.pal/tools/project.ts serves <name> <goal|revenue|fun> [note]
  *   bun ~/.pal/tools/project.ts resume <name>
  *   bun ~/.pal/tools/project.ts complete | archive | pause | unpause <name>
  *   bun ~/.pal/tools/project.ts add-next <name> "text"
@@ -38,6 +39,7 @@ import {
   readProject,
   writeProject,
 } from "../../hooks/lib/projects";
+import { isServesKind, SERVES_KINDS, setServes } from "../../hooks/lib/serves";
 
 function now(): string {
   return new Date().toISOString();
@@ -83,6 +85,8 @@ function cmdCreate(args: string[]): void {
       path: { type: "string" },
       name: { type: "string" },
       objectives: { type: "string" },
+      serves: { type: "string" },
+      "serves-note": { type: "string" },
     },
     allowPositionals: true,
   });
@@ -111,6 +115,10 @@ function cmdCreate(args: string[]): void {
         .join("\n")
     : undefined;
 
+  if (values.serves !== undefined && !isServesKind(values.serves)) {
+    fail(`--serves must be one of: ${SERVES_KINDS.join(", ")}`);
+  }
+
   const project: ProjectProgress = {
     name,
     path,
@@ -118,9 +126,29 @@ function cmdCreate(args: string[]): void {
     created: now(),
     updated: now(),
     ...(goalLines ? { goal: goalLines } : {}),
+    ...(isServesKind(values.serves)
+      ? { serves: values.serves, serves_by: "user" as const }
+      : {}),
+    ...(values["serves-note"] ? { serves_note: values["serves-note"] } : {}),
   };
   writeProject(project);
   ok({ created: true, project });
+}
+
+/** The answer the scaffolder asks for, and the one place importance can be corrected. */
+function cmdServes(args: string[]): void {
+  const [name, kind, ...note] = args;
+  if (!name || !kind) fail("Usage: serves <name> <goal|revenue|fun> [note]");
+  if (!isServesKind(kind)) fail(`serves must be one of: ${SERVES_KINDS.join(", ")}`);
+
+  const outcome = setServes({
+    name,
+    kind,
+    note: note.join(" ").trim() || undefined,
+    by: "user",
+  });
+  if (outcome === "missing") fail(`No project named "${name}".`);
+  ok({ project: name, serves: kind, by: "user" });
 }
 
 // ── resume ────────────────────────────────────────────────────────
@@ -386,7 +414,7 @@ function statusFromBox(box: string): IscStatus {
   return "open";
 }
 
-interface Isc {
+export interface Isc {
   id: number;
   text: string;
   status: IscStatus;
@@ -412,7 +440,7 @@ function decodeIscText(stored: string): string {
   return stored.replaceAll(/\\(.)/g, (whole, ch) => ISC_UNESCAPE[ch] ?? whole);
 }
 
-function parseIscs(criteria: string): Isc[] {
+export function parseIscs(criteria: string): Isc[] {
   const out: Isc[] = [];
   for (const line of criteria.split("\n")) {
     const m = new RegExp(/^-\s+\[( |x|~)\]\s+ISC-(\d+):\s+(.+)$/i).exec(line);
@@ -753,7 +781,8 @@ function help(): void {
 
 Commands:
   list                                          show all registered projects
-  create [name] [--path PATH] [--objectives X]  register a project
+  create [name] [--path PATH] [--objectives X] [--serves KIND]  register a project
+  serves <name> <goal|revenue|fun> [note]       say what it is for — outranks PAL's guess
   resume <name>                                 print lean project view (open-ISC titles; full text via show-isc)
   complete <name>                               mark complete
   archive <name>                                mark archived
@@ -795,6 +824,9 @@ function run(): void {
       return;
     case "create":
       cmdCreate(rest);
+      return;
+    case "serves":
+      cmdServes(rest);
       return;
     case "resume":
       cmdResume(rest);

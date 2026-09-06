@@ -9,6 +9,17 @@ import {
   raw as readSettings,
   write as writeSettings,
 } from "../hooks/lib/settings";
+import { isValidTimeZone } from "../hooks/lib/wall-clock";
+
+/**
+ * Empty means the machine's guess, which clack substitutes after validation runs,
+ * so pressing Enter has to pass.
+ * @lintignore exercised directly by test/setup-identity.test.ts
+ */
+export function timezoneProblem(input: string | undefined): string | undefined {
+  if (!input || isValidTimeZone(input)) return undefined;
+  return `Not a timezone Intl recognises: ${input}`;
+}
 
 /** Prompt for missing identity fields. Skips any field that already has a value. */
 export async function promptIdentity(): Promise<void> {
@@ -80,8 +91,9 @@ export async function promptIdentity(): Promise<void> {
   if (needsTimezone) {
     const guess = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const tz = await clack.text({
-      message: "Your timezone",
+      message: `Your timezone (Enter keeps ${guess})`,
       defaultValue: guess,
+      validate: timezoneProblem,
     });
     if (clack.isCancel(tz)) {
       clack.cancel("Setup cancelled");

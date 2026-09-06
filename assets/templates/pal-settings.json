@@ -28,6 +28,7 @@
     "selfModel": true,
     "contextualSteering": true,
     "skillMatching": true,
+    "wallClock": true,
     "steeringTestReport": false
   },
   "steering": {

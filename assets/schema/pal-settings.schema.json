@@ -69,6 +69,10 @@
           "type": "boolean",
           "description": "Prompt-time \"Potential matching skills\" hints, matched from each skill's metadata.triggers."
         },
+        "wallClock": {
+          "type": "boolean",
+          "description": "One line of the current time with every prompt, in identity.principal.timezone, so a session resumed hours later knows the day changed."
+        },
         "steeringTestReport": { "type": "boolean", "description": "When true, the assistant notes to the user which steering self-check fired. For the dual-live test period; ships false." }
       }
     },

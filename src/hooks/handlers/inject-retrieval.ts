@@ -14,6 +14,7 @@ import { ensureIndex } from "../lib/retrieval-index";
 import { isEnabled } from "../lib/settings";
 import { getSkillReminder } from "../lib/skill-match";
 import { getSteeringReminder } from "../lib/steering";
+import { getWallClockReminder } from "../lib/wall-clock";
 
 const BUDGET_MS = 250;
 
@@ -79,11 +80,14 @@ function writeForAgent(reminder: string): void {
   }
 }
 
-/** Merge every prompt-time source — contextual steering, skill matches, prior-lesson
- *  retrieval — into one payload, or null when none of them produced anything.
+/** Merge every prompt-time source — the wall clock, contextual steering, skill
+ *  matches, prior-lesson retrieval — into one payload, or null when none of them
+ *  produced anything. The clock leads: it is the only part that is true of the
+ *  moment rather than of the prompt.
  *  @lintignore dynamically imported by opencode plugin */
 export async function getPromptContext(prompt: string): Promise<string | null> {
   const parts = [
+    getWallClockReminder(),
     getSteeringReminder(prompt),
     getSkillReminder(prompt),
     await getRetrievalReminder(prompt),

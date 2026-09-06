@@ -24,6 +24,11 @@ import { detectRemote } from "./remote";
 
 export type ProjectStatus = "active" | "paused" | "complete" | "archived";
 
+/** What a project is for. The three answers importance can be ranked from. */
+export type ServesKind = "goal" | "revenue" | "fun";
+/** Who decided it. A user answer outranks a guess and survives re-inference. */
+export type ServesAuthority = "inferred" | "user";
+
 export interface ProjectProgress {
   name: string;
   /** Resolved for this machine at read time; absent when not checked out here. */
@@ -36,6 +41,10 @@ export interface ProjectProgress {
   next?: string[];
   blockers?: string[];
   handoff?: string;
+  /** What this project is for — the fact importance is ranked from. */
+  serves?: ServesKind;
+  serves_note?: string;
+  serves_by?: ServesAuthority;
   // ISA body sections
   problem?: string;
   goal?: string;
@@ -100,7 +109,7 @@ export function legacyJsonToProgress(raw: unknown): ProjectProgress | null {
   return p;
 }
 
-const PROJECT_STALE_DAYS_DEFAULT = 14;
+export const PROJECT_STALE_DAYS_DEFAULT = 14;
 
 const PROJECT_MARKERS = [
   ".git",
@@ -123,6 +132,9 @@ type IsaMeta = {
   next?: string[];
   blockers?: string[];
   handoff?: string;
+  serves?: ServesKind;
+  serves_note?: string;
+  serves_by?: ServesAuthority;
 };
 
 const BODY_SECTIONS: Array<[string, keyof ProjectProgress]> = [
@@ -269,6 +281,9 @@ export function writeProject(p: ProjectProgress): void {
   if (p.next?.length) meta.next = p.next;
   if (p.blockers?.length) meta.blockers = p.blockers;
   if (p.handoff) meta.handoff = p.handoff;
+  if (p.serves) meta.serves = p.serves;
+  if (p.serves_note) meta.serves_note = p.serves_note;
+  if (p.serves_by) meta.serves_by = p.serves_by;
   writeFileSync(ensureAndGetIsaFile(p.name), stringify(meta, buildBody(p)), "utf-8");
 }
 
