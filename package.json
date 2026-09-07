@@ -1,7 +1,7 @@
 {
   "name": "portable-agent-layer",
-  "version": "0.72.0",
-  "description": "PAL \u2014 Portable Agent Layer: persistent personal context for AI coding assistants",
+  "version": "0.73.0",
+  "description": "PAL — Portable Agent Layer: persistent personal context for AI coding assistants",
   "type": "module",
   "bin": {
     "pal": "src/cli/index.ts"

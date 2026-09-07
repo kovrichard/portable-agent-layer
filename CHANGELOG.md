@@ -1,3 +1,23 @@
+# [0.73.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.72.0...v0.73.0) (2026-09-07)
+
+
+### Bug Fixes
+
+* build page correctly ([d4e2248](https://github.com/kovrichard/portable-agent-layer/commit/d4e224809a0004be511982526cf4eab69ffd4dd6))
+* **goal-links:** enhance evaluation prompts and assertions for goal and waiting-on features ([e9e9199](https://github.com/kovrichard/portable-agent-layer/commit/e9e9199c21b3d99ced318cbdbf2f97dea181b254))
+* reload before tests ([3b19ba7](https://github.com/kovrichard/portable-agent-layer/commit/3b19ba7b53b684a78fbc7dfd945e61e5504ead9d))
+
+
+### Features
+
+* **control-room:** add goal-linking and waiting-on evaluation features ([9358c60](https://github.com/kovrichard/portable-agent-layer/commit/9358c602d955d4ccb968cf9540c6dab7d6034a87))
+* **control-room:** add placement feature and enhance project management ([0843410](https://github.com/kovrichard/portable-agent-layer/commit/0843410e80b070743ddee0ff6bda501bd72ca3dd))
+* **control-room:** enhance project detail and summary features ([367dc6e](https://github.com/kovrichard/portable-agent-layer/commit/367dc6ec97c59a8d09ec0e86e4e23dfaac86714a))
+* **control-room:** integrate Vite for UI build process and enhance control room features ([de361a7](https://github.com/kovrichard/portable-agent-layer/commit/de361a78558b33c855bff72fefbf70b2ad2a680a))
+* **control-room:** introduce attention management and snooze functionality ([81e659f](https://github.com/kovrichard/portable-agent-layer/commit/81e659f838312012c6a0b93ef0724fb621773901))
+* enhance control room UI with new components and layout improvements ([e84f45e](https://github.com/kovrichard/portable-agent-layer/commit/e84f45e92c4f46217e95d569410d05d21f6811e5))
+* update dependencies and refactor control room UI ([77942e7](https://github.com/kovrichard/portable-agent-layer/commit/77942e7e71ebff1a64b7da25d960838a2ceb4e5b))
+
 # [0.72.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.71.0...v0.72.0) (2026-09-06)
 
 
