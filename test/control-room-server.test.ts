@@ -12,6 +12,7 @@ import type {
 import type { Matrix } from "../src/tools/control-room/matrix";
 import type { ServerStatus } from "../src/tools/control-room/server";
 import type { LedgerView } from "../src/tools/ledger/view";
+import { ensurePageBuilt } from "./lib/built-page";
 
 // The HTTP surface is small enough to pin completely: where it listens, what
 // each route answers, and that a bad window is refused rather than widened.
@@ -19,12 +20,7 @@ import type { LedgerView } from "../src/tools/ledger/view";
 let HOME: string;
 let server: ReturnType<typeof Bun.serve> | null = null;
 
-// The page is a build artifact rather than source, so the suite builds it once
-// instead of asserting against whatever a previous run happened to leave behind.
-beforeAll(async () => {
-  const { buildPage, isBuilt } = await import("../src/tools/control-room/static");
-  if (!isBuilt()) expect(buildPage()).toBe(true);
-});
+beforeAll(ensurePageBuilt);
 
 beforeEach(() => {
   HOME = mkdtempSync(resolve(tmpdir(), "pal-control-room-"));
@@ -625,6 +621,21 @@ describe("how the page itself is served", () => {
       const res = await fetch(`${base}${path}`);
       expect(res.status).toBe(200);
       expect(res.headers.get("content-type")).toContain("text/html");
+    }
+  });
+
+  test("the page's own assets are served, and only those", async () => {
+    const base = await listen();
+    const html = await (await fetch(`${base}/`)).text();
+    const asset = /src="(\/assets\/[^"]+)"/.exec(html)?.[1];
+    expect(asset).toBeTruthy();
+
+    const served = await fetch(`${base}${asset}`);
+    expect(served.status).toBe(200);
+    expect(Number(served.headers.get("content-length"))).toBeGreaterThan(0);
+
+    for (const climb of ["/../package.json", "/assets/../../../package.json"]) {
+      expect((await fetch(`${base}${climb}`)).status).toBe(404);
     }
   });
 

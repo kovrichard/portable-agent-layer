@@ -6,7 +6,7 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { isAbsolute, relative, resolve } from "node:path";
 
 const UI_DIST = resolve(import.meta.dir, "ui", "dist");
 
@@ -22,9 +22,11 @@ export function isBuilt(): boolean {
  */
 export function buildPage(): boolean {
   const repoRoot = resolve(import.meta.dir, "..", "..", "..");
-  const vite = resolve(repoRoot, "node_modules", ".bin", "vite");
+  // node_modules/.bin/vite is a shell shim that Windows cannot spawn directly;
+  // the package's own JS entry runs the same build under any runtime.
+  const vite = resolve(repoRoot, "node_modules", "vite", "bin", "vite.js");
   if (!existsSync(vite)) return false;
-  const built = spawnSync(vite, ["build"], {
+  const built = spawnSync(process.execPath, [vite, "build"], {
     cwd: resolve(import.meta.dir, "ui"),
     encoding: "utf-8",
   });
@@ -55,7 +57,12 @@ export function indexHtml(): Response {
  */
 export function staticAsset(pathname: string): Response | null {
   const target = resolve(UI_DIST, `.${pathname}`);
-  if (!target.startsWith(`${UI_DIST}/`)) return null;
-  const file = Bun.file(target);
-  return existsSync(target) ? new Response(file) : null;
+  if (!isInsideDist(target)) return null;
+  return existsSync(target) ? new Response(Bun.file(target)) : null;
+}
+
+/** Compared as paths, not strings — a separator differs by platform. */
+function isInsideDist(target: string): boolean {
+  const rel = relative(UI_DIST, target);
+  return rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
 }
