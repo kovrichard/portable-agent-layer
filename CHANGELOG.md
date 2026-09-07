@@ -1,3 +1,10 @@
+# [0.74.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.73.0...v0.74.0) (2026-09-07)
+
+
+### Features
+
+* **server:** add restart command to control room and enhance server management ([607db05](https://github.com/kovrichard/portable-agent-layer/commit/607db056bbbfe331603392bbc52eda90ac5822bc))
+
 # [0.73.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.72.0...v0.73.0) (2026-09-07)
 
 
