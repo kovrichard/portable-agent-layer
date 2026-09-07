@@ -37,6 +37,8 @@ export async function runServer(args: string[]): Promise<number> {
       return cmdStart(rest);
     case "stop":
       return cmdStop();
+    case "restart":
+      return cmdRestart();
     case "status":
       return cmdStatus();
     case undefined:
@@ -60,6 +62,7 @@ function showHelp(): void {
   Subcommands:
     start [--port <n>]         Start the control room in the background (default port ${DEFAULT_PORT})
     stop                       Stop it
+    restart                    Replace a running one — the API only changes when the process does
     status                     Show whether it is running, and where
 
   The page listens on ${LOOPBACK} only.
@@ -154,6 +157,29 @@ async function cmdStart(args: string[]): Promise<number> {
   writeState({ pid: status.pid, port, startedAt: status.startedAt });
   console.log(url(port));
   return 0;
+}
+
+/**
+ * The page is read off disk per request, so a rebuilt dist reaches the browser
+ * on the next reload — but the API routes are the running process's own code,
+ * and those only change when the process does.
+ */
+async function cmdRestart(): Promise<number> {
+  const running = await runningServer();
+  if (!running) {
+    console.log("Not running — nothing to restart. Use `start`.");
+    return 0;
+  }
+  await cmdStop();
+  return cmdStart(["--port", String(running.port)]);
+}
+
+/**
+ * Used by `pal cli install`: an install that leaves an old build answering on
+ * the port has not finished. A server nobody started stays unstarted.
+ */
+export async function restartIfRunning(): Promise<boolean> {
+  return (await runningServer()) !== null && (await cmdRestart()) === 0;
 }
 
 /** The state file is a claim; the process answering on that port is the fact. */
