@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
@@ -48,6 +48,16 @@ describe("pal help", () => {
     const result = pal("--help");
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("pal cli <command>");
+  });
+});
+
+describe("pal cli version", () => {
+  const expected = `${JSON.parse(readFileSync(resolve(import.meta.dir, "../package.json"), "utf-8")).version}\n`;
+
+  test.each(["version", "-v", "--version"])("%s prints the package version", (flag) => {
+    const result = pal("cli", flag);
+    expect(result.status).toBe(0);
+    expect(result.stdout).toBe(expected);
   });
 });
 

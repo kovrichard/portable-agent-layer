@@ -24,6 +24,14 @@ export const WATCHED_PATHS = [
   "assets/agents",
 ];
 
+/**
+ * A flag spelling of a command the README documents under its canonical name,
+ * or the `cli` prefix the dispatcher consumes before a command is ever named.
+ */
+function isAliasOrInternalRoute(cmd: string): boolean {
+  return ["--help", "-h", "help", "-v", "--version", "cli"].includes(cmd);
+}
+
 /** Extract CLI command names from the switch statement in index.ts */
 function extractCliCommands(): string[] {
   const pkg = palPkg();
@@ -36,8 +44,7 @@ function extractCliCommands(): string[] {
 
   for (const match of matches) {
     const cmd = match[1];
-    // Skip help aliases and internal routing
-    if (["--help", "-h", "help", "cli"].includes(cmd)) continue;
+    if (isAliasOrInternalRoute(cmd)) continue;
     commands.push(cmd);
   }
 

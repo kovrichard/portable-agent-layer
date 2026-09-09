@@ -140,6 +140,67 @@ export function selectIscs(
   return open;
 }
 
+export interface IscSections {
+  criteria: string;
+  changelog: string;
+}
+
+export type IscMove =
+  | ({ ok: true; already: boolean } & IscSections)
+  | { ok: false; reason: string };
+
+/**
+ * Closing an ISC moves its line out of Criteria and files it under a dated
+ * archive heading in the Changelog. Reopening walks it back. Both are pure so
+ * the CLI and the control room reach the same record through one rule.
+ */
+export function completeIsc(
+  sections: IscSections,
+  id: number,
+  now: Date = new Date()
+): IscMove {
+  const kept = { criteria: sections.criteria, changelog: sections.changelog };
+  if (parseIscs(sections.changelog).some((i) => i.id === id)) {
+    return { ok: true, already: true, ...kept };
+  }
+  const { line, rest } = removeIscLine(sections.criteria, id);
+  if (!line) return { ok: false, reason: `ISC-${id} not found` };
+  return {
+    ok: true,
+    already: false,
+    criteria: rest,
+    changelog: archiveLine(
+      sections.changelog,
+      line.replace("[ ]", "[x]"),
+      "Archived",
+      now
+    ),
+  };
+}
+
+export function reopenIsc(sections: IscSections, id: number): IscMove {
+  const kept = { criteria: sections.criteria, changelog: sections.changelog };
+  if (parseIscs(sections.criteria).some((i) => i.id === id && i.status === "open")) {
+    return { ok: true, already: true, ...kept };
+  }
+  let changelog = sections.changelog;
+  let criteria = sections.criteria;
+  let removed = removeIscLine(changelog, id);
+  if (removed.line) changelog = dropEmptyArchiveHeadings(removed.rest);
+  else {
+    removed = removeIscLine(criteria, id);
+    if (removed.line) criteria = removed.rest;
+  }
+  if (!removed.line) return { ok: false, reason: `ISC-${id} not found` };
+  const openLine = removed.line.replace(/\[[x~]\]/i, "[ ]");
+  return {
+    ok: true,
+    already: false,
+    criteria: criteria ? `${criteria.trimEnd()}\n${openLine}` : openLine,
+    changelog,
+  };
+}
+
 /** A filesystem-safe stem for a task's own ISA, kept unique by the clock. */
 export function taskSlug(title: string, now: number = Date.now()): string {
   const sanitized = title

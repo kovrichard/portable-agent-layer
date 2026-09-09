@@ -139,4 +139,28 @@ describe("pal cli server", () => {
     expect(started.status).toBe(1);
     expect(started.stderr).toContain("--port");
   });
+
+  // The page is read off disk per request, so a rebuilt dist reaches the browser
+  // on its own — but /api is the running process's own code, and an install that
+  // leaves the old process answering has shipped nothing.
+  test("restart replaces the process, keeping the port it was on", () => {
+    pal("start", "--port", String(PORT));
+    const before = recordedPid();
+
+    const restarted = pal("restart");
+    expect(restarted.status).toBe(0);
+
+    const after = recordedPid();
+    expect(after).not.toBe(before);
+    expect(alive(before)).toBe(false);
+    expect(alive(after)).toBe(true);
+    expect(pal("status").stdout).toContain(`http://127.0.0.1:${PORT}/`);
+  });
+
+  test("restart does not start a server nobody was running", () => {
+    const restarted = pal("restart");
+    expect(restarted.status).toBe(0);
+    expect(restarted.stdout).toContain("nothing to restart");
+    expect(existsSync(stateFile())).toBe(false);
+  });
 });

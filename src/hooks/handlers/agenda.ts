@@ -10,10 +10,14 @@
  *    answer to "what now" is rarely "open a repository".
  */
 
+import { writeFile } from "node:fs/promises";
 import { matrix } from "../../tools/control-room/matrix";
+import { handoffFile, readHandoffs, withWaitingOn } from "../../tools/lib/handoff-note";
 import { type AgendaMove, readAgenda, writeAgenda } from "../lib/agenda-store";
+import { linkInputs, readGoalLinks, writeGoalLinks } from "../lib/goal-links";
 import { canInfer, inference } from "../lib/inference";
 import { logDebug, logError } from "../lib/log";
+import { SONNET_MODEL } from "../lib/models";
 import { readAllProjects } from "../lib/projects";
 import { isServesKind, SERVES_KINDS, setServes } from "../lib/serves";
 import { readTelosGoals } from "../lib/telos-goals";
@@ -21,6 +25,7 @@ import { logTokenUsage } from "../lib/token-usage";
 
 const FRESH_HOURS = 6;
 const MAX_PROJECTS_PER_GUESS = 40;
+const MAX_WAITING_PER_RUN = 3;
 
 function hoursSince(iso: string, now: Date): number {
   const at = new Date(iso).getTime();
@@ -53,6 +58,45 @@ const SERVES_SCHEMA = {
   required: ["projects"] as const,
 };
 
+const LINKS_SCHEMA = {
+  type: "object" as const,
+  additionalProperties: false,
+  properties: {
+    links: {
+      type: "array" as const,
+      description: "One entry per goal you were given, no others",
+      items: {
+        type: "object" as const,
+        additionalProperties: false,
+        properties: {
+          goalId: { type: "string" as const },
+          projects: {
+            type: "array" as const,
+            description:
+              "Slugs of the projects that move this goal forward, copied exactly. Empty when none does.",
+            items: { type: "string" as const },
+          },
+        },
+        required: ["goalId", "projects"] as const,
+      },
+    },
+  },
+  required: ["links"] as const,
+};
+
+const WAITING_SCHEMA = {
+  type: "object" as const,
+  additionalProperties: false,
+  properties: {
+    question: {
+      type: "string" as const,
+      description:
+        "The one thing the work needs from the person before it can move, in their own terms. Empty string when the handoff asks nothing of them.",
+    },
+  },
+  required: ["question"] as const,
+};
+
 const MOVES_SCHEMA = {
   type: "object" as const,
   additionalProperties: false,
@@ -72,8 +116,13 @@ const MOVES_SCHEMA = {
             type: "string" as const,
             description: "One short clause naming the evidence it came from",
           },
+          project: {
+            type: "string" as const,
+            description:
+              "The slug of the project this move belongs to, exactly as given, or an empty string when it belongs to none",
+          },
         },
-        required: ["move", "because"] as const,
+        required: ["move", "because", "project"] as const,
       },
     },
   },
@@ -129,10 +178,11 @@ async function guessMissingServes(sessionId?: string): Promise<number> {
     maxTokens: 700,
     timeout: 90000,
     jsonSchema: SERVES_SCHEMA,
+    model: SONNET_MODEL,
     caller: "agenda-serves",
     sessionId,
   });
-  if (result.usage) logTokenUsage("agenda-serves", result.usage);
+  if (result.usage) logTokenUsage("agenda-serves", result.usage, SONNET_MODEL);
   if (!result.success || !result.output) return 0;
 
   const parsed = parsePayload<{
@@ -157,7 +207,7 @@ async function guessMissingServes(sessionId?: string): Promise<number> {
 
 function matrixBrief(): string {
   const grid = matrix();
-  const lines = [...grid.now, ...grid.plan, ...grid.noise].map((item) => {
+  const lines = rankedItems(grid).map((item) => {
     const why = item.urgentBecause.join(", ") || "nothing pressing";
     const waiting = item.waitingOn ? ` — waiting on the user for: ${item.waitingOn}` : "";
     return `- [${item.kind}] ${item.label}: ${item.importantBecause}; ${why}${waiting}`;
@@ -165,7 +215,129 @@ function matrixBrief(): string {
   return lines.length > 0 ? lines.join("\n") : "Nothing is ranked yet.";
 }
 
+/**
+ * Only when the goals or the project set moved. A stop that changed neither
+ * costs nothing, which is what makes this affordable on every session.
+ */
+async function refreshGoalLinks(
+  sessionId?: string
+): Promise<"fresh" | "written" | "failed"> {
+  const goals = readTelosGoals();
+  const projects = readAllProjects().filter((p) => p.status === "active");
+  if (goals.length === 0 || projects.length === 0) return "fresh";
+
+  const inputs = linkInputs(
+    goals.map((g) => g.id),
+    projects.map((p) => p.name)
+  );
+  if (readGoalLinks()?.inputs === inputs) return "fresh";
+
+  const described = projects
+    .map(
+      (p) =>
+        `- ${p.name}: ${(p.goal ?? p.problem ?? "").replace(/\s+/g, " ").slice(0, 200) || "no description on record"}`
+    )
+    .join("\n");
+  const listed = goals.map((g) => `- ${g.id}: ${g.text}`).join("\n");
+
+  const result = await inference({
+    system: [
+      "You are told a person's stated goals and their active projects.",
+      "For each goal, name the projects that move it forward.",
+      "Judge from the goal and the project description only. A project that merely resembles a goal in subject does not serve it — it has to move it.",
+      "A goal that nothing serves gets an empty list, and that is a useful answer rather than a failure.",
+      "Copy project slugs exactly. Return one entry per goal you were given.",
+    ].join("\n"),
+    user: `Their goals:\n${listed}\n\nTheir active projects:\n${described}`,
+    maxTokens: 600,
+    timeout: 90000,
+    jsonSchema: LINKS_SCHEMA,
+    model: SONNET_MODEL,
+    caller: "agenda-goal-links",
+    sessionId,
+  });
+  if (result.usage) logTokenUsage("agenda-goal-links", result.usage, SONNET_MODEL);
+  if (!result.success || !result.output) return "failed";
+
+  const parsed = parsePayload<{ links: { goalId: string; projects: unknown }[] }>(
+    result.output,
+    "agenda:goal-links"
+  );
+  if (!parsed?.links) return "failed";
+
+  const goalIds = new Set(goals.map((g) => g.id));
+  const slugs = new Set(projects.map((p) => p.name));
+  const links = parsed.links
+    .filter((l) => goalIds.has(l.goalId))
+    .map((l) => ({
+      goalId: l.goalId,
+      projects: (Array.isArray(l.projects) ? l.projects : []).filter(
+        (slug): slug is string => typeof slug === "string" && slugs.has(slug)
+      ),
+    }));
+
+  await writeGoalLinks({ generatedAt: new Date().toISOString(), inputs, links });
+  return "written";
+}
+
+/**
+ * An auto handoff is a transcript excerpt nobody framed, so it never carries the
+ * question the work is stuck on — which is exactly the field three surfaces read.
+ * Most handoffs are stuck on nothing, so an empty answer is the common one.
+ */
+async function extractWaitingOn(sessionId?: string): Promise<number> {
+  const pending = Object.entries(readHandoffs()).filter(
+    ([, h]) =>
+      h.source === "auto" && h.status === "in-progress" && h.handoff && !h.waitingOn
+  );
+  if (pending.length === 0) return 0;
+
+  let written = 0;
+  for (const [cwd, entry] of pending.slice(0, MAX_WAITING_PER_RUN)) {
+    const result = await inference({
+      system: [
+        "You are given the last exchange of a coding session that stopped mid-work.",
+        "Decide whether the work is blocked on the person — a decision only they can make, a question they were asked and did not answer, an approval the work needs.",
+        "Most sessions are not blocked on anyone. Waiting for an agent to continue is not being blocked on the person.",
+        "When it is blocked, answer with the question in their own terms, under fifteen words.",
+        "When it is not, answer with an empty string. That is the ordinary answer.",
+      ].join("\n"),
+      user: entry.handoff,
+      maxTokens: 120,
+      timeout: 60000,
+      jsonSchema: WAITING_SCHEMA,
+      model: SONNET_MODEL,
+      caller: "agenda-waiting-on",
+      sessionId,
+    });
+    if (result.usage) logTokenUsage("agenda-waiting-on", result.usage, SONNET_MODEL);
+    if (!result.success || !result.output) continue;
+
+    const parsed = parsePayload<{ question: string }>(result.output, "agenda:waiting-on");
+    const question = parsed?.question?.trim();
+    if (!question) continue;
+    const store = withWaitingOn(readHandoffs(), cwd, question);
+    await writeFile(handoffFile(), JSON.stringify(store, null, 2), "utf-8");
+    written++;
+  }
+  return written;
+}
+
+function rankedItems(grid: ReturnType<typeof matrix>) {
+  return [...grid.now, ...grid.plan, ...grid.noise];
+}
+
+/** A model asked for a project name will invent one; only a slug it was shown counts. */
+function knownSlug(candidate: unknown, slugs: Set<string>): string | null {
+  return typeof candidate === "string" && slugs.has(candidate) ? candidate : null;
+}
+
 async function writeMoves(sessionId?: string): Promise<boolean> {
+  const slugs = new Set(
+    rankedItems(matrix())
+      .filter((i) => i.kind === "project")
+      .map((i) => i.id)
+  );
   const result = await inference({
     system: [
       "You write the first three lines a person reads in the morning.",
@@ -173,20 +345,31 @@ async function writeMoves(sessionId?: string): Promise<boolean> {
       "Write exactly three moves, most consequential first.",
       "A move is a sentence naming an action, not a project name: 'Send ACE the mapping one-pager' beats 'work on ontology'.",
       "Prefer what is blocked on the person themselves, then what serves a goal, then what is merely urgent.",
+      "Name the project each move belongs to, copying its slug exactly from the list you were given. A move that belongs to no project takes an empty string.",
       "Never invent a fact that is not in what you were given.",
     ].join("\n"),
     user: `Their goals:\n${goalsBrief()}\n\nWhat is ranked and why:\n${matrixBrief()}`,
     maxTokens: 400,
     timeout: 90000,
     jsonSchema: MOVES_SCHEMA,
+    model: SONNET_MODEL,
     caller: "agenda-moves",
     sessionId,
   });
-  if (result.usage) logTokenUsage("agenda-moves", result.usage);
+  if (result.usage) logTokenUsage("agenda-moves", result.usage, SONNET_MODEL);
   if (!result.success || !result.output) return false;
 
-  const parsed = parsePayload<{ moves: AgendaMove[] }>(result.output, "agenda:moves");
-  const moves = (parsed?.moves ?? []).filter((m) => m.move).slice(0, 3);
+  const parsed = parsePayload<{ moves: (AgendaMove & { project?: unknown })[] }>(
+    result.output,
+    "agenda:moves"
+  );
+  const moves: AgendaMove[] = (parsed?.moves ?? [])
+    .filter((m) => m.move)
+    .slice(0, 3)
+    .map(({ move, because, project }) => {
+      const slug = knownSlug(project, slugs);
+      return slug ? { move, because, project: slug } : { move, because };
+    });
   if (moves.length === 0) return false;
 
   await writeAgenda({ generatedAt: new Date().toISOString(), moves });
@@ -206,8 +389,13 @@ export async function refreshAgenda(
   if (!canInfer()) return "no-inference";
 
   const guessed = await guessMissingServes(sessionId);
+  const linked = await refreshGoalLinks(sessionId);
+  const waiting = await extractWaitingOn(sessionId);
   const wrote = await writeMoves(sessionId);
-  logDebug("agenda", `serves guessed: ${guessed}, moves written: ${wrote}`);
+  logDebug(
+    "agenda",
+    `serves guessed: ${guessed}, links: ${linked}, waitingOn: ${waiting}, moves written: ${wrote}`
+  );
   return wrote ? "written" : "failed";
 }
 

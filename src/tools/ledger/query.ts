@@ -34,6 +34,7 @@ export interface LedgerFilter {
   actor?: string;
   machine?: string;
   runtime?: string;
+  authority?: string;
   outcome?: string;
   tool?: string;
   target?: string;
@@ -100,6 +101,7 @@ function matchesFilter(entry: LedgerEntry, filter: LedgerFilter): boolean {
   if (filter.actor && entry.actor !== filter.actor) return false;
   if (filter.machine && entry.machine !== filter.machine) return false;
   if (filter.runtime && entry.runtime !== filter.runtime) return false;
+  if (filter.authority && entry.authority !== filter.authority) return false;
   if (filter.outcome && entry.outcome !== filter.outcome) return false;
   if (filter.tool && entry.tool.toLowerCase() !== filter.tool.toLowerCase()) return false;
   if (filter.target && !entry.target.includes(filter.target)) return false;

@@ -42,13 +42,16 @@ import {
 import { isServesKind, SERVES_KINDS, setServes } from "../../hooks/lib/serves";
 import {
   archiveLine,
-  dropEmptyArchiveHeadings,
+  completeIsc,
   encodeIscText,
   ISC_BOX,
+  type IscMove,
+  type IscSections,
   iscTitle,
   nextIscId,
   parseIscs,
   removeIscLine,
+  reopenIsc,
   selectIscs,
   taskSlug,
 } from "../lib/project-isc";
@@ -440,17 +443,25 @@ function cmdCompleteIsc(args: string[]): void {
   const id = Number(args[1] ?? fail("Usage: complete-isc <name> <id>"));
   if (!Number.isInteger(id) || id < 1) fail("ISC id must be a positive integer");
   const p = requireProject(name);
-  if (parseIscs(p.changelog ?? "").some((i) => i.id === id)) {
+  const move = completeIsc(sectionsOf(p), id);
+  if (!move.ok) fail(`${move.reason} in project "${name}"`);
+  if (move.already) {
     ok({ checked: true, id, alreadyDone: true });
     return;
   }
-  const { line, rest } = removeIscLine(p.criteria ?? "", id);
-  if (!line) fail(`ISC-${id} not found in project "${name}"`);
-  p.criteria = rest;
-  p.changelog = archiveLine(p.changelog, line.replace("[ ]", "[x]"));
+  applyIscMove(p, move);
+  ok({ checked: true, id, archived: true });
+}
+
+function sectionsOf(p: ProjectProgress): IscSections {
+  return { criteria: p.criteria ?? "", changelog: p.changelog ?? "" };
+}
+
+function applyIscMove(p: ProjectProgress, move: IscMove & { ok: true }): void {
+  p.criteria = move.criteria;
+  p.changelog = move.changelog;
   p.updated = now();
   writeProject(p);
-  ok({ checked: true, id, archived: true });
 }
 
 // Reopening pulls the line back out of the Changelog (or legacy Criteria) into
@@ -460,22 +471,13 @@ function cmdReopenIsc(args: string[]): void {
   const id = Number(args[1] ?? fail("Usage: reopen-isc <name> <id>"));
   if (!Number.isInteger(id) || id < 1) fail("ISC id must be a positive integer");
   const p = requireProject(name);
-  if (parseIscs(p.criteria ?? "").some((i) => i.id === id && i.status === "open")) {
+  const move = reopenIsc(sectionsOf(p), id);
+  if (!move.ok) fail(`${move.reason} in project "${name}"`);
+  if (move.already) {
     ok({ checked: false, id, alreadyOpen: true });
     return;
   }
-  let removed = removeIscLine(p.changelog ?? "", id);
-  if (removed.line) {
-    p.changelog = dropEmptyArchiveHeadings(removed.rest);
-  } else {
-    removed = removeIscLine(p.criteria ?? "", id);
-    if (removed.line) p.criteria = removed.rest;
-  }
-  if (!removed.line) fail(`ISC-${id} not found in project "${name}"`);
-  const openLine = removed.line.replace(/\[[x~]\]/i, "[ ]");
-  p.criteria = p.criteria ? `${p.criteria.trimEnd()}\n${openLine}` : openLine;
-  p.updated = now();
-  writeProject(p);
+  applyIscMove(p, move);
   ok({ checked: false, id });
 }
 

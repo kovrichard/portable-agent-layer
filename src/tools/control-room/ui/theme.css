@@ -1,0 +1,127 @@
+/**
+ * Industry, as Tailwind sees it. Source file — `bun run build:ui` compiles this
+ * to tailwind.css, which is what index.html actually links.
+ */
+
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+
+@source "./*.tsx";
+@source "./**/*.tsx";
+@source "./index.html";
+
+@theme static {
+  --color-bg: #f2f2f3;
+  --color-surface: #e9e9ea;
+  --color-ink: #1d1f20;
+  --color-divider: color-mix(in srgb, #1d1f20 16%, transparent);
+
+  --color-neutral-100: #f5f5f8;
+  --color-neutral-200: #e7e7ea;
+  --color-neutral-300: #d4d4d7;
+  --color-neutral-400: #b7b7ba;
+  --color-neutral-500: #98989b;
+  --color-neutral-600: #7a7a7d;
+  --color-neutral-700: #5d5d60;
+  --color-neutral-800: #424244;
+  --color-neutral-900: #2b2b2d;
+
+  --color-accent: #5980a6;
+  --color-accent-100: #eef6ff;
+  --color-accent-200: #d6ebff;
+  --color-accent-300: #b5d9fd;
+  --color-accent-400: #94bce3;
+  --color-accent-500: #749dc4;
+  --color-accent-600: #597ea3;
+  --color-accent-700: #416180;
+  --color-accent-800: #2c455d;
+  --color-accent-900: #1d2d3d;
+
+  --color-alarm: oklch(0.55 0.17 27);
+
+  --font-heading: "Barlow Condensed", system-ui, sans-serif;
+  --font-body: "Barlow", system-ui, sans-serif;
+  --font-mono: ui-monospace, Menlo, monospace;
+
+  /* Industry's --space-N is exactly N x 3.4px, which is Tailwind's own scale
+     with a retuned base — so p-4 here is Industry's --space-4 to the pixel. */
+  --spacing: 0.2125rem;
+
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 7px;
+
+  --shadow-sm: 0 1px 2px color-mix(in srgb, #2b2b2d 14%, transparent);
+  --shadow-md: 0 3px 10px color-mix(in srgb, #2b2b2d 16%, transparent);
+  --shadow-lg: 0 12px 32px color-mix(in srgb, #2b2b2d 22%, transparent);
+
+  /* Industry draws an 11px crosshair in 55% ink whose centre sits on the
+     border line — .corner is 11px at top/left -6px over a 1px border. */
+  --registration-size: 11px;
+  --registration-inset: -6px;
+  --registration-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11'%3E%3Cpath d='M5.5 0v11M0 5.5h11' stroke='%231d1f20' stroke-opacity='.55' stroke-width='1'/%3E%3C/svg%3E");
+}
+
+@layer base {
+  body {
+    background: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--color-accent-200);
+  }
+}
+
+/**
+ * The wireframe frame every card, figure and primary button wears: square
+ * corners, a hairline border and four "+" registration marks drawn outside the
+ * box. Industry ships it as a class plus four <i> children; here the marks are
+ * one pseudo-element, so the markup stays clean.
+ */
+@utility blueprint {
+  position: relative;
+  border: 1px solid var(--color-divider);
+  border-radius: 0;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: var(--registration-inset);
+    pointer-events: none;
+    background-image: var(--registration-mark), var(--registration-mark),
+      var(--registration-mark), var(--registration-mark);
+    background-repeat: no-repeat;
+    background-size: var(--registration-size) var(--registration-size);
+    background-position: left top, right top, left bottom, right bottom;
+  }
+}
+
+/** Industry's uppercase eyebrow, used for every panel heading and column label. */
+@utility eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-neutral-700);
+}

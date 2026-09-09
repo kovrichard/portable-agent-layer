@@ -16,6 +16,8 @@ type TokenCaller =
   | "relationship"
   | "self-model"
   | "agenda-serves"
+  | "agenda-goal-links"
+  | "agenda-waiting-on"
   | "agenda-moves";
 
 interface TokenUsageEntry {

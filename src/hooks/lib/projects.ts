@@ -45,6 +45,9 @@ export interface ProjectProgress {
   serves?: ServesKind;
   serves_note?: string;
   serves_by?: ServesAuthority;
+  /** The user's own placement on the grid, which overrules both guesses. */
+  placed?: string;
+  placed_by?: ServesAuthority;
   // ISA body sections
   problem?: string;
   goal?: string;
@@ -284,6 +287,8 @@ export function writeProject(p: ProjectProgress): void {
   if (p.serves) meta.serves = p.serves;
   if (p.serves_note) meta.serves_note = p.serves_note;
   if (p.serves_by) meta.serves_by = p.serves_by;
+  if (p.placed) meta.placed = p.placed;
+  if (p.placed_by) meta.placed_by = p.placed_by;
   writeFileSync(ensureAndGetIsaFile(p.name), stringify(meta, buildBody(p)), "utf-8");
 }
 

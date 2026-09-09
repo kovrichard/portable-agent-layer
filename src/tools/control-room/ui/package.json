@@ -1,0 +1,28 @@
+{
+  "name": "@pal/control-room-ui",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The control room's page. Built here, served by the PAL CLI, never installed by a PAL user — the published package carries dist/, not these dependencies.",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite"
+  },
+  "dependencies": {
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "radix-ui": "1.6.7",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-router": "8.3.1",
+    "tailwind-merge": "3.6.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "6.1.1",
+    "tailwindcss": "4.3.3",
+    "vite": "8.2.2"
+  }
+}

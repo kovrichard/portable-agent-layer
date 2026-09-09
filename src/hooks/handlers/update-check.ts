@@ -46,7 +46,7 @@ function writeCache(cache: UpdateCache): void {
   }
 }
 
-function isRepoMode(): boolean {
+export function isRepoMode(): boolean {
   return existsSync(resolve(palPkg(), ".git"));
 }
 

@@ -6,6 +6,7 @@ include:
   - "!**/node_modules/**"
   - "!**/.next/**"
   - "!**/out/**"
+  - "!**/dist/**"
   - "!**/vendor/**"
 plugins: [sonar]
 rules:
@@ -75,6 +76,17 @@ arch:
     - pattern: "process.exit("
       in: ["src/hooks/lib/**"]
       message: "process.exit() called inside a library module — library functions should return or throw, not terminate the process."
+
+    # The page's libraries belong to the @pal/control-room-ui workspace and are
+    # bundled into ui/dist, so they are absent from what a PAL user installs.
+    # Bun hoists them into the root node_modules for local development, which
+    # means resolution alone would not stop server code importing them — this
+    # rule is the boundary.
+    - pattern: 're:from "(react|react-dom|react-router|radix-ui|clsx|tailwind-merge|class-variance-authority)'
+      in:
+        - "src/**"
+        - "!src/tools/control-room/ui/**"
+      message: "Page-only dependency imported outside the control-room-ui workspace — it is not installed for PAL users, so this would fail at runtime."
 
     # RtkWrap's run() is the spawn seam itself — it forwards stdin to `rtk hook`
     # and its stdout back, and what is left after removing the spawn is nothing a

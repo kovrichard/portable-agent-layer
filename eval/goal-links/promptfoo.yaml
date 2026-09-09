@@ -1,0 +1,123 @@
+# PAL goal-to-project linkage evaluation
+#
+# Evaluates the prompt in src/hooks/handlers/agenda.ts (refreshGoalLinks), as the
+# model actually receives it: the provider spawns the `claude` CLI the way PAL's
+# inference layer does, so the prompt below is the whole thing — system, user and
+# the schema instruction buildCliPrompt() appends. Haiku is what ships today;
+# sonnet-5 answers "would a bigger model judge better?" with evidence.
+#
+# Two failures matter and they pull in opposite directions: linking a project
+# that merely shares a subject with a goal (a chat client is not "land two
+# clients"), and refusing to link one that plainly moves it. An empty list is a
+# real answer, not a miss.
+#
+# Run:
+#   bun run eval:goal-links
+
+description: goal links — which projects actually move a stated goal forward?
+
+prompts:
+  - label: goal-links
+    raw: |
+      You are told a person's stated goals and their active projects.
+      For each goal, name the projects that move it forward.
+      Judge from the goal and the project description only. A project that merely resembles a goal in subject does not serve it — it has to move it.
+      A goal that nothing serves gets an empty list, and that is a useful answer rather than a failure.
+      Copy project slugs exactly. Return one entry per goal you were given.
+
+      Their goals:
+      {{goals}}
+
+      Their active projects:
+      {{projects}}
+
+      Respond with ONLY a JSON value matching this schema (no prose, no markdown): {'type':'object','additionalProperties':false,'properties':{'links':{'type':'array','description':'One entry per goal you were given, no others','items':{'type':'object','additionalProperties':false,'properties':{'goalId':{'type':'string'},'projects':{'type':'array','description':'Slugs of the projects that move this goal forward, copied exactly. Empty when none does.','items':{'type':'string'}}},'required':['goalId','projects']}}},'required':['links']}
+
+providers:
+  - id: file://../lib/claude-cli.js
+    label: haiku
+    config: { model: claude-haiku-4-5-20251001 }
+  - id: file://../lib/claude-cli.js
+    label: sonnet-5
+    config: { model: claude-sonnet-5 }
+
+defaultTest:
+  assert:
+    - type: javascript
+      value: file://../lib/valid-json.js
+      description: "Output must carry a links array"
+
+tests:
+  - description: a starter kit that pays the bills serves the client goal
+    vars:
+      goals: |
+        - clients: Land two retained consulting clients by December.
+        - pal1: Ship PAL 1.0 with cross-machine sync.
+      projects: |
+        - catalyst: The Next.js starter that pays for the rest — every client project begins here.
+        - portable-agent-layer: Cross-agent memory and a ledger of what the agents did.
+        - fyzz-chat: A chat client I like using.
+    assert:
+      - type: javascript
+        value: file://assertions/serves.js
+        config:
+          clients: ["catalyst"]
+          pal1: ["portable-agent-layer"]
+      - type: javascript
+        value: file://assertions/does-not-serve.js
+        config:
+          pal1: ["fyzz-chat"]
+
+  - description: sharing a subject is not serving — a chat client is not a client goal
+    vars:
+      goals: |
+        - clients: Land two retained consulting clients by December.
+      projects: |
+        - fyzz-chat: A chat client I like using.
+        - home-server: Keep the NAS alive.
+    assert:
+      - type: javascript
+        value: file://assertions/serves-nothing.js
+        config: { goalId: clients }
+
+  - description: a goal nothing serves gets an empty list rather than a stretch
+    vars:
+      goals: |
+        - talk: Give one talk about personal AI infrastructure.
+      projects: |
+        - konvert7-billing: Invoices and Stripe webhooks for every Konvert7 product.
+    assert:
+      - type: javascript
+        value: file://assertions/serves-nothing.js
+        config: { goalId: talk }
+
+  - description: one goal can be served by several projects
+    vars:
+      goals: |
+        - pal1: Ship PAL 1.0 with cross-machine sync.
+      projects: |
+        - portable-agent-layer: Cross-agent memory and a ledger of what the agents did.
+        - pal-site: pal.konvert7.com explains what PAL does today.
+        - notes-cli: A small note taker.
+    assert:
+      - type: javascript
+        value: file://assertions/serves.js
+        config:
+          pal1: ["portable-agent-layer"]
+      - type: javascript
+        value: file://assertions/does-not-serve.js
+        config:
+          pal1: ["notes-cli"]
+
+  - description: every goal it was given comes back, none invented
+    vars:
+      goals: |
+        - a: Land two retained consulting clients.
+        - b: Ship PAL 1.0.
+        - c: Give one talk.
+      projects: |
+        - catalyst: The starter that pays for the rest.
+    assert:
+      - type: javascript
+        value: file://assertions/covers-goals.js
+        config: { goalIds: ["a", "b", "c"] }

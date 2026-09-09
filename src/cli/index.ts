@@ -17,12 +17,13 @@
  *   doctor                            Check prerequisites and system health
  *   usage                             Summarize token usage and cost
  *   ledger <sub> [filters]            Query the action ledger (log · show · stats)
- *   server start|stop|status          The control room, a local page over ~/.pal
+ *   server start|stop|restart|status  The control room, a local page over ~/.pal
  *   skill link <name>                 Link a personal ~/.pal/skills/<name>/ into installed agents
  *   skill doctor <name|--all>         Evaluate one skill, or every installed skill, against the authoring best practices
  *   subagent link <name>             Install a personal ~/.pal/agents/<name>.md into installed agents
  *   subagent doctor <name>           Evaluate a subagent against the authoring best practices
  *   debug [on|off]                    Enable / disable verbose hook debug logging
+ *   version | -v                      Print the installed PAL version
  */
 
 import { spawnSync } from "node:child_process";
@@ -280,6 +281,11 @@ async function runCli(command: string | undefined, args: string[]) {
     case "debug":
       cliDebug(args);
       break;
+    case "version":
+    case "-v":
+    case "--version":
+      showVersion();
+      break;
     case "--help":
     case "-h":
     case "help":
@@ -342,7 +348,7 @@ function showHelp() {
                                             (search · graph · stats · hubs · find · show · add · ls)
     pal cli ledger <sub> [filters]          Query the action ledger (log · show · stats)
                                             e.g. ledger log --project X --since 7d
-    pal cli server start|stop|status        The control room: a local page to open before a terminal
+    pal cli server start|stop|restart|status  The control room: a local page to open before a terminal
     pal cli skill link <name>               Link a personal ~/.pal/skills/<name>/ into installed agents
     pal cli skill doctor <name|--all>       Evaluate one skill, or every installed skill
     pal cli skill author-model              Print the flagship model that authors skills for the active agent
@@ -351,6 +357,7 @@ function showHelp() {
     pal cli subagent list                   List the user-authored subagents in ~/.pal/agents/
     pal cli subagent author-model           Print the flagship model that authors subagents for the active agent
     pal cli debug [on|off]                  Enable/disable verbose hook debug logging (persisted)
+    pal cli version | -v                    Print the installed PAL version
 
   Environment:
     PAL_HOME              Override user state directory (default: ~/.pal or repo root)
@@ -1287,7 +1294,26 @@ async function install(targets: Targets) {
     `Shared: ${indexedSkills} skills indexed · ${palDocsCount} docs → ~/.pal/docs/ · AGENTS.md + context digests written`
   );
 
+  await refreshControlRoom();
+
   log.success("Done. Existing config was preserved — only new entries were added.");
+}
+
+/**
+ * A published install carries the page in its tarball; a checkout does not —
+ * ui/dist is gitignored, so a pull leaves whatever was built last. Rebuild
+ * there, then replace the process, because the API is the running code.
+ */
+async function refreshControlRoom(): Promise<void> {
+  const { isRepoMode } = await import("../hooks/handlers/update-check");
+  const { buildPage } = await import("../tools/control-room/static");
+  if (isRepoMode() && !buildPage()) {
+    log.warn("Control room page could not be rebuilt — run: bun run build:ui");
+    return;
+  }
+
+  const { restartIfRunning } = await import("./server");
+  if (await restartIfRunning()) log.success("Control room restarted on the new build");
 }
 
 async function uninstall(args: string[]) {
@@ -1598,21 +1624,29 @@ function cliDebug(args: string[]) {
   }
 }
 
+function packageVersion(): string {
+  try {
+    const pkgJson = JSON.parse(
+      readFileSync(resolve(palPkg(), "package.json"), "utf-8")
+    ) as {
+      version: string;
+    };
+    return pkgJson.version;
+  } catch (e) {
+    throw new Error(`Failed to read package.json: ${e}`);
+  }
+}
+
+function showVersion() {
+  console.log(packageVersion());
+}
+
 async function status() {
   const home = palHome();
   const pkg = palPkg();
 
-  let pkgJson: { version: string };
-  try {
-    pkgJson = JSON.parse(readFileSync(resolve(pkg, "package.json"), "utf-8")) as {
-      version: string;
-    };
-  } catch (e) {
-    throw new Error(`Failed to read package.json: ${e}`);
-  }
-
   console.log("");
-  log.info(`Version:  ${pkgJson.version}`);
+  log.info(`Version:  ${packageVersion()}`);
   log.info(`Package:  ${pkg}`);
   log.info(`Home:     ${home}`);
   console.log("");
