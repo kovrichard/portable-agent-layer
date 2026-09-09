@@ -1,3 +1,11 @@
+## [0.75.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.75.0...v0.75.1) (2026-09-09)
+
+
+### Bug Fixes
+
+* **agent:** fall back to an installed CLI instead of assuming claude ([3b07ec6](https://github.com/kovrichard/portable-agent-layer/commit/3b07ec60533eaa31a578325e362a3d9e7b150ed2))
+* **which:** reject a directory that shares a binary's name ([941607c](https://github.com/kovrichard/portable-agent-layer/commit/941607c29882dece8455d72f827418e9875fd5e4))
+
 # [0.75.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.74.0...v0.75.0) (2026-09-09)
 
 
