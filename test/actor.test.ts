@@ -5,8 +5,10 @@ import { resolve } from "node:path";
 
 let HOME: string;
 
-/** Every signal declaredAgent reads; a host var inherited from the session that
- * runs the suite would declare an agent these cases mean to leave undeclared. */
+/** Every signal declaredAgent reads, plus the PATH getActiveAgent falls back
+ * to; a host var inherited from the session that runs the suite, or an agent
+ * CLI installed on it, would name an agent these cases mean to leave
+ * undeclared. */
 const AGENT_SIGNALS = [
   "PAL_AGENT",
   "CURSOR_AGENT",
@@ -15,6 +17,7 @@ const AGENT_SIGNALS = [
   "CLAUDE_CODE_ENTRYPOINT",
   "CODEX_CLI_VERSION",
   "OPENAI_CODEX",
+  "PATH",
 ] as const;
 
 const savedSignals: Record<string, string | undefined> = {};

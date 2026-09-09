@@ -9,8 +9,25 @@
  *    names — passing the full `.cmd`/`.exe` path bypasses that fragility.
  */
 
-import { accessSync, constants, existsSync } from "node:fs";
+import { accessSync, constants, statSync } from "node:fs";
 import { delimiter, resolve as resolvePath } from "node:path";
+
+/**
+ * A directory carries the execute bit as "traversable", so X_OK alone accepts
+ * a folder that happens to share a CLI's name. statSync follows symlinks, so a
+ * linked binary still resolves. Windows has no executable bit — being a file
+ * under a PATHEXT extension is all it can offer.
+ */
+function isExecutableFile(candidate: string): boolean {
+  try {
+    if (!statSync(candidate).isFile()) return false;
+    if (process.platform === "win32") return true;
+    accessSync(candidate, constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /** Resolve a binary on PATH to its full absolute path, or null if absent. */
 export function findBinaryOnPath(name: string): string | null {
@@ -24,17 +41,7 @@ export function findBinaryOnPath(name: string): string | null {
     if (!dir) continue;
     for (const ext of exts) {
       const candidate = resolvePath(dir, name + ext);
-      try {
-        if (process.platform === "win32") {
-          // Windows has no executable bit — existence in PATHEXT is enough.
-          if (existsSync(candidate)) return candidate;
-        } else {
-          accessSync(candidate, constants.X_OK);
-          return candidate;
-        }
-      } catch {
-        /* not here — try next */
-      }
+      if (isExecutableFile(candidate)) return candidate;
     }
   }
   return null;
