@@ -9,8 +9,12 @@
  * Detection reads PAL_AGENT first (set in-process by
  * `src/targets/opencode/plugin.ts`), then the host's own environment, and only
  * then the `--agent=` flag the install templates in `assets/templates/*` put
- * on the hook command line. See declaredAgent for why that order.
+ * on the hook command line. See declaredAgent for why that order. When nothing
+ * declares an agent at all, getActiveAgent falls back to the agent CLIs found
+ * on PATH rather than assuming claude.
  */
+
+import { findBinaryOnPath } from "./which";
 
 export type AgentType = "claude" | "cursor" | "codex" | "copilot" | "opencode" | "vscode";
 
@@ -109,9 +113,36 @@ export function declaredAgent(): AgentType | undefined {
   return agentFromRuntimeEnv() ?? flag;
 }
 
-/** Which agent's conventions to follow. Assumes "claude" when undeclared. */
+/**
+ * The CLI each agent spawns for inference, in the order inference.ts routes
+ * them. vscode is absent because it has no CLI of its own — it runs Claude's.
+ */
+const AGENT_BINARIES: ReadonlyArray<readonly [AgentType, string]> = [
+  ["claude", "claude"],
+  ["codex", "codex"],
+  ["opencode", "opencode"],
+  ["copilot", "copilot"],
+  ["cursor", "cursor-agent"],
+];
+
+/**
+ * Which agent this machine actually has, for the case where nothing declared
+ * one — a plain terminal running `pal cli`, a cron child, a detached spawn.
+ * Assuming claude there names an agent that may not be installed, which routes
+ * inference to a binary that isn't on PATH and reports a host that isn't there.
+ */
+function agentFromInstalledBinary(): AgentType | undefined {
+  return AGENT_BINARIES.find(([, binary]) => findBinaryOnPath(binary) !== null)?.[0];
+}
+
+/**
+ * Which agent's conventions to follow.
+ *
+ * A declaration always wins; claude remains the last resort so a machine with
+ * no agent CLI at all behaves as it always has.
+ */
 export function getActiveAgent(): AgentType {
-  return declaredAgent() ?? "claude";
+  return declaredAgent() ?? agentFromInstalledBinary() ?? "claude";
 }
 
 export const isClaude = () => getActiveAgent() === "claude";

@@ -1,4 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { resolve } from "node:path";
 import {
   blockResponse,
   declaredAgent,
@@ -10,6 +13,7 @@ import {
   isOpencode,
   normalizeToolUse,
 } from "../src/hooks/lib/agent";
+import { writeFakeBin } from "./fixtures/fake-bin";
 
 const PRESERVED_ENV_KEYS = [
   "PAL_AGENT",
@@ -21,6 +25,7 @@ const PRESERVED_ENV_KEYS = [
   "CLAUDE_CODE_ENTRYPOINT",
   "CODEX_CLI_VERSION",
   "OPENAI_CODEX",
+  "PATH",
 ] as const;
 
 describe("getActiveAgent — PAL_AGENT env signal", () => {
@@ -393,6 +398,61 @@ describe("getActiveAgent — the four hosts PAL actually runs under", () => {
       permission: "deny",
       user_message: "nope",
     });
+  });
+});
+
+describe("getActiveAgent — undeclared falls back to what is installed", () => {
+  const saved: Record<string, string | undefined> = {};
+  let dir: string;
+  let argv: string[];
+
+  beforeEach(() => {
+    for (const k of PRESERVED_ENV_KEYS) {
+      saved[k] = process.env[k];
+      delete process.env[k];
+    }
+    argv = process.argv;
+    process.argv = ["bun", "hook.ts"];
+    dir = mkdtempSync(resolve(tmpdir(), "agent-installed-"));
+    process.env.PATH = dir;
+  });
+
+  afterEach(() => {
+    process.argv = argv;
+    rmSync(dir, { recursive: true, force: true });
+    for (const k of PRESERVED_ENV_KEYS) {
+      if (saved[k] === undefined) delete process.env[k];
+      else process.env[k] = saved[k];
+    }
+  });
+
+  test("an undeclared terminal with only opencode installed is opencode", () => {
+    writeFakeBin(dir, "opencode", "");
+    expect(getActiveAgent()).toBe("opencode");
+    expect(isOpencode()).toBe(true);
+  });
+
+  test("cursor-agent is the binary that names the cursor agent", () => {
+    writeFakeBin(dir, "cursor-agent", "");
+    expect(getActiveAgent()).toBe("cursor");
+  });
+
+  test("claude wins when several agent CLIs are installed", () => {
+    writeFakeBin(dir, "opencode", "");
+    writeFakeBin(dir, "codex", "");
+    writeFakeBin(dir, "claude", "");
+    expect(getActiveAgent()).toBe("claude");
+  });
+
+  test("a declared agent outranks whatever is installed", () => {
+    writeFakeBin(dir, "opencode", "");
+    process.env.PAL_AGENT = "codex";
+    expect(getActiveAgent()).toBe("codex");
+  });
+
+  test("no agent CLI at all still leaves claude as the last resort", () => {
+    expect(declaredAgent()).toBeUndefined();
+    expect(getActiveAgent()).toBe("claude");
   });
 });
 
