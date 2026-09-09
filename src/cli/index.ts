@@ -23,6 +23,7 @@
  *   subagent link <name>             Install a personal ~/.pal/agents/<name>.md into installed agents
  *   subagent doctor <name>           Evaluate a subagent against the authoring best practices
  *   debug [on|off]                    Enable / disable verbose hook debug logging
+ *   version | -v                      Print the installed PAL version
  */
 
 import { spawnSync } from "node:child_process";
@@ -280,6 +281,11 @@ async function runCli(command: string | undefined, args: string[]) {
     case "debug":
       cliDebug(args);
       break;
+    case "version":
+    case "-v":
+    case "--version":
+      showVersion();
+      break;
     case "--help":
     case "-h":
     case "help":
@@ -351,6 +357,7 @@ function showHelp() {
     pal cli subagent list                   List the user-authored subagents in ~/.pal/agents/
     pal cli subagent author-model           Print the flagship model that authors subagents for the active agent
     pal cli debug [on|off]                  Enable/disable verbose hook debug logging (persisted)
+    pal cli version | -v                    Print the installed PAL version
 
   Environment:
     PAL_HOME              Override user state directory (default: ~/.pal or repo root)
@@ -1617,21 +1624,29 @@ function cliDebug(args: string[]) {
   }
 }
 
+function packageVersion(): string {
+  try {
+    const pkgJson = JSON.parse(
+      readFileSync(resolve(palPkg(), "package.json"), "utf-8")
+    ) as {
+      version: string;
+    };
+    return pkgJson.version;
+  } catch (e) {
+    throw new Error(`Failed to read package.json: ${e}`);
+  }
+}
+
+function showVersion() {
+  console.log(packageVersion());
+}
+
 async function status() {
   const home = palHome();
   const pkg = palPkg();
 
-  let pkgJson: { version: string };
-  try {
-    pkgJson = JSON.parse(readFileSync(resolve(pkg, "package.json"), "utf-8")) as {
-      version: string;
-    };
-  } catch (e) {
-    throw new Error(`Failed to read package.json: ${e}`);
-  }
-
   console.log("");
-  log.info(`Version:  ${pkgJson.version}`);
+  log.info(`Version:  ${packageVersion()}`);
   log.info(`Package:  ${pkg}`);
   log.info(`Home:     ${home}`);
   console.log("");
