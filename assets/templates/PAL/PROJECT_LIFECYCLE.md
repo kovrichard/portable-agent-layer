@@ -1,6 +1,6 @@
 # Project Lifecycle
 
-You (the AI) own the project lifecycle. Project state lives in `~/.pal/memory/state/progress/{slug}.json`, one file per project, managed via `bun ~/.pal/tools/project.ts`. Active projects are auto-injected into every SessionStart context regardless of cwd.
+You (the AI) own the project lifecycle. Project state lives in `~/.pal/memory/state/progress/{slug}.json`, one file per project, managed via `pal cli project`. Active projects are auto-injected into every SessionStart context regardless of cwd.
 
 ## When to invoke the CLI
 

@@ -7,7 +7,7 @@
  * reads and formats with behavioral guidance.
  *
  * Usage:
- *   bun ~/.pal/tools/synthesize.ts [--days 7] [--force]
+ *   pal cli synthesize [--days 7] [--force]
  *
  * Guards: skips if last synthesis was < 24h ago (unless --force).
  * Output: ~/.pal/memory/state/synthesis.json

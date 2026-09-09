@@ -3,7 +3,7 @@
 // consulting-report skill tool: launch the Next.js dev server for live preview.
 //
 // Usage:
-//   bun ~/.pal/skills/consulting-report/tools/dev.ts <report-dir>
+//   pal cli skill run consulting-report dev <report-dir>
 
 import { spawnSync } from "node:child_process";
 import { constants as fsConstants } from "node:fs";

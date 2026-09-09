@@ -6,12 +6,12 @@ See `SKILL.md` for the full workflow. TL;DR:
 
 ```bash
 # one-time per brand
-bun ~/.pal/skills/presentation/tools/setup-template.ts
+pal cli skill run presentation setup-template
 
 # per deck
-bun ~/.pal/skills/presentation/tools/new-deck.ts ~/decks/my-talk --template my-brand
+pal cli skill run presentation new-deck ~/decks/my-talk --template my-brand
 $EDITOR ~/decks/my-talk/slides/
-bun ~/.pal/skills/presentation/tools/build.ts ~/decks/my-talk
+pal cli skill run presentation build ~/decks/my-talk
 # → ./my-talk/my-talk.html (and ./my-talk/my-talk.md — concatenated source)
 # open the .html in your browser; refresh after each rebuild
 ```

@@ -6,20 +6,20 @@
  * Frontmatter holds operational state; body holds ISA spec sections.
  *
  * Usage:
- *   bun ~/.pal/tools/project.ts list
- *   bun ~/.pal/tools/project.ts create [name] [--path PATH] [--objectives "..."] [--serves goal|revenue|fun]
- *   bun ~/.pal/tools/project.ts serves <name> <goal|revenue|fun> [note]
- *   bun ~/.pal/tools/project.ts resume <name>
- *   bun ~/.pal/tools/project.ts complete | archive | pause | unpause <name>
- *   bun ~/.pal/tools/project.ts add-next <name> "text"
- *   bun ~/.pal/tools/project.ts add-blocker <name> "text"
- *   bun ~/.pal/tools/project.ts add-decision <name> "decision" "rationale"
- *   bun ~/.pal/tools/project.ts add-handoff <name> "text"
- *   bun ~/.pal/tools/project.ts rm-next | rm-blocker <name> <index>
- *   bun ~/.pal/tools/project.ts update-section <name> <section> "content"
- *   bun ~/.pal/tools/project.ts criteria <name>
- *   bun ~/.pal/tools/project.ts isa-init <name>
- *   bun ~/.pal/tools/project.ts migrate
+ *   pal cli project list
+ *   pal cli project create [name] [--path PATH] [--objectives "..."] [--serves goal|revenue|fun]
+ *   pal cli project serves <name> <goal|revenue|fun> [note]
+ *   pal cli project resume <name>
+ *   pal cli project complete | archive | pause | unpause <name>
+ *   pal cli project add-next <name> "text"
+ *   pal cli project add-blocker <name> "text"
+ *   pal cli project add-decision <name> "decision" "rationale"
+ *   pal cli project add-handoff <name> "text"
+ *   pal cli project rm-next | rm-blocker <name> <index>
+ *   pal cli project update-section <name> <section> "content"
+ *   pal cli project criteria <name>
+ *   pal cli project isa-init <name>
+ *   pal cli project migrate
  */
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";

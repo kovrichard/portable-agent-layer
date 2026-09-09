@@ -30,7 +30,7 @@ Manage the user's project registry. Each project lives at `~/.pal/memory/project
 All operations go through the canonical CLI:
 
 ```bash
-bun ~/.pal/tools/project.ts <command> [args]
+pal cli project <command> [args]
 ```
 
 Output is JSON.
@@ -115,7 +115,7 @@ When the user describes next steps, blockers, or decisions during normal work, i
 User: "store under <project> that a reference implementation exists in this repo"
 → Identify the project from `list` (or by name)
 → Durable reference, not a task → update-section
-→ bun ~/.pal/tools/project.ts update-section <slug> context "Reference implementation lives in this repo"
+→ pal cli project update-section <slug> context "Reference implementation lives in this repo"
 ```
 
 **Registering the current repo**
@@ -123,32 +123,32 @@ User: "store under <project> that a reference implementation exists in this repo
 User: "track this project"
 → Default name from cwd basename, confirm with user
 → Ask what it serves: a goal, a way it could pay, or fun
-→ bun ~/.pal/tools/project.ts create --path "$(pwd)" --objectives "first objective; second objective" --serves revenue --serves-note "could be sold as a service"
+→ pal cli project create --path "$(pwd)" --objectives "first objective; second objective" --serves revenue --serves-note "could be sold as a service"
 ```
 
 **Correcting what a project is for**
 ```
 User: "<project> isn't a toy, it's the thing I'd actually sell"
-→ bun ~/.pal/tools/project.ts serves <slug> revenue "the one I would sell"
+→ pal cli project serves <slug> revenue "the one I would sell"
 ```
 
 **Logging a decision**
 ```
 User: "we decided <decision> because <reason>"
-→ bun ~/.pal/tools/project.ts add-decision <slug> "<decision>" "<reason>"
+→ pal cli project add-decision <slug> "<decision>" "<reason>"
 ```
 
 **Setting the goal and criteria**
 ```
 User: "set the goal for pal to 'ship ISA support with full test coverage'"
-→ bun ~/.pal/tools/project.ts update-section pal goal "ship ISA support with full test coverage"
+→ pal cli project update-section pal goal "ship ISA support with full test coverage"
 ```
 
 **Completing a project**
 ```
 User: "mark <project> as complete"
 → Confirm
-→ bun ~/.pal/tools/project.ts complete <slug>
+→ pal cli project complete <slug>
 ```
 
 ## Anti-patterns

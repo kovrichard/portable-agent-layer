@@ -6,9 +6,9 @@
  * Stored in memory/state/threads.jsonl as structured records.
  *
  * Usage:
- *   bun ~/.pal/tools/thread.ts --add --title "..." [--context "..."]
- *   bun ~/.pal/tools/thread.ts --resolve --id <id>
- *   bun ~/.pal/tools/thread.ts --list [--all]
+ *   pal cli thread --add --title "..." [--context "..."]
+ *   pal cli thread --resolve --id <id>
+ *   pal cli thread --list [--all]
  */
 
 import { parseArgs } from "node:util";

@@ -61,5 +61,5 @@ After showing results, ask:
 
 If yes to crystallizing:
 ```bash
-bun ~/.pal/tools/wisdom-frame.ts --domain <domain> --observation "<principle>"
+pal cli wisdom-frame --domain <domain> --observation "<principle>"
 ```

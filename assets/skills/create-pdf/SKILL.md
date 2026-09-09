@@ -68,13 +68,13 @@ Invoke the skill tool. Flags:
 Single-file example:
 
 ```bash
-node ~/.pal/skills/create-pdf/tools/md-to-html-pdf.mjs /path/to/report.md --pdf /path/to/report.pdf
+pal cli skill run create-pdf md-to-html-pdf.mjs /path/to/report.md --pdf /path/to/report.pdf
 ```
 
 Multi-file example (after Step 2):
 
 ```bash
-node ~/.pal/skills/create-pdf/tools/md-to-html-pdf.mjs /tmp/combined.md --pdf /path/to/report.pdf --html /path/to/report.html
+pal cli skill run create-pdf md-to-html-pdf.mjs /tmp/combined.md --pdf /path/to/report.pdf --html /path/to/report.html
 ```
 
 The tool writes the self-contained HTML (inline CSS, UTF-8) and the PDF, and prints both paths + sizes on stdout.
@@ -95,7 +95,7 @@ Default styling (A4, 25mm margins, GitHub-ish look, table-friendly, page-break-a
 - `--header <html|file>` / `--footer <html|file>` — running header/footer on every page. The value is either an inline HTML string or a path to an HTML file. Templates may use Playwright's injected classes: `pageNumber`, `totalPages`, `date`, `title`, `url`.
 
 ```bash
-node ~/.pal/skills/create-pdf/tools/md-to-html-pdf.mjs report.md --pdf report.pdf \
+pal cli skill run create-pdf md-to-html-pdf.mjs report.md --pdf report.pdf \
   --margin 18mm \
   --header '<div style="font-size:9px;width:100%;text-align:center;color:#888">CONFIDENTIAL</div>' \
   --footer '<div style="font-size:9px;width:100%;text-align:right;padding-right:12mm;color:#888"><span class="pageNumber"></span>/<span class="totalPages"></span></div>'

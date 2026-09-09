@@ -34,7 +34,17 @@
       "Bash(rtk gain *)",
       "Bash(bun ~/.pal/skills/*/tools/*.ts *)",
       "Bash(bun ~/.pal/tools/*.ts *)",
-      "Bash(node --experimental-strip-types ~/.pal/skills/consulting-report/tools/generate-pdf.ts *)"
+      "Bash(node --experimental-strip-types ~/.pal/skills/consulting-report/tools/generate-pdf.ts *)",
+      "Bash(pal cli skill run *)",
+      "Bash(pal cli algorithm-reflect *)",
+      "Bash(pal cli algorithm-synthesize *)",
+      "Bash(pal cli analyze *)",
+      "Bash(pal cli handoff-note *)",
+      "Bash(pal cli project *)",
+      "Bash(pal cli relationship-note *)",
+      "Bash(pal cli synthesize *)",
+      "Bash(pal cli thread *)",
+      "Bash(pal cli wisdom-frame *)"
     ]
   },
   "skillOverrides": {

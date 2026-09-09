@@ -6,8 +6,8 @@
  * Written by Claude in-session — no inference call needed.
  *
  * Usage:
- *   bun ~/.pal/tools/handoff-note.ts --title "what we were doing" --text "what remains + next steps"
- *   bun ~/.pal/tools/handoff-note.ts --done   # mark completed, suppress next-session injection
+ *   pal cli handoff-note --title "what we were doing" --text "what remains + next steps"
+ *   pal cli handoff-note --done   # mark completed, suppress next-session injection
  */
 
 import { writeFileSync } from "node:fs";
@@ -25,8 +25,8 @@ const HELP = `
 HandoffNote — Write a handoff note for the current project
 
 Usage:
-  bun ~/.pal/tools/handoff-note.ts --title "what we were doing" --text "what remains"
-  bun ~/.pal/tools/handoff-note.ts --done    # mark session completed
+  pal cli handoff-note --title "what we were doing" --text "what remains"
+  pal cli handoff-note --done    # mark session completed
 
 Arguments:
   --title   Brief title of what was being worked on (5-10 words)

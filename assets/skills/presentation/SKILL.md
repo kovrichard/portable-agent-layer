@@ -32,14 +32,14 @@ Renders a deck folder (markdown + config) to a single self-contained HTML presen
 
 Interactive:
 ```bash
-bun ~/.pal/skills/presentation/tools/setup-template.ts
+pal cli skill run presentation setup-template
 ```
 
 Walks through 9 fields: name, storage path, logo file, primary color, accent color, footer text, logo placement, fonts, aspect ratio. Optional: generate a showcase deck demonstrating every layout.
 
 Non-interactive (Claude can drive it):
 ```bash
-bun ~/.pal/skills/presentation/tools/setup-template.ts \
+pal cli skill run presentation setup-template \
   --name <slug> \
   --logo <abs-path-to-logo.svg> \
   --primary "#0E1335" \
@@ -57,7 +57,7 @@ Defaults if omitted: accent = derived complementary of primary; logo-placement =
 ### Step 1: Scaffold a deck
 
 ```bash
-bun ~/.pal/skills/presentation/tools/new-deck.ts <deck-dir> --template <name> [--title "Deck title"]
+pal cli skill run presentation new-deck <deck-dir> --template <name> [--title "Deck title"]
 ```
 
 If `--template` is omitted and only one template is registered, that one is used. If multiple are registered, the command lists them and exits. Adds `--showcase` to scaffold a demo deck with every layout exercised.
@@ -79,7 +79,7 @@ Backwards compatible: if `slides/` doesn't exist, the build falls back to a sing
 ### Step 3: Build
 
 ```bash
-bun ~/.pal/skills/presentation/tools/build.ts <deck-dir> [--out <dir>] [--force]
+pal cli skill run presentation build <deck-dir> [--out <dir>] [--force]
 ```
 
 Output files (where `<deck-name>` = basename of `<deck-dir>`):
@@ -96,7 +96,7 @@ Override: pass `--out <dir>` to redirect elsewhere. When `--out` is *not* the de
 ### Step 3.5 (optional but recommended): Lint with the doctor
 
 ```bash
-bun ~/.pal/skills/presentation/tools/doctor.ts <deck-dir> [--strict]
+pal cli skill run presentation doctor <deck-dir> [--strict]
 ```
 
 Catches authoring failures before you ever open the browser:
@@ -346,13 +346,13 @@ Print this block as the closing of any turn that touches slides:
 ```bash
 # lint — catches overflow, missing assets, layout-content mismatches
 # bash / PowerShell / Git Bash:
-bun ~/.pal/skills/presentation/tools/doctor.ts <deck-dir>
+pal cli skill run presentation doctor <deck-dir>
 # Windows cmd.exe:
 bun %USERPROFILE%\.pal\skills\presentation\tools\doctor.ts <deck-dir>
 
 # build — writes <cwd>/<deck-name>/<deck-name>.{html,md}
 # bash / PowerShell / Git Bash:
-bun ~/.pal/skills/presentation/tools/build.ts <deck-dir>
+pal cli skill run presentation build <deck-dir>
 # Windows cmd.exe (no ~ expansion):
 bun %USERPROFILE%\.pal\skills\presentation\tools\build.ts <deck-dir>
 
@@ -365,7 +365,7 @@ Substitute `<deck-dir>` with the actual deck path. Do this even when you also ra
 ## Other commands
 
 ```bash
-bun ~/.pal/skills/presentation/tools/list-templates.ts
+pal cli skill run presentation list-templates
 ```
 
 Prints all registered templates with their primary color and storage path.
