@@ -18,7 +18,18 @@
  */
 
 import { spawn } from "node:child_process";
+import { getActiveAgent } from "./agent";
 import { logDebug, logError } from "./log";
+
+/**
+ * A hook run by Cursor, Copilot or Codex knows its agent only from the
+ * `--agent=` flag its own config put on the command line, and argv does not
+ * cross a spawn. Re-declaring it here is what stops the child from taking the
+ * "claude" default and spawning the wrong CLI for its inference.
+ */
+function withAgentDeclaration(args: string[]): string[] {
+  return [...args, `--agent=${getActiveAgent()}`];
+}
 
 export function spawnDetachedInference(
   scriptPath: string,
@@ -26,7 +37,7 @@ export function spawnDetachedInference(
   scope: string
 ): void {
   try {
-    const child = spawn("bun", [scriptPath, ...args], {
+    const child = spawn("bun", [scriptPath, ...withAgentDeclaration(args)], {
       detached: true,
       stdio: "ignore",
       env: { ...process.env, CLAUDECODE: undefined },

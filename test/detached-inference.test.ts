@@ -4,15 +4,31 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { spawnDetachedInference } from "../src/hooks/lib/detached-inference";
 
+/** A detached child runs asynchronously, so every assertion on it has to wait. */
+async function readWhenWritten(path: string, attempts = 50): Promise<string> {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const content = readFileSync(path, "utf-8");
+      if (content) return content;
+    } catch {
+      /* child hasn't written it yet */
+    }
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  return "";
+}
+
 describe("spawnDetachedInference", () => {
   let tmp: string;
   let savedHome: string | undefined;
   let savedClaudecode: string | undefined;
+  let savedAgent: string | undefined;
 
   beforeEach(() => {
     tmp = mkdtempSync(resolve(tmpdir(), "pal-detached-"));
     savedHome = process.env.PAL_HOME;
     savedClaudecode = process.env.CLAUDECODE;
+    savedAgent = process.env.PAL_AGENT;
     process.env.PAL_HOME = tmp;
     process.env.CLAUDECODE = "1"; // parent has it set
     // Enable debug logging for tests that assert on debug.log content.
@@ -27,6 +43,8 @@ describe("spawnDetachedInference", () => {
     else process.env.PAL_HOME = savedHome;
     if (savedClaudecode === undefined) delete process.env.CLAUDECODE;
     else process.env.CLAUDECODE = savedClaudecode;
+    if (savedAgent === undefined) delete process.env.PAL_AGENT;
+    else process.env.PAL_AGENT = savedAgent;
   });
 
   test("spawned child receives CLAUDECODE unset; parent retains it", async () => {
@@ -43,18 +61,7 @@ writeFileSync(${JSON.stringify(markerFile)}, "claudecode=[" + (process.env.CLAUD
 
     spawnDetachedInference(childScript, [], "test");
 
-    // Detached child runs asynchronously; poll for the marker.
-    let content = "";
-    for (let i = 0; i < 50; i++) {
-      try {
-        content = readFileSync(markerFile, "utf-8");
-        if (content) break;
-      } catch {
-        /* not yet */
-      }
-      await new Promise((r) => setTimeout(r, 100));
-    }
-    expect(content).toBe("claudecode=[]");
+    expect(await readWhenWritten(markerFile)).toBe("claudecode=[]");
     expect(process.env.CLAUDECODE).toBe("1");
   });
 
@@ -72,18 +79,46 @@ writeFileSync(${JSON.stringify(markerFile)}, "claudecode=[" + (process.env.CLAUD
     writeFileSync(childScript, `process.exit(0);`, "utf-8");
     spawnDetachedInference(childScript, ["--mode-x", "arg1"], "test-scope");
 
-    const logPath = resolve(tmp, "debug", "debug.log");
-    let log = "";
-    for (let i = 0; i < 20; i++) {
-      try {
-        log = readFileSync(logPath, "utf-8");
-        if (log.includes("test-scope")) break;
-      } catch {
-        /* not yet */
-      }
-      await new Promise((r) => setTimeout(r, 50));
-    }
+    const log = await readWhenWritten(resolve(tmp, "debug", "debug.log"));
     expect(log).toContain("test-scope: detached inference spawned: --mode-x");
+  });
+
+  test("child argv carries the parent's active agent", async () => {
+    process.env.PAL_AGENT = "cursor";
+    const childScript = resolve(tmp, "argv-child.ts");
+    const markerFile = resolve(tmp, "argv-marker.txt");
+    writeFileSync(
+      childScript,
+      `import { writeFileSync } from "node:fs";
+writeFileSync(${JSON.stringify(markerFile)}, process.argv.slice(2).join(" "));
+`,
+      "utf-8"
+    );
+
+    spawnDetachedInference(childScript, ["--run", "sid-1"], "test");
+
+    expect(await readWhenWritten(markerFile)).toBe("--run sid-1 --agent=cursor");
+  });
+
+  test("child detects the agent from argv alone, without inheriting PAL_AGENT", async () => {
+    process.env.PAL_AGENT = "cursor";
+    const childScript = resolve(tmp, "detect-child.ts");
+    const markerFile = resolve(tmp, "detect-marker.txt");
+    // Drop the inherited env signal before loading the detector, so only the
+    // argv flag can account for the answer.
+    writeFileSync(
+      childScript,
+      `import { writeFileSync } from "node:fs";
+delete process.env.PAL_AGENT;
+const { getActiveAgent } = await import(${JSON.stringify(resolve(import.meta.dir, "../src/hooks/lib/agent.ts"))});
+writeFileSync(${JSON.stringify(markerFile)}, getActiveAgent());
+`,
+      "utf-8"
+    );
+
+    spawnDetachedInference(childScript, ["--run", "sid-2"], "test");
+
+    expect(await readWhenWritten(markerFile)).toBe("cursor");
   });
 
   test("logs error if spawn throws", () => {
