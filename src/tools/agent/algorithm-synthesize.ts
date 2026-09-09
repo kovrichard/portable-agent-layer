@@ -20,6 +20,7 @@
 import { parseArgs } from "node:util";
 import { readReflections } from "../../hooks/lib/learning-store";
 import { paths } from "../../hooks/lib/paths";
+import { scriptArgs } from "../lib/script-args";
 
 /** Algorithm areas a Q2 idea can target, mapped to ALGORITHM.md structure. */
 const BUCKETS: { key: string; label: string; patterns: RegExp }[] = [
@@ -202,7 +203,7 @@ export function formatAlgorithmReport(s: AlgorithmSynthesis): string {
   return lines.join("\n");
 }
 
-export function run(argv: string[] = process.argv.slice(2)) {
+export function run(argv: string[] = scriptArgs()) {
   const { values } = parseArgs({
     args: argv,
     options: {

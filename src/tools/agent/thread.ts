@@ -13,6 +13,7 @@
 
 import { parseArgs } from "node:util";
 import { emit } from "../lib/emit";
+import { scriptArgs } from "../lib/script-args";
 import {
   addThread,
   readThreads,
@@ -59,7 +60,7 @@ function markResolved(id: string | undefined) {
   emit.receipt(file, { id, status: "resolved", title: resolution.thread.title });
 }
 
-export function run(argv: string[] = Bun.argv.slice(2)) {
+export function run(argv: string[] = scriptArgs()) {
   const { values } = parseArgs({
     args: argv,
     options: {

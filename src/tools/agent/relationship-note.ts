@@ -22,6 +22,7 @@ import { parseArgs } from "node:util";
 import { appendNotes } from "../../hooks/lib/relationship";
 import { emit } from "../lib/emit";
 import { notesFromFlags } from "../lib/note-flags";
+import { scriptArgs } from "../lib/script-args";
 
 const HELP = `
 RelationshipNote — Append W/O/Session entries to today's relationship log
@@ -42,7 +43,7 @@ Multiple flags may be combined in one call. At least one of --o, --w, --b is req
 Output: appends to memory/relationship/YYYY-MM/YYYY-MM-DD.md
 `;
 
-export function run(argv: string[] = Bun.argv.slice(2)) {
+export function run(argv: string[] = scriptArgs()) {
   const { values } = parseArgs({
     args: argv,
     options: {

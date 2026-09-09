@@ -20,6 +20,7 @@ import {
   recordNote,
   statusOf,
 } from "../lib/handoff-note";
+import { scriptArgs } from "../lib/script-args";
 
 const HELP = `
 HandoffNote — Write a handoff note for the current project
@@ -44,7 +45,7 @@ function saveNote(note: NoteInput): void {
   emit.receipt(file, { status: statusOf(note), entries: Object.keys(store).length });
 }
 
-export function run(argv: string[] = Bun.argv.slice(2)) {
+export function run(argv: string[] = scriptArgs()) {
   const { values } = parseArgs({
     args: argv,
     options: {

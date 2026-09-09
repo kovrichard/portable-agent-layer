@@ -55,6 +55,7 @@ import {
   selectIscs,
   taskSlug,
 } from "../lib/project-isc";
+import { scriptArgs } from "../lib/script-args";
 
 function now(): string {
   return new Date().toISOString();
@@ -693,7 +694,7 @@ Commands:
 `);
 }
 
-export function run(argv: string[] = Bun.argv.slice(2)): void {
+export function run(argv: string[] = scriptArgs()): void {
   const [cmd, ...rest] = argv;
   if (!cmd || cmd === "help" || cmd === "--help" || cmd === "-h") {
     help();
