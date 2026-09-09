@@ -1,3 +1,15 @@
+# [0.75.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.74.0...v0.75.0) (2026-09-09)
+
+
+### Bug Fixes
+
+* **inference:** declare the active agent to detached children ([7f4cf36](https://github.com/kovrichard/portable-agent-layer/commit/7f4cf36101fc9be15055e863a84922f4c2c42435))
+
+
+### Features
+
+* **cli:** print the installed version ([fc01773](https://github.com/kovrichard/portable-agent-layer/commit/fc017735375c778ba01a563e62835a3e51fdea00))
+
 # [0.74.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.73.0...v0.74.0) (2026-09-07)
 
 
