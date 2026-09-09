@@ -77,6 +77,20 @@ arch:
       in: ["src/hooks/lib/**"]
       message: "process.exit() called inside a library module — library functions should return or throw, not terminate the process."
 
+    # cmd.exe never expands "~" and PowerShell hands it to native commands
+    # literally, so a tilde invocation in a doc comment or a printed next-step
+    # hint is a command a Windows user cannot run. This covers only the .ts
+    # surface: klint's walker takes tsx?/jsx?/mts/cts alone (core/runner.ts), so
+    # SKILL.md and the templates are invisible to it and are held by
+    # test/shipped-invocations.test.ts instead. builtin-tools.ts is excluded
+    # because its comment documents the old form this rule exists to retire.
+    - pattern: 're:(bun|node) ~/\.pal/(tools|skills)/'
+      in:
+        - "assets/**"
+        - "src/**"
+        - "!src/cli/builtin-tools.ts"
+      message: "Tool invoked through a tilde path — no Windows shell expands it. Use 'pal cli <tool>' or 'pal cli skill run <skill> <tool>'."
+
     # The page's libraries belong to the @pal/control-room-ui workspace and are
     # bundled into ui/dist, so they are absent from what a PAL user installs.
     # Bun hoists them into the root node_modules for local development, which
