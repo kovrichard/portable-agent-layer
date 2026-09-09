@@ -303,9 +303,9 @@ export function synthesize(days: number): SynthesisState {
 
 // ── CLI ──
 
-function run() {
+export function run(argv: string[] = Bun.argv.slice(2)) {
   const { values } = parseArgs({
-    args: Bun.argv.slice(2),
+    args: argv,
     options: {
       days: { type: "string", default: "7" },
       force: { type: "boolean" },

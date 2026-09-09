@@ -192,9 +192,9 @@ ${antiPatternEntry}
 
 // ── CLI ──
 
-function run() {
+export function run(argv: string[] = Bun.argv.slice(2)) {
   const { values } = parseArgs({
-    args: Bun.argv.slice(2),
+    args: argv,
     options: {
       domain: { type: "string", short: "d" },
       observation: { type: "string", short: "o" },

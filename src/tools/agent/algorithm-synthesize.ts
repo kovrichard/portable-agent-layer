@@ -202,9 +202,9 @@ export function formatAlgorithmReport(s: AlgorithmSynthesis): string {
   return lines.join("\n");
 }
 
-if (import.meta.main) {
+export function run(argv: string[] = process.argv.slice(2)) {
   const { values } = parseArgs({
-    args: process.argv.slice(2),
+    args: argv,
     options: {
       since: { type: "string" },
       json: { type: "boolean", default: false },
@@ -216,3 +216,5 @@ if (import.meta.main) {
     values.json ? JSON.stringify(result, null, 2) : formatAlgorithmReport(result)
   );
 }
+
+if (import.meta.main) run();

@@ -18,6 +18,8 @@
  *   usage                             Summarize token usage and cost
  *   ledger <sub> [filters]            Query the action ledger (log · show · stats)
  *   server start|stop|restart|status  The control room, a local page over ~/.pal
+ *   <tool> [args]                     Run a built-in agent tool (project, thread, analyze, …)
+ *   skill run <skill> <tool> [-- args]  Run a skill's own tool by name, not by path
  *   skill link <name>                 Link a personal ~/.pal/skills/<name>/ into installed agents
  *   skill doctor <name|--all>         Evaluate one skill, or every installed skill, against the authoring best practices
  *   subagent link <name>             Install a personal ~/.pal/agents/<name>.md into installed agents
@@ -50,7 +52,9 @@ import { ensureRegistered, writeRegistryEntry } from "../hooks/lib/machine";
 import { palHome, palPkg, paths, platform } from "../hooks/lib/paths";
 import { auditBindings, describeBindingIssue } from "../hooks/lib/projects";
 import { telosStatus } from "../hooks/lib/telos-topics";
+import { findBinaryOnPath } from "../hooks/lib/which";
 import { log } from "../targets/lib";
+import { builtinToolVerbs, runBuiltinTool } from "./builtin-tools";
 import { checkPendingMigrations } from "./migrate";
 
 const allArgs = process.argv.slice(2);
@@ -184,6 +188,7 @@ async function session(sessionArgs: string[]) {
 // ── CLI dispatcher ──
 
 async function runCli(command: string | undefined, args: string[]) {
+  if (command && (await runBuiltinTool(command, args))) return;
   switch (command) {
     case "init":
       await init(args);
@@ -217,11 +222,6 @@ async function runCli(command: string | undefined, args: string[]) {
     case "migrate": {
       const { runMigrate } = await import("./migrate");
       runMigrate(args);
-      break;
-    }
-    case "analyze": {
-      const { run: runAnalyze } = await import("../tools/agent/analyze");
-      await runAnalyze(args);
       break;
     }
     case "usage": {
@@ -338,7 +338,8 @@ function showHelp() {
     pal cli status                          Show PAL configuration
     pal cli doctor [--probe-inference]      Check prerequisites and health (--probe fires real inference per route)
     pal cli migrate [--list] [--dry-run]    Run pending data migrations
-    pal cli analyze [--actionable]          Learning analysis: ratings, failure patterns, graduation candidates
+    pal cli <tool> [args]                   Run a built-in agent tool ('<tool> --help' for its flags):
+                                            ${builtinToolVerbs.join(" · ")}
     pal cli usage                           Summarize token usage and cost
     pal cli actor [label <name>]            Show or rename this actor (who caused a record)
     pal cli machine [label <name>]          Show or rename this install (where it was written)
@@ -349,6 +350,7 @@ function showHelp() {
     pal cli ledger <sub> [filters]          Query the action ledger (log · show · stats)
                                             e.g. ledger log --project X --since 7d
     pal cli server start|stop|restart|status  The control room: a local page to open before a terminal
+    pal cli skill run <skill> <tool> [-- args]  Run ~/.pal/skills/<skill>/tools/<tool> by name
     pal cli skill link <name>               Link a personal ~/.pal/skills/<name>/ into installed agents
     pal cli skill doctor <name|--all>       Evaluate one skill, or every installed skill
     pal cli skill author-model              Print the flagship model that authors skills for the active agent
@@ -833,6 +835,12 @@ function doctor(silent = false): DoctorResult {
     console.log("");
     log.info("Prerequisites");
     ok(`Bun ${bun.version}`);
+    const palBin = findBinaryOnPath("pal");
+    palBin
+      ? ok(`pal on PATH — ${palBin}`)
+      : fail(
+          "pal — not on PATH; skills and docs invoke tools as 'pal cli ...', which will not resolve. Install globally: bun add -g portable-agent-layer"
+        );
     const node = checkNode();
     if (!node.available) {
       warn(

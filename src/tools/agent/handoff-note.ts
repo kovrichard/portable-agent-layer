@@ -44,9 +44,9 @@ function saveNote(note: NoteInput): void {
   emit.receipt(file, { status: statusOf(note), entries: Object.keys(store).length });
 }
 
-function run() {
+export function run(argv: string[] = Bun.argv.slice(2)) {
   const { values } = parseArgs({
-    args: Bun.argv.slice(2),
+    args: argv,
     options: {
       title: { type: "string" },
       text: { type: "string" },

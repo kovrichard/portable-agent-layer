@@ -45,9 +45,9 @@ function reflectionsPath(): string {
   return paths.reflectionsFile();
 }
 
-function run() {
+export function run(argv: string[] = Bun.argv.slice(2)) {
   const { values } = parseArgs({
-    args: Bun.argv.slice(2),
+    args: argv,
     options: {
       task: { type: "string" },
       criteria: { type: "string" },

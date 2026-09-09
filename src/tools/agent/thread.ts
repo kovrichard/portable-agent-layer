@@ -59,9 +59,9 @@ function markResolved(id: string | undefined) {
   emit.receipt(file, { id, status: "resolved", title: resolution.thread.title });
 }
 
-function run() {
+export function run(argv: string[] = Bun.argv.slice(2)) {
   const { values } = parseArgs({
-    args: Bun.argv.slice(2),
+    args: argv,
     options: {
       add: { type: "boolean" },
       resolve: { type: "boolean" },

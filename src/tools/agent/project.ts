@@ -693,8 +693,8 @@ Commands:
 `);
 }
 
-function run(): void {
-  const [cmd, ...rest] = Bun.argv.slice(2);
+export function run(argv: string[] = Bun.argv.slice(2)): void {
+  const [cmd, ...rest] = argv;
   if (!cmd || cmd === "help" || cmd === "--help" || cmd === "-h") {
     help();
     return;
