@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
@@ -452,6 +452,14 @@ describe("getActiveAgent — undeclared falls back to what is installed", () => 
 
   test("no agent CLI at all still leaves claude as the last resort", () => {
     expect(declaredAgent()).toBeUndefined();
+    expect(getActiveAgent()).toBe("claude");
+  });
+
+  // Regression: a directory carries the execute bit too, so a PATH entry
+  // holding a folder named after a CLI read as that CLI being installed —
+  // which is how a `codex` directory on the CI runners renamed the agent.
+  test("a directory sharing a CLI's name is not that CLI", () => {
+    mkdirSync(resolve(dir, "codex"));
     expect(getActiveAgent()).toBe("claude");
   });
 });
