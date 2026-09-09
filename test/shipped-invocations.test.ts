@@ -27,6 +27,24 @@ function shippedInvocations(pattern: RegExp): { file: string; command: string }[
   return found;
 }
 
+/**
+ * A `.mjs` tool is a build artifact: scripts/build-skill-tools.ts emits it at
+ * prepack from the `.ts` carrying the `pal-build:mjs` marker, and .gitignore keeps
+ * it out of a checkout. Resolving it on disk would make this guard depend on
+ * whether something had run the build — and something does, mid-suite, since
+ * package-publish.test.ts runs `bun pm pack` and prepack writes the artifacts back
+ * into the tree. Under --randomize that is a coin flip. So resolve the source and
+ * the marker, which are what decide whether the shipped command will work.
+ */
+function toolIsShipped(skill: string, tool: string): boolean {
+  const tools = resolve(ROOT, "assets/skills", skill, "tools");
+  if (tool.endsWith(".mjs")) {
+    const source = resolve(tools, `${tool.slice(0, -".mjs".length)}.ts`);
+    return existsSync(source) && readFileSync(source, "utf-8").includes("pal-build:mjs");
+  }
+  return existsSync(resolve(tools, tool)) || existsSync(resolve(tools, `${tool}.ts`));
+}
+
 describe("the `pal cli` commands PAL ships in its own instruction text", () => {
   test("every `pal cli skill run <skill> <tool>` names a tool that exists", () => {
     const uses = shippedInvocations(
@@ -36,9 +54,7 @@ describe("the `pal cli` commands PAL ships in its own instruction text", () => {
 
     const missing = uses.filter(({ command }) => {
       const [skill, tool] = command.split(" ").slice(4);
-      if (!skill || !tool) return true;
-      const base = resolve(ROOT, "assets/skills", skill, "tools", tool);
-      return !existsSync(base) && !existsSync(`${base}.ts`);
+      return !skill || !tool || !toolIsShipped(skill, tool);
     });
     expect(missing).toEqual([]);
   });
