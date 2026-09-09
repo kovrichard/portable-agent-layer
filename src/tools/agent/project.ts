@@ -811,7 +811,7 @@ export function run(argv: string[] = scriptArgs()): void {
       cmdRm(rest);
       return;
     default:
-      fail(`Unknown command "${cmd}". Run 'project.ts help' for usage.`);
+      fail(`Unknown command "${cmd}". Run 'pal cli project help' for usage.`);
   }
 }
 

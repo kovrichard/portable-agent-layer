@@ -405,7 +405,7 @@ export function resolveSubagentFile(arg: string): string {
 if (import.meta.main) {
   const arg = process.argv[2];
   if (!arg) {
-    console.error("Usage: bun src/tools/subagent-doctor.ts <file-or-name>");
+    console.error("Usage: pal cli subagent doctor <file-or-name>");
     process.exit(2);
   }
   const report = lintSubagent(resolveSubagentFile(arg));

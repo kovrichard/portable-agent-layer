@@ -40,7 +40,7 @@ Output is JSON.
 | `list` | All registered projects with status, path, updated, stale flag, and counts |
 | `create [name] [--path PATH] [--objectives "a;b;c"] [--serves KIND] [--serves-note "..."]` | Register a project. Defaults: name=basename(cwd), path=cwd. Slug must be `[a-z0-9_-]+`. KIND is `goal`, `revenue` or `fun` |
 | `serves <name> <goal\|revenue\|fun> [note]` | Set what the project is for, after the fact |
-| `resume <name>` | Print the full project ISA — all frontmatter and body sections |
+| `resume <name>` | Print the lean project view — frontmatter, body sections, and open-ISC titles (full ISC text via `show-isc`) |
 | `add-next <name> "text"` | Append a next step (array, instantly appendable) |
 | `add-blocker <name> "text"` | Append a blocker (array, instantly appendable) |
 | `add-decision <name> "decision" "rationale"` | Log a timestamped decision entry to the Decisions section |
@@ -48,6 +48,15 @@ Output is JSON.
 | `rm-next \| rm-blocker <name> <index>` | Remove a next/blocker entry by zero-based index |
 | `update-section <name> <section> "content"` | Set an ISA body section (problem, goal, criteria, vision, constraints, out_of_scope, context, decisions, changelog) |
 | `criteria <name>` | Print the Criteria section (verifiable success conditions) |
+| `set-path <name> <new-path>` | Update the registered path |
+| `add-isc <name> "title"` | Append a new open ISC to Criteria |
+| `list-isc <name> [--all \| --closed \| --retired]` | List open ISCs (default), or the archived/retired sets |
+| `show-isc <name> <id>` | Print one ISC's full text |
+| `edit-isc <name> <id> "new text"` | Rewrite an ISC's wording, keeping its id and state |
+| `complete-isc \| reopen-isc <name> <id>` | Archive a finished ISC, or pull one back into the open set |
+| `retire-isc <name> <id> [--by <id>]` | Close an ISC that stopped being valid, not as done |
+| `prune-isc <name>` | Sweep legacy done ISCs from Criteria into the Changelog archive |
+| `scaffold-task-isa <title>` / `complete-task-isa <slug>` | Create and close a one-shot task ISA in `memory/work/` |
 | `isa-init <name>` | Mark a project as ISA-initialized |
 | `complete <name>` / `archive <name>` / `pause <name>` / `unpause <name>` | Status transitions |
 | `rm <name>` | Delete the project directory entirely |
