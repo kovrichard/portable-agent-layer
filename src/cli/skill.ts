@@ -21,7 +21,12 @@ import { getActiveAgent } from "../hooks/lib/agent";
 import { flagshipAuthorModel } from "../hooks/lib/models";
 import { palHome } from "../hooks/lib/paths";
 import { linkPersonalSkill, log } from "../targets/lib";
-import { formatReport, formatSummary, lintSkill } from "../tools/lib/skill-doctor";
+import {
+  formatReport,
+  formatSummary,
+  lintSkill,
+  resolveSkillDir,
+} from "../tools/lib/skill-doctor";
 
 /** Entry names under ~/.pal/skills/, sorted; dangling links included. */
 function skillEntries(dir: string): string[] {
@@ -118,10 +123,10 @@ export async function runSkill(args: string[]): Promise<number> {
   if (sub === "doctor") {
     if (name === "--all") return doctorAll();
     if (!name) {
-      log.error("Usage: pal cli skill doctor <name|--all>");
+      log.error("Usage: pal cli skill doctor <skill-dir-or-name|--all>");
       return 1;
     }
-    const report = lintSkill(resolve(palHome(), "skills", name));
+    const report = lintSkill(resolveSkillDir(name));
     console.log(formatReport(report));
     return report.errors > 0 ? 1 : 0;
   }
