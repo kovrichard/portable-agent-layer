@@ -10,7 +10,7 @@
 // and is invoked as that .mjs: a .ts under node_modules can't be type-stripped by Node.
 //
 // Usage:
-//   node ~/.pal/skills/create-pdf/tools/md-to-html-pdf.mjs <input.md> \
+//   pal cli skill run create-pdf md-to-html-pdf.mjs <input.md> \
 //     [--html <out.html>] [--pdf <out.pdf>] [--margin <css>] [--header <html|file>] [--footer <html|file>]
 //   --margin defaults to 25mm (all sides). --header/--footer accept inline HTML or a file path.
 

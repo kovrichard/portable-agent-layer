@@ -28,19 +28,19 @@ Use the `grok-search` tool to query the Grok API with real-time search grounding
 ### Current events / breaking news (web + X sources)
 
 ```bash
-bun ~/.pal/skills/research/tools/grok-search.ts -- "<your research query>" --sources web,x
+pal cli skill run deep-research grok-search -- "<your research query>" --sources web,x
 ```
 
 ### Social sentiment / trending topics (X only)
 
 ```bash
-bun ~/.pal/skills/research/tools/grok-search.ts -- "Search X for recent posts about: <topic>. Summarize key themes, notable accounts, and overall sentiment." --sources x
+pal cli skill run deep-research grok-search -- "Search X for recent posts about: <topic>. Summarize key themes, notable accounts, and overall sentiment." --sources x
 ```
 
 ### Web-only search
 
 ```bash
-bun ~/.pal/skills/research/tools/grok-search.ts -- "<query>" --sources web
+pal cli skill run deep-research grok-search -- "<query>" --sources web
 ```
 
 The tool outputs findings as markdown with a `## Sources` section listing URLs and X posts.

@@ -41,10 +41,10 @@ Thinking-only. No tool calls except context recovery (Grep/Glob/Read).
 ```bash
 # If cwd matches a registered project — read its open ISCs (Ideal State Criteria):
 # list-isc returns OPEN criteria by default; pass --all or --closed to see finished ones.
-bun ~/.pal/tools/project.ts list-isc <project-name>
+pal cli project list-isc <project-name>
 
 # If this is ad-hoc work with no registered project — scaffold a task ISA:
-bun ~/.pal/tools/project.ts scaffold-task-isa "<task title>"
+pal cli project scaffold-task-isa "<task title>"
 ```
 
 Surface any open ISCs as live context: they are unfinished criteria from prior sessions. New criteria defined in this session extend them (use `add-isc`), not replace them.
@@ -243,7 +243,7 @@ Focus: reasoning approach, problem decomposition, anticipation, blind spots.
 **2. Reflection Log** — record algorithm performance:
 
 ```bash
-bun ~/.pal/tools/algorithm-reflect.ts --task "description" --criteria N --passed N --failed N --sentiment 1-10 \
+pal cli algorithm-reflect --task "description" --criteria N --passed N --failed N --sentiment 1-10 \
   --q1 "self reflection" --q2 "algorithm reflection" --q3 "AI reflection" --scope general
 ```
 
@@ -255,16 +255,16 @@ The goal is behavioral intelligence about the user, not a session log. Session l
 
 ```bash
 # Opinion — behavioral observation about the user (what you noticed about how they work):
-bun ~/.pal/tools/relationship-note.ts --o "User prefers reviewing existing code before adding anything new" --confidence 0.80
+pal cli relationship-note --o "User prefers reviewing existing code before adding anything new" --confidence 0.80
 
 # World fact — objective fact about the user's situation (tech stack, project state, context):
-bun ~/.pal/tools/relationship-note.ts --w "User is building a backend service in TypeScript with Bun"
+pal cli relationship-note --w "User is building a backend service in TypeScript with Bun"
 
 # Session diary — what the agent did this session (first-person, specific):
-bun ~/.pal/tools/relationship-note.ts --b "Refactored the auth middleware to support refresh token rotation"
+pal cli relationship-note --b "Refactored the auth middleware to support refresh token rotation"
 
 # Multiple notes in one call:
-bun ~/.pal/tools/relationship-note.ts --o "User prefers one verified change at a time, not batches" --confidence 0.80 --b "Fixed the path-normalization bug in the hook merge logic"
+pal cli relationship-note --o "User prefers one verified change at a time, not batches" --confidence 0.80 --b "Fixed the path-normalization bug in the hook merge logic"
 ```
 
 **O (Opinion) — what to write:**
@@ -291,10 +291,10 @@ Skip only if the session was a trivial lookup or typo fix (same rule as step 2).
 
 ```bash
 # Work still in progress:
-bun ~/.pal/tools/handoff-note.ts --title "what we were doing" --text "what remains, decisions made, next steps"
+pal cli handoff-note --title "what we were doing" --text "what remains, decisions made, next steps"
 
 # Work finished — clear any previous in-progress handoff:
-bun ~/.pal/tools/handoff-note.ts --done --title "what we completed"
+pal cli handoff-note --done --title "what we completed"
 ```
 
 - Write if anything is left mid-flight: unfinished implementation, open decision, partially debugged issue
@@ -306,21 +306,21 @@ bun ~/.pal/tools/handoff-note.ts --done --title "what we completed"
 **Project work** — use ISCs, not threads:
 ```bash
 # Close completed ISCs:
-bun ~/.pal/tools/project.ts complete-isc <project-name> <id>
+pal cli project complete-isc <project-name> <id>
 
 # Open new ISCs for unfinished work:
-bun ~/.pal/tools/project.ts add-isc <project-name> "what remains"
+pal cli project add-isc <project-name> "what remains"
 ```
 
 **Task ISA (one-shot work)** — mark complete when done:
 ```bash
-bun ~/.pal/tools/project.ts complete-task-isa <slug>
+pal cli project complete-task-isa <slug>
 ```
 
 **Cross-project or non-project follow-ups** — use threads:
 ```bash
-bun ~/.pal/tools/thread.ts --add --title "brief title" --context "why it matters, what needs to happen"
-bun ~/.pal/tools/thread.ts --resolve --id <id>
+pal cli thread --add --title "brief title" --context "why it matters, what needs to happen"
+pal cli thread --resolve --id <id>
 ```
 
 **6. Opinion capture** — scan the conversation for moments where the user:
@@ -331,13 +331,13 @@ bun ~/.pal/tools/thread.ts --resolve --id <id>
 For each, invoke the opinion tool:
 ```bash
 # User confirmed a preference
-bun ~/.pal/skills/opinion/tools/opinion.ts evidence "matching keywords" --confirmation "what they confirmed"
+pal cli skill run opinion opinion evidence "matching keywords" --confirmation "what they confirmed"
 
 # User corrected a preference
-bun ~/.pal/skills/opinion/tools/opinion.ts evidence "matching keywords" --contradiction "what they corrected"
+pal cli skill run opinion opinion evidence "matching keywords" --contradiction "what they corrected"
 
 # New pattern observed (no existing opinion matches)
-bun ~/.pal/skills/opinion/tools/opinion.ts add "the preference" --category communication|technical|workflow|general
+pal cli skill run opinion opinion add "the preference" --category communication|technical|workflow|general
 ```
 
 Skip if nothing in the conversation touched preferences or working style.
@@ -345,7 +345,7 @@ Skip if nothing in the conversation touched preferences or working style.
 **7. Wisdom Frame** (Extended+ only) — if the session produced a genuine, reusable insight:
 
 ```bash
-bun ~/.pal/tools/wisdom-frame.ts --domain <domain> --observation "insight" [--type principle|contextual-rule|anti-pattern|evolution]
+pal cli wisdom-frame --domain <domain> --observation "insight" [--type principle|contextual-rule|anti-pattern|evolution]
 ```
 
 Domains: `development`, `workflow`, `communication`, `infrastructure`, `integration`, or any fitting domain.

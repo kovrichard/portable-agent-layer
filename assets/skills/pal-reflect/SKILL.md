@@ -55,8 +55,8 @@ After showing results, say:
 If the user confirms or corrects something, use the opinion tool:
 ```bash
 # Confirmed
-bun ~/.pal/skills/opinion/tools/opinion.ts evidence "keywords" --confirmation "what they confirmed"
+pal cli skill run opinion opinion evidence "keywords" --confirmation "what they confirmed"
 
 # Corrected
-bun ~/.pal/skills/opinion/tools/opinion.ts evidence "keywords" --contradiction "what they corrected"
+pal cli skill run opinion opinion evidence "keywords" --contradiction "what they corrected"
 ```

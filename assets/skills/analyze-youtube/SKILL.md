@@ -23,7 +23,7 @@ When the user asks to analyze, summarize, or extract information from a YouTube 
 Use the `youtube-analyze` CLI tool. It sends the video to Gemini, which processes both visual and audio content natively.
 
 ```bash
-bun ~/.pal/skills/analyze-youtube/tools/youtube-analyze.ts -- <youtube-url> [--prompt "your question"]
+pal cli skill run analyze-youtube youtube-analyze -- <youtube-url> [--prompt "your question"]
 ```
 
 - Without `--prompt`, it returns a structured summary with key insights, topics, people, and quotes.

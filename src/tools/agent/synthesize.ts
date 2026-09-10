@@ -7,7 +7,7 @@
  * reads and formats with behavioral guidance.
  *
  * Usage:
- *   bun ~/.pal/tools/synthesize.ts [--days 7] [--force]
+ *   pal cli synthesize [--days 7] [--force]
  *
  * Guards: skips if last synthesis was < 24h ago (unless --force).
  * Output: ~/.pal/memory/state/synthesis.json
@@ -17,6 +17,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { ensureDir, paths } from "../../hooks/lib/paths";
+import { scriptArgs } from "../lib/script-args";
 import { readJsonl } from "../lib/self-model";
 
 // ── Config ──
@@ -303,9 +304,9 @@ export function synthesize(days: number): SynthesisState {
 
 // ── CLI ──
 
-function run() {
+export function run(argv: string[] = scriptArgs()) {
   const { values } = parseArgs({
-    args: Bun.argv.slice(2),
+    args: argv,
     options: {
       days: { type: "string", default: "7" },
       force: { type: "boolean" },

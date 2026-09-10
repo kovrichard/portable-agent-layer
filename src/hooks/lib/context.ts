@@ -4,14 +4,13 @@
  */
 
 import { existsSync, readFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { loadReflectNudge } from "../handlers/reflect-trigger";
 import { loadAlgorithmReviewNudge } from "./algorithm-review";
 import { loadAnalyzeNudge } from "./analyze-nudge";
 import { readLearnings } from "./learning-store";
 import { loadOpinionContext } from "./opinions";
-import { paths } from "./paths";
+import { paths, toPath } from "./paths";
 import { loadActiveProjectsContext } from "./projects";
 import { loadRecentNotes } from "./relationship";
 import { loadFailurePatterns } from "./semi-static";
@@ -24,11 +23,10 @@ function loadStartupFiles(): string {
   const files = settings.startupFiles();
   if (files.length === 0) return "";
 
-  const home = homedir();
   const sections: string[] = [];
 
   for (const file of files) {
-    const resolved = file.replace("~", home);
+    const resolved = toPath(file);
     if (!existsSync(resolved)) continue;
     try {
       const content = readFileSync(resolved, "utf-8").trim();

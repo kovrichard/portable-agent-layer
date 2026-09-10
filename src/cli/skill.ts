@@ -8,15 +8,25 @@
  *   pal cli skill doctor --all    Evaluate every installed skill, one line each.
  *   pal cli skill author-model    Print the flagship model configured to author
  *                                 skills for the active agent (empty if none).
+ *   pal cli skill run <skill> <tool> [-- args]
+ *                                 Run ~/.pal/skills/<skill>/tools/<tool>, so a
+ *                                 SKILL.md can name the tool instead of a path
+ *                                 with a tilde no Windows shell expands.
  */
 
+import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { getActiveAgent } from "../hooks/lib/agent";
 import { flagshipAuthorModel } from "../hooks/lib/models";
 import { palHome } from "../hooks/lib/paths";
 import { linkPersonalSkill, log } from "../targets/lib";
-import { formatReport, formatSummary, lintSkill } from "../tools/lib/skill-doctor";
+import {
+  formatReport,
+  formatSummary,
+  lintSkill,
+  resolveSkillDir,
+} from "../tools/lib/skill-doctor";
 
 /** Entry names under ~/.pal/skills/, sorted; dangling links included. */
 function skillEntries(dir: string): string[] {
@@ -59,8 +69,50 @@ function doctorAll(): number {
   return failing > 0 ? 1 : 0;
 }
 
+/** One plain path segment — the containment guarantee for `skill run`. */
+function isPlainSegment(part: string): boolean {
+  return (
+    part.length > 0 && part !== "." && part !== ".." && !new RegExp(/[/\\\0]/).test(part)
+  );
+}
+
+/** Playwright tools ship compiled as .mjs and need Node; everything else is Bun. */
+function runtimeFor(file: string): string {
+  return file.endsWith(".mjs") ? "node" : "bun";
+}
+
+function toolFileName(tool: string): string {
+  return new RegExp(/\.[a-z]+$/).test(tool) ? tool : `${tool}.ts`;
+}
+
+function runSkillTool(skill: string, tool: string, toolArgs: string[]): number {
+  if (!isPlainSegment(skill) || !isPlainSegment(tool)) {
+    log.error("Skill and tool must be plain names — no path separators, no '..'");
+    return 1;
+  }
+  const file = toolFileName(tool);
+  const path = resolve(palHome(), "skills", skill, "tools", file);
+  if (!existsSync(path)) {
+    log.error(`No tool '${file}' in skill '${skill}' — looked in ${path}`);
+    return 1;
+  }
+  const { status } = spawnSync(runtimeFor(file), [path, ...toolArgs], {
+    stdio: "inherit",
+  });
+  return status ?? 1;
+}
+
 export async function runSkill(args: string[]): Promise<number> {
   const [sub, name] = args;
+
+  if (sub === "run") {
+    const [, skill, tool, ...rest] = args;
+    if (!skill || !tool) {
+      log.error("Usage: pal cli skill run <skill> <tool> [-- args]");
+      return 1;
+    }
+    return runSkillTool(skill, tool, rest[0] === "--" ? rest.slice(1) : rest);
+  }
 
   if (sub === "author-model") {
     const model = flagshipAuthorModel(getActiveAgent());
@@ -71,10 +123,10 @@ export async function runSkill(args: string[]): Promise<number> {
   if (sub === "doctor") {
     if (name === "--all") return doctorAll();
     if (!name) {
-      log.error("Usage: pal cli skill doctor <name|--all>");
+      log.error("Usage: pal cli skill doctor <skill-dir-or-name|--all>");
       return 1;
     }
-    const report = lintSkill(resolve(palHome(), "skills", name));
+    const report = lintSkill(resolveSkillDir(name));
     console.log(formatReport(report));
     return report.errors > 0 ? 1 : 0;
   }
@@ -104,6 +156,6 @@ export async function runSkill(args: string[]): Promise<number> {
     }
   }
 
-  log.error("Usage: pal cli skill <link|doctor|author-model> [name|--all]");
+  log.error("Usage: pal cli skill <run|link|doctor|author-model> [name|--all]");
   return 1;
 }

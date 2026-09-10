@@ -14,6 +14,7 @@ import { parseArgs } from "node:util";
 import { writeLastAnalyzeDate } from "../../hooks/lib/analyze-nudge";
 import { analyze } from "../../hooks/lib/graduation";
 import { reportLines } from "../lib/analyze-report";
+import { scriptArgs } from "../lib/script-args";
 
 const HELP = `
   PAL Learning Analysis — unified graduation + ratings report
@@ -36,7 +37,7 @@ const HELP = `
   Usage: pal cli analyze [--actionable]
 `;
 
-export async function run(argv: string[] = Bun.argv.slice(2)) {
+export async function run(argv: string[] = scriptArgs()) {
   const { values } = parseArgs({
     args: argv,
     options: {

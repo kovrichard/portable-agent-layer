@@ -4,7 +4,7 @@
 // and install Next.js dependencies.
 //
 // Usage:
-//   bun ~/.pal/skills/consulting-report/tools/scaffold.ts <target-dir> \
+//   pal cli skill run consulting-report scaffold <target-dir> \
 //        [--client "Client Name"] [--title "Report Title"] [--no-install]
 
 import { spawnSync } from "node:child_process";
@@ -100,7 +100,7 @@ async function run(argv: string[] = process.argv.slice(2)): Promise<void> {
   console.log(`  2. Edit lib/report-data.ts (metadata) and app/page.tsx (layout)`);
   console.log(`  3. Live preview:    bun run dev`);
   console.log(
-    `  4. Generate PDF:    node ~/.pal/skills/consulting-report/tools/generate-pdf.mjs ${opts.targetDir}`
+    `  4. Generate PDF:    pal cli skill run consulting-report generate-pdf.mjs ${opts.targetDir}`
   );
 }
 

@@ -43,7 +43,7 @@ Read the file directly from `~/.pal/telos/` when the user asks about any area. S
 Appends content, creates backup, logs the change:
 
 ```bash
-bun ~/.pal/skills/telos/tools/update-telos.ts <FILE> "<content>" "<description>"
+pal cli skill run telos update-telos <FILE> "<content>" "<description>"
 ```
 
 ## Routing
