@@ -103,16 +103,29 @@ describe("platform", () => {
     expect(platform.agentsDir()).toBe(resolve(home, ".agents"));
   });
 
+  // An override is resolved, not passed through: "/custom/claude" is rooted but
+  // driveless on Windows, so the literal it was compared against here only ever
+  // matched on POSIX.
   test("env overrides work", async () => {
     process.env.PAL_CLAUDE_DIR = "/custom/claude";
     process.env.PAL_OPENCODE_DIR = "/custom/opencode";
     process.env.PAL_AGENTS_DIR = "/custom/agents";
     const { platform } = await import("../src/hooks/lib/paths");
-    expect(platform.claudeDir()).toBe("/custom/claude");
-    expect(platform.opencodeDir()).toBe("/custom/opencode");
-    expect(platform.agentsDir()).toBe("/custom/agents");
+    expect(platform.claudeDir()).toBe(resolve("/custom/claude"));
+    expect(platform.opencodeDir()).toBe(resolve("/custom/opencode"));
+    expect(platform.agentsDir()).toBe(resolve("/custom/agents"));
     delete process.env.PAL_CLAUDE_DIR;
     delete process.env.PAL_OPENCODE_DIR;
     delete process.env.PAL_AGENTS_DIR;
+  });
+
+  // The reason overrides go through toPath at all. Setting PAL_CLAUDE_DIR=~/x in
+  // a Windows shell hands PAL a literal tilde, and the old pass-through made a
+  // directory called "~" under the cwd.
+  test("a tilde in an override is expanded, not taken literally", async () => {
+    process.env.PAL_CLAUDE_DIR = "~/claude-alt";
+    const { platform } = await import("../src/hooks/lib/paths");
+    expect(platform.claudeDir()).toBe(resolve(homedir(), "claude-alt"));
+    delete process.env.PAL_CLAUDE_DIR;
   });
 });
