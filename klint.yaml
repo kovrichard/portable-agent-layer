@@ -91,6 +91,26 @@ arch:
         - "!src/cli/builtin-tools.ts"
       message: "Tool invoked through a tilde path — no Windows shell expands it. Use 'pal cli <tool>' or 'pal cli skill run <skill> <tool>'."
 
+    # "~" is a shell feature: bash and zsh expand it before a process starts,
+    # cmd.exe has no such feature, and PowerShell hands it to native commands
+    # literally. So node:path has nothing for it and every hand-rolled expander
+    # is a Windows bug waiting — the one this replaced was context.ts's
+    # unanchored file.replace("~", home), which turned /tmp/a~b/c into
+    # /tmp/a<home>b/c. toPath() in paths.ts is the only expander.
+    - pattern: 're:(startsWith\(.~|replace\(.~|replace\(/\^~)'
+      in:
+        - "src/**"
+        - "!src/hooks/lib/paths.ts"
+      message: "Hand-rolled tilde expansion — import toPath() from src/hooks/lib/paths.ts, which anchors on the leading segment and rejects ~user."
+
+    # A path that came from argv or a flag has not been through a shell on
+    # Windows, so resolve() reads its leading "~" as a literal directory under
+    # the cwd. toPath() is resolve() plus the expansion the shell did not do.
+    - pattern: 're:resolve\((values\.|argv\[|positionals\[|args\[|rest\b)'
+      in:
+        - "src/**"
+      message: "Foreign path string resolved directly — use toPath() from src/hooks/lib/paths.ts so a leading tilde survives Windows."
+
     # The page's libraries belong to the @pal/control-room-ui workspace and are
     # bundled into ui/dist, so they are absent from what a PAL user installs.
     # Bun hoists them into the root node_modules for local development, which

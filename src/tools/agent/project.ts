@@ -26,7 +26,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { writeBinding } from "../../hooks/lib/bindings";
-import { paths } from "../../hooks/lib/paths";
+import { paths, toPath } from "../../hooks/lib/paths";
 import {
   defaultSlug,
   deleteProject,
@@ -107,7 +107,7 @@ function cmdCreate(args: string[]): void {
     allowPositionals: true,
   });
 
-  const path = resolve(values.path ?? process.cwd());
+  const path = toPath(values.path ?? process.cwd());
   const name = (values.name ?? positionals[0] ?? defaultSlug(path)).trim();
 
   if (!/^[a-z0-9_-]+$/.test(name)) {
@@ -272,7 +272,7 @@ function addHandoff(name: string, text: string): void {
 function cmdSetPath(args: string[]): void {
   const [name, ...rest] = args;
   if (!name || rest.length === 0) fail("Usage: set-path <name> <new-path>");
-  const newPath = resolve(rest.join(" ").trim());
+  const newPath = toPath(rest.join(" ").trim());
   const p = requireProject(name);
   writeBinding(p.name, newPath);
   p.updated = now();

@@ -20,7 +20,7 @@
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
-import { palHome } from "./paths";
+import { palHome, toPath } from "./paths";
 
 /** Project name → absolute path on this machine. */
 export type Bindings = Record<string, string>;
@@ -105,7 +105,7 @@ export function writeBinding(
   home: string = palHome()
 ): void {
   const bindings = readBindings(home);
-  bindings[project] = resolve(path);
+  bindings[project] = toPath(path);
   writeBindings(bindings, home);
 }
 
