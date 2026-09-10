@@ -26,6 +26,16 @@ export function toPath(input: string, base: string = process.cwd()): string {
   return resolve(base, input);
 }
 
+/**
+ * Whether a string names a location rather than a bare identifier. A verb that
+ * accepts either `my-skill` or `~/skills/my-skill` has to tell them apart before
+ * it looks the argument up in a store — appending a tilde path to a store
+ * directory yields a path that can never exist.
+ */
+export function namesAPath(input: string): boolean {
+  return input.startsWith("~") || input.includes("/") || input.includes("\\");
+}
+
 /** An env override names a path the same way a flag does, so it gets the same treatment. */
 function envPath(name: string, fallback: string): string {
   const override = process.env[name];

@@ -49,7 +49,7 @@ import {
 import { inference, previewInferenceRoute } from "../hooks/lib/inference";
 import { DEBUG_LOG_MAX_ROTATED, logDebug } from "../hooks/lib/log";
 import { ensureRegistered, writeRegistryEntry } from "../hooks/lib/machine";
-import { palHome, palPkg, paths, platform } from "../hooks/lib/paths";
+import { palHome, palPkg, paths, platform, toPath } from "../hooks/lib/paths";
 import { auditBindings, describeBindingIssue } from "../hooks/lib/projects";
 import { telosStatus } from "../hooks/lib/telos-topics";
 import { findBinaryOnPath } from "../hooks/lib/which";
@@ -1369,7 +1369,7 @@ async function exportState(args: string[]) {
 
   const dryRun = args.includes("--dry-run");
   const pathArg = args.find((a) => !a.startsWith("-"));
-  const resolvedArg = pathArg ? resolve(pathArg) : null;
+  const resolvedArg = pathArg ? toPath(pathArg) : null;
   const argIsDir =
     resolvedArg !== null &&
     existsSync(resolvedArg) &&
@@ -1433,7 +1433,7 @@ async function importState(args: string[]) {
 
   let zipPath: string;
 
-  const resolvedArg = pathArg ? resolve(pathArg) : null;
+  const resolvedArg = pathArg ? toPath(pathArg) : null;
   const argIsDir =
     resolvedArg !== null &&
     existsSync(resolvedArg) &&

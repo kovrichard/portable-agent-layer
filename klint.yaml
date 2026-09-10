@@ -106,7 +106,12 @@ arch:
     # A path that came from argv or a flag has not been through a shell on
     # Windows, so resolve() reads its leading "~" as a literal directory under
     # the cwd. toPath() is resolve() plus the expansion the shell did not do.
-    - pattern: 're:resolve\((values\.|argv\[|positionals\[|args\[|rest\b)'
+    #
+    # The second alternative catches the laundered form — `const pathArg =
+    # args.find(...)` then `resolve(pathArg)` — which the first misses and which
+    # hid this bug in export, import and both doctor resolvers. It matches a
+    # variable whose name ENDS in arg/Arg; a wider match would hit "target".
+    - pattern: 're:resolve\((values\.|argv\[|positionals\[|args\[|rest\b|\w*[Aa]rg\))'
       in:
         - "src/**"
       message: "Foreign path string resolved directly — use toPath() from src/hooks/lib/paths.ts so a leading tilde survives Windows."

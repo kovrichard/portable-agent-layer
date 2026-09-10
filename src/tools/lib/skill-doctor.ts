@@ -12,7 +12,7 @@
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, extname, relative, resolve } from "node:path";
-import { palHome } from "../../hooks/lib/paths";
+import { palHome, toPath } from "../../hooks/lib/paths";
 import { declaredTriggers } from "../../hooks/lib/skill-triggers";
 
 type Level = "pass" | "warn" | "error";
@@ -449,7 +449,7 @@ export function formatReport(r: DoctorReport): string {
  * report names the directory the caller meant rather than a guess.
  */
 export function resolveSkillDir(arg: string): string {
-  const asPath = resolve(arg);
+  const asPath = toPath(arg);
   if (existsSync(resolve(asPath, "SKILL.md"))) return asPath;
   const byName = resolve(palHome(), "skills", arg);
   if (existsSync(resolve(byName, "SKILL.md"))) return byName;

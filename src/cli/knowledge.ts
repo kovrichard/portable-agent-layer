@@ -23,6 +23,7 @@
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import * as clack from "@clack/prompts";
+import { toPath } from "../hooks/lib/paths";
 import { buildGraph, resolveSlug, stats, traverse } from "../tools/knowledge/graph";
 import {
   type CompanyInput,
@@ -553,7 +554,7 @@ interface IngestPayload {
 }
 
 async function readIngestInput(file: string | undefined): Promise<string | null> {
-  if (file) return readFileSync(file, "utf-8");
+  if (file) return readFileSync(toPath(file), "utf-8");
   if (process.stdin.isTTY) return null;
   return await Bun.stdin.text();
 }

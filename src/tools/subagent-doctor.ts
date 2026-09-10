@@ -13,7 +13,7 @@
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
-import { assets, palHome } from "../hooks/lib/paths";
+import { assets, namesAPath, palHome, toPath } from "../hooks/lib/paths";
 
 type Level = "pass" | "warn" | "error";
 
@@ -396,9 +396,9 @@ export function formatSubagentReport(r: SubagentReport): string {
 
 /** Resolve a doctor argument to a subagent .md path (a path, or a name in the store). */
 export function resolveSubagentFile(arg: string): string {
-  if (arg.endsWith(".md") && existsSync(resolve(arg))) return resolve(arg);
-  const direct = resolve(arg);
+  const direct = toPath(arg);
   if (existsSync(direct) && direct.endsWith(".md")) return direct;
+  if (namesAPath(arg)) return direct.endsWith(".md") ? direct : `${direct}.md`;
   return resolve(palHome(), "agents", arg.endsWith(".md") ? arg : `${arg}.md`);
 }
 
