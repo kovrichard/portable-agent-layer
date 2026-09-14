@@ -1,3 +1,10 @@
+## [0.76.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.76.0...v0.76.1) (2026-09-14)
+
+
+### Bug Fixes
+
+* **projects:** file session history under its project, not the cwd's name ([#11](https://github.com/kovrichard/portable-agent-layer/issues/11)) ([09cec7b](https://github.com/kovrichard/portable-agent-layer/commit/09cec7bb27f721f8180dfe2b4ef96a5e66a6acb3))
+
 # [0.76.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.75.1...v0.76.0) (2026-09-10)
 
 
