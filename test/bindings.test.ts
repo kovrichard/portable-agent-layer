@@ -91,21 +91,21 @@ describe("readBindings", () => {
 describe("writeBinding", () => {
   test("round-trips a project to an absolute path", async () => {
     const { writeBinding, bindingFor } = await lib();
-    writeBinding("letterbox", "/srv/code/letterbox", HOME);
-    expect(bindingFor("letterbox", HOME)).toBe(elsewhere("/srv/code/letterbox"));
+    writeBinding("alpha", "/srv/code/alpha", HOME);
+    expect(bindingFor("alpha", HOME)).toBe(elsewhere("/srv/code/alpha"));
   });
 
   test("stores a relative path as absolute", async () => {
     const { writeBinding, bindingFor } = await lib();
-    writeBinding("letterbox", "./letterbox", HOME);
-    expect(bindingFor("letterbox", HOME)).toBe(resolve("./letterbox"));
+    writeBinding("alpha", "./alpha", HOME);
+    expect(bindingFor("alpha", HOME)).toBe(resolve("./alpha"));
   });
 
   test("rebinding replaces the previous path", async () => {
     const { writeBinding, bindingFor } = await lib();
-    writeBinding("letterbox", "/old/letterbox", HOME);
-    writeBinding("letterbox", "/new/letterbox", HOME);
-    expect(bindingFor("letterbox", HOME)).toBe(elsewhere("/new/letterbox"));
+    writeBinding("alpha", "/old/alpha", HOME);
+    writeBinding("alpha", "/new/alpha", HOME);
+    expect(bindingFor("alpha", HOME)).toBe(elsewhere("/new/alpha"));
   });
 
   test("an unbound project reads as null, not a dead path", async () => {

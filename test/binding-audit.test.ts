@@ -51,17 +51,17 @@ describe("auditBindings", () => {
     ]);
   });
 
-  // The transcend shape: one name reused for a second checkout. Binding by name
+  // The orbit shape: one name reused for a second checkout. Binding by name
   // alone would silently repoint the first, so the collision must surface.
   test("reports two projects sharing one directory", async () => {
     const { auditBindings } = await lib();
-    const shared = checkout("transcend");
+    const shared = checkout("orbit");
     const issues = auditBindings(
-      [project("transcend", shared), project("transcend-internal", shared)],
+      [project("orbit", shared), project("orbit-internal", shared)],
       {}
     );
     expect(issues).toEqual([
-      { kind: "shared", path: shared, projects: ["transcend", "transcend-internal"] },
+      { kind: "shared", path: shared, projects: ["orbit", "orbit-internal"] },
     ]);
   });
 
@@ -97,11 +97,11 @@ describe("proposeBinding", () => {
     expect(proposal?.command).toContain("set-path some-other-name");
   });
 
-  // The transcend shape: a name can belong to more than one checkout, so a name
+  // The orbit shape: a name can belong to more than one checkout, so a name
   // match must never be presented as certain.
   test("is only weak when nothing but the directory name agrees", async () => {
     const { proposeBinding } = await lib();
-    const proposal = proposeBinding(project("transcend"), checkout("transcend"));
+    const proposal = proposeBinding(project("orbit"), checkout("orbit"));
     expect(proposal?.confidence).toBe("weak");
     expect(proposal?.reason).toContain("more than one checkout");
   });
@@ -113,15 +113,15 @@ describe("proposeBinding", () => {
 
   test("a differing remote does not get promoted by a matching name", async () => {
     const { proposeBinding } = await lib();
-    const dir = repoAt("transcend", "git@github.com:someone/other.git");
-    const p = { ...project("transcend"), remote: "github.com/rico/transcend" };
+    const dir = repoAt("orbit", "git@github.com:someone/other.git");
+    const p = { ...project("orbit"), remote: "github.com/someone/orbit" };
     expect(proposeBinding(p, dir)?.confidence).toBe("weak");
   });
 
   test("only ever suggests a command, never performs the binding", async () => {
     const { proposeBinding } = await lib();
     const { readBindings } = await import("../src/hooks/lib/bindings");
-    proposeBinding(project("transcend"), checkout("transcend"));
+    proposeBinding(project("orbit"), checkout("orbit"));
     expect(readBindings(HOME)).toEqual({});
   });
 });
@@ -139,8 +139,8 @@ describe("describeBindingIssue", () => {
     const msg = describeBindingIssue({
       kind: "shared",
       path: "/w/t",
-      projects: ["transcend", "transcend-internal"],
+      projects: ["orbit", "orbit-internal"],
     });
-    expect(msg).toContain("transcend and transcend-internal");
+    expect(msg).toContain("orbit and orbit-internal");
   });
 });

@@ -177,7 +177,7 @@ describe("totalTokens", () => {
 
 describe("projectNameOf", () => {
   test("takes the last segment of a Claude Code project directory", () => {
-    expect(projectNameOf("-mnt-ssd3-home-user-git-klint")).toBe("klint");
+    expect(projectNameOf("-mnt-disk2-home-user-git-widgets")).toBe("widgets");
   });
 
   test("keeps a single-segment name as it is", () => {
@@ -321,7 +321,7 @@ describe("readClaudeCode", () => {
     const dir = tempHome();
     for (const [name, input] of [
       ["-home-user-git-portable-agent-layer", 10],
-      ["-home-user-git-klint", 20],
+      ["-home-user-git-widgets", 20],
     ] as const) {
       mkdirSync(join(dir, name), { recursive: true });
       writeFileSync(
@@ -332,8 +332,8 @@ describe("readClaudeCode", () => {
       );
     }
 
-    const result = readClaudeCode(dir, "lin", NOW);
-    expect(Object.keys(result.byProject)).toEqual(["klint"]);
+    const result = readClaudeCode(dir, "idge", NOW);
+    expect(Object.keys(result.byProject)).toEqual(["widgets"]);
     expect(result.buckets.total.input).toBe(20);
   });
 

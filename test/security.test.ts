@@ -105,7 +105,7 @@ describe("checkBashCommand", () => {
     expect(checkBashCommand("Remove-Item -Recurse -Force node_modules")).toBeNull();
     expect(checkBashCommand("Remove-Item -Recurse -Force .\\dist")).toBeNull();
     expect(
-      checkBashCommand("Remove-Item -Recurse -Force C:\\Users\\rico\\proj\\dist")
+      checkBashCommand("Remove-Item -Recurse -Force C:\\Users\\user\\proj\\dist")
     ).toBeNull();
     expect(checkBashCommand("rd /s /q build")).toBeNull();
     expect(checkBashCommand("del /f /s /q *.tmp")).toBeNull();

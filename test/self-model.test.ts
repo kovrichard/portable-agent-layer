@@ -837,7 +837,7 @@ describe("formatDataForInference", () => {
   };
 
   test("an empty corpus is a header and nothing else", () => {
-    expect(formatDataForInference(base, "Rico").split("\n")).toEqual([
+    expect(formatDataForInference(base, "Ada").split("\n")).toEqual([
       "## Raw Data — 30-day window, 2026-09-06",
       "Sessions: 0",
       "Ratings: 0 total, 0/10 avg, recent 0/10, trend stable",
@@ -854,7 +854,7 @@ describe("formatDataForInference", () => {
 
   test("renders an opinion as category, statement and percentage", () => {
     const data = { ...base, opinions: [opinion("a view", 0.92, "communication")] };
-    expect(formatDataForInference(data, "Rico")).toContain(
+    expect(formatDataForInference(data, "Ada")).toContain(
       "- [communication] a view (92%)"
     );
   });
@@ -864,7 +864,7 @@ describe("formatDataForInference", () => {
       ...base,
       opinions: [opinion("at the floor", 0.6), opinion("under it", 0.59)],
     };
-    const out = formatDataForInference(data, "Rico");
+    const out = formatDataForInference(data, "Ada");
     expect(out).toContain("at the floor");
     expect(out).not.toContain("under it");
   });
@@ -872,8 +872,8 @@ describe("formatDataForInference", () => {
   // The heading is keyed to having opinions at all, not to having confident ones.
   test("the heading still prints when every opinion is under the floor", () => {
     const data = { ...base, opinions: [opinion("a hunch", 0.4)] };
-    expect(formatDataForInference(data, "Rico").split("\n").at(-1)).toBe(
-      "### Opinions about Rico (confidence-scored)"
+    expect(formatDataForInference(data, "Ada").split("\n").at(-1)).toBe(
+      "### Opinions about Ada (confidence-scored)"
     );
   });
 
@@ -885,7 +885,7 @@ describe("formatDataForInference", () => {
         { domain: "writing", principles: ["three"] },
       ],
     };
-    expect(formatDataForInference(data, "Rico").split("\n").slice(4)).toEqual([
+    expect(formatDataForInference(data, "Ada").split("\n").slice(4)).toEqual([
       "",
       "### Crystallized Principles",
       "- [engineering] one",
@@ -896,7 +896,7 @@ describe("formatDataForInference", () => {
 
   test("renders a graduated pattern with its occurrence count", () => {
     const data = { ...base, graduated: [graduated("verify first", 7)] };
-    expect(formatDataForInference(data, "Rico")).toContain(
+    expect(formatDataForInference(data, "Ada")).toContain(
       "- [project] verify first (7x)"
     );
   });
@@ -909,7 +909,7 @@ describe("formatDataForInference", () => {
         SINCE
       ),
     };
-    expect(formatDataForInference(data, "Rico")).toContain('- "a verbose recap"');
+    expect(formatDataForInference(data, "Ada")).toContain('- "a verbose recap"');
   });
 
   test("shows the last eight self-observations", () => {
@@ -917,7 +917,7 @@ describe("formatDataForInference", () => {
       ...base,
       selfObservations: Array.from({ length: 11 }, (_, i) => `self ${i}`),
     };
-    const lines = formatDataForInference(data, "Rico").split("\n").slice(6);
+    const lines = formatDataForInference(data, "Ada").split("\n").slice(6);
     expect(lines).toHaveLength(8);
     expect(lines[0]).toBe("- self 3");
   });
@@ -927,7 +927,7 @@ describe("formatDataForInference", () => {
       ...base,
       algorithmObservations: Array.from({ length: 7 }, (_, i) => `algo ${i}`),
     };
-    const lines = formatDataForInference(data, "Rico").split("\n").slice(6);
+    const lines = formatDataForInference(data, "Ada").split("\n").slice(6);
     expect(lines).toHaveLength(5);
     expect(lines[0]).toBe("- algo 2");
   });
@@ -937,7 +937,7 @@ describe("formatDataForInference", () => {
       ...base,
       behaviorNotes: Array.from({ length: 12 }, (_, i) => `behavior ${i}`),
     };
-    const lines = formatDataForInference(data, "Rico").split("\n").slice(6);
+    const lines = formatDataForInference(data, "Ada").split("\n").slice(6);
     expect(lines).toHaveLength(8);
     expect(lines[0]).toBe("- behavior 4");
   });
@@ -947,7 +947,7 @@ describe("formatDataForInference", () => {
       ...base,
       wisdomNotes: Array.from({ length: 9 }, (_, i) => `world ${i}`),
     };
-    const lines = formatDataForInference(data, "Rico").split("\n").slice(6);
+    const lines = formatDataForInference(data, "Ada").split("\n").slice(6);
     expect(lines).toHaveLength(5);
     expect(lines[0]).toBe("- world 4");
   });
@@ -959,7 +959,7 @@ describe("formatDataForInference", () => {
       passRate: 75,
       avgSentiment: 8.5,
     };
-    expect(formatDataForInference(data, "Rico").split("\n").at(-1)).toBe(
+    expect(formatDataForInference(data, "Ada").split("\n").at(-1)).toBe(
       "### Algorithm Performance: 75% pass rate, 8.5/10 sentiment, 2 reflections"
     );
   });
@@ -987,13 +987,13 @@ describe("formatDataForInference", () => {
       avgSentiment: 8,
     };
 
-    expect(formatDataForInference(data, "Rico").split("\n")).toEqual([
+    expect(formatDataForInference(data, "Ada").split("\n")).toEqual([
       "## Raw Data — 30-day window, 2026-09-06",
       "Sessions: 20",
       "Ratings: 2 total, 5.5/10 avg, recent 5.5/10, trend stable",
       "1 high (8+), 1 low (<=3)",
       "",
-      "### Opinions about Rico (confidence-scored)",
+      "### Opinions about Ada (confidence-scored)",
       "- [communication] verdicts, not surveys (92%)",
       "",
       "### Crystallized Principles",
@@ -1024,18 +1024,18 @@ describe("formatDataForInference", () => {
 
 describe("buildPrompt", () => {
   test("casts the model as the assistant by name", () => {
-    const prompt = buildPrompt("Jarvis", "Rico");
-    expect(prompt).toContain("an AI assistant named Jarvis. You ARE Jarvis");
-    expect(prompt).toContain("**# Self-Model — Jarvis**");
+    const prompt = buildPrompt("Atlas", "Ada");
+    expect(prompt).toContain("an AI assistant named Atlas. You ARE Atlas");
+    expect(prompt).toContain("**# Self-Model — Atlas**");
   });
 
   test("names the principal in the section it asks for", () => {
-    expect(buildPrompt("Jarvis", "Ada")).toContain("**## Who Ada Is**");
+    expect(buildPrompt("Atlas", "Ada")).toContain("**## Who Ada Is**");
   });
 
   // The footer is appended after the fact, so asking for one would duplicate it.
   test("forbids the model writing its own footer", () => {
-    expect(buildPrompt("Jarvis", "Rico")).toContain("Do not write a footer");
+    expect(buildPrompt("Atlas", "Ada")).toContain("Do not write a footer");
   });
 });
 
@@ -1070,7 +1070,7 @@ describe("previousModelForPrompt", () => {
   // A fallback is a raw data dump; feeding it back drives the next run into the
   // same timeout that produced it.
   test("drops a failed synthesis rather than feeding it back", () => {
-    expect(previousModelForPrompt(failedSynthesisModel("Jarvis", "raw"))).toBe("");
+    expect(previousModelForPrompt(failedSynthesisModel("Atlas", "raw"))).toBe("");
   });
 });
 
@@ -1086,7 +1086,7 @@ describe("inferenceUserContent", () => {
   });
 
   test("a failed synthesis leaves the raw data alone", () => {
-    const previous = failedSynthesisModel("Jarvis", "old raw");
+    const previous = failedSynthesisModel("Atlas", "old raw");
     expect(inferenceUserContent("RAW", previous)).toBe("RAW");
   });
 });
@@ -1117,8 +1117,8 @@ describe("metaFooter", () => {
 
 describe("failedSynthesisModel", () => {
   test("marks itself so the next run does not read it as a model", () => {
-    const fallback = failedSynthesisModel("Jarvis", "RAW");
-    expect(fallback).toBe(`# Self-Model — Jarvis\n*${FAILED_SYNTHESIS}*\n\nRAW`);
+    const fallback = failedSynthesisModel("Atlas", "RAW");
+    expect(fallback).toBe(`# Self-Model — Atlas\n*${FAILED_SYNTHESIS}*\n\nRAW`);
     expect(previousModelForPrompt(fallback)).toBe("");
   });
 });

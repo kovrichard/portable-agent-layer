@@ -265,8 +265,8 @@ describe("loadRatings", () => {
 describe("groupNoteOccurrences", () => {
   test("counts two phrasings of the same observation once", () => {
     const summaries = groupNoteOccurrences([
-      note("O", "Rico prefers concise summaries over long recaps", "2026-09-01", 0.8),
-      note("O", "Rico prefers concise summaries, not long recaps", "2026-09-03", 0.9),
+      note("O", "Ada prefers concise summaries over long recaps", "2026-09-01", 0.8),
+      note("O", "Ada prefers concise summaries, not long recaps", "2026-09-03", 0.9),
     ]);
     expect(summaries).toHaveLength(1);
     expect(summaries[0].occurrences).toBe(2);
@@ -296,8 +296,8 @@ describe("groupNoteOccurrences", () => {
 
   test("averages the confidences of a group", () => {
     const summaries = groupNoteOccurrences([
-      note("O", "Rico prefers concise summaries over long recaps", "2026-09-01", 0.8),
-      note("O", "Rico prefers concise summaries, not long recaps", "2026-09-03", 0.6),
+      note("O", "Ada prefers concise summaries over long recaps", "2026-09-01", 0.8),
+      note("O", "Ada prefers concise summaries, not long recaps", "2026-09-03", 0.6),
     ]);
     expect(summaries[0].avgConfidence).toBeCloseTo(0.7, 10);
   });
@@ -309,8 +309,8 @@ describe("groupNoteOccurrences", () => {
 
   test("lists each date once even when a day carries the note twice", () => {
     const summaries = groupNoteOccurrences([
-      note("O", "Rico prefers concise summaries over long recaps", "2026-09-01", 0.8),
-      note("O", "Rico prefers concise summaries, not long recaps", "2026-09-01", 0.9),
+      note("O", "Ada prefers concise summaries over long recaps", "2026-09-01", 0.8),
+      note("O", "Ada prefers concise summaries, not long recaps", "2026-09-01", 0.9),
     ]);
     expect(summaries[0].dates).toEqual(["2026-09-01"]);
     expect(summaries[0].occurrences).toBe(2);
@@ -319,8 +319,8 @@ describe("groupNoteOccurrences", () => {
   test("puts the most-seen observation first", () => {
     const summaries = groupNoteOccurrences([
       note("O", "seen once and never again", "2026-09-01", 0.5),
-      note("O", "Rico prefers concise summaries over long recaps", "2026-09-01", 0.8),
-      note("O", "Rico prefers concise summaries, not long recaps", "2026-09-02", 0.9),
+      note("O", "Ada prefers concise summaries over long recaps", "2026-09-01", 0.8),
+      note("O", "Ada prefers concise summaries, not long recaps", "2026-09-02", 0.9),
     ]);
     expect(summaries[0].occurrences).toBe(2);
     expect(summaries[1].occurrences).toBe(1);
@@ -337,8 +337,8 @@ describe("planPromotions", () => {
   test("promotes an observation seen twice", () => {
     const plan = planPromotions(
       [
-        note("O", "Rico prefers concise summaries over long recaps", "2026-09-01", 0.8),
-        note("O", "Rico prefers concise summaries, not long recaps", "2026-09-03", 0.9),
+        note("O", "Ada prefers concise summaries over long recaps", "2026-09-01", 0.8),
+        note("O", "Ada prefers concise summaries, not long recaps", "2026-09-03", 0.9),
       ],
       []
     );
@@ -355,9 +355,9 @@ describe("planPromotions", () => {
   });
 
   test("strengthens an opinion that already covers the observation", () => {
-    const existing = createOpinion("Rico prefers concise summaries", "seed");
+    const existing = createOpinion("Ada prefers concise summaries", "seed");
     const plan = planPromotions(
-      [note("O", "Rico prefers concise summaries over long recaps", "2026-09-01", 0.8)],
+      [note("O", "Ada prefers concise summaries over long recaps", "2026-09-01", 0.8)],
       [existing]
     );
     expect(plan.changes).toHaveLength(1);
@@ -369,20 +369,20 @@ describe("planPromotions", () => {
   // A match against an existing opinion needs no second sighting: the opinion
   // is already the second sighting.
   test("a single sighting still strengthens an opinion it matches", () => {
-    const existing = createOpinion("Rico prefers concise summaries", "seed");
+    const existing = createOpinion("Ada prefers concise summaries", "seed");
     expect(
-      planPromotions([note("O", "Rico prefers concise summaries", "d", 0.8)], [existing])
+      planPromotions([note("O", "Ada prefers concise summaries", "d", 0.8)], [existing])
         .changes
     ).toHaveLength(1);
   });
 
   test("reports the existing opinion's wording, not the note's", () => {
-    const existing = createOpinion("Rico prefers concise summaries", "seed");
+    const existing = createOpinion("Ada prefers concise summaries", "seed");
     const plan = planPromotions(
-      [note("O", "Rico prefers concise summaries over long recaps", "d", 0.8)],
+      [note("O", "Ada prefers concise summaries over long recaps", "d", 0.8)],
       [existing]
     );
-    expect(plan.changes[0].statement).toBe("Rico prefers concise summaries");
+    expect(plan.changes[0].statement).toBe("Ada prefers concise summaries");
   });
 
   // An opinion at the ceiling gains evidence but no confidence, so there is
@@ -398,7 +398,7 @@ describe("planPromotions", () => {
   });
 
   test("does not re-count evidence the opinion already carries", () => {
-    const seeded = createOpinion("Rico prefers concise summaries", "already recorded");
+    const seeded = createOpinion("Ada prefers concise summaries", "already recorded");
     const plan = planPromotions(
       [note("O", "already recorded", "2026-09-01", 0.8)],
       [seeded]
@@ -409,8 +409,8 @@ describe("planPromotions", () => {
   test("plans without writing — the caller decides whether to save", () => {
     const plan = planPromotions(
       [
-        note("O", "Rico prefers concise summaries over long recaps", "2026-09-01", 0.8),
-        note("O", "Rico prefers concise summaries, not long recaps", "2026-09-03", 0.9),
+        note("O", "Ada prefers concise summaries over long recaps", "2026-09-01", 0.8),
+        note("O", "Ada prefers concise summaries, not long recaps", "2026-09-03", 0.9),
       ],
       []
     );
@@ -428,12 +428,7 @@ describe("planPromotions", () => {
   test("a new opinion starts at the base and gains a step per extra sighting", () => {
     const base = createOpinion("anything", "seed").confidence;
     const sighting = (n: number) =>
-      note(
-        "O",
-        `Rico prefers concise summaries over long recaps ${n}`,
-        "2026-09-01",
-        0.8
-      );
+      note("O", `Ada prefers concise summaries over long recaps ${n}`, "2026-09-01", 0.8);
 
     expect(planPromotions([sighting(1), sighting(2)], []).changes[0].newConfidence).toBe(
       base + 0.05
@@ -457,16 +452,16 @@ describe("planPromotions", () => {
   });
 
   test("records at most 120 characters when strengthening an existing opinion", () => {
-    const existing = createOpinion("Rico prefers concise summaries", "seed");
-    const long = `Rico prefers concise summaries ${"w".repeat(200)}`;
+    const existing = createOpinion("Ada prefers concise summaries", "seed");
+    const long = `Ada prefers concise summaries ${"w".repeat(200)}`;
     const plan = planPromotions([note("O", long, "d", 0.8)], [existing]);
     expect(plan.toSave[0].evidence.at(-1)?.source).toBe(long.slice(0, 120));
   });
 
   test("cites the note as supporting evidence, which is what raises confidence", () => {
-    const existing = createOpinion("Rico prefers concise summaries", "seed");
+    const existing = createOpinion("Ada prefers concise summaries", "seed");
     const plan = planPromotions(
-      [note("O", "Rico prefers concise summaries over long recaps", "d", 0.8)],
+      [note("O", "Ada prefers concise summaries over long recaps", "d", 0.8)],
       [existing]
     );
     expect(plan.toSave[0].evidence.at(-1)?.type).toBe("supporting");
@@ -563,8 +558,8 @@ describe("formatReport", () => {
   // rendering: assert them line by line and a stray one goes unnoticed.
   test("renders the whole report, blank lines and all", () => {
     const notes = [
-      note("O", "Rico prefers concise summaries over long recaps", "2026-09-01", 0.8),
-      note("O", "Rico prefers concise summaries, not long recaps", "2026-09-03", 0.6),
+      note("O", "Ada prefers concise summaries over long recaps", "2026-09-01", 0.8),
+      note("O", "Ada prefers concise summaries, not long recaps", "2026-09-03", 0.6),
       note("W", "runs Copilot as the GitHub CLI", "2026-09-02"),
       note("Session", "built the ledger read side", "2026-09-02", 0.5),
     ];
@@ -597,7 +592,7 @@ describe("formatReport", () => {
       "",
       "## Recurring Opinions",
       "",
-      "- **Rico prefers concise summaries over long recaps**",
+      "- **Ada prefers concise summaries over long recaps**",
       "  Seen 2x | Avg confidence: 0.70 | Dates: 2026-09-01, 2026-09-03",
       "",
       "## World Facts Observed",
@@ -641,8 +636,8 @@ describe("formatReport", () => {
     const report = formatReport(
       "Weekly",
       [
-        note("O", "Rico prefers concise summaries over long recaps", "2026-09-01", 0.8),
-        note("O", "Rico prefers concise summaries, not long recaps", "2026-09-03", 0.6),
+        note("O", "Ada prefers concise summaries over long recaps", "2026-09-01", 0.8),
+        note("O", "Ada prefers concise summaries, not long recaps", "2026-09-03", 0.6),
       ],
       [],
       [],

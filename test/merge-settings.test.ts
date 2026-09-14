@@ -57,7 +57,7 @@ const PAL_TEMPLATE = {
   },
   permissions: { allow: ["Read(//*)", "Bash(bun run test *)"] },
   skillOverrides: { telos: { enabled: true } },
-  attribution: { commit: "Co-authored by Jarvis", pr: "Co-authored by [Jarvis]" },
+  attribution: { commit: "Co-authored by Atlas", pr: "Co-authored by [Atlas]" },
   showClearContextOnPlanAccept: true,
   respectGitignore: false,
   spinnerTipsEnabled: false,

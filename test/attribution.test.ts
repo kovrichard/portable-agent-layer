@@ -3,9 +3,9 @@ import { applyAttribution, buildAttributionText, PAL_REPO_URL } from "../src/tar
 
 describe("buildAttributionText", () => {
   test("composes commit footer (bare URL) and PR line (markdown link)", () => {
-    expect(buildAttributionText("Jarvis")).toEqual({
-      commit: `Co-authored by Jarvis · ${PAL_REPO_URL}`,
-      pr: `Co-authored by [Jarvis](${PAL_REPO_URL})`,
+    expect(buildAttributionText("Atlas")).toEqual({
+      commit: `Co-authored by Atlas · ${PAL_REPO_URL}`,
+      pr: `Co-authored by [Atlas](${PAL_REPO_URL})`,
       sessionUrl: false,
     });
   });
@@ -14,7 +14,7 @@ describe("buildAttributionText", () => {
     const { commit, pr } = buildAttributionText("Friday");
     expect(commit).toContain("Friday");
     expect(pr).toContain("[Friday]");
-    expect(commit).not.toContain("Jarvis");
+    expect(commit).not.toContain("Atlas");
   });
 
   test("PR link points at the public repo, not pal.konvert7.com", () => {
@@ -27,32 +27,32 @@ describe("buildAttributionText", () => {
 
 describe("applyAttribution", () => {
   test("enabled → fills attribution and drops Claude's byline", () => {
-    const result = applyAttribution({}, { enabled: true, name: "Jarvis" });
+    const result = applyAttribution({}, { enabled: true, name: "Atlas" });
     expect(result.attribution).toEqual({
-      commit: `Co-authored by Jarvis · ${PAL_REPO_URL}`,
-      pr: `Co-authored by [Jarvis](${PAL_REPO_URL})`,
+      commit: `Co-authored by Atlas · ${PAL_REPO_URL}`,
+      pr: `Co-authored by [Atlas](${PAL_REPO_URL})`,
       sessionUrl: false,
     });
     expect(result.includeCoAuthoredBy).toBe(false);
   });
 
   test("disabled → clears attribution and restores default byline", () => {
-    const enabled = applyAttribution({}, { enabled: true, name: "Jarvis" });
-    const disabled = applyAttribution(enabled, { enabled: false, name: "Jarvis" });
+    const enabled = applyAttribution({}, { enabled: true, name: "Atlas" });
+    const disabled = applyAttribution(enabled, { enabled: false, name: "Atlas" });
     expect(disabled.attribution).toEqual({ commit: "", pr: "", sessionUrl: false });
     expect("includeCoAuthoredBy" in disabled).toBe(false);
   });
 
   test("does not mutate the input settings object", () => {
     const input = { attribution: { commit: "", pr: "" } };
-    applyAttribution(input, { enabled: true, name: "Jarvis" });
+    applyAttribution(input, { enabled: true, name: "Atlas" });
     expect(input.attribution).toEqual({ commit: "", pr: "" });
   });
 
   test("preserves unrelated settings keys", () => {
     const result = applyAttribution(
       { respectGitignore: true, hooks: { Stop: [] } },
-      { enabled: true, name: "Jarvis" }
+      { enabled: true, name: "Atlas" }
     );
     expect(result.respectGitignore).toBe(true);
     expect(result.hooks).toEqual({ Stop: [] });
@@ -61,17 +61,17 @@ describe("applyAttribution", () => {
 
 describe("attribution suppresses the claude.ai session link", () => {
   test("enabled attribution turns the session url off", () => {
-    expect(buildAttributionText("Jarvis").sessionUrl).toBe(false);
+    expect(buildAttributionText("Atlas").sessionUrl).toBe(false);
   });
 
   test("disabling PAL attribution still leaves the session url off", () => {
-    const disabled = applyAttribution({}, { enabled: false, name: "Jarvis" });
+    const disabled = applyAttribution({}, { enabled: false, name: "Atlas" });
     expect((disabled.attribution as { sessionUrl?: boolean }).sessionUrl).toBe(false);
   });
 
   test("a reinstall does not resurrect a session url the user turned off", () => {
-    const existing = applyAttribution({}, { enabled: true, name: "Jarvis" });
-    const reinstalled = applyAttribution(existing, { enabled: true, name: "Jarvis" });
+    const existing = applyAttribution({}, { enabled: true, name: "Atlas" });
+    const reinstalled = applyAttribution(existing, { enabled: true, name: "Atlas" });
     expect((reinstalled.attribution as { sessionUrl?: boolean }).sessionUrl).toBe(false);
   });
 
