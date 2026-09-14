@@ -53,8 +53,8 @@ describe("parseBullets", () => {
   });
 
   test("prose lines stand alone when there are no bullets", () => {
-    expect(parseBullets("Built with Catalyst\nDeployed on Workers")).toEqual([
-      "Built with Catalyst",
+    expect(parseBullets("Built with Bun\nDeployed on Workers")).toEqual([
+      "Built with Bun",
       "Deployed on Workers",
     ]);
   });

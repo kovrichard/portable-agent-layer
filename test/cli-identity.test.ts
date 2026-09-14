@@ -10,7 +10,7 @@ function writeSettings(principalName: string | undefined): void {
   writeFileSync(
     resolve(HOME, "memory", "pal-settings.json"),
     JSON.stringify({
-      identity: { ai: { name: "Jarvis" }, principal: { name: principalName } },
+      identity: { ai: { name: "Atlas" }, principal: { name: principalName } },
     })
   );
 }

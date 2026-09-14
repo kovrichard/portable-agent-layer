@@ -343,7 +343,7 @@ async function writeMoves(sessionId?: string): Promise<boolean> {
       "You write the first three lines a person reads in the morning.",
       "You are given their goals and a ranked list of their projects and goals with the reason each was ranked.",
       "Write exactly three moves, most consequential first.",
-      "A move is a sentence naming an action, not a project name: 'Send ACE the mapping one-pager' beats 'work on ontology'.",
+      "A move is a sentence naming an action, not a project name: 'Send the supplier the revised quote' beats 'work on billing'.",
       "Prefer what is blocked on the person themselves, then what serves a goal, then what is merely urgent.",
       "Name the project each move belongs to, copying its slug exactly from the list you were given. A move that belongs to no project takes an empty string.",
       "Never invent a fact that is not in what you were given.",

@@ -152,7 +152,7 @@ describe("pal cli timezone", () => {
     writeFileSync(
       resolve(HOME, "memory", "pal-settings.json"),
       JSON.stringify({
-        identity: { ai: { name: "Jarvis" } },
+        identity: { ai: { name: "Atlas" } },
         dynamicContext: { x: false },
       })
     );
@@ -163,7 +163,7 @@ describe("pal cli timezone", () => {
     const data = JSON.parse(
       readFileSync(resolve(HOME, "memory", "pal-settings.json"), "utf-8")
     );
-    expect(data.identity.ai.name).toBe("Jarvis");
+    expect(data.identity.ai.name).toBe("Atlas");
     expect(data.dynamicContext.x).toBe(false);
     expect(data.identity.principal.timezone).toBe("Asia/Tokyo");
   });

@@ -143,8 +143,8 @@ describe("writeSession / project history I/O", () => {
       summary: "Summary text",
       insights: "Some insight",
     };
-    appendProjectHistory("/Users/rico/projects/myproject", entry);
-    const history = readProjectHistory("/Users/rico/projects/myproject", 10);
+    appendProjectHistory("/Users/user/projects/myproject", entry);
+    const history = readProjectHistory("/Users/user/projects/myproject", 10);
     expect(history).toHaveLength(1);
     expect(history[0]?.title).toBe("Test session");
     expect(history[0]?.summary).toBe("Summary text");
