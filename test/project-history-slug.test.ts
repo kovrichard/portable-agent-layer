@@ -54,58 +54,60 @@ function parkedHistory(slug: string): string {
   return resolve(HOME, "memory", "state", "unbound-history", `${slug}.jsonl`);
 }
 
+function folderInRegistry(slug: string): string {
+  return resolve(HOME, "memory", "projects", slug);
+}
+
 describe("history routing", () => {
   test("a project checked out under a different directory name owns its history", async () => {
-    const checkout = registerProject("bidding-ecosystem", "docs");
+    const checkout = registerProject("alpha", "workspace");
     const { appendProjectHistory } = await import("../src/hooks/lib/work-tracking");
 
-    appendProjectHistory(checkout, entry("scraped the thing"));
+    appendProjectHistory(checkout, entry("did the thing"));
 
-    expect(existsSync(projectHistory("bidding-ecosystem"))).toBe(true);
-    expect(existsSync(resolve(HOME, "memory", "projects", "docs"))).toBe(false);
+    expect(existsSync(projectHistory("alpha"))).toBe(true);
+    expect(existsSync(folderInRegistry("workspace"))).toBe(false);
   });
 
   test("a subdirectory of a project resolves to the project, not the subdirectory", async () => {
-    const checkout = registerProject("letterbox", "letterbox");
+    const checkout = registerProject("beta", "beta");
     const nested = resolve(checkout, "src", "server");
     mkdirSync(nested, { recursive: true });
     const { appendProjectHistory } = await import("../src/hooks/lib/work-tracking");
 
-    appendProjectHistory(nested, entry("worked in src"));
+    appendProjectHistory(nested, entry("worked deeper in the tree"));
 
-    expect(existsSync(projectHistory("letterbox"))).toBe(true);
-    expect(existsSync(resolve(HOME, "memory", "projects", "server"))).toBe(false);
+    expect(existsSync(projectHistory("beta"))).toBe(true);
+    expect(existsSync(folderInRegistry("server"))).toBe(false);
   });
 
   test("an unregistered directory parks its history and mints no project folder", async () => {
-    const loose = resolve(HOME, "checkouts", "scratch");
+    const loose = resolve(HOME, "checkouts", "untracked");
     mkdirSync(loose, { recursive: true });
     const { appendProjectHistory } = await import("../src/hooks/lib/work-tracking");
 
     appendProjectHistory(loose, entry("ad-hoc session"));
 
-    expect(existsSync(parkedHistory("scratch"))).toBe(true);
-    expect(existsSync(resolve(HOME, "memory", "projects", "scratch"))).toBe(false);
+    expect(existsSync(parkedHistory("untracked"))).toBe(true);
+    expect(existsSync(folderInRegistry("untracked"))).toBe(false);
   });
 
   test("what was written is what is read back", async () => {
-    const checkout = registerProject("bidding-ecosystem", "docs");
+    const checkout = registerProject("alpha", "workspace");
     const { appendProjectHistory, readProjectHistory } = await import(
       "../src/hooks/lib/work-tracking"
     );
 
-    appendProjectHistory(checkout, entry("scraped the thing"));
+    appendProjectHistory(checkout, entry("did the thing"));
 
-    expect(readProjectHistory(checkout).map((h) => h.title)).toEqual([
-      "scraped the thing",
-    ]);
+    expect(readProjectHistory(checkout).map((h) => h.title)).toEqual(["did the thing"]);
   });
 });
 
 describe("v6 history-slugs", () => {
   /** History as the old writer left it: a folder named after the cwd. */
   function orphanFolder(slug: string, title: string): void {
-    const dir = resolve(HOME, "memory", "projects", slug);
+    const dir = folderInRegistry(slug);
     mkdirSync(dir, { recursive: true });
     writeFileSync(resolve(dir, "history.jsonl"), `${JSON.stringify(entry(title))}\n`);
   }
@@ -116,61 +118,59 @@ describe("v6 history-slugs", () => {
   }
 
   test("reattaches an orphan to the project checked out in that directory", async () => {
-    registerProject("bidding-ecosystem", "docs");
-    orphanFolder("docs", "scraped the thing");
+    registerProject("alpha", "workspace");
+    orphanFolder("workspace", "stranded entry");
 
     await run();
 
-    expect(readFileSync(projectHistory("bidding-ecosystem"), "utf-8")).toContain(
-      "scraped the thing"
-    );
-    expect(existsSync(resolve(HOME, "memory", "projects", "docs"))).toBe(false);
+    expect(readFileSync(projectHistory("alpha"), "utf-8")).toContain("stranded entry");
+    expect(existsSync(folderInRegistry("workspace"))).toBe(false);
   });
 
   test("parks an orphan no project claims, keeping every entry", async () => {
-    orphanFolder("ontology", "thought about ontologies");
+    orphanFolder("unclaimed", "recorded somewhere else");
 
     await run();
 
-    expect(readFileSync(parkedHistory("ontology"), "utf-8")).toContain(
-      "thought about ontologies"
+    expect(readFileSync(parkedHistory("unclaimed"), "utf-8")).toContain(
+      "recorded somewhere else"
     );
-    expect(existsSync(resolve(HOME, "memory", "projects", "ontology"))).toBe(false);
+    expect(existsSync(folderInRegistry("unclaimed"))).toBe(false);
   });
 
   test("keeps both sides when the destination already has history", async () => {
-    registerProject("bidding-ecosystem", "docs");
+    registerProject("alpha", "workspace");
     writeFileSync(
-      projectHistory("bidding-ecosystem"),
+      projectHistory("alpha"),
       `${JSON.stringify(entry("already recorded"))}\n`
     );
-    orphanFolder("docs", "stranded entry");
+    orphanFolder("workspace", "stranded entry");
 
     await run();
 
-    const merged = readFileSync(projectHistory("bidding-ecosystem"), "utf-8");
+    const merged = readFileSync(projectHistory("alpha"), "utf-8");
     expect(merged).toContain("already recorded");
     expect(merged).toContain("stranded entry");
   });
 
   test("folds parked history back in once its project is registered", async () => {
-    const loose = resolve(HOME, "checkouts", "landgrab");
+    const loose = resolve(HOME, "checkouts", "gamma");
     mkdirSync(loose, { recursive: true });
     const { appendProjectHistory } = await import("../src/hooks/lib/work-tracking");
     appendProjectHistory(loose, entry("before registration"));
 
-    registerProject("landgrab", "landgrab");
+    registerProject("gamma", "gamma");
     await run();
 
-    expect(readFileSync(projectHistory("landgrab"), "utf-8")).toContain(
+    expect(readFileSync(projectHistory("gamma"), "utf-8")).toContain(
       "before registration"
     );
-    expect(existsSync(parkedHistory("landgrab"))).toBe(false);
+    expect(existsSync(parkedHistory("gamma"))).toBe(false);
   });
 
   test("leaves a registered project's own history alone", async () => {
-    registerProject("letterbox", "letterbox");
-    writeFileSync(projectHistory("letterbox"), `${JSON.stringify(entry("mine"))}\n`);
+    registerProject("beta", "beta");
+    writeFileSync(projectHistory("beta"), `${JSON.stringify(entry("mine"))}\n`);
 
     const { checkPendingMigrations } = await import("../src/cli/migrate");
     expect(checkPendingMigrations().find((m) => m.id === "v6-history-slugs")).toBe(
