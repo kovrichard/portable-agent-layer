@@ -1,3 +1,30 @@
+# [0.76.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.75.1...v0.76.0) (2026-09-10)
+
+
+### Bug Fixes
+
+* **agent:** fall back to an installed CLI instead of assuming claude ([2733104](https://github.com/kovrichard/portable-agent-layer/commit/2733104abddda9d52b4340ee64344fbfb4d69b8c))
+* **assets:** invoke PAL tools as `pal cli`, not through a tilde path ([018f5ad](https://github.com/kovrichard/portable-agent-layer/commit/018f5adbc98f71124520380a1ddef4faecb0b2e1))
+* **cli:** let `skill doctor` take a directory, as its usage string promises ([48871d1](https://github.com/kovrichard/portable-agent-layer/commit/48871d103bb9bb8009fb2025ce8ab824d6f8bb02))
+* **paths:** expand tildes in one place and make it structural ([1b5834f](https://github.com/kovrichard/portable-agent-layer/commit/1b5834f99fe49d8bc88c21b3ea9a812d6f6286ca))
+* **paths:** expand tildes in the entry points the klint rule could not see ([7ca1c17](https://github.com/kovrichard/portable-agent-layer/commit/7ca1c17ec63f64de6ccaf9fd0663c8e3b833dc86))
+* **skills:** refer to scripts according to the new schema ([91a27d7](https://github.com/kovrichard/portable-agent-layer/commit/91a27d7dc67a99d7a9cd3a08c3b7103e25b65098))
+* **test:** resolve a skill's .mjs tool by its source, not by a build artifact ([01ebd2f](https://github.com/kovrichard/portable-agent-layer/commit/01ebd2fea2c40a90f4c5f57a23c6e8efb3f11a36))
+* **which:** reject a directory that shares a binary's name ([8076bb7](https://github.com/kovrichard/portable-agent-layer/commit/8076bb7997a05aa25fefea63ffe998aba6a3ea91))
+
+
+### Features
+
+* **cli:** surface built-in and skill tools as `pal cli` verbs ([657de7f](https://github.com/kovrichard/portable-agent-layer/commit/657de7fa42d02e3a1ac7f26d2424af23842af346))
+
+## [0.75.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.75.0...v0.75.1) (2026-09-09)
+
+
+### Bug Fixes
+
+* **agent:** fall back to an installed CLI instead of assuming claude ([3b07ec6](https://github.com/kovrichard/portable-agent-layer/commit/3b07ec60533eaa31a578325e362a3d9e7b150ed2))
+* **which:** reject a directory that shares a binary's name ([941607c](https://github.com/kovrichard/portable-agent-layer/commit/941607c29882dece8455d72f827418e9875fd5e4))
+
 # [0.75.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.74.0...v0.75.0) (2026-09-09)
 
 

@@ -2,7 +2,7 @@
 
 One markdown file per slide under `slides/`. Files are concatenated at build time in filename order (use leading zeros: `001.md`, `002.md`, …). **Don't put `---` separators inside slide files** — the separator is added between files at build time.
 
-Build: `bun ~/.pal/skills/presentation/tools/build.ts .`
+Build: `pal cli skill run presentation build .`
 
 Output lands at `<cwd>/<deck-name>/<deck-name>.html` — open it in your browser and refresh after each rebuild.
 

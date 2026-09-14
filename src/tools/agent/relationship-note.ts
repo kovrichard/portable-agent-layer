@@ -6,9 +6,9 @@
  * the user (O, W) and session diary entries (--b).
  *
  * Usage:
- *   bun ~/.pal/tools/relationship-note.ts --o "User prefers X" --confidence 0.80
- *   bun ~/.pal/tools/relationship-note.ts --w "User is building X in TypeScript"
- *   bun ~/.pal/tools/relationship-note.ts --b "Debugged the cache split logic"
+ *   pal cli relationship-note --o "User prefers X" --confidence 0.80
+ *   pal cli relationship-note --w "User is building X in TypeScript"
+ *   pal cli relationship-note --b "Debugged the cache split logic"
  *
  * Note types:
  *   --o   Opinion/behavioral observation about the user (requires --confidence)
@@ -22,14 +22,15 @@ import { parseArgs } from "node:util";
 import { appendNotes } from "../../hooks/lib/relationship";
 import { emit } from "../lib/emit";
 import { notesFromFlags } from "../lib/note-flags";
+import { scriptArgs } from "../lib/script-args";
 
 const HELP = `
 RelationshipNote — Append W/O/Session entries to today's relationship log
 
 Usage:
-  bun ~/.pal/tools/relationship-note.ts --o "User prefers X" --confidence 0.80
-  bun ~/.pal/tools/relationship-note.ts --w "User is building X in TypeScript"
-  bun ~/.pal/tools/relationship-note.ts --b "Debugged the cache split logic"
+  pal cli relationship-note --o "User prefers X" --confidence 0.80
+  pal cli relationship-note --w "User is building X in TypeScript"
+  pal cli relationship-note --b "Debugged the cache split logic"
 
 Flags:
   --o TEXT          Opinion/behavioral observation about the user
@@ -42,9 +43,9 @@ Multiple flags may be combined in one call. At least one of --o, --w, --b is req
 Output: appends to memory/relationship/YYYY-MM/YYYY-MM-DD.md
 `;
 
-if (import.meta.main) {
+export function run(argv: string[] = scriptArgs()) {
   const { values } = parseArgs({
-    args: Bun.argv.slice(2),
+    args: argv,
     options: {
       o: { type: "string", multiple: true },
       w: { type: "string", multiple: true },
@@ -68,3 +69,5 @@ if (import.meta.main) {
   const { file, written } = appendNotes(result.notes);
   emit.receipt(file, { written, deduped: result.notes.length - written });
 }
+
+if (import.meta.main) run();

@@ -13,7 +13,7 @@
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
-import { assets, palHome } from "../hooks/lib/paths";
+import { assets, namesAPath, palHome, toPath } from "../hooks/lib/paths";
 
 type Level = "pass" | "warn" | "error";
 
@@ -396,16 +396,16 @@ export function formatSubagentReport(r: SubagentReport): string {
 
 /** Resolve a doctor argument to a subagent .md path (a path, or a name in the store). */
 export function resolveSubagentFile(arg: string): string {
-  if (arg.endsWith(".md") && existsSync(resolve(arg))) return resolve(arg);
-  const direct = resolve(arg);
+  const direct = toPath(arg);
   if (existsSync(direct) && direct.endsWith(".md")) return direct;
+  if (namesAPath(arg)) return direct.endsWith(".md") ? direct : `${direct}.md`;
   return resolve(palHome(), "agents", arg.endsWith(".md") ? arg : `${arg}.md`);
 }
 
 if (import.meta.main) {
   const arg = process.argv[2];
   if (!arg) {
-    console.error("Usage: bun src/tools/subagent-doctor.ts <file-or-name>");
+    console.error("Usage: pal cli subagent doctor <file-or-name>");
     process.exit(2);
   }
   const report = lintSubagent(resolveSubagentFile(arg));

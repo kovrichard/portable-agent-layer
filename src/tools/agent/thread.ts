@@ -6,13 +6,14 @@
  * Stored in memory/state/threads.jsonl as structured records.
  *
  * Usage:
- *   bun ~/.pal/tools/thread.ts --add --title "..." [--context "..."]
- *   bun ~/.pal/tools/thread.ts --resolve --id <id>
- *   bun ~/.pal/tools/thread.ts --list [--all]
+ *   pal cli thread --add --title "..." [--context "..."]
+ *   pal cli thread --resolve --id <id>
+ *   pal cli thread --list [--all]
  */
 
 import { parseArgs } from "node:util";
 import { emit } from "../lib/emit";
+import { scriptArgs } from "../lib/script-args";
 import {
   addThread,
   readThreads,
@@ -59,9 +60,9 @@ function markResolved(id: string | undefined) {
   emit.receipt(file, { id, status: "resolved", title: resolution.thread.title });
 }
 
-function run() {
+export function run(argv: string[] = scriptArgs()) {
   const { values } = parseArgs({
-    args: Bun.argv.slice(2),
+    args: argv,
     options: {
       add: { type: "boolean" },
       resolve: { type: "boolean" },

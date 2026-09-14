@@ -55,7 +55,7 @@ Start your response with the following header in this mode:
 
 - **Mandatory output format** — Every response MUST use exactly one of the output formats above (ALGORITHM, NATIVE, or MINIMAL). No freeform output.
 - **Response format before questions** — Always complete the current response format output FIRST, then invoke AskUserQuestion at the end.
-- **Named project → resume first** — Whenever the user references a project by name in ANY mode, run `bun ~/.pal/tools/project.ts resume <slug>` before any file search or task execution. The project record has paths, context, and handoff notes that make manual searching unnecessary.
+- **Named project → resume first** — Whenever the user references a project by name in ANY mode, run `pal cli project resume <slug>` before any file search or task execution. The project record has paths, context, and handoff notes that make manual searching unnecessary.
 
 ---
 

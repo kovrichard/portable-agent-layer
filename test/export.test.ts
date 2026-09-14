@@ -5,10 +5,11 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { linkDir } from "./helpers/links";
 
@@ -229,6 +230,34 @@ describe("cli import — folder arg", () => {
     } finally {
       rmSync(workDir, { recursive: true, force: true });
       rmSync(freshHome, { recursive: true, force: true });
+    }
+  });
+});
+
+// Both verbs took the path positional through a local variable before resolving
+// it, which is the shape the klint rule cannot see. On Windows nothing expands
+// the tilde, so the export landed in a directory literally named "~".
+describe("a tilde in the path positional", () => {
+  test("export names the file under the home, not under a directory called ~", () => {
+    const r = palCli(["export", "--dry-run", "~/pal-export-dest"]);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain(resolve(homedir(), "pal-export-dest"));
+    expect(r.stdout).not.toContain("~/pal-export-dest");
+  });
+
+  // AdmZip's failure drops the filename, so the resolved path is read back from
+  // the debug log, which this test's PAL_HOME owns.
+  test("import looks for the archive under the home, not under a directory called ~", () => {
+    const marker = resolve(TEST_HOME, "memory", "state", "debug-enabled");
+    const log = resolve(TEST_HOME, "debug", "debug.log");
+    writeFileSync(marker, "");
+    try {
+      palCli(["import", "~/pal-import-nowhere.zip"], { input: "n\n" });
+      const contents = readFileSync(log, "utf-8");
+      expect(contents).toContain(resolve(homedir(), "pal-import-nowhere.zip"));
+    } finally {
+      rmSync(marker, { force: true });
+      rmSync(log, { force: true });
     }
   });
 });

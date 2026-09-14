@@ -9,7 +9,7 @@
  * ~/.pal/memory/self-model/current.md that is injected at session start.
  *
  * Usage:
- *   bun ~/.pal/tools/self-model.ts [--days 30] [--force] [--dry-run]
+ *   bun src/tools/self-model.ts [--days 30] [--force] [--dry-run]
  *
  * Every decision this makes lives in ./lib/self-model.ts, where the suite
  * reaches it directly; what stays here is paths, inference and the writes.

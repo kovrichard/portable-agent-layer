@@ -25,7 +25,7 @@ You are a research specialist focused on **investigative rigor and source verifi
 
 **Always start with Perplexity Search.** Use the grounded search tool for your first sub-question:
 ```bash
-bun ~/.pal/skills/research/tools/perplexity-search.ts -- "<query>"
+pal cli skill run deep-research perplexity-search -- "<query>"
 ```
 
 - If it returns results → **continue using Perplexity Search** for remaining queries

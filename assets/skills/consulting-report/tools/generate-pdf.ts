@@ -12,7 +12,7 @@
 // and is invoked as that .mjs: a .ts under node_modules can't be type-stripped by Node.
 //
 // Usage:
-//   node ~/.pal/skills/consulting-report/tools/generate-pdf.mjs <report-dir> [--pdf <out>] [--html <out>] [--skip-build]
+//   pal cli skill run consulting-report generate-pdf.mjs <report-dir> [--pdf <out>] [--html <out>] [--skip-build]
 
 import { spawnSync } from "node:child_process";
 import { createReadStream, constants as fsConstants, realpathSync } from "node:fs";

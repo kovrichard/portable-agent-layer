@@ -459,7 +459,7 @@ export function loadActiveProjectsContext(cwd: string = process.cwd()): string {
   if (showHint) {
     if (visible.length > 0) lines.push("");
     lines.push(
-      `💡 \`${projectRoot}\` looks like a project but isn't registered. If substantive work starts here, suggest registering it via \`bun ~/.pal/tools/project.ts create\`.`
+      `💡 \`${projectRoot}\` looks like a project but isn't registered. If substantive work starts here, suggest registering it via \`pal cli project create\`.`
     );
   }
 

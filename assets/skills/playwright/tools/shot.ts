@@ -9,7 +9,7 @@
 // caller (SKILL.md) can fall back to the Playwright MCP.
 //
 // Runs under Bun on every OS:
-//   bun ~/.pal/skills/playwright/tools/shot.ts <url> [opts]
+//   pal cli skill run playwright shot <url> [opts]
 // It used to ship a Node-compiled .mjs sibling because chromium.launch hung under Bun on
 // Windows; bun 1.4.0 fixes that, so the Node hop and the build step are gone.
 

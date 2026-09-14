@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { basename, dirname, resolve } from "node:path";
 import {
   type DoctorReport,
@@ -307,6 +308,12 @@ describe("resolveSkillDir", () => {
   // Falling back to the path keeps the report naming what the caller asked for.
   test("an argument matching neither resolves as a path", () => {
     expect(resolveSkillDir("no-such-skill")).toBe(resolve("no-such-skill"));
+  });
+
+  // The usage string promises a directory, and a user types the one they know:
+  // `pal cli skill doctor ~/my-skill`. No Windows shell expands that.
+  test("expands a leading tilde rather than reading it as a directory name", () => {
+    expect(resolveSkillDir("~/no-such-skill")).toBe(resolve(homedir(), "no-such-skill"));
   });
 
   test("prefers the path over a same-named installed skill", () => {

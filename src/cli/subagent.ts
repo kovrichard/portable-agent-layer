@@ -40,7 +40,7 @@ export async function runSubagent(args: string[]): Promise<number> {
 
   if (sub === "doctor") {
     if (!name) {
-      log.error("Usage: pal cli subagent doctor <name>");
+      log.error("Usage: pal cli subagent doctor <file-or-name>");
       return 1;
     }
     const report = lintSubagent(resolveSubagentFile(name));

@@ -57,7 +57,7 @@ Read a file only when you need the format of an existing entry, or when the user
 6. Write it with the telos tool, never by editing the file:
 
    ```bash
-   bun ~/.pal/skills/telos/tools/update-telos.ts <FILE> "<content>" "<description>"
+   pal cli skill run telos update-telos <FILE> "<content>" "<description>"
    ```
 
    `<FILE>` is the bare filename, `<description>` is a short line naming what the entry covers and the date it was given.

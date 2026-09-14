@@ -21,7 +21,7 @@ When the user asks to analyze, read, or extract information from a PDF:
 
 - **URL**: Use the `pdf-download` CLI tool to download and archive the PDF:
   ```bash
-  bun ~/.pal/skills/analyze-pdf/tools/pdf-download.ts -- <url> [--filename <name.pdf>]
+  pal cli skill run analyze-pdf pdf-download -- <url> [--filename <name.pdf>]
   ```
   The tool downloads the file, saves it to `memory/downloads/{YYYY}/{MM}/{DD}/{filename}.pdf`, and returns JSON with the saved `path`.
 
@@ -38,7 +38,7 @@ Do NOT install PDF processing tools (poppler, pdftotext, etc.) unless the user e
 If the Read tool fails to open the PDF (e.g. error mentioning `pdftoppm`, missing renderer, or unsupported format), fall back to the text-extraction CLI:
 
 ```bash
-bun ~/.pal/skills/analyze-pdf/tools/pdf-read.ts -- <path>
+pal cli skill run analyze-pdf pdf-read -- <path>
 ```
 
 Use the stdout output as the document content and proceed with the user's request as normal.

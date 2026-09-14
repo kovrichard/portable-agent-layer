@@ -18,6 +18,7 @@ import { parseArgs } from "node:util";
 import { paths } from "../../hooks/lib/paths";
 import { buildReflection, intOr, reflectionLine } from "../lib/algorithm-reflect";
 import { emit } from "../lib/emit";
+import { scriptArgs } from "../lib/script-args";
 
 const HELP = `
 AlgorithmReflect — Log algorithm performance after LEARN phase
@@ -45,9 +46,9 @@ function reflectionsPath(): string {
   return paths.reflectionsFile();
 }
 
-function run() {
+export function run(argv: string[] = scriptArgs()) {
   const { values } = parseArgs({
-    args: Bun.argv.slice(2),
+    args: argv,
     options: {
       task: { type: "string" },
       criteria: { type: "string" },
