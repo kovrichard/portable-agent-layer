@@ -4,8 +4,9 @@
  */
 
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { ensureDir, paths } from "./paths";
+import { defaultSlug, readAllProjects, resolveProjectFromCwd } from "./projects";
 
 // ── Session Records ──────────────────────────────────────────────
 
@@ -146,25 +147,29 @@ interface ProjectHistoryEntry {
   insights: string;
 }
 
-/** Convert a cwd path to a filesystem-safe slug (last directory segment) */
-function cwdToSlug(cwd: string): string {
-  const normalized = cwd.replaceAll("\\", "/").replace(/\/+$/, "");
-  return normalized.split("/").pop() || "unknown";
+/**
+ * A directory under `memory/projects/` is what `list`, `resume` and the export
+ * read as a project, so only a registered one may own a folder there. Writer and
+ * readers share this resolver: keying them apart is what filed a project's
+ * history under its parent directory's name.
+ */
+function historyFileFor(cwd: string): string {
+  const project = resolveProjectFromCwd(cwd, readAllProjects());
+  return project
+    ? resolve(paths.projectHistory(), project.name, "history.jsonl")
+    : resolve(paths.unboundHistory(), `${defaultSlug(cwd)}.jsonl`);
 }
 
-/** Append a learning entry to the project's history.jsonl */
+/** Append a learning entry to the history file owning this cwd */
 export function appendProjectHistory(cwd: string, entry: ProjectHistoryEntry): void {
-  const slug = cwdToSlug(cwd);
-  const dir = ensureDir(resolve(paths.projectHistory(), slug));
-  const historyPath = resolve(dir, "history.jsonl");
-  const line = `${JSON.stringify(entry)}\n`;
-  appendFileSync(historyPath, line, "utf-8");
+  const historyPath = historyFileFor(cwd);
+  ensureDir(dirname(historyPath));
+  appendFileSync(historyPath, `${JSON.stringify(entry)}\n`, "utf-8");
 }
 
-/** Read the project history for a given cwd */
+/** Read the session history for a given cwd */
 export function readProjectHistory(cwd: string, limit = 15): ProjectHistoryEntry[] {
-  const slug = cwdToSlug(cwd);
-  const historyPath = resolve(paths.projectHistory(), slug, "history.jsonl");
+  const historyPath = historyFileFor(cwd);
   if (!existsSync(historyPath)) return [];
   try {
     const lines = readFileSync(historyPath, "utf-8").trim().split("\n").filter(Boolean);
