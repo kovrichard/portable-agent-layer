@@ -57,6 +57,7 @@ export const paths = {
   ledger: () => ensureDir(home("memory", "ledger")),
   progress: () => ensureDir(home("memory", "state", "progress")),
   projectHistory: () => ensureDir(home("memory", "projects")),
+  unboundHistory: () => ensureDir(home("memory", "state", "unbound-history")),
   sessionLearning: () => ensureDir(home("memory", "learning", "session")),
   synthesis: () => ensureDir(home("memory", "learning", "synthesis")),
   work: () => ensureDir(home("memory", "work")),
