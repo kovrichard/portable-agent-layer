@@ -103,7 +103,7 @@ lang: en
   console.log(`  slides:     ${sourceFiles.length} file(s) in slides/`);
   console.log(`\nNext:`);
   console.log(`  $EDITOR ${slidesDir}/`);
-  console.log(`  bun ~/.pal/skills/presentation/tools/build.ts ${target}`);
+  console.log(`  pal cli skill run presentation build ${target}`);
   console.log(`  # output → ${target}/${slug}.html  (override with --out <dir>)`);
 }
 

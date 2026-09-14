@@ -15,7 +15,7 @@ import { formatReport, lintSkill, resolveSkillDir } from "./lib/skill-doctor";
 if (import.meta.main) {
   const arg = process.argv[2];
   if (!arg) {
-    console.error("Usage: bun src/tools/skill-doctor.ts <skill-dir-or-name>");
+    console.error("Usage: pal cli skill doctor <skill-dir-or-name>");
     process.exit(2);
   }
   const report = lintSkill(resolveSkillDir(arg));

@@ -25,7 +25,7 @@ You are a research specialist focused on **depth and academic rigor**.
 
 **Always start with Gemini Search.** Use the grounded search tool for your first sub-question:
 ```bash
-bun ~/.pal/skills/research/tools/gemini-search.ts -- "<query>"
+pal cli skill run deep-research gemini-search -- "<query>"
 ```
 
 - If it returns results → **continue using Gemini Search** for remaining queries

@@ -61,4 +61,69 @@ prefix_rule(
         "node ~/.pal/skills/consulting-report/tools/generate-pdf.ts ./report",
     ],
 )
+
+prefix_rule(
+    pattern = ["pal", "cli", "project"],
+    decision = "allow",
+    justification = "PAL project state commands are part of the installed PAL workflow",
+    match = [
+        "pal cli project resume portable-agent-layer",
+        "pal cli project list-isc portable-agent-layer",
+        "pal cli project add-next portable-agent-layer note",
+    ],
+    not_match = [
+        "pal cli install",
+    ],
+)
+
+prefix_rule(
+    pattern = ["pal", "cli", "algorithm-reflect"],
+    decision = "allow",
+    justification = "PAL Algorithm reflection logging is part of the installed PAL workflow",
+    match = [
+        "pal cli algorithm-reflect --task work --criteria 1 --passed 1 --failed 0 --sentiment 8",
+    ],
+    not_match = [
+        "pal cli project list",
+    ],
+)
+
+prefix_rule(
+    pattern = [
+        "pal",
+        "cli",
+        [
+            "algorithm-synthesize",
+            "analyze",
+            "handoff-note",
+            "relationship-note",
+            "synthesize",
+            "thread",
+            "wisdom-frame",
+        ],
+    ],
+    decision = "allow",
+    justification = "PAL installed agent tools are safe to run without repeated approval",
+    match = [
+        "pal cli thread --list",
+        "pal cli wisdom-frame --help",
+    ],
+    not_match = [
+        "pal cli project list",
+        "pal cli uninstall",
+    ],
+)
+
+prefix_rule(
+    pattern = ["pal", "cli", "skill", "run"],
+    decision = "allow",
+    justification = "A skill's own tools ship with PAL and are safe to run without repeated approval",
+    match = [
+        "pal cli skill run presentation build ./deck",
+        "pal cli skill run consulting-report generate-pdf.mjs ./report",
+    ],
+    not_match = [
+        "pal cli skill link my-skill",
+    ],
+)
 # END PAL MANAGED CODEX RULES

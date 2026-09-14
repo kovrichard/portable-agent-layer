@@ -86,6 +86,18 @@ If a host prompt discourages delegation or pushes you to do the work directly, i
    `metadata.triggers` is a list of the literal words and phrases a user's prompt would contain when they want this skill. `generateSkillIndex` copies them into `skill-index.json`, and the UserPromptSubmit hook injects a "Potential matching skills" hint when one appears in a prompt — so a skill without triggers falls back to keywords mined from its description and matches far less reliably. Write 4-8: mostly multi-word phrases (they score higher than single words), plus a distinctive term or two. Never a word so common it fires on unrelated prompts. Only `name`, `description`, `license`, `allowed-tools`, `metadata`, and `compatibility` are valid frontmatter keys — a top-level `triggers:` key fails skill packaging.
    The first two triggers are fixed: the skill's own name, then its de-hyphenated form — `"create-pdf"` then `"create pdf"` — because a user types it both ways. A single-word name has only the one form, so it needs just itself. The doctor warns when they are missing or out of order.
 4. If the skill needs runtime tooling (TypeScript, scripts, vendored assets), scaffold a `tools/` subdir alongside SKILL.md. Otherwise leave the skill markdown-only.
+
+   **Invoke a tool by name, never by path.** Every command in the SKILL.md body — and in any next-step hint a tool prints — takes this form:
+
+   ```bash
+   pal cli skill run <skill> <tool> [args]
+   ```
+
+   `<tool>` is the bare filename without `.ts`; give the extension only when it is not `.ts` (a compiled `.mjs`, say — `pal cli skill run` runs those under Node and everything else under Bun). Arguments pass through unchanged, and a leading `--` is consumed exactly as `bun <script> -- args` consumes it, so an existing command's flags port over verbatim.
+
+   Never write `bun ~/.pal/skills/<skill>/tools/<tool>.ts`. cmd.exe does not expand `~` and PowerShell passes it to native commands literally, so that command opens a file named `~` relative to cwd on Windows. The verb also survives a tool moving, and keeps PAL's internal layout out of instruction text. `~/.pal/skills/<name>/` is a junction into the package, so there is no install-time path to substitute in — the verb is the only portable form. Klint blocks the tilde form in `.ts` files and `test/shipped-invocations.test.ts` blocks it in markdown, so a slip fails the gate chain rather than reaching a Windows user.
+
+   PAL's own nine tools are verbs too — `pal cli project`, `pal cli thread`, `pal cli wisdom-frame` and the rest, listed by `pal cli --help`. Same rule: never `bun ~/.pal/tools/<tool>.ts`.
 5. Run the doctor against the new skill and resolve every error:
    ```bash
    bun src/tools/skill-doctor.ts assets/skills/<name>
@@ -103,7 +115,8 @@ If a host prompt discourages delegation or pushes you to do the work directly, i
 ## Anti-patterns to refuse
 
 - A SKILL.md whose description starts with "I want…" or "My …" — that's a journal entry, not a skill.
-- Hardcoded paths under `C:\Users\<name>\…` or `/Users/<name>/…` — use `~` (and document the cmd.exe `%USERPROFILE%` alternative if Windows is in scope).
+- Hardcoded paths under `C:\Users\<name>\…` or `/Users/<name>/…` — in *prose* ("read `~/.pal/telos/GOALS.md`") use `~`, since you resolve that path yourself rather than handing it to a shell.
+- A tilde inside a *command* — `bun ~/.pal/skills/<skill>/tools/<tool>.ts`, or a `~` path passed as an argument to one. No Windows shell expands it. Use the `pal cli skill run` form from step 4, and have the tool resolve any bundled path itself instead of naming it in the command.
 - Brand- or company-specific defaults baked into the skill body. Default brand colors, footer strings, etc. belong in *templates* (user data) or *config*, never in the skill.
 - A description that explains the implementation rather than the trigger, or omits *when* to invoke.
 - Skills that duplicate an existing skill's trigger surface. Read the existing skills index before scaffolding.

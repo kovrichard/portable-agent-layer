@@ -20,6 +20,7 @@ import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { paths } from "../../hooks/lib/paths";
 import { emit } from "../lib/emit";
+import { scriptArgs } from "../lib/script-args";
 
 // ── Types ──
 
@@ -192,9 +193,9 @@ ${antiPatternEntry}
 
 // ── CLI ──
 
-function run() {
+export function run(argv: string[] = scriptArgs()) {
   const { values } = parseArgs({
-    args: Bun.argv.slice(2),
+    args: argv,
     options: {
       domain: { type: "string", short: "d" },
       observation: { type: "string", short: "o" },

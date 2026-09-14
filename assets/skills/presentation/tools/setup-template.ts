@@ -344,7 +344,7 @@ aspect: "${aspect}"
   }
 
   console.log(
-    `\nNext: bun ~/.pal/skills/presentation/tools/new-deck.ts <deck-dir> --template ${name}`
+    `\nNext: pal cli skill run presentation new-deck <deck-dir> --template ${name}`
   );
 }
 

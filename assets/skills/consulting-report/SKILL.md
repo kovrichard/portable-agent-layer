@@ -61,7 +61,7 @@ The component renders whatever `tunableLabel` you provide; the template never ha
 ### 1. Scaffold a new report
 
 ```bash
-bun ~/.pal/skills/consulting-report/tools/scaffold.ts <target-dir> \
+pal cli skill run consulting-report scaffold <target-dir> \
   [--client "Client Name"] [--title "Report Title"] [--no-install]
 ```
 
@@ -79,7 +79,7 @@ Static images go in `public/`; reference them from JSX as `<img src="/your-image
 ### 3. Live preview while authoring
 
 ```bash
-bun ~/.pal/skills/consulting-report/tools/dev.ts <report-dir>
+pal cli skill run consulting-report dev <report-dir>
 ```
 
 Wraps `bun run dev` in the report directory. Open the URL printed by Next, edit `app/page.tsx` or `lib/report-data.ts`, browser hot-reloads.
@@ -87,7 +87,7 @@ Wraps `bun run dev` in the report directory. Open the URL printed by Next, edit 
 ### 4. Render the PDF
 
 ```bash
-node ~/.pal/skills/consulting-report/tools/generate-pdf.mjs <report-dir>
+pal cli skill run consulting-report generate-pdf.mjs <report-dir>
 ```
 
 Runs `next build` (which produces a static export at `out/`), then Playwright loads it via a tiny in-process HTTP server and prints the PDF with page-numbered header/footer. Output:
@@ -149,14 +149,14 @@ Run with **Node**, not Bun — Playwright's `chromium.launch()` hangs under Bun 
 ## Demo
 
 ```bash
-node ~/.pal/skills/consulting-report/tools/generate-pdf.mjs ~/.pal/skills/consulting-report/demo
+pal cli skill run consulting-report generate-pdf.mjs ~/.pal/skills/consulting-report/demo
 ```
 
 Renders the bundled Acme Industries example end-to-end. Inspect the resulting PDF to see the full layout before authoring your own.
 
 ## Important
 
-- Run on Node (Playwright); the tool ships as a compiled `.mjs` so no `--experimental-strip-types` is needed
+- Runs on Node (Playwright); the tool ships as a compiled `.mjs`, and `pal cli skill run` picks Node for that extension so no `--experimental-strip-types` is needed
 - Bundled fonts come from Google Fonts via `next/font/google` — no licensing surface, no CDN at runtime, glyphs embedded at build time
 - Reports are disposable artifacts of `lib/report-data.ts` + `app/page.tsx`; commit the source, not the PDF
 - The scaffolder runs `bun install` inside the target by default — pass `--no-install` to skip

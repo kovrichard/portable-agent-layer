@@ -9,6 +9,7 @@ import {
   test,
 } from "bun:test";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { runKnowledge } from "../src/cli/knowledge";
 import { exists, getOrCreate, load, save } from "../src/tools/knowledge/lib";
@@ -496,5 +497,24 @@ describe("ingest", () => {
 
     expect(code).toBe(1);
     expect(out).toContain("at least one");
+  });
+
+  // --file went straight into readFileSync, so no shell meant no expansion and
+  // the read looked for a directory literally named "~" under the cwd. The
+  // filename in the ENOENT is what says which path was actually attempted.
+  test("--file expands a leading tilde instead of reading it literally", async () => {
+    const attempted = await runKnowledge([
+      "ingest",
+      "--file",
+      "~/pal-knowledge-nowhere.json",
+      "--source",
+      "x",
+    ]).then(
+      () => "",
+      (e: Error) => e.message
+    );
+
+    expect(attempted).toContain(resolve(homedir(), "pal-knowledge-nowhere.json"));
+    expect(attempted).not.toContain("~/pal-knowledge-nowhere.json");
   });
 });
