@@ -1,8 +1,8 @@
 /**
  * Which projects serve which stated goal, and how far along that makes it.
  *
- * The linkage needs judgement — "Catalyst is the starter that pays for the rest"
- * serves "land two retained clients" only if you know what both mean — so a model
+ * The linkage needs judgement — "the starter kit is what pays for the rest"
+ * serves "reach steady revenue" only if you know what both mean — so a model
  * draws it. The progress does not: it is criteria closed over criteria written,
  * counted here, because a model returning "64%" says something unfalsifiable
  * about a goal it cannot measure.

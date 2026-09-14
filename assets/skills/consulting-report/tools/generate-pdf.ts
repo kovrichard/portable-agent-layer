@@ -28,9 +28,9 @@ interface ReportMeta {
   reportTitle: string;
   classification: string;
   consultancyName: string;
-  /** Public path to consultancy logo (e.g. "/logos/konvert7.svg"). Used in the PDF footer. */
+  /** Public path to consultancy logo (e.g. "/logos/consultancy.svg"). Used in the PDF footer. */
   consultancyLogoSrc?: string;
-  /** Public path to client logo (e.g. "/logos/transcend.svg"). Used in the PDF header. */
+  /** Public path to client logo (e.g. "/logos/client.svg"). Used in the PDF header. */
   clientLogoSrc?: string;
 }
 

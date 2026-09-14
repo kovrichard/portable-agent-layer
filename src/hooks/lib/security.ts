@@ -14,7 +14,7 @@ const WIN_RECURSE_FLAG = String.raw`(?:-(?:r(?:e(?:c(?:u(?:r(?:se?)?)?)?)?)?f?|f
 
 /**
  * A whole root, not a directory inside one. The trailing lookahead is the part
- * that matters: without it `C:\` prefix-matches `C:\Users\rico\dist` and every
+ * that matters: without it `C:\` prefix-matches `C:\Users\user\dist` and every
  * ordinary recursive delete on Windows gets blocked.
  */
 const WIN_ROOT_TARGET = String.raw`["']?(?:[a-z]:[\\/]?\*?|\\\\|~|\$home|\$env:userprofile|\$env:systemdrive)["']?(?=["'\s;,)]|$)`;
