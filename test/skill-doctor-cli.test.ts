@@ -1,8 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 
+const REPO = resolve(import.meta.dir, "..");
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 const ROOT = resolve(import.meta.dir, "../.test-home-skill-doctor-cli");
 const PAL = resolve(ROOT, ".pal");
@@ -45,6 +46,7 @@ afterAll(() => {
 describe("pal cli skill doctor", () => {
   function doctor(name: string, home = PAL) {
     return spawnSync("bun", ["run", CLI, "cli", "skill", "doctor", name], {
+      cwd: REPO,
       env: { ...process.env, PAL_HOME: home },
       encoding: "utf-8",
       timeout: 15000,
@@ -59,6 +61,30 @@ describe("pal cli skill doctor", () => {
 
   test("exits 1 when a skill has errors", () => {
     expect(doctor("Broken").status).toBe(1);
+  });
+
+  // The verb hand-rolled `<home>/skills/<arg>`, which node's resolve() happens to
+  // get right for an absolute argument — it short-circuits on the absolute segment.
+  // A relative directory is where the two diverge, and it is the form a contributor
+  // types: `pal cli skill doctor assets/skills/telos`.
+  test("takes a relative skill directory, not only a name under the home", () => {
+    const r = doctor(relative(REPO, resolve(PAL, "skills", "clean-skill")));
+
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
+
+  test("a relative directory outside the home resolves too — path first, name second", () => {
+    const outside = resolve(ROOT, "elsewhere", "clean-skill");
+    mkdirSync(outside, { recursive: true });
+    writeFileSync(
+      resolve(outside, "SKILL.md"),
+      GOOD.replaceAll("good-skill", "clean-skill").replaceAll("good skill", "clean skill")
+    );
+    const r = doctor(relative(REPO, outside));
+
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain(outside);
   });
 
   test("--all reports every installed skill", () => {

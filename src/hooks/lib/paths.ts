@@ -3,12 +3,52 @@ import { homedir } from "node:os";
 import { resolve } from "node:path";
 
 /**
+ * Turn a path string that came from outside — argv, a flag, an env override, a
+ * persisted record — into a real absolute path.
+ *
+ * "~" is a shell feature, not a filesystem one: bash and zsh expand it before a
+ * process starts, cmd.exe has no such feature, and PowerShell hands it to native
+ * commands untouched. So node:path has nothing for it (`resolve("~/x")` yields
+ * `<cwd>/~/x`) and every caller that skips this function is a Windows bug.
+ *
+ * Only the leading segment counts. `~user` throws instead of resolving, because
+ * it needs a passwd lookup and quietly reading it as a relative directory is the
+ * exact failure this replaces.
+ */
+export function toPath(input: string, base: string = process.cwd()): string {
+  if (input === "~") return homedir();
+  if (input.startsWith("~/") || input.startsWith("~\\")) {
+    return resolve(homedir(), input.slice(2));
+  }
+  if (input.startsWith("~")) {
+    throw new Error(`Home-relative paths for another user are not supported: ${input}`);
+  }
+  return resolve(base, input);
+}
+
+/**
+ * Whether a string names a location rather than a bare identifier. A verb that
+ * accepts either `my-skill` or `~/skills/my-skill` has to tell them apart before
+ * it looks the argument up in a store — appending a tilde path to a store
+ * directory yields a path that can never exist.
+ */
+export function namesAPath(input: string): boolean {
+  return input.startsWith("~") || input.includes("/") || input.includes("\\");
+}
+
+/** An env override names a path the same way a flag does, so it gets the same treatment. */
+function envPath(name: string, fallback: string): string {
+  const override = process.env[name];
+  return override ? toPath(override) : fallback;
+}
+
+/**
  * Root of the PAL package (engine code + shipped assets).
  * In repo mode: the repo root.
  * In package mode: the global node_modules package directory.
  */
 export function palPkg(): string {
-  return process.env.PAL_PKG || resolve(import.meta.dir, "..", "..", "..");
+  return envPath("PAL_PKG", resolve(import.meta.dir, "..", "..", ".."));
 }
 
 /**
@@ -17,7 +57,7 @@ export function palPkg(): string {
  * Power users who want memory/telos versioned in a repo can override via PAL_HOME.
  */
 export function palHome(): string {
-  return process.env.PAL_HOME || resolve(homedir(), ".pal");
+  return envPath("PAL_HOME", resolve(homedir(), ".pal"));
 }
 
 /** Ensure a directory exists, creating it recursively if needed */
@@ -69,12 +109,12 @@ export const paths = {
 // Platform directories (env override or cross-platform defaults)
 const h = homedir();
 export const platform = {
-  claudeDir: () => process.env.PAL_CLAUDE_DIR || resolve(h, ".claude"),
-  opencodeDir: () => process.env.PAL_OPENCODE_DIR || resolve(h, ".config", "opencode"),
-  cursorDir: () => process.env.PAL_CURSOR_DIR || resolve(h, ".cursor"),
-  copilotDir: () => process.env.PAL_COPILOT_DIR || resolve(h, ".copilot"),
-  codexDir: () => process.env.PAL_CODEX_DIR || resolve(h, ".codex"),
-  agentsDir: () => process.env.PAL_AGENTS_DIR || resolve(h, ".agents"),
+  claudeDir: () => envPath("PAL_CLAUDE_DIR", resolve(h, ".claude")),
+  opencodeDir: () => envPath("PAL_OPENCODE_DIR", resolve(h, ".config", "opencode")),
+  cursorDir: () => envPath("PAL_CURSOR_DIR", resolve(h, ".cursor")),
+  copilotDir: () => envPath("PAL_COPILOT_DIR", resolve(h, ".copilot")),
+  codexDir: () => envPath("PAL_CODEX_DIR", resolve(h, ".codex")),
+  agentsDir: () => envPath("PAL_AGENTS_DIR", resolve(h, ".agents")),
 } as const;
 
 // Engine/asset paths (in PAL_PKG / repo root)

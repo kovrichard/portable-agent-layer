@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { resolve } from "node:path";
-import { lintSubagent } from "../src/tools/subagent-doctor";
+import { lintSubagent, resolveSubagentFile } from "../src/tools/subagent-doctor";
 
 const ROOT = resolve(import.meta.dir, "../.test-home-subagent-doctor");
 
@@ -140,5 +141,21 @@ You do a thing.
   test("the GOOD fixture produces zero non-pass findings we did not expect", () => {
     // Guards against a check silently flipping GOOD to warn/error.
     expect(findings(fixture(GOOD))).toHaveLength(0);
+  });
+});
+
+describe("resolveSubagentFile", () => {
+  // The usage string takes a file, and a user types the one they know:
+  // `pal cli subagent doctor ~/agents/helper.md`. No Windows shell expands that.
+  test("expands a leading tilde in a .md argument", () => {
+    expect(resolveSubagentFile("~/agents/helper.md")).toBe(
+      resolve(homedir(), "agents", "helper.md")
+    );
+  });
+
+  // A bare name is looked up in the store, so the tilde form must not be
+  // mistaken for one and appended to the agents directory.
+  test("a tilde path is not treated as a bare name in the store", () => {
+    expect(resolveSubagentFile("~/helper")).toBe(resolve(homedir(), "helper.md"));
   });
 });

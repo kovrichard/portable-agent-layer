@@ -6,27 +6,27 @@
  * Frontmatter holds operational state; body holds ISA spec sections.
  *
  * Usage:
- *   bun ~/.pal/tools/project.ts list
- *   bun ~/.pal/tools/project.ts create [name] [--path PATH] [--objectives "..."] [--serves goal|revenue|fun]
- *   bun ~/.pal/tools/project.ts serves <name> <goal|revenue|fun> [note]
- *   bun ~/.pal/tools/project.ts resume <name>
- *   bun ~/.pal/tools/project.ts complete | archive | pause | unpause <name>
- *   bun ~/.pal/tools/project.ts add-next <name> "text"
- *   bun ~/.pal/tools/project.ts add-blocker <name> "text"
- *   bun ~/.pal/tools/project.ts add-decision <name> "decision" "rationale"
- *   bun ~/.pal/tools/project.ts add-handoff <name> "text"
- *   bun ~/.pal/tools/project.ts rm-next | rm-blocker <name> <index>
- *   bun ~/.pal/tools/project.ts update-section <name> <section> "content"
- *   bun ~/.pal/tools/project.ts criteria <name>
- *   bun ~/.pal/tools/project.ts isa-init <name>
- *   bun ~/.pal/tools/project.ts migrate
+ *   pal cli project list
+ *   pal cli project create [name] [--path PATH] [--objectives "..."] [--serves goal|revenue|fun]
+ *   pal cli project serves <name> <goal|revenue|fun> [note]
+ *   pal cli project resume <name>
+ *   pal cli project complete | archive | pause | unpause <name>
+ *   pal cli project add-next <name> "text"
+ *   pal cli project add-blocker <name> "text"
+ *   pal cli project add-decision <name> "decision" "rationale"
+ *   pal cli project add-handoff <name> "text"
+ *   pal cli project rm-next | rm-blocker <name> <index>
+ *   pal cli project update-section <name> <section> "content"
+ *   pal cli project criteria <name>
+ *   pal cli project isa-init <name>
+ *   pal cli project migrate
  */
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { writeBinding } from "../../hooks/lib/bindings";
-import { paths } from "../../hooks/lib/paths";
+import { paths, toPath } from "../../hooks/lib/paths";
 import {
   defaultSlug,
   deleteProject,
@@ -55,6 +55,7 @@ import {
   selectIscs,
   taskSlug,
 } from "../lib/project-isc";
+import { scriptArgs } from "../lib/script-args";
 
 function now(): string {
   return new Date().toISOString();
@@ -106,7 +107,7 @@ function cmdCreate(args: string[]): void {
     allowPositionals: true,
   });
 
-  const path = resolve(values.path ?? process.cwd());
+  const path = toPath(values.path ?? process.cwd());
   const name = (values.name ?? positionals[0] ?? defaultSlug(path)).trim();
 
   if (!/^[a-z0-9_-]+$/.test(name)) {
@@ -271,7 +272,7 @@ function addHandoff(name: string, text: string): void {
 function cmdSetPath(args: string[]): void {
   const [name, ...rest] = args;
   if (!name || rest.length === 0) fail("Usage: set-path <name> <new-path>");
-  const newPath = resolve(rest.join(" ").trim());
+  const newPath = toPath(rest.join(" ").trim());
   const p = requireProject(name);
   writeBinding(p.name, newPath);
   p.updated = now();
@@ -693,8 +694,8 @@ Commands:
 `);
 }
 
-function run(): void {
-  const [cmd, ...rest] = Bun.argv.slice(2);
+export function run(argv: string[] = scriptArgs()): void {
+  const [cmd, ...rest] = argv;
   if (!cmd || cmd === "help" || cmd === "--help" || cmd === "-h") {
     help();
     return;
@@ -810,7 +811,7 @@ function run(): void {
       cmdRm(rest);
       return;
     default:
-      fail(`Unknown command "${cmd}". Run 'project.ts help' for usage.`);
+      fail(`Unknown command "${cmd}". Run 'pal cli project help' for usage.`);
   }
 }
 

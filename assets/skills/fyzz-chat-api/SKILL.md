@@ -21,19 +21,19 @@ When you need to access the user's Fyzz Chat conversations or projects, use the 
 ### List conversations
 
 ```bash
-bun ~/.pal/skills/fyzz-chat-api/tools/fyzz-api.ts -- conversations [--limit 20] [--search "query"] [--project-id <id>] [--cursor <cursor>]
+pal cli skill run fyzz-chat-api fyzz-api -- conversations [--limit 20] [--search "query"] [--project-id <id>] [--cursor <cursor>]
 ```
 
 ### Get a single conversation with messages
 
 ```bash
-bun ~/.pal/skills/fyzz-chat-api/tools/fyzz-api.ts -- conversations <conversation-id>
+pal cli skill run fyzz-chat-api fyzz-api -- conversations <conversation-id>
 ```
 
 ### List projects
 
 ```bash
-bun ~/.pal/skills/fyzz-chat-api/tools/fyzz-api.ts -- projects
+pal cli skill run fyzz-chat-api fyzz-api -- projects
 ```
 
 ## Setup
