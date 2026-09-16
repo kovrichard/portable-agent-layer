@@ -1,3 +1,10 @@
+# [0.77.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.76.1...v0.77.0) (2026-09-16)
+
+
+### Features
+
+* introduce optional auto update ([e67a2fd](https://github.com/kovrichard/portable-agent-layer/commit/e67a2fdab1483d649f110a06b794a26fc32f6f57))
+
 ## [0.76.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.76.0...v0.76.1) (2026-09-14)
 
 
