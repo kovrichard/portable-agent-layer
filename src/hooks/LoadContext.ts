@@ -11,6 +11,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { getActiveAgent } from "./lib/agent";
+import { shouldAutoUpdate, spawnAutoUpdate } from "./lib/auto-update";
 import { buildClaudeMd, regenerateIfNeeded } from "./lib/claude-md";
 import { type AgentTarget, buildSystemReminder } from "./lib/context";
 import { logContextSnapshot, logDebug, logError } from "./lib/log";
@@ -36,6 +37,12 @@ try {
   if (regenerateIfNeeded()) logDebug("LoadContext", "AGENTS.md regenerated");
 } catch (err) {
   logError("LoadContext:regenerate", err);
+}
+
+try {
+  if (shouldAutoUpdate()) spawnAutoUpdate();
+} catch (err) {
+  logError("LoadContext:auto-update", err);
 }
 
 try {

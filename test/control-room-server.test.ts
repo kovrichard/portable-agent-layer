@@ -2,6 +2,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:te
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import type { AutoUpdateStatus } from "../src/hooks/lib/auto-update";
 import { reload } from "../src/hooks/lib/settings";
 import type {
   AgendaView,
@@ -578,6 +579,52 @@ describe("the knobs behind the grid", () => {
     expect(
       (await post(base, "/api/prefs", { attention: { nonsense: true } })).status
     ).toBe(400);
+  });
+});
+
+// The button's own route is pointed at a PAL_PKG that holds no PAL, so the child
+// it spawns finds nothing to run. What is under test is the route, not the update.
+describe("keeping PAL up to date", () => {
+  test("the page reads the toggle and the installed version", async () => {
+    const base = await listen();
+    const status = await getJson<AutoUpdateStatus>(`${base}/api/update`);
+    expect(status.enabled).toBe(false);
+    expect(status.current).toBeTruthy();
+  });
+
+  test("the switch turns daily updates on, and off again", async () => {
+    const base = await listen();
+
+    expect((await post(base, "/api/update", { enabled: true })).status).toBe(200);
+    expect((await getJson<AutoUpdateStatus>(`${base}/api/update`)).enabled).toBe(true);
+
+    await post(base, "/api/update", { enabled: false });
+    expect((await getJson<AutoUpdateStatus>(`${base}/api/update`)).enabled).toBe(false);
+  });
+
+  test("flipping the switch also settles the question install asks", async () => {
+    const base = await listen();
+    await post(base, "/api/update", { enabled: true });
+    expect((await getJson<AutoUpdateStatus>(`${base}/api/update`)).decided).toBe(true);
+  });
+
+  test("anything but true or false is refused", async () => {
+    const base = await listen();
+    expect((await post(base, "/api/update", { enabled: "yes" })).status).toBe(400);
+    expect((await post(base, "/api/update", {})).status).toBe(400);
+  });
+
+  test("the button answers at once rather than waiting for the update", async () => {
+    const prevPkg = process.env.PAL_PKG;
+    process.env.PAL_PKG = mkdtempSync(resolve(tmpdir(), "pal-no-pal-"));
+    const base = await listen();
+    try {
+      expect((await post(base, "/api/update/run", {})).status).toBe(202);
+    } finally {
+      rmSync(process.env.PAL_PKG, { recursive: true, force: true });
+      if (prevPkg === undefined) delete process.env.PAL_PKG;
+      else process.env.PAL_PKG = prevPkg;
+    }
   });
 });
 

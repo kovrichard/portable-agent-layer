@@ -96,6 +96,17 @@ export function writeInstallSettings(update: Partial<InstallSettings>): WriteOut
   return { ok: true, changed: true };
 }
 
+/**
+ * Flipping the switch here is itself a decision, so `decided` closes the
+ * one-time install question too — nobody is asked about a setting they just set.
+ */
+export function setAutoUpdate(enabled: boolean): WriteOutcome {
+  const data = rawSettings();
+  writeSettings({ ...data, autoUpdate: { ...data.autoUpdate, enabled, decided: true } });
+  reload();
+  return { ok: true, changed: true };
+}
+
 function isTimezone(value: string): boolean {
   try {
     new Intl.DateTimeFormat("en-US", { timeZone: value });
