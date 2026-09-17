@@ -53,6 +53,16 @@
           }
         ]
       }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/SessionClose.ts --agent=codex"
+          }
+        ]
+      }
     ]
   }
 }

@@ -11,7 +11,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { getActiveAgent } from "./lib/agent";
-import { shouldAutoUpdate, spawnAutoUpdate } from "./lib/auto-update";
+import { autoUpdateOnStart } from "./lib/auto-update";
 import { buildClaudeMd, regenerateIfNeeded } from "./lib/claude-md";
 import { type AgentTarget, buildSystemReminder } from "./lib/context";
 import { logContextSnapshot, logDebug, logError } from "./lib/log";
@@ -40,7 +40,7 @@ try {
 }
 
 try {
-  if (shouldAutoUpdate()) spawnAutoUpdate();
+  if (autoUpdateOnStart()) logDebug("LoadContext", "close hook silent — updating now");
 } catch (err) {
   logError("LoadContext:auto-update", err);
 }

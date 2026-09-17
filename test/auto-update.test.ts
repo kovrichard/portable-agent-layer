@@ -1,10 +1,20 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
+  autoUpdateOnClose,
+  autoUpdateOnStart,
   autoUpdateStatus,
+  endsTheSession,
   readLedger,
   runAutoUpdate,
   shouldAutoUpdate,
@@ -167,6 +177,18 @@ describe("a run that fails", () => {
   });
 });
 
+/** Stands in for `pal cli update`, and leaves a mark when it actually ran. */
+function countingUpdateCommand(marker: string): void {
+  mkdirSync(resolve(PKG, "src", "cli"), { recursive: true });
+  writeFileSync(
+    resolve(PKG, "src", "cli", "index.ts"),
+    `import { appendFileSync } from "node:fs";\nappendFileSync(${JSON.stringify(marker)}, "ran\\n");`,
+    "utf-8"
+  );
+  git("add", "-A");
+  git("commit", "-m", "counting update command");
+}
+
 /** Stands in for `pal cli update`, and copies the ledger as it found it. */
 function fakeUpdateCommand(): string {
   const seen = resolve(PKG, "seen.json");
@@ -196,6 +218,145 @@ describe("the attempt stamp", () => {
       attemptedAt?: string;
     };
     expect(asTheChildSawIt.attemptedAt).toBeTruthy();
+  });
+});
+
+// Claude's SessionEnd fires for /clear and for resume, where the CLI keeps
+// running; Copilot does the same on /clear. Updating there would rewrite the
+// config of a session the user is still sitting in.
+describe("which kind of close starts an update", () => {
+  test("quitting does", () => {
+    for (const reason of ["prompt_input_exit", "logout", "other", undefined]) {
+      expect(endsTheSession(reason)).toBe(true);
+    }
+  });
+
+  test("clearing or resuming does not", () => {
+    expect(endsTheSession("clear")).toBe(false);
+    expect(endsTheSession("resume")).toBe(false);
+  });
+
+  test("a clear never starts an update, however overdue one is", () => {
+    setSettings({ enabled: true, decided: true });
+    expect(shouldAutoUpdate()).toBe(true);
+
+    expect(autoUpdateOnClose("clear")).toBeNull();
+    expect(readLedger()).toBeNull();
+  });
+
+  test("an opted-out install starts nothing on close", () => {
+    expect(autoUpdateOnClose("logout")).toBeNull();
+  });
+});
+
+// A terminal that starts a minutes-long reinstall and says nothing reads as a
+// hang, and a hang gets CTRL+C. It does not actually wait — the child is
+// detached — so the line says there is nothing to wait for.
+describe("what the closing terminal says", () => {
+  test("names the versions it is moving between", () => {
+    setSettings({ enabled: true, decided: true });
+    writeFileSync(
+      resolve(paths.state(), "update-available.json"),
+      JSON.stringify({
+        checkedAt: new Date().toISOString(),
+        available: true,
+        current: "0.76.1",
+        latest: "0.77.0",
+        mode: "repo",
+      }),
+      "utf-8"
+    );
+
+    const notice = autoUpdateOnClose("prompt_input_exit");
+
+    expect(notice).toContain("0.76.1 → 0.77.0");
+    expect(notice).toContain("nothing to wait for");
+  });
+
+  test("explains a clone it could not touch, instead of going quiet", () => {
+    setSettings({ enabled: true, decided: true });
+    writeFileSync(resolve(PKG, "work.txt"), "unstaged change", "utf-8");
+
+    expect(autoUpdateOnClose("prompt_input_exit")).toContain("uncommitted changes");
+  });
+
+  test("says nothing when yesterday's skip is the only thing on file", () => {
+    setSettings({ enabled: true, decided: true });
+    setLedger({
+      attemptedAt: ago(HOUR_MS),
+      skippedAt: ago(30 * HOUR_MS),
+      skipped: "uncommitted changes",
+    });
+
+    expect(autoUpdateOnClose("prompt_input_exit")).toBeNull();
+  });
+
+  test("says nothing at all when updates are off", () => {
+    expect(autoUpdateOnClose("prompt_input_exit")).toBeNull();
+  });
+});
+
+// Without this, a session that is killed — or an agent whose close event never
+// arrives — leaves the install pinned on a statusline telling it to restart,
+// which would do nothing. Start is the rescue, not the schedule.
+describe("when the close hook never fires", () => {
+  test("an install that has never managed an attempt is rescued at start", () => {
+    setSettings({ enabled: true, decided: true });
+    expect(autoUpdateOnStart()).toBe(true);
+  });
+
+  test("a close that ran yesterday means start stays out of the way", () => {
+    setSettings({ enabled: true, decided: true });
+    setLedger({ attemptedAt: ago(25 * HOUR_MS), ok: true });
+    expect(autoUpdateOnStart()).toBe(false);
+  });
+
+  test("four days of silence brings the rescue back", () => {
+    setSettings({ enabled: true, decided: true });
+    setLedger({ attemptedAt: ago(4 * 24 * HOUR_MS), ok: true });
+    expect(autoUpdateOnStart()).toBe(true);
+  });
+
+  test("an opted-out install is never rescued", () => {
+    expect(autoUpdateOnStart()).toBe(false);
+  });
+});
+
+describe("two sessions closing at once", () => {
+  test("the second one finds the lock held and leaves the clone alone", () => {
+    setSettings({ enabled: true, decided: true });
+    const seen = resolve(PKG, "runs.txt");
+    countingUpdateCommand(seen);
+
+    writeFileSync(
+      resolve(paths.state(), "auto-update.lock"),
+      JSON.stringify({ pid: 1, at: new Date().toISOString() }),
+      "utf-8"
+    );
+    runAutoUpdate();
+
+    expect(existsSync(seen)).toBe(false);
+  });
+
+  test("a lock left behind by a dead run is taken over", () => {
+    setSettings({ enabled: true, decided: true });
+    const seen = resolve(PKG, "runs.txt");
+    countingUpdateCommand(seen);
+
+    writeFileSync(
+      resolve(paths.state(), "auto-update.lock"),
+      JSON.stringify({ pid: 1, at: ago(31 * 60 * 1000) }),
+      "utf-8"
+    );
+    runAutoUpdate();
+
+    expect(existsSync(seen)).toBe(true);
+  });
+
+  test("the lock is released, so tomorrow's run is not blocked by today's", () => {
+    setSettings({ enabled: true, decided: true });
+    runAutoUpdate();
+    expect(existsSync(resolve(paths.state(), "auto-update.lock"))).toBe(false);
   });
 });
 

@@ -77,7 +77,7 @@ pal cli status        # check your setup
 | `pal cli init` | Scaffold PAL home directory and install hooks |
 | `pal cli install` | Register hooks/skills for targets |
 | `pal cli uninstall` | Remove hooks/skills for targets |
-| `pal cli update` | Update PAL (git pull or npm update) and reinstall hooks. Install asks once whether to do this daily on its own; the switch lives in the control room under Settings → Updates. On a repo install a daily run waits while the clone has uncommitted changes |
+| `pal cli update` | Update PAL (git pull or npm update) and reinstall hooks. Install asks once whether to do this daily on its own, applied when a session closes so opening PAL is never slowed; the switch lives in the control room under Settings → Updates. On a repo install a daily run waits while the clone has uncommitted changes |
 | `pal cli export` | Export user state (telos, memory) to a zip |
 | `pal cli import` | Import user state from a zip |
 | `pal cli status` | Show current PAL configuration |

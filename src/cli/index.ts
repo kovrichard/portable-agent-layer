@@ -178,6 +178,9 @@ async function session(sessionArgs: string[]) {
     await checkForUpdate();
     const notice = getUpdateNotice();
     if (notice) console.log(`\n${notice}`);
+    const { autoUpdateOnClose } = await import("../hooks/lib/auto-update");
+    const closing = autoUpdateOnClose();
+    if (closing) console.log(`\n${closing}`);
   } catch {
     // Non-critical
   }

@@ -149,7 +149,7 @@ function Updates({ initial }: { initial: AutoUpdateStatus }) {
     <Panel title="Updates">
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-3 text-[12.5px]">
-          <span>update once a day, at session start</span>
+          <span>update once a day, when a session closes</span>
           <Switch
             aria-label="update once a day"
             checked={status.enabled}

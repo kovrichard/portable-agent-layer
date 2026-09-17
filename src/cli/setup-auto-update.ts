@@ -14,7 +14,8 @@ import { raw as readSettings, write as writeSettings } from "../hooks/lib/settin
 
 /** Only a git clone can be mid-change; a global package install has no such state. */
 function whatItDoes(): string {
-  const daily = "Once a day, at session start, PAL updates itself in the background.";
+  const daily =
+    "Once a day, when you close a session, PAL updates itself in the background.\nOpening PAL is never slowed down, and the statusline says when to restart.";
   return isRepoMode()
     ? `${daily}\nIt waits while this clone has uncommitted changes.`
     : daily;

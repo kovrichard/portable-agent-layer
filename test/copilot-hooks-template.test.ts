@@ -33,6 +33,7 @@ describe("Copilot hooks template", () => {
       "postToolUse",
       "postToolUseFailure",
       "preToolUse",
+      "sessionEnd",
       "sessionStart",
       "userPromptSubmitted",
     ]);
