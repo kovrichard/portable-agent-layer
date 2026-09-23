@@ -13,6 +13,7 @@ const BUILTIN_TOOLS = {
   "handoff-note": () => import("../tools/agent/handoff-note"),
   project: () => import("../tools/agent/project"),
   "relationship-note": () => import("../tools/agent/relationship-note"),
+  "relationship-reflect": () => import("../tools/agent/relationship-reflect"),
   synthesize: () => import("../tools/agent/synthesize"),
   thread: () => import("../tools/agent/thread"),
   "wisdom-frame": () => import("../tools/agent/wisdom-frame"),

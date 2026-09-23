@@ -8,17 +8,17 @@
  * - Generate a summary report
  *
  * Usage:
- *   bun run tool:reflect              # Reflect on last 7 days
- *   bun run tool:reflect -- --month   # Reflect on last 30 days
- *   bun run tool:reflect -- --dry-run # Preview without writing
+ *   pal cli relationship-reflect             # Reflect on last 7 days
+ *   pal cli relationship-reflect --month     # Reflect on last 30 days
+ *   pal cli relationship-reflect --dry-run   # Preview without writing
  */
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { readOpinions, saveOpinion, setLastReflectDate } from "../hooks/lib/opinions";
-import { palHome } from "../hooks/lib/paths";
-import { emit } from "./lib/emit";
+import { readOpinions, saveOpinion, setLastReflectDate } from "../../hooks/lib/opinions";
+import { palHome } from "../../hooks/lib/paths";
+import { emit } from "../lib/emit";
 import {
   consoleLines,
   formatReport,
@@ -27,7 +27,8 @@ import {
   loadRatings,
   planPromotions,
   reportPath,
-} from "./lib/relationship-reflect";
+} from "../lib/relationship-reflect";
+import { scriptArgs } from "../lib/script-args";
 
 const HELP = `
 RelationshipReflect — Periodic reflection + opinion promotion
@@ -36,9 +37,9 @@ Reads recent relationship notes and ratings. Promotes recurring
 observations (O type) into tracked opinions with confidence scoring.
 
 Usage:
-  bun run tool:reflect              Reflect on last 7 days (default)
-  bun run tool:reflect -- --month   Reflect on last 30 days
-  bun run tool:reflect -- --dry-run Preview without writing
+  pal cli relationship-reflect             Reflect on last 7 days (default)
+  pal cli relationship-reflect --month     Reflect on last 30 days
+  pal cli relationship-reflect --dry-run   Preview without writing
 
 Output:
   - Updates memory/relationship/opinions.json (confidence tracking)
@@ -56,9 +57,9 @@ function saveReport(report: string, period: string): string {
   return filepath;
 }
 
-function run() {
+export function run(argv: string[] = scriptArgs()) {
   const { values } = parseArgs({
-    args: Bun.argv.slice(2),
+    args: argv,
     options: {
       month: { type: "boolean" },
       "dry-run": { type: "boolean" },
