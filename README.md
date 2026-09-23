@@ -165,6 +165,7 @@ pal cli debug       # show current status and log path
 |----------|-------------|
 | `PAL_INFERENCE_DISABLED` | Set to `1` to disable all inference (used by the test suite to prevent real CLI spawns) |
 | `PAL_NOTIFICATIONS_DISABLED` | Set to `1` to suppress desktop notifications (used by the test suite) |
+| `PAL_TEST_SANDBOX` | Set by the test suite. Without a `PAL_HOME`, state goes to a temp directory instead of `~/.pal`, and installers refuse to touch real agent directories |
 
 ---
 

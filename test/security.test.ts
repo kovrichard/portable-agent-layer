@@ -14,8 +14,13 @@ const ROOT_OVERRIDES = [
 ];
 const savedOverrides = new Map(ROOT_OVERRIDES.map((name) => [name, process.env[name]]));
 
+function pinRealPalHome(): void {
+  process.env.PAL_HOME = join(homedir(), ".pal");
+}
+
 beforeAll(() => {
   for (const name of ROOT_OVERRIDES) delete process.env[name];
+  pinRealPalHome();
 });
 
 afterAll(() => {
@@ -329,7 +334,7 @@ describe("checkFilePath", () => {
       expect(checkFilePath("/srv/pal-home/memory/sessions.json")).toBeTruthy();
       expect(checkFilePath(home(".pal", "memory", "sessions.json"))).toBeNull();
     } finally {
-      delete process.env.PAL_HOME;
+      pinRealPalHome();
     }
   });
 
@@ -404,7 +409,7 @@ describe("checkFilePath", () => {
       // a not-yet-created personal skill is also allowed (scaffolding)
       expect(checkFilePath(join(skills, "brandnew", "SKILL.md"))).toBeNull();
     } finally {
-      delete process.env.PAL_HOME;
+      pinRealPalHome();
       rmSync(base, { recursive: true, force: true });
     }
   });

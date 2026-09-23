@@ -28,10 +28,18 @@ describe("palHome", () => {
 
   test("falls back to ~/.pal without env", async () => {
     delete process.env.PAL_HOME;
+    delete process.env.PAL_TEST_SANDBOX;
     process.env.PAL_PKG = TEST_DIR;
     const { palHome } = await import("../src/hooks/lib/paths");
     expect(palHome()).toBe(resolve(homedir(), ".pal"));
     delete process.env.PAL_PKG;
+    process.env.PAL_TEST_SANDBOX = "1";
+  });
+
+  test("a test run without PAL_HOME never lands in the real ~/.pal", async () => {
+    delete process.env.PAL_HOME;
+    const { palHome } = await import("../src/hooks/lib/paths");
+    expect(palHome()).not.toBe(resolve(homedir(), ".pal"));
   });
 });
 

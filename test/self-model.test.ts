@@ -1132,7 +1132,7 @@ describe("self-model entrypoint", () => {
         "--help",
         "--agent=codex",
       ],
-      { stdout: "pipe", stderr: "pipe" }
+      { stdout: "pipe", stderr: "pipe", env: process.env }
     );
     expect(run.stderr.toString()).not.toContain("Unknown option");
     expect(run.exitCode).toBe(0);

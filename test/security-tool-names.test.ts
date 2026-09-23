@@ -12,6 +12,7 @@ async function runValidator(payload: unknown, agent = "vscode"): Promise<string>
     stdin: new TextEncoder().encode(JSON.stringify(payload)),
     stdout: "pipe",
     stderr: "ignore",
+    env: process.env,
   });
   const out = await new Response(proc.stdout).text();
   await proc.exited;
