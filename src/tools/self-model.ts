@@ -140,6 +140,7 @@ async function run() {
       force: { type: "boolean" },
       "dry-run": { type: "boolean" },
       help: { type: "boolean", short: "h" },
+      agent: { type: "string" },
     },
   });
 

@@ -1122,3 +1122,19 @@ describe("failedSynthesisModel", () => {
     expect(previousModelForPrompt(fallback)).toBe("");
   });
 });
+
+describe("self-model entrypoint", () => {
+  test("accepts the --agent flag every detached inference spawn appends", () => {
+    const run = Bun.spawnSync(
+      [
+        "bun",
+        join(import.meta.dir, "..", "src", "tools", "self-model.ts"),
+        "--help",
+        "--agent=codex",
+      ],
+      { stdout: "pipe", stderr: "pipe" }
+    );
+    expect(run.stderr.toString()).not.toContain("Unknown option");
+    expect(run.exitCode).toBe(0);
+  });
+});
