@@ -3,7 +3,7 @@
  * PAL CLI — Portable Agent Layer
  *
  * Usage:
- *   pal [claude-args...]              Start a Claude session with session summary on exit
+ *   pal [agent-args...]               Start the first installed agent: claude, codex, cursor-agent, copilot, opencode
  *   pal cli <command> [options]       Admin commands
  *
  * Admin commands (pal cli ...):
@@ -56,6 +56,7 @@ import { findBinaryOnPath } from "../hooks/lib/which";
 import { log } from "../targets/lib";
 import { builtinToolVerbs, runBuiltinTool } from "./builtin-tools";
 import { checkPendingMigrations } from "./migrate";
+import { findSessionAgent, NO_SESSION_AGENT_MESSAGE } from "./session-agent";
 
 const allArgs = process.argv.slice(2);
 
@@ -109,16 +110,10 @@ function checkCopilot(): ToolCheck {
   return cli;
 }
 
-function detectAgent(): string | null {
-  if (checkTool("claude").available) return "claude";
-  if (checkTool("opencode").available) return "opencode";
-  return null;
-}
-
 async function session(sessionArgs: string[]) {
-  const agent = detectAgent();
+  const agent = findSessionAgent();
   if (!agent) {
-    log.error("No supported agent found. Install Claude Code or opencode.");
+    log.error(NO_SESSION_AGENT_MESSAGE);
     process.exit(1);
   }
 
@@ -325,7 +320,7 @@ function pointAtOnboarding(): void {
 function showHelp() {
   console.log(`
   Usage:
-    pal [claude-args...]                    Start a Claude session
+    pal [agent-args...]                     Start the first installed agent
     pal cli <command> [options]             Admin commands
 
   Admin commands:
@@ -1156,7 +1151,7 @@ function doctor(silent = false): DoctorResult {
 
     if (!hasAgent) {
       console.log("");
-      log.error("No supported agent found. Install Claude Code or opencode.");
+      log.error(NO_SESSION_AGENT_MESSAGE);
     }
     console.log("");
   }
