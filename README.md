@@ -156,7 +156,7 @@ PAL routes inference through the host agent's subscription CLI by default. API k
 Enable verbose hook logging with:
 
 ```
-pal cli debug on    # enable  → logs to memory/state/debug.log
+pal cli debug on    # enable  → logs to debug/debug.log
 pal cli debug off   # disable
 pal cli debug       # show current status and log path
 ```

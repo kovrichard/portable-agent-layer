@@ -1,6 +1,6 @@
 /**
  * Simple file-based debug logger for PAL hooks.
- * Writes to memory/state/debug.log — rotated on each session start.
+ * Writes to debug/debug.log, rotated by size.
  *
  * Only writes when debug is enabled (`pal cli debug on`) or when called via logError (always logged).
  */
@@ -8,6 +8,7 @@
 import {
   appendFileSync,
   existsSync,
+  readFileSync,
   renameSync,
   statSync,
   unlinkSync,
@@ -78,8 +79,48 @@ function rotateIfNeeded(path: string): void {
   }
 }
 
-/** Test-only: max rotated count for callers that need to enumerate. */
-export const DEBUG_LOG_MAX_ROTATED = MAX_ROTATED;
+export interface HookHealth {
+  totalErrors: number;
+  lastError: string | null;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function logFilesOldestFirst(): string[] {
+  const path = logFile();
+  const rotated = Array.from(
+    { length: MAX_ROTATED },
+    (_, i) => `${path}.${MAX_ROTATED - i}`
+  );
+  return [...rotated, `${path}.prev`, path];
+}
+
+function readAllLogs(): string {
+  return logFilesOldestFirst()
+    .filter((path) => existsSync(path))
+    .map((path) => readFileSync(path, "utf-8"))
+    .join("\n");
+}
+
+function loggedAt(line: string): number {
+  const match = /^\[(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})\]/.exec(line);
+  return match ? Date.parse(`${match[1]}T${match[2]}Z`) : 0;
+}
+
+export function recentHookErrors(now: number = Date.now()): HookHealth {
+  try {
+    const recent = readAllLogs()
+      .split("\n")
+      .filter((line) => line.includes("] ERROR ") && loggedAt(line) > now - DAY_MS);
+    const last = recent.at(-1);
+    return {
+      totalErrors: recent.length,
+      lastError: last ? last.replace(/^\[.*?\] ERROR /, "").slice(0, 120) : null,
+    };
+  } catch {
+    return { totalErrors: 0, lastError: null };
+  }
+}
 
 function isDebugEnabled(): boolean {
   return existsSync(resolve(palHome(), "memory", "state", "debug-enabled"));

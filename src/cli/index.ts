@@ -47,7 +47,7 @@ import {
   summarize,
 } from "../hooks/lib/import-merge";
 import { inference, previewInferenceRoute } from "../hooks/lib/inference";
-import { DEBUG_LOG_MAX_ROTATED, logDebug } from "../hooks/lib/log";
+import { logDebug, recentHookErrors } from "../hooks/lib/log";
 import { ensureRegistered, writeRegistryEntry } from "../hooks/lib/machine";
 import { palHome, palPkg, paths, platform, toPath } from "../hooks/lib/paths";
 import { auditBindings, describeBindingIssue } from "../hooks/lib/projects";
@@ -462,11 +462,6 @@ function resolveTargets(args: string[], health?: DoctorResult): Targets {
 
 // ── Hook health ──
 
-interface HookHealth {
-  totalErrors: number;
-  lastError: string | null;
-}
-
 function checkClaudeHooksRegistered(): boolean {
   const settingsPath = resolve(platform.claudeDir(), "settings.json");
   if (!existsSync(settingsPath)) return false;
@@ -645,7 +640,7 @@ async function probeInference(): Promise<void> {
         );
       } else {
         console.log(
-          `  ${red}✗${reset} ${tag} ${String(elapsedMs).padStart(6)}ms  ${dim}failed — see ~/.pal/memory/state/debug.log${reset}`
+          `  ${red}✗${reset} ${tag} ${String(elapsedMs).padStart(6)}ms  ${dim}failed — see ~/.pal/debug/debug.log${reset}`
         );
       }
     }
@@ -731,46 +726,6 @@ function rtkInstallHint(): string {
     return "download rtk.exe from https://github.com/rtk-ai/rtk/releases and add it to PATH";
   if (process.platform === "darwin") return "`brew install rtk`";
   return "`curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh`";
-}
-
-function checkHookHealth(home: string): HookHealth {
-  const stateDir = resolve(home, "memory", "state");
-  // Read current + all rotated logs (`.1`..`.5`) + legacy `.prev` so a recent
-  // rotation doesn't make the 24h window appear empty.
-  const candidates = [
-    resolve(stateDir, "debug.log"),
-    resolve(stateDir, "debug.log.prev"),
-    ...Array.from({ length: DEBUG_LOG_MAX_ROTATED }, (_, i) =>
-      resolve(stateDir, `debug.log.${i + 1}`)
-    ),
-  ];
-
-  try {
-    let content = "";
-    for (const path of candidates) {
-      if (existsSync(path)) content += `${readFileSync(path, "utf-8")}\n`;
-    }
-    if (!content) return { totalErrors: 0, lastError: null };
-
-    const lines = content.split("\n").filter((l) => l.includes("] ERROR "));
-
-    // Filter to last 24h
-    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const recentErrors = lines.filter((line) => {
-      const match = new RegExp(/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]/).exec(line);
-      if (!match) return false;
-      return new Date(match[1]) > cutoff;
-    });
-
-    const lastError =
-      recentErrors.length > 0
-        ? (recentErrors.at(-1) ?? "").replace(/^\[.*?\] ERROR /, "").slice(0, 120)
-        : null;
-
-    return { totalErrors: recentErrors.length, lastError };
-  } catch {
-    return { totalErrors: 0, lastError: null };
-  }
 }
 
 // ── Doctor ──
@@ -1131,7 +1086,7 @@ function doctor(silent = false): DoctorResult {
       : warn("PAL_PERPLEXITY_API_KEY — not set (optional, for Perplexity researcher)");
 
     // Hook health from debug.log
-    const hookHealth = checkHookHealth(home);
+    const hookHealth = recentHookErrors();
     if (hookHealth.totalErrors === 0) {
       ok("Hooks: no recent errors");
     } else {
