@@ -63,7 +63,7 @@ alias pal="bun run ~/path/to/portable-agent-layer/src/cli/index.ts"
 
 ```bash
 pal cli init          # scaffold home, install hooks for all targets
-pal                   # start a Claude session (with session summary on exit)
+pal                   # start the first installed agent in the terminal
 pal cli status        # check your setup
 ```
 
@@ -73,7 +73,7 @@ pal cli status        # check your setup
 
 | Command | Description |
 |---------|-------------|
-| `pal` | Start a Claude session with session summary on exit |
+| `pal` | Start the first installed agent, in order: Claude Code, Codex, Cursor CLI, Copilot CLI, opencode. Claude sessions print a summary on exit |
 | `pal cli init` | Scaffold PAL home directory and install hooks |
 | `pal cli install` | Register hooks/skills for targets |
 | `pal cli uninstall` | Remove hooks/skills for targets |

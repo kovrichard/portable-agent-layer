@@ -16,6 +16,7 @@ import { loadAnalyzeNudge } from "../../hooks/lib/analyze-nudge";
 import { paths } from "../../hooks/lib/paths";
 import {
   isStale,
+  PROJECT_STALE_DAYS_DEFAULT,
   type ProjectProgress,
   readAllProjects,
   type ServesAuthority,
@@ -188,7 +189,7 @@ function toCard(
   snoozes: Record<string, string>
 ): ProjectCard {
   const path = p.path ?? null;
-  const stale = isStale(p);
+  const stale = isStale(p, PROJECT_STALE_DAYS_DEFAULT, now);
   const history = path ? readProjectHistory(path, 1) : [];
   const last = history.at(-1);
   return {
