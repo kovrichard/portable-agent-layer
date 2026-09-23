@@ -1,13 +1,23 @@
 import { useEffect, useState } from "react";
+import type {
+  AutoUpdateLedger,
+  AutoUpdateStatus,
+} from "../../../../hooks/lib/auto-update";
 import type { ControlRoomPrefs } from "../../prefs";
 import type { ServerStatus } from "../../server";
 import { Button } from "../components/button";
 import { Input } from "../components/input";
 import { Label } from "../components/label";
 import { Switch } from "../components/switch";
+import { clock } from "../format";
 import { Empty, Panel, Pending } from "../frame";
 import { useLoaded } from "../lib/api";
-import { setInstallSettings, setPrefs as writePrefs } from "../lib/write";
+import {
+  runUpdateNow,
+  setAutoUpdate,
+  setInstallSettings,
+  setPrefs as writePrefs,
+} from "../lib/write";
 
 interface InstallSettings {
   actor: string;
@@ -76,6 +86,96 @@ function ThisInstall({ initial }: { initial: InstallSettings }) {
             Save
           </Button>
           {saved && <span className="text-[12px] text-neutral-600">saved</span>}
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+function latest(last: AutoUpdateLedger): string {
+  return last.finishedAt ?? last.attemptedAt ?? last.skippedAt ?? "";
+}
+
+function lastRunLine(last: AutoUpdateLedger | null): string {
+  if (!last) return "never run";
+  const at = latest(last);
+  const when = at ? ` · ${clock(at)}` : "";
+  if (at && at === last.skippedAt) return `waited — ${last.skipped}${when}`;
+  if (last.finishedAt) {
+    return last.ok
+      ? `updated ${last.from} → ${last.to}${when}`
+      : `failed — ${last.error ?? "unknown error"}${when}`;
+  }
+  return `running since ${clock(last.attemptedAt ?? "")}`;
+}
+
+function versionLine(status: AutoUpdateStatus): string {
+  if (status.available && status.latest) return `${status.current} → ${status.latest}`;
+  return `${status.current} · up to date`;
+}
+
+function Updates({ initial }: { initial: AutoUpdateStatus }) {
+  const [status, setStatus] = useState(initial);
+  const [error, setError] = useState<string | null>(null);
+  const [running, setRunning] = useState(false);
+
+  const refresh = () => {
+    void fetch("/api/update")
+      .then((res) => res.json() as Promise<AutoUpdateStatus>)
+      .then(setStatus)
+      .catch(() => setError("could not read update status"));
+  };
+
+  const toggle = (enabled: boolean) => {
+    setStatus({ ...status, enabled });
+    void setAutoUpdate(enabled).then((failure) => {
+      setError(failure);
+      if (failure) setStatus({ ...status, enabled: !enabled });
+    });
+  };
+
+  const now = () => {
+    setRunning(true);
+    void runUpdateNow().then((failure) => {
+      setError(failure);
+      setTimeout(() => {
+        setRunning(false);
+        refresh();
+      }, 4000);
+    });
+  };
+
+  return (
+    <Panel title="Updates">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between gap-3 text-[12.5px]">
+          <span>update once a day, when a session closes</span>
+          <Switch
+            aria-label="update once a day"
+            checked={status.enabled}
+            onCheckedChange={toggle}
+          />
+        </div>
+        <dl className="m-0 grid grid-cols-[110px_1fr] gap-y-1.5 text-[12.5px]">
+          <dt className="text-neutral-600">version</dt>
+          <dd className="m-0 tabular-nums">{versionLine(status)}</dd>
+          <dt className="text-neutral-600">last run</dt>
+          <dd className="m-0">{lastRunLine(status.last)}</dd>
+        </dl>
+        {error && (
+          <p className="border-l-2 border-alarm bg-alarm/10 px-3 py-2 text-[12px] text-alarm">
+            {error}
+          </p>
+        )}
+        <div className="flex items-center gap-3">
+          <Button variant="primary" disabled={running} onClick={now}>
+            {running ? "Updating…" : "Update now"}
+          </Button>
+          {status.mode === "repo" && (
+            <span className="text-[11px] text-neutral-600">
+              waits if this clone has uncommitted changes
+            </span>
+          )}
         </div>
       </div>
     </Panel>
@@ -172,12 +272,14 @@ export function Settings() {
   const settings = useLoaded<InstallSettings>("/api/settings");
   const prefs = useLoaded<ControlRoomPrefs>("/api/prefs");
   const status = useLoaded<ServerStatus>("/api/status");
+  const updates = useLoaded<AutoUpdateStatus>("/api/update");
 
   if (settings.state !== "ready") return <Pending value={settings} />;
   return (
     <div className="grid items-start gap-6 md:grid-cols-2">
       <ThisInstall initial={settings.data} />
       {prefs.state === "ready" && <Ranking initial={prefs.data} />}
+      {updates.state === "ready" && <Updates initial={updates.data} />}
       <Panel title="Where it runs">
         {status.state === "ready" ? (
           <dl className="m-0 grid grid-cols-[110px_1fr] gap-y-1.5 text-[12.5px]">

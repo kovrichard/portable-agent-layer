@@ -127,6 +127,12 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       if (isPalSpawnedInference()) return;
       logDebug("opencode:event", `Event: ${event.type}`);
 
+      if (event.type === "server.instance.disposed") {
+        const { autoUpdateOnClose } =
+          await lib<typeof import("../../hooks/lib/auto-update")>("auto-update.ts");
+        autoUpdateOnClose();
+      }
+
       if (event.type === "session.created" || event.type === "session.updated") {
         const { regenerateIfNeeded } =
           await lib<typeof import("../../hooks/lib/claude-md")>("claude-md.ts");

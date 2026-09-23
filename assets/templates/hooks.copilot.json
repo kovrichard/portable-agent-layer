@@ -57,6 +57,13 @@
         "bash": "bun run {{PKG_ROOT}}/src/hooks/StopOrchestrator.ts --agent=copilot",
         "powershell": "bun run {{PKG_ROOT}}/src/hooks/StopOrchestrator.ts --agent=copilot"
       }
+    ],
+    "sessionEnd": [
+      {
+        "type": "command",
+        "bash": "bun run {{PKG_ROOT}}/src/hooks/SessionClose.ts --agent=copilot",
+        "powershell": "bun run {{PKG_ROOT}}/src/hooks/SessionClose.ts --agent=copilot"
+      }
     ]
   }
 }

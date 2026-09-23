@@ -212,7 +212,14 @@ if [ -f "$UPDATE_CACHE" ]; then
     else
       VERSION_STR="$UC_CURRENT (new commits)"
     fi
-    UPDATE_LINE="📦 update: $VERSION_STR  run: pal cli update"
+    # With daily updates on, PAL applies this when the session closes — so the
+    # next step is to restart, not to run the command yourself.
+    AUTO_UPDATE=$(jq -r '.autoUpdate.enabled // false' "$HOME/.pal/memory/pal-settings.json" 2>/dev/null)
+    if [ "$AUTO_UPDATE" = "true" ]; then
+      UPDATE_LINE="📦 update: $VERSION_STR  restart to apply"
+    else
+      UPDATE_LINE="📦 update: $VERSION_STR  run: pal cli update"
+    fi
   fi
 fi
 

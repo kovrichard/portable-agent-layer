@@ -1,5 +1,5 @@
 /**
- * The page's four write calls. Each POSTs one named field and hands back the
+ * The page's write calls. Each POSTs one named field and hands back the
  * server's own error text, so a refusal reads the same wherever it surfaces.
  */
 
@@ -40,4 +40,12 @@ export function setSnooze(project: string, id: number, days: number) {
 
 export function setPrefs(update: Record<string, unknown>) {
   return post("/api/prefs", update);
+}
+
+export function setAutoUpdate(enabled: boolean) {
+  return post("/api/update", { enabled });
+}
+
+export function runUpdateNow() {
+  return post("/api/update/run", {});
 }

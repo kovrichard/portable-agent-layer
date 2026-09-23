@@ -167,7 +167,14 @@ if (Test-Path $updateCache) {
     $uc = Get-Content $updateCache -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json
     if ($uc.available -eq $true) {
       $versionStr = if ($uc.current -ne $uc.latest) { "$($uc.current) -> $($uc.latest)" } else { $uc.current + " (new commits)" }
-      $UPDATE_LINE = "[update] $versionStr  run: pal cli update"
+      # With daily updates on, PAL applies this when the session closes — so the
+      # next step is to restart, not to run the command yourself.
+      $palSettings = Join-Path $env:USERPROFILE ".pal\memory\pal-settings.json"
+      $autoUpdate = $false
+      if (Test-Path $palSettings) {
+        try { $autoUpdate = (Get-Content $palSettings -Raw | ConvertFrom-Json).autoUpdate.enabled -eq $true } catch {}
+      }
+      $UPDATE_LINE = if ($autoUpdate) { "[update] $versionStr  restart to apply" } else { "[update] $versionStr  run: pal cli update" }
     }
   } catch {}
 }

@@ -12,7 +12,7 @@ import { resolve } from "node:path";
 import { logDebug } from "../lib/log";
 import { ensureDir, palPkg, paths } from "../lib/paths";
 
-interface UpdateCache {
+export interface UpdateCache {
   checkedAt: string;
   available: boolean;
   current: string;
@@ -26,16 +26,22 @@ function cachePath(): string {
   return resolve(ensureDir(paths.state()), "update-available.json");
 }
 
-function readCache(): UpdateCache | null {
+/** The last check's result whatever its age — the notice and the page read this, not the TTL. */
+export function cachedStatus(): UpdateCache | null {
   try {
     const fp = cachePath();
     if (!existsSync(fp)) return null;
-    const cache = JSON.parse(readFileSync(fp, "utf-8")) as UpdateCache;
-    if (Date.now() - new Date(cache.checkedAt).getTime() < CACHE_TTL_MS) return cache;
-    return null; // expired
+    return JSON.parse(readFileSync(fp, "utf-8")) as UpdateCache;
   } catch {
     return null;
   }
+}
+
+function readCache(): UpdateCache | null {
+  const cache = cachedStatus();
+  if (!cache) return null;
+  const fresh = Date.now() - new Date(cache.checkedAt).getTime() < CACHE_TTL_MS;
+  return fresh ? cache : null;
 }
 
 function writeCache(cache: UpdateCache): void {
@@ -50,7 +56,7 @@ export function isRepoMode(): boolean {
   return existsSync(resolve(palPkg(), ".git"));
 }
 
-function getInstalledVersion(): string {
+export function getInstalledVersion(): string {
   try {
     const pkg = JSON.parse(readFileSync(resolve(palPkg(), "package.json"), "utf-8"));
     return pkg.version || "0.0.0";
@@ -193,14 +199,7 @@ export function clearUpdateCache(): void {
 
 /** Read cached update status for greeting display. Returns null if no update. */
 export function getUpdateNotice(): string | null {
-  try {
-    const fp = cachePath();
-    if (!existsSync(fp)) return null;
-    const cache = JSON.parse(readFileSync(fp, "utf-8")) as UpdateCache;
-    if (!cache.available) return null;
-
-    return `📦 Update available: ${cache.current} → ${cache.latest} (pal cli update)`;
-  } catch {
-    return null;
-  }
+  const cache = cachedStatus();
+  if (!cache?.available) return null;
+  return `📦 Update available: ${cache.current} → ${cache.latest} (pal cli update)`;
 }

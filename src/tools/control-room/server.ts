@@ -6,6 +6,7 @@
  * `pal cli server start|stop|status` owns the process; this file only serves.
  */
 
+import { autoUpdateStatus, spawnAutoUpdate } from "../../hooks/lib/auto-update";
 import { loadMachine } from "../../hooks/lib/machine";
 import { readAllProjects } from "../../hooks/lib/projects";
 import { isServesKind, setServes } from "../../hooks/lib/serves";
@@ -25,6 +26,7 @@ import {
   isQuadrant,
   QUADRANTS,
   readInstallSettings,
+  setAutoUpdate,
   setIscStatus,
   setPlacement,
   type WriteOutcome,
@@ -255,6 +257,26 @@ async function readWrite(request: Request): Promise<Response> {
   return json({ marked: markRead(ids as string[]) });
 }
 
+async function autoUpdateWrite(request: Request): Promise<Response> {
+  const body = await readBody(request);
+  if (!body) return json({ error: "expected a JSON body" }, 400);
+  const { enabled } = body;
+  if (typeof enabled !== "boolean") {
+    return json({ error: "enabled must be true or false" }, 400);
+  }
+  const outcome = setAutoUpdate(enabled);
+  return outcome.ok ? json(autoUpdateStatus()) : answer(outcome, {});
+}
+
+/**
+ * The button runs the update the daily gate would have run, bypassing the
+ * schedule but not the dirty-tree guard the child applies to itself.
+ */
+function updateNow(): Promise<Response> {
+  spawnAutoUpdate();
+  return Promise.resolve(json({ started: true }, 202));
+}
+
 async function prefsWrite(request: Request): Promise<Response> {
   const body = await readBody(request);
   if (!body) return json({ error: "expected a JSON body" }, 400);
@@ -270,6 +292,8 @@ const WRITES: Record<string, (request: Request) => Promise<Response>> = {
   "/api/snooze": snoozeWrite,
   "/api/attention/read": readWrite,
   "/api/prefs": prefsWrite,
+  "/api/update": autoUpdateWrite,
+  "/api/update/run": updateNow,
 };
 
 export function startControlRoom(port: number = DEFAULT_PORT) {
@@ -312,6 +336,8 @@ export function startControlRoom(port: number = DEFAULT_PORT) {
           return json(readInstallSettings());
         case "/api/prefs":
           return json(readPrefs());
+        case "/api/update":
+          return json(autoUpdateStatus());
         case "/api/attention":
           return json(attention());
         case "/api/status":

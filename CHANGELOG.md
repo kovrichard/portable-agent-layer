@@ -1,3 +1,17 @@
+# [0.78.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.77.0...v0.78.0) (2026-09-17)
+
+
+### Features
+
+* implement session close auto-update mechanism ([f92830c](https://github.com/kovrichard/portable-agent-layer/commit/f92830c89b118e6bcd949fb6066af981a05e7bb5))
+
+# [0.77.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.76.1...v0.77.0) (2026-09-16)
+
+
+### Features
+
+* introduce optional auto update ([e67a2fd](https://github.com/kovrichard/portable-agent-layer/commit/e67a2fdab1483d649f110a06b794a26fc32f6f57))
+
 ## [0.76.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.76.0...v0.76.1) (2026-09-14)
 
 

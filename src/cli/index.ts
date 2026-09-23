@@ -173,6 +173,9 @@ async function session(sessionArgs: string[]) {
     await checkForUpdate();
     const notice = getUpdateNotice();
     if (notice) console.log(`\n${notice}`);
+    const { autoUpdateOnClose } = await import("../hooks/lib/auto-update");
+    const closing = autoUpdateOnClose();
+    if (closing) console.log(`\n${closing}`);
   } catch {
     // Non-critical
   }
@@ -1240,10 +1243,12 @@ async function install(targets: Targets) {
     await import("../targets/lib");
   const { promptIdentity } = await import("./setup-identity");
   const { promptAttribution } = await import("./setup-attribution");
+  const { promptAutoUpdate } = await import("./setup-auto-update");
   scaffoldTelos();
   scaffoldPalSettings();
   await promptIdentity();
   await promptAttribution();
+  await promptAutoUpdate();
   pointAtOnboarding();
 
   // Registers the label loadActor derives, so it travels on the next export.

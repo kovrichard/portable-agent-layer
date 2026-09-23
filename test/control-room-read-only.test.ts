@@ -89,6 +89,7 @@ const GETS = [
   "/api/ledger",
   "/api/projects",
   "/api/status",
+  "/api/update",
 ];
 
 describe("reading the morning screen writes nothing", () => {

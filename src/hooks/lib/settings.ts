@@ -25,6 +25,8 @@ export interface PalSettingsData {
   dynamicContext?: Record<string, boolean>;
   /** Git co-author attribution opt-in. `decided` gates the one-time prompt. */
   attribution?: { enabled?: boolean; decided?: boolean };
+  /** Daily unattended self-update opt-in. `decided` gates the one-time prompt. */
+  autoUpdate?: { enabled?: boolean; decided?: boolean };
   /**
    * Action-ledger user extension. `redactPaths` adds to the built-in set of
    * paths whose contents are never stored; it cannot shrink it.

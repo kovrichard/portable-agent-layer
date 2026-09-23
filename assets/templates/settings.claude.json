@@ -196,6 +196,17 @@
           }
         ]
       }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "prompt_input_exit|logout|other",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/SessionClose.ts --agent=claude"
+          }
+        ]
+      }
     ]
   },
   "autoMemoryEnabled": false
