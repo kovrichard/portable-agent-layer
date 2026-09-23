@@ -231,6 +231,22 @@ describe("checkBashCommand", () => {
     expect(checkBashCommand("find ~/.pal/memory -name sessions.json")).toBeNull();
   });
 
+  test("a quoted pipe does not split a read into a write", () => {
+    expect(
+      checkBashCommand(
+        String.raw`grep -n "lastReflect\|last_reflect" ~/.pal/memory/sessions.json`
+      )
+    ).toBeNull();
+    expect(checkBashCommand("grep 'a;b' ~/.pal/memory/sessions.json")).toBeNull();
+  });
+
+  test("an unquoted pipe into a write is still blocked", () => {
+    expect(checkBashCommand(`cat x | tee ~/.pal/memory/sessions.json`)).toBeTruthy();
+    expect(
+      checkBashCommand(`grep "a|b" x; echo y > ~/.pal/memory/sessions.json`)
+    ).toBeTruthy();
+  });
+
   test("allows editing managed files in repo templates", () => {
     expect(checkBashCommand("echo 'x' > assets/templates/pal-settings.json")).toBeNull();
     expect(
