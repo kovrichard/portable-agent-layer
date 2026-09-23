@@ -79,9 +79,14 @@ const WIN_ELEVATED_THREATS: [RegExp, string][] = [
   [/\bdiskpart\b/i, "Disk partitioning"],
 ];
 
+const POSIX_ROOT_TARGET = String.raw`["']?(?:(?:~|\$HOME|\$\{HOME\})/?|/)\*?["']?(?=\s|[;&|]|$)`;
+
 /** Dangerous command patterns — always blocked */
 const BLOCKED_COMMANDS: [RegExp, string][] = [
-  [/rm\s+-rf\s+[/~]/, "Recursive delete of root or home"],
+  [
+    new RegExp(String.raw`rm\s+-rf\s+${POSIX_ROOT_TARGET}`),
+    "Recursive delete of root or home",
+  ],
   [/mkfs\./, "Filesystem format"],
   [/dd\s+if=.*of=\/dev\//, "Raw disk write"],
   [/>\s*\/dev\/sd/, "Direct device write"],

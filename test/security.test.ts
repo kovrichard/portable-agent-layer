@@ -216,6 +216,20 @@ describe("checkBashCommand", () => {
     expect(checkBashCommand("rm -rf ./build")).toBeNull();
   });
 
+  test("blocks a recursive delete of root or home however it is spelled", () => {
+    for (const target of ["/", "/*", "~", "~/", "~/*", "$HOME", `\${HOME}/`, '"$HOME"']) {
+      expect(checkBashCommand(`rm -rf ${target}`)).toBeTruthy();
+    }
+    expect(checkBashCommand("rm -rf / && ls")).toBeTruthy();
+  });
+
+  test("allows a recursive delete of a folder inside root or home", () => {
+    expect(checkBashCommand("rm -rf /tmp/scratch/build")).toBeNull();
+    expect(checkBashCommand("rm -rf ~/projects/app/dist")).toBeNull();
+    expect(checkBashCommand("rm -rf $HOME/.cache/bun")).toBeNull();
+    expect(checkBashCommand("rm -rf  build")).toBeNull();
+  });
+
   // --- Managed file scoping ---
 
   test("blocks writing to managed files under managed roots", () => {
