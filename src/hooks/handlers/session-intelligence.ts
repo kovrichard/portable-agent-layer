@@ -1,8 +1,8 @@
 /**
  * Stop handler: unified session intelligence capture.
  *
- * Produces: title, summary, insights via Haiku.
- * Writes: session learning file, project history.
+ * Produces: title, summary, insights, handoff via Haiku.
+ * Writes: session learning file, project history, auto handoff (in-progress only).
  *
  * Relationship notes → written in ALGORITHM LEARN phase via relationship-note.ts
  * Handoff notes     → written in ALGORITHM LEARN phase via handoff-note.ts
@@ -32,6 +32,7 @@ import {
   parseMessages,
 } from "../lib/transcript";
 import { appendProjectHistory, detectStatus } from "../lib/work-tracking";
+import { writeAutoHandoff } from "./persist-last-exchange";
 
 // ── JSON schema for merged Haiku call ──
 
@@ -140,6 +141,9 @@ export async function captureSessionIntelligence(
   const title = output?.title || extractContent(lastUser).slice(0, 80) || "session";
   const summary = output?.summary || lastAssistantText.slice(0, 600);
   const insights = output?.insights || "";
+  if (status === "in-progress" && output?.handoff) {
+    writeAutoHandoff(process.cwd(), { title, status, handoff: output.handoff });
+  }
   // ── Write session learning file ──
 
   const category = categorizeLearning(title, summary);

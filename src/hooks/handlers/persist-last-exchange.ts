@@ -35,6 +35,34 @@ function isProtectedHandoff(entry: unknown): boolean {
   return Date.now() - new Date(e.timestamp).getTime() <= HANDOFF_STALE_MS;
 }
 
+interface AutoHandoff {
+  title: string;
+  status: string;
+  handoff: string;
+}
+
+function readHandoffs(handoffPath: string): Record<string, unknown> {
+  try {
+    return existsSync(handoffPath) ? JSON.parse(readFileSync(handoffPath, "utf-8")) : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Record this cwd's handoff unless a fresh deliberate note already owns it (ISC-39). */
+export function writeAutoHandoff(cwd: string, entry: AutoHandoff): void {
+  const handoffPath = resolve(ensureDir(paths.state()), "last-handoff.json");
+  const existing = readHandoffs(handoffPath);
+  if (isProtectedHandoff(existing[cwd])) return;
+  existing[cwd] = {
+    timestamp: new Date().toISOString(),
+    ...entry,
+    artifacts: [],
+    source: "auto",
+  };
+  writeFileSync(handoffPath, JSON.stringify(existing, null, 2), "utf-8");
+}
+
 export function persistLastExchange(
   messages: ParsedMessage[],
   sessionId: string,
@@ -59,30 +87,17 @@ export function persistLastExchange(
     writeFileSync(resolve(stateDir, `${sessionId}.json`), json, "utf-8");
     writeFileSync(resolve(stateDir, "latest.json"), json, "utf-8");
 
-    // 2. Write last-handoff.json for "Pick Up Where You Left Off" — unless a
-    //    fresh deliberate note already owns this cwd (ISC-39).
-    const handoffPath = resolve(paths.state(), "last-handoff.json");
-    const existing: Record<string, unknown> = existsSync(handoffPath)
-      ? JSON.parse(readFileSync(handoffPath, "utf-8"))
-      : {};
-    if (!isProtectedHandoff(existing[cwd])) {
-      const title = (lastUser.slice(0, 80).replace(/\n/g, " ") || "Session").trim();
-      const handoff = [
-        lastUser ? `Last user message:\n${lastUser.slice(0, 500)}` : "",
-        lastAssistant ? `\nLast assistant response:\n${lastAssistant.slice(0, 500)}` : "",
-      ]
-        .filter(Boolean)
-        .join("");
-      existing[cwd] = {
-        timestamp: new Date().toISOString(),
-        title,
-        status: detectStatus(lastAssistant),
-        handoff,
-        artifacts: [],
-        source: "auto",
-      };
-      writeFileSync(handoffPath, JSON.stringify(existing, null, 2), "utf-8");
-    }
+    const handoff = [
+      lastUser ? `Last user message:\n${lastUser.slice(0, 500)}` : "",
+      lastAssistant ? `\nLast assistant response:\n${lastAssistant.slice(0, 500)}` : "",
+    ]
+      .filter(Boolean)
+      .join("");
+    writeAutoHandoff(cwd, {
+      title: (lastUser.slice(0, 80).replace(/\n/g, " ") || "Session").trim(),
+      status: detectStatus(lastAssistant),
+      handoff,
+    });
 
     logDebug(
       "persist-last-exchange",

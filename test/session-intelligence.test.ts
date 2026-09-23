@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { captureSessionIntelligence } from "../src/hooks/handlers/session-intelligence";
@@ -8,6 +15,9 @@ import {
   markCaptured,
   readCapture,
 } from "../src/hooks/lib/capture-store";
+import { _resetClaudeBinaryCache } from "../src/hooks/lib/inference";
+import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
+import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 
 // Every case here fails a guard that returns before canInfer(), so no inference
 // is ever reached. That is the point: the gating is what decides whether a
@@ -87,5 +97,53 @@ describe("a session already captured", () => {
     // Asserting on the decision, not on what follows it: past this guard the
     // handler reaches the inference gate, whose answer depends on the machine.
     expect(isRecaptureWorthwhile(readCapture("s1"), 40)).toBe(true);
+  });
+});
+
+describe("an unfinished session", () => {
+  let binDir: string;
+  let savedPath: string | undefined;
+
+  beforeEach(() => {
+    binDir = mkdtempSync(resolve(tmpdir(), "pal-si-bin-"));
+    savedPath = process.env.PATH;
+    delete process.env.PAL_INFERENCE_DISABLED;
+    delete process.env[SPAWN_GUARD_ENV.SENTINEL];
+    delete process.env[SPAWN_GUARD_ENV.DEPTH];
+    process.env.PAL_AGENT = "claude";
+    const reply = {
+      title: "Handoff wiring",
+      summary: "We traced the handoff.",
+      insights: "",
+      handoff: "Wire the model handoff into last-handoff.json, then run the gates.",
+    };
+    writeFakeBin(
+      binDir,
+      "claude",
+      `console.log(${JSON.stringify(JSON.stringify(reply))});\n`
+    );
+    prependPath(binDir);
+    _resetClaudeBinaryCache();
+  });
+
+  afterEach(() => {
+    process.env.PATH = savedPath;
+    process.env.PAL_INFERENCE_DISABLED = "1";
+    _resetClaudeBinaryCache();
+    rmSync(binDir, { recursive: true, force: true });
+  });
+
+  test("leaves the model's handoff for the next session, not the raw last exchange", async () => {
+    await captureSessionIntelligence(transcript(12, 300), "s-open");
+
+    const handoffs = JSON.parse(
+      readFileSync(resolve(HOME, "memory", "state", "last-handoff.json"), "utf-8")
+    );
+    expect(handoffs[process.cwd()]).toMatchObject({
+      title: "Handoff wiring",
+      status: "in-progress",
+      handoff: "Wire the model handoff into last-handoff.json, then run the gates.",
+      source: "auto",
+    });
   });
 });
