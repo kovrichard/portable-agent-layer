@@ -349,10 +349,11 @@ export function resolveProjectFromCwd(
 
 export function isStale(
   p: ProjectProgress,
-  thresholdDays = PROJECT_STALE_DAYS_DEFAULT
+  thresholdDays = PROJECT_STALE_DAYS_DEFAULT,
+  now: Date = new Date()
 ): boolean {
   if (!p.updated) return false;
-  const age = Date.now() - new Date(p.updated).getTime();
+  const age = now.getTime() - new Date(p.updated).getTime();
   if (!Number.isFinite(age) || age < 0) return false;
   return age > thresholdDays * 86_400_000;
 }

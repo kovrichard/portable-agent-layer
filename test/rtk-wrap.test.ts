@@ -8,7 +8,7 @@ import { delimiter, resolve } from "node:path";
 // deterministic and don't depend on a real rtk being installed on CI.
 //
 // Tests that must actually EXECUTE the fake prepend the temp dir to the real
-// PATH, so the fake shadows any real rtk while `node` still resolves for the
+// PATH, so the fake shadows any real rtk while `bun` still resolves for the
 // launcher. The fake's logic is JavaScript on both platforms; only the launcher
 // differs — a shebang on POSIX, a .cmd shim on Windows, which is what
 // findBinaryOnPath resolves there via PATHEXT.
@@ -24,11 +24,11 @@ function writeFakeRtk(body: string): void {
   const script = `const c=[];process.stdin.on("data",d=>c.push(d));process.stdin.on("end",()=>{${body}});`;
   if (WINDOWS) {
     writeFileSync(resolve(dir, "rtk.js"), script);
-    writeFileSync(resolve(dir, "rtk.cmd"), `@echo off\r\nnode "%~dp0rtk.js" %*\r\n`);
+    writeFileSync(resolve(dir, "rtk.cmd"), `@echo off\r\nbun "%~dp0rtk.js" %*\r\n`);
     return;
   }
   const p = resolve(dir, "rtk");
-  writeFileSync(p, `#!/usr/bin/env node\n${script}\n`);
+  writeFileSync(p, `#!/usr/bin/env bun\n${script}\n`);
   chmodSync(p, 0o755);
 }
 
