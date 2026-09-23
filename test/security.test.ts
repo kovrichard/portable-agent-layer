@@ -1,9 +1,33 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { checkBashCommand, checkFilePath } from "../src/hooks/lib/security";
 import { linkDir } from "./helpers/links";
+
+const ROOT_OVERRIDES = [
+  "PAL_HOME",
+  "PAL_CLAUDE_DIR",
+  "PAL_AGENTS_DIR",
+  "PAL_CURSOR_DIR",
+  "PAL_OPENCODE_DIR",
+];
+const savedOverrides = new Map(ROOT_OVERRIDES.map((name) => [name, process.env[name]]));
+
+beforeAll(() => {
+  for (const name of ROOT_OVERRIDES) delete process.env[name];
+});
+
+afterAll(() => {
+  for (const [name, value] of savedOverrides) {
+    if (value === undefined) delete process.env[name];
+    else process.env[name] = value;
+  }
+});
+
+function home(...segments: string[]): string {
+  return join(homedir(), ...segments);
+}
 
 describe("checkBashCommand", () => {
   // --- Dangerous commands (always blocked) ---
@@ -236,6 +260,21 @@ describe("checkBashCommand", () => {
     expect(checkBashCommand("grep pattern ratings.jsonl")).toBeNull();
   });
 
+  test("blocks managed files however the home directory is spelled", () => {
+    expect(checkBashCommand("echo x > $HOME/.pal/memory/sessions.json")).toBeTruthy();
+    expect(checkBashCommand(`echo x > \${HOME}/.claude/CLAUDE.md`)).toBeTruthy();
+    expect(checkBashCommand(`echo x > ${home(".pal", "AGENTS.md")}`)).toBeTruthy();
+  });
+
+  test("allows writing a repository's own agent docs inside a Claude Code worktree", () => {
+    expect(
+      checkBashCommand(
+        "echo x > /src/MyRepo/.claude/worktrees/wt-1/libraries/Foo/AGENTS.md"
+      )
+    ).toBeNull();
+    expect(checkBashCommand("echo x > /src/MyRepo/.claude/CLAUDE.md")).toBeNull();
+  });
+
   // --- Managed directory scoping ---
 
   test("blocks writing to managed dirs under managed roots", () => {
@@ -274,14 +313,42 @@ describe("checkFilePath", () => {
   // --- Managed file scoping ---
 
   test("blocks managed files under managed roots", () => {
-    expect(checkFilePath("/home/user/.pal/memory/sessions.json")).toBeTruthy();
-    expect(checkFilePath("/home/user/.claude/CLAUDE.md")).toBeTruthy();
-    expect(checkFilePath("/home/user/.agents/ratings.jsonl")).toBeTruthy();
+    expect(checkFilePath(home(".pal", "memory", "sessions.json"))).toBeTruthy();
+    expect(checkFilePath(home(".claude", "CLAUDE.md"))).toBeTruthy();
+    expect(checkFilePath(home(".agents", "ratings.jsonl"))).toBeTruthy();
   });
 
-  test("blocks managed files under managed roots (Windows paths)", () => {
+  test("blocks managed files spelled with backslashes", () => {
+    const backslashed = home(".pal", "memory", "pal-settings.json").replaceAll("/", "\\");
+    expect(checkFilePath(backslashed)).toBeTruthy();
+  });
+
+  test("blocks managed files under a relocated PAL home", () => {
+    process.env.PAL_HOME = "/srv/pal-home";
+    try {
+      expect(checkFilePath("/srv/pal-home/memory/sessions.json")).toBeTruthy();
+      expect(checkFilePath(home(".pal", "memory", "sessions.json"))).toBeNull();
+    } finally {
+      delete process.env.PAL_HOME;
+    }
+  });
+
+  test("allows a repository's own agent docs inside a Claude Code worktree", () => {
     expect(
-      checkFilePath("C:\\Users\\testuser\\.pal\\memory\\pal-settings.json")
+      checkFilePath("/src/MyRepo/.claude/worktrees/wt-1/libraries/Foo/AGENTS.md")
+    ).toBeNull();
+    expect(checkFilePath("/src/MyRepo/.claude/worktrees/wt-1/CLAUDE.md")).toBeNull();
+  });
+
+  test("allows agent docs in a repository's own dot-folders", () => {
+    expect(checkFilePath("/src/MyRepo/.claude/CLAUDE.md")).toBeNull();
+    expect(checkFilePath("/src/MyRepo/.cursor/rules/AGENTS.md")).toBeNull();
+    expect(checkFilePath("/src/MyRepo/.agents/skills/x/AGENTS.md")).toBeNull();
+  });
+
+  test("still blocks Claude auto-memory nested inside a worktree", () => {
+    expect(
+      checkFilePath("/src/R/.claude/worktrees/wt/.claude/projects/p/memory/x.md")
     ).toBeTruthy();
   });
 
@@ -299,23 +366,31 @@ describe("checkFilePath", () => {
   // --- Managed directory scoping ---
 
   test("blocks managed directories under managed roots", () => {
-    expect(checkFilePath("/home/user/.pal/memory/signals/foo.txt")).toBeTruthy();
-    expect(checkFilePath("/home/user/.pal/memory/learning/session/file.md")).toBeTruthy();
+    expect(checkFilePath(home(".pal", "memory", "signals", "foo.txt"))).toBeTruthy();
+    expect(
+      checkFilePath(home(".pal", "memory", "learning", "session", "file.md"))
+    ).toBeTruthy();
+  });
+
+  test("allows repository folders that share a managed directory's name", () => {
+    expect(checkFilePath("/src/MyRepo/src/debug/logger.ts")).toBeNull();
+    expect(checkFilePath("/src/MyRepo/docs/memory/projects/x.md")).toBeNull();
   });
 
   // --- PAL-deployed dirs (engine-managed, overwritten on pal install) ---
 
   test("blocks writes to ~/.pal/docs/ with actionable message", () => {
-    expect(checkFilePath("/home/user/.pal/docs/README.md")).toMatch(
+    expect(checkFilePath(home(".pal", "docs", "README.md"))).toMatch(
       /managed by 'pal install'.*PAL repo/
     );
-    expect(checkFilePath("/home/user/.pal/docs/ALGORITHM.md")).toMatch(/pal install/);
+    expect(checkFilePath(home(".pal", "docs", "ALGORITHM.md"))).toMatch(/pal install/);
   });
 
   test("blocks shipped (symlinked) skills but allows personal skill dirs", () => {
     const base = mkdtempSync(join(tmpdir(), "pal-skills-"));
     const skills = join(base, ".pal", "skills");
     mkdirSync(skills, { recursive: true });
+    process.env.PAL_HOME = join(base, ".pal");
     // shipped skill = symlink into the repo; personal skill = real dir authored in place
     const repoSkill = join(base, "repo-skill");
     mkdirSync(repoSkill, { recursive: true });
@@ -329,19 +404,24 @@ describe("checkFilePath", () => {
       // a not-yet-created personal skill is also allowed (scaffolding)
       expect(checkFilePath(join(skills, "brandnew", "SKILL.md"))).toBeNull();
     } finally {
+      delete process.env.PAL_HOME;
       rmSync(base, { recursive: true, force: true });
     }
   });
 
   test("blocks writes to ~/.pal/tools/ with actionable message", () => {
-    expect(checkFilePath("/home/user/.pal/tools/thread.ts")).toMatch(
+    expect(checkFilePath(home(".pal", "tools", "thread.ts"))).toMatch(
       /managed by 'pal install'.*PAL repo/
     );
   });
 
+  test("allows a repository's own .pal/docs folder", () => {
+    expect(checkFilePath("/src/MyRepo/.pal/docs/README.md")).toBeNull();
+  });
+
   test("does not block .pal paths that don't match docs/skills/tools", () => {
-    expect(checkFilePath("/home/user/.pal/telos/GOALS.md")).toBeNull();
-    expect(checkFilePath("/home/user/.pal/memory/pal-settings.json")).toBeTruthy(); // caught by HOOK_MANAGED_FILES
+    expect(checkFilePath(home(".pal", "telos", "GOALS.md"))).toBeNull();
+    expect(checkFilePath(home(".pal", "memory", "pal-settings.json"))).toBeTruthy(); // caught by HOOK_MANAGED_FILES
   });
 
   // --- Safe paths ---

@@ -4,6 +4,9 @@
  */
 
 import { lstatSync } from "node:fs";
+import { homedir } from "node:os";
+import { resolve } from "node:path";
+import { palHome, platform } from "./paths";
 
 // PowerShell aliases rm, rmdir, del, erase, rd and ri all to Remove-Item, and
 // cmd ships its own rd and del — so the verb alone never says which shell ran it.
@@ -137,13 +140,8 @@ const HOOK_MANAGED_DIRS = [
   "debug",
 ];
 
-/** Escape a string for use in a RegExp */
-function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 /** PAL-deployed dirs — engine-managed, overwritten on every `pal install` */
-const PAL_INSTALLED_DIRS_RE = /[/\\]\.pal[/\\](?:docs|skills|tools)[/\\]/;
+const PAL_INSTALLED_DIRS = ["docs", "skills", "tools"];
 
 /** Paths that should never be written to */
 const PROTECTED_PATHS: RegExp[] = [
@@ -154,25 +152,80 @@ const PROTECTED_PATHS: RegExp[] = [
   /\.gnupg\//,
   // Claude Code auto-memory — PAL owns memory; writes here indicate wrong system is being used
   /\.claude\/projects\/[^/]+\/memory\//,
-  // PAL_INSTALLED_DIRS_RE is enforced by the dedicated branch in checkFilePath
-  // (which exempts personal skill dirs); keeping it here would re-block them.
-  // Derived from HOOK_MANAGED_FILES — scoped to managed roots only
-  ...HOOK_MANAGED_FILES.map(
-    (name) =>
-      new RegExp(
-        String.raw`[/\\]\.(?:pal|claude|agents|cursor)[/\\].*${escapeRegExp(name)}$`
-      )
-  ),
 ];
 
-/** Roots where managed files/dirs are protected (user state, not repo templates) */
-const MANAGED_ROOTS = [".pal/", ".claude/", ".agents/", ".config/opencode/", ".cursor/"];
+function comparable(path: string): string {
+  const forward = path.replaceAll("\\", "/").replace(/\/+$/, "");
+  return process.platform === "win32" ? forward.toLowerCase() : forward;
+}
 
-function isUnderManagedRoot(path: string): boolean {
-  const normalized = path.replaceAll("\\", "/");
-  return MANAGED_ROOTS.some(
-    (root) => normalized.includes(`/${root}`) || normalized.includes(`\\.${root}`)
-  );
+function absoluteComparable(path: string): string {
+  return comparable(resolve(path.replaceAll("\\", "/")));
+}
+
+/** The part of `path` below `root`, or null when `path` is outside it. */
+function pathBelow(root: string, path: string): string | null {
+  const base = absoluteComparable(root);
+  const target = absoluteComparable(path);
+  return target.startsWith(`${base}/`) ? target.slice(base.length + 1) : null;
+}
+
+/** The real directories PAL writes user state into, not any folder that shares their name. */
+function managedRoots(): string[] {
+  return [
+    palHome(),
+    platform.claudeDir(),
+    platform.agentsDir(),
+    platform.cursorDir(),
+    platform.opencodeDir(),
+  ];
+}
+
+function pathInsideManagedRoot(path: string): string | null {
+  for (const root of managedRoots()) {
+    const below = pathBelow(root, path);
+    if (below !== null) return below;
+  }
+  return null;
+}
+
+function managedFileAt(below: string): string | undefined {
+  return HOOK_MANAGED_FILES.find((name) => {
+    const file = comparable(name);
+    return below === file || below.endsWith(`/${file}`);
+  });
+}
+
+function managedDirAt(below: string): string | undefined {
+  return HOOK_MANAGED_DIRS.find((dir) => `/${below}/`.includes(`/${comparable(dir)}/`));
+}
+
+function managedPathReason(path: string): string | null {
+  const below = pathInsideManagedRoot(path);
+  if (below === null) return null;
+  const file = managedFileAt(below);
+  if (file) return `${file} is managed automatically by hooks — do not edit directly`;
+  const dir = managedDirAt(below);
+  if (dir) return `${dir}/ is managed automatically by hooks — do not edit directly`;
+  return null;
+}
+
+const HOME_PREFIX =
+  /^(?:~|\$HOME|\$\{HOME\}|\$env:USERPROFILE|%USERPROFILE%)(?=[/\\]|$)/i;
+const COMMAND_TOKEN = /[^\s'"`<>|;&()=]+/g;
+
+function pathsNamedIn(segment: string): string[] {
+  return Array.from(segment.matchAll(COMMAND_TOKEN), (m) => m[0])
+    .filter((token) => HOME_PREFIX.test(token) || /[/\\]/.test(token))
+    .map((token) => token.replace(HOME_PREFIX, () => homedir()));
+}
+
+function managedReasonInSegment(segment: string): string | null {
+  for (const path of pathsNamedIn(segment)) {
+    const reason = managedPathReason(path);
+    if (reason) return reason;
+  }
+  return null;
 }
 
 /** Read-only commands allowed to reference protected files */
@@ -189,26 +242,10 @@ export function checkBashCommand(cmd: string): string | null {
       if (pattern.test(cmd)) return reason;
     }
   }
-  // If command references a managed file in a managed root path, block unless read-only.
-  // The filename must appear IN the same path as the managed root (e.g. .pal/.../file.json).
-  const segments = cmd.split(/[|;&&]/).map((s) => s.trim());
-  for (const name of HOOK_MANAGED_FILES) {
-    const pattern = new RegExp(
-      String.raw`\.(?:pal|claude|agents|cursor|config/opencode)[/\\]\S*${escapeRegExp(name)}`
-    );
-    const managed = segments.filter((s) => pattern.test(s));
-    if (managed.length > 0 && !managed.every((s) => READ_ONLY_COMMANDS.test(s))) {
-      return `${name} is managed automatically by hooks — do not edit directly`;
-    }
-  }
-  for (const dir of HOOK_MANAGED_DIRS) {
-    const pattern = new RegExp(
-      String.raw`\.(?:pal|claude|agents|cursor|config/opencode)[/\\]\S*${escapeRegExp(dir)}`
-    );
-    const managed = segments.filter((s) => pattern.test(s));
-    if (managed.length > 0 && !managed.every((s) => READ_ONLY_COMMANDS.test(s))) {
-      return `${dir} is managed automatically by hooks — do not edit directly`;
-    }
+  const segments = cmd.split(/[|;&]/).map((s) => s.trim());
+  for (const segment of segments) {
+    const reason = managedReasonInSegment(segment);
+    if (reason && !READ_ONLY_COMMANDS.test(segment)) return reason;
   }
   return null;
 }
@@ -218,44 +255,25 @@ export function checkBashCommand(cmd: string): string | null {
  * skills are real dirs authored in place. A not-yet-created skill dir is also
  * personal (scaffolding). So: symlink → shipped/protected, otherwise → personal.
  */
-function isShippedSkillPath(normalized: string): boolean {
-  const m = /\.pal\/skills\/([^/]+)/.exec(normalized);
-  if (!m) return false;
-  const skillRoot = normalized.slice(0, m.index + m[0].length);
+function isShippedSkill(name: string): boolean {
   try {
-    return lstatSync(skillRoot).isSymbolicLink();
+    return lstatSync(resolve(palHome(), "skills", name)).isSymbolicLink();
   } catch {
     return false;
   }
 }
 
+function palInstalledReason(path: string): string | null {
+  const [dir, entry] = pathBelow(palHome(), path)?.split("/") ?? [];
+  if (!dir || !entry || !PAL_INSTALLED_DIRS.includes(dir)) return null;
+  if (dir === "skills" && !isShippedSkill(entry)) return null;
+  return `~/.pal/${dir}/ is managed by 'pal install' — edit the source in the PAL repo instead`;
+}
+
 /** Check a file path against protected patterns. Returns a reason string or null. */
 export function checkFilePath(filePath: string): string | null {
-  const normalized = filePath.replaceAll("\\", "/");
-  // Check hook-managed files — only under managed roots (not repo templates)
-  if (isUnderManagedRoot(normalized)) {
-    const matchedFile = HOOK_MANAGED_FILES.find((name) =>
-      normalized.endsWith(`/${name}`)
-    );
-    if (matchedFile) {
-      return `${matchedFile} is managed automatically by hooks — do not edit directly`;
-    }
-  }
-  // Check hook-managed directories
-  const matchedDir = HOOK_MANAGED_DIRS.find((dir) => normalized.includes(`/${dir}/`));
-  if (matchedDir) {
-    return `${matchedDir}/ is managed automatically by hooks — do not edit directly`;
-  }
-  // PAL-deployed dirs — edit source in the PAL repo, not the installed copy
-  if (PAL_INSTALLED_DIRS_RE.test(normalized)) {
-    const match = new RegExp(/\.pal[/\\](docs|skills|tools)/).exec(normalized);
-    const dir = match ? match[1] : "docs/skills/tools";
-    const isPersonalSkill = dir === "skills" && !isShippedSkillPath(normalized);
-    if (!isPersonalSkill) {
-      return `~/.pal/${dir}/ is managed by 'pal install' — edit the source in the PAL repo instead`;
-    }
-  }
-  // Check remaining system-protected paths
+  const reason = managedPathReason(filePath) ?? palInstalledReason(filePath);
+  if (reason) return reason;
   if (PROTECTED_PATHS.some((pattern) => pattern.test(filePath))) {
     return `Protected path: ${filePath}`;
   }

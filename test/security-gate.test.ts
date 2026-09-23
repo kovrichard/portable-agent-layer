@@ -135,7 +135,11 @@ describe("which tool names the gate recognises", () => {
 });
 
 describe("a refused file write", () => {
-  const PROTECTED = "/home/someone/.pal/memory/projects/demo/ISA.md";
+  let PROTECTED: string;
+
+  beforeEach(() => {
+    PROTECTED = resolve(HOME, "memory", "projects", "demo", "ISA.md");
+  });
 
   test("names the file, not the directory", () => {
     const refusal = decideRefusal(wrapped("Edit", { file_path: PROTECTED }), CWD);
