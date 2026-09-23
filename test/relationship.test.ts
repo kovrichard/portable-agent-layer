@@ -99,10 +99,12 @@ describe("appendNotes", () => {
     expect(content).toContain(`cwd:${process.cwd()}`);
   });
 
-  test("omits the session comment when no id is given", () => {
+  test("stamps the cwd without a session id, as the relationship-note tool writes", () => {
     appendNotes([{ type: "W", text: "a fact" }]);
 
-    expect(readFileSync(todayFile(), "utf-8")).not.toContain("<!-- session:");
+    const content = readFileSync(todayFile(), "utf-8");
+    expect(content).not.toContain("session:");
+    expect(content).toContain(`<!-- cwd:${process.cwd()} -->`);
   });
 
   test("anchors the cwd to {proj:slug} when it falls inside a registered project", () => {
