@@ -1,5 +1,5 @@
 /**
- * The daily self-update: when it may run unattended, and what came of it.
+ * The unattended self-update: when it may run, and what came of it.
  *
  * `pal cli update` still owns the pull and the reinstall — this module only
  * decides whether to start it and records the outcome, so the command shape
@@ -41,7 +41,8 @@ export interface AutoUpdateStatus {
   last: AutoUpdateLedger | null;
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
 const RESCUE_AFTER_MS = 3 * DAY_MS;
 const LOCK_STALE_MS = 30 * 60 * 1000;
 const DIRTY_TREE = "uncommitted changes in the PAL repo";
@@ -122,15 +123,24 @@ function recordSkip(reason: string): void {
   logDebug("auto-update", `skipped: ${reason}`);
 }
 
-function attemptedWithin(ledger: AutoUpdateLedger | null, now: number): boolean {
-  if (!ledger?.attemptedAt) return false;
-  return now - new Date(ledger.attemptedAt).getTime() < DAY_MS;
+/**
+ * A clean run — including one that found nothing to install — only waits out the
+ * hour, so a release published after the morning's check still lands today. A
+ * failed or interrupted run waits a day, so a broken update cannot loop.
+ */
+function waitAfter(ledger: AutoUpdateLedger): number {
+  return ledger.ok === true ? HOUR_MS : DAY_MS;
 }
 
-/** The unattended gate: opted in, not already tried today, and safe to pull. */
+function heldByLastRun(ledger: AutoUpdateLedger | null, now: number): boolean {
+  if (!ledger?.attemptedAt) return false;
+  return now - new Date(ledger.attemptedAt).getTime() < waitAfter(ledger);
+}
+
+/** The unattended gate: opted in, not held by the last run, and safe to pull. */
 export function shouldAutoUpdate(now: number = Date.now()): boolean {
   if (!isAutoUpdateEnabled()) return false;
-  if (attemptedWithin(readLedger(), now)) return false;
+  if (heldByLastRun(readLedger(), now)) return false;
   if (hasUncommittedChanges()) {
     recordSkip(DIRTY_TREE);
     return false;
