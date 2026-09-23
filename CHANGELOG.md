@@ -1,3 +1,10 @@
+## [0.78.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.78.1...v0.78.2) (2026-09-23)
+
+
+### Bug Fixes
+
+* **security:** protect PAL's real directories, not any folder with their name ([090dd23](https://github.com/kovrichard/portable-agent-layer/commit/090dd233cfc7a841ae47c81b255751dd0d44ac7a)), closes [#13](https://github.com/kovrichard/portable-agent-layer/issues/13)
+
 ## [0.78.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.78.0...v0.78.1) (2026-09-23)
 
 
