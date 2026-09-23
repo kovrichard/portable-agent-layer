@@ -1,3 +1,11 @@
+## [0.78.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.78.0...v0.78.1) (2026-09-23)
+
+
+### Bug Fixes
+
+* **cli:** launch any of the five terminal agents from bare pal ([64ecfb4](https://github.com/kovrichard/portable-agent-layer/commit/64ecfb49f7465c0e8686015b5fafddbd3d711b97))
+* judge board staleness against its own clock; run fake rtk with bun ([1cfebfd](https://github.com/kovrichard/portable-agent-layer/commit/1cfebfd7b59176605edff2564d8c2db90d5d9e74))
+
 # [0.78.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.77.0...v0.78.0) (2026-09-17)
 
 
