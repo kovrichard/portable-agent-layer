@@ -184,4 +184,12 @@ describe("an unfinished session", () => {
       rmSync(startDir, { recursive: true, force: true });
     }
   });
+
+  test("records no history when the model gave no summary", async () => {
+    writeFakeBin(binDir, "claude", "process.exit(1);\n");
+
+    await captureSessionIntelligence(transcript(12, 300), "s-no-model");
+
+    expect(readProjectHistory(process.cwd())).toEqual([]);
+  });
 });

@@ -219,13 +219,14 @@ export async function captureSessionIntelligence(
   const filepath = resolve(dir, filename);
   await writeFile(filepath, content, "utf-8");
 
-  // Append to per-project history
-  appendProjectHistory(sessionDir(), {
-    date: new Date().toISOString().slice(0, 10),
-    title,
-    summary,
-    insights,
-  });
+  if (output) {
+    appendProjectHistory(sessionDir(), {
+      date: new Date().toISOString().slice(0, 10),
+      title,
+      summary,
+      insights,
+    });
+  }
 
   if (sessionId) markCaptured(sessionId, filepath, messages.length);
   logDebug("session-intelligence", `Learning captured: ${title}`);
