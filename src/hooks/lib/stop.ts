@@ -22,7 +22,12 @@ import { captureWorkSession } from "../handlers/work-session";
 import { spawnDetachedInference } from "./detached-inference";
 import { logDebug, logError } from "./log";
 import { assets, ensureDir, paths } from "./paths";
-import { extractContent, extractLastAssistant, parseMessages } from "./transcript";
+import {
+  extractContent,
+  extractLastAssistant,
+  parseMessages,
+  withFinalReply,
+} from "./transcript";
 
 interface RunStopHandlersOptions {
   lastAssistantMessage?: string;
@@ -31,11 +36,13 @@ interface RunStopHandlersOptions {
 
 /** Run all stop handlers with a transcript string */
 export async function runStopHandlers(
-  transcript: string,
+  fileTranscript: string,
   options: RunStopHandlersOptions = {}
 ): Promise<void> {
-  const messages = parseMessages(transcript);
-  if (messages.length < 2) return;
+  const fileMessages = parseMessages(fileTranscript);
+  if (fileMessages.length < 2) return;
+  const messages = withFinalReply(fileMessages, options.lastAssistantMessage);
+  const transcript = JSON.stringify(messages);
 
   logDebug("runStopHandlers", `Running handlers (${messages.length} messages)`);
 

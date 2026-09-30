@@ -117,8 +117,11 @@ export function loadRelationshipContext(): string {
   }
 }
 
-/** Load session intelligence from compact synthesis state */
-function loadSessionIntelligence(): string {
+/**
+ * Off the startup context until the reflection stats are reliable enough to act on.
+ * @lintignore exercised directly by test/context-build.test.ts
+ */
+export function loadSessionIntelligence(): string {
   try {
     const p = resolve(paths.state(), "synthesis.json");
     if (!existsSync(p)) return "";
@@ -211,9 +214,6 @@ export function buildSystemReminder(
     !skipSemiStatic && settings.isEnabled("opinions") ? loadOpinionContext() : "";
   const selfModel =
     !skipSemiStatic && settings.isEnabled("selfModel") ? loadSelfModel() : "";
-  const intelligence = settings.isEnabled("sessionIntelligence")
-    ? loadSessionIntelligence()
-    : "";
   const handoff =
     !opts.withoutHandoff && settings.isEnabled("handoff")
       ? loadHandoffContext(sessionDir())
@@ -231,7 +231,6 @@ export function buildSystemReminder(
   if (selfModel) parts.push(selfModel);
   if (wisdom) parts.push(wisdom);
   if (opinions) parts.push(opinions);
-  if (intelligence) parts.push(intelligence);
   if (relationship) parts.push(relationship);
   if (activeProjects) parts.push(activeProjects);
   if (failures) parts.push(failures);

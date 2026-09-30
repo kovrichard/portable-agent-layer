@@ -89,6 +89,15 @@ export function extractLastAssistant(messages: Message[]): Message | undefined {
   return messages.filter((m) => m.role === "assistant").pop();
 }
 
+/** The agent hands its final reply to the Stop hook before that reply reaches the transcript file. */
+export function withFinalReply(messages: Message[], finalReply?: string): Message[] {
+  const reply = finalReply?.trim();
+  if (!reply) return messages;
+  const last = messages.at(-1);
+  if (last?.role === "assistant" && extractContent(last).includes(reply)) return messages;
+  return [...messages, { role: "assistant", content: reply }];
+}
+
 /** Get the last user message from a messages array */
 export function extractLastUser(messages: Message[]): Message | undefined {
   return messages.filter((m) => m.role === "user").pop();

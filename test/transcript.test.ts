@@ -2,7 +2,28 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { readTranscriptFile } from "../src/hooks/lib/transcript";
+import { readTranscriptFile, withFinalReply } from "../src/hooks/lib/transcript";
+
+describe("withFinalReply", () => {
+  const asked = [{ role: "user", content: "ask" }];
+
+  test("adds a final reply the file does not have yet", () => {
+    expect(withFinalReply(asked, "answer")).toEqual([
+      ...asked,
+      { role: "assistant", content: "answer" },
+    ]);
+  });
+
+  test("does not repeat a reply the file already ends with", () => {
+    const answered = [...asked, { role: "assistant", content: "answer" }];
+    expect(withFinalReply(answered, "answer")).toEqual(answered);
+  });
+
+  test("leaves the transcript alone when the agent passed no reply", () => {
+    expect(withFinalReply(asked, undefined)).toEqual(asked);
+    expect(withFinalReply(asked, "  ")).toEqual(asked);
+  });
+});
 
 function withTmpFile(content: string, fn: (path: string) => void): void {
   const dir = mkdtempSync(resolve(tmpdir(), "pal-transcript-test-"));

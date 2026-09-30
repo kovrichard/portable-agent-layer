@@ -232,6 +232,7 @@ export async function captureSessionIntelligence(
       title,
       summary,
       insights,
+      session: sessionId,
     });
   }
 

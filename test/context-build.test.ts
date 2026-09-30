@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import {
   buildSystemReminder,
   loadRelationshipContext,
+  loadSessionIntelligence,
   loadWisdomContext,
 } from "../src/hooks/lib/context";
 import { writeProject } from "../src/hooks/lib/projects";
@@ -297,16 +298,29 @@ function handoff(over: Record<string, unknown> = {}) {
 }
 
 describe("session intelligence", () => {
-  test("is absent when no synthesis has been written", () => {
+  test("stays out of the startup context until its stats are worth reading", () => {
+    synthesis({
+      algorithm: {
+        reflectionCount: 4,
+        passRate: 60,
+        avgSentiment: 8,
+        recentObservations: [],
+      },
+    });
+
     expect(buildSystemReminder()).not.toContain("## Session Intelligence");
+  });
+
+  test("is absent when no synthesis has been written", () => {
+    expect(loadSessionIntelligence()).toBe("");
   });
 
   test("leaves ratings to the self-model, which is built from them", () => {
     synthesis({ ratings: ratings({ lowCount: 6, trend: "declining" }) });
 
-    const out = buildSystemReminder();
+    const out = loadSessionIntelligence();
 
-    expect(out).not.toContain("## Session Intelligence");
+    expect(out).toBe("");
     expect(out).not.toContain("Rating trend");
     expect(out).not.toContain("low ratings");
   });
@@ -321,7 +335,7 @@ describe("session intelligence", () => {
       },
     });
 
-    expect(buildSystemReminder()).toContain(
+    expect(loadSessionIntelligence()).toContain(
       "**Algorithm:** 4 reflections, 95% criteria pass rate, 8/10 sentiment."
     );
   });
@@ -336,7 +350,7 @@ describe("session intelligence", () => {
       },
     });
 
-    expect(buildSystemReminder()).toContain("→ Criteria pass rate is low.");
+    expect(loadSessionIntelligence()).toContain("→ Criteria pass rate is low.");
   });
 
   test("stays quiet about a healthy pass rate", () => {
@@ -349,7 +363,7 @@ describe("session intelligence", () => {
       },
     });
 
-    expect(buildSystemReminder()).not.toContain("Criteria pass rate is low");
+    expect(loadSessionIntelligence()).not.toContain("Criteria pass rate is low");
   });
 
   test("shows observations recorded in this project", () => {
@@ -369,7 +383,7 @@ describe("session intelligence", () => {
       },
     });
 
-    const out = buildSystemReminder();
+    const out = loadSessionIntelligence();
 
     expect(out).toContain("Recent self-observations (this project):");
     expect(out).toContain('- [2026-08-18] a task: "a lesson"');
@@ -392,13 +406,13 @@ describe("session intelligence", () => {
       },
     });
 
-    expect(buildSystemReminder()).not.toContain("not mine");
+    expect(loadSessionIntelligence()).not.toContain("not mine");
   });
 
   test("ignores a malformed synthesis file", () => {
     write("memory/state/synthesis.json", "{ not json");
 
-    expect(buildSystemReminder()).not.toContain("## Session Intelligence");
+    expect(loadSessionIntelligence()).toBe("");
   });
 });
 

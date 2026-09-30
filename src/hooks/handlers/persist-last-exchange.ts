@@ -71,8 +71,20 @@ function readHandoffs(): Record<string, StoredHandoff> {
   }
 }
 
+function isWithinReadWindow(entry: StoredHandoff): boolean {
+  if (!entry.timestamp) return false;
+  return Date.now() - new Date(entry.timestamp).getTime() <= HANDOFF_STALE_MS;
+}
+
 function writeHandoffs(handoffs: Record<string, StoredHandoff>): void {
-  writeFileSync(handoffPath(), JSON.stringify(handoffs, null, 2), "utf-8");
+  const readable = Object.entries(handoffs).filter(([, entry]) =>
+    isWithinReadWindow(entry)
+  );
+  writeFileSync(
+    handoffPath(),
+    JSON.stringify(Object.fromEntries(readable), null, 2),
+    "utf-8"
+  );
 }
 
 export function structuredHandoff(parts: {

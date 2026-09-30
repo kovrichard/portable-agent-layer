@@ -57,6 +57,24 @@ describe("runStopHandlers — transcript gate", () => {
   });
 });
 
+describe("runStopHandlers — the final reply", () => {
+  test("records the reply the agent handed over, not an earlier one still in the file", async () => {
+    await runStopHandlers(transcriptOf("first ask", "a mid-turn note", "second ask"), {
+      sessionId: "s-final",
+      lastAssistantMessage: "the final answer",
+    });
+
+    const exchange = JSON.parse(
+      readFileSync(
+        resolve(HOME, "memory", "state", "last-exchange", "latest.json"),
+        "utf-8"
+      )
+    );
+    expect(exchange.userMessage).toBe("second ask");
+    expect(exchange.assistantMessage).toBe("the final answer");
+  });
+});
+
 describe("runStopHandlers — last-response cache", () => {
   test("caches the last assistant message under the session id", async () => {
     await runStopHandlers(transcriptOf("q", "the answer"), { sessionId: "sess-a" });
