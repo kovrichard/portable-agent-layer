@@ -1,3 +1,11 @@
+## [0.79.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.79.0...v0.79.1) (2026-09-30)
+
+
+### Bug Fixes
+
+* **install:** actually turn off Claude's own memory ([f652e78](https://github.com/kovrichard/portable-agent-layer/commit/f652e78e35d0f20f67388f045fc4b08955ba927e))
+* **test:** build the package-install fixture without a clone ([ad42181](https://github.com/kovrichard/portable-agent-layer/commit/ad42181e98c8370d13a045654c9ba522e941d9c2))
+
 # [0.79.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.78.3...v0.79.0) (2026-09-30)
 
 
