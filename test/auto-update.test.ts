@@ -48,6 +48,14 @@ function repoFixture(version = "0.76.1"): void {
   git("commit", "-m", "base");
 }
 
+/** A package install is a folder that was never a clone, rather than a clone with .git removed. */
+function packageFixture(): void {
+  rmSync(PKG, { recursive: true, force: true });
+  PKG = mkdtempSync(resolve(tmpdir(), "pal-auto-update-pkg-"));
+  process.env.PAL_PKG = PKG;
+  writeFileSync(resolve(PKG, "package.json"), JSON.stringify({ version: "0.76.1" }));
+}
+
 function setSettings(autoUpdate: Record<string, boolean>): void {
   writeFileSync(
     resolve(HOME, "memory", "pal-settings.json"),
@@ -162,7 +170,7 @@ describe("uncommitted work", () => {
 
   test("a package install has no clone, so nothing holds it back", () => {
     setSettings({ enabled: true, decided: true });
-    rmSync(resolve(PKG, ".git"), { recursive: true, force: true });
+    packageFixture();
     writeFileSync(resolve(PKG, "work.txt"), "loose file beside the package", "utf-8");
 
     expect(autoUpdateStatus().mode).toBe("package");
