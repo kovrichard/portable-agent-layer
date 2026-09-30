@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { mergeSettings, unmergeSettings } from "../src/targets/lib";
+import { resolve } from "node:path";
+import { loadSettingsTemplate, mergeSettings, unmergeSettings } from "../src/targets/lib";
 
 describe("mergeSettings — deprecated permission cleanup", () => {
   test("strips ineffective Grep()/Glob() rules left by older templates", () => {
@@ -76,6 +77,23 @@ describe("mergeSettings", () => {
     expect(merged.respectGitignore).toBe(false);
     expect(merged.spinnerTipsEnabled).toBe(false);
     expect(merged.spinnerTipsOverride).toEqual({ tips: ["pal tip one", "pal tip two"] });
+  });
+
+  test("a fresh install receives every setting the shipped template carries", () => {
+    const shipped = loadSettingsTemplate(
+      resolve(import.meta.dir, "../assets/templates/settings.claude.json"),
+      "/pkg"
+    );
+    const merged = mergeSettings({}, shipped);
+    for (const key of Object.keys(shipped)) expect(merged).toHaveProperty(key);
+  });
+
+  test("turns off Claude's own memory, but not over a user's choice", () => {
+    const template = { autoMemoryEnabled: false };
+    expect(mergeSettings({}, template).autoMemoryEnabled).toBe(false);
+    expect(mergeSettings({ autoMemoryEnabled: true }, template).autoMemoryEnabled).toBe(
+      true
+    );
   });
 
   test("replaces a PAL hook installed from a different package path", () => {
@@ -201,6 +219,12 @@ describe("unmergeSettings", () => {
     expect(cleaned.respectGitignore).toBeUndefined();
     expect(cleaned.spinnerTipsEnabled).toBeUndefined();
     expect(cleaned.spinnerTipsOverride).toBeUndefined();
+  });
+
+  test("uninstalling gives Claude its own memory back", () => {
+    const template = { autoMemoryEnabled: false };
+    const cleaned = unmergeSettings(mergeSettings({}, template), template);
+    expect(cleaned).not.toHaveProperty("autoMemoryEnabled");
   });
 
   test("round-trips user settings back to their original shape", () => {
