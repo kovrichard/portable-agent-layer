@@ -1,5 +1,5 @@
 /**
- * Spawned, never awaited — runs the daily self-update in a process of its own.
+ * Spawned, never awaited — runs the unattended self-update in a process of its own.
  *
  * LoadContext decides whether today's update is due; the control room's button
  * starts this directly. Either way the work happens here so nothing waits on a

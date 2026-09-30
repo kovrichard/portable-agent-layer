@@ -77,7 +77,7 @@ pal cli status        # check your setup
 | `pal cli init` | Scaffold PAL home directory and install hooks |
 | `pal cli install` | Register hooks/skills for targets |
 | `pal cli uninstall` | Remove hooks/skills for targets |
-| `pal cli update` | Update PAL (git pull or npm update) and reinstall hooks. Install asks once whether to do this daily on its own, applied when a session closes so opening PAL is never slowed; the switch lives in the control room under Settings → Updates. On a repo install a daily run waits while the clone has uncommitted changes |
+| `pal cli update` | Update PAL (git pull or npm update) and reinstall hooks. Install asks once whether to do this on its own: when a session closes PAL checks for a release (at most hourly) and installs it, so opening PAL is never slowed. A failed update waits a day before retrying. The switch lives in the control room under Settings → Updates. On a repo install an update waits while the clone has uncommitted changes |
 | `pal cli export` | Export user state (telos, memory) to a zip |
 | `pal cli import` | Import user state from a zip |
 | `pal cli status` | Show current PAL configuration |
@@ -156,7 +156,7 @@ PAL routes inference through the host agent's subscription CLI by default. API k
 Enable verbose hook logging with:
 
 ```
-pal cli debug on    # enable  → logs to memory/state/debug.log
+pal cli debug on    # enable  → logs to debug/debug.log
 pal cli debug off   # disable
 pal cli debug       # show current status and log path
 ```
@@ -165,6 +165,7 @@ pal cli debug       # show current status and log path
 |----------|-------------|
 | `PAL_INFERENCE_DISABLED` | Set to `1` to disable all inference (used by the test suite to prevent real CLI spawns) |
 | `PAL_NOTIFICATIONS_DISABLED` | Set to `1` to suppress desktop notifications (used by the test suite) |
+| `PAL_TEST_SANDBOX` | Set by the test suite. Without a `PAL_HOME`, state goes to a temp directory instead of `~/.pal`, and installers refuse to touch real agent directories |
 
 ---
 

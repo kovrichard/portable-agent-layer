@@ -383,7 +383,7 @@ Relationship notes (O/B types)
 - Content is global/user-level — safe to pre-compile (not project-scoped)
 
 **Tier 3 — Dynamic** (injected fresh each session by LoadContext hook):
-- Handoff notes, session intelligence, open threads, relationship notes, project history
+- Handoff notes, session intelligence, relationship notes, project history
 - Changes per-session or is project-scoped — can't be pre-compiled
 - Injected as `<system-reminder>` block via stdout
 - Each section independently toggleable in `pal-settings.json → dynamicContext`
@@ -402,12 +402,12 @@ LoadContext.ts
   └─► Build system-reminder (dynamic sections only):
       1. loadAtStartup files (user-configured)
       2. Handoff note (in-progress work from last session)
-      3. Session intelligence (rating trend, algorithm performance)
-      4. Open threads (current project only)
+      3. Due nudges (algorithm review, relationship reflect, learning analysis)
+      4. Session intelligence (rating trend, algorithm performance)
       5. Recent interaction notes (last 2 days)
       6. Active projects
       7. Project session history (this project)
-      8. Signal trends (today/week/trend)
+      8. Other recent learnings (other projects, titles only)
 ```
 
 ### On-Demand Context

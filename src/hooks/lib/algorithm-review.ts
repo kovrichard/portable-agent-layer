@@ -35,11 +35,13 @@ export function writeReviewMark(ts: string): void {
   writeFileSync(markFile(), `${JSON.stringify({ lastReviewedTs: ts }, null, 2)}\n`);
 }
 
-/** True only in a maintainer repo checkout — the repo-only update skill is present. */
-export function isMaintainerEnv(): boolean {
-  return existsSync(
-    resolve(palPkg(), ".agents", "skills", "algorithm-update", "SKILL.md")
-  );
+function hasAlgorithmUpdateSkill(root: string): boolean {
+  return existsSync(resolve(root, ".agents", "skills", "algorithm-update", "SKILL.md"));
+}
+
+/** True when PAL runs from its checkout, or a session is working inside one. */
+export function isMaintainerEnv(cwd: string = process.cwd()): boolean {
+  return hasAlgorithmUpdateSkill(palPkg()) || hasAlgorithmUpdateSkill(cwd);
 }
 
 /** Count reflections newer than the last review mark (all of them, if never reviewed). */
@@ -60,8 +62,11 @@ export interface ReviewNudge {
  * Nudge data when BOTH thresholds are met (≥25 new AND ≥7 days) in a maintainer
  * env, else null. `now` is injected for testability.
  */
-export function algorithmReviewNudge(now: Date): ReviewNudge | null {
-  if (!isMaintainerEnv()) return null;
+export function algorithmReviewNudge(
+  now: Date,
+  cwd: string = process.cwd()
+): ReviewNudge | null {
+  if (!isMaintainerEnv(cwd)) return null;
   const mark = readReviewMark();
   const count = countUnreviewed(mark);
   if (count < NUDGE_MIN_COUNT) return null;

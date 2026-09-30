@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync } from "node:fs";
-import { homedir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { resolve } from "node:path";
 
 /**
@@ -56,8 +56,13 @@ export function palPkg(): string {
  * Always resolves to ~/.pal/ regardless of where the package lives.
  * Power users who want memory/telos versioned in a repo can override via PAL_HOME.
  */
+function defaultPalHome(): string {
+  if (process.env.PAL_TEST_SANDBOX) return resolve(tmpdir(), "pal-test-home");
+  return resolve(homedir(), ".pal");
+}
+
 export function palHome(): string {
-  return envPath("PAL_HOME", resolve(homedir(), ".pal"));
+  return envPath("PAL_HOME", defaultPalHome());
 }
 
 /** Ensure a directory exists, creating it recursively if needed */

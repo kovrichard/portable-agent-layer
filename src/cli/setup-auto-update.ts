@@ -1,5 +1,5 @@
 /**
- * Daily unattended updates — one-time opt-in prompt.
+ * Unattended updates — one-time opt-in prompt.
  *
  * Asked once during `pal install`, the same seam git attribution uses, so a new
  * user sees it at init and an existing one on their next update. The non-TTY
@@ -14,11 +14,11 @@ import { raw as readSettings, write as writeSettings } from "../hooks/lib/settin
 
 /** Only a git clone can be mid-change; a global package install has no such state. */
 function whatItDoes(): string {
-  const daily =
-    "Once a day, when you close a session, PAL updates itself in the background.\nOpening PAL is never slowed down, and the statusline says when to restart.";
+  const onClose =
+    "When you close a session, PAL checks for a new release (at most hourly) and installs it in the background.\nOpening PAL is never slowed down, and the statusline says when to restart.";
   return isRepoMode()
-    ? `${daily}\nIt waits while this clone has uncommitted changes.`
-    : daily;
+    ? `${onClose}\nIt waits while this clone has uncommitted changes.`
+    : onClose;
 }
 
 export async function promptAutoUpdate(): Promise<void> {
@@ -31,7 +31,7 @@ export async function promptAutoUpdate(): Promise<void> {
   clack.note(whatItDoes(), "Keep PAL up to date on its own?");
 
   const enabled = await clack.confirm({
-    message: "Turn on daily automatic updates?",
+    message: "Turn on automatic updates?",
     initialValue: false,
   });
   if (clack.isCancel(enabled)) {
@@ -41,6 +41,6 @@ export async function promptAutoUpdate(): Promise<void> {
 
   settings.autoUpdate = { enabled: enabled === true, decided: true };
   writeSettings(settings);
-  const state = enabled ? "Daily updates on" : "Daily updates off";
+  const state = enabled ? "Automatic updates on" : "Automatic updates off";
   clack.outro(`${state} ✓  ·  change later: control room → Settings → Updates`);
 }

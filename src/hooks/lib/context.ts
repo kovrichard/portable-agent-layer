@@ -8,6 +8,7 @@ import { resolve } from "node:path";
 import { loadReflectNudge } from "../handlers/reflect-trigger";
 import { loadAlgorithmReviewNudge } from "./algorithm-review";
 import { loadAnalyzeNudge } from "./analyze-nudge";
+import { resolveAnchor } from "./anchor";
 import { readLearnings } from "./learning-store";
 import { loadOpinionContext } from "./opinions";
 import { paths, toPath } from "./paths";
@@ -105,6 +106,11 @@ function loadProjectHistoryContext(): string {
   }
 }
 
+function stampedPath(stamp: string): string {
+  const resolved = resolveAnchor(stamp);
+  return resolved.state === "unresolvable" ? stamp : resolved.path;
+}
+
 /**
  * Filter raw relationship note lines:
  * - O entries: stripped (loaded natively via digest)
@@ -125,7 +131,7 @@ function filterRelationshipNotes(notes: string, cwd: string): string {
     }
     const cwdMatch = new RegExp(/<!--.*cwd:(\S+)/).exec(line);
     if (cwdMatch) {
-      blockCwd = cwdMatch[1];
+      blockCwd = stampedPath(cwdMatch[1]);
       continue;
     }
     if (/^\s*<!--/.test(line)) continue;

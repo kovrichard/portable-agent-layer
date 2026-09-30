@@ -103,9 +103,27 @@ describe("the daily gate", () => {
     expect(shouldAutoUpdate()).toBe(true);
   });
 
-  test("an attempt an hour ago holds it until tomorrow", () => {
+  test("a run that never finished holds the day", () => {
     setSettings({ enabled: true, decided: true });
-    setLedger({ attemptedAt: ago(HOUR_MS) });
+    setLedger({ attemptedAt: ago(2 * HOUR_MS) });
+    expect(shouldAutoUpdate()).toBe(false);
+  });
+
+  test("a morning run that found nothing does not block a release published at noon", () => {
+    setSettings({ enabled: true, decided: true });
+    setLedger({
+      attemptedAt: ago(6 * HOUR_MS),
+      finishedAt: ago(6 * HOUR_MS),
+      ok: true,
+      from: "0.78.0",
+      to: "0.78.0",
+    });
+    expect(shouldAutoUpdate()).toBe(true);
+  });
+
+  test("a clean run holds the next check for an hour", () => {
+    setSettings({ enabled: true, decided: true });
+    setLedger({ attemptedAt: ago(10 * 60 * 1000), ok: true });
     expect(shouldAutoUpdate()).toBe(false);
   });
 

@@ -76,8 +76,8 @@ export function appendNotes(notes: RelationshipNote[], sessionId?: string): Appe
 
   const timestamp = new Date().toTimeString().slice(0, 5);
   lines.push(`## ${timestamp}`);
-  if (sessionId)
-    lines.push(`<!-- session:${sessionId} cwd:${encodeAnchor(process.cwd())} -->`);
+  const session = sessionId ? `session:${sessionId} ` : "";
+  lines.push(`<!-- ${session}cwd:${encodeAnchor(process.cwd())} -->`);
 
   for (const note of fresh) {
     if (note.type === "O" && note.confidence !== undefined) {

@@ -60,7 +60,12 @@ describe("maintainer gate", () => {
 
   test("isMaintainerEnv false for a downstream install (no .agents/ skill)", () => {
     asDownstream();
-    expect(isMaintainerEnv()).toBe(false);
+    expect(isMaintainerEnv(TEST_HOME)).toBe(false);
+  });
+
+  test("isMaintainerEnv true for a package install working inside the PAL checkout", () => {
+    asDownstream();
+    expect(isMaintainerEnv(REPO_ROOT)).toBe(true);
   });
 });
 
@@ -92,7 +97,7 @@ describe("algorithmReviewNudge — AND-gated thresholds", () => {
   test("null for downstream even with a huge backlog", () => {
     asDownstream();
     addReflections(100, "2026-05-30T00:00:00Z");
-    expect(algorithmReviewNudge(NOW)).toBeNull();
+    expect(algorithmReviewNudge(NOW, TEST_HOME)).toBeNull();
   });
 
   test("null when fewer than 25 new reflections", () => {

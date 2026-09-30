@@ -8,7 +8,7 @@
  */
 
 import { spawn } from "node:child_process";
-import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { SIMILARITY_THRESHOLD } from "./graduation";
 import { readFailures, readReflections } from "./learning-store";
@@ -197,14 +197,21 @@ export function readIndex(): RetrievalIndex | null {
 }
 
 /** True if any source directory was modified after the index was built. */
+function newestFileMtime(dir: string): number {
+  let newest = 0;
+  for (const entry of readdirSync(dir, { recursive: true, withFileTypes: true })) {
+    if (!entry.isFile()) continue;
+    newest = Math.max(newest, statSync(resolve(entry.parentPath, entry.name)).mtimeMs);
+  }
+  return newest;
+}
+
 export function isStale(index: RetrievalIndex): boolean {
   try {
     const builtMs = new Date(index.builtAt).getTime();
-    for (const dir of [paths.failures(), paths.wisdom(), paths.reflections()]) {
-      if (!existsSync(dir)) continue;
-      if (statSync(dir).mtimeMs > builtMs) return true;
-    }
-    return false;
+    return [paths.failures(), paths.wisdom(), paths.reflections()].some(
+      (dir) => newestFileMtime(dir) > builtMs
+    );
   } catch {
     return false;
   }

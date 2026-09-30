@@ -19,10 +19,10 @@ When `/pal-reflect` is invoked (by you in response to a nudge, or by the user di
 ## 1. Run the reflect tool
 
 ```bash
-bun run tool:reflect
+pal cli relationship-reflect
 ```
 
-If the user passed `--dry-run`, append it: `bun run tool:reflect -- --dry-run`
+If the user passed `--dry-run`, append it: `pal cli relationship-reflect --dry-run`
 
 ## 2. Parse and present the output
 

@@ -79,9 +79,14 @@ const WIN_ELEVATED_THREATS: [RegExp, string][] = [
   [/\bdiskpart\b/i, "Disk partitioning"],
 ];
 
+const POSIX_ROOT_TARGET = String.raw`["']?(?:(?:~|\$HOME|\$\{HOME\})/?|/)\*?["']?(?=\s|[;&|]|$)`;
+
 /** Dangerous command patterns — always blocked */
 const BLOCKED_COMMANDS: [RegExp, string][] = [
-  [/rm\s+-rf\s+[/~]/, "Recursive delete of root or home"],
+  [
+    new RegExp(String.raw`rm\s+-rf\s+${POSIX_ROOT_TARGET}`),
+    "Recursive delete of root or home",
+  ],
   [/mkfs\./, "Filesystem format"],
   [/dd\s+if=.*of=\/dev\//, "Raw disk write"],
   [/>\s*\/dev\/sd/, "Direct device write"],
@@ -232,6 +237,28 @@ function managedReasonInSegment(segment: string): string | null {
 const READ_ONLY_COMMANDS =
   /^\s*(?:cat|head|tail|less|more|grep|rg|wc|diff|stat|file|ls|dir|find|git\s+(?:log|diff|blame|show|status)|bat)\b/;
 
+const COMMAND_SEPARATORS = new Set(["|", ";", "&"]);
+
+function unquotedSegments(cmd: string): string[] {
+  const segments: string[] = [];
+  let current = "";
+  let quote: string | null = null;
+  for (const char of cmd) {
+    if (quote) {
+      if (char === quote) quote = null;
+    } else if (char === "'" || char === '"') {
+      quote = char;
+    } else if (COMMAND_SEPARATORS.has(char)) {
+      segments.push(current.trim());
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  segments.push(current.trim());
+  return segments;
+}
+
 /** Check a bash command against blocked patterns. Returns reason string or null. */
 export function checkBashCommand(cmd: string): string | null {
   for (const [pattern, reason] of BLOCKED_COMMANDS) {
@@ -242,8 +269,7 @@ export function checkBashCommand(cmd: string): string | null {
       if (pattern.test(cmd)) return reason;
     }
   }
-  const segments = cmd.split(/[|;&]/).map((s) => s.trim());
-  for (const segment of segments) {
+  for (const segment of unquotedSegments(cmd)) {
     const reason = managedReasonInSegment(segment);
     if (reason && !READ_ONLY_COMMANDS.test(segment)) return reason;
   }

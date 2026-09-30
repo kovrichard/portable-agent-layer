@@ -148,6 +148,16 @@ describe("loadRelationshipContext", () => {
     expect(loadRelationshipContext()).toContain("- Session: did the thing");
   });
 
+  test("keeps a session entry whose cwd stamp is anchored to the current project", () => {
+    write(
+      "memory/projects/here/ISA.md",
+      `---\nname: "here"\npath: "${process.cwd()}"\nstatus: "active"\ncreated: "2026-01-01"\nupdated: "2026-01-01"\n---\n`
+    );
+    notes("## 09:00\n<!-- cwd:{proj:here} -->\n- Session: anchored work\n");
+
+    expect(loadRelationshipContext()).toContain("- Session: anchored work");
+  });
+
   test("drops a session entry recorded in another project", () => {
     notes("## 09:00\n<!-- session:abc cwd:/elsewhere -->\n- Session: unrelated work\n");
 

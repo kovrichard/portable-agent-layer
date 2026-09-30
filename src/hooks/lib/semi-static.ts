@@ -7,10 +7,11 @@
  */
 
 import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { basename, resolve } from "node:path";
 import { type FailureEntry, readFailures } from "./learning-store";
 import { loadOpinionContext } from "./opinions";
 import { palHome, paths } from "./paths";
+import { type ProjectProgress, readAllProjects, resolveProjectFromCwd } from "./projects";
 import { readFramePrinciples } from "./wisdom";
 
 /** A single semi-static context source — built at session stop, loaded natively at session start. */
@@ -67,6 +68,12 @@ export function rankFailures(
     .slice(0, limit);
 }
 
+function projectTag(cwd: string, projects: ProjectProgress[]): string {
+  if (!cwd) return "";
+  const name = resolveProjectFromCwd(cwd, projects)?.name ?? basename(cwd);
+  return `[${name}]`;
+}
+
 /** Build the failure avoid-list, prioritized by relevance to the current project. */
 export function loadFailurePatterns(): string {
   try {
@@ -74,11 +81,11 @@ export function loadFailurePatterns(): string {
     const all = readFailures(paths.failures());
     if (all.length === 0) return "";
 
+    const projects = readAllProjects();
     const lines = rankFailures(all, cwd).map((e) => {
       const label = e.rating ? `[${e.rating}/10]` : "";
-      const tag = e.cwd === cwd ? "[project]" : "[other]";
       const text = e.principle || e.context;
-      return `- ${label} ${tag} ${text}`.trim();
+      return ["-", label, projectTag(e.cwd, projects), text].filter(Boolean).join(" ");
     });
 
     return ["## Lessons from Recent Failures — Apply These Now", ...lines].join("\n");

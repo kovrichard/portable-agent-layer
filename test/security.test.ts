@@ -14,8 +14,13 @@ const ROOT_OVERRIDES = [
 ];
 const savedOverrides = new Map(ROOT_OVERRIDES.map((name) => [name, process.env[name]]));
 
+function pinRealPalHome(): void {
+  process.env.PAL_HOME = join(homedir(), ".pal");
+}
+
 beforeAll(() => {
   for (const name of ROOT_OVERRIDES) delete process.env[name];
+  pinRealPalHome();
 });
 
 afterAll(() => {
@@ -211,6 +216,20 @@ describe("checkBashCommand", () => {
     expect(checkBashCommand("rm -rf ./build")).toBeNull();
   });
 
+  test("blocks a recursive delete of root or home however it is spelled", () => {
+    for (const target of ["/", "/*", "~", "~/", "~/*", "$HOME", `\${HOME}/`, '"$HOME"']) {
+      expect(checkBashCommand(`rm -rf ${target}`)).toBeTruthy();
+    }
+    expect(checkBashCommand("rm -rf / && ls")).toBeTruthy();
+  });
+
+  test("allows a recursive delete of a folder inside root or home", () => {
+    expect(checkBashCommand("rm -rf /tmp/scratch/build")).toBeNull();
+    expect(checkBashCommand("rm -rf ~/projects/app/dist")).toBeNull();
+    expect(checkBashCommand("rm -rf $HOME/.cache/bun")).toBeNull();
+    expect(checkBashCommand("rm -rf  build")).toBeNull();
+  });
+
   // --- Managed file scoping ---
 
   test("blocks writing to managed files under managed roots", () => {
@@ -224,6 +243,22 @@ describe("checkBashCommand", () => {
     expect(checkBashCommand("grep pattern ~/.claude/ratings.jsonl")).toBeNull();
     expect(checkBashCommand("head ~/.pal/memory/sessions.json")).toBeNull();
     expect(checkBashCommand("find ~/.pal/memory -name sessions.json")).toBeNull();
+  });
+
+  test("a quoted pipe does not split a read into a write", () => {
+    expect(
+      checkBashCommand(
+        String.raw`grep -n "lastReflect\|last_reflect" ~/.pal/memory/sessions.json`
+      )
+    ).toBeNull();
+    expect(checkBashCommand("grep 'a;b' ~/.pal/memory/sessions.json")).toBeNull();
+  });
+
+  test("an unquoted pipe into a write is still blocked", () => {
+    expect(checkBashCommand(`cat x | tee ~/.pal/memory/sessions.json`)).toBeTruthy();
+    expect(
+      checkBashCommand(`grep "a|b" x; echo y > ~/.pal/memory/sessions.json`)
+    ).toBeTruthy();
   });
 
   test("allows editing managed files in repo templates", () => {
@@ -329,7 +364,7 @@ describe("checkFilePath", () => {
       expect(checkFilePath("/srv/pal-home/memory/sessions.json")).toBeTruthy();
       expect(checkFilePath(home(".pal", "memory", "sessions.json"))).toBeNull();
     } finally {
-      delete process.env.PAL_HOME;
+      pinRealPalHome();
     }
   });
 
@@ -404,7 +439,7 @@ describe("checkFilePath", () => {
       // a not-yet-created personal skill is also allowed (scaffolding)
       expect(checkFilePath(join(skills, "brandnew", "SKILL.md"))).toBeNull();
     } finally {
-      delete process.env.PAL_HOME;
+      pinRealPalHome();
       rmSync(base, { recursive: true, force: true });
     }
   });

@@ -1,5 +1,13 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
-import { appendFileSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { resolve } from "node:path";
 import { runRetrieval } from "../src/hooks/lib/retrieval";
 import {
@@ -389,6 +397,77 @@ describe("retrieval index — staleness", () => {
     const idx = buildIndex();
     const stale = { ...idx, builtAt: "1970-01-01T00:00:00Z" };
     expect(isStale(stale)).toBe(true);
+  });
+
+  const BUILT = "2026-09-01T00:00:00Z";
+
+  function ageEveryDirectory(root: string) {
+    const old = new Date("2026-08-01T00:00:00Z");
+    for (const entry of readdirSync(root, { recursive: true, withFileTypes: true })) {
+      if (entry.isDirectory())
+        utimesSync(resolve(entry.parentPath, entry.name), old, old);
+    }
+    utimesSync(root, old, old);
+  }
+
+  function touchAfterBuild(file: string) {
+    const later = new Date("2026-09-02T00:00:00Z");
+    utimesSync(file, later, later);
+  }
+
+  test("isStale sees a capture added inside an existing month folder", () => {
+    fixtureCapture("2026/04", "20260415-100000_initial", {
+      rating: 3,
+      context: "initial capture",
+      principle: "first principle",
+      ts: "2026-04-15T10:00:00Z",
+    });
+    const idx = { ...buildIndex(), builtAt: BUILT };
+    ageEveryDirectory(resolve(TEST_HOME, "memory"));
+    touchAfterBuild(
+      resolve(
+        TEST_HOME,
+        "memory/learning/failures/2026/04/20260415-100000_initial/capture.md"
+      )
+    );
+
+    expect(isStale(idx)).toBe(true);
+  });
+
+  test("isStale sees a reflection appended to the existing store", () => {
+    fixtureReflection({
+      timestamp: "2026-05-30T18:00:00Z",
+      cwd: "/Users/x/code/pal",
+      task: "Some task",
+      sentiment: 7,
+      q1: "Some reflection",
+    });
+    const idx = { ...buildIndex(), builtAt: BUILT };
+    ageEveryDirectory(resolve(TEST_HOME, "memory"));
+    touchAfterBuild(
+      resolve(TEST_HOME, "memory/learning/reflections/algorithm-reflections.jsonl")
+    );
+
+    expect(isStale(idx)).toBe(true);
+  });
+
+  test("isStale holds a fresh index when nothing changed after the build", () => {
+    fixtureCapture("2026/04", "20260415-100000_initial", {
+      rating: 3,
+      context: "initial capture",
+      principle: "first principle",
+      ts: "2026-04-15T10:00:00Z",
+    });
+    const idx = { ...buildIndex(), builtAt: BUILT };
+    const old = new Date("2026-08-01T00:00:00Z");
+    for (const entry of readdirSync(resolve(TEST_HOME, "memory"), {
+      recursive: true,
+      withFileTypes: true,
+    })) {
+      utimesSync(resolve(entry.parentPath, entry.name), old, old);
+    }
+
+    expect(isStale(idx)).toBe(false);
   });
 
   test("ensureIndex builds + writes when missing", () => {
