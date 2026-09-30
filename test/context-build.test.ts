@@ -426,7 +426,7 @@ describe("handoff", () => {
     expect(buildSystemReminder()).toContain("Pick Up Where You Left Off");
   });
 
-  test("ignores a handoff belonging to another project", () => {
+  test("shows another folder's handoff only as the conversation elsewhere", () => {
     write(
       "memory/state/last-handoff.json",
       JSON.stringify({
@@ -439,6 +439,9 @@ describe("handoff", () => {
       })
     );
 
-    expect(buildSystemReminder()).not.toContain("someone else work");
+    const out = buildSystemReminder();
+    expect(out).not.toContain("Pick Up Where You Left Off");
+    expect(out).toContain("## Last Conversation Elsewhere");
+    expect(out).toContain("someone else work");
   });
 });

@@ -23,6 +23,7 @@ import { canInfer, inference } from "../lib/inference";
 import { categorizeLearning } from "../lib/learning-category";
 import { logDebug, logError } from "../lib/log";
 import { ensureDir, paths } from "../lib/paths";
+import { sessionDir } from "../lib/session-dir";
 import { fileTimestamp, monthPath } from "../lib/time";
 import { logTokenUsage } from "../lib/token-usage";
 import {
@@ -142,7 +143,7 @@ export async function captureSessionIntelligence(
   const summary = output?.summary || lastAssistantText.slice(0, 600);
   const insights = output?.insights || "";
   if (status === "in-progress" && output?.handoff) {
-    writeAutoHandoff(process.cwd(), { title, status, handoff: output.handoff });
+    writeAutoHandoff(sessionDir(), { title, status, handoff: output.handoff });
   }
   // ── Write session learning file ──
 

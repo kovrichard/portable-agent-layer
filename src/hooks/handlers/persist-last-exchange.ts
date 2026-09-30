@@ -18,6 +18,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { logDebug, logError } from "../lib/log";
 import { ensureDir, paths } from "../lib/paths";
+import { sessionDir } from "../lib/session-dir";
 import { extractContent, extractLastAssistant, extractLastUser } from "../lib/transcript";
 import { detectStatus } from "../lib/work-tracking";
 
@@ -66,7 +67,7 @@ export function writeAutoHandoff(cwd: string, entry: AutoHandoff): void {
 export function persistLastExchange(
   messages: ParsedMessage[],
   sessionId: string,
-  cwd: string = process.cwd()
+  cwd: string = sessionDir()
 ): void {
   try {
     const lastUser = extractContent(extractLastUser(messages));

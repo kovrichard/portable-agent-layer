@@ -100,4 +100,19 @@ describe("persistLastExchange — handoff protection (ISC-39)", () => {
     expect(existsSync(latest)).toBe(true);
     expect(readFileSync(latest, "utf-8")).toContain("raw auto snapshot user msg");
   });
+
+  test("files the handoff under the folder the session started in, not where it cd'd to", async () => {
+    const saved = process.env.CLAUDE_PROJECT_DIR;
+    process.env.CLAUDE_PROJECT_DIR = CWD;
+    try {
+      const { persistLastExchange } = await import(
+        "../src/hooks/handlers/persist-last-exchange"
+      );
+      persistLastExchange(messages, "sess-1");
+      expect(readEntry().handoff).toContain("raw auto snapshot user msg");
+    } finally {
+      if (saved === undefined) delete process.env.CLAUDE_PROJECT_DIR;
+      else process.env.CLAUDE_PROJECT_DIR = saved;
+    }
+  });
 });

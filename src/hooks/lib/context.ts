@@ -9,11 +9,13 @@ import { loadReflectNudge } from "../handlers/reflect-trigger";
 import { loadAlgorithmReviewNudge } from "./algorithm-review";
 import { loadAnalyzeNudge } from "./analyze-nudge";
 import { resolveAnchor } from "./anchor";
+import { loadHandoffContext } from "./handoff-context";
 import { loadOpinionContext } from "./opinions";
 import { paths, toPath } from "./paths";
 import { loadActiveProjectsContext } from "./projects";
 import { loadRecentNotes } from "./relationship";
 import { loadFailurePatterns } from "./semi-static";
+import { sessionDir } from "./session-dir";
 import * as settings from "./settings";
 import { readFramePrinciples } from "./wisdom";
 import { lastSessionTitle, readProjectHistory } from "./work-tracking";
@@ -195,31 +197,6 @@ function loadSessionIntelligence(): string {
   }
 }
 
-/** Load handoff state for the current project */
-function loadHandoff(): string {
-  try {
-    const p = resolve(paths.state(), "last-handoff.json");
-    if (!existsSync(p)) return "";
-    const handoffs = JSON.parse(readFileSync(p, "utf-8"));
-    const cwd = process.cwd();
-    const entry = handoffs[cwd];
-    if (!entry?.handoff || entry.status !== "in-progress") return "";
-
-    const age = Date.now() - new Date(entry.timestamp).getTime();
-    if (age > 7 * 24 * 60 * 60 * 1000) return ""; // stale after 7 days
-
-    return [
-      "## Pick Up Where You Left Off",
-      `*Previous session: ${entry.title}*`,
-      "",
-      entry.handoff,
-      "→ Continue this work or explicitly close it before starting something new.",
-    ].join("\n");
-  } catch {
-    return "";
-  }
-}
-
 /** Truncate text to maxChars at the last complete line boundary */
 function capSection(text: string, maxChars: number): string {
   if (text.length <= maxChars) return text;
@@ -281,7 +258,9 @@ export function buildSystemReminder(
     ? loadSessionIntelligence()
     : "";
   const handoff =
-    !opts.withoutHandoff && settings.isEnabled("handoff") ? loadHandoff() : "";
+    !opts.withoutHandoff && settings.isEnabled("handoff")
+      ? loadHandoffContext(sessionDir())
+      : "";
   // Maintainer-only: self-gates to a repo checkout, "" for everyone else.
   const algoReview = loadAlgorithmReviewNudge();
   const reflectNudge = loadReflectNudge();
