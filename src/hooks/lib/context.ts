@@ -203,7 +203,7 @@ export function buildSystemReminder(
     ? loadRelationshipContext()
     : "";
   const activeProjects = settings.isEnabled("projects")
-    ? loadActiveProjectsContext(process.cwd(), lastSessionTitle)
+    ? loadActiveProjectsContext(sessionDir(), lastSessionTitle)
     : "";
   const failures =
     settings.isEnabled("failurePatterns") && !skipSemiStatic ? loadFailurePatterns() : "";

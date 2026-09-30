@@ -6,6 +6,7 @@ import {
   loadRelationshipContext,
   loadWisdomContext,
 } from "../src/hooks/lib/context";
+import { writeProject } from "../src/hooks/lib/projects";
 import { appendProjectHistory } from "../src/hooks/lib/work-tracking";
 
 const HOME = resolve(import.meta.dir, "../.test-home-context-build");
@@ -243,6 +244,26 @@ describe("buildSystemReminder", () => {
     });
 
     expect(buildSystemReminder()).not.toContain("An earlier session here");
+  });
+
+  test("marks the project the session started in, not the folder it moved to", () => {
+    const startDir = resolve(HOME, "started-here");
+    mkdirSync(startDir, { recursive: true });
+    writeProject({
+      name: "started-here",
+      path: startDir,
+      status: "active",
+      created: new Date().toISOString(),
+      updated: new Date().toISOString(),
+    });
+    const savedStart = process.env.CLAUDE_PROJECT_DIR;
+    process.env.CLAUDE_PROJECT_DIR = startDir;
+    try {
+      expect(buildSystemReminder()).toContain("**started-here** (just now) → here");
+    } finally {
+      if (savedStart === undefined) delete process.env.CLAUDE_PROJECT_DIR;
+      else process.env.CLAUDE_PROJECT_DIR = savedStart;
+    }
   });
 
   test("still includes relationship notes for a native-loading agent", () => {
