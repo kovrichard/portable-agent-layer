@@ -19,7 +19,8 @@ memory/
 │   └── token-usage.jsonl               # Per-call inference token usage
 │
 ├── signals/
-│   └── ratings.jsonl                   # Append-only rating signals (explicit + implicit)
+│   ├── ratings.jsonl                   # Append-only rating signals (explicit + implicit)
+│   └── interaction/YYYY-MM.jsonl       # Measured features of each user turn (never the text)
 │
 ├── relationship/
 │   ├── YYYY-MM/YYYY-MM-DD.md           # Daily interaction notes (W / O / B)
@@ -54,6 +55,7 @@ Almost everything in `state/`, `signals/`, `relationship/opinions.json`, `learni
 | A reusable session insight | Session-intelligence handler (automatic) | `learning/session/YYYY-MM/*.md` |
 | A failure worth learning from | Failure-principle handler (automatic, low ratings) | `learning/failures/YYYY-MM/*.md` |
 | A rating signal | UserPromptOrchestrator rating capture | `signals/ratings.jsonl` |
+| How a user turn went (pace, length, skimming, corrections) | Prompt-time interaction measurement (automatic) | `signals/interaction/YYYY-MM.jsonl` |
 | A project handoff | Project skill / detached handlers | `projects/<slug>/` |
 
 ## Format conventions

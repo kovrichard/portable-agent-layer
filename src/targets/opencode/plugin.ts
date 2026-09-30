@@ -175,7 +175,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       const text = partsToText(output.parts ?? []);
       if (!text.trim()) return;
 
-      const injectedText = (await getPromptContext(text)) ?? "";
+      const injectedText = (await getPromptContext(text, input.sessionID)) ?? "";
       logPromptSnapshot(text, injectedText || null);
 
       await Promise.allSettled([
