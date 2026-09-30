@@ -169,7 +169,15 @@ export function appendProjectHistory(cwd: string, entry: ProjectHistoryEntry): v
 
 /** Read the session history for a given cwd */
 export function readProjectHistory(cwd: string, limit = 15): ProjectHistoryEntry[] {
-  const historyPath = historyFileFor(cwd);
+  return readHistoryFile(historyFileFor(cwd), limit);
+}
+
+export function lastSessionTitle(project: string): string | undefined {
+  const historyPath = resolve(paths.projectHistory(), project, "history.jsonl");
+  return readHistoryFile(historyPath, 1)[0]?.title;
+}
+
+function readHistoryFile(historyPath: string, limit: number): ProjectHistoryEntry[] {
   if (!existsSync(historyPath)) return [];
   try {
     const lines = readFileSync(historyPath, "utf-8").trim().split("\n").filter(Boolean);

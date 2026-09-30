@@ -1,8 +1,8 @@
 /**
  * Stop handler: unified session intelligence capture.
  *
- * Produces: title, summary, insights, handoff via Haiku.
- * Writes: session learning file, project history, auto handoff (in-progress only).
+ * Produces: title, summary, insights, status and a done/next/waiting handoff via Haiku.
+ * Writes: session learning file, project history, auto handoff.
  *
  * Relationship notes → written in ALGORITHM LEARN phase via relationship-note.ts
  * Handoff notes     → written in ALGORITHM LEARN phase via handoff-note.ts
@@ -23,6 +23,7 @@ import { canInfer, inference } from "../lib/inference";
 import { categorizeLearning } from "../lib/learning-category";
 import { logDebug, logError } from "../lib/log";
 import { ensureDir, paths } from "../lib/paths";
+import { sessionDir } from "../lib/session-dir";
 import { fileTimestamp, monthPath } from "../lib/time";
 import { logTokenUsage } from "../lib/token-usage";
 import {
@@ -31,8 +32,8 @@ import {
   extractLastUser,
   parseMessages,
 } from "../lib/transcript";
-import { appendProjectHistory, detectStatus } from "../lib/work-tracking";
-import { writeAutoHandoff } from "./persist-last-exchange";
+import { appendProjectHistory } from "../lib/work-tracking";
+import { structuredHandoff, writeAutoHandoff } from "./persist-last-exchange";
 
 // ── JSON schema for merged Haiku call ──
 
@@ -51,20 +52,51 @@ const INTELLIGENCE_SCHEMA = {
       description:
         "What worked, what was surprising, what to do differently, 2-3 bullet points",
     },
-    handoff: {
+    status: {
+      type: "string" as const,
+      enum: ["in-progress", "completed"],
+      description:
+        "in-progress if work remains or the AI's last message awaits the user's answer; completed only if nothing is left",
+    },
+    done: {
+      type: "string" as const,
+      description: "What the latest piece of work finished, one sentence",
+    },
+    next: {
+      type: "string" as const,
+      description: "The concrete next step, one sentence, empty if none",
+    },
+    waitingOn: {
       type: "string" as const,
       description:
-        "If status is in-progress: what remains to be done, key decisions made, blockers. If completed: empty string.",
+        "What the AI needs from the user before it can continue, empty if nothing",
     },
   },
-  required: ["title", "summary", "insights", "handoff"] as const,
+  required: [
+    "title",
+    "summary",
+    "insights",
+    "status",
+    "done",
+    "next",
+    "waitingOn",
+  ] as const,
 };
 
 interface IntelligenceOutput {
   title: string;
   summary: string;
   insights: string;
-  handoff: string;
+  status: "in-progress" | "completed";
+  done: string;
+  next: string;
+  waitingOn: string;
+}
+
+/** A reply states its verdict first and its question to the user last. */
+export function openingAndClosing(text: string, each: number): string {
+  if (text.length <= each * 2) return text;
+  return `${text.slice(0, each)} … ${text.slice(-each)}`;
 }
 
 // ── Main handler ──
@@ -96,10 +128,9 @@ export async function captureSessionIntelligence(
   const lastAssistant = extractLastAssistant(messages);
   const lastAssistantText = extractContent(lastAssistant);
   const lastUser = extractLastUser(messages);
-  const status = detectStatus(lastAssistantText);
 
   const userWindow = userMessages.slice(-10).map((t) => t.slice(0, 200));
-  const assistantWindow = lastAssistantText.slice(0, 600);
+  const assistantWindow = openingAndClosing(lastAssistantText, 300);
 
   if (userWindow.length < 3) return;
 
@@ -111,17 +142,15 @@ export async function captureSessionIntelligence(
     const result = await inference({
       system: [
         "You analyze a session between a human user and an AI assistant. Sessions may involve coding, research, writing, planning, analysis, or any other task.",
-        `Session status: ${status}.`,
         "Produce ALL of the following:",
         "1. title: short title (5-10 words) describing what was accomplished",
         "2. summary: what the AI did for the user (2-4 sentences, AI perspective using 'we')",
         "3. insights: what worked, what was surprising, what to do differently (2-3 points, no markdown)",
-        status === "in-progress"
-          ? "4. handoff: what remains unfinished — decisions made so far, next steps, blockers (2-4 sentences)"
-          : "4. handoff: empty string (session completed)",
+        "4. status: in-progress if work remains or the last AI response ends with a question or offer awaiting the user; completed only if nothing is left",
+        "5. done, next, waitingOn: a handoff for whoever picks this up next. Describe the LATEST thread of work, the one the last messages are about, not earlier topics of the session. One sentence each; next and waitingOn may be empty.",
       ].join("\n"),
       user: `User messages:\n${numberedMessages}\n\nLast AI response:\n${assistantWindow}`,
-      maxTokens: 350,
+      maxTokens: 450,
       timeout: 90000,
       jsonSchema: INTELLIGENCE_SCHEMA,
       caller: "session-intelligence",
@@ -141,8 +170,14 @@ export async function captureSessionIntelligence(
   const title = output?.title || extractContent(lastUser).slice(0, 80) || "session";
   const summary = output?.summary || lastAssistantText.slice(0, 600);
   const insights = output?.insights || "";
-  if (status === "in-progress" && output?.handoff) {
-    writeAutoHandoff(process.cwd(), { title, status, handoff: output.handoff });
+  if (output) {
+    writeAutoHandoff(sessionDir(), {
+      title,
+      status: output.status,
+      handoff: structuredHandoff(output),
+      waitingOn: output.waitingOn,
+      sessionId,
+    });
   }
   // ── Write session learning file ──
 

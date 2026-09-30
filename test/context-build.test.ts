@@ -3,7 +3,6 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   buildSystemReminder,
-  loadLearningDigest,
   loadRelationshipContext,
   loadWisdomContext,
 } from "../src/hooks/lib/context";
@@ -86,34 +85,11 @@ describe("loadWisdomContext", () => {
   });
 });
 
-describe("loadLearningDigest", () => {
-  test("is empty when nothing has been learned", () => {
-    expect(loadLearningDigest()).toBe("");
-  });
-
-  test("omits learnings from the current project", () => {
-    learning("Same project thing", process.cwd());
-
-    expect(loadLearningDigest()).toBe("");
-  });
-
-  test("lists learnings from other projects under a heading", () => {
+describe("learnings from other folders", () => {
+  test("stay out of the session-start context", () => {
     learning("Elsewhere thing", "/some/other/project");
 
-    const out = loadLearningDigest();
-
-    expect(out).toContain("## Other Recent Learnings");
-    expect(out).toContain("- Elsewhere thing");
-  });
-
-  test("lists at most five cross-project learnings", () => {
-    for (let i = 0; i < 8; i++) learning(`Thing ${i}`, `/other/${i}`, i);
-
-    const listed = loadLearningDigest()
-      .split("\n")
-      .filter((l) => l.startsWith("- "));
-
-    expect(listed).toHaveLength(5);
+    expect(buildSystemReminder()).not.toContain("Elsewhere thing");
   });
 });
 
@@ -230,6 +206,26 @@ describe("buildSystemReminder", () => {
     for (const agent of ["claude", "opencode", "cursor", "copilot"] as const) {
       expect(buildSystemReminder({ agent })).not.toContain("Native principle");
     }
+  });
+
+  test("drops only the handoff when asked to go without it", () => {
+    write(
+      "memory/state/last-handoff.json",
+      JSON.stringify({
+        [process.cwd()]: {
+          title: "open work",
+          handoff: "finish the gate",
+          status: "in-progress",
+          timestamp: new Date().toISOString(),
+        },
+      })
+    );
+    notes("## 09:00\n- W: a fact\n");
+
+    expect(buildSystemReminder()).toContain("finish the gate");
+    const out = buildSystemReminder({ withoutHandoff: true });
+    expect(out).not.toContain("finish the gate");
+    expect(out).toContain("- W: a fact");
   });
 
   test("still includes relationship notes for a native-loading agent", () => {
@@ -408,14 +404,17 @@ describe("handoff", () => {
     const out = buildSystemReminder();
 
     expect(out).toContain("## Pick Up Where You Left Off");
-    expect(out).toContain("*Previous session: a previous session*");
+    expect(out).toContain("*Previous session: a previous session · 0m ago*");
     expect(out).toContain("the remaining work");
+    expect(out).toContain("→ Continue this work");
   });
 
-  test("stays silent once the handoff is done", () => {
-    handoff({ status: "done" });
+  test("a finished session stays available for follow-ups, not as open work", () => {
+    handoff({ status: "completed", lastUser: "what about the gate?" });
 
-    expect(buildSystemReminder()).not.toContain("Pick Up Where You Left Off");
+    const out = buildSystemReminder();
+    expect(out).toContain("- User: what about the gate?");
+    expect(out).not.toContain("→ Continue this work");
   });
 
   test("drops a handoff older than a week", () => {
@@ -430,7 +429,7 @@ describe("handoff", () => {
     expect(buildSystemReminder()).toContain("Pick Up Where You Left Off");
   });
 
-  test("ignores a handoff belonging to another project", () => {
+  test("shows another folder's handoff only as the conversation elsewhere", () => {
     write(
       "memory/state/last-handoff.json",
       JSON.stringify({
@@ -443,6 +442,9 @@ describe("handoff", () => {
       })
     );
 
-    expect(buildSystemReminder()).not.toContain("someone else work");
+    const out = buildSystemReminder();
+    expect(out).not.toContain("Pick Up Where You Left Off");
+    expect(out).toContain("## Last Conversation Elsewhere");
+    expect(out).toContain("someone else work");
   });
 });

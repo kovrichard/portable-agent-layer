@@ -9,7 +9,10 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { captureSessionIntelligence } from "../src/hooks/handlers/session-intelligence";
+import {
+  captureSessionIntelligence,
+  openingAndClosing,
+} from "../src/hooks/handlers/session-intelligence";
 import {
   isRecaptureWorthwhile,
   markCaptured,
@@ -84,6 +87,20 @@ describe("what is not worth a model call", () => {
   });
 });
 
+describe("the reply the model reads", () => {
+  test("keeps a long reply's closing question to the user", () => {
+    const reply = `Verdict first. ${"detail ".repeat(200)}Push it now, or keep going?`;
+    const window = openingAndClosing(reply, 300);
+    expect(window.startsWith("Verdict first.")).toBe(true);
+    expect(window.endsWith("Push it now, or keep going?")).toBe(true);
+    expect(window.length).toBeLessThan(620);
+  });
+
+  test("leaves a short reply whole", () => {
+    expect(openingAndClosing("Done. Anything else?", 300)).toBe("Done. Anything else?");
+  });
+});
+
 describe("a session already captured", () => {
   test("is not captured again when it has barely grown", async () => {
     markCaptured("s1", "/learning/a.md", 20);
@@ -114,7 +131,10 @@ describe("an unfinished session", () => {
       title: "Handoff wiring",
       summary: "We traced the handoff.",
       insights: "",
-      handoff: "Wire the model handoff into last-handoff.json, then run the gates.",
+      status: "in-progress",
+      done: "Traced where the handoff is written.",
+      next: "Wire the model handoff into last-handoff.json, then run the gates.",
+      waitingOn: "",
     };
     writeFakeBin(
       binDir,
@@ -139,8 +159,11 @@ describe("an unfinished session", () => {
     expect(handoffs[process.cwd()]).toMatchObject({
       title: "Handoff wiring",
       status: "in-progress",
-      handoff: "Wire the model handoff into last-handoff.json, then run the gates.",
+      handoff:
+        "Done: Traced where the handoff is written.\n" +
+        "Next: Wire the model handoff into last-handoff.json, then run the gates.",
       source: "auto",
+      sessionId: "s-open",
     });
   });
 });

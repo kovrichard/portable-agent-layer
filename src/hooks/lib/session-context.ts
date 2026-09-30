@@ -24,6 +24,28 @@ export function isSubagentSession(env: NodeJS.ProcessEnv): boolean {
   return env.CLAUDE_PROJECT_DIR?.includes("/.claude/Agents/") ?? false;
 }
 
+export type SessionStartContext = "full" | "without-handoff" | "none";
+
+/**
+ * Claude Code and Codex replay the context injected at startup when a session
+ * is resumed. Copilot does not document it, and has shipped a release that
+ * dropped startup context, so it keeps getting the full context on resume.
+ */
+const RESUME_KEEPS_CONTEXT: ReadonlySet<string> = new Set(["claude", "codex"]);
+
+/**
+ * After a compaction, CompactRecover restores the last exchange, so the
+ * handoff is redundant. Agents that name no source get everything.
+ */
+export function contextForSource(
+  agent: string,
+  source: string | undefined
+): SessionStartContext {
+  if (source === "resume" && RESUME_KEEPS_CONTEXT.has(agent)) return "none";
+  if (source === "compact") return "without-handoff";
+  return "full";
+}
+
 /**
  * Copilot and Cursor read AGENTS.md natively from nothing, so it is prepended
  * here; Codex reaches it through a symlink and Claude Code loads it itself.

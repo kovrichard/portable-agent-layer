@@ -9,15 +9,16 @@ import { loadReflectNudge } from "../handlers/reflect-trigger";
 import { loadAlgorithmReviewNudge } from "./algorithm-review";
 import { loadAnalyzeNudge } from "./analyze-nudge";
 import { resolveAnchor } from "./anchor";
-import { readLearnings } from "./learning-store";
+import { loadHandoffContext } from "./handoff-context";
 import { loadOpinionContext } from "./opinions";
 import { paths, toPath } from "./paths";
 import { loadActiveProjectsContext } from "./projects";
 import { loadRecentNotes } from "./relationship";
 import { loadFailurePatterns } from "./semi-static";
+import { sessionDir } from "./session-dir";
 import * as settings from "./settings";
 import { readFramePrinciples } from "./wisdom";
-import { readProjectHistory } from "./work-tracking";
+import { lastSessionTitle, readProjectHistory } from "./work-tracking";
 
 /** Load and concatenate loadAtStartup files */
 function loadStartupFiles(): string {
@@ -46,29 +47,6 @@ export function loadWisdomContext(): string {
     const principles = readFramePrinciples();
     if (principles.length === 0) return "";
     return ["## Crystallized Principles", ...principles.map((p) => `- ${p}`)].join("\n");
-  } catch {
-    return "";
-  }
-}
-
-/** Load recent session learning files as digest, with detail for current project */
-export function loadLearningDigest(): string {
-  try {
-    const cwd = process.cwd();
-    const entries = readLearnings(paths.sessionLearning(), 10);
-    if (entries.length === 0) return "";
-
-    // This-project learnings are now in loadProjectHistoryContext(); only show cross-project here
-    const other = entries.filter((e) => e.cwd !== cwd).slice(0, 5);
-
-    if (other.length === 0) return "";
-
-    const lines: string[] = [];
-
-    lines.push("## Other Recent Learnings");
-    for (const e of other) lines.push(`- ${e.title}`);
-
-    return lines.join("\n");
   } catch {
     return "";
   }
@@ -219,31 +197,6 @@ function loadSessionIntelligence(): string {
   }
 }
 
-/** Load handoff state for the current project */
-function loadHandoff(): string {
-  try {
-    const p = resolve(paths.state(), "last-handoff.json");
-    if (!existsSync(p)) return "";
-    const handoffs = JSON.parse(readFileSync(p, "utf-8"));
-    const cwd = process.cwd();
-    const entry = handoffs[cwd];
-    if (!entry?.handoff || entry.status !== "in-progress") return "";
-
-    const age = Date.now() - new Date(entry.timestamp).getTime();
-    if (age > 7 * 24 * 60 * 60 * 1000) return ""; // stale after 7 days
-
-    return [
-      "## Pick Up Where You Left Off",
-      `*Previous session: ${entry.title}*`,
-      "",
-      entry.handoff,
-      "→ Continue this work or explicitly close it before starting something new.",
-    ].join("\n");
-  } catch {
-    return "";
-  }
-}
-
 /** Truncate text to maxChars at the last complete line boundary */
 function capSection(text: string, maxChars: number): string {
   if (text.length <= maxChars) return text;
@@ -272,7 +225,9 @@ export type AgentTarget = "claude" | "opencode" | "cursor" | "copilot";
  * opts.agent — agent target; Claude Code skips semi-static sections (self-model,
  * wisdom, opinions) that load natively via @imports in CLAUDE.md.
  */
-export function buildSystemReminder(opts: { agent?: AgentTarget } = {}): string {
+export function buildSystemReminder(
+  opts: { agent?: AgentTarget; withoutHandoff?: boolean } = {}
+): string {
   // Semi-static sections loaded natively via @imports (Claude Code) or
   // instructions[] (opencode). Skip them from hook output for those agents.
   const skipSemiStatic =
@@ -287,12 +242,11 @@ export function buildSystemReminder(opts: { agent?: AgentTarget } = {}): string 
   const relationship = settings.isEnabled("relationship")
     ? loadRelationshipContext()
     : "";
-  const digest = settings.isEnabled("learningDigest") ? loadLearningDigest() : "";
   const projectHistory = settings.isEnabled("projectHistory")
     ? loadProjectHistoryContext()
     : "";
   const activeProjects = settings.isEnabled("projects")
-    ? loadActiveProjectsContext()
+    ? loadActiveProjectsContext(process.cwd(), lastSessionTitle)
     : "";
   const failures =
     settings.isEnabled("failurePatterns") && !skipSemiStatic ? loadFailurePatterns() : "";
@@ -303,7 +257,10 @@ export function buildSystemReminder(opts: { agent?: AgentTarget } = {}): string 
   const intelligence = settings.isEnabled("sessionIntelligence")
     ? loadSessionIntelligence()
     : "";
-  const handoff = settings.isEnabled("handoff") ? loadHandoff() : "";
+  const handoff =
+    !opts.withoutHandoff && settings.isEnabled("handoff")
+      ? loadHandoffContext(sessionDir())
+      : "";
   // Maintainer-only: self-gates to a repo checkout, "" for everyone else.
   const algoReview = loadAlgorithmReviewNudge();
   const reflectNudge = loadReflectNudge();
@@ -321,7 +278,6 @@ export function buildSystemReminder(opts: { agent?: AgentTarget } = {}): string 
   if (relationship) parts.push(relationship);
   if (activeProjects) parts.push(activeProjects);
   if (projectHistory) parts.push(projectHistory);
-  if (digest) parts.push(digest);
   if (failures) parts.push(failures);
   if (parts.length === 0) return "";
 

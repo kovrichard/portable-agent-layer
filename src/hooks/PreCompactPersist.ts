@@ -17,6 +17,7 @@ import { resolve } from "node:path";
 import { persistLastExchange } from "./handlers/persist-last-exchange";
 import { logDebug, logError } from "./lib/log";
 import { paths } from "./lib/paths";
+import { sessionDir } from "./lib/session-dir";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
 import { readTranscriptFile } from "./lib/transcript";
@@ -27,7 +28,6 @@ if (isPalSpawnedInference()) process.exit(0);
 interface PreCompactInput {
   session_id?: string;
   transcript_path?: string;
-  cwd?: string;
   hook_event_name?: string;
   trigger?: "manual" | "auto";
   custom_instructions?: string;
@@ -47,7 +47,7 @@ const main = async () => {
       process.exit(0);
     }
     const sessionId = input.session_id ?? "unknown";
-    const cwd = input.cwd ?? process.cwd();
+    const cwd = sessionDir();
 
     // Stop fires after every response and is authoritative. Skip if it already
     // wrote latest.json for this session — PreCompact is a safety net only.

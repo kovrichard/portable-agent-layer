@@ -4,7 +4,6 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
   buildSystemReminder,
-  loadLearningDigest,
   loadRelationshipContext,
   loadWisdomContext,
 } from "../src/hooks/lib/context";
@@ -45,10 +44,6 @@ describe("wisdom", () => {
 describe("context builders", () => {
   test("loadWisdomContext returns string", () => {
     expect(typeof loadWisdomContext()).toBe("string");
-  });
-
-  test("loadLearningDigest returns string", () => {
-    expect(typeof loadLearningDigest()).toBe("string");
   });
 
   test("loadFailurePatterns returns string", () => {

@@ -18,11 +18,13 @@ import { logContextSnapshot, logDebug, logError } from "./lib/log";
 import { platform } from "./lib/paths";
 import {
   contextEnvelope,
+  contextForSource,
   copilotInstructions,
   isSubagentSession,
   needsAgentsMd,
 } from "./lib/session-context";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
+import { readStdinJSON } from "./lib/stdin";
 
 // Recursion guard — when this process is a PAL-spawned inference subprocess,
 // skip all context loading so we don't trigger another inference call.
@@ -47,11 +49,21 @@ try {
 
 try {
   const active = getActiveAgent();
+  const input = await readStdinJSON<{ source?: string }>();
+  const wanted = contextForSource(active, input?.source);
+  if (wanted === "none") {
+    logDebug("LoadContext", `source=${input?.source}, context already present`);
+    process.exit(0);
+  }
+
   // The reminder is built for one of three targets; every other agent reads the
   // same shape Claude Code does.
   const target: AgentTarget =
     active === "copilot" || active === "cursor" ? active : "claude";
-  const reminder = buildSystemReminder({ agent: target });
+  const reminder = buildSystemReminder({
+    agent: target,
+    withoutHandoff: wanted === "without-handoff",
+  });
   if (!reminder) process.exit(0);
   logContextSnapshot(reminder);
 
