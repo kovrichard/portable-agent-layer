@@ -14,11 +14,13 @@ import {
   openingAndClosing,
 } from "../src/hooks/handlers/session-intelligence";
 import {
+  claimHandoffSummary,
   isRecaptureWorthwhile,
   markCaptured,
   readCapture,
 } from "../src/hooks/lib/capture-store";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
+import { readProjectHistory } from "../src/hooks/lib/work-tracking";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 
 // Every case here fails a guard that returns before canInfer(), so no inference
@@ -52,6 +54,14 @@ function transcript(messageCount: number, padding: number): string {
     content: `message ${i} ${"x".repeat(padding)}`,
   }));
   return JSON.stringify(messages);
+}
+
+function handoffPath(): string {
+  return resolve(HOME, "memory", "state", "last-handoff.json");
+}
+
+function handoffs(): Record<string, unknown> {
+  return JSON.parse(readFileSync(handoffPath(), "utf-8"));
 }
 
 /** Learning files, wherever under the month directories they landed. */
@@ -165,5 +175,50 @@ describe("an unfinished session", () => {
       source: "auto",
       sessionId: "s-open",
     });
+  });
+
+  test("files the session under the folder it started in, not the one it ended in", async () => {
+    const startDir = mkdtempSync(resolve(tmpdir(), "pal-si-start-"));
+    const savedStart = process.env.CLAUDE_PROJECT_DIR;
+    process.env.CLAUDE_PROJECT_DIR = startDir;
+    try {
+      await captureSessionIntelligence(transcript(12, 300), "s-moved");
+
+      expect(readProjectHistory(startDir).map((e) => e.title)).toEqual([
+        "Handoff wiring",
+      ]);
+    } finally {
+      if (savedStart === undefined) delete process.env.CLAUDE_PROJECT_DIR;
+      else process.env.CLAUDE_PROJECT_DIR = savedStart;
+      rmSync(startDir, { recursive: true, force: true });
+    }
+  });
+
+  test("records no history when the model gave no summary", async () => {
+    writeFakeBin(binDir, "claude", "process.exit(1);\n");
+
+    await captureSessionIntelligence(transcript(12, 300), "s-no-model");
+
+    expect(readProjectHistory(process.cwd())).toEqual([]);
+  });
+
+  test("summarises the handoff again after a new message, before the learning is due", async () => {
+    markCaptured("s-turn", "/learning/a.md", 20);
+    claimHandoffSummary("s-turn", 10);
+
+    await captureSessionIntelligence(transcript(22, 300), "s-turn");
+
+    expect(handoffs()[process.cwd()]).toMatchObject({ title: "Handoff wiring" });
+    expect(learningFiles()).toEqual([]);
+    expect(readProjectHistory(process.cwd())).toEqual([]);
+  });
+
+  test("does not summarise the same turn twice", async () => {
+    markCaptured("s-twice", "/learning/a.md", 20);
+    claimHandoffSummary("s-twice", 11);
+
+    await captureSessionIntelligence(transcript(22, 300), "s-twice");
+
+    expect(existsSync(handoffPath())).toBe(false);
   });
 });

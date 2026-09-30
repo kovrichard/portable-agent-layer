@@ -20,7 +20,6 @@
     "opinions": true,
     "relationship": true,
     "failurePatterns": true,
-    "projectHistory": true,
     "projects": true,
     "sessionIntelligence": true,
     "handoff": true,

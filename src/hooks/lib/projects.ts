@@ -386,6 +386,27 @@ function formatAgo(ts: string): string {
 }
 
 const MAX_INLINE_BULLETS = 3;
+const FACTS_BUDGET = 600;
+
+function factLines(context: string): string[] {
+  return context
+    .split("\n")
+    .map((l) => l.replace(/^[-*]\s*/, "").trim())
+    .filter((l) => l && !l.startsWith("#"));
+}
+
+/** Whole facts in written order, so none is cut mid-sentence; the first always fits. */
+function factsLine(project: string, context: string): string {
+  const facts = factLines(context);
+  const shown = facts.slice(0, 1);
+  for (const fact of facts.slice(1)) {
+    if ([...shown, fact].join("; ").length > FACTS_BUDGET) break;
+    shown.push(fact);
+  }
+  const more =
+    shown.length < facts.length ? ` (more: \`pal cli project resume ${project}\`)` : "";
+  return `  Facts: ${shown.join("; ")}${more}`;
+}
 
 /**
  * Format the SessionStart "Active Projects" section.
@@ -425,13 +446,7 @@ export function loadActiveProjectsContext(
 
       if (isResolved) {
         lines.push(`- **${p.name}** (${statusPrefix}${ago})${stale}${here}`);
-        if (p.context) {
-          const bullets = p.context
-            .split("\n")
-            .map((l) => l.replace(/^[-*]\s*/, "").trim())
-            .filter(Boolean);
-          lines.push(`  Facts: ${bullets.slice(0, MAX_INLINE_BULLETS).join("; ")}`);
-        }
+        if (p.context) lines.push(factsLine(p.name, p.context));
         if (p.goal) {
           const bullets = p.goal
             .split("\n")

@@ -9,6 +9,7 @@ import { loadReflectNudge } from "../handlers/reflect-trigger";
 import { loadAlgorithmReviewNudge } from "./algorithm-review";
 import { loadAnalyzeNudge } from "./analyze-nudge";
 import { resolveAnchor } from "./anchor";
+import { oncePerDay } from "./daily-nudge";
 import { loadHandoffContext } from "./handoff-context";
 import { loadOpinionContext } from "./opinions";
 import { paths, toPath } from "./paths";
@@ -18,7 +19,7 @@ import { loadFailurePatterns } from "./semi-static";
 import { sessionDir } from "./session-dir";
 import * as settings from "./settings";
 import { readFramePrinciples } from "./wisdom";
-import { lastSessionTitle, readProjectHistory } from "./work-tracking";
+import { lastSessionTitle } from "./work-tracking";
 
 /** Load and concatenate loadAtStartup files */
 function loadStartupFiles(): string {
@@ -60,25 +61,6 @@ function loadSelfModel(): string {
     const content = readFileSync(p, "utf-8").trim();
     if (!content) return "";
     return content;
-  } catch {
-    return "";
-  }
-}
-
-/** Load per-project session history for the current working directory */
-function loadProjectHistoryContext(): string {
-  try {
-    const cwd = process.cwd();
-    const entries = readProjectHistory(cwd, 3);
-    if (entries.length === 0) return "";
-
-    const lines: string[] = ["## This Project — Session History"];
-    for (const e of entries) {
-      lines.push(`- **${e.title}** (${e.date})`);
-      if (e.summary) lines.push(`  ${e.summary.split("\n")[0].slice(0, 150)}`);
-    }
-
-    return lines.join("\n");
   } catch {
     return "";
   }
@@ -144,28 +126,6 @@ function loadSessionIntelligence(): string {
 
     const lines: string[] = ["## Session Intelligence"];
 
-    // Rating Trend
-    if (state.ratings?.count > 0) {
-      const r = state.ratings;
-      const lowNote = r.lowCount > 0 ? ` ${r.lowCount} low ratings.` : "";
-      lines.push(
-        "",
-        `**Rating trend:** ${r.avg}/10 avg (last 10: ${r.recentAvg}/10, ${r.trend}).${lowNote}`
-      );
-      if (r.trend === "declining") {
-        lines.push(
-          "→ Trend is declining. Be extra careful with assumptions. Confirm before acting."
-        );
-      } else if (r.trend === "improving") {
-        lines.push("→ Trend is improving. Maintain current approach.");
-      } else if (r.lowCount > 5) {
-        lines.push(
-          "→ Multiple low ratings. Slow down, verify before acting, ask when uncertain."
-        );
-      }
-    }
-
-    // Algorithm Performance
     if (state.algorithm?.reflectionCount > 0) {
       const a = state.algorithm;
       lines.push(
@@ -242,11 +202,8 @@ export function buildSystemReminder(
   const relationship = settings.isEnabled("relationship")
     ? loadRelationshipContext()
     : "";
-  const projectHistory = settings.isEnabled("projectHistory")
-    ? loadProjectHistoryContext()
-    : "";
   const activeProjects = settings.isEnabled("projects")
-    ? loadActiveProjectsContext(process.cwd(), lastSessionTitle)
+    ? loadActiveProjectsContext(sessionDir(), lastSessionTitle)
     : "";
   const failures =
     settings.isEnabled("failurePatterns") && !skipSemiStatic ? loadFailurePatterns() : "";
@@ -262,9 +219,9 @@ export function buildSystemReminder(
       ? loadHandoffContext(sessionDir())
       : "";
   // Maintainer-only: self-gates to a repo checkout, "" for everyone else.
-  const algoReview = loadAlgorithmReviewNudge();
-  const reflectNudge = loadReflectNudge();
-  const analyzeNudge = loadAnalyzeNudge();
+  const algoReview = oncePerDay("algorithm-review", loadAlgorithmReviewNudge());
+  const reflectNudge = oncePerDay("reflect", loadReflectNudge());
+  const analyzeNudge = oncePerDay("analyze", loadAnalyzeNudge());
   const parts: string[] = [];
   if (startup) parts.push(startup);
   if (handoff) parts.push(handoff);
@@ -277,7 +234,6 @@ export function buildSystemReminder(
   if (intelligence) parts.push(intelligence);
   if (relationship) parts.push(relationship);
   if (activeProjects) parts.push(activeProjects);
-  if (projectHistory) parts.push(projectHistory);
   if (failures) parts.push(failures);
   if (parts.length === 0) return "";
 

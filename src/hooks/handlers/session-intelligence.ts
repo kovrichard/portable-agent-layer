@@ -13,6 +13,8 @@ import { existsSync } from "node:fs";
 import { unlink, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
+  claimHandoffSummary,
+  isHandoffStale,
   isRecaptureWorthwhile,
   learningSlug,
   markCaptured,
@@ -109,9 +111,10 @@ export async function captureSessionIntelligence(
   const messages = parseMessages(transcript);
   if (messages.length < 6 || transcript.length < 2000) return;
 
-  if (sessionId && !isRecaptureWorthwhile(readCapture(sessionId), messages.length)) {
-    return;
-  }
+  const userMessageCount = messages.filter((m) => m.role === "user").length;
+  const previous = sessionId ? readCapture(sessionId) : null;
+  const learningDue = isRecaptureWorthwhile(previous, messages.length);
+  if (!learningDue && !isHandoffStale(previous, userMessageCount)) return;
 
   // Skip if no inference path is available (no CLI binary AND no API key)
   if (!canInfer()) {
@@ -133,6 +136,8 @@ export async function captureSessionIntelligence(
   const assistantWindow = openingAndClosing(lastAssistantText, 300);
 
   if (userWindow.length < 3) return;
+
+  if (sessionId) claimHandoffSummary(sessionId, userMessageCount);
 
   // Single Haiku call
   logDebug("session-intelligence", "Calling inference...");
@@ -179,6 +184,8 @@ export async function captureSessionIntelligence(
       sessionId,
     });
   }
+  if (!learningDue) return;
+
   // ── Write session learning file ──
 
   const category = categorizeLearning(title, summary);
@@ -219,13 +226,14 @@ export async function captureSessionIntelligence(
   const filepath = resolve(dir, filename);
   await writeFile(filepath, content, "utf-8");
 
-  // Append to per-project history
-  appendProjectHistory(process.cwd(), {
-    date: new Date().toISOString().slice(0, 10),
-    title,
-    summary,
-    insights,
-  });
+  if (output) {
+    appendProjectHistory(sessionDir(), {
+      date: new Date().toISOString().slice(0, 10),
+      title,
+      summary,
+      insights,
+    });
+  }
 
   if (sessionId) markCaptured(sessionId, filepath, messages.length);
   logDebug("session-intelligence", `Learning captured: ${title}`);
