@@ -106,6 +106,42 @@ describe("loadActiveProjectsContext", () => {
     expect(out).toContain("Tech stack: Bun + TS");
   });
 
+  test("a heading is not a fact", async () => {
+    const lib = await freshLib();
+    const cwd = fixtureRepoDir("with-heading");
+    lib.writeProject({
+      name: "with-heading",
+      path: cwd,
+      status: "active",
+      created: nowIso(),
+      updated: nowIso(),
+      context:
+        "Runs from a package install\n\n### Lineage\n\nForked from an older upstream",
+    });
+    const out = lib.loadActiveProjectsContext(cwd);
+    expect(out).toContain(
+      "Facts: Runs from a package install; Forked from an older upstream"
+    );
+  });
+
+  test("long facts stop whole at the budget and point to the full record", async () => {
+    const lib = await freshLib();
+    const cwd = fixtureRepoDir("long-facts");
+    const fact = (n: number) => `Fact ${n} ${"x".repeat(250)}.`;
+    lib.writeProject({
+      name: "long-facts",
+      path: cwd,
+      status: "active",
+      created: nowIso(),
+      updated: nowIso(),
+      context: [fact(1), fact(2), fact(3)].join("\n"),
+    });
+    const out = lib.loadActiveProjectsContext(cwd);
+    expect(out).toContain(`Facts: ${fact(1)}; ${fact(2)}`);
+    expect(out).not.toContain("Fact 3");
+    expect(out).toContain("pal cli project resume long-facts");
+  });
+
   test("facts do NOT surface in compact one-liner for non-resolved projects", async () => {
     const lib = await freshLib();
     const otherRepo = fixtureRepoDir("other");
