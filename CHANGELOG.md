@@ -1,3 +1,18 @@
+## [0.79.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.79.1...v0.79.2) (2026-09-30)
+
+
+### Bug Fixes
+
+* **context:** drop the session history section from startup ([d9b1f04](https://github.com/kovrichard/portable-agent-layer/commit/d9b1f04faea7c941a9c8dc53f31fdade81425438))
+* **context:** leave ratings to the self-model ([84b46c1](https://github.com/kovrichard/portable-agent-layer/commit/84b46c1999fb541fa7d77063ded597a381d1356d))
+* **context:** mark the project the session started in as here ([98b001a](https://github.com/kovrichard/portable-agent-layer/commit/98b001ad8c6b9fc9258810fd7f373561f5fa36c6))
+* **context:** show the due reminders once a day, not every session ([ae86470](https://github.com/kovrichard/portable-agent-layer/commit/ae86470d859cef58af975e29bc550de70bebf65a))
+* **projects:** inject whole facts within a budget, not the first three lines ([804cabb](https://github.com/kovrichard/portable-agent-layer/commit/804cabb7443301baa70b7946cac598bb22539514))
+* **session-intelligence:** file history under the folder the session started in ([cb75a0f](https://github.com/kovrichard/portable-agent-layer/commit/cb75a0f90032bbc67075f1d5807009aaddbc8292))
+* **session-intelligence:** keep failed summaries out of the project history ([c088bd0](https://github.com/kovrichard/portable-agent-layer/commit/c088bd075d4ff3dff5a1780f65f0a3d7ed10a4df))
+* **session-intelligence:** summarise the handoff after every new message ([bcb024e](https://github.com/kovrichard/portable-agent-layer/commit/bcb024e8d91edeafa9f8abe8d5a5cd6ac6dc819b))
+* **test:** wait for detached stop handlers to release the temp home on Windows ([450b163](https://github.com/kovrichard/portable-agent-layer/commit/450b1633d50d17da90ebb29ed04d160dddacbb90))
+
 ## [0.79.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.79.0...v0.79.1) (2026-09-30)
 
 
