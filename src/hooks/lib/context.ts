@@ -19,7 +19,7 @@ import { loadFailurePatterns } from "./semi-static";
 import { sessionDir } from "./session-dir";
 import * as settings from "./settings";
 import { readFramePrinciples } from "./wisdom";
-import { lastSessionTitle, readProjectHistory } from "./work-tracking";
+import { lastSessionTitle } from "./work-tracking";
 
 /** Load and concatenate loadAtStartup files */
 function loadStartupFiles(): string {
@@ -61,25 +61,6 @@ function loadSelfModel(): string {
     const content = readFileSync(p, "utf-8").trim();
     if (!content) return "";
     return content;
-  } catch {
-    return "";
-  }
-}
-
-/** Load per-project session history for the current working directory */
-function loadProjectHistoryContext(): string {
-  try {
-    const cwd = process.cwd();
-    const entries = readProjectHistory(cwd, 3);
-    if (entries.length === 0) return "";
-
-    const lines: string[] = ["## This Project — Session History"];
-    for (const e of entries) {
-      lines.push(`- **${e.title}** (${e.date})`);
-      if (e.summary) lines.push(`  ${e.summary.split("\n")[0].slice(0, 150)}`);
-    }
-
-    return lines.join("\n");
   } catch {
     return "";
   }
@@ -221,9 +202,6 @@ export function buildSystemReminder(
   const relationship = settings.isEnabled("relationship")
     ? loadRelationshipContext()
     : "";
-  const projectHistory = settings.isEnabled("projectHistory")
-    ? loadProjectHistoryContext()
-    : "";
   const activeProjects = settings.isEnabled("projects")
     ? loadActiveProjectsContext(process.cwd(), lastSessionTitle)
     : "";
@@ -256,7 +234,6 @@ export function buildSystemReminder(
   if (intelligence) parts.push(intelligence);
   if (relationship) parts.push(relationship);
   if (activeProjects) parts.push(activeProjects);
-  if (projectHistory) parts.push(projectHistory);
   if (failures) parts.push(failures);
   if (parts.length === 0) return "";
 

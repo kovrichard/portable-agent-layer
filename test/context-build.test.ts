@@ -6,6 +6,7 @@ import {
   loadRelationshipContext,
   loadWisdomContext,
 } from "../src/hooks/lib/context";
+import { appendProjectHistory } from "../src/hooks/lib/work-tracking";
 
 const HOME = resolve(import.meta.dir, "../.test-home-context-build");
 const savedHome = process.env.PAL_HOME;
@@ -231,6 +232,17 @@ describe("buildSystemReminder", () => {
     const out = buildSystemReminder({ withoutHandoff: true });
     expect(out).not.toContain("finish the gate");
     expect(out).toContain("- W: a fact");
+  });
+
+  test("leaves past sessions to the handoff and the active projects list", () => {
+    appendProjectHistory(process.cwd(), {
+      date: "2026-09-30",
+      title: "An earlier session here",
+      summary: "What that session did.",
+      insights: "",
+    });
+
+    expect(buildSystemReminder()).not.toContain("An earlier session here");
   });
 
   test("still includes relationship notes for a native-loading agent", () => {
