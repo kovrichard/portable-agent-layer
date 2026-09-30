@@ -3,7 +3,6 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
-  _resetOpencodeBinaryCache,
   buildCliPrompt,
   buildOpencodeArgs,
   extractOpencodeText,
@@ -116,13 +115,11 @@ describe("inference dispatcher — opencode spawn integration (fake binary)", ()
     delete process.env[SPAWN_GUARD_ENV.DEPTH];
     delete process.env.PAL_INFERENCE_DISABLED;
     process.env.PAL_AGENT = "opencode";
-    _resetOpencodeBinaryCache();
   });
 
   afterEach(() => {
     rmSync(tmpBin, { recursive: true, force: true });
     restoreEnv(saved);
-    _resetOpencodeBinaryCache();
   });
 
   test("end-to-end: fake opencode emits a text event, dispatcher extracts it", async () => {

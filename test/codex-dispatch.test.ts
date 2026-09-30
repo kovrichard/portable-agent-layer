@@ -3,7 +3,6 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
-  _resetCodexBinaryCache,
   buildCliPrompt,
   buildCodexArgs,
   hasOpenAiKey,
@@ -120,13 +119,11 @@ describe("inference dispatcher — codex spawn integration (fake binary)", () =>
     delete process.env[SPAWN_GUARD_ENV.DEPTH];
     delete process.env.PAL_INFERENCE_DISABLED;
     process.env.PAL_AGENT = "codex";
-    _resetCodexBinaryCache();
   });
 
   afterEach(() => {
     rmSync(tmpBin, { recursive: true, force: true });
     restoreEnv(saved);
-    _resetCodexBinaryCache();
   });
 
   test("end-to-end: fake codex echoes stdin (the prompt), dispatcher captures it", async () => {

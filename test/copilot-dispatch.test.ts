@@ -2,12 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import {
-  _resetCopilotBinaryCache,
-  buildCliPrompt,
-  buildCopilotArgs,
-  inference,
-} from "../src/hooks/lib/inference";
+import { buildCliPrompt, buildCopilotArgs, inference } from "../src/hooks/lib/inference";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 
@@ -98,13 +93,11 @@ describe("inference dispatcher — copilot spawn integration (fake binary)", () 
     delete process.env[SPAWN_GUARD_ENV.DEPTH];
     delete process.env.PAL_INFERENCE_DISABLED;
     process.env.PAL_AGENT = "copilot";
-    _resetCopilotBinaryCache();
   });
 
   afterEach(() => {
     rmSync(tmpBin, { recursive: true, force: true });
     restoreEnv(saved);
-    _resetCopilotBinaryCache();
   });
 
   test("end-to-end: fake copilot echoes stdin, dispatcher captures it", async () => {

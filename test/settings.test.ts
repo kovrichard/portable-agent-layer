@@ -95,3 +95,20 @@ describe("startupFiles", () => {
     expect(startupFiles()).toEqual([]);
   });
 });
+
+describe("cache", () => {
+  test("a different PAL_HOME reads its own settings, not the cached ones", async () => {
+    const { isEnabled, reload } = await import("../src/hooks/lib/settings");
+    reload();
+    expect(isEnabled("selfModel")).toBe(false);
+    const otherHome = resolve(import.meta.dir, "../.test-home-settings-other");
+    mkdirSync(resolve(otherHome, "memory"), { recursive: true });
+    try {
+      process.env.PAL_HOME = otherHome;
+      expect(isEnabled("selfModel")).toBe(true);
+    } finally {
+      process.env.PAL_HOME = TEST_HOME;
+      rmSync(otherHome, { recursive: true, force: true });
+    }
+  });
+});
