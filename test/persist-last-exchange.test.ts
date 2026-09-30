@@ -62,6 +62,28 @@ afterEach(() => {
   if (existsSync(HOME)) rmSync(HOME, { recursive: true });
 });
 
+describe("persistLastExchange — old handoffs", () => {
+  test("drops other folders' handoffs once they are past the week the reader shows", async () => {
+    const daysAgo = (days: number) =>
+      new Date(Date.now() - days * 86_400_000).toISOString();
+    mkdirSync(STATE, { recursive: true });
+    writeFileSync(
+      HANDOFF,
+      JSON.stringify({
+        "/old/folder": deliberate({ timestamp: daysAgo(8) }),
+        "/recent/folder": deliberate({ timestamp: daysAgo(6) }),
+      })
+    );
+
+    await runPersist();
+
+    expect(Object.keys(JSON.parse(readFileSync(HANDOFF, "utf-8"))).sort()).toEqual([
+      CWD,
+      "/recent/folder",
+    ]);
+  });
+});
+
 describe("persistLastExchange — handoff protection (ISC-39)", () => {
   test("preserves a fresh deliberate in-progress handoff", async () => {
     seedHandoff(deliberate());
