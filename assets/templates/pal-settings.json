@@ -21,7 +21,6 @@
     "relationship": true,
     "failurePatterns": true,
     "projects": true,
-    "sessionIntelligence": true,
     "handoff": true,
     "selfModel": true,
     "contextualSteering": true,

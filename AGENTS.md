@@ -134,7 +134,7 @@ PAL uses a 3-tier system to keep the hook's dynamic output small while ensuring 
 | ---- | ---- | --- | ------- |
 | **1 — Operational** | CLAUDE.md / AGENTS.md — identity, modes, routing | Loaded natively by each agent at startup | On install / AGENTS.md change |
 | **2 — Semi-static** | Self-model, wisdom, opinions, synthesis, failures, steering | `@imports` (Claude Code), `instructions[]` (opencode), `.mdc` rules (Cursor), `.instructions.md` (Copilot) | Written at session stop by `writeContextDigests()` |
-| **3 — Dynamic** | Handoff, session intelligence, threads, relationship notes, active projects | Hook stdout via `LoadContext` → `buildSystemReminder()` | Injected fresh each session |
+| **3 — Dynamic** | Handoff, threads, relationship notes, active projects | Hook stdout via `LoadContext` → `buildSystemReminder()` | Injected fresh each session |
 
 **Single registry.** All semi-static sources are defined in `src/hooks/lib/semi-static.ts` via `getSemiStaticSources()`. Adding one entry there propagates automatically to: CLAUDE.md `@imports`, opencode `instructions[]`, Cursor `.mdc` filenames, Copilot `.instructions.md` filenames, and the session-stop digest writer. No other files need touching.
 
