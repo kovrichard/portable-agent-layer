@@ -1,3 +1,20 @@
+# [0.79.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.78.3...v0.79.0) (2026-09-30)
+
+
+### Bug Fixes
+
+* **analyze:** ask the agent's CLI for recommendations, not only an API key ([1258c54](https://github.com/kovrichard/portable-agent-layer/commit/1258c54f42fe086d2d8889ab9761722d7f07b955))
+* **context:** drop the Other Recent Learnings block ([e60e2e2](https://github.com/kovrichard/portable-agent-layer/commit/e60e2e20408e510ce34c52274afcb76bca4fd7e0))
+* **context:** skip context on resume only for agents known to replay it ([96f5822](https://github.com/kovrichard/portable-agent-layer/commit/96f5822f0fdbaf41164a64c659c45043f2292cc2))
+* **context:** skip session-start context on resume, and the handoff on compact ([3299174](https://github.com/kovrichard/portable-agent-layer/commit/3299174b36dccf44249c11809e14949c2da63605))
+
+
+### Features
+
+* **context:** each recent project carries its last session; quiet ones collapse ([c16cd68](https://github.com/kovrichard/portable-agent-layer/commit/c16cd68a3ec4c696b75e1be5b8597da18484c612))
+* **context:** handoffs follow the start folder; show the latest one from elsewhere ([6caf509](https://github.com/kovrichard/portable-agent-layer/commit/6caf5097917c8a36cd8df4bd40b6ff5589a3e5fd))
+* **handoff:** model-judged status and done/next/waiting summary ([356ecb3](https://github.com/kovrichard/portable-agent-layer/commit/356ecb3c217e54b3b39418a24c4f636601961434))
+
 ## [0.78.3](https://github.com/kovrichard/portable-agent-layer/compare/v0.78.2...v0.78.3) (2026-09-30)
 
 
