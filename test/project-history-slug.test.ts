@@ -115,6 +115,26 @@ describe("history routing", () => {
     expect(lastSessionTitle("alpha")).toBe("latest");
     expect(lastSessionTitle("never-worked-on")).toBeUndefined();
   });
+
+  test("a session keeps one entry, its latest summary", async () => {
+    const checkout = registerProject("alpha", "workspace");
+    const { appendProjectHistory, readProjectHistory } = await import(
+      "../src/hooks/lib/work-tracking"
+    );
+
+    appendProjectHistory(checkout, { ...entry("early summary"), session: "s1" });
+    appendProjectHistory(checkout, { ...entry("another session"), session: "s2" });
+    appendProjectHistory(checkout, { ...entry("later summary"), session: "s1" });
+    appendProjectHistory(checkout, entry("no session id"));
+    appendProjectHistory(checkout, entry("no session id"));
+
+    expect(readProjectHistory(checkout).map((h) => h.title)).toEqual([
+      "another session",
+      "later summary",
+      "no session id",
+      "no session id",
+    ]);
+  });
 });
 
 describe("v6 history-slugs", () => {

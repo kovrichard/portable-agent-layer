@@ -145,6 +145,7 @@ interface ProjectHistoryEntry {
   title: string;
   summary: string;
   insights: string;
+  session?: string;
 }
 
 /**
@@ -160,11 +161,28 @@ function historyFileFor(cwd: string): string {
     : resolve(paths.unboundHistory(), `${defaultSlug(cwd)}.jsonl`);
 }
 
-/** Append a learning entry to the history file owning this cwd */
+function withoutSession(lines: string[], session: string): string[] {
+  return lines.filter((line) => {
+    try {
+      return (JSON.parse(line) as ProjectHistoryEntry).session !== session;
+    } catch {
+      return true;
+    }
+  });
+}
+
+/** A session is summarised again as it grows; its entry is replaced, not repeated. */
 export function appendProjectHistory(cwd: string, entry: ProjectHistoryEntry): void {
   const historyPath = historyFileFor(cwd);
   ensureDir(dirname(historyPath));
-  appendFileSync(historyPath, `${JSON.stringify(entry)}\n`, "utf-8");
+  const line = JSON.stringify(entry);
+  if (!entry.session || !existsSync(historyPath)) {
+    appendFileSync(historyPath, `${line}\n`, "utf-8");
+    return;
+  }
+  const lines = readFileSync(historyPath, "utf-8").split("\n").filter(Boolean);
+  const kept = withoutSession(lines, entry.session);
+  writeFileSync(historyPath, `${[...kept, line].join("\n")}\n`, "utf-8");
 }
 
 /** Read the session history for a given cwd */

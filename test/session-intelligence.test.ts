@@ -184,8 +184,8 @@ describe("an unfinished session", () => {
     try {
       await captureSessionIntelligence(transcript(12, 300), "s-moved");
 
-      expect(readProjectHistory(startDir).map((e) => e.title)).toEqual([
-        "Handoff wiring",
+      expect(readProjectHistory(startDir).map((e) => [e.title, e.session])).toEqual([
+        ["Handoff wiring", "s-moved"],
       ]);
     } finally {
       if (savedStart === undefined) delete process.env.CLAUDE_PROJECT_DIR;
