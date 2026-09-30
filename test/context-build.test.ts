@@ -404,14 +404,17 @@ describe("handoff", () => {
     const out = buildSystemReminder();
 
     expect(out).toContain("## Pick Up Where You Left Off");
-    expect(out).toContain("*Previous session: a previous session*");
+    expect(out).toContain("*Previous session: a previous session · 0m ago*");
     expect(out).toContain("the remaining work");
+    expect(out).toContain("→ Continue this work");
   });
 
-  test("stays silent once the handoff is done", () => {
-    handoff({ status: "done" });
+  test("a finished session stays available for follow-ups, not as open work", () => {
+    handoff({ status: "completed", lastUser: "what about the gate?" });
 
-    expect(buildSystemReminder()).not.toContain("Pick Up Where You Left Off");
+    const out = buildSystemReminder();
+    expect(out).toContain("- User: what about the gate?");
+    expect(out).not.toContain("→ Continue this work");
   });
 
   test("drops a handoff older than a week", () => {

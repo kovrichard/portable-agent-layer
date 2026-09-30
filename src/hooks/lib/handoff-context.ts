@@ -8,6 +8,8 @@ interface HandoffEntry {
   handoff?: string;
   status?: string;
   timestamp?: string;
+  lastUser?: string;
+  lastAssistant?: string;
 }
 
 const HANDOFF_STALE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -24,7 +26,7 @@ function readHandoffs(): Record<string, HandoffEntry> {
 }
 
 function isFresh(entry: HandoffEntry, now: number): boolean {
-  if (!entry.handoff || !entry.timestamp) return false;
+  if (!(entry.handoff || entry.lastUser) || !entry.timestamp) return false;
   return now - new Date(entry.timestamp).getTime() <= HANDOFF_STALE_MS;
 }
 
@@ -32,7 +34,7 @@ function isScratchDir(dir: string): boolean {
   return dir.startsWith(tmpdir());
 }
 
-function trimAtWord(text: string, max: number): string {
+export function trimAtWord(text: string, max: number): string {
   const flat = text.replace(/\s+/g, " ").trim();
   if (flat.length <= max) return flat;
   const cut = flat.slice(0, max);
@@ -48,14 +50,25 @@ function formatAgo(timestamp: string, now: number): string {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
+function lastExchangeLines(entry: HandoffEntry): string[] {
+  if (!entry.lastUser) return [];
+  const lines = ["Last exchange:", `- User: ${entry.lastUser}`];
+  if (entry.lastAssistant) lines.push(`- You: ${entry.lastAssistant}`);
+  return lines;
+}
+
+/** A finished session is still shown, for follow-ups, just not as open work. */
 function hereSection(entry: HandoffEntry | undefined, now: number): string {
-  if (!entry || entry.status !== "in-progress" || !isFresh(entry, now)) return "";
+  if (!entry || !isFresh(entry, now)) return "";
+  const open = entry.status !== "completed";
   return [
     "## Pick Up Where You Left Off",
-    `*Previous session: ${entry.title}*`,
-    "",
-    entry.handoff,
-    "→ Continue this work or explicitly close it before starting something new.",
+    `*Previous session: ${entry.title} · ${formatAgo(entry.timestamp ?? "", now)}*`,
+    ...(entry.handoff ? [entry.handoff] : []),
+    ...lastExchangeLines(entry),
+    ...(open
+      ? ["→ Continue this work or explicitly close it before starting something new."]
+      : []),
   ].join("\n");
 }
 
@@ -82,7 +95,7 @@ function elsewhereSection(
   return [
     "## Last Conversation Elsewhere",
     `*${dir} · ${formatAgo(entry.timestamp ?? "", now)} · may be unrelated: ${entry.title}*`,
-    trimAtWord(entry.handoff ?? "", ELSEWHERE_MAX_CHARS),
+    trimAtWord(entry.handoff || `User: ${entry.lastUser}`, ELSEWHERE_MAX_CHARS),
   ].join("\n");
 }
 
