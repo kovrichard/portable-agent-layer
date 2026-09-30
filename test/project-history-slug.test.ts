@@ -102,6 +102,19 @@ describe("history routing", () => {
 
     expect(readProjectHistory(checkout).map((h) => h.title)).toEqual(["did the thing"]);
   });
+
+  test("a project's last session is found by name, from any folder", async () => {
+    const checkout = registerProject("alpha", "workspace");
+    const { appendProjectHistory, lastSessionTitle } = await import(
+      "../src/hooks/lib/work-tracking"
+    );
+
+    appendProjectHistory(checkout, entry("first"));
+    appendProjectHistory(checkout, entry("latest"));
+
+    expect(lastSessionTitle("alpha")).toBe("latest");
+    expect(lastSessionTitle("never-worked-on")).toBeUndefined();
+  });
 });
 
 describe("v6 history-slugs", () => {

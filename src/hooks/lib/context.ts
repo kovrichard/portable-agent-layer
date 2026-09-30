@@ -16,7 +16,7 @@ import { loadRecentNotes } from "./relationship";
 import { loadFailurePatterns } from "./semi-static";
 import * as settings from "./settings";
 import { readFramePrinciples } from "./wisdom";
-import { readProjectHistory } from "./work-tracking";
+import { lastSessionTitle, readProjectHistory } from "./work-tracking";
 
 /** Load and concatenate loadAtStartup files */
 function loadStartupFiles(): string {
@@ -269,7 +269,7 @@ export function buildSystemReminder(
     ? loadProjectHistoryContext()
     : "";
   const activeProjects = settings.isEnabled("projects")
-    ? loadActiveProjectsContext()
+    ? loadActiveProjectsContext(process.cwd(), lastSessionTitle)
     : "";
   const failures =
     settings.isEnabled("failurePatterns") && !skipSemiStatic ? loadFailurePatterns() : "";

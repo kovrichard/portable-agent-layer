@@ -193,8 +193,32 @@ describe("loadActiveProjectsContext", () => {
     expect(out).toContain("**shelved** (paused,");
   });
 
-  test("stale projects (>14d) get the ⚠ marker", async () => {
+  test("stale projects (>14d) collapse into one line of names", async () => {
     const lib = await freshLib();
+    for (const name of ["rusty", "dusty"]) {
+      lib.writeProject({
+        name,
+        path: fixtureRepoDir(name),
+        status: "active",
+        created: nowIso(-30 * 86_400_000),
+        updated: nowIso(-30 * 86_400_000),
+        next: ["a"],
+      });
+    }
+    const out = lib.loadActiveProjectsContext(fixturePlainDir("notes"));
+    expect(out).toMatch(/^- Quiet for 14\+ days: (rusty, dusty|dusty, rusty)$/m);
+    expect(out).not.toContain("**rusty**");
+  });
+
+  test("a recent project carries its last session, a quiet one does not", async () => {
+    const lib = await freshLib();
+    lib.writeProject({
+      name: "fresh",
+      path: fixtureRepoDir("fresh"),
+      status: "active",
+      created: nowIso(),
+      updated: nowIso(),
+    });
     lib.writeProject({
       name: "rusty",
       path: fixtureRepoDir("rusty"),
@@ -202,8 +226,16 @@ describe("loadActiveProjectsContext", () => {
       created: nowIso(-30 * 86_400_000),
       updated: nowIso(-30 * 86_400_000),
     });
-    const out = lib.loadActiveProjectsContext(fixturePlainDir("notes"));
-    expect(out).toContain("⚠ stale");
+    const titles: Record<string, string> = {
+      fresh: "Shipped the gate",
+      rusty: "Old work",
+    };
+    const out = lib.loadActiveProjectsContext(
+      fixturePlainDir("notes"),
+      (name) => titles[name]
+    );
+    expect(out).toContain("- **fresh** (just now) — last: Shipped the gate");
+    expect(out).not.toContain("Old work");
   });
 
   test("hint appears alongside list when cwd is project-shaped but unregistered", async () => {

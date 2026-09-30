@@ -391,10 +391,14 @@ const MAX_INLINE_BULLETS = 3;
  * Format the SessionStart "Active Projects" section.
  *
  * For the cwd-resolved project (`→ here`): full detail with Context, Objectives
- * (from goal section), Next, and Blockers. For all others: compact one-liner with
- * next/blocker counts only. Stale flag (>14d) and browse-mode hint included.
+ * (from goal section), Next, and Blockers. Other recent projects: one line with
+ * counts and the last session's title, enough to follow up from any folder.
+ * Quiet ones (>14d) collapse to a single line of names.
  */
-export function loadActiveProjectsContext(cwd: string = process.cwd()): string {
+export function loadActiveProjectsContext(
+  cwd: string = process.cwd(),
+  lastSessionTitle: (project: string) => string | undefined = () => undefined
+): string {
   const all = readAllProjects();
   const visible = all.filter((p) => p.status === "active" || p.status === "paused");
   const resolved = resolveProjectFromCwd(cwd, visible);
@@ -411,6 +415,7 @@ export function loadActiveProjectsContext(cwd: string = process.cwd()): string {
   if (visible.length > 0) {
     lines.push("## Active Projects", "");
     const sorted = [...visible].sort((a, b) => b.updated.localeCompare(a.updated));
+    const quiet: string[] = [];
     for (const p of sorted) {
       const ago = formatAgo(p.updated);
       const stale = isStale(p) ? " ⚠ stale" : "";
@@ -447,13 +452,20 @@ export function loadActiveProjectsContext(cwd: string = process.cwd()): string {
         if (p.blockers?.length) {
           lines.push(`  Blockers: ${p.blockers.slice(0, MAX_INLINE_BULLETS).join("; ")}`);
         }
+      } else if (stale) {
+        quiet.push(p.name);
       } else {
         const counts: string[] = [];
         if (p.next?.length) counts.push(`${p.next.length} next`);
         if (p.blockers?.length) counts.push(`${p.blockers.length} blockers`);
         const countsSuffix = counts.length > 0 ? ` — ${counts.join(", ")}` : "";
-        lines.push(`- **${p.name}** (${statusPrefix}${ago})${countsSuffix}${stale}`);
+        const last = lastSessionTitle(p.name);
+        const lastSuffix = last ? ` — last: ${last}` : "";
+        lines.push(`- **${p.name}** (${statusPrefix}${ago})${countsSuffix}${lastSuffix}`);
       }
+    }
+    if (quiet.length > 0) {
+      lines.push(`- Quiet for ${PROJECT_STALE_DAYS_DEFAULT}+ days: ${quiet.join(", ")}`);
     }
   }
 
