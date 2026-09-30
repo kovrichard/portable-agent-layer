@@ -51,6 +51,12 @@ export function wallClockLine(now: Date, configuredZone: string): string {
   return `Now: ${f.weekday} ${f.year}-${f.month}-${f.day} ${f.hour}:${f.minute} ${zone}`;
 }
 
+/** The calendar date in the principal's timezone, YYYY-MM-DD. */
+export function localDay(now: Date = new Date()): string {
+  const f = fieldsIn(now, zoneOrUtc(identity().principal.timezone));
+  return `${f.year}-${f.month}-${f.day}`;
+}
+
 export function getWallClockReminder(now: Date = new Date()): string | null {
   if (!isEnabled("wallClock")) return null;
   const line = wallClockLine(now, identity().principal.timezone);

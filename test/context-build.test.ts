@@ -175,6 +175,11 @@ describe("buildSystemReminder", () => {
     expect(out).toContain("/pal-analyze");
   });
 
+  test("shows the analyze nudge in the first session of the day only", () => {
+    expect(buildSystemReminder()).toContain("## Learning Analysis Due");
+    expect(buildSystemReminder()).not.toContain("## Learning Analysis Due");
+  });
+
   test("wraps content in a system-reminder with the current time", () => {
     notes("## 09:00\n- W: a fact\n");
 

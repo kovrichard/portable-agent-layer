@@ -9,6 +9,7 @@ import { loadReflectNudge } from "../handlers/reflect-trigger";
 import { loadAlgorithmReviewNudge } from "./algorithm-review";
 import { loadAnalyzeNudge } from "./analyze-nudge";
 import { resolveAnchor } from "./anchor";
+import { oncePerDay } from "./daily-nudge";
 import { loadHandoffContext } from "./handoff-context";
 import { loadOpinionContext } from "./opinions";
 import { paths, toPath } from "./paths";
@@ -262,9 +263,9 @@ export function buildSystemReminder(
       ? loadHandoffContext(sessionDir())
       : "";
   // Maintainer-only: self-gates to a repo checkout, "" for everyone else.
-  const algoReview = loadAlgorithmReviewNudge();
-  const reflectNudge = loadReflectNudge();
-  const analyzeNudge = loadAnalyzeNudge();
+  const algoReview = oncePerDay("algorithm-review", loadAlgorithmReviewNudge());
+  const reflectNudge = oncePerDay("reflect", loadReflectNudge());
+  const analyzeNudge = oncePerDay("analyze", loadAnalyzeNudge());
   const parts: string[] = [];
   if (startup) parts.push(startup);
   if (handoff) parts.push(handoff);
