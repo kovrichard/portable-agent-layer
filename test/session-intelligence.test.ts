@@ -19,6 +19,7 @@ import {
   readCapture,
 } from "../src/hooks/lib/capture-store";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
+import { readProjectHistory } from "../src/hooks/lib/work-tracking";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 
 // Every case here fails a guard that returns before canInfer(), so no inference
@@ -165,5 +166,22 @@ describe("an unfinished session", () => {
       source: "auto",
       sessionId: "s-open",
     });
+  });
+
+  test("files the session under the folder it started in, not the one it ended in", async () => {
+    const startDir = mkdtempSync(resolve(tmpdir(), "pal-si-start-"));
+    const savedStart = process.env.CLAUDE_PROJECT_DIR;
+    process.env.CLAUDE_PROJECT_DIR = startDir;
+    try {
+      await captureSessionIntelligence(transcript(12, 300), "s-moved");
+
+      expect(readProjectHistory(startDir).map((e) => e.title)).toEqual([
+        "Handoff wiring",
+      ]);
+    } finally {
+      if (savedStart === undefined) delete process.env.CLAUDE_PROJECT_DIR;
+      else process.env.CLAUDE_PROJECT_DIR = savedStart;
+      rmSync(startDir, { recursive: true, force: true });
+    }
   });
 });

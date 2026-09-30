@@ -220,7 +220,7 @@ export async function captureSessionIntelligence(
   await writeFile(filepath, content, "utf-8");
 
   // Append to per-project history
-  appendProjectHistory(process.cwd(), {
+  appendProjectHistory(sessionDir(), {
     date: new Date().toISOString().slice(0, 10),
     title,
     summary,
