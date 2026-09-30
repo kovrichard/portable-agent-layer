@@ -232,6 +232,26 @@ describe("buildSystemReminder", () => {
     }
   });
 
+  test("drops only the handoff when asked to go without it", () => {
+    write(
+      "memory/state/last-handoff.json",
+      JSON.stringify({
+        [process.cwd()]: {
+          title: "open work",
+          handoff: "finish the gate",
+          status: "in-progress",
+          timestamp: new Date().toISOString(),
+        },
+      })
+    );
+    notes("## 09:00\n- W: a fact\n");
+
+    expect(buildSystemReminder()).toContain("finish the gate");
+    const out = buildSystemReminder({ withoutHandoff: true });
+    expect(out).not.toContain("finish the gate");
+    expect(out).toContain("- W: a fact");
+  });
+
   test("still includes relationship notes for a native-loading agent", () => {
     notes("## 09:00\n- W: still injected\n");
 

@@ -272,7 +272,9 @@ export type AgentTarget = "claude" | "opencode" | "cursor" | "copilot";
  * opts.agent — agent target; Claude Code skips semi-static sections (self-model,
  * wisdom, opinions) that load natively via @imports in CLAUDE.md.
  */
-export function buildSystemReminder(opts: { agent?: AgentTarget } = {}): string {
+export function buildSystemReminder(
+  opts: { agent?: AgentTarget; withoutHandoff?: boolean } = {}
+): string {
   // Semi-static sections loaded natively via @imports (Claude Code) or
   // instructions[] (opencode). Skip them from hook output for those agents.
   const skipSemiStatic =
@@ -303,7 +305,8 @@ export function buildSystemReminder(opts: { agent?: AgentTarget } = {}): string 
   const intelligence = settings.isEnabled("sessionIntelligence")
     ? loadSessionIntelligence()
     : "";
-  const handoff = settings.isEnabled("handoff") ? loadHandoff() : "";
+  const handoff =
+    !opts.withoutHandoff && settings.isEnabled("handoff") ? loadHandoff() : "";
   // Maintainer-only: self-gates to a repo checkout, "" for everyone else.
   const algoReview = loadAlgorithmReviewNudge();
   const reflectNudge = loadReflectNudge();
