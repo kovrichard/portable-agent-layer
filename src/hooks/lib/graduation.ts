@@ -12,7 +12,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { hasApiKey } from "./inference";
+import { canInfer } from "./inference";
 import {
   type FailureEntry,
   type LearningEntry,
@@ -215,7 +215,7 @@ async function generateRecommendations(
   ratings: RatingsSummary | null
 ): Promise<string[]> {
   if (candidates.length === 0 && !ratings) return [];
-  if (!hasApiKey()) {
+  if (!canInfer()) {
     return candidates
       .slice(0, 3)
       .map(

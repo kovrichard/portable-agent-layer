@@ -1,6 +1,16 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
+import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 
 const TEST_HOME = resolve(import.meta.dir, "../.test-home-graduation");
 
@@ -178,5 +188,39 @@ describe("analyze", () => {
     const result = await analyze();
     // Ratings file is empty in test, so null is expected
     expect(result.ratings).toBeNull();
+  });
+});
+
+describe("recommendations without an API key", () => {
+  let binDir: string;
+  let savedPath: string | undefined;
+
+  beforeAll(() => {
+    binDir = mkdtempSync(resolve(tmpdir(), "pal-grad-bin-"));
+    savedPath = process.env.PATH;
+    delete process.env.PAL_INFERENCE_DISABLED;
+    delete process.env[SPAWN_GUARD_ENV.SENTINEL];
+    delete process.env[SPAWN_GUARD_ENV.DEPTH];
+    process.env.PAL_AGENT = "claude";
+    const reply = { recommendations: ["Check the npm registry before installing."] };
+    writeFakeBin(
+      binDir,
+      "claude",
+      `console.log(${JSON.stringify(JSON.stringify(reply))});\n`
+    );
+    prependPath(binDir);
+  });
+
+  afterAll(() => {
+    process.env.PATH = savedPath;
+    process.env.PAL_INFERENCE_DISABLED = "1";
+    delete process.env.PAL_AGENT;
+    rmSync(binDir, { recursive: true, force: true });
+  });
+
+  test("come from the agent's own CLI", async () => {
+    const { analyze } = await import("../src/hooks/lib/graduation");
+    const result = await analyze({ actionable: true });
+    expect(result.recommendations).toEqual(["Check the npm registry before installing."]);
   });
 });
