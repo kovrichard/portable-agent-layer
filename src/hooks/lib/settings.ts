@@ -54,26 +54,25 @@ const IDENTITY_DEFAULTS: Identity = {
 
 // ── Singleton ──
 
-let cached: PalSettingsData | null = null;
+let cached: { path: string; data: PalSettingsData } | null = null;
 
 function settingsPath(): string {
   return resolve(paths.memory(), "pal-settings.json");
 }
 
-function load(): PalSettingsData {
-  if (cached) return cached;
-  const p = settingsPath();
-  if (!existsSync(p)) {
-    cached = {};
-    return cached;
-  }
+function readSettingsFile(p: string): PalSettingsData {
+  if (!existsSync(p)) return {};
   try {
-    cached = JSON.parse(readFileSync(p, "utf-8")) as PalSettingsData;
-    return cached;
+    return JSON.parse(readFileSync(p, "utf-8")) as PalSettingsData;
   } catch {
-    cached = {};
-    return cached;
+    return {};
   }
+}
+
+function load(): PalSettingsData {
+  const p = settingsPath();
+  if (cached?.path !== p) cached = { path: p, data: readSettingsFile(p) };
+  return cached.data;
 }
 
 /** Force re-read from disk (useful after writes) */
