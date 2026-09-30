@@ -9,7 +9,6 @@ import { loadReflectNudge } from "../handlers/reflect-trigger";
 import { loadAlgorithmReviewNudge } from "./algorithm-review";
 import { loadAnalyzeNudge } from "./analyze-nudge";
 import { resolveAnchor } from "./anchor";
-import { readLearnings } from "./learning-store";
 import { loadOpinionContext } from "./opinions";
 import { paths, toPath } from "./paths";
 import { loadActiveProjectsContext } from "./projects";
@@ -46,29 +45,6 @@ export function loadWisdomContext(): string {
     const principles = readFramePrinciples();
     if (principles.length === 0) return "";
     return ["## Crystallized Principles", ...principles.map((p) => `- ${p}`)].join("\n");
-  } catch {
-    return "";
-  }
-}
-
-/** Load recent session learning files as digest, with detail for current project */
-export function loadLearningDigest(): string {
-  try {
-    const cwd = process.cwd();
-    const entries = readLearnings(paths.sessionLearning(), 10);
-    if (entries.length === 0) return "";
-
-    // This-project learnings are now in loadProjectHistoryContext(); only show cross-project here
-    const other = entries.filter((e) => e.cwd !== cwd).slice(0, 5);
-
-    if (other.length === 0) return "";
-
-    const lines: string[] = [];
-
-    lines.push("## Other Recent Learnings");
-    for (const e of other) lines.push(`- ${e.title}`);
-
-    return lines.join("\n");
   } catch {
     return "";
   }
@@ -289,7 +265,6 @@ export function buildSystemReminder(
   const relationship = settings.isEnabled("relationship")
     ? loadRelationshipContext()
     : "";
-  const digest = settings.isEnabled("learningDigest") ? loadLearningDigest() : "";
   const projectHistory = settings.isEnabled("projectHistory")
     ? loadProjectHistoryContext()
     : "";
@@ -324,7 +299,6 @@ export function buildSystemReminder(
   if (relationship) parts.push(relationship);
   if (activeProjects) parts.push(activeProjects);
   if (projectHistory) parts.push(projectHistory);
-  if (digest) parts.push(digest);
   if (failures) parts.push(failures);
   if (parts.length === 0) return "";
 

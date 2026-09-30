@@ -57,7 +57,6 @@
         "wisdom": { "type": "boolean", "description": "Crystallized wisdom principles." },
         "opinions": { "type": "boolean", "description": "Tracked user opinions." },
         "relationship": { "type": "boolean", "description": "Recent relationship notes." },
-        "learningDigest": { "type": "boolean", "description": "Lessons-from-failures digest." },
         "failurePatterns": { "type": "boolean", "description": "Recurring failure patterns." },
         "projectHistory": { "type": "boolean", "description": "Per-project session history." },
         "projects": { "type": "boolean", "description": "Active projects list." },

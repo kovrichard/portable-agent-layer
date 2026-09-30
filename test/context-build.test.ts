@@ -3,7 +3,6 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   buildSystemReminder,
-  loadLearningDigest,
   loadRelationshipContext,
   loadWisdomContext,
 } from "../src/hooks/lib/context";
@@ -86,34 +85,11 @@ describe("loadWisdomContext", () => {
   });
 });
 
-describe("loadLearningDigest", () => {
-  test("is empty when nothing has been learned", () => {
-    expect(loadLearningDigest()).toBe("");
-  });
-
-  test("omits learnings from the current project", () => {
-    learning("Same project thing", process.cwd());
-
-    expect(loadLearningDigest()).toBe("");
-  });
-
-  test("lists learnings from other projects under a heading", () => {
+describe("learnings from other folders", () => {
+  test("stay out of the session-start context", () => {
     learning("Elsewhere thing", "/some/other/project");
 
-    const out = loadLearningDigest();
-
-    expect(out).toContain("## Other Recent Learnings");
-    expect(out).toContain("- Elsewhere thing");
-  });
-
-  test("lists at most five cross-project learnings", () => {
-    for (let i = 0; i < 8; i++) learning(`Thing ${i}`, `/other/${i}`, i);
-
-    const listed = loadLearningDigest()
-      .split("\n")
-      .filter((l) => l.startsWith("- "));
-
-    expect(listed).toHaveLength(5);
+    expect(buildSystemReminder()).not.toContain("Elsewhere thing");
   });
 });
 
