@@ -155,6 +155,15 @@ export function loadSettingsTemplate(templatePath: string, pkgRoot: string): Set
  * - permissions.allow: deduplicate by value
  * - other keys: template values are added if not already present
  */
+/** Set by the template on first install; after that the user's value wins. */
+const USER_OWNED_SETTINGS = [
+  "attribution",
+  "showClearContextOnPlanAccept",
+  "respectGitignore",
+  "spinnerTipsEnabled",
+  "autoMemoryEnabled",
+] as const;
+
 export function mergeSettings(existing: Settings, template: Settings): Settings {
   const result = { ...existing };
 
@@ -220,32 +229,8 @@ export function mergeSettings(existing: Settings, template: Settings): Settings 
     }
   }
 
-  // Merge attribution (object with commit/pr keys, add if not present)
-  if (template.attribution && typeof template.attribution === "object") {
-    if (!("attribution" in result)) {
-      result.attribution = template.attribution;
-    }
-  }
-
-  // Merge showClearContextOnPlanAccept (boolean, add if not present)
-  if ("showClearContextOnPlanAccept" in template) {
-    if (!("showClearContextOnPlanAccept" in result)) {
-      result.showClearContextOnPlanAccept = template.showClearContextOnPlanAccept;
-    }
-  }
-
-  // Merge respectGitignore (boolean, add if not present)
-  if ("respectGitignore" in template) {
-    if (!("respectGitignore" in result)) {
-      result.respectGitignore = template.respectGitignore;
-    }
-  }
-
-  // Merge spinnerTipsEnabled (boolean, add if not present)
-  if ("spinnerTipsEnabled" in template) {
-    if (!("spinnerTipsEnabled" in result)) {
-      result.spinnerTipsEnabled = template.spinnerTipsEnabled;
-    }
+  for (const key of USER_OWNED_SETTINGS) {
+    if (key in template && !(key in result)) result[key] = template[key];
   }
 
   // Merge spinnerTipsOverride (merge tips array, deduplicate by content)
@@ -322,27 +307,8 @@ export function unmergeSettings(existing: Settings, template: Settings): Setting
     if (Object.keys(result.skillOverrides).length === 0) delete result.skillOverrides;
   }
 
-  // Remove PAL attribution if it matches template structure
-  if (template.attribution && "attribution" in result) {
-    delete result.attribution;
-  }
-
-  // Remove PAL showClearContextOnPlanAccept
-  if (
-    "showClearContextOnPlanAccept" in template &&
-    "showClearContextOnPlanAccept" in result
-  ) {
-    delete result.showClearContextOnPlanAccept;
-  }
-
-  // Remove PAL respectGitignore
-  if ("respectGitignore" in template && "respectGitignore" in result) {
-    delete result.respectGitignore;
-  }
-
-  // Remove PAL spinnerTipsEnabled
-  if ("spinnerTipsEnabled" in template && "spinnerTipsEnabled" in result) {
-    delete result.spinnerTipsEnabled;
+  for (const key of USER_OWNED_SETTINGS) {
+    if (key in template) delete result[key];
   }
 
   // Remove PAL spinnerTipsOverride (remove only template tips, preserve user tips)
