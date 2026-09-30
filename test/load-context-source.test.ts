@@ -9,8 +9,8 @@ const LOAD_CONTEXT = resolve(import.meta.dir, "../src/hooks/LoadContext.ts");
 
 let sandbox = "";
 
-function runLoadContext(source: string) {
-  return spawnSync("bun", ["run", LOAD_CONTEXT, "--agent=claude"], {
+function runLoadContext(source: string, agent = "claude") {
+  return spawnSync("bun", ["run", LOAD_CONTEXT, `--agent=${agent}`], {
     env: {
       ...process.env,
       PAL_HOME: resolve(sandbox, "home"),
@@ -39,21 +39,38 @@ afterAll(() => {
 
 describe("which session starts get context", () => {
   test.each([
-    ["startup", "full"],
-    ["clear", "full"],
-    [undefined, "full"],
-    ["compact", "without-handoff"],
-    ["resume", "none"],
-  ] as const)("%s gets %s", (source, expected) => {
-    expect(contextForSource(source)).toBe(expected);
+    ["claude", "startup", "full"],
+    ["claude", "clear", "full"],
+    ["claude", undefined, "full"],
+    ["claude", "compact", "without-handoff"],
+    ["claude", "resume", "none"],
+    ["codex", "resume", "none"],
+    ["codex", "compact", "without-handoff"],
+    ["codex", "fork", "full"],
+    ["copilot", "resume", "full"],
+    ["copilot", "new", "full"],
+    ["vscode", "resume", "full"],
+    ["cursor", undefined, "full"],
+  ] as const)("%s, %s gets %s", (agent, source, expected) => {
+    expect(contextForSource(agent, source)).toBe(expected);
   });
 
-  test("a resumed session is not handed the context a second time", () => {
-    const result = runLoadContext("resume");
+  test.each([
+    "claude",
+    "codex",
+  ])("a resumed %s session is not handed the context a second time", (agent) => {
+    const result = runLoadContext("resume", agent);
     expect({ status: result.status, stdout: result.stdout }).toEqual({
       status: 0,
       stdout: "",
     });
+  });
+
+  test("a resumed Copilot session still is, since Copilot may not replay it", () => {
+    const result = runLoadContext("resume", "copilot");
+    expect(result.status).toBe(0);
+    const parsed = JSON.parse(result.stdout) as { additionalContext?: string };
+    expect(parsed.additionalContext).toContain("<system-reminder>");
   });
 
   test("a fresh session still is", () => {

@@ -48,14 +48,14 @@ try {
 }
 
 try {
+  const active = getActiveAgent();
   const input = await readStdinJSON<{ source?: string }>();
-  const wanted = contextForSource(input?.source);
+  const wanted = contextForSource(active, input?.source);
   if (wanted === "none") {
     logDebug("LoadContext", `source=${input?.source}, context already present`);
     process.exit(0);
   }
 
-  const active = getActiveAgent();
   // The reminder is built for one of three targets; every other agent reads the
   // same shape Claude Code does.
   const target: AgentTarget =
