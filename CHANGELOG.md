@@ -1,3 +1,24 @@
+## [0.78.3](https://github.com/kovrichard/portable-agent-layer/compare/v0.78.2...v0.78.3) (2026-09-30)
+
+
+### Bug Fixes
+
+* **algorithm-review:** nudge a maintainer on a package install ([3f2fc37](https://github.com/kovrichard/portable-agent-layer/commit/3f2fc37740522fbfaa2fc7636d3ab56b2e3df87b))
+* **auto-update:** let a clean run retry after an hour, not a day ([2253c1e](https://github.com/kovrichard/portable-agent-layer/commit/2253c1e801fb26ff2e00d076da06c7705646ebfd))
+* **docs:** match the documented injection order to buildSystemReminder ([d8d12b6](https://github.com/kovrichard/portable-agent-layer/commit/d8d12b6ffd8d5cf6ae4f5c1acd3d9e69bde7d6bd))
+* **doctor:** read hook errors from the log the logger writes ([5f687e2](https://github.com/kovrichard/portable-agent-layer/commit/5f687e2b112b4e45d8254c3bc7adf8f034cae702))
+* **failures:** tag digest lessons with their own project ([b6740e7](https://github.com/kovrichard/portable-agent-layer/commit/b6740e716f1fb2466b918f9cdd9f9bdc29eec9db))
+* **handoff:** use the handoff session intelligence already writes ([4c64792](https://github.com/kovrichard/portable-agent-layer/commit/4c64792e318e0d76e394a17117653a7007f6cce2))
+* **inference:** key cached binary lookups by PATH ([8847451](https://github.com/kovrichard/portable-agent-layer/commit/88474511e6c718a540569a9596b3a02e7e27d8dc))
+* **pal-reflect:** run reflect through a pal cli verb ([695cb57](https://github.com/kovrichard/portable-agent-layer/commit/695cb57c4172c28a4a1a76303a61e743b396cbad))
+* **relationship:** scope session notes to the project they came from ([e8c8f0a](https://github.com/kovrichard/portable-agent-layer/commit/e8c8f0abe1e8cf70b1f380da4b2e58e55a8f43a0))
+* **retrieval:** notice new lessons when deciding the index is stale ([ba715b4](https://github.com/kovrichard/portable-agent-layer/commit/ba715b46bdfadb64eb5f697994ae59af007e02a3))
+* **security:** block recursive deletes of root or home, not every absolute path ([65ce63c](https://github.com/kovrichard/portable-agent-layer/commit/65ce63cbaaa6e3d29e82a4cc82c37924f1ef5af3))
+* **security:** split commands only on unquoted separators ([dfd4542](https://github.com/kovrichard/portable-agent-layer/commit/dfd4542c5bba832d49ac2d2e5cba7fb53e2df257))
+* **self-model:** accept the --agent flag detached spawns append ([73d92b8](https://github.com/kovrichard/portable-agent-layer/commit/73d92b85f5e6bd3a60c3f0c10170a54da840a996))
+* **settings:** key the settings cache by the file it came from ([08c90b5](https://github.com/kovrichard/portable-agent-layer/commit/08c90b52441ec69537b63d04a87d82d33e7329e0))
+* **test:** keep the suite out of the real ~/.pal ([1e78a82](https://github.com/kovrichard/portable-agent-layer/commit/1e78a82be4db749168e0c2c4bcebc148b3ff4e85))
+
 ## [0.78.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.78.1...v0.78.2) (2026-09-23)
 
 
