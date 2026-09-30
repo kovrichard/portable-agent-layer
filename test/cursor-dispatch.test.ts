@@ -2,12 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import {
-  _resetCursorBinaryCache,
-  buildCliPrompt,
-  buildCursorArgs,
-  inference,
-} from "../src/hooks/lib/inference";
+import { buildCliPrompt, buildCursorArgs, inference } from "../src/hooks/lib/inference";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 
@@ -101,13 +96,11 @@ describe("inference dispatcher — cursor spawn integration (fake binary)", () =
     delete process.env[SPAWN_GUARD_ENV.DEPTH];
     delete process.env.PAL_INFERENCE_DISABLED;
     process.env.PAL_AGENT = "cursor";
-    _resetCursorBinaryCache();
   });
 
   afterEach(() => {
     rmSync(tmpBin, { recursive: true, force: true });
     restoreEnv(saved);
-    _resetCursorBinaryCache();
   });
 
   test("end-to-end: fake cursor-agent echoes stdin, dispatcher captures it", async () => {

@@ -15,7 +15,6 @@ import {
   markCaptured,
   readCapture,
 } from "../src/hooks/lib/capture-store";
-import { _resetClaudeBinaryCache } from "../src/hooks/lib/inference";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 
@@ -123,13 +122,11 @@ describe("an unfinished session", () => {
       `console.log(${JSON.stringify(JSON.stringify(reply))});\n`
     );
     prependPath(binDir);
-    _resetClaudeBinaryCache();
   });
 
   afterEach(() => {
     process.env.PATH = savedPath;
     process.env.PAL_INFERENCE_DISABLED = "1";
-    _resetClaudeBinaryCache();
     rmSync(binDir, { recursive: true, force: true });
   });
 

@@ -3,7 +3,6 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
-  _resetClaudeBinaryCache,
   buildClaudeArgs,
   buildCodexArgs,
   buildCopilotArgs,
@@ -135,11 +134,9 @@ describe("canInfer routing", () => {
     delete process.env.PAL_ANTHROPIC_API_KEY;
     delete process.env[SPAWN_GUARD_ENV.SENTINEL];
     delete process.env[SPAWN_GUARD_ENV.DEPTH];
-    _resetClaudeBinaryCache();
   });
   afterEach(() => {
     restoreEnv(saved);
-    _resetClaudeBinaryCache();
   });
 
   test("hasApiKey reflects PAL_ANTHROPIC_API_KEY presence", () => {
@@ -211,7 +208,6 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
     delete process.env[SPAWN_GUARD_ENV.SENTINEL];
     delete process.env[SPAWN_GUARD_ENV.DEPTH];
     process.env.PAL_AGENT = "claude";
-    _resetClaudeBinaryCache();
   });
 
   afterEach(() => {
@@ -219,7 +215,6 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
     restoreEnv(saved);
     if (savedDisabled === undefined) delete process.env.PAL_INFERENCE_DISABLED;
     else process.env.PAL_INFERENCE_DISABLED = savedDisabled;
-    _resetClaudeBinaryCache();
   });
 
   test("end-to-end: fake claude binary echoes stdin, dispatcher returns it", async () => {

@@ -214,40 +214,32 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
 // Per-agent CLI metadata — binary presence + argv builders
 // ─────────────────────────────────────────────────────────────────────────────
 
-let claudeBinaryCache: string | null | undefined;
-let codexBinaryCache: string | null | undefined;
-let opencodeBinaryCache: string | null | undefined;
-let copilotBinaryCache: string | null | undefined;
-let cursorBinaryCache: string | null | undefined;
+const binaryCache = new Map<string, string | null>();
+
+function cachedBinary(name: string): string | null {
+  const key = `${name}\0${process.env.PATH ?? ""}`;
+  if (!binaryCache.has(key)) binaryCache.set(key, findBinaryOnPath(name));
+  return binaryCache.get(key) ?? null;
+}
 
 function getClaudeBinary(): string | null {
-  if (claudeBinaryCache !== undefined) return claudeBinaryCache;
-  claudeBinaryCache = findBinaryOnPath("claude");
-  return claudeBinaryCache;
+  return cachedBinary("claude");
 }
 
 function getCodexBinary(): string | null {
-  if (codexBinaryCache !== undefined) return codexBinaryCache;
-  codexBinaryCache = findBinaryOnPath("codex");
-  return codexBinaryCache;
+  return cachedBinary("codex");
 }
 
 function getOpencodeBinary(): string | null {
-  if (opencodeBinaryCache !== undefined) return opencodeBinaryCache;
-  opencodeBinaryCache = findBinaryOnPath("opencode");
-  return opencodeBinaryCache;
+  return cachedBinary("opencode");
 }
 
 function getCopilotBinary(): string | null {
-  if (copilotBinaryCache !== undefined) return copilotBinaryCache;
-  copilotBinaryCache = findBinaryOnPath("copilot");
-  return copilotBinaryCache;
+  return cachedBinary("copilot");
 }
 
 function getCursorBinary(): string | null {
-  if (cursorBinaryCache !== undefined) return cursorBinaryCache;
-  cursorBinaryCache = findBinaryOnPath("cursor-agent");
-  return cursorBinaryCache;
+  return cachedBinary("cursor-agent");
 }
 
 function hasClaudeBinary(): boolean {
@@ -264,31 +256,6 @@ function hasCopilotBinary(): boolean {
 }
 function hasCursorBinary(): boolean {
   return getCursorBinary() !== null;
-}
-
-/** Test-only: reset the cached claude-binary resolution. */
-export function _resetClaudeBinaryCache(): void {
-  claudeBinaryCache = undefined;
-}
-
-/** Test-only: reset the cached codex-binary resolution. */
-export function _resetCodexBinaryCache(): void {
-  codexBinaryCache = undefined;
-}
-
-/** Test-only: reset the cached opencode-binary resolution. */
-export function _resetOpencodeBinaryCache(): void {
-  opencodeBinaryCache = undefined;
-}
-
-/** Test-only: reset the cached copilot-binary resolution. */
-export function _resetCopilotBinaryCache(): void {
-  copilotBinaryCache = undefined;
-}
-
-/** Test-only: reset the cached cursor-binary resolution. */
-export function _resetCursorBinaryCache(): void {
-  cursorBinaryCache = undefined;
 }
 
 /**
