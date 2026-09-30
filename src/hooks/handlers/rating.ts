@@ -13,6 +13,7 @@ import { resolve } from "node:path";
 import { spawnDetachedInference } from "../lib/detached-inference";
 import { canInfer, inference } from "../lib/inference";
 import { paths } from "../lib/paths";
+import { isSystemText, stripInjectedTags } from "../lib/prompt-text";
 import { emitRating } from "../lib/signals";
 import { now } from "../lib/time";
 import { logTokenUsage } from "../lib/token-usage";
@@ -126,35 +127,6 @@ function isPraise(prompt: string): boolean {
     POSITIVE_PHRASES.has(normalized) ||
     (words.length === 2 && words.every((w) => POSITIVE_PRAISE_WORDS.has(w)))
   );
-}
-
-// ── System-Injected Tag Stripping ──
-
-/**
- * Strip IDE/system-injected XML tags from the prompt to recover the raw user text.
- * Claude Code VSCode extension prepends tags like <ide_opened_file>...</ide_opened_file>
- * and <ide_selection>...</ide_selection> to the prompt field in hooks.
- */
-const INJECTED_TAG_RE =
-  /<(?:ide_opened_file|ide_selection|system-reminder|task-notification)[^>]*>[\s\S]*?<\/(?:ide_opened_file|ide_selection|system-reminder|task-notification)>/gi;
-
-function stripInjectedTags(prompt: string): string {
-  return prompt.replace(INJECTED_TAG_RE, "").trim();
-}
-
-// ── System Text Filters ──
-
-const SYSTEM_TEXT_PATTERNS = [
-  /^<task-notification>/i,
-  /^<system-reminder>/i,
-  /^This session is being continued from a previous conversation/i,
-  /^Please continue the conversation/i,
-  /^Note:.*was read before/i,
-];
-
-function isSystemText(prompt: string): boolean {
-  const trimmed = prompt.trim();
-  return SYSTEM_TEXT_PATTERNS.some((re) => re.test(trimmed));
 }
 
 // ── Sentiment Analysis ──
