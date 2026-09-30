@@ -1,3 +1,13 @@
+## [0.79.3](https://github.com/kovrichard/portable-agent-layer/compare/v0.79.2...v0.79.3) (2026-09-30)
+
+
+### Bug Fixes
+
+* **context:** leave session intelligence out of the startup context ([a4c7da8](https://github.com/kovrichard/portable-agent-layer/commit/a4c7da88b009e21745c431b4e83734deff062961))
+* **handoff:** drop handoffs older than the week the reader shows ([371ea48](https://github.com/kovrichard/portable-agent-layer/commit/371ea485af46a1e97b45c5ee362fa3b76f8f96b4))
+* **history:** keep one entry per session, its latest summary ([3d7289d](https://github.com/kovrichard/portable-agent-layer/commit/3d7289d4dc4457bdbf64e55cddf5a66eff1a384f))
+* **stop:** take the final reply from the agent, not the transcript file ([3ab600e](https://github.com/kovrichard/portable-agent-layer/commit/3ab600eed26e40a405ad65cc8f0ab6c76e1c43f5))
+
 ## [0.79.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.79.1...v0.79.2) (2026-09-30)
 
 
