@@ -13,6 +13,7 @@ import { paths } from "./paths";
 export interface CaptureEntry {
   filepath: string;
   messageCount: number;
+  userMessageCount?: number;
 }
 
 /** Below this many new messages, a re-capture would restate what was already written. */
@@ -71,13 +72,22 @@ export function isRecaptureWorthwhile(
   return messageCount - previous.messageCount >= MIN_NEW_MESSAGES;
 }
 
-export function markCaptured(
-  sessionId: string,
-  filepath: string,
-  messageCount: number
-): void {
+/**
+ * The handoff describes the latest turn, so any new message from the user makes
+ * it stale, however little the transcript grew.
+ */
+export function isHandoffStale(
+  previous: CaptureEntry | null,
+  userMessageCount: number
+): boolean {
+  if (!previous) return true;
+  return userMessageCount > (previous.userMessageCount ?? 0);
+}
+
+function updateCapture(sessionId: string, update: Partial<CaptureEntry>): void {
   const data = readAll();
-  data[sessionId] = { filepath, messageCount };
+  const current = data[sessionId] ?? { filepath: "", messageCount: 0 };
+  data[sessionId] = { ...current, ...update };
   const entries = Object.entries(data);
   const kept = entries.length > MAX_REMEMBERED ? entries.slice(-MAX_REMEMBERED) : entries;
   writeFileSync(
@@ -85,6 +95,19 @@ export function markCaptured(
     JSON.stringify(Object.fromEntries(kept), null, 2),
     "utf-8"
   );
+}
+
+export function markCaptured(
+  sessionId: string,
+  filepath: string,
+  messageCount: number
+): void {
+  updateCapture(sessionId, { filepath, messageCount });
+}
+
+/** Claimed before the model call, so a second Stop for the same turn finds it taken. */
+export function claimHandoffSummary(sessionId: string, userMessageCount: number): void {
+  updateCapture(sessionId, { userMessageCount });
 }
 
 /**
