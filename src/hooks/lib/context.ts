@@ -145,28 +145,6 @@ function loadSessionIntelligence(): string {
 
     const lines: string[] = ["## Session Intelligence"];
 
-    // Rating Trend
-    if (state.ratings?.count > 0) {
-      const r = state.ratings;
-      const lowNote = r.lowCount > 0 ? ` ${r.lowCount} low ratings.` : "";
-      lines.push(
-        "",
-        `**Rating trend:** ${r.avg}/10 avg (last 10: ${r.recentAvg}/10, ${r.trend}).${lowNote}`
-      );
-      if (r.trend === "declining") {
-        lines.push(
-          "→ Trend is declining. Be extra careful with assumptions. Confirm before acting."
-        );
-      } else if (r.trend === "improving") {
-        lines.push("→ Trend is improving. Maintain current approach.");
-      } else if (r.lowCount > 5) {
-        lines.push(
-          "→ Multiple low ratings. Slow down, verify before acting, ask when uncertain."
-        );
-      }
-    }
-
-    // Algorithm Performance
     if (state.algorithm?.reflectionCount > 0) {
       const a = state.algorithm;
       lines.push(

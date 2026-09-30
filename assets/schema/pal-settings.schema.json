@@ -60,7 +60,7 @@
         "failurePatterns": { "type": "boolean", "description": "Recurring failure patterns." },
         "projectHistory": { "type": "boolean", "description": "Per-project session history." },
         "projects": { "type": "boolean", "description": "Active projects list." },
-        "sessionIntelligence": { "type": "boolean", "description": "Rating trends and session signals." },
+        "sessionIntelligence": { "type": "boolean", "description": "Algorithm reflection stats and this project's self-observations." },
         "handoff": { "type": "boolean", "description": "Handoff note from the previous session." },
         "selfModel": { "type": "boolean", "description": "The assistant's self-model synthesis." },
         "contextualSteering": { "type": "boolean", "description": "Prompt-time steering self-checks (see the steering section)." },

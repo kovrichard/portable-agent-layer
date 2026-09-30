@@ -268,43 +268,14 @@ describe("session intelligence", () => {
     expect(buildSystemReminder()).not.toContain("## Session Intelligence");
   });
 
-  test("reports the rating trend line", () => {
-    synthesis({ ratings: ratings({ avg: 8, recentAvg: 9, trend: "improving" }) });
+  test("leaves ratings to the self-model, which is built from them", () => {
+    synthesis({ ratings: ratings({ lowCount: 6, trend: "declining" }) });
 
     const out = buildSystemReminder();
 
-    expect(out).toContain("**Rating trend:** 8/10 avg (last 10: 9/10, improving).");
-    expect(out).toContain("→ Trend is improving. Maintain current approach.");
-  });
-
-  test("warns when the trend is declining", () => {
-    synthesis({ ratings: ratings({ trend: "declining" }) });
-
-    expect(buildSystemReminder()).toContain("→ Trend is declining.");
-  });
-
-  test("notes the low-rating count when there is one", () => {
-    synthesis({ ratings: ratings({ lowCount: 2 }) });
-
-    expect(buildSystemReminder()).toContain("2 low ratings.");
-  });
-
-  test("omits the low-rating note when there are none", () => {
-    synthesis({ ratings: ratings({ lowCount: 0 }) });
-
-    expect(buildSystemReminder()).not.toContain("low ratings.");
-  });
-
-  test("advises slowing down when many ratings are low and the trend is flat", () => {
-    synthesis({ ratings: ratings({ lowCount: 6, trend: "stable" }) });
-
-    expect(buildSystemReminder()).toContain("→ Multiple low ratings.");
-  });
-
-  test("skips the ratings block when nothing was rated", () => {
-    synthesis({ ratings: ratings({ count: 0 }) });
-
-    expect(buildSystemReminder()).not.toContain("**Rating trend:**");
+    expect(out).not.toContain("## Session Intelligence");
+    expect(out).not.toContain("Rating trend");
+    expect(out).not.toContain("low ratings");
   });
 
   test("reports algorithm performance", () => {
