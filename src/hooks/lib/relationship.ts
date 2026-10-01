@@ -102,10 +102,12 @@ export function loadRecentNotes(days: number = 2): string {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
 
+  const cutoffMonth = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, "0")}`;
   const sections: string[] = [];
 
   for (const monthDir of readdirSync(relDir).sort().reverse()) {
     if (!/^\d{4}-\d{2}$/.test(monthDir)) continue;
+    if (monthDir < cutoffMonth) break;
     const monthPath = resolve(relDir, monthDir);
 
     let files: string[];
@@ -129,8 +131,6 @@ export function loadRecentNotes(days: number = 2): string {
         // skip unreadable files
       }
     }
-
-    if (sections.length > 0) break; // only go back one month at most
   }
 
   return sections.join("\n\n---\n\n");
