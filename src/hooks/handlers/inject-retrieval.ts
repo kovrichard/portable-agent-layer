@@ -8,6 +8,7 @@
  */
 
 import { isCodex, isCursor } from "../lib/agent";
+import { observeTurn } from "../lib/interaction";
 import { logDebug, logError } from "../lib/log";
 import { runRetrieval } from "../lib/retrieval";
 import { ensureIndex } from "../lib/retrieval-index";
@@ -85,9 +86,13 @@ function writeForAgent(reminder: string): void {
  *  produced anything. The clock leads: it is the only part that is true of the
  *  moment rather than of the prompt.
  *  @lintignore dynamically imported by opencode plugin */
-export async function getPromptContext(prompt: string): Promise<string | null> {
+export async function getPromptContext(
+  prompt: string,
+  sessionId?: string
+): Promise<string | null> {
   const parts = [
     getWallClockReminder(),
+    withinBudget(() => observeTurn(prompt, sessionId), BUDGET_MS),
     getSteeringReminder(prompt),
     getSkillReminder(prompt),
     await getRetrievalReminder(prompt),
@@ -98,8 +103,11 @@ export async function getPromptContext(prompt: string): Promise<string | null> {
 
 /** Gather all prompt-time context and do the one per-agent write. Returns the
  *  combined reminder that was injected, or null if there was nothing to inject. */
-export async function injectPromptContext(prompt: string): Promise<string | null> {
-  const combined = await getPromptContext(prompt);
+export async function injectPromptContext(
+  prompt: string,
+  sessionId?: string
+): Promise<string | null> {
+  const combined = await getPromptContext(prompt, sessionId);
   if (combined) writeForAgent(combined);
   return combined;
 }

@@ -73,6 +73,18 @@ describe("runStopHandlers — the final reply", () => {
     expect(exchange.userMessage).toBe("second ask");
     expect(exchange.assistantMessage).toBe("the final answer");
   });
+
+  test("notes the final reply's shape, so the next turn is measured against it", async () => {
+    await runStopHandlers(transcriptOf("ask", "draft"), {
+      sessionId: "s-shape",
+      lastAssistantMessage: "- one\n- two\n\nWhich do you want?",
+    });
+
+    const tracks = JSON.parse(
+      readFileSync(resolve(HOME, "memory", "state", "interaction-sessions.json"), "utf-8")
+    );
+    expect(tracks["s-shape"].reply).toMatchObject({ listItems: 2, asked: true });
+  });
 });
 
 describe("runStopHandlers — last-response cache", () => {

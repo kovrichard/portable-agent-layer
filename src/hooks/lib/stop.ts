@@ -20,6 +20,7 @@ import { resetTab } from "../handlers/tab";
 import { updateCounts } from "../handlers/update-counts";
 import { captureWorkSession } from "../handlers/work-session";
 import { spawnDetachedInference } from "./detached-inference";
+import { recordReply } from "./interaction";
 import { logDebug, logError } from "./log";
 import { assets, ensureDir, paths } from "./paths";
 import {
@@ -48,6 +49,7 @@ export async function runStopHandlers(
 
   // Cache last assistant response (session-scoped)
   cacheLastResponse(messages, options.lastAssistantMessage, options.sessionId);
+  if (options.sessionId) recordFinalReply(messages, options.sessionId);
 
   // Always persist last exchange — drives CompactRecover + "Pick Up Where You Left Off"
   if (options.sessionId) persistLastExchange(messages, options.sessionId);
@@ -158,6 +160,17 @@ function cacheLastResponse(
     logDebug("runStopHandlers", "Cached last response for RatingCapture");
   } catch (err) {
     logError("runStopHandlers:cacheLastResponse", err);
+  }
+}
+
+function recordFinalReply(
+  messages: ReturnType<typeof parseMessages>,
+  sessionId: string
+): void {
+  try {
+    recordReply(sessionId, extractContent(extractLastAssistant(messages)));
+  } catch (err) {
+    logError("runStopHandlers:recordReply", err);
   }
 }
 

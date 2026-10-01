@@ -30,7 +30,7 @@ logDebug("UserPromptOrchestrator", `Input: ${JSON.stringify(input).slice(0, 200)
 if (!input?.prompt) process.exit(0);
 
 const sessionId = input.session_id ?? input.sessionId ?? input.conversation_id;
-const injected = await injectPromptContext(input.prompt);
+const injected = await injectPromptContext(input.prompt, sessionId);
 logPromptSnapshot(input.prompt, injected);
 
 const results = await Promise.allSettled([

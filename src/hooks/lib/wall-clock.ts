@@ -57,6 +57,12 @@ export function localDay(now: Date = new Date()): string {
   return `${f.year}-${f.month}-${f.day}`;
 }
 
+/** Hour (0-23) and short weekday in the principal's timezone. */
+export function localClock(now: Date = new Date()): { hour: number; weekday: string } {
+  const f = fieldsIn(now, zoneOrUtc(identity().principal.timezone));
+  return { hour: Number(f.hour), weekday: f.weekday };
+}
+
 export function getWallClockReminder(now: Date = new Date()): string | null {
   if (!isEnabled("wallClock")) return null;
   const line = wallClockLine(now, identity().principal.timezone);
