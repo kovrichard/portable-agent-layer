@@ -95,17 +95,23 @@ function hintEarningTurns(session: string): void {
   }
 }
 
-describe.each([
-  ["cursor", { conversation_id: "cu1", hook_event_name: "beforeSubmitPrompt" }, "cu1"],
-  ["copilot", { sessionId: "cp1", cwd: "/work" }, "cp1"],
-])("%s takes no context on a prompt", (agent, ids, session) => {
-  test("logs the turn and writes nothing the agent would drop", async () => {
-    const out = await promptHookOutput(agent, { ...ids, prompt: "rename the column" });
+describe("cursor's prompt hook, which documents no context field", () => {
+  test("logs the turn and still offers the context as additional_context", async () => {
+    const out = await promptHookOutput("cursor", {
+      conversation_id: "cu1",
+      hook_event_name: "beforeSubmitPrompt",
+      prompt: "rename the column",
+    } as PromptPayload);
 
-    expect(out).toBe("");
-    expect(loggedTurns().at(-1)?.session).toBe(session);
+    expect(JSON.parse(out).additional_context).toContain("Now: ");
+    expect(loggedTurns().at(-1)?.session).toBe("cu1");
   });
+});
 
+describe.each([
+  ["cursor", "cu1"],
+  ["copilot", "cp1"],
+])("%s is not known to hear per-turn context", (agent, session) => {
   test("never logs a hint as sent", async () => {
     await asAgent(agent, () => hintEarningTurns(session));
 
@@ -116,6 +122,18 @@ describe.each([
     await asAgent("claude", () => hintEarningTurns(session));
 
     expect(loggedTurns().some((turn) => turn.hinted)).toBe(true);
+  });
+});
+
+describe("copilot's prompt hook, whose output is dropped", () => {
+  test("logs the turn and writes nothing", async () => {
+    const out = await promptHookOutput("copilot", {
+      sessionId: "cp1",
+      prompt: "rename the column",
+    });
+
+    expect(out).toBe("");
+    expect(loggedTurns().at(-1)?.session).toBe("cp1");
   });
 });
 

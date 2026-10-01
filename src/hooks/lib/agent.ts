@@ -246,14 +246,15 @@ function claudeBlock(reason: string, hookEventName?: string): string {
 }
 
 /**
- * Cursor's beforeSubmitPrompt and the Copilot CLI's userPromptSubmitted drop
- * whatever a hook returns; both take context only at session start.
+ * Cursor's beforeSubmitPrompt documents no context field, and the Copilot CLI
+ * drops whatever its userPromptSubmitted hook returns.
  */
 export const hearsPromptContext = () => !isCursor() && !isCopilot();
 
 /** How a prompt hook hands context to the model, in the shape this agent reads. */
 export function promptContextResponse(context: string): string | null {
-  if (!hearsPromptContext()) return null;
+  if (isCopilot()) return null;
+  if (isCursor()) return JSON.stringify({ additional_context: context });
   if (isCodex() || isVscode()) {
     return JSON.stringify({
       hookSpecificOutput: {
