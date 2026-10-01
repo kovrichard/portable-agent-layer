@@ -245,13 +245,14 @@ function claudeBlock(reason: string, hookEventName?: string): string {
   });
 }
 
-/**
- * Cursor's beforeSubmitPrompt documents no context field, and the Copilot CLI
- * drops whatever its userPromptSubmitted hook returns.
- */
-export const hearsPromptContext = () => !isCursor() && !isCopilot();
+/** Cursor's beforeSubmitPrompt documents no context field. */
+export const hearsPromptContext = () => !isCursor();
 
-/** How a prompt hook hands context to the model, in the shape this agent reads. */
+/**
+ * How a prompt hook hands context to the model, in the shape this agent reads.
+ * Null for the Copilot CLI, which drops a userPromptSubmitted hook's output and
+ * takes the context on userPromptTransformed instead.
+ */
 export function promptContextResponse(context: string): string | null {
   if (isCopilot()) return null;
   if (isCursor()) return JSON.stringify({ additional_context: context });

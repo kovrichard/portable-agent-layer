@@ -9,6 +9,11 @@ import {
   hookSessionId,
 } from "../src/hooks/lib/hook-turn";
 import { observeTurn, recordReply, type TurnEvent } from "../src/hooks/lib/interaction";
+import {
+  parkPromptContext,
+  type TransformedPromptPayload,
+  transformedPromptResponse,
+} from "../src/hooks/lib/parked-context";
 import { reload } from "../src/hooks/lib/settings";
 import { stopTurn } from "../src/hooks/lib/stop";
 
@@ -108,32 +113,108 @@ describe("cursor's prompt hook, which documents no context field", () => {
   });
 });
 
-describe.each([
-  ["cursor", "cu1"],
-  ["copilot", "cp1"],
-])("%s is not known to hear per-turn context", (agent, session) => {
+describe("cursor is not known to hear per-turn context", () => {
   test("never logs a hint as sent", async () => {
-    await asAgent(agent, () => hintEarningTurns(session));
+    await asAgent("cursor", () => hintEarningTurns("cu1"));
 
     expect(loggedTurns().some((turn) => turn.hinted)).toBe(false);
   });
 
   test("the same turns do earn a hint where the agent can hear it", async () => {
-    await asAgent("claude", () => hintEarningTurns(session));
+    await asAgent("claude", () => hintEarningTurns("cu1"));
 
     expect(loggedTurns().some((turn) => turn.hinted)).toBe(true);
   });
 });
 
-describe("copilot's prompt hook, whose output is dropped", () => {
-  test("logs the turn and writes nothing", async () => {
-    const out = await promptHookOutput("copilot", {
-      sessionId: "cp1",
-      prompt: "rename the column",
-    });
+describe("copilot, whose prompt hook output is dropped", () => {
+  const prompt = { sessionId: "cp1", prompt: "rename the column" };
+  const transformed = (over: Partial<TransformedPromptPayload> = {}) => ({
+    sessionId: "cp1",
+    timestamp: 1,
+    cwd: "/work",
+    prompt: "rename the column",
+    transformedPrompt: "<context>repo</context>\nrename the column",
+    ...over,
+  });
+
+  function modelFacing(out: string | null): string {
+    return JSON.parse(out ?? "{}").modifiedTransformedPrompt;
+  }
+
+  test("logs the turn and writes nothing on userPromptSubmitted", async () => {
+    const out = await promptHookOutput("copilot", prompt);
 
     expect(out).toBe("");
     expect(loggedTurns().at(-1)?.session).toBe("cp1");
+  });
+
+  test("appends the context to the model-facing prompt on userPromptTransformed", async () => {
+    await promptHookOutput("copilot", prompt);
+    const facing = modelFacing(transformedPromptResponse(transformed()));
+
+    expect(facing.startsWith("<context>repo</context>\nrename the column\n\n")).toBe(
+      true
+    );
+    expect(facing).toContain("Now: ");
+  });
+
+  test("hands the context over once", async () => {
+    await promptHookOutput("copilot", prompt);
+    transformedPromptResponse(transformed());
+
+    expect(transformedPromptResponse(transformed())).toBeNull();
+  });
+
+  test("never hands one session's context to another", async () => {
+    await promptHookOutput("copilot", prompt);
+
+    expect(transformedPromptResponse(transformed({ sessionId: "cp2" }))).toBeNull();
+  });
+
+  test("drops context parked too long ago to belong to this prompt", async () => {
+    parkPromptContext("cp1", "stale", new Date(Date.now() - 10 * 60_000));
+
+    expect(transformedPromptResponse(transformed())).toBeNull();
+  });
+
+  test("leaves the prompt alone without a model-facing prompt to extend", async () => {
+    await promptHookOutput("copilot", prompt);
+
+    expect(transformedPromptResponse(transformed({ transformedPrompt: "" }))).toBeNull();
+  });
+
+  test("logs a hint as sent, since it now reaches the model", async () => {
+    await asAgent("copilot", () => hintEarningTurns("cp1"));
+
+    expect(loggedTurns().some((turn) => turn.hinted)).toBe(true);
+  });
+
+  test("the install wires userPromptTransformed to that hook", () => {
+    const hooks = JSON.parse(
+      readFileSync(resolve(REPO, "assets", "templates", "hooks.copilot.json"), "utf-8")
+    ).hooks;
+
+    expect(JSON.stringify(hooks.userPromptTransformed)).toContain(
+      "src/hooks/PromptTransformed.ts --agent=copilot"
+    );
+  });
+
+  test("the installed hook prints the extended prompt", async () => {
+    await promptHookOutput("copilot", prompt);
+    const result = spawnSync(
+      "bun",
+      ["run", resolve(REPO, "src", "hooks", "PromptTransformed.ts"), "--agent=copilot"],
+      {
+        env: { ...process.env, PAL_HOME: HOME },
+        input: JSON.stringify(transformed()),
+        encoding: "utf-8",
+        timeout: 10000,
+      }
+    );
+
+    expect(result.status).toBe(0);
+    expect(modelFacing(result.stdout)).toContain("Now: ");
   });
 });
 
