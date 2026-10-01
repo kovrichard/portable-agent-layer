@@ -245,6 +245,20 @@ function claudeBlock(reason: string, hookEventName?: string): string {
   });
 }
 
+/** How a prompt hook hands context to the model, in the shape this agent reads. */
+export function promptContextResponse(context: string): string {
+  if (isCursor()) return JSON.stringify({ additional_context: context });
+  if (isCodex() || isVscode()) {
+    return JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: "UserPromptSubmit",
+        additionalContext: context,
+      },
+    });
+  }
+  return `${context}\n`;
+}
+
 export function blockResponse(reason: string, hookEventName?: string): string {
   if (isCursor()) {
     return JSON.stringify({ permission: "deny", user_message: reason });

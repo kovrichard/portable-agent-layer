@@ -7,7 +7,7 @@
  * produces empty output, never blocks the prompt.
  */
 
-import { isCodex, isCursor } from "../lib/agent";
+import { promptContextResponse } from "../lib/agent";
 import { observeTurn } from "../lib/interaction";
 import { logDebug, logError } from "../lib/log";
 import { runRetrieval } from "../lib/retrieval";
@@ -60,25 +60,10 @@ export async function getRetrievalReminder(prompt: string): Promise<string | nul
   return result.reminder;
 }
 
-/** Write a reminder to stdout in the correct format for the current agent.
- *  Claude Code: plain text. Cursor: { additional_context }. Codex: hookSpecificOutput JSON.
- *  MUST be called at most once per hook run — Cursor/Codex expect a single JSON
- *  object on stdout, so all prompt-time context is merged before this call. */
+/** MUST be called at most once per hook run — the JSON shapes are a single object
+ *  on stdout, so all prompt-time context is merged before this call. */
 function writeForAgent(reminder: string): void {
-  if (isCursor()) {
-    process.stdout.write(JSON.stringify({ additional_context: reminder }));
-  } else if (isCodex()) {
-    process.stdout.write(
-      JSON.stringify({
-        hookSpecificOutput: {
-          hookEventName: "UserPromptSubmit",
-          additionalContext: reminder,
-        },
-      })
-    );
-  } else {
-    process.stdout.write(`${reminder}\n`);
-  }
+  process.stdout.write(promptContextResponse(reminder));
 }
 
 /** Merge every prompt-time source — the wall clock, contextual steering, skill

@@ -2,7 +2,12 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { fileFinalReply, hookSessionId } from "../src/hooks/lib/hook-turn";
+import { injectPromptContext } from "../src/hooks/handlers/inject-retrieval";
+import {
+  fileFinalReply,
+  type HookTurnPayload,
+  hookSessionId,
+} from "../src/hooks/lib/hook-turn";
 import { observeTurn, type TurnEvent } from "../src/hooks/lib/interaction";
 import { reload } from "../src/hooks/lib/settings";
 import { stopTurn } from "../src/hooks/lib/stop";
@@ -28,6 +33,8 @@ afterEach(() => {
   rmSync(HOME, { recursive: true, force: true });
 });
 
+type PromptPayload = HookTurnPayload & { prompt: string };
+
 function loggedTurns(): TurnEvent[] {
   const dir = resolve(HOME, "memory", "signals", "interaction");
   if (!existsSync(dir)) return [];
@@ -49,6 +56,46 @@ function replyFiledFor(session: string): TurnEvent["reply"] {
   observeTurn("thanks, next one", session);
   return loggedTurns().at(-1)?.reply ?? null;
 }
+
+async function promptHookOutput(agent: string, payload: PromptPayload) {
+  const savedAgent = process.env.PAL_AGENT;
+  const write = process.stdout.write.bind(process.stdout);
+  let out = "";
+  process.env.PAL_AGENT = agent;
+  // biome-ignore lint/suspicious/noExplicitAny: test stub
+  (process.stdout as any).write = (chunk: string) => {
+    out += chunk;
+    return true;
+  };
+  try {
+    await injectPromptContext(payload.prompt, hookSessionId(payload));
+  } finally {
+    process.stdout.write = write;
+    if (savedAgent === undefined) delete process.env.PAL_AGENT;
+    else process.env.PAL_AGENT = savedAgent;
+  }
+  return out;
+}
+
+function hookSpecificContext(out: string): string {
+  const parsed = JSON.parse(out);
+  expect(parsed.hookSpecificOutput.hookEventName).toBe("UserPromptSubmit");
+  return parsed.hookSpecificOutput.additionalContext;
+}
+
+describe("vscode", () => {
+  test("logs the turn and hands the context back as hookSpecificOutput", async () => {
+    const prompt = {
+      session_id: "vs1",
+      hook_event_name: "UserPromptSubmit",
+      prompt: "rename the column",
+    };
+    const out = await promptHookOutput("vscode", prompt);
+
+    expect(hookSpecificContext(out)).toContain("Now: ");
+    expect(loggedTurns().at(-1)?.session).toBe("vs1");
+  });
+});
 
 describe("cursor", () => {
   test("files the reply afterAgentResponse hands over, under the prompt's conversation", () => {
@@ -96,6 +143,13 @@ describe("cursor", () => {
 
 describe("codex", () => {
   const prompt = { session_id: "thr_1", turn_id: "t1", prompt: "rename the column" };
+
+  test("logs the turn and hands the context back as hookSpecificOutput", async () => {
+    const out = await promptHookOutput("codex", prompt);
+
+    expect(hookSpecificContext(out)).toContain("Now: ");
+    expect(loggedTurns().at(-1)?.session).toBe("thr_1");
+  });
 
   test("files the reply it hands over even when its transcript is unreadable", async () => {
     observeTurn(prompt.prompt, hookSessionId(prompt));
