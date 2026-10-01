@@ -171,16 +171,6 @@ describe("cursor", () => {
     expect(result.status).toBe(0);
     expect(replyFiledFor("cu2")).toMatchObject({ words: 2 });
   });
-
-  test("the install wires afterAgentResponse to that hook", () => {
-    const template = readFileSync(
-      resolve(REPO, "assets", "templates", "hooks.cursor.json"),
-      "utf-8"
-    );
-    expect(JSON.stringify(JSON.parse(template).hooks.afterAgentResponse)).toContain(
-      "src/hooks/AgentResponse.ts --agent=cursor"
-    );
-  });
 });
 
 describe("codex", () => {
@@ -214,5 +204,141 @@ describe("codex", () => {
     await stopTurn({ session_id: "thr_1", last_assistant_message: "Done." });
 
     expect(replyFiledFor("thr_1")).toMatchObject({ words: 1 });
+  });
+});
+
+describe("claude", () => {
+  test("logs the turn and hands the context back as plain text", async () => {
+    const out = await promptHookOutput("claude", {
+      session_id: "c1",
+      prompt: "rename the column",
+    });
+
+    expect(out).toContain("Now: ");
+    expect(out.trimStart().startsWith("{")).toBe(false);
+    expect(loggedTurns().at(-1)?.session).toBe("c1");
+  });
+
+  test("files the reply from its transcript", async () => {
+    observeTurn("rename the column", "c1");
+    await stopTurn({
+      session_id: "c1",
+      transcript_path: transcriptFile("claude.jsonl", [
+        { type: "user", message: { content: "rename the column" } },
+        {
+          type: "assistant",
+          message: { content: [{ type: "text", text: "Renamed it in both tables." }] },
+        },
+      ]),
+    });
+
+    expect(replyFiledFor("c1")).toMatchObject({ words: 5 });
+  });
+});
+
+const EVENT_LOG = [
+  { type: "user.message", data: { content: "rename the column" } },
+  { type: "assistant.message", data: { content: "Renamed it in both tables." } },
+];
+
+describe("copilot", () => {
+  test("files the reply from the transcript agentStop points at", async () => {
+    observeTurn("rename the column", "cp1");
+    const stop = {
+      sessionId: "cp1",
+      stopReason: "end_turn",
+      transcriptPath: transcriptFile("copilot.jsonl", EVENT_LOG),
+    };
+    await stopTurn(stop);
+
+    expect(replyFiledFor("cp1")).toMatchObject({ words: 5 });
+  });
+});
+
+describe("vscode", () => {
+  test("files the reply from the transcript Stop points at", async () => {
+    observeTurn("rename the column", "vs1");
+    const stop = {
+      session_id: "vs1",
+      stop_hook_active: false,
+      transcript_path: transcriptFile("vscode.jsonl", EVENT_LOG),
+    };
+    await stopTurn(stop);
+
+    expect(replyFiledFor("vs1")).toMatchObject({ words: 5 });
+  });
+});
+
+describe("opencode", () => {
+  const conversation = [
+    { info: { role: "user" }, parts: [{ type: "text", text: "rename the column" }] },
+    {
+      info: { role: "assistant" },
+      parts: [{ type: "text", text: "Renamed it in both tables." }],
+    },
+  ];
+
+  // biome-ignore lint/suspicious/noExplicitAny: the plugin's opencode-typed hooks
+  async function plugin(): Promise<any> {
+    const savedAgent = process.env.PAL_AGENT;
+    const { default: PALPlugin } = await import("../src/targets/opencode/plugin");
+    const hooks = await PALPlugin({
+      directory: HOME,
+      client: { session: { messages: async () => ({ data: conversation }) } },
+    } as never);
+    if (savedAgent === undefined) delete process.env.PAL_AGENT;
+    else process.env.PAL_AGENT = savedAgent;
+    return hooks;
+  }
+
+  test("logs the turn and adds the context as a synthetic part", async () => {
+    const hooks = await plugin();
+    const output = { parts: [{ type: "text", text: "rename the column" }] };
+    await asAgent("opencode", () =>
+      hooks["chat.message"]({ sessionID: "oc1", messageID: "m1" }, output)
+    );
+
+    expect(output.parts[0]).toMatchObject({ synthetic: true, sessionID: "oc1" });
+    expect(String((output.parts[0] as { text: string }).text)).toContain("Now: ");
+    expect(loggedTurns().at(-1)?.session).toBe("oc1");
+  });
+
+  test("files the reply when the session goes idle", async () => {
+    const hooks = await plugin();
+    observeTurn("rename the column", "oc1");
+    await asAgent("opencode", () =>
+      hooks.event({ event: { type: "session.idle", properties: { sessionID: "oc1" } } })
+    );
+
+    expect(replyFiledFor("oc1")).toMatchObject({ words: 5 });
+  });
+});
+
+const WIRING = [
+  ["claude", "settings.claude.json", "UserPromptSubmit", ["Stop"]],
+  ["codex", "hooks.codex.json", "UserPromptSubmit", ["Stop"]],
+  ["copilot", "hooks.copilot.json", "userPromptSubmitted", ["agentStop"]],
+  ["vscode", "hooks.vscode.json", "UserPromptSubmit", ["Stop"]],
+  ["cursor", "hooks.cursor.json", "beforeSubmitPrompt", ["stop", "afterAgentResponse"]],
+] as const;
+
+const REPLY_HOOK: Record<string, string> = {
+  afterAgentResponse: "AgentResponse.ts",
+};
+
+describe.each(WIRING)("%s install", (agent, file, promptEvent, replyEvents) => {
+  const hooks = JSON.parse(
+    readFileSync(resolve(REPO, "assets", "templates", file), "utf-8")
+  ).hooks;
+
+  test(`measures each prompt on ${promptEvent}`, () => {
+    expect(JSON.stringify(hooks[promptEvent])).toContain(
+      `src/hooks/UserPromptOrchestrator.ts --agent=${agent}`
+    );
+  });
+
+  test.each([...replyEvents])("files the reply on %s", (event) => {
+    const entry = REPLY_HOOK[event] ?? "StopOrchestrator.ts";
+    expect(JSON.stringify(hooks[event])).toContain(`src/hooks/${entry} --agent=${agent}`);
   });
 });
