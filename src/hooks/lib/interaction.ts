@@ -12,6 +12,7 @@ import {
 } from "node:fs";
 import { resolve } from "node:path";
 import { currentAttribution } from "./actor";
+import { hearsPromptContext } from "./agent";
 import {
   type Baseline,
   DEFAULT_BASELINE,
@@ -252,7 +253,11 @@ export function observeTurn(
   const recent = [...track.recent, event].slice(-RECENT_KEPT);
   const mood = readMood(recent, baseline(session, now));
   const reminder = moodReminder(mood, track.mood ?? "");
-  appendEvent({ ...event, mood: mood.key, hinted: reminder !== null });
+  appendEvent({
+    ...event,
+    mood: mood.key,
+    hinted: reminder !== null && hearsPromptContext(),
+  });
   sampleReaction(event, text, track);
   writeTrack(session, {
     ...track,

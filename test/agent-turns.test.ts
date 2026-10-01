@@ -8,7 +8,7 @@ import {
   type HookTurnPayload,
   hookSessionId,
 } from "../src/hooks/lib/hook-turn";
-import { observeTurn, type TurnEvent } from "../src/hooks/lib/interaction";
+import { observeTurn, recordReply, type TurnEvent } from "../src/hooks/lib/interaction";
 import { reload } from "../src/hooks/lib/settings";
 import { stopTurn } from "../src/hooks/lib/stop";
 
@@ -57,25 +57,67 @@ function replyFiledFor(session: string): TurnEvent["reply"] {
   return loggedTurns().at(-1)?.reply ?? null;
 }
 
-async function promptHookOutput(agent: string, payload: PromptPayload) {
+async function asAgent<T>(agent: string, work: () => T | Promise<T>): Promise<T> {
   const savedAgent = process.env.PAL_AGENT;
+  process.env.PAL_AGENT = agent;
+  try {
+    return await work();
+  } finally {
+    if (savedAgent === undefined) delete process.env.PAL_AGENT;
+    else process.env.PAL_AGENT = savedAgent;
+  }
+}
+
+async function promptHookOutput(agent: string, payload: PromptPayload) {
   const write = process.stdout.write.bind(process.stdout);
   let out = "";
-  process.env.PAL_AGENT = agent;
   // biome-ignore lint/suspicious/noExplicitAny: test stub
   (process.stdout as any).write = (chunk: string) => {
     out += chunk;
     return true;
   };
   try {
-    await injectPromptContext(payload.prompt, hookSessionId(payload));
+    await asAgent(agent, () =>
+      injectPromptContext(payload.prompt, hookSessionId(payload))
+    );
   } finally {
     process.stdout.write = write;
-    if (savedAgent === undefined) delete process.env.PAL_AGENT;
-    else process.env.PAL_AGENT = savedAgent;
   }
   return out;
 }
+
+/** Short, quick turns that change the session's picture and so earn a hint. */
+function hintEarningTurns(session: string): void {
+  observeTurn("start the work", session);
+  for (let i = 0; i < 4; i++) {
+    recordReply(session, "short answer");
+    observeTurn("yes pls", session);
+  }
+}
+
+describe.each([
+  ["cursor", { conversation_id: "cu1", hook_event_name: "beforeSubmitPrompt" }, "cu1"],
+  ["copilot", { sessionId: "cp1", cwd: "/work" }, "cp1"],
+])("%s takes no context on a prompt", (agent, ids, session) => {
+  test("logs the turn and writes nothing the agent would drop", async () => {
+    const out = await promptHookOutput(agent, { ...ids, prompt: "rename the column" });
+
+    expect(out).toBe("");
+    expect(loggedTurns().at(-1)?.session).toBe(session);
+  });
+
+  test("never logs a hint as sent", async () => {
+    await asAgent(agent, () => hintEarningTurns(session));
+
+    expect(loggedTurns().some((turn) => turn.hinted)).toBe(false);
+  });
+
+  test("the same turns do earn a hint where the agent can hear it", async () => {
+    await asAgent("claude", () => hintEarningTurns(session));
+
+    expect(loggedTurns().some((turn) => turn.hinted)).toBe(true);
+  });
+});
 
 function hookSpecificContext(out: string): string {
   const parsed = JSON.parse(out);

@@ -63,7 +63,8 @@ export async function getRetrievalReminder(prompt: string): Promise<string | nul
 /** MUST be called at most once per hook run — the JSON shapes are a single object
  *  on stdout, so all prompt-time context is merged before this call. */
 function writeForAgent(reminder: string): void {
-  process.stdout.write(promptContextResponse(reminder));
+  const response = promptContextResponse(reminder);
+  if (response) process.stdout.write(response);
 }
 
 /** Merge every prompt-time source — the wall clock, contextual steering, skill
