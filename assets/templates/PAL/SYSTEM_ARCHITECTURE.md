@@ -250,6 +250,21 @@ Brief description.
 └─────────────────────┘
 ```
 
+### Per-Agent Turn Contract
+
+Every agent's turns are measured and its replies filed under the session id the agent sent. What differs is whether the prompt hook can hand context back, and where the final reply comes from.
+
+| Agent | Prompt event → context per turn | Final reply from |
+|-------|---------------------------------|------------------|
+| Claude Code | `UserPromptSubmit` → plain text | `Stop` transcript |
+| Codex | `UserPromptSubmit` → `hookSpecificOutput.additionalContext` | `Stop` `last_assistant_message` |
+| VS Code | `UserPromptSubmit` → `hookSpecificOutput.additionalContext` | `Stop` transcript |
+| opencode | `chat.message` → synthetic part | `session.idle` session messages |
+| Cursor | `beforeSubmitPrompt` → **none**, startup only | `afterAgentResponse` `text` (`AgentResponse.ts`) |
+| Copilot CLI | `userPromptSubmitted` → **none**, startup only | `agentStop` transcript |
+
+Cursor and the Copilot CLI drop whatever a prompt hook returns, so per-turn context (wall clock, steering, skill matches, retrieval, interaction hints) never reaches them; they get PAL's context at session start only, and no hint is logged as sent. `test/agent-turns.test.ts` holds each agent to this table.
+
 ### Design Principles
 
 - **Fail-open**: Hook errors never block the user's session
