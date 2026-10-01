@@ -1,12 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { reactionTo, replyKeywords } from "../src/hooks/lib/interaction-reaction";
-
-const REPLY = replyKeywords(
-  "I moved the retry logic into the queue worker and the flaky upload test passes now."
-);
+import { reactionTo } from "../src/hooks/lib/interaction-reaction";
 
 function react(text: string, previousPrompt = "fix the flaky upload test") {
-  return reactionTo(text, { previousPrompt, replyKeywords: REPLY });
+  return reactionTo(text, previousPrompt);
 }
 
 describe("a reply's outcome, read from the next message", () => {

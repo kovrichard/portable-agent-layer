@@ -8,11 +8,6 @@ import { extractKeywords, similarity } from "./text-similarity";
 
 export type Reaction = "corrected" | "repeated" | "approved" | "new-topic" | "follow-up";
 
-export interface ReplyContext {
-  previousPrompt?: string;
-  replyKeywords: string[];
-}
-
 const CORRECTION_RE =
   /^(?:(?:no|nope|wrong)(?:[,.!]|$)|(?:that'?s|this is|it'?s) (?:wrong|not)\b|not what i\b|i said\b|i told you\b|you forgot\b|you missed\b|still (?:broken|failing|wrong)\b)/i;
 
@@ -66,14 +61,10 @@ function isNewTopic(text: string): boolean {
   return NEW_TOPIC_RE.test(text.trim());
 }
 
-export function reactionTo(text: string, context: ReplyContext): Reaction {
+export function reactionTo(text: string, previousPrompt: string | undefined): Reaction {
   if (isCorrection(text)) return "corrected";
-  if (isRepeat(text, context.previousPrompt)) return "repeated";
+  if (isRepeat(text, previousPrompt)) return "repeated";
   if (isApproval(text)) return "approved";
   if (isNewTopic(text)) return "new-topic";
   return "follow-up";
-}
-
-export function replyKeywords(reply: string): string[] {
-  return [...extractKeywords(reply)];
 }
