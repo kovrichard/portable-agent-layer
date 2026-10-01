@@ -20,7 +20,12 @@ import { resetTab } from "../handlers/tab";
 import { updateCounts } from "../handlers/update-counts";
 import { captureWorkSession } from "../handlers/work-session";
 import { spawnDetachedInference } from "./detached-inference";
-import { type HookTurnPayload, hookSessionId } from "./hook-turn";
+import {
+  fileFinalReply,
+  type HookTurnPayload,
+  hookFinalReply,
+  hookSessionId,
+} from "./hook-turn";
 import { recordReply } from "./interaction";
 import { logDebug, logError } from "./log";
 import { assets, ensureDir, paths } from "./paths";
@@ -35,26 +40,21 @@ import {
 export interface StopTurnPayload extends HookTurnPayload {
   transcript_path?: string | null;
   transcriptPath?: string | null;
-  last_assistant_message?: string | null;
-  lastAssistantMessage?: string | null;
 }
 
 /** Everything a stop hook does once the agent's payload is read. */
 export async function stopTurn(payload: StopTurnPayload | null): Promise<void> {
-  const sessionId = hookSessionId(payload);
-  const finalReply =
-    payload?.last_assistant_message ?? payload?.lastAssistantMessage ?? undefined;
   const transcriptPath = payload?.transcript_path ?? payload?.transcriptPath;
   const messages = transcriptPath ? readTranscriptFile(transcriptPath) : [];
   if (messages.length >= 2) {
     await runStopHandlers(JSON.stringify(messages), {
-      lastAssistantMessage: finalReply,
-      sessionId,
+      lastAssistantMessage: hookFinalReply(payload),
+      sessionId: hookSessionId(payload),
     });
     return;
   }
   logDebug("stopTurn", "No readable transcript; filing only the final reply");
-  if (sessionId && finalReply) recordReply(sessionId, finalReply);
+  fileFinalReply(payload);
 }
 
 interface RunStopHandlersOptions {
