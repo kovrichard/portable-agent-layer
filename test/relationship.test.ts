@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, setSystemTime, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { appendNotes, loadRecentNotes } from "../src/hooks/lib/relationship";
@@ -187,6 +187,18 @@ describe("loadRecentNotes", () => {
     expect(loaded).toContain("TODAY");
     expect(loaded).toContain("YESTERDAY");
     expect(loaded).toContain("\n\n---\n\n");
+  });
+
+  test("on the first of the month, yesterday's notes still come from last month", () => {
+    setSystemTime(new Date(2026, 9, 1, 9, 0));
+    try {
+      seed("2026-10", "2026-10-01", "TODAY");
+      seed("2026-09", "2026-09-30", "YESTERDAY");
+
+      expect(loadRecentNotes(2)).toContain("YESTERDAY");
+    } finally {
+      setSystemTime();
+    }
   });
 
   test("excludes a day older than the requested window", () => {
