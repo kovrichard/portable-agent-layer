@@ -104,6 +104,49 @@ describe("interaction report", () => {
     expect(lines).toContain("  long      no replies yet");
   });
 
+  test("a repeat counts against a reply like a correction", () => {
+    const summary = summarize([turn(), answered(100, "repeated")]);
+
+    expect(summary.usual.correctedShare).toBe(1);
+  });
+
+  test("counts only the turns logged without a mood as older", () => {
+    const summary = summarize([
+      turn({ mood: undefined }),
+      turn(),
+      turn({ mood: "short" }),
+    ]);
+
+    expect(summary.unlogged).toBe(1);
+  });
+
+  test("prints turns, sessions, channels, reactions and hints", () => {
+    const lines = reportLines(
+      summarize([
+        turn({ session: "a", channel: "mobile", mood: "short", hinted: true }),
+        { ...answered(80, "approved"), session: "a", channel: "mobile" },
+        { ...answered(90, "follow-up"), session: "a", channel: null },
+        { ...answered(90, "follow-up"), session: "b", channel: "mobile" },
+      ]),
+      1
+    );
+
+    expect(lines.slice(0, 4)).toEqual([
+      "Interaction report, last day",
+      "Turns: 4 in 2 sessions · mobile 3 · unknown 1",
+      "Reactions: follow-up 67% · approved 33%",
+      "Hints sent: short 1",
+    ]);
+  });
+
+  test("names the older turns left out", () => {
+    const lines = reportLines(summarize([turn({ mood: undefined })]), 7);
+
+    expect(lines.at(-1)).toBe(
+      "1 older turns were logged before moods were, and are left out of the comparison."
+    );
+  });
+
   test("says so when nothing was measured", () => {
     expect(reportLines(summarize([]), 7)).toEqual([
       "No measured turns in the last 7 days.",
