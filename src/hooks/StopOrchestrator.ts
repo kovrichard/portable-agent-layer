@@ -8,6 +8,7 @@
 
 import { checkReadmeSync } from "./handlers/readme-sync";
 import { blockResponse, isCodex, isCursor } from "./lib/agent";
+import { type HookTurnPayload, hookSessionId } from "./lib/hook-turn";
 import { logError } from "./lib/log";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
@@ -18,9 +19,7 @@ import { readTranscriptFile } from "./lib/transcript";
 // learning, ratings, or handoffs from their throwaway transcript.
 if (isPalSpawnedInference()) process.exit(0);
 
-interface StopHookInput {
-  session_id?: string;
-  sessionId?: string; // Copilot uses camelCase
+interface StopHookInput extends HookTurnPayload {
   transcript_path?: string;
   transcriptPath?: string; // Copilot uses camelCase
   last_assistant_message?: string;
@@ -52,7 +51,7 @@ try {
 
 const input = await readStdinJSON<StopHookInput>();
 const transcriptPath = input?.transcript_path ?? input?.transcriptPath;
-const sessionId = input?.session_id ?? input?.sessionId;
+const sessionId = hookSessionId(input);
 const lastAssistant = input?.last_assistant_message ?? input?.lastAssistantMessage;
 
 if (!transcriptPath) {

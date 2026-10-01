@@ -10,6 +10,7 @@
 import { injectPromptContext } from "./handlers/inject-retrieval";
 import { captureRating } from "./handlers/rating";
 import { captureSessionName } from "./handlers/session-name";
+import { type HookTurnPayload, hookSessionId } from "./lib/hook-turn";
 import { logDebug, logError, logPromptSnapshot } from "./lib/log";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
@@ -18,18 +19,15 @@ import { readStdinJSON } from "./lib/stdin";
 // payload, not a real user message. Skip rating capture, session naming, etc.
 if (isPalSpawnedInference()) process.exit(0);
 
-interface PromptSubmitInput {
+interface PromptSubmitInput extends HookTurnPayload {
   prompt: string;
-  session_id?: string;
-  sessionId?: string; // Copilot sends this (camelCase) instead of session_id
-  conversation_id?: string; // Cursor sends this instead of session_id
 }
 
 const input = await readStdinJSON<PromptSubmitInput>();
 logDebug("UserPromptOrchestrator", `Input: ${JSON.stringify(input).slice(0, 200)}`);
 if (!input?.prompt) process.exit(0);
 
-const sessionId = input.session_id ?? input.sessionId ?? input.conversation_id;
+const sessionId = hookSessionId(input);
 const injected = await injectPromptContext(input.prompt, sessionId);
 logPromptSnapshot(input.prompt, injected);
 
