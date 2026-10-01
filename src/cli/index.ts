@@ -110,6 +110,16 @@ function checkCopilot(): ToolCheck {
   return cli;
 }
 
+/**
+ * The Cursor CLI installs `cursor-agent` (and `agent`) and no `cursor` command;
+ * `cursor` is the editor's shell command. Both read ~/.cursor, so either counts.
+ */
+function checkCursor(): ToolCheck {
+  const cli = checkTool("cursor-agent");
+  if (cli.available) return cli;
+  return checkTool("cursor");
+}
+
 async function session(sessionArgs: string[]) {
   const agent = findSessionAgent();
   if (!agent) {
@@ -759,7 +769,7 @@ function doctor(silent = false): DoctorResult {
   const bun = { name: "bun", available: true, version: Bun.version };
   const claude = checkTool("claude");
   const opencode = checkTool("opencode");
-  const cursor = checkTool("cursor");
+  const cursor = checkCursor();
   const copilot = checkCopilot();
   const codex = checkTool("codex");
   const rtk = checkTool("rtk");
