@@ -145,6 +145,17 @@ describe("measuring a turn", () => {
     expect(lastEvent().words).toBe(2);
   });
 
+  test("a subagent handing back its report is not a user turn", () => {
+    observeTurn(
+      'Another Claude session sent a message:\n<agent-message from="a1">[Subagent hand-back] report</agent-message>',
+      "s1",
+      T0
+    );
+    observeTurn("real words", "s1", T0);
+
+    expect(loggedEvents()).toHaveLength(1);
+  });
+
   test("records nothing when switched off", () => {
     setSettings({ dynamicContext: { interactionAwareness: false } });
     observeTurn("hello there", "s1", T0);
