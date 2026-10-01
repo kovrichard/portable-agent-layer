@@ -1,3 +1,20 @@
+# [0.83.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.82.0...v0.83.0) (2026-10-01)
+
+
+### Bug Fixes
+
+* **hooks:** file the final reply when the transcript can't be read ([a66d6eb](https://github.com/kovrichard/portable-agent-layer/commit/a66d6ebf5f85ea08df86be50510650ae129141d9))
+* **hooks:** hand VS Code its prompt context as hookSpecificOutput ([d667451](https://github.com/kovrichard/portable-agent-layer/commit/d6674515294eb5d6c46a13efc5432fec83df493a))
+* **hooks:** keep offering Cursor its prompt context ([7004c30](https://github.com/kovrichard/portable-agent-layer/commit/7004c309f77fefa3f83f93d96ae6a6b6b8bfcf21))
+* **hooks:** read Cursor's conversation id when a turn stops ([7b9572c](https://github.com/kovrichard/portable-agent-layer/commit/7b9572c2d7de45f01c24a0b762544e6c8cdefe2a))
+* **hooks:** send no per-turn context to agents that drop it ([41ff176](https://github.com/kovrichard/portable-agent-layer/commit/41ff176672f56011cdc6b6eff638136b80e5b926))
+
+
+### Features
+
+* **hooks:** file Cursor's reply from afterAgentResponse ([ae4cb4c](https://github.com/kovrichard/portable-agent-layer/commit/ae4cb4c767cc82f6c0eb85427f76dd69bfc2ab1a))
+* **hooks:** hand the Copilot CLI its prompt context on userPromptTransformed ([83c4d48](https://github.com/kovrichard/portable-agent-layer/commit/83c4d48c150485f5107b79c2f4ee47bd04b97b09))
+
 # [0.82.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.81.1...v0.82.0) (2026-10-01)
 
 
