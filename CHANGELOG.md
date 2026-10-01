@@ -1,3 +1,10 @@
+## [0.84.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.84.0...v0.84.1) (2026-10-01)
+
+
+### Bug Fixes
+
+* **cursor:** detect cursor-agent before cursor ([8f7f439](https://github.com/kovrichard/portable-agent-layer/commit/8f7f439e369c3011df5db648256d2f2b91bd5778))
+
 # [0.84.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.83.0...v0.84.0) (2026-10-01)
 
 
