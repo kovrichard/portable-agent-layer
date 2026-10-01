@@ -102,6 +102,8 @@ describe("spawn-guard integration — hook entry-points short-circuit when spawn
     "src/hooks/UserPromptOrchestrator.ts",
     "src/hooks/CompactRecover.ts",
     "src/hooks/PreCompactPersist.ts",
+    "src/hooks/AgentResponse.ts",
+    "src/hooks/PromptTransformed.ts",
   ] as const;
 
   for (const hookPath of HOOKS_TO_GUARD) {

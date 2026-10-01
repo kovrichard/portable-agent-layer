@@ -51,12 +51,14 @@ function words(n: number): string {
 beforeEach(() => {
   TEST_HOME = mkdtempSync(resolve(tmpdir(), "pal-interaction-"));
   process.env.PAL_HOME = TEST_HOME;
+  process.env.PAL_AGENT = "claude";
   mkdirSync(resolve(TEST_HOME, "memory"), { recursive: true });
   setSettings({});
 });
 
 afterEach(() => {
   delete process.env.PAL_HOME;
+  delete process.env.PAL_AGENT;
   reload();
   rmSync(TEST_HOME, { recursive: true, force: true });
 });

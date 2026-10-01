@@ -15,6 +15,13 @@
         "powershell": "bun run {{PKG_ROOT}}/src/hooks/UserPromptOrchestrator.ts --agent=copilot"
       }
     ],
+    "userPromptTransformed": [
+      {
+        "type": "command",
+        "bash": "bun run {{PKG_ROOT}}/src/hooks/PromptTransformed.ts --agent=copilot",
+        "powershell": "bun run {{PKG_ROOT}}/src/hooks/PromptTransformed.ts --agent=copilot"
+      }
+    ],
     "preToolUse": [
       {
         "type": "command",

@@ -3,7 +3,6 @@
  * Fans out to independent handlers via Promise.allSettled.
  *
  * stdin: JSON object with { session_id, transcript_path, last_assistant_message, ... }
- * Transcript is read from the file at transcript_path, NOT from stdin.
  */
 
 import { checkReadmeSync } from "./handlers/readme-sync";
@@ -11,21 +10,11 @@ import { blockResponse, isCodex, isCursor } from "./lib/agent";
 import { logError } from "./lib/log";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
-import { runStopHandlers } from "./lib/stop";
-import { readTranscriptFile } from "./lib/transcript";
+import { type StopTurnPayload, stopTurn } from "./lib/stop";
 
 // Recursion guard — spawned inference subprocesses must not record session
 // learning, ratings, or handoffs from their throwaway transcript.
 if (isPalSpawnedInference()) process.exit(0);
-
-interface StopHookInput {
-  session_id?: string;
-  sessionId?: string; // Copilot uses camelCase
-  transcript_path?: string;
-  transcriptPath?: string; // Copilot uses camelCase
-  last_assistant_message?: string;
-  lastAssistantMessage?: string; // Copilot uses camelCase
-}
 
 // Check README sync before anything else — may block the session
 try {
@@ -50,23 +39,4 @@ try {
   logError("StopOrchestrator:readme-sync", err);
 }
 
-const input = await readStdinJSON<StopHookInput>();
-const transcriptPath = input?.transcript_path ?? input?.transcriptPath;
-const sessionId = input?.session_id ?? input?.sessionId;
-const lastAssistant = input?.last_assistant_message ?? input?.lastAssistantMessage;
-
-if (!transcriptPath) {
-  logError("StopOrchestrator", "No transcript_path in hook input");
-  process.exit(0);
-}
-
-// Read the actual transcript from the file on disk
-const messages = readTranscriptFile(transcriptPath);
-if (messages.length < 2) process.exit(0);
-
-// Serialize and run handlers
-const transcript = JSON.stringify(messages);
-await runStopHandlers(transcript, {
-  lastAssistantMessage: lastAssistant,
-  sessionId,
-});
+await stopTurn(await readStdinJSON<StopTurnPayload>());

@@ -36,6 +36,7 @@ describe("Copilot hooks template", () => {
       "sessionEnd",
       "sessionStart",
       "userPromptSubmitted",
+      "userPromptTransformed",
     ]);
   });
 

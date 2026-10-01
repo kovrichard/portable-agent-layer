@@ -49,6 +49,12 @@
         "command": "bun run {{PKG_ROOT}}/src/hooks/SecurityValidator.ts --agent=cursor"
       }
     ],
+    "afterAgentResponse": [
+      {
+        "type": "command",
+        "command": "bun run {{PKG_ROOT}}/src/hooks/AgentResponse.ts --agent=cursor"
+      }
+    ],
     "stop": [
       {
         "type": "command",
