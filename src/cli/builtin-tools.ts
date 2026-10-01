@@ -11,6 +11,7 @@ const BUILTIN_TOOLS = {
   "algorithm-synthesize": () => import("../tools/agent/algorithm-synthesize"),
   analyze: () => import("../tools/agent/analyze"),
   "handoff-note": () => import("../tools/agent/handoff-note"),
+  interaction: () => import("../tools/agent/interaction"),
   project: () => import("../tools/agent/project"),
   "relationship-note": () => import("../tools/agent/relationship-note"),
   "relationship-reflect": () => import("../tools/agent/relationship-reflect"),

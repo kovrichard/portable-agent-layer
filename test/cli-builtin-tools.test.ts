@@ -35,6 +35,7 @@ const READ_ONLY_ARGS: Record<string, string[]> = {
   "algorithm-synthesize": [],
   analyze: ["--help"],
   "handoff-note": ["--help"],
+  interaction: ["report"],
   project: ["list"],
   "relationship-note": ["--help"],
   "relationship-reflect": ["--help"],

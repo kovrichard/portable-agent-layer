@@ -3,7 +3,13 @@
  * Per-session tracking lives in state and is discarded with the session.
  */
 
-import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { resolve } from "node:path";
 import { currentAttribution } from "./actor";
 import {
@@ -42,6 +48,8 @@ export interface TurnEvent extends MoodTurn {
   weekday: string;
   reply: Omit<ReplyShape, "at"> | null;
   reaction: Reaction | null;
+  mood?: string;
+  hinted?: boolean;
 }
 
 interface SessionTrack {
@@ -146,6 +154,16 @@ function readEvents(file: string): TurnEvent[] {
     });
 }
 
+export function turnsSince(since: Date): TurnEvent[] {
+  const fromMonth = since.toISOString().slice(0, 7);
+  const sinceTs = since.toISOString();
+  return readdirSync(eventsDir())
+    .filter((f) => f.endsWith(".jsonl") && f.slice(0, 7) >= fromMonth)
+    .sort()
+    .flatMap((f) => readEvents(resolve(eventsDir(), f)))
+    .filter((e) => e.ts >= sinceTs);
+}
+
 /** The user's own normal, from this month and last, outside the session being judged. */
 function baseline(session: string, now: Date = new Date()): Baseline {
   const lastMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
@@ -231,10 +249,11 @@ export function observeTurn(
   if (!text) return null;
   const track = trackOf(session);
   const event = measureTurn(text, session, track, now, channel);
-  appendEvent(event);
-  sampleReaction(event, text, track);
   const recent = [...track.recent, event].slice(-RECENT_KEPT);
   const mood = readMood(recent, baseline(session, now));
+  const reminder = moodReminder(mood, track.mood ?? "");
+  appendEvent({ ...event, mood: mood.key, hinted: reminder !== null });
+  sampleReaction(event, text, track);
   writeTrack(session, {
     ...track,
     updated: now.toISOString(),
@@ -243,5 +262,5 @@ export function observeTurn(
     recent,
     mood: mood.key,
   });
-  return moodReminder(mood, track.mood ?? "");
+  return reminder;
 }
