@@ -181,6 +181,19 @@ describe("telling the agent", () => {
     expect(reminders[3]).toBeNull();
   });
 
+  test("logs the mood each turn was read as, and whether the agent was told", () => {
+    observeTurn("start", "s1", T0);
+    for (const i of [1, 2, 3, 4]) fastShortTurn("s1", i);
+
+    expect(loggedEvents().map((e) => [e.mood, e.hinted])).toEqual([
+      ["", false],
+      ["", false],
+      ["short", true],
+      ["fast,short", true],
+      ["fast,short", false],
+    ]);
+  });
+
   test("says once when the pattern is back to usual", () => {
     observeTurn("start", "s1", T0);
     for (const i of [1, 2, 3]) fastShortTurn("s1", i);
