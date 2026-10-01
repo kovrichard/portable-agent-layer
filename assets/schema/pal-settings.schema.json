@@ -74,6 +74,10 @@
           "type": "boolean",
           "description": "Measure each user turn (pace, message length, skimming, corrections; never the text) into memory/signals/interaction/, and tell the agent when the session's pattern changes."
         },
+        "reactionSampling": {
+          "type": "boolean",
+          "description": "Keep a rolling local sample (about 230 messages) of user message text, its reaction label and the end of the reply it answered, in memory/state/reaction-samples.json, so the reaction rules can be audited. Stores message text; set false to keep none."
+        },
         "steeringTestReport": { "type": "boolean", "description": "When true, the assistant notes to the user which steering self-check fired. For the dual-live test period; ships false." }
       }
     },

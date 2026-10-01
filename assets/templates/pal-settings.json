@@ -27,6 +27,7 @@
     "skillMatching": true,
     "wallClock": true,
     "interactionAwareness": true,
+    "reactionSampling": true,
     "steeringTestReport": false
   },
   "steering": {

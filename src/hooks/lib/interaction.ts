@@ -21,6 +21,7 @@ import {
   reactionTo,
   replyKeywords,
 } from "./interaction-reaction";
+import { keepSample, replyEnd } from "./interaction-samples";
 import { ensureDir, paths } from "./paths";
 import { isSystemText, stripInjectedTags } from "./prompt-text";
 import { isEnabled } from "./settings";
@@ -50,6 +51,7 @@ interface SessionTrack {
   lastPromptAt?: string;
   reply?: ReplyShape;
   replyKeywords?: string[];
+  replyEnd?: string;
   recent: TurnEvent[];
   mood?: string;
 }
@@ -210,6 +212,18 @@ export function recordReply(
     updated: now.toISOString(),
     reply: replyShape(reply, now),
     replyKeywords: replyKeywords(reply),
+    replyEnd: replyEnd(reply),
+  });
+}
+
+function sampleReaction(event: TurnEvent, text: string, track: SessionTrack): void {
+  if (!event.reaction) return;
+  keepSample({
+    ts: event.ts,
+    session: event.session,
+    reaction: event.reaction,
+    text,
+    replyEnd: track.replyEnd ?? "",
   });
 }
 
@@ -226,6 +240,7 @@ export function observeTurn(
   const track = trackOf(session);
   const event = measureTurn(text, session, track, now, channel);
   appendEvent(event);
+  sampleReaction(event, text, track);
   const recent = [...track.recent, event].slice(-RECENT_KEPT);
   const mood = readMood(recent, baseline(session, now));
   writeTrack(session, {
