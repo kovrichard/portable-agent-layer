@@ -1,3 +1,10 @@
+# [0.84.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.83.0...v0.84.0) (2026-10-01)
+
+
+### Features
+
+* **interaction:** break the report down by agent ([17f05d8](https://github.com/kovrichard/portable-agent-layer/commit/17f05d8088bb89ab7ac1090db3c4da59d76dfe72))
+
 # [0.83.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.82.0...v0.83.0) (2026-10-01)
 
 
