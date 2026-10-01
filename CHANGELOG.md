@@ -1,3 +1,17 @@
+# [0.81.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.80.0...v0.81.0) (2026-10-01)
+
+
+### Bug Fixes
+
+* **interaction:** a subagent hand-back is not a user turn ([ca067a1](https://github.com/kovrichard/portable-agent-layer/commit/ca067a1c7a358b3d3fc04c5427a4dcfb07d1a46e))
+
+
+### Features
+
+* **interaction:** keep a rolling sample of labelled messages for auditing the rules ([809ac71](https://github.com/kovrichard/portable-agent-layer/commit/809ac71443fda168bfe4cee8e66c69e3fca98f5c))
+* **interaction:** maintainer audit of the reaction rules ([f07dbaf](https://github.com/kovrichard/portable-agent-layer/commit/f07dbafeeae0ebc58599f6e8bf6b2c445084147b))
+* **interaction:** read how each message received the previous reply ([014ca40](https://github.com/kovrichard/portable-agent-layer/commit/014ca40d498dbfa86c084934a67afda083e19b4b))
+
 # [0.80.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.79.3...v0.80.0) (2026-10-01)
 
 
