@@ -1,3 +1,10 @@
+# [0.82.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.81.1...v0.82.0) (2026-10-01)
+
+
+### Features
+
+* **interaction:** report whether replies change while a label is active ([eedb409](https://github.com/kovrichard/portable-agent-layer/commit/eedb40952aad1a1702d332faf79f46660d58cd6f))
+
 ## [0.81.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.81.0...v0.81.1) (2026-10-01)
 
 
