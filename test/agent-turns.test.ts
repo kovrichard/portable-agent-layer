@@ -409,6 +409,23 @@ describe("copilot", () => {
     expect(await filedReply("cp1")).toMatchObject({ words: 5 });
   });
 
+  test("a deferred stop waits for the reply and files it, not the one before", async () => {
+    observeTurn("rename the column", "cp1");
+    const transcriptPath = transcriptFile("copilot.jsonl", [
+      ...earlier,
+      ...EVENT_LOG.slice(0, 1),
+    ]);
+    const payloadPath = resolve(HOME, "stop.json");
+    writeFileSync(payloadPath, JSON.stringify({ sessionId: "cp1", transcriptPath }));
+    const finished = finishDeferredStop(payloadPath, { timeoutMs: 2000, intervalMs: 10 });
+    await Bun.sleep(50);
+    transcriptFile("copilot.jsonl", [...earlier, ...EVENT_LOG]);
+    await finished;
+
+    expect(trackedReply("cp1")).toMatchObject({ words: 5 });
+    expect(existsSync(payloadPath)).toBe(false);
+  });
+
   test("files nothing when the reply never lands", async () => {
     observeTurn("rename the column", "cp1");
     const payloadPath = resolve(HOME, "stop.json");
