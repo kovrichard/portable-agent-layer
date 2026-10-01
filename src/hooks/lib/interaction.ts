@@ -51,6 +51,7 @@ export interface TurnEvent extends MoodTurn {
   reaction: Reaction | null;
   mood?: string;
   hinted?: boolean;
+  runtime?: string;
 }
 
 interface SessionTrack {

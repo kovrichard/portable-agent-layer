@@ -15,7 +15,8 @@ const HELP = `
   PAL Interaction report
 
   Reads the measured turns in memory/signals/interaction/ (features only, no
-  text) and prints turns, channels, reactions, the hints sent, and for each
+  text) and prints turns, channels, reactions, the hints sent, per agent the
+  turns, replies filed and hints sent, and for each
   label (short, long, fast, skimming, friction) how the replies written while
   it was active compare with the replies written while none was.
 

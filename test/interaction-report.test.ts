@@ -139,6 +139,39 @@ describe("interaction report", () => {
     ]);
   });
 
+  test("counts each agent's turns, the replies filed for them, and the hints sent", () => {
+    const summary = summarize([
+      turn({ runtime: "cursor", hinted: true }),
+      { ...answered(80, "approved"), runtime: "cursor" },
+      { ...turn({ runtime: "codex" }), session: "c" },
+      turn({ runtime: undefined }),
+    ]);
+
+    expect(summary.agents).toEqual({
+      cursor: { turns: 2, replies: 1, hints: 1 },
+      codex: { turns: 1, replies: 0, hints: 0 },
+      unknown: { turns: 1, replies: 0, hints: 0 },
+    });
+  });
+
+  test("prints a line per agent, busiest first", () => {
+    const lines = reportLines(
+      summarize([
+        turn({ runtime: "codex" }),
+        { ...answered(80, "approved"), runtime: "claude" },
+        { ...answered(80, "approved"), runtime: "claude", hinted: true },
+      ]),
+      7
+    );
+
+    expect(lines).toContain("By agent:");
+    const at = lines.indexOf("By agent:");
+    expect(lines.slice(at + 1, at + 3)).toEqual([
+      "  claude    2 turns · 2 replies filed · 1 hint sent",
+      "  codex     1 turn · 0 replies filed · 0 hints sent",
+    ]);
+  });
+
   test("names the older turns left out", () => {
     const lines = reportLines(summarize([turn({ mood: undefined })]), 7);
 
