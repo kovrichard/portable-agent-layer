@@ -1,3 +1,15 @@
+# [0.80.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.79.3...v0.80.0) (2026-10-01)
+
+
+### Bug Fixes
+
+* **relationship:** keep yesterday's notes on the first of the month ([fdbf26b](https://github.com/kovrichard/portable-agent-layer/commit/fdbf26b2b201f69af369d78bc6b2e1830b945aa9))
+
+
+### Features
+
+* **interaction:** measure each user turn and tell the agent when the pattern changes ([db7a657](https://github.com/kovrichard/portable-agent-layer/commit/db7a65739812aad85376d7b67fa80b296907d58c))
+
 ## [0.79.3](https://github.com/kovrichard/portable-agent-layer/compare/v0.79.2...v0.79.3) (2026-09-30)
 
 
