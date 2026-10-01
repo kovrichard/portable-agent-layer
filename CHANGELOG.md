@@ -1,3 +1,10 @@
+## [0.81.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.81.0...v0.81.1) (2026-10-01)
+
+
+### Bug Fixes
+
+* **interaction:** read go-aheads and topic changes the way users write them ([a0d03ee](https://github.com/kovrichard/portable-agent-layer/commit/a0d03ee6baf30774fb367b1a7f0bb96d9c0b97b7))
+
 # [0.81.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.80.0...v0.81.0) (2026-10-01)
 
 
