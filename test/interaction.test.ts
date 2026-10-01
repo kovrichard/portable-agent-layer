@@ -98,6 +98,20 @@ describe("measuring a turn", () => {
     expect(lastEvent().skimmed).toBe(false);
   });
 
+  test("logs how the message received the reply, and nothing when no reply came", () => {
+    observeTurn("fix the flaky upload test", "s1", T0);
+    recordReply(
+      "s1",
+      "Moved the retry into the queue worker; the upload test passes.",
+      at(30)
+    );
+    observeTurn("great, merge it", "s1", at(40));
+    expect(lastEvent().reaction).toBe("approved");
+
+    observeTurn("and the docs?", "s1", at(45));
+    expect(lastEvent().reaction).toBeNull();
+  });
+
   test("a gap over twenty minutes is a break", () => {
     observeTurn("start", "s1", T0);
     recordReply("s1", "done", at(10));
@@ -129,6 +143,17 @@ describe("measuring a turn", () => {
 
     expect(loggedEvents()).toHaveLength(1);
     expect(lastEvent().words).toBe(2);
+  });
+
+  test("a subagent handing back its report is not a user turn", () => {
+    observeTurn(
+      'Another Claude session sent a message:\n<agent-message from="a1">[Subagent hand-back] report</agent-message>',
+      "s1",
+      T0
+    );
+    observeTurn("real words", "s1", T0);
+
+    expect(loggedEvents()).toHaveLength(1);
   });
 
   test("records nothing when switched off", () => {

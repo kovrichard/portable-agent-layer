@@ -55,7 +55,8 @@ Almost everything in `state/`, `signals/`, `relationship/opinions.json`, `learni
 | A reusable session insight | Session-intelligence handler (automatic) | `learning/session/YYYY-MM/*.md` |
 | A failure worth learning from | Failure-principle handler (automatic, low ratings) | `learning/failures/YYYY-MM/*.md` |
 | A rating signal | UserPromptOrchestrator rating capture | `signals/ratings.jsonl` |
-| How a user turn went (pace, length, skimming, corrections) | Prompt-time interaction measurement (automatic) | `signals/interaction/YYYY-MM.jsonl` |
+| How a user turn went (pace, length, skimming, how it received the last reply) | Prompt-time interaction measurement (automatic) | `signals/interaction/YYYY-MM.jsonl` |
+| A rolling sample of labelled messages, for auditing the reaction rules | Prompt-time interaction measurement (automatic, `reactionSampling`) | `state/reaction-samples.json` |
 | A project handoff | Project skill / detached handlers | `projects/<slug>/` |
 
 ## Format conventions

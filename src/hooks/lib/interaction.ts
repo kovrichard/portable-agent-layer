@@ -14,10 +14,17 @@ import {
   moodReminder,
   readMood,
 } from "./interaction-mood";
+import {
+  isCorrection,
+  isRepeat,
+  type Reaction,
+  reactionTo,
+  replyKeywords,
+} from "./interaction-reaction";
+import { keepSample, replyEnd } from "./interaction-samples";
 import { ensureDir, paths } from "./paths";
 import { isSystemText, stripInjectedTags } from "./prompt-text";
 import { isEnabled } from "./settings";
-import { extractKeywords, similarity } from "./text-similarity";
 import { localClock } from "./wall-clock";
 
 interface ReplyShape {
@@ -35,6 +42,7 @@ export interface TurnEvent extends MoodTurn {
   hour: number;
   weekday: string;
   reply: Omit<ReplyShape, "at"> | null;
+  reaction: Reaction | null;
 }
 
 interface SessionTrack {
@@ -42,6 +50,8 @@ interface SessionTrack {
   lastPrompt?: string;
   lastPromptAt?: string;
   reply?: ReplyShape;
+  replyKeywords?: string[];
+  replyEnd?: string;
   recent: TurnEvent[];
   mood?: string;
 }
@@ -49,14 +59,9 @@ interface SessionTrack {
 const BREAK_SEC = 20 * 60;
 const SKIM_MIN_WORDS = 150;
 const SKIM_WORDS_PER_SEC = 10;
-const REPEAT_SIMILARITY = 0.6;
-const REPEAT_MIN_KEYWORDS = 5;
 const RECENT_KEPT = 12;
 const MAX_TRACKED_SESSIONS = 20;
 const BASELINE_MIN_SAMPLES = 20;
-
-const CORRECTION_RE =
-  /^(?:(?:no|nope)(?:[,.!]|$)|wrong\b|that'?s not\b|not what i\b|i said\b|i told you\b|you forgot\b|you missed\b|still (?:broken|failing|wrong)\b)/i;
 
 function wordCount(text: string): number {
   return text.split(/\s+/).filter(Boolean).length;
@@ -71,11 +76,6 @@ function replyShape(text: string, at: Date): ReplyShape {
     headings: lines.filter((l) => /^#{1,6}\s/.test(l)).length,
     asked: text.trim().endsWith("?"),
   };
-}
-
-function isRepeat(text: string, previous: string | undefined): boolean {
-  if (!previous || extractKeywords(text).size < REPEAT_MIN_KEYWORDS) return false;
-  return similarity(text, previous) >= REPEAT_SIMILARITY;
 }
 
 /** The reply belongs to this turn only if it arrived after the previous prompt. */
@@ -115,8 +115,14 @@ function measureTurn(
     skimmed: isSkimmed(reply, gapSec),
     interrupted: Boolean(track.lastPromptAt) && !reply,
     repeated: isRepeat(text, track.lastPrompt),
-    corrected: CORRECTION_RE.test(text),
+    corrected: isCorrection(text),
     reply: reply ? replyFeatures(reply) : null,
+    reaction: reply
+      ? reactionTo(text, {
+          previousPrompt: track.lastPrompt,
+          replyKeywords: track.replyKeywords ?? [],
+        })
+      : null,
   };
 }
 
@@ -205,6 +211,19 @@ export function recordReply(
     ...track,
     updated: now.toISOString(),
     reply: replyShape(reply, now),
+    replyKeywords: replyKeywords(reply),
+    replyEnd: replyEnd(reply),
+  });
+}
+
+function sampleReaction(event: TurnEvent, text: string, track: SessionTrack): void {
+  if (!event.reaction) return;
+  keepSample({
+    ts: event.ts,
+    session: event.session,
+    reaction: event.reaction,
+    text,
+    replyEnd: track.replyEnd ?? "",
   });
 }
 
@@ -221,6 +240,7 @@ export function observeTurn(
   const track = trackOf(session);
   const event = measureTurn(text, session, track, now, channel);
   appendEvent(event);
+  sampleReaction(event, text, track);
   const recent = [...track.recent, event].slice(-RECENT_KEPT);
   const mood = readMood(recent, baseline(session, now));
   writeTrack(session, {

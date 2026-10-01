@@ -14,6 +14,7 @@ import { loadHandoffContext } from "./handoff-context";
 import { loadOpinionContext } from "./opinions";
 import { paths, toPath } from "./paths";
 import { loadActiveProjectsContext } from "./projects";
+import { loadReactionAuditNudge } from "./reaction-audit";
 import { loadRecentNotes } from "./relationship";
 import { loadFailurePatterns } from "./semi-static";
 import { sessionDir } from "./session-dir";
@@ -220,12 +221,14 @@ export function buildSystemReminder(
       : "";
   // Maintainer-only: self-gates to a repo checkout, "" for everyone else.
   const algoReview = oncePerDay("algorithm-review", loadAlgorithmReviewNudge());
+  const reactionAudit = oncePerDay("reaction-audit", loadReactionAuditNudge());
   const reflectNudge = oncePerDay("reflect", loadReflectNudge());
   const analyzeNudge = oncePerDay("analyze", loadAnalyzeNudge());
   const parts: string[] = [];
   if (startup) parts.push(startup);
   if (handoff) parts.push(handoff);
   if (algoReview) parts.push(algoReview);
+  if (reactionAudit) parts.push(reactionAudit);
   if (reflectNudge) parts.push(reflectNudge);
   if (analyzeNudge) parts.push(analyzeNudge);
   if (selfModel) parts.push(selfModel);
