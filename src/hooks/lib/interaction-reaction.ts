@@ -20,15 +20,16 @@ const APPROVAL_RE =
   /^(?:good|great|nice|perfect|cool|amazing|awesome|excellent|brilliant|works|it works|thanks|thank you|thx|y+e+s+|yep|yeah|yup|sure|exactly|correct|agreed|lgtm|well done|love it|sounds good|looks good|that'?s it|(?:it|this|that) (?:is|'s) (?:fine|good|great|right))\b/i;
 
 const GO_AHEAD_RE =
-  /^(?:go ahead|go|do it|proceed|continue|merge|push|ship|commit|build|approved|let'?s (?:see|do|go))\b/i;
+  /^(?:go ahead|go|do it|proceed|continue|merge|push|ship|commit|build|start|fix (?:all|them|both)|approved|let'?s (?:see|do|go))\b/i;
+
+const NEW_TOPIC_RE =
+  /^(?:(?:ok(?:ay)?|btw|also),?\s+)?(?:new (?:\w+ ){0,2}(?:task|topic|question|thing)|(?:different|unrelated|separate|another) (?:task|topic|question|thing)|unrelated\b|switching (?:gears|topics?)|change of (?:topic|subject))/i;
 
 const GO_AHEAD_MAX_WORDS = 6;
 const BARE_OK_RE = /^(?:ok(?:ay)?|k)[,.!]?(?:\s+\S+){0,2}$/i;
 const HEDGE_RE = /\b(?:but|however|though|except|instead)\b/i;
 const REPEAT_SIMILARITY = 0.6;
 const REPEAT_MIN_KEYWORDS = 5;
-const NEW_TOPIC_MIN_KEYWORDS = 4;
-const NEW_TOPIC_MAX_OVERLAP = 0.15;
 
 export function isCorrection(text: string): boolean {
   return CORRECTION_RE.test(text.trim());
@@ -39,30 +40,37 @@ export function isRepeat(text: string, previous: string | undefined): boolean {
   return similarity(text, previous) >= REPEAT_SIMILARITY;
 }
 
-function isApproval(text: string): boolean {
-  const trimmed = text.trim();
-  if (HEDGE_RE.test(trimmed.split(/[.!?\n]/)[0])) return false;
-  if (APPROVAL_RE.test(trimmed) || BARE_OK_RE.test(trimmed)) return true;
-  return GO_AHEAD_RE.test(trimmed) && trimmed.split(/\s+/).length <= GO_AHEAD_MAX_WORDS;
+function isShortGoAhead(sentence: string): boolean {
+  return GO_AHEAD_RE.test(sentence) && sentence.split(/\s+/).length <= GO_AHEAD_MAX_WORDS;
 }
 
-/** Few of the message's words appear in the exchange it follows. */
-function isNewTopic(text: string, context: ReplyContext): boolean {
-  const words = extractKeywords(text);
-  if (words.size < NEW_TOPIC_MIN_KEYWORDS) return false;
-  const exchange = new Set([
-    ...context.replyKeywords,
-    ...extractKeywords(context.previousPrompt ?? ""),
-  ]);
-  const shared = [...words].filter((w) => exchange.has(w)).length;
-  return shared / words.size <= NEW_TOPIC_MAX_OVERLAP;
+function lastSentence(text: string): string {
+  return (
+    text
+      .split(/[.!\n]\s*/)
+      .filter(Boolean)
+      .at(-1)
+      ?.trim() ?? ""
+  );
+}
+
+function isApproval(text: string): boolean {
+  const trimmed = text.trim();
+  if (trimmed.includes("?") || HEDGE_RE.test(trimmed.split(/[.!?\n]/)[0])) return false;
+  if (APPROVAL_RE.test(trimmed) || BARE_OK_RE.test(trimmed)) return true;
+  return isShortGoAhead(trimmed) || isShortGoAhead(lastSentence(trimmed));
+}
+
+/** Word overlap was measured against real messages and does not separate topics; only saying so does. */
+function isNewTopic(text: string): boolean {
+  return NEW_TOPIC_RE.test(text.trim());
 }
 
 export function reactionTo(text: string, context: ReplyContext): Reaction {
   if (isCorrection(text)) return "corrected";
   if (isRepeat(text, context.previousPrompt)) return "repeated";
   if (isApproval(text)) return "approved";
-  if (isNewTopic(text, context)) return "new-topic";
+  if (isNewTopic(text)) return "new-topic";
   return "follow-up";
 }
 

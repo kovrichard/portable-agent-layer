@@ -39,6 +39,9 @@ describe("a reply's outcome, read from the next message", () => {
     "push and PR",
     "ok",
     "ok go",
+    "start building the first one",
+    "fix all in separate commits",
+    "looks right to me. go ahead with step 2 then",
   ])("approved: %s", (text) => {
     expect(react(text)).toBe("approved");
   });
@@ -48,6 +51,7 @@ describe("a reply's outcome, read from the next message", () => {
     "ok you are running on the new version",
     "good, but rename the worker first",
     "merge it once the staging deploy finished and the smoke tests are green",
+    "good. does this cover the windows case?",
   ])("an opener or a go-ahead with conditions is not approval: %s", (text) => {
     expect(react(text)).not.toBe("approved");
   });
@@ -61,10 +65,21 @@ describe("a reply's outcome, read from the next message", () => {
     ).toBe("repeated");
   });
 
-  test("a message about something else entirely is a new topic", () => {
-    expect(react("what should the landing page headline say about pricing tiers")).toBe(
-      "new-topic"
-    );
+  test.each([
+    "new task: the landing page needs a pricing table",
+    "new in between task: the deploy script skips staging",
+    "unrelated question, how do we rotate the api keys?",
+    "ok, different topic: the invoice export",
+  ])("a message that says it changes the subject is a new topic: %s", (text) => {
+    expect(react(text)).toBe("new-topic");
+  });
+
+  test.each([
+    "what should the landing page headline say about pricing tiers",
+    "all done? what would you add to the dashboard next, my goal is fewer manual checks",
+    "merge failed again, now on three CI runners",
+  ])("few shared words alone is not a new topic: %s", (text) => {
+    expect(react(text)).toBe("follow-up");
   });
 
   test("a question about the reply is a follow-up", () => {
