@@ -260,10 +260,10 @@ Every agent's turns are measured and its replies filed under the session id the 
 | Codex | `UserPromptSubmit` → `hookSpecificOutput.additionalContext` | `Stop` `last_assistant_message` |
 | VS Code | `UserPromptSubmit` → `hookSpecificOutput.additionalContext` | `Stop` transcript |
 | opencode | `chat.message` → synthetic part | `session.idle` session messages |
-| Cursor | `beforeSubmitPrompt` → **none**, startup only | `afterAgentResponse` `text` (`AgentResponse.ts`) |
-| Copilot CLI | `userPromptSubmitted` → **none**, startup only | `agentStop` transcript |
+| Cursor | `beforeSubmitPrompt` → `additional_context`, undocumented | `afterAgentResponse` `text` (`AgentResponse.ts`) |
+| Copilot CLI | `userPromptTransformed` → `modifiedTransformedPrompt` (`PromptTransformed.ts`) | `agentStop` transcript |
 
-Cursor and the Copilot CLI drop whatever a prompt hook returns, so per-turn context (wall clock, steering, skill matches, retrieval, interaction hints) never reaches them; they get PAL's context at session start only, and no hint is logged as sent. `test/agent-turns.test.ts` holds each agent to this table.
+The Copilot CLI drops what its `userPromptSubmitted` hook returns, so that hook only measures the turn and parks the context; `userPromptTransformed` fires next and appends it to the prompt the model receives. Cursor documents no context field on `beforeSubmitPrompt`, so PAL offers `additional_context` there but logs no interaction hint as sent until it is shown to reach the model; its documented context channel is session start. `test/agent-turns.test.ts` holds each agent to this table.
 
 ### Design Principles
 
