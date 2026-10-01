@@ -1,31 +1,48 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { delimiter, dirname, resolve } from "node:path";
 
 const REPO = resolve(import.meta.dir, "..");
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 const ROOT = resolve(import.meta.dir, "../.test-home-doctor-cursor");
 const BUN_DIR = dirname(process.execPath);
+const WINDOWS = process.platform === "win32";
+
+function writeFakeBinary(dir: string, binary: string): void {
+  if (WINDOWS) {
+    writeFileSync(
+      resolve(dir, `${binary}.cmd`),
+      `@echo off\r\necho ${binary} 2026.10.01\r\n`
+    );
+    return;
+  }
+  const path = resolve(dir, binary);
+  writeFileSync(path, `#!/bin/sh\necho "${binary} 2026.10.01"\n`);
+  chmodSync(path, 0o755);
+}
 
 function binDirWith(name: string, binaries: string[]): string {
   const dir = resolve(ROOT, name);
   mkdirSync(dir, { recursive: true });
-  for (const binary of binaries) {
-    const path = resolve(dir, binary);
-    writeFileSync(path, `#!/bin/sh\necho "${binary} 2026.10.01"\n`);
-    chmodSync(path, 0o755);
-  }
+  for (const binary of binaries) writeFakeBinary(dir, binary);
   return dir;
 }
 
+function envWithoutPath(): Record<string, string | undefined> {
+  return Object.fromEntries(
+    Object.entries(process.env).filter(([key]) => key.toUpperCase() !== "PATH")
+  );
+}
+
 function doctorWithPath(binDir: string) {
-  return spawnSync("bun", ["run", CLI, "cli", "doctor"], {
+  return spawnSync(process.execPath, ["run", CLI, "cli", "doctor"], {
     cwd: REPO,
     env: {
-      ...process.env,
-      PATH: `${binDir}:${BUN_DIR}`,
+      ...envWithoutPath(),
+      PATH: `${binDir}${delimiter}${BUN_DIR}`,
       PAL_HOME: resolve(ROOT, ".pal"),
+      PAL_SKIP_DOCTOR: "0",
     },
     encoding: "utf-8",
     timeout: 30000,
