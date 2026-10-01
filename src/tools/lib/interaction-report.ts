@@ -22,10 +22,17 @@ interface ReplyStats {
   correctedShare: number;
 }
 
+interface AgentCounts {
+  turns: number;
+  replies: number;
+  hints: number;
+}
+
 export interface InteractionSummary {
   turns: number;
   sessions: number;
   channels: Record<string, number>;
+  agents: Record<string, AgentCounts>;
   reactions: Record<string, number>;
   hints: Record<string, number>;
   unlogged: number;
@@ -70,6 +77,20 @@ function repliesUnderMood(events: TurnEvent[]): ReplyUnderMood[] {
   return replies;
 }
 
+/** A turn carries the reply that answered the turn before it, so a filed reply shows up there. */
+function byAgent(events: TurnEvent[]): Record<string, AgentCounts> {
+  const agents: Record<string, AgentCounts> = {};
+  for (const e of events) {
+    const agent = e.runtime ?? "unknown";
+    const counts = agents[agent] ?? { turns: 0, replies: 0, hints: 0 };
+    agents[agent] = counts;
+    counts.turns++;
+    if (e.reply) counts.replies++;
+    if (e.hinted) counts.hints++;
+  }
+  return agents;
+}
+
 export function summarize(events: TurnEvent[]): InteractionSummary {
   const replies = repliesUnderMood(events);
   const hinted = events.filter((e) => e.hinted);
@@ -77,6 +98,7 @@ export function summarize(events: TurnEvent[]): InteractionSummary {
     turns: events.length,
     sessions: new Set(events.map((e) => e.session)).size,
     channels: tally(events.map((e) => e.channel ?? "unknown")),
+    agents: byAgent(events),
     reactions: tally(events.flatMap((e) => (e.reaction ? [e.reaction] : []))),
     hints: tally(hinted.map((e) => e.mood || "back to usual")),
     unlogged: events.filter((e) => e.mood === undefined).length,
@@ -119,8 +141,20 @@ function labelLine(label: string, s: ReplyStats, usual: ReplyStats): string {
   ].join(" · ");
 }
 
-function plural(n: number, noun: string): string {
-  return `${n} ${noun}${n === 1 ? "" : "s"}`;
+function plural(n: number, noun: string, nouns = `${noun}s`): string {
+  return `${n} ${n === 1 ? noun : nouns}`;
+}
+
+function agentLines(agents: Record<string, AgentCounts>): string[] {
+  return Object.entries(agents)
+    .sort(([, a], [, b]) => b.turns - a.turns)
+    .map(([agent, c]) =>
+      [
+        `  ${agent.padEnd(9)} ${plural(c.turns, "turn")}`,
+        `${plural(c.replies, "reply", "replies")} filed`,
+        `${plural(c.hints, "hint")} sent`,
+      ].join(" · ")
+    );
 }
 
 export function reportLines(summary: InteractionSummary, days: number): string[] {
@@ -131,6 +165,9 @@ export function reportLines(summary: InteractionSummary, days: number): string[]
     `Turns: ${summary.turns} in ${plural(summary.sessions, "session")} · ${counts(summary.channels)}`,
     `Reactions: ${shares(summary.reactions)}`,
     `Hints sent: ${counts(summary.hints)}`,
+    "",
+    "By agent:",
+    ...agentLines(summary.agents),
     "",
     "Replies written while a label was active, against replies while none was:",
     ...LABELS.map((label) => labelLine(label, summary.byLabel[label], summary.usual)),
