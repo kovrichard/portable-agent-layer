@@ -19,7 +19,6 @@ import {
   isRepeat,
   type Reaction,
   reactionTo,
-  replyKeywords,
 } from "./interaction-reaction";
 import { keepSample, replyEnd } from "./interaction-samples";
 import { ensureDir, paths } from "./paths";
@@ -50,7 +49,6 @@ interface SessionTrack {
   lastPrompt?: string;
   lastPromptAt?: string;
   reply?: ReplyShape;
-  replyKeywords?: string[];
   replyEnd?: string;
   recent: TurnEvent[];
   mood?: string;
@@ -117,12 +115,7 @@ function measureTurn(
     repeated: isRepeat(text, track.lastPrompt),
     corrected: isCorrection(text),
     reply: reply ? replyFeatures(reply) : null,
-    reaction: reply
-      ? reactionTo(text, {
-          previousPrompt: track.lastPrompt,
-          replyKeywords: track.replyKeywords ?? [],
-        })
-      : null,
+    reaction: reply ? reactionTo(text, track.lastPrompt) : null,
   };
 }
 
@@ -211,7 +204,6 @@ export function recordReply(
     ...track,
     updated: now.toISOString(),
     reply: replyShape(reply, now),
-    replyKeywords: replyKeywords(reply),
     replyEnd: replyEnd(reply),
   });
 }
