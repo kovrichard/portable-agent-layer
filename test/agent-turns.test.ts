@@ -15,7 +15,7 @@ import {
   transformedPromptResponse,
 } from "../src/hooks/lib/parked-context";
 import { reload } from "../src/hooks/lib/settings";
-import { stopTurn } from "../src/hooks/lib/stop";
+import { finishDeferredStop, stopTurn } from "../src/hooks/lib/stop";
 
 // stopTurn can spawn detached children that keep writing into PAL_HOME after the
 // test returns; .gitignore covers .test-home-* for that reason.
@@ -60,6 +60,23 @@ function transcriptFile(name: string, lines: unknown[]): string {
 function replyFiledFor(session: string): TurnEvent["reply"] {
   observeTurn("thanks, next one", session);
   return loggedTurns().at(-1)?.reply ?? null;
+}
+
+function trackedReply(session: string): { words: number } | undefined {
+  const file = resolve(HOME, "memory", "state", "interaction-sessions.json");
+  if (!existsSync(file)) return undefined;
+  return JSON.parse(readFileSync(file, "utf-8"))[session]?.reply;
+}
+
+/** A reply filed by a detached child shows up in the session's track a moment later. */
+async function filedReply(session: string, timeoutMs = 4000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const reply = trackedReply(session);
+    if (reply) return reply;
+    await Bun.sleep(50);
+  }
+  return undefined;
 }
 
 async function asAgent<T>(agent: string, work: () => T | Promise<T>): Promise<T> {
@@ -298,6 +315,19 @@ describe("codex", () => {
     expect(replyFiledFor("thr_1")).toMatchObject({ words: 5 });
   });
 
+  test("files the reply it hands over at once, even before its transcript has it", async () => {
+    observeTurn(prompt.prompt, hookSessionId(prompt));
+    await stopTurn({
+      session_id: "thr_1",
+      transcript_path: transcriptFile("rollout.jsonl", [
+        { type: "user", message: { content: prompt.prompt } },
+      ]),
+      last_assistant_message: "Renamed it in both tables.",
+    });
+
+    expect(replyFiledFor("thr_1")).toMatchObject({ words: 5 });
+  });
+
   test("files the reply when no transcript is offered at all", async () => {
     observeTurn(prompt.prompt, hookSessionId(prompt));
     await stopTurn({ session_id: "thr_1", last_assistant_message: "Done." });
@@ -341,6 +371,11 @@ const EVENT_LOG = [
 ];
 
 describe("copilot", () => {
+  const earlier = [
+    { type: "user.message", data: { content: "hi" } },
+    { type: "assistant.message", data: { content: "Hello." } },
+  ];
+
   test("files the reply from the transcript agentStop points at", async () => {
     observeTurn("rename the column", "cp1");
     const stop = {
@@ -351,6 +386,46 @@ describe("copilot", () => {
     await stopTurn(stop);
 
     expect(replyFiledFor("cp1")).toMatchObject({ words: 5 });
+  });
+
+  test("files the reply it writes to the transcript only after agentStop returns", async () => {
+    observeTurn("rename the column", "cp1");
+    const transcriptPath = transcriptFile("copilot.jsonl", EVENT_LOG.slice(0, 1));
+    await stopTurn({ sessionId: "cp1", transcriptPath });
+    transcriptFile("copilot.jsonl", EVENT_LOG);
+
+    expect(await filedReply("cp1")).toMatchObject({ words: 5 });
+  });
+
+  test("never files the previous turn's reply for a resumed turn", async () => {
+    observeTurn("rename the column", "cp1");
+    const transcriptPath = transcriptFile("copilot.jsonl", [
+      ...earlier,
+      ...EVENT_LOG.slice(0, 1),
+    ]);
+    await stopTurn({ sessionId: "cp1", transcriptPath });
+    transcriptFile("copilot.jsonl", [...earlier, ...EVENT_LOG]);
+
+    expect(await filedReply("cp1")).toMatchObject({ words: 5 });
+  });
+
+  test("files nothing when the reply never lands", async () => {
+    observeTurn("rename the column", "cp1");
+    const payloadPath = resolve(HOME, "stop.json");
+    writeFileSync(
+      payloadPath,
+      JSON.stringify({
+        sessionId: "cp1",
+        transcriptPath: transcriptFile("copilot.jsonl", [
+          ...earlier,
+          ...EVENT_LOG.slice(0, 1),
+        ]),
+      })
+    );
+    await finishDeferredStop(payloadPath, { timeoutMs: 50, intervalMs: 10 });
+
+    expect(trackedReply("cp1")).toBeUndefined();
+    expect(existsSync(payloadPath)).toBe(false);
   });
 });
 
