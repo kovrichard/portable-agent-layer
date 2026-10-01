@@ -98,6 +98,20 @@ describe("measuring a turn", () => {
     expect(lastEvent().skimmed).toBe(false);
   });
 
+  test("logs how the message received the reply, and nothing when no reply came", () => {
+    observeTurn("fix the flaky upload test", "s1", T0);
+    recordReply(
+      "s1",
+      "Moved the retry into the queue worker; the upload test passes.",
+      at(30)
+    );
+    observeTurn("great, merge it", "s1", at(40));
+    expect(lastEvent().reaction).toBe("approved");
+
+    observeTurn("and the docs?", "s1", at(45));
+    expect(lastEvent().reaction).toBeNull();
+  });
+
   test("a gap over twenty minutes is a break", () => {
     observeTurn("start", "s1", T0);
     recordReply("s1", "done", at(10));
