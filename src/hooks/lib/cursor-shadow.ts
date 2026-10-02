@@ -9,11 +9,11 @@ import { resolve } from "node:path";
 import { agentFromArgv, inCursorAgent } from "./agent";
 import { platform } from "./paths";
 
-const PAL_CURSOR_HOOK = /\/src\/hooks\/\w+\.ts --agent=cursor\b/;
+const PAL_HOOK = /\/src\/hooks\/\w+\.ts\b/;
 
 function cursorRunsPalHooks(): boolean {
   try {
-    return PAL_CURSOR_HOOK.test(
+    return PAL_HOOK.test(
       readFileSync(resolve(platform.cursorDir(), "hooks.json"), "utf-8")
     );
   } catch {

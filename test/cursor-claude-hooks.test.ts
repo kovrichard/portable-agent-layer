@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { duplicatesCursorHooks } from "../src/hooks/lib/cursor-shadow";
 
 // cursor-agent also runs every hook in ~/.claude/settings.json, so with PAL's
 // Cursor hooks installed each Cursor prompt ran PAL twice: two logged turns, two
@@ -75,6 +76,19 @@ async function runHook(agentFlag: string, host: Record<string, string>): Promise
   return out.trim();
 }
 
+const savedArgv = process.argv;
+const savedEnv = { ...process.env };
+
+afterEach(() => {
+  process.argv = savedArgv;
+  process.env = { ...savedEnv };
+});
+
+function inHost(agentFlag: string, host: Record<string, string>): void {
+  process.argv = ["bun", "hook.ts", `--agent=${agentFlag}`];
+  process.env = hostEnv(host);
+}
+
 const IN_CURSOR = { CURSOR_AGENT: "1" };
 const IN_CLAUDE_CODE = { CLAUDE_CODE_ENTRYPOINT: "cli" };
 
@@ -84,25 +98,40 @@ describe("a Claude-registered hook inside Cursor", () => {
     expect(await runHook("claude", IN_CURSOR)).toBe("");
   });
 
-  test("still runs when PAL has no Cursor hooks, since it is the only copy", async () => {
-    expect(await runHook("claude", IN_CURSOR)).toContain("deny");
+  test("is a duplicate when PAL's own Cursor hooks will run it", () => {
+    installPalCursorHooks();
+    inHost("claude", IN_CURSOR);
+    expect(duplicatesCursorHooks()).toBe(true);
   });
 
-  test("still runs when Cursor's hooks are only the user's own", async () => {
+  test("is not one when PAL has no Cursor hooks, since it is the only copy", () => {
+    inHost("claude", IN_CURSOR);
+    expect(duplicatesCursorHooks()).toBe(false);
+  });
+
+  test("is not one when Cursor's hooks are only the user's own", () => {
     installUserCursorHooks();
-    expect(await runHook("claude", IN_CURSOR)).toContain("deny");
+    inHost("claude", IN_CURSOR);
+    expect(duplicatesCursorHooks()).toBe(false);
   });
 });
 
 describe("the hooks that must keep running", () => {
-  test("PAL's Cursor registration inside Cursor", async () => {
+  test("PAL's Cursor registration inside Cursor", () => {
     installPalCursorHooks();
-    expect(await runHook("cursor", IN_CURSOR)).toContain("deny");
+    inHost("cursor", IN_CURSOR);
+    expect(duplicatesCursorHooks()).toBe(false);
   });
 
-  test("the Claude registration inside Claude Code", async () => {
+  test("the Claude registration inside Claude Code", () => {
     installPalCursorHooks();
-    expect(await runHook("claude", IN_CLAUDE_CODE)).toContain("deny");
+    inHost("claude", IN_CLAUDE_CODE);
+    expect(duplicatesCursorHooks()).toBe(false);
+  });
+
+  test("a hook that blocks still blocks when it is the one that runs", async () => {
+    installPalCursorHooks();
+    expect(await runHook("cursor", IN_CURSOR)).toContain("deny");
   });
 });
 
