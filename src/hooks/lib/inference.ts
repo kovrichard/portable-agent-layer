@@ -33,6 +33,7 @@ import {
 } from "./agent";
 import { logDebug, logError } from "./log";
 import { HAIKU_MODEL } from "./models";
+import { writeInstructionFreeConfig } from "./opencode-config";
 import { buildSpawnGuardEnv, getInferenceDepth, SPAWN_GUARD_ENV } from "./spawn-guard";
 import { findBinaryOnPath } from "./which";
 
@@ -171,13 +172,7 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
     const bin = getOpencodeBinary();
     if (bin) {
       logDebug("inference", `${tag} route=opencode-spawn agent=${agent}`);
-      return inferenceViaCliSpawn(
-        bin,
-        buildOpencodeArgs(opts),
-        buildCliPrompt(opts),
-        opts,
-        extractOpencodeText
-      );
+      return inferenceViaOpencodeSpawn(bin, opts);
     }
   }
   if (isCopilot()) {
@@ -366,6 +361,34 @@ export function buildOpencodeArgs(_opts: InferenceOptions): string[] {
   return ["run", "--pure", "--format", "json"];
 }
 
+// Without its own AGENTS.md, opencode falls back to ~/.claude/CLAUDE.md, and it
+// lists every Claude and external skill in its tool description.
+const OPENCODE_WITHOUT_EXTERNAL_CONTEXT = {
+  OPENCODE_DISABLE_CLAUDE_CODE: "1",
+  OPENCODE_DISABLE_EXTERNAL_SKILLS: "1",
+};
+
+/** Runs from an empty directory so no project AGENTS.md is in reach either. */
+async function inferenceViaOpencodeSpawn(
+  bin: string,
+  opts: InferenceOptions
+): Promise<InferenceResult> {
+  const dir = await mkdtemp(join(tmpdir(), "pal-opencode-"));
+  try {
+    writeInstructionFreeConfig(dir);
+    return await inferenceViaCliSpawn(
+      bin,
+      buildOpencodeArgs(opts),
+      buildCliPrompt(opts),
+      opts,
+      extractOpencodeText,
+      { cwd: dir, env: { XDG_CONFIG_HOME: dir, ...OPENCODE_WITHOUT_EXTERNAL_CONTEXT } }
+    );
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
 /**
  * Build the argv for `cursor-agent -p …` from inference options. Pure.
  *
@@ -513,7 +536,8 @@ async function singleCliAttempt(
   args: string[],
   stdinInput: string,
   env: NodeJS.ProcessEnv,
-  timeout: number
+  timeout: number,
+  cwd?: string
 ): Promise<RawSpawnResult> {
   return new Promise<RawSpawnResult>((resolve) => {
     let stdout = "";
@@ -530,6 +554,7 @@ async function singleCliAttempt(
     try {
       proc = Bun.spawn([binary, ...args], {
         env,
+        cwd,
         stdin: "pipe",
         stdout: "pipe",
         stderr: "pipe",
@@ -593,6 +618,11 @@ async function singleCliAttempt(
   });
 }
 
+interface SpawnPlace {
+  cwd?: string;
+  env?: Record<string, string>;
+}
+
 /**
  * Generic CLI dispatcher: spawn `binary args`, write stdinInput to stdin (may be
  * empty for argv-only CLIs like codex), capture stdout, retry once on empty-abort.
@@ -603,10 +633,11 @@ async function inferenceViaCliSpawn(
   args: string[],
   stdinInput: string,
   opts: InferenceOptions,
-  extractText?: (rawStdout: string) => string
+  extractText?: (rawStdout: string) => string,
+  place: SpawnPlace = {}
 ): Promise<InferenceResult> {
   const timeout = opts.timeout ?? 15000;
-  const env = buildSpawnGuardEnv(process.env);
+  const env = { ...buildSpawnGuardEnv(process.env), ...place.env };
   const started = Date.now();
   const caller = opts.caller ?? "anonymous";
   const session = opts.sessionId ?? "-";
@@ -616,7 +647,7 @@ async function inferenceViaCliSpawn(
   const binaryName = basename(binary).replace(/\.(cmd|bat|exe|com)$/i, "");
 
   // Attempt 1
-  let attempt = await singleCliAttempt(binary, args, stdinInput, env, timeout);
+  let attempt = await singleCliAttempt(binary, args, stdinInput, env, timeout, place.cwd);
 
   // Universal retry on empty-output exit≠0 (correlates strongly with burst-
   // concurrency races — the binary silently aborts without writing to either
@@ -633,7 +664,7 @@ async function inferenceViaCliSpawn(
       `${tag} retry: empty-abort binary=${binaryName} exit=${attempt.code} after ${Date.now() - started}ms, jitter=${jitterMs}ms`
     );
     await new Promise((r) => setTimeout(r, jitterMs));
-    attempt = await singleCliAttempt(binary, args, stdinInput, env, timeout);
+    attempt = await singleCliAttempt(binary, args, stdinInput, env, timeout, place.cwd);
   }
 
   const elapsedMs = Date.now() - started;
