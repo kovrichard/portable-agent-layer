@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
@@ -16,6 +23,7 @@ const PRESERVED = [
   "PAL_ANTHROPIC_API_KEY",
   "PAL_HOME",
   "PAL_INFERENCE_DISABLED",
+  "PAL_OPENCODE_DIR",
   "PATH",
   "CLAUDECODE",
   SPAWN_GUARD_ENV.SENTINEL,
@@ -157,6 +165,39 @@ console.log(JSON.stringify({ type: "text", part: { type: "text", text } }));\n`
 
     const result = await inference({ user: "hi", timeout: 5000 });
     expect(result.success).toBe(false);
+  });
+
+  test("the background run sees the user's model but none of their instructions", async () => {
+    const opencodeDir = resolve(tmpBin, "user-opencode");
+    mkdirSync(opencodeDir);
+    writeFileSync(
+      resolve(opencodeDir, "config.json"),
+      JSON.stringify({ model: "acme/fast", instructions: ["/memory/self-model.md"] })
+    );
+    writeFileSync(resolve(opencodeDir, "AGENTS.md"), "Always answer in a header.");
+    process.env.PAL_OPENCODE_DIR = opencodeDir;
+    writeFakeBin(
+      tmpBin,
+      "opencode",
+      `import { readdirSync, readFileSync } from "node:fs";
+const dir = \`\${process.env.XDG_CONFIG_HOME}/opencode\`;
+const files = readdirSync(dir);
+const config = JSON.parse(readFileSync(\`\${dir}/config.json\`, "utf-8"));
+const claudeCode = process.env.OPENCODE_DISABLE_CLAUDE_CODE;
+const skills = process.env.OPENCODE_DISABLE_EXTERNAL_SKILLS;
+const text = JSON.stringify({ files, config, claudeCode, skills, cwd: process.cwd() });
+console.log(JSON.stringify({ type: "text", part: { type: "text", text } }));\n`
+    );
+    prependPath(tmpBin);
+
+    const result = await inference({ user: "hi", timeout: 5000 });
+    const seen = JSON.parse(result.output ?? "{}");
+    expect(seen.files).toEqual(["config.json"]);
+    expect(seen.config).toEqual({ model: "acme/fast" });
+    expect(seen.claudeCode).toBe("1");
+    expect(seen.skills).toBe("1");
+    expect(seen.cwd).not.toBe(process.cwd());
+    expect(existsSync(seen.cwd)).toBe(false);
   });
 
   test("a model error is in the log by the time inference returns", async () => {
