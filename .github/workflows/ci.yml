@@ -38,9 +38,18 @@ jobs:
         with:
           bun-version: "1.4.0"
 
+      - name: Cache Bun downloads
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/bun-cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+
       - name: Install dependencies
         # No lifecycle scripts, so no dependency can run arbitrary code on install.
         run: bun install --frozen-lockfile --ignore-scripts
+        env:
+          BUN_INSTALL_CACHE_DIR: ${{ runner.temp }}/bun-cache
 
       - name: Audit dependencies
         # Informational only — bun audit lacks a --production flag, and all
@@ -99,15 +108,34 @@ jobs:
         with:
           bun-version: "1.4.0"
 
+      - name: Cache Bun downloads
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/bun-cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+
       - name: Install dependencies
         # No lifecycle scripts, so no dependency can run arbitrary code on install.
         run: bun install --frozen-lockfile --ignore-scripts
+        env:
+          BUN_INSTALL_CACHE_DIR: ${{ runner.temp }}/bun-cache
+
+      - name: Cache Chromium
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/ms-playwright
+          key: chromium-${{ runner.os }}-${{ hashFiles('bun.lock') }}
 
       - name: Install Chromium
         run: bun x playwright install chromium
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/ms-playwright
 
       - name: Launch a browser and capture a screenshot
         run: bun test test/browser-smoke.test.ts
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/ms-playwright
 
   pkg-e2e:
     name: pkg-e2e (${{ matrix.os }})
@@ -130,9 +158,18 @@ jobs:
         with:
           bun-version: "1.4.0"
 
+      - name: Cache Bun downloads
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/bun-cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+
       - name: Install dependencies
         # No lifecycle scripts, so no dependency can run arbitrary code on install.
         run: bun install --frozen-lockfile --ignore-scripts
+        env:
+          BUN_INSTALL_CACHE_DIR: ${{ runner.temp }}/bun-cache
 
       - name: Pack tarball
         shell: bash
