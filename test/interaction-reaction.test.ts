@@ -13,6 +13,11 @@ describe("a reply's outcome, read from the next message", () => {
     "that's not what I asked",
     "I said the queue, not the worker",
     "still failing on CI",
+    "I think you are partially wrong about the retry",
+    "you're wrong on the second point",
+    "I don't see the retry change",
+    "the retry fix isn't added yet, right?",
+    "the queue change wasn't pushed",
   ])("corrected: %s", (text) => {
     expect(react(text)).toBe("corrected");
   });
@@ -21,6 +26,12 @@ describe("a reply's outcome, read from the next message", () => {
     "wrong upload test first pls",
     "no problem, go on",
     "nothing else to add",
+    "wait, why does the worker retry?",
+    "I don't see why the worker retries",
+    "I don't see any problem with it",
+    "I don't see the point of a second queue",
+    "you are not wrong about the retry",
+    "the deploy isn't done yet, right?",
   ])("a word that only looks like a correction is not one: %s", (text) => {
     expect(react(text)).not.toBe("corrected");
   });
@@ -38,6 +49,11 @@ describe("a reply's outcome, read from the next message", () => {
     "start building the first one",
     "fix all in separate commits",
     "looks right to me. go ahead with step 2 then",
+    "understood, well done. Now go ahead with the queue fix. Staging deploys meanwhile",
+    "got it, great",
+    "Let's build that, good job",
+    "add pls. the smaller model is fine",
+    "yes, fix both. Then push. Also sketch the retry fix, but don't build it yet",
   ])("approved: %s", (text) => {
     expect(react(text)).toBe("approved");
   });
@@ -48,7 +64,14 @@ describe("a reply's outcome, read from the next message", () => {
     "good, but rename the worker first",
     "merge it once the staging deploy finished and the smoke tests are green",
     "good. does this cover the windows case?",
-  ])("an opener or a go-ahead with conditions is not approval: %s", (text) => {
+    "Merge failed",
+    "push failed",
+    "build is broken",
+    "commit error",
+    "add a retry to the fetch",
+    "add pls. but use the smaller model",
+    "push. the tests still need a rename though",
+  ])("an opener, a failure report or a go-ahead with conditions is not approval: %s", (text) => {
     expect(react(text)).not.toBe("approved");
   });
 
