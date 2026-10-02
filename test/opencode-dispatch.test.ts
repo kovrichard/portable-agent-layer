@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
@@ -157,6 +157,23 @@ console.log(JSON.stringify({ type: "text", part: { type: "text", text } }));\n`
 
     const result = await inference({ user: "hi", timeout: 5000 });
     expect(result.success).toBe(false);
+  });
+
+  test("a model error is in the log by the time inference returns", async () => {
+    const error = JSON.stringify({
+      type: "error",
+      error: { name: "APIError", data: { message: "model rejected the request" } },
+    });
+    writeFakeBin(
+      tmpBin,
+      "opencode",
+      `console.log(${JSON.stringify(error)});\nprocess.exit(1);\n`
+    );
+    prependPath(tmpBin);
+
+    await inference({ user: "hi", timeout: 5000 });
+    const log = readFileSync(resolve(tmpBin, "debug", "debug.log"), "utf-8");
+    expect(log).toContain("model rejected the request");
   });
 
   test("JSON-schema path parses opencode text event containing JSON", async () => {

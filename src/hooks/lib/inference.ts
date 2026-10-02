@@ -31,7 +31,7 @@ import {
   isCursor,
   isOpencode,
 } from "./agent";
-import { logDebug } from "./log";
+import { logDebug, logError } from "./log";
 import { HAIKU_MODEL } from "./models";
 import { buildSpawnGuardEnv, getInferenceDepth, SPAWN_GUARD_ENV } from "./spawn-guard";
 import { findBinaryOnPath } from "./which";
@@ -536,7 +536,7 @@ async function singleCliAttempt(
         windowsHide: true,
       });
     } catch (err) {
-      void logError("inference:spawn", err);
+      logError("inference:spawn", err);
       finish({ code: null, stdout: "", stderr: "", timedOut: false });
       return;
     }
@@ -563,7 +563,7 @@ async function singleCliAttempt(
         if (stdinInput) stdinWriter.write(stdinInput);
         stdinWriter.end();
       } catch (err) {
-        void logError("inference:stdin", err);
+        logError("inference:stdin", err);
       }
     }
 
@@ -646,14 +646,11 @@ async function inferenceViaCliSpawn(
   };
 
   if (attempt.timedOut) {
-    void logError(
-      "inference:spawn",
-      `${tag} timeout binary=${binaryName} after ${timeout}ms`
-    );
+    logError("inference:spawn", `${tag} timeout binary=${binaryName} after ${timeout}ms`);
     return finish({ success: false });
   }
   if (attempt.code !== 0) {
-    void logError(
+    logError(
       "inference:spawn",
       `${tag} exited=${attempt.code} binary=${binaryName} argv=${JSON.stringify(args)} stderr(${attempt.stderr.length})=${attempt.stderr.slice(0, 300)} stdout(${attempt.stdout.length})=${attempt.stdout.slice(0, 300)}`
     );
@@ -665,7 +662,7 @@ async function inferenceViaCliSpawn(
   if (!text) {
     // Extraction returned empty — the binary succeeded but our extractor found
     // no usable text. Log the raw stdout so we can see what was actually emitted.
-    void logError(
+    logError(
       "inference:spawn",
       `${tag} extract-empty binary=${binaryName} rawStdout(${rawText.length})=${rawText.slice(0, 500)}`
     );
@@ -677,11 +674,6 @@ async function inferenceViaCliSpawn(
     return finish({ success: true, output: JSON.stringify(parsed) });
   }
   return finish({ success: true, output: text });
-}
-
-async function logError(scope: string, err: unknown): Promise<void> {
-  const { logError: log } = await import("./log");
-  log(scope, err);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -733,7 +725,7 @@ async function inferenceViaApi(opts: InferenceOptions): Promise<InferenceResult>
 
     if (!response.ok) {
       const errBody = await response.text().catch(() => "");
-      await logError("inference", `HTTP ${response.status}: ${errBody.slice(0, 200)}`);
+      logError("inference", `HTTP ${response.status}: ${errBody.slice(0, 200)}`);
       return { success: false };
     }
 
@@ -752,7 +744,7 @@ async function inferenceViaApi(opts: InferenceOptions): Promise<InferenceResult>
 
     return { success: true, output: text, usage };
   } catch (err) {
-    await logError("inference", err);
+    logError("inference", err);
     return { success: false };
   }
 }
@@ -813,10 +805,7 @@ async function inferenceViaOpenAiApi(opts: InferenceOptions): Promise<InferenceR
 
     if (!response.ok) {
       const errBody = await response.text().catch(() => "");
-      await logError(
-        "inference:openai",
-        `HTTP ${response.status}: ${errBody.slice(0, 200)}`
-      );
+      logError("inference:openai", `HTTP ${response.status}: ${errBody.slice(0, 200)}`);
       return { success: false };
     }
 
@@ -840,7 +829,7 @@ async function inferenceViaOpenAiApi(opts: InferenceOptions): Promise<InferenceR
 
     return { success: true, output: text, usage };
   } catch (err) {
-    await logError("inference:openai", err);
+    logError("inference:openai", err);
     return { success: false };
   }
 }

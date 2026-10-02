@@ -25,6 +25,10 @@ async function lib<T>(mod: string): Promise<T> {
 
 type TranscriptMessage = { role: string; content: string };
 
+function isSessionEvent(type: string): boolean {
+  return type.startsWith("session.");
+}
+
 const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   // Pre-load shared modules
   const { buildSystemReminder } =
@@ -125,7 +129,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
     // --- Session events: start and stop handling ---
     event: async ({ event }) => {
       if (isPalSpawnedInference()) return;
-      logDebug("opencode:event", `Event: ${event.type}`);
+      if (isSessionEvent(event.type)) logDebug("opencode:event", `Event: ${event.type}`);
 
       if (event.type === "server.instance.disposed") {
         const { autoUpdateOnClose } =
@@ -139,7 +143,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
         regenerateIfNeeded();
       }
 
-      if (event.type === "session.idle" || event.type === "session.diff") {
+      if (event.type === "session.idle") {
         logDebug("opencode:event", "Running stop handlers...");
         try {
           const sessionID = (event as { properties?: { sessionID?: string } })?.properties
