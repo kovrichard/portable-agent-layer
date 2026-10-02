@@ -4,7 +4,7 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { mkdtemp, rename, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
@@ -42,10 +42,89 @@ export interface StopTurnPayload extends HookTurnPayload {
   transcriptPath?: string | null;
 }
 
+type Transcript = ReturnType<typeof readTranscriptFile>;
+
+interface ReplyWait {
+  timeoutMs: number;
+  intervalMs: number;
+}
+
+const REPLY_WAIT: ReplyWait = { timeoutMs: 15_000, intervalMs: 200 };
+
+function transcriptOf(payload: StopTurnPayload | null): Transcript {
+  const transcriptPath = payload?.transcript_path ?? payload?.transcriptPath;
+  return transcriptPath ? readTranscriptFile(transcriptPath) : [];
+}
+
+/** The Copilot CLI writes the reply to its transcript only after agentStop returns. */
+function replyNotWrittenYet(payload: StopTurnPayload | null, messages: Transcript) {
+  return messages.at(-1)?.role === "user" && !hookFinalReply(payload);
+}
+
+async function transcriptOnceReplied(
+  payload: StopTurnPayload,
+  wait: ReplyWait
+): Promise<Transcript | null> {
+  const deadline = Date.now() + wait.timeoutMs;
+  for (;;) {
+    const messages = transcriptOf(payload);
+    if (!replyNotWrittenYet(payload, messages)) return messages;
+    if (Date.now() >= deadline) return null;
+    await Bun.sleep(wait.intervalMs);
+  }
+}
+
+function deferStopTurn(payload: StopTurnPayload): void {
+  try {
+    const deferId: string = randomUUID();
+    const payloadPath = resolve(paths.state(), `stop-deferred.${deferId}.json`);
+    writeFileSync(payloadPath, JSON.stringify(payload), "utf-8");
+    const scriptPath = resolve(assets.hooks(), "StopDeferred.ts");
+    spawnDetachedInference(scriptPath, [payloadPath], "stop-deferred");
+  } catch (err) {
+    logError("deferStopTurn", err);
+  }
+}
+
+function takeDeferredPayload(payloadPath: string): StopTurnPayload | null {
+  try {
+    return JSON.parse(readFileSync(payloadPath, "utf-8"));
+  } catch {
+    return null;
+  } finally {
+    rmSync(payloadPath, { force: true });
+  }
+}
+
+/** Runs the stop a hook deferred, once the reply it was waiting for is in the transcript. */
+export async function finishDeferredStop(
+  payloadPath: string,
+  wait: ReplyWait = REPLY_WAIT
+): Promise<void> {
+  const payload = takeDeferredPayload(payloadPath);
+  if (!payload) return;
+  const messages = await transcriptOnceReplied(payload, wait);
+  if (!messages) {
+    logDebug("finishDeferredStop", "The reply never reached the transcript");
+    return;
+  }
+  await runTurnStop(payload, messages);
+}
+
 /** Everything a stop hook does once the agent's payload is read. */
 export async function stopTurn(payload: StopTurnPayload | null): Promise<void> {
-  const transcriptPath = payload?.transcript_path ?? payload?.transcriptPath;
-  const messages = transcriptPath ? readTranscriptFile(transcriptPath) : [];
+  const messages = transcriptOf(payload);
+  if (payload && replyNotWrittenYet(payload, messages)) {
+    deferStopTurn(payload);
+    return;
+  }
+  await runTurnStop(payload, messages);
+}
+
+async function runTurnStop(
+  payload: StopTurnPayload | null,
+  messages: Transcript
+): Promise<void> {
   if (messages.length >= 2) {
     await runStopHandlers(JSON.stringify(messages), {
       lastAssistantMessage: hookFinalReply(payload),

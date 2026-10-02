@@ -263,7 +263,7 @@ Every agent's turns are measured and its replies filed under the session id the 
 | Cursor | `beforeSubmitPrompt` → `additional_context`, undocumented | `afterAgentResponse` `text` (`AgentResponse.ts`) |
 | Copilot CLI | `userPromptTransformed` → `modifiedTransformedPrompt` (`PromptTransformed.ts`) | `agentStop` transcript |
 
-The Copilot CLI drops what its `userPromptSubmitted` hook returns, so that hook only measures the turn and parks the context; `userPromptTransformed` fires next and appends it to the prompt the model receives. Cursor documents no context field on `beforeSubmitPrompt`, so PAL offers `additional_context` there but logs no interaction hint as sent until it is shown to reach the model; its documented context channel is session start. `test/agent-turns.test.ts` holds each agent to this table.
+The Copilot CLI drops what its `userPromptSubmitted` hook returns, so that hook only measures the turn and parks the context; `userPromptTransformed` fires next and appends it to the prompt the model receives. It also writes the reply to the `agentStop` transcript only after that hook returns, so a stop whose transcript still ends on the user's message hands off to a detached `StopDeferred.ts`, which waits for the reply before running the stop handlers. Cursor documents no context field on `beforeSubmitPrompt`, so PAL offers `additional_context` there but logs no interaction hint as sent until it is shown to reach the model; its documented context channel is session start. `test/agent-turns.test.ts` holds each agent to this table.
 
 ### Design Principles
 
