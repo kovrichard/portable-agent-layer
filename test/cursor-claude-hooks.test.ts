@@ -77,16 +77,23 @@ async function runHook(agentFlag: string, host: Record<string, string>): Promise
 }
 
 const savedArgv = process.argv;
-const savedEnv = { ...process.env };
+const TOUCHED_ENV_KEYS = [...HOST_ENV_KEYS, "PAL_CURSOR_DIR"];
+const savedEnv = Object.fromEntries(TOUCHED_ENV_KEYS.map((k) => [k, process.env[k]]));
 
+// Keys are set one by one: replacing process.env with a plain object drops
+// Windows' case-insensitive Path/PATH, which breaks every later spawn.
 afterEach(() => {
   process.argv = savedArgv;
-  process.env = { ...savedEnv };
+  for (const [key, value] of Object.entries(savedEnv)) {
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
 });
 
 function inHost(agentFlag: string, host: Record<string, string>): void {
   process.argv = ["bun", "hook.ts", `--agent=${agentFlag}`];
-  process.env = hostEnv(host);
+  for (const key of HOST_ENV_KEYS) delete process.env[key];
+  Object.assign(process.env, { PAL_CURSOR_DIR: cursorDir, ...host });
 }
 
 const IN_CURSOR = { CURSOR_AGENT: "1" };
