@@ -1,3 +1,10 @@
+## [0.84.5](https://github.com/kovrichard/portable-agent-layer/compare/v0.84.4...v0.84.5) (2026-10-02)
+
+
+### Bug Fixes
+
+* **codex:** read Codex's conversation file at stop ([b486448](https://github.com/kovrichard/portable-agent-layer/commit/b486448cc17cabe72fbd31238da7bf55ca0a9931))
+
 ## [0.84.4](https://github.com/kovrichard/portable-agent-layer/compare/v0.84.3...v0.84.4) (2026-10-02)
 
 
