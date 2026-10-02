@@ -9,7 +9,10 @@ import { extractKeywords, similarity } from "./text-similarity";
 export type Reaction = "corrected" | "repeated" | "approved" | "new-topic" | "follow-up";
 
 const CORRECTION_RE =
-  /^(?:(?:no|nope|wrong)(?:[,.!]|$)|(?:that'?s|this is|it'?s) (?:wrong|not)\b|not what i\b|i said\b|i told you\b|you forgot\b|you missed\b|still (?:broken|failing|wrong)\b)/i;
+  /^(?:(?:no|nope|wrong)(?:[,.!]|$)|(?:that'?s|this is|it'?s) (?:wrong|not)\b|not what i\b|i said\b|i told you\b|you forgot\b|you missed\b|still (?:broken|failing|wrong)\b|i don'?t see (?:the|your) (?!(?:problem|issue|point|harm|difference|need|reason)\b))/i;
+
+const CLAIM_DISPUTED_RE =
+  /\byou(?:'re| are) (?:partially |partly |completely |totally )?wrong\b|\b(?:isn'?t|wasn'?t|aren'?t|weren'?t) (?:added|included|fixed|pushed|committed|applied|merged)\b/i;
 
 const APPROVAL_RE =
   /^(?:good|great|nice|perfect|cool|amazing|awesome|excellent|brilliant|works|it works|thanks|thank you|thx|y+e+s+|yep|yeah|yup|sure|exactly|correct|agreed|lgtm|well done|love it|sounds good|looks good|that'?s it|(?:it|this|that) (?:is|'s) (?:fine|good|great|right))\b/i;
@@ -28,7 +31,8 @@ const REPEAT_SIMILARITY = 0.6;
 const REPEAT_MIN_KEYWORDS = 5;
 
 export function isCorrection(text: string): boolean {
-  return CORRECTION_RE.test(text.trim());
+  const trimmed = text.trim();
+  return CORRECTION_RE.test(trimmed) || CLAIM_DISPUTED_RE.test(trimmed);
 }
 
 export function isRepeat(text: string, previous: string | undefined): boolean {

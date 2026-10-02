@@ -13,6 +13,11 @@ describe("a reply's outcome, read from the next message", () => {
     "that's not what I asked",
     "I said the queue, not the worker",
     "still failing on CI",
+    "I think you are partially wrong about the retry",
+    "you're wrong on the second point",
+    "I don't see the retry change",
+    "the retry fix isn't added yet, right?",
+    "the queue change wasn't pushed",
   ])("corrected: %s", (text) => {
     expect(react(text)).toBe("corrected");
   });
@@ -21,6 +26,12 @@ describe("a reply's outcome, read from the next message", () => {
     "wrong upload test first pls",
     "no problem, go on",
     "nothing else to add",
+    "wait, why does the worker retry?",
+    "I don't see why the worker retries",
+    "I don't see any problem with it",
+    "I don't see the point of a second queue",
+    "you are not wrong about the retry",
+    "the deploy isn't done yet, right?",
   ])("a word that only looks like a correction is not one: %s", (text) => {
     expect(react(text)).not.toBe("corrected");
   });
