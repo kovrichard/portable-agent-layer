@@ -1,3 +1,17 @@
+# [0.85.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.84.5...v0.85.0) (2026-10-02)
+
+
+### Bug Fixes
+
+* **inference:** write failures to the log before inference returns ([5f97dcf](https://github.com/kovrichard/portable-agent-layer/commit/5f97dcf9a9a5338f2e4521e959cddf6c18e4d1fa))
+* **opencode:** end the turn only when the session goes idle ([24c1bc2](https://github.com/kovrichard/portable-agent-layer/commit/24c1bc203d9d449669266350efa1d0242b5f3804))
+* **opencode:** log only session events in debug mode ([2dc2c55](https://github.com/kovrichard/portable-agent-layer/commit/2dc2c55164b90dfdf7809f7608b7fda6e6860536))
+
+
+### Features
+
+* **doctor:** warn when opencode has no pinned background model ([01681f3](https://github.com/kovrichard/portable-agent-layer/commit/01681f329f14808e5571ce5b6d1bbf21c23ca1e8))
+
 ## [0.84.5](https://github.com/kovrichard/portable-agent-layer/compare/v0.84.4...v0.84.5) (2026-10-02)
 
 
