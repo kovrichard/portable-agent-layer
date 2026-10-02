@@ -1,3 +1,12 @@
+## [0.85.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.1...v0.85.2) (2026-10-02)
+
+
+### Bug Fixes
+
+* **interaction:** catch corrections that dispute what the reply claimed ([2555c7f](https://github.com/kovrichard/portable-agent-layer/commit/2555c7f92de5224352652b62f09726acdd515d14))
+* **interaction:** never read a failure report as approval ([0280633](https://github.com/kovrichard/portable-agent-layer/commit/0280633ba6c04dbf5436e66995c4d0aec0957d4b))
+* **interaction:** read approvals that open with an acknowledgement or a short go-ahead ([58e0324](https://github.com/kovrichard/portable-agent-layer/commit/58e03249ec7c711962842580532ccaeac6a01163))
+
 ## [0.85.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.0...v0.85.1) (2026-10-02)
 
 
