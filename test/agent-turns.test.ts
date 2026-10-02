@@ -337,14 +337,13 @@ describe("codex", () => {
 });
 
 describe("claude", () => {
-  test("logs the turn and hands the context back as plain text", async () => {
+  test("logs the turn and hands the context back in the shape VS Code also reads from the same hook", async () => {
     const out = await promptHookOutput("claude", {
       session_id: "c1",
       prompt: "rename the column",
     });
 
-    expect(out).toContain("Now: ");
-    expect(out.trimStart().startsWith("{")).toBe(false);
+    expect(hookSpecificContext(out)).toContain("Now: ");
     expect(loggedTurns().at(-1)?.session).toBe("c1");
   });
 

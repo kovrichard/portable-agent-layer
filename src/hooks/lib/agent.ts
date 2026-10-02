@@ -256,7 +256,7 @@ export const hearsPromptContext = () => !isCursor();
 export function promptContextResponse(context: string): string | null {
   if (isCopilot()) return null;
   if (isCursor()) return JSON.stringify({ additional_context: context });
-  if (isCodex() || isVscode()) {
+  if (isCodex() || isClaude() || isVscode()) {
     return JSON.stringify({
       hookSpecificOutput: {
         hookEventName: "UserPromptSubmit",

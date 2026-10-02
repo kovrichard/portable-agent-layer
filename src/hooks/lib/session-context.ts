@@ -24,6 +24,9 @@ export function isSubagentSession(env: NodeJS.ProcessEnv): boolean {
   return env.CLAUDE_PROJECT_DIR?.includes("/.claude/Agents/") ?? false;
 }
 
+/** VS Code runs the hooks in ~/.claude/settings.json too, and reads only hookSpecificOutput. */
+const SHARES_CLAUDE_SETTINGS: ReadonlySet<string> = new Set(["claude", "vscode"]);
+
 export type SessionStartContext = "full" | "without-handoff" | "none";
 
 /**
@@ -78,7 +81,7 @@ export function contextEnvelope(
   if (agent === "cursor") {
     return { kind: "json", payload: JSON.stringify({ additional_context: merged }) };
   }
-  if (agent === "codex") {
+  if (agent === "codex" || SHARES_CLAUDE_SETTINGS.has(agent)) {
     return {
       kind: "json",
       payload: JSON.stringify({
@@ -86,7 +89,6 @@ export function contextEnvelope(
       }),
     };
   }
-  // Claude Code, and opencode which uses the plugin path rather than this hook.
   return { kind: "text", payload: merged };
 }
 

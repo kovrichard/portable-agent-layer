@@ -57,10 +57,10 @@ describe("the envelope each agent is handed", () => {
     expect(nested.additionalContext).toContain(REMINDER);
   });
 
-  test("Claude Code takes raw text, not JSON", () => {
-    const envelope = contextEnvelope("claude", REMINDER, AGENTS_MD);
-    expect(envelope?.kind).toBe("text");
-    expect(envelope?.payload).toBe(REMINDER);
+  test("Claude Code gets hookSpecificOutput, because VS Code runs the same hook and reads only that", () => {
+    const nested = payloadOf("claude").hookSpecificOutput as Record<string, unknown>;
+    expect(nested.hookEventName).toBe("SessionStart");
+    expect(nested.additionalContext).toBe(REMINDER);
   });
 
   test("an agent nobody wrote a branch for is treated as Claude Code, not dropped", () => {
