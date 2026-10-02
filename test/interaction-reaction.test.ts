@@ -48,7 +48,12 @@ describe("a reply's outcome, read from the next message", () => {
     "good, but rename the worker first",
     "merge it once the staging deploy finished and the smoke tests are green",
     "good. does this cover the windows case?",
-  ])("an opener or a go-ahead with conditions is not approval: %s", (text) => {
+    "Merge failed",
+    "push failed",
+    "build is broken",
+    "commit error",
+    "add a retry to the fetch",
+  ])("an opener, a failure report or a go-ahead with conditions is not approval: %s", (text) => {
     expect(react(text)).not.toBe("approved");
   });
 

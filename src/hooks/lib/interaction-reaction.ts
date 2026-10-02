@@ -23,6 +23,7 @@ const NEW_TOPIC_RE =
 const GO_AHEAD_MAX_WORDS = 6;
 const BARE_OK_RE = /^(?:ok(?:ay)?|k)[,.!]?(?:\s+\S+){0,2}$/i;
 const HEDGE_RE = /\b(?:but|however|though|except|instead)\b/i;
+const FAILURE_RE = /\b(?:fail(?:ed|s|ing)?|broken|broke|errors?|crash(?:ed|es)?)\b/i;
 const REPEAT_SIMILARITY = 0.6;
 const REPEAT_MIN_KEYWORDS = 5;
 
@@ -51,7 +52,8 @@ function lastSentence(text: string): string {
 
 function isApproval(text: string): boolean {
   const trimmed = text.trim();
-  if (trimmed.includes("?") || HEDGE_RE.test(trimmed.split(/[.!?\n]/)[0])) return false;
+  if (trimmed.includes("?") || FAILURE_RE.test(trimmed)) return false;
+  if (HEDGE_RE.test(trimmed.split(/[.!?\n]/)[0])) return false;
   if (APPROVAL_RE.test(trimmed) || BARE_OK_RE.test(trimmed)) return true;
   return isShortGoAhead(trimmed) || isShortGoAhead(lastSentence(trimmed));
 }
