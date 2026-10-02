@@ -103,11 +103,21 @@ jobs:
         # No lifecycle scripts, so no dependency can run arbitrary code on install.
         run: bun install --frozen-lockfile --ignore-scripts
 
+      - name: Cache Chromium
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/ms-playwright
+          key: chromium-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+
       - name: Install Chromium
         run: bun x playwright install chromium
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/ms-playwright
 
       - name: Launch a browser and capture a screenshot
         run: bun test test/browser-smoke.test.ts
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/ms-playwright
 
   pkg-e2e:
     name: pkg-e2e (${{ matrix.os }})
@@ -182,7 +192,7 @@ jobs:
           echo "$out" | grep -qE "(Already up to date|Updated:)"
 
   release:
-    needs: [test, pkg-e2e]
+    needs: [test, pkg-e2e, browser-smoke]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
