@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { opencodeBackgroundModel } from "../src/targets/opencode/model";
+import { opencodeBackgroundModel } from "../src/hooks/lib/opencode-config";
 
 const savedDir = process.env.PAL_OPENCODE_DIR;
 let dir: string;

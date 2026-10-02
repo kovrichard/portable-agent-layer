@@ -49,12 +49,12 @@ import {
 import { inference, previewInferenceRoute } from "../hooks/lib/inference";
 import { logDebug, recentHookErrors } from "../hooks/lib/log";
 import { ensureRegistered, writeRegistryEntry } from "../hooks/lib/machine";
+import { opencodeBackgroundModel } from "../hooks/lib/opencode-config";
 import { palHome, palPkg, paths, platform, toPath } from "../hooks/lib/paths";
 import { auditBindings, describeBindingIssue } from "../hooks/lib/projects";
 import { telosStatus } from "../hooks/lib/telos-topics";
 import { findBinaryOnPath } from "../hooks/lib/which";
 import { log } from "../targets/lib";
-import { opencodeBackgroundModel } from "../targets/opencode/model";
 import { builtinToolVerbs, runBuiltinTool } from "./builtin-tools";
 import { checkPendingMigrations } from "./migrate";
 import { findSessionAgent, NO_SESSION_AGENT_MESSAGE } from "./session-agent";
