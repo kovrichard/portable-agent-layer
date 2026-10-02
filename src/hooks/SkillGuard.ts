@@ -10,7 +10,10 @@
  */
 
 import { blockResponse, normalizeToolUse } from "./lib/agent";
+import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { readStdinJSON } from "./lib/stdin";
+
+if (duplicatesCursorHooks()) process.exit(0);
 
 const BLOCKED_SKILLS = ["keybindings-help"];
 

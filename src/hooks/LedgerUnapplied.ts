@@ -20,10 +20,13 @@
  * Silent and fail-open, for the same reason as the other halves.
  */
 
+import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { reapStalePending } from "./lib/ledger";
 import { commitUnapplied, ledgeredCalls, unappliedVerdictOf } from "./lib/ledger-hook";
 import { logDebug } from "./lib/log";
 import { readStdinJSON } from "./lib/stdin";
+
+if (duplicatesCursorHooks()) process.exit(0);
 
 try {
   const input = await readStdinJSON<Record<string, unknown>>();

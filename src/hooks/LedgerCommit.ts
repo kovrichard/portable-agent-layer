@@ -10,9 +10,12 @@
  * Silent and fail-open, for the same reason as its other half.
  */
 
+import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { commitApplied, ledgeredCalls } from "./lib/ledger-hook";
 import { logDebug } from "./lib/log";
 import { readStdinJSON } from "./lib/stdin";
+
+if (duplicatesCursorHooks()) process.exit(0);
 
 try {
   const input = await readStdinJSON<Record<string, unknown>>();

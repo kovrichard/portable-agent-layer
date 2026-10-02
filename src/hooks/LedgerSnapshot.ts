@@ -10,9 +10,12 @@
  * that could block an edit would be a worse thing than a ledger with a gap.
  */
 
+import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { ledgeredCalls, snapshotCall } from "./lib/ledger-hook";
 import { logDebug } from "./lib/log";
 import { readStdinJSON } from "./lib/stdin";
+
+if (duplicatesCursorHooks()) process.exit(0);
 
 try {
   const input = await readStdinJSON<Record<string, unknown>>();

@@ -10,6 +10,7 @@
 import { injectPromptContext } from "./handlers/inject-retrieval";
 import { captureRating } from "./handlers/rating";
 import { captureSessionName } from "./handlers/session-name";
+import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { type HookTurnPayload, hookSessionId } from "./lib/hook-turn";
 import { logDebug, logError, logPromptSnapshot } from "./lib/log";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
@@ -18,6 +19,7 @@ import { readStdinJSON } from "./lib/stdin";
 // Recursion guard — the "prompt" inside a spawned inference is the dispatcher's
 // payload, not a real user message. Skip rating capture, session naming, etc.
 if (isPalSpawnedInference()) process.exit(0);
+if (duplicatesCursorHooks()) process.exit(0);
 
 interface PromptSubmitInput extends HookTurnPayload {
   prompt: string;

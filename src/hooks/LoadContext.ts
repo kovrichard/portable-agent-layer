@@ -14,6 +14,7 @@ import { getActiveAgent } from "./lib/agent";
 import { autoUpdateOnStart } from "./lib/auto-update";
 import { buildClaudeMd, regenerateIfNeeded } from "./lib/claude-md";
 import { type AgentTarget, buildSystemReminder } from "./lib/context";
+import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { logContextSnapshot, logDebug, logError } from "./lib/log";
 import { platform } from "./lib/paths";
 import {
@@ -29,7 +30,7 @@ import { readStdinJSON } from "./lib/stdin";
 // Recursion guard — when this process is a PAL-spawned inference subprocess,
 // skip all context loading so we don't trigger another inference call.
 if (isPalSpawnedInference()) process.exit(0);
-
+if (duplicatesCursorHooks()) process.exit(0);
 if (isSubagentSession(process.env)) {
   logDebug("LoadContext", "Subagent session — skipping context loading");
   process.exit(0);

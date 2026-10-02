@@ -1,0 +1,125 @@
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { resolve } from "node:path";
+
+// cursor-agent also runs every hook in ~/.claude/settings.json, so with PAL's
+// Cursor hooks installed each Cursor prompt ran PAL twice: two logged turns, two
+// rating calls, and Claude's CompactRecover replaying the last Claude exchange.
+
+const REPO_ROOT = resolve(import.meta.dir, "..");
+const HOOK = resolve(REPO_ROOT, "src/hooks/SecurityValidator.ts");
+
+// Assembled at runtime so this file does not contain the literal pattern that
+// PAL's own SecurityValidator blocks when an agent edits or greps it.
+const DANGEROUS = `${"rm -r"}${"f /"}`;
+const PAYLOAD = {
+  hook_event_name: "PreToolUse",
+  tool_name: "Bash",
+  tool_input: { command: DANGEROUS },
+};
+
+const HOST_ENV_KEYS = [
+  "PAL_AGENT",
+  "CURSOR_AGENT",
+  "CURSOR_VERSION",
+  "CURSOR_INVOKED_AS",
+  "CLAUDE_CODE_ENTRYPOINT",
+  "CODEX_CLI_VERSION",
+  "OPENAI_CODEX",
+] as const;
+
+let cursorDir: string;
+
+beforeEach(() => {
+  cursorDir = mkdtempSync(resolve(tmpdir(), "pal-cursor-shadow-"));
+});
+
+afterEach(() => {
+  rmSync(cursorDir, { recursive: true, force: true });
+});
+
+function installPalCursorHooks(): void {
+  const command = `bun run /pkg/src/hooks/SecurityValidator.ts --agent=cursor`;
+  writeFileSync(
+    resolve(cursorDir, "hooks.json"),
+    JSON.stringify({ version: 1, hooks: { preToolUse: [{ type: "command", command }] } })
+  );
+}
+
+function installUserCursorHooks(): void {
+  writeFileSync(
+    resolve(cursorDir, "hooks.json"),
+    JSON.stringify({
+      version: 1,
+      hooks: { preToolUse: [{ type: "command", command: "./my-own-hook.sh" }] },
+    })
+  );
+}
+
+function hostEnv(host: Record<string, string>): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { ...process.env, PAL_CURSOR_DIR: cursorDir, ...host };
+  for (const key of HOST_ENV_KEYS) if (!(key in host)) delete env[key];
+  return env;
+}
+
+async function runHook(agentFlag: string, host: Record<string, string>): Promise<string> {
+  const proc = Bun.spawn(["bun", "run", HOOK, `--agent=${agentFlag}`], {
+    stdin: new TextEncoder().encode(JSON.stringify(PAYLOAD)),
+    stdout: "pipe",
+    stderr: "ignore",
+    env: hostEnv(host),
+  });
+  const out = await new Response(proc.stdout).text();
+  await proc.exited;
+  return out.trim();
+}
+
+const IN_CURSOR = { CURSOR_AGENT: "1" };
+const IN_CLAUDE_CODE = { CLAUDE_CODE_ENTRYPOINT: "cli" };
+
+describe("a Claude-registered hook inside Cursor", () => {
+  test("stands down when PAL's own Cursor hooks will run it", async () => {
+    installPalCursorHooks();
+    expect(await runHook("claude", IN_CURSOR)).toBe("");
+  });
+
+  test("still runs when PAL has no Cursor hooks, since it is the only copy", async () => {
+    expect(await runHook("claude", IN_CURSOR)).toContain("deny");
+  });
+
+  test("still runs when Cursor's hooks are only the user's own", async () => {
+    installUserCursorHooks();
+    expect(await runHook("claude", IN_CURSOR)).toContain("deny");
+  });
+});
+
+describe("the hooks that must keep running", () => {
+  test("PAL's Cursor registration inside Cursor", async () => {
+    installPalCursorHooks();
+    expect(await runHook("cursor", IN_CURSOR)).toContain("deny");
+  });
+
+  test("the Claude registration inside Claude Code", async () => {
+    installPalCursorHooks();
+    expect(await runHook("claude", IN_CLAUDE_CODE)).toContain("deny");
+  });
+});
+
+describe("every hook the Claude config registers", () => {
+  const template = readFileSync(
+    resolve(REPO_ROOT, "assets/templates/settings.claude.json"),
+    "utf-8"
+  );
+  const hooks = [...new Set(template.match(/src\/hooks\/\w+\.ts/g) ?? [])];
+
+  test("is found in the template", () => {
+    expect(hooks.length).toBeGreaterThan(5);
+  });
+
+  test.each(hooks)("%s checks for Cursor's own copy before doing anything", (hook) => {
+    expect(readFileSync(resolve(REPO_ROOT, hook), "utf-8")).toContain(
+      "if (duplicatesCursorHooks()) process.exit(0);"
+    );
+  });
+});
