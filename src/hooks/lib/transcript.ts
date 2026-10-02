@@ -31,15 +31,44 @@ function claudeCodeEntryText(msg: { content?: unknown }): string {
   return "";
 }
 
+interface CodexPayload {
+  role?: string;
+  content?: unknown;
+}
+
+const CODEX_INJECTED_CONTEXT = ["# AGENTS.md instructions", "<environment_context>"];
+
+function isCodexInjectedContext(text: string): boolean {
+  return CODEX_INJECTED_CONTEXT.some((prefix) => text.startsWith(prefix));
+}
+
+function codexTexts(content: unknown): string[] {
+  if (!Array.isArray(content)) return [];
+  return content
+    .map((part) => part?.text)
+    .filter((text): text is string => typeof text === "string" && text.length > 0);
+}
+
+function codexMessage(payload: CodexPayload | undefined): Message | null {
+  const role = payload?.role;
+  if (role !== "user" && role !== "assistant") return null;
+  const texts = codexTexts(payload?.content).filter(
+    (text) => !isCodexInjectedContext(text)
+  );
+  return texts.length > 0 ? { role, content: texts.join(" ") } : null;
+}
+
 // Claude Code tags transcript lines `type: "user"|"assistant"` with the text
 // under `message.content`. VS Code Copilot's own event log instead uses
 // `type: "user.message"|"assistant.message"` with a flat `data.content`
-// string — two shapes sharing one transcript_path contract across agents.
+// string. Codex nests each message as a `response_item` payload.
 function parseTranscriptEntry(entry: {
   type?: string;
   message?: { content?: unknown };
   data?: { content?: unknown };
+  payload?: CodexPayload;
 }): Message | null {
+  if (entry.type === "response_item") return codexMessage(entry.payload);
   if (entry.type === "user" || entry.type === "assistant") {
     const text = claudeCodeEntryText(entry.message ?? {});
     return text ? { role: entry.type, content: text } : null;
@@ -55,7 +84,8 @@ function parseTranscriptEntry(entry: {
 /**
  * Read an agent transcript JSONL file and extract user/assistant messages.
  * Supports Claude Code's `{type:"user"|"assistant", message:{content}}` shape
- * and VS Code Copilot's `{type:"user.message"|"assistant.message", data:{content}}` shape.
+ * VS Code Copilot's `{type:"user.message"|"assistant.message", data:{content}}` shape,
+ * and Codex's `{type:"response_item", payload:{type:"message", role, content}}` shape.
  */
 export function readTranscriptFile(path: string): Message[] {
   try {
