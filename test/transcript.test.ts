@@ -153,6 +153,75 @@ describe("readTranscriptFile — VS Code Copilot shape", () => {
   });
 });
 
+function codexMessage(role: string, ...texts: string[]): string {
+  const partType = role === "assistant" ? "output_text" : "input_text";
+  return JSON.stringify({
+    type: "response_item",
+    payload: {
+      type: "message",
+      role,
+      content: texts.map((text) => ({ type: partType, text })),
+    },
+  });
+}
+
+describe("readTranscriptFile — Codex shape", () => {
+  test("extracts the user and assistant messages of a turn", () => {
+    withTmpFile(
+      [
+        JSON.stringify({ type: "session_meta", payload: { id: "abc" } }),
+        codexMessage("developer", "sandbox rules"),
+        codexMessage("user", "what changed?"),
+        JSON.stringify({ type: "response_item", payload: { type: "reasoning" } }),
+        JSON.stringify({
+          type: "response_item",
+          payload: { type: "custom_tool_call", name: "shell" },
+        }),
+        codexMessage("assistant", "two files"),
+        JSON.stringify({ type: "event_msg", payload: { type: "task_complete" } }),
+      ].join("\n"),
+      (path) => {
+        expect(readTranscriptFile(path)).toEqual([
+          { role: "user", content: "what changed?" },
+          { role: "assistant", content: "two files" },
+        ]);
+      }
+    );
+  });
+
+  test("joins a message split across several text parts", () => {
+    withTmpFile(codexMessage("assistant", "first", "second"), (path) => {
+      expect(readTranscriptFile(path)).toEqual([
+        { role: "assistant", content: "first second" },
+      ]);
+    });
+  });
+
+  test("skips a message with no text in it", () => {
+    withTmpFile(codexMessage("assistant", ""), (path) => {
+      expect(readTranscriptFile(path)).toEqual([]);
+    });
+  });
+
+  test("skips the instructions and environment Codex injects as a user message", () => {
+    withTmpFile(
+      [
+        codexMessage(
+          "user",
+          "# AGENTS.md instructions\n\n<INSTRUCTIONS>\nbe brief\n</INSTRUCTIONS>",
+          "<environment_context>\n  <cwd>/work</cwd>\n</environment_context>"
+        ),
+        codexMessage("user", "what changed?"),
+      ].join("\n"),
+      (path) => {
+        expect(readTranscriptFile(path)).toEqual([
+          { role: "user", content: "what changed?" },
+        ]);
+      }
+    );
+  });
+});
+
 describe("readTranscriptFile — malformed input", () => {
   test("returns [] for a missing file", () => {
     expect(readTranscriptFile(resolve(tmpdir(), "pal-does-not-exist.jsonl"))).toEqual([]);
