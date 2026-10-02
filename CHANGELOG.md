@@ -1,3 +1,10 @@
+## [0.84.3](https://github.com/kovrichard/portable-agent-layer/compare/v0.84.2...v0.84.3) (2026-10-02)
+
+
+### Bug Fixes
+
+* **copilot:** never rewrite VS Code settings PAL cannot parse as JSON ([bdbfdfa](https://github.com/kovrichard/portable-agent-layer/commit/bdbfdfa171f864ffb6658b08cc3449722b7763ef))
+
 ## [0.84.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.84.1...v0.84.2) (2026-10-02)
 
 
