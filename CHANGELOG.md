@@ -1,3 +1,10 @@
+## [0.85.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.0...v0.85.1) (2026-10-02)
+
+
+### Bug Fixes
+
+* **opencode:** keep PAL's instructions out of background inference ([cfd0be9](https://github.com/kovrichard/portable-agent-layer/commit/cfd0be9586c328d721d1a9a9955b2f2844a76da1))
+
 # [0.85.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.84.5...v0.85.0) (2026-10-02)
 
 
