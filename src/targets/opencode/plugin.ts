@@ -139,7 +139,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
         regenerateIfNeeded();
       }
 
-      if (event.type === "session.idle" || event.type === "session.diff") {
+      if (event.type === "session.idle") {
         logDebug("opencode:event", "Running stop handlers...");
         try {
           const sessionID = (event as { properties?: { sessionID?: string } })?.properties

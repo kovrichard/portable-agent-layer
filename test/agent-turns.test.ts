@@ -469,13 +469,20 @@ describe("opencode", () => {
     },
   ];
 
+  let transcriptFetches = 0;
+
   // biome-ignore lint/suspicious/noExplicitAny: the plugin's opencode-typed hooks
   async function plugin(): Promise<any> {
     const savedAgent = process.env.PAL_AGENT;
     const { default: PALPlugin } = await import("../src/targets/opencode/plugin");
+    transcriptFetches = 0;
+    const messages = async () => {
+      transcriptFetches++;
+      return { data: conversation };
+    };
     const hooks = await PALPlugin({
       directory: HOME,
-      client: { session: { messages: async () => ({ data: conversation }) } },
+      client: { session: { messages } },
     } as never);
     if (savedAgent === undefined) delete process.env.PAL_AGENT;
     else process.env.PAL_AGENT = savedAgent;
@@ -502,6 +509,24 @@ describe("opencode", () => {
     );
 
     expect(replyFiledFor("oc1")).toMatchObject({ words: 5 });
+  });
+
+  test("a file diff mid-turn does not end the turn", async () => {
+    const hooks = await plugin();
+    await asAgent("opencode", () =>
+      hooks.event({ event: { type: "session.diff", properties: { sessionID: "oc1" } } })
+    );
+
+    expect(transcriptFetches).toBe(0);
+  });
+
+  test("an idle session ends the turn once", async () => {
+    const hooks = await plugin();
+    await asAgent("opencode", () =>
+      hooks.event({ event: { type: "session.idle", properties: { sessionID: "oc1" } } })
+    );
+
+    expect(transcriptFetches).toBe(1);
   });
 });
 
