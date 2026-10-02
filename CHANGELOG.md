@@ -1,3 +1,10 @@
+## [0.84.4](https://github.com/kovrichard/portable-agent-layer/compare/v0.84.3...v0.84.4) (2026-10-02)
+
+
+### Bug Fixes
+
+* **cursor:** stop the Claude-registered hooks running PAL a second time ([e980cda](https://github.com/kovrichard/portable-agent-layer/commit/e980cda79cd54ba30c20f25ebd4850a8565e03d8))
+
 ## [0.84.3](https://github.com/kovrichard/portable-agent-layer/compare/v0.84.2...v0.84.3) (2026-10-02)
 
 
