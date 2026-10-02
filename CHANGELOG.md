@@ -1,3 +1,10 @@
+## [0.84.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.84.1...v0.84.2) (2026-10-02)
+
+
+### Bug Fixes
+
+* **hooks:** run the Copilot CLI stop once its reply is in the transcript ([1ea8d42](https://github.com/kovrichard/portable-agent-layer/commit/1ea8d42324fc5c8d3cd958244e2dacfbdd71ee1c))
+
 ## [0.84.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.84.0...v0.84.1) (2026-10-01)
 
 
