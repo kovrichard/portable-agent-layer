@@ -528,6 +528,24 @@ describe("opencode", () => {
 
     expect(transcriptFetches).toBe(1);
   });
+
+  function debugLog(): string {
+    const path = resolve(HOME, "debug", "debug.log");
+    return existsSync(path) ? readFileSync(path, "utf-8") : "";
+  }
+
+  test("debug logging records session events but not the streamed reply", async () => {
+    mkdirSync(resolve(HOME, "memory", "state"), { recursive: true });
+    writeFileSync(resolve(HOME, "memory", "state", "debug-enabled"), "");
+    const hooks = await plugin();
+    const events = ["message.part.delta", "message.part.updated", "session.status"];
+    for (const type of events) {
+      await asAgent("opencode", () => hooks.event({ event: { type, properties: {} } }));
+    }
+
+    expect(debugLog()).toContain("Event: session.status");
+    expect(debugLog()).not.toContain("Event: message.");
+  });
 });
 
 const WIRING = [
