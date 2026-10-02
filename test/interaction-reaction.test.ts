@@ -49,6 +49,11 @@ describe("a reply's outcome, read from the next message", () => {
     "start building the first one",
     "fix all in separate commits",
     "looks right to me. go ahead with step 2 then",
+    "understood, well done. Now go ahead with the queue fix. Staging deploys meanwhile",
+    "got it, great",
+    "Let's build that, good job",
+    "add pls. the smaller model is fine",
+    "yes, fix both. Then push. Also sketch the retry fix, but don't build it yet",
   ])("approved: %s", (text) => {
     expect(react(text)).toBe("approved");
   });
@@ -64,6 +69,8 @@ describe("a reply's outcome, read from the next message", () => {
     "build is broken",
     "commit error",
     "add a retry to the fetch",
+    "add pls. but use the smaller model",
+    "push. the tests still need a rename though",
   ])("an opener, a failure report or a go-ahead with conditions is not approval: %s", (text) => {
     expect(react(text)).not.toBe("approved");
   });
