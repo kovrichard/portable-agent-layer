@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { enableCopilotInstructions } from "../src/targets/vscode-settings";
+import {
+  claudeHooksInVscode,
+  enableCopilotInstructions,
+} from "../src/targets/vscode-settings";
 
 const ROOT = resolve(tmpdir(), `pal-vscode-settings-${process.pid}`);
 const USER_DIR = resolve(ROOT, "Code", "User");
@@ -67,5 +70,31 @@ describe("enabling ~/.copilot/instructions in VS Code settings", () => {
 
     expect(enableCopilotInstructions(SETTINGS)).toBe("vscode-never-launched");
     expect(existsSync(SETTINGS)).toBe(false);
+  });
+});
+
+describe("whether VS Code runs the hooks PAL registers for Claude", () => {
+  test("it does when chat.useClaudeHooks is on, comments and all", () => {
+    writeFileSync(SETTINGS, '{\n  // hooks\n  "chat.useClaudeHooks": true,\n}\n');
+    expect(claudeHooksInVscode(SETTINGS)).toBe("on");
+  });
+
+  test("it does not when the setting is missing, since VS Code defaults it to off", () => {
+    writeFileSync(SETTINGS, JSON.stringify({ "editor.fontSize": 14 }));
+    expect(claudeHooksInVscode(SETTINGS)).toBe("off");
+  });
+
+  test("it does not when the setting is turned off", () => {
+    writeFileSync(SETTINGS, JSON.stringify({ "chat.useClaudeHooks": false }));
+    expect(claudeHooksInVscode(SETTINGS)).toBe("off");
+  });
+
+  test("it does not when VS Code was launched but never saved a setting", () => {
+    expect(claudeHooksInVscode(SETTINGS)).toBe("off");
+  });
+
+  test("there is nothing to say when VS Code was never launched", () => {
+    rmSync(USER_DIR, { recursive: true });
+    expect(claudeHooksInVscode(SETTINGS)).toBe("vscode-never-launched");
   });
 });

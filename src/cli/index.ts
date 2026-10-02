@@ -54,7 +54,8 @@ import { palHome, palPkg, paths, platform, toPath } from "../hooks/lib/paths";
 import { auditBindings, describeBindingIssue } from "../hooks/lib/projects";
 import { telosStatus } from "../hooks/lib/telos-topics";
 import { findBinaryOnPath } from "../hooks/lib/which";
-import { log } from "../targets/lib";
+import { log, vscodeSettingsFile } from "../targets/lib";
+import { claudeHooksInVscode } from "../targets/vscode-settings";
 import { builtinToolVerbs, runBuiltinTool } from "./builtin-tools";
 import { checkPendingMigrations } from "./migrate";
 import { findSessionAgent, NO_SESSION_AGENT_MESSAGE } from "./session-agent";
@@ -970,6 +971,13 @@ function doctor(silent = false): DoctorResult {
         ? ok("Copilot instructions present")
         : warn("Copilot instructions missing (written at first session stop)");
     }
+    const vsSettings = vscodeSettingsFile();
+    const vscodeHooks = vsSettings ? claudeHooksInVscode(vsSettings) : null;
+    if (vscodeHooks === "on") ok("VS Code runs PAL's hooks (chat.useClaudeHooks)");
+    if (vscodeHooks === "off")
+      warn(
+        `VS Code chat won't run PAL's hooks — add "chat.useClaudeHooks": true to ${vsSettings}`
+      );
     if (codex.available) {
       checkCodexHooksRegistered()
         ? ok("Codex hooks registered")

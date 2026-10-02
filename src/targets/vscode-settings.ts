@@ -44,6 +44,16 @@ function writeEnabled(settingsPath: string, settings: Settings): InstructionsOut
   return "enabled";
 }
 
+/** VS Code runs the hooks in ~/.claude/settings.json only behind this setting, which defaults to off. */
+export function claudeHooksInVscode(
+  settingsPath: string
+): "on" | "off" | "vscode-never-launched" {
+  if (!existsSync(dirname(settingsPath))) return "vscode-never-launched";
+  if (!existsSync(settingsPath)) return "off";
+  const settings = parsed(readFileSync(settingsPath, "utf-8"), Bun.JSONC.parse);
+  return settings?.["chat.useClaudeHooks"] === true ? "on" : "off";
+}
+
 export function enableCopilotInstructions(settingsPath: string): InstructionsOutcome {
   if (!existsSync(dirname(settingsPath))) return "vscode-never-launched";
   if (!existsSync(settingsPath)) return writeEnabled(settingsPath, {});
