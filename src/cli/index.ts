@@ -54,6 +54,7 @@ import { auditBindings, describeBindingIssue } from "../hooks/lib/projects";
 import { telosStatus } from "../hooks/lib/telos-topics";
 import { findBinaryOnPath } from "../hooks/lib/which";
 import { log } from "../targets/lib";
+import { opencodeBackgroundModel } from "../targets/opencode/model";
 import { builtinToolVerbs, runBuiltinTool } from "./builtin-tools";
 import { checkPendingMigrations } from "./migrate";
 import { findSessionAgent, NO_SESSION_AGENT_MESSAGE } from "./session-agent";
@@ -1050,6 +1051,14 @@ function doctor(silent = false): DoctorResult {
       } else {
         ok(`Would route to: ${preview.route} (${preview.reason})`);
       }
+    }
+    if (opencode.available) {
+      const model = opencodeBackgroundModel();
+      model
+        ? ok(`opencode background model: ${model}`)
+        : warn(
+            `opencode background model: not pinned — background inference uses the model last picked in the TUI. Pin one with "model" in ${resolve(platform.opencodeDir(), "config.json")}`
+          );
     }
     if (process.env.PAL_INFERENCE_DISABLED === "1") {
       warn(
