@@ -182,7 +182,7 @@ jobs:
           echo "$out" | grep -qE "(Already up to date|Updated:)"
 
   release:
-    needs: [test, pkg-e2e]
+    needs: [test, pkg-e2e, browser-smoke]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
