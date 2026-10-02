@@ -15,6 +15,7 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { persistLastExchange } from "./handlers/persist-last-exchange";
+import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { logDebug, logError } from "./lib/log";
 import { paths } from "./lib/paths";
 import { sessionDir } from "./lib/session-dir";
@@ -24,6 +25,7 @@ import { readTranscriptFile } from "./lib/transcript";
 
 // Recursion guard — spawned subprocesses don't compact, so nothing to persist.
 if (isPalSpawnedInference()) process.exit(0);
+if (duplicatesCursorHooks()) process.exit(0);
 
 interface PreCompactInput {
   session_id?: string;

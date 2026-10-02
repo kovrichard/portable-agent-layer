@@ -7,6 +7,7 @@
 
 import { checkReadmeSync } from "./handlers/readme-sync";
 import { blockResponse, isCodex, isCursor } from "./lib/agent";
+import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { logError } from "./lib/log";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
@@ -15,6 +16,7 @@ import { type StopTurnPayload, stopTurn } from "./lib/stop";
 // Recursion guard — spawned inference subprocesses must not record session
 // learning, ratings, or handoffs from their throwaway transcript.
 if (isPalSpawnedInference()) process.exit(0);
+if (duplicatesCursorHooks()) process.exit(0);
 
 // Check README sync before anything else — may block the session
 try {

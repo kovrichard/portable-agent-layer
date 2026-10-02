@@ -17,7 +17,10 @@
  */
 
 import { getActiveAgent } from "./lib/agent";
+import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { findBinaryOnPath } from "./lib/which";
+
+if (duplicatesCursorHooks()) process.exit(0);
 
 const RTK_HOOK_SUBCOMMAND: Partial<Record<ReturnType<typeof getActiveAgent>, string>> = {
   claude: "claude",

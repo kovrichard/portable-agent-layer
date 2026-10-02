@@ -11,11 +11,13 @@
  */
 
 import { autoUpdateOnClose } from "./lib/auto-update";
+import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { logError } from "./lib/log";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
 
 if (isPalSpawnedInference()) process.exit(0);
+if (duplicatesCursorHooks()) process.exit(0);
 
 try {
   const input = await readStdinJSON<{ reason?: string }>();

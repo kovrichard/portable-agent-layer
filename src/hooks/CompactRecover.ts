@@ -14,12 +14,14 @@ import {
   isConsumable,
   type SavedExchange,
 } from "./lib/compact-recall";
+import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { logDebug, logError } from "./lib/log";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
 
 // Recursion guard — spawned subprocesses don't compact, so nothing to recover.
 if (isPalSpawnedInference()) process.exit(0);
+if (duplicatesCursorHooks()) process.exit(0);
 
 interface SessionStartInput {
   session_id?: string;

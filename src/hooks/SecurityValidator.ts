@@ -8,10 +8,13 @@
  */
 
 import { blockResponse } from "./lib/agent";
+import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { recordBlocked } from "./lib/ledger";
 import { logError } from "./lib/log";
 import { decideRefusal, type SecurityInput } from "./lib/security-gate";
 import { readStdinJSON } from "./lib/stdin";
+
+if (duplicatesCursorHooks()) process.exit(0);
 
 try {
   const input = await readStdinJSON<SecurityInput>();

@@ -41,7 +41,7 @@ function agentFromEnv(): AgentType | undefined {
  * prefix is PowerShell-only, so a hook config that guesses the host's shell
  * wrong fails before the hook ever runs. An argv flag is shell-agnostic.
  */
-function agentFromArgv(): AgentType | undefined {
+export function agentFromArgv(): AgentType | undefined {
   const flag = process.argv.find((a) => a.startsWith("--agent="));
   const value = flag?.slice("--agent=".length);
   return value && KNOWN_AGENTS.has(value as AgentType) ? (value as AgentType) : undefined;
@@ -52,7 +52,7 @@ function agentFromArgv(): AgentType | undefined {
  * nothing and appears on no other surface, but it is not the primary signal —
  * it is absent from the session env that hook children inherit.
  */
-function inCursorAgent(): boolean {
+export function inCursorAgent(): boolean {
   return Boolean(
     process.env.CURSOR_AGENT ??
       process.env.CURSOR_VERSION ??
