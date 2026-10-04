@@ -7,6 +7,7 @@
 
 import { checkReadmeSync } from "./handlers/readme-sync";
 import { blockResponse, isCodex, isCursor } from "./lib/agent";
+import { watchClaims } from "./lib/claim-log";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { logError } from "./lib/log";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
@@ -41,4 +42,10 @@ try {
   logError("StopOrchestrator:readme-sync", err);
 }
 
-await stopTurn(await readStdinJSON<StopTurnPayload>());
+const payload = await readStdinJSON<StopTurnPayload>();
+try {
+  watchClaims(payload);
+} catch (err) {
+  logError("StopOrchestrator:claim-check", err);
+}
+await stopTurn(payload);

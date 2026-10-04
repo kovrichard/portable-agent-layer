@@ -3,6 +3,7 @@
  * the agent's replies changed while a measured label was in its context.
  */
 
+import type { ClaimRecord } from "../../hooks/lib/claim-log";
 import type { TurnEvent } from "../../hooks/lib/interaction";
 import { median } from "../../hooks/lib/interaction-mood";
 import {
@@ -196,6 +197,21 @@ function labelLine(label: string, s: ReplyStats, usual: ReplyStats): string {
   if (s.followed.checked)
     parts.push(`followed ${s.followed.followed} of ${s.followed.checked}`);
   return parts.join(" · ");
+}
+
+const UNBACKED_LISTED = 5;
+
+export function claimCheckLines(records: ClaimRecord[]): string[] {
+  if (records.length === 0) return [];
+  const unbacked = records.filter((r) => r.verdict === "unbacked");
+  const unknown = records.filter((r) => r.verdict === "unknown").length;
+  return [
+    "",
+    `Result claims (watched, never sent back): ${plural(records.length, "reply", "replies")} · ${unbacked.length} with no command behind it · ${unknown} unreadable`,
+    ...unbacked
+      .slice(-UNBACKED_LISTED)
+      .flatMap((r) => (r.claims ?? []).map((c) => `  no command: ${c}`)),
+  ];
 }
 
 function plural(n: number, noun: string, nouns = `${noun}s`): string {

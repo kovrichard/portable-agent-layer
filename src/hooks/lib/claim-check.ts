@@ -22,7 +22,7 @@ const COMMAND_TOOLS = new Set([
   "exec_command",
 ]);
 
-type ClaimVerdict = "none" | "backed" | "unbacked" | "unknown";
+export type ClaimVerdict = "none" | "backed" | "unbacked" | "unknown";
 
 export interface ClaimCheck {
   verdict: ClaimVerdict;

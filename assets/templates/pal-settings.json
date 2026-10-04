@@ -29,6 +29,7 @@
     "dueReminders": false,
     "interactionAwareness": true,
     "reactionSampling": true,
+    "claimCheck": true,
     "steeringTestReport": false
   },
   "steering": {
