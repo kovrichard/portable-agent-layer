@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, resolve } from "node:path";
+import { isRepoMode } from "../../hooks/handlers/update-check";
 import { palPkg } from "../../hooks/lib/paths";
 import { findBinaryOnPath } from "../../hooks/lib/which";
 import type { ToolCheck } from "./agents";
@@ -82,14 +83,29 @@ export function playwrightFinding(host: BrowserHost): Finding {
   );
 }
 
-function palOnPathFinding(): Finding {
-  const pal = findBinaryOnPath("pal");
-  return pal
-    ? passed("pal.path", `pal on PATH — ${pal}`)
-    : failing("pal.path", "pal is not on PATH — skills that run 'pal cli …' fail", {
-        say: "Install PAL globally",
-        command: "bun add -g portable-agent-layer",
-      });
+interface PalInstall {
+  pal: string | null;
+  pkg: string;
+  repoMode: boolean;
+}
+
+function putPalOnPath(install: PalInstall): Fix {
+  return install.repoMode
+    ? {
+        say: "Link the checkout — a shell alias is invisible to agents",
+        command: `cd ${install.pkg} && bun link`,
+      }
+    : { say: "Install PAL globally", command: "bun add -g portable-agent-layer" };
+}
+
+export function palOnPathFinding(install: PalInstall): Finding {
+  return install.pal
+    ? passed("pal.path", `pal on PATH — ${install.pal}`)
+    : failing(
+        "pal.path",
+        "pal is not on PATH — skills that run 'pal cli …' fail",
+        putPalOnPath(install)
+      );
 }
 
 function rtkInstall(): Fix {
@@ -115,7 +131,11 @@ function rtkFinding(rtk: ToolCheck): Finding {
 export function environmentFindings(rtk: ToolCheck): Finding[] {
   return [
     passed("bun", `Bun ${Bun.version}`),
-    palOnPathFinding(),
+    palOnPathFinding({
+      pal: findBinaryOnPath("pal"),
+      pkg: palPkg(),
+      repoMode: isRepoMode(),
+    }),
     playwrightFinding({
       browsersPath: playwrightBrowsersPath(),
       playwright: installedPlaywright(),
