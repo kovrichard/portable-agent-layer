@@ -14,13 +14,14 @@ import {
   type Split,
   splits,
 } from "../../hooks/lib/interaction-preferences";
+import { approvalIsKnown } from "../../hooks/lib/interaction-reaction";
 
 const LABELS = ["short", "long", "fast", "skimming", "friction"] as const;
 
 interface ReplyUnderMood {
   labels: string[];
   words: number;
-  approved: boolean;
+  approved: boolean | null;
   corrected: boolean;
   complied?: boolean;
 }
@@ -52,6 +53,7 @@ export interface InteractionSummary {
   reactions: Record<string, number>;
   hints: Record<string, number>;
   unlogged: number;
+  readBeforeGoAhead: number;
   usual: ReplyStats;
   byLabel: Record<string, ReplyStats>;
   approvals: Approvals;
@@ -81,7 +83,10 @@ function stats(replies: ReplyUnderMood[]): ReplyStats {
   return {
     replies: replies.length,
     medianWords: median(replies.map((r) => r.words)),
-    approvedShare: share(replies, (r) => r.approved),
+    approvedShare: share(
+      replies.filter((r) => r.approved !== null),
+      (r) => r.approved === true
+    ),
     correctedShare: share(replies, (r) => r.corrected),
     followed: {
       checked: replies.filter((r) => r.complied !== undefined).length,
@@ -100,13 +105,18 @@ function repliesUnderMood(events: TurnEvent[]): ReplyUnderMood[] {
       replies.push({
         labels: mood ? mood.split(",") : [],
         words: e.reply.words,
-        approved: e.reaction === "approved",
+        approved: approvalIsKnown(e) ? e.reaction === "approved" : null,
         corrected: e.reaction === "corrected" || e.reaction === "repeated",
         complied: e.complied,
       });
     lastMood.set(e.session, e.mood);
   }
   return replies;
+}
+
+function reactionName(e: TurnEvent): string {
+  if (e.reaction === "approved" && !approvalIsKnown(e)) return "approved or go-ahead";
+  return e.reaction ?? "";
 }
 
 /** A turn carries the reply that answered the turn before it, so a filed reply shows up there. */
@@ -131,7 +141,8 @@ export function summarize(events: TurnEvent[]): InteractionSummary {
     sessions: new Set(events.map((e) => e.session)).size,
     channels: tally(events.map((e) => e.channel ?? "unknown")),
     agents: byAgent(events),
-    reactions: tally(events.flatMap((e) => (e.reaction ? [e.reaction] : []))),
+    reactions: tally(events.flatMap((e) => (e.reaction ? [reactionName(e)] : []))),
+    readBeforeGoAhead: events.filter((e) => e.reaction && !approvalIsKnown(e)).length,
     hints: tally(hinted.map((e) => e.mood || "back to usual")),
     unlogged: events.filter((e) => e.mood === undefined).length,
     usual: stats(replies.filter((r) => r.labels.length === 0)),
@@ -254,6 +265,11 @@ export function reportLines(summary: InteractionSummary, days: number): string[]
     lines.push(
       "",
       `${summary.unlogged} older turns were logged before moods were, and are left out of the comparison.`
+    );
+  if (summary.readBeforeGoAhead)
+    lines.push(
+      "",
+      `${summary.readBeforeGoAhead} older replies were read before go-ahead was split from approval, and are left out of the approval figures.`
     );
   return lines;
 }

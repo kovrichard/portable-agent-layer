@@ -26,6 +26,7 @@ import { shorterApprovedMore } from "./interaction-preferences";
 import {
   isCorrection,
   isRepeat,
+  REACTION_RULES,
   type Reaction,
   reactionTo,
 } from "./interaction-reaction";
@@ -51,6 +52,7 @@ export interface TurnEvent extends MoodTurn {
   weekday: string;
   reply: Omit<ReplyShape, "at"> | null;
   reaction: Reaction | null;
+  reactionRules?: number;
   mood?: string;
   hinted?: boolean;
   complied?: boolean;
@@ -129,6 +131,7 @@ function measureTurn(
     corrected: isCorrection(text),
     reply: reply ? replyFeatures(reply) : null,
     reaction: reply ? reactionTo(text, track.lastPrompt) : null,
+    ...(reply && { reactionRules: REACTION_RULES }),
   };
 }
 

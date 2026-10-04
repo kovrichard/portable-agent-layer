@@ -6,6 +6,7 @@
  */
 
 import { median } from "./interaction-mood";
+import { approvalIsKnown } from "./interaction-reaction";
 
 const MIN_REPLIES_PER_SIDE = 20;
 const MIN_GAP = 0.1;
@@ -20,6 +21,7 @@ interface ReplyFeatures {
 interface ReactedTurn {
   reply: ReplyFeatures | null;
   reaction: string | null;
+  reactionRules?: number;
 }
 
 interface Outcome {
@@ -41,7 +43,9 @@ export interface Split {
 
 function outcomes(events: ReactedTurn[]): Outcome[] {
   return events.flatMap((e) =>
-    e.reply && e.reaction ? [{ reply: e.reply, approved: e.reaction === "approved" }] : []
+    e.reply && e.reaction && approvalIsKnown(e)
+      ? [{ reply: e.reply, approved: e.reaction === "approved" }]
+      : []
   );
 }
 

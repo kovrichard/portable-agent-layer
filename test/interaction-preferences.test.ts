@@ -6,6 +6,7 @@ import {
   shorterApprovedMore,
   splits,
 } from "../src/hooks/lib/interaction-preferences";
+import { REACTION_RULES } from "../src/hooks/lib/interaction-reaction";
 
 interface Shape {
   words?: number;
@@ -35,6 +36,7 @@ function reacted(approved: boolean, shape: Shape = {}): TurnEvent {
       asked: shape.asked ?? false,
     },
     reaction: approved ? "approved" : "follow-up",
+    reactionRules: REACTION_RULES,
   };
 }
 
@@ -94,6 +96,12 @@ describe("learning what replies get approved", () => {
       { ...reacted(true), reaction: null },
       { ...reacted(true), reply: null },
     ];
+
+    expect(split(events, "with a list").lacks.replies).toBe(1);
+  });
+
+  test("a reply judged before go-ahead was split from approval teaches nothing", () => {
+    const events = [reacted(true), { ...reacted(true), reactionRules: undefined }];
 
     expect(split(events, "with a list").lacks.replies).toBe(1);
   });

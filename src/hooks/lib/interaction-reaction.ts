@@ -14,6 +14,14 @@ export type Reaction =
   | "new-topic"
   | "follow-up";
 
+/** Logged with each reaction, so a log read under older rules is not read with today's meaning. */
+export const REACTION_RULES = 2;
+const GO_AHEAD_SPLIT = 2;
+
+export function approvalIsKnown(turn: { reactionRules?: number }): boolean {
+  return (turn.reactionRules ?? 1) >= GO_AHEAD_SPLIT;
+}
+
 const CORRECTION_RE =
   /^(?:(?:no|nope|wrong)(?:[,.!]|$)|(?:that'?s|this is|it'?s) (?:wrong|not)\b|not what i\b|i said\b|i told you\b|you forgot\b|you missed\b|still (?:broken|failing|wrong)\b|i don'?t see (?:the|your) (?!(?:problem|issue|point|harm|difference|need|reason)\b))/i;
 
