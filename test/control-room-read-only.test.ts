@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
   mkdirSync,
   mkdtempSync,
@@ -9,7 +9,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { relative, resolve } from "node:path";
-import { ensurePageBuilt } from "./lib/built-page";
+import { buildPageFirst } from "./lib/built-page";
 
 // Opening the page is not work on a project. Every GET route is swept here
 // against a snapshot of the whole home, because `updated` is what tells you a
@@ -19,7 +19,7 @@ let HOME: string;
 let server: ReturnType<typeof Bun.serve> | null = null;
 
 // The sweep asserts 200 on "/", which is the built page rather than a template.
-beforeAll(ensurePageBuilt);
+buildPageFirst();
 
 beforeEach(() => {
   HOME = mkdtempSync(resolve(tmpdir(), "pal-read-only-"));
