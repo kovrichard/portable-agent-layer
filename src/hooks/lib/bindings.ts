@@ -20,6 +20,7 @@
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
+import { adoptParkedHistory } from "./parked-history";
 import { palHome, toPath } from "./paths";
 
 /** Project name → absolute path on this machine. */
@@ -91,6 +92,7 @@ export function writeBindings(bindings: Bindings, home: string = palHome()): voi
   const sorted: Bindings = {};
   for (const key of Object.keys(bindings).sort()) sorted[key] = bindings[key];
   writeFileSync(bindingsFilePath(home), `${JSON.stringify(sorted, null, 2)}\n`);
+  adoptParkedHistory(sorted, home);
 }
 
 /** The absolute path this machine has for `project`, or null when unbound. */

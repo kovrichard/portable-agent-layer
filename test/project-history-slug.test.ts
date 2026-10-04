@@ -137,6 +137,59 @@ describe("history routing", () => {
   });
 });
 
+describe("parked history finds its project", () => {
+  async function parkUnder(dirName: string, title: string): Promise<string> {
+    const loose = resolve(HOME, "checkouts", dirName);
+    mkdirSync(loose, { recursive: true });
+    const { appendProjectHistory } = await import("../src/hooks/lib/work-tracking");
+    appendProjectHistory(loose, entry(title));
+    return loose;
+  }
+
+  test("moves in the moment its project is created here, with no migration run", async () => {
+    const loose = await parkUnder("delta", "before the project existed");
+    const { writeProject } = await import("../src/hooks/lib/projects");
+
+    writeProject({
+      name: "delta",
+      status: "active",
+      created: "2026-01-01",
+      updated: "2026-01-01",
+      path: loose,
+    });
+
+    expect(readFileSync(projectHistory("delta"), "utf-8")).toContain(
+      "before the project existed"
+    );
+    expect(existsSync(parkedHistory("delta"))).toBe(false);
+    const { checkPendingMigrations } = await import("../src/cli/migrate");
+    expect(checkPendingMigrations()).toEqual([]);
+  });
+
+  test("never mints a project folder for a binding with no project record", async () => {
+    const loose = await parkUnder("ghost", "no record anywhere");
+    const { writeBinding } = await import("../src/hooks/lib/bindings");
+
+    writeBinding("ghost", loose);
+
+    expect(existsSync(folderInRegistry("ghost"))).toBe(false);
+    expect(existsSync(parkedHistory("ghost"))).toBe(true);
+  });
+
+  test("stays parked while two projects are checked out under that name", async () => {
+    const loose = await parkUnder("shared", "whose is it");
+    const other = resolve(HOME, "elsewhere", "shared");
+    mkdirSync(other, { recursive: true });
+    registerProject("first", "shared");
+    registerProject("second", "shared");
+    const { writeBindings } = await import("../src/hooks/lib/bindings");
+
+    writeBindings({ first: loose, second: other });
+
+    expect(existsSync(parkedHistory("shared"))).toBe(true);
+  });
+});
+
 describe("v6 history-slugs", () => {
   /** History as the old writer left it: a folder named after the cwd. */
   function orphanFolder(slug: string, title: string): void {
@@ -199,6 +252,20 @@ describe("v6 history-slugs", () => {
       "before registration"
     );
     expect(existsSync(parkedHistory("gamma"))).toBe(false);
+  });
+
+  test("does not claim it kept the files it moved", async () => {
+    orphanFolder("unclaimed", "recorded somewhere else");
+    const printed: string[] = [];
+    const log = console.log;
+    console.log = (...args: unknown[]) => printed.push(args.join(" "));
+    try {
+      await run();
+    } finally {
+      console.log = log;
+    }
+
+    expect(printed.join("\n")).not.toContain("preserved");
   });
 
   test("leaves a registered project's own history alone", async () => {

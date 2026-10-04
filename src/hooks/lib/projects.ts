@@ -267,11 +267,6 @@ export function writeProject(p: ProjectProgress): void {
     const detected = detectRemote(p.path);
     if (detected) p.remote = detected;
   }
-  // Only a path that exists here may be bound. Saving a record is not a claim
-  // about this machine's disk — `path` may have arrived from an imported record
-  // written elsewhere, and binding it would recreate the very leak bindings exist
-  // to prevent. An explicit `writeBinding` from the user stays unguarded.
-  if (p.path && existsSync(p.path)) writeBinding(p.name, p.path);
   const meta: Record<string, unknown> = {
     name: p.name,
     status: p.status,
@@ -290,6 +285,11 @@ export function writeProject(p: ProjectProgress): void {
   if (p.placed) meta.placed = p.placed;
   if (p.placed_by) meta.placed_by = p.placed_by;
   writeFileSync(ensureAndGetIsaFile(p.name), stringify(meta, buildBody(p)), "utf-8");
+  // Only a path that exists here may be bound. Saving a record is not a claim
+  // about this machine's disk — `path` may have arrived from an imported record
+  // written elsewhere, and binding it would recreate the very leak bindings exist
+  // to prevent. An explicit `writeBinding` from the user stays unguarded.
+  if (p.path && existsSync(p.path)) writeBinding(p.name, p.path);
 }
 
 export function deleteProject(name: string): boolean {
