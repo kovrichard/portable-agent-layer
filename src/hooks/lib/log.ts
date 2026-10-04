@@ -108,16 +108,19 @@ function loggedAt(line: string): number {
   return match ? Date.parse(`${match[1]}T${match[2]}Z`) : 0;
 }
 
+function whatTheAgentSaid(message: string): string {
+  const output = / stderr\(\d+\)=(.*?) stdout\(\d+\)=(.*)$/.exec(message);
+  if (!output) return message;
+  return output[1].trim() || output[2].trim() || message;
+}
+
 function groupBySource(errors: string[]): HookErrorGroup[] {
   const groups = new Map<string, HookErrorGroup>();
   for (const error of errors) {
     const source = /^([^:]+):/.exec(error)?.[1] ?? "unknown";
     const group = groups.get(source) ?? { source, count: 0, last: "" };
     group.count++;
-    group.last = error
-      .slice(source.length + 1)
-      .trim()
-      .slice(0, 120);
+    group.last = whatTheAgentSaid(error.slice(source.length + 1).trim()).slice(0, 120);
     groups.set(source, group);
   }
   return [...groups.values()].sort((a, b) => b.count - a.count);

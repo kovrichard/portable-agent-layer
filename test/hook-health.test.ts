@@ -56,6 +56,22 @@ describe("recentHookErrors", () => {
     ]);
   });
 
+  test("a failed agent call reports what the agent said, not its argv", () => {
+    debugLog("debug.log", [
+      '[2026-09-23 11:00:00] ERROR inference:spawn: caller=agenda exited=1 binary=claude argv=["--print","--model","m"] stderr(0)= stdout(14)=Login expired.',
+    ]);
+
+    expect(recentHookErrors(NOW)[0].last).toBe("Login expired.");
+  });
+
+  test("a failed agent call prefers its stderr when it wrote one", () => {
+    debugLog("debug.log", [
+      '[2026-09-23 11:00:00] ERROR inference:spawn: caller=agenda exited=1 binary=claude argv=["--print"] stderr(9)=rate limit stdout(4)=noise',
+    ]);
+
+    expect(recentHookErrors(NOW)[0].last).toBe("rate limit");
+  });
+
   test("reports nothing when no log exists", () => {
     expect(recentHookErrors(NOW)).toEqual([]);
   });
