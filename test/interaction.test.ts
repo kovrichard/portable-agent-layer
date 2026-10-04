@@ -219,18 +219,32 @@ describe("telling the agent", () => {
   });
 });
 
-function seedReplyHistory(replyWords: number) {
+function pastTurn(replyWords: number, reaction: string | null = null): string {
+  return JSON.stringify({
+    session: "old",
+    words: 30,
+    gapSec: 120,
+    afterBreak: false,
+    reply: { words: replyWords, listItems: 0, headings: 0, asked: false },
+    reaction,
+  });
+}
+
+function seedHistory(history: string[]) {
   mkdirSync(eventsDir(), { recursive: true });
-  const history = Array.from({ length: 25 }, () =>
-    JSON.stringify({
-      session: "old",
-      words: 30,
-      gapSec: 120,
-      afterBreak: false,
-      reply: { words: replyWords, listItems: 0, headings: 0, asked: false },
-    })
-  );
   writeFileSync(resolve(eventsDir(), "2026-09.jsonl"), `${history.join("\n")}\n`);
+}
+
+function seedReplyHistory(replyWords: number) {
+  seedHistory(Array.from({ length: 25 }, () => pastTurn(replyWords)));
+}
+
+function seedShortRepliesApprovedMore() {
+  const reacted = (words: number, approved: number) =>
+    Array.from({ length: 20 }, (_, i) =>
+      pastTurn(words, i < approved ? "approved" : "follow-up")
+    );
+  seedHistory([...reacted(60, 10), ...reacted(300, 2)]);
 }
 
 function settleIntoFastShort(session: string): void {
@@ -248,6 +262,18 @@ describe("checking the hint worked", () => {
     expect(reminder).toContain("Your last reply was 300 words");
     expect(reminder).toContain("usually 200");
     expect(reminder).toContain("under 100 words");
+    expect(reminder).not.toContain("approved");
+  });
+
+  test("the reminder cites the user's own approvals when they favour shorter replies", () => {
+    seedShortRepliesApprovedMore();
+    settleIntoFastShort("s1");
+    recordReply("s1", words(300), at(150));
+    const reminder = observeTurn("ok", "s1", at(160));
+
+    expect(reminder).toContain(
+      "Replies under 180 words were approved 50% of the time, longer ones 10%."
+    );
   });
 
   test("a reply that follows the hint gets nothing more", () => {

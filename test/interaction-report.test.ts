@@ -130,6 +130,50 @@ describe("interaction report", () => {
     expect(lines).toContain("  long      no replies yet");
   });
 
+  test("prints what gets approved, and says where the evidence is too thin", () => {
+    const reacted = (n: number, approved: number, words: number) =>
+      Array.from({ length: n }, (_, i) =>
+        answered(words, i < approved ? "approved" : "follow-up")
+      );
+    const lines = reportLines(
+      summarize([turn(), ...reacted(20, 10, 100), ...reacted(20, 2, 300)]),
+      7
+    );
+
+    const at = lines.indexOf("What gets approved, from 40 reacted replies:");
+    expect(at).toBeGreaterThan(-1);
+    expect(lines.slice(at + 1, at + 3)).toEqual([
+      "  under 200 words: approved 50% of 20 · 200 words or more: 10% of 20",
+      "  with a list: too few replies (0 against 40)",
+    ]);
+  });
+
+  test("a narrow gap on enough replies reads as no real difference", () => {
+    const reacted = (n: number, approved: number, asked: boolean) =>
+      Array.from({ length: n }, (_, i) => ({
+        ...answered(100, i < approved ? "approved" : "follow-up"),
+        reply: { words: 100, listItems: 0, headings: 0, asked },
+      }));
+    const lines = reportLines(
+      summarize([turn(), ...reacted(20, 5, true), ...reacted(20, 4, false)]),
+      7
+    );
+
+    expect(lines).toContain(
+      "  ending with a question: no real difference (25% of 20 against 20% of 20)"
+    );
+  });
+
+  test("learns each channel apart in the report", () => {
+    const lines = reportLines(
+      summarize([turn(), { ...answered(100, "approved"), channel: "discord-mobile" }]),
+      7
+    );
+
+    expect(lines).toContain("On discord-mobile, from 1 reacted reply:");
+    expect(lines.some((l) => l.startsWith("On terminal"))).toBe(false);
+  });
+
   test("a repeat counts against a reply like a correction", () => {
     const summary = summarize([turn(), answered(100, "repeated")]);
 

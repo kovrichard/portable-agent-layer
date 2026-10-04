@@ -4,6 +4,8 @@
  * of two the mood rules use to call a message short.
  */
 
+import { approvedShare, type Side, type Split } from "./interaction-preferences";
+
 const ASKS_FOR_LESS = ["short", "fast", "skimming"];
 
 function lengthTarget(usualReplyWords: number): number {
@@ -25,7 +27,20 @@ export function followedHint(
   return replyWords <= lengthTarget(usualReplyWords);
 }
 
-export function ignoredHintReminder(replyWords: number, usualReplyWords: number): string {
+function pct(s: Side): string {
+  return `${Math.round(approvedShare(s) * 100)}%`;
+}
+
+function citedApprovals(evidence: Split | null): string {
+  if (!evidence) return "";
+  return ` Replies ${evidence.shape} were approved ${pct(evidence.has)} of the time, longer ones ${pct(evidence.lacks)}.`;
+}
+
+export function ignoredHintReminder(
+  replyWords: number,
+  usualReplyWords: number,
+  evidence: Split | null
+): string {
   const target = lengthTarget(usualReplyWords);
-  return `<system-reminder>Interaction: the user still wants less. Your last reply was ${replyWords} words (usually ${usualReplyWords}); keep this one under ${target} words.</system-reminder>`;
+  return `<system-reminder>Interaction: the user still wants less. Your last reply was ${replyWords} words (usually ${usualReplyWords}); keep this one under ${target} words.${citedApprovals(evidence)}</system-reminder>`;
 }

@@ -22,6 +22,7 @@ import {
   moodReminder,
   readMood,
 } from "./interaction-mood";
+import { shorterApprovedMore } from "./interaction-preferences";
 import {
   isCorrection,
   isRepeat,
@@ -254,11 +255,12 @@ function reminderForIgnoredHint(
   complied: boolean | null,
   moodKey: string,
   replyWords: number | undefined,
-  usualReply: number | null
+  usualReply: number | null,
+  history: TurnEvent[]
 ): string | null {
   if (complied !== false || !asksForLess(moodKey)) return null;
   if (replyWords === undefined || usualReply === null) return null;
-  return ignoredHintReminder(replyWords, usualReply);
+  return ignoredHintReminder(replyWords, usualReply, shorterApprovedMore(history));
 }
 
 function joinReminders(...reminders: (string | null)[]): string | null {
@@ -288,7 +290,7 @@ export function observeTurn(
   const mood = readMood(recent, baseline(history));
   const reminder = joinReminders(
     moodReminder(mood, track.mood ?? ""),
-    reminderForIgnoredHint(complied, mood.key, replyWords, usualReply)
+    reminderForIgnoredHint(complied, mood.key, replyWords, usualReply, history)
   );
   appendEvent({
     ...event,
