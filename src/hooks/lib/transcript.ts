@@ -38,7 +38,7 @@ interface CodexPayload {
 
 const CODEX_INJECTED_CONTEXT = ["# AGENTS.md instructions", "<environment_context>"];
 
-function isCodexInjectedContext(text: string): boolean {
+export function isCodexInjectedContext(text: string): boolean {
   return CODEX_INJECTED_CONTEXT.some((prefix) => text.startsWith(prefix));
 }
 
