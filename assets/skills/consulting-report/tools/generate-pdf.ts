@@ -1,25 +1,18 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 // consulting-report skill tool: build the Next.js report and render it to PDF.
 // Pipeline: `next build` produces a static export at out/ — Playwright loads
 // out/index.html and prints a PDF with branded header/footer/page numbers.
 //
-// Run with Node (not Bun) — Playwright's chromium.launch() hangs under Bun on
-// Windows because it uses --remote-debugging-pipe over stdio and Bun's Windows
-// child-process pipe handling doesn't complete the CDP handshake.
-//
-// pal-build:mjs — ships as a compiled generate-pdf.mjs sibling (scripts/build-skill-tools.ts)
-// and is invoked as that .mjs: a .ts under node_modules can't be type-stripped by Node.
-//
 // Usage:
-//   pal cli skill run consulting-report generate-pdf.mjs <report-dir> [--pdf <out>] [--html <out>] [--skip-build]
+//   pal cli skill run consulting-report generate-pdf <report-dir> [--pdf <out>] [--html <out>] [--skip-build]
 
 import { spawnSync } from "node:child_process";
-import { createReadStream, constants as fsConstants, realpathSync } from "node:fs";
+import { createReadStream, constants as fsConstants } from "node:fs";
 import { access, readFile, stat, unlink, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import { extname, join, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { pathToFileURL } from "node:url";
 import { PDFDocument } from "pdf-lib";
 import { chromium } from "playwright";
 
@@ -312,22 +305,4 @@ async function run(argv: string[] = process.argv.slice(2)): Promise<void> {
   console.log(`PDF:  ${pdfPath} (${(pdfStat.size / 1024).toFixed(1)} KB)`);
 }
 
-// Node ≥ 22.6 doesn't expose import.meta.main; gate on argv[1] instead.
-// Use realpathSync on both sides so symlinked skill paths (e.g. ~/.pal/skills →
-// PAL repo) match the resolved import.meta.url.
-// fileURLToPath, never new URL().pathname: on Windows the latter yields
-// "/C:/Users/..." — leading slash, forward slashes — which can never equal argv[1]'s
-// "C:\Users\...", so the gate silently failed and run() never executed there.
-function realResolve(p: string): string {
-  try {
-    return realpathSync(resolve(p));
-  } catch {
-    return resolve(p);
-  }
-}
-const isMain =
-  process.argv[1] &&
-  realResolve(process.argv[1]) === realResolve(fileURLToPath(import.meta.url));
-if (isMain) {
-  await run();
-}
+if (import.meta.main) await run();

@@ -51,18 +51,6 @@ prefix_rule(
 )
 
 prefix_rule(
-    pattern = ["node", "--experimental-strip-types", "~/.pal/skills/consulting-report/tools/generate-pdf.ts"],
-    decision = "allow",
-    justification = "PAL consulting-report PDF generation requires Node for Playwright compatibility",
-    match = [
-        "node --experimental-strip-types ~/.pal/skills/consulting-report/tools/generate-pdf.ts ./report",
-    ],
-    not_match = [
-        "node ~/.pal/skills/consulting-report/tools/generate-pdf.ts ./report",
-    ],
-)
-
-prefix_rule(
     pattern = ["pal", "cli", "project"],
     decision = "allow",
     justification = "PAL project state commands are part of the installed PAL workflow",
@@ -120,7 +108,7 @@ prefix_rule(
     justification = "A skill's own tools ship with PAL and are safe to run without repeated approval",
     match = [
         "pal cli skill run presentation build ./deck",
-        "pal cli skill run consulting-report generate-pdf.mjs ./report",
+        "pal cli skill run consulting-report generate-pdf ./report",
     ],
     not_match = [
         "pal cli skill link my-skill",
