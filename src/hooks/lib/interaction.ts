@@ -13,6 +13,7 @@ import {
 import { resolve } from "node:path";
 import { currentAttribution } from "./actor";
 import { hearsPromptContext } from "./agent";
+import { asksForLess, followedHint, ignoredHintReminder } from "./interaction-hint-check";
 import {
   type Baseline,
   DEFAULT_BASELINE,
@@ -21,6 +22,7 @@ import {
   moodReminder,
   readMood,
 } from "./interaction-mood";
+import { shorterApprovedMore } from "./interaction-preferences";
 import {
   isCorrection,
   isRepeat,
@@ -51,6 +53,7 @@ export interface TurnEvent extends MoodTurn {
   reaction: Reaction | null;
   mood?: string;
   hinted?: boolean;
+  complied?: boolean;
   runtime?: string;
 }
 
@@ -166,13 +169,21 @@ export function turnsSince(since: Date): TurnEvent[] {
     .filter((e) => e.ts >= sinceTs);
 }
 
-/** The user's own normal, from this month and last, outside the session being judged. */
-function baseline(session: string, now: Date = new Date()): Baseline {
+/** This month and last, outside the session being judged. */
+function historyOutside(session: string, now: Date): TurnEvent[] {
   const lastMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
-  const events = [
-    ...readEvents(monthFile(lastMonth)),
-    ...readEvents(monthFile(now)),
-  ].filter((e) => e.session !== session);
+  return [...readEvents(monthFile(lastMonth)), ...readEvents(monthFile(now))].filter(
+    (e) => e.session !== session
+  );
+}
+
+function usualReplyWords(history: TurnEvent[]): number | null {
+  const replies = history.flatMap((e) => (e.reply ? [e.reply.words] : []));
+  return replies.length >= BASELINE_MIN_SAMPLES ? median(replies) : null;
+}
+
+/** The user's own normal, measured on their history. */
+function baseline(events: TurnEvent[]): Baseline {
   const gaps = events
     .filter((e) => e.gapSec !== null && !e.afterBreak)
     .map((e) => e.gapSec);
@@ -239,7 +250,25 @@ function sampleReaction(event: TurnEvent, text: string, track: SessionTrack): vo
   });
 }
 
-/** Logs the turn and returns a reminder when the session's picture changed. */
+/** Only while the user still wants less: once the mood is back to usual, length is not the point. */
+function reminderForIgnoredHint(
+  complied: boolean | null,
+  moodKey: string,
+  replyWords: number | undefined,
+  usualReply: number | null,
+  history: TurnEvent[]
+): string | null {
+  if (complied !== false || !asksForLess(moodKey)) return null;
+  if (replyWords === undefined || usualReply === null) return null;
+  return ignoredHintReminder(replyWords, usualReply, shorterApprovedMore(history));
+}
+
+function joinReminders(...reminders: (string | null)[]): string | null {
+  const said = reminders.filter((r): r is string => r !== null);
+  return said.length ? said.join("\n") : null;
+}
+
+/** Logs the turn and returns a reminder when the session's picture changed, or a hint went unheeded. */
 export function observeTurn(
   prompt: string,
   session: string | undefined,
@@ -250,14 +279,24 @@ export function observeTurn(
   const text = stripInjectedTags(prompt);
   if (!text) return null;
   const track = trackOf(session);
+  const history = historyOutside(session, now);
+  const usualReply = usualReplyWords(history);
   const event = measureTurn(text, session, track, now, channel);
+  const replyWords = event.reply?.words;
+  const complied = hearsPromptContext()
+    ? followedHint(track.mood, replyWords, usualReply)
+    : null;
   const recent = [...track.recent, event].slice(-RECENT_KEPT);
-  const mood = readMood(recent, baseline(session, now));
-  const reminder = moodReminder(mood, track.mood ?? "");
+  const mood = readMood(recent, baseline(history));
+  const reminder = joinReminders(
+    moodReminder(mood, track.mood ?? ""),
+    reminderForIgnoredHint(complied, mood.key, replyWords, usualReply, history)
+  );
   appendEvent({
     ...event,
     mood: mood.key,
     hinted: reminder !== null && hearsPromptContext(),
+    ...(complied !== null && { complied }),
   });
   sampleReaction(event, text, track);
   writeTrack(session, {

@@ -5,6 +5,15 @@
 
 import type { TurnEvent } from "../../hooks/lib/interaction";
 import { median } from "../../hooks/lib/interaction-mood";
+import {
+  approvedShare,
+  hasEnoughReplies,
+  isEvidence,
+  reactedReplies,
+  type Side,
+  type Split,
+  splits,
+} from "../../hooks/lib/interaction-preferences";
 
 const LABELS = ["short", "long", "fast", "skimming", "friction"] as const;
 
@@ -13,6 +22,12 @@ interface ReplyUnderMood {
   words: number;
   approved: boolean;
   corrected: boolean;
+  complied?: boolean;
+}
+
+interface HintFollowing {
+  checked: number;
+  followed: number;
 }
 
 interface ReplyStats {
@@ -20,6 +35,7 @@ interface ReplyStats {
   medianWords: number | null;
   approvedShare: number;
   correctedShare: number;
+  followed: HintFollowing;
 }
 
 interface AgentCounts {
@@ -38,6 +54,17 @@ export interface InteractionSummary {
   unlogged: number;
   usual: ReplyStats;
   byLabel: Record<string, ReplyStats>;
+  approvals: Approvals;
+  approvalsByChannel: Record<string, Approvals>;
+}
+
+interface Approvals {
+  reacted: number;
+  splits: Split[];
+}
+
+function approvals(events: TurnEvent[]): Approvals {
+  return { reacted: reactedReplies(events), splits: splits(events) };
 }
 
 function tally(values: string[]): Record<string, number> {
@@ -56,6 +83,10 @@ function stats(replies: ReplyUnderMood[]): ReplyStats {
     medianWords: median(replies.map((r) => r.words)),
     approvedShare: share(replies, (r) => r.approved),
     correctedShare: share(replies, (r) => r.corrected),
+    followed: {
+      checked: replies.filter((r) => r.complied !== undefined).length,
+      followed: replies.filter((r) => r.complied === true).length,
+    },
   };
 }
 
@@ -71,6 +102,7 @@ function repliesUnderMood(events: TurnEvent[]): ReplyUnderMood[] {
         words: e.reply.words,
         approved: e.reaction === "approved",
         corrected: e.reaction === "corrected" || e.reaction === "repeated",
+        complied: e.complied,
       });
     lastMood.set(e.session, e.mood);
   }
@@ -109,7 +141,18 @@ export function summarize(events: TurnEvent[]): InteractionSummary {
         stats(replies.filter((r) => r.labels.includes(label))),
       ])
     ),
+    approvals: approvals(events),
+    approvalsByChannel: approvalsByChannel(events),
   };
+}
+
+function approvalsByChannel(events: TurnEvent[]): Record<string, Approvals> {
+  const channels = Map.groupBy(events, (e) => e.channel ?? "unknown");
+  return Object.fromEntries(
+    [...channels]
+      .map(([channel, turns]) => [channel, approvals(turns)] as const)
+      .filter(([, a]) => a.reacted > 0)
+  );
 }
 
 function pct(n: number): string {
@@ -133,16 +176,50 @@ function words(s: ReplyStats): string {
 
 function labelLine(label: string, s: ReplyStats, usual: ReplyStats): string {
   if (s.replies === 0) return `  ${label.padEnd(9)} no replies yet`;
-  return [
+  const parts = [
     `  ${label.padEnd(9)} ${s.replies} replies`,
     `median ${words(s)} words (usual ${words(usual)})`,
     `approved ${pct(s.approvedShare)} (usual ${pct(usual.approvedShare)})`,
     `corrected ${pct(s.correctedShare)} (usual ${pct(usual.correctedShare)})`,
-  ].join(" · ");
+  ];
+  if (s.followed.checked)
+    parts.push(`followed ${s.followed.followed} of ${s.followed.checked}`);
+  return parts.join(" · ");
 }
 
 function plural(n: number, noun: string, nouns = `${noun}s`): string {
   return `${n} ${n === 1 ? noun : nouns}`;
+}
+
+function approvedOf(s: Side): string {
+  return `${pct(approvedShare(s))} of ${s.replies}`;
+}
+
+function splitLine(split: Split): string {
+  const head = `  ${split.shape}:`;
+  if (!hasEnoughReplies(split))
+    return `${head} too few replies (${split.has.replies} against ${split.lacks.replies})`;
+  if (!isEvidence(split))
+    return `${head} no real difference (${approvedOf(split.has)} against ${approvedOf(split.lacks)})`;
+  return `${head} approved ${approvedOf(split.has)} · ${split.opposite}: ${approvedOf(split.lacks)}`;
+}
+
+function approvalLines(title: string, a: Approvals): string[] {
+  return [
+    "",
+    `${title}, from ${plural(a.reacted, "reacted reply", "reacted replies")}:`,
+    ...a.splits.map(splitLine),
+  ];
+}
+
+function allApprovalLines(summary: InteractionSummary): string[] {
+  if (summary.approvals.reacted === 0) return [];
+  return [
+    ...approvalLines("What gets approved", summary.approvals),
+    ...Object.entries(summary.approvalsByChannel).flatMap(([channel, a]) =>
+      approvalLines(`On ${channel}`, a)
+    ),
+  ];
 }
 
 function agentLines(agents: Record<string, AgentCounts>): string[] {
@@ -171,6 +248,7 @@ export function reportLines(summary: InteractionSummary, days: number): string[]
     "",
     "Replies written while a label was active, against replies while none was:",
     ...LABELS.map((label) => labelLine(label, summary.byLabel[label], summary.usual)),
+    ...allApprovalLines(summary),
   ];
   if (summary.unlogged)
     lines.push(

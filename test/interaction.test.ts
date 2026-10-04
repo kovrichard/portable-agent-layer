@@ -219,6 +219,129 @@ describe("telling the agent", () => {
   });
 });
 
+function pastTurn(replyWords: number, reaction: string | null = null): string {
+  return JSON.stringify({
+    session: "old",
+    words: 30,
+    gapSec: 120,
+    afterBreak: false,
+    reply: { words: replyWords, listItems: 0, headings: 0, asked: false },
+    reaction,
+  });
+}
+
+function seedHistory(history: string[]) {
+  mkdirSync(eventsDir(), { recursive: true });
+  writeFileSync(resolve(eventsDir(), "2026-09.jsonl"), `${history.join("\n")}\n`);
+}
+
+function seedReplyHistory(replyWords: number) {
+  seedHistory(Array.from({ length: 25 }, () => pastTurn(replyWords)));
+}
+
+function seedShortRepliesApprovedMore() {
+  const reacted = (words: number, approved: number) =>
+    Array.from({ length: 20 }, (_, i) =>
+      pastTurn(words, i < approved ? "approved" : "follow-up")
+    );
+  seedHistory([...reacted(60, 10), ...reacted(300, 2)]);
+}
+
+function settleIntoFastShort(session: string): void {
+  observeTurn("start", session, T0);
+  for (const i of [1, 2, 3, 4]) fastShortTurn(session, i);
+}
+
+describe("checking the hint worked", () => {
+  test("a reply that ignores a hint for less gets a reminder with numbers", () => {
+    seedReplyHistory(200);
+    settleIntoFastShort("s1");
+    recordReply("s1", words(300), at(150));
+    const reminder = observeTurn("ok", "s1", at(160));
+
+    expect(reminder).toContain("Your last reply was 300 words");
+    expect(reminder).toContain("usually 200");
+    expect(reminder).toContain("under 100 words");
+    expect(reminder).not.toContain("approved");
+  });
+
+  test("the reminder cites the user's own approvals when they favour shorter replies", () => {
+    seedShortRepliesApprovedMore();
+    settleIntoFastShort("s1");
+    recordReply("s1", words(300), at(150));
+    const reminder = observeTurn("ok", "s1", at(160));
+
+    expect(reminder).toContain(
+      "Replies under 180 words were approved 50% of the time, longer ones 10%."
+    );
+  });
+
+  test("a reply that follows the hint gets nothing more", () => {
+    seedReplyHistory(200);
+    settleIntoFastShort("s1");
+    recordReply("s1", words(60), at(150));
+
+    expect(observeTurn("ok", "s1", at(160))).toBeNull();
+  });
+
+  test("without a history of replies, no target is made up", () => {
+    settleIntoFastShort("s1");
+    recordReply("s1", words(300), at(150));
+
+    expect(observeTurn("ok", "s1", at(160))).toBeNull();
+  });
+
+  test("logs whether each reply written under a hint for less followed it", () => {
+    seedReplyHistory(200);
+    settleIntoFastShort("s1");
+    recordReply("s1", words(300), at(150));
+    observeTurn("ok", "s1", at(160));
+
+    const sessionTurns = loggedEvents().filter((e) => e.session === "s1");
+    expect(sessionTurns.map((e) => e.complied)).toEqual([
+      undefined,
+      undefined,
+      undefined,
+      true,
+      true,
+      false,
+    ]);
+  });
+
+  test("an agent that never hears hints is not judged on them", () => {
+    process.env.PAL_AGENT = "cursor";
+    seedReplyHistory(200);
+    settleIntoFastShort("s1");
+    recordReply("s1", words(300), at(150));
+
+    expect(observeTurn("ok", "s1", at(160))).toBeNull();
+    expect(lastEvent().complied).toBeUndefined();
+  });
+
+  test("once the user is back to usual, length is not nagged", () => {
+    seedReplyHistory(200);
+    settleIntoFastShort("s1");
+    recordReply("s1", words(300), at(150));
+    const back = observeTurn(words(40), "s1", at(150 + 3 * 3600));
+
+    expect(back).toContain("back to their usual pattern");
+    expect(back).not.toContain("still wants less");
+  });
+
+  test("a label that asks for nothing in particular is not checked", () => {
+    seedReplyHistory(200);
+    observeTurn("start", "s1", T0);
+    for (const i of [1, 2, 3, 4]) {
+      recordReply("s1", "an answer", at(i * 200));
+      observeTurn(words(100), "s1", at(i * 200 + 100));
+    }
+    recordReply("s1", words(300), at(1000));
+    observeTurn(words(100), "s1", at(1100));
+
+    expect(lastEvent().complied).toBeUndefined();
+  });
+});
+
 function turn(overrides: Partial<MoodTurn>): MoodTurn {
   return {
     words: 30,
