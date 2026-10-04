@@ -1,0 +1,129 @@
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { dirname, resolve } from "node:path";
+import { palPkg } from "../../hooks/lib/paths";
+import { findBinaryOnPath } from "../../hooks/lib/which";
+import type { ToolCheck } from "./agents";
+import { type Finding, type Fix, failing, optional, passed, warning } from "./finding";
+import { osReleaseField, readOsRelease } from "./os-release";
+import { versionControlFindings } from "./version-control";
+
+interface PlaywrightBuild {
+  version: string;
+  revision: string;
+}
+
+interface BrowserHost {
+  browsersPath: string;
+  playwright: PlaywrightBuild | null;
+  platform: NodeJS.Platform;
+  arch: string;
+  osRelease: string;
+}
+
+const NEWEST_UBUNTU_PLAYWRIGHT_KNOWS = 24.04;
+
+function playwrightBrowsersPath(): string {
+  if (process.env.PLAYWRIGHT_BROWSERS_PATH) return process.env.PLAYWRIGHT_BROWSERS_PATH;
+  const home = homedir();
+  if (process.platform === "darwin") return resolve(home, "Library/Caches/ms-playwright");
+  if (process.platform === "win32") return resolve(home, "AppData/Local/ms-playwright");
+  return resolve(home, ".cache/ms-playwright");
+}
+
+function installedPlaywright(): PlaywrightBuild | null {
+  try {
+    const pkg = Bun.resolveSync("playwright-core/package.json", palPkg());
+    const { version } = JSON.parse(readFileSync(pkg, "utf-8"));
+    const { browsers } = JSON.parse(
+      readFileSync(resolve(dirname(pkg), "browsers.json"), "utf-8")
+    );
+    const shell = (browsers as { name: string; revision: string }[]).find(
+      (b) => b.name === "chromium-headless-shell"
+    );
+    return shell ? { version, revision: shell.revision } : null;
+  } catch {
+    return null;
+  }
+}
+
+function hasChromium(host: BrowserHost): boolean {
+  if (!existsSync(host.browsersPath)) return false;
+  const dirs = readdirSync(host.browsersPath);
+  const revision = host.playwright?.revision;
+  return revision
+    ? dirs.some(
+        (d) => d === `chromium_headless_shell-${revision}` || d === `chromium-${revision}`
+      )
+    : dirs.some((d) => d.startsWith("chromium"));
+}
+
+function playwrightPlatformOverride(host: BrowserHost): string {
+  if (host.platform !== "linux") return "";
+  if (osReleaseField(host.osRelease, "ID") !== "ubuntu") return "";
+  const version = Number.parseFloat(osReleaseField(host.osRelease, "VERSION_ID"));
+  if (!(version > NEWEST_UBUNTU_PLAYWRIGHT_KNOWS)) return "";
+  return `PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-${host.arch === "arm64" ? "arm64" : "x64"} `;
+}
+
+export function playwrightFinding(host: BrowserHost): Finding {
+  if (hasChromium(host)) return passed("playwright", "Playwright Chromium installed");
+  const pinned = host.playwright ? `playwright@${host.playwright.version}` : "playwright";
+  const override = playwrightPlatformOverride(host);
+  return warning(
+    "playwright.missing",
+    "Playwright's Chromium is not installed — create-pdf, consulting-report and screenshots fail",
+    {
+      say: override
+        ? "Install it as Ubuntu 24.04, which Playwright supports"
+        : "Install it",
+      command: `${override}bun x ${pinned} install chromium`,
+    }
+  );
+}
+
+function palOnPathFinding(): Finding {
+  const pal = findBinaryOnPath("pal");
+  return pal
+    ? passed("pal.path", `pal on PATH — ${pal}`)
+    : failing("pal.path", "pal is not on PATH — skills that run 'pal cli …' fail", {
+        say: "Install PAL globally",
+        command: "bun add -g portable-agent-layer",
+      });
+}
+
+function rtkInstall(): Fix {
+  if (process.platform === "win32")
+    return {
+      say: "Download rtk.exe from https://github.com/rtk-ai/rtk/releases and add it to PATH",
+    };
+  if (process.platform === "darwin")
+    return { say: "Install rtk", command: "brew install rtk" };
+  return {
+    say: "Install rtk",
+    command:
+      "curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh",
+  };
+}
+
+function rtkFinding(rtk: ToolCheck): Finding {
+  return rtk.available
+    ? passed("rtk", rtk.version || "rtk")
+    : optional("rtk.missing", "rtk — compresses long command output", rtkInstall());
+}
+
+export function environmentFindings(rtk: ToolCheck): Finding[] {
+  return [
+    passed("bun", `Bun ${Bun.version}`),
+    palOnPathFinding(),
+    playwrightFinding({
+      browsersPath: playwrightBrowsersPath(),
+      playwright: installedPlaywright(),
+      platform: process.platform,
+      arch: process.arch,
+      osRelease: readOsRelease(),
+    }),
+    rtkFinding(rtk),
+    ...versionControlFindings(),
+  ];
+}

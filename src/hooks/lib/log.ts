@@ -79,9 +79,10 @@ function rotateIfNeeded(path: string): void {
   }
 }
 
-export interface HookHealth {
-  totalErrors: number;
-  lastError: string | null;
+export interface HookErrorGroup {
+  source: string;
+  count: number;
+  last: string;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -107,18 +108,30 @@ function loggedAt(line: string): number {
   return match ? Date.parse(`${match[1]}T${match[2]}Z`) : 0;
 }
 
-export function recentHookErrors(now: number = Date.now()): HookHealth {
+function groupBySource(errors: string[]): HookErrorGroup[] {
+  const groups = new Map<string, HookErrorGroup>();
+  for (const error of errors) {
+    const source = /^([^:]+):/.exec(error)?.[1] ?? "unknown";
+    const group = groups.get(source) ?? { source, count: 0, last: "" };
+    group.count++;
+    group.last = error
+      .slice(source.length + 1)
+      .trim()
+      .slice(0, 120);
+    groups.set(source, group);
+  }
+  return [...groups.values()].sort((a, b) => b.count - a.count);
+}
+
+export function recentHookErrors(now: number = Date.now()): HookErrorGroup[] {
   try {
     const recent = readAllLogs()
       .split("\n")
-      .filter((line) => line.includes("] ERROR ") && loggedAt(line) > now - DAY_MS);
-    const last = recent.at(-1);
-    return {
-      totalErrors: recent.length,
-      lastError: last ? last.replace(/^\[.*?\] ERROR /, "").slice(0, 120) : null,
-    };
+      .filter((line) => line.includes("] ERROR ") && loggedAt(line) > now - DAY_MS)
+      .map((line) => line.replace(/^\[.*?\] ERROR /, ""));
+    return groupBySource(recent);
   } catch {
-    return { totalErrors: 0, lastError: null };
+    return [];
   }
 }
 

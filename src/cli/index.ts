@@ -47,17 +47,14 @@ import {
   summarize,
 } from "../hooks/lib/import-merge";
 import { inference, previewInferenceRoute } from "../hooks/lib/inference";
-import { logDebug, recentHookErrors } from "../hooks/lib/log";
+import { logDebug } from "../hooks/lib/log";
 import { ensureRegistered, writeRegistryEntry } from "../hooks/lib/machine";
-import { opencodeBackgroundModel } from "../hooks/lib/opencode-config";
 import { palHome, palPkg, paths, platform, toPath } from "../hooks/lib/paths";
-import { auditBindings, describeBindingIssue } from "../hooks/lib/projects";
 import { telosStatus } from "../hooks/lib/telos-topics";
-import { findBinaryOnPath } from "../hooks/lib/which";
 import { log } from "../targets/lib";
 import { builtinToolVerbs, runBuiltinTool } from "./builtin-tools";
-import { versionControlLines } from "./doctor-tools";
-import { checkPendingMigrations } from "./migrate";
+import { type DoctorResult, detectAgents } from "./doctor/agents";
+import { runDoctor } from "./doctor/run";
 import { findSessionAgent, NO_SESSION_AGENT_MESSAGE } from "./session-agent";
 
 const allArgs = process.argv.slice(2);
@@ -74,53 +71,6 @@ if (allArgs[0] === "cli") {
 }
 
 // ── Session: pal [args] ──
-
-interface ToolCheck {
-  name: string;
-  available: boolean;
-  version?: string;
-}
-
-function checkTool(cmd: string, versionArgs: string[] = ["--version"]): ToolCheck {
-  try {
-    const result = spawnSync(cmd, versionArgs, {
-      stdio: ["ignore", "pipe", "pipe"],
-      shell: true,
-      timeout: 5000,
-    });
-    if (result.status === 0) {
-      const version = (result.stdout?.toString() || "").trim().split("\n")[0];
-      return { name: cmd, available: true, version };
-    }
-  } catch {
-    // not found
-  }
-  return { name: cmd, available: false };
-}
-
-/**
- * Copilot ships as a VS Code extension as well as a CLI, and the extension puts
- * no `copilot` binary on PATH — but both read hooks, skills and agents out of
- * ~/.copilot. Fall back to that directory so PAL's copilot checks still run.
- */
-function checkCopilot(): ToolCheck {
-  const cli = checkTool("copilot", ["version"]);
-  if (cli.available) return cli;
-  if (existsSync(platform.copilotDir())) {
-    return { name: "copilot", available: true, version: "~/.copilot (no CLI on PATH)" };
-  }
-  return cli;
-}
-
-/**
- * The Cursor CLI installs `cursor-agent` (and `agent`) and no `cursor` command;
- * `cursor` is the editor's shell command. Both read ~/.cursor, so either counts.
- */
-function checkCursor(): ToolCheck {
-  const cli = checkTool("cursor-agent");
-  if (cli.available) return cli;
-  return checkTool("cursor");
-}
 
 async function session(sessionArgs: string[]) {
   const agent = findSessionAgent();
@@ -223,10 +173,11 @@ async function runCli(command: string | undefined, args: string[]) {
       await status();
       break;
     case "doctor": {
-      doctor();
+      const exitCode = runDoctor(args);
       if (args.includes("--probe-inference") || args.includes("--probe")) {
         await probeInference();
       }
+      process.exit(exitCode);
       break;
     }
     case "migrate": {
@@ -346,7 +297,8 @@ function showHelp() {
     pal cli export [path] [--dry-run]       Export state to zip
     pal cli import [path] [--dry-run]       Merge state from zip (--overwrite to replace)
     pal cli status                          Show PAL configuration
-    pal cli doctor [--probe-inference]      Check prerequisites and health (--probe fires real inference per route)
+    pal cli doctor [--verbose] [--json]     Find what is wrong and how to fix it; exits 1 on any failure
+                   [--probe-inference]      Also fire real inference per route
     pal cli migrate [--list] [--dry-run]    Run pending data migrations
     pal cli <tool> [args]                   Run a built-in agent tool ('<tool> --help' for its flags):
                                             ${builtinToolVerbs.join(" · ")}
@@ -419,7 +371,7 @@ function parseTargets(args: string[]): Targets {
 /** Resolve targets against available agents. Errors if explicitly requested but missing. */
 function resolveTargets(args: string[], health?: DoctorResult): Targets {
   const requested = parseTargets(args);
-  const h = health || doctor(true);
+  const h = health || detectAgents();
   const explicit = args.some(
     (a) =>
       a === "--claude" ||
@@ -472,140 +424,6 @@ function resolveTargets(args: string[], health?: DoctorResult): Targets {
   return targets;
 }
 
-// ── Hook health ──
-
-function checkClaudeHooksRegistered(): boolean {
-  const settingsPath = resolve(platform.claudeDir(), "settings.json");
-  if (!existsSync(settingsPath)) return false;
-  try {
-    const settings = JSON.parse(readFileSync(settingsPath, "utf-8"));
-    const groups = settings?.hooks?.SessionStart;
-    if (!Array.isArray(groups)) return false;
-    return groups.some((g: { hooks?: { command?: string }[] }) =>
-      g?.hooks?.some((h) => h?.command?.includes("LoadContext"))
-    );
-  } catch {
-    return false;
-  }
-}
-
-function checkCursorHooksRegistered(): boolean {
-  const hooksPath = resolve(platform.cursorDir(), "hooks.json");
-  if (!existsSync(hooksPath)) return false;
-  try {
-    const data = JSON.parse(readFileSync(hooksPath, "utf-8"));
-    const hooks = data?.hooks?.sessionStart;
-    if (!Array.isArray(hooks)) return false;
-    return hooks.some((h: { command?: string }) => h?.command?.includes("LoadContext"));
-  } catch {
-    return false;
-  }
-}
-
-function checkOpencodePluginInstalled(): boolean {
-  return existsSync(resolve(platform.opencodeDir(), "plugins", "pal-plugin.ts"));
-}
-
-function checkCopilotHooksRegistered(): boolean {
-  return existsSync(resolve(platform.copilotDir(), "hooks", "pal-hooks.json"));
-}
-
-function checkCodexHooksRegistered(): boolean {
-  const hooksPath = resolve(platform.codexDir(), "hooks.json");
-  if (!existsSync(hooksPath)) return false;
-  try {
-    const data = JSON.parse(readFileSync(hooksPath, "utf-8"));
-    const entries = data?.hooks?.SessionStart;
-    if (!Array.isArray(entries)) return false;
-    return entries.some((entry: { command?: string; hooks?: { command?: string }[] }) => {
-      if (entry?.command?.includes("LoadContext")) return true;
-      return entry?.hooks?.some((h) => h?.command?.includes("LoadContext")) ?? false;
-    });
-  } catch {
-    return false;
-  }
-}
-
-function checkCopilotInstructionsPresent(): boolean {
-  const instructionsDir = resolve(platform.copilotDir(), "instructions");
-  if (!existsSync(instructionsDir)) return false;
-  return readdirSync(instructionsDir).some(
-    (f) => f.startsWith("pal-") && f.endsWith(".instructions.md")
-  );
-}
-
-// ── Install integrity (Tier 2 doctor checks) ──
-
-/** Hook-config keys that carry a shell command: cross-platform and per-shell variants. */
-function isHookCommandField(key: string): boolean {
-  return key === "command" || key === "bash" || key === "powershell";
-}
-
-/** Recursively collect every command-carrying field value in a hook-config JSON. */
-function extractAllHookCommands(obj: unknown, out: string[] = []): string[] {
-  if (Array.isArray(obj)) {
-    for (const item of obj) extractAllHookCommands(item, out);
-  } else if (obj && typeof obj === "object") {
-    for (const [k, v] of Object.entries(obj)) {
-      if (isHookCommandField(k) && typeof v === "string") {
-        out.push(v);
-      } else {
-        extractAllHookCommands(v, out);
-      }
-    }
-  }
-  return out;
-}
-
-interface HookPrefixCheck {
-  ok: boolean;
-  total: number;
-  missing: number;
-  firstMissing?: string;
-}
-
-/**
- * True when a hook command names its agent, by env prefix or by argv flag.
- *
- * An env prefix only parses in one shell family, so hook configs whose host
- * shell is unknown declare the agent with a shell-agnostic `--agent=` flag.
- */
-function declaresAgent(cmd: string, agentName: string): boolean {
-  return (
-    cmd.startsWith(`PAL_AGENT=${agentName} `) ||
-    cmd.startsWith(`$env:PAL_AGENT='${agentName}'; `) ||
-    cmd.includes(`--agent=${agentName}`)
-  );
-}
-
-/** Verify every command in an installed hook file names `<agent>` as its agent. */
-function checkAgentHookPrefix(filePath: string, agentName: string): HookPrefixCheck {
-  if (!existsSync(filePath)) return { ok: false, total: 0, missing: 0 };
-  try {
-    const data = JSON.parse(readFileSync(filePath, "utf-8"));
-    const commands = extractAllHookCommands(data.hooks ?? data);
-    const missing = commands.filter((c) => !declaresAgent(c, agentName));
-    return {
-      ok: commands.length > 0 && missing.length === 0,
-      total: commands.length,
-      missing: missing.length,
-      firstMissing: missing[0]?.slice(0, 80),
-    };
-  } catch {
-    return { ok: false, total: 0, missing: 0 };
-  }
-}
-
-interface FreshnessCheck {
-  ok: boolean;
-  reason?: string;
-}
-
-/**
- * Verify the installed opencode plugin is at least as new as the source. Catches
- * the "stale install" failure mode we hit live — plugin file is a copy, not a
- * symlink, so source edits don't reach the running opencode until reinstall.
- */
 /**
  * Probe every supported agent route with a tiny real inference call.
  * Sequential (concurrent multi-CLI spawns trigger the empty-abort race we
@@ -662,438 +480,6 @@ async function probeInference(): Promise<void> {
   }
 }
 
-function checkOpencodePluginFresh(): FreshnessCheck {
-  const installedPath = resolve(platform.opencodeDir(), "plugins", "pal-plugin.ts");
-  const sourcePath = resolve(palPkg(), "src", "targets", "opencode", "plugin.ts");
-  if (!existsSync(installedPath))
-    return { ok: false, reason: "installed plugin missing" };
-  if (!existsSync(sourcePath)) return { ok: true }; // can't compare; assume installed is fine
-  try {
-    const installedMtime = statSync(installedPath).mtimeMs;
-    const sourceMtime = statSync(sourcePath).mtimeMs;
-    if (installedMtime >= sourceMtime) return { ok: true };
-    const ageMin = Math.round((sourceMtime - installedMtime) / 60000);
-    return {
-      ok: false,
-      reason: `source is ${ageMin}m newer than installed — run 'pal cli install --opencode'`,
-    };
-  } catch {
-    return { ok: true };
-  }
-}
-
-function playwrightBrowsersPath(): string {
-  if (process.env.PLAYWRIGHT_BROWSERS_PATH) return process.env.PLAYWRIGHT_BROWSERS_PATH;
-  const home = homedir();
-  if (process.platform === "darwin") return resolve(home, "Library/Caches/ms-playwright");
-  if (process.platform === "win32") return resolve(home, "AppData/Local/ms-playwright");
-  return resolve(home, ".cache/ms-playwright");
-}
-
-function checkPlaywrightChromium(): boolean {
-  const base = playwrightBrowsersPath();
-  if (!existsSync(base)) return false;
-  try {
-    return readdirSync(base).some((f) => f.startsWith("chromium-"));
-  } catch {
-    return false;
-  }
-}
-
-function rtkInstallHint(): string {
-  if (process.platform === "win32")
-    return "download rtk.exe from https://github.com/rtk-ai/rtk/releases and add it to PATH";
-  if (process.platform === "darwin") return "`brew install rtk`";
-  return "`curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh`";
-}
-
-// ── Doctor ──
-
-interface DoctorResult {
-  bun: ToolCheck;
-  claude: ToolCheck;
-  opencode: ToolCheck;
-  cursor: ToolCheck;
-  copilot: ToolCheck;
-  codex: ToolCheck;
-  rtk: ToolCheck;
-  hasAgent: boolean;
-}
-
-function doctor(silent = false): DoctorResult {
-  // Allow CI/tests to skip agent detection
-  if (process.env.PAL_SKIP_DOCTOR === "1") {
-    return {
-      bun: { name: "bun", available: true, version: Bun.version },
-      claude: { name: "claude", available: true },
-      opencode: { name: "opencode", available: true },
-      cursor: { name: "cursor", available: true },
-      copilot: { name: "copilot", available: true },
-      codex: { name: "codex", available: true },
-      rtk: { name: "rtk", available: true },
-      hasAgent: true,
-    };
-  }
-
-  const bun = { name: "bun", available: true, version: Bun.version };
-  const claude = checkTool("claude");
-  const opencode = checkTool("opencode");
-  const cursor = checkCursor();
-  const copilot = checkCopilot();
-  const codex = checkTool("codex");
-  const rtk = checkTool("rtk");
-  const hasAgent =
-    claude.available ||
-    opencode.available ||
-    cursor.available ||
-    copilot.available ||
-    codex.available;
-
-  const home = palHome();
-  const telosCount = (() => {
-    try {
-      return readdirSync(resolve(home, "telos")).filter((f) => f.endsWith(".md")).length;
-    } catch {
-      return 0;
-    }
-  })();
-
-  if (!silent) {
-    const ok = (msg: string) => console.log(`  \x1b[32m\u2713\x1b[0m ${msg}`);
-    const warn = (msg: string) => console.log(`  \x1b[33m\u26A0\x1b[0m ${msg}`);
-    const fail = (msg: string) => console.log(`  \x1b[31m\u2717\x1b[0m ${msg}`);
-    const info = (msg: string) => console.log(`  \x1b[90m\u00B7\x1b[0m ${msg}`);
-
-    console.log("");
-    log.info("Prerequisites");
-    ok(`Bun ${bun.version}`);
-    const palBin = findBinaryOnPath("pal");
-    palBin
-      ? ok(`pal on PATH — ${palBin}`)
-      : fail(
-          "pal — not on PATH; skills and docs invoke tools as 'pal cli ...', which will not resolve. Install globally: bun add -g portable-agent-layer"
-        );
-    claude.available
-      ? ok(`Claude Code ${claude.version || ""}`.trim())
-      : fail("Claude Code — not found");
-    opencode.available
-      ? ok(`opencode ${opencode.version || ""}`.trim())
-      : fail("opencode — not found");
-    cursor.available
-      ? ok(`Cursor ${cursor.version || ""}`.trim())
-      : fail("Cursor — not found");
-    copilot.available
-      ? ok(`Copilot ${copilot.version || ""}`.trim())
-      : fail("Copilot — not found");
-    codex.available
-      ? ok(`Codex ${codex.version || ""}`.trim())
-      : fail("Codex — not found");
-    checkPlaywrightChromium()
-      ? ok("Playwright Chromium installed")
-      : fail(
-          "Playwright Chromium — not found (run 'pal cli install' or 'bunx playwright install chromium')"
-        );
-    rtk.available
-      ? ok(rtk.version || "rtk")
-      : info(
-          `rtk — not installed (optional; enables Bash output compression — ${rtkInstallHint()})`
-        );
-    const print = { ok, warn, info };
-    for (const line of versionControlLines()) print[line.level](line.text);
-
-    console.log("");
-    log.info("PAL state");
-    ok(`PAL home: ${home}`);
-    telosCount > 0 ? ok(`TELOS: ${telosCount} files`) : fail("TELOS: not scaffolded");
-
-    // Identity
-    const palSettingsPath = resolve(home, "memory", "pal-settings.json");
-    if (existsSync(palSettingsPath)) {
-      try {
-        const s = JSON.parse(readFileSync(palSettingsPath, "utf-8"));
-        const hasIdentity = s?.identity?.principal?.name && s?.identity?.ai?.name;
-        hasIdentity
-          ? ok("Identity configured")
-          : warn("Identity — incomplete (run 'pal cli install')");
-      } catch {
-        warn("Identity — could not read pal-settings.json");
-      }
-    } else {
-      warn("Identity — pal-settings.json missing (run 'pal cli install')");
-    }
-
-    // AGENTS.md
-    const agentsMdPath = resolve(platform.opencodeDir(), "AGENTS.md");
-    existsSync(agentsMdPath)
-      ? ok("AGENTS.md present")
-      : fail("AGENTS.md — missing (run 'pal cli install')");
-
-    if (claude.available) {
-      const claudeMdPath = resolve(platform.claudeDir(), "CLAUDE.md");
-      existsSync(claudeMdPath)
-        ? ok("CLAUDE.md present")
-        : fail("CLAUDE.md — missing (run 'pal cli install --claude')");
-    }
-
-    // An empty TELOS is a normal state, not a broken install: the onboarding
-    // skill fills it whenever the user is ready, which may be months from now.
-    {
-      const unanswered = telosStatus(home)
-        .filter((topic) => topic.priority && !topic.answered)
-        .map((topic) => topic.key);
-      unanswered.length === 0
-        ? ok("TELOS answered")
-        : warn(
-            `TELOS unanswered — ${unanswered.join(", ")} (ask your agent to onboard you)`
-          );
-    }
-
-    // Project bindings — where each project lives on THIS machine
-    {
-      const issues = auditBindings();
-      if (issues.length === 0) {
-        ok("Project bindings healthy");
-      } else {
-        for (const issue of issues) warn(`Binding: ${describeBindingIssue(issue)}`);
-      }
-    }
-
-    // Dependencies (PAL's own npm packages)
-    const nodeModulesPath = resolve(palPkg(), "node_modules");
-    existsSync(nodeModulesPath)
-      ? ok("Dependencies installed")
-      : fail("Dependencies missing — run 'pal cli install'");
-
-    // Skills (per installed agent)
-    console.log("");
-    log.info("Skills");
-    const countSkillsIn = (dir: string) =>
-      existsSync(dir)
-        ? readdirSync(dir).filter((f) => existsSync(resolve(dir, f, "SKILL.md"))).length
-        : 0;
-    if (claude.available) {
-      const n = countSkillsIn(resolve(platform.claudeDir(), "skills"));
-      n > 0
-        ? ok(`Claude Code skills: ${n}`)
-        : warn("Claude Code skills — none found (run 'pal cli install --claude')");
-    }
-    if (opencode.available) {
-      const n = countSkillsIn(resolve(platform.agentsDir(), "skills"));
-      n > 0
-        ? ok(`opencode skills: ${n}`)
-        : warn("opencode skills — none found (run 'pal cli install --opencode')");
-    }
-    if (cursor.available) {
-      const n = countSkillsIn(resolve(platform.cursorDir(), "skills"));
-      n > 0
-        ? ok(`Cursor skills: ${n}`)
-        : warn("Cursor skills — none found (run 'pal cli install --cursor')");
-    }
-    if (copilot.available) {
-      const n = countSkillsIn(resolve(platform.copilotDir(), "skills"));
-      n > 0
-        ? ok(`Copilot skills: ${n}`)
-        : warn("Copilot skills — none found (run 'pal cli install --copilot')");
-    }
-    if (codex.available) {
-      const n = countSkillsIn(resolve(platform.codexDir(), "skills"));
-      n > 0
-        ? ok(`Codex skills: ${n}`)
-        : warn("Codex skills — none found (run 'pal cli install --codex')");
-    }
-
-    // Hook registration (per installed agent)
-    console.log("");
-    log.info("Hooks");
-    if (claude.available) {
-      checkClaudeHooksRegistered()
-        ? ok("Claude Code hooks registered")
-        : fail("Claude Code hooks — not registered (run 'pal cli install --claude')");
-    }
-    if (opencode.available) {
-      checkOpencodePluginInstalled()
-        ? ok("opencode plugin installed")
-        : fail("opencode plugin — not installed (run 'pal cli install --opencode')");
-    }
-    if (cursor.available) {
-      checkCursorHooksRegistered()
-        ? ok("Cursor hooks registered")
-        : fail("Cursor hooks — not registered (run 'pal cli install --cursor')");
-    }
-    if (copilot.available) {
-      checkCopilotHooksRegistered()
-        ? ok("Copilot hooks registered")
-        : fail("Copilot hooks — not registered (run 'pal cli install --copilot')");
-      checkCopilotInstructionsPresent()
-        ? ok("Copilot instructions present")
-        : warn("Copilot instructions missing (written at first session stop)");
-    }
-    if (codex.available) {
-      checkCodexHooksRegistered()
-        ? ok("Codex hooks registered")
-        : fail("Codex hooks — not registered (run 'pal cli install --codex')");
-    }
-
-    // Install integrity — verify PAL_AGENT prefix on every command in installed
-    // hook files. Catches stale installs after template changes (the exact bug
-    // we hit live for opencode + copilot). opencode uses a plugin file instead
-    // of a hooks.json, so it gets a separate freshness check.
-    console.log("");
-    log.info("Install integrity");
-    const prefixCheck = (
-      filePath: string,
-      agentName: string,
-      installCmd: string
-    ): void => {
-      const r = checkAgentHookPrefix(filePath, agentName);
-      if (r.ok) {
-        ok(`${agentName}: declared on all ${r.total} hook commands`);
-      } else if (r.total === 0) {
-        fail(`${agentName}: hook file missing or unreadable at ${filePath}`);
-      } else {
-        fail(
-          `${agentName}: ${r.missing}/${r.total} hook commands do not declare ${agentName} (run '${installCmd}')`
-        );
-        if (r.firstMissing) {
-          log.warn(`    First offender: ${r.firstMissing}…`);
-        }
-      }
-    };
-    if (claude.available) {
-      prefixCheck(
-        resolve(platform.claudeDir(), "settings.json"),
-        "claude",
-        "pal cli install --claude"
-      );
-    }
-    if (cursor.available) {
-      prefixCheck(
-        resolve(platform.cursorDir(), "hooks.json"),
-        "cursor",
-        "pal cli install --cursor"
-      );
-    }
-    if (copilot.available) {
-      prefixCheck(
-        resolve(platform.copilotDir(), "hooks", "pal-hooks.json"),
-        "copilot",
-        "pal cli install --copilot"
-      );
-    }
-    if (codex.available) {
-      prefixCheck(
-        resolve(platform.codexDir(), "hooks.json"),
-        "codex",
-        "pal cli install --codex"
-      );
-    }
-    if (opencode.available) {
-      const fresh = checkOpencodePluginFresh();
-      fresh.ok
-        ? ok("opencode plugin: source-and-installed in sync")
-        : fail(`opencode plugin: ${fresh.reason}`);
-    }
-
-    // Inference routing preview — what `inference()` would do RIGHT NOW
-    console.log("");
-    log.info("Inference");
-    {
-      const preview = previewInferenceRoute();
-      console.log(`  → Active agent: ${preview.agent}`);
-      if (preview.route === "none") {
-        fail(`Would route to: NONE — ${preview.reason}`);
-      } else if (preview.route === "disabled") {
-        warn(`Would route to: DISABLED — ${preview.reason}`);
-      } else if (preview.route.endsWith("-api")) {
-        warn(`Would route to: ${preview.route} (${preview.reason})`);
-      } else {
-        ok(`Would route to: ${preview.route} (${preview.reason})`);
-      }
-    }
-    if (opencode.available) {
-      const model = opencodeBackgroundModel();
-      model
-        ? ok(`opencode background model: ${model}`)
-        : warn(
-            `opencode background model: not pinned — background inference uses the model last picked in the TUI. Pin one with "model" in ${resolve(platform.opencodeDir(), "config.json")}`
-          );
-    }
-    if (process.env.PAL_INFERENCE_DISABLED === "1") {
-      warn(
-        "PAL_INFERENCE_DISABLED=1 — test kill-switch leaked into prod env; every inference call will return failure"
-      );
-    } else {
-      ok("PAL_INFERENCE_DISABLED is not set (production-safe)");
-    }
-
-    // Spawn-guard env vars should never appear in the user's shell — they're
-    // set ONLY in PAL-spawned subprocesses. Leaks into the user shell cause
-    // every inference call to short-circuit silently.
-    if (process.env.PAL_SPAWNED_INFERENCE) {
-      fail(
-        `PAL_SPAWNED_INFERENCE=${process.env.PAL_SPAWNED_INFERENCE} leaked into shell — every inference call will refuse. Unset it.`
-      );
-    } else {
-      ok("PAL_SPAWNED_INFERENCE not leaked (recursion guard clean)");
-    }
-    if (process.env.PAL_INFERENCE_DEPTH) {
-      fail(
-        `PAL_INFERENCE_DEPTH=${process.env.PAL_INFERENCE_DEPTH} leaked into shell — depth circuit-breaker will fire. Unset it.`
-      );
-    } else {
-      ok("PAL_INFERENCE_DEPTH not leaked (depth counter clean)");
-    }
-
-    // API key checks — both are optional safety-net fallbacks. Unset is normal
-    // for CLI-only setups; only matters if your native CLI breaks.
-    process.env.PAL_ANTHROPIC_API_KEY
-      ? ok("PAL_ANTHROPIC_API_KEY set (anthropic-api fallback available)")
-      : info("PAL_ANTHROPIC_API_KEY unset (optional — anthropic-api fallback off)");
-    process.env.PAL_OPENAI_API_KEY
-      ? ok("PAL_OPENAI_API_KEY set (openai-api fallback for codex available)")
-      : info("PAL_OPENAI_API_KEY unset (optional — openai-api fallback off)");
-    process.env.PAL_GEMINI_API_KEY
-      ? ok("PAL_GEMINI_API_KEY is set")
-      : warn("PAL_GEMINI_API_KEY — not set (optional, for YouTube analysis)");
-    process.env.PAL_XAI_API_KEY
-      ? ok("PAL_XAI_API_KEY is set")
-      : warn("PAL_XAI_API_KEY — not set (optional, for Grok researcher)");
-    process.env.PAL_PERPLEXITY_API_KEY
-      ? ok("PAL_PERPLEXITY_API_KEY is set")
-      : warn("PAL_PERPLEXITY_API_KEY — not set (optional, for Perplexity researcher)");
-
-    // Hook health from debug.log
-    const hookHealth = recentHookErrors();
-    if (hookHealth.totalErrors === 0) {
-      ok("Hooks: no recent errors");
-    } else {
-      fail(`Hooks: ${hookHealth.totalErrors} error(s) in last 24h`);
-      if (hookHealth.lastError) {
-        log.warn(`    Last: ${hookHealth.lastError}`);
-      }
-    }
-
-    // Pending migrations
-    const pendingMigrations = checkPendingMigrations();
-    if (pendingMigrations.length > 0) {
-      for (const m of pendingMigrations) {
-        const detail = m.detail ? ` (${m.detail})` : "";
-        warn(
-          `Migration pending: ${m.id} — ${m.description}${detail} → run 'pal cli migrate'`
-        );
-      }
-    }
-
-    if (!hasAgent) {
-      console.log("");
-      log.error(NO_SESSION_AGENT_MESSAGE);
-    }
-    console.log("");
-  }
-
-  return { bun, claude, opencode, cursor, copilot, codex, rtk, hasAgent };
-}
-
 // ── Commands ──
 
 async function init(args: string[]) {
@@ -1101,8 +487,8 @@ async function init(args: string[]) {
 
   banner();
 
-  // Run doctor first — abort if no agents available
-  const health = doctor(false);
+  const health = detectAgents();
+  runDoctor([], health);
   if (!health.hasAgent) {
     process.exit(1);
   }

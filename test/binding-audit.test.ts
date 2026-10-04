@@ -125,22 +125,3 @@ describe("proposeBinding", () => {
     expect(readBindings(HOME)).toEqual({});
   });
 });
-
-describe("describeBindingIssue", () => {
-  test("tells the user how to fix an unlocatable project", async () => {
-    const { describeBindingIssue } = await lib();
-    const msg = describeBindingIssue({ kind: "unlocatable", project: "alpha" });
-    expect(msg).toContain("not checked out here");
-    expect(msg).toContain("set-path alpha");
-  });
-
-  test("names both projects in a collision", async () => {
-    const { describeBindingIssue } = await lib();
-    const msg = describeBindingIssue({
-      kind: "shared",
-      path: "/w/t",
-      projects: ["orbit", "orbit-internal"],
-    });
-    expect(msg).toContain("orbit and orbit-internal");
-  });
-});
