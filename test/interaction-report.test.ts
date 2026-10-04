@@ -104,6 +104,32 @@ describe("interaction report", () => {
     expect(lines).toContain("  long      no replies yet");
   });
 
+  test("counts how often replies followed a hint for less", () => {
+    const summary = summarize([
+      turn({ mood: "short" }),
+      { ...answered(80, "approved", "short"), complied: true },
+      { ...answered(300, "follow-up", "short"), complied: false },
+      { ...answered(320, "follow-up", "short"), complied: false },
+    ]);
+
+    expect(summary.byLabel.short.followed).toEqual({ checked: 3, followed: 1 });
+    expect(summary.byLabel.long.followed).toEqual({ checked: 0, followed: 0 });
+  });
+
+  test("prints how often the hint was followed, only where it was checked", () => {
+    const lines = reportLines(
+      summarize([
+        turn({ mood: "short" }),
+        { ...answered(80, "approved", "short"), complied: true },
+        { ...answered(300, "follow-up", "short"), complied: false },
+      ]),
+      7
+    );
+
+    expect(lines.find((l) => l.startsWith("  short"))).toEndWith(" · followed 1 of 2");
+    expect(lines).toContain("  long      no replies yet");
+  });
+
   test("a repeat counts against a reply like a correction", () => {
     const summary = summarize([turn(), answered(100, "repeated")]);
 

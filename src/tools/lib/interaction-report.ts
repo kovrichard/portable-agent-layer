@@ -13,6 +13,12 @@ interface ReplyUnderMood {
   words: number;
   approved: boolean;
   corrected: boolean;
+  complied?: boolean;
+}
+
+interface HintFollowing {
+  checked: number;
+  followed: number;
 }
 
 interface ReplyStats {
@@ -20,6 +26,7 @@ interface ReplyStats {
   medianWords: number | null;
   approvedShare: number;
   correctedShare: number;
+  followed: HintFollowing;
 }
 
 interface AgentCounts {
@@ -56,6 +63,10 @@ function stats(replies: ReplyUnderMood[]): ReplyStats {
     medianWords: median(replies.map((r) => r.words)),
     approvedShare: share(replies, (r) => r.approved),
     correctedShare: share(replies, (r) => r.corrected),
+    followed: {
+      checked: replies.filter((r) => r.complied !== undefined).length,
+      followed: replies.filter((r) => r.complied === true).length,
+    },
   };
 }
 
@@ -71,6 +82,7 @@ function repliesUnderMood(events: TurnEvent[]): ReplyUnderMood[] {
         words: e.reply.words,
         approved: e.reaction === "approved",
         corrected: e.reaction === "corrected" || e.reaction === "repeated",
+        complied: e.complied,
       });
     lastMood.set(e.session, e.mood);
   }
@@ -133,12 +145,15 @@ function words(s: ReplyStats): string {
 
 function labelLine(label: string, s: ReplyStats, usual: ReplyStats): string {
   if (s.replies === 0) return `  ${label.padEnd(9)} no replies yet`;
-  return [
+  const parts = [
     `  ${label.padEnd(9)} ${s.replies} replies`,
     `median ${words(s)} words (usual ${words(usual)})`,
     `approved ${pct(s.approvedShare)} (usual ${pct(usual.approvedShare)})`,
     `corrected ${pct(s.correctedShare)} (usual ${pct(usual.correctedShare)})`,
-  ].join(" · ");
+  ];
+  if (s.followed.checked)
+    parts.push(`followed ${s.followed.followed} of ${s.followed.checked}`);
+  return parts.join(" · ");
 }
 
 function plural(n: number, noun: string, nouns = `${noun}s`): string {
