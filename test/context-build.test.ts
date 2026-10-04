@@ -171,16 +171,26 @@ describe("loadRelationshipContext", () => {
 describe("buildSystemReminder", () => {
   // A bare home is not silent: the analyze nudge and the unregistered-project
   // hint both fire, which is the behaviour worth pinning here.
-  test("surfaces the analyze nudge when analysis has never run", () => {
-    const out = buildSystemReminder();
+  test("surfaces the analyze nudge at startup for an agent with no per-turn context", () => {
+    const out = buildSystemReminder({ agent: "cursor" });
 
     expect(out).toContain("## Learning Analysis Due");
     expect(out).toContain("/pal-analyze");
   });
 
-  test("shows the analyze nudge in the first session of the day only", () => {
-    expect(buildSystemReminder()).toContain("## Learning Analysis Due");
-    expect(buildSystemReminder()).not.toContain("## Learning Analysis Due");
+  test("keeps the analyze nudge in every session until a reply passes it on", () => {
+    expect(buildSystemReminder({ agent: "cursor" })).toContain(
+      "## Learning Analysis Due"
+    );
+    expect(buildSystemReminder({ agent: "cursor" })).toContain(
+      "## Learning Analysis Due"
+    );
+  });
+
+  test("leaves due nudges to the per-turn context where the agent hears it", () => {
+    expect(buildSystemReminder({ agent: "claude" })).not.toContain(
+      "## Learning Analysis Due"
+    );
   });
 
   test("wraps content in a system-reminder with the current time", () => {

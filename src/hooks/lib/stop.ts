@@ -19,6 +19,7 @@ import { runSynthesis } from "../handlers/synthesis";
 import { resetTab } from "../handlers/tab";
 import { updateCounts } from "../handlers/update-counts";
 import { captureWorkSession } from "../handlers/work-session";
+import { acknowledgeMentioned } from "./daily-nudge";
 import { spawnDetachedInference } from "./detached-inference";
 import {
   fileFinalReply,
@@ -274,7 +275,9 @@ function recordFinalReply(
   sessionId: string
 ): void {
   try {
-    recordReply(sessionId, extractContent(extractLastAssistant(messages)));
+    const reply = extractContent(extractLastAssistant(messages));
+    recordReply(sessionId, reply);
+    acknowledgeMentioned(reply);
   } catch (err) {
     logError("runStopHandlers:recordReply", err);
   }
