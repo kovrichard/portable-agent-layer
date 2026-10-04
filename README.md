@@ -51,10 +51,10 @@ bun install
 bun run install:all
 ```
 
-In repo mode, add an alias to your shell profile:
+Then put `pal` on your PATH from the checkout. An alias is not enough: agents run skills in non-interactive shells, which never load it.
 
 ```bash
-alias pal="bun run ~/path/to/portable-agent-layer/src/cli/index.ts"
+bun link
 ```
 
 ---

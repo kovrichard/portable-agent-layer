@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { playwrightFinding } from "../src/cli/doctor/environment";
+import { palOnPathFinding, playwrightFinding } from "../src/cli/doctor/environment";
 
 let CACHE: string;
 
@@ -69,5 +69,26 @@ describe("the browser PDF and screenshot skills use", () => {
     mkdirSync(resolve(CACHE, "chromium-1100"));
 
     expect(playwrightFinding(host({ playwright: null })).severity).toBe("ok");
+  });
+});
+
+describe("pal on PATH", () => {
+  test("a repo checkout is linked, not installed from npm", () => {
+    const finding = palOnPathFinding({ pal: null, pkg: "/src/pal", repoMode: true });
+
+    expect(finding.severity).toBe("fail");
+    expect(finding.fix?.command).toBe("cd /src/pal && bun link");
+  });
+
+  test("a package install is reinstalled globally", () => {
+    expect(
+      palOnPathFinding({ pal: null, pkg: "/g/pal", repoMode: false }).fix?.command
+    ).toBe("bun add -g portable-agent-layer");
+  });
+
+  test("found on PATH passes", () => {
+    expect(
+      palOnPathFinding({ pal: "/bin/pal", pkg: "/g/pal", repoMode: true }).severity
+    ).toBe("ok");
   });
 });

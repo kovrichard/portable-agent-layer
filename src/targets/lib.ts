@@ -17,7 +17,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, resolve, sep } from "node:path";
+import { dirname, isAbsolute, resolve, sep } from "node:path";
 import { assets, palHome, platform } from "../hooks/lib/paths";
 import { declaredTriggers } from "../hooks/lib/skill-triggers";
 
@@ -186,7 +186,7 @@ export function mergeSettings(existing: Settings, template: Settings): Settings 
     for (const [event, entries] of Object.entries(result.hooks)) {
       result.hooks[event] = entries.filter((e) => {
         const cmd = e.hooks?.[0]?.command;
-        return !cmd || !palCanonical.has(canonicalPalCmd(cmd));
+        return !cmd || !isOutdatedPalHook(cmd, palCanonical);
       });
       if (result.hooks[event].length === 0) delete result.hooks[event];
     }
@@ -390,7 +390,7 @@ export function mergeCursorHooks(
     // Strip existing PAL hooks that match canonically (removes old-path duplicates)
     for (const [event, entries] of Object.entries(result.hooks)) {
       result.hooks[event] = entries.filter(
-        (e) => !palCanonical.has(canonicalPalCmd(e.command))
+        (e) => !isOutdatedPalHook(e.command, palCanonical)
       );
       if (result.hooks[event].length === 0) delete result.hooks[event];
     }
@@ -467,6 +467,15 @@ function canonicalPalCmd(cmd: string): string {
   return withoutEnv;
 }
 
+function runsRemovedPalHook(cmd: string): boolean {
+  const script = /bun\s+run\s+(\S+\/src\/hooks\/\S+\.ts)/.exec(cmd)?.[1];
+  return script !== undefined && isAbsolute(script) && !existsSync(script);
+}
+
+function isOutdatedPalHook(cmd: string, palCanonical: Set<string>): boolean {
+  return palCanonical.has(canonicalPalCmd(cmd)) || runsRemovedPalHook(cmd);
+}
+
 /**
  * True for path-scoped Grep()/Glob() allow rules, which Claude Code cannot honor —
  * it resolves Grep/Glob permission through Read(...) rules, so these never match and
@@ -507,11 +516,11 @@ function stripPalHooks(
     hooks[event] = (hooks[event] ?? [])
       .map((g) => {
         const flat = g as unknown as CodexHookCommand;
-        if (!g.hooks && flat.command && palCanonical.has(canonicalPalCmd(flat.command))) {
+        if (!g.hooks && flat.command && isOutdatedPalHook(flat.command, palCanonical)) {
           return null;
         }
         const filtered = (g.hooks ?? []).filter(
-          (h) => !palCanonical.has(canonicalPalCmd(h.command))
+          (h) => !isOutdatedPalHook(h.command, palCanonical)
         );
         return filtered.length > 0 ? { ...g, hooks: filtered } : null;
       })

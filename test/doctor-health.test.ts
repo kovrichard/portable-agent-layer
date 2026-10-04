@@ -25,6 +25,21 @@ describe("hook errors", () => {
   test("no errors passes", () => {
     expect(hookErrorFindings([])[0].severity).toBe("ok");
   });
+
+  test("an expired Claude login fails and points at the year-long token", () => {
+    const [finding] = hookErrorFindings([
+      {
+        source: "inference",
+        count: 38,
+        last: "Failed to authenticate: OAuth session expired and could not be refreshed",
+      },
+    ]);
+
+    expect(finding.severity).toBe("fail");
+    expect(finding.title).toContain("38");
+    expect(finding.fix?.command).toBe("claude setup-token");
+    expect(finding.fix?.say).toContain("CLAUDE_CODE_OAUTH_TOKEN");
+  });
 });
 
 describe("pending migrations", () => {

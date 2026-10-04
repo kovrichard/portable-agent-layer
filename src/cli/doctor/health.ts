@@ -3,7 +3,7 @@ import { cachedStatus, type UpdateCache } from "../../hooks/handlers/update-chec
 import { type HookErrorGroup, recentHookErrors } from "../../hooks/lib/log";
 import { palHome } from "../../hooks/lib/paths";
 import { checkPendingMigrations } from "../migrate";
-import { type Finding, passed, warning } from "./finding";
+import { type Finding, failing, passed, warning } from "./finding";
 
 interface PendingMigration {
   id: string;
@@ -11,11 +11,25 @@ interface PendingMigration {
   detail?: string;
 }
 
+const CLAUDE_LOGIN_EXPIRED = /Failed to authenticate/;
+
+function claudeLoginExpiredFinding(group: HookErrorGroup): Finding {
+  return failing(
+    `hook-errors.${group.source}`,
+    `Background calls to Claude cannot log in — ${group.count} failed in the last 24h: ${group.last}`,
+    {
+      say: "Create a year-long token, then export it as CLAUDE_CODE_OAUTH_TOKEN in your shell profile",
+      command: "claude setup-token",
+    }
+  );
+}
+
 export function hookErrorFindings(groups: HookErrorGroup[]): Finding[] {
   if (groups.length === 0)
     return [passed("hook-errors", "No hook errors in the last 24h")];
   const log = resolve(palHome(), "debug", "debug.log");
   return groups.map((group) => {
+    if (CLAUDE_LOGIN_EXPIRED.test(group.last)) return claudeLoginExpiredFinding(group);
     const times = group.count === 1 ? "once" : `${group.count} times`;
     return warning(
       `hook-errors.${group.source}`,
