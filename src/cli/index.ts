@@ -56,6 +56,7 @@ import { telosStatus } from "../hooks/lib/telos-topics";
 import { findBinaryOnPath } from "../hooks/lib/which";
 import { log } from "../targets/lib";
 import { builtinToolVerbs, runBuiltinTool } from "./builtin-tools";
+import { versionControlLines } from "./doctor-tools";
 import { checkPendingMigrations } from "./migrate";
 import { findSessionAgent, NO_SESSION_AGENT_MESSAGE } from "./session-agent";
 
@@ -842,6 +843,8 @@ function doctor(silent = false): DoctorResult {
       : info(
           `rtk — not installed (optional; enables Bash output compression — ${rtkInstallHint()})`
         );
+    const print = { ok, warn, info };
+    for (const line of versionControlLines()) print[line.level](line.text);
 
     console.log("");
     log.info("PAL state");
