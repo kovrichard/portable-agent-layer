@@ -1,3 +1,10 @@
+## [0.85.11](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.10...v0.85.11) (2026-10-04)
+
+
+### Bug Fixes
+
+* **doctor:** report problems with the command that fixes each ([d8fbf0a](https://github.com/kovrichard/portable-agent-layer/commit/d8fbf0a39939821a62e0b3fd76a5d9ef80d07aee))
+
 ## [0.85.10](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.9...v0.85.10) (2026-10-04)
 
 
