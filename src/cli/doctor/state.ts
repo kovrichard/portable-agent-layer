@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { palHome, palPkg } from "../../hooks/lib/paths";
 import { auditBindings, type BindingIssue } from "../../hooks/lib/projects";
 import { telosStatus } from "../../hooks/lib/telos-topics";
+import { retiredKeysIn } from "../migrate";
 import { type Finding, failing, optional, passed, warning } from "./finding";
 
 interface SchemaNode {
@@ -142,7 +143,12 @@ function settingsFindings(): Finding[] {
       }),
     ];
   const schema = readSettingsSchema();
-  const unknown = schema ? unknownSettingsKeys(settings, schema) : [];
+  const leftToMigration = new Set(
+    retiredKeysIn(settings as Record<string, Record<string, unknown>>)
+  );
+  const unknown = schema
+    ? unknownSettingsKeys(settings, schema).filter((k) => !leftToMigration.has(k.path))
+    : [];
   return [identityFinding(settings), unknownKeysFinding(unknown)];
 }
 
