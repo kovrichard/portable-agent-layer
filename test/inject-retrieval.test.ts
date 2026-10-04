@@ -40,7 +40,7 @@ function seedCapture(slug: string, ctx: string, principle: string) {
     "rating: 3",
     `context: "${ctx}"`,
     `principle: "${principle}"`,
-    "ts: 2026-04-15T10:00:00Z",
+    `ts: ${new Date(Date.now() - 86_400_000).toISOString()}`,
     `slug: ${slug}`,
     "---",
     "",
