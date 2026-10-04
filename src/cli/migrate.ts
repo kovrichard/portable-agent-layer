@@ -12,7 +12,6 @@
 
 import {
   existsSync,
-  mkdirSync,
   readdirSync,
   readFileSync,
   renameSync,
@@ -22,7 +21,7 @@ import {
 } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 import { readBindings } from "../hooks/lib/bindings";
-import { mergeJsonlLines } from "../hooks/lib/import-merge";
+import { foldHistoryInto } from "../hooks/lib/parked-history";
 import { palHome, paths } from "../hooks/lib/paths";
 import {
   legacyJsonToProgress,
@@ -55,6 +54,8 @@ interface Migration {
   description: string;
   check(): { pending: boolean; detail?: string };
   run(dryRun?: boolean): MigrationResult;
+  /** Moves its sources rather than copying them, so there is nothing left to delete. */
+  movesSources?: true;
 }
 
 // ── v1-projects: JSON progress files → ISA.md ─────────────────────
@@ -588,15 +589,6 @@ function destinationFor(item: StrandedHistory): string {
     : resolve(paths.unboundHistory(), `${item.slug}.jsonl`);
 }
 
-/** Union both sides so a destination that already has history keeps it. */
-function foldHistoryInto(target: string, source: string): number {
-  const local = existsSync(target) ? readFileSync(target, "utf-8") : "";
-  const { text, added } = mergeJsonlLines(local, readFileSync(source, "utf-8"));
-  mkdirSync(dirname(target), { recursive: true });
-  writeFileSync(target, text, "utf-8");
-  return added;
-}
-
 function discardEmptyFolder(dir: string): void {
   try {
     if (readdirSync(dir).length === 0) rmdirSync(dir);
@@ -608,6 +600,7 @@ function discardEmptyFolder(dir: string): void {
 const v6HistorySlugs: Migration = {
   id: "v6-history-slugs",
   description: "Re-file session history keyed on a cwd name onto its owning project",
+  movesSources: true,
 
   check() {
     const stranded = strandedHistory();
@@ -728,7 +721,7 @@ export function runMigrate(args: string[]): void {
   console.log(
     `  ${dryRun ? "Would migrate" : "Migrated"}: ${totalMigrated} | Skipped: ${totalSkipped}`
   );
-  if (!dryRun && totalMigrated > 0) {
+  if (!dryRun && totalMigrated > 0 && pending.some((m) => !m.movesSources)) {
     console.log("  Source files preserved — delete manually once verified.");
   }
   console.log("");
