@@ -205,9 +205,10 @@ export function claimCheckLines(records: ClaimRecord[]): string[] {
   if (records.length === 0) return [];
   const unbacked = records.filter((r) => r.verdict === "unbacked");
   const unknown = records.filter((r) => r.verdict === "unknown").length;
+  const sentBack = records.filter((r) => r.blocked).length;
   return [
     "",
-    `Result claims (watched, never sent back): ${plural(records.length, "reply", "replies")} · ${unbacked.length} with no command behind it · ${unknown} unreadable`,
+    `Result claims: ${plural(records.length, "reply", "replies")} · ${unbacked.length} with no command behind it · ${sentBack} sent back · ${unknown} unreadable`,
     ...unbacked
       .slice(-UNBACKED_LISTED)
       .flatMap((r) => (r.claims ?? []).map((c) => `  no command: ${c}`)),

@@ -101,6 +101,58 @@ describe("watching result claims at stop", () => {
   });
 });
 
+describe("sending an unbacked claim back, when opted in", () => {
+  const optIn = () => setSettings({ dynamicContext: { claimCheckBlocks: true } });
+
+  test("is off by default", () => {
+    expect(stop("All tests pass.")).toBeNull();
+    expect(claimChecksSince(since)[0].blocked).toBeUndefined();
+  });
+
+  test("names the claim and asks for the output", () => {
+    optIn();
+
+    expect(stop("Renamed it. All tests pass.")).toBe(
+      'Your reply claims a result no command in this turn showed: "All tests pass". Run the check and show its output, or say it is unverified.'
+    );
+    expect(claimChecksSince(since)[0].blocked).toBe(true);
+    expect(claimCheckLines(claimChecksSince(since))[1]).toContain("1 sent back");
+  });
+
+  test("leaves a backed claim alone", () => {
+    optIn();
+
+    expect(stop("All tests pass.", [prompt, bash])).toBeNull();
+  });
+
+  test("leaves a turn it could not read alone", () => {
+    optIn();
+
+    expect(stop("All tests pass.", [{ type: "other" }])).toBeNull();
+  });
+
+  test.each([
+    ["Claude Code", { stop_hook_active: true }],
+    ["Cursor", { loop_count: 1 }],
+  ])("sends a reply back once at most (%s)", (_, sentBack) => {
+    optIn();
+    const path = transcript([prompt]);
+
+    expect(
+      watchClaims(
+        {
+          session_id: "s1",
+          last_assistant_message: "All tests pass.",
+          transcript_path: path,
+          ...sentBack,
+        },
+        NOW
+      )
+    ).toBeNull();
+    expect(claimChecksSince(since)[0].blocked).toBeUndefined();
+  });
+});
+
 describe("reporting the watched claims", () => {
   test("counts the claims and lists the unbacked ones", () => {
     stop("All tests pass.");
@@ -108,7 +160,7 @@ describe("reporting the watched claims", () => {
 
     expect(claimCheckLines(claimChecksSince(since))).toEqual([
       "",
-      "Result claims (watched, never sent back): 2 replies · 1 with no command behind it · 0 unreadable",
+      "Result claims: 2 replies · 1 with no command behind it · 0 sent back · 0 unreadable",
       "  no command: All tests pass",
     ]);
   });

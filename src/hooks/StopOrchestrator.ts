@@ -6,7 +6,7 @@
  */
 
 import { checkReadmeSync } from "./handlers/readme-sync";
-import { blockResponse, isCodex, isCursor } from "./lib/agent";
+import { stopBlockResponse } from "./lib/agent";
 import { watchClaims } from "./lib/claim-log";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { logError } from "./lib/log";
@@ -25,17 +25,7 @@ try {
   // is worth less than not blocking at all — require the reason to raise one.
   const decision = checkReadmeSync();
   if (decision.decision === "block" && decision.reason) {
-    if (isCursor()) {
-      // Cursor stop hook: followup_message auto-sends to the agent
-      process.stdout.write(JSON.stringify({ followup_message: decision.reason }));
-    } else if (isCodex()) {
-      // Codex stop hook: additionalContext re-queues as next prompt
-      process.stdout.write(JSON.stringify({ additionalContext: decision.reason }));
-    } else {
-      // Claude Code, the Copilot CLI and VS Code's own Copilot each read a
-      // different stop-block shape; VS Code ignores the top-level keys entirely.
-      process.stdout.write(blockResponse(decision.reason, "Stop"));
-    }
+    process.stdout.write(stopBlockResponse(decision.reason));
     process.exit(0);
   }
 } catch (err) {
@@ -44,7 +34,11 @@ try {
 
 const payload = await readStdinJSON<StopTurnPayload>();
 try {
-  watchClaims(payload);
+  const sendBack = watchClaims(payload);
+  if (sendBack) {
+    process.stdout.write(stopBlockResponse(sendBack));
+    process.exit(0);
+  }
 } catch (err) {
   logError("StopOrchestrator:claim-check", err);
 }

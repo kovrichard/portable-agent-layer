@@ -30,6 +30,7 @@
     "interactionAwareness": true,
     "reactionSampling": true,
     "claimCheck": true,
+    "claimCheckBlocks": false,
     "steeringTestReport": false
   },
   "steering": {

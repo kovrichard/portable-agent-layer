@@ -21,7 +21,7 @@ const HELP = `
   label (short, long, fast, skimming, friction) how the replies written while
   it was active compare with the replies written while none was. Last, the
   replies that claimed a result (memory/signals/claim-checks/), and which of
-  them had no command behind the claim.
+  them had no command behind the claim or were sent back.
 
   Usage: pal cli interaction report [--days N]   (default 7)
 `;
