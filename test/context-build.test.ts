@@ -54,6 +54,7 @@ beforeEach(() => {
   if (existsSync(HOME)) rmSync(HOME, { recursive: true });
   mkdirSync(HOME, { recursive: true });
   process.env.PAL_HOME = HOME;
+  reload();
 });
 
 afterEach(() => {
@@ -177,8 +178,6 @@ describe("buildSystemReminder", () => {
     );
     reload();
   }
-
-  afterEach(() => reload());
 
   test("leaves due reminders out until the user opts in", () => {
     expect(buildSystemReminder({ agent: "cursor" })).not.toContain(
