@@ -1,3 +1,12 @@
+## [0.85.6](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.5...v0.85.6) (2026-10-04)
+
+
+### Bug Fixes
+
+* **interaction:** keep approvals read before the split out of the figures ([8439079](https://github.com/kovrichard/portable-agent-layer/commit/8439079149115d4ca8b6b594c72ee110e4e5c9eb))
+* **interaction:** read a go-ahead apart from approval ([3cdc7d3](https://github.com/kovrichard/portable-agent-layer/commit/3cdc7d397b03bbba8460cde7031ae1da4074d781))
+* **reaction-audit:** label go-ahead apart from approval ([01bc651](https://github.com/kovrichard/portable-agent-layer/commit/01bc651a50cabd270e9cadc27e22c7931688e401))
+
 ## [0.85.5](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.4...v0.85.5) (2026-10-04)
 
 
