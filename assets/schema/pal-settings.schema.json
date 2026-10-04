@@ -70,6 +70,10 @@
           "type": "boolean",
           "description": "One line of the current time with every prompt, in identity.principal.timezone, so a session resumed hours later knows the day changed."
         },
+        "dueReminders": {
+          "type": "boolean",
+          "description": "Opt-in, off by default until 1.0. Due maintenance reminders (learning analysis, relationship reflect) with every prompt until a reply names their command; then quiet until the next day."
+        },
         "interactionAwareness": {
           "type": "boolean",
           "description": "Measure each user turn (pace, message length, skimming, corrections; never the text) into memory/signals/interaction/, and tell the agent when the session's pattern changes."

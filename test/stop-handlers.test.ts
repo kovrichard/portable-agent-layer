@@ -85,6 +85,19 @@ describe("runStopHandlers — the final reply", () => {
     );
     expect(tracks["s-shape"].reply).toMatchObject({ listItems: 2, asked: true });
   });
+
+  test("a reply that passes on a due reminder clears it for the day", async () => {
+    await runStopHandlers(transcriptOf("ask", "draft"), {
+      sessionId: "s-nudge",
+      lastAssistantMessage:
+        "Done. Learning analysis is due too: want me to run /pal-analyze?",
+    });
+
+    const shown = JSON.parse(
+      readFileSync(resolve(HOME, "memory", "state", "nudges-shown.json"), "utf-8")
+    );
+    expect(Object.keys(shown)).toEqual(["analyze"]);
+  });
 });
 
 describe("runStopHandlers — last-response cache", () => {

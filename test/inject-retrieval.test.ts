@@ -40,7 +40,7 @@ function seedCapture(slug: string, ctx: string, principle: string) {
     "rating: 3",
     `context: "${ctx}"`,
     `principle: "${principle}"`,
-    "ts: 2026-04-15T10:00:00Z",
+    `ts: ${new Date(Date.now() - 86_400_000).toISOString()}`,
     `slug: ${slug}`,
     "---",
     "",
@@ -121,6 +121,13 @@ describe("injectPromptContext handler", () => {
   // keep asserting what they are about: whether retrieval and skills emit.
   beforeEach(async () => {
     await setSettings({ dynamicContext: { wallClock: false } });
+  });
+
+  test("a due reminder rides along once the user opts in", async () => {
+    await setSettings({ dynamicContext: { wallClock: false, dueReminders: true } });
+    const { injectPromptContext } = await loadHandlers();
+    const out = await captureStdout(() => injectPromptContext("anything goes here"));
+    expect(out).toContain("/pal-analyze");
   });
 
   test("the wall clock rides along even when nothing else matches", async () => {
