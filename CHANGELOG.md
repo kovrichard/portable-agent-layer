@@ -1,3 +1,10 @@
+## [0.85.12](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.11...v0.85.12) (2026-10-04)
+
+
+### Bug Fixes
+
+* **doctor:** check that dependencies resolve, not that a folder exists ([2aabaca](https://github.com/kovrichard/portable-agent-layer/commit/2aabaca4b2f0983a4a9015f66927a279fbdc258e))
+
 ## [0.85.11](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.10...v0.85.11) (2026-10-04)
 
 
