@@ -1,3 +1,12 @@
+## [0.85.5](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.4...v0.85.5) (2026-10-04)
+
+
+### Bug Fixes
+
+* **interaction:** check whether a hint changed the next reply ([9043eed](https://github.com/kovrichard/portable-agent-layer/commit/9043eed23244831b50747da347c52a88d9f083a6))
+* **interaction:** learn which reply shapes the user approves ([3797f45](https://github.com/kovrichard/portable-agent-layer/commit/3797f453293ed18ef48b861d6a26a377c2bff8c4))
+* **test:** date the retrieval fixture relative to now ([92f3ff7](https://github.com/kovrichard/portable-agent-layer/commit/92f3ff7bbeb7beceef0b7474e4a5726ff7b6062d))
+
 ## [0.85.4](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.3...v0.85.4) (2026-10-04)
 
 
