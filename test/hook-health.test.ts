@@ -29,7 +29,7 @@ describe("recentHookErrors", () => {
   test("sees an error logError just wrote", () => {
     logError("rating", new Error("boom"));
 
-    expect(recentHookErrors().totalErrors).toBe(1);
+    expect(recentHookErrors()).toEqual([{ source: "rating", count: 1, last: "boom" }]);
   });
 
   test("counts only the last 24 hours, read as UTC", () => {
@@ -38,20 +38,25 @@ describe("recentHookErrors", () => {
       "[2026-09-22 12:30:00] ERROR fresh: inside the window",
     ]);
 
-    expect(recentHookErrors(NOW)).toEqual({
-      totalErrors: 1,
-      lastError: "fresh: inside the window",
-    });
+    expect(recentHookErrors(NOW)).toEqual([
+      { source: "fresh", count: 1, last: "inside the window" },
+    ]);
   });
 
-  test("names the newest error even when rotated logs hold others", () => {
-    debugLog("debug.log", ["[2026-09-23 11:00:00] ERROR newest: current file"]);
-    debugLog("debug.log.1", ["[2026-09-23 10:00:00] ERROR older: rotated file"]);
+  test("groups by the hook that failed, most errors first, each with its newest message", () => {
+    debugLog("debug.log.1", [
+      "[2026-09-23 09:00:00] ERROR rating: first",
+      "[2026-09-23 09:30:00] ERROR agenda: once",
+    ]);
+    debugLog("debug.log", ["[2026-09-23 11:00:00] ERROR rating: newest"]);
 
-    expect(recentHookErrors(NOW).lastError).toBe("newest: current file");
+    expect(recentHookErrors(NOW)).toEqual([
+      { source: "rating", count: 2, last: "newest" },
+      { source: "agenda", count: 1, last: "once" },
+    ]);
   });
 
   test("reports nothing when no log exists", () => {
-    expect(recentHookErrors(NOW)).toEqual({ totalErrors: 0, lastError: null });
+    expect(recentHookErrors(NOW)).toEqual([]);
   });
 });

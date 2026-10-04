@@ -36,7 +36,7 @@ function envWithoutPath(): Record<string, string | undefined> {
 }
 
 function doctorWithPath(binDir: string) {
-  return spawnSync(process.execPath, ["run", CLI, "cli", "doctor"], {
+  return spawnSync(process.execPath, ["run", CLI, "cli", "doctor", "--json"], {
     cwd: REPO,
     env: {
       ...envWithoutPath(),
@@ -47,6 +47,10 @@ function doctorWithPath(binDir: string) {
     encoding: "utf-8",
     timeout: 30000,
   });
+}
+
+function agentsFound(stdout: string): string[] {
+  return (JSON.parse(stdout) as { agents: string[] }).agents;
 }
 
 beforeAll(() => {
@@ -61,20 +65,18 @@ describe("pal cli doctor — Cursor detection", () => {
   test("finds the Cursor CLI, which installs cursor-agent and no cursor command", () => {
     const r = doctorWithPath(binDirWith("cli-only", ["cursor-agent", "agent"]));
 
-    expect(r.stdout).not.toContain("Cursor — not found");
-    expect(r.stdout).toContain("Cursor cursor-agent 2026.10.01");
+    expect(agentsFound(r.stdout)).toContain("cursor");
   });
 
   test("still finds the Cursor editor when only its cursor command is on PATH", () => {
     const r = doctorWithPath(binDirWith("editor-only", ["cursor"]));
 
-    expect(r.stdout).not.toContain("Cursor — not found");
-    expect(r.stdout).toContain("Cursor cursor 2026.10.01");
+    expect(agentsFound(r.stdout)).toContain("cursor");
   });
 
   test("reports Cursor missing when neither is on PATH", () => {
     const r = doctorWithPath(binDirWith("neither", []));
 
-    expect(r.stdout).toContain("Cursor — not found");
+    expect(agentsFound(r.stdout)).not.toContain("cursor");
   });
 });

@@ -5,8 +5,8 @@ import { delimiter, dirname, resolve } from "node:path";
 import {
   ghInstallHint,
   gitInstallHint,
-  versionControlLines,
-} from "../src/cli/doctor-tools";
+  versionControlFindings,
+} from "../src/cli/doctor/version-control";
 import { detectRemote } from "../src/hooks/lib/remote";
 import { writeFakeBin } from "./fixtures/fake-bin";
 
@@ -27,11 +27,11 @@ describe("how to install git", () => {
       "sudo zypper install git",
     ],
   ] as const)("%s %s", (platform, release, command) => {
-    expect(gitInstallHint(platform, release)).toContain(command);
+    expect(gitInstallHint(platform, release).command).toBe(command);
   });
 
   test("an unknown Linux points at its package manager", () => {
-    expect(gitInstallHint("linux", osRelease("someos"))).toContain("package manager");
+    expect(gitInstallHint("linux", osRelease("someos")).say).toContain("package manager");
   });
 });
 
@@ -47,7 +47,8 @@ describe("how to install gh", () => {
       "https://github.com/cli/cli/blob/trunk/docs/install_linux.md",
     ],
   ] as const)("%s %s", (platform, release, command) => {
-    expect(ghInstallHint(platform, release)).toContain(command);
+    const hint = ghInstallHint(platform, release);
+    expect(hint.command ?? hint.say).toContain(command);
   });
 });
 
@@ -75,55 +76,59 @@ describe("checking git and gh", () => {
 ${hang ? "await Bun.sleep(10_000);" : ""}
 process.exit(${authExit});`
     );
-  const lines = () =>
-    versionControlLines({ platform: "darwin", osRelease: "", timeoutMs: 3000 });
+  const findings = () =>
+    versionControlFindings({ platform: "darwin", osRelease: "", timeoutMs: 3000 });
 
-  test("no git warns and names what stops working", () => {
-    const [git] = lines();
+  test("no git warns, names what stops working, and says how to install it", () => {
+    const [git] = findings();
 
-    expect(git.level).toBe("warn");
-    expect(git.text).toContain("project matching");
-    expect(git.text).toContain("brew install git");
+    expect(git.severity).toBe("warn");
+    expect(git.title).toContain("project matching");
+    expect(git.fix?.command).toBe("brew install git");
   });
 
-  test("git present is ok with its version", () => {
+  test("git present passes with its version", () => {
     fakeGit();
 
-    expect(lines()[0]).toEqual({ level: "ok", text: "git version 2.50.0" });
+    expect(findings()[0]).toEqual({
+      id: "git",
+      severity: "ok",
+      title: "git version 2.50.0",
+    });
   });
 
-  test("no gh is an optional note with the install command", () => {
-    const gh = lines()[1];
+  test("no gh is listed as optional, with the install command", () => {
+    const gh = findings()[1];
 
-    expect(gh.level).toBe("info");
-    expect(gh.text).toContain("optional");
-    expect(gh.text).toContain("brew install gh");
+    expect(gh.severity).toBe("optional");
+    expect(gh.fix?.command).toBe("brew install gh");
   });
 
-  test("gh logged in is ok", () => {
+  test("gh logged in passes", () => {
     fakeGh(0);
 
-    expect(lines()[1]).toEqual({ level: "ok", text: "gh version 2.80.0, logged in" });
+    expect(findings()[1].title).toBe("gh version 2.80.0, logged in");
+    expect(findings()[1].severity).toBe("ok");
   });
 
   test("gh logged out warns to log in", () => {
     fakeGh(1);
 
-    const gh = lines()[1];
-    expect(gh.level).toBe("warn");
-    expect(gh.text).toContain("gh auth login");
+    const gh = findings()[1];
+    expect(gh.severity).toBe("warn");
+    expect(gh.fix?.command).toBe("gh auth login");
   });
 
   test("a gh that does not answer is not reported as logged out", () => {
     fakeGh(1, true);
 
-    const gh = versionControlLines({
+    const gh = versionControlFindings({
       platform: "darwin",
       osRelease: "",
       timeoutMs: 1000,
     })[1];
-    expect(gh.level).toBe("info");
-    expect(gh.text).toContain("could not check");
+    expect(gh.severity).toBe("ok");
+    expect(gh.title).toContain("not checked in time");
   });
 
   test("project matching by remote skips quietly without git", () => {

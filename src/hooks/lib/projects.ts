@@ -572,22 +572,6 @@ export function auditBindings(
   return issues;
 }
 
-/**
- * Every issue names the command that fixes it. PAL runs inside agents, where a
- * hook cannot ask a question — so a suggestion is always a command the user can
- * choose to run, never something applied on their behalf.
- */
-export function describeBindingIssue(issue: BindingIssue): string {
-  const fix = (name: string) => `run 'project set-path ${name} <path>'`;
-  if (issue.kind === "unlocatable")
-    return `${issue.project} — not checked out here (${fix(issue.project)})`;
-  // "points at" rather than "bound to": the path may equally have come from a
-  // legacy record's own field, which is not a binding.
-  if (issue.kind === "missing")
-    return `${issue.project} — points at ${issue.path}, which does not exist here (${fix(issue.project)})`;
-  return `${issue.projects.join(" and ")} — both point at ${issue.path}; rebind whichever is wrong (${fix(issue.projects[0])})`;
-}
-
 export type BindingProposal = {
   state: "unbound";
   confidence: "strong" | "weak";

@@ -81,7 +81,7 @@ pal cli status        # check your setup
 | `pal cli export` | Export user state (telos, memory) to a zip |
 | `pal cli import` | Import user state from a zip |
 | `pal cli status` | Show current PAL configuration |
-| `pal cli doctor` | Check prerequisites and system health |
+| `pal cli doctor` | Find what is wrong and the command that fixes each problem (`--verbose` lists every check, `--json` for agents); exits 1 on any failure |
 | `pal cli migrate` | Run pending data migrations (non-destructive) |
 | `pal cli analyze [--actionable]` | Learning analysis: rating trends, failure patterns, graduation candidates |
 | `pal cli usage` | Summarize token usage and estimated cost |
