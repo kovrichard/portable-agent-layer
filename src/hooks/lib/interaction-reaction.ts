@@ -6,7 +6,13 @@
 
 import { extractKeywords, similarity } from "./text-similarity";
 
-export type Reaction = "corrected" | "repeated" | "approved" | "new-topic" | "follow-up";
+export type Reaction =
+  | "corrected"
+  | "repeated"
+  | "approved"
+  | "go-ahead"
+  | "new-topic"
+  | "follow-up";
 
 const CORRECTION_RE =
   /^(?:(?:no|nope|wrong)(?:[,.!]|$)|(?:that'?s|this is|it'?s) (?:wrong|not)\b|not what i\b|i said\b|i told you\b|you forgot\b|you missed\b|still (?:broken|failing|wrong)\b|i don'?t see (?:the|your) (?!(?:problem|issue|point|harm|difference|need|reason)\b))/i;
@@ -15,7 +21,10 @@ const CLAIM_DISPUTED_RE =
   /\byou(?:'re| are) (?:partially |partly |completely |totally )?wrong\b|\b(?:isn'?t|wasn'?t|aren'?t|weren'?t) (?:added|included|fixed|pushed|committed|applied|merged)\b/i;
 
 const APPROVAL_RE =
-  /^(?:(?:understood|got it|ok(?:ay)?),?\s+)?(?:good|great|nice|perfect|cool|amazing|awesome|excellent|brilliant|works|it works|thanks|thank you|thx|y+e+s+|yep|yeah|yup|sure|exactly|correct|agreed|lgtm|well done|love it|sounds good|looks good|that'?s it|(?:it|this|that) (?:is|'s) (?:fine|good|great|right))\b/i;
+  /^(?:(?:understood|got it|ok(?:ay)?),?\s+)?(?:good|great|nice|perfect|cool|amazing|awesome|excellent|brilliant|works|it works|thanks|thank you|thx|y+e+s+|yep|yeah|yup|sure|exactly|correct|agreed|lgtm|well done|love it|sounds good|looks good|that'?s it|(?:it|this|that)(?: is|'s) (?:fine|good|great|right))\b/i;
+
+const PRAISE_RE =
+  /\b(?:good|great|nice|perfect|cool|amazing|awesome|excellent|brilliant|works|thanks|thank you|thx|exactly|correct|agreed|lgtm|well done|good job|love it|sounds good|looks (?:good|right)|that'?s it|(?:it|this|that)(?: is|'s) (?:fine|good|great|right))\b/i;
 
 const GO_AHEAD_RE =
   /^(?:go ahead|go|do it|proceed|continue|merge|push|ship|commit|build|start|fix (?:all|them|both)|approved|let'?s (?:see|do|go|build|start|fix|ship)|(?:add|do|fix) (?:it )?(?:pls|please))\b/i;
@@ -51,7 +60,7 @@ function sentences(text: string): string[] {
     .filter(Boolean);
 }
 
-function isApproval(text: string): boolean {
+function isAcceptance(text: string): boolean {
   const trimmed = text.trim();
   if (trimmed.includes("?") || FAILURE_RE.test(trimmed)) return false;
   if (HEDGE_RE.test(trimmed.split(/[.!?\n]/)[0])) return false;
@@ -59,6 +68,11 @@ function isApproval(text: string): boolean {
   const all = sentences(trimmed);
   if (isShortGoAhead(all.at(-1) ?? "")) return true;
   return isShortGoAhead(all[0] ?? "") && !HEDGE_RE.test(trimmed);
+}
+
+/** A yes or a go only gives permission to continue; approval judges the work itself. */
+function praisesTheResult(text: string): boolean {
+  return PRAISE_RE.test(text);
 }
 
 /** Word overlap was measured against real messages and does not separate topics; only saying so does. */
@@ -69,7 +83,7 @@ function isNewTopic(text: string): boolean {
 export function reactionTo(text: string, previousPrompt: string | undefined): Reaction {
   if (isCorrection(text)) return "corrected";
   if (isRepeat(text, previousPrompt)) return "repeated";
-  if (isApproval(text)) return "approved";
+  if (isAcceptance(text)) return praisesTheResult(text) ? "approved" : "go-ahead";
   if (isNewTopic(text)) return "new-topic";
   return "follow-up";
 }

@@ -77,6 +77,15 @@ describe("sampling messages for the rule audit", () => {
     expect(kept.at(-1)?.text).toBe("msg 30");
   });
 
+  test("go-aheads are kept apart from approvals, so the audit sees both", () => {
+    for (let i = 0; i < 30; i++) sample("go-ahead", i);
+    sample("approved", 30);
+
+    const kept = readSamples();
+    expect(kept.filter((s) => s.reaction === "go-ahead")).toHaveLength(20);
+    expect(kept.filter((s) => s.reaction === "approved")).toHaveLength(1);
+  });
+
   test("follow-ups, where the misses land, get the most room", () => {
     for (let i = 0; i < 160; i++) sample("follow-up", i);
 
