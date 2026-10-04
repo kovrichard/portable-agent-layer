@@ -1,3 +1,10 @@
+## [0.85.10](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.9...v0.85.10) (2026-10-04)
+
+
+### Bug Fixes
+
+* **skills:** run the PDF tools under Bun, and drop the Node requirement ([8017cee](https://github.com/kovrichard/portable-agent-layer/commit/8017cee733da38dd24fd9f4c533199c04e7ac024))
+
 ## [0.85.9](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.8...v0.85.9) (2026-10-04)
 
 
