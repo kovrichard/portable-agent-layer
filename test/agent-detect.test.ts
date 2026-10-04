@@ -12,6 +12,7 @@ import {
   isCursor,
   isOpencode,
   normalizeToolUse,
+  stopBlockResponse,
 } from "../src/hooks/lib/agent";
 import { writeFakeBin } from "./fixtures/fake-bin";
 
@@ -128,6 +129,23 @@ describe("blockResponse", () => {
       if (saved[k] === undefined) delete process.env[k];
       else process.env[k] = saved[k];
     }
+  });
+
+  test.each([
+    ["cursor", { followup_message: "Show the output" }],
+    ["codex", { additionalContext: "Show the output" }],
+  ])("%s gets the reply sent back in its own stop shape", (agent, shape) => {
+    process.env.PAL_AGENT = agent;
+
+    expect(JSON.parse(stopBlockResponse("Show the output"))).toEqual(shape);
+  });
+
+  test("claude sends a reply back with the stop block", () => {
+    process.env.PAL_AGENT = "claude";
+
+    expect(stopBlockResponse("Show the output")).toBe(
+      blockResponse("Show the output", "Stop")
+    );
   });
 
   test("codex PreToolUse deny includes a non-empty permissionDecisionReason", () => {

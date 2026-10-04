@@ -7,8 +7,9 @@
  */
 
 import { parseArgs } from "node:util";
+import { claimChecksSince } from "../../hooks/lib/claim-log";
 import { turnsSince } from "../../hooks/lib/interaction";
-import { reportLines, summarize } from "../lib/interaction-report";
+import { claimCheckLines, reportLines, summarize } from "../lib/interaction-report";
 import { scriptArgs } from "../lib/script-args";
 
 const HELP = `
@@ -18,7 +19,9 @@ const HELP = `
   text) and prints turns, channels, reactions, the hints sent, per agent the
   turns, replies filed and hints sent, and for each
   label (short, long, fast, skimming, friction) how the replies written while
-  it was active compare with the replies written while none was.
+  it was active compare with the replies written while none was. Last, the
+  replies that claimed a result (memory/signals/claim-checks/), and which of
+  them had no command behind the claim or were sent back.
 
   Usage: pal cli interaction report [--days N]   (default 7)
 `;
@@ -39,8 +42,11 @@ export function run(argv: string[] = scriptArgs()) {
     console.log(HELP);
     return;
   }
-  const events = turnsSince(new Date(Date.now() - days * DAY_MS));
-  for (const line of reportLines(summarize(events), days)) console.log(line);
+  const since = new Date(Date.now() - days * DAY_MS);
+  const events = turnsSince(since);
+  const claims = claimCheckLines(claimChecksSince(since));
+  for (const line of [...reportLines(summarize(events), days), ...claims])
+    console.log(line);
 }
 
 if (import.meta.main) run();

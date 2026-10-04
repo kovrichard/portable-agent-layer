@@ -41,6 +41,8 @@ import {
 export interface StopTurnPayload extends HookTurnPayload {
   transcript_path?: string | null;
   transcriptPath?: string | null;
+  stop_hook_active?: boolean;
+  loop_count?: number;
 }
 
 type Transcript = ReturnType<typeof readTranscriptFile>;

@@ -267,6 +267,13 @@ export function promptContextResponse(context: string): string | null {
   return `${context}\n`;
 }
 
+/** Stops the agent from ending its turn and hands it the reason as its next input. */
+export function stopBlockResponse(reason: string): string {
+  if (isCursor()) return JSON.stringify({ followup_message: reason });
+  if (isCodex()) return JSON.stringify({ additionalContext: reason });
+  return blockResponse(reason, "Stop");
+}
+
 export function blockResponse(reason: string, hookEventName?: string): string {
   if (isCursor()) {
     return JSON.stringify({ permission: "deny", user_message: reason });
