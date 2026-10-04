@@ -82,7 +82,7 @@ export async function getPromptContext(
   const parts = [
     getWallClockReminder(),
     withinBudget(() => observeTurn(prompt, sessionId), BUDGET_MS),
-    isEnabled("dueReminders") ? withinBudget(() => dueNudgeReminder(), BUDGET_MS) : null,
+    withinBudget(() => dueNudgeReminder(), BUDGET_MS),
     getSteeringReminder(prompt),
     getSkillReminder(prompt),
     await getRetrievalReminder(prompt),

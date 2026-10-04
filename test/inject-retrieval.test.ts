@@ -120,18 +120,18 @@ describe("injectPromptContext handler", () => {
   // The wall clock rides on every prompt by design, so these cases silence it to
   // keep asserting what they are about: whether retrieval and skills emit.
   beforeEach(async () => {
-    await setSettings({ dynamicContext: { wallClock: false, dueReminders: false } });
+    await setSettings({ dynamicContext: { wallClock: false } });
   });
 
-  test("a due reminder rides along until a reply passes it on", async () => {
-    await setSettings({ dynamicContext: { wallClock: false } });
+  test("a due reminder rides along once the user opts in", async () => {
+    await setSettings({ dynamicContext: { wallClock: false, dueReminders: true } });
     const { injectPromptContext } = await loadHandlers();
     const out = await captureStdout(() => injectPromptContext("anything goes here"));
     expect(out).toContain("/pal-analyze");
   });
 
   test("the wall clock rides along even when nothing else matches", async () => {
-    await setSettings({ dynamicContext: { dueReminders: false } });
+    await setSettings({});
     const { injectPromptContext } = await loadHandlers();
     const out = await captureStdout(() => injectPromptContext("anything goes here"));
     expect(out).toContain("Now: ");
@@ -155,7 +155,6 @@ describe("injectPromptContext handler", () => {
         learningInjection: false,
         contextualSteering: false,
         wallClock: false,
-        dueReminders: false,
       },
     });
     const { injectPromptContext } = await loadHandlers();

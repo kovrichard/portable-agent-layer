@@ -72,7 +72,7 @@
         },
         "dueReminders": {
           "type": "boolean",
-          "description": "Due maintenance reminders (learning analysis, relationship reflect) with every prompt until a reply names their command; then quiet until the next day."
+          "description": "Opt-in, off by default until 1.0. Due maintenance reminders (learning analysis, relationship reflect) with every prompt until a reply names their command; then quiet until the next day."
         },
         "interactionAwareness": {
           "type": "boolean",

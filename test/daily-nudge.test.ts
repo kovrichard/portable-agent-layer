@@ -88,13 +88,27 @@ describe("a due reminder", () => {
 describe("the per-turn reminder", () => {
   const morning = new Date("2026-09-30T08:00:00Z");
 
+  function optInToDueReminders(): void {
+    writeFileSync(
+      resolve(HOME, "memory", "pal-settings.json"),
+      JSON.stringify({ dynamicContext: { dueReminders: true } })
+    );
+    reload();
+  }
+
+  test("is off until the user opts in", () => {
+    expect(dueNudgeReminder(morning)).toBeNull();
+  });
+
   test("asks the agent to tell the user what is due", () => {
+    optInToDueReminders();
     const reminder = dueNudgeReminder(morning) ?? "";
     expect(reminder).toContain("Tell the user");
     expect(reminder).toContain("/pal-analyze");
   });
 
   test("goes quiet once a reply has passed it on", () => {
+    optInToDueReminders();
     acknowledgeMentioned("Learning analysis is due: /pal-analyze", morning);
     expect(dueNudgeReminder(morning)).toBeNull();
   });

@@ -5,6 +5,7 @@ import { loadAlgorithmReviewNudge } from "./algorithm-review";
 import { loadAnalyzeNudge } from "./analyze-nudge";
 import { ensureDir, paths } from "./paths";
 import { loadReactionAuditNudge } from "./reaction-audit";
+import { isOptedIn } from "./settings";
 import { localDay } from "./wall-clock";
 
 type ShownOn = Record<string, string>;
@@ -61,6 +62,7 @@ export function acknowledgeMentioned(reply: string, now: Date = new Date()): voi
 }
 
 export function dueNudgeSections(now: Date = new Date()): string[] {
+  if (!isOptedIn("dueReminders")) return [];
   return DUE_NUDGES.map((nudge) => pendingToday(nudge.key, nudge.load(), now)).filter(
     Boolean
   );
