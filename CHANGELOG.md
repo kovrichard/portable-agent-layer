@@ -1,3 +1,10 @@
+## [0.85.4](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.3...v0.85.4) (2026-10-04)
+
+
+### Bug Fixes
+
+* **test:** give the control room page build a minute, not five seconds ([5131922](https://github.com/kovrichard/portable-agent-layer/commit/5131922ce9c6ca815d9e5a635d3d8f648fde9a49)), closes [#39](https://github.com/kovrichard/portable-agent-layer/issues/39)
+
 ## [0.85.3](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.2...v0.85.3) (2026-10-04)
 
 
