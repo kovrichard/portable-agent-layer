@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
@@ -12,7 +12,7 @@ import type {
 import type { Matrix } from "../src/tools/control-room/matrix";
 import type { ServerStatus } from "../src/tools/control-room/server";
 import type { LedgerView } from "../src/tools/ledger/view";
-import { ensurePageBuilt } from "./lib/built-page";
+import { buildPageFirst } from "./lib/built-page";
 
 // The HTTP surface is small enough to pin completely: where it listens, what
 // each route answers, and that a bad window is refused rather than widened.
@@ -20,7 +20,7 @@ import { ensurePageBuilt } from "./lib/built-page";
 let HOME: string;
 let server: ReturnType<typeof Bun.serve> | null = null;
 
-beforeAll(ensurePageBuilt);
+buildPageFirst();
 
 beforeEach(() => {
   HOME = mkdtempSync(resolve(tmpdir(), "pal-control-room-"));
