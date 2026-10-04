@@ -1,3 +1,10 @@
+## [0.85.9](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.8...v0.85.9) (2026-10-04)
+
+
+### Bug Fixes
+
+* **projects:** move parked history into its project as soon as it is bound ([a17443d](https://github.com/kovrichard/portable-agent-layer/commit/a17443da02eccf58e5332beb54521679595ff7f8))
+
 ## [0.85.8](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.7...v0.85.8) (2026-10-04)
 
 
