@@ -1,3 +1,12 @@
+## [0.85.7](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.6...v0.85.7) (2026-10-04)
+
+
+### Bug Fixes
+
+* **claim-check:** log each result claim at stop and report the unbacked ones ([8f1d526](https://github.com/kovrichard/portable-agent-layer/commit/8f1d5262bda0fccd7c492fb54fa746369a7f0b05))
+* **claim-check:** send an unbacked result claim back once, when opted in ([5a5a056](https://github.com/kovrichard/portable-agent-layer/commit/5a5a0563fc13cdc69690f652357b928c5db09093))
+* **claim-check:** tell a backed result claim from an unbacked one ([60c0fd6](https://github.com/kovrichard/portable-agent-layer/commit/60c0fd694ca872b23e7dc1e90b913d3247d6a523))
+
 ## [0.85.6](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.5...v0.85.6) (2026-10-04)
 
 
