@@ -209,13 +209,43 @@ function bindingFindings(): Finding[] {
     : issues.map(bindingFinding);
 }
 
+function resolves(name: string, from: string): boolean {
+  try {
+    Bun.resolveSync(`${name}/package.json`, from);
+    return true;
+  } catch {
+    try {
+      Bun.resolveSync(name, from);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
+export function unresolvedDependencies(pkg: string): string[] {
+  try {
+    const { dependencies = {} } = JSON.parse(
+      readFileSync(resolve(pkg, "package.json"), "utf-8")
+    );
+    return Object.keys(dependencies).filter((name) => !resolves(name, pkg));
+  } catch {
+    return [];
+  }
+}
+
 function dependencyFinding(): Finding {
-  return existsSync(resolve(palPkg(), "node_modules"))
+  const missing = unresolvedDependencies(palPkg());
+  return missing.length === 0
     ? passed("dependencies", "Dependencies installed")
-    : failing("dependencies", "PAL's dependencies are not installed", {
-        say: "Install them",
-        command: "pal cli install",
-      });
+    : failing(
+        "dependencies",
+        `PAL's dependencies do not resolve: ${missing.join(", ")}`,
+        {
+          say: "Install them",
+          command: "pal cli install",
+        }
+      );
 }
 
 export function stateFindings(): Finding[] {

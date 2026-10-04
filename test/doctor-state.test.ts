@@ -6,6 +6,7 @@ import {
   bindingFinding,
   stateFindings,
   unknownSettingsKeys,
+  unresolvedDependencies,
 } from "../src/cli/doctor/state";
 
 let HOME: string;
@@ -94,6 +95,34 @@ describe("PAL's own state", () => {
     expect(
       stateFindings().filter((f) => f.severity === "fail" || f.severity === "warn")
     ).toEqual([]);
+  });
+});
+
+describe("PAL's dependencies", () => {
+  function pkgWithDeps(deps: string[], hoisted: string[]): string {
+    const pkg = resolve(HOME, "global", "node_modules", "portable-agent-layer");
+    write(
+      resolve(pkg, "package.json"),
+      JSON.stringify({ dependencies: Object.fromEntries(deps.map((d) => [d, "1"])) })
+    );
+    for (const name of hoisted) {
+      write(
+        resolve(HOME, "global", "node_modules", name, "package.json"),
+        JSON.stringify({ name, main: "index.js" })
+      );
+      write(resolve(HOME, "global", "node_modules", name, "index.js"), "");
+    }
+    return pkg;
+  }
+
+  test("dependencies hoisted beside a global install count as installed", () => {
+    expect(unresolvedDependencies(pkgWithDeps(["alpha"], ["alpha"]))).toEqual([]);
+  });
+
+  test("names each dependency that does not resolve", () => {
+    expect(unresolvedDependencies(pkgWithDeps(["alpha", "beta"], ["alpha"]))).toEqual([
+      "beta",
+    ]);
   });
 });
 
