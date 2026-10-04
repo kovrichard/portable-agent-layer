@@ -26,6 +26,7 @@
     "contextualSteering": true,
     "skillMatching": true,
     "wallClock": true,
+    "dueReminders": false,
     "interactionAwareness": true,
     "reactionSampling": true,
     "steeringTestReport": false

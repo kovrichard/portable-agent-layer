@@ -115,6 +115,11 @@ export function isEnabled(key: string): boolean {
   return load().dynamicContext?.[key] !== false;
 }
 
+/** Check if an opt-in dynamic context section is enabled (defaults to false) */
+export function isOptedIn(key: string): boolean {
+  return load().dynamicContext?.[key] === true;
+}
+
 /** Get the loadAtStartup file list */
 export function startupFiles(): string[] {
   return load().loadAtStartup?.files ?? [];

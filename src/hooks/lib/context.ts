@@ -5,16 +5,12 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { loadReflectNudge } from "../handlers/reflect-trigger";
-import { loadAlgorithmReviewNudge } from "./algorithm-review";
-import { loadAnalyzeNudge } from "./analyze-nudge";
 import { resolveAnchor } from "./anchor";
-import { oncePerDay } from "./daily-nudge";
+import { dueNudgeSections } from "./daily-nudge";
 import { loadHandoffContext } from "./handoff-context";
 import { loadOpinionContext } from "./opinions";
 import { paths, toPath } from "./paths";
 import { loadActiveProjectsContext } from "./projects";
-import { loadReactionAuditNudge } from "./reaction-audit";
 import { loadRecentNotes } from "./relationship";
 import { loadFailurePatterns } from "./semi-static";
 import { sessionDir } from "./session-dir";
@@ -219,18 +215,11 @@ export function buildSystemReminder(
     !opts.withoutHandoff && settings.isEnabled("handoff")
       ? loadHandoffContext(sessionDir())
       : "";
-  // Maintainer-only: self-gates to a repo checkout, "" for everyone else.
-  const algoReview = oncePerDay("algorithm-review", loadAlgorithmReviewNudge());
-  const reactionAudit = oncePerDay("reaction-audit", loadReactionAuditNudge());
-  const reflectNudge = oncePerDay("reflect", loadReflectNudge());
-  const analyzeNudge = oncePerDay("analyze", loadAnalyzeNudge());
+  const dueNudges = opts.agent === "cursor" ? dueNudgeSections() : [];
   const parts: string[] = [];
   if (startup) parts.push(startup);
   if (handoff) parts.push(handoff);
-  if (algoReview) parts.push(algoReview);
-  if (reactionAudit) parts.push(reactionAudit);
-  if (reflectNudge) parts.push(reflectNudge);
-  if (analyzeNudge) parts.push(analyzeNudge);
+  parts.push(...dueNudges);
   if (selfModel) parts.push(selfModel);
   if (wisdom) parts.push(wisdom);
   if (opinions) parts.push(opinions);

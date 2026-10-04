@@ -8,6 +8,7 @@
  */
 
 import { promptContextResponse } from "../lib/agent";
+import { dueNudgeReminder } from "../lib/daily-nudge";
 import { observeTurn } from "../lib/interaction";
 import { logDebug, logError } from "../lib/log";
 import { parkPromptContext } from "../lib/parked-context";
@@ -81,6 +82,7 @@ export async function getPromptContext(
   const parts = [
     getWallClockReminder(),
     withinBudget(() => observeTurn(prompt, sessionId), BUDGET_MS),
+    withinBudget(() => dueNudgeReminder(), BUDGET_MS),
     getSteeringReminder(prompt),
     getSkillReminder(prompt),
     await getRetrievalReminder(prompt),

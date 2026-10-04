@@ -8,6 +8,7 @@ import {
   loadWisdomContext,
 } from "../src/hooks/lib/context";
 import { writeProject } from "../src/hooks/lib/projects";
+import { reload } from "../src/hooks/lib/settings";
 import { appendProjectHistory } from "../src/hooks/lib/work-tracking";
 
 const HOME = resolve(import.meta.dir, "../.test-home-context-build");
@@ -53,6 +54,7 @@ beforeEach(() => {
   if (existsSync(HOME)) rmSync(HOME, { recursive: true });
   mkdirSync(HOME, { recursive: true });
   process.env.PAL_HOME = HOME;
+  reload();
 });
 
 afterEach(() => {
@@ -169,18 +171,43 @@ describe("loadRelationshipContext", () => {
 });
 
 describe("buildSystemReminder", () => {
-  // A bare home is not silent: the analyze nudge and the unregistered-project
-  // hint both fire, which is the behaviour worth pinning here.
-  test("surfaces the analyze nudge when analysis has never run", () => {
-    const out = buildSystemReminder();
+  function optInToDueReminders() {
+    write(
+      "memory/pal-settings.json",
+      JSON.stringify({ dynamicContext: { dueReminders: true } })
+    );
+    reload();
+  }
+
+  test("leaves due reminders out until the user opts in", () => {
+    expect(buildSystemReminder({ agent: "cursor" })).not.toContain(
+      "## Learning Analysis Due"
+    );
+  });
+
+  test("surfaces the analyze nudge at startup for an agent with no per-turn context", () => {
+    optInToDueReminders();
+    const out = buildSystemReminder({ agent: "cursor" });
 
     expect(out).toContain("## Learning Analysis Due");
     expect(out).toContain("/pal-analyze");
   });
 
-  test("shows the analyze nudge in the first session of the day only", () => {
-    expect(buildSystemReminder()).toContain("## Learning Analysis Due");
-    expect(buildSystemReminder()).not.toContain("## Learning Analysis Due");
+  test("keeps the analyze nudge in every session until a reply passes it on", () => {
+    optInToDueReminders();
+    expect(buildSystemReminder({ agent: "cursor" })).toContain(
+      "## Learning Analysis Due"
+    );
+    expect(buildSystemReminder({ agent: "cursor" })).toContain(
+      "## Learning Analysis Due"
+    );
+  });
+
+  test("leaves due nudges to the per-turn context where the agent hears it", () => {
+    optInToDueReminders();
+    expect(buildSystemReminder({ agent: "claude" })).not.toContain(
+      "## Learning Analysis Due"
+    );
   });
 
   test("wraps content in a system-reminder with the current time", () => {

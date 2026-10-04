@@ -123,6 +123,13 @@ describe("injectPromptContext handler", () => {
     await setSettings({ dynamicContext: { wallClock: false } });
   });
 
+  test("a due reminder rides along once the user opts in", async () => {
+    await setSettings({ dynamicContext: { wallClock: false, dueReminders: true } });
+    const { injectPromptContext } = await loadHandlers();
+    const out = await captureStdout(() => injectPromptContext("anything goes here"));
+    expect(out).toContain("/pal-analyze");
+  });
+
   test("the wall clock rides along even when nothing else matches", async () => {
     await setSettings({});
     const { injectPromptContext } = await loadHandlers();
