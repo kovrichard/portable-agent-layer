@@ -1,3 +1,10 @@
+## [0.85.8](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.7...v0.85.8) (2026-10-04)
+
+
+### Bug Fixes
+
+* **doctor:** check git and gh, with the install command for each platform ([6c26949](https://github.com/kovrichard/portable-agent-layer/commit/6c2694938563b21d2adc280dc5b34fcabddf26e0))
+
 ## [0.85.7](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.6...v0.85.7) (2026-10-04)
 
 
