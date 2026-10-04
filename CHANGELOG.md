@@ -1,3 +1,14 @@
+## [0.85.13](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.12...v0.85.13) (2026-10-04)
+
+
+### Bug Fixes
+
+* **docs:** put pal on PATH with bun link in repo mode ([bc8839c](https://github.com/kovrichard/portable-agent-layer/commit/bc8839c77bb07d8a77be745352e79b424c8c8306))
+* **doctor:** link a repo checkout when pal is not on PATH ([6ee06bf](https://github.com/kovrichard/portable-agent-layer/commit/6ee06bfa5630230f84447302c72fbdbeff94341f))
+* **doctor:** name an expired Claude login and point at setup-token ([d3a793c](https://github.com/kovrichard/portable-agent-layer/commit/d3a793cd8a81549825f08873fb29e790fe4424d0))
+* **install:** drop PAL hooks whose script no longer exists ([4de7fcb](https://github.com/kovrichard/portable-agent-layer/commit/4de7fcb91d81d506fed0e29b26bf6203bfe1c73a))
+* **migrate:** remove settings older templates wrote and PAL no longer reads ([54c02c0](https://github.com/kovrichard/portable-agent-layer/commit/54c02c067942ffe365fe1826f8170371a845eed5))
+
 ## [0.85.12](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.11...v0.85.12) (2026-10-04)
 
 
