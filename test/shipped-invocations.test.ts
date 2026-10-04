@@ -27,21 +27,8 @@ function shippedInvocations(pattern: RegExp): { file: string; command: string }[
   return found;
 }
 
-/**
- * A `.mjs` tool is a build artifact: scripts/build-skill-tools.ts emits it at
- * prepack from the `.ts` carrying the `pal-build:mjs` marker, and .gitignore keeps
- * it out of a checkout. Resolving it on disk would make this guard depend on
- * whether something had run the build — and something does, mid-suite, since
- * package-publish.test.ts runs `bun pm pack` and prepack writes the artifacts back
- * into the tree. Under --randomize that is a coin flip. So resolve the source and
- * the marker, which are what decide whether the shipped command will work.
- */
 function toolIsShipped(skill: string, tool: string): boolean {
   const tools = resolve(ROOT, "assets/skills", skill, "tools");
-  if (tool.endsWith(".mjs")) {
-    const source = resolve(tools, `${tool.slice(0, -".mjs".length)}.ts`);
-    return existsSync(source) && readFileSync(source, "utf-8").includes("pal-build:mjs");
-  }
   return existsSync(resolve(tools, tool)) || existsSync(resolve(tools, `${tool}.ts`));
 }
 
@@ -57,6 +44,15 @@ describe("the `pal cli` commands PAL ships in its own instruction text", () => {
       return !skill || !tool || !toolIsShipped(skill, tool);
     });
     expect(missing).toEqual([]);
+  });
+
+  test("no shipped tool needs Node: every one runs under Bun", () => {
+    const nodeRun = [
+      ...shippedInvocations(new RegExp(/pal cli skill run [a-z0-9-]+ [a-z0-9-]+\.mjs/g)),
+      ...shippedInvocations(new RegExp(/#!\/usr\/bin\/env node|pal-build:mjs/g)),
+    ];
+
+    expect(nodeRun).toEqual([]);
   });
 
   test("every `pal cli <verb>` naming a built-in tool is a registered verb", () => {

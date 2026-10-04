@@ -87,7 +87,7 @@ Wraps `bun run dev` in the report directory. Open the URL printed by Next, edit 
 ### 4. Render the PDF
 
 ```bash
-pal cli skill run consulting-report generate-pdf.mjs <report-dir>
+pal cli skill run consulting-report generate-pdf <report-dir>
 ```
 
 Runs `next build` (which produces a static export at `out/`), then Playwright loads it via a tiny in-process HTTP server and prints the PDF with page-numbered header/footer. Output:
@@ -97,8 +97,6 @@ Runs `next build` (which produces a static export at `out/`), then Playwright lo
 ```
 
 Override with `--pdf <path>`. Pass `--skip-build` to re-render the PDF from the existing `out/` without re-building.
-
-Run with **Node**, not Bun — Playwright's `chromium.launch()` hangs under Bun on Windows.
 
 ## Directory Layout
 
@@ -149,14 +147,13 @@ Run with **Node**, not Bun — Playwright's `chromium.launch()` hangs under Bun 
 ## Demo
 
 ```bash
-pal cli skill run consulting-report generate-pdf.mjs ~/.pal/skills/consulting-report/demo
+pal cli skill run consulting-report generate-pdf ~/.pal/skills/consulting-report/demo
 ```
 
 Renders the bundled Acme Industries example end-to-end. Inspect the resulting PDF to see the full layout before authoring your own.
 
 ## Important
 
-- Runs on Node (Playwright); the tool ships as a compiled `.mjs`, and `pal cli skill run` picks Node for that extension so no `--experimental-strip-types` is needed
 - Bundled fonts come from Google Fonts via `next/font/google` — no licensing surface, no CDN at runtime, glyphs embedded at build time
 - Reports are disposable artifacts of `lib/report-data.ts` + `app/page.tsx`; commit the source, not the PDF
 - The scaffolder runs `bun install` inside the target by default — pass `--no-install` to skip

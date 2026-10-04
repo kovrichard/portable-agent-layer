@@ -1,16 +1,9 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 // create-pdf skill tool: Markdown -> HTML (marked, GFM) -> PDF (Playwright).
 // Self-contained HTML: all CSS inlined, no CDN at render time.
 //
-// Run with Node (not Bun) — Playwright's chromium.launch hangs under Bun on Windows
-// because it uses --remote-debugging-pipe over stdio and Bun's Windows child-process
-// pipe handling doesn't complete the CDP handshake.
-//
-// pal-build:mjs — ships as a compiled md-to-html-pdf.mjs sibling (scripts/build-skill-tools.ts)
-// and is invoked as that .mjs: a .ts under node_modules can't be type-stripped by Node.
-//
 // Usage:
-//   pal cli skill run create-pdf md-to-html-pdf.mjs <input.md> \
+//   pal cli skill run create-pdf md-to-html-pdf <input.md> \
 //     [--html <out.html>] [--pdf <out.pdf>] [--margin <css>] [--header <html|file>] [--footer <html|file>]
 //   --margin defaults to 25mm (all sides). --header/--footer accept inline HTML or a file path.
 

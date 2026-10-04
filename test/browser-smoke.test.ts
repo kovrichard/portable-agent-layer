@@ -21,6 +21,10 @@ import { pathToFileURL } from "node:url";
 const ENABLED = process.env.PAL_BROWSER_SMOKE === "1";
 
 const SHOT = resolve(import.meta.dir, "../assets/skills/playwright/tools/shot.ts");
+const PDF = resolve(
+  import.meta.dir,
+  "../assets/skills/create-pdf/tools/md-to-html-pdf.ts"
+);
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
 
 let DIR: string;
@@ -58,5 +62,21 @@ describe.skipIf(!ENABLED)("browser smoke", () => {
     const png = readFileSync(out);
     expect(png.subarray(0, 4)).toEqual(PNG_MAGIC);
     expect(png.byteLength).toBeGreaterThan(1000);
+  }, 150_000);
+
+  test("renders markdown to a real PDF under bun", () => {
+    const md = resolve(DIR, "probe.md");
+    const out = resolve(DIR, "probe.pdf");
+    writeFileSync(md, "# pal pdf smoke\n\n| a | b |\n|---|---|\n| 1 | 2 |\n");
+
+    const res = spawnSync("bun", [PDF, md, "--pdf", out], {
+      encoding: "utf-8",
+      timeout: 120_000,
+    });
+
+    expect(res.status).toBe(0);
+    const pdf = readFileSync(out);
+    expect(pdf.subarray(0, 5).toString()).toBe("%PDF-");
+    expect(pdf.byteLength).toBeGreaterThan(1000);
   }, 150_000);
 });

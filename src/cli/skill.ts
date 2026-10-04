@@ -76,11 +76,6 @@ function isPlainSegment(part: string): boolean {
   );
 }
 
-/** Playwright tools ship compiled as .mjs and need Node; everything else is Bun. */
-function runtimeFor(file: string): string {
-  return file.endsWith(".mjs") ? "node" : "bun";
-}
-
 function toolFileName(tool: string): string {
   return new RegExp(/\.[a-z]+$/).test(tool) ? tool : `${tool}.ts`;
 }
@@ -96,7 +91,7 @@ function runSkillTool(skill: string, tool: string, toolArgs: string[]): number {
     log.error(`No tool '${file}' in skill '${skill}' — looked in ${path}`);
     return 1;
   }
-  const { status } = spawnSync(runtimeFor(file), [path, ...toolArgs], {
+  const { status } = spawnSync("bun", [path, ...toolArgs], {
     stdio: "inherit",
   });
   return status ?? 1;
