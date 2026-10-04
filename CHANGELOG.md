@@ -1,3 +1,13 @@
+## [0.85.3](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.2...v0.85.3) (2026-10-04)
+
+
+### Bug Fixes
+
+* **context:** keep due reminders until a reply passes them on ([8493c11](https://github.com/kovrichard/portable-agent-layer/commit/8493c11717c5d6336ca04f17724d7e4eb6809d4e))
+* **context:** ship due reminders off until they are fit to release ([0052912](https://github.com/kovrichard/portable-agent-layer/commit/005291263dd1cf6e1ad1112b396324d0b7572f38))
+* **test:** date the retrieval fixture relative to now ([c4b3a55](https://github.com/kovrichard/portable-agent-layer/commit/c4b3a5558854406399c1c371ffcb8c84fca9b830))
+* **test:** reset the settings cache before each context-build test ([cb02e63](https://github.com/kovrichard/portable-agent-layer/commit/cb02e63d7446e80f47824c572cb91d411d4db7c6))
+
 ## [0.85.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.1...v0.85.2) (2026-10-02)
 
 
