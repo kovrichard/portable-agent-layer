@@ -21,6 +21,7 @@ export interface ReactionSample {
 const KEPT: Record<Reaction, number> = {
   "follow-up": 150,
   approved: 20,
+  "go-ahead": 20,
   corrected: 20,
   repeated: 20,
   "new-topic": 20,

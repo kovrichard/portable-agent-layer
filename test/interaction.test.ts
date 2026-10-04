@@ -15,6 +15,7 @@ import {
   type MoodTurn,
   readMood,
 } from "../src/hooks/lib/interaction-mood";
+import { REACTION_RULES } from "../src/hooks/lib/interaction-reaction";
 import { reload } from "../src/hooks/lib/settings";
 
 let TEST_HOME: string;
@@ -112,6 +113,14 @@ describe("measuring a turn", () => {
 
     observeTurn("and the docs?", "s1", at(45));
     expect(lastEvent().reaction).toBeNull();
+  });
+
+  test("a reaction is logged with the version of the rules that read it", () => {
+    observeTurn("fix the flaky upload test", "s1", T0);
+    recordReply("s1", "Done.", at(30));
+    observeTurn("sure", "s1", at(40));
+
+    expect(lastEvent()).toMatchObject({ reaction: "go-ahead", reactionRules: 2 });
   });
 
   test("a gap over twenty minutes is a break", () => {
@@ -227,6 +236,7 @@ function pastTurn(replyWords: number, reaction: string | null = null): string {
     afterBreak: false,
     reply: { words: replyWords, listItems: 0, headings: 0, asked: false },
     reaction,
+    ...(reaction && { reactionRules: REACTION_RULES }),
   });
 }
 

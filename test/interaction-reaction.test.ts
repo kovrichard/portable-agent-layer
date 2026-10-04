@@ -37,25 +37,35 @@ describe("a reply's outcome, read from the next message", () => {
   });
 
   test.each([
-    "yes pls",
-    "yyyyes",
     "great, merge it",
     "It works, well done",
     "that's it. also bump the version",
+    "looks right to me. go ahead with step 2 then",
+    "understood, well done. Now go ahead with the queue fix. Staging deploys meanwhile",
+    "got it, great",
+    "Let's build that, good job",
+    "perfect",
+    "thanks",
+    "sounds good",
+    "that's fine",
+  ])("approved, the result itself is accepted: %s", (text) => {
+    expect(react(text)).toBe("approved");
+  });
+
+  test.each([
+    "yes pls",
+    "yyyyes",
+    "sure",
     "merge to main",
     "push and PR",
     "ok",
     "ok go",
     "start building the first one",
     "fix all in separate commits",
-    "looks right to me. go ahead with step 2 then",
-    "understood, well done. Now go ahead with the queue fix. Staging deploys meanwhile",
-    "got it, great",
-    "Let's build that, good job",
     "add pls. the smaller model is fine",
     "yes, fix both. Then push. Also sketch the retry fix, but don't build it yet",
-  ])("approved: %s", (text) => {
-    expect(react(text)).toBe("approved");
+  ])("a go-ahead only gives permission to continue: %s", (text) => {
+    expect(react(text)).toBe("go-ahead");
   });
 
   test.each([
@@ -72,7 +82,7 @@ describe("a reply's outcome, read from the next message", () => {
     "add pls. but use the smaller model",
     "push. the tests still need a rename though",
   ])("an opener, a failure report or a go-ahead with conditions is not approval: %s", (text) => {
-    expect(react(text)).not.toBe("approved");
+    expect(["approved", "go-ahead"]).not.toContain(react(text));
   });
 
   test("asking the same thing again is a repeat, even before approval words", () => {

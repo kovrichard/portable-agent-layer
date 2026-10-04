@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { TurnEvent } from "../src/hooks/lib/interaction";
+import { REACTION_RULES } from "../src/hooks/lib/interaction-reaction";
 import { reportLines, summarize } from "../src/tools/lib/interaction-report";
 
 let clock = 0;
@@ -31,8 +32,14 @@ function answered(words: number, reaction: TurnEvent["reaction"], mood = "") {
   return turn({
     reply: { words, listItems: 0, headings: 0, asked: false },
     reaction,
+    reactionRules: REACTION_RULES,
     mood,
   });
+}
+
+function readBeforeTheSplit(event: TurnEvent): TurnEvent {
+  const { reactionRules: _rules, ...older } = event;
+  return older;
 }
 
 describe("interaction report", () => {
@@ -172,6 +179,38 @@ describe("interaction report", () => {
 
     expect(lines).toContain("On discord-mobile, from 1 reacted reply:");
     expect(lines.some((l) => l.startsWith("On terminal"))).toBe(false);
+  });
+
+  test("an approval read before go-ahead was split is left out of approval figures", () => {
+    const summary = summarize([
+      turn(),
+      readBeforeTheSplit(answered(100, "approved")),
+      answered(100, "approved"),
+      answered(100, "follow-up"),
+    ]);
+
+    expect(summary.usual.replies).toBe(3);
+    expect(summary.usual.approvedShare).toBe(0.5);
+    expect(summary.approvals.reacted).toBe(2);
+  });
+
+  test("names older approvals for what they may be, and says they are left out", () => {
+    const lines = reportLines(
+      summarize([
+        turn(),
+        readBeforeTheSplit(answered(100, "approved")),
+        readBeforeTheSplit(answered(100, "follow-up")),
+        answered(100, "go-ahead"),
+      ]),
+      7
+    );
+
+    expect(lines[2]).toBe(
+      "Reactions: approved or go-ahead 33% · follow-up 33% · go-ahead 33%"
+    );
+    expect(lines).toContain(
+      "2 older replies were read before go-ahead was split from approval, and are left out of the approval figures."
+    );
   });
 
   test("a repeat counts against a reply like a correction", () => {

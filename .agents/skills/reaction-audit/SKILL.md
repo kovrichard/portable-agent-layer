@@ -1,6 +1,6 @@
 ---
 name: reaction-audit
-description: Audit PAL's code-only reaction rules (corrected, repeated, approved, new-topic, follow-up) against the maintainer's sampled real messages, and report where a model's reading disagrees, as proposed rule changes with test cases. Use when the session reminder shows "Reaction Rules Audit Due", or when asked to check or audit the reaction rules.
+description: Audit PAL's code-only reaction rules (corrected, repeated, approved, go-ahead, new-topic, follow-up) against the maintainer's sampled real messages, and report where a model's reading disagrees, as proposed rule changes with test cases. Use when the session reminder shows "Reaction Rules Audit Due", or when asked to check or audit the reaction rules.
 argument-hint: (optional) --all to audit every kept sample, not only those since the last audit
 metadata:
   triggers:
@@ -26,7 +26,8 @@ A **repo-only, maintainer** workflow. The rules live in `src/hooks/lib/interacti
 2. **Label each sample yourself**, one at a time, from the message and the reply end only. Use exactly one of:
    - `corrected`: the user says the reply was wrong or missed what they asked.
    - `repeated`: the user restates their previous request.
-   - `approved`: the user accepts the reply or tells you to go ahead, with nothing else to fix.
+   - `approved`: the user accepts the result itself, praising or confirming the work ("great", "works", "looks right"), with nothing else to fix.
+   - `go-ahead`: the user only gives permission to continue ("yes", "sure", "ok", "merge it"), without judging the work. Praise plus permission is `approved`.
    - `new-topic`: the user moves to something unrelated to the reply.
    - `follow-up`: anything else, including questions and new instructions on the same work.
 
@@ -37,7 +38,7 @@ A **repo-only, maintainer** workflow. The rules live in `src/hooks/lib/interacti
    bun .agents/skills/reaction-audit/tools/compare.ts <labels.json>
    ```
 
-4. **Judge each disagreement.** Re-read the message and reply end, then decide which side is right. A rule is wrong only when the message clearly means your label. When a message is ambiguous, the rule's label stands: the rules favour precision over recall.
+4. **Judge each disagreement.** Re-read the message and reply end, then decide which side is right. A sample kept before go-ahead was split from approval (October 2026) may carry `approved` for a go-ahead; that disagreement is the old rules, not a miss. A rule is wrong only when the message clearly means your label. When a message is ambiguous, the rule's label stands: the rules favour precision over recall.
 
 5. **Group the rule misses into proposed changes.** For each: the pattern the rules miss or misfire on, the messages that show it, a concrete change to `interaction-reaction.ts`, and the test cases for `test/interaction-reaction.test.ts`, including one that must not change label. Do not quote private message text in code or tests; write a neutral case with the same shape.
 
