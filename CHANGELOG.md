@@ -1,3 +1,10 @@
+## [0.85.18](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.17...v0.85.18) (2026-10-05)
+
+
+### Bug Fixes
+
+* **install:** fail CI when PAL stops shipping something it never cleans up ([0633bf5](https://github.com/kovrichard/portable-agent-layer/commit/0633bf56d7571bc09b7271e55fd94c7398d4bd08))
+
 ## [0.85.17](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.16...v0.85.17) (2026-10-05)
 
 
