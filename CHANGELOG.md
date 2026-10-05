@@ -1,3 +1,10 @@
+## [0.85.20](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.19...v0.85.20) (2026-10-05)
+
+
+### Bug Fixes
+
+* **claims:** require git to back a claim about what is pushed or merged ([17717a4](https://github.com/kovrichard/portable-agent-layer/commit/17717a4340e78c046e1ff3d261ae0bdaab1c7b98)), closes [#55](https://github.com/kovrichard/portable-agent-layer/issues/55)
+
 ## [0.85.19](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.18...v0.85.19) (2026-10-05)
 
 
