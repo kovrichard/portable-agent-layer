@@ -1,3 +1,11 @@
+## [0.85.16](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.15...v0.85.16) (2026-10-05)
+
+
+### Bug Fixes
+
+* **install:** apply pending migrations before installing ([4bed9e5](https://github.com/kovrichard/portable-agent-layer/commit/4bed9e56158a26933c31d38eb30ce7f220df5de7))
+* **migrate:** make migrations the only code that knows PAL's past ([687c51d](https://github.com/kovrichard/portable-agent-layer/commit/687c51df16006230243503a6cbdb86aff2b5cb8a))
+
 ## [0.85.15](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.14...v0.85.15) (2026-10-05)
 
 
