@@ -1,3 +1,11 @@
+## [0.85.14](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.13...v0.85.14) (2026-10-05)
+
+
+### Bug Fixes
+
+* **doctor:** list a retired settings key once, under its migration ([34f9043](https://github.com/kovrichard/portable-agent-layer/commit/34f9043a6db60b5c5d1f2c217f025bd81be373ff))
+* **doctor:** say when a hook last failed, and soften a login already fixed ([159b944](https://github.com/kovrichard/portable-agent-layer/commit/159b944896742114b40a0dc80a4135926e0b5417))
+
 ## [0.85.13](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.12...v0.85.13) (2026-10-04)
 
 
