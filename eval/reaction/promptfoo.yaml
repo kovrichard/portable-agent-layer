@@ -33,13 +33,20 @@ prompts:
       </message>
 
       Pick exactly one label:
-      - corrected: the user says the reply was wrong, missed what they asked, made a false claim, broke a promise, or failed to explain.
+      - corrected: the message shows the reply itself was wrong. Something the reply claimed is false, something it said was done is missing, a command or step it gave does not work, a promise it made was not kept, it forgot or missed what the user asked, or the user still does not understand after its explanation.
       - repeated: the user restates their previous request because it was not done.
       - approved: the user accepts the reply or tells the assistant to go ahead, with nothing else to fix.
       - new-topic: the user moves to something unrelated to the reply.
-      - follow-up: anything else, including questions and new instructions on the same work.
+      - follow-up: anything else on the same work.
 
-      Judge the message against what the reply said. When genuinely ambiguous, answer follow-up.
+      These are follow-up, not corrected:
+      - news about something that failed after the reply, when the reply never claimed it would work, such as a failed CI run or pasted errors;
+      - asking "are you sure?" or asking the assistant to double-check, without saying the reply is wrong;
+      - suggesting more, or a new requirement on top of the work;
+      - asking where or how to do a step the reply described;
+      - a complaint about something other than the reply.
+
+      Judge the message against what the reply said. Answer corrected only when the message clearly says or shows the reply was wrong; otherwise answer follow-up.
 
       Respond with ONLY a JSON object, no prose: {"reaction": "<label>"}
 
