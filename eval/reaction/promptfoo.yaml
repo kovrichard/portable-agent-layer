@@ -1,16 +1,16 @@
 # PAL reaction classification evaluation
 #
-# Evaluates a candidate prompt for labelling how the user reacted to the
-# assistant's previous reply. The rules in src/hooks/lib/interaction-reaction.ts
-# read the message alone and miss most corrections; this prompt also sees the end
-# of the reply, which is what makes "acme not found" or "it was 10 minutes ago" a
-# correction.
+# Evaluates the prompt in src/hooks/lib/reaction-rating.ts as the model receives
+# it: system, user, and the schema instruction buildCliPrompt() appends. It labels
+# how the user reacted to the previous reply, and the label is the implicit
+# rating: a confirmed correction rates low, praise rates high, anything else
+# carries no rating. Seeing the end of the reply is what makes "acme not found"
+# or "it was 10 minutes ago" a correction.
 #
-# Only the correction call is under test here: the rules keep approvals. Two
-# failures matter. Missing a correction loses a lesson; calling a follow-up a
+# Two failures matter. Missing a correction loses a lesson; calling a follow-up a
 # correction teaches a false one, and that is the more expensive mistake. The
 # traps are follow-ups that sound negative: a failed CI run, pasted errors, "are
-# you sure", a new requirement.
+# you sure", a new requirement. A go-ahead must not count as praise.
 #
 # Run:
 #   bun run eval:reaction --filter-providers haiku
@@ -22,19 +22,10 @@ prompts:
     raw: |
       You classify how a user reacted to an AI assistant's reply.
 
-      The end of the assistant's reply:
-      <reply_end>
-      {{replyEnd}}
-      </reply_end>
-
-      The user's next message:
-      <message>
-      {{message}}
-      </message>
-
       Pick exactly one label:
       - corrected: the message shows the reply itself was wrong. Something the reply claimed is false, something it said was done is missing, a command or step it gave does not work, a promise it made was not kept, it forgot or missed what the user asked, or the user still does not understand after its explanation.
       - repeated: the user restates their previous request because it was not done.
+      - praised: the user explicitly praises the reply or the work, such as "well done", "perfect", "exactly", "this works great".
       - approved: the user accepts the reply or tells the assistant to go ahead, with nothing else to fix.
       - new-topic: the user moves to something unrelated to the reply.
       - follow-up: anything else on the same work.
@@ -46,9 +37,23 @@ prompts:
       - asking where or how to do a step the reply described;
       - a complaint about something other than the reply.
 
+      A go-ahead, "yes", "ok", or "thanks" with a next instruction is approved, not praised.
+
       Judge the message against what the reply said. Answer corrected only when the message clearly says or shows the reply was wrong; otherwise answer follow-up.
 
-      Respond with ONLY a JSON object, no prose: {"reaction": "<label>"}
+      For corrected or repeated, set issue to what the reply got wrong, in at most twelve words. Otherwise set issue to an empty string.
+
+      The end of the assistant's reply:
+      <reply_end>
+      {{replyEnd}}
+      </reply_end>
+
+      The user's next message:
+      <message>
+      {{message}}
+      </message>
+
+      Respond with ONLY a JSON value matching this schema (no prose, no markdown): {'type':'object','properties':{'reaction':{'enum':['corrected','repeated','praised','approved','new-topic','follow-up']},'issue':{'type':'string'}},'required':['reaction','issue'],'additionalProperties':false}
 
 providers:
   - id: file://../lib/claude-cli.js
@@ -283,3 +288,36 @@ tests:
     assert:
       - type: javascript
         value: file://assertions/not-correction.js
+
+  # ── praise, and go-aheads that are not praise ──
+  - description: praise for work that now works
+    vars:
+      replyEnd: The upload fix is deployed and the health check is green.
+      message: well done, it finally works
+    assert:
+      - type: javascript
+        value: file://assertions/is-praised.js
+
+  - description: praise for the answer itself
+    vars:
+      replyEnd: The slow part is the CLI's start-up, about 2.5s of every call.
+      message: perfect, exactly what I needed to know
+    assert:
+      - type: javascript
+        value: file://assertions/is-praised.js
+
+  - description: a polite go-ahead is not praise
+    vars:
+      replyEnd: The branch is ready. Shall I commit it?
+      message: yes pls, commit it
+    assert:
+      - type: javascript
+        value: file://assertions/not-praised.js
+
+  - description: thanks with the next instruction is not praise
+    vars:
+      replyEnd: The first two checks are in place.
+      message: ok thanks, now do the third one
+    assert:
+      - type: javascript
+        value: file://assertions/not-praised.js
