@@ -127,7 +127,7 @@ Do not modify these files unless changing behaviour for all evals:
 | `eval/run.ts` | Runner — accepts `<name>`, resolves config, sets cwd for logs |
 | `eval/logs/` | Gitignored; promptfoo writes error/debug logs here |
 
-After any change to shared infrastructure, run `bun eval/run.ts sentiment --no-cache` to confirm no regressions.
+After any change to shared infrastructure, run `bun eval/run.ts reaction --filter-providers haiku --no-cache` to confirm no regressions.
 
 ## Output format
 
