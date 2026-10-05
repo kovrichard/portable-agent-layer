@@ -1,3 +1,10 @@
+## [0.85.19](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.18...v0.85.19) (2026-10-05)
+
+
+### Bug Fixes
+
+* **context:** tell the agent with every prompt whether the work here is shipped ([75e3add](https://github.com/kovrichard/portable-agent-layer/commit/75e3addd53a75584bd7f3f0d107e4fa09603e7c8))
+
 ## [0.85.18](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.17...v0.85.18) (2026-10-05)
 
 
