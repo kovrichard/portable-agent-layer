@@ -1,3 +1,14 @@
+## [0.85.22](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.21...v0.85.22) (2026-10-05)
+
+
+### Bug Fixes
+
+* **eval:** add a reaction eval for correction detection ([bbcec6e](https://github.com/kovrichard/portable-agent-layer/commit/bbcec6e0463139769e22b706110810fe52ed62ad))
+* **eval:** evaluate the reaction prompt the rater ships ([b864c98](https://github.com/kovrichard/portable-agent-layer/commit/b864c9885678a82c8c3d16fcd5de1d4744e458f8))
+* **eval:** remove the sentiment eval ([7b7cc40](https://github.com/kovrichard/portable-agent-layer/commit/7b7cc401c7b3d39216ceefa0d5c5a20b2a8d841d))
+* **eval:** tell the reaction prompt which follow-ups are not corrections ([5a33d9f](https://github.com/kovrichard/portable-agent-layer/commit/5a33d9f8434f8f4885b2f8f24c8f78fee73c0e8c))
+* **rating:** rate the reaction to the reply, not the message's tone ([85be8c8](https://github.com/kovrichard/portable-agent-layer/commit/85be8c8f9f304b35adec6ee46d9fb100ec033a95))
+
 ## [0.85.21](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.20...v0.85.21) (2026-10-05)
 
 
