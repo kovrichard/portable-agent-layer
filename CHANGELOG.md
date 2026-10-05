@@ -1,3 +1,14 @@
+## [0.85.17](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.16...v0.85.17) (2026-10-05)
+
+
+### Bug Fixes
+
+* **ci:** run the doctor fix proofs ([c971f35](https://github.com/kovrichard/portable-agent-layer/commit/c971f35484a08d0337a0e104542dd725c0ca0f34))
+* **doctor:** point a pal that Bun installed at PATH, not at a reinstall ([6247248](https://github.com/kovrichard/portable-agent-layer/commit/6247248e925dee41dd2f67a8d81511b689c693c4))
+* **doctor:** prove every fix PAL prints clears its finding ([3064008](https://github.com/kovrichard/portable-agent-layer/commit/3064008a2a50adc6b016af22a2a87d1245e46320))
+* **doctor:** say which fix commands belong to PAL ([8d68100](https://github.com/kovrichard/portable-agent-layer/commit/8d681003b14930487ae2e0cfcd27626d64380723))
+* **install:** install only missing production dependencies in package mode ([7e59e20](https://github.com/kovrichard/portable-agent-layer/commit/7e59e20ad4a1e0b6891281175f4d82f223d6fd81))
+
 ## [0.85.16](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.15...v0.85.16) (2026-10-05)
 
 
