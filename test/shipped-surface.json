@@ -279,6 +279,7 @@
     "home/memory/pal-settings.json#dynamicContext.projects",
     "home/memory/pal-settings.json#dynamicContext.reactionSampling",
     "home/memory/pal-settings.json#dynamicContext.relationship",
+    "home/memory/pal-settings.json#dynamicContext.repoState",
     "home/memory/pal-settings.json#dynamicContext.selfModel",
     "home/memory/pal-settings.json#dynamicContext.skillMatching",
     "home/memory/pal-settings.json#dynamicContext.steeringTestReport",

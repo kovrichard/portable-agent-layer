@@ -117,25 +117,34 @@ async function captureStdout(work: () => Promise<void>): Promise<string> {
 }
 
 describe("injectPromptContext handler", () => {
-  // The wall clock rides on every prompt by design, so these cases silence it to
-  // keep asserting what they are about: whether retrieval and skills emit.
+  // The wall clock and the repo state ride on every prompt by design, so these cases
+  // silence them to keep asserting what they are about: whether retrieval and skills emit.
+  const everyPromptOff = { wallClock: false, repoState: false };
+
   beforeEach(async () => {
-    await setSettings({ dynamicContext: { wallClock: false } });
+    await setSettings({ dynamicContext: everyPromptOff });
   });
 
   test("a due reminder rides along once the user opts in", async () => {
-    await setSettings({ dynamicContext: { wallClock: false, dueReminders: true } });
+    await setSettings({ dynamicContext: { ...everyPromptOff, dueReminders: true } });
     const { injectPromptContext } = await loadHandlers();
     const out = await captureStdout(() => injectPromptContext("anything goes here"));
     expect(out).toContain("/pal-analyze");
   });
 
   test("the wall clock rides along even when nothing else matches", async () => {
-    await setSettings({});
+    await setSettings({ dynamicContext: { repoState: false } });
     const { injectPromptContext } = await loadHandlers();
     const out = await captureStdout(() => injectPromptContext("anything goes here"));
     expect(out).toContain("Now: ");
     expect(out.trim().split("\n")).toHaveLength(1);
+  });
+
+  test("the repo state of the working directory rides along", async () => {
+    await setSettings({ dynamicContext: { wallClock: false } });
+    const { injectPromptContext } = await loadHandlers();
+    const out = await captureStdout(() => injectPromptContext("anything goes here"));
+    expect(out).toContain("Repo: ");
   });
 
   test("emits empty when prompt is empty", async () => {
@@ -154,7 +163,7 @@ describe("injectPromptContext handler", () => {
       dynamicContext: {
         learningInjection: false,
         contextualSteering: false,
-        wallClock: false,
+        ...everyPromptOff,
       },
     });
     const { injectPromptContext } = await loadHandlers();
