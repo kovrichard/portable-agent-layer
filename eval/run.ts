@@ -4,7 +4,7 @@
  * then delegates to promptfoo. Any extra argv is forwarded (e.g. --verbose).
  *
  * Usage: bun eval/run.ts <name> [promptfoo args...]
- *   bun eval/run.ts sentiment --providers haiku --no-cache
+ *   bun eval/run.ts reaction --filter-providers haiku --no-cache
  *
  * Each <name> maps to eval/<name>/promptfoo.yaml.
  */
