@@ -12,6 +12,7 @@ import { dueNudgeReminder } from "../lib/daily-nudge";
 import { observeTurn } from "../lib/interaction";
 import { logDebug, logError } from "../lib/log";
 import { parkPromptContext } from "../lib/parked-context";
+import { getRepoStateReminder } from "../lib/repo-state";
 import { runRetrieval } from "../lib/retrieval";
 import { ensureIndex } from "../lib/retrieval-index";
 import { isEnabled } from "../lib/settings";
@@ -70,7 +71,7 @@ function writeForAgent(reminder: string, sessionId?: string): void {
   else if (sessionId) parkPromptContext(sessionId, reminder);
 }
 
-/** Merge every prompt-time source — the wall clock, contextual steering, skill
+/** Merge every prompt-time source — the wall clock, the repo state, contextual steering, skill
  *  matches, prior-lesson retrieval — into one payload, or null when none of them
  *  produced anything. The clock leads: it is the only part that is true of the
  *  moment rather than of the prompt.
@@ -81,6 +82,7 @@ export async function getPromptContext(
 ): Promise<string | null> {
   const parts = [
     getWallClockReminder(),
+    withinBudget(() => getRepoStateReminder(), BUDGET_MS),
     withinBudget(() => observeTurn(prompt, sessionId), BUDGET_MS),
     withinBudget(() => dueNudgeReminder(), BUDGET_MS),
     getSteeringReminder(prompt),

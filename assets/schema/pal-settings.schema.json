@@ -70,6 +70,10 @@
           "type": "boolean",
           "description": "One line of the current time with every prompt, in identity.principal.timezone, so a session resumed hours later knows the day changed."
         },
+        "repoState": {
+          "type": "boolean",
+          "description": "One line with every prompt saying whether the work in the current directory is committed, pushed and released; a registered project without git is named as such."
+        },
         "dueReminders": {
           "type": "boolean",
           "description": "Opt-in, off by default until 1.0. Due maintenance reminders (learning analysis, relationship reflect) with every prompt until a reply names their command; then quiet until the next day."
