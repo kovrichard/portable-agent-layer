@@ -83,6 +83,12 @@ export interface HookErrorGroup {
   source: string;
   count: number;
   last: string;
+  lastAt: number;
+}
+
+interface LoggedError {
+  at: number;
+  message: string;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -114,13 +120,14 @@ function whatTheAgentSaid(message: string): string {
   return output[1].trim() || output[2].trim() || message;
 }
 
-function groupBySource(errors: string[]): HookErrorGroup[] {
+function groupBySource(errors: LoggedError[]): HookErrorGroup[] {
   const groups = new Map<string, HookErrorGroup>();
-  for (const error of errors) {
-    const source = /^([^:]+):/.exec(error)?.[1] ?? "unknown";
-    const group = groups.get(source) ?? { source, count: 0, last: "" };
+  for (const { at, message } of errors) {
+    const source = /^([^:]+):/.exec(message)?.[1] ?? "unknown";
+    const group = groups.get(source) ?? { source, count: 0, last: "", lastAt: 0 };
     group.count++;
-    group.last = whatTheAgentSaid(error.slice(source.length + 1).trim()).slice(0, 120);
+    group.last = whatTheAgentSaid(message.slice(source.length + 1).trim()).slice(0, 120);
+    group.lastAt = at;
     groups.set(source, group);
   }
   return [...groups.values()].sort((a, b) => b.count - a.count);
@@ -131,7 +138,10 @@ export function recentHookErrors(now: number = Date.now()): HookErrorGroup[] {
     const recent = readAllLogs()
       .split("\n")
       .filter((line) => line.includes("] ERROR ") && loggedAt(line) > now - DAY_MS)
-      .map((line) => line.replace(/^\[.*?\] ERROR /, ""));
+      .map((line) => ({
+        at: loggedAt(line),
+        message: line.replace(/^\[.*?\] ERROR /, ""),
+      }));
     return groupBySource(recent);
   } catch {
     return [];

@@ -6,12 +6,20 @@ import {
 } from "../src/cli/doctor/health";
 import { apiKeyFindings, leakedEnvFindings } from "../src/cli/doctor/inference";
 
+const NOW = Date.parse("2026-10-04T19:00:00Z");
+const MINUTE = 60_000;
+const at = (minutesAgo: number) => NOW - minutesAgo * MINUTE;
+const noToken = { now: NOW, env: {} };
+
 describe("hook errors", () => {
   test("one warning per failing hook, with its count and newest message", () => {
-    const findings = hookErrorFindings([
-      { source: "rating", count: 3, last: "timed out" },
-      { source: "agenda", count: 1, last: "bad json" },
-    ]);
+    const findings = hookErrorFindings(
+      [
+        { source: "rating", count: 3, last: "timed out", lastAt: at(5) },
+        { source: "agenda", count: 1, last: "bad json", lastAt: at(5) },
+      ],
+      noToken
+    );
 
     expect(findings.map((f) => f.id)).toEqual([
       "hook-errors.rating",
@@ -22,23 +30,46 @@ describe("hook errors", () => {
     expect(findings[0].title).toContain("timed out");
   });
 
-  test("no errors passes", () => {
-    expect(hookErrorFindings([])[0].severity).toBe("ok");
+  test("says how long ago the newest failure was, so a fixed one reads as old", () => {
+    const title = (minutesAgo: number) =>
+      hookErrorFindings(
+        [{ source: "rating", count: 1, last: "boom", lastAt: at(minutesAgo) }],
+        noToken
+      )[0].title;
+
+    expect(title(45)).toContain("last 45m ago");
+    expect(title(150)).toContain("last 2h ago");
   });
 
+  test("no errors passes", () => {
+    expect(hookErrorFindings([], noToken)[0].severity).toBe("ok");
+  });
+
+  const expiredLogin = {
+    source: "inference",
+    count: 38,
+    last: "Failed to authenticate: OAuth session expired and could not be refreshed",
+    lastAt: at(75),
+  };
+
   test("an expired Claude login fails and points at the year-long token", () => {
-    const [finding] = hookErrorFindings([
-      {
-        source: "inference",
-        count: 38,
-        last: "Failed to authenticate: OAuth session expired and could not be refreshed",
-      },
-    ]);
+    const [finding] = hookErrorFindings([expiredLogin], noToken);
 
     expect(finding.severity).toBe("fail");
     expect(finding.title).toContain("38");
     expect(finding.fix?.command).toBe("claude setup-token");
     expect(finding.fix?.say).toContain("CLAUDE_CODE_OAUTH_TOKEN");
+  });
+
+  test("once the year-long token is set, the old failures only warn", () => {
+    const [finding] = hookErrorFindings([expiredLogin], {
+      now: NOW,
+      env: { CLAUDE_CODE_OAUTH_TOKEN: "set" },
+    });
+
+    expect(finding.severity).toBe("warn");
+    expect(finding.title).toContain("last 1h ago");
+    expect(finding.fix?.say).toContain("CLAUDE_CODE_OAUTH_TOKEN is set");
   });
 });
 

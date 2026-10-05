@@ -671,7 +671,9 @@ function readSettingsObject(): Record<string, Record<string, unknown>> | null {
   }
 }
 
-function retiredKeysIn(settings: Record<string, Record<string, unknown>>): string[] {
+export function retiredKeysIn(
+  settings: Record<string, Record<string, unknown>>
+): string[] {
   return Object.entries(RETIRED_SETTINGS_KEYS).flatMap(([section, keys]) => {
     const value = settings[section];
     if (typeof value !== "object" || value === null) return [];

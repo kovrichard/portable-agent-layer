@@ -29,7 +29,9 @@ describe("recentHookErrors", () => {
   test("sees an error logError just wrote", () => {
     logError("rating", new Error("boom"));
 
-    expect(recentHookErrors()).toEqual([{ source: "rating", count: 1, last: "boom" }]);
+    expect(recentHookErrors()).toMatchObject([
+      { source: "rating", count: 1, last: "boom" },
+    ]);
   });
 
   test("counts only the last 24 hours, read as UTC", () => {
@@ -38,12 +40,12 @@ describe("recentHookErrors", () => {
       "[2026-09-22 12:30:00] ERROR fresh: inside the window",
     ]);
 
-    expect(recentHookErrors(NOW)).toEqual([
+    expect(recentHookErrors(NOW)).toMatchObject([
       { source: "fresh", count: 1, last: "inside the window" },
     ]);
   });
 
-  test("groups by the hook that failed, most errors first, each with its newest message", () => {
+  test("groups by the hook that failed, most errors first, each with its newest message and when", () => {
     debugLog("debug.log.1", [
       "[2026-09-23 09:00:00] ERROR rating: first",
       "[2026-09-23 09:30:00] ERROR agenda: once",
@@ -51,8 +53,18 @@ describe("recentHookErrors", () => {
     debugLog("debug.log", ["[2026-09-23 11:00:00] ERROR rating: newest"]);
 
     expect(recentHookErrors(NOW)).toEqual([
-      { source: "rating", count: 2, last: "newest" },
-      { source: "agenda", count: 1, last: "once" },
+      {
+        source: "rating",
+        count: 2,
+        last: "newest",
+        lastAt: Date.parse("2026-09-23T11:00:00Z"),
+      },
+      {
+        source: "agenda",
+        count: 1,
+        last: "once",
+        lastAt: Date.parse("2026-09-23T09:30:00Z"),
+      },
     ]);
   });
 

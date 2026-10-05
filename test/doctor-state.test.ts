@@ -88,6 +88,15 @@ describe("PAL's own state", () => {
     expect(unknown[0].title).toContain("dynamicContext.retiredTwo");
   });
 
+  test("keys a pending migration removes are left to that migration", () => {
+    healthyHome();
+    settings({ ...IDENTITY, dynamicContext: { learningDigest: true, retiredOne: true } });
+
+    const title = byId("settings.unknown")?.title ?? "";
+    expect(title).toContain("dynamicContext.retiredOne");
+    expect(title).not.toContain("learningDigest");
+  });
+
   test("valid settings raise nothing", () => {
     healthyHome();
     settings({ ...IDENTITY, dynamicContext: { claimCheck: false } });
