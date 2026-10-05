@@ -3,14 +3,7 @@
  * Deploys plugin, installs skills, generates AGENTS.md.
  */
 
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  statSync,
-  unlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { palPkg, platform } from "../../hooks/lib/paths";
 import { getSemiStaticSources } from "../../hooks/lib/semi-static";
@@ -22,11 +15,7 @@ const OC_PLUGINS_DIR = resolve(OC_GLOBAL_DIR, "plugins");
 
 mkdirSync(OC_PLUGINS_DIR, { recursive: true });
 
-// --- 1. Deploy plugin (clean up legacy filename) ---
-const legacyPlugin = resolve(OC_PLUGINS_DIR, "pai-plugin.ts");
-if (existsSync(legacyPlugin)) {
-  unlinkSync(legacyPlugin);
-}
+// --- 1. Deploy plugin ---
 const pluginSrc = resolve(PKG_ROOT, "src", "targets", "opencode", "plugin.ts");
 const pluginDst = resolve(OC_PLUGINS_DIR, "pal-plugin.ts");
 // Embed PKG_ROOT as a hardcoded constant so no env config is needed

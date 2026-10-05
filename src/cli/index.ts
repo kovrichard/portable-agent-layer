@@ -524,6 +524,9 @@ async function install(targets: Targets, args: string[]): Promise<number> {
     log.warn("bun install failed — continuing anyway, but hooks may not work");
   }
 
+  const { applyPendingMigrations } = await import("./migrate");
+  for (const line of applyPendingMigrations()) log.info(line);
+
   // Uses `bun x` (not `bunx`) for Windows compatibility — bunx resolves unreliably under cmd.exe.
   if (process.env.PAL_SKIP_BROWSER_INSTALL !== "1") installChromium();
 

@@ -4,7 +4,7 @@
  * and the VS Code chat.instructionsFilesLocations entry.
  */
 
-import { copyFileSync, existsSync, lstatSync, readlinkSync, unlinkSync } from "node:fs";
+import { copyFileSync, existsSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
 import { platform } from "../../hooks/lib/paths";
 import {
@@ -62,22 +62,6 @@ const removedInstructions = removePalContextFiles(
 log.success(
   `Removed ${removedInstructions.length} ~/.copilot/instructions/pal-*.instructions.md`
 );
-
-// --- Backward compat: remove old copilot-instructions.md symlink if present ---
-const legacyPath = resolve(COPILOT_DIR, "copilot-instructions.md");
-if (existsSync(legacyPath)) {
-  try {
-    if (
-      lstatSync(legacyPath).isSymbolicLink() &&
-      readlinkSync(legacyPath).includes("AGENTS.md")
-    ) {
-      unlinkSync(legacyPath);
-      log.success("Removed legacy copilot-instructions.md symlink");
-    }
-  } catch {
-    /* ignore */
-  }
-}
 
 // --- Remove ~/.copilot/instructions entry from VS Code settings ---
 const vsSettingsPath = vscodeSettingsFile();

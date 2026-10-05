@@ -1,13 +1,13 @@
 /**
- * pal cli migrate — versioned, non-destructive data migrations.
+ * pal cli migrate — the only place PAL knows about its own past.
  *
  * Each Migration has:
- *   check() — returns whether this migration is needed (safe to call repeatedly)
- *   run()   — applies the migration; NEVER deletes source data
+ *   check() — reads what is on disk, so it is safe to call on every install
+ *   run()   — applies it; user data is moved, never deleted, while leftovers
+ *             PAL itself wrote and no longer reads are removed
  *
- * Add new migrations by appending to MIGRATIONS. Registry is ordered; migrations
- * run in declaration order. Doctor calls checkPendingMigrations() to surface
- * pending work without running anything.
+ * Retiring a setting, hook, file or name means adding a migration that removes
+ * its leftovers. Install runs pending migrations first; the doctor lists them.
  */
 
 import {
@@ -40,6 +40,7 @@ import {
   slugify,
 } from "../tools/knowledge/lib";
 import { readThreads, type Thread, writeThreads } from "../tools/lib/thread";
+import { LEFTOVERS, type Leftover } from "./leftovers";
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -715,6 +716,29 @@ const v7RetiredSettingsKeys: Migration = {
   },
 };
 
+function leftoverMigration(leftover: Leftover): Migration {
+  return {
+    id: leftover.id,
+    description: leftover.description,
+    movesSources: true,
+    check() {
+      const found = leftover.find();
+      return { pending: found.length > 0, detail: found.join(", ") || undefined };
+    },
+    run(dryRun = false): MigrationResult {
+      const found = leftover.find();
+      if (found.length === 0) return { migrated: 0, skipped: 0, results: [] };
+      if (!dryRun) leftover.remove();
+      const verb = dryRun ? "would remove" : "removed";
+      return {
+        migrated: found.length,
+        skipped: 0,
+        results: [`${verb} ${found.join(", ")}`],
+      };
+    },
+  };
+}
+
 const MIGRATIONS: Migration[] = [
   v1Projects,
   v2ThreadsToIsc,
@@ -723,6 +747,7 @@ const MIGRATIONS: Migration[] = [
   v5AttributionKeys,
   v6HistorySlugs,
   v7RetiredSettingsKeys,
+  ...LEFTOVERS.map(leftoverMigration),
 ];
 
 // ── Public API ────────────────────────────────────────────────────
@@ -731,6 +756,13 @@ interface PendingMigration {
   id: string;
   description: string;
   detail?: string;
+}
+
+/** Install runs these first, so one install leaves nothing an older PAL wrote. */
+export function applyPendingMigrations(): string[] {
+  return MIGRATIONS.filter((m) => m.check().pending).flatMap((m) =>
+    m.run(false).results.map((line) => `${m.id}: ${line}`)
+  );
 }
 
 /** Returns migrations that have pending work. Used by doctor. */
