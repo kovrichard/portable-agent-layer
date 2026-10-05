@@ -520,7 +520,10 @@ function targetInstallers(): [keyof Targets, string, () => Promise<unknown>][] {
 async function install(targets: Targets, args: string[]): Promise<number> {
   narrateSteps(args.includes("--verbose"));
   const pkg = palPkg();
-  if (runQuietly("bun", ["install", "--frozen-lockfile"], pkg) !== 0) {
+  const { dependencyInstall } = await import("./dependencies");
+  const { isRepoMode } = await import("../hooks/handlers/update-check");
+  const bunInstall = dependencyInstall(pkg, isRepoMode());
+  if (bunInstall && runQuietly("bun", bunInstall, pkg) !== 0) {
     log.warn("bun install failed — continuing anyway, but hooks may not work");
   }
 
