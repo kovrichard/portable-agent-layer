@@ -103,7 +103,7 @@ describe("installing the browser", () => {
 });
 
 describe("pal on PATH", () => {
-  const notOnPath = { pal: null };
+  const notOnPath = { pal: null, bunBin: "/home/u/.bun/bin", inBunBin: false };
 
   test("a repo checkout is linked, not installed from npm", () => {
     const finding = palOnPathFinding({ ...notOnPath, pkg: "/src/pal", repoMode: true });
@@ -120,6 +120,21 @@ describe("pal on PATH", () => {
     expect(
       palOnPathFinding({ ...notOnPath, pkg: "/g/pal", repoMode: false }).fix
     ).toMatchObject({ command: "bun add -g portable-agent-layer", external: true });
+  });
+
+  test.each([
+    true,
+    false,
+  ])("pal already in Bun's bin directory points at PATH, not at a reinstall (repo mode %p)", (repoMode) => {
+    const fix = palOnPathFinding({
+      ...notOnPath,
+      inBunBin: true,
+      pkg: "/g/pal",
+      repoMode,
+    }).fix;
+
+    expect(fix?.command).toBeUndefined();
+    expect(fix?.say).toContain("/home/u/.bun/bin");
   });
 
   test("found on PATH passes", () => {

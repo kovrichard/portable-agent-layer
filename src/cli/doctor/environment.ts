@@ -114,9 +114,15 @@ interface PalInstall {
   pal: string | null;
   pkg: string;
   repoMode: boolean;
+  bunBin: string;
+  inBunBin: boolean;
 }
 
 function putPalOnPath(install: PalInstall): Fix {
+  if (install.inBunBin)
+    return {
+      say: `Add ${install.bunBin} to PATH in your shell profile — Bun put pal there`,
+    };
   return install.repoMode
     ? {
         say: "Link the checkout — a shell alias is invisible to agents",
@@ -128,6 +134,14 @@ function putPalOnPath(install: PalInstall): Fix {
         command: "bun add -g portable-agent-layer",
         external: true,
       };
+}
+
+function bunBin(): string {
+  return resolve(process.env.BUN_INSTALL ?? resolve(homedir(), ".bun"), "bin");
+}
+
+function isInBunBin(): boolean {
+  return ["pal", "pal.exe"].some((name) => existsSync(resolve(bunBin(), name)));
 }
 
 export function palOnPathFinding(install: PalInstall): Finding {
@@ -168,6 +182,8 @@ export function environmentFindings(rtk: ToolCheck): Finding[] {
       pal: findBinaryOnPath("pal"),
       pkg: palPkg(),
       repoMode: isRepoMode(),
+      bunBin: bunBin(),
+      inBunBin: isInBunBin(),
     }),
     playwrightFinding(thisBrowserHost()),
     rtkFinding(rtk),
