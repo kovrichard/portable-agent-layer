@@ -1,19 +1,27 @@
 /**
  * UserPromptSubmit handler: detects explicit and implicit ratings.
- * Ported from original PAI's RatingCapture.hook.ts with rich sentiment analysis.
  *
  * - Explicit: "7", "8 - great work", "rating: 8"
- * - Implicit: Haiku-powered sentiment inference on every user message
- * - Low ratings (<5) write detailed learning markdown
- * - Very low ratings (<=3) write pending-failure.json for Stop handler
+ * - Implicit: a model labels the reaction to the previous reply; only a confirmed
+ *   correction or plain praise becomes a rating
+ * - Low ratings (<=4) write pending-failure.json; the Stop handler writes the
+ *   lesson from the transcript
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawnDetachedInference } from "../lib/detached-inference";
 import { canInfer, inference } from "../lib/inference";
+import { replyEnd } from "../lib/interaction-samples";
 import { paths } from "../lib/paths";
 import { isSystemText, stripInjectedTags } from "../lib/prompt-text";
+import {
+  isCorrectionLabel,
+  parseReactionLabel,
+  ratingContext,
+  ratingFromLabels,
+  reactionRequest,
+} from "../lib/reaction-rating";
 import { emitRating } from "../lib/signals";
 import { now } from "../lib/time";
 import { logTokenUsage } from "../lib/token-usage";
@@ -129,80 +137,18 @@ function isPraise(prompt: string): boolean {
   );
 }
 
-// ── Sentiment Analysis ──
-
-const SENTIMENT_SCHEMA = {
-  type: "object",
-  properties: {
-    rating: { type: ["number", "null"] },
-    sentiment: { enum: ["positive", "negative", "neutral"] },
-    confidence: { type: "number" },
-    summary: { type: "string" },
-    detailed_context: { type: "string" },
-    principle: { type: "string" },
-  },
-  required: [
-    "rating",
-    "sentiment",
-    "confidence",
-    "summary",
-    "detailed_context",
-    "principle",
-  ],
-  additionalProperties: false,
-} as const;
-
-interface SentimentResult {
-  rating: number | null;
-  sentiment: "positive" | "negative" | "neutral";
-  confidence: number;
-  summary: string;
-  detailed_context: string;
-  principle: string;
-}
-
-const SENTIMENT_SYSTEM_PROMPT = `Analyze the user's message for emotional sentiment toward the AI assistant.
-
-OUTPUT FORMAT (JSON only):
-{
-  "rating": <1-10 or null>,
-  "sentiment": "positive" | "negative" | "neutral",
-  "confidence": <0.0-1.0>,
-  "summary": "<10 words max>",
-  "detailed_context": "<what the user wanted, what the AI did or failed to do, root cause, and what to do differently — 50-150 words>",
-  "principle": "<one actionable rule, 10-20 words, start with a verb: Verify / Always / Never / Ask>"
-}
-
-RATING SCALE: 1-2 strong frustration · 3-4 mild frustration · 5 neutral · 6-7 approval · 8-9 strong approval · 10 exceptional · null = no emotional signal
-Short praise ("great job", "nice") = STRONG APPROVAL (8-9), not mild.
-
-TASK DIRECTIVES — short imperatives with "pls" are approval or sequencing signals (null or 6-7, NOT negative):
-"write it pls" / "do it pls" / "step 3 pls" / "option 2 pls" = user directing or approving the AI's own proposal.
-EXCEPTION: "fix X pls" / "fix that pls" is always negative — "fix" implies a problem regardless of "pls".
-
-IMPLIED NEGATIVE (rate 2-4): corrections ("that's wrong", "I meant..."), repeats ("again pls", "still broken", "doesn't work again"), behavioral corrections ("don't do that"), exasperated questions ("why is this still broken?"), failure confirmations ("nothing is fixed").
-IMPLIED POSITIVE (rate 6-8): trust signals ("go ahead", "fix all of it"), continuation ("now also add X", "next do..."), moving forward with the next task.
-NULL rating: neutral questions, simple continuations ("yes", "continue"), task directives without failure context.`;
-
-const MIN_CONFIDENCE = 0.5;
-
 // ── Rating Handling ──
 
 function handleRating(
   rating: number,
   context: string,
   source: string,
-  detailedContext?: string,
-  principle?: string,
-  sessionId?: string,
+  responsePreview: string,
   userMessage?: string
 ): void {
-  const responsePreview = getLastResponse(sessionId).slice(0, 500);
   emitRating(rating, context, source, responsePreview);
 
   if (rating <= 4) {
-    // Low rating — write pending file for Stop handler with full transcript
-    const userPreview = userMessage?.slice(0, 400);
     writeFileSync(
       resolve(paths.state(), "pending-failure.json"),
       JSON.stringify(
@@ -210,10 +156,8 @@ function handleRating(
           rating,
           context,
           source,
-          detailedContext,
-          principle,
           responsePreview,
-          userPreview,
+          userPreview: userMessage?.slice(0, 400),
           cwd: process.cwd(),
           ts: now(),
         },
@@ -225,92 +169,63 @@ function handleRating(
   }
 }
 
-// ── Implicit Sentiment ──
+// ── Implicit Rating ──
 
-function handleImplicitSentiment(message: string, sessionId?: string): void {
+function handleImplicitReaction(message: string, sessionId?: string): void {
   const trimmed = message.trim();
+  const reply = replyEnd(getLastResponse(sessionId));
 
-  // Fast-path: short praise -> rating 8 (synchronous, no inference)
   if (isPraise(trimmed)) {
-    handleRating(
-      8,
-      `Direct praise: "${trimmed}"`,
-      "implicit",
-      undefined,
-      undefined,
-      sessionId,
-      trimmed
-    );
+    handleRating(8, `Direct praise: "${trimmed}"`, "implicit", reply, trimmed);
     return;
   }
 
-  // Skip system-injected text
   if (isSystemText(trimmed)) return;
+  if (!reply) return;
 
   // Skip very short, very long, or code-like messages
   if (trimmed.length < 5 || trimmed.length > 500) return;
   if (/^[/$`{]/.test(trimmed) || trimmed.includes("\n\n")) return;
 
-  // Inference path — detach to background. claude --print has 3-5s of cold-start
-  // overhead per call; running inline would block UserPromptSubmit and exceed
-  // any reasonable in-line budget. Uses the shared detach helper.
+  // claude --print has 3-5s of cold start, too slow for UserPromptSubmit.
+  // The reply is read here, before the turn's own reply can replace it in the cache.
   if (!canInfer()) return;
-  const msgB64 = Buffer.from(trimmed.slice(0, 800)).toString("base64");
   spawnDetachedInference(
     import.meta.filename,
-    ["--sentiment", sessionId ?? "", msgB64],
+    [
+      "--sentiment",
+      sessionId ?? "",
+      Buffer.from(trimmed).toString("base64"),
+      Buffer.from(reply).toString("base64"),
+    ],
     "rating"
   );
 }
 
-/**
- * Background sentiment mode: called via --sentiment flag from a detached subprocess.
- * Runs the heavy inference, parses the result, and writes the rating if confident.
- */
-async function runSentimentInferenceAndStore(
+async function labelReaction(reply: string, message: string, sessionId?: string) {
+  const result = await inference(reactionRequest(reply, message, sessionId));
+  if (result.usage) logTokenUsage("rating", result.usage);
+  return result.success ? parseReactionLabel(result.output) : null;
+}
+
+/** Background mode: label the reaction, confirm a correction, store the rating. */
+async function runReactionRatingAndStore(
   message: string,
+  reply: string,
   sessionId?: string
 ): Promise<void> {
   try {
-    const trimmed = message.trim();
-    const lastResponse = getLastResponse(sessionId).slice(0, 300);
-    const contextBlock = lastResponse
-      ? `CONTEXT (last AI response excerpt):\n${lastResponse}\n\nCURRENT USER MESSAGE:\n${trimmed.slice(0, 300)}`
-      : trimmed.slice(0, 300);
-
-    const result = await inference({
-      system: SENTIMENT_SYSTEM_PROMPT,
-      user: contextBlock,
-      maxTokens: 500,
-      timeout: 90000,
-      jsonSchema: SENTIMENT_SCHEMA,
-      caller: "rating",
-      sessionId,
-    });
-
-    if (result.usage) logTokenUsage("rating", result.usage);
-    if (!result.success || !result.output) return;
-
-    const parsed = JSON.parse(result.output) as SentimentResult;
-
-    if (parsed.rating === null) return;
-    if (parsed.confidence < MIN_CONFIDENCE) return;
-
-    const rating = parsed.rating;
-    if (typeof rating === "number" && rating >= 1 && rating <= 10 && rating !== 5) {
-      handleRating(
-        rating,
-        `${parsed.summary}: ${trimmed.slice(0, 200)}`,
-        "implicit",
-        parsed.detailed_context,
-        parsed.principle,
-        sessionId,
-        trimmed
-      );
+    const first = await labelReaction(reply, message, sessionId);
+    const confirmation = isCorrectionLabel(first)
+      ? await labelReaction(reply, message, sessionId)
+      : null;
+    const rating = ratingFromLabels(first, confirmation);
+    if (first && rating !== null) {
+      handleRating(rating, ratingContext(first, message), "implicit", reply, message);
     }
   } catch (err) {
     const { logError } = await import("../lib/log");
-    logError("rating:sentiment-child", err);
+    logError("rating:reaction-child", err);
   }
 }
 
@@ -327,26 +242,29 @@ export function captureRating(message: string, sessionId?: string): void {
       explicit.rating,
       explicit.comment || cleaned.slice(0, 200),
       "explicit",
-      undefined,
-      undefined,
-      sessionId,
+      getLastResponse(sessionId).slice(0, 500),
       cleaned
     );
     return;
   }
 
-  // Path 2: Implicit sentiment — fast-paths run synchronously, the inference
-  // path detaches to a background bun subprocess (mirrors session-name).
-  handleImplicitSentiment(cleaned, sessionId);
+  // Path 2: Implicit reaction — the praise fast-path runs synchronously, the
+  // model path detaches to a background bun subprocess (mirrors session-name).
+  handleImplicitReaction(cleaned, sessionId);
 }
 
-// Background sentiment entry point
+// Background reaction entry point
 if (process.argv[2] === "--sentiment") {
   const sid = process.argv[3];
   const msgB64 = process.argv[4];
-  if (msgB64) {
-    const msg = Buffer.from(msgB64, "base64").toString("utf-8");
-    await runSentimentInferenceAndStore(msg, sid === "" ? undefined : sid);
+  const replyB64 = process.argv[5];
+  if (msgB64 && replyB64) {
+    const decode = (b64: string) => Buffer.from(b64, "base64").toString("utf-8");
+    await runReactionRatingAndStore(
+      decode(msgB64),
+      decode(replyB64),
+      sid === "" ? undefined : sid
+    );
   }
   process.exit(0);
 }
