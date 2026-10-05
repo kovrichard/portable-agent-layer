@@ -1,5 +1,5 @@
 /**
- * The claim check at stop: every reply that makes a result claim is logged to
+ * The claim check at stop: every reply that makes a result or status claim is logged to
  * memory/signals/claim-checks/ with its verdict. The claiming sentence is kept
  * only when no command backed it, so the log can be audited. Sending the reply
  * back is opt-in (dynamicContext.claimCheckBlocks).
@@ -13,6 +13,7 @@ import {
   type ClaimVerdict,
   checkClaims,
   commandsThisTurn,
+  isVersionControlClaim,
 } from "./claim-check";
 import { hookFinalReply, hookSessionId } from "./hook-turn";
 import { ensureDir, paths } from "./paths";
@@ -85,11 +86,14 @@ function sendsBack(payload: StopTurnPayload, check: ClaimCheck): boolean {
 
 function sendBackReason(claims: string[]): string {
   const quoted = claims.map((c) => `"${c.slice(0, CLAIM_MAX)}"`).join(", ");
-  return `Your reply claims a result no command in this turn showed: ${quoted}. Run the check and show its output, or say it is unverified.`;
+  const ask = claims.some(isVersionControlClaim)
+    ? "Read what is committed, pushed, merged or released with git or gh and show it"
+    : "Run the check and show its output";
+  return `Your reply claims what no command in this turn showed: ${quoted}. ${ask}, or say it is unverified.`;
 }
 
 /**
- * Checks the final reply against the turn's commands and logs any result claim.
+ * Checks the final reply against the turn's commands and logs any claim.
  * Returns the reason to send the reply back with, when that is opted in.
  */
 export function watchClaims(
@@ -103,7 +107,8 @@ export function watchClaims(
   const check = checkClaims(reply, commands);
   if (check.verdict === "none") return null;
   const blocked = sendsBack(payload, check);
-  record({ check, commands, session: hookSessionId(payload) ?? "unknown", blocked }, now);
+  const session = hookSessionId(payload) ?? "unknown";
+  record({ check, commands: commands?.length ?? null, session, blocked }, now);
   return blocked ? sendBackReason(check.claims) : null;
 }
 

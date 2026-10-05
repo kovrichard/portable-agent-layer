@@ -113,10 +113,18 @@ describe("sending an unbacked claim back, when opted in", () => {
     optIn();
 
     expect(stop("Renamed it. All tests pass.")).toBe(
-      'Your reply claims a result no command in this turn showed: "All tests pass". Run the check and show its output, or say it is unverified.'
+      'Your reply claims what no command in this turn showed: "All tests pass". Run the check and show its output, or say it is unverified.'
     );
     expect(claimChecksSince(since)[0].blocked).toBe(true);
     expect(claimCheckLines(claimChecksSince(since))[1]).toContain("1 sent back");
+  });
+
+  test("a status claim after only a test run is sent back to read git", () => {
+    optIn();
+
+    expect(stop("Tests ran. The fix is not pushed yet.", [prompt, bash])).toBe(
+      'Your reply claims what no command in this turn showed: "The fix is not pushed yet". Read what is committed, pushed, merged or released with git or gh and show it, or say it is unverified.'
+    );
   });
 
   test("leaves a backed claim alone", () => {
@@ -160,7 +168,7 @@ describe("reporting the watched claims", () => {
 
     expect(claimCheckLines(claimChecksSince(since))).toEqual([
       "",
-      "Result claims: 2 replies · 1 with no command behind it · 0 sent back · 0 unreadable",
+      "Result and status claims: 2 replies · 1 with no command behind it · 0 sent back · 0 unreadable",
       "  no command: All tests pass",
     ]);
   });

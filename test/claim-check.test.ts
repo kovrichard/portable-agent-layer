@@ -3,6 +3,7 @@ import {
   checkClaims,
   commandsThisTurn,
   resultClaims,
+  statusClaims,
 } from "../src/hooks/lib/claim-check";
 
 function claude(entries: unknown[]): string[] {
@@ -10,9 +11,9 @@ function claude(entries: unknown[]): string[] {
 }
 
 const prompt = (text: string) => ({ type: "user", message: { content: text } });
-const toolUse = (name: string) => ({
+const toolUse = (name: string, input: Record<string, unknown> = {}) => ({
   type: "assistant",
-  message: { content: [{ type: "tool_use", name, input: {} }] },
+  message: { content: [{ type: "tool_use", name, input }] },
 });
 const toolResult = () => ({
   type: "user",
@@ -54,6 +55,33 @@ describe("finding result claims in a reply", () => {
   });
 });
 
+describe("finding status claims in a reply", () => {
+  test.each([
+    "The branch is not pushed yet.",
+    "Those changes are still uncommitted.",
+    "PR #55 isn't merged.",
+    "0.85.19 hasn't been released.",
+    "It's merged and tagged.",
+    "The fix is not deployed to production.",
+    "The new version is live.",
+  ])("a claim: %s", (reply) => {
+    expect(statusClaims(reply)).toHaveLength(1);
+  });
+
+  test.each([
+    "Once it is pushed, CI runs.",
+    "If it isn't merged by tonight, ping me.",
+    "I'll push after you review.",
+    "Is it merged?",
+    "- [ ] C-A1: No credential is committed",
+    "**To verify the new version is live:**",
+    'The rule catches replies that say "not pushed" from memory.',
+    "Renamed the worker.",
+  ])("not a claim: %s", (reply) => {
+    expect(statusClaims(reply)).toEqual([]);
+  });
+});
+
 describe("counting the commands run this turn", () => {
   test("counts command tools after the user's last prompt only", () => {
     const lines = claude([
@@ -68,13 +96,13 @@ describe("counting the commands run this turn", () => {
       toolResult(),
     ]);
 
-    expect(commandsThisTurn(lines)).toBe(1);
+    expect(commandsThisTurn(lines)).toHaveLength(1);
   });
 
   test("an edit or a read is not a command that shows a result", () => {
     const lines = claude([prompt("fix it"), toolUse("Edit"), toolUse("Read")]);
 
-    expect(commandsThisTurn(lines)).toBe(0);
+    expect(commandsThisTurn(lines)).toEqual([]);
   });
 
   test("a notification injected mid-turn does not start a new turn", () => {
@@ -84,7 +112,7 @@ describe("counting the commands run this turn", () => {
       prompt("<task-notification>done</task-notification>"),
     ]);
 
-    expect(commandsThisTurn(lines)).toBe(1);
+    expect(commandsThisTurn(lines)).toHaveLength(1);
   });
 
   test("reads a Codex turn", () => {
@@ -97,11 +125,23 @@ describe("counting the commands run this turn", () => {
           content: [{ type: "input_text", text: "run it" }],
         },
       },
-      { type: "response_item", payload: { type: "custom_tool_call", name: "exec" } },
-      { type: "response_item", payload: { type: "function_call", name: "shell" } },
+      {
+        type: "response_item",
+        payload: { type: "custom_tool_call", name: "exec", input: "bun test" },
+      },
+      {
+        type: "response_item",
+        payload: {
+          type: "function_call",
+          name: "shell",
+          arguments: '{"command":["git","status"]}',
+        },
+      },
     ].map((e) => JSON.stringify(e));
 
-    expect(commandsThisTurn(lines)).toBe(2);
+    const commands = commandsThisTurn(lines);
+    expect(commands).toHaveLength(2);
+    expect(checkClaims("The branch is not pushed yet.", commands).verdict).toBe("backed");
   });
 
   test("a transcript it cannot read gives no count rather than zero", () => {
@@ -109,16 +149,28 @@ describe("counting the commands run this turn", () => {
   });
 });
 
+describe("the commands run this turn", () => {
+  test("keep what each command ran, so a claim can ask which state was read", () => {
+    const lines = claude([
+      prompt("is it pushed"),
+      toolUse("Bash", { command: "git status -sb" }),
+      toolUse("Edit", { file_path: "a.ts" }),
+    ]);
+
+    expect(commandsThisTurn(lines)).toEqual(['{"command":"git status -sb"}']);
+  });
+});
+
 describe("judging the reply", () => {
   test("a claim with no command behind it is unbacked", () => {
-    expect(checkClaims("All tests pass.", 0)).toEqual({
+    expect(checkClaims("All tests pass.", [])).toEqual({
       verdict: "unbacked",
       claims: ["All tests pass"],
     });
   });
 
   test("a claim after a command ran is backed", () => {
-    expect(checkClaims("All tests pass.", 2).verdict).toBe("backed");
+    expect(checkClaims("All tests pass.", ["bun test", "ls"]).verdict).toBe("backed");
   });
 
   test("a claim in a turn that could not be read is unknown, never unbacked", () => {
@@ -126,9 +178,32 @@ describe("judging the reply", () => {
   });
 
   test("a reply that claims nothing is not judged", () => {
-    expect(checkClaims("Renamed the worker.", 0)).toEqual({
+    expect(checkClaims("Renamed the worker.", [])).toEqual({
       verdict: "none",
       claims: [],
     });
+  });
+
+  test("what is pushed or merged is backed only by a command that read git", () => {
+    expect(checkClaims("The branch is not pushed yet.", ["bun test"])).toEqual({
+      verdict: "unbacked",
+      claims: ["The branch is not pushed yet"],
+    });
+    expect(checkClaims("The branch is not pushed yet.", ["git status -sb"]).verdict).toBe(
+      "backed"
+    );
+    expect(checkClaims("PR #55 isn't merged.", ["gh pr view 55"]).verdict).toBe("backed");
+  });
+
+  test("what is deployed is backed by any command, since the target varies", () => {
+    expect(checkClaims("The new version is live.", ["curl -sI https://x"]).verdict).toBe(
+      "backed"
+    );
+  });
+
+  test("only the claims nothing backed are named", () => {
+    expect(
+      checkClaims("All tests pass. The branch is not pushed yet.", ["bun test"])
+    ).toEqual({ verdict: "unbacked", claims: ["The branch is not pushed yet"] });
   });
 });
