@@ -50,10 +50,10 @@ import { inference, previewInferenceRoute } from "../hooks/lib/inference";
 import { logDebug } from "../hooks/lib/log";
 import { ensureRegistered, writeRegistryEntry } from "../hooks/lib/machine";
 import { palHome, palPkg, paths, platform, toPath } from "../hooks/lib/paths";
-import { telosStatus } from "../hooks/lib/telos-topics";
-import { log } from "../targets/lib";
+import { log, narrateSteps } from "../targets/lib";
 import { builtinToolVerbs, runBuiltinTool } from "./builtin-tools";
 import { type DoctorResult, detectAgents } from "./doctor/agents";
+import { installChromium } from "./doctor/environment";
 import { runDoctor } from "./doctor/run";
 import { findSessionAgent, NO_SESSION_AGENT_MESSAGE } from "./session-agent";
 
@@ -155,7 +155,7 @@ async function runCli(command: string | undefined, args: string[]) {
       break;
     case "install":
       banner();
-      await install(resolveTargets(args));
+      process.exit(await install(resolveTargets(args), args));
       break;
     case "uninstall":
       await uninstall(args);
@@ -265,22 +265,8 @@ function banner() {
   console.log("");
   console.log("  ╔═══════════════════════════════════╗");
   console.log("  ║  PAL — Portable Agent Layer       ║");
-  console.log("  ║  Non-destructive · Modular        ║");
   console.log("  ╚═══════════════════════════════════╝");
   console.log("");
-}
-
-/**
- * Install asks for identity and stops. TELOS is a conversation, not a form: a
- * user who has just installed a tool cannot yet say what they want from it, and
- * answers given under that pressure are worse than none.
- */
-function pointAtOnboarding(): void {
-  const unanswered = telosStatus().filter((topic) => topic.priority && !topic.answered);
-  if (unanswered.length === 0) return;
-  log.info(
-    `PAL knows nothing about you yet (${unanswered.length} topics open). When you have half an hour, ask your agent to onboard you.`
-  );
 }
 
 function showHelp() {
@@ -290,8 +276,9 @@ function showHelp() {
     pal cli <command> [options]             Admin commands
 
   Admin commands:
-    pal cli init [--claude] [--opencode] [--cursor] [--codex]    Scaffold and install (default: all)
-    pal cli install [--claude] [--opencode] [--cursor] [--codex] Register hooks for targets
+    pal cli init [--claude] [--opencode] [--cursor] [--codex]    Scaffold and install (default: all), then run the doctor
+    pal cli install [--claude] [--opencode] [--cursor] [--codex] Register hooks for targets, then run the doctor
+                                            Add --verbose to either for the step-by-step log
     pal cli uninstall [--claude] [--opencode] [--cursor] [--codex] Remove hooks for targets
     pal cli update                          Update PAL (git pull or npm update)
     pal cli export [path] [--dry-run]       Export state to zip
@@ -486,12 +473,10 @@ async function init(args: string[]) {
   const { scaffoldTelos } = await import("../targets/lib");
 
   banner();
+  narrateSteps(args.includes("--verbose"));
 
   const health = detectAgents();
-  runDoctor([], health);
-  if (!health.hasAgent) {
-    process.exit(1);
-  }
+  if (!health.hasAgent) process.exit(runDoctor([], health));
 
   const home = palHome();
   log.info(`Creating PAL home at ${home}`);
@@ -506,7 +491,7 @@ async function init(args: string[]) {
 
   // Auto-detect available targets
   const targets = resolveTargets(args, health);
-  await install(targets);
+  process.exit(await install(targets, args));
 }
 
 /**
@@ -522,25 +507,25 @@ function runQuietly(cmd: string, args: string[], cwd: string): number | null {
   return r.status;
 }
 
-async function install(targets: Targets) {
-  // Ensure dependencies are installed
+function targetInstallers(): [keyof Targets, string, () => Promise<unknown>][] {
+  return [
+    ["claude", "Claude Code", () => import("../targets/claude/install")],
+    ["opencode", "opencode", () => import("../targets/opencode/install")],
+    ["cursor", "Cursor", () => import("../targets/cursor/install")],
+    ["copilot", "Copilot", () => import("../targets/copilot/install")],
+    ["codex", "Codex", () => import("../targets/codex/install")],
+  ];
+}
+
+async function install(targets: Targets, args: string[]): Promise<number> {
+  narrateSteps(args.includes("--verbose"));
   const pkg = palPkg();
   if (runQuietly("bun", ["install", "--frozen-lockfile"], pkg) !== 0) {
     log.warn("bun install failed — continuing anyway, but hooks may not work");
   }
 
-  // Fetch the Chromium build Playwright uses for PDF rendering (create-pdf skill).
-  // Idempotent — skipped if already cached. Skipped entirely under PAL_SKIP_BROWSER_INSTALL=1
-  // (used by tests to avoid a ~150MB download on every run).
   // Uses `bun x` (not `bunx`) for Windows compatibility — bunx resolves unreliably under cmd.exe.
-  if (process.env.PAL_SKIP_BROWSER_INSTALL !== "1") {
-    const pw = runQuietly("bun", ["x", "playwright", "install", "chromium"], pkg);
-    if (pw !== 0) {
-      log.warn(
-        `playwright install chromium failed (exit ${pw}) — create-pdf and consulting-report skills won't work. Retry manually: bun x playwright install chromium`
-      );
-    }
-  }
+  if (process.env.PAL_SKIP_BROWSER_INSTALL !== "1") installChromium();
 
   // Scaffold TELOS + PAL settings, then prompt for missing identity
   const { scaffoldTelos, scaffoldPalSettings, copyPalDocs, generateSkillIndex } =
@@ -553,7 +538,6 @@ async function install(targets: Targets) {
   await promptIdentity();
   await promptAttribution();
   await promptAutoUpdate();
-  pointAtOnboarding();
 
   // Registers the label loadActor derives, so it travels on the next export.
   const { ensureActorRegistered } = await import("../hooks/lib/actor");
@@ -566,34 +550,10 @@ async function install(targets: Targets) {
   const palDocsCount = copyPalDocs();
   regenerateIfNeeded();
 
-  if (targets.claude) {
-    console.log("━━━ Claude Code ━━━");
-    await import("../targets/claude/install");
-    console.log("");
-  }
-
-  if (targets.opencode) {
-    console.log("━━━ opencode ━━━");
-    await import("../targets/opencode/install");
-    console.log("");
-  }
-
-  if (targets.cursor) {
-    console.log("━━━ Cursor ━━━");
-    await import("../targets/cursor/install");
-    console.log("");
-  }
-
-  if (targets.copilot) {
-    console.log("━━━ Copilot ━━━");
-    await import("../targets/copilot/install");
-    console.log("");
-  }
-
-  if (targets.codex) {
-    console.log("━━━ Codex ━━━");
-    await import("../targets/codex/install");
-    console.log("");
+  for (const [target, label, installTarget] of targetInstallers()) {
+    if (!targets[target]) continue;
+    log.heading(label);
+    await installTarget();
   }
 
   // The rest of the shared work reads what the installers just wrote: the index
@@ -608,7 +568,8 @@ async function install(targets: Targets) {
 
   await refreshControlRoom();
 
-  log.success("Done. Existing config was preserved — only new entries were added.");
+  if (args.includes("--verbose")) console.log("");
+  return runDoctor(args);
 }
 
 /**
@@ -912,7 +873,7 @@ async function update() {
   clearUpdateCache();
 
   log.info("Reinstalling...");
-  await install(resolveTargets([]));
+  process.exit(await install(resolveTargets([]), []));
 }
 
 function cliDebug(args: string[]) {

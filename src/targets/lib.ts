@@ -27,9 +27,21 @@ function runningUnderTest(): boolean {
   return process.env.PAL_TEST_SANDBOX === "1";
 }
 
+let narrating = true;
+
+/** Install's step log is for --verbose; the doctor report that follows carries the result. */
+export function narrateSteps(on: boolean): void {
+  narrating = on;
+}
+
+function narrate(line: string): void {
+  if (narrating) console.log(line);
+}
+
 export const log = {
-  info: (msg: string) => console.log(`\x1b[34m[pal]\x1b[0m ${msg}`),
-  success: (msg: string) => console.log(`\x1b[32m[pal]\x1b[0m ${msg}`),
+  info: (msg: string) => narrate(`\x1b[34m[pal]\x1b[0m ${msg}`),
+  success: (msg: string) => narrate(`\x1b[32m[pal]\x1b[0m ${msg}`),
+  heading: (label: string) => narrate(`\n━━━ ${label} ━━━`),
   warn: (msg: string) => console.log(`\x1b[33m[pal]\x1b[0m ${msg}`),
   error: (msg: string) => console.error(`\x1b[31m[pal]\x1b[0m ${msg}`),
 
@@ -42,7 +54,7 @@ export const log = {
    */
   detail: (msg: string) => {
     if (runningUnderTest()) return;
-    console.log(`\x1b[34m[pal]\x1b[0m ${msg}`);
+    narrate(`\x1b[34m[pal]\x1b[0m ${msg}`);
   },
 };
 

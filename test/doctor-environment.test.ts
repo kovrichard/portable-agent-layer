@@ -2,7 +2,11 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { palOnPathFinding, playwrightFinding } from "../src/cli/doctor/environment";
+import {
+  installChromium,
+  palOnPathFinding,
+  playwrightFinding,
+} from "../src/cli/doctor/environment";
 
 let CACHE: string;
 
@@ -69,6 +73,32 @@ describe("the browser PDF and screenshot skills use", () => {
     mkdirSync(resolve(CACHE, "chromium-1100"));
 
     expect(playwrightFinding(host({ playwright: null })).severity).toBe("ok");
+  });
+});
+
+describe("installing the browser", () => {
+  test("runs the exact command the doctor would suggest", () => {
+    const ran: string[] = [];
+    const newUbuntu = host({ osRelease: ubuntu("26.04") });
+
+    installChromium(newUbuntu, (command) => {
+      ran.push(command);
+      return true;
+    });
+
+    expect(ran).toEqual([playwrightFinding(newUbuntu).fix?.command ?? ""]);
+  });
+
+  test("skips the download when the right build is already there", () => {
+    mkdirSync(resolve(CACHE, "chromium_headless_shell-1223"));
+    const ran: string[] = [];
+
+    installChromium(host(), (command) => {
+      ran.push(command);
+      return true;
+    });
+
+    expect(ran).toEqual([]);
   });
 });
 
