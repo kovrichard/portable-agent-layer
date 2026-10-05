@@ -53,6 +53,7 @@ import { palHome, palPkg, paths, platform, toPath } from "../hooks/lib/paths";
 import { log, narrateSteps } from "../targets/lib";
 import { builtinToolVerbs, runBuiltinTool } from "./builtin-tools";
 import { type DoctorResult, detectAgents } from "./doctor/agents";
+import { installChromium } from "./doctor/environment";
 import { runDoctor } from "./doctor/run";
 import { findSessionAgent, NO_SESSION_AGENT_MESSAGE } from "./session-agent";
 
@@ -523,18 +524,8 @@ async function install(targets: Targets, args: string[]): Promise<number> {
     log.warn("bun install failed — continuing anyway, but hooks may not work");
   }
 
-  // Fetch the Chromium build Playwright uses for PDF rendering (create-pdf skill).
-  // Idempotent — skipped if already cached. Skipped entirely under PAL_SKIP_BROWSER_INSTALL=1
-  // (used by tests to avoid a ~150MB download on every run).
   // Uses `bun x` (not `bunx`) for Windows compatibility — bunx resolves unreliably under cmd.exe.
-  if (process.env.PAL_SKIP_BROWSER_INSTALL !== "1") {
-    const pw = runQuietly("bun", ["x", "playwright", "install", "chromium"], pkg);
-    if (pw !== 0) {
-      log.warn(
-        `playwright install chromium failed (exit ${pw}) — create-pdf and consulting-report skills won't work. Retry manually: bun x playwright install chromium`
-      );
-    }
-  }
+  if (process.env.PAL_SKIP_BROWSER_INSTALL !== "1") installChromium();
 
   // Scaffold TELOS + PAL settings, then prompt for missing identity
   const { scaffoldTelos, scaffoldPalSettings, copyPalDocs, generateSkillIndex } =
@@ -577,7 +568,7 @@ async function install(targets: Targets, args: string[]): Promise<number> {
 
   await refreshControlRoom();
 
-  console.log("");
+  if (args.includes("--verbose")) console.log("");
   return runDoctor(args);
 }
 

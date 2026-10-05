@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, resolve } from "node:path";
@@ -67,20 +68,45 @@ function playwrightPlatformOverride(host: BrowserHost): string {
   return `PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-${host.arch === "arm64" ? "arm64" : "x64"} `;
 }
 
+function chromiumInstallCommand(host: BrowserHost): string {
+  const pinned = host.playwright ? `playwright@${host.playwright.version}` : "playwright";
+  return `${playwrightPlatformOverride(host)}bun x ${pinned} install chromium`;
+}
+
 export function playwrightFinding(host: BrowserHost): Finding {
   if (hasChromium(host)) return passed("playwright", "Playwright Chromium installed");
-  const pinned = host.playwright ? `playwright@${host.playwright.version}` : "playwright";
-  const override = playwrightPlatformOverride(host);
   return warning(
     "playwright.missing",
     "Playwright's Chromium is not installed — create-pdf, consulting-report and screenshots fail",
     {
-      say: override
+      say: playwrightPlatformOverride(host)
         ? "Install it as Ubuntu 24.04, which Playwright supports"
         : "Install it",
-      command: `${override}bun x ${pinned} install chromium`,
+      command: chromiumInstallCommand(host),
     }
   );
+}
+
+function thisBrowserHost(): BrowserHost {
+  return {
+    browsersPath: playwrightBrowsersPath(),
+    playwright: installedPlaywright(),
+    platform: process.platform,
+    arch: process.arch,
+    osRelease: readOsRelease(),
+  };
+}
+
+function runInShell(command: string): boolean {
+  return spawnSync(command, { cwd: palPkg(), shell: true, stdio: "ignore" }).status === 0;
+}
+
+/** A failure is left to the doctor's report that follows, which names the fix. */
+export function installChromium(
+  host: BrowserHost = thisBrowserHost(),
+  run: (command: string) => boolean = runInShell
+): void {
+  if (!hasChromium(host)) run(chromiumInstallCommand(host));
 }
 
 interface PalInstall {
@@ -136,13 +162,7 @@ export function environmentFindings(rtk: ToolCheck): Finding[] {
       pkg: palPkg(),
       repoMode: isRepoMode(),
     }),
-    playwrightFinding({
-      browsersPath: playwrightBrowsersPath(),
-      playwright: installedPlaywright(),
-      platform: process.platform,
-      arch: process.arch,
-      osRelease: readOsRelease(),
-    }),
+    playwrightFinding(thisBrowserHost()),
     rtkFinding(rtk),
     ...versionControlFindings(),
   ];
