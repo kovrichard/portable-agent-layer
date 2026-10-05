@@ -1,3 +1,11 @@
+## [0.85.21](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.20...v0.85.21) (2026-10-05)
+
+
+### Bug Fixes
+
+* **eval:** run promptfoo under Bun ([ebbd94d](https://github.com/kovrichard/portable-agent-layer/commit/ebbd94dc5c07bbae8a6f9f9a50fa231e3882dbcd))
+* **skills:** point eval-prompt at the claude CLI route and private data ([d8e5a0a](https://github.com/kovrichard/portable-agent-layer/commit/d8e5a0a7e2fb870e699e77f4f8f61a70ad74a3eb))
+
 ## [0.85.20](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.19...v0.85.20) (2026-10-05)
 
 
