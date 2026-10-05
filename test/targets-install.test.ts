@@ -89,34 +89,6 @@ describe("scaffoldPalSettings", () => {
     expect(JSON.parse(readFileSync(dst, "utf-8")).mine).toBe(true);
   });
 
-  test("strips a deprecated PROJECTS.md entry from loadAtStartup.files", () => {
-    mkdirSync(resolve(HOME, "memory"), { recursive: true });
-    const dst = resolve(HOME, "memory", "pal-settings.json");
-    writeFileSync(
-      dst,
-      JSON.stringify({
-        loadAtStartup: { files: ["telos/GOALS.md", "memory/PROJECTS.md"] },
-      })
-    );
-
-    scaffoldPalSettings();
-
-    expect(JSON.parse(readFileSync(dst, "utf-8")).loadAtStartup.files).toEqual([
-      "telos/GOALS.md",
-    ]);
-  });
-
-  test("leaves loadAtStartup alone when nothing is deprecated", () => {
-    mkdirSync(resolve(HOME, "memory"), { recursive: true });
-    const dst = resolve(HOME, "memory", "pal-settings.json");
-    const files = ["telos/GOALS.md", "telos/MISSION.md"];
-    writeFileSync(dst, JSON.stringify({ loadAtStartup: { files } }));
-
-    scaffoldPalSettings();
-
-    expect(JSON.parse(readFileSync(dst, "utf-8")).loadAtStartup.files).toEqual(files);
-  });
-
   test("survives a malformed settings file", () => {
     mkdirSync(resolve(HOME, "memory"), { recursive: true });
     const dst = resolve(HOME, "memory", "pal-settings.json");

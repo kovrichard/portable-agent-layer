@@ -211,7 +211,7 @@ export function mergeSettings(existing: Settings, template: Settings): Settings 
     }
   }
 
-  // Merge permissions.allow (deduplicate), then drop deprecated entries.
+  // Merge permissions.allow (deduplicate)
   if (template.permissions?.allow) {
     result.permissions ??= {};
     result.permissions.allow ??= [];
@@ -221,15 +221,6 @@ export function mergeSettings(existing: Settings, template: Settings): Settings 
       }
     }
   }
-  // Strip ineffective Grep(...)/Glob(...) rules left by older templates. Claude Code
-  // governs Grep/Glob via Read(...) rules, so a path-scoped Grep()/Glob() entry never
-  // matches and Claude Code warns about it on every prompt. Read(//*) already covers them.
-  if (result.permissions?.allow) {
-    result.permissions.allow = result.permissions.allow.filter(
-      (perm) => !isIneffectiveFileToolRule(perm)
-    );
-  }
-
   // Merge skillOverrides (object with skill name keys, add if not present)
   if (template.skillOverrides && typeof template.skillOverrides === "object") {
     result.skillOverrides ??= {};
@@ -488,15 +479,6 @@ function isOutdatedPalHook(cmd: string, palCanonical: Set<string>): boolean {
   return palCanonical.has(canonicalPalCmd(cmd)) || runsRemovedPalHook(cmd);
 }
 
-/**
- * True for path-scoped Grep()/Glob() allow rules, which Claude Code cannot honor —
- * it resolves Grep/Glob permission through Read(...) rules, so these never match and
- * trigger a warning on every prompt. Bare "Grep"/"Glob" tool allows are left intact.
- */
-function isIneffectiveFileToolRule(perm: string): boolean {
-  return /^(?:Grep|Glob)\(/.test(perm);
-}
-
 export function loadCodexHooksTemplate(
   templatePath: string,
   pkgRoot: string
@@ -696,21 +678,6 @@ export function scaffoldPalSettings(): void {
   if (!existsSync(dst)) {
     copyFileSync(src, dst);
     log.info("Created pal-settings.json from template");
-  }
-
-  // Strip deprecated loadAtStartup.files entries from existing installs.
-  // mergeSettings only adds, never removes — deprecated entries persist indefinitely otherwise.
-  try {
-    const raw = JSON.parse(readFileSync(dst, "utf-8"));
-    const files: string[] = raw?.loadAtStartup?.files ?? [];
-    const cleaned = files.filter((f: string) => !f.endsWith("PROJECTS.md"));
-    if (cleaned.length !== files.length) {
-      raw.loadAtStartup.files = cleaned;
-      writeFileSync(dst, `${JSON.stringify(raw, null, 2)}\n`, "utf-8");
-      log.info("Removed deprecated PROJECTS.md from loadAtStartup.files");
-    }
-  } catch {
-    /* non-fatal — malformed settings left as-is */
   }
 }
 

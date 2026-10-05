@@ -36,22 +36,10 @@ function timestamp(): string {
  * .MAX_ROTATED (oldest). Each rotation shifts .N-1 → .N, drops the oldest,
  * and renames the current log to .1. Total disk footprint bounded at
  * (MAX_ROTATED + 1) * MAX_LOG_SIZE ≈ 300KB.
- *
- * Migrates legacy .prev → .1 on first new rotation so existing history
- * survives the format change.
  */
 function rotateIfNeeded(path: string): void {
   try {
     if (!existsSync(path) || statSync(path).size <= MAX_LOG_SIZE) return;
-    // Backward-compat migration: legacy .prev was the single old rotation file.
-    const legacyPrev = `${path}.prev`;
-    if (existsSync(legacyPrev) && !existsSync(`${path}.1`)) {
-      try {
-        renameSync(legacyPrev, `${path}.1`);
-      } catch {
-        /* ignore */
-      }
-    }
     // Drop the oldest, then shift .N-1 → .N for N from MAX_ROTATED down to 2.
     const oldest = `${path}.${MAX_ROTATED}`;
     if (existsSync(oldest)) {
@@ -99,7 +87,7 @@ function logFilesOldestFirst(): string[] {
     { length: MAX_ROTATED },
     (_, i) => `${path}.${MAX_ROTATED - i}`
   );
-  return [...rotated, `${path}.prev`, path];
+  return [...rotated, path];
 }
 
 function readAllLogs(): string {
