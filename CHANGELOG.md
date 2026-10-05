@@ -1,3 +1,11 @@
+## [0.85.15](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.14...v0.85.15) (2026-10-05)
+
+
+### Bug Fixes
+
+* **install:** end init and install with the doctor's report ([6dacaa6](https://github.com/kovrichard/portable-agent-layer/commit/6dacaa624c0ba419e88b3649178a83153ad1a9a4))
+* **install:** install the Chromium build the doctor checks for ([8068514](https://github.com/kovrichard/portable-agent-layer/commit/806851499b1dcb35abd6831b1ec99f5121071cb3))
+
 ## [0.85.14](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.13...v0.85.14) (2026-10-05)
 
 
