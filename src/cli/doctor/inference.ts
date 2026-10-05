@@ -34,6 +34,7 @@ export function leakedEnvFindings(env: Env, os: NodeJS.Platform): Finding[] {
           {
             say: "Clear it, and remove it from your shell profile if it is set there",
             command: unsetCommand(name, os),
+            external: true,
           }
         )
       : passed(`env.${name}`, `${name} not set`)

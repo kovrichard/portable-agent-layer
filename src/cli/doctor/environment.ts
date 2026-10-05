@@ -83,6 +83,7 @@ export function playwrightFinding(host: BrowserHost): Finding {
         ? "Install it as Ubuntu 24.04, which Playwright supports"
         : "Install it",
       command: chromiumInstallCommand(host),
+      external: false,
     }
   );
 }
@@ -120,8 +121,13 @@ function putPalOnPath(install: PalInstall): Fix {
     ? {
         say: "Link the checkout — a shell alias is invisible to agents",
         command: `cd ${install.pkg} && bun link`,
+        external: false,
       }
-    : { say: "Install PAL globally", command: "bun add -g portable-agent-layer" };
+    : {
+        say: "Install PAL globally",
+        command: "bun add -g portable-agent-layer",
+        external: true,
+      };
 }
 
 export function palOnPathFinding(install: PalInstall): Finding {
@@ -140,11 +146,12 @@ function rtkInstall(): Fix {
       say: "Download rtk.exe from https://github.com/rtk-ai/rtk/releases and add it to PATH",
     };
   if (process.platform === "darwin")
-    return { say: "Install rtk", command: "brew install rtk" };
+    return { say: "Install rtk", command: "brew install rtk", external: true };
   return {
     say: "Install rtk",
     command:
       "curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh",
+    external: true,
   };
 }
 

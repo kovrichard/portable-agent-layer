@@ -6,10 +6,10 @@
 
 export type Severity = "fail" | "warn" | "optional" | "ok";
 
-export interface Fix {
-  say: string;
-  command?: string;
-}
+/** `external`: the command belongs to another tool, so PAL leaves running it to you. */
+export type Fix =
+  | { say: string; command?: undefined }
+  | { say: string; command: string; external: boolean };
 
 export interface Finding {
   id: string;

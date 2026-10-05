@@ -21,8 +21,16 @@ describe("the doctor's report", () => {
         ...base,
         findings: [
           passed("a", "A fine"),
-          warning("w", "Something drifted", { say: "Resync it", command: "pal cli w" }),
-          failing("f", "Something broke", { say: "Repair it", command: "pal cli f" }),
+          warning("w", "Something drifted", {
+            say: "Resync it",
+            command: "pal cli w",
+            external: false,
+          }),
+          failing("f", "Something broke", {
+            say: "Repair it",
+            command: "pal cli f",
+            external: false,
+          }),
         ],
       },
       plain
@@ -43,7 +51,11 @@ describe("the doctor's report", () => {
         ...base,
         findings: [
           passed("a", "A fine"),
-          optional("gh", "gh — see PR and CI state", { say: "Install it", command: "x" }),
+          optional("gh", "gh — see PR and CI state", {
+            say: "Install it",
+            command: "x",
+            external: true,
+          }),
         ],
       },
       plain

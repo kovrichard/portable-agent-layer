@@ -95,6 +95,7 @@ function identityFinding(settings: Record<string, unknown>): Finding {
   return warning("identity", "Identity is incomplete — PAL does not know both names", {
     say: "Answer the identity questions",
     command: "pal cli install",
+    external: false,
   });
 }
 
@@ -120,6 +121,7 @@ function settingsFindings(): Finding[] {
       warning("settings.missing", "pal-settings.json is missing", {
         say: "Recreate it",
         command: "pal cli install",
+        external: false,
       }),
     ];
   let settings: unknown;
@@ -165,6 +167,7 @@ function telosFindings(home: string): Finding[] {
       failing("telos.missing", "TELOS is not scaffolded", {
         say: "Scaffold it",
         command: "pal cli init",
+        external: false,
       }),
     ];
   const unanswered = telosStatus(home)
@@ -205,6 +208,7 @@ export function bindingFinding(issue: BindingIssue): Finding {
   return warning(`binding.${project}`, title, {
     say: "Point it at its checkout",
     command: `pal cli project set-path ${project} <path>`,
+    external: false,
   });
 }
 
@@ -250,6 +254,7 @@ function dependencyFinding(): Finding {
         {
           say: "Install them",
           command: "pal cli install",
+          external: false,
         }
       );
 }

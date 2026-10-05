@@ -30,22 +30,24 @@ const GH_ON_LINUX: Partial<Record<LinuxFamily, string>> = {
 
 export function gitInstallHint(platform: NodeJS.Platform, osRelease: string): Fix {
   if (platform === "win32")
-    return { say: "Install git", command: "winget install Git.Git" };
-  if (platform === "darwin") return { say: "Install git", command: "brew install git" };
+    return { say: "Install git", command: "winget install Git.Git", external: true };
+  if (platform === "darwin")
+    return { say: "Install git", command: "brew install git", external: true };
   const family = linuxFamily(osRelease);
   return family
-    ? { say: "Install git", command: GIT_ON_LINUX[family] }
+    ? { say: "Install git", command: GIT_ON_LINUX[family], external: true }
     : { say: "Install git with your package manager" };
 }
 
 export function ghInstallHint(platform: NodeJS.Platform, osRelease: string): Fix {
   if (platform === "win32")
-    return { say: "Install gh", command: "winget install GitHub.cli" };
-  if (platform === "darwin") return { say: "Install gh", command: "brew install gh" };
+    return { say: "Install gh", command: "winget install GitHub.cli", external: true };
+  if (platform === "darwin")
+    return { say: "Install gh", command: "brew install gh", external: true };
   const family = linuxFamily(osRelease);
   const command = family ? GH_ON_LINUX[family] : undefined;
   return command
-    ? { say: "Install gh", command }
+    ? { say: "Install gh", command, external: true }
     : { say: `Install gh as described at ${GH_LINUX_DOCS}` };
 }
 
@@ -94,6 +96,7 @@ function ghFinding(host: Host): Finding {
     return warning("gh.logged-out", `${gh.version} is not logged in`, {
       say: "Log in",
       command: "gh auth login",
+      external: true,
     });
   return passed("gh", `${gh.version}, logged in`);
 }
