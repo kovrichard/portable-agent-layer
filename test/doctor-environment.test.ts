@@ -103,22 +103,44 @@ describe("installing the browser", () => {
 });
 
 describe("pal on PATH", () => {
+  const notOnPath = { pal: null, bunBin: "/home/u/.bun/bin", inBunBin: false };
+
   test("a repo checkout is linked, not installed from npm", () => {
-    const finding = palOnPathFinding({ pal: null, pkg: "/src/pal", repoMode: true });
+    const finding = palOnPathFinding({ ...notOnPath, pkg: "/src/pal", repoMode: true });
 
     expect(finding.severity).toBe("fail");
-    expect(finding.fix?.command).toBe("cd /src/pal && bun link");
+    expect(finding.fix).toEqual({
+      say: "Link the checkout — a shell alias is invisible to agents",
+      command: "cd /src/pal && bun link",
+      external: false,
+    });
   });
 
-  test("a package install is reinstalled globally", () => {
+  test("a package that is not installed globally is installed with Bun", () => {
     expect(
-      palOnPathFinding({ pal: null, pkg: "/g/pal", repoMode: false }).fix?.command
-    ).toBe("bun add -g portable-agent-layer");
+      palOnPathFinding({ ...notOnPath, pkg: "/g/pal", repoMode: false }).fix
+    ).toMatchObject({ command: "bun add -g portable-agent-layer", external: true });
+  });
+
+  test.each([
+    true,
+    false,
+  ])("pal already in Bun's bin directory points at PATH, not at a reinstall (repo mode %p)", (repoMode) => {
+    const fix = palOnPathFinding({
+      ...notOnPath,
+      inBunBin: true,
+      pkg: "/g/pal",
+      repoMode,
+    }).fix;
+
+    expect(fix?.command).toBeUndefined();
+    expect(fix?.say).toContain("/home/u/.bun/bin");
   });
 
   test("found on PATH passes", () => {
     expect(
-      palOnPathFinding({ pal: "/bin/pal", pkg: "/g/pal", repoMode: true }).severity
+      palOnPathFinding({ ...notOnPath, pal: "/bin/pal", pkg: "/g/pal", repoMode: true })
+        .severity
     ).toBe("ok");
   });
 });

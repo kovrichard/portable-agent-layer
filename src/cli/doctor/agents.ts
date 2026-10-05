@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 import { palPkg, platform } from "../../hooks/lib/paths";
 import { NO_SESSION_AGENT_MESSAGE } from "../session-agent";
-import { type Finding, failing, optional, passed, warning } from "./finding";
+import { type Finding, type Fix, failing, optional, passed, warning } from "./finding";
 
 export type AgentName = "claude" | "opencode" | "cursor" | "copilot" | "codex";
 
@@ -139,9 +139,10 @@ const LAYOUT: Record<AgentName, AgentLayout> = {
   },
 };
 
-const reinstall = (agent: AgentName) => ({
+const reinstall = (agent: AgentName): Fix => ({
   say: `Reinstall PAL for ${LAYOUT[agent].label}`,
   command: `pal cli install --${agent}`,
+  external: false,
 });
 
 /** Hook-config keys that carry a shell command: cross-platform and per-shell variants. */
@@ -215,6 +216,7 @@ function hookFindings(agent: AgentName, file: string): Finding[] {
         {
           say: `Fix the JSON in ${file}, then reinstall`,
           command: `pal cli install --${agent}`,
+          external: false,
         }
       ),
     ];
@@ -310,6 +312,7 @@ export function agentFindings(agents: AgentName[]): Finding[] {
       : failing("agents-md", "AGENTS.md is missing", {
           say: "Reinstall PAL",
           command: "pal cli install",
+          external: false,
         }),
     ...agents.flatMap(oneAgentFindings),
   ];

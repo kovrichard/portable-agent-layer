@@ -33,10 +33,12 @@ function claudeLoginExpiredFinding(
     return warning(`hook-errors.${group.source}`, title, {
       say: "CLAUDE_CODE_OAUTH_TOKEN is set — if these failures predate it, they clear 24h after the last one; if not, the token is invalid, so create a new one",
       command: "claude setup-token",
+      external: true,
     });
   return failing(`hook-errors.${group.source}`, title, {
     say: "Create a year-long token, then export it as CLAUDE_CODE_OAUTH_TOKEN in your shell profile",
     command: "claude setup-token",
+    external: true,
   });
 }
 
@@ -66,7 +68,7 @@ export function migrationFindings(pending: PendingMigration[]): Finding[] {
     return warning(
       `migration.${migration.id}`,
       `Migration pending: ${migration.description}${detail}`,
-      { say: "Run it", command: "pal cli migrate" }
+      { say: "Run it", command: "pal cli migrate", external: false }
     );
   });
 }
@@ -76,6 +78,7 @@ export function updateFinding(cache: UpdateCache | null): Finding {
   return warning("update", `PAL ${cache.latest} is out (${cache.current} installed)`, {
     say: "Update",
     command: "pal cli update",
+    external: false,
   });
 }
 
