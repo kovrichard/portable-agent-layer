@@ -21,8 +21,9 @@ Maintainer-only skill. Operates on the `eval/` directory of the PAL repo. Do not
 
 1. Run the eval, forwarding any extra flags the user passed:
    ```bash
-   bun eval/run.ts <prompt-name> [--providers haiku] [--no-cache] [--filter-pattern "A1"]
+   bun eval/run.ts <prompt-name> [--filter-providers haiku] [--no-cache] [--filter-pattern "A1"]
    ```
+   `--filter-providers` selects providers by label. Never pass `--providers`: it replaces the configured providers with one named after its argument.
 2. Read the results table. For each failing test, note the prompt column (v1 vs v2) and the expected vs actual `sentiment`/`rating` field.
 3. Report: pass rate per prompt, which cases failed, and whether v2 outperforms v1.
 
@@ -57,7 +58,7 @@ When no `eval/<name>/` exists yet:
    ```
    If the production code calls `injectJsonSchemaInstruction()`, append the schema instruction to the system prompt string — that is what the model receives.
 
-3. Write `promptfoo.yaml`. Use this template:
+3. Write `promptfoo.yaml`. PAL's inference runs `claude --print`, not an API key, so evaluate that route with `eval/lib/claude-cli.js`; an `anthropic:` or `openai:` provider tests a path PAL does not ship. The provider blocks on each call, so `-j` does not parallelise it. Use this template:
    ```yaml
    description: "<name> — v1 baseline vs v2 candidate"
 
@@ -65,14 +66,12 @@ When no `eval/<name>/` exists yet:
      - file://prompts/v1-current.json
 
    providers:
-     - id: anthropic:messages:claude-haiku-4-5-20251001
+     - id: file://../lib/claude-cli.js
        label: haiku
-       config:
-         output_format:
-           type: json_schema
-           schema: <paste the output JSON schema here>
-     - id: openai:chat:gpt-4o-mini
-       label: gpt-4o-mini
+       config: { model: claude-haiku-4-5-20251001 }
+     - id: file://../lib/claude-cli.js
+       label: sonnet-5
+       config: { model: claude-sonnet-5 }
 
    defaultTest:
      assert:
@@ -97,9 +96,19 @@ When no `eval/<name>/` exists yet:
    - **B** — inputs that MUST produce a specific value (true positives)
    - **C** — neutral / null cases
    - **D** — explicit / direct signal cases
-   Aim for 8–16 cases minimum, sourced from failure corpus and real interaction logs.
+   Aim for 8–16 cases minimum, sourced from failure corpus and real interaction logs. Committed cases are public: rewrite any real message into a neutral case with the same shape.
 
-6. Run: `bun eval/run.ts <name> --providers haiku --no-cache`
+6. Run: `bun eval/run.ts <name> --filter-providers haiku --no-cache`
+
+### Evaluating against private data
+
+Real user messages (reaction samples, transcripts) never go into `eval/`. Build the config in a directory outside the repo:
+
+- Generate `promptfoo.json` from the private data with a small script. Put the expected label in each test's `vars` and check it with one JavaScript assertion that requires `eval/lib/parse-output` by absolute path.
+- Reference the provider by absolute path, `file:///<repo>/eval/lib/claude-cli.js`.
+- Run promptfoo from a working directory holding empty `promptfooconfig.yaml` and `redteam.yaml` files (see `eval/run.ts` for why), with `bun <repo>/node_modules/promptfoo/dist/src/entrypoint.js eval -c <config> --no-cache -o <results.json>`.
+- When the gold labels come from a model, label blind first, without the rule or prompt output in view, and say so in the report.
+- A classifier's output varies run to run: before trusting a difference of a few cases, run twice and report both.
 
 ### Adding a v2 candidate
 
