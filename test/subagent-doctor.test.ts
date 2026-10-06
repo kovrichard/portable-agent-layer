@@ -127,6 +127,35 @@ describe("subagent-doctor", () => {
     expect(hasWarn(fixture(bad), "cursor.skills")).toBe(true);
   });
 
+  test("a global field beyond name and description errors", () => {
+    const bad = GOOD.replace("claude:\n", "model: inherit\nclaude:\n");
+    expect(hasError(fixture(bad), "global.fields")).toBe(true);
+  });
+
+  test("an unknown codex sandbox_mode warns", () => {
+    const bad = GOOD.replace(
+      "---\n\nYou review",
+      "codex:\n  sandbox_mode: open\n---\n\nYou review"
+    );
+    expect(hasWarn(fixture(bad), "codex.sandbox_mode")).toBe(true);
+  });
+
+  test.each(["tools", "skills"])("a %s list in the codex block warns", (key) => {
+    const bad = GOOD.replace(
+      "---\n\nYou review",
+      `codex:\n  ${key}:\n    - read\n---\n\nYou review`
+    );
+    expect(hasWarn(fixture(bad), `codex.${key}`)).toBe(true);
+  });
+
+  test("a valid codex block adds no findings", () => {
+    const good = GOOD.replace(
+      "---\n\nYou review",
+      "codex:\n  model: gpt-6-sol\n  sandbox_mode: read-only\n---\n\nYou review"
+    );
+    expect(findings(fixture(good))).toHaveLength(0);
+  });
+
   test("no platform block at all warns", () => {
     const bare = `---
 name: bare-agent

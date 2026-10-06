@@ -1,12 +1,9 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
+import type { AgentPlatform } from "../../hooks/lib/agent-definition";
 import { palPkg, platform } from "../../hooks/lib/paths";
-import {
-  type AgentPlatform,
-  nativeAgentsDir,
-  staleShippedAgents,
-} from "../../targets/lib";
+import { nativeAgentsDir, staleShippedAgents } from "../../targets/lib";
 import { NO_SESSION_AGENT_MESSAGE } from "../session-agent";
 import { type Finding, type Fix, failing, optional, passed, warning } from "./finding";
 
@@ -307,9 +304,9 @@ function oneAgentFindings(agent: AgentName): Finding[] {
   findings.push(
     ...(layout.hookFile
       ? hookFindings(agent, layout.hookFile())
-      : opencodePluginFindings())
+      : opencodePluginFindings()),
+    subagentFinding(agent)
   );
-  if (agent !== "codex") findings.push(subagentFinding(agent));
   if (layout.instructions) {
     const { file, name } = layout.instructions;
     findings.push(

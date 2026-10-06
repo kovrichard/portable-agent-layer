@@ -1,11 +1,20 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
+  copyAgentsForCodex,
   copyAgentsForCopilot,
   copyAgentsForCursor,
   copyAgentsForOpencode,
+  removeAgentsFromCodex,
   removeAgentsFromCopilot,
   removeAgentsFromCursor,
   removeAgentsFromOpencode,
@@ -121,6 +130,44 @@ describe("agent extraction per platform", () => {
 
     expect(second).toBe(first);
     expect(readdirSync(dir).filter((f) => f.endsWith(".md"))).toHaveLength(first);
+  });
+});
+
+describe("codex agents", () => {
+  test("installs every shipped agent as a TOML file and nothing else", () => {
+    const dir = tmp();
+
+    const count = copyAgentsForCodex(dir);
+
+    expect(count).toBeGreaterThan(0);
+    expect(readdirSync(dir).filter((f) => f.endsWith(".toml"))).toHaveLength(count);
+    expect(readdirSync(dir).filter((f) => f.endsWith(".md"))).toHaveLength(0);
+  });
+
+  test("each file parses as TOML with the source body as its instructions", () => {
+    const dir = tmp();
+    copyAgentsForCodex(dir);
+
+    const agent = Bun.TOML.parse(agentFile(dir, "gemini-researcher.toml")) as Record<
+      string,
+      string
+    >;
+
+    expect(agent.name).toBe("gemini-researcher");
+    expect(agent.developer_instructions).toStartWith(
+      "You are a research specialist focused on **depth and academic rigor**."
+    );
+  });
+
+  test("removal deletes the TOML files and leaves the user's own agents", () => {
+    const dir = tmp();
+    const count = copyAgentsForCodex(dir);
+    writeFileSync(resolve(dir, "mine.toml"), 'name = "mine"');
+
+    const removed = removeAgentsFromCodex(dir);
+
+    expect(removed).toHaveLength(count);
+    expect(readdirSync(dir)).toEqual(["mine.toml"]);
   });
 });
 

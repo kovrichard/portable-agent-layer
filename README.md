@@ -231,7 +231,7 @@ Your setup should be able to travel with you.
 ## Features
 
 - **Cross-platform**: works on Windows, macOS, and Linux
-- **Cross-agent**: full support for Claude Code, opencode, Cursor, GitHub Copilot, and Codex (Codex still lacks subagents)
+- **Cross-agent**: full support for Claude Code, opencode, Cursor, GitHub Copilot, and Codex
 - **Subscription-first inference**: background inference routes through whichever subscription CLI is active — no API key needed by default
 - **Portable knowledge**: export and import accumulated knowledge
 - **A morning screen, not a dashboard**: `pal cli server` ranks your projects *and* your written goals in one urgent/important grid. Urgency is read off the files — blockers, an unfinished handoff, a date in a next step, an important thing gone quiet. Importance comes from one fact per project: whether it serves a goal you wrote down, is a way the work could pay, or is kept for its own sake. PAL guesses that once at session stop; you correct it on the page or with `project.ts serves <name> goal|revenue|fun`, and the correction survives every later guess

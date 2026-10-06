@@ -2,7 +2,7 @@
  * subagent-doctor — static evaluator for a personal subagent definition
  * (~/.pal/agents/<name>.md) with merged multi-platform frontmatter. Checks only
  * what is mechanically verifiable: name/description constraints, per-platform
- * blocks (claude/opencode/cursor/copilot), model/tools/permission shape, body
+ * blocks (claude/opencode/cursor/copilot/codex), model/tools/permission shape, body
  * length, and absolute-path portability.
  *
  * Library:  import { lintSubagent, formatSubagentReport } from ".../subagent-doctor"
@@ -13,6 +13,11 @@
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
+import {
+  AGENT_PLATFORMS,
+  type AgentPlatform,
+  parseAgentDefinition,
+} from "../hooks/lib/agent-definition";
 import { assets, namesAPath, palHome, toPath } from "../hooks/lib/paths";
 
 type Level = "pass" | "warn" | "error";
@@ -30,9 +35,6 @@ export interface SubagentReport {
   errors: number;
   warnings: number;
 }
-
-const AGENT_PLATFORMS = ["claude", "opencode", "cursor", "copilot"] as const;
-type AgentPlatform = (typeof AGENT_PLATFORMS)[number];
 
 interface ParsedSubagent {
   hasFrontmatter: boolean;
@@ -53,6 +55,9 @@ const MAX_BODY_LINES = 500;
 const KNOWN_MODELS = ["inherit", "fable", "sonnet", "opus", "haiku"];
 const PERMISSION_VALUES = ["allow", "ask", "deny"];
 const OPENCODE_MODES = ["subagent", "primary", "all"];
+const CODEX_SANDBOX_MODES = ["read-only", "workspace-write", "danger-full-access"];
+const CODEX_TABLE_KEYS = ["tools", "skills"];
+const SHARED_FIELDS = ["name", "description"];
 
 /** Machine/user-specific absolute paths that will not survive an export. */
 const ABSOLUTE_PATH_RE =
@@ -71,42 +76,11 @@ function shippedAgentNames(): Set<string> {
 
 /** Split a merged subagent .md into global fields, per-platform blocks, and body. */
 function parseSubagent(content: string): ParsedSubagent {
-  const parts = content.split(/^---\s*$/m);
-  if (parts.length < 3) {
-    return {
-      hasFrontmatter: false,
-      name: null,
-      description: null,
-      descriptionQuoted: false,
-      global: [],
-      platforms: {},
-      body: content,
-    };
+  const definition = parseAgentDefinition(content);
+  if (!definition.hasFrontmatter) {
+    return { ...definition, name: null, description: null, descriptionQuoted: false };
   }
-  const frontmatter = parts[1];
-  const body = parts.slice(2).join("---");
-
-  const global: string[] = [];
-  const platforms: Partial<Record<AgentPlatform, string[]>> = {};
-  let current: AgentPlatform | null = null;
-
-  for (const line of frontmatter.split("\n")) {
-    if (!line.trim()) continue;
-    const pm = /^(claude|opencode|cursor|copilot):\s*$/.exec(line);
-    if (pm) {
-      current = pm[1] as AgentPlatform;
-      platforms[current] ??= [];
-      continue;
-    }
-    if (current) {
-      if (/^ {2}/.test(line)) {
-        platforms[current]?.push(line.slice(2));
-        continue;
-      }
-      current = null;
-    }
-    global.push(line);
-  }
+  const { global, platforms, body } = definition;
 
   const globalText = global.join("\n");
   const name = /^name:\s*"?(.+?)"?\s*$/m.exec(globalText)?.[1] ?? null;
@@ -137,6 +111,10 @@ function fieldValue(lines: string[], key: string): string | null {
     if (m) return m[1].replace(/^"(.*)"$/, "$1");
   }
   return null;
+}
+
+function topLevelKeys(lines: string[]): string[] {
+  return lines.flatMap((line) => /^([A-Za-z0-9_-]+):/.exec(line)?.[1] ?? []);
 }
 
 /** True when a block declares `key:` (with or without an inline value). */
@@ -200,6 +178,26 @@ function checkCursorBlock(lines: string[], add: AddFinding): void {
 function checkCopilotBlock(lines: string[], add: AddFinding): void {
   const model = fieldValue(lines, "model");
   if (model) validateModel(model, "copilot", add);
+}
+
+function checkCodexBlock(lines: string[], add: AddFinding): void {
+  const model = fieldValue(lines, "model");
+  if (model) validateModel(model, "codex", add);
+  const sandbox = fieldValue(lines, "sandbox_mode");
+  if (sandbox !== null && !CODEX_SANDBOX_MODES.includes(sandbox)) {
+    add(
+      "warn",
+      "codex.sandbox_mode",
+      `sandbox_mode "${sandbox}" — expected one of ${CODEX_SANDBOX_MODES.join(", ")}`
+    );
+  }
+  for (const key of CODEX_TABLE_KEYS.filter((k) => hasField(lines, k))) {
+    add(
+      "warn",
+      `codex.${key}`,
+      `Codex reads \`${key}\` as a config table, not a list — the agent will not load; name tools or skills in the body instead`
+    );
+  }
 }
 
 function validateModel(model: string, platform: string, add: AddFinding): void {
@@ -311,6 +309,17 @@ export function lintSubagent(file: string): SubagentReport {
         );
   }
 
+  const unmappedGlobals = topLevelKeys(parsed.global).filter(
+    (key) => !SHARED_FIELDS.includes(key)
+  );
+  if (unmappedGlobals.length > 0) {
+    add(
+      "error",
+      "global.fields",
+      `global ${unmappedGlobals.join(", ")} has no Codex key, so linking fails — move it into the platform blocks that use it`
+    );
+  }
+
   // ── platform blocks ──
   const present = AGENT_PLATFORMS.filter((p) => (platforms[p]?.length ?? 0) > 0);
   present.length > 0
@@ -318,13 +327,14 @@ export function lintSubagent(file: string): SubagentReport {
     : add(
         "warn",
         "platforms",
-        "no platform block — the subagent installs with only name/description; add a claude:/opencode:/cursor:/copilot: block to set model, tools, mode"
+        "no platform block — the subagent installs with only name/description; add a claude:/opencode:/cursor:/copilot:/codex: block to set model, tools, mode"
       );
 
   if (platforms.claude) checkClaudeBlock(platforms.claude, add);
   if (platforms.opencode) checkOpencodeBlock(platforms.opencode, add);
   if (platforms.cursor) checkCursorBlock(platforms.cursor, add);
   if (platforms.copilot) checkCopilotBlock(platforms.copilot, add);
+  if (platforms.codex) checkCodexBlock(platforms.codex, add);
 
   // ── skills field: Claude preloads it; the others have no such field ──
   for (const p of ["opencode", "cursor", "copilot"] as const) {

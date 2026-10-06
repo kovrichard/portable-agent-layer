@@ -18,7 +18,9 @@ A personal subagent is stored once as `~/.pal/agents/<name>.md` with **merged
 multi-platform frontmatter**. On `pal cli subagent link <name>`, PAL splits it per
 platform and writes a native file into each installed agent's agents directory. Global
 fields (`name`, `description`) always ship; each platform block is un-indented into that
-agent's frontmatter and the other blocks are stripped.
+agent's frontmatter and the other blocks are stripped. Codex is the exception in format
+only: it gets `~/.codex/agents/<name>.toml`, with the body as `developer_instructions`
+and the `codex:` block's keys at the top level.
 
 ```markdown
 ---
@@ -44,6 +46,10 @@ cursor:
 copilot:
   model: inherit
   tools: read, edit             # comma list
+codex:
+  model: gpt-6-sol              # omit to inherit the parent session's model
+  model_reasoning_effort: high
+  sandbox_mode: read-only       # read-only | workspace-write | danger-full-access
 ---
 
 <system prompt — second-person instructions to the subagent>
@@ -67,6 +73,12 @@ with just `name` + `description` (a valid, minimal subagent).
   field — emitting one there is ignored. If a subagent should lean on specific skills on
   those agents, name them in the system prompt body instead.
 - **cursor** — `readonly` and `is_background` are booleans (`true`/`false`).
+- **codex** — every key is optional and inherits from the parent session when omitted.
+  Values must be strings, numbers, booleans or lists of strings. Codex has **no** `tools`
+  allow-list or `skills` list (both are config tables there, and a list makes Codex skip
+  the agent); restrict access with `sandbox_mode` and name skills in the body. The
+  global frontmatter may hold only `name` and `description`, because nothing else maps
+  to a Codex key.
 
 ## What makes a good subagent
 

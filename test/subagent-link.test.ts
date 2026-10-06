@@ -29,6 +29,7 @@ const claudeFile = resolve(HOME, ".claude/agents/my-helper.md");
 const opencodeFile = resolve(HOME, ".config/opencode/agents/my-helper.md");
 const copilotFile = resolve(HOME, ".copilot/agents/my-helper.md");
 const cursorFile = resolve(HOME, ".cursor/agents/my-helper.md");
+const codexFile = resolve(HOME, ".codex/agents/my-helper.toml");
 
 const MERGED = `---
 name: my-helper
@@ -43,6 +44,8 @@ opencode:
 copilot:
   model: inherit
   tools: read
+codex:
+  sandbox_mode: read-only
 ---
 
 You are a test helper subagent.
@@ -59,6 +62,7 @@ beforeAll(() => {
   mkdirSync(resolve(HOME, ".claude/agents"), { recursive: true });
   mkdirSync(resolve(HOME, ".config/opencode/agents"), { recursive: true });
   mkdirSync(resolve(HOME, ".copilot/agents"), { recursive: true });
+  mkdirSync(resolve(HOME, ".codex/agents"), { recursive: true });
   firstLink = subagentLink("my-helper");
 });
 
@@ -96,6 +100,31 @@ describe("pal cli subagent link", () => {
     // …and claude's fields did NOT leak in (they would if copilot: were
     // unrecognised and its lines fell through to the global frontmatter)
     expect(copilot).not.toContain("model: fable");
+  });
+
+  test("codex gets a TOML agent carrying its own block", () => {
+    const codex = Bun.TOML.parse(readFileSync(codexFile, "utf-8")) as Record<
+      string,
+      string
+    >;
+    expect(codex.name).toBe("my-helper");
+    expect(codex.sandbox_mode).toBe("read-only");
+    expect(codex.developer_instructions).toBe("You are a test helper subagent.\n");
+    expect(codex.model).toBeUndefined();
+  });
+
+  test("a definition Codex cannot take installs nowhere", () => {
+    writeFileSync(
+      resolve(HOME, ".pal/agents/half-built.md"),
+      MERGED.replace("name: my-helper", "name: half-built").replace(
+        "  sandbox_mode: read-only",
+        "  mcp_servers:\n    docs:\n      url: x"
+      )
+    );
+    const res = subagentLink("half-built");
+    expect(res.status).toBe(1);
+    expect(res.stderr + res.stdout).toContain("codex");
+    expect(existsSync(resolve(HOME, ".claude/agents/half-built.md"))).toBe(false);
   });
 
   test("opencode gets mode + permission", () => {

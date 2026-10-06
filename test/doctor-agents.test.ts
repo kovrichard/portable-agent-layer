@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { agentFindings, rosterFindings } from "../src/cli/doctor/agents";
-import { copyAgents } from "../src/targets/lib";
+import { copyAgents, copyAgentsForCodex } from "../src/targets/lib";
 
 const DIR_VARS = {
   PAL_CLAUDE_DIR: "claude",
@@ -247,8 +247,20 @@ describe("installed subagents", () => {
     expect(byId(agentFindings(["claude"]), "claude.subagents")?.severity).toBe("ok");
   });
 
-  test("codex has no subagents to check", () => {
-    expect(byId(agentFindings(["codex"]), "codex.subagents")).toBeUndefined();
+  test("codex compares its TOML render against the source", () => {
+    write(
+      resolve(ROOT, "pkg", "assets", "agents", "researcher.md"),
+      shippedAgent.replace("claude:", 'description: "Researches."\nclaude:')
+    );
+    const codexAgents = resolve(ROOT, "codex", "agents");
+
+    expect(byId(agentFindings(["codex"]), "codex.subagents")?.severity).toBe("warn");
+    copyAgentsForCodex(codexAgents);
+    expect(byId(agentFindings(["codex"]), "codex.subagents")?.severity).toBe("ok");
+    write(resolve(codexAgents, "researcher.toml"), "stale copy");
+    expect(byId(agentFindings(["codex"]), "codex.subagents")?.title).toContain(
+      "researcher"
+    );
   });
 });
 

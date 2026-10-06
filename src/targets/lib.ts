@@ -18,8 +18,10 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, resolve, sep } from "node:path";
+import { AGENT_PLATFORMS, type AgentPlatform } from "../hooks/lib/agent-definition";
 import { assets, palHome, platform } from "../hooks/lib/paths";
 import { declaredTriggers } from "../hooks/lib/skill-triggers";
+import { agentFileName, renderAgentForPlatform } from "./agent-render";
 
 // --- Colored logging ---
 
@@ -1031,81 +1033,28 @@ export function countAgents(): number {
   }
 }
 
-// --- Agent platform extraction ---
+// --- Agent platform rendering ---
 
-const AGENT_PLATFORMS = ["claude", "opencode", "cursor", "copilot"] as const;
-export type AgentPlatform = (typeof AGENT_PLATFORMS)[number];
+const shippedAgentStems = () =>
+  readdirSync(assets.agents())
+    .filter((f) => f.endsWith(".md"))
+    .map((f) => f.replace(/\.md$/, ""));
 
-/**
- * Extract a platform-specific agent file from the unified agent format.
- *
- * Each agent .md defines platform blocks at the top level:
- *   claude:     → fields for Claude Code
- *   opencode:   → fields for opencode
- *   cursor:     → fields for Cursor
- *
- * Global fields (name, description) are always included.
- * The target platform block is un-indented and merged into the root.
- * All other platform blocks are stripped.
- */
-function extractAgentForPlatform(content: string, platform: AgentPlatform): string {
-  const parts = content.split(/^---\s*$/m);
-  if (parts.length < 3) return content;
-
-  const frontmatter = parts[1];
-  const body = parts.slice(2).join("---");
-
-  const globalLines: string[] = [];
-  const platformLines: Record<AgentPlatform, string[]> = {
-    claude: [],
-    opencode: [],
-    cursor: [],
-    copilot: [],
-  };
-  let currentPlatform: AgentPlatform | null = null;
-
-  for (const line of frontmatter.split("\n")) {
-    if (!line.trim()) continue;
-
-    const platformMatch = new RegExp(/^(claude|opencode|cursor|copilot):\s*$/).exec(line);
-    if (platformMatch) {
-      currentPlatform = platformMatch[1] as AgentPlatform;
-      continue;
-    }
-
-    if (currentPlatform) {
-      if (new RegExp(/^ {2}/).exec(line)) {
-        platformLines[currentPlatform].push(line.slice(2)); // un-indent one level
-        continue;
-      }
-      currentPlatform = null; // end of platform block
-    }
-
-    globalLines.push(line);
-  }
-
-  const newFrontmatter = [...globalLines, ...platformLines[platform]]
-    .filter((l) => l.trim())
-    .join("\n");
-
-  return `---\n${newFrontmatter}\n---\n${body}`;
-}
+const shippedAgentSource = (stem: string) =>
+  readFileSync(resolve(assets.agents(), `${stem}.md`), "utf-8");
 
 /** Install agents for a platform into a target directory. Always overwrites. */
 function installAgents(targetDir: string, platform: AgentPlatform): number {
-  const agentsDir = assets.agents();
-  if (!existsSync(agentsDir)) return 0;
+  if (!existsSync(assets.agents())) return 0;
 
   mkdirSync(targetDir, { recursive: true });
   let count = 0;
 
-  for (const file of readdirSync(agentsDir).filter((f) => f.endsWith(".md"))) {
-    const name = file.replace(/\.md$/, "");
-    const installed = reportOnlyOnFailure(`${platform} agent ${name}`, () => {
-      const content = readFileSync(resolve(agentsDir, file), "utf-8");
+  for (const stem of shippedAgentStems()) {
+    const installed = reportOnlyOnFailure(`${platform} agent ${stem}`, () => {
       writeFileSync(
-        resolve(targetDir, file),
-        extractAgentForPlatform(content, platform),
+        resolve(targetDir, agentFileName(stem, platform)),
+        renderAgentForPlatform(shippedAgentSource(stem), platform),
         "utf-8"
       );
     });
@@ -1116,34 +1065,29 @@ function installAgents(targetDir: string, platform: AgentPlatform): number {
 
 /** Shipped agents in targetDir that differ from what installAgents would write there. */
 export function staleShippedAgents(targetDir: string, agent: AgentPlatform): string[] {
-  const agentsDir = assets.agents();
-  if (!existsSync(agentsDir)) return [];
-  const isStale = (file: string) => {
-    const installed = resolve(targetDir, file);
-    const expected = extractAgentForPlatform(
-      readFileSync(resolve(agentsDir, file), "utf-8"),
-      agent
+  if (!existsSync(assets.agents())) return [];
+  const isStale = (stem: string) => {
+    const installed = resolve(targetDir, agentFileName(stem, agent));
+    return (
+      !existsSync(installed) ||
+      readFileSync(installed, "utf-8") !==
+        renderAgentForPlatform(shippedAgentSource(stem), agent)
     );
-    return !existsSync(installed) || readFileSync(installed, "utf-8") !== expected;
   };
-  return readdirSync(agentsDir)
-    .filter((f) => f.endsWith(".md") && isStale(f))
-    .map((f) => f.replace(/\.md$/, ""))
-    .sort();
+  return shippedAgentStems().filter(isStale).sort();
 }
 
 /** Remove PAL agents from a directory. */
-function uninstallAgents(targetDir: string, label: string): string[] {
-  const agentsDir = assets.agents();
-  if (!existsSync(agentsDir)) return [];
+function uninstallAgents(targetDir: string, platform: AgentPlatform): string[] {
+  if (!existsSync(assets.agents())) return [];
 
   const removed: string[] = [];
-  for (const file of readdirSync(agentsDir).filter((f) => f.endsWith(".md"))) {
-    const dst = resolve(targetDir, file);
+  for (const stem of shippedAgentStems()) {
+    const dst = resolve(targetDir, agentFileName(stem, platform));
     if (existsSync(dst)) {
       unlinkSync(dst);
-      removed.push(file.replace(/\.md$/, ""));
-      log.detail(`Removed ${label} agent: ${file.replace(/\.md$/, "")}`);
+      removed.push(stem);
+      log.detail(`Removed ${platform} agent: ${stem}`);
     }
   }
   return removed;
@@ -1165,12 +1109,20 @@ export function copyAgentsForCopilot(copilotAgentsDir: string): number {
   return installAgents(copilotAgentsDir, "copilot");
 }
 
+export function copyAgentsForCodex(codexAgentsDir: string): number {
+  return installAgents(codexAgentsDir, "codex");
+}
+
 export function removeAgentsFromCursor(cursorAgentsDir: string): string[] {
   return uninstallAgents(cursorAgentsDir, "cursor");
 }
 
 export function removeAgentsFromCopilot(copilotAgentsDir: string): string[] {
   return uninstallAgents(copilotAgentsDir, "copilot");
+}
+
+export function removeAgentsFromCodex(codexAgentsDir: string): string[] {
+  return uninstallAgents(codexAgentsDir, "codex");
 }
 
 // --- Personal subagents (user-authored, under ~/.pal/agents/) ---
@@ -1197,6 +1149,7 @@ export function nativeAgentsDir(agent: AgentPlatform): string {
     opencode: platform.opencodeDir,
     cursor: platform.cursorDir,
     copilot: platform.copilotDir,
+    codex: platform.codexDir,
   }[agent];
   return resolve(home(), "agents");
 }
@@ -1239,17 +1192,23 @@ export function installPersonalSubagent(name: string): string[] {
     );
   }
   const content = readFileSync(src, "utf-8");
-  const installed: string[] = [];
-  for (const { agent, dir } of personalSubagentTargets()) {
-    if (!existsSync(dir)) continue; // agent not installed
-    writeFileSync(
-      resolve(dir, `${name}.md`),
-      extractAgentForPlatform(content, agent),
-      "utf-8"
-    );
-    installed.push(agent);
+  const renders = personalSubagentTargets()
+    .filter(({ dir }) => existsSync(dir))
+    .map(({ agent, dir }) => ({
+      agent,
+      file: resolve(dir, agentFileName(name, agent)),
+      text: renderForPersonalSubagent(content, agent),
+    }));
+  for (const { file, text } of renders) writeFileSync(file, text, "utf-8");
+  return renders.map(({ agent }) => agent);
+}
+
+function renderForPersonalSubagent(content: string, agent: AgentPlatform): string {
+  try {
+    return renderAgentForPlatform(content, agent);
+  } catch (e) {
+    throw new Error(`Cannot build the ${agent} subagent: ${(e as Error).message}`);
   }
-  return installed;
 }
 
 /** Load and resolve the Copilot hooks template, substituting PKG_ROOT */

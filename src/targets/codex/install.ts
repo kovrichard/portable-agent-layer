@@ -1,7 +1,7 @@
 /**
  * PAL — Codex target installer
  * Merges PAL hooks into ~/.codex/hooks.json (never overwrites user hooks).
- * Symlinks skills. Ensures AGENTS.md symlink via regenerateIfNeeded().
+ * Symlinks skills, renders agents to TOML. Ensures AGENTS.md symlink via regenerateIfNeeded().
  */
 
 import {
@@ -15,6 +15,7 @@ import { resolve } from "node:path";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
 import {
   addCodexStatuslineConfig,
+  copyAgentsForCodex,
   copySkills,
   countSkills,
   loadCodexHooksTemplate,
@@ -100,6 +101,10 @@ log.success("Merged PAL allowlist rules into ~/.codex/rules/default.rules");
 const codexSkillsDir = resolve(CODEX_DIR, "skills");
 copySkills(codexSkillsDir);
 log.success(`${countSkills()} skills → ~/.codex/skills/`);
+
+// --- Render agents to ~/.codex/agents/ ---
+const agentCount = copyAgentsForCodex(resolve(CODEX_DIR, "agents"));
+log.success(`${agentCount} agents → ~/.codex/agents/`);
 
 // --- Enable hooks in config.toml ---
 const CONFIG_FILE = resolve(CODEX_DIR, "config.toml");

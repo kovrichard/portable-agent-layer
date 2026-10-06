@@ -1,7 +1,7 @@
 ---
 name: create-subagent
 license: MIT
-description: "Create a user-scoped subagent for every installed agent (Claude Code, opencode, Cursor, Copilot) from one merged definition, then install and run the doctor on it. Use when the user asks to create a subagent, add a custom agent, delegate a role to a specialized agent, or \"make a subagent that…\"."
+description: "Create a user-scoped subagent for every installed agent (Claude Code, opencode, Cursor, Copilot, Codex) from one merged definition, then install and run the doctor on it. Use when the user asks to create a subagent, add a custom agent, delegate a role to a specialized agent, or \"make a subagent that…\"."
 argument-hint: <subagent name> <what it does + when to delegate>
 metadata:
   source: portable-agent-layer
@@ -38,7 +38,7 @@ cat ~/.pal/skills/create-subagent/authoring-guide.md
    cannot reasonably infer, then confirm your draft:
    - **model** — a flagship model or `inherit` the caller's model (can differ per agent).
    - **tools** — which tools it may use (a comma list for Claude/Copilot; a permission
-     map for opencode). Default: inherit all tools.
+     map for opencode; a `sandbox_mode` for Codex). Default: inherit all tools.
    - **skills** — skills to PRELOAD. Claude Code only; the other agents have no such
      field (see the guide). Record intended skills in the body for the others.
    - **system prompt** — the role and behavior. Draft it and confirm with the user.

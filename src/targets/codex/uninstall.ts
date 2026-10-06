@@ -1,7 +1,7 @@
 /**
  * PAL — Codex uninstaller
  * Removes only PAL-owned hooks from ~/.codex/hooks.json. Preserves user hooks.
- * Removes PAL skill symlinks.
+ * Removes PAL skill symlinks and PAL agents.
  */
 
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -11,6 +11,7 @@ import {
   loadCodexHooksTemplate,
   log,
   readJson,
+  removeAgentsFromCodex,
   removeCodexStatuslineConfig,
   removeSkills,
   unmergeCodexHooks,
@@ -85,6 +86,12 @@ if (removed.length > 0) {
   log.success(`Removed ${removed.length} skill(s): ${removed.join(", ")}`);
 } else {
   log.info("No PAL skills found");
+}
+
+// --- Remove PAL agents ---
+const removedAgents = removeAgentsFromCodex(resolve(CODEX_DIR, "agents"));
+if (removedAgents.length > 0) {
+  log.success(`Removed ${removedAgents.length} agent(s): ${removedAgents.join(", ")}`);
 }
 
 // --- Disable hooks in config.toml ---
