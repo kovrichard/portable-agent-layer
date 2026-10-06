@@ -1,3 +1,22 @@
+# [0.86.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.24...v0.86.0) (2026-10-06)
+
+
+### Bug Fixes
+
+* **deep-research:** relay missing researcher keys to the user ([0db35a6](https://github.com/kovrichard/portable-agent-layer/commit/0db35a6892eca786d6ed75af6f8982925d102585))
+* do not count ERROR strings as hook errors ([a0bbcf1](https://github.com/kovrichard/portable-agent-layer/commit/a0bbcf1e1cc02414ecc01cafef9255a2ca606233))
+* **doctor:** advise by the login a failed call used ([0618833](https://github.com/kovrichard/portable-agent-layer/commit/06188333ea599542c33b88a7aa00b0c6d6932c4e))
+* **frontmatter:** introduce splitFrontmatter utility for improved content parsing ([9db798b](https://github.com/kovrichard/portable-agent-layer/commit/9db798b5731536164f9ee634805df5b6d75b4b63))
+* **inference:** keep API keys for claude unless a subscription token is set ([bf4bd26](https://github.com/kovrichard/portable-agent-layer/commit/bf4bd26cb3ad9a82a001b4e746cc3fab0d3cea8e))
+
+
+### Features
+
+* **codex:** add subagent support ([3a55b96](https://github.com/kovrichard/portable-agent-layer/commit/3a55b9615079f175ddebd98af8513ab8650a02b0))
+* **doctor:** warn about PAL keys set in the shell, advertise only inference keys ([da3bd2d](https://github.com/kovrichard/portable-agent-layer/commit/da3bd2de69fb13f469d0e4bf17110f497e7da654))
+* **inference:** read credentials from ~/.pal/.env ([59d51f8](https://github.com/kovrichard/portable-agent-layer/commit/59d51f8e3035758a20824f2e98f569679099a445))
+* **skills:** give shipped skills ~/.pal/.env ([e098b14](https://github.com/kovrichard/portable-agent-layer/commit/e098b1443756aae0888ecbed10c35c0730f3adff))
+
 ## [0.85.24](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.23...v0.85.24) (2026-10-06)
 
 
