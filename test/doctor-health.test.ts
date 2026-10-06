@@ -4,7 +4,11 @@ import {
   migrationFindings,
   updateFinding,
 } from "../src/cli/doctor/health";
-import { apiKeyFindings, leakedEnvFindings } from "../src/cli/doctor/inference";
+import {
+  apiKeyFindings,
+  leakedEnvFindings,
+  routeFinding,
+} from "../src/cli/doctor/inference";
 
 const NOW = Date.parse("2026-10-04T19:00:00Z");
 const MINUTE = 60_000;
@@ -145,5 +149,31 @@ describe("API keys", () => {
     );
 
     expect(gemini?.severity).toBe("ok");
+  });
+});
+
+describe("inference route", () => {
+  test("names the model background inference will use", () => {
+    const finding = routeFinding({
+      agent: "codex",
+      route: "codex-spawn",
+      reason: "codex binary on PATH",
+      model: "gpt-6-luna",
+    });
+
+    expect(finding?.title).toBe(
+      "Inference: codex-spawn on gpt-6-luna (codex binary on PATH)"
+    );
+  });
+
+  test("an API route names its model too", () => {
+    const finding = routeFinding({
+      agent: "claude",
+      route: "anthropic-api",
+      reason: "fallback",
+      model: "haiku",
+    });
+
+    expect(finding?.title).toContain("anthropic-api on haiku");
   });
 });

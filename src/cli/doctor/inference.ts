@@ -51,8 +51,13 @@ export function apiKeyFindings(env: Env): Finding[] {
   );
 }
 
-function routeFinding(): Finding | null {
-  const preview = previewInferenceRoute();
+type Preview = ReturnType<typeof previewInferenceRoute>;
+
+function modelSuffix(preview: Preview): string {
+  return preview.model ? ` on ${preview.model}` : "";
+}
+
+export function routeFinding(preview: Preview = previewInferenceRoute()): Finding | null {
   if (preview.route === "disabled") return null;
   if (preview.route === "none")
     return failing(
@@ -63,10 +68,13 @@ function routeFinding(): Finding | null {
   if (preview.route.endsWith("-api"))
     return warning(
       "inference.api",
-      `Background inference goes through ${preview.route} (${preview.reason}) — it bills the API key`,
+      `Background inference goes through ${preview.route}${modelSuffix(preview)} (${preview.reason}) — it bills the API key`,
       { say: "Put the agent's CLI on PATH to use your subscription instead" }
     );
-  return passed("inference", `Inference: ${preview.route} (${preview.reason})`);
+  return passed(
+    "inference",
+    `Inference: ${preview.route}${modelSuffix(preview)} (${preview.reason})`
+  );
 }
 
 function opencodeModelFinding(): Finding {
