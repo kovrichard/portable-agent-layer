@@ -25,6 +25,9 @@ const PRESERVED = [
   "PAL_HOME",
   "PATH",
   "CLAUDECODE",
+  "CLAUDE_CODE_OAUTH_TOKEN",
+  "ANTHROPIC_API_KEY",
+  "ANTHROPIC_AUTH_TOKEN",
   SPAWN_GUARD_ENV.SENTINEL,
   SPAWN_GUARD_ENV.DEPTH,
 ] as const;
@@ -199,6 +202,9 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
     // log into tmpBin/memory/state/debug.log instead, cleaned up below.
     process.env.PAL_HOME = tmpBin;
     delete process.env.PAL_ANTHROPIC_API_KEY;
+    delete process.env.CLAUDE_CODE_OAUTH_TOKEN;
+    delete process.env.ANTHROPIC_API_KEY;
+    delete process.env.ANTHROPIC_AUTH_TOKEN;
     delete process.env[SPAWN_GUARD_ENV.SENTINEL];
     delete process.env[SPAWN_GUARD_ENV.DEPTH];
     process.env.PAL_AGENT = "claude";
@@ -255,6 +261,39 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
     expect(result.output).toBe("claudecode=[]");
     // Parent still has CLAUDECODE=1 — scoping confirmed.
     expect(process.env.CLAUDECODE).toBe("1");
+  });
+
+  test("fake claude receives CLAUDE_CODE_OAUTH_TOKEN from ~/.pal/.env", async () => {
+    writeFileSync(resolve(tmpBin, ".env"), "CLAUDE_CODE_OAUTH_TOKEN=from-pal-env\n");
+    writeFakeBin(
+      tmpBin,
+      "claude",
+      `console.log(\`token=[\${process.env.CLAUDE_CODE_OAUTH_TOKEN ?? ""}]\`);\n`
+    );
+    prependPath(tmpBin);
+
+    const result = await inference({ user: "ignored", timeout: 5000 });
+    expect(result.output).toBe("token=[from-pal-env]");
+  });
+
+  test("fake claude never sees the API keys that outrank the subscription", async () => {
+    process.env.ANTHROPIC_API_KEY = "would-bill-the-api";
+    writeFileSync(resolve(tmpBin, ".env"), "ANTHROPIC_AUTH_TOKEN=would-bill-too\n");
+    writeFakeBin(
+      tmpBin,
+      "claude",
+      `console.log(\`key=[\${process.env.ANTHROPIC_API_KEY ?? ""}] auth=[\${process.env.ANTHROPIC_AUTH_TOKEN ?? ""}]\`);\n`
+    );
+    prependPath(tmpBin);
+
+    const result = await inference({ user: "ignored", timeout: 5000 });
+    expect(result.output).toBe("key=[] auth=[]");
+  });
+
+  test("PAL_ANTHROPIC_API_KEY in ~/.pal/.env counts as an API fallback", () => {
+    expect(hasApiKey()).toBe(false);
+    writeFileSync(resolve(tmpBin, ".env"), "PAL_ANTHROPIC_API_KEY=from-pal-env\n");
+    expect(hasApiKey()).toBe(true);
   });
 
   test("logDebug emits route=claude-spawn line when debug enabled", async () => {

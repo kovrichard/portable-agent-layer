@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { cachedStatus, type UpdateCache } from "../../hooks/handlers/update-check";
 import { type HookErrorGroup, recentHookErrors } from "../../hooks/lib/log";
+import { palEnvPath, withPalEnv } from "../../hooks/lib/pal-env";
 import { palHome } from "../../hooks/lib/paths";
 import { checkPendingMigrations } from "../migrate";
 import { type Finding, failing, passed, warning } from "./finding";
@@ -36,7 +37,7 @@ function claudeLoginExpiredFinding(
       external: true,
     });
   return failing(`hook-errors.${group.source}`, title, {
-    say: "Create a year-long token, then export it as CLAUDE_CODE_OAUTH_TOKEN in your shell profile",
+    say: `Create a year-long token, then add it as CLAUDE_CODE_OAUTH_TOKEN=… to ${palEnvPath()}`,
     command: "claude setup-token",
     external: true,
   });
@@ -44,7 +45,7 @@ function claudeLoginExpiredFinding(
 
 export function hookErrorFindings(
   groups: HookErrorGroup[],
-  context: ErrorContext = { now: Date.now(), env: process.env }
+  context: ErrorContext = { now: Date.now(), env: withPalEnv(process.env) }
 ): Finding[] {
   if (groups.length === 0)
     return [passed("hook-errors", "No hook errors in the last 24h")];

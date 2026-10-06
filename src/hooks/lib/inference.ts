@@ -39,15 +39,16 @@ import {
   isFixedModelRoute,
 } from "./models";
 import { opencodeTierModel, writeInstructionFreeConfig } from "./opencode-config";
+import { withPalEnv } from "./pal-env";
 import { buildSpawnGuardEnv, getInferenceDepth, SPAWN_GUARD_ENV } from "./spawn-guard";
 import { findBinaryOnPath } from "./which";
 
 export function hasApiKey(): boolean {
-  return !!process.env.PAL_ANTHROPIC_API_KEY;
+  return !!withPalEnv().PAL_ANTHROPIC_API_KEY;
 }
 
 export function hasOpenAiKey(): boolean {
-  return !!process.env.PAL_OPENAI_API_KEY;
+  return !!withPalEnv().PAL_OPENAI_API_KEY;
 }
 
 type InferenceRoute =
@@ -304,6 +305,12 @@ export function buildClaudeArgs(
   return args;
 }
 
+/** https://code.claude.com/docs/en/authentication#authentication-precedence */
+const WITHOUT_KEYS_OUTRANKING_SUBSCRIPTION = {
+  ANTHROPIC_API_KEY: undefined,
+  ANTHROPIC_AUTH_TOKEN: undefined,
+};
+
 /**
  * Claude keeps a real system prompt, unlike the other agents, so the system text
  * reaches it through --system-prompt-file rather than --system-prompt. Only the
@@ -317,16 +324,20 @@ async function inferenceViaClaudeSpawn(
   bin: string,
   opts: InferenceOptions
 ): Promise<InferenceResult> {
+  const spawnClaude = (args: string[]) =>
+    inferenceViaCliSpawn(bin, args, opts.user, opts, undefined, {
+      env: WITHOUT_KEYS_OUTRANKING_SUBSCRIPTION,
+    });
   const system = opts.jsonSchema
     ? injectJsonSchemaInstruction(opts.system ?? "", opts.jsonSchema)
     : opts.system;
-  if (!system) return inferenceViaCliSpawn(bin, buildClaudeArgs(opts), opts.user, opts);
+  if (!system) return spawnClaude(buildClaudeArgs(opts));
 
   const dir = await mkdtemp(join(tmpdir(), "pal-system-"));
   try {
     const file = join(dir, "system-prompt.md");
     await writeFile(file, system, "utf-8");
-    return await inferenceViaCliSpawn(bin, buildClaudeArgs(opts, file), opts.user, opts);
+    return await spawnClaude(buildClaudeArgs(opts, file));
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -653,7 +664,7 @@ async function singleCliAttempt(
 
 interface SpawnPlace {
   cwd?: string;
-  env?: Record<string, string>;
+  env?: Record<string, string | undefined>;
 }
 
 /**
@@ -670,7 +681,7 @@ async function inferenceViaCliSpawn(
   place: SpawnPlace = {}
 ): Promise<InferenceResult> {
   const timeout = opts.timeout ?? 15000;
-  const env = { ...buildSpawnGuardEnv(process.env), ...place.env };
+  const env = { ...buildSpawnGuardEnv(withPalEnv(process.env)), ...place.env };
   const started = Date.now();
   const caller = opts.caller ?? "anonymous";
   const session = opts.sessionId ?? "-";
@@ -746,7 +757,7 @@ async function inferenceViaCliSpawn(
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function inferenceViaApi(opts: InferenceOptions): Promise<InferenceResult> {
-  const apiKey = process.env.PAL_ANTHROPIC_API_KEY;
+  const apiKey = withPalEnv().PAL_ANTHROPIC_API_KEY;
   if (!apiKey) return { success: false };
 
   const { system, user, maxTokens = 200, timeout = 5000, jsonSchema } = opts;
@@ -814,7 +825,7 @@ async function inferenceViaApi(opts: InferenceOptions): Promise<InferenceResult>
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function inferenceViaOpenAiApi(opts: InferenceOptions): Promise<InferenceResult> {
-  const apiKey = process.env.PAL_OPENAI_API_KEY;
+  const apiKey = withPalEnv().PAL_OPENAI_API_KEY;
   if (!apiKey) return { success: false };
 
   const { system, user, maxTokens = 500, timeout = 15000, jsonSchema } = opts;

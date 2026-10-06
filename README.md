@@ -138,6 +138,10 @@ PAL routes inference through the host agent's subscription CLI by default. API k
 | `PAL_XAI_API_KEY` | For Grok real-time research skill (X/web search) |
 | `PAL_PERPLEXITY_API_KEY` | For Perplexity deep research skill |
 
+### `~/.pal/.env`
+
+Agents launched from a desktop app never read your shell profile, so the hooks they spawn cannot see variables exported there. PAL's background inference also reads `~/.pal/.env`, one `KEY=value` per line (`export KEY=value` works too); a variable already set in the environment wins. Put `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`), `PAL_ANTHROPIC_API_KEY` and `PAL_OPENAI_API_KEY` there. The file stays on this machine: `pal cli export` never includes it.
+
 ### Path overrides
 
 | Variable | Description |

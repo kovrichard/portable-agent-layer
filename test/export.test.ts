@@ -68,6 +68,8 @@ beforeAll(() => {
     "---\nname: my-helper\n---\n"
   );
 
+  writeFileSync(resolve(TEST_HOME, ".env"), "CLAUDE_CODE_OAUTH_TOKEN=fake-token\n");
+
   process.env.PAL_HOME = TEST_HOME;
 });
 
@@ -106,6 +108,11 @@ describe("collectExportFiles", () => {
     const files = collectExportFiles();
     const shipped = files.filter((f) => f.startsWith("skills/shipped-skill"));
     expect(shipped).toHaveLength(0);
+  });
+
+  test("never collects the credentials in ~/.pal/.env", async () => {
+    const { collectExportFiles } = await import("../src/hooks/lib/export");
+    expect(collectExportFiles().filter((f) => f.endsWith(".env"))).toEqual([]);
   });
 });
 

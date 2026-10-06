@@ -1,4 +1,7 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { resolve } from "node:path";
 import {
   hookErrorFindings,
   migrationFindings,
@@ -10,6 +13,7 @@ import {
   leakedEnvFindings,
   routeFinding,
 } from "../src/cli/doctor/inference";
+import { palEnvPath } from "../src/hooks/lib/pal-env";
 
 const NOW = Date.parse("2026-10-04T19:00:00Z");
 const MINUTE = 60_000;
@@ -201,5 +205,64 @@ describe("cursor plan", () => {
 
   test("unreadable output gives no finding", () => {
     expect(cursorPlanFinding("")).toBeNull();
+  });
+});
+
+describe("~/.pal/.env", () => {
+  const expiredLogin = {
+    source: "inference",
+    count: 2,
+    last: "Failed to authenticate: OAuth session expired and could not be refreshed",
+    lastAt: Date.now(),
+  };
+  let home: string;
+  let saved: Record<string, string | undefined>;
+
+  beforeEach(() => {
+    saved = {
+      PAL_HOME: process.env.PAL_HOME,
+      TOKEN: process.env.CLAUDE_CODE_OAUTH_TOKEN,
+    };
+    home = mkdtempSync(resolve(tmpdir(), "pal-doctor-env-"));
+    process.env.PAL_HOME = home;
+    delete process.env.CLAUDE_CODE_OAUTH_TOKEN;
+  });
+
+  afterEach(() => {
+    if (saved.PAL_HOME === undefined) delete process.env.PAL_HOME;
+    else process.env.PAL_HOME = saved.PAL_HOME;
+    if (saved.TOKEN !== undefined) process.env.CLAUDE_CODE_OAUTH_TOKEN = saved.TOKEN;
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  test("an expired login points at ~/.pal/.env for the token", () => {
+    const [finding] = hookErrorFindings([expiredLogin]);
+
+    expect(finding.severity).toBe("fail");
+    expect(finding.fix?.say).toContain(palEnvPath());
+  });
+
+  test("a token in ~/.pal/.env counts as set", () => {
+    writeFileSync(palEnvPath(), "CLAUDE_CODE_OAUTH_TOKEN=from-pal-env\n");
+
+    const [finding] = hookErrorFindings([expiredLogin]);
+    expect(finding.severity).toBe("warn");
+  });
+
+  test("an inference key in ~/.pal/.env passes, and a missing one points there", () => {
+    writeFileSync(palEnvPath(), "PAL_ANTHROPIC_API_KEY=from-pal-env\n");
+    const findings = apiKeyFindings({});
+    const byId = (id: string) => findings.find((f) => f.id === id);
+
+    expect(byId("key.PAL_ANTHROPIC_API_KEY")?.severity).toBe("ok");
+    expect(byId("key.PAL_OPENAI_API_KEY")?.fix?.say).toContain(palEnvPath());
+  });
+
+  test("a skill key in ~/.pal/.env stays unset, since skills read only the shell", () => {
+    writeFileSync(palEnvPath(), "PAL_GEMINI_API_KEY=from-pal-env\n");
+    const gemini = apiKeyFindings({}).find((f) => f.id === "key.PAL_GEMINI_API_KEY");
+
+    expect(gemini?.severity).toBe("optional");
+    expect(gemini?.fix?.say).toContain("shell profile");
   });
 });

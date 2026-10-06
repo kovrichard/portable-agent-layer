@@ -26,6 +26,7 @@ const PRESERVED = [
   "PAL_OPENCODE_DIR",
   "PATH",
   "CLAUDECODE",
+  "ANTHROPIC_API_KEY",
   SPAWN_GUARD_ENV.SENTINEL,
   SPAWN_GUARD_ENV.DEPTH,
 ] as const;
@@ -157,6 +158,20 @@ console.log(JSON.stringify({ type: "text", part: { type: "text", text } }));\n`
     expect(result.success).toBe(true);
     expect(result.output).toBe("sentinel=1 claudecode=[]");
     expect(process.env.CLAUDECODE).toBe("1");
+  });
+
+  test("fake opencode keeps ANTHROPIC_API_KEY, which its own providers may run on", async () => {
+    process.env.ANTHROPIC_API_KEY = "opencode-provider-key";
+    writeFakeBin(
+      tmpBin,
+      "opencode",
+      `const text = \`key=[\${process.env.ANTHROPIC_API_KEY ?? ""}]\`;
+console.log(JSON.stringify({ type: "text", part: { type: "text", text } }));\n`
+    );
+    prependPath(tmpBin);
+
+    const result = await inference({ user: "ignored", timeout: 5000 });
+    expect(result.output).toBe("key=[opencode-provider-key]");
   });
 
   test("non-zero exit from fake opencode returns success: false", async () => {
