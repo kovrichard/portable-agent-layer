@@ -879,7 +879,8 @@ async function update() {
   clearUpdateCache();
 
   log.info("Reinstalling...");
-  process.exit(await install(resolveTargets([]), []));
+  const { reinstallInFreshProcess } = await import("./reinstall");
+  process.exit(reinstallInFreshProcess());
 }
 
 function cliDebug(args: string[]) {
