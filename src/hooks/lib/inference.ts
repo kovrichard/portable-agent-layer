@@ -317,10 +317,14 @@ export function loggedClaudeAuthMode(message: string): ClaudeAuthMode {
 }
 
 /** https://code.claude.com/docs/en/authentication#authentication-precedence */
-const WITHOUT_KEYS_OUTRANKING_SUBSCRIPTION = {
+const WITHOUT_KEYS_OUTRANKING_TOKEN = {
   ANTHROPIC_API_KEY: undefined,
   ANTHROPIC_AUTH_TOKEN: undefined,
 };
+
+function credentialOverridesFor(mode: ClaudeAuthMode) {
+  return mode === "token" ? WITHOUT_KEYS_OUTRANKING_TOKEN : {};
+}
 
 /**
  * Claude keeps a real system prompt, unlike the other agents, so the system text
@@ -335,10 +339,11 @@ async function inferenceViaClaudeSpawn(
   bin: string,
   opts: InferenceOptions
 ): Promise<InferenceResult> {
+  const mode = claudeAuthMode();
   const spawnClaude = (args: string[]) =>
     inferenceViaCliSpawn(bin, args, opts.user, opts, undefined, {
-      env: WITHOUT_KEYS_OUTRANKING_SUBSCRIPTION,
-      logTag: `auth=${claudeAuthMode()}`,
+      env: credentialOverridesFor(mode),
+      logTag: `auth=${mode}`,
     });
   const system = opts.jsonSchema
     ? injectJsonSchemaInstruction(opts.system ?? "", opts.jsonSchema)

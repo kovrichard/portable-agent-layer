@@ -277,9 +277,23 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
     expect(result.output).toBe("token=[from-pal-env]");
   });
 
-  test("fake claude never sees the API keys that outrank the subscription", async () => {
-    process.env.ANTHROPIC_API_KEY = "would-bill-the-api";
-    writeFileSync(resolve(tmpBin, ".env"), "ANTHROPIC_AUTH_TOKEN=would-bill-too\n");
+  test.each([
+    [
+      "a subscription token drops them",
+      "CLAUDE_CODE_OAUTH_TOKEN=from-pal-env\n",
+      "key=[] auth=[]",
+    ],
+    [
+      "without a token claude keeps them, so key-only and gateway logins work",
+      "",
+      "key=[api-key-login] auth=[gateway-login]",
+    ],
+  ])("API keys outranking the token: %s", async (_case, tokenLine, expected) => {
+    process.env.ANTHROPIC_API_KEY = "api-key-login";
+    writeFileSync(
+      resolve(tmpBin, ".env"),
+      `${tokenLine}ANTHROPIC_AUTH_TOKEN=gateway-login\n`
+    );
     writeFakeBin(
       tmpBin,
       "claude",
@@ -288,7 +302,7 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
     prependPath(tmpBin);
 
     const result = await inference({ user: "ignored", timeout: 5000 });
-    expect(result.output).toBe("key=[] auth=[]");
+    expect(result.output).toBe(expected);
   });
 
   test.each([
