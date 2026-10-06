@@ -39,7 +39,7 @@ function loadApiKey(): string {
       "Error: PAL_PERPLEXITY_API_KEY environment variable is not set.\n" +
         "The Perplexity API could not be reached. The researcher agent should fall back to WebSearch.\n" +
         "To enable Perplexity search, get an API key at https://www.perplexity.ai/settings/api\n" +
-        "and set it: export PAL_PERPLEXITY_API_KEY=pplx-..."
+        "and add it to ~/.pal/.env as PAL_PERPLEXITY_API_KEY=pplx-..."
     );
     process.exit(1);
   }

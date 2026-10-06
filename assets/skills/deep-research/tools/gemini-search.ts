@@ -53,6 +53,7 @@ function loadApiKey(): string {
   if (!key) {
     console.error("Error: PAL_GEMINI_API_KEY environment variable is not set.");
     console.error("Get an API key at https://aistudio.google.com/apikey");
+    console.error("and add it to ~/.pal/.env as PAL_GEMINI_API_KEY=...");
     process.exit(1);
   }
   return key;

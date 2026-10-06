@@ -192,19 +192,45 @@ describe("variables that only PAL's own subprocesses should carry", () => {
 });
 
 describe("API keys", () => {
-  test("an unset key is optional and says what it unlocks", () => {
-    const gemini = apiKeyFindings({}).find((f) => f.id === "key.PAL_GEMINI_API_KEY");
+  const finding = (id: string, shell = {}, file = {}) =>
+    apiKeyFindings(shell, file).find((f) => f.id === `key.${id}`);
 
-    expect(gemini?.severity).toBe("optional");
-    expect(gemini?.title).toContain("YouTube");
+  test("an unset inference key is optional and says what it unlocks", () => {
+    const anthropic = finding("PAL_ANTHROPIC_API_KEY");
+
+    expect(anthropic?.severity).toBe("optional");
+    expect(anthropic?.title).toContain("claude CLI");
   });
 
-  test("a set key passes", () => {
-    const gemini = apiKeyFindings({ PAL_GEMINI_API_KEY: "x" }).find(
-      (f) => f.id === "key.PAL_GEMINI_API_KEY"
-    );
+  test.each([
+    "PAL_GEMINI_API_KEY",
+    "PAL_FYZZ_API_KEY",
+  ])("an unset skill key is not advertised: %s", (name) => {
+    expect(finding(name)).toBeUndefined();
+  });
 
-    expect(gemini?.severity).toBe("ok");
+  test.each([
+    "PAL_ANTHROPIC_API_KEY",
+    "PAL_GEMINI_API_KEY",
+    "PAL_FYZZ_API_KEY",
+  ])("a key only in ~/.pal/.env passes: %s", (name) => {
+    expect(finding(name, {}, { [name]: "from-file" })?.severity).toBe("ok");
+  });
+
+  test.each([
+    ["missing from the file", undefined, "never see it", "Move it to"],
+    ["duplicated in the file", "shell-value", "duplicated in", "Remove it from"],
+    ["different in the file", "file-value", "overrides the different", "Remove it from"],
+  ])("a key set in the shell warns when it is %s", (_case, fileValue, consequence, advice) => {
+    for (const name of ["PAL_ANTHROPIC_API_KEY", "PAL_FYZZ_API_KEY"]) {
+      const file = fileValue === undefined ? {} : { [name]: fileValue };
+      const shellKey = finding(name, { [name]: "shell-value" }, file);
+
+      expect(shellKey?.severity).toBe("warn");
+      expect(shellKey?.title).toContain(consequence);
+      expect(shellKey?.fix?.say).toContain(advice);
+      expect(JSON.stringify(shellKey)).not.toContain("-value");
+    }
   });
 });
 
@@ -307,12 +333,12 @@ describe("~/.pal/.env", () => {
     expect(byId("key.PAL_OPENAI_API_KEY")?.fix?.say).toContain(palEnvPath());
   });
 
-  test("a shipped skill's key in ~/.pal/.env passes, and a missing one points there", () => {
+  test("a shipped skill's key is read from ~/.pal/.env by default", () => {
     writeFileSync(palEnvPath(), "PAL_GEMINI_API_KEY=from-pal-env\n");
     const findings = apiKeyFindings({});
     const byId = (id: string) => findings.find((f) => f.id === id);
 
     expect(byId("key.PAL_GEMINI_API_KEY")?.severity).toBe("ok");
-    expect(byId("key.PAL_XAI_API_KEY")?.fix?.say).toContain(palEnvPath());
+    expect(byId("key.PAL_XAI_API_KEY")).toBeUndefined();
   });
 });

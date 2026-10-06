@@ -17,7 +17,7 @@ function loadApiKey(): string {
   const key = process.env.PAL_FYZZ_API_KEY;
   if (!key) {
     console.error("Error: PAL_FYZZ_API_KEY environment variable is not set.");
-    console.error("Set it in your shell profile or PAL settings.json env section.");
+    console.error("Add it to ~/.pal/.env as PAL_FYZZ_API_KEY=...");
     process.exit(1);
   }
   return key;

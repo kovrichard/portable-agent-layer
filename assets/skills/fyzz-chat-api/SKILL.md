@@ -41,8 +41,8 @@ pal cli skill run fyzz-chat-api fyzz-api -- projects
 If the tool reports a missing API key:
 
 1. Ask the user to create one in Fyzz Chat → Settings → API Keys
-2. They should set `PAL_FYZZ_API_KEY` in their shell profile or in PAL's `settings.json` env section
-3. Optionally set `PAL_FYZZ_BASE_URL` (defaults to `http://localhost:3000`)
+2. They should add `PAL_FYZZ_API_KEY=...` to `~/.pal/.env`
+3. Optionally add `PAL_FYZZ_BASE_URL=...` there too (defaults to `http://localhost:3000`)
 
 ## Guidelines
 

@@ -137,10 +137,12 @@ PAL routes inference through the host agent's subscription CLI by default. API k
 | `PAL_GEMINI_API_KEY` | For YouTube video analysis and web search skill |
 | `PAL_XAI_API_KEY` | For Grok real-time research skill (X/web search) |
 | `PAL_PERPLEXITY_API_KEY` | For Perplexity deep research skill |
+| `PAL_FYZZ_API_KEY` | For the Fyzz Chat skill |
+| `PAL_FYZZ_BASE_URL` | Fyzz Chat server for that skill (default: `http://localhost:3000`) |
 
 ### `~/.pal/.env`
 
-Agents launched from a desktop app never read your shell profile, so the hooks they spawn cannot see variables exported there. PAL's background inference and the skills shipped with PAL also read `~/.pal/.env`, one `KEY=value` per line (`export KEY=value` works too); a variable already set in the environment wins. Put `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`) and the API keys above there. Personal skills made with `create-skill` never receive the file. It stays on this machine: `pal cli export` never includes it.
+Agents launched from a desktop app never read your shell profile, so the hooks they spawn cannot see variables exported there. PAL's background inference and the skills shipped with PAL also read `~/.pal/.env`, one `KEY=value` per line (`export KEY=value` works too); a variable already set in the environment wins. Put `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`) and the API keys above there; `pal cli doctor` warns about any of the API keys above still set in your shell. Personal skills made with `create-skill` never receive the file. It stays on this machine: `pal cli export` never includes it.
 
 ### Path overrides
 

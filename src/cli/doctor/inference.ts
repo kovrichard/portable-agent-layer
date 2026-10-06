@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { previewInferenceRoute } from "../../hooks/lib/inference";
 import { opencodeBackgroundModel } from "../../hooks/lib/opencode-config";
-import { palEnvPath, readPalEnvFile, withPalEnv } from "../../hooks/lib/pal-env";
+import { palEnvPath, readPalEnvFile } from "../../hooks/lib/pal-env";
 import { platform } from "../../hooks/lib/paths";
 import type { AgentName } from "./agents";
 import { type Finding, failing, optional, passed, warning } from "./finding";
@@ -15,13 +15,18 @@ const SUBPROCESS_ONLY = {
   PAL_INFERENCE_DISABLED: "every inference call fails",
 } as const;
 
-const API_KEYS = {
+const INFERENCE_KEYS = {
   PAL_ANTHROPIC_API_KEY: "fallback when the claude CLI cannot answer",
   PAL_OPENAI_API_KEY: "fallback when the codex CLI cannot answer",
-  PAL_GEMINI_API_KEY: "YouTube analysis and Gemini research",
-  PAL_XAI_API_KEY: "the Grok researcher",
-  PAL_PERPLEXITY_API_KEY: "the Perplexity researcher",
 } as const;
+
+const SKILL_KEYS = [
+  "PAL_GEMINI_API_KEY",
+  "PAL_XAI_API_KEY",
+  "PAL_PERPLEXITY_API_KEY",
+  "PAL_FYZZ_API_KEY",
+  "PAL_FYZZ_BASE_URL",
+] as const;
 
 function unsetCommand(name: string, os: NodeJS.Platform): string {
   return os === "win32" ? `Remove-Item Env:${name}` : `unset ${name}`;
@@ -43,15 +48,51 @@ export function leakedEnvFindings(env: Env, os: NodeJS.Platform): Finding[] {
   );
 }
 
-export function apiKeyFindings(env: Env): Finding[] {
-  const withFile = withPalEnv(env);
-  return Object.entries(API_KEYS).map(([name, unlocks]) =>
-    withFile[name]
-      ? passed(`key.${name}`, `${name} set`)
-      : optional(`key.${name}`, `${name} — ${unlocks}`, {
-          say: `add it to ${palEnvPath()}`,
-        })
+function shellKeyConsequence(shellValue: string, fileValue: string | undefined): string {
+  if (fileValue === undefined)
+    return "so agents launched outside a terminal never see it";
+  if (fileValue === shellValue) return `and duplicated in ${palEnvPath()}`;
+  return `and overrides the different value in ${palEnvPath()}`;
+}
+
+function shellKeyFinding(name: string, shellValue: string, fileValue?: string): Finding {
+  return warning(
+    `key.${name}`,
+    `${name} is set in your shell, ${shellKeyConsequence(shellValue, fileValue)}`,
+    {
+      say:
+        fileValue === undefined
+          ? `Move it to ${palEnvPath()} and remove it from your shell profile`
+          : "Remove it from your shell profile",
+    }
   );
+}
+
+function keyFinding(
+  name: string,
+  shell: Env,
+  file: Record<string, string>,
+  ifUnset: () => Finding | null
+): Finding | null {
+  const shellValue = shell[name];
+  if (shellValue) return shellKeyFinding(name, shellValue, file[name]);
+  if (file[name]) return passed(`key.${name}`, `${name} set`);
+  return ifUnset();
+}
+
+export function apiKeyFindings(
+  shell: Env,
+  file: Record<string, string> = readPalEnvFile()
+): Finding[] {
+  const inference = Object.entries(INFERENCE_KEYS).map(([name, unlocks]) =>
+    keyFinding(name, shell, file, () =>
+      optional(`key.${name}`, `${name} — ${unlocks}`, {
+        say: `add it to ${palEnvPath()}`,
+      })
+    )
+  );
+  const skills = SKILL_KEYS.map((name) => keyFinding(name, shell, file, () => null));
+  return [...inference, ...skills].filter((f): f is Finding => f !== null);
 }
 
 const OAUTH_TOKEN = "CLAUDE_CODE_OAUTH_TOKEN";
