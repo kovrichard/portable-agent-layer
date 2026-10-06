@@ -98,6 +98,7 @@ export const paths = {
   wisdom: () => ensureDir(home("memory", "wisdom", "frames")),
   wisdomState: () => ensureDir(home("memory", "wisdom", "state")),
   relationship: () => ensureDir(home("memory", "relationship")),
+  adaptation: () => ensureDir(home("memory", "adaptation")),
   knowledge: () => ensureDir(home("memory", "knowledge")),
   knowledgeDomain: (d: string) => ensureDir(home("memory", "knowledge", d)),
   failures: () => ensureDir(home("memory", "learning", "failures")),
