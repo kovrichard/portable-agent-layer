@@ -7,6 +7,7 @@ import {
   readFileSync,
   rmSync,
   statSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -238,5 +239,62 @@ describe("pal cli skill run — a skill's own tool, by name", () => {
     const result = run(CLI, ["cli", "skill", "run", SKILL, "absent"]);
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("absent.ts");
+  });
+});
+
+describe("pal cli skill run — ~/.pal/.env reaches shipped skills only", () => {
+  const PRINT_KEY = `console.log(\`key=[\${process.env.PAL_GEMINI_API_KEY ?? ""}]\`);\n`;
+  let pkg: string;
+
+  function skillWithKeyTool(dir: string): string {
+    mkdirSync(resolve(dir, "tools"), { recursive: true });
+    writeFileSync(resolve(dir, "tools", "key.ts"), PRINT_KEY);
+    return dir;
+  }
+
+  function linkIntoHome(name: string, target: string): void {
+    symlinkSync(target, resolve(home, "skills", name), "junction");
+  }
+
+  function runKeyTool(skill: string) {
+    const env: Record<string, string | undefined> = {
+      ...process.env,
+      PAL_HOME: home,
+      PAL_PKG: pkg,
+    };
+    delete env.PAL_GEMINI_API_KEY;
+    return spawnSync("bun", [CLI, "cli", "skill", "run", skill, "key"], {
+      env,
+      encoding: "utf-8",
+      timeout: 20000,
+    });
+  }
+
+  beforeAll(() => {
+    pkg = mkdtempSync(resolve(tmpdir(), "pal-pkg-"));
+    mkdirSync(resolve(home, "skills"), { recursive: true });
+    writeFileSync(resolve(home, ".env"), "PAL_GEMINI_API_KEY=from-pal-env\n");
+    linkIntoHome(
+      "shipped",
+      skillWithKeyTool(resolve(pkg, "assets", "skills", "shipped"))
+    );
+    skillWithKeyTool(resolve(home, "skills", "personal"));
+    linkIntoHome("linked", skillWithKeyTool(resolve(home, "elsewhere", "linked")));
+  });
+
+  afterAll(() => {
+    rmSync(pkg, { recursive: true, force: true });
+  });
+
+  test("a shipped skill's tool receives keys from ~/.pal/.env", () => {
+    expect(runKeyTool("shipped").stdout.trim()).toBe("key=[from-pal-env]");
+  });
+
+  test("a personal skill's tool does not", () => {
+    expect(runKeyTool("personal").stdout.trim()).toBe("key=[]");
+  });
+
+  test("a personal skill linked in from outside the package does not either", () => {
+    expect(runKeyTool("linked").stdout.trim()).toBe("key=[]");
   });
 });

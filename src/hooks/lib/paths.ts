@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
-import { resolve } from "node:path";
+import { isAbsolute, relative, resolve } from "node:path";
 
 /**
  * Turn a path string that came from outside — argv, a flag, an env override, a
@@ -34,6 +34,12 @@ export function toPath(input: string, base: string = process.cwd()): string {
  */
 export function namesAPath(input: string): boolean {
   return input.startsWith("~") || input.includes("/") || input.includes("\\");
+}
+
+/** Compared as paths, not strings — a separator differs by platform. */
+export function isInside(parent: string, target: string): boolean {
+  const rel = relative(parent, target);
+  return rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
 }
 
 /** An env override names a path the same way a flag does, so it gets the same treatment. */

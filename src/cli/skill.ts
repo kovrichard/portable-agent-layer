@@ -15,11 +15,12 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { getActiveAgent } from "../hooks/lib/agent";
 import { flagshipAuthorModel } from "../hooks/lib/models";
-import { palHome } from "../hooks/lib/paths";
+import { withPalEnv } from "../hooks/lib/pal-env";
+import { isInside, palHome, palPkg } from "../hooks/lib/paths";
 import { linkPersonalSkill, log } from "../targets/lib";
 import {
   formatReport,
@@ -93,8 +94,15 @@ function runSkillTool(skill: string, tool: string, toolArgs: string[]): number {
   }
   const { status } = spawnSync("bun", [path, ...toolArgs], {
     stdio: "inherit",
+    env: isShippedTool(path) ? withPalEnv(process.env) : process.env,
   });
   return status ?? 1;
+}
+
+/** Real paths, so a personal skill symlinked from elsewhere never passes as shipped. */
+function isShippedTool(path: string): boolean {
+  const shipped = resolve(palPkg(), "assets", "skills");
+  return existsSync(shipped) && isInside(realpathSync(shipped), realpathSync(path));
 }
 
 export async function runSkill(args: string[]): Promise<number> {

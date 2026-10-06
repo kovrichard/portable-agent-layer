@@ -258,11 +258,12 @@ describe("~/.pal/.env", () => {
     expect(byId("key.PAL_OPENAI_API_KEY")?.fix?.say).toContain(palEnvPath());
   });
 
-  test("a skill key in ~/.pal/.env stays unset, since skills read only the shell", () => {
+  test("a shipped skill's key in ~/.pal/.env passes, and a missing one points there", () => {
     writeFileSync(palEnvPath(), "PAL_GEMINI_API_KEY=from-pal-env\n");
-    const gemini = apiKeyFindings({}).find((f) => f.id === "key.PAL_GEMINI_API_KEY");
+    const findings = apiKeyFindings({});
+    const byId = (id: string) => findings.find((f) => f.id === id);
 
-    expect(gemini?.severity).toBe("optional");
-    expect(gemini?.fix?.say).toContain("shell profile");
+    expect(byId("key.PAL_GEMINI_API_KEY")?.severity).toBe("ok");
+    expect(byId("key.PAL_XAI_API_KEY")?.fix?.say).toContain(palEnvPath());
   });
 });

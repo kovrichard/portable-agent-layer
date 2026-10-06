@@ -6,7 +6,8 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { isAbsolute, relative, resolve } from "node:path";
+import { resolve } from "node:path";
+import { isInside } from "../../hooks/lib/paths";
 
 const UI_DIST = resolve(import.meta.dir, "ui", "dist");
 
@@ -57,12 +58,6 @@ export function indexHtml(): Response {
  */
 export function staticAsset(pathname: string): Response | null {
   const target = resolve(UI_DIST, `.${pathname}`);
-  if (!isInsideDist(target)) return null;
+  if (!isInside(UI_DIST, target)) return null;
   return existsSync(target) ? new Response(Bun.file(target)) : null;
-}
-
-/** Compared as paths, not strings — a separator differs by platform. */
-function isInsideDist(target: string): boolean {
-  const rel = relative(UI_DIST, target);
-  return rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
 }

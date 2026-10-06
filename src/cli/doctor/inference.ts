@@ -15,12 +15,9 @@ const SUBPROCESS_ONLY = {
   PAL_INFERENCE_DISABLED: "every inference call fails",
 } as const;
 
-const INFERENCE_KEYS = {
+const API_KEYS = {
   PAL_ANTHROPIC_API_KEY: "fallback when the claude CLI cannot answer",
   PAL_OPENAI_API_KEY: "fallback when the codex CLI cannot answer",
-} as const;
-
-const SKILL_KEYS = {
   PAL_GEMINI_API_KEY: "YouTube analysis and Gemini research",
   PAL_XAI_API_KEY: "the Grok researcher",
   PAL_PERPLEXITY_API_KEY: "the Perplexity researcher",
@@ -46,19 +43,15 @@ export function leakedEnvFindings(env: Env, os: NodeJS.Platform): Finding[] {
   );
 }
 
-function keyFindings(env: Env, keys: Record<string, string>, say: string): Finding[] {
-  return Object.entries(keys).map(([name, unlocks]) =>
-    env[name]
-      ? passed(`key.${name}`, `${name} set`)
-      : optional(`key.${name}`, `${name} — ${unlocks}`, { say })
-  );
-}
-
 export function apiKeyFindings(env: Env): Finding[] {
-  return [
-    ...keyFindings(withPalEnv(env), INFERENCE_KEYS, `add it to ${palEnvPath()}`),
-    ...keyFindings(env, SKILL_KEYS, "set it in your shell profile"),
-  ];
+  const withFile = withPalEnv(env);
+  return Object.entries(API_KEYS).map(([name, unlocks]) =>
+    withFile[name]
+      ? passed(`key.${name}`, `${name} set`)
+      : optional(`key.${name}`, `${name} — ${unlocks}`, {
+          say: `add it to ${palEnvPath()}`,
+        })
+  );
 }
 
 type Preview = ReturnType<typeof previewInferenceRoute>;
