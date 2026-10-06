@@ -1,3 +1,10 @@
+## [0.86.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.86.0...v0.86.1) (2026-10-06)
+
+
+### Bug Fixes
+
+* **update:** reinstall in a fresh process after updating ([006c756](https://github.com/kovrichard/portable-agent-layer/commit/006c7567c13c6e84813909dfc7da7550a542b65f))
+
 # [0.86.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.24...v0.86.0) (2026-10-06)
 
 
