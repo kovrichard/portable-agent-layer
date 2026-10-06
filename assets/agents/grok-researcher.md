@@ -105,5 +105,5 @@ If you fell back to WebSearch because the Grok API was unavailable, you MUST app
 
 ```markdown
 ---
-> **Note:** This research used WebSearch fallback instead of Grok Search. The `PAL_XAI_API_KEY` environment variable is not set. To enable Grok real-time search, set the key: `export PAL_XAI_API_KEY=...` (get one at https://console.x.ai/)
+> **Note:** This research used WebSearch fallback instead of Grok Search. The `PAL_XAI_API_KEY` environment variable is not set. To enable Grok real-time search, add `PAL_XAI_API_KEY=...` to `~/.pal/.env` (get one at https://console.x.ai/)
 ```

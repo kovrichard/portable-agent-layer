@@ -83,5 +83,5 @@ If you fell back to WebSearch because the Gemini API was unavailable, you MUST a
 
 ```markdown
 ---
-> **Note:** This research used WebSearch fallback instead of Gemini Search. The `PAL_GEMINI_API_KEY` environment variable is not set. To enable Gemini-grounded search, set the key: `export PAL_GEMINI_API_KEY=...` (get one at https://aistudio.google.com/apikey)
+> **Note:** This research used WebSearch fallback instead of Gemini Search. The `PAL_GEMINI_API_KEY` environment variable is not set. To enable Gemini-grounded search, add `PAL_GEMINI_API_KEY=...` to `~/.pal/.env` (get one at https://aistudio.google.com/apikey)
 ```

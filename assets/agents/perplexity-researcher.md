@@ -77,5 +77,5 @@ If you fell back to WebSearch because the Perplexity API was unavailable, you MU
 
 ```markdown
 ---
-> **Note:** This research used WebSearch fallback instead of Perplexity Search. The `PAL_PERPLEXITY_API_KEY` environment variable is not set. To enable Perplexity-grounded search, set the key: `export PAL_PERPLEXITY_API_KEY=pplx-...` (get one at https://www.perplexity.ai/settings/api)
+> **Note:** This research used WebSearch fallback instead of Perplexity Search. The `PAL_PERPLEXITY_API_KEY` environment variable is not set. To enable Perplexity-grounded search, add `PAL_PERPLEXITY_API_KEY=pplx-...` to `~/.pal/.env` (get one at https://www.perplexity.ai/settings/api)
 ```

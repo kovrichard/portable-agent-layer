@@ -92,6 +92,7 @@ After collecting agent results, synthesize into:
 4. **Conflicts** — where agents disagree, with both sides presented
 5. **Gaps** — what remains unknown or needs further investigation
 6. **Sources** — deduplicated list of verified URLs from all agents
+7. **Missing API keys** — only when a researcher ended with a WebSearch fallback footnote: tell the user which researcher ran without its API, which key it needs, where to get one, and to add it to `~/.pal/.env`. One line per missing key, never dropped from the synthesis
 
 Keep total output under 1500 words unless the user asks for more.
 
