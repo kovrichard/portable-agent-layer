@@ -1,3 +1,13 @@
+## [0.85.24](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.23...v0.85.24) (2026-10-06)
+
+
+### Bug Fixes
+
+* **doctor:** name the model background inference uses ([fe2b469](https://github.com/kovrichard/portable-agent-layer/commit/fe2b46975ce756f9eb9eba13818a0989e51352a2))
+* **doctor:** show why a probed inference route failed ([935068c](https://github.com/kovrichard/portable-agent-layer/commit/935068c912b99ca4ac40323876ee15d4ea9d9e43))
+* **doctor:** warn when Cursor's free plan has a named model set ([bd8da10](https://github.com/kovrichard/portable-agent-layer/commit/bd8da10c348da54e1fc00c6e9ef6eb4b7771af22))
+* **inference:** pick each provider's model from a size tier ([59655c2](https://github.com/kovrichard/portable-agent-layer/commit/59655c2f0d0960f65b5ed7bfa1832679b4ac2ecd))
+
 ## [0.85.23](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.22...v0.85.23) (2026-10-06)
 
 
