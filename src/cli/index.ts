@@ -17,6 +17,7 @@
  *   doctor                            Check prerequisites and system health
  *   usage                             Summarize token usage and cost
  *   ledger <sub> [filters]            Query the action ledger (log · show · stats)
+ *   rule list|approve|deny [id]       Review rules drafted from your corrections
  *   server start|stop|restart|status  The control room, a local page over ~/.pal
  *   <tool> [args]                     Run a built-in agent tool (project, thread, analyze, …)
  *   skill run <skill> <tool> [-- args]  Run a skill's own tool by name, not by path
@@ -202,6 +203,12 @@ async function runCli(command: string | undefined, args: string[]) {
       if (code !== 0) process.exit(code);
       break;
     }
+    case "rule": {
+      const { runRule } = await import("./rule");
+      const code = await runRule(args);
+      if (code !== 0) process.exit(code);
+      break;
+    }
     case "server": {
       const { runServer } = await import("./server");
       const code = await runServer(args);
@@ -298,6 +305,7 @@ function showHelp() {
                                             (search · graph · stats · hubs · find · show · add · ls)
     pal cli ledger <sub> [filters]          Query the action ledger (log · show · stats)
                                             e.g. ledger log --project X --since 7d
+    pal cli rule list|approve|deny [id]     Review rules drafted from your corrections
     pal cli server start|stop|restart|status  The control room: a local page to open before a terminal
     pal cli skill run <skill> <tool> [-- args]  Run ~/.pal/skills/<skill>/tools/<tool> by name
     pal cli skill link <name>               Link a personal ~/.pal/skills/<name>/ into installed agents
