@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import type { InferenceTier } from "./models";
 import { platform } from "./paths";
 
 const GLOBAL_CONFIG_FILES = ["config.json", "opencode.json", "opencode.jsonc"];
@@ -17,17 +18,27 @@ function readConfig(name: string): OpencodeConfig | null {
   }
 }
 
-function pinnedModel(config: OpencodeConfig | null): string | null {
-  return typeof config?.model === "string" && config.model ? config.model : null;
+function pinnedModel(config: OpencodeConfig | null, key = "model"): string | null {
+  const value = config?.[key];
+  return typeof value === "string" && value ? value : null;
+}
+
+function firstPinned(key: string): string | null {
+  for (const name of GLOBAL_CONFIG_FILES) {
+    const model = pinnedModel(readConfig(name), key);
+    if (model) return model;
+  }
+  return null;
 }
 
 /** Without a pinned model, `opencode run` falls back to whatever was last picked in the TUI. */
 export function opencodeBackgroundModel(): string | null {
-  for (const name of GLOBAL_CONFIG_FILES) {
-    const model = pinnedModel(readConfig(name));
-    if (model) return model;
-  }
-  return null;
+  return firstPinned("model");
+}
+
+export function opencodeTierModel(tier: InferenceTier): string | null {
+  const small = tier === "small" ? firstPinned("small_model") : null;
+  return small ?? opencodeBackgroundModel();
 }
 
 function withoutInstructions(config: OpencodeConfig): OpencodeConfig {

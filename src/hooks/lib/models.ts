@@ -8,6 +8,40 @@ export const HAIKU_MODEL = "claude-haiku-4-5-20251001";
 export const SONNET_MODEL = "claude-sonnet-5";
 export const FABLE_MODEL = "claude-fable-5";
 
+export type InferenceTier = "small" | "medium";
+
+export type FixedModelRoute =
+  | "claude-spawn"
+  | "anthropic-api"
+  | "codex-spawn"
+  | "openai-api";
+
+const ANTHROPIC_MODELS = { small: HAIKU_MODEL, medium: SONNET_MODEL };
+const OPENAI_MODELS = { small: "gpt-6-luna", medium: "gpt-6-sol" };
+
+/**
+ * opencode's models come from the user's own config (opencodeTierModel). Copilot and
+ * Cursor are absent on purpose: which named models they accept depends on the user's
+ * plan, and a free plan refuses every one but Auto.
+ */
+const INFERENCE_MODELS: Record<FixedModelRoute, Record<InferenceTier, string>> = {
+  "claude-spawn": ANTHROPIC_MODELS,
+  "anthropic-api": ANTHROPIC_MODELS,
+  "codex-spawn": OPENAI_MODELS,
+  "openai-api": OPENAI_MODELS,
+};
+
+export function isFixedModelRoute(route: string): route is FixedModelRoute {
+  return Object.hasOwn(INFERENCE_MODELS, route);
+}
+
+export function inferenceModel(
+  route: FixedModelRoute,
+  tier: InferenceTier = "small"
+): string {
+  return INFERENCE_MODELS[route][tier];
+}
+
 /**
  * Per-agent flagship model used to AUTHOR new skills (via `create-skill`).
  *

@@ -4,7 +4,12 @@ import {
   migrationFindings,
   updateFinding,
 } from "../src/cli/doctor/health";
-import { apiKeyFindings, leakedEnvFindings } from "../src/cli/doctor/inference";
+import {
+  apiKeyFindings,
+  cursorPlanFinding,
+  leakedEnvFindings,
+  routeFinding,
+} from "../src/cli/doctor/inference";
 
 const NOW = Date.parse("2026-10-04T19:00:00Z");
 const MINUTE = 60_000;
@@ -145,5 +150,56 @@ describe("API keys", () => {
     );
 
     expect(gemini?.severity).toBe("ok");
+  });
+});
+
+describe("inference route", () => {
+  test("names the model background inference will use", () => {
+    const finding = routeFinding({
+      agent: "codex",
+      route: "codex-spawn",
+      reason: "codex binary on PATH",
+      model: "gpt-6-luna",
+    });
+
+    expect(finding?.title).toBe(
+      "Inference: codex-spawn on gpt-6-luna (codex binary on PATH)"
+    );
+  });
+
+  test("an API route names its model too", () => {
+    const finding = routeFinding({
+      agent: "claude",
+      route: "anthropic-api",
+      reason: "fallback",
+      model: "haiku",
+    });
+
+    expect(finding?.title).toContain("anthropic-api on haiku");
+  });
+});
+
+describe("cursor plan", () => {
+  const about = (model: string, tier: string) =>
+    `About Cursor CLI\n\nCLI Version         1.0\nModel               ${model}\nSubscription Tier   ${tier}\nOS                  linux (x64)\n`;
+
+  test("a free plan with a named model warns and says to switch to Auto", () => {
+    const finding = cursorPlanFinding(about("GPT-5.6 Luna 272K Low", "Free"));
+
+    expect(finding?.severity).toBe("warn");
+    expect(finding?.title).toContain("GPT-5.6 Luna 272K Low");
+    expect(finding?.fix?.say).toContain("Auto");
+  });
+
+  test("a free plan on Auto passes", () => {
+    expect(cursorPlanFinding(about("Auto", "Free"))?.severity).toBe("ok");
+  });
+
+  test("a paid plan with a named model passes", () => {
+    expect(cursorPlanFinding(about("GPT-5.6 Luna 272K Low", "Pro"))?.severity).toBe("ok");
+  });
+
+  test("unreadable output gives no finding", () => {
+    expect(cursorPlanFinding("")).toBeNull();
   });
 });

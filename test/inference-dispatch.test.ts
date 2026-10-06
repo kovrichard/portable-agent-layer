@@ -56,12 +56,6 @@ describe("buildClaudeArgs", () => {
     expect(args[ofIdx + 1]).toBe("text");
   });
 
-  test("uses model from opts when provided", () => {
-    const args = buildClaudeArgs({ user: "hi", model: "sonnet" });
-    const idx = args.indexOf("--model");
-    expect(args[idx + 1]).toBe("sonnet");
-  });
-
   // The system text goes to a file and only the path rides in argv, so a
   // multi-paragraph system prompt survives cmd.exe on Windows.
   test("points --system-prompt-file at the given path", () => {
@@ -294,6 +288,18 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
 
     const result = await inference({ user: "hi", timeout: 5000 });
     expect(result.success).toBe(false);
+  });
+
+  test("a failed spawn carries the first line of its error", async () => {
+    writeFakeBin(
+      tmpBin,
+      "claude",
+      `console.error("\\nModel unavailable on this plan\\nat line 2");\nprocess.exit(1);\n`
+    );
+    prependPath(tmpBin);
+
+    const result = await inference({ user: "hi", timeout: 5000 });
+    expect(result.error).toBe("Model unavailable on this plan");
   });
 
   test("JSON-schema path parses fake claude's JSON output", async () => {
