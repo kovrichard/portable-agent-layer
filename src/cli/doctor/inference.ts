@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { previewInferenceRoute } from "../../hooks/lib/inference";
 import { opencodeBackgroundModel } from "../../hooks/lib/opencode-config";
@@ -89,11 +90,45 @@ function opencodeModelFinding(): Finding {
       );
 }
 
+function aboutField(about: string, field: string): string | null {
+  const line = about.split("\n").find((l) => l.startsWith(`${field} `));
+  return line ? line.slice(field.length).trim() || null : null;
+}
+
+/** Cursor's free plan refuses every named model, so a pinned one fails all background inference. */
+export function cursorPlanFinding(about: string): Finding | null {
+  const model = aboutField(about, "Model");
+  const tier = aboutField(about, "Subscription Tier");
+  if (!model || !tier) return null;
+  if (tier === "Free" && model !== "Auto")
+    return warning(
+      "cursor.model",
+      `Cursor is set to ${model}, but its free plan only runs Auto — background inference fails`,
+      { say: "Switch Cursor's model to Auto, or upgrade the plan" }
+    );
+  return passed("cursor.model", `Cursor model ${model} runs on the ${tier} plan`);
+}
+
+function cursorAbout(): string {
+  const result = spawnSync("cursor-agent", ["about"], {
+    encoding: "utf-8",
+    shell: true,
+    timeout: 15_000,
+  });
+  return result.status === 0 ? result.stdout : "";
+}
+
+function cursorFindings(): Finding[] {
+  const finding = cursorPlanFinding(cursorAbout());
+  return finding ? [finding] : [];
+}
+
 export function inferenceFindings(agents: AgentName[]): Finding[] {
   const route = routeFinding();
   return [
     ...(route ? [route] : []),
     ...(agents.includes("opencode") ? [opencodeModelFinding()] : []),
+    ...(agents.includes("cursor") ? cursorFindings() : []),
     ...leakedEnvFindings(process.env, process.platform),
     ...apiKeyFindings(process.env),
   ];
