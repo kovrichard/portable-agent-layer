@@ -150,6 +150,8 @@ interface InferenceOptions {
 interface InferenceResult {
   success: boolean;
   output?: string;
+  /** First line of a failed CLI's error output. */
+  error?: string;
   usage?: { inputTokens: number; outputTokens: number };
 }
 
@@ -544,6 +546,13 @@ export function parseJsonFromOutput(output: string): unknown | null {
   return null;
 }
 
+function firstLine(text: string): string | undefined {
+  return text
+    .split("\n")
+    .find((line) => line.trim())
+    ?.trim();
+}
+
 interface RawSpawnResult {
   code: number | null;
   stdout: string;
@@ -709,7 +718,7 @@ async function inferenceViaCliSpawn(
       "inference:spawn",
       `${tag} exited=${attempt.code} binary=${binaryName} argv=${JSON.stringify(args)} stderr(${attempt.stderr.length})=${attempt.stderr.slice(0, 300)} stdout(${attempt.stdout.length})=${attempt.stdout.slice(0, 300)}`
     );
-    return finish({ success: false });
+    return finish({ success: false, error: firstLine(attempt.stderr || attempt.stdout) });
   }
   const rawText = attempt.stdout.trim();
   if (!rawText) return finish({ success: false });

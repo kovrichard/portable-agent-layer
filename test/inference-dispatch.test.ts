@@ -290,6 +290,18 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
     expect(result.success).toBe(false);
   });
 
+  test("a failed spawn carries the first line of its error", async () => {
+    writeFakeBin(
+      tmpBin,
+      "claude",
+      `console.error("\\nModel unavailable on this plan\\nat line 2");\nprocess.exit(1);\n`
+    );
+    prependPath(tmpBin);
+
+    const result = await inference({ user: "hi", timeout: 5000 });
+    expect(result.error).toBe("Model unavailable on this plan");
+  });
+
   test("JSON-schema path parses fake claude's JSON output", async () => {
     writeFakeBin(tmpBin, "claude", `console.log('{"verdict":"good"}');\n`);
     prependPath(tmpBin);

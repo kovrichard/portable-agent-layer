@@ -457,7 +457,7 @@ async function probeInference(): Promise<void> {
         );
       } else {
         console.log(
-          `  ${red}✗${reset} ${tag} ${String(elapsedMs).padStart(6)}ms  ${dim}failed — see ~/.pal/debug/debug.log${reset}`
+          `  ${red}✗${reset} ${tag} ${String(elapsedMs).padStart(6)}ms  ${dim}${r.error ?? "failed — see ~/.pal/debug/debug.log"}${reset}`
         );
       }
     }
