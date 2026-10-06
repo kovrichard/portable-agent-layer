@@ -425,6 +425,17 @@ LoadContext.ts
       8. Other recent learnings (other projects, titles only)
 ```
 
+### Injection Budget
+
+Claude Code caps each string a hook injects at **10,000 characters**: plain stdout as a whole, or each JSON field (`additionalContext`, `systemMessage`) on its own. Over the cap, the text is saved to a file and replaced with the file path plus a preview of the first 2,000 characters, and the model is never told to read the file. No setting raises the cap.
+
+Design rules for anything injected by a hook (Tier 3 and per-prompt reminders):
+- Stay under 10,000 characters per hook output.
+- Put what matters most in the first 2,000 characters, in case a future change crosses the cap.
+- Measure before adding a section: pipe a SessionStart payload into `LoadContext.ts` and count the bytes.
+
+Tier 1 and Tier 2 load as memory files, not hook output, so this cap does not apply to them. Other agents' limits are not documented here; check them before relying on the same budget.
+
 ### On-Demand Context
 
 Everything else loads via the routing table in CLAUDE.md. The AI reads files only when the current task requires that context — no upfront loading of the full system.
