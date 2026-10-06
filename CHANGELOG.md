@@ -1,3 +1,10 @@
+## [0.85.23](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.22...v0.85.23) (2026-10-06)
+
+
+### Bug Fixes
+
+* **docs:** document the hook injection budget ([1fb8bdf](https://github.com/kovrichard/portable-agent-layer/commit/1fb8bdfa6e335625db75c1f1319737558675f48d))
+
 ## [0.85.22](https://github.com/kovrichard/portable-agent-layer/compare/v0.85.21...v0.85.22) (2026-10-05)
 
 
