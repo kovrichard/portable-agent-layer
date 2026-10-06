@@ -203,7 +203,8 @@ PAL ships with built-in skills that extend your agent's capabilities:
 | `playwright` | Screenshot a page for a visual check |
 | `presentation` | Build branded slide decks from outlines |
 | `projects` | Look up, resume, register, or manage tracked projects |
-| `reflect` | Diagnose why a PAL behavior didn't trigger || `telos` | Inspect or update goals, beliefs, strategies, narratives |
+| `reflect` | Diagnose why a PAL behavior didn't trigger |
+| `rule-review` | Approve or deny the rules PAL drafted from your corrections || `telos` | Inspect or update goals, beliefs, strategies, narratives |
 | `think` | Structured first-pass reasoning on a problem |
 
 ---
