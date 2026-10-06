@@ -5,6 +5,7 @@ import {
   ratingContext,
   ratingFromLabels,
   reactionRequest,
+  turnFromLabels,
 } from "../src/hooks/lib/reaction-rating";
 
 const corrected = {
@@ -81,6 +82,35 @@ describe("ratingFromLabels", () => {
 
   test("no label carries no rating", () => {
     expect(ratingFromLabels(null, null)).toBeNull();
+  });
+});
+
+describe("turnFromLabels", () => {
+  const seen = { session: "s1", message: "no, wrong file", replyEnd: "Cleaned it up." };
+
+  test("a confirmed correction is logged as confirmed", () => {
+    expect(turnFromLabels(seen, corrected, repeated)).toEqual({
+      ...seen,
+      reaction: "corrected",
+      issue: "claimed the file was cleaned up",
+      confirmed: true,
+    });
+  });
+
+  test("a correction the second label disagreed with is logged as unconfirmed", () => {
+    expect(turnFromLabels(seen, corrected, praised)?.confirmed).toBe(false);
+  });
+
+  test("any other reaction is logged without a confirmation flag", () => {
+    expect(turnFromLabels(seen, praised, null)).toEqual({
+      ...seen,
+      reaction: "praised",
+      issue: "",
+    });
+  });
+
+  test("no label means nothing to log", () => {
+    expect(turnFromLabels(seen, null, null)).toBeNull();
   });
 });
 

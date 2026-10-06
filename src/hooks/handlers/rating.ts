@@ -10,6 +10,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { appendTurn } from "../lib/adaptation-turns";
 import { spawnDetachedInference } from "../lib/detached-inference";
 import { canInfer, inference } from "../lib/inference";
 import { replyEnd } from "../lib/interaction-samples";
@@ -21,6 +22,7 @@ import {
   ratingContext,
   ratingFromLabels,
   reactionRequest,
+  turnFromLabels,
 } from "../lib/reaction-rating";
 import { emitRating } from "../lib/signals";
 import { now } from "../lib/time";
@@ -223,6 +225,12 @@ async function runReactionRatingAndStore(
     if (first && rating !== null) {
       handleRating(rating, ratingContext(first, message), "implicit", reply, message);
     }
+    const turn = turnFromLabels(
+      { session: sessionId ?? "", message, replyEnd: reply },
+      first,
+      confirmation
+    );
+    if (turn) appendTurn(turn);
   } catch (err) {
     const { logError } = await import("../lib/log");
     logError("rating:reaction-child", err);
