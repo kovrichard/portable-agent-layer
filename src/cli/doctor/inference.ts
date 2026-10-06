@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { previewInferenceRoute } from "../../hooks/lib/inference";
 import { opencodeBackgroundModel } from "../../hooks/lib/opencode-config";
-import { palEnvPath, withPalEnv } from "../../hooks/lib/pal-env";
+import { palEnvPath, readPalEnvFile, withPalEnv } from "../../hooks/lib/pal-env";
 import { platform } from "../../hooks/lib/paths";
 import type { AgentName } from "./agents";
 import { type Finding, failing, optional, passed, warning } from "./finding";
@@ -52,6 +52,40 @@ export function apiKeyFindings(env: Env): Finding[] {
           say: `add it to ${palEnvPath()}`,
         })
   );
+}
+
+const OAUTH_TOKEN = "CLAUDE_CODE_OAUTH_TOKEN";
+
+function isMalformedToken(value: string): boolean {
+  return value === "" || /[\s"']/.test(value);
+}
+
+/** Silent unless a token is set; it is optional, and the native login needs none of this. */
+export function oauthTokenFindings(
+  shell: Env,
+  file: Record<string, string> = readPalEnvFile()
+): Finding[] {
+  const shellToken = shell[OAUTH_TOKEN];
+  const fileToken = file[OAUTH_TOKEN];
+  if (shellToken === undefined && fileToken === undefined) return [];
+  const findings: Finding[] = [];
+  if ([shellToken, fileToken].some((t) => t !== undefined && isMalformedToken(t)))
+    findings.push(
+      warning("oauth.malformed", `${OAUTH_TOKEN} is empty or contains spaces or quotes`, {
+        say: `Paste the token from 'claude setup-token' as a bare value in ${palEnvPath()}`,
+      })
+    );
+  if (shellToken && fileToken && shellToken !== fileToken)
+    findings.push(
+      warning(
+        "oauth.shadowed",
+        `Your shell's ${OAUTH_TOKEN} differs from the one in ${palEnvPath()}, and the shell's wins`,
+        {
+          say: "Keep one copy: drop it from your shell, or have your shell read it from the file",
+        }
+      )
+    );
+  return findings.length > 0 ? findings : [passed("oauth", `${OAUTH_TOKEN} set`)];
 }
 
 type Preview = ReturnType<typeof previewInferenceRoute>;
@@ -133,5 +167,6 @@ export function inferenceFindings(agents: AgentName[]): Finding[] {
     ...(agents.includes("cursor") ? cursorFindings() : []),
     ...leakedEnvFindings(process.env, process.platform),
     ...apiKeyFindings(process.env),
+    ...oauthTokenFindings(process.env),
   ];
 }

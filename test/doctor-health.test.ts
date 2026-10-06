@@ -11,6 +11,7 @@ import {
   apiKeyFindings,
   cursorPlanFinding,
   leakedEnvFindings,
+  oauthTokenFindings,
   routeFinding,
 } from "../src/cli/doctor/inference";
 import { palEnvPath } from "../src/hooks/lib/pal-env";
@@ -18,7 +19,7 @@ import { palEnvPath } from "../src/hooks/lib/pal-env";
 const NOW = Date.parse("2026-10-04T19:00:00Z");
 const MINUTE = 60_000;
 const at = (minutesAgo: number) => NOW - minutesAgo * MINUTE;
-const noToken = { now: NOW, env: {} };
+const noToken = { now: NOW };
 
 describe("hook errors", () => {
   test("one warning per failing hook, with its count and newest message", () => {
@@ -61,24 +62,74 @@ describe("hook errors", () => {
     lastAt: at(75),
   };
 
-  test("an expired Claude login fails and points at the year-long token", () => {
-    const [finding] = hookErrorFindings([expiredLogin], noToken);
+  const rejectedBy = (auth: string) => ({
+    ...expiredLogin,
+    lastMessage: `caller=rating sessionId=s1 auth=${auth} exited=1 binary=claude`,
+  });
+
+  test("an expired native login fails and says to log in again, never mentioning a token", () => {
+    const [finding] = hookErrorFindings([rejectedBy("native")], noToken);
 
     expect(finding.severity).toBe("fail");
     expect(finding.title).toContain("38");
-    expect(finding.fix?.command).toBe("claude setup-token");
-    expect(finding.fix?.say).toContain("CLAUDE_CODE_OAUTH_TOKEN");
+    expect(finding.fix?.command).toBe("claude auth login");
+    expect(finding.fix?.say).not.toContain("TOKEN");
   });
 
-  test("once the year-long token is set, the old failures only warn", () => {
-    const [finding] = hookErrorFindings([expiredLogin], {
-      now: NOW,
-      env: { CLAUDE_CODE_OAUTH_TOKEN: "set" },
-    });
+  test("a line logged before spawns were tagged reads as the native login", () => {
+    const [finding] = hookErrorFindings([expiredLogin], noToken);
+    expect(finding.fix?.command).toBe("claude auth login");
+  });
+
+  test("a rejected token warns and says to renew it", () => {
+    const [finding] = hookErrorFindings([rejectedBy("token")], noToken);
 
     expect(finding.severity).toBe("warn");
     expect(finding.title).toContain("last 1h ago");
-    expect(finding.fix?.say).toContain("CLAUDE_CODE_OAUTH_TOKEN is set");
+    expect(finding.fix?.command).toBe("claude setup-token");
+    expect(finding.fix?.say).toContain("CLAUDE_CODE_OAUTH_TOKEN was rejected");
+  });
+});
+
+describe("the optional CLAUDE_CODE_OAUTH_TOKEN", () => {
+  test("says nothing when no token is set anywhere", () => {
+    expect(oauthTokenFindings({}, {})).toEqual([]);
+  });
+
+  test("a well-formed token passes, from the shell or from the file", () => {
+    expect(oauthTokenFindings({ CLAUDE_CODE_OAUTH_TOKEN: "abc" }, {})[0].severity).toBe(
+      "ok"
+    );
+    expect(oauthTokenFindings({}, { CLAUDE_CODE_OAUTH_TOKEN: "abc" })[0].severity).toBe(
+      "ok"
+    );
+  });
+
+  test.each([
+    ["empty in the file", {}, { CLAUDE_CODE_OAUTH_TOKEN: "" }],
+    ["empty in the shell", { CLAUDE_CODE_OAUTH_TOKEN: "" }, {}],
+    ["a space inside", {}, { CLAUDE_CODE_OAUTH_TOKEN: "abc def" }],
+    ["a stray quote", { CLAUDE_CODE_OAUTH_TOKEN: 'abc"' }, {}],
+  ])("warns when malformed: %s", (_label, shell, file) => {
+    const ids = oauthTokenFindings(shell, file).map((f) => f.id);
+    expect(ids).toContain("oauth.malformed");
+  });
+
+  test("warns when the shell's copy shadows a different one in the file", () => {
+    const findings = oauthTokenFindings(
+      { CLAUDE_CODE_OAUTH_TOKEN: "tok-shell-A1" },
+      { CLAUDE_CODE_OAUTH_TOKEN: "tok-file-B2" }
+    );
+    expect(findings.map((f) => f.id)).toEqual(["oauth.shadowed"]);
+    expect(findings[0].title).not.toContain("tok-");
+  });
+
+  test("the same token in both places passes", () => {
+    const findings = oauthTokenFindings(
+      { CLAUDE_CODE_OAUTH_TOKEN: "same" },
+      { CLAUDE_CODE_OAUTH_TOKEN: "same" }
+    );
+    expect(findings.map((f) => f.severity)).toEqual(["ok"]);
   });
 });
 
@@ -235,18 +286,16 @@ describe("~/.pal/.env", () => {
     rmSync(home, { recursive: true, force: true });
   });
 
-  test("an expired login points at ~/.pal/.env for the token", () => {
-    const [finding] = hookErrorFindings([expiredLogin]);
-
-    expect(finding.severity).toBe("fail");
+  test("a rejected token is renewed in ~/.pal/.env", () => {
+    const [finding] = hookErrorFindings([
+      { ...expiredLogin, lastMessage: "caller=rating auth=token exited=1" },
+    ]);
     expect(finding.fix?.say).toContain(palEnvPath());
   });
 
-  test("a token in ~/.pal/.env counts as set", () => {
+  test("a token in ~/.pal/.env is read by default", () => {
     writeFileSync(palEnvPath(), "CLAUDE_CODE_OAUTH_TOKEN=from-pal-env\n");
-
-    const [finding] = hookErrorFindings([expiredLogin]);
-    expect(finding.severity).toBe("warn");
+    expect(oauthTokenFindings({}).map((f) => f.id)).toEqual(["oauth"]);
   });
 
   test("an inference key in ~/.pal/.env passes, and a missing one points there", () => {

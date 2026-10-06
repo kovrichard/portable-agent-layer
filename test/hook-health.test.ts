@@ -58,12 +58,14 @@ describe("recentHookErrors", () => {
         count: 2,
         last: "newest",
         lastAt: Date.parse("2026-09-23T11:00:00Z"),
+        lastMessage: "newest",
       },
       {
         source: "agenda",
         count: 1,
         last: "once",
         lastAt: Date.parse("2026-09-23T09:30:00Z"),
+        lastMessage: "once",
       },
     ]);
   });
@@ -74,6 +76,14 @@ describe("recentHookErrors", () => {
     ]);
 
     expect(recentHookErrors(NOW)[0].last).toBe("Login expired.");
+  });
+
+  test("the newest error keeps its whole message, tags included", () => {
+    debugLog("debug.log", [
+      "[2026-09-23 11:00:00] ERROR inference:spawn: caller=agenda auth=token exited=1 binary=claude stderr(5)=boom stdout(0)=",
+    ]);
+
+    expect(recentHookErrors(NOW)[0].lastMessage).toContain("auth=token");
   });
 
   test("a failed agent call prefers its stderr when it wrote one", () => {

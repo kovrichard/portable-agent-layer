@@ -305,6 +305,17 @@ export function buildClaudeArgs(
   return args;
 }
 
+type ClaudeAuthMode = "token" | "native";
+
+function claudeAuthMode(): ClaudeAuthMode {
+  return withPalEnv().CLAUDE_CODE_OAUTH_TOKEN ? "token" : "native";
+}
+
+/** Lines logged before spawns were tagged came from the native login. */
+export function loggedClaudeAuthMode(message: string): ClaudeAuthMode {
+  return /\bauth=token\b/.test(message) ? "token" : "native";
+}
+
 /** https://code.claude.com/docs/en/authentication#authentication-precedence */
 const WITHOUT_KEYS_OUTRANKING_SUBSCRIPTION = {
   ANTHROPIC_API_KEY: undefined,
@@ -327,6 +338,7 @@ async function inferenceViaClaudeSpawn(
   const spawnClaude = (args: string[]) =>
     inferenceViaCliSpawn(bin, args, opts.user, opts, undefined, {
       env: WITHOUT_KEYS_OUTRANKING_SUBSCRIPTION,
+      logTag: `auth=${claudeAuthMode()}`,
     });
   const system = opts.jsonSchema
     ? injectJsonSchemaInstruction(opts.system ?? "", opts.jsonSchema)
@@ -665,6 +677,7 @@ async function singleCliAttempt(
 interface SpawnPlace {
   cwd?: string;
   env?: Record<string, string | undefined>;
+  logTag?: string;
 }
 
 /**
@@ -685,7 +698,9 @@ async function inferenceViaCliSpawn(
   const started = Date.now();
   const caller = opts.caller ?? "anonymous";
   const session = opts.sessionId ?? "-";
-  const tag = `caller=${caller} sessionId=${session}`;
+  const tag = [`caller=${caller}`, `sessionId=${session}`, place.logTag]
+    .filter(Boolean)
+    .join(" ");
   // Friendly name for logs — strip path + extension so cross-platform diffs
   // (e.g. C:\…\claude.cmd vs /usr/local/bin/claude) read the same in debug.log.
   const binaryName = basename(binary).replace(/\.(cmd|bat|exe|com)$/i, "");

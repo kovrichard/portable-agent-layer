@@ -1,7 +1,8 @@
 import { resolve } from "node:path";
 import { cachedStatus, type UpdateCache } from "../../hooks/handlers/update-check";
+import { loggedClaudeAuthMode } from "../../hooks/lib/inference";
 import { type HookErrorGroup, recentHookErrors } from "../../hooks/lib/log";
-import { palEnvPath, withPalEnv } from "../../hooks/lib/pal-env";
+import { palEnvPath } from "../../hooks/lib/pal-env";
 import { palHome } from "../../hooks/lib/paths";
 import { checkPendingMigrations } from "../migrate";
 import { type Finding, failing, passed, warning } from "./finding";
@@ -14,7 +15,6 @@ interface PendingMigration {
 
 interface ErrorContext {
   now: number;
-  env: Record<string, string | undefined>;
 }
 
 const CLAUDE_LOGIN_EXPIRED = /Failed to authenticate/;
@@ -30,22 +30,22 @@ function claudeLoginExpiredFinding(
   context: ErrorContext
 ): Finding {
   const title = `Background calls to Claude could not log in — ${group.count} failed in the last 24h, last ${ago(group.lastAt, context.now)}: ${group.last}`;
-  if (context.env.CLAUDE_CODE_OAUTH_TOKEN)
+  if (loggedClaudeAuthMode(group.lastMessage ?? "") === "token")
     return warning(`hook-errors.${group.source}`, title, {
-      say: "CLAUDE_CODE_OAUTH_TOKEN is set — if these failures predate it, they clear 24h after the last one; if not, the token is invalid, so create a new one",
+      say: `CLAUDE_CODE_OAUTH_TOKEN was rejected — it expired or is invalid. Create a new one and replace it in ${palEnvPath()}`,
       command: "claude setup-token",
       external: true,
     });
   return failing(`hook-errors.${group.source}`, title, {
-    say: `Create a year-long token, then add it as CLAUDE_CODE_OAUTH_TOKEN=… to ${palEnvPath()}`,
-    command: "claude setup-token",
+    say: "Log the Claude CLI in again",
+    command: "claude auth login",
     external: true,
   });
 }
 
 export function hookErrorFindings(
   groups: HookErrorGroup[],
-  context: ErrorContext = { now: Date.now(), env: withPalEnv(process.env) }
+  context: ErrorContext = { now: Date.now() }
 ): Finding[] {
   if (groups.length === 0)
     return [passed("hook-errors", "No hook errors in the last 24h")];

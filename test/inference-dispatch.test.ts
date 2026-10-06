@@ -12,10 +12,11 @@ import {
   hasApiKey,
   inference,
   injectJsonSchemaInstruction,
+  loggedClaudeAuthMode,
   parseJsonFromOutput,
   schemaInstruction,
 } from "../src/hooks/lib/inference";
-import { logPromptSnapshot } from "../src/hooks/lib/log";
+import { logPromptSnapshot, recentHookErrors } from "../src/hooks/lib/log";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 
@@ -288,6 +289,24 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
 
     const result = await inference({ user: "ignored", timeout: 5000 });
     expect(result.output).toBe("key=[] auth=[]");
+  });
+
+  test.each([
+    ["token" as const, "CLAUDE_CODE_OAUTH_TOKEN=from-pal-env\n"],
+    ["native" as const, ""],
+  ])("a failed claude spawn logs which login it used: %s", async (mode, palEnv) => {
+    writeFileSync(resolve(tmpBin, ".env"), palEnv);
+    writeFakeBin(
+      tmpBin,
+      "claude",
+      `console.error("Failed to authenticate: OAuth session expired");\nprocess.exit(1);\n`
+    );
+    prependPath(tmpBin);
+
+    await inference({ user: "ignored", timeout: 5000 });
+    const [group] = recentHookErrors();
+    expect(loggedClaudeAuthMode(group.lastMessage ?? "")).toBe(mode);
+    expect(group.lastMessage).not.toContain("from-pal-env");
   });
 
   test("PAL_ANTHROPIC_API_KEY in ~/.pal/.env counts as an API fallback", () => {

@@ -72,6 +72,8 @@ export interface HookErrorGroup {
   count: number;
   last: string;
   lastAt: number;
+  /** The newest error's whole message, for tags `last` trims away. */
+  lastMessage?: string;
 }
 
 interface LoggedError {
@@ -114,7 +116,8 @@ function groupBySource(errors: LoggedError[]): HookErrorGroup[] {
     const source = /^([^:]+):/.exec(message)?.[1] ?? "unknown";
     const group = groups.get(source) ?? { source, count: 0, last: "", lastAt: 0 };
     group.count++;
-    group.last = whatTheAgentSaid(message.slice(source.length + 1).trim()).slice(0, 120);
+    group.lastMessage = message.slice(source.length + 1).trim();
+    group.last = whatTheAgentSaid(group.lastMessage).slice(0, 120);
     group.lastAt = at;
     groups.set(source, group);
   }

@@ -34,7 +34,7 @@ export function parsePalEnv(content: string): Record<string, string> {
   return values;
 }
 
-function readPalEnvFile(): Record<string, string> {
+export function readPalEnvFile(): Record<string, string> {
   try {
     return parsePalEnv(readFileSync(palEnvPath(), "utf-8"));
   } catch {
