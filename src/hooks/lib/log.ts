@@ -99,8 +99,11 @@ function readAllLogs(): string {
     .join("\n");
 }
 
+const LOGGED_LINE = /^\[(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})\] /;
+const ERROR_LINE = new RegExp(`${LOGGED_LINE.source}ERROR `);
+
 function loggedAt(line: string): number {
-  const match = /^\[(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})\]/.exec(line);
+  const match = LOGGED_LINE.exec(line);
   return match ? Date.parse(`${match[1]}T${match[2]}Z`) : 0;
 }
 
@@ -128,10 +131,10 @@ export function recentHookErrors(now: number = Date.now()): HookErrorGroup[] {
   try {
     const recent = readAllLogs()
       .split("\n")
-      .filter((line) => line.includes("] ERROR ") && loggedAt(line) > now - DAY_MS)
+      .filter((line) => ERROR_LINE.test(line) && loggedAt(line) > now - DAY_MS)
       .map((line) => ({
         at: loggedAt(line),
-        message: line.replace(/^\[.*?\] ERROR /, ""),
+        message: line.replace(ERROR_LINE, ""),
       }));
     return groupBySource(recent);
   } catch {

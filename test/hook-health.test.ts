@@ -78,6 +78,15 @@ describe("recentHookErrors", () => {
     expect(recentHookErrors(NOW)[0].last).toBe("Login expired.");
   });
 
+  test("a debug line that merely mentions '] ERROR ' is not an error", () => {
+    debugLog("debug.log", [
+      `[2026-09-23 11:00:00] DEBUG SecurityValidator: bashVerdict=ALLOW command=grep "] ERROR rating: boom" debug.log`,
+      "[2026-09-23 11:30:00] ERROR rating: boom",
+    ]);
+
+    expect(recentHookErrors(NOW)).toMatchObject([{ source: "rating", count: 1 }]);
+  });
+
   test("the newest error keeps its whole message, tags included", () => {
     debugLog("debug.log", [
       "[2026-09-23 11:00:00] ERROR inference:spawn: caller=agenda auth=token exited=1 binary=claude stderr(5)=boom stdout(0)=",
