@@ -6,6 +6,8 @@
  * go-ahead, a question or news carries no rating at all.
  */
 
+import type { TurnInput } from "./adaptation-turns";
+
 const MODEL_REACTIONS = [
   "corrected",
   "repeated",
@@ -107,6 +109,24 @@ export function ratingFromLabels(
   if (!first) return null;
   if (isCorrectionLabel(first) && !isCorrectionLabel(confirmation)) return null;
   return RATING_BY_REACTION[first.reaction] ?? null;
+}
+
+interface SeenTurn {
+  session: string;
+  message: string;
+  replyEnd: string;
+}
+
+export function turnFromLabels(
+  seen: SeenTurn,
+  first: ReactionLabel | null,
+  confirmation: ReactionLabel | null
+): TurnInput | null {
+  if (!first) return null;
+  const turn = { ...seen, reaction: first.reaction, issue: first.issue };
+  return isCorrectionLabel(first)
+    ? { ...turn, confirmed: isCorrectionLabel(confirmation) }
+    : turn;
 }
 
 export function ratingContext(label: ReactionLabel, message: string): string {
