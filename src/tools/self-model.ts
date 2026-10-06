@@ -84,7 +84,7 @@ async function composeSelfModel(days: number): Promise<string> {
   const result = await inference({
     system: buildPrompt(ai.name, principal.name),
     user: inferenceUserContent(rawData, readFileOrEmpty(selfModelPath())),
-    model: SONNET_MODEL,
+    tier: "medium",
     maxTokens: 1500,
     timeout: 90000,
     caller: "self-model",

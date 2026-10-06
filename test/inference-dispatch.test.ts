@@ -56,12 +56,6 @@ describe("buildClaudeArgs", () => {
     expect(args[ofIdx + 1]).toBe("text");
   });
 
-  test("uses model from opts when provided", () => {
-    const args = buildClaudeArgs({ user: "hi", model: "sonnet" });
-    const idx = args.indexOf("--model");
-    expect(args[idx + 1]).toBe("sonnet");
-  });
-
   // The system text goes to a file and only the path rides in argv, so a
   // multi-paragraph system prompt survives cmd.exe on Windows.
   test("points --system-prompt-file at the given path", () => {

@@ -178,7 +178,7 @@ async function guessMissingServes(sessionId?: string): Promise<number> {
     maxTokens: 700,
     timeout: 90000,
     jsonSchema: SERVES_SCHEMA,
-    model: SONNET_MODEL,
+    tier: "medium",
     caller: "agenda-serves",
     sessionId,
   });
@@ -252,7 +252,7 @@ async function refreshGoalLinks(
     maxTokens: 600,
     timeout: 90000,
     jsonSchema: LINKS_SCHEMA,
-    model: SONNET_MODEL,
+    tier: "medium",
     caller: "agenda-goal-links",
     sessionId,
   });
@@ -306,7 +306,7 @@ async function extractWaitingOn(sessionId?: string): Promise<number> {
       maxTokens: 120,
       timeout: 60000,
       jsonSchema: WAITING_SCHEMA,
-      model: SONNET_MODEL,
+      tier: "medium",
       caller: "agenda-waiting-on",
       sessionId,
     });
@@ -352,7 +352,7 @@ async function writeMoves(sessionId?: string): Promise<boolean> {
     maxTokens: 400,
     timeout: 90000,
     jsonSchema: MOVES_SCHEMA,
-    model: SONNET_MODEL,
+    tier: "medium",
     caller: "agenda-moves",
     sessionId,
   });

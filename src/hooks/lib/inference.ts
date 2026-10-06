@@ -32,8 +32,13 @@ import {
   isOpencode,
 } from "./agent";
 import { logDebug, logError } from "./log";
-import { HAIKU_MODEL } from "./models";
-import { writeInstructionFreeConfig } from "./opencode-config";
+import {
+  type FixedModelRoute,
+  type InferenceTier,
+  inferenceModel,
+  isFixedModelRoute,
+} from "./models";
+import { opencodeTierModel, writeInstructionFreeConfig } from "./opencode-config";
 import { buildSpawnGuardEnv, getInferenceDepth, SPAWN_GUARD_ENV } from "./spawn-guard";
 import { findBinaryOnPath } from "./which";
 
@@ -45,24 +50,39 @@ export function hasOpenAiKey(): boolean {
   return !!process.env.PAL_OPENAI_API_KEY;
 }
 
+type InferenceRoute =
+  | FixedModelRoute
+  | "opencode-spawn"
+  | "copilot-spawn"
+  | "cursor-spawn"
+  | "disabled"
+  | "none";
+
+interface RoutePreview {
+  agent: string;
+  route: InferenceRoute;
+  reason: string;
+}
+
+function modelFor(route: FixedModelRoute, opts: InferenceOptions): string {
+  return inferenceModel(route, opts.tier);
+}
+
+function smallModelOf(route: InferenceRoute): string | undefined {
+  if (route === "opencode-spawn") return opencodeTierModel("small") ?? undefined;
+  return isFixedModelRoute(route) ? inferenceModel(route, "small") : undefined;
+}
+
 /**
  * Preview what `inference()` would do RIGHT NOW given current env + binaries.
  * Pure diagnostic — never spawns or fetches. Used by `pal cli doctor`.
  */
-export function previewInferenceRoute(): {
-  agent: string;
-  route:
-    | "claude-spawn"
-    | "codex-spawn"
-    | "openai-api"
-    | "opencode-spawn"
-    | "copilot-spawn"
-    | "cursor-spawn"
-    | "anthropic-api"
-    | "disabled"
-    | "none";
-  reason: string;
-} {
+export function previewInferenceRoute(): RoutePreview & { model?: string } {
+  const preview = previewRoute();
+  return { ...preview, model: smallModelOf(preview.route) };
+}
+
+function previewRoute(): RoutePreview {
   const agent = getActiveAgent();
   if (process.env.PAL_INFERENCE_DISABLED === "1") {
     return {
@@ -115,7 +135,8 @@ export function canInfer(): boolean {
 interface InferenceOptions {
   system?: string;
   user: string;
-  model?: string;
+  /** Model size; the active route maps it to that provider's model. Default "small". */
+  tier?: InferenceTier;
   maxTokens?: number;
   timeout?: number;
   /** JSON schema for structured output — guarantees valid JSON matching the schema */
@@ -152,7 +173,7 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
     if (bin) {
       logDebug(
         "inference",
-        `${tag} route=claude-spawn agent=${agent} model=${opts.model ?? HAIKU_MODEL}`
+        `${tag} route=claude-spawn agent=${agent} model=${modelFor("claude-spawn", opts)}`
       );
       return inferenceViaClaudeSpawn(bin, opts);
     }
@@ -269,7 +290,7 @@ export function buildClaudeArgs(
   const args = [
     "--print",
     "--model",
-    opts.model ?? HAIKU_MODEL,
+    modelFor("claude-spawn", opts),
     "--tools",
     "",
     "--output-format",
@@ -327,9 +348,11 @@ async function inferenceViaClaudeSpawn(
  * given, so this costs nothing on POSIX and is the only thing that works on
  * Windows. Do not move the prompt back into argv.
  */
-export function buildCodexArgs(_opts: InferenceOptions): string[] {
+export function buildCodexArgs(opts: InferenceOptions): string[] {
   return [
     "exec",
+    "-m",
+    modelFor("codex-spawn", opts),
     "--color",
     "never",
     "--skip-git-repo-check",
@@ -357,8 +380,9 @@ export function buildCodexArgs(_opts: InferenceOptions): string[] {
  * element does not survive cmd.exe on Windows. Provider/model is left unset so
  * opencode uses the user's configured default.
  */
-export function buildOpencodeArgs(_opts: InferenceOptions): string[] {
-  return ["run", "--pure", "--format", "json"];
+export function buildOpencodeArgs(opts: InferenceOptions): string[] {
+  const model = opencodeTierModel(opts.tier ?? "small");
+  return ["run", "--pure", "--format", "json", ...(model ? ["-m", model] : [])];
 }
 
 // Without its own AGENTS.md, opencode falls back to ~/.claude/CLAUDE.md, and it
@@ -716,21 +740,14 @@ async function inferenceViaApi(opts: InferenceOptions): Promise<InferenceResult>
   const apiKey = process.env.PAL_ANTHROPIC_API_KEY;
   if (!apiKey) return { success: false };
 
-  const {
-    system,
-    user,
-    model = HAIKU_MODEL,
-    maxTokens = 200,
-    timeout = 5000,
-    jsonSchema,
-  } = opts;
+  const { system, user, maxTokens = 200, timeout = 5000, jsonSchema } = opts;
 
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
 
     const body: Record<string, unknown> = {
-      model,
+      model: modelFor("anthropic-api", opts),
       max_tokens: maxTokens,
       messages: [{ role: "user", content: user }],
     };
@@ -787,20 +804,11 @@ async function inferenceViaApi(opts: InferenceOptions): Promise<InferenceResult>
 // structured-output schema for JSON-mode callers.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const OPENAI_DEFAULT_MODEL = "gpt-5.4-mini";
-
 async function inferenceViaOpenAiApi(opts: InferenceOptions): Promise<InferenceResult> {
   const apiKey = process.env.PAL_OPENAI_API_KEY;
   if (!apiKey) return { success: false };
 
-  const {
-    system,
-    user,
-    model = OPENAI_DEFAULT_MODEL,
-    maxTokens = 500,
-    timeout = 15000,
-    jsonSchema,
-  } = opts;
+  const { system, user, maxTokens = 500, timeout = 15000, jsonSchema } = opts;
 
   try {
     const controller = new AbortController();
@@ -811,7 +819,7 @@ async function inferenceViaOpenAiApi(opts: InferenceOptions): Promise<InferenceR
     messages.push({ role: "user", content: user });
 
     const body: Record<string, unknown> = {
-      model,
+      model: modelFor("openai-api", opts),
       max_tokens: maxTokens,
       messages,
     };
