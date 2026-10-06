@@ -1,3 +1,12 @@
+## [0.86.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.86.1...v0.86.2) (2026-10-06)
+
+
+### Bug Fixes
+
+* **adaptation:** store rule drafts and the user's decisions ([44b3515](https://github.com/kovrichard/portable-agent-layer/commit/44b3515a86aae87f94df4a9736ccb0052fcee41a))
+* **cli:** approve or deny rule drafts with pal cli rule ([f1dba22](https://github.com/kovrichard/portable-agent-layer/commit/f1dba22f76372534e982573905f48ec66830eb83))
+* **skills:** review rule drafts in chat with rule-review ([31aa634](https://github.com/kovrichard/portable-agent-layer/commit/31aa634b0426c732ba1c6f9ad925699c2dd5d2c6))
+
 ## [0.86.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.86.0...v0.86.1) (2026-10-06)
 
 
