@@ -1,3 +1,11 @@
+## [0.86.3](https://github.com/kovrichard/portable-agent-layer/compare/v0.86.2...v0.86.3) (2026-10-06)
+
+
+### Bug Fixes
+
+* **adaptation:** keep a 30-day log of rated turns ([fe1ab4d](https://github.com/kovrichard/portable-agent-layer/commit/fe1ab4dc6d5b330383cb5dd26a3b09f98a8e722f))
+* **rating:** log every labelled turn to the adaptation turn log ([876c92b](https://github.com/kovrichard/portable-agent-layer/commit/876c92b8ecb605e56625a10c96798b881766a621))
+
 ## [0.86.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.86.1...v0.86.2) (2026-10-06)
 
 
