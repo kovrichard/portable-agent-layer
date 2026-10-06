@@ -91,6 +91,7 @@ pal cli status        # check your setup
 | `pal cli timezone [<zone>]` | Show or set your timezone. IANA names only, validated before it is stored |
 | `pal cli knowledge` | Query & manage the knowledge store (search, graph, stats, hubs, find, show, add, ls, ingest) |
 | `pal cli ledger` | Query the action ledger — `log`, `show <id>`, `stats`, filtered by `--project`, `--since`, `--actor`, `--machine`, `--runtime`, `--outcome`, `--tool`, `--target` |
+| `pal cli rule` | Review the rules drafted from your corrections — `list [--all] [--json]`, `approve <id>`, `deny <id>`. A draft steers nothing until approved; a denied one is never drafted again |
 | `pal cli server` | The morning screen: a local page to open before a terminal — three moves for today, an urgent/important grid over every project *and* every stated goal, where you left off, and a drawer holding the signal and the action ledger — `start [--port <n>]`, `stop`, `status`. Loopback only, default port 7250. No model runs on page load |
 | `pal cli skill link <name>` | Link a personal `~/.pal/skills/<name>/` into every installed agent so it is discoverable |
 | `pal cli skill doctor <name>` | Evaluate a skill against the authoring best practices (folder/file-name match, name, description, body length, point-of-view, reference depth) |
@@ -203,7 +204,7 @@ PAL ships with built-in skills that extend your agent's capabilities:
 | `presentation` | Build branded slide decks from outlines |
 | `projects` | Look up, resume, register, or manage tracked projects |
 | `reflect` | Diagnose why a PAL behavior didn't trigger |
-| `telos` | Inspect or update goals, beliefs, strategies, narratives |
+| `rule-review` | Approve or deny the rules PAL drafted from your corrections || `telos` | Inspect or update goals, beliefs, strategies, narratives |
 | `think` | Structured first-pass reasoning on a problem |
 
 ---
