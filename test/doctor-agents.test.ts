@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { agentFindings, rosterFindings } from "../src/cli/doctor/agents";
+import { copyAgents } from "../src/targets/lib";
 
 const DIR_VARS = {
   PAL_CLAUDE_DIR: "claude",
@@ -203,6 +204,51 @@ describe("opencode's plugin", () => {
     const finding = byId(agentFindings(["opencode"]), "opencode.plugin.stale");
     expect(finding?.severity).toBe("warn");
     expect(finding?.fix?.command).toBe("pal cli install --opencode");
+  });
+});
+
+describe("installed subagents", () => {
+  const shippedAgent = "---\nname: researcher\nclaude:\n  model: sonnet\n---\nbody v1\n";
+
+  function installedSubagent(): string {
+    healthyClaude();
+    write(resolve(ROOT, "pkg", "assets", "agents", "researcher.md"), shippedAgent);
+    copyAgents();
+    return resolve(ROOT, "claude", "agents", "researcher.md");
+  }
+
+  test("a subagent installed from this PAL version has no problems", () => {
+    installedSubagent();
+
+    expect(byId(agentFindings(["claude"]), "claude.subagents")?.severity).toBe("ok");
+  });
+
+  test.each([
+    ["edited after install", (path: string) => write(path, "stale copy")],
+    ["deleted after install", (path: string) => rmSync(path)],
+  ])("a subagent %s warns, naming it, with the reinstall command", (_case, drift) => {
+    drift(installedSubagent());
+
+    const finding = byId(agentFindings(["claude"]), "claude.subagents");
+    expect(finding?.severity).toBe("warn");
+    expect(finding?.title).toContain("researcher");
+    expect(finding?.fix?.command).toBe("pal cli install --claude");
+  });
+
+  test("a changed source warns until the next install", () => {
+    installedSubagent();
+    write(
+      resolve(ROOT, "pkg", "assets", "agents", "researcher.md"),
+      shippedAgent.replace("v1", "v2")
+    );
+
+    expect(byId(agentFindings(["claude"]), "claude.subagents")?.severity).toBe("warn");
+    copyAgents();
+    expect(byId(agentFindings(["claude"]), "claude.subagents")?.severity).toBe("ok");
+  });
+
+  test("codex has no subagents to check", () => {
+    expect(byId(agentFindings(["codex"]), "codex.subagents")).toBeUndefined();
   });
 });
 

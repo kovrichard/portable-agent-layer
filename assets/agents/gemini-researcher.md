@@ -29,7 +29,7 @@ pal cli skill run deep-research gemini-search -- "<query>"
 ```
 
 - If it returns results → **continue using Gemini Search** for remaining queries
-- If it errors about `PAL_GEMINI_API_KEY` → **fall back to WebSearch/WebFetch** for all queries using the fallback methodology below
+- If it errors about `PAL_GEMINI_API_KEY` → **fall back to WebSearch/WebFetch** for all queries using the fallback methodology below, and **set a flag** to include the fallback footnote in your output
 
 The tool has a built-in academic system prompt that prioritizes scholarly sources, but you should still craft queries to target academic content:
 - Include author names, paper titles, or venue names when known
@@ -83,5 +83,5 @@ If you fell back to WebSearch because the Gemini API was unavailable, you MUST a
 
 ```markdown
 ---
-> **Note:** This research used WebSearch fallback instead of Gemini Search. The `PAL_GEMINI_API_KEY` environment variable is not set. To enable Gemini-grounded search, add `PAL_GEMINI_API_KEY=...` to `~/.pal/.env` (get one at https://aistudio.google.com/apikey)
+> **Tell the user:** This research used WebSearch fallback instead of Gemini Search. The `PAL_GEMINI_API_KEY` environment variable is not set. To enable Gemini-grounded search, add `PAL_GEMINI_API_KEY=...` to `~/.pal/.env` (get one at https://aistudio.google.com/apikey)
 ```

@@ -993,7 +993,7 @@ export function removeSkills(claudeSkillsDir: string): string[] {
 
 // --- Agents ---
 
-const claudeAgentsDir = () => resolve(platform.claudeDir(), "agents");
+const claudeAgentsDir = () => nativeAgentsDir("claude");
 
 /**
  * Install PAL agent definitions into ~/.claude/agents/.
@@ -1034,7 +1034,7 @@ export function countAgents(): number {
 // --- Agent platform extraction ---
 
 const AGENT_PLATFORMS = ["claude", "opencode", "cursor", "copilot"] as const;
-type AgentPlatform = (typeof AGENT_PLATFORMS)[number];
+export type AgentPlatform = (typeof AGENT_PLATFORMS)[number];
 
 /**
  * Extract a platform-specific agent file from the unified agent format.
@@ -1114,6 +1114,24 @@ function installAgents(targetDir: string, platform: AgentPlatform): number {
   return count;
 }
 
+/** Shipped agents in targetDir that differ from what installAgents would write there. */
+export function staleShippedAgents(targetDir: string, agent: AgentPlatform): string[] {
+  const agentsDir = assets.agents();
+  if (!existsSync(agentsDir)) return [];
+  const isStale = (file: string) => {
+    const installed = resolve(targetDir, file);
+    const expected = extractAgentForPlatform(
+      readFileSync(resolve(agentsDir, file), "utf-8"),
+      agent
+    );
+    return !existsSync(installed) || readFileSync(installed, "utf-8") !== expected;
+  };
+  return readdirSync(agentsDir)
+    .filter((f) => f.endsWith(".md") && isStale(f))
+    .map((f) => f.replace(/\.md$/, ""))
+    .sort();
+}
+
 /** Remove PAL agents from a directory. */
 function uninstallAgents(targetDir: string, label: string): string[] {
   const agentsDir = assets.agents();
@@ -1169,12 +1187,18 @@ const palAgentsStore = () => resolve(palHome(), "agents");
  * exists (mirrors linkPersonalSkill's per-agent gate).
  */
 function personalSubagentTargets(): { agent: AgentPlatform; dir: string }[] {
-  return [
-    { agent: "claude", dir: resolve(platform.claudeDir(), "agents") },
-    { agent: "opencode", dir: resolve(platform.opencodeDir(), "agents") },
-    { agent: "cursor", dir: resolve(platform.cursorDir(), "agents") },
-    { agent: "copilot", dir: resolve(platform.copilotDir(), "agents") },
-  ];
+  return AGENT_PLATFORMS.map((agent) => ({ agent, dir: nativeAgentsDir(agent) }));
+}
+
+/** The directory each agent reads its subagent definitions from. */
+export function nativeAgentsDir(agent: AgentPlatform): string {
+  const home = {
+    claude: platform.claudeDir,
+    opencode: platform.opencodeDir,
+    cursor: platform.cursorDir,
+    copilot: platform.copilotDir,
+  }[agent];
+  return resolve(home(), "agents");
 }
 
 /** Names of the subagents PAL ships (assets/agents/*.md). */

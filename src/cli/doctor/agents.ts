@@ -2,6 +2,11 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 import { palPkg, platform } from "../../hooks/lib/paths";
+import {
+  type AgentPlatform,
+  nativeAgentsDir,
+  staleShippedAgents,
+} from "../../targets/lib";
 import { NO_SESSION_AGENT_MESSAGE } from "../session-agent";
 import { type Finding, type Fix, failing, optional, passed, warning } from "./finding";
 
@@ -274,6 +279,18 @@ function opencodePluginFindings(): Finding[] {
   return [passed("opencode.hooks", "opencode plugin installed and current")];
 }
 
+function subagentFinding(agent: AgentPlatform): Finding {
+  const label = LAYOUT[agent].label;
+  const stale = staleShippedAgents(nativeAgentsDir(agent), agent);
+  if (stale.length === 0)
+    return passed(`${agent}.subagents`, `${label}: subagents match this PAL version`);
+  return warning(
+    `${agent}.subagents`,
+    `${label}: installed subagents differ from this PAL version — ${stale.join(", ")}`,
+    reinstall(agent)
+  );
+}
+
 function countSkills(dir: string): number {
   if (!existsSync(dir)) return 0;
   return readdirSync(dir).filter((f) => existsSync(resolve(dir, f, "SKILL.md"))).length;
@@ -292,6 +309,7 @@ function oneAgentFindings(agent: AgentName): Finding[] {
       ? hookFindings(agent, layout.hookFile())
       : opencodePluginFindings())
   );
+  if (agent !== "codex") findings.push(subagentFinding(agent));
   if (layout.instructions) {
     const { file, name } = layout.instructions;
     findings.push(

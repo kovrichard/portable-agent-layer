@@ -52,7 +52,7 @@ If the grok-search tool fails (missing `PAL_XAI_API_KEY` or API error), fall bac
 1. **Search** using WebSearch with time-sensitive queries — prepend "2026" or "latest" or "today" to queries
 2. **Prioritize** news sources, social media aggregators, and live blogs
 3. **Fetch** the most recent results with WebFetch to extract detail
-4. **Note** in your output that you used the fallback path (no Grok API access)
+4. **Set a flag** to include the fallback footnote in your output
 
 ## Methodology
 
@@ -105,5 +105,5 @@ If you fell back to WebSearch because the Grok API was unavailable, you MUST app
 
 ```markdown
 ---
-> **Note:** This research used WebSearch fallback instead of Grok Search. The `PAL_XAI_API_KEY` environment variable is not set. To enable Grok real-time search, add `PAL_XAI_API_KEY=...` to `~/.pal/.env` (get one at https://console.x.ai/)
+> **Tell the user:** This research used WebSearch fallback instead of Grok Search. The `PAL_XAI_API_KEY` environment variable is not set. To enable Grok real-time search, add `PAL_XAI_API_KEY=...` to `~/.pal/.env` (get one at https://console.x.ai/)
 ```
