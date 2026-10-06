@@ -16,6 +16,11 @@ Body content here.
     expect(result.body).toBe("Body content here.");
   });
 
+  test("keeps a blank line after a horizontal rule in the body", () => {
+    const result = parse("---\ntitle: T\n---\n\nIntro.\n\n---\n\nAfter the rule.\n");
+    expect(result.body).toBe("Intro.\n\n---\n\nAfter the rule.");
+  });
+
   test("parses numeric values", () => {
     const content = `---
 rating: 3

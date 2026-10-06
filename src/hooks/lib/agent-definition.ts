@@ -4,6 +4,8 @@
  * and a body that becomes the subagent's system prompt.
  */
 
+import { splitFrontmatter } from "./frontmatter";
+
 export const AGENT_PLATFORMS = [
   "claude",
   "opencode",
@@ -26,8 +28,8 @@ const PLATFORM_BLOCK_HEADER = new RegExp(
 const BLOCK_INDENT = "  ";
 
 export function parseAgentDefinition(content: string): AgentDefinition {
-  const parts = content.split(/^---\s*$/m);
-  if (parts.length < 3) {
+  const split = splitFrontmatter(content);
+  if (!split) {
     return { hasFrontmatter: false, global: [], platforms: {}, body: content };
   }
 
@@ -35,7 +37,7 @@ export function parseAgentDefinition(content: string): AgentDefinition {
   const platforms: Partial<Record<AgentPlatform, string[]>> = {};
   let current: AgentPlatform | null = null;
 
-  for (const line of parts[1].split("\n")) {
+  for (const line of split.frontmatter.split("\n")) {
     if (!line.trim()) continue;
     const header = PLATFORM_BLOCK_HEADER.exec(line);
     if (header) {
@@ -51,5 +53,5 @@ export function parseAgentDefinition(content: string): AgentDefinition {
     global.push(line);
   }
 
-  return { hasFrontmatter: true, global, platforms, body: parts.slice(2).join("---") };
+  return { hasFrontmatter: true, global, platforms, body: split.body };
 }

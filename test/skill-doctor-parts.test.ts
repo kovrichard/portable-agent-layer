@@ -100,7 +100,7 @@ describe("parseSkill", () => {
   // pattern consumed, which the body checks (line count, voice, links) survive.
   test("keeps horizontal rules that appear in the body", () => {
     const parsed = parseSkill("---\nname: x\n---\nintro\n\n---\n\noutro\n");
-    expect(parsed.body).toBe("\nintro\n\n---\noutro\n");
+    expect(parsed.body).toBe("\nintro\n\n---\n\noutro\n");
     expect(parsed.name).toBe("x");
   });
 

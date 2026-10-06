@@ -94,6 +94,24 @@ describe("codex agent rendering", () => {
   });
 });
 
+describe("body fidelity", () => {
+  const ruled = MERGED.replace(
+    "---\nReturn findings only.",
+    "---\n\nReturn findings only."
+  );
+
+  test("markdown output reproduces the source body byte for byte", () => {
+    const body = (text: string) => text.slice(text.indexOf("\n---\n", 4));
+    expect(body(renderAgentForPlatform(ruled, "claude"))).toBe(body(ruled));
+  });
+
+  test("codex instructions keep a blank line after a horizontal rule", () => {
+    expect(codexToml(ruled).developer_instructions).toBe(
+      "You review diffs.\n\n---\n\nReturn findings only.\n"
+    );
+  });
+});
+
 describe("markdown agent rendering", () => {
   test("a codex block never leaks into another platform's frontmatter", () => {
     const claude = renderAgentForPlatform(MERGED, "claude");

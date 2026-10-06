@@ -20,7 +20,7 @@ export function renderAgentForPlatform(content: string, platform: AgentPlatform)
   if (platform === "codex") return renderCodexAgent(definition);
   if (!definition.hasFrontmatter) return content;
   const frontmatter = [...definition.global, ...(definition.platforms[platform] ?? [])];
-  return `---\n${frontmatter.join("\n")}\n---\n${definition.body}`;
+  return `---\n${frontmatter.join("\n")}\n---${definition.body}`;
 }
 
 function renderCodexAgent(definition: AgentDefinition): string {

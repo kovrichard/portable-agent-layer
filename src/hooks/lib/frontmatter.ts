@@ -10,23 +10,36 @@ interface Parsed<T = Record<string, string>> {
   body: string;
 }
 
-const DELIMITER = /^---\s*$/m;
+const DELIMITER = /^---[ \t]*$/m;
+
+interface FrontmatterSplit {
+  leading: string;
+  frontmatter: string;
+  body: string;
+}
+
+/**
+ * Split text at its first two `---` lines. The body keeps every character after
+ * the closing delimiter, so later `---` rules and the lines around them survive.
+ */
+export function splitFrontmatter(content: string): FrontmatterSplit | null {
+  const parts = content.split(DELIMITER);
+  if (parts.length < 3) return null;
+  return { leading: parts[0], frontmatter: parts[1], body: parts.slice(2).join("---") };
+}
 
 /**
  * Parse frontmatter from a markdown string.
  * Returns typed meta + body. If no frontmatter found, meta is empty and body is the full content.
  */
 export function parse<T = Record<string, string>>(content: string): Parsed<T> {
-  const parts = content.split(DELIMITER);
-
-  // Need at least 3 parts: before --- | frontmatter | after ---
-  // parts[0] should be empty (content starts with ---)
-  if (parts.length < 3 || parts[0].trim() !== "") {
+  const split = splitFrontmatter(content);
+  if (!split || split.leading.trim() !== "") {
     return { meta: {} as T, body: content };
   }
 
-  const rawMeta = parts[1];
-  const body = parts.slice(2).join("---").trim();
+  const rawMeta = split.frontmatter;
+  const body = split.body.trim();
 
   const meta: Record<string, unknown> = {};
   for (const line of rawMeta.split("\n")) {

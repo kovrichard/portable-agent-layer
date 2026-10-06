@@ -12,6 +12,7 @@
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, extname, relative, resolve } from "node:path";
+import { splitFrontmatter } from "../../hooks/lib/frontmatter";
 import { palHome, toPath } from "../../hooks/lib/paths";
 import { declaredTriggers } from "../../hooks/lib/skill-triggers";
 
@@ -90,8 +91,8 @@ export function findAbsolutePaths(skillDir: string): string[] {
 
 /** Split a SKILL.md into frontmatter fields and body. */
 export function parseSkill(content: string): ParsedSkill {
-  const parts = content.split(/^---\s*$/m);
-  if (parts.length < 3) {
+  const split = splitFrontmatter(content);
+  if (!split) {
     return {
       name: null,
       description: null,
@@ -103,8 +104,7 @@ export function parseSkill(content: string): ParsedSkill {
       body: content,
     };
   }
-  const frontmatter = parts[1];
-  const body = parts.slice(2).join("---");
+  const { frontmatter, body } = split;
   const name = /^name:\s*"?(.+?)"?\s*$/m.exec(frontmatter)?.[1] ?? null;
   const rawDescription = /^description:[ \t]*(.*?)\s*$/m.exec(frontmatter)?.[1] ?? null;
   const descriptionQuoted =
