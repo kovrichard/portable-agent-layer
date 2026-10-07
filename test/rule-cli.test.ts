@@ -93,6 +93,24 @@ describe("pal cli rule approve / deny", () => {
     expect(readRules()[0].status).toBe("approved");
   });
 
+  test("a widening names its rule, and approving it says the rule's trigger changed", async () => {
+    const rule = seed("Claiming work is finished");
+    await runRule(["approve", rule.id]);
+    const widening = addDraft({
+      ...rule,
+      trigger: { side: "reply", pattern: "done|finished" },
+      widens: rule.id,
+    });
+
+    await runRule(["list"]);
+    expect(printed.join("\n")).toContain(`widens: ${rule.id}`);
+
+    expect(await runRule(["approve", widening.id])).toBe(0);
+    expect(printed.at(-1)).toBe(
+      `Rule ${rule.id} now triggers on: done|finished (widened by ${widening.id})`
+    );
+  });
+
   test("deny records the denial", async () => {
     const rule = seed("Claiming work is finished");
 

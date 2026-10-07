@@ -85,6 +85,20 @@ describe("recordCandidate", () => {
     expect(readRules()).toEqual([]);
   });
 
+  test("a widening needs only the one correction its rule missed", () => {
+    const widening = { ...candidate, widens: "r1" };
+
+    recordCandidate(widening, [corrections[0], ...ordinary(20)]);
+
+    expect(readRules()).toMatchObject([{ status: "draft", widens: "r1" }]);
+  });
+
+  test("a new rule firing on one correction still fails", () => {
+    recordCandidate(candidate, [corrections[0], ...ordinary(20)]);
+
+    expect(readCandidates()[0]).toMatchObject({ verdict: "failed" });
+  });
+
   test("a broken line is skipped", () => {
     recordCandidate({ ...candidate, when: "first" }, corrections);
     appendFileSync(
@@ -108,6 +122,15 @@ describe("reproveWaiting", () => {
       proof: { ordinary: 25 },
     });
     expect(readRules()).toHaveLength(1);
+  });
+
+  test("a waiting widening is proven again as a widening", () => {
+    const widening = { ...candidate, widens: "r1" };
+    recordCandidate(widening, [corrections[0], ...ordinary(5)]);
+
+    reproveWaiting([corrections[0], ...ordinary(20)]);
+
+    expect(readCandidates()[0]).toMatchObject({ verdict: "passed" });
   });
 
   test("a waiting candidate that still lacks turns stays waiting", () => {

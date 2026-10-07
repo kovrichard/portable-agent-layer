@@ -46,6 +46,7 @@ function cmdList(args: string[]): number {
 function formatRule(rule: AdaptationRule): string {
   return [
     `${rule.id}  [${rule.status}]  ${rule.when}`,
+    ...(rule.widens ? [`  widens: ${rule.widens}`] : []),
     `  trigger (${rule.trigger.side}): ${rule.trigger.pattern}`,
     `  steering: ${rule.steering}`,
     ...(rule.check ? [`  check: ${rule.check}`] : []),
@@ -56,6 +57,11 @@ function formatRule(rule: AdaptationRule): string {
 
 function formatProof(proof: TriggerProof): string {
   return `fired on ${proof.firedCorrections}/${proof.corrections} corrections, ${proof.firedOrdinary}/${proof.ordinary} ordinary turns`;
+}
+
+function decisionLine(id: string, decision: string, rule: AdaptationRule): string {
+  if (rule.id === id) return `Rule ${id} ${decision}: ${rule.when}`;
+  return `Rule ${rule.id} now triggers on: ${rule.trigger.pattern} (widened by ${id})`;
 }
 
 function cmdDecide(
@@ -71,7 +77,7 @@ function cmdDecide(
     console.error(result.reason);
     return 1;
   }
-  console.log(`Rule ${id} ${decision}: ${result.rule.when}`);
+  console.log(decisionLine(id, decision, result.rule));
   return 0;
 }
 

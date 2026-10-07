@@ -34,6 +34,8 @@ export interface DraftInput {
   /** How to tell from a reply whether the steering was followed. */
   check?: string;
   proof?: TriggerProof;
+  /** The approved rule whose trigger this draft replaces with a wider one. */
+  widens?: string;
 }
 
 export interface AdaptationRule extends DraftInput {
@@ -78,12 +80,34 @@ export function addDraft(input: DraftInput): AdaptationRule {
   return rule;
 }
 
+function approveWidening(
+  rules: AdaptationRule[],
+  widening: AdaptationRule
+): DecideResult {
+  const target = rules.find((r) => r.id === widening.widens);
+  if (target?.status !== "approved")
+    return { ok: false, reason: `Rule ${widening.widens} is not an approved rule` };
+  const widened: AdaptationRule = {
+    ...target,
+    trigger: widening.trigger,
+    evidence: [...target.evidence, ...widening.evidence],
+    proof: widening.proof,
+  };
+  writeRules(
+    rules
+      .filter((r) => r.id !== widening.id)
+      .map((r) => (r.id === target.id ? widened : r))
+  );
+  return { ok: true, rule: widened };
+}
+
 export function decideRule(id: string, decision: Decision): DecideResult {
   const rules = readRules();
   const rule = rules.find((r) => r.id === id);
   if (!rule) return { ok: false, reason: `No rule with id ${id}` };
   if (rule.status !== "draft")
     return { ok: false, reason: `Rule ${id} was already ${rule.status}` };
+  if (rule.widens && decision === "approved") return approveWidening(rules, rule);
   const decided: AdaptationRule = {
     ...rule,
     status: decision,

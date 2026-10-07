@@ -2,8 +2,10 @@ import { describe, expect, test } from "bun:test";
 import type { Turn } from "../src/hooks/lib/adaptation-turns";
 import {
   canRepeat,
+  canWiden,
   correctionsToDraftFrom,
   drafterRequest,
+  type KnownRule,
   parseDraft,
 } from "../src/hooks/lib/rule-drafter";
 
@@ -22,6 +24,7 @@ const correction = (over: Partial<Turn>): Turn =>
 
 const draft = {
   recurring: true,
+  widens: "",
   reason: "Both claim success without a run.",
   when: "Reporting that tests pass",
   side: "reply",
@@ -30,6 +33,22 @@ const draft = {
   check: "The reply quotes a test run.",
   cites: [0, 1],
 };
+
+const verdictRule: KnownRule = {
+  id: "r1",
+  status: "approved",
+  when: "The user asks for an opinion",
+  trigger: { side: "prompt", pattern: "what do you think" },
+  steering: "Give a verdict.",
+  check: "The reply states a verdict.",
+};
+
+const missed = [
+  {
+    ...correction({ message: "so no verdict?", issue: "gave no verdict" }),
+    prompt: "honest take on this design?",
+  },
+];
 
 const two = [
   { ...correction({ message: "they never ran" }), prompt: "" },
@@ -81,10 +100,95 @@ describe("drafterRequest", () => {
 
   test("lists the rules that are already known", () => {
     const request = drafterRequest(two, [
-      { when: "Deleting files", steering: "Ask first.", status: "denied" },
+      {
+        ...verdictRule,
+        when: "Deleting files",
+        steering: "Ask first.",
+        status: "denied",
+      },
     ]);
 
     expect(request.user).toContain("denied: Deleting files. Ask first.");
+  });
+
+  test("shows an approved rule's trigger and whether it fired on the newest correction", () => {
+    const request = drafterRequest(missed, [verdictRule]);
+
+    expect(request.user).toContain(
+      "approved rule r1: The user asks for an opinion. Give a verdict. Trigger on the prompt: what do you think. Fires on the newest correction: no."
+    );
+  });
+
+  test("names the rule a pending widening is for", () => {
+    const request = drafterRequest(missed, [
+      { ...verdictRule, id: "w1", status: "draft", widens: "r1" },
+    ]);
+
+    expect(request.user).toContain("draft widening of rule r1:");
+  });
+});
+
+describe("canWiden", () => {
+  test("one correction an approved rule's trigger missed can widen it", () => {
+    expect(canWiden(missed, [verdictRule])).toBe(true);
+  });
+
+  test("a rule whose trigger fired on the correction is not widened", () => {
+    const caught = [{ ...missed[0], prompt: "what do you think?" }];
+    expect(canWiden(caught, [verdictRule])).toBe(false);
+  });
+
+  test("only an approved rule is widened", () => {
+    expect(canWiden(missed, [{ ...verdictRule, status: "draft" }])).toBe(false);
+    expect(canWiden([], [verdictRule])).toBe(false);
+  });
+});
+
+describe("parseDraft, widening a rule", () => {
+  const widening = {
+    ...draft,
+    widens: "r1",
+    pattern: "honest take",
+    when: "",
+    steering: "",
+    check: "",
+    cites: [0],
+  };
+
+  test("adds the pattern to the rule's trigger and keeps the rule's instruction", () => {
+    expect(parseDraft(JSON.stringify(widening), missed, [verdictRule])).toEqual({
+      when: "The user asks for an opinion",
+      trigger: { side: "prompt", pattern: "what do you think|honest take" },
+      steering: "Give a verdict.",
+      check: "The reply states a verdict.",
+      evidence: ["gave no verdict: so no verdict?"],
+      widens: "r1",
+    });
+  });
+
+  test("a rule that is not approved and known is not widened", () => {
+    const output = JSON.stringify({ ...widening, widens: "nope" });
+    expect(parseDraft(output, missed, [verdictRule])).toBeNull();
+  });
+
+  test("a rule whose trigger already fired on the correction is not widened", () => {
+    const caught = [{ ...missed[0], prompt: "what do you think?" }];
+    expect(parseDraft(JSON.stringify(widening), caught, [verdictRule])).toBeNull();
+  });
+
+  test("an addition that still misses the correction is rejected", () => {
+    const output = JSON.stringify({ ...widening, pattern: "your view" });
+    expect(parseDraft(output, missed, [verdictRule])).toBeNull();
+  });
+
+  test("an addition that is not a valid expression is rejected", () => {
+    const output = JSON.stringify({ ...widening, pattern: "honest (take" });
+    expect(parseDraft(output, missed, [verdictRule])).toBeNull();
+  });
+
+  test("a widening that leaves out the newest correction is rejected", () => {
+    const output = JSON.stringify({ ...widening, cites: [] });
+    expect(parseDraft(output, missed, [verdictRule])).toBeNull();
   });
 });
 
