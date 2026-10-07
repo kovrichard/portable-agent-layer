@@ -10,10 +10,13 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { appendTurn } from "../lib/adaptation-turns";
+import { appendCandidate, readCandidates } from "../lib/adaptation-candidates";
+import { readRules } from "../lib/adaptation-rules";
+import { appendTurn, readTurns } from "../lib/adaptation-turns";
 import { spawnDetachedInference } from "../lib/detached-inference";
 import { canInfer, inference } from "../lib/inference";
 import { replyEnd } from "../lib/interaction-samples";
+import { logDebug } from "../lib/log";
 import { paths } from "../lib/paths";
 import { isSystemText, stripInjectedTags } from "../lib/prompt-text";
 import {
@@ -24,6 +27,12 @@ import {
   reactionRequest,
   turnFromLabels,
 } from "../lib/reaction-rating";
+import {
+  canRepeat,
+  correctionsToDraftFrom,
+  drafterRequest,
+  parseDraft,
+} from "../lib/rule-drafter";
 import { emitRating } from "../lib/signals";
 import { now } from "../lib/time";
 import { logTokenUsage } from "../lib/token-usage";
@@ -210,6 +219,23 @@ async function labelReaction(reply: string, message: string, sessionId?: string)
   return result.success ? parseReactionLabel(result.output) : null;
 }
 
+function knownRules() {
+  return [
+    ...readRules(),
+    ...readCandidates().map((candidate) => ({ ...candidate, status: "candidate" })),
+  ];
+}
+
+async function draftRuleCandidate(sessionId?: string): Promise<void> {
+  const corrections = correctionsToDraftFrom(readTurns());
+  if (!canRepeat(corrections)) return;
+  const result = await inference(drafterRequest(corrections, knownRules(), sessionId));
+  if (result.usage) logTokenUsage("rule-drafter", result.usage);
+  const candidate = result.success ? parseDraft(result.output, corrections) : null;
+  if (candidate) appendCandidate(candidate);
+  else logDebug("rule-drafter", `no candidate: ${result.output ?? result.error ?? ""}`);
+}
+
 /** Background mode: label the reaction, confirm a correction, store the rating. */
 async function runReactionRatingAndStore(
   message: string,
@@ -231,6 +257,7 @@ async function runReactionRatingAndStore(
       confirmation
     );
     if (turn) appendTurn(turn);
+    if (turn?.confirmed) await draftRuleCandidate(sessionId);
   } catch (err) {
     const { logError } = await import("../lib/log");
     logError("rating:reaction-child", err);
