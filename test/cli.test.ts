@@ -42,7 +42,7 @@ describe("pal help", () => {
     const result = pal("help");
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("pal cli <command>");
-    expect(result.stdout).toContain("pal cli init");
+    expect(result.stdout).toMatch(/^ {2}init\s/m);
   });
 
   test("--help flag works", () => {
@@ -100,7 +100,7 @@ describe("pal cli unknown", () => {
   test("unknown command exits with error", () => {
     const result = pal("cli", "banana");
     expect(result.status).toBe(1);
-    const output = result.stdout + result.stderr;
-    expect(output).toContain("Unknown command: banana");
+    expect(result.stderr).toStartWith("error: unknown command 'banana'");
+    expect(result.stderr).toContain("Usage: pal cli <command>");
   });
 });

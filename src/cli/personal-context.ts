@@ -1,10 +1,6 @@
 /**
  * pal cli telos / pal cli timezone — the personal context PAL carries about you.
  *
- *   pal cli telos             Which TELOS topics are answered, in interview order
- *   pal cli timezone          Show the configured timezone
- *   pal cli timezone <zone>   Set it, if Intl recognises the name
- *
  * Both exist for the onboarding skill. pal-settings.json is hook-protected, so
  * an agent cannot write the timezone itself, and a skill that restated the
  * answered/unanswered rule in prose would drift from the code that decides it.
@@ -18,14 +14,21 @@ import {
 import { telosStatus } from "../hooks/lib/telos-topics";
 import { canonicalTimeZone } from "../hooks/lib/wall-clock";
 import { log } from "../targets/lib";
+import { leaf } from "../tools/lib/command";
 
-export function runTelos(args: string[]): number {
-  if (args.length > 0) {
-    log.error(`Unknown telos argument: ${args[0]}`);
-    log.info("Usage: pal cli telos");
-    return 1;
-  }
+export const telosCommand = leaf({
+  summary: "Which TELOS topics are answered, in interview order",
+  run: printTelosStatus,
+});
 
+export const timezoneCommand = leaf({
+  summary: "Show the configured timezone, or set it to an IANA name",
+  args: "[zone...]",
+  details: "Example: pal cli timezone Europe/Budapest",
+  run: ({ positionals }) => timezone(positionals),
+});
+
+function printTelosStatus(): number {
   const topics = telosStatus();
   for (const topic of topics) {
     const mark = topic.answered ? "answered " : "unanswered";
@@ -39,8 +42,8 @@ export function runTelos(args: string[]): number {
   return 0;
 }
 
-export function runTimezone(args: string[]): number {
-  const requested = args.join(" ").trim();
+function timezone(words: string[]): number {
+  const requested = words.join(" ").trim();
 
   if (!requested) {
     const current = identity().principal.timezone;

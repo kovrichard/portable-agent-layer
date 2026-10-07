@@ -8,11 +8,11 @@
 
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { parseArgs } from "node:util";
 import { spawnDetachedInference } from "../hooks/lib/detached-inference";
 import { paths } from "../hooks/lib/paths";
 import { DEFAULT_PORT, LOOPBACK, type ServerStatus } from "../tools/control-room/server";
 import { BUILD_COMMAND, buildPage, isBuilt } from "../tools/control-room/static";
+import { group, leaf, UsageError } from "../tools/lib/command";
 
 interface ServerState {
   pid: number;
@@ -30,44 +30,29 @@ const SERVER_SCRIPT = resolve(
 const STARTUP_TIMEOUT_MS = 3000;
 const PROBE_TIMEOUT_MS = 500;
 
-export async function runServer(args: string[]): Promise<number> {
-  const [sub, ...rest] = args;
-  switch (sub) {
-    case "start":
-      return cmdStart(rest);
-    case "stop":
-      return cmdStop();
-    case "restart":
-      return cmdRestart();
-    case "status":
-      return cmdStatus();
-    case undefined:
-    case "help":
-    case "--help":
-    case "-h":
-      showHelp();
-      return 0;
-    default:
-      console.error(`Unknown subcommand: ${sub}\n`);
-      showHelp();
-      return 1;
-  }
-}
-
-function showHelp(): void {
-  console.log(`
-  Usage:
-    pal cli server <subcommand>
-
-  Subcommands:
-    start [--port <n>]         Start the control room in the background (default port ${DEFAULT_PORT})
-    stop                       Stop it
-    restart                    Replace a running one — the API only changes when the process does
-    status                     Show whether it is running, and where
-
-  The page listens on ${LOOPBACK} only.
-`);
-}
+export const serverCommand = group({
+  summary: "Start, stop and inspect the local control room",
+  details: `The page listens on ${LOOPBACK} only.`,
+  commands: {
+    start: leaf({
+      summary: "Start the control room in the background",
+      options: {
+        port: {
+          type: "string",
+          value: "<n>",
+          description: `Port to listen on (default ${DEFAULT_PORT})`,
+        },
+      },
+      run: ({ values }) => cmdStart(parsePort(values.port)),
+    }),
+    stop: leaf({ summary: "Stop it", run: cmdStop }),
+    restart: leaf({
+      summary: "Replace a running one — the API only changes when the process does",
+      run: cmdRestart,
+    }),
+    status: leaf({ summary: "Show whether it is running, and where", run: cmdStatus }),
+  },
+});
 
 function url(port: number): string {
   return `http://${LOOPBACK}:${port}/`;
@@ -122,19 +107,14 @@ async function waitUntilAnswering(port: number): Promise<ServerStatus | null> {
   return null;
 }
 
-function parsePort(args: string[]): number | string {
-  const { values } = parseArgs({ args, options: { port: { type: "string" } } });
-  if (values.port === undefined) return DEFAULT_PORT;
-  const port = Number(values.port);
-  return Number.isInteger(port) && port > 0 && port < 65536
-    ? port
-    : `--port must be a port number, got ${values.port}`;
+function parsePort(value: string | undefined): number {
+  if (value === undefined) return DEFAULT_PORT;
+  const port = Number(value);
+  if (Number.isInteger(port) && port > 0 && port < 65536) return port;
+  throw new UsageError(`--port must be a port number, got ${value}`);
 }
 
-async function cmdStart(args: string[]): Promise<number> {
-  const port = parsePort(args);
-  if (typeof port === "string") return fail(port);
-
+async function cmdStart(port: number): Promise<number> {
   const running = await runningServer();
   if (running) {
     console.log(`Already running at ${url(running.port)} (pid ${running.pid})`);
@@ -171,7 +151,7 @@ async function cmdRestart(): Promise<number> {
     return 0;
   }
   await cmdStop();
-  return cmdStart(["--port", String(running.port)]);
+  return cmdStart(running.port);
 }
 
 /**

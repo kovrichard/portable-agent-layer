@@ -15,8 +15,8 @@
 
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { parseArgs } from "node:util";
 import { ensureDir, paths } from "../../hooks/lib/paths";
+import { leaf, runCommand, UsageError } from "../lib/command";
 import { scriptArgs } from "../lib/script-args";
 import { readJsonl } from "../lib/self-model";
 
@@ -304,33 +304,33 @@ export function synthesize(days: number): SynthesisState {
 
 // ── CLI ──
 
-export function run(argv: string[] = scriptArgs()) {
-  const { values } = parseArgs({
-    args: argv,
-    options: {
-      days: { type: "string", default: "7" },
-      force: { type: "boolean" },
-      help: { type: "boolean", short: "h" },
+export const command = leaf({
+  summary: "Aggregate recent PAL activity into compact state",
+  options: {
+    days: {
+      type: "string",
+      default: "7",
+      value: "<n>",
+      description: "Lookback window (default: 7)",
     },
-  });
+    force: { type: "boolean", description: "Skip 24h guard" },
+  },
+  details: "Output: ~/.pal/memory/state/synthesis.json",
+  run: ({ values }) =>
+    synthesizeUnlessFresh(lookbackDays(values.days), values.force ?? false),
+});
 
-  if (values.help) {
-    console.log(`
-Synthesize — Aggregate recent PAL activity into compact state
+export function run(argv: string[] = scriptArgs()): Promise<number> {
+  return runCommand(command, argv, ["pal", "cli", "synthesize"]);
+}
 
-Usage:
-  synthesize.ts [--days 7] [--force]
+function lookbackDays(raw: string): number {
+  const days = parseInt(raw, 10);
+  if (Number.isNaN(days)) throw new UsageError(`--days must be a number of days: ${raw}`);
+  return days;
+}
 
-Options:
-  --days   Lookback window (default: 7)
-  --force  Skip 24h guard
-
-Output: ~/.pal/memory/state/synthesis.json
-`);
-    process.exit(0);
-  }
-
-  const force = values.force ?? false;
+function synthesizeUnlessFresh(days: number, force: boolean): undefined {
   if (!shouldRun(force)) {
     console.log(
       JSON.stringify({
@@ -341,7 +341,6 @@ Output: ~/.pal/memory/state/synthesis.json
     return;
   }
 
-  const days = parseInt(values.days ?? "7", 10);
   const state = synthesize(days);
   const sp = synthesisPath();
 
@@ -363,4 +362,4 @@ Output: ~/.pal/memory/state/synthesis.json
   );
 }
 
-if (import.meta.main) run();
+if (import.meta.main) process.exit(await run());

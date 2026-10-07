@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { builtinToolVerbs } from "../src/cli/builtin-tools";
+import { cliTree, inertAdmin } from "../src/cli/tree";
+import type { Command, Leaf } from "../src/tools/lib/command";
 
 const ROOT = resolve(import.meta.dir, "..");
 const SCANNED = ["assets", "src"];
@@ -32,7 +34,70 @@ function toolIsShipped(skill: string, tool: string): boolean {
   return existsSync(resolve(tools, tool)) || existsSync(resolve(tools, `${tool}.ts`));
 }
 
+const TREE = cliTree(inertAdmin());
+
+function commandWords(text: string): string[] {
+  return text
+    .replace(/\s#.*$/, "")
+    .split(/\s+/)
+    .slice(2);
+}
+
+function resolveCommand(words: string[]): { node: Command; rest: string[] } | string {
+  let node: Command = TREE;
+  let depth = 0;
+  for (const word of words) {
+    if (node.kind !== "group" || !/^[a-z][a-z-]*$/.test(word)) break;
+    const next: Command | undefined = node.commands[node.aliases?.[word] ?? word];
+    if (!next) return `unknown command '${word}'`;
+    node = next;
+    depth += 1;
+  }
+  return { node, rest: words.slice(depth) };
+}
+
+function undeclaredFlag(command: Leaf, words: string[]): string | null {
+  const options = Object.entries(command.options ?? {});
+  const longs = new Set(["help", ...options.map(([name]) => name)]);
+  const shorts = new Set(["h", ...options.map(([, spec]) => spec.short)]);
+  for (const word of words) {
+    const long = /^--([a-z][a-z0-9-]*)/.exec(word)?.[1];
+    if (long && !longs.has(long)) return `--${long} is not declared`;
+    const short = /^-([a-zA-Z])$/.exec(word)?.[1];
+    if (short && !shorts.has(short)) return `-${short} is not declared`;
+  }
+  return null;
+}
+
+function invocationProblem(text: string): string | null {
+  const resolved = resolveCommand(commandWords(text));
+  if (typeof resolved === "string") return resolved;
+  const { node, rest } = resolved;
+  if (node.kind !== "leaf" || node.passThrough) return null;
+  return undeclaredFlag(node, rest);
+}
+
 describe("the `pal cli` commands PAL ships in its own instruction text", () => {
+  test("every shipped `pal cli` call names a real command with flags it declares", () => {
+    const uses = shippedInvocations(new RegExp(/pal cli [^`\n]*/g));
+    expect(uses.length).toBeGreaterThan(100);
+
+    const broken = uses
+      .map(({ file, command }) => ({
+        file,
+        command,
+        problem: invocationProblem(command),
+      }))
+      .filter(({ problem }) => problem !== null);
+    expect(broken).toEqual([]);
+  });
+
+  test("the call check rejects an unknown command and an undeclared flag", () => {
+    expect(invocationProblem("pal cli frobnicate")).toBe("unknown command 'frobnicate'");
+    expect(invocationProblem("pal cli doctor --nope")).toBe("--nope is not declared");
+    expect(invocationProblem("pal cli ledger log --since 7d --json")).toBeNull();
+  });
+
   test("every `pal cli skill run <skill> <tool>` names a tool that exists", () => {
     const uses = shippedInvocations(
       new RegExp(/pal cli skill run ([a-z0-9-]+) ([a-z0-9.-]+)/g)

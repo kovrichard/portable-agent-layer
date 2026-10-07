@@ -100,8 +100,8 @@ describe("dispatcher", () => {
     cap.logSpy.mockRestore();
     cap.errSpy.mockRestore();
     expect(code).toBe(0);
-    expect(cap.flush()).toContain("Usage:");
-    expect(cap.flush()).toContain("subcommand");
+    expect(cap.flush()).toContain("Usage: pal cli knowledge <command>");
+    expect(cap.flush()).toContain("Commands:");
   });
 
   test("unknown subcommand → exit 1, prints help", async () => {
@@ -110,7 +110,49 @@ describe("dispatcher", () => {
     cap.logSpy.mockRestore();
     cap.errSpy.mockRestore();
     expect(code).toBe(1);
-    expect(cap.flush()).toContain("Unknown subcommand");
+    expect(cap.flush()).toContain("error: unknown command 'bogus'");
+  });
+
+  test("a subcommand's --help prints its usage and creates nothing", async () => {
+    const cap = captureOutput();
+    const code = await runKnowledge(["add", "People", "Helpless Test", "--help"]);
+    cap.logSpy.mockRestore();
+    cap.errSpy.mockRestore();
+    expect(code).toBe(0);
+    expect(cap.flush()).toContain("Usage: pal cli knowledge add <domain> <name>");
+    expect(exists("People", "helpless-test")).toBe(false);
+  });
+
+  test("an unknown flag → exit 1 with error: on stderr", async () => {
+    const cap = captureOutput();
+    const code = await runKnowledge(["search", "acme", "--fuzzy"]);
+    const stderr = cap.errSpy.mock.calls.flat().join("\n");
+    cap.logSpy.mockRestore();
+    cap.errSpy.mockRestore();
+    expect(code).toBe(1);
+    expect(stderr).toContain("error: Unknown option '--fuzzy'");
+    expect(stderr).toContain("Usage: pal cli knowledge search <query>");
+  });
+
+  test("a missing required argument → exit 1 naming it", async () => {
+    const cap = captureOutput();
+    const code = await runKnowledge(["add", "People"]);
+    const stderr = cap.errSpy.mock.calls.flat().join("\n");
+    cap.logSpy.mockRestore();
+    cap.errSpy.mockRestore();
+    expect(code).toBe(1);
+    expect(stderr).toContain("error: missing <name>");
+  });
+
+  test("an extra argument is refused rather than ignored", async () => {
+    fixture();
+    const cap = captureOutput();
+    const code = await runKnowledge(["search", "acme", "labs"]);
+    const stderr = cap.errSpy.mock.calls.flat().join("\n");
+    cap.logSpy.mockRestore();
+    cap.errSpy.mockRestore();
+    expect(code).toBe(1);
+    expect(stderr).toContain("error: unexpected argument 'labs'");
   });
 
   test("help works", async () => {
@@ -132,7 +174,7 @@ describe("search", () => {
     cap.logSpy.mockRestore();
     cap.errSpy.mockRestore();
     expect(code).toBe(1);
-    expect(cap.flush()).toContain("Usage");
+    expect(cap.flush()).toContain("error: missing <query>");
   });
 
   test("returns hits ranked by score", async () => {
@@ -224,6 +266,16 @@ describe("graph", () => {
     cap.logSpy.mockRestore();
     cap.errSpy.mockRestore();
     expect(code).toBe(1);
+  });
+
+  test("a non-positive --hops is a usage error", async () => {
+    fixture();
+    const cap = captureOutput();
+    const code = await runKnowledge(["graph", "alice", "--hops", "0"]);
+    cap.logSpy.mockRestore();
+    cap.errSpy.mockRestore();
+    expect(code).toBe(1);
+    expect(cap.flush()).toContain("error: --hops must be a positive integer");
   });
 });
 

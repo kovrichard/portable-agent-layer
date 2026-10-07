@@ -14,12 +14,12 @@
  * invisible even when (especially when) the keyword sort misses or mis-sorts it.
  *
  * Library:  import { synthesizeAlgorithm, formatAlgorithmReport } from ".../algorithm-synthesize"
- * Script:   bun src/tools/agent/algorithm-synthesize.ts [--since <ISO>] [--json]
+ * Script:   pal cli algorithm-synthesize [--since <ISO>] [--json]
  */
 
-import { parseArgs } from "node:util";
 import { readReflections } from "../../hooks/lib/learning-store";
 import { paths } from "../../hooks/lib/paths";
+import { leaf, runCommand, UsageError } from "../lib/command";
 import { scriptArgs } from "../lib/script-args";
 
 /** Algorithm areas a Q2 idea can target, mapped to ALGORITHM.md structure. */
@@ -203,19 +203,44 @@ export function formatAlgorithmReport(s: AlgorithmSynthesis): string {
   return lines.join("\n");
 }
 
-export function run(argv: string[] = scriptArgs()) {
-  const { values } = parseArgs({
-    args: argv,
-    options: {
-      since: { type: "string" },
-      json: { type: "boolean", default: false },
+const DETAILS = `Reads the Q2 field ("what a smarter algorithm would have done") of every
+algorithm reflection and pre-sorts it into candidate areas of ALGORITHM.md. The
+buckets are a keyword hint only: every Q2 they miss is listed in full under
+"Unbucketed", and task-specific Q2s are listed separately.`;
+
+export const command = leaf({
+  summary: "Cluster algorithm reflections into candidate ALGORITHM.md changes",
+  options: {
+    since: {
+      type: "string",
+      value: "<iso-date>",
+      description: "Only reflections from this date on (default: all time)",
     },
-  });
-  const since = values.since ? new Date(values.since) : undefined;
-  const result = synthesizeAlgorithm(since);
-  console.log(
-    values.json ? JSON.stringify(result, null, 2) : formatAlgorithmReport(result)
-  );
+    json: {
+      type: "boolean",
+      default: false,
+      description: "Print the full synthesis as JSON instead of the report",
+    },
+  },
+  details: DETAILS,
+  run: ({ values }) => printSynthesis(sinceDate(values.since), values.json),
+});
+
+export function run(argv: string[] = scriptArgs()): Promise<number> {
+  return runCommand(command, argv, ["pal", "cli", "algorithm-synthesize"]);
 }
 
-if (import.meta.main) run();
+function sinceDate(raw: string | undefined): Date | undefined {
+  if (raw === undefined) return undefined;
+  const since = new Date(raw);
+  if (Number.isNaN(since.getTime()))
+    throw new UsageError(`--since is not a date: ${raw}`);
+  return since;
+}
+
+function printSynthesis(since: Date | undefined, asJson: boolean): undefined {
+  const result = synthesizeAlgorithm(since);
+  console.log(asJson ? JSON.stringify(result, null, 2) : formatAlgorithmReport(result));
+}
+
+if (import.meta.main) process.exit(await run());

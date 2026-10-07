@@ -1,17 +1,7 @@
 /**
- * pal cli skill — manage personal skills under ~/.pal/skills/.
- *
- *   pal cli skill link <name>     Link an existing ~/.pal/skills/<name>/ into
- *                                 every installed agent so it is discoverable.
- *   pal cli skill doctor <name>   Evaluate ~/.pal/skills/<name>/ against the
- *                                 skill-authoring best practices.
- *   pal cli skill doctor --all    Evaluate every installed skill, one line each.
- *   pal cli skill author-model    Print the flagship model configured to author
- *                                 skills for the active agent (empty if none).
- *   pal cli skill run <skill> <tool> [-- args]
- *                                 Run ~/.pal/skills/<skill>/tools/<tool>, so a
- *                                 SKILL.md can name the tool instead of a path
- *                                 with a tilde no Windows shell expands.
+ * pal cli skill — manage personal skills under ~/.pal/skills/. `skill run`
+ * exists so a SKILL.md can name a tool instead of a path with a tilde no
+ * Windows shell expands.
  */
 
 import { spawnSync } from "node:child_process";
@@ -22,6 +12,7 @@ import { flagshipAuthorModel } from "../hooks/lib/models";
 import { withPalEnv } from "../hooks/lib/pal-env";
 import { isInside, palHome, palPkg } from "../hooks/lib/paths";
 import { linkPersonalSkill, log } from "../targets/lib";
+import { group, leaf, UsageError } from "../tools/lib/command";
 import {
   formatReport,
   formatSummary,
@@ -105,60 +96,78 @@ function isShippedTool(path: string): boolean {
   return existsSync(shipped) && isInside(realpathSync(shipped), realpathSync(path));
 }
 
-export async function runSkill(args: string[]): Promise<number> {
-  const [sub, name] = args;
-
-  if (sub === "run") {
-    const [, skill, tool, ...rest] = args;
-    if (!skill || !tool) {
-      log.error("Usage: pal cli skill run <skill> <tool> [-- args]");
-      return 1;
-    }
-    return runSkillTool(skill, tool, rest[0] === "--" ? rest.slice(1) : rest);
-  }
-
-  if (sub === "author-model") {
-    const model = flagshipAuthorModel(getActiveAgent());
-    if (model) console.log(model);
-    return 0;
-  }
-
-  if (sub === "doctor") {
-    if (name === "--all") return doctorAll();
-    if (!name) {
-      log.error("Usage: pal cli skill doctor <skill-dir-or-name|--all>");
-      return 1;
-    }
-    const report = lintSkill(resolveSkillDir(name));
-    console.log(formatReport(report));
-    return report.errors > 0 ? 1 : 0;
-  }
-
-  if (sub === "link") {
-    if (!name) {
-      log.error("Usage: pal cli skill link <name>");
-      return 1;
-    }
-    try {
-      const linked = linkPersonalSkill(name);
-      if (linked.length === 0) {
-        log.warn(
-          `'${name}' linked to no per-skill agents (none installed). ` +
-            "It is still discoverable by opencode via ~/.pal/skills/."
-        );
-      } else {
-        log.success(
-          `Linked '${name}' into: ${linked.join(", ")} ` +
-            "(opencode: auto via ~/.pal/skills/)"
-        );
-      }
-      return 0;
-    } catch (e) {
-      log.error(e instanceof Error ? e.message : String(e));
-      return 1;
-    }
-  }
-
-  log.error("Usage: pal cli skill <run|link|doctor|author-model> [name|--all]");
-  return 1;
+function doctorOne(name: string): number {
+  const report = lintSkill(resolveSkillDir(name));
+  console.log(formatReport(report));
+  return report.errors > 0 ? 1 : 0;
 }
+
+function doctor(name: string | undefined, all: boolean): number {
+  if (all && name) throw new UsageError("give a skill name or --all, not both");
+  if (all) return doctorAll();
+  if (!name) throw new UsageError("missing <name> (or --all)");
+  return doctorOne(name);
+}
+
+function link(name: string): number {
+  try {
+    const linked = linkPersonalSkill(name);
+    if (linked.length === 0) {
+      log.warn(
+        `'${name}' linked to no per-skill agents (none installed). ` +
+          "It is still discoverable by opencode via ~/.pal/skills/."
+      );
+    } else {
+      log.success(
+        `Linked '${name}' into: ${linked.join(", ")} ` +
+          "(opencode: auto via ~/.pal/skills/)"
+      );
+    }
+    return 0;
+  } catch (e) {
+    log.error(e instanceof Error ? e.message : String(e));
+    return 1;
+  }
+}
+
+export function printAuthorModel(): number {
+  const model = flagshipAuthorModel(getActiveAgent());
+  if (model) console.log(model);
+  return 0;
+}
+
+export const skillCommand = group({
+  summary: "Manage personal skills under ~/.pal/skills/",
+  commands: {
+    run: leaf({
+      summary:
+        "Run ~/.pal/skills/<skill>/tools/<tool>; every later argument goes to the tool",
+      args: "<skill> <tool>",
+      passThrough: true,
+      details:
+        "Arguments after <tool> reach the tool untouched; '--' before them is optional.",
+      run: ({ positionals, passedThrough }) =>
+        runSkillTool(positionals[0], positionals[1], passedThrough),
+    }),
+    link: leaf({
+      summary: "Link ~/.pal/skills/<name>/ into every installed agent",
+      args: "<name>",
+      run: ({ positionals }) => link(positionals[0]),
+    }),
+    doctor: leaf({
+      summary: "Check a skill against the skill-authoring best practices",
+      args: "[name]",
+      options: {
+        all: {
+          type: "boolean",
+          description: "Check every installed skill, one line each",
+        },
+      },
+      run: ({ positionals, values }) => doctor(positionals[0], values.all === true),
+    }),
+    "author-model": leaf({
+      summary: "Print the flagship model that authors skills for the active agent",
+      run: printAuthorModel,
+    }),
+  },
+});

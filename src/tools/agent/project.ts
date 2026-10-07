@@ -5,26 +5,11 @@
  * Each project is stored at `~/.pal/memory/projects/{slug}/ISA.md`.
  * Frontmatter holds operational state; body holds ISA spec sections.
  *
- * Usage:
- *   pal cli project list
- *   pal cli project create [name] [--path PATH] [--objectives "..."] [--serves goal|revenue|fun]
- *   pal cli project serves <name> <goal|revenue|fun> [note]
- *   pal cli project resume <name>
- *   pal cli project complete | archive | pause | unpause <name>
- *   pal cli project add-next <name> "text"
- *   pal cli project add-blocker <name> "text"
- *   pal cli project add-decision <name> "decision" "rationale"
- *   pal cli project add-handoff <name> "text"
- *   pal cli project rm-next | rm-blocker <name> <index>
- *   pal cli project update-section <name> <section> "content"
- *   pal cli project criteria <name>
- *   pal cli project isa-init <name>
- *   pal cli project migrate
+ * Usage: pal cli project <command> --help
  */
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { parseArgs } from "node:util";
 import { writeBinding } from "../../hooks/lib/bindings";
 import { paths, toPath } from "../../hooks/lib/paths";
 import {
@@ -37,9 +22,11 @@ import {
   proposeBinding,
   readAllProjects,
   readProject,
+  type ServesKind,
   writeProject,
 } from "../../hooks/lib/projects";
 import { isServesKind, SERVES_KINDS, setServes } from "../../hooks/lib/serves";
+import { group, type Leaf, leaf, runCommand, UsageError } from "../lib/command";
 import {
   archiveLine,
   completeIsc,
@@ -76,9 +63,40 @@ function requireProject(name: string): ProjectProgress {
   return p as ProjectProgress;
 }
 
+// ── argument values ───────────────────────────────────────────────
+
+function positiveId(value: string, label: string): number {
+  const id = Number(value);
+  if (!Number.isInteger(id) || id < 1) {
+    throw new UsageError(`${label} must be a positive integer, got "${value}"`);
+  }
+  return id;
+}
+
+function listIndex(value: string): number {
+  const index = Number(value);
+  if (!Number.isInteger(index) || index < 0) {
+    throw new UsageError(`<index> must be a non-negative integer, got "${value}"`);
+  }
+  return index;
+}
+
+function nonBlank(text: string, slot: string): string {
+  const trimmed = text.trim();
+  if (!trimmed) throw new UsageError(`${slot} is empty`);
+  return trimmed;
+}
+
+function servesKind(value: string, label: string): ServesKind {
+  if (!isServesKind(value)) {
+    throw new UsageError(`${label} must be one of: ${SERVES_KINDS.join(", ")}`);
+  }
+  return value;
+}
+
 // ── list ──────────────────────────────────────────────────────────
 
-function cmdList(): void {
+function cmdList(): undefined {
   const all = readAllProjects().sort((a, b) => b.updated.localeCompare(a.updated));
   const rows = all.map((p) => ({
     name: p.name,
@@ -94,27 +112,35 @@ function cmdList(): void {
 
 // ── create ────────────────────────────────────────────────────────
 
-function cmdCreate(args: string[]): void {
-  const { values, positionals } = parseArgs({
-    args,
-    options: {
-      path: { type: "string" },
-      name: { type: "string" },
-      objectives: { type: "string" },
-      serves: { type: "string" },
-      "serves-note": { type: "string" },
-    },
-    allowPositionals: true,
-  });
+interface CreateValues {
+  path?: string;
+  name?: string;
+  objectives?: string;
+  serves?: string;
+  "serves-note"?: string;
+}
 
+function projectName(
+  positional: string | undefined,
+  flag: string | undefined
+): string | undefined {
+  if (positional !== undefined && flag !== undefined) {
+    throw new UsageError("give the name once: as [name] or as --name");
+  }
+  return positional ?? flag;
+}
+
+function cmdCreate(given: string | undefined, values: CreateValues): undefined {
   const path = toPath(values.path ?? process.cwd());
-  const name = (values.name ?? positionals[0] ?? defaultSlug(path)).trim();
+  const name = (given ?? defaultSlug(path)).trim();
 
   if (!/^[a-z0-9_-]+$/.test(name)) {
-    fail(
+    throw new UsageError(
       `Invalid project name "${name}". Use lowercase letters, digits, hyphens, underscores.`
     );
   }
+  const serves =
+    values.serves === undefined ? undefined : servesKind(values.serves, "--serves");
 
   if (readProject(name)) {
     fail(
@@ -131,10 +157,6 @@ function cmdCreate(args: string[]): void {
         .join("\n")
     : undefined;
 
-  if (values.serves !== undefined && !isServesKind(values.serves)) {
-    fail(`--serves must be one of: ${SERVES_KINDS.join(", ")}`);
-  }
-
   const project: ProjectProgress = {
     name,
     path,
@@ -142,9 +164,7 @@ function cmdCreate(args: string[]): void {
     created: now(),
     updated: now(),
     ...(goalLines ? { goal: goalLines } : {}),
-    ...(isServesKind(values.serves)
-      ? { serves: values.serves, serves_by: "user" as const }
-      : {}),
+    ...(serves ? { serves, serves_by: "user" as const } : {}),
     ...(values["serves-note"] ? { serves_note: values["serves-note"] } : {}),
   };
   writeProject(project);
@@ -152,15 +172,11 @@ function cmdCreate(args: string[]): void {
 }
 
 /** The answer the scaffolder asks for, and the one place importance can be corrected. */
-function cmdServes(args: string[]): void {
-  const [name, kind, ...note] = args;
-  if (!name || !kind) fail("Usage: serves <name> <goal|revenue|fun> [note]");
-  if (!isServesKind(kind)) fail(`serves must be one of: ${SERVES_KINDS.join(", ")}`);
-
+function cmdServes(name: string, kind: ServesKind, note: string): undefined {
   const outcome = setServes({
     name,
     kind,
-    note: note.join(" ").trim() || undefined,
+    note: note.trim() || undefined,
     by: "user",
   });
   if (outcome === "missing") fail(`No project named "${name}".`);
@@ -173,9 +189,7 @@ function cmdServes(args: string[]): void {
 // Criteria/Changelog blobs collapse to open-ISC titles + counts. Full ISC text
 // is fetched on demand via show-isc / list-isc, so resume stays cheap on
 // projects carrying a large backlog.
-function cmdResume(args: string[]): void {
-  const name = args[0];
-  if (!name) fail("Usage: resume <name>");
+function cmdResume(name: string): undefined {
   const { criteria, changelog, ...project } = requireProject(name);
   const iscs = parseIscs(criteria ?? "");
   const archived = parseIscs(changelog ?? "");
@@ -205,7 +219,7 @@ function cmdResume(args: string[]): void {
 
 // ── status transitions ────────────────────────────────────────────
 
-function setStatus(name: string, status: ProjectStatus): void {
+function setStatus(name: string, status: ProjectStatus): undefined {
   const p = requireProject(name);
   p.status = status;
   p.updated = now();
@@ -215,20 +229,18 @@ function setStatus(name: string, status: ProjectStatus): void {
 
 // ── append/remove for array fields ───────────────────────────────
 
-function appendItem(name: string, field: "next" | "blockers", text: string): void {
-  if (!text?.trim()) fail(`Empty ${field} text.`);
+function appendItem(name: string, field: "next" | "blockers", text: string): undefined {
+  const item = nonBlank(text, `${field} text`);
   const p = requireProject(name);
   const list = p[field] ?? [];
-  list.push(text.trim());
+  list.push(item);
   p[field] = list;
   p.updated = now();
   writeProject(p);
   ok({ updated: true, name, field, count: list.length });
 }
 
-function removeItem(name: string, field: "next" | "blockers", indexArg: string): void {
-  const idx = parseInt(indexArg, 10);
-  if (!Number.isInteger(idx) || idx < 0) fail(`Invalid index "${indexArg}".`);
+function removeItem(name: string, field: "next" | "blockers", idx: number): undefined {
   const p = requireProject(name);
   const list = p[field] ?? [];
   if (idx >= list.length) fail(`Index ${idx} out of range (length ${list.length}).`);
@@ -241,12 +253,12 @@ function removeItem(name: string, field: "next" | "blockers", indexArg: string):
 
 // ── decisions (body section append) ──────────────────────────────
 
-function addDecision(name: string, decision: string, rationale: string): void {
-  if (!decision?.trim() || !rationale?.trim())
-    fail("Usage: add-decision <name> <decision> <rationale>");
+function addDecision(name: string, decision: string, rationale: string): undefined {
+  const what = nonBlank(decision, "<decision>");
+  const why = nonBlank(rationale, "<rationale...>");
   const p = requireProject(name);
   const date = new Date().toISOString().slice(0, 10);
-  const line = `- ${date}: ${decision.trim()} (${rationale.trim()})`;
+  const line = `- ${date}: ${what} (${why})`;
   p.decisions = p.decisions ? `${p.decisions}\n${line}` : line;
   p.updated = now();
   writeProject(p);
@@ -255,10 +267,10 @@ function addDecision(name: string, decision: string, rationale: string): void {
 
 // ── handoff ───────────────────────────────────────────────────────
 
-function addHandoff(name: string, text: string): void {
-  if (!text?.trim()) fail("Empty handoff text.");
+function addHandoff(name: string, text: string): undefined {
+  const handoff = nonBlank(text, "handoff text");
   const p = requireProject(name);
-  p.handoff = text.trim();
+  p.handoff = handoff;
   p.updated = now();
   writeProject(p);
   ok({ updated: true, name });
@@ -269,10 +281,8 @@ function addHandoff(name: string, text: string): void {
 // Where a project lives is machine-local, so this writes a binding rather than a
 // field on the record. Unlike the save path it does not require the directory to
 // exist yet: naming where a repo is about to be cloned is a legitimate use.
-function cmdSetPath(args: string[]): void {
-  const [name, ...rest] = args;
-  if (!name || rest.length === 0) fail("Usage: set-path <name> <new-path>");
-  const newPath = toPath(rest.join(" ").trim());
+function cmdSetPath(name: string, rawPath: string): undefined {
+  const newPath = toPath(nonBlank(rawPath, "<path...>"));
   const p = requireProject(name);
   writeBinding(p.name, newPath);
   p.updated = now();
@@ -295,15 +305,19 @@ const VALID_SECTIONS = [
 ] as const;
 type Section = (typeof VALID_SECTIONS)[number];
 
-function cmdUpdateSection(args: string[]): void {
-  const [name, section, ...rest] = args;
-  if (!name || !section) fail("Usage: update-section <name> <section> <content>");
-  const key = section.toLowerCase().replace(/\s+/g, "_") as Section;
+function sectionKey(section: string): Section {
+  const key = section.toLowerCase().replace(/\s+/g, "_");
   if (!(VALID_SECTIONS as readonly string[]).includes(key)) {
-    fail(`Unknown section "${section}". Valid: ${VALID_SECTIONS.join(", ")}`);
+    throw new UsageError(
+      `Unknown section "${section}". Valid: ${VALID_SECTIONS.join(", ")}`
+    );
   }
-  const content = rest.join(" ").trim();
-  if (!content) fail("Empty content.");
+  return key as Section;
+}
+
+function cmdUpdateSection(name: string, section: string, text: string): undefined {
+  const key = sectionKey(section);
+  const content = nonBlank(text, "<content...>");
   const p = requireProject(name);
   (p as unknown as Record<string, unknown>)[key] = content;
   p.updated = now();
@@ -313,18 +327,14 @@ function cmdUpdateSection(args: string[]): void {
 
 // ── criteria ──────────────────────────────────────────────────────
 
-function cmdCriteria(args: string[]): void {
-  const name = args[0];
-  if (!name) fail("Usage: criteria <name>");
+function cmdCriteria(name: string): undefined {
   const p = requireProject(name);
   ok({ name, criteria: p.criteria ?? "" });
 }
 
 // ── isa-init ──────────────────────────────────────────────────────
 
-function cmdIsaInit(args: string[]): void {
-  const name = args[0];
-  if (!name) fail("Usage: isa-init <name>");
+function cmdIsaInit(name: string): undefined {
   const p = requireProject(name);
   const sections: Array<keyof ProjectProgress> = [
     "problem",
@@ -354,7 +364,7 @@ function cmdIsaInit(args: string[]): void {
 
 // ── migrate (from old JSON format) ───────────────────────────────
 
-function cmdMigrate(): void {
+function cmdMigrate(): undefined {
   const progressDir = paths.progress();
   if (!existsSync(progressDir)) {
     ok({ migrated: 0, skipped: 0, results: [] });
@@ -403,9 +413,7 @@ function cmdMigrate(): void {
 
 // ── rm (project) ──────────────────────────────────────────────────
 
-function cmdRm(args: string[]): void {
-  const name = args[0];
-  if (!name) fail("Usage: rm <name>  (deletes the entire project directory)");
+function cmdRm(name: string): undefined {
   const removed = deleteProject(name);
   if (!removed) fail(`No project named "${name}".`);
   ok({ deleted: true, name });
@@ -416,10 +424,8 @@ function cmdRm(args: string[]): void {
 // Three states, not two: a retired ISC is one that stopped being valid, which the
 // record must not report as completed work. The box character is the storage form
 // and the id stays in it, so a retired line keeps reserving its id in nextIscId.
-function cmdAddIsc(args: string[]): void {
-  const name = args[0] ?? fail("Usage: add-isc <name> <title>");
-  const title = args.slice(1).join(" ").trim();
-  if (!title) fail("Usage: add-isc <name> <title>");
+function cmdAddIsc(name: string, text: string): undefined {
+  const title = nonBlank(text, "<title...>");
   const p = requireProject(name);
   const current = p.criteria ?? "";
   const id = nextIscId(current, p.changelog ?? "");
@@ -439,10 +445,7 @@ function cmdAddIsc(args: string[]): void {
 
 // Completing an ISC moves its line out of Criteria and into the dated Changelog
 // archive, so Criteria stays exactly the open set and never re-bloats context.
-function cmdCompleteIsc(args: string[]): void {
-  const name = args[0] ?? fail("Usage: complete-isc <name> <id>");
-  const id = Number(args[1] ?? fail("Usage: complete-isc <name> <id>"));
-  if (!Number.isInteger(id) || id < 1) fail("ISC id must be a positive integer");
+function cmdCompleteIsc(name: string, id: number): undefined {
   const p = requireProject(name);
   const move = completeIsc(sectionsOf(p), id);
   if (!move.ok) fail(`${move.reason} in project "${name}"`);
@@ -467,10 +470,7 @@ function applyIscMove(p: ProjectProgress, move: IscMove & { ok: true }): void {
 
 // Reopening pulls the line back out of the Changelog (or legacy Criteria) into
 // the open set.
-function cmdReopenIsc(args: string[]): void {
-  const name = args[0] ?? fail("Usage: reopen-isc <name> <id>");
-  const id = Number(args[1] ?? fail("Usage: reopen-isc <name> <id>"));
-  if (!Number.isInteger(id) || id < 1) fail("ISC id must be a positive integer");
+function cmdReopenIsc(name: string, id: number): undefined {
   const p = requireProject(name);
   const move = reopenIsc(sectionsOf(p), id);
   if (!move.ok) fail(`${move.reason} in project "${name}"`);
@@ -482,11 +482,23 @@ function cmdReopenIsc(args: string[]): void {
   ok({ checked: false, id });
 }
 
-function cmdListIsc(args: string[]): void {
-  const flags = new Set(args.filter((a) => a.startsWith("--")));
-  const name =
-    args.find((a) => !a.startsWith("--")) ??
-    fail("Usage: list-isc <name> [--all | --closed | --retired]");
+interface IscListFlags {
+  all?: boolean;
+  closed?: boolean;
+  retired?: boolean;
+}
+
+function iscListFlag(flags: IscListFlags): Set<string> {
+  const chosen = Object.entries(flags)
+    .filter(([, on]) => on)
+    .map(([flag]) => `--${flag}`);
+  if (chosen.length > 1) {
+    throw new UsageError(`${chosen.join(" and ")} cannot be combined; pick one`);
+  }
+  return new Set(chosen);
+}
+
+function cmdListIsc(name: string, flags: Set<string>): undefined {
   const p = requireProject(name);
   const criteria = parseIscs(p.criteria ?? "");
   const all = [...criteria, ...parseIscs(p.changelog ?? "")];
@@ -505,10 +517,7 @@ function cmdListIsc(args: string[]): void {
 
 // show-isc prints one ISC's full text on demand — the "detail" counterpart to
 // resume's titles. Scans Criteria (open + not-yet-archived) and Changelog.
-function cmdShowIsc(args: string[]): void {
-  const name = args[0];
-  const id = Number(args[1]);
-  if (!name || !Number.isInteger(id) || id < 1) fail("Usage: show-isc <name> <id>");
+function cmdShowIsc(name: string, id: number): undefined {
   const p = requireProject(name);
   const isc = [...parseIscs(p.criteria ?? ""), ...parseIscs(p.changelog ?? "")].find(
     (i) => i.id === id
@@ -520,18 +529,7 @@ function cmdShowIsc(args: string[]): void {
 // retire-isc closes an ISC that stopped being valid, which complete-isc cannot say:
 // completing files it as done work. The line moves to the Changelog under its own
 // heading as [~], so it still reserves its id and never reads as finished.
-function cmdRetireIsc(args: string[]): void {
-  const positional = args.filter((a) => !a.startsWith("--"));
-  const name = positional[0];
-  const id = Number(positional[1]);
-  if (!name || !Number.isInteger(id) || id < 1) {
-    fail("Usage: retire-isc <name> <id> [--by <supersedingId>]");
-  }
-  const byIndex = args.indexOf("--by");
-  const by = byIndex === -1 ? null : Number(args[byIndex + 1]);
-  if (byIndex !== -1 && (!Number.isInteger(by) || (by ?? 0) < 1)) {
-    fail("--by expects a positive ISC id");
-  }
+function cmdRetireIsc(name: string, id: number, by: number | null): undefined {
   const p = requireProject(name);
   if (parseIscs(p.changelog ?? "").some((i) => i.id === id && i.status === "retired")) {
     ok({ retired: true, id, alreadyRetired: true });
@@ -554,13 +552,8 @@ function cmdRetireIsc(args: string[]): void {
 // edit-isc rewrites one ISC's text in place, keeping its id and open/done state.
 // The id never leaves the record, so nextIscId still reserves it. Returns the
 // previous text because the ISA files carry no version history of their own.
-function cmdEditIsc(args: string[]): void {
-  const name = args[0];
-  const id = Number(args[1]);
-  const text = args.slice(2).join(" ").trim();
-  if (!name || !Number.isInteger(id) || id < 1 || !text) {
-    fail('Usage: edit-isc <name> <id> "new text"');
-  }
+function cmdEditIsc(name: string, id: number, newText: string): undefined {
+  const text = nonBlank(newText, "<text...>");
   const p = requireProject(name);
   const inCriteria = parseIscs(p.criteria ?? "").find((i) => i.id === id);
   const isc = inCriteria ?? parseIscs(p.changelog ?? "").find((i) => i.id === id);
@@ -592,8 +585,7 @@ function cmdEditIsc(args: string[]): void {
 
 // Backfill: sweep any done ISCs still sitting in Criteria (legacy projects, or
 // completions from before archive-on-complete) into the Changelog in one pass.
-function cmdPruneIsc(args: string[]): void {
-  const name = args[0] ?? fail("Usage: prune-isc <name>");
+function cmdPruneIsc(name: string): undefined {
   const p = requireProject(name);
   const done = parseIscs(p.criteria ?? "").filter((i) => i.status !== "open");
   for (const isc of done) {
@@ -618,9 +610,8 @@ function taskIsaPath(slug: string): string {
   return resolve(dir, "ISA.md");
 }
 
-function cmdScaffoldTaskIsa(args: string[]): void {
-  const title = args.join(" ").trim();
-  if (!title) fail("Usage: scaffold-task-isa <title>");
+function cmdScaffoldTaskIsa(text: string): undefined {
+  const title = nonBlank(text, "<title...>");
   const slug = taskSlug(title);
   const ts = new Date().toISOString();
   const content = [
@@ -644,8 +635,7 @@ function cmdScaffoldTaskIsa(args: string[]): void {
   ok({ created: true, slug, path: filePath });
 }
 
-function cmdCompleteTaskIsa(args: string[]): void {
-  const slug = args[0] ?? fail("Usage: complete-task-isa <slug>");
+function cmdCompleteTaskIsa(slug: string): undefined {
   const filePath = resolve(paths.work(), slug, "ISA.md");
   if (!existsSync(filePath)) fail(`Task ISA not found: ${slug}`);
   const content = readFileSync(filePath, "utf-8");
@@ -656,163 +646,186 @@ function cmdCompleteTaskIsa(args: string[]): void {
   ok({ completed: true, slug });
 }
 
-// ── dispatch ──────────────────────────────────────────────────────
+// ── command tree ──────────────────────────────────────────────────
 
-function help(): void {
-  console.log(`Project — manage PAL project state (ISA.md backed).
-
-Commands:
-  list                                          show all registered projects
-  create [name] [--path PATH] [--objectives X] [--serves KIND]  register a project
-  serves <name> <goal|revenue|fun> [note]       say what it is for — outranks PAL's guess
-  resume <name>                                 print lean project view (open-ISC titles; full text via show-isc)
-  complete <name>                               mark complete
-  archive <name>                                mark archived
-  pause <name> | unpause <name>                 toggle paused/active
-  set-path <name> <new-path>                    update the registered path
-  add-next <name> "text"                        append next step
-  add-blocker <name> "text"                     append blocker
-  add-decision <name> "decision" "rationale"    log a dated decision entry
-  add-handoff <name> "text"                     overwrite handoff field
-  rm-next <name> <index>                        remove next step by index
-  rm-blocker <name> <index>                     remove blocker by index
-  update-section <name> <section> "content"     set an ISA body section
-  criteria <name>                               print the Criteria section
-  add-isc <name> "title"                        append a new open ISC to Criteria
-  complete-isc <name> <id>                      mark ISC-N as done
-  reopen-isc <name> <id>                        reopen ISC-N (mark not done)
-  list-isc <name> [--all | --closed | --retired] list open ISCs (default); --all, --closed, or --retired
-  show-isc <name> <id>                          print one ISC's full text
-  edit-isc <name> <id> "new text"               rewrite ISC-N's text, keeping its id and state
-  retire-isc <name> <id> [--by <id>]            close ISC-N as no longer valid, not as done
-  prune-isc <name>                              archive done ISCs from Criteria into the Changelog
-  isa-init <name>                               mark project as ISA-initialized
-  scaffold-task-isa <title>                     create a one-shot task ISA in memory/work/
-  complete-task-isa <slug>                      mark a task ISA as complete
-  migrate                                       migrate old JSON progress files → ISA.md
-  rm <name>                                     delete the entire project
-`);
+function joined(words: string[]): string {
+  return words.join(" ");
 }
 
-export function run(argv: string[] = scriptArgs()): void {
-  const [cmd, ...rest] = argv;
-  if (!cmd || cmd === "help" || cmd === "--help" || cmd === "-h") {
-    help();
-    return;
-  }
-  switch (cmd) {
-    case "list":
-      cmdList();
-      return;
-    case "create":
-      cmdCreate(rest);
-      return;
-    case "serves":
-      cmdServes(rest);
-      return;
-    case "resume":
-      cmdResume(rest);
-      return;
-    case "complete":
-      setStatus(rest[0] ?? fail("Usage: complete <name>"), "complete");
-      return;
-    case "archive":
-      setStatus(rest[0] ?? fail("Usage: archive <name>"), "archived");
-      return;
-    case "pause":
-      setStatus(rest[0] ?? fail("Usage: pause <name>"), "paused");
-      return;
-    case "unpause":
-      setStatus(rest[0] ?? fail("Usage: unpause <name>"), "active");
-      return;
-    case "add-next":
-      appendItem(
-        rest[0] ?? fail("Usage: add-next <name> <text>"),
-        "next",
-        rest.slice(1).join(" ")
-      );
-      return;
-    case "add-blocker":
-      appendItem(
-        rest[0] ?? fail("Usage: add-blocker <name> <text>"),
-        "blockers",
-        rest.slice(1).join(" ")
-      );
-      return;
-    case "add-decision":
-      addDecision(
-        rest[0] ?? fail("Usage: add-decision <name> <decision> <rationale>"),
-        rest[1] ?? "",
-        rest.slice(2).join(" ")
-      );
-      return;
-    case "add-handoff":
-      addHandoff(
-        rest[0] ?? fail("Usage: add-handoff <name> <text>"),
-        rest.slice(1).join(" ")
-      );
-      return;
-    case "rm-next":
-      removeItem(rest[0] ?? fail("Usage: rm-next <name> <index>"), "next", rest[1] ?? "");
-      return;
-    case "rm-blocker":
-      removeItem(
-        rest[0] ?? fail("Usage: rm-blocker <name> <index>"),
-        "blockers",
-        rest[1] ?? ""
-      );
-      return;
-    case "update-section":
-      cmdUpdateSection(rest);
-      return;
-    case "criteria":
-      cmdCriteria(rest);
-      return;
-    case "add-isc":
-      cmdAddIsc(rest);
-      return;
-    case "complete-isc":
-      cmdCompleteIsc(rest);
-      return;
-    case "reopen-isc":
-      cmdReopenIsc(rest);
-      return;
-    case "list-isc":
-      cmdListIsc(rest);
-      return;
-    case "show-isc":
-      cmdShowIsc(rest);
-      return;
-    case "retire-isc":
-      cmdRetireIsc(rest);
-      return;
-    case "edit-isc":
-      cmdEditIsc(rest);
-      return;
-    case "prune-isc":
-      cmdPruneIsc(rest);
-      return;
-    case "isa-init":
-      cmdIsaInit(rest);
-      return;
-    case "scaffold-task-isa":
-      cmdScaffoldTaskIsa(rest);
-      return;
-    case "complete-task-isa":
-      cmdCompleteTaskIsa(rest);
-      return;
-    case "migrate":
-      cmdMigrate();
-      return;
-    case "set-path":
-      cmdSetPath(rest);
-      return;
-    case "rm":
-      cmdRm(rest);
-      return;
-    default:
-      fail(`Unknown command "${cmd}". Run 'pal cli project help' for usage.`);
-  }
+function nameLeaf(summary: string, act: (name: string) => undefined): Leaf {
+  return leaf({ summary, args: "<name>", run: ({ positionals }) => act(positionals[0]) });
 }
 
-if (import.meta.main) run();
+function statusLeaf(summary: string, status: ProjectStatus): Leaf {
+  return nameLeaf(summary, (name) => setStatus(name, status));
+}
+
+function iscLeaf(summary: string, act: (name: string, id: number) => undefined): Leaf {
+  return leaf({
+    summary,
+    args: "<name> <id>",
+    run: ({ positionals }) => act(positionals[0], positiveId(positionals[1], "<id>")),
+  });
+}
+
+function textLeaf(
+  summary: string,
+  slot: string,
+  act: (name: string, text: string) => undefined
+): Leaf {
+  return leaf({
+    summary,
+    args: `<name> ${slot}`,
+    run: ({ positionals }) => act(positionals[0], joined(positionals.slice(1))),
+  });
+}
+
+function removeLeaf(summary: string, field: "next" | "blockers"): Leaf {
+  return leaf({
+    summary,
+    args: "<name> <index>",
+    run: ({ positionals }) =>
+      removeItem(positionals[0], field, listIndex(positionals[1])),
+  });
+}
+
+export const command = group({
+  summary: "Manage PAL project state (ISA.md backed)",
+  commands: {
+    list: leaf({ summary: "Show all registered projects", run: cmdList }),
+    create: leaf({
+      summary: "Register a project",
+      args: "[name]",
+      options: {
+        path: {
+          type: "string",
+          value: "<path>",
+          description: "Where the project lives (default: cwd)",
+        },
+        name: {
+          type: "string",
+          value: "<name>",
+          description: "Slug, instead of [name] (default: the path's basename)",
+        },
+        objectives: {
+          type: "string",
+          value: "<a;b>",
+          description: "Goal lines, split on ';', '|' or newlines",
+        },
+        serves: {
+          type: "string",
+          value: `<${SERVES_KINDS.join("|")}>`,
+          description: "What the project is for",
+        },
+        "serves-note": {
+          type: "string",
+          value: "<text>",
+          description: "Why, in a few words",
+        },
+      },
+      run: ({ positionals, values }) =>
+        cmdCreate(projectName(positionals[0], values.name), values),
+    }),
+    serves: leaf({
+      summary: "Say what it is for — outranks PAL's guess",
+      args: `<name> <${SERVES_KINDS.join("|")}> [note...]`,
+      run: ({ positionals: [name, kind, ...note] }) =>
+        cmdServes(name, servesKind(kind, "serves"), joined(note)),
+    }),
+    resume: nameLeaf(
+      "Print lean project view (open-ISC titles; full text via show-isc)",
+      cmdResume
+    ),
+    complete: statusLeaf("Mark complete", "complete"),
+    archive: statusLeaf("Mark archived", "archived"),
+    pause: statusLeaf("Mark paused", "paused"),
+    unpause: statusLeaf("Mark active again", "active"),
+    "set-path": leaf({
+      summary: "Update the registered path",
+      args: "<name> <path...>",
+      run: ({ positionals: [name, ...path] }) => cmdSetPath(name, joined(path)),
+    }),
+    "add-next": textLeaf("Append next step", "<text...>", (name, text) =>
+      appendItem(name, "next", text)
+    ),
+    "add-blocker": textLeaf("Append blocker", "<text...>", (name, text) =>
+      appendItem(name, "blockers", text)
+    ),
+    "add-decision": leaf({
+      summary: "Log a dated decision entry",
+      args: "<name> <decision> <rationale...>",
+      run: ({ positionals: [name, decision, ...rationale] }) =>
+        addDecision(name, decision, joined(rationale)),
+    }),
+    "add-handoff": textLeaf("Overwrite handoff field", "<text...>", addHandoff),
+    "rm-next": removeLeaf("Remove next step by index", "next"),
+    "rm-blocker": removeLeaf("Remove blocker by index", "blockers"),
+    "update-section": leaf({
+      summary: "Set an ISA body section",
+      args: "<name> <section> <content...>",
+      details: `Sections: ${VALID_SECTIONS.join(", ")}`,
+      run: ({ positionals: [name, section, ...content] }) =>
+        cmdUpdateSection(name, section, joined(content)),
+    }),
+    criteria: nameLeaf("Print the Criteria section", cmdCriteria),
+    "add-isc": textLeaf("Append a new open ISC to Criteria", "<title...>", cmdAddIsc),
+    "complete-isc": iscLeaf("Mark ISC-N as done", cmdCompleteIsc),
+    "reopen-isc": iscLeaf("Reopen ISC-N (mark not done)", cmdReopenIsc),
+    "list-isc": leaf({
+      summary: "List open ISCs (default), or the closed or retired ones",
+      args: "<name>",
+      options: {
+        all: { type: "boolean", description: "Open, done and retired" },
+        closed: { type: "boolean", description: "Done only" },
+        retired: { type: "boolean", description: "Retired only" },
+      },
+      run: ({ positionals, values }) => cmdListIsc(positionals[0], iscListFlag(values)),
+    }),
+    "show-isc": iscLeaf("Print one ISC's full text", cmdShowIsc),
+    "edit-isc": leaf({
+      summary: "Rewrite ISC-N's text, keeping its id and state",
+      args: "<name> <id> <text...>",
+      run: ({ positionals: [name, id, ...text] }) =>
+        cmdEditIsc(name, positiveId(id, "<id>"), joined(text)),
+    }),
+    "retire-isc": leaf({
+      summary: "Close ISC-N as no longer valid, not as done",
+      args: "<name> <id>",
+      options: {
+        by: { type: "string", value: "<id>", description: "The ISC that supersedes it" },
+      },
+      run: ({ positionals: [name, id], values }) =>
+        cmdRetireIsc(
+          name,
+          positiveId(id, "<id>"),
+          values.by === undefined ? null : positiveId(values.by, "--by")
+        ),
+    }),
+    "prune-isc": nameLeaf(
+      "Archive done ISCs from Criteria into the Changelog",
+      cmdPruneIsc
+    ),
+    "isa-init": nameLeaf("Mark project as ISA-initialized", cmdIsaInit),
+    "scaffold-task-isa": leaf({
+      summary: "Create a one-shot task ISA in memory/work/",
+      args: "<title...>",
+      run: ({ positionals }) => cmdScaffoldTaskIsa(joined(positionals)),
+    }),
+    "complete-task-isa": leaf({
+      summary: "Mark a task ISA as complete",
+      args: "<slug>",
+      run: ({ positionals }) => cmdCompleteTaskIsa(positionals[0]),
+    }),
+    migrate: leaf({
+      summary: "Migrate old JSON progress files → ISA.md",
+      run: cmdMigrate,
+    }),
+    rm: nameLeaf("Delete the entire project", cmdRm),
+  },
+});
+
+export function run(argv: string[] = scriptArgs()): Promise<number> {
+  return runCommand(command, argv, ["pal", "cli", "project"]);
+}
+
+if (import.meta.main) process.exit(await run());

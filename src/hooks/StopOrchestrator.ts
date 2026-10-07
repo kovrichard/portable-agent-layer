@@ -35,7 +35,7 @@ enterHookWorkspace(payload);
 try {
   // A block carrying no reason stops the turn without telling the model why, so it
   // is worth less than not blocking at all — require the reason to raise one.
-  const decision = checkReadmeSync();
+  const decision = await checkReadmeSync();
   if (decision.decision === "block" && decision.reason) {
     process.stdout.write(stopBlockResponse(decision.reason));
     process.exit(0);

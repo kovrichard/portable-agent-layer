@@ -15,9 +15,9 @@
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { parseArgs } from "node:util";
 import { readOpinions, saveOpinion, setLastReflectDate } from "../../hooks/lib/opinions";
 import { palHome } from "../../hooks/lib/paths";
+import { leaf, runCommand } from "../lib/command";
 import { emit } from "../lib/emit";
 import {
   consoleLines,
@@ -30,21 +30,27 @@ import {
 } from "../lib/relationship-reflect";
 import { scriptArgs } from "../lib/script-args";
 
-const HELP = `
-RelationshipReflect — Periodic reflection + opinion promotion
-
-Reads recent relationship notes and ratings. Promotes recurring
+const DETAILS = `Reads recent relationship notes and ratings. Promotes recurring
 observations (O type) into tracked opinions with confidence scoring.
-
-Usage:
-  pal cli relationship-reflect             Reflect on last 7 days (default)
-  pal cli relationship-reflect --month     Reflect on last 30 days
-  pal cli relationship-reflect --dry-run   Preview without writing
+With no flags, reflects on the last 7 days.
 
 Output:
   - Updates memory/relationship/opinions.json (confidence tracking)
-  - Creates reflection report in memory/relationship/reflections/
-`;
+  - Creates reflection report in memory/relationship/reflections/`;
+
+export const command = leaf({
+  summary: "Periodic reflection + opinion promotion",
+  options: {
+    month: { type: "boolean", description: "Reflect on last 30 days" },
+    "dry-run": { type: "boolean", description: "Preview without writing" },
+  },
+  details: DETAILS,
+  run: ({ values }) => reflect(values.month ?? false, values["dry-run"] ?? false),
+});
+
+export function run(argv: string[] = scriptArgs()): Promise<number> {
+  return runCommand(command, argv, ["pal", "cli", "relationship-reflect"]);
+}
 
 const relationshipDir = () => resolve(palHome(), "memory", "relationship");
 const ratingsFile = () => resolve(palHome(), "memory", "signals", "ratings.jsonl");
@@ -57,24 +63,9 @@ function saveReport(report: string, period: string): string {
   return filepath;
 }
 
-export function run(argv: string[] = scriptArgs()) {
-  const { values } = parseArgs({
-    args: argv,
-    options: {
-      month: { type: "boolean" },
-      "dry-run": { type: "boolean" },
-      help: { type: "boolean", short: "h" },
-    },
-  });
-
-  if (values.help) {
-    console.log(HELP);
-    process.exit(0);
-  }
-
-  const daysBack = values.month ? 30 : 7;
-  const period = values.month ? "Monthly" : "Weekly";
-  const dryRun = values["dry-run"] ?? false;
+function reflect(month: boolean, dryRun: boolean): undefined {
+  const daysBack = month ? 30 : 7;
+  const period = month ? "Monthly" : "Weekly";
 
   const notes = loadNotes(relationshipDir(), daysBack);
   const ratings = loadRatings(ratingsFile(), daysBack);
@@ -84,7 +75,7 @@ export function run(argv: string[] = scriptArgs()) {
 
   if (notes.length === 0 && ratings.length === 0) {
     emit.ok("No data to analyze");
-    process.exit(0);
+    return;
   }
 
   const plan = planPromotions(notes, readOpinions());
@@ -109,4 +100,4 @@ export function run(argv: string[] = scriptArgs()) {
   for (const line of highConfidenceLines(readOpinions())) emit.ok(line);
 }
 
-if (import.meta.main) run();
+if (import.meta.main) process.exit(await run());

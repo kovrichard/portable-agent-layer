@@ -7,18 +7,13 @@
  * evolution log. Principles are marked [CRYSTAL: N%] manually when
  * confidence is high enough.
  *
- * Usage:
- *   bun run tool:wisdom-frame --domain communication --observation "prefers bullet points"
- *   bun run tool:wisdom-frame --domain development --observation "refactoring without tests caused regressions" --type anti-pattern
- *   bun run tool:wisdom-frame --domain workflow --observation "always run type-check after edits" --type principle
- *
- * Types: principle, contextual-rule, anti-pattern, evolution (default)
+ * Usage: pal cli wisdom-frame --domain <domain> --observation "…" [--type <type>]
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { parseArgs } from "node:util";
 import { paths } from "../../hooks/lib/paths";
+import { leaf, runCommand, UsageError } from "../lib/command";
 import { emit } from "../lib/emit";
 import { scriptArgs } from "../lib/script-args";
 
@@ -193,23 +188,7 @@ ${antiPatternEntry}
 
 // ── CLI ──
 
-export function run(argv: string[] = scriptArgs()) {
-  const { values } = parseArgs({
-    args: argv,
-    options: {
-      domain: { type: "string", short: "d" },
-      observation: { type: "string", short: "o" },
-      type: { type: "string", short: "t" },
-      help: { type: "boolean", short: "h" },
-    },
-  });
-
-  if (values.help) {
-    console.log(`
-WisdomFrameUpdater — Update wisdom frames with observations
-
-Usage:
-  bun run tool:wisdom-frame --domain <domain> --observation "text" [--type <type>]
+const DETAILS = `Required: --domain and --observation.
 
 Domains:
   development, workflow, communication, infrastructure, integration, or any custom domain
@@ -221,21 +200,49 @@ Types:
   evolution        General observation (default)
 
 Examples:
-  bun run tool:wisdom-frame -d workflow -o "always run type-check after edits"
-  bun run tool:wisdom-frame -d development -o "mocking DB hides migration bugs" -t anti-pattern
-  bun run tool:wisdom-frame -d communication -o "user prefers terse summaries" -t principle
-`);
-    process.exit(0);
-  }
+  pal cli wisdom-frame -d workflow -o "always run type-check after edits"
+  pal cli wisdom-frame -d development -o "mocking DB hides migration bugs" -t anti-pattern
+  pal cli wisdom-frame -d communication -o "user prefers terse summaries" -t principle`;
 
-  if (!values.domain || !values.observation) {
-    console.error("Required: --domain and --observation");
-    process.exit(1);
-  }
+export const command = leaf({
+  summary: "Update wisdom frames with observations",
+  options: {
+    domain: {
+      type: "string",
+      short: "d",
+      value: "<domain>",
+      description: "Frame to update; created if it does not exist",
+    },
+    observation: {
+      type: "string",
+      short: "o",
+      value: "<text>",
+      description: "The observation to record",
+    },
+    type: {
+      type: "string",
+      short: "t",
+      value: "<type>",
+      description: "Observation type (default: evolution)",
+    },
+  },
+  details: DETAILS,
+  run: ({ values }) => {
+    const { domain, observation } = values;
+    if (!domain || !observation) {
+      throw new UsageError("--domain and --observation are required");
+    }
+    return recordObservation(domain, observation, values.type || "evolution");
+  },
+});
 
-  const cliType = (values.type || "evolution") as ObservationType;
-  const result = updateFrame(values.domain, values.observation, cliType);
+export function run(argv: string[] = scriptArgs()): Promise<number> {
+  return runCommand(command, argv, ["pal", "cli", "wisdom-frame"]);
+}
+
+function recordObservation(domain: string, observation: string, type: string): undefined {
+  const result = updateFrame(domain, observation, type as ObservationType);
   emit.receipt(result.framePath, { domain: result.domain, type: result.type });
 }
 
-if (import.meta.main) run();
+if (import.meta.main) process.exit(await run());

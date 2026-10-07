@@ -14,24 +14,39 @@ import {
   readRules,
   type TriggerProof,
 } from "../hooks/lib/adaptation-rules";
+import { group, leaf, runCommand } from "../tools/lib/command";
 
-const DECISIONS: Record<string, Exclude<RuleStatus, "draft">> = {
-  approve: "approved",
-  deny: "denied",
-};
+export const ruleCommand = group({
+  summary: "Review the rules PAL drafted from your corrections",
+  commands: {
+    list: leaf({
+      summary: "Drafts waiting for a decision",
+      options: {
+        all: { type: "boolean", description: "Every rule, not only the drafts" },
+        json: { type: "boolean", description: "Machine-readable output" },
+      },
+      run: ({ values }) => cmdList(values.all === true, values.json === true),
+    }),
+    approve: leaf({
+      summary: "Approve a draft so it steers",
+      args: "<id>",
+      run: ({ positionals }) => cmdDecide(positionals[0], "approved"),
+    }),
+    deny: leaf({
+      summary: "Deny a draft; it stays on record so it is not drafted again",
+      args: "<id>",
+      run: ({ positionals }) => cmdDecide(positionals[0], "denied"),
+    }),
+  },
+});
 
-export async function runRule(args: string[]): Promise<number> {
-  const [sub, ...rest] = args;
-  if (sub === "list") return cmdList(rest);
-  if (sub && sub in DECISIONS) return cmdDecide(rest[0], DECISIONS[sub]);
-  showHelp();
-  return sub === undefined || sub === "help" ? 0 : 1;
+export function runRule(args: string[]): Promise<number> {
+  return runCommand(ruleCommand, args, ["pal", "cli", "rule"]);
 }
 
-function cmdList(args: string[]): number {
-  const all = args.includes("--all");
+function cmdList(all: boolean, json: boolean): number {
   const rules = readRules().filter((r) => all || r.status === "draft");
-  if (args.includes("--json")) {
+  if (json) {
     console.log(JSON.stringify(rules, null, 2));
     return 0;
   }
@@ -64,14 +79,7 @@ function decisionLine(id: string, decision: string, rule: AdaptationRule): strin
   return `Rule ${rule.id} now triggers on: ${rule.trigger.pattern} (widened by ${id})`;
 }
 
-function cmdDecide(
-  id: string | undefined,
-  decision: Exclude<RuleStatus, "draft">
-): number {
-  if (!id) {
-    console.error("Give the rule id: pal cli rule approve|deny <id>");
-    return 1;
-  }
+function cmdDecide(id: string, decision: Exclude<RuleStatus, "draft">): number {
   const result = decideRule(id, decision);
   if (!result.ok) {
     console.error(result.reason);
@@ -79,12 +87,4 @@ function cmdDecide(
   }
   console.log(decisionLine(id, decision, result.rule));
   return 0;
-}
-
-function showHelp(): void {
-  console.log(`pal cli rule — review adaptation rules drafted from your corrections
-
-  pal cli rule list [--all] [--json]   Drafts waiting for a decision
-  pal cli rule approve <id>            Approve a draft so it steers
-  pal cli rule deny <id>               Deny a draft; it is not drafted again`);
 }

@@ -3,25 +3,9 @@
  *
  * Thin presentation layer over src/tools/knowledge/{lib,graph}.ts. Owns
  * formatting + argv parsing only; all entity logic lives in the tools.
- *
- * Subcommands:
- *   search <query>                Substring search across title/tags/body
- *   graph <slug> [--hops N]       BFS traversal from a slug (default 2 hops)
- *   stats                         Counts, hubs, isolated nodes
- *   hubs                          Top 10 most-connected entities
- *   find <tag>                    Entities tagged with <tag>
- *   show <slug>                   Print one entity (frontmatter + body)
- *   add <domain> <name>           Create entity (interactive unless flags given)
- *     --tags ai,research          Comma-separated tags
- *     --related slug:type         Repeatable; type ∈ RELATION_TYPES
- *     --quality 0-10
- *     --status seedling|budding|evergreen
- *     --type <subtype>            Free-form sub-type (default by domain)
- *   ls [domain]                   List entities, optionally by one domain
  */
 
 import { readFileSync } from "node:fs";
-import { parseArgs } from "node:util";
 import * as clack from "@clack/prompts";
 import { toPath } from "../hooks/lib/paths";
 import { buildGraph, resolveSlug, stats, traverse } from "../tools/knowledge/graph";
@@ -43,74 +27,109 @@ import {
   STATUSES,
   type Status,
 } from "../tools/knowledge/lib";
+import { group, leaf, runCommand, UsageError } from "../tools/lib/command";
 
-// ── Dispatcher ─────────────────────────────────────────────────────
+const VOCABULARY = `Domains: ${DOMAINS.join(", ")}
+Relation types: ${RELATION_TYPES.join(", ")}`;
 
-export async function runKnowledge(args: string[]): Promise<number> {
-  const [sub, ...rest] = args;
-  switch (sub) {
-    case "search":
-      return cmdSearch(rest);
-    case "graph":
-      return cmdGraph(rest);
-    case "stats":
-      return cmdStats();
-    case "hubs":
-      return cmdHubs();
-    case "find":
-      return cmdFind(rest);
-    case "show":
-      return cmdShow(rest);
-    case "add":
-      return cmdAdd(rest);
-    case "ls":
-      return cmdLs(rest);
-    case "ingest":
-      return cmdIngest(rest);
-    case undefined:
-    case "help":
-    case "--help":
-    case "-h":
-      showHelp();
-      return 0;
-    default:
-      console.error(`Unknown subcommand: ${sub}\n`);
-      showHelp();
-      return 1;
-  }
-}
+export const knowledgeCommand = group({
+  summary: "Query and manage the knowledge store",
+  commands: {
+    search: leaf({
+      summary: "Substring search across title, tags, body",
+      args: "<query>",
+      run: ({ positionals }) => cmdSearch(positionals[0]),
+    }),
+    graph: leaf({
+      summary: "BFS traversal from a slug (default 2 hops)",
+      args: "<slug>",
+      options: {
+        hops: { type: "string", value: "<n>", description: "Hops to follow (default 2)" },
+      },
+      run: ({ positionals, values }) => cmdGraph(positionals[0], parseHops(values.hops)),
+    }),
+    stats: leaf({ summary: "Counts, hubs, isolated nodes", run: cmdStats }),
+    hubs: leaf({ summary: "Top 10 most-connected entities", run: cmdHubs }),
+    find: leaf({
+      summary: "Entities tagged with <tag>",
+      args: "<tag>",
+      run: ({ positionals }) => cmdFind(positionals[0]),
+    }),
+    show: leaf({
+      summary: "Print one entity (frontmatter + body)",
+      args: "<slug>",
+      run: ({ positionals }) => cmdShow(positionals[0]),
+    }),
+    add: leaf({
+      summary: "Create an entity (interactive unless flags are given)",
+      args: "<domain> <name>",
+      options: {
+        tags: { type: "string", value: "<a,b>", description: "Comma-separated tags" },
+        related: {
+          type: "string",
+          multiple: true,
+          value: "<slug:type>",
+          description: "Typed relation (repeatable)",
+        },
+        quality: { type: "string", value: "<0-10>", description: "Default 5" },
+        status: {
+          type: "string",
+          value: `<${STATUSES.join("|")}>`,
+          description: "Default seedling",
+        },
+        type: { type: "string", value: "<subtype>", description: "Free-form sub-type" },
+        body: { type: "string", value: "<text>", description: "Markdown body" },
+      },
+      details: VOCABULARY,
+      run: ({ positionals, values }) =>
+        cmdAdd(
+          parseDomain(positionals[0]),
+          positionals[1],
+          parseAddFlags(values),
+          Object.keys(values).length > 0
+        ),
+    }),
+    ls: leaf({
+      summary: "List entities, optionally by one domain",
+      args: "[domain]",
+      details: VOCABULARY,
+      run: ({ positionals }) =>
+        cmdLs(positionals[0] === undefined ? undefined : parseDomain(positionals[0])),
+    }),
+    ingest: leaf({
+      summary: "Upsert people and companies from JSON on stdin (or --file)",
+      options: {
+        source: {
+          type: "string",
+          short: "s",
+          value: "<id>",
+          description: 'Provenance tag (default "manual")',
+        },
+        file: {
+          type: "string",
+          short: "f",
+          value: "<path>",
+          description: "Read the JSON from a file instead of stdin",
+        },
+      },
+      run: ({ values }) => cmdIngest(values.source ?? "manual", values.file),
+    }),
+  },
+  details: VOCABULARY,
+});
 
-// ── Helpers ────────────────────────────────────────────────────────
-
-function showHelp(): void {
-  console.log(`
-  Usage:
-    pal cli knowledge <subcommand> [args]
-
-  Subcommands:
-    search <query>             Substring search across title, tags, body
-    graph <slug> [--hops N]    BFS traversal from a slug (default 2 hops)
-    stats                      Counts, hubs, isolated nodes
-    hubs                       Top 10 most-connected entities
-    find <tag>                 Entities tagged with <tag>
-    show <slug>                Print one entity (frontmatter + body)
-    add <domain> <name>        Create entity (interactive unless flags given)
-      --tags ai,research            Comma-separated tags
-      --related slug:type           Typed relation (repeatable)
-      --quality 0-10                Default 5
-      --status seedling|budding|evergreen   Default seedling
-      --type <subtype>              Free-form sub-type
-    ls [domain]                List entities (optionally by one domain)
-    ingest [--file F]          Upsert JSON from stdin (or --file)
-      --source <id>                 Provenance tag (default "manual")
-
-  Domains: People, Companies, Ideas, Research
-  Relation types: ${RELATION_TYPES.join(", ")}
-`);
+export function runKnowledge(args: string[]): Promise<number> {
+  return runCommand(knowledgeCommand, args, ["pal", "cli", "knowledge"]);
 }
 
 function isDomain(s: string): s is Domain {
   return (DOMAINS as readonly string[]).includes(s);
+}
+
+function parseDomain(value: string): Domain {
+  if (!isDomain(value))
+    throw new UsageError(`domain must be one of: ${DOMAINS.join(", ")}`);
+  return value;
 }
 
 function isStatus(s: string): s is Status {
@@ -171,12 +190,7 @@ function scoreEntity(entity: Entity, q: string): number {
   return score;
 }
 
-function cmdSearch(args: string[]): number {
-  const q = args[0];
-  if (!q) {
-    console.error("Usage: pal cli knowledge search <query>");
-    return 1;
-  }
+function cmdSearch(q: string): number {
   const hits: SearchHit[] = [];
   for (const e of list()) {
     const s = scoreEntity(e, q);
@@ -195,23 +209,15 @@ function cmdSearch(args: string[]): number {
 
 // ── graph ──────────────────────────────────────────────────────────
 
-function cmdGraph(args: string[]): number {
-  const { values, positionals } = parseArgs({
-    args,
-    options: { hops: { type: "string" } },
-    allowPositionals: true,
-    strict: false,
-  });
-  const query = positionals[0];
-  if (!query) {
-    console.error("Usage: pal cli knowledge graph <slug> [--hops N]");
-    return 1;
-  }
-  const hops = values.hops ? Number(values.hops) : 2;
+function parseHops(value: string | undefined): number {
+  const hops = value === undefined ? 2 : Number(value);
   if (!Number.isInteger(hops) || hops < 1) {
-    console.error("--hops must be a positive integer");
-    return 1;
+    throw new UsageError("--hops must be a positive integer");
   }
+  return hops;
+}
+
+function cmdGraph(query: string, hops: number): number {
   const g = buildGraph();
   const slug = resolveSlug(g, query);
   if (!slug) {
@@ -302,12 +308,8 @@ function cmdHubs(): number {
 
 // ── find ───────────────────────────────────────────────────────────
 
-function cmdFind(args: string[]): number {
-  const tag = args[0]?.toLowerCase();
-  if (!tag) {
-    console.error("Usage: pal cli knowledge find <tag>");
-    return 1;
-  }
+function cmdFind(rawTag: string): number {
+  const tag = rawTag.toLowerCase();
   // Accept both the bare tag and the topic-prefixed form so users don't
   // need to know which kind a given concept was stored as.
   const prefixedTag = tag.startsWith("topic:") ? tag : `topic:${tag}`;
@@ -331,12 +333,7 @@ function cmdFind(args: string[]): number {
 
 // ── show ───────────────────────────────────────────────────────────
 
-function cmdShow(args: string[]): number {
-  const query = args[0];
-  if (!query) {
-    console.error("Usage: pal cli knowledge show <slug>");
-    return 1;
-  }
+function cmdShow(query: string): number {
   const g = buildGraph();
   const slug = resolveSlug(g, query);
   if (!slug) {
@@ -385,91 +382,74 @@ interface AddFlags {
   body?: string;
 }
 
+interface AddFlagValues {
+  tags?: string;
+  related?: string[];
+  quality?: string;
+  status?: string;
+  type?: string;
+  body?: string;
+}
+
 function parseRelatedFlag(value: string): Related {
   const [slug, type] = value.split(":");
   if (!slug || !type) {
-    throw new Error(`--related must be slug:type, got "${value}"`);
+    throw new UsageError(`--related must be slug:type, got "${value}"`);
   }
   if (!isRelationType(type)) {
-    throw new Error(
+    throw new UsageError(
       `--related type must be one of: ${RELATION_TYPES.join(", ")} (got "${type}")`
     );
   }
   return { slug, type };
 }
 
-function parseAddFlags(args: string[]): AddFlags {
-  const { values } = parseArgs({
-    args,
-    options: {
-      tags: { type: "string" },
-      related: { type: "string", multiple: true },
-      quality: { type: "string" },
-      status: { type: "string" },
-      type: { type: "string" },
-      body: { type: "string" },
-    },
-    allowPositionals: true,
-    strict: false,
-  });
-  const tags = values.tags
-    ? String(values.tags)
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean)
-    : [];
-  const related = ((values.related as string[] | undefined) ?? []).map(parseRelatedFlag);
-  const quality = values.quality != null ? Number(values.quality) : undefined;
-  if (quality != null && (!Number.isInteger(quality) || quality < 0 || quality > 10)) {
-    throw new Error("--quality must be an integer 0-10");
+function parseQuality(value: string | undefined): number | undefined {
+  if (value === undefined) return undefined;
+  const quality = Number(value);
+  if (!Number.isInteger(quality) || quality < 0 || quality > 10) {
+    throw new UsageError("--quality must be an integer 0-10");
   }
-  const status = values.status as string | undefined;
-  if (status && !isStatus(status)) {
-    throw new Error(`--status must be one of: ${STATUSES.join(", ")}`);
-  }
+  return quality;
+}
+
+function parseStatus(value: string | undefined): Status | undefined {
+  if (value === undefined) return undefined;
+  if (!isStatus(value))
+    throw new UsageError(`--status must be one of: ${STATUSES.join(", ")}`);
+  return value;
+}
+
+function parseAddFlags(values: AddFlagValues): AddFlags {
+  const tags = (values.tags ?? "")
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
   return {
     tags,
-    related,
-    quality,
-    status: status as Status | undefined,
-    type: values.type as string | undefined,
-    body: values.body as string | undefined,
+    related: (values.related ?? []).map(parseRelatedFlag),
+    quality: parseQuality(values.quality),
+    status: parseStatus(values.status),
+    type: values.type,
+    body: values.body,
   };
 }
 
-async function cmdAdd(args: string[]): Promise<number> {
-  // First two positionals: domain, name.
-  const positional = args.filter((a) => !a.startsWith("--"));
-  const domainStr = positional[0];
-  const name = positional[1];
-  if (!domainStr || !isDomain(domainStr)) {
-    console.error(`Usage: pal cli knowledge add <${DOMAINS.join("|")}> <name> [flags]`);
-    return 1;
-  }
-  if (!name) {
-    console.error("Missing <name>");
-    return 1;
-  }
-
-  const flagArgs = args.slice(args.indexOf(name) + 1);
-  const hasAnyFlag = flagArgs.some((a) => a.startsWith("--"));
-  let flags: AddFlags;
-  try {
-    flags = parseAddFlags(flagArgs);
-  } catch (e) {
-    console.error(e instanceof Error ? e.message : String(e));
-    return 1;
-  }
-
-  // Interactive mode only when no flags and we have a TTY.
-  if (!hasAnyFlag && process.stdin.isTTY) {
+async function cmdAdd(
+  domain: Domain,
+  name: string,
+  given: AddFlags,
+  anyFlagGiven: boolean
+): Promise<number> {
+  let flags = given;
+  if (!anyFlagGiven && process.stdin.isTTY) {
     const enriched = await runInteractiveAdd(flags);
     if (enriched === null) return 1;
     flags = enriched;
   }
 
   const entity = getOrCreate({
-    domain: domainStr,
+    domain,
     name,
     tags: flags.tags,
     related: flags.related,
@@ -528,13 +508,7 @@ async function runInteractiveAdd(prefilled: AddFlags): Promise<AddFlags | null> 
 
 // ── ls ─────────────────────────────────────────────────────────────
 
-function cmdLs(args: string[]): number {
-  const domainArg = args[0];
-  if (domainArg && !isDomain(domainArg)) {
-    console.error(`Domain must be one of: ${DOMAINS.join(", ")}`);
-    return 1;
-  }
-  const target = domainArg ? (domainArg as Domain) : undefined;
+function cmdLs(target: Domain | undefined): number {
   const entries = list(target).sort(
     (a, b) => a.domain.localeCompare(b.domain) || a.slug.localeCompare(b.slug)
   );
@@ -559,25 +533,10 @@ async function readIngestInput(file: string | undefined): Promise<string | null>
   return await Bun.stdin.text();
 }
 
-async function cmdIngest(args: string[]): Promise<number> {
-  const { values } = parseArgs({
-    args,
-    options: {
-      source: { type: "string", short: "s", default: "manual" },
-      file: { type: "string", short: "f" },
-    },
-    strict: true,
-  });
-
-  const sourceId = values.source ?? "manual";
-  const raw = await readIngestInput(values.file);
-
+async function cmdIngest(sourceId: string, file: string | undefined): Promise<number> {
+  const raw = await readIngestInput(file);
   if (raw === null || !raw.trim()) {
-    console.error(
-      "Usage: echo '<JSON>' | pal cli knowledge ingest --source <id>\n" +
-        "   or: pal cli knowledge ingest --file <path> --source <id>"
-    );
-    return 1;
+    throw new UsageError("pipe the JSON on stdin or pass --file <path>");
   }
 
   let data: IngestPayload;
