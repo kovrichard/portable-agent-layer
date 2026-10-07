@@ -16,13 +16,24 @@ import {
   normalizeToolUse,
   stopBlockResponse,
 } from "../src/hooks/lib/agent";
-import { isSideStop, latestUserRequest } from "../src/hooks/lib/antigravity-transcript";
-import { alreadySentBack } from "../src/hooks/lib/claim-log";
+import {
+  isSideStop,
+  latestUserRequest,
+  withTranscriptReply,
+} from "../src/hooks/lib/antigravity-transcript";
+import { commandsThisTurn } from "../src/hooks/lib/claim-check";
+import {
+  alreadySentBack,
+  claimChecksSince,
+  watchClaims,
+} from "../src/hooks/lib/claim-log";
 import { enterHookWorkspace } from "../src/hooks/lib/hook-turn";
 import { invocationContext } from "../src/hooks/lib/invocation-context";
 import { landedCalls, ledgeredCalls } from "../src/hooks/lib/ledger-hook";
 import { agentDirOverrides, paths } from "../src/hooks/lib/paths";
 import { decideRefusal } from "../src/hooks/lib/security-gate";
+import { reload } from "../src/hooks/lib/settings";
+import { readTranscriptFile } from "../src/hooks/lib/transcript";
 
 // Every payload and transcript step below was captured from agy 1.3.1 by a hook
 // that wrote its stdin to disk; only the paths are swapped for sandbox ones.
@@ -117,6 +128,62 @@ const SUBAGENT_OPENING = {
   content:
     "The following is a <SYSTEM_MESSAGE> not actually sent by the user.\n\n<SYSTEM_MESSAGE>\n[Message] timestamp=2026-10-07T14:35:36Z sender=298eb946-5a54-496e-afdc-db3a6c882bd9 priority=MESSAGE_PRIORITY_HIGH content=Reply with your exact model ID.\n</SYSTEM_MESSAGE>",
 };
+
+function plannerResponse(fields: Record<string, unknown>) {
+  return {
+    step_index: 2,
+    source: "MODEL",
+    type: "PLANNER_RESPONSE",
+    status: "DONE",
+    created_at: "2026-10-07T17:43:08Z",
+    input_tokens: 21491,
+    cache_read_tokens: 0,
+    output_tokens: 567,
+    thinking: "The task involves executing a shell command.",
+    ...fields,
+  };
+}
+
+const said = (content: string) => plannerResponse({ content });
+
+const ranCommand = (commandLine: string) =>
+  plannerResponse({
+    tool_calls: [
+      {
+        name: "run_command",
+        args: {
+          CommandLine: commandLine,
+          Cwd: "/ws",
+          WaitMsBeforeAsync: 2000,
+          toolAction: "Running command",
+          toolSummary: "Run command",
+        },
+      },
+    ],
+  });
+
+const TOOL_RESULT = {
+  step_index: 3,
+  source: "MODEL",
+  type: "GENERIC",
+  status: "ERROR",
+  error: "tool call denied by pre-tool hook: Blocked: Disk partitioning",
+  created_at: "2026-10-07T17:43:14Z",
+  content: "Encountered error in step execution: tool call denied by pre-tool hook",
+};
+
+// Bun.spawn hands a child the environment the process started with, which lacks
+// both this sandbox and the preload's PAL_TEST_SANDBOX, so it is passed by hand.
+function runStopOrchestrator(payload: Record<string, unknown>) {
+  return Bun.spawnSync(
+    ["bun", "run", resolve(HOOKS, "StopOrchestrator.ts"), "--agent=antigravity"],
+    {
+      stdin: new TextEncoder().encode(JSON.stringify(payload)),
+      stderr: "ignore",
+      env: process.env,
+    }
+  );
+}
 
 function writeTranscript(...steps: unknown[]): void {
   writeFileSync(transcript, steps.map((s) => JSON.stringify(s)).join("\n"), "utf-8");
@@ -320,25 +387,146 @@ describe("which agy stops end a turn of the user's", () => {
     expect(isSideStop({ fullyIdle: false, transcriptPath: transcript })).toBe(false);
   });
 
-  // Until agy's transcript is parsed a handled stop changes nothing on disk either,
-  // so the debug log is the one place the two can be told apart.
+  // The debug log names every stop handler that starts, so its silence shows none did.
   test("StopOrchestrator never starts the stop handlers for a side stop", () => {
     writeTranscript(SUBAGENT_OPENING);
     writeFileSync(resolve(paths.state(), "debug-enabled"), "", "utf-8");
-    const proc = Bun.spawnSync(
-      ["bun", "run", resolve(HOOKS, "StopOrchestrator.ts"), "--agent=antigravity"],
-      {
-        stdin: new TextEncoder().encode(JSON.stringify(stop())),
-        stderr: "ignore",
-        env: process.env,
-      }
-    );
+    const proc = runStopOrchestrator(stop());
     expect(proc.exitCode).toBe(0);
     expect(proc.stdout.toString()).toBe("");
     const debugLog = resolve(paths.debug(), "debug.log");
     expect(existsSync(debugLog) ? readFileSync(debugLog, "utf-8") : "").not.toContain(
       "stopTurn"
     );
+  });
+});
+
+describe("agy's transcript read as the turns of a conversation", () => {
+  test("what the user typed and what the model said, and nothing around them", () => {
+    writeTranscript(
+      userInput("run the tests"),
+      userInput("<system-reminder>context</system-reminder>", "SYSTEM_SDK"),
+      ranCommand("bun test"),
+      TOOL_RESULT,
+      said("All tests pass.")
+    );
+    expect(readTranscriptFile(transcript)).toEqual([
+      { role: "user", content: "run the tests" },
+      { role: "assistant", content: "All tests pass." },
+    ]);
+  });
+});
+
+describe("agy's final reply comes from its transcript", () => {
+  const replyOf = (payload: Record<string, unknown>) =>
+    withTranscriptReply(payload)?.lastAssistantMessage;
+
+  test("it is the model's last words since the user's latest request", () => {
+    writeTranscript(
+      userInput("first"),
+      said("old"),
+      userInput("second"),
+      said("Looking."),
+      ranCommand("ls"),
+      said("new")
+    );
+    expect(replyOf(stop())).toBe("new");
+  });
+
+  test("an earlier turn's reply is not taken for this one's", () => {
+    writeTranscript(
+      userInput("first"),
+      said("old"),
+      userInput("second"),
+      ranCommand("ls")
+    );
+    expect(replyOf(stop())).toBeUndefined();
+  });
+
+  test("a response with no words in it is no reply", () => {
+    writeTranscript(userInput("first"), said("Done."), said("\n"), said(""));
+    expect(replyOf(stop())).toBe("Done.");
+  });
+
+  test("no payload stays no payload", () => {
+    expect(withTranscriptReply(null)).toBeNull();
+  });
+
+  test("a reply the payload already carries is kept", () => {
+    writeTranscript(userInput("first"), said("from the transcript"));
+    expect(replyOf(stop({ lastAssistantMessage: "given" }))).toBe("given");
+  });
+
+  test("another agent's payload is left as it came", () => {
+    writeTranscript(userInput("first"), said("from the transcript"));
+    const payload = { session_id: "s1", transcriptPath: transcript };
+    expect(withTranscriptReply(payload)).toBe(payload);
+  });
+});
+
+describe("the claim check reads agy's turn", () => {
+  const lines = (...steps: unknown[]) => steps.map((s) => JSON.stringify(s));
+
+  test("run_command counts as a command, from the user's latest request on", () => {
+    const commands = commandsThisTurn(
+      lines(
+        userInput("a"),
+        ranCommand("git status"),
+        userInput("b"),
+        ranCommand("bun test")
+      )
+    );
+    expect(commands).toHaveLength(1);
+    expect(commands?.[0]).toContain("bun test");
+  });
+
+  test("a step PAL injected does not start a new turn", () => {
+    expect(
+      commandsThisTurn(
+        lines(userInput("a"), ranCommand("bun test"), userInput("ctx", "SYSTEM_SDK"))
+      )
+    ).toHaveLength(1);
+  });
+
+  test("a turn that ran nothing is readable, not unknown", () => {
+    expect(commandsThisTurn(lines(userInput("a"), said("hi")))).toEqual([]);
+  });
+
+  test("a claim in agy's reply is backed by the command the turn ran", () => {
+    reload();
+    writeTranscript(
+      userInput("run the tests"),
+      ranCommand("bun test"),
+      said("All tests pass.")
+    );
+    watchClaims(withTranscriptReply(stop()));
+    expect(claimChecksSince(new Date(0))).toEqual([
+      expect.objectContaining({ verdict: "backed", commands: 1 }),
+    ]);
+  });
+
+  test("a tool that runs no command is not one", () => {
+    const view = plannerResponse({
+      tool_calls: [{ name: "view_file", args: { AbsolutePath: "/ws/a.ts" } }],
+    });
+    expect(commandsThisTurn(lines(userInput("a"), view))).toEqual([]);
+  });
+});
+
+describe("StopOrchestrator on a turn of the user's", () => {
+  test("checks the claims in the reply it read off the transcript", () => {
+    reload();
+    writeTranscript(userInput("run the tests"), said("All tests pass."));
+    const proc = runStopOrchestrator(stop());
+    expect(proc.exitCode).toBe(0);
+    reload();
+    expect(claimChecksSince(new Date(0))).toEqual([
+      expect.objectContaining({
+        session: CONVERSATION,
+        verdict: "unbacked",
+        commands: 0,
+      }),
+    ]);
   });
 });
 

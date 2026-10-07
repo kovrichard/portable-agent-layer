@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import type { AgentName } from "../../../../hooks/lib/agent-registry";
 import { PAGE_OUTCOMES, type PageOutcome } from "../../../ledger/outcomes";
 import type { LedgerView, LedgerViewRow } from "../../../ledger/view";
 import { Badge } from "../components/badge";
@@ -42,7 +43,15 @@ export const LOG_KEYS = [
 export type LogFilter = Record<(typeof LOG_KEYS)[number], string>;
 
 const AUTHORITIES = ["user", "agent"] as const;
-const RUNTIMES = ["claude", "cursor", "codex", "copilot", "opencode", "unknown"] as const;
+const RUNTIMES = Object.keys({
+  claude: true,
+  cursor: true,
+  codex: true,
+  copilot: true,
+  opencode: true,
+  antigravity: true,
+  unknown: true,
+} satisfies Record<AgentName | "unknown", true>);
 
 const EMPTY_FILTER: LogFilter = {
   project: "",

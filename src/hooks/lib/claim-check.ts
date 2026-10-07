@@ -5,6 +5,7 @@
  * unreadable turn is never unbacked.
  */
 
+import { toolCallsOf, typedRequest } from "./antigravity-transcript";
 import { isSystemText } from "./prompt-text";
 import { isCodexInjectedContext } from "./transcript";
 
@@ -32,6 +33,7 @@ const COMMAND_TOOLS = new Set([
   "exec",
   "shell",
   "exec_command",
+  "run_command",
 ]);
 
 export type ClaimVerdict = "none" | "backed" | "unbacked" | "unknown";
@@ -86,6 +88,9 @@ export function isVersionControlClaim(claim: string): boolean {
 
 interface TranscriptLine {
   type?: string;
+  source?: string;
+  content?: unknown;
+  tool_calls?: { name?: string; args?: unknown }[];
   message?: { content?: unknown };
   payload?: {
     type?: string;
@@ -124,7 +129,7 @@ function promptText(entry: TranscriptLine): string | null {
       .map((b) => b.text ?? "")
       .join(" ");
   }
-  return null;
+  return typedRequest(entry);
 }
 
 function isUserPrompt(entry: TranscriptLine): boolean {
@@ -135,6 +140,10 @@ function isUserPrompt(entry: TranscriptLine): boolean {
 const ran = (input: unknown) => JSON.stringify(input ?? {});
 
 function commandsIn(entry: TranscriptLine): string[] {
+  if (entry.type === "PLANNER_RESPONSE")
+    return toolCallsOf(entry)
+      .filter((call) => COMMAND_TOOLS.has(call.name ?? ""))
+      .map((call) => ran(call.args));
   if (entry.type === "assistant")
     return blocks(entry.message?.content)
       .filter((b) => b.type === "tool_use" && COMMAND_TOOLS.has(b.name ?? ""))
@@ -148,7 +157,9 @@ function commandsIn(entry: TranscriptLine): string[] {
 }
 
 function isTurnEntry(entry: TranscriptLine): boolean {
-  return ["user", "assistant", "response_item"].includes(entry.type ?? "");
+  return ["user", "assistant", "response_item", "PLANNER_RESPONSE"].includes(
+    entry.type ?? ""
+  );
 }
 
 /** What each command this turn ran. Null when no line reads as a turn, so an

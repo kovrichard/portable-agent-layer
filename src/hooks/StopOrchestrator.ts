@@ -8,7 +8,11 @@
 import { checkReadmeSync } from "./handlers/readme-sync";
 import { watchReplyRules } from "./lib/adaptation-steering";
 import { stopBlockResponse } from "./lib/agent";
-import { type AntigravityStopFields, isSideStop } from "./lib/antigravity-transcript";
+import {
+  type AntigravityStopFields,
+  isSideStop,
+  withTranscriptReply,
+} from "./lib/antigravity-transcript";
 import { watchClaims } from "./lib/claim-log";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { enterHookWorkspace } from "./lib/hook-turn";
@@ -22,8 +26,9 @@ import { type StopTurnPayload, stopTurn } from "./lib/stop";
 if (isPalSpawnedInference()) process.exit(0);
 if (duplicatesCursorHooks()) process.exit(0);
 
-const payload = await readStdinJSON<StopTurnPayload & AntigravityStopFields>();
-if (isSideStop(payload)) process.exit(0);
+const received = await readStdinJSON<StopTurnPayload & AntigravityStopFields>();
+if (isSideStop(received)) process.exit(0);
+const payload = withTranscriptReply(received);
 enterHookWorkspace(payload);
 
 // Check README sync before anything else — may block the session
