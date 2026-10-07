@@ -1,3 +1,20 @@
+# [0.87.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.86.3...v0.87.0) (2026-10-07)
+
+
+### Features
+
+* **adaptation:** draft a rule candidate when a correction repeats ([bd21d12](https://github.com/kovrichard/portable-agent-layer/commit/bd21d12e8ff6a4fd5b62bc0329a37cbb6ff0a034))
+* **adaptation:** keep rule candidates until they are proven ([6468a18](https://github.com/kovrichard/portable-agent-layer/commit/6468a18551f530935ac0e54f96be0c90a8c1a6d4))
+* **adaptation:** measure what an approved rule did ([7789d8d](https://github.com/kovrichard/portable-agent-layer/commit/7789d8dadfb43317b3237ccc6e8fa3c069324adb))
+* **adaptation:** promote proven candidates to drafts ([55678bf](https://github.com/kovrichard/portable-agent-layer/commit/55678bf25f0d5be675c770508daeff1d8f3cefa8))
+* **adaptation:** replay a candidate's trigger over the turn log ([dc32080](https://github.com/kovrichard/portable-agent-layer/commit/dc32080a16faca62b4e495e73bc8c443ca54a847))
+* **adaptation:** steer with approved rules at prompt and at stop ([cb50429](https://github.com/kovrichard/portable-agent-layer/commit/cb50429bf67a7b74f8a6bc15798d9fdda962f194))
+* **control-room:** add the Relationship tab ([508b0aa](https://github.com/kovrichard/portable-agent-layer/commit/508b0aa1537081bc6f02bf5c4251cceaf0290158))
+* **control-room:** serve rule decisions and ring the bell for drafts ([761f4a5](https://github.com/kovrichard/portable-agent-layer/commit/761f4a5317af9cd8a3b62192ff15ddd5ba42c9da))
+* **rating:** stamp a turn with when its message was sent ([15ceb9d](https://github.com/kovrichard/portable-agent-layer/commit/15ceb9d93130072241e1ad67756c18799880f6a6))
+* **rule:** show the check and the proof when reviewing a draft ([a0a3bbf](https://github.com/kovrichard/portable-agent-layer/commit/a0a3bbfb6f09b2c63dce2bbd753616f0f5cc9cec))
+* **settings:** add the adaptationRules switch ([fa32b0e](https://github.com/kovrichard/portable-agent-layer/commit/fa32b0ec716887b7b3063e48cfe486a6dca02804))
+
 ## [0.86.3](https://github.com/kovrichard/portable-agent-layer/compare/v0.86.2...v0.86.3) (2026-10-06)
 
 
