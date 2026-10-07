@@ -112,6 +112,59 @@ describe("decideRule", () => {
     expect(readRules()[0].status).toBe("denied");
   });
 
+  test("approving a widening gives its rule the wider trigger and folds the draft in", () => {
+    const rule = addDraft(draft);
+    decideRule(rule.id, "approved");
+    const proof = { firedCorrections: 1, corrections: 1, firedOrdinary: 0, ordinary: 20 };
+    const widening = addDraft({
+      ...draft,
+      trigger: { side: "prompt", pattern: "what do you think|honest take" },
+      evidence: ["no verdict: honest take?"],
+      proof,
+      widens: rule.id,
+    });
+
+    const result = decideRule(widening.id, "approved");
+
+    expect(result.ok).toBe(true);
+    expect(readRules()).toEqual([
+      expect.objectContaining({
+        id: rule.id,
+        status: "approved",
+        trigger: { side: "prompt", pattern: "what do you think|honest take" },
+        evidence: [...draft.evidence, "no verdict: honest take?"],
+        proof,
+      }),
+    ]);
+  });
+
+  test("a denied widening stays on record and leaves its rule alone", () => {
+    const rule = addDraft(draft);
+    decideRule(rule.id, "approved");
+    const widening = addDraft({
+      ...draft,
+      trigger: { side: "prompt", pattern: "x|y" },
+      widens: rule.id,
+    });
+
+    decideRule(widening.id, "denied");
+
+    expect(readRules().map((r) => [r.status, r.trigger.pattern])).toEqual([
+      ["approved", "what do you think"],
+      ["denied", "x|y"],
+    ]);
+  });
+
+  test("a widening whose rule is no longer approved is refused", () => {
+    const rule = addDraft(draft);
+    const widening = addDraft({ ...draft, widens: rule.id });
+
+    const result = decideRule(widening.id, "approved");
+
+    expect(result.ok).toBe(false);
+    expect(readRules().map((r) => r.status)).toEqual(["draft", "draft"]);
+  });
+
   test("the file stays valid JSON after a decision", () => {
     const { id } = addDraft(draft);
     decideRule(id, "approved");

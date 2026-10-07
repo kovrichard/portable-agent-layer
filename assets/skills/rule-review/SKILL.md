@@ -36,6 +36,7 @@ Each draft prints as:
 
 ```
 <id>  [draft]  <situation>
+  widens: <id of an approved rule>        (only on a widening)
   trigger (<prompt|reply>): <pattern>
   steering: <steering>
   check: <how to tell the steering was followed>
@@ -92,6 +93,8 @@ Draft <id>
 ```
 
 The proof is the trigger replayed over the last 30 days of turns: how many of the user's confirmed corrections it would have caught, and how many ordinary turns it would have fired on needlessly. Omit the Check or Proof line when the listing has none.
+
+A draft with a `widens:` line is not a new rule. An approved rule missed a correction because its trigger did not match the user's wording, and the draft is that rule with a wider trigger. Add a line `Widens:   rule <id>; approving replaces its trigger with the one above` under When. Approving it updates the approved rule and the draft disappears; the CLI then reports `Rule <id> now triggers on: <pattern> (widened by <draft id>)`. Report that line verbatim too. Denying it leaves the approved rule as it was.
 
 Follow the list with one question, e.g. "Approve or deny each? Reply with the id and your decision." After a single draft, "Approve or deny <id>?" is enough.
 
