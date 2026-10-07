@@ -1,3 +1,13 @@
+# [0.88.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.87.0...v0.88.0) (2026-10-07)
+
+
+### Features
+
+* **adaptation:** approving a widening replaces its rule's trigger ([e07d189](https://github.com/kovrichard/portable-agent-layer/commit/e07d18937a7f5e4edbb99b37d326d0307281ab3b))
+* **adaptation:** prove a widened trigger on the correction its rule missed ([19b9616](https://github.com/kovrichard/portable-agent-layer/commit/19b9616372048c0cc02d80c6bcb608fc2cf51c04))
+* **adaptation:** widen an approved rule whose trigger missed a correction ([965c658](https://github.com/kovrichard/portable-agent-layer/commit/965c658ad8819f86eaa8475b5ac72cc48b54eb1a))
+* **control-room:** show the trigger a widening replaces ([b00bf46](https://github.com/kovrichard/portable-agent-layer/commit/b00bf46646924cd6bee92c9b46074cc9d7ce9d57))
+
 # [0.87.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.86.3...v0.87.0) (2026-10-07)
 
 
