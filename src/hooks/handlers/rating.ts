@@ -33,6 +33,7 @@ import {
 } from "../lib/reaction-rating";
 import {
   canRepeat,
+  canWiden,
   correctionsToDraftFrom,
   drafterRequest,
   parseDraft,
@@ -236,10 +237,11 @@ async function draftRuleCandidate(sessionId?: string): Promise<void> {
   const turns = withRequests(readTurns());
   reproveWaiting(turns);
   const corrections = correctionsToDraftFrom(turns);
-  if (!canRepeat(corrections)) return;
-  const result = await inference(drafterRequest(corrections, knownRules(), sessionId));
+  const known = knownRules();
+  if (!canRepeat(corrections) && !canWiden(corrections, known)) return;
+  const result = await inference(drafterRequest(corrections, known, sessionId));
   if (result.usage) logTokenUsage("rule-drafter", result.usage);
-  const candidate = result.success ? parseDraft(result.output, corrections) : null;
+  const candidate = result.success ? parseDraft(result.output, corrections, known) : null;
   if (candidate) recordCandidate(candidate, turns);
   else logDebug("rule-drafter", `no candidate: ${result.output ?? result.error ?? ""}`);
 }
