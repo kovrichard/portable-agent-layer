@@ -18,6 +18,7 @@ function runLoadContext(source: string, agent = "claude") {
       PAL_COPILOT_DIR: resolve(sandbox, "copilot"),
       PAL_OPENCODE_DIR: resolve(sandbox, "opencode"),
       PAL_CODEX_DIR: resolve(sandbox, "codex"),
+      PAL_GEMINI_DIR: resolve(sandbox, "gemini"),
       PAL_CURSOR_DIR: resolve(sandbox, "cursor"),
     },
     input: JSON.stringify({ hook_event_name: "SessionStart", source }),

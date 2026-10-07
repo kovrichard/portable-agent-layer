@@ -63,6 +63,7 @@ function pal(...args: string[]) {
       PAL_CURSOR_DIR: at(".cursor"),
       PAL_COPILOT_DIR: at(".copilot"),
       PAL_CODEX_DIR: at(".codex"),
+      PAL_GEMINI_DIR: at(".gemini"),
       PAL_AGENTS_DIR: at(".agents"),
     },
     encoding: "utf-8",

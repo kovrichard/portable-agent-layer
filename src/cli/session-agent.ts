@@ -15,4 +15,4 @@ export function findSessionAgent(): SessionAgent | null {
 }
 
 export const NO_SESSION_AGENT_MESSAGE =
-  "No supported agent found. Install Claude Code, Codex, Cursor CLI, Copilot CLI or opencode.";
+  "No supported agent found. Install Claude Code, Codex, Cursor CLI, Copilot CLI, opencode or Antigravity CLI.";

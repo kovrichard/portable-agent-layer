@@ -25,6 +25,7 @@ function runLoadContext() {
       PAL_CLAUDE_DIR: resolve(sandbox, "claude"),
       PAL_OPENCODE_DIR: resolve(sandbox, "opencode"),
       PAL_CODEX_DIR: resolve(sandbox, "codex"),
+      PAL_GEMINI_DIR: resolve(sandbox, "gemini"),
       PAL_CURSOR_DIR: resolve(sandbox, "cursor"),
     },
     input: "",

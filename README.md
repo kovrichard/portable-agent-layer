@@ -156,6 +156,7 @@ Agents launched from a desktop app never read your shell profile, so the hooks t
 | `PAL_CURSOR_DIR` | Override Cursor config dir (default: `~/.cursor`) |
 | `PAL_COPILOT_DIR` | Override Copilot config dir (default: `~/.copilot`) |
 | `PAL_CODEX_DIR` | Override Codex config dir (default: `~/.codex`) |
+| `PAL_GEMINI_DIR` | Override the Gemini dir Antigravity CLI reads (default: `~/.gemini`) |
 | `PAL_AGENTS_DIR` | Override agents dir (default: `~/.agents`) |
 
 ### Debug / test

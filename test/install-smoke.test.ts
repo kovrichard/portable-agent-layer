@@ -16,6 +16,7 @@ const CLAUDE_DIR = resolve(TEST_HOME, ".claude");
 const OPENCODE_DIR = resolve(TEST_HOME, ".opencode");
 const CURSOR_DIR = resolve(TEST_HOME, ".cursor");
 const CODEX_DIR = resolve(TEST_HOME, ".codex");
+const GEMINI_DIR = resolve(TEST_HOME, ".gemini");
 const AGENTS_DIR = resolve(TEST_HOME, ".agents");
 
 function pal(...args: string[]) {
@@ -29,6 +30,7 @@ function pal(...args: string[]) {
       PAL_OPENCODE_DIR: OPENCODE_DIR,
       PAL_CURSOR_DIR: CURSOR_DIR,
       PAL_CODEX_DIR: CODEX_DIR,
+      PAL_GEMINI_DIR: GEMINI_DIR,
       PAL_AGENTS_DIR: AGENTS_DIR,
     },
     encoding: "utf-8",
@@ -141,6 +143,21 @@ describe("pal cli install (smoke)", () => {
     expect(uninstalledRules).not.toContain("~/.pal/tools/project.ts");
     const uninstalledConfig = readFileSync(resolve(CODEX_DIR, "config.toml"), "utf-8");
     expect(uninstalledConfig).not.toContain('tui.status_line = ["model-with-reasoning"');
+  }, 90000);
+
+  test("install --antigravity lands everything in one plugin, uninstall removes only it", () => {
+    const plugin = resolve(GEMINI_DIR, "config", "plugins", "pal");
+    expect(pal("cli", "install", "--antigravity").status).toBe(0);
+
+    const manifest = JSON.parse(readFileSync(resolve(plugin, "plugin.json"), "utf-8"));
+    expect(manifest.name).toBe("pal");
+    const skills = readdirSync(resolve(plugin, "skills"));
+    expect(skills.length).toBeGreaterThan(0);
+    expect(existsSync(resolve(plugin, "skills", skills[0], "SKILL.md"))).toBe(true);
+
+    expect(pal("cli", "uninstall", "--antigravity").status).toBe(0);
+    expect(existsSync(plugin)).toBe(false);
+    expect(existsSync(resolve(TEST_HOME, "skills", skills[0], "SKILL.md"))).toBe(true);
   }, 90000);
 
   test("install is idempotent — second run preserves files", () => {

@@ -569,6 +569,7 @@ All paths resolve through `src/hooks/lib/paths.ts`:
 | Cursor config | `~/.cursor` | `PAL_CURSOR_DIR` |
 | Copilot config | `~/.copilot` | `PAL_COPILOT_DIR` |
 | Codex config | `~/.codex` | `PAL_CODEX_DIR` |
+| Antigravity CLI plugin | `~/.gemini/config/plugins/pal` | `PAL_GEMINI_DIR` (replaces `~/.gemini`) |
 | Agents dir | `~/.agents` | `PAL_AGENTS_DIR` |
 
 ### Portability Contract

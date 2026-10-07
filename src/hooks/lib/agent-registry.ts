@@ -47,6 +47,12 @@ export const AGENT_REGISTRY = {
     home: platform.codexDir,
     skills: "own-skills-dir",
   },
+  antigravity: {
+    label: "Antigravity CLI",
+    binary: "agy",
+    home: platform.antigravityPluginDir,
+    skills: "own-skills-dir",
+  },
 } as const satisfies Record<string, AgentEntry>;
 
 export type AgentName = keyof typeof AGENT_REGISTRY;
@@ -59,6 +65,7 @@ export const INFERENCE_PRIORITY = [
   "opencode",
   "copilot",
   "cursor",
+  "antigravity",
 ] as const satisfies readonly AgentName[];
 
 export const LAUNCH_PRIORITY = [
@@ -67,6 +74,7 @@ export const LAUNCH_PRIORITY = [
   "cursor",
   "copilot",
   "opencode",
+  "antigravity",
 ] as const satisfies readonly AgentName[];
 
 export function skillsDirOf(agent: AgentName): string {

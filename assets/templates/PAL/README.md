@@ -120,7 +120,7 @@ pal cli update               # Update PAL
 PAL is designed to work identically across:
 - **Platforms:** macOS, Linux, Windows
 - **Agents:** Claude Code (full), opencode (full), Cursor (full), Codex (partial — AGENTS.md and skills only, no hooks or subagents)
-- **Environment overrides:** `PAL_HOME`, `PAL_PKG`, `PAL_CLAUDE_DIR`, `PAL_OPENCODE_DIR`, `PAL_CURSOR_DIR`, `PAL_CODEX_DIR`, `PAL_AGENTS_DIR`
+- **Environment overrides:** `PAL_HOME`, `PAL_PKG`, `PAL_CLAUDE_DIR`, `PAL_OPENCODE_DIR`, `PAL_CURSOR_DIR`, `PAL_CODEX_DIR`, `PAL_GEMINI_DIR`, `PAL_AGENTS_DIR`
 
 ## Extending PAL
 

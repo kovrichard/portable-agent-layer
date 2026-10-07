@@ -127,6 +127,7 @@ const AGENT_DIR_DEFAULTS = {
   PAL_CURSOR_DIR: [".cursor"],
   PAL_COPILOT_DIR: [".copilot"],
   PAL_CODEX_DIR: [".codex"],
+  PAL_GEMINI_DIR: [".gemini"],
   PAL_AGENTS_DIR: [".agents"],
 } as const;
 
@@ -144,12 +145,15 @@ export function agentDirOverrides(): { env: AgentDirOverride; realDir: string }[
   }));
 }
 
+const geminiDir = agentDir("PAL_GEMINI_DIR");
+
 export const platform = {
   claudeDir: agentDir("PAL_CLAUDE_DIR"),
   opencodeDir: agentDir("PAL_OPENCODE_DIR"),
   cursorDir: agentDir("PAL_CURSOR_DIR"),
   copilotDir: agentDir("PAL_COPILOT_DIR"),
   codexDir: agentDir("PAL_CODEX_DIR"),
+  antigravityPluginDir: () => resolve(geminiDir(), "config", "plugins", "pal"),
   agentsDir: agentDir("PAL_AGENTS_DIR"),
 } as const;
 

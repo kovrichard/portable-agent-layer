@@ -41,7 +41,12 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
-import { AGENT_NAMES, AGENT_REGISTRY, type AgentName } from "../hooks/lib/agent-registry";
+import {
+  AGENT_NAMES,
+  AGENT_REGISTRY,
+  type AgentName,
+  INFERENCE_PRIORITY,
+} from "../hooks/lib/agent-registry";
 import {
   appendImportLog,
   mergeArchive,
@@ -327,6 +332,7 @@ function showHelp() {
     PAL_CURSOR_DIR        Override Cursor config dir (default: ~/.cursor)
     PAL_COPILOT_DIR       Override Copilot config dir (default: ~/.copilot)
     PAL_CODEX_DIR         Override Codex config dir (default: ~/.codex)
+    PAL_GEMINI_DIR        Override Antigravity's Gemini dir (default: ~/.gemini)
     PAL_AGENTS_DIR        Override agents dir (default: ~/.agents)
 `);
 }
@@ -391,10 +397,9 @@ async function probeInference(): Promise<void> {
   const yellow = "\x1b[33m";
   const dim = "\x1b[90m";
   const reset = "\x1b[0m";
-  const agents = ["claude", "codex", "opencode", "copilot", "cursor"] as const;
   const savedAgent = process.env.PAL_AGENT;
   try {
-    for (const agent of agents) {
+    for (const agent of INFERENCE_PRIORITY) {
       process.env.PAL_AGENT = agent;
       const preview = previewInferenceRoute();
       const tag = `${agent.padEnd(10)} → ${preview.route.padEnd(15)}`;
@@ -495,6 +500,10 @@ function targetScripts(): Record<
     codex: {
       install: () => import("../targets/codex/install"),
       uninstall: () => import("../targets/codex/uninstall"),
+    },
+    antigravity: {
+      install: () => import("../targets/antigravity/install"),
+      uninstall: () => import("../targets/antigravity/uninstall"),
     },
   };
 }

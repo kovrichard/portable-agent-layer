@@ -3,12 +3,14 @@ import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { agentFindings, rosterFindings } from "../src/cli/doctor/agents";
+import { AGENT_NAMES } from "../src/hooks/lib/agent-registry";
 import { copyAgents, copyAgentsForCodex } from "../src/targets/lib";
 
 const DIR_VARS = {
   PAL_CLAUDE_DIR: "claude",
   PAL_CURSOR_DIR: "cursor",
   PAL_CODEX_DIR: "codex",
+  PAL_GEMINI_DIR: "gemini",
   PAL_COPILOT_DIR: "copilot",
   PAL_OPENCODE_DIR: "opencode",
   PAL_AGENTS_DIR: "agents",
@@ -277,8 +279,6 @@ describe("which agents are installed", () => {
   });
 
   test("every supported agent installed lists nothing", () => {
-    expect(rosterFindings(["claude", "codex", "copilot", "cursor", "opencode"])).toEqual(
-      []
-    );
+    expect(rosterFindings([...AGENT_NAMES])).toEqual([]);
   });
 });
