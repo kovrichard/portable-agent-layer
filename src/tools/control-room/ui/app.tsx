@@ -22,6 +22,7 @@ import {
   STATUS_FILTERS,
   type StatusFilter,
 } from "./screens/projects";
+import { Relationship } from "./screens/relationship";
 import { Settings } from "./screens/settings";
 import { isLayout, LAYOUTS, type Layout, Today } from "./screens/today";
 
@@ -126,6 +127,23 @@ function LogRoute() {
   );
 }
 
+function RelationshipRoute() {
+  return (
+    <Screen
+      title="Relationship"
+      aside={
+        <span className="text-[12px] text-neutral-700">
+          rules drafted from your corrections, and what they did
+        </span>
+      }
+    >
+      <Scroller className={MARK_ROOM}>
+        <Relationship />
+      </Scroller>
+    </Screen>
+  );
+}
+
 function SettingsRoute() {
   return (
     <Screen title="Settings">
@@ -140,6 +158,7 @@ const TABS = [
   { to: "/", label: "Today", end: true },
   { to: "/projects", label: "Projects", end: false },
   { to: "/log", label: "Action log", end: false },
+  { to: "/relationship", label: "Relationship", end: false },
   { to: "/settings", label: "Settings", end: false },
 ] as const;
 
@@ -194,6 +213,7 @@ function App() {
             <Route path="/projects" element={<ProjectsRoute />} />
             <Route path="/projects/:slug" element={<ProjectDetailRoute />} />
             <Route path="/log" element={<LogRoute />} />
+            <Route path="/relationship" element={<RelationshipRoute />} />
             <Route path="/settings" element={<SettingsRoute />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
