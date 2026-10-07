@@ -30,6 +30,26 @@ export interface Turn extends TurnInput {
   ts: string;
 }
 
+export interface RequestedTurn extends Turn {
+  /** The user's request the reply answered, when that message was logged too. */
+  prompt: string;
+}
+
+function precedingRequest(turns: Turn[], index: number): string {
+  const session = turns[index].session;
+  for (let i = index - 1; i >= 0; i--) {
+    if (turns[i].session === session) return turns[i].message;
+  }
+  return "";
+}
+
+export function withRequests(turns: Turn[]): RequestedTurn[] {
+  return turns.map((turn, index) => ({
+    ...turn,
+    prompt: precedingRequest(turns, index),
+  }));
+}
+
 function monthFile(date: Date): string {
   return `turns-${date.toISOString().slice(0, 7)}.jsonl`;
 }

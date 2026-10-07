@@ -737,3 +737,76 @@ describe("the one thing the page may change", () => {
     expect(await getJson<{ slug: string }[]>(`${base}/api/projects`)).toEqual([]);
   });
 });
+
+describe("the relationship tab", () => {
+  const draftRule = async () => {
+    const { addDraft } = await import("../src/hooks/lib/adaptation-rules");
+    return addDraft({
+      when: "Claiming tests pass",
+      trigger: { side: "reply", pattern: "tests? pass" },
+      steering: "Show the test output.",
+      evidence: [],
+    });
+  };
+
+  test("/relationship is the page", async () => {
+    const base = await listen();
+    const res = await fetch(`${base}/relationship`);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain('id="root"');
+  });
+
+  test("/api/relationship lists the drafts waiting", async () => {
+    const draft = await draftRule();
+    const base = await listen();
+    const body = await getJson<{ drafts: { id: string }[] }>(`${base}/api/relationship`);
+    expect(body.drafts.map((d) => d.id)).toEqual([draft.id]);
+  });
+
+  test("approving from the page decides the draft, and a second decision is refused", async () => {
+    const draft = await draftRule();
+    const base = await listen();
+
+    const first = await post(base, "/api/rule", { id: draft.id, decision: "approved" });
+    expect(first.status).toBe(200);
+    const second = await post(base, "/api/rule", { id: draft.id, decision: "denied" });
+    expect(second.status).toBe(409);
+  });
+
+  test("a rule write refuses what it cannot act on", async () => {
+    const base = await listen();
+    expect((await post(base, "/api/rule", { id: "x", decision: "maybe" })).status).toBe(
+      400
+    );
+    expect((await post(base, "/api/rule", { decision: "approved" })).status).toBe(400);
+    expect((await post(base, "/api/rule", { id: "x", decision: "denied" })).status).toBe(
+      404
+    );
+  });
+
+  test("a waiting draft lights the bell and links to the tab", async () => {
+    const draft = await draftRule();
+    const base = await listen();
+    const body = await getJson<AttentionBody>(`${base}/api/attention`);
+    expect(body.items.find((i) => i.source === "rules")).toMatchObject({
+      id: `rule:${draft.id}`,
+      href: "/relationship",
+    });
+  });
+
+  test("a decided rule leaves the bell", async () => {
+    const draft = await draftRule();
+    const base = await listen();
+    await post(base, "/api/rule", { id: draft.id, decision: "denied" });
+    const body = await getJson<AttentionBody>(`${base}/api/attention`);
+    expect(body.items.filter((i) => i.source === "rules")).toEqual([]);
+  });
+
+  test("the bell stays quiet about drafts when the rules source is off", async () => {
+    await draftRule();
+    const base = await listen();
+    await post(base, "/api/prefs", { attention: { rules: false } });
+    const body = await getJson<AttentionBody>(`${base}/api/attention`);
+    expect(body.items.filter((i) => i.source === "rules")).toEqual([]);
+  });
+});

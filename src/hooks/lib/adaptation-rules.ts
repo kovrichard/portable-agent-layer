@@ -12,10 +12,18 @@ import { paths } from "./paths";
 export type RuleStatus = "draft" | "approved" | "denied";
 type Decision = Exclude<RuleStatus, "draft">;
 
-interface RuleTrigger {
+export interface RuleTrigger {
   /** Whether the pattern is matched against the user's prompt or the assistant's reply. */
   side: "prompt" | "reply";
   pattern: string;
+}
+
+/** Where the trigger fired when replayed over the turn log. */
+export interface TriggerProof {
+  firedCorrections: number;
+  corrections: number;
+  firedOrdinary: number;
+  ordinary: number;
 }
 
 export interface DraftInput {
@@ -23,6 +31,9 @@ export interface DraftInput {
   trigger: RuleTrigger;
   steering: string;
   evidence: string[];
+  /** How to tell from a reply whether the steering was followed. */
+  check?: string;
+  proof?: TriggerProof;
 }
 
 export interface AdaptationRule extends DraftInput {

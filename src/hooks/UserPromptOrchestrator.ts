@@ -29,12 +29,13 @@ const input = await readStdinJSON<PromptSubmitInput>();
 logDebug("UserPromptOrchestrator", `Input: ${JSON.stringify(input).slice(0, 200)}`);
 if (!input?.prompt) process.exit(0);
 
+const sentAt = new Date();
 const sessionId = hookSessionId(input);
 const injected = await injectPromptContext(input.prompt, sessionId);
 logPromptSnapshot(input.prompt, injected);
 
 const results = await Promise.allSettled([
-  captureRating(input.prompt, sessionId),
+  captureRating(input.prompt, sessionId, sentAt),
   captureSessionName(input.prompt, sessionId ?? ""),
 ]);
 

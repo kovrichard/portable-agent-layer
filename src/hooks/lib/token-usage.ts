@@ -10,6 +10,7 @@ import { ensureDir, paths } from "./paths";
 
 type TokenCaller =
   | "rating"
+  | "rule-drafter"
   | "failure"
   | "session-name"
   | "session-intelligence"

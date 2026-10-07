@@ -10,10 +10,17 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { appendTurn } from "../lib/adaptation-turns";
+import {
+  readCandidates,
+  recordCandidate,
+  reproveWaiting,
+} from "../lib/adaptation-candidates";
+import { readRules } from "../lib/adaptation-rules";
+import { appendTurn, readTurns, withRequests } from "../lib/adaptation-turns";
 import { spawnDetachedInference } from "../lib/detached-inference";
 import { canInfer, inference } from "../lib/inference";
 import { replyEnd } from "../lib/interaction-samples";
+import { logDebug } from "../lib/log";
 import { paths } from "../lib/paths";
 import { isSystemText, stripInjectedTags } from "../lib/prompt-text";
 import {
@@ -24,6 +31,12 @@ import {
   reactionRequest,
   turnFromLabels,
 } from "../lib/reaction-rating";
+import {
+  canRepeat,
+  correctionsToDraftFrom,
+  drafterRequest,
+  parseDraft,
+} from "../lib/rule-drafter";
 import { emitRating } from "../lib/signals";
 import { now } from "../lib/time";
 import { logTokenUsage } from "../lib/token-usage";
@@ -173,7 +186,7 @@ function handleRating(
 
 // ── Implicit Rating ──
 
-function handleImplicitReaction(message: string, sessionId?: string): void {
+function handleImplicitReaction(message: string, sentAt: Date, sessionId?: string): void {
   const trimmed = message.trim();
   const reply = replyEnd(getLastResponse(sessionId));
 
@@ -199,6 +212,7 @@ function handleImplicitReaction(message: string, sessionId?: string): void {
       sessionId ?? "",
       Buffer.from(trimmed).toString("base64"),
       Buffer.from(reply).toString("base64"),
+      sentAt.toISOString(),
     ],
     "rating"
   );
@@ -210,11 +224,32 @@ async function labelReaction(reply: string, message: string, sessionId?: string)
   return result.success ? parseReactionLabel(result.output) : null;
 }
 
+function knownRules() {
+  const waiting = readCandidates().filter((candidate) => candidate.verdict === "waiting");
+  return [
+    ...readRules(),
+    ...waiting.map((candidate) => ({ ...candidate, status: "candidate" })),
+  ];
+}
+
+async function draftRuleCandidate(sessionId?: string): Promise<void> {
+  const turns = withRequests(readTurns());
+  reproveWaiting(turns);
+  const corrections = correctionsToDraftFrom(turns);
+  if (!canRepeat(corrections)) return;
+  const result = await inference(drafterRequest(corrections, knownRules(), sessionId));
+  if (result.usage) logTokenUsage("rule-drafter", result.usage);
+  const candidate = result.success ? parseDraft(result.output, corrections) : null;
+  if (candidate) recordCandidate(candidate, turns);
+  else logDebug("rule-drafter", `no candidate: ${result.output ?? result.error ?? ""}`);
+}
+
 /** Background mode: label the reaction, confirm a correction, store the rating. */
 async function runReactionRatingAndStore(
   message: string,
   reply: string,
-  sessionId?: string
+  sessionId: string | undefined,
+  sentAt: Date
 ): Promise<void> {
   try {
     const first = await labelReaction(reply, message, sessionId);
@@ -230,7 +265,8 @@ async function runReactionRatingAndStore(
       first,
       confirmation
     );
-    if (turn) appendTurn(turn);
+    if (turn) appendTurn(turn, sentAt);
+    if (turn?.confirmed) await draftRuleCandidate(sessionId);
   } catch (err) {
     const { logError } = await import("../lib/log");
     logError("rating:reaction-child", err);
@@ -239,7 +275,11 @@ async function runReactionRatingAndStore(
 
 // ── Main Export ──
 
-export function captureRating(message: string, sessionId?: string): void {
+export function captureRating(
+  message: string,
+  sessionId?: string,
+  sentAt: Date = new Date()
+): void {
   // Strip IDE/system-injected tags to recover raw user text
   const cleaned = stripInjectedTags(message);
 
@@ -258,7 +298,7 @@ export function captureRating(message: string, sessionId?: string): void {
 
   // Path 2: Implicit reaction — the praise fast-path runs synchronously, the
   // model path detaches to a background bun subprocess (mirrors session-name).
-  handleImplicitReaction(cleaned, sessionId);
+  handleImplicitReaction(cleaned, sentAt, sessionId);
 }
 
 // Background reaction entry point
@@ -268,10 +308,12 @@ if (process.argv[2] === "--sentiment") {
   const replyB64 = process.argv[5];
   if (msgB64 && replyB64) {
     const decode = (b64: string) => Buffer.from(b64, "base64").toString("utf-8");
+    const sentAt = new Date(process.argv[6] ?? "");
     await runReactionRatingAndStore(
       decode(msgB64),
       decode(replyB64),
-      sid === "" ? undefined : sid
+      sid === "" ? undefined : sid,
+      Number.isNaN(sentAt.getTime()) ? new Date() : sentAt
     );
   }
   process.exit(0);

@@ -38,6 +38,8 @@ Each draft prints as:
 <id>  [draft]  <situation>
   trigger (<prompt|reply>): <pattern>
   steering: <steering>
+  check: <how to tell the steering was followed>
+  proof: fired on <n>/<n> corrections, <n>/<n> ordinary turns
   evidence: <line>
 ```
 
@@ -83,9 +85,13 @@ Present each draft as one compact block, nothing else in between:
 Draft <id>
   When:     <situation>
   Steer:    <steering>
+  Check:    <check>
+  Proof:    fired on <n>/<n> corrections, <n>/<n> ordinary turns
   Evidence: <evidence line>
             <evidence line>
 ```
+
+The proof is the trigger replayed over the last 30 days of turns: how many of the user's confirmed corrections it would have caught, and how many ordinary turns it would have fired on needlessly. Omit the Check or Proof line when the listing has none.
 
 Follow the list with one question, e.g. "Approve or deny each? Reply with the id and your decision." After a single draft, "Approve or deny <id>?" is enough.
 

@@ -18,6 +18,7 @@ import { agenda, agentsAtWork, board, handoffs, signal, summary } from "./data";
 import { projectDetail } from "./detail";
 import { matrix } from "./matrix";
 import { type PrefUpdate, readPrefs, validatePrefs, writePrefs } from "./prefs";
+import { decideFromPage, relationship } from "./relationship";
 import { DEFAULT_PORT, LOOPBACK } from "./server-config";
 import { MAX_SNOOZE_DAYS, setSnooze } from "./snooze";
 import { indexHtml, staticAsset } from "./static";
@@ -39,7 +40,14 @@ export { DEFAULT_PORT, LOOPBACK };
  * Every path the single-page app owns. Listed rather than wildcarded, because a
  * blanket "/*" outranks the fetch handler and would swallow /api as well.
  */
-const PAGE_ROUTES = ["/", "/projects", "/projects/:slug", "/log", "/settings"];
+const PAGE_ROUTES = [
+  "/",
+  "/projects",
+  "/projects/:slug",
+  "/log",
+  "/relationship",
+  "/settings",
+];
 
 export interface ServerStatus {
   pid: number;
@@ -284,7 +292,20 @@ async function prefsWrite(request: Request): Promise<Response> {
   return failure ? json({ error: failure }, 400) : json(writePrefs(body as PrefUpdate));
 }
 
+/** Approve or deny a rule draft — the same rule `pal cli rule` reaches. */
+async function ruleWrite(request: Request): Promise<Response> {
+  const body = await readBody(request);
+  if (!body) return json({ error: "expected a JSON body" }, 400);
+  const { id, decision } = body;
+  if (typeof id !== "string" || !id) return json({ error: "id is required" }, 400);
+  if (decision !== "approved" && decision !== "denied") {
+    return json({ error: "decision must be approved or denied" }, 400);
+  }
+  return answer(decideFromPage(id, decision), { id, decision });
+}
+
 const WRITES: Record<string, (request: Request) => Promise<Response>> = {
+  "/api/rule": ruleWrite,
   "/api/serves": overrideServes,
   "/api/isc": iscWrite,
   "/api/placement": placementWrite,
@@ -340,6 +361,8 @@ export function startControlRoom(port: number = DEFAULT_PORT) {
           return json(autoUpdateStatus());
         case "/api/attention":
           return json(attention());
+        case "/api/relationship":
+          return json(relationship());
         case "/api/status":
           return status(server.port ?? port, startedAt);
         default:

@@ -46,6 +46,10 @@ export function setAutoUpdate(enabled: boolean) {
   return post("/api/update", { enabled });
 }
 
+export function decideRule(id: string, decision: "approved" | "denied") {
+  return post("/api/rule", { id, decision });
+}
+
 export function runUpdateNow() {
   return post("/api/update/run", {});
 }

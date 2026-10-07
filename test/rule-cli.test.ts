@@ -49,6 +49,22 @@ describe("pal cli rule list", () => {
     expect(out).toContain("Show the evidence.");
   });
 
+  test("shows the check and where the trigger fired in the turn log", async () => {
+    addDraft({
+      when: "Claiming tests pass",
+      trigger: { side: "reply", pattern: "tests pass" },
+      steering: "Show the run.",
+      evidence: [],
+      check: "The reply quotes a test run.",
+      proof: { firedCorrections: 2, corrections: 3, firedOrdinary: 1, ordinary: 43 },
+    });
+
+    await runRule(["list"]);
+    const out = printed.join("\n");
+    expect(out).toContain("check: The reply quotes a test run.");
+    expect(out).toContain("proof: fired on 2/3 corrections, 1/43 ordinary turns");
+  });
+
   test("hides decided rules unless --all is given", async () => {
     const rule = seed("Claiming work is finished");
     await runRule(["deny", rule.id]);

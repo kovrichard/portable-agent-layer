@@ -12,6 +12,7 @@ import {
   decideRule,
   type RuleStatus,
   readRules,
+  type TriggerProof,
 } from "../hooks/lib/adaptation-rules";
 
 const DECISIONS: Record<string, Exclude<RuleStatus, "draft">> = {
@@ -47,8 +48,14 @@ function formatRule(rule: AdaptationRule): string {
     `${rule.id}  [${rule.status}]  ${rule.when}`,
     `  trigger (${rule.trigger.side}): ${rule.trigger.pattern}`,
     `  steering: ${rule.steering}`,
+    ...(rule.check ? [`  check: ${rule.check}`] : []),
+    ...(rule.proof ? [`  proof: ${formatProof(rule.proof)}`] : []),
     ...rule.evidence.map((e) => `  evidence: ${e}`),
   ].join("\n");
+}
+
+function formatProof(proof: TriggerProof): string {
+  return `fired on ${proof.firedCorrections}/${proof.corrections} corrections, ${proof.firedOrdinary}/${proof.ordinary} ordinary turns`;
 }
 
 function cmdDecide(
