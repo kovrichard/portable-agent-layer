@@ -3,10 +3,13 @@ import { appendFileSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
-  appendCandidate,
   type CandidateInput,
   readCandidates,
+  recordCandidate,
+  reproveWaiting,
 } from "../src/hooks/lib/adaptation-candidates";
+import { readRules } from "../src/hooks/lib/adaptation-rules";
+import type { RequestedTurn } from "../src/hooks/lib/adaptation-turns";
 
 let HOME: string;
 const savedHome = process.env.PAL_HOME;
@@ -30,27 +33,99 @@ const candidate: CandidateInput = {
   evidence: ["claimed tests pass: they never ran"],
 };
 
-describe("candidates", () => {
+const turn = (over: Partial<RequestedTurn>): RequestedTurn => ({
+  ts: "2026-10-07T08:00:00.000Z",
+  session: "s1",
+  message: "next please",
+  replyEnd: "Renamed the key.",
+  reaction: "follow-up",
+  issue: "",
+  prompt: "",
+  ...over,
+});
+
+const corrections = [
+  turn({ reaction: "corrected", confirmed: true, replyEnd: "All tests pass." }),
+  turn({ reaction: "corrected", confirmed: true, replyEnd: "Tests pass now." }),
+];
+const ordinary = (count: number) => Array.from({ length: count }, () => turn({}));
+
+describe("recordCandidate", () => {
   test("no file reads as no candidates", () => {
     expect(readCandidates()).toEqual([]);
   });
 
-  test("a candidate reads back with its creation time", () => {
-    appendCandidate(candidate, new Date("2026-10-07T08:00:00Z"));
+  test("a proven candidate becomes a draft rule carrying its proof", () => {
+    const recorded = recordCandidate(candidate, [...corrections, ...ordinary(20)]);
 
-    expect(readCandidates()).toEqual([
-      { ...candidate, createdAt: "2026-10-07T08:00:00.000Z" },
+    expect(recorded.verdict).toBe("passed");
+    expect(readRules()).toMatchObject([
+      {
+        status: "draft",
+        when: candidate.when,
+        check: candidate.check,
+        proof: { firedCorrections: 2, corrections: 2, firedOrdinary: 0, ordinary: 20 },
+      },
     ]);
   });
 
-  test("candidates keep their order and a broken line is skipped", () => {
-    appendCandidate({ ...candidate, when: "first" });
+  test("a failed candidate is kept with its proof and never becomes a draft", () => {
+    const loud = Array.from({ length: 20 }, () => turn({ replyEnd: "tests pass" }));
+
+    recordCandidate(candidate, [...corrections, ...loud]);
+
+    expect(readCandidates()[0]).toMatchObject({ verdict: "failed" });
+    expect(readRules()).toEqual([]);
+  });
+
+  test("a candidate without enough ordinary turns waits", () => {
+    recordCandidate(candidate, [...corrections, ...ordinary(5)]);
+
+    expect(readCandidates()[0]).toMatchObject({ verdict: "waiting" });
+    expect(readRules()).toEqual([]);
+  });
+
+  test("a broken line is skipped", () => {
+    recordCandidate({ ...candidate, when: "first" }, corrections);
     appendFileSync(
       resolve(HOME, "memory", "adaptation", "candidates.jsonl"),
       "{ broken\n"
     );
-    appendCandidate({ ...candidate, when: "second" });
+    recordCandidate({ ...candidate, when: "second" }, corrections);
 
     expect(readCandidates().map((c) => c.when)).toEqual(["first", "second"]);
+  });
+});
+
+describe("reproveWaiting", () => {
+  test("a waiting candidate is promoted once the log has enough ordinary turns", () => {
+    recordCandidate(candidate, [...corrections, ...ordinary(5)]);
+
+    reproveWaiting([...corrections, ...ordinary(25)]);
+
+    expect(readCandidates()[0]).toMatchObject({
+      verdict: "passed",
+      proof: { ordinary: 25 },
+    });
+    expect(readRules()).toHaveLength(1);
+  });
+
+  test("a waiting candidate that still lacks turns stays waiting", () => {
+    recordCandidate(candidate, [...corrections, ...ordinary(5)]);
+
+    reproveWaiting([...corrections, ...ordinary(10)]);
+
+    expect(readCandidates()[0]).toMatchObject({ verdict: "waiting" });
+    expect(readRules()).toEqual([]);
+  });
+
+  test("a decided candidate is not proven again", () => {
+    recordCandidate(candidate, [...corrections, ...ordinary(20)]);
+    recordCandidate({ ...candidate, when: "waiting" }, [...corrections, ...ordinary(5)]);
+
+    reproveWaiting([...corrections, ...ordinary(30)]);
+
+    expect(readCandidates()[0]).toMatchObject({ proof: { ordinary: 20 } });
+    expect(readRules()).toHaveLength(2);
   });
 });

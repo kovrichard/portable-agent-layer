@@ -10,9 +10,13 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { appendCandidate, readCandidates } from "../lib/adaptation-candidates";
+import {
+  readCandidates,
+  recordCandidate,
+  reproveWaiting,
+} from "../lib/adaptation-candidates";
 import { readRules } from "../lib/adaptation-rules";
-import { appendTurn, readTurns } from "../lib/adaptation-turns";
+import { appendTurn, readTurns, withRequests } from "../lib/adaptation-turns";
 import { spawnDetachedInference } from "../lib/detached-inference";
 import { canInfer, inference } from "../lib/inference";
 import { replyEnd } from "../lib/interaction-samples";
@@ -220,19 +224,22 @@ async function labelReaction(reply: string, message: string, sessionId?: string)
 }
 
 function knownRules() {
+  const waiting = readCandidates().filter((candidate) => candidate.verdict === "waiting");
   return [
     ...readRules(),
-    ...readCandidates().map((candidate) => ({ ...candidate, status: "candidate" })),
+    ...waiting.map((candidate) => ({ ...candidate, status: "candidate" })),
   ];
 }
 
 async function draftRuleCandidate(sessionId?: string): Promise<void> {
-  const corrections = correctionsToDraftFrom(readTurns());
+  const turns = withRequests(readTurns());
+  reproveWaiting(turns);
+  const corrections = correctionsToDraftFrom(turns);
   if (!canRepeat(corrections)) return;
   const result = await inference(drafterRequest(corrections, knownRules(), sessionId));
   if (result.usage) logTokenUsage("rule-drafter", result.usage);
   const candidate = result.success ? parseDraft(result.output, corrections) : null;
-  if (candidate) appendCandidate(candidate);
+  if (candidate) recordCandidate(candidate, turns);
   else logDebug("rule-drafter", `no candidate: ${result.output ?? result.error ?? ""}`);
 }
 
