@@ -63,10 +63,26 @@ describe("pal cli install (smoke)", () => {
   }, 90000);
 
   test("install --opencode lands plugin and agents", () => {
+    const configFile = resolve(OPENCODE_DIR, "config.json");
+    const userRules = { "~/secrets/**": "deny" };
+    mkdirSync(OPENCODE_DIR, { recursive: true });
+    writeFileSync(
+      configFile,
+      JSON.stringify({ permission: { external_directory: userRules } })
+    );
     const result = pal("cli", "install", "--opencode");
     expect(result.status).toBe(0);
     expect(existsSync(OPENCODE_DIR)).toBe(true);
     expect(existsSync(resolve(OPENCODE_DIR, "plugins", "pal-plugin.ts"))).toBe(true);
+    const config = JSON.parse(readFileSync(configFile, "utf-8"));
+    expect(config.permission.external_directory).toEqual({
+      ...userRules,
+      [`${TEST_HOME}/**`]: "allow",
+    });
+
+    expect(pal("cli", "uninstall", "--opencode").status).toBe(0);
+    const cleaned = JSON.parse(readFileSync(configFile, "utf-8"));
+    expect(cleaned.permission.external_directory).toEqual(userRules);
   }, 90000);
 
   test("install --cursor wires hooks, skills, agents", () => {

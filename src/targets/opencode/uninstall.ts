@@ -8,6 +8,7 @@ import { resolve } from "node:path";
 import { platform } from "../../hooks/lib/paths";
 import { getSemiStaticSources } from "../../hooks/lib/semi-static";
 import { log, removeAgentsFromOpencode, removePalDocs, removeSkills } from "../lib";
+import { palHomePattern, removePalHomeAllow } from "./permission";
 
 const OC_GLOBAL_DIR = platform.opencodeDir() || "";
 
@@ -58,14 +59,14 @@ try {
   /* gone */
 }
 
-// --- Remove PAL entries from config.json instructions[] ---
+// --- Remove PAL entries from config.json instructions[] and permission ---
 const configPath = resolve(OC_GLOBAL_DIR, "config.json");
 if (existsSync(configPath) && statSync(configPath).size > 0) {
   try {
-    const ocConfig = JSON.parse(readFileSync(configPath, "utf-8")) as Record<
-      string,
-      unknown
-    >;
+    const ocConfig = removePalHomeAllow(
+      JSON.parse(readFileSync(configPath, "utf-8")) as Record<string, unknown>,
+      palHomePattern()
+    );
     if (Array.isArray(ocConfig.instructions)) {
       const palFiles = new Set(getSemiStaticSources().map((s) => s.path));
       const filtered = (ocConfig.instructions as string[]).filter(
@@ -76,11 +77,11 @@ if (existsSync(configPath) && statSync(configPath).size > 0) {
       } else {
         ocConfig.instructions = filtered;
       }
-      writeFileSync(configPath, `${JSON.stringify(ocConfig, null, 2)}\n`, "utf-8");
-      log.success("Removed PAL entries from config.json instructions[]");
     }
+    writeFileSync(configPath, `${JSON.stringify(ocConfig, null, 2)}\n`, "utf-8");
+    log.success("Removed PAL entries from config.json");
   } catch {
-    log.warn("Could not clean config.json instructions[] — check manually");
+    log.warn("Could not clean config.json — check manually");
   }
 }
 

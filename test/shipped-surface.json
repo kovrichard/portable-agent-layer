@@ -273,6 +273,7 @@
     ".opencode/config.json#instructions[]={root}/home/memory/relationship/opinions-context.md",
     ".opencode/config.json#instructions[]={root}/home/memory/self-model/current.md",
     ".opencode/config.json#instructions[]={root}/home/memory/wisdom/context.md",
+    ".opencode/config.json#permission.external_directory.{root}/home/**",
     ".opencode/plugins/package.json",
     ".opencode/plugins/pal-plugin.ts",
     "home/memory/actor.json",
