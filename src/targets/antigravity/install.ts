@@ -1,12 +1,12 @@
 /**
  * PAL — Antigravity CLI target installer
- * Everything PAL gives agy lives in one plugin, ~/.gemini/config/plugins/pal/
- * (rules, hooks, skills, subagents), so the user's own hooks.json and settings
- * are never merged into.
+ * Rules, hooks, skills and subagents live in one plugin, ~/.gemini/config/plugins/pal/.
+ * A plugin cannot carry permissions, so the command allowlist alone is merged into
+ * agy's settings.json; the user's own hooks.json is never touched.
  */
 
-import { mkdirSync } from "node:fs";
-import { resolve } from "node:path";
+import { copyFileSync, existsSync, mkdirSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { skillsDirOf } from "../../hooks/lib/agent-registry";
 import { ensureAntigravityRule } from "../../hooks/lib/claude-md";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
@@ -15,8 +15,11 @@ import {
   copySkills,
   countSkills,
   loadHooksTemplate,
+  loadSettingsTemplate,
   log,
+  mergeSettings,
   nativeAgentsDir,
+  readJson,
   writeJson,
 } from "../lib";
 
@@ -40,6 +43,18 @@ writeJson(
   loadHooksTemplate(assets.antigravityHooksTemplate(), PKG_ROOT, "Antigravity CLI")
 );
 log.success("PAL hooks → hooks.json");
+
+const SETTINGS = platform.antigravitySettings();
+mkdirSync(dirname(SETTINGS), { recursive: true });
+if (existsSync(SETTINGS)) copyFileSync(SETTINGS, `${SETTINGS}.bak.${Date.now()}`);
+writeJson(
+  SETTINGS,
+  mergeSettings(
+    readJson(SETTINGS, {}),
+    loadSettingsTemplate(assets.antigravitySettingsTemplate(), PKG_ROOT)
+  )
+);
+log.success("PAL command allowlist → antigravity-cli/settings.json");
 
 copySkills(skillsDirOf("antigravity"));
 const agentCount = copyAgentsForAntigravity(nativeAgentsDir("antigravity"));

@@ -1,14 +1,22 @@
 /**
  * PAL — Antigravity CLI uninstaller
- * Removes the PAL plugin, ~/.gemini/config/plugins/pal/. Skill links are
- * unlinked first so removing the folder never walks into the skills they point at.
+ * Removes the PAL plugin, ~/.gemini/config/plugins/pal/, and exactly the allowlist
+ * entries PAL merged into agy's settings.json. Skill links are unlinked first so
+ * removing the folder never walks into the skills they point at.
  */
 
-import { existsSync, lstatSync, readdirSync, rmSync, unlinkSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  lstatSync,
+  readdirSync,
+  rmSync,
+  unlinkSync,
+} from "node:fs";
 import { resolve } from "node:path";
 import { skillsDirOf } from "../../hooks/lib/agent-registry";
-import { platform } from "../../hooks/lib/paths";
-import { log } from "../lib";
+import { assets, palPkg, platform } from "../../hooks/lib/paths";
+import { loadSettingsTemplate, log, readJson, unmergeSettings, writeJson } from "../lib";
 
 function unlinkSkillLinks(dir: string): string[] {
   if (!existsSync(dir)) return [];
@@ -26,5 +34,16 @@ if (existsSync(PLUGIN_DIR)) {
   rmSync(PLUGIN_DIR, { recursive: true, force: true });
   log.success(`Removed the PAL plugin and ${removed.length} skill link(s)`);
 } else {
-  log.info("No PAL plugin found, nothing to do");
+  log.info("No PAL plugin found");
+}
+
+const SETTINGS = platform.antigravitySettings();
+if (existsSync(SETTINGS)) {
+  copyFileSync(SETTINGS, `${SETTINGS}.bak.${Date.now()}`);
+  const template = loadSettingsTemplate(
+    assets.antigravitySettingsTemplate(),
+    palPkg().replaceAll("\\", "/")
+  );
+  writeJson(SETTINGS, unmergeSettings(readJson(SETTINGS, {}), template));
+  log.success("Removed the PAL command allowlist from antigravity-cli/settings.json");
 }

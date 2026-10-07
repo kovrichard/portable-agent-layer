@@ -154,6 +154,7 @@ export const platform = {
   copilotDir: agentDir("PAL_COPILOT_DIR"),
   codexDir: agentDir("PAL_CODEX_DIR"),
   antigravityPluginDir: () => resolve(geminiDir(), "config", "plugins", "pal"),
+  antigravitySettings: () => resolve(geminiDir(), "antigravity-cli", "settings.json"),
   agentsDir: agentDir("PAL_AGENTS_DIR"),
 } as const;
 
@@ -169,6 +170,8 @@ export const assets = {
   copilotHooksTemplate: () => pkg("assets", "templates", "hooks.copilot.json"),
   codexHooksTemplate: () => pkg("assets", "templates", "hooks.codex.json"),
   antigravityHooksTemplate: () => pkg("assets", "templates", "hooks.antigravity.json"),
+  antigravitySettingsTemplate: () =>
+    pkg("assets", "templates", "settings.antigravity.json"),
   codexRulesTemplate: () => pkg("assets", "templates", "rules.codex.rules"),
   statuslineScriptBash: () => pkg("assets", "statusline.sh"),
   statuslineScriptPs1: () => pkg("assets", "statusline.ps1"),

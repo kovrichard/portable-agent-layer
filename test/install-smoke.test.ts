@@ -149,7 +149,20 @@ describe("pal cli install (smoke)", () => {
 
   test("install --antigravity lands everything in one plugin, uninstall removes only it", () => {
     const plugin = resolve(GEMINI_DIR, "config", "plugins", "pal");
+    const settingsFile = resolve(GEMINI_DIR, "antigravity-cli", "settings.json");
+    const userSettings = {
+      colorScheme: "tokyo night",
+      permissions: { allow: ["command(gh pr list)"] },
+    };
+    mkdirSync(resolve(GEMINI_DIR, "antigravity-cli"), { recursive: true });
+    writeFileSync(settingsFile, JSON.stringify(userSettings));
     expect(pal("cli", "install", "--antigravity").status).toBe(0);
+
+    const settings = JSON.parse(readFileSync(settingsFile, "utf-8"));
+    expect(settings.colorScheme).toBe("tokyo night");
+    expect(settings.permissions.allow).toContain("command(gh pr list)");
+    expect(settings.permissions.allow).toContain("command(grep)");
+    expect(settings.permissions.allow).toContain("command(pal cli project)");
 
     const manifest = JSON.parse(readFileSync(resolve(plugin, "plugin.json"), "utf-8"));
     expect(manifest.name).toBe("pal");
@@ -185,6 +198,7 @@ describe("pal cli install (smoke)", () => {
 
     expect(pal("cli", "uninstall", "--antigravity").status).toBe(0);
     expect(existsSync(plugin)).toBe(false);
+    expect(JSON.parse(readFileSync(settingsFile, "utf-8"))).toEqual(userSettings);
     expect(existsSync(resolve(TEST_HOME, "skills", skills[0], "SKILL.md"))).toBe(true);
   }, 90000);
 

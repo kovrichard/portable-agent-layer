@@ -570,6 +570,7 @@ All paths resolve through `src/hooks/lib/paths.ts`:
 | Copilot config | `~/.copilot` | `PAL_COPILOT_DIR` |
 | Codex config | `~/.codex` | `PAL_CODEX_DIR` |
 | Antigravity CLI plugin | `~/.gemini/config/plugins/pal` | `PAL_GEMINI_DIR` (replaces `~/.gemini`) |
+| Antigravity CLI settings (PAL's command allowlist only) | `~/.gemini/antigravity-cli/settings.json` | `PAL_GEMINI_DIR` |
 | Agents dir | `~/.agents` | `PAL_AGENTS_DIR` |
 
 ### Portability Contract
