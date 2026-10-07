@@ -53,7 +53,22 @@ function Evidence({ items }: { items: string[] }) {
   );
 }
 
-function Draft({ rule, onDecided }: { rule: AdaptationRule; onDecided: () => void }) {
+function replacedTrigger(rule: AdaptationRule, active: ActiveRule[]): string | undefined {
+  if (!rule.widens) return undefined;
+  const target = active.find((r) => r.id === rule.widens);
+  if (!target) return `the trigger of rule ${rule.widens}`;
+  return `/${target.trigger.pattern}/i`;
+}
+
+function Draft({
+  rule,
+  active,
+  onDecided,
+}: {
+  rule: AdaptationRule;
+  active: ActiveRule[];
+  onDecided: () => void;
+}) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const decide = (decision: "approved" | "denied") => {
@@ -67,7 +82,7 @@ function Draft({ rule, onDecided }: { rule: AdaptationRule; onDecided: () => voi
   return (
     <div className="flex flex-col gap-3 border-t border-divider py-3 first:border-t-0">
       <div className="font-heading text-[15px] font-semibold">{rule.when}</div>
-      <Facts rows={ruleFacts(rule)} />
+      <Facts rows={[["replaces", replacedTrigger(rule, active)], ...ruleFacts(rule)]} />
       <Evidence items={rule.evidence} />
       {error && (
         <p className="border-l-2 border-alarm bg-alarm/10 px-3 py-2 text-[12px] text-alarm">
@@ -206,7 +221,9 @@ export function Relationship() {
         {drafts.length === 0 ? (
           <Empty>No rule draft waits for a decision.</Empty>
         ) : (
-          drafts.map((rule) => <Draft key={rule.id} rule={rule} onDecided={reload} />)
+          drafts.map((rule) => (
+            <Draft key={rule.id} rule={rule} active={active} onDecided={reload} />
+          ))
         )}
       </Panel>
       <Panel title="Active rules">
