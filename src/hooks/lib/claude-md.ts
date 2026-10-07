@@ -21,7 +21,7 @@ import {
 } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { assets, ensureDir, paths, platform } from "./paths";
-import { getSemiStaticSources } from "./semi-static";
+import { antigravityRule, getSemiStaticSources } from "./semi-static";
 
 const TEMPLATE_PATH = assets.agentsMdTemplate();
 
@@ -170,12 +170,31 @@ function ensureClaudeCodeMd(): void {
   }
 }
 
+/** Keep the PAL plugin's always-on rule in step with AGENTS.md; only when the plugin is installed. */
+export function ensureAntigravityRule(): void {
+  const pluginDir = platform.antigravityPluginDir();
+  if (!existsSync(pluginDir)) return;
+  const rulePath = resolve(pluginDir, "rules", "pal.md");
+  const expected = antigravityRule(
+    "PAL — identity, response modes and context routing",
+    buildClaudeMd()
+  );
+  try {
+    if (existsSync(rulePath) && readFileSync(rulePath, "utf-8") === expected) return;
+    ensureDir(dirname(rulePath));
+    writeFileSync(rulePath, expected, "utf-8");
+  } catch {
+    /* non-fatal */
+  }
+}
+
 /** Regenerate AGENTS.md if any source file is newer, write real CLAUDE.md, ensure other symlinks. Returns true if rebuilt. */
 export function regenerateIfNeeded(): boolean {
   const { outputPath } = getOutputPaths();
   if (!needsRebuild()) {
     ensureSymlinks();
     ensureClaudeCodeMd();
+    ensureAntigravityRule();
     return false;
   }
   ensureDir(dirname(outputPath));
@@ -193,5 +212,6 @@ export function regenerateIfNeeded(): boolean {
     }
   }
   ensureSymlinks();
+  ensureAntigravityRule();
   return true;
 }

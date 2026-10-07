@@ -1,7 +1,16 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  test,
+} from "bun:test";
 import {
   existsSync,
   mkdirSync,
+  readFileSync,
   readlinkSync,
   rmSync,
   symlinkSync,
@@ -141,6 +150,7 @@ describe("needsRebuild", () => {
     process.env.PAL_CLAUDE_DIR = resolve(TEST_HOME, ".claude");
     process.env.PAL_OPENCODE_DIR = resolve(TEST_HOME, ".opencode");
     process.env.PAL_CODEX_DIR = resolve(TEST_HOME, ".codex");
+    process.env.PAL_GEMINI_DIR = resolve(TEST_HOME, ".gemini");
 
     const staleDir = resolve(TEST_HOME, ".stale-opencode");
     const codexDir = resolve(TEST_HOME, ".codex");
@@ -161,5 +171,39 @@ describe("needsRebuild", () => {
     delete process.env.PAL_CLAUDE_DIR;
     delete process.env.PAL_OPENCODE_DIR;
     delete process.env.PAL_CODEX_DIR;
+    delete process.env.PAL_GEMINI_DIR;
+  });
+});
+
+describe("ensureAntigravityRule", () => {
+  const geminiDir = resolve(TEST_HOME, ".gemini-rule");
+  const pluginDir = resolve(geminiDir, "config", "plugins", "pal");
+  const rulePath = resolve(pluginDir, "rules", "pal.md");
+
+  beforeEach(() => {
+    process.env.PAL_GEMINI_DIR = geminiDir;
+  });
+
+  afterEach(() => {
+    rmSync(geminiDir, { recursive: true, force: true });
+    delete process.env.PAL_GEMINI_DIR;
+  });
+
+  test("writes AGENTS.md as an always-on plugin rule", async () => {
+    mkdirSync(pluginDir, { recursive: true });
+
+    const { ensureAntigravityRule } = await import("../src/hooks/lib/claude-md");
+    ensureAntigravityRule();
+
+    const rule = readFileSync(rulePath, "utf-8");
+    expect(rule).toStartWith("---\ntrigger: always_on\ndescription: ");
+    expect(rule).toContain("TestBot");
+  });
+
+  test("leaves agy alone when the PAL plugin is not installed", async () => {
+    const { ensureAntigravityRule } = await import("../src/hooks/lib/claude-md");
+    ensureAntigravityRule();
+
+    expect(existsSync(geminiDir)).toBe(false);
   });
 });

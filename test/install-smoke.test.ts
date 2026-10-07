@@ -15,6 +15,7 @@ const TEST_HOME = resolve(import.meta.dir, "../.test-install-home");
 const CLAUDE_DIR = resolve(TEST_HOME, ".claude");
 const OPENCODE_DIR = resolve(TEST_HOME, ".opencode");
 const CURSOR_DIR = resolve(TEST_HOME, ".cursor");
+const COPILOT_DIR = resolve(TEST_HOME, ".copilot");
 const CODEX_DIR = resolve(TEST_HOME, ".codex");
 const GEMINI_DIR = resolve(TEST_HOME, ".gemini");
 const AGENTS_DIR = resolve(TEST_HOME, ".agents");
@@ -29,6 +30,7 @@ function pal(...args: string[]) {
       PAL_CLAUDE_DIR: CLAUDE_DIR,
       PAL_OPENCODE_DIR: OPENCODE_DIR,
       PAL_CURSOR_DIR: CURSOR_DIR,
+      PAL_COPILOT_DIR: COPILOT_DIR,
       PAL_CODEX_DIR: CODEX_DIR,
       PAL_GEMINI_DIR: GEMINI_DIR,
       PAL_AGENTS_DIR: AGENTS_DIR,
@@ -154,6 +156,13 @@ describe("pal cli install (smoke)", () => {
     const skills = readdirSync(resolve(plugin, "skills"));
     expect(skills.length).toBeGreaterThan(0);
     expect(existsSync(resolve(plugin, "skills", skills[0], "SKILL.md"))).toBe(true);
+    const instructions = readFileSync(resolve(plugin, "rules", "pal.md"), "utf-8");
+    expect(instructions).toStartWith("---\ntrigger: always_on\n");
+    expect(instructions).toContain("# PAL");
+    const steering = readFileSync(resolve(plugin, "rules", "pal-steering.md"), "utf-8");
+    expect(steering).toStartWith(
+      "---\ntrigger: always_on\ndescription: PAL steering rules\n"
+    );
 
     expect(pal("cli", "uninstall", "--antigravity").status).toBe(0);
     expect(existsSync(plugin)).toBe(false);

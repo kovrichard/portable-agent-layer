@@ -5,42 +5,34 @@
  * at the next session start, keeping hook stdout small.
  *
  * Sources are defined in src/hooks/lib/semi-static.ts — add one entry there
- * to extend coverage to all consumers (CLAUDE.md, opencode, Cursor, Copilot).
+ * to extend coverage to all consumers (CLAUDE.md, opencode, Cursor, Copilot, Antigravity).
  */
 
 import { existsSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { ensureDir, platform } from "../lib/paths";
 import {
+  antigravityFilename,
+  antigravityRule,
   copilotFilename,
   cursorFilename,
   getSemiStaticSources,
 } from "../lib/semi-static";
 
+function subdirIfInstalled(agentHome: () => string, subdir: string): string | null {
+  try {
+    const home = agentHome();
+    return existsSync(home) ? ensureDir(resolve(home, subdir)) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function writeContextDigests(): void {
   const sources = getSemiStaticSources();
-
-  // Resolve Cursor/Copilot destination dirs once (null if agent not installed)
-  let rulesDir: string | null = null;
-  let instructionsDir: string | null = null;
-
-  try {
-    const cursorDir = platform.cursorDir();
-    if (existsSync(cursorDir)) {
-      rulesDir = ensureDir(resolve(cursorDir, "rules"));
-    }
-  } catch {
-    /* non-fatal */
-  }
-
-  try {
-    const copilotDir = platform.copilotDir();
-    if (existsSync(copilotDir)) {
-      instructionsDir = ensureDir(resolve(copilotDir, "instructions"));
-    }
-  } catch {
-    /* non-fatal */
-  }
+  const rulesDir = subdirIfInstalled(platform.cursorDir, "rules");
+  const instructionsDir = subdirIfInstalled(platform.copilotDir, "instructions");
+  const antigravityRulesDir = subdirIfInstalled(platform.antigravityPluginDir, "rules");
 
   for (const src of sources) {
     try {
@@ -64,6 +56,14 @@ export function writeContextDigests(): void {
         writeFileSync(
           resolve(instructionsDir, copilotFilename(src)),
           `---\napplyTo: "**"\n---\n\n${content}`,
+          "utf-8"
+        );
+      }
+
+      if (antigravityRulesDir) {
+        writeFileSync(
+          resolve(antigravityRulesDir, antigravityFilename(src)),
+          antigravityRule(src.description, content),
           "utf-8"
         );
       }

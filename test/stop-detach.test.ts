@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { assets } from "../src/hooks/lib/paths";
 import { runStopHandlers } from "../src/hooks/lib/stop";
+import { sandboxContextRuleDirs } from "./lib/context-rule-dirs";
 
 /** The detached children still hold files in the home; Windows refuses to delete those. */
 function removeOnceReleased(dir: string): void {
@@ -21,14 +22,17 @@ function removeOnceReleased(dir: string): void {
 describe("runStopHandlers — Stop hook non-blocking contract", () => {
   let tmp: string;
   let savedHome: string | undefined;
+  let restoreContextRuleDirs: () => void;
 
   beforeEach(() => {
     tmp = mkdtempSync(resolve(tmpdir(), "pal-stop-test-"));
     savedHome = process.env.PAL_HOME;
     process.env.PAL_HOME = tmp;
+    restoreContextRuleDirs = sandboxContextRuleDirs(resolve(tmp, "agents"));
   });
 
   afterEach(() => {
+    restoreContextRuleDirs();
     removeOnceReleased(tmp);
     if (savedHome === undefined) delete process.env.PAL_HOME;
     else process.env.PAL_HOME = savedHome;

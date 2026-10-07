@@ -563,7 +563,8 @@ async function install(targets: Targets, args: string[]): Promise<number> {
 
   // The rest of the shared work reads what the installers just wrote: the index
   // walks ~/.pal/skills, and the digests land in ~/.cursor/rules and
-  // ~/.copilot/instructions, which are skipped when the agent's home is absent.
+  // ~/.copilot/instructions and the Antigravity plugin's rules/, which are skipped
+  // when the agent's home is absent.
   const { writeContextDigests } = await import("../hooks/handlers/context-digests");
   const indexedSkills = generateSkillIndex();
   writeContextDigests();

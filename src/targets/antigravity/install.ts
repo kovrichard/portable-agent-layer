@@ -7,6 +7,7 @@
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { skillsDirOf } from "../../hooks/lib/agent-registry";
+import { ensureAntigravityRule } from "../../hooks/lib/claude-md";
 import { platform } from "../../hooks/lib/paths";
 import { copySkills, countSkills, log, writeJson } from "../lib";
 
@@ -18,6 +19,11 @@ writeJson(resolve(PLUGIN_DIR, "plugin.json"), {
   description: "Portable Agent Layer — personal context, skills and hooks",
 });
 log.success(`PAL plugin → ${PLUGIN_DIR}`);
+
+ensureAntigravityRule();
+log.success(
+  "PAL instructions → rules/pal.md (context rules follow from the shared digests)"
+);
 
 copySkills(skillsDirOf("antigravity"));
 log.success(`${countSkills()} skills → ${skillsDirOf("antigravity")}`);

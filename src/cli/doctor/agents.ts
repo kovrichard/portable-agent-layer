@@ -126,7 +126,13 @@ const WIRING: Record<AgentName, AgentWiring> = {
   copilot: { hookFile: () => resolve(platform.copilotDir(), "hooks", "pal-hooks.json") },
   cursor: { hookFile: () => resolve(platform.cursorDir(), "hooks.json") },
   opencode: {},
-  antigravity: { hookFile: () => resolve(platform.antigravityPluginDir(), "hooks.json") },
+  antigravity: {
+    hookFile: () => resolve(platform.antigravityPluginDir(), "hooks.json"),
+    instructions: {
+      file: () => resolve(platform.antigravityPluginDir(), "rules", "pal.md"),
+      name: "PAL plugin rule",
+    },
+  },
 };
 
 const labelOf = (agent: AgentName) => AGENT_REGISTRY[agent].label;

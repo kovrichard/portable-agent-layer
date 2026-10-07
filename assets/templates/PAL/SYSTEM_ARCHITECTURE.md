@@ -394,7 +394,7 @@ Relationship notes (O/B types)
 **Tier 2 — Semi-static** (pre-compiled at previous session stop, loaded natively):
 - Self-model, wisdom, opinions, synthesis, failures, steering rules
 - Written to disk by `writeContextDigests()` at Stop time
-- Loaded natively per-agent: `@imports` in CLAUDE.md (Claude Code), `instructions[]` in opencode config, `.mdc` rules in `~/.cursor/rules/` (Cursor), `.instructions.md` in `~/.copilot/instructions/` (Copilot)
+- Loaded natively per-agent: `@imports` in CLAUDE.md (Claude Code), `instructions[]` in opencode config, `.mdc` rules in `~/.cursor/rules/` (Cursor), `.instructions.md` in `~/.copilot/instructions/` (Copilot), always-on rules in `~/.gemini/config/plugins/pal/rules/` (Antigravity)
 - Content is global/user-level — safe to pre-compile (not project-scoped)
 
 **Tier 3 — Dynamic** (injected fresh each session by LoadContext hook):

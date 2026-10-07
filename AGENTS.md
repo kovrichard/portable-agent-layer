@@ -133,10 +133,10 @@ PAL uses a 3-tier system to keep the hook's dynamic output small while ensuring 
 | Tier | What | How | Written |
 | ---- | ---- | --- | ------- |
 | **1 — Operational** | CLAUDE.md / AGENTS.md — identity, modes, routing | Loaded natively by each agent at startup | On install / AGENTS.md change |
-| **2 — Semi-static** | Self-model, wisdom, opinions, synthesis, failures, steering | `@imports` (Claude Code), `instructions[]` (opencode), `.mdc` rules (Cursor), `.instructions.md` (Copilot) | Written at session stop by `writeContextDigests()` |
+| **2 — Semi-static** | Self-model, wisdom, opinions, synthesis, failures, steering | `@imports` (Claude Code), `instructions[]` (opencode), `.mdc` rules (Cursor), `.instructions.md` (Copilot), plugin `rules/` (Antigravity) | Written at session stop by `writeContextDigests()` |
 | **3 — Dynamic** | Handoff, threads, relationship notes, active projects | Hook stdout via `LoadContext` → `buildSystemReminder()` | Injected fresh each session |
 
-**Single registry.** All semi-static sources are defined in `src/hooks/lib/semi-static.ts` via `getSemiStaticSources()`. Adding one entry there propagates automatically to: CLAUDE.md `@imports`, opencode `instructions[]`, Cursor `.mdc` filenames, Copilot `.instructions.md` filenames, and the session-stop digest writer. No other files need touching.
+**Single registry.** All semi-static sources are defined in `src/hooks/lib/semi-static.ts` via `getSemiStaticSources()`. Adding one entry there propagates automatically to: CLAUDE.md `@imports`, opencode `instructions[]`, Cursor `.mdc` filenames, Copilot `.instructions.md` filenames, Antigravity plugin rule filenames, and the session-stop digest writer. No other files need touching.
 
 ## Common workflows
 

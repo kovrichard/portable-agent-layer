@@ -16,6 +16,7 @@ import {
 } from "../src/hooks/lib/parked-context";
 import { reload } from "../src/hooks/lib/settings";
 import { finishDeferredStop, stopTurn } from "../src/hooks/lib/stop";
+import { sandboxContextRuleDirs } from "./lib/context-rule-dirs";
 
 // stopTurn can spawn detached children that keep writing into PAL_HOME after the
 // test returns; .gitignore covers .test-home-* for that reason.
@@ -23,17 +24,20 @@ const REPO = resolve(import.meta.dir, "..");
 const HOME = resolve(REPO, ".test-home-agent-turns");
 const AGENT_RESPONSE_HOOK = resolve(REPO, "src", "hooks", "AgentResponse.ts");
 const savedHome = process.env.PAL_HOME;
+let restoreContextRuleDirs: () => void;
 
 beforeEach(() => {
   rmSync(HOME, { recursive: true, force: true });
   mkdirSync(resolve(HOME, "memory"), { recursive: true });
   process.env.PAL_HOME = HOME;
+  restoreContextRuleDirs = sandboxContextRuleDirs(resolve(HOME, "agents"));
   reload();
 });
 
 afterEach(() => {
   if (savedHome === undefined) delete process.env.PAL_HOME;
   else process.env.PAL_HOME = savedHome;
+  restoreContextRuleDirs();
   reload();
   rmSync(HOME, { recursive: true, force: true });
 });

@@ -3,7 +3,7 @@
  *
  * One entry here = the only change needed to add a new source across all consumers:
  * CLAUDE.md @imports, opencode instructions[], Cursor .mdc, Copilot .instructions.md,
- * and the session-stop digest writer.
+ * Antigravity plugin rules, and the session-stop digest writer.
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -22,9 +22,9 @@ interface SemiStaticSource {
   readonly writesDigest: boolean;
   /** Returns current content — builds fresh when writesDigest is true, reads the file otherwise. */
   load(): string;
-  /** Slug for ~/.cursor/rules/pal-${slug}.mdc and ~/.copilot/instructions/pal-${slug}.instructions.md */
+  /** Slug for the pal-${slug} rule/instruction files written for Cursor, Copilot and Antigravity. */
   readonly slug: string;
-  /** Human-readable description for Cursor .mdc frontmatter. */
+  /** Human-readable description for Cursor .mdc and Antigravity rule frontmatter. */
   readonly description: string;
 }
 
@@ -36,6 +36,16 @@ export function cursorFilename(src: SemiStaticSource): string {
 /** Returns the Copilot instructions filename for a source. */
 export function copilotFilename(src: SemiStaticSource): string {
   return `pal-${src.slug}.instructions.md`;
+}
+
+/** Returns the Antigravity plugin rule filename for a source. */
+export function antigravityFilename(src: SemiStaticSource): string {
+  return `pal-${src.slug}.md`;
+}
+
+/** An Antigravity rule file; a rule without a valid `trigger` is silently discarded. */
+export function antigravityRule(description: string, content: string): string {
+  return `---\ntrigger: always_on\ndescription: ${description}\n---\n\n${content}`;
 }
 
 function readFileSafe(path: string): string {
