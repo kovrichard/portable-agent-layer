@@ -5,15 +5,12 @@
  */
 
 import type { CandidateInput } from "./adaptation-candidates";
-import type { Turn } from "./adaptation-turns";
+import { type RequestedTurn, type Turn, withRequests } from "./adaptation-turns";
 
 const MIN_CITED = 2;
 const EVIDENCE_MESSAGE_MAX = 200;
 
-export interface Correction extends Turn {
-  /** The user's request the corrected reply answered, when it was logged. */
-  prompt: string;
-}
+type Correction = RequestedTurn;
 
 export interface KnownRule {
   when: string;
@@ -62,18 +59,8 @@ const DRAFTER_SCHEMA = {
   additionalProperties: false,
 } as const;
 
-function precedingRequest(turns: Turn[], index: number): string {
-  const session = turns[index].session;
-  for (let i = index - 1; i >= 0; i--) {
-    if (turns[i].session === session) return turns[i].message;
-  }
-  return "";
-}
-
 export function correctionsToDraftFrom(turns: Turn[]): Correction[] {
-  return turns.flatMap((turn, index) =>
-    turn.confirmed === true ? [{ ...turn, prompt: precedingRequest(turns, index) }] : []
-  );
+  return withRequests(turns).filter((turn) => turn.confirmed === true);
 }
 
 export function canRepeat(corrections: Correction[]): boolean {
