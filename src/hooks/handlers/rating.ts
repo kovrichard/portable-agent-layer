@@ -186,7 +186,7 @@ function handleRating(
 
 // ── Implicit Rating ──
 
-function handleImplicitReaction(message: string, sessionId?: string): void {
+function handleImplicitReaction(message: string, sentAt: Date, sessionId?: string): void {
   const trimmed = message.trim();
   const reply = replyEnd(getLastResponse(sessionId));
 
@@ -212,6 +212,7 @@ function handleImplicitReaction(message: string, sessionId?: string): void {
       sessionId ?? "",
       Buffer.from(trimmed).toString("base64"),
       Buffer.from(reply).toString("base64"),
+      sentAt.toISOString(),
     ],
     "rating"
   );
@@ -247,7 +248,8 @@ async function draftRuleCandidate(sessionId?: string): Promise<void> {
 async function runReactionRatingAndStore(
   message: string,
   reply: string,
-  sessionId?: string
+  sessionId: string | undefined,
+  sentAt: Date
 ): Promise<void> {
   try {
     const first = await labelReaction(reply, message, sessionId);
@@ -263,7 +265,7 @@ async function runReactionRatingAndStore(
       first,
       confirmation
     );
-    if (turn) appendTurn(turn);
+    if (turn) appendTurn(turn, sentAt);
     if (turn?.confirmed) await draftRuleCandidate(sessionId);
   } catch (err) {
     const { logError } = await import("../lib/log");
@@ -273,7 +275,11 @@ async function runReactionRatingAndStore(
 
 // ── Main Export ──
 
-export function captureRating(message: string, sessionId?: string): void {
+export function captureRating(
+  message: string,
+  sessionId?: string,
+  sentAt: Date = new Date()
+): void {
   // Strip IDE/system-injected tags to recover raw user text
   const cleaned = stripInjectedTags(message);
 
@@ -292,7 +298,7 @@ export function captureRating(message: string, sessionId?: string): void {
 
   // Path 2: Implicit reaction — the praise fast-path runs synchronously, the
   // model path detaches to a background bun subprocess (mirrors session-name).
-  handleImplicitReaction(cleaned, sessionId);
+  handleImplicitReaction(cleaned, sentAt, sessionId);
 }
 
 // Background reaction entry point
@@ -302,10 +308,12 @@ if (process.argv[2] === "--sentiment") {
   const replyB64 = process.argv[5];
   if (msgB64 && replyB64) {
     const decode = (b64: string) => Buffer.from(b64, "base64").toString("utf-8");
+    const sentAt = new Date(process.argv[6] ?? "");
     await runReactionRatingAndStore(
       decode(msgB64),
       decode(replyB64),
-      sid === "" ? undefined : sid
+      sid === "" ? undefined : sid,
+      Number.isNaN(sentAt.getTime()) ? new Date() : sentAt
     );
   }
   process.exit(0);
