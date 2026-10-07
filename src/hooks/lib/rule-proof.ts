@@ -40,6 +40,10 @@ export function proveTrigger(trigger: RuleTrigger, turns: RequestedTurn[]): Trig
   };
 }
 
+export function ordinaryTurnsNeeded(proof: TriggerProof): number {
+  return Math.max(0, MIN_ORDINARY_TURNS - proof.ordinary);
+}
+
 export function proofVerdict(proof: TriggerProof): ProofVerdict {
   if (proof.firedCorrections < MIN_FIRED_CORRECTIONS) return "failed";
   if (proof.ordinary < MIN_ORDINARY_TURNS) return "waiting";

@@ -9,6 +9,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { readRules } from "../../hooks/lib/adaptation-rules";
 import { ensureDir, paths } from "../../hooks/lib/paths";
 import { readAllProjects } from "../../hooks/lib/projects";
 import { queryLedger } from "../ledger/query";
@@ -127,10 +128,27 @@ function unranked(): AttentionItem[] {
     }));
 }
 
+function ruleDrafts(): AttentionItem[] {
+  return readRules()
+    .filter((rule) => rule.status === "draft")
+    .map((rule) => ({
+      id: `rule:${rule.id}`,
+      source: "rules" as const,
+      severity: "waiting" as const,
+      title: `Rule draft waiting: ${rule.when}`,
+      detail: rule.steering,
+      at: rule.createdAt,
+      project: null,
+      href: "/relationship",
+      read: false,
+    }));
+}
+
 const SOURCES: Record<AttentionSource, (now: Date) => AttentionItem[]> = {
   refusals,
   waiting,
   unranked: () => unranked(),
+  rules: () => ruleDrafts(),
 };
 
 export function attention(now: Date = new Date()): AttentionView {

@@ -14,7 +14,7 @@ import {
   write as writeSettings,
 } from "../../hooks/lib/settings";
 
-const ATTENTION_SOURCES = ["refusals", "waiting", "unranked"] as const;
+const ATTENTION_SOURCES = ["refusals", "waiting", "unranked", "rules"] as const;
 export type AttentionSource = (typeof ATTENTION_SOURCES)[number];
 
 export interface ControlRoomPrefs {
@@ -28,7 +28,7 @@ const PREF_DEFAULTS: ControlRoomPrefs = {
   quietAfterDays: PROJECT_STALE_DAYS_DEFAULT,
   urgentWithinDays: 14,
   rankGoals: true,
-  attention: { refusals: true, waiting: true, unranked: true },
+  attention: { refusals: true, waiting: true, unranked: true, rules: true },
 };
 
 const DAY_LIMIT = 365;
