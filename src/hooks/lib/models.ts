@@ -16,15 +16,26 @@ export type FixedModelRoute =
   | "codex-spawn"
   | "openai-api";
 
-const ANTHROPIC_MODELS = { small: HAIKU_MODEL, medium: SONNET_MODEL };
-const OPENAI_MODELS = { small: "gpt-6-luna", medium: "gpt-6-sol" };
+/** `large` is the flagship that authors skills and subagents; without one, the agent authors inline. */
+type RouteModels = Record<InferenceTier, string> & { large?: string };
+
+const ANTHROPIC_MODELS: RouteModels = {
+  small: HAIKU_MODEL,
+  medium: SONNET_MODEL,
+  large: FABLE_MODEL,
+};
+const OPENAI_MODELS: RouteModels = {
+  small: "gpt-6-luna",
+  medium: "gpt-6-sol",
+  large: "gpt-6-astra",
+};
 
 /**
  * opencode's models come from the user's own config (opencodeTierModel). Copilot and
  * Cursor are absent on purpose: which named models they accept depends on the user's
  * plan, and a free plan refuses every one but Auto.
  */
-const INFERENCE_MODELS: Record<FixedModelRoute, Record<InferenceTier, string>> = {
+const INFERENCE_MODELS: Record<FixedModelRoute, RouteModels> = {
   "claude-spawn": ANTHROPIC_MODELS,
   "anthropic-api": ANTHROPIC_MODELS,
   "codex-spawn": OPENAI_MODELS,
@@ -42,22 +53,19 @@ export function inferenceModel(
   return INFERENCE_MODELS[route][tier];
 }
 
-/**
- * Per-agent flagship model used to AUTHOR new skills (via `create-skill`).
- *
- * This is the single extension point for delegated skill authoring: an agent
- * present here → `create-skill` spins up that agent's `skill-author` subagent on
- * this model; an agent absent → `create-skill` authors inline. Add a provider by
- * adding one entry (and a matching platform block in assets/agents/skill-author.md).
- */
-export const FLAGSHIP_AUTHOR_MODEL: Partial<Record<AgentType, string>> = {
-  claude: FABLE_MODEL,
-  // codex: "gpt-5.5",   // enable once Codex ships a tool-capable flagship subagent
+const AGENT_SPAWN_ROUTE: Partial<Record<AgentType, FixedModelRoute>> = {
+  claude: "claude-spawn",
+  codex: "codex-spawn",
 };
 
-/** Flagship authoring model for an agent, or undefined if none is configured. */
+/**
+ * The model an agent's `skill-author` / `subagent-author` runs on, or undefined
+ * when `create-skill` and `create-subagent` should author inline. A new provider
+ * needs a `large` model on its route and a platform block in assets/agents/*-author.md.
+ */
 export function flagshipAuthorModel(agent: AgentType): string | undefined {
-  return FLAGSHIP_AUTHOR_MODEL[agent];
+  const route = AGENT_SPAWN_ROUTE[agent];
+  return route ? INFERENCE_MODELS[route].large : undefined;
 }
 
 export interface ModelPricing {

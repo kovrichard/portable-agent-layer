@@ -18,6 +18,9 @@ cursor:
   model: inherit
   readonly: false
   is_background: false
+
+codex:
+  model: gpt-6-astra
 ---
 
 You author a single new personal subagent for this user. You are handed a **subagent name** and a **description**, and interview answers about its model, tools, skills, and system prompt.

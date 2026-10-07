@@ -18,6 +18,9 @@ cursor:
   model: inherit
   readonly: false
   is_background: false
+
+codex:
+  model: gpt-6-astra
 ---
 
 You author a single new personal skill for this user. You are handed a **skill name** and a **skill description**, and optionally hints about tooling or triggers.
