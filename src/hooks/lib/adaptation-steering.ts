@@ -5,12 +5,11 @@
  */
 
 import { appendFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { type AdaptationRule, type RuleTrigger, readRules } from "./adaptation-rules";
 import { alreadySentBack } from "./claim-log";
 import { hookFinalReply, hookSessionId } from "./hook-turn";
 import { replyEnd } from "./interaction-samples";
-import { paths } from "./paths";
+import { ruleEventsPath } from "./rule-effect";
 import { isEnabled } from "./settings";
 import type { StopTurnPayload } from "./stop";
 
@@ -44,10 +43,7 @@ function logFire(
   const lines = rules.map((rule) =>
     JSON.stringify({ ts: now.toISOString(), rule: rule.id, side, session, sentBack })
   );
-  appendFileSync(
-    resolve(paths.adaptation(), "rule-events.jsonl"),
-    `${lines.join("\n")}\n`
-  );
+  appendFileSync(ruleEventsPath(), `${lines.join("\n")}\n`);
 }
 
 function withinBudget(rules: AdaptationRule[]): AdaptationRule[] {
