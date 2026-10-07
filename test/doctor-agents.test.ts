@@ -1,10 +1,21 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { agentFindings, rosterFindings } from "../src/cli/doctor/agents";
 import { AGENT_NAMES } from "../src/hooks/lib/agent-registry";
-import { copyAgents, copyAgentsForCodex } from "../src/targets/lib";
+import {
+  copyAgents,
+  copyAgentsForAntigravity,
+  copyAgentsForCodex,
+} from "../src/targets/lib";
 
 const DIR_VARS = {
   PAL_CLAUDE_DIR: "claude",
@@ -288,6 +299,25 @@ describe("installed subagents", () => {
     write(resolve(codexAgents, "researcher.toml"), "stale copy");
     expect(byId(agentFindings(["codex"]), "codex.subagents")?.title).toContain(
       "researcher"
+    );
+  });
+
+  test("antigravity installs its own block into the plugin and checks it", () => {
+    write(
+      resolve(ROOT, "pkg", "assets", "agents", "researcher.md"),
+      shippedAgent.replace("---\nbody", "antigravity:\n  model: pro\n---\nbody")
+    );
+    const pluginAgents = resolve(ROOT, "gemini", "config", "plugins", "pal", "agents");
+
+    expect(byId(agentFindings(["antigravity"]), "antigravity.subagents")?.severity).toBe(
+      "warn"
+    );
+    copyAgentsForAntigravity(pluginAgents);
+    expect(readFileSync(resolve(pluginAgents, "researcher.md"), "utf-8")).toBe(
+      "---\nname: researcher\nmodel: pro\n---\nbody v1\n"
+    );
+    expect(byId(agentFindings(["antigravity"]), "antigravity.subagents")?.severity).toBe(
+      "ok"
     );
   });
 });

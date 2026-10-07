@@ -177,6 +177,11 @@ describe("pal cli install (smoke)", () => {
       "PostToolUse",
       "Stop",
     ]);
+    const author = readFileSync(resolve(plugin, "agents", "skill-author.md"), "utf-8");
+    expect(author).toContain("\nmodel: pro\n");
+    expect(author).toContain("\nmainAgent: false\n");
+    expect(author).toContain("\n  - write_to_file\n");
+    expect(author).not.toContain("fable");
 
     expect(pal("cli", "uninstall", "--antigravity").status).toBe(0);
     expect(existsSync(plugin)).toBe(false);

@@ -1103,6 +1103,10 @@ export function copyAgentsForCodex(codexAgentsDir: string): number {
   return installAgents(codexAgentsDir, "codex");
 }
 
+export function copyAgentsForAntigravity(pluginAgentsDir: string): number {
+  return installAgents(pluginAgentsDir, "antigravity");
+}
+
 export function removeAgentsFromCursor(cursorAgentsDir: string): string[] {
   return uninstallAgents(cursorAgentsDir, "cursor");
 }

@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
+import { assets } from "../src/hooks/lib/paths";
 import { lintSubagent, resolveSubagentFile } from "../src/tools/subagent-doctor";
 
 const ROOT = resolve(import.meta.dir, "../.test-home-subagent-doctor");
@@ -156,6 +157,72 @@ describe("subagent-doctor", () => {
     expect(findings(fixture(good))).toHaveLength(0);
   });
 
+  const withAntigravity = (block: string) =>
+    fixture(GOOD.replace("---\n\nYou review", `antigravity:\n${block}---\n\nYou review`));
+
+  const antigravityProblems = (file: string) =>
+    findings(file)
+      .filter((f) => f.check.startsWith("antigravity."))
+      .map((f) => `${f.level} ${f.check}: ${f.message}`);
+
+  test.each([
+    [
+      "a full block",
+      "  model: pro\n  subagent: true\n  mainAgent: false\n  tools:\n    - view_file\n    - run_command\n",
+    ],
+    ["tools alone", "  tools:\n    - view_file\n"],
+  ])("%s for antigravity adds no findings", (_case, block) => {
+    expect(findings(withAntigravity(block))).toHaveLength(0);
+  });
+
+  test("Claude tool names in the antigravity block error, since they can hang agy", () => {
+    const file = withAntigravity("  tools:\n    - view_file\n    - Bash\n    - Grep\n");
+    expect(antigravityProblems(file)).toEqual([
+      expect.stringContaining("error antigravity.tools: unknown tool(s) Bash, Grep — "),
+    ]);
+  });
+
+  test.each([
+    ["missing", "  model: flash\n"],
+    ["blank", "  tools:\n"],
+    ["empty", "  tools: []\n"],
+  ])("%s antigravity tools warn, since agy then grants none", (_case, block) => {
+    expect(antigravityProblems(withAntigravity(block))).toEqual([
+      expect.stringContaining("warn antigravity.tools: no `tools` — "),
+    ]);
+  });
+
+  test.each([
+    ["a comma string", "  tools: view_file, run_command\n"],
+    ["a list holding a mapping", "  tools:\n    - view_file\n    - name: grep_search\n"],
+    ["unparseable YAML", "  tools: [view_file\n"],
+  ])("antigravity tools as %s error, since agy needs a list of names", (_case, block) => {
+    expect(antigravityProblems(withAntigravity(block))).toEqual([
+      "error antigravity.tools: `tools` must be a YAML list of tool names",
+    ]);
+  });
+
+  test("an antigravity model outside inherit/flash/pro warns", () => {
+    const file = withAntigravity("  model: fable\n  tools:\n    - view_file\n");
+    expect(antigravityProblems(file)).toEqual([
+      'warn antigravity.model: model "fable" — expected one of inherit, flash, pro',
+    ]);
+  });
+
+  test("every shipped subagent's antigravity block is clean", () => {
+    const shipped = readdirSync(assets.agents()).filter((f) => f.endsWith(".md"));
+    expect(shipped.length).toBeGreaterThan(0);
+    for (const file of shipped) {
+      const report = lintSubagent(resolve(assets.agents(), file));
+      const antigravity = report.findings.filter((f) =>
+        f.check.startsWith("antigravity.")
+      );
+      expect(antigravity.map((f) => `${file} ${f.level} ${f.check}`)).toEqual([
+        `${file} pass antigravity.tools`,
+      ]);
+    }
+  });
+
   test("no platform block at all warns", () => {
     const bare = `---
 name: bare-agent
@@ -165,6 +232,9 @@ description: "A minimal subagent. Use when nothing else fits."
 You do a thing.
 `;
     expect(hasWarn(fixture(bare), "platforms")).toBe(true);
+    expect(
+      lintSubagent(fixture(bare)).findings.find((f) => f.check === "platforms")?.message
+    ).toContain("/codex:/antigravity: block");
   });
 
   test("the GOOD fixture produces zero non-pass findings we did not expect", () => {

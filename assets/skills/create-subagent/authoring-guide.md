@@ -50,6 +50,14 @@ codex:
   model: gpt-6-sol              # omit to inherit the parent session's model
   model_reasoning_effort: high
   sandbox_mode: read-only       # read-only | workspace-write | danger-full-access
+antigravity:
+  model: inherit                # inherit | flash | pro
+  subagent: true
+  mainAgent: false              # keep it out of the main-agent picker
+  tools:                        # YAML list of exact names; omitted = NO tools
+    - view_file
+    - grep_search
+    - run_command
 ---
 
 <system prompt — second-person instructions to the subagent>
@@ -79,6 +87,14 @@ with just `name` + `description` (a valid, minimal subagent).
   the agent); restrict access with `sandbox_mode` and name skills in the body. The
   global frontmatter may hold only `name` and `description`, because nothing else maps
   to a Codex key.
+- **antigravity** — installs into the PAL plugin's `agents/` folder. `model` is
+  `inherit`, `flash` or `pro`. `tools` is a YAML list, and omitting it gives the subagent
+  **no** tools. Use Antigravity's own names, never Claude's: `view_file` (Read),
+  `grep_search` (Grep), `find_by_name` / `list_dir` (Glob), `write_to_file` (Write),
+  `replace_file_content` / `multi_replace_file_content` (Edit), `run_command` (Bash),
+  `search_web` (WebSearch), `read_url_content` (WebFetch). An unknown name can hang the
+  subagent, so the doctor treats it as an error. Set `subagent: true` and
+  `mainAgent: false` so it is offered only as a delegate.
 
 ## What makes a good subagent
 

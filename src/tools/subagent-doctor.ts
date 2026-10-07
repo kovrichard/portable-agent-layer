@@ -2,7 +2,7 @@
  * subagent-doctor — static evaluator for a personal subagent definition
  * (~/.pal/agents/<name>.md) with merged multi-platform frontmatter. Checks only
  * what is mechanically verifiable: name/description constraints, per-platform
- * blocks (claude/opencode/cursor/copilot/codex), model/tools/permission shape, body
+ * blocks (one per agent), model/tools/permission shape, body
  * length, and absolute-path portability.
  *
  * Library:  import { lintSubagent, formatSubagentReport } from ".../subagent-doctor"
@@ -55,6 +55,29 @@ const OPENCODE_MODES = ["subagent", "primary", "all"];
 const CODEX_SANDBOX_MODES = ["read-only", "workspace-write", "danger-full-access"];
 const CODEX_TABLE_KEYS = ["tools", "skills"];
 const SHARED_FIELDS = ["name", "description"];
+const ANTIGRAVITY_MODELS = ["inherit", "flash", "pro"];
+const ANTIGRAVITY_TOOLS = [
+  "view_file",
+  "write_to_file",
+  "replace_file_content",
+  "multi_replace_file_content",
+  "list_dir",
+  "find_by_name",
+  "grep_search",
+  "search_web",
+  "read_url_content",
+  "run_command",
+  "manage_task",
+  "schedule",
+  "list_permissions",
+  "ask_permission",
+  "invoke_subagent",
+  "define_subagent",
+  "send_message",
+  "manage_subagents",
+  "ask_question",
+  "generate_image",
+];
 
 /** Machine/user-specific absolute paths that will not survive an export. */
 const ABSOLUTE_PATH_RE =
@@ -197,6 +220,49 @@ function checkCodexBlock(lines: string[], add: AddFinding): void {
   }
 }
 
+function checkAntigravityBlock(lines: string[], add: AddFinding): void {
+  const model = fieldValue(lines, "model");
+  if (model !== null && !ANTIGRAVITY_MODELS.includes(model)) {
+    add(
+      "warn",
+      "antigravity.model",
+      `model "${model}" — expected one of ${ANTIGRAVITY_MODELS.join(", ")}`
+    );
+  }
+  checkAntigravityTools(antigravityTools(lines), add);
+}
+
+function antigravityTools(lines: string[]): unknown {
+  try {
+    return (Bun.YAML.parse(lines.join("\n")) as { tools?: unknown } | null)?.tools;
+  } catch {
+    return "unparseable";
+  }
+}
+
+function checkAntigravityTools(tools: unknown, add: AddFinding): void {
+  if (tools === undefined || tools === null || (Array.isArray(tools) && !tools.length)) {
+    add(
+      "warn",
+      "antigravity.tools",
+      "no `tools` — Antigravity gives the subagent no tools at all; list the ones it needs"
+    );
+    return;
+  }
+  if (!Array.isArray(tools) || !tools.every((t) => typeof t === "string")) {
+    add("error", "antigravity.tools", "`tools` must be a YAML list of tool names");
+    return;
+  }
+  const unknown = tools.filter((t) => !ANTIGRAVITY_TOOLS.includes(t));
+  unknown.length > 0
+    ? add(
+        "error",
+        "antigravity.tools",
+        `unknown tool(s) ${unknown.join(", ")} — an unmapped tool name can hang the subagent; use Antigravity names such as run_command, view_file, search_web`
+      )
+    : add("pass", "antigravity.tools", `${tools.length} known tool(s)`);
+}
+
 function validateModel(model: string, platform: string, add: AddFinding): void {
   const known = KNOWN_MODELS.includes(model) || /^(claude-|gpt-|o\d|gemini-)/.test(model);
   if (!known) {
@@ -319,12 +385,13 @@ export function lintSubagent(file: string): SubagentReport {
 
   // ── platform blocks ──
   const present = AGENT_NAMES.filter((p) => (platforms[p]?.length ?? 0) > 0);
+  const blockKeys = AGENT_NAMES.map((p) => p.concat(":")).join("/");
   present.length > 0
     ? add("pass", "platforms", `defines block(s): ${present.join(", ")}`)
     : add(
         "warn",
         "platforms",
-        "no platform block — the subagent installs with only name/description; add a claude:/opencode:/cursor:/copilot:/codex: block to set model, tools, mode"
+        `no platform block — the subagent installs with only name/description; add a ${blockKeys} block to set model, tools, mode`
       );
 
   if (platforms.claude) checkClaudeBlock(platforms.claude, add);
@@ -332,6 +399,7 @@ export function lintSubagent(file: string): SubagentReport {
   if (platforms.cursor) checkCursorBlock(platforms.cursor, add);
   if (platforms.copilot) checkCopilotBlock(platforms.copilot, add);
   if (platforms.codex) checkCodexBlock(platforms.codex, add);
+  if (platforms.antigravity) checkAntigravityBlock(platforms.antigravity, add);
 
   // ── skills field: Claude preloads it; the others have no such field ──
   for (const p of ["opencode", "cursor", "copilot"] as const) {

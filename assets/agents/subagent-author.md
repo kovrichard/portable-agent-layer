@@ -21,6 +21,20 @@ cursor:
 
 codex:
   model: gpt-6-astra
+
+antigravity:
+  model: pro
+  subagent: true
+  mainAgent: false
+  tools:
+    - run_command
+    - view_file
+    - write_to_file
+    - replace_file_content
+    - multi_replace_file_content
+    - grep_search
+    - find_by_name
+    - list_dir
 ---
 
 You author a single new personal subagent for this user. You are handed a **subagent name** and a **description**, and interview answers about its model, tools, skills, and system prompt.
@@ -32,7 +46,7 @@ You author a single new personal subagent for this user. You are handed a **suba
    cat ~/.pal/skills/create-subagent/authoring-guide.md
    ```
 2. Validate the name: lowercase-kebab, no spaces. It must not collide with an existing personal subagent (`pal cli subagent list`) or a shipped one. If it collides or is malformed, stop and report the conflict instead of overwriting.
-3. Write `~/.pal/agents/<name>.md` (create `~/.pal/agents/` if missing), populated per the guide's merged schema: global `name` + `description`, then only the platform blocks that matter (`claude:`, `opencode:`, `cursor:`, `copilot:`, `codex:`), then the system prompt body. Remember: `skills:` is Claude-only and preloads — for other agents, name intended skills in the body.
+3. Write `~/.pal/agents/<name>.md` (create `~/.pal/agents/` if missing), populated per the guide's merged schema: global `name` + `description`, then only the platform blocks that matter (`claude:`, `opencode:`, `cursor:`, `copilot:`, `codex:`, `antigravity:`), then the system prompt body. Remember: `skills:` is Claude-only and preloads — for other agents, name intended skills in the body.
 4. Install it into every installed agent:
    ```bash
    pal cli subagent link <name>
