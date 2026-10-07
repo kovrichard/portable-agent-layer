@@ -9,6 +9,7 @@
 
 import { blockResponse } from "./lib/agent";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
+import { enterHookWorkspace } from "./lib/hook-turn";
 import { recordBlocked } from "./lib/ledger";
 import { logError } from "./lib/log";
 import { decideRefusal, type SecurityInput } from "./lib/security-gate";
@@ -20,6 +21,7 @@ try {
   const input = await readStdinJSON<SecurityInput>();
   if (!input) process.exit(0);
 
+  enterHookWorkspace(input);
   const refusal = decideRefusal(input, process.cwd());
   if (!refusal) process.exit(0);
 

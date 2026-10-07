@@ -8,11 +8,10 @@
  */
 
 import { injectPromptContext } from "./handlers/inject-retrieval";
-import { captureRating } from "./handlers/rating";
-import { captureSessionName } from "./handlers/session-name";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { type HookTurnPayload, hookSessionId } from "./lib/hook-turn";
-import { logDebug, logError, logPromptSnapshot } from "./lib/log";
+import { logDebug, logPromptSnapshot } from "./lib/log";
+import { capturePrompt } from "./lib/prompt-capture";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
 
@@ -34,15 +33,4 @@ const sessionId = hookSessionId(input);
 const injected = await injectPromptContext(input.prompt, sessionId);
 logPromptSnapshot(input.prompt, injected);
 
-const results = await Promise.allSettled([
-  captureRating(input.prompt, sessionId, sentAt),
-  captureSessionName(input.prompt, sessionId ?? ""),
-]);
-
-const handlerNames = ["rating", "session-name"];
-for (let i = 0; i < results.length; i++) {
-  const r = results[i];
-  if (r.status === "rejected") {
-    logError(`UserPromptOrchestrator:${handlerNames[i]}`, r.reason);
-  }
-}
+await capturePrompt(input.prompt, sessionId, sentAt, "UserPromptOrchestrator");

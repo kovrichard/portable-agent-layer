@@ -7,7 +7,7 @@
  * lives here instead; the entrypoint is left with stdin, stdout and the ledger.
  */
 
-import { normalizeToolUse } from "./agent";
+import { ANTIGRAVITY_WRITE_TOOLS, FILE_TARGET_KEYS, normalizeToolUse } from "./agent";
 import { logDebug } from "./log";
 import { checkBashCommand, checkFilePath } from "./security";
 
@@ -43,6 +43,7 @@ const SHELL_TOOLS = [
   "run_in_terminal",
   "terminal",
   "execute_command",
+  "run_command",
 ];
 
 const FILE_WRITE_TOOLS = [
@@ -64,6 +65,7 @@ const FILE_WRITE_TOOLS = [
   "replacestring",
   "edit_notebook_file",
   "notebookedit",
+  ...ANTIGRAVITY_WRITE_TOOLS,
 ];
 
 function isShellExec(input: SecurityInput): input is ShellExecInput {
@@ -121,7 +123,12 @@ export function decideRefusal(input: SecurityInput, cwd: string): GateRefusal | 
     `toolName=${toolUse.toolName} args=${Object.keys(toolUse.toolInput).join(",")}`
   );
 
-  const command = firstStringArg(toolUse.toolInput, ["command", "commandLine", "script"]);
+  const command = firstStringArg(toolUse.toolInput, [
+    "command",
+    "commandLine",
+    "CommandLine",
+    "script",
+  ]);
   if (runsShellCommand(toolUse.toolName) && command) {
     const reason = checkBashCommand(command);
     // "No output" from a downstream tool is indistinguishable between "denied,
@@ -141,7 +148,7 @@ export function decideRefusal(input: SecurityInput, cwd: string): GateRefusal | 
     }
   }
 
-  const filePath = firstStringArg(toolUse.toolInput, ["file_path", "filePath", "path"]);
+  const filePath = firstStringArg(toolUse.toolInput, FILE_TARGET_KEYS);
   if (writesFile(toolUse.toolName) && filePath) {
     const reason = checkFilePath(filePath);
     if (reason) {

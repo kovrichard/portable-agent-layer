@@ -209,6 +209,32 @@ describe("opencode's plugin", () => {
   });
 });
 
+describe("Antigravity's plugin hooks", () => {
+  function pluginHooks(contextScript: string): void {
+    const command = palCommand(hookScript(contextScript), "antigravity");
+    write(
+      resolve(ROOT, "gemini", "config", "plugins", "pal", "hooks.json"),
+      JSON.stringify({ pal: { PreInvocation: [{ type: "command", command }] } })
+    );
+  }
+
+  test("are registered when the plugin runs InvocationContext, agy's context hook", () => {
+    pluginHooks("InvocationContext");
+
+    expect(byId(agentFindings(["antigravity"]), "antigravity.hooks")?.severity).toBe(
+      "ok"
+    );
+  });
+
+  test("LoadContext alone does not count, since agy has no event to run it on", () => {
+    pluginHooks("LoadContext");
+
+    expect(
+      byId(agentFindings(["antigravity"]), "antigravity.hooks.missing")?.severity
+    ).toBe("fail");
+  });
+});
+
 describe("installed subagents", () => {
   const shippedAgent = "---\nname: researcher\nclaude:\n  model: sonnet\n---\nbody v1\n";
 

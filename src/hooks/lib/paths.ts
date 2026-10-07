@@ -168,6 +168,7 @@ export const assets = {
   cursorHooksTemplate: () => pkg("assets", "templates", "hooks.cursor.json"),
   copilotHooksTemplate: () => pkg("assets", "templates", "hooks.copilot.json"),
   codexHooksTemplate: () => pkg("assets", "templates", "hooks.codex.json"),
+  antigravityHooksTemplate: () => pkg("assets", "templates", "hooks.antigravity.json"),
   codexRulesTemplate: () => pkg("assets", "templates", "rules.codex.rules"),
   statuslineScriptBash: () => pkg("assets", "statusline.sh"),
   statuslineScriptPs1: () => pkg("assets", "statusline.ps1"),

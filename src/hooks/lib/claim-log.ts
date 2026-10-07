@@ -73,7 +73,11 @@ function record({ check, commands, session, blocked }: Watched, now: Date) {
 }
 
 export function alreadySentBack(payload: StopTurnPayload): boolean {
-  return payload.stop_hook_active === true || (payload.loop_count ?? 0) > 0;
+  return (
+    payload.stop_hook_active === true ||
+    (payload.loop_count ?? 0) > 0 ||
+    (payload.executionNum ?? 0) > 0
+  );
 }
 
 function sendsBack(payload: StopTurnPayload, check: ClaimCheck): boolean {

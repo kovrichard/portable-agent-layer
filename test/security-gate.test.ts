@@ -85,6 +85,7 @@ const SHELL_TOOLS = [
   "run_in_terminal",
   "terminal",
   "execute_command",
+  "run_command",
 ];
 
 const FILE_WRITE_TOOLS = [
@@ -106,6 +107,9 @@ const FILE_WRITE_TOOLS = [
   "replacestring",
   "edit_notebook_file",
   "notebookedit",
+  "write_to_file",
+  "replace_file_content",
+  "multi_replace_file_content",
 ];
 
 describe("which tool names the gate recognises", () => {
@@ -124,6 +128,7 @@ describe("which tool names the gate recognises", () => {
   test.each([
     "command",
     "commandLine",
+    "CommandLine",
     "script",
   ])("the command is found however it is spelled: %s", (key) => {
     expect(decideRefusal(wrapped("Bash", { [key]: DANGEROUS }), CWD)).not.toBeNull();
@@ -161,6 +166,7 @@ describe("a refused file write", () => {
     "file_path",
     "filePath",
     "path",
+    "TargetFile",
   ])("the path is found however it is spelled: %s", (key) => {
     expect(decideRefusal(wrapped("Write", { [key]: PROTECTED }), CWD)).not.toBeNull();
   });

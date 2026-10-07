@@ -1194,8 +1194,12 @@ function renderForPersonalSubagent(content: string, agent: AgentName): string {
   }
 }
 
-/** Load and resolve the Copilot hooks template, substituting PKG_ROOT */
-export function loadCopilotHooksTemplate(templatePath: string, pkgRoot: string): unknown {
+/** Any agent's hooks template with PKG_ROOT filled in, parsed. */
+export function loadHooksTemplate(
+  templatePath: string,
+  pkgRoot: string,
+  agentLabel: string
+): unknown {
   const resolved = readFileSync(templatePath, "utf-8").replaceAll(
     "{{PKG_ROOT}}",
     pkgRoot
@@ -1203,8 +1207,15 @@ export function loadCopilotHooksTemplate(templatePath: string, pkgRoot: string):
   try {
     return JSON.parse(resolved);
   } catch (e) {
-    throw new Error(`Failed to parse Copilot hooks template at ${templatePath}: ${e}`);
+    throw new Error(
+      `Failed to parse ${agentLabel} hooks template at ${templatePath}: ${e}`
+    );
   }
+}
+
+/** Load and resolve the Copilot hooks template, substituting PKG_ROOT */
+export function loadCopilotHooksTemplate(templatePath: string, pkgRoot: string): unknown {
+  return loadHooksTemplate(templatePath, pkgRoot, "Copilot");
 }
 
 // --- Statusline ---

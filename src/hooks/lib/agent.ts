@@ -71,17 +71,24 @@ function inClaudeCode(): boolean {
   return Boolean(process.env.CLAUDE_CODE_ENTRYPOINT);
 }
 
+/** Exported into every hook and tool process agy spawns. */
+function inAntigravity(): boolean {
+  return Boolean(process.env.ANTIGRAVITY_CONVERSATION_ID);
+}
+
 /**
  * Which host is running this process, read from what the host itself exported.
  *
  * cursor-agent is tested first on purpose: it emulates Claude Code closely
  * enough to inject CLAUDE_PROJECT_DIR and CLAUDE_CODE_AUTO_COMPACT_WINDOW, so
  * a CLAUDE_* variable is evidence of Claude Code only once Cursor is ruled out.
+ * Antigravity comes last because its variable leaks into any agent it runs.
  */
 function agentFromRuntimeEnv(): AgentType | undefined {
   if (inCursorAgent()) return "cursor";
   if (inCodex()) return "codex";
   if (inClaudeCode()) return "claude";
+  if (inAntigravity()) return "antigravity";
   return undefined;
 }
 
@@ -143,6 +150,7 @@ export const isCursor = () => getActiveAgent() === "cursor";
 export const isCodex = () => getActiveAgent() === "codex";
 export const isCopilot = () => getActiveAgent() === "copilot";
 export const isOpencode = () => getActiveAgent() === "opencode";
+const isAntigravity = () => getActiveAgent() === "antigravity";
 const isVscode = () => getActiveAgent() === "vscode";
 
 /** Normalized preToolUse request — one shape for every agent's payload. */
@@ -151,6 +159,16 @@ export interface ToolUseRequest {
   toolInput: Record<string, unknown>;
   hookEventName?: string;
 }
+
+/** Every spelling agents use for the file a write tool changes. */
+export const FILE_TARGET_KEYS = ["file_path", "filePath", "path", "TargetFile"];
+
+/** Antigravity's file-writing tools, all of which name their file `TargetFile`. */
+export const ANTIGRAVITY_WRITE_TOOLS = [
+  "write_to_file",
+  "replace_file_content",
+  "multi_replace_file_content",
+];
 
 function firstString(...values: unknown[]): string | undefined {
   return values.find((v): v is string => typeof v === "string" && v.length > 0);
@@ -179,6 +197,14 @@ function toolInputOf(payload: Record<string, unknown>): Record<string, unknown> 
   return firstObject(...candidates) ?? candidates.map(parsedObject).find(Boolean) ?? {};
 }
 
+/** Antigravity nests the call as `toolCall: { name, args }`. */
+function nestedToolCall(payload: Record<string, unknown>): ToolUseRequest | null {
+  const call = firstObject(payload.toolCall);
+  const toolName = firstString(call?.name);
+  if (!call || !toolName) return null;
+  return { toolName, toolInput: firstObject(call.args) ?? {} };
+}
+
 /**
  * Normalize a preToolUse payload across agents.
  *
@@ -191,7 +217,7 @@ export function normalizeToolUse(raw: unknown): ToolUseRequest | null {
   const payload = firstObject(raw);
   if (!payload) return null;
   const toolName = firstString(payload.tool_name, payload.toolName);
-  if (!toolName) return null;
+  if (!toolName) return nestedToolCall(payload);
   return {
     toolName,
     toolInput: toolInputOf(payload),
@@ -206,6 +232,7 @@ export function normalizeToolUse(raw: unknown): ToolUseRequest | null {
  * Copilot preToolUse:    { permissionDecision: "deny", permissionDecisionReason }
  * Copilot agentStop:     { decision: "block", reason }
  * Codex PreToolUse:      { hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: reason } }
+ * Antigravity PreToolUse: { decision: "deny", reason }
  *
  * A stop event denies the whole turn, not one tool call, so it carries a
  * decision rather than a permission — callers must name the event to get it.
@@ -264,10 +291,14 @@ export function promptContextResponse(context: string): string | null {
 export function stopBlockResponse(reason: string): string {
   if (isCursor()) return JSON.stringify({ followup_message: reason });
   if (isCodex()) return JSON.stringify({ additionalContext: reason });
+  if (isAntigravity()) return JSON.stringify({ decision: "continue", reason });
   return blockResponse(reason, "Stop");
 }
 
 export function blockResponse(reason: string, hookEventName?: string): string {
+  if (isAntigravity()) {
+    return JSON.stringify({ decision: "deny", reason });
+  }
   if (isCursor()) {
     return JSON.stringify({ permission: "deny", user_message: reason });
   }

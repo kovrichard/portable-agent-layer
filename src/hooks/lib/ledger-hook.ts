@@ -8,7 +8,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
-import { normalizeToolUse } from "./agent";
+import { ANTIGRAVITY_WRITE_TOOLS, FILE_TARGET_KEYS, normalizeToolUse } from "./agent";
 import {
   claimPending,
   type LedgerEntry,
@@ -38,6 +38,7 @@ const LEDGERED_TOOLS = new Set([
   "insert",
   "str_replace",
   "str_replace_editor",
+  ...ANTIGRAVITY_WRITE_TOOLS,
 ]);
 
 /**
@@ -52,9 +53,6 @@ const PATCHING_TOOLS = new Set(["apply_patch", "applypatch"]);
  * A read recorded as an action would put queries back in a log of changes.
  */
 const READING_COMMANDS = new Set(["view"]);
-
-/** Agents disagree on the spelling; the value is the same file either way. */
-const TARGET_KEYS = ["file_path", "filePath", "path"];
 
 /** Every header in the V4A patch format that names a file the patch changes. */
 const PATCHED_FILE_HEADER = /^\*\*\* (?:Add|Update|Delete) File: (.+)$/gm;
@@ -153,7 +151,7 @@ function derivedPairingKey(anchor: string, tool: string, target: string): string
 }
 
 function sessionOf(payload: Record<string, unknown>): string | null {
-  const session = payload.sessionId ?? payload.session_id;
+  const session = payload.sessionId ?? payload.session_id ?? payload.conversationId;
   return typeof session === "string" && session.length > 0 ? session : null;
 }
 
@@ -227,6 +225,16 @@ function contentsOf(path: string): string | null {
 /** Park the target's current contents, the last moment they still exist. */
 export function snapshotCall(call: LedgeredCall): void {
   savePending({ ...call, before: contentsOf(call.target), ts: new Date().toISOString() });
+}
+
+/** Antigravity fires PostToolUse for a failed call too, and says so only in `error`. */
+function reportsFailure(payload: Record<string, unknown>): boolean {
+  return typeof payload.error === "string" && payload.error.length > 0;
+}
+
+/** The calls in a post-tool payload whose change actually reached the disk. */
+export function landedCalls(payload: Record<string, unknown>): LedgeredCall[] {
+  return reportsFailure(payload) ? [] : ledgeredCalls(payload);
 }
 
 /** Pair a parked before-state with the result, or nothing if none was parked. */
@@ -303,7 +311,7 @@ export function ledgeredTarget(
 ): string | null {
   if (!LEDGERED_TOOLS.has(toolName.toLowerCase())) return null;
   if (readsRatherThanChanges(toolInput)) return null;
-  for (const key of TARGET_KEYS) {
+  for (const key of FILE_TARGET_KEYS) {
     const value = toolInput[key];
     if (typeof value === "string" && value.length > 0) return value;
   }

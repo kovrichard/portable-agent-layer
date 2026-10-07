@@ -11,6 +11,7 @@
  */
 
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
+import { enterHookWorkspace } from "./lib/hook-turn";
 import { ledgeredCalls, snapshotCall } from "./lib/ledger-hook";
 import { logDebug } from "./lib/log";
 import { readStdinJSON } from "./lib/stdin";
@@ -21,6 +22,7 @@ try {
   const input = await readStdinJSON<Record<string, unknown>>();
   if (!input) process.exit(0);
 
+  enterHookWorkspace(input);
   const calls = ledgeredCalls(input);
   if (calls.length === 0) process.exit(0);
 

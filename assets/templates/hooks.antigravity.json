@@ -1,0 +1,42 @@
+{
+  "pal": {
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "bun run {{PKG_ROOT}}/src/hooks/InvocationContext.ts --agent=antigravity"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/SecurityValidator.ts --agent=antigravity"
+          },
+          {
+            "type": "command",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerSnapshot.ts --agent=antigravity"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts --agent=antigravity"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "bun run {{PKG_ROOT}}/src/hooks/StopOrchestrator.ts --agent=antigravity"
+      }
+    ]
+  }
+}

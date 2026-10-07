@@ -163,6 +163,20 @@ describe("pal cli install (smoke)", () => {
     expect(steering).toStartWith(
       "---\ntrigger: always_on\ndescription: PAL steering rules\n"
     );
+    const hooks = readFileSync(resolve(plugin, "hooks.json"), "utf-8");
+    const commands = Array.from(hooks.matchAll(/"command": "([^"]+)"/g), (m) => m[1]);
+    expect(commands.length).toBe(5);
+    for (const command of commands) {
+      expect(command).not.toContain("{{PKG_ROOT}}");
+      expect(command).toEndWith(" --agent=antigravity");
+      expect(existsSync(command.split(" ")[2])).toBe(true);
+    }
+    expect(Object.keys(JSON.parse(hooks).pal)).toEqual([
+      "PreInvocation",
+      "PreToolUse",
+      "PostToolUse",
+      "Stop",
+    ]);
 
     expect(pal("cli", "uninstall", "--antigravity").status).toBe(0);
     expect(existsSync(plugin)).toBe(false);

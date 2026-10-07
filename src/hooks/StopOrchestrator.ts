@@ -8,8 +8,10 @@
 import { checkReadmeSync } from "./handlers/readme-sync";
 import { watchReplyRules } from "./lib/adaptation-steering";
 import { stopBlockResponse } from "./lib/agent";
+import { type AntigravityStopFields, isSideStop } from "./lib/antigravity-transcript";
 import { watchClaims } from "./lib/claim-log";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
+import { enterHookWorkspace } from "./lib/hook-turn";
 import { logError } from "./lib/log";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
@@ -19,6 +21,10 @@ import { type StopTurnPayload, stopTurn } from "./lib/stop";
 // learning, ratings, or handoffs from their throwaway transcript.
 if (isPalSpawnedInference()) process.exit(0);
 if (duplicatesCursorHooks()) process.exit(0);
+
+const payload = await readStdinJSON<StopTurnPayload & AntigravityStopFields>();
+if (isSideStop(payload)) process.exit(0);
+enterHookWorkspace(payload);
 
 // Check README sync before anything else — may block the session
 try {
@@ -33,7 +39,6 @@ try {
   logError("StopOrchestrator:readme-sync", err);
 }
 
-const payload = await readStdinJSON<StopTurnPayload>();
 try {
   const sendBack = watchClaims(payload);
   if (sendBack) {

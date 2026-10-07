@@ -111,6 +111,8 @@ export function installedAgents(result: DoctorResult): AgentName[] {
 
 interface AgentWiring {
   hookFile?: () => string;
+  /** The hook whose absence means PAL's context never arrives; LoadContext unless set. */
+  contextHook?: string;
   instructions?: { file: () => string; name: string };
 }
 
@@ -128,6 +130,7 @@ const WIRING: Record<AgentName, AgentWiring> = {
   opencode: {},
   antigravity: {
     hookFile: () => resolve(platform.antigravityPluginDir(), "hooks.json"),
+    contextHook: "InvocationContext",
     instructions: {
       file: () => resolve(platform.antigravityPluginDir(), "rules", "pal.md"),
       name: "PAL plugin rule",
@@ -203,7 +206,7 @@ function readHookCommands(file: string): string[] | "missing" | "unreadable" {
   }
 }
 
-function hookFindings(agent: AgentName, file: string): Finding[] {
+function hookFindings(agent: AgentName, file: string, contextHook: string): Finding[] {
   const label = labelOf(agent);
   const commands = readHookCommands(file);
   if (commands === "unreadable")
@@ -219,7 +222,7 @@ function hookFindings(agent: AgentName, file: string): Finding[] {
       ),
     ];
   const pal = commands === "missing" ? [] : commands.filter((c) => isPalHook(c, agent));
-  if (!pal.some((c) => c.includes("LoadContext")))
+  if (!pal.some((c) => c.includes(contextHook)))
     return [
       failing(
         `${agent}.hooks.missing`,
@@ -300,7 +303,7 @@ function oneAgentFindings(agent: AgentName): Finding[] {
   ];
   findings.push(
     ...(layout.hookFile
-      ? hookFindings(agent, layout.hookFile())
+      ? hookFindings(agent, layout.hookFile(), layout.contextHook ?? "LoadContext")
       : opencodePluginFindings()),
     subagentFinding(agent)
   );
