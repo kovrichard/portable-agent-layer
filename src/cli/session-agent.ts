@@ -1,14 +1,12 @@
+import { AGENT_REGISTRY, LAUNCH_PRIORITY } from "../hooks/lib/agent-registry";
 import { findBinaryOnPath } from "../hooks/lib/which";
 
-const SESSION_AGENT_BINARIES = [
-  "claude",
-  "codex",
-  "cursor-agent",
-  "copilot",
-  "opencode",
-] as const;
+export type SessionAgent =
+  (typeof AGENT_REGISTRY)[(typeof LAUNCH_PRIORITY)[number]]["binary"];
 
-export type SessionAgent = (typeof SESSION_AGENT_BINARIES)[number];
+const SESSION_AGENT_BINARIES: readonly SessionAgent[] = LAUNCH_PRIORITY.map(
+  (agent) => AGENT_REGISTRY[agent].binary
+);
 
 export function findSessionAgent(): SessionAgent | null {
   return (

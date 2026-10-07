@@ -14,24 +14,23 @@
  * on PATH rather than assuming claude.
  */
 
+import {
+  AGENT_REGISTRY,
+  type AgentName,
+  INFERENCE_PRIORITY,
+  isAgentName,
+} from "./agent-registry";
 import { findBinaryOnPath } from "./which";
 
-export type AgentType = "claude" | "cursor" | "codex" | "copilot" | "opencode" | "vscode";
+export type AgentType = AgentName | "vscode";
 
-const KNOWN_AGENTS: ReadonlySet<AgentType> = new Set([
-  "claude",
-  "cursor",
-  "codex",
-  "copilot",
-  "opencode",
-  "vscode",
-]);
+function asAgentType(value: string | undefined): AgentType | undefined {
+  if (!value) return undefined;
+  return value === "vscode" || isAgentName(value) ? value : undefined;
+}
 
 function agentFromEnv(): AgentType | undefined {
-  const explicit = process.env.PAL_AGENT;
-  return explicit && KNOWN_AGENTS.has(explicit as AgentType)
-    ? (explicit as AgentType)
-    : undefined;
+  return asAgentType(process.env.PAL_AGENT);
 }
 
 /**
@@ -43,8 +42,7 @@ function agentFromEnv(): AgentType | undefined {
  */
 export function agentFromArgv(): AgentType | undefined {
   const flag = process.argv.find((a) => a.startsWith("--agent="));
-  const value = flag?.slice("--agent=".length);
-  return value && KNOWN_AGENTS.has(value as AgentType) ? (value as AgentType) : undefined;
+  return asAgentType(flag?.slice("--agent=".length));
 }
 
 /**
@@ -117,13 +115,8 @@ export function declaredAgent(): AgentType | undefined {
  * The CLI each agent spawns for inference, in the order inference.ts routes
  * them. vscode is absent because it has no CLI of its own — it runs Claude's.
  */
-const AGENT_BINARIES: ReadonlyArray<readonly [AgentType, string]> = [
-  ["claude", "claude"],
-  ["codex", "codex"],
-  ["opencode", "opencode"],
-  ["copilot", "copilot"],
-  ["cursor", "cursor-agent"],
-];
+const AGENT_BINARIES: ReadonlyArray<readonly [AgentType, string]> =
+  INFERENCE_PRIORITY.map((agent) => [agent, AGENT_REGISTRY[agent].binary] as const);
 
 /**
  * Which agent this machine actually has, for the case where nothing declared

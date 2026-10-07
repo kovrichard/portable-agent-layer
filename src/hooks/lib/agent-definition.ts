@@ -4,27 +4,17 @@
  * and a body that becomes the subagent's system prompt.
  */
 
+import { AGENT_NAMES, type AgentName } from "./agent-registry";
 import { splitFrontmatter } from "./frontmatter";
-
-export const AGENT_PLATFORMS = [
-  "claude",
-  "opencode",
-  "cursor",
-  "copilot",
-  "codex",
-] as const;
-export type AgentPlatform = (typeof AGENT_PLATFORMS)[number];
 
 export interface AgentDefinition {
   hasFrontmatter: boolean;
   global: string[];
-  platforms: Partial<Record<AgentPlatform, string[]>>;
+  platforms: Partial<Record<AgentName, string[]>>;
   body: string;
 }
 
-const PLATFORM_BLOCK_HEADER = new RegExp(
-  String.raw`^(${AGENT_PLATFORMS.join("|")}):\s*$`
-);
+const PLATFORM_BLOCK_HEADER = new RegExp(String.raw`^(${AGENT_NAMES.join("|")}):\s*$`);
 const BLOCK_INDENT = "  ";
 
 export function parseAgentDefinition(content: string): AgentDefinition {
@@ -34,14 +24,14 @@ export function parseAgentDefinition(content: string): AgentDefinition {
   }
 
   const global: string[] = [];
-  const platforms: Partial<Record<AgentPlatform, string[]>> = {};
-  let current: AgentPlatform | null = null;
+  const platforms: Partial<Record<AgentName, string[]>> = {};
+  let current: AgentName | null = null;
 
   for (const line of split.frontmatter.split("\n")) {
     if (!line.trim()) continue;
     const header = PLATFORM_BLOCK_HEADER.exec(line);
     if (header) {
-      current = header[1] as AgentPlatform;
+      current = header[1] as AgentName;
       platforms[current] ??= [];
       continue;
     }

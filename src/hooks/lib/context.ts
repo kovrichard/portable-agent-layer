@@ -5,6 +5,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import type { AgentName } from "./agent-registry";
 import { resolveAnchor } from "./anchor";
 import { dueNudgeSections } from "./daily-nudge";
 import { loadHandoffContext } from "./handoff-context";
@@ -173,7 +174,10 @@ function capSection(text: string, maxChars: number): string {
 }
 
 /** Agent targets — determines which context sections are skipped due to native loading. */
-export type AgentTarget = "claude" | "opencode" | "cursor" | "copilot";
+export type AgentTarget = Extract<
+  AgentName,
+  "claude" | "opencode" | "cursor" | "copilot"
+>;
 
 /**
  * Build the <system-reminder> content for the AI.

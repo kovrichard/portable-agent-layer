@@ -41,6 +41,7 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
+import { AGENT_NAMES, AGENT_REGISTRY, type AgentName } from "../hooks/lib/agent-registry";
 import {
   appendImportLog,
   mergeArchive,
@@ -330,92 +331,47 @@ function showHelp() {
 `);
 }
 
-type Targets = {
-  claude: boolean;
-  opencode: boolean;
-  cursor: boolean;
-  copilot: boolean;
-  codex: boolean;
-};
+type Targets = Record<AgentName, boolean>;
+
+function targetsWhere(selected: (agent: AgentName) => boolean): Targets {
+  return Object.fromEntries(
+    AGENT_NAMES.map((agent) => [agent, selected(agent)])
+  ) as Targets;
+}
+
+function namedTargets(args: string[]): AgentName[] {
+  if (args.includes("--all")) return AGENT_NAMES;
+  return AGENT_NAMES.filter((agent) => args.includes(`--${agent}`));
+}
 
 function parseTargets(args: string[]): Targets {
-  let claude = false;
-  let opencode = false;
-  let cursor = false;
-  let copilot = false;
-  let codex = false;
-  for (const arg of args) {
-    if (arg === "--claude") claude = true;
-    else if (arg === "--opencode") opencode = true;
-    else if (arg === "--cursor") cursor = true;
-    else if (arg === "--copilot") copilot = true;
-    else if (arg === "--codex") codex = true;
-    else if (arg === "--all") {
-      claude = true;
-      opencode = true;
-      cursor = true;
-      copilot = true;
-      codex = true;
-    }
-  }
-  if (!claude && !opencode && !cursor && !copilot && !codex)
-    return { claude: true, opencode: true, cursor: true, copilot: true, codex: true };
-  return { claude, opencode, cursor, copilot, codex };
+  const named = namedTargets(args);
+  return named.length === 0
+    ? targetsWhere(() => true)
+    : targetsWhere((a) => named.includes(a));
 }
 
 /** Resolve targets against available agents. Errors if explicitly requested but missing. */
 function resolveTargets(args: string[], health?: DoctorResult): Targets {
   const requested = parseTargets(args);
   const h = health || detectAgents();
-  const explicit = args.some(
-    (a) =>
-      a === "--claude" ||
-      a === "--opencode" ||
-      a === "--cursor" ||
-      a === "--copilot" ||
-      a === "--codex" ||
-      a === "--all"
-  );
 
-  if (explicit) {
-    if (requested.claude && !h.claude.available) {
-      log.error("Claude Code is not installed. Run 'pal cli doctor' for details.");
-      process.exit(1);
-    }
-    if (requested.opencode && !h.opencode.available) {
-      log.error("opencode is not installed. Run 'pal cli doctor' for details.");
-      process.exit(1);
-    }
-    if (requested.cursor && !h.cursor.available) {
-      log.error("Cursor is not installed. Run 'pal cli doctor' for details.");
-      process.exit(1);
-    }
-    if (requested.copilot && !h.copilot.available) {
-      log.error("Copilot is not installed. Run 'pal cli doctor' for details.");
-      process.exit(1);
-    }
-    if (requested.codex && !h.codex.available) {
-      log.error("Codex is not installed. Run 'pal cli doctor' for details.");
+  if (namedTargets(args).length > 0) {
+    const missing = AGENT_NAMES.find((agent) => requested[agent] && !h[agent].available);
+    if (missing) {
+      log.error(
+        `${AGENT_REGISTRY[missing].label} is not installed. Run 'pal cli doctor' for details.`
+      );
       process.exit(1);
     }
     return requested;
   }
 
-  // Default (no flags) — install for available agents only
-  const targets: Targets = {
-    claude: h.claude.available,
-    opencode: h.opencode.available,
-    cursor: h.cursor.available,
-    copilot: h.copilot.available,
-    codex: h.codex.available,
-  };
-
-  if (!targets.claude) log.info("Skipping Claude Code (not installed)");
-  if (!targets.opencode) log.info("Skipping opencode (not installed)");
-  if (!targets.cursor) log.info("Skipping Cursor (not installed)");
-  if (!targets.copilot) log.info("Skipping Copilot (not installed)");
-  if (!targets.codex) log.info("Skipping Codex (not installed)");
-
+  const targets = targetsWhere((agent) => h[agent].available);
+  for (const agent of AGENT_NAMES) {
+    if (!targets[agent])
+      log.info(`Skipping ${AGENT_REGISTRY[agent].label} (not installed)`);
+  }
   return targets;
 }
 
@@ -515,14 +471,40 @@ function runQuietly(cmd: string, args: string[], cwd: string): number | null {
   return r.status;
 }
 
-function targetInstallers(): [keyof Targets, string, () => Promise<unknown>][] {
-  return [
-    ["claude", "Claude Code", () => import("../targets/claude/install")],
-    ["opencode", "opencode", () => import("../targets/opencode/install")],
-    ["cursor", "Cursor", () => import("../targets/cursor/install")],
-    ["copilot", "Copilot", () => import("../targets/copilot/install")],
-    ["codex", "Codex", () => import("../targets/codex/install")],
-  ];
+function targetScripts(): Record<
+  AgentName,
+  { install: () => Promise<unknown>; uninstall: () => Promise<unknown> }
+> {
+  return {
+    claude: {
+      install: () => import("../targets/claude/install"),
+      uninstall: () => import("../targets/claude/uninstall"),
+    },
+    opencode: {
+      install: () => import("../targets/opencode/install"),
+      uninstall: () => import("../targets/opencode/uninstall"),
+    },
+    cursor: {
+      install: () => import("../targets/cursor/install"),
+      uninstall: () => import("../targets/cursor/uninstall"),
+    },
+    copilot: {
+      install: () => import("../targets/copilot/install"),
+      uninstall: () => import("../targets/copilot/uninstall"),
+    },
+    codex: {
+      install: () => import("../targets/codex/install"),
+      uninstall: () => import("../targets/codex/uninstall"),
+    },
+  };
+}
+
+function targetInstallers(): [AgentName, string, () => Promise<unknown>][] {
+  return AGENT_NAMES.map((agent) => [
+    agent,
+    AGENT_REGISTRY[agent].label,
+    targetScripts()[agent].install,
+  ]);
 }
 
 async function install(targets: Targets, args: string[]): Promise<number> {
@@ -606,33 +588,9 @@ async function refreshControlRoom(): Promise<void> {
 async function uninstall(args: string[]) {
   const targets = parseTargets(args);
 
-  if (targets.claude) {
-    console.log("━━━ Claude Code ━━━");
-    await import("../targets/claude/uninstall");
-    console.log("");
-  }
-
-  if (targets.opencode) {
-    console.log("━━━ opencode ━━━");
-    await import("../targets/opencode/uninstall");
-    console.log("");
-  }
-
-  if (targets.cursor) {
-    console.log("━━━ Cursor ━━━");
-    await import("../targets/cursor/uninstall");
-    console.log("");
-  }
-
-  if (targets.copilot) {
-    console.log("━━━ Copilot ━━━");
-    await import("../targets/copilot/uninstall");
-    console.log("");
-  }
-
-  if (targets.codex) {
-    console.log("━━━ Codex ━━━");
-    await import("../targets/codex/uninstall");
+  for (const agent of AGENT_NAMES.filter((a) => targets[a])) {
+    console.log(`━━━ ${AGENT_REGISTRY[agent].label} ━━━`);
+    await targetScripts()[agent].uninstall();
     console.log("");
   }
 

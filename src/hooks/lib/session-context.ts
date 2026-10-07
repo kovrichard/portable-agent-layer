@@ -7,6 +7,8 @@
  * context for weeks — and none of it was reachable from a test.
  */
 
+import type { AgentName } from "./agent-registry";
+
 export interface ContextEnvelope {
   /** Whether the agent parses stdout as JSON or reads it as raw text. */
   kind: "json" | "text";
@@ -31,7 +33,7 @@ export type SessionStartContext = "full" | "without-handoff" | "none";
  * is resumed. Copilot does not document it, and has shipped a release that
  * dropped startup context, so it keeps getting the full context on resume.
  */
-const RESUME_KEEPS_CONTEXT: ReadonlySet<string> = new Set(["claude", "codex"]);
+const RESUME_KEEPS_CONTEXT: ReadonlySet<string> = new Set<AgentName>(["claude", "codex"]);
 
 /**
  * After a compaction, CompactRecover restores the last exchange, so the

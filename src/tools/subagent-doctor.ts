@@ -13,11 +13,8 @@
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
-import {
-  AGENT_PLATFORMS,
-  type AgentPlatform,
-  parseAgentDefinition,
-} from "../hooks/lib/agent-definition";
+import { parseAgentDefinition } from "../hooks/lib/agent-definition";
+import { AGENT_NAMES, type AgentName } from "../hooks/lib/agent-registry";
 import { assets, namesAPath, palHome, toPath } from "../hooks/lib/paths";
 
 type Level = "pass" | "warn" | "error";
@@ -42,7 +39,7 @@ interface ParsedSubagent {
   description: string | null;
   descriptionQuoted: boolean;
   global: string[];
-  platforms: Partial<Record<AgentPlatform, string[]>>;
+  platforms: Partial<Record<AgentName, string[]>>;
   body: string;
 }
 
@@ -321,7 +318,7 @@ export function lintSubagent(file: string): SubagentReport {
   }
 
   // ── platform blocks ──
-  const present = AGENT_PLATFORMS.filter((p) => (platforms[p]?.length ?? 0) > 0);
+  const present = AGENT_NAMES.filter((p) => (platforms[p]?.length ?? 0) > 0);
   present.length > 0
     ? add("pass", "platforms", `defines block(s): ${present.join(", ")}`)
     : add(
