@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { RequestedTurn } from "../src/hooks/lib/adaptation-turns";
-import { proofVerdict, proveTrigger } from "../src/hooks/lib/rule-proof";
+import {
+  firesOn,
+  proofVerdict,
+  proveTrigger,
+  widenedProofVerdict,
+} from "../src/hooks/lib/rule-proof";
 
 const turn = (over: Partial<RequestedTurn>): RequestedTurn => ({
   ts: "2026-10-07T08:00:00.000Z",
@@ -101,5 +106,33 @@ describe("proofVerdict", () => {
 
   test("too few corrections fired fails even before enough ordinary turns", () => {
     expect(proofVerdict({ ...proof, firedCorrections: 1, ordinary: 5 })).toBe("failed");
+  });
+});
+
+describe("widenedProofVerdict", () => {
+  const proof = { firedCorrections: 1, corrections: 1, firedOrdinary: 2, ordinary: 20 };
+
+  test("a widened trigger passes on the one correction its rule missed", () => {
+    expect(widenedProofVerdict(proof)).toBe("passed");
+  });
+
+  test("a widened trigger that misses every correction fails", () => {
+    expect(widenedProofVerdict({ ...proof, firedCorrections: 0 })).toBe("failed");
+  });
+
+  test("a widened trigger is held to the same quiet on ordinary turns", () => {
+    expect(widenedProofVerdict({ ...proof, firedOrdinary: 3 })).toBe("failed");
+    expect(widenedProofVerdict({ ...proof, ordinary: 19, firedOrdinary: 0 })).toBe(
+      "waiting"
+    );
+  });
+});
+
+describe("firesOn", () => {
+  test("reads the side the trigger names, ignoring case", () => {
+    const corrected = turn({ prompt: "Honest take?", replyEnd: "Sounds good." });
+
+    expect(firesOn({ side: "prompt", pattern: "honest take" }, corrected)).toBe(true);
+    expect(firesOn({ side: "reply", pattern: "honest take" }, corrected)).toBe(false);
   });
 });

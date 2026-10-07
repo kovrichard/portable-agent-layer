@@ -11,7 +11,12 @@ import { resolve } from "node:path";
 import { addDraft, type DraftInput, type TriggerProof } from "./adaptation-rules";
 import type { RequestedTurn } from "./adaptation-turns";
 import { paths } from "./paths";
-import { type ProofVerdict, proofVerdict, proveTrigger } from "./rule-proof";
+import {
+  type ProofVerdict,
+  proofVerdict,
+  proveTrigger,
+  widenedProofVerdict,
+} from "./rule-proof";
 
 export interface CandidateInput extends DraftInput {
   check: string;
@@ -55,7 +60,8 @@ function writeCandidates(candidates: Candidate[]): void {
 
 function prove(candidate: Candidate, turns: RequestedTurn[]): Candidate {
   const proof = proveTrigger(candidate.trigger, turns);
-  return { ...candidate, proof, verdict: proofVerdict(proof) };
+  const verdict = candidate.widens ? widenedProofVerdict(proof) : proofVerdict(proof);
+  return { ...candidate, proof, verdict };
 }
 
 function promoteIfPassed(candidate: Candidate): void {
