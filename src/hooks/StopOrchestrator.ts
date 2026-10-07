@@ -6,6 +6,7 @@
  */
 
 import { checkReadmeSync } from "./handlers/readme-sync";
+import { watchReplyRules } from "./lib/adaptation-steering";
 import { stopBlockResponse } from "./lib/agent";
 import { watchClaims } from "./lib/claim-log";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
@@ -41,5 +42,14 @@ try {
   }
 } catch (err) {
   logError("StopOrchestrator:claim-check", err);
+}
+try {
+  const sendBack = watchReplyRules(payload);
+  if (sendBack) {
+    process.stdout.write(stopBlockResponse(sendBack));
+    process.exit(0);
+  }
+} catch (err) {
+  logError("StopOrchestrator:adaptation-rules", err);
 }
 await stopTurn(payload);

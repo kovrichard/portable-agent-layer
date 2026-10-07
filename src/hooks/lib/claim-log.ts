@@ -72,7 +72,7 @@ function record({ check, commands, session, blocked }: Watched, now: Date) {
   appendFileSync(monthFile(now), `${JSON.stringify(line)}\n`);
 }
 
-function alreadySentBack(payload: StopTurnPayload): boolean {
+export function alreadySentBack(payload: StopTurnPayload): boolean {
   return payload.stop_hook_active === true || (payload.loop_count ?? 0) > 0;
 }
 

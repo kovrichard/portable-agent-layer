@@ -7,6 +7,7 @@
  * produces empty output, never blocks the prompt.
  */
 
+import { promptRulesReminder } from "../lib/adaptation-steering";
 import { promptContextResponse } from "../lib/agent";
 import { dueNudgeReminder } from "../lib/daily-nudge";
 import { observeTurn } from "../lib/interaction";
@@ -82,6 +83,7 @@ export async function getPromptContext(
 ): Promise<string | null> {
   const parts = [
     getWallClockReminder(),
+    withinBudget(() => promptRulesReminder(prompt, sessionId), BUDGET_MS),
     withinBudget(() => getRepoStateReminder(), BUDGET_MS),
     withinBudget(() => observeTurn(prompt, sessionId), BUDGET_MS),
     withinBudget(() => dueNudgeReminder(), BUDGET_MS),
