@@ -278,6 +278,7 @@
     "home/memory/actor.json",
     "home/memory/pal-settings.json",
     "home/memory/pal-settings.json#$schema",
+    "home/memory/pal-settings.json#dynamicContext.adaptationRules",
     "home/memory/pal-settings.json#dynamicContext.claimCheck",
     "home/memory/pal-settings.json#dynamicContext.claimCheckBlocks",
     "home/memory/pal-settings.json#dynamicContext.contextualSteering",

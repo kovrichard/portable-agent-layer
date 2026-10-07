@@ -94,6 +94,10 @@
           "type": "boolean",
           "description": "Opt-in, off by default. Send a reply with an unbacked result or status claim back to the agent once, asking it to show the output or say the result is unverified. Needs claimCheck. Not on Cursor, whose stop payload carries no reply text."
         },
+        "adaptationRules": {
+          "type": "boolean",
+          "description": "Let the rules you approved from your past corrections steer the agent: a rule triggered by your prompt is injected before the agent answers, and a reply that matches a rule's trigger is sent back to the agent once at stop. Each firing is logged to memory/adaptation/rule-events.jsonl. Set false to switch every rule off."
+        },
         "steeringTestReport": { "type": "boolean", "description": "When true, the assistant notes to the user which steering self-check fired. For the dual-live test period; ships false." }
       }
     },

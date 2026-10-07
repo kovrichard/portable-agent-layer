@@ -32,6 +32,7 @@
     "reactionSampling": true,
     "claimCheck": true,
     "claimCheckBlocks": false,
+    "adaptationRules": true,
     "steeringTestReport": false
   },
   "steering": {
