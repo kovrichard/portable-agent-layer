@@ -57,10 +57,10 @@ try {
     process.exit(0);
   }
 
-  // The reminder is built for one of three targets; every other agent reads the
+  // The reminder is built for one of four targets; every other agent reads the
   // same shape Claude Code does.
   const target: AgentTarget =
-    active === "copilot" || active === "cursor" ? active : "claude";
+    active === "copilot" || active === "cursor" || active === "codex" ? active : "claude";
   const reminder = buildSystemReminder({
     agent: target,
     withoutHandoff: wanted === "without-handoff",

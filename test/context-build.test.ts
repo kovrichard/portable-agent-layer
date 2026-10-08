@@ -227,8 +227,6 @@ describe("buildSystemReminder", () => {
     expect(buildSystemReminder({ agent: "claude" })).not.toContain("Native principle");
   });
 
-  // Every member of AgentTarget loads semi-static context natively, so the hook
-  // only injects it when no agent is named — the path Codex takes.
   test("includes wisdom when no agent is named", () => {
     frame("development", "### Injected principle [CRYSTAL: 90%]\nbody");
 
@@ -241,6 +239,12 @@ describe("buildSystemReminder", () => {
     for (const agent of ["claude", "opencode", "cursor", "copilot"] as const) {
       expect(buildSystemReminder({ agent })).not.toContain("Native principle");
     }
+  });
+
+  test("includes wisdom for Codex, whose AGENTS.md has no import mechanism", () => {
+    frame("development", "### Injected principle [CRYSTAL: 90%]\nbody");
+
+    expect(buildSystemReminder({ agent: "codex" })).toContain("Injected principle");
   });
 
   test("drops only the handoff when asked to go without it", () => {

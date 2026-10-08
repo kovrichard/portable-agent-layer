@@ -13,7 +13,7 @@ import { loadOpinionContext } from "./opinions";
 import { paths, toPath } from "./paths";
 import { loadActiveProjectsContext } from "./projects";
 import { loadRecentNotes } from "./relationship";
-import { loadFailurePatterns } from "./semi-static";
+import { loadFailurePatterns, loadSteeringRules } from "./semi-static";
 import { sessionDir } from "./session-dir";
 import * as settings from "./settings";
 import { readFramePrinciples } from "./wisdom";
@@ -173,10 +173,13 @@ function capSection(text: string, maxChars: number): string {
   return kept.join("\n");
 }
 
-/** Agent targets — determines which context sections are skipped due to native loading. */
+/**
+ * Agent targets — determines which context sections are skipped due to native loading.
+ * Codex has no native include for them, so its reminder carries them.
+ */
 export type AgentTarget = Extract<
   AgentName,
-  "claude" | "opencode" | "cursor" | "copilot"
+  "claude" | "opencode" | "cursor" | "copilot" | "codex"
 >;
 
 /**
@@ -215,6 +218,7 @@ export function buildSystemReminder(
     !skipSemiStatic && settings.isEnabled("opinions") ? loadOpinionContext() : "";
   const selfModel =
     !skipSemiStatic && settings.isEnabled("selfModel") ? loadSelfModel() : "";
+  const steering = skipSemiStatic ? "" : loadSteeringRules();
   const handoff =
     !opts.withoutHandoff && settings.isEnabled("handoff")
       ? loadHandoffContext(sessionDir())
@@ -230,6 +234,7 @@ export function buildSystemReminder(
   if (relationship) parts.push(relationship);
   if (activeProjects) parts.push(activeProjects);
   if (failures) parts.push(failures);
+  if (steering) parts.push(steering);
   if (parts.length === 0) return "";
 
   const now = new Date();
