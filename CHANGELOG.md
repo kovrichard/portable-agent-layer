@@ -1,3 +1,10 @@
+## [0.89.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.89.0...v0.89.1) (2026-10-08)
+
+
+### Bug Fixes
+
+* **cli:** keep adm-zip out of the doctor's startup imports ([29cd5a1](https://github.com/kovrichard/portable-agent-layer/commit/29cd5a1bf5ca9d701a5c8f4039e458e8e235df68))
+
 # [0.89.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.88.1...v0.89.0) (2026-10-08)
 
 
