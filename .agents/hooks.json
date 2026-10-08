@@ -1,0 +1,38 @@
+{
+  "gates": {
+    "Stop": [
+      {
+        "type": "command",
+        "command": "bun hooks/check.ts --antigravity"
+      },
+      {
+        "type": "command",
+        "command": "bun hooks/type-check.ts --antigravity"
+      },
+      {
+        "type": "command",
+        "command": "bun hooks/knip.ts --antigravity"
+      },
+      {
+        "type": "command",
+        "command": "bun hooks/jscpd.ts --antigravity"
+      },
+      {
+        "type": "command",
+        "command": "bun hooks/klint.ts --antigravity"
+      },
+      {
+        "type": "command",
+        "command": "bun hooks/secretlint.ts --antigravity"
+      },
+      {
+        "type": "command",
+        "command": "bun hooks/madge.ts --antigravity"
+      },
+      {
+        "type": "command",
+        "command": "bun hooks/lf.ts --antigravity"
+      }
+    ]
+  }
+}

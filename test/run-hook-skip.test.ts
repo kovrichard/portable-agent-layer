@@ -102,6 +102,39 @@ describe("run-hook clean-worktree skip", () => {
     expect(r.status).toBe(2);
   });
 
+  test("antigravity runs the gate from the workspace, not from .agents", () => {
+    const dir = makeRepo("antigravity-cwd");
+    writeFileSync(resolve(dir, "tracked.txt"), "changed\n");
+    mkdirSync(resolve(dir, ".agents"));
+
+    const r = spawnSync(
+      "bun",
+      ["run", HOOK, "--antigravity", "test", "-f", "tracked.txt"],
+      { cwd: resolve(dir, ".agents"), encoding: "utf-8" }
+    );
+
+    expect(r.status).toBe(0);
+    expect(r.stdout).toBe("");
+  });
+
+  test("antigravity turns a failing gate into a Stop continue", () => {
+    const dir = makeRepo("antigravity-failing");
+    writeFileSync(resolve(dir, "tracked.txt"), "changed\n");
+    mkdirSync(resolve(dir, ".agents"));
+
+    const r = spawnSync(
+      "bun",
+      ["run", HOOK, "--antigravity", "echo", "broken;", "exit", "3"],
+      {
+        cwd: resolve(dir, ".agents"),
+        encoding: "utf-8",
+      }
+    );
+
+    expect(r.status).toBe(0);
+    expect(JSON.parse(r.stdout)).toEqual({ decision: "continue", reason: "broken" });
+  });
+
   test("a clean worktree skips a gate that would otherwise fail", () => {
     const dir = makeRepo("clean-failing");
 
