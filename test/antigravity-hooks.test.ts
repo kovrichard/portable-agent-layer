@@ -5,7 +5,6 @@ import {
   mkdtempSync,
   readFileSync,
   realpathSync,
-  rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -34,6 +33,7 @@ import { agentDirOverrides, paths } from "../src/hooks/lib/paths";
 import { decideRefusal } from "../src/hooks/lib/security-gate";
 import { reload } from "../src/hooks/lib/settings";
 import { readTranscriptFile } from "../src/hooks/lib/transcript";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // Every payload and transcript step below was captured from agy 1.3.1 by a hook
 // that wrote its stdin to disk; only the paths are swapped for sandbox ones.
@@ -223,7 +223,7 @@ afterEach(() => {
     if (savedEnv[key] === undefined) delete process.env[key];
     else process.env[key] = savedEnv[key];
   }
-  rmSync(sandbox, { recursive: true, force: true });
+  removeOnceReleased(sandbox);
 });
 
 describe("agy nests the tool call as toolCall: { name, args }", () => {
