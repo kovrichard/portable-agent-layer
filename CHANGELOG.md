@@ -1,3 +1,18 @@
+# [0.91.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.90.0...v0.91.0) (2026-10-08)
+
+
+### Bug Fixes
+
+* **cli:** keep "Already up to date" in piped update output ([23737bd](https://github.com/kovrichard/portable-agent-layer/commit/23737bdd6aa5d89fbaa564700ee1627e1cf6ae67))
+* **targets:** stop leaking colour codes into piped install output ([69f4913](https://github.com/kovrichard/portable-agent-layer/commit/69f491357bed01d6bc5bc5a679402e1779834f1b))
+
+
+### Features
+
+* **cli:** add terminal styling primitives for the redesigned CLI ([1b182b5](https://github.com/kovrichard/portable-agent-layer/commit/1b182b57791f83087788e6fa58714029d5ff93b9))
+* **cli:** run init, install and update on one live step rail ([343de48](https://github.com/kovrichard/portable-agent-layer/commit/343de487792388f9b1d4367633af7e3e2cf1f27c))
+* **doctor:** redesign the report with a health badge and grouped checks ([aa62bd6](https://github.com/kovrichard/portable-agent-layer/commit/aa62bd6ddf442edd9ff40020d49eeeda990b9ac7))
+
 # [0.90.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.89.1...v0.90.0) (2026-10-08)
 
 
