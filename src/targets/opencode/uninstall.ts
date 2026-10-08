@@ -7,7 +7,7 @@ import { existsSync, readFileSync, statSync, unlinkSync, writeFileSync } from "n
 import { resolve } from "node:path";
 import { platform } from "../../hooks/lib/paths";
 import { getSemiStaticSources } from "../../hooks/lib/semi-static";
-import { log, removeAgentsFromOpencode, removePalDocs, removeSkills } from "../lib";
+import { log, removeAgentsFromOpencode, removePalDocs } from "../lib";
 import { palHomePattern, removePalHomeAllow } from "./permission";
 
 const OC_GLOBAL_DIR = platform.opencodeDir() || "";
@@ -27,11 +27,6 @@ try {
 } catch {
   log.info("No PAL plugin found");
 }
-
-// --- Remove skills ---
-const removed = removeSkills(resolve(PAL_CLAUDE_DIR, "skills"));
-if (removed.length > 0)
-  log.success(`Removed ${removed.length} skill(s): ${removed.join(", ")}`);
 
 // --- Remove agents ---
 const removedAgents = removeAgentsFromOpencode(resolve(OC_GLOBAL_DIR, "agents"));
