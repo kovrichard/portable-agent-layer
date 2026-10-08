@@ -104,13 +104,20 @@ export function loadFailurePatterns(): string {
   }
 }
 
+function steeringRulesPath(): string {
+  return resolve(palHome(), "docs", "STEERING_RULES.md");
+}
+
+export function loadSteeringRules(): string {
+  return readFileSafe(steeringRulesPath());
+}
+
 /**
  * All semi-static context sources in load order.
  * Adding one entry here is the only change needed to extend coverage to all consumers.
  */
 export function getSemiStaticSources(): SemiStaticSource[] {
   const memory = paths.memory();
-  const home = palHome();
   return [
     {
       path: resolve(memory, "self-model", "current.md"),
@@ -157,9 +164,9 @@ export function getSemiStaticSources(): SemiStaticSource[] {
       description: "PAL recent failure lessons",
     },
     {
-      path: resolve(home, "docs", "STEERING_RULES.md"),
+      path: steeringRulesPath(),
       writesDigest: false,
-      load: () => readFileSafe(resolve(home, "docs", "STEERING_RULES.md")),
+      load: loadSteeringRules,
       slug: "steering",
       description: "PAL steering rules",
     },
