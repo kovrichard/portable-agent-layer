@@ -1,3 +1,10 @@
+## [0.91.3](https://github.com/kovrichard/portable-agent-layer/compare/v0.91.2...v0.91.3) (2026-10-08)
+
+
+### Bug Fixes
+
+* **context:** hand Codex the semi-static context at session start ([6c94584](https://github.com/kovrichard/portable-agent-layer/commit/6c94584844346613fba5c29339a4296951bdbbef))
+
 ## [0.91.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.91.1...v0.91.2) (2026-10-08)
 
 
