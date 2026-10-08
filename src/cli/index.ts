@@ -35,8 +35,8 @@ import { palHome, palPkg, paths, platform, toPath } from "../hooks/lib/paths";
 import { log, narrateSteps } from "../targets/lib";
 import { helpText, runCommand } from "../tools/lib/command";
 import { type DoctorResult, detectAgents } from "./doctor/agents";
-import { installChromium } from "./doctor/environment";
 import { runDoctor } from "./doctor/run";
+import type { InstallPlan } from "./install-flow";
 import { findSessionAgent, NO_SESSION_AGENT_MESSAGE } from "./session-agent";
 import { cliTree, type DebugState } from "./tree";
 
@@ -45,7 +45,7 @@ const CLI_PATH = ["pal", "cli"];
 const tree = cliTree({
   init: ({ argv }) => init(argv),
   install: async ({ argv }) => {
-    banner();
+    narrateSteps(argv.includes("--verbose"));
     process.exit(await install(resolveTargets(argv), argv));
   },
   uninstall: ({ argv }) => uninstall(argv),
@@ -152,14 +152,6 @@ async function doctor(args: string[]): Promise<never> {
 }
 
 // ── Helpers ──
-
-function banner() {
-  console.log("");
-  console.log("  ╔═══════════════════════════════════╗");
-  console.log("  ║  PAL — Portable Agent Layer       ║");
-  console.log("  ╚═══════════════════════════════════╝");
-  console.log("");
-}
 
 function showHelp() {
   console.log(
@@ -268,42 +260,27 @@ async function probeInference(): Promise<void> {
 
 // ── Commands ──
 
-async function init(args: string[]) {
+/**
+ * memory/state is scaffolded here, not left to generateSkillIndex: that returns
+ * early when ~/.pal/skills is absent, so an init that installs no skills would
+ * leave every writer of memory/state with nowhere to write.
+ */
+async function createPalHome(): Promise<void> {
   const { scaffoldTelos } = await import("../targets/lib");
-
-  banner();
-  narrateSteps(args.includes("--verbose"));
-
-  const health = detectAgents();
-  if (!health.hasAgent) process.exit(runDoctor([], health));
-
   const home = palHome();
-  log.info(`Creating PAL home at ${home}`);
   mkdirSync(resolve(home, "telos"), { recursive: true });
-  mkdirSync(resolve(home, "memory"), { recursive: true });
-  // Scaffolded here, not left to generateSkillIndex: that returns early when
-  // ~/.pal/skills is absent, so an init that installs no skills would leave
-  // every writer of memory/state with nowhere to write.
   mkdirSync(resolve(home, "memory", "state"), { recursive: true });
-
   scaffoldTelos();
-
-  // Auto-detect available targets
-  const targets = resolveTargets(args, health);
-  process.exit(await install(targets, args));
 }
 
-/**
- * Run a setup subprocess, showing its output only when it fails.
- *
- * These are idempotent and usually report "no changes", so their banners are
- * pure noise on a re-install — but the moment one fails, the reason it gives
- * is the only thing that explains the warning.
- */
-function runQuietly(cmd: string, args: string[], cwd: string): number | null {
-  const r = spawnSync(cmd, args, { cwd, encoding: "utf-8", shell: true });
-  if (r.status !== 0) process.stderr.write((r.stdout ?? "") + (r.stderr ?? ""));
-  return r.status;
+async function init(args: string[]) {
+  narrateSteps(args.includes("--verbose"));
+  const health = detectAgents();
+  if (!health.hasAgent) process.exit(runDoctor([], health));
+  const targets = resolveTargets(args, health);
+  process.exit(
+    await install(targets, args, { kind: "init", prepareHome: createPalHome })
+  );
 }
 
 function targetScripts(): Record<
@@ -338,91 +315,28 @@ function targetScripts(): Record<
   };
 }
 
-function targetInstallers(): [AgentName, string, () => Promise<unknown>][] {
-  return AGENT_NAMES.map((agent) => [
-    agent,
-    AGENT_REGISTRY[agent].label,
-    targetScripts()[agent].install,
-  ]);
+function targetInstallers(): Record<AgentName, () => Promise<unknown>> {
+  return Object.fromEntries(
+    AGENT_NAMES.map((agent) => [agent, targetScripts()[agent].install])
+  ) as Record<AgentName, () => Promise<unknown>>;
 }
 
-async function install(targets: Targets, args: string[]): Promise<number> {
-  narrateSteps(args.includes("--verbose"));
-  const pkg = palPkg();
-  const { dependencyInstall } = await import("./dependencies");
-  const { isRepoMode } = await import("../hooks/handlers/update-check");
-  const bunInstall = dependencyInstall(pkg, isRepoMode());
-  if (bunInstall && runQuietly("bun", bunInstall, pkg) !== 0) {
-    log.warn("bun install failed — continuing anyway, but hooks may not work");
-  }
-
-  const { applyPendingMigrations } = await import("./migrate");
-  for (const line of applyPendingMigrations()) log.info(line);
-
-  // Uses `bun x` (not `bunx`) for Windows compatibility — bunx resolves unreliably under cmd.exe.
-  if (process.env.PAL_SKIP_BROWSER_INSTALL !== "1") installChromium();
-
-  // Scaffold TELOS + PAL settings, then prompt for missing identity
-  const { scaffoldTelos, scaffoldPalSettings, copyPalDocs, generateSkillIndex } =
-    await import("../targets/lib");
-  const { promptIdentity } = await import("./setup-identity");
-  const { promptAttribution } = await import("./setup-attribution");
-  const { promptAutoUpdate } = await import("./setup-auto-update");
-  scaffoldTelos();
-  scaffoldPalSettings();
-  await promptIdentity();
-  await promptAttribution();
-  await promptAutoUpdate();
-
-  // Registers the label loadActor derives, so it travels on the next export.
-  const { ensureActorRegistered } = await import("../hooks/lib/actor");
-  ensureActorRegistered();
-
-  // Shared, target-independent state. Every target installer used to repeat these
-  // identical calls; AGENTS.md in particular must exist before any target symlinks
-  // to it, so it runs once here rather than once per target.
-  const { regenerateIfNeeded } = await import("../hooks/lib/claude-md");
-  const palDocsCount = copyPalDocs();
-  regenerateIfNeeded();
-
-  for (const [target, label, installTarget] of targetInstallers()) {
-    if (!targets[target]) continue;
-    log.heading(label);
-    await installTarget();
-  }
-
-  // The rest of the shared work reads what the installers just wrote: the index
-  // walks ~/.pal/skills, and the digests land in ~/.cursor/rules and
-  // ~/.copilot/instructions and the Antigravity plugin's rules/, which are skipped
-  // when the agent's home is absent.
-  const { writeContextDigests } = await import("../hooks/handlers/context-digests");
-  const indexedSkills = generateSkillIndex();
-  writeContextDigests();
-  log.success(
-    `Shared: ${indexedSkills} skills indexed · ${palDocsCount} docs → ~/.pal/docs/ · AGENTS.md + context digests written`
-  );
-
-  await refreshControlRoom();
-
-  if (args.includes("--verbose")) console.log("");
-  return runDoctor(args);
-}
-
-/**
- * A published install carries the page in its tarball; a checkout does not —
- * ui/dist is gitignored, so a pull leaves whatever was built last. Rebuild
- * there, then replace the process, because the API is the running code.
- */
-async function refreshControlRoom(): Promise<void> {
-  const { isRepoMode } = await import("../hooks/handlers/update-check");
-  const { buildPage } = await import("../tools/control-room/static");
-  if (isRepoMode() && !buildPage()) {
-    log.warn("Control room page could not be rebuilt — run: bun run build:ui");
-    return;
-  }
-
-  const { restartIfRunning } = await import("./server");
-  if (await restartIfRunning()) log.success("Control room restarted on the new build");
+async function install(
+  targets: Targets,
+  args: string[],
+  plan: Pick<InstallPlan, "kind" | "prepareHome"> = { kind: "install" }
+): Promise<number> {
+  const { runInstall } = await import("./install-flow");
+  const updatedFrom = process.env.PAL_UPDATED_FROM;
+  return runInstall({
+    ...plan,
+    kind: updatedFrom ? "update" : plan.kind,
+    agents: AGENT_NAMES.filter((agent) => targets[agent]),
+    installers: targetInstallers(),
+    verbose: args.includes("--verbose"),
+    version: packageVersion(),
+    updatedFrom,
+  });
 }
 
 async function uninstall(args: string[]) {
@@ -643,50 +557,17 @@ async function update() {
   const { checkForUpdate, clearUpdateCache } = await import(
     "../hooks/handlers/update-check"
   );
-  const result = await checkForUpdate(true);
-
-  log.info(`Current: ${result.current} (${result.mode} mode)`);
-
-  if (!result.available) {
-    log.success("Already up to date.");
-    return;
-  }
-
-  log.info(`Available: ${result.latest}`);
-
-  const pkg = palPkg();
-  if (result.mode === "repo") {
-    log.info("Pulling updates...");
-    const pull = spawnSync("git", ["pull", "--ff-only"], { cwd: pkg, stdio: "inherit" });
-    if (pull.status !== 0) {
-      log.error("git pull failed. You may have local changes — try pulling manually.");
-      process.exit(1);
-    }
-  } else {
-    log.info("Updating via bun...");
-    const up = spawnSync("bun", ["add", "-g", `portable-agent-layer@${result.latest}`], {
-      stdio: "inherit",
-    });
-    if (up.status !== 0) {
-      log.error(`Update failed. Try: bun add -g portable-agent-layer@${result.latest}`);
-      process.exit(1);
-    }
-  }
-
-  let newPkg: { version: string };
-  try {
-    newPkg = JSON.parse(readFileSync(resolve(pkg, "package.json"), "utf-8")) as {
-      version: string;
-    };
-  } catch (e) {
-    throw new Error(`Failed to read updated package.json: ${e}`);
-  }
-  log.success(`Updated: ${result.current} → ${newPkg.version}`);
-  clearUpdateCache();
-
-  log.info("Reinstalling...");
   const { reinstallInFreshProcess } = await import("./reinstall");
-  process.exit(reinstallInFreshProcess());
+  const { runUpdate } = await import("./update-flow");
+  process.exit(
+    await runUpdate({
+      check: () => checkForUpdate(true),
+      reinstall: (env) => {
+        clearUpdateCache();
+        return reinstallInFreshProcess(process.argv[1], env);
+      },
+    })
+  );
 }
 
 function cliDebug(state: DebugState) {

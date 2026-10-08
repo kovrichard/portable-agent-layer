@@ -21,13 +21,13 @@ function whatItDoes(): string {
     : onClose;
 }
 
-export async function promptAutoUpdate(): Promise<void> {
-  if (!process.stdin.isTTY) return;
+/** True when it asked. */
+export async function promptAutoUpdate(): Promise<boolean> {
+  if (!process.stdin.isTTY) return false;
 
   const settings = { ...readSettings() };
-  if (settings.autoUpdate?.decided) return;
+  if (settings.autoUpdate?.decided) return false;
 
-  clack.intro("Automatic updates");
   clack.note(whatItDoes(), "Keep PAL up to date on its own?");
 
   const enabled = await clack.confirm({
@@ -35,12 +35,13 @@ export async function promptAutoUpdate(): Promise<void> {
     initialValue: false,
   });
   if (clack.isCancel(enabled)) {
-    clack.cancel("Skipped — will ask again next time");
-    return;
+    clack.log.warn("Skipped — will ask again next time");
+    return true;
   }
 
   settings.autoUpdate = { enabled: enabled === true, decided: true };
   writeSettings(settings);
   const state = enabled ? "Automatic updates on" : "Automatic updates off";
-  clack.outro(`${state} ✓  ·  change later: control room → Settings → Updates`);
+  clack.log.success(`${state} · change later: control room → Settings → Updates`);
+  return true;
 }

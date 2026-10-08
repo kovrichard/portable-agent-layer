@@ -30,6 +30,14 @@ describe("reinstallInFreshProcess", () => {
     expect(pid).not.toBe(process.pid);
   });
 
+  test("tells the install which version it updated from", () => {
+    const entry = fakeEntry(
+      `process.exit(process.env.PAL_UPDATED_FROM === "0.89.0" && process.env.PATH ? 0 : 1);\n`
+    );
+
+    expect(reinstallInFreshProcess(entry, { PAL_UPDATED_FROM: "0.89.0" })).toBe(0);
+  });
+
   test("returns the install's exit code", () => {
     expect(reinstallInFreshProcess(fakeEntry("process.exit(7);\n"))).toBe(7);
   });

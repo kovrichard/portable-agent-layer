@@ -69,7 +69,8 @@ describe.skipIf(process.platform === "win32")("what init and install print", () 
   });
 
   test("the banner names PAL and nothing else", () => {
-    expect(init).toContain("PAL — Portable Agent Layer");
+    expect(init).toMatch(/^PAL \d+\.\d+\.\d+ init\n/);
+    expect(reinstall).toMatch(/^PAL \d+\.\d+\.\d+ install\n/);
     expect(init).not.toContain("Non-destructive");
     expect(reinstall).not.toContain("Existing config was preserved");
   });
