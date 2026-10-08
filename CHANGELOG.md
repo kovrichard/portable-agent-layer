@@ -1,3 +1,10 @@
+## [0.91.4](https://github.com/kovrichard/portable-agent-layer/compare/v0.91.3...v0.91.4) (2026-10-08)
+
+
+### Bug Fixes
+
+* **uninstall:** remove only the uninstalled agent's skill links ([01d5dec](https://github.com/kovrichard/portable-agent-layer/commit/01d5deccd441715a1fd4fc359467688beb4255f1))
+
 ## [0.91.3](https://github.com/kovrichard/portable-agent-layer/compare/v0.91.2...v0.91.3) (2026-10-08)
 
 
