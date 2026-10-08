@@ -23,11 +23,14 @@ const env = {
   PAL_GEMINI_DIR: at(".gemini"),
 };
 
+const SPAWN_TIMEOUT = 90_000;
+const INSTALL_THEN_UNINSTALL = 2 * SPAWN_TIMEOUT;
+
 function pal(...args: string[]) {
   const result = spawnSync("bun", ["run", CLI, "cli", ...args], {
     env,
     encoding: "utf-8",
-    timeout: 90000,
+    timeout: SPAWN_TIMEOUT,
   });
   expect(result.status).toBe(0);
 }
@@ -49,28 +52,40 @@ afterAll(() => {
 });
 
 describe("a per-agent uninstall", () => {
-  test("leaves the shared skill store and other agents' skills resolving", () => {
-    pal("install", "--claude", "--cursor");
-    pal("uninstall", "--cursor");
+  test(
+    "leaves the shared skill store and other agents' skills resolving",
+    () => {
+      pal("install", "--claude", "--cursor");
+      pal("uninstall", "--cursor");
 
-    expect(unresolvedIn(at(".pal", "skills"))).toEqual([]);
-    expect(unresolvedIn(at(".claude", "skills"))).toEqual([]);
-    expect(unresolvedIn(at(".agents", "skills"))).toEqual([]);
-  });
+      expect(unresolvedIn(at(".pal", "skills"))).toEqual([]);
+      expect(unresolvedIn(at(".claude", "skills"))).toEqual([]);
+      expect(unresolvedIn(at(".agents", "skills"))).toEqual([]);
+    },
+    INSTALL_THEN_UNINSTALL
+  );
 
-  test("removes the uninstalled agent's own skill links", () => {
-    pal("install", "--claude", "--cursor");
-    pal("uninstall", "--cursor");
+  test(
+    "removes the uninstalled agent's own skill links",
+    () => {
+      pal("install", "--claude", "--cursor");
+      pal("uninstall", "--cursor");
 
-    expect(
-      shippedSkills().filter((name) => existsSync(at(".cursor", "skills", name)))
-    ).toEqual([]);
-  });
+      expect(
+        shippedSkills().filter((name) => existsSync(at(".cursor", "skills", name)))
+      ).toEqual([]);
+    },
+    INSTALL_THEN_UNINSTALL
+  );
 
-  test("leaves Claude's skill links alone when opencode is uninstalled", () => {
-    pal("install", "--claude", "--opencode");
-    pal("uninstall", "--opencode");
+  test(
+    "leaves Claude's skill links alone when opencode is uninstalled",
+    () => {
+      pal("install", "--claude", "--opencode");
+      pal("uninstall", "--opencode");
 
-    expect(unresolvedIn(at(".claude", "skills"))).toEqual([]);
-  });
+      expect(unresolvedIn(at(".claude", "skills"))).toEqual([]);
+    },
+    INSTALL_THEN_UNINSTALL
+  );
 });
