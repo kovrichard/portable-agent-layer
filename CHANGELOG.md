@@ -1,3 +1,11 @@
+# [0.90.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.89.1...v0.90.0) (2026-10-08)
+
+
+### Features
+
+* **inference:** run the rule drafter on Haiku 5.5 ([f1bc385](https://github.com/kovrichard/portable-agent-layer/commit/f1bc3850d34c628317e930000dbfddb1af0e7046))
+* **rating:** confirm corrections with a dedicated check ([c370225](https://github.com/kovrichard/portable-agent-layer/commit/c37022556a8c28094838bacac75b7e6bb1803496))
+
 ## [0.89.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.89.0...v0.89.1) (2026-10-08)
 
 
