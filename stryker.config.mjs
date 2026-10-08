@@ -20,7 +20,6 @@ const SUBPROCESS_SUITES = new Set([
   "test/skill-link.test.ts",
   "test/spawn-guard.test.ts",
   "test/subagent-link.test.ts",
-  "test/update-command.test.ts",
 ]);
 
 function isInProcessSuite(file) {
@@ -40,18 +39,31 @@ export default {
   plugins: ["@hughescr/stryker-bun-runner"],
   testRunner: "bun",
   coverageAnalysis: "perTest",
-  // The ring is the portable core the suite exercises in-process: hook libraries, agent
-  // tools, and the shared target helpers. Everything left out is either an entrypoint the
-  // suite only reaches by spawning it (src/cli, src/hooks/*.ts) or an OS/network boundary
-  // that is stubbed away before a mutant could ever be observed.
+  // The ring is every module the suite can import: hook libraries and handlers, agent
+  // tools, the CLI's commands and UI, and the shared target helpers. Everything left out
+  // is an entrypoint the suite only reaches by spawning it (src/cli/index.ts,
+  // src/hooks/*.ts), an OS/network/TTY boundary that is stubbed away before a mutant
+  // could ever be observed, or a file a test reads as text, which instrumenting breaks.
   mutate: [
     "src/hooks/lib/**/*.ts",
+    "src/hooks/handlers/*.ts",
     "src/tools/**/*.ts",
+    "src/cli/**/*.ts",
     "src/targets/lib.ts",
+    "src/targets/agent-render.ts",
+    "src/targets/vscode-settings.ts",
+    "src/targets/opencode/permission.ts",
     "!src/hooks/lib/inference.ts",
     "!src/hooks/lib/notify.ts",
     "!src/hooks/lib/stdin.ts",
     "!src/hooks/lib/which.ts",
+    "!src/cli/index.ts",
+    "!src/cli/server.ts",
+    "!src/cli/setup-attribution.ts",
+    "!src/cli/setup-auto-update.ts",
+    "!src/cli/setup-identity.ts",
+    // Read as text by update-command.test.ts.
+    "!src/hooks/handlers/update-check.ts",
     // Tools that are only ever spawned and now hold nothing but argv and one
     // library call — the same case as src/cli and src/hooks/*.ts above. Their
     // decisions live in src/tools/lib/, which is measured.
