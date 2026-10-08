@@ -1,6 +1,6 @@
 # Memory System
 
-PAL has its own memory system that persists across sessions AND across tools (Claude Code, opencode, Cursor, Copilot, Codex). Always prefer PAL memory over any tool-native memory system.
+PAL has its own memory system that persists across sessions AND across tools (Claude Code, opencode, Cursor, Copilot, Codex, Antigravity CLI). Always prefer PAL memory over any tool-native memory system.
 
 ## Layout
 
