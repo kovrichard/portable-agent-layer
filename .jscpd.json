@@ -17,6 +17,7 @@
     "assets/skills/*/template/**",
     "assets/skills/presentation/vendor/**",
     "assets/skills/presentation/theme-base/**",
-    "test/**"
+    "test/**",
+    ".claude/worktrees"
   ]
 }

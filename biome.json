@@ -27,7 +27,8 @@
       "!.stryker-tmp",
       "!.test-install-home",
       "!src/tools/control-room/ui/theme.css",
-      "!src/tools/control-room/ui/dist"
+      "!src/tools/control-room/ui/dist",
+      "!!.claude/worktrees"
     ]
   },
   "formatter": {
