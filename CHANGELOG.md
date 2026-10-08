@@ -1,3 +1,10 @@
+## [0.91.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.91.1...v0.91.2) (2026-10-08)
+
+
+### Bug Fixes
+
+* ignore worktrees in jscpd and biome ([26cfa2f](https://github.com/kovrichard/portable-agent-layer/commit/26cfa2fbfa5ab5db5a38629876c4d1056443c7e7))
+
 ## [0.91.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.91.0...v0.91.1) (2026-10-08)
 
 
