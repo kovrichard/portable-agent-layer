@@ -1,3 +1,10 @@
+## [0.91.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.91.0...v0.91.1) (2026-10-08)
+
+
+### Bug Fixes
+
+* **test:** wait for stop-handler children before removing the test home ([cc44c96](https://github.com/kovrichard/portable-agent-layer/commit/cc44c9693a1438c2197f66a9aced51a4004a2d7d))
+
 # [0.91.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.90.0...v0.91.0) (2026-10-08)
 
 
