@@ -78,7 +78,7 @@ describe("pal cli install (smoke)", () => {
     const config = JSON.parse(readFileSync(configFile, "utf-8"));
     expect(config.permission.external_directory).toEqual({
       ...userRules,
-      [`${TEST_HOME}/**`]: "allow",
+      [`${TEST_HOME.replaceAll("\\", "/")}/**`]: "allow",
     });
 
     expect(pal("cli", "uninstall", "--opencode").status).toBe(0);
