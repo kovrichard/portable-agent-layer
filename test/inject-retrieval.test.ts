@@ -21,6 +21,7 @@ beforeEach(async () => {
     resolve(TEST_HOME, "memory", "learning"),
     resolve(TEST_HOME, "memory", "wisdom"),
     resolve(TEST_HOME, "memory", "state"),
+    resolve(TEST_HOME, "memory", "adaptation"),
   ]) {
     if (existsSync(dir)) rmSync(dir, { recursive: true });
   }
@@ -223,6 +224,30 @@ describe("injectPromptContext handler", () => {
     const out = await captureStdout(() =>
       injectPromptContext("rename the column in that table")
     );
+    expect(out).toBe("");
+  });
+
+  test("a subagent's hand-back matches no rule, lesson, skill or self-check", async () => {
+    const { addDraft, decideRule } = await import("../src/hooks/lib/adaptation-rules");
+    const rule = addDraft({
+      when: "The user reports a broken build",
+      trigger: { side: "prompt", pattern: "build is broken" },
+      steering: "Read the failing output first.",
+      evidence: [],
+    });
+    decideRule(rule.id, "approved");
+    seedSkillIndex();
+    seedCapture(
+      "20260415-100000_db-mock",
+      "Mocked database hid a migration bug",
+      "Never mock the database in integration tests"
+    );
+    const { injectPromptContext } = await loadHandlers();
+    const handBack =
+      '<agent-message from="a1">\n[Subagent hand-back] The build is broken and tests are failing; should I mock the database in this integration test? Also a slide deck.\n</agent-message>';
+
+    const out = await captureStdout(() => injectPromptContext(handBack));
+
     expect(out).toBe("");
   });
 

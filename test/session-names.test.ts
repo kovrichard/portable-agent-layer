@@ -1,5 +1,42 @@
 import { describe, expect, test } from "bun:test";
-import { extractFallbackName } from "../src/hooks/lib/session-names";
+import { extractFallbackName, labelFromModel } from "../src/hooks/lib/session-names";
+
+describe("labelFromModel", () => {
+  test("a clean four-word answer becomes the label", () => {
+    expect(labelFromModel("Fix Session Name Generation")).toBe(
+      "Fix Session Name Generation"
+    );
+  });
+
+  test("markdown emphasis is stripped before the words are cased", () => {
+    expect(labelFromModel("**fix Cli Command Alignment**")).toBe(
+      "Fix Cli Command Alignment"
+    );
+    expect(labelFromModel("`Debug Docker Compose Build`")).toBe(
+      "Debug Docker Compose Build"
+    );
+  });
+
+  test("only the first line counts when the model goes on to explain", () => {
+    expect(
+      labelFromModel("**Verify Root Directory Path**\n\nI should clarify that I")
+    ).toBe("Verify Root Directory Path");
+    expect(labelFromModel("Docker Build Fix\n\nThis session covers")).toBeNull();
+  });
+
+  test("quotes and punctuation are dropped", () => {
+    expect(labelFromModel('"Research Market Entry Strategy."')).toBe(
+      "Research Market Entry Strategy"
+    );
+  });
+
+  test("an answer that is not four substantial words is refused", () => {
+    expect(labelFromModel("Say")).toBeNull();
+    expect(labelFromModel("I cannot name this session without more")).toBeNull();
+    expect(labelFromModel("Fix a CI Bug")).toBeNull();
+    expect(labelFromModel("")).toBeNull();
+  });
+});
 
 describe("extractFallbackName", () => {
   test("extracts meaningful keywords", () => {

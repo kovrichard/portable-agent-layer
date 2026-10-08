@@ -167,6 +167,17 @@ describe("measuring a turn", () => {
     expect(loggedEvents()).toHaveLength(1);
   });
 
+  test("a hand-back delivered as a bare agent message is not a user turn either", () => {
+    observeTurn(
+      '<agent-message from="a1">\n[Subagent hand-back] report\n</agent-message>',
+      "s1",
+      T0
+    );
+    observeTurn("real words", "s1", T0);
+
+    expect(loggedEvents()).toHaveLength(1);
+  });
+
   test("records nothing when switched off", () => {
     setSettings({ dynamicContext: { interactionAwareness: false } });
     observeTurn("hello there", "s1", T0);

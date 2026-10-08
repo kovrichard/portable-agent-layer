@@ -220,10 +220,26 @@ export function extractFallbackName(prompt: string): string {
 
   if (unique.length === 0) return "untitled session";
 
-  return unique
-    .slice(0, 4)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(" ");
+  return unique.slice(0, 4).map(titleCase).join(" ");
+}
+
+function titleCase(word: string): string {
+  return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+}
+
+function firstLine(text: string): string {
+  return text.trim().split("\n")[0];
+}
+
+export function labelFromModel(output: string): string | null {
+  const words = firstLine(output)
+    .replace(/[*_`#"']/g, "")
+    .replace(/[.!?,;:]/g, "")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 4);
+  const substantial = words.length === 4 && words.every((w) => w.length >= 3);
+  return substantial ? words.map(titleCase).join(" ") : null;
 }
 
 function namesFilePath(): string {

@@ -17,6 +17,7 @@ const SYSTEM_TEXT_PATTERNS = [
   /^Please continue the conversation/i,
   /^Note:.*was read before/i,
   /^Another Claude session sent a message:/i,
+  /^<agent-message\b/i,
 ];
 
 export function isSystemText(prompt: string): boolean {

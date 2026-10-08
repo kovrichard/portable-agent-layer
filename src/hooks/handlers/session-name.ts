@@ -14,6 +14,7 @@ import { canInfer, inference } from "../lib/inference";
 import { logDebug, logError } from "../lib/log";
 import {
   extractFallbackName,
+  labelFromModel,
   readSessionNames,
   writeSessionName,
 } from "../lib/session-names";
@@ -78,18 +79,8 @@ async function upgradeWithInference(
     if (result.usage) logTokenUsage("session-name", result.usage);
     if (!result.success || !result.output) return;
 
-    let label = result.output
-      .replace(/^["']|["']$/g, "")
-      .replace(/[.!?,;:]/g, "")
-      .trim();
-
-    const words = label.split(/\s+/).slice(0, 4);
-    label = words
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-      .join(" ");
-
-    const allSubstantial = words.every((w) => w.length >= 3);
-    if (!label || words.length !== 4 || !allSubstantial) return;
+    const label = labelFromModel(result.output);
+    if (!label) return;
 
     // Only write if name hasn't changed (re-read under guard)
     const freshNames = readSessionNames();

@@ -18,6 +18,11 @@ import {
 } from "../src/hooks/lib/retrieval-index";
 
 const TEST_HOME = resolve(import.meta.dir, "../.test-home-retrieval");
+const FIXTURES_WRITTEN = Date.parse("2026-06-01T00:00:00Z");
+
+function sameAgeToday(writtenAs: string): string {
+  return new Date(Date.now() - (FIXTURES_WRITTEN - Date.parse(writtenAs))).toISOString();
+}
 
 beforeAll(() => {
   process.env.PAL_HOME = TEST_HOME;
@@ -112,7 +117,7 @@ describe("retrieval index — build + read", () => {
         rating: 3,
         context: "User got burned by mocked database tests passing in CI",
         principle: "Never mock the database in integration tests",
-        ts: "2026-04-15T10:00:00Z",
+        ts: sameAgeToday("2026-04-15T10:00:00Z"),
       },
       "## What Happened\nMigration script ran fine in test but failed in prod due to mocked schema.\n"
     );
@@ -133,13 +138,13 @@ describe("retrieval ranker — correctness", () => {
       rating: 4,
       context: "Fixed a typo in README",
       principle: "Run spell-check before pushing docs",
-      ts: "2026-04-10T09:00:00Z",
+      ts: sameAgeToday("2026-04-10T09:00:00Z"),
     });
     fixtureCapture("2026/04", "20260420-090000_database-mock-leak", {
       rating: 2,
       context: "Mocked database hid migration bug",
       principle: "Never mock the database in integration tests",
-      ts: "2026-04-20T09:00:00Z",
+      ts: sameAgeToday("2026-04-20T09:00:00Z"),
     });
     const idx = buildIndex();
     const result = runRetrieval(
@@ -157,7 +162,7 @@ describe("retrieval ranker — correctness", () => {
       rating: 4,
       context: "Fixed a typo in README",
       principle: "Run spell-check before pushing docs",
-      ts: "2026-04-10T09:00:00Z",
+      ts: sameAgeToday("2026-04-10T09:00:00Z"),
     });
     const idx = buildIndex();
     const result = runRetrieval(
@@ -174,13 +179,13 @@ describe("retrieval ranker — correctness", () => {
       rating: 3,
       context: "PAL hook handler regressed",
       principle: "Test PAL hooks in isolation before wiring",
-      ts: "2026-04-15T10:00:00Z",
+      ts: sameAgeToday("2026-04-15T10:00:00Z"),
     });
     fixtureCapture("2026/04", "20260416-100000_other-deploy-issue", {
       rating: 3,
       context: "Some other repo had a deploy regression",
       principle: "Test deploy scripts in isolation before wiring",
-      ts: "2026-04-16T10:00:00Z",
+      ts: sameAgeToday("2026-04-16T10:00:00Z"),
     });
     const idx = buildIndex();
 
@@ -201,7 +206,7 @@ describe("retrieval ranker — correctness", () => {
         context: `Verbose context paragraph number ${i} about distributed systems consensus`,
         principle:
           "Always verify consensus before assuming distributed system state — quorum reads avoid split-brain reads under partition",
-        ts: `2026-04-1${i}T10:00:00Z`,
+        ts: sameAgeToday(`2026-04-1${i}T10:00:00Z`),
       });
     }
     const idx = buildIndex();
@@ -220,13 +225,13 @@ describe("retrieval index — dedup against graduated frames", () => {
       rating: 3,
       context: "User had to repeat the requirement twice",
       principle: "Always clarify intent before delivering",
-      ts: "2026-04-15T10:00:00Z",
+      ts: sameAgeToday("2026-04-15T10:00:00Z"),
     });
     fixtureCapture("2026/04", "20260420-100000_unrelated", {
       rating: 2,
       context: "Kubernetes pod kept crashing on init",
       principle: "Verify pod readiness probes match container startup time",
-      ts: "2026-04-20T10:00:00Z",
+      ts: sameAgeToday("2026-04-20T10:00:00Z"),
     });
     fixtureFrame("communication", "Always clarify intent before answering", 90);
 
@@ -245,7 +250,7 @@ describe("retrieval index — dedup against graduated frames", () => {
       rating: 3,
       context: "Kafka consumer lag spiked under load",
       principle: "Pin consumer group offsets explicitly during failover scenarios",
-      ts: "2026-04-15T10:00:00Z",
+      ts: sameAgeToday("2026-04-15T10:00:00Z"),
     });
     fixtureFrame("communication", "Always clarify intent before answering", 90);
 
@@ -258,7 +263,7 @@ describe("retrieval index — dedup against graduated frames", () => {
       rating: 3,
       context: "Some failure context",
       principle: "",
-      ts: "2026-04-15T10:00:00Z",
+      ts: sameAgeToday("2026-04-15T10:00:00Z"),
     });
     fixtureFrame("communication", "Always clarify intent before answering", 90);
 
@@ -282,7 +287,7 @@ describe("retrieval index — anchored cwd (cross-machine scope)", () => {
     // exactly what happens after an import from another machine.
     fixtureProject("sample", "/opt/build/sample");
     fixtureReflection({
-      timestamp: "2026-05-30T18:00:00Z",
+      timestamp: sameAgeToday("2026-05-30T18:00:00Z"),
       cwd: "{proj:sample}/src",
       task: "Build the playwright visual-check skill",
       sentiment: 8,
@@ -300,7 +305,7 @@ describe("retrieval index — anchored cwd (cross-machine scope)", () => {
   test("does not scope-match a different local cwd under the same project", () => {
     fixtureProject("sample", "/opt/build/sample");
     fixtureReflection({
-      timestamp: "2026-05-30T18:00:00Z",
+      timestamp: sameAgeToday("2026-05-30T18:00:00Z"),
       cwd: "{proj:sample}/src",
       task: "Build the playwright visual-check skill",
       sentiment: 8,
@@ -318,7 +323,7 @@ describe("retrieval index — anchored cwd (cross-machine scope)", () => {
   test("an anchor whose project is not registered here never scope-matches", () => {
     // No fixtureProject call — the slug is unknown on this "machine".
     fixtureReflection({
-      timestamp: "2026-05-30T18:00:00Z",
+      timestamp: sameAgeToday("2026-05-30T18:00:00Z"),
       cwd: "{proj:gizmo}/src",
       task: "Build the playwright visual-check skill",
       sentiment: 8,
@@ -337,7 +342,7 @@ describe("retrieval index — anchored cwd (cross-machine scope)", () => {
 describe("retrieval index — reflections", () => {
   test("indexes reflections with q1 as the displayed principle", () => {
     fixtureReflection({
-      timestamp: "2026-05-30T18:00:00Z",
+      timestamp: sameAgeToday("2026-05-30T18:00:00Z"),
       cwd: "/Users/x/code/pal",
       task: "Build the playwright visual-check skill",
       sentiment: 8,
@@ -354,7 +359,7 @@ describe("retrieval index — reflections", () => {
 
   test("surfaces a reflection on a lexically-matching query, labeled as a reflection", () => {
     fixtureReflection({
-      timestamp: "2026-05-30T18:00:00Z",
+      timestamp: sameAgeToday("2026-05-30T18:00:00Z"),
       cwd: "/Users/x/code/pal",
       task: "Build the playwright visual-check skill",
       sentiment: 8,
@@ -374,7 +379,7 @@ describe("retrieval index — reflections", () => {
 
   test("isStale flags index when the reflections store is newer", () => {
     fixtureReflection({
-      timestamp: "2026-05-30T18:00:00Z",
+      timestamp: sameAgeToday("2026-05-30T18:00:00Z"),
       cwd: "/Users/x/code/pal",
       task: "Some task",
       sentiment: 7,
@@ -392,7 +397,7 @@ describe("retrieval index — staleness", () => {
       rating: 3,
       context: "initial capture",
       principle: "first principle",
-      ts: "2026-04-15T10:00:00Z",
+      ts: sameAgeToday("2026-04-15T10:00:00Z"),
     });
     const idx = buildIndex();
     const stale = { ...idx, builtAt: "1970-01-01T00:00:00Z" };
@@ -420,7 +425,7 @@ describe("retrieval index — staleness", () => {
       rating: 3,
       context: "initial capture",
       principle: "first principle",
-      ts: "2026-04-15T10:00:00Z",
+      ts: sameAgeToday("2026-04-15T10:00:00Z"),
     });
     const idx = { ...buildIndex(), builtAt: BUILT };
     ageEveryDirectory(resolve(TEST_HOME, "memory"));
@@ -436,7 +441,7 @@ describe("retrieval index — staleness", () => {
 
   test("isStale sees a reflection appended to the existing store", () => {
     fixtureReflection({
-      timestamp: "2026-05-30T18:00:00Z",
+      timestamp: sameAgeToday("2026-05-30T18:00:00Z"),
       cwd: "/Users/x/code/pal",
       task: "Some task",
       sentiment: 7,
@@ -456,7 +461,7 @@ describe("retrieval index — staleness", () => {
       rating: 3,
       context: "initial capture",
       principle: "first principle",
-      ts: "2026-04-15T10:00:00Z",
+      ts: sameAgeToday("2026-04-15T10:00:00Z"),
     });
     const idx = { ...buildIndex(), builtAt: BUILT };
     const old = new Date("2026-08-01T00:00:00Z");
@@ -475,7 +480,7 @@ describe("retrieval index — staleness", () => {
       rating: 3,
       context: "initial",
       principle: "first principle",
-      ts: "2026-04-15T10:00:00Z",
+      ts: sameAgeToday("2026-04-15T10:00:00Z"),
     });
     const idx = ensureIndex();
     expect(idx.corpusSize).toBe(1);
