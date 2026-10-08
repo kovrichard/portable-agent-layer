@@ -21,14 +21,18 @@ import { spawnDetachedInference } from "../lib/detached-inference";
 import { canInfer, inference } from "../lib/inference";
 import { replyEnd } from "../lib/interaction-samples";
 import { logDebug } from "../lib/log";
+import { HAIKU_5_5_MODEL } from "../lib/models";
 import { paths } from "../lib/paths";
 import { isSystemText, stripInjectedTags } from "../lib/prompt-text";
 import {
-  isCorrectionLabel,
+  correctionCheckRequest,
+  needsCorrectionCheck,
+  parseCorrectionCheck,
   parseReactionLabel,
   ratingContext,
   ratingFromLabels,
   reactionRequest,
+  settledLabel,
   turnFromLabels,
 } from "../lib/reaction-rating";
 import {
@@ -225,6 +229,12 @@ async function labelReaction(reply: string, message: string, sessionId?: string)
   return result.success ? parseReactionLabel(result.output) : null;
 }
 
+async function checkCorrection(reply: string, message: string, sessionId?: string) {
+  const result = await inference(correctionCheckRequest(reply, message, sessionId));
+  if (result.usage) logTokenUsage("rating", result.usage);
+  return result.success ? parseCorrectionCheck(result.output) : null;
+}
+
 function knownRules() {
   const waiting = readCandidates().filter((candidate) => candidate.verdict === "waiting");
   return [
@@ -240,13 +250,13 @@ async function draftRuleCandidate(sessionId?: string): Promise<void> {
   const known = knownRules();
   if (!canRepeat(corrections) && !canWiden(corrections, known)) return;
   const result = await inference(drafterRequest(corrections, known, sessionId));
-  if (result.usage) logTokenUsage("rule-drafter", result.usage);
+  if (result.usage) logTokenUsage("rule-drafter", result.usage, HAIKU_5_5_MODEL);
   const candidate = result.success ? parseDraft(result.output, corrections, known) : null;
   if (candidate) recordCandidate(candidate, turns);
   else logDebug("rule-drafter", `no candidate: ${result.output ?? result.error ?? ""}`);
 }
 
-/** Background mode: label the reaction, confirm a correction, store the rating. */
+/** Background mode: label the reaction, check a possible correction, store the rating. */
 async function runReactionRatingAndStore(
   message: string,
   reply: string,
@@ -255,17 +265,18 @@ async function runReactionRatingAndStore(
 ): Promise<void> {
   try {
     const first = await labelReaction(reply, message, sessionId);
-    const confirmation = isCorrectionLabel(first)
-      ? await labelReaction(reply, message, sessionId)
+    const check = needsCorrectionCheck(first)
+      ? await checkCorrection(reply, message, sessionId)
       : null;
-    const rating = ratingFromLabels(first, confirmation);
-    if (first && rating !== null) {
-      handleRating(rating, ratingContext(first, message), "implicit", reply, message);
+    const label = settledLabel(first, check);
+    const rating = ratingFromLabels(label, check);
+    if (label && rating !== null) {
+      handleRating(rating, ratingContext(label, message), "implicit", reply, message);
     }
     const turn = turnFromLabels(
       { session: sessionId ?? "", message, replyEnd: reply },
-      first,
-      confirmation
+      label,
+      check
     );
     if (turn) appendTurn(turn, sentAt);
     if (turn?.confirmed) await draftRuleCandidate(sessionId);
