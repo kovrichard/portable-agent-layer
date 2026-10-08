@@ -1224,31 +1224,51 @@ export function loadCopilotHooksTemplate(templatePath: string, pkgRoot: string):
 
 // --- Statusline ---
 
-export type StatuslineTarget = Extract<AgentName, "claude" | "cursor">;
+export type StatuslineTarget = Extract<AgentName, "claude" | "cursor" | "antigravity">;
+
+interface StatuslineSlot {
+  dir: () => string;
+  /** The script path as the agent's own config spells it, without the extension. */
+  script: string;
+  powershellFlags: string;
+  extra?: Record<string, unknown>;
+}
+
+const STATUSLINE: Record<StatuslineTarget, StatuslineSlot> = {
+  claude: {
+    dir: platform.claudeDir,
+    script: "~/.claude/statusline",
+    powershellFlags: "-NoProfile -ExecutionPolicy Bypass",
+  },
+  cursor: {
+    dir: platform.cursorDir,
+    script: "~/.cursor/statusline",
+    powershellFlags: "-NoProfile",
+    extra: { updateIntervalMs: 300, timeoutMs: 2000 },
+  },
+  antigravity: {
+    dir: platform.antigravityCliDir,
+    script: "~/.gemini/antigravity-cli/statusline",
+    powershellFlags: "-NoProfile -ExecutionPolicy Bypass",
+  },
+};
 
 function statuslineAgentDir(target: StatuslineTarget): string {
-  return target === "claude" ? platform.claudeDir() : platform.cursorDir();
+  return STATUSLINE[target].dir();
 }
 
 function statuslineCommand(target: StatuslineTarget): string {
-  const isPlatformWin32 = process.platform === "win32";
-  if (target === "cursor") {
-    return isPlatformWin32
-      ? "powershell -NoProfile -File ~/.cursor/statusline.ps1"
-      : "~/.cursor/statusline.sh";
-  }
-  return isPlatformWin32
-    ? "powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/statusline.ps1"
-    : "~/.claude/statusline.sh";
+  const { script, powershellFlags } = STATUSLINE[target];
+  return process.platform === "win32"
+    ? `powershell ${powershellFlags} -File ${script}.ps1`
+    : `${script}.sh`;
 }
 
 function isPalStatuslineCommand(cmd: string, target: StatuslineTarget): boolean {
-  return target === "claude"
-    ? cmd.includes(".claude/statusline")
-    : cmd.includes(".cursor/statusline");
+  return cmd.includes(STATUSLINE[target].script.slice(2));
 }
 
-/** Copy statusline script to ~/.claude/ or ~/.cursor/ for the current platform */
+/** Copy the statusline script into the agent's config dir for the current platform */
 export function copyStatusline(target: StatuslineTarget = "claude"): boolean {
   const agentDir = statuslineAgentDir(target);
   mkdirSync(agentDir, { recursive: true });
@@ -1280,7 +1300,7 @@ export function copyStatusline(target: StatuslineTarget = "claude"): boolean {
   }
 }
 
-/** Remove statusline script from ~/.claude/ or ~/.cursor/ */
+/** Remove the statusline script from the agent's config dir */
 export function removeStatusline(target: StatuslineTarget = "claude"): boolean {
   const isPlatformWin32 = process.platform === "win32";
   const scriptName = isPlatformWin32 ? "statusline.ps1" : "statusline.sh";
@@ -1331,8 +1351,7 @@ export function addStatuslineConfig(
       if (!claudeStatuslineNeedsRefresh(cmd)) {
         return settings;
       }
-    } else if (!isPalStatuslineCommand(cmd, "cursor")) {
-      // Cursor: preserve user-defined statusLine commands
+    } else if (!isPalStatuslineCommand(cmd, target)) {
       return settings;
     }
   }
@@ -1342,13 +1361,13 @@ export function addStatuslineConfig(
     type: "command",
     command,
     padding: 2,
-    ...(target === "cursor" ? { updateIntervalMs: 300, timeoutMs: 2000 } : {}),
+    ...STATUSLINE[target].extra,
   };
 
   return settings;
 }
 
-/** Remove statusLine config from settings (PAL-owned only for Cursor) */
+/** Remove statusLine config from settings (PAL-owned only, except for Claude) */
 export function removeStatuslineConfig(
   settings: Record<string, unknown>,
   target: StatuslineTarget = "claude"
@@ -1364,7 +1383,7 @@ export function removeStatuslineConfig(
   }
 
   const cmd = statusLine.command as string | undefined;
-  if (cmd && isPalStatuslineCommand(cmd, "cursor")) {
+  if (cmd && isPalStatuslineCommand(cmd, target)) {
     delete settings.statusLine;
   }
   return settings;

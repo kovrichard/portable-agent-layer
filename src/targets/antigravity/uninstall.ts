@@ -1,7 +1,7 @@
 /**
  * PAL — Antigravity CLI uninstaller
- * Removes the PAL plugin, ~/.gemini/config/plugins/pal/, and exactly the allowlist
- * entries PAL merged into agy's settings.json. Skill links are unlinked first so
+ * Removes the PAL plugin, ~/.gemini/config/plugins/pal/, exactly the allowlist
+ * entries PAL merged into agy's settings.json, and PAL's statusLine and script. Skill links are unlinked first so
  * removing the folder never walks into the skills they point at.
  */
 
@@ -16,7 +16,15 @@ import {
 import { resolve } from "node:path";
 import { skillsDirOf } from "../../hooks/lib/agent-registry";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
-import { loadSettingsTemplate, log, readJson, unmergeSettings, writeJson } from "../lib";
+import {
+  loadSettingsTemplate,
+  log,
+  readJson,
+  removeStatusline,
+  removeStatuslineConfig,
+  unmergeSettings,
+  writeJson,
+} from "../lib";
 
 function unlinkSkillLinks(dir: string): string[] {
   if (!existsSync(dir)) return [];
@@ -44,6 +52,15 @@ if (existsSync(SETTINGS)) {
     assets.antigravitySettingsTemplate(),
     palPkg().replaceAll("\\", "/")
   );
-  writeJson(SETTINGS, unmergeSettings(readJson(SETTINGS, {}), template));
-  log.success("Removed the PAL command allowlist from antigravity-cli/settings.json");
+  writeJson(
+    SETTINGS,
+    removeStatuslineConfig(
+      unmergeSettings(readJson(SETTINGS, {}), template),
+      "antigravity"
+    )
+  );
+  log.success(
+    "Removed the PAL command allowlist and statusLine from antigravity-cli/settings.json"
+  );
 }
+removeStatusline("antigravity");
