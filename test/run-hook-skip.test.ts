@@ -121,15 +121,12 @@ describe("run-hook clean-worktree skip", () => {
     const dir = makeRepo("antigravity-failing");
     writeFileSync(resolve(dir, "tracked.txt"), "changed\n");
     mkdirSync(resolve(dir, ".agents"));
+    writeFileSync(resolve(dir, "gate.ts"), 'console.log("broken");\nprocess.exit(3);\n');
 
-    const r = spawnSync(
-      "bun",
-      ["run", HOOK, "--antigravity", "echo", "broken;", "exit", "3"],
-      {
-        cwd: resolve(dir, ".agents"),
-        encoding: "utf-8",
-      }
-    );
+    const r = spawnSync("bun", ["run", HOOK, "--antigravity", "bun", "gate.ts"], {
+      cwd: resolve(dir, ".agents"),
+      encoding: "utf-8",
+    });
 
     expect(r.status).toBe(0);
     expect(JSON.parse(r.stdout)).toEqual({ decision: "continue", reason: "broken" });
