@@ -18,7 +18,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { type ExportManifest, MANIFEST_NAME } from "./export";
+import { type ExportManifest, MANIFEST_NAME } from "./export-manifest";
 
 /** One file inside an export archive, decoupled from the zip library. */
 export interface ArchiveEntry {

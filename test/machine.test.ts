@@ -324,7 +324,7 @@ describe("machine.json never leaves the machine", () => {
 
 describe("export manifest", () => {
   test("names the producing machine and the file count", async () => {
-    const { buildManifest } = await import("../src/hooks/lib/export");
+    const { buildManifest } = await import("../src/hooks/lib/export-manifest");
     const mf = buildManifest({ id: "id-a", label: "macbook", os: "darwin" }, 7);
     expect(mf.machineId).toBe("id-a");
     expect(mf.label).toBe("macbook");
@@ -333,7 +333,9 @@ describe("export manifest", () => {
   });
 
   test("readManifest round-trips what buildManifest produced", async () => {
-    const { buildManifest, MANIFEST_NAME } = await import("../src/hooks/lib/export");
+    const { buildManifest, MANIFEST_NAME } = await import(
+      "../src/hooks/lib/export-manifest"
+    );
     const { readManifest } = await import("../src/hooks/lib/import-merge");
     const mf = buildManifest({ id: "id-a", label: "macbook", os: "darwin" }, 7);
     const got = readManifest([
@@ -351,7 +353,7 @@ describe("export manifest", () => {
   });
 
   test("returns null for a corrupt or id-less manifest", async () => {
-    const { MANIFEST_NAME } = await import("../src/hooks/lib/export");
+    const { MANIFEST_NAME } = await import("../src/hooks/lib/export-manifest");
     const { readManifest } = await import("../src/hooks/lib/import-merge");
     expect(
       readManifest([{ path: MANIFEST_NAME, data: () => Buffer.from("{{{") }])

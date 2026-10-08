@@ -7,6 +7,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import AdmZip from "adm-zip";
 import { ensureActorRegistered } from "./actor";
+import { buildManifest, MANIFEST_NAME } from "./export-manifest";
 import { ensureRegistered } from "./machine";
 import { palHome } from "./paths";
 
@@ -59,30 +60,6 @@ export function collectExportFiles(): string[] {
   }
 
   return files;
-}
-
-/** Archive metadata naming the machine that produced it. */
-export const MANIFEST_NAME = "export-manifest.json";
-
-export interface ExportManifest {
-  machineId: string;
-  label: string;
-  os: string;
-  exportedAt: string;
-  fileCount: number;
-}
-
-export function buildManifest(
-  identity: { id: string; label: string; os: string },
-  fileCount: number
-): ExportManifest {
-  return {
-    machineId: identity.id,
-    label: identity.label,
-    os: identity.os,
-    exportedAt: new Date().toISOString(),
-    fileCount,
-  };
 }
 
 /**
