@@ -1,3 +1,11 @@
+## [0.88.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.88.0...v0.88.1) (2026-10-08)
+
+
+### Bug Fixes
+
+* **hooks:** treat a subagent's hand-back as system text, not a user turn ([a70bc50](https://github.com/kovrichard/portable-agent-layer/commit/a70bc5032f73d61ef1c903fa22ee71883f20effd))
+* **session-name:** strip markdown and prose from the model's name ([5e9ac4a](https://github.com/kovrichard/portable-agent-layer/commit/5e9ac4a0e4f38b65f6e2e2688981cfd3f6281aa1))
+
 # [0.88.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.87.0...v0.88.0) (2026-10-07)
 
 
