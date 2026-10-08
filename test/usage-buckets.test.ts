@@ -56,6 +56,7 @@ describe("emptyBucket / emptyTimeBuckets", () => {
       cacheRead: 0,
       cost: 0,
       calls: 0,
+      unpriced: 0,
     });
   });
 

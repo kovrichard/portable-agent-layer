@@ -62,6 +62,7 @@ export default {
     "!src/cli/setup-attribution.ts",
     "!src/cli/setup-auto-update.ts",
     "!src/cli/setup-identity.ts",
+    "!src/cli/usage.ts",
     // Read as text by update-command.test.ts.
     "!src/hooks/handlers/update-check.ts",
     // Tools that are only ever spawned and now hold nothing but argv and one
