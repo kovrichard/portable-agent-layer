@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runStopHandlers } from "../src/hooks/lib/stop";
 import { sandboxContextRuleDirs } from "./lib/context-rule-dirs";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // runStopHandlers spawns detached children that keep writing into PAL_HOME after
 // the test returns, so this directory can reappear after cleanup — .gitignore
@@ -34,7 +35,7 @@ function seedCache(entries: Record<string, { response: string; ts: string }>) {
 }
 
 beforeEach(() => {
-  if (existsSync(HOME)) rmSync(HOME, { recursive: true });
+  removeOnceReleased(HOME);
   mkdirSync(HOME, { recursive: true });
   process.env.PAL_HOME = HOME;
   restoreContextRuleDirs = sandboxContextRuleDirs(resolve(HOME, "agents"));
@@ -44,7 +45,7 @@ afterEach(() => {
   restoreContextRuleDirs();
   if (savedHome === undefined) delete process.env.PAL_HOME;
   else process.env.PAL_HOME = savedHome;
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 describe("runStopHandlers — transcript gate", () => {
