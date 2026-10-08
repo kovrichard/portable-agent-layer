@@ -10,7 +10,8 @@ import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawnDetachedInference } from "../hooks/lib/detached-inference";
 import { paths } from "../hooks/lib/paths";
-import { DEFAULT_PORT, LOOPBACK, type ServerStatus } from "../tools/control-room/server";
+import type { ServerStatus } from "../tools/control-room/server";
+import { DEFAULT_PORT, LOOPBACK } from "../tools/control-room/server-config";
 import { BUILD_COMMAND, buildPage, isBuilt } from "../tools/control-room/static";
 import { group, leaf, UsageError } from "../tools/lib/command";
 

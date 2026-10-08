@@ -297,10 +297,12 @@ const BREAKAGES: Breakage[] = [
   {
     id: "dependencies",
     modes: ["package"],
-    break: (s) =>
-      rmSync(at(s, ".bun", "install", "global", "node_modules", "fast-myers-diff"), {
-        recursive: true,
-      }),
+    break: (s) => {
+      for (const dependency of ["fast-myers-diff", "@clack/prompts"])
+        rmSync(at(s, ".bun", "install", "global", "node_modules", dependency), {
+          recursive: true,
+        });
+    },
   },
 ];
 

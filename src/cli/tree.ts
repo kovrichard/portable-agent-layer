@@ -17,7 +17,7 @@ import { usageCommand } from "../tools/token-cost";
 import { builtinTools, builtinToolVerbs } from "./builtin-tools";
 import { identityCommand } from "./identity";
 import { knowledgeCommand } from "./knowledge";
-import { ledgerCommand } from "./ledger";
+import { ledgerCommand } from "./ledger-command";
 import { runMigrate } from "./migrate";
 import { telosCommand, timezoneCommand } from "./personal-context";
 import { ruleCommand } from "./rule";

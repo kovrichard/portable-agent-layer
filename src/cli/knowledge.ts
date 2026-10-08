@@ -6,7 +6,6 @@
  */
 
 import { readFileSync } from "node:fs";
-import * as clack from "@clack/prompts";
 import { toPath } from "../hooks/lib/paths";
 import { buildGraph, resolveSlug, stats, traverse } from "../tools/knowledge/graph";
 import {
@@ -463,6 +462,7 @@ async function cmdAdd(
 }
 
 async function runInteractiveAdd(prefilled: AddFlags): Promise<AddFlags | null> {
+  const clack = await import("@clack/prompts");
   clack.intro("Add knowledge entry");
   const tagsInput = await clack.text({
     message: "Tags (comma-separated, optional):",
