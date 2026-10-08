@@ -8,7 +8,11 @@ import {
   skillsDirOf,
 } from "../../hooks/lib/agent-registry";
 import { palPkg, platform } from "../../hooks/lib/paths";
-import { nativeAgentsDir, staleShippedAgents } from "../../targets/lib";
+import {
+  installedShippedAgentCount,
+  nativeAgentsDir,
+  staleShippedAgents,
+} from "../../targets/lib";
 import { NO_SESSION_AGENT_MESSAGE } from "../session-agent";
 import { type Finding, type Fix, failing, optional, passed, warning } from "./finding";
 
@@ -231,7 +235,13 @@ function hookFindings(agent: AgentName, file: string, contextHook: string): Find
       ),
     ];
 
-  const findings = [passed(`${agent}.hooks`, `${label}: ${pal.length} hooks registered`)];
+  const findings = [
+    passed(
+      `${agent}.hooks`,
+      `${label}: ${pal.length} hooks registered`,
+      `${pal.length} hooks`
+    ),
+  ];
   const undeclared = pal.filter((c) => !declaresAgent(c, agent));
   if (undeclared.length > 0)
     findings.push(
@@ -272,14 +282,20 @@ function opencodePluginFindings(): Finding[] {
         reinstall("opencode")
       ),
     ];
-  return [passed("opencode.hooks", "opencode plugin installed and current")];
+  return [
+    passed("opencode.hooks", "opencode plugin installed and current", "plugin current"),
+  ];
 }
 
 function subagentFinding(agent: AgentName): Finding {
   const label = labelOf(agent);
   const stale = staleShippedAgents(nativeAgentsDir(agent), agent);
   if (stale.length === 0)
-    return passed(`${agent}.subagents`, `${label}: subagents match this PAL version`);
+    return passed(
+      `${agent}.subagents`,
+      `${label}: subagents match this PAL version`,
+      "subagents current"
+    );
   return warning(
     `${agent}.subagents`,
     `${label}: installed subagents differ from this PAL version — ${stale.join(", ")}`,
@@ -298,7 +314,7 @@ function oneAgentFindings(agent: AgentName): Finding[] {
   const skills = countSkills(skillsDirOf(agent));
   const findings = [
     skills > 0
-      ? passed(`${agent}.skills`, `${label}: ${skills} skills`)
+      ? passed(`${agent}.skills`, `${label}: ${skills} skills`, `${skills} skills`)
       : warning(`${agent}.skills`, `${label} has no PAL skills`, reinstall(agent)),
   ];
   findings.push(
@@ -311,11 +327,29 @@ function oneAgentFindings(agent: AgentName): Finding[] {
     const { file, name } = layout.instructions;
     findings.push(
       existsSync(file())
-        ? passed(`${agent}.instructions`, `${name} present`)
+        ? passed(`${agent}.instructions`, `${name} present`, name)
         : failing(`${agent}.instructions`, `${name} is missing`, reinstall(agent))
     );
   }
   return findings;
+}
+
+function palHookCount(agent: AgentName): number {
+  const file = WIRING[agent].hookFile?.();
+  const commands = file ? readHookCommands(file) : "missing";
+  return Array.isArray(commands) ? commands.filter((c) => isPalHook(c, agent)).length : 0;
+}
+
+/** What PAL put into an agent, in the few words an install step reports it in. */
+export function agentInventory(agent: AgentName): string[] {
+  const plural = (count: number, noun: string) =>
+    `${count} ${noun}${count === 1 ? "" : "s"}`;
+  const wiring = WIRING[agent].hookFile ? plural(palHookCount(agent), "hook") : "plugin";
+  return [
+    plural(countSkills(skillsDirOf(agent)), "skill"),
+    wiring,
+    plural(installedShippedAgentCount(agent), "agent"),
+  ];
 }
 
 export function agentFindings(agents: AgentName[]): Finding[] {
@@ -345,7 +379,7 @@ export function rosterFindings(agents: AgentName[]): Finding[] {
   return [
     optional(
       "agents.others",
-      `Other agents PAL supports — ${others.map(labelOf).join(", ")}`,
+      `${others.map(labelOf).join(", ")} — other agents PAL supports`,
       {
         say: `install it, then run pal cli install --${others.length === 1 ? others[0] : "<agent>"}`,
       }

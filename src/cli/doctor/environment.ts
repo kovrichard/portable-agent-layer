@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, resolve } from "node:path";
@@ -98,16 +98,24 @@ function thisBrowserHost(): BrowserHost {
   };
 }
 
-function runInShell(command: string): boolean {
-  return spawnSync(command, { cwd: palPkg(), shell: true, stdio: "ignore" }).status === 0;
+function runInShell(command: string): Promise<boolean> {
+  return new Promise((done) => {
+    const child = spawn(command, { cwd: palPkg(), shell: true, stdio: "ignore" });
+    child.on("error", () => done(false));
+    child.on("close", (code) => done(code === 0));
+  });
 }
 
-/** A failure is left to the doctor's report that follows, which names the fix. */
-export function installChromium(
+/**
+ * Null when the right build is already there. A failure is left to the
+ * doctor's report that follows, which names the fix.
+ */
+export async function installChromium(
   host: BrowserHost = thisBrowserHost(),
-  run: (command: string) => boolean = runInShell
-): void {
-  if (!hasChromium(host)) run(chromiumInstallCommand(host));
+  run: (command: string) => Promise<boolean> | boolean = runInShell
+): Promise<boolean | null> {
+  if (hasChromium(host)) return null;
+  return run(chromiumInstallCommand(host));
 }
 
 interface PalInstall {
