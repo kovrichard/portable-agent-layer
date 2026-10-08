@@ -1,3 +1,24 @@
+# [0.89.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.88.1...v0.89.0) (2026-10-08)
+
+
+### Bug Fixes
+
+* **antigravity:** add command allowlist settings for Antigravity CLI ([cff6b67](https://github.com/kovrichard/portable-agent-layer/commit/cff6b67940f659b26d19a2b1285e98a6b1e76411))
+* **cli:** load optional dependencies lazily so the doctor runs without them ([6efcb2a](https://github.com/kovrichard/portable-agent-layer/commit/6efcb2ae05983e17751758b5a35134726faf1524))
+* **opencode:** allowlist safe commands ([452c60b](https://github.com/kovrichard/portable-agent-layer/commit/452c60b23be4d7f2362e678295eca27f9f044c01))
+
+
+### Features
+
+* add antigravity support ([4e4c3e7](https://github.com/kovrichard/portable-agent-layer/commit/4e4c3e79fc5cf322b530ecbc9a4da46efdbb3169))
+* **antigravity:** add dev hook support ([8e6165b](https://github.com/kovrichard/portable-agent-layer/commit/8e6165b6797f56119f2455bd345fbc2205110bbc))
+* **antigravity:** add subagent support ([2bc4a82](https://github.com/kovrichard/portable-agent-layer/commit/2bc4a828f2d52203134c9b83ff5eb88a4b9d1570))
+* **antigravity:** add support for statusline configuration and script management ([4c79684](https://github.com/kovrichard/portable-agent-layer/commit/4c79684a74957e25411ad94817a7441ff1910a92))
+* **antigravity:** enhance integration with context digests and ensure rule generation for the Antigravity plugin ([1331863](https://github.com/kovrichard/portable-agent-layer/commit/133186357606b7d1a3bdbead0df6ed3be94eeb2c))
+* **antigravity:** implement hooks ([4f3cace](https://github.com/kovrichard/portable-agent-layer/commit/4f3cace60830b70740543ddc7dc767878f16f4f0))
+* **antigravity:** implement tool-less inference agent and enhance CLI integration ([2a7b694](https://github.com/kovrichard/portable-agent-layer/commit/2a7b6948f770b9a733c76b7af7658ee788852a75))
+* **antigravity:** introduce transcript handling ([ec8456c](https://github.com/kovrichard/portable-agent-layer/commit/ec8456c4d352ec04dcb38cd86090290dd31c3728))
+
 ## [0.88.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.88.0...v0.88.1) (2026-10-08)
 
 
