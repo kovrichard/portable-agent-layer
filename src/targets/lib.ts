@@ -989,8 +989,11 @@ export function removePalContextFiles(dir: string, suffix: string): string[] {
   return removed;
 }
 
-/** Remove PAL skill symlinks from ~/.pal/skills/ and ~/.claude/skills/ */
-export function removeSkills(claudeSkillsDir: string): string[] {
+/**
+ * Remove one agent's PAL skill links. ~/.pal/skills/<name> and ~/.agents/skills
+ * are shared by every installed agent, so a per-agent uninstall leaves them.
+ */
+export function removeSkills(agentSkillsDir: string): string[] {
   const skillsDir = assets.skills();
   if (!existsSync(skillsDir)) return [];
 
@@ -998,22 +1001,13 @@ export function removeSkills(claudeSkillsDir: string): string[] {
   for (const name of readdirSync(skillsDir)) {
     if (!existsSync(resolve(skillsDir, name, "SKILL.md"))) continue;
 
-    for (const link of [resolve(palSkillsDir(), name), resolve(claudeSkillsDir, name)]) {
-      try {
-        unlinkSync(link);
-      } catch {
-        /* already gone */
-      }
+    try {
+      unlinkSync(resolve(agentSkillsDir, name));
+    } catch {
+      /* already gone */
     }
     removed.push(name);
     log.detail(`Removed skill: ${name}`);
-  }
-
-  // Remove ~/.agents/skills/ → ~/.pal/skills/ symlink
-  try {
-    unlinkSync(resolve(platform.agentsDir(), "skills"));
-  } catch {
-    /* gone */
   }
 
   return removed;

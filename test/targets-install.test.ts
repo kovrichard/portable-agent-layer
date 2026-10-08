@@ -184,7 +184,7 @@ describe("shipped skills", () => {
     expect(readdirSync(claudeSkills)).toHaveLength(first);
   });
 
-  test("removes what it linked and names each skill", () => {
+  test("removes the agent's links and names each skill", () => {
     const claudeSkills = resolve(ENV.PAL_CLAUDE_DIR, "skills");
     const count = copySkills(claudeSkills);
 
@@ -192,6 +192,14 @@ describe("shipped skills", () => {
 
     expect(removed).toHaveLength(count);
     expect(readdirSync(claudeSkills)).toHaveLength(0);
-    expect(readdirSync(resolve(HOME, "skills"))).toHaveLength(0);
+  });
+
+  test("keeps the shared skill store other agents link through", () => {
+    const count = copySkills(resolve(ENV.PAL_CLAUDE_DIR, "skills"));
+
+    removeSkills(resolve(ENV.PAL_CURSOR_DIR, "skills"));
+
+    expect(readdirSync(resolve(HOME, "skills"))).toHaveLength(count);
+    expect(lstatSync(resolve(ENV.PAL_AGENTS_DIR, "skills")).isSymbolicLink()).toBe(true);
   });
 });
