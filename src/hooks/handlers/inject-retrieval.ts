@@ -13,6 +13,7 @@ import { dueNudgeReminder } from "../lib/daily-nudge";
 import { observeTurn } from "../lib/interaction";
 import { logDebug, logError } from "../lib/log";
 import { parkPromptContext } from "../lib/parked-context";
+import { isSystemText } from "../lib/prompt-text";
 import { getRepoStateReminder } from "../lib/repo-state";
 import { runRetrieval } from "../lib/retrieval";
 import { ensureIndex } from "../lib/retrieval-index";
@@ -81,15 +82,16 @@ export async function getPromptContext(
   prompt: string,
   sessionId?: string
 ): Promise<string | null> {
+  const userText = isSystemText(prompt) ? "" : prompt;
   const parts = [
     getWallClockReminder(),
-    withinBudget(() => promptRulesReminder(prompt, sessionId), BUDGET_MS),
+    userText && withinBudget(() => promptRulesReminder(userText, sessionId), BUDGET_MS),
     withinBudget(() => getRepoStateReminder(), BUDGET_MS),
-    withinBudget(() => observeTurn(prompt, sessionId), BUDGET_MS),
+    userText && withinBudget(() => observeTurn(userText, sessionId), BUDGET_MS),
     withinBudget(() => dueNudgeReminder(), BUDGET_MS),
-    getSteeringReminder(prompt),
-    getSkillReminder(prompt),
-    await getRetrievalReminder(prompt),
+    userText && getSteeringReminder(userText),
+    userText && getSkillReminder(userText),
+    userText && (await getRetrievalReminder(userText)),
   ].filter((p): p is string => Boolean(p));
 
   return parts.length > 0 ? parts.join("\n\n") : null;
