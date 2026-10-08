@@ -11,6 +11,7 @@ import {
   previewInferenceRoute,
 } from "../src/hooks/lib/inference";
 import {
+  HAIKU_5_5_MODEL,
   HAIKU_MODEL,
   inferenceModel,
   isFixedModelRoute,
@@ -49,6 +50,18 @@ describe("inferenceModel", () => {
     expect(isFixedModelRoute("opencode-spawn")).toBe(false);
   });
 
+  test("the rule drafter runs on Haiku 5.5 on the claude routes", () => {
+    expect(inferenceModel("claude-spawn", "small", "rule-drafter")).toBe(HAIKU_5_5_MODEL);
+    expect(inferenceModel("anthropic-api", "small", "rule-drafter")).toBe(
+      HAIKU_5_5_MODEL
+    );
+  });
+
+  test("a caller nobody evaluated stays on the route's own model", () => {
+    expect(inferenceModel("claude-spawn", "small", "rating")).toBe(HAIKU_MODEL);
+    expect(inferenceModel("codex-spawn", "small", "rule-drafter")).toBe("gpt-6-luna");
+  });
+
   test("small is the default tier", () => {
     expect(inferenceModel("codex-spawn")).toBe(inferenceModel("codex-spawn", "small"));
   });
@@ -69,6 +82,11 @@ describe("inferenceModel", () => {
 describe("argv carries the tier's model", () => {
   test("claude defaults to Haiku", () => {
     expect(flagValue(buildClaudeArgs({ user: "hi" }), "--model")).toBe(HAIKU_MODEL);
+  });
+
+  test("claude passes the caller's evaluated model", () => {
+    const args = buildClaudeArgs({ user: "hi", caller: "rule-drafter" });
+    expect(flagValue(args, "--model")).toBe(HAIKU_5_5_MODEL);
   });
 
   test("claude medium uses Sonnet", () => {

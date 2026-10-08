@@ -67,7 +67,8 @@
     "eval:failure-principle": "bun eval/run.ts failure-principle",
     "eval:goal-links": "bun eval/run.ts goal-links",
     "eval:waiting-on": "bun eval/run.ts waiting-on",
-    "eval:reaction": "bun eval/run.ts reaction"
+    "eval:reaction": "bun eval/run.ts reaction",
+    "eval:correction-check": "bun eval/run.ts correction-check"
   },
   "lint-staged": {
     "*.ts": [

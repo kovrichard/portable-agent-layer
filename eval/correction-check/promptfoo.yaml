@@ -1,0 +1,284 @@
+# PAL correction check evaluation
+#
+# Evaluates the prompt in src/hooks/lib/reaction-rating.ts that checks a
+# possible correction: a "corrected", "repeated" or "follow-up" from the
+# labelling prompt is asked again as one narrow question, was the reply itself
+# wrong? Asking the labelling prompt twice repeats its own mistakes; this question
+# has to catch the follow-ups that sound like corrections and the corrections the
+# first label missed. The cases are the reaction eval's corrections, look-alike
+# follow-ups, and go-aheads a first label may call a follow-up.
+#
+# Run:
+#   bun run eval:correction-check --filter-providers haiku
+
+description: correction check — was the reply itself wrong?
+
+prompts:
+  - label: correction-check
+    raw: |
+      An AI assistant sent a reply and the user answered. A first reader labelled the answer a correction of the reply. Check whether that is right.
+
+      It is a correction only when the user says or shows that the reply itself was wrong:
+      - something the reply claimed is false;
+      - something it said was done is not done;
+      - a command or step it gave does not work;
+      - a promise it made was not kept;
+      - following its advice or steps caused a problem;
+      - it missed what the user asked, or is waiting on or asking for something the user had already done;
+      - the user still does not understand after its explanation, even when they phrase it as a question.
+
+      It is not a correction when the user:
+      - wants more, or adds a requirement the reply was not asked to meet. "This needs more" or "it should also do X" is a new requirement unless the reply claimed X was already done;
+      - cannot find where or how to do a step the reply described;
+      - doubts the reply or asks for a check, without saying it is wrong;
+      - reports something that failed later, when the reply never claimed it would work;
+      - complains about something other than what the reply claimed;
+      - decides to change or drop a feature.
+
+      The end of the assistant's reply:
+      <reply_end>
+      {{replyEnd}}
+      </reply_end>
+
+      The user's next message:
+      <message>
+      {{message}}
+      </message>
+
+      Answer corrected if it is a correction, otherwise not-corrected. For corrected, set issue to what the reply got wrong, in at most twelve words; otherwise set issue to an empty string.
+
+      Respond with ONLY a JSON value matching this schema (no prose, no markdown): {'type':'object','properties':{'reaction':{'enum':['corrected','not-corrected']},'issue':{'type':'string'}},'required':['reaction','issue'],'additionalProperties':false}
+
+providers:
+  - id: file://../lib/claude-cli.js
+    label: haiku
+    config: { model: claude-haiku-4-5-20251001 }
+  - id: file://../lib/claude-cli.js
+    label: haiku-5-5
+    config: { model: claude-haiku-5-5 }
+
+defaultTest:
+  assert:
+    - type: javascript
+      value: file://../lib/valid-json.js
+      description: "Output must be a parseable JSON object"
+
+tests:
+  # ── corrections ──
+  - description: a claimed change the user cannot find
+    vars:
+      replyEnd: >-
+        The README cleanup is in place, and every file edit went through the edit
+        tool. Next in the queue is the duplicate-notification fix.
+      message: I don't see the README cleanup
+    assert:
+      - type: javascript
+        value: file://../reaction/assertions/is-correction.js
+
+  - description: an explanation that did not land
+    vars:
+      replyEnd: >-
+        The block is sent once per session, at the start, not on every turn. Without
+        the filter, the reader would have treated it as something you said.
+      message: I still don't get why it ran twice then
+    assert:
+      - type: javascript
+        value: file://../reaction/assertions/is-correction.js
+
+  - description: the command the reply gave does not exist
+    vars:
+      replyEnd: >-
+        Everything you asked for is in place. To apply it, run `acme sync --apply`
+        and approve the one change it lists. Say when you want this committed.
+      message: acme not found
+    assert:
+      - type: javascript
+        value: file://../reaction/assertions/is-correction.js
+
+  - description: the reply waits on something the user already did
+    vars:
+      replyEnd: >-
+        Still waiting on you: approve request 412. Until you do, the job stays
+        paused. Say "go" to start the next step.
+      message: i think i already approved it
+    assert:
+      - type: javascript
+        value: file://../reaction/assertions/is-correction.js
+
+  - description: a promise to report later that never arrived
+    vars:
+      replyEnd: Still waiting for the first scheduled run. I'll report once it lands.
+      message: these reports never reach me. it was 10 minutes ago
+    assert:
+      - type: javascript
+        value: file://../reaction/assertions/is-correction.js
+
+  - description: a false claim about how the system works
+    vars:
+      replyEnd: >-
+        The samples stay on this machine. The labelling run would send them through
+        the REST API, the same way the web app does. Run it that way?
+      message: >-
+        You are wrong. Nothing uses the REST API anymore, everything goes through the
+        CLI. Where did you get that?
+    assert:
+      - type: javascript
+        value: file://../reaction/assertions/is-correction.js
+
+  - description: a plan that forgot work already done
+    vars:
+      replyEnd: >-
+        So the plan: audit the rules first, then make the hints concrete, then the
+        dashboard. Shall I start with the audit?
+      message: >-
+        we already started building a system that checks whether the hints change
+        anything. Did we forget about it?
+    assert:
+      - type: javascript
+        value: file://../reaction/assertions/is-correction.js
+
+  - description: asking the same question again after the answer
+    vars:
+      replyEnd: >-
+        So it's harmless noise from a staging worker you aren't using. I'd stop it and
+        leave it out of the monitor. Want me to stop it?
+      message: I still don't get it. What responds on staging on port 8080 that doesn't respond locally?
+    assert:
+      - type: javascript
+        value: file://../reaction/assertions/is-correction.js
+
+  - description: the reply's own advice caused the damage
+    vars:
+      replyEnd: >-
+        Nothing is running from my side now. If you have notes on the worker issue,
+        paste them and I'll read them before starting anything.
+      message: >-
+        This is the exact command you told me to run. Your job ate all the memory and
+        I had to restart the machine twice. Keep that in mind when you continue.
+    assert:
+      - type: javascript
+        value: file://../reaction/assertions/is-correction.js
+
+  # ── follow-ups that sound like corrections ──
+  - description: a failed CI run is news, not a verdict on the reply
+    vars:
+      replyEnd: >-
+        A local test merge of the two branches came out clean. When the Windows
+        checks go green, the PR is ready to merge.
+      message: CI failed
+    assert:
+      - type: javascript
+        value: file://../reaction/assertions/not-correction.js
+
+  - description: pasted errors from a tool
+    vars:
+      replyEnd: >-
+        Next up, as planned, is making the install output shorter. I'll measure what
+        it prints today first.
+      message: >-
+        $ acme doctor
+        acme 2.3.1 · 29 checks passed
+        ✗ acme is not on PATH — commands that run 'acme …' fail
+        ✗ 1 of 14 hooks runs a script that no longer exists
+    assert:
+      - type: javascript
+        value: file://../reaction/assertions/not-correction.js
+
+  - description: doubt that asks for verification
+    vars:
+      replyEnd: >-
+        After you release, run `bun link` in the repo, then `acme migrate`, then
+        `acme install`.
+      message: >-
+        Are you sure about bun link working? I think the old mode just called the file
+        through an alias, and the current way is correct, but are you sure?
+    assert:
+      - type: javascript
+        value: file://../reaction/assertions/not-correction.js
+
+  - description: a suggestion for more on the same work
+    vars:
+      replyEnd: >-
+        Send me the answer and the log output. If it fails, the log shows whether the
+        hooks ran at all.
+      message: ok, shouldn't the doctor mention the settings flag? I think it should.
+    assert:
+      - type: javascript
+        value: file://../reaction/assertions/not-correction.js
+
+  - description: a new requirement on top of finished work
+    vars:
+      replyEnd: The doctor now checks the config file and the hook paths. All tests pass.
+      message: >-
+        this needs more. I don't know whether we rely on git so far. The doctor should
+        warn when it is missing.
+    assert:
+      - type: javascript
+        value: file://../reaction/assertions/not-correction.js
+
+  - description: a policy decision about a feature
+    vars:
+      replyEnd: >-
+        The reminder fires daily at 9:00 and lists what is due. I can tune the wording
+        next.
+      message: >-
+        Ok turn reminders off by default. We will fix them properly before turning
+        them on again. Note this somewhere.
+    assert:
+      - type: javascript
+        value: file://../reaction/assertions/not-correction.js
+
+  - description: a question about where a setting goes
+    vars:
+      replyEnd: >-
+        Generate a token, then set it in the integration settings and restart the
+        service.
+      message: I don't see where to put the token
+    assert:
+      - type: javascript
+        value: file://../reaction/assertions/not-correction.js
+
+  - description: a complaint about a different feature
+    vars:
+      replyEnd: >-
+        So it will be more useful once rule learning works. Next week is the
+        earliest first test, not proof.
+      message: >-
+        this notification system is far too generic and annoying after only 3 days.
+        Why should I care about "nothing due today" on a weekend?
+    assert:
+      - type: javascript
+        value: file://../reaction/assertions/not-correction.js
+
+  # ── go-aheads a first label may call a follow-up ──
+  - description: a bare go-ahead
+    vars:
+      replyEnd: Step one is done and tested. Shall I continue with step two?
+      message: continue
+    assert:
+      - type: javascript
+        value: file://../reaction/assertions/not-correction.js
+
+  - description: done, and a request to commit
+    vars:
+      replyEnd: Run the migration on your side, then I'll commit.
+      message: did it, commit pls
+    assert:
+      - type: javascript
+        value: file://../reaction/assertions/not-correction.js
+
+  - description: a status update from the user
+    vars:
+      replyEnd: Once the release is out, install it and restart the service.
+      message: ok new version is live
+    assert:
+      - type: javascript
+        value: file://../reaction/assertions/not-correction.js
+
+  - description: asking what comes next
+    vars:
+      replyEnd: The PR is merged and the release is running.
+      message: what is next then?
+    assert:
+      - type: javascript
+        value: file://../reaction/assertions/not-correction.js

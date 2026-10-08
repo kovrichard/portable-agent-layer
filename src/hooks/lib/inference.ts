@@ -74,7 +74,7 @@ interface RoutePreview {
 }
 
 function modelFor(route: FixedModelRoute, opts: InferenceOptions): string {
-  return inferenceModel(route, opts.tier);
+  return inferenceModel(route, opts.tier, opts.caller);
 }
 
 function smallModelOf(route: InferenceRoute): string | undefined {

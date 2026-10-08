@@ -5,6 +5,7 @@
 import type { AgentType } from "./agent";
 
 export const HAIKU_MODEL = "claude-haiku-4-5-20251001";
+export const HAIKU_5_5_MODEL = "claude-haiku-5-5";
 export const SONNET_MODEL = "claude-sonnet-5";
 export const FABLE_MODEL = "claude-fable-5";
 
@@ -54,11 +55,23 @@ export function isFixedModelRoute(route: string): route is FixedModelRoute {
   return Object.hasOwn(INFERENCE_MODELS, route);
 }
 
+/** Callers whose prompt has been evaluated on Haiku 5.5; the rest stay on HAIKU_MODEL until theirs is. */
+const ANTHROPIC_EVALUATED_ON_HAIKU_5_5 = new Set(["rule-drafter"]);
+
+function evaluatedModel(models: RouteModels, caller?: string): string | undefined {
+  const onAnthropic = models === ANTHROPIC_MODELS;
+  return onAnthropic && caller && ANTHROPIC_EVALUATED_ON_HAIKU_5_5.has(caller)
+    ? HAIKU_5_5_MODEL
+    : undefined;
+}
+
 export function inferenceModel(
   route: FixedModelRoute,
-  tier: InferenceTier = "small"
+  tier: InferenceTier = "small",
+  caller?: string
 ): string {
-  return INFERENCE_MODELS[route][tier];
+  const models = INFERENCE_MODELS[route];
+  return evaluatedModel(models, caller) ?? models[tier];
 }
 
 const AGENT_SPAWN_ROUTE: Partial<Record<AgentType, FixedModelRoute>> = {
@@ -101,6 +114,14 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
     cacheWrite5m: 1.25,
     cacheWrite1h: 2,
     cacheRead: 0.1,
+  },
+  // Rates for prompts up to 100k tokens; longer prompts cost 5x, and PAL's never get there.
+  [HAIKU_5_5_MODEL]: {
+    input: 0.1,
+    output: 0.5,
+    cacheWrite5m: 0.125,
+    cacheWrite1h: 0.2,
+    cacheRead: 0.01,
   },
   [FABLE_MODEL]: {
     input: 10,

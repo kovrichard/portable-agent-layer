@@ -1,10 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import {
+  correctionCheckRequest,
   isCorrectionLabel,
+  needsCorrectionCheck,
+  parseCorrectionCheck,
   parseReactionLabel,
   ratingContext,
   ratingFromLabels,
   reactionRequest,
+  settledLabel,
   turnFromLabels,
 } from "../src/hooks/lib/reaction-rating";
 
@@ -135,6 +139,97 @@ describe("ratingContext", () => {
     expect(ratingContext(praised, "x".repeat(300))).toHaveLength(
       "Praised the reply: ".length + 200
     );
+  });
+});
+
+describe("correctionCheckRequest", () => {
+  test("asks a question of its own about the same reply and message", () => {
+    const request = correctionCheckRequest("Run acme sync.", "acme not found", "s1");
+    const labelling = reactionRequest("Run acme sync.", "acme not found", "s1");
+    expect(request.user.startsWith(labelling.user)).toBe(true);
+    expect(request.system).not.toBe(labelling.system);
+    expect(request.jsonSchema.properties.reaction.enum).toEqual([
+      "corrected",
+      "not-corrected",
+    ]);
+    expect(request.sessionId).toBe("s1");
+    expect(request.caller).toBe("rating");
+  });
+
+  test("asks for the answer after the message, where it was evaluated", () => {
+    const request = correctionCheckRequest("Run acme sync.", "acme not found");
+    expect(request.user.indexOf("Answer corrected")).toBeGreaterThan(
+      request.user.indexOf("</message>")
+    );
+    expect(request.system).not.toContain("Answer corrected");
+  });
+});
+
+describe("parseCorrectionCheck", () => {
+  test("a correction keeps what the reply got wrong", () => {
+    expect(
+      parseCorrectionCheck('{"reaction":"corrected","issue":" wrong flag "}')
+    ).toEqual({ reaction: "corrected", issue: "wrong flag" });
+  });
+
+  test("anything else reads as a follow-up", () => {
+    expect(parseCorrectionCheck('{"reaction":"not-corrected","issue":"x"}')).toEqual(
+      followUp
+    );
+  });
+
+  test("output that is not JSON is no answer", () => {
+    expect(parseCorrectionCheck("corrected")).toBeNull();
+    expect(parseCorrectionCheck(undefined)).toBeNull();
+  });
+});
+
+describe("needsCorrectionCheck", () => {
+  test("a correction, a repeat and a follow-up are checked", () => {
+    expect(needsCorrectionCheck(corrected)).toBe(true);
+    expect(needsCorrectionCheck(repeated)).toBe(true);
+    expect(needsCorrectionCheck(followUp)).toBe(true);
+  });
+
+  test("praise, approval, a new topic and no label are not", () => {
+    expect(needsCorrectionCheck(praised)).toBe(false);
+    expect(needsCorrectionCheck(approved)).toBe(false);
+    expect(needsCorrectionCheck({ reaction: "new-topic", issue: "" })).toBe(false);
+    expect(needsCorrectionCheck(null)).toBe(false);
+  });
+});
+
+describe("settledLabel", () => {
+  const caught = { reaction: "corrected" as const, issue: "the flag does not exist" };
+
+  test("a follow-up the check calls a correction becomes that correction", () => {
+    expect(settledLabel(followUp, caught)).toEqual(caught);
+  });
+
+  test("a follow-up the check clears stays a follow-up", () => {
+    expect(settledLabel(followUp, followUp)).toEqual(followUp);
+    expect(settledLabel(followUp, null)).toEqual(followUp);
+  });
+
+  test("any other first label stands, and the check only confirms it", () => {
+    expect(settledLabel(corrected, followUp)).toEqual(corrected);
+    expect(settledLabel(repeated, caught)).toEqual(repeated);
+    expect(settledLabel(null, caught)).toBeNull();
+  });
+
+  test("a follow-up caught by the check rates and logs as a confirmed correction", () => {
+    const label = settledLabel(followUp, caught);
+    expect(ratingFromLabels(label, caught)).toBe(3);
+    expect(
+      turnFromLabels({ session: "s", message: "m", replyEnd: "r" }, label, caught)
+    ).toEqual({
+      session: "s",
+      message: "m",
+      replyEnd: "r",
+      reaction: "corrected",
+      issue: "the flag does not exist",
+      confirmed: true,
+    });
   });
 });
 
