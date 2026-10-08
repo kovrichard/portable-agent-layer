@@ -14,6 +14,16 @@ describe("model pricing table", () => {
     expect(MODEL_PRICING["claude-opus-5"]).toEqual(OPUS_5_RATES);
   });
 
+  test("Haiku 5.5 carries its published rates for prompts up to 100k tokens", () => {
+    expect(MODEL_PRICING["claude-haiku-5-5"]).toEqual({
+      input: 0.1,
+      output: 0.5,
+      cacheWrite5m: 0.125,
+      cacheWrite1h: 0.2,
+      cacheRead: 0.01,
+    });
+  });
+
   test("every entry prices all five token categories above zero", () => {
     for (const p of Object.values(MODEL_PRICING)) {
       expect(Object.values(p).every((rate) => rate > 0)).toBe(true);
