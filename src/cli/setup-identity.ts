@@ -21,10 +21,10 @@ export function timezoneProblem(input: string | undefined): string | undefined {
   return `Not a timezone Intl recognises: ${input}`;
 }
 
-/** Prompt for missing identity fields. Skips any field that already has a value. */
-export async function promptIdentity(): Promise<void> {
+/** Prompt for missing identity fields; true when it asked anything. */
+export async function promptIdentity(): Promise<boolean> {
   // Skip interactive prompts in non-TTY environments (tests, CI)
-  if (!process.stdin.isTTY) return;
+  if (!process.stdin.isTTY) return false;
 
   const settings: PalSettingsData = { ...readSettings() };
   settings.identity ??= {};
@@ -40,12 +40,7 @@ export async function promptIdentity(): Promise<void> {
   const needsCatchphrase = !ai.catchphrase;
   const needsTimezone = !principal.timezone;
 
-  if (!needsPrincipal && !needsAi && !needsCatchphrase && !needsTimezone) {
-    clack.log.info("Identity already configured");
-    return;
-  }
-
-  clack.intro("Identity Setup");
+  if (!needsPrincipal && !needsAi && !needsCatchphrase && !needsTimezone) return false;
 
   if (needsPrincipal) {
     const name = await clack.text({
@@ -55,20 +50,20 @@ export async function promptIdentity(): Promise<void> {
     });
     if (clack.isCancel(name)) {
       clack.cancel("Setup cancelled");
-      return;
+      return true;
     }
     principal.name = name;
   }
 
   if (needsAi) {
     const name = await clack.text({
-      message: "Name your AI",
+      message: "Name your assistant",
       defaultValue: "Assistant",
       placeholder: "e.g. Jarvis, Friday, Atlas",
     });
     if (clack.isCancel(name)) {
       clack.cancel("Setup cancelled");
-      return;
+      return true;
     }
     ai.name = name;
     ai.fullName = `${name} — Personal AI`;
@@ -83,7 +78,7 @@ export async function promptIdentity(): Promise<void> {
     });
     if (clack.isCancel(catchphrase)) {
       clack.cancel("Setup cancelled");
-      return;
+      return true;
     }
     ai.catchphrase = catchphrase;
   }
@@ -97,11 +92,11 @@ export async function promptIdentity(): Promise<void> {
     });
     if (clack.isCancel(tz)) {
       clack.cancel("Setup cancelled");
-      return;
+      return true;
     }
     principal.timezone = tz;
   }
 
   writeSettings(settings);
-  clack.outro("Identity saved ✓");
+  return true;
 }

@@ -18,6 +18,7 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, resolve, sep } from "node:path";
+import { createStyle, PALETTE, type Rgb } from "../cli/ui/style";
 import {
   AGENT_NAMES,
   AGENT_REGISTRY,
@@ -45,12 +46,47 @@ function narrate(line: string): void {
   if (narrating) console.log(line);
 }
 
+export type LogLevel = "info" | "success" | "warn" | "error" | "detail";
+type LogSink = (level: LogLevel, message: string) => void;
+
+let sink: LogSink | null = null;
+
+/** Hands every log line to `collect` while `work` runs, so a caller can place it under its own step. */
+export async function capturingLog<T>(
+  collect: LogSink,
+  work: () => Promise<T>
+): Promise<T> {
+  const previous = sink;
+  sink = collect;
+  try {
+    return await work();
+  } finally {
+    sink = previous;
+  }
+}
+
+const LEVEL_COLOR: Record<LogLevel, Rgb> = {
+  info: PALETTE.indigo,
+  success: PALETTE.green,
+  warn: PALETTE.amber,
+  error: PALETTE.rose,
+  detail: PALETTE.indigo,
+};
+
+function tagged(level: LogLevel, message: string): string {
+  return `${createStyle().paint(LEVEL_COLOR[level], "[pal]")} ${message}`;
+}
+
+function emit(level: LogLevel, message: string, write: (line: string) => void): void {
+  if (sink) sink(level, message);
+  else write(tagged(level, message));
+}
+
 export const log = {
-  info: (msg: string) => narrate(`\x1b[34m[pal]\x1b[0m ${msg}`),
-  success: (msg: string) => narrate(`\x1b[32m[pal]\x1b[0m ${msg}`),
-  heading: (label: string) => narrate(`\n━━━ ${label} ━━━`),
-  warn: (msg: string) => console.log(`\x1b[33m[pal]\x1b[0m ${msg}`),
-  error: (msg: string) => console.error(`\x1b[31m[pal]\x1b[0m ${msg}`),
+  info: (msg: string) => emit("info", msg, narrate),
+  success: (msg: string) => emit("success", msg, narrate),
+  warn: (msg: string) => emit("warn", msg, (line) => console.log(line)),
+  error: (msg: string) => emit("error", msg, (line) => console.error(line)),
 
   /**
    * Per-item narration from inside a loop, where the caller already reports the
@@ -61,7 +97,7 @@ export const log = {
    */
   detail: (msg: string) => {
     if (runningUnderTest()) return;
-    narrate(`\x1b[34m[pal]\x1b[0m ${msg}`);
+    emit("detail", msg, narrate);
   },
 };
 
@@ -1150,6 +1186,13 @@ function shippedAgentNames(): Set<string> {
       .filter((f) => f.endsWith(".md"))
       .map((f) => f.replace(/\.md$/, ""))
   );
+}
+
+export function installedShippedAgentCount(agent: AgentName): number {
+  const dir = nativeAgentsDir(agent);
+  return [...shippedAgentNames()].filter((name) =>
+    existsSync(resolve(dir, agentFileName(name, agent)))
+  ).length;
 }
 
 /** List the user-authored subagents in ~/.pal/agents/. */

@@ -11,15 +11,20 @@ export type Fix =
   | { say: string; command?: undefined }
   | { say: string; command: string; external: boolean };
 
+export type Group = "Environment" | "Agents" | "Inference" | "State";
+
 export interface Finding {
   id: string;
   severity: Severity;
   title: string;
   fix?: Fix;
+  group?: Group;
+  /** The few words a passing check takes up when its agent's checks share one line. */
+  brief?: string;
 }
 
-export function passed(id: string, title: string): Finding {
-  return { id, severity: "ok", title };
+export function passed(id: string, title: string, brief?: string): Finding {
+  return brief ? { id, severity: "ok", title, brief } : { id, severity: "ok", title };
 }
 
 export function failing(id: string, title: string, fix?: Fix): Finding {

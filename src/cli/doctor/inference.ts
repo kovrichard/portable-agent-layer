@@ -183,7 +183,11 @@ export function cursorPlanFinding(about: string): Finding | null {
       `Cursor is set to ${model}, but its free plan only runs Auto — background inference fails`,
       { say: "Switch Cursor's model to Auto, or upgrade the plan" }
     );
-  return passed("cursor.model", `Cursor model ${model} runs on the ${tier} plan`);
+  return passed(
+    "cursor.model",
+    `Cursor model ${model} runs on the ${tier} plan`,
+    `model ${model} on the ${tier} plan`
+  );
 }
 
 function cursorAbout(): string {

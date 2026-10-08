@@ -5,9 +5,13 @@ import { spawnSync } from "node:child_process";
  * modules in Bun's cache, so a new installer importing a new export would bind
  * against the stale module and throw. A fresh process loads everything from disk.
  */
-export function reinstallInFreshProcess(entry: string = process.argv[1]): number {
+export function reinstallInFreshProcess(
+  entry: string = process.argv[1],
+  env: Record<string, string> = {}
+): number {
   const run = spawnSync(process.execPath, [entry, "cli", "install"], {
     stdio: "inherit",
+    env: { ...process.env, ...env },
   });
   return run.status ?? 1;
 }

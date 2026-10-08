@@ -3,51 +3,101 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { LiveRail } from "../src/cli/ui/live";
+import { createStyle } from "../src/cli/ui/style";
+import type { Terminal } from "../src/cli/ui/terminal";
+import { downloadCommand, runUpdate } from "../src/cli/update-flow";
 import {
   checkForUpdate,
   clearUpdateCache,
   getUpdateNotice,
+  type UpdateCache,
 } from "../src/hooks/handlers/update-check";
 import { paths } from "../src/hooks/lib/paths";
 
-// Locks in the fix for the package-mode update bug.
-// `bun update -g <pkg>` respects the caret range stored at install time, and on
-// 0.x versions a caret allows only patch bumps (^0.24.2 = >=0.24.2 <0.25.0). A
-// user pinned at 0.24.2 could never reach 0.29.0 via `bun update`. The fix is
-// to re-pin via `bun add -g <pkg>@<latest>`.
-describe("pal cli update — package mode command shape", () => {
-  const src = readFileSync(resolve(import.meta.dir, "../src/cli/index.ts"), "utf-8");
-  const updateCheckSrc = readFileSync(
-    resolve(import.meta.dir, "../src/hooks/handlers/update-check.ts"),
-    "utf-8"
-  );
+const release = (mode: UpdateCache["mode"], available = true): UpdateCache =>
+  ({ available, current: "0.89.0", latest: "0.90.0", mode }) as UpdateCache;
 
-  test("re-pins via 'bun add -g portable-agent-layer@<latest>'", () => {
-    expect(src).toMatch(
-      /spawnSync\(\s*"bun"\s*,\s*\[\s*"add"\s*,\s*"-g"\s*,\s*`portable-agent-layer@\$\{result\.latest\}`/
-    );
+const pipe: Terminal = { rich: false, color: "none", unicode: true, width: 80 };
+
+function updating(update: UpdateCache, code = 0) {
+  let out = "";
+  const ran: string[][] = [];
+  const reinstalls: Record<string, string>[] = [];
+  const style = createStyle(pipe);
+  const result = runUpdate(
+    {
+      check: async () => update,
+      run: async (cmd, args) => {
+        ran.push([cmd, ...args]);
+        return { code, output: "remote said no" };
+      },
+      reinstall: (env) => {
+        reinstalls.push(env);
+        return 0;
+      },
+    },
+    style,
+    new LiveRail(style, (text) => {
+      out += text;
+    })
+  );
+  return { result, ran, reinstalls, output: () => out };
+}
+
+describe("pal cli update — the download", () => {
+  test("re-pins the package, since a 0.x caret only allows patch bumps", () => {
+    expect(downloadCommand(release("package")).slice(0, 2)).toEqual([
+      "bun",
+      ["add", "-g", "portable-agent-layer@0.90.0"],
+    ]);
   });
 
-  test("does not use 'bun update -g portable-agent-layer' (caret-capped)", () => {
-    expect(src).not.toMatch(
-      /spawnSync\(\s*"bun"\s*,\s*\[\s*"update"\s*,\s*"-g"\s*,\s*"portable-agent-layer"/
-    );
+  test("fast-forwards a clone, never merging or resetting", () => {
+    expect(downloadCommand(release("repo")).slice(0, 2)).toEqual([
+      "git",
+      ["pull", "--ff-only"],
+    ]);
   });
 
   test("auto-detects repo mode via .git — no env var required", () => {
+    const updateCheckSrc = readFileSync(
+      resolve(import.meta.dir, "../src/hooks/handlers/update-check.ts"),
+      "utf-8"
+    );
     expect(updateCheckSrc).not.toContain("PAL_UPDATE_MODE");
     expect(updateCheckSrc).toContain('existsSync(resolve(palPkg(), ".git"))');
   });
 });
 
-// Repo mode is the other half of update(): a clone next to package.json is
-// updated via `git pull --ff-only`. Locking this prevents accidental swaps to
-// `git pull` (allows merges) or `git fetch` + reset (loses local commits).
-describe("pal cli update — repo mode command shape", () => {
-  const src = readFileSync(resolve(import.meta.dir, "../src/cli/index.ts"), "utf-8");
+describe("pal cli update — the flow", () => {
+  test("says so and stops when PAL is the latest", async () => {
+    const run = updating(release("package", false));
 
-  test("uses 'git pull --ff-only'", () => {
-    expect(src).toMatch(/spawnSync\(\s*"git"\s*,\s*\[\s*"pull"\s*,\s*"--ff-only"\s*\]/);
+    expect(await run.result).toBe(0);
+    expect(run.ran).toEqual([]);
+    expect(run.reinstalls).toEqual([]);
+    expect(run.output()).toContain("Already up to date: PAL 0.89.0 is the latest");
+  });
+
+  test("downloads, then reinstalls in a process that knows the old version", async () => {
+    const run = updating(release("package"));
+
+    expect(await run.result).toBe(0);
+    expect(run.output()).toContain("PAL 0.89.0 -> 0.90.0");
+    expect(run.output()).toContain("ok   Download: portable-agent-layer 0.90.0");
+    expect(run.reinstalls).toEqual([{ PAL_UPDATED_FROM: "0.89.0" }]);
+  });
+
+  test("a failed download says how to retry, shows why, and does not reinstall", async () => {
+    const run = updating(release("package"), 1);
+
+    expect(await run.result).toBe(1);
+    expect(run.reinstalls).toEqual([]);
+    expect(run.output()).toContain(
+      "fail Download: try: bun add -g portable-agent-layer@0.90.0"
+    );
+    expect(run.output()).toContain("remote said no");
   });
 });
 
