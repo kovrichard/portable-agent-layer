@@ -13,7 +13,7 @@ import { createStyle, type Style } from "./ui/style";
 const PACKAGE = "portable-agent-layer";
 
 function upToDate(style: Style, version: string): string {
-  if (!style.term.rich) return `PAL ${version} is the latest`;
+  if (!style.term.rich) return `Already up to date: PAL ${version} is the latest`;
   const checked = `${style.glyph.dot} checked just now`;
   return `  ${mark(style, "ok")} ${style.gradient("PAL")} ${style.bold(version)} ${style.soft("is the latest")} ${style.dim(checked)}`;
 }

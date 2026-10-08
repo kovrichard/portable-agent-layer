@@ -77,7 +77,7 @@ describe("pal cli update — the flow", () => {
     expect(await run.result).toBe(0);
     expect(run.ran).toEqual([]);
     expect(run.reinstalls).toEqual([]);
-    expect(run.output()).toContain("PAL 0.89.0 is the latest");
+    expect(run.output()).toContain("Already up to date: PAL 0.89.0 is the latest");
   });
 
   test("downloads, then reinstalls in a process that knows the old version", async () => {
