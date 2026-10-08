@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { injectPromptContext } from "../src/hooks/handlers/inject-retrieval";
 import {
@@ -17,6 +17,7 @@ import {
 import { reload } from "../src/hooks/lib/settings";
 import { finishDeferredStop, stopTurn } from "../src/hooks/lib/stop";
 import { sandboxContextRuleDirs } from "./lib/context-rule-dirs";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // stopTurn can spawn detached children that keep writing into PAL_HOME after the
 // test returns; .gitignore covers .test-home-* for that reason.
@@ -27,7 +28,7 @@ const savedHome = process.env.PAL_HOME;
 let restoreContextRuleDirs: () => void;
 
 beforeEach(() => {
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
   mkdirSync(resolve(HOME, "memory"), { recursive: true });
   process.env.PAL_HOME = HOME;
   restoreContextRuleDirs = sandboxContextRuleDirs(resolve(HOME, "agents"));
@@ -39,7 +40,7 @@ afterEach(() => {
   else process.env.PAL_HOME = savedHome;
   restoreContextRuleDirs();
   reload();
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 type PromptPayload = HookTurnPayload & { prompt: string };
