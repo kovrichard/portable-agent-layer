@@ -14,7 +14,8 @@ export type FixedModelRoute =
   | "claude-spawn"
   | "anthropic-api"
   | "codex-spawn"
-  | "openai-api";
+  | "openai-api"
+  | "antigravity-spawn";
 
 /** `large` is the flagship that authors skills and subagents; without one, the agent authors inline. */
 type RouteModels = Record<InferenceTier, string> & { large?: string };
@@ -29,6 +30,12 @@ const OPENAI_MODELS: RouteModels = {
   medium: "gpt-6-sol",
   large: "gpt-6-astra",
 };
+/** An Antigravity subagent's `model:` takes only a tier name, so `large` is `pro`. */
+const GEMINI_MODELS: RouteModels = {
+  small: "gemini-3.8-flash-low",
+  medium: "gemini-3.8-flash-high",
+  large: "pro",
+};
 
 /**
  * opencode's models come from the user's own config (opencodeTierModel). Copilot and
@@ -40,6 +47,7 @@ const INFERENCE_MODELS: Record<FixedModelRoute, RouteModels> = {
   "anthropic-api": ANTHROPIC_MODELS,
   "codex-spawn": OPENAI_MODELS,
   "openai-api": OPENAI_MODELS,
+  "antigravity-spawn": GEMINI_MODELS,
 };
 
 export function isFixedModelRoute(route: string): route is FixedModelRoute {
@@ -56,6 +64,7 @@ export function inferenceModel(
 const AGENT_SPAWN_ROUTE: Partial<Record<AgentType, FixedModelRoute>> = {
   claude: "claude-spawn",
   codex: "codex-spawn",
+  antigravity: "antigravity-spawn",
 };
 
 /**

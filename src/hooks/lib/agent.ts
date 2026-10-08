@@ -150,7 +150,7 @@ export const isCursor = () => getActiveAgent() === "cursor";
 export const isCodex = () => getActiveAgent() === "codex";
 export const isCopilot = () => getActiveAgent() === "copilot";
 export const isOpencode = () => getActiveAgent() === "opencode";
-const isAntigravity = () => getActiveAgent() === "antigravity";
+export const isAntigravity = () => getActiveAgent() === "antigravity";
 const isVscode = () => getActiveAgent() === "vscode";
 
 /** Normalized preToolUse request — one shape for every agent's payload. */

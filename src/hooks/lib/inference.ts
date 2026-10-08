@@ -25,12 +25,20 @@ import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import {
   getActiveAgent,
+  isAntigravity,
   isClaude,
   isCodex,
   isCopilot,
   isCursor,
   isOpencode,
 } from "./agent";
+import {
+  extractAntigravityText,
+  INFERENCE_AGENT,
+  removeSpawnedConversation,
+  streamJsonPrompt,
+  writeInferenceAgent,
+} from "./antigravity-inference";
 import { logDebug, logError } from "./log";
 import {
   type FixedModelRoute,
@@ -108,6 +116,8 @@ function previewRoute(): RoutePreview {
     return { agent, route: "copilot-spawn", reason: "copilot binary on PATH" };
   if (isCursor() && hasCursorBinary())
     return { agent, route: "cursor-spawn", reason: "cursor-agent binary on PATH" };
+  if (isAntigravity() && hasAntigravityBinary())
+    return { agent, route: "antigravity-spawn", reason: "agy binary on PATH" };
   if (hasApiKey())
     return {
       agent,
@@ -130,6 +140,7 @@ export function canInfer(): boolean {
   if (isOpencode() && hasOpencodeBinary()) return true;
   if (isCopilot() && hasCopilotBinary()) return true;
   if (isCursor() && hasCursorBinary()) return true;
+  if (isAntigravity() && hasAntigravityBinary()) return true;
   return hasApiKey();
 }
 
@@ -218,13 +229,23 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
       return inferenceViaCliSpawn(bin, buildCursorArgs(opts), buildCliPrompt(opts), opts);
     }
   }
+  if (isAntigravity()) {
+    const bin = getAntigravityBinary();
+    if (bin) {
+      logDebug(
+        "inference",
+        `${tag} route=antigravity-spawn agent=${agent} model=${modelFor("antigravity-spawn", opts)}`
+      );
+      return inferenceViaAntigravitySpawn(bin, opts);
+    }
+  }
   if (hasApiKey()) {
     logDebug("inference", `${tag} route=anthropic-api agent=${agent}`);
     return inferenceViaApi(opts);
   }
   logDebug(
     "inference",
-    `${tag} route=none agent=${agent} hasApiKey=false hasOpenAiKey=${hasOpenAiKey()} hasClaude=${hasClaudeBinary()} hasCodex=${hasCodexBinary()} hasOpencode=${hasOpencodeBinary()} hasCopilot=${hasCopilotBinary()} hasCursor=${hasCursorBinary()}`
+    `${tag} route=none agent=${agent} hasApiKey=false hasOpenAiKey=${hasOpenAiKey()} hasClaude=${hasClaudeBinary()} hasCodex=${hasCodexBinary()} hasOpencode=${hasOpencodeBinary()} hasCopilot=${hasCopilotBinary()} hasCursor=${hasCursorBinary()} hasAgy=${hasAntigravityBinary()}`
   );
   return { success: false };
 }
@@ -261,6 +282,10 @@ function getCursorBinary(): string | null {
   return cachedBinary("cursor-agent");
 }
 
+function getAntigravityBinary(): string | null {
+  return cachedBinary("agy");
+}
+
 function hasClaudeBinary(): boolean {
   return getClaudeBinary() !== null;
 }
@@ -275,6 +300,9 @@ function hasCopilotBinary(): boolean {
 }
 function hasCursorBinary(): boolean {
   return getCursorBinary() !== null;
+}
+function hasAntigravityBinary(): boolean {
+  return getAntigravityBinary() !== null;
 }
 
 /**
@@ -467,6 +495,51 @@ async function inferenceViaOpencodeSpawn(
  */
 export function buildCursorArgs(_opts: InferenceOptions): string[] {
   return ["-p", "--mode", "ask", "--output-format", "text", "--trust"];
+}
+
+/**
+ * Build the argv for a one-turn `agy` stream-json session. Pure.
+ *
+ * The prompt goes in as one NDJSON `user` event on stdin (streamJsonPrompt), not
+ * through `-p`: a multi-paragraph argv element cannot survive cmd.exe on Windows,
+ * and stream-json input drops a `-p` prompt anyway. Closing stdin ends the
+ * session once the turn's `result` event is out.
+ *
+ * `--json-schema` is deliberately absent: under the tool-less agent it looped
+ * through several turns, so the schema rides in the prompt as for every other CLI.
+ */
+export function buildAntigravityArgs(opts: InferenceOptions): string[] {
+  return [
+    "--input-format",
+    "stream-json",
+    "--output-format",
+    "stream-json",
+    "--model",
+    modelFor("antigravity-spawn", opts),
+    "--agent",
+    INFERENCE_AGENT,
+  ];
+}
+
+/** Runs from an empty workspace that holds only the tool-less inference agent. */
+async function inferenceViaAntigravitySpawn(
+  bin: string,
+  opts: InferenceOptions
+): Promise<InferenceResult> {
+  const dir = await mkdtemp(join(tmpdir(), "pal-antigravity-"));
+  try {
+    writeInferenceAgent(dir);
+    return await inferenceViaCliSpawn(
+      bin,
+      buildAntigravityArgs(opts),
+      streamJsonPrompt(buildCliPrompt(opts)),
+      opts,
+      extractAntigravityText,
+      { cwd: dir, afterRun: removeSpawnedConversation }
+    );
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 }
 
 /**
@@ -683,6 +756,8 @@ interface SpawnPlace {
   cwd?: string;
   env?: Record<string, string | undefined>;
   logTag?: string;
+  /** Sees the final attempt's stdout whatever the outcome, timeouts included. */
+  afterRun?: (rawStdout: string) => void;
 }
 
 /**
@@ -731,6 +806,7 @@ async function inferenceViaCliSpawn(
     attempt = await singleCliAttempt(binary, args, stdinInput, env, timeout, place.cwd);
   }
 
+  place.afterRun?.(attempt.stdout);
   const elapsedMs = Date.now() - started;
   const finish = (result: InferenceResult): InferenceResult => {
     logDebug(

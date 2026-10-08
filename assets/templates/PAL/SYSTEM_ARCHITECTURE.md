@@ -459,6 +459,7 @@ The active agent is detected via `getActiveAgent()` in `src/hooks/lib/agent.ts` 
 | `cursor` | `cursor-agent` | argv-only, no stdin |
 | `copilot` | `copilot` | GitHub Copilot CLI |
 | `codex` | `codex exec` | Falls back to `PAL_OPENAI_API_KEY` if the `codex` binary is missing |
+| `antigravity` | `agy --input-format stream-json` | Runs in an empty temp workspace under a tool-less `pal-inference` agent, which keeps PAL's plugin rules out of the reply; Gemini Flash low (small) / high (medium). The run's conversation files are deleted afterwards |
 
 If no CLI binary is available, the dispatcher falls back to `PAL_ANTHROPIC_API_KEY` (Haiku via the Anthropic API) or `PAL_OPENAI_API_KEY` (OpenAI API). `canInfer()` returns `false` only when both routes are unavailable — handlers then skip silently.
 

@@ -154,6 +154,7 @@ export const platform = {
   copilotDir: agentDir("PAL_COPILOT_DIR"),
   codexDir: agentDir("PAL_CODEX_DIR"),
   antigravityPluginDir: () => resolve(geminiDir(), "config", "plugins", "pal"),
+  antigravityCliDir: () => resolve(geminiDir(), "antigravity-cli"),
   antigravitySettings: () => resolve(geminiDir(), "antigravity-cli", "settings.json"),
   agentsDir: agentDir("PAL_AGENTS_DIR"),
 } as const;

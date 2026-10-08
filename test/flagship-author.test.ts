@@ -33,6 +33,10 @@ describe("flagship authoring registry", () => {
     expect(flagshipAuthorModel("codex")).toBe("gpt-6-astra");
   });
 
+  test("antigravity resolves to the pro tier its subagents name", () => {
+    expect(flagshipAuthorModel("antigravity")).toBe("pro");
+  });
+
   test("agents without a configured flagship resolve to undefined (inline path)", () => {
     expect(flagshipAuthorModel("opencode")).toBeUndefined();
     expect(flagshipAuthorModel("cursor")).toBeUndefined();
@@ -43,6 +47,7 @@ describe("flagship authoring registry", () => {
     expect(AGENT_NAMES.filter((agent) => flagshipAuthorModel(agent))).toEqual([
       "claude",
       "codex",
+      "antigravity",
     ]);
   });
 
@@ -51,6 +56,8 @@ describe("flagship authoring registry", () => {
       const content = readFileSync(resolve(AGENTS_DIR, `${stem}.md`), "utf-8");
       const codex = renderAgentForPlatform(content, "codex");
       expect(codex).toContain(`model = "${flagshipAuthorModel("codex")}"`);
+      const antigravity = renderAgentForPlatform(content, "antigravity");
+      expect(antigravity).toContain(`\nmodel: ${flagshipAuthorModel("antigravity")}\n`);
     }
   });
 });
@@ -66,6 +73,12 @@ describe("pal cli skill author-model", () => {
     const r = authorModel("codex");
     expect(r.status).toBe(0);
     expect(r.stdout.trim()).toBe("gpt-6-astra");
+  });
+
+  test("prints the pro tier for antigravity", () => {
+    const r = authorModel("antigravity");
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim()).toBe("pro");
   });
 
   test("prints nothing for an agent with no flagship — drives inline authoring", () => {
