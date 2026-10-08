@@ -2,7 +2,7 @@ import { hookFormatFromArgs, runHook } from "./run-hook";
 
 const format = hookFormatFromArgs();
 
-if (format === "codex") {
+if (format === "codex" || format === "antigravity") {
   const exitCode = runHook(["bun", "run", "jscpd"], format);
   process.exit(exitCode);
 }

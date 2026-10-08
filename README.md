@@ -2,7 +2,7 @@
 
 A cross-platform, cross-agent layer for portable AI workflows, memory, and accumulated knowledge.
 
-PAL lets you carry your agent context across **Windows**, **macOS**, and **Linux**, and work across different agent runtimes and interfaces such as **Claude Code**, **opencode**, **Cursor**, **GitHub Copilot**, and **Codex**. Its core idea is simple: your knowledge and workflows should belong to **you**, not to a single machine, tool, or vendor.
+PAL lets you carry your agent context across **Windows**, **macOS**, and **Linux**, and work across different agent runtimes and interfaces such as **Claude Code**, **opencode**, **Cursor**, **GitHub Copilot**, **Codex**, and **Antigravity CLI**. Its core idea is simple: your knowledge and workflows should belong to **you**, not to a single machine, tool, or vendor.
 
 > Inspired in part by [Daniel Miessler](https://danielmiessler.com)'s work on [Personal AI Infrastructure](https://github.com/danielmiessler/Personal_AI_Infrastructure). PAL is an independent open-source implementation focused on portability across platforms and agents. It is not affiliated with or endorsed by Daniel Miessler.
 
@@ -33,7 +33,7 @@ With PAL, you can:
 > **Bun is required.** PAL is built on [Bun](https://bun.sh) and will not work with Node.js or other runtimes. Install it with `curl -fsSL https://bun.sh/install | bash`.
 
 - [Bun](https://bun.sh) >= 1.4.0
-- At least one of: [Claude Code](https://claude.ai/code), [opencode](https://opencode.ai), [Cursor](https://cursor.com), [GitHub Copilot CLI](https://docs.github.com/en/copilot/github-copilot-in-the-cli), or [Codex](https://openai.com/index/introducing-codex/)
+- At least one of: [Claude Code](https://claude.ai/code), [opencode](https://opencode.ai), [Cursor](https://cursor.com), [GitHub Copilot CLI](https://docs.github.com/en/copilot/github-copilot-in-the-cli), [Codex](https://openai.com/index/introducing-codex/), or [Antigravity CLI](https://antigravity.google/product/antigravity-cli)
 
 ### Package mode (recommended)
 
@@ -73,7 +73,7 @@ pal cli status        # check your setup
 
 | Command | Description |
 |---------|-------------|
-| `pal` | Start the first installed agent, in order: Claude Code, Codex, Cursor CLI, Copilot CLI, opencode. Claude sessions print a summary on exit |
+| `pal` | Start the first installed agent, in order: Claude Code, Codex, Cursor CLI, Copilot CLI, opencode, Antigravity CLI. Claude sessions print a summary on exit |
 | `pal cli init` | Scaffold PAL home directory and install hooks |
 | `pal cli install` | Register hooks/skills for targets |
 | `pal cli uninstall` | Remove hooks/skills for targets |
@@ -108,6 +108,7 @@ pal cli status        # check your setup
 pal cli install --claude      # Claude Code only
 pal cli install --opencode    # opencode only
 pal cli install --cursor      # Cursor only
+pal cli install --antigravity # Antigravity CLI only
 pal cli install               # all available (default)
 ```
 
@@ -119,7 +120,8 @@ pal cli install               # all available (default)
 | opencode | Full | Yes | Yes (plugin) | Yes | Yes | `opencode run` |
 | Cursor | Full | Yes | Yes | Yes (injected via hook) | Yes | `cursor-agent` |
 | GitHub Copilot | Full | Yes | Yes | Yes (via `~/.copilot/instructions/*.instructions.md`) | Yes | `copilot` |
-| Codex | Full | Yes | Yes | Yes | No | `codex exec` |
+| Codex | Full | Yes | Yes | Yes | Yes | `codex exec` |
+| Antigravity CLI | Full | Yes | Yes (plugin) | Yes (via the plugin's `rules/`) | Yes | `agy` |
 
 PAL's background inference (session naming, summaries, failure capture, etc.) runs through whichever subscription CLI is active — no API key required by default.
 
@@ -156,6 +158,7 @@ Agents launched from a desktop app never read your shell profile, so the hooks t
 | `PAL_CURSOR_DIR` | Override Cursor config dir (default: `~/.cursor`) |
 | `PAL_COPILOT_DIR` | Override Copilot config dir (default: `~/.copilot`) |
 | `PAL_CODEX_DIR` | Override Codex config dir (default: `~/.codex`) |
+| `PAL_GEMINI_DIR` | Override the Gemini dir Antigravity CLI reads (default: `~/.gemini`) |
 | `PAL_AGENTS_DIR` | Override agents dir (default: `~/.agents`) |
 
 ### Debug / test
@@ -232,7 +235,7 @@ Your setup should be able to travel with you.
 ## Features
 
 - **Cross-platform**: works on Windows, macOS, and Linux
-- **Cross-agent**: full support for Claude Code, opencode, Cursor, GitHub Copilot, and Codex
+- **Cross-agent**: full support for Claude Code, opencode, Cursor, GitHub Copilot, Codex, and Antigravity CLI
 - **Subscription-first inference**: background inference routes through whichever subscription CLI is active — no API key needed by default
 - **Portable knowledge**: export and import accumulated knowledge
 - **A morning screen, not a dashboard**: `pal cli server` ranks your projects *and* your written goals in one urgent/important grid. Urgency is read off the files — blockers, an unfinished handoff, a date in a next step, an important thing gone quiet. Importance comes from one fact per project: whether it serves a goal you wrote down, is a way the work could pay, or is kept for its own sake. PAL guesses that once at session stop; you correct it on the page or with `project.ts serves <name> goal|revenue|fun`, and the correction survives every later guess

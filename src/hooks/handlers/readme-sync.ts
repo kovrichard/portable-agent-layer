@@ -39,15 +39,19 @@ interface ReadmeSyncDecision {
 }
 
 /** Returns a block decision if README is stale, or empty object to allow stop. */
-export function checkReadmeSync(): ReadmeSyncDecision {
+export async function checkReadmeSync(): Promise<ReadmeSyncDecision> {
   if (!hasDocumentableChanges()) {
     logDebug("readme-sync", "No documentable changes detected");
     return {};
   }
 
   logDebug("readme-sync", "Documentable files changed — validating README");
-  const result = validateReadmeSync();
+  const { adminCommandNames } = await import("../../cli/tree");
+  return readmeDecision(adminCommandNames());
+}
 
+function readmeDecision(cliCommands: string[]): ReadmeSyncDecision {
+  const result = validateReadmeSync(cliCommands);
   if (!result.ok) {
     logDebug("readme-sync", `README out of sync: ${result.issues.join("; ")}`);
     const issueList = result.issues.map((i) => `- ${i}`).join("\n");

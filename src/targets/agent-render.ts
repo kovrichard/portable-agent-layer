@@ -5,17 +5,17 @@
 
 import {
   type AgentDefinition,
-  type AgentPlatform,
   parseAgentDefinition,
 } from "../hooks/lib/agent-definition";
+import type { AgentName } from "../hooks/lib/agent-registry";
 
 const CODEX_OWNED_KEYS = new Set(["name", "description", "developer_instructions"]);
 
-export function agentFileName(stem: string, platform: AgentPlatform): string {
+export function agentFileName(stem: string, platform: AgentName): string {
   return `${stem}.${platform === "codex" ? "toml" : "md"}`;
 }
 
-export function renderAgentForPlatform(content: string, platform: AgentPlatform): string {
+export function renderAgentForPlatform(content: string, platform: AgentName): string {
   const definition = parseAgentDefinition(content);
   if (platform === "codex") return renderCodexAgent(definition);
   if (!definition.hasFrontmatter) return content;

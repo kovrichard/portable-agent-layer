@@ -4,14 +4,8 @@
  * Thin presentation layer over src/tools/ledger/query.ts. Owns formatting and
  * argv parsing only; every question about the records themselves is answered
  * there.
- *
- * Subcommands:
- *   log [filters]     Matching actions, oldest first
- *   show <id>         One action in full, with its change and current standing
- *   stats [filters]   Counts by outcome, runtime, actor, tool and target
  */
 
-import { parseArgs } from "node:util";
 import type { LedgerEntry } from "../hooks/lib/ledger";
 import {
   type ChainVerdict,
@@ -28,75 +22,22 @@ import {
   standing,
   summarize,
 } from "../tools/ledger/query";
+import { UsageError } from "../tools/lib/command";
 
-const FILTER_OPTIONS = {
-  project: { type: "string" },
-  since: { type: "string" },
-  until: { type: "string" },
-  actor: { type: "string" },
-  machine: { type: "string" },
-  runtime: { type: "string" },
-  outcome: { type: "string" },
-  tool: { type: "string" },
-  target: { type: "string" },
-  limit: { type: "string" },
-  json: { type: "boolean" },
-} as const;
-
-export async function runLedger(args: string[]): Promise<number> {
-  const [sub, ...rest] = args;
-  switch (sub) {
-    case "log":
-      return cmdLog(rest);
-    case "show":
-      return cmdShow(rest);
-    case "stats":
-      return cmdStats(rest);
-    case undefined:
-    case "help":
-    case "--help":
-    case "-h":
-      showHelp();
-      return 0;
-    default:
-      console.error(`Unknown subcommand: ${sub}\n`);
-      showHelp();
-      return 1;
-  }
+export function ledgerLog(values: Record<string, unknown>): number {
+  return cmdLog(buildFilter(values), values.json === true);
 }
 
-function showHelp(): void {
-  console.log(`
-  Usage:
-    pal cli ledger <subcommand> [filters]
+export function ledgerShow(id: string, json: boolean): number {
+  return cmdShow(id, json);
+}
 
-  Subcommands:
-    log [filters]              Matching actions, oldest first
-    show <id>                  One action in full: change, target, standing
-    stats [filters]            Counts by outcome, runtime, actor, tool, target
-
-  Filters:
-    --project <slug>           Actions against a registered project
-    --since <7d|2026-09-01>    A duration back from now, or a date
-    --until <date>             Upper bound on the timestamp
-    --actor <id>               Who caused it
-    --machine <id>             Which install wrote it
-    --runtime <agent>          claude, cursor, codex, copilot, opencode
-    --outcome <applied|failed|denied>
-    --tool <Edit|Write>
-    --target <substring>       Match anywhere in the recorded path
-    --limit <n>                Keep the newest n matches
-    --json                     Machine-readable output
-
-  Examples:
-    pal cli ledger log --project portable-agent-layer --since 7d
-    pal cli ledger log --target memory/ --outcome applied
-    pal cli ledger stats --since 24h
-`);
+export function ledgerStats(values: Record<string, unknown>): number {
+  return cmdStats(buildFilter(values), values.json === true);
 }
 
 /** A filter that silently ignored an unparseable window would answer the wrong question. */
-function buildFilter(values: Record<string, unknown>): LedgerFilter | string {
+function buildFilter(values: Record<string, unknown>): LedgerFilter {
   const filter: LedgerFilter = {};
   for (const key of [
     "project",
@@ -115,43 +56,27 @@ function buildFilter(values: Record<string, unknown>): LedgerFilter | string {
     const spec = values[key];
     if (typeof spec !== "string") continue;
     const at = parseSince(spec);
-    if (!at) return `Unrecognised --${key}: ${spec} (use 7d, 24h, or a date)`;
+    if (!at)
+      throw new UsageError(`Unrecognised --${key}: ${spec} (use 7d, 24h, or a date)`);
     filter[key] = at;
   }
 
   if (typeof values.limit === "string") {
     const limit = Number(values.limit);
     if (!Number.isInteger(limit) || limit < 1)
-      return `--limit must be a positive integer`;
+      throw new UsageError("--limit must be a positive integer");
     filter.limit = limit;
   }
   return filter;
-}
-
-function parseFilters(args: string[]): { filter: LedgerFilter; json: boolean } | string {
-  try {
-    const { values } = parseArgs({
-      args,
-      options: FILTER_OPTIONS,
-      allowPositionals: true,
-    });
-    const filter = buildFilter(values);
-    return typeof filter === "string" ? filter : { filter, json: values.json === true };
-  } catch (error) {
-    return error instanceof Error ? error.message : String(error);
-  }
 }
 
 function shortId(id: string): string {
   return id.slice(0, 11).padEnd(11);
 }
 
-function cmdLog(args: string[]): number {
-  const parsed = parseFilters(args);
-  if (typeof parsed === "string") return fail(parsed);
-
-  const entries = queryLedger(parsed.filter);
-  if (parsed.json) {
+function cmdLog(filter: LedgerFilter, json: boolean): number {
+  const entries = queryLedger(filter);
+  if (json) {
     console.log(JSON.stringify(entries, null, 2));
     return 0;
   }
@@ -218,14 +143,11 @@ function printChange(entry: LedgerEntry): void {
   }
 }
 
-function cmdShow(args: string[]): number {
-  const [id, ...rest] = args;
-  if (!id) return fail("Usage: pal cli ledger show <id>");
-
+function cmdShow(id: string, json: boolean): number {
   const entry = findEntry(id);
   if (!entry) return fail(`No action with id ${id}`);
 
-  if (rest.includes("--json")) {
+  if (json) {
     console.log(
       JSON.stringify(
         {
@@ -280,12 +202,9 @@ function printTally(label: string, counts: Record<string, number>): void {
     console.log(`    ${String(count).padStart(6)}  ${key}`);
 }
 
-function cmdStats(args: string[]): number {
-  const parsed = parseFilters(args);
-  if (typeof parsed === "string") return fail(parsed);
-
-  const stats = summarize(queryLedger(parsed.filter));
-  if (parsed.json) {
+function cmdStats(filter: LedgerFilter, json: boolean): number {
+  const stats = summarize(queryLedger(filter));
+  if (json) {
     console.log(JSON.stringify(stats, null, 2));
     return 0;
   }

@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import {
   existsSync,
   mkdirSync,
@@ -8,6 +8,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
+import { run } from "../src/tools/agent/project";
 
 const TEST_HOME = resolve(import.meta.dir, "../.test-home-project-cli");
 const CLI = resolve(import.meta.dir, "../src/tools/agent/project.ts");
@@ -66,9 +67,84 @@ describe("project CLI", () => {
   test("help prints usage", async () => {
     const r = await runCli(["help"]);
     expect(r.code).toBe(0);
-    expect(r.stdout).toContain("Project — manage PAL project state");
+    expect(r.stdout).toContain("Usage: pal cli project <command>");
+    expect(r.stdout).toContain("Manage PAL project state");
     expect(r.stdout).toContain("create");
     expect(r.stdout).toContain("update-section");
+  });
+
+  test("a subcommand's --help prints its usage and writes nothing", async () => {
+    await runCli(["create", "helpless", "--path", "/tmp/helpless-fake"]);
+    const r = await runCli(["add-isc", "helpless", "never filed", "--help"]);
+    expect(r.code).toBe(0);
+    expect(r.stdout).toContain("Usage: pal cli project add-isc <name> <title...>");
+    expect(section("helpless", "Criteria")).not.toContain("never filed");
+  });
+
+  test("an unknown flag exits 1 with error: and the usage on stderr", async () => {
+    await runCli(["create", "badflag", "--path", "/tmp/badflag-fake"]);
+    const r = await runCli(["list-isc", "badflag", "--open"]);
+    expect(r.code).toBe(1);
+    expect(r.stdout).toBe("");
+    expect(r.stderr).toContain("error: Unknown option '--open'");
+    expect(r.stderr).toContain("Usage: pal cli project list-isc <name>");
+  });
+
+  test("run() dispatches under the pal cli project path", async () => {
+    const printed: string[] = [];
+    const log = spyOn(console, "log").mockImplementation((line: string) => {
+      printed.push(line);
+    });
+    const code = await run(["complete-isc", "--help"]);
+    log.mockRestore();
+    expect(code).toBe(0);
+    expect(printed.join("\n")).toContain(
+      "Usage: pal cli project complete-isc <name> <id>"
+    );
+  });
+
+  test("a missing required argument exits 1 naming it", async () => {
+    const r = await runCli(["add-next", "nobody"]);
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain("error: missing <text...>");
+  });
+
+  test("an extra argument is refused rather than ignored", async () => {
+    await runCli(["create", "extra", "--path", "/tmp/extra-fake"]);
+    const r = await runCli(["resume", "extra", "stray"]);
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain("error: unexpected argument 'stray'");
+  });
+
+  test("list-isc refuses two selections at once", async () => {
+    await runCli(["create", "twosel", "--path", "/tmp/twosel-fake"]);
+    const r = await runCli(["list-isc", "twosel", "--all", "--closed"]);
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain("error: --all and --closed cannot be combined");
+  });
+
+  test("create refuses a name given both ways", async () => {
+    const r = await runCli(["create", "one", "--name", "two", "--path", "/tmp/x"]);
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain("error: give the name once");
+    expect(isaFiles()).toEqual([]);
+  });
+
+  test("rm-next refuses an index that is not a number", async () => {
+    await runCli(["create", "idx", "--path", "/tmp/idx-fake"]);
+    await runCli(["add-next", "idx", "keep"]);
+    const r = await runCli(["rm-next", "idx", "1abc"]);
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain(
+      'error: <index> must be a non-negative integer, got "1abc"'
+    );
+  });
+
+  test("a bullet list is content, not a flag", async () => {
+    await runCli(["create", "dash", "--path", "/tmp/dash-fake"]);
+    const r = await runCli(["update-section", "dash", "goal", "- a\n- b"]);
+    expect(r.code).toBe(0);
+    expect(section("dash", "Goal")).toBe("- a\n- b");
   });
 
   test("create with explicit name + path → writes ISA.md", async () => {
@@ -292,7 +368,8 @@ describe("project CLI", () => {
   test("unknown command exits 1 with helpful stderr", async () => {
     const r = await runCli(["frobnicate"]);
     expect(r.code).toBe(1);
-    expect(r.stderr).toContain("Unknown command");
+    expect(r.stderr).toContain("error: unknown command 'frobnicate'");
+    expect(r.stderr).toContain("Usage: pal cli project <command>");
   });
 
   test("list-isc defaults to open ISCs only; --all / --closed reveal done ones", async () => {
@@ -788,7 +865,8 @@ describe("project CLI", () => {
     test("serves needs both a name and a kind", async () => {
       const r = await runCli(["serves", "servlonely"]);
       expect(r.code).toBe(1);
-      expect(r.stderr).toContain("Usage: serves");
+      expect(r.stderr).toContain("error: missing <goal|revenue|fun>");
+      expect(r.stderr).toContain("Usage: pal cli project serves <name>");
     });
   });
 });

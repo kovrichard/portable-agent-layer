@@ -11,7 +11,8 @@
  */
 
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
-import { commitApplied, ledgeredCalls } from "./lib/ledger-hook";
+import { enterHookWorkspace } from "./lib/hook-turn";
+import { commitApplied, landedCalls } from "./lib/ledger-hook";
 import { logDebug } from "./lib/log";
 import { readStdinJSON } from "./lib/stdin";
 
@@ -21,7 +22,8 @@ try {
   const input = await readStdinJSON<Record<string, unknown>>();
   if (!input) process.exit(0);
 
-  for (const call of ledgeredCalls(input)) {
+  enterHookWorkspace(input);
+  for (const call of landedCalls(input)) {
     const entry = commitApplied(call);
     if (entry) {
       logDebug("LedgerCommit", `recorded ${entry.id} ${entry.tool} ${entry.target}`);

@@ -17,6 +17,18 @@ cursor:
   model: inherit
   readonly: false
   is_background: false
+
+antigravity:
+  model: inherit
+  subagent: true
+  mainAgent: false
+  tools:
+    - search_web
+    - read_url_content
+    - view_file
+    - grep_search
+    - find_by_name
+    - list_dir
 ---
 
 You are a research specialist focused on **breadth and perspective diversity**.

@@ -31,6 +31,11 @@ describe("inferenceModel", () => {
     expect(inferenceModel("anthropic-api", "medium")).toBe(SONNET_MODEL);
   });
 
+  test("the agy route uses Gemini Flash at low and high effort", () => {
+    expect(inferenceModel("antigravity-spawn", "small")).toBe("gemini-3.8-flash-low");
+    expect(inferenceModel("antigravity-spawn", "medium")).toBe("gemini-3.8-flash-high");
+  });
+
   test("openai routes use gpt-6-luna for small", () => {
     expect(inferenceModel("codex-spawn", "small")).toBe("gpt-6-luna");
     expect(inferenceModel("openai-api", "small")).toBe("gpt-6-luna");
@@ -38,6 +43,7 @@ describe("inferenceModel", () => {
 
   test("only routes with a fixed table count as fixed", () => {
     expect(isFixedModelRoute("codex-spawn")).toBe(true);
+    expect(isFixedModelRoute("antigravity-spawn")).toBe(true);
     expect(isFixedModelRoute("copilot-spawn")).toBe(false);
     expect(isFixedModelRoute("cursor-spawn")).toBe(false);
     expect(isFixedModelRoute("opencode-spawn")).toBe(false);
@@ -53,6 +59,7 @@ describe("inferenceModel", () => {
       "anthropic-api",
       "codex-spawn",
       "openai-api",
+      "antigravity-spawn",
     ] as const) {
       expect(inferenceModel(route, "small")).not.toBe(inferenceModel(route, "medium"));
     }

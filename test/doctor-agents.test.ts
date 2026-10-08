@@ -1,14 +1,27 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { agentFindings, rosterFindings } from "../src/cli/doctor/agents";
-import { copyAgents, copyAgentsForCodex } from "../src/targets/lib";
+import { AGENT_NAMES } from "../src/hooks/lib/agent-registry";
+import {
+  copyAgents,
+  copyAgentsForAntigravity,
+  copyAgentsForCodex,
+} from "../src/targets/lib";
 
 const DIR_VARS = {
   PAL_CLAUDE_DIR: "claude",
   PAL_CURSOR_DIR: "cursor",
   PAL_CODEX_DIR: "codex",
+  PAL_GEMINI_DIR: "gemini",
   PAL_COPILOT_DIR: "copilot",
   PAL_OPENCODE_DIR: "opencode",
   PAL_AGENTS_DIR: "agents",
@@ -207,6 +220,32 @@ describe("opencode's plugin", () => {
   });
 });
 
+describe("Antigravity's plugin hooks", () => {
+  function pluginHooks(contextScript: string): void {
+    const command = palCommand(hookScript(contextScript), "antigravity");
+    write(
+      resolve(ROOT, "gemini", "config", "plugins", "pal", "hooks.json"),
+      JSON.stringify({ pal: { PreInvocation: [{ type: "command", command }] } })
+    );
+  }
+
+  test("are registered when the plugin runs InvocationContext, agy's context hook", () => {
+    pluginHooks("InvocationContext");
+
+    expect(byId(agentFindings(["antigravity"]), "antigravity.hooks")?.severity).toBe(
+      "ok"
+    );
+  });
+
+  test("LoadContext alone does not count, since agy has no event to run it on", () => {
+    pluginHooks("LoadContext");
+
+    expect(
+      byId(agentFindings(["antigravity"]), "antigravity.hooks.missing")?.severity
+    ).toBe("fail");
+  });
+});
+
 describe("installed subagents", () => {
   const shippedAgent = "---\nname: researcher\nclaude:\n  model: sonnet\n---\nbody v1\n";
 
@@ -262,6 +301,25 @@ describe("installed subagents", () => {
       "researcher"
     );
   });
+
+  test("antigravity installs its own block into the plugin and checks it", () => {
+    write(
+      resolve(ROOT, "pkg", "assets", "agents", "researcher.md"),
+      shippedAgent.replace("---\nbody", "antigravity:\n  model: pro\n---\nbody")
+    );
+    const pluginAgents = resolve(ROOT, "gemini", "config", "plugins", "pal", "agents");
+
+    expect(byId(agentFindings(["antigravity"]), "antigravity.subagents")?.severity).toBe(
+      "warn"
+    );
+    copyAgentsForAntigravity(pluginAgents);
+    expect(readFileSync(resolve(pluginAgents, "researcher.md"), "utf-8")).toBe(
+      "---\nname: researcher\nmodel: pro\n---\nbody v1\n"
+    );
+    expect(byId(agentFindings(["antigravity"]), "antigravity.subagents")?.severity).toBe(
+      "ok"
+    );
+  });
 });
 
 describe("which agents are installed", () => {
@@ -277,8 +335,6 @@ describe("which agents are installed", () => {
   });
 
   test("every supported agent installed lists nothing", () => {
-    expect(rosterFindings(["claude", "codex", "copilot", "cursor", "opencode"])).toEqual(
-      []
-    );
+    expect(rosterFindings([...AGENT_NAMES])).toEqual([]);
   });
 });

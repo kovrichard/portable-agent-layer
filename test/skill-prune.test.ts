@@ -22,9 +22,11 @@ const env = {
   PAL_SKIP_DOCTOR: "1",
   PAL_SKIP_BROWSER_INSTALL: "1",
   PAL_CLAUDE_DIR: resolve(HOME, ".claude"),
+  PAL_OPENCODE_DIR: resolve(HOME, ".opencode"),
   PAL_CURSOR_DIR: resolve(HOME, ".cursor"),
   PAL_COPILOT_DIR: resolve(HOME, ".copilot"),
   PAL_CODEX_DIR: resolve(HOME, ".codex"),
+  PAL_GEMINI_DIR: resolve(HOME, ".gemini"),
   PAL_AGENTS_DIR: resolve(HOME, ".agents"),
 };
 

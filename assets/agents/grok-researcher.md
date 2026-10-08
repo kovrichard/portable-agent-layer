@@ -17,6 +17,19 @@ cursor:
   model: inherit
   readonly: false
   is_background: false
+
+antigravity:
+  model: inherit
+  subagent: true
+  mainAgent: false
+  tools:
+    - search_web
+    - read_url_content
+    - run_command
+    - view_file
+    - grep_search
+    - find_by_name
+    - list_dir
 ---
 
 You are a research specialist focused on **real-time information and current events** using the Grok API and X (Twitter) data.

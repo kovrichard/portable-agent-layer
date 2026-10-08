@@ -1,32 +1,7 @@
 #!/usr/bin/env bun
 /**
- * PAL CLI — Portable Agent Layer
- *
- * Usage:
- *   pal [agent-args...]               Start the first installed agent: claude, codex, cursor-agent, copilot, opencode
- *   pal cli <command> [options]       Admin commands
- *
- * Admin commands (pal cli ...):
- *   init                              Scaffold PAL home, install hooks for all targets
- *   install [--claude] [--opencode] [--cursor] [--codex]   Register hooks/skills for targets
- *   uninstall [--claude] [--opencode] [--cursor] [--codex] Remove hooks/skills for targets
- *   update                             Update PAL (git pull or npm update)
- *   export [path] [--dry-run]         Export user state to zip
- *   import [path] [--dry-run] [--overwrite]  Merge user state from zip
- *   status                            Show current PAL configuration
- *   doctor                            Check prerequisites and system health
- *   usage                             Summarize token usage and cost
- *   ledger <sub> [filters]            Query the action ledger (log · show · stats)
- *   rule list|approve|deny [id]       Review rules drafted from your corrections
- *   server start|stop|restart|status  The control room, a local page over ~/.pal
- *   <tool> [args]                     Run a built-in agent tool (project, thread, analyze, …)
- *   skill run <skill> <tool> [-- args]  Run a skill's own tool by name, not by path
- *   skill link <name>                 Link a personal ~/.pal/skills/<name>/ into installed agents
- *   skill doctor <name|--all>         Evaluate one skill, or every installed skill, against the authoring best practices
- *   subagent link <name>             Install a personal ~/.pal/agents/<name>.md into installed agents
- *   subagent doctor <name>           Evaluate a subagent against the authoring best practices
- *   debug [on|off]                    Enable / disable verbose hook debug logging
- *   version | -v                      Print the installed PAL version
+ * PAL CLI — Portable Agent Layer. `pal [agent-args...]` starts the first
+ * installed agent; `pal cli <command>` runs the command tree in ./tree.ts.
  */
 
 import { spawnSync } from "node:child_process";
@@ -42,6 +17,12 @@ import {
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import {
+  AGENT_NAMES,
+  AGENT_REGISTRY,
+  type AgentName,
+  INFERENCE_PRIORITY,
+} from "../hooks/lib/agent-registry";
+import {
   appendImportLog,
   mergeArchive,
   readManifest,
@@ -52,19 +33,35 @@ import { logDebug } from "../hooks/lib/log";
 import { ensureRegistered, writeRegistryEntry } from "../hooks/lib/machine";
 import { palHome, palPkg, paths, platform, toPath } from "../hooks/lib/paths";
 import { log, narrateSteps } from "../targets/lib";
-import { builtinToolVerbs, runBuiltinTool } from "./builtin-tools";
+import { helpText, runCommand } from "../tools/lib/command";
 import { type DoctorResult, detectAgents } from "./doctor/agents";
 import { installChromium } from "./doctor/environment";
 import { runDoctor } from "./doctor/run";
 import { findSessionAgent, NO_SESSION_AGENT_MESSAGE } from "./session-agent";
+import { cliTree, type DebugState } from "./tree";
 
 const allArgs = process.argv.slice(2);
+const CLI_PATH = ["pal", "cli"];
+const tree = cliTree({
+  init: ({ argv }) => init(argv),
+  install: async ({ argv }) => {
+    banner();
+    process.exit(await install(resolveTargets(argv), argv));
+  },
+  uninstall: ({ argv }) => uninstall(argv),
+  update: () => update(),
+  export: ({ argv }) => exportState(argv),
+  import: ({ argv }) => importState(argv),
+  status: () => status(),
+  doctor: ({ argv }) => doctor(argv),
+  debug: (state) => cliDebug(state),
+  version: () => showVersion(),
+});
 
 // ── Route: pal cli <command> or pal [claude-args] ──
 
 if (allArgs[0] === "cli") {
-  const [, command, ...args] = allArgs;
-  await runCli(command, args);
+  process.exitCode = await runCommand(tree, allArgs.slice(1), CLI_PATH);
 } else if (allArgs[0] === "--help" || allArgs[0] === "-h" || allArgs[0] === "help") {
   showHelp();
 } else {
@@ -146,124 +143,12 @@ async function session(sessionArgs: string[]) {
   process.exit(exitCode);
 }
 
-// ── CLI dispatcher ──
-
-async function runCli(command: string | undefined, args: string[]) {
-  if (command && (await runBuiltinTool(command, args))) return;
-  switch (command) {
-    case "init":
-      await init(args);
-      break;
-    case "install":
-      banner();
-      process.exit(await install(resolveTargets(args), args));
-      break;
-    case "uninstall":
-      await uninstall(args);
-      break;
-    case "export":
-      await exportState(args);
-      break;
-    case "import":
-      await importState(args);
-      break;
-    case "update":
-      await update();
-      break;
-    case "status":
-      await status();
-      break;
-    case "doctor": {
-      const exitCode = runDoctor(args);
-      if (args.includes("--probe-inference") || args.includes("--probe")) {
-        await probeInference();
-      }
-      process.exit(exitCode);
-      break;
-    }
-    case "migrate": {
-      const { runMigrate } = await import("./migrate");
-      runMigrate(args);
-      break;
-    }
-    case "usage": {
-      const { usage } = await import("../tools/token-cost");
-      usage();
-      break;
-    }
-    case "knowledge": {
-      const { runKnowledge } = await import("./knowledge");
-      const code = await runKnowledge(args);
-      if (code !== 0) process.exit(code);
-      break;
-    }
-    case "ledger": {
-      const { runLedger } = await import("./ledger");
-      const code = await runLedger(args);
-      if (code !== 0) process.exit(code);
-      break;
-    }
-    case "rule": {
-      const { runRule } = await import("./rule");
-      const code = await runRule(args);
-      if (code !== 0) process.exit(code);
-      break;
-    }
-    case "server": {
-      const { runServer } = await import("./server");
-      const code = await runServer(args);
-      if (code !== 0) process.exit(code);
-      break;
-    }
-    case "subagent": {
-      const { runSubagent } = await import("./subagent");
-      const code = await runSubagent(args);
-      if (code !== 0) process.exit(code);
-      break;
-    }
-    case "skill": {
-      const { runSkill } = await import("./skill");
-      const code = await runSkill(args);
-      if (code !== 0) process.exit(code);
-      break;
-    }
-    case "actor":
-    case "machine": {
-      const { runIdentity } = await import("./identity");
-      const code = runIdentity(command, args);
-      if (code !== 0) process.exit(code);
-      break;
-    }
-    case "telos": {
-      const { runTelos } = await import("./personal-context");
-      const code = runTelos(args);
-      if (code !== 0) process.exit(code);
-      break;
-    }
-    case "timezone": {
-      const { runTimezone } = await import("./personal-context");
-      const code = runTimezone(args);
-      if (code !== 0) process.exit(code);
-      break;
-    }
-    case "debug":
-      cliDebug(args);
-      break;
-    case "version":
-    case "-v":
-    case "--version":
-      showVersion();
-      break;
-    case "--help":
-    case "-h":
-    case "help":
-      showHelp();
-      break;
-    default:
-      if (command) log.error(`Unknown command: ${command}`);
-      showHelp();
-      process.exit(command ? 1 : 0);
+async function doctor(args: string[]): Promise<never> {
+  const exitCode = runDoctor(args);
+  if (args.includes("--probe-inference") || args.includes("--probe")) {
+    await probeInference();
   }
+  process.exit(exitCode);
 }
 
 // ── Helpers ──
@@ -277,145 +162,52 @@ function banner() {
 }
 
 function showHelp() {
-  console.log(`
-  Usage:
-    pal [agent-args...]                     Start the first installed agent
-    pal cli <command> [options]             Admin commands
-
-  Admin commands:
-    pal cli init [--claude] [--opencode] [--cursor] [--codex]    Scaffold and install (default: all), then run the doctor
-    pal cli install [--claude] [--opencode] [--cursor] [--codex] Register hooks for targets, then run the doctor
-                                            Add --verbose to either for the step-by-step log
-    pal cli uninstall [--claude] [--opencode] [--cursor] [--codex] Remove hooks for targets
-    pal cli update                          Update PAL (git pull or npm update)
-    pal cli export [path] [--dry-run]       Export state to zip
-    pal cli import [path] [--dry-run]       Merge state from zip (--overwrite to replace)
-    pal cli status                          Show PAL configuration
-    pal cli doctor [--verbose] [--json]     Find what is wrong and how to fix it; exits 1 on any failure
-                   [--probe-inference]      Also fire real inference per route
-    pal cli migrate [--list] [--dry-run]    Run pending data migrations
-    pal cli <tool> [args]                   Run a built-in agent tool ('<tool> --help' for its flags):
-                                            ${builtinToolVerbs.join(" · ")}
-    pal cli usage                           Summarize token usage and cost
-    pal cli actor [label <name>]            Show or rename this actor (who caused a record)
-    pal cli machine [label <name>]          Show or rename this install (where it was written)
-    pal cli telos                           Which TELOS topics are answered, in interview order
-    pal cli timezone [<zone>]               Show or set your timezone (IANA name)
-    pal cli knowledge <sub> [args]          Query & manage the knowledge store
-                                            (search · graph · stats · hubs · find · show · add · ls)
-    pal cli ledger <sub> [filters]          Query the action ledger (log · show · stats)
-                                            e.g. ledger log --project X --since 7d
-    pal cli rule list|approve|deny [id]     Review rules drafted from your corrections
-    pal cli server start|stop|restart|status  The control room: a local page to open before a terminal
-    pal cli skill run <skill> <tool> [-- args]  Run ~/.pal/skills/<skill>/tools/<tool> by name
-    pal cli skill link <name>               Link a personal ~/.pal/skills/<name>/ into installed agents
-    pal cli skill doctor <name|--all>       Evaluate one skill, or every installed skill
-    pal cli skill author-model              Print the flagship model that authors skills for the active agent
-    pal cli subagent link <name>            Install a personal ~/.pal/agents/<name>.md into installed agents
-    pal cli subagent doctor <name>          Evaluate a subagent against the authoring best practices
-    pal cli subagent list                   List the user-authored subagents in ~/.pal/agents/
-    pal cli subagent author-model           Print the flagship model that authors subagents for the active agent
-    pal cli debug [on|off]                  Enable/disable verbose hook debug logging (persisted)
-    pal cli version | -v                    Print the installed PAL version
-
-  Environment:
-    PAL_HOME              Override user state directory (default: ~/.pal or repo root)
-    PAL_PKG               Override package root
-    PAL_CLAUDE_DIR        Override Claude config dir (default: ~/.claude)
-    PAL_OPENCODE_DIR      Override opencode config dir (default: ~/.config/opencode)
-    PAL_CURSOR_DIR        Override Cursor config dir (default: ~/.cursor)
-    PAL_COPILOT_DIR       Override Copilot config dir (default: ~/.copilot)
-    PAL_CODEX_DIR         Override Codex config dir (default: ~/.codex)
-    PAL_AGENTS_DIR        Override agents dir (default: ~/.agents)
-`);
+  console.log(
+    `Usage: pal [agent-args...]\n\n  Start the first installed agent, passing the arguments on\n\n${helpText(tree, CLI_PATH)}`
+  );
 }
 
-type Targets = {
-  claude: boolean;
-  opencode: boolean;
-  cursor: boolean;
-  copilot: boolean;
-  codex: boolean;
-};
+type Targets = Record<AgentName, boolean>;
+
+function targetsWhere(selected: (agent: AgentName) => boolean): Targets {
+  return Object.fromEntries(
+    AGENT_NAMES.map((agent) => [agent, selected(agent)])
+  ) as Targets;
+}
+
+function namedTargets(args: string[]): AgentName[] {
+  if (args.includes("--all")) return AGENT_NAMES;
+  return AGENT_NAMES.filter((agent) => args.includes(`--${agent}`));
+}
 
 function parseTargets(args: string[]): Targets {
-  let claude = false;
-  let opencode = false;
-  let cursor = false;
-  let copilot = false;
-  let codex = false;
-  for (const arg of args) {
-    if (arg === "--claude") claude = true;
-    else if (arg === "--opencode") opencode = true;
-    else if (arg === "--cursor") cursor = true;
-    else if (arg === "--copilot") copilot = true;
-    else if (arg === "--codex") codex = true;
-    else if (arg === "--all") {
-      claude = true;
-      opencode = true;
-      cursor = true;
-      copilot = true;
-      codex = true;
-    }
-  }
-  if (!claude && !opencode && !cursor && !copilot && !codex)
-    return { claude: true, opencode: true, cursor: true, copilot: true, codex: true };
-  return { claude, opencode, cursor, copilot, codex };
+  const named = namedTargets(args);
+  return named.length === 0
+    ? targetsWhere(() => true)
+    : targetsWhere((a) => named.includes(a));
 }
 
 /** Resolve targets against available agents. Errors if explicitly requested but missing. */
 function resolveTargets(args: string[], health?: DoctorResult): Targets {
   const requested = parseTargets(args);
   const h = health || detectAgents();
-  const explicit = args.some(
-    (a) =>
-      a === "--claude" ||
-      a === "--opencode" ||
-      a === "--cursor" ||
-      a === "--copilot" ||
-      a === "--codex" ||
-      a === "--all"
-  );
 
-  if (explicit) {
-    if (requested.claude && !h.claude.available) {
-      log.error("Claude Code is not installed. Run 'pal cli doctor' for details.");
-      process.exit(1);
-    }
-    if (requested.opencode && !h.opencode.available) {
-      log.error("opencode is not installed. Run 'pal cli doctor' for details.");
-      process.exit(1);
-    }
-    if (requested.cursor && !h.cursor.available) {
-      log.error("Cursor is not installed. Run 'pal cli doctor' for details.");
-      process.exit(1);
-    }
-    if (requested.copilot && !h.copilot.available) {
-      log.error("Copilot is not installed. Run 'pal cli doctor' for details.");
-      process.exit(1);
-    }
-    if (requested.codex && !h.codex.available) {
-      log.error("Codex is not installed. Run 'pal cli doctor' for details.");
+  if (namedTargets(args).length > 0) {
+    const missing = AGENT_NAMES.find((agent) => requested[agent] && !h[agent].available);
+    if (missing) {
+      log.error(
+        `${AGENT_REGISTRY[missing].label} is not installed. Run 'pal cli doctor' for details.`
+      );
       process.exit(1);
     }
     return requested;
   }
 
-  // Default (no flags) — install for available agents only
-  const targets: Targets = {
-    claude: h.claude.available,
-    opencode: h.opencode.available,
-    cursor: h.cursor.available,
-    copilot: h.copilot.available,
-    codex: h.codex.available,
-  };
-
-  if (!targets.claude) log.info("Skipping Claude Code (not installed)");
-  if (!targets.opencode) log.info("Skipping opencode (not installed)");
-  if (!targets.cursor) log.info("Skipping Cursor (not installed)");
-  if (!targets.copilot) log.info("Skipping Copilot (not installed)");
-  if (!targets.codex) log.info("Skipping Codex (not installed)");
-
+  const targets = targetsWhere((agent) => h[agent].available);
+  for (const agent of AGENT_NAMES) {
+    if (!targets[agent])
+      log.info(`Skipping ${AGENT_REGISTRY[agent].label} (not installed)`);
+  }
   return targets;
 }
 
@@ -435,10 +227,9 @@ async function probeInference(): Promise<void> {
   const yellow = "\x1b[33m";
   const dim = "\x1b[90m";
   const reset = "\x1b[0m";
-  const agents = ["claude", "codex", "opencode", "copilot", "cursor"] as const;
   const savedAgent = process.env.PAL_AGENT;
   try {
-    for (const agent of agents) {
+    for (const agent of INFERENCE_PRIORITY) {
       process.env.PAL_AGENT = agent;
       const preview = previewInferenceRoute();
       const tag = `${agent.padEnd(10)} → ${preview.route.padEnd(15)}`;
@@ -515,14 +306,44 @@ function runQuietly(cmd: string, args: string[], cwd: string): number | null {
   return r.status;
 }
 
-function targetInstallers(): [keyof Targets, string, () => Promise<unknown>][] {
-  return [
-    ["claude", "Claude Code", () => import("../targets/claude/install")],
-    ["opencode", "opencode", () => import("../targets/opencode/install")],
-    ["cursor", "Cursor", () => import("../targets/cursor/install")],
-    ["copilot", "Copilot", () => import("../targets/copilot/install")],
-    ["codex", "Codex", () => import("../targets/codex/install")],
-  ];
+function targetScripts(): Record<
+  AgentName,
+  { install: () => Promise<unknown>; uninstall: () => Promise<unknown> }
+> {
+  return {
+    claude: {
+      install: () => import("../targets/claude/install"),
+      uninstall: () => import("../targets/claude/uninstall"),
+    },
+    opencode: {
+      install: () => import("../targets/opencode/install"),
+      uninstall: () => import("../targets/opencode/uninstall"),
+    },
+    cursor: {
+      install: () => import("../targets/cursor/install"),
+      uninstall: () => import("../targets/cursor/uninstall"),
+    },
+    copilot: {
+      install: () => import("../targets/copilot/install"),
+      uninstall: () => import("../targets/copilot/uninstall"),
+    },
+    codex: {
+      install: () => import("../targets/codex/install"),
+      uninstall: () => import("../targets/codex/uninstall"),
+    },
+    antigravity: {
+      install: () => import("../targets/antigravity/install"),
+      uninstall: () => import("../targets/antigravity/uninstall"),
+    },
+  };
+}
+
+function targetInstallers(): [AgentName, string, () => Promise<unknown>][] {
+  return AGENT_NAMES.map((agent) => [
+    agent,
+    AGENT_REGISTRY[agent].label,
+    targetScripts()[agent].install,
+  ]);
 }
 
 async function install(targets: Targets, args: string[]): Promise<number> {
@@ -572,7 +393,8 @@ async function install(targets: Targets, args: string[]): Promise<number> {
 
   // The rest of the shared work reads what the installers just wrote: the index
   // walks ~/.pal/skills, and the digests land in ~/.cursor/rules and
-  // ~/.copilot/instructions, which are skipped when the agent's home is absent.
+  // ~/.copilot/instructions and the Antigravity plugin's rules/, which are skipped
+  // when the agent's home is absent.
   const { writeContextDigests } = await import("../hooks/handlers/context-digests");
   const indexedSkills = generateSkillIndex();
   writeContextDigests();
@@ -606,33 +428,9 @@ async function refreshControlRoom(): Promise<void> {
 async function uninstall(args: string[]) {
   const targets = parseTargets(args);
 
-  if (targets.claude) {
-    console.log("━━━ Claude Code ━━━");
-    await import("../targets/claude/uninstall");
-    console.log("");
-  }
-
-  if (targets.opencode) {
-    console.log("━━━ opencode ━━━");
-    await import("../targets/opencode/uninstall");
-    console.log("");
-  }
-
-  if (targets.cursor) {
-    console.log("━━━ Cursor ━━━");
-    await import("../targets/cursor/uninstall");
-    console.log("");
-  }
-
-  if (targets.copilot) {
-    console.log("━━━ Copilot ━━━");
-    await import("../targets/copilot/uninstall");
-    console.log("");
-  }
-
-  if (targets.codex) {
-    console.log("━━━ Codex ━━━");
-    await import("../targets/codex/uninstall");
+  for (const agent of AGENT_NAMES.filter((a) => targets[a])) {
+    console.log(`━━━ ${AGENT_REGISTRY[agent].label} ━━━`);
+    await targetScripts()[agent].uninstall();
     console.log("");
   }
 
@@ -891,18 +689,17 @@ async function update() {
   process.exit(reinstallInFreshProcess());
 }
 
-function cliDebug(args: string[]) {
+function cliDebug(state: DebugState) {
   const stateDir = resolve(palHome(), "memory", "state");
   const flagFile = resolve(stateDir, "debug-enabled");
   // Must match log.ts's logFile() — reporting a different path sends anyone
   // debugging a hook to an empty file.
   const logFile = resolve(paths.debug(), "debug.log");
-  const sub = args[0];
-  if (sub === "on") {
+  if (state === "on") {
     mkdirSync(stateDir, { recursive: true });
     writeFileSync(flagFile, "");
     log.success(`Debug logging enabled → ${logFile}`);
-  } else if (sub === "off") {
+  } else if (state === "off") {
     rmSync(flagFile, { force: true });
     log.success("Debug logging disabled");
   } else {

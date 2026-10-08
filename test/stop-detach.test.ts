@@ -1,34 +1,26 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { assets } from "../src/hooks/lib/paths";
 import { runStopHandlers } from "../src/hooks/lib/stop";
-
-/** The detached children still hold files in the home; Windows refuses to delete those. */
-function removeOnceReleased(dir: string): void {
-  for (let attempt = 1; ; attempt++) {
-    try {
-      rmSync(dir, { recursive: true, force: true });
-      return;
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "EBUSY" || attempt >= 50) throw err;
-      Bun.sleepSync(100);
-    }
-  }
-}
+import { sandboxContextRuleDirs } from "./lib/context-rule-dirs";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 describe("runStopHandlers — Stop hook non-blocking contract", () => {
   let tmp: string;
   let savedHome: string | undefined;
+  let restoreContextRuleDirs: () => void;
 
   beforeEach(() => {
     tmp = mkdtempSync(resolve(tmpdir(), "pal-stop-test-"));
     savedHome = process.env.PAL_HOME;
     process.env.PAL_HOME = tmp;
+    restoreContextRuleDirs = sandboxContextRuleDirs(resolve(tmp, "agents"));
   });
 
   afterEach(() => {
+    restoreContextRuleDirs();
     removeOnceReleased(tmp);
     if (savedHome === undefined) delete process.env.PAL_HOME;
     else process.env.PAL_HOME = savedHome;

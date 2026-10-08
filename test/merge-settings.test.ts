@@ -268,3 +268,25 @@ describe("unmergeSettings", () => {
     expect(unmergeSettings(existing, {})).toEqual(existing);
   });
 });
+
+describe("the Antigravity command allowlist", () => {
+  const shippedAllow = (name: string) =>
+    loadSettingsTemplate(resolve(import.meta.dir, "../assets/templates", name), "/pkg")
+      .permissions?.allow ?? [];
+
+  function fixedPrefixCommands(claudeAllow: string[]): string[] {
+    return claudeAllow.flatMap((rule) => {
+      const prefix = /^Bash\((.+?) (?:\/\/)?\*\)$/.exec(rule)?.[1];
+      return prefix && !prefix.includes("*") ? [prefix] : [];
+    });
+  }
+
+  test("grants every fixed-prefix command Claude's allowlist grants, and nothing else", () => {
+    const expected = fixedPrefixCommands(shippedAllow("settings.claude.json"));
+    expect(expected).toContain("grep");
+    expect(expected).toContain("pal cli project");
+    expect(shippedAllow("settings.antigravity.json")).toEqual(
+      expected.map((prefix) => `command(${prefix})`)
+    );
+  });
+});

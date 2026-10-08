@@ -120,13 +120,43 @@ export const paths = {
 
 // Platform directories (env override or cross-platform defaults)
 const h = homedir();
+
+const AGENT_DIR_DEFAULTS = {
+  PAL_CLAUDE_DIR: [".claude"],
+  PAL_OPENCODE_DIR: [".config", "opencode"],
+  PAL_CURSOR_DIR: [".cursor"],
+  PAL_COPILOT_DIR: [".copilot"],
+  PAL_CODEX_DIR: [".codex"],
+  PAL_GEMINI_DIR: [".gemini"],
+  PAL_AGENTS_DIR: [".agents"],
+} as const;
+
+type AgentDirOverride = keyof typeof AGENT_DIR_DEFAULTS;
+
+const defaultAgentDir = (env: AgentDirOverride) => resolve(h, ...AGENT_DIR_DEFAULTS[env]);
+
+const agentDir = (env: AgentDirOverride) => () => envPath(env, defaultAgentDir(env));
+
+/** Every agent dir override with the real directory it replaces. */
+export function agentDirOverrides(): { env: AgentDirOverride; realDir: string }[] {
+  return (Object.keys(AGENT_DIR_DEFAULTS) as AgentDirOverride[]).map((env) => ({
+    env,
+    realDir: defaultAgentDir(env),
+  }));
+}
+
+const geminiDir = agentDir("PAL_GEMINI_DIR");
+
 export const platform = {
-  claudeDir: () => envPath("PAL_CLAUDE_DIR", resolve(h, ".claude")),
-  opencodeDir: () => envPath("PAL_OPENCODE_DIR", resolve(h, ".config", "opencode")),
-  cursorDir: () => envPath("PAL_CURSOR_DIR", resolve(h, ".cursor")),
-  copilotDir: () => envPath("PAL_COPILOT_DIR", resolve(h, ".copilot")),
-  codexDir: () => envPath("PAL_CODEX_DIR", resolve(h, ".codex")),
-  agentsDir: () => envPath("PAL_AGENTS_DIR", resolve(h, ".agents")),
+  claudeDir: agentDir("PAL_CLAUDE_DIR"),
+  opencodeDir: agentDir("PAL_OPENCODE_DIR"),
+  cursorDir: agentDir("PAL_CURSOR_DIR"),
+  copilotDir: agentDir("PAL_COPILOT_DIR"),
+  codexDir: agentDir("PAL_CODEX_DIR"),
+  antigravityPluginDir: () => resolve(geminiDir(), "config", "plugins", "pal"),
+  antigravityCliDir: () => resolve(geminiDir(), "antigravity-cli"),
+  antigravitySettings: () => resolve(geminiDir(), "antigravity-cli", "settings.json"),
+  agentsDir: agentDir("PAL_AGENTS_DIR"),
 } as const;
 
 // Engine/asset paths (in PAL_PKG / repo root)
@@ -140,6 +170,9 @@ export const assets = {
   cursorHooksTemplate: () => pkg("assets", "templates", "hooks.cursor.json"),
   copilotHooksTemplate: () => pkg("assets", "templates", "hooks.copilot.json"),
   codexHooksTemplate: () => pkg("assets", "templates", "hooks.codex.json"),
+  antigravityHooksTemplate: () => pkg("assets", "templates", "hooks.antigravity.json"),
+  antigravitySettingsTemplate: () =>
+    pkg("assets", "templates", "settings.antigravity.json"),
   codexRulesTemplate: () => pkg("assets", "templates", "rules.codex.rules"),
   statuslineScriptBash: () => pkg("assets", "statusline.sh"),
   statuslineScriptPs1: () => pkg("assets", "statusline.ps1"),

@@ -68,6 +68,31 @@ describe("cursor statusline config", () => {
 
 const onWindows = process.platform === "win32";
 
+describe("antigravity statusline config", () => {
+  test("addStatuslineConfig points agy at the script in antigravity-cli", () => {
+    expect(addStatuslineConfig({}, "antigravity").statusLine).toEqual({
+      type: "command",
+      command: onWindows
+        ? "powershell -NoProfile -ExecutionPolicy Bypass -File ~/.gemini/antigravity-cli/statusline.ps1"
+        : "~/.gemini/antigravity-cli/statusline.sh",
+      padding: 2,
+    });
+  });
+
+  test("a user's own statusLine is kept on install and on uninstall", () => {
+    const config = { statusLine: { type: "command", command: "~/bin/my-line" } };
+    expect(addStatuslineConfig(config, "antigravity")).toBe(config);
+    expect(removeStatuslineConfig(config, "antigravity").statusLine).toBe(
+      config.statusLine
+    );
+  });
+
+  test("uninstall removes PAL's statusLine", () => {
+    const installed = addStatuslineConfig({}, "antigravity");
+    expect(removeStatuslineConfig(installed, "antigravity").statusLine).toBeUndefined();
+  });
+});
+
 describe("claude statusline config", () => {
   test("addStatuslineConfig refreshes old Get-Content claude command", () => {
     const config = {

@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import {
-  FABLE_MODEL,
-  FLAGSHIP_AUTHOR_MODEL,
-  flagshipAuthorModel,
-} from "../src/hooks/lib/models";
+import { AGENT_NAMES } from "../src/hooks/lib/agent-registry";
+import { FABLE_MODEL, flagshipAuthorModel } from "../src/hooks/lib/models";
+import { renderAgentForPlatform } from "../src/targets/agent-render";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
+const AGENTS_DIR = resolve(import.meta.dir, "../assets/agents");
 
 function authorModel(agent: string | undefined) {
   const env: Record<string, string> = { ...(process.env as Record<string, string>) };
@@ -29,16 +29,36 @@ describe("flagship authoring registry", () => {
     expect(FABLE_MODEL).toBe("claude-fable-5");
   });
 
+  test("codex resolves to GPT-6 Astra", () => {
+    expect(flagshipAuthorModel("codex")).toBe("gpt-6-astra");
+  });
+
+  test("antigravity resolves to the pro tier its subagents name", () => {
+    expect(flagshipAuthorModel("antigravity")).toBe("pro");
+  });
+
   test("agents without a configured flagship resolve to undefined (inline path)", () => {
-    expect(flagshipAuthorModel("codex")).toBeUndefined();
     expect(flagshipAuthorModel("opencode")).toBeUndefined();
     expect(flagshipAuthorModel("cursor")).toBeUndefined();
     expect(flagshipAuthorModel("copilot")).toBeUndefined();
   });
 
-  test("registry is opt-in per agent — only entries present are configured", () => {
-    // Guards the extensibility contract: adding a provider is one entry here.
-    expect(Object.keys(FLAGSHIP_AUTHOR_MODEL)).toEqual(["claude"]);
+  test("only agents whose route has a large model author through a flagship", () => {
+    expect(AGENT_NAMES.filter((agent) => flagshipAuthorModel(agent))).toEqual([
+      "claude",
+      "codex",
+      "antigravity",
+    ]);
+  });
+
+  test("each flagship author subagent pins its agent's large model", () => {
+    for (const stem of ["skill-author", "subagent-author"]) {
+      const content = readFileSync(resolve(AGENTS_DIR, `${stem}.md`), "utf-8");
+      const codex = renderAgentForPlatform(content, "codex");
+      expect(codex).toContain(`model = "${flagshipAuthorModel("codex")}"`);
+      const antigravity = renderAgentForPlatform(content, "antigravity");
+      expect(antigravity).toContain(`\nmodel: ${flagshipAuthorModel("antigravity")}\n`);
+    }
   });
 });
 
@@ -49,8 +69,20 @@ describe("pal cli skill author-model", () => {
     expect(r.stdout.trim()).toBe(FABLE_MODEL);
   });
 
-  test("prints nothing for an agent with no flagship — drives inline authoring", () => {
+  test("prints the flagship model for codex", () => {
     const r = authorModel("codex");
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim()).toBe("gpt-6-astra");
+  });
+
+  test("prints the pro tier for antigravity", () => {
+    const r = authorModel("antigravity");
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim()).toBe("pro");
+  });
+
+  test("prints nothing for an agent with no flagship — drives inline authoring", () => {
+    const r = authorModel("opencode");
     expect(r.status).toBe(0);
     expect(r.stdout.trim()).toBe("");
   });

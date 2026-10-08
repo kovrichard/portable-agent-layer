@@ -1,15 +1,20 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
-import type { AgentPlatform } from "../../hooks/lib/agent-definition";
+import {
+  AGENT_REGISTRY,
+  type AgentName,
+  AGENT_NAMES as REGISTERED_AGENTS,
+  skillsDirOf,
+} from "../../hooks/lib/agent-registry";
 import { palPkg, platform } from "../../hooks/lib/paths";
 import { nativeAgentsDir, staleShippedAgents } from "../../targets/lib";
 import { NO_SESSION_AGENT_MESSAGE } from "../session-agent";
 import { type Finding, type Fix, failing, optional, passed, warning } from "./finding";
 
-export type AgentName = "claude" | "opencode" | "cursor" | "copilot" | "codex";
+export type { AgentName };
 
-const AGENT_NAMES: AgentName[] = ["claude", "codex", "copilot", "cursor", "opencode"];
+const AGENT_NAMES: AgentName[] = [...REGISTERED_AGENTS].sort();
 
 export interface ToolCheck {
   name: string;
@@ -17,16 +22,11 @@ export interface ToolCheck {
   version?: string;
 }
 
-export interface DoctorResult {
+export type DoctorResult = Record<AgentName, ToolCheck> & {
   bun: ToolCheck;
-  claude: ToolCheck;
-  opencode: ToolCheck;
-  cursor: ToolCheck;
-  copilot: ToolCheck;
-  codex: ToolCheck;
   rtk: ToolCheck;
   hasAgent: boolean;
-}
+};
 
 function checkTool(cmd: string, versionArgs: string[] = ["--version"]): ToolCheck {
   try {
@@ -69,33 +69,39 @@ function checkCursor(): ToolCheck {
   return checkTool("cursor");
 }
 
+const AGENT_PROBES: Record<AgentName, () => ToolCheck> = {
+  claude: () => checkTool("claude"),
+  opencode: () => checkTool("opencode"),
+  cursor: checkCursor,
+  copilot: checkCopilot,
+  codex: () => checkTool("codex"),
+  antigravity: () => checkTool("agy"),
+};
+
+function agentChecks(
+  probe: (agent: AgentName) => ToolCheck
+): Record<AgentName, ToolCheck> {
+  return Object.fromEntries(
+    REGISTERED_AGENTS.map((agent) => [agent, probe(agent)])
+  ) as Record<AgentName, ToolCheck>;
+}
+
 export function detectAgents(): DoctorResult {
+  const bun = { name: "bun", available: true, version: Bun.version };
   if (process.env.PAL_SKIP_DOCTOR === "1") {
     return {
-      bun: { name: "bun", available: true, version: Bun.version },
-      claude: { name: "claude", available: true },
-      opencode: { name: "opencode", available: true },
-      cursor: { name: "cursor", available: true },
-      copilot: { name: "copilot", available: true },
-      codex: { name: "codex", available: true },
+      ...agentChecks((agent) => ({ name: agent, available: true })),
+      bun,
       rtk: { name: "rtk", available: true },
       hasAgent: true,
     };
   }
-  const claude = checkTool("claude");
-  const opencode = checkTool("opencode");
-  const cursor = checkCursor();
-  const copilot = checkCopilot();
-  const codex = checkTool("codex");
+  const agents = agentChecks((agent) => AGENT_PROBES[agent]());
   return {
-    bun: { name: "bun", available: true, version: Bun.version },
-    claude,
-    opencode,
-    cursor,
-    copilot,
-    codex,
+    ...agents,
+    bun,
     rtk: checkTool("rtk"),
-    hasAgent: [claude, opencode, cursor, copilot, codex].some((tool) => tool.available),
+    hasAgent: Object.values(agents).some((tool) => tool.available),
   };
 }
 
@@ -103,46 +109,39 @@ export function installedAgents(result: DoctorResult): AgentName[] {
   return AGENT_NAMES.filter((name) => result[name].available);
 }
 
-interface AgentLayout {
-  label: string;
-  skillsDir: () => string;
+interface AgentWiring {
   hookFile?: () => string;
+  /** The hook whose absence means PAL's context never arrives; LoadContext unless set. */
+  contextHook?: string;
   instructions?: { file: () => string; name: string };
 }
 
-const LAYOUT: Record<AgentName, AgentLayout> = {
+const WIRING: Record<AgentName, AgentWiring> = {
   claude: {
-    label: "Claude Code",
-    skillsDir: () => resolve(platform.claudeDir(), "skills"),
     hookFile: () => resolve(platform.claudeDir(), "settings.json"),
     instructions: {
       file: () => resolve(platform.claudeDir(), "CLAUDE.md"),
       name: "CLAUDE.md",
     },
   },
-  codex: {
-    label: "Codex",
-    skillsDir: () => resolve(platform.codexDir(), "skills"),
-    hookFile: () => resolve(platform.codexDir(), "hooks.json"),
-  },
-  copilot: {
-    label: "Copilot",
-    skillsDir: () => resolve(platform.copilotDir(), "skills"),
-    hookFile: () => resolve(platform.copilotDir(), "hooks", "pal-hooks.json"),
-  },
-  cursor: {
-    label: "Cursor",
-    skillsDir: () => resolve(platform.cursorDir(), "skills"),
-    hookFile: () => resolve(platform.cursorDir(), "hooks.json"),
-  },
-  opencode: {
-    label: "opencode",
-    skillsDir: () => resolve(platform.agentsDir(), "skills"),
+  codex: { hookFile: () => resolve(platform.codexDir(), "hooks.json") },
+  copilot: { hookFile: () => resolve(platform.copilotDir(), "hooks", "pal-hooks.json") },
+  cursor: { hookFile: () => resolve(platform.cursorDir(), "hooks.json") },
+  opencode: {},
+  antigravity: {
+    hookFile: () => resolve(platform.antigravityPluginDir(), "hooks.json"),
+    contextHook: "InvocationContext",
+    instructions: {
+      file: () => resolve(platform.antigravityPluginDir(), "rules", "pal.md"),
+      name: "PAL plugin rule",
+    },
   },
 };
 
+const labelOf = (agent: AgentName) => AGENT_REGISTRY[agent].label;
+
 const reinstall = (agent: AgentName): Fix => ({
-  say: `Reinstall PAL for ${LAYOUT[agent].label}`,
+  say: `Reinstall PAL for ${labelOf(agent)}`,
   command: `pal cli install --${agent}`,
   external: false,
 });
@@ -207,8 +206,8 @@ function readHookCommands(file: string): string[] | "missing" | "unreadable" {
   }
 }
 
-function hookFindings(agent: AgentName, file: string): Finding[] {
-  const label = LAYOUT[agent].label;
+function hookFindings(agent: AgentName, file: string, contextHook: string): Finding[] {
+  const label = labelOf(agent);
   const commands = readHookCommands(file);
   if (commands === "unreadable")
     return [
@@ -223,7 +222,7 @@ function hookFindings(agent: AgentName, file: string): Finding[] {
       ),
     ];
   const pal = commands === "missing" ? [] : commands.filter((c) => isPalHook(c, agent));
-  if (!pal.some((c) => c.includes("LoadContext")))
+  if (!pal.some((c) => c.includes(contextHook)))
     return [
       failing(
         `${agent}.hooks.missing`,
@@ -276,8 +275,8 @@ function opencodePluginFindings(): Finding[] {
   return [passed("opencode.hooks", "opencode plugin installed and current")];
 }
 
-function subagentFinding(agent: AgentPlatform): Finding {
-  const label = LAYOUT[agent].label;
+function subagentFinding(agent: AgentName): Finding {
+  const label = labelOf(agent);
   const stale = staleShippedAgents(nativeAgentsDir(agent), agent);
   if (stale.length === 0)
     return passed(`${agent}.subagents`, `${label}: subagents match this PAL version`);
@@ -294,16 +293,17 @@ function countSkills(dir: string): number {
 }
 
 function oneAgentFindings(agent: AgentName): Finding[] {
-  const layout = LAYOUT[agent];
-  const skills = countSkills(layout.skillsDir());
+  const layout = WIRING[agent];
+  const label = labelOf(agent);
+  const skills = countSkills(skillsDirOf(agent));
   const findings = [
     skills > 0
-      ? passed(`${agent}.skills`, `${layout.label}: ${skills} skills`)
-      : warning(`${agent}.skills`, `${layout.label} has no PAL skills`, reinstall(agent)),
+      ? passed(`${agent}.skills`, `${label}: ${skills} skills`)
+      : warning(`${agent}.skills`, `${label} has no PAL skills`, reinstall(agent)),
   ];
   findings.push(
     ...(layout.hookFile
-      ? hookFindings(agent, layout.hookFile())
+      ? hookFindings(agent, layout.hookFile(), layout.contextHook ?? "LoadContext")
       : opencodePluginFindings()),
     subagentFinding(agent)
   );
@@ -345,7 +345,7 @@ export function rosterFindings(agents: AgentName[]): Finding[] {
   return [
     optional(
       "agents.others",
-      `Other agents PAL supports — ${others.map((name) => LAYOUT[name].label).join(", ")}`,
+      `Other agents PAL supports — ${others.map(labelOf).join(", ")}`,
       {
         say: `install it, then run pal cli install --${others.length === 1 ? others[0] : "<agent>"}`,
       }

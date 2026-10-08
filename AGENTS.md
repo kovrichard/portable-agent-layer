@@ -6,7 +6,7 @@ Working notes for any AI agent contributing to this repository.
 
 ## What is PAL
 
-The Portable Agent Layer is cross-platform, cross-agent infrastructure for carrying personal AI context (TELOS, memory, skills, hooks) between machines and between AI runtimes (Claude Code, opencode, Cursor, Codex). It ships as a CLI (`pal`) plus a curated set of skills, hooks, and tooling that targets each agent's native config format.
+The Portable Agent Layer is cross-platform, cross-agent infrastructure for carrying personal AI context (TELOS, memory, skills, hooks) between machines and between AI runtimes (Claude Code, opencode, Cursor, Copilot, Codex, Antigravity CLI). It ships as a CLI (`pal`) plus a curated set of skills, hooks, and tooling that targets each agent's native config format.
 
 Two layers carry most of the work:
 
@@ -56,15 +56,16 @@ Each gate, its script, and its wrapper in `.agents/hooks/`:
 
 ## The `.agents/hooks/` system
 
-Every wrapper above is wired into the Stop / session-end event of each agent configured here. Each wrapper is a thin call into `run-hook.ts`, which does the subprocess plumbing and skips the whole chain when `git status` is empty — so a conversational turn that changed nothing costs a single git call. A failing gate makes `run-hook.ts` exit 2, which the agent treats as a blocked session-end: it must fix the underlying issue before it can stop.
+Every wrapper above is wired into the Stop / session-end event of each agent configured here. Each wrapper is a thin call into `run-hook.ts`, which does the subprocess plumbing and skips the whole chain when `git status` is empty — so a conversational turn that changed nothing costs a single git call. A failing gate makes `run-hook.ts` exit 2, which the agent treats as a blocked session-end: it must fix the underlying issue before it can stop. Antigravity CLI is the exception: it gets a Stop `continue` reply with exit 0, and it runs the gates from `.agents/`, so its commands are relative to that folder.
 
-| Agent       | Config file                 | Event          |
-| ----------- | --------------------------- | -------------- |
-| Claude Code | `.claude/settings.json`     | `Stop`         |
-| Cursor      | `.cursor/hooks.json`        | `stop`         |
-| Codex       | `.codex/hooks.json`         | `Stop`         |
-| Copilot     | `.github/hooks/gates.json`  | `agentStop`    |
-| opencode    | `.opencode/plugins/lint.ts` | `session.idle` |
+| Agent           | Config file                 | Event          |
+| --------------- | --------------------------- | -------------- |
+| Claude Code     | `.claude/settings.json`     | `Stop`         |
+| Cursor          | `.cursor/hooks.json`        | `stop`         |
+| Codex           | `.codex/hooks.json`         | `Stop`         |
+| Copilot         | `.github/hooks/gates.json`  | `agentStop`    |
+| opencode        | `.opencode/plugins/lint.ts` | `session.idle` |
+| Antigravity CLI | `.agents/hooks.json`        | `Stop`         |
 
 To add a gate: a script in `package.json`, a wrapper in `.agents/hooks/`, and an entry in each agent config above.
 
@@ -133,10 +134,10 @@ PAL uses a 3-tier system to keep the hook's dynamic output small while ensuring 
 | Tier | What | How | Written |
 | ---- | ---- | --- | ------- |
 | **1 — Operational** | CLAUDE.md / AGENTS.md — identity, modes, routing | Loaded natively by each agent at startup | On install / AGENTS.md change |
-| **2 — Semi-static** | Self-model, wisdom, opinions, synthesis, failures, steering | `@imports` (Claude Code), `instructions[]` (opencode), `.mdc` rules (Cursor), `.instructions.md` (Copilot) | Written at session stop by `writeContextDigests()` |
+| **2 — Semi-static** | Self-model, wisdom, opinions, synthesis, failures, steering | `@imports` (Claude Code), `instructions[]` (opencode), `.mdc` rules (Cursor), `.instructions.md` (Copilot), plugin `rules/` (Antigravity) | Written at session stop by `writeContextDigests()` |
 | **3 — Dynamic** | Handoff, threads, relationship notes, active projects | Hook stdout via `LoadContext` → `buildSystemReminder()` | Injected fresh each session |
 
-**Single registry.** All semi-static sources are defined in `src/hooks/lib/semi-static.ts` via `getSemiStaticSources()`. Adding one entry there propagates automatically to: CLAUDE.md `@imports`, opencode `instructions[]`, Cursor `.mdc` filenames, Copilot `.instructions.md` filenames, and the session-stop digest writer. No other files need touching.
+**Single registry.** All semi-static sources are defined in `src/hooks/lib/semi-static.ts` via `getSemiStaticSources()`. Adding one entry there propagates automatically to: CLAUDE.md `@imports`, opencode `instructions[]`, Cursor `.mdc` filenames, Copilot `.instructions.md` filenames, Antigravity plugin rule filenames, and the session-stop digest writer. No other files need touching.
 
 ## Common workflows
 

@@ -15,8 +15,11 @@ const TEST_HOME = resolve(import.meta.dir, "../.test-install-home");
 const CLAUDE_DIR = resolve(TEST_HOME, ".claude");
 const OPENCODE_DIR = resolve(TEST_HOME, ".opencode");
 const CURSOR_DIR = resolve(TEST_HOME, ".cursor");
+const COPILOT_DIR = resolve(TEST_HOME, ".copilot");
 const CODEX_DIR = resolve(TEST_HOME, ".codex");
+const GEMINI_DIR = resolve(TEST_HOME, ".gemini");
 const AGENTS_DIR = resolve(TEST_HOME, ".agents");
+const onWindows = process.platform === "win32";
 
 function pal(...args: string[]) {
   return spawnSync("bun", ["run", CLI, ...args], {
@@ -28,7 +31,9 @@ function pal(...args: string[]) {
       PAL_CLAUDE_DIR: CLAUDE_DIR,
       PAL_OPENCODE_DIR: OPENCODE_DIR,
       PAL_CURSOR_DIR: CURSOR_DIR,
+      PAL_COPILOT_DIR: COPILOT_DIR,
       PAL_CODEX_DIR: CODEX_DIR,
+      PAL_GEMINI_DIR: GEMINI_DIR,
       PAL_AGENTS_DIR: AGENTS_DIR,
     },
     encoding: "utf-8",
@@ -59,10 +64,26 @@ describe("pal cli install (smoke)", () => {
   }, 90000);
 
   test("install --opencode lands plugin and agents", () => {
+    const configFile = resolve(OPENCODE_DIR, "config.json");
+    const userRules = { "~/secrets/**": "deny" };
+    mkdirSync(OPENCODE_DIR, { recursive: true });
+    writeFileSync(
+      configFile,
+      JSON.stringify({ permission: { external_directory: userRules } })
+    );
     const result = pal("cli", "install", "--opencode");
     expect(result.status).toBe(0);
     expect(existsSync(OPENCODE_DIR)).toBe(true);
     expect(existsSync(resolve(OPENCODE_DIR, "plugins", "pal-plugin.ts"))).toBe(true);
+    const config = JSON.parse(readFileSync(configFile, "utf-8"));
+    expect(config.permission.external_directory).toEqual({
+      ...userRules,
+      [`${TEST_HOME.replaceAll("\\", "/")}/**`]: "allow",
+    });
+
+    expect(pal("cli", "uninstall", "--opencode").status).toBe(0);
+    const cleaned = JSON.parse(readFileSync(configFile, "utf-8"));
+    expect(cleaned.permission.external_directory).toEqual(userRules);
   }, 90000);
 
   test("install --cursor wires hooks, skills, agents", () => {
@@ -141,6 +162,73 @@ describe("pal cli install (smoke)", () => {
     expect(uninstalledRules).not.toContain("~/.pal/tools/project.ts");
     const uninstalledConfig = readFileSync(resolve(CODEX_DIR, "config.toml"), "utf-8");
     expect(uninstalledConfig).not.toContain('tui.status_line = ["model-with-reasoning"');
+  }, 90000);
+
+  test("install --antigravity lands everything in one plugin, uninstall removes only it", () => {
+    const plugin = resolve(GEMINI_DIR, "config", "plugins", "pal");
+    const settingsFile = resolve(GEMINI_DIR, "antigravity-cli", "settings.json");
+    const userSettings = {
+      colorScheme: "tokyo night",
+      permissions: { allow: ["command(gh pr list)"] },
+    };
+    mkdirSync(resolve(GEMINI_DIR, "antigravity-cli"), { recursive: true });
+    writeFileSync(settingsFile, JSON.stringify(userSettings));
+    expect(pal("cli", "install", "--antigravity").status).toBe(0);
+
+    const settings = JSON.parse(readFileSync(settingsFile, "utf-8"));
+    expect(settings.colorScheme).toBe("tokyo night");
+    expect(settings.permissions.allow).toContain("command(gh pr list)");
+    expect(settings.permissions.allow).toContain("command(grep)");
+    expect(settings.permissions.allow).toContain("command(pal cli project)");
+    const statuslineScript = onWindows ? "statusline.ps1" : "statusline.sh";
+    expect(settings.statusLine.command).toBe(
+      onWindows
+        ? "powershell -NoProfile -ExecutionPolicy Bypass -File ~/.gemini/antigravity-cli/statusline.ps1"
+        : "~/.gemini/antigravity-cli/statusline.sh"
+    );
+    expect(existsSync(resolve(GEMINI_DIR, "antigravity-cli", statuslineScript))).toBe(
+      true
+    );
+
+    const manifest = JSON.parse(readFileSync(resolve(plugin, "plugin.json"), "utf-8"));
+    expect(manifest.name).toBe("pal");
+    const skills = readdirSync(resolve(plugin, "skills"));
+    expect(skills.length).toBeGreaterThan(0);
+    expect(existsSync(resolve(plugin, "skills", skills[0], "SKILL.md"))).toBe(true);
+    const instructions = readFileSync(resolve(plugin, "rules", "pal.md"), "utf-8");
+    expect(instructions).toStartWith("---\ntrigger: always_on\n");
+    expect(instructions).toContain("# PAL");
+    const steering = readFileSync(resolve(plugin, "rules", "pal-steering.md"), "utf-8");
+    expect(steering).toStartWith(
+      "---\ntrigger: always_on\ndescription: PAL steering rules\n"
+    );
+    const hooks = readFileSync(resolve(plugin, "hooks.json"), "utf-8");
+    const commands = Array.from(hooks.matchAll(/"command": "([^"]+)"/g), (m) => m[1]);
+    expect(commands.length).toBe(5);
+    for (const command of commands) {
+      expect(command).not.toContain("{{PKG_ROOT}}");
+      expect(command).toEndWith(" --agent=antigravity");
+      expect(existsSync(command.split(" ")[2])).toBe(true);
+    }
+    expect(Object.keys(JSON.parse(hooks).pal)).toEqual([
+      "PreInvocation",
+      "PreToolUse",
+      "PostToolUse",
+      "Stop",
+    ]);
+    const author = readFileSync(resolve(plugin, "agents", "skill-author.md"), "utf-8");
+    expect(author).toContain("\nmodel: pro\n");
+    expect(author).toContain("\nmainAgent: false\n");
+    expect(author).toContain("\n  - write_to_file\n");
+    expect(author).not.toContain("fable");
+
+    expect(pal("cli", "uninstall", "--antigravity").status).toBe(0);
+    expect(existsSync(plugin)).toBe(false);
+    expect(JSON.parse(readFileSync(settingsFile, "utf-8"))).toEqual(userSettings);
+    expect(existsSync(resolve(GEMINI_DIR, "antigravity-cli", statuslineScript))).toBe(
+      false
+    );
+    expect(existsSync(resolve(TEST_HOME, "skills", skills[0], "SKILL.md"))).toBe(true);
   }, 90000);
 
   test("install is idempotent — second run preserves files", () => {

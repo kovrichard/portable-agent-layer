@@ -8,6 +8,7 @@ import { resolve } from "node:path";
 import { palPkg, platform } from "../../hooks/lib/paths";
 import { getSemiStaticSources } from "../../hooks/lib/semi-static";
 import { copyAgentsForOpencode, copySkills, countSkills, log, writeJson } from "../lib";
+import { allowPalHome, palHomePattern } from "./permission";
 
 const PKG_ROOT = palPkg();
 const OC_GLOBAL_DIR = platform.opencodeDir();
@@ -63,4 +64,5 @@ const existingInstructions = Array.isArray(ocConfig.instructions)
   ? (ocConfig.instructions as string[])
   : [];
 ocConfig.instructions = [...new Set([...existingInstructions, ...staticFiles])];
+ocConfig = allowPalHome(ocConfig, palHomePattern());
 writeFileSync(configPath, `${JSON.stringify(ocConfig, null, 2)}\n`, "utf-8");

@@ -2,12 +2,14 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runStopHandlers } from "../src/hooks/lib/stop";
+import { sandboxContextRuleDirs } from "./lib/context-rule-dirs";
 
 // runStopHandlers spawns detached children that keep writing into PAL_HOME after
 // the test returns, so this directory can reappear after cleanup — .gitignore
 // covers .test-home-* for exactly that reason.
 const HOME = resolve(import.meta.dir, "../.test-home-stop-handlers");
 const savedHome = process.env.PAL_HOME;
+let restoreContextRuleDirs: () => void;
 
 function transcriptOf(...contents: string[]): string {
   return JSON.stringify(
@@ -35,9 +37,11 @@ beforeEach(() => {
   if (existsSync(HOME)) rmSync(HOME, { recursive: true });
   mkdirSync(HOME, { recursive: true });
   process.env.PAL_HOME = HOME;
+  restoreContextRuleDirs = sandboxContextRuleDirs(resolve(HOME, "agents"));
 });
 
 afterEach(() => {
+  restoreContextRuleDirs();
   if (savedHome === undefined) delete process.env.PAL_HOME;
   else process.env.PAL_HOME = savedHome;
   rmSync(HOME, { recursive: true, force: true });

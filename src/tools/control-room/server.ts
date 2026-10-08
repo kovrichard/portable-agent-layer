@@ -34,8 +34,6 @@ import {
   writeInstallSettings,
 } from "./writes";
 
-export { DEFAULT_PORT, LOOPBACK };
-
 /**
  * Every path the single-page app owns. Listed rather than wildcarded, because a
  * blanket "/*" outranks the fetch handler and would swallow /api as well.

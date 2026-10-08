@@ -15,7 +15,14 @@ const ROOT = resolve(import.meta.dir, "../.test-home-sandbox-guard");
  */
 const FAKE_HOME = resolve(ROOT, "home");
 const PAL_HOME = resolve(ROOT, "pal");
-const AGENT_DIRS = [".claude", ".cursor", ".copilot", ".codex", ".agents"];
+const AGENT_DIRS = [
+  ".claude",
+  ".cursor",
+  ".copilot",
+  ".codex",
+  ".gemini/config/plugins/pal",
+  ".agents",
+];
 
 /** Link a skill the way a test that sandboxes PAL_HOME but forgets the agent dirs would. */
 function linkWithUnsandboxedAgentDirs() {
@@ -30,6 +37,7 @@ function linkWithUnsandboxedAgentDirs() {
     "PAL_CURSOR_DIR",
     "PAL_COPILOT_DIR",
     "PAL_CODEX_DIR",
+    "PAL_GEMINI_DIR",
     "PAL_OPENCODE_DIR",
     "PAL_AGENTS_DIR",
   ]) {

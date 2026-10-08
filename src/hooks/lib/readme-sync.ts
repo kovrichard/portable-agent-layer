@@ -16,40 +16,13 @@ interface SyncResult {
 
 /** Files that, when changed, should trigger a README check. */
 export const WATCHED_PATHS = [
-  "src/cli/index.ts",
+  "src/cli",
   "src/hooks/lib/paths.ts",
   "src/hooks/lib/inference.ts",
   "src/tools/youtube-analyze.ts",
   "assets/skills",
   "assets/agents",
 ];
-
-/**
- * A flag spelling of a command the README documents under its canonical name,
- * or the `cli` prefix the dispatcher consumes before a command is ever named.
- */
-function isAliasOrInternalRoute(cmd: string): boolean {
-  return ["--help", "-h", "help", "-v", "--version", "cli"].includes(cmd);
-}
-
-/** Extract CLI command names from the switch statement in index.ts */
-function extractCliCommands(): string[] {
-  const pkg = palPkg();
-  const cliPath = resolve(pkg, "src", "cli", "index.ts");
-  if (!existsSync(cliPath)) return [];
-
-  const content = readFileSync(cliPath, "utf-8");
-  const matches = content.matchAll(/case\s+"([^"]+)":/g);
-  const commands: string[] = [];
-
-  for (const match of matches) {
-    const cmd = match[1];
-    if (isAliasOrInternalRoute(cmd)) continue;
-    commands.push(cmd);
-  }
-
-  return [...new Set(commands)];
-}
 
 /** Extract PAL_* env var names from paths.ts + API keys from source */
 function extractEnvVars(): string[] {
@@ -113,7 +86,7 @@ function documentedSkillNames(readme: string): string[] {
 }
 
 /** Validate that README.md documents all code surfaces. */
-export function validateReadmeSync(): SyncResult {
+export function validateReadmeSync(cliCommands: string[]): SyncResult {
   const pkg = palPkg();
   const readmePath = resolve(pkg, "README.md");
 
@@ -124,8 +97,7 @@ export function validateReadmeSync(): SyncResult {
   const readme = readFileSync(readmePath, "utf-8");
   const issues: string[] = [];
 
-  // Check CLI commands
-  for (const cmd of extractCliCommands()) {
+  for (const cmd of cliCommands) {
     if (!readme.includes(`pal cli ${cmd}`)) {
       issues.push(`CLI command "${cmd}" exists in code but not documented in README`);
     }

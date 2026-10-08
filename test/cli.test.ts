@@ -19,6 +19,7 @@ function pal(...args: string[]) {
       PAL_CURSOR_DIR: resolve(TEST_HOME, ".cursor"),
       PAL_COPILOT_DIR: resolve(TEST_HOME, ".copilot"),
       PAL_CODEX_DIR: resolve(TEST_HOME, ".codex"),
+      PAL_GEMINI_DIR: resolve(TEST_HOME, ".gemini"),
       PAL_AGENTS_DIR: resolve(TEST_HOME, ".agents"),
     },
     encoding: "utf-8",
@@ -41,7 +42,7 @@ describe("pal help", () => {
     const result = pal("help");
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("pal cli <command>");
-    expect(result.stdout).toContain("pal cli init");
+    expect(result.stdout).toMatch(/^ {2}init\s/m);
   });
 
   test("--help flag works", () => {
@@ -99,7 +100,7 @@ describe("pal cli unknown", () => {
   test("unknown command exits with error", () => {
     const result = pal("cli", "banana");
     expect(result.status).toBe(1);
-    const output = result.stdout + result.stderr;
-    expect(output).toContain("Unknown command: banana");
+    expect(result.stderr).toStartWith("error: unknown command 'banana'");
+    expect(result.stderr).toContain("Usage: pal cli <command>");
   });
 });

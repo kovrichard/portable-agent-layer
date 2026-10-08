@@ -18,8 +18,13 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, resolve, sep } from "node:path";
-import { AGENT_PLATFORMS, type AgentPlatform } from "../hooks/lib/agent-definition";
-import { assets, palHome, platform } from "../hooks/lib/paths";
+import {
+  AGENT_NAMES,
+  AGENT_REGISTRY,
+  type AgentName,
+  skillsDirOf,
+} from "../hooks/lib/agent-registry";
+import { agentDirOverrides, assets, palHome, platform } from "../hooks/lib/paths";
 import { declaredTriggers } from "../hooks/lib/skill-triggers";
 import { agentFileName, renderAgentForPlatform } from "./agent-render";
 
@@ -844,20 +849,10 @@ function pruneStaleSkillLinks(agentSkillsDir: string): string[] {
   return removed;
 }
 
-/**
- * Agent skills directories that need a per-skill discovery link.
- *
- * opencode is intentionally absent: it discovers the whole ~/.pal/skills/ tree
- * via the ~/.agents/skills → ~/.pal/skills symlink, so any personal skill is
- * picked up without a per-skill link.
- */
 function perSkillAgentDirs(): { agent: string; dir: string }[] {
-  return [
-    { agent: "claude", dir: resolve(platform.claudeDir(), "skills") },
-    { agent: "cursor", dir: resolve(platform.cursorDir(), "skills") },
-    { agent: "copilot", dir: resolve(platform.copilotDir(), "skills") },
-    { agent: "codex", dir: resolve(platform.codexDir(), "skills") },
-  ];
+  return AGENT_NAMES.filter(
+    (agent) => AGENT_REGISTRY[agent].skills === "own-skills-dir"
+  ).map((agent) => ({ agent, dir: skillsDirOf(agent) }));
 }
 
 /**
@@ -890,15 +885,9 @@ export function linkPersonalSkill(name: string): string[] {
  * PAL_*_DIR vars at a sandbox silently rewires their real setup.
  */
 function realAgentRoots(): string[] {
-  const h = homedir();
   return [
-    resolve(h, ".pal"),
-    resolve(h, ".claude"),
-    resolve(h, ".cursor"),
-    resolve(h, ".copilot"),
-    resolve(h, ".codex"),
-    resolve(h, ".agents"),
-    resolve(h, ".config", "opencode"),
+    resolve(homedir(), ".pal"),
+    ...agentDirOverrides().map(({ realDir }) => realDir),
   ];
 }
 
@@ -917,8 +906,9 @@ function assertInsideTestSandbox(link: string): void {
   if (!escaped) return;
   throw new Error(
     `Refusing to write ${link}: outside the test sandbox (${escaped} is a real agent directory). ` +
-      "Point PAL_CLAUDE_DIR, PAL_CURSOR_DIR, PAL_COPILOT_DIR, PAL_CODEX_DIR, " +
-      "PAL_OPENCODE_DIR and PAL_AGENTS_DIR at a temp directory in this test."
+      `Point ${agentDirOverrides()
+        .map(({ env }) => env)
+        .join(", ")} at a temp directory in this test.`
   );
 }
 
@@ -1044,7 +1034,7 @@ const shippedAgentSource = (stem: string) =>
   readFileSync(resolve(assets.agents(), `${stem}.md`), "utf-8");
 
 /** Install agents for a platform into a target directory. Always overwrites. */
-function installAgents(targetDir: string, platform: AgentPlatform): number {
+function installAgents(targetDir: string, platform: AgentName): number {
   if (!existsSync(assets.agents())) return 0;
 
   mkdirSync(targetDir, { recursive: true });
@@ -1064,7 +1054,7 @@ function installAgents(targetDir: string, platform: AgentPlatform): number {
 }
 
 /** Shipped agents in targetDir that differ from what installAgents would write there. */
-export function staleShippedAgents(targetDir: string, agent: AgentPlatform): string[] {
+export function staleShippedAgents(targetDir: string, agent: AgentName): string[] {
   if (!existsSync(assets.agents())) return [];
   const isStale = (stem: string) => {
     const installed = resolve(targetDir, agentFileName(stem, agent));
@@ -1078,7 +1068,7 @@ export function staleShippedAgents(targetDir: string, agent: AgentPlatform): str
 }
 
 /** Remove PAL agents from a directory. */
-function uninstallAgents(targetDir: string, platform: AgentPlatform): string[] {
+function uninstallAgents(targetDir: string, platform: AgentName): string[] {
   if (!existsSync(assets.agents())) return [];
 
   const removed: string[] = [];
@@ -1113,6 +1103,10 @@ export function copyAgentsForCodex(codexAgentsDir: string): number {
   return installAgents(codexAgentsDir, "codex");
 }
 
+export function copyAgentsForAntigravity(pluginAgentsDir: string): number {
+  return installAgents(pluginAgentsDir, "antigravity");
+}
+
 export function removeAgentsFromCursor(cursorAgentsDir: string): string[] {
   return uninstallAgents(cursorAgentsDir, "cursor");
 }
@@ -1138,20 +1132,13 @@ const palAgentsStore = () => resolve(palHome(), "agents");
  * written into. An agent counts as installed when its agents directory already
  * exists (mirrors linkPersonalSkill's per-agent gate).
  */
-function personalSubagentTargets(): { agent: AgentPlatform; dir: string }[] {
-  return AGENT_PLATFORMS.map((agent) => ({ agent, dir: nativeAgentsDir(agent) }));
+function personalSubagentTargets(): { agent: AgentName; dir: string }[] {
+  return AGENT_NAMES.map((agent) => ({ agent, dir: nativeAgentsDir(agent) }));
 }
 
 /** The directory each agent reads its subagent definitions from. */
-export function nativeAgentsDir(agent: AgentPlatform): string {
-  const home = {
-    claude: platform.claudeDir,
-    opencode: platform.opencodeDir,
-    cursor: platform.cursorDir,
-    copilot: platform.copilotDir,
-    codex: platform.codexDir,
-  }[agent];
-  return resolve(home(), "agents");
+export function nativeAgentsDir(agent: AgentName): string {
+  return resolve(AGENT_REGISTRY[agent].home(), "agents");
 }
 
 /** Names of the subagents PAL ships (assets/agents/*.md). */
@@ -1203,7 +1190,7 @@ export function installPersonalSubagent(name: string): string[] {
   return renders.map(({ agent }) => agent);
 }
 
-function renderForPersonalSubagent(content: string, agent: AgentPlatform): string {
+function renderForPersonalSubagent(content: string, agent: AgentName): string {
   try {
     return renderAgentForPlatform(content, agent);
   } catch (e) {
@@ -1211,8 +1198,12 @@ function renderForPersonalSubagent(content: string, agent: AgentPlatform): strin
   }
 }
 
-/** Load and resolve the Copilot hooks template, substituting PKG_ROOT */
-export function loadCopilotHooksTemplate(templatePath: string, pkgRoot: string): unknown {
+/** Any agent's hooks template with PKG_ROOT filled in, parsed. */
+export function loadHooksTemplate(
+  templatePath: string,
+  pkgRoot: string,
+  agentLabel: string
+): unknown {
   const resolved = readFileSync(templatePath, "utf-8").replaceAll(
     "{{PKG_ROOT}}",
     pkgRoot
@@ -1220,37 +1211,64 @@ export function loadCopilotHooksTemplate(templatePath: string, pkgRoot: string):
   try {
     return JSON.parse(resolved);
   } catch (e) {
-    throw new Error(`Failed to parse Copilot hooks template at ${templatePath}: ${e}`);
+    throw new Error(
+      `Failed to parse ${agentLabel} hooks template at ${templatePath}: ${e}`
+    );
   }
+}
+
+/** Load and resolve the Copilot hooks template, substituting PKG_ROOT */
+export function loadCopilotHooksTemplate(templatePath: string, pkgRoot: string): unknown {
+  return loadHooksTemplate(templatePath, pkgRoot, "Copilot");
 }
 
 // --- Statusline ---
 
-export type StatuslineTarget = "claude" | "cursor";
+export type StatuslineTarget = Extract<AgentName, "claude" | "cursor" | "antigravity">;
+
+interface StatuslineSlot {
+  dir: () => string;
+  /** The script path as the agent's own config spells it, without the extension. */
+  script: string;
+  powershellFlags: string;
+  extra?: Record<string, unknown>;
+}
+
+const STATUSLINE: Record<StatuslineTarget, StatuslineSlot> = {
+  claude: {
+    dir: platform.claudeDir,
+    script: "~/.claude/statusline",
+    powershellFlags: "-NoProfile -ExecutionPolicy Bypass",
+  },
+  cursor: {
+    dir: platform.cursorDir,
+    script: "~/.cursor/statusline",
+    powershellFlags: "-NoProfile",
+    extra: { updateIntervalMs: 300, timeoutMs: 2000 },
+  },
+  antigravity: {
+    dir: platform.antigravityCliDir,
+    script: "~/.gemini/antigravity-cli/statusline",
+    powershellFlags: "-NoProfile -ExecutionPolicy Bypass",
+  },
+};
 
 function statuslineAgentDir(target: StatuslineTarget): string {
-  return target === "claude" ? platform.claudeDir() : platform.cursorDir();
+  return STATUSLINE[target].dir();
 }
 
 function statuslineCommand(target: StatuslineTarget): string {
-  const isPlatformWin32 = process.platform === "win32";
-  if (target === "cursor") {
-    return isPlatformWin32
-      ? "powershell -NoProfile -File ~/.cursor/statusline.ps1"
-      : "~/.cursor/statusline.sh";
-  }
-  return isPlatformWin32
-    ? "powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/statusline.ps1"
-    : "~/.claude/statusline.sh";
+  const { script, powershellFlags } = STATUSLINE[target];
+  return process.platform === "win32"
+    ? `powershell ${powershellFlags} -File ${script}.ps1`
+    : `${script}.sh`;
 }
 
 function isPalStatuslineCommand(cmd: string, target: StatuslineTarget): boolean {
-  return target === "claude"
-    ? cmd.includes(".claude/statusline")
-    : cmd.includes(".cursor/statusline");
+  return cmd.includes(STATUSLINE[target].script.slice(2));
 }
 
-/** Copy statusline script to ~/.claude/ or ~/.cursor/ for the current platform */
+/** Copy the statusline script into the agent's config dir for the current platform */
 export function copyStatusline(target: StatuslineTarget = "claude"): boolean {
   const agentDir = statuslineAgentDir(target);
   mkdirSync(agentDir, { recursive: true });
@@ -1282,7 +1300,7 @@ export function copyStatusline(target: StatuslineTarget = "claude"): boolean {
   }
 }
 
-/** Remove statusline script from ~/.claude/ or ~/.cursor/ */
+/** Remove the statusline script from the agent's config dir */
 export function removeStatusline(target: StatuslineTarget = "claude"): boolean {
   const isPlatformWin32 = process.platform === "win32";
   const scriptName = isPlatformWin32 ? "statusline.ps1" : "statusline.sh";
@@ -1333,8 +1351,7 @@ export function addStatuslineConfig(
       if (!claudeStatuslineNeedsRefresh(cmd)) {
         return settings;
       }
-    } else if (!isPalStatuslineCommand(cmd, "cursor")) {
-      // Cursor: preserve user-defined statusLine commands
+    } else if (!isPalStatuslineCommand(cmd, target)) {
       return settings;
     }
   }
@@ -1344,13 +1361,13 @@ export function addStatuslineConfig(
     type: "command",
     command,
     padding: 2,
-    ...(target === "cursor" ? { updateIntervalMs: 300, timeoutMs: 2000 } : {}),
+    ...STATUSLINE[target].extra,
   };
 
   return settings;
 }
 
-/** Remove statusLine config from settings (PAL-owned only for Cursor) */
+/** Remove statusLine config from settings (PAL-owned only, except for Claude) */
 export function removeStatuslineConfig(
   settings: Record<string, unknown>,
   target: StatuslineTarget = "claude"
@@ -1366,7 +1383,7 @@ export function removeStatuslineConfig(
   }
 
   const cmd = statusLine.command as string | undefined;
-  if (cmd && isPalStatuslineCommand(cmd, "cursor")) {
+  if (cmd && isPalStatuslineCommand(cmd, target)) {
     delete settings.statusLine;
   }
   return settings;

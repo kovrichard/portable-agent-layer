@@ -29,6 +29,7 @@ function pal(...args: string[]) {
       PAL_CURSOR_DIR: resolve(SANDBOX, ".cursor"),
       PAL_COPILOT_DIR: resolve(SANDBOX, ".copilot"),
       PAL_CODEX_DIR: resolve(SANDBOX, ".codex"),
+      PAL_GEMINI_DIR: resolve(SANDBOX, ".gemini"),
       PAL_AGENTS_DIR: resolve(SANDBOX, ".agents"),
     },
     encoding: "utf-8",

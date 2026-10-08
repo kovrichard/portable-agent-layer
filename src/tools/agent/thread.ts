@@ -11,7 +11,7 @@
  *   pal cli thread --list [--all]
  */
 
-import { parseArgs } from "node:util";
+import { leaf, runCommand, UsageError } from "../lib/command";
 import { emit } from "../lib/emit";
 import { scriptArgs } from "../lib/script-args";
 import {
@@ -23,20 +23,41 @@ import {
   writeThreads,
 } from "../lib/thread";
 
-const HELP = `
-Thread — Manage open threads across sessions
+const DETAILS = `Modes (one of --add, --resolve, --list is required):
+  pal cli thread --add --title "..." [--context "..."]
+  pal cli thread --resolve --id <id>
+  pal cli thread --list [--all]`;
 
-Usage:
-  thread.ts --add --title "..." [--context "..."]
-  thread.ts --resolve --id <id>
-  thread.ts --list [--all]
-`;
+export const command = leaf({
+  summary: "Manage open threads across sessions",
+  options: {
+    add: { type: "boolean", description: "Open a new thread (needs --title)" },
+    resolve: { type: "boolean", description: "Mark a thread resolved (needs --id)" },
+    list: { type: "boolean", description: "Print open threads as JSON" },
+    title: { type: "string", value: "<text>", description: "Title of the thread to add" },
+    context: {
+      type: "string",
+      value: "<text>",
+      description: "Why it matters, what needs to happen (with --add)",
+    },
+    id: { type: "string", value: "<id>", description: "Id of the thread to resolve" },
+    all: { type: "boolean", description: "Include resolved threads (with --list)" },
+  },
+  details: DETAILS,
+  run: ({ values }) => {
+    if (values.add) return add(values.title, values.context);
+    if (values.resolve) return markResolved(values.id);
+    if (values.list) return list(values.all ?? false);
+    throw new UsageError("one of --add, --resolve, --list is required");
+  },
+});
 
-function add(title: string | undefined, context: string | undefined) {
-  if (!title) {
-    console.error("--title required");
-    process.exit(1);
-  }
+export function run(argv: string[] = scriptArgs()): Promise<number> {
+  return runCommand(command, argv, ["pal", "cli", "thread"]);
+}
+
+function add(title: string | undefined, context: string | undefined): undefined {
+  if (!title) throw new UsageError("--add needs --title");
   const thread = addThread(title, context ?? "");
   emit.receipt(threadsFile(), {
     id: thread.id,
@@ -45,52 +66,22 @@ function add(title: string | undefined, context: string | undefined) {
   });
 }
 
-function markResolved(id: string | undefined) {
-  if (!id) {
-    console.error("--id required");
-    process.exit(1);
-  }
+function markResolved(id: string | undefined): number {
+  if (!id) throw new UsageError("--resolve needs --id");
   const file = threadsFile();
   const resolution = resolveThreadIn(readThreads(file), id, new Date());
   if (!resolution) {
     console.error(`Thread not found: ${id}`);
-    process.exit(1);
+    return 1;
   }
   writeThreads(resolution.threads, file);
   emit.receipt(file, { id, status: "resolved", title: resolution.thread.title });
+  return 0;
 }
 
-export function run(argv: string[] = scriptArgs()) {
-  const { values } = parseArgs({
-    args: argv,
-    options: {
-      add: { type: "boolean" },
-      resolve: { type: "boolean" },
-      list: { type: "boolean" },
-      title: { type: "string" },
-      context: { type: "string" },
-      id: { type: "string" },
-      all: { type: "boolean" },
-      help: { type: "boolean", short: "h" },
-    },
-  });
-
-  let cmd: string | null = null;
-  if (values.add) cmd = "add";
-  else if (values.resolve) cmd = "resolve";
-  else if (values.list) cmd = "list";
-
-  if (values.help || !cmd) {
-    console.log(HELP);
-    process.exit(cmd ? 0 : 1);
-  }
-
-  if (cmd === "add") add(values.title, values.context);
-  if (cmd === "resolve") markResolved(values.id);
-  if (cmd === "list") {
-    const threads = visibleThreads(readThreads(), values.all ?? false);
-    emit.data(JSON.stringify({ count: threads.length, threads }, null, 2));
-  }
+function list(includeResolved: boolean): undefined {
+  const threads = visibleThreads(readThreads(), includeResolved);
+  emit.data(JSON.stringify({ count: threads.length, threads }, null, 2));
 }
 
-if (import.meta.main) run();
+if (import.meta.main) process.exit(await run());

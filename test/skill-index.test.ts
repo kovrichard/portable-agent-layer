@@ -16,6 +16,7 @@ const AGENT_DIRS = {
   PAL_CURSOR_DIR: resolve(HOME, ".cursor"),
   PAL_COPILOT_DIR: resolve(HOME, ".copilot"),
   PAL_CODEX_DIR: resolve(HOME, ".codex"),
+  PAL_GEMINI_DIR: resolve(HOME, ".gemini"),
   PAL_AGENTS_DIR: resolve(HOME, ".agents"),
 };
 const saved: Record<string, string | undefined> = {};

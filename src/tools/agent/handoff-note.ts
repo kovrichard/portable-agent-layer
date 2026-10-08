@@ -11,7 +11,7 @@
  */
 
 import { writeFileSync } from "node:fs";
-import { parseArgs } from "node:util";
+import { leaf, runCommand, UsageError } from "../lib/command";
 import { emit } from "../lib/emit";
 import {
   handoffFile,
@@ -22,68 +22,65 @@ import {
 } from "../lib/handoff-note";
 import { scriptArgs } from "../lib/script-args";
 
-const HELP = `
-HandoffNote — Write a handoff note for the current project
+const DETAILS = `Required: --title and --text, or --done to close.
 
-Usage:
+Examples:
   pal cli handoff-note --title "what we were doing" --text "what remains"
   pal cli handoff-note --done    # mark session completed
 
-Arguments:
-  --title   Brief title of what was being worked on (5-10 words)
-  --text    What remains unfinished — decisions made, next steps, blockers
-  --waiting What this needs from you before it can move (a decision, an answer, access)
-  --done    Mark as completed; suppresses "pick up where you left off" injection
+Output: writes to memory/state/last-handoff.json keyed by cwd`;
 
-Output: writes to memory/state/last-handoff.json keyed by cwd
-`;
+export const command = leaf({
+  summary: "Write a handoff note for the current project",
+  options: {
+    title: {
+      type: "string",
+      value: "<text>",
+      description: "Brief title of what was being worked on (5-10 words)",
+    },
+    text: {
+      type: "string",
+      value: "<text>",
+      description: "What remains unfinished — decisions made, next steps, blockers",
+    },
+    waiting: {
+      type: "string",
+      value: "<text>",
+      description:
+        "What this needs from you before it can move (a decision, an answer, access)",
+    },
+    done: {
+      type: "boolean",
+      description: `Mark as completed; suppresses "pick up where you left off" injection`,
+    },
+  },
+  details: DETAILS,
+  run: ({ values }) => {
+    const { title, text, waiting, done } = values;
+    if (done) {
+      return saveNote({
+        cwd: process.cwd(),
+        title: title || "session",
+        text: text || "",
+        done: true,
+      });
+    }
+    if (!title || !text) {
+      throw new UsageError("--title and --text are required (or --done to close)");
+    }
+    return saveNote({ cwd: process.cwd(), title, text, done: false, waitingOn: waiting });
+  },
+});
 
-function saveNote(note: NoteInput): void {
+export function run(argv: string[] = scriptArgs()): Promise<number> {
+  return runCommand(command, argv, ["pal", "cli", "handoff-note"]);
+}
+
+function saveNote(note: NoteInput): undefined {
   const file = handoffFile();
   const store = recordNote(readHandoffs(file), note, new Date());
   writeFileSync(file, JSON.stringify(store, null, 2), "utf-8");
   emit.receipt(file, { status: statusOf(note), entries: Object.keys(store).length });
 }
 
-export function run(argv: string[] = scriptArgs()) {
-  const { values } = parseArgs({
-    args: argv,
-    options: {
-      title: { type: "string" },
-      text: { type: "string" },
-      waiting: { type: "string" },
-      done: { type: "boolean" },
-      help: { type: "boolean", short: "h" },
-    },
-  });
-
-  if (values.help) {
-    console.log(HELP);
-    process.exit(0);
-  }
-
-  if (values.done) {
-    saveNote({
-      cwd: process.cwd(),
-      title: values.title || "session",
-      text: values.text || "",
-      done: true,
-    });
-    process.exit(0);
-  }
-
-  if (!values.title || !values.text) {
-    console.error("Required: --title and --text (or --done to close)");
-    process.exit(1);
-  }
-
-  saveNote({
-    cwd: process.cwd(),
-    title: values.title,
-    text: values.text,
-    done: false,
-    waitingOn: values.waiting,
-  });
-}
-
-if (import.meta.main) run();
+if (import.meta.main) process.exit(await run());

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { AGENT_PLATFORMS } from "../src/hooks/lib/agent-definition";
+import { AGENT_NAMES } from "../src/hooks/lib/agent-registry";
 import { agentFileName, renderAgentForPlatform } from "../src/targets/agent-render";
 
 const SHIPPED = resolve(import.meta.dir, "../assets/agents");
@@ -127,7 +127,7 @@ describe("shipped agents", () => {
   const sources = readdirSync(SHIPPED).filter((f) => f.endsWith(".md"));
 
   test.each(
-    AGENT_PLATFORMS.map((platform) => [platform])
+    AGENT_NAMES.map((platform) => [platform])
   )("every one renders for %s", (platform) => {
     for (const file of sources) {
       expect(() =>

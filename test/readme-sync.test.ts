@@ -1,7 +1,26 @@
 import { describe, expect, test } from "bun:test";
-import { shippedSkillNames, validateReadmeSync } from "../src/hooks/lib/readme-sync";
+import { adminCommandNames } from "../src/cli/tree";
+import {
+  shippedSkillNames,
+  validateReadmeSync as validateAgainst,
+} from "../src/hooks/lib/readme-sync";
+
+const validateReadmeSync = () => validateAgainst(adminCommandNames());
 
 describe("README sync", () => {
+  test("checks the CLI's own commands, not the built-in tool verbs", () => {
+    const names = adminCommandNames();
+    expect(names).toContain("install");
+    expect(names).toContain("knowledge");
+    expect(names).not.toContain("thread");
+  });
+
+  test("flags a command the README does not document", () => {
+    expect(validateAgainst(["frobnicate"]).issues).toContain(
+      'CLI command "frobnicate" exists in code but not documented in README'
+    );
+  });
+
   test("README documents all CLI commands", () => {
     const result = validateReadmeSync();
     const cmdIssues = result.issues.filter((i) => i.includes("CLI command"));

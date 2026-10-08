@@ -1,11 +1,6 @@
 /**
  * pal cli actor / pal cli machine — read and rename the two identities PAL keeps.
  *
- *   pal cli actor                 Show this actor's label and id
- *   pal cli actor label <name>    Rename the actor — who caused a record
- *   pal cli machine               Show this install's label and id
- *   pal cli machine label <name>  Rename the machine — where a record was written
- *
  * Renaming touches no stored record: both subjects resolve a label on read, so
  * an id already written into a thread or a reflection reads under the new name
  * immediately. The registry entry is refreshed here so the change also travels
@@ -26,6 +21,7 @@ import {
   setLabel,
 } from "../hooks/lib/machine";
 import { log } from "../targets/lib";
+import { type Group, group, leaf, runCommand, UsageError } from "../tools/lib/command";
 
 export type IdentitySubject = "actor" | "machine";
 
@@ -84,21 +80,31 @@ function rename(subject: IdentitySubject, name: string): number {
   return 0;
 }
 
-export function runIdentity(subject: IdentitySubject, args: string[]): number {
-  const [action, ...rest] = args;
+function renameTo(subject: IdentitySubject, words: string[]): number {
+  const name = words.join(" ").trim();
+  if (!name) throw new UsageError("the name is empty");
+  return rename(subject, name);
+}
 
-  if (!action) return show(subject);
+export function identityCommand(subject: IdentitySubject): Group {
+  const { noun } = SUBJECTS[subject];
+  return group({
+    summary: `Show or rename this ${subject} — ${noun}`,
+    fallback: "show",
+    commands: {
+      show: leaf({
+        summary: `Show this ${subject}'s label and id`,
+        run: () => show(subject),
+      }),
+      label: leaf({
+        summary: `Rename the ${subject}; stored records read under the new name at once`,
+        args: "<name...>",
+        run: ({ positionals }) => renameTo(subject, positionals),
+      }),
+    },
+  });
+}
 
-  if (action === "label") {
-    const name = rest.join(" ").trim();
-    if (!name) {
-      log.error(`Usage: pal cli ${subject} label <name>`);
-      return 1;
-    }
-    return rename(subject, name);
-  }
-
-  log.error(`Unknown ${subject} action: ${action}`);
-  log.info(`Usage: pal cli ${subject} [label <name>]`);
-  return 1;
+export function runIdentity(subject: IdentitySubject, args: string[]): Promise<number> {
+  return runCommand(identityCommand(subject), args, ["pal", "cli", subject]);
 }

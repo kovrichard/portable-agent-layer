@@ -4,6 +4,7 @@
  */
 
 import { readFileSync } from "node:fs";
+import { antigravityMessage } from "./antigravity-transcript";
 
 interface Message {
   role: string;
@@ -61,7 +62,8 @@ function codexMessage(payload: CodexPayload | undefined): Message | null {
 // Claude Code tags transcript lines `type: "user"|"assistant"` with the text
 // under `message.content`. VS Code Copilot's own event log instead uses
 // `type: "user.message"|"assistant.message"` with a flat `data.content`
-// string. Codex nests each message as a `response_item` payload.
+// string. Codex nests each message as a `response_item` payload. Antigravity
+// writes one step per line, `type: "USER_INPUT"|"PLANNER_RESPONSE"|…`.
 function parseTranscriptEntry(entry: {
   type?: string;
   message?: { content?: unknown };
@@ -78,14 +80,15 @@ function parseTranscriptEntry(entry: {
     const role = entry.type === "user.message" ? "user" : "assistant";
     return typeof text === "string" && text ? { role, content: text } : null;
   }
-  return null;
+  return antigravityMessage(entry);
 }
 
 /**
  * Read an agent transcript JSONL file and extract user/assistant messages.
  * Supports Claude Code's `{type:"user"|"assistant", message:{content}}` shape
  * VS Code Copilot's `{type:"user.message"|"assistant.message", data:{content}}` shape,
- * and Codex's `{type:"response_item", payload:{type:"message", role, content}}` shape.
+ * Codex's `{type:"response_item", payload:{type:"message", role, content}}` shape,
+ * and Antigravity's `{type:"USER_INPUT"|"PLANNER_RESPONSE", source, content}` steps.
  */
 export function readTranscriptFile(path: string): Message[] {
   try {

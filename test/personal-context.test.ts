@@ -9,6 +9,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { runCommand } from "../src/tools/lib/command";
 
 // These two commands are the onboarding skill's only way in: settings are
 // hook-protected, and the skill must not decide "unanswered" for itself.
@@ -39,21 +40,30 @@ function storedTimezone(): string | undefined {
   return JSON.parse(readFileSync(path, "utf-8")).identity?.principal?.timezone;
 }
 
-async function capture(work: () => number): Promise<{ code: number; out: string }> {
+async function capture(
+  work: () => Promise<number>
+): Promise<{ code: number; out: string }> {
   const original = console.log;
   let out = "";
   console.log = (...args: unknown[]) => {
     out += `${args.join(" ")}\n`;
   };
   try {
-    return { code: work(), out };
+    const code = await work();
+    return { code, out };
   } finally {
     console.log = original;
   }
 }
 
 async function cli() {
-  return await import(`../src/cli/personal-context.ts?t=${Date.now()}`);
+  const fresh = await import(`../src/cli/personal-context.ts?t=${Date.now()}`);
+  return {
+    runTelos: (args: string[]) =>
+      runCommand(fresh.telosCommand, args, ["pal", "cli", "telos"]),
+    runTimezone: (args: string[]) =>
+      runCommand(fresh.timezoneCommand, args, ["pal", "cli", "timezone"]),
+  };
 }
 
 describe("pal cli telos", () => {

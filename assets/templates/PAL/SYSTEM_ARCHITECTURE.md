@@ -394,7 +394,7 @@ Relationship notes (O/B types)
 **Tier 2 — Semi-static** (pre-compiled at previous session stop, loaded natively):
 - Self-model, wisdom, opinions, synthesis, failures, steering rules
 - Written to disk by `writeContextDigests()` at Stop time
-- Loaded natively per-agent: `@imports` in CLAUDE.md (Claude Code), `instructions[]` in opencode config, `.mdc` rules in `~/.cursor/rules/` (Cursor), `.instructions.md` in `~/.copilot/instructions/` (Copilot)
+- Loaded natively per-agent: `@imports` in CLAUDE.md (Claude Code), `instructions[]` in opencode config, `.mdc` rules in `~/.cursor/rules/` (Cursor), `.instructions.md` in `~/.copilot/instructions/` (Copilot), always-on rules in `~/.gemini/config/plugins/pal/rules/` (Antigravity)
 - Content is global/user-level — safe to pre-compile (not project-scoped)
 
 **Tier 3 — Dynamic** (injected fresh each session by LoadContext hook):
@@ -459,6 +459,7 @@ The active agent is detected via `getActiveAgent()` in `src/hooks/lib/agent.ts` 
 | `cursor` | `cursor-agent` | argv-only, no stdin |
 | `copilot` | `copilot` | GitHub Copilot CLI |
 | `codex` | `codex exec` | Falls back to `PAL_OPENAI_API_KEY` if the `codex` binary is missing |
+| `antigravity` | `agy --input-format stream-json` | Runs in an empty temp workspace under a tool-less `pal-inference` agent, which keeps PAL's plugin rules out of the reply; Gemini Flash low (small) / high (medium). The run's conversation files are deleted afterwards |
 
 If no CLI binary is available, the dispatcher falls back to `PAL_ANTHROPIC_API_KEY` (Haiku via the Anthropic API) or `PAL_OPENAI_API_KEY` (OpenAI API). `canInfer()` returns `false` only when both routes are unavailable — handlers then skip silently.
 
@@ -569,6 +570,8 @@ All paths resolve through `src/hooks/lib/paths.ts`:
 | Cursor config | `~/.cursor` | `PAL_CURSOR_DIR` |
 | Copilot config | `~/.copilot` | `PAL_COPILOT_DIR` |
 | Codex config | `~/.codex` | `PAL_CODEX_DIR` |
+| Antigravity CLI plugin | `~/.gemini/config/plugins/pal` | `PAL_GEMINI_DIR` (replaces `~/.gemini`) |
+| Antigravity CLI settings (PAL's command allowlist only) | `~/.gemini/antigravity-cli/settings.json` | `PAL_GEMINI_DIR` |
 | Agents dir | `~/.agents` | `PAL_AGENTS_DIR` |
 
 ### Portability Contract

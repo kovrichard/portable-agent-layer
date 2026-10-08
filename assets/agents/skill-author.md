@@ -18,6 +18,23 @@ cursor:
   model: inherit
   readonly: false
   is_background: false
+
+codex:
+  model: gpt-6-astra
+
+antigravity:
+  model: pro
+  subagent: true
+  mainAgent: false
+  tools:
+    - run_command
+    - view_file
+    - write_to_file
+    - replace_file_content
+    - multi_replace_file_content
+    - grep_search
+    - find_by_name
+    - list_dir
 ---
 
 You author a single new personal skill for this user. You are handed a **skill name** and a **skill description**, and optionally hints about tooling or triggers.

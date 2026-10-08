@@ -17,6 +17,19 @@ cursor:
   model: inherit
   readonly: false
   is_background: false
+
+antigravity:
+  model: inherit
+  subagent: true
+  mainAgent: false
+  tools:
+    - run_command
+    - search_web
+    - read_url_content
+    - view_file
+    - grep_search
+    - find_by_name
+    - list_dir
 ---
 
 You are a research specialist focused on **investigative rigor and source verification**.
