@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { log } from "../src/targets/lib";
+import { capturingLog, type LogLevel, log } from "../src/targets/lib";
 
 // The suite drives these installers by the hundred against temp directories, so
 // their per-item narration describes files that were never on this machine —
@@ -57,4 +57,58 @@ describe("the levels a caller reports results through", () => {
     expect(lines[1]).toContain("Removed 6 agent(s): a, b");
     expect(lines[2]).toContain("Skipped renamed-away");
   });
+
+  test("piped, the [pal] prefix carries no colour codes", () => {
+    const lines = captureOut(() => log.warn("Kept your settings"));
+    expect(lines).toEqual(["[pal] Kept your settings"]);
+  });
 });
+
+describe("capturing an installer's log", () => {
+  test("hands each line to the caller instead of printing it", async () => {
+    const seen: [LogLevel, string][] = [];
+    const lines = await captureOutAsync(() =>
+      capturingLog(
+        (level, message) => {
+          seen.push([level, message]);
+        },
+        async () => {
+          log.warn("Kept your settings");
+          log.success("Merged PAL settings");
+        }
+      )
+    );
+
+    expect(lines).toEqual([]);
+    expect(seen).toEqual([
+      ["warn", "Kept your settings"],
+      ["success", "Merged PAL settings"],
+    ]);
+  });
+
+  test("prints again once the work is done, even if it failed", async () => {
+    const failed = capturingLog(
+      () => {},
+      async () => {
+        throw new Error("broke");
+      }
+    );
+    await expect(failed).rejects.toThrow("broke");
+
+    expect(captureOut(() => log.warn("after"))).toEqual(["[pal] after"]);
+  });
+});
+
+async function captureOutAsync(fn: () => Promise<unknown>): Promise<string[]> {
+  const lines: string[] = [];
+  const original = console.log;
+  console.log = (...args: unknown[]) => {
+    lines.push(args.join(" "));
+  };
+  try {
+    await fn();
+  } finally {
+    console.log = original;
+  }
+  return lines;
+}
