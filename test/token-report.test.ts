@@ -1,20 +1,24 @@
 import { describe, expect, test } from "bun:test";
 import {
+  costLabel,
   detailedLine,
   fmt,
   fmtCost,
+  modelLabel,
   parseRtkSummary,
   type RtkGain,
   rowLine,
   rtkLines,
+  type UsageData,
   usageLines,
 } from "../src/tools/lib/token-report";
 import {
+  type AgentUsage,
   addToBucket,
   type Bucket,
-  type ClaudeCodeUsage,
   emptyBucket,
   emptyTimeBuckets,
+  grandTotal,
   type PalInferenceUsage,
   type TimeBuckets,
 } from "../src/tools/lib/usage-buckets";
@@ -43,7 +47,7 @@ function timeBucketsOf(model: string, scale: number): TimeBuckets {
 
 const NO_RTK: RtkGain = { installed: false, summary: null };
 
-const EMPTY_CC: ClaudeCodeUsage = {
+const EMPTY_CC: AgentUsage = {
   buckets: emptyTimeBuckets(),
   byModel: {},
   byProject: {},
@@ -54,6 +58,20 @@ const EMPTY_PAL: PalInferenceUsage = {
   byModel: {},
   byCaller: {},
 };
+
+function report(
+  cc: AgentUsage = EMPTY_CC,
+  pal: PalInferenceUsage = EMPTY_PAL,
+  more: Partial<UsageData> = {}
+): UsageData {
+  return {
+    agents: [{ label: "Claude Code", usage: cc }],
+    pal,
+    rtk: NO_RTK,
+    untracked: [],
+    ...more,
+  };
+}
 
 const find = (lines: string[], text: string) => lines.find((l) => l.includes(text));
 
@@ -78,6 +96,33 @@ describe("fmt", () => {
   test("switches to M exactly at a million", () => {
     expect(fmt(1_000_000)).toBe("1.0M");
     expect(fmt(999_999)).toBe("1000.0k");
+  });
+});
+
+describe("costLabel", () => {
+  test("shows a dash, not $0, when no call of the bucket had a price", () => {
+    const bucket = { ...emptyBucket(), calls: 2, unpriced: 2 };
+    expect(costLabel(bucket)).toBe("-");
+    expect(costLabel(bucket, "—")).toBe("—");
+  });
+
+  test("shows the priced part when only some calls went unpriced", () => {
+    const bucket = { ...emptyBucket(), calls: 2, unpriced: 1, cost: 1.5 };
+    expect(costLabel(bucket)).toBe("$1.50");
+  });
+
+  test("an empty bucket costs $0, since nothing went unpriced", () => {
+    expect(costLabel(emptyBucket())).toBe("$0.0000");
+  });
+});
+
+describe("modelLabel", () => {
+  test("drops a provider path, keeping the model's own name", () => {
+    expect(modelLabel("accounts/fireworks/models/kimi-k3")).toBe("kimi-k3");
+  });
+
+  test("drops the claude- prefix", () => {
+    expect(modelLabel("claude-opus-5")).toBe("opus-5");
   });
 });
 
@@ -187,8 +232,10 @@ describe("parseRtkSummary", () => {
 });
 
 describe("usageLines", () => {
-  test("always opens with the Claude Code section and its four windows", () => {
-    const lines = usageLines(EMPTY_CC, EMPTY_PAL, NO_RTK);
+  test("opens with an agent's section and its four windows once it made a call", () => {
+    const lines = usageLines(
+      report({ ...EMPTY_CC, buckets: timeBucketsOf("claude-opus-5", 10) })
+    );
     expect(lines[0]).toBe("\n  Claude Code Usage\n");
     expect(lines[1]).toContain("Today");
     expect(lines[2]).toContain("7d");
@@ -198,33 +245,105 @@ describe("usageLines", () => {
 
   // The exact count is what pins "omits": a section that returned a placeholder
   // instead of nothing would still not contain the heading it was asked about.
-  test("with nothing recorded, emits the four windows, rtk and the total — and nothing else", () => {
-    expect(usageLines(EMPTY_CC, EMPTY_PAL, NO_RTK)).toEqual([
-      "\n  Claude Code Usage\n",
-      rowLine("Today", emptyBucket()),
-      rowLine("7d", emptyBucket()),
-      rowLine("30d", emptyBucket()),
-      rowLine("Total", emptyBucket()),
+  test("with nothing recorded, says so, then rtk and the total — and nothing else", () => {
+    expect(usageLines(report())).toEqual([
+      "\n  No agent usage recorded\n",
       "\n  rtk Compression\n",
       "  rtk not installed",
       "\n  Grand Total: $0.0000\n",
     ]);
   });
 
+  test("gives every agent that made a call its own section, and none to one that did not", () => {
+    const used = { ...EMPTY_CC, buckets: timeBucketsOf("gpt-5.5", 10) };
+    const lines = usageLines(
+      report(EMPTY_CC, EMPTY_PAL, {
+        agents: [
+          { label: "Claude Code", usage: EMPTY_CC },
+          { label: "Codex", usage: used },
+          { label: "opencode", usage: used },
+        ],
+      })
+    );
+    expect(lines).toContain("\n  Codex Usage\n");
+    expect(lines).toContain("\n  opencode Usage\n");
+    expect(find(lines, "Claude Code")).toBeUndefined();
+  });
+
+  test("names the agents on this machine that keep no token counts", () => {
+    const lines = usageLines(
+      report(EMPTY_CC, EMPTY_PAL, { untracked: ["Cursor", "Antigravity CLI"] })
+    );
+    expect(lines).toContain("\n  Cursor, Antigravity CLI: no token counts recorded");
+  });
+
+  test("names the agents the grand total cannot price, and leaves them out of it", () => {
+    const unpriced = emptyTimeBuckets();
+    for (const window of Object.values(unpriced)) {
+      Object.assign(window, { calls: 3, unpriced: 3, input: 1_000_000 });
+    }
+    const lines = usageLines(
+      report(EMPTY_CC, EMPTY_PAL, {
+        agents: [{ label: "Codex", usage: { ...EMPTY_CC, buckets: unpriced } }],
+      })
+    );
+    expect(lines).toContain("\n  Not priced: Codex (no per-token price)");
+    expect(lines.at(-1)).toBe("\n  Grand Total: $0.0000\n");
+  });
+
+  test("adds up a model that two agents both used into one row", () => {
+    const agentWith = (model: string) => ({
+      label: model,
+      usage: { ...EMPTY_CC, byModel: { [model]: bucketOf("claude-opus-5", 10) } },
+    });
+    const lines = usageLines(
+      report(EMPTY_CC, EMPTY_PAL, {
+        agents: [agentWith("gpt-5.5"), agentWith("gpt-5.5")],
+      })
+    );
+    const row = find(lines, "gpt-5.5 ") as string;
+    expect(row).toBe(
+      detailedLine(
+        "gpt-5.5",
+        grandTotal([bucketOf("claude-opus-5", 10), bucketOf("claude-opus-5", 10)])
+      )
+    );
+  });
+
+  test("adds up a project that two agents both worked in", () => {
+    const agentIn = (project: string, scale: number) => ({
+      label: project,
+      usage: {
+        ...EMPTY_CC,
+        byProject: { [project]: timeBucketsOf("claude-opus-5", scale) },
+      },
+    });
+    const lines = usageLines(
+      report(EMPTY_CC, EMPTY_PAL, {
+        agents: [agentIn("pal", 10), agentIn("pal", 10), agentIn("other", 1)],
+      })
+    );
+    const merged = grandTotal([
+      timeBucketsOf("claude-opus-5", 10).total,
+      timeBucketsOf("claude-opus-5", 10).total,
+    ]);
+    expect(find(lines, "  pal ")).toBe(rowLine("pal", merged));
+  });
+
   test("omits the model section when nothing was recorded", () => {
-    const lines = usageLines(EMPTY_CC, EMPTY_PAL, NO_RTK);
+    const lines = usageLines(report());
     expect(find(lines, "By Model")).toBeUndefined();
   });
 
   test("shows the model section, costliest model first", () => {
-    const cc: ClaudeCodeUsage = {
+    const cc: AgentUsage = {
       ...EMPTY_CC,
       byModel: {
         "claude-haiku-4-5-20251001": bucketOf("claude-haiku-4-5-20251001", 1_000),
         "claude-opus-5": bucketOf("claude-opus-5", 1_000),
       },
     };
-    const lines = usageLines(cc, EMPTY_PAL, NO_RTK);
+    const lines = usageLines(report(cc));
     const heading = lines.findIndex((l) => l.includes("By Model (all time)"));
     expect(heading).toBeGreaterThan(-1);
     expect(lines[heading + 1]).toContain("opus-5");
@@ -233,8 +352,8 @@ describe("usageLines", () => {
 
   test("strips the claude- prefix from a model name", () => {
     const bucket = bucketOf("claude-opus-5", 10);
-    const cc: ClaudeCodeUsage = { ...EMPTY_CC, byModel: { "claude-opus-5": bucket } };
-    const line = find(usageLines(cc, EMPTY_PAL, NO_RTK), " in  ") as string;
+    const cc: AgentUsage = { ...EMPTY_CC, byModel: { "claude-opus-5": bucket } };
+    const line = find(usageLines(report(cc)), " in  ") as string;
     expect(line).toStartWith("  opus-5 ");
   });
 
@@ -242,38 +361,38 @@ describe("usageLines", () => {
   // two, so the column never collides with the numbers beside it.
   test("holds the default column width for a name that fits", () => {
     const bucket = bucketOf("claude-opus-5", 10);
-    const cc: ClaudeCodeUsage = { ...EMPTY_CC, byModel: { "claude-opus-5": bucket } };
-    const line = find(usageLines(cc, EMPTY_PAL, NO_RTK), " in  ");
+    const cc: AgentUsage = { ...EMPTY_CC, byModel: { "claude-opus-5": bucket } };
+    const line = find(usageLines(report(cc)), " in  ");
     expect(line).toBe(detailedLine("opus-5", bucket, 14));
   });
 
   test("widens the model column for a name longer than the default", () => {
     const long = "claude-a-very-long-model-identifier-9";
     const bucket = bucketOf(long, 1);
-    const cc: ClaudeCodeUsage = { ...EMPTY_CC, byModel: { [long]: bucket } };
-    const line = find(usageLines(cc, EMPTY_PAL, NO_RTK), "a-very-long");
+    const cc: AgentUsage = { ...EMPTY_CC, byModel: { [long]: bucket } };
+    const line = find(usageLines(report(cc)), "a-very-long");
     expect(line).toBe(detailedLine("a-very-long-model-identifier-9", bucket, 32));
   });
 
   test("omits the project section for a single project — it says nothing new", () => {
-    const cc: ClaudeCodeUsage = {
+    const cc: AgentUsage = {
       ...EMPTY_CC,
       byProject: { pal: timeBucketsOf("claude-opus-5", 10) },
     };
-    const lines = usageLines(cc, EMPTY_PAL, NO_RTK);
+    const lines = usageLines(report(cc));
     expect(find(lines, "By Project")).toBeUndefined();
-    expect(lines).toHaveLength(usageLines(EMPTY_CC, EMPTY_PAL, NO_RTK).length);
+    expect(lines).toHaveLength(usageLines(report()).length);
   });
 
   test("shows the project section from two projects up, costliest first", () => {
-    const cc: ClaudeCodeUsage = {
+    const cc: AgentUsage = {
       ...EMPTY_CC,
       byProject: {
         cheap: timeBucketsOf("claude-haiku-4-5-20251001", 10),
         dear: timeBucketsOf("claude-opus-5", 10_000),
       },
     };
-    const lines = usageLines(cc, EMPTY_PAL, NO_RTK);
+    const lines = usageLines(report(cc));
     const heading = lines.findIndex((l) => l.includes("By Project (all time)"));
     expect(heading).toBeGreaterThan(-1);
     expect(lines[heading + 1]).toContain("dear");
@@ -289,7 +408,7 @@ describe("usageLines", () => {
         "gpt-mystery": timeBucketsOf("gpt-mystery", 10),
       },
     };
-    const lines = usageLines(EMPTY_CC, pal, NO_RTK);
+    const lines = usageLines(report(EMPTY_CC, pal));
     expect(find(lines, "PAL Inference (Haiku)")).toBeDefined();
     expect(find(lines, "PAL Inference (Sonnet)")).toBeDefined();
     expect(find(lines, "PAL Inference (gpt-mystery)")).toBeDefined();
@@ -302,7 +421,7 @@ describe("usageLines", () => {
       ...EMPTY_PAL,
       byModel: { "claude-opus-5": timeBucketsOf("claude-opus-5", 10) },
     };
-    expect(usageLines(EMPTY_CC, pal, NO_RTK)).toContain("\n  PAL Inference (opus-5)\n");
+    expect(usageLines(report(EMPTY_CC, pal))).toContain("\n  PAL Inference (opus-5)\n");
   });
 
   test("skips a PAL model that made no calls", () => {
@@ -310,7 +429,7 @@ describe("usageLines", () => {
       ...EMPTY_PAL,
       byModel: { "claude-haiku-4-5-20251001": emptyTimeBuckets() },
     };
-    expect(find(usageLines(EMPTY_CC, pal, NO_RTK), "PAL Inference")).toBeUndefined();
+    expect(find(usageLines(report(EMPTY_CC, pal)), "PAL Inference")).toBeUndefined();
   });
 
   test("gives a PAL inference section the same four windows", () => {
@@ -318,7 +437,7 @@ describe("usageLines", () => {
       ...EMPTY_PAL,
       byModel: { "claude-haiku-4-5-20251001": timeBucketsOf("claude-haiku-4-5", 10) },
     };
-    const lines = usageLines(EMPTY_CC, pal, NO_RTK);
+    const lines = usageLines(report(EMPTY_CC, pal));
     const heading = lines.findIndex((l) => l.includes("PAL Inference"));
     expect(
       lines.slice(heading + 1, heading + 5).map((l) => l.trim().split(" ")[0])
@@ -326,12 +445,12 @@ describe("usageLines", () => {
   });
 
   test("always ends with the grand total", () => {
-    const lines = usageLines(EMPTY_CC, EMPTY_PAL, NO_RTK);
+    const lines = usageLines(report());
     expect(lines[lines.length - 1]).toBe("\n  Grand Total: $0.0000\n");
   });
 
   test("the grand total adds PAL inference to Claude Code, not just one of them", () => {
-    const cc: ClaudeCodeUsage = {
+    const cc: AgentUsage = {
       ...EMPTY_CC,
       buckets: timeBucketsOf("claude-opus-5", 1e6),
     };
@@ -342,13 +461,13 @@ describe("usageLines", () => {
 
     const expected = cc.buckets.total.cost + pal.buckets.total.cost;
     expect(expected).toBeGreaterThan(1);
-    expect(usageLines(cc, pal, NO_RTK).at(-1)).toBe(
+    expect(usageLines(report(cc, pal)).at(-1)).toBe(
       `\n  Grand Total: ${fmtCost(expected)}\n`
     );
   });
 
   test("puts the rtk section between PAL inference and the grand total", () => {
-    const lines = usageLines(EMPTY_CC, EMPTY_PAL, NO_RTK);
+    const lines = usageLines(report());
     const rtk = lines.findIndex((l) => l.includes("rtk Compression"));
     expect(rtk).toBe(lines.length - 3);
   });

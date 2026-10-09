@@ -1,10 +1,7 @@
 /**
- * What has been spent, across the two places PAL can learn it from: Claude Code's
- * own transcripts and PAL's inference log.
- *
- * The tool around this is spawned, so the arithmetic that decides what a month
- * costs was never checked. Both readers take the directory to read rather than
- * finding it themselves, which is the only thing that made them testable.
+ * What has been spent: the buckets every agent's reader fills, Claude Code's
+ * transcripts, and PAL's inference log. Readers take the directory to read
+ * rather than finding it themselves, which is what makes them testable.
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -20,6 +17,7 @@ export interface Bucket {
   cacheRead: number;
   cost: number;
   calls: number;
+  unpriced: number;
 }
 
 export interface TimeBuckets {
@@ -55,6 +53,7 @@ export function emptyBucket(): Bucket {
     cacheRead: 0,
     cost: 0,
     calls: 0,
+    unpriced: 0,
   };
 }
 
@@ -79,20 +78,38 @@ export function horizonsFrom(now: Date): Horizons {
   };
 }
 
-export function addToBucket(bucket: Bucket, model: string, tokens: Tokens): void {
+/** A null cost is a call the agent does not bill per token; its tokens still count. */
+function addCall(bucket: Bucket, tokens: Tokens, cost: number | null, calls = 1): void {
   bucket.input += tokens.input;
   bucket.output += tokens.output;
   bucket.cacheWrite5m += tokens.cacheWrite5m;
   bucket.cacheWrite1h += tokens.cacheWrite1h;
   bucket.cacheRead += tokens.cacheRead;
-  bucket.cost += costOfUsage(model, tokens);
-  bucket.calls++;
+  bucket.cost += cost ?? 0;
+  bucket.calls += calls;
+  if (cost === null) bucket.unpriced += calls;
+}
+
+export function addToBucket(bucket: Bucket, model: string, tokens: Tokens): void {
+  addCall(bucket, tokens, costOfUsage(model, tokens));
 }
 
 /**
  * The windows nest: everything in today is also in the week, the month and the
  * total, so a call is added to every window it falls inside rather than to one.
  */
+function addToWindows(
+  buckets: TimeBuckets,
+  ts: string,
+  horizons: Horizons,
+  add: (bucket: Bucket) => void
+): void {
+  add(buckets.total);
+  if (ts >= horizons.monthAgo) add(buckets.month);
+  if (ts >= horizons.weekAgo) add(buckets.week);
+  if (ts.startsWith(horizons.todayPrefix)) add(buckets.today);
+}
+
 export function addToTimeBuckets(
   buckets: TimeBuckets,
   ts: string,
@@ -100,10 +117,7 @@ export function addToTimeBuckets(
   tokens: Tokens,
   horizons: Horizons
 ): void {
-  addToBucket(buckets.total, model, tokens);
-  if (ts >= horizons.monthAgo) addToBucket(buckets.month, model, tokens);
-  if (ts >= horizons.weekAgo) addToBucket(buckets.week, model, tokens);
-  if (ts.startsWith(horizons.todayPrefix)) addToBucket(buckets.today, model, tokens);
+  addToWindows(buckets, ts, horizons, (bucket) => addToBucket(bucket, model, tokens));
 }
 
 export function totalTokens(bucket: Bucket): number {
@@ -122,10 +136,45 @@ export function projectNameOf(dirName: string): string {
   return segments.length > 1 ? segments.slice(-1)[0] : dirName;
 }
 
-export interface ClaudeCodeUsage {
+export interface AgentUsage {
   buckets: TimeBuckets;
   byModel: Record<string, Bucket>;
   byProject: Record<string, TimeBuckets>;
+}
+
+export function emptyAgentUsage(): AgentUsage {
+  return { buckets: emptyTimeBuckets(), byModel: {}, byProject: {} };
+}
+
+/** One or more model calls of a session, as every agent's reader hands them over. */
+interface UsageCall {
+  ts: string;
+  model: string;
+  project: string;
+  tokens: Tokens;
+  cost: number | null;
+  calls?: number;
+}
+
+export interface UsageTally {
+  usage: AgentUsage;
+  record: (call: UsageCall) => void;
+}
+
+export function usageTally(projectFilter?: string, now: Date = new Date()): UsageTally {
+  const horizons = horizonsFrom(now);
+  const usage = emptyAgentUsage();
+  const record = (call: UsageCall) => {
+    if (typeof projectFilter === "string" && !call.project.includes(projectFilter))
+      return;
+    const add = (bucket: Bucket) => addCall(bucket, call.tokens, call.cost, call.calls);
+    addToWindows(usage.buckets, call.ts, horizons, add);
+    usage.byModel[call.model] ??= emptyBucket();
+    add(usage.byModel[call.model]);
+    usage.byProject[call.project] ??= emptyTimeBuckets();
+    addToWindows(usage.byProject[call.project], call.ts, horizons, add);
+  };
+  return { usage, record };
 }
 
 interface TranscriptLine {
@@ -196,14 +245,9 @@ export function readClaudeCode(
   claudeDir: string,
   projectFilter?: string,
   now: Date = new Date()
-): ClaudeCodeUsage {
-  const horizons = horizonsFrom(now);
-  const result: ClaudeCodeUsage = {
-    buckets: emptyTimeBuckets(),
-    byModel: {},
-    byProject: {},
-  };
-  if (!existsSync(claudeDir)) return result;
+): AgentUsage {
+  const tally = usageTally(projectFilter, now);
+  if (!existsSync(claudeDir)) return tally.usage;
 
   const projectDirs = readdirSync(claudeDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
@@ -226,25 +270,16 @@ export function readClaudeCode(
         if (!line.includes('"usage"')) continue;
         const call = pricedCallOf(line);
         if (!call) continue;
-
-        addToTimeBuckets(result.buckets, call.ts, call.model, call.tokens, horizons);
-
-        result.byModel[call.model] ??= emptyBucket();
-        addToBucket(result.byModel[call.model], call.model, call.tokens);
-
-        result.byProject[projName] ??= emptyTimeBuckets();
-        addToTimeBuckets(
-          result.byProject[projName],
-          call.ts,
-          call.model,
-          call.tokens,
-          horizons
-        );
+        tally.record({
+          ...call,
+          project: projName,
+          cost: costOfUsage(call.model, call.tokens),
+        });
       }
     }
   }
 
-  return result;
+  return tally.usage;
 }
 
 export interface PalInferenceUsage {
@@ -324,6 +359,16 @@ export function grandTotal(buckets: Bucket[]): Bucket {
     grand.cacheRead += bucket.cacheRead;
     grand.cost += bucket.cost;
     grand.calls += bucket.calls;
+    grand.unpriced += bucket.unpriced;
   }
   return grand;
+}
+
+export function mergeTimeBuckets(all: TimeBuckets[]): TimeBuckets {
+  return {
+    today: grandTotal(all.map((b) => b.today)),
+    week: grandTotal(all.map((b) => b.week)),
+    month: grandTotal(all.map((b) => b.month)),
+    total: grandTotal(all.map((b) => b.total)),
+  };
 }

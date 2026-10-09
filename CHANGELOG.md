@@ -1,3 +1,10 @@
+## [0.91.6](https://github.com/kovrichard/portable-agent-layer/compare/v0.91.5...v0.91.6) (2026-10-09)
+
+
+### Bug Fixes
+
+* **usage:** report every agent's token usage in the new cli design ([f36c023](https://github.com/kovrichard/portable-agent-layer/commit/f36c0230e034fb4bbcfbd7533feac5b59304db28))
+
 ## [0.91.5](https://github.com/kovrichard/portable-agent-layer/compare/v0.91.4...v0.91.5) (2026-10-09)
 
 

@@ -7,12 +7,27 @@
  */
 
 import {
+  type AgentUsage,
   type Bucket,
-  type ClaudeCodeUsage,
   grandTotal,
+  mergeTimeBuckets,
   type PalInferenceUsage,
+  type TimeBuckets,
   totalTokens,
 } from "./usage-buckets";
+
+export interface AgentReport {
+  label: string;
+  usage: AgentUsage;
+}
+
+/** `untracked` names the agents on this machine that keep no token counts at all. */
+export interface UsageData {
+  agents: AgentReport[];
+  pal: PalInferenceUsage;
+  rtk: RtkGain;
+  untracked: string[];
+}
 
 export interface RtkSummary {
   total_commands: number;
@@ -44,6 +59,11 @@ export function fmtCost(n: number): string {
   return `$${n.toFixed(4)}`;
 }
 
+/** A bucket whose every call went unpriced has no cost to show, which is not $0. */
+export function costLabel(b: Bucket, dash = "-"): string {
+  return b.calls > 0 && b.unpriced === b.calls ? dash : fmtCost(b.cost);
+}
+
 export function rowLine(
   label: string,
   b: Bucket,
@@ -51,7 +71,7 @@ export function rowLine(
 ): string {
   const tokens = fmt(totalTokens(b)).padStart(8);
   const calls = fmt(b.calls).padStart(5);
-  const cost = fmtCost(b.cost).padStart(8);
+  const cost = costLabel(b).padStart(8);
   return `  ${label.padEnd(labelWidth)} ${tokens} tok  ${calls} calls  ${cost}`;
 }
 
@@ -65,22 +85,19 @@ export function detailedLine(
   const write5m = fmt(b.cacheWrite5m).padStart(7);
   const write1h = fmt(b.cacheWrite1h).padStart(7);
   const read = fmt(b.cacheRead).padStart(8);
-  const cost = fmtCost(b.cost).padStart(8);
+  const cost = costLabel(b).padStart(8);
   return `  ${label.padEnd(labelWidth)} ${input} in  ${output} out  ${write5m} cw5m  ${write1h} cw1h  ${read} cr  ${cost}`;
 }
 
-function windowLines(buckets: {
-  today: Bucket;
-  week: Bucket;
-  month: Bucket;
-  total: Bucket;
-}): string[] {
-  return [
-    rowLine("Today", buckets.today),
-    rowLine("7d", buckets.week),
-    rowLine("30d", buckets.month),
-    rowLine("Total", buckets.total),
-  ];
+export const WINDOWS = [
+  ["Today", "today"],
+  ["7d", "week"],
+  ["30d", "month"],
+  ["Total", "total"],
+] as const satisfies readonly (readonly [string, keyof TimeBuckets])[];
+
+function windowLines(buckets: TimeBuckets): string[] {
+  return WINDOWS.map(([label, window]) => rowLine(label, buckets[window]));
 }
 
 /** Costliest first — the point of the section is what to look at. */
@@ -88,10 +105,45 @@ function byCost<T>(entries: [string, T][], costOf: (value: T) => number): [strin
   return entries.sort((a, b) => costOf(b[1]) - costOf(a[1]));
 }
 
-function byModelLines(byModel: ClaudeCodeUsage["byModel"]): string[] {
-  const sorted = byCost(Object.entries(byModel), (bucket) => bucket.cost);
+/** Drops the vendor's prefix and any provider path, so `accounts/x/models/kimi` reads `kimi`. */
+export function modelLabel(model: string): string {
+  return (model.split("/").at(-1) ?? model).replace("claude-", "");
+}
+
+export const usedAgents = (agents: AgentReport[]) =>
+  agents.filter((agent) => agent.usage.buckets.total.calls > 0);
+
+function mergedEntries<T>(
+  agents: AgentReport[],
+  pick: (usage: AgentUsage) => Record<string, T>,
+  merge: (all: T[]) => T
+): [string, T][] {
+  const grouped = new Map<string, T[]>();
+  for (const { usage } of agents) {
+    for (const [key, value] of Object.entries(pick(usage))) {
+      grouped.set(key, [...(grouped.get(key) ?? []), value]);
+    }
+  }
+  return [...grouped].map(([key, all]) => [key, merge(all)]);
+}
+
+export function modelsByCost(agents: AgentReport[]): [string, Bucket][] {
+  return byCost(
+    mergedEntries(agents, (usage) => usage.byModel, grandTotal),
+    (bucket) => bucket.cost
+  );
+}
+
+/** One project is the project you are in; a breakdown of it says nothing new. */
+export function projectsByCost(agents: AgentReport[]): [string, TimeBuckets][] {
+  const entries = mergedEntries(agents, (usage) => usage.byProject, mergeTimeBuckets);
+  return entries.length <= 1 ? [] : byCost(entries, (buckets) => buckets.total.cost);
+}
+
+function byModelLines(agents: AgentReport[]): string[] {
+  const sorted = modelsByCost(agents);
   if (sorted.length === 0) return [];
-  const names = sorted.map(([model]) => model.replace("claude-", ""));
+  const names = sorted.map(([model]) => modelLabel(model));
   const width = Math.max(DEFAULT_LABEL_WIDTH, ...names.map((name) => name.length + 2));
   return [
     "\n  By Model (all time)\n",
@@ -99,30 +151,65 @@ function byModelLines(byModel: ClaudeCodeUsage["byModel"]): string[] {
   ];
 }
 
-/** One project is the project you are in; a breakdown of it says nothing new. */
-function byProjectLines(byProject: ClaudeCodeUsage["byProject"]): string[] {
-  const entries = Object.entries(byProject);
-  if (entries.length <= 1) return [];
-  const sorted = byCost(entries, (buckets) => buckets.total.cost);
+function byProjectLines(agents: AgentReport[]): string[] {
+  const sorted = projectsByCost(agents);
+  if (sorted.length === 0) return [];
   return [
     "\n  By Project (all time)\n",
     ...sorted.map(([project, buckets]) => rowLine(project, buckets.total)),
   ];
 }
 
-function inferenceLabel(model: string): string {
+export function inferenceLabel(model: string): string {
   if (model.includes("haiku")) return "Haiku";
   if (model.includes("sonnet")) return "Sonnet";
   return model.replace("claude-", "");
 }
 
-function palInferenceLines(byModel: PalInferenceUsage["byModel"]): string[] {
-  const lines: string[] = [];
-  for (const [model, buckets] of Object.entries(byModel)) {
-    if (buckets.total.calls === 0) continue;
-    lines.push(`\n  PAL Inference (${inferenceLabel(model)})\n`, ...windowLines(buckets));
-  }
-  return lines;
+export const usedInferenceModels = (pal: PalInferenceUsage) =>
+  Object.entries(pal.byModel).filter(([, buckets]) => buckets.total.calls > 0);
+
+function palInferenceLines(pal: PalInferenceUsage): string[] {
+  return usedInferenceModels(pal).flatMap(([model, buckets]) => [
+    `\n  PAL Inference (${inferenceLabel(model)})\n`,
+    ...windowLines(buckets),
+  ]);
+}
+
+function agentLines(agents: AgentReport[]): string[] {
+  const used = usedAgents(agents);
+  if (used.length === 0) return ["\n  No agent usage recorded\n"];
+  return used.flatMap(({ label, usage }) => [
+    `\n  ${label} Usage\n`,
+    ...windowLines(usage.buckets),
+  ]);
+}
+
+function untrackedLines(untracked: string[]): string[] {
+  return untracked.length === 0
+    ? []
+    : [`\n  ${untracked.join(", ")}: no token counts recorded`];
+}
+
+export function grandBucket(data: UsageData): Bucket {
+  return grandTotal([
+    ...data.agents.map((agent) => agent.usage.buckets.total),
+    data.pal.buckets.total,
+  ]);
+}
+
+/** The agents whose spend the grand total cannot include, because they bill otherwise. */
+export function unpricedAgents(agents: AgentReport[]): string[] {
+  return agents
+    .filter((agent) => agent.usage.buckets.total.unpriced > 0)
+    .map((agent) => agent.label);
+}
+
+function unpricedLines(agents: AgentReport[]): string[] {
+  const unpriced = unpricedAgents(agents);
+  return unpriced.length === 0
+    ? []
+    : [`\n  Not priced: ${unpriced.join(", ")} (no per-token price)`];
 }
 
 export function rtkLines(gain: RtkGain): string[] {
@@ -155,19 +242,15 @@ export function parseRtkSummary(
   }
 }
 
-export function usageLines(
-  claudeCode: ClaudeCodeUsage,
-  pal: PalInferenceUsage,
-  rtk: RtkGain
-): string[] {
-  const grand = grandTotal([claudeCode.buckets.total, pal.buckets.total]);
+export function usageLines(data: UsageData): string[] {
   return [
-    "\n  Claude Code Usage\n",
-    ...windowLines(claudeCode.buckets),
-    ...byModelLines(claudeCode.byModel),
-    ...byProjectLines(claudeCode.byProject),
-    ...palInferenceLines(pal.byModel),
-    ...rtkLines(rtk),
-    `\n  Grand Total: ${fmtCost(grand.cost)}\n`,
+    ...agentLines(data.agents),
+    ...untrackedLines(data.untracked),
+    ...byModelLines(data.agents),
+    ...byProjectLines(data.agents),
+    ...palInferenceLines(data.pal),
+    ...rtkLines(data.rtk),
+    ...unpricedLines(data.agents),
+    `\n  Grand Total: ${fmtCost(grandBucket(data).cost)}\n`,
   ];
 }
