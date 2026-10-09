@@ -1,1 +1,3 @@
+# git exports GIT_DIR and friends to hooks; Bun.spawn passes them on even after a test deletes them from process.env
+unset $(git rev-parse --local-env-vars)
 bun run test
