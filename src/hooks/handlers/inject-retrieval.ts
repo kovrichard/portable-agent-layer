@@ -10,6 +10,7 @@
 import { promptRulesReminder } from "../lib/adaptation-steering";
 import { promptContextResponse } from "../lib/agent";
 import { dueNudgeReminder } from "../lib/daily-nudge";
+import { getEntityReminder } from "../lib/entity-cards";
 import { observeTurn } from "../lib/interaction";
 import { logDebug, logError } from "../lib/log";
 import { parkPromptContext } from "../lib/parked-context";
@@ -91,6 +92,9 @@ export async function getPromptContext(
     withinBudget(() => dueNudgeReminder(), BUDGET_MS),
     userText && getSteeringReminder(userText),
     userText && getSkillReminder(userText),
+    userText &&
+      isEnabled("entityCards") &&
+      withinBudget(() => getEntityReminder(userText), BUDGET_MS),
     userText && (await getRetrievalReminder(userText)),
   ].filter((p): p is string => Boolean(p));
 

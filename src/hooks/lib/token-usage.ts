@@ -14,6 +14,7 @@ type TokenCaller =
   | "failure"
   | "session-name"
   | "session-intelligence"
+  | "entity-extraction"
   | "relationship"
   | "self-model"
   | "agenda-serves"

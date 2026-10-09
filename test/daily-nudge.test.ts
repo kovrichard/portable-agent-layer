@@ -6,6 +6,7 @@ import {
   dueNudgeReminder,
   pendingToday,
 } from "../src/hooks/lib/daily-nudge";
+import { queueForReview } from "../src/hooks/lib/entity-extraction";
 import { reload } from "../src/hooks/lib/settings";
 import { freshTestDir } from "./lib/test-home";
 
@@ -102,6 +103,57 @@ describe("the per-turn reminder", () => {
   test("goes quiet once a reply has passed it on", () => {
     optInToDueReminders();
     acknowledgeMentioned("Learning analysis is due: /pal-analyze", morning);
+    expect(dueNudgeReminder(morning)).toBeNull();
+  });
+});
+
+describe("the entity review reminder", () => {
+  const morning = new Date("2026-09-30T08:00:00Z");
+
+  function queueOneItem(): void {
+    mkdirSync(resolve(HOME, "memory", "knowledge"), { recursive: true });
+    queueForReview([
+      {
+        id: "a1b2c3d4",
+        ts: morning.toISOString(),
+        source: "chat test",
+        reason: "first-name-only",
+        entity: {
+          kind: "person",
+          name: "Dax",
+          existing: "",
+          aliases: [],
+          role: "",
+          organization: "",
+          relation: "",
+          fact: "",
+        },
+        candidates: [],
+      },
+    ]);
+  }
+
+  test("names the review command while items wait, without opting in to due reminders", () => {
+    queueOneItem();
+    const reminder = dueNudgeReminder(morning) ?? "";
+    expect(reminder).toContain("1 person or company waits");
+    expect(reminder).toContain("pal cli knowledge review");
+    expect(reminder).not.toContain("/pal-analyze");
+  });
+
+  test("goes quiet once a reply has passed it on", () => {
+    queueOneItem();
+    acknowledgeMentioned("Run `pal cli knowledge review` to answer it.", morning);
+    expect(dueNudgeReminder(morning)).toBeNull();
+  });
+
+  test("stays silent when extraction is switched off", () => {
+    queueOneItem();
+    writeFileSync(
+      resolve(HOME, "memory", "pal-settings.json"),
+      JSON.stringify({ dynamicContext: { entityExtraction: false } })
+    );
+    reload();
     expect(dueNudgeReminder(morning)).toBeNull();
   });
 });

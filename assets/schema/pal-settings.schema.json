@@ -98,6 +98,14 @@
           "type": "boolean",
           "description": "Let the rules you approved from your past corrections steer the agent: a rule triggered by your prompt is injected before the agent answers, and a reply that matches a rule's trigger is sent back to the agent once at stop. Each firing is logged to memory/adaptation/rule-events.jsonl. Set false to switch every rule off. Reply-side rules do not run on Cursor, whose stop payload carries no reply text, or on opencode, whose plugin does not run the stop check."
         },
+        "entityCards": {
+          "type": "boolean",
+          "description": "When a prompt names a person or company from the knowledge store, inject a short card about them before the agent answers. Reads files only; no model call."
+        },
+        "entityExtraction": {
+          "type": "boolean",
+          "description": "After a session stops, ask a background model which people and companies your own messages mentioned, and write clear matches and new full names to the knowledge store with the message as source. A name that could be more than one entry, or a first name alone, waits for `pal cli knowledge review` instead."
+        },
         "steeringTestReport": { "type": "boolean", "description": "When true, the assistant notes to the user which steering self-check fired. For the dual-live test period; ships false." }
       }
     },

@@ -3,9 +3,10 @@ import { resolve } from "node:path";
 import { loadReflectNudge } from "../handlers/reflect-trigger";
 import { loadAlgorithmReviewNudge } from "./algorithm-review";
 import { loadAnalyzeNudge } from "./analyze-nudge";
+import { loadEntityReviewNudge } from "./entity-review";
 import { ensureDir, paths } from "./paths";
 import { loadReactionAuditNudge } from "./reaction-audit";
-import { isOptedIn } from "./settings";
+import { isEnabled, isOptedIn } from "./settings";
 import { localDay } from "./wall-clock";
 
 type ShownOn = Record<string, string>;
@@ -14,17 +15,42 @@ interface DueNudge {
   key: string;
   command: string;
   load: () => string;
+  enabled: () => boolean;
 }
+
+const dueRemindersOn = () => isOptedIn("dueReminders");
 
 const DUE_NUDGES: DueNudge[] = [
   {
     key: "algorithm-review",
     command: "/algorithm-update",
     load: loadAlgorithmReviewNudge,
+    enabled: dueRemindersOn,
   },
-  { key: "reaction-audit", command: "/reaction-audit", load: loadReactionAuditNudge },
-  { key: "reflect", command: "/pal-reflect", load: loadReflectNudge },
-  { key: "analyze", command: "/pal-analyze", load: loadAnalyzeNudge },
+  {
+    key: "reaction-audit",
+    command: "/reaction-audit",
+    load: loadReactionAuditNudge,
+    enabled: dueRemindersOn,
+  },
+  {
+    key: "reflect",
+    command: "/pal-reflect",
+    load: loadReflectNudge,
+    enabled: dueRemindersOn,
+  },
+  {
+    key: "analyze",
+    command: "/pal-analyze",
+    load: loadAnalyzeNudge,
+    enabled: dueRemindersOn,
+  },
+  {
+    key: "entity-review",
+    command: "pal cli knowledge review",
+    load: loadEntityReviewNudge,
+    enabled: () => isEnabled("entityExtraction"),
+  },
 ];
 
 function shownPath(): string {
@@ -62,10 +88,9 @@ export function acknowledgeMentioned(reply: string, now: Date = new Date()): voi
 }
 
 export function dueNudgeSections(now: Date = new Date()): string[] {
-  if (!isOptedIn("dueReminders")) return [];
-  return DUE_NUDGES.map((nudge) => pendingToday(nudge.key, nudge.load(), now)).filter(
-    Boolean
-  );
+  return DUE_NUDGES.filter((nudge) => nudge.enabled())
+    .map((nudge) => pendingToday(nudge.key, nudge.load(), now))
+    .filter(Boolean);
 }
 
 export function dueNudgeReminder(now: Date = new Date()): string | null {
