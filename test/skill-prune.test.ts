@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { existsSync, lstatSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { linkDir } from "./lib/links";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { runSync } from "./lib/run";
 import { testHome } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
@@ -27,9 +27,8 @@ const env = {
 };
 
 function pal(...args: string[]) {
-  return spawnSync("bun", ["run", CLI, "cli", ...args], {
+  return runSync(["bun", "run", CLI, "cli", ...args], {
     env,
-    encoding: "utf-8",
     timeout: 90000,
   });
 }

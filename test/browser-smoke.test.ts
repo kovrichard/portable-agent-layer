@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { runSync } from "./lib/run";
 import { freshTestDir } from "./lib/test-home";
 
 /**
@@ -46,10 +46,9 @@ describe.skipIf(!ENABLED)("browser smoke", () => {
     // --viewport forces the in-process Playwright tier: without it the tool prefers
     // a system playwright-cli when one is on PATH, and the launch under test would
     // never happen.
-    const res = spawnSync(
-      "bun",
-      [SHOT, pathToFileURL(page).href, "--viewport", "640x360", "-o", out],
-      { encoding: "utf-8", timeout: 120_000 }
+    const res = runSync(
+      ["bun", SHOT, pathToFileURL(page).href, "--viewport", "640x360", "-o", out],
+      { timeout: 120_000 }
     );
 
     expect(res.stdout + res.stderr).not.toContain("NO_PLAYWRIGHT_CLI");
@@ -65,8 +64,7 @@ describe.skipIf(!ENABLED)("browser smoke", () => {
     const out = resolve(DIR, "probe.pdf");
     writeFileSync(md, "# pal pdf smoke\n\n| a | b |\n|---|---|\n| 1 | 2 |\n");
 
-    const res = spawnSync("bun", [PDF, md, "--pdf", out], {
-      encoding: "utf-8",
+    const res = runSync(["bun", PDF, md, "--pdf", out], {
       timeout: 120_000,
     });
 

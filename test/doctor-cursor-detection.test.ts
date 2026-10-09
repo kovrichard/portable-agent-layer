@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { delimiter, dirname, resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { runSync } from "./lib/run";
 import { testHome } from "./lib/test-home";
 
 const REPO = resolve(import.meta.dir, "..");
@@ -38,7 +38,7 @@ function envWithoutPath(): Record<string, string | undefined> {
 }
 
 function doctorWithPath(binDir: string) {
-  return spawnSync(process.execPath, ["run", CLI, "cli", "doctor", "--json"], {
+  return runSync([process.execPath, "run", CLI, "cli", "doctor", "--json"], {
     cwd: REPO,
     env: {
       ...envWithoutPath(),
@@ -46,7 +46,6 @@ function doctorWithPath(binDir: string) {
       PAL_HOME: resolve(ROOT, ".pal"),
       PAL_SKIP_DOCTOR: "0",
     },
-    encoding: "utf-8",
     timeout: 30000,
   });
 }

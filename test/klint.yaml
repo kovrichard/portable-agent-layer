@@ -25,6 +25,10 @@ arch:
       message: "Build test folders with testHome() or freshTestDir() from test/lib/test-home.ts — a random temp dir piles up once nothing tears it down. Code that walks up to a project root gets outsideRepoHome()."
 
   forbidden:
+    - pattern: 're:\bspawnSync\b.*node:child_process'
+      in: ["."]
+      message: "Run commands through runSync() from test/lib/run.ts — node's spawnSync can miss a child's exit under bun test --isolate and hang the whole run."
+
     - pattern: 're:\b(afterEach|afterAll)\b'
       in: ["."]
       message: "Tests only set up, never tear down: undo the previous test's state at the start of beforeEach instead."

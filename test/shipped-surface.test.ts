@@ -8,10 +8,10 @@
  */
 
 import { beforeAll, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { linkFile } from "./lib/links";
+import { runSync } from "./lib/run";
 import { plant, ROOTS, surface } from "./lib/shipped-surface";
 import { freshTestDir } from "./lib/test-home";
 
@@ -43,7 +43,7 @@ function install(root: string): void {
       resolve(root, dir),
     ])
   );
-  const result = spawnSync("bun", [CLI, "cli", "install"], {
+  const result = runSync(["bun", CLI, "cli", "install"], {
     env: {
       ...inherited,
       ...dirs,
@@ -53,7 +53,6 @@ function install(root: string): void {
       PAL_SKIP_BROWSER_INSTALL: "1",
       PAL_SKIP_DOCTOR: "1",
     },
-    encoding: "utf-8",
     timeout: 120_000,
   });
   if (result.status !== 0) throw new Error(`install failed: ${result.stderr}`);

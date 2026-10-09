@@ -1,18 +1,17 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { linkDir } from "./lib/links";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { runSync } from "./lib/run";
 import { freshTestDir, testHome } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 
 function palCli(args: string[], opts: { input?: string } = {}) {
-  return spawnSync("bun", ["run", CLI, "cli", ...args], {
+  return runSync(["bun", "run", CLI, "cli", ...args], {
     env: { ...process.env, PAL_HOME: TEST_HOME },
-    encoding: "utf-8",
     input: opts.input,
     timeout: 15000,
   });
@@ -214,9 +213,8 @@ describe("cli import — folder arg", () => {
       expect(exportResult.status).toBe(0);
 
       // Import into an empty home — the personal files must materialize.
-      const importResult = spawnSync("bun", ["run", CLI, "cli", "import", workDir], {
+      const importResult = runSync(["bun", "run", CLI, "cli", "import", workDir], {
         env: { ...process.env, PAL_HOME: freshHome },
-        encoding: "utf-8",
         input: "y\n",
         timeout: 15000,
       });

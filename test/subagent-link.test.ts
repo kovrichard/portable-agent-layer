@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { runSync } from "./lib/run";
 import { testHome } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
@@ -21,9 +21,8 @@ const env = {
 };
 
 function subagentLink(name: string) {
-  return spawnSync("bun", ["run", CLI, "cli", "subagent", "link", name], {
+  return runSync(["bun", "run", CLI, "cli", "subagent", "link", name], {
     env,
-    encoding: "utf-8",
     timeout: 15000,
   });
 }
@@ -156,9 +155,8 @@ describe("pal cli subagent link", () => {
   });
 
   test("errors with usage when no name is given", () => {
-    const res = spawnSync("bun", ["run", CLI, "cli", "subagent", "link"], {
+    const res = runSync(["bun", "run", CLI, "cli", "subagent", "link"], {
       env,
-      encoding: "utf-8",
       timeout: 15000,
     });
     expect(res.status).toBe(1);

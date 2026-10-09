@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { delimiter, dirname, resolve } from "node:path";
+import { runSync } from "./lib/run";
 import { freshTestDir } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
@@ -18,7 +18,7 @@ function fakeClaudeOnPath(): string {
 
 function pal(...args: string[]) {
   const { PAL_SKIP_DOCTOR: _skip, ...env } = process.env;
-  const result = spawnSync("bun", ["run", CLI, "cli", ...args], {
+  const result = runSync(["bun", "run", CLI, "cli", ...args], {
     env: {
       ...env,
       PATH: fakeClaudeOnPath(),
@@ -32,7 +32,6 @@ function pal(...args: string[]) {
       PAL_GEMINI_DIR: resolve(SANDBOX, ".gemini"),
       PAL_AGENTS_DIR: resolve(SANDBOX, ".agents"),
     },
-    encoding: "utf-8",
     timeout: 60000,
   });
   return `${result.stdout}${result.stderr}`;

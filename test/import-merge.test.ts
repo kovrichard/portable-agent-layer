@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { runSync } from "./lib/run";
 import { freshTestDir } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
@@ -23,9 +23,8 @@ let DST: string;
 let WORK: string;
 
 function cli(home: string, args: string[], input = "y\n") {
-  return spawnSync("bun", ["run", CLI, "cli", ...args], {
+  return runSync(["bun", "run", CLI, "cli", ...args], {
     env: { ...process.env, PAL_HOME: home },
-    encoding: "utf-8",
     input,
     timeout: 20000,
   });

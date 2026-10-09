@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { contextForSource } from "../src/hooks/lib/session-context";
+import { runSync } from "./lib/run";
 import { freshTestDir } from "./lib/test-home";
 
 const LOAD_CONTEXT = resolve(import.meta.dir, "../src/hooks/LoadContext.ts");
@@ -10,7 +10,7 @@ const LOAD_CONTEXT = resolve(import.meta.dir, "../src/hooks/LoadContext.ts");
 let sandbox = "";
 
 function runLoadContext(source: string, agent = "claude") {
-  return spawnSync("bun", ["run", LOAD_CONTEXT, `--agent=${agent}`], {
+  return runSync(["bun", "run", LOAD_CONTEXT, `--agent=${agent}`], {
     env: {
       ...process.env,
       PAL_HOME: resolve(sandbox, "home"),
@@ -22,7 +22,6 @@ function runLoadContext(source: string, agent = "claude") {
       PAL_CURSOR_DIR: resolve(sandbox, "cursor"),
     },
     input: JSON.stringify({ hook_event_name: "SessionStart", source }),
-    encoding: "utf-8",
     timeout: 60000,
   });
 }

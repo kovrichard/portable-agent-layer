@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { runSync } from "./lib/run";
 import { freshTestDir } from "./lib/test-home";
 
 // The statusline is where a user learns an update is waiting, so its advice has
@@ -37,12 +37,11 @@ function fixture(autoUpdate: boolean): void {
 }
 
 function render(): string {
-  const run = spawnSync("bash", [resolve(repo, "assets", "statusline.sh")], {
+  const run = runSync(["bash", resolve(repo, "assets", "statusline.sh")], {
     input: SESSION_JSON,
-    encoding: "utf-8",
     env: { ...process.env, HOME },
   });
-  return run.stdout ?? "";
+  return run.stdout;
 }
 
 beforeEach(() => {

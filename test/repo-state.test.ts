@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { runSync } from "./lib/run";
 import { freshTestDir } from "./lib/test-home";
 
 let ROOT: string;
@@ -26,9 +26,9 @@ async function repoStateReminder(cwd: string) {
 }
 
 function git(dir: string, ...args: string[]): void {
-  const result = spawnSync(
-    "git",
+  const result = runSync(
     [
+      "git",
       "-c",
       "user.name=t",
       "-c",
@@ -37,7 +37,7 @@ function git(dir: string, ...args: string[]): void {
       "init.defaultBranch=main",
       ...args,
     ],
-    { cwd: dir, encoding: "utf-8" }
+    { cwd: dir }
   );
   if (result.status !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr}`);
 }

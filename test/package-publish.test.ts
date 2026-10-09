@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { runSync } from "./lib/run";
 import { freshTestDir } from "./lib/test-home";
 
 const REPO = resolve(import.meta.dir, "..");
@@ -18,9 +18,8 @@ describe("package publish surface", () => {
     const sandbox = freshTestDir(import.meta.file);
     try {
       const script = resolve(REPO, ".husky/install.mjs");
-      const result = spawnSync("bun", [script], {
+      const result = runSync(["bun", script], {
         cwd: sandbox,
-        encoding: "utf-8",
         env: { ...process.env, CI: "", NODE_ENV: "" },
       });
       expect(result.status).toBe(0);
@@ -33,9 +32,8 @@ describe("package publish surface", () => {
   test("packed tarball contains .husky/install.mjs", () => {
     const sandbox = freshTestDir(import.meta.file);
     try {
-      const pack = spawnSync("bun", ["pm", "pack", "--destination", sandbox], {
+      const pack = runSync(["bun", "pm", "pack", "--destination", sandbox], {
         cwd: REPO,
-        encoding: "utf-8",
         timeout: 60000,
       });
       expect(pack.status).toBe(0);
@@ -50,9 +48,8 @@ describe("package publish surface", () => {
 
       // Listed by bare name from inside the sandbox: GNU tar reads the colon in
       // a Windows path as a host:path remote spec and tries to open a connection.
-      const list = spawnSync("tar", ["-tzf", basename(tarballPath)], {
+      const list = runSync(["tar", "-tzf", basename(tarballPath)], {
         cwd: sandbox,
-        encoding: "utf-8",
       });
       expect(list.status).toBe(0);
       expect(list.stdout).toContain("package/.husky/install.mjs");

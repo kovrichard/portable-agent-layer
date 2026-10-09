@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import {
   buildSpawnGuardEnv,
@@ -7,6 +6,7 @@ import {
   isPalSpawnedInference,
   SPAWN_GUARD_ENV,
 } from "../src/hooks/lib/spawn-guard";
+import { runSync } from "./lib/run";
 
 const KEYS = [SPAWN_GUARD_ENV.SENTINEL, SPAWN_GUARD_ENV.DEPTH] as const;
 
@@ -99,14 +99,13 @@ describe("spawn-guard integration — hook entry-points short-circuit when spawn
 
   for (const hookPath of HOOKS_TO_GUARD) {
     test(`${hookPath} exits silently when PAL_SPAWNED_INFERENCE=1`, () => {
-      const result = spawnSync("bun", ["run", resolve(REPO_ROOT, hookPath)], {
+      const result = runSync(["bun", "run", resolve(REPO_ROOT, hookPath)], {
         env: {
           ...process.env,
           [SPAWN_GUARD_ENV.SENTINEL]: "1",
           PAL_AGENT: "claude",
         },
         input: "{}",
-        encoding: "utf-8",
         timeout: 5000,
       });
       // Spawned hooks must exit 0 with no stdout — no context injection,

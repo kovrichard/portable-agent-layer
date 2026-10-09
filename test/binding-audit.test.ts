@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import type { ProjectProgress } from "../src/hooks/lib/projects";
+import { runSync } from "./lib/run";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
@@ -77,8 +77,8 @@ describe("auditBindings", () => {
 describe("proposeBinding", () => {
   function repoAt(name: string, origin?: string): string {
     const dir = checkout(name);
-    spawnSync("git", ["init", "-q", dir]);
-    if (origin) spawnSync("git", ["-C", dir, "remote", "add", "origin", origin]);
+    runSync(["git", "init", "-q", dir]);
+    if (origin) runSync(["git", "-C", dir, "remote", "add", "origin", origin]);
     return dir;
   }
 

@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -14,6 +13,7 @@ import {
 import { paths } from "../src/hooks/lib/paths";
 import { reload } from "../src/hooks/lib/settings";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { runSync } from "./lib/run";
 import { freshTestDir } from "./lib/test-home";
 
 // The gate is the whole feature: everything downstream of it is `pal cli update`,
@@ -27,7 +27,7 @@ let PKG: string;
 const HOUR_MS = 60 * 60 * 1000;
 
 function git(...args: string[]): void {
-  spawnSync("git", args, { cwd: PKG, stdio: "ignore" });
+  runSync(["git", ...args], { cwd: PKG });
 }
 
 /** A clean clone with one commit — the shape isRepoMode() and the dirty check read. */

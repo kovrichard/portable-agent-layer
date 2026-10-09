@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { runSync } from "./lib/run";
 import { testHome } from "./lib/test-home";
 
 const REPO = resolve(import.meta.dir, "..");
@@ -43,10 +43,9 @@ beforeAll(() => {
 
 describe("pal cli skill doctor", () => {
   function doctor(name: string, home = PAL) {
-    return spawnSync("bun", ["run", CLI, "cli", "skill", "doctor", name], {
+    return runSync(["bun", "run", CLI, "cli", "skill", "doctor", name], {
       cwd: REPO,
       env: { ...process.env, PAL_HOME: home },
-      encoding: "utf-8",
       timeout: 15000,
     });
   }
@@ -107,9 +106,8 @@ describe("pal cli skill doctor", () => {
   });
 
   test("exits 1 with usage when no name is given", () => {
-    const r = spawnSync("bun", ["run", CLI, "cli", "skill", "doctor"], {
+    const r = runSync(["bun", "run", CLI, "cli", "skill", "doctor"], {
       env: { ...process.env, PAL_HOME: PAL },
-      encoding: "utf-8",
       timeout: 15000,
     });
     expect(r.status).toBe(1);

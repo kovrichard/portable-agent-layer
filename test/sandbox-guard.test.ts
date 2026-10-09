@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { runSync } from "./lib/run";
 import { testHome } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
@@ -45,9 +45,8 @@ function linkWithUnsandboxedAgentDirs() {
   ]) {
     delete env[v];
   }
-  return spawnSync("bun", ["run", CLI, "cli", "skill", "link", "guard-probe"], {
+  return runSync(["bun", "run", CLI, "cli", "skill", "link", "guard-probe"], {
     env,
-    encoding: "utf-8",
     timeout: 20000,
   });
 }

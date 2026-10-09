@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { runSync } from "./lib/run";
 import { freshTestDir } from "./lib/test-home";
 
 // The lifecycle is the only part of the server with real failure surface:
@@ -20,9 +20,8 @@ beforeEach(() => {
 });
 
 function pal(...args: string[]) {
-  return spawnSync("bun", ["run", CLI, "cli", "server", ...args], {
+  return runSync(["bun", "run", CLI, "cli", "server", ...args], {
     env: { ...process.env, PAL_HOME: HOME, PAL_SKIP_DOCTOR: "1" },
-    encoding: "utf-8",
     timeout: 15000,
   });
 }

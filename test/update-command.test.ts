@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { LiveRail } from "../src/cli/ui/live";
@@ -13,6 +12,7 @@ import {
   type UpdateCache,
 } from "../src/hooks/handlers/update-check";
 import { paths } from "../src/hooks/lib/paths";
+import { runSync } from "./lib/run";
 import { freshTestDir } from "./lib/test-home";
 
 const release = (mode: UpdateCache["mode"], available = true): UpdateCache =>
@@ -145,8 +145,7 @@ describe("pal cli update — repo mode ignores local unpushed commits", () => {
   const origin = freshTestDir(import.meta.file);
   const clone = freshTestDir(import.meta.file);
 
-  const git = (cwd: string, ...args: string[]) =>
-    spawnSync("git", args, { cwd, stdio: "ignore" });
+  const git = (cwd: string, ...args: string[]) => runSync(["git", ...args], { cwd });
 
   const commit = (cwd: string, version: string, msg: string) => {
     writeFileSync(resolve(cwd, "package.json"), JSON.stringify({ version }));

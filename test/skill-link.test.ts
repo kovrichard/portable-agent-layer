@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { existsSync, lstatSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { runSync } from "./lib/run";
 import { testHome } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
@@ -20,9 +20,8 @@ const env = {
 };
 
 function skillLink(name: string) {
-  return spawnSync("bun", ["run", CLI, "cli", "skill", "link", name], {
+  return runSync(["bun", "run", CLI, "cli", "skill", "link", name], {
     env,
-    encoding: "utf-8",
     timeout: 15000,
   });
 }
@@ -73,9 +72,8 @@ describe("pal cli skill link", () => {
   });
 
   test("errors with usage when no name is given", () => {
-    const res = spawnSync("bun", ["run", CLI, "cli", "skill", "link"], {
+    const res = runSync(["bun", "run", CLI, "cli", "skill", "link"], {
       env,
-      encoding: "utf-8",
       timeout: 15000,
     });
     expect(res.status).toBe(1);

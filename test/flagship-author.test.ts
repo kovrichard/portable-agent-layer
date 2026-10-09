@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { AGENT_NAMES } from "../src/hooks/lib/agent-registry";
 import { FABLE_MODEL, flagshipAuthorModel } from "../src/hooks/lib/models";
 import { renderAgentForPlatform } from "../src/targets/agent-render";
+import { runSync } from "./lib/run";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 const AGENTS_DIR = resolve(import.meta.dir, "../assets/agents");
@@ -16,9 +16,8 @@ function authorModel(agent: string | undefined) {
   delete env.OPENAI_CODEX;
   if (agent === undefined) delete env.PAL_AGENT;
   else env.PAL_AGENT = agent;
-  return spawnSync("bun", ["run", CLI, "cli", "skill", "author-model"], {
+  return runSync(["bun", "run", CLI, "cli", "skill", "author-model"], {
     env,
-    encoding: "utf-8",
     timeout: 15000,
   });
 }

@@ -1,10 +1,10 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { builtinToolVerbs } from "../src/cli/builtin-tools";
 import { linkDir } from "./lib/links";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { runSync } from "./lib/run";
 import { freshTestDir } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
@@ -13,9 +13,8 @@ const TOOL_DIR = resolve(import.meta.dir, "../src/tools/agent");
 let home: string;
 
 function run(command: string, args: string[]) {
-  return spawnSync("bun", [command, ...args], {
+  return runSync(["bun", command, ...args], {
     env: { ...process.env, PAL_HOME: home },
-    encoding: "utf-8",
     timeout: 20000,
   });
 }
@@ -142,14 +141,12 @@ describe("pal cli <tool> — the writing path, not just --help", () => {
       const viaCliHome = freshTestDir(import.meta.file);
       const viaPathHome = freshTestDir(import.meta.file);
       try {
-        const viaCli = spawnSync("bun", [CLI, "cli", verb, ...args], {
+        const viaCli = runSync(["bun", CLI, "cli", verb, ...args], {
           env: { ...process.env, PAL_HOME: viaCliHome },
-          encoding: "utf-8",
           timeout: 20000,
         });
-        const viaPath = spawnSync("bun", [resolve(TOOL_DIR, `${verb}.ts`), ...args], {
+        const viaPath = runSync(["bun", resolve(TOOL_DIR, `${verb}.ts`), ...args], {
           env: { ...process.env, PAL_HOME: viaPathHome },
-          encoding: "utf-8",
           timeout: 20000,
         });
 
@@ -252,9 +249,8 @@ describe("pal cli skill run — ~/.pal/.env reaches shipped skills only", () => 
       PAL_PKG: pkg,
     };
     delete env.PAL_GEMINI_API_KEY;
-    return spawnSync("bun", [CLI, "cli", "skill", "run", skill, "key"], {
+    return runSync(["bun", CLI, "cli", "skill", "run", skill, "key"], {
       env,
-      encoding: "utf-8",
       timeout: 20000,
     });
   }

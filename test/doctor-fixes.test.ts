@@ -5,7 +5,6 @@
  */
 
 import { beforeAll, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import {
   chmodSync,
   cpSync,
@@ -19,6 +18,7 @@ import {
 import { resolve } from "node:path";
 import { linkDir, linkFile } from "./lib/links";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { runSync } from "./lib/run";
 import { outsideRepoHome } from "./lib/test-home";
 
 type Mode = "package" | "repo";
@@ -46,7 +46,7 @@ const UNPROVEN: Record<string, string> = {
 };
 
 function bunCache(): string {
-  return spawnSync("bun", ["pm", "cache"], { encoding: "utf-8" }).stdout.trim();
+  return runSync(["bun", "pm", "cache"]).stdout.trim();
 }
 
 function sandboxEnv(root: string): Record<string, string> {
@@ -75,10 +75,9 @@ function sandboxEnv(root: string): Record<string, string> {
 }
 
 function sh(root: string, command: string, cwd = root) {
-  const result = spawnSync("sh", ["-c", command], {
+  const result = runSync(["sh", "-c", command], {
     cwd,
     env: sandboxEnv(root),
-    encoding: "utf-8",
     timeout: 120_000,
   });
   return { ok: result.status === 0, output: `${result.stdout}${result.stderr}` };
@@ -95,9 +94,8 @@ function fakeAgentsOnPath(root: string): void {
 }
 
 function installFromTarball(root: string): string {
-  const packed = spawnSync("bun", ["pm", "pack", "--destination", root, "--quiet"], {
+  const packed = runSync(["bun", "pm", "pack", "--destination", root, "--quiet"], {
     cwd: REPO,
-    encoding: "utf-8",
   });
   if (packed.status !== 0) throw new Error(`bun pm pack failed: ${packed.stderr}`);
   const tarball = readdirSync(root).find((file) => file.endsWith(".tgz"));
@@ -114,12 +112,10 @@ function installFromTarball(root: string): string {
 }
 
 function trackedAndNewFiles(): string[] {
-  return spawnSync(
-    "git",
-    ["ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+  return runSync(
+    ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
     {
       cwd: REPO,
-      encoding: "utf-8",
     }
   )
     .stdout.split("\0")

@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { runSync } from "./lib/run";
 import { testHome } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
@@ -17,7 +17,7 @@ const AGENTS_DIR = resolve(TEST_HOME, ".agents");
 const onWindows = process.platform === "win32";
 
 function pal(...args: string[]) {
-  return spawnSync("bun", ["run", CLI, ...args], {
+  return runSync(["bun", "run", CLI, ...args], {
     env: {
       ...process.env,
       PAL_HOME: TEST_HOME,
@@ -31,7 +31,6 @@ function pal(...args: string[]) {
       PAL_GEMINI_DIR: GEMINI_DIR,
       PAL_AGENTS_DIR: AGENTS_DIR,
     },
-    encoding: "utf-8",
     timeout: 90000,
   });
 }

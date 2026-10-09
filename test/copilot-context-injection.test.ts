@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { runSync } from "./lib/run";
 import { freshTestDir } from "./lib/test-home";
 
 const LOAD_CONTEXT = resolve(import.meta.dir, "../src/hooks/LoadContext.ts");
@@ -17,7 +17,7 @@ let result: { status: number | null; stdout: string; stderr: string };
  * with the sandbox's empty settings.
  */
 function runLoadContext() {
-  return spawnSync("bun", ["run", LOAD_CONTEXT, "--agent=copilot"], {
+  return runSync(["bun", "run", LOAD_CONTEXT, "--agent=copilot"], {
     env: {
       ...process.env,
       PAL_HOME: resolve(sandbox, "home"),
@@ -29,7 +29,6 @@ function runLoadContext() {
       PAL_CURSOR_DIR: resolve(sandbox, "cursor"),
     },
     input: "",
-    encoding: "utf-8",
     timeout: 60000,
   });
 }

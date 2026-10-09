@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { runSync } from "./lib/run";
 import { freshTestDir, testHome } from "./lib/test-home";
 
 const ROOT = testHome(import.meta.file);
@@ -10,7 +10,7 @@ const HOOK = resolve(import.meta.dir, "../.agents/hooks/run-hook.ts");
 const MARKER = "gate-ran";
 
 function git(cwd: string, ...args: string[]) {
-  spawnSync("git", args, { cwd, stdio: "ignore" });
+  runSync(["git", ...args], { cwd });
 }
 
 /** A repo whose only commit is one tracked file, so the worktree starts clean. */
@@ -28,11 +28,8 @@ function makeRepo(name: string): string {
 
 /** Runs the hook with a command that prints MARKER, so its absence proves a skip. */
 function runHookIn(cwd: string) {
-  const r = spawnSync("bun", ["run", HOOK, "echo", MARKER], {
-    cwd,
-    encoding: "utf-8",
-  });
-  return { code: r.status, stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
+  const r = runSync(["bun", "run", HOOK, "echo", MARKER], { cwd });
+  return { code: r.status, stdout: r.stdout, stderr: r.stderr };
 }
 
 beforeAll(() => {
@@ -76,7 +73,7 @@ describe("run-hook clean-worktree skip", () => {
   test("runs the gate outside a git repository", () => {
     const dir = freshTestDir(import.meta.file);
     try {
-      expect(spawnSync("git", ["status"], { cwd: dir }).status).not.toBe(0);
+      expect(runSync(["git", "status"], { cwd: dir }).status).not.toBe(0);
 
       const r = runHookIn(dir);
 
@@ -91,10 +88,7 @@ describe("run-hook clean-worktree skip", () => {
     const dir = makeRepo("failing");
     writeFileSync(resolve(dir, "tracked.txt"), "changed\n");
 
-    const r = spawnSync("bun", ["run", HOOK, "exit", "3"], {
-      cwd: dir,
-      encoding: "utf-8",
-    });
+    const r = runSync(["bun", "run", HOOK, "exit", "3"], { cwd: dir });
 
     expect(r.status).toBe(2);
   });
@@ -104,10 +98,9 @@ describe("run-hook clean-worktree skip", () => {
     writeFileSync(resolve(dir, "tracked.txt"), "changed\n");
     mkdirSync(resolve(dir, ".agents"));
 
-    const r = spawnSync(
-      "bun",
-      ["run", HOOK, "--antigravity", "test", "-f", "tracked.txt"],
-      { cwd: resolve(dir, ".agents"), encoding: "utf-8" }
+    const r = runSync(
+      ["bun", "run", HOOK, "--antigravity", "test", "-f", "tracked.txt"],
+      { cwd: resolve(dir, ".agents") }
     );
 
     expect(r.status).toBe(0);
@@ -120,9 +113,8 @@ describe("run-hook clean-worktree skip", () => {
     mkdirSync(resolve(dir, ".agents"));
     writeFileSync(resolve(dir, "gate.ts"), 'console.log("broken");\nprocess.exit(3);\n');
 
-    const r = spawnSync("bun", ["run", HOOK, "--antigravity", "bun", "gate.ts"], {
+    const r = runSync(["bun", "run", HOOK, "--antigravity", "bun", "gate.ts"], {
       cwd: resolve(dir, ".agents"),
-      encoding: "utf-8",
     });
 
     expect(r.status).toBe(0);
@@ -132,10 +124,7 @@ describe("run-hook clean-worktree skip", () => {
   test("a clean worktree skips a gate that would otherwise fail", () => {
     const dir = makeRepo("clean-failing");
 
-    const r = spawnSync("bun", ["run", HOOK, "exit", "3"], {
-      cwd: dir,
-      encoding: "utf-8",
-    });
+    const r = runSync(["bun", "run", HOOK, "exit", "3"], { cwd: dir });
 
     expect(r.status).toBe(0);
   });

@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { injectPromptContext } from "../src/hooks/handlers/inject-retrieval";
@@ -18,6 +17,7 @@ import { reload } from "../src/hooks/lib/settings";
 import { finishDeferredStop, stopTurn } from "../src/hooks/lib/stop";
 import { sandboxContextRuleDirs } from "./lib/context-rule-dirs";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { runSync } from "./lib/run";
 import { testHome } from "./lib/test-home";
 
 // stopTurn can spawn detached children that keep writing into PAL_HOME after the
@@ -215,13 +215,16 @@ describe("copilot, whose prompt hook output is dropped", () => {
 
   test("the installed hook prints the extended prompt", async () => {
     await promptHookOutput("copilot", prompt);
-    const result = spawnSync(
-      "bun",
-      ["run", resolve(REPO, "src", "hooks", "PromptTransformed.ts"), "--agent=copilot"],
+    const result = runSync(
+      [
+        "bun",
+        "run",
+        resolve(REPO, "src", "hooks", "PromptTransformed.ts"),
+        "--agent=copilot",
+      ],
       {
         env: { ...process.env, PAL_HOME: HOME },
         input: JSON.stringify(transformed()),
-        encoding: "utf-8",
         timeout: 10000,
       }
     );
@@ -273,10 +276,9 @@ describe("cursor", () => {
 
   test("the installed hook files the reply it is handed", () => {
     observeTurn("rename the column", "cu2");
-    const result = spawnSync("bun", ["run", AGENT_RESPONSE_HOOK, "--agent=cursor"], {
+    const result = runSync(["bun", "run", AGENT_RESPONSE_HOOK, "--agent=cursor"], {
       env: { ...process.env, PAL_HOME: HOME },
       input: JSON.stringify({ conversation_id: "cu2", text: "Renamed it." }),
-      encoding: "utf-8",
       timeout: 10000,
     });
 

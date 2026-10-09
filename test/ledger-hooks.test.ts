@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { applyDelta } from "../src/hooks/lib/ledger";
+import { runSync } from "./lib/run";
 import { freshTestDir } from "./lib/test-home";
 
 // The two hooks are only correct together, and only as separate processes:
@@ -20,9 +20,8 @@ beforeEach(() => {
 });
 
 function runHook(hook: string, payload: unknown) {
-  return spawnSync("bun", ["run", resolve(ROOT, "src", "hooks", `${hook}.ts`)], {
+  return runSync(["bun", "run", resolve(ROOT, "src", "hooks", `${hook}.ts`)], {
     input: JSON.stringify(payload),
-    encoding: "utf-8",
     timeout: 20000,
     env: { ...process.env, PAL_HOME: HOME, PAL_AGENT: "claude" },
   });
@@ -294,12 +293,10 @@ describe("hook protocol", () => {
   });
 
   test("malformed input fails open rather than erroring", () => {
-    const res = spawnSync(
-      "bun",
-      ["run", resolve(ROOT, "src", "hooks", "LedgerSnapshot.ts")],
+    const res = runSync(
+      ["bun", "run", resolve(ROOT, "src", "hooks", "LedgerSnapshot.ts")],
       {
         input: "not json at all",
-        encoding: "utf-8",
         timeout: 20000,
         env: { ...process.env, PAL_HOME: HOME },
       }

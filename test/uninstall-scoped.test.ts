@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { runSync } from "./lib/run";
 import { freshTestDir } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
@@ -28,9 +28,8 @@ const SPAWN_TIMEOUT = 90_000;
 const INSTALL_THEN_UNINSTALL = 2 * SPAWN_TIMEOUT;
 
 function pal(...args: string[]) {
-  const result = spawnSync("bun", ["run", CLI, "cli", ...args], {
+  const result = runSync(["bun", "run", CLI, "cli", ...args], {
     env,
-    encoding: "utf-8",
     timeout: SPAWN_TIMEOUT,
   });
   expect(result.status).toBe(0);
