@@ -15,8 +15,9 @@ import {
   readIndex,
 } from "../src/hooks/lib/retrieval-index";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const TEST_HOME = resolve(import.meta.dir, "../.test-home-retrieval");
+const TEST_HOME = testHome(import.meta.file);
 const FIXTURES_WRITTEN = Date.parse("2026-06-01T00:00:00Z");
 
 function sameAgeToday(writtenAs: string): string {

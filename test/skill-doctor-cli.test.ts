@@ -3,10 +3,11 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
 const REPO = resolve(import.meta.dir, "..");
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
-const ROOT = resolve(import.meta.dir, "../.test-home-skill-doctor-cli");
+const ROOT = testHome(import.meta.file);
 const PAL = resolve(ROOT, ".pal");
 
 const GOOD = `---

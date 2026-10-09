@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { mergeCodexHooks, mergeCursorHooks, mergeSettings } from "../src/targets/lib";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 let DIR: string;
 let USER_SCRIPT: string;
 
 beforeEach(() => {
-  DIR = mkdtempSync(resolve(tmpdir(), "pal-orphan-hooks-"));
+  DIR = freshTestDir(import.meta.file);
   USER_SCRIPT = resolve(DIR, "src", "hooks", "Mine.ts");
   mkdirSync(resolve(DIR, "src", "hooks"), { recursive: true });
   writeFileSync(USER_SCRIPT, "");

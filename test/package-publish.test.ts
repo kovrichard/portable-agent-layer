@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 const REPO = resolve(import.meta.dir, "..");
 
@@ -15,7 +15,7 @@ describe("package publish surface", () => {
   });
 
   test("prepare script exits 0 when .git is absent (package mode)", () => {
-    const sandbox = mkdtempSync(resolve(tmpdir(), "pal-prepare-"));
+    const sandbox = freshTestDir(import.meta.file);
     try {
       const script = resolve(REPO, ".husky/install.mjs");
       const result = spawnSync("bun", [script], {
@@ -31,7 +31,7 @@ describe("package publish surface", () => {
   });
 
   test("packed tarball contains .husky/install.mjs", () => {
-    const sandbox = mkdtempSync(resolve(tmpdir(), "pal-pack-"));
+    const sandbox = freshTestDir(import.meta.file);
     try {
       const pack = spawnSync("bun", ["pm", "pack", "--destination", sandbox], {
         cwd: REPO,

@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir, testHome } from "./lib/test-home";
 
-const ROOT = resolve(import.meta.dir, "../.test-tmp/run-hook-skip");
+const ROOT = testHome(import.meta.file);
 const HOOK = resolve(import.meta.dir, "../.agents/hooks/run-hook.ts");
 const MARKER = "gate-ran";
 
@@ -74,11 +74,11 @@ describe("run-hook clean-worktree skip", () => {
     expect(JSON.parse(r.stdout).output).toBe("ok");
   });
 
-  // Must live outside the repo tree: a directory nested inside it would make
-  // `git status` walk up and succeed against the parent, so the gate would run
+  // Relies on GIT_CEILING_DIRECTORIES stopping git at .test/: without it
+  // `git status` would walk up and succeed against the repo, so the gate would run
   // for the wrong reason and this case would prove nothing.
   test("runs the gate outside a git repository", () => {
-    const dir = mkdtempSync(resolve(tmpdir(), "pal-run-hook-"));
+    const dir = freshTestDir(import.meta.file);
     try {
       expect(spawnSync("git", ["status"], { cwd: dir }).status).not.toBe(0);
 

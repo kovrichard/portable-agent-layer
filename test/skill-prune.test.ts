@@ -4,10 +4,11 @@ import { existsSync, lstatSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { linkDir } from "./lib/links";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 const REPO_SKILLS = resolve(import.meta.dir, "../assets/skills");
-const HOME = resolve(import.meta.dir, "../.test-home-skill-prune");
+const HOME = testHome(import.meta.file);
 const PAL_SKILLS = resolve(HOME, ".pal/skills");
 const CLAUDE_SKILLS = resolve(HOME, ".claude/skills");
 

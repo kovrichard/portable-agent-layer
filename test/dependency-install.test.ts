@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { dependencyInstall } from "../src/cli/dependencies";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 let PKG: string;
 
 beforeEach(() => {
-  PKG = mkdtempSync(resolve(tmpdir(), "pal-dependency-install-"));
+  PKG = freshTestDir(import.meta.file);
 });
 
 afterEach(() => {

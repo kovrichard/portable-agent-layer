@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { readTranscriptFile, withFinalReply } from "../src/hooks/lib/transcript";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 describe("withFinalReply", () => {
   const asked = [{ role: "user", content: "ask" }];
@@ -27,7 +27,7 @@ describe("withFinalReply", () => {
 });
 
 function withTmpFile(content: string, fn: (path: string) => void): void {
-  const dir = mkdtempSync(resolve(tmpdir(), "pal-transcript-test-"));
+  const dir = freshTestDir(import.meta.file);
   const path = resolve(dir, "transcript.jsonl");
   try {
     writeFileSync(path, content, "utf-8");
@@ -225,7 +225,11 @@ describe("readTranscriptFile — Codex shape", () => {
 
 describe("readTranscriptFile — malformed input", () => {
   test("returns [] for a missing file", () => {
-    expect(readTranscriptFile(resolve(tmpdir(), "pal-does-not-exist.jsonl"))).toEqual([]);
+    expect(
+      readTranscriptFile(
+        resolve(freshTestDir(import.meta.file), "pal-does-not-exist.jsonl")
+      )
+    ).toEqual([]);
   });
 
   test("skips malformed lines without throwing", () => {

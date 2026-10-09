@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   mergeInferredPrinciple,
@@ -10,6 +9,7 @@ import {
   recentExchange,
 } from "../src/hooks/lib/failure-principle";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 // A low rating is the one signal that says the session went wrong, and this is
 // what PAL does with it. It runs detached — claude --print's cold start outruns
@@ -179,7 +179,7 @@ describe("processFailurePrinciple", () => {
   let HOME: string;
 
   beforeEach(async () => {
-    HOME = mkdtempSync(resolve(tmpdir(), "pal-failure-"));
+    HOME = freshTestDir(import.meta.file);
     process.env.PAL_HOME = HOME;
     (await import("../src/hooks/lib/settings")).reload();
   });

@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 // A wrong diff does not throw. It produces a plausible delta that reconstructs
 // the wrong file, and an example-based test written by the same person who
@@ -13,7 +12,7 @@ import { removeOnceReleased } from "./lib/remove-once-released";
 let HOME: string;
 
 beforeEach(async () => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-delta-"));
+  HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   (await import("../src/hooks/lib/settings")).reload();
 });

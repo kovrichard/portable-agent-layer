@@ -1,18 +1,18 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   opencodeBackgroundModel,
   writeInstructionFreeConfig,
 } from "../src/hooks/lib/opencode-config";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 const savedDir = process.env.PAL_OPENCODE_DIR;
 let dir: string;
 
 beforeEach(() => {
-  dir = mkdtempSync(resolve(tmpdir(), "pal-opencode-model-"));
+  dir = freshTestDir(import.meta.file);
   process.env.PAL_OPENCODE_DIR = dir;
 });
 
@@ -51,7 +51,7 @@ describe("the config a background opencode run gets", () => {
   let configHome: string;
 
   beforeEach(() => {
-    configHome = mkdtempSync(resolve(tmpdir(), "pal-opencode-bg-"));
+    configHome = freshTestDir(import.meta.file);
   });
 
   afterEach(() => {

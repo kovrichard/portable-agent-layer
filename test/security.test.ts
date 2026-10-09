@@ -1,10 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync } from "node:fs";
-import { homedir, tmpdir } from "node:os";
+import { mkdirSync } from "node:fs";
+import { homedir } from "node:os";
 import { join } from "node:path";
 import { checkBashCommand, checkFilePath } from "../src/hooks/lib/security";
 import { linkDir } from "./lib/links";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 const ROOT_OVERRIDES = [
   "PAL_HOME",
@@ -423,7 +424,7 @@ describe("checkFilePath", () => {
   });
 
   test("blocks shipped (symlinked) skills but allows personal skill dirs", () => {
-    const base = mkdtempSync(join(tmpdir(), "pal-skills-"));
+    const base = freshTestDir(import.meta.file);
     const skills = join(base, ".pal", "skills");
     mkdirSync(skills, { recursive: true });
     process.env.PAL_HOME = join(base, ".pal");

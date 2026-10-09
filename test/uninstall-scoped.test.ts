@@ -1,13 +1,13 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 const REPO_SKILLS = resolve(import.meta.dir, "../assets/skills");
-const SANDBOX = mkdtempSync(resolve(tmpdir(), "pal-uninstall-scoped-"));
+const SANDBOX = freshTestDir(import.meta.file);
 const at = (...parts: string[]) => resolve(SANDBOX, ...parts);
 
 const env = {

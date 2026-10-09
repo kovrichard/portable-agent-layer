@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { LedgerEntry } from "../src/hooks/lib/ledger";
 import { ledgerView } from "../src/tools/ledger/view";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 // A refusal produces no other event: nothing runs, so no post-tool hook reports
 // it. If the gate does not write the entry itself, the block leaves no trace and
@@ -19,7 +19,7 @@ const DANGEROUS = `${"rm -r"}${"f /"}`;
 let HOME: string;
 
 beforeEach(() => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-blocked-"));
+  HOME = freshTestDir(import.meta.file);
   mkdirSync(resolve(HOME, "memory", "ledger"), { recursive: true });
 });
 

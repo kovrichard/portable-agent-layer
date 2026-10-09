@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 // The lifecycle is the only part of the server with real failure surface:
 // a process that outlives its shell has to be found again to be stopped, and
@@ -15,7 +15,7 @@ let HOME: string;
 let PORT: number;
 
 beforeEach(() => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-server-cli-"));
+  HOME = freshTestDir(import.meta.file);
   PORT = 17000 + Math.floor(Math.random() * 2000);
 });
 

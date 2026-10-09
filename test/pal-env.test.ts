@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { palEnvPath, parsePalEnv, withPalEnv } from "../src/hooks/lib/pal-env";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 describe("parsePalEnv", () => {
   test("reads one KEY=value per line, skipping blanks and comments", () => {
@@ -33,7 +33,7 @@ describe("withPalEnv", () => {
 
   beforeEach(() => {
     savedHome = process.env.PAL_HOME;
-    home = mkdtempSync(resolve(tmpdir(), "pal-env-"));
+    home = freshTestDir(import.meta.file);
     process.env.PAL_HOME = home;
   });
 

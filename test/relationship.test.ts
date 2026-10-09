@@ -3,8 +3,9 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { appendNotes, loadRecentNotes } from "../src/hooks/lib/relationship";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const HOME = resolve(import.meta.dir, "../.test-home-relationship");
+const HOME = testHome(import.meta.file);
 const savedHome = process.env.PAL_HOME;
 
 function ymd(offsetDays = 0): { month: string; day: string } {

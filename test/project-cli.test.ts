@@ -3,8 +3,9 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { resolve } from "node:path";
 import { run } from "../src/tools/agent/project";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const TEST_HOME = resolve(import.meta.dir, "../.test-home-project-cli");
+const TEST_HOME = testHome(import.meta.file);
 const CLI = resolve(import.meta.dir, "../src/tools/agent/project.ts");
 
 beforeAll(() => {

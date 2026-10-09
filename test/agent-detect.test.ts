@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   blockResponse,
@@ -16,6 +15,7 @@ import {
 } from "../src/hooks/lib/agent";
 import { writeFakeBin } from "./fixtures/fake-bin";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 const PRESERVED_ENV_KEYS = [
   "PAL_AGENT",
@@ -432,7 +432,7 @@ describe("getActiveAgent — undeclared falls back to what is installed", () => 
     }
     argv = process.argv;
     process.argv = ["bun", "hook.ts"];
-    dir = mkdtempSync(resolve(tmpdir(), "agent-installed-"));
+    dir = freshTestDir(import.meta.file);
     process.env.PATH = dir;
   });
 

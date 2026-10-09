@@ -1,6 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   addToBucket,
@@ -15,6 +14,7 @@ import {
   totalTokens,
 } from "../src/tools/lib/usage-buckets";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 const NOW = new Date("2026-09-06T12:00:00.000Z");
 const HORIZONS = horizonsFrom(NOW);
@@ -22,7 +22,7 @@ const HORIZONS = horizonsFrom(NOW);
 const tempDirs: string[] = [];
 
 function tempHome(): string {
-  const dir = mkdtempSync(join(tmpdir(), "pal-usage-buckets-"));
+  const dir = freshTestDir(import.meta.file);
   tempDirs.push(dir);
   return dir;
 }

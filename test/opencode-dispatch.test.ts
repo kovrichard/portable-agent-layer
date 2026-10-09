@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   buildCliPrompt,
@@ -11,6 +10,7 @@ import {
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 const PRESERVED = [
   "PAL_AGENT",
@@ -111,7 +111,7 @@ describe("inference dispatcher — opencode spawn integration (fake binary)", ()
 
   beforeEach(() => {
     saved = savedEnv();
-    tmpBin = mkdtempSync(resolve(tmpdir(), "pal-fake-opencode-"));
+    tmpBin = freshTestDir(import.meta.file);
     process.env.PAL_HOME = tmpBin;
     delete process.env.PAL_ANTHROPIC_API_KEY;
     delete process.env[SPAWN_GUARD_ENV.SENTINEL];

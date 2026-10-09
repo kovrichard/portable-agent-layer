@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 // The read side is only worth as much as the questions it can answer without
 // lying. These cases are about the three ways it could: losing the rotated
@@ -13,8 +13,8 @@ let HOME: string;
 let PROJECT: string;
 
 beforeEach(() => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-ledger-query-"));
-  PROJECT = mkdtempSync(resolve(tmpdir(), "pal-project-"));
+  HOME = freshTestDir(import.meta.file);
+  PROJECT = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   mkdirSync(resolve(HOME, "memory", "ledger"), { recursive: true });
 });

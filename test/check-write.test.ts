@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fingerprint, report, rewrittenBetween } from "../.agents/scripts/check-write";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 // The formatter runs between an agent reading a file and editing it. What it
 // rewrote is the difference between an edit that lands and one that fails on a
@@ -12,7 +12,7 @@ import { removeOnceReleased } from "./lib/remove-once-released";
 
 describe("fingerprint", () => {
   test("changes when the bytes change", () => {
-    const dir = mkdtempSync(resolve(tmpdir(), "pal-fmt-"));
+    const dir = freshTestDir(import.meta.file);
     const file = resolve(dir, "a.ts");
     try {
       writeFileSync(file, "const a=1", "utf-8");
@@ -27,7 +27,7 @@ describe("fingerprint", () => {
   // A formatter that rewrote a file byte-identically must not be reported: an
   // output that cries wolf trains the reader to ignore it.
   test("is stable when a rewrite produced identical bytes", () => {
-    const dir = mkdtempSync(resolve(tmpdir(), "pal-fmt-"));
+    const dir = freshTestDir(import.meta.file);
     const file = resolve(dir, "a.ts");
     try {
       writeFileSync(file, "const a = 1;", "utf-8");

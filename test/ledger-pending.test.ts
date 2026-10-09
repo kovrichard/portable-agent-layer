@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readdirSync, utimesSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, readdirSync, utimesSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 // A snapshot is half of a record. These cases are about what happens to the
 // half that never gets its pair: the call was denied, or it failed, or it was
@@ -11,7 +11,7 @@ import { removeOnceReleased } from "./lib/remove-once-released";
 let HOME: string;
 
 beforeEach(async () => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-pending-"));
+  HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   (await import("../src/hooks/lib/settings")).reload();
 });

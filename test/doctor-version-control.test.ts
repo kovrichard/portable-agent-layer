@@ -1,7 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { delimiter, dirname, resolve } from "node:path";
+import { delimiter, dirname } from "node:path";
 import {
   ghInstallHint,
   gitInstallHint,
@@ -10,6 +8,7 @@ import {
 import { detectRemote } from "../src/hooks/lib/remote";
 import { writeFakeBin } from "./fixtures/fake-bin";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 const osRelease = (id: string, like = "") =>
   `NAME="Some Linux"\nID=${id}\n${like ? `ID_LIKE="${like}"\n` : ""}`;
@@ -58,7 +57,7 @@ describe("checking git and gh", () => {
   let savedPath: string | undefined;
 
   beforeEach(() => {
-    bin = mkdtempSync(resolve(tmpdir(), "pal-doctor-vc-"));
+    bin = freshTestDir(import.meta.file);
     savedPath = process.env.PATH;
     process.env.PATH = [bin, dirname(process.execPath)].join(delimiter);
   });

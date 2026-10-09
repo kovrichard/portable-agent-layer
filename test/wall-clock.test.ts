@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 // The line is injected on every prompt of every session, so its shape, its
 // timezone handling and its kill switch are all pinned.
@@ -10,7 +10,7 @@ import { removeOnceReleased } from "./lib/remove-once-released";
 let TEST_HOME: string;
 
 beforeEach(() => {
-  TEST_HOME = mkdtempSync(resolve(tmpdir(), "pal-wall-clock-"));
+  TEST_HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = TEST_HOME;
   mkdirSync(resolve(TEST_HOME, "memory"), { recursive: true });
 });

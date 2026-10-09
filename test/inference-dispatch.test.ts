@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   buildClaudeArgs,
@@ -20,6 +19,7 @@ import { logPromptSnapshot, recentHookErrors } from "../src/hooks/lib/log";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 const PRESERVED = [
   "PAL_AGENT",
@@ -199,7 +199,7 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
     saved = savedEnv();
     savedDisabled = process.env.PAL_INFERENCE_DISABLED;
     delete process.env.PAL_INFERENCE_DISABLED;
-    tmpBin = mkdtempSync(resolve(tmpdir(), "pal-fake-claude-"));
+    tmpBin = freshTestDir(import.meta.file);
     // Isolate debug-log writes from production ~/.pal/ — inference() will
     // log into tmpBin/memory/state/debug.log instead, cleaned up below.
     process.env.PAL_HOME = tmpBin;
@@ -335,7 +335,7 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
     prependPath(tmpBin);
 
     const palHomeSaved = process.env.PAL_HOME;
-    const tmpHome = mkdtempSync(resolve(tmpdir(), "pal-debug-home-"));
+    const tmpHome = freshTestDir(import.meta.file);
     const stateDir = resolve(tmpHome, "memory", "state");
     mkdirSync(stateDir, { recursive: true });
     writeFileSync(resolve(stateDir, "debug-enabled"), "");
@@ -391,7 +391,7 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
 
 describe("logPromptSnapshot", () => {
   test("writes last-prompt.md to debug folder when debug enabled", () => {
-    const tmpHome = mkdtempSync(resolve(tmpdir(), "pal-prompt-snap-"));
+    const tmpHome = freshTestDir(import.meta.file);
     const stateDir = resolve(tmpHome, "memory", "state");
     mkdirSync(stateDir, { recursive: true });
     writeFileSync(resolve(stateDir, "debug-enabled"), "");
@@ -409,7 +409,7 @@ describe("logPromptSnapshot", () => {
   });
 
   test("does not write when debug disabled", () => {
-    const tmpHome = mkdtempSync(resolve(tmpdir(), "pal-prompt-snap-nodebug-"));
+    const tmpHome = freshTestDir(import.meta.file);
     const palHomeSaved = process.env.PAL_HOME;
     process.env.PAL_HOME = tmpHome;
     try {

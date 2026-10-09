@@ -6,6 +6,8 @@
  * inference dispatcher (e.g. via a fake binary on PATH) opt back in by
  * deleting this env var in their own beforeEach.
  */
+import { resolve } from "node:path";
+
 process.env.PAL_INFERENCE_DISABLED = "1";
 process.env.PAL_NOTIFICATIONS_DISABLED = "1";
 
@@ -40,3 +42,9 @@ function detachFromHookRepository() {
 }
 
 detachFromHookRepository();
+
+function stopGitAtTestHomes() {
+  process.env.GIT_CEILING_DIRECTORIES = resolve(import.meta.dir, "../.test");
+}
+
+stopGitAtTestHomes();

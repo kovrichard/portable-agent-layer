@@ -8,12 +8,12 @@ import {
   spyOn,
   test,
 } from "bun:test";
-import { mkdtempSync, readdirSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { type AdminHandlers, cliTree } from "../src/cli/tree";
 import { type Command, runCommand } from "../src/tools/lib/command";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 const handlerRan = () => {
   throw new Error("a handler ran during a help or misuse call");
@@ -48,7 +48,7 @@ let err: string[];
 let spies: ReturnType<typeof spyOn>[];
 
 beforeAll(() => {
-  sandbox = mkdtempSync(resolve(tmpdir(), "pal-cli-tree-"));
+  sandbox = freshTestDir(import.meta.file);
   for (const key of SANDBOX_KEYS) process.env[key] = resolve(sandbox, key);
 });
 

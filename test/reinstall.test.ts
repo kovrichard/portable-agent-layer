@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { reinstallInFreshProcess } from "../src/cli/reinstall";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 describe("reinstallInFreshProcess", () => {
   let dir: string;
 
   beforeEach(() => {
-    dir = mkdtempSync(resolve(tmpdir(), "pal-reinstall-"));
+    dir = freshTestDir(import.meta.file);
   });
   afterEach(() => removeOnceReleased(dir));
 

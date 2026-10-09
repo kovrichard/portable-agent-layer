@@ -9,19 +9,12 @@
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import {
-  chmodSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  realpathSync,
-  writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
+import { chmodSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { linkFile } from "./lib/links";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { plant, ROOTS, surface } from "./lib/shipped-surface";
+import { freshTestDir } from "./lib/test-home";
 
 interface Manifest {
   current: string[];
@@ -68,7 +61,7 @@ function install(root: string): void {
 }
 
 function sandbox(): string {
-  const root = realpathSync(mkdtempSync(resolve(tmpdir(), "pal-shipped-surface-")));
+  const root = realpathSync(freshTestDir(import.meta.file));
   mkdirSync(resolve(root, "user"));
   fakeAgentsOnPath(root);
   install(root);

@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 import { removePalContextFiles } from "../src/targets/lib";
+import { freshTestDir } from "./lib/test-home";
 
 function dirWith(files: string[]): string {
-  const dir = mkdtempSync(join(tmpdir(), "pal-ctx-"));
+  const dir = freshTestDir(import.meta.file);
   for (const f of files) writeFileSync(resolve(dir, f), "x", "utf-8");
   return dir;
 }
@@ -55,12 +55,12 @@ describe("removePalContextFiles", () => {
   });
 
   test("is a no-op when the directory does not exist", () => {
-    const dir = resolve(mkdtempSync(join(tmpdir(), "pal-ctx-")), "never-created");
+    const dir = resolve(freshTestDir(import.meta.file), "never-created");
     expect(removePalContextFiles(dir, ".mdc")).toEqual([]);
   });
 
   test("ignores subdirectories that happen to match the pattern", () => {
-    const dir = mkdtempSync(join(tmpdir(), "pal-ctx-"));
+    const dir = freshTestDir(import.meta.file);
     mkdirSync(resolve(dir, "pal-nested.mdc"));
     writeFileSync(resolve(dir, "pal-nested.mdc", "inner.md"), "x", "utf-8");
     expect(removePalContextFiles(dir, ".mdc")).toEqual([]);

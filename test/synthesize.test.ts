@@ -3,8 +3,9 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { synthesize, writeSynthesis } from "../src/tools/agent/synthesize";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const HOME = resolve(import.meta.dir, "../.test-home-synthesize");
+const HOME = testHome(import.meta.file);
 const savedHome = process.env.PAL_HOME;
 
 function iso(daysAgo: number): string {

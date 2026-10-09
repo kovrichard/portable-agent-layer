@@ -1,17 +1,17 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { LEFTOVERS } from "../src/cli/leftovers";
 import { linkFile } from "./lib/links";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 let DIR: string;
 const saved = { ...process.env };
 const at = (...parts: string[]) => resolve(DIR, ...parts);
 
 beforeEach(() => {
-  DIR = mkdtempSync(resolve(tmpdir(), "pal-leftovers-"));
+  DIR = freshTestDir(import.meta.file);
   process.env.PAL_HOME = at("home");
   process.env.PAL_CLAUDE_DIR = at(".claude");
   process.env.PAL_OPENCODE_DIR = at(".opencode");

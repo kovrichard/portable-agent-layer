@@ -1,7 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { LiveRail } from "../src/cli/ui/live";
 import { createStyle } from "../src/cli/ui/style";
@@ -15,6 +14,7 @@ import {
 } from "../src/hooks/handlers/update-check";
 import { paths } from "../src/hooks/lib/paths";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 const release = (mode: UpdateCache["mode"], available = true): UpdateCache =>
   ({ available, current: "0.89.0", latest: "0.90.0", mode }) as UpdateCache;
@@ -109,7 +109,7 @@ describe("pal cli update — the flow", () => {
 describe("pal cli update — clears stale update cache", () => {
   const src = readFileSync(resolve(import.meta.dir, "../src/cli/index.ts"), "utf-8");
   const prevHome = process.env.PAL_HOME;
-  const home = mkdtempSync(resolve(tmpdir(), "pal-update-cache-"));
+  const home = freshTestDir(import.meta.file);
 
   afterAll(() => {
     if (prevHome === undefined) delete process.env.PAL_HOME;
@@ -151,9 +151,9 @@ describe("pal cli update — clears stale update cache", () => {
 describe("pal cli update — repo mode ignores local unpushed commits", () => {
   const prevHome = process.env.PAL_HOME;
   const prevPkg = process.env.PAL_PKG;
-  const home = mkdtempSync(resolve(tmpdir(), "pal-update-home-"));
-  const origin = mkdtempSync(resolve(tmpdir(), "pal-update-origin-"));
-  const clone = mkdtempSync(resolve(tmpdir(), "pal-update-clone-"));
+  const home = freshTestDir(import.meta.file);
+  const origin = freshTestDir(import.meta.file);
+  const clone = freshTestDir(import.meta.file);
 
   const git = (cwd: string, ...args: string[]) =>
     spawnSync("git", args, { cwd, stdio: "ignore" });

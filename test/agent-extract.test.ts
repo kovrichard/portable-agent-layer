@@ -1,12 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import {
-  existsSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   copyAgentsForCodex,
@@ -19,11 +12,12 @@ import {
   removeAgentsFromOpencode,
 } from "../src/targets/lib";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 const dirs: string[] = [];
 
 function tmp(): string {
-  const dir = mkdtempSync(resolve(tmpdir(), "pal-agents-"));
+  const dir = freshTestDir(import.meta.file);
   dirs.push(dir);
   return dir;
 }

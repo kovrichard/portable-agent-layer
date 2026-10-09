@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   agentsAtWork,
@@ -16,6 +15,7 @@ import {
   sortBoard,
 } from "../src/tools/control-room/data";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 // Every number the page shows comes from one of these functions, so each one
 // is pinned against a fixture home rather than against the live ~/.pal.
@@ -24,7 +24,7 @@ const NOW = new Date("2026-09-05T12:00:00.000Z");
 let HOME: string;
 
 beforeEach(() => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-control-room-data-"));
+  HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
 });
 

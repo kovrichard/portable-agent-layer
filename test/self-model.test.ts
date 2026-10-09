@@ -1,6 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   type AlgorithmReflection,
@@ -34,6 +33,7 @@ import {
   synthesisIsDue,
 } from "../src/tools/lib/self-model";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 const NOW = new Date("2026-09-06T12:00:00.000Z");
 const SINCE = new Date("2026-08-07T12:00:00.000Z");
@@ -41,7 +41,7 @@ const SINCE = new Date("2026-08-07T12:00:00.000Z");
 const tempDirs: string[] = [];
 
 function tempDir(): string {
-  const dir = mkdtempSync(join(tmpdir(), "pal-self-model-"));
+  const dir = freshTestDir(import.meta.file);
   tempDirs.push(dir);
   return dir;
 }

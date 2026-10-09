@@ -1,18 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import {
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { builtinToolVerbs } from "../src/cli/builtin-tools";
 import { linkDir } from "./lib/links";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 const TOOL_DIR = resolve(import.meta.dir, "../src/tools/agent");
@@ -46,7 +39,7 @@ const READ_ONLY_ARGS: Record<string, string[]> = {
 };
 
 beforeAll(() => {
-  home = mkdtempSync(resolve(tmpdir(), "pal-builtin-"));
+  home = freshTestDir(import.meta.file);
 });
 
 afterAll(() => {
@@ -150,8 +143,8 @@ describe("pal cli <tool> — the writing path, not just --help", () => {
   test.each(Object.entries(WRITE_CASES))(
     "%s writes the same tree either way",
     (verb, args) => {
-      const viaCliHome = mkdtempSync(resolve(tmpdir(), "pal-write-cli-"));
-      const viaPathHome = mkdtempSync(resolve(tmpdir(), "pal-write-path-"));
+      const viaCliHome = freshTestDir(import.meta.file);
+      const viaPathHome = freshTestDir(import.meta.file);
       try {
         const viaCli = spawnSync("bun", [CLI, "cli", verb, ...args], {
           env: { ...process.env, PAL_HOME: viaCliHome },
@@ -271,7 +264,7 @@ describe("pal cli skill run — ~/.pal/.env reaches shipped skills only", () => 
   }
 
   beforeAll(() => {
-    pkg = mkdtempSync(resolve(tmpdir(), "pal-pkg-"));
+    pkg = freshTestDir(import.meta.file);
     mkdirSync(resolve(home, "skills"), { recursive: true });
     writeFileSync(resolve(home, ".env"), "PAL_GEMINI_API_KEY=from-pal-env\n");
     linkIntoHome(

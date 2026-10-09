@@ -3,9 +3,10 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
-const TEST_HOME = resolve(import.meta.dir, "../.test-install-home");
+const TEST_HOME = testHome(import.meta.file);
 const CLAUDE_DIR = resolve(TEST_HOME, ".claude");
 const OPENCODE_DIR = resolve(TEST_HOME, ".opencode");
 const CURSOR_DIR = resolve(TEST_HOME, ".cursor");

@@ -19,8 +19,9 @@ import {
   scaffoldTelos,
 } from "../src/targets/lib";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const HOME = resolve(import.meta.dir, "../.test-home-targets-install");
+const HOME = testHome(import.meta.file);
 // copySkills also symlinks into platform.agentsDir(), so PAL_AGENTS_DIR must be
 // redirected too or the test writes into the developer's real ~/.agents.
 const ENV = {

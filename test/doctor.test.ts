@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
@@ -9,11 +8,12 @@ import {
   lintSlide,
 } from "../assets/skills/presentation/tools/doctor";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir, testHome } from "./lib/test-home";
 
 // Helper — lint a single slide given its body. Creates a throwaway deck dir
 // only when the rule needs to resolve an asset path (image-text, missing-asset).
 async function lint(body: string, opts: { deckDir?: string } = {}): Promise<Finding[]> {
-  const deckDir = opts.deckDir ?? tmpdir();
+  const deckDir = opts.deckDir ?? testHome(import.meta.file, "deck");
   const r = await lintSlide({ name: "test.md", body }, deckDir);
   return r.findings;
 }
@@ -72,7 +72,7 @@ describe("global rules", () => {
   });
 
   test("missing-asset resolves against deck dir for present files", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "doctor-asset-"));
+    const dir = freshTestDir(import.meta.file);
     try {
       mkdirSync(join(dir, "assets"));
       writeFileSync(join(dir, "assets", "diagram.png"), "");

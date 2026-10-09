@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { enableCopilotInstructions } from "../src/targets/vscode-settings";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const ROOT = resolve(tmpdir(), `pal-vscode-settings-${process.pid}`);
+const ROOT = testHome(import.meta.file);
 const USER_DIR = resolve(ROOT, "Code", "User");
 const SETTINGS = resolve(USER_DIR, "settings.json");
 const ENABLED = { "~/.copilot/instructions": true };

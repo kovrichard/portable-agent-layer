@@ -10,9 +10,10 @@ import {
   writeReviewMark,
 } from "../src/hooks/lib/algorithm-review";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
 const REPO_ROOT = resolve(import.meta.dir, "..");
-const TEST_HOME = resolve(import.meta.dir, "../.test-home-algo-review");
+const TEST_HOME = testHome(import.meta.file);
 const REFL_FILE = resolve(
   TEST_HOME,
   "memory",

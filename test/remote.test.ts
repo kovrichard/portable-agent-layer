@@ -1,10 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { resolve } from "node:path";
 import { detectRemote, normalizeRemote } from "../src/hooks/lib/remote";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 describe("normalizeRemote", () => {
   test("every clone style of one repository converges on one value", () => {
@@ -56,7 +54,7 @@ describe("normalizeRemote", () => {
 
 describe("detectRemote", () => {
   test("returns null outside a git repository", () => {
-    const dir = mkdtempSync(resolve(tmpdir(), "pal-noremote-"));
+    const dir = freshTestDir(import.meta.file);
     try {
       expect(detectRemote(dir)).toBeNull();
     } finally {
@@ -65,7 +63,7 @@ describe("detectRemote", () => {
   });
 
   test("returns null for a git repo that has no origin", () => {
-    const dir = mkdtempSync(resolve(tmpdir(), "pal-noorigin-"));
+    const dir = freshTestDir(import.meta.file);
     try {
       spawnSync("git", ["init", "-q", dir]);
       expect(detectRemote(dir)).toBeNull();
@@ -75,7 +73,7 @@ describe("detectRemote", () => {
   });
 
   test("reads and normalizes a configured origin", () => {
-    const dir = mkdtempSync(resolve(tmpdir(), "pal-origin-"));
+    const dir = freshTestDir(import.meta.file);
     try {
       spawnSync("git", ["init", "-q", dir]);
       spawnSync("git", ["-C", dir, "remote", "add", "origin", "git@github.com:a/b.git"]);

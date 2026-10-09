@@ -28,7 +28,7 @@ bun test test/cli.test.ts                       # one file
 bun test --test-name-pattern "scaffolds telos"  # one test by name
 ```
 
-Run the CLI against a sandboxed home with `PAL_HOME=./.test-home bun src/cli/index.ts cli init`. `.test-home/` is wiped at the start of `bun test test/cli.test.ts`.
+Run the CLI against a sandboxed home with `PAL_HOME=./.test/cli/home bun src/cli/index.ts cli init`. `.test/cli/home/` is wiped at the start of `bun test test/cli.test.ts`. Every test home lives under `.test/`, one folder per test file, built by `test/lib/test-home.ts`.
 
 The control room's page is the one part of `src/` that is built rather than served from source: Bun's CSS bundler passes Tailwind's `@theme` / `@utility` directives through as unknown at-rules, so `vite.config.ts` builds `src/tools/control-room/ui/` into `ui/dist/`, which is gitignored and emitted at `prepack`.
 

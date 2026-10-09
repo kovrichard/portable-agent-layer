@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
 
@@ -17,7 +17,7 @@ function writeSettings(principalName: string | undefined): void {
 }
 
 beforeEach(async () => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-identity-cli-"));
+  HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   // settings caches per process and bun shares one across test files.
   (await import("../src/hooks/lib/settings")).reload();

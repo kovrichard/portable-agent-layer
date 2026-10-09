@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, utimesSync, writeFileSync } from "node:fs";
-import { homedir, tmpdir } from "node:os";
+import { mkdirSync, utimesSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import {
   accumulateUsage,
@@ -15,6 +15,7 @@ import {
   totalTokens,
 } from "../src/tools/lib/session-usage";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 // What the `pal` wrapper prints after a session ends. It is spawned, so none of
 // it was reachable from a test — which is how the duration came to be reported
@@ -26,7 +27,7 @@ const MODEL = "claude-opus-5";
 let CLAUDE_DIR: string;
 
 beforeEach(() => {
-  CLAUDE_DIR = mkdtempSync(resolve(tmpdir(), "pal-summary-"));
+  CLAUDE_DIR = freshTestDir(import.meta.file);
 });
 
 afterEach(() => {
