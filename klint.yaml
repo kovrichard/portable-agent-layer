@@ -138,6 +138,16 @@ arch:
         - "!src/hooks/RtkWrap.ts"
       message: "Unexported function in a hook entrypoint — nothing can import it, so nothing can test it. Move it to src/hooks/lib/."
 
+    # A "dir" symlink needs Developer Mode on Windows, so it throws EPERM for an
+    # ordinary user. ensureSymlink() makes a junction there instead, and
+    # claude-md.ts links one file with a copy fallback.
+    - pattern: 're:\bsymlinkSync\('
+      in:
+        - "src/**"
+        - "!src/targets/lib.ts"
+        - "!src/hooks/lib/claude-md.ts"
+      message: "Raw symlinkSync — a directory symlink needs Developer Mode on Windows. Create links in src/targets/lib.ts, where ensureSymlink() picks a junction on Windows."
+
   singleton:
     - pattern: "process.env.PAL_HOME"
       only: "src/hooks/lib/paths.ts"

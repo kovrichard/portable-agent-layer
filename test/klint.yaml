@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/konvert7/klint/refs/heads/main/klint.schema.json
+
+# The suite's own rules, kept apart from ../klint.yaml so the product rules and
+# the sonar plugin do not start judging test code. Paths are relative to test/.
+include:
+  - "."
+rules: {}
+
+arch:
+  forbidden:
+    - pattern: 're:\brmSync\('
+      in: ["**", "!lib/remove-once-released.ts"]
+      message: "Delete through removeOnceReleased() from test/lib/remove-once-released.ts — a child the test started can still hold the folder, and Windows refuses to delete it (EBUSY)."
+
+    - pattern: 're:\bsymlinkSync\('
+      in: ["**", "!lib/links.ts"]
+      message: "Link through linkDir() or linkFile() from test/lib/links.ts — a plain directory symlink needs Developer Mode on Windows and throws EPERM everywhere else."
