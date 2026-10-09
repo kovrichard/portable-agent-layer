@@ -6,6 +6,7 @@
  * inference dispatcher (e.g. via a fake binary on PATH) opt back in by
  * deleting this env var in their own beforeEach.
  */
+import { beforeEach } from "bun:test";
 import { TEST_ROOT } from "./lib/test-home";
 
 process.env.PAL_INFERENCE_DISABLED = "1";
@@ -55,3 +56,12 @@ function seeTheTerminalCiSees() {
 }
 
 seeTheTerminalCiSees();
+
+function startEveryTestOnTheOriginalPath() {
+  const originalPath = process.env.PATH;
+  beforeEach(() => {
+    process.env.PATH = originalPath;
+  });
+}
+
+startEveryTestOnTheOriginalPath();
