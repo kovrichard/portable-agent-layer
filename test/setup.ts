@@ -48,3 +48,10 @@ function stopGitAtTestHomes() {
 }
 
 stopGitAtTestHomes();
+
+function seeTheTerminalCiSees() {
+  process.stdout.isTTY = false;
+  delete process.env.FORCE_COLOR;
+}
+
+seeTheTerminalCiSees();

@@ -90,8 +90,7 @@ export default {
   concurrency: Number(process.env.STRYKER_CONCURRENCY ?? 4),
   bun: {
     testFiles,
-    // No --isolate: bun re-runs the preload and rebuilds the module graph for every file,
-    // and this runner's dry-run preload eager-imports every mutated module each time.
+    bunArgs: ["--isolate"],
     timeout: 120000,
     // Loading the whole suite pushes the runner's inspector handshake past its 5s default.
     inspectorTimeout: 60000,
