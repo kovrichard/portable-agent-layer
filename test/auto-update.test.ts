@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -23,8 +23,6 @@ import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
 let PKG: string;
-const prevHome = process.env.PAL_HOME;
-const prevPkg = process.env.PAL_PKG;
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -78,15 +76,6 @@ beforeEach(() => {
   process.env.PAL_PKG = PKG;
   mkdirSync(resolve(HOME, "memory", "state"), { recursive: true });
   repoFixture();
-  reload();
-});
-
-afterEach(() => {
-  if (prevHome === undefined) delete process.env.PAL_HOME;
-  else process.env.PAL_HOME = prevHome;
-  if (prevPkg === undefined) delete process.env.PAL_PKG;
-  else process.env.PAL_PKG = prevPkg;
-  for (const dir of [HOME, PKG]) removeOnceReleased(dir);
   reload();
 });
 

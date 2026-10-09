@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import {
@@ -7,22 +7,13 @@ import {
   unknownSettingsKeys,
   unresolvedDependencies,
 } from "../src/cli/doctor/state";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
-let savedHome: string | undefined;
 
 beforeEach(() => {
   HOME = freshTestDir(import.meta.file);
-  savedHome = process.env.PAL_HOME;
   process.env.PAL_HOME = HOME;
-});
-
-afterEach(() => {
-  if (savedHome === undefined) delete process.env.PAL_HOME;
-  else process.env.PAL_HOME = savedHome;
-  removeOnceReleased(HOME);
 });
 
 function write(path: string, content: string): void {

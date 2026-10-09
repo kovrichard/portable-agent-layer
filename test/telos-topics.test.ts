@@ -1,8 +1,7 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { hasRealContent, telosStatus } from "../src/hooks/lib/telos-topics";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 // One definition of "answered" serves the doctor, `pal cli telos` and the
@@ -13,10 +12,6 @@ let HOME: string;
 beforeEach(() => {
   HOME = freshTestDir(import.meta.file);
   mkdirSync(resolve(HOME, "telos"), { recursive: true });
-});
-
-afterEach(() => {
-  removeOnceReleased(HOME);
 });
 
 function writeTopic(name: string, body: string): string {

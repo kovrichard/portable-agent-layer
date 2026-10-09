@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { addDraft, type DraftInput, decideRule } from "../src/hooks/lib/adaptation-rules";
@@ -7,7 +7,6 @@ import {
   watchReplyRules,
 } from "../src/hooks/lib/adaptation-steering";
 import { reload } from "../src/hooks/lib/settings";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
@@ -18,12 +17,6 @@ beforeEach(() => {
   process.env.PAL_HOME = HOME;
   mkdirSync(resolve(HOME, "memory"), { recursive: true });
   reload();
-});
-
-afterEach(() => {
-  delete process.env.PAL_HOME;
-  reload();
-  removeOnceReleased(HOME);
 });
 
 function approved(over: Partial<DraftInput>) {

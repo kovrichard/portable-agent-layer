@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { observeTurn, recordReply, type TurnEvent } from "../src/hooks/lib/interaction";
@@ -9,7 +9,6 @@ import {
 } from "../src/hooks/lib/interaction-mood";
 import { REACTION_RULES } from "../src/hooks/lib/interaction-reaction";
 import { reload } from "../src/hooks/lib/settings";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 let TEST_HOME: string;
@@ -49,13 +48,6 @@ beforeEach(() => {
   process.env.PAL_AGENT = "claude";
   mkdirSync(resolve(TEST_HOME, "memory"), { recursive: true });
   setSettings({});
-});
-
-afterEach(() => {
-  delete process.env.PAL_HOME;
-  delete process.env.PAL_AGENT;
-  reload();
-  removeOnceReleased(TEST_HOME);
 });
 
 describe("measuring a turn", () => {

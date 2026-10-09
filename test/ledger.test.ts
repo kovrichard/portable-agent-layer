@@ -1,7 +1,6 @@
-import { afterEach, beforeEach, describe, expect, setSystemTime, test } from "bun:test";
+import { beforeEach, describe, expect, setSystemTime, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 // The ledger is the record something else will be judged against, so these
@@ -17,13 +16,6 @@ beforeEach(async () => {
   delete process.env.PAL_SPAWNED_INFERENCE;
   delete process.env.PAL_AGENT;
   (await import("../src/hooks/lib/settings")).reload();
-});
-
-afterEach(() => {
-  delete process.env.PAL_HOME;
-  delete process.env.PAL_SPAWNED_INFERENCE;
-  delete process.env.PAL_AGENT;
-  removeOnceReleased(HOME);
 });
 
 async function lib() {

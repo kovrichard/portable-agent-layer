@@ -1,9 +1,8 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { delimiter, dirname, resolve } from "node:path";
 import { linkFile } from "./lib/links";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
@@ -76,10 +75,6 @@ beforeAll(() => {
     .filter((f: { severity: string }) => f.severity === "fail" || f.severity === "warn")
     .map((f: { id: string }) => f.id);
 }, 120000);
-
-afterAll(() => {
-  removeOnceReleased(SANDBOX);
-});
 
 describe.skipIf(process.platform === "win32")(
   "one install removes what older versions left",

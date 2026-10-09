@@ -1,8 +1,7 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { delimiter, dirname, resolve } from "node:path";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
@@ -49,10 +48,6 @@ beforeAll(() => {
   reinstall = pal("install", "--claude");
   verbose = pal("install", "--claude", "--verbose");
 }, 180000);
-
-afterAll(() => {
-  removeOnceReleased(SANDBOX);
-});
 
 describe.skipIf(process.platform === "win32")("what init and install print", () => {
   test("init reports health after installing, not before", () => {

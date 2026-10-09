@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import {
@@ -11,19 +11,9 @@ import {
 const KEYS = [SPAWN_GUARD_ENV.SENTINEL, SPAWN_GUARD_ENV.DEPTH] as const;
 
 describe("spawn-guard helpers", () => {
-  const saved: Record<string, string | undefined> = {};
-
   beforeEach(() => {
     for (const k of KEYS) {
-      saved[k] = process.env[k];
       delete process.env[k];
-    }
-  });
-
-  afterEach(() => {
-    for (const k of KEYS) {
-      if (saved[k] === undefined) delete process.env[k];
-      else process.env[k] = saved[k];
     }
   });
 

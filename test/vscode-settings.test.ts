@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { enableCopilotInstructions } from "../src/targets/vscode-settings";
@@ -10,8 +10,10 @@ const USER_DIR = resolve(ROOT, "Code", "User");
 const SETTINGS = resolve(USER_DIR, "settings.json");
 const ENABLED = { "~/.copilot/instructions": true };
 
-beforeEach(() => mkdirSync(USER_DIR, { recursive: true }));
-afterEach(() => removeOnceReleased(ROOT));
+beforeEach(() => {
+  removeOnceReleased(ROOT);
+  mkdirSync(USER_DIR, { recursive: true });
+});
 
 function settings(): Record<string, unknown> {
   return JSON.parse(readFileSync(SETTINGS, "utf-8"));

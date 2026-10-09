@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Reaction } from "../src/hooks/lib/interaction-reaction";
@@ -11,7 +11,6 @@ import {
   writeAuditMark,
 } from "../src/hooks/lib/reaction-audit";
 import { reload } from "../src/hooks/lib/settings";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 const REPO_ROOT = resolve(import.meta.dir, "..");
@@ -40,13 +39,6 @@ beforeEach(() => {
   mkdirSync(resolve(TEST_HOME, "memory", "state"), { recursive: true });
   writeFileSync(resolve(TEST_HOME, "memory", "pal-settings.json"), "{}");
   reload();
-});
-
-afterEach(() => {
-  delete process.env.PAL_HOME;
-  delete process.env.PAL_PKG;
-  reload();
-  removeOnceReleased(TEST_HOME);
 });
 
 describe("audit samples", () => {

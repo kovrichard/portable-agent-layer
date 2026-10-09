@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
@@ -35,13 +35,6 @@ beforeAll(async () => {
   process.env.PAL_HOME = TEST_HOME;
   const { reload } = await import("../src/hooks/lib/settings");
   reload();
-});
-
-afterAll(async () => {
-  delete process.env.PAL_HOME;
-  const { reload } = await import("../src/hooks/lib/settings");
-  reload();
-  removeOnceReleased(TEST_HOME);
 });
 
 describe("identity", () => {

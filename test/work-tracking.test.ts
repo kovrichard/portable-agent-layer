@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync } from "node:fs";
 import {
   appendProjectHistory,
@@ -17,11 +17,6 @@ beforeAll(() => {
   process.env.PAL_HOME = TEST_HOME;
   removeOnceReleased(TEST_HOME);
   mkdirSync(TEST_HOME, { recursive: true });
-});
-
-afterAll(() => {
-  delete process.env.PAL_HOME;
-  removeOnceReleased(TEST_HOME);
 });
 
 describe("detectStatus", () => {

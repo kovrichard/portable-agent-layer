@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -25,23 +25,13 @@ import { testHome } from "./lib/test-home";
 const REPO = resolve(import.meta.dir, "..");
 const HOME = testHome(import.meta.file);
 const AGENT_RESPONSE_HOOK = resolve(REPO, "src", "hooks", "AgentResponse.ts");
-const savedHome = process.env.PAL_HOME;
-let restoreContextRuleDirs: () => void;
 
 beforeEach(() => {
   removeOnceReleased(HOME);
   mkdirSync(resolve(HOME, "memory"), { recursive: true });
   process.env.PAL_HOME = HOME;
-  restoreContextRuleDirs = sandboxContextRuleDirs(resolve(HOME, "agents"));
+  sandboxContextRuleDirs(resolve(HOME, "agents"));
   reload();
-});
-
-afterEach(() => {
-  if (savedHome === undefined) delete process.env.PAL_HOME;
-  else process.env.PAL_HOME = savedHome;
-  restoreContextRuleDirs();
-  reload();
-  removeOnceReleased(HOME);
 });
 
 type PromptPayload = HookTurnPayload & { prompt: string };

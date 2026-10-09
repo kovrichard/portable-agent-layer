@@ -1,8 +1,7 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { palEnvPath, parsePalEnv, withPalEnv } from "../src/hooks/lib/pal-env";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 describe("parsePalEnv", () => {
@@ -29,18 +28,10 @@ describe("parsePalEnv", () => {
 
 describe("withPalEnv", () => {
   let home: string;
-  let savedHome: string | undefined;
 
   beforeEach(() => {
-    savedHome = process.env.PAL_HOME;
     home = freshTestDir(import.meta.file);
     process.env.PAL_HOME = home;
-  });
-
-  afterEach(() => {
-    if (savedHome === undefined) delete process.env.PAL_HOME;
-    else process.env.PAL_HOME = savedHome;
-    removeOnceReleased(home);
   });
 
   test("lives at the root of PAL's home", () => {

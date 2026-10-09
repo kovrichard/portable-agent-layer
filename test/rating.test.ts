@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync } from "node:fs";
 import { captureRating, parseExplicitRating } from "../src/hooks/handlers/rating";
 import { removeOnceReleased } from "./lib/remove-once-released";
@@ -7,27 +7,12 @@ import { testHome } from "./lib/test-home";
 const TEST_HOME = testHome(import.meta.file);
 
 describe("captureRating non-blocking contract", () => {
-  let savedKey: string | undefined;
-  let savedAgent: string | undefined;
-  let savedHome: string | undefined;
   beforeEach(() => {
-    savedKey = process.env.PAL_ANTHROPIC_API_KEY;
-    savedAgent = process.env.PAL_AGENT;
-    savedHome = process.env.PAL_HOME;
     removeOnceReleased(TEST_HOME);
     mkdirSync(TEST_HOME, { recursive: true });
     process.env.PAL_ANTHROPIC_API_KEY = "sk-test-would-route-to-api";
     process.env.PAL_AGENT = "claude";
     process.env.PAL_HOME = TEST_HOME;
-  });
-  afterEach(() => {
-    if (savedKey === undefined) delete process.env.PAL_ANTHROPIC_API_KEY;
-    else process.env.PAL_ANTHROPIC_API_KEY = savedKey;
-    if (savedAgent === undefined) delete process.env.PAL_AGENT;
-    else process.env.PAL_AGENT = savedAgent;
-    if (savedHome === undefined) delete process.env.PAL_HOME;
-    else process.env.PAL_HOME = savedHome;
-    removeOnceReleased(TEST_HOME);
   });
 
   test("returns synchronously when implicit-sentiment path is triggered", () => {

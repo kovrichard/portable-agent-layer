@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { declaredTriggers } from "../src/hooks/lib/skill-triggers";
@@ -66,7 +66,6 @@ describe("declaredTriggers", () => {
 });
 
 const HOME = testHome(import.meta.file);
-let savedHome: string | undefined;
 
 function writeSkill(name: string, frontmatter: string) {
   const dir = resolve(HOME, "skills", name);
@@ -94,14 +93,7 @@ async function triggersFor(frontmatter: string): Promise<string[]> {
 beforeEach(() => {
   removeOnceReleased(HOME);
   mkdirSync(HOME, { recursive: true });
-  savedHome = process.env.PAL_HOME;
   process.env.PAL_HOME = HOME;
-});
-
-afterEach(() => {
-  if (savedHome === undefined) delete process.env.PAL_HOME;
-  else process.env.PAL_HOME = savedHome;
-  removeOnceReleased(HOME);
 });
 
 describe("generateSkillIndex — trigger source", () => {

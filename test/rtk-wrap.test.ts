@@ -1,7 +1,6 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { chmodSync, writeFileSync } from "node:fs";
 import { delimiter, resolve } from "node:path";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 // RtkWrap delegates to `rtk hook <agent>` when rtk is on PATH, forwarding its
@@ -52,9 +51,6 @@ async function runHook(env: Record<string, string>, stdin = "{}"): Promise<strin
 
 beforeEach(() => {
   dir = freshTestDir(import.meta.file);
-});
-afterEach(() => {
-  removeOnceReleased(dir);
 });
 
 describe("RtkWrap", () => {

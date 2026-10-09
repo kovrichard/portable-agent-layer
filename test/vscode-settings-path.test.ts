@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { vscodeSettingsFile } from "../src/targets/lib";
@@ -11,7 +11,7 @@ function asPlatform(value: string) {
   Object.defineProperty(process, "platform", { value, configurable: true });
 }
 
-afterEach(() => {
+beforeEach(() => {
   Object.defineProperty(process, "platform", {
     value: realPlatform,
     configurable: true,

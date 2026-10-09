@@ -1,9 +1,8 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { promptAutoUpdate } from "../src/cli/setup-auto-update";
 import { raw as rawSettings, reload, write } from "../src/hooks/lib/settings";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 // The install question must be silent wherever nobody can answer it. That is not
@@ -11,7 +10,6 @@ import { freshTestDir } from "./lib/test-home";
 // terminal, and a prompt there would hang the update forever.
 
 let HOME: string;
-const prevHome = process.env.PAL_HOME;
 const originalIsTTY = process.stdin.isTTY;
 
 function setTTY(value: boolean | undefined): void {
@@ -19,17 +17,10 @@ function setTTY(value: boolean | undefined): void {
 }
 
 beforeEach(() => {
+  setTTY(originalIsTTY);
   HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   mkdirSync(resolve(HOME, "memory"), { recursive: true });
-  reload();
-});
-
-afterEach(() => {
-  setTTY(originalIsTTY);
-  if (prevHome === undefined) delete process.env.PAL_HOME;
-  else process.env.PAL_HOME = prevHome;
-  removeOnceReleased(HOME);
   reload();
 });
 

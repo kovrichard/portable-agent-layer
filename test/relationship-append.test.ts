@@ -1,5 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { removeOnceReleased } from "./lib/remove-once-released";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { freshTestDir } from "./lib/test-home";
 
 // appendNotes deduplicates against what today's file already holds, so the count
@@ -11,11 +10,6 @@ let HOME: string;
 beforeEach(() => {
   HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
-});
-
-afterEach(() => {
-  delete process.env.PAL_HOME;
-  removeOnceReleased(HOME);
 });
 
 async function lib() {

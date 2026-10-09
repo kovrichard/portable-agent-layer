@@ -1,18 +1,13 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { dependencyInstall } from "../src/cli/dependencies";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 let PKG: string;
 
 beforeEach(() => {
   PKG = freshTestDir(import.meta.file);
-});
-
-afterEach(() => {
-  removeOnceReleased(PKG);
 });
 
 function dependsOn(...names: string[]): void {

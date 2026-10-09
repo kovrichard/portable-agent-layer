@@ -1,8 +1,7 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import { buildPageFirst } from "./lib/built-page";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 // Opening the page is not work on a project. Every GET route is swept here
@@ -16,17 +15,12 @@ let server: ReturnType<typeof Bun.serve> | null = null;
 buildPageFirst();
 
 beforeEach(() => {
+  server?.stop(true);
+  server = null;
   HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   mkdirSync(resolve(HOME, "memory", "ledger"), { recursive: true });
   mkdirSync(resolve(HOME, "memory", "state"), { recursive: true });
-});
-
-afterEach(() => {
-  server?.stop(true);
-  server = null;
-  delete process.env.PAL_HOME;
-  removeOnceReleased(HOME);
 });
 
 function registerProject(slug: string, updated: string, serves?: string): void {

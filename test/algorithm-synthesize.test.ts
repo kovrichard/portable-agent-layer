@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { appendFileSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -14,11 +14,6 @@ const REFL_FILE = resolve(REFL_DIR, "algorithm-reflections.jsonl");
 
 beforeAll(() => {
   process.env.PAL_HOME = TEST_HOME;
-});
-
-afterAll(() => {
-  delete process.env.PAL_HOME;
-  removeOnceReleased(TEST_HOME);
 });
 
 beforeEach(() => {

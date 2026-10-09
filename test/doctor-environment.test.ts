@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -6,17 +6,12 @@ import {
   palOnPathFinding,
   playwrightFinding,
 } from "../src/cli/doctor/environment";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 let CACHE: string;
 
 beforeEach(() => {
   CACHE = freshTestDir(import.meta.file);
-});
-
-afterEach(() => {
-  removeOnceReleased(CACHE);
 });
 
 const ubuntu = (version: string) =>

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { writeContextDigests } from "../src/hooks/handlers/context-digests";
@@ -23,11 +23,6 @@ beforeEach(() => {
     "# Steer carefully\n"
   );
   Object.assign(process.env, AGENT_DIR_VARS);
-});
-
-afterEach(() => {
-  for (const v of Object.keys(AGENT_DIR_VARS)) delete process.env[v];
-  removeOnceReleased(ROOT);
 });
 
 describe("writeContextDigests for Antigravity", () => {

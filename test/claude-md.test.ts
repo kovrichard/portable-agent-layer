@@ -1,12 +1,4 @@
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  test,
-} from "bun:test";
+import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import {
   existsSync,
   mkdirSync,
@@ -57,13 +49,6 @@ beforeAll(async () => {
   process.env.PAL_HOME = TEST_HOME;
   const { reload } = await import("../src/hooks/lib/settings");
   reload();
-});
-
-afterAll(async () => {
-  delete process.env.PAL_HOME;
-  const { reload } = await import("../src/hooks/lib/settings");
-  reload();
-  removeOnceReleased(TEST_HOME);
 });
 
 describe("buildClaudeMd", () => {
@@ -182,12 +167,8 @@ describe("ensureAntigravityRule", () => {
   const rulePath = resolve(pluginDir, "rules", "pal.md");
 
   beforeEach(() => {
-    process.env.PAL_GEMINI_DIR = geminiDir;
-  });
-
-  afterEach(() => {
     removeOnceReleased(geminiDir);
-    delete process.env.PAL_GEMINI_DIR;
+    process.env.PAL_GEMINI_DIR = geminiDir;
   });
 
   test("writes AGENTS.md as an always-on plugin rule", async () => {

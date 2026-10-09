@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import {
   type CommandInput,
   group,
@@ -10,21 +10,18 @@ import {
 
 let out: string[];
 let err: string[];
-let logSpy: ReturnType<typeof spyOn>;
-let errSpy: ReturnType<typeof spyOn>;
+let logSpy: ReturnType<typeof spyOn> | undefined;
+let errSpy: ReturnType<typeof spyOn> | undefined;
 let calls: CommandInput[];
 
 beforeEach(() => {
+  logSpy?.mockRestore();
+  errSpy?.mockRestore();
   out = [];
   err = [];
   calls = [];
   logSpy = spyOn(console, "log").mockImplementation((...a) => out.push(a.join(" ")));
   errSpy = spyOn(console, "error").mockImplementation((...a) => err.push(a.join(" ")));
-});
-
-afterEach(() => {
-  logSpy.mockRestore();
-  errSpy.mockRestore();
 });
 
 function record(result?: number) {

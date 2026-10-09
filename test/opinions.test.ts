@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
@@ -10,11 +10,6 @@ beforeAll(() => {
   removeOnceReleased(TEST_HOME);
   mkdirSync(resolve(TEST_HOME, "memory", "relationship"), { recursive: true });
   process.env.PAL_HOME = TEST_HOME;
-});
-
-afterAll(() => {
-  delete process.env.PAL_HOME;
-  removeOnceReleased(TEST_HOME);
 });
 
 describe("opinions", () => {

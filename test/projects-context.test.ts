@@ -1,20 +1,15 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { outsideRepoHome } from "./lib/test-home";
 
-// Use os.tmpdir() so findProjectRoot's walk-up doesn't hit the PAL repo's
-// own .git (which would happen if TEST_HOME lived inside the repo).
-const TEST_HOME = mkdtempSync(resolve(tmpdir(), "pal-projects-context-"));
+const TEST_HOME = outsideRepoHome(import.meta.file);
 
 beforeAll(() => {
-  process.env.PAL_HOME = TEST_HOME;
-});
-
-afterAll(() => {
-  delete process.env.PAL_HOME;
   removeOnceReleased(TEST_HOME);
+  mkdirSync(TEST_HOME, { recursive: true });
+  process.env.PAL_HOME = TEST_HOME;
 });
 
 beforeEach(() => {

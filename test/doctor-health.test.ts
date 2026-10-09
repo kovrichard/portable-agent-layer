@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import {
   hookErrorFindings,
@@ -13,7 +13,6 @@ import {
   routeFinding,
 } from "../src/cli/doctor/inference";
 import { palEnvPath } from "../src/hooks/lib/pal-env";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 const NOW = Date.parse("2026-10-04T19:00:00Z");
@@ -293,23 +292,11 @@ describe("~/.pal/.env", () => {
     lastAt: Date.now(),
   };
   let home: string;
-  let saved: Record<string, string | undefined>;
 
   beforeEach(() => {
-    saved = {
-      PAL_HOME: process.env.PAL_HOME,
-      TOKEN: process.env.CLAUDE_CODE_OAUTH_TOKEN,
-    };
     home = freshTestDir(import.meta.file);
     process.env.PAL_HOME = home;
     delete process.env.CLAUDE_CODE_OAUTH_TOKEN;
-  });
-
-  afterEach(() => {
-    if (saved.PAL_HOME === undefined) delete process.env.PAL_HOME;
-    else process.env.PAL_HOME = saved.PAL_HOME;
-    if (saved.TOKEN !== undefined) process.env.CLAUDE_CODE_OAUTH_TOKEN = saved.TOKEN;
-    removeOnceReleased(home);
   });
 
   test("a rejected token is renewed in ~/.pal/.env", () => {

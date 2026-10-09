@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, utimesSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
@@ -14,7 +14,6 @@ import {
   summaryLine,
   totalTokens,
 } from "../src/tools/lib/session-usage";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 // What the `pal` wrapper prints after a session ends. It is spawned, so none of
@@ -28,10 +27,6 @@ let CLAUDE_DIR: string;
 
 beforeEach(() => {
   CLAUDE_DIR = freshTestDir(import.meta.file);
-});
-
-afterEach(() => {
-  removeOnceReleased(CLAUDE_DIR);
 });
 
 function assistantLine(

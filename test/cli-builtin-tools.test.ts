@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -40,10 +40,6 @@ const READ_ONLY_ARGS: Record<string, string[]> = {
 
 beforeAll(() => {
   home = freshTestDir(import.meta.file);
-});
-
-afterAll(() => {
-  removeOnceReleased(home);
 });
 
 describe("pal cli <tool> — the tilde-free path to a built-in tool", () => {
@@ -273,10 +269,6 @@ describe("pal cli skill run — ~/.pal/.env reaches shipped skills only", () => 
     );
     skillWithKeyTool(resolve(home, "skills", "personal"));
     linkIntoHome("linked", skillWithKeyTool(resolve(home, "elsewhere", "linked")));
-  });
-
-  afterAll(() => {
-    removeOnceReleased(pkg);
   });
 
   test("a shipped skill's tool receives keys from ~/.pal/.env", () => {

@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
@@ -65,11 +65,6 @@ beforeAll(() => {
   writeFileSync(resolve(TEST_HOME, ".env"), "CLAUDE_CODE_OAUTH_TOKEN=fake-token\n");
 
   process.env.PAL_HOME = TEST_HOME;
-});
-
-afterAll(() => {
-  delete process.env.PAL_HOME;
-  removeOnceReleased(TEST_HOME);
 });
 
 describe("collectExportFiles", () => {

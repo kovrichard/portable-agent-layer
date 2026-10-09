@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -11,26 +11,15 @@ import {
   removeAgentsFromCursor,
   removeAgentsFromOpencode,
 } from "../src/targets/lib";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
-const dirs: string[] = [];
-
 function tmp(): string {
-  const dir = freshTestDir(import.meta.file);
-  dirs.push(dir);
-  return dir;
+  return freshTestDir(import.meta.file);
 }
 
 function agentFile(dir: string, name = "gemini-researcher.md"): string {
   return readFileSync(resolve(dir, name), "utf-8");
 }
-
-afterEach(() => {
-  for (const dir of dirs.splice(0)) {
-    removeOnceReleased(dir);
-  }
-});
 
 describe("agent extraction per platform", () => {
   test("installs every shipped agent and reports the count", () => {

@@ -1,7 +1,6 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 // The line is injected on every prompt of every session, so its shape, its
@@ -13,11 +12,6 @@ beforeEach(() => {
   TEST_HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = TEST_HOME;
   mkdirSync(resolve(TEST_HOME, "memory"), { recursive: true });
-});
-
-afterEach(() => {
-  delete process.env.PAL_HOME;
-  removeOnceReleased(TEST_HOME);
 });
 
 async function setSettings(data: Record<string, unknown>) {

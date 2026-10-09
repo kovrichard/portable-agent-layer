@@ -1,9 +1,8 @@
-import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { turnsSince } from "../src/hooks/lib/interaction";
 import { run } from "../src/tools/agent/interaction";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 let TEST_HOME: string;
@@ -31,11 +30,6 @@ beforeEach(() => {
   TEST_HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = TEST_HOME;
   mkdirSync(eventsDir(), { recursive: true });
-});
-
-afterEach(() => {
-  delete process.env.PAL_HOME;
-  removeOnceReleased(TEST_HOME);
 });
 
 describe("reading turns back", () => {

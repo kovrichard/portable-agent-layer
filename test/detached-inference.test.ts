@@ -1,8 +1,7 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawnDetachedInference } from "../src/hooks/lib/detached-inference";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 /** A detached child runs asynchronously, so every assertion on it has to wait. */
@@ -21,31 +20,18 @@ async function readWhenWritten(path: string, attempts = 50): Promise<string> {
 
 describe("spawnDetachedInference", () => {
   let tmp: string;
-  let savedHome: string | undefined;
-  let savedClaudecode: string | undefined;
-  let savedAgent: string | undefined;
+  const savedAgent = process.env.PAL_AGENT;
 
   beforeEach(() => {
+    if (savedAgent === undefined) delete process.env.PAL_AGENT;
+    else process.env.PAL_AGENT = savedAgent;
     tmp = freshTestDir(import.meta.file);
-    savedHome = process.env.PAL_HOME;
-    savedClaudecode = process.env.CLAUDECODE;
-    savedAgent = process.env.PAL_AGENT;
     process.env.PAL_HOME = tmp;
     process.env.CLAUDECODE = "1"; // parent has it set
     // Enable debug logging for tests that assert on debug.log content.
     const stateDir = resolve(tmp, "memory", "state");
     mkdirSync(stateDir, { recursive: true });
     writeFileSync(resolve(stateDir, "debug-enabled"), "");
-  });
-
-  afterEach(() => {
-    removeOnceReleased(tmp);
-    if (savedHome === undefined) delete process.env.PAL_HOME;
-    else process.env.PAL_HOME = savedHome;
-    if (savedClaudecode === undefined) delete process.env.CLAUDECODE;
-    else process.env.CLAUDECODE = savedClaudecode;
-    if (savedAgent === undefined) delete process.env.PAL_AGENT;
-    else process.env.PAL_AGENT = savedAgent;
   });
 
   test("spawned child receives CLAUDECODE unset; parent retains it", async () => {

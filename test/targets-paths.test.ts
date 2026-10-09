@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 // Imported at file load, before PAL_HOME is set below: these functions resolve
@@ -14,8 +14,6 @@ import { testHome } from "./lib/test-home";
 
 const HOME = testHome(import.meta.file);
 const CLAUDE = resolve(HOME, ".claude");
-const savedHome = process.env.PAL_HOME;
-const savedClaude = process.env.PAL_CLAUDE_DIR;
 
 function skill(name: string, withManifest = true) {
   mkdirSync(resolve(HOME, "skills", name), { recursive: true });
@@ -27,14 +25,6 @@ beforeEach(() => {
   mkdirSync(HOME, { recursive: true });
   process.env.PAL_HOME = HOME;
   process.env.PAL_CLAUDE_DIR = CLAUDE;
-});
-
-afterEach(() => {
-  if (savedHome === undefined) delete process.env.PAL_HOME;
-  else process.env.PAL_HOME = savedHome;
-  if (savedClaude === undefined) delete process.env.PAL_CLAUDE_DIR;
-  else process.env.PAL_CLAUDE_DIR = savedClaude;
-  removeOnceReleased(HOME);
 });
 
 describe("countSkills", () => {

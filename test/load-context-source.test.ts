@@ -1,9 +1,8 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { contextForSource } from "../src/hooks/lib/session-context";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 const LOAD_CONTEXT = resolve(import.meta.dir, "../src/hooks/LoadContext.ts");
@@ -33,10 +32,6 @@ beforeAll(() => {
   const telos = resolve(sandbox, "home", "telos");
   mkdirSync(telos, { recursive: true });
   writeFileSync(resolve(telos, "GOALS.md"), "# Goals\n\n- ship PAL\n", "utf-8");
-});
-
-afterAll(() => {
-  if (sandbox) removeOnceReleased(sandbox);
 });
 
 describe("which session starts get context", () => {

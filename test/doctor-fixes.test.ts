@@ -4,23 +4,22 @@
  * Slow by design, so it runs in its own CI job: PAL_FIX_PROOFS=1.
  */
 
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
   chmodSync,
   cpSync,
   existsSync,
   mkdirSync,
-  mkdtempSync,
   readdirSync,
   readFileSync,
   utimesSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { linkDir, linkFile } from "./lib/links";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { outsideRepoHome } from "./lib/test-home";
 
 type Mode = "package" | "repo";
 
@@ -188,7 +187,8 @@ function restore(root: string): void {
 }
 
 function prepare(mode: Mode): Sandbox {
-  const root = mkdtempSync(resolve(tmpdir(), `pal-doctor-fixes-${mode}-`));
+  const root = resolve(outsideRepoHome(import.meta.file), mode);
+  removeOnceReleased(root);
   for (const dir of STATE_DIRS) mkdirSync(resolve(root, dir), { recursive: true });
   fakeAgentsOnPath(root);
   const pkg = mode === "package" ? installFromTarball(root) : checkOut(root);
@@ -320,10 +320,6 @@ describe.skipIf(!PROVING).each(["package", "repo"] as Mode[])(
     beforeAll(() => {
       sandbox = prepare(mode);
     }, 300_000);
-
-    afterAll(() => {
-      removeOnceReleased(sandbox.root);
-    });
 
     test("a fresh install leaves nothing for PAL to fix", () => {
       const left = palFixable(sandbox).filter((f) => !(f.id in UNPROVEN));

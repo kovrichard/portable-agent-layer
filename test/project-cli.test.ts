@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { beforeAll, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { run } from "../src/tools/agent/project";
@@ -11,10 +11,6 @@ const CLI = resolve(import.meta.dir, "../src/tools/agent/project.ts");
 beforeAll(() => {
   removeOnceReleased(TEST_HOME);
   mkdirSync(TEST_HOME, { recursive: true });
-});
-
-afterAll(() => {
-  removeOnceReleased(TEST_HOME);
 });
 
 beforeEach(() => {

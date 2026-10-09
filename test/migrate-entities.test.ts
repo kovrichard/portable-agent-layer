@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runMigrate } from "../src/cli/migrate";
@@ -12,15 +12,8 @@ const ROOT = testHome(import.meta.file);
 const LEGACY_DIR = resolve(ROOT, "memory/entities");
 const LEGACY_FILE = resolve(LEGACY_DIR, "entity-index.json");
 
-const originalPalHome = process.env.PAL_HOME;
-
 beforeAll(() => {
   process.env.PAL_HOME = ROOT;
-});
-
-afterAll(() => {
-  if (originalPalHome === undefined) delete process.env.PAL_HOME;
-  else process.env.PAL_HOME = originalPalHome;
 });
 
 beforeEach(() => {

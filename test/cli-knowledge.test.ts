@@ -1,13 +1,4 @@
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  spyOn,
-  test,
-} from "bun:test";
+import { beforeAll, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
@@ -17,15 +8,9 @@ import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 
 const ROOT = testHome(import.meta.file);
-const originalPalHome = process.env.PAL_HOME;
 
 beforeAll(() => {
   process.env.PAL_HOME = ROOT;
-});
-
-afterAll(() => {
-  if (originalPalHome === undefined) delete process.env.PAL_HOME;
-  else process.env.PAL_HOME = originalPalHome;
 });
 
 beforeEach(() => {
@@ -52,11 +37,6 @@ function captureOutput(): {
     errSpy,
   };
 }
-
-afterEach(() => {
-  // Restore any console spies installed in tests
-  // (spyOn auto-restores on afterEach in newer bun versions; safe regardless)
-});
 
 function fixture(): void {
   getOrCreate({

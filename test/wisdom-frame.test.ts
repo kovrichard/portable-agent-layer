@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
@@ -16,11 +16,6 @@ beforeEach(() => {
   // Clean frames dir between tests
   const framesDir = resolve(TEST_HOME, "memory", "wisdom", "frames");
   removeOnceReleased(framesDir);
-});
-
-afterAll(() => {
-  delete process.env.PAL_HOME;
-  removeOnceReleased(TEST_HOME);
 });
 
 // Dynamic import to pick up PAL_HOME

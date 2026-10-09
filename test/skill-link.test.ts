@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, lstatSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -38,10 +38,6 @@ beforeAll(() => {
   // claude + cursor are "installed" (their skills dirs exist); copilot + codex are not.
   mkdirSync(resolve(HOME, ".claude/skills"), { recursive: true });
   mkdirSync(resolve(HOME, ".cursor/skills"), { recursive: true });
-});
-
-afterAll(() => {
-  removeOnceReleased(HOME);
 });
 
 describe("pal cli skill link", () => {

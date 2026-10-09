@@ -1,8 +1,9 @@
 import { mkdirSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { basename, resolve } from "node:path";
 import { removeOnceReleased } from "./remove-once-released";
 
-const TEST_ROOT = resolve(import.meta.dir, "../../.test");
+export const TEST_ROOT = resolve(import.meta.dir, "../../.test");
 
 function suiteName(file: string): string {
   return basename(file).replace(/\.test\.ts$/, "");
@@ -11,6 +12,15 @@ function suiteName(file: string): string {
 /** A fixed folder for this suite under .test/, so a rerun reuses it instead of piling up. */
 export function testHome(file: string, label = "home"): string {
   return resolve(TEST_ROOT, suiteName(file), label);
+}
+
+/**
+ * A fixed folder for this suite with no project above it, for code that walks up
+ * to the nearest .git or package.json. Keyed by checkout so Stryker sandboxes never share one.
+ */
+export function outsideRepoHome(file: string): string {
+  const checkout = Bun.hash(TEST_ROOT).toString(36);
+  return resolve(tmpdir(), `pal-test-${checkout}`, suiteName(file));
 }
 
 const handedOut = new Map<string, number>();

@@ -1,18 +1,8 @@
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  spyOn,
-  test,
-} from "bun:test";
+import { beforeAll, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { type AdminHandlers, cliTree } from "../src/cli/tree";
 import { type Command, runCommand } from "../src/tools/lib/command";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 const handlerRan = () => {
@@ -41,36 +31,24 @@ function nodes(command: Command, path: string[]): [string[], Command][] {
 
 const TREE = nodes(cliTree(admin), ["pal", "cli"]);
 const SANDBOX_KEYS = ["PAL_HOME", "PAL_CLAUDE_DIR", "PAL_CODEX_DIR", "PAL_AGENTS_DIR"];
-const saved = Object.fromEntries(SANDBOX_KEYS.map((k) => [k, process.env[k]]));
 let sandbox: string;
 let out: string[];
 let err: string[];
-let spies: ReturnType<typeof spyOn>[];
+let spies: ReturnType<typeof spyOn>[] = [];
 
 beforeAll(() => {
   sandbox = freshTestDir(import.meta.file);
   for (const key of SANDBOX_KEYS) process.env[key] = resolve(sandbox, key);
 });
 
-afterAll(() => {
-  for (const key of SANDBOX_KEYS) {
-    if (saved[key] === undefined) delete process.env[key];
-    else process.env[key] = saved[key];
-  }
-  removeOnceReleased(sandbox);
-});
-
 beforeEach(() => {
+  for (const spy of spies) spy.mockRestore();
   out = [];
   err = [];
   spies = [
     spyOn(console, "log").mockImplementation((...a) => out.push(a.join(" "))),
     spyOn(console, "error").mockImplementation((...a) => err.push(a.join(" "))),
   ];
-});
-
-afterEach(() => {
-  for (const spy of spies) spy.mockRestore();
 });
 
 const at = (path: string[]) => path.slice(2);

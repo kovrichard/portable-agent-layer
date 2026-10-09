@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -17,7 +17,6 @@ import {
   SONNET_MODEL,
 } from "../src/hooks/lib/models";
 import { opencodeTierModel } from "../src/hooks/lib/opencode-config";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 function flagValue(args: string[], flag: string): string | undefined {
@@ -115,16 +114,10 @@ describe("argv carries the tier's model", () => {
 
 describe("opencode picks from the user's own config", () => {
   let dir: string;
-  const saved = process.env.PAL_OPENCODE_DIR;
 
   beforeEach(() => {
     dir = freshTestDir(import.meta.file);
     process.env.PAL_OPENCODE_DIR = dir;
-  });
-  afterEach(() => {
-    removeOnceReleased(dir);
-    if (saved === undefined) delete process.env.PAL_OPENCODE_DIR;
-    else process.env.PAL_OPENCODE_DIR = saved;
   });
 
   function writeConfig(config: Record<string, unknown>) {
@@ -153,20 +146,6 @@ describe("opencode picks from the user's own config", () => {
 });
 
 describe("previewInferenceRoute", () => {
-  const saved = {
-    agent: process.env.PAL_AGENT,
-    disabled: process.env.PAL_INFERENCE_DISABLED,
-  };
-  afterEach(() => {
-    for (const [k, v] of [
-      ["PAL_AGENT", saved.agent],
-      ["PAL_INFERENCE_DISABLED", saved.disabled],
-    ] as const) {
-      if (v === undefined) delete process.env[k];
-      else process.env[k] = v;
-    }
-  });
-
   test("reports no model for a plan-picked route", () => {
     delete process.env.PAL_INFERENCE_DISABLED;
     process.env.PAL_AGENT = "copilot";

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { LedgerEntry } from "../src/hooks/lib/ledger";
@@ -21,10 +21,6 @@ let HOME: string;
 beforeEach(() => {
   HOME = freshTestDir(import.meta.file);
   mkdirSync(resolve(HOME, "memory", "ledger"), { recursive: true });
-});
-
-afterEach(() => {
-  removeOnceReleased(HOME);
 });
 
 async function runValidator(payload: unknown, agent = "claude"): Promise<string> {

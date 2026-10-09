@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { ArchiveEntry } from "../src/hooks/lib/import-merge";
@@ -10,7 +10,6 @@ import {
   readManifest,
   summarize,
 } from "../src/hooks/lib/import-merge";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
@@ -19,10 +18,6 @@ let QUARANTINE: string;
 beforeEach(() => {
   HOME = freshTestDir(import.meta.file);
   QUARANTINE = resolve(HOME, "backups", "incoming");
-});
-
-afterEach(() => {
-  removeOnceReleased(HOME);
 });
 
 /** An archive entry without a zip — the seam ArchiveEntry exists to expose. */

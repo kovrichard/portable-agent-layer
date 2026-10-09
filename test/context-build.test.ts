@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -14,7 +14,6 @@ import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 
 const HOME = testHome(import.meta.file);
-const savedHome = process.env.PAL_HOME;
 
 function write(relPath: string, content: string) {
   const full = resolve(HOME, relPath);
@@ -57,12 +56,6 @@ beforeEach(() => {
   mkdirSync(HOME, { recursive: true });
   process.env.PAL_HOME = HOME;
   reload();
-});
-
-afterEach(() => {
-  if (savedHome === undefined) delete process.env.PAL_HOME;
-  else process.env.PAL_HOME = savedHome;
-  removeOnceReleased(HOME);
 });
 
 describe("loadWisdomContext", () => {

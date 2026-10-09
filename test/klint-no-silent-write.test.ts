@@ -1,9 +1,8 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { RawViolation } from "@konvert7/klint/core/types";
 import rules from "../klint.rules";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 // The rule this covers shipped once as a file-level check, and a silent writer
@@ -28,10 +27,6 @@ function check(files: string[]): RawViolation[] {
 
 beforeEach(() => {
   ROOT = freshTestDir(import.meta.file);
-});
-
-afterEach(() => {
-  removeOnceReleased(ROOT);
 });
 
 const SILENT = `import { writeFileSync } from "node:fs";

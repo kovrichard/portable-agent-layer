@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -67,10 +67,6 @@ beforeAll(() => {
   mkdirSync(resolve(HOME, ".copilot/agents"), { recursive: true });
   mkdirSync(resolve(HOME, ".codex/agents"), { recursive: true });
   firstLink = subagentLink("my-helper");
-});
-
-afterAll(() => {
-  removeOnceReleased(HOME);
 });
 
 describe("pal cli subagent link", () => {

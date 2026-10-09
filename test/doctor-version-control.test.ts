@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { delimiter, dirname } from "node:path";
 import {
   ghInstallHint,
@@ -7,7 +7,6 @@ import {
 } from "../src/cli/doctor/version-control";
 import { detectRemote } from "../src/hooks/lib/remote";
 import { writeFakeBin } from "./fixtures/fake-bin";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 const osRelease = (id: string, like = "") =>
@@ -54,17 +53,10 @@ describe("how to install gh", () => {
 
 describe("checking git and gh", () => {
   let bin: string;
-  let savedPath: string | undefined;
 
   beforeEach(() => {
     bin = freshTestDir(import.meta.file);
-    savedPath = process.env.PATH;
     process.env.PATH = [bin, dirname(process.execPath)].join(delimiter);
-  });
-
-  afterEach(() => {
-    process.env.PATH = savedPath;
-    removeOnceReleased(bin);
   });
 
   const fakeGit = () => writeFakeBin(bin, "git", 'console.log("git version 2.50.0");');

@@ -1,8 +1,7 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 // The lifecycle is the only part of the server with real failure surface:
@@ -15,13 +14,9 @@ let HOME: string;
 let PORT: number;
 
 beforeEach(() => {
+  if (HOME) pal("stop");
   HOME = freshTestDir(import.meta.file);
   PORT = 17000 + Math.floor(Math.random() * 2000);
-});
-
-afterEach(() => {
-  pal("stop");
-  removeOnceReleased(HOME);
 });
 
 function pal(...args: string[]) {
