@@ -1,18 +1,19 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, rmSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const TEST_HOME = resolve(import.meta.dir, "../.test-home-opinions");
 
 beforeAll(() => {
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
   mkdirSync(resolve(TEST_HOME, "memory", "relationship"), { recursive: true });
   process.env.PAL_HOME = TEST_HOME;
 });
 
 afterAll(() => {
   delete process.env.PAL_HOME;
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
 });
 
 describe("opinions", () => {

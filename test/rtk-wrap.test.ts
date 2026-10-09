@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, resolve } from "node:path";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // RtkWrap delegates to `rtk hook <agent>` when rtk is on PATH, forwarding its
 // stdout verbatim. We stub rtk with a fake executable so these tests are
@@ -53,7 +54,7 @@ beforeEach(() => {
   dir = mkdtempSync(resolve(tmpdir(), "rtk-wrap-"));
 });
 afterEach(() => {
-  rmSync(dir, { recursive: true, force: true });
+  removeOnceReleased(dir);
 });
 
 describe("RtkWrap", () => {

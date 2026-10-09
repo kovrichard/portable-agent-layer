@@ -1,14 +1,8 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 const TEST_HOME = resolve(import.meta.dir, "../.test-install-home");
@@ -42,7 +36,7 @@ function pal(...args: string[]) {
 }
 
 beforeAll(() => {
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
   mkdirSync(TEST_HOME, { recursive: true });
 });
 
@@ -115,7 +109,7 @@ describe("pal cli install (smoke)", () => {
   }, 90000);
 
   test("install --codex manages only PAL-owned allowlist rules", () => {
-    rmSync(CODEX_DIR, { recursive: true, force: true });
+    removeOnceReleased(CODEX_DIR);
     const rulesFile = resolve(CODEX_DIR, "rules", "default.rules");
     mkdirSync(resolve(CODEX_DIR, "rules"), { recursive: true });
     writeFileSync(

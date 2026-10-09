@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, rmSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { captureRating, parseExplicitRating } from "../src/hooks/handlers/rating";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const TEST_HOME = resolve(import.meta.dir, "../.test-home-rating");
 
@@ -13,7 +14,7 @@ describe("captureRating non-blocking contract", () => {
     savedKey = process.env.PAL_ANTHROPIC_API_KEY;
     savedAgent = process.env.PAL_AGENT;
     savedHome = process.env.PAL_HOME;
-    if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+    removeOnceReleased(TEST_HOME);
     mkdirSync(TEST_HOME, { recursive: true });
     process.env.PAL_ANTHROPIC_API_KEY = "sk-test-would-route-to-api";
     process.env.PAL_AGENT = "claude";
@@ -26,7 +27,7 @@ describe("captureRating non-blocking contract", () => {
     else process.env.PAL_AGENT = savedAgent;
     if (savedHome === undefined) delete process.env.PAL_HOME;
     else process.env.PAL_HOME = savedHome;
-    if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+    removeOnceReleased(TEST_HOME);
   });
 
   test("returns synchronously when implicit-sentiment path is triggered", () => {

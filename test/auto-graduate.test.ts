@@ -1,18 +1,19 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const TEST_HOME = resolve(import.meta.dir, "../.test-home-auto-graduate");
 
 beforeAll(() => {
   process.env.PAL_HOME = TEST_HOME;
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
   mkdirSync(TEST_HOME, { recursive: true });
 });
 
 afterAll(() => {
   delete process.env.PAL_HOME;
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
 });
 
 beforeEach(() => {
@@ -20,7 +21,7 @@ beforeEach(() => {
     resolve(TEST_HOME, "memory", "learning"),
     resolve(TEST_HOME, "memory", "wisdom"),
   ]) {
-    if (existsSync(dir)) rmSync(dir, { recursive: true });
+    removeOnceReleased(dir);
   }
 });
 

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, utimesSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
@@ -14,6 +14,7 @@ import {
   summaryLine,
   totalTokens,
 } from "../src/tools/lib/session-usage";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // What the `pal` wrapper prints after a session ends. It is spawned, so none of
 // it was reachable from a test — which is how the duration came to be reported
@@ -29,7 +30,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  rmSync(CLAUDE_DIR, { recursive: true, force: true });
+  removeOnceReleased(CLAUDE_DIR);
 });
 
 function assistantLine(

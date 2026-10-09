@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 // Imported at file load, before PAL_HOME is set below: these functions resolve
 // their directories per call, so the env set in beforeEach still takes effect.
@@ -9,6 +9,7 @@ import {
   countSkills,
   listPersonalSubagents,
 } from "../src/targets/lib";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const HOME = resolve(import.meta.dir, "../.test-home-targets-paths");
 const CLAUDE = resolve(HOME, ".claude");
@@ -21,7 +22,7 @@ function skill(name: string, withManifest = true) {
 }
 
 beforeEach(() => {
-  if (existsSync(HOME)) rmSync(HOME, { recursive: true });
+  removeOnceReleased(HOME);
   mkdirSync(HOME, { recursive: true });
   process.env.PAL_HOME = HOME;
   process.env.PAL_CLAUDE_DIR = CLAUDE;
@@ -32,7 +33,7 @@ afterEach(() => {
   else process.env.PAL_HOME = savedHome;
   if (savedClaude === undefined) delete process.env.PAL_CLAUDE_DIR;
   else process.env.PAL_CLAUDE_DIR = savedClaude;
-  if (existsSync(HOME)) rmSync(HOME, { recursive: true });
+  removeOnceReleased(HOME);
 });
 
 describe("countSkills", () => {

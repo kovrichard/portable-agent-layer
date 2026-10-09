@@ -1,11 +1,12 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const TEST_HOME = resolve(import.meta.dir, "../.test-home-settings");
 
 beforeAll(async () => {
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
   mkdirSync(resolve(TEST_HOME, "memory"), { recursive: true });
 
   writeFileSync(
@@ -39,7 +40,7 @@ afterAll(async () => {
   delete process.env.PAL_HOME;
   const { reload } = await import("../src/hooks/lib/settings");
   reload();
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
 });
 
 describe("identity", () => {
@@ -108,7 +109,7 @@ describe("cache", () => {
       expect(isEnabled("selfModel")).toBe(true);
     } finally {
       process.env.PAL_HOME = TEST_HOME;
-      rmSync(otherHome, { recursive: true, force: true });
+      removeOnceReleased(otherHome);
     }
   });
 });

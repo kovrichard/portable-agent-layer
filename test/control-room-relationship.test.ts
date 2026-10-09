@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
@@ -15,6 +15,7 @@ import {
 import { appendTurn, type TurnInput } from "../src/hooks/lib/adaptation-turns";
 import { ruleEventsPath } from "../src/hooks/lib/rule-effect";
 import { decideFromPage, relationship } from "../src/tools/control-room/relationship";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 let HOME: string;
 const NOW = new Date("2026-10-07T12:00:00Z");
@@ -26,7 +27,7 @@ beforeEach(() => {
 
 afterEach(() => {
   delete process.env.PAL_HOME;
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 const rule: DraftInput = {

@@ -1,8 +1,9 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, lstatSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { linkDir } from "./helpers/links";
+import { linkDir } from "./lib/links";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 const REPO_SKILLS = resolve(import.meta.dir, "../assets/skills");
@@ -45,7 +46,7 @@ function isSymlink(path: string): boolean {
 // whichever test ran second asserting against the other's leftovers. Bun
 // randomises test order per seed, which turns that into an intermittent failure.
 beforeEach(() => {
-  if (existsSync(HOME)) rmSync(HOME, { recursive: true });
+  removeOnceReleased(HOME);
   mkdirSync(PAL_SKILLS, { recursive: true });
   mkdirSync(CLAUDE_SKILLS, { recursive: true });
 
@@ -63,7 +64,7 @@ beforeEach(() => {
 });
 
 afterAll(() => {
-  if (existsSync(HOME)) rmSync(HOME, { recursive: true });
+  removeOnceReleased(HOME);
 });
 
 describe("stale shipped-skill links", () => {

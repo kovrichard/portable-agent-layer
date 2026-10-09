@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import type { RawViolation } from "@konvert7/klint/core/types";
 import rules from "../klint.rules";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // The rule this covers shipped once as a file-level check, and a silent writer
 // went out under it: an ungated emit.data() anywhere in the file excused every
@@ -30,7 +31,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  rmSync(ROOT, { recursive: true, force: true });
+  removeOnceReleased(ROOT);
 });
 
 const SILENT = `import { writeFileSync } from "node:fs";

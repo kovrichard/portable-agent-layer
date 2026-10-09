@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { mergeCodexHooks, mergeCursorHooks, mergeSettings } from "../src/targets/lib";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 let DIR: string;
 let USER_SCRIPT: string;
@@ -15,7 +16,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  rmSync(DIR, { recursive: true, force: true });
+  removeOnceReleased(DIR);
 });
 
 const removedHook = () => `bun run ${DIR}/src/hooks/PostToolOrchestrator.ts`;

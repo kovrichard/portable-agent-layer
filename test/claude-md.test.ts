@@ -12,16 +12,16 @@ import {
   mkdirSync,
   readFileSync,
   readlinkSync,
-  rmSync,
-  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
+import { linkFile } from "./lib/links";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const TEST_HOME = resolve(import.meta.dir, "../.test-home-claude-md");
 
 beforeAll(async () => {
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
 
   mkdirSync(resolve(TEST_HOME, "memory", "state"), { recursive: true });
 
@@ -62,7 +62,7 @@ afterAll(async () => {
   delete process.env.PAL_HOME;
   const { reload } = await import("../src/hooks/lib/settings");
   reload();
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
 });
 
 describe("buildClaudeMd", () => {
@@ -118,7 +118,7 @@ describe("buildClaudeCodeMd", () => {
     const result = buildClaudeCodeMd();
     expect(result).toMatch(/^@.*self-model.*current\.md/);
 
-    rmSync(selfModelDir, { recursive: true });
+    removeOnceReleased(selfModelDir);
   });
 
   test("omits @import when self-model does not exist", async () => {
@@ -161,7 +161,7 @@ describe("needsRebuild", () => {
     mkdirSync(staleDir, { recursive: true });
     mkdirSync(codexDir, { recursive: true });
     writeFileSync(staleTarget, "# stale\n", "utf-8");
-    symlinkSync(staleTarget, codexAgents);
+    linkFile(staleTarget, codexAgents);
 
     const { regenerateIfNeeded } = await import("../src/hooks/lib/claude-md");
     regenerateIfNeeded();
@@ -185,7 +185,7 @@ describe("ensureAntigravityRule", () => {
   });
 
   afterEach(() => {
-    rmSync(geminiDir, { recursive: true, force: true });
+    removeOnceReleased(geminiDir);
     delete process.env.PAL_GEMINI_DIR;
   });
 

@@ -5,12 +5,12 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
-  rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { appendTurn, readTurns, type TurnInput } from "../src/hooks/lib/adaptation-turns";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 let HOME: string;
 const savedHome = process.env.PAL_HOME;
@@ -24,7 +24,7 @@ beforeEach(() => {
 afterEach(() => {
   if (savedHome === undefined) delete process.env.PAL_HOME;
   else process.env.PAL_HOME = savedHome;
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 const turn: TurnInput = {

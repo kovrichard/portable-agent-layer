@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { writeContextDigests } from "../src/hooks/handlers/context-digests";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const ROOT = resolve(import.meta.dir, "../.test-home-context-digests");
 const GEMINI_DIR = resolve(ROOT, ".gemini");
@@ -14,7 +15,7 @@ const AGENT_DIR_VARS = {
 };
 
 beforeEach(() => {
-  rmSync(ROOT, { recursive: true, force: true });
+  removeOnceReleased(ROOT);
   mkdirSync(resolve(ROOT, "home", "docs"), { recursive: true });
   writeFileSync(
     resolve(ROOT, "home", "docs", "STEERING_RULES.md"),
@@ -25,7 +26,7 @@ beforeEach(() => {
 
 afterEach(() => {
   for (const v of Object.keys(AGENT_DIR_VARS)) delete process.env[v];
-  rmSync(ROOT, { recursive: true, force: true });
+  removeOnceReleased(ROOT);
 });
 
 describe("writeContextDigests for Antigravity", () => {

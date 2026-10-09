@@ -1,19 +1,20 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const TEST_HOME = resolve(import.meta.dir, "../.test-home-inject-retrieval");
 
 beforeAll(() => {
   process.env.PAL_HOME = TEST_HOME;
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
   mkdirSync(TEST_HOME, { recursive: true });
   mkdirSync(resolve(TEST_HOME, "memory"), { recursive: true });
 });
 
 afterAll(() => {
   delete process.env.PAL_HOME;
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
 });
 
 beforeEach(async () => {
@@ -23,10 +24,10 @@ beforeEach(async () => {
     resolve(TEST_HOME, "memory", "state"),
     resolve(TEST_HOME, "memory", "adaptation"),
   ]) {
-    if (existsSync(dir)) rmSync(dir, { recursive: true });
+    removeOnceReleased(dir);
   }
   const settingsPath = resolve(TEST_HOME, "memory", "pal-settings.json");
-  if (existsSync(settingsPath)) rmSync(settingsPath);
+  removeOnceReleased(settingsPath);
   // Bust the in-memory settings cache so a test that disabled the flag
   // doesn't poison the next test that wants the default-true behavior.
   const settings = await import("../src/hooks/lib/settings");

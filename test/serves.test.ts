@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { readProject } from "../src/hooks/lib/projects";
@@ -10,6 +10,7 @@ import {
   SERVES_MEANING,
   setServes,
 } from "../src/hooks/lib/serves";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // The override rule is the whole point of storing who decided, so it is pinned
 // from both directions: a guess must not clobber an answer, an answer must
@@ -24,7 +25,7 @@ beforeEach(() => {
 
 afterEach(() => {
   delete process.env.PAL_HOME;
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 function isaPath(slug: string): string {

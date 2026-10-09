@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import {
   collectSkillFiles,
@@ -12,6 +12,7 @@ import {
   stripCode,
   topLevelField,
 } from "../src/tools/lib/skill-doctor";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const ROOT = resolve(import.meta.dir, "../.test-home-skill-doctor-parts");
 
@@ -30,12 +31,12 @@ function skillDir(files: Record<string, string>): string {
 }
 
 beforeAll(() => {
-  if (existsSync(ROOT)) rmSync(ROOT, { recursive: true });
+  removeOnceReleased(ROOT);
   mkdirSync(ROOT, { recursive: true });
 });
 
 afterAll(() => {
-  if (existsSync(ROOT)) rmSync(ROOT, { recursive: true });
+  removeOnceReleased(ROOT);
 });
 
 describe("parseSkill", () => {

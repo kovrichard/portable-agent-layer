@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
@@ -15,6 +15,7 @@ import {
   routeFinding,
 } from "../src/cli/doctor/inference";
 import { palEnvPath } from "../src/hooks/lib/pal-env";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const NOW = Date.parse("2026-10-04T19:00:00Z");
 const MINUTE = 60_000;
@@ -309,7 +310,7 @@ describe("~/.pal/.env", () => {
     if (saved.PAL_HOME === undefined) delete process.env.PAL_HOME;
     else process.env.PAL_HOME = saved.PAL_HOME;
     if (saved.TOKEN !== undefined) process.env.CLAUDE_CODE_OAUTH_TOKEN = saved.TOKEN;
-    rmSync(home, { recursive: true, force: true });
+    removeOnceReleased(home);
   });
 
   test("a rejected token is renewed in ~/.pal/.env", () => {

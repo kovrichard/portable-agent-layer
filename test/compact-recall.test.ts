@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
@@ -10,6 +10,7 @@ import {
   type SavedExchange,
   truncate,
 } from "../src/hooks/lib/compact-recall";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // This runs once per compaction and its output is the only surviving copy of the
 // turn that was in flight. A budget that is wrong silently loses half a message;
@@ -25,7 +26,7 @@ beforeEach(() => {
 
 afterEach(() => {
   delete process.env.PAL_HOME;
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 function saveExchange(name: string): string {

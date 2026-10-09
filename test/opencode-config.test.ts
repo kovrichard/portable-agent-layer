@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
   opencodeBackgroundModel,
   writeInstructionFreeConfig,
 } from "../src/hooks/lib/opencode-config";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const savedDir = process.env.PAL_OPENCODE_DIR;
 let dir: string;
@@ -16,7 +17,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  rmSync(dir, { recursive: true, force: true });
+  removeOnceReleased(dir);
   if (savedDir === undefined) delete process.env.PAL_OPENCODE_DIR;
   else process.env.PAL_OPENCODE_DIR = savedDir;
 });
@@ -54,7 +55,7 @@ describe("the config a background opencode run gets", () => {
   });
 
   afterEach(() => {
-    rmSync(configHome, { recursive: true, force: true });
+    removeOnceReleased(configHome);
   });
 
   function backgroundFile(name: string): unknown {

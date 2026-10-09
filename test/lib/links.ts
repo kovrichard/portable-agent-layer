@@ -12,3 +12,8 @@ import { symlinkSync } from "node:fs";
 export function linkDir(target: string, link: string): void {
   symlinkSync(target, link, process.platform === "win32" ? "junction" : "dir");
 }
+
+/** A file link has no junction to fall back on, so a test using one skips Windows. */
+export function linkFile(target: string, link: string): void {
+  symlinkSync(target, link, "file");
+}

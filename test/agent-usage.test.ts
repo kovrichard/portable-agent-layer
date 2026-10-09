@@ -1,9 +1,10 @@
 import { Database } from "bun:sqlite";
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { readCodex, readCopilot, readOpencode } from "../src/tools/lib/agent-usage";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const NOW = new Date("2026-09-06T12:00:00.000Z");
 const TODAY = "2026-09-06T10:00:00.000Z";
@@ -18,7 +19,7 @@ function tempDir(): string {
 }
 
 afterAll(() => {
-  for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true });
+  for (const dir of tempDirs) removeOnceReleased(dir);
 });
 
 function writeLines(path: string, entries: unknown[]): void {

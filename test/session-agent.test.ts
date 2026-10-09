@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { findSessionAgent, type SessionAgent } from "../src/cli/session-agent";
 import { writeFakeBin } from "./fixtures/fake-bin";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 describe("findSessionAgent", () => {
   let dir: string;
@@ -16,7 +17,7 @@ describe("findSessionAgent", () => {
 
   afterEach(() => {
     process.env.PATH = originalPath;
-    rmSync(dir, { recursive: true, force: true });
+    removeOnceReleased(dir);
   });
 
   test("returns null when no terminal agent is on PATH", () => {

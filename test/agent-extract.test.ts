@@ -4,7 +4,6 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
-  rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -19,6 +18,7 @@ import {
   removeAgentsFromCursor,
   removeAgentsFromOpencode,
 } from "../src/targets/lib";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const dirs: string[] = [];
 
@@ -34,7 +34,7 @@ function agentFile(dir: string, name = "gemini-researcher.md"): string {
 
 afterEach(() => {
   for (const dir of dirs.splice(0)) {
-    if (existsSync(dir)) rmSync(dir, { recursive: true });
+    removeOnceReleased(dir);
   }
 });
 

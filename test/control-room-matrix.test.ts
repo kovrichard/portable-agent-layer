@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
@@ -8,6 +8,7 @@ import {
   type MatrixItem,
   matrix,
 } from "../src/tools/control-room/matrix";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // Every placement on the morning screen has to be defensible from files alone,
 // so each rule that can move an item between quadrants gets its own fixture.
@@ -22,7 +23,7 @@ beforeEach(() => {
 
 afterEach(() => {
   delete process.env.PAL_HOME;
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 interface ProjectFixture {

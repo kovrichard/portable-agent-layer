@@ -4,12 +4,12 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
-  rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { relative, resolve } from "node:path";
 import { buildPageFirst } from "./lib/built-page";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // Opening the page is not work on a project. Every GET route is swept here
 // against a snapshot of the whole home, because `updated` is what tells you a
@@ -32,7 +32,7 @@ afterEach(() => {
   server?.stop(true);
   server = null;
   delete process.env.PAL_HOME;
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 function registerProject(slug: string, updated: string, serves?: string): void {

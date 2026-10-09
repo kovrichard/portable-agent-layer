@@ -47,7 +47,7 @@
     "check": "biome check",
     "check-write": "bun .agents/scripts/check-write.ts",
     "knip": "knip-bun",
-    "klint": "klint",
+    "klint": "klint && klint --config test",
     "jscpd": "jscpd --noTips",
     "madge": "madge --circular --extensions ts --ts-config tsconfig.json src",
     "lf": "bun .agents/scripts/check-lf.ts",

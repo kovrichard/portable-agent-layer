@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, lstatSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 const HOME = resolve(import.meta.dir, "../.test-home-skill-link");
@@ -26,7 +27,7 @@ function skillLink(name: string) {
 }
 
 beforeAll(() => {
-  if (existsSync(HOME)) rmSync(HOME, { recursive: true });
+  removeOnceReleased(HOME);
   // A personal skill already scaffolded under ~/.pal/skills/
   mkdirSync(resolve(HOME, ".pal/skills/my-skill"), { recursive: true });
   writeFileSync(
@@ -39,7 +40,7 @@ beforeAll(() => {
 });
 
 afterAll(() => {
-  if (existsSync(HOME)) rmSync(HOME, { recursive: true });
+  removeOnceReleased(HOME);
 });
 
 describe("pal cli skill link", () => {

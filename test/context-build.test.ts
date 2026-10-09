@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   buildSystemReminder,
@@ -10,6 +10,7 @@ import {
 import { writeProject } from "../src/hooks/lib/projects";
 import { reload } from "../src/hooks/lib/settings";
 import { appendProjectHistory } from "../src/hooks/lib/work-tracking";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const HOME = resolve(import.meta.dir, "../.test-home-context-build");
 const savedHome = process.env.PAL_HOME;
@@ -51,7 +52,7 @@ function learning(title: string, cwd: string, offset = 0) {
 }
 
 beforeEach(() => {
-  if (existsSync(HOME)) rmSync(HOME, { recursive: true });
+  removeOnceReleased(HOME);
   mkdirSync(HOME, { recursive: true });
   process.env.PAL_HOME = HOME;
   reload();
@@ -60,7 +61,7 @@ beforeEach(() => {
 afterEach(() => {
   if (savedHome === undefined) delete process.env.PAL_HOME;
   else process.env.PAL_HOME = savedHome;
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 describe("loadWisdomContext", () => {

@@ -1,8 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, resolve } from "node:path";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 let SANDBOX: string;
@@ -50,7 +51,7 @@ beforeAll(() => {
 }, 180000);
 
 afterAll(() => {
-  rmSync(SANDBOX, { recursive: true, force: true });
+  removeOnceReleased(SANDBOX);
 });
 
 describe.skipIf(process.platform === "win32")("what init and install print", () => {

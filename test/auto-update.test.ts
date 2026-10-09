@@ -1,13 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
@@ -21,6 +14,7 @@ import {
 } from "../src/hooks/lib/auto-update";
 import { paths } from "../src/hooks/lib/paths";
 import { reload } from "../src/hooks/lib/settings";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // The gate is the whole feature: everything downstream of it is `pal cli update`,
 // which has its own tests. So each state that must NOT start an update is built
@@ -50,7 +44,7 @@ function repoFixture(version = "0.76.1"): void {
 
 /** A package install is a folder that was never a clone, rather than a clone with .git removed. */
 function packageFixture(): void {
-  rmSync(PKG, { recursive: true, force: true });
+  removeOnceReleased(PKG);
   PKG = mkdtempSync(resolve(tmpdir(), "pal-auto-update-pkg-"));
   process.env.PAL_PKG = PKG;
   writeFileSync(resolve(PKG, "package.json"), JSON.stringify({ version: "0.76.1" }));
@@ -92,7 +86,7 @@ afterEach(() => {
   else process.env.PAL_HOME = prevHome;
   if (prevPkg === undefined) delete process.env.PAL_PKG;
   else process.env.PAL_PKG = prevPkg;
-  for (const dir of [HOME, PKG]) rmSync(dir, { recursive: true, force: true });
+  for (const dir of [HOME, PKG]) removeOnceReleased(dir);
   reload();
 });
 
@@ -164,7 +158,7 @@ describe("uncommitted work", () => {
     expect(shouldAutoUpdate()).toBe(false);
     expect(readLedger()?.attemptedAt).toBeUndefined();
 
-    rmSync(dirt);
+    removeOnceReleased(dirt);
     expect(shouldAutoUpdate()).toBe(true);
   });
 

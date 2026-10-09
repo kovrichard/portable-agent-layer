@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { claimChecksSince, watchClaims } from "../src/hooks/lib/claim-log";
 import { reload } from "../src/hooks/lib/settings";
 import { claimCheckLines } from "../src/tools/lib/interaction-report";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 let HOME: string;
 const NOW = new Date("2026-10-04T12:00:00Z");
@@ -47,7 +48,7 @@ beforeEach(() => {
 afterEach(() => {
   delete process.env.PAL_HOME;
   reload();
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 const since = new Date("2026-10-01T00:00:00Z");

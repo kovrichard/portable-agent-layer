@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, rmSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   buildGraph,
@@ -10,6 +10,7 @@ import {
   traverse,
 } from "../src/tools/knowledge/graph";
 import { type Domain, getOrCreate, save } from "../src/tools/knowledge/lib";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const ROOT = resolve(import.meta.dir, "../.test-tmp/knowledge-graph");
 
@@ -80,7 +81,7 @@ function fixture(): void {
 }
 
 beforeEach(() => {
-  if (existsSync(ROOT)) rmSync(ROOT, { recursive: true });
+  removeOnceReleased(ROOT);
   mkdirSync(ROOT, { recursive: true });
 });
 

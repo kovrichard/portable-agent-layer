@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { loadHandoffContext } from "../src/hooks/lib/handoff-context";
 import { sessionDir } from "../src/hooks/lib/session-dir";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const HERE = "/work/here";
 const OTHER = "/work/other";
@@ -32,7 +33,7 @@ beforeEach(() => {
 
 afterEach(() => {
   delete process.env.PAL_HOME;
-  rmSync(home, { recursive: true, force: true });
+  removeOnceReleased(home);
 });
 
 describe("loadHandoffContext", () => {

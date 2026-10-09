@@ -5,7 +5,6 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
-  rmSync,
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
@@ -19,6 +18,7 @@ import {
   scaffoldPalSettings,
   scaffoldTelos,
 } from "../src/targets/lib";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const HOME = resolve(import.meta.dir, "../.test-home-targets-install");
 // copySkills also symlinks into platform.agentsDir(), so PAL_AGENTS_DIR must be
@@ -36,7 +36,7 @@ const saved: Record<string, string | undefined> = {};
 const SCRIPT = process.platform === "win32" ? "statusline.ps1" : "statusline.sh";
 
 beforeEach(() => {
-  if (existsSync(HOME)) rmSync(HOME, { recursive: true });
+  removeOnceReleased(HOME);
   mkdirSync(HOME, { recursive: true });
   for (const [key, value] of Object.entries(ENV)) {
     saved[key] = process.env[key];
@@ -49,7 +49,7 @@ afterEach(() => {
     if (saved[key] === undefined) delete process.env[key];
     else process.env[key] = saved[key];
   }
-  if (existsSync(HOME)) rmSync(HOME, { recursive: true });
+  removeOnceReleased(HOME);
 });
 
 describe("scaffoldTelos", () => {

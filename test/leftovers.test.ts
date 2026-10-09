@@ -1,16 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { LEFTOVERS } from "../src/cli/leftovers";
+import { linkFile } from "./lib/links";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 let DIR: string;
 const saved = { ...process.env };
@@ -34,7 +28,7 @@ afterEach(() => {
     if (saved[key] === undefined) delete process.env[key];
     else process.env[key] = saved[key];
   }
-  rmSync(DIR, { recursive: true, force: true });
+  removeOnceReleased(DIR);
 });
 
 function write(path: string, content: unknown): void {
@@ -114,7 +108,7 @@ describe.skipIf(process.platform === "win32")("Copilot instructions link", () =>
   test("removes a link to AGENTS.md", () => {
     write(at("home", "AGENTS.md"), "# agents");
     mkdirSync(at(".copilot"), { recursive: true });
-    symlinkSync(at("home", "AGENTS.md"), at(".copilot", "copilot-instructions.md"));
+    linkFile(at("home", "AGENTS.md"), at(".copilot", "copilot-instructions.md"));
 
     cleanUp("copilot-instructions-link");
   });

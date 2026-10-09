@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -8,6 +8,7 @@ import {
   type Finding,
   lintSlide,
 } from "../assets/skills/presentation/tools/doctor";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // Helper — lint a single slide given its body. Creates a throwaway deck dir
 // only when the rule needs to resolve an asset path (image-text, missing-asset).
@@ -81,7 +82,7 @@ describe("global rules", () => {
       );
       expect(ruleNames(f)).not.toContain("missing-asset");
     } finally {
-      rmSync(dir, { recursive: true, force: true });
+      removeOnceReleased(dir);
     }
   });
 

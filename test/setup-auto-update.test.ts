@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { promptAutoUpdate } from "../src/cli/setup-auto-update";
 import { raw as rawSettings, reload, write } from "../src/hooks/lib/settings";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // The install question must be silent wherever nobody can answer it. That is not
 // politeness: the reinstall at the end of an unattended update runs without a
@@ -28,7 +29,7 @@ afterEach(() => {
   setTTY(originalIsTTY);
   if (prevHome === undefined) delete process.env.PAL_HOME;
   else process.env.PAL_HOME = prevHome;
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
   reload();
 });
 

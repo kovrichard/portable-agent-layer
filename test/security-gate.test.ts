@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { decideRefusal } from "../src/hooks/lib/security-gate";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // The gate used to live inside a spawned entrypoint, so none of this was
 // reachable: which tool names count as a shell, which argument spells the path,
@@ -23,7 +24,7 @@ beforeEach(() => {
 
 afterEach(() => {
   delete process.env.PAL_HOME;
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 function wrapped(toolName: string, toolArgs: Record<string, unknown>) {

@@ -1,24 +1,25 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const TEST_HOME = resolve(import.meta.dir, "../.test-home-wisdom");
 
 beforeAll(() => {
   process.env.PAL_HOME = TEST_HOME;
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
   mkdirSync(TEST_HOME, { recursive: true });
 });
 
 beforeEach(() => {
   // Clean frames dir between tests
   const framesDir = resolve(TEST_HOME, "memory", "wisdom", "frames");
-  if (existsSync(framesDir)) rmSync(framesDir, { recursive: true });
+  removeOnceReleased(framesDir);
 });
 
 afterAll(() => {
   delete process.env.PAL_HOME;
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
 });
 
 // Dynamic import to pick up PAL_HOME

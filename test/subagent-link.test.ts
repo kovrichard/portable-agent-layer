@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 const HOME = resolve(import.meta.dir, "../.test-home-subagent-link");
@@ -55,7 +56,7 @@ You are a test helper subagent.
 let firstLink: ReturnType<typeof subagentLink>;
 
 beforeAll(() => {
-  if (existsSync(HOME)) rmSync(HOME, { recursive: true });
+  removeOnceReleased(HOME);
   // A personal subagent already authored under ~/.pal/agents/
   mkdirSync(resolve(HOME, ".pal/agents"), { recursive: true });
   writeFileSync(resolve(HOME, ".pal/agents/my-helper.md"), MERGED);
@@ -68,7 +69,7 @@ beforeAll(() => {
 });
 
 afterAll(() => {
-  if (existsSync(HOME)) rmSync(HOME, { recursive: true });
+  removeOnceReleased(HOME);
 });
 
 describe("pal cli subagent link", () => {

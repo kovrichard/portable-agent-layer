@@ -1,12 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
@@ -17,6 +10,7 @@ import {
   markCaptured,
   readCapture,
 } from "../src/hooks/lib/capture-store";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // Stop fires after every response, so one session reaches the capture handler
 // many times. These cases pin what stops it writing the same learning twice, and
@@ -32,7 +26,7 @@ beforeEach(() => {
 
 afterEach(() => {
   delete process.env.PAL_HOME;
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 function writeRaw(content: string): void {

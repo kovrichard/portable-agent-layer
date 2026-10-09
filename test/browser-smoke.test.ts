@@ -1,9 +1,10 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 /**
  * Actually launches a browser, which no other test does.
@@ -34,7 +35,7 @@ beforeAll(() => {
 });
 
 afterAll(() => {
-  if (DIR) rmSync(DIR, { recursive: true, force: true });
+  if (DIR) removeOnceReleased(DIR);
 });
 
 describe.skipIf(!ENABLED)("browser smoke", () => {

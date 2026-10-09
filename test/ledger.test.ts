@@ -5,11 +5,11 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
-  rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // The ledger is the record something else will be judged against, so these
 // cases care less about the happy path than about what an entry claims when it
@@ -30,7 +30,7 @@ afterEach(() => {
   delete process.env.PAL_HOME;
   delete process.env.PAL_SPAWNED_INFERENCE;
   delete process.env.PAL_AGENT;
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 async function lib() {

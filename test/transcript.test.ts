@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { readTranscriptFile, withFinalReply } from "../src/hooks/lib/transcript";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 describe("withFinalReply", () => {
   const asked = [{ role: "user", content: "ask" }];
@@ -32,7 +33,7 @@ function withTmpFile(content: string, fn: (path: string) => void): void {
     writeFileSync(path, content, "utf-8");
     fn(path);
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    removeOnceReleased(dir);
   }
 }
 

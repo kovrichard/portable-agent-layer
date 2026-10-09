@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { buildCliPrompt, buildCursorArgs, inference } from "../src/hooks/lib/inference";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const PRESERVED = [
   "PAL_AGENT",
@@ -99,7 +100,7 @@ describe("inference dispatcher — cursor spawn integration (fake binary)", () =
   });
 
   afterEach(() => {
-    rmSync(tmpBin, { recursive: true, force: true });
+    removeOnceReleased(tmpBin);
     restoreEnv(saved);
   });
 

@@ -1,12 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
@@ -22,6 +15,7 @@ import {
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { readProjectHistory } from "../src/hooks/lib/work-tracking";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // Every case here fails a guard that returns before canInfer(), so no inference
 // is ever reached. That is the point: the gating is what decides whether a
@@ -45,7 +39,7 @@ afterEach(() => {
   delete process.env.PAL_HOME;
   delete process.env.PAL_AGENT;
   if (API_KEY !== undefined) process.env.PAL_ANTHROPIC_API_KEY = API_KEY;
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 function transcript(messageCount: number, padding: number): string {
@@ -157,7 +151,7 @@ describe("an unfinished session", () => {
   afterEach(() => {
     process.env.PATH = savedPath;
     process.env.PAL_INFERENCE_DISABLED = "1";
-    rmSync(binDir, { recursive: true, force: true });
+    removeOnceReleased(binDir);
   });
 
   test("leaves the model's handoff for the next session, not the raw last exchange", async () => {
@@ -190,7 +184,7 @@ describe("an unfinished session", () => {
     } finally {
       if (savedStart === undefined) delete process.env.CLAUDE_PROJECT_DIR;
       else process.env.CLAUDE_PROJECT_DIR = savedStart;
-      rmSync(startDir, { recursive: true, force: true });
+      removeOnceReleased(startDir);
     }
   });
 

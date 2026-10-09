@@ -4,7 +4,6 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
-  rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -17,6 +16,7 @@ import {
 } from "../src/hooks/lib/interaction-mood";
 import { REACTION_RULES } from "../src/hooks/lib/interaction-reaction";
 import { reload } from "../src/hooks/lib/settings";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 let TEST_HOME: string;
 const T0 = new Date("2026-09-10T10:00:00Z");
@@ -61,7 +61,7 @@ afterEach(() => {
   delete process.env.PAL_HOME;
   delete process.env.PAL_AGENT;
   reload();
-  rmSync(TEST_HOME, { recursive: true, force: true });
+  removeOnceReleased(TEST_HOME);
 });
 
 describe("measuring a turn", () => {

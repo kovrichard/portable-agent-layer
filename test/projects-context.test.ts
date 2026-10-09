@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // Use os.tmpdir() so findProjectRoot's walk-up doesn't hit the PAL repo's
 // own .git (which would happen if TEST_HOME lived inside the repo).
@@ -13,12 +14,12 @@ beforeAll(() => {
 
 afterAll(() => {
   delete process.env.PAL_HOME;
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
 });
 
 beforeEach(() => {
   const dir = resolve(TEST_HOME, "memory", "projects");
-  if (existsSync(dir)) rmSync(dir, { recursive: true });
+  removeOnceReleased(dir);
 });
 
 async function freshLib() {

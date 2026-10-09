@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { hasRealContent, telosStatus } from "../src/hooks/lib/telos-topics";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // One definition of "answered" serves the doctor, `pal cli telos` and the
 // onboarding skill, so what counts as scaffolding is pinned here.
@@ -15,7 +16,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 function writeTopic(name: string, body: string): string {

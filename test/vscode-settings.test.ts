@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { enableCopilotInstructions } from "../src/targets/vscode-settings";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const ROOT = resolve(tmpdir(), `pal-vscode-settings-${process.pid}`);
 const USER_DIR = resolve(ROOT, "Code", "User");
@@ -10,7 +11,7 @@ const SETTINGS = resolve(USER_DIR, "settings.json");
 const ENABLED = { "~/.copilot/instructions": true };
 
 beforeEach(() => mkdirSync(USER_DIR, { recursive: true }));
-afterEach(() => rmSync(ROOT, { recursive: true, force: true }));
+afterEach(() => removeOnceReleased(ROOT));
 
 function settings(): Record<string, unknown> {
   return JSON.parse(readFileSync(SETTINGS, "utf-8"));
@@ -63,7 +64,7 @@ describe("enabling ~/.copilot/instructions in VS Code settings", () => {
   });
 
   test("skips a VS Code that has never been launched", () => {
-    rmSync(USER_DIR, { recursive: true, force: true });
+    removeOnceReleased(USER_DIR);
 
     expect(enableCopilotInstructions(SETTINGS)).toBe("vscode-never-launched");
     expect(existsSync(SETTINGS)).toBe(false);

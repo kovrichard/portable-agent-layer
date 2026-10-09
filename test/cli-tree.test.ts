@@ -8,11 +8,12 @@ import {
   spyOn,
   test,
 } from "bun:test";
-import { mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { type AdminHandlers, cliTree } from "../src/cli/tree";
 import { type Command, runCommand } from "../src/tools/lib/command";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const handlerRan = () => {
   throw new Error("a handler ran during a help or misuse call");
@@ -56,7 +57,7 @@ afterAll(() => {
     if (saved[key] === undefined) delete process.env[key];
     else process.env[key] = saved[key];
   }
-  rmSync(sandbox, { recursive: true, force: true });
+  removeOnceReleased(sandbox);
 });
 
 beforeEach(() => {

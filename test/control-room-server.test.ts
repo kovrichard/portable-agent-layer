@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import type { AutoUpdateStatus } from "../src/hooks/lib/auto-update";
@@ -13,6 +13,7 @@ import type { Matrix } from "../src/tools/control-room/matrix";
 import type { ServerStatus } from "../src/tools/control-room/server";
 import type { LedgerView } from "../src/tools/ledger/view";
 import { buildPageFirst } from "./lib/built-page";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // The HTTP surface is small enough to pin completely: where it listens, what
 // each route answers, and that a bad window is refused rather than widened.
@@ -32,7 +33,7 @@ afterEach(() => {
   server?.stop(true);
   server = null;
   delete process.env.PAL_HOME;
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 async function listen(): Promise<string> {
@@ -616,7 +617,7 @@ describe("keeping PAL up to date", () => {
     try {
       expect((await post(base, "/api/update/run", {})).status).toBe(202);
     } finally {
-      rmSync(process.env.PAL_PKG, { recursive: true, force: true });
+      removeOnceReleased(process.env.PAL_PKG);
       if (prevPkg === undefined) delete process.env.PAL_PKG;
       else process.env.PAL_PKG = prevPkg;
     }

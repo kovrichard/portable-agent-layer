@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { refreshAgenda } from "../src/hooks/handlers/agenda";
 import { readAgenda } from "../src/hooks/lib/agenda-store";
 import { canInfer } from "../src/hooks/lib/inference";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // The only model call behind the morning screen. Both gates in front of it are
 // pinned here: an agenda written a few hours ago is not rewritten, and a runtime
@@ -29,7 +30,7 @@ afterEach(() => {
     else process.env[k] = saved[k];
   }
   delete process.env.PAL_HOME;
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 /** An agent with no binary on an empty PATH and no keys: nothing can be asked. */
