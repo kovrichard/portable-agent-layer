@@ -49,42 +49,29 @@ export interface ExtractionPlan {
   review: ReviewItem[];
 }
 
-const STRING = { type: "string" as const };
+function closedObject<P extends Record<string, unknown>>(properties: P) {
+  return {
+    type: "object" as const,
+    additionalProperties: false,
+    properties,
+    required: Object.keys(properties),
+  };
+}
 
-export const EXTRACTION_SCHEMA = {
-  type: "object" as const,
-  additionalProperties: false,
-  properties: {
-    entities: {
-      type: "array" as const,
-      items: {
-        type: "object" as const,
-        additionalProperties: false,
-        properties: {
-          kind: { type: "string" as const, enum: ["person", "company"] },
-          name: STRING,
-          existing: STRING,
-          aliases: { type: "array" as const, items: STRING },
-          role: STRING,
-          organization: STRING,
-          relation: STRING,
-          fact: STRING,
-        },
-        required: [
-          "kind",
-          "name",
-          "existing",
-          "aliases",
-          "role",
-          "organization",
-          "relation",
-          "fact",
-        ],
-      },
-    },
-  },
-  required: ["entities"],
-};
+export function extractionSchema() {
+  const text = { type: "string" as const };
+  const entity = closedObject({
+    kind: { type: "string" as const, enum: ["person", "company"] },
+    name: text,
+    existing: text,
+    aliases: { type: "array" as const, items: text },
+    role: text,
+    organization: text,
+    relation: text,
+    fact: text,
+  });
+  return closedObject({ entities: { type: "array" as const, items: entity } });
+}
 
 const MAX_TEXT = 4000;
 const MIN_TEXT = 20;

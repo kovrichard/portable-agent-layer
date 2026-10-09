@@ -15,43 +15,40 @@ interface DueNudge {
   key: string;
   command: string;
   load: () => string;
-  enabled: () => boolean;
+  enabled?: () => boolean;
 }
-
-const dueRemindersOn = () => isOptedIn("dueReminders");
 
 const DUE_NUDGES: DueNudge[] = [
   {
     key: "algorithm-review",
     command: "/algorithm-update",
     load: loadAlgorithmReviewNudge,
-    enabled: dueRemindersOn,
   },
-  {
-    key: "reaction-audit",
-    command: "/reaction-audit",
-    load: loadReactionAuditNudge,
-    enabled: dueRemindersOn,
-  },
-  {
-    key: "reflect",
-    command: "/pal-reflect",
-    load: loadReflectNudge,
-    enabled: dueRemindersOn,
-  },
-  {
-    key: "analyze",
-    command: "/pal-analyze",
-    load: loadAnalyzeNudge,
-    enabled: dueRemindersOn,
-  },
-  {
+  { key: "reaction-audit", command: "/reaction-audit", load: loadReactionAuditNudge },
+  { key: "reflect", command: "/pal-reflect", load: loadReflectNudge },
+  { key: "analyze", command: "/pal-analyze", load: loadAnalyzeNudge },
+];
+
+function entityReviewNudge(): DueNudge {
+  return {
     key: "entity-review",
     command: "pal cli knowledge review",
     load: loadEntityReviewNudge,
     enabled: () => isEnabled("entityExtraction"),
-  },
-];
+  };
+}
+
+function dueNudges(): DueNudge[] {
+  return [...DUE_NUDGES, entityReviewNudge()];
+}
+
+function dueRemindersOn(): boolean {
+  return isOptedIn("dueReminders");
+}
+
+function isSwitchedOn(nudge: DueNudge): boolean {
+  return (nudge.enabled ?? dueRemindersOn)();
+}
 
 function shownPath(): string {
   return resolve(ensureDir(paths.state()), "nudges-shown.json");
@@ -79,7 +76,7 @@ export function pendingToday(
 }
 
 export function acknowledgeMentioned(reply: string, now: Date = new Date()): void {
-  const mentioned = DUE_NUDGES.filter((nudge) => reply.includes(nudge.command));
+  const mentioned = dueNudges().filter((nudge) => reply.includes(nudge.command));
   if (!mentioned.length) return;
   const today = localDay(now);
   const shownOn = readShownOn();
@@ -88,7 +85,8 @@ export function acknowledgeMentioned(reply: string, now: Date = new Date()): voi
 }
 
 export function dueNudgeSections(now: Date = new Date()): string[] {
-  return DUE_NUDGES.filter((nudge) => nudge.enabled())
+  return dueNudges()
+    .filter(isSwitchedOn)
     .map((nudge) => pendingToday(nudge.key, nudge.load(), now))
     .filter(Boolean);
 }

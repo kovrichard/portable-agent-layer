@@ -5,6 +5,7 @@ import { extractSessionEntities } from "../src/hooks/handlers/entity-extraction"
 import { loadKnownEntities, loadNameIndex } from "../src/hooks/lib/entity-cards";
 import {
   type ExtractedEntity,
+  extractionSchema,
   planExtraction,
   queueForReview,
   reviewQueueFile,
@@ -12,7 +13,11 @@ import {
   unseenUserText,
   worthExtracting,
 } from "../src/hooks/lib/entity-extraction";
-import { buildNameIndex, type NamedEntity } from "../src/hooks/lib/entity-names";
+import {
+  buildNameIndex,
+  type NamedEntity,
+  type NameIndex,
+} from "../src/hooks/lib/entity-names";
 import { reload } from "../src/hooks/lib/settings";
 import { ingestEntities } from "../src/tools/knowledge/ingest";
 import { load } from "../src/tools/knowledge/lib";
@@ -47,7 +52,7 @@ const KNOWN: NamedEntity[] = [
     domainName: "fenwick.hu",
   },
 ];
-const index = buildNameIndex(KNOWN, EXCLUDED);
+let index: NameIndex;
 
 function extracted(over: Partial<ExtractedEntity>): ExtractedEntity {
   return {
@@ -72,6 +77,33 @@ beforeEach(() => {
   removeOnceReleased(HOME);
   mkdirSync(resolve(HOME, "memory"), { recursive: true });
   reload();
+  index = buildNameIndex(KNOWN, EXCLUDED);
+});
+
+describe("extractionSchema", () => {
+  test("asks for a closed list of entities with every field required", () => {
+    const schema = extractionSchema();
+    const entity = schema.properties.entities.items;
+    const fields = Object.keys(extracted({})).sort();
+    expect(schema).toMatchObject({
+      type: "object",
+      additionalProperties: false,
+      required: ["entities"],
+      properties: { entities: { type: "array" } },
+    });
+    expect(entity.type).toBe("object");
+    expect(entity.additionalProperties).toBe(false);
+    expect(Object.keys(entity.properties).sort()).toEqual(fields);
+    expect([...entity.required].sort()).toEqual(fields);
+  });
+
+  test("types each field the way parseExtraction reads it", () => {
+    const { properties } = extractionSchema().properties.entities.items;
+    expect(properties.kind).toEqual({ type: "string", enum: ["person", "company"] });
+    expect(properties.aliases).toEqual({ type: "array", items: { type: "string" } });
+    for (const field of ["name", "existing", "role", "organization", "relation", "fact"])
+      expect(properties[field as keyof typeof properties]).toEqual({ type: "string" });
+  });
 });
 
 describe("planExtraction", () => {

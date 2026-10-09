@@ -618,18 +618,21 @@ async function cmdIngest(sourceId: string, file: string | undefined): Promise<nu
 
 // ── review ─────────────────────────────────────────────────────────
 
-const REVIEW_REASONS: Record<ReviewItem["reason"], string> = {
-  ambiguous: "could be more than one known entry",
-  "unknown-existing": "named an entry the store does not have",
-  "first-name-only": "first name only",
-};
+function reviewReason(reason: ReviewItem["reason"]): string {
+  const reasons: Record<ReviewItem["reason"], string> = {
+    ambiguous: "could be more than one known entry",
+    "unknown-existing": "named an entry the store does not have",
+    "first-name-only": "first name only",
+  };
+  return reasons[reason];
+}
 
 function reviewLines(item: ReviewItem): string[] {
   const { kind, name, fact } = item.entity;
   const candidates =
     item.candidates.length > 0 ? `could be: ${item.candidates.join(", ")}` : "";
   return [
-    `  ${item.id}  ${kind} "${name}" — ${REVIEW_REASONS[item.reason]}`,
+    `  ${item.id}  ${kind} "${name}" — ${reviewReason(item.reason)}`,
     ...[fact, candidates, `from ${item.source}`]
       .filter(Boolean)
       .map((line) => `            ${line}`),

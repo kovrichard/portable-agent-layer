@@ -1,9 +1,10 @@
-import { describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import {
   buildNameIndex,
   findMentions,
   lookupName,
   type NamedEntity,
+  type NameIndex,
   proseOnly,
 } from "../src/hooks/lib/entity-names";
 
@@ -24,7 +25,11 @@ const ENTITIES = [
   company("brightmoor-io", "Brightmoor Kft.", "brightmoor.io"),
 ];
 
-const index = buildNameIndex(ENTITIES, ["Quilly", "Jarvis"]);
+let index: NameIndex;
+
+beforeEach(() => {
+  index = buildNameIndex(ENTITIES, ["Quilly", "Jarvis"]);
+});
 
 function slugsIn(text: string): string[][] {
   return findMentions(text, index).map((m) => m.entities.map((e) => e.slug).sort());

@@ -7,7 +7,7 @@
 import { ingestEntities } from "../../tools/knowledge/ingest";
 import { excludedNames, loadKnownEntities, loadNameIndex } from "../lib/entity-cards";
 import {
-  EXTRACTION_SCHEMA,
+  extractionSchema,
   extractionSystem,
   extractionUser,
   markSeen,
@@ -50,7 +50,7 @@ export async function extractSessionEntities(
     tier: "medium",
     maxTokens: 900,
     timeout: 90000,
-    jsonSchema: EXTRACTION_SCHEMA,
+    jsonSchema: extractionSchema(),
     caller: "entity-extraction",
     sessionId,
   });

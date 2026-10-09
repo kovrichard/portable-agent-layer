@@ -33,20 +33,29 @@ interface Token {
   gapBefore: string;
 }
 
-const NON_PROSE = [
-  /```[\s\S]*?```/g,
-  /`[^`\n]*`/g,
-  /\bhttps?:\/\/\S+/g,
-  /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g,
-  /[\w.-]+(?:\/[\w.-]+)+/g,
-  /<[^>\n]*>/g,
-];
-
-const LEGAL_SUFFIX =
-  /\s+(?:kft|nyrt|zrt|bt|kkt|ltd|inc|llc|gmbh|korlatolt felelossegu tarsasag)\.?$/;
-const WORD = /[\p{L}\p{N}](?:[\p{L}\p{N}'’.-]*[\p{L}\p{N}])?/gu;
-const SENTENCE_BREAK = /[.!?:;\n]/;
 const MIN_PARTIAL = 3;
+
+function nonProse(): RegExp[] {
+  return [
+    /```[\s\S]*?```/g,
+    /`[^`\n]*`/g,
+    /\bhttps?:\/\/\S+/g,
+    /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g,
+    /[\w.-]+(?:\/[\w.-]+)+/g,
+    /<[^>\n]*>/g,
+  ];
+}
+
+function withoutLegalSuffix(name: string): string {
+  return name.replace(
+    /\s+(?:kft|nyrt|zrt|bt|kkt|ltd|inc|llc|gmbh|korlatolt felelossegu tarsasag)\.?$/,
+    ""
+  );
+}
+
+function breaksSentence(gap: string): boolean {
+  return /[.!?:;\n]/.test(gap);
+}
 
 export function foldName(name: string): string {
   return name
@@ -59,13 +68,13 @@ export function foldName(name: string): string {
 }
 
 export function proseOnly(text: string): string {
-  return NON_PROSE.reduce((out, re) => out.replace(re, " "), text);
+  return nonProse().reduce((out, re) => out.replace(re, " "), text);
 }
 
 function tokenize(text: string): Token[] {
   const tokens: Token[] = [];
   let last = 0;
-  for (const m of text.matchAll(WORD)) {
+  for (const m of text.matchAll(/[\p{L}\p{N}](?:[\p{L}\p{N}'’.-]*[\p{L}\p{N}])?/gu)) {
     const start = m.index ?? 0;
     tokens.push({
       raw: m[0],
@@ -82,7 +91,7 @@ function words(name: string): string[] {
 }
 
 function companyNames(entity: NamedEntity): string[] {
-  const bare = foldName(entity.title).replace(LEGAL_SUFFIX, "");
+  const bare = withoutLegalSuffix(foldName(entity.title));
   const site = entity.domainName ? foldName(entity.domainName).split(".")[0] : "";
   return [entity.title, bare, site, ...entity.aliases];
 }
@@ -139,12 +148,12 @@ function isCapitalized(token: Token | undefined): boolean {
 
 function joinedTo(token: Token | undefined): boolean {
   return Boolean(
-    token && /^\s+$/.test(token.gapBefore) && !SENTENCE_BREAK.test(token.gapBefore)
+    token && /^\s+$/.test(token.gapBefore) && !breaksSentence(token.gapBefore)
   );
 }
 
 function startsSentence(tokens: Token[], at: number): boolean {
-  return at === 0 || SENTENCE_BREAK.test(tokens[at].gapBefore);
+  return at === 0 || breaksSentence(tokens[at].gapBefore);
 }
 
 /** "Daniel Miessler" is not a known Dániel: a lone given name next to an unknown
