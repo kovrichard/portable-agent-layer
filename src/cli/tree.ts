@@ -13,7 +13,6 @@ import {
   type OptionSpec,
   type OptionSpecs,
 } from "../tools/lib/command";
-import { usageCommand } from "../tools/token-cost";
 import { builtinTools, builtinToolVerbs } from "./builtin-tools";
 import { identityCommand } from "./identity";
 import { knowledgeCommand } from "./knowledge";
@@ -24,6 +23,7 @@ import { ruleCommand } from "./rule";
 import { serverCommand } from "./server";
 import { skillCommand } from "./skill";
 import { subagentCommand } from "./subagent";
+import { usageCommand } from "./usage";
 
 type Handler = Leaf["run"];
 export type DebugState = "on" | "off" | "status";
