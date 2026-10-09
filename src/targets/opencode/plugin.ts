@@ -5,7 +5,6 @@
  * This plugin just wires opencode's hook API to those shared functions.
  */
 
-import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import type { Plugin, PluginInput } from "@opencode-ai/plugin";
 
@@ -46,11 +45,11 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   const rtkRewrite = (cmd: string): string | null => {
     if (!rtkBin || !cmd) return null;
     try {
-      const r = spawnSync(rtkBin, ["hook", "check", cmd], {
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "ignore"],
+      const r = Bun.spawnSync([rtkBin, "hook", "check", cmd], {
+        env: process.env,
+        stderr: "ignore",
       });
-      const out = r.status === 0 ? (r.stdout ?? "").trim() : "";
+      const out = r.exitCode === 0 ? r.stdout.toString().trim() : "";
       return out && out !== cmd ? out : null;
     } catch {
       return null;

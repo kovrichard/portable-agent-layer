@@ -1,9 +1,9 @@
-import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { previewInferenceRoute } from "../../hooks/lib/inference";
 import { opencodeBackgroundModel } from "../../hooks/lib/opencode-config";
 import { palEnvPath, readPalEnvFile } from "../../hooks/lib/pal-env";
 import { platform } from "../../hooks/lib/paths";
+import { spawnInCurrentEnv } from "../../hooks/lib/spawn";
 import type { AgentName } from "./agents";
 import { type Finding, failing, optional, passed, warning } from "./finding";
 
@@ -191,12 +191,12 @@ export function cursorPlanFinding(about: string): Finding | null {
 }
 
 function cursorAbout(): string {
-  const result = spawnSync("cursor-agent", ["about"], {
-    encoding: "utf-8",
-    shell: true,
-    timeout: 15_000,
-  });
-  return result.status === 0 ? result.stdout : "";
+  try {
+    const result = spawnInCurrentEnv(["cursor-agent", "about"], { timeout: 15_000 });
+    return result.exitCode === 0 ? result.stdout.toString() : "";
+  } catch {
+    return "";
+  }
 }
 
 function cursorFindings(): Finding[] {

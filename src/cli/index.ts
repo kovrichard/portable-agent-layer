@@ -4,7 +4,6 @@
  * installed agent; `pal cli <command>` runs the command tree in ./tree.ts.
  */
 
-import { spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -32,6 +31,7 @@ import { inference, previewInferenceRoute } from "../hooks/lib/inference";
 import { logDebug } from "../hooks/lib/log";
 import { ensureRegistered, writeRegistryEntry } from "../hooks/lib/machine";
 import { palHome, palPkg, paths, platform, toPath } from "../hooks/lib/paths";
+import { spawnInCurrentEnv } from "../hooks/lib/spawn";
 import { log, narrateSteps } from "../targets/lib";
 import { helpText, runCommand } from "../tools/lib/command";
 import { type DoctorResult, detectAgents } from "./doctor/agents";
@@ -77,12 +77,11 @@ async function session(sessionArgs: string[]) {
     process.exit(1);
   }
 
-  const result = spawnSync(agent, sessionArgs, {
-    stdio: "inherit",
-    shell: true,
+  const result = spawnInCurrentEnv([agent, ...sessionArgs], {
+    stdio: ["inherit", "inherit", "inherit"],
   });
 
-  const exitCode = result.status ?? 1;
+  const exitCode = result.exitCode ?? 1;
 
   // Session summary (Claude only)
   if (agent !== "claude") process.exit(exitCode);
@@ -115,8 +114,8 @@ async function session(sessionArgs: string[]) {
         const sessionId = JSON.parse(lastLine).sessionId;
         if (sessionId) {
           const summaryScript = resolve(palPkg(), "src", "tools", "session-summary.ts");
-          spawnSync("bun", ["run", summaryScript, "--", "--session", sessionId], {
-            stdio: "inherit",
+          spawnInCurrentEnv(["bun", "run", summaryScript, "--", "--session", sessionId], {
+            stdio: ["inherit", "inherit", "inherit"],
           });
         }
       }

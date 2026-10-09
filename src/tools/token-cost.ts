@@ -3,11 +3,11 @@
  * PAL's inference log, and rtk's savings.
  */
 
-import { spawnSync } from "node:child_process";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { AGENT_REGISTRY, type AgentName } from "../hooks/lib/agent-registry";
 import { palHome, platform } from "../hooks/lib/paths";
+import { spawnInCurrentEnv } from "../hooks/lib/spawn";
 import { findBinaryOnPath } from "../hooks/lib/which";
 import { readCodex, readCopilot, readOpencode } from "./lib/agent-usage";
 import {
@@ -48,13 +48,12 @@ const installedUntracked = () =>
 function rtkGain(): RtkGain {
   const rtk = findBinaryOnPath("rtk");
   if (!rtk) return { installed: false, summary: null };
-  const result = spawnSync(rtk, ["gain", "--format", "json"], {
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "ignore"],
+  const result = spawnInCurrentEnv([rtk, "gain", "--format", "json"], {
+    stderr: "ignore",
   });
   return {
     installed: true,
-    summary: parseRtkSummary(result.status, result.stdout ?? ""),
+    summary: parseRtkSummary(result.exitCode, result.stdout.toString()),
   };
 }
 

@@ -77,6 +77,10 @@ arch:
       in: ["src/hooks/lib/**"]
       message: "process.exit() called inside a library module — library functions should return or throw, not terminate the process."
 
+    - pattern: 're:\bspawnSync\b.*node:child_process'
+      in: ["src/**"]
+      message: "Use spawnInCurrentEnv() from src/hooks/lib/spawn.ts — node's spawnSync can miss a child's exit under bun test --isolate and hang the whole run."
+
     # cmd.exe never expands "~" and PowerShell hands it to native commands
     # literally, so a tilde invocation in a doc comment or a printed next-step
     # hint is a command a Windows user cannot run. This covers only the .ts
@@ -149,6 +153,11 @@ arch:
       message: "Raw symlinkSync — a directory symlink needs Developer Mode on Windows. Create links in src/targets/lib.ts, where ensureSymlink() picks a junction on Windows."
 
   singleton:
+    - pattern: "Bun.spawnSync("
+      only: "src/hooks/lib/spawn.ts"
+      in: ["src/**", "!src/targets/opencode/plugin.ts"]
+      message: "Spawn through spawnInCurrentEnv() from src/hooks/lib/spawn.ts — Bun.spawnSync alone hands the child the environment Bun started with, not process.env as it is now."
+
     - pattern: "process.env.PAL_HOME"
       only: "src/hooks/lib/paths.ts"
       in: ["src/**"]

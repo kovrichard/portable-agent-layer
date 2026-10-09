@@ -3,6 +3,7 @@
  * matching by remote and the update checks skip; without gh, nothing does yet.
  */
 
+import { spawnInCurrentEnv } from "../../hooks/lib/spawn";
 import { findBinaryOnPath } from "../../hooks/lib/which";
 import { type Finding, type Fix, optional, passed, warning } from "./finding";
 import { type LinuxFamily, linuxFamily, readOsRelease } from "./os-release";
@@ -52,7 +53,7 @@ export function ghInstallHint(platform: NodeJS.Platform, osRelease: string): Fix
 }
 
 function run(binary: string, args: string[], timeoutMs: number) {
-  const result = Bun.spawnSync([binary, ...args], {
+  const result = spawnInCurrentEnv([binary, ...args], {
     stdout: "pipe",
     stderr: "ignore",
     timeout: timeoutMs,

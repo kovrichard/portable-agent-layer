@@ -3,10 +3,10 @@
  * prompt — so the agent answers from the checkout, not from what it remembers.
  */
 
-import { spawnSync } from "node:child_process";
 import { basename } from "node:path";
 import { readAllProjects, resolveProjectFromCwd } from "./projects";
 import { isEnabled } from "./settings";
+import { spawnInCurrentEnv } from "./spawn";
 
 const GIT_TIMEOUT_MS = 1000;
 
@@ -20,11 +20,14 @@ interface Status {
 }
 
 function git(cwd: string, ...args: string[]): string | null {
-  const result = spawnSync("git", ["-C", cwd, ...args], {
-    encoding: "utf-8",
-    timeout: GIT_TIMEOUT_MS,
-  });
-  return result.status === 0 ? result.stdout.trim() : null;
+  try {
+    const result = spawnInCurrentEnv(["git", "-C", cwd, ...args], {
+      timeout: GIT_TIMEOUT_MS,
+    });
+    return result.exitCode === 0 ? result.stdout.toString().trim() : null;
+  } catch {
+    return null;
+  }
 }
 
 function header(lines: string[], key: string): string | null {

@@ -4,13 +4,13 @@
  * Windows shell expands.
  */
 
-import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { getActiveAgent } from "../hooks/lib/agent";
 import { flagshipAuthorModel } from "../hooks/lib/models";
 import { withPalEnv } from "../hooks/lib/pal-env";
 import { isInside, palHome, palPkg } from "../hooks/lib/paths";
+import { spawnInCurrentEnv } from "../hooks/lib/spawn";
 import { linkPersonalSkill, log } from "../targets/lib";
 import { group, leaf, UsageError } from "../tools/lib/command";
 import {
@@ -83,11 +83,11 @@ function runSkillTool(skill: string, tool: string, toolArgs: string[]): number {
     log.error(`No tool '${file}' in skill '${skill}' — looked in ${path}`);
     return 1;
   }
-  const { status } = spawnSync("bun", [path, ...toolArgs], {
-    stdio: "inherit",
+  const { exitCode } = spawnInCurrentEnv(["bun", path, ...toolArgs], {
+    stdio: ["inherit", "inherit", "inherit"],
     env: isShippedTool(path) ? withPalEnv(process.env) : process.env,
   });
-  return status ?? 1;
+  return exitCode ?? 1;
 }
 
 /** Real paths, so a personal skill symlinked from elsewhere never passes as shipped. */

@@ -12,7 +12,7 @@
  * already there.
  */
 
-import { spawnSync } from "node:child_process";
+import { spawnInCurrentEnv } from "./spawn";
 
 const GIT_TIMEOUT_MS = 2000;
 
@@ -49,10 +49,13 @@ export function normalizeRemote(url: string): string | null {
 
 /** The normalized origin remote of the repo at `dir`, or null if there is none. */
 export function detectRemote(dir: string): string | null {
-  const res = spawnSync("git", ["-C", dir, "remote", "get-url", "origin"], {
-    encoding: "utf-8",
-    timeout: GIT_TIMEOUT_MS,
-  });
-  if (res.status !== 0 || !res.stdout) return null;
-  return normalizeRemote(res.stdout);
+  try {
+    const res = spawnInCurrentEnv(["git", "-C", dir, "remote", "get-url", "origin"], {
+      timeout: GIT_TIMEOUT_MS,
+    });
+    const url = res.stdout.toString();
+    return res.exitCode === 0 && url ? normalizeRemote(url) : null;
+  } catch {
+    return null;
+  }
 }

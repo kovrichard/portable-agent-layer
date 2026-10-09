@@ -11,13 +11,14 @@
  * never consumes today's attempt.
  */
 
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { cachedStatus, getInstalledVersion, isRepoMode } from "../handlers/update-check";
 import { logDebug, logError } from "./log";
 import { assets, palPkg, paths } from "./paths";
 import { raw as rawSettings } from "./settings";
+import { spawnInCurrentEnv } from "./spawn";
 
 export interface AutoUpdateLedger {
   attemptedAt?: string;
@@ -109,13 +110,15 @@ export function autoUpdateStatus(): AutoUpdateStatus {
  */
 function hasUncommittedChanges(): boolean {
   if (!isRepoMode()) return false;
-  const status = spawnSync("git", ["status", "--porcelain"], {
-    cwd: palPkg(),
-    encoding: "utf-8",
-    windowsHide: true,
-  });
-  if (status.status !== 0) return false;
-  return (status.stdout ?? "").trim().length > 0;
+  try {
+    const status = spawnInCurrentEnv(["git", "status", "--porcelain"], {
+      cwd: palPkg(),
+      windowsHide: true,
+    });
+    return status.exitCode === 0 && status.stdout.toString().trim().length > 0;
+  } catch {
+    return false;
+  }
 }
 
 function recordSkip(reason: string): void {
@@ -264,27 +267,26 @@ function update(): AutoUpdateLedger {
   const from = getInstalledVersion();
   writeLedger({ attemptedAt: new Date().toISOString(), from });
 
-  const run = spawnSync("bun", updateCommand(), {
+  const run = spawnInCurrentEnv(["bun", ...updateCommand()], {
     cwd: palPkg(),
-    encoding: "utf-8",
     windowsHide: true,
   });
-  const output = `${run.stdout ?? ""}${run.stderr ?? ""}`;
+  const output = `${run.stdout}${run.stderr}`;
   try {
     writeFileSync(logPath(), output, "utf-8");
   } catch (err) {
     logError("auto-update:log", err);
   }
 
-  const ok = run.status === 0;
-  logDebug("auto-update", `update exited ${run.status}`);
+  const ok = run.exitCode === 0;
+  logDebug("auto-update", `update exited ${run.exitCode}`);
   return writeLedger({
     ...readLedger(),
     finishedAt: new Date().toISOString(),
     ok,
     from,
     to: getInstalledVersion(),
-    error: ok ? undefined : (run.error?.message ?? `exit ${run.status}`),
+    error: ok ? undefined : `exit ${run.exitCode}`,
   });
 }
 

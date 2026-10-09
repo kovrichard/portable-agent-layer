@@ -7,6 +7,7 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "no
 import { resolve } from "node:path";
 import { palPkg, platform } from "../../hooks/lib/paths";
 import { getSemiStaticSources } from "../../hooks/lib/semi-static";
+import { spawnInCurrentEnv } from "../../hooks/lib/spawn";
 import { copyAgentsForOpencode, copySkills, countSkills, log, writeJson } from "../lib";
 import { allowPalHome, palHomePattern } from "./permission";
 
@@ -35,7 +36,7 @@ if (!existsSync(pkgPath)) {
 }
 
 try {
-  Bun.spawnSync(["bun", "install", "--silent"], { cwd: OC_PLUGINS_DIR });
+  spawnInCurrentEnv(["bun", "install", "--silent"], { cwd: OC_PLUGINS_DIR });
 } catch {
   log.warn(`Could not install plugin deps — run 'bun install' in ${OC_PLUGINS_DIR}`);
 }

@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawnInCurrentEnv } from "../hooks/lib/spawn";
 
 /**
  * An update replaces PAL's files under a process that already holds the old
@@ -9,9 +9,9 @@ export function reinstallInFreshProcess(
   entry: string = process.argv[1],
   env: Record<string, string> = {}
 ): number {
-  const run = spawnSync(process.execPath, [entry, "cli", "install"], {
-    stdio: "inherit",
+  const run = spawnInCurrentEnv([process.execPath, entry, "cli", "install"], {
+    stdio: ["inherit", "inherit", "inherit"],
     env: { ...process.env, ...env },
   });
-  return run.status ?? 1;
+  return run.exitCode ?? 1;
 }

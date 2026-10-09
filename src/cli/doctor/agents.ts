@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 import {
@@ -8,6 +7,7 @@ import {
   skillsDirOf,
 } from "../../hooks/lib/agent-registry";
 import { palPkg, platform } from "../../hooks/lib/paths";
+import { spawnInCurrentEnv } from "../../hooks/lib/spawn";
 import {
   installedShippedAgentCount,
   nativeAgentsDir,
@@ -34,13 +34,9 @@ export type DoctorResult = Record<AgentName, ToolCheck> & {
 
 function checkTool(cmd: string, versionArgs: string[] = ["--version"]): ToolCheck {
   try {
-    const result = spawnSync(cmd, versionArgs, {
-      stdio: ["ignore", "pipe", "pipe"],
-      shell: true,
-      timeout: 5000,
-    });
-    if (result.status === 0) {
-      const version = (result.stdout?.toString() || "").trim().split("\n")[0];
+    const result = spawnInCurrentEnv([cmd, ...versionArgs], { timeout: 5000 });
+    if (result.exitCode === 0) {
+      const version = result.stdout.toString().trim().split("\n")[0];
       return { name: cmd, available: true, version };
     }
   } catch {

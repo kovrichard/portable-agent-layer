@@ -4,10 +4,10 @@
  * rather than answering a blank page.
  */
 
-import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { isInside } from "../../hooks/lib/paths";
+import { spawnInCurrentEnv } from "../../hooks/lib/spawn";
 
 const UI_DIST = resolve(import.meta.dir, "ui", "dist");
 
@@ -27,11 +27,10 @@ export function buildPage(): boolean {
   // the package's own JS entry runs the same build under any runtime.
   const vite = resolve(repoRoot, "node_modules", "vite", "bin", "vite.js");
   if (!existsSync(vite)) return false;
-  const built = spawnSync(process.execPath, [vite, "build"], {
+  const built = spawnInCurrentEnv([process.execPath, vite, "build"], {
     cwd: resolve(import.meta.dir, "ui"),
-    encoding: "utf-8",
   });
-  return built.status === 0 && isBuilt();
+  return built.exitCode === 0 && isBuilt();
 }
 
 function unbuiltPage(): Response {
