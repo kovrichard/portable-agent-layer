@@ -1,4 +1,4 @@
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, resolve } from "node:path";
 import { removeOnceReleased } from "./remove-once-released";
@@ -21,6 +21,13 @@ export function testHome(file: string, label = "home"): string {
 export function outsideRepoHome(file: string): string {
   const checkout = Bun.hash(TEST_ROOT).toString(36);
   return resolve(tmpdir(), `pal-test-${checkout}`, suiteName(file));
+}
+
+/** What the previous run's freshTestDir() handed out, until this run's first call wipes it. */
+export function leftoverTestDirs(file: string): string[] {
+  const tmp = testHome(file, "tmp");
+  if (!existsSync(tmp)) return [];
+  return readdirSync(tmp).map((name) => resolve(tmp, name));
 }
 
 const handedOut = new Map<string, number>();
