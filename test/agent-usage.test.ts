@@ -116,6 +116,7 @@ describe("readOpencode", () => {
     messages.forEach(({ created, data }, i) => {
       insert.run(String(i), new Date(created).getTime(), JSON.stringify(data));
     });
+    insert.finalize();
     db.close();
     return path;
   }
