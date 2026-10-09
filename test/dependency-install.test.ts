@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { dependencyInstall } from "../src/cli/dependencies";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 let PKG: string;
 
@@ -11,7 +12,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  rmSync(PKG, { recursive: true, force: true });
+  removeOnceReleased(PKG);
 });
 
 function dependsOn(...names: string[]): void {

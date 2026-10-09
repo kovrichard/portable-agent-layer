@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { duplicatesCursorHooks } from "../src/hooks/lib/cursor-shadow";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // cursor-agent also runs every hook in ~/.claude/settings.json, so with PAL's
 // Cursor hooks installed each Cursor prompt ran PAL twice: two logged turns, two
@@ -37,7 +38,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  rmSync(cursorDir, { recursive: true, force: true });
+  removeOnceReleased(cursorDir);
 });
 
 function installPalCursorHooks(): void {

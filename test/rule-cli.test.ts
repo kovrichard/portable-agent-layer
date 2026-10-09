@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { runRule } from "../src/cli/rule";
 import { addDraft, readRules } from "../src/hooks/lib/adaptation-rules";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 let HOME: string;
 const savedHome = process.env.PAL_HOME;
@@ -26,7 +27,7 @@ afterEach(() => {
   errSpy.mockRestore();
   if (savedHome === undefined) delete process.env.PAL_HOME;
   else process.env.PAL_HOME = savedHome;
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 function seed(when: string) {

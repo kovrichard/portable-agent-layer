@@ -14,14 +14,13 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
-  rmSync,
-  symlinkSync,
   utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { linkDir } from "./helpers/links";
+import { linkDir, linkFile } from "./lib/links";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 type Mode = "package" | "repo";
 
@@ -93,7 +92,7 @@ function fakeAgentsOnPath(root: string): void {
     writeFileSync(resolve(bin, agent), "#!/bin/sh\necho 1.0.0\n");
     chmodSync(resolve(bin, agent), 0o755);
   }
-  symlinkSync(process.execPath, resolve(bin, "bun"));
+  linkFile(process.execPath, resolve(bin, "bun"));
 }
 
 function installFromTarball(root: string): string {
@@ -180,7 +179,7 @@ function snapshot(root: string): void {
 
 function restore(root: string): void {
   for (const dir of STATE_DIRS) {
-    rmSync(resolve(root, dir), { recursive: true, force: true });
+    removeOnceReleased(resolve(root, dir));
     cpSync(resolve(root, "baseline", dir), resolve(root, dir), {
       recursive: true,
       verbatimSymlinks: true,
@@ -234,11 +233,11 @@ interface Breakage {
 const BREAKAGES: Breakage[] = [
   {
     id: "settings.missing",
-    break: (s) => rmSync(at(s, "home", "memory", "pal-settings.json")),
+    break: (s) => removeOnceReleased(at(s, "home", "memory", "pal-settings.json")),
   },
   {
     id: "telos.missing",
-    break: (s) => rmSync(at(s, "home", "telos"), { recursive: true }),
+    break: (s) => removeOnceReleased(at(s, "home", "telos")),
   },
   {
     id: "binding.demo",
@@ -267,42 +266,48 @@ const BREAKAGES: Breakage[] = [
     break: (s) => undeclared(at(s, ".claude", "settings.json")),
   },
   { id: "claude.hooks.scripts", break: retiredHookScript },
-  { id: "claude.instructions", break: (s) => rmSync(at(s, ".claude", "CLAUDE.md")) },
+  {
+    id: "claude.instructions",
+    break: (s) => removeOnceReleased(at(s, ".claude", "CLAUDE.md")),
+  },
   {
     id: "claude.skills",
-    break: (s) => rmSync(at(s, ".claude", "skills"), { recursive: true }),
+    break: (s) => removeOnceReleased(at(s, ".claude", "skills")),
   },
   {
     id: "codex.hooks.unreadable",
     break: (s) => writeFileSync(at(s, ".codex", "hooks.json"), "{"),
   },
-  { id: "cursor.hooks.missing", break: (s) => rmSync(at(s, ".cursor", "hooks.json")) },
+  {
+    id: "cursor.hooks.missing",
+    break: (s) => removeOnceReleased(at(s, ".cursor", "hooks.json")),
+  },
   {
     id: "copilot.hooks.missing",
-    break: (s) => rmSync(at(s, ".copilot", "hooks", "pal-hooks.json")),
+    break: (s) => removeOnceReleased(at(s, ".copilot", "hooks", "pal-hooks.json")),
   },
   {
     id: "opencode.hooks.missing",
-    break: (s) => rmSync(at(s, ".opencode", "plugins", "pal-plugin.ts")),
+    break: (s) => removeOnceReleased(at(s, ".opencode", "plugins", "pal-plugin.ts")),
   },
   {
     id: "opencode.plugin.stale",
     break: (s) => utimesSync(at(s, ".opencode", "plugins", "pal-plugin.ts"), 0, 0),
   },
-  { id: "agents-md", break: (s) => rmSync(at(s, ".opencode", "AGENTS.md")) },
+  { id: "agents-md", break: (s) => removeOnceReleased(at(s, ".opencode", "AGENTS.md")) },
   {
     id: "pal.path",
     modes: ["repo"],
-    break: (s) => rmSync(at(s, ".bun", "bin", "pal")),
+    break: (s) => removeOnceReleased(at(s, ".bun", "bin", "pal")),
   },
   {
     id: "dependencies",
     modes: ["package"],
     break: (s) => {
       for (const dependency of ["fast-myers-diff", "@clack/prompts", "adm-zip"])
-        rmSync(at(s, ".bun", "install", "global", "node_modules", dependency), {
-          recursive: true,
-        });
+        removeOnceReleased(
+          at(s, ".bun", "install", "global", "node_modules", dependency)
+        );
     },
   },
 ];
@@ -317,7 +322,7 @@ describe.skipIf(!PROVING).each(["package", "repo"] as Mode[])(
     }, 300_000);
 
     afterAll(() => {
-      rmSync(sandbox.root, { recursive: true, force: true });
+      removeOnceReleased(sandbox.root);
     });
 
     test("a fresh install leaves nothing for PAL to fix", () => {

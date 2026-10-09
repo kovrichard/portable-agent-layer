@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { appendFileSync, mkdtempSync, rmSync } from "node:fs";
+import { appendFileSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
@@ -10,6 +10,7 @@ import {
 } from "../src/hooks/lib/adaptation-candidates";
 import { readRules } from "../src/hooks/lib/adaptation-rules";
 import type { RequestedTurn } from "../src/hooks/lib/adaptation-turns";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 let HOME: string;
 const savedHome = process.env.PAL_HOME;
@@ -22,7 +23,7 @@ beforeEach(() => {
 afterEach(() => {
   if (savedHome === undefined) delete process.env.PAL_HOME;
   else process.env.PAL_HOME = savedHome;
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 const candidate: CandidateInput = {

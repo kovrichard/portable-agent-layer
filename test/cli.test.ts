@@ -1,7 +1,8 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 const TEST_HOME = resolve(import.meta.dir, "../.test-home");
@@ -32,7 +33,7 @@ let init: ReturnType<typeof pal>;
 // `pal cli init` runs `bun install --frozen-lockfile` + telos scaffolding + doctor
 // pre-flight; on Windows this is ~5–6s, occasionally over bun-test's 5s default.
 beforeAll(() => {
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
   mkdirSync(TEST_HOME, { recursive: true });
   init = pal("cli", "init");
 }, 30000);

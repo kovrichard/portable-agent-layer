@@ -1,10 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import {
   appendFileSync,
-  existsSync,
   mkdirSync,
   readdirSync,
-  rmSync,
   utimesSync,
   writeFileSync,
 } from "node:fs";
@@ -16,6 +14,7 @@ import {
   isStale,
   readIndex,
 } from "../src/hooks/lib/retrieval-index";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const TEST_HOME = resolve(import.meta.dir, "../.test-home-retrieval");
 const FIXTURES_WRITTEN = Date.parse("2026-06-01T00:00:00Z");
@@ -26,13 +25,13 @@ function sameAgeToday(writtenAs: string): string {
 
 beforeAll(() => {
   process.env.PAL_HOME = TEST_HOME;
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
   mkdirSync(TEST_HOME, { recursive: true });
 });
 
 afterAll(() => {
   delete process.env.PAL_HOME;
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
 });
 
 beforeEach(() => {
@@ -41,10 +40,10 @@ beforeEach(() => {
     resolve(TEST_HOME, "memory", "learning", "reflections"),
     resolve(TEST_HOME, "memory", "wisdom", "frames"),
   ]) {
-    if (existsSync(dir)) rmSync(dir, { recursive: true });
+    removeOnceReleased(dir);
   }
   const indexPath = resolve(TEST_HOME, "memory", "learning", ".retrieval-index.json");
-  if (existsSync(indexPath)) rmSync(indexPath);
+  removeOnceReleased(indexPath);
 });
 
 function fixtureCapture(

@@ -1,16 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import type { LedgerEntry } from "../src/hooks/lib/ledger";
 import { ledgerView } from "../src/tools/ledger/view";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // A refusal produces no other event: nothing runs, so no post-tool hook reports
 // it. If the gate does not write the entry itself, the block leaves no trace and
@@ -30,7 +24,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 async function runValidator(payload: unknown, agent = "claude"): Promise<string> {
@@ -110,7 +104,7 @@ describe("a rule refusing is recorded", () => {
 
   test("a ledger it cannot write still denies — recording never softens a block", async () => {
     // A file where the ledger directory has to go: every write path throws.
-    rmSync(resolve(HOME, "memory", "ledger"), { recursive: true });
+    removeOnceReleased(resolve(HOME, "memory", "ledger"));
     writeFileSync(resolve(HOME, "memory", "ledger"), "not a directory", "utf-8");
 
     const out = await runValidator(preToolUse("Bash", { command: DANGEROUS }));

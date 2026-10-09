@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
+import { mkdirSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   DOMAINS,
@@ -16,11 +16,12 @@ import {
   slugify,
   validate,
 } from "../src/tools/knowledge/lib";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const ROOT = resolve(import.meta.dir, "../.test-tmp/knowledge");
 
 beforeEach(() => {
-  if (existsSync(ROOT)) rmSync(ROOT, { recursive: true });
+  removeOnceReleased(ROOT);
   mkdirSync(ROOT, { recursive: true });
 });
 

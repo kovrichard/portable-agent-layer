@@ -1,17 +1,18 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const TEST_DIR = resolve(import.meta.dir, "../.test-home-paths");
 
 beforeAll(() => {
-  if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true });
+  removeOnceReleased(TEST_DIR);
   mkdirSync(TEST_DIR, { recursive: true });
 });
 
 afterAll(() => {
-  if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true });
+  removeOnceReleased(TEST_DIR);
   // Clean up env
   delete process.env.PAL_HOME;
   delete process.env.PAL_PKG;

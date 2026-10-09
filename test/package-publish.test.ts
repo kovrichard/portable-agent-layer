@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, resolve } from "node:path";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const REPO = resolve(import.meta.dir, "..");
 
@@ -25,7 +26,7 @@ describe("package publish surface", () => {
       expect(result.status).toBe(0);
       expect(result.stderr).toBe("");
     } finally {
-      rmSync(sandbox, { recursive: true, force: true });
+      removeOnceReleased(sandbox);
     }
   });
 
@@ -56,7 +57,7 @@ describe("package publish surface", () => {
       expect(list.status).toBe(0);
       expect(list.stdout).toContain("package/.husky/install.mjs");
     } finally {
-      rmSync(sandbox, { recursive: true, force: true });
+      removeOnceReleased(sandbox);
     }
   }, 60000);
 });

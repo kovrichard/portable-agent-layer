@@ -1,32 +1,26 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { run } from "../src/tools/agent/project";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const TEST_HOME = resolve(import.meta.dir, "../.test-home-project-cli");
 const CLI = resolve(import.meta.dir, "../src/tools/agent/project.ts");
 
 beforeAll(() => {
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
   mkdirSync(TEST_HOME, { recursive: true });
 });
 
 afterAll(() => {
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
 });
 
 beforeEach(() => {
   const isaDir = resolve(TEST_HOME, "memory", "projects");
-  if (existsSync(isaDir)) rmSync(isaDir, { recursive: true });
+  removeOnceReleased(isaDir);
   const legacyDir = resolve(TEST_HOME, "memory", "state", "progress");
-  if (existsSync(legacyDir)) rmSync(legacyDir, { recursive: true });
+  removeOnceReleased(legacyDir);
 });
 
 async function runCli(

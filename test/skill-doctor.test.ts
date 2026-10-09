@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, resolve } from "node:path";
 import {
@@ -9,6 +9,7 @@ import {
   lintSkill,
   resolveSkillDir,
 } from "../src/tools/lib/skill-doctor";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const ROOT = resolve(import.meta.dir, "../.test-home-skill-doctor");
 
@@ -53,12 +54,12 @@ function levelOf(dir: string, check: string) {
 }
 
 beforeAll(() => {
-  if (existsSync(ROOT)) rmSync(ROOT, { recursive: true });
+  removeOnceReleased(ROOT);
   mkdirSync(ROOT, { recursive: true });
 });
 
 afterAll(() => {
-  if (existsSync(ROOT)) rmSync(ROOT, { recursive: true });
+  removeOnceReleased(ROOT);
 });
 
 describe("lintSkill", () => {

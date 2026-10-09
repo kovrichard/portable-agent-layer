@@ -1,8 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const ROOT = resolve(import.meta.dir, "../.test-tmp/run-hook-skip");
 const HOOK = resolve(import.meta.dir, "../.agents/hooks/run-hook.ts");
@@ -35,12 +36,12 @@ function runHookIn(cwd: string) {
 }
 
 beforeAll(() => {
-  if (existsSync(ROOT)) rmSync(ROOT, { recursive: true });
+  removeOnceReleased(ROOT);
   mkdirSync(ROOT, { recursive: true });
 });
 
 afterAll(() => {
-  if (existsSync(ROOT)) rmSync(ROOT, { recursive: true });
+  removeOnceReleased(ROOT);
 });
 
 describe("run-hook clean-worktree skip", () => {
@@ -86,7 +87,7 @@ describe("run-hook clean-worktree skip", () => {
       expect(r.code).toBe(0);
       expect(JSON.parse(r.stdout).output).toBe("ok");
     } finally {
-      rmSync(dir, { recursive: true });
+      removeOnceReleased(dir);
     }
   });
 

@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { declaredTriggers } from "../src/hooks/lib/skill-triggers";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 describe("declaredTriggers", () => {
   test("reads a YAML block sequence under metadata", () => {
@@ -90,7 +91,7 @@ async function triggersFor(frontmatter: string): Promise<string[]> {
 }
 
 beforeEach(() => {
-  if (existsSync(HOME)) rmSync(HOME, { recursive: true });
+  removeOnceReleased(HOME);
   mkdirSync(HOME, { recursive: true });
   savedHome = process.env.PAL_HOME;
   process.env.PAL_HOME = HOME;
@@ -99,7 +100,7 @@ beforeEach(() => {
 afterEach(() => {
   if (savedHome === undefined) delete process.env.PAL_HOME;
   else process.env.PAL_HOME = savedHome;
-  if (existsSync(HOME)) rmSync(HOME, { recursive: true });
+  removeOnceReleased(HOME);
 });
 
 describe("generateSkillIndex — trigger source", () => {

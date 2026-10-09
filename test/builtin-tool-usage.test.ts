@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { run as algorithmReflect } from "../src/tools/agent/algorithm-reflect";
@@ -11,6 +11,7 @@ import { run as relationshipReflect } from "../src/tools/agent/relationship-refl
 import { run as synthesize } from "../src/tools/agent/synthesize";
 import { run as thread } from "../src/tools/agent/thread";
 import { run as wisdomFrame } from "../src/tools/agent/wisdom-frame";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const TOOLS: [string, (argv: string[]) => Promise<number>][] = [
   ["algorithm-reflect", algorithmReflect],
@@ -36,7 +37,7 @@ beforeEach(() => {
 afterEach(() => {
   if (previousHome === undefined) delete process.env.PAL_HOME;
   else process.env.PAL_HOME = previousHome;
-  rmSync(home, { recursive: true, force: true });
+  removeOnceReleased(home);
 });
 
 async function captured(

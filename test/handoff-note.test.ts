@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
@@ -13,6 +13,7 @@ import {
   statusOf,
   trimHandoffs,
 } from "../src/tools/lib/handoff-note";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // The handoff note is where an agent says what it could not finish. One of those
 // reasons — waiting on the human — is the only one the morning screen can act on,
@@ -30,8 +31,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  rmSync(HOME, { recursive: true, force: true });
-  rmSync(CWD, { recursive: true, force: true });
+  removeOnceReleased(HOME);
+  removeOnceReleased(CWD);
 });
 
 async function runCli(args: string[]): Promise<number> {

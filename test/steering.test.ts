@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { classifyPrompt, getSteeringReminder } from "../src/hooks/lib/steering";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // Steering reads user rules / disables from pal-settings.json, so these tests run
 // against an isolated PAL_HOME to stay deterministic regardless of the real config.
@@ -9,18 +10,18 @@ const TEST_HOME = resolve(import.meta.dir, "../.test-home-steering");
 
 beforeAll(() => {
   process.env.PAL_HOME = TEST_HOME;
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
   mkdirSync(resolve(TEST_HOME, "memory"), { recursive: true });
 });
 
 afterAll(() => {
   delete process.env.PAL_HOME;
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
 });
 
 beforeEach(async () => {
   const p = resolve(TEST_HOME, "memory", "pal-settings.json");
-  if (existsSync(p)) rmSync(p);
+  removeOnceReleased(p);
   const settings = await import("../src/hooks/lib/settings");
   settings.reload();
 });

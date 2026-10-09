@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import type { ArchiveEntry } from "../src/hooks/lib/import-merge";
@@ -11,6 +11,7 @@ import {
   readManifest,
   summarize,
 } from "../src/hooks/lib/import-merge";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 let HOME: string;
 let QUARANTINE: string;
@@ -21,7 +22,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 /** An archive entry without a zip — the seam ArchiveEntry exists to expose. */

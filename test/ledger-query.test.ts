@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // The read side is only worth as much as the questions it can answer without
 // lying. These cases are about the three ways it could: losing the rotated
@@ -20,8 +21,8 @@ beforeEach(() => {
 
 afterEach(() => {
   delete process.env.PAL_HOME;
-  rmSync(HOME, { recursive: true, force: true });
-  rmSync(PROJECT, { recursive: true, force: true });
+  removeOnceReleased(HOME);
+  removeOnceReleased(PROJECT);
 });
 
 async function query() {

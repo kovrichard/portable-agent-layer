@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import type { Turn } from "../src/hooks/lib/adaptation-turns";
@@ -8,6 +8,7 @@ import {
   readRuleEvents,
   ruleEffects,
 } from "../src/hooks/lib/rule-effect";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const turn = (ts: string, over: Partial<Turn> = {}): Turn => ({
   ts,
@@ -95,7 +96,7 @@ describe("readRuleEvents", () => {
 
   afterEach(() => {
     delete process.env.PAL_HOME;
-    rmSync(HOME, { recursive: true, force: true });
+    removeOnceReleased(HOME);
   });
 
   test("no log reads as no events", () => {

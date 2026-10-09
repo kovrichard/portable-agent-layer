@@ -6,12 +6,12 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
-  rmSync,
   writeFileSync,
 } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { linkDir } from "./helpers/links";
+import { linkDir } from "./lib/links";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 
@@ -27,7 +27,7 @@ function palCli(args: string[], opts: { input?: string } = {}) {
 const TEST_HOME = resolve(import.meta.dir, "../.test-home-export");
 
 beforeAll(() => {
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
 
   // Scaffold a fake PAL home
   mkdirSync(resolve(TEST_HOME, "telos"), { recursive: true });
@@ -75,7 +75,7 @@ beforeAll(() => {
 
 afterAll(() => {
   delete process.env.PAL_HOME;
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
 });
 
 describe("collectExportFiles", () => {
@@ -161,7 +161,7 @@ describe("cli export — folder arg", () => {
       );
       expect(zips).toHaveLength(1);
     } finally {
-      rmSync(outDir, { recursive: true, force: true });
+      removeOnceReleased(outDir);
     }
   });
 
@@ -175,7 +175,7 @@ describe("cli export — folder arg", () => {
       const zips = readdirSync(outDir).filter((f) => f.endsWith(".zip"));
       expect(zips).toHaveLength(0);
     } finally {
-      rmSync(outDir, { recursive: true, force: true });
+      removeOnceReleased(outDir);
     }
   });
 });
@@ -201,7 +201,7 @@ describe("cli import — folder arg", () => {
       expect(overwriteDry.status).toBe(0);
       expect(overwriteDry.stdout).toContain("Would overwrite with");
     } finally {
-      rmSync(workDir, { recursive: true, force: true });
+      removeOnceReleased(workDir);
     }
   });
 
@@ -212,7 +212,7 @@ describe("cli import — folder arg", () => {
       expect(result.status).not.toBe(0);
       expect(result.stderr).toContain("No export or backup files found");
     } finally {
-      rmSync(emptyDir, { recursive: true, force: true });
+      removeOnceReleased(emptyDir);
     }
   });
 
@@ -235,8 +235,8 @@ describe("cli import — folder arg", () => {
       expect(existsSync(resolve(freshHome, "skills", "my-skill", "SKILL.md"))).toBe(true);
       expect(existsSync(resolve(freshHome, "agents", "my-helper.md"))).toBe(true);
     } finally {
-      rmSync(workDir, { recursive: true, force: true });
-      rmSync(freshHome, { recursive: true, force: true });
+      removeOnceReleased(workDir);
+      removeOnceReleased(freshHome);
     }
   });
 });
@@ -263,8 +263,8 @@ describe("a tilde in the path positional", () => {
       const contents = readFileSync(log, "utf-8");
       expect(contents).toContain(resolve(homedir(), "pal-import-nowhere.zip"));
     } finally {
-      rmSync(marker, { force: true });
-      rmSync(log, { force: true });
+      removeOnceReleased(marker);
+      removeOnceReleased(log);
     }
   });
 });

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
@@ -15,6 +15,7 @@ import {
   stopBlockResponse,
 } from "../src/hooks/lib/agent";
 import { writeFakeBin } from "./fixtures/fake-bin";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const PRESERVED_ENV_KEYS = [
   "PAL_AGENT",
@@ -437,7 +438,7 @@ describe("getActiveAgent — undeclared falls back to what is installed", () => 
 
   afterEach(() => {
     process.argv = argv;
-    rmSync(dir, { recursive: true, force: true });
+    removeOnceReleased(dir);
     for (const k of PRESERVED_ENV_KEYS) {
       if (saved[k] === undefined) delete process.env[k];
       else process.env[k] = saved[k];

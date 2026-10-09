@@ -7,10 +7,11 @@ import {
   expect,
   test,
 } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { readProject, writeProject } from "../src/hooks/lib/projects";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // Use os.tmpdir() so tests don't interact with the real PAL home or with the
 // PAL repo's own .git when resolveProjectFromCwd or process.cwd() are involved.
@@ -27,12 +28,12 @@ beforeAll(() => {
 afterAll(() => {
   delete process.env.PAL_HOME;
   process.chdir(ORIGINAL_CWD);
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
 });
 
 beforeEach(() => {
   const dir = resolve(TEST_HOME, "memory", "projects");
-  if (existsSync(dir)) rmSync(dir, { recursive: true });
+  removeOnceReleased(dir);
 });
 
 afterEach(() => {

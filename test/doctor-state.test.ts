@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import {
@@ -8,6 +8,7 @@ import {
   unknownSettingsKeys,
   unresolvedDependencies,
 } from "../src/cli/doctor/state";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 let HOME: string;
 let savedHome: string | undefined;
@@ -21,7 +22,7 @@ beforeEach(() => {
 afterEach(() => {
   if (savedHome === undefined) delete process.env.PAL_HOME;
   else process.env.PAL_HOME = savedHome;
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 function write(path: string, content: string): void {

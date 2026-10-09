@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
@@ -19,6 +19,7 @@ import {
 import { logPromptSnapshot, recentHookErrors } from "../src/hooks/lib/log";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const PRESERVED = [
   "PAL_AGENT",
@@ -212,7 +213,7 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
   });
 
   afterEach(() => {
-    rmSync(tmpBin, { recursive: true, force: true });
+    removeOnceReleased(tmpBin);
     restoreEnv(saved);
     if (savedDisabled === undefined) delete process.env.PAL_INFERENCE_DISABLED;
     else process.env.PAL_INFERENCE_DISABLED = savedDisabled;
@@ -350,7 +351,7 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
     } finally {
       if (palHomeSaved === undefined) delete process.env.PAL_HOME;
       else process.env.PAL_HOME = palHomeSaved;
-      rmSync(tmpHome, { recursive: true, force: true });
+      removeOnceReleased(tmpHome);
     }
   });
 
@@ -403,7 +404,7 @@ describe("logPromptSnapshot", () => {
     } finally {
       if (palHomeSaved === undefined) delete process.env.PAL_HOME;
       else process.env.PAL_HOME = palHomeSaved;
-      rmSync(tmpHome, { recursive: true, force: true });
+      removeOnceReleased(tmpHome);
     }
   });
 
@@ -418,7 +419,7 @@ describe("logPromptSnapshot", () => {
     } finally {
       if (palHomeSaved === undefined) delete process.env.PAL_HOME;
       else process.env.PAL_HOME = palHomeSaved;
-      rmSync(tmpHome, { recursive: true, force: true });
+      removeOnceReleased(tmpHome);
     }
   });
 });

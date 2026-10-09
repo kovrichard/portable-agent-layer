@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { dueFrom, readTelosGoals } from "../src/hooks/lib/telos-goals";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // GOALS.md is prose written by a person, and the matrix has to rank it without
 // a model — so every shape the file actually takes is pinned here.
@@ -16,7 +17,7 @@ beforeEach(() => {
 
 afterEach(() => {
   delete process.env.PAL_HOME;
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 function writeGoals(content: string): void {

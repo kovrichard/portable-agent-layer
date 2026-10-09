@@ -6,11 +6,11 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
-  rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 
@@ -86,7 +86,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  for (const d of [SRC, DST, WORK]) rmSync(d, { recursive: true, force: true });
+  for (const d of [SRC, DST, WORK]) removeOnceReleased(d);
 });
 
 describe("import into a NON-EMPTY home", () => {

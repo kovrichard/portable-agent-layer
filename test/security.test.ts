@@ -1,9 +1,10 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { checkBashCommand, checkFilePath } from "../src/hooks/lib/security";
-import { linkDir } from "./helpers/links";
+import { linkDir } from "./lib/links";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const ROOT_OVERRIDES = [
   "PAL_HOME",
@@ -440,7 +441,7 @@ describe("checkFilePath", () => {
       expect(checkFilePath(join(skills, "brandnew", "SKILL.md"))).toBeNull();
     } finally {
       pinRealPalHome();
-      rmSync(base, { recursive: true, force: true });
+      removeOnceReleased(base);
     }
   });
 

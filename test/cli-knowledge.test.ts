@@ -8,11 +8,12 @@ import {
   spyOn,
   test,
 } from "bun:test";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { runKnowledge } from "../src/cli/knowledge";
 import { exists, getOrCreate, load, save } from "../src/tools/knowledge/lib";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const ROOT = resolve(import.meta.dir, "../.test-tmp/cli-knowledge");
 const originalPalHome = process.env.PAL_HOME;
@@ -27,7 +28,7 @@ afterAll(() => {
 });
 
 beforeEach(() => {
-  if (existsSync(ROOT)) rmSync(ROOT, { recursive: true });
+  removeOnceReleased(ROOT);
   mkdirSync(ROOT, { recursive: true });
 });
 
