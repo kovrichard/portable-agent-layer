@@ -1,16 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 
@@ -56,9 +49,9 @@ function lines(home: string, rel: string): string[] {
 }
 
 beforeEach(() => {
-  SRC = mkdtempSync(resolve(tmpdir(), "pal-src-"));
-  DST = mkdtempSync(resolve(tmpdir(), "pal-dst-"));
-  WORK = mkdtempSync(resolve(tmpdir(), "pal-work-"));
+  SRC = freshTestDir(import.meta.file);
+  DST = freshTestDir(import.meta.file);
+  WORK = freshTestDir(import.meta.file);
 
   // SRC = the "Mac": two ratings, one reflection, its own skill
   write(

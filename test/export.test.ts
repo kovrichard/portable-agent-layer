@@ -1,17 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
-import { homedir, tmpdir } from "node:os";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { linkDir } from "./lib/links";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir, testHome } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 
@@ -24,7 +18,7 @@ function palCli(args: string[], opts: { input?: string } = {}) {
   });
 }
 
-const TEST_HOME = resolve(import.meta.dir, "../.test-home-export");
+const TEST_HOME = testHome(import.meta.file);
 
 beforeAll(() => {
   removeOnceReleased(TEST_HOME);
@@ -152,7 +146,7 @@ describe("timestamp", () => {
 
 describe("cli export — folder arg", () => {
   test("auto-names zip inside given directory", () => {
-    const outDir = mkdtempSync(resolve(tmpdir(), "pal-export-dir-"));
+    const outDir = freshTestDir(import.meta.file);
     try {
       const result = palCli(["export", outDir]);
       expect(result.status).toBe(0);
@@ -166,7 +160,7 @@ describe("cli export — folder arg", () => {
   });
 
   test("dry-run with folder arg lists files without writing", () => {
-    const outDir = mkdtempSync(resolve(tmpdir(), "pal-export-dry-"));
+    const outDir = freshTestDir(import.meta.file);
     try {
       const result = palCli(["export", outDir, "--dry-run"]);
       expect(result.status).toBe(0);
@@ -182,7 +176,7 @@ describe("cli export — folder arg", () => {
 
 describe("cli import — folder arg", () => {
   test("finds latest zip in given directory and dry-runs import", () => {
-    const workDir = mkdtempSync(resolve(tmpdir(), "pal-import-dir-"));
+    const workDir = freshTestDir(import.meta.file);
     try {
       // Export to workDir first so there is a zip to find
       const exportResult = palCli(["export", workDir]);
@@ -206,7 +200,7 @@ describe("cli import — folder arg", () => {
   });
 
   test("exits non-zero when folder has no zip files", () => {
-    const emptyDir = mkdtempSync(resolve(tmpdir(), "pal-import-empty-"));
+    const emptyDir = freshTestDir(import.meta.file);
     try {
       const result = palCli(["import", emptyDir], { input: "y\n" });
       expect(result.status).not.toBe(0);
@@ -217,8 +211,8 @@ describe("cli import — folder arg", () => {
   });
 
   test("round-trips a personal skill and subagent into a fresh home", () => {
-    const workDir = mkdtempSync(resolve(tmpdir(), "pal-roundtrip-"));
-    const freshHome = mkdtempSync(resolve(tmpdir(), "pal-fresh-home-"));
+    const workDir = freshTestDir(import.meta.file);
+    const freshHome = freshTestDir(import.meta.file);
     try {
       // Export the seeded TEST_HOME (has skills/my-skill + agents/my-helper).
       const exportResult = palCli(["export", workDir]);

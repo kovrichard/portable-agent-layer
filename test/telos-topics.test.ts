@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readdirSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { hasRealContent, telosStatus } from "../src/hooks/lib/telos-topics";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 // One definition of "answered" serves the doctor, `pal cli telos` and the
 // onboarding skill, so what counts as scaffolding is pinned here.
@@ -11,7 +11,7 @@ import { removeOnceReleased } from "./lib/remove-once-released";
 let HOME: string;
 
 beforeEach(() => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-telos-topics-"));
+  HOME = freshTestDir(import.meta.file);
   mkdirSync(resolve(HOME, "telos"), { recursive: true });
 });
 

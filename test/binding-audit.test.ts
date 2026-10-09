@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import type { ProjectProgress } from "../src/hooks/lib/projects";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
 
 beforeEach(() => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-audit-"));
+  HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
 });
 

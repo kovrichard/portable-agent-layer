@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { declaredTriggers } from "../src/hooks/lib/skill-triggers";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
 describe("declaredTriggers", () => {
   test("reads a YAML block sequence under metadata", () => {
@@ -64,7 +65,7 @@ describe("declaredTriggers", () => {
   });
 });
 
-const HOME = resolve(import.meta.dir, "../.test-home-skill-triggers");
+const HOME = testHome(import.meta.file);
 let savedHome: string | undefined;
 
 function writeSkill(name: string, frontmatter: string) {

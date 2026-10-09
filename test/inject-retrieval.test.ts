@@ -2,8 +2,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:tes
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const TEST_HOME = resolve(import.meta.dir, "../.test-home-inject-retrieval");
+const TEST_HOME = testHome(import.meta.file);
 
 beforeAll(() => {
   process.env.PAL_HOME = TEST_HOME;

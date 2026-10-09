@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   buildRecall,
@@ -11,6 +10,7 @@ import {
   truncate,
 } from "../src/hooks/lib/compact-recall";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 // This runs once per compaction and its output is the only surviving copy of the
 // turn that was in flight. A budget that is wrong silently loses half a message;
@@ -19,7 +19,7 @@ import { removeOnceReleased } from "./lib/remove-once-released";
 let HOME: string;
 
 beforeEach(() => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-recall-"));
+  HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   mkdirSync(resolve(HOME, "memory", "state", "last-exchange"), { recursive: true });
 });

@@ -13,8 +13,9 @@ import {
   writeProject,
 } from "../src/hooks/lib/projects";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const TEST_HOME = resolve(import.meta.dir, "../.test-home-projects");
+const TEST_HOME = testHome(import.meta.file);
 
 beforeAll(() => {
   process.env.PAL_HOME = TEST_HOME;

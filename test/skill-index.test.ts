@@ -3,8 +3,9 @@ import { existsSync, lstatSync, mkdirSync, readFileSync, writeFileSync } from "n
 import { resolve } from "node:path";
 import { generateSkillIndex, linkPersonalSkill } from "../src/targets/lib";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const HOME = resolve(import.meta.dir, "../.test-home-skill-index");
+const HOME = testHome(import.meta.file);
 const AGENT_DIRS = {
   PAL_CLAUDE_DIR: resolve(HOME, ".claude"),
   PAL_CURSOR_DIR: resolve(HOME, ".cursor"),

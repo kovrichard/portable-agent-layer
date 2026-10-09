@@ -11,8 +11,9 @@ import { writeProject } from "../src/hooks/lib/projects";
 import { reload } from "../src/hooks/lib/settings";
 import { appendProjectHistory } from "../src/hooks/lib/work-tracking";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const HOME = resolve(import.meta.dir, "../.test-home-context-build");
+const HOME = testHome(import.meta.file);
 const savedHome = process.env.PAL_HOME;
 
 function write(relPath: string, content: string) {

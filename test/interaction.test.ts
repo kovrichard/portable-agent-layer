@@ -1,12 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import {
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { observeTurn, recordReply, type TurnEvent } from "../src/hooks/lib/interaction";
 import {
@@ -17,6 +10,7 @@ import {
 import { REACTION_RULES } from "../src/hooks/lib/interaction-reaction";
 import { reload } from "../src/hooks/lib/settings";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 let TEST_HOME: string;
 const T0 = new Date("2026-09-10T10:00:00Z");
@@ -50,7 +44,7 @@ function words(n: number): string {
 }
 
 beforeEach(() => {
-  TEST_HOME = mkdtempSync(resolve(tmpdir(), "pal-interaction-"));
+  TEST_HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = TEST_HOME;
   process.env.PAL_AGENT = "claude";
   mkdirSync(resolve(TEST_HOME, "memory"), { recursive: true });

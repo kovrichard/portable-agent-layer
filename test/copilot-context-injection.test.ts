@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 const LOAD_CONTEXT = resolve(import.meta.dir, "../src/hooks/LoadContext.ts");
 
@@ -36,7 +36,7 @@ function runLoadContext() {
 }
 
 beforeAll(() => {
-  sandbox = mkdtempSync(resolve(tmpdir(), "pal-copilot-ctx-"));
+  sandbox = freshTestDir(import.meta.file);
   copilotDir = resolve(sandbox, "copilot");
   const telos = resolve(sandbox, "home", "telos");
   mkdirSync(telos, { recursive: true });

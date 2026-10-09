@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { duplicatesCursorHooks } from "../src/hooks/lib/cursor-shadow";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 // cursor-agent also runs every hook in ~/.claude/settings.json, so with PAL's
 // Cursor hooks installed each Cursor prompt ran PAL twice: two logged turns, two
@@ -34,7 +34,7 @@ const HOST_ENV_KEYS = [
 let cursorDir: string;
 
 beforeEach(() => {
-  cursorDir = mkdtempSync(resolve(tmpdir(), "pal-cursor-shadow-"));
+  cursorDir = freshTestDir(import.meta.file);
 });
 
 afterEach(() => {

@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Reaction } from "../src/hooks/lib/interaction-reaction";
 import { keepSample, readSamples } from "../src/hooks/lib/interaction-samples";
@@ -13,6 +12,7 @@ import {
 } from "../src/hooks/lib/reaction-audit";
 import { reload } from "../src/hooks/lib/settings";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 const REPO_ROOT = resolve(import.meta.dir, "..");
 const T0 = new Date("2026-09-10T10:00:00Z");
@@ -34,7 +34,7 @@ function addSamples(reaction: Reaction, count: number, fromSec: number) {
 }
 
 beforeEach(() => {
-  TEST_HOME = mkdtempSync(resolve(tmpdir(), "pal-reaction-audit-"));
+  TEST_HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = TEST_HOME;
   process.env.PAL_PKG = REPO_ROOT;
   mkdirSync(resolve(TEST_HOME, "memory", "state"), { recursive: true });

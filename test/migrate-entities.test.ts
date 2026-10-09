@@ -4,10 +4,11 @@ import { resolve } from "node:path";
 import { runMigrate } from "../src/cli/migrate";
 import { exists, load } from "../src/tools/knowledge/lib";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-// Sandbox via PAL_HOME so the migration's path-resolution lands in our tmp dir
+// Sandbox via PAL_HOME so the migration's path-resolution lands in our test home
 // instead of touching the user's real ~/.pal.
-const ROOT = resolve(import.meta.dir, "../.test-tmp/migrate-entities");
+const ROOT = testHome(import.meta.file);
 const LEGACY_DIR = resolve(ROOT, "memory/entities");
 const LEGACY_FILE = resolve(LEGACY_DIR, "entity-index.json");
 

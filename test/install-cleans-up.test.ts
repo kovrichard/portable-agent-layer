@@ -1,17 +1,10 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import {
-  chmodSync,
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { delimiter, dirname, resolve } from "node:path";
 import { linkFile } from "./lib/links";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 let SANDBOX: string;
@@ -75,7 +68,7 @@ const json = (path: string) => JSON.parse(readFileSync(path, "utf-8"));
 let doctorIds: string[];
 
 beforeAll(() => {
-  SANDBOX = mkdtempSync(resolve(tmpdir(), "pal-install-cleans-up-"));
+  SANDBOX = freshTestDir(import.meta.file);
   plantLeftovers();
   pal("install", "--claude");
   const report = JSON.parse(pal("doctor", "--json").stdout);

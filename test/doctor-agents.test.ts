@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { agentFindings, rosterFindings } from "../src/cli/doctor/agents";
 import { AGENT_NAMES } from "../src/hooks/lib/agent-registry";
@@ -10,6 +9,7 @@ import {
   copyAgentsForCodex,
 } from "../src/targets/lib";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 const DIR_VARS = {
   PAL_CLAUDE_DIR: "claude",
@@ -26,7 +26,7 @@ let ROOT: string;
 const saved: Record<string, string | undefined> = {};
 
 beforeEach(() => {
-  ROOT = mkdtempSync(resolve(tmpdir(), "pal-doctor-agents-"));
+  ROOT = freshTestDir(import.meta.file);
   for (const [name, dir] of Object.entries(DIR_VARS)) {
     saved[name] = process.env[name];
     process.env[name] = resolve(ROOT, dir);

@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   captureSessionIntelligence,
@@ -16,6 +15,7 @@ import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { readProjectHistory } from "../src/hooks/lib/work-tracking";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 // Every case here fails a guard that returns before canInfer(), so no inference
 // is ever reached. That is the point: the gating is what decides whether a
@@ -25,7 +25,7 @@ let HOME: string;
 let API_KEY: string | undefined;
 
 beforeEach(() => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-si-"));
+  HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   mkdirSync(resolve(HOME, "memory", "state"), { recursive: true });
   // Backstop: if a guard failed to fire, this stops the handler reaching a real
@@ -125,7 +125,7 @@ describe("an unfinished session", () => {
   let savedPath: string | undefined;
 
   beforeEach(() => {
-    binDir = mkdtempSync(resolve(tmpdir(), "pal-si-bin-"));
+    binDir = freshTestDir(import.meta.file);
     savedPath = process.env.PATH;
     delete process.env.PAL_INFERENCE_DISABLED;
     delete process.env[SPAWN_GUARD_ENV.SENTINEL];
@@ -172,7 +172,7 @@ describe("an unfinished session", () => {
   });
 
   test("files the session under the folder it started in, not the one it ended in", async () => {
-    const startDir = mkdtempSync(resolve(tmpdir(), "pal-si-start-"));
+    const startDir = freshTestDir(import.meta.file);
     const savedStart = process.env.CLAUDE_PROJECT_DIR;
     process.env.CLAUDE_PROJECT_DIR = startDir;
     try {

@@ -1,7 +1,4 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { resolve } from "node:path";
 import {
   buildSystemReminder,
   loadRelationshipContext,
@@ -10,6 +7,7 @@ import {
 import { loadFailurePatterns } from "../src/hooks/lib/semi-static";
 import { readFramePrinciples } from "../src/hooks/lib/wisdom";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 // These are type-only smoke tests, so they need no real corpus — and reading the
 // developer's own ~/.pal would let context assembly write into it (project reads
@@ -17,7 +15,7 @@ import { removeOnceReleased } from "./lib/remove-once-released";
 let HOME: string;
 
 beforeAll(() => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-context-"));
+  HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
 });
 

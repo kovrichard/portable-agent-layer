@@ -63,7 +63,7 @@ const HOOK_SCRIPT = /[\\/]src[\\/]hooks[\\/]([\w-]+\.ts)/g;
 type Json = Record<string, unknown>;
 
 function normalised(text: string, root: string, pkg: string): string {
-  return text.replaceAll(pkg, "{pkg}").replaceAll(root, "{root}");
+  return text.replaceAll(root, "{root}").replaceAll(pkg, "{pkg}");
 }
 
 function concrete(text: string, root: string, pkg: string): string {

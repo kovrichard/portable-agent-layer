@@ -1,10 +1,8 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { resolve } from "node:path";
 import { runRule } from "../src/cli/rule";
 import { addDraft, readRules } from "../src/hooks/lib/adaptation-rules";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
 const savedHome = process.env.PAL_HOME;
@@ -13,7 +11,7 @@ let logSpy: ReturnType<typeof spyOn>;
 let errSpy: ReturnType<typeof spyOn>;
 
 beforeEach(() => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-rule-cli-"));
+  HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   printed = [];
   logSpy = spyOn(console, "log").mockImplementation((...a) => printed.push(a.join(" ")));

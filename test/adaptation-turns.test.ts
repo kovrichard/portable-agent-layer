@@ -3,21 +3,20 @@ import {
   appendFileSync,
   existsSync,
   mkdirSync,
-  mkdtempSync,
   readdirSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { appendTurn, readTurns, type TurnInput } from "../src/hooks/lib/adaptation-turns";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
 const savedHome = process.env.PAL_HOME;
 const dir = () => resolve(HOME, "memory", "adaptation");
 
 beforeEach(() => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-turns-"));
+  HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
 });
 

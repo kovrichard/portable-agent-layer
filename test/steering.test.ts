@@ -3,10 +3,11 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { classifyPrompt, getSteeringReminder } from "../src/hooks/lib/steering";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
 // Steering reads user rules / disables from pal-settings.json, so these tests run
 // against an isolated PAL_HOME to stay deterministic regardless of the real config.
-const TEST_HOME = resolve(import.meta.dir, "../.test-home-steering");
+const TEST_HOME = testHome(import.meta.file);
 
 beforeAll(() => {
   process.env.PAL_HOME = TEST_HOME;

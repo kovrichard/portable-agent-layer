@@ -14,8 +14,9 @@ import { resolve } from "node:path";
 import { runKnowledge } from "../src/cli/knowledge";
 import { exists, getOrCreate, load, save } from "../src/tools/knowledge/lib";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const ROOT = resolve(import.meta.dir, "../.test-tmp/cli-knowledge");
+const ROOT = testHome(import.meta.file);
 const originalPalHome = process.env.PAL_HOME;
 
 beforeAll(() => {

@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { promptAutoUpdate } from "../src/cli/setup-auto-update";
 import { raw as rawSettings, reload, write } from "../src/hooks/lib/settings";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 // The install question must be silent wherever nobody can answer it. That is not
 // politeness: the reinstall at the end of an unattended update runs without a
@@ -19,7 +19,7 @@ function setTTY(value: boolean | undefined): void {
 }
 
 beforeEach(() => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-setup-auto-update-"));
+  HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   mkdirSync(resolve(HOME, "memory"), { recursive: true });
   reload();

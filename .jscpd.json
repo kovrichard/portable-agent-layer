@@ -9,6 +9,7 @@
   "format": ["typescript", "javascript", "json"],
   "ignore": [
     "**/node_modules/**",
+    ".test/**",
     ".test-install-home/**",
     ".test-home*/**",
     "**/dist/**",

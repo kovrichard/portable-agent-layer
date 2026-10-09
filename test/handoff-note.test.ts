@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   entryFor,
@@ -14,6 +13,7 @@ import {
   trimHandoffs,
 } from "../src/tools/lib/handoff-note";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 // The handoff note is where an agent says what it could not finish. One of those
 // reasons — waiting on the human — is the only one the morning screen can act on,
@@ -24,10 +24,10 @@ let HOME: string;
 let CWD: string;
 
 beforeEach(() => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-handoff-"));
+  HOME = freshTestDir(import.meta.file);
   // The note is keyed by the child's own process.cwd(), which is always the
-  // resolved path — and on macOS the temp dir reaches us through a symlink.
-  CWD = realpathSync(mkdtempSync(resolve(tmpdir(), "pal-handoff-cwd-")));
+  // resolved path — and the repo can reach us through a symlink.
+  CWD = realpathSync(freshTestDir(import.meta.file));
 });
 
 afterEach(() => {

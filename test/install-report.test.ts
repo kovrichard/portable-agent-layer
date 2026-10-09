@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { delimiter, dirname, resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 let SANDBOX: string;
@@ -44,7 +44,7 @@ let reinstall: string;
 let verbose: string;
 
 beforeAll(() => {
-  SANDBOX = mkdtempSync(resolve(tmpdir(), "pal-install-report-"));
+  SANDBOX = freshTestDir(import.meta.file);
   init = pal("init", "--claude");
   reinstall = pal("install", "--claude");
   verbose = pal("install", "--claude", "--verbose");

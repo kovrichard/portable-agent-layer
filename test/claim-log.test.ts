@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { claimChecksSince, watchClaims } from "../src/hooks/lib/claim-log";
 import { reload } from "../src/hooks/lib/settings";
 import { claimCheckLines } from "../src/tools/lib/interaction-report";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
 const NOW = new Date("2026-10-04T12:00:00Z");
@@ -39,7 +39,7 @@ function setSettings(data: Record<string, unknown>) {
 }
 
 beforeEach(() => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-claim-log-"));
+  HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   mkdirSync(resolve(HOME, "memory"), { recursive: true });
   reload();

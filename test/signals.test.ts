@@ -3,8 +3,9 @@ import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { emitRating } from "../src/hooks/lib/signals";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const TEST_HOME = resolve(import.meta.dir, "../.test-home-signals");
+const TEST_HOME = testHome(import.meta.file);
 
 beforeEach(() => {
   process.env.PAL_HOME = TEST_HOME;

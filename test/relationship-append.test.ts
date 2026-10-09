@@ -1,8 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 // appendNotes deduplicates against what today's file already holds, so the count
 // it was handed is not the count that landed. The receipt reports the truth, which
@@ -11,7 +9,7 @@ import { removeOnceReleased } from "./lib/remove-once-released";
 let HOME: string;
 
 beforeEach(() => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-rel-"));
+  HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
 });
 

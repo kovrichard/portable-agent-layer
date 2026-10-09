@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
 
@@ -24,7 +24,7 @@ const AGENT_SIGNALS = [
 const savedSignals: Record<string, string | undefined> = {};
 
 beforeEach(async () => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-actor-"));
+  HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   delete process.env.PAL_SPAWNED_INFERENCE;
   for (const key of AGENT_SIGNALS) {

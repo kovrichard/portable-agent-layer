@@ -2,8 +2,9 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const HOME = resolve(import.meta.dir, "../.test-home-persist");
+const HOME = testHome(import.meta.file);
 const STATE = resolve(HOME, "memory", "state");
 const HANDOFF = resolve(STATE, "last-handoff.json");
 const CWD = "/fake/project";

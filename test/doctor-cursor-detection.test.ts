@@ -3,10 +3,11 @@ import { spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { delimiter, dirname, resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
 const REPO = resolve(import.meta.dir, "..");
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
-const ROOT = resolve(import.meta.dir, "../.test-home-doctor-cursor");
+const ROOT = testHome(import.meta.file);
 const BUN_DIR = dirname(process.execPath);
 const WINDOWS = process.platform === "win32";
 

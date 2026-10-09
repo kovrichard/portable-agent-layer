@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Turn } from "../src/hooks/lib/adaptation-turns";
 import {
@@ -9,6 +8,7 @@ import {
   ruleEffects,
 } from "../src/hooks/lib/rule-effect";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 const turn = (ts: string, over: Partial<Turn> = {}): Turn => ({
   ts,
@@ -90,7 +90,7 @@ describe("readRuleEvents", () => {
   let HOME: string;
 
   beforeEach(() => {
-    HOME = mkdtempSync(resolve(tmpdir(), "pal-rule-effect-"));
+    HOME = freshTestDir(import.meta.file);
     process.env.PAL_HOME = HOME;
   });
 

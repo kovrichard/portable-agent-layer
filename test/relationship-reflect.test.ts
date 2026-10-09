@@ -1,6 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createOpinion } from "../src/hooks/lib/opinions";
 import {
@@ -23,13 +22,14 @@ import {
   reportPath,
 } from "../src/tools/lib/relationship-reflect";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 const NOW = new Date("2026-09-06T12:00:00.000Z");
 
 const tempDirs: string[] = [];
 
 function tempDir(): string {
-  const dir = mkdtempSync(join(tmpdir(), "pal-reflect-"));
+  const dir = freshTestDir(import.meta.file);
   tempDirs.push(dir);
   return dir;
 }

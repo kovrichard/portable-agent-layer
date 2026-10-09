@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
 let WORK: string;
 
 beforeEach(async () => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-oc-home-"));
-  WORK = mkdtempSync(resolve(tmpdir(), "pal-oc-work-"));
+  HOME = freshTestDir(import.meta.file);
+  WORK = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   process.env.PAL_AGENT = "opencode";
   (await import("../src/hooks/lib/settings")).reload();

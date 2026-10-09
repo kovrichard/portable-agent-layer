@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 // The page shows numbers and words, not records. These cases pin the words:
 // which outcomes count as refusals, whose name appears on a row, how an anchor
@@ -11,7 +11,7 @@ import { removeOnceReleased } from "./lib/remove-once-released";
 let HOME: string;
 
 beforeEach(() => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-ledger-view-"));
+  HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   mkdirSync(resolve(HOME, "memory", "ledger"), { recursive: true });
 });

@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync } from "node:fs";
-import { resolve } from "node:path";
 import { ingestEntities } from "../src/tools/knowledge/ingest";
 import { exists, load, save } from "../src/tools/knowledge/lib";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const ROOT = resolve(import.meta.dir, "../.test-tmp/knowledge-ingest");
+const ROOT = testHome(import.meta.file);
 
 beforeEach(() => {
   removeOnceReleased(ROOT);

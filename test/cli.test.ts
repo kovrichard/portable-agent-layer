@@ -3,9 +3,10 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
-const TEST_HOME = resolve(import.meta.dir, "../.test-home");
+const TEST_HOME = testHome(import.meta.file);
 
 function pal(...args: string[]) {
   return spawnSync("bun", ["run", CLI, ...args], {

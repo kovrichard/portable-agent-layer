@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { AutoUpdateStatus } from "../src/hooks/lib/auto-update";
 import type {
@@ -14,6 +13,7 @@ import type { ServerStatus } from "../src/tools/control-room/server";
 import type { LedgerView } from "../src/tools/ledger/view";
 import { buildPageFirst } from "./lib/built-page";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 // The HTTP surface is small enough to pin completely: where it listens, what
 // each route answers, and that a bad window is refused rather than widened.
@@ -24,7 +24,7 @@ let server: ReturnType<typeof Bun.serve> | null = null;
 buildPageFirst();
 
 beforeEach(() => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-control-room-"));
+  HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   mkdirSync(resolve(HOME, "memory", "ledger"), { recursive: true });
 });
@@ -612,7 +612,7 @@ describe("keeping PAL up to date", () => {
 
   test("the button answers at once rather than waiting for the update", async () => {
     const prevPkg = process.env.PAL_PKG;
-    process.env.PAL_PKG = mkdtempSync(resolve(tmpdir(), "pal-no-pal-"));
+    process.env.PAL_PKG = freshTestDir(import.meta.file);
     const base = await listen();
     try {
       expect((await post(base, "/api/update/run", {})).status).toBe(202);

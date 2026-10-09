@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawnDetachedInference } from "../src/hooks/lib/detached-inference";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 /** A detached child runs asynchronously, so every assertion on it has to wait. */
 async function readWhenWritten(path: string, attempts = 50): Promise<string> {
@@ -26,7 +26,7 @@ describe("spawnDetachedInference", () => {
   let savedAgent: string | undefined;
 
   beforeEach(() => {
-    tmp = mkdtempSync(resolve(tmpdir(), "pal-detached-"));
+    tmp = freshTestDir(import.meta.file);
     savedHome = process.env.PAL_HOME;
     savedClaudecode = process.env.CLAUDECODE;
     savedAgent = process.env.PAL_AGENT;

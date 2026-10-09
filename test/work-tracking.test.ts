@@ -1,6 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync } from "node:fs";
-import { resolve } from "node:path";
 import {
   appendProjectHistory,
   detectStatus,
@@ -10,8 +9,9 @@ import {
   writeSession,
 } from "../src/hooks/lib/work-tracking";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const TEST_HOME = resolve(import.meta.dir, "../.test-home-work-tracking");
+const TEST_HOME = testHome(import.meta.file);
 
 beforeAll(() => {
   process.env.PAL_HOME = TEST_HOME;

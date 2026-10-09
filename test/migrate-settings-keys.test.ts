@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { checkPendingMigrations, runMigrate } from "../src/cli/migrate";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
 const savedHome = process.env.PAL_HOME;
@@ -19,7 +19,7 @@ const readSettings = () => JSON.parse(readFileSync(settingsFile(), "utf-8"));
 const pendingIds = () => checkPendingMigrations().map((m) => m.id);
 
 beforeEach(() => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-migrate-settings-"));
+  HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
 });
 

@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 const LOAD_CONTEXT = resolve(import.meta.dir, "../src/hooks/LoadContext.ts");
 
@@ -35,7 +35,7 @@ function runLoadContext() {
 }
 
 beforeAll(() => {
-  sandbox = mkdtempSync(resolve(tmpdir(), "pal-codex-ctx-"));
+  sandbox = freshTestDir(import.meta.file);
   seed("telos/GOALS.md", "# Goals\n\n- ship PAL\n");
   seed("memory/self-model/current.md", "# Self-Model\nCodex self-model marker");
   seed(

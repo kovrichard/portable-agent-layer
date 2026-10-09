@@ -1,7 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { resolve } from "node:path";
+import { writeFileSync } from "node:fs";
 import {
   hookErrorFindings,
   migrationFindings,
@@ -16,6 +14,7 @@ import {
 } from "../src/cli/doctor/inference";
 import { palEnvPath } from "../src/hooks/lib/pal-env";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 const NOW = Date.parse("2026-10-04T19:00:00Z");
 const MINUTE = 60_000;
@@ -301,7 +300,7 @@ describe("~/.pal/.env", () => {
       PAL_HOME: process.env.PAL_HOME,
       TOKEN: process.env.CLAUDE_CODE_OAUTH_TOKEN,
     };
-    home = mkdtempSync(resolve(tmpdir(), "pal-doctor-env-"));
+    home = freshTestDir(import.meta.file);
     process.env.PAL_HOME = home;
     delete process.env.CLAUDE_CODE_OAUTH_TOKEN;
   });

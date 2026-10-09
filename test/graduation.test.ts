@@ -1,12 +1,12 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir, testHome } from "./lib/test-home";
 
-const TEST_HOME = resolve(import.meta.dir, "../.test-home-graduation");
+const TEST_HOME = testHome(import.meta.file);
 
 let savedApiKey: string | undefined;
 
@@ -190,7 +190,7 @@ describe("recommendations without an API key", () => {
   let savedPath: string | undefined;
 
   beforeAll(() => {
-    binDir = mkdtempSync(resolve(tmpdir(), "pal-grad-bin-"));
+    binDir = freshTestDir(import.meta.file);
     savedPath = process.env.PATH;
     delete process.env.PAL_INFERENCE_DISABLED;
     delete process.env[SPAWN_GUARD_ENV.SENTINEL];

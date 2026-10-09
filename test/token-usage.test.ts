@@ -3,8 +3,9 @@ import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { logTokenUsage } from "../src/hooks/lib/token-usage";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const TEST_HOME = resolve(import.meta.dir, "../.test-home-token-usage");
+const TEST_HOME = testHome(import.meta.file);
 
 beforeEach(() => {
   process.env.PAL_HOME = TEST_HOME;

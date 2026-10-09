@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   acknowledgeMentioned,
@@ -9,6 +8,7 @@ import {
 } from "../src/hooks/lib/daily-nudge";
 import { reload } from "../src/hooks/lib/settings";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
 const savedHome = process.env.PAL_HOME;
@@ -22,7 +22,7 @@ function setTimezone(timezone: string): void {
 }
 
 beforeEach(() => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-daily-nudge-"));
+  HOME = freshTestDir(import.meta.file);
   mkdirSync(resolve(HOME, "memory", "state"), { recursive: true });
   process.env.PAL_HOME = HOME;
   reload();

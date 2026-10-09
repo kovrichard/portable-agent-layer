@@ -10,8 +10,9 @@ import {
   listPersonalSubagents,
 } from "../src/targets/lib";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const HOME = resolve(import.meta.dir, "../.test-home-targets-paths");
+const HOME = testHome(import.meta.file);
 const CLAUDE = resolve(HOME, ".claude");
 const savedHome = process.env.PAL_HOME;
 const savedClaude = process.env.PAL_CLAUDE_DIR;

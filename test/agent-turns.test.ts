@@ -18,11 +18,12 @@ import { reload } from "../src/hooks/lib/settings";
 import { finishDeferredStop, stopTurn } from "../src/hooks/lib/stop";
 import { sandboxContextRuleDirs } from "./lib/context-rule-dirs";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
 // stopTurn can spawn detached children that keep writing into PAL_HOME after the
-// test returns; .gitignore covers .test-home-* for that reason.
+// test returns; .gitignore covers .test/ for that reason.
 const REPO = resolve(import.meta.dir, "..");
-const HOME = resolve(REPO, ".test-home-agent-turns");
+const HOME = testHome(import.meta.file);
 const AGENT_RESPONSE_HOOK = resolve(REPO, "src", "hooks", "AgentResponse.ts");
 const savedHome = process.env.PAL_HOME;
 let restoreContextRuleDirs: () => void;

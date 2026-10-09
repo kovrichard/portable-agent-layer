@@ -1,7 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { resolve } from "node:path";
+import { writeFileSync } from "node:fs";
 import {
   type CandidateInput,
   recordCandidate,
@@ -16,12 +14,13 @@ import { appendTurn, type TurnInput } from "../src/hooks/lib/adaptation-turns";
 import { ruleEventsPath } from "../src/hooks/lib/rule-effect";
 import { decideFromPage, relationship } from "../src/tools/control-room/relationship";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
 const NOW = new Date("2026-10-07T12:00:00Z");
 
 beforeEach(() => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-relationship-"));
+  HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
 });
 

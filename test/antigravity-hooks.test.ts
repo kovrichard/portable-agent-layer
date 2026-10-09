@@ -2,12 +2,10 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
   existsSync,
   mkdirSync,
-  mkdtempSync,
   readFileSync,
   realpathSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
   blockResponse,
@@ -34,6 +32,7 @@ import { decideRefusal } from "../src/hooks/lib/security-gate";
 import { reload } from "../src/hooks/lib/settings";
 import { readTranscriptFile } from "../src/hooks/lib/transcript";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 // Every payload and transcript step below was captured from agy 1.3.1 by a hook
 // that wrote its stdin to disk; only the paths are swapped for sandbox ones.
@@ -208,7 +207,7 @@ function seedRelationshipNote(marker: string): void {
 }
 
 beforeEach(() => {
-  sandbox = realpathSync(mkdtempSync(resolve(tmpdir(), "pal-agy-hooks-")));
+  sandbox = realpathSync(freshTestDir(import.meta.file));
   workspace = resolve(sandbox, "workspace");
   mkdirSync(workspace, { recursive: true });
   transcript = resolve(sandbox, "transcript_full.jsonl");

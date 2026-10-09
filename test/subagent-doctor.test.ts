@@ -5,8 +5,9 @@ import { resolve } from "node:path";
 import { assets } from "../src/hooks/lib/paths";
 import { lintSubagent, resolveSubagentFile } from "../src/tools/subagent-doctor";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const ROOT = resolve(import.meta.dir, "../.test-home-subagent-doctor");
+const ROOT = testHome(import.meta.file);
 
 let counter = 0;
 /**

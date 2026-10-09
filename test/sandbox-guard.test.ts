@@ -3,9 +3,10 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
-const ROOT = resolve(import.meta.dir, "../.test-home-sandbox-guard");
+const ROOT = testHome(import.meta.file);
 
 /**
  * A stand-in for the developer's home directory. `os.homedir()` reads HOME on

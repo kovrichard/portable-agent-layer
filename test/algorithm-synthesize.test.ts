@@ -6,8 +6,9 @@ import {
   synthesizeAlgorithm,
 } from "../src/tools/agent/algorithm-synthesize";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const TEST_HOME = resolve(import.meta.dir, "../.test-home-algo-synth");
+const TEST_HOME = testHome(import.meta.file);
 const REFL_DIR = resolve(TEST_HOME, "memory", "learning", "reflections");
 const REFL_FILE = resolve(REFL_DIR, "algorithm-reflections.jsonl");
 

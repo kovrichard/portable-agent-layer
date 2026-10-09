@@ -125,6 +125,7 @@ export default {
     ".github",
     ".husky",
     ".opencode",
+    ".test",
     ".test-home*",
     ".test-install-home",
     ".test-tmp",

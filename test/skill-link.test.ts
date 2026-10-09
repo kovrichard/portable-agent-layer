@@ -3,9 +3,10 @@ import { spawnSync } from "node:child_process";
 import { existsSync, lstatSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
-const HOME = resolve(import.meta.dir, "../.test-home-skill-link");
+const HOME = testHome(import.meta.file);
 
 const env = {
   ...process.env,

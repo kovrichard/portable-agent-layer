@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 // What a call that did not land writes to the ledger. This half is the one that
 // can still recover a before-state after the fact — nothing landed, so the file
@@ -13,7 +13,7 @@ import { removeOnceReleased } from "./lib/remove-once-released";
 let HOME: string;
 
 beforeEach(async () => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-unapplied-"));
+  HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   (await import("../src/hooks/lib/settings")).reload();
 });

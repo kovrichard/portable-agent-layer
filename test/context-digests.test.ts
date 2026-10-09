@@ -3,8 +3,9 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { writeContextDigests } from "../src/hooks/handlers/context-digests";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const ROOT = resolve(import.meta.dir, "../.test-home-context-digests");
+const ROOT = testHome(import.meta.file);
 const GEMINI_DIR = resolve(ROOT, ".gemini");
 const PLUGIN_DIR = resolve(GEMINI_DIR, "config", "plugins", "pal");
 const AGENT_DIR_VARS = {

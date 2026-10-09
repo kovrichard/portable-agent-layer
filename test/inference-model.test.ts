@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   buildClaudeArgs,
@@ -19,6 +18,7 @@ import {
 } from "../src/hooks/lib/models";
 import { opencodeTierModel } from "../src/hooks/lib/opencode-config";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 function flagValue(args: string[], flag: string): string | undefined {
   const i = args.indexOf(flag);
@@ -118,7 +118,7 @@ describe("opencode picks from the user's own config", () => {
   const saved = process.env.PAL_OPENCODE_DIR;
 
   beforeEach(() => {
-    dir = mkdtempSync(resolve(tmpdir(), "pal-oc-tier-"));
+    dir = freshTestDir(import.meta.file);
     process.env.PAL_OPENCODE_DIR = dir;
   });
   afterEach(() => {

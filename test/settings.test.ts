@@ -2,8 +2,9 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const TEST_HOME = resolve(import.meta.dir, "../.test-home-settings");
+const TEST_HOME = testHome(import.meta.file);
 
 beforeAll(async () => {
   removeOnceReleased(TEST_HOME);
@@ -102,7 +103,7 @@ describe("cache", () => {
     const { isEnabled, reload } = await import("../src/hooks/lib/settings");
     reload();
     expect(isEnabled("selfModel")).toBe(false);
-    const otherHome = resolve(import.meta.dir, "../.test-home-settings-other");
+    const otherHome = testHome(import.meta.file, "other");
     mkdirSync(resolve(otherHome, "memory"), { recursive: true });
     try {
       process.env.PAL_HOME = otherHome;

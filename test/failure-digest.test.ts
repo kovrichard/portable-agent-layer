@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { loadFailurePatterns } from "../src/hooks/lib/semi-static";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
 const savedHome = process.env.PAL_HOME;
@@ -27,7 +27,7 @@ function project(name: string, path: string) {
 }
 
 beforeAll(() => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-failure-digest-"));
+  HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   project("letterbox", "/work/letterbox");
   capture("20260920-100000_a", "/work/letterbox", "letterbox lesson");

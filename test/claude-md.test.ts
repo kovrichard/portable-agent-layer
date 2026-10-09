@@ -17,8 +17,9 @@ import {
 import { resolve } from "node:path";
 import { linkFile } from "./lib/links";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const TEST_HOME = resolve(import.meta.dir, "../.test-home-claude-md");
+const TEST_HOME = testHome(import.meta.file);
 
 beforeAll(async () => {
   removeOnceReleased(TEST_HOME);

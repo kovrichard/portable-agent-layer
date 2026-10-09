@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { refreshAgenda } from "../src/hooks/handlers/agenda";
 import { readAgenda } from "../src/hooks/lib/agenda-store";
 import { canInfer } from "../src/hooks/lib/inference";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 // The only model call behind the morning screen. Both gates in front of it are
 // pinned here: an agenda written a few hours ago is not rewritten, and a runtime
@@ -19,7 +19,7 @@ let saved: Record<string, string | undefined>;
 
 beforeEach(() => {
   saved = Object.fromEntries(PRESERVED.map((k) => [k, process.env[k]]));
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-agenda-handler-"));
+  HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   mkdirSync(resolve(HOME, "memory", "state"), { recursive: true });
 });
@@ -35,7 +35,7 @@ afterEach(() => {
 
 /** An agent with no binary on an empty PATH and no keys: nothing can be asked. */
 function withoutInference(): void {
-  const empty = mkdtempSync(resolve(tmpdir(), "pal-agenda-nopath-"));
+  const empty = freshTestDir(import.meta.file);
   process.env.PATH = empty;
   process.env.PAL_AGENT = "opencode";
   delete process.env.PAL_ANTHROPIC_API_KEY;

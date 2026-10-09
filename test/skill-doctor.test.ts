@@ -10,8 +10,9 @@ import {
   resolveSkillDir,
 } from "../src/tools/lib/skill-doctor";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const ROOT = resolve(import.meta.dir, "../.test-home-skill-doctor");
+const ROOT = testHome(import.meta.file);
 
 let counter = 0;
 /**

@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { logError, recentHookErrors } from "../src/hooks/lib/log";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 const NOW = Date.parse("2026-09-23T12:00:00Z");
 let HOME: string;
@@ -16,7 +16,7 @@ function debugLog(name: string, lines: string[]) {
 }
 
 beforeEach(() => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-hook-health-"));
+  HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
 });
 

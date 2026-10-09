@@ -4,11 +4,12 @@ import { resolve } from "node:path";
 import { runStopHandlers } from "../src/hooks/lib/stop";
 import { sandboxContextRuleDirs } from "./lib/context-rule-dirs";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
 // runStopHandlers spawns detached children that keep writing into PAL_HOME after
 // the test returns, so this directory can reappear after cleanup — .gitignore
-// covers .test-home-* for exactly that reason.
-const HOME = resolve(import.meta.dir, "../.test-home-stop-handlers");
+// covers .test/ for exactly that reason.
+const HOME = testHome(import.meta.file);
 const savedHome = process.env.PAL_HOME;
 let restoreContextRuleDirs: () => void;
 

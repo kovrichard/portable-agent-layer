@@ -3,8 +3,9 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { matchSkills, type SkillIndex } from "../src/hooks/lib/skill-match";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const TEST_HOME = resolve(import.meta.dir, "../.test-home-skill-match");
+const TEST_HOME = testHome(import.meta.file);
 
 const INDEX: SkillIndex = {
   skills: {

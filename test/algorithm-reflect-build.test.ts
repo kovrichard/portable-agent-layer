@@ -2,8 +2,9 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const HOME = resolve(import.meta.dir, "../.test-home-algorithm-reflect-build");
+const HOME = testHome(import.meta.file);
 const NOW = new Date("2026-09-06T12:00:00.000Z");
 
 beforeEach(() => {

@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { loadHandoffContext } from "../src/hooks/lib/handoff-context";
 import { sessionDir } from "../src/hooks/lib/session-dir";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 const HERE = "/work/here";
 const OTHER = "/work/other";
@@ -27,7 +28,7 @@ function seed(entries: Record<string, ReturnType<typeof handoff>>) {
 }
 
 beforeEach(() => {
-  home = mkdtempSync(resolve(tmpdir(), "pal-handoff-context-"));
+  home = freshTestDir(import.meta.file);
   process.env.PAL_HOME = home;
 });
 

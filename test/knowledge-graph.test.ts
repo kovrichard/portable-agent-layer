@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync } from "node:fs";
-import { resolve } from "node:path";
 import {
   buildGraph,
   extractWikilinks,
@@ -11,8 +10,9 @@ import {
 } from "../src/tools/knowledge/graph";
 import { type Domain, getOrCreate, save } from "../src/tools/knowledge/lib";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const ROOT = resolve(import.meta.dir, "../.test-tmp/knowledge-graph");
+const ROOT = testHome(import.meta.file);
 
 function seed(args: {
   domain: Domain;

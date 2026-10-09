@@ -17,8 +17,9 @@ import {
   validate,
 } from "../src/tools/knowledge/lib";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const ROOT = resolve(import.meta.dir, "../.test-tmp/knowledge");
+const ROOT = testHome(import.meta.file);
 
 beforeEach(() => {
   removeOnceReleased(ROOT);

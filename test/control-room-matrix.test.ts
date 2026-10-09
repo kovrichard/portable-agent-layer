@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   buildMatrix,
@@ -9,6 +8,7 @@ import {
   matrix,
 } from "../src/tools/control-room/matrix";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 // Every placement on the morning screen has to be defensible from files alone,
 // so each rule that can move an item between quadrants gets its own fixture.
@@ -17,7 +17,7 @@ const NOW = new Date("2026-09-05T12:00:00.000Z");
 let HOME: string;
 
 beforeEach(() => {
-  HOME = mkdtempSync(resolve(tmpdir(), "pal-matrix-"));
+  HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
 });
 

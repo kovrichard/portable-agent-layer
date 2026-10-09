@@ -1,7 +1,4 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { resolve } from "node:path";
 import { run as algorithmReflect } from "../src/tools/agent/algorithm-reflect";
 import { run as algorithmSynthesize } from "../src/tools/agent/algorithm-synthesize";
 import { run as analyze } from "../src/tools/agent/analyze";
@@ -12,6 +9,7 @@ import { run as synthesize } from "../src/tools/agent/synthesize";
 import { run as thread } from "../src/tools/agent/thread";
 import { run as wisdomFrame } from "../src/tools/agent/wisdom-frame";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { freshTestDir } from "./lib/test-home";
 
 const TOOLS: [string, (argv: string[]) => Promise<number>][] = [
   ["algorithm-reflect", algorithmReflect],
@@ -30,7 +28,7 @@ let previousHome: string | undefined;
 
 beforeEach(() => {
   previousHome = process.env.PAL_HOME;
-  home = mkdtempSync(resolve(tmpdir(), "pal-tool-usage-"));
+  home = freshTestDir(import.meta.file);
   process.env.PAL_HOME = home;
 });
 
