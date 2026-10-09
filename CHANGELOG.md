@@ -1,3 +1,10 @@
+## [0.91.5](https://github.com/kovrichard/portable-agent-layer/compare/v0.91.4...v0.91.5) (2026-10-09)
+
+
+### Bug Fixes
+
+* **test:** clear git's repository env vars in the test preload ([7d64914](https://github.com/kovrichard/portable-agent-layer/commit/7d6491406922a7526e918dabc2beffd87be1d41a))
+
 ## [0.91.4](https://github.com/kovrichard/portable-agent-layer/compare/v0.91.3...v0.91.4) (2026-10-08)
 
 
