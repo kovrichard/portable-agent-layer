@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createOpinion } from "../src/hooks/lib/opinions";
@@ -22,6 +22,7 @@ import {
   type Rating,
   reportPath,
 } from "../src/tools/lib/relationship-reflect";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const NOW = new Date("2026-09-06T12:00:00.000Z");
 
@@ -34,7 +35,7 @@ function tempDir(): string {
 }
 
 afterAll(() => {
-  for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true });
+  for (const dir of tempDirs) removeOnceReleased(dir);
 });
 
 const note = (

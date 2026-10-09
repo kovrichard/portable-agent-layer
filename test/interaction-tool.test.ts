@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { turnsSince } from "../src/hooks/lib/interaction";
 import { run } from "../src/tools/agent/interaction";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 let TEST_HOME: string;
 
@@ -34,7 +35,7 @@ beforeEach(() => {
 
 afterEach(() => {
   delete process.env.PAL_HOME;
-  rmSync(TEST_HOME, { recursive: true, force: true });
+  removeOnceReleased(TEST_HOME);
 });
 
 describe("reading turns back", () => {

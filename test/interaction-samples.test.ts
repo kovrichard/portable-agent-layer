@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { observeTurn, recordReply } from "../src/hooks/lib/interaction";
 import type { Reaction } from "../src/hooks/lib/interaction-reaction";
 import { keepSample, readSamples } from "../src/hooks/lib/interaction-samples";
 import { reload } from "../src/hooks/lib/settings";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 let TEST_HOME: string;
 const T0 = new Date("2026-09-10T10:00:00Z");
@@ -39,7 +40,7 @@ beforeEach(() => {
 afterEach(() => {
   delete process.env.PAL_HOME;
   reload();
-  rmSync(TEST_HOME, { recursive: true, force: true });
+  removeOnceReleased(TEST_HOME);
 });
 
 describe("sampling messages for the rule audit", () => {

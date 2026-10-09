@@ -1,12 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
@@ -17,6 +10,7 @@ import {
 } from "../src/hooks/lib/inference";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const PRESERVED = [
   "PAL_AGENT",
@@ -127,7 +121,7 @@ describe("inference dispatcher — opencode spawn integration (fake binary)", ()
   });
 
   afterEach(() => {
-    rmSync(tmpBin, { recursive: true, force: true });
+    removeOnceReleased(tmpBin);
     restoreEnv(saved);
   });
 

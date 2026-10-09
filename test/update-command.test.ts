@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { LiveRail } from "../src/cli/ui/live";
@@ -14,6 +14,7 @@ import {
   type UpdateCache,
 } from "../src/hooks/handlers/update-check";
 import { paths } from "../src/hooks/lib/paths";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const release = (mode: UpdateCache["mode"], available = true): UpdateCache =>
   ({ available, current: "0.89.0", latest: "0.90.0", mode }) as UpdateCache;
@@ -113,7 +114,7 @@ describe("pal cli update — clears stale update cache", () => {
   afterAll(() => {
     if (prevHome === undefined) delete process.env.PAL_HOME;
     else process.env.PAL_HOME = prevHome;
-    rmSync(home, { recursive: true, force: true });
+    removeOnceReleased(home);
   });
 
   test("update() calls clearUpdateCache after a successful update", () => {
@@ -168,8 +169,7 @@ describe("pal cli update — repo mode ignores local unpushed commits", () => {
     else process.env.PAL_HOME = prevHome;
     if (prevPkg === undefined) delete process.env.PAL_PKG;
     else process.env.PAL_PKG = prevPkg;
-    for (const dir of [home, origin, clone])
-      rmSync(dir, { recursive: true, force: true });
+    for (const dir of [home, origin, clone]) removeOnceReleased(dir);
   });
 
   test("a clone ahead of origin/main reports no update", () => {

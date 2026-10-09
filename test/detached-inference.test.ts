@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { spawnDetachedInference } from "../src/hooks/lib/detached-inference";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 /** A detached child runs asynchronously, so every assertion on it has to wait. */
 async function readWhenWritten(path: string, attempts = 50): Promise<string> {
@@ -38,7 +39,7 @@ describe("spawnDetachedInference", () => {
   });
 
   afterEach(() => {
-    rmSync(tmp, { recursive: true, force: true });
+    removeOnceReleased(tmp);
     if (savedHome === undefined) delete process.env.PAL_HOME;
     else process.env.PAL_HOME = savedHome;
     if (savedClaudecode === undefined) delete process.env.CLAUDECODE;

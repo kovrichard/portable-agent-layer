@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
@@ -7,6 +7,7 @@ import {
   palOnPathFinding,
   playwrightFinding,
 } from "../src/cli/doctor/environment";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 let CACHE: string;
 
@@ -15,7 +16,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  rmSync(CACHE, { recursive: true, force: true });
+  removeOnceReleased(CACHE);
 });
 
 const ubuntu = (version: string) =>

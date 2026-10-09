@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const REPO = resolve(import.meta.dir, "..");
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
@@ -31,7 +32,7 @@ function installSkill(name: string, skillMd: string) {
 }
 
 beforeAll(() => {
-  if (existsSync(ROOT)) rmSync(ROOT, { recursive: true });
+  removeOnceReleased(ROOT);
   installSkill(
     "clean-skill",
     GOOD.replaceAll("good-skill", "clean-skill").replaceAll("good skill", "clean skill")
@@ -40,7 +41,7 @@ beforeAll(() => {
 });
 
 afterAll(() => {
-  if (existsSync(ROOT)) rmSync(ROOT, { recursive: true });
+  removeOnceReleased(ROOT);
 });
 
 describe("pal cli skill doctor", () => {

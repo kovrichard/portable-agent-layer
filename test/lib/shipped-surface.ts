@@ -17,10 +17,11 @@ import {
   readdirSync,
   readFileSync,
   readlinkSync,
-  symlinkSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
+import { linkDir, linkFile } from "./links";
 
 export const ROOTS = [
   ".agents",
@@ -167,11 +168,16 @@ function plantHook(path: string, script: string): void {
   writeFileSync(path, text.replace(first[0], `${first[1]}${script}`));
 }
 
+function plantLink(target: string, link: string): void {
+  const toDir = existsSync(target) && statSync(target).isDirectory();
+  (toDir ? linkDir : linkFile)(target, link);
+}
+
 function plantFile(root: string, pkg: string, item: string): void {
   const [rel, target] = item.split(" -> ");
   const path = resolve(root, rel);
   mkdirSync(dirname(path), { recursive: true });
-  if (target) symlinkSync(concrete(target, root, pkg), path);
+  if (target) plantLink(concrete(target, root, pkg), path);
   else writeFileSync(path, rel.endsWith(".json") ? "{}" : "left by an older PAL\n");
 }
 

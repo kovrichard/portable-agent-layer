@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { matchSkills, type SkillIndex } from "../src/hooks/lib/skill-match";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const TEST_HOME = resolve(import.meta.dir, "../.test-home-skill-match");
 
@@ -41,18 +42,18 @@ async function loadMatcher() {
 
 beforeAll(() => {
   process.env.PAL_HOME = TEST_HOME;
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
   mkdirSync(resolve(TEST_HOME, "memory"), { recursive: true });
 });
 
 afterAll(() => {
   delete process.env.PAL_HOME;
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
 });
 
 beforeEach(async () => {
   const settingsPath = resolve(TEST_HOME, "memory", "pal-settings.json");
-  if (existsSync(settingsPath)) rmSync(settingsPath);
+  removeOnceReleased(settingsPath);
   (await import("../src/hooks/lib/settings")).reload();
   writeIndex(INDEX);
 });
@@ -125,7 +126,7 @@ describe("getSkillReminder", () => {
   });
 
   test("returns null when there is no skill index on disk", async () => {
-    rmSync(resolve(TEST_HOME, "memory", "state", "skill-index.json"));
+    removeOnceReleased(resolve(TEST_HOME, "memory", "state", "skill-index.json"));
 
     expect((await loadMatcher())("make me a pitch deck")).toBeNull();
   });

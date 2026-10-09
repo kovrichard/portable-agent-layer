@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // The line is injected on every prompt of every session, so its shape, its
 // timezone handling and its kill switch are all pinned.
@@ -16,7 +17,7 @@ beforeEach(() => {
 
 afterEach(() => {
   delete process.env.PAL_HOME;
-  rmSync(TEST_HOME, { recursive: true, force: true });
+  removeOnceReleased(TEST_HOME);
 });
 
 async function setSettings(data: Record<string, unknown>) {

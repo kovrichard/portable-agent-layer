@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, setSystemTime, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { appendNotes, loadRecentNotes } from "../src/hooks/lib/relationship";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const HOME = resolve(import.meta.dir, "../.test-home-relationship");
 const savedHome = process.env.PAL_HOME;
@@ -30,7 +31,7 @@ function seed(month: string, day: string, content: string) {
 }
 
 beforeEach(() => {
-  if (existsSync(HOME)) rmSync(HOME, { recursive: true });
+  removeOnceReleased(HOME);
   mkdirSync(HOME, { recursive: true });
   process.env.PAL_HOME = HOME;
 });
@@ -38,7 +39,7 @@ beforeEach(() => {
 afterEach(() => {
   if (savedHome === undefined) delete process.env.PAL_HOME;
   else process.env.PAL_HOME = savedHome;
-  if (existsSync(HOME)) rmSync(HOME, { recursive: true });
+  removeOnceReleased(HOME);
 });
 
 describe("appendNotes", () => {

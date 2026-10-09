@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { agendaPath, readAgenda, writeAgenda } from "../src/hooks/lib/agenda-store";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // The page reads this file and never writes it, so a half-written or hand-edited
 // agenda must read as "nothing yet" rather than crash the morning screen.
@@ -16,7 +17,7 @@ beforeEach(() => {
 
 afterEach(() => {
   delete process.env.PAL_HOME;
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 function writeRaw(content: string): void {

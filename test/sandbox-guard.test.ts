@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 const ROOT = resolve(import.meta.dir, "../.test-home-sandbox-guard");
@@ -51,7 +52,7 @@ function linkWithUnsandboxedAgentDirs() {
 }
 
 beforeAll(() => {
-  if (existsSync(ROOT)) rmSync(ROOT, { recursive: true });
+  removeOnceReleased(ROOT);
   // The agent dirs must exist, or linkPersonalSkill treats them as "not installed".
   for (const dir of AGENT_DIRS) {
     mkdirSync(resolve(FAKE_HOME, dir, "skills"), { recursive: true });
@@ -64,7 +65,7 @@ beforeAll(() => {
 });
 
 afterAll(() => {
-  if (existsSync(ROOT)) rmSync(ROOT, { recursive: true });
+  removeOnceReleased(ROOT);
 });
 
 describe("test sandbox guard", () => {

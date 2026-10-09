@@ -1,8 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const LOAD_CONTEXT = resolve(import.meta.dir, "../src/hooks/LoadContext.ts");
 
@@ -50,7 +51,7 @@ beforeAll(() => {
 });
 
 afterAll(() => {
-  if (sandbox) rmSync(sandbox, { recursive: true, force: true });
+  if (sandbox) removeOnceReleased(sandbox);
 });
 
 // Codex's AGENTS.md is plain text with no @imports, and no digest file is

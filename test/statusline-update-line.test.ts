@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // The statusline is where a user learns an update is waiting, so its advice has
 // to match what PAL will actually do. With daily updates on, telling someone to
@@ -50,7 +51,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 describe.skipIf(process.platform === "win32")("the update line", () => {

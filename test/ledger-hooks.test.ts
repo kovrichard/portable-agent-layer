@@ -1,16 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { applyDelta } from "../src/hooks/lib/ledger";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // The two hooks are only correct together, and only as separate processes:
 // the whole point is that the before-state survives from one invocation to the
@@ -27,7 +21,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 function runHook(hook: string, payload: unknown) {

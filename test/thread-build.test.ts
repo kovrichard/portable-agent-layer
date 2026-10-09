@@ -1,18 +1,19 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const HOME = resolve(import.meta.dir, "../.test-home-thread-build");
 
 beforeEach(() => {
   process.env.PAL_HOME = HOME;
-  if (existsSync(HOME)) rmSync(HOME, { recursive: true });
+  removeOnceReleased(HOME);
   mkdirSync(HOME, { recursive: true });
 });
 
 afterEach(() => {
   delete process.env.PAL_HOME;
-  if (existsSync(HOME)) rmSync(HOME, { recursive: true });
+  removeOnceReleased(HOME);
 });
 
 async function lib() {

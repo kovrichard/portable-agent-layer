@@ -1,15 +1,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runMigrate } from "../src/cli/migrate";
 import { exists, load } from "../src/tools/knowledge/lib";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // Sandbox via PAL_HOME so the migration's path-resolution lands in our tmp dir
 // instead of touching the user's real ~/.pal.
@@ -29,7 +23,7 @@ afterAll(() => {
 });
 
 beforeEach(() => {
-  if (existsSync(ROOT)) rmSync(ROOT, { recursive: true });
+  removeOnceReleased(ROOT);
   mkdirSync(LEGACY_DIR, { recursive: true });
 });
 

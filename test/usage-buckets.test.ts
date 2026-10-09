@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -14,6 +14,7 @@ import {
   readPalInference,
   totalTokens,
 } from "../src/tools/lib/usage-buckets";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const NOW = new Date("2026-09-06T12:00:00.000Z");
 const HORIZONS = horizonsFrom(NOW);
@@ -27,7 +28,7 @@ function tempHome(): string {
 }
 
 afterAll(() => {
-  for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true });
+  for (const dir of tempDirs) removeOnceReleased(dir);
 });
 
 const tokens = (input: number, output: number, cw5m = 0, cw1h = 0, cr = 0) => ({

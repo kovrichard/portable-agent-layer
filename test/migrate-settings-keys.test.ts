@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { checkPendingMigrations, runMigrate } from "../src/cli/migrate";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 let HOME: string;
 const savedHome = process.env.PAL_HOME;
@@ -25,7 +26,7 @@ beforeEach(() => {
 afterEach(() => {
   if (savedHome === undefined) delete process.env.PAL_HOME;
   else process.env.PAL_HOME = savedHome;
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 describe("v7-retired-settings-keys", () => {

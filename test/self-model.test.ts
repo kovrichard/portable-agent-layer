@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -33,6 +33,7 @@ import {
   summarizeRatings,
   synthesisIsDue,
 } from "../src/tools/lib/self-model";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const NOW = new Date("2026-09-06T12:00:00.000Z");
 const SINCE = new Date("2026-08-07T12:00:00.000Z");
@@ -46,7 +47,7 @@ function tempDir(): string {
 }
 
 afterAll(() => {
-  for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true });
+  for (const dir of tempDirs) removeOnceReleased(dir);
 });
 
 function fileWith(content: string, name = "f.jsonl"): string {

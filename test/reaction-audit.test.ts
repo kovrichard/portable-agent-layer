@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import type { Reaction } from "../src/hooks/lib/interaction-reaction";
@@ -12,6 +12,7 @@ import {
   writeAuditMark,
 } from "../src/hooks/lib/reaction-audit";
 import { reload } from "../src/hooks/lib/settings";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const REPO_ROOT = resolve(import.meta.dir, "..");
 const T0 = new Date("2026-09-10T10:00:00Z");
@@ -45,7 +46,7 @@ afterEach(() => {
   delete process.env.PAL_HOME;
   delete process.env.PAL_PKG;
   reload();
-  rmSync(TEST_HOME, { recursive: true, force: true });
+  removeOnceReleased(TEST_HOME);
 });
 
 describe("audit samples", () => {

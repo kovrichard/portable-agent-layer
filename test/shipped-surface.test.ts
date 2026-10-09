@@ -15,12 +15,12 @@ import {
   mkdtempSync,
   readFileSync,
   realpathSync,
-  rmSync,
-  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { linkFile } from "./lib/links";
+import { removeOnceReleased } from "./lib/remove-once-released";
 import { plant, ROOTS, surface } from "./lib/shipped-surface";
 
 interface Manifest {
@@ -40,7 +40,7 @@ function fakeAgentsOnPath(root: string): void {
     writeFileSync(resolve(bin, agent), "#!/bin/sh\necho 1.0.0\n");
     chmodSync(resolve(bin, agent), 0o755);
   }
-  symlinkSync(process.execPath, resolve(bin, "bun"));
+  linkFile(process.execPath, resolve(bin, "bun"));
 }
 
 function install(root: string): void {
@@ -111,7 +111,7 @@ describe.skipIf(process.platform === "win32")("what PAL ships", () => {
   }, 300_000);
 
   afterAll(() => {
-    for (const root of sandboxes) rmSync(root, { recursive: true, force: true });
+    for (const root of sandboxes) removeOnceReleased(root);
   });
 
   test("a fresh install writes exactly what the manifest lists", () => {

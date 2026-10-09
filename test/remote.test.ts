@@ -1,9 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { detectRemote, normalizeRemote } from "../src/hooks/lib/remote";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 describe("normalizeRemote", () => {
   test("every clone style of one repository converges on one value", () => {
@@ -59,7 +60,7 @@ describe("detectRemote", () => {
     try {
       expect(detectRemote(dir)).toBeNull();
     } finally {
-      rmSync(dir, { recursive: true, force: true });
+      removeOnceReleased(dir);
     }
   });
 
@@ -69,7 +70,7 @@ describe("detectRemote", () => {
       spawnSync("git", ["init", "-q", dir]);
       expect(detectRemote(dir)).toBeNull();
     } finally {
-      rmSync(dir, { recursive: true, force: true });
+      removeOnceReleased(dir);
     }
   });
 
@@ -80,7 +81,7 @@ describe("detectRemote", () => {
       spawnSync("git", ["-C", dir, "remote", "add", "origin", "git@github.com:a/b.git"]);
       expect(detectRemote(dir)).toBe("github.com/a/b");
     } finally {
-      rmSync(dir, { recursive: true, force: true });
+      removeOnceReleased(dir);
     }
   });
 });

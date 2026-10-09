@@ -5,14 +5,14 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
-  rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { builtinToolVerbs } from "../src/cli/builtin-tools";
-import { linkDir } from "./helpers/links";
+import { linkDir } from "./lib/links";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 const TOOL_DIR = resolve(import.meta.dir, "../src/tools/agent");
@@ -50,7 +50,7 @@ beforeAll(() => {
 });
 
 afterAll(() => {
-  rmSync(home, { recursive: true, force: true });
+  removeOnceReleased(home);
 });
 
 describe("pal cli <tool> — the tilde-free path to a built-in tool", () => {
@@ -181,8 +181,8 @@ describe("pal cli <tool> — the writing path, not just --help", () => {
           );
         }
       } finally {
-        rmSync(viaCliHome, { recursive: true, force: true });
-        rmSync(viaPathHome, { recursive: true, force: true });
+        removeOnceReleased(viaCliHome);
+        removeOnceReleased(viaPathHome);
       }
     },
     30000
@@ -283,7 +283,7 @@ describe("pal cli skill run — ~/.pal/.env reaches shipped skills only", () => 
   });
 
   afterAll(() => {
-    rmSync(pkg, { recursive: true, force: true });
+    removeOnceReleased(pkg);
   });
 
   test("a shipped skill's tool receives keys from ~/.pal/.env", () => {

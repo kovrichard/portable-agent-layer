@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { logError, recentHookErrors } from "../src/hooks/lib/log";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const NOW = Date.parse("2026-09-23T12:00:00Z");
 let HOME: string;
@@ -22,7 +23,7 @@ beforeEach(() => {
 afterEach(() => {
   if (savedHome === undefined) delete process.env.PAL_HOME;
   else process.env.PAL_HOME = savedHome;
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 describe("recentHookErrors", () => {

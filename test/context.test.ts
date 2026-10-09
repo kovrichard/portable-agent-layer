@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
@@ -9,6 +9,7 @@ import {
 } from "../src/hooks/lib/context";
 import { loadFailurePatterns } from "../src/hooks/lib/semi-static";
 import { readFramePrinciples } from "../src/hooks/lib/wisdom";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // These are type-only smoke tests, so they need no real corpus — and reading the
 // developer's own ~/.pal would let context assembly write into it (project reads
@@ -22,7 +23,7 @@ beforeAll(() => {
 
 afterAll(() => {
   delete process.env.PAL_HOME;
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 describe("wisdom", () => {

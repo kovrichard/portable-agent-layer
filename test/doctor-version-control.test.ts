@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, resolve } from "node:path";
 import {
@@ -9,6 +9,7 @@ import {
 } from "../src/cli/doctor/version-control";
 import { detectRemote } from "../src/hooks/lib/remote";
 import { writeFakeBin } from "./fixtures/fake-bin";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const osRelease = (id: string, like = "") =>
   `NAME="Some Linux"\nID=${id}\n${like ? `ID_LIKE="${like}"\n` : ""}`;
@@ -64,7 +65,7 @@ describe("checking git and gh", () => {
 
   afterEach(() => {
     process.env.PATH = savedPath;
-    rmSync(bin, { recursive: true, force: true });
+    removeOnceReleased(bin);
   });
 
   const fakeGit = () => writeFakeBin(bin, "git", 'console.log("git version 2.50.0");');

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
@@ -15,6 +15,7 @@ import {
   ratingSeries,
   sortBoard,
 } from "../src/tools/control-room/data";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // Every number the page shows comes from one of these functions, so each one
 // is pinned against a fixture home rather than against the live ~/.pal.
@@ -29,7 +30,7 @@ beforeEach(() => {
 
 afterEach(() => {
   delete process.env.PAL_HOME;
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 function projectDir(slug: string): string {

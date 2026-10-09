@@ -1,12 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  utimesSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { agentFindings, rosterFindings } from "../src/cli/doctor/agents";
@@ -16,6 +9,7 @@ import {
   copyAgentsForAntigravity,
   copyAgentsForCodex,
 } from "../src/targets/lib";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const DIR_VARS = {
   PAL_CLAUDE_DIR: "claude",
@@ -45,7 +39,7 @@ afterEach(() => {
     if (value === undefined) delete process.env[name];
     else process.env[name] = value;
   }
-  rmSync(ROOT, { recursive: true, force: true });
+  removeOnceReleased(ROOT);
 });
 
 function write(path: string, content: string): string {
@@ -97,7 +91,7 @@ describe("an installed agent", () => {
 
   test("hooks that are not registered fail, with the reinstall command", () => {
     healthyClaude();
-    rmSync(resolve(ROOT, "claude", "settings.json"));
+    removeOnceReleased(resolve(ROOT, "claude", "settings.json"));
 
     const finding = byId(agentFindings(["claude"]), "claude.hooks.missing");
     expect(finding?.severity).toBe("fail");
@@ -155,7 +149,7 @@ describe("an installed agent", () => {
 
   test("no skills warns, with the reinstall command", () => {
     healthyClaude();
-    rmSync(resolve(ROOT, "claude", "skills"), { recursive: true });
+    removeOnceReleased(resolve(ROOT, "claude", "skills"));
 
     const finding = byId(agentFindings(["claude"]), "claude.skills");
     expect(finding?.severity).toBe("warn");
@@ -164,14 +158,14 @@ describe("an installed agent", () => {
 
   test("a missing CLAUDE.md fails", () => {
     healthyClaude();
-    rmSync(resolve(ROOT, "claude", "CLAUDE.md"));
+    removeOnceReleased(resolve(ROOT, "claude", "CLAUDE.md"));
 
     expect(byId(agentFindings(["claude"]), "claude.instructions")?.severity).toBe("fail");
   });
 
   test("a missing AGENTS.md fails, with the reinstall command", () => {
     healthyClaude();
-    rmSync(resolve(ROOT, "opencode", "AGENTS.md"));
+    removeOnceReleased(resolve(ROOT, "opencode", "AGENTS.md"));
 
     const finding = byId(agentFindings(["claude"]), "agents-md");
     expect(finding?.severity).toBe("fail");
@@ -204,7 +198,7 @@ describe("opencode's plugin", () => {
 
   test("a missing plugin fails", () => {
     opencode(0);
-    rmSync(resolve(ROOT, "opencode", "plugins", "pal-plugin.ts"));
+    removeOnceReleased(resolve(ROOT, "opencode", "plugins", "pal-plugin.ts"));
 
     expect(byId(agentFindings(["opencode"]), "opencode.hooks.missing")?.severity).toBe(
       "fail"
@@ -264,7 +258,7 @@ describe("installed subagents", () => {
 
   test.each([
     ["edited after install", (path: string) => write(path, "stale copy")],
-    ["deleted after install", (path: string) => rmSync(path)],
+    ["deleted after install", (path: string) => removeOnceReleased(path)],
   ])("a subagent %s warns, naming it, with the reinstall command", (_case, drift) => {
     drift(installedSubagent());
 

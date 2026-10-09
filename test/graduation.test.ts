@@ -1,16 +1,10 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const TEST_HOME = resolve(import.meta.dir, "../.test-home-graduation");
 
@@ -19,7 +13,7 @@ let savedApiKey: string | undefined;
 beforeAll(() => {
   savedApiKey = process.env.PAL_ANTHROPIC_API_KEY;
   delete process.env.PAL_ANTHROPIC_API_KEY;
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
 
   // Create failure entries with capture.md (need 3+ similar ones to trigger graduation)
   for (let i = 1; i <= 4; i++) {
@@ -103,7 +97,7 @@ beforeAll(() => {
 afterAll(() => {
   delete process.env.PAL_HOME;
   if (savedApiKey) process.env.PAL_ANTHROPIC_API_KEY = savedApiKey;
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
 });
 
 describe("learning-store", () => {
@@ -215,7 +209,7 @@ describe("recommendations without an API key", () => {
     process.env.PATH = savedPath;
     process.env.PAL_INFERENCE_DISABLED = "1";
     delete process.env.PAL_AGENT;
-    rmSync(binDir, { recursive: true, force: true });
+    removeOnceReleased(binDir);
   });
 
   test("come from the agent's own CLI", async () => {

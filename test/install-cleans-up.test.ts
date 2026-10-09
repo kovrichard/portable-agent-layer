@@ -6,12 +6,12 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
-  rmSync,
-  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, resolve } from "node:path";
+import { linkFile } from "./lib/links";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 let SANDBOX: string;
@@ -39,7 +39,7 @@ function plantLeftovers(): void {
   write(at(".opencode", "plugins", "pai-plugin.ts"), "// old plugin name\n");
   write(at("home", "AGENTS.md"), "# agents\n");
   mkdirSync(at(".copilot"), { recursive: true });
-  symlinkSync(at("home", "AGENTS.md"), at(".copilot", "copilot-instructions.md"));
+  linkFile(at("home", "AGENTS.md"), at(".copilot", "copilot-instructions.md"));
 }
 
 function fakeClaudeOnPath(): string {
@@ -85,7 +85,7 @@ beforeAll(() => {
 }, 120000);
 
 afterAll(() => {
-  rmSync(SANDBOX, { recursive: true, force: true });
+  removeOnceReleased(SANDBOX);
 });
 
 describe.skipIf(process.platform === "win32")(

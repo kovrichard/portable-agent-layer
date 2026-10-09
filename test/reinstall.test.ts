@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { reinstallInFreshProcess } from "../src/cli/reinstall";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 describe("reinstallInFreshProcess", () => {
   let dir: string;
@@ -10,7 +11,7 @@ describe("reinstallInFreshProcess", () => {
   beforeEach(() => {
     dir = mkdtempSync(resolve(tmpdir(), "pal-reinstall-"));
   });
-  afterEach(() => rmSync(dir, { recursive: true, force: true }));
+  afterEach(() => removeOnceReleased(dir));
 
   function fakeEntry(body: string): string {
     const entry = resolve(dir, "entry.ts");

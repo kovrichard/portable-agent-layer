@@ -1,15 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { runCommand } from "../src/tools/lib/command";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // These two commands are the onboarding skill's only way in: settings are
 // hook-protected, and the skill must not decide "unanswered" for itself.
@@ -26,7 +20,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   delete process.env.PAL_HOME;
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
   (await import("../src/hooks/lib/settings")).reload();
 });
 

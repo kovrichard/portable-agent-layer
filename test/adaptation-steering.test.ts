@@ -1,12 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { addDraft, type DraftInput, decideRule } from "../src/hooks/lib/adaptation-rules";
@@ -15,6 +8,7 @@ import {
   watchReplyRules,
 } from "../src/hooks/lib/adaptation-steering";
 import { reload } from "../src/hooks/lib/settings";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 let HOME: string;
 const NOW = new Date("2026-10-07T08:00:00Z");
@@ -29,7 +23,7 @@ beforeEach(() => {
 afterEach(() => {
   delete process.env.PAL_HOME;
   reload();
-  rmSync(HOME, { recursive: true, force: true });
+  removeOnceReleased(HOME);
 });
 
 function approved(over: Partial<DraftInput>) {

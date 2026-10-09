@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { fingerprint, report, rewrittenBetween } from "../.agents/scripts/check-write";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 // The formatter runs between an agent reading a file and editing it. What it
 // rewrote is the difference between an edit that lands and one that fails on a
@@ -19,7 +20,7 @@ describe("fingerprint", () => {
       writeFileSync(file, "const a = 1;", "utf-8");
       expect(fingerprint([file]).get(file)).not.toBe(before.get(file));
     } finally {
-      rmSync(dir, { recursive: true, force: true });
+      removeOnceReleased(dir);
     }
   });
 
@@ -34,7 +35,7 @@ describe("fingerprint", () => {
       writeFileSync(file, "const a = 1;", "utf-8");
       expect(fingerprint([file]).get(file)).toBe(before.get(file));
     } finally {
-      rmSync(dir, { recursive: true, force: true });
+      removeOnceReleased(dir);
     }
   });
 

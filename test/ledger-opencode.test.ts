@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 let HOME: string;
 let WORK: string;
@@ -17,8 +18,8 @@ beforeEach(async () => {
 afterEach(() => {
   delete process.env.PAL_HOME;
   delete process.env.PAL_AGENT;
-  rmSync(HOME, { recursive: true, force: true });
-  rmSync(WORK, { recursive: true, force: true });
+  removeOnceReleased(HOME);
+  removeOnceReleased(WORK);
 });
 
 async function hook() {

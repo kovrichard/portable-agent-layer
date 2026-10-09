@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { appendFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import { appendFileSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   algorithmReviewNudge,
@@ -9,6 +9,7 @@ import {
   readReviewMark,
   writeReviewMark,
 } from "../src/hooks/lib/algorithm-review";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const REPO_ROOT = resolve(import.meta.dir, "..");
 const TEST_HOME = resolve(import.meta.dir, "../.test-home-algo-review");
@@ -41,7 +42,7 @@ function asDownstream() {
 }
 
 beforeEach(() => {
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
   mkdirSync(TEST_HOME, { recursive: true });
   process.env.PAL_HOME = TEST_HOME;
 });
@@ -49,7 +50,7 @@ beforeEach(() => {
 afterEach(() => {
   delete process.env.PAL_HOME;
   delete process.env.PAL_PKG;
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
 });
 
 describe("maintainer gate", () => {

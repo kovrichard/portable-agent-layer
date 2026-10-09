@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   defaultSlug,
@@ -12,23 +12,24 @@ import {
   resolveProjectFromCwd,
   writeProject,
 } from "../src/hooks/lib/projects";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const TEST_HOME = resolve(import.meta.dir, "../.test-home-projects");
 
 beforeAll(() => {
   process.env.PAL_HOME = TEST_HOME;
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
   mkdirSync(TEST_HOME, { recursive: true });
 });
 
 afterAll(() => {
   delete process.env.PAL_HOME;
-  if (existsSync(TEST_HOME)) rmSync(TEST_HOME, { recursive: true });
+  removeOnceReleased(TEST_HOME);
 });
 
 beforeEach(() => {
   const dir = resolve(TEST_HOME, "memory", "projects");
-  if (existsSync(dir)) rmSync(dir, { recursive: true });
+  removeOnceReleased(dir);
 });
 
 function fakeProject(overrides: Partial<ProjectProgress> = {}): ProjectProgress {

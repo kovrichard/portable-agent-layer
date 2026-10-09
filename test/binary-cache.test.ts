@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { canInfer } from "../src/hooks/lib/inference";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const KEYS = ["PATH", "PAL_AGENT", "PAL_ANTHROPIC_API_KEY"] as const;
 let saved: Record<string, string | undefined>;
@@ -24,8 +25,8 @@ afterEach(() => {
     if (saved[key] === undefined) delete process.env[key];
     else process.env[key] = saved[key];
   }
-  rmSync(emptyBin, { recursive: true, force: true });
-  rmSync(claudeBin, { recursive: true, force: true });
+  removeOnceReleased(emptyBin);
+  removeOnceReleased(claudeBin);
 });
 
 test("a binary lookup is not reused under a different PATH", () => {

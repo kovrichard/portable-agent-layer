@@ -1,8 +1,9 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { removeOnceReleased } from "./lib/remove-once-released";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 const REPO_SKILLS = resolve(import.meta.dir, "../assets/skills");
@@ -44,11 +45,11 @@ const unresolvedIn = (dir: string) =>
   shippedSkills().filter((name) => !existsSync(resolve(dir, name, "SKILL.md")));
 
 beforeEach(() => {
-  rmSync(SANDBOX, { recursive: true, force: true });
+  removeOnceReleased(SANDBOX);
 });
 
 afterAll(() => {
-  rmSync(SANDBOX, { recursive: true, force: true });
+  removeOnceReleased(SANDBOX);
 });
 
 describe("a per-agent uninstall", () => {
