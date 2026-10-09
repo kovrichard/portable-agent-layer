@@ -7,11 +7,11 @@ include:
 rules: {}
 
 arch:
-  forbidden:
+  singleton:
     - pattern: 're:\brmSync\('
-      in: ["**", "!lib/remove-once-released.ts"]
+      only: "lib/remove-once-released.ts"
       message: "Delete through removeOnceReleased() from test/lib/remove-once-released.ts — a child the test started can still hold the folder, and Windows refuses to delete it (EBUSY)."
 
     - pattern: 're:\bsymlinkSync\('
-      in: ["**", "!lib/links.ts"]
+      only: "lib/links.ts"
       message: "Link through linkDir() or linkFile() from test/lib/links.ts — a plain directory symlink needs Developer Mode on Windows and throws EPERM everywhere else."
