@@ -1,3 +1,10 @@
+## [0.91.8](https://github.com/kovrichard/portable-agent-layer/compare/v0.91.7...v0.91.8) (2026-10-09)
+
+
+### Bug Fixes
+
+* **test:** delete and link test folders through Windows-safe helpers ([3290a90](https://github.com/kovrichard/portable-agent-layer/commit/3290a90de0b96694aec04d26f80a9fa90db306f2)), closes [#70](https://github.com/kovrichard/portable-agent-layer/issues/70) [#72](https://github.com/kovrichard/portable-agent-layer/issues/72)
+
 ## [0.91.7](https://github.com/kovrichard/portable-agent-layer/compare/v0.91.6...v0.91.7) (2026-10-09)
 
 
