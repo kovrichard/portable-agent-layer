@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
@@ -7,11 +7,9 @@ import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir, testHome } from "./lib/test-home";
 
 const TEST_HOME = testHome(import.meta.file);
-
-let savedApiKey: string | undefined;
+const ORIGINAL_PATH = process.env.PATH;
 
 beforeAll(() => {
-  savedApiKey = process.env.PAL_ANTHROPIC_API_KEY;
   delete process.env.PAL_ANTHROPIC_API_KEY;
   removeOnceReleased(TEST_HOME);
 
@@ -94,10 +92,10 @@ beforeAll(() => {
   process.env.PAL_HOME = TEST_HOME;
 });
 
-afterAll(() => {
-  delete process.env.PAL_HOME;
-  if (savedApiKey) process.env.PAL_ANTHROPIC_API_KEY = savedApiKey;
-  removeOnceReleased(TEST_HOME);
+beforeEach(() => {
+  process.env.PATH = ORIGINAL_PATH;
+  process.env.PAL_INFERENCE_DISABLED = "1";
+  delete process.env.PAL_AGENT;
 });
 
 describe("learning-store", () => {
@@ -187,11 +185,9 @@ describe("analyze", () => {
 
 describe("recommendations without an API key", () => {
   let binDir: string;
-  let savedPath: string | undefined;
 
-  beforeAll(() => {
+  beforeEach(() => {
     binDir = freshTestDir(import.meta.file);
-    savedPath = process.env.PATH;
     delete process.env.PAL_INFERENCE_DISABLED;
     delete process.env[SPAWN_GUARD_ENV.SENTINEL];
     delete process.env[SPAWN_GUARD_ENV.DEPTH];
@@ -203,13 +199,6 @@ describe("recommendations without an API key", () => {
       `console.log(${JSON.stringify(JSON.stringify(reply))});\n`
     );
     prependPath(binDir);
-  });
-
-  afterAll(() => {
-    process.env.PATH = savedPath;
-    process.env.PAL_INFERENCE_DISABLED = "1";
-    delete process.env.PAL_AGENT;
-    removeOnceReleased(binDir);
   });
 
   test("come from the agent's own CLI", async () => {

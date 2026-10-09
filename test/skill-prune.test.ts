@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, lstatSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -62,10 +62,6 @@ beforeEach(() => {
   // Dangling links the user made themselves — targets outside any PAL tree.
   linkDir(resolve(HOME, "elsewhere"), resolve(PAL_SKILLS, "foreign"));
   linkDir(resolve(HOME, "gone"), resolve(CLAUDE_SKILLS, "user-link"));
-});
-
-afterAll(() => {
-  removeOnceReleased(HOME);
 });
 
 describe("stale shipped-skill links", () => {

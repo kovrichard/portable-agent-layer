@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { classifyPrompt, getSteeringReminder } from "../src/hooks/lib/steering";
@@ -13,11 +13,6 @@ beforeAll(() => {
   process.env.PAL_HOME = TEST_HOME;
   removeOnceReleased(TEST_HOME);
   mkdirSync(resolve(TEST_HOME, "memory"), { recursive: true });
-});
-
-afterAll(() => {
-  delete process.env.PAL_HOME;
-  removeOnceReleased(TEST_HOME);
 });
 
 beforeEach(async () => {

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import {
   existsSync,
   mkdirSync,
@@ -31,7 +31,6 @@ import { agentDirOverrides, paths } from "../src/hooks/lib/paths";
 import { decideRefusal } from "../src/hooks/lib/security-gate";
 import { reload } from "../src/hooks/lib/settings";
 import { readTranscriptFile } from "../src/hooks/lib/transcript";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 // Every payload and transcript step below was captured from agy 1.3.1 by a hook
@@ -48,8 +47,17 @@ const CONVERSATION = "40a52bef-33e9-4979-a9e4-cb99c5303691";
 let sandbox: string;
 let workspace: string;
 let transcript: string;
-const savedEnv: Record<string, string | undefined> = {};
-const SANDBOXED_ENV = ["PAL_HOME", "PAL_AGENT", ...agentDirOverrides().map((o) => o.env)];
+const ORIGINAL_CWD = process.cwd();
+const RUNTIME_ENV = [
+  "ANTIGRAVITY_CONVERSATION_ID",
+  "CLAUDE_CODE_ENTRYPOINT",
+  "CURSOR_AGENT",
+  "CURSOR_VERSION",
+  "CURSOR_INVOKED_AS",
+  "CODEX_CLI_VERSION",
+  "OPENAI_CODEX",
+];
+const savedRuntimeEnv = Object.fromEntries(RUNTIME_ENV.map((k) => [k, process.env[k]]));
 
 function agyPayload(fields: Record<string, unknown>): Record<string, unknown> {
   return {
@@ -207,22 +215,18 @@ function seedRelationshipNote(marker: string): void {
 }
 
 beforeEach(() => {
+  process.chdir(ORIGINAL_CWD);
+  for (const key of RUNTIME_ENV) {
+    if (savedRuntimeEnv[key] === undefined) delete process.env[key];
+    else process.env[key] = savedRuntimeEnv[key];
+  }
   sandbox = realpathSync(freshTestDir(import.meta.file));
   workspace = resolve(sandbox, "workspace");
   mkdirSync(workspace, { recursive: true });
   transcript = resolve(sandbox, "transcript_full.jsonl");
-  for (const key of SANDBOXED_ENV) savedEnv[key] = process.env[key];
   process.env.PAL_HOME = resolve(sandbox, "home");
   for (const { env } of agentDirOverrides()) process.env[env] = resolve(sandbox, env);
   delete process.env.PAL_AGENT;
-});
-
-afterEach(() => {
-  for (const key of SANDBOXED_ENV) {
-    if (savedEnv[key] === undefined) delete process.env[key];
-    else process.env[key] = savedEnv[key];
-  }
-  removeOnceReleased(sandbox);
 });
 
 describe("agy nests the tool call as toolCall: { name, args }", () => {
@@ -591,9 +595,6 @@ describe("PreInvocation injects context as one user step", () => {
 });
 
 describe("hooks run from the workspace agy names, not the plugin folder", () => {
-  const original = process.cwd();
-  afterEach(() => process.chdir(original));
-
   test("the first workspace path becomes the working directory", () => {
     enterHookWorkspace(stop());
     expect(process.cwd()).toBe(workspace);
@@ -601,42 +602,21 @@ describe("hooks run from the workspace agy names, not the plugin folder", () => 
 
   test("a workspace that is not on disk leaves it alone", () => {
     enterHookWorkspace({ workspacePaths: [resolve(sandbox, "gone")] });
-    expect(process.cwd()).toBe(original);
+    expect(process.cwd()).toBe(ORIGINAL_CWD);
   });
 
   test("a payload naming no workspace leaves it alone", () => {
     enterHookWorkspace(null);
     enterHookWorkspace({ workspacePaths: [42] });
     enterHookWorkspace({ session_id: "s" });
-    expect(process.cwd()).toBe(original);
+    expect(process.cwd()).toBe(ORIGINAL_CWD);
   });
 });
 
 describe("agy is recognised from the environment it gives its hooks", () => {
-  const RUNTIME_ENV = [
-    "ANTIGRAVITY_CONVERSATION_ID",
-    "CLAUDE_CODE_ENTRYPOINT",
-    "CURSOR_AGENT",
-    "CURSOR_VERSION",
-    "CURSOR_INVOKED_AS",
-    "CODEX_CLI_VERSION",
-    "OPENAI_CODEX",
-  ];
-  const saved: Record<string, string | undefined> = {};
-
   beforeEach(() => {
-    for (const key of RUNTIME_ENV) {
-      saved[key] = process.env[key];
-      delete process.env[key];
-    }
+    for (const key of RUNTIME_ENV) delete process.env[key];
     process.env.ANTIGRAVITY_CONVERSATION_ID = CONVERSATION;
-  });
-
-  afterEach(() => {
-    for (const key of RUNTIME_ENV) {
-      if (saved[key] === undefined) delete process.env[key];
-      else process.env[key] = saved[key];
-    }
   });
 
   test("its conversation id alone names it", () => {

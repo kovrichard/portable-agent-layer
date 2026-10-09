@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import {
   buildCliPrompt,
   buildCodexArgs,
@@ -7,7 +7,6 @@ import {
 } from "../src/hooks/lib/inference";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 const PRESERVED = [
@@ -105,11 +104,11 @@ describe("hasOpenAiKey", () => {
 });
 
 describe("inference dispatcher — codex spawn integration (fake binary)", () => {
-  let saved: Record<string, string | undefined>;
+  const saved = savedEnv();
   let tmpBin: string;
 
   beforeEach(() => {
-    saved = savedEnv();
+    restoreEnv(saved);
     tmpBin = freshTestDir(import.meta.file);
     // Isolate debug-log writes from production ~/.pal/.
     process.env.PAL_HOME = tmpBin;
@@ -118,11 +117,6 @@ describe("inference dispatcher — codex spawn integration (fake binary)", () =>
     delete process.env[SPAWN_GUARD_ENV.DEPTH];
     delete process.env.PAL_INFERENCE_DISABLED;
     process.env.PAL_AGENT = "codex";
-  });
-
-  afterEach(() => {
-    removeOnceReleased(tmpBin);
-    restoreEnv(saved);
   });
 
   test("end-to-end: fake codex echoes stdin (the prompt), dispatcher captures it", async () => {

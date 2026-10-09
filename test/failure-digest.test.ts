@@ -1,12 +1,10 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { loadFailurePatterns } from "../src/hooks/lib/semi-static";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
-const savedHome = process.env.PAL_HOME;
 
 function capture(slug: string, cwd: string, principle: string) {
   const dir = resolve(HOME, "memory/learning/failures/2026/09", slug);
@@ -32,12 +30,6 @@ beforeAll(() => {
   project("letterbox", "/work/letterbox");
   capture("20260920-100000_a", "/work/letterbox", "letterbox lesson");
   capture("20260920-100001_b", "/work/scratch-tool", "scratch lesson");
-});
-
-afterAll(() => {
-  if (savedHome === undefined) delete process.env.PAL_HOME;
-  else process.env.PAL_HOME = savedHome;
-  removeOnceReleased(HOME);
 });
 
 describe("failure digest labels", () => {

@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -38,10 +38,6 @@ function runHookIn(cwd: string) {
 beforeAll(() => {
   removeOnceReleased(ROOT);
   mkdirSync(ROOT, { recursive: true });
-});
-
-afterAll(() => {
-  removeOnceReleased(ROOT);
 });
 
 describe("run-hook clean-worktree skip", () => {

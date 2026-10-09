@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { run as algorithmReflect } from "../src/tools/agent/algorithm-reflect";
 import { run as algorithmSynthesize } from "../src/tools/agent/algorithm-synthesize";
 import { run as analyze } from "../src/tools/agent/analyze";
@@ -8,7 +8,6 @@ import { run as relationshipReflect } from "../src/tools/agent/relationship-refl
 import { run as synthesize } from "../src/tools/agent/synthesize";
 import { run as thread } from "../src/tools/agent/thread";
 import { run as wisdomFrame } from "../src/tools/agent/wisdom-frame";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 const TOOLS: [string, (argv: string[]) => Promise<number>][] = [
@@ -24,18 +23,10 @@ const TOOLS: [string, (argv: string[]) => Promise<number>][] = [
 ];
 
 let home: string;
-let previousHome: string | undefined;
 
 beforeEach(() => {
-  previousHome = process.env.PAL_HOME;
   home = freshTestDir(import.meta.file);
   process.env.PAL_HOME = home;
-});
-
-afterEach(() => {
-  if (previousHome === undefined) delete process.env.PAL_HOME;
-  else process.env.PAL_HOME = previousHome;
-  removeOnceReleased(home);
 });
 
 async function captured(

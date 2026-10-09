@@ -25,7 +25,7 @@
       "klint.rules.ts",
       "stryker.config.mjs",
       "!.stryker-tmp",
-      "!.test-install-home",
+      "!.test",
       "!src/tools/control-room/ui/theme.css",
       "!src/tools/control-room/ui/dist",
       "!!.claude/worktrees"

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -12,7 +12,6 @@ import {
   statusOf,
   trimHandoffs,
 } from "../src/tools/lib/handoff-note";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 // The handoff note is where an agent says what it could not finish. One of those
@@ -28,11 +27,6 @@ beforeEach(() => {
   // The note is keyed by the child's own process.cwd(), which is always the
   // resolved path — and the repo can reach us through a symlink.
   CWD = realpathSync(freshTestDir(import.meta.file));
-});
-
-afterEach(() => {
-  removeOnceReleased(HOME);
-  removeOnceReleased(CWD);
 });
 
 async function runCli(args: string[]): Promise<number> {

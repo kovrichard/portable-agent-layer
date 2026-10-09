@@ -1,8 +1,7 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { duplicatesCursorHooks } from "../src/hooks/lib/cursor-shadow";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 // cursor-agent also runs every hook in ~/.claude/settings.json, so with PAL's
@@ -35,10 +34,6 @@ let cursorDir: string;
 
 beforeEach(() => {
   cursorDir = freshTestDir(import.meta.file);
-});
-
-afterEach(() => {
-  removeOnceReleased(cursorDir);
 });
 
 function installPalCursorHooks(): void {
@@ -83,7 +78,7 @@ const savedEnv = Object.fromEntries(TOUCHED_ENV_KEYS.map((k) => [k, process.env[
 
 // Keys are set one by one: replacing process.env with a plain object drops
 // Windows' case-insensitive Path/PATH, which breaks every later spawn.
-afterEach(() => {
+beforeEach(() => {
   process.argv = savedArgv;
   for (const [key, value] of Object.entries(savedEnv)) {
     if (value === undefined) delete process.env[key];

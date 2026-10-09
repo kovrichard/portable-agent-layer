@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { matchSkills, type SkillIndex } from "../src/hooks/lib/skill-match";
@@ -45,11 +45,6 @@ beforeAll(() => {
   process.env.PAL_HOME = TEST_HOME;
   removeOnceReleased(TEST_HOME);
   mkdirSync(resolve(TEST_HOME, "memory"), { recursive: true });
-});
-
-afterAll(() => {
-  delete process.env.PAL_HOME;
-  removeOnceReleased(TEST_HOME);
 });
 
 beforeEach(async () => {

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { agentFindings, rosterFindings } from "../src/cli/doctor/agents";
@@ -23,23 +23,13 @@ const DIR_VARS = {
 } as const;
 
 let ROOT: string;
-const saved: Record<string, string | undefined> = {};
 
 beforeEach(() => {
   ROOT = freshTestDir(import.meta.file);
   for (const [name, dir] of Object.entries(DIR_VARS)) {
-    saved[name] = process.env[name];
     process.env[name] = resolve(ROOT, dir);
   }
   write(resolve(ROOT, "opencode", "AGENTS.md"), "# PAL");
-});
-
-afterEach(() => {
-  for (const [name, value] of Object.entries(saved)) {
-    if (value === undefined) delete process.env[name];
-    else process.env[name] = value;
-  }
-  removeOnceReleased(ROOT);
 });
 
 function write(path: string, content: string): string {

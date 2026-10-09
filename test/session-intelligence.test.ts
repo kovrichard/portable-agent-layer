@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -22,24 +22,18 @@ import { freshTestDir } from "./lib/test-home";
 // session costs a model call at all, and it used to be unreachable from a test.
 
 let HOME: string;
-let API_KEY: string | undefined;
+const ORIGINAL_PATH = process.env.PATH;
 
 beforeEach(() => {
+  process.env.PATH = ORIGINAL_PATH;
+  process.env.PAL_INFERENCE_DISABLED = "1";
   HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   mkdirSync(resolve(HOME, "memory", "state"), { recursive: true });
   // Backstop: if a guard failed to fire, this stops the handler reaching a real
   // model rather than letting the test quietly make a network call.
-  API_KEY = process.env.PAL_ANTHROPIC_API_KEY;
   delete process.env.PAL_ANTHROPIC_API_KEY;
   process.env.PAL_AGENT = "codex";
-});
-
-afterEach(() => {
-  delete process.env.PAL_HOME;
-  delete process.env.PAL_AGENT;
-  if (API_KEY !== undefined) process.env.PAL_ANTHROPIC_API_KEY = API_KEY;
-  removeOnceReleased(HOME);
 });
 
 function transcript(messageCount: number, padding: number): string {
@@ -122,11 +116,9 @@ describe("a session already captured", () => {
 
 describe("an unfinished session", () => {
   let binDir: string;
-  let savedPath: string | undefined;
 
   beforeEach(() => {
     binDir = freshTestDir(import.meta.file);
-    savedPath = process.env.PATH;
     delete process.env.PAL_INFERENCE_DISABLED;
     delete process.env[SPAWN_GUARD_ENV.SENTINEL];
     delete process.env[SPAWN_GUARD_ENV.DEPTH];
@@ -146,12 +138,6 @@ describe("an unfinished session", () => {
       `console.log(${JSON.stringify(JSON.stringify(reply))});\n`
     );
     prependPath(binDir);
-  });
-
-  afterEach(() => {
-    process.env.PATH = savedPath;
-    process.env.PAL_INFERENCE_DISABLED = "1";
-    removeOnceReleased(binDir);
   });
 
   test("leaves the model's handoff for the next session, not the raw last exchange", async () => {

@@ -1,8 +1,7 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 // The statusline is where a user learns an update is waiting, so its advice has
@@ -48,10 +47,6 @@ function render(): string {
 
 beforeEach(() => {
   HOME = freshTestDir(import.meta.file);
-});
-
-afterEach(() => {
-  removeOnceReleased(HOME);
 });
 
 describe.skipIf(process.platform === "win32")("the update line", () => {

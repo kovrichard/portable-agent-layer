@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
 import { emit } from "../src/tools/lib/emit";
 
@@ -6,10 +6,7 @@ import { emit } from "../src/tools/lib/emit";
 // isVerbose() reads process.env + process.stdout.isTTY per call, so we drive
 // both here and capture what actually reaches stdout.
 
-const originalWrite = process.stdout.write.bind(process.stdout);
 const originalIsTTY = process.stdout.isTTY;
-const originalVerbose = process.env.PAL_VERBOSE;
-const originalQuiet = process.env.PAL_QUIET;
 
 let captured: string[];
 
@@ -26,20 +23,12 @@ function setTTY(value: boolean | undefined): void {
 }
 
 beforeEach(() => {
+  setTTY(originalIsTTY);
   captureStdout();
   process.env.PAL_VERBOSE = undefined;
   process.env.PAL_QUIET = undefined;
   delete process.env.PAL_VERBOSE;
   delete process.env.PAL_QUIET;
-});
-
-afterEach(() => {
-  process.stdout.write = originalWrite;
-  setTTY(originalIsTTY);
-  if (originalVerbose === undefined) delete process.env.PAL_VERBOSE;
-  else process.env.PAL_VERBOSE = originalVerbose;
-  if (originalQuiet === undefined) delete process.env.PAL_QUIET;
-  else process.env.PAL_QUIET = originalQuiet;
 });
 
 describe("emit.data", () => {
@@ -86,13 +75,6 @@ describe("emit.ok", () => {
 });
 
 describe("emit.receipt", () => {
-  const originalHome = process.env.PAL_HOME;
-
-  afterEach(() => {
-    if (originalHome === undefined) delete process.env.PAL_HOME;
-    else process.env.PAL_HOME = originalHome;
-  });
-
   function receipt(): Record<string, unknown> {
     return JSON.parse(captured.join(""));
   }

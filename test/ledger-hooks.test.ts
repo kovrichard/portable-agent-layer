@@ -1,9 +1,8 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { applyDelta } from "../src/hooks/lib/ledger";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 // The two hooks are only correct together, and only as separate processes:
@@ -18,10 +17,6 @@ beforeEach(() => {
   HOME = freshTestDir(import.meta.file);
   work = resolve(HOME, "work");
   mkdirSync(work, { recursive: true });
-});
-
-afterEach(() => {
-  removeOnceReleased(HOME);
 });
 
 function runHook(hook: string, payload: unknown) {

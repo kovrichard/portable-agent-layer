@@ -1,29 +1,18 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { assets } from "../src/hooks/lib/paths";
 import { runStopHandlers } from "../src/hooks/lib/stop";
 import { sandboxContextRuleDirs } from "./lib/context-rule-dirs";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 describe("runStopHandlers — Stop hook non-blocking contract", () => {
   let tmp: string;
-  let savedHome: string | undefined;
-  let restoreContextRuleDirs: () => void;
 
   beforeEach(() => {
     tmp = freshTestDir(import.meta.file);
-    savedHome = process.env.PAL_HOME;
     process.env.PAL_HOME = tmp;
-    restoreContextRuleDirs = sandboxContextRuleDirs(resolve(tmp, "agents"));
-  });
-
-  afterEach(() => {
-    restoreContextRuleDirs();
-    removeOnceReleased(tmp);
-    if (savedHome === undefined) delete process.env.PAL_HOME;
-    else process.env.PAL_HOME = savedHome;
+    sandboxContextRuleDirs(resolve(tmp, "agents"));
   });
 
   test("returns within 2s — does not await any inference", async () => {

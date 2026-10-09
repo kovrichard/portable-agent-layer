@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -10,7 +10,6 @@ import { buildAntigravityArgs, inference } from "../src/hooks/lib/inference";
 import { inferenceModel } from "../src/hooks/lib/models";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 const PRESERVED = [
@@ -115,12 +114,14 @@ describe("extractAntigravityText", () => {
 });
 
 describe("inference dispatcher — agy spawn integration (fake binary)", () => {
-  let saved: Record<string, string | undefined>;
+  const saved = Object.fromEntries(PRESERVED.map((k) => [k, process.env[k]]));
   let tmpBin: string;
 
   beforeEach(() => {
-    saved = {};
-    for (const k of PRESERVED) saved[k] = process.env[k];
+    for (const k of PRESERVED) {
+      if (saved[k] === undefined) delete process.env[k];
+      else process.env[k] = saved[k];
+    }
     tmpBin = freshTestDir(import.meta.file);
     process.env.PAL_HOME = tmpBin;
     process.env.PAL_GEMINI_DIR = resolve(tmpBin, ".gemini");
@@ -129,14 +130,6 @@ describe("inference dispatcher — agy spawn integration (fake binary)", () => {
     delete process.env[SPAWN_GUARD_ENV.DEPTH];
     delete process.env.PAL_INFERENCE_DISABLED;
     process.env.PAL_AGENT = "antigravity";
-  });
-
-  afterEach(() => {
-    removeOnceReleased(tmpBin);
-    for (const k of PRESERVED) {
-      if (saved[k] === undefined) delete process.env[k];
-      else process.env[k] = saved[k];
-    }
   });
 
   test("the prompt arrives on stdin in an empty workspace holding only the inference agent", async () => {

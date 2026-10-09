@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -9,7 +9,6 @@ import {
   type SavedExchange,
   truncate,
 } from "../src/hooks/lib/compact-recall";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 // This runs once per compaction and its output is the only surviving copy of the
@@ -22,11 +21,6 @@ beforeEach(() => {
   HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   mkdirSync(resolve(HOME, "memory", "state", "last-exchange"), { recursive: true });
-});
-
-afterEach(() => {
-  delete process.env.PAL_HOME;
-  removeOnceReleased(HOME);
 });
 
 function saveExchange(name: string): string {

@@ -1,9 +1,8 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 /**
@@ -32,10 +31,6 @@ let DIR: string;
 
 beforeAll(() => {
   DIR = freshTestDir(import.meta.file);
-});
-
-afterAll(() => {
-  if (DIR) removeOnceReleased(DIR);
 });
 
 describe.skipIf(!ENABLED)("browser smoke", () => {

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -25,6 +25,7 @@ const PRESERVED = [
   "PAL_AGENT",
   "PAL_ANTHROPIC_API_KEY",
   "PAL_HOME",
+  "PAL_INFERENCE_DISABLED",
   "PATH",
   "CLAUDECODE",
   "CLAUDE_CODE_OAUTH_TOKEN",
@@ -45,6 +46,8 @@ function restoreEnv(saved: Record<string, string | undefined>) {
     else process.env[k] = saved[k];
   }
 }
+
+const BASELINE = savedEnv();
 
 describe("buildClaudeArgs", () => {
   test("includes core flags every time", () => {
@@ -127,15 +130,11 @@ describe("parseJsonFromOutput", () => {
 });
 
 describe("canInfer routing", () => {
-  let saved: Record<string, string | undefined>;
   beforeEach(() => {
-    saved = savedEnv();
+    restoreEnv(BASELINE);
     delete process.env.PAL_ANTHROPIC_API_KEY;
     delete process.env[SPAWN_GUARD_ENV.SENTINEL];
     delete process.env[SPAWN_GUARD_ENV.DEPTH];
-  });
-  afterEach(() => {
-    restoreEnv(saved);
   });
 
   test("hasApiKey reflects PAL_ANTHROPIC_API_KEY presence", () => {
@@ -151,17 +150,9 @@ describe("canInfer routing", () => {
 });
 
 describe("inference dispatcher — depth limit refusal", () => {
-  let saved: Record<string, string | undefined>;
-  let savedDisabled: string | undefined;
   beforeEach(() => {
-    saved = savedEnv();
-    savedDisabled = process.env.PAL_INFERENCE_DISABLED;
+    restoreEnv(BASELINE);
     delete process.env.PAL_INFERENCE_DISABLED;
-  });
-  afterEach(() => {
-    restoreEnv(saved);
-    if (savedDisabled === undefined) delete process.env.PAL_INFERENCE_DISABLED;
-    else process.env.PAL_INFERENCE_DISABLED = savedDisabled;
   });
 
   test("returns failure when depth >= MAX_DEPTH (no spawn, no API call)", async () => {
@@ -191,17 +182,14 @@ describe("inference dispatcher — PAL_INFERENCE_DISABLED kill-switch", () => {
 });
 
 describe("inference dispatcher — claude spawn integration (fake binary)", () => {
-  let saved: Record<string, string | undefined>;
-  let savedDisabled: string | undefined;
   let tmpBin: string;
 
   beforeEach(() => {
-    saved = savedEnv();
-    savedDisabled = process.env.PAL_INFERENCE_DISABLED;
+    restoreEnv(BASELINE);
     delete process.env.PAL_INFERENCE_DISABLED;
     tmpBin = freshTestDir(import.meta.file);
     // Isolate debug-log writes from production ~/.pal/ — inference() will
-    // log into tmpBin/memory/state/debug.log instead, cleaned up below.
+    // log into tmpBin/memory/state/debug.log instead.
     process.env.PAL_HOME = tmpBin;
     delete process.env.PAL_ANTHROPIC_API_KEY;
     delete process.env.CLAUDE_CODE_OAUTH_TOKEN;
@@ -210,13 +198,6 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
     delete process.env[SPAWN_GUARD_ENV.SENTINEL];
     delete process.env[SPAWN_GUARD_ENV.DEPTH];
     process.env.PAL_AGENT = "claude";
-  });
-
-  afterEach(() => {
-    removeOnceReleased(tmpBin);
-    restoreEnv(saved);
-    if (savedDisabled === undefined) delete process.env.PAL_INFERENCE_DISABLED;
-    else process.env.PAL_INFERENCE_DISABLED = savedDisabled;
   });
 
   test("end-to-end: fake claude binary echoes stdin, dispatcher returns it", async () => {

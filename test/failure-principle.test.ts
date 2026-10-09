@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -8,7 +8,6 @@ import {
   principleRequest,
   recentExchange,
 } from "../src/hooks/lib/failure-principle";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 // A low rating is the one signal that says the session went wrong, and this is
@@ -182,11 +181,6 @@ describe("processFailurePrinciple", () => {
     HOME = freshTestDir(import.meta.file);
     process.env.PAL_HOME = HOME;
     (await import("../src/hooks/lib/settings")).reload();
-  });
-
-  afterEach(() => {
-    delete process.env.PAL_HOME;
-    removeOnceReleased(HOME);
   });
 
   async function handler() {

@@ -1,8 +1,7 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { reinstallInFreshProcess } from "../src/cli/reinstall";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 describe("reinstallInFreshProcess", () => {
@@ -11,7 +10,6 @@ describe("reinstallInFreshProcess", () => {
   beforeEach(() => {
     dir = freshTestDir(import.meta.file);
   });
-  afterEach(() => removeOnceReleased(dir));
 
   function fakeEntry(body: string): string {
     const entry = resolve(dir, "entry.ts");

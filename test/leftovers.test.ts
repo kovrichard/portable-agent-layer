@@ -1,13 +1,11 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { LEFTOVERS } from "../src/cli/leftovers";
 import { linkFile } from "./lib/links";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 let DIR: string;
-const saved = { ...process.env };
 const at = (...parts: string[]) => resolve(DIR, ...parts);
 
 beforeEach(() => {
@@ -16,19 +14,6 @@ beforeEach(() => {
   process.env.PAL_CLAUDE_DIR = at(".claude");
   process.env.PAL_OPENCODE_DIR = at(".opencode");
   process.env.PAL_COPILOT_DIR = at(".copilot");
-});
-
-afterEach(() => {
-  for (const key of [
-    "PAL_HOME",
-    "PAL_CLAUDE_DIR",
-    "PAL_OPENCODE_DIR",
-    "PAL_COPILOT_DIR",
-  ]) {
-    if (saved[key] === undefined) delete process.env[key];
-    else process.env[key] = saved[key];
-  }
-  removeOnceReleased(DIR);
 });
 
 function write(path: string, content: unknown): void {

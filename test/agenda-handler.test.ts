@@ -1,10 +1,9 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { refreshAgenda } from "../src/hooks/handlers/agenda";
 import { readAgenda } from "../src/hooks/lib/agenda-store";
 import { canInfer } from "../src/hooks/lib/inference";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 // The only model call behind the morning screen. Both gates in front of it are
@@ -15,22 +14,16 @@ const NOW = new Date("2026-09-05T12:00:00.000Z");
 const PRESERVED = ["PAL_AGENT", "PAL_ANTHROPIC_API_KEY", "PAL_OPENAI_API_KEY", "PATH"];
 
 let HOME: string;
-let saved: Record<string, string | undefined>;
+const saved = Object.fromEntries(PRESERVED.map((k) => [k, process.env[k]]));
 
 beforeEach(() => {
-  saved = Object.fromEntries(PRESERVED.map((k) => [k, process.env[k]]));
-  HOME = freshTestDir(import.meta.file);
-  process.env.PAL_HOME = HOME;
-  mkdirSync(resolve(HOME, "memory", "state"), { recursive: true });
-});
-
-afterEach(() => {
   for (const k of PRESERVED) {
     if (saved[k] === undefined) delete process.env[k];
     else process.env[k] = saved[k];
   }
-  delete process.env.PAL_HOME;
-  removeOnceReleased(HOME);
+  HOME = freshTestDir(import.meta.file);
+  process.env.PAL_HOME = HOME;
+  mkdirSync(resolve(HOME, "memory", "state"), { recursive: true });
 });
 
 /** An agent with no binary on an empty PATH and no keys: nothing can be asked. */

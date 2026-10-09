@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -13,7 +13,6 @@ import {
   type UpdateCache,
 } from "../src/hooks/handlers/update-check";
 import { paths } from "../src/hooks/lib/paths";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 const release = (mode: UpdateCache["mode"], available = true): UpdateCache =>
@@ -108,14 +107,7 @@ describe("pal cli update — the flow", () => {
 // TTL even though the user just updated. update() must clear the cache.
 describe("pal cli update — clears stale update cache", () => {
   const src = readFileSync(resolve(import.meta.dir, "../src/cli/index.ts"), "utf-8");
-  const prevHome = process.env.PAL_HOME;
   const home = freshTestDir(import.meta.file);
-
-  afterAll(() => {
-    if (prevHome === undefined) delete process.env.PAL_HOME;
-    else process.env.PAL_HOME = prevHome;
-    removeOnceReleased(home);
-  });
 
   test("update() calls clearUpdateCache after a successful update", () => {
     expect(src).toContain("clearUpdateCache");
@@ -149,8 +141,6 @@ describe("pal cli update — clears stale update cache", () => {
 // origin (unpushed commits) nagged "Update available: X → X". The fix keys off
 // the behind-count (commits on origin/main we lack), not raw hash inequality.
 describe("pal cli update — repo mode ignores local unpushed commits", () => {
-  const prevHome = process.env.PAL_HOME;
-  const prevPkg = process.env.PAL_PKG;
   const home = freshTestDir(import.meta.file);
   const origin = freshTestDir(import.meta.file);
   const clone = freshTestDir(import.meta.file);
@@ -163,14 +153,6 @@ describe("pal cli update — repo mode ignores local unpushed commits", () => {
     git(cwd, "add", "-A");
     git(cwd, "commit", "-m", msg);
   };
-
-  afterAll(() => {
-    if (prevHome === undefined) delete process.env.PAL_HOME;
-    else process.env.PAL_HOME = prevHome;
-    if (prevPkg === undefined) delete process.env.PAL_PKG;
-    else process.env.PAL_PKG = prevPkg;
-    for (const dir of [home, origin, clone]) removeOnceReleased(dir);
-  });
 
   test("a clone ahead of origin/main reports no update", () => {
     git(origin, "init", "--bare", "-b", "main");

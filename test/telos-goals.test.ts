@@ -1,8 +1,7 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { dueFrom, readTelosGoals } from "../src/hooks/lib/telos-goals";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 // GOALS.md is prose written by a person, and the matrix has to rank it without
@@ -13,11 +12,6 @@ let HOME: string;
 beforeEach(() => {
   HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
-});
-
-afterEach(() => {
-  delete process.env.PAL_HOME;
-  removeOnceReleased(HOME);
 });
 
 function writeGoals(content: string): void {

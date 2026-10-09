@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import {
   existsSync,
   lstatSync,
@@ -33,24 +33,14 @@ const ENV = {
   PAL_GEMINI_DIR: resolve(HOME, ".gemini"),
   PAL_AGENTS_DIR: resolve(HOME, ".agents"),
 };
-const saved: Record<string, string | undefined> = {};
 const SCRIPT = process.platform === "win32" ? "statusline.ps1" : "statusline.sh";
 
 beforeEach(() => {
   removeOnceReleased(HOME);
   mkdirSync(HOME, { recursive: true });
   for (const [key, value] of Object.entries(ENV)) {
-    saved[key] = process.env[key];
     process.env[key] = value;
   }
-});
-
-afterEach(() => {
-  for (const key of Object.keys(ENV)) {
-    if (saved[key] === undefined) delete process.env[key];
-    else process.env[key] = saved[key];
-  }
-  removeOnceReleased(HOME);
 });
 
 describe("scaffoldTelos", () => {

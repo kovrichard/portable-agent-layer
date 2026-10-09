@@ -1,7 +1,6 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 // v5 renames the origin stamp `m` to `machine` on stored records. Nothing ever
@@ -28,11 +27,6 @@ function readLines(file: string): Record<string, unknown>[] {
 beforeEach(() => {
   HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
-});
-
-afterEach(() => {
-  delete process.env.PAL_HOME;
-  removeOnceReleased(HOME);
 });
 
 async function migration() {

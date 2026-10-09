@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
@@ -52,10 +52,6 @@ You review code for correctness issues and report them succinctly.
 `;
 
 beforeAll(() => {
-  removeOnceReleased(ROOT);
-});
-
-afterAll(() => {
   removeOnceReleased(ROOT);
 });
 

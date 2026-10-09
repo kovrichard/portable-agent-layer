@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { AutoUpdateStatus } from "../src/hooks/lib/auto-update";
@@ -24,16 +24,11 @@ let server: ReturnType<typeof Bun.serve> | null = null;
 buildPageFirst();
 
 beforeEach(() => {
+  server?.stop(true);
+  server = null;
   HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   mkdirSync(resolve(HOME, "memory", "ledger"), { recursive: true });
-});
-
-afterEach(() => {
-  server?.stop(true);
-  server = null;
-  delete process.env.PAL_HOME;
-  removeOnceReleased(HOME);
 });
 
 async function listen(): Promise<string> {

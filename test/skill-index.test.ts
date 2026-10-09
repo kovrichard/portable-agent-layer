@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, lstatSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { generateSkillIndex, linkPersonalSkill } from "../src/targets/lib";
@@ -14,7 +14,6 @@ const AGENT_DIRS = {
   PAL_GEMINI_DIR: resolve(HOME, ".gemini"),
   PAL_AGENTS_DIR: resolve(HOME, ".agents"),
 };
-const saved: Record<string, string | undefined> = {};
 
 function writeSkill(name: string, frontmatter: string | null, body = "text") {
   const dir = resolve(HOME, "skills", name);
@@ -33,20 +32,10 @@ function readIndex() {
 beforeEach(() => {
   removeOnceReleased(HOME);
   mkdirSync(HOME, { recursive: true });
-  saved.PAL_HOME = process.env.PAL_HOME;
   process.env.PAL_HOME = HOME;
   for (const [key, value] of Object.entries(AGENT_DIRS)) {
-    saved[key] = process.env[key];
     process.env[key] = value;
   }
-});
-
-afterEach(() => {
-  for (const key of ["PAL_HOME", ...Object.keys(AGENT_DIRS)]) {
-    if (saved[key] === undefined) delete process.env[key];
-    else process.env[key] = saved[key];
-  }
-  removeOnceReleased(HOME);
 });
 
 describe("generateSkillIndex", () => {

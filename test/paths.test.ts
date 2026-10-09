@@ -1,22 +1,15 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
-import { testHome } from "./lib/test-home";
+import { TEST_ROOT, testHome } from "./lib/test-home";
 
 const TEST_DIR = testHome(import.meta.file);
 
 beforeAll(() => {
   removeOnceReleased(TEST_DIR);
   mkdirSync(TEST_DIR, { recursive: true });
-});
-
-afterAll(() => {
-  removeOnceReleased(TEST_DIR);
-  // Clean up env
-  delete process.env.PAL_HOME;
-  delete process.env.PAL_PKG;
 });
 
 describe("palHome", () => {
@@ -47,7 +40,7 @@ describe("palHome", () => {
   test("a test run without PAL_HOME stays inside the checkout's .test/", async () => {
     delete process.env.PAL_HOME;
     const { palHome } = await import("../src/hooks/lib/paths");
-    expect(palHome()).toBe(resolve(import.meta.dir, "../.test/pal-home"));
+    expect(palHome()).toBe(resolve(TEST_ROOT, "pal-home"));
   });
 });
 

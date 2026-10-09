@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { appendFileSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -43,15 +43,10 @@ function asDownstream() {
 }
 
 beforeEach(() => {
+  delete process.env.PAL_PKG;
   removeOnceReleased(TEST_HOME);
   mkdirSync(TEST_HOME, { recursive: true });
   process.env.PAL_HOME = TEST_HOME;
-});
-
-afterEach(() => {
-  delete process.env.PAL_HOME;
-  delete process.env.PAL_PKG;
-  removeOnceReleased(TEST_HOME);
 });
 
 describe("maintainer gate", () => {

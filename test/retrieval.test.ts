@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import {
   appendFileSync,
   mkdirSync,
@@ -28,11 +28,6 @@ beforeAll(() => {
   process.env.PAL_HOME = TEST_HOME;
   removeOnceReleased(TEST_HOME);
   mkdirSync(TEST_HOME, { recursive: true });
-});
-
-afterAll(() => {
-  delete process.env.PAL_HOME;
-  removeOnceReleased(TEST_HOME);
 });
 
 beforeEach(() => {

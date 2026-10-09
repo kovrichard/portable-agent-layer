@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runStopHandlers } from "../src/hooks/lib/stop";
@@ -6,12 +6,7 @@ import { sandboxContextRuleDirs } from "./lib/context-rule-dirs";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 
-// runStopHandlers spawns detached children that keep writing into PAL_HOME after
-// the test returns, so this directory can reappear after cleanup — .gitignore
-// covers .test/ for exactly that reason.
 const HOME = testHome(import.meta.file);
-const savedHome = process.env.PAL_HOME;
-let restoreContextRuleDirs: () => void;
 
 function transcriptOf(...contents: string[]): string {
   return JSON.stringify(
@@ -39,14 +34,7 @@ beforeEach(() => {
   removeOnceReleased(HOME);
   mkdirSync(HOME, { recursive: true });
   process.env.PAL_HOME = HOME;
-  restoreContextRuleDirs = sandboxContextRuleDirs(resolve(HOME, "agents"));
-});
-
-afterEach(() => {
-  restoreContextRuleDirs();
-  if (savedHome === undefined) delete process.env.PAL_HOME;
-  else process.env.PAL_HOME = savedHome;
-  removeOnceReleased(HOME);
+  sandboxContextRuleDirs(resolve(HOME, "agents"));
 });
 
 describe("runStopHandlers — transcript gate", () => {

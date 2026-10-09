@@ -1,8 +1,7 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runCommand } from "../src/tools/lib/command";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 // These two commands are the onboarding skill's only way in: settings are
@@ -15,12 +14,6 @@ beforeEach(async () => {
   process.env.PAL_HOME = HOME;
   mkdirSync(resolve(HOME, "memory"), { recursive: true });
   mkdirSync(resolve(HOME, "telos"), { recursive: true });
-  (await import("../src/hooks/lib/settings")).reload();
-});
-
-afterEach(async () => {
-  delete process.env.PAL_HOME;
-  removeOnceReleased(HOME);
   (await import("../src/hooks/lib/settings")).reload();
 });
 

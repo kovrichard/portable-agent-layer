@@ -1,8 +1,7 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { mergeCodexHooks, mergeCursorHooks, mergeSettings } from "../src/targets/lib";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 let DIR: string;
@@ -13,10 +12,6 @@ beforeEach(() => {
   USER_SCRIPT = resolve(DIR, "src", "hooks", "Mine.ts");
   mkdirSync(resolve(DIR, "src", "hooks"), { recursive: true });
   writeFileSync(USER_SCRIPT, "");
-});
-
-afterEach(() => {
-  removeOnceReleased(DIR);
 });
 
 const removedHook = () => `bun run ${DIR}/src/hooks/PostToolOrchestrator.ts`;

@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
@@ -39,10 +39,6 @@ beforeAll(() => {
     GOOD.replaceAll("good-skill", "clean-skill").replaceAll("good skill", "clean skill")
   );
   installSkill("Broken", GOOD.replace("good-skill", "UPPER"));
-});
-
-afterAll(() => {
-  removeOnceReleased(ROOT);
 });
 
 describe("pal cli skill doctor", () => {

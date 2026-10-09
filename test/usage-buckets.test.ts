@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -13,23 +13,14 @@ import {
   readPalInference,
   totalTokens,
 } from "../src/tools/lib/usage-buckets";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 const NOW = new Date("2026-09-06T12:00:00.000Z");
 const HORIZONS = horizonsFrom(NOW);
 
-const tempDirs: string[] = [];
-
 function tempHome(): string {
-  const dir = freshTestDir(import.meta.file);
-  tempDirs.push(dir);
-  return dir;
+  return freshTestDir(import.meta.file);
 }
-
-afterAll(() => {
-  for (const dir of tempDirs) removeOnceReleased(dir);
-});
 
 const tokens = (input: number, output: number, cw5m = 0, cw1h = 0, cr = 0) => ({
   input,

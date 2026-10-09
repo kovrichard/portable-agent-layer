@@ -7,12 +7,11 @@
  *   PAL_SURFACE_UPDATE=1 bun test test/shipped-surface.test.ts
  */
 
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { linkFile } from "./lib/links";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { plant, ROOTS, surface } from "./lib/shipped-surface";
 import { freshTestDir } from "./lib/test-home";
 
@@ -80,7 +79,6 @@ function refreshed(previous: Manifest, current: string[]): Manifest {
   return { current, retired };
 }
 
-const sandboxes: string[] = [];
 let fresh: string[];
 let planted: string[];
 let reinstalled: string[];
@@ -100,12 +98,7 @@ describe.skipIf(process.platform === "win32")("what PAL ships", () => {
     planted = surface(old, PKG);
     install(old);
     reinstalled = surface(old, PKG);
-    sandboxes.push(clean, old);
   }, 300_000);
-
-  afterAll(() => {
-    for (const root of sandboxes) removeOnceReleased(root);
-  });
 
   test("a fresh install writes exactly what the manifest lists", () => {
     expect(fresh).toEqual(readManifest().current);

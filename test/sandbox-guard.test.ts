@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -63,10 +63,6 @@ beforeAll(() => {
     resolve(PAL_HOME, "skills", "guard-probe", "SKILL.md"),
     "---\nname: guard-probe\n---\n"
   );
-});
-
-afterAll(() => {
-  removeOnceReleased(ROOT);
 });
 
 describe("test sandbox guard", () => {

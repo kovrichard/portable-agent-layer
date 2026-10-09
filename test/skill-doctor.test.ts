@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, resolve } from "node:path";
@@ -57,10 +57,6 @@ function levelOf(dir: string, check: string) {
 beforeAll(() => {
   removeOnceReleased(ROOT);
   mkdirSync(ROOT, { recursive: true });
-});
-
-afterAll(() => {
-  removeOnceReleased(ROOT);
 });
 
 describe("lintSkill", () => {

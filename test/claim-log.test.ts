@@ -1,10 +1,9 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { claimChecksSince, watchClaims } from "../src/hooks/lib/claim-log";
 import { reload } from "../src/hooks/lib/settings";
 import { claimCheckLines } from "../src/tools/lib/interaction-report";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
@@ -43,12 +42,6 @@ beforeEach(() => {
   process.env.PAL_HOME = HOME;
   mkdirSync(resolve(HOME, "memory"), { recursive: true });
   reload();
-});
-
-afterEach(() => {
-  delete process.env.PAL_HOME;
-  reload();
-  removeOnceReleased(HOME);
 });
 
 const since = new Date("2026-10-01T00:00:00Z");

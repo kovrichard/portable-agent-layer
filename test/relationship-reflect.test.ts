@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createOpinion } from "../src/hooks/lib/opinions";
@@ -21,22 +21,13 @@ import {
   type Rating,
   reportPath,
 } from "../src/tools/lib/relationship-reflect";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 const NOW = new Date("2026-09-06T12:00:00.000Z");
 
-const tempDirs: string[] = [];
-
 function tempDir(): string {
-  const dir = freshTestDir(import.meta.file);
-  tempDirs.push(dir);
-  return dir;
+  return freshTestDir(import.meta.file);
 }
-
-afterAll(() => {
-  for (const dir of tempDirs) removeOnceReleased(dir);
-});
 
 const note = (
   type: ParsedNote["type"],

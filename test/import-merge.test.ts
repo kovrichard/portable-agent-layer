@@ -1,8 +1,7 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
@@ -76,10 +75,6 @@ beforeEach(() => {
   );
   write(DST, "skills/linux-skill/SKILL.md", "# Linux Skill\n");
   write(DST, "telos/GOALS.md", "# Goals\nlinux version\n");
-});
-
-afterEach(() => {
-  for (const d of [SRC, DST, WORK]) removeOnceReleased(d);
 });
 
 describe("import into a NON-EMPTY home", () => {

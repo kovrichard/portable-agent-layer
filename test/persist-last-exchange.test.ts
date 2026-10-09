@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
@@ -57,11 +57,6 @@ async function runPersist() {
 beforeEach(() => {
   removeOnceReleased(HOME);
   process.env.PAL_HOME = HOME;
-});
-
-afterEach(() => {
-  delete process.env.PAL_HOME;
-  removeOnceReleased(HOME);
 });
 
 describe("persistLastExchange — old handoffs", () => {

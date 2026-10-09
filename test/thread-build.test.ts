@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
@@ -10,11 +10,6 @@ beforeEach(() => {
   process.env.PAL_HOME = HOME;
   removeOnceReleased(HOME);
   mkdirSync(HOME, { recursive: true });
-});
-
-afterEach(() => {
-  delete process.env.PAL_HOME;
-  removeOnceReleased(HOME);
 });
 
 async function lib() {

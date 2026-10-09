@@ -1,7 +1,6 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
@@ -21,28 +20,13 @@ const AGENT_SIGNALS = [
   "PATH",
 ] as const;
 
-const savedSignals: Record<string, string | undefined> = {};
-
 beforeEach(async () => {
   HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   delete process.env.PAL_SPAWNED_INFERENCE;
-  for (const key of AGENT_SIGNALS) {
-    savedSignals[key] = process.env[key];
-    delete process.env[key];
-  }
+  for (const key of AGENT_SIGNALS) delete process.env[key];
   // settings caches per process and bun shares one across test files.
   (await import("../src/hooks/lib/settings")).reload();
-});
-
-afterEach(() => {
-  delete process.env.PAL_HOME;
-  delete process.env.PAL_SPAWNED_INFERENCE;
-  for (const key of AGENT_SIGNALS) {
-    if (savedSignals[key] === undefined) delete process.env[key];
-    else process.env[key] = savedSignals[key];
-  }
-  removeOnceReleased(HOME);
 });
 
 async function lib() {

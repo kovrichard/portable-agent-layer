@@ -1,8 +1,7 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { buildCliPrompt, buildCopilotArgs, inference } from "../src/hooks/lib/inference";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 const PRESERVED = [
@@ -80,11 +79,11 @@ describe("buildCopilotArgs", () => {
 });
 
 describe("inference dispatcher — copilot spawn integration (fake binary)", () => {
-  let saved: Record<string, string | undefined>;
+  const saved = savedEnv();
   let tmpBin: string;
 
   beforeEach(() => {
-    saved = savedEnv();
+    restoreEnv(saved);
     tmpBin = freshTestDir(import.meta.file);
     process.env.PAL_HOME = tmpBin;
     delete process.env.PAL_ANTHROPIC_API_KEY;
@@ -92,11 +91,6 @@ describe("inference dispatcher — copilot spawn integration (fake binary)", () 
     delete process.env[SPAWN_GUARD_ENV.DEPTH];
     delete process.env.PAL_INFERENCE_DISABLED;
     process.env.PAL_AGENT = "copilot";
-  });
-
-  afterEach(() => {
-    removeOnceReleased(tmpBin);
-    restoreEnv(saved);
   });
 
   test("end-to-end: fake copilot echoes stdin, dispatcher captures it", async () => {

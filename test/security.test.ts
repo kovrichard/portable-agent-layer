@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -14,7 +14,6 @@ const ROOT_OVERRIDES = [
   "PAL_CURSOR_DIR",
   "PAL_OPENCODE_DIR",
 ];
-const savedOverrides = new Map(ROOT_OVERRIDES.map((name) => [name, process.env[name]]));
 
 function pinRealPalHome(): void {
   process.env.PAL_HOME = join(homedir(), ".pal");
@@ -23,13 +22,6 @@ function pinRealPalHome(): void {
 beforeAll(() => {
   for (const name of ROOT_OVERRIDES) delete process.env[name];
   pinRealPalHome();
-});
-
-afterAll(() => {
-  for (const [name, value] of savedOverrides) {
-    if (value === undefined) delete process.env[name];
-    else process.env[name] = value;
-  }
 });
 
 function home(...segments: string[]): string {

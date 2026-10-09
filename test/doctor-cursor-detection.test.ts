@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { delimiter, dirname, resolve } from "node:path";
@@ -56,10 +56,6 @@ function agentsFound(stdout: string): string[] {
 }
 
 beforeAll(() => {
-  removeOnceReleased(ROOT);
-});
-
-afterAll(() => {
   removeOnceReleased(ROOT);
 });
 

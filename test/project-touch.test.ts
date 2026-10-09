@@ -1,43 +1,28 @@
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  test,
-} from "bun:test";
-import { mkdirSync, mkdtempSync, realpathSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { mkdirSync, realpathSync } from "node:fs";
 import { resolve } from "node:path";
 import { readProject, writeProject } from "../src/hooks/lib/projects";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { outsideRepoHome } from "./lib/test-home";
 
-// Use os.tmpdir() so tests don't interact with the real PAL home or with the
-// PAL repo's own .git when resolveProjectFromCwd or process.cwd() are involved.
+const ORIGINAL_CWD = process.cwd();
+let TEST_HOME: string;
+
 // realpathSync is required on macOS where /tmp → /private/tmp: process.cwd()
 // canonicalizes after chdir, so registered paths must be canonical too or
 // resolveProjectFromCwd's startsWith check misses.
-const TEST_HOME = realpathSync(mkdtempSync(resolve(tmpdir(), "pal-project-touch-")));
-const ORIGINAL_CWD = process.cwd();
-
 beforeAll(() => {
+  const home = outsideRepoHome(import.meta.file);
+  removeOnceReleased(home);
+  mkdirSync(home, { recursive: true });
+  TEST_HOME = realpathSync(home);
   process.env.PAL_HOME = TEST_HOME;
 });
 
-afterAll(() => {
-  delete process.env.PAL_HOME;
-  process.chdir(ORIGINAL_CWD);
-  removeOnceReleased(TEST_HOME);
-});
-
 beforeEach(() => {
+  process.chdir(ORIGINAL_CWD);
   const dir = resolve(TEST_HOME, "memory", "projects");
   removeOnceReleased(dir);
-});
-
-afterEach(() => {
-  process.chdir(ORIGINAL_CWD);
 });
 
 function fixtureRepo(slug: string): string {

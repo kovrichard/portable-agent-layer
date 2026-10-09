@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import {
@@ -34,10 +34,6 @@ function skillDir(files: Record<string, string>): string {
 beforeAll(() => {
   removeOnceReleased(ROOT);
   mkdirSync(ROOT, { recursive: true });
-});
-
-afterAll(() => {
-  removeOnceReleased(ROOT);
 });
 
 describe("parseSkill", () => {

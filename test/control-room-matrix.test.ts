@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -7,7 +7,6 @@ import {
   type MatrixItem,
   matrix,
 } from "../src/tools/control-room/matrix";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 // Every placement on the morning screen has to be defensible from files alone,
@@ -19,11 +18,6 @@ let HOME: string;
 beforeEach(() => {
   HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
-});
-
-afterEach(() => {
-  delete process.env.PAL_HOME;
-  removeOnceReleased(HOME);
 });
 
 interface ProjectFixture {

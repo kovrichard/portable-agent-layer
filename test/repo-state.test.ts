@@ -1,8 +1,7 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 let ROOT: string;
@@ -11,11 +10,6 @@ beforeEach(() => {
   ROOT = realpathSync(freshTestDir(import.meta.file));
   process.env.PAL_HOME = resolve(ROOT, "pal");
   mkdirSync(resolve(ROOT, "pal", "memory"), { recursive: true });
-});
-
-afterEach(() => {
-  delete process.env.PAL_HOME;
-  removeOnceReleased(ROOT);
 });
 
 async function setSettings(data: Record<string, unknown>) {

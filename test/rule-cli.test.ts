@@ -1,16 +1,16 @@
-import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { runRule } from "../src/cli/rule";
 import { addDraft, readRules } from "../src/hooks/lib/adaptation-rules";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
-const savedHome = process.env.PAL_HOME;
 let printed: string[];
-let logSpy: ReturnType<typeof spyOn>;
-let errSpy: ReturnType<typeof spyOn>;
+let logSpy: ReturnType<typeof spyOn> | undefined;
+let errSpy: ReturnType<typeof spyOn> | undefined;
 
 beforeEach(() => {
+  logSpy?.mockRestore();
+  errSpy?.mockRestore();
   HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   printed = [];
@@ -18,14 +18,6 @@ beforeEach(() => {
   errSpy = spyOn(console, "error").mockImplementation((...a) =>
     printed.push(a.join(" "))
   );
-});
-
-afterEach(() => {
-  logSpy.mockRestore();
-  errSpy.mockRestore();
-  if (savedHome === undefined) delete process.env.PAL_HOME;
-  else process.env.PAL_HOME = savedHome;
-  removeOnceReleased(HOME);
 });
 
 function seed(when: string) {

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { capturingLog, type LogLevel, log } from "../src/targets/lib";
 
 // The suite drives these installers by the hundred against temp directories, so
@@ -21,7 +21,7 @@ function captureOut(fn: () => void): string[] {
   return lines;
 }
 
-afterEach(() => {
+beforeEach(() => {
   process.env.PAL_TEST_SANDBOX = "1";
 });
 

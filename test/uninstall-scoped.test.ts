@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
@@ -45,10 +45,6 @@ const unresolvedIn = (dir: string) =>
   shippedSkills().filter((name) => !existsSync(resolve(dir, name, "SKILL.md")));
 
 beforeEach(() => {
-  removeOnceReleased(SANDBOX);
-});
-
-afterAll(() => {
   removeOnceReleased(SANDBOX);
 });
 

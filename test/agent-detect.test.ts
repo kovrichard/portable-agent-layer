@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -14,7 +14,6 @@ import {
   stopBlockResponse,
 } from "../src/hooks/lib/agent";
 import { writeFakeBin } from "./fixtures/fake-bin";
-import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 const PRESERVED_ENV_KEYS = [
@@ -30,21 +29,15 @@ const PRESERVED_ENV_KEYS = [
   "PATH",
 ] as const;
 
+const ORIGINAL_ARGV = process.argv;
+
+beforeEach(() => {
+  process.argv = ORIGINAL_ARGV;
+});
+
 describe("getActiveAgent — PAL_AGENT env signal", () => {
-  const saved: Record<string, string | undefined> = {};
-
   beforeEach(() => {
-    for (const k of PRESERVED_ENV_KEYS) {
-      saved[k] = process.env[k];
-      delete process.env[k];
-    }
-  });
-
-  afterEach(() => {
-    for (const k of PRESERVED_ENV_KEYS) {
-      if (saved[k] === undefined) delete process.env[k];
-      else process.env[k] = saved[k];
-    }
+    for (const k of PRESERVED_ENV_KEYS) delete process.env[k];
   });
 
   test("defaults to claude when nothing is set", () => {
@@ -116,20 +109,8 @@ describe("getActiveAgent — PAL_AGENT env signal", () => {
 });
 
 describe("blockResponse", () => {
-  const saved: Record<string, string | undefined> = {};
-
   beforeEach(() => {
-    for (const k of PRESERVED_ENV_KEYS) {
-      saved[k] = process.env[k];
-      delete process.env[k];
-    }
-  });
-
-  afterEach(() => {
-    for (const k of PRESERVED_ENV_KEYS) {
-      if (saved[k] === undefined) delete process.env[k];
-      else process.env[k] = saved[k];
-    }
+    for (const k of PRESERVED_ENV_KEYS) delete process.env[k];
   });
 
   test.each([
@@ -272,22 +253,8 @@ describe("blockResponse", () => {
 });
 
 describe("getActiveAgent — --agent= argv flag", () => {
-  const saved: Record<string, string | undefined> = {};
-  const savedArgv = process.argv;
-
   beforeEach(() => {
-    for (const k of PRESERVED_ENV_KEYS) {
-      saved[k] = process.env[k];
-      delete process.env[k];
-    }
-  });
-
-  afterEach(() => {
-    process.argv = savedArgv;
-    for (const k of PRESERVED_ENV_KEYS) {
-      if (saved[k] === undefined) delete process.env[k];
-      else process.env[k] = saved[k];
-    }
+    for (const k of PRESERVED_ENV_KEYS) delete process.env[k];
   });
 
   test("reads the agent from --agent= when no env var is set", () => {
@@ -327,22 +294,8 @@ describe("getActiveAgent — --agent= argv flag", () => {
  * where the ledger recorded the wrong runtime.
  */
 describe("getActiveAgent — the four hosts PAL actually runs under", () => {
-  const saved: Record<string, string | undefined> = {};
-  const savedArgv = process.argv;
-
   beforeEach(() => {
-    for (const k of PRESERVED_ENV_KEYS) {
-      saved[k] = process.env[k];
-      delete process.env[k];
-    }
-  });
-
-  afterEach(() => {
-    process.argv = savedArgv;
-    for (const k of PRESERVED_ENV_KEYS) {
-      if (saved[k] === undefined) delete process.env[k];
-      else process.env[k] = saved[k];
-    }
+    for (const k of PRESERVED_ENV_KEYS) delete process.env[k];
   });
 
   test("cursor-agent is cursor even when registered as --agent=claude", () => {
@@ -421,28 +374,13 @@ describe("getActiveAgent — the four hosts PAL actually runs under", () => {
 });
 
 describe("getActiveAgent — undeclared falls back to what is installed", () => {
-  const saved: Record<string, string | undefined> = {};
   let dir: string;
-  let argv: string[];
 
   beforeEach(() => {
-    for (const k of PRESERVED_ENV_KEYS) {
-      saved[k] = process.env[k];
-      delete process.env[k];
-    }
-    argv = process.argv;
+    for (const k of PRESERVED_ENV_KEYS) delete process.env[k];
     process.argv = ["bun", "hook.ts"];
     dir = freshTestDir(import.meta.file);
     process.env.PATH = dir;
-  });
-
-  afterEach(() => {
-    process.argv = argv;
-    removeOnceReleased(dir);
-    for (const k of PRESERVED_ENV_KEYS) {
-      if (saved[k] === undefined) delete process.env[k];
-      else process.env[k] = saved[k];
-    }
   });
 
   test("an undeclared terminal with only opencode installed is opencode", () => {
