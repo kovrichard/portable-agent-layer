@@ -7,12 +7,12 @@ import {
   readFileSync,
   rmSync,
   statSync,
-  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { builtinToolVerbs } from "../src/cli/builtin-tools";
+import { linkDir } from "./helpers/links";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 const TOOL_DIR = resolve(import.meta.dir, "../src/tools/agent");
@@ -253,7 +253,7 @@ describe("pal cli skill run — ~/.pal/.env reaches shipped skills only", () => 
   }
 
   function linkIntoHome(name: string, target: string): void {
-    symlinkSync(target, resolve(home, "skills", name), "junction");
+    linkDir(target, resolve(home, "skills", name));
   }
 
   function runKeyTool(skill: string) {

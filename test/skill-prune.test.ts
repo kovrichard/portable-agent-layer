@@ -1,14 +1,8 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import {
-  existsSync,
-  lstatSync,
-  mkdirSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, lstatSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { linkDir } from "./helpers/links";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 const REPO_SKILLS = resolve(import.meta.dir, "../assets/skills");
@@ -56,24 +50,16 @@ beforeEach(() => {
   mkdirSync(CLAUDE_SKILLS, { recursive: true });
 
   // A shipped skill that was renamed: both discovery links now dangle.
-  symlinkSync(
-    resolve(REPO_SKILLS, "renamed-away"),
-    resolve(PAL_SKILLS, "renamed-away"),
-    "dir"
-  );
-  symlinkSync(
-    resolve(PAL_SKILLS, "renamed-away"),
-    resolve(CLAUDE_SKILLS, "renamed-away"),
-    "dir"
-  );
+  linkDir(resolve(REPO_SKILLS, "renamed-away"), resolve(PAL_SKILLS, "renamed-away"));
+  linkDir(resolve(PAL_SKILLS, "renamed-away"), resolve(CLAUDE_SKILLS, "renamed-away"));
 
   // A personal skill: a real directory, never a link.
   mkdirSync(resolve(PAL_SKILLS, "mine"), { recursive: true });
   writeFileSync(resolve(PAL_SKILLS, "mine/SKILL.md"), "---\nname: mine\n---\n");
 
   // Dangling links the user made themselves — targets outside any PAL tree.
-  symlinkSync(resolve(HOME, "elsewhere"), resolve(PAL_SKILLS, "foreign"), "dir");
-  symlinkSync(resolve(HOME, "gone"), resolve(CLAUDE_SKILLS, "user-link"), "dir");
+  linkDir(resolve(HOME, "elsewhere"), resolve(PAL_SKILLS, "foreign"));
+  linkDir(resolve(HOME, "gone"), resolve(CLAUDE_SKILLS, "user-link"));
 });
 
 afterAll(() => {
