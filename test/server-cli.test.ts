@@ -1,8 +1,8 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { freshTestDir } from "./lib/test-home";
+import { freshTestDir, leftoverTestDirs } from "./lib/test-home";
 
 // The lifecycle is the only part of the server with real failure surface:
 // a process that outlives its shell has to be found again to be stopped, and
@@ -13,22 +13,34 @@ const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 let HOME: string;
 let PORT: number;
 
+beforeAll(stopServersLeftByLastRun);
+
 beforeEach(() => {
   if (HOME) pal("stop");
   HOME = freshTestDir(import.meta.file);
   PORT = 17000 + Math.floor(Math.random() * 2000);
 });
 
-function pal(...args: string[]) {
+function palIn(home: string, ...args: string[]) {
   return spawnSync("bun", ["run", CLI, "cli", "server", ...args], {
-    env: { ...process.env, PAL_HOME: HOME, PAL_SKIP_DOCTOR: "1" },
+    env: { ...process.env, PAL_HOME: home, PAL_SKIP_DOCTOR: "1" },
     encoding: "utf-8",
     timeout: 15000,
   });
 }
 
-function stateFile(): string {
-  return resolve(HOME, "server.json");
+function pal(...args: string[]) {
+  return palIn(HOME, ...args);
+}
+
+function stateFile(home = HOME): string {
+  return resolve(home, "server.json");
+}
+
+function stopServersLeftByLastRun(): void {
+  for (const home of leftoverTestDirs(import.meta.file)) {
+    if (existsSync(stateFile(home))) palIn(home, "stop");
+  }
 }
 
 function recordedPid(): number {
