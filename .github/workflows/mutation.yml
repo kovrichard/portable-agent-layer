@@ -15,7 +15,7 @@ jobs:
     # measures test strength, which is platform-independent. Running it three times
     # would triple the slowest job in the repo for no extra signal.
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
 
     env:
       PAL_SKIP_BROWSER_INSTALL: "1"
