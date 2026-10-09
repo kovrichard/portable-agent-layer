@@ -3,8 +3,9 @@ import { existsSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { testHome } from "./lib/test-home";
 
-const TEST_DIR = resolve(import.meta.dir, "../.test-home-paths");
+const TEST_DIR = testHome(import.meta.file);
 
 beforeAll(() => {
   removeOnceReleased(TEST_DIR);
@@ -41,6 +42,12 @@ describe("palHome", () => {
     delete process.env.PAL_HOME;
     const { palHome } = await import("../src/hooks/lib/paths");
     expect(palHome()).not.toBe(resolve(homedir(), ".pal"));
+  });
+
+  test("a test run without PAL_HOME stays inside the checkout's .test/", async () => {
+    delete process.env.PAL_HOME;
+    const { palHome } = await import("../src/hooks/lib/paths");
+    expect(palHome()).toBe(resolve(import.meta.dir, "../.test/pal-home"));
   });
 });
 
