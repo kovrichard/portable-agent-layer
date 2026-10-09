@@ -21,6 +21,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { linkDir } from "./helpers/links";
 
 type Mode = "package" | "repo";
 
@@ -132,7 +133,7 @@ function checkOut(root: string): string {
   for (const file of trackedAndNewFiles())
     cpSync(resolve(REPO, file), resolve(pkg, file), { verbatimSymlinks: true });
   mkdirSync(resolve(pkg, ".git"));
-  symlinkSync(resolve(REPO, "node_modules"), resolve(pkg, "node_modules"));
+  linkDir(resolve(REPO, "node_modules"), resolve(pkg, "node_modules"));
   const linked = sh(root, "bun link", pkg);
   if (!linked.ok) throw new Error(`bun link failed: ${linked.output}`);
   return pkg;
