@@ -168,6 +168,7 @@ export async function runStopHandlers(
   // any in-hook budget. These spawn detached bun subprocesses that run the
   // inference and write results to disk; they don't block this hook.
   await detachSessionIntelligence(transcript, options.sessionId);
+  await detachEntityExtraction(transcript, options.sessionId);
   await detachFailurePrinciple(transcript);
   detachAgenda(options.sessionId);
   // Failure auto-graduation is intentionally NOT wired here: every pattern it
@@ -322,6 +323,24 @@ async function detachSessionIntelligence(
     );
   } catch (err) {
     logError("detachSessionIntelligence", err);
+  }
+}
+
+async function detachEntityExtraction(
+  transcript: string,
+  sessionId?: string
+): Promise<void> {
+  if (!sessionId) return;
+  try {
+    const transcriptPath = await writeTranscriptTmp(transcript);
+    const scriptPath = resolve(assets.hooks(), "handlers", "entity-extraction.ts");
+    spawnDetachedInference(
+      scriptPath,
+      ["--run", sessionId, transcriptPath],
+      "entity-extraction"
+    );
+  } catch (err) {
+    logError("detachEntityExtraction", err);
   }
 }
 

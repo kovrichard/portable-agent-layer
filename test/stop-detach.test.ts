@@ -63,7 +63,12 @@ describe("runStopHandlers — Stop hook non-blocking contract", () => {
   // Each detached handler is spawned by path, so a rename is invisible to the
   // type checker and only shows up as a hook that quietly stopped running.
   test("every handler the stop hook spawns by path is on disk", () => {
-    const spawned = ["agenda", "session-intelligence", "failure-principle"];
+    const spawned = [
+      "agenda",
+      "session-intelligence",
+      "entity-extraction",
+      "failure-principle",
+    ];
     for (const name of spawned) {
       expect(
         existsSync(resolve(assets.hooks(), "handlers", `${name}.ts`)),

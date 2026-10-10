@@ -3,9 +3,10 @@ import { resolve } from "node:path";
 import { loadReflectNudge } from "../handlers/reflect-trigger";
 import { loadAlgorithmReviewNudge } from "./algorithm-review";
 import { loadAnalyzeNudge } from "./analyze-nudge";
+import { loadEntityReviewNudge } from "./entity-review";
 import { ensureDir, paths } from "./paths";
 import { loadReactionAuditNudge } from "./reaction-audit";
-import { isOptedIn } from "./settings";
+import { isEnabled, isOptedIn } from "./settings";
 import { localDay } from "./wall-clock";
 
 type ShownOn = Record<string, string>;
@@ -14,6 +15,7 @@ interface DueNudge {
   key: string;
   command: string;
   load: () => string;
+  enabled?: () => boolean;
 }
 
 const DUE_NUDGES: DueNudge[] = [
@@ -26,6 +28,27 @@ const DUE_NUDGES: DueNudge[] = [
   { key: "reflect", command: "/pal-reflect", load: loadReflectNudge },
   { key: "analyze", command: "/pal-analyze", load: loadAnalyzeNudge },
 ];
+
+function entityReviewNudge(): DueNudge {
+  return {
+    key: "entity-review",
+    command: "pal cli knowledge review",
+    load: loadEntityReviewNudge,
+    enabled: () => isEnabled("entityExtraction"),
+  };
+}
+
+function dueNudges(): DueNudge[] {
+  return [...DUE_NUDGES, entityReviewNudge()];
+}
+
+function dueRemindersOn(): boolean {
+  return isOptedIn("dueReminders");
+}
+
+function isSwitchedOn(nudge: DueNudge): boolean {
+  return (nudge.enabled ?? dueRemindersOn)();
+}
 
 function shownPath(): string {
   return resolve(ensureDir(paths.state()), "nudges-shown.json");
@@ -53,7 +76,7 @@ export function pendingToday(
 }
 
 export function acknowledgeMentioned(reply: string, now: Date = new Date()): void {
-  const mentioned = DUE_NUDGES.filter((nudge) => reply.includes(nudge.command));
+  const mentioned = dueNudges().filter((nudge) => reply.includes(nudge.command));
   if (!mentioned.length) return;
   const today = localDay(now);
   const shownOn = readShownOn();
@@ -62,10 +85,10 @@ export function acknowledgeMentioned(reply: string, now: Date = new Date()): voi
 }
 
 export function dueNudgeSections(now: Date = new Date()): string[] {
-  if (!isOptedIn("dueReminders")) return [];
-  return DUE_NUDGES.map((nudge) => pendingToday(nudge.key, nudge.load(), now)).filter(
-    Boolean
-  );
+  return dueNudges()
+    .filter(isSwitchedOn)
+    .map((nudge) => pendingToday(nudge.key, nudge.load(), now))
+    .filter(Boolean);
 }
 
 export function dueNudgeReminder(now: Date = new Date()): string | null {

@@ -29,7 +29,14 @@ import {
 
 // --- Public input shape -----------------------------------------------------
 
-export interface PersonInput {
+interface Addressing {
+  aliases?: string[] | null;
+  relation?: string | null;
+  /** The stored file to update, when its slug is not derived from the name or domain. */
+  slug?: string | null;
+}
+
+export interface PersonInput extends Addressing {
   name: string;
   role?: string | null;
   title?: string | null;
@@ -40,7 +47,7 @@ export interface PersonInput {
   [extra: string]: unknown;
 }
 
-export interface CompanyInput {
+export interface CompanyInput extends Addressing {
   name: string;
   domain?: string | null;
   industry?: string | null;
@@ -201,7 +208,17 @@ function newPersonEntity(input: PersonInput, slug: string): Entity {
   if (Object.keys(socials).length > 0) {
     fm.socials = Object.entries(socials).map(([k, v]) => `${k}:${v}`);
   }
-  return { domain: "People", slug, frontmatter: fm, body: "" };
+  return { domain: "People", slug, frontmatter: withAddressing(fm, input), body: "" };
+}
+
+/** How the user refers to an entity and stands towards it — both only ever grow. */
+function withAddressing(fm: EntityFrontmatter, input: Addressing): EntityFrontmatter {
+  const prior = Array.isArray(fm.aliases) ? (fm.aliases as string[]) : undefined;
+  const aliases = mergeStringArray(prior, input.aliases ?? undefined);
+  if (aliases.length > 0) fm.aliases = aliases;
+  const relation = mergeScalar(fm.relation, input.relation);
+  if (relation) fm.relation = relation;
+  return fm;
 }
 
 function newCompanyEntity(input: CompanyInput, slug: string): Entity {
@@ -220,7 +237,7 @@ function newCompanyEntity(input: CompanyInput, slug: string): Entity {
   if (input.industry) fm.industry = input.industry;
   if (input.mentioned_as) fm.mentioned_as = input.mentioned_as;
   if (input.sentiment) fm.sentiment = input.sentiment;
-  return { domain: "Companies", slug, frontmatter: fm, body: "" };
+  return { domain: "Companies", slug, frontmatter: withAddressing(fm, input), body: "" };
 }
 
 function mergePerson(prior: Entity, input: PersonInput): Entity {
@@ -248,7 +265,7 @@ function mergePerson(prior: Entity, input: PersonInput): Entity {
   if (Object.keys(socials).length > 0) {
     fm.socials = Object.entries(socials).map(([k, v]) => `${k}:${v}`);
   }
-  return { ...prior, frontmatter: fm };
+  return { ...prior, frontmatter: withAddressing(fm, input) };
 }
 
 function mergeCompany(prior: Entity, input: CompanyInput): Entity {
@@ -260,7 +277,7 @@ function mergeCompany(prior: Entity, input: CompanyInput): Entity {
   if (input.industry) {
     fm.tags = mergeStringArray(fm.tags, industryToTopicTags(input.industry));
   }
-  return { ...prior, frontmatter: fm };
+  return { ...prior, frontmatter: withAddressing(fm, input) };
 }
 
 function upsertPerson(
@@ -268,7 +285,7 @@ function upsertPerson(
   sourceId: string,
   rootDir?: string
 ): UpsertResult {
-  const slug = slugify(input.name);
+  const slug = input.slug || slugify(input.name);
   if (!slug) throw new Error(`ingest: cannot slugify person name "${input.name}"`);
   const prior = load("People", slug, rootDir);
   const created = prior === null;
@@ -294,7 +311,7 @@ function upsertCompany(
   rootDir?: string
 ): UpsertResult {
   const baseKey = input.domain?.trim() ? input.domain : input.name;
-  const slug = slugify(baseKey);
+  const slug = input.slug || slugify(baseKey);
   if (!slug) throw new Error(`ingest: cannot slugify company "${input.name}"`);
   const prior = load("Companies", slug, rootDir);
   const created = prior === null;

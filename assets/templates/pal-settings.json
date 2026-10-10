@@ -33,6 +33,8 @@
     "claimCheck": true,
     "claimCheckBlocks": false,
     "adaptationRules": true,
+    "entityCards": true,
+    "entityExtraction": true,
     "steeringTestReport": false
   },
   "steering": {
