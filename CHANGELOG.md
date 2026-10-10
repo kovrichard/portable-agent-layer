@@ -1,3 +1,20 @@
+# [0.93.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.92.0...v0.93.0) (2026-10-10)
+
+
+### Bug Fixes
+
+* **inference:** run Copilot without tools so a background call can't act ([415ac9d](https://github.com/kovrichard/portable-agent-layer/commit/415ac9dfbf3be9596e077fe0485167b87f9faf68))
+
+
+### Features
+
+* **knowledge:** learn people and companies from chat, with a review queue ([c3ce095](https://github.com/kovrichard/portable-agent-layer/commit/c3ce0955b6d19799bbfff93b5dc5730e307ab12f))
+
+
+### Performance Improvements
+
+* **knowledge:** keep entity code out of module load for mutation testing ([dccbf0b](https://github.com/kovrichard/portable-agent-layer/commit/dccbf0bb3d7a8061e231a11fd6c238d7bdc1c575))
+
 # [0.92.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.91.8...v0.92.0) (2026-10-10)
 
 
