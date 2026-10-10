@@ -23,6 +23,7 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
+import { z } from "zod";
 import {
   getActiveAgent,
   isAntigravity,
@@ -151,7 +152,7 @@ interface InferenceOptions {
   tier?: InferenceTier;
   maxTokens?: number;
   timeout?: number;
-  /** JSON schema for structured output — guarantees valid JSON matching the schema */
+  /** JSON schema the reply must match; a reply that doesn't fails with the reason */
   jsonSchema?: Record<string, unknown>;
   /** Opaque label identifying the calling handler — appears in debug logs as caller=X */
   caller?: string;
@@ -167,7 +168,34 @@ interface InferenceResult {
   usage?: { inputTokens: number; outputTokens: number };
 }
 
+function schemaProblem(
+  output: string,
+  schema: Record<string, unknown>
+): string | undefined {
+  const checked = z.fromJSONSchema(schema).safeParse(parseJsonFromOutput(output));
+  if (checked.success) return undefined;
+  return checked.error.issues
+    .map((issue) => `${issue.path.join(".") || "reply"}: ${issue.message}`)
+    .join("; ");
+}
+
 export async function inference(opts: InferenceOptions): Promise<InferenceResult> {
+  const result = await routeInference(opts);
+  if (!opts.jsonSchema || !result.success || !result.output) return result;
+  const problem = schemaProblem(result.output, opts.jsonSchema);
+  if (!problem) return result;
+  logError(
+    "inference",
+    `caller=${opts.caller ?? "anonymous"} schema mismatch: ${problem}`
+  );
+  return {
+    ...result,
+    success: false,
+    error: `the reply does not match the schema: ${problem}`,
+  };
+}
+
+async function routeInference(opts: InferenceOptions): Promise<InferenceResult> {
   // Hard kill-switch — set by the test suite to guarantee no real inference
   // ever fires from tests (no spawn, no API call). Production code never sets it.
   if (process.env.PAL_INFERENCE_DISABLED === "1") {

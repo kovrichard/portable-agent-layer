@@ -368,6 +368,25 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
     expect(result.success).toBe(true);
     expect(JSON.parse(result.output ?? "{}")).toEqual({ verdict: "good" });
   });
+
+  test("a JSON reply that breaks the schema fails and names the field", async () => {
+    writeFakeBin(tmpBin, "claude", `console.log('{"verdict":7,"extra":true}');\n`);
+    prependPath(tmpBin);
+
+    const result = await inference({
+      user: "rate this",
+      jsonSchema: {
+        type: "object",
+        additionalProperties: false,
+        required: ["verdict"],
+        properties: { verdict: { type: "string" } },
+      },
+      timeout: 5000,
+    });
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("verdict");
+    expect(result.error).toContain("extra");
+  });
 });
 
 describe("logPromptSnapshot", () => {

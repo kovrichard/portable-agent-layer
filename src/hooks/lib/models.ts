@@ -9,7 +9,8 @@ export const HAIKU_5_5_MODEL = "claude-haiku-5-5";
 export const SONNET_MODEL = "claude-sonnet-5";
 export const FABLE_MODEL = "claude-fable-5";
 
-export type InferenceTier = "small" | "medium";
+export const INFERENCE_TIERS = ["small", "medium"] as const;
+export type InferenceTier = (typeof INFERENCE_TIERS)[number];
 
 export type FixedModelRoute =
   | "claude-spawn"
