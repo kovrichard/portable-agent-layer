@@ -35,7 +35,7 @@ jobs:
           # Pinned, not floated: bun 1.3.14 changed async-promise cleanup in a way that
           # broke the Stryker bun runner, which held this at 1.3.13 until 1.4.0 ran a
           # mutation pass clean again. Re-check with a local `stryker run` before moving it.
-          bun-version: "1.4.2"
+          bun-version: "1.4.3"
 
       - name: Install dependencies
         # No lifecycle scripts, so no dependency can run arbitrary code on install.
