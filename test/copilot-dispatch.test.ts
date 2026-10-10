@@ -43,7 +43,25 @@ describe("buildCopilotArgs", () => {
     expect(args).toContain("--disable-builtin-mcps");
     expect(args).toContain("--no-auto-update");
     expect(args).toContain("--no-color");
-    expect(args).toContain("--allow-all-tools");
+  });
+
+  // With every tool allowed, an inference child loaded the entities skill and
+  // wrote contacts into the real knowledge store instead of answering.
+  test("the child can see no tool and may not run a shell, write a file or open a URL", () => {
+    const args = buildCopilotArgs({ user: "hi" });
+    expect(args).toContain("--available-tools=none");
+    expect(args).toEqual(
+      expect.arrayContaining([
+        "--deny-tool=shell",
+        "--deny-tool=write",
+        "--deny-tool=url",
+      ])
+    );
+    expect(args).not.toContain("--allow-all-tools");
+  });
+
+  test("prints only the reply, without tool notices or usage stats", () => {
+    expect(buildCopilotArgs({ user: "hi" })).toContain("--silent");
   });
 
   test("no argv element carries the prompt or a newline", () => {

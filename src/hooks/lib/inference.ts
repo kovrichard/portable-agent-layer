@@ -580,8 +580,10 @@ async function inferenceViaAntigravitySpawn(
  *   --disable-builtin-mcps    → no MCP servers in the child (extra safety)
  *   --no-auto-update          → prevent CLI self-update from delaying the spawn
  *   --no-color                → clean stdout for capture
- *   --allow-all-tools         → REQUIRED for non-interactive mode (without it,
- *                                copilot prompts for tool-use confirmation)
+ *   --available-tools=none    → Copilot has no "no tools" flag; an allowlist
+ *                                naming an unknown tool hides every tool
+ *   --deny-tool=…             → backstop: deny rules win over any allow rule
+ *   --silent                  → keeps the tool-filter notices out of stdout
  *
  * Copilot has no --system-prompt flag, so system + user + JSON-schema are
  * concatenated into one prompt delivered on stdin. `-p/--prompt` is deliberately
@@ -595,7 +597,11 @@ export function buildCopilotArgs(_opts: InferenceOptions): string[] {
     "--disable-builtin-mcps",
     "--no-auto-update",
     "--no-color",
-    "--allow-all-tools",
+    "--silent",
+    "--available-tools=none",
+    "--deny-tool=shell",
+    "--deny-tool=write",
+    "--deny-tool=url",
   ];
 }
 
