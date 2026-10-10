@@ -105,4 +105,13 @@ describe("pal cli infer", () => {
     expect(calls).toEqual([]);
     expect(printed.err.join("\n")).toContain("small, medium");
   });
+
+  test("refuses a schema it could not check a reply against, before inferring", async () => {
+    const { calls, infer } = recording({ success: true, output: "{}" });
+    const values = { schema: file("schema.json", '{"type":"nonsense"}') };
+
+    expect(await inferFromCli(values, "q", infer)).toBe(1);
+    expect(calls).toEqual([]);
+    expect(printed.err.join("\n")).toContain("Unsupported type: nonsense");
+  });
 });

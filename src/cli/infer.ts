@@ -5,6 +5,7 @@
  */
 
 import { readFileSync } from "node:fs";
+import { z } from "zod";
 import { inference } from "../hooks/lib/inference";
 import { INFERENCE_TIERS, type InferenceTier } from "../hooks/lib/models";
 import { leaf } from "../tools/lib/command";
@@ -47,13 +48,29 @@ function promptOf(stdin: string): string {
   return prompt;
 }
 
-function schemaFrom(path: string | undefined): Record<string, unknown> | undefined {
-  if (!path) return undefined;
+function readSchema(path: string): Record<string, unknown> {
   try {
     return JSON.parse(readFileSync(path, "utf-8"));
   } catch {
     throw new InferInputError(`--schema ${path} is not a readable JSON file.`);
   }
+}
+
+function assertCheckable(path: string, schema: Record<string, unknown>): void {
+  try {
+    z.fromJSONSchema(schema);
+  } catch (err) {
+    throw new InferInputError(
+      `--schema ${path} cannot be checked: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+}
+
+function schemaFrom(path: string | undefined): Record<string, unknown> | undefined {
+  if (!path) return undefined;
+  const schema = readSchema(path);
+  assertCheckable(path, schema);
+  return schema;
 }
 
 function requestFrom(values: InferValues, stdin: string): Parameters<Infer>[0] {
@@ -69,7 +86,7 @@ function requestFrom(values: InferValues, stdin: string): Parameters<Infer>[0] {
 
 function failureReason(result: Awaited<ReturnType<Infer>>, wantedJson: boolean): string {
   if (result.error) return result.error;
-  if (wantedJson && result.output) return "the reply was not JSON matching the schema";
+  if (wantedJson && result.output) return "the reply was not JSON";
   return "no inference route answered (run `pal cli doctor`)";
 }
 
@@ -108,7 +125,7 @@ export const inferCommand = leaf({
     schema: {
       type: "string",
       value: "<file>",
-      description: "JSON schema file; the reply is JSON matching it",
+      description: "JSON schema file; a reply that doesn't match it fails",
     },
     timeout: {
       type: "string",
