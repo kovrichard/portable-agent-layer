@@ -1,3 +1,14 @@
+# [0.94.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.93.0...v0.94.0) (2026-10-10)
+
+
+### Features
+
+* **cli:** pal cli infer --web lets the model search the web ([217c62e](https://github.com/kovrichard/portable-agent-layer/commit/217c62eede5c4f022c314f0a945ac6498132f45d))
+* **inference:** let a call search the web and do nothing else ([481f263](https://github.com/kovrichard/portable-agent-layer/commit/481f263cd9004cdcd2189266d44ef6d8c37a40ca))
+* **knowledge:** look up new companies and contacts on Wikipedia for review ([213de19](https://github.com/kovrichard/portable-agent-layer/commit/213de190a034a46e7b57231a81b4637d7eb5379e))
+* **knowledge:** research new companies and contacts on the web for review ([74f0de4](https://github.com/kovrichard/portable-agent-layer/commit/74f0de47c2c76853789cb6b9ceb5e43d001b63a4))
+* **skills:** research-entity runs pal cli knowledge research ([22e8f30](https://github.com/kovrichard/portable-agent-layer/commit/22e8f306e456d78785c0d09db9c05f60b0efe215))
+
 # [0.93.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.92.0...v0.93.0) (2026-10-10)
 
 
