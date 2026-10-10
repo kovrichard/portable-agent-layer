@@ -1,3 +1,12 @@
+# [0.92.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.91.8...v0.92.0) (2026-10-10)
+
+
+### Features
+
+* **cli:** refuse an infer schema that cannot be checked ([f90b43d](https://github.com/kovrichard/portable-agent-layer/commit/f90b43d41f7ca7b453950c851acd8b4ceadaa253))
+* **cli:** run one inference call with pal cli infer ([7cdddf0](https://github.com/kovrichard/portable-agent-layer/commit/7cdddf090e6903f484dfb3678c8ceee9c65708f3))
+* **inference:** fail a reply that does not match its JSON schema ([3b016b1](https://github.com/kovrichard/portable-agent-layer/commit/3b016b19ad5aa7c49b5f38a84e86d2965d8d6a0e))
+
 ## [0.91.8](https://github.com/kovrichard/portable-agent-layer/compare/v0.91.7...v0.91.8) (2026-10-09)
 
 
