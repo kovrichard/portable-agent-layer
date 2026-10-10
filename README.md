@@ -85,6 +85,7 @@ pal cli status        # check your setup
 | `pal cli migrate` | Run pending data migrations (non-destructive) |
 | `pal cli analyze [--actionable]` | Learning analysis: rating trends, failure patterns, graduation candidates |
 | `pal cli usage` | Summarize token usage and estimated cost |
+| `pal cli infer` | One model call for scripts and bots, on the active agent's route: prompt on stdin, reply on stdout. `--tier small\|medium`, `--system <file>`, `--schema <file>` for a JSON reply checked against it, `--timeout <seconds>`. The call loads no PAL hooks or context; exits 1 with the reason when no route answers |
 | `pal cli actor [label <name>]` | Show or rename the actor — who caused a record. Travels with an export, so a shared memory can tell two people apart |
 | `pal cli machine [label <name>]` | Show or rename this install — where a record was written. Never leaves the machine |
 | `pal cli telos` | Which TELOS topics are answered, in interview order, and which one comes next |

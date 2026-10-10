@@ -15,6 +15,7 @@ import {
 } from "../tools/lib/command";
 import { builtinTools, builtinToolVerbs } from "./builtin-tools";
 import { identityCommand } from "./identity";
+import { inferCommand } from "./infer";
 import { knowledgeCommand } from "./knowledge";
 import { ledgerCommand } from "./ledger-command";
 import { runMigrate } from "./migrate";
@@ -150,6 +151,7 @@ export function cliTree(admin: AdminHandlers): Group {
     commands: {
       ...adminCommands(admin),
       usage: usageCommand,
+      infer: inferCommand,
       actor: identityCommand("actor"),
       machine: identityCommand("machine"),
       telos: telosCommand,
