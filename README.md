@@ -208,7 +208,9 @@ PAL ships with built-in skills that extend your agent's capabilities:
 | `presentation` | Build branded slide decks from outlines |
 | `projects` | Look up, resume, register, or manage tracked projects |
 | `reflect` | Diagnose why a PAL behavior didn't trigger |
-| `rule-review` | Approve or deny the rules PAL drafted from your corrections || `telos` | Inspect or update goals, beliefs, strategies, narratives |
+| `research-entity` | Research a company or person on the web: links, registry entry, recent news |
+| `rule-review` | Approve or deny the rules PAL drafted from your corrections |
+| `telos` | Inspect or update goals, beliefs, strategies, narratives |
 | `think` | Structured first-pass reasoning on a problem |
 
 ---
