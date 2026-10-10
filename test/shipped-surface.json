@@ -286,6 +286,7 @@
     "home/memory/pal-settings.json#dynamicContext.dueReminders",
     "home/memory/pal-settings.json#dynamicContext.entityCards",
     "home/memory/pal-settings.json#dynamicContext.entityExtraction",
+    "home/memory/pal-settings.json#dynamicContext.entityLookup",
     "home/memory/pal-settings.json#dynamicContext.failurePatterns",
     "home/memory/pal-settings.json#dynamicContext.handoff",
     "home/memory/pal-settings.json#dynamicContext.interactionAwareness",

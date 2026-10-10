@@ -623,17 +623,22 @@ function reviewReason(reason: ReviewItem["reason"]): string {
     ambiguous: "could be more than one known entry",
     "unknown-existing": "named an entry the store does not have",
     "first-name-only": "first name only",
+    "web-profile": "found on Wikipedia",
   };
   return reasons[reason];
 }
 
+function reviewDetails(item: ReviewItem): string[] {
+  if (item.profile)
+    return [item.profile.website, `for ${item.entity.existing}`].filter(Boolean);
+  return item.candidates.length > 0 ? [`could be: ${item.candidates.join(", ")}`] : [];
+}
+
 function reviewLines(item: ReviewItem): string[] {
   const { kind, name, fact } = item.entity;
-  const candidates =
-    item.candidates.length > 0 ? `could be: ${item.candidates.join(", ")}` : "";
   return [
     `  ${item.id}  ${kind} "${name}" — ${reviewReason(item.reason)}`,
-    ...[fact, candidates, `from ${item.source}`]
+    ...[fact, ...reviewDetails(item), `from ${item.source}`]
       .filter(Boolean)
       .map((line) => `            ${line}`),
   ];

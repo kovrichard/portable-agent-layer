@@ -35,13 +35,21 @@ export interface ExtractedEntity {
   fact: string;
 }
 
+export interface WebProfile {
+  summary: string;
+  description: string;
+  website: string;
+  url: string;
+}
+
 export interface ReviewItem {
   ts: string;
   source: string;
   id: string;
-  reason: "ambiguous" | "unknown-existing" | "first-name-only";
+  reason: "ambiguous" | "unknown-existing" | "first-name-only" | "web-profile";
   entity: ExtractedEntity;
   candidates: string[];
+  profile?: WebProfile;
 }
 
 export interface ExtractionPlan {
@@ -49,7 +57,7 @@ export interface ExtractionPlan {
   review: ReviewItem[];
 }
 
-function closedObject<P extends Record<string, unknown>>(properties: P) {
+export function closedObject<P extends Record<string, unknown>>(properties: P) {
   return {
     type: "object" as const,
     additionalProperties: false,

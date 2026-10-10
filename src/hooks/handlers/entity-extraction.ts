@@ -1,7 +1,8 @@
 /**
  * Stop handler: learn the people and companies the user mentioned since the last
- * stop, so the prompt-time cards know them next time. Runs detached; one model
- * call at most, and only when the new text names someone.
+ * stop, so the prompt-time cards know them next time, and look the new ones up on
+ * Wikipedia for review. Runs detached; one extraction call, only when the new text
+ * names someone, and one call per entry looked up.
  */
 
 import { ingestEntities } from "../../tools/knowledge/ingest";
@@ -18,6 +19,7 @@ import {
   unseenUserText,
   worthExtracting,
 } from "../lib/entity-extraction";
+import { lookUpNewEntities, lookupDeps, newLookupTargets } from "../lib/entity-lookup";
 import { canInfer, inference } from "../lib/inference";
 import { logDebug, logError } from "../lib/log";
 import { identity, isEnabled } from "../lib/settings";
@@ -65,6 +67,11 @@ export async function extractSessionEntities(
     "entity-extraction",
     `${written.people.length} people, ${written.companies.length} companies, ${plan.review.length} for review`
   );
+  if (isEnabled("entityLookup"))
+    await lookUpNewEntities(
+      newLookupTargets(plan.ingest, written),
+      lookupDeps(id.principal.name, inference)
+    );
 }
 
 if (process.argv[2] === "--run") {
