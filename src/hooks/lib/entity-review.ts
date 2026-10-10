@@ -7,8 +7,8 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { type IngestInput, ingestEntities } from "../../tools/knowledge/ingest";
 import { loadKnownEntities, loadNameIndex } from "./entity-cards";
 import { ingestInput, type ReviewItem, reviewQueueFile } from "./entity-extraction";
-import { profileIngest } from "./entity-lookup";
 import { indexedEntities, type NamedEntity, type NameIndex } from "./entity-names";
+import { profileIngest } from "./entity-research";
 
 export interface AcceptChoice {
   as?: string;
@@ -81,7 +81,7 @@ function acceptedInput(
   const target = chosenEntity(item, choice.as ?? item.entity.existing, index);
   return profileIngest(
     { ...item, entity: { ...item.entity, existing: target?.slug ?? "" } },
-    target?.title ?? item.entity.name
+    target?.title ?? choice.name ?? item.entity.name
   );
 }
 

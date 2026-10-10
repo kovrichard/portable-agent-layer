@@ -35,7 +35,7 @@
     "adaptationRules": true,
     "entityCards": true,
     "entityExtraction": true,
-    "entityLookup": true,
+    "entityResearch": false,
     "steeringTestReport": false
   },
   "steering": {

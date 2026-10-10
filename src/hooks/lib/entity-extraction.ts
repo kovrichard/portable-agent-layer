@@ -35,11 +35,25 @@ export interface ExtractedEntity {
   fact: string;
 }
 
-export interface WebProfile {
+export interface ResearchProfile {
+  match: "sure" | "unsure" | "none";
   summary: string;
-  description: string;
+  role: string;
+  organization: string;
   website: string;
-  url: string;
+  linkedin: string;
+  socials: { platform: string; url: string }[];
+  registry: {
+    name: string;
+    number: string;
+    taxNumber: string;
+    seat: string;
+    status: string;
+    managers: string[];
+    url: string;
+  };
+  news: { date: string; title: string; url: string }[];
+  sources: string[];
 }
 
 export interface ReviewItem {
@@ -49,7 +63,7 @@ export interface ReviewItem {
   reason: "ambiguous" | "unknown-existing" | "first-name-only" | "web-profile";
   entity: ExtractedEntity;
   candidates: string[];
-  profile?: WebProfile;
+  profile?: ResearchProfile;
 }
 
 export interface ExtractionPlan {

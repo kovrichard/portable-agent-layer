@@ -7,6 +7,7 @@
 
 import { readFileSync } from "node:fs";
 import type { ReviewItem } from "../hooks/lib/entity-extraction";
+import { renderProfile } from "../hooks/lib/entity-research";
 import {
   type AcceptChoice,
   acceptReview,
@@ -34,6 +35,7 @@ import {
   type Status,
 } from "../tools/knowledge/lib";
 import { group, leaf, runCommand, UsageError } from "../tools/lib/command";
+import { researchCommand } from "./knowledge-research";
 
 const VOCABULARY = `Domains: ${DOMAINS.join(", ")}
 Relation types: ${RELATION_TYPES.join(", ")}`;
@@ -120,6 +122,7 @@ export const knowledgeCommand = group({
       },
       run: ({ values }) => cmdIngest(values.source ?? "manual", values.file),
     }),
+    research: researchCommand,
     review: group({
       summary: "People and companies the background extractor would not guess",
       fallback: "list",
@@ -623,22 +626,27 @@ function reviewReason(reason: ReviewItem["reason"]): string {
     ambiguous: "could be more than one known entry",
     "unknown-existing": "named an entry the store does not have",
     "first-name-only": "first name only",
-    "web-profile": "found on Wikipedia",
+    "web-profile": "found on the web",
   };
   return reasons[reason];
 }
 
 function reviewDetails(item: ReviewItem): string[] {
   if (item.profile)
-    return [item.profile.website, `for ${item.entity.existing}`].filter(Boolean);
-  return item.candidates.length > 0 ? [`could be: ${item.candidates.join(", ")}`] : [];
+    return [
+      item.entity.existing ? `for ${item.entity.existing}` : "as a new entry",
+      ...renderProfile(item.profile).split("\n"),
+    ];
+  const candidates =
+    item.candidates.length > 0 ? [`could be: ${item.candidates.join(", ")}`] : [];
+  return [item.entity.fact, ...candidates, `from ${item.source}`];
 }
 
 function reviewLines(item: ReviewItem): string[] {
-  const { kind, name, fact } = item.entity;
+  const { kind, name } = item.entity;
   return [
     `  ${item.id}  ${kind} "${name}" — ${reviewReason(item.reason)}`,
-    ...[fact, ...reviewDetails(item), `from ${item.source}`]
+    ...reviewDetails(item)
       .filter(Boolean)
       .map((line) => `            ${line}`),
   ];

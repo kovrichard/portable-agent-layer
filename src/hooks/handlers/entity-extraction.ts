@@ -1,8 +1,8 @@
 /**
  * Stop handler: learn the people and companies the user mentioned since the last
- * stop, so the prompt-time cards know them next time, and look the new ones up on
- * Wikipedia for review. Runs detached; one extraction call, only when the new text
- * names someone, and one call per entry looked up.
+ * stop, so the prompt-time cards know them next time, and research the new ones on
+ * the web for review. Runs detached; one extraction call, only when the new text
+ * names someone, and one web research call per new entry.
  */
 
 import { ingestEntities } from "../../tools/knowledge/ingest";
@@ -19,10 +19,10 @@ import {
   unseenUserText,
   worthExtracting,
 } from "../lib/entity-extraction";
-import { lookUpNewEntities, lookupDeps, newLookupTargets } from "../lib/entity-lookup";
+import { newResearchTargets, researchNewEntities } from "../lib/entity-research";
 import { canInfer, inference } from "../lib/inference";
 import { logDebug, logError } from "../lib/log";
-import { identity, isEnabled } from "../lib/settings";
+import { identity, isEnabled, isOptedIn } from "../lib/settings";
 import { logTokenUsage } from "../lib/token-usage";
 import { parseMessages } from "../lib/transcript";
 
@@ -67,11 +67,11 @@ export async function extractSessionEntities(
     "entity-extraction",
     `${written.people.length} people, ${written.companies.length} companies, ${plan.review.length} for review`
   );
-  if (isEnabled("entityLookup"))
-    await lookUpNewEntities(
-      newLookupTargets(plan.ingest, written),
-      lookupDeps(id.principal.name, inference)
-    );
+  if (isOptedIn("entityResearch"))
+    await researchNewEntities(newResearchTargets(plan.ingest, written), {
+      principal: id.principal.name,
+      infer: inference,
+    });
 }
 
 if (process.argv[2] === "--run") {
