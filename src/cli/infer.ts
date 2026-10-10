@@ -18,6 +18,7 @@ interface InferValues {
   schema?: string;
   timeout?: string;
   caller?: string;
+  web?: boolean;
 }
 
 type Infer = typeof inference;
@@ -81,6 +82,7 @@ function requestFrom(values: InferValues, stdin: string): Parameters<Infer>[0] {
     tier: tierOf(values.tier),
     timeout: timeoutMs(values.timeout),
     caller: values.caller ?? "cli-infer",
+    web: values.web ?? false,
   };
 }
 
@@ -136,6 +138,10 @@ export const inferCommand = leaf({
       type: "string",
       value: "<label>",
       description: "Label for PAL's debug log",
+    },
+    web: {
+      type: "boolean",
+      description: "Let the model search and read the web (Claude, Codex, Copilot)",
     },
   },
   run: async ({ values }) => inferFromCli(values, await Bun.stdin.text()),

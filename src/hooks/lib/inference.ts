@@ -134,6 +134,13 @@ function previewRoute(): RoutePreview {
 }
 
 /** True if any inference path is currently usable (subscription CLI OR API key). */
+/** Routes whose CLI can be limited to web search and fetch alone. */
+function canSearchWeb(): boolean {
+  if (isClaude() && hasClaudeBinary()) return true;
+  if (isCodex() && hasCodexBinary()) return true;
+  return isCopilot() && hasCopilotBinary();
+}
+
 export function canInfer(): boolean {
   if (isClaude() && hasClaudeBinary()) return true;
   if (isCodex() && hasCodexBinary()) return true;
@@ -158,6 +165,8 @@ interface InferenceOptions {
   caller?: string;
   /** Session ID the call is associated with — appears in debug logs as sessionId=X */
   sessionId?: string;
+  /** Let the model search and read the web, and nothing else; a route that can't fails */
+  web?: boolean;
 }
 
 interface InferenceResult {
@@ -210,6 +219,10 @@ async function routeInference(opts: InferenceOptions): Promise<InferenceResult> 
   const caller = opts.caller ?? "anonymous";
   const session = opts.sessionId ?? "-";
   const tag = `caller=${caller} sessionId=${session}`;
+  if (opts.web && !canSearchWeb()) {
+    logDebug("inference", `${tag} refuse: no web route agent=${agent}`);
+    return { success: false, error: `web research is not available on ${agent} yet` };
+  }
   if (isClaude()) {
     const bin = getClaudeBinary();
     if (bin) {
@@ -342,6 +355,15 @@ function hasAntigravityBinary(): boolean {
  * line. System, user and any JSON-schema instruction all travel together on
  * stdin instead, the same way every other agent receives them.
  */
+const CLAUDE_WEB_TOOLS = "WebSearch,WebFetch";
+
+/** --tools alone makes the web tools visible; --allowed-tools spares them the prompt. */
+function claudeTools(opts: InferenceOptions): string[] {
+  return opts.web
+    ? ["--tools", CLAUDE_WEB_TOOLS, "--allowed-tools", CLAUDE_WEB_TOOLS]
+    : ["--tools", ""];
+}
+
 export function buildClaudeArgs(
   opts: InferenceOptions,
   systemPromptFile?: string
@@ -350,8 +372,7 @@ export function buildClaudeArgs(
     "--print",
     "--model",
     modelFor("claude-spawn", opts),
-    "--tools",
-    "",
+    ...claudeTools(opts),
     "--output-format",
     "text",
     "--setting-sources",
@@ -447,6 +468,7 @@ export function buildCodexArgs(opts: InferenceOptions): string[] {
     "--sandbox",
     "read-only",
     "--ephemeral",
+    ...(opts.web ? ["-c", "web_search=live"] : []),
   ];
 }
 
@@ -584,6 +606,8 @@ async function inferenceViaAntigravitySpawn(
  *                                naming an unknown tool hides every tool
  *   --deny-tool=…             → backstop: deny rules win over any allow rule
  *   --silent                  → keeps the tool-filter notices out of stdout
+ *   web: only web_fetch, pre-approved for every URL; Copilot has no search tool,
+ *        so it fetches search pages itself
  *
  * Copilot has no --system-prompt flag, so system + user + JSON-schema are
  * concatenated into one prompt delivered on stdin. `-p/--prompt` is deliberately
@@ -591,18 +615,23 @@ async function inferenceViaAntigravitySpawn(
  * survive cmd.exe when Bun.spawn resolves copilot to its Windows .cmd shim.
  * Piping stdin keeps copilot non-interactive, so dropping -p costs nothing.
  */
-export function buildCopilotArgs(_opts: InferenceOptions): string[] {
+export function buildCopilotArgs(opts: InferenceOptions): string[] {
   return [
     "--no-custom-instructions",
     "--disable-builtin-mcps",
     "--no-auto-update",
     "--no-color",
     "--silent",
-    "--available-tools=none",
+    ...copilotTools(opts),
     "--deny-tool=shell",
     "--deny-tool=write",
-    "--deny-tool=url",
   ];
+}
+
+function copilotTools(opts: InferenceOptions): string[] {
+  return opts.web
+    ? ["--available-tools=web_fetch", "--allow-tool=web_fetch", "--allow-all-urls"]
+    : ["--available-tools=none", "--deny-tool=url"];
 }
 
 /**

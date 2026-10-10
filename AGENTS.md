@@ -113,6 +113,19 @@ Two klint rules hold the line, both scoped to `src/hooks/*.ts` alone: no unexpor
 out of scope — a handler exports its entry point, so its private helpers are ordinary
 encapsulation.
 
+### Every capability is a `pal cli` command
+
+Skills, hooks, the control room and outside programs reach PAL through `pal cli …`,
+never through a raw script path (`bun …/tools/x.ts`) or a direct agent call
+(`claude -p`, `codex exec`, `copilot`). The command owns the platform and agent
+differences: which agent is active, its flags, its model per tier, Windows shims.
+`pal cli infer` is the pattern: one command, every agent's route resolved inside.
+
+So a new capability ships as a `pal cli` command first, and a skill that uses it only
+says which command to run. When the active agent cannot do something (no web search,
+say), the command says so plainly instead of degrading silently. Existing raw script
+calls move behind `pal cli` as they are touched.
+
 ### Other house rules (already enforced by tooling)
 
 - No assignment in expressions (e.g. `while ((m = re.exec(s)) !== null)` — Biome catches it; use `Array.from(s.matchAll(re), ...)` or `for (const m of s.matchAll(re))`).

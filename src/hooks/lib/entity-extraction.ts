@@ -35,13 +35,35 @@ export interface ExtractedEntity {
   fact: string;
 }
 
+export interface ResearchProfile {
+  match: "sure" | "unsure" | "none";
+  summary: string;
+  role: string;
+  organization: string;
+  website: string;
+  linkedin: string;
+  socials: { platform: string; url: string }[];
+  registry: {
+    name: string;
+    number: string;
+    taxNumber: string;
+    seat: string;
+    status: string;
+    managers: string[];
+    url: string;
+  };
+  news: { date: string; title: string; url: string }[];
+  sources: string[];
+}
+
 export interface ReviewItem {
   ts: string;
   source: string;
   id: string;
-  reason: "ambiguous" | "unknown-existing" | "first-name-only";
+  reason: "ambiguous" | "unknown-existing" | "first-name-only" | "web-profile";
   entity: ExtractedEntity;
   candidates: string[];
+  profile?: ResearchProfile;
 }
 
 export interface ExtractionPlan {
@@ -49,7 +71,7 @@ export interface ExtractionPlan {
   review: ReviewItem[];
 }
 
-function closedObject<P extends Record<string, unknown>>(properties: P) {
+export function closedObject<P extends Record<string, unknown>>(properties: P) {
   return {
     type: "object" as const,
     additionalProperties: false,

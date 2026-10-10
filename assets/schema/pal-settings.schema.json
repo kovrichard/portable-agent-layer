@@ -106,6 +106,10 @@
           "type": "boolean",
           "description": "After a session stops, ask a background model which people and companies your own messages mentioned, and write clear matches and new full names to the knowledge store with the message as source. A name that could be more than one entry, or a first name alone, waits for `pal cli knowledge review` instead."
         },
+        "entityResearch": {
+          "type": "boolean",
+          "description": "Opt-in, off by default. When extraction creates a company, or a person with a known organization, research it on the web through the active agent (up to three per stop): website, LinkedIn, social accounts, the company registry entry, recent news, each with its source. A profile the model is sure of waits in `pal cli knowledge review`; accepting writes it to the entry. The name and what you said about it reach the agent's web search. Claude Code, Codex and Copilot only. Needs entityExtraction."
+        },
         "steeringTestReport": { "type": "boolean", "description": "When true, the assistant notes to the user which steering self-check fired. For the dual-live test period; ships false." }
       }
     },

@@ -15,6 +15,7 @@ type TokenCaller =
   | "session-name"
   | "session-intelligence"
   | "entity-extraction"
+  | "entity-research"
   | "relationship"
   | "self-model"
   | "agenda-serves"

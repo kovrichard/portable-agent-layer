@@ -79,6 +79,14 @@ describe("pal cli infer", () => {
     expect(calls[0].timeout).toBe(90_000);
   });
 
+  test("lets the model search the web only when asked to", async () => {
+    const { calls, infer } = recording({ success: true, output: "ok" });
+
+    await inferFromCli({}, "q", infer);
+    await inferFromCli({ web: true }, "q", infer);
+    expect(calls.map((c) => c.web)).toEqual([false, true]);
+  });
+
   test("exits 1 with the route's error when inference fails", async () => {
     const { infer } = recording({ success: false, error: "not logged in" });
 

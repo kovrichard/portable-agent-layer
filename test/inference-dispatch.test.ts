@@ -424,6 +424,66 @@ describe("logPromptSnapshot", () => {
   });
 });
 
+describe("web research", () => {
+  const web = { user: "find it", web: true };
+
+  test("claude sees and may use web search and fetch, and no other tool", () => {
+    const args = buildClaudeArgs(web);
+    expect(args[args.indexOf("--tools") + 1]).toBe("WebSearch,WebFetch");
+    expect(args[args.indexOf("--allowed-tools") + 1]).toBe("WebSearch,WebFetch");
+    expect(buildClaudeArgs({ user: "hi" })).not.toContain("--allowed-tools");
+  });
+
+  test("codex turns on live search and stays in its read-only sandbox", () => {
+    const args = buildCodexArgs(web);
+    expect(args[args.indexOf("-c") + 1]).toBe("web_search=live");
+    expect(args[args.indexOf("--sandbox") + 1]).toBe("read-only");
+    expect(buildCodexArgs({ user: "hi" })).not.toContain("web_search=live");
+  });
+
+  test("copilot may only fetch web pages, and still not run a shell or write", () => {
+    const args = buildCopilotArgs(web);
+    expect(args).toEqual(
+      expect.arrayContaining([
+        "--available-tools=web_fetch",
+        "--allow-tool=web_fetch",
+        "--allow-all-urls",
+        "--deny-tool=shell",
+        "--deny-tool=write",
+      ])
+    );
+    expect(args).not.toContain("--available-tools=none");
+    expect(args).not.toContain("--deny-tool=url");
+  });
+
+  test("an agent without a web route says so instead of answering from memory", async () => {
+    restoreEnv(BASELINE);
+    delete process.env.PAL_INFERENCE_DISABLED;
+    delete process.env[SPAWN_GUARD_ENV.DEPTH];
+    const tmpBin = freshTestDir(import.meta.file);
+    process.env.PAL_HOME = tmpBin;
+    process.env.PAL_AGENT = "opencode";
+    writeFakeBin(tmpBin, "opencode", `console.log("from memory");\n`);
+    prependPath(tmpBin);
+
+    const result = await inference({ ...web, timeout: 5000 });
+    expect(result).toEqual({
+      success: false,
+      error: "web research is not available on opencode yet",
+    });
+  });
+
+  for (const [name, build] of [
+    ["claude", buildClaudeArgs],
+    ["codex", buildCodexArgs],
+    ["copilot", buildCopilotArgs],
+  ] as const) {
+    test(`${name} web argv carries no double quote`, () => {
+      expect(build(web).filter((arg) => arg.includes('"'))).toEqual([]);
+    });
+  }
+});
+
 describe("schema instruction stays free of double quotes", () => {
   const schema = { type: "object", properties: { verdict: { type: "string" } } };
   const opts = { user: "rate this", jsonSchema: schema };

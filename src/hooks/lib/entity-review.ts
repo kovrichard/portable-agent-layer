@@ -4,10 +4,11 @@
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { ingestEntities } from "../../tools/knowledge/ingest";
+import { type IngestInput, ingestEntities } from "../../tools/knowledge/ingest";
 import { loadKnownEntities, loadNameIndex } from "./entity-cards";
 import { ingestInput, type ReviewItem, reviewQueueFile } from "./entity-extraction";
 import { indexedEntities, type NamedEntity, type NameIndex } from "./entity-names";
+import { profileIngest } from "./entity-research";
 
 export interface AcceptChoice {
   as?: string;
@@ -68,6 +69,22 @@ export function loadEntityReviewNudge(): string {
   ].join("\n");
 }
 
+function acceptedInput(
+  item: ReviewItem,
+  choice: AcceptChoice,
+  index: NameIndex
+): IngestInput {
+  if (!item.profile) {
+    const known = chosenEntity(item, choice.as, index);
+    return ingestInput(item.entity, index, known, choice.name);
+  }
+  const target = chosenEntity(item, choice.as ?? item.entity.existing, index);
+  return profileIngest(
+    { ...item, entity: { ...item.entity, existing: target?.slug ?? "" } },
+    target?.title ?? choice.name ?? item.entity.name
+  );
+}
+
 export function rejectReview(id: string): ReviewItem | null {
   return takeFromQueue(id);
 }
@@ -77,11 +94,7 @@ export function acceptReview(id: string, choice: AcceptChoice = {}): Accepted | 
   const queued = pendingReviews().find((i) => i.id === id);
   if (!queued) return null;
   const index = loadNameIndex(loadKnownEntities());
-  const known = chosenEntity(queued, choice.as, index);
-  const result = ingestEntities(
-    ingestInput(queued.entity, index, known, choice.name),
-    queued.source
-  );
+  const result = ingestEntities(acceptedInput(queued, choice, index), queued.source);
   takeFromQueue(id);
   const written = result.people[0] ?? result.companies[0];
   return { item: queued, slug: written.slug, created: written.created };
