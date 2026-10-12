@@ -199,7 +199,7 @@ describe("pal cli install (smoke)", () => {
     );
     const hooks = readFileSync(resolve(plugin, "hooks.json"), "utf-8");
     const commands = Array.from(hooks.matchAll(/"command": "([^"]+)"/g), (m) => m[1]);
-    expect(commands.length).toBe(5);
+    expect(commands.length).toBe(6);
     for (const command of commands) {
       expect(command).not.toContain("{{PKG_ROOT}}");
       expect(command).toEndWith(" --agent=antigravity");

@@ -42,6 +42,20 @@ export const EVENT_FIELDS = {
   session_start: ["source", "palVersion", "tz", "utcOffsetMin"],
   session_end: ["reason", "durationSec"],
   compaction: ["trigger", "withInstructions"],
+  tool_call: [
+    "tool",
+    "outcome",
+    "durationMs",
+    "inputChars",
+    "outputChars",
+    "fileExt",
+    "skill",
+    "subagent",
+    "subagentTokens",
+    "subagentTools",
+    "mcpServer",
+    "host",
+  ],
 } as const satisfies Record<string, readonly string[]>;
 
 export type EventType = keyof typeof EVENT_FIELDS;

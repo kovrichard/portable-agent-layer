@@ -35,12 +35,20 @@
       {
         "type": "command",
         "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts --agent=cursor"
+      },
+      {
+        "type": "command",
+        "command": "bun run {{PKG_ROOT}}/src/hooks/ToolEvent.ts --agent=cursor"
       }
     ],
     "postToolUseFailure": [
       {
         "type": "command",
         "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerUnapplied.ts --agent=cursor"
+      },
+      {
+        "type": "command",
+        "command": "bun run {{PKG_ROOT}}/src/hooks/ToolEvent.ts --agent=cursor"
       }
     ],
     "beforeShellExecution": [

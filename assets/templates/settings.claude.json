@@ -161,6 +161,15 @@
             "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts --agent=claude"
           }
         ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/ToolEvent.ts --agent=claude"
+          }
+        ]
       }
     ],
     "PostToolUseFailure": [
@@ -172,6 +181,15 @@
             "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerUnapplied.ts --agent=claude"
           }
         ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/ToolEvent.ts --agent=claude"
+          }
+        ]
       }
     ],
     "PermissionDenied": [
@@ -181,6 +199,15 @@
           {
             "type": "command",
             "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerUnapplied.ts --agent=claude"
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/ToolEvent.ts --agent=claude"
           }
         ]
       }
