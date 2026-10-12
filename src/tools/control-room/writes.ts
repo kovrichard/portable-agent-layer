@@ -6,6 +6,7 @@
  * write surface over ~/.pal.
  */
 
+import { logCommitment } from "../../hooks/lib/commitment-events";
 import { readProject, writeProject } from "../../hooks/lib/projects";
 import {
   raw as rawSettings,
@@ -38,6 +39,7 @@ export function setIscStatus(project: string, id: number, close: boolean): Write
   p.changelog = move.changelog;
   p.updated = new Date().toISOString();
   writeProject(p);
+  logCommitment(project, id, close ? "kept" : "reopened", "control-room");
   return { ok: true, changed: true };
 }
 

@@ -65,6 +65,7 @@ export const EVENT_FIELDS = {
     "outputTokens",
   ],
   pal_update: ["outcome", "from", "to", "durationSec", "skipReason"],
+  commitment: ["iscProject", "isc", "outcome", "surface", "snoozeDays"],
   permission_prompt: ["tool"],
   notification: ["kind"],
   tool_call: [

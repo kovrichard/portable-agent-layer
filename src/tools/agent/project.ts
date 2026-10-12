@@ -11,6 +11,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { writeBinding } from "../../hooks/lib/bindings";
+import { logCommitment } from "../../hooks/lib/commitment-events";
 import { paths, toPath } from "../../hooks/lib/paths";
 import {
   defaultSlug,
@@ -454,6 +455,7 @@ function cmdCompleteIsc(name: string, id: number): undefined {
     return;
   }
   applyIscMove(p, move);
+  logCommitment(name, id, "kept", "cli");
   ok({ checked: true, id, archived: true });
 }
 
@@ -479,6 +481,7 @@ function cmdReopenIsc(name: string, id: number): undefined {
     return;
   }
   applyIscMove(p, move);
+  logCommitment(name, id, "reopened", "cli");
   ok({ checked: false, id });
 }
 
@@ -546,6 +549,7 @@ function cmdRetireIsc(name: string, id: number, by: number | null): undefined {
   );
   p.updated = now();
   writeProject(p);
+  logCommitment(name, id, "dropped", "cli");
   ok({ retired: true, id, supersededBy: by, archived: true });
 }
 
