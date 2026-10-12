@@ -18,12 +18,12 @@ missing hook is recorded here, never synthesised from another event.
 | ----- | ----------- | -------- | ------ | ------- | ----- | ----------- |
 | `turn` | ✅ UserPromptSubmit | ✅ chat.message | ✅ beforeSubmitPrompt | ✅ userPromptSubmitted | ✅ UserPromptSubmit | ✅ PreInvocation |
 | `reply` | ✅ Stop | ✅ session.idle | ✅ stop | ✅ agentStop | ✅ Stop | ✅ Stop |
-| `session_start` | ✅ SessionStart | ◻ session.created | ✅ sessionStart | ✅ sessionStart | ✅ SessionStart | ⛔ |
+| `session_start` | ✅ SessionStart | ✅ session.created | ✅ sessionStart | ✅ sessionStart | ✅ SessionStart | ⛔ |
 | `session_end` | ✅ SessionEnd | ? | ✅ sessionEnd | ✅ sessionEnd | ✅ SessionEnd | ⛔ |
-| `compaction` | ✅ PreCompact | ◻ session.compacted | ✅ preCompact | ✅ preCompact | ✅ PreCompact | ⛔ |
+| `compaction` | ✅ PreCompact | ✅ session.compacted | ✅ preCompact | ✅ preCompact | ✅ PreCompact | ⛔ |
 | `tool_call` ok | ✅ PostToolUse | ✅ tool.execute.after | ✅ postToolUse | ✅ postToolUse | ✅ PostToolUse | ✅ PostToolUse |
 | `tool_call` failed | ✅ PostToolUseFailure | ? | ✅ postToolUseFailure | ✅ postToolUseFailure | ⛔ | ⛔ |
-| `tool_call` denied | ✅ PermissionDenied | ◻ permission.replied | ⛔ | ⛔ | ⛔ | ⛔ |
+| `tool_call` denied | ✅ PermissionDenied | ✅ permission.replied | ⛔ | ⛔ | ⛔ | ⛔ |
 | `permission_prompt` | ✅ PermissionRequest | ✅ permission.ask | ⛔ | ⛔ | ⛔ | ⛔ |
 | `notification` | ✅ Notification | ⛔ | ⛔ | ⛔ | ⛔ | ⛔ |
 | `hook_timing` stop | ✅ Stop | ✅ session.idle | ✅ stop | ✅ agentStop | ✅ Stop | ✅ Stop |
