@@ -7,7 +7,7 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { hearsPromptContext } from "./agent";
-import { appendEvent, eventsInMonth, eventsSince } from "./events";
+import { appendEvent, eventsInMonth, eventsSince, logQuietly } from "./events";
 import { asksForLess, followedHint, ignoredHintReminder } from "./interaction-hint-check";
 import {
   type Baseline,
@@ -137,10 +137,12 @@ function legacyTurnsDir(): string {
 
 function logTurn(event: TurnEvent, prompt: string, text: string): void {
   const { ts, session, channel, ...fields } = event;
-  appendEvent(
-    "turn",
-    { ...fields, ...turnExtras(prompt, text) },
-    { ts, session, channel, content: { prompt: text } }
+  logQuietly("turn", () =>
+    appendEvent(
+      "turn",
+      { ...fields, ...turnExtras(prompt, text) },
+      { ts, session, channel, content: { prompt: text } }
+    )
   );
 }
 
@@ -156,11 +158,16 @@ function logReply(
   track: SessionTrack
 ) {
   const { at, ...features } = shape;
-  const latencySec = secondsBetween(track.lastPromptAt, new Date(at));
-  appendEvent(
-    "reply",
-    { ...features, mode: responseModeOf(reply), latencySec },
-    { ts: at, session, content: { reply } }
+  logQuietly("reply", () =>
+    appendEvent(
+      "reply",
+      {
+        ...features,
+        mode: responseModeOf(reply),
+        latencySec: secondsBetween(track.lastPromptAt, new Date(at)),
+      },
+      { ts: at, session, content: { reply } }
+    )
   );
 }
 

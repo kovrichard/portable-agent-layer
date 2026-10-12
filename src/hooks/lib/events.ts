@@ -168,6 +168,15 @@ export function appendEvent(
   }
 }
 
+/** Runs a logging step so that nothing it does can fail the hook around it. */
+export function logQuietly(label: string, write: () => void): void {
+  try {
+    write();
+  } catch (err) {
+    logError(`events:${label}`, err);
+  }
+}
+
 function parseLines(file: string): LoggedEvent[] {
   if (!existsSync(file)) return [];
   return readFileSync(file, "utf-8")

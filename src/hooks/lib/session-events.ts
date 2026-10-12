@@ -5,7 +5,7 @@
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { appendEvent, eventsSince } from "./events";
+import { appendEvent, eventsSince, logQuietly } from "./events";
 import { type HookTurnPayload, hookSessionId } from "./hook-turn";
 import { palPkg } from "./paths";
 
@@ -43,10 +43,12 @@ export function logSessionStart(
   payload: SessionStartPayload | null,
   now: Date = new Date()
 ): void {
-  appendEvent(
-    "session_start",
-    { source: payload?.source ?? null, palVersion: palVersion(), ...timezone(now) },
-    { ts: now.toISOString(), session: hookSessionId(payload) ?? null }
+  logQuietly("session_start", () =>
+    appendEvent(
+      "session_start",
+      { source: payload?.source ?? null, palVersion: palVersion(), ...timezone(now) },
+      { ts: now.toISOString(), session: hookSessionId(payload) ?? null }
+    )
   );
 }
 
@@ -62,13 +64,15 @@ export function logSessionEnd(
   now: Date = new Date()
 ): void {
   const session = hookSessionId(payload) ?? null;
-  appendEvent(
-    "session_end",
-    {
-      reason: payload?.reason ?? null,
-      durationSec: session ? secondsSinceStart(session, now) : null,
-    },
-    { ts: now.toISOString(), session }
+  logQuietly("session_end", () =>
+    appendEvent(
+      "session_end",
+      {
+        reason: payload?.reason ?? null,
+        durationSec: session ? secondsSinceStart(session, now) : null,
+      },
+      { ts: now.toISOString(), session }
+    )
   );
 }
 
@@ -76,12 +80,14 @@ export function logCompaction(
   payload: CompactionPayload | null,
   now: Date = new Date()
 ): void {
-  appendEvent(
-    "compaction",
-    {
-      trigger: payload?.trigger ?? null,
-      withInstructions: Boolean(payload?.custom_instructions?.trim()),
-    },
-    { ts: now.toISOString(), session: hookSessionId(payload) ?? null }
+  logQuietly("compaction", () =>
+    appendEvent(
+      "compaction",
+      {
+        trigger: payload?.trigger ?? null,
+        withInstructions: Boolean(payload?.custom_instructions?.trim()),
+      },
+      { ts: now.toISOString(), session: hookSessionId(payload) ?? null }
+    )
   );
 }

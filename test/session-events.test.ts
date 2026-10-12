@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   logCompaction,
@@ -83,6 +83,17 @@ describe("session boundaries", () => {
       T0
     );
     expect(JSON.stringify(streamed("compaction"))).not.toContain("keep IDs");
+  });
+});
+
+describe("a broken event store never fails the hook", () => {
+  test("every session logger swallows the failure", () => {
+    writeFileSync(resolve(home, "memory", "events"), "not a folder");
+    expect(() => {
+      logSessionStart({ session_id: "s1", source: "startup" }, T0);
+      logSessionEnd({ session_id: "s1", reason: "other" }, T0);
+      logCompaction({ session_id: "s1", trigger: "auto" }, T0);
+    }).not.toThrow();
   });
 });
 
