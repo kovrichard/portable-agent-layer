@@ -73,6 +73,15 @@ describe("a tool call", () => {
     expect(web?.host).toBe("bun.sh");
   });
 
+  test("a shell call records only the program it ran", () => {
+    logToolCall({
+      tool_name: "Bash",
+      tool_input: { command: "  /usr/bin/git push --force" },
+    });
+    logToolCall({ toolName: "bash", toolArgs: '{"command":"bun test x"}' });
+    expect(toolCalls().map((e) => e.program)).toEqual(["git", "bun"]);
+  });
+
   test("a failed and a denied call say so", () => {
     logToolCall({ hook_event_name: "PostToolUseFailure", tool_name: "Bash", error: "x" });
     logToolCall({ hook_event_name: "PermissionDenied", tool_name: "Bash", reason: "no" });

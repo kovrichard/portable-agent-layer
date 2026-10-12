@@ -3,7 +3,7 @@
  * cheap facts about it. The call's arguments go to the content store.
  */
 
-import { extname } from "node:path";
+import { basename, extname } from "node:path";
 import { FILE_TARGET_KEYS, normalizeToolUse, type ToolUseRequest } from "./agent";
 import { appendEvent, logQuietly } from "./events";
 import { hookSessionId } from "./hook-turn";
@@ -11,6 +11,7 @@ import { unappliedVerdictOf } from "./ledger-hook";
 
 const RESULT_KEYS = ["tool_response", "toolResult", "tool_output", "result"];
 const DURATION_KEYS = ["duration_ms", "durationMs"];
+const COMMAND_KEYS = ["command", "commandLine", "CommandLine", "script"];
 
 function stringIn(input: Record<string, unknown>, keys: string[]): string | null {
   const found = keys.map((k) => input[k]).find((v) => typeof v === "string" && v);
@@ -46,6 +47,11 @@ function mcpServerOf(tool: string): string | null {
   return tool.startsWith("mcp__") ? (tool.split("__")[1] ?? null) : null;
 }
 
+function programOf(command: string | null): string | null {
+  const first = command?.trim().split(/\s+/)[0];
+  return first ? basename(first) : null;
+}
+
 function outcomeOf(payload: Record<string, unknown>): string {
   const verdict = unappliedVerdictOf(payload);
   if (verdict) return verdict.outcome;
@@ -70,6 +76,7 @@ function toolCallFields(payload: Record<string, unknown>, call: ToolUseRequest) 
     inputChars: sizeOf(input),
     outputChars: sizeOf(result),
     fileExt: file ? extname(file) || null : null,
+    program: programOf(stringIn(input, COMMAND_KEYS)),
     skill: stringIn(input, ["skill"]),
     subagent: stringIn(input, ["subagent_type"]),
     ...subagentRun(result),
