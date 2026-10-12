@@ -29,6 +29,10 @@ function recordDiscordNag(
 
 function reportCollected(): undefined {
   const emitted = collectEvents();
+  if (emitted === null) {
+    console.log("Another collect is running; nothing collected.");
+    return;
+  }
   const sources = Object.entries(emitted);
   if (sources.length === 0) {
     console.log("The event log is off; nothing collected.");
