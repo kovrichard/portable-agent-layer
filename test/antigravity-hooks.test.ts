@@ -24,6 +24,7 @@ import {
   claimChecksSince,
   watchClaims,
 } from "../src/hooks/lib/claim-log";
+import { eventsSince } from "../src/hooks/lib/events";
 import { enterHookWorkspace } from "../src/hooks/lib/hook-turn";
 import { invocationContext } from "../src/hooks/lib/invocation-context";
 import { landedCalls, ledgeredCalls } from "../src/hooks/lib/ledger-hook";
@@ -587,8 +588,28 @@ describe("PreInvocation injects context as one user step", () => {
     expect(kept).not.toContain("older-0");
   });
 
+  test("a turn's prompt hook is timed, handler by handler, like UserPromptSubmit", async () => {
+    await invocationContext(preInvocation(0));
+    expect(eventsSince("hook_timing", new Date(0))).toEqual([
+      expect.objectContaining({
+        session: CONVERSATION,
+        hook: "prompt",
+        handlers: {
+          "session-context": expect.any(Number),
+          "inject-context": expect.any(Number),
+          capture: expect.any(Number),
+        },
+      }),
+    ]);
+  });
+
   test("a later model call within a turn injects nothing", async () => {
     expect(await invocationContext(preInvocation(1))).toBeNull();
+  });
+
+  test("nor is it timed, since no prompt was handled", async () => {
+    await invocationContext(preInvocation(1));
+    expect(eventsSince("hook_timing", new Date(0))).toEqual([]);
   });
 
   test("a subagent's conversation injects nothing", async () => {
