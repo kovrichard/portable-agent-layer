@@ -7,6 +7,7 @@
 import { appendFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { currentAttribution } from "./actor";
+import type { AgentType } from "./agent";
 import { logError } from "./log";
 import { ensureDir, paths } from "./paths";
 import { readAllProjects, resolveProjectFromCwd } from "./projects";
@@ -68,6 +69,25 @@ export const EVENT_FIELDS = {
   commitment: ["iscProject", "isc", "outcome", "surface", "snoozeDays"],
   entity_first_seen: ["domain", "entityType"],
   discord_nag: ["stage", "kind", "responseSec"],
+  model_call: [
+    "model",
+    "requestedModel",
+    "inputTokens",
+    "outputTokens",
+    "cacheWrite5m",
+    "cacheWrite1h",
+    "cacheRead",
+    "thinkingTokens",
+    "thinkingMs",
+    "webSearches",
+    "webFetches",
+    "serviceTier",
+    "speed",
+    "effort",
+    "stopReason",
+    "entrypoint",
+    "sidechain",
+  ],
   permission_prompt: ["tool"],
   notification: ["kind"],
   tool_call: [
@@ -118,6 +138,7 @@ export interface AppendOptions {
   id?: string;
   ts?: string;
   session?: string | null;
+  runtime?: AgentType;
   channel?: string | null;
   cwd?: string;
   content?: Record<string, unknown>;
@@ -177,6 +198,7 @@ function envelope(type: EventType, options: AppendOptions): EventEnvelope {
     type,
     session: options.session ?? null,
     ...currentAttribution(),
+    ...(options.runtime && { runtime: options.runtime }),
     channel:
       options.channel !== undefined ? options.channel : process.env.PAL_CHANNEL || null,
     project: projectOf(cwd),
