@@ -130,8 +130,8 @@ describe("accumulateUsage", () => {
     expect(accumulateUsage(noModel, SESSION).input).toBe(0);
   });
 
-  test("a message written as one line per content block is billed once", () => {
-    const block = (id: string, type: string) =>
+  test("a message written as one line per content block is billed once, at its final usage", () => {
+    const block = (id: string, type: string, output = 300) =>
       JSON.stringify({
         type: "assistant",
         sessionId: SESSION,
@@ -139,15 +139,15 @@ describe("accumulateUsage", () => {
           id,
           model: MODEL,
           content: [{ type }],
-          usage: { input_tokens: 10, output_tokens: 300 },
+          usage: { input_tokens: 10, output_tokens: output },
         },
       });
     const usage = accumulateUsage(
       [
-        block("msg_1", "text"),
-        block("msg_1", "tool_use"),
+        block("msg_1", "thinking", 3),
         block("msg_1", "tool_use"),
         block("msg_2", "text"),
+        block("msg_1", "tool_use"),
       ].join("\n"),
       SESSION
     );

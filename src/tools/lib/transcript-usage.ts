@@ -19,14 +19,17 @@ export interface TranscriptUsage {
 }
 
 /**
- * Claude Code writes one transcript line per content block of a message, and
- * every one of them repeats the message's full usage. A message is billed once.
+ * Claude Code writes one transcript line per content block of a message, each
+ * repeating the message's usage — and an early line can carry the usage while
+ * the message was still streaming. A message is billed once, at its last line.
  */
-export function firstSighting(seen: Set<string>, messageId: string | undefined): boolean {
-  if (!messageId) return true;
-  if (seen.has(messageId)) return false;
-  seen.add(messageId);
-  return true;
+export function finalPerMessage<T>(
+  calls: Iterable<T>,
+  messageIdOf: (call: T) => string | undefined
+): T[] {
+  const byMessage = new Map<unknown, T>();
+  for (const call of calls) byMessage.set(messageIdOf(call) ?? call, call);
+  return [...byMessage.values()];
 }
 
 export interface CacheWrites {
