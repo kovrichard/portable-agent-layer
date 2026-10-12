@@ -116,6 +116,16 @@ export const EVENT_FIELDS = {
     "aiCoAuthored",
   ],
   rating: ["rating", "source"],
+  action: [
+    "tool",
+    "outcome",
+    "fileExt",
+    "change",
+    "linesAdded",
+    "linesRemoved",
+    "beforeBytes",
+    "afterBytes",
+  ],
   permission_prompt: ["tool"],
   notification: ["kind"],
   tool_call: [
