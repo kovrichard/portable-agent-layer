@@ -118,6 +118,7 @@ export const EVENT_FIELDS = {
   rating: ["rating", "source"],
   project: ["change", "status"],
   decision: ["words"],
+  promise: ["change", "dueInSec", "lateSec", "snoozes", "nags"],
   action: [
     "tool",
     "outcome",
