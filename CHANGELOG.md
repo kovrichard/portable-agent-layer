@@ -1,3 +1,11 @@
+# [0.97.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.96.1...v0.97.0) (2026-10-12)
+
+
+### Features
+
+* **events:** log opencode tool calls that fail ([25d69a5](https://github.com/kovrichard/portable-agent-layer/commit/25d69a54878b1a3e397c5783100e723cebe37bdd))
+* **events:** time Antigravity's prompt hook ([8919050](https://github.com/kovrichard/portable-agent-layer/commit/89190502aee59439592c48d815a8bdd42c876e6c))
+
 ## [0.96.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.96.0...v0.96.1) (2026-10-12)
 
 
