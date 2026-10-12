@@ -1,5 +1,4 @@
 import { isNagStage, logDiscordNag, NAG_STAGES } from "../hooks/lib/discord-events";
-import { backfillEvents } from "../tools/lib/backfill";
 import { collectEvents } from "../tools/lib/collectors";
 import { group, leaf, UsageError } from "../tools/lib/command";
 
@@ -42,7 +41,8 @@ function reportCollected(): undefined {
   for (const [source, count] of sources) console.log(`${source}: ${count}`);
 }
 
-function reportBackfilled(since: string | undefined): undefined {
+async function reportBackfilled(since: string | undefined): Promise<undefined> {
+  const { backfillEvents } = await import("../tools/lib/backfill");
   const appended = backfillEvents(since);
   const sources = Object.entries(appended);
   if (sources.length === 0) {
