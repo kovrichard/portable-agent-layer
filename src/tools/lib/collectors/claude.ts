@@ -35,12 +35,14 @@ interface ClaudeLine {
   };
 }
 
+type ModelCallLine = ClaudeLine & { timestamp: string };
+
 interface SettledRead {
-  messages: ClaudeLine[];
+  messages: ModelCallLine[];
   resumeAt: number;
 }
 
-function isModelCall(line: ClaudeLine | null): line is ClaudeLine {
+function isModelCall(line: ClaudeLine | null): line is ModelCallLine {
   return (
     line?.type === "assistant" &&
     !!line.message?.usage &&
@@ -80,7 +82,7 @@ function settledMessages(
   settled: boolean
 ): SettledRead {
   const { lines, end } = completeLinesFrom(filepath, offset);
-  const groups = new Map<string, { start: number; line: ClaudeLine }>();
+  const groups = new Map<string, { start: number; line: ModelCallLine }>();
   let newest: string | undefined;
   for (const { text, start } of lines) {
     if (!text.includes('"usage"')) continue;
@@ -146,8 +148,7 @@ export function collectClaude(
     const offset = Number(cursor[key] ?? 0);
     const read = settledMessages(filepath, offset, isSettled(filepath, now));
     if (read.resumeAt === offset) continue;
-    for (const line of read.messages)
-      emitModelCall(line, billingAt(line.timestamp ?? ""));
+    for (const line of read.messages) emitModelCall(line, billingAt(line.timestamp));
     emitted += read.messages.length;
     cursor[key] = read.resumeAt;
     writeCursor("claude", cursor);

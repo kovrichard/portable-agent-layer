@@ -7,7 +7,13 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { hearsPromptContext } from "./agent";
-import { appendEvent, eventsInMonth, eventsSince, logQuietly } from "./events";
+import {
+  appendEvent,
+  eventsInMonth,
+  eventsSince,
+  type LoggedEvent,
+  logQuietly,
+} from "./events";
 import { asksForLess, followedHint, ignoredHintReminder } from "./interaction-hint-check";
 import {
   type Baseline,
@@ -200,17 +206,31 @@ function legacyTurnsSince(since: Date): TurnEvent[] {
     .filter((e) => e.ts >= sinceTs);
 }
 
+export const legacyTurnId = (turn: TurnEvent) => `turn:${turn.session}:${turn.ts}`;
+
+/** Every turn logged before turns streamed into the event log. */
+export function legacyTurns(): TurnEvent[] {
+  return legacyTurnsSince(new Date(0));
+}
+
+function withStreamed(legacy: TurnEvent[], streamed: LoggedEvent[]): TurnEvent[] {
+  const backfilled = new Set(streamed.map((e) => e.id));
+  const notBackfilled = legacy.filter((turn) => !backfilled.has(legacyTurnId(turn)));
+  return [...notBackfilled, ...(streamed as unknown as TurnEvent[])];
+}
+
 export function turnsSince(since: Date): TurnEvent[] {
-  const streamed = eventsSince("turn", since) as unknown as TurnEvent[];
-  return [...legacyTurnsSince(since), ...streamed].sort((a, b) =>
+  return withStreamed(legacyTurnsSince(since), eventsSince("turn", since)).sort((a, b) =>
     a.ts.localeCompare(b.ts)
   );
 }
 
 function turnsInMonth(month: Date): TurnEvent[] {
   const file = `${month.toISOString().slice(0, 7)}.jsonl`;
-  const streamed = eventsInMonth("turn", month) as unknown as TurnEvent[];
-  return [...readLegacyTurns(resolve(legacyTurnsDir(), file)), ...streamed];
+  return withStreamed(
+    readLegacyTurns(resolve(legacyTurnsDir(), file)),
+    eventsInMonth("turn", month)
+  );
 }
 
 /** This month and last, outside the session being judged. */

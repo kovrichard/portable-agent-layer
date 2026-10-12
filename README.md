@@ -85,6 +85,7 @@ pal cli status        # check your setup
 | `pal cli migrate` | Run pending data migrations (non-destructive) |
 | `pal cli analyze [--actionable]` | Learning analysis: rating trends, failure patterns, graduation candidates |
 | `pal cli usage` | Summarize token usage and estimated cost |
+| `pal cli cost` | What each month was paid against its API-equivalent cost, per agent |
 | `pal cli content preserve` | Copy every Claude Code transcript, gzipped, into `memory/content/` before Claude Code deletes it (30 days by default). Runs on its own whenever a session closes; the content store never leaves the machine, so `export` skips it |
 | `pal cli events discord-nag <sent\|answered>` | For a bot outside PAL: record a nag it sent (`--kind <kind>`), or the answer to one and how long it took (`--after-sec <n>`), in the local event log |
 | `pal cli infer` | One model call for scripts and bots, on the active agent's route: prompt on stdin, reply on stdout. `--tier small\|medium`, `--system <file>`, `--schema <file>` for a JSON reply checked against it, `--timeout <seconds>`. The call loads no PAL hooks or context; exits 1 with the reason when no route answers |

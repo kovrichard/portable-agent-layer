@@ -6,7 +6,7 @@
 
 import { appendFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { currentAttribution } from "./actor";
+import { currentAttribution, type RecordAttribution } from "./actor";
 import type { AgentType } from "./agent";
 import { logError } from "./log";
 import { ensureDir, paths } from "./paths";
@@ -51,7 +51,7 @@ export const EVENT_FIELDS = {
     "tz",
     "utcOffsetMin",
   ],
-  session_end: ["reason", "durationSec", "turns"],
+  session_end: ["reason", "durationSec", "turns", "messages", "status"],
   compaction: ["trigger", "withInstructions", "contextTokens"],
   hook_timing: ["hook", "totalMs", "handlers"],
   inference_call: [
@@ -101,6 +101,31 @@ export const EVENT_FIELDS = {
     "host",
   ],
   conversation: ["steps", "status", "depth", "subagent", "killed"],
+  commit: [
+    "hash",
+    "committedAt",
+    "files",
+    "added",
+    "deleted",
+    "commitType",
+    "breaking",
+    "revert",
+    "merge",
+    "tags",
+    "coAuthors",
+    "aiCoAuthored",
+  ],
+  rating: ["rating", "source"],
+  action: [
+    "tool",
+    "outcome",
+    "fileExt",
+    "change",
+    "linesAdded",
+    "linesRemoved",
+    "beforeBytes",
+    "afterBytes",
+  ],
   permission_prompt: ["tool"],
   notification: ["kind"],
   tool_call: [
@@ -151,7 +176,8 @@ export interface AppendOptions {
   id?: string;
   ts?: string;
   session?: string | null;
-  runtime?: AgentType;
+  runtime?: AgentType | "git" | "unknown";
+  attribution?: Partial<RecordAttribution>;
   channel?: string | null;
   cwd?: string;
   content?: Record<string, unknown>;
@@ -212,6 +238,7 @@ function envelope(type: EventType, options: AppendOptions): EventEnvelope {
     session: options.session ?? null,
     ...currentAttribution(),
     ...(options.runtime && { runtime: options.runtime }),
+    ...options.attribution,
     channel:
       options.channel !== undefined ? options.channel : process.env.PAL_CHANNEL || null,
     project: cwd ? projectOf(cwd) : null,
@@ -268,6 +295,17 @@ function parseLines(file: string): LoggedEvent[] {
         return [];
       }
     });
+}
+
+/** Every id already in the log, so a source read twice appends nothing new. */
+export function loggedEventIds(): Set<string> {
+  const dir = eventsDir();
+  return new Set(
+    readdirSync(dir)
+      .filter((f) => f.endsWith(".jsonl"))
+      .flatMap((f) => parseLines(resolve(dir, f)))
+      .map((e) => e.id)
+  );
 }
 
 export function eventsInMonth(type: EventType, month: Date): LoggedEvent[] {

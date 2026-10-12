@@ -15,6 +15,7 @@ import {
 } from "../tools/lib/command";
 import { builtinTools, builtinToolVerbs } from "./builtin-tools";
 import { contentCommand } from "./content";
+import { costCommand } from "./cost";
 import { eventsCommand } from "./events";
 import { identityCommand } from "./identity";
 import { inferCommand } from "./infer";
@@ -153,6 +154,7 @@ export function cliTree(admin: AdminHandlers): Group {
     commands: {
       ...adminCommands(admin),
       usage: usageCommand,
+      cost: costCommand,
       content: contentCommand,
       events: eventsCommand,
       infer: inferCommand,
