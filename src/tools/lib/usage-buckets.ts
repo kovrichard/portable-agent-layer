@@ -208,6 +208,13 @@ function transcriptsIn(projPath: string): string[] {
   return files;
 }
 
+export function claudeTranscripts(projectsDir: string): string[] {
+  if (!existsSync(projectsDir)) return [];
+  return readdirSync(projectsDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .flatMap((entry) => transcriptsIn(resolve(projectsDir, entry.name)));
+}
+
 interface PricedCall {
   messageId?: string;
   ts: string;
