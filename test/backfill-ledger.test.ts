@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { recordAction, recordBlocked } from "../src/hooks/lib/ledger";
 import { writeProject } from "../src/hooks/lib/projects";
@@ -27,6 +27,21 @@ beforeEach(() => {
   });
 });
 
+function setEventLog(enabled: boolean): void {
+  writeFileSync(
+    resolve(home, "pal", "memory", "pal-settings.json"),
+    JSON.stringify({ eventLog: { enabled } })
+  );
+  reload();
+}
+
+function beforeStreaming<T>(record: () => T): T {
+  setEventLog(false);
+  const entry = record();
+  setEventLog(true);
+  return entry;
+}
+
 function logLines(dir: string): Record<string, unknown>[] {
   const path = resolve(home, "pal", dir, "events");
   if (!existsSync(path)) return [];
@@ -38,17 +53,19 @@ function logLines(dir: string): Record<string, unknown>[] {
 
 const actions = () => logLines("memory").filter((e) => e.type === "action");
 
-describe("ledger entries become action events", () => {
-  test("an applied edit carries its line counts and sizes, in its project", () => {
-    const entry = recordAction({
-      tool: "Edit",
-      target: resolve(project, "src", "secret-name.ts"),
-      outcome: "applied",
-      before: "a\nb\n",
-      after: "a\nc\nd\n",
-    });
+const anEdit = () =>
+  recordAction({
+    tool: "Edit",
+    target: resolve(project, "src", "secret-name.ts"),
+    outcome: "applied",
+    before: "a\nb\n",
+    after: "a\nc\nd\n",
+  });
 
-    expect(backfillEvents()).toMatchObject({ ledger: 1 });
+describe("ledger entries stream live as action events", () => {
+  test("an applied edit carries its line counts and sizes, in its project", () => {
+    const entry = anEdit();
+
     expect(actions()).toEqual([
       expect.objectContaining({
         id: `ledger:${entry.id}`,
@@ -65,6 +82,7 @@ describe("ledger entries become action events", () => {
       }),
     ]);
     expect(JSON.stringify(logLines("memory"))).not.toContain("secret-name");
+    expect(backfillEvents()).toMatchObject({ ledger: 0 });
   });
 
   test("a blocked command keeps the command and reason out of the event", () => {
@@ -75,7 +93,6 @@ describe("ledger entries become action events", () => {
       reason: "a private reason",
     });
 
-    backfillEvents();
     expect(actions()).toEqual([
       expect.objectContaining({
         outcome: "blocked",
@@ -93,11 +110,16 @@ describe("ledger entries become action events", () => {
       }),
     ]);
   });
+});
 
-  test("a second run appends nothing", () => {
-    recordBlocked({ tool: "Bash", target: project, command: "x", reason: "y" });
-    backfillEvents();
+describe("ledger entries from before streaming are backfilled", () => {
+  test("an entry is logged once, under the id it would have streamed with", () => {
+    const entry = beforeStreaming(anEdit);
+
+    expect(backfillEvents()).toMatchObject({ ledger: 1 });
     expect(backfillEvents()).toMatchObject({ ledger: 0 });
-    expect(actions()).toHaveLength(1);
+    expect(actions()).toEqual([
+      expect.objectContaining({ id: `ledger:${entry.id}`, linesAdded: 2 }),
+    ]);
   });
 });
