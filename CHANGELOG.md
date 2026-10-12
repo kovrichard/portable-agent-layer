@@ -1,3 +1,10 @@
+## [0.96.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.96.0...v0.96.1) (2026-10-12)
+
+
+### Bug Fixes
+
+* **control-room:** build the page once, and only when it is out of date ([6262e50](https://github.com/kovrichard/portable-agent-layer/commit/6262e50a92226348a695ee1c31cdcd0f103505da))
+
 # [0.96.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.95.1...v0.96.0) (2026-10-12)
 
 
