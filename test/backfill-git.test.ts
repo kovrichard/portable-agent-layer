@@ -79,7 +79,7 @@ describe("git history becomes commit events", () => {
     );
     run("tag", "v1.0.0");
 
-    expect(backfillEvents()).toEqual({ git: 1 });
+    expect(backfillEvents()).toMatchObject({ git: 1 });
     expect(commits()).toEqual([
       expect.objectContaining({
         id: `git:${hash}`,
@@ -135,14 +135,14 @@ describe("git history becomes commit events", () => {
   test("a second run appends nothing, and a new commit only itself", () => {
     commitFiles("chore: one", { a: "1\n" });
     backfillEvents();
-    expect(backfillEvents()).toEqual({ git: 0 });
+    expect(backfillEvents()).toMatchObject({ git: 0 });
     commitFiles("chore: two", { b: "1\n" });
-    expect(backfillEvents()).toEqual({ git: 1 });
+    expect(backfillEvents()).toMatchObject({ git: 1 });
     expect(commits()).toHaveLength(2);
   });
 
   test("--since leaves older commits out", () => {
     commitFiles("chore: old", { a: "1\n" });
-    expect(backfillEvents("2026-10-13")).toEqual({ git: 0 });
+    expect(backfillEvents("2026-10-13")).toMatchObject({ git: 0 });
   });
 });

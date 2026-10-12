@@ -3,7 +3,13 @@
  * Used by both Claude Code (StopOrchestrator) and opencode (plugin).
  */
 
-import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, resolve } from "node:path";
 import { ensureDir, paths } from "./paths";
 import { defaultSlug, readAllProjects, resolveProjectFromCwd } from "./projects";
@@ -41,9 +47,40 @@ function readSessions(): SessionRecord[] {
   }
 }
 
+function sessionArchiveDir(): string {
+  return ensureDir(resolve(paths.state(), "sessions-archive"));
+}
+
 function sessionArchiveFile(record: SessionRecord): string {
   const month = Number.isNaN(Date.parse(record.ts)) ? "undated" : record.ts.slice(0, 7);
-  return resolve(ensureDir(resolve(paths.state(), "sessions-archive")), `${month}.jsonl`);
+  return resolve(sessionArchiveDir(), `${month}.jsonl`);
+}
+
+function parseArchiveLine(line: string): SessionRecord[] {
+  try {
+    return [JSON.parse(line) as SessionRecord];
+  } catch {
+    return [];
+  }
+}
+
+function readArchivedSessions(): SessionRecord[] {
+  const dir = sessionArchiveDir();
+  return readdirSync(dir)
+    .filter((f) => f.endsWith(".jsonl"))
+    .flatMap((f) => readFileSync(resolve(dir, f), "utf-8").split("\n"))
+    .filter(Boolean)
+    .flatMap(parseArchiveLine);
+}
+
+/** Every session still on record, archived or current, each at its latest state. */
+export function readSessionHistory(): SessionRecord[] {
+  const latest = new Map<string, SessionRecord>();
+  for (const record of [...readArchivedSessions(), ...readSessions()]) {
+    const seen = latest.get(record.sessionId);
+    if (!seen || seen.ts <= record.ts) latest.set(record.sessionId, record);
+  }
+  return [...latest.values()];
 }
 
 function archiveSessions(records: SessionRecord[]): void {

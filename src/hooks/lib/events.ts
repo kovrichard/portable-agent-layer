@@ -51,7 +51,7 @@ export const EVENT_FIELDS = {
     "tz",
     "utcOffsetMin",
   ],
-  session_end: ["reason", "durationSec", "turns"],
+  session_end: ["reason", "durationSec", "turns", "messages", "status"],
   compaction: ["trigger", "withInstructions", "contextTokens"],
   hook_timing: ["hook", "totalMs", "handlers"],
   inference_call: [
@@ -165,7 +165,7 @@ export interface AppendOptions {
   id?: string;
   ts?: string;
   session?: string | null;
-  runtime?: AgentType | "git";
+  runtime?: AgentType | "git" | "unknown";
   channel?: string | null;
   cwd?: string;
   content?: Record<string, unknown>;
