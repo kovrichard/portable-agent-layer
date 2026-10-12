@@ -4,12 +4,16 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { AGENT_REGISTRY, type AgentName } from "../hooks/lib/agent-registry";
 import { palHome, platform } from "../hooks/lib/paths";
 import { findBinaryOnPath } from "../hooks/lib/which";
-import { readCodex, readCopilot, readOpencode } from "./lib/agent-usage";
+import {
+  opencodeDatabase,
+  readCodex,
+  readCopilot,
+  readOpencode,
+} from "./lib/agent-usage";
 import {
   type AgentReport,
   parseRtkSummary,
@@ -19,11 +23,6 @@ import {
 import { readClaudeCode, readPalInference } from "./lib/usage-buckets";
 
 const UNTRACKED_AGENTS: AgentName[] = ["cursor", "antigravity"];
-
-function opencodeDatabase(): string {
-  const dataHome = process.env.XDG_DATA_HOME || resolve(homedir(), ".local", "share");
-  return resolve(dataHome, "opencode", "opencode.db");
-}
 
 function agentReports(project: string | undefined): AgentReport[] {
   const report = (agent: AgentName, read: () => AgentReport["usage"]) => ({

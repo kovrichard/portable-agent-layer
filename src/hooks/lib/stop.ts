@@ -19,6 +19,7 @@ import { runSynthesis } from "../handlers/synthesis";
 import { resetTab } from "../handlers/tab";
 import { updateCounts } from "../handlers/update-counts";
 import { captureWorkSession } from "../handlers/work-session";
+import { spawnCollectIfDue } from "./collect-trigger";
 import { acknowledgeMentioned } from "./daily-nudge";
 import { spawnDetachedInference } from "./detached-inference";
 import { startHookTiming } from "./hook-timing";
@@ -193,6 +194,7 @@ export async function runStopHandlers(
     "project-touch": projectTouch(options.lastAssistantMessage),
     "desktop-notify": notifyDesktop(options.sessionId),
     "context-digests": Promise.resolve(writeContextDigests()),
+    "collect-events": Promise.resolve(spawnCollectIfDue()),
   };
   const names = Object.keys(handlers);
   const results = await Promise.allSettled(
