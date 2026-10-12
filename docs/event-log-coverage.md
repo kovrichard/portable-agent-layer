@@ -20,7 +20,7 @@ missing hook is recorded here, never synthesised from another event.
 | `reply` | ✅ Stop | ✅ session.idle | ✅ stop | ✅ agentStop | ✅ Stop | ✅ Stop |
 | `session_start` | ✅ SessionStart | ◻ session.created | ✅ sessionStart | ✅ sessionStart | ✅ SessionStart | ⛔ |
 | `session_end` | ✅ SessionEnd | ? | ✅ sessionEnd | ✅ sessionEnd | ✅ SessionEnd | ⛔ |
-| `compaction` | ✅ PreCompact | ◻ session.compacted | ◻ preCompact | ◻ preCompact | ◻ PreCompact | ⛔ |
+| `compaction` | ✅ PreCompact | ◻ session.compacted | ✅ preCompact | ✅ preCompact | ✅ PreCompact | ⛔ |
 | `tool_call` ok | ✅ PostToolUse | ✅ tool.execute.after | ✅ postToolUse | ✅ postToolUse | ✅ PostToolUse | ✅ PostToolUse |
 | `tool_call` failed | ✅ PostToolUseFailure | ? | ✅ postToolUseFailure | ✅ postToolUseFailure | ⛔ | ⛔ |
 | `tool_call` denied | ✅ PermissionDenied | ◻ permission.replied | ⛔ | ⛔ | ⛔ | ⛔ |

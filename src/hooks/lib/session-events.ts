@@ -32,7 +32,10 @@ interface SessionEndPayload extends HookTurnPayload {
 interface CompactionPayload extends HookTurnPayload {
   trigger?: string;
   custom_instructions?: string;
+  customInstructions?: string;
   transcript_path?: string;
+  transcriptPath?: string;
+  context_tokens?: number;
 }
 
 function palVersion(): string | null {
@@ -181,6 +184,15 @@ export function contextTokensOf(transcriptPath: string | undefined): number | nu
   );
 }
 
+function instructionsOf(payload: CompactionPayload | null): string | undefined {
+  return payload?.custom_instructions ?? payload?.customInstructions;
+}
+
+function compactedTokensOf(payload: CompactionPayload | null): number | null {
+  if (typeof payload?.context_tokens === "number") return payload.context_tokens;
+  return contextTokensOf(payload?.transcript_path ?? payload?.transcriptPath);
+}
+
 export function logCompaction(
   payload: CompactionPayload | null,
   now: Date = new Date()
@@ -190,8 +202,8 @@ export function logCompaction(
       "compaction",
       {
         trigger: payload?.trigger ?? null,
-        withInstructions: Boolean(payload?.custom_instructions?.trim()),
-        contextTokens: contextTokensOf(payload?.transcript_path),
+        withInstructions: Boolean(instructionsOf(payload)?.trim()),
+        contextTokens: compactedTokensOf(payload),
       },
       { ts: now.toISOString(), session: hookSessionId(payload) ?? null }
     )

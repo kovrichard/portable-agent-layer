@@ -54,6 +54,16 @@
         ]
       }
     ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/PreCompactPersist.ts --agent=codex"
+          }
+        ]
+      }
+    ],
     "SessionEnd": [
       {
         "hooks": [

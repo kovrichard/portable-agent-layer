@@ -148,6 +148,97 @@ describe("what a session ran with", () => {
   });
 });
 
+// Shapes from each runtime's hook reference (cursor.com/docs/hooks,
+// docs.github.com/en/copilot/reference/hooks-configuration,
+// developers.openai.com/codex/hooks), not from captured runs.
+describe("a compaction on every runtime that announces one", () => {
+  test("Cursor hands over the token count itself", () => {
+    logCompaction(
+      {
+        conversation_id: "cur1",
+        hook_event_name: "preCompact",
+        trigger: "auto",
+        context_usage_percent: 85,
+        context_tokens: 120000,
+        context_window_size: 128000,
+        message_count: 45,
+        messages_to_compact: 30,
+        is_first_compaction: true,
+      } as Parameters<typeof logCompaction>[0],
+      T0
+    );
+    expect(streamed("compaction")).toEqual([
+      expect.objectContaining({
+        session: "cur1",
+        trigger: "auto",
+        withInstructions: false,
+        contextTokens: 120000,
+      }),
+    ]);
+  });
+
+  test("Copilot's camelCase keys are read like Claude's snake_case ones", () => {
+    const transcript = resolve(home, "copilot.jsonl");
+    writeFileSync(
+      transcript,
+      `${JSON.stringify({ message: { usage: { input_tokens: 42 } } })}\n`
+    );
+    logCompaction(
+      {
+        sessionId: "cop1",
+        timestamp: T0.getTime(),
+        cwd: "/work",
+        transcriptPath: transcript,
+        trigger: "manual",
+        customInstructions: "keep IDs",
+      } as Parameters<typeof logCompaction>[0],
+      T0
+    );
+    expect(streamed("compaction")).toEqual([
+      expect.objectContaining({
+        session: "cop1",
+        trigger: "manual",
+        withInstructions: true,
+        contextTokens: 42,
+      }),
+    ]);
+  });
+
+  test("Codex sends Claude's keys and may have no transcript", () => {
+    logCompaction(
+      {
+        session_id: "cdx1",
+        transcript_path: null,
+        cwd: "/work",
+        hook_event_name: "PreCompact",
+        model: "gpt-5",
+        turn_id: "t1",
+        trigger: "auto",
+      } as unknown as Parameters<typeof logCompaction>[0],
+      T0
+    );
+    expect(streamed("compaction")).toEqual([
+      expect.objectContaining({ session: "cdx1", trigger: "auto", contextTokens: null }),
+    ]);
+  });
+
+  test("each of their templates runs the compaction hook on its own event name", () => {
+    const template = (name: string) =>
+      readFileSync(resolve(import.meta.dir, "../assets/templates", name), "utf-8");
+    const registered = (name: string, event: string) =>
+      JSON.stringify(JSON.parse(template(name)).hooks[event] ?? null);
+    expect(registered("hooks.cursor.json", "preCompact")).toContain(
+      "PreCompactPersist.ts --agent=cursor"
+    );
+    expect(registered("hooks.copilot.json", "preCompact")).toContain(
+      "PreCompactPersist.ts --agent=copilot"
+    );
+    expect(registered("hooks.codex.json", "PreCompact")).toContain(
+      "PreCompactPersist.ts --agent=codex"
+    );
+  });
+});
+
 describe("a broken event store never fails the hook", () => {
   test("every session logger swallows the failure", () => {
     writeFileSync(resolve(home, "memory", "events"), "not a folder");

@@ -7,8 +7,8 @@
  *
  * Storage: ~/.pal/memory/state/last-exchange/{session_id}.json + latest.json.
  * Path lives under PAL_HOME so other agents (OpenCode, Copilot, Cursor) can read the
- * same state if/when they grow equivalent compaction-recovery hooks. PreCompact itself
- * is currently a Claude Code event.
+ * same state if/when they grow equivalent compaction-recovery hooks. Cursor, Copilot
+ * and Codex run it too, which logs their compactions.
  */
 
 import { existsSync } from "node:fs";
