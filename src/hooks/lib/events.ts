@@ -6,7 +6,7 @@
 
 import { appendFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { currentAttribution } from "./actor";
+import { currentAttribution, type RecordAttribution } from "./actor";
 import type { AgentType } from "./agent";
 import { logError } from "./log";
 import { ensureDir, paths } from "./paths";
@@ -166,6 +166,7 @@ export interface AppendOptions {
   ts?: string;
   session?: string | null;
   runtime?: AgentType | "git" | "unknown";
+  attribution?: Partial<RecordAttribution>;
   channel?: string | null;
   cwd?: string;
   content?: Record<string, unknown>;
@@ -226,6 +227,7 @@ function envelope(type: EventType, options: AppendOptions): EventEnvelope {
     session: options.session ?? null,
     ...currentAttribution(),
     ...(options.runtime && { runtime: options.runtime }),
+    ...options.attribution,
     channel:
       options.channel !== undefined ? options.channel : process.env.PAL_CHANNEL || null,
     project: cwd ? projectOf(cwd) : null,

@@ -8,6 +8,7 @@ import { readAllProjects } from "../../../hooks/lib/projects";
 import { eventLogEnabled } from "../../../hooks/lib/settings";
 import { backfillGit } from "./git";
 import { backfillSessions } from "./sessions";
+import { backfillTurns } from "./turns";
 
 function projectRepos(): string[] {
   const paths = readAllProjects().flatMap((project) =>
@@ -22,5 +23,6 @@ export function backfillEvents(since?: string): Record<string, number> {
   return {
     git: backfillGit(projectRepos(), known, since),
     sessions: backfillSessions(since),
+    turns: backfillTurns(known, since),
   };
 }
