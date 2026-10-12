@@ -18,8 +18,24 @@ beforeAll(stopServersLeftByLastRun);
 beforeEach(() => {
   if (HOME) pal("stop");
   HOME = freshTestDir(import.meta.file);
-  PORT = 17000 + Math.floor(Math.random() * 2000);
+  PORT = portNobodyListensOn();
 });
+
+/**
+ * A second control room started on a taken port shares it with the first
+ * rather than failing, so a guessed port can land on a server another run
+ * left behind and answer for it. The OS only hands out a port that is free.
+ */
+function portNobodyListensOn(): number {
+  const placeholder = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch: () => new Response(),
+  });
+  const { port } = placeholder;
+  placeholder.stop(true);
+  return port as number;
+}
 
 function palIn(home: string, ...args: string[]) {
   return spawnSync("bun", ["run", CLI, "cli", "server", ...args], {

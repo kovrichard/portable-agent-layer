@@ -33,11 +33,15 @@ describe("package publish surface", () => {
   test("packed tarball contains .husky/install.mjs", () => {
     const sandbox = freshTestDir(import.meta.file);
     try {
-      const pack = spawnSync("bun", ["pm", "pack", "--destination", sandbox], {
-        cwd: REPO,
-        encoding: "utf-8",
-        timeout: 60000,
-      });
+      const pack = spawnSync(
+        "bun",
+        ["pm", "pack", "--ignore-scripts", "--destination", sandbox],
+        {
+          cwd: REPO,
+          encoding: "utf-8",
+          timeout: 60000,
+        }
+      );
       expect(pack.status).toBe(0);
 
       const tarball = pack.stdout
