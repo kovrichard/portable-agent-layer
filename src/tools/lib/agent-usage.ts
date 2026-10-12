@@ -108,14 +108,16 @@ export function readCodex(
   now: Date = new Date()
 ): AgentUsage {
   const tally = usageTally(projectFilter, now);
+  for (const filepath of codexRollouts(codexDir)) recordCodexRollout(filepath, tally);
+  return tally.usage;
+}
+
+export function codexRollouts(codexDir: string): string[] {
   const isRollout = (name: string) =>
     name.startsWith("rollout-") && name.endsWith(".jsonl");
-  for (const sub of ["sessions", "archived_sessions"]) {
-    for (const filepath of filesUnder(resolve(codexDir, sub), isRollout)) {
-      recordCodexRollout(filepath, tally);
-    }
-  }
-  return tally.usage;
+  return ["sessions", "archived_sessions"].flatMap((sub) =>
+    filesUnder(resolve(codexDir, sub), isRollout)
+  );
 }
 
 interface OpencodeMessage {

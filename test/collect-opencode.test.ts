@@ -108,7 +108,7 @@ describe("collecting opencode's model calls", () => {
       model: "kimi-k3",
       provider: "fireworks-ai",
       inputTokens: 100,
-      outputTokens: 77,
+      outputTokens: 117,
       thinkingTokens: 40,
       cacheWrite5m: 30,
       cacheRead: 900,
@@ -128,7 +128,7 @@ describe("collecting opencode's model calls", () => {
     insert(db, "msg_3", T0, assistant(3));
     db.close();
     expect(collectOpencode(dbPath, LATER)).toBe(1);
-    expect(streamed().map((e) => e.outputTokens)).toEqual([1, 2, 3]);
+    expect(streamed().map((e) => e.outputTokens)).toEqual([41, 42, 43]);
   });
 
   test("a message still streaming stops the read until it completes", () => {
@@ -141,7 +141,7 @@ describe("collecting opencode's model calls", () => {
     insert(db, "msg_2", T0 + 1, assistant(20, true, T0 + 1));
     db.close();
     expect(collectOpencode(dbPath, now)).toBe(2);
-    expect(streamed().map((e) => e.outputTokens)).toEqual([1, 20, 3]);
+    expect(streamed().map((e) => e.outputTokens)).toEqual([41, 60, 43]);
   });
 
   test("a message left uncompleted for an hour is taken as it stands", () => {

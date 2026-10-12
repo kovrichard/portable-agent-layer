@@ -8,6 +8,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
+import { agentDirOverrides } from "../src/hooks/lib/paths";
 import { reload } from "../src/hooks/lib/settings";
 import { collectEvents } from "../src/tools/lib/collectors";
 import { collectClaude } from "../src/tools/lib/collectors/claude";
@@ -154,15 +155,17 @@ describe("collecting Claude Code's model calls", () => {
 
 describe("collecting every source", () => {
   test("a source that fails is reported and the others still collect", () => {
+    const overrides = [...agentDirOverrides().map(({ env }) => env), "XDG_DATA_HOME"];
+    for (const env of overrides) process.env[env] = resolve(home, env);
     process.env.PAL_CLAUDE_DIR = resolve(home, "claude");
-    process.env.XDG_DATA_HOME = resolve(home, "data");
-    mkdirSync(resolve(home, "data", "opencode", "opencode.db"), { recursive: true });
+    mkdirSync(resolve(home, "XDG_DATA_HOME", "opencode", "opencode.db"), {
+      recursive: true,
+    });
     write(block("msg_1", 10), block("msg_2", 20));
     try {
-      expect(collectEvents()).toEqual({ claude: 1, opencode: "failed" });
+      expect(collectEvents()).toEqual({ claude: 1, opencode: "failed", codex: 0 });
     } finally {
-      delete process.env.PAL_CLAUDE_DIR;
-      delete process.env.XDG_DATA_HOME;
+      for (const env of overrides) delete process.env[env];
     }
   });
 

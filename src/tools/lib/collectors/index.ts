@@ -9,11 +9,13 @@ import { platform } from "../../../hooks/lib/paths";
 import { eventLogEnabled } from "../../../hooks/lib/settings";
 import { opencodeDatabase } from "../agent-usage";
 import { collectClaude } from "./claude";
+import { collectCodex } from "./codex";
 import { collectOpencode } from "./opencode";
 
 const COLLECTORS: Record<string, () => number> = {
   claude: () => collectClaude(resolve(platform.claudeDir(), "projects")),
   opencode: () => collectOpencode(opencodeDatabase()),
+  codex: () => collectCodex(platform.codexDir()),
 };
 
 export function collectEvents(): Record<string, number | "failed"> {

@@ -65,7 +65,7 @@ function emitModelCall(row: MessageRow, message: AssistantMessage): void {
       model: message.modelID,
       provider: message.providerID,
       inputTokens: tokens.input,
-      outputTokens: tokens.output,
+      outputTokens: (tokens.output ?? 0) + (tokens.reasoning ?? 0),
       thinkingTokens: tokens.reasoning,
       cacheWrite5m: tokens.cache?.write,
       cacheRead: tokens.cache?.read,
