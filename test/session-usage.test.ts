@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, utimesSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
+import { PRICE_HISTORY } from "../src/hooks/lib/models";
 import {
   accumulateUsage,
   claudeProjectsDir,
@@ -152,6 +153,33 @@ describe("accumulateUsage", () => {
       SESSION
     );
     expect([usage.calls, usage.input, usage.output]).toEqual([2, 20, 600]);
+  });
+
+  test("a turn is priced at the rate in force on its own date", () => {
+    PRICE_HISTORY[MODEL] = [
+      {
+        until: "2026-09-01",
+        rates: {
+          input: 6,
+          output: 30,
+          cacheWrite5m: 7.5,
+          cacheWrite1h: 12,
+          cacheRead: 0.6,
+        },
+      },
+    ];
+    try {
+      const usage = accumulateUsage(
+        assistantLine(
+          { input_tokens: 1_000_000 },
+          { timestamp: "2026-08-20T08:00:00.000Z" }
+        ),
+        SESSION
+      );
+      expect(usage.cost).toBeCloseTo(6, 10);
+    } finally {
+      delete PRICE_HISTORY[MODEL];
+    }
   });
 
   test("a corrupt line is skipped, not fatal to the rest of the file", () => {

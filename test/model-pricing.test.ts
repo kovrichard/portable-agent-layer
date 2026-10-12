@@ -1,5 +1,14 @@
-import { describe, expect, test } from "bun:test";
-import { costOfUsage, MODEL_PRICING, pricingFor } from "../src/hooks/lib/models";
+import { beforeEach, describe, expect, test } from "bun:test";
+import {
+  costOfUsage,
+  MODEL_PRICING,
+  PRICE_HISTORY,
+  pricingFor,
+} from "../src/hooks/lib/models";
+
+beforeEach(() => {
+  delete PRICE_HISTORY["claude-opus-5"];
+});
 
 const OPUS_5_RATES = {
   input: 5,
@@ -77,6 +86,50 @@ describe("pricingFor", () => {
 
   test("returns null for an unknown vendor model", () => {
     expect(pricingFor("gpt-5.5")).toBeNull();
+  });
+});
+
+describe("a price change", () => {
+  const OPUS_5_LAUNCH = { ...OPUS_5_RATES, input: 6, output: 30 };
+
+  beforeEach(() => {
+    PRICE_HISTORY["claude-opus-5"] = [{ until: "2026-09-01", rates: OPUS_5_LAUNCH }];
+  });
+
+  test("a call before the change is priced at the rate then in force", () => {
+    expect(pricingFor("claude-opus-5", "2026-08-31T23:59:59Z")).toEqual(OPUS_5_LAUNCH);
+  });
+
+  test("a call from the change on is priced at the new rate", () => {
+    expect(pricingFor("claude-opus-5", "2026-09-01T00:00:00Z")).toEqual(OPUS_5_RATES);
+  });
+
+  test("a dated or tagged ID follows its base model's history", () => {
+    expect(pricingFor("claude-opus-5-20260115", "2026-08-01T00:00:00Z")).toEqual(
+      OPUS_5_LAUNCH
+    );
+  });
+
+  test("a call with no date is priced at today's rate", () => {
+    expect(pricingFor("claude-opus-5")).toEqual(OPUS_5_RATES);
+  });
+
+  test("the cost of a usage record follows the date it is given", () => {
+    const usage = {
+      input: 1_000_000,
+      output: 0,
+      cacheWrite5m: 0,
+      cacheWrite1h: 0,
+      cacheRead: 0,
+    };
+    expect(costOfUsage("claude-opus-5", usage, "2026-08-15T12:00:00Z")).toBeCloseTo(
+      6,
+      10
+    );
+    expect(costOfUsage("claude-opus-5", usage, "2026-09-15T12:00:00Z")).toBeCloseTo(
+      5,
+      10
+    );
   });
 });
 

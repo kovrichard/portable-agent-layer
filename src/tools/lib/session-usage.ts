@@ -147,13 +147,17 @@ export function accumulateUsage(transcript: string, sessionId: string): SessionU
     const cacheRead = usage.cache_read_input_tokens ?? 0;
     const { cacheWrite5m, cacheWrite1h } = cacheWritesOf(usage);
 
-    total.cost += costOfUsage(model, {
-      input,
-      output,
-      cacheWrite5m,
-      cacheWrite1h,
-      cacheRead,
-    });
+    total.cost += costOfUsage(
+      model,
+      {
+        input,
+        output,
+        cacheWrite5m,
+        cacheWrite1h,
+        cacheRead,
+      },
+      entry.timestamp
+    );
     total.input += input;
     total.output += output;
     total.cacheWrite5m += cacheWrite5m;
