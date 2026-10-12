@@ -65,3 +65,30 @@ function startEveryTestOnTheOriginalPath() {
 }
 
 startEveryTestOnTheOriginalPath();
+
+function logSlowSpawns() {
+  const childProcess = require("node:child_process");
+  const label = (cmd: unknown, args: unknown) =>
+    [cmd, ...(Array.isArray(args) ? args : [])].join(" ").slice(0, 160);
+  const report = (what: string, started: number, extra: string) => {
+    const ms = Math.round(performance.now() - started);
+    if (ms > 1000) process.stderr.write(`SLOWSPAWN ${ms}ms ${what} ${extra}\n`);
+  };
+  const nodeSpawnSync = childProcess.spawnSync;
+  childProcess.spawnSync = (cmd: unknown, args: unknown, opts: unknown) => {
+    const started = performance.now();
+    const result = nodeSpawnSync(cmd, args, opts);
+    report(label(cmd, args), started, `status=${result.status} signal=${result.signal}`);
+    return result;
+  };
+  const bunSpawnSync = Bun.spawnSync;
+  Bun.spawnSync = ((cmd: unknown, opts: unknown) => {
+    const started = performance.now();
+    const result = bunSpawnSync(cmd as never, opts as never);
+    const argv = Array.isArray(cmd) ? cmd : (cmd as { cmd: string[] }).cmd;
+    report(label(argv[0], argv.slice(1)), started, `exit=${result.exitCode}`);
+    return result;
+  }) as typeof Bun.spawnSync;
+}
+
+logSlowSpawns();
