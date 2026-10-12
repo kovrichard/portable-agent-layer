@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { appendEvent } from "../src/hooks/lib/events";
@@ -10,7 +10,10 @@ import {
   logSessionStart,
 } from "../src/hooks/lib/session-events";
 import { reload } from "../src/hooks/lib/settings";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 let home: string;
 const T0 = new Date("2026-09-10T10:00:00.000Z");

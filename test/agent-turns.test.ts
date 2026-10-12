@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -18,7 +18,10 @@ import { reload } from "../src/hooks/lib/settings";
 import { finishDeferredStop, stopTurn } from "../src/hooks/lib/stop";
 import { sandboxContextRuleDirs } from "./lib/context-rule-dirs";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { testHome } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 // stopTurn can spawn detached children that keep writing into PAL_HOME after the
 // test returns; .gitignore covers .test/ for that reason.

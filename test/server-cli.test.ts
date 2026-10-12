@@ -1,8 +1,18 @@
-import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import {
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  setDefaultTimeout,
+  test,
+} from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir, leftoverTestDirs } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 // The lifecycle is the only part of the server with real failure surface:
 // a process that outlives its shell has to be found again to be stopped, and
@@ -18,8 +28,24 @@ beforeAll(stopServersLeftByLastRun);
 beforeEach(() => {
   if (HOME) pal("stop");
   HOME = freshTestDir(import.meta.file);
-  PORT = 17000 + Math.floor(Math.random() * 2000);
+  PORT = portNobodyListensOn();
 });
+
+/**
+ * A second control room started on a taken port shares it with the first
+ * rather than failing, so a guessed port can land on a server another run
+ * left behind and answer for it. The OS only hands out a port that is free.
+ */
+function portNobodyListensOn(): number {
+  const placeholder = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch: () => new Response(),
+  });
+  const { port } = placeholder;
+  placeholder.stop(true);
+  return port as number;
+}
 
 function palIn(home: string, ...args: string[]) {
   return spawnSync("bun", ["run", CLI, "cli", "server", ...args], {

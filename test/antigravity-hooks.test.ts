@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import {
   existsSync,
   mkdirSync,
@@ -31,7 +31,10 @@ import { agentDirOverrides, paths } from "../src/hooks/lib/paths";
 import { decideRefusal } from "../src/hooks/lib/security-gate";
 import { reload } from "../src/hooks/lib/settings";
 import { readTranscriptFile } from "../src/hooks/lib/transcript";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 // Every payload and transcript step below was captured from agy 1.3.1 by a hook
 // that wrote its stdin to disk; only the paths are swapped for sandbox ones.

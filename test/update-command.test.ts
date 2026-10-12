@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -13,7 +13,10 @@ import {
   type UpdateCache,
 } from "../src/hooks/handlers/update-check";
 import { paths } from "../src/hooks/lib/paths";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 const release = (mode: UpdateCache["mode"], available = true): UpdateCache =>
   ({ available, current: "0.89.0", latest: "0.90.0", mode }) as UpdateCache;

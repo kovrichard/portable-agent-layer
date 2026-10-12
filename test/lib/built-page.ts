@@ -3,8 +3,8 @@ import { beforeAll, expect } from "bun:test";
 const PAGE_BUILD_TIMEOUT_MS = 60_000;
 
 async function ensurePageBuilt(): Promise<void> {
-  const { buildPage, isBuilt } = await import("../../src/tools/control-room/static");
-  if (!isBuilt()) expect(buildPage()).toBe(true);
+  const { buildPage, isUpToDate } = await import("../../src/tools/control-room/static");
+  if (!isUpToDate()) expect(buildPage()).toBe(true);
 }
 
 /**

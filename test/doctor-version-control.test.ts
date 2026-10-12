@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { delimiter, dirname } from "node:path";
 import {
   ghInstallHint,
@@ -7,7 +7,10 @@ import {
 } from "../src/cli/doctor/version-control";
 import { detectRemote } from "../src/hooks/lib/remote";
 import { writeFakeBin } from "./fixtures/fake-bin";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 const osRelease = (id: string, like = "") =>
   `NAME="Some Linux"\nID=${id}\n${like ? `ID_LIKE="${like}"\n` : ""}`;

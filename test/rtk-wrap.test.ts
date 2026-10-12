@@ -1,7 +1,10 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { chmodSync, writeFileSync } from "node:fs";
 import { delimiter, resolve } from "node:path";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 // RtkWrap delegates to `rtk hook <agent>` when rtk is on PATH, forwarding its
 // stdout verbatim. We stub rtk with a fake executable so these tests are
