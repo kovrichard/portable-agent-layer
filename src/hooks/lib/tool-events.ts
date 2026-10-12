@@ -8,6 +8,7 @@ import { FILE_TARGET_KEYS, normalizeToolUse, type ToolUseRequest } from "./agent
 import { appendEvent, logQuietly } from "./events";
 import { hookSessionId } from "./hook-turn";
 import { unappliedVerdictOf } from "./ledger-hook";
+import { permissionWaitSec } from "./waiting-on-user";
 
 const RESULT_KEYS = ["tool_response", "toolResult", "tool_output", "result"];
 const DURATION_KEYS = ["duration_ms", "durationMs"];
@@ -90,8 +91,13 @@ export function logToolCall(payload: Record<string, unknown> | null): void {
   logQuietly("tool_call", () => {
     const call = normalizeToolUse(payload);
     if (!payload || !call) return;
-    appendEvent("tool_call", toolCallFields(payload, call), {
-      session: hookSessionId(payload) ?? null,
+    const session = hookSessionId(payload) ?? null;
+    const fields = {
+      ...toolCallFields(payload, call),
+      promptWaitSec: permissionWaitSec(session, call.toolName),
+    };
+    appendEvent("tool_call", fields, {
+      session,
       content: { tool: call.toolName, input: call.toolInput },
     });
   });

@@ -30,6 +30,7 @@ import { ensureDir, paths } from "./paths";
 import { isSystemText, stripInjectedTags } from "./prompt-text";
 import { isEnabled } from "./settings";
 import { responseModeOf, turnExtras } from "./turn-extras";
+import { backAfterNotificationSec } from "./waiting-on-user";
 import { localClock } from "./wall-clock";
 
 interface ReplyShape {
@@ -140,7 +141,11 @@ function logTurn(event: TurnEvent, prompt: string, text: string): void {
   logQuietly("turn", () =>
     appendEvent(
       "turn",
-      { ...fields, ...turnExtras(prompt, text) },
+      {
+        ...fields,
+        ...turnExtras(prompt, text),
+        backAfterSec: backAfterNotificationSec(session, new Date(ts)),
+      },
       { ts, session, channel, content: { prompt: text } }
     )
   );

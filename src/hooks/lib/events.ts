@@ -37,6 +37,7 @@ export const EVENT_FIELDS = {
     "pastedChars",
     "images",
     "command",
+    "backAfterSec",
   ],
   reply: ["words", "listItems", "headings", "asked", "mode", "latencySec"],
   session_start: [
@@ -51,9 +52,12 @@ export const EVENT_FIELDS = {
   ],
   session_end: ["reason", "durationSec", "turns"],
   compaction: ["trigger", "withInstructions", "contextTokens"],
+  permission_prompt: ["tool"],
+  notification: ["kind"],
   tool_call: [
     "tool",
     "outcome",
+    "promptWaitSec",
     "durationMs",
     "inputChars",
     "outputChars",

@@ -63,6 +63,8 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   const { runStopHandlers } = await lib<typeof import("../../hooks/lib/stop")>("stop.ts");
   const { logToolCall } =
     await lib<typeof import("../../hooks/lib/tool-events")>("tool-events.ts");
+  const { logAttention } =
+    await lib<typeof import("../../hooks/lib/attention-events")>("attention-events.ts");
   const { captureSessionName } = await lib<
     typeof import("../../hooks/handlers/session-name")
   >("../handlers/session-name.ts");
@@ -237,6 +239,14 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
 
       const call = ledgeredOpencodeCall(toolName, _input.callID, output.args);
       if (call) snapshotCall(call);
+    },
+
+    "permission.ask": async (input: { type: string; sessionID: string }) => {
+      logAttention({
+        hook_event_name: "PermissionRequest",
+        session_id: input.sessionID,
+        tool_name: input.type,
+      });
     },
 
     "tool.execute.after": async (

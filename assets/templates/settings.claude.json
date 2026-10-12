@@ -192,6 +192,28 @@
         ]
       }
     ],
+    "PermissionRequest": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/AttentionEvent.ts --agent=claude"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/AttentionEvent.ts --agent=claude"
+          }
+        ]
+      }
+    ],
     "PermissionDenied": [
       {
         "matcher": "Write|Edit",
