@@ -1,8 +1,10 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { logCommitment } from "../src/hooks/lib/commitment-events";
 import { writeProject } from "../src/hooks/lib/projects";
 import { reload } from "../src/hooks/lib/settings";
+import { run } from "../src/tools/agent/project";
 import { backfillEvents } from "../src/tools/lib/backfill";
 import { freshTestDir } from "./lib/test-home";
 
@@ -59,21 +61,28 @@ describe("project history becomes events", () => {
     ]);
   });
 
-  test("an ISC closes or retires on the day its archive heading names", () => {
+  test("an ISC is kept or dropped on the day its archive heading names", () => {
     backfillEvents();
-    expect(ofType("isc")).toEqual([
+    expect(ofType("commitment")).toEqual([
       expect.objectContaining({
         ts: "2026-08-10T00:00:00.000Z",
         project: "shop",
+        iscProject: "shop",
         isc: 1,
-        change: "done",
+        outcome: "kept",
       }),
       expect.objectContaining({
         ts: "2026-08-12T00:00:00.000Z",
         isc: 2,
-        change: "retired",
+        outcome: "dropped",
       }),
     ]);
+  });
+
+  test("a close already streamed live is not logged again", () => {
+    logCommitment("shop", 1, "kept", "cli");
+    expect(backfillEvents()).toMatchObject({ projects: 4 });
+    expect(ofType("commitment").filter((e) => e.isc === 1)).toHaveLength(1);
   });
 
   test("each dated decision is one event, its text kept as content", () => {
@@ -91,5 +100,28 @@ describe("project history becomes events", () => {
   test("a second run appends nothing", () => {
     backfillEvents();
     expect(backfillEvents()).toMatchObject({ projects: 0 });
+  });
+});
+
+describe("project history streams live", () => {
+  async function cli(...args: string[]): Promise<void> {
+    const quiet = spyOn(console, "log").mockImplementation(() => {});
+    try {
+      await run(args);
+    } finally {
+      quiet.mockRestore();
+    }
+  }
+
+  test("creating a project and recording a decision log what the backfill would", async () => {
+    await cli("create", "cart", "--path", resolve(home, "cart"));
+    await cli("add-decision", "cart", "Use a queue", "it retries");
+    const live = logLines("memory").filter((e) => e.project === "cart");
+    expect(live.map((e) => [e.type, e.change ?? e.words])).toEqual([
+      ["project", "registered"],
+      ["decision", 5],
+    ]);
+    expect(backfillEvents()).toMatchObject({ projects: 5 });
+    expect(logLines("memory").filter((e) => e.project === "cart")).toHaveLength(2);
   });
 });

@@ -117,7 +117,6 @@ export const EVENT_FIELDS = {
   ],
   rating: ["rating", "source"],
   project: ["change", "status"],
-  isc: ["isc", "change"],
   decision: ["words"],
   action: [
     "tool",

@@ -1,11 +1,11 @@
 /**
- * A commitment is an ISC: completing it keeps it, retiring it drops it, and a
- * snooze puts it off. Each change of state is one event, whichever surface made it.
+ * A commitment is an ISC: adding it opens it, completing it keeps it, retiring
+ * it drops it, and a snooze puts it off. Each change of state is one event, whichever surface made it.
  */
 
 import { appendEvent, logQuietly } from "./events";
 
-export type CommitmentOutcome = "kept" | "dropped" | "snoozed" | "reopened";
+export type CommitmentOutcome = "opened" | "kept" | "dropped" | "snoozed" | "reopened";
 
 export function logCommitment(
   iscProject: string,

@@ -25,6 +25,8 @@ function commitments(): Record<string, unknown>[] {
     .filter((e) => e.type === "commitment");
 }
 
+const afterOpening = () => commitments().filter((e) => e.outcome !== "opened");
+
 async function cli(...args: string[]): Promise<void> {
   const quiet = spyOn(console, "log").mockImplementation(() => {});
   try {
@@ -46,30 +48,39 @@ beforeEach(async () => {
 });
 
 describe("a commitment", () => {
+  test("opened when its ISC is added", () => {
+    expect(commitments().map((e) => [e.iscProject, e.isc, e.outcome, e.surface])).toEqual(
+      [
+        ["goals", 1, "opened", "cli"],
+        ["goals", 2, "opened", "cli"],
+      ]
+    );
+  });
+
   test("kept, reopened and dropped from the CLI, each once", async () => {
     await cli("complete-isc", "goals", "1");
     await cli("complete-isc", "goals", "1");
     await cli("reopen-isc", "goals", "1");
     await cli("retire-isc", "goals", "2");
-    expect(commitments().map((e) => [e.iscProject, e.isc, e.outcome, e.surface])).toEqual(
-      [
-        ["goals", 1, "kept", "cli"],
-        ["goals", 1, "reopened", "cli"],
-        ["goals", 2, "dropped", "cli"],
-      ]
-    );
+    expect(
+      afterOpening().map((e) => [e.iscProject, e.isc, e.outcome, e.surface])
+    ).toEqual([
+      ["goals", 1, "kept", "cli"],
+      ["goals", 1, "reopened", "cli"],
+      ["goals", 2, "dropped", "cli"],
+    ]);
   });
 
   test("kept and snoozed from the control room, and waking one is not a snooze", () => {
     setIscStatus("goals", 1, true);
     setSnooze("goals", 2, 7);
     setSnooze("goals", 2, 0);
-    expect(commitments().map((e) => [e.isc, e.outcome, e.surface, e.snoozeDays])).toEqual(
-      [
-        [1, "kept", "control-room", null],
-        [2, "snoozed", "control-room", 7],
-      ]
-    );
+    expect(
+      afterOpening().map((e) => [e.isc, e.outcome, e.surface, e.snoozeDays])
+    ).toEqual([
+      [1, "kept", "control-room", null],
+      [2, "snoozed", "control-room", 7],
+    ]);
   });
 
   test("never carries the criterion's text", async () => {
