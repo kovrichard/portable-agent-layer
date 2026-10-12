@@ -1,4 +1,4 @@
-import { appendFileSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { currentAttribution } from "./actor";
 import { paths } from "./paths";
@@ -18,6 +18,31 @@ function emitSignal(
   const signal: Signal = { ts: now(), ...currentAttribution(), ...data };
   const filepath = resolve(paths.signals(), filename);
   appendFileSync(filepath, `${JSON.stringify(signal)}\n`);
+}
+
+export interface RatingSignal extends Signal {
+  rating: number;
+  context: string;
+  source: string;
+  response_preview?: string;
+}
+
+function parseSignal(line: string): RatingSignal[] {
+  try {
+    return [JSON.parse(line) as RatingSignal];
+  } catch {
+    return [];
+  }
+}
+
+export function readRatings(): RatingSignal[] {
+  const filepath = resolve(paths.signals(), "ratings.jsonl");
+  if (!existsSync(filepath)) return [];
+  return readFileSync(filepath, "utf-8")
+    .split("\n")
+    .filter(Boolean)
+    .flatMap(parseSignal)
+    .filter((row) => row.type === "rating");
 }
 
 /** Append a rating signal */

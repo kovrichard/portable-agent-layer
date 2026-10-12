@@ -115,6 +115,7 @@ export const EVENT_FIELDS = {
     "coAuthors",
     "aiCoAuthored",
   ],
+  rating: ["rating", "source"],
   permission_prompt: ["tool"],
   notification: ["kind"],
   tool_call: [
