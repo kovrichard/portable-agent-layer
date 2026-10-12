@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   buildClaudeArgs,
@@ -168,19 +168,28 @@ describe("inference dispatcher — depth limit refusal", () => {
 });
 
 describe("inference dispatcher — PAL_INFERENCE_DISABLED kill-switch", () => {
-  test("inference() returns failure immediately when PAL_INFERENCE_DISABLED=1", async () => {
-    const saved = process.env.PAL_INFERENCE_DISABLED;
+  let tmpBin: string;
+
+  beforeEach(() => {
+    restoreEnv(BASELINE);
+    tmpBin = freshTestDir(import.meta.file);
+    process.env.PAL_HOME = tmpBin;
+    process.env.PAL_AGENT = "claude";
     process.env.PAL_INFERENCE_DISABLED = "1";
-    try {
-      const start = Date.now();
-      const result = await inference({ user: "hi", timeout: 30000 });
-      const elapsed = Date.now() - start;
-      expect(result.success).toBe(false);
-      expect(elapsed).toBeLessThan(50); // no spawn, no fetch
-    } finally {
-      if (saved === undefined) delete process.env.PAL_INFERENCE_DISABLED;
-      else process.env.PAL_INFERENCE_DISABLED = saved;
-    }
+  });
+
+  test("inference() fails without spawning the agent when PAL_INFERENCE_DISABLED=1", async () => {
+    const spawned = resolve(tmpBin, "spawned");
+    writeFakeBin(
+      tmpBin,
+      "claude",
+      `require("node:fs").writeFileSync(${JSON.stringify(spawned)}, "");\nconsole.log("ok");\n`
+    );
+    prependPath(tmpBin);
+
+    const result = await inference({ user: "hi", timeout: 30000 });
+    expect(result.success).toBe(false);
+    expect(existsSync(spawned)).toBe(false);
   });
 });
 
