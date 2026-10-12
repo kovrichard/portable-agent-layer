@@ -69,6 +69,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
     logOpencodeCompaction,
     logOpencodePermissionReply,
     logOpencodeSessionCreated,
+    logOpencodeToolFailure,
     rememberAskedTool,
   } = await lib<typeof import("../../hooks/lib/opencode-events")>("opencode-events.ts");
   const { captureSessionName } = await lib<
@@ -153,6 +154,8 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
         logOpencodeCompaction(event.properties.sessionID);
       if (event.type === "permission.replied")
         logOpencodePermissionReply(event.properties);
+      if (event.type === "message.part.updated")
+        logOpencodeToolFailure(event.properties.part);
 
       if (event.type === "session.created" || event.type === "session.updated") {
         const { regenerateIfNeeded } =

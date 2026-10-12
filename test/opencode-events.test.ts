@@ -5,6 +5,7 @@ import {
   logOpencodeCompaction,
   logOpencodePermissionReply,
   logOpencodeSessionCreated,
+  logOpencodeToolFailure,
   rememberAskedTool,
 } from "../src/hooks/lib/opencode-events";
 import { agentDirOverrides } from "../src/hooks/lib/paths";
@@ -108,6 +109,73 @@ describe("an opencode permission reply", () => {
   });
 });
 
+describe("an opencode tool part that ends in error", () => {
+  function erroredPart(callID: string, error: string) {
+    return {
+      type: "tool",
+      callID,
+      sessionID: "ses_1",
+      tool: "bash",
+      state: {
+        status: "error",
+        input: { command: "ls /missing" },
+        error,
+        time: { start: 1_000, end: 1_250 },
+      },
+    };
+  }
+
+  test("is a failed call, with its tool, input and duration", () => {
+    logOpencodeToolFailure(erroredPart("call_1", "ls: cannot access '/missing'"));
+    expect(streamed("tool_call")).toEqual([
+      expect.objectContaining({
+        session: "ses_1",
+        tool: "bash",
+        outcome: "failed",
+        program: "ls",
+        durationMs: 250,
+      }),
+    ]);
+  });
+
+  test("a part updated again after it failed is logged once", () => {
+    const part = erroredPart("call_2", "boom");
+    logOpencodeToolFailure(part);
+    logOpencodeToolFailure(part);
+    expect(streamed("tool_call")).toHaveLength(1);
+  });
+
+  test("a call a permission rule blocked is denied, not failed", () => {
+    logOpencodeToolFailure(
+      erroredPart(
+        "call_3",
+        "The user has specified a rule which prevents you from using this specific tool call. Here are some of the relevant rules []"
+      )
+    );
+    expect(streamed("tool_call").map((e) => e.outcome)).toEqual(["denied"]);
+  });
+
+  test("a call the user rejected is left to the permission reply that already logs it", () => {
+    logOpencodeToolFailure(
+      erroredPart(
+        "call_4",
+        "The user rejected permission to use this specific tool call."
+      )
+    );
+    expect(streamed("tool_call")).toEqual([]);
+  });
+
+  test("a part still running, or one that is not a tool, is no call", () => {
+    const running = erroredPart("call_5", "");
+    logOpencodeToolFailure({
+      ...running,
+      state: { ...running.state, status: "running" },
+    });
+    logOpencodeToolFailure({ type: "text", callID: "call_6" });
+    expect(streamed("tool_call")).toEqual([]);
+  });
+});
+
 describe("the opencode plugin routes its bus events to these loggers", () => {
   // biome-ignore lint/suspicious/noExplicitAny: the plugin's opencode-typed hooks
   async function plugin(): Promise<any> {
@@ -116,7 +184,7 @@ describe("the opencode plugin routes its bus events to these loggers", () => {
     return await PALPlugin({ directory: home, client: {} } as never);
   }
 
-  test("a created session, a compaction and a rejected ask each land", async () => {
+  test("a created session, a compaction, a rejected ask and a failed tool each land", async () => {
     const hooks = await plugin();
     await hooks.event({
       event: { type: "session.created", properties: { info: { id: "ses_p" } } },
@@ -131,11 +199,31 @@ describe("the opencode plugin routes its bus events to these loggers", () => {
         properties: { sessionID: "ses_p", permissionID: "per_p", response: "reject" },
       },
     });
+    await hooks.event({
+      event: {
+        type: "message.part.updated",
+        properties: {
+          part: {
+            type: "tool",
+            callID: "call_p",
+            sessionID: "ses_p",
+            tool: "read",
+            state: {
+              status: "error",
+              input: {},
+              error: "ENOENT",
+              time: { start: 1, end: 2 },
+            },
+          },
+        },
+      },
+    });
 
     expect(streamed("session_start").map((e) => e.session)).toEqual(["ses_p"]);
     expect(streamed("compaction").map((e) => e.session)).toEqual(["ses_p"]);
     expect(streamed("tool_call").map((e) => [e.tool, e.outcome])).toEqual([
       ["edit", "denied"],
+      ["read", "failed"],
     ]);
   });
 });
