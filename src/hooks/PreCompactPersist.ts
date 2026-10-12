@@ -19,6 +19,7 @@ import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { logDebug, logError } from "./lib/log";
 import { paths } from "./lib/paths";
 import { sessionDir } from "./lib/session-dir";
+import { logCompaction } from "./lib/session-events";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
 import { readTranscriptFile } from "./lib/transcript";
@@ -37,6 +38,7 @@ interface PreCompactInput {
 
 const main = async () => {
   const input = await readStdinJSON<PreCompactInput>();
+  logCompaction(input);
   if (!input?.transcript_path) {
     logDebug("PreCompactPersist", "No transcript_path in input — skipping");
     process.exit(0);

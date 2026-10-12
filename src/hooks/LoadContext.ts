@@ -24,11 +24,10 @@ import {
   isSubagentSession,
   needsAgentsMd,
 } from "./lib/session-context";
+import { logSessionStart } from "./lib/session-events";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
 
-// Recursion guard — when this process is a PAL-spawned inference subprocess,
-// skip all context loading so we don't trigger another inference call.
 if (isPalSpawnedInference()) process.exit(0);
 if (duplicatesCursorHooks()) process.exit(0);
 if (isSubagentSession(process.env)) {
@@ -51,6 +50,7 @@ try {
 try {
   const active = getActiveAgent();
   const input = await readStdinJSON<{ source?: string }>();
+  logSessionStart(input);
   const wanted = contextForSource(active, input?.source);
   if (wanted === "none") {
     logDebug("LoadContext", `source=${input?.source}, context already present`);
