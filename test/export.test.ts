@@ -40,6 +40,8 @@ beforeAll(() => {
     '{"rating":5}\n'
   );
   writeFileSync(resolve(TEST_HOME, "memory", "downloads", "2026", "file.pdf"), "pdf");
+  mkdirSync(resolve(TEST_HOME, "memory", "content", "claude"), { recursive: true });
+  writeFileSync(resolve(TEST_HOME, "memory", "content", "claude", "s.jsonl.gz"), "gz");
 
   // A user-authored personal skill (real directory) — should be exported.
   mkdirSync(resolve(TEST_HOME, "skills", "my-skill"), { recursive: true });
@@ -83,6 +85,12 @@ describe("collectExportFiles", () => {
     const files = collectExportFiles();
     const downloads = files.filter((f) => f.startsWith("memory/downloads"));
     expect(downloads).toHaveLength(0);
+  });
+
+  test("keeps the content store on its machine", async () => {
+    const { collectExportFiles } = await import("../src/hooks/lib/export");
+    const files = collectExportFiles();
+    expect(files.filter((f) => f.startsWith("memory/content"))).toHaveLength(0);
   });
 
   test("collects user-authored personal skills and subagents", async () => {

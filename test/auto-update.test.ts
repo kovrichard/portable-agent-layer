@@ -186,6 +186,57 @@ describe("a run that fails", () => {
   });
 });
 
+function updateEvents(): Record<string, unknown>[] {
+  const file = resolve(
+    HOME,
+    "memory",
+    "events",
+    `${new Date().toISOString().slice(0, 7)}.jsonl`
+  );
+  if (!existsSync(file)) return [];
+  return readFileSync(file, "utf-8")
+    .trim()
+    .split("\n")
+    .map((l) => JSON.parse(l))
+    .filter((e) => e.type === "pal_update");
+}
+
+describe("the event log", () => {
+  test("a failed run is logged with the version it started from", () => {
+    setSettings({ enabled: true, decided: true });
+    runAutoUpdate();
+    expect(updateEvents()).toEqual([
+      expect.objectContaining({ outcome: "failed", from: "0.76.1", to: "0.76.1" }),
+    ]);
+  });
+
+  test("a skip is logged with its reason", () => {
+    writeFileSync(resolve(PKG, "work.txt"), "unstaged change", "utf-8");
+    runAutoUpdate();
+    expect(updateEvents()[0]).toMatchObject({
+      outcome: "skipped",
+      skipReason: "uncommitted changes in the PAL repo",
+    });
+  });
+
+  test("a run that moved the version is logged as an update between the two", () => {
+    mkdirSync(resolve(PKG, "src", "cli"), { recursive: true });
+    writeFileSync(
+      resolve(PKG, "src", "cli", "index.ts"),
+      `require("node:fs").writeFileSync(${JSON.stringify(resolve(PKG, "package.json"))}, '{"version":"0.77.0"}');`,
+      "utf-8"
+    );
+    git("add", "-A");
+    git("commit", "-m", "fake update");
+    runAutoUpdate();
+    expect(updateEvents()[0]).toMatchObject({
+      outcome: "updated",
+      from: "0.76.1",
+      to: "0.77.0",
+    });
+  });
+});
+
 /** Stands in for `pal cli update`, and leaves a mark when it actually ran. */
 function countingUpdateCommand(marker: string): void {
   mkdirSync(resolve(PKG, "src", "cli"), { recursive: true });

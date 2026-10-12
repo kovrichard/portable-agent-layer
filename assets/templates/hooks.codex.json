@@ -39,7 +39,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts --agent=codex"
+            "command": "bun run {{PKG_ROOT}}/src/hooks/PostToolOrchestrator.ts --agent=codex"
           }
         ]
       }
@@ -50,6 +50,16 @@
           {
             "type": "command",
             "command": "bun run {{PKG_ROOT}}/src/hooks/StopOrchestrator.ts --agent=codex"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/PreCompactPersist.ts --agent=codex"
           }
         ]
       }

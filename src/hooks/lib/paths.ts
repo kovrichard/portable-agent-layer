@@ -111,6 +111,7 @@ export const paths = {
     home("memory", "learning", "reflections", "algorithm-reflections.jsonl"),
   retrievalIndex: () => home("memory", "learning", ".retrieval-index.json"),
   ledger: () => ensureDir(home("memory", "ledger")),
+  content: () => ensureDir(home("memory", "content")),
   progress: () => ensureDir(home("memory", "state", "progress")),
   projectHistory: () => ensureDir(home("memory", "projects")),
   unboundHistory: () => ensureDir(home("memory", "state", "unbound-history")),

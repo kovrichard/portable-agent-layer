@@ -84,11 +84,11 @@ describe("Codex sends the patch under a command key, not as the arguments", () =
 describe("the Codex hooks template", () => {
   test("snapshots before a tool runs and commits after it", () => {
     const ledger = commands()
-      .filter((c) => c.command.includes("Ledger"))
+      .filter((c) => /Ledger|PostTool/.test(c.command))
       .map((c) => `${c.event} ${c.command.split("/").pop()}`);
     expect(ledger).toEqual([
       "PreToolUse LedgerSnapshot.ts --agent=codex",
-      "PostToolUse LedgerCommit.ts --agent=codex",
+      "PostToolUse PostToolOrchestrator.ts --agent=codex",
     ]);
   });
 
@@ -101,12 +101,12 @@ describe("the Codex hooks template", () => {
 
   /**
    * Codex publishes neither PostToolUseFailure nor PermissionDenied (its own
-   * parity tracker lists both as missing), so wiring LedgerUnapplied would
-   * register a hook that never fires and imply an outcome PAL cannot observe.
+   * parity tracker lists both as missing), so wiring one would register a hook
+   * that never fires and imply an outcome PAL cannot observe.
    */
   test("records no failure outcome, because Codex publishes no failure event", () => {
     expect(commands().map((c) => c.event)).not.toContain("PostToolUseFailure");
-    expect(commands().every((c) => !c.command.includes("LedgerUnapplied"))).toBe(true);
+    expect(commands().map((c) => c.event)).not.toContain("PermissionDenied");
   });
 
   test("still runs the security gate before the snapshot", () => {

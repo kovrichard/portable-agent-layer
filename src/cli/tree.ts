@@ -14,6 +14,8 @@ import {
   type OptionSpecs,
 } from "../tools/lib/command";
 import { builtinTools, builtinToolVerbs } from "./builtin-tools";
+import { contentCommand } from "./content";
+import { eventsCommand } from "./events";
 import { identityCommand } from "./identity";
 import { inferCommand } from "./infer";
 import { knowledgeCommand } from "./knowledge";
@@ -151,6 +153,8 @@ export function cliTree(admin: AdminHandlers): Group {
     commands: {
       ...adminCommands(admin),
       usage: usageCommand,
+      content: contentCommand,
+      events: eventsCommand,
       infer: inferCommand,
       actor: identityCommand("actor"),
       machine: identityCommand("machine"),

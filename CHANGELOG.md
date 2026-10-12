@@ -1,3 +1,36 @@
+# [0.95.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.94.0...v0.95.0) (2026-10-12)
+
+
+### Bug Fixes
+
+* **events:** logging never fails the hook it runs in ([786918d](https://github.com/kovrichard/portable-agent-layer/commit/786918d186d0081549bf236ab6e6eec89b2d83d2))
+
+
+### Features
+
+* **content:** keep a gzipped copy of every Claude Code transcript ([b5abb1a](https://github.com/kovrichard/portable-agent-layer/commit/b5abb1aefbacdf25b1e5dcebbcf77a906af897b5))
+* **events:** a commitment event when an ISC is kept, dropped, snoozed or reopened ([744490d](https://github.com/kovrichard/portable-agent-layer/commit/744490d0de47ae3d3556c6342fdc0260faf948a5))
+* **events:** a tool_call event for every tool call on every agent ([0c6e327](https://github.com/kovrichard/portable-agent-layer/commit/0c6e32792807a1815142a116397f36613e385e15))
+* **events:** entity_first_seen when a new entity enters the knowledge store ([759e928](https://github.com/kovrichard/portable-agent-layer/commit/759e928f3561ce342ff684865333c7e755de4a11))
+* **events:** hook_timing for the stop and prompt hooks ([0a01741](https://github.com/kovrichard/portable-agent-layer/commit/0a01741e69eb68617bbfe890b79af395244f83b2))
+* **events:** inference_call for every inference PAL makes ([4ca83a9](https://github.com/kovrichard/portable-agent-layer/commit/4ca83a9b7a15e62e4f9b1713855b77724576f82a))
+* **events:** local append-only event stream with content store ([748a540](https://github.com/kovrichard/portable-agent-layer/commit/748a540888c54b9b7e532e9d1c1de5243d5fdef0))
+* **events:** log compaction on Cursor, Copilot and Codex ([e09043f](https://github.com/kovrichard/portable-agent-layer/commit/e09043f68dbd9a0b07965302995afe59be225a3a))
+* **events:** log opencode session starts, compactions and denied calls ([a0294b9](https://github.com/kovrichard/portable-agent-layer/commit/a0294b991e7dd680898f057fa07967eea440140a))
+* **events:** pal cli events discord-nag for the bot's nags and answer times ([ecb3cfe](https://github.com/kovrichard/portable-agent-layer/commit/ecb3cfe37d9c3c3b13a1b92c4550d2f95077e401))
+* **events:** pal_update for every self-update attempt and skip ([c1d83e1](https://github.com/kovrichard/portable-agent-layer/commit/c1d83e152375b7374cf8efa83fb69d686baa9580))
+* **events:** permission prompts, notifications and how long the user took ([b5a66c6](https://github.com/kovrichard/portable-agent-layer/commit/b5a66c6f5516da7c8f4986eacdea341019afee57))
+* **events:** session model, branch and size, and the program a shell call ran ([30c5978](https://github.com/kovrichard/portable-agent-layer/commit/30c59781a079bc02f6ec1c33d895fe6502be64fd))
+* **events:** session start, end and compaction events ([0965879](https://github.com/kovrichard/portable-agent-layer/commit/0965879f6f7206b1fe057135678f58365bc43832))
+* **interaction:** log turns as events in the stream ([897d172](https://github.com/kovrichard/portable-agent-layer/commit/897d172442a3c6edd1c24ea86cd867467bb01bce))
+* **interaction:** turn extras and reply events ([97cbf8b](https://github.com/kovrichard/portable-agent-layer/commit/97cbf8b74194afcc63f0171c0e8c8cdb08a01506))
+* **work-tracking:** archive sessions pruned from sessions.json ([3d1f22d](https://github.com/kovrichard/portable-agent-layer/commit/3d1f22d92a25539fdff829d2049bd047854d45ad))
+
+
+### Performance Improvements
+
+* **events:** log tool calls without a blocking process ([a96f2e4](https://github.com/kovrichard/portable-agent-layer/commit/a96f2e43b8a7c88575f3f5494869c0d0b6ddacf2))
+
 # [0.94.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.93.0...v0.94.0) (2026-10-10)
 
 

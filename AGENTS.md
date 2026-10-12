@@ -106,7 +106,7 @@ its logic can be deleted outright and the suite stays green.
 So an entrypoint is: read stdin → parse → **one call to an exported library
 function** → write stdout. Everything else belongs in `src/hooks/lib/`, where the
 suite imports it directly. The spawn seam still earns one smoke test per entrypoint;
-it stops being the only test. `src/hooks/LedgerCommit.ts` is the pattern in four lines.
+it stops being the only test. `src/hooks/PostToolOrchestrator.ts` is the pattern in four lines.
 
 Two klint rules hold the line, both scoped to `src/hooks/*.ts` alone: no unexported
 `function` declaration, and a 90-line ceiling. `src/hooks/handlers/**` is deliberately
