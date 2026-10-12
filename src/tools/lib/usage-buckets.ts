@@ -7,7 +7,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { costOfUsage } from "../../hooks/lib/models";
-import { cacheWritesOf, type TranscriptUsage } from "./transcript-usage";
+import { cacheWritesOf, firstSighting, type TranscriptUsage } from "./transcript-usage";
 
 export interface Bucket {
   input: number;
@@ -180,7 +180,7 @@ export function usageTally(projectFilter?: string, now: Date = new Date()): Usag
 interface TranscriptLine {
   type?: string;
   timestamp?: string;
-  message?: { model?: string; usage?: TranscriptUsage };
+  message?: { id?: string; model?: string; usage?: TranscriptUsage };
 }
 
 /**
@@ -209,6 +209,7 @@ function transcriptsIn(projPath: string): string[] {
 }
 
 interface PricedCall {
+  messageId?: string;
   ts: string;
   model: string;
   tokens: Tokens;
@@ -230,6 +231,7 @@ function pricedCallOf(line: string): PricedCall | null {
   if (!usage || !model || !ts) return null;
 
   return {
+    messageId: entry.message?.id,
     ts,
     model,
     tokens: {
@@ -248,6 +250,7 @@ export function readClaudeCode(
 ): AgentUsage {
   const tally = usageTally(projectFilter, now);
   if (!existsSync(claudeDir)) return tally.usage;
+  const billed = new Set<string>();
 
   const projectDirs = readdirSync(claudeDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
@@ -269,9 +272,11 @@ export function readClaudeCode(
         // Cheap reject before the parse: most lines are not model turns.
         if (!line.includes('"usage"')) continue;
         const call = pricedCallOf(line);
-        if (!call) continue;
+        if (!call || !firstSighting(billed, call.messageId)) continue;
         tally.record({
-          ...call,
+          ts: call.ts,
+          model: call.model,
+          tokens: call.tokens,
           project: projName,
           cost: costOfUsage(call.model, call.tokens),
         });

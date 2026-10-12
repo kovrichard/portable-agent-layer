@@ -18,6 +18,17 @@ export interface TranscriptUsage {
   };
 }
 
+/**
+ * Claude Code writes one transcript line per content block of a message, and
+ * every one of them repeats the message's full usage. A message is billed once.
+ */
+export function firstSighting(seen: Set<string>, messageId: string | undefined): boolean {
+  if (!messageId) return true;
+  if (seen.has(messageId)) return false;
+  seen.add(messageId);
+  return true;
+}
+
 export interface CacheWrites {
   cacheWrite5m: number;
   cacheWrite1h: number;

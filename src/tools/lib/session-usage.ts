@@ -10,7 +10,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { costOfUsage } from "../../hooks/lib/models";
-import { cacheWritesOf, type TranscriptUsage } from "./transcript-usage";
+import { cacheWritesOf, firstSighting, type TranscriptUsage } from "./transcript-usage";
 
 export interface SessionUsage {
   input: number;
@@ -94,7 +94,7 @@ interface TranscriptLine {
   type?: string;
   timestamp?: string;
   sessionId?: string;
-  message?: { model?: string; usage?: TranscriptUsage };
+  message?: { id?: string; model?: string; usage?: TranscriptUsage };
 }
 
 function emptyUsage(): SessionUsage {
@@ -113,6 +113,7 @@ function emptyUsage(): SessionUsage {
 
 export function accumulateUsage(transcript: string, sessionId: string): SessionUsage {
   const total = emptyUsage();
+  const billed = new Set<string>();
   let firstTs = "";
   let lastTs = "";
 
@@ -136,7 +137,7 @@ export function accumulateUsage(transcript: string, sessionId: string): SessionU
     if (entry.type !== "assistant") continue;
     const usage = entry.message?.usage;
     const model = entry.message?.model;
-    if (!usage || !model) continue;
+    if (!usage || !model || !firstSighting(billed, entry.message?.id)) continue;
 
     const input = usage.input_tokens ?? 0;
     const output = usage.output_tokens ?? 0;

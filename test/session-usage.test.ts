@@ -130,6 +130,30 @@ describe("accumulateUsage", () => {
     expect(accumulateUsage(noModel, SESSION).input).toBe(0);
   });
 
+  test("a message written as one line per content block is billed once", () => {
+    const block = (id: string, type: string) =>
+      JSON.stringify({
+        type: "assistant",
+        sessionId: SESSION,
+        message: {
+          id,
+          model: MODEL,
+          content: [{ type }],
+          usage: { input_tokens: 10, output_tokens: 300 },
+        },
+      });
+    const usage = accumulateUsage(
+      [
+        block("msg_1", "text"),
+        block("msg_1", "tool_use"),
+        block("msg_1", "tool_use"),
+        block("msg_2", "text"),
+      ].join("\n"),
+      SESSION
+    );
+    expect([usage.calls, usage.input, usage.output]).toEqual([2, 20, 600]);
+  });
+
   test("a corrupt line is skipped, not fatal to the rest of the file", () => {
     const usage = accumulateUsage(
       ["{not json", assistantLine({ input_tokens: 100 }), ""].join("\n"),
