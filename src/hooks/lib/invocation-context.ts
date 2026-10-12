@@ -15,6 +15,7 @@ import { latestUserRequest } from "./antigravity-transcript";
 import { autoUpdateOnStart } from "./auto-update";
 import { regenerateIfNeeded } from "./claude-md";
 import { buildSystemReminder } from "./context";
+import { startHookTiming } from "./hook-timing";
 import { type HookTurnPayload, hookSessionId } from "./hook-turn";
 import { logContextSnapshot, logError, logPromptSnapshot } from "./log";
 import { paths } from "./paths";
@@ -89,11 +90,18 @@ export async function invocationContext(
   const prompt = latestUserRequest(payload.transcriptPath);
   if (prompt === null) return null;
 
+  const timing = startHookTiming("prompt");
+  const sessionContext = claimConversationStart(conversationId)
+    ? await timing.time("session-context", sessionStartReminder)
+    : null;
   const parts = [
-    claimConversationStart(conversationId) ? sessionStartReminder() : null,
-    await promptReminder(prompt, conversationId),
+    sessionContext,
+    await timing.time("inject-context", () => promptReminder(prompt, conversationId)),
   ].filter((part): part is string => Boolean(part));
-  await capturePrompt(prompt, conversationId, sentAt, "InvocationContext");
+  await timing.time("capture", () =>
+    capturePrompt(prompt, conversationId, sentAt, "InvocationContext")
+  );
+  timing.log(conversationId);
 
   return parts.length > 0 ? injectedStep(parts.join("\n\n")) : null;
 }

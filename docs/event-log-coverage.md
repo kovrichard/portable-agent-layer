@@ -19,15 +19,15 @@ missing hook is recorded here, never synthesised from another event.
 | `turn` | ✅ UserPromptSubmit | ✅ chat.message | ✅ beforeSubmitPrompt | ✅ userPromptSubmitted | ✅ UserPromptSubmit | ✅ PreInvocation |
 | `reply` | ✅ Stop | ✅ session.idle | ✅ stop | ✅ agentStop | ✅ Stop | ✅ Stop |
 | `session_start` | ✅ SessionStart | ✅ session.created | ✅ sessionStart | ✅ sessionStart | ✅ SessionStart | ⛔ |
-| `session_end` | ✅ SessionEnd | ? | ✅ sessionEnd | ✅ sessionEnd | ✅ SessionEnd | ⛔ |
+| `session_end` | ✅ SessionEnd | ⛔ | ✅ sessionEnd | ✅ sessionEnd | ✅ SessionEnd | ⛔ |
 | `compaction` | ✅ PreCompact | ✅ session.compacted | ✅ preCompact | ✅ preCompact | ✅ PreCompact | ⛔ |
 | `tool_call` ok | ✅ PostToolUse | ✅ tool.execute.after | ✅ postToolUse | ✅ postToolUse | ✅ PostToolUse | ✅ PostToolUse |
-| `tool_call` failed | ✅ PostToolUseFailure | ? | ✅ postToolUseFailure | ✅ postToolUseFailure | ⛔ | ⛔ |
+| `tool_call` failed | ✅ PostToolUseFailure | ✅ message.part.updated | ✅ postToolUseFailure | ✅ postToolUseFailure | ⛔ | ✅ PostToolUse `error` |
 | `tool_call` denied | ✅ PermissionDenied | ✅ permission.replied | ⛔ | ⛔ | ⛔ | ⛔ |
 | `permission_prompt` | ✅ PermissionRequest | ✅ permission.ask | ⛔ | ⛔ | ⛔ | ⛔ |
 | `notification` | ✅ Notification | ⛔ | ⛔ | ⛔ | ⛔ | ⛔ |
 | `hook_timing` stop | ✅ Stop | ✅ session.idle | ✅ stop | ✅ agentStop | ✅ Stop | ✅ Stop |
-| `hook_timing` prompt | ✅ UserPromptSubmit | ⛔ in-process | ✅ beforeSubmitPrompt | ✅ userPromptSubmitted | ✅ UserPromptSubmit | ◻ |
+| `hook_timing` prompt | ✅ UserPromptSubmit | ⛔ in-process | ✅ beforeSubmitPrompt | ✅ userPromptSubmitted | ✅ UserPromptSubmit | ✅ PreInvocation |
 | `pal_update` unattended | ✅ SessionEnd | ✅ server.instance.disposed | ✅ sessionEnd | ✅ sessionEnd | ✅ SessionEnd | ⛔ |
 
 Each post-tool event has one PAL entry, `PostToolOrchestrator.ts`, which writes
@@ -36,10 +36,13 @@ it twice: sync on edits for the ledger (`--only=ledger`), async on every tool fo
 the event (`--only=events`), so a tool call never waits on the event log.
 opencode does both in-process.
 
-`◻` and `?` cells are the open work. opencode's failed tool call is `?` because
-only its unreleased plugin API reports one (`tool.execute.after` with
-`status: "error"`). opencode's plugin runs in-process, so it
-starts no hook process whose time could be measured.
+A tool that throws in opencode never reaches `tool.execute.after`; its message
+part turning to `error` is the only trace, and a call the user rejected there is
+left to `permission.replied`. opencode has no event for a session ending:
+`session.deleted` is the user deleting one, and `server.instance.disposed` is
+the whole process. Its plugin runs in-process, so it starts no hook process
+whose time could be measured. Antigravity fires PostToolUse for a failed call
+too and says so only in `error`.
 
 ## Events PAL writes itself
 
