@@ -37,7 +37,7 @@
   },
   "scripts": {
     "type-check": "tsc --noEmit",
-    "test": "bun test --randomize --isolate --parallel=4; bun test --randomize --isolate --parallel=4; bun test --randomize --isolate --parallel=4; bun test --randomize --isolate --parallel=4; bun test --randomize --isolate --parallel=4",
+    "test": "bun test --randomize --isolate --parallel=2; bun test --randomize --isolate --parallel=2; bun test --randomize --isolate --parallel=2; bun test --randomize --isolate --parallel=2; bun test --randomize --isolate --parallel=2",
     "test:mutate": "stryker run",
     "test:mutate:diff": "bun .agents/scripts/mutate-diff.ts",
     "format": "biome format",
