@@ -2,6 +2,7 @@ import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir, leftoverTestDirs } from "./lib/test-home";
 
 // The lifecycle is the only part of the server with real failure surface:
@@ -103,15 +104,19 @@ describe("pal cli server", () => {
     expect(recordedPid()).toBe(pid);
   });
 
-  test("stop kills the process and forgets it", async () => {
-    pal("start", "--port", String(PORT));
-    const pid = recordedPid();
+  test(
+    "stop kills the process and forgets it",
+    async () => {
+      pal("start", "--port", String(PORT));
+      const pid = recordedPid();
 
-    const stopped = pal("stop");
-    expect(stopped.status).toBe(0);
-    expect(await untilGone(pid)).toBe(true);
-    expect(existsSync(stateFile())).toBe(false);
-  });
+      const stopped = pal("stop");
+      expect(stopped.status).toBe(0);
+      expect(await untilGone(pid)).toBe(true);
+      expect(existsSync(stateFile())).toBe(false);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
   test("stop with a stale record clears it and says so", () => {
     writeFileSync(

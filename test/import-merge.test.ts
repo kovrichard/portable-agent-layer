@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
@@ -78,106 +79,140 @@ beforeEach(() => {
 });
 
 describe("import into a NON-EMPTY home", () => {
-  test("merges jsonl records from both sides instead of overwriting", () => {
-    expect(cli(SRC, ["export", WORK]).status).toBe(0);
-    const r = cli(DST, ["import", WORK]);
-    expect(r.status).toBe(0);
+  test(
+    "merges jsonl records from both sides instead of overwriting",
+    () => {
+      expect(cli(SRC, ["export", WORK]).status).toBe(0);
+      const r = cli(DST, ["import", WORK]);
+      expect(r.status).toBe(0);
 
-    const ratings = lines(DST, "memory/signals/ratings.jsonl");
-    // local record survives
-    expect(ratings.some((l) => l.includes("2026-02-01"))).toBe(true);
-    // imported records arrive
-    expect(ratings.some((l) => l.includes("2026-01-01"))).toBe(true);
-    expect(ratings.some((l) => l.includes("2026-01-02"))).toBe(true);
-    expect(ratings.length).toBe(3);
+      const ratings = lines(DST, "memory/signals/ratings.jsonl");
+      // local record survives
+      expect(ratings.some((l) => l.includes("2026-02-01"))).toBe(true);
+      // imported records arrive
+      expect(ratings.some((l) => l.includes("2026-01-01"))).toBe(true);
+      expect(ratings.some((l) => l.includes("2026-01-02"))).toBe(true);
+      expect(ratings.length).toBe(3);
 
-    const refl = lines(DST, "memory/learning/reflections/algorithm-reflections.jsonl");
-    expect(refl.length).toBe(2);
-    expect(refl.some((l) => l.includes("linux lesson"))).toBe(true);
-    expect(refl.some((l) => l.includes("mac lesson"))).toBe(true);
-  });
+      const refl = lines(DST, "memory/learning/reflections/algorithm-reflections.jsonl");
+      expect(refl.length).toBe(2);
+      expect(refl.some((l) => l.includes("linux lesson"))).toBe(true);
+      expect(refl.some((l) => l.includes("mac lesson"))).toBe(true);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("keeps both machines' personal skills", () => {
-    expect(cli(SRC, ["export", WORK]).status).toBe(0);
-    expect(cli(DST, ["import", WORK]).status).toBe(0);
+  test(
+    "keeps both machines' personal skills",
+    () => {
+      expect(cli(SRC, ["export", WORK]).status).toBe(0);
+      expect(cli(DST, ["import", WORK]).status).toBe(0);
 
-    expect(existsSync(resolve(DST, "skills", "linux-skill", "SKILL.md"))).toBe(true);
-    expect(existsSync(resolve(DST, "skills", "mac-skill", "SKILL.md"))).toBe(true);
-  });
+      expect(existsSync(resolve(DST, "skills", "linux-skill", "SKILL.md"))).toBe(true);
+      expect(existsSync(resolve(DST, "skills", "mac-skill", "SKILL.md"))).toBe(true);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("does not destroy a diverged non-jsonl file; quarantines the incoming copy", () => {
-    expect(cli(SRC, ["export", WORK]).status).toBe(0);
-    expect(cli(DST, ["import", WORK]).status).toBe(0);
+  test(
+    "does not destroy a diverged non-jsonl file; quarantines the incoming copy",
+    () => {
+      expect(cli(SRC, ["export", WORK]).status).toBe(0);
+      expect(cli(DST, ["import", WORK]).status).toBe(0);
 
-    // local wins in place
-    expect(read(DST, "telos/GOALS.md")).toContain("linux version");
-    // incoming is preserved somewhere under backups/, not silently dropped
-    const found = findUnder(resolve(DST, "backups"), "GOALS.md");
-    expect(found.length).toBeGreaterThan(0);
-    expect(readFileSync(found[0], "utf-8")).toContain("mac version");
-  });
+      // local wins in place
+      expect(read(DST, "telos/GOALS.md")).toContain("linux version");
+      // incoming is preserved somewhere under backups/, not silently dropped
+      const found = findUnder(resolve(DST, "backups"), "GOALS.md");
+      expect(found.length).toBeGreaterThan(0);
+      expect(readFileSync(found[0], "utf-8")).toContain("mac version");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("is idempotent — importing twice does not duplicate records", () => {
-    expect(cli(SRC, ["export", WORK]).status).toBe(0);
-    expect(cli(DST, ["import", WORK]).status).toBe(0);
-    const afterFirst = lines(DST, "memory/signals/ratings.jsonl").length;
+  test(
+    "is idempotent — importing twice does not duplicate records",
+    () => {
+      expect(cli(SRC, ["export", WORK]).status).toBe(0);
+      expect(cli(DST, ["import", WORK]).status).toBe(0);
+      const afterFirst = lines(DST, "memory/signals/ratings.jsonl").length;
 
-    expect(cli(DST, ["import", WORK]).status).toBe(0);
-    const afterSecond = lines(DST, "memory/signals/ratings.jsonl").length;
+      expect(cli(DST, ["import", WORK]).status).toBe(0);
+      const afterSecond = lines(DST, "memory/signals/ratings.jsonl").length;
 
-    expect(afterSecond).toBe(afterFirst);
-    expect(afterSecond).toBe(3);
-  });
+      expect(afterSecond).toBe(afterFirst);
+      expect(afterSecond).toBe(3);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("writes an import log entry per run", () => {
-    expect(cli(SRC, ["export", WORK]).status).toBe(0);
-    expect(cli(DST, ["import", WORK]).status).toBe(0);
-    expect(cli(DST, ["import", WORK]).status).toBe(0);
+  test(
+    "writes an import log entry per run",
+    () => {
+      expect(cli(SRC, ["export", WORK]).status).toBe(0);
+      expect(cli(DST, ["import", WORK]).status).toBe(0);
+      expect(cli(DST, ["import", WORK]).status).toBe(0);
 
-    const logLines = lines(DST, "memory/state/import-log.jsonl");
-    expect(logLines.length).toBe(2);
-    expect(JSON.parse(logLines[0])).toHaveProperty("archive");
-  });
+      const logLines = lines(DST, "memory/state/import-log.jsonl");
+      expect(logLines.length).toBe(2);
+      expect(JSON.parse(logLines[0])).toHaveProperty("archive");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("--overwrite restores backup semantics (local side replaced)", () => {
-    expect(cli(SRC, ["export", WORK]).status).toBe(0);
-    expect(cli(DST, ["import", WORK, "--overwrite"]).status).toBe(0);
+  test(
+    "--overwrite restores backup semantics (local side replaced)",
+    () => {
+      expect(cli(SRC, ["export", WORK]).status).toBe(0);
+      expect(cli(DST, ["import", WORK, "--overwrite"]).status).toBe(0);
 
-    const ratings = lines(DST, "memory/signals/ratings.jsonl");
-    expect(ratings.length).toBe(2);
-    expect(ratings.some((l) => l.includes("2026-02-01"))).toBe(false);
-  });
+      const ratings = lines(DST, "memory/signals/ratings.jsonl");
+      expect(ratings.length).toBe(2);
+      expect(ratings.some((l) => l.includes("2026-02-01"))).toBe(false);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("never imports machine.json even if present in the archive", () => {
-    write(SRC, "memory/state/x.json", "{}");
-    writeFileSync(resolve(SRC, "machine.json"), '{"id":"SRC-ID"}');
-    writeFileSync(resolve(DST, "machine.json"), '{"id":"DST-ID"}');
-    expect(cli(SRC, ["export", WORK]).status).toBe(0);
-    expect(cli(DST, ["import", WORK]).status).toBe(0);
+  test(
+    "never imports machine.json even if present in the archive",
+    () => {
+      write(SRC, "memory/state/x.json", "{}");
+      writeFileSync(resolve(SRC, "machine.json"), '{"id":"SRC-ID"}');
+      writeFileSync(resolve(DST, "machine.json"), '{"id":"DST-ID"}');
+      expect(cli(SRC, ["export", WORK]).status).toBe(0);
+      expect(cli(DST, ["import", WORK]).status).toBe(0);
 
-    expect(read(DST, "machine.json")).toContain("DST-ID");
-  });
+      expect(read(DST, "machine.json")).toContain("DST-ID");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });
 
 describe("machine identity crosses on import", () => {
-  test("source machine is named and its label resolves afterwards", async () => {
-    cli(SRC, ["export", WORK]);
-    const srcId = JSON.parse(readFileSync(resolve(SRC, "machine.json"), "utf-8"))
-      .id as string;
+  test(
+    "source machine is named and its label resolves afterwards",
+    async () => {
+      cli(SRC, ["export", WORK]);
+      const srcId = JSON.parse(readFileSync(resolve(SRC, "machine.json"), "utf-8"))
+        .id as string;
 
-    const r = cli(DST, ["import", WORK]);
-    expect(r.status).toBe(0);
-    expect(r.stdout).toContain("Source machine:");
+      const r = cli(DST, ["import", WORK]);
+      expect(r.status).toBe(0);
+      expect(r.stdout).toContain("Source machine:");
 
-    // DST keeps its own identity...
-    const dstId = JSON.parse(readFileSync(resolve(DST, "machine.json"), "utf-8"))
-      .id as string;
-    expect(dstId).not.toBe(srcId);
+      // DST keeps its own identity...
+      const dstId = JSON.parse(readFileSync(resolve(DST, "machine.json"), "utf-8"))
+        .id as string;
+      expect(dstId).not.toBe(srcId);
 
-    // ...and can now name the machine those records came from.
-    expect(existsSync(resolve(DST, "memory", "machines", `${srcId}.md`))).toBe(true);
+      // ...and can now name the machine those records came from.
+      expect(existsSync(resolve(DST, "memory", "machines", `${srcId}.md`))).toBe(true);
 
-    const logged = lines(DST, "memory/state/import-log.jsonl").map((l) => JSON.parse(l));
-    expect(logged[0].sourceMachineId).toBe(srcId);
-  });
+      const logged = lines(DST, "memory/state/import-log.jsonl").map((l) =>
+        JSON.parse(l)
+      );
+      expect(logged[0].sourceMachineId).toBe(srcId);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });

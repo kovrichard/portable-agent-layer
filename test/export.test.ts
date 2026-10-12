@@ -5,6 +5,7 @@ import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { linkDir } from "./lib/links";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir, testHome } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
@@ -148,59 +149,71 @@ describe("timestamp", () => {
 });
 
 describe("cli export — folder arg", () => {
-  test("auto-names zip inside given directory", () => {
-    const outDir = freshTestDir(import.meta.file);
-    try {
-      const result = palCli(["export", outDir]);
-      expect(result.status).toBe(0);
-      const zips = readdirSync(outDir).filter(
-        (f) => f.startsWith("pal-export-") && f.endsWith(".zip")
-      );
-      expect(zips).toHaveLength(1);
-    } finally {
-      removeOnceReleased(outDir);
-    }
-  });
+  test(
+    "auto-names zip inside given directory",
+    () => {
+      const outDir = freshTestDir(import.meta.file);
+      try {
+        const result = palCli(["export", outDir]);
+        expect(result.status).toBe(0);
+        const zips = readdirSync(outDir).filter(
+          (f) => f.startsWith("pal-export-") && f.endsWith(".zip")
+        );
+        expect(zips).toHaveLength(1);
+      } finally {
+        removeOnceReleased(outDir);
+      }
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("dry-run with folder arg lists files without writing", () => {
-    const outDir = freshTestDir(import.meta.file);
-    try {
-      const result = palCli(["export", outDir, "--dry-run"]);
-      expect(result.status).toBe(0);
-      expect(result.stdout).toContain("Would export");
-      // No zip written in dry-run
-      const zips = readdirSync(outDir).filter((f) => f.endsWith(".zip"));
-      expect(zips).toHaveLength(0);
-    } finally {
-      removeOnceReleased(outDir);
-    }
-  });
+  test(
+    "dry-run with folder arg lists files without writing",
+    () => {
+      const outDir = freshTestDir(import.meta.file);
+      try {
+        const result = palCli(["export", outDir, "--dry-run"]);
+        expect(result.status).toBe(0);
+        expect(result.stdout).toContain("Would export");
+        // No zip written in dry-run
+        const zips = readdirSync(outDir).filter((f) => f.endsWith(".zip"));
+        expect(zips).toHaveLength(0);
+      } finally {
+        removeOnceReleased(outDir);
+      }
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });
 
 describe("cli import — folder arg", () => {
-  test("finds latest zip in given directory and dry-runs import", () => {
-    const workDir = freshTestDir(import.meta.file);
-    try {
-      // Export to workDir first so there is a zip to find
-      const exportResult = palCli(["export", workDir]);
-      expect(exportResult.status).toBe(0);
+  test(
+    "finds latest zip in given directory and dry-runs import",
+    () => {
+      const workDir = freshTestDir(import.meta.file);
+      try {
+        // Export to workDir first so there is a zip to find
+        const exportResult = palCli(["export", workDir]);
+        expect(exportResult.status).toBe(0);
 
-      // Import from workDir (folder arg) — pipe "y" to the confirmation prompt.
-      // Dry-run names the mode it would take, since merge and overwrite differ
-      // destructively.
-      const importResult = palCli(["import", workDir, "--dry-run"], { input: "y\n" });
-      expect(importResult.status).toBe(0);
-      expect(importResult.stdout).toContain("Would merge");
+        // Import from workDir (folder arg) — pipe "y" to the confirmation prompt.
+        // Dry-run names the mode it would take, since merge and overwrite differ
+        // destructively.
+        const importResult = palCli(["import", workDir, "--dry-run"], { input: "y\n" });
+        expect(importResult.status).toBe(0);
+        expect(importResult.stdout).toContain("Would merge");
 
-      const overwriteDry = palCli(["import", workDir, "--dry-run", "--overwrite"], {
-        input: "y\n",
-      });
-      expect(overwriteDry.status).toBe(0);
-      expect(overwriteDry.stdout).toContain("Would overwrite with");
-    } finally {
-      removeOnceReleased(workDir);
-    }
-  });
+        const overwriteDry = palCli(["import", workDir, "--dry-run", "--overwrite"], {
+          input: "y\n",
+        });
+        expect(overwriteDry.status).toBe(0);
+        expect(overwriteDry.stdout).toContain("Would overwrite with");
+      } finally {
+        removeOnceReleased(workDir);
+      }
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
   test("exits non-zero when folder has no zip files", () => {
     const emptyDir = freshTestDir(import.meta.file);
@@ -213,41 +226,51 @@ describe("cli import — folder arg", () => {
     }
   });
 
-  test("round-trips a personal skill and subagent into a fresh home", () => {
-    const workDir = freshTestDir(import.meta.file);
-    const freshHome = freshTestDir(import.meta.file);
-    try {
-      // Export the seeded TEST_HOME (has skills/my-skill + agents/my-helper).
-      const exportResult = palCli(["export", workDir]);
-      expect(exportResult.status).toBe(0);
+  test(
+    "round-trips a personal skill and subagent into a fresh home",
+    () => {
+      const workDir = freshTestDir(import.meta.file);
+      const freshHome = freshTestDir(import.meta.file);
+      try {
+        // Export the seeded TEST_HOME (has skills/my-skill + agents/my-helper).
+        const exportResult = palCli(["export", workDir]);
+        expect(exportResult.status).toBe(0);
 
-      // Import into an empty home — the personal files must materialize.
-      const importResult = spawnSync("bun", ["run", CLI, "cli", "import", workDir], {
-        env: { ...process.env, PAL_HOME: freshHome },
-        encoding: "utf-8",
-        input: "y\n",
-        timeout: 15000,
-      });
-      expect(importResult.status).toBe(0);
-      expect(existsSync(resolve(freshHome, "skills", "my-skill", "SKILL.md"))).toBe(true);
-      expect(existsSync(resolve(freshHome, "agents", "my-helper.md"))).toBe(true);
-    } finally {
-      removeOnceReleased(workDir);
-      removeOnceReleased(freshHome);
-    }
-  });
+        // Import into an empty home — the personal files must materialize.
+        const importResult = spawnSync("bun", ["run", CLI, "cli", "import", workDir], {
+          env: { ...process.env, PAL_HOME: freshHome },
+          encoding: "utf-8",
+          input: "y\n",
+          timeout: 15000,
+        });
+        expect(importResult.status).toBe(0);
+        expect(existsSync(resolve(freshHome, "skills", "my-skill", "SKILL.md"))).toBe(
+          true
+        );
+        expect(existsSync(resolve(freshHome, "agents", "my-helper.md"))).toBe(true);
+      } finally {
+        removeOnceReleased(workDir);
+        removeOnceReleased(freshHome);
+      }
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });
 
 // Both verbs took the path positional through a local variable before resolving
 // it, which is the shape the klint rule cannot see. On Windows nothing expands
 // the tilde, so the export landed in a directory literally named "~".
 describe("a tilde in the path positional", () => {
-  test("export names the file under the home, not under a directory called ~", () => {
-    const r = palCli(["export", "--dry-run", "~/pal-export-dest"]);
-    expect(r.status).toBe(0);
-    expect(r.stdout).toContain(resolve(homedir(), "pal-export-dest"));
-    expect(r.stdout).not.toContain("~/pal-export-dest");
-  });
+  test(
+    "export names the file under the home, not under a directory called ~",
+    () => {
+      const r = palCli(["export", "--dry-run", "~/pal-export-dest"]);
+      expect(r.status).toBe(0);
+      expect(r.stdout).toContain(resolve(homedir(), "pal-export-dest"));
+      expect(r.stdout).not.toContain("~/pal-export-dest");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
   // AdmZip's failure drops the filename, so the resolved path is read back from
   // the debug log, which this test's PAL_HOME owns.

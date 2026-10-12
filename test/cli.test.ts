@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { testHome } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
@@ -83,19 +84,27 @@ describe("pal cli init", () => {
 });
 
 describe("pal cli export", () => {
-  test("--dry-run lists files", () => {
-    const result = pal("cli", "export", "--dry-run");
-    expect(result.status).toBe(0);
-    const output = result.stdout + result.stderr;
-    expect(output).toContain("telos/");
-  });
+  test(
+    "--dry-run lists files",
+    () => {
+      const result = pal("cli", "export", "--dry-run");
+      expect(result.status).toBe(0);
+      const output = result.stdout + result.stderr;
+      expect(output).toContain("telos/");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("exports to zip", () => {
-    const exportPath = resolve(TEST_HOME, "test-export.zip");
-    const result = pal("cli", "export", exportPath);
-    expect(result.status).toBe(0);
-    expect(existsSync(exportPath)).toBe(true);
-  });
+  test(
+    "exports to zip",
+    () => {
+      const exportPath = resolve(TEST_HOME, "test-export.zip");
+      const result = pal("cli", "export", exportPath);
+      expect(result.status).toBe(0);
+      expect(existsSync(exportPath)).toBe(true);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });
 
 describe("pal cli unknown", () => {
