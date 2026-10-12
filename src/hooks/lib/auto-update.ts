@@ -15,6 +15,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { cachedStatus, getInstalledVersion, isRepoMode } from "../handlers/update-check";
+import { appendEvent, logQuietly } from "./events";
 import { logDebug, logError } from "./log";
 import { assets, palPkg, paths } from "./paths";
 import { raw as rawSettings } from "./settings";
@@ -118,8 +119,23 @@ function hasUncommittedChanges(): boolean {
   return (status.stdout ?? "").trim().length > 0;
 }
 
+function outcomeOf(entry: AutoUpdateLedger): string {
+  if (!entry.ok) return "failed";
+  return entry.from === entry.to ? "unchanged" : "updated";
+}
+
+function secondsBetween(from?: string, to?: string): number | null {
+  if (!from || !to) return null;
+  return Math.round((Date.parse(to) - Date.parse(from)) / 1000);
+}
+
+function logUpdateEvent(fields: Record<string, unknown>): void {
+  logQuietly("pal_update", () => appendEvent("pal_update", fields));
+}
+
 function recordSkip(reason: string): void {
   writeLedger({ ...readLedger(), skippedAt: new Date().toISOString(), skipped: reason });
+  logUpdateEvent({ outcome: "skipped", skipReason: reason });
   logDebug("auto-update", `skipped: ${reason}`);
 }
 
@@ -278,7 +294,7 @@ function update(): AutoUpdateLedger {
 
   const ok = run.status === 0;
   logDebug("auto-update", `update exited ${run.status}`);
-  return writeLedger({
+  const entry = writeLedger({
     ...readLedger(),
     finishedAt: new Date().toISOString(),
     ok,
@@ -286,6 +302,13 @@ function update(): AutoUpdateLedger {
     to: getInstalledVersion(),
     error: ok ? undefined : (run.error?.message ?? `exit ${run.status}`),
   });
+  logUpdateEvent({
+    outcome: outcomeOf(entry),
+    from: entry.from ?? null,
+    to: entry.to ?? null,
+    durationSec: secondsBetween(entry.attemptedAt, entry.finishedAt),
+  });
+  return entry;
 }
 
 /** Hands the update to its own process, which outlives the session that closed. */

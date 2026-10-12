@@ -64,6 +64,7 @@ export const EVENT_FIELDS = {
     "inputTokens",
     "outputTokens",
   ],
+  pal_update: ["outcome", "from", "to", "durationSec", "skipReason"],
   permission_prompt: ["tool"],
   notification: ["kind"],
   tool_call: [
