@@ -92,6 +92,10 @@ export const EVENT_FIELDS = {
     "agent",
     "mode",
     "durationMs",
+    "ttftMs",
+    "aiu",
+    "initiator",
+    "host",
   ],
   permission_prompt: ["tool"],
   notification: ["kind"],
@@ -206,7 +210,7 @@ function envelope(type: EventType, options: AppendOptions): EventEnvelope {
     ...(options.runtime && { runtime: options.runtime }),
     channel:
       options.channel !== undefined ? options.channel : process.env.PAL_CHANNEL || null,
-    project: projectOf(cwd),
+    project: cwd ? projectOf(cwd) : null,
     cwd,
   };
 }

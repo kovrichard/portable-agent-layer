@@ -7,7 +7,11 @@ import {
   collectOpencode,
   OPENCODE_ALLOW_LIST,
 } from "../src/tools/lib/collectors/opencode";
-import { assertNoCredentials, selectAllowed } from "../src/tools/lib/collectors/sqlite";
+import {
+  type AllowList,
+  assertNoCredentials,
+  selectAllowed,
+} from "../src/tools/lib/collectors/sqlite";
 import { freshTestDir } from "./lib/test-home";
 
 // Schema and message shape from a real opencode.db (column names and keys
@@ -157,8 +161,18 @@ describe("collecting opencode's model calls", () => {
 });
 
 describe("a collector never reads a credential", () => {
-  test("the shipped allow-lists name no credential table or column", () => {
-    expect(() => assertNoCredentials(OPENCODE_ALLOW_LIST)).not.toThrow();
+  test("every shipped allow-list names no credential table or column", async () => {
+    const allowLists = [];
+    for (const file of readdirSync(COLLECTORS_DIR)) {
+      const module = await import(resolve(COLLECTORS_DIR, file));
+      for (const [name, value] of Object.entries(module)) {
+        if (name.endsWith("_ALLOW_LIST")) allowLists.push(value as AllowList);
+      }
+    }
+    expect(allowLists.length).toBeGreaterThanOrEqual(2);
+    for (const allowList of allowLists) {
+      expect(() => assertNoCredentials(allowList)).not.toThrow();
+    }
   });
 
   test.each([

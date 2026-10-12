@@ -79,7 +79,7 @@ function emitModelCall(row: MessageRow, message: AssistantMessage): void {
       ts: new Date(row.time_created).toISOString(),
       session: row.session_id,
       runtime: "opencode",
-      cwd: message.path?.cwd,
+      cwd: message.path?.cwd ?? "",
     }
   );
 }

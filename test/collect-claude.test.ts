@@ -163,7 +163,12 @@ describe("collecting every source", () => {
     });
     write(block("msg_1", 10), block("msg_2", 20));
     try {
-      expect(collectEvents()).toEqual({ claude: 1, opencode: "failed", codex: 0 });
+      expect(collectEvents()).toEqual({
+        claude: 1,
+        opencode: "failed",
+        codex: 0,
+        copilot: 0,
+      });
     } finally {
       for (const env of overrides) delete process.env[env];
     }

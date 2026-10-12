@@ -24,8 +24,8 @@ export function assertNoCredentials(allowList: AllowList): void {
 export interface ResumeAfter {
   orderColumn: string;
   idColumn: string;
-  order: number;
-  id: string;
+  order: number | string;
+  id: number | string;
 }
 
 function quoted(identifier: string): string {
@@ -53,7 +53,9 @@ export function selectAllowed<Row>(
   const sql = `SELECT ${columns.map(quoted).join(", ")} FROM ${quoted(table)} WHERE ${order} > ?1 OR (${order} = ?1 AND ${id} > ?2) ORDER BY ${order}, ${id}`;
   const db = new Database(dbPath, { readonly: true });
   try {
-    return db.query<Row, [number, string]>(sql).all(after.order, after.id);
+    return db
+      .query<Row, [number | string, number | string]>(sql)
+      .all(after.order, after.id);
   } finally {
     db.close();
   }

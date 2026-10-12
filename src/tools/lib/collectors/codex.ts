@@ -105,7 +105,7 @@ function emitModelCall({ ts, usage, context }: CodexCall): void {
       cacheRead,
       effort: context.effort,
     },
-    { ts, session: context.session ?? null, runtime: "codex", cwd: context.cwd }
+    { ts, session: context.session ?? null, runtime: "codex", cwd: context.cwd ?? "" }
   );
 }
 
