@@ -64,6 +64,38 @@ describe("measuring a turn", () => {
     );
   });
 
+  test("a turn records its language, pastes, images and slash command", () => {
+    observeTurn(
+      'what is the state of this? <pasted_content id="p">log line</pasted_content id="p"> [Image #1]',
+      "s1",
+      T0
+    );
+    expect(lastEvent()).toMatchObject({
+      language: "en",
+      pastedChars: 8,
+      images: 1,
+      command: null,
+    });
+  });
+
+  test("a reply is logged as its own event with mode and time since the prompt", () => {
+    observeTurn("first question here", "s1", T0);
+    recordReply("s1", "══════ PAL | NATIVE ══════\nthe answer?", at(42));
+    const reply = readFileSync(resolve(eventsDir(), "2026-09.jsonl"), "utf-8")
+      .trim()
+      .split("\n")
+      .map((l) => JSON.parse(l))
+      .find((e) => e.type === "reply");
+    expect(reply).toMatchObject({
+      session: "s1",
+      mode: "NATIVE",
+      latencySec: 42,
+      asked: true,
+      words: 7,
+    });
+    expect(JSON.stringify(reply)).not.toContain("the answer");
+  });
+
   test("the gap runs from the reply that answered the previous prompt", () => {
     observeTurn("first question here", "s1", T0);
     recordReply("s1", "an answer", at(30));

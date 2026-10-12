@@ -29,6 +29,7 @@ import { keepSample, replyEnd } from "./interaction-samples";
 import { ensureDir, paths } from "./paths";
 import { isSystemText, stripInjectedTags } from "./prompt-text";
 import { isEnabled } from "./settings";
+import { responseModeOf, turnExtras } from "./turn-extras";
 import { localClock } from "./wall-clock";
 
 interface ReplyShape {
@@ -134,9 +135,33 @@ function legacyTurnsDir(): string {
   return ensureDir(resolve(paths.signals(), "interaction"));
 }
 
-function logTurn(event: TurnEvent, prompt: string): void {
+function logTurn(event: TurnEvent, prompt: string, text: string): void {
   const { ts, session, channel, ...fields } = event;
-  appendEvent("turn", fields, { ts, session, channel, content: { prompt } });
+  appendEvent(
+    "turn",
+    { ...fields, ...turnExtras(prompt, text) },
+    { ts, session, channel, content: { prompt: text } }
+  );
+}
+
+function secondsBetween(from: string | undefined, to: Date): number | null {
+  if (!from) return null;
+  return Math.round((to.getTime() - new Date(from).getTime()) / 100) / 10;
+}
+
+function logReply(
+  session: string,
+  reply: string,
+  shape: ReplyShape,
+  track: SessionTrack
+) {
+  const { at, ...features } = shape;
+  const latencySec = secondsBetween(track.lastPromptAt, new Date(at));
+  appendEvent(
+    "reply",
+    { ...features, mode: responseModeOf(reply), latencySec },
+    { ts: at, session, content: { reply } }
+  );
 }
 
 function readLegacyTurns(file: string): TurnEvent[] {
@@ -238,10 +263,12 @@ export function recordReply(
 ): void {
   if (!session || !reply.trim() || !isEnabled("interactionAwareness")) return;
   const track = trackOf(session);
+  const shape = replyShape(reply, now);
+  logReply(session, reply, shape, track);
   writeTrack(session, {
     ...track,
     updated: now.toISOString(),
-    reply: replyShape(reply, now),
+    reply: shape,
     replyEnd: replyEnd(reply),
   });
 }
@@ -306,6 +333,7 @@ export function observeTurn(
       hinted: reminder !== null && hearsPromptContext(),
       ...(complied !== null && { complied }),
     },
+    prompt,
     text
   );
   sampleReaction(event, text, track);

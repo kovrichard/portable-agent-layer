@@ -33,7 +33,12 @@ export const EVENT_FIELDS = {
     "mood",
     "hinted",
     "complied",
+    "language",
+    "pastedChars",
+    "images",
+    "command",
   ],
+  reply: ["words", "listItems", "headings", "asked", "mode", "latencySec"],
 } as const satisfies Record<string, readonly string[]>;
 
 export type EventType = keyof typeof EVENT_FIELDS;
