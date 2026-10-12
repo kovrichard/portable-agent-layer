@@ -6,6 +6,7 @@
 import { loggedEventIds } from "../../../hooks/lib/events";
 import { readAllProjects } from "../../../hooks/lib/projects";
 import { eventLogEnabled } from "../../../hooks/lib/settings";
+import { backfillEntities } from "./entities";
 import { backfillGit } from "./git";
 import { backfillLedger } from "./ledger";
 import { backfillProjects } from "./projects";
@@ -32,5 +33,6 @@ export function backfillEvents(since?: string): Record<string, number> {
     ledger: backfillLedger(known, since),
     projects: backfillProjects(known, since),
     promises: backfillPromises(known, since),
+    entities: backfillEntities(known, since),
   };
 }
