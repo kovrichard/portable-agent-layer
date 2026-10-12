@@ -17,6 +17,7 @@
         ".opencode/plugins/*.ts"
       ],
       "project": ["src/**/*.ts", "!src/tools/control-room/ui/**"],
+      "bun": { "entry": ["**/*.{test,spec}.{js,jsx,ts,tsx}"] },
       "ignore": [".opencode/plugins/lint.ts", "src/targets/opencode/plugin.ts"],
       "ignoreDependencies": [
         "@semantic-release/github",
