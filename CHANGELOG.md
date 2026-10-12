@@ -1,3 +1,15 @@
+# [0.96.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.95.1...v0.96.0) (2026-10-12)
+
+
+### Features
+
+* **events:** collect Antigravity's conversations ([a4ebd8d](https://github.com/kovrichard/portable-agent-layer/commit/a4ebd8dafb84984bc5a5fbcbb49b2ea06731ec2d))
+* **events:** collect at session stop, at most every quarter hour ([577d103](https://github.com/kovrichard/portable-agent-layer/commit/577d1039e68197f4a2d44e67d4958c51a0dbee65))
+* **events:** collect Claude Code's model calls into the event log ([0ce1e88](https://github.com/kovrichard/portable-agent-layer/commit/0ce1e88a603eaa146c5497681eb035b42c02b276))
+* **events:** collect Codex's model calls ([702e0b2](https://github.com/kovrichard/portable-agent-layer/commit/702e0b29a7debcd105eb32870228fe455d8d9a3f))
+* **events:** collect Copilot's model calls from its session store ([20ed5bd](https://github.com/kovrichard/portable-agent-layer/commit/20ed5bd68c4fbda8ec146996442bf69757d29f43))
+* **events:** collect opencode's model calls through a credential-proof reader ([6082aa5](https://github.com/kovrichard/portable-agent-layer/commit/6082aa5ee4ae581e868075ef38f2ec308da2c0e5))
+
 ## [0.95.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.95.0...v0.95.1) (2026-10-12)
 
 
