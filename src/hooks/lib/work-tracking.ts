@@ -41,6 +41,17 @@ function readSessions(): SessionRecord[] {
   }
 }
 
+function sessionArchiveFile(record: SessionRecord): string {
+  const month = Number.isNaN(Date.parse(record.ts)) ? "undated" : record.ts.slice(0, 7);
+  return resolve(ensureDir(resolve(paths.state(), "sessions-archive")), `${month}.jsonl`);
+}
+
+function archiveSessions(records: SessionRecord[]): void {
+  for (const record of records) {
+    appendFileSync(sessionArchiveFile(record), `${JSON.stringify(record)}\n`, "utf-8");
+  }
+}
+
 export function writeSession(record: SessionRecord): void {
   const sessions = readSessions();
   // Replace existing record with same sessionId, or append
@@ -50,9 +61,12 @@ export function writeSession(record: SessionRecord): void {
   } else {
     sessions.push(record);
   }
-  // Prune to last N
-  const pruned = sessions.slice(-MAX_SESSIONS);
-  writeFileSync(sessionsPath(), JSON.stringify(pruned, null, 2), "utf-8");
+  archiveSessions(sessions.slice(0, -MAX_SESSIONS));
+  writeFileSync(
+    sessionsPath(),
+    JSON.stringify(sessions.slice(-MAX_SESSIONS), null, 2),
+    "utf-8"
+  );
 }
 
 /** Detect session completion status from last assistant message */

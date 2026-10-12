@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import {
   appendProjectHistory,
   detectStatus,
@@ -130,6 +131,39 @@ describe("writeSession / project history I/O", () => {
 
     // Second write should replace, not duplicate — verified via appendProjectHistory
     // (writeSession internals are tested indirectly here)
+  });
+
+  test("a session pruned out of sessions.json lands in the monthly archive", () => {
+    const session = (n: number) => ({
+      sessionId: `prune-${n}`,
+      name: `session ${n}`,
+      ts: `2026-03-${String((n % 28) + 1).padStart(2, "0")}T10:00:00.000Z`,
+      cwd: "/tmp/proj",
+      status: "completed" as const,
+      summary: "",
+      artifacts: [],
+      handoff: "",
+      messageCount: 1,
+    });
+    const archive = resolve(
+      TEST_HOME,
+      "memory",
+      "state",
+      "sessions-archive",
+      "2026-03.jsonl"
+    );
+    for (let n = 0; n < 51; n++) writeSession(session(n));
+    const hot = JSON.parse(
+      readFileSync(resolve(TEST_HOME, "memory", "state", "sessions.json"), "utf-8")
+    ) as { sessionId: string }[];
+    const archived = readFileSync(archive, "utf-8")
+      .trim()
+      .split("\n")
+      .map((l) => JSON.parse(l));
+    expect(hot).toHaveLength(50);
+    expect(hot.some((s) => s.sessionId === "prune-0")).toBe(false);
+    expect(archived.map((s) => s.sessionId)).toContain("prune-0");
+    expect(archived.filter((s) => s.sessionId === "prune-0")).toHaveLength(1);
   });
 
   test("appendProjectHistory and readProjectHistory round-trip", () => {
