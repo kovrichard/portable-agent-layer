@@ -1,9 +1,18 @@
-import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import {
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  setDefaultTimeout,
+  test,
+} from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir, leftoverTestDirs } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 // The lifecycle is the only part of the server with real failure surface:
 // a process that outlives its shell has to be found again to be stopped, and
@@ -20,7 +29,7 @@ beforeEach(() => {
   if (HOME) pal("stop");
   HOME = freshTestDir(import.meta.file);
   PORT = portNobodyListensOn();
-}, SPAWN_HEAVY_TEST_MS);
+});
 
 /**
  * A second control room started on a taken port shares it with the first
@@ -83,149 +92,109 @@ async function untilGone(pid: number): Promise<boolean> {
 }
 
 describe("pal cli server", () => {
-  test(
-    "start answers after the launching command has exited",
-    async () => {
-      const started = pal("start", "--port", String(PORT));
-      expect(started.status).toBe(0);
-      expect(started.stdout).toContain(`http://127.0.0.1:${PORT}/`);
+  test("start answers after the launching command has exited", async () => {
+    const started = pal("start", "--port", String(PORT));
+    expect(started.status).toBe(0);
+    expect(started.stdout).toContain(`http://127.0.0.1:${PORT}/`);
 
-      const res = await fetch(`http://127.0.0.1:${PORT}/api/status`);
-      expect(res.status).toBe(200);
-      expect(existsSync(stateFile())).toBe(true);
-      expect(alive(recordedPid())).toBe(true);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const res = await fetch(`http://127.0.0.1:${PORT}/api/status`);
+    expect(res.status).toBe(200);
+    expect(existsSync(stateFile())).toBe(true);
+    expect(alive(recordedPid())).toBe(true);
+  });
 
-  test(
-    "start again reports the running one instead of a second",
-    () => {
-      pal("start", "--port", String(PORT));
-      const pid = recordedPid();
+  test("start again reports the running one instead of a second", () => {
+    pal("start", "--port", String(PORT));
+    const pid = recordedPid();
 
-      const again = pal("start", "--port", String(PORT));
-      expect(again.status).toBe(0);
-      expect(again.stdout).toContain("Already running");
-      expect(recordedPid()).toBe(pid);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const again = pal("start", "--port", String(PORT));
+    expect(again.status).toBe(0);
+    expect(again.stdout).toContain("Already running");
+    expect(recordedPid()).toBe(pid);
+  });
 
-  test(
-    "stop kills the process and forgets it",
-    async () => {
-      pal("start", "--port", String(PORT));
-      const pid = recordedPid();
+  test("stop kills the process and forgets it", async () => {
+    pal("start", "--port", String(PORT));
+    const pid = recordedPid();
 
-      const stopped = pal("stop");
-      expect(stopped.status).toBe(0);
-      expect(await untilGone(pid)).toBe(true);
-      expect(existsSync(stateFile())).toBe(false);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const stopped = pal("stop");
+    expect(stopped.status).toBe(0);
+    expect(await untilGone(pid)).toBe(true);
+    expect(existsSync(stateFile())).toBe(false);
+  });
 
-  test(
-    "stop with a stale record clears it and says so",
-    () => {
-      writeFileSync(
-        stateFile(),
-        JSON.stringify({
-          pid: 2147483000,
-          port: PORT,
-          startedAt: "2026-09-01T00:00:00.000Z",
-        })
-      );
+  test("stop with a stale record clears it and says so", () => {
+    writeFileSync(
+      stateFile(),
+      JSON.stringify({
+        pid: 2147483000,
+        port: PORT,
+        startedAt: "2026-09-01T00:00:00.000Z",
+      })
+    );
 
-      const stopped = pal("stop");
-      expect(stopped.status).toBe(0);
-      expect(stopped.stdout).toContain("already gone");
-      expect(existsSync(stateFile())).toBe(false);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const stopped = pal("stop");
+    expect(stopped.status).toBe(0);
+    expect(stopped.stdout).toContain("already gone");
+    expect(existsSync(stateFile())).toBe(false);
+  });
 
-  test(
-    "start after a stale record starts fresh",
-    () => {
-      writeFileSync(
-        stateFile(),
-        JSON.stringify({
-          pid: 2147483000,
-          port: PORT,
-          startedAt: "2026-09-01T00:00:00.000Z",
-        })
-      );
+  test("start after a stale record starts fresh", () => {
+    writeFileSync(
+      stateFile(),
+      JSON.stringify({
+        pid: 2147483000,
+        port: PORT,
+        startedAt: "2026-09-01T00:00:00.000Z",
+      })
+    );
 
-      const started = pal("start", "--port", String(PORT));
-      expect(started.status).toBe(0);
-      expect(recordedPid()).not.toBe(2147483000);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const started = pal("start", "--port", String(PORT));
+    expect(started.status).toBe(0);
+    expect(recordedPid()).not.toBe(2147483000);
+  });
 
-  test(
-    "status says not running, with exit 1, when nothing is",
-    () => {
-      const status = pal("status");
-      expect(status.status).toBe(1);
-      expect(status.stdout).toContain("Not running");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("status says not running, with exit 1, when nothing is", () => {
+    const status = pal("status");
+    expect(status.status).toBe(1);
+    expect(status.stdout).toContain("Not running");
+  });
 
-  test(
-    "status names the running server",
-    () => {
-      pal("start", "--port", String(PORT));
-      const status = pal("status");
-      expect(status.status).toBe(0);
-      expect(status.stdout).toContain(`http://127.0.0.1:${PORT}/`);
-      expect(status.stdout).toContain(`pid          ${recordedPid()}`);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("status names the running server", () => {
+    pal("start", "--port", String(PORT));
+    const status = pal("status");
+    expect(status.status).toBe(0);
+    expect(status.stdout).toContain(`http://127.0.0.1:${PORT}/`);
+    expect(status.stdout).toContain(`pid          ${recordedPid()}`);
+  });
 
-  test(
-    "a port that is not a number is refused",
-    () => {
-      const started = pal("start", "--port", "lots");
-      expect(started.status).toBe(1);
-      expect(started.stderr).toContain("--port");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("a port that is not a number is refused", () => {
+    const started = pal("start", "--port", "lots");
+    expect(started.status).toBe(1);
+    expect(started.stderr).toContain("--port");
+  });
 
   // The page is read off disk per request, so a rebuilt dist reaches the browser
   // on its own — but /api is the running process's own code, and an install that
   // leaves the old process answering has shipped nothing.
-  test(
-    "restart replaces the process, keeping the port it was on",
-    () => {
-      pal("start", "--port", String(PORT));
-      const before = recordedPid();
+  test("restart replaces the process, keeping the port it was on", () => {
+    pal("start", "--port", String(PORT));
+    const before = recordedPid();
 
-      const restarted = pal("restart");
-      expect(restarted.status).toBe(0);
+    const restarted = pal("restart");
+    expect(restarted.status).toBe(0);
 
-      const after = recordedPid();
-      expect(after).not.toBe(before);
-      expect(alive(before)).toBe(false);
-      expect(alive(after)).toBe(true);
-      expect(pal("status").stdout).toContain(`http://127.0.0.1:${PORT}/`);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const after = recordedPid();
+    expect(after).not.toBe(before);
+    expect(alive(before)).toBe(false);
+    expect(alive(after)).toBe(true);
+    expect(pal("status").stdout).toContain(`http://127.0.0.1:${PORT}/`);
+  });
 
-  test(
-    "restart does not start a server nobody was running",
-    () => {
-      const restarted = pal("restart");
-      expect(restarted.status).toBe(0);
-      expect(restarted.stdout).toContain("nothing to restart");
-      expect(existsSync(stateFile())).toBe(false);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("restart does not start a server nobody was running", () => {
+    const restarted = pal("restart");
+    expect(restarted.status).toBe(0);
+    expect(restarted.stdout).toContain("nothing to restart");
+    expect(existsSync(stateFile())).toBe(false);
+  });
 });

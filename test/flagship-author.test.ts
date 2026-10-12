@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -6,6 +6,8 @@ import { AGENT_NAMES } from "../src/hooks/lib/agent-registry";
 import { FABLE_MODEL, flagshipAuthorModel } from "../src/hooks/lib/models";
 import { renderAgentForPlatform } from "../src/targets/agent-render";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 const AGENTS_DIR = resolve(import.meta.dir, "../assets/agents");
@@ -64,43 +66,27 @@ describe("flagship authoring registry", () => {
 });
 
 describe("pal cli skill author-model", () => {
-  test(
-    "prints the flagship model for claude",
-    () => {
-      const r = authorModel("claude");
-      expect(r.status).toBe(0);
-      expect(r.stdout.trim()).toBe(FABLE_MODEL);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("prints the flagship model for claude", () => {
+    const r = authorModel("claude");
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim()).toBe(FABLE_MODEL);
+  });
 
-  test(
-    "prints the flagship model for codex",
-    () => {
-      const r = authorModel("codex");
-      expect(r.status).toBe(0);
-      expect(r.stdout.trim()).toBe("gpt-6-astra");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("prints the flagship model for codex", () => {
+    const r = authorModel("codex");
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim()).toBe("gpt-6-astra");
+  });
 
-  test(
-    "prints the pro tier for antigravity",
-    () => {
-      const r = authorModel("antigravity");
-      expect(r.status).toBe(0);
-      expect(r.stdout.trim()).toBe("pro");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("prints the pro tier for antigravity", () => {
+    const r = authorModel("antigravity");
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim()).toBe("pro");
+  });
 
-  test(
-    "prints nothing for an agent with no flagship — drives inline authoring",
-    () => {
-      const r = authorModel("opencode");
-      expect(r.status).toBe(0);
-      expect(r.stdout.trim()).toBe("");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("prints nothing for an agent with no flagship — drives inline authoring", () => {
+    const r = authorModel("opencode");
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim()).toBe("");
+  });
 });

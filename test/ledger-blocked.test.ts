@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { LedgerEntry } from "../src/hooks/lib/ledger";
@@ -6,6 +6,8 @@ import { ledgerView } from "../src/tools/ledger/view";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 // A refusal produces no other event: nothing runs, so no post-tool hook reports
 // it. If the gate does not write the entry itself, the block leaves no trace and
@@ -50,118 +52,86 @@ function entries(): LedgerEntry[] {
 }
 
 describe("a rule refusing is recorded", () => {
-  test(
-    "a refused write is one entry, with the reason the agent was given",
-    async () => {
-      const target = resolve(HOME, "memory", "projects", "demo", "ISA.md");
-      const out = await runValidator(preToolUse("Edit", { file_path: target }));
-      expect(out).toContain("deny");
+  test("a refused write is one entry, with the reason the agent was given", async () => {
+    const target = resolve(HOME, "memory", "projects", "demo", "ISA.md");
+    const out = await runValidator(preToolUse("Edit", { file_path: target }));
+    expect(out).toContain("deny");
 
-      const written = entries();
-      expect(written).toHaveLength(1);
-      expect(written[0].outcome).toBe("blocked");
-      expect(written[0].tool).toBe("Edit");
-      expect(written[0].target).toContain("ISA.md");
-      expect(written[0].reason).toContain("managed automatically by hooks");
-      expect(out).toContain(written[0].reason ?? "");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const written = entries();
+    expect(written).toHaveLength(1);
+    expect(written[0].outcome).toBe("blocked");
+    expect(written[0].tool).toBe("Edit");
+    expect(written[0].target).toContain("ISA.md");
+    expect(written[0].reason).toContain("managed automatically by hooks");
+    expect(out).toContain(written[0].reason ?? "");
+  });
 
-  test(
-    "nothing landed, so nothing is claimed to have landed",
-    async () => {
-      const target = resolve(HOME, "memory", "projects", "demo", "ISA.md");
-      await runValidator(preToolUse("Edit", { file_path: target }));
+  test("nothing landed, so nothing is claimed to have landed", async () => {
+    const target = resolve(HOME, "memory", "projects", "demo", "ISA.md");
+    await runValidator(preToolUse("Edit", { file_path: target }));
 
-      const entry = entries()[0];
-      expect(entry.before).toBeNull();
-      expect(entry.after).toBeNull();
-      expect(entry.delta).toBeUndefined();
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const entry = entries()[0];
+    expect(entry.before).toBeNull();
+    expect(entry.after).toBeNull();
+    expect(entry.delta).toBeUndefined();
+  });
 
-  test(
-    "a refused command names itself, since it has no file to name",
-    async () => {
-      const out = await runValidator(preToolUse("Bash", { command: DANGEROUS }));
-      expect(out).toContain("deny");
+  test("a refused command names itself, since it has no file to name", async () => {
+    const out = await runValidator(preToolUse("Bash", { command: DANGEROUS }));
+    expect(out).toContain("deny");
 
-      const written = entries();
-      expect(written).toHaveLength(1);
-      expect(written[0].outcome).toBe("blocked");
-      expect(written[0].command).toBe(DANGEROUS);
-      expect(written[0].tool).toBe("Bash");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const written = entries();
+    expect(written).toHaveLength(1);
+    expect(written[0].outcome).toBe("blocked");
+    expect(written[0].command).toBe(DANGEROUS);
+    expect(written[0].tool).toBe("Bash");
+  });
 
-  test(
-    "the flat shell shape is recorded too, not only the wrapped one",
-    async () => {
-      const out = await runValidator({ command: DANGEROUS }, "cursor");
-      expect(out).toContain("deny");
-      expect(entries()[0]?.command).toBe(DANGEROUS);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("the flat shell shape is recorded too, not only the wrapped one", async () => {
+    const out = await runValidator({ command: DANGEROUS }, "cursor");
+    expect(out).toContain("deny");
+    expect(entries()[0]?.command).toBe(DANGEROUS);
+  });
 
-  test(
-    "an allowed action writes nothing — the ledger is not a log of attempts",
-    async () => {
-      const out = await runValidator(
-        preToolUse("Edit", { file_path: resolve(HOME, "notes.md") })
-      );
-      expect(out).toBe("");
-      expect(entries()).toEqual([]);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("an allowed action writes nothing — the ledger is not a log of attempts", async () => {
+    const out = await runValidator(
+      preToolUse("Edit", { file_path: resolve(HOME, "notes.md") })
+    );
+    expect(out).toBe("");
+    expect(entries()).toEqual([]);
+  });
 
-  test(
-    "a ledger it cannot write still denies — recording never softens a block",
-    async () => {
-      // A file where the ledger directory has to go: every write path throws.
-      removeOnceReleased(resolve(HOME, "memory", "ledger"));
-      writeFileSync(resolve(HOME, "memory", "ledger"), "not a directory", "utf-8");
+  test("a ledger it cannot write still denies — recording never softens a block", async () => {
+    // A file where the ledger directory has to go: every write path throws.
+    removeOnceReleased(resolve(HOME, "memory", "ledger"));
+    writeFileSync(resolve(HOME, "memory", "ledger"), "not a directory", "utf-8");
 
-      const out = await runValidator(preToolUse("Bash", { command: DANGEROUS }));
-      expect(out).toContain("deny");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const out = await runValidator(preToolUse("Bash", { command: DANGEROUS }));
+    expect(out).toContain("deny");
+  });
 
-  test(
-    "it carries who tried it, so a refusal is attributable like any entry",
-    async () => {
-      await runValidator(preToolUse("Bash", { command: DANGEROUS }));
-      const entry = entries()[0];
-      expect(entry.actor).toBeTruthy();
-      expect(entry.machine).toBeTruthy();
-      expect(entry.runtime).toBe("claude");
-      expect(entry.authority).toBeTruthy();
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("it carries who tried it, so a refusal is attributable like any entry", async () => {
+    await runValidator(preToolUse("Bash", { command: DANGEROUS }));
+    const entry = entries()[0];
+    expect(entry.actor).toBeTruthy();
+    expect(entry.machine).toBeTruthy();
+    expect(entry.runtime).toBe("claude");
+    expect(entry.authority).toBeTruthy();
+  });
 });
 
 describe("what the page then reads", () => {
-  test(
-    "blocked is counted, and counted as a refusal",
-    async () => {
-      process.env.PAL_HOME = HOME;
-      try {
-        await runValidator(preToolUse("Bash", { command: DANGEROUS }));
-        const view = ledgerView({});
-        expect(view.stats.outcomes.blocked.total).toBe(1);
-        expect(view.stats.refusals).toBe(1);
-        expect(view.rows[0].outcome).toBe("blocked");
-        expect(view.rows[0].command).toBe(DANGEROUS);
-      } finally {
-        delete process.env.PAL_HOME;
-      }
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("blocked is counted, and counted as a refusal", async () => {
+    process.env.PAL_HOME = HOME;
+    try {
+      await runValidator(preToolUse("Bash", { command: DANGEROUS }));
+      const view = ledgerView({});
+      expect(view.stats.outcomes.blocked.total).toBe(1);
+      expect(view.stats.refusals).toBe(1);
+      expect(view.rows[0].outcome).toBe("blocked");
+      expect(view.rows[0].command).toBe(DANGEROUS);
+    } finally {
+      delete process.env.PAL_HOME;
+    }
+  });
 });

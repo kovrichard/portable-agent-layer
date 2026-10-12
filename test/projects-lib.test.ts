@@ -1,4 +1,11 @@
-import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import {
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  setDefaultTimeout,
+  test,
+} from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -15,6 +22,8 @@ import {
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { testHome } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 const TEST_HOME = testHome(import.meta.file);
 
@@ -98,35 +107,27 @@ function checkoutDir(name: string): string {
 }
 
 describe("read/write/delete", () => {
-  test(
-    "write then read round-trips",
-    () => {
-      const p = fakeProject({ name: "alpha", path: checkoutDir("alpha") });
-      writeProject(p);
-      const got = readProject("alpha");
-      expect(got).toEqual(p);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("write then read round-trips", () => {
+    const p = fakeProject({ name: "alpha", path: checkoutDir("alpha") });
+    writeProject(p);
+    const got = readProject("alpha");
+    expect(got).toEqual(p);
+  });
 
-  test(
-    "write then read round-trips with ISA body sections",
-    () => {
-      const p = fakeProject({
-        name: "rich",
-        path: checkoutDir("rich"),
-        goal: "Ship ISA support",
-        criteria: "- All tests pass\n- ISA.md is created on create",
-        context: "PAL source repo\nReference: ~/pai",
-        next: ["Build it", "Test it"],
-        blockers: ["Need design approval"],
-      });
-      writeProject(p);
-      const got = readProject("rich");
-      expect(got).toEqual(p);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("write then read round-trips with ISA body sections", () => {
+    const p = fakeProject({
+      name: "rich",
+      path: checkoutDir("rich"),
+      goal: "Ship ISA support",
+      criteria: "- All tests pass\n- ISA.md is created on create",
+      context: "PAL source repo\nReference: ~/pai",
+      next: ["Build it", "Test it"],
+      blockers: ["Need design approval"],
+    });
+    writeProject(p);
+    const got = readProject("rich");
+    expect(got).toEqual(p);
+  });
 
   test("readAllProjects returns all written projects", () => {
     writeProject(fakeProject({ name: "a", path: "/tmp/a" }));

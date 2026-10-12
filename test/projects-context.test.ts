@@ -1,9 +1,18 @@
-import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import {
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  setDefaultTimeout,
+  test,
+} from "bun:test";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { outsideRepoHome } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 const TEST_HOME = outsideRepoHome(import.meta.file);
 
@@ -67,388 +76,324 @@ describe("loadActiveProjectsContext", () => {
     expect(out).toContain(root);
   });
 
-  test(
-    "registered project + cwd resolves → → here marker, no hint",
-    async () => {
-      const lib = await freshLib();
-      const cwd = fixtureRepoDir("alpha");
-      lib.writeProject({
-        name: "alpha",
-        path: cwd,
-        status: "active",
-        created: nowIso(),
-        updated: nowIso(),
-        goal: "ship tier 2",
-      });
-      const out = lib.loadActiveProjectsContext(cwd);
-      expect(out).toContain("## Active Projects");
-      expect(out).toContain("**alpha**");
-      expect(out).toContain("→ here");
-      expect(out).toContain("Objectives: ship tier 2");
-      expect(out).not.toContain("💡");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("registered project + cwd resolves → → here marker, no hint", async () => {
+    const lib = await freshLib();
+    const cwd = fixtureRepoDir("alpha");
+    lib.writeProject({
+      name: "alpha",
+      path: cwd,
+      status: "active",
+      created: nowIso(),
+      updated: nowIso(),
+      goal: "ship tier 2",
+    });
+    const out = lib.loadActiveProjectsContext(cwd);
+    expect(out).toContain("## Active Projects");
+    expect(out).toContain("**alpha**");
+    expect(out).toContain("→ here");
+    expect(out).toContain("Objectives: ship tier 2");
+    expect(out).not.toContain("💡");
+  });
 
-  test(
-    "facts surface in the cwd-resolved project block",
-    async () => {
-      const lib = await freshLib();
-      const cwd = fixtureRepoDir("with-facts");
-      lib.writeProject({
-        name: "with-facts",
-        path: cwd,
-        status: "active",
-        created: nowIso(),
-        updated: nowIso(),
-        context: "Upstream lives at /repos/upstream\nTech stack: Bun + TS",
-      });
-      const out = lib.loadActiveProjectsContext(cwd);
-      expect(out).toContain("Facts:");
-      expect(out).toContain("Upstream lives at /repos/upstream");
-      expect(out).toContain("Tech stack: Bun + TS");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("facts surface in the cwd-resolved project block", async () => {
+    const lib = await freshLib();
+    const cwd = fixtureRepoDir("with-facts");
+    lib.writeProject({
+      name: "with-facts",
+      path: cwd,
+      status: "active",
+      created: nowIso(),
+      updated: nowIso(),
+      context: "Upstream lives at /repos/upstream\nTech stack: Bun + TS",
+    });
+    const out = lib.loadActiveProjectsContext(cwd);
+    expect(out).toContain("Facts:");
+    expect(out).toContain("Upstream lives at /repos/upstream");
+    expect(out).toContain("Tech stack: Bun + TS");
+  });
 
-  test(
-    "a heading is not a fact",
-    async () => {
-      const lib = await freshLib();
-      const cwd = fixtureRepoDir("with-heading");
-      lib.writeProject({
-        name: "with-heading",
-        path: cwd,
-        status: "active",
-        created: nowIso(),
-        updated: nowIso(),
-        context:
-          "Runs from a package install\n\n### Lineage\n\nForked from an older upstream",
-      });
-      const out = lib.loadActiveProjectsContext(cwd);
-      expect(out).toContain(
-        "Facts: Runs from a package install; Forked from an older upstream"
-      );
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("a heading is not a fact", async () => {
+    const lib = await freshLib();
+    const cwd = fixtureRepoDir("with-heading");
+    lib.writeProject({
+      name: "with-heading",
+      path: cwd,
+      status: "active",
+      created: nowIso(),
+      updated: nowIso(),
+      context:
+        "Runs from a package install\n\n### Lineage\n\nForked from an older upstream",
+    });
+    const out = lib.loadActiveProjectsContext(cwd);
+    expect(out).toContain(
+      "Facts: Runs from a package install; Forked from an older upstream"
+    );
+  });
 
-  test(
-    "long facts stop whole at the budget and point to the full record",
-    async () => {
-      const lib = await freshLib();
-      const cwd = fixtureRepoDir("long-facts");
-      const fact = (n: number) => `Fact ${n} ${"x".repeat(250)}.`;
-      lib.writeProject({
-        name: "long-facts",
-        path: cwd,
-        status: "active",
-        created: nowIso(),
-        updated: nowIso(),
-        context: [fact(1), fact(2), fact(3)].join("\n"),
-      });
-      const out = lib.loadActiveProjectsContext(cwd);
-      expect(out).toContain(`Facts: ${fact(1)}; ${fact(2)}`);
-      expect(out).not.toContain("Fact 3");
-      expect(out).toContain("pal cli project resume long-facts");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("long facts stop whole at the budget and point to the full record", async () => {
+    const lib = await freshLib();
+    const cwd = fixtureRepoDir("long-facts");
+    const fact = (n: number) => `Fact ${n} ${"x".repeat(250)}.`;
+    lib.writeProject({
+      name: "long-facts",
+      path: cwd,
+      status: "active",
+      created: nowIso(),
+      updated: nowIso(),
+      context: [fact(1), fact(2), fact(3)].join("\n"),
+    });
+    const out = lib.loadActiveProjectsContext(cwd);
+    expect(out).toContain(`Facts: ${fact(1)}; ${fact(2)}`);
+    expect(out).not.toContain("Fact 3");
+    expect(out).toContain("pal cli project resume long-facts");
+  });
 
-  test(
-    "facts do NOT surface in compact one-liner for non-resolved projects",
-    async () => {
-      const lib = await freshLib();
-      const otherRepo = fixtureRepoDir("other");
-      lib.writeProject({
-        name: "other",
-        path: otherRepo,
-        status: "active",
-        created: nowIso(),
-        updated: nowIso(),
-        context: "Some private fact",
-      });
-      // cwd is a plain dir, not the registered project
-      const out = lib.loadActiveProjectsContext(fixturePlainDir("notes"));
-      expect(out).toContain("**other**");
-      expect(out).not.toContain("Facts:");
-      expect(out).not.toContain("Some private fact");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("facts do NOT surface in compact one-liner for non-resolved projects", async () => {
+    const lib = await freshLib();
+    const otherRepo = fixtureRepoDir("other");
+    lib.writeProject({
+      name: "other",
+      path: otherRepo,
+      status: "active",
+      created: nowIso(),
+      updated: nowIso(),
+      context: "Some private fact",
+    });
+    // cwd is a plain dir, not the registered project
+    const out = lib.loadActiveProjectsContext(fixturePlainDir("notes"));
+    expect(out).toContain("**other**");
+    expect(out).not.toContain("Facts:");
+    expect(out).not.toContain("Some private fact");
+  });
 
-  test(
-    "cwd is parent of registered projects → no → here, no hint (browse mode)",
-    async () => {
-      const lib = await freshLib();
-      const a = fixtureRepoDir("multi/a");
-      const b = fixtureRepoDir("multi/b");
-      const parent = resolve(TEST_HOME, "fixtures", "multi");
-      lib.writeProject({
-        name: "a",
-        path: a,
-        status: "active",
-        created: nowIso(),
-        updated: nowIso(),
-      });
-      lib.writeProject({
-        name: "b",
-        path: b,
-        status: "active",
-        created: nowIso(),
-        updated: nowIso(),
-      });
-      const out = lib.loadActiveProjectsContext(parent);
-      expect(out).toContain("**a**");
-      expect(out).toContain("**b**");
-      expect(out).not.toContain("→ here");
-      // Parent dir has no .git itself, so no hint either
-      expect(out).not.toContain("💡");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("cwd is parent of registered projects → no → here, no hint (browse mode)", async () => {
+    const lib = await freshLib();
+    const a = fixtureRepoDir("multi/a");
+    const b = fixtureRepoDir("multi/b");
+    const parent = resolve(TEST_HOME, "fixtures", "multi");
+    lib.writeProject({
+      name: "a",
+      path: a,
+      status: "active",
+      created: nowIso(),
+      updated: nowIso(),
+    });
+    lib.writeProject({
+      name: "b",
+      path: b,
+      status: "active",
+      created: nowIso(),
+      updated: nowIso(),
+    });
+    const out = lib.loadActiveProjectsContext(parent);
+    expect(out).toContain("**a**");
+    expect(out).toContain("**b**");
+    expect(out).not.toContain("→ here");
+    // Parent dir has no .git itself, so no hint either
+    expect(out).not.toContain("💡");
+  });
 
-  test(
-    "archived projects are excluded; complete projects are excluded",
-    async () => {
-      const lib = await freshLib();
-      lib.writeProject({
-        name: "live",
-        path: fixtureRepoDir("live"),
-        status: "active",
-        created: nowIso(),
-        updated: nowIso(),
-      });
-      lib.writeProject({
-        name: "shipped",
-        path: fixtureRepoDir("shipped"),
-        status: "complete",
-        created: nowIso(),
-        updated: nowIso(),
-      });
-      lib.writeProject({
-        name: "old",
-        path: fixtureRepoDir("old"),
-        status: "archived",
-        created: nowIso(),
-        updated: nowIso(),
-      });
-      const out = lib.loadActiveProjectsContext(fixturePlainDir("notes"));
-      expect(out).toContain("**live**");
-      expect(out).not.toContain("**shipped**");
-      expect(out).not.toContain("**old**");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("archived projects are excluded; complete projects are excluded", async () => {
+    const lib = await freshLib();
+    lib.writeProject({
+      name: "live",
+      path: fixtureRepoDir("live"),
+      status: "active",
+      created: nowIso(),
+      updated: nowIso(),
+    });
+    lib.writeProject({
+      name: "shipped",
+      path: fixtureRepoDir("shipped"),
+      status: "complete",
+      created: nowIso(),
+      updated: nowIso(),
+    });
+    lib.writeProject({
+      name: "old",
+      path: fixtureRepoDir("old"),
+      status: "archived",
+      created: nowIso(),
+      updated: nowIso(),
+    });
+    const out = lib.loadActiveProjectsContext(fixturePlainDir("notes"));
+    expect(out).toContain("**live**");
+    expect(out).not.toContain("**shipped**");
+    expect(out).not.toContain("**old**");
+  });
 
-  test(
-    "paused projects are listed with paused prefix",
-    async () => {
-      const lib = await freshLib();
-      lib.writeProject({
-        name: "shelved",
-        path: fixtureRepoDir("shelved"),
-        status: "paused",
-        created: nowIso(),
-        updated: nowIso(),
-      });
-      const out = lib.loadActiveProjectsContext(fixturePlainDir("notes"));
-      expect(out).toContain("**shelved** (paused,");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("paused projects are listed with paused prefix", async () => {
+    const lib = await freshLib();
+    lib.writeProject({
+      name: "shelved",
+      path: fixtureRepoDir("shelved"),
+      status: "paused",
+      created: nowIso(),
+      updated: nowIso(),
+    });
+    const out = lib.loadActiveProjectsContext(fixturePlainDir("notes"));
+    expect(out).toContain("**shelved** (paused,");
+  });
 
-  test(
-    "stale projects (>14d) collapse into one line of names",
-    async () => {
-      const lib = await freshLib();
-      for (const name of ["rusty", "dusty"]) {
-        lib.writeProject({
-          name,
-          path: fixtureRepoDir(name),
-          status: "active",
-          created: nowIso(-30 * 86_400_000),
-          updated: nowIso(-30 * 86_400_000),
-          next: ["a"],
-        });
-      }
-      const out = lib.loadActiveProjectsContext(fixturePlainDir("notes"));
-      expect(out).toMatch(/^- Quiet for 14\+ days: (rusty, dusty|dusty, rusty)$/m);
-      expect(out).not.toContain("**rusty**");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
-
-  test(
-    "a recent project carries its last session, a quiet one does not",
-    async () => {
-      const lib = await freshLib();
+  test("stale projects (>14d) collapse into one line of names", async () => {
+    const lib = await freshLib();
+    for (const name of ["rusty", "dusty"]) {
       lib.writeProject({
-        name: "fresh",
-        path: fixtureRepoDir("fresh"),
-        status: "active",
-        created: nowIso(),
-        updated: nowIso(),
-      });
-      lib.writeProject({
-        name: "rusty",
-        path: fixtureRepoDir("rusty"),
+        name,
+        path: fixtureRepoDir(name),
         status: "active",
         created: nowIso(-30 * 86_400_000),
         updated: nowIso(-30 * 86_400_000),
+        next: ["a"],
       });
-      const titles: Record<string, string> = {
-        fresh: "Shipped the gate",
-        rusty: "Old work",
-      };
-      const out = lib.loadActiveProjectsContext(
-        fixturePlainDir("notes"),
-        (name) => titles[name]
-      );
-      expect(out).toContain("- **fresh** (just now) — last: Shipped the gate");
-      expect(out).not.toContain("Old work");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    }
+    const out = lib.loadActiveProjectsContext(fixturePlainDir("notes"));
+    expect(out).toMatch(/^- Quiet for 14\+ days: (rusty, dusty|dusty, rusty)$/m);
+    expect(out).not.toContain("**rusty**");
+  });
 
-  test(
-    "hint appears alongside list when cwd is project-shaped but unregistered",
-    async () => {
-      const lib = await freshLib();
-      lib.writeProject({
-        name: "registered-elsewhere",
-        path: fixtureRepoDir("registered-elsewhere"),
-        status: "active",
-        created: nowIso(),
-        updated: nowIso(),
-      });
-      const cwd = fixtureRepoDir("brand-new");
-      const out = lib.loadActiveProjectsContext(cwd);
-      expect(out).toContain("**registered-elsewhere**");
-      expect(out).toContain("💡");
-      expect(out).toContain(cwd);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("a recent project carries its last session, a quiet one does not", async () => {
+    const lib = await freshLib();
+    lib.writeProject({
+      name: "fresh",
+      path: fixtureRepoDir("fresh"),
+      status: "active",
+      created: nowIso(),
+      updated: nowIso(),
+    });
+    lib.writeProject({
+      name: "rusty",
+      path: fixtureRepoDir("rusty"),
+      status: "active",
+      created: nowIso(-30 * 86_400_000),
+      updated: nowIso(-30 * 86_400_000),
+    });
+    const titles: Record<string, string> = {
+      fresh: "Shipped the gate",
+      rusty: "Old work",
+    };
+    const out = lib.loadActiveProjectsContext(
+      fixturePlainDir("notes"),
+      (name) => titles[name]
+    );
+    expect(out).toContain("- **fresh** (just now) — last: Shipped the gate");
+    expect(out).not.toContain("Old work");
+  });
 
-  test(
-    "non-resolved projects render as one-liners with counts, not full blocks",
-    async () => {
-      const lib = await freshLib();
-      lib.writeProject({
-        name: "verbose",
-        path: fixtureRepoDir("verbose"),
-        status: "active",
-        created: nowIso(),
-        updated: nowIso(),
-        goal: "should not appear\nneither this",
-        next: ["a", "b", "c", "d"],
-        blockers: ["x"],
-      });
-      const out = lib.loadActiveProjectsContext(fixturePlainDir("notes"));
-      expect(out).toContain("**verbose**");
-      expect(out).toContain("4 next");
-      expect(out).toContain("1 blockers");
-      expect(out).not.toContain("Objectives:");
-      expect(out).not.toContain("Next:");
-      expect(out).not.toContain("Blockers:");
-      expect(out).not.toContain("should not appear");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("hint appears alongside list when cwd is project-shaped but unregistered", async () => {
+    const lib = await freshLib();
+    lib.writeProject({
+      name: "registered-elsewhere",
+      path: fixtureRepoDir("registered-elsewhere"),
+      status: "active",
+      created: nowIso(),
+      updated: nowIso(),
+    });
+    const cwd = fixtureRepoDir("brand-new");
+    const out = lib.loadActiveProjectsContext(cwd);
+    expect(out).toContain("**registered-elsewhere**");
+    expect(out).toContain("💡");
+    expect(out).toContain(cwd);
+  });
 
-  test(
-    "resolved project shows full detail; siblings stay one-liner",
-    async () => {
-      const lib = await freshLib();
-      const here = fixtureRepoDir("focus");
-      lib.writeProject({
-        name: "focus",
-        path: here,
-        status: "active",
-        created: nowIso(),
-        updated: nowIso(),
-        goal: "land tier 4",
-        next: ["one", "two"],
-      });
-      lib.writeProject({
-        name: "sidekick",
-        path: fixtureRepoDir("sidekick"),
-        status: "active",
-        created: nowIso(),
-        updated: nowIso(-60_000),
-        goal: "unrelated work",
-        next: ["x", "y", "z"],
-      });
-      const out = lib.loadActiveProjectsContext(here);
-      expect(out).toContain("**focus**");
-      expect(out).toContain("→ here");
-      expect(out).toContain("Objectives: land tier 4");
-      expect(out).toContain("Next: one; two");
-      expect(out).toContain("**sidekick**");
-      expect(out).toContain("3 next");
-      expect(out).not.toContain("unrelated work");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("non-resolved projects render as one-liners with counts, not full blocks", async () => {
+    const lib = await freshLib();
+    lib.writeProject({
+      name: "verbose",
+      path: fixtureRepoDir("verbose"),
+      status: "active",
+      created: nowIso(),
+      updated: nowIso(),
+      goal: "should not appear\nneither this",
+      next: ["a", "b", "c", "d"],
+      blockers: ["x"],
+    });
+    const out = lib.loadActiveProjectsContext(fixturePlainDir("notes"));
+    expect(out).toContain("**verbose**");
+    expect(out).toContain("4 next");
+    expect(out).toContain("1 blockers");
+    expect(out).not.toContain("Objectives:");
+    expect(out).not.toContain("Next:");
+    expect(out).not.toContain("Blockers:");
+    expect(out).not.toContain("should not appear");
+  });
 
-  test(
-    "constraints surface in the cwd-resolved project block",
-    async () => {
-      const lib = await freshLib();
-      const cwd = fixtureRepoDir("constrained");
-      lib.writeProject({
-        name: "constrained",
-        path: cwd,
-        status: "active",
-        created: nowIso(),
-        updated: nowIso(),
-        constraints:
-          "- Bun >= 1.3.0 only\n- No agent-specific imports in core logic\n- PAL_HOME override must work everywhere",
-      });
-      const out = lib.loadActiveProjectsContext(cwd);
-      expect(out).toContain("Constraints:");
-      expect(out).toContain("Bun >= 1.3.0 only");
-      expect(out).toContain("No agent-specific imports in core logic");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("resolved project shows full detail; siblings stay one-liner", async () => {
+    const lib = await freshLib();
+    const here = fixtureRepoDir("focus");
+    lib.writeProject({
+      name: "focus",
+      path: here,
+      status: "active",
+      created: nowIso(),
+      updated: nowIso(),
+      goal: "land tier 4",
+      next: ["one", "two"],
+    });
+    lib.writeProject({
+      name: "sidekick",
+      path: fixtureRepoDir("sidekick"),
+      status: "active",
+      created: nowIso(),
+      updated: nowIso(-60_000),
+      goal: "unrelated work",
+      next: ["x", "y", "z"],
+    });
+    const out = lib.loadActiveProjectsContext(here);
+    expect(out).toContain("**focus**");
+    expect(out).toContain("→ here");
+    expect(out).toContain("Objectives: land tier 4");
+    expect(out).toContain("Next: one; two");
+    expect(out).toContain("**sidekick**");
+    expect(out).toContain("3 next");
+    expect(out).not.toContain("unrelated work");
+  });
 
-  test(
-    "constraints do NOT surface in compact one-liner for non-resolved projects",
-    async () => {
-      const lib = await freshLib();
-      lib.writeProject({
-        name: "other-constrained",
-        path: fixtureRepoDir("other-constrained"),
-        status: "active",
-        created: nowIso(),
-        updated: nowIso(),
-        constraints: "- Secret constraint",
-      });
-      const out = lib.loadActiveProjectsContext(fixturePlainDir("notes"));
-      expect(out).not.toContain("Constraints:");
-      expect(out).not.toContain("Secret constraint");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("constraints surface in the cwd-resolved project block", async () => {
+    const lib = await freshLib();
+    const cwd = fixtureRepoDir("constrained");
+    lib.writeProject({
+      name: "constrained",
+      path: cwd,
+      status: "active",
+      created: nowIso(),
+      updated: nowIso(),
+      constraints:
+        "- Bun >= 1.3.0 only\n- No agent-specific imports in core logic\n- PAL_HOME override must work everywhere",
+    });
+    const out = lib.loadActiveProjectsContext(cwd);
+    expect(out).toContain("Constraints:");
+    expect(out).toContain("Bun >= 1.3.0 only");
+    expect(out).toContain("No agent-specific imports in core logic");
+  });
 
-  test(
-    "notes folder (no project markers) → no hint even when projects exist elsewhere",
-    async () => {
-      const lib = await freshLib();
-      lib.writeProject({
-        name: "real",
-        path: fixtureRepoDir("real"),
-        status: "active",
-        created: nowIso(),
-        updated: nowIso(),
-      });
-      const cwd = fixturePlainDir("just-notes");
-      const out = lib.loadActiveProjectsContext(cwd);
-      expect(out).toContain("**real**");
-      expect(out).not.toContain("💡");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("constraints do NOT surface in compact one-liner for non-resolved projects", async () => {
+    const lib = await freshLib();
+    lib.writeProject({
+      name: "other-constrained",
+      path: fixtureRepoDir("other-constrained"),
+      status: "active",
+      created: nowIso(),
+      updated: nowIso(),
+      constraints: "- Secret constraint",
+    });
+    const out = lib.loadActiveProjectsContext(fixturePlainDir("notes"));
+    expect(out).not.toContain("Constraints:");
+    expect(out).not.toContain("Secret constraint");
+  });
+
+  test("notes folder (no project markers) → no hint even when projects exist elsewhere", async () => {
+    const lib = await freshLib();
+    lib.writeProject({
+      name: "real",
+      path: fixtureRepoDir("real"),
+      status: "active",
+      created: nowIso(),
+      updated: nowIso(),
+    });
+    const cwd = fixturePlainDir("just-notes");
+    const out = lib.loadActiveProjectsContext(cwd);
+    expect(out).toContain("**real**");
+    expect(out).not.toContain("💡");
+  });
 });

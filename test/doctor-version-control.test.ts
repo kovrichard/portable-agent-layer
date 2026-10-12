@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { delimiter, dirname } from "node:path";
 import {
   ghInstallHint,
@@ -9,6 +9,8 @@ import { detectRemote } from "../src/hooks/lib/remote";
 import { writeFakeBin } from "./fixtures/fake-bin";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 const osRelease = (id: string, like = "") =>
   `NAME="Some Linux"\nID=${id}\n${like ? `ID_LIKE="${like}"\n` : ""}`;
@@ -80,19 +82,15 @@ process.exit(${authExit});`
     expect(git.fix?.command).toBe("brew install git");
   });
 
-  test(
-    "git present passes with its version",
-    () => {
-      fakeGit();
+  test("git present passes with its version", () => {
+    fakeGit();
 
-      expect(findings()[0]).toEqual({
-        id: "git",
-        severity: "ok",
-        title: "git version 2.50.0",
-      });
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(findings()[0]).toEqual({
+      id: "git",
+      severity: "ok",
+      title: "git version 2.50.0",
+    });
+  });
 
   test("no gh is listed as optional, with the install command", () => {
     const gh = findings()[1];
@@ -101,50 +99,34 @@ process.exit(${authExit});`
     expect(gh.fix?.command).toBe("brew install gh");
   });
 
-  test(
-    "gh logged in passes",
-    () => {
-      fakeGh(0);
+  test("gh logged in passes", () => {
+    fakeGh(0);
 
-      expect(findings()[1].title).toBe("gh version 2.80.0, logged in");
-      expect(findings()[1].severity).toBe("ok");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(findings()[1].title).toBe("gh version 2.80.0, logged in");
+    expect(findings()[1].severity).toBe("ok");
+  });
 
-  test(
-    "gh logged out warns to log in",
-    () => {
-      fakeGh(1);
+  test("gh logged out warns to log in", () => {
+    fakeGh(1);
 
-      const gh = findings()[1];
-      expect(gh.severity).toBe("warn");
-      expect(gh.fix?.command).toBe("gh auth login");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const gh = findings()[1];
+    expect(gh.severity).toBe("warn");
+    expect(gh.fix?.command).toBe("gh auth login");
+  });
 
-  test(
-    "a gh that does not answer is not reported as logged out",
-    () => {
-      fakeGh(1, true);
+  test("a gh that does not answer is not reported as logged out", () => {
+    fakeGh(1, true);
 
-      const gh = versionControlFindings({
-        platform: "darwin",
-        osRelease: "",
-        timeoutMs: 1000,
-      })[1];
-      expect(gh.severity).toBe("ok");
-      expect(gh.title).toContain("not checked in time");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const gh = versionControlFindings({
+      platform: "darwin",
+      osRelease: "",
+      timeoutMs: 1000,
+    })[1];
+    expect(gh.severity).toBe("ok");
+    expect(gh.title).toContain("not checked in time");
+  });
 
-  test(
-    "project matching by remote skips quietly without git",
-    () => {
-      expect(detectRemote(bin)).toBeNull();
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("project matching by remote skips quietly without git", () => {
+    expect(detectRemote(bin)).toBeNull();
+  });
 });

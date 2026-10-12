@@ -1,8 +1,10 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 let HOME: string;
 
@@ -46,67 +48,55 @@ describe("v4 paths-to-bindings", () => {
     expect(await migration()).toBeUndefined();
   });
 
-  test(
-    "moves the path into a binding and out of the record",
-    async () => {
-      const dir = checkout("alpha");
-      const file = legacyRecord("alpha", dir);
-      const { runMigrate } = await import("../src/cli/migrate");
-      const { bindingFor } = await import("../src/hooks/lib/bindings");
+  test("moves the path into a binding and out of the record", async () => {
+    const dir = checkout("alpha");
+    const file = legacyRecord("alpha", dir);
+    const { runMigrate } = await import("../src/cli/migrate");
+    const { bindingFor } = await import("../src/hooks/lib/bindings");
 
-      runMigrate([]);
+    runMigrate([]);
 
-      expect(readFileSync(file, "utf-8")).not.toContain("path:");
-      expect(bindingFor("alpha", HOME)).toBe(dir);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(readFileSync(file, "utf-8")).not.toContain("path:");
+    expect(bindingFor("alpha", HOME)).toBe(dir);
+  });
 
   // Content, not bytes: the writer normalizes spacing after a heading, so a
   // hand-written record comes back canonically formatted. Every section and its
   // text must survive, and `updated` must not move — the staleness ordering in
   // the project list is built on it.
-  test(
-    "preserves every section, its text, and the updated timestamp",
-    async () => {
-      const file = legacyRecord("alpha", checkout("alpha"));
-      const { runMigrate } = await import("../src/cli/migrate");
+  test("preserves every section, its text, and the updated timestamp", async () => {
+    const file = legacyRecord("alpha", checkout("alpha"));
+    const { runMigrate } = await import("../src/cli/migrate");
 
-      runMigrate([]);
-      const after = readFileSync(file, "utf-8");
+    runMigrate([]);
+    const after = readFileSync(file, "utf-8");
 
-      expect(after).toContain("## Goal");
-      expect(after).toContain("Ship the thing.");
-      expect(after).toContain("## Criteria");
-      expect(after).toContain("- [ ] ISC-1: works");
-      expect(after).toContain('updated: "2026-02-02"');
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(after).toContain("## Goal");
+    expect(after).toContain("Ship the thing.");
+    expect(after).toContain("## Criteria");
+    expect(after).toContain("- [ ] ISC-1: works");
+    expect(after).toContain('updated: "2026-02-02"');
+  });
 
-  test(
-    "a record already in canonical form comes back byte-identical apart from the path",
-    async () => {
-      const dir = checkout("beta");
-      const { writeProject, readProject } = await import("../src/hooks/lib/projects");
-      writeProject({
-        name: "beta",
-        path: dir,
-        status: "active",
-        created: "2026-01-01",
-        updated: "2026-02-02",
-        goal: "Ship it.",
-      });
-      const file = resolve(HOME, "memory", "projects", "beta", "ISA.md");
-      const before = readFileSync(file, "utf-8");
+  test("a record already in canonical form comes back byte-identical apart from the path", async () => {
+    const dir = checkout("beta");
+    const { writeProject, readProject } = await import("../src/hooks/lib/projects");
+    writeProject({
+      name: "beta",
+      path: dir,
+      status: "active",
+      created: "2026-01-01",
+      updated: "2026-02-02",
+      goal: "Ship it.",
+    });
+    const file = resolve(HOME, "memory", "projects", "beta", "ISA.md");
+    const before = readFileSync(file, "utf-8");
 
-      const p = readProject("beta");
-      if (p) writeProject(p);
+    const p = readProject("beta");
+    if (p) writeProject(p);
 
-      expect(readFileSync(file, "utf-8")).toBe(before);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(readFileSync(file, "utf-8")).toBe(before);
+  });
 
   test("a dry run changes nothing on disk", async () => {
     const file = legacyRecord("alpha", checkout("alpha"));
@@ -120,14 +110,10 @@ describe("v4 paths-to-bindings", () => {
     expect(existsSync(bindingsFilePath(HOME))).toBe(false);
   });
 
-  test(
-    "stops being pending once it has run",
-    async () => {
-      legacyRecord("alpha", checkout("alpha"));
-      const { runMigrate } = await import("../src/cli/migrate");
-      runMigrate([]);
-      expect(await migration()).toBeUndefined();
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("stops being pending once it has run", async () => {
+    legacyRecord("alpha", checkout("alpha"));
+    const { runMigrate } = await import("../src/cli/migrate");
+    runMigrate([]);
+    expect(await migration()).toBeUndefined();
+  });
 });

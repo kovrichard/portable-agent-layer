@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -17,6 +17,8 @@ import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 // Every case here fails a guard that returns before canInfer(), so no inference
 // is ever reached. That is the point: the gating is what decides whether a
@@ -141,74 +143,58 @@ describe("an unfinished session", () => {
     prependPath(binDir);
   });
 
-  test(
-    "leaves the model's handoff for the next session, not the raw last exchange",
-    async () => {
-      await captureSessionIntelligence(transcript(12, 300), "s-open");
+  test("leaves the model's handoff for the next session, not the raw last exchange", async () => {
+    await captureSessionIntelligence(transcript(12, 300), "s-open");
 
-      const handoffs = JSON.parse(
-        readFileSync(resolve(HOME, "memory", "state", "last-handoff.json"), "utf-8")
-      );
-      expect(handoffs[process.cwd()]).toMatchObject({
-        title: "Handoff wiring",
-        status: "in-progress",
-        handoff:
-          "Done: Traced where the handoff is written.\n" +
-          "Next: Wire the model handoff into last-handoff.json, then run the gates.",
-        source: "auto",
-        sessionId: "s-open",
-      });
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const handoffs = JSON.parse(
+      readFileSync(resolve(HOME, "memory", "state", "last-handoff.json"), "utf-8")
+    );
+    expect(handoffs[process.cwd()]).toMatchObject({
+      title: "Handoff wiring",
+      status: "in-progress",
+      handoff:
+        "Done: Traced where the handoff is written.\n" +
+        "Next: Wire the model handoff into last-handoff.json, then run the gates.",
+      source: "auto",
+      sessionId: "s-open",
+    });
+  });
 
-  test(
-    "files the session under the folder it started in, not the one it ended in",
-    async () => {
-      const startDir = freshTestDir(import.meta.file);
-      const savedStart = process.env.CLAUDE_PROJECT_DIR;
-      process.env.CLAUDE_PROJECT_DIR = startDir;
-      try {
-        await captureSessionIntelligence(transcript(12, 300), "s-moved");
+  test("files the session under the folder it started in, not the one it ended in", async () => {
+    const startDir = freshTestDir(import.meta.file);
+    const savedStart = process.env.CLAUDE_PROJECT_DIR;
+    process.env.CLAUDE_PROJECT_DIR = startDir;
+    try {
+      await captureSessionIntelligence(transcript(12, 300), "s-moved");
 
-        expect(readProjectHistory(startDir).map((e) => [e.title, e.session])).toEqual([
-          ["Handoff wiring", "s-moved"],
-        ]);
-      } finally {
-        if (savedStart === undefined) delete process.env.CLAUDE_PROJECT_DIR;
-        else process.env.CLAUDE_PROJECT_DIR = savedStart;
-        removeOnceReleased(startDir);
-      }
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+      expect(readProjectHistory(startDir).map((e) => [e.title, e.session])).toEqual([
+        ["Handoff wiring", "s-moved"],
+      ]);
+    } finally {
+      if (savedStart === undefined) delete process.env.CLAUDE_PROJECT_DIR;
+      else process.env.CLAUDE_PROJECT_DIR = savedStart;
+      removeOnceReleased(startDir);
+    }
+  });
 
-  test(
-    "records no history when the model gave no summary",
-    async () => {
-      writeFakeBin(binDir, "claude", "process.exit(1);\n");
+  test("records no history when the model gave no summary", async () => {
+    writeFakeBin(binDir, "claude", "process.exit(1);\n");
 
-      await captureSessionIntelligence(transcript(12, 300), "s-no-model");
+    await captureSessionIntelligence(transcript(12, 300), "s-no-model");
 
-      expect(readProjectHistory(process.cwd())).toEqual([]);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(readProjectHistory(process.cwd())).toEqual([]);
+  });
 
-  test(
-    "summarises the handoff again after a new message, before the learning is due",
-    async () => {
-      markCaptured("s-turn", "/learning/a.md", 20);
-      claimHandoffSummary("s-turn", 10);
+  test("summarises the handoff again after a new message, before the learning is due", async () => {
+    markCaptured("s-turn", "/learning/a.md", 20);
+    claimHandoffSummary("s-turn", 10);
 
-      await captureSessionIntelligence(transcript(22, 300), "s-turn");
+    await captureSessionIntelligence(transcript(22, 300), "s-turn");
 
-      expect(handoffs()[process.cwd()]).toMatchObject({ title: "Handoff wiring" });
-      expect(learningFiles()).toEqual([]);
-      expect(readProjectHistory(process.cwd())).toEqual([]);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(handoffs()[process.cwd()]).toMatchObject({ title: "Handoff wiring" });
+    expect(learningFiles()).toEqual([]);
+    expect(readProjectHistory(process.cwd())).toEqual([]);
+  });
 
   test("does not summarise the same turn twice", async () => {
     markCaptured("s-twice", "/learning/a.md", 20);

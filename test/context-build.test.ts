@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -13,6 +13,8 @@ import { appendProjectHistory } from "../src/hooks/lib/work-tracking";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { testHome } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 const HOME = testHome(import.meta.file);
 
@@ -274,29 +276,25 @@ describe("buildSystemReminder", () => {
     expect(buildSystemReminder()).not.toContain("An earlier session here");
   });
 
-  test(
-    "marks the project the session started in, not the folder it moved to",
-    () => {
-      const startDir = resolve(HOME, "started-here");
-      mkdirSync(startDir, { recursive: true });
-      writeProject({
-        name: "started-here",
-        path: startDir,
-        status: "active",
-        created: new Date().toISOString(),
-        updated: new Date().toISOString(),
-      });
-      const savedStart = process.env.CLAUDE_PROJECT_DIR;
-      process.env.CLAUDE_PROJECT_DIR = startDir;
-      try {
-        expect(buildSystemReminder()).toContain("**started-here** (just now) → here");
-      } finally {
-        if (savedStart === undefined) delete process.env.CLAUDE_PROJECT_DIR;
-        else process.env.CLAUDE_PROJECT_DIR = savedStart;
-      }
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("marks the project the session started in, not the folder it moved to", () => {
+    const startDir = resolve(HOME, "started-here");
+    mkdirSync(startDir, { recursive: true });
+    writeProject({
+      name: "started-here",
+      path: startDir,
+      status: "active",
+      created: new Date().toISOString(),
+      updated: new Date().toISOString(),
+    });
+    const savedStart = process.env.CLAUDE_PROJECT_DIR;
+    process.env.CLAUDE_PROJECT_DIR = startDir;
+    try {
+      expect(buildSystemReminder()).toContain("**started-here** (just now) → here");
+    } finally {
+      if (savedStart === undefined) delete process.env.CLAUDE_PROJECT_DIR;
+      else process.env.CLAUDE_PROJECT_DIR = savedStart;
+    }
+  });
 
   test("still includes relationship notes for a native-loading agent", () => {
     notes("## 09:00\n- W: still injected\n");

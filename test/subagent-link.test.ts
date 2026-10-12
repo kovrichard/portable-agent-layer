@@ -1,10 +1,12 @@
-import { beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { testHome } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 const HOME = testHome(import.meta.file);
@@ -68,7 +70,7 @@ beforeAll(() => {
   mkdirSync(resolve(HOME, ".copilot/agents"), { recursive: true });
   mkdirSync(resolve(HOME, ".codex/agents"), { recursive: true });
   firstLink = subagentLink("my-helper");
-}, SPAWN_HEAVY_TEST_MS);
+});
 
 describe("pal cli subagent link", () => {
   test("installs a personal subagent into installed agents only", () => {
@@ -113,23 +115,19 @@ describe("pal cli subagent link", () => {
     expect(codex.model).toBeUndefined();
   });
 
-  test(
-    "a definition Codex cannot take installs nowhere",
-    () => {
-      writeFileSync(
-        resolve(HOME, ".pal/agents/half-built.md"),
-        MERGED.replace("name: my-helper", "name: half-built").replace(
-          "  sandbox_mode: read-only",
-          "  mcp_servers:\n    docs:\n      url: x"
-        )
-      );
-      const res = subagentLink("half-built");
-      expect(res.status).toBe(1);
-      expect(res.stderr + res.stdout).toContain("codex");
-      expect(existsSync(resolve(HOME, ".claude/agents/half-built.md"))).toBe(false);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("a definition Codex cannot take installs nowhere", () => {
+    writeFileSync(
+      resolve(HOME, ".pal/agents/half-built.md"),
+      MERGED.replace("name: my-helper", "name: half-built").replace(
+        "  sandbox_mode: read-only",
+        "  mcp_servers:\n    docs:\n      url: x"
+      )
+    );
+    const res = subagentLink("half-built");
+    expect(res.status).toBe(1);
+    expect(res.stderr + res.stdout).toContain("codex");
+    expect(existsSync(resolve(HOME, ".claude/agents/half-built.md"))).toBe(false);
+  });
 
   test("opencode gets mode + permission", () => {
     const oc = readFileSync(opencodeFile, "utf-8");
@@ -137,51 +135,35 @@ describe("pal cli subagent link", () => {
     expect(oc).toContain("read: allow");
   });
 
-  test(
-    "is idempotent — re-linking succeeds",
-    () => {
-      const res = subagentLink("my-helper");
-      expect(res.status).toBe(0);
-      expect(existsSync(claudeFile)).toBe(true);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("is idempotent — re-linking succeeds", () => {
+    const res = subagentLink("my-helper");
+    expect(res.status).toBe(0);
+    expect(existsSync(claudeFile)).toBe(true);
+  });
 
-  test(
-    "rejects a name that collides with a shipped subagent",
-    () => {
-      writeFileSync(
-        resolve(HOME, ".pal/agents/skill-author.md"),
-        MERGED.replace("name: my-helper", "name: skill-author")
-      );
-      const res = subagentLink("skill-author");
-      expect(res.status).toBe(1);
-      expect(res.stderr + res.stdout).toContain("shipped PAL subagent");
-      // and it must NOT have overwritten anything in the agent dirs
-      expect(existsSync(resolve(HOME, ".claude/agents/skill-author.md"))).toBe(false);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("rejects a name that collides with a shipped subagent", () => {
+    writeFileSync(
+      resolve(HOME, ".pal/agents/skill-author.md"),
+      MERGED.replace("name: my-helper", "name: skill-author")
+    );
+    const res = subagentLink("skill-author");
+    expect(res.status).toBe(1);
+    expect(res.stderr + res.stdout).toContain("shipped PAL subagent");
+    // and it must NOT have overwritten anything in the agent dirs
+    expect(existsSync(resolve(HOME, ".claude/agents/skill-author.md"))).toBe(false);
+  });
 
-  test(
-    "fails when the subagent does not exist in ~/.pal/agents/",
-    () => {
-      const res = subagentLink("ghost");
-      expect(res.status).toBe(1);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("fails when the subagent does not exist in ~/.pal/agents/", () => {
+    const res = subagentLink("ghost");
+    expect(res.status).toBe(1);
+  });
 
-  test(
-    "errors with usage when no name is given",
-    () => {
-      const res = spawnSync("bun", ["run", CLI, "cli", "subagent", "link"], {
-        env,
-        encoding: "utf-8",
-        timeout: 15000,
-      });
-      expect(res.status).toBe(1);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("errors with usage when no name is given", () => {
+    const res = spawnSync("bun", ["run", CLI, "cli", "subagent", "link"], {
+      env,
+      encoding: "utf-8",
+      timeout: 15000,
+    });
+    expect(res.status).toBe(1);
+  });
 });

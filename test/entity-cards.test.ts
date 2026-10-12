@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { getPromptContext } from "../src/hooks/handlers/inject-retrieval";
@@ -12,6 +12,8 @@ import { ingestEntities } from "../src/tools/knowledge/ingest";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { testHome } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 const HOME = testHome(import.meta.file);
 
@@ -60,19 +62,15 @@ describe("entityReminder", () => {
     expect(entityReminder("refactor the parser", loadKnownEntities())).toBeNull();
   });
 
-  test(
-    "the prompt context carries the card, and the setting turns it off",
-    async () => {
-      expect(await getPromptContext("is Brightmoor billing on time?")).toContain(
-        "**Brightmoor Kft.**"
-      );
-      writeSettings({ dynamicContext: { entityCards: false } });
-      expect(await getPromptContext("is Brightmoor billing on time?")).not.toContain(
-        "Brightmoor Kft."
-      );
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("the prompt context carries the card, and the setting turns it off", async () => {
+    expect(await getPromptContext("is Brightmoor billing on time?")).toContain(
+      "**Brightmoor Kft.**"
+    );
+    writeSettings({ dynamicContext: { entityCards: false } });
+    expect(await getPromptContext("is Brightmoor billing on time?")).not.toContain(
+      "Brightmoor Kft."
+    );
+  });
 });
 
 describe("latestNote", () => {

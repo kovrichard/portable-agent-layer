@@ -1,9 +1,11 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawnDetachedInference } from "../src/hooks/lib/detached-inference";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 /** A detached child runs asynchronously, so every assertion on it has to wait. */
 async function readWhenWritten(path: string, attempts = 50): Promise<string> {
@@ -35,103 +37,79 @@ describe("spawnDetachedInference", () => {
     writeFileSync(resolve(stateDir, "debug-enabled"), "");
   });
 
-  test(
-    "spawned child receives CLAUDECODE unset; parent retains it",
-    async () => {
-      // Child script writes its CLAUDECODE env value into a marker file.
-      const childScript = resolve(tmp, "child.ts");
-      const markerFile = resolve(tmp, "marker.txt");
-      writeFileSync(
-        childScript,
-        `import { writeFileSync } from "node:fs";
+  test("spawned child receives CLAUDECODE unset; parent retains it", async () => {
+    // Child script writes its CLAUDECODE env value into a marker file.
+    const childScript = resolve(tmp, "child.ts");
+    const markerFile = resolve(tmp, "marker.txt");
+    writeFileSync(
+      childScript,
+      `import { writeFileSync } from "node:fs";
 writeFileSync(${JSON.stringify(markerFile)}, "claudecode=[" + (process.env.CLAUDECODE ?? "") + "]");
 `,
-        "utf-8"
-      );
+      "utf-8"
+    );
 
-      spawnDetachedInference(childScript, [], "test");
+    spawnDetachedInference(childScript, [], "test");
 
-      expect(await readWhenWritten(markerFile)).toBe("claudecode=[]");
-      expect(process.env.CLAUDECODE).toBe("1");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(await readWhenWritten(markerFile)).toBe("claudecode=[]");
+    expect(process.env.CLAUDECODE).toBe("1");
+  });
 
-  test(
-    "returns immediately even though child runs async",
-    () => {
-      const childScript = resolve(tmp, "slow-child.ts");
-      writeFileSync(
-        childScript,
-        `await new Promise((r) => setTimeout(r, 2000));`,
-        "utf-8"
-      );
-      const start = Date.now();
-      spawnDetachedInference(childScript, [], "test");
-      const elapsed = Date.now() - start;
-      expect(elapsed).toBeLessThan(200);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("returns immediately even though child runs async", () => {
+    const childScript = resolve(tmp, "slow-child.ts");
+    writeFileSync(childScript, `await new Promise((r) => setTimeout(r, 2000));`, "utf-8");
+    const start = Date.now();
+    spawnDetachedInference(childScript, [], "test");
+    const elapsed = Date.now() - start;
+    expect(elapsed).toBeLessThan(200);
+  });
 
-  test(
-    "logs debug line when spawned successfully",
-    async () => {
-      const childScript = resolve(tmp, "noop.ts");
-      writeFileSync(childScript, `process.exit(0);`, "utf-8");
-      spawnDetachedInference(childScript, ["--mode-x", "arg1"], "test-scope");
+  test("logs debug line when spawned successfully", async () => {
+    const childScript = resolve(tmp, "noop.ts");
+    writeFileSync(childScript, `process.exit(0);`, "utf-8");
+    spawnDetachedInference(childScript, ["--mode-x", "arg1"], "test-scope");
 
-      const log = await readWhenWritten(resolve(tmp, "debug", "debug.log"));
-      expect(log).toContain("test-scope: detached inference spawned: --mode-x");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const log = await readWhenWritten(resolve(tmp, "debug", "debug.log"));
+    expect(log).toContain("test-scope: detached inference spawned: --mode-x");
+  });
 
-  test(
-    "child argv carries the parent's active agent",
-    async () => {
-      process.env.PAL_AGENT = "cursor";
-      const childScript = resolve(tmp, "argv-child.ts");
-      const markerFile = resolve(tmp, "argv-marker.txt");
-      writeFileSync(
-        childScript,
-        `import { writeFileSync } from "node:fs";
+  test("child argv carries the parent's active agent", async () => {
+    process.env.PAL_AGENT = "cursor";
+    const childScript = resolve(tmp, "argv-child.ts");
+    const markerFile = resolve(tmp, "argv-marker.txt");
+    writeFileSync(
+      childScript,
+      `import { writeFileSync } from "node:fs";
 writeFileSync(${JSON.stringify(markerFile)}, process.argv.slice(2).join(" "));
 `,
-        "utf-8"
-      );
+      "utf-8"
+    );
 
-      spawnDetachedInference(childScript, ["--run", "sid-1"], "test");
+    spawnDetachedInference(childScript, ["--run", "sid-1"], "test");
 
-      expect(await readWhenWritten(markerFile)).toBe("--run sid-1 --agent=cursor");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(await readWhenWritten(markerFile)).toBe("--run sid-1 --agent=cursor");
+  });
 
-  test(
-    "child detects the agent from argv alone, without inheriting PAL_AGENT",
-    async () => {
-      process.env.PAL_AGENT = "cursor";
-      const childScript = resolve(tmp, "detect-child.ts");
-      const markerFile = resolve(tmp, "detect-marker.txt");
-      // Drop the inherited env signal before loading the detector, so only the
-      // argv flag can account for the answer.
-      writeFileSync(
-        childScript,
-        `import { writeFileSync } from "node:fs";
+  test("child detects the agent from argv alone, without inheriting PAL_AGENT", async () => {
+    process.env.PAL_AGENT = "cursor";
+    const childScript = resolve(tmp, "detect-child.ts");
+    const markerFile = resolve(tmp, "detect-marker.txt");
+    // Drop the inherited env signal before loading the detector, so only the
+    // argv flag can account for the answer.
+    writeFileSync(
+      childScript,
+      `import { writeFileSync } from "node:fs";
 delete process.env.PAL_AGENT;
 const { getActiveAgent } = await import(${JSON.stringify(resolve(import.meta.dir, "../src/hooks/lib/agent.ts"))});
 writeFileSync(${JSON.stringify(markerFile)}, getActiveAgent());
 `,
-        "utf-8"
-      );
+      "utf-8"
+    );
 
-      spawnDetachedInference(childScript, ["--run", "sid-2"], "test");
+    spawnDetachedInference(childScript, ["--run", "sid-2"], "test");
 
-      expect(await readWhenWritten(markerFile)).toBe("cursor");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(await readWhenWritten(markerFile)).toBe("cursor");
+  });
 
   test("logs error if spawn throws", () => {
     // Use an executable path that doesn't exist to force spawn() throw.

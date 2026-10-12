@@ -1,9 +1,11 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 let ROOT: string;
 
@@ -71,120 +73,84 @@ async function registerProject(name: string, path: string) {
 }
 
 describe("a git checkout", () => {
-  test(
-    "in sync with its remote says so, with the release it sits on",
-    async () => {
-      const dir = released();
+  test("in sync with its remote says so, with the release it sits on", async () => {
+    const dir = released();
 
-      expect(await repoStateReminder(dir)).toBe(
-        "<system-reminder>Repo: app on main · clean · pushed · at tag v1.0.0</system-reminder>"
-      );
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(await repoStateReminder(dir)).toBe(
+      "<system-reminder>Repo: app on main · clean · pushed · at tag v1.0.0</system-reminder>"
+    );
+  });
 
-  test(
-    "counts the files not committed and the commits not pushed",
-    async () => {
-      const dir = released();
-      commit(dir, "b");
-      commit(dir, "c");
-      writeFileSync(resolve(dir, "d"), "d");
-      writeFileSync(resolve(dir, "a"), "changed");
+  test("counts the files not committed and the commits not pushed", async () => {
+    const dir = released();
+    commit(dir, "b");
+    commit(dir, "c");
+    writeFileSync(resolve(dir, "d"), "d");
+    writeFileSync(resolve(dir, "a"), "changed");
 
-      const line = await repoStateReminder(dir);
-      expect(line).toContain("2 files uncommitted");
-      expect(line).toContain("2 commits not pushed");
-      expect(line).toContain("2 commits since tag v1.0.0");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const line = await repoStateReminder(dir);
+    expect(line).toContain("2 files uncommitted");
+    expect(line).toContain("2 commits not pushed");
+    expect(line).toContain("2 commits since tag v1.0.0");
+  });
 
-  test(
-    "names commits the remote has that are not pulled yet",
-    async () => {
-      const dir = released();
-      commit(dir, "b");
-      git(dir, "push", "-q");
-      git(dir, "reset", "-q", "--hard", "HEAD~1");
+  test("names commits the remote has that are not pulled yet", async () => {
+    const dir = released();
+    commit(dir, "b");
+    git(dir, "push", "-q");
+    git(dir, "reset", "-q", "--hard", "HEAD~1");
 
-      expect(await repoStateReminder(dir)).toContain("1 commit behind origin/main");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(await repoStateReminder(dir)).toContain("1 commit behind origin/main");
+  });
 
-  test(
-    "a branch never pushed says it has no upstream",
-    async () => {
-      const dir = released();
-      git(dir, "checkout", "-qb", "fix/thing");
+  test("a branch never pushed says it has no upstream", async () => {
+    const dir = released();
+    git(dir, "checkout", "-qb", "fix/thing");
 
-      expect(await repoStateReminder(dir)).toContain(
-        "app on fix/thing · clean · never pushed"
-      );
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(await repoStateReminder(dir)).toContain(
+      "app on fix/thing · clean · never pushed"
+    );
+  });
 
-  test(
-    "a subdirectory reports the checkout it belongs to",
-    async () => {
-      const dir = released();
-      mkdirSync(resolve(dir, "src"));
+  test("a subdirectory reports the checkout it belongs to", async () => {
+    const dir = released();
+    mkdirSync(resolve(dir, "src"));
 
-      expect(await repoStateReminder(resolve(dir, "src"))).toContain("Repo: app on main");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(await repoStateReminder(resolve(dir, "src"))).toContain("Repo: app on main");
+  });
 
-  test(
-    "an empty repository without tags still gets a line",
-    async () => {
-      const dir = resolve(ROOT, "fresh");
-      mkdirSync(dir);
-      git(dir, "init", "-q");
+  test("an empty repository without tags still gets a line", async () => {
+    const dir = resolve(ROOT, "fresh");
+    mkdirSync(dir);
+    git(dir, "init", "-q");
 
-      expect(await repoStateReminder(dir)).toBe(
-        "<system-reminder>Repo: fresh on main · no commits yet · never pushed</system-reminder>"
-      );
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(await repoStateReminder(dir)).toBe(
+      "<system-reminder>Repo: fresh on main · no commits yet · never pushed</system-reminder>"
+    );
+  });
 });
 
 describe("a project without git", () => {
-  test(
-    "says nothing there is committed, pushed or released",
-    async () => {
-      const dir = resolve(ROOT, "notes");
-      mkdirSync(dir);
-      await registerProject("notes", dir);
+  test("says nothing there is committed, pushed or released", async () => {
+    const dir = resolve(ROOT, "notes");
+    mkdirSync(dir);
+    await registerProject("notes", dir);
 
-      expect(await repoStateReminder(dir)).toBe(
-        "<system-reminder>Repo: notes is not under git — nothing in it is committed, pushed or released; the files on disk are its whole state</system-reminder>"
-      );
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(await repoStateReminder(dir)).toBe(
+      "<system-reminder>Repo: notes is not under git — nothing in it is committed, pushed or released; the files on disk are its whole state</system-reminder>"
+    );
+  });
 
-  test(
-    "an unregistered directory without git gets no line",
-    async () => {
-      const dir = resolve(ROOT, "scratch");
-      mkdirSync(dir);
+  test("an unregistered directory without git gets no line", async () => {
+    const dir = resolve(ROOT, "scratch");
+    mkdirSync(dir);
 
-      expect(await repoStateReminder(dir)).toBeNull();
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(await repoStateReminder(dir)).toBeNull();
+  });
 });
 
-test(
-  "the line is off when repoState is disabled",
-  async () => {
-    await setSettings({ dynamicContext: { repoState: false } });
+test("the line is off when repoState is disabled", async () => {
+  await setSettings({ dynamicContext: { repoState: false } });
 
-    expect(await repoStateReminder(released())).toBeNull();
-  },
-  SPAWN_HEAVY_TEST_MS
-);
+  expect(await repoStateReminder(released())).toBeNull();
+});

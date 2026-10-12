@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -11,6 +11,8 @@ import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 const PRESERVED = [
   "PAL_AGENT",
@@ -120,88 +122,70 @@ describe("inference dispatcher — opencode spawn integration (fake binary)", ()
     process.env.PAL_AGENT = "opencode";
   });
 
-  test(
-    "end-to-end: fake opencode emits a text event, dispatcher extracts it",
-    async () => {
-      const event = JSON.stringify({
-        type: "text",
-        part: { type: "text", text: "hello-opencode" },
-      });
-      writeFakeBin(tmpBin, "opencode", `console.log(${JSON.stringify(event)});\n`);
-      prependPath(tmpBin);
+  test("end-to-end: fake opencode emits a text event, dispatcher extracts it", async () => {
+    const event = JSON.stringify({
+      type: "text",
+      part: { type: "text", text: "hello-opencode" },
+    });
+    writeFakeBin(tmpBin, "opencode", `console.log(${JSON.stringify(event)});\n`);
+    prependPath(tmpBin);
 
-      const result = await inference({ user: "anything", timeout: 5000 });
-      expect(result.success).toBe(true);
-      expect(result.output).toBe("hello-opencode");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const result = await inference({ user: "anything", timeout: 5000 });
+    expect(result.success).toBe(true);
+    expect(result.output).toBe("hello-opencode");
+  });
 
-  test(
-    "fake opencode sees PAL_SPAWNED_INFERENCE=1 and CLAUDECODE unset",
-    async () => {
-      writeFakeBin(
-        tmpBin,
-        "opencode",
-        `const text = \`sentinel=\${process.env.${SPAWN_GUARD_ENV.SENTINEL}} claudecode=[\${process.env.CLAUDECODE ?? ""}]\`;
+  test("fake opencode sees PAL_SPAWNED_INFERENCE=1 and CLAUDECODE unset", async () => {
+    writeFakeBin(
+      tmpBin,
+      "opencode",
+      `const text = \`sentinel=\${process.env.${SPAWN_GUARD_ENV.SENTINEL}} claudecode=[\${process.env.CLAUDECODE ?? ""}]\`;
 console.log(JSON.stringify({ type: "text", part: { type: "text", text } }));\n`
-      );
-      prependPath(tmpBin);
-      process.env.CLAUDECODE = "1";
+    );
+    prependPath(tmpBin);
+    process.env.CLAUDECODE = "1";
 
-      const result = await inference({ user: "ignored", timeout: 5000 });
-      expect(result.success).toBe(true);
-      expect(result.output).toBe("sentinel=1 claudecode=[]");
-      expect(process.env.CLAUDECODE).toBe("1");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const result = await inference({ user: "ignored", timeout: 5000 });
+    expect(result.success).toBe(true);
+    expect(result.output).toBe("sentinel=1 claudecode=[]");
+    expect(process.env.CLAUDECODE).toBe("1");
+  });
 
-  test(
-    "fake opencode keeps ANTHROPIC_API_KEY, which its own providers may run on",
-    async () => {
-      process.env.ANTHROPIC_API_KEY = "opencode-provider-key";
-      writeFakeBin(
-        tmpBin,
-        "opencode",
-        `const text = \`key=[\${process.env.ANTHROPIC_API_KEY ?? ""}]\`;
+  test("fake opencode keeps ANTHROPIC_API_KEY, which its own providers may run on", async () => {
+    process.env.ANTHROPIC_API_KEY = "opencode-provider-key";
+    writeFakeBin(
+      tmpBin,
+      "opencode",
+      `const text = \`key=[\${process.env.ANTHROPIC_API_KEY ?? ""}]\`;
 console.log(JSON.stringify({ type: "text", part: { type: "text", text } }));\n`
-      );
-      prependPath(tmpBin);
+    );
+    prependPath(tmpBin);
 
-      const result = await inference({ user: "ignored", timeout: 5000 });
-      expect(result.output).toBe("key=[opencode-provider-key]");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const result = await inference({ user: "ignored", timeout: 5000 });
+    expect(result.output).toBe("key=[opencode-provider-key]");
+  });
 
-  test(
-    "non-zero exit from fake opencode returns success: false",
-    async () => {
-      writeFakeBin(tmpBin, "opencode", `process.exit(1);\n`);
-      prependPath(tmpBin);
+  test("non-zero exit from fake opencode returns success: false", async () => {
+    writeFakeBin(tmpBin, "opencode", `process.exit(1);\n`);
+    prependPath(tmpBin);
 
-      const result = await inference({ user: "hi", timeout: 5000 });
-      expect(result.success).toBe(false);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const result = await inference({ user: "hi", timeout: 5000 });
+    expect(result.success).toBe(false);
+  });
 
-  test(
-    "the background run sees the user's model but none of their instructions",
-    async () => {
-      const opencodeDir = resolve(tmpBin, "user-opencode");
-      mkdirSync(opencodeDir);
-      writeFileSync(
-        resolve(opencodeDir, "config.json"),
-        JSON.stringify({ model: "acme/fast", instructions: ["/memory/self-model.md"] })
-      );
-      writeFileSync(resolve(opencodeDir, "AGENTS.md"), "Always answer in a header.");
-      process.env.PAL_OPENCODE_DIR = opencodeDir;
-      writeFakeBin(
-        tmpBin,
-        "opencode",
-        `import { readdirSync, readFileSync } from "node:fs";
+  test("the background run sees the user's model but none of their instructions", async () => {
+    const opencodeDir = resolve(tmpBin, "user-opencode");
+    mkdirSync(opencodeDir);
+    writeFileSync(
+      resolve(opencodeDir, "config.json"),
+      JSON.stringify({ model: "acme/fast", instructions: ["/memory/self-model.md"] })
+    );
+    writeFileSync(resolve(opencodeDir, "AGENTS.md"), "Always answer in a header.");
+    process.env.PAL_OPENCODE_DIR = opencodeDir;
+    writeFakeBin(
+      tmpBin,
+      "opencode",
+      `import { readdirSync, readFileSync } from "node:fs";
 const dir = \`\${process.env.XDG_CONFIG_HOME}/opencode\`;
 const files = readdirSync(dir);
 const config = JSON.parse(readFileSync(\`\${dir}/config.json\`, "utf-8"));
@@ -209,60 +193,50 @@ const claudeCode = process.env.OPENCODE_DISABLE_CLAUDE_CODE;
 const skills = process.env.OPENCODE_DISABLE_EXTERNAL_SKILLS;
 const text = JSON.stringify({ files, config, claudeCode, skills, cwd: process.cwd() });
 console.log(JSON.stringify({ type: "text", part: { type: "text", text } }));\n`
-      );
-      prependPath(tmpBin);
+    );
+    prependPath(tmpBin);
 
-      const result = await inference({ user: "hi", timeout: 5000 });
-      const seen = JSON.parse(result.output ?? "{}");
-      expect(seen.files).toEqual(["config.json"]);
-      expect(seen.config).toEqual({ model: "acme/fast" });
-      expect(seen.claudeCode).toBe("1");
-      expect(seen.skills).toBe("1");
-      expect(seen.cwd).not.toBe(process.cwd());
-      expect(existsSync(seen.cwd)).toBe(false);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const result = await inference({ user: "hi", timeout: 5000 });
+    const seen = JSON.parse(result.output ?? "{}");
+    expect(seen.files).toEqual(["config.json"]);
+    expect(seen.config).toEqual({ model: "acme/fast" });
+    expect(seen.claudeCode).toBe("1");
+    expect(seen.skills).toBe("1");
+    expect(seen.cwd).not.toBe(process.cwd());
+    expect(existsSync(seen.cwd)).toBe(false);
+  });
 
-  test(
-    "a model error is in the log by the time inference returns",
-    async () => {
-      const error = JSON.stringify({
-        type: "error",
-        error: { name: "APIError", data: { message: "model rejected the request" } },
-      });
-      writeFakeBin(
-        tmpBin,
-        "opencode",
-        `console.log(${JSON.stringify(error)});\nprocess.exit(1);\n`
-      );
-      prependPath(tmpBin);
+  test("a model error is in the log by the time inference returns", async () => {
+    const error = JSON.stringify({
+      type: "error",
+      error: { name: "APIError", data: { message: "model rejected the request" } },
+    });
+    writeFakeBin(
+      tmpBin,
+      "opencode",
+      `console.log(${JSON.stringify(error)});\nprocess.exit(1);\n`
+    );
+    prependPath(tmpBin);
 
-      await inference({ user: "hi", timeout: 5000 });
-      const log = readFileSync(resolve(tmpBin, "debug", "debug.log"), "utf-8");
-      expect(log).toContain("model rejected the request");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    await inference({ user: "hi", timeout: 5000 });
+    const log = readFileSync(resolve(tmpBin, "debug", "debug.log"), "utf-8");
+    expect(log).toContain("model rejected the request");
+  });
 
-  test(
-    "JSON-schema path parses opencode text event containing JSON",
-    async () => {
-      const event = JSON.stringify({
-        type: "text",
-        part: { type: "text", text: '{"verdict":"ok"}' },
-      });
-      writeFakeBin(tmpBin, "opencode", `console.log(${JSON.stringify(event)});\n`);
-      prependPath(tmpBin);
+  test("JSON-schema path parses opencode text event containing JSON", async () => {
+    const event = JSON.stringify({
+      type: "text",
+      part: { type: "text", text: '{"verdict":"ok"}' },
+    });
+    writeFakeBin(tmpBin, "opencode", `console.log(${JSON.stringify(event)});\n`);
+    prependPath(tmpBin);
 
-      const result = await inference({
-        user: "rate",
-        jsonSchema: { type: "object", properties: { verdict: { type: "string" } } },
-        timeout: 5000,
-      });
-      expect(result.success).toBe(true);
-      expect(JSON.parse(result.output ?? "{}")).toEqual({ verdict: "ok" });
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const result = await inference({
+      user: "rate",
+      jsonSchema: { type: "object", properties: { verdict: { type: "string" } } },
+      timeout: 5000,
+    });
+    expect(result.success).toBe(true);
+    expect(JSON.parse(result.output ?? "{}")).toEqual({ verdict: "ok" });
+  });
 });

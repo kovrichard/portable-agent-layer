@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import {
   buildCliPrompt,
   buildCodexArgs,
@@ -9,6 +9,8 @@ import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 const PRESERVED = [
   "PAL_AGENT",
@@ -120,70 +122,54 @@ describe("inference dispatcher — codex spawn integration (fake binary)", () =>
     process.env.PAL_AGENT = "codex";
   });
 
-  test(
-    "end-to-end: fake codex echoes stdin (the prompt), dispatcher captures it",
-    async () => {
-      // Reads stdin rather than argv: that is where the prompt now travels, so
-      // this fails if the prompt ever moves back into a positional argument.
-      writeFakeBin(
-        tmpBin,
-        "codex",
-        `for await (const c of Bun.stdin.stream()) Bun.write(Bun.stdout, c);\n`
-      );
-      prependPath(tmpBin);
+  test("end-to-end: fake codex echoes stdin (the prompt), dispatcher captures it", async () => {
+    // Reads stdin rather than argv: that is where the prompt now travels, so
+    // this fails if the prompt ever moves back into a positional argument.
+    writeFakeBin(
+      tmpBin,
+      "codex",
+      `for await (const c of Bun.stdin.stream()) Bun.write(Bun.stdout, c);\n`
+    );
+    prependPath(tmpBin);
 
-      const result = await inference({ user: "hello-codex", timeout: 5000 });
-      expect(result.success).toBe(true);
-      expect(result.output).toBe("hello-codex");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const result = await inference({ user: "hello-codex", timeout: 5000 });
+    expect(result.success).toBe(true);
+    expect(result.output).toBe("hello-codex");
+  });
 
-  test(
-    "fake codex sees PAL_SPAWNED_INFERENCE=1 and CLAUDECODE unset in its env",
-    async () => {
-      writeFakeBin(
-        tmpBin,
-        "codex",
-        `console.log(\`sentinel=\${process.env.${SPAWN_GUARD_ENV.SENTINEL}} claudecode=[\${process.env.CLAUDECODE ?? ""}]\`);\n`
-      );
-      prependPath(tmpBin);
-      process.env.CLAUDECODE = "1"; // parent has it set
+  test("fake codex sees PAL_SPAWNED_INFERENCE=1 and CLAUDECODE unset in its env", async () => {
+    writeFakeBin(
+      tmpBin,
+      "codex",
+      `console.log(\`sentinel=\${process.env.${SPAWN_GUARD_ENV.SENTINEL}} claudecode=[\${process.env.CLAUDECODE ?? ""}]\`);\n`
+    );
+    prependPath(tmpBin);
+    process.env.CLAUDECODE = "1"; // parent has it set
 
-      const result = await inference({ user: "ignored", timeout: 5000 });
-      expect(result.success).toBe(true);
-      expect(result.output).toBe("sentinel=1 claudecode=[]");
-      expect(process.env.CLAUDECODE).toBe("1"); // parent untouched
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const result = await inference({ user: "ignored", timeout: 5000 });
+    expect(result.success).toBe(true);
+    expect(result.output).toBe("sentinel=1 claudecode=[]");
+    expect(process.env.CLAUDECODE).toBe("1"); // parent untouched
+  });
 
-  test(
-    "non-zero exit from fake codex returns success: false",
-    async () => {
-      writeFakeBin(tmpBin, "codex", `process.exit(2);\n`);
-      prependPath(tmpBin);
+  test("non-zero exit from fake codex returns success: false", async () => {
+    writeFakeBin(tmpBin, "codex", `process.exit(2);\n`);
+    prependPath(tmpBin);
 
-      const result = await inference({ user: "hi", timeout: 5000 });
-      expect(result.success).toBe(false);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const result = await inference({ user: "hi", timeout: 5000 });
+    expect(result.success).toBe(false);
+  });
 
-  test(
-    "JSON-schema path parses fake codex JSON output",
-    async () => {
-      writeFakeBin(tmpBin, "codex", `console.log('{"verdict":"ok"}');\n`);
-      prependPath(tmpBin);
+  test("JSON-schema path parses fake codex JSON output", async () => {
+    writeFakeBin(tmpBin, "codex", `console.log('{"verdict":"ok"}');\n`);
+    prependPath(tmpBin);
 
-      const result = await inference({
-        user: "rate",
-        jsonSchema: { type: "object", properties: { verdict: { type: "string" } } },
-        timeout: 5000,
-      });
-      expect(result.success).toBe(true);
-      expect(JSON.parse(result.output ?? "{}")).toEqual({ verdict: "ok" });
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const result = await inference({
+      user: "rate",
+      jsonSchema: { type: "object", properties: { verdict: { type: "string" } } },
+      timeout: 5000,
+    });
+    expect(result.success).toBe(true);
+    expect(JSON.parse(result.output ?? "{}")).toEqual({ verdict: "ok" });
+  });
 });

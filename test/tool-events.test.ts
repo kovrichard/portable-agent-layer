@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runPostToolHandlers } from "../src/hooks/lib/post-tool";
@@ -7,6 +7,8 @@ import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { logToolCall } from "../src/hooks/lib/tool-events";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 let home: string;
 
@@ -156,42 +158,34 @@ describe("a tool call", () => {
 });
 
 describe("the PostToolOrchestrator hook", () => {
-  test(
-    "logs the call, prints nothing and exits 0",
-    async () => {
-      const proc = Bun.spawn(
-        ["bun", resolve(import.meta.dir, "../src/hooks/PostToolOrchestrator.ts")],
-        {
-          stdin: new TextEncoder().encode(
-            JSON.stringify({ session_id: "s9", tool_name: "Grep", tool_input: {} })
-          ),
-          env: { ...process.env, PAL_HOME: home },
-          stdout: "pipe",
-          stderr: "ignore",
-        }
-      );
-      expect(await proc.exited).toBe(0);
-      expect(await new Response(proc.stdout).text()).toBe("");
-      expect(toolCalls()[0]).toMatchObject({ session: "s9", tool: "Grep" });
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("logs the call, prints nothing and exits 0", async () => {
+    const proc = Bun.spawn(
+      ["bun", resolve(import.meta.dir, "../src/hooks/PostToolOrchestrator.ts")],
+      {
+        stdin: new TextEncoder().encode(
+          JSON.stringify({ session_id: "s9", tool_name: "Grep", tool_input: {} })
+        ),
+        env: { ...process.env, PAL_HOME: home },
+        stdout: "pipe",
+        stderr: "ignore",
+      }
+    );
+    expect(await proc.exited).toBe(0);
+    expect(await new Response(proc.stdout).text()).toBe("");
+    expect(toolCalls()[0]).toMatchObject({ session: "s9", tool: "Grep" });
+  });
 
-  test(
-    "exits 0 even when the event store is broken",
-    async () => {
-      writeFileSync(resolve(home, "memory", "events"), "not a folder");
-      const proc = Bun.spawn(
-        ["bun", resolve(import.meta.dir, "../src/hooks/PostToolOrchestrator.ts")],
-        {
-          stdin: new TextEncoder().encode(JSON.stringify({ tool_name: "Grep" })),
-          env: { ...process.env, PAL_HOME: home },
-          stdout: "ignore",
-          stderr: "ignore",
-        }
-      );
-      expect(await proc.exited).toBe(0);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("exits 0 even when the event store is broken", async () => {
+    writeFileSync(resolve(home, "memory", "events"), "not a folder");
+    const proc = Bun.spawn(
+      ["bun", resolve(import.meta.dir, "../src/hooks/PostToolOrchestrator.ts")],
+      {
+        stdin: new TextEncoder().encode(JSON.stringify({ tool_name: "Grep" })),
+        env: { ...process.env, PAL_HOME: home },
+        stdout: "ignore",
+        stderr: "ignore",
+      }
+    );
+    expect(await proc.exited).toBe(0);
+  });
 });

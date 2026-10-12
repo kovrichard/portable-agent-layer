@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -15,6 +15,8 @@ import {
 import { paths } from "../src/hooks/lib/paths";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 const release = (mode: UpdateCache["mode"], available = true): UpdateCache =>
   ({ available, current: "0.89.0", latest: "0.90.0", mode }) as UpdateCache;
@@ -155,32 +157,28 @@ describe("pal cli update — repo mode ignores local unpushed commits", () => {
     git(cwd, "commit", "-m", msg);
   };
 
-  test(
-    "a clone ahead of origin/main reports no update",
-    () => {
-      git(origin, "init", "--bare", "-b", "main");
-      git(clone, "init", "-b", "main");
-      git(clone, "config", "user.email", "t@t.t");
-      git(clone, "config", "user.name", "t");
-      git(clone, "remote", "add", "origin", origin);
-      commit(clone, "0.61.3", "base");
-      git(clone, "push", "-u", "origin", "main");
+  test("a clone ahead of origin/main reports no update", () => {
+    git(origin, "init", "--bare", "-b", "main");
+    git(clone, "init", "-b", "main");
+    git(clone, "config", "user.email", "t@t.t");
+    git(clone, "config", "user.name", "t");
+    git(clone, "remote", "add", "origin", origin);
+    commit(clone, "0.61.3", "base");
+    git(clone, "push", "-u", "origin", "main");
 
-      // Diverge locally: unpushed commit, version unchanged — the exact bug shape.
-      // Touch a distinct file so the commit is real (identical package.json alone
-      // would be a no-op commit and create no divergence).
-      writeFileSync(resolve(clone, "work.txt"), "unpushed local change");
-      commit(clone, "0.61.3", "local unpushed work");
+    // Diverge locally: unpushed commit, version unchanged — the exact bug shape.
+    // Touch a distinct file so the commit is real (identical package.json alone
+    // would be a no-op commit and create no divergence).
+    writeFileSync(resolve(clone, "work.txt"), "unpushed local change");
+    commit(clone, "0.61.3", "local unpushed work");
 
-      process.env.PAL_HOME = home;
-      process.env.PAL_PKG = clone;
-      clearUpdateCache();
+    process.env.PAL_HOME = home;
+    process.env.PAL_PKG = clone;
+    clearUpdateCache();
 
-      return checkForUpdate(true).then((result) => {
-        expect(result.mode).toBe("repo");
-        expect(result.available).toBe(false);
-      });
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    return checkForUpdate(true).then((result) => {
+      expect(result.mode).toBe("repo");
+      expect(result.available).toBe(false);
+    });
+  });
 });

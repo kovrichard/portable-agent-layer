@@ -1,8 +1,10 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 let HOME: string;
 
@@ -135,29 +137,25 @@ describe("parked history finds its project", () => {
     return loose;
   }
 
-  test(
-    "moves in the moment its project is created here, with no migration run",
-    async () => {
-      const loose = await parkUnder("delta", "before the project existed");
-      const { writeProject } = await import("../src/hooks/lib/projects");
+  test("moves in the moment its project is created here, with no migration run", async () => {
+    const loose = await parkUnder("delta", "before the project existed");
+    const { writeProject } = await import("../src/hooks/lib/projects");
 
-      writeProject({
-        name: "delta",
-        status: "active",
-        created: "2026-01-01",
-        updated: "2026-01-01",
-        path: loose,
-      });
+    writeProject({
+      name: "delta",
+      status: "active",
+      created: "2026-01-01",
+      updated: "2026-01-01",
+      path: loose,
+    });
 
-      expect(readFileSync(projectHistory("delta"), "utf-8")).toContain(
-        "before the project existed"
-      );
-      expect(existsSync(parkedHistory("delta"))).toBe(false);
-      const { checkPendingMigrations } = await import("../src/cli/migrate");
-      expect(checkPendingMigrations()).toEqual([]);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(readFileSync(projectHistory("delta"), "utf-8")).toContain(
+      "before the project existed"
+    );
+    expect(existsSync(parkedHistory("delta"))).toBe(false);
+    const { checkPendingMigrations } = await import("../src/cli/migrate");
+    expect(checkPendingMigrations()).toEqual([]);
+  });
 
   test("never mints a project folder for a binding with no project record", async () => {
     const loose = await parkUnder("ghost", "no record anywhere");

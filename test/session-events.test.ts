@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { appendEvent } from "../src/hooks/lib/events";
@@ -12,6 +12,8 @@ import {
 import { reload } from "../src/hooks/lib/settings";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 let home: string;
 const T0 = new Date("2026-09-10T10:00:00.000Z");
@@ -252,29 +254,25 @@ describe("a broken event store never fails the hook", () => {
 });
 
 describe("the PreCompact hook", () => {
-  test(
-    "logs the compaction when the agent runs it",
-    async () => {
-      const proc = Bun.spawn(
-        ["bun", resolve(import.meta.dir, "../src/hooks/PreCompactPersist.ts")],
-        {
-          stdin: new TextEncoder().encode(
-            JSON.stringify({ session_id: "s9", trigger: "auto" })
-          ),
-          env: { ...process.env, PAL_HOME: home },
-          stdout: "ignore",
-          stderr: "ignore",
-        }
-      );
-      await proc.exited;
-      const month = new Date().toISOString().slice(0, 7);
-      const lines = readFileSync(
-        resolve(home, "memory", "events", `${month}.jsonl`),
-        "utf-8"
-      );
-      expect(lines).toContain('"type":"compaction"');
-      expect(lines).toContain('"session":"s9"');
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("logs the compaction when the agent runs it", async () => {
+    const proc = Bun.spawn(
+      ["bun", resolve(import.meta.dir, "../src/hooks/PreCompactPersist.ts")],
+      {
+        stdin: new TextEncoder().encode(
+          JSON.stringify({ session_id: "s9", trigger: "auto" })
+        ),
+        env: { ...process.env, PAL_HOME: home },
+        stdout: "ignore",
+        stderr: "ignore",
+      }
+    );
+    await proc.exited;
+    const month = new Date().toISOString().slice(0, 7);
+    const lines = readFileSync(
+      resolve(home, "memory", "events", `${month}.jsonl`),
+      "utf-8"
+    );
+    expect(lines).toContain('"type":"compaction"');
+    expect(lines).toContain('"session":"s9"');
+  });
 });

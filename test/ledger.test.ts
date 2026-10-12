@@ -1,8 +1,17 @@
-import { beforeEach, describe, expect, setSystemTime, test } from "bun:test";
+import {
+  beforeEach,
+  describe,
+  expect,
+  setDefaultTimeout,
+  setSystemTime,
+  test,
+} from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 // The ledger is the record something else will be judged against, so these
 // cases care less about the happy path than about what an entry claims when it
@@ -206,29 +215,22 @@ describe("blocked actions", () => {
 });
 
 describe("target paths", () => {
-  test(
-    "are anchored to the project so they survive a different mount",
-    async () => {
-      const root = resolve(HOME, "work", "app");
-      mkdirSync(resolve(root, "src"), { recursive: true });
-      const { writeProject } = await import("../src/hooks/lib/projects");
-      writeProject({
-        name: "demo",
-        path: root,
-        status: "active",
-        created: "2026-05-04T10:00:00Z",
-        updated: "2026-05-04T10:00:00Z",
-      });
+  test("are anchored to the project so they survive a different mount", async () => {
+    const root = resolve(HOME, "work", "app");
+    mkdirSync(resolve(root, "src"), { recursive: true });
+    const { writeProject } = await import("../src/hooks/lib/projects");
+    writeProject({
+      name: "demo",
+      path: root,
+      status: "active",
+      created: "2026-05-04T10:00:00Z",
+      updated: "2026-05-04T10:00:00Z",
+    });
 
-      const { recordAction } = await lib();
-      const entry = recordAction({
-        ...APPLIED,
-        target: resolve(root, "src", "index.ts"),
-      });
-      expect(entry.target).toBe("{proj:demo}/src/index.ts");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const { recordAction } = await lib();
+    const entry = recordAction({ ...APPLIED, target: resolve(root, "src", "index.ts") });
+    expect(entry.target).toBe("{proj:demo}/src/index.ts");
+  });
 
   test("pass through unchanged outside any registered project", async () => {
     const { recordAction } = await lib();

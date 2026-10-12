@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -16,6 +16,8 @@ import { reload } from "../src/hooks/lib/settings";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 // The gate is the whole feature: everything downstream of it is `pal cli update`,
 // which has its own tests. So each state that must NOT start an update is built
@@ -78,7 +80,7 @@ beforeEach(() => {
   mkdirSync(resolve(HOME, "memory", "state"), { recursive: true });
   repoFixture();
   reload();
-}, SPAWN_HEAVY_TEST_MS);
+});
 
 describe("the daily gate", () => {
   test("a fresh install never updates itself", () => {
@@ -90,14 +92,10 @@ describe("the daily gate", () => {
     expect(shouldAutoUpdate()).toBe(false);
   });
 
-  test(
-    "opted in, nothing tried yet, clean clone — it runs",
-    () => {
-      setSettings({ enabled: true, decided: true });
-      expect(shouldAutoUpdate()).toBe(true);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("opted in, nothing tried yet, clean clone — it runs", () => {
+    setSettings({ enabled: true, decided: true });
+    expect(shouldAutoUpdate()).toBe(true);
+  });
 
   test("a run that never finished holds the day", () => {
     setSettings({ enabled: true, decided: true });
@@ -105,21 +103,17 @@ describe("the daily gate", () => {
     expect(shouldAutoUpdate()).toBe(false);
   });
 
-  test(
-    "a morning run that found nothing does not block a release published at noon",
-    () => {
-      setSettings({ enabled: true, decided: true });
-      setLedger({
-        attemptedAt: ago(6 * HOUR_MS),
-        finishedAt: ago(6 * HOUR_MS),
-        ok: true,
-        from: "0.78.0",
-        to: "0.78.0",
-      });
-      expect(shouldAutoUpdate()).toBe(true);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("a morning run that found nothing does not block a release published at noon", () => {
+    setSettings({ enabled: true, decided: true });
+    setLedger({
+      attemptedAt: ago(6 * HOUR_MS),
+      finishedAt: ago(6 * HOUR_MS),
+      ok: true,
+      from: "0.78.0",
+      to: "0.78.0",
+    });
+    expect(shouldAutoUpdate()).toBe(true);
+  });
 
   test("a clean run holds the next check for an hour", () => {
     setSettings({ enabled: true, decided: true });
@@ -127,15 +121,11 @@ describe("the daily gate", () => {
     expect(shouldAutoUpdate()).toBe(false);
   });
 
-  test(
-    "an attempt 25 hours ago lets the next one through",
-    () => {
-      setSettings({ enabled: true, decided: true });
-      setLedger({ attemptedAt: ago(25 * HOUR_MS) });
-      expect(shouldAutoUpdate()).toBe(true);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("an attempt 25 hours ago lets the next one through", () => {
+    setSettings({ enabled: true, decided: true });
+    setLedger({ attemptedAt: ago(25 * HOUR_MS) });
+    expect(shouldAutoUpdate()).toBe(true);
+  });
 
   test("a failed attempt still holds the day, so a broken update cannot loop", () => {
     setSettings({ enabled: true, decided: true });
@@ -145,32 +135,24 @@ describe("the daily gate", () => {
 });
 
 describe("uncommitted work", () => {
-  test(
-    "a dirty clone waits, and says why",
-    () => {
-      setSettings({ enabled: true, decided: true });
-      writeFileSync(resolve(PKG, "work.txt"), "unstaged change", "utf-8");
+  test("a dirty clone waits, and says why", () => {
+    setSettings({ enabled: true, decided: true });
+    writeFileSync(resolve(PKG, "work.txt"), "unstaged change", "utf-8");
 
-      expect(shouldAutoUpdate()).toBe(false);
-      expect(readLedger()?.skipped).toContain("uncommitted changes");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(shouldAutoUpdate()).toBe(false);
+    expect(readLedger()?.skipped).toContain("uncommitted changes");
+  });
 
-  test(
-    "waiting does not consume the day — the next session tries again",
-    () => {
-      setSettings({ enabled: true, decided: true });
-      const dirt = resolve(PKG, "work.txt");
-      writeFileSync(dirt, "unstaged change", "utf-8");
-      expect(shouldAutoUpdate()).toBe(false);
-      expect(readLedger()?.attemptedAt).toBeUndefined();
+  test("waiting does not consume the day — the next session tries again", () => {
+    setSettings({ enabled: true, decided: true });
+    const dirt = resolve(PKG, "work.txt");
+    writeFileSync(dirt, "unstaged change", "utf-8");
+    expect(shouldAutoUpdate()).toBe(false);
+    expect(readLedger()?.attemptedAt).toBeUndefined();
 
-      removeOnceReleased(dirt);
-      expect(shouldAutoUpdate()).toBe(true);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    removeOnceReleased(dirt);
+    expect(shouldAutoUpdate()).toBe(true);
+  });
 
   test("a package install has no clone, so nothing holds it back", () => {
     setSettings({ enabled: true, decided: true });
@@ -182,37 +164,29 @@ describe("uncommitted work", () => {
     expect(readLedger()).toBeNull();
   });
 
-  test(
-    "the button cannot pull over uncommitted work either",
-    () => {
-      writeFileSync(resolve(PKG, "work.txt"), "unstaged change", "utf-8");
+  test("the button cannot pull over uncommitted work either", () => {
+    writeFileSync(resolve(PKG, "work.txt"), "unstaged change", "utf-8");
 
-      runAutoUpdate();
+    runAutoUpdate();
 
-      expect(readLedger()?.skipped).toContain("uncommitted changes");
-      expect(readLedger()?.attemptedAt).toBeUndefined();
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(readLedger()?.skipped).toContain("uncommitted changes");
+    expect(readLedger()?.attemptedAt).toBeUndefined();
+  });
 });
 
 // The clone has no src/cli/index.ts, so the spawned update exits nonzero — which
 // is the case worth pinning: the attempt must already be on record by then.
 describe("a run that fails", () => {
-  test(
-    "is recorded, and holds the day",
-    () => {
-      setSettings({ enabled: true, decided: true });
+  test("is recorded, and holds the day", () => {
+    setSettings({ enabled: true, decided: true });
 
-      const ledger = runAutoUpdate();
+    const ledger = runAutoUpdate();
 
-      expect(ledger.attemptedAt).toBeTruthy();
-      expect(ledger.ok).toBe(false);
-      expect(ledger.error).toBeTruthy();
-      expect(shouldAutoUpdate()).toBe(false);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(ledger.attemptedAt).toBeTruthy();
+    expect(ledger.ok).toBe(false);
+    expect(ledger.error).toBeTruthy();
+    expect(shouldAutoUpdate()).toBe(false);
+  });
 });
 
 function updateEvents(): Record<string, unknown>[] {
@@ -231,51 +205,39 @@ function updateEvents(): Record<string, unknown>[] {
 }
 
 describe("the event log", () => {
-  test(
-    "a failed run is logged with the version it started from",
-    () => {
-      setSettings({ enabled: true, decided: true });
-      runAutoUpdate();
-      expect(updateEvents()).toEqual([
-        expect.objectContaining({ outcome: "failed", from: "0.76.1", to: "0.76.1" }),
-      ]);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("a failed run is logged with the version it started from", () => {
+    setSettings({ enabled: true, decided: true });
+    runAutoUpdate();
+    expect(updateEvents()).toEqual([
+      expect.objectContaining({ outcome: "failed", from: "0.76.1", to: "0.76.1" }),
+    ]);
+  });
 
-  test(
-    "a skip is logged with its reason",
-    () => {
-      writeFileSync(resolve(PKG, "work.txt"), "unstaged change", "utf-8");
-      runAutoUpdate();
-      expect(updateEvents()[0]).toMatchObject({
-        outcome: "skipped",
-        skipReason: "uncommitted changes in the PAL repo",
-      });
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("a skip is logged with its reason", () => {
+    writeFileSync(resolve(PKG, "work.txt"), "unstaged change", "utf-8");
+    runAutoUpdate();
+    expect(updateEvents()[0]).toMatchObject({
+      outcome: "skipped",
+      skipReason: "uncommitted changes in the PAL repo",
+    });
+  });
 
-  test(
-    "a run that moved the version is logged as an update between the two",
-    () => {
-      mkdirSync(resolve(PKG, "src", "cli"), { recursive: true });
-      writeFileSync(
-        resolve(PKG, "src", "cli", "index.ts"),
-        `require("node:fs").writeFileSync(${JSON.stringify(resolve(PKG, "package.json"))}, '{"version":"0.77.0"}');`,
-        "utf-8"
-      );
-      git("add", "-A");
-      git("commit", "-m", "fake update");
-      runAutoUpdate();
-      expect(updateEvents()[0]).toMatchObject({
-        outcome: "updated",
-        from: "0.76.1",
-        to: "0.77.0",
-      });
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("a run that moved the version is logged as an update between the two", () => {
+    mkdirSync(resolve(PKG, "src", "cli"), { recursive: true });
+    writeFileSync(
+      resolve(PKG, "src", "cli", "index.ts"),
+      `require("node:fs").writeFileSync(${JSON.stringify(resolve(PKG, "package.json"))}, '{"version":"0.77.0"}');`,
+      "utf-8"
+    );
+    git("add", "-A");
+    git("commit", "-m", "fake update");
+    runAutoUpdate();
+    expect(updateEvents()[0]).toMatchObject({
+      outcome: "updated",
+      from: "0.76.1",
+      to: "0.77.0",
+    });
+  });
 });
 
 /** Stands in for `pal cli update`, and leaves a mark when it actually ran. */
@@ -309,21 +271,17 @@ function fakeUpdateCommand(): string {
 }
 
 describe("the attempt stamp", () => {
-  test(
-    "is on disk before the update command runs, not after it returns",
-    () => {
-      setSettings({ enabled: true, decided: true });
-      const seen = fakeUpdateCommand();
+  test("is on disk before the update command runs, not after it returns", () => {
+    setSettings({ enabled: true, decided: true });
+    const seen = fakeUpdateCommand();
 
-      runAutoUpdate();
+    runAutoUpdate();
 
-      const asTheChildSawIt = JSON.parse(readFileSync(seen, "utf-8")) as {
-        attemptedAt?: string;
-      };
-      expect(asTheChildSawIt.attemptedAt).toBeTruthy();
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const asTheChildSawIt = JSON.parse(readFileSync(seen, "utf-8")) as {
+      attemptedAt?: string;
+    };
+    expect(asTheChildSawIt.attemptedAt).toBeTruthy();
+  });
 });
 
 // Claude's SessionEnd fires for /clear and for resume, where the CLI keeps
@@ -341,17 +299,13 @@ describe("which kind of close starts an update", () => {
     expect(endsTheSession("resume")).toBe(false);
   });
 
-  test(
-    "a clear never starts an update, however overdue one is",
-    () => {
-      setSettings({ enabled: true, decided: true });
-      expect(shouldAutoUpdate()).toBe(true);
+  test("a clear never starts an update, however overdue one is", () => {
+    setSettings({ enabled: true, decided: true });
+    expect(shouldAutoUpdate()).toBe(true);
 
-      expect(autoUpdateOnClose("clear")).toBeNull();
-      expect(readLedger()).toBeNull();
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(autoUpdateOnClose("clear")).toBeNull();
+    expect(readLedger()).toBeNull();
+  });
 
   test("an opted-out install starts nothing on close", () => {
     expect(autoUpdateOnClose("logout")).toBeNull();
@@ -362,40 +316,32 @@ describe("which kind of close starts an update", () => {
 // hang, and a hang gets CTRL+C. It does not actually wait — the child is
 // detached — so the line says there is nothing to wait for.
 describe("what the closing terminal says", () => {
-  test(
-    "names the versions it is moving between",
-    () => {
-      setSettings({ enabled: true, decided: true });
-      writeFileSync(
-        resolve(paths.state(), "update-available.json"),
-        JSON.stringify({
-          checkedAt: new Date().toISOString(),
-          available: true,
-          current: "0.76.1",
-          latest: "0.77.0",
-          mode: "repo",
-        }),
-        "utf-8"
-      );
+  test("names the versions it is moving between", () => {
+    setSettings({ enabled: true, decided: true });
+    writeFileSync(
+      resolve(paths.state(), "update-available.json"),
+      JSON.stringify({
+        checkedAt: new Date().toISOString(),
+        available: true,
+        current: "0.76.1",
+        latest: "0.77.0",
+        mode: "repo",
+      }),
+      "utf-8"
+    );
 
-      const notice = autoUpdateOnClose("prompt_input_exit");
+    const notice = autoUpdateOnClose("prompt_input_exit");
 
-      expect(notice).toContain("0.76.1 → 0.77.0");
-      expect(notice).toContain("nothing to wait for");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(notice).toContain("0.76.1 → 0.77.0");
+    expect(notice).toContain("nothing to wait for");
+  });
 
-  test(
-    "explains a clone it could not touch, instead of going quiet",
-    () => {
-      setSettings({ enabled: true, decided: true });
-      writeFileSync(resolve(PKG, "work.txt"), "unstaged change", "utf-8");
+  test("explains a clone it could not touch, instead of going quiet", () => {
+    setSettings({ enabled: true, decided: true });
+    writeFileSync(resolve(PKG, "work.txt"), "unstaged change", "utf-8");
 
-      expect(autoUpdateOnClose("prompt_input_exit")).toContain("uncommitted changes");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(autoUpdateOnClose("prompt_input_exit")).toContain("uncommitted changes");
+  });
 
   test("says nothing when yesterday's skip is the only thing on file", () => {
     setSettings({ enabled: true, decided: true });
@@ -417,14 +363,10 @@ describe("what the closing terminal says", () => {
 // arrives — leaves the install pinned on a statusline telling it to restart,
 // which would do nothing. Start is the rescue, not the schedule.
 describe("when the close hook never fires", () => {
-  test(
-    "an install that has never managed an attempt is rescued at start",
-    () => {
-      setSettings({ enabled: true, decided: true });
-      expect(autoUpdateOnStart()).toBe(true);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("an install that has never managed an attempt is rescued at start", () => {
+    setSettings({ enabled: true, decided: true });
+    expect(autoUpdateOnStart()).toBe(true);
+  });
 
   test("a close that ran yesterday means start stays out of the way", () => {
     setSettings({ enabled: true, decided: true });
@@ -432,15 +374,11 @@ describe("when the close hook never fires", () => {
     expect(autoUpdateOnStart()).toBe(false);
   });
 
-  test(
-    "four days of silence brings the rescue back",
-    () => {
-      setSettings({ enabled: true, decided: true });
-      setLedger({ attemptedAt: ago(4 * 24 * HOUR_MS), ok: true });
-      expect(autoUpdateOnStart()).toBe(true);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("four days of silence brings the rescue back", () => {
+    setSettings({ enabled: true, decided: true });
+    setLedger({ attemptedAt: ago(4 * 24 * HOUR_MS), ok: true });
+    expect(autoUpdateOnStart()).toBe(true);
+  });
 
   test("an opted-out install is never rescued", () => {
     expect(autoUpdateOnStart()).toBe(false);
@@ -448,53 +386,41 @@ describe("when the close hook never fires", () => {
 });
 
 describe("two sessions closing at once", () => {
-  test(
-    "the second one finds the lock held and leaves the clone alone",
-    () => {
-      setSettings({ enabled: true, decided: true });
-      const seen = resolve(PKG, "runs.txt");
-      countingUpdateCommand(seen);
+  test("the second one finds the lock held and leaves the clone alone", () => {
+    setSettings({ enabled: true, decided: true });
+    const seen = resolve(PKG, "runs.txt");
+    countingUpdateCommand(seen);
 
-      writeFileSync(
-        resolve(paths.state(), "auto-update.lock"),
-        JSON.stringify({ pid: 1, at: new Date().toISOString() }),
-        "utf-8"
-      );
-      runAutoUpdate();
+    writeFileSync(
+      resolve(paths.state(), "auto-update.lock"),
+      JSON.stringify({ pid: 1, at: new Date().toISOString() }),
+      "utf-8"
+    );
+    runAutoUpdate();
 
-      expect(existsSync(seen)).toBe(false);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(existsSync(seen)).toBe(false);
+  });
 
-  test(
-    "a lock left behind by a dead run is taken over",
-    () => {
-      setSettings({ enabled: true, decided: true });
-      const seen = resolve(PKG, "runs.txt");
-      countingUpdateCommand(seen);
+  test("a lock left behind by a dead run is taken over", () => {
+    setSettings({ enabled: true, decided: true });
+    const seen = resolve(PKG, "runs.txt");
+    countingUpdateCommand(seen);
 
-      writeFileSync(
-        resolve(paths.state(), "auto-update.lock"),
-        JSON.stringify({ pid: 1, at: ago(31 * 60 * 1000) }),
-        "utf-8"
-      );
-      runAutoUpdate();
+    writeFileSync(
+      resolve(paths.state(), "auto-update.lock"),
+      JSON.stringify({ pid: 1, at: ago(31 * 60 * 1000) }),
+      "utf-8"
+    );
+    runAutoUpdate();
 
-      expect(existsSync(seen)).toBe(true);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(existsSync(seen)).toBe(true);
+  });
 
-  test(
-    "the lock is released, so tomorrow's run is not blocked by today's",
-    () => {
-      setSettings({ enabled: true, decided: true });
-      runAutoUpdate();
-      expect(existsSync(resolve(paths.state(), "auto-update.lock"))).toBe(false);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("the lock is released, so tomorrow's run is not blocked by today's", () => {
+    setSettings({ enabled: true, decided: true });
+    runAutoUpdate();
+    expect(existsSync(resolve(paths.state(), "auto-update.lock"))).toBe(false);
+  });
 });
 
 describe("what the page reads", () => {

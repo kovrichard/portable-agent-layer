@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -8,6 +8,8 @@ import {
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 let root: string;
 let at: { source: string; target: string; manifest: string };
@@ -74,24 +76,20 @@ describe("preserveTranscripts", () => {
 });
 
 describe("PreserveTranscripts entrypoint", () => {
-  test(
-    "copies the configured Claude dir into the PAL home's content store",
-    () => {
-      const claudeDir = resolve(root, "claude");
-      const home = resolve(root, "home");
-      mkdirSync(resolve(claudeDir, "projects", "-proj"), { recursive: true });
-      writeFileSync(resolve(claudeDir, "projects", "-proj", "s1.jsonl"), "{}\n");
-      const run = Bun.spawnSync(
-        ["bun", resolve(import.meta.dir, "../src/hooks/PreserveTranscripts.ts")],
-        { env: { ...process.env, PAL_HOME: home, PAL_CLAUDE_DIR: claudeDir } }
-      );
-      expect(run.exitCode).toBe(0);
-      expect(
-        existsSync(resolve(home, "memory", "content", "claude", "-proj", "s1.jsonl.gz"))
-      ).toBe(true);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("copies the configured Claude dir into the PAL home's content store", () => {
+    const claudeDir = resolve(root, "claude");
+    const home = resolve(root, "home");
+    mkdirSync(resolve(claudeDir, "projects", "-proj"), { recursive: true });
+    writeFileSync(resolve(claudeDir, "projects", "-proj", "s1.jsonl"), "{}\n");
+    const run = Bun.spawnSync(
+      ["bun", resolve(import.meta.dir, "../src/hooks/PreserveTranscripts.ts")],
+      { env: { ...process.env, PAL_HOME: home, PAL_CLAUDE_DIR: claudeDir } }
+    );
+    expect(run.exitCode).toBe(0);
+    expect(
+      existsSync(resolve(home, "memory", "content", "claude", "-proj", "s1.jsonl.gz"))
+    ).toBe(true);
+  });
 });
 
 describe("preserveTranscriptsOnce", () => {

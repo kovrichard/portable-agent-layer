@@ -1,10 +1,12 @@
-import { beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { testHome } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 const REPO = resolve(import.meta.dir, "..");
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
@@ -52,102 +54,67 @@ describe("pal cli skill doctor", () => {
     });
   }
 
-  test(
-    "exits 0 for a clean skill",
-    () => {
-      const r = doctor("clean-skill");
-      expect(r.status).toBe(0);
-      expect(r.stdout).toContain("PASS");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("exits 0 for a clean skill", () => {
+    const r = doctor("clean-skill");
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
 
-  test(
-    "exits 1 when a skill has errors",
-    () => {
-      expect(doctor("Broken").status).toBe(1);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("exits 1 when a skill has errors", () => {
+    expect(doctor("Broken").status).toBe(1);
+  });
 
   // The verb hand-rolled `<home>/skills/<arg>`, which node's resolve() happens to
   // get right for an absolute argument — it short-circuits on the absolute segment.
   // A relative directory is where the two diverge, and it is the form a contributor
   // types: `pal cli skill doctor assets/skills/telos`.
-  test(
-    "takes a relative skill directory, not only a name under the home",
-    () => {
-      const r = doctor(relative(REPO, resolve(PAL, "skills", "clean-skill")));
+  test("takes a relative skill directory, not only a name under the home", () => {
+    const r = doctor(relative(REPO, resolve(PAL, "skills", "clean-skill")));
 
-      expect(r.status).toBe(0);
-      expect(r.stdout).toContain("PASS");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("PASS");
+  });
 
-  test(
-    "a relative directory outside the home resolves too — path first, name second",
-    () => {
-      const outside = resolve(ROOT, "elsewhere", "clean-skill");
-      mkdirSync(outside, { recursive: true });
-      writeFileSync(
-        resolve(outside, "SKILL.md"),
-        GOOD.replaceAll("good-skill", "clean-skill").replaceAll(
-          "good skill",
-          "clean skill"
-        )
-      );
-      const r = doctor(relative(REPO, outside));
+  test("a relative directory outside the home resolves too — path first, name second", () => {
+    const outside = resolve(ROOT, "elsewhere", "clean-skill");
+    mkdirSync(outside, { recursive: true });
+    writeFileSync(
+      resolve(outside, "SKILL.md"),
+      GOOD.replaceAll("good-skill", "clean-skill").replaceAll("good skill", "clean skill")
+    );
+    const r = doctor(relative(REPO, outside));
 
-      expect(r.status).toBe(0);
-      expect(r.stdout).toContain(outside);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain(outside);
+  });
 
-  test(
-    "--all reports every installed skill",
-    () => {
-      const r = doctor("--all");
+  test("--all reports every installed skill", () => {
+    const r = doctor("--all");
 
-      expect(r.stdout).toContain("clean-skill");
-      expect(r.stdout).toContain("Broken");
-      expect(r.stdout).toContain("2 skills");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(r.stdout).toContain("clean-skill");
+    expect(r.stdout).toContain("Broken");
+    expect(r.stdout).toContain("2 skills");
+  });
 
-  test(
-    "--all exits 1 when any skill has errors",
-    () => {
-      expect(doctor("--all").status).toBe(1);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("--all exits 1 when any skill has errors", () => {
+    expect(doctor("--all").status).toBe(1);
+  });
 
-  test(
-    "--all exits 0 and says so when there are no skills",
-    () => {
-      const emptyHome = resolve(ROOT, "empty-home");
-      mkdirSync(resolve(emptyHome, "skills"), { recursive: true });
-      const r = doctor("--all", emptyHome);
+  test("--all exits 0 and says so when there are no skills", () => {
+    const emptyHome = resolve(ROOT, "empty-home");
+    mkdirSync(resolve(emptyHome, "skills"), { recursive: true });
+    const r = doctor("--all", emptyHome);
 
-      expect(r.status).toBe(0);
-      expect(`${r.stdout}${r.stderr}`).toContain("No skills found");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    expect(r.status).toBe(0);
+    expect(`${r.stdout}${r.stderr}`).toContain("No skills found");
+  });
 
-  test(
-    "exits 1 with usage when no name is given",
-    () => {
-      const r = spawnSync("bun", ["run", CLI, "cli", "skill", "doctor"], {
-        env: { ...process.env, PAL_HOME: PAL },
-        encoding: "utf-8",
-        timeout: 15000,
-      });
-      expect(r.status).toBe(1);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("exits 1 with usage when no name is given", () => {
+    const r = spawnSync("bun", ["run", CLI, "cli", "skill", "doctor"], {
+      env: { ...process.env, PAL_HOME: PAL },
+      encoding: "utf-8",
+      timeout: 15000,
+    });
+    expect(r.status).toBe(1);
+  });
 });

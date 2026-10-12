@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import {
   copyFileSync,
   existsSync,
@@ -10,6 +10,8 @@ import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 let HOME: string;
 
@@ -155,21 +157,17 @@ describe("seeding happens on the first read", () => {
     expect(seedBindings(readAllProjects(), HOME)).toEqual([]);
   });
 
-  test(
-    "a project registered later is bound on the next read",
-    async () => {
-      await addProject("alpha", checkout("alpha"));
-      const { readAllProjects } = await seedLib();
-      const { readBindings } = await lib();
-      readAllProjects();
+  test("a project registered later is bound on the next read", async () => {
+    await addProject("alpha", checkout("alpha"));
+    const { readAllProjects } = await seedLib();
+    const { readBindings } = await lib();
+    readAllProjects();
 
-      const beta = checkout("beta");
-      await addProject("beta", beta);
-      readAllProjects();
-      expect(readBindings(HOME).beta).toBe(beta);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const beta = checkout("beta");
+    await addProject("beta", beta);
+    readAllProjects();
+    expect(readBindings(HOME).beta).toBe(beta);
+  });
 
   test("refuses a record whose path does not exist on this machine", async () => {
     legacyProject("from-the-mac", "/Users/someone/dev/from-the-mac");
@@ -297,33 +295,25 @@ describe("test-sandbox guard", () => {
 });
 
 describe("an export carries no filesystem paths", () => {
-  test(
-    "a project record written today contains no absolute path",
-    async () => {
-      const dir = checkout("alpha");
-      await addProject("alpha", dir);
+  test("a project record written today contains no absolute path", async () => {
+    const dir = checkout("alpha");
+    await addProject("alpha", dir);
 
-      const record = readFileSync(
-        resolve(HOME, "memory", "projects", "alpha", "ISA.md"),
-        "utf-8"
-      );
-      expect(record).toContain('name: "alpha"');
-      expect(record).not.toContain(dir);
-      expect(record).not.toContain("path:");
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+    const record = readFileSync(
+      resolve(HOME, "memory", "projects", "alpha", "ISA.md"),
+      "utf-8"
+    );
+    expect(record).toContain('name: "alpha"');
+    expect(record).not.toContain(dir);
+    expect(record).not.toContain("path:");
+  });
 
-  test(
-    "the path is still recoverable locally, from the binding",
-    async () => {
-      const dir = checkout("alpha");
-      await addProject("alpha", dir);
-      const { readProject } = await seedLib();
-      expect(readProject("alpha")?.path).toBe(dir);
-    },
-    SPAWN_HEAVY_TEST_MS
-  );
+  test("the path is still recoverable locally, from the binding", async () => {
+    const dir = checkout("alpha");
+    await addProject("alpha", dir);
+    const { readProject } = await seedLib();
+    expect(readProject("alpha")?.path).toBe(dir);
+  });
 });
 
 describe("bindings never sync", () => {
