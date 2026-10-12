@@ -12,6 +12,7 @@ import { agentDirOverrides } from "../src/hooks/lib/paths";
 import { reload } from "../src/hooks/lib/settings";
 import { collectEvents } from "../src/tools/lib/collectors";
 import { collectClaude } from "../src/tools/lib/collectors/claude";
+import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 // Line shape from Claude Code transcripts: one line per content block, each
@@ -190,5 +191,49 @@ describe("collecting every source", () => {
     );
     reload();
     expect(collectEvents()).toEqual({});
+  });
+});
+
+describe("a transcript Claude Code deleted", () => {
+  let copies: string;
+
+  function preserve(...lines: string[]) {
+    mkdirSync(resolve(copies, "-repo"), { recursive: true });
+    writeFileSync(
+      resolve(copies, "-repo", "s.jsonl.gz"),
+      Bun.gzipSync(Buffer.from(`${lines.join("\n")}\n`))
+    );
+  }
+
+  beforeEach(() => {
+    copies = resolve(home, "memory", "content", "claude");
+  });
+
+  test("is read on from PAL's copy where the cursor stopped, once", () => {
+    write(block("msg_1", 10));
+    expect(collectClaude(projects, LATER, undefined, copies)).toBe(1);
+    preserve(block("msg_1", 10), block("msg_2", 20));
+    removeOnceReleased(transcript);
+    expect(collectClaude(projects, LATER, undefined, copies)).toBe(1);
+    expect(collectClaude(projects, LATER, undefined, copies)).toBe(0);
+    expect(streamed().map((e) => e.outputTokens)).toEqual([10, 20]);
+  });
+
+  test("pal cli events collect reads PAL's copies too", () => {
+    const overrides = [...agentDirOverrides().map(({ env }) => env), "XDG_DATA_HOME"];
+    for (const env of overrides) process.env[env] = resolve(home, env);
+    process.env.PAL_CLAUDE_DIR = resolve(home, "claude");
+    preserve(block("msg_1", 10), block("msg_2", 20));
+    try {
+      expect(collectEvents()).toMatchObject({ claude: 2 });
+    } finally {
+      for (const env of overrides) delete process.env[env];
+    }
+  });
+
+  test("still on disk, it is read from the original, not the copy", () => {
+    write(block("msg_1", 10));
+    preserve(block("msg_1", 10), block("msg_2", 20));
+    expect(collectClaude(projects, LATER, undefined, copies)).toBe(1);
   });
 });
