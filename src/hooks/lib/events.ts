@@ -52,6 +52,7 @@ export const EVENT_FIELDS = {
   ],
   session_end: ["reason", "durationSec", "turns"],
   compaction: ["trigger", "withInstructions", "contextTokens"],
+  hook_timing: ["hook", "totalMs", "handlers"],
   permission_prompt: ["tool"],
   notification: ["kind"],
   tool_call: [
