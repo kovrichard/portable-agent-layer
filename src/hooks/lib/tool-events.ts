@@ -104,17 +104,3 @@ export function logToolCall(payload: Record<string, unknown> | null): void {
     });
   });
 }
-
-const FOLDED_FLAG = "--tool-events";
-
-/**
- * Where a ledger hook already runs after every tool call, it logs the call too
- * and saves a process. The install template opts in with the flag; Claude Code
- * matches its ledger hooks to edits alone and runs ToolEvent async instead.
- */
-export function logToolCallWhenFolded(
-  payload: Record<string, unknown> | null,
-  argv: string[] = process.argv
-): void {
-  if (argv.includes(FOLDED_FLAG)) logToolCall(payload);
-}

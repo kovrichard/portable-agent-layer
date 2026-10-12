@@ -161,9 +161,15 @@ function plantInConfig(path: string, spec: string): void {
   writeFileSync(path, JSON.stringify(config, null, 2));
 }
 
-function plantHook(path: string, script: string): void {
+function firstShippedHook(text: string, pkg: string): RegExpMatchArray | undefined {
+  return Array.from(text.matchAll(/([\\/]src[\\/]hooks[\\/])([\w-]+\.ts)/g)).find((m) =>
+    existsSync(resolve(pkg, "src", "hooks", m[2]))
+  );
+}
+
+function plantHook(path: string, pkg: string, script: string): void {
   const text = readFileSync(path, "utf-8");
-  const first = /([\\/]src[\\/]hooks[\\/])[\w-]+\.ts/.exec(text);
+  const first = firstShippedHook(text, pkg);
   if (!first) throw new Error(`no hook to rename in ${path}`);
   writeFileSync(path, text.replace(first[0], `${first[1]}${script}`));
 }
@@ -186,6 +192,6 @@ export function plant(root: string, pkg: string, item: string): void {
   const [file, spec] = concrete(item, root, pkg).split(/#(.*)/s);
   if (spec === undefined) plantFile(root, pkg, item);
   else if (spec.startsWith("hook="))
-    plantHook(resolve(root, file), spec.slice("hook=".length));
+    plantHook(resolve(root, file), pkg, spec.slice("hook=".length));
   else plantInConfig(resolve(root, file), spec);
 }

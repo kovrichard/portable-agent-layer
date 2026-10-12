@@ -158,7 +158,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts --agent=claude"
+            "command": "bun run {{PKG_ROOT}}/src/hooks/PostToolOrchestrator.ts --agent=claude --only=ledger"
           }
         ]
       },
@@ -167,7 +167,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run {{PKG_ROOT}}/src/hooks/ToolEvent.ts --agent=claude",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/PostToolOrchestrator.ts --agent=claude --only=events",
             "async": true
           }
         ]
@@ -179,7 +179,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerUnapplied.ts --agent=claude"
+            "command": "bun run {{PKG_ROOT}}/src/hooks/PostToolOrchestrator.ts --agent=claude --only=ledger"
           }
         ]
       },
@@ -188,7 +188,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run {{PKG_ROOT}}/src/hooks/ToolEvent.ts --agent=claude",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/PostToolOrchestrator.ts --agent=claude --only=events",
             "async": true
           }
         ]
@@ -222,7 +222,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerUnapplied.ts --agent=claude"
+            "command": "bun run {{PKG_ROOT}}/src/hooks/PostToolOrchestrator.ts --agent=claude --only=ledger"
           }
         ]
       },
@@ -231,7 +231,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run {{PKG_ROOT}}/src/hooks/ToolEvent.ts --agent=claude",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/PostToolOrchestrator.ts --agent=claude --only=events",
             "async": true
           }
         ]

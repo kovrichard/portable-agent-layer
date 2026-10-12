@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { runPostToolHandlers } from "../src/hooks/lib/post-tool";
 import { reload } from "../src/hooks/lib/settings";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
-import { logToolCall, logToolCallWhenFolded } from "../src/hooks/lib/tool-events";
+import { logToolCall } from "../src/hooks/lib/tool-events";
 import { freshTestDir } from "./lib/test-home";
 
 let home: string;
@@ -120,16 +121,24 @@ describe("a tool call", () => {
     expect(toolCalls()).toEqual([]);
   });
 
-  test("a ledger hook logs the call only when its template folds tool events in", () => {
-    const call = { session_id: "s4", tool_name: "Edit", tool_input: {} };
-    logToolCallWhenFolded(call, ["bun", "LedgerCommit.ts", "--agent=claude"]);
-    logToolCallWhenFolded(call, [
+  test("the post-tool hook logs it unless its registration is ledger-only", () => {
+    const call = (session: string) => ({ session_id: session, tool_name: "Grep" });
+    runPostToolHandlers(call("all"), [
       "bun",
-      "LedgerCommit.ts",
+      "PostToolOrchestrator.ts",
       "--agent=cursor",
-      "--tool-events",
     ]);
-    expect(toolCalls().map((e) => e.session)).toEqual(["s4"]);
+    runPostToolHandlers(call("ledger"), [
+      "bun",
+      "PostToolOrchestrator.ts",
+      "--only=ledger",
+    ]);
+    runPostToolHandlers(call("events"), [
+      "bun",
+      "PostToolOrchestrator.ts",
+      "--only=events",
+    ]);
+    expect(toolCalls().map((e) => e.session)).toEqual(["all", "events"]);
   });
 
   test("a call made inside PAL's own inference is not the user's, and is not logged", () => {
@@ -145,10 +154,10 @@ describe("a tool call", () => {
   });
 });
 
-describe("the ToolEvent hook", () => {
+describe("the PostToolOrchestrator hook", () => {
   test("logs the call, prints nothing and exits 0", async () => {
     const proc = Bun.spawn(
-      ["bun", resolve(import.meta.dir, "../src/hooks/ToolEvent.ts")],
+      ["bun", resolve(import.meta.dir, "../src/hooks/PostToolOrchestrator.ts")],
       {
         stdin: new TextEncoder().encode(
           JSON.stringify({ session_id: "s9", tool_name: "Grep", tool_input: {} })
@@ -166,7 +175,7 @@ describe("the ToolEvent hook", () => {
   test("exits 0 even when the event store is broken", async () => {
     writeFileSync(resolve(home, "memory", "events"), "not a folder");
     const proc = Bun.spawn(
-      ["bun", resolve(import.meta.dir, "../src/hooks/ToolEvent.ts")],
+      ["bun", resolve(import.meta.dir, "../src/hooks/PostToolOrchestrator.ts")],
       {
         stdin: new TextEncoder().encode(JSON.stringify({ tool_name: "Grep" })),
         env: { ...process.env, PAL_HOME: home },

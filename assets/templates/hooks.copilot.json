@@ -47,15 +47,15 @@
     "postToolUse": [
       {
         "type": "command",
-        "bash": "bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts --agent=copilot --tool-events",
-        "powershell": "bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts --agent=copilot --tool-events"
+        "bash": "bun run {{PKG_ROOT}}/src/hooks/PostToolOrchestrator.ts --agent=copilot",
+        "powershell": "bun run {{PKG_ROOT}}/src/hooks/PostToolOrchestrator.ts --agent=copilot"
       }
     ],
     "postToolUseFailure": [
       {
         "type": "command",
-        "bash": "bun run {{PKG_ROOT}}/src/hooks/LedgerUnapplied.ts --agent=copilot --event=postToolUseFailure --tool-events",
-        "powershell": "bun run {{PKG_ROOT}}/src/hooks/LedgerUnapplied.ts --agent=copilot --event=postToolUseFailure --tool-events"
+        "bash": "bun run {{PKG_ROOT}}/src/hooks/PostToolOrchestrator.ts --agent=copilot --event=postToolUseFailure",
+        "powershell": "bun run {{PKG_ROOT}}/src/hooks/PostToolOrchestrator.ts --agent=copilot --event=postToolUseFailure"
       }
     ],
     "agentStop": [

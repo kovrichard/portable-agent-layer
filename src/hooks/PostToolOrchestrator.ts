@@ -1,21 +1,20 @@
 /**
- * Hook: after every tool call, failed call and denied call — logs it as an event.
- * Logging only: it writes nothing to stdout and always exits 0.
+ * Hook: after a tool call, a failed call or a denied one. Silent and fail-open:
+ * it prints nothing and always exits 0, so it can never disturb a turn.
  */
 
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { enterHookWorkspace } from "./lib/hook-turn";
-import { isPalSpawnedInference } from "./lib/spawn-guard";
+import { runPostToolHandlers } from "./lib/post-tool";
 import { readStdinJSON } from "./lib/stdin";
-import { logToolCall } from "./lib/tool-events";
 
-if (isPalSpawnedInference()) process.exit(0);
 if (duplicatesCursorHooks()) process.exit(0);
 
 try {
   const input = await readStdinJSON<Record<string, unknown>>();
+  if (!input) process.exit(0);
   enterHookWorkspace(input);
-  logToolCall(input);
+  runPostToolHandlers(input);
 } catch {
   process.exit(0);
 }

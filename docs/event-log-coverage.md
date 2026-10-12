@@ -30,9 +30,11 @@ missing hook is recorded here, never synthesised from another event.
 | `hook_timing` prompt | ✅ UserPromptSubmit | ⛔ in-process | ✅ beforeSubmitPrompt | ✅ userPromptSubmitted | ✅ UserPromptSubmit | ◻ |
 | `pal_update` unattended | ✅ SessionEnd | ✅ server.instance.disposed | ✅ sessionEnd | ✅ sessionEnd | ✅ SessionEnd | ⛔ |
 
-A tool call costs the turn no extra process. Claude Code runs `ToolEvent.ts`
-async, outside the turn; every other hook runtime logs it from the ledger hook
-that already runs after each call (`--tool-events`); opencode logs in-process.
+Each post-tool event has one PAL entry, `PostToolOrchestrator.ts`, which writes
+the ledger's second half and the `tool_call` event. Claude Code alone registers
+it twice: sync on edits for the ledger (`--only=ledger`), async on every tool for
+the event (`--only=events`), so a tool call never waits on the event log.
+opencode does both in-process.
 
 `◻` and `?` cells are the open work. opencode's failed tool call is `?` because
 only its unreleased plugin API reports one (`tool.execute.after` with
