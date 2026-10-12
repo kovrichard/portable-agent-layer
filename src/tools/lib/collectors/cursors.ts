@@ -7,7 +7,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { paths } from "../../../hooks/lib/paths";
 
-export type SourceCursor = Record<string, number>;
+export type SourceCursor = Record<string, number | string>;
 
 function cursorsFile(): string {
   return resolve(paths.state(), "collector-cursors.json");

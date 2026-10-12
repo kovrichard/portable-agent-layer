@@ -72,6 +72,7 @@ export const EVENT_FIELDS = {
   model_call: [
     "model",
     "requestedModel",
+    "provider",
     "inputTokens",
     "outputTokens",
     "cacheWrite5m",
@@ -87,6 +88,10 @@ export const EVENT_FIELDS = {
     "stopReason",
     "entrypoint",
     "sidechain",
+    "costUsd",
+    "agent",
+    "mode",
+    "durationMs",
   ],
   permission_prompt: ["tool"],
   notification: ["kind"],

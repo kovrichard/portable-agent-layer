@@ -153,13 +153,16 @@ describe("collecting Claude Code's model calls", () => {
 });
 
 describe("collecting every source", () => {
-  test("reads Claude Code's projects under its configured directory", () => {
+  test("a source that fails is reported and the others still collect", () => {
     process.env.PAL_CLAUDE_DIR = resolve(home, "claude");
+    process.env.XDG_DATA_HOME = resolve(home, "data");
+    mkdirSync(resolve(home, "data", "opencode", "opencode.db"), { recursive: true });
     write(block("msg_1", 10), block("msg_2", 20));
     try {
-      expect(collectEvents()).toEqual({ claude: 1 });
+      expect(collectEvents()).toEqual({ claude: 1, opencode: "failed" });
     } finally {
       delete process.env.PAL_CLAUDE_DIR;
+      delete process.env.XDG_DATA_HOME;
     }
   });
 

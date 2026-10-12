@@ -137,7 +137,7 @@ export function collectClaude(projectsDir: string, now: Date = new Date()): numb
   let emitted = 0;
   for (const filepath of claudeTranscripts(projectsDir)) {
     const key = relative(projectsDir, filepath).split(sep).join("/");
-    const offset = cursor[key] ?? 0;
+    const offset = Number(cursor[key] ?? 0);
     const read = settledMessages(filepath, offset, isSettled(filepath, now));
     if (read.resumeAt === offset) continue;
     for (const line of read.messages) emitModelCall(line);

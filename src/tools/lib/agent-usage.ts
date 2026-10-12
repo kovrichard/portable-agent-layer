@@ -6,6 +6,7 @@
 
 import { Database } from "bun:sqlite";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { basename, resolve } from "node:path";
 import {
   type AgentUsage,
@@ -143,6 +144,11 @@ function opencodeTokens(message: OpencodeMessage): Tokens {
 }
 
 const anyTokens = (tokens: Tokens) => Object.values(tokens).some((n) => n > 0);
+
+export function opencodeDatabase(): string {
+  const dataHome = process.env.XDG_DATA_HOME || resolve(homedir(), ".local", "share");
+  return resolve(dataHome, "opencode", "opencode.db");
+}
 
 interface OpencodeRow {
   time_created: number;

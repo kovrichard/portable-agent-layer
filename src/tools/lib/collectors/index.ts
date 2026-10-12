@@ -7,10 +7,13 @@ import { resolve } from "node:path";
 import { logError } from "../../../hooks/lib/log";
 import { platform } from "../../../hooks/lib/paths";
 import { eventLogEnabled } from "../../../hooks/lib/settings";
+import { opencodeDatabase } from "../agent-usage";
 import { collectClaude } from "./claude";
+import { collectOpencode } from "./opencode";
 
 const COLLECTORS: Record<string, () => number> = {
   claude: () => collectClaude(resolve(platform.claudeDir(), "projects")),
+  opencode: () => collectOpencode(opencodeDatabase()),
 };
 
 export function collectEvents(): Record<string, number | "failed"> {
