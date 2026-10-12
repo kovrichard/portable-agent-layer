@@ -110,6 +110,14 @@ describe("collecting Claude Code's model calls", () => {
     });
   });
 
+  test("a call collected with no billing source is billed as unknown, not left blank", () => {
+    write(block("msg_1", 3));
+    collectClaude(projects, LATER);
+    expect(streamed()).toEqual([
+      expect.objectContaining({ billing: "unknown", plan: null, extraUsage: null }),
+    ]);
+  });
+
   test("a second run emits nothing the first one did", () => {
     write(block("msg_1", 10), block("msg_2", 20));
     collectClaude(projects, LATER);
