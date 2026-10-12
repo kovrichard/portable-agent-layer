@@ -198,8 +198,8 @@ async function finishShared(docs: number): Promise<Done> {
  */
 async function refreshControlRoom(): Promise<Done | null> {
   const { isRepoMode } = await import("../hooks/handlers/update-check");
-  const { buildPage, isUpToDate } = await import("../tools/control-room/static");
-  const rebuilt = isRepoMode() && !isUpToDate() ? buildPage() : null;
+  const { refreshPage } = await import("../tools/control-room/static");
+  const rebuilt = refreshPage(isRepoMode());
   if (rebuilt === false)
     return {
       detail: ["page not rebuilt"],

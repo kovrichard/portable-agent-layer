@@ -10,42 +10,57 @@ import { resolve } from "node:path";
 import { isInside } from "../../hooks/lib/paths";
 
 const REPO_ROOT = resolve(import.meta.dir, "..", "..", "..");
-const SOURCE_ROOT = resolve(REPO_ROOT, "src");
 const UI_ROOT = resolve(import.meta.dir, "ui");
 const UI_DIST = resolve(UI_ROOT, "dist");
 const UI_INDEX = resolve(UI_DIST, "index.html");
-const BUILD_LOCK = resolve(UI_ROOT, "dist.lock");
-const ABANDONED_LOCK_MS = 120_000;
+export const ABANDONED_LOCK_MS = 120_000;
 
 export const BUILD_COMMAND = "bun run build:ui";
+
+/** Where the page is built from and to, and how; tests point it at a sandbox. */
+export interface PageBuild {
+  sources: string;
+  lockfile: string;
+  dist: string;
+  lock: string;
+  build: () => boolean;
+}
+
+const THE_PAGE: PageBuild = {
+  sources: resolve(REPO_ROOT, "src"),
+  lockfile: resolve(REPO_ROOT, "bun.lock"),
+  dist: UI_DIST,
+  lock: resolve(UI_ROOT, "dist.lock"),
+  build: runViteBuild,
+};
 
 export function isBuilt(): boolean {
   return existsSync(UI_INDEX);
 }
 
-function newestSourceChange(): number {
-  const sources = readdirSync(SOURCE_ROOT, { recursive: true, withFileTypes: true })
-    .filter((entry) => entry.isFile() && !isInside(UI_DIST, entry.parentPath))
+function newestSourceChange(page: PageBuild): number {
+  const sources = readdirSync(page.sources, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile() && !isInside(page.dist, entry.parentPath))
     .map((entry) => resolve(entry.parentPath, entry.name));
-  const lockfile = resolve(REPO_ROOT, "bun.lock");
-  if (existsSync(lockfile)) sources.push(lockfile);
+  if (existsSync(page.lockfile)) sources.push(page.lockfile);
   return Math.max(...sources.map((file) => statSync(file).mtimeMs));
 }
 
-export function isUpToDate(): boolean {
-  return isBuilt() && statSync(UI_INDEX).mtimeMs >= newestSourceChange();
+export function isUpToDate(page: PageBuild = THE_PAGE): boolean {
+  const index = resolve(page.dist, "index.html");
+  return existsSync(index) && statSync(index).mtimeMs >= newestSourceChange(page);
 }
 
-function clearAbandonedLock(): void {
+function clearAbandonedLock(lock: string): void {
   try {
-    if (Date.now() - statSync(BUILD_LOCK).mtimeMs > ABANDONED_LOCK_MS)
-      rmSync(BUILD_LOCK, { recursive: true, force: true });
+    if (Date.now() - statSync(lock).mtimeMs > ABANDONED_LOCK_MS)
+      rmSync(lock, { recursive: true, force: true });
   } catch {}
 }
 
-function tryTakeBuildLock(): boolean {
+function tryTakeBuildLock(lock: string): boolean {
   try {
-    mkdirSync(BUILD_LOCK);
+    mkdirSync(lock);
     return true;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "EEXIST") return false;
@@ -53,19 +68,24 @@ function tryTakeBuildLock(): boolean {
   }
 }
 
-function whileHoldingBuildLock(build: () => boolean): boolean {
-  while (!tryTakeBuildLock()) {
-    clearAbandonedLock();
+function whileHoldingBuildLock(lock: string, build: () => boolean): boolean {
+  while (!tryTakeBuildLock(lock)) {
+    clearAbandonedLock(lock);
     Bun.sleepSync(50);
   }
   try {
     return build();
   } finally {
-    rmSync(BUILD_LOCK, { recursive: true, force: true });
+    rmSync(lock, { recursive: true, force: true });
   }
 }
 
-function runViteBuild(vite: string): boolean {
+/** A clone has vite; a published install has the prepacked dist and never needs it. */
+function runViteBuild(): boolean {
+  // node_modules/.bin/vite is a shell shim that Windows cannot spawn directly;
+  // the package's own JS entry runs the same build under any runtime.
+  const vite = resolve(REPO_ROOT, "node_modules", "vite", "bin", "vite.js");
+  if (!existsSync(vite)) return false;
   const built = spawnSync(process.execPath, [vite, "build"], {
     cwd: UI_ROOT,
     encoding: "utf-8",
@@ -74,17 +94,19 @@ function runViteBuild(vite: string): boolean {
 }
 
 /**
- * A clone has vite; a published install has the prepacked dist and never needs
- * it. Either way the page is there by the time the server answers. vite empties
- * dist before writing it, so one build at a time, and none once another process
- * has already brought it up to date.
+ * vite empties dist before writing it, so one build at a time, and none once
+ * another process has already brought it up to date.
  */
-export function buildPage(): boolean {
-  // node_modules/.bin/vite is a shell shim that Windows cannot spawn directly;
-  // the package's own JS entry runs the same build under any runtime.
-  const vite = resolve(REPO_ROOT, "node_modules", "vite", "bin", "vite.js");
-  if (!existsSync(vite)) return false;
-  return whileHoldingBuildLock(() => isUpToDate() || runViteBuild(vite));
+export function buildPage(page: PageBuild = THE_PAGE): boolean {
+  return whileHoldingBuildLock(page.lock, () => isUpToDate(page) || page.build());
+}
+
+/** A checkout's dist is whatever was built last, so an install rebuilds it if the sources moved on. */
+export function refreshPage(
+  inCheckout: boolean,
+  page: PageBuild = THE_PAGE
+): boolean | null {
+  return inCheckout && !isUpToDate(page) ? buildPage(page) : null;
 }
 
 function unbuiltPage(): Response {
