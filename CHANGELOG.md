@@ -1,3 +1,11 @@
+## [0.95.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.95.0...v0.95.1) (2026-10-12)
+
+
+### Bug Fixes
+
+* **usage:** bill a message at its last line, not a streaming partial ([c667e26](https://github.com/kovrichard/portable-agent-layer/commit/c667e26ca8e17c2181611608ed362c7f074eaef6))
+* **usage:** bill each Claude Code message once, not once per content block ([f1856c2](https://github.com/kovrichard/portable-agent-layer/commit/f1856c2128b4c07a89932084243063147d7484af))
+
 # [0.95.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.94.0...v0.95.0) (2026-10-12)
 
 
