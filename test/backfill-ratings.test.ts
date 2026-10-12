@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { reload } from "../src/hooks/lib/settings";
+import { emitRating } from "../src/hooks/lib/signals";
 import { backfillEvents } from "../src/tools/lib/backfill";
 import { freshTestDir } from "./lib/test-home";
 
@@ -98,6 +99,16 @@ describe("rating signals become rating events", () => {
       ratingRow("2026-09-11T06:55:09.577Z")
     );
     expect(backfillEvents()).toMatchObject({ ratings: 2 });
+    expect(backfillEvents()).toMatchObject({ ratings: 0 });
+  });
+
+  test("a rating streams live, and the backfill then has nothing to add", () => {
+    mkdirSync(resolve(home, "memory", "signals"), { recursive: true });
+    emitRating(7, "a private live context", "implicit", "a private live preview");
+
+    expect(ratings()).toEqual([
+      expect.objectContaining({ rating: 7, source: "implicit" }),
+    ]);
     expect(backfillEvents()).toMatchObject({ ratings: 0 });
   });
 

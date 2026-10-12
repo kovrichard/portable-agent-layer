@@ -1,6 +1,7 @@
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { currentAttribution } from "./actor";
+import { currentAttribution, type RecordAttribution } from "./actor";
+import { type AppendOptions, appendEvent } from "./events";
 import { paths } from "./paths";
 import { now } from "./time";
 
@@ -14,17 +15,40 @@ interface Signal {
 function emitSignal(
   filename: string,
   data: { type: string; [key: string]: unknown }
-): void {
+): Signal {
   const signal: Signal = { ts: now(), ...currentAttribution(), ...data };
   const filepath = resolve(paths.signals(), filename);
   appendFileSync(filepath, `${JSON.stringify(signal)}\n`);
+  return signal;
 }
 
-export interface RatingSignal extends Signal {
+export interface RatingSignal extends Signal, Partial<RecordAttribution> {
   rating: number;
   context: string;
   source: string;
   response_preview?: string;
+}
+
+export const ratingEventId = (row: RatingSignal) =>
+  `rating:${row.machine ?? "unknown"}:${row.ts}`;
+
+/** Logs a rating row as an event, under an id the row alone determines. */
+export function logRatingEvent(
+  row: RatingSignal,
+  placement: Pick<AppendOptions, "attribution" | "cwd"> = {}
+): string | null {
+  return appendEvent(
+    "rating",
+    { rating: row.rating, source: row.source },
+    {
+      id: ratingEventId(row),
+      ts: row.ts,
+      session: null,
+      channel: null,
+      content: { context: row.context, responsePreview: row.response_preview ?? null },
+      ...placement,
+    }
+  );
 }
 
 function parseSignal(line: string): RatingSignal[] {
@@ -59,5 +83,6 @@ export function emitRating(
     source,
     ...(responsePreview ? { response_preview: responsePreview } : {}),
   };
-  emitSignal("ratings.jsonl", data);
+  const signal = emitSignal("ratings.jsonl", data) as RatingSignal;
+  logRatingEvent(signal);
 }
