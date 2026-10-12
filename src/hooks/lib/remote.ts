@@ -14,6 +14,9 @@
 
 import { spawnSync } from "node:child_process";
 
+/** Public PAL repository — the link surfaced in commit/PR co-author credits. */
+export const PAL_REPO_URL = "https://github.com/kovrichard/portable-agent-layer";
+
 const GIT_TIMEOUT_MS = 2000;
 
 /**

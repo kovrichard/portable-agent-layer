@@ -26,6 +26,7 @@ import {
   skillsDirOf,
 } from "../hooks/lib/agent-registry";
 import { agentDirOverrides, assets, palHome, platform } from "../hooks/lib/paths";
+import { PAL_REPO_URL } from "../hooks/lib/remote";
 import { declaredTriggers } from "../hooks/lib/skill-triggers";
 import { agentFileName, renderAgentForPlatform } from "./agent-render";
 
@@ -117,9 +118,6 @@ export function writeJson(path: string, data: unknown): void {
 }
 
 // --- Git attribution ---
-
-/** Public PAL repository — the link surfaced in commit/PR co-author credits. */
-export const PAL_REPO_URL = "https://github.com/kovrichard/portable-agent-layer";
 
 /**
  * Build the commit footer (bare URL, autolinks on GitHub) and PR body line

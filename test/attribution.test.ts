@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { applyAttribution, buildAttributionText, PAL_REPO_URL } from "../src/targets/lib";
+import { PAL_REPO_URL } from "../src/hooks/lib/remote";
+import { applyAttribution, buildAttributionText } from "../src/targets/lib";
 
 describe("buildAttributionText", () => {
   test("composes commit footer (bare URL) and PR line (markdown link)", () => {
