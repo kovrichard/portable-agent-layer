@@ -66,6 +66,7 @@ export const EVENT_FIELDS = {
   ],
   pal_update: ["outcome", "from", "to", "durationSec", "skipReason"],
   commitment: ["iscProject", "isc", "outcome", "surface", "snoozeDays"],
+  entity_first_seen: ["domain", "entityType"],
   permission_prompt: ["tool"],
   notification: ["kind"],
   tool_call: [
