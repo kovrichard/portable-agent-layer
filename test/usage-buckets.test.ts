@@ -226,6 +226,33 @@ describe("readClaudeCode", () => {
     expect(result.byProject.pal.total.calls).toBe(2);
   });
 
+  test("a message written as one line per content block is billed once, at its final usage", () => {
+    const dir = tempHome();
+    const proj = join(dir, "-p-real");
+    mkdirSync(proj, { recursive: true });
+    const block = (id: string, type: string, output = 300) =>
+      JSON.stringify({
+        type: "assistant",
+        timestamp: "2026-09-06T08:00:00.000Z",
+        message: {
+          id,
+          model: "claude-opus-5",
+          content: [{ type }],
+          usage: { input_tokens: 10, output_tokens: output },
+        },
+      });
+    writeFileSync(
+      join(proj, "s.jsonl"),
+      [
+        block("msg_1", "thinking", 3),
+        block("msg_2", "text"),
+        block("msg_1", "tool_use"),
+      ].join("\n")
+    );
+    const total = readClaudeCode(dir, undefined, NOW).buckets.total;
+    expect([total.calls, total.input, total.output]).toEqual([2, 20, 600]);
+  });
+
   test("ignores a stray file sitting beside the project directories", () => {
     const dir = tempHome();
     writeFileSync(join(dir, "stray.jsonl"), "not a project");
