@@ -1,3 +1,28 @@
+# [0.98.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.97.0...v0.98.0) (2026-10-12)
+
+
+### Bug Fixes
+
+* **cli:** load the event backfill only when it runs ([a13f007](https://github.com/kovrichard/portable-agent-layer/commit/a13f00745ab7b3739b3787a8026123bbf3716568))
+* **events:** leave the test suite's leaked ledger rows out of the backfill ([167d687](https://github.com/kovrichard/portable-agent-layer/commit/167d6875acc7a227de1a9845153d65bba7241fc8))
+* **events:** type a Claude model call's timestamp instead of defaulting it ([18571c0](https://github.com/kovrichard/portable-agent-layer/commit/18571c09514dfc5225efcab103e93eb6e6a58403))
+* **usage:** price Opus 5.5, Sonnet 5.5 and Fable 5.1 at their own rates ([d4b25cd](https://github.com/kovrichard/portable-agent-layer/commit/d4b25cd2cfd68ac3e2cdb3363e6a9d9bc641ff0a))
+
+
+### Features
+
+* **events:** backfill git history as commit events ([9f2b64c](https://github.com/kovrichard/portable-agent-layer/commit/9f2b64c7496e6a93159bbc2e161b48bc8bdcac35))
+* **events:** backfill legacy turn files as turn events ([f643ebe](https://github.com/kovrichard/portable-agent-layer/commit/f643ebe753adc16f3289751fe5a1b1cde6e08e8c))
+* **events:** backfill ratings as rating events ([7103c79](https://github.com/kovrichard/portable-agent-layer/commit/7103c793b2c03bc926012d21ff9b6c028cc9d206))
+* **events:** backfill recorded sessions as session_end events ([d42381c](https://github.com/kovrichard/portable-agent-layer/commit/d42381cd92e372f9c571be74c8e777c7bfd035f7))
+* **events:** backfill the action ledger as action events ([bd1fd0d](https://github.com/kovrichard/portable-agent-layer/commit/bd1fd0d0b2eae14821b1caeba5945aaf896924a9))
+* **events:** record each agent's billing mode on its model calls ([2e132bc](https://github.com/kovrichard/portable-agent-layer/commit/2e132bc86685df0e22108bfb0a9cf2443ce64a6b))
+* **events:** stream ledger entries live as action events ([bbfe393](https://github.com/kovrichard/portable-agent-layer/commit/bbfe393a6441fbb3143c1d97223e030fc80d4ebe))
+* **events:** stream ratings live as rating events ([56e7ad0](https://github.com/kovrichard/portable-agent-layer/commit/56e7ad07dda431f11d1d522f14400e49902e8e27))
+* **usage:** date what each subscription plan costs per month ([551e6ec](https://github.com/kovrichard/portable-agent-layer/commit/551e6ec7d3b73e1dee0d764d761172c320f16b2a))
+* **usage:** pal cli cost, each month paid against its API-equivalent ([1d0dffd](https://github.com/kovrichard/portable-agent-layer/commit/1d0dffdcc6e2d7d580fce2443afeefafb04cebe5))
+* **usage:** price every call at the rate in force on its date ([2371518](https://github.com/kovrichard/portable-agent-layer/commit/237151893270756e85dfcc0985efecacd811d09b))
+
 # [0.97.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.96.1...v0.97.0) (2026-10-12)
 
 
