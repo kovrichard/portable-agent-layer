@@ -24,6 +24,30 @@ describe("model pricing table", () => {
     });
   });
 
+  test("the point releases carry their own rates, not their base model's", () => {
+    expect(pricingFor("claude-opus-5-5")).toEqual({
+      input: 4,
+      output: 20,
+      cacheWrite5m: 5,
+      cacheWrite1h: 8,
+      cacheRead: 0.2,
+    });
+    expect(pricingFor("claude-sonnet-5-5")).toEqual({
+      input: 2,
+      output: 10,
+      cacheWrite5m: 2.5,
+      cacheWrite1h: 4,
+      cacheRead: 0.1,
+    });
+    expect(pricingFor("claude-fable-5-1")).toEqual({
+      input: 10,
+      output: 50,
+      cacheWrite5m: 12.5,
+      cacheWrite1h: 20,
+      cacheRead: 0.25,
+    });
+  });
+
   test("every entry prices all five token categories above zero", () => {
     for (const p of Object.values(MODEL_PRICING)) {
       expect(Object.values(p).every((rate) => rate > 0)).toBe(true);

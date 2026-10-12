@@ -124,12 +124,26 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
     cacheWrite1h: 0.2,
     cacheRead: 0.01,
   },
+  "claude-fable-5-1": {
+    input: 10,
+    output: 50,
+    cacheWrite5m: 12.5,
+    cacheWrite1h: 20,
+    cacheRead: 0.25,
+  },
   [FABLE_MODEL]: {
     input: 10,
     output: 50,
     cacheWrite5m: 12.5,
     cacheWrite1h: 20,
     cacheRead: 1,
+  },
+  "claude-opus-5-5": {
+    input: 4,
+    output: 20,
+    cacheWrite5m: 5,
+    cacheWrite1h: 8,
+    cacheRead: 0.2,
   },
   "claude-opus-5": {
     input: 5,
@@ -166,7 +180,13 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
     cacheWrite1h: 10,
     cacheRead: 0.5,
   },
-  // Claude Sonnet 5 — introductory pricing through 2026-08-31; standard (3/15/3.75/6/0.30) applies from 2026-09-01.
+  "claude-sonnet-5-5": {
+    input: 2,
+    output: 10,
+    cacheWrite5m: 2.5,
+    cacheWrite1h: 4,
+    cacheRead: 0.1,
+  },
   "claude-sonnet-5": {
     input: 2,
     output: 10,
