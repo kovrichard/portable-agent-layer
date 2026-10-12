@@ -101,6 +101,20 @@ export const EVENT_FIELDS = {
     "host",
   ],
   conversation: ["steps", "status", "depth", "subagent", "killed"],
+  commit: [
+    "hash",
+    "committedAt",
+    "files",
+    "added",
+    "deleted",
+    "commitType",
+    "breaking",
+    "revert",
+    "merge",
+    "tags",
+    "coAuthors",
+    "aiCoAuthored",
+  ],
   permission_prompt: ["tool"],
   notification: ["kind"],
   tool_call: [
@@ -151,7 +165,7 @@ export interface AppendOptions {
   id?: string;
   ts?: string;
   session?: string | null;
-  runtime?: AgentType;
+  runtime?: AgentType | "git";
   channel?: string | null;
   cwd?: string;
   content?: Record<string, unknown>;
@@ -268,6 +282,17 @@ function parseLines(file: string): LoggedEvent[] {
         return [];
       }
     });
+}
+
+/** Every id already in the log, so a source read twice appends nothing new. */
+export function loggedEventIds(): Set<string> {
+  const dir = eventsDir();
+  return new Set(
+    readdirSync(dir)
+      .filter((f) => f.endsWith(".jsonl"))
+      .flatMap((f) => parseLines(resolve(dir, f)))
+      .map((e) => e.id)
+  );
 }
 
 export function eventsInMonth(type: EventType, month: Date): LoggedEvent[] {

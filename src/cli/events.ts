@@ -1,4 +1,5 @@
 import { isNagStage, logDiscordNag, NAG_STAGES } from "../hooks/lib/discord-events";
+import { backfillEvents } from "../tools/lib/backfill";
 import { collectEvents } from "../tools/lib/collectors";
 import { group, leaf, UsageError } from "../tools/lib/command";
 
@@ -41,9 +42,30 @@ function reportCollected(): undefined {
   for (const [source, count] of sources) console.log(`${source}: ${count}`);
 }
 
+function reportBackfilled(since: string | undefined): undefined {
+  const appended = backfillEvents(since);
+  const sources = Object.entries(appended);
+  if (sources.length === 0) {
+    console.log("The event log is off; nothing backfilled.");
+    return;
+  }
+  for (const [source, count] of sources) console.log(`${source}: ${count}`);
+}
+
 export const eventsCommand = group({
   summary: "PAL's local event log",
   commands: {
+    backfill: leaf({
+      summary: "Read everything that still exists into the event log, once",
+      options: {
+        since: {
+          type: "string",
+          value: "<date>",
+          description: "Only what happened after this date",
+        },
+      },
+      run: ({ values }) => reportBackfilled(values.since),
+    }),
     collect: leaf({
       summary: "Read every agent's own records into the event log",
       run: () => reportCollected(),
