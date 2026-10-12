@@ -12,6 +12,7 @@ import { relative, sep } from "node:path";
 import { appendEvent } from "../../../hooks/lib/events";
 import { cacheWritesOf, type TranscriptUsage } from "../transcript-usage";
 import { claudeTranscripts } from "../usage-buckets";
+import { type Billing, UNKNOWN } from "./billing";
 import { readCursor, writeCursor } from "./cursors";
 
 const SETTLE_MS = 5 * 60_000;
@@ -97,11 +98,12 @@ function settledMessages(
   };
 }
 
-function emitModelCall(line: ClaudeLine): void {
+function emitModelCall(line: ClaudeLine, billing: Billing): void {
   const usage = line.message?.usage ?? {};
   appendEvent(
     "model_call",
     {
+      ...billing,
       model: line.message?.model,
       requestedModel: line.requestedModel,
       inputTokens: usage.input_tokens,
@@ -132,7 +134,11 @@ function isSettled(filepath: string, now: Date): boolean {
   return now.getTime() - statSync(filepath).mtimeMs > SETTLE_MS;
 }
 
-export function collectClaude(projectsDir: string, now: Date = new Date()): number {
+export function collectClaude(
+  projectsDir: string,
+  now: Date = new Date(),
+  billingAt: (at: string) => Billing = () => UNKNOWN
+): number {
   const cursor = readCursor("claude");
   let emitted = 0;
   for (const filepath of claudeTranscripts(projectsDir)) {
@@ -140,7 +146,8 @@ export function collectClaude(projectsDir: string, now: Date = new Date()): numb
     const offset = Number(cursor[key] ?? 0);
     const read = settledMessages(filepath, offset, isSettled(filepath, now));
     if (read.resumeAt === offset) continue;
-    for (const line of read.messages) emitModelCall(line);
+    for (const line of read.messages)
+      emitModelCall(line, billingAt(line.timestamp ?? ""));
     emitted += read.messages.length;
     cursor[key] = read.resumeAt;
     writeCursor("claude", cursor);

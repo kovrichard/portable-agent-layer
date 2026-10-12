@@ -5,9 +5,10 @@
  */
 
 import { readFileSync, statSync } from "node:fs";
-import { relative, sep } from "node:path";
+import { relative, resolve, sep } from "node:path";
 import { appendEvent } from "../../../hooks/lib/events";
 import { codexRollouts } from "../agent-usage";
+import { type Billing, codexBilling } from "./billing";
 import { readCursor, writeCursor } from "./cursors";
 
 interface CodexUsage {
@@ -90,12 +91,13 @@ function callsOf(filepath: string): CodexCall[] {
   return calls;
 }
 
-function emitModelCall({ ts, usage, context }: CodexCall): void {
+function emitModelCall({ ts, usage, context }: CodexCall, billing: Billing): void {
   const cacheRead = usage.cached_input_tokens ?? 0;
   const cacheWrite = usage.cache_write_input_tokens ?? 0;
   appendEvent(
     "model_call",
     {
+      ...billing,
       model: context.model,
       provider: context.provider,
       inputTokens: (usage.input_tokens ?? 0) - cacheRead - cacheWrite,
@@ -111,6 +113,7 @@ function emitModelCall({ ts, usage, context }: CodexCall): void {
 
 export function collectCodex(codexDir: string): number {
   const cursor = readCursor("codex");
+  const billing = codexBilling(resolve(codexDir, "auth.json"));
   let emitted = 0;
   for (const filepath of codexRollouts(codexDir)) {
     const key = relative(codexDir, filepath).split(sep).join("/");
@@ -119,7 +122,7 @@ export function collectCodex(codexDir: string): number {
     const collectedTotal = Number(cursor[key] ?? -1);
     for (const call of callsOf(filepath)) {
       if (call.total <= collectedTotal) continue;
-      emitModelCall(call);
+      emitModelCall(call, billing);
       emitted++;
       cursor[key] = call.total;
     }

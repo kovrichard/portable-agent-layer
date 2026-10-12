@@ -12,6 +12,7 @@ import { paths, platform } from "../../../hooks/lib/paths";
 import { eventLogEnabled } from "../../../hooks/lib/settings";
 import { opencodeDatabase } from "../agent-usage";
 import { antigravityDatabase, collectAntigravity } from "./antigravity";
+import { claudeBilling, claudeConfigFile } from "./billing";
 import { collectClaude } from "./claude";
 import { collectCodex } from "./codex";
 import { collectCopilot, copilotDatabase } from "./copilot";
@@ -20,7 +21,12 @@ import { collectOpencode } from "./opencode";
 const LOCK_STALE_MS = 10 * 60_000;
 
 const COLLECTORS: Record<string, () => number> = {
-  claude: () => collectClaude(resolve(platform.claudeDir(), "projects")),
+  claude: () =>
+    collectClaude(
+      resolve(platform.claudeDir(), "projects"),
+      new Date(),
+      claudeBilling(claudeConfigFile())
+    ),
   opencode: () => collectOpencode(opencodeDatabase()),
   codex: () => collectCodex(platform.codexDir()),
   copilot: () => collectCopilot(copilotDatabase(platform.copilotDir())),

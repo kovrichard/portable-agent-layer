@@ -70,6 +70,9 @@ export const EVENT_FIELDS = {
   entity_first_seen: ["domain", "entityType"],
   discord_nag: ["stage", "kind", "responseSec"],
   model_call: [
+    "billing",
+    "plan",
+    "extraUsage",
     "model",
     "requestedModel",
     "provider",

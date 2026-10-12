@@ -7,6 +7,7 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { appendEvent } from "../../../hooks/lib/events";
+import { COPILOT_BILLING } from "./billing";
 import { readCursor, writeCursor } from "./cursors";
 import { type AllowList, selectAllowed } from "./sqlite";
 
@@ -66,6 +67,7 @@ function emitModelCall(row: UsageRow, session: SessionRow | undefined): void {
   appendEvent(
     "model_call",
     {
+      ...COPILOT_BILLING,
       model: row.model,
       inputTokens: num(row.input_tokens) - cacheRead,
       outputTokens: row.output_tokens,
