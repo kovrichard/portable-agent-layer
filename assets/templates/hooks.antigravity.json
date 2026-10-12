@@ -27,11 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts --agent=antigravity"
-          },
-          {
-            "type": "command",
-            "command": "bun run {{PKG_ROOT}}/src/hooks/ToolEvent.ts --agent=antigravity"
+            "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts --tool-events --agent=antigravity"
           }
         ]
       }

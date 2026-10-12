@@ -25,12 +25,14 @@ import { reapStalePending } from "./lib/ledger";
 import { commitUnapplied, ledgeredCalls, unappliedVerdictOf } from "./lib/ledger-hook";
 import { logDebug } from "./lib/log";
 import { readStdinJSON } from "./lib/stdin";
+import { logToolCallWhenFolded } from "./lib/tool-events";
 
 if (duplicatesCursorHooks()) process.exit(0);
 
 try {
   const input = await readStdinJSON<Record<string, unknown>>();
   if (!input) process.exit(0);
+  logToolCallWhenFolded(input);
 
   const calls = ledgeredCalls(input);
   const verdict = calls.length > 0 && unappliedVerdictOf(input);

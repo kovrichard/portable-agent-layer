@@ -15,6 +15,7 @@ import { enterHookWorkspace } from "./lib/hook-turn";
 import { commitApplied, landedCalls } from "./lib/ledger-hook";
 import { logDebug } from "./lib/log";
 import { readStdinJSON } from "./lib/stdin";
+import { logToolCallWhenFolded } from "./lib/tool-events";
 
 if (duplicatesCursorHooks()) process.exit(0);
 
@@ -23,6 +24,7 @@ try {
   if (!input) process.exit(0);
 
   enterHookWorkspace(input);
+  logToolCallWhenFolded(input);
   for (const call of landedCalls(input)) {
     const entry = commitApplied(call);
     if (entry) {

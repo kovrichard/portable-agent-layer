@@ -39,11 +39,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts --agent=codex"
-          },
-          {
-            "type": "command",
-            "command": "bun run {{PKG_ROOT}}/src/hooks/ToolEvent.ts --agent=codex"
+            "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts --agent=codex --tool-events"
           }
         ]
       }

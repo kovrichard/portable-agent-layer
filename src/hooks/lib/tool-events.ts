@@ -8,6 +8,7 @@ import { FILE_TARGET_KEYS, normalizeToolUse, type ToolUseRequest } from "./agent
 import { appendEvent, logQuietly } from "./events";
 import { hookSessionId } from "./hook-turn";
 import { unappliedVerdictOf } from "./ledger-hook";
+import { isPalSpawnedInference } from "./spawn-guard";
 import { permissionWaitSec } from "./waiting-on-user";
 
 const RESULT_KEYS = ["tool_response", "toolResult", "tool_output", "result"];
@@ -88,6 +89,7 @@ function toolCallFields(payload: Record<string, unknown>, call: ToolUseRequest) 
 
 /** Logs the call a post-tool, failure or denial payload describes; ignores anything else. */
 export function logToolCall(payload: Record<string, unknown> | null): void {
+  if (isPalSpawnedInference()) return;
   logQuietly("tool_call", () => {
     const call = normalizeToolUse(payload);
     if (!payload || !call) return;
@@ -101,4 +103,18 @@ export function logToolCall(payload: Record<string, unknown> | null): void {
       content: { tool: call.toolName, input: call.toolInput },
     });
   });
+}
+
+const FOLDED_FLAG = "--tool-events";
+
+/**
+ * Where a ledger hook already runs after every tool call, it logs the call too
+ * and saves a process. The install template opts in with the flag; Claude Code
+ * matches its ledger hooks to edits alone and runs ToolEvent async instead.
+ */
+export function logToolCallWhenFolded(
+  payload: Record<string, unknown> | null,
+  argv: string[] = process.argv
+): void {
+  if (argv.includes(FOLDED_FLAG)) logToolCall(payload);
 }

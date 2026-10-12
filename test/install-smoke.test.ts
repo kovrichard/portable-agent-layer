@@ -56,6 +56,15 @@ describe("pal cli install (smoke)", () => {
     const agents = resolve(CLAUDE_DIR, "agents");
     expect(existsSync(agents)).toBe(true);
     expect(readdirSync(agents).length).toBeGreaterThan(0);
+
+    const toolEventHooks = Object.values(
+      JSON.parse(readFileSync(settings, "utf-8")).hooks
+    )
+      .flat()
+      .flatMap((block) => (block as { hooks: Record<string, unknown>[] }).hooks)
+      .filter((hook) => String(hook.command).includes("ToolEvent.ts"));
+    expect(toolEventHooks).toHaveLength(3);
+    for (const hook of toolEventHooks) expect(hook.async).toBe(true);
   }, 90000);
 
   test("install --opencode lands plugin and agents", () => {
@@ -199,7 +208,7 @@ describe("pal cli install (smoke)", () => {
     );
     const hooks = readFileSync(resolve(plugin, "hooks.json"), "utf-8");
     const commands = Array.from(hooks.matchAll(/"command": "([^"]+)"/g), (m) => m[1]);
-    expect(commands.length).toBe(6);
+    expect(commands.length).toBe(5);
     for (const command of commands) {
       expect(command).not.toContain("{{PKG_ROOT}}");
       expect(command).toEndWith(" --agent=antigravity");

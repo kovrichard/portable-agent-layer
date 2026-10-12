@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { reload } from "../src/hooks/lib/settings";
-import { logToolCall } from "../src/hooks/lib/tool-events";
+import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
+import { logToolCall, logToolCallWhenFolded } from "../src/hooks/lib/tool-events";
 import { freshTestDir } from "./lib/test-home";
 
 let home: string;
@@ -25,6 +26,7 @@ function toolCalls(): Record<string, unknown>[] {
 }
 
 beforeEach(() => {
+  delete process.env[SPAWN_GUARD_ENV.SENTINEL];
   home = freshTestDir(import.meta.file);
   process.env.PAL_HOME = home;
   process.env.PAL_AGENT = "claude";
@@ -115,6 +117,25 @@ describe("a tool call", () => {
   test("a payload that names no tool is ignored", () => {
     logToolCall({ session_id: "s1", prompt: "hi" });
     logToolCall(null);
+    expect(toolCalls()).toEqual([]);
+  });
+
+  test("a ledger hook logs the call only when its template folds tool events in", () => {
+    const call = { session_id: "s4", tool_name: "Edit", tool_input: {} };
+    logToolCallWhenFolded(call, ["bun", "LedgerCommit.ts", "--agent=claude"]);
+    logToolCallWhenFolded(call, [
+      "bun",
+      "LedgerCommit.ts",
+      "--agent=cursor",
+      "--tool-events",
+    ]);
+    expect(toolCalls().map((e) => e.session)).toEqual(["s4"]);
+  });
+
+  test("a call made inside PAL's own inference is not the user's, and is not logged", () => {
+    process.env[SPAWN_GUARD_ENV.SENTINEL] = "1";
+    logToolCall({ tool_name: "Read", tool_input: {} });
+    delete process.env[SPAWN_GUARD_ENV.SENTINEL];
     expect(toolCalls()).toEqual([]);
   });
 

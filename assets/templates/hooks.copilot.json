@@ -47,25 +47,15 @@
     "postToolUse": [
       {
         "type": "command",
-        "bash": "bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts --agent=copilot",
-        "powershell": "bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts --agent=copilot"
-      },
-      {
-        "type": "command",
-        "bash": "bun run {{PKG_ROOT}}/src/hooks/ToolEvent.ts --agent=copilot",
-        "powershell": "bun run {{PKG_ROOT}}/src/hooks/ToolEvent.ts --agent=copilot"
+        "bash": "bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts --agent=copilot --tool-events",
+        "powershell": "bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts --agent=copilot --tool-events"
       }
     ],
     "postToolUseFailure": [
       {
         "type": "command",
-        "bash": "bun run {{PKG_ROOT}}/src/hooks/LedgerUnapplied.ts --agent=copilot --event=postToolUseFailure",
-        "powershell": "bun run {{PKG_ROOT}}/src/hooks/LedgerUnapplied.ts --agent=copilot --event=postToolUseFailure"
-      },
-      {
-        "type": "command",
-        "bash": "bun run {{PKG_ROOT}}/src/hooks/ToolEvent.ts --agent=copilot --event=postToolUseFailure",
-        "powershell": "bun run {{PKG_ROOT}}/src/hooks/ToolEvent.ts --agent=copilot --event=postToolUseFailure"
+        "bash": "bun run {{PKG_ROOT}}/src/hooks/LedgerUnapplied.ts --agent=copilot --event=postToolUseFailure --tool-events",
+        "powershell": "bun run {{PKG_ROOT}}/src/hooks/LedgerUnapplied.ts --agent=copilot --event=postToolUseFailure --tool-events"
       }
     ],
     "agentStop": [
