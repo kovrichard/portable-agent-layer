@@ -1,3 +1,4 @@
+import { Database } from "bun:sqlite";
 import { beforeEach, describe, expect, test } from "bun:test";
 import {
   existsSync,
@@ -205,6 +206,29 @@ describe("billing lands on every collected model call", () => {
     writeFileSync(rollout, `${lines.join("\n")}\n`);
   }
 
+  function opencodeMessage(): void {
+    const opencodeDir = resolve(home, "data", "opencode");
+    mkdirSync(opencodeDir, { recursive: true });
+    const db = new Database(resolve(opencodeDir, "opencode.db"), { create: true });
+    db.run(
+      "CREATE TABLE message (id TEXT PRIMARY KEY, session_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT)"
+    );
+    const created = LONG_AGO.getTime();
+    const message = {
+      role: "assistant",
+      modelID: "gpt-6",
+      providerID: "openai",
+      path: { cwd: home },
+      time: { created, completed: created + 1000 },
+      tokens: { input: 8, output: 2 },
+    };
+    db.run("INSERT INTO message VALUES ('msg_1', 'ses_1', ?1, ?1, ?2)", [
+      created,
+      JSON.stringify(message),
+    ]);
+    db.close();
+  }
+
   test("a Claude Code call carries the subscription it was billed under", () => {
     writeJson(resolve(home, ".claude.json"), { oauthAccount: MAX_5X });
     claudeTranscript();
@@ -230,9 +254,15 @@ describe("billing lands on every collected model call", () => {
       OPENAI_API_KEY: SECRET,
       tokens: { id_token: SECRET, access_token: SECRET, refresh_token: SECRET },
     });
+    opencodeMessage();
+    writeJson(resolve(home, "data", "opencode", "auth.json"), {
+      openai: { type: "api", key: SECRET },
+      anthropic: { type: "oauth", refresh: SECRET, access: SECRET, expires: 1 },
+    });
     collectEvents();
     expect(modelCalls().map((e) => [e.runtime, e.billing])).toEqual([
       ["claude", "subscription"],
+      ["opencode", "api"],
       ["codex", "subscription"],
     ]);
     expect(everythingWritten()).not.toContain(SECRET);
