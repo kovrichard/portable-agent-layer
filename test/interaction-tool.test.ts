@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { appendEvent } from "../src/hooks/lib/events";
 import { turnsSince } from "../src/hooks/lib/interaction";
 import { run } from "../src/tools/agent/interaction";
 import { freshTestDir } from "./lib/test-home";
@@ -42,6 +43,18 @@ describe("reading turns back", () => {
     expect(turnsSince(new Date("2026-09-15T00:00:00Z")).map((e) => e.ts)).toEqual([
       "2026-09-20T10:00:00.000Z",
       "2026-10-01T10:00:00.000Z",
+    ]);
+  });
+
+  test("merges the older turn files with turns in the event log, in time order", () => {
+    writeMonth("2026-09.jsonl", ["2026-09-20T10:00:00.000Z"]);
+    appendEvent("turn", { words: 3 }, { ts: "2026-09-21T10:00:00.000Z", session: "s2" });
+    appendEvent("turn", { words: 3 }, { ts: "2026-09-19T10:00:00.000Z", session: "s2" });
+
+    expect(turnsSince(new Date("2026-09-15T00:00:00Z")).map((e) => e.ts)).toEqual([
+      "2026-09-19T10:00:00.000Z",
+      "2026-09-20T10:00:00.000Z",
+      "2026-09-21T10:00:00.000Z",
     ]);
   });
 });

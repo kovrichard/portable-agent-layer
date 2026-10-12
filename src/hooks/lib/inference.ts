@@ -40,6 +40,7 @@ import {
   streamJsonPrompt,
   writeInferenceAgent,
 } from "./antigravity-inference";
+import { logInferenceCall, SCHEMA_MISMATCH } from "./inference-events";
 import { logDebug, logError } from "./log";
 import {
   type FixedModelRoute,
@@ -188,7 +189,22 @@ function schemaProblem(
     .join("; ");
 }
 
+function plannedRoute(opts: InferenceOptions): { route: string; model: string | null } {
+  const { route } = previewRoute();
+  if (route === "opencode-spawn")
+    return { route, model: opencodeTierModel(opts.tier ?? "small") };
+  if (isFixedModelRoute(route)) return { route, model: modelFor(route, opts) };
+  return { route, model: null };
+}
+
 export async function inference(opts: InferenceOptions): Promise<InferenceResult> {
+  const started = performance.now();
+  const result = await checkedInference(opts);
+  logInferenceCall(opts, plannedRoute(opts), result, performance.now() - started);
+  return result;
+}
+
+async function checkedInference(opts: InferenceOptions): Promise<InferenceResult> {
   const result = await routeInference(opts);
   if (!opts.jsonSchema || !result.success || !result.output) return result;
   const problem = schemaProblem(result.output, opts.jsonSchema);
@@ -200,7 +216,7 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
   return {
     ...result,
     success: false,
-    error: `the reply does not match the schema: ${problem}`,
+    error: `${SCHEMA_MISMATCH}: ${problem}`,
   };
 }
 

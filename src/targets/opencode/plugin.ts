@@ -61,6 +61,16 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
 
   // Load shared handlers
   const { runStopHandlers } = await lib<typeof import("../../hooks/lib/stop")>("stop.ts");
+  const { logToolCall } =
+    await lib<typeof import("../../hooks/lib/tool-events")>("tool-events.ts");
+  const { logAttention } =
+    await lib<typeof import("../../hooks/lib/attention-events")>("attention-events.ts");
+  const {
+    logOpencodeCompaction,
+    logOpencodePermissionReply,
+    logOpencodeSessionCreated,
+    rememberAskedTool,
+  } = await lib<typeof import("../../hooks/lib/opencode-events")>("opencode-events.ts");
   const { captureSessionName } = await lib<
     typeof import("../../hooks/handlers/session-name")
   >("../handlers/session-name.ts");
@@ -136,6 +146,13 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
           await lib<typeof import("../../hooks/lib/auto-update")>("auto-update.ts");
         autoUpdateOnClose();
       }
+
+      if (event.type === "session.created")
+        logOpencodeSessionCreated(event.properties.info);
+      if (event.type === "session.compacted")
+        logOpencodeCompaction(event.properties.sessionID);
+      if (event.type === "permission.replied")
+        logOpencodePermissionReply(event.properties);
 
       if (event.type === "session.created" || event.type === "session.updated") {
         const { regenerateIfNeeded } =
@@ -237,10 +254,25 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       if (call) snapshotCall(call);
     },
 
+    "permission.ask": async (input: { id: string; type: string; sessionID: string }) => {
+      rememberAskedTool(input);
+      logAttention({
+        hook_event_name: "PermissionRequest",
+        session_id: input.sessionID,
+        tool_name: input.type,
+      });
+    },
+
     "tool.execute.after": async (
       input: { tool: string; sessionID: string; callID: string; args: unknown },
-      _output: { title: string; output: string; metadata: unknown }
+      output: { title: string; output: string; metadata: unknown }
     ) => {
+      logToolCall({
+        tool_name: input.tool,
+        tool_input: input.args,
+        session_id: input.sessionID,
+        tool_response: output?.output,
+      });
       const call = ledgeredOpencodeCall(input.tool, input.callID, input.args);
       if (!call) return;
 

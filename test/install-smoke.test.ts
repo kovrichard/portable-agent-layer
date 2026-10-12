@@ -56,6 +56,16 @@ describe("pal cli install (smoke)", () => {
     const agents = resolve(CLAUDE_DIR, "agents");
     expect(existsSync(agents)).toBe(true);
     expect(readdirSync(agents).length).toBeGreaterThan(0);
+
+    const postToolHooks = (only: string) =>
+      Object.values(JSON.parse(readFileSync(settings, "utf-8")).hooks)
+        .flat()
+        .flatMap((block) => (block as { hooks: Record<string, unknown>[] }).hooks)
+        .filter((hook) => String(hook.command).includes(`--only=${only}`));
+    expect(postToolHooks("events")).toHaveLength(3);
+    for (const hook of postToolHooks("events")) expect(hook.async).toBe(true);
+    expect(postToolHooks("ledger")).toHaveLength(3);
+    for (const hook of postToolHooks("ledger")) expect(hook.async).toBeUndefined();
   }, 90000);
 
   test("install --opencode lands plugin and agents", () => {

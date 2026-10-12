@@ -47,15 +47,15 @@
     "postToolUse": [
       {
         "type": "command",
-        "bash": "bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts --agent=copilot",
-        "powershell": "bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts --agent=copilot"
+        "bash": "bun run {{PKG_ROOT}}/src/hooks/PostToolOrchestrator.ts --agent=copilot",
+        "powershell": "bun run {{PKG_ROOT}}/src/hooks/PostToolOrchestrator.ts --agent=copilot"
       }
     ],
     "postToolUseFailure": [
       {
         "type": "command",
-        "bash": "bun run {{PKG_ROOT}}/src/hooks/LedgerUnapplied.ts --agent=copilot --event=postToolUseFailure",
-        "powershell": "bun run {{PKG_ROOT}}/src/hooks/LedgerUnapplied.ts --agent=copilot --event=postToolUseFailure"
+        "bash": "bun run {{PKG_ROOT}}/src/hooks/PostToolOrchestrator.ts --agent=copilot --event=postToolUseFailure",
+        "powershell": "bun run {{PKG_ROOT}}/src/hooks/PostToolOrchestrator.ts --agent=copilot --event=postToolUseFailure"
       }
     ],
     "agentStop": [
@@ -63,6 +63,13 @@
         "type": "command",
         "bash": "bun run {{PKG_ROOT}}/src/hooks/StopOrchestrator.ts --agent=copilot",
         "powershell": "bun run {{PKG_ROOT}}/src/hooks/StopOrchestrator.ts --agent=copilot"
+      }
+    ],
+    "preCompact": [
+      {
+        "type": "command",
+        "bash": "bun run {{PKG_ROOT}}/src/hooks/PreCompactPersist.ts --agent=copilot",
+        "powershell": "bun run {{PKG_ROOT}}/src/hooks/PreCompactPersist.ts --agent=copilot"
       }
     ],
     "sessionEnd": [

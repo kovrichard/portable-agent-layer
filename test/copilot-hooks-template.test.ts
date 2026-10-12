@@ -32,6 +32,7 @@ describe("Copilot hooks template", () => {
       "agentStop",
       "postToolUse",
       "postToolUseFailure",
+      "preCompact",
       "preToolUse",
       "sessionEnd",
       "sessionStart",

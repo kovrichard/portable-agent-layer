@@ -197,8 +197,14 @@ describe("the shipped Copilot hooks template", () => {
 
   test("registers all three ledger halves on Copilot's own event names", () => {
     expect(commandsFor("preToolUse").join(" ")).toContain("LedgerSnapshot.ts");
-    expect(commandsFor("postToolUse").join(" ")).toContain("LedgerCommit.ts");
-    expect(commandsFor("postToolUseFailure").join(" ")).toContain("LedgerUnapplied.ts");
+    expect(commandsFor("postToolUse")).toEqual([
+      expect.stringContaining("PostToolOrchestrator.ts"),
+    ]);
+    expect(commandsFor("postToolUseFailure")).toEqual([
+      expect.stringContaining(
+        "PostToolOrchestrator.ts --agent=copilot --event=postToolUseFailure"
+      ),
+    ]);
   });
 
   test("snapshots last, so a blocking hook does not strand a snapshot", () => {

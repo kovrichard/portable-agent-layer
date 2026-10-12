@@ -37,13 +37,14 @@ beforeEach(() => {
 type PromptPayload = HookTurnPayload & { prompt: string };
 
 function loggedTurns(): TurnEvent[] {
-  const dir = resolve(HOME, "memory", "signals", "interaction");
+  const dir = resolve(HOME, "memory", "events");
   if (!existsSync(dir)) return [];
   const month = new Date().toISOString().slice(0, 7);
   return readFileSync(resolve(dir, `${month}.jsonl`), "utf-8")
     .trim()
     .split("\n")
-    .map((line) => JSON.parse(line));
+    .map((line) => JSON.parse(line))
+    .filter((event) => event.type === "turn");
 }
 
 function transcriptFile(name: string, lines: unknown[]): string {

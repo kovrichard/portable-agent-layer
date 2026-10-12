@@ -21,6 +21,7 @@ import { updateCounts } from "../handlers/update-counts";
 import { captureWorkSession } from "../handlers/work-session";
 import { acknowledgeMentioned } from "./daily-nudge";
 import { spawnDetachedInference } from "./detached-inference";
+import { startHookTiming } from "./hook-timing";
 import {
   fileFinalReply,
   type HookTurnPayload,
@@ -150,6 +151,7 @@ export async function runStopHandlers(
   fileTranscript: string,
   options: RunStopHandlersOptions = {}
 ): Promise<void> {
+  const timing = startHookTiming("stop");
   const fileMessages = parseMessages(fileTranscript);
   if (fileMessages.length < 2) return;
   const messages = withFinalReply(fileMessages, options.lastAssistantMessage);
@@ -167,10 +169,12 @@ export async function runStopHandlers(
   // Detach inference-bearing handlers — claude --print cold-start can exceed
   // any in-hook budget. These spawn detached bun subprocesses that run the
   // inference and write results to disk; they don't block this hook.
-  await detachSessionIntelligence(transcript, options.sessionId);
-  await detachEntityExtraction(transcript, options.sessionId);
-  await detachFailurePrinciple(transcript);
-  detachAgenda(options.sessionId);
+  await timing.time("detach-inference", async () => {
+    await detachSessionIntelligence(transcript, options.sessionId);
+    await detachEntityExtraction(transcript, options.sessionId);
+    await detachFailurePrinciple(transcript);
+    detachAgenda(options.sessionId);
+  });
   // Failure auto-graduation is intentionally NOT wired here: every pattern it
   // ever promoted was a frustration log, not a principle. Wisdom frames are
   // populated by Claude in-conversation (see wisdom.ts header). The handler
@@ -178,37 +182,29 @@ export async function runStopHandlers(
 
   // Run remaining (non-inference) handlers concurrently.
   // project-touch only fires when cwd resolves to an active registered project.
-  const results = await Promise.allSettled([
-    captureWorkSession(transcript, options.sessionId),
-    resetTab(),
-    updateCounts(),
-    autoBackup(),
-    checkReflectTrigger(),
-    checkSelfModelTrigger(),
-    runSynthesis(),
-    projectTouch(options.lastAssistantMessage),
-    notifyDesktop(options.sessionId),
-    Promise.resolve(writeContextDigests()),
-  ]);
-
-  const handlerNames = [
-    "work-session",
-    "tab",
-    "update-counts",
-    "backup",
-    "reflect-trigger",
-    "self-model-trigger",
-    "synthesis",
-    "project-touch",
-    "desktop-notify",
-    "context-digests",
-  ];
+  const handlers: Record<string, unknown> = {
+    "work-session": captureWorkSession(transcript, options.sessionId),
+    tab: resetTab(),
+    "update-counts": updateCounts(),
+    backup: autoBackup(),
+    "reflect-trigger": checkReflectTrigger(),
+    "self-model-trigger": checkSelfModelTrigger(),
+    synthesis: runSynthesis(),
+    "project-touch": projectTouch(options.lastAssistantMessage),
+    "desktop-notify": notifyDesktop(options.sessionId),
+    "context-digests": Promise.resolve(writeContextDigests()),
+  };
+  const names = Object.keys(handlers);
+  const results = await Promise.allSettled(
+    names.map((name) => timing.time(name, Promise.resolve(handlers[name])))
+  );
   for (let i = 0; i < results.length; i++) {
     const r = results[i];
-    if (r.status === "rejected") {
-      logError(`runStopHandlers:${handlerNames[i]}`, r.reason);
+    if (r?.status === "rejected") {
+      logError(`runStopHandlers:${names[i]}`, r.reason);
     }
   }
+  timing.log(options.sessionId);
 }
 
 /**

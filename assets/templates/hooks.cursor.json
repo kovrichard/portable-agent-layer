@@ -34,13 +34,13 @@
     "postToolUse": [
       {
         "type": "command",
-        "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts --agent=cursor"
+        "command": "bun run {{PKG_ROOT}}/src/hooks/PostToolOrchestrator.ts --agent=cursor"
       }
     ],
     "postToolUseFailure": [
       {
         "type": "command",
-        "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerUnapplied.ts --agent=cursor"
+        "command": "bun run {{PKG_ROOT}}/src/hooks/PostToolOrchestrator.ts --agent=cursor"
       }
     ],
     "beforeShellExecution": [
@@ -59,6 +59,12 @@
       {
         "type": "command",
         "command": "bun run {{PKG_ROOT}}/src/hooks/StopOrchestrator.ts --agent=cursor"
+      }
+    ],
+    "preCompact": [
+      {
+        "type": "command",
+        "command": "bun run {{PKG_ROOT}}/src/hooks/PreCompactPersist.ts --agent=cursor"
       }
     ],
     "sessionEnd": [
