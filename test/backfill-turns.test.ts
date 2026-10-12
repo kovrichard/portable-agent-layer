@@ -78,6 +78,25 @@ describe("legacy turn files become turn events", () => {
     ]);
   });
 
+  test("a row written before attribution existed is unknown, not this machine's", () => {
+    writeLegacy(
+      legacyRow("2026-09-10T06:55:09.577Z", {
+        machine: undefined,
+        actor: undefined,
+        runtime: undefined,
+      })
+    );
+    backfillEvents();
+
+    expect(streamedTurns()).toEqual([
+      expect.objectContaining({
+        machine: "unknown",
+        actor: "unknown",
+        runtime: "unknown",
+      }),
+    ]);
+  });
+
   test("a backfilled turn is read once, not once from each store", () => {
     writeLegacy(
       legacyRow("2026-09-10T06:55:09.577Z"),

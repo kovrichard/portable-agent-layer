@@ -4,43 +4,29 @@
  * holds other machines' rows too.
  */
 
-import type { RecordAttribution } from "../../../hooks/lib/actor";
 import { appendEvent } from "../../../hooks/lib/events";
 import {
   legacyTurnId,
   legacyTurns,
   type TurnEvent,
 } from "../../../hooks/lib/interaction";
+import { type AttributedRow, emitUnseen, recordedAttribution } from "./rows";
 
-type LegacyTurn = TurnEvent & Partial<RecordAttribution>;
+type LegacyTurn = TurnEvent & AttributedRow;
 
-function attributionOf({ machine, actor, runtime, authority }: LegacyTurn) {
-  return Object.fromEntries(
-    Object.entries({ machine, actor, runtime, authority }).filter(([, v]) => v)
-  ) as Partial<RecordAttribution>;
-}
-
-function emitTurn(turn: LegacyTurn): void {
+function emitTurn(turn: LegacyTurn, id: string): void {
   const { ts, session, channel, ...fields } = turn;
   appendEvent("turn", fields, {
-    id: legacyTurnId(turn),
+    id,
     ts,
     session,
     channel: channel ?? null,
     cwd: "",
-    attribution: attributionOf(turn),
+    attribution: recordedAttribution(turn),
   });
 }
 
 /** Appends the legacy turns not yet logged and returns how many. */
 export function backfillTurns(known: Set<string>, since?: string): number {
-  let emitted = 0;
-  for (const turn of legacyTurns() as LegacyTurn[]) {
-    const id = legacyTurnId(turn);
-    if (known.has(id) || turn.ts < new Date(since ?? 0).toISOString()) continue;
-    known.add(id);
-    emitTurn(turn);
-    emitted++;
-  }
-  return emitted;
+  return emitUnseen(legacyTurns() as LegacyTurn[], legacyTurnId, emitTurn, known, since);
 }
