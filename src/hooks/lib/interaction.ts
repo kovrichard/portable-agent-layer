@@ -1,18 +1,13 @@
 /**
- * Measures every user turn in code and logs the features, never the text.
+ * Measures every user turn in code and logs the features as turn events; the
+ * prompt text goes only to the content store, which never leaves the machine.
  * Per-session tracking lives in state and is discarded with the session.
  */
 
-import {
-  appendFileSync,
-  existsSync,
-  readdirSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { currentAttribution } from "./actor";
 import { hearsPromptContext } from "./agent";
+import { appendEvent, eventsInMonth, eventsSince } from "./events";
 import { asksForLess, followedHint, ignoredHintReminder } from "./interaction-hint-check";
 import {
   type Baseline,
@@ -135,20 +130,16 @@ function measureTurn(
   };
 }
 
-function eventsDir(): string {
+function legacyTurnsDir(): string {
   return ensureDir(resolve(paths.signals(), "interaction"));
 }
 
-function monthFile(date: Date): string {
-  return resolve(eventsDir(), `${date.toISOString().slice(0, 7)}.jsonl`);
+function logTurn(event: TurnEvent, prompt: string): void {
+  const { ts, session, channel, ...fields } = event;
+  appendEvent("turn", fields, { ts, session, channel, content: { prompt } });
 }
 
-function appendEvent(event: TurnEvent): void {
-  const line = { ...currentAttribution(), type: "turn", ...event };
-  appendFileSync(monthFile(new Date(event.ts)), `${JSON.stringify(line)}\n`);
-}
-
-function readEvents(file: string): TurnEvent[] {
+function readLegacyTurns(file: string): TurnEvent[] {
   if (!existsSync(file)) return [];
   return readFileSync(file, "utf-8")
     .split("\n")
@@ -162,20 +153,33 @@ function readEvents(file: string): TurnEvent[] {
     });
 }
 
-export function turnsSince(since: Date): TurnEvent[] {
+function legacyTurnsSince(since: Date): TurnEvent[] {
   const fromMonth = since.toISOString().slice(0, 7);
   const sinceTs = since.toISOString();
-  return readdirSync(eventsDir())
+  return readdirSync(legacyTurnsDir())
     .filter((f) => f.endsWith(".jsonl") && f.slice(0, 7) >= fromMonth)
     .sort()
-    .flatMap((f) => readEvents(resolve(eventsDir(), f)))
+    .flatMap((f) => readLegacyTurns(resolve(legacyTurnsDir(), f)))
     .filter((e) => e.ts >= sinceTs);
+}
+
+export function turnsSince(since: Date): TurnEvent[] {
+  const streamed = eventsSince("turn", since) as unknown as TurnEvent[];
+  return [...legacyTurnsSince(since), ...streamed].sort((a, b) =>
+    a.ts.localeCompare(b.ts)
+  );
+}
+
+function turnsInMonth(month: Date): TurnEvent[] {
+  const file = `${month.toISOString().slice(0, 7)}.jsonl`;
+  const streamed = eventsInMonth("turn", month) as unknown as TurnEvent[];
+  return [...readLegacyTurns(resolve(legacyTurnsDir(), file)), ...streamed];
 }
 
 /** This month and last, outside the session being judged. */
 function historyOutside(session: string, now: Date): TurnEvent[] {
   const lastMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
-  return [...readEvents(monthFile(lastMonth)), ...readEvents(monthFile(now))].filter(
+  return [...turnsInMonth(lastMonth), ...turnsInMonth(now)].filter(
     (e) => e.session !== session
   );
 }
@@ -295,12 +299,15 @@ export function observeTurn(
     moodReminder(mood, track.mood ?? ""),
     reminderForIgnoredHint(complied, mood.key, replyWords, usualReply, history)
   );
-  appendEvent({
-    ...event,
-    mood: mood.key,
-    hinted: reminder !== null && hearsPromptContext(),
-    ...(complied !== null && { complied }),
-  });
+  logTurn(
+    {
+      ...event,
+      mood: mood.key,
+      hinted: reminder !== null && hearsPromptContext(),
+      ...(complied !== null && { complied }),
+    },
+    text
+  );
   sampleReaction(event, text, track);
   writeTrack(session, {
     ...track,

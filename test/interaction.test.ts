@@ -19,14 +19,15 @@ function at(sec: number): Date {
 }
 
 function eventsDir(): string {
-  return resolve(TEST_HOME, "memory", "signals", "interaction");
+  return resolve(TEST_HOME, "memory", "events");
 }
 
 function loggedEvents(): TurnEvent[] {
   return readFileSync(resolve(eventsDir(), "2026-09.jsonl"), "utf-8")
     .trim()
     .split("\n")
-    .map((l) => JSON.parse(l));
+    .map((l) => JSON.parse(l))
+    .filter((e) => e.type === "turn");
 }
 
 function lastEvent(): TurnEvent {
@@ -57,6 +58,10 @@ describe("measuring a turn", () => {
     const raw = readFileSync(resolve(eventsDir(), "2026-09.jsonl"), "utf-8");
     expect(raw).not.toContain("credentials");
     expect(lastEvent()).toMatchObject({ session: "s1", words: 5, channel: "mobile" });
+    const content = resolve(TEST_HOME, "memory", "content", "events", "2026-09.jsonl");
+    expect(readFileSync(content, "utf-8")).toContain(
+      "please rotate the staging credentials"
+    );
   });
 
   test("the gap runs from the reply that answered the previous prompt", () => {
@@ -212,11 +217,22 @@ describe("telling the agent", () => {
   });
 
   test("judges against the user's own normal, not a fixed one", () => {
-    mkdirSync(eventsDir(), { recursive: true });
     const terseHistory = Array.from({ length: 25 }, () =>
       JSON.stringify({ session: "old", words: 2, gapSec: 15, afterBreak: false })
     );
-    writeFileSync(resolve(eventsDir(), "2026-09.jsonl"), `${terseHistory.join("\n")}\n`);
+    seedHistory(terseHistory);
+
+    observeTurn("start", "s1", T0);
+    const reminders = [1, 2, 3, 4].map((i) => fastShortTurn("s1", i));
+
+    expect(reminders.every((r) => r === null)).toBe(true);
+  });
+
+  test("the user's normal counts history already in the event stream", () => {
+    const terseHistory = Array.from({ length: 25 }, () =>
+      JSON.stringify({ session: "old", words: 2, gapSec: 15, afterBreak: false })
+    );
+    seedStreamedHistory(terseHistory);
 
     observeTurn("start", "s1", T0);
     const reminders = [1, 2, 3, 4].map((i) => fastShortTurn("s1", i));
@@ -237,9 +253,21 @@ function pastTurn(replyWords: number, reaction: string | null = null): string {
   });
 }
 
+function legacyTurnsDir(): string {
+  return resolve(TEST_HOME, "memory", "signals", "interaction");
+}
+
 function seedHistory(history: string[]) {
+  mkdirSync(legacyTurnsDir(), { recursive: true });
+  writeFileSync(resolve(legacyTurnsDir(), "2026-09.jsonl"), `${history.join("\n")}\n`);
+}
+
+function seedStreamedHistory(history: string[]) {
   mkdirSync(eventsDir(), { recursive: true });
-  writeFileSync(resolve(eventsDir(), "2026-09.jsonl"), `${history.join("\n")}\n`);
+  const asTurns = history.map((line) =>
+    JSON.stringify({ type: "turn", ...JSON.parse(line) })
+  );
+  writeFileSync(resolve(eventsDir(), "2026-09.jsonl"), `${asTurns.join("\n")}\n`);
 }
 
 function seedReplyHistory(replyWords: number) {
