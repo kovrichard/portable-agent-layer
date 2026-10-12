@@ -5,7 +5,9 @@
  */
 
 import { existsSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { appendEvent } from "../../../hooks/lib/events";
+import { type Billing, opencodeBilling } from "./billing";
 import { readCursor, writeCursor } from "./cursors";
 import { type AllowList, selectAllowed } from "./sqlite";
 
@@ -57,11 +59,16 @@ function durationOf(message: AssistantMessage): number | undefined {
   return created && completed ? completed - created : undefined;
 }
 
-function emitModelCall(row: MessageRow, message: AssistantMessage): void {
+function emitModelCall(
+  row: MessageRow,
+  message: AssistantMessage,
+  billing: Billing
+): void {
   const tokens = message.tokens ?? {};
   appendEvent(
     "model_call",
     {
+      ...billing,
       model: message.modelID,
       provider: message.providerID,
       inputTokens: tokens.input,
@@ -99,12 +106,13 @@ export function collectOpencode(dbPath: string, now: Date = new Date()): number 
       id: String(cursor.id ?? ""),
     }
   );
+  const billingOf = opencodeBilling(resolve(dirname(dbPath), "auth.json"));
   let emitted = 0;
   for (const row of rows) {
     const message = assistantMessageOf(row);
     if (message && stillStreaming(message, row, now)) break;
     if (message) {
-      emitModelCall(row, message);
+      emitModelCall(row, message, billingOf(message.providerID));
       emitted++;
     }
     cursor.order = row.time_created;

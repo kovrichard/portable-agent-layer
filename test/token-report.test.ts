@@ -31,16 +31,18 @@ const tokens = (input: number, output: number, cw5m = 0, cw1h = 0, cr = 0) => ({
   cacheRead: cr,
 });
 
+const TS = "2026-09-06T12:00:00.000Z";
+
 function bucketOf(model: string, scale: number): Bucket {
   const bucket = emptyBucket();
-  addToBucket(bucket, model, tokens(scale, scale * 2, scale, scale, scale));
+  addToBucket(bucket, model, tokens(scale, scale * 2, scale, scale, scale), TS);
   return bucket;
 }
 
 function timeBucketsOf(model: string, scale: number): TimeBuckets {
   const buckets = emptyTimeBuckets();
   for (const window of [buckets.today, buckets.week, buckets.month, buckets.total]) {
-    addToBucket(window, model, tokens(scale, scale * 2));
+    addToBucket(window, model, tokens(scale, scale * 2), TS);
   }
   return buckets;
 }
@@ -141,7 +143,7 @@ describe("fmtCost", () => {
 describe("rowLine", () => {
   test("carries the label, the token total, the calls and the cost", () => {
     const bucket = emptyBucket();
-    addToBucket(bucket, "claude-opus-5", tokens(1_000, 2_000, 3_000, 4_000, 5_000));
+    addToBucket(bucket, "claude-opus-5", tokens(1_000, 2_000, 3_000, 4_000, 5_000), TS);
     const line = rowLine("Today", bucket);
     expect(line).toContain("Today");
     expect(line).toContain("15.0k tok");
@@ -157,7 +159,7 @@ describe("rowLine", () => {
 describe("detailedLine", () => {
   test("breaks the tokens out into all five fields", () => {
     const bucket = emptyBucket();
-    addToBucket(bucket, "claude-opus-5", tokens(1, 2, 3, 4, 5));
+    addToBucket(bucket, "claude-opus-5", tokens(1, 2, 3, 4, 5), TS);
     const line = detailedLine("opus-5", bucket);
     expect(line).toContain("1 in");
     expect(line).toContain("2 out");

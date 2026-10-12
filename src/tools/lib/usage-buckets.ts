@@ -90,8 +90,13 @@ function addCall(bucket: Bucket, tokens: Tokens, cost: number | null, calls = 1)
   if (cost === null) bucket.unpriced += calls;
 }
 
-export function addToBucket(bucket: Bucket, model: string, tokens: Tokens): void {
-  addCall(bucket, tokens, costOfUsage(model, tokens));
+export function addToBucket(
+  bucket: Bucket,
+  model: string,
+  tokens: Tokens,
+  ts: string
+): void {
+  addCall(bucket, tokens, costOfUsage(model, tokens, ts));
 }
 
 /**
@@ -117,7 +122,7 @@ export function addToTimeBuckets(
   tokens: Tokens,
   horizons: Horizons
 ): void {
-  addToWindows(buckets, ts, horizons, (bucket) => addToBucket(bucket, model, tokens));
+  addToWindows(buckets, ts, horizons, (bucket) => addToBucket(bucket, model, tokens, ts));
 }
 
 export function totalTokens(bucket: Bucket): number {
@@ -290,7 +295,7 @@ export function readClaudeCode(
       model: call.model,
       tokens: call.tokens,
       project: call.project,
-      cost: costOfUsage(call.model, call.tokens),
+      cost: costOfUsage(call.model, call.tokens, call.ts),
     });
   }
   return tally.usage;
@@ -357,7 +362,7 @@ export function readPalInference(
     );
 
     result.byCaller[entry.caller] ??= emptyBucket();
-    addToBucket(result.byCaller[entry.caller], entry.model, tokens);
+    addToBucket(result.byCaller[entry.caller], entry.model, tokens, entry.ts);
   }
 
   return result;

@@ -107,7 +107,15 @@ export interface TokenUsage {
   cacheRead: number;
 }
 
-/** Pricing per million tokens (USD) — from https://platform.claude.com/docs/en/about-claude/pricing */
+interface SupersededRates {
+  until: string;
+  rates: ModelPricing;
+}
+
+/** A model's earlier rates, oldest first; a price change moves today's row here. */
+export const PRICE_HISTORY: Record<string, SupersededRates[]> = {};
+
+/** Pricing per million tokens (USD) in force today — from https://platform.claude.com/docs/en/about-claude/pricing */
 export const MODEL_PRICING: Record<string, ModelPricing> = {
   [HAIKU_MODEL]: {
     input: 1,
@@ -124,12 +132,26 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
     cacheWrite1h: 0.2,
     cacheRead: 0.01,
   },
+  "claude-fable-5-1": {
+    input: 10,
+    output: 50,
+    cacheWrite5m: 12.5,
+    cacheWrite1h: 20,
+    cacheRead: 0.25,
+  },
   [FABLE_MODEL]: {
     input: 10,
     output: 50,
     cacheWrite5m: 12.5,
     cacheWrite1h: 20,
     cacheRead: 1,
+  },
+  "claude-opus-5-5": {
+    input: 4,
+    output: 20,
+    cacheWrite5m: 5,
+    cacheWrite1h: 8,
+    cacheRead: 0.2,
   },
   "claude-opus-5": {
     input: 5,
@@ -166,7 +188,13 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
     cacheWrite1h: 10,
     cacheRead: 0.5,
   },
-  // Claude Sonnet 5 — introductory pricing through 2026-08-31; standard (3/15/3.75/6/0.30) applies from 2026-09-01.
+  "claude-sonnet-5-5": {
+    input: 2,
+    output: 10,
+    cacheWrite5m: 2.5,
+    cacheWrite1h: 4,
+    cacheRead: 0.1,
+  },
   "claude-sonnet-5": {
     input: 2,
     output: 10,
@@ -203,16 +231,20 @@ function longestPrefixKey(model: string): string | null {
  * (`claude-opus-5-20260115`) and context-tagged (`claude-opus-5[1m]`) — so an
  * exact miss falls back to the longest table key the ID starts with.
  */
-export function pricingFor(model: string): ModelPricing | null {
-  const exact = MODEL_PRICING[model];
-  if (exact) return exact;
-  const prefix = longestPrefixKey(model);
-  return prefix ? MODEL_PRICING[prefix] : null;
+export function pricingFor(model: string, at?: string): ModelPricing | null {
+  const key = MODEL_PRICING[model] ? model : longestPrefixKey(model);
+  return key ? ratesInForce(key, at) : null;
 }
 
-/** USD cost of a token usage record. Unpriced models bill as 0. */
-export function costOfUsage(model: string, usage: TokenUsage): number {
-  const p = pricingFor(model);
+function ratesInForce(key: string, at: string | undefined): ModelPricing {
+  const when = Date.parse(at ?? "");
+  const superseded = PRICE_HISTORY[key]?.find((s) => when < Date.parse(s.until));
+  return superseded?.rates ?? MODEL_PRICING[key];
+}
+
+/** USD cost of a token usage record at the rates in force at `at`. Unpriced models bill as 0. */
+export function costOfUsage(model: string, usage: TokenUsage, at?: string): number {
+  const p = pricingFor(model, at);
   if (!p) return 0;
   return (
     (usage.input * p.input +

@@ -1,6 +1,7 @@
-import { describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { PRICE_HISTORY } from "../src/hooks/lib/models";
 import {
   addToBucket,
   addToTimeBuckets,
@@ -16,6 +17,10 @@ import {
 import { freshTestDir } from "./lib/test-home";
 
 const NOW = new Date("2026-09-06T12:00:00.000Z");
+
+beforeEach(() => {
+  delete PRICE_HISTORY["claude-opus-5"];
+});
 const HORIZONS = horizonsFrom(NOW);
 
 function tempHome(): string {
@@ -82,8 +87,8 @@ describe("horizonsFrom", () => {
 describe("addToBucket", () => {
   test("accumulates every token field and counts the call", () => {
     const bucket = emptyBucket();
-    addToBucket(bucket, "claude-opus-5", tokens(10, 20, 30, 40, 50));
-    addToBucket(bucket, "claude-opus-5", tokens(1, 2, 3, 4, 5));
+    addToBucket(bucket, "claude-opus-5", tokens(10, 20, 30, 40, 50), NOW.toISOString());
+    addToBucket(bucket, "claude-opus-5", tokens(1, 2, 3, 4, 5), NOW.toISOString());
     expect(bucket.input).toBe(11);
     expect(bucket.output).toBe(22);
     expect(bucket.cacheWrite5m).toBe(33);
@@ -94,15 +99,16 @@ describe("addToBucket", () => {
 
   test("prices what it accumulates", () => {
     const bucket = emptyBucket();
-    addToBucket(bucket, "claude-opus-5", tokens(1_000_000, 1_000_000));
+    addToBucket(bucket, "claude-opus-5", tokens(1_000_000, 1_000_000), NOW.toISOString());
     expect(bucket.cost).toBeGreaterThan(0);
   });
 
   test("prices per model, so a cheap model costs less than an expensive one", () => {
     const opus = emptyBucket();
     const haiku = emptyBucket();
-    addToBucket(opus, "claude-opus-5", tokens(1_000_000, 1_000_000));
-    addToBucket(haiku, "claude-haiku-4-5-20251001", tokens(1_000_000, 1_000_000));
+    const ts = NOW.toISOString();
+    addToBucket(opus, "claude-opus-5", tokens(1_000_000, 1_000_000), ts);
+    addToBucket(haiku, "claude-haiku-4-5-20251001", tokens(1_000_000, 1_000_000), ts);
     expect(haiku.cost).toBeLessThan(opus.cost);
   });
 });
@@ -163,7 +169,7 @@ describe("addToTimeBuckets", () => {
 describe("totalTokens", () => {
   test("sums all five token fields", () => {
     const bucket = emptyBucket();
-    addToBucket(bucket, "m", tokens(1, 2, 4, 8, 16));
+    addToBucket(bucket, "m", tokens(1, 2, 4, 8, 16), NOW.toISOString());
     expect(totalTokens(bucket)).toBe(31);
   });
 });
@@ -470,6 +476,49 @@ describe("readClaudeCode", () => {
   });
 });
 
+describe("a price change reaches every reader", () => {
+  const OPUS_5_LAUNCH = {
+    input: 6,
+    output: 30,
+    cacheWrite5m: 7.5,
+    cacheWrite1h: 12,
+    cacheRead: 0.6,
+  };
+  const BEFORE = "2026-08-20T08:00:00.000Z";
+
+  beforeEach(() => {
+    PRICE_HISTORY["claude-opus-5"] = [{ until: "2026-09-01", rates: OPUS_5_LAUNCH }];
+  });
+
+  test("a transcript call is priced at the rate on its own date", () => {
+    const dir = tempHome();
+    const proj = join(dir, "-p-real");
+    mkdirSync(proj, { recursive: true });
+    writeFileSync(
+      join(proj, "s.jsonl"),
+      assistantLine(BEFORE, "claude-opus-5", { input_tokens: 1_000_000 })
+    );
+    expect(readClaudeCode(dir, undefined, NOW).buckets.total.cost).toBeCloseTo(6, 10);
+  });
+
+  test("a PAL inference call is too, in its windows and under its caller", () => {
+    const filepath = join(tempHome(), "token-usage.jsonl");
+    writeFileSync(
+      filepath,
+      JSON.stringify({
+        ts: BEFORE,
+        caller: "c",
+        model: "claude-opus-5",
+        inputTokens: 1_000_000,
+        outputTokens: 0,
+      })
+    );
+    const result = readPalInference(filepath, NOW);
+    expect(result.buckets.total.cost).toBeCloseTo(6, 10);
+    expect(result.byCaller.c.cost).toBeCloseTo(6, 10);
+  });
+});
+
 describe("readPalInference", () => {
   function writeLog(lines: string[]): string {
     const dir = tempHome();
@@ -549,8 +598,8 @@ describe("grandTotal", () => {
   test("sums every field across the buckets it is given", () => {
     const a = emptyBucket();
     const b = emptyBucket();
-    addToBucket(a, "claude-opus-5", tokens(1, 2, 3, 4, 5));
-    addToBucket(b, "claude-opus-5", tokens(10, 20, 30, 40, 50));
+    addToBucket(a, "claude-opus-5", tokens(1, 2, 3, 4, 5), NOW.toISOString());
+    addToBucket(b, "claude-opus-5", tokens(10, 20, 30, 40, 50), NOW.toISOString());
 
     const grand = grandTotal([a, b]);
     expect(grand.input).toBe(11);
@@ -568,7 +617,7 @@ describe("grandTotal", () => {
 
   test("does not mutate the buckets it sums", () => {
     const a = emptyBucket();
-    addToBucket(a, "claude-opus-5", tokens(1, 1));
+    addToBucket(a, "claude-opus-5", tokens(1, 1), NOW.toISOString());
     grandTotal([a, a]);
     expect(a.calls).toBe(1);
   });
