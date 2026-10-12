@@ -168,6 +168,7 @@ describe("collecting every source", () => {
         opencode: "failed",
         codex: 0,
         copilot: 0,
+        antigravity: 0,
       });
     } finally {
       for (const env of overrides) delete process.env[env];

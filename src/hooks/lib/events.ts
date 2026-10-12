@@ -97,6 +97,7 @@ export const EVENT_FIELDS = {
     "initiator",
     "host",
   ],
+  conversation: ["steps", "status", "depth", "subagent", "killed"],
   permission_prompt: ["tool"],
   notification: ["kind"],
   tool_call: [

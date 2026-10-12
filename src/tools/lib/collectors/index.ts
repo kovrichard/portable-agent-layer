@@ -8,6 +8,7 @@ import { logError } from "../../../hooks/lib/log";
 import { platform } from "../../../hooks/lib/paths";
 import { eventLogEnabled } from "../../../hooks/lib/settings";
 import { opencodeDatabase } from "../agent-usage";
+import { antigravityDatabase, collectAntigravity } from "./antigravity";
 import { collectClaude } from "./claude";
 import { collectCodex } from "./codex";
 import { collectCopilot, copilotDatabase } from "./copilot";
@@ -18,6 +19,8 @@ const COLLECTORS: Record<string, () => number> = {
   opencode: () => collectOpencode(opencodeDatabase()),
   codex: () => collectCodex(platform.codexDir()),
   copilot: () => collectCopilot(copilotDatabase(platform.copilotDir())),
+  antigravity: () =>
+    collectAntigravity(antigravityDatabase(platform.antigravityCliDir())),
 };
 
 export function collectEvents(): Record<string, number | "failed"> {
