@@ -1,7 +1,14 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { resolve } from "node:path";
-import { recordAction, recordBlocked } from "../src/hooks/lib/ledger";
+import { ledgerPath, recordAction, recordBlocked } from "../src/hooks/lib/ledger";
 import { writeProject } from "../src/hooks/lib/projects";
 import { reload } from "../src/hooks/lib/settings";
 import { backfillEvents } from "../src/tools/lib/backfill";
@@ -121,5 +128,21 @@ describe("ledger entries from before streaming are backfilled", () => {
     expect(actions()).toEqual([
       expect.objectContaining({ id: `ledger:${entry.id}`, linesAdded: 2 }),
     ]);
+  });
+
+  test("the rows the test suite leaked before it was sandboxed are left out", () => {
+    const leaked = { ...beforeStreaming(anEdit), id: "leaked", command: "rm -rf /" };
+    appendFileSync(
+      ledgerPath(),
+      `${JSON.stringify({ ...leaked, ts: "2026-09-06T09:13:07.065Z" })}\n`
+    );
+    appendFileSync(
+      ledgerPath(),
+      `${JSON.stringify({ ...leaked, id: "real", ts: "2026-09-24T09:00:00.000Z" })}\n`
+    );
+
+    backfillEvents();
+    expect(actions().map((e) => e.id)).not.toContain("ledger:leaked");
+    expect(actions().map((e) => e.id)).toContain("ledger:real");
   });
 });
