@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
 const REPO = resolve(import.meta.dir, "..");
@@ -14,21 +15,25 @@ describe("package publish surface", () => {
     expect(pkg.scripts.prepare).toBe("bun .husky/install.mjs");
   });
 
-  test("prepare script exits 0 when .git is absent (package mode)", () => {
-    const sandbox = freshTestDir(import.meta.file);
-    try {
-      const script = resolve(REPO, ".husky/install.mjs");
-      const result = spawnSync("bun", [script], {
-        cwd: sandbox,
-        encoding: "utf-8",
-        env: { ...process.env, CI: "", NODE_ENV: "" },
-      });
-      expect(result.status).toBe(0);
-      expect(result.stderr).toBe("");
-    } finally {
-      removeOnceReleased(sandbox);
-    }
-  });
+  test(
+    "prepare script exits 0 when .git is absent (package mode)",
+    () => {
+      const sandbox = freshTestDir(import.meta.file);
+      try {
+        const script = resolve(REPO, ".husky/install.mjs");
+        const result = spawnSync("bun", [script], {
+          cwd: sandbox,
+          encoding: "utf-8",
+          env: { ...process.env, CI: "", NODE_ENV: "" },
+        });
+        expect(result.status).toBe(0);
+        expect(result.stderr).toBe("");
+      } finally {
+        removeOnceReleased(sandbox);
+      }
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
   test("packed tarball contains .husky/install.mjs", () => {
     const sandbox = freshTestDir(import.meta.file);

@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
 const LOAD_CONTEXT = resolve(import.meta.dir, "../src/hooks/LoadContext.ts");
@@ -42,7 +43,7 @@ beforeAll(() => {
   mkdirSync(copilotDir, { recursive: true });
   writeFileSync(resolve(telos, "GOALS.md"), "# Goals\n\n- ship PAL\n", "utf-8");
   result = runLoadContext();
-});
+}, SPAWN_HEAVY_TEST_MS);
 
 describe("LoadContext on Copilot", () => {
   test("exits 0 so a fail-open runtime does not log a hook failure", () => {

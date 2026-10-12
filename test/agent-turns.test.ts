@@ -18,6 +18,7 @@ import { reload } from "../src/hooks/lib/settings";
 import { finishDeferredStop, stopTurn } from "../src/hooks/lib/stop";
 import { sandboxContextRuleDirs } from "./lib/context-rule-dirs";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { testHome } from "./lib/test-home";
 
 // stopTurn can spawn detached children that keep writing into PAL_HOME after the
@@ -115,16 +116,20 @@ function hintEarningTurns(session: string): void {
 }
 
 describe("cursor's prompt hook, which documents no context field", () => {
-  test("logs the turn and still offers the context as additional_context", async () => {
-    const out = await promptHookOutput("cursor", {
-      conversation_id: "cu1",
-      hook_event_name: "beforeSubmitPrompt",
-      prompt: "rename the column",
-    } as PromptPayload);
+  test(
+    "logs the turn and still offers the context as additional_context",
+    async () => {
+      const out = await promptHookOutput("cursor", {
+        conversation_id: "cu1",
+        hook_event_name: "beforeSubmitPrompt",
+        prompt: "rename the column",
+      } as PromptPayload);
 
-    expect(JSON.parse(out).additional_context).toContain("Now: ");
-    expect(loggedTurns().at(-1)?.session).toBe("cu1");
-  });
+      expect(JSON.parse(out).additional_context).toContain("Now: ");
+      expect(loggedTurns().at(-1)?.session).toBe("cu1");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });
 
 describe("cursor is not known to hear per-turn context", () => {
@@ -156,35 +161,51 @@ describe("copilot, whose prompt hook output is dropped", () => {
     return JSON.parse(out ?? "{}").modifiedTransformedPrompt;
   }
 
-  test("logs the turn and writes nothing on userPromptSubmitted", async () => {
-    const out = await promptHookOutput("copilot", prompt);
+  test(
+    "logs the turn and writes nothing on userPromptSubmitted",
+    async () => {
+      const out = await promptHookOutput("copilot", prompt);
 
-    expect(out).toBe("");
-    expect(loggedTurns().at(-1)?.session).toBe("cp1");
-  });
+      expect(out).toBe("");
+      expect(loggedTurns().at(-1)?.session).toBe("cp1");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("appends the context to the model-facing prompt on userPromptTransformed", async () => {
-    await promptHookOutput("copilot", prompt);
-    const facing = modelFacing(transformedPromptResponse(transformed()));
+  test(
+    "appends the context to the model-facing prompt on userPromptTransformed",
+    async () => {
+      await promptHookOutput("copilot", prompt);
+      const facing = modelFacing(transformedPromptResponse(transformed()));
 
-    expect(facing.startsWith("<context>repo</context>\nrename the column\n\n")).toBe(
-      true
-    );
-    expect(facing).toContain("Now: ");
-  });
+      expect(facing.startsWith("<context>repo</context>\nrename the column\n\n")).toBe(
+        true
+      );
+      expect(facing).toContain("Now: ");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("hands the context over once", async () => {
-    await promptHookOutput("copilot", prompt);
-    transformedPromptResponse(transformed());
+  test(
+    "hands the context over once",
+    async () => {
+      await promptHookOutput("copilot", prompt);
+      transformedPromptResponse(transformed());
 
-    expect(transformedPromptResponse(transformed())).toBeNull();
-  });
+      expect(transformedPromptResponse(transformed())).toBeNull();
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("never hands one session's context to another", async () => {
-    await promptHookOutput("copilot", prompt);
+  test(
+    "never hands one session's context to another",
+    async () => {
+      await promptHookOutput("copilot", prompt);
 
-    expect(transformedPromptResponse(transformed({ sessionId: "cp2" }))).toBeNull();
-  });
+      expect(transformedPromptResponse(transformed({ sessionId: "cp2" }))).toBeNull();
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
   test("drops context parked too long ago to belong to this prompt", async () => {
     parkPromptContext("cp1", "stale", new Date(Date.now() - 10 * 60_000));
@@ -192,11 +213,17 @@ describe("copilot, whose prompt hook output is dropped", () => {
     expect(transformedPromptResponse(transformed())).toBeNull();
   });
 
-  test("leaves the prompt alone without a model-facing prompt to extend", async () => {
-    await promptHookOutput("copilot", prompt);
+  test(
+    "leaves the prompt alone without a model-facing prompt to extend",
+    async () => {
+      await promptHookOutput("copilot", prompt);
 
-    expect(transformedPromptResponse(transformed({ transformedPrompt: "" }))).toBeNull();
-  });
+      expect(
+        transformedPromptResponse(transformed({ transformedPrompt: "" }))
+      ).toBeNull();
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
   test("logs a hint as sent, since it now reaches the model", async () => {
     await asAgent("copilot", () => hintEarningTurns("cp1"));
@@ -214,22 +241,26 @@ describe("copilot, whose prompt hook output is dropped", () => {
     );
   });
 
-  test("the installed hook prints the extended prompt", async () => {
-    await promptHookOutput("copilot", prompt);
-    const result = spawnSync(
-      "bun",
-      ["run", resolve(REPO, "src", "hooks", "PromptTransformed.ts"), "--agent=copilot"],
-      {
-        env: { ...process.env, PAL_HOME: HOME },
-        input: JSON.stringify(transformed()),
-        encoding: "utf-8",
-        timeout: 10000,
-      }
-    );
+  test(
+    "the installed hook prints the extended prompt",
+    async () => {
+      await promptHookOutput("copilot", prompt);
+      const result = spawnSync(
+        "bun",
+        ["run", resolve(REPO, "src", "hooks", "PromptTransformed.ts"), "--agent=copilot"],
+        {
+          env: { ...process.env, PAL_HOME: HOME },
+          input: JSON.stringify(transformed()),
+          encoding: "utf-8",
+          timeout: 10000,
+        }
+      );
 
-    expect(result.status).toBe(0);
-    expect(modelFacing(result.stdout)).toContain("Now: ");
-  });
+      expect(result.status).toBe(0);
+      expect(modelFacing(result.stdout)).toContain("Now: ");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });
 
 function hookSpecificContext(out: string): string {
@@ -239,17 +270,21 @@ function hookSpecificContext(out: string): string {
 }
 
 describe("vscode", () => {
-  test("logs the turn and hands the context back as hookSpecificOutput", async () => {
-    const prompt = {
-      session_id: "vs1",
-      hook_event_name: "UserPromptSubmit",
-      prompt: "rename the column",
-    };
-    const out = await promptHookOutput("vscode", prompt);
+  test(
+    "logs the turn and hands the context back as hookSpecificOutput",
+    async () => {
+      const prompt = {
+        session_id: "vs1",
+        hook_event_name: "UserPromptSubmit",
+        prompt: "rename the column",
+      };
+      const out = await promptHookOutput("vscode", prompt);
 
-    expect(hookSpecificContext(out)).toContain("Now: ");
-    expect(loggedTurns().at(-1)?.session).toBe("vs1");
-  });
+      expect(hookSpecificContext(out)).toContain("Now: ");
+      expect(loggedTurns().at(-1)?.session).toBe("vs1");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });
 
 describe("cursor", () => {
@@ -272,29 +307,37 @@ describe("cursor", () => {
     expect(replyFiledFor("cu1")).toMatchObject({ words: 5 });
   });
 
-  test("the installed hook files the reply it is handed", () => {
-    observeTurn("rename the column", "cu2");
-    const result = spawnSync("bun", ["run", AGENT_RESPONSE_HOOK, "--agent=cursor"], {
-      env: { ...process.env, PAL_HOME: HOME },
-      input: JSON.stringify({ conversation_id: "cu2", text: "Renamed it." }),
-      encoding: "utf-8",
-      timeout: 10000,
-    });
+  test(
+    "the installed hook files the reply it is handed",
+    () => {
+      observeTurn("rename the column", "cu2");
+      const result = spawnSync("bun", ["run", AGENT_RESPONSE_HOOK, "--agent=cursor"], {
+        env: { ...process.env, PAL_HOME: HOME },
+        input: JSON.stringify({ conversation_id: "cu2", text: "Renamed it." }),
+        encoding: "utf-8",
+        timeout: 10000,
+      });
 
-    expect(result.status).toBe(0);
-    expect(replyFiledFor("cu2")).toMatchObject({ words: 2 });
-  });
+      expect(result.status).toBe(0);
+      expect(replyFiledFor("cu2")).toMatchObject({ words: 2 });
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });
 
 describe("codex", () => {
   const prompt = { session_id: "thr_1", turn_id: "t1", prompt: "rename the column" };
 
-  test("logs the turn and hands the context back as hookSpecificOutput", async () => {
-    const out = await promptHookOutput("codex", prompt);
+  test(
+    "logs the turn and hands the context back as hookSpecificOutput",
+    async () => {
+      const out = await promptHookOutput("codex", prompt);
 
-    expect(hookSpecificContext(out)).toContain("Now: ");
-    expect(loggedTurns().at(-1)?.session).toBe("thr_1");
-  });
+      expect(hookSpecificContext(out)).toContain("Now: ");
+      expect(loggedTurns().at(-1)?.session).toBe("thr_1");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
   test("files the reply it hands over even when its transcript is unreadable", async () => {
     observeTurn(prompt.prompt, hookSessionId(prompt));
@@ -334,32 +377,40 @@ describe("codex", () => {
 });
 
 describe("claude", () => {
-  test("logs the turn and hands the context back as plain text", async () => {
-    const out = await promptHookOutput("claude", {
-      session_id: "c1",
-      prompt: "rename the column",
-    });
+  test(
+    "logs the turn and hands the context back as plain text",
+    async () => {
+      const out = await promptHookOutput("claude", {
+        session_id: "c1",
+        prompt: "rename the column",
+      });
 
-    expect(out).toContain("Now: ");
-    expect(out.trimStart().startsWith("{")).toBe(false);
-    expect(loggedTurns().at(-1)?.session).toBe("c1");
-  });
+      expect(out).toContain("Now: ");
+      expect(out.trimStart().startsWith("{")).toBe(false);
+      expect(loggedTurns().at(-1)?.session).toBe("c1");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("files the reply from its transcript", async () => {
-    observeTurn("rename the column", "c1");
-    await stopTurn({
-      session_id: "c1",
-      transcript_path: transcriptFile("claude.jsonl", [
-        { type: "user", message: { content: "rename the column" } },
-        {
-          type: "assistant",
-          message: { content: [{ type: "text", text: "Renamed it in both tables." }] },
-        },
-      ]),
-    });
+  test(
+    "files the reply from its transcript",
+    async () => {
+      observeTurn("rename the column", "c1");
+      await stopTurn({
+        session_id: "c1",
+        transcript_path: transcriptFile("claude.jsonl", [
+          { type: "user", message: { content: "rename the column" } },
+          {
+            type: "assistant",
+            message: { content: [{ type: "text", text: "Renamed it in both tables." }] },
+          },
+        ]),
+      });
 
-    expect(replyFiledFor("c1")).toMatchObject({ words: 5 });
-  });
+      expect(replyFiledFor("c1")).toMatchObject({ words: 5 });
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });
 
 const EVENT_LOG = [
@@ -373,55 +424,74 @@ describe("copilot", () => {
     { type: "assistant.message", data: { content: "Hello." } },
   ];
 
-  test("files the reply from the transcript agentStop points at", async () => {
-    observeTurn("rename the column", "cp1");
-    const stop = {
-      sessionId: "cp1",
-      stopReason: "end_turn",
-      transcriptPath: transcriptFile("copilot.jsonl", EVENT_LOG),
-    };
-    await stopTurn(stop);
+  test(
+    "files the reply from the transcript agentStop points at",
+    async () => {
+      observeTurn("rename the column", "cp1");
+      const stop = {
+        sessionId: "cp1",
+        stopReason: "end_turn",
+        transcriptPath: transcriptFile("copilot.jsonl", EVENT_LOG),
+      };
+      await stopTurn(stop);
 
-    expect(replyFiledFor("cp1")).toMatchObject({ words: 5 });
-  });
+      expect(replyFiledFor("cp1")).toMatchObject({ words: 5 });
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("files the reply it writes to the transcript only after agentStop returns", async () => {
-    observeTurn("rename the column", "cp1");
-    const transcriptPath = transcriptFile("copilot.jsonl", EVENT_LOG.slice(0, 1));
-    await stopTurn({ sessionId: "cp1", transcriptPath });
-    transcriptFile("copilot.jsonl", EVENT_LOG);
+  test(
+    "files the reply it writes to the transcript only after agentStop returns",
+    async () => {
+      observeTurn("rename the column", "cp1");
+      const transcriptPath = transcriptFile("copilot.jsonl", EVENT_LOG.slice(0, 1));
+      await stopTurn({ sessionId: "cp1", transcriptPath });
+      transcriptFile("copilot.jsonl", EVENT_LOG);
 
-    expect(await filedReply("cp1")).toMatchObject({ words: 5 });
-  });
+      expect(await filedReply("cp1")).toMatchObject({ words: 5 });
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("never files the previous turn's reply for a resumed turn", async () => {
-    observeTurn("rename the column", "cp1");
-    const transcriptPath = transcriptFile("copilot.jsonl", [
-      ...earlier,
-      ...EVENT_LOG.slice(0, 1),
-    ]);
-    await stopTurn({ sessionId: "cp1", transcriptPath });
-    transcriptFile("copilot.jsonl", [...earlier, ...EVENT_LOG]);
+  test(
+    "never files the previous turn's reply for a resumed turn",
+    async () => {
+      observeTurn("rename the column", "cp1");
+      const transcriptPath = transcriptFile("copilot.jsonl", [
+        ...earlier,
+        ...EVENT_LOG.slice(0, 1),
+      ]);
+      await stopTurn({ sessionId: "cp1", transcriptPath });
+      transcriptFile("copilot.jsonl", [...earlier, ...EVENT_LOG]);
 
-    expect(await filedReply("cp1")).toMatchObject({ words: 5 });
-  });
+      expect(await filedReply("cp1")).toMatchObject({ words: 5 });
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("a deferred stop waits for the reply and files it, not the one before", async () => {
-    observeTurn("rename the column", "cp1");
-    const transcriptPath = transcriptFile("copilot.jsonl", [
-      ...earlier,
-      ...EVENT_LOG.slice(0, 1),
-    ]);
-    const payloadPath = resolve(HOME, "stop.json");
-    writeFileSync(payloadPath, JSON.stringify({ sessionId: "cp1", transcriptPath }));
-    const finished = finishDeferredStop(payloadPath, { timeoutMs: 2000, intervalMs: 10 });
-    await Bun.sleep(50);
-    transcriptFile("copilot.jsonl", [...earlier, ...EVENT_LOG]);
-    await finished;
+  test(
+    "a deferred stop waits for the reply and files it, not the one before",
+    async () => {
+      observeTurn("rename the column", "cp1");
+      const transcriptPath = transcriptFile("copilot.jsonl", [
+        ...earlier,
+        ...EVENT_LOG.slice(0, 1),
+      ]);
+      const payloadPath = resolve(HOME, "stop.json");
+      writeFileSync(payloadPath, JSON.stringify({ sessionId: "cp1", transcriptPath }));
+      const finished = finishDeferredStop(payloadPath, {
+        timeoutMs: 2000,
+        intervalMs: 10,
+      });
+      await Bun.sleep(50);
+      transcriptFile("copilot.jsonl", [...earlier, ...EVENT_LOG]);
+      await finished;
 
-    expect(trackedReply("cp1")).toMatchObject({ words: 5 });
-    expect(existsSync(payloadPath)).toBe(false);
-  });
+      expect(trackedReply("cp1")).toMatchObject({ words: 5 });
+      expect(existsSync(payloadPath)).toBe(false);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
   test("files nothing when the reply never lands", async () => {
     observeTurn("rename the column", "cp1");
@@ -444,17 +514,21 @@ describe("copilot", () => {
 });
 
 describe("vscode", () => {
-  test("files the reply from the transcript Stop points at", async () => {
-    observeTurn("rename the column", "vs1");
-    const stop = {
-      session_id: "vs1",
-      stop_hook_active: false,
-      transcript_path: transcriptFile("vscode.jsonl", EVENT_LOG),
-    };
-    await stopTurn(stop);
+  test(
+    "files the reply from the transcript Stop points at",
+    async () => {
+      observeTurn("rename the column", "vs1");
+      const stop = {
+        session_id: "vs1",
+        stop_hook_active: false,
+        transcript_path: transcriptFile("vscode.jsonl", EVENT_LOG),
+      };
+      await stopTurn(stop);
 
-    expect(replyFiledFor("vs1")).toMatchObject({ words: 5 });
-  });
+      expect(replyFiledFor("vs1")).toMatchObject({ words: 5 });
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });
 
 describe("opencode", () => {
@@ -486,27 +560,35 @@ describe("opencode", () => {
     return hooks;
   }
 
-  test("logs the turn and adds the context as a synthetic part", async () => {
-    const hooks = await plugin();
-    const output = { parts: [{ type: "text", text: "rename the column" }] };
-    await asAgent("opencode", () =>
-      hooks["chat.message"]({ sessionID: "oc1", messageID: "m1" }, output)
-    );
+  test(
+    "logs the turn and adds the context as a synthetic part",
+    async () => {
+      const hooks = await plugin();
+      const output = { parts: [{ type: "text", text: "rename the column" }] };
+      await asAgent("opencode", () =>
+        hooks["chat.message"]({ sessionID: "oc1", messageID: "m1" }, output)
+      );
 
-    expect(output.parts[0]).toMatchObject({ synthetic: true, sessionID: "oc1" });
-    expect(String((output.parts[0] as { text: string }).text)).toContain("Now: ");
-    expect(loggedTurns().at(-1)?.session).toBe("oc1");
-  });
+      expect(output.parts[0]).toMatchObject({ synthetic: true, sessionID: "oc1" });
+      expect(String((output.parts[0] as { text: string }).text)).toContain("Now: ");
+      expect(loggedTurns().at(-1)?.session).toBe("oc1");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("files the reply when the session goes idle", async () => {
-    const hooks = await plugin();
-    observeTurn("rename the column", "oc1");
-    await asAgent("opencode", () =>
-      hooks.event({ event: { type: "session.idle", properties: { sessionID: "oc1" } } })
-    );
+  test(
+    "files the reply when the session goes idle",
+    async () => {
+      const hooks = await plugin();
+      observeTurn("rename the column", "oc1");
+      await asAgent("opencode", () =>
+        hooks.event({ event: { type: "session.idle", properties: { sessionID: "oc1" } } })
+      );
 
-    expect(replyFiledFor("oc1")).toMatchObject({ words: 5 });
-  });
+      expect(replyFiledFor("oc1")).toMatchObject({ words: 5 });
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
   test("a file diff mid-turn does not end the turn", async () => {
     const hooks = await plugin();
@@ -517,14 +599,18 @@ describe("opencode", () => {
     expect(transcriptFetches).toBe(0);
   });
 
-  test("an idle session ends the turn once", async () => {
-    const hooks = await plugin();
-    await asAgent("opencode", () =>
-      hooks.event({ event: { type: "session.idle", properties: { sessionID: "oc1" } } })
-    );
+  test(
+    "an idle session ends the turn once",
+    async () => {
+      const hooks = await plugin();
+      await asAgent("opencode", () =>
+        hooks.event({ event: { type: "session.idle", properties: { sessionID: "oc1" } } })
+      );
 
-    expect(transcriptFetches).toBe(1);
-  });
+      expect(transcriptFetches).toBe(1);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
   function debugLog(): string {
     const path = resolve(HOME, "debug", "debug.log");

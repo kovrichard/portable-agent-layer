@@ -41,28 +41,40 @@ beforeAll(() => {
 }, 30000);
 
 describe("pal help", () => {
-  test("shows help text", () => {
-    const result = pal("help");
-    expect(result.status).toBe(0);
-    expect(result.stdout).toContain("pal cli <command>");
-    expect(result.stdout).toMatch(/^ {2}init\s/m);
-  });
+  test(
+    "shows help text",
+    () => {
+      const result = pal("help");
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain("pal cli <command>");
+      expect(result.stdout).toMatch(/^ {2}init\s/m);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("--help flag works", () => {
-    const result = pal("--help");
-    expect(result.status).toBe(0);
-    expect(result.stdout).toContain("pal cli <command>");
-  });
+  test(
+    "--help flag works",
+    () => {
+      const result = pal("--help");
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain("pal cli <command>");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });
 
 describe("pal cli version", () => {
   const expected = `${JSON.parse(readFileSync(resolve(import.meta.dir, "../package.json"), "utf-8")).version}\n`;
 
-  test.each(["version", "-v", "--version"])("%s prints the package version", (flag) => {
-    const result = pal("cli", flag);
-    expect(result.status).toBe(0);
-    expect(result.stdout).toBe(expected);
-  });
+  test.each(["version", "-v", "--version"])(
+    "%s prints the package version",
+    (flag) => {
+      const result = pal("cli", flag);
+      expect(result.status).toBe(0);
+      expect(result.stdout).toBe(expected);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });
 
 describe("pal cli init", () => {
@@ -108,10 +120,14 @@ describe("pal cli export", () => {
 });
 
 describe("pal cli unknown", () => {
-  test("unknown command exits with error", () => {
-    const result = pal("cli", "banana");
-    expect(result.status).toBe(1);
-    expect(result.stderr).toStartWith("error: unknown command 'banana'");
-    expect(result.stderr).toContain("Usage: pal cli <command>");
-  });
+  test(
+    "unknown command exits with error",
+    () => {
+      const result = pal("cli", "banana");
+      expect(result.status).toBe(1);
+      expect(result.stderr).toStartWith("error: unknown command 'banana'");
+      expect(result.stderr).toContain("Usage: pal cli <command>");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });

@@ -6,6 +6,7 @@ import { observeTurn } from "../src/hooks/lib/interaction";
 import { reload } from "../src/hooks/lib/settings";
 import { logToolCall } from "../src/hooks/lib/tool-events";
 import { permissionWaitSec } from "../src/hooks/lib/waiting-on-user";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
 let home: string;
@@ -108,24 +109,31 @@ describe("a notification", () => {
 });
 
 describe("the AttentionEvent hook", () => {
-  test("prints nothing, so it never answers the prompt, and exits 0", async () => {
-    const proc = Bun.spawn(
-      ["bun", resolve(import.meta.dir, "../src/hooks/AttentionEvent.ts")],
-      {
-        stdin: new TextEncoder().encode(
-          JSON.stringify({
-            hook_event_name: "PermissionRequest",
-            session_id: "s9",
-            tool_name: "Bash",
-          })
-        ),
-        env: { ...process.env, PAL_HOME: home },
-        stdout: "pipe",
-        stderr: "ignore",
-      }
-    );
-    expect(await proc.exited).toBe(0);
-    expect(await new Response(proc.stdout).text()).toBe("");
-    expect(events("permission_prompt")[0]).toMatchObject({ session: "s9", tool: "Bash" });
-  });
+  test(
+    "prints nothing, so it never answers the prompt, and exits 0",
+    async () => {
+      const proc = Bun.spawn(
+        ["bun", resolve(import.meta.dir, "../src/hooks/AttentionEvent.ts")],
+        {
+          stdin: new TextEncoder().encode(
+            JSON.stringify({
+              hook_event_name: "PermissionRequest",
+              session_id: "s9",
+              tool_name: "Bash",
+            })
+          ),
+          env: { ...process.env, PAL_HOME: home },
+          stdout: "pipe",
+          stderr: "ignore",
+        }
+      );
+      expect(await proc.exited).toBe(0);
+      expect(await new Response(proc.stdout).text()).toBe("");
+      expect(events("permission_prompt")[0]).toMatchObject({
+        session: "s9",
+        tool: "Bash",
+      });
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });

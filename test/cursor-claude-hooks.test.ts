@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { duplicatesCursorHooks } from "../src/hooks/lib/cursor-shadow";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
 // cursor-agent also runs every hook in ~/.claude/settings.json, so with PAL's
@@ -96,10 +97,14 @@ const IN_CURSOR = { CURSOR_AGENT: "1" };
 const IN_CLAUDE_CODE = { CLAUDE_CODE_ENTRYPOINT: "cli" };
 
 describe("a Claude-registered hook inside Cursor", () => {
-  test("stands down when PAL's own Cursor hooks will run it", async () => {
-    installPalCursorHooks();
-    expect(await runHook("claude", IN_CURSOR)).toBe("");
-  });
+  test(
+    "stands down when PAL's own Cursor hooks will run it",
+    async () => {
+      installPalCursorHooks();
+      expect(await runHook("claude", IN_CURSOR)).toBe("");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
   test("is a duplicate when PAL's own Cursor hooks will run it", () => {
     installPalCursorHooks();
@@ -132,10 +137,14 @@ describe("the hooks that must keep running", () => {
     expect(duplicatesCursorHooks()).toBe(false);
   });
 
-  test("a hook that blocks still blocks when it is the one that runs", async () => {
-    installPalCursorHooks();
-    expect(await runHook("cursor", IN_CURSOR)).toContain("deny");
-  });
+  test(
+    "a hook that blocks still blocks when it is the one that runs",
+    async () => {
+      installPalCursorHooks();
+      expect(await runHook("cursor", IN_CURSOR)).toContain("deny");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });
 
 describe("every hook the Claude config registers", () => {

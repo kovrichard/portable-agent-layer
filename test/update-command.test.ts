@@ -13,6 +13,7 @@ import {
   type UpdateCache,
 } from "../src/hooks/handlers/update-check";
 import { paths } from "../src/hooks/lib/paths";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
 const release = (mode: UpdateCache["mode"], available = true): UpdateCache =>
@@ -154,28 +155,32 @@ describe("pal cli update — repo mode ignores local unpushed commits", () => {
     git(cwd, "commit", "-m", msg);
   };
 
-  test("a clone ahead of origin/main reports no update", () => {
-    git(origin, "init", "--bare", "-b", "main");
-    git(clone, "init", "-b", "main");
-    git(clone, "config", "user.email", "t@t.t");
-    git(clone, "config", "user.name", "t");
-    git(clone, "remote", "add", "origin", origin);
-    commit(clone, "0.61.3", "base");
-    git(clone, "push", "-u", "origin", "main");
+  test(
+    "a clone ahead of origin/main reports no update",
+    () => {
+      git(origin, "init", "--bare", "-b", "main");
+      git(clone, "init", "-b", "main");
+      git(clone, "config", "user.email", "t@t.t");
+      git(clone, "config", "user.name", "t");
+      git(clone, "remote", "add", "origin", origin);
+      commit(clone, "0.61.3", "base");
+      git(clone, "push", "-u", "origin", "main");
 
-    // Diverge locally: unpushed commit, version unchanged — the exact bug shape.
-    // Touch a distinct file so the commit is real (identical package.json alone
-    // would be a no-op commit and create no divergence).
-    writeFileSync(resolve(clone, "work.txt"), "unpushed local change");
-    commit(clone, "0.61.3", "local unpushed work");
+      // Diverge locally: unpushed commit, version unchanged — the exact bug shape.
+      // Touch a distinct file so the commit is real (identical package.json alone
+      // would be a no-op commit and create no divergence).
+      writeFileSync(resolve(clone, "work.txt"), "unpushed local change");
+      commit(clone, "0.61.3", "local unpushed work");
 
-    process.env.PAL_HOME = home;
-    process.env.PAL_PKG = clone;
-    clearUpdateCache();
+      process.env.PAL_HOME = home;
+      process.env.PAL_PKG = clone;
+      clearUpdateCache();
 
-    return checkForUpdate(true).then((result) => {
-      expect(result.mode).toBe("repo");
-      expect(result.available).toBe(false);
-    });
-  });
+      return checkForUpdate(true).then((result) => {
+        expect(result.mode).toBe("repo");
+        expect(result.available).toBe(false);
+      });
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });

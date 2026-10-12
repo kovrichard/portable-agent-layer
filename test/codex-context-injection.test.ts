@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
 const LOAD_CONTEXT = resolve(import.meta.dir, "../src/hooks/LoadContext.ts");
@@ -47,7 +48,7 @@ beforeAll(() => {
     hookSpecificOutput?: { additionalContext?: string };
   };
   additionalContext = parsed.hookSpecificOutput?.additionalContext ?? "";
-});
+}, SPAWN_HEAVY_TEST_MS);
 
 // Codex's AGENTS.md is plain text with no @imports, and no digest file is
 // written for it, so the SessionStart hook is its only route to these.

@@ -6,6 +6,7 @@ import {
   preserveTranscriptsOnce,
 } from "../src/hooks/lib/transcript-preserve";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
 let root: string;
@@ -73,20 +74,24 @@ describe("preserveTranscripts", () => {
 });
 
 describe("PreserveTranscripts entrypoint", () => {
-  test("copies the configured Claude dir into the PAL home's content store", () => {
-    const claudeDir = resolve(root, "claude");
-    const home = resolve(root, "home");
-    mkdirSync(resolve(claudeDir, "projects", "-proj"), { recursive: true });
-    writeFileSync(resolve(claudeDir, "projects", "-proj", "s1.jsonl"), "{}\n");
-    const run = Bun.spawnSync(
-      ["bun", resolve(import.meta.dir, "../src/hooks/PreserveTranscripts.ts")],
-      { env: { ...process.env, PAL_HOME: home, PAL_CLAUDE_DIR: claudeDir } }
-    );
-    expect(run.exitCode).toBe(0);
-    expect(
-      existsSync(resolve(home, "memory", "content", "claude", "-proj", "s1.jsonl.gz"))
-    ).toBe(true);
-  });
+  test(
+    "copies the configured Claude dir into the PAL home's content store",
+    () => {
+      const claudeDir = resolve(root, "claude");
+      const home = resolve(root, "home");
+      mkdirSync(resolve(claudeDir, "projects", "-proj"), { recursive: true });
+      writeFileSync(resolve(claudeDir, "projects", "-proj", "s1.jsonl"), "{}\n");
+      const run = Bun.spawnSync(
+        ["bun", resolve(import.meta.dir, "../src/hooks/PreserveTranscripts.ts")],
+        { env: { ...process.env, PAL_HOME: home, PAL_CLAUDE_DIR: claudeDir } }
+      );
+      expect(run.exitCode).toBe(0);
+      expect(
+        existsSync(resolve(home, "memory", "content", "claude", "-proj", "s1.jsonl.gz"))
+      ).toBe(true);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });
 
 describe("preserveTranscriptsOnce", () => {

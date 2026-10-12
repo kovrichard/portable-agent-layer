@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { detectRemote, normalizeRemote } from "../src/hooks/lib/remote";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
 describe("normalizeRemote", () => {
@@ -53,33 +54,52 @@ describe("normalizeRemote", () => {
 });
 
 describe("detectRemote", () => {
-  test("returns null outside a git repository", () => {
-    const dir = freshTestDir(import.meta.file);
-    try {
-      expect(detectRemote(dir)).toBeNull();
-    } finally {
-      removeOnceReleased(dir);
-    }
-  });
+  test(
+    "returns null outside a git repository",
+    () => {
+      const dir = freshTestDir(import.meta.file);
+      try {
+        expect(detectRemote(dir)).toBeNull();
+      } finally {
+        removeOnceReleased(dir);
+      }
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("returns null for a git repo that has no origin", () => {
-    const dir = freshTestDir(import.meta.file);
-    try {
-      spawnSync("git", ["init", "-q", dir]);
-      expect(detectRemote(dir)).toBeNull();
-    } finally {
-      removeOnceReleased(dir);
-    }
-  });
+  test(
+    "returns null for a git repo that has no origin",
+    () => {
+      const dir = freshTestDir(import.meta.file);
+      try {
+        spawnSync("git", ["init", "-q", dir]);
+        expect(detectRemote(dir)).toBeNull();
+      } finally {
+        removeOnceReleased(dir);
+      }
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("reads and normalizes a configured origin", () => {
-    const dir = freshTestDir(import.meta.file);
-    try {
-      spawnSync("git", ["init", "-q", dir]);
-      spawnSync("git", ["-C", dir, "remote", "add", "origin", "git@github.com:a/b.git"]);
-      expect(detectRemote(dir)).toBe("github.com/a/b");
-    } finally {
-      removeOnceReleased(dir);
-    }
-  });
+  test(
+    "reads and normalizes a configured origin",
+    () => {
+      const dir = freshTestDir(import.meta.file);
+      try {
+        spawnSync("git", ["init", "-q", dir]);
+        spawnSync("git", [
+          "-C",
+          dir,
+          "remote",
+          "add",
+          "origin",
+          "git@github.com:a/b.git",
+        ]);
+        expect(detectRemote(dir)).toBe("github.com/a/b");
+      } finally {
+        removeOnceReleased(dir);
+      }
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });

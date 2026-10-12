@@ -32,6 +32,7 @@ import {
   summarizeRatings,
   synthesisIsDue,
 } from "../src/tools/lib/self-model";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
 const NOW = new Date("2026-09-06T12:00:00.000Z");
@@ -1116,17 +1117,21 @@ describe("failedSynthesisModel", () => {
 });
 
 describe("self-model entrypoint", () => {
-  test("accepts the --agent flag every detached inference spawn appends", () => {
-    const run = Bun.spawnSync(
-      [
-        "bun",
-        join(import.meta.dir, "..", "src", "tools", "self-model.ts"),
-        "--help",
-        "--agent=codex",
-      ],
-      { stdout: "pipe", stderr: "pipe", env: process.env }
-    );
-    expect(run.stderr.toString()).not.toContain("Unknown option");
-    expect(run.exitCode).toBe(0);
-  });
+  test(
+    "accepts the --agent flag every detached inference spawn appends",
+    () => {
+      const run = Bun.spawnSync(
+        [
+          "bun",
+          join(import.meta.dir, "..", "src", "tools", "self-model.ts"),
+          "--help",
+          "--agent=codex",
+        ],
+        { stdout: "pipe", stderr: "pipe", env: process.env }
+      );
+      expect(run.stderr.toString()).not.toContain("Unknown option");
+      expect(run.exitCode).toBe(0);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });

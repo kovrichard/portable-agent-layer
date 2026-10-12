@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { chmodSync, writeFileSync } from "node:fs";
 import { delimiter, resolve } from "node:path";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
 // RtkWrap delegates to `rtk hook <agent>` when rtk is on PATH, forwarding its
@@ -54,39 +55,59 @@ beforeEach(() => {
 });
 
 describe("RtkWrap", () => {
-  test("forwards rtk hook stdout verbatim when rtk is present", async () => {
-    writeFakeRtk(
-      `if(process.argv[2]==="hook")process.stdout.write(${JSON.stringify(FAKE_OUTPUT)});`
-    );
-    const out = await runHook({ PATH: shadowPath(), PAL_AGENT: "claude" });
-    expect(out).toBe(FAKE_OUTPUT);
-  });
+  test(
+    "forwards rtk hook stdout verbatim when rtk is present",
+    async () => {
+      writeFakeRtk(
+        `if(process.argv[2]==="hook")process.stdout.write(${JSON.stringify(FAKE_OUTPUT)});`
+      );
+      const out = await runHook({ PATH: shadowPath(), PAL_AGENT: "claude" });
+      expect(out).toBe(FAKE_OUTPUT);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
   // The fake writes a well-formed rewrite to stdout *and* fails. Only the exit
   // code can suppress it, so this stays honest about what it is testing —
   // a fake that failed silently would pass even with the guard removed.
-  test("fail-open: rtk exits non-zero → its stdout is discarded", async () => {
-    writeFakeRtk(
-      `process.stdout.write(${JSON.stringify(FAKE_OUTPUT)});process.stderr.write("boom");process.exitCode=1;`
-    );
-    const out = await runHook({ PATH: shadowPath(), PAL_AGENT: "claude" });
-    expect(out).toBe("");
-  });
+  test(
+    "fail-open: rtk exits non-zero → its stdout is discarded",
+    async () => {
+      writeFakeRtk(
+        `process.stdout.write(${JSON.stringify(FAKE_OUTPUT)});process.stderr.write("boom");process.exitCode=1;`
+      );
+      const out = await runHook({ PATH: shadowPath(), PAL_AGENT: "claude" });
+      expect(out).toBe("");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("fail-open: rtk absent → no output, command unchanged", async () => {
-    const out = await runHook({ PATH: dir, PAL_AGENT: "claude" });
-    expect(out).toBe("");
-  });
+  test(
+    "fail-open: rtk absent → no output, command unchanged",
+    async () => {
+      const out = await runHook({ PATH: dir, PAL_AGENT: "claude" });
+      expect(out).toBe("");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("no-op for codex (allow/deny only — cannot rewrite)", async () => {
-    writeFakeRtk(`process.stdout.write(${JSON.stringify(FAKE_OUTPUT)});`);
-    const out = await runHook({ PATH: shadowPath(), PAL_AGENT: "codex" });
-    expect(out).toBe("");
-  });
+  test(
+    "no-op for codex (allow/deny only — cannot rewrite)",
+    async () => {
+      writeFakeRtk(`process.stdout.write(${JSON.stringify(FAKE_OUTPUT)});`);
+      const out = await runHook({ PATH: shadowPath(), PAL_AGENT: "codex" });
+      expect(out).toBe("");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("no-op for opencode (handled by plugin, not this hook)", async () => {
-    writeFakeRtk(`process.stdout.write(${JSON.stringify(FAKE_OUTPUT)});`);
-    const out = await runHook({ PATH: shadowPath(), PAL_AGENT: "opencode" });
-    expect(out).toBe("");
-  });
+  test(
+    "no-op for opencode (handled by plugin, not this hook)",
+    async () => {
+      writeFakeRtk(`process.stdout.write(${JSON.stringify(FAKE_OUTPUT)});`);
+      const out = await runHook({ PATH: shadowPath(), PAL_AGENT: "opencode" });
+      expect(out).toBe("");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });

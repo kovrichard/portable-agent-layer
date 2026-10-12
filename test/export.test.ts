@@ -215,16 +215,20 @@ describe("cli import — folder arg", () => {
     SPAWN_HEAVY_TEST_MS
   );
 
-  test("exits non-zero when folder has no zip files", () => {
-    const emptyDir = freshTestDir(import.meta.file);
-    try {
-      const result = palCli(["import", emptyDir], { input: "y\n" });
-      expect(result.status).not.toBe(0);
-      expect(result.stderr).toContain("No export or backup files found");
-    } finally {
-      removeOnceReleased(emptyDir);
-    }
-  });
+  test(
+    "exits non-zero when folder has no zip files",
+    () => {
+      const emptyDir = freshTestDir(import.meta.file);
+      try {
+        const result = palCli(["import", emptyDir], { input: "y\n" });
+        expect(result.status).not.toBe(0);
+        expect(result.stderr).toContain("No export or backup files found");
+      } finally {
+        removeOnceReleased(emptyDir);
+      }
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
   test(
     "round-trips a personal skill and subagent into a fresh home",
@@ -274,17 +278,21 @@ describe("a tilde in the path positional", () => {
 
   // AdmZip's failure drops the filename, so the resolved path is read back from
   // the debug log, which this test's PAL_HOME owns.
-  test("import looks for the archive under the home, not under a directory called ~", () => {
-    const marker = resolve(TEST_HOME, "memory", "state", "debug-enabled");
-    const log = resolve(TEST_HOME, "debug", "debug.log");
-    writeFileSync(marker, "");
-    try {
-      palCli(["import", "~/pal-import-nowhere.zip"], { input: "n\n" });
-      const contents = readFileSync(log, "utf-8");
-      expect(contents).toContain(resolve(homedir(), "pal-import-nowhere.zip"));
-    } finally {
-      removeOnceReleased(marker);
-      removeOnceReleased(log);
-    }
-  });
+  test(
+    "import looks for the archive under the home, not under a directory called ~",
+    () => {
+      const marker = resolve(TEST_HOME, "memory", "state", "debug-enabled");
+      const log = resolve(TEST_HOME, "debug", "debug.log");
+      writeFileSync(marker, "");
+      try {
+        palCli(["import", "~/pal-import-nowhere.zip"], { input: "n\n" });
+        const contents = readFileSync(log, "utf-8");
+        expect(contents).toContain(resolve(homedir(), "pal-import-nowhere.zip"));
+      } finally {
+        removeOnceReleased(marker);
+        removeOnceReleased(log);
+      }
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });

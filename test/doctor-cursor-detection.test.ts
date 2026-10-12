@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { delimiter, dirname, resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { testHome } from "./lib/test-home";
 
 const REPO = resolve(import.meta.dir, "..");
@@ -60,21 +61,33 @@ beforeAll(() => {
 });
 
 describe("pal cli doctor — Cursor detection", () => {
-  test("finds the Cursor CLI, which installs cursor-agent and no cursor command", () => {
-    const r = doctorWithPath(binDirWith("cli-only", ["cursor-agent", "agent"]));
+  test(
+    "finds the Cursor CLI, which installs cursor-agent and no cursor command",
+    () => {
+      const r = doctorWithPath(binDirWith("cli-only", ["cursor-agent", "agent"]));
 
-    expect(agentsFound(r.stdout)).toContain("cursor");
-  });
+      expect(agentsFound(r.stdout)).toContain("cursor");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("still finds the Cursor editor when only its cursor command is on PATH", () => {
-    const r = doctorWithPath(binDirWith("editor-only", ["cursor"]));
+  test(
+    "still finds the Cursor editor when only its cursor command is on PATH",
+    () => {
+      const r = doctorWithPath(binDirWith("editor-only", ["cursor"]));
 
-    expect(agentsFound(r.stdout)).toContain("cursor");
-  });
+      expect(agentsFound(r.stdout)).toContain("cursor");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("reports Cursor missing when neither is on PATH", () => {
-    const r = doctorWithPath(binDirWith("neither", []));
+  test(
+    "reports Cursor missing when neither is on PATH",
+    () => {
+      const r = doctorWithPath(binDirWith("neither", []));
 
-    expect(agentsFound(r.stdout)).not.toContain("cursor");
-  });
+      expect(agentsFound(r.stdout)).not.toContain("cursor");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });

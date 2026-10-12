@@ -12,6 +12,7 @@ import {
   statusOf,
   trimHandoffs,
 } from "../src/tools/lib/handoff-note";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
 // The handoff note is where an agent says what it could not finish. One of those
@@ -52,39 +53,55 @@ function stored(): HandoffEntry {
 }
 
 describe("handoff-note --waiting", () => {
-  test("what the work needs from the human is recorded on its own", async () => {
-    expect(
-      await runCli([
-        "--title",
-        "the pricing page",
-        "--text",
-        "copy is drafted, the numbers are not",
-        "--waiting",
-        "a decision on the tiers",
-      ])
-    ).toBe(0);
-    const entry = stored();
-    expect(entry.waitingOn).toBe("a decision on the tiers");
-    expect(entry.status).toBe("in-progress");
-    expect(entry.handoff).toBe("copy is drafted, the numbers are not");
-  });
+  test(
+    "what the work needs from the human is recorded on its own",
+    async () => {
+      expect(
+        await runCli([
+          "--title",
+          "the pricing page",
+          "--text",
+          "copy is drafted, the numbers are not",
+          "--waiting",
+          "a decision on the tiers",
+        ])
+      ).toBe(0);
+      const entry = stored();
+      expect(entry.waitingOn).toBe("a decision on the tiers");
+      expect(entry.status).toBe("in-progress");
+      expect(entry.handoff).toBe("copy is drafted, the numbers are not");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("a note without the flag carries no waiting line at all", async () => {
-    await runCli(["--title", "t", "--text", "unfinished"]);
-    expect(stored()).not.toHaveProperty("waitingOn");
-  });
+  test(
+    "a note without the flag carries no waiting line at all",
+    async () => {
+      await runCli(["--title", "t", "--text", "unfinished"]);
+      expect(stored()).not.toHaveProperty("waitingOn");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("closing a session does not leave a stale waiting line behind", async () => {
-    await runCli(["--title", "t", "--text", "x", "--waiting", "an answer"]);
-    await runCli(["--done"]);
-    const entry = stored();
-    expect(entry.status).toBe("completed");
-    expect(entry).not.toHaveProperty("waitingOn");
-  });
+  test(
+    "closing a session does not leave a stale waiting line behind",
+    async () => {
+      await runCli(["--title", "t", "--text", "x", "--waiting", "an answer"]);
+      await runCli(["--done"]);
+      const entry = stored();
+      expect(entry.status).toBe("completed");
+      expect(entry).not.toHaveProperty("waitingOn");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("a note still needs both a title and text", async () => {
-    expect(await runCli(["--waiting", "an answer"])).toBe(1);
-  });
+  test(
+    "a note still needs both a title and text",
+    async () => {
+      expect(await runCli(["--waiting", "an answer"])).toBe(1);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });
 
 const NOW = new Date("2026-09-06T12:00:00.000Z");

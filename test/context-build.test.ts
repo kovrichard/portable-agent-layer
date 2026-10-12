@@ -11,6 +11,7 @@ import { writeProject } from "../src/hooks/lib/projects";
 import { reload } from "../src/hooks/lib/settings";
 import { appendProjectHistory } from "../src/hooks/lib/work-tracking";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { testHome } from "./lib/test-home";
 
 const HOME = testHome(import.meta.file);
@@ -273,25 +274,29 @@ describe("buildSystemReminder", () => {
     expect(buildSystemReminder()).not.toContain("An earlier session here");
   });
 
-  test("marks the project the session started in, not the folder it moved to", () => {
-    const startDir = resolve(HOME, "started-here");
-    mkdirSync(startDir, { recursive: true });
-    writeProject({
-      name: "started-here",
-      path: startDir,
-      status: "active",
-      created: new Date().toISOString(),
-      updated: new Date().toISOString(),
-    });
-    const savedStart = process.env.CLAUDE_PROJECT_DIR;
-    process.env.CLAUDE_PROJECT_DIR = startDir;
-    try {
-      expect(buildSystemReminder()).toContain("**started-here** (just now) → here");
-    } finally {
-      if (savedStart === undefined) delete process.env.CLAUDE_PROJECT_DIR;
-      else process.env.CLAUDE_PROJECT_DIR = savedStart;
-    }
-  });
+  test(
+    "marks the project the session started in, not the folder it moved to",
+    () => {
+      const startDir = resolve(HOME, "started-here");
+      mkdirSync(startDir, { recursive: true });
+      writeProject({
+        name: "started-here",
+        path: startDir,
+        status: "active",
+        created: new Date().toISOString(),
+        updated: new Date().toISOString(),
+      });
+      const savedStart = process.env.CLAUDE_PROJECT_DIR;
+      process.env.CLAUDE_PROJECT_DIR = startDir;
+      try {
+        expect(buildSystemReminder()).toContain("**started-here** (just now) → here");
+      } finally {
+        if (savedStart === undefined) delete process.env.CLAUDE_PROJECT_DIR;
+        else process.env.CLAUDE_PROJECT_DIR = savedStart;
+      }
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
   test("still includes relationship notes for a native-loading agent", () => {
     notes("## 09:00\n- W: still injected\n");

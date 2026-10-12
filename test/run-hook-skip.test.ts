@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir, testHome } from "./lib/test-home";
 
 const ROOT = testHome(import.meta.file);
@@ -41,102 +42,137 @@ beforeAll(() => {
 });
 
 describe("run-hook clean-worktree skip", () => {
-  test("skips the gate on a clean worktree and says why", () => {
-    const r = runHookIn(makeRepo("clean"));
+  test(
+    "skips the gate on a clean worktree and says why",
+    () => {
+      const r = runHookIn(makeRepo("clean"));
 
-    expect(r.code).toBe(0);
-    expect(JSON.parse(r.stdout).output).toBe(
-      "skipped: worktree clean, HEAD already gated by pre-commit and CI"
-    );
-  });
+      expect(r.code).toBe(0);
+      expect(JSON.parse(r.stdout).output).toBe(
+        "skipped: worktree clean, HEAD already gated by pre-commit and CI"
+      );
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("runs the gate when a tracked file is modified", () => {
-    const dir = makeRepo("modified");
-    writeFileSync(resolve(dir, "tracked.txt"), "changed\n");
-
-    const r = runHookIn(dir);
-
-    expect(r.code).toBe(0);
-    expect(JSON.parse(r.stdout).output).toBe("ok");
-  });
-
-  test("runs the gate when only an untracked file exists", () => {
-    const dir = makeRepo("untracked");
-    writeFileSync(resolve(dir, "brand-new.txt"), "new\n");
-
-    const r = runHookIn(dir);
-
-    expect(r.code).toBe(0);
-    expect(JSON.parse(r.stdout).output).toBe("ok");
-  });
-
-  // Relies on GIT_CEILING_DIRECTORIES stopping git at .test/: without it
-  // `git status` would walk up and succeed against the repo, so the gate would run
-  // for the wrong reason and this case would prove nothing.
-  test("runs the gate outside a git repository", () => {
-    const dir = freshTestDir(import.meta.file);
-    try {
-      expect(spawnSync("git", ["status"], { cwd: dir }).status).not.toBe(0);
+  test(
+    "runs the gate when a tracked file is modified",
+    () => {
+      const dir = makeRepo("modified");
+      writeFileSync(resolve(dir, "tracked.txt"), "changed\n");
 
       const r = runHookIn(dir);
 
       expect(r.code).toBe(0);
       expect(JSON.parse(r.stdout).output).toBe("ok");
-    } finally {
-      removeOnceReleased(dir);
-    }
-  });
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("a failing gate still blocks when the worktree is dirty", () => {
-    const dir = makeRepo("failing");
-    writeFileSync(resolve(dir, "tracked.txt"), "changed\n");
+  test(
+    "runs the gate when only an untracked file exists",
+    () => {
+      const dir = makeRepo("untracked");
+      writeFileSync(resolve(dir, "brand-new.txt"), "new\n");
 
-    const r = spawnSync("bun", ["run", HOOK, "exit", "3"], {
-      cwd: dir,
-      encoding: "utf-8",
-    });
+      const r = runHookIn(dir);
 
-    expect(r.status).toBe(2);
-  });
+      expect(r.code).toBe(0);
+      expect(JSON.parse(r.stdout).output).toBe("ok");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("antigravity runs the gate from the workspace, not from .agents", () => {
-    const dir = makeRepo("antigravity-cwd");
-    writeFileSync(resolve(dir, "tracked.txt"), "changed\n");
-    mkdirSync(resolve(dir, ".agents"));
+  // Relies on GIT_CEILING_DIRECTORIES stopping git at .test/: without it
+  // `git status` would walk up and succeed against the repo, so the gate would run
+  // for the wrong reason and this case would prove nothing.
+  test(
+    "runs the gate outside a git repository",
+    () => {
+      const dir = freshTestDir(import.meta.file);
+      try {
+        expect(spawnSync("git", ["status"], { cwd: dir }).status).not.toBe(0);
 
-    const r = spawnSync(
-      "bun",
-      ["run", HOOK, "--antigravity", "test", "-f", "tracked.txt"],
-      { cwd: resolve(dir, ".agents"), encoding: "utf-8" }
-    );
+        const r = runHookIn(dir);
 
-    expect(r.status).toBe(0);
-    expect(r.stdout).toBe("");
-  });
+        expect(r.code).toBe(0);
+        expect(JSON.parse(r.stdout).output).toBe("ok");
+      } finally {
+        removeOnceReleased(dir);
+      }
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("antigravity turns a failing gate into a Stop continue", () => {
-    const dir = makeRepo("antigravity-failing");
-    writeFileSync(resolve(dir, "tracked.txt"), "changed\n");
-    mkdirSync(resolve(dir, ".agents"));
-    writeFileSync(resolve(dir, "gate.ts"), 'console.log("broken");\nprocess.exit(3);\n');
+  test(
+    "a failing gate still blocks when the worktree is dirty",
+    () => {
+      const dir = makeRepo("failing");
+      writeFileSync(resolve(dir, "tracked.txt"), "changed\n");
 
-    const r = spawnSync("bun", ["run", HOOK, "--antigravity", "bun", "gate.ts"], {
-      cwd: resolve(dir, ".agents"),
-      encoding: "utf-8",
-    });
+      const r = spawnSync("bun", ["run", HOOK, "exit", "3"], {
+        cwd: dir,
+        encoding: "utf-8",
+      });
 
-    expect(r.status).toBe(0);
-    expect(JSON.parse(r.stdout)).toEqual({ decision: "continue", reason: "broken" });
-  });
+      expect(r.status).toBe(2);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("a clean worktree skips a gate that would otherwise fail", () => {
-    const dir = makeRepo("clean-failing");
+  test(
+    "antigravity runs the gate from the workspace, not from .agents",
+    () => {
+      const dir = makeRepo("antigravity-cwd");
+      writeFileSync(resolve(dir, "tracked.txt"), "changed\n");
+      mkdirSync(resolve(dir, ".agents"));
 
-    const r = spawnSync("bun", ["run", HOOK, "exit", "3"], {
-      cwd: dir,
-      encoding: "utf-8",
-    });
+      const r = spawnSync(
+        "bun",
+        ["run", HOOK, "--antigravity", "test", "-f", "tracked.txt"],
+        { cwd: resolve(dir, ".agents"), encoding: "utf-8" }
+      );
 
-    expect(r.status).toBe(0);
-  });
+      expect(r.status).toBe(0);
+      expect(r.stdout).toBe("");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
+
+  test(
+    "antigravity turns a failing gate into a Stop continue",
+    () => {
+      const dir = makeRepo("antigravity-failing");
+      writeFileSync(resolve(dir, "tracked.txt"), "changed\n");
+      mkdirSync(resolve(dir, ".agents"));
+      writeFileSync(
+        resolve(dir, "gate.ts"),
+        'console.log("broken");\nprocess.exit(3);\n'
+      );
+
+      const r = spawnSync("bun", ["run", HOOK, "--antigravity", "bun", "gate.ts"], {
+        cwd: resolve(dir, ".agents"),
+        encoding: "utf-8",
+      });
+
+      expect(r.status).toBe(0);
+      expect(JSON.parse(r.stdout)).toEqual({ decision: "continue", reason: "broken" });
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
+
+  test(
+    "a clean worktree skips a gate that would otherwise fail",
+    () => {
+      const dir = makeRepo("clean-failing");
+
+      const r = spawnSync("bun", ["run", HOOK, "exit", "3"], {
+        cwd: dir,
+        encoding: "utf-8",
+      });
+
+      expect(r.status).toBe(0);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });

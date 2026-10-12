@@ -137,34 +137,46 @@ describe("a git checkout", () => {
     SPAWN_HEAVY_TEST_MS
   );
 
-  test("an empty repository without tags still gets a line", async () => {
-    const dir = resolve(ROOT, "fresh");
-    mkdirSync(dir);
-    git(dir, "init", "-q");
+  test(
+    "an empty repository without tags still gets a line",
+    async () => {
+      const dir = resolve(ROOT, "fresh");
+      mkdirSync(dir);
+      git(dir, "init", "-q");
 
-    expect(await repoStateReminder(dir)).toBe(
-      "<system-reminder>Repo: fresh on main · no commits yet · never pushed</system-reminder>"
-    );
-  });
+      expect(await repoStateReminder(dir)).toBe(
+        "<system-reminder>Repo: fresh on main · no commits yet · never pushed</system-reminder>"
+      );
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });
 
 describe("a project without git", () => {
-  test("says nothing there is committed, pushed or released", async () => {
-    const dir = resolve(ROOT, "notes");
-    mkdirSync(dir);
-    await registerProject("notes", dir);
+  test(
+    "says nothing there is committed, pushed or released",
+    async () => {
+      const dir = resolve(ROOT, "notes");
+      mkdirSync(dir);
+      await registerProject("notes", dir);
 
-    expect(await repoStateReminder(dir)).toBe(
-      "<system-reminder>Repo: notes is not under git — nothing in it is committed, pushed or released; the files on disk are its whole state</system-reminder>"
-    );
-  });
+      expect(await repoStateReminder(dir)).toBe(
+        "<system-reminder>Repo: notes is not under git — nothing in it is committed, pushed or released; the files on disk are its whole state</system-reminder>"
+      );
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("an unregistered directory without git gets no line", async () => {
-    const dir = resolve(ROOT, "scratch");
-    mkdirSync(dir);
+  test(
+    "an unregistered directory without git gets no line",
+    async () => {
+      const dir = resolve(ROOT, "scratch");
+      mkdirSync(dir);
 
-    expect(await repoStateReminder(dir)).toBeNull();
-  });
+      expect(await repoStateReminder(dir)).toBeNull();
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });
 
 test(

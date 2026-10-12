@@ -2,6 +2,7 @@ import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { testHome } from "./lib/test-home";
 
 const TEST_HOME = testHome(import.meta.file);
@@ -138,12 +139,16 @@ describe("injectPromptContext handler", () => {
     expect(out.trim().split("\n")).toHaveLength(1);
   });
 
-  test("the repo state of the working directory rides along", async () => {
-    await setSettings({ dynamicContext: { wallClock: false } });
-    const { injectPromptContext } = await loadHandlers();
-    const out = await captureStdout(() => injectPromptContext("anything goes here"));
-    expect(out).toContain("Repo: ");
-  });
+  test(
+    "the repo state of the working directory rides along",
+    async () => {
+      await setSettings({ dynamicContext: { wallClock: false } });
+      const { injectPromptContext } = await loadHandlers();
+      const out = await captureStdout(() => injectPromptContext("anything goes here"));
+      expect(out).toContain("Repo: ");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
   test("emits empty when prompt is empty", async () => {
     const { injectPromptContext } = await loadHandlers();

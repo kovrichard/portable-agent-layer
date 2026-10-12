@@ -13,6 +13,7 @@ import type { ServerStatus } from "../src/tools/control-room/server";
 import type { LedgerView } from "../src/tools/ledger/view";
 import { buildPageFirst } from "./lib/built-page";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
 // The HTTP surface is small enough to pin completely: where it listens, what
@@ -357,38 +358,46 @@ describe("what the page may change", () => {
   const withCriteria =
     "## Criteria\n\n- [ ] ISC-1: the open one\n- [ ] ISC-2: the other\n";
 
-  test("closing an ISC archives it, and reopening walks it back", async () => {
-    registerProject("demo", withCriteria);
-    const base = await listen();
-    const statuses = async () =>
-      (await getJson<DetailBody>(`${base}/api/project?slug=demo`)).iscs.map(
-        (i) => `${i.id}:${i.status}`
-      );
+  test(
+    "closing an ISC archives it, and reopening walks it back",
+    async () => {
+      registerProject("demo", withCriteria);
+      const base = await listen();
+      const statuses = async () =>
+        (await getJson<DetailBody>(`${base}/api/project?slug=demo`)).iscs.map(
+          (i) => `${i.id}:${i.status}`
+        );
 
-    expect(await statuses()).toEqual(["1:open", "2:open"]);
+      expect(await statuses()).toEqual(["1:open", "2:open"]);
 
-    expect(
-      (await post(base, "/api/isc", { project: "demo", id: 1, status: "done" })).ok
-    ).toBe(true);
-    expect(await statuses()).toEqual(["2:open", "1:done"]);
+      expect(
+        (await post(base, "/api/isc", { project: "demo", id: 1, status: "done" })).ok
+      ).toBe(true);
+      expect(await statuses()).toEqual(["2:open", "1:done"]);
 
-    expect(
-      (await post(base, "/api/isc", { project: "demo", id: 1, status: "open" })).ok
-    ).toBe(true);
-    expect(await statuses()).toEqual(["2:open", "1:open"]);
-  });
+      expect(
+        (await post(base, "/api/isc", { project: "demo", id: 1, status: "open" })).ok
+      ).toBe(true);
+      expect(await statuses()).toEqual(["2:open", "1:open"]);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("closing one that is already closed changes nothing and says so", async () => {
-    registerProject("demo", withCriteria);
-    const base = await listen();
-    await post(base, "/api/isc", { project: "demo", id: 1, status: "done" });
-    const again = await post(base, "/api/isc", {
-      project: "demo",
-      id: 1,
-      status: "done",
-    });
-    expect(await again.json()).toMatchObject({ changed: false });
-  });
+  test(
+    "closing one that is already closed changes nothing and says so",
+    async () => {
+      registerProject("demo", withCriteria);
+      const base = await listen();
+      await post(base, "/api/isc", { project: "demo", id: 1, status: "done" });
+      const again = await post(base, "/api/isc", {
+        project: "demo",
+        id: 1,
+        status: "done",
+      });
+      expect(await again.json()).toMatchObject({ changed: false });
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
   test("an ISC write refuses what it cannot act on", async () => {
     registerProject("demo", withCriteria);
@@ -408,29 +417,33 @@ describe("what the page may change", () => {
     ).toBe(404);
   });
 
-  test("a placement overrules the grid's own guess and survives on the record", async () => {
-    registerProject("demo", withCriteria);
-    const base = await listen();
-    const quadrantOf = async () => {
-      const grid = await getJson<Matrix>(`${base}/api/matrix`);
-      for (const key of ["now", "plan", "noise", "later"] as const) {
-        if (grid[key].some((i) => i.id === "demo")) return key;
-      }
-      return null;
-    };
+  test(
+    "a placement overrules the grid's own guess and survives on the record",
+    async () => {
+      registerProject("demo", withCriteria);
+      const base = await listen();
+      const quadrantOf = async () => {
+        const grid = await getJson<Matrix>(`${base}/api/matrix`);
+        for (const key of ["now", "plan", "noise", "later"] as const) {
+          if (grid[key].some((i) => i.id === "demo")) return key;
+        }
+        return null;
+      };
 
-    expect(await quadrantOf()).toBe("later");
-    expect(
-      (await post(base, "/api/placement", { project: "demo", quadrant: "now" })).ok
-    ).toBe(true);
-    expect(await quadrantOf()).toBe("now");
+      expect(await quadrantOf()).toBe("later");
+      expect(
+        (await post(base, "/api/placement", { project: "demo", quadrant: "now" })).ok
+      ).toBe(true);
+      expect(await quadrantOf()).toBe("now");
 
-    const detail = await getJson<DetailBody>(`${base}/api/project?slug=demo`);
-    expect(detail.placed).toBe("now");
+      const detail = await getJson<DetailBody>(`${base}/api/project?slug=demo`);
+      expect(detail.placed).toBe("now");
 
-    await post(base, "/api/placement", { project: "demo", quadrant: null });
-    expect(await quadrantOf()).toBe("later");
-  });
+      await post(base, "/api/placement", { project: "demo", quadrant: null });
+      expect(await quadrantOf()).toBe("later");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
   test("a placement refuses a quadrant that is not one", async () => {
     registerProject("demo", withCriteria);
@@ -605,18 +618,22 @@ describe("keeping PAL up to date", () => {
     expect((await post(base, "/api/update", {})).status).toBe(400);
   });
 
-  test("the button answers at once rather than waiting for the update", async () => {
-    const prevPkg = process.env.PAL_PKG;
-    process.env.PAL_PKG = freshTestDir(import.meta.file);
-    const base = await listen();
-    try {
-      expect((await post(base, "/api/update/run", {})).status).toBe(202);
-    } finally {
-      removeOnceReleased(process.env.PAL_PKG);
-      if (prevPkg === undefined) delete process.env.PAL_PKG;
-      else process.env.PAL_PKG = prevPkg;
-    }
-  });
+  test(
+    "the button answers at once rather than waiting for the update",
+    async () => {
+      const prevPkg = process.env.PAL_PKG;
+      process.env.PAL_PKG = freshTestDir(import.meta.file);
+      const base = await listen();
+      try {
+        expect((await post(base, "/api/update/run", {})).status).toBe(202);
+      } finally {
+        removeOnceReleased(process.env.PAL_PKG);
+        if (prevPkg === undefined) delete process.env.PAL_PKG;
+        else process.env.PAL_PKG = prevPkg;
+      }
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });
 
 describe("snoozing a criterion", () => {
@@ -699,19 +716,31 @@ describe("the one thing the page may change", () => {
     });
   }
 
-  test("an override is written as the user's own answer", async () => {
-    registerProject("alpha");
-    const base = await listen();
-    const res = await post(base, { project: "alpha", serves: "revenue", note: "a bet" });
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ project: "alpha", serves: "revenue", by: "user" });
+  test(
+    "an override is written as the user's own answer",
+    async () => {
+      registerProject("alpha");
+      const base = await listen();
+      const res = await post(base, {
+        project: "alpha",
+        serves: "revenue",
+        note: "a bet",
+      });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({
+        project: "alpha",
+        serves: "revenue",
+        by: "user",
+      });
 
-    const grid = await getJson<Matrix>(`${base}/api/matrix`);
-    const item = grid.plan.find((i) => i.id === "alpha");
-    expect(item?.serves).toBe("revenue");
-    expect(item?.servesBy).toBe("user");
-    expect(grid.unranked).toBe(0);
-  });
+      const grid = await getJson<Matrix>(`${base}/api/matrix`);
+      const item = grid.plan.find((i) => i.id === "alpha");
+      expect(item?.serves).toBe("revenue");
+      expect(item?.servesBy).toBe("user");
+      expect(grid.unranked).toBe(0);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
   test("it refuses a kind that is not one of the three", async () => {
     registerProject("alpha");

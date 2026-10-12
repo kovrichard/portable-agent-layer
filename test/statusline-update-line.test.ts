@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
 // The statusline is where a user learns an update is waiting, so its advice has
@@ -50,25 +51,37 @@ beforeEach(() => {
 });
 
 describe.skipIf(process.platform === "win32")("the update line", () => {
-  test("tells you to restart when PAL applies updates itself", () => {
-    fixture(true);
-    const line = render();
-    expect(line).toContain("0.76.1 → 0.77.0");
-    expect(line).toContain("restart to apply");
-    expect(line).not.toContain("pal cli update");
-  });
+  test(
+    "tells you to restart when PAL applies updates itself",
+    () => {
+      fixture(true);
+      const line = render();
+      expect(line).toContain("0.76.1 → 0.77.0");
+      expect(line).toContain("restart to apply");
+      expect(line).not.toContain("pal cli update");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("tells you to run the command when it does not", () => {
-    fixture(false);
-    const line = render();
-    expect(line).toContain("run: pal cli update");
-    expect(line).not.toContain("restart to apply");
-  });
+  test(
+    "tells you to run the command when it does not",
+    () => {
+      fixture(false);
+      const line = render();
+      expect(line).toContain("run: pal cli update");
+      expect(line).not.toContain("restart to apply");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("says nothing at all when no update is waiting", () => {
-    mkdirSync(resolve(HOME, ".pal", "memory", "state"), { recursive: true });
-    expect(render()).not.toContain("update");
-  });
+  test(
+    "says nothing at all when no update is waiting",
+    () => {
+      mkdirSync(resolve(HOME, ".pal", "memory", "state"), { recursive: true });
+      expect(render()).not.toContain("update");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });
 
 // The PowerShell statusline has no bash to run it here, so its two branches are

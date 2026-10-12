@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 
 const HOOK = resolve(import.meta.dir, "../src/hooks/SecurityValidator.ts");
 
@@ -39,50 +40,74 @@ describe("SecurityValidator — shell tool names", () => {
   ];
 
   for (const toolName of SHELL_TOOL_NAMES) {
-    test(`denies a recursive root delete via "${toolName}"`, async () => {
-      const out = await runValidator(preToolUse(toolName, { command: DANGEROUS }));
-      expect(out).toContain("permissionDecision");
-      expect(out).toContain("deny");
-    });
+    test(
+      `denies a recursive root delete via "${toolName}"`,
+      async () => {
+        const out = await runValidator(preToolUse(toolName, { command: DANGEROUS }));
+        expect(out).toContain("permissionDecision");
+        expect(out).toContain("deny");
+      },
+      SPAWN_HEAVY_TEST_MS
+    );
   }
 
-  test("allows a harmless command through the same tool", async () => {
-    const out = await runValidator(
-      preToolUse("runInTerminal", { command: "npm run build" })
-    );
-    expect(out).toBe("");
-  });
+  test(
+    "allows a harmless command through the same tool",
+    async () => {
+      const out = await runValidator(
+        preToolUse("runInTerminal", { command: "npm run build" })
+      );
+      expect(out).toBe("");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("does not treat a read-only tool as a shell", async () => {
-    const out = await runValidator(preToolUse("readFile", { command: DANGEROUS }));
-    expect(out).toBe("");
-  });
+  test(
+    "does not treat a read-only tool as a shell",
+    async () => {
+      const out = await runValidator(preToolUse("readFile", { command: DANGEROUS }));
+      expect(out).toBe("");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });
 
 describe("SecurityValidator — argument spelling", () => {
-  test("reads the command from commandLine as well as command", async () => {
-    const out = await runValidator(
-      preToolUse("runInTerminal", { commandLine: DANGEROUS })
-    );
-    expect(out).toContain("deny");
-  });
+  test(
+    "reads the command from commandLine as well as command",
+    async () => {
+      const out = await runValidator(
+        preToolUse("runInTerminal", { commandLine: DANGEROUS })
+      );
+      expect(out).toContain("deny");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });
 
 describe("SecurityValidator — per-agent deny shape", () => {
-  test("vscode nests the deny inside hookSpecificOutput", async () => {
-    const out = await runValidator(preToolUse("runInTerminal", { command: DANGEROUS }));
-    const payload = JSON.parse(out);
-    expect(payload.hookSpecificOutput.permissionDecision).toBe("deny");
-    expect(payload.permissionDecision).toBeUndefined();
-  });
+  test(
+    "vscode nests the deny inside hookSpecificOutput",
+    async () => {
+      const out = await runValidator(preToolUse("runInTerminal", { command: DANGEROUS }));
+      const payload = JSON.parse(out);
+      expect(payload.hookSpecificOutput.permissionDecision).toBe("deny");
+      expect(payload.permissionDecision).toBeUndefined();
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("copilot CLI keeps the flat top-level deny", async () => {
-    const out = await runValidator(
-      preToolUse("runInTerminal", { command: DANGEROUS }),
-      "copilot"
-    );
-    const payload = JSON.parse(out);
-    expect(payload.permissionDecision).toBe("deny");
-    expect(payload.hookSpecificOutput).toBeUndefined();
-  });
+  test(
+    "copilot CLI keeps the flat top-level deny",
+    async () => {
+      const out = await runValidator(
+        preToolUse("runInTerminal", { command: DANGEROUS }),
+        "copilot"
+      );
+      const payload = JSON.parse(out);
+      expect(payload.permissionDecision).toBe("deny");
+      expect(payload.hookSpecificOutput).toBeUndefined();
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });

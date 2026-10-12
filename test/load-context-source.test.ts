@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { contextForSource } from "../src/hooks/lib/session-context";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
 const LOAD_CONTEXT = resolve(import.meta.dir, "../src/hooks/LoadContext.ts");
@@ -52,27 +53,36 @@ describe("which session starts get context", () => {
     expect(contextForSource(agent, source)).toBe(expected);
   });
 
-  test.each([
-    "claude",
-    "codex",
-  ])("a resumed %s session is not handed the context a second time", (agent) => {
-    const result = runLoadContext("resume", agent);
-    expect({ status: result.status, stdout: result.stdout }).toEqual({
-      status: 0,
-      stdout: "",
-    });
-  });
+  test.each(["claude", "codex"])(
+    "a resumed %s session is not handed the context a second time",
+    (agent) => {
+      const result = runLoadContext("resume", agent);
+      expect({ status: result.status, stdout: result.stdout }).toEqual({
+        status: 0,
+        stdout: "",
+      });
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("a resumed Copilot session still is, since Copilot may not replay it", () => {
-    const result = runLoadContext("resume", "copilot");
-    expect(result.status).toBe(0);
-    const parsed = JSON.parse(result.stdout) as { additionalContext?: string };
-    expect(parsed.additionalContext).toContain("<system-reminder>");
-  });
+  test(
+    "a resumed Copilot session still is, since Copilot may not replay it",
+    () => {
+      const result = runLoadContext("resume", "copilot");
+      expect(result.status).toBe(0);
+      const parsed = JSON.parse(result.stdout) as { additionalContext?: string };
+      expect(parsed.additionalContext).toContain("<system-reminder>");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("a fresh session still is", () => {
-    const result = runLoadContext("startup");
-    expect(result.status).toBe(0);
-    expect(result.stdout).toContain("<system-reminder>");
-  });
+  test(
+    "a fresh session still is",
+    () => {
+      const result = runLoadContext("startup");
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain("<system-reminder>");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });

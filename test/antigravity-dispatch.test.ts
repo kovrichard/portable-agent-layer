@@ -10,6 +10,7 @@ import { buildAntigravityArgs, inference } from "../src/hooks/lib/inference";
 import { inferenceModel } from "../src/hooks/lib/models";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
 const PRESERVED = [
@@ -132,11 +133,13 @@ describe("inference dispatcher — agy spawn integration (fake binary)", () => {
     process.env.PAL_AGENT = "antigravity";
   });
 
-  test("the prompt arrives on stdin in an empty workspace holding only the inference agent", async () => {
-    writeFakeBin(
-      tmpBin,
-      "agy",
-      `import { existsSync, readdirSync, readFileSync } from "node:fs";
+  test(
+    "the prompt arrives on stdin in an empty workspace holding only the inference agent",
+    async () => {
+      writeFakeBin(
+        tmpBin,
+        "agy",
+        `import { existsSync, readdirSync, readFileSync } from "node:fs";
 const input = JSON.parse((await Bun.stdin.text()).trim());
 const agent = \`\${process.cwd()}/.agents/agents/${INFERENCE_AGENT}.md\`;
 const response = JSON.stringify({
@@ -147,85 +150,107 @@ const response = JSON.stringify({
   cwd: process.cwd(),
 });
 console.log(JSON.stringify({ event: "result", result: { status: "SUCCESS", response } }));\n`
-    );
-    prependPath(tmpBin);
+      );
+      prependPath(tmpBin);
 
-    const result = await inference({ system: "Be terse", user: "line one\nline two" });
-    expect(result.success).toBe(true);
-    const seen = JSON.parse(result.output ?? "{}");
-    expect(seen.content).toBe("Be terse\n\nline one\nline two");
-    expect(seen.workspace).toEqual([".agents"]);
-    expect(seen.toolless).toBe(true);
-    expect(seen.sentinel).toBe("1");
-    expect(seen.cwd).not.toBe(process.cwd());
-    expect(existsSync(seen.cwd)).toBe(false);
-  });
+      const result = await inference({ system: "Be terse", user: "line one\nline two" });
+      expect(result.success).toBe(true);
+      const seen = JSON.parse(result.output ?? "{}");
+      expect(seen.content).toBe("Be terse\n\nline one\nline two");
+      expect(seen.workspace).toEqual([".agents"]);
+      expect(seen.toolless).toBe(true);
+      expect(seen.sentinel).toBe("1");
+      expect(seen.cwd).not.toBe(process.cwd());
+      expect(existsSync(seen.cwd)).toBe(false);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("a schema request parses the JSON in the response", async () => {
-    writeFakeBin(
-      tmpBin,
-      "agy",
-      `console.log(${JSON.stringify(resultEvent("SUCCESS", '{"rating": 9}\n'))});\n`
-    );
-    prependPath(tmpBin);
+  test(
+    "a schema request parses the JSON in the response",
+    async () => {
+      writeFakeBin(
+        tmpBin,
+        "agy",
+        `console.log(${JSON.stringify(resultEvent("SUCCESS", '{"rating": 9}\n'))});\n`
+      );
+      prependPath(tmpBin);
 
-    const result = await inference({
-      user: "rate",
-      jsonSchema: { type: "object", properties: { rating: { type: "integer" } } },
-    });
-    expect(result.success).toBe(true);
-    expect(JSON.parse(result.output ?? "{}")).toEqual({ rating: 9 });
-  });
+      const result = await inference({
+        user: "rate",
+        jsonSchema: { type: "object", properties: { rating: { type: "integer" } } },
+      });
+      expect(result.success).toBe(true);
+      expect(JSON.parse(result.output ?? "{}")).toEqual({ rating: 9 });
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("an ERROR result with a non-zero exit fails", async () => {
-    writeFakeBin(
-      tmpBin,
-      "agy",
-      `console.log(${JSON.stringify(resultEvent("ERROR", ""))});\nprocess.exit(1);\n`
-    );
-    prependPath(tmpBin);
+  test(
+    "an ERROR result with a non-zero exit fails",
+    async () => {
+      writeFakeBin(
+        tmpBin,
+        "agy",
+        `console.log(${JSON.stringify(resultEvent("ERROR", ""))});\nprocess.exit(1);\n`
+      );
+      prependPath(tmpBin);
 
-    expect((await inference({ user: "hi" })).success).toBe(false);
-  });
+      expect((await inference({ user: "hi" })).success).toBe(false);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("the spawned conversation is removed and the user's own is kept", async () => {
-    const cliDir = resolve(tmpBin, ".gemini", "antigravity-cli");
-    const spawned = seedConversation(cliDir, SPAWNED);
-    const usersOwn = seedConversation(cliDir, USERS_OWN);
-    const stdout = `${initEvent(SPAWNED)}\n${resultEvent("SUCCESS", "OK")}`;
-    writeFakeBin(tmpBin, "agy", `console.log(${JSON.stringify(stdout)});\n`);
-    prependPath(tmpBin);
+  test(
+    "the spawned conversation is removed and the user's own is kept",
+    async () => {
+      const cliDir = resolve(tmpBin, ".gemini", "antigravity-cli");
+      const spawned = seedConversation(cliDir, SPAWNED);
+      const usersOwn = seedConversation(cliDir, USERS_OWN);
+      const stdout = `${initEvent(SPAWNED)}\n${resultEvent("SUCCESS", "OK")}`;
+      writeFakeBin(tmpBin, "agy", `console.log(${JSON.stringify(stdout)});\n`);
+      prependPath(tmpBin);
 
-    expect((await inference({ user: "hi" })).output).toBe("OK");
-    expect(spawned.filter(existsSync)).toEqual([]);
-    expect(usersOwn.filter(existsSync)).toEqual(usersOwn);
-  });
+      expect((await inference({ user: "hi" })).output).toBe("OK");
+      expect(spawned.filter(existsSync)).toEqual([]);
+      expect(usersOwn.filter(existsSync)).toEqual(usersOwn);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("a failed run still removes its conversation", async () => {
-    const cliDir = resolve(tmpBin, ".gemini", "antigravity-cli");
-    const spawned = seedConversation(cliDir, SPAWNED);
-    const stdout = `${initEvent(SPAWNED)}\n${resultEvent("ERROR", "")}`;
-    writeFakeBin(
-      tmpBin,
-      "agy",
-      `console.log(${JSON.stringify(stdout)});\nprocess.exit(1);\n`
-    );
-    prependPath(tmpBin);
+  test(
+    "a failed run still removes its conversation",
+    async () => {
+      const cliDir = resolve(tmpBin, ".gemini", "antigravity-cli");
+      const spawned = seedConversation(cliDir, SPAWNED);
+      const stdout = `${initEvent(SPAWNED)}\n${resultEvent("ERROR", "")}`;
+      writeFakeBin(
+        tmpBin,
+        "agy",
+        `console.log(${JSON.stringify(stdout)});\nprocess.exit(1);\n`
+      );
+      prependPath(tmpBin);
 
-    expect((await inference({ user: "hi" })).success).toBe(false);
-    expect(spawned.filter(existsSync)).toEqual([]);
-  });
+      expect((await inference({ user: "hi" })).success).toBe(false);
+      expect(spawned.filter(existsSync)).toEqual([]);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("an id that is not a conversation id removes nothing", async () => {
-    const cliDir = resolve(tmpBin, ".gemini", "antigravity-cli");
-    mkdirSync(cliDir, { recursive: true });
-    const outside = resolve(cliDir, "keep.db");
-    writeFileSync(outside, "x");
-    const stdout = `${initEvent("../keep")}\n${resultEvent("SUCCESS", "OK")}`;
-    writeFakeBin(tmpBin, "agy", `console.log(${JSON.stringify(stdout)});\n`);
-    prependPath(tmpBin);
+  test(
+    "an id that is not a conversation id removes nothing",
+    async () => {
+      const cliDir = resolve(tmpBin, ".gemini", "antigravity-cli");
+      mkdirSync(cliDir, { recursive: true });
+      const outside = resolve(cliDir, "keep.db");
+      writeFileSync(outside, "x");
+      const stdout = `${initEvent("../keep")}\n${resultEvent("SUCCESS", "OK")}`;
+      writeFakeBin(tmpBin, "agy", `console.log(${JSON.stringify(stdout)});\n`);
+      prependPath(tmpBin);
 
-    expect((await inference({ user: "hi" })).output).toBe("OK");
-    expect(existsSync(outside)).toBe(true);
-  });
+      expect((await inference({ user: "hi" })).output).toBe("OK");
+      expect(existsSync(outside)).toBe(true);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });

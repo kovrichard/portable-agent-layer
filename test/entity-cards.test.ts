@@ -10,6 +10,7 @@ import {
 import { reload } from "../src/hooks/lib/settings";
 import { ingestEntities } from "../src/tools/knowledge/ingest";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { testHome } from "./lib/test-home";
 
 const HOME = testHome(import.meta.file);
@@ -59,15 +60,19 @@ describe("entityReminder", () => {
     expect(entityReminder("refactor the parser", loadKnownEntities())).toBeNull();
   });
 
-  test("the prompt context carries the card, and the setting turns it off", async () => {
-    expect(await getPromptContext("is Brightmoor billing on time?")).toContain(
-      "**Brightmoor Kft.**"
-    );
-    writeSettings({ dynamicContext: { entityCards: false } });
-    expect(await getPromptContext("is Brightmoor billing on time?")).not.toContain(
-      "Brightmoor Kft."
-    );
-  });
+  test(
+    "the prompt context carries the card, and the setting turns it off",
+    async () => {
+      expect(await getPromptContext("is Brightmoor billing on time?")).toContain(
+        "**Brightmoor Kft.**"
+      );
+      writeSettings({ dynamicContext: { entityCards: false } });
+      expect(await getPromptContext("is Brightmoor billing on time?")).not.toContain(
+        "Brightmoor Kft."
+      );
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });
 
 describe("latestNote", () => {

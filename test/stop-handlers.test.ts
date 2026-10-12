@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { runStopHandlers } from "../src/hooks/lib/stop";
 import { sandboxContextRuleDirs } from "./lib/context-rule-dirs";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { testHome } from "./lib/test-home";
 
 const HOME = testHome(import.meta.file);
@@ -52,137 +53,188 @@ describe("runStopHandlers — transcript gate", () => {
 });
 
 describe("runStopHandlers — the final reply", () => {
-  test("records the reply the agent handed over, not an earlier one still in the file", async () => {
-    await runStopHandlers(transcriptOf("first ask", "a mid-turn note", "second ask"), {
-      sessionId: "s-final",
-      lastAssistantMessage: "the final answer",
-    });
+  test(
+    "records the reply the agent handed over, not an earlier one still in the file",
+    async () => {
+      await runStopHandlers(transcriptOf("first ask", "a mid-turn note", "second ask"), {
+        sessionId: "s-final",
+        lastAssistantMessage: "the final answer",
+      });
 
-    const exchange = JSON.parse(
-      readFileSync(
-        resolve(HOME, "memory", "state", "last-exchange", "latest.json"),
-        "utf-8"
-      )
-    );
-    expect(exchange.userMessage).toBe("second ask");
-    expect(exchange.assistantMessage).toBe("the final answer");
-  });
+      const exchange = JSON.parse(
+        readFileSync(
+          resolve(HOME, "memory", "state", "last-exchange", "latest.json"),
+          "utf-8"
+        )
+      );
+      expect(exchange.userMessage).toBe("second ask");
+      expect(exchange.assistantMessage).toBe("the final answer");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("notes the final reply's shape, so the next turn is measured against it", async () => {
-    await runStopHandlers(transcriptOf("ask", "draft"), {
-      sessionId: "s-shape",
-      lastAssistantMessage: "- one\n- two\n\nWhich do you want?",
-    });
+  test(
+    "notes the final reply's shape, so the next turn is measured against it",
+    async () => {
+      await runStopHandlers(transcriptOf("ask", "draft"), {
+        sessionId: "s-shape",
+        lastAssistantMessage: "- one\n- two\n\nWhich do you want?",
+      });
 
-    const tracks = JSON.parse(
-      readFileSync(resolve(HOME, "memory", "state", "interaction-sessions.json"), "utf-8")
-    );
-    expect(tracks["s-shape"].reply).toMatchObject({ listItems: 2, asked: true });
-  });
+      const tracks = JSON.parse(
+        readFileSync(
+          resolve(HOME, "memory", "state", "interaction-sessions.json"),
+          "utf-8"
+        )
+      );
+      expect(tracks["s-shape"].reply).toMatchObject({ listItems: 2, asked: true });
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("a reply that passes on a due reminder clears it for the day", async () => {
-    await runStopHandlers(transcriptOf("ask", "draft"), {
-      sessionId: "s-nudge",
-      lastAssistantMessage:
-        "Done. Learning analysis is due too: want me to run /pal-analyze?",
-    });
+  test(
+    "a reply that passes on a due reminder clears it for the day",
+    async () => {
+      await runStopHandlers(transcriptOf("ask", "draft"), {
+        sessionId: "s-nudge",
+        lastAssistantMessage:
+          "Done. Learning analysis is due too: want me to run /pal-analyze?",
+      });
 
-    const shown = JSON.parse(
-      readFileSync(resolve(HOME, "memory", "state", "nudges-shown.json"), "utf-8")
-    );
-    expect(Object.keys(shown)).toEqual(["analyze"]);
-  });
+      const shown = JSON.parse(
+        readFileSync(resolve(HOME, "memory", "state", "nudges-shown.json"), "utf-8")
+      );
+      expect(Object.keys(shown)).toEqual(["analyze"]);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });
 
 describe("runStopHandlers — last-response cache", () => {
-  test("caches the last assistant message under the session id", async () => {
-    await runStopHandlers(transcriptOf("q", "the answer"), { sessionId: "sess-a" });
+  test(
+    "caches the last assistant message under the session id",
+    async () => {
+      await runStopHandlers(transcriptOf("q", "the answer"), { sessionId: "sess-a" });
 
-    expect(readCache()["sess-a"].response).toBe("the answer");
-    expect(readCache()["sess-a"].ts).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-  });
+      expect(readCache()["sess-a"].response).toBe("the answer");
+      expect(readCache()["sess-a"].ts).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("prefers an explicitly supplied last assistant message", async () => {
-    await runStopHandlers(transcriptOf("q", "from transcript"), {
-      sessionId: "sess-a",
-      lastAssistantMessage: "supplied directly",
-    });
+  test(
+    "prefers an explicitly supplied last assistant message",
+    async () => {
+      await runStopHandlers(transcriptOf("q", "from transcript"), {
+        sessionId: "sess-a",
+        lastAssistantMessage: "supplied directly",
+      });
 
-    expect(readCache()["sess-a"].response).toBe("supplied directly");
-  });
+      expect(readCache()["sess-a"].response).toBe("supplied directly");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("writes no cache when there is no session id", async () => {
-    await runStopHandlers(transcriptOf("q", "an answer"));
+  test(
+    "writes no cache when there is no session id",
+    async () => {
+      await runStopHandlers(transcriptOf("q", "an answer"));
 
-    expect(existsSync(cachePath())).toBe(false);
-  });
+      expect(existsSync(cachePath())).toBe(false);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("truncates a long response to 2000 characters", async () => {
-    await runStopHandlers(transcriptOf("q", "x".repeat(5000)), { sessionId: "sess-a" });
+  test(
+    "truncates a long response to 2000 characters",
+    async () => {
+      await runStopHandlers(transcriptOf("q", "x".repeat(5000)), { sessionId: "sess-a" });
 
-    expect(readCache()["sess-a"].response).toHaveLength(2000);
-  });
+      expect(readCache()["sess-a"].response).toHaveLength(2000);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("overwrites the entry for the same session", async () => {
-    await runStopHandlers(transcriptOf("q", "first"), { sessionId: "sess-a" });
-    await runStopHandlers(transcriptOf("q", "second"), { sessionId: "sess-a" });
+  test(
+    "overwrites the entry for the same session",
+    async () => {
+      await runStopHandlers(transcriptOf("q", "first"), { sessionId: "sess-a" });
+      await runStopHandlers(transcriptOf("q", "second"), { sessionId: "sess-a" });
 
-    const cache = readCache();
-    expect(Object.keys(cache)).toEqual(["sess-a"]);
-    expect(cache["sess-a"].response).toBe("second");
-  });
+      const cache = readCache();
+      expect(Object.keys(cache)).toEqual(["sess-a"]);
+      expect(cache["sess-a"].response).toBe("second");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("keeps entries belonging to other sessions", async () => {
-    await runStopHandlers(transcriptOf("q", "one"), { sessionId: "sess-a" });
-    await runStopHandlers(transcriptOf("q", "two"), { sessionId: "sess-b" });
+  test(
+    "keeps entries belonging to other sessions",
+    async () => {
+      await runStopHandlers(transcriptOf("q", "one"), { sessionId: "sess-a" });
+      await runStopHandlers(transcriptOf("q", "two"), { sessionId: "sess-b" });
 
-    expect(Object.keys(readCache()).sort()).toEqual(["sess-a", "sess-b"]);
-  });
+      expect(Object.keys(readCache()).sort()).toEqual(["sess-a", "sess-b"]);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("starts a fresh cache when the existing file is corrupt", async () => {
-    mkdirSync(resolve(HOME, "memory", "state"), { recursive: true });
-    writeFileSync(cachePath(), "{ not json", "utf-8");
+  test(
+    "starts a fresh cache when the existing file is corrupt",
+    async () => {
+      mkdirSync(resolve(HOME, "memory", "state"), { recursive: true });
+      writeFileSync(cachePath(), "{ not json", "utf-8");
 
-    await runStopHandlers(transcriptOf("q", "recovered"), { sessionId: "sess-a" });
+      await runStopHandlers(transcriptOf("q", "recovered"), { sessionId: "sess-a" });
 
-    expect(readCache()["sess-a"].response).toBe("recovered");
-  });
+      expect(readCache()["sess-a"].response).toBe("recovered");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("caps the cache at twenty sessions, evicting the oldest", async () => {
-    const seeded: Record<string, { response: string; ts: string }> = {};
-    for (let i = 0; i < 20; i++) {
-      seeded[`old-${String(i).padStart(2, "0")}`] = {
-        response: "r",
-        ts: `2020-01-${String(i + 1).padStart(2, "0")}T00:00:00.000Z`,
-      };
-    }
-    seedCache(seeded);
+  test(
+    "caps the cache at twenty sessions, evicting the oldest",
+    async () => {
+      const seeded: Record<string, { response: string; ts: string }> = {};
+      for (let i = 0; i < 20; i++) {
+        seeded[`old-${String(i).padStart(2, "0")}`] = {
+          response: "r",
+          ts: `2020-01-${String(i + 1).padStart(2, "0")}T00:00:00.000Z`,
+        };
+      }
+      seedCache(seeded);
 
-    await runStopHandlers(transcriptOf("q", "newest"), { sessionId: "fresh" });
+      await runStopHandlers(transcriptOf("q", "newest"), { sessionId: "fresh" });
 
-    const cache = readCache();
-    expect(Object.keys(cache)).toHaveLength(20);
-    expect(cache.fresh).toBeDefined();
-    expect(cache["old-00"]).toBeUndefined();
-    expect(cache["old-19"]).toBeDefined();
-  });
+      const cache = readCache();
+      expect(Object.keys(cache)).toHaveLength(20);
+      expect(cache.fresh).toBeDefined();
+      expect(cache["old-00"]).toBeUndefined();
+      expect(cache["old-19"]).toBeDefined();
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("leaves the cache untouched at exactly twenty sessions", async () => {
-    const seeded: Record<string, { response: string; ts: string }> = {};
-    for (let i = 0; i < 19; i++) {
-      seeded[`keep-${String(i).padStart(2, "0")}`] = {
-        response: "r",
-        ts: `2020-01-${String(i + 1).padStart(2, "0")}T00:00:00.000Z`,
-      };
-    }
-    seedCache(seeded);
+  test(
+    "leaves the cache untouched at exactly twenty sessions",
+    async () => {
+      const seeded: Record<string, { response: string; ts: string }> = {};
+      for (let i = 0; i < 19; i++) {
+        seeded[`keep-${String(i).padStart(2, "0")}`] = {
+          response: "r",
+          ts: `2020-01-${String(i + 1).padStart(2, "0")}T00:00:00.000Z`,
+        };
+      }
+      seedCache(seeded);
 
-    await runStopHandlers(transcriptOf("q", "twentieth"), { sessionId: "fresh" });
+      await runStopHandlers(transcriptOf("q", "twentieth"), { sessionId: "fresh" });
 
-    const cache = readCache();
-    expect(Object.keys(cache)).toHaveLength(20);
-    expect(cache["keep-00"]).toBeDefined();
-  });
+      const cache = readCache();
+      expect(Object.keys(cache)).toHaveLength(20);
+      expect(cache["keep-00"]).toBeDefined();
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });
 
 describe("runStopHandlers — pending failure claim", () => {
@@ -190,23 +242,31 @@ describe("runStopHandlers — pending failure claim", () => {
     return resolve(HOME, "memory", "state", "pending-failure.json");
   }
 
-  test("claims a pending failure by moving it out of the state directory", async () => {
-    mkdirSync(resolve(HOME, "memory", "state"), { recursive: true });
-    writeFileSync(
-      pendingPath(),
-      JSON.stringify({ rating: 3, context: "bad", cwd: HOME }),
-      "utf-8"
-    );
+  test(
+    "claims a pending failure by moving it out of the state directory",
+    async () => {
+      mkdirSync(resolve(HOME, "memory", "state"), { recursive: true });
+      writeFileSync(
+        pendingPath(),
+        JSON.stringify({ rating: 3, context: "bad", cwd: HOME }),
+        "utf-8"
+      );
 
-    await runStopHandlers(transcriptOf("q", "an answer"), { sessionId: "sess-a" });
+      await runStopHandlers(transcriptOf("q", "an answer"), { sessionId: "sess-a" });
 
-    expect(existsSync(pendingPath())).toBe(false);
-  });
+      expect(existsSync(pendingPath())).toBe(false);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("completes normally when no pending failure exists", async () => {
-    await runStopHandlers(transcriptOf("q", "an answer"), { sessionId: "sess-a" });
+  test(
+    "completes normally when no pending failure exists",
+    async () => {
+      await runStopHandlers(transcriptOf("q", "an answer"), { sessionId: "sess-a" });
 
-    expect(existsSync(pendingPath())).toBe(false);
-    expect(readCache()["sess-a"]).toBeDefined();
-  });
+      expect(existsSync(pendingPath())).toBe(false);
+      expect(readCache()["sess-a"]).toBeDefined();
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });

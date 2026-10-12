@@ -8,6 +8,7 @@ import {
   type PageBuild,
   refreshPage,
 } from "../src/tools/control-room/static";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
 let page: PageBuild;
@@ -113,31 +114,43 @@ describe("building the page", () => {
     expect(existsSync(page.lock)).toBe(false);
   });
 
-  test("waits for a build another process holds the lock for", () => {
-    lockAgedBy(0);
-    releaseLockAfter(300);
-    const started = Date.now();
-    expect(buildPage(page)).toBe(true);
-    expect(Date.now() - started).toBeGreaterThanOrEqual(250);
-    expect(builds).toBe(1);
-  });
+  test(
+    "waits for a build another process holds the lock for",
+    () => {
+      lockAgedBy(0);
+      releaseLockAfter(300);
+      const started = Date.now();
+      expect(buildPage(page)).toBe(true);
+      expect(Date.now() - started).toBeGreaterThanOrEqual(250);
+      expect(builds).toBe(1);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("takes over a lock abandoned for longer than a build can take", () => {
-    lockAgedBy(ABANDONED_LOCK_MS + 1000);
-    releaseLockAfter(2000);
-    const started = Date.now();
-    expect(buildPage(page)).toBe(true);
-    expect(Date.now() - started).toBeLessThan(1000);
-    expect(builds).toBe(1);
-  });
+  test(
+    "takes over a lock abandoned for longer than a build can take",
+    () => {
+      lockAgedBy(ABANDONED_LOCK_MS + 1000);
+      releaseLockAfter(2000);
+      const started = Date.now();
+      expect(buildPage(page)).toBe(true);
+      expect(Date.now() - started).toBeLessThan(1000);
+      expect(builds).toBe(1);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("leaves a lock alone that is younger than that", () => {
-    lockAgedBy(ABANDONED_LOCK_MS - 10_000);
-    releaseLockAfter(300);
-    const started = Date.now();
-    buildPage(page);
-    expect(Date.now() - started).toBeGreaterThanOrEqual(250);
-  });
+  test(
+    "leaves a lock alone that is younger than that",
+    () => {
+      lockAgedBy(ABANDONED_LOCK_MS - 10_000);
+      releaseLockAfter(300);
+      const started = Date.now();
+      buildPage(page);
+      expect(Date.now() - started).toBeGreaterThanOrEqual(250);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });
 
 describe("refreshing the page on install", () => {

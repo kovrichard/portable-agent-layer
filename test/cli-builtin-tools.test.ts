@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import { builtinToolVerbs } from "../src/cli/builtin-tools";
 import { linkDir } from "./lib/links";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
@@ -48,19 +49,27 @@ describe("pal cli <tool> — the tilde-free path to a built-in tool", () => {
   });
 
   for (const verb of Object.keys(READ_ONLY_ARGS)) {
-    test(`${verb} matches the direct script invocation`, () => {
-      const args = READ_ONLY_ARGS[verb] ?? [];
-      const viaCli = run(CLI, ["cli", verb, ...args]);
-      const viaPath = run(resolve(TOOL_DIR, `${verb}.ts`), args);
-      expect(viaCli.stdout).toBe(viaPath.stdout);
-      expect(viaCli.status).toBe(viaPath.status);
-    });
+    test(
+      `${verb} matches the direct script invocation`,
+      () => {
+        const args = READ_ONLY_ARGS[verb] ?? [];
+        const viaCli = run(CLI, ["cli", verb, ...args]);
+        const viaPath = run(resolve(TOOL_DIR, `${verb}.ts`), args);
+        expect(viaCli.stdout).toBe(viaPath.stdout);
+        expect(viaCli.status).toBe(viaPath.status);
+      },
+      SPAWN_HEAVY_TEST_MS
+    );
   }
 
-  test("an unknown verb still falls through to the usual unknown-command path", () => {
-    const result = run(CLI, ["cli", "definitely-not-a-tool"]);
-    expect(result.status).not.toBe(0);
-  });
+  test(
+    "an unknown verb still falls through to the usual unknown-command path",
+    () => {
+      const result = run(CLI, ["cli", "definitely-not-a-tool"]);
+      expect(result.status).not.toBe(0);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });
 
 /**
@@ -190,26 +199,42 @@ describe("pal cli skill run — a skill's own tool, by name", () => {
     );
   });
 
-  test("runs the tool and passes arguments through", () => {
-    const result = run(CLI, ["cli", "skill", "run", SKILL, "echo", "a", "b"]);
-    expect(result.status).toBe(0);
-    expect(result.stdout.trim()).toBe('["a","b"]');
-  });
+  test(
+    "runs the tool and passes arguments through",
+    () => {
+      const result = run(CLI, ["cli", "skill", "run", SKILL, "echo", "a", "b"]);
+      expect(result.status).toBe(0);
+      expect(result.stdout.trim()).toBe('["a","b"]');
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("a -- separator is consumed, not forwarded", () => {
-    const result = run(CLI, ["cli", "skill", "run", SKILL, "echo", "--", "--flag"]);
-    expect(result.stdout.trim()).toBe('["--flag"]');
-  });
+  test(
+    "a -- separator is consumed, not forwarded",
+    () => {
+      const result = run(CLI, ["cli", "skill", "run", SKILL, "echo", "--", "--flag"]);
+      expect(result.stdout.trim()).toBe('["--flag"]');
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("the tool's exit code is the CLI's exit code", () => {
-    const result = run(CLI, ["cli", "skill", "run", SKILL, "echo", "--boom"]);
-    expect(result.status).toBe(3);
-  });
+  test(
+    "the tool's exit code is the CLI's exit code",
+    () => {
+      const result = run(CLI, ["cli", "skill", "run", SKILL, "echo", "--boom"]);
+      expect(result.status).toBe(3);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("the .ts extension is implied but may be given", () => {
-    const result = run(CLI, ["cli", "skill", "run", SKILL, "echo.ts"]);
-    expect(result.status).toBe(0);
-  });
+  test(
+    "the .ts extension is implied but may be given",
+    () => {
+      const result = run(CLI, ["cli", "skill", "run", SKILL, "echo.ts"]);
+      expect(result.status).toBe(0);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
   // Names reach this from SKILL.md text, so a traversing one must never resolve
   // to a file outside ~/.pal/skills/.
@@ -218,17 +243,25 @@ describe("pal cli skill run — a skill's own tool, by name", () => {
     ["tool name climbs out", [SKILL, "../../../../../../bin/ls"]],
     ["skill name is a nested path", ["demo/tools", "echo"]],
     ["backslash separator", [SKILL, "..\\..\\echo"]],
-  ])("rejects a traversing name: %s", (_label, [skill, tool]) => {
-    const result = run(CLI, ["cli", "skill", "run", skill as string, tool as string]);
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain("plain names");
-  });
+  ])(
+    "rejects a traversing name: %s",
+    (_label, [skill, tool]) => {
+      const result = run(CLI, ["cli", "skill", "run", skill as string, tool as string]);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("plain names");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("a missing tool is reported, not silently skipped", () => {
-    const result = run(CLI, ["cli", "skill", "run", SKILL, "absent"]);
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain("absent.ts");
-  });
+  test(
+    "a missing tool is reported, not silently skipped",
+    () => {
+      const result = run(CLI, ["cli", "skill", "run", SKILL, "absent"]);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("absent.ts");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });
 
 describe("pal cli skill run — ~/.pal/.env reaches shipped skills only", () => {
@@ -271,15 +304,27 @@ describe("pal cli skill run — ~/.pal/.env reaches shipped skills only", () => 
     linkIntoHome("linked", skillWithKeyTool(resolve(home, "elsewhere", "linked")));
   });
 
-  test("a shipped skill's tool receives keys from ~/.pal/.env", () => {
-    expect(runKeyTool("shipped").stdout.trim()).toBe("key=[from-pal-env]");
-  });
+  test(
+    "a shipped skill's tool receives keys from ~/.pal/.env",
+    () => {
+      expect(runKeyTool("shipped").stdout.trim()).toBe("key=[from-pal-env]");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("a personal skill's tool does not", () => {
-    expect(runKeyTool("personal").stdout.trim()).toBe("key=[]");
-  });
+  test(
+    "a personal skill's tool does not",
+    () => {
+      expect(runKeyTool("personal").stdout.trim()).toBe("key=[]");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("a personal skill linked in from outside the package does not either", () => {
-    expect(runKeyTool("linked").stdout.trim()).toBe("key=[]");
-  });
+  test(
+    "a personal skill linked in from outside the package does not either",
+    () => {
+      expect(runKeyTool("linked").stdout.trim()).toBe("key=[]");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });

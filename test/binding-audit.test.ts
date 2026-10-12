@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import type { ProjectProgress } from "../src/hooks/lib/projects";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
@@ -82,41 +83,61 @@ describe("proposeBinding", () => {
     return dir;
   }
 
-  test("is strong when the repository here is the project's recorded remote", async () => {
-    const { proposeBinding } = await lib();
-    const dir = repoAt("anything", "git@github.com:a/b.git");
-    const p = { ...project("some-other-name"), remote: "github.com/a/b" };
+  test(
+    "is strong when the repository here is the project's recorded remote",
+    async () => {
+      const { proposeBinding } = await lib();
+      const dir = repoAt("anything", "git@github.com:a/b.git");
+      const p = { ...project("some-other-name"), remote: "github.com/a/b" };
 
-    const proposal = proposeBinding(p, dir);
-    expect(proposal?.confidence).toBe("strong");
-    expect(proposal?.command).toContain("set-path some-other-name");
-  });
+      const proposal = proposeBinding(p, dir);
+      expect(proposal?.confidence).toBe("strong");
+      expect(proposal?.command).toContain("set-path some-other-name");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
   // The orbit shape: a name can belong to more than one checkout, so a name
   // match must never be presented as certain.
-  test("is only weak when nothing but the directory name agrees", async () => {
-    const { proposeBinding } = await lib();
-    const proposal = proposeBinding(project("orbit"), checkout("orbit"));
-    expect(proposal?.confidence).toBe("weak");
-    expect(proposal?.reason).toContain("more than one checkout");
-  });
+  test(
+    "is only weak when nothing but the directory name agrees",
+    async () => {
+      const { proposeBinding } = await lib();
+      const proposal = proposeBinding(project("orbit"), checkout("orbit"));
+      expect(proposal?.confidence).toBe("weak");
+      expect(proposal?.reason).toContain("more than one checkout");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("stays silent when neither remote nor name matches", async () => {
-    const { proposeBinding } = await lib();
-    expect(proposeBinding(project("alpha"), checkout("something-else"))).toBeNull();
-  });
+  test(
+    "stays silent when neither remote nor name matches",
+    async () => {
+      const { proposeBinding } = await lib();
+      expect(proposeBinding(project("alpha"), checkout("something-else"))).toBeNull();
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("a differing remote does not get promoted by a matching name", async () => {
-    const { proposeBinding } = await lib();
-    const dir = repoAt("orbit", "git@github.com:someone/other.git");
-    const p = { ...project("orbit"), remote: "github.com/someone/orbit" };
-    expect(proposeBinding(p, dir)?.confidence).toBe("weak");
-  });
+  test(
+    "a differing remote does not get promoted by a matching name",
+    async () => {
+      const { proposeBinding } = await lib();
+      const dir = repoAt("orbit", "git@github.com:someone/other.git");
+      const p = { ...project("orbit"), remote: "github.com/someone/orbit" };
+      expect(proposeBinding(p, dir)?.confidence).toBe("weak");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("only ever suggests a command, never performs the binding", async () => {
-    const { proposeBinding } = await lib();
-    const { readBindings } = await import("../src/hooks/lib/bindings");
-    proposeBinding(project("orbit"), checkout("orbit"));
-    expect(readBindings(HOME)).toEqual({});
-  });
+  test(
+    "only ever suggests a command, never performs the binding",
+    async () => {
+      const { proposeBinding } = await lib();
+      const { readBindings } = await import("../src/hooks/lib/bindings");
+      proposeBinding(project("orbit"), checkout("orbit"));
+      expect(readBindings(HOME)).toEqual({});
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });

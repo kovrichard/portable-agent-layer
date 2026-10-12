@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { buildCliPrompt, buildCopilotArgs, inference } from "../src/hooks/lib/inference";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
 const PRESERVED = [
@@ -111,53 +112,69 @@ describe("inference dispatcher — copilot spawn integration (fake binary)", () 
     process.env.PAL_AGENT = "copilot";
   });
 
-  test("end-to-end: fake copilot echoes stdin, dispatcher captures it", async () => {
-    // Reads stdin rather than argv: that is where the prompt now travels.
-    writeFakeBin(
-      tmpBin,
-      "copilot",
-      `for await (const c of Bun.stdin.stream()) Bun.write(Bun.stdout, c);\n`
-    );
-    prependPath(tmpBin);
+  test(
+    "end-to-end: fake copilot echoes stdin, dispatcher captures it",
+    async () => {
+      // Reads stdin rather than argv: that is where the prompt now travels.
+      writeFakeBin(
+        tmpBin,
+        "copilot",
+        `for await (const c of Bun.stdin.stream()) Bun.write(Bun.stdout, c);\n`
+      );
+      prependPath(tmpBin);
 
-    const result = await inference({ user: "hello-copilot", timeout: 5000 });
-    expect(result.success).toBe(true);
-    expect(result.output).toBe("hello-copilot");
-  });
+      const result = await inference({ user: "hello-copilot", timeout: 5000 });
+      expect(result.success).toBe(true);
+      expect(result.output).toBe("hello-copilot");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("fake copilot sees PAL_SPAWNED_INFERENCE=1 and CLAUDECODE unset", async () => {
-    writeFakeBin(
-      tmpBin,
-      "copilot",
-      `console.log(\`sentinel=\${process.env.${SPAWN_GUARD_ENV.SENTINEL}} claudecode=[\${process.env.CLAUDECODE ?? ""}]\`);\n`
-    );
-    prependPath(tmpBin);
-    process.env.CLAUDECODE = "1";
+  test(
+    "fake copilot sees PAL_SPAWNED_INFERENCE=1 and CLAUDECODE unset",
+    async () => {
+      writeFakeBin(
+        tmpBin,
+        "copilot",
+        `console.log(\`sentinel=\${process.env.${SPAWN_GUARD_ENV.SENTINEL}} claudecode=[\${process.env.CLAUDECODE ?? ""}]\`);\n`
+      );
+      prependPath(tmpBin);
+      process.env.CLAUDECODE = "1";
 
-    const result = await inference({ user: "ignored", timeout: 5000 });
-    expect(result.success).toBe(true);
-    expect(result.output).toBe("sentinel=1 claudecode=[]");
-    expect(process.env.CLAUDECODE).toBe("1");
-  });
+      const result = await inference({ user: "ignored", timeout: 5000 });
+      expect(result.success).toBe(true);
+      expect(result.output).toBe("sentinel=1 claudecode=[]");
+      expect(process.env.CLAUDECODE).toBe("1");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("non-zero exit from fake copilot returns success: false", async () => {
-    writeFakeBin(tmpBin, "copilot", `process.exit(1);\n`);
-    prependPath(tmpBin);
+  test(
+    "non-zero exit from fake copilot returns success: false",
+    async () => {
+      writeFakeBin(tmpBin, "copilot", `process.exit(1);\n`);
+      prependPath(tmpBin);
 
-    const result = await inference({ user: "hi", timeout: 5000 });
-    expect(result.success).toBe(false);
-  });
+      const result = await inference({ user: "hi", timeout: 5000 });
+      expect(result.success).toBe(false);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
-  test("JSON-schema path parses fake copilot JSON output", async () => {
-    writeFakeBin(tmpBin, "copilot", `console.log('{"verdict":"ok"}');\n`);
-    prependPath(tmpBin);
+  test(
+    "JSON-schema path parses fake copilot JSON output",
+    async () => {
+      writeFakeBin(tmpBin, "copilot", `console.log('{"verdict":"ok"}');\n`);
+      prependPath(tmpBin);
 
-    const result = await inference({
-      user: "rate",
-      jsonSchema: { type: "object", properties: { verdict: { type: "string" } } },
-      timeout: 5000,
-    });
-    expect(result.success).toBe(true);
-    expect(JSON.parse(result.output ?? "{}")).toEqual({ verdict: "ok" });
-  });
+      const result = await inference({
+        user: "rate",
+        jsonSchema: { type: "object", properties: { verdict: { type: "string" } } },
+        timeout: 5000,
+      });
+      expect(result.success).toBe(true);
+      expect(JSON.parse(result.output ?? "{}")).toEqual({ verdict: "ok" });
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });

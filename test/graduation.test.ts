@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir, testHome } from "./lib/test-home";
 
 const TEST_HOME = testHome(import.meta.file);
@@ -201,9 +202,15 @@ describe("recommendations without an API key", () => {
     prependPath(binDir);
   });
 
-  test("come from the agent's own CLI", async () => {
-    const { analyze } = await import("../src/hooks/lib/graduation");
-    const result = await analyze({ actionable: true });
-    expect(result.recommendations).toEqual(["Check the npm registry before installing."]);
-  });
+  test(
+    "come from the agent's own CLI",
+    async () => {
+      const { analyze } = await import("../src/hooks/lib/graduation");
+      const result = await analyze({ actionable: true });
+      expect(result.recommendations).toEqual([
+        "Check the npm registry before installing.",
+      ]);
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 });

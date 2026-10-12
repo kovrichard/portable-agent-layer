@@ -4,6 +4,7 @@ import { existsSync, lstatSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { linkDir } from "./lib/links";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { testHome } from "./lib/test-home";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
@@ -65,13 +66,17 @@ beforeEach(() => {
 });
 
 describe("stale shipped-skill links", () => {
-  test("skill doctor --all skips a dangling link and names it", () => {
-    const res = pal("skill", "doctor", "--all");
-    expect(res.stdout + res.stderr).not.toContain("ENOENT");
-    expect(res.stdout).toContain("Skipped renamed-away");
-    expect(res.stdout).toContain("1 skills —");
-    expect(res.stdout).toContain("mine");
-  });
+  test(
+    "skill doctor --all skips a dangling link and names it",
+    () => {
+      const res = pal("skill", "doctor", "--all");
+      expect(res.stdout + res.stderr).not.toContain("ENOENT");
+      expect(res.stdout).toContain("Skipped renamed-away");
+      expect(res.stdout).toContain("1 skills —");
+      expect(res.stdout).toContain("mine");
+    },
+    SPAWN_HEAVY_TEST_MS
+  );
 
   test("install prunes PAL-owned dangling links and leaves everything else", () => {
     const res = pal("install", "--claude");
