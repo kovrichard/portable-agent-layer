@@ -1,3 +1,14 @@
+# [0.101.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.100.0...v0.101.0) (2026-10-13)
+
+
+### Features
+
+* **wrapped:** agents ([77f8b8f](https://github.com/kovrichard/portable-agent-layer/commit/77f8b8f362f001615d71154925a8cc5b0726239f))
+* **wrapped:** habits ([93f7c42](https://github.com/kovrichard/portable-agent-layer/commit/93f7c42c53bb34d0d83795f949aea68996d2780f))
+* **wrapped:** pal cli wrapped prints the year's totals ([52db636](https://github.com/kovrichard/portable-agent-layer/commit/52db6367c9eed79ab32ce2c2c00661bdada07e92))
+* **wrapped:** records ([43d4197](https://github.com/kovrichard/portable-agent-layer/commit/43d419730762c2421846c45447c9f99768e9378c))
+* **wrapped:** skills, rules and promises ([4fde90c](https://github.com/kovrichard/portable-agent-layer/commit/4fde90c15b6bf417b4e3fc838f0782ec2b17ea25))
+
 # [0.100.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.99.2...v0.100.0) (2026-10-13)
 
 
