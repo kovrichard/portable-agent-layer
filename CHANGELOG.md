@@ -1,3 +1,21 @@
+# [0.100.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.99.2...v0.100.0) (2026-10-13)
+
+
+### Bug Fixes
+
+* **hooks:** count klint gate runs as hook runs in both configs ([b8cf7e7](https://github.com/kovrichard/portable-agent-layer/commit/b8cf7e7ae883183b8e92ef6a8149973a18c4ad28))
+* **token-usage:** log the model inference ran on, not Haiku ([7a0e9ac](https://github.com/kovrichard/portable-agent-layer/commit/7a0e9acaa6d94756da6b8916ea5489f1d8aa7070))
+
+
+### Features
+
+* **inference:** log inference usage in model_call's token fields ([b930ee6](https://github.com/kovrichard/portable-agent-layer/commit/b930ee6fce3542bbb0a7f3b4550a1e0238b76e66))
+* **inference:** read antigravity spawns' tokens from its result event ([7287eb3](https://github.com/kovrichard/portable-agent-layer/commit/7287eb3f7cb743d5eafc71523fe6acb171a79768))
+* **inference:** read claude spawns' tokens from its JSON result ([dc85ac7](https://github.com/kovrichard/portable-agent-layer/commit/dc85ac7ac8a661f630f12805e75be9fc82285bd0))
+* **inference:** read codex spawns' tokens from its JSON events ([1c44683](https://github.com/kovrichard/portable-agent-layer/commit/1c44683090808622e0276a80daea876c8d17686a))
+* **inference:** read copilot spawns' prompt tokens from its JSON events ([db05d49](https://github.com/kovrichard/portable-agent-layer/commit/db05d4957f6f97066a88a9472bbeb746abf604de))
+* **inference:** read opencode spawns' tokens from its step events ([0797982](https://github.com/kovrichard/portable-agent-layer/commit/079798217a08fc71c6cbbdea2201a18cc8cbe2ed))
+
 ## [0.99.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.99.1...v0.99.2) (2026-10-13)
 
 
