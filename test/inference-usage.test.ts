@@ -130,7 +130,8 @@ describe("copilot's and antigravity's usage", () => {
           {
             type: "session.shutdown",
             data: { modelMetrics: { a: usage(10), b: usage(20) } },
-          }
+          },
+          { type: "session.info", data: { modelMetrics: { a: usage(99) } } }
         )
       )
     ).toEqual({
