@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { inferFromCli } from "../src/cli/infer";
+import { inferFromCli, routeFromCli } from "../src/cli/infer";
 import type { inference } from "../src/hooks/lib/inference";
 import { freshTestDir } from "./lib/test-home";
 
@@ -112,6 +112,24 @@ describe("pal cli infer", () => {
     expect(await inferFromCli({ schema: file("bad.json", "{type") }, "q", infer)).toBe(1);
     expect(calls).toEqual([]);
     expect(printed.err.join("\n")).toContain("small, medium");
+  });
+
+  test("--route prints the planned route for the tier and caller without inferring", () => {
+    const asked: unknown[] = [];
+    const plan = (tier: string, caller?: string) => {
+      asked.push([tier, caller]);
+      return { agent: "codex", route: "codex-spawn", model: "gpt-x" };
+    };
+
+    expect(routeFromCli({ tier: "medium", caller: "eval" }, plan)).toBe(0);
+    expect(asked).toEqual([["medium", "eval"]]);
+    expect(JSON.parse(printed.out[0] ?? "")).toEqual({
+      agent: "codex",
+      route: "codex-spawn",
+      model: "gpt-x",
+    });
+    expect(routeFromCli({ tier: "huge" }, plan)).toBe(1);
+    expect(asked).toHaveLength(1);
   });
 
   test("refuses a schema it could not check a reply against, before inferring", async () => {

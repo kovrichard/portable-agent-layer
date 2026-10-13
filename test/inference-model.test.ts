@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { chmodSync, writeFileSync } from "node:fs";
+import { delimiter, resolve } from "node:path";
 import {
   buildClaudeArgs,
   buildCodexArgs,
   buildCopilotArgs,
   buildCursorArgs,
   buildOpencodeArgs,
+  plannedInferenceRoute,
   previewInferenceRoute,
 } from "../src/hooks/lib/inference";
 import {
@@ -160,5 +161,32 @@ describe("previewInferenceRoute", () => {
     if (preview.route === "claude-spawn" || preview.route === "anthropic-api")
       expect(preview.model).toBe(HAIKU_MODEL);
     else expect(preview.model).toBeUndefined();
+  });
+});
+
+function pathWithFakeClaude(): string {
+  const dir = freshTestDir(`${import.meta.file}-planned`);
+  const name = process.platform === "win32" ? "claude.cmd" : "claude";
+  writeFileSync(resolve(dir, name), "");
+  chmodSync(resolve(dir, name), 0o755);
+  return `${dir}${delimiter}${process.env.PATH ?? ""}`;
+}
+
+describe("plannedInferenceRoute", () => {
+  test("names the agent, its route and the model for the tier asked", () => {
+    const realPath = process.env.PATH;
+    delete process.env.PAL_INFERENCE_DISABLED;
+    process.env.PAL_AGENT = "claude";
+    process.env.PATH = pathWithFakeClaude();
+    try {
+      expect(plannedInferenceRoute("medium")).toEqual({
+        agent: "claude",
+        route: "claude-spawn",
+        model: SONNET_MODEL,
+      });
+      expect(plannedInferenceRoute("small").model).toBe(HAIKU_MODEL);
+    } finally {
+      process.env.PATH = realPath;
+    }
   });
 });
