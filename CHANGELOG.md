@@ -1,3 +1,14 @@
+# [0.99.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.98.0...v0.99.0) (2026-10-13)
+
+
+### Features
+
+* **events:** backfill knowledge entities as entity_first_seen events ([b00bfad](https://github.com/kovrichard/portable-agent-layer/commit/b00bfad80773df0d53f2372f115f5f54b5486829))
+* **events:** backfill project registrations, ISC closes and decisions ([5a5e298](https://github.com/kovrichard/portable-agent-layer/commit/5a5e2988e5d48bcf6a34de1b968cc3a0bddec272))
+* **events:** backfill the Discord bot's promises as promise events ([85ad67d](https://github.com/kovrichard/portable-agent-layer/commit/85ad67db09101bb01678c577e348b63c8d97bfda))
+* **events:** collect a deleted Claude transcript from PAL's copy ([a86d2c3](https://github.com/kovrichard/portable-agent-layer/commit/a86d2c348eb6c0db68a59e535f3318cc3faee0fd))
+* **events:** log ISA history as commitments and stream it live ([0cacb3d](https://github.com/kovrichard/portable-agent-layer/commit/0cacb3dcb83a7a418523473e8d3da1518c219c88))
+
 # [0.98.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.97.0...v0.98.0) (2026-10-12)
 
 
