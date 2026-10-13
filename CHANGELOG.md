@@ -1,3 +1,14 @@
+# [0.103.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.102.0...v0.103.0) (2026-10-13)
+
+
+### Features
+
+* **cost:** cost per commit and per closed isc, and cache hit rate ([8fc45bc](https://github.com/kovrichard/portable-agent-layer/commit/8fc45bc68980c9be04c2542cdfa36b22bbafe57c))
+* **cost:** model mix and pal's own spend per caller ([de3f717](https://github.com/kovrichard/portable-agent-layer/commit/de3f71750007b43594f9fcbc7fb6efeb9274c97e))
+* **cost:** most expensive projects, sessions, days and turns ([7bc741d](https://github.com/kovrichard/portable-agent-layer/commit/7bc741d830c5188fa879f70ee54e11c74c294048))
+* **cost:** pal's context overhead per session ([04789e1](https://github.com/kovrichard/portable-agent-layer/commit/04789e13e5d6035e45553ad49032a3f648dba6ff))
+* **hooks:** log how much context pal injects per session ([f61cd8b](https://github.com/kovrichard/portable-agent-layer/commit/f61cd8bdb800ef2da9fa6d8dbfd9cada4c9bdbef))
+
 # [0.102.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.101.0...v0.102.0) (2026-10-13)
 
 
