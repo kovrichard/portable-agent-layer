@@ -3,6 +3,7 @@ import { fmtCost } from "../token-report";
 import type { Efficiency, PerUnit } from "./efficiency";
 import type { Entry, Leaderboards } from "./leaderboards";
 import type { Share } from "./mix";
+import type { Overhead } from "./overhead";
 
 function entryLine({ label, cost, unpriced }: Entry): string {
   const extra = unpriced > 0 ? ` + ${count(unpriced)} unpriced calls` : "";
@@ -46,6 +47,21 @@ function shareLine({ label, calls, cost, unpriced }: Share): string {
   const price = unpriced === calls ? "unknown" : fmtCost(cost);
   const extra = unpriced > 0 && unpriced < calls ? `, ${count(unpriced)} unpriced` : "";
   return `    ${price.padStart(10)}  ${label}  ${counted(calls, "call")}${extra}`;
+}
+
+const chars = (n: number) => `${count(Math.round(n))} chars`.padStart(14);
+
+export function overheadLines(overhead: Overhead | null): string[] {
+  const title = "\n  PAL context per session\n";
+  if (overhead === null) return [title, "    unknown"];
+  const { instructionsChars, semiStaticChars, dynamicChars } = overhead.perSession;
+  return [
+    `\n  PAL context per session, over ${counted(overhead.sessions, "session")} since ${overhead.since}\n`,
+    `    Instructions ${chars(instructionsChars)}`,
+    `    Semi-static  ${chars(semiStaticChars)}`,
+    `    Dynamic      ${chars(dynamicChars)}`,
+    `    Total        ${chars(instructionsChars + semiStaticChars + dynamicChars)}`,
+  ];
 }
 
 export function shareLines(title: string, shares: Share[]): string[] {

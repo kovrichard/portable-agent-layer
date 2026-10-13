@@ -4,7 +4,13 @@ import { leaf } from "../tools/lib/command";
 import { efficiency } from "../tools/lib/cost/efficiency";
 import { leaderboards } from "../tools/lib/cost/leaderboards";
 import { modelMix, palSpend } from "../tools/lib/cost/mix";
-import { efficiencyLines, leaderboardLines, shareLines } from "../tools/lib/cost/render";
+import { contextOverhead } from "../tools/lib/cost/overhead";
+import {
+  efficiencyLines,
+  leaderboardLines,
+  overheadLines,
+  shareLines,
+} from "../tools/lib/cost/render";
 import { costLines, costMonths } from "../tools/lib/cost-report";
 import { ofType } from "../tools/lib/wrapped/year";
 
@@ -17,6 +23,7 @@ function printCost(): undefined {
     ...efficiencyLines(efficiency(events)),
     ...shareLines("Model mix", modelMix(events)),
     ...shareLines("PAL's own spend per caller, already in the totals", palSpend(events)),
+    ...overheadLines(contextOverhead(events)),
   ];
   for (const line of lines) console.log(line);
 }
