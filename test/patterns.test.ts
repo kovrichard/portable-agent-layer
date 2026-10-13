@@ -123,6 +123,19 @@ describe("days", () => {
     });
   });
 
+  test("the busiest day is named, and the log is read in time order whatever order it was written in", () => {
+    const activity = activityOf(
+      at("turn", "a", "2026-06-01T08:00:00.000Z"),
+      at("turn", "a", "2026-06-02T08:00:00.000Z"),
+      at("turn", "a", "2026-06-02T08:02:00.000Z"),
+      at("commit", "b", "2026-06-02T08:01:00.000Z")
+    );
+    expect(contextSwitches(activity)).toEqual({
+      perDay: 1,
+      mostInADay: { value: 2, label: "2026-06-02" },
+    });
+  });
+
   test("nothing logged has no switches and no days", () => {
     expect(contextSwitches([])).toBeNull();
     expect(dayShape([])).toEqual({ oneProject: 0, manyProjects: 0 });
@@ -200,6 +213,22 @@ describe("focus blocks", () => {
     });
   });
 
+  test("a block can start on a model call, and of two equally long ones the first is the longest", () => {
+    const focus = focusBlocks(
+      activityOf(
+        ...[0, 1440].flatMap((start) => [
+          minutesIn("model_call", "a", start),
+          ...[30, 60, 90].map((m) => minutesIn("turn", "a", start + m)),
+        ])
+      )
+    );
+    expect(focus).toEqual({
+      blocks: 2,
+      minutes: 180,
+      longest: { value: 90, label: "a, 2026-06-01" },
+    });
+  });
+
   test("activity with no block long enough has none", () => {
     expect(focusBlocks(activityOf(minutesIn("turn", "a", 0)))).toEqual({
       blocks: 0,
@@ -228,7 +257,8 @@ describe("focus as printed", () => {
     expect(focusLines({ blocks: 0, minutes: 0, longest: null })[2]).toBe(
       "    longest              none"
     );
-    expect(focusLines(null).slice(1)).toEqual([
+    expect(focusLines(null)).toEqual([
+      "\n  Focus\n",
       "    focus blocks         unknown",
       "    longest              unknown",
     ]);
@@ -303,7 +333,10 @@ describe("projects as printed", () => {
   });
 
   test("no activity says unknown", () => {
-    expect(projectsLines([]).slice(1)).toEqual(["    projects             unknown"]);
+    expect(projectsLines([])).toEqual([
+      "\n  Projects\n",
+      "    projects             unknown",
+    ]);
   });
 });
 
@@ -325,7 +358,8 @@ describe("momentum as printed", () => {
     expect(momentumLines({ project: "pal", days: 2, since: "2026-10-12" }, [])[2]).toBe(
       "    quiet after a burst  none"
     );
-    expect(momentumLines(null, []).slice(1)).toEqual([
+    expect(momentumLines(null, [])).toEqual([
+      "\n  Momentum\n",
       "    current sprint       unknown",
       "    quiet after a burst  unknown",
     ]);
@@ -343,6 +377,18 @@ async function patterns(): Promise<string> {
 }
 
 describe("pal cli patterns", () => {
+  test("its help says what it reads", async () => {
+    const log = spyOn(console, "log").mockImplementation(() => {});
+    try {
+      await runCommand(patternsCommand, ["--help"], ["pal", "cli", "patterns"]);
+      expect(log.mock.calls.join("\n")).toContain(
+        "How you work across projects, read from the event log"
+      );
+    } finally {
+      log.mockRestore();
+    }
+  });
+
   test("prints the patterns read from the event log", async () => {
     appendEvent("commit", {}, { project: "pal", ts: "2026-06-01T10:00:00.000Z" });
     const text = await patterns();
