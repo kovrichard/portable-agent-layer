@@ -6,7 +6,8 @@
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { AGENT_REGISTRY, type AgentName } from "../hooks/lib/agent-registry";
-import { palHome, platform } from "../hooks/lib/paths";
+import { eventsSince } from "../hooks/lib/events";
+import { platform } from "../hooks/lib/paths";
 import { findBinaryOnPath } from "../hooks/lib/which";
 import {
   opencodeDatabase,
@@ -60,7 +61,7 @@ function rtkGain(): RtkGain {
 export function collectUsage(project: string | undefined): UsageData {
   return {
     agents: agentReports(project),
-    pal: readPalInference(resolve(palHome(), "memory", "signals", "token-usage.jsonl")),
+    pal: readPalInference(eventsSince("inference_call", new Date(0))),
     rtk: rtkGain(),
     untracked: installedUntracked(),
   };

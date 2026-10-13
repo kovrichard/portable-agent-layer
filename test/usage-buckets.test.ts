@@ -15,6 +15,7 @@ import {
   totalTokens,
 } from "../src/tools/lib/usage-buckets";
 import { freshTestDir } from "./lib/test-home";
+import { event } from "./lib/wrapped-events";
 
 const NOW = new Date("2026-09-06T12:00:00.000Z");
 
@@ -26,6 +27,19 @@ const HORIZONS = horizonsFrom(NOW);
 function tempHome(): string {
   return freshTestDir(import.meta.file);
 }
+
+const palCall = (ts: string, fields: Record<string, unknown> = {}) =>
+  event(
+    "inference_call",
+    {
+      caller: "c",
+      model: "claude-haiku-4-5-20251001",
+      inputTokens: 100,
+      outputTokens: 10,
+      ...fields,
+    },
+    { ts }
+  );
 
 const tokens = (input: number, output: number, cw5m = 0, cw1h = 0, cr = 0) => ({
   input,
@@ -502,95 +516,71 @@ describe("a price change reaches every reader", () => {
   });
 
   test("a PAL inference call is too, in its windows and under its caller", () => {
-    const filepath = join(tempHome(), "token-usage.jsonl");
-    writeFileSync(
-      filepath,
-      JSON.stringify({
-        ts: BEFORE,
-        caller: "c",
-        model: "claude-opus-5",
-        inputTokens: 1_000_000,
-        outputTokens: 0,
-      })
+    const result = readPalInference(
+      [
+        palCall(BEFORE, {
+          caller: "c",
+          model: "claude-opus-5",
+          inputTokens: 1_000_000,
+          outputTokens: 0,
+        }),
+      ],
+      NOW
     );
-    const result = readPalInference(filepath, NOW);
     expect(result.buckets.total.cost).toBeCloseTo(6, 10);
     expect(result.byCaller.c.cost).toBeCloseTo(6, 10);
   });
 });
 
 describe("readPalInference", () => {
-  function writeLog(lines: string[]): string {
-    const dir = tempHome();
-    const filepath = join(dir, "token-usage.jsonl");
-    writeFileSync(filepath, lines.join("\n"));
-    return filepath;
-  }
+  const HAIKU = "claude-haiku-4-5-20251001";
 
-  test("returns empty buckets when the log does not exist", () => {
-    const result = readPalInference(join(tempHome(), "missing.jsonl"), NOW);
+  test("nothing logged leaves every bucket empty", () => {
+    const result = readPalInference([], NOW);
     expect(result.buckets.total.calls).toBe(0);
     expect(result.byCaller).toEqual({});
   });
 
-  test("returns empty buckets for an empty log", () => {
-    expect(readPalInference(writeLog([""]), NOW).buckets.total.calls).toBe(0);
-  });
-
   test("splits a call across the windows, the model and the caller", () => {
-    const filepath = writeLog([
-      JSON.stringify({
-        ts: "2026-09-06T08:00:00.000Z",
-        caller: "failure-principle",
-        model: "claude-haiku-4-5-20251001",
-        inputTokens: 300,
-        outputTokens: 40,
-      }),
-      JSON.stringify({
-        ts: "2026-08-25T08:00:00.000Z",
-        caller: "synthesize",
-        model: "claude-haiku-4-5-20251001",
-        inputTokens: 100,
-        outputTokens: 10,
-      }),
-    ]);
-
-    const result = readPalInference(filepath, NOW);
+    const result = readPalInference(
+      [
+        palCall("2026-09-06T08:00:00.000Z", {
+          caller: "failure-principle",
+          inputTokens: 300,
+          outputTokens: 40,
+        }),
+        palCall("2026-08-25T08:00:00.000Z", { caller: "synthesize" }),
+      ],
+      NOW
+    );
     expect(result.buckets.total.calls).toBe(2);
     expect(result.buckets.today.input).toBe(300);
-    expect(result.byModel["claude-haiku-4-5-20251001"].month.calls).toBe(2);
+    expect(result.byModel[HAIKU].month.calls).toBe(2);
     expect(result.byCaller["failure-principle"].input).toBe(300);
     expect(result.byCaller.synthesize.calls).toBe(1);
   });
 
-  test("records no cache traffic — a PAL prompt has none", () => {
-    const filepath = writeLog([
-      JSON.stringify({
-        ts: "2026-09-06T08:00:00.000Z",
-        caller: "c",
-        model: "claude-haiku-4-5-20251001",
-        inputTokens: 10,
-        outputTokens: 2,
-      }),
-    ]);
-    const total = readPalInference(filepath, NOW).buckets.total;
-    expect(total.cacheWrite5m).toBe(0);
-    expect(total.cacheWrite1h).toBe(0);
-    expect(total.cacheRead).toBe(0);
+  test("counts the cache traffic a call reported", () => {
+    const total = readPalInference(
+      [palCall(NOW.toISOString(), { cacheWrite5m: 5, cacheWrite1h: 7, cacheRead: 11 })],
+      NOW
+    ).buckets.total;
+    expect(total).toMatchObject({ cacheWrite5m: 5, cacheWrite1h: 7, cacheRead: 11 });
   });
 
-  test("skips a malformed line and keeps the rest", () => {
-    const filepath = writeLog([
-      "not json at all",
-      JSON.stringify({
-        ts: "2026-09-06T08:00:00.000Z",
-        caller: "c",
-        model: "m",
-        inputTokens: 4,
-        outputTokens: 1,
-      }),
-    ]);
-    expect(readPalInference(filepath, NOW).buckets.total.calls).toBe(1);
+  test("a call without input or output counts is left out, not counted as zero", () => {
+    const result = readPalInference(
+      [
+        palCall(NOW.toISOString(), { inputTokens: null }),
+        palCall(NOW.toISOString(), { outputTokens: null }),
+        palCall(NOW.toISOString(), { model: null, caller: null }),
+        event("model_call", { inputTokens: 1, outputTokens: 1 }),
+      ],
+      NOW
+    );
+    expect(result.buckets.total.calls).toBe(1);
+    expect(Object.keys(result.byModel)).toEqual(["unknown"]);
+    expect(Object.keys(result.byCaller)).toEqual(["anonymous"]);
   });
 });
 
