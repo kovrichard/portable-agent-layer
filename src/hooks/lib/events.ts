@@ -8,6 +8,7 @@ import { appendFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { currentAttribution, type RecordAttribution } from "./actor";
 import type { AgentType } from "./agent";
+import { USAGE_FIELDS } from "./inference-usage";
 import { logError } from "./log";
 import { ensureDir, paths } from "./paths";
 import { readAllProjects, resolveProjectFromCwd } from "./projects";
@@ -62,8 +63,7 @@ export const EVENT_FIELDS = {
     "web",
     "latencyMs",
     "failure",
-    "inputTokens",
-    "outputTokens",
+    ...USAGE_FIELDS,
   ],
   pal_update: ["outcome", "from", "to", "durationSec", "skipReason"],
   commitment: ["iscProject", "isc", "outcome", "surface", "snoozeDays"],

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { eventsSince } from "../src/hooks/lib/events";
 import {
   buildCliPrompt,
   buildOpencodeArgs,
@@ -133,6 +134,33 @@ describe("inference dispatcher — opencode spawn integration (fake binary)", ()
     const result = await inference({ user: "anything", timeout: 5000 });
     expect(result.success).toBe(true);
     expect(result.output).toBe("hello-opencode");
+  });
+
+  test("the call is logged with every step's tokens and cost, reasoning counted as output", async () => {
+    const step = (input: number, reasoning: number) =>
+      JSON.stringify({
+        type: "step_finish",
+        part: {
+          type: "step-finish",
+          tokens: { input, output: 10, reasoning, cache: { write: 3, read: 4 } },
+          cost: 0.5,
+        },
+      });
+    const text = JSON.stringify({ type: "text", part: { type: "text", text: "hi" } });
+    const lines = [text, step(100, 5), step(200, 0)].join("\n");
+    writeFakeBin(tmpBin, "opencode", `console.log(${JSON.stringify(lines)});\n`);
+    prependPath(tmpBin);
+
+    await inference({ user: "anything", timeout: 5000 });
+    expect(eventsSince("inference_call", new Date(0))[0]).toMatchObject({
+      route: "opencode-spawn",
+      inputTokens: 300,
+      outputTokens: 25,
+      thinkingTokens: 5,
+      cacheWrite5m: 6,
+      cacheRead: 8,
+      costUsd: 1,
+    });
   });
 
   test("fake opencode sees PAL_SPAWNED_INFERENCE=1 and CLAUDECODE unset", async () => {

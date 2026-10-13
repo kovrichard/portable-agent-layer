@@ -13,7 +13,7 @@ import {
 } from "../src/hooks/lib/capture-store";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { readProjectHistory } from "../src/hooks/lib/work-tracking";
-import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
+import { claudeReplying, prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
@@ -135,11 +135,7 @@ describe("an unfinished session", () => {
       next: "Wire the model handoff into last-handoff.json, then run the gates.",
       waitingOn: "",
     };
-    writeFakeBin(
-      binDir,
-      "claude",
-      `console.log(${JSON.stringify(JSON.stringify(reply))});\n`
-    );
+    writeFakeBin(binDir, "claude", claudeReplying(JSON.stringify(JSON.stringify(reply))));
     prependPath(binDir);
   });
 

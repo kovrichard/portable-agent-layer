@@ -162,7 +162,7 @@ export async function captureSessionIntelligence(
       sessionId,
     });
 
-    if (result.usage) logTokenUsage("session-intelligence", result.usage);
+    logTokenUsage("session-intelligence", result);
 
     if (result.success && result.output) {
       output = JSON.parse(result.output) as IntelligenceOutput;

@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
+import { eventsSince } from "../src/hooks/lib/events";
 import { buildCliPrompt, buildCopilotArgs, inference } from "../src/hooks/lib/inference";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
-import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
+import { copilotReplying, prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
@@ -67,6 +68,11 @@ describe("buildCopilotArgs", () => {
     expect(buildCopilotArgs({ user: "hi" })).toContain("--silent");
   });
 
+  test("prints JSON events, so the reply and its usage can be read apart", () => {
+    const args = buildCopilotArgs({ user: "hi" });
+    expect(args[args.indexOf("--output-format") + 1]).toBe("json");
+  });
+
   test("no argv element carries the prompt or a newline", () => {
     const args = buildCopilotArgs({ system: "Be terse", user: "summarize this" });
     expect(args).not.toContain("summarize this");
@@ -116,11 +122,7 @@ describe("inference dispatcher — copilot spawn integration (fake binary)", () 
 
   test("end-to-end: fake copilot echoes stdin, dispatcher captures it", async () => {
     // Reads stdin rather than argv: that is where the prompt now travels.
-    writeFakeBin(
-      tmpBin,
-      "copilot",
-      `for await (const c of Bun.stdin.stream()) Bun.write(Bun.stdout, c);\n`
-    );
+    writeFakeBin(tmpBin, "copilot", copilotReplying("await Bun.stdin.text()"));
     prependPath(tmpBin);
 
     const result = await inference({ user: "hello-copilot", timeout: 5000 });
@@ -132,7 +134,9 @@ describe("inference dispatcher — copilot spawn integration (fake binary)", () 
     writeFakeBin(
       tmpBin,
       "copilot",
-      `console.log(\`sentinel=\${process.env.${SPAWN_GUARD_ENV.SENTINEL}} claudecode=[\${process.env.CLAUDECODE ?? ""}]\`);\n`
+      copilotReplying(
+        `\`sentinel=\${process.env.${SPAWN_GUARD_ENV.SENTINEL}} claudecode=[\${process.env.CLAUDECODE ?? ""}]\``
+      )
     );
     prependPath(tmpBin);
     process.env.CLAUDECODE = "1";
@@ -141,6 +145,35 @@ describe("inference dispatcher — copilot spawn integration (fake binary)", () 
     expect(result.success).toBe(true);
     expect(result.output).toBe("sentinel=1 claudecode=[]");
     expect(process.env.CLAUDECODE).toBe("1");
+  });
+
+  test("the call is logged with the prompt tokens copilot reported, output left unknown", async () => {
+    writeFakeBin(
+      tmpBin,
+      "copilot",
+      copilotReplying(`"pong"`, { prompt_tokens: 4289, cache_read: 1, cache_write: 4286 })
+    );
+    prependPath(tmpBin);
+
+    await inference({ user: "hi", timeout: 5000 });
+    expect(eventsSince("inference_call", new Date(0))[0]).toMatchObject({
+      route: "copilot-spawn",
+      inputTokens: 2,
+      cacheRead: 1,
+      cacheWrite5m: 4286,
+      outputTokens: null,
+    });
+  });
+
+  test("the reply is copilot's last message, not its first", async () => {
+    writeFakeBin(
+      tmpBin,
+      "copilot",
+      `console.log(JSON.stringify({ type: "assistant.message", data: { content: "draft" } }));\n${copilotReplying(`"final"`)}`
+    );
+    prependPath(tmpBin);
+
+    expect((await inference({ user: "hi", timeout: 5000 })).output).toBe("final");
   });
 
   test("non-zero exit from fake copilot returns success: false", async () => {
@@ -152,7 +185,7 @@ describe("inference dispatcher — copilot spawn integration (fake binary)", () 
   });
 
   test("JSON-schema path parses fake copilot JSON output", async () => {
-    writeFakeBin(tmpBin, "copilot", `console.log('{"verdict":"ok"}');\n`);
+    writeFakeBin(tmpBin, "copilot", copilotReplying(`'{"verdict":"ok"}'`));
     prependPath(tmpBin);
 
     const result = await inference({

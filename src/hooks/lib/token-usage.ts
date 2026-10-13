@@ -1,11 +1,11 @@
 /**
- * Append-only JSONL logger for Haiku token usage.
+ * Append-only JSONL logger for inference token usage.
  * Writes to memory/signals/token-usage.jsonl
  */
 
 import { appendFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { HAIKU_MODEL } from "./models";
+import type { InferenceUsage } from "./inference-usage";
 import { ensureDir, paths } from "./paths";
 
 type TokenCaller =
@@ -23,6 +23,8 @@ type TokenCaller =
   | "agenda-waiting-on"
   | "agenda-moves";
 
+const UNKNOWN_MODEL = "unknown";
+
 interface TokenUsageEntry {
   ts: string;
   caller: TokenCaller;
@@ -33,15 +35,16 @@ interface TokenUsageEntry {
 
 export function logTokenUsage(
   caller: TokenCaller,
-  usage: { inputTokens: number; outputTokens: number },
-  model?: string
+  call: { usage?: InferenceUsage; model?: string }
 ): void {
+  const { inputTokens, outputTokens } = call.usage ?? {};
+  if (inputTokens === undefined || outputTokens === undefined) return;
   const entry: TokenUsageEntry = {
     ts: new Date().toISOString(),
     caller,
-    model: model ?? HAIKU_MODEL,
-    inputTokens: usage.inputTokens,
-    outputTokens: usage.outputTokens,
+    model: call.model ?? UNKNOWN_MODEL,
+    inputTokens,
+    outputTokens,
   };
 
   const dir = ensureDir(paths.signals());

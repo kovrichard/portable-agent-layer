@@ -18,6 +18,36 @@
 import { chmodSync, writeFileSync } from "node:fs";
 import { delimiter, resolve } from "node:path";
 
+/** A fake claude's logic that answers `replyExpr` the way `--output-format json` does. */
+export function claudeReplying(replyExpr: string, usage: object = {}): string {
+  return `const reply = ${replyExpr};\nconsole.log(JSON.stringify({ type: "result", is_error: false, result: String(reply), usage: ${JSON.stringify(usage)} }));\n`;
+}
+
+/** A fake codex's logic that answers `replyExpr` the way `codex exec --json` does. */
+export function codexReplying(replyExpr: string, usage: object = {}): string {
+  return [
+    `const reply = ${replyExpr};`,
+    `console.log(JSON.stringify({ type: "thread.started" }));`,
+    `console.log(JSON.stringify({ type: "item.completed", item: { type: "agent_message", text: String(reply) } }));`,
+    `console.log(JSON.stringify({ type: "turn.completed", usage: ${JSON.stringify(usage)} }));`,
+    "",
+  ].join("\n");
+}
+
+/** A fake copilot's logic that answers `replyExpr` the way `--output-format json` does. */
+export function copilotReplying(replyExpr: string, modelUsage?: object): string {
+  const checkpoint = modelUsage
+    ? `console.log(JSON.stringify({ type: "session.usage_checkpoint", data: { promptCacheBreakState: [{ models: { m: ${JSON.stringify(modelUsage)} } }] } }));`
+    : "";
+  return [
+    `const reply = ${replyExpr};`,
+    `console.log(JSON.stringify({ type: "assistant.message", data: { content: String(reply), phase: "final_answer" } }));`,
+    checkpoint,
+    `console.log(JSON.stringify({ type: "result", exitCode: 0 }));`,
+    "",
+  ].join("\n");
+}
+
 /** Prepend a directory to process.env.PATH using the platform delimiter. */
 export function prependPath(dir: string): void {
   process.env.PATH = `${dir}${delimiter}${process.env.PATH ?? ""}`;
