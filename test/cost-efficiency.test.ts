@@ -31,6 +31,7 @@ describe("efficiency", () => {
       at("commitment", "2026-06-01T07:00:00.000Z", { outcome: "kept" }),
       at("commitment", "2026-06-01T09:00:00.000Z", { outcome: "kept" }),
       at("commitment", "2026-06-01T09:00:00.000Z", { outcome: "broken" }),
+      at("commitment", "2026-06-01T09:00:00.000Z", { outcome: "broken" }),
     ]);
     expect(result).toEqual({
       since: "2026-06-01",
@@ -79,12 +80,12 @@ describe("efficiency as printed", () => {
       efficiencyLines({
         since: "2026-06-01",
         perCommit: { cost: 1, units: 3, lowerBound: false },
-        perClosedIsc: null,
+        perClosedIsc: { cost: 4, units: 2, lowerBound: false },
         cacheHitRate: null,
       }).slice(1)
     ).toEqual([
       "    Per commit       $1.00 over 3 commits",
-      "    Per closed ISC   unknown",
+      "    Per closed ISC   $4.00 over 2 ISCs",
       "    Cache hit rate   unknown",
     ]);
   });

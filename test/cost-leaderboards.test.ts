@@ -44,13 +44,15 @@ describe("leaderboards", () => {
   test("a session is named by the project most of its calls ran in and the local day it started", () => {
     const boards = leaderboards([
       call(1, { session: "session-one", ts: "2026-06-02T08:00:00.000Z", project: "b" }),
-      call(1, { session: "session-one", ts: "2026-06-01T22:30:00.000Z" }),
+      call(1, { session: "session-one", ts: "2026-06-01T21:30:00.000Z" }),
       call(1, { session: "session-one", ts: "2026-06-02T09:00:00.000Z", project: "a" }),
       call(1, { session: "session-one", ts: "2026-06-02T10:00:00.000Z", project: "a" }),
+      call(1, { session: "session-one", ts: "2026-06-02T11:00:00.000Z" }),
+      call(1, { session: "session-one", ts: "2026-06-02T12:00:00.000Z" }),
       call(0.5),
     ]);
     expect(boards.sessions).toEqual([
-      { label: "session- (a, 2026-06-02)", cost: 4, unpriced: 0 },
+      { label: "session- (a, 2026-06-01)", cost: 6, unpriced: 0 },
       { label: "no session (no project, 2026-06-01)", cost: 0.5, unpriced: 0 },
     ]);
   });
@@ -66,9 +68,10 @@ describe("leaderboards", () => {
     ]);
   });
 
-  test("a turn costs the calls until the next message in its session", () => {
+  test("a turn costs the calls until the next message in its session; one without calls is unknown", () => {
     const turnAt = (ts: string) => event("turn", {}, { session: "s", ts, project: "p" });
     const boards = leaderboards([
+      turnAt("2026-06-01T07:00:00.000Z"),
       turnAt("2026-06-01T08:00:00.000Z"),
       call(1, { session: "s", ts: "2026-06-01T08:01:00.000Z" }),
       turnAt("2026-06-01T09:00:00.000Z"),
