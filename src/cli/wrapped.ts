@@ -1,5 +1,6 @@
 import { leaf, UsageError } from "../tools/lib/command";
-import { totalsLines } from "../tools/lib/wrapped/render";
+import { wrappedRecords } from "../tools/lib/wrapped/records";
+import { recordsLines, totalsLines } from "../tools/lib/wrapped/render";
 import { wrappedTotals } from "../tools/lib/wrapped/totals";
 import { eventsOfYear } from "../tools/lib/wrapped/year";
 
@@ -16,7 +17,11 @@ function printWrapped(year: number): undefined {
     console.log(`\n  No events logged in ${year}\n`);
     return;
   }
-  for (const line of totalsLines(wrappedTotals(events))) console.log(line);
+  const lines = [
+    ...totalsLines(wrappedTotals(events)),
+    ...recordsLines(wrappedRecords(events)),
+  ];
+  for (const line of lines) console.log(line);
 }
 
 export const wrappedCommand = leaf({

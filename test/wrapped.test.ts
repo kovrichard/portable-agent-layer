@@ -1,53 +1,15 @@
 import { beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { mkdirSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { wrappedCommand } from "../src/cli/wrapped";
-import { appendEvent, type EventType, type LoggedEvent } from "../src/hooks/lib/events";
-import { reload } from "../src/hooks/lib/settings";
+import { appendEvent, type LoggedEvent } from "../src/hooks/lib/events";
 import { runCommand } from "../src/tools/lib/command";
 import { totalsLines } from "../src/tools/lib/wrapped/render";
 import { type WrappedTotals, wrappedTotals } from "../src/tools/lib/wrapped/totals";
 import { eventsOfYear } from "../src/tools/lib/wrapped/year";
-import { freshTestDir } from "./lib/test-home";
-
-let home: string;
+import { budapestHome, event } from "./lib/wrapped-events";
 
 beforeEach(() => {
-  home = freshTestDir(import.meta.file);
-  process.env.PAL_HOME = home;
-  mkdirSync(resolve(home, "memory"), { recursive: true });
-  writeFileSync(
-    resolve(home, "memory", "pal-settings.json"),
-    JSON.stringify({ identity: { principal: { timezone: "Europe/Budapest" } } })
-  );
-  reload();
+  budapestHome(import.meta.file);
 });
-
-let seq = 0;
-
-function event(
-  type: EventType,
-  fields: Record<string, unknown> = {},
-  envelope: Partial<LoggedEvent> = {}
-): LoggedEvent {
-  seq++;
-  return {
-    v: 1,
-    id: `e${seq}`,
-    ts: "2026-06-01T10:00:00.000Z",
-    type,
-    session: null,
-    runtime: "claude",
-    machine: "m",
-    actor: "a",
-    authority: "self",
-    channel: null,
-    project: null,
-    cwd: "/w",
-    ...envelope,
-    ...fields,
-  };
-}
 
 describe("the year's events", () => {
   test("a year starts and ends at midnight in the principal's timezone", () => {

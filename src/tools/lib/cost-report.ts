@@ -24,7 +24,7 @@ export type CostMonths = Map<string, Map<string, AgentMonth>>;
 const numberOf = (value: unknown) => (typeof value === "number" ? value : 0);
 
 /** Claude Code at its dated rates, opencode at the cost it recorded, anything else unknown. */
-function apiPriceOf(event: LoggedEvent): number | null {
+export function apiPriceOf(event: LoggedEvent): number | null {
   if (event.runtime === "opencode")
     return typeof event.costUsd === "number" ? event.costUsd : null;
   if (event.runtime !== "claude" || typeof event.model !== "string") return null;

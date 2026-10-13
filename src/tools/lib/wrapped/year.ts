@@ -5,7 +5,7 @@ import {
 } from "../../../hooks/lib/events";
 import { localDay } from "../../../hooks/lib/wall-clock";
 
-function dayOf(event: LoggedEvent): string {
+export function dayOf(event: LoggedEvent): string {
   return localDay(new Date(event.ts));
 }
 
