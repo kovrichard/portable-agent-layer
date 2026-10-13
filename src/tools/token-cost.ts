@@ -4,12 +4,18 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { AGENT_REGISTRY, type AgentName } from "../hooks/lib/agent-registry";
-import { palHome, platform } from "../hooks/lib/paths";
+import { eventsSince } from "../hooks/lib/events";
+import { platform } from "../hooks/lib/paths";
+import { transcriptArchive } from "../hooks/lib/transcript-preserve";
 import { findBinaryOnPath } from "../hooks/lib/which";
-import { readCodex, readCopilot, readOpencode } from "./lib/agent-usage";
+import {
+  opencodeDatabase,
+  readCodex,
+  readCopilot,
+  readOpencode,
+} from "./lib/agent-usage";
 import {
   type AgentReport,
   parseRtkSummary,
@@ -20,11 +26,6 @@ import { readClaudeCode, readPalInference } from "./lib/usage-buckets";
 
 const UNTRACKED_AGENTS: AgentName[] = ["cursor", "antigravity"];
 
-function opencodeDatabase(): string {
-  const dataHome = process.env.XDG_DATA_HOME || resolve(homedir(), ".local", "share");
-  return resolve(dataHome, "opencode", "opencode.db");
-}
-
 function agentReports(project: string | undefined): AgentReport[] {
   const report = (agent: AgentName, read: () => AgentReport["usage"]) => ({
     label: AGENT_REGISTRY[agent].label,
@@ -32,7 +33,12 @@ function agentReports(project: string | undefined): AgentReport[] {
   });
   return [
     report("claude", () =>
-      readClaudeCode(resolve(platform.claudeDir(), "projects"), project)
+      readClaudeCode(
+        resolve(platform.claudeDir(), "projects"),
+        project,
+        new Date(),
+        transcriptArchive()
+      )
     ),
     report("codex", () => readCodex(platform.codexDir(), project)),
     report("opencode", () => readOpencode(opencodeDatabase(), project)),
@@ -61,7 +67,7 @@ function rtkGain(): RtkGain {
 export function collectUsage(project: string | undefined): UsageData {
   return {
     agents: agentReports(project),
-    pal: readPalInference(resolve(palHome(), "memory", "signals", "token-usage.jsonl")),
+    pal: readPalInference(eventsSince("inference_call", new Date(0))),
     rtk: rtkGain(),
     untracked: installedUntracked(),
   };

@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 
@@ -56,6 +56,16 @@ describe("pal cli install (smoke)", () => {
     const agents = resolve(CLAUDE_DIR, "agents");
     expect(existsSync(agents)).toBe(true);
     expect(readdirSync(agents).length).toBeGreaterThan(0);
+
+    const postToolHooks = (only: string) =>
+      Object.values(JSON.parse(readFileSync(settings, "utf-8")).hooks)
+        .flat()
+        .flatMap((block) => (block as { hooks: Record<string, unknown>[] }).hooks)
+        .filter((hook) => String(hook.command).includes(`--only=${only}`));
+    expect(postToolHooks("events")).toHaveLength(3);
+    for (const hook of postToolHooks("events")) expect(hook.async).toBe(true);
+    expect(postToolHooks("ledger")).toHaveLength(3);
+    for (const hook of postToolHooks("ledger")) expect(hook.async).toBeUndefined();
   }, 90000);
 
   test("install --opencode lands plugin and agents", () => {
@@ -234,4 +244,22 @@ describe("pal cli install (smoke)", () => {
     const after = readdirSync(resolve(CLAUDE_DIR, "skills")).length;
     expect(after).toBe(before);
   }, 180000);
+
+  const reinstalls = [
+    { flag: "--claude", dir: CLAUDE_DIR },
+    { flag: "--cursor", dir: CURSOR_DIR },
+    { flag: "--codex", dir: CODEX_DIR },
+    { flag: "--codex", dir: resolve(CODEX_DIR, "rules") },
+    { flag: "--antigravity", dir: resolve(GEMINI_DIR, "antigravity-cli") },
+  ];
+  for (const { flag, dir } of reinstalls) {
+    const where = relative(TEST_HOME, dir);
+    test(`reinstalling ${flag} over unchanged configs leaves no new backup in ${where}`, () => {
+      const backups = () => readdirSync(dir).filter((name) => /\.bak\.\d+$/.test(name));
+      expect(pal("cli", "install", flag).status).toBe(0);
+      const before = backups();
+      expect(pal("cli", "install", flag).status).toBe(0);
+      expect(backups()).toEqual(before);
+    }, 180000);
+  }
 });

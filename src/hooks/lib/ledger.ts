@@ -30,10 +30,11 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, extname, resolve } from "node:path";
 import { calcPatch } from "fast-myers-diff";
 import { currentAttribution, type RecordAttribution } from "./actor";
-import { encodeAnchor } from "./anchor";
+import { encodeAnchor, resolveAnchor } from "./anchor";
+import { appendEvent } from "./events";
 import { ensureDir, paths } from "./paths";
 import { isSensitivePath } from "./sensitive-path";
 
@@ -273,7 +274,65 @@ export function recordAction(input: RecordActionInput): LedgerEntry {
   const file = ledgerPath();
   rotateIfFull(file);
   appendFileSync(file, `${JSON.stringify(entry)}\n`, "utf-8");
+  logActionEvent(entry);
   return entry;
+}
+
+export const actionEventId = (entry: LedgerEntry) => `ledger:${entry.id}`;
+
+function changeKindOf(delta: LedgerDelta | undefined): string {
+  if (!delta) return "none";
+  if (delta.redacted) return "redacted";
+  if (delta.truncated) return "truncated";
+  return "hunks";
+}
+
+function changeOf({ delta }: LedgerEntry) {
+  const change = changeKindOf(delta);
+  if (change !== "hunks" || !delta)
+    return { change, linesAdded: null, linesRemoved: null };
+  return {
+    change,
+    linesAdded: delta.hunks.reduce((n, h) => n + h.insert.length, 0),
+    linesRemoved: delta.hunks.reduce((n, h) => n + h.remove, 0),
+  };
+}
+
+function directoryOf(entry: LedgerEntry): string {
+  const resolved = resolveAnchor(entry.target);
+  if (resolved.state === "unresolvable") return "";
+  return entry.command === undefined ? dirname(resolved.path) : resolved.path;
+}
+
+/** The entry as an action event; its target, reason and command are text, so they go to content. */
+export function logActionEvent(
+  entry: LedgerEntry,
+  attribution: Partial<RecordAttribution> = {}
+): string | null {
+  return appendEvent(
+    "action",
+    {
+      tool: entry.tool,
+      outcome: entry.outcome,
+      fileExt: entry.command === undefined ? extname(entry.target) || null : null,
+      ...changeOf(entry),
+      beforeBytes: entry.before?.bytes ?? null,
+      afterBytes: entry.after?.bytes ?? null,
+    },
+    {
+      id: actionEventId(entry),
+      ts: entry.ts,
+      session: null,
+      channel: null,
+      cwd: directoryOf(entry),
+      attribution,
+      content: {
+        target: entry.target,
+        reason: entry.reason ?? null,
+        command: entry.command ?? null,
+      },
+    }
+  );
 }
 
 /** A refused command is quoted back, not stored whole. */

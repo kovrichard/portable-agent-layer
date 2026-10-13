@@ -31,16 +31,18 @@ const tokens = (input: number, output: number, cw5m = 0, cw1h = 0, cr = 0) => ({
   cacheRead: cr,
 });
 
+const TS = "2026-09-06T12:00:00.000Z";
+
 function bucketOf(model: string, scale: number): Bucket {
   const bucket = emptyBucket();
-  addToBucket(bucket, model, tokens(scale, scale * 2, scale, scale, scale));
+  addToBucket(bucket, model, tokens(scale, scale * 2, scale, scale, scale), TS);
   return bucket;
 }
 
 function timeBucketsOf(model: string, scale: number): TimeBuckets {
   const buckets = emptyTimeBuckets();
   for (const window of [buckets.today, buckets.week, buckets.month, buckets.total]) {
-    addToBucket(window, model, tokens(scale, scale * 2));
+    addToBucket(window, model, tokens(scale, scale * 2), TS);
   }
   return buckets;
 }
@@ -124,6 +126,12 @@ describe("modelLabel", () => {
   test("drops the claude- prefix", () => {
     expect(modelLabel("claude-opus-5")).toBe("opus-5");
   });
+
+  test("drops a release date, keeping the version", () => {
+    expect(modelLabel("claude-haiku-4-5-20251001")).toBe("haiku-4-5");
+    expect(modelLabel("gpt-6-2026")).toBe("gpt-6-2026");
+    expect(modelLabel("m-20251001-preview")).toBe("m-20251001-preview");
+  });
 });
 
 describe("fmtCost", () => {
@@ -141,7 +149,7 @@ describe("fmtCost", () => {
 describe("rowLine", () => {
   test("carries the label, the token total, the calls and the cost", () => {
     const bucket = emptyBucket();
-    addToBucket(bucket, "claude-opus-5", tokens(1_000, 2_000, 3_000, 4_000, 5_000));
+    addToBucket(bucket, "claude-opus-5", tokens(1_000, 2_000, 3_000, 4_000, 5_000), TS);
     const line = rowLine("Today", bucket);
     expect(line).toContain("Today");
     expect(line).toContain("15.0k tok");
@@ -157,7 +165,7 @@ describe("rowLine", () => {
 describe("detailedLine", () => {
   test("breaks the tokens out into all five fields", () => {
     const bucket = emptyBucket();
-    addToBucket(bucket, "claude-opus-5", tokens(1, 2, 3, 4, 5));
+    addToBucket(bucket, "claude-opus-5", tokens(1, 2, 3, 4, 5), TS);
     const line = detailedLine("opus-5", bucket);
     expect(line).toContain("1 in");
     expect(line).toContain("2 out");
@@ -399,29 +407,19 @@ describe("usageLines", () => {
     expect(lines[heading + 2]).toContain("cheap");
   });
 
-  test("names a PAL inference section after the model family", () => {
+  test("names a PAL inference section after the model and its version", () => {
     const pal: PalInferenceUsage = {
       ...EMPTY_PAL,
       byModel: {
         "claude-haiku-4-5-20251001": timeBucketsOf("claude-haiku-4-5-20251001", 10),
-        "claude-sonnet-5": timeBucketsOf("claude-sonnet-5", 10),
-        "gpt-mystery": timeBucketsOf("gpt-mystery", 10),
+        "claude-haiku-5-5": timeBucketsOf("claude-haiku-5-5", 10),
+        "accounts/fireworks/models/kimi-k3": timeBucketsOf("kimi-k3", 10),
       },
     };
     const lines = usageLines(report(EMPTY_CC, pal));
-    expect(find(lines, "PAL Inference (Haiku)")).toBeDefined();
-    expect(find(lines, "PAL Inference (Sonnet)")).toBeDefined();
-    expect(find(lines, "PAL Inference (gpt-mystery)")).toBeDefined();
-  });
-
-  // A model with no family name still loses the vendor prefix, which is the only
-  // case where the fallback branch does any work at all.
-  test("falls back to the bare model name, prefix stripped", () => {
-    const pal: PalInferenceUsage = {
-      ...EMPTY_PAL,
-      byModel: { "claude-opus-5": timeBucketsOf("claude-opus-5", 10) },
-    };
-    expect(usageLines(report(EMPTY_CC, pal))).toContain("\n  PAL Inference (opus-5)\n");
+    expect(lines).toContain("\n  PAL Inference (haiku-4-5)\n");
+    expect(lines).toContain("\n  PAL Inference (haiku-5-5)\n");
+    expect(lines).toContain("\n  PAL Inference (kimi-k3)\n");
   });
 
   test("skips a PAL model that made no calls", () => {

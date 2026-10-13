@@ -8,6 +8,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { logCommitment } from "../../hooks/lib/commitment-events";
 import { ensureDir, paths } from "../../hooks/lib/paths";
 
 const DAY_MS = 86_400_000;
@@ -61,5 +62,6 @@ export function setSnooze(
   if (days <= 0) delete live[key];
   else live[key] = new Date(now.getTime() + days * DAY_MS).toISOString().slice(0, 10);
   writeFileSync(snoozeFile(), `${JSON.stringify(live, null, 2)}\n`, "utf-8");
+  if (days > 0) logCommitment(project, id, "snoozed", "control-room", days);
   return live[key] ?? null;
 }

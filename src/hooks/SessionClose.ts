@@ -13,14 +13,19 @@
 import { autoUpdateOnClose } from "./lib/auto-update";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { logError } from "./lib/log";
+import { logSessionEnd } from "./lib/session-events";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
+import { spawnTranscriptPreserve } from "./lib/transcript-preserve";
 
 if (isPalSpawnedInference()) process.exit(0);
 if (duplicatesCursorHooks()) process.exit(0);
 
+spawnTranscriptPreserve();
+
 try {
   const input = await readStdinJSON<{ reason?: string }>();
+  logSessionEnd(input);
   autoUpdateOnClose(input?.reason);
 } catch (err) {
   logError("SessionClose", err);

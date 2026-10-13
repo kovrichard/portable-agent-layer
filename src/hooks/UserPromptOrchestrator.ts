@@ -9,6 +9,7 @@
 
 import { injectPromptContext } from "./handlers/inject-retrieval";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
+import { startHookTiming } from "./lib/hook-timing";
 import { type HookTurnPayload, hookSessionId } from "./lib/hook-turn";
 import { logDebug, logPromptSnapshot } from "./lib/log";
 import { capturePrompt } from "./lib/prompt-capture";
@@ -28,9 +29,15 @@ const input = await readStdinJSON<PromptSubmitInput>();
 logDebug("UserPromptOrchestrator", `Input: ${JSON.stringify(input).slice(0, 200)}`);
 if (!input?.prompt) process.exit(0);
 
+const timing = startHookTiming("prompt");
 const sentAt = new Date();
 const sessionId = hookSessionId(input);
-const injected = await injectPromptContext(input.prompt, sessionId);
+const injected = await timing.time("inject-context", () =>
+  injectPromptContext(input.prompt, sessionId)
+);
 logPromptSnapshot(input.prompt, injected);
 
-await capturePrompt(input.prompt, sessionId, sentAt, "UserPromptOrchestrator");
+await timing.time("capture", () =>
+  capturePrompt(input.prompt, sessionId, sentAt, "UserPromptOrchestrator")
+);
+timing.log(sessionId);

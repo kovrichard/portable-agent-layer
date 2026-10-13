@@ -131,8 +131,12 @@ describe("the shipped Cursor hooks template", () => {
 
   test("registers all three ledger halves on Cursor's own event names", () => {
     expect(commandsFor("preToolUse").join(" ")).toContain("LedgerSnapshot.ts");
-    expect(commandsFor("postToolUse").join(" ")).toContain("LedgerCommit.ts");
-    expect(commandsFor("postToolUseFailure").join(" ")).toContain("LedgerUnapplied.ts");
+    expect(commandsFor("postToolUse")).toEqual([
+      expect.stringContaining("PostToolOrchestrator.ts"),
+    ]);
+    expect(commandsFor("postToolUseFailure")).toEqual([
+      expect.stringContaining("PostToolOrchestrator.ts"),
+    ]);
   });
 
   test("snapshots last, so a blocking hook does not strand a snapshot", () => {

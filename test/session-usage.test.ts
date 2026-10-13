@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, utimesSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
+import { PRICE_HISTORY } from "../src/hooks/lib/models";
 import {
   accumulateUsage,
   claudeProjectsDir,
@@ -128,6 +129,57 @@ describe("accumulateUsage", () => {
       message: { usage: { input_tokens: 500 } },
     });
     expect(accumulateUsage(noModel, SESSION).input).toBe(0);
+  });
+
+  test("a message written as one line per content block is billed once, at its final usage", () => {
+    const block = (id: string, type: string, output = 300) =>
+      JSON.stringify({
+        type: "assistant",
+        sessionId: SESSION,
+        message: {
+          id,
+          model: MODEL,
+          content: [{ type }],
+          usage: { input_tokens: 10, output_tokens: output },
+        },
+      });
+    const usage = accumulateUsage(
+      [
+        block("msg_1", "thinking", 3),
+        block("msg_1", "tool_use"),
+        block("msg_2", "text"),
+        block("msg_1", "tool_use"),
+      ].join("\n"),
+      SESSION
+    );
+    expect([usage.calls, usage.input, usage.output]).toEqual([2, 20, 600]);
+  });
+
+  test("a turn is priced at the rate in force on its own date", () => {
+    PRICE_HISTORY[MODEL] = [
+      {
+        until: "2026-09-01",
+        rates: {
+          input: 6,
+          output: 30,
+          cacheWrite5m: 7.5,
+          cacheWrite1h: 12,
+          cacheRead: 0.6,
+        },
+      },
+    ];
+    try {
+      const usage = accumulateUsage(
+        assistantLine(
+          { input_tokens: 1_000_000 },
+          { timestamp: "2026-08-20T08:00:00.000Z" }
+        ),
+        SESSION
+      );
+      expect(usage.cost).toBeCloseTo(6, 10);
+    } finally {
+      delete PRICE_HISTORY[MODEL];
+    }
   });
 
   test("a corrupt line is skipped, not fatal to the rest of the file", () => {

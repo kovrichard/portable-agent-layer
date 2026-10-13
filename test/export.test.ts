@@ -1,11 +1,14 @@
-import { beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { linkDir } from "./lib/links";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir, testHome } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 
@@ -40,6 +43,8 @@ beforeAll(() => {
     '{"rating":5}\n'
   );
   writeFileSync(resolve(TEST_HOME, "memory", "downloads", "2026", "file.pdf"), "pdf");
+  mkdirSync(resolve(TEST_HOME, "memory", "content", "claude"), { recursive: true });
+  writeFileSync(resolve(TEST_HOME, "memory", "content", "claude", "s.jsonl.gz"), "gz");
 
   // A user-authored personal skill (real directory) — should be exported.
   mkdirSync(resolve(TEST_HOME, "skills", "my-skill"), { recursive: true });
@@ -83,6 +88,12 @@ describe("collectExportFiles", () => {
     const files = collectExportFiles();
     const downloads = files.filter((f) => f.startsWith("memory/downloads"));
     expect(downloads).toHaveLength(0);
+  });
+
+  test("keeps the content store on its machine", async () => {
+    const { collectExportFiles } = await import("../src/hooks/lib/export");
+    const files = collectExportFiles();
+    expect(files.filter((f) => f.startsWith("memory/content"))).toHaveLength(0);
   });
 
   test("collects user-authored personal skills and subagents", async () => {

@@ -16,7 +16,7 @@
 import { parseArgs } from "node:util";
 
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
-const DEFAULT_MODEL = "gemini-3.1-flash-lite-preview";
+const DEFAULT_MODEL = "gemini-3.8-flash";
 
 interface GroundingChunk {
   web?: { uri: string; title: string };

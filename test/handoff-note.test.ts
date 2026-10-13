@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -12,7 +12,10 @@ import {
   statusOf,
   trimHandoffs,
 } from "../src/tools/lib/handoff-note";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 // The handoff note is where an agent says what it could not finish. One of those
 // reasons — waiting on the human — is the only one the morning screen can act on,

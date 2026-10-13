@@ -16,6 +16,24 @@ export interface TranscriptUsage {
     ephemeral_5m_input_tokens?: number;
     ephemeral_1h_input_tokens?: number;
   };
+  output_tokens_details?: { thinking_tokens?: number };
+  server_tool_use?: { web_search_requests?: number; web_fetch_requests?: number };
+  service_tier?: string;
+  speed?: string;
+}
+
+/**
+ * Claude Code writes one transcript line per content block of a message, each
+ * repeating the message's usage — and an early line can carry the usage while
+ * the message was still streaming. A message is billed once, at its last line.
+ */
+export function finalPerMessage<T>(
+  calls: Iterable<T>,
+  messageIdOf: (call: T) => string | undefined
+): T[] {
+  const byMessage = new Map<unknown, T>();
+  for (const call of calls) byMessage.set(messageIdOf(call) ?? call, call);
+  return [...byMessage.values()];
 }
 
 export interface CacheWrites {

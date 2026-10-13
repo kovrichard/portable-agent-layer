@@ -32,6 +32,8 @@ export interface PalSettingsData {
    * paths whose contents are never stored; it cannot shrink it.
    */
   ledger?: { redactPaths?: string[] };
+  /** Local event log (memory/events) and content store (memory/content). On unless disabled. */
+  eventLog?: { enabled?: boolean };
   /** Control-room ranking knobs and attention sources — see src/tools/control-room/prefs.ts. */
   controlRoom?: Record<string, unknown>;
   /** Contextual-steering user extension: personal rules + shipped rules to suppress by tag. */
@@ -118,6 +120,10 @@ export function isEnabled(key: string): boolean {
 /** Check if an opt-in dynamic context section is enabled (defaults to false) */
 export function isOptedIn(key: string): boolean {
   return load().dynamicContext?.[key] === true;
+}
+
+export function eventLogEnabled(): boolean {
+  return load().eventLog?.enabled !== false;
 }
 
 /** Get the loadAtStartup file list */

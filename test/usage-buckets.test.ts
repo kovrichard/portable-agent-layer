@@ -1,6 +1,7 @@
-import { describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { PRICE_HISTORY } from "../src/hooks/lib/models";
 import {
   addToBucket,
   addToTimeBuckets,
@@ -14,13 +15,31 @@ import {
   totalTokens,
 } from "../src/tools/lib/usage-buckets";
 import { freshTestDir } from "./lib/test-home";
+import { event } from "./lib/wrapped-events";
 
 const NOW = new Date("2026-09-06T12:00:00.000Z");
+
+beforeEach(() => {
+  delete PRICE_HISTORY["claude-opus-5"];
+});
 const HORIZONS = horizonsFrom(NOW);
 
 function tempHome(): string {
   return freshTestDir(import.meta.file);
 }
+
+const palCall = (ts: string, fields: Record<string, unknown> = {}) =>
+  event(
+    "inference_call",
+    {
+      caller: "c",
+      model: "claude-haiku-4-5-20251001",
+      inputTokens: 100,
+      outputTokens: 10,
+      ...fields,
+    },
+    { ts }
+  );
 
 const tokens = (input: number, output: number, cw5m = 0, cw1h = 0, cr = 0) => ({
   input,
@@ -82,8 +101,8 @@ describe("horizonsFrom", () => {
 describe("addToBucket", () => {
   test("accumulates every token field and counts the call", () => {
     const bucket = emptyBucket();
-    addToBucket(bucket, "claude-opus-5", tokens(10, 20, 30, 40, 50));
-    addToBucket(bucket, "claude-opus-5", tokens(1, 2, 3, 4, 5));
+    addToBucket(bucket, "claude-opus-5", tokens(10, 20, 30, 40, 50), NOW.toISOString());
+    addToBucket(bucket, "claude-opus-5", tokens(1, 2, 3, 4, 5), NOW.toISOString());
     expect(bucket.input).toBe(11);
     expect(bucket.output).toBe(22);
     expect(bucket.cacheWrite5m).toBe(33);
@@ -94,15 +113,16 @@ describe("addToBucket", () => {
 
   test("prices what it accumulates", () => {
     const bucket = emptyBucket();
-    addToBucket(bucket, "claude-opus-5", tokens(1_000_000, 1_000_000));
+    addToBucket(bucket, "claude-opus-5", tokens(1_000_000, 1_000_000), NOW.toISOString());
     expect(bucket.cost).toBeGreaterThan(0);
   });
 
   test("prices per model, so a cheap model costs less than an expensive one", () => {
     const opus = emptyBucket();
     const haiku = emptyBucket();
-    addToBucket(opus, "claude-opus-5", tokens(1_000_000, 1_000_000));
-    addToBucket(haiku, "claude-haiku-4-5-20251001", tokens(1_000_000, 1_000_000));
+    const ts = NOW.toISOString();
+    addToBucket(opus, "claude-opus-5", tokens(1_000_000, 1_000_000), ts);
+    addToBucket(haiku, "claude-haiku-4-5-20251001", tokens(1_000_000, 1_000_000), ts);
     expect(haiku.cost).toBeLessThan(opus.cost);
   });
 });
@@ -163,7 +183,7 @@ describe("addToTimeBuckets", () => {
 describe("totalTokens", () => {
   test("sums all five token fields", () => {
     const bucket = emptyBucket();
-    addToBucket(bucket, "m", tokens(1, 2, 4, 8, 16));
+    addToBucket(bucket, "m", tokens(1, 2, 4, 8, 16), NOW.toISOString());
     expect(totalTokens(bucket)).toBe(31);
   });
 });
@@ -224,6 +244,88 @@ describe("readClaudeCode", () => {
     expect(result.buckets.total.output).toBe(205);
     expect(result.byModel["claude-opus-5"].calls).toBe(2);
     expect(result.byProject.pal.total.calls).toBe(2);
+  });
+
+  describe("with PAL's archive of the transcripts", () => {
+    const turn = (input: number) =>
+      assistantLine(NOW.toISOString(), "claude-opus-5", {
+        input_tokens: input,
+        output_tokens: 0,
+      });
+
+    function transcript(path: string, input: number): void {
+      mkdirSync(join(path, ".."), { recursive: true });
+      writeFileSync(path, turn(input));
+    }
+
+    function archived(path: string, input: number): void {
+      mkdirSync(join(path, ".."), { recursive: true });
+      writeFileSync(`${path}.gz`, Bun.gzipSync(turn(input)));
+    }
+
+    function homes() {
+      const dir = tempHome();
+      return { live: join(dir, "projects"), archive: join(dir, "archive") };
+    }
+
+    test("a transcript Claude Code deleted is still read from PAL's archive", () => {
+      const { live, archive } = homes();
+      transcript(join(live, "-w-pal", "kept.jsonl"), 1);
+      archived(join(archive, "-w-pal", "kept.jsonl"), 1);
+      archived(join(archive, "-w-pal", "deleted.jsonl"), 10);
+      archived(join(archive, "-w-pal", "deleted", "subagents", "agent-a.jsonl"), 100);
+      archived(join(archive, "-w-gone", "only.jsonl"), 1000);
+      archived(join(archive, "-w-gone", "notes.json"), 10_000);
+
+      const usage = readClaudeCode(live, undefined, NOW, archive);
+      expect(usage.buckets.total.input).toBe(1111);
+      expect(usage.byProject.pal.total.input).toBe(111);
+      expect(usage.byProject.gone.total.input).toBe(1000);
+    });
+
+    test("without an archive only the live transcripts count", () => {
+      const { live, archive } = homes();
+      transcript(join(live, "-w-pal", "kept.jsonl"), 1);
+      archived(join(archive, "-w-pal", "deleted.jsonl"), 10);
+      expect(readClaudeCode(live, undefined, NOW).buckets.total.input).toBe(1);
+      expect(
+        readClaudeCode(live, undefined, NOW, join(archive, "absent")).buckets.total.input
+      ).toBe(1);
+    });
+
+    test("an archived copy that is not gzip is skipped", () => {
+      const { live, archive } = homes();
+      mkdirSync(join(archive, "-w-pal"), { recursive: true });
+      writeFileSync(join(archive, "-w-pal", "broken.jsonl.gz"), "not gzip");
+      expect(readClaudeCode(live, undefined, NOW, archive).buckets.total.calls).toBe(0);
+    });
+  });
+
+  test("a message written as one line per content block is billed once, at its final usage", () => {
+    const dir = tempHome();
+    const proj = join(dir, "-p-real");
+    mkdirSync(proj, { recursive: true });
+    const block = (id: string, type: string, output = 300) =>
+      JSON.stringify({
+        type: "assistant",
+        timestamp: "2026-09-06T08:00:00.000Z",
+        message: {
+          id,
+          model: "claude-opus-5",
+          content: [{ type }],
+          usage: { input_tokens: 10, output_tokens: output },
+        },
+      });
+    writeFileSync(
+      join(proj, "s.jsonl"),
+      [
+        block("msg_1", "thinking", 3),
+        block("msg_2", "text"),
+        block("msg_1", "tool_use"),
+      ].join("\n")
+    );
+    const total = readClaudeCode(dir, undefined, NOW).buckets.total;
+    expect([total.calls, total.input, total.output]).toEqual([2, 20, 600]);
   });
 
   test("ignores a stray file sitting beside the project directories", () => {
@@ -443,78 +545,98 @@ describe("readClaudeCode", () => {
   });
 });
 
-describe("readPalInference", () => {
-  function writeLog(lines: string[]): string {
-    const dir = tempHome();
-    const filepath = join(dir, "token-usage.jsonl");
-    writeFileSync(filepath, lines.join("\n"));
-    return filepath;
-  }
+describe("a price change reaches every reader", () => {
+  const OPUS_5_LAUNCH = {
+    input: 6,
+    output: 30,
+    cacheWrite5m: 7.5,
+    cacheWrite1h: 12,
+    cacheRead: 0.6,
+  };
+  const BEFORE = "2026-08-20T08:00:00.000Z";
 
-  test("returns empty buckets when the log does not exist", () => {
-    const result = readPalInference(join(tempHome(), "missing.jsonl"), NOW);
+  beforeEach(() => {
+    PRICE_HISTORY["claude-opus-5"] = [{ until: "2026-09-01", rates: OPUS_5_LAUNCH }];
+  });
+
+  test("a transcript call is priced at the rate on its own date", () => {
+    const dir = tempHome();
+    const proj = join(dir, "-p-real");
+    mkdirSync(proj, { recursive: true });
+    writeFileSync(
+      join(proj, "s.jsonl"),
+      assistantLine(BEFORE, "claude-opus-5", { input_tokens: 1_000_000 })
+    );
+    expect(readClaudeCode(dir, undefined, NOW).buckets.total.cost).toBeCloseTo(6, 10);
+  });
+
+  test("a PAL inference call is too, in its windows and under its caller", () => {
+    const result = readPalInference(
+      [
+        palCall(BEFORE, {
+          caller: "c",
+          model: "claude-opus-5",
+          inputTokens: 1_000_000,
+          outputTokens: 0,
+        }),
+      ],
+      NOW
+    );
+    expect(result.buckets.total.cost).toBeCloseTo(6, 10);
+    expect(result.byCaller.c.cost).toBeCloseTo(6, 10);
+  });
+});
+
+describe("readPalInference", () => {
+  const HAIKU = "claude-haiku-4-5-20251001";
+
+  test("nothing logged leaves every bucket empty", () => {
+    const result = readPalInference([], NOW);
     expect(result.buckets.total.calls).toBe(0);
     expect(result.byCaller).toEqual({});
   });
 
-  test("returns empty buckets for an empty log", () => {
-    expect(readPalInference(writeLog([""]), NOW).buckets.total.calls).toBe(0);
-  });
-
   test("splits a call across the windows, the model and the caller", () => {
-    const filepath = writeLog([
-      JSON.stringify({
-        ts: "2026-09-06T08:00:00.000Z",
-        caller: "failure-principle",
-        model: "claude-haiku-4-5-20251001",
-        inputTokens: 300,
-        outputTokens: 40,
-      }),
-      JSON.stringify({
-        ts: "2026-08-25T08:00:00.000Z",
-        caller: "synthesize",
-        model: "claude-haiku-4-5-20251001",
-        inputTokens: 100,
-        outputTokens: 10,
-      }),
-    ]);
-
-    const result = readPalInference(filepath, NOW);
+    const result = readPalInference(
+      [
+        palCall("2026-09-06T08:00:00.000Z", {
+          caller: "failure-principle",
+          inputTokens: 300,
+          outputTokens: 40,
+        }),
+        palCall("2026-08-25T08:00:00.000Z", { caller: "synthesize" }),
+      ],
+      NOW
+    );
     expect(result.buckets.total.calls).toBe(2);
     expect(result.buckets.today.input).toBe(300);
-    expect(result.byModel["claude-haiku-4-5-20251001"].month.calls).toBe(2);
+    expect(result.byModel[HAIKU].month.calls).toBe(2);
     expect(result.byCaller["failure-principle"].input).toBe(300);
     expect(result.byCaller.synthesize.calls).toBe(1);
   });
 
-  test("records no cache traffic — a PAL prompt has none", () => {
-    const filepath = writeLog([
-      JSON.stringify({
-        ts: "2026-09-06T08:00:00.000Z",
-        caller: "c",
-        model: "claude-haiku-4-5-20251001",
-        inputTokens: 10,
-        outputTokens: 2,
-      }),
-    ]);
-    const total = readPalInference(filepath, NOW).buckets.total;
-    expect(total.cacheWrite5m).toBe(0);
-    expect(total.cacheWrite1h).toBe(0);
-    expect(total.cacheRead).toBe(0);
+  test("counts the cache traffic a call reported", () => {
+    const total = readPalInference(
+      [palCall(NOW.toISOString(), { cacheWrite5m: 5, cacheWrite1h: 7, cacheRead: 11 })],
+      NOW
+    ).buckets.total;
+    expect(total).toMatchObject({ cacheWrite5m: 5, cacheWrite1h: 7, cacheRead: 11 });
   });
 
-  test("skips a malformed line and keeps the rest", () => {
-    const filepath = writeLog([
-      "not json at all",
-      JSON.stringify({
-        ts: "2026-09-06T08:00:00.000Z",
-        caller: "c",
-        model: "m",
-        inputTokens: 4,
-        outputTokens: 1,
-      }),
-    ]);
-    expect(readPalInference(filepath, NOW).buckets.total.calls).toBe(1);
+  test("a call without input or output counts is left out, not counted as zero", () => {
+    const result = readPalInference(
+      [
+        palCall(NOW.toISOString(), { inputTokens: null }),
+        palCall(NOW.toISOString(), { outputTokens: null }),
+        palCall(NOW.toISOString(), { inputTokens: undefined }),
+        palCall(NOW.toISOString(), { model: null, caller: null }),
+        event("model_call", { inputTokens: 1, outputTokens: 1 }),
+      ],
+      NOW
+    );
+    expect(result.buckets.total.calls).toBe(1);
+    expect(Object.keys(result.byModel)).toEqual(["unknown"]);
+    expect(Object.keys(result.byCaller)).toEqual(["anonymous"]);
   });
 });
 
@@ -522,8 +644,8 @@ describe("grandTotal", () => {
   test("sums every field across the buckets it is given", () => {
     const a = emptyBucket();
     const b = emptyBucket();
-    addToBucket(a, "claude-opus-5", tokens(1, 2, 3, 4, 5));
-    addToBucket(b, "claude-opus-5", tokens(10, 20, 30, 40, 50));
+    addToBucket(a, "claude-opus-5", tokens(1, 2, 3, 4, 5), NOW.toISOString());
+    addToBucket(b, "claude-opus-5", tokens(10, 20, 30, 40, 50), NOW.toISOString());
 
     const grand = grandTotal([a, b]);
     expect(grand.input).toBe(11);
@@ -541,7 +663,7 @@ describe("grandTotal", () => {
 
   test("does not mutate the buckets it sums", () => {
     const a = emptyBucket();
-    addToBucket(a, "claude-opus-5", tokens(1, 1));
+    addToBucket(a, "claude-opus-5", tokens(1, 1), NOW.toISOString());
     grandTotal([a, a]);
     expect(a.calls).toBe(1);
   });

@@ -4,7 +4,7 @@
  * Removes PAL skill symlinks.
  */
 
-import { copyFileSync, existsSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
 import {
@@ -17,8 +17,8 @@ import {
   removeSkills,
   removeStatusline,
   removeStatuslineConfig,
+  replaceJsonConfig,
   unmergeCursorHooks,
-  writeJson,
 } from "../lib";
 
 const PKG_ROOT = palPkg().replaceAll("\\", "/");
@@ -28,15 +28,11 @@ const CLI_CONFIG = resolve(CURSOR_DIR, "cli-config.json");
 
 // --- Remove PAL hooks from hooks.json ---
 if (existsSync(HOOKS_FILE)) {
-  // Backup before modifying
-  copyFileSync(HOOKS_FILE, `${HOOKS_FILE}.bak.${Date.now()}`);
-  log.info("Backed up hooks.json");
-
   const template = loadCursorHooksTemplate(assets.cursorHooksTemplate(), PKG_ROOT);
   const existing = readJson<Record<string, unknown>>(HOOKS_FILE, {});
   const cleaned = unmergeCursorHooks(existing, template);
 
-  writeJson(HOOKS_FILE, cleaned);
+  replaceJsonConfig(HOOKS_FILE, cleaned);
   log.success("Removed PAL hooks from hooks.json");
 } else {
   log.info("No hooks.json found, nothing to do");
@@ -62,10 +58,8 @@ removePalDocs();
 
 // --- Remove statusline script and cli-config statusLine ---
 if (existsSync(CLI_CONFIG)) {
-  copyFileSync(CLI_CONFIG, `${CLI_CONFIG}.bak.${Date.now()}`);
-  log.info("Backed up cli-config.json");
   const cliConfig = readJson<Record<string, unknown>>(CLI_CONFIG, {});
-  writeJson(CLI_CONFIG, removeStatuslineConfig(cliConfig, "cursor"));
+  replaceJsonConfig(CLI_CONFIG, removeStatuslineConfig(cliConfig, "cursor"));
   log.success("Removed PAL statusLine from cli-config.json");
 } else {
   log.info("No cli-config.json found, skipping statusLine removal");

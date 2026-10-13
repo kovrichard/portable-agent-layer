@@ -4,7 +4,6 @@ import {
   fmt,
   fmtCost,
   grandBucket,
-  inferenceLabel,
   modelLabel,
   modelsByCost,
   projectsByCost,
@@ -100,7 +99,7 @@ function projectSection(style: Style, agents: AgentReport[]): string[] {
 
 function inferenceSections(style: Style, data: UsageData): string[] {
   return usedInferenceModels(data.pal).flatMap(([model, buckets]) => [
-    subtle(style, "PAL inference", inferenceLabel(model)),
+    subtle(style, "PAL inference", modelLabel(model)),
     ...windowRows(style, buckets),
     "",
   ]);

@@ -1,11 +1,14 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { applyDelta } from "../src/hooks/lib/ledger";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
-// The two hooks are only correct together, and only as separate processes:
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
+
+// The two halves are only correct together, and only as separate processes:
 // the whole point is that the before-state survives from one invocation to the
 // next. Driving them in-process would test a pairing that never happens.
 
@@ -19,8 +22,8 @@ beforeEach(() => {
   mkdirSync(work, { recursive: true });
 });
 
-function runHook(hook: string, payload: unknown) {
-  return spawnSync("bun", ["run", resolve(ROOT, "src", "hooks", `${hook}.ts`)], {
+function runHook(hook: string, payload: unknown, args: string[] = []) {
+  return spawnSync("bun", ["run", resolve(ROOT, "src", "hooks", `${hook}.ts`), ...args], {
     input: JSON.stringify(payload),
     encoding: "utf-8",
     timeout: 20000,
@@ -59,7 +62,7 @@ describe("the snapshot/commit pair", () => {
 
     runHook("LedgerSnapshot", payload("PreToolUse", target));
     writeFileSync(target, "const a = 2;", "utf-8");
-    runHook("LedgerCommit", payload("PostToolUse", target));
+    runHook("PostToolOrchestrator", payload("PostToolUse", target));
 
     const all = entries();
     expect(all).toHaveLength(1);
@@ -76,7 +79,7 @@ describe("the snapshot/commit pair", () => {
 
     runHook("LedgerSnapshot", payload("PreToolUse", target));
     writeFileSync(target, "fresh", "utf-8");
-    runHook("LedgerCommit", payload("PostToolUse", target));
+    runHook("PostToolOrchestrator", payload("PostToolUse", target));
 
     const [entry] = entries();
     expect(entry.before).toBeNull();
@@ -99,7 +102,7 @@ describe("the snapshot/commit pair", () => {
     const target = resolve(work, "index.ts");
     writeFileSync(target, "const a = 2;", "utf-8");
 
-    runHook("LedgerCommit", payload("PostToolUse", target, "toolu_unpaired"));
+    runHook("PostToolOrchestrator", payload("PostToolUse", target, "toolu_unpaired"));
 
     expect(entries()).toEqual([]);
   });
@@ -114,8 +117,8 @@ describe("the snapshot/commit pair", () => {
     runHook("LedgerSnapshot", payload("PreToolUse", two, "toolu_two"));
     writeFileSync(one, "ONE-after", "utf-8");
     writeFileSync(two, "TWO-after", "utf-8");
-    runHook("LedgerCommit", payload("PostToolUse", two, "toolu_two"));
-    runHook("LedgerCommit", payload("PostToolUse", one, "toolu_one"));
+    runHook("PostToolOrchestrator", payload("PostToolUse", two, "toolu_two"));
+    runHook("PostToolOrchestrator", payload("PostToolUse", one, "toolu_one"));
 
     const byTarget = new Map(
       entries().map((e) => [String(e.target), (e.before as { hash: string }).hash])
@@ -148,7 +151,7 @@ describe("the snapshot/unapplied pair", () => {
     writeFileSync(target, "const a = 1;", "utf-8");
 
     runHook("LedgerSnapshot", payload("PreToolUse", target));
-    runHook("LedgerUnapplied", failure(target));
+    runHook("PostToolOrchestrator", failure(target));
 
     const [entry] = entries();
     expect(entry.outcome).toBe("failed");
@@ -163,7 +166,7 @@ describe("the snapshot/unapplied pair", () => {
     writeFileSync(target, "const a = 1;", "utf-8");
 
     runHook("LedgerSnapshot", payload("PreToolUse", target));
-    runHook("LedgerUnapplied", denial(target));
+    runHook("PostToolOrchestrator", denial(target));
 
     const [entry] = entries();
     expect(entry.outcome).toBe("denied");
@@ -176,8 +179,8 @@ describe("the snapshot/unapplied pair", () => {
     const target = resolve(work, "index.ts");
     writeFileSync(target, "const a = 1;", "utf-8");
 
-    runHook("LedgerUnapplied", failure(target, "toolu_f"));
-    runHook("LedgerUnapplied", denial(target, "toolu_d"));
+    runHook("PostToolOrchestrator", failure(target, "toolu_f"));
+    runHook("PostToolOrchestrator", denial(target, "toolu_d"));
 
     expect(entries().map((e) => e.outcome)).toEqual(["failed", "denied"]);
   });
@@ -187,7 +190,7 @@ describe("the snapshot/unapplied pair", () => {
     writeFileSync(target, "const a = 1;", "utf-8");
 
     runHook("LedgerSnapshot", payload("PreToolUse", target));
-    runHook("LedgerUnapplied", failure(target));
+    runHook("PostToolOrchestrator", failure(target));
 
     expect(entries()[0].after).toBeNull();
   });
@@ -198,7 +201,7 @@ describe("the snapshot/unapplied pair", () => {
     const target = resolve(work, "index.ts");
     writeFileSync(target, "const a = 1;", "utf-8");
 
-    runHook("LedgerUnapplied", failure(target, "toolu_unpaired"));
+    runHook("PostToolOrchestrator", failure(target, "toolu_unpaired"));
 
     const [entry] = entries();
     expect(entry.outcome).toBe("failed");
@@ -210,18 +213,19 @@ describe("the snapshot/unapplied pair", () => {
     writeFileSync(target, "const a = 1;", "utf-8");
 
     runHook("LedgerSnapshot", payload("PreToolUse", target));
-    runHook("LedgerUnapplied", failure(target));
-    runHook("LedgerCommit", payload("PostToolUse", target));
+    runHook("PostToolOrchestrator", failure(target));
+    runHook("PostToolOrchestrator", payload("PostToolUse", target));
 
     expect(entries()).toHaveLength(1);
     expect(entries()[0].outcome).toBe("failed");
   });
 
-  test("declines an event that does not mean the call ended", () => {
+  test("an events-only registration leaves the ledger alone", () => {
     const target = resolve(work, "index.ts");
     writeFileSync(target, "const a = 1;", "utf-8");
 
-    runHook("LedgerUnapplied", payload("PostToolUse", target));
+    runHook("LedgerSnapshot", payload("PreToolUse", target));
+    runHook("PostToolOrchestrator", failure(target), ["--only=events"]);
 
     expect(entries()).toEqual([]);
   });
@@ -230,7 +234,7 @@ describe("the snapshot/unapplied pair", () => {
     const target = resolve(work, "index.ts");
     writeFileSync(target, "const a = 1;", "utf-8");
 
-    runHook("LedgerUnapplied", payload("PermissionDenied", target));
+    runHook("PostToolOrchestrator", payload("PermissionDenied", target));
 
     const [entry] = entries();
     expect(entry.outcome).toBe("denied");
@@ -241,7 +245,7 @@ describe("the snapshot/unapplied pair", () => {
     const target = resolve(work, "index.ts");
     writeFileSync(target, "const a = 1;", "utf-8");
 
-    const res = runHook("LedgerUnapplied", failure(target));
+    const res = runHook("PostToolOrchestrator", failure(target));
     expect(res.status).toBe(0);
     expect(res.stdout).toBe("");
   });
@@ -259,7 +263,7 @@ describe("what the ledger declines to record", () => {
     };
 
     runHook("LedgerSnapshot", read);
-    runHook("LedgerCommit", { ...read, hook_event_name: "PostToolUse" });
+    runHook("PostToolOrchestrator", { ...read, hook_event_name: "PostToolUse" });
 
     expect(entries()).toEqual([]);
   });
@@ -273,7 +277,7 @@ describe("what the ledger declines to record", () => {
     };
 
     runHook("LedgerSnapshot", bash);
-    runHook("LedgerCommit", { ...bash, hook_event_name: "PostToolUse" });
+    runHook("PostToolOrchestrator", { ...bash, hook_event_name: "PostToolUse" });
 
     expect(entries()).toEqual([]);
   });
@@ -285,7 +289,7 @@ describe("hook protocol", () => {
     writeFileSync(target, "const a = 1;", "utf-8");
 
     const pre = runHook("LedgerSnapshot", payload("PreToolUse", target));
-    const post = runHook("LedgerCommit", payload("PostToolUse", target));
+    const post = runHook("PostToolOrchestrator", payload("PostToolUse", target));
 
     expect(pre.status).toBe(0);
     expect(pre.stdout).toBe("");

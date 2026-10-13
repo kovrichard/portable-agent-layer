@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
+import { eventsSince } from "../src/hooks/lib/events";
 import {
   buildCliPrompt,
   buildCodexArgs,
@@ -6,8 +7,11 @@ import {
   inference,
 } from "../src/hooks/lib/inference";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
-import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
+import { codexReplying, prependPath, writeFakeBin } from "./fixtures/fake-bin";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 const PRESERVED = [
   "PAL_AGENT",
@@ -122,11 +126,7 @@ describe("inference dispatcher — codex spawn integration (fake binary)", () =>
   test("end-to-end: fake codex echoes stdin (the prompt), dispatcher captures it", async () => {
     // Reads stdin rather than argv: that is where the prompt now travels, so
     // this fails if the prompt ever moves back into a positional argument.
-    writeFakeBin(
-      tmpBin,
-      "codex",
-      `for await (const c of Bun.stdin.stream()) Bun.write(Bun.stdout, c);\n`
-    );
+    writeFakeBin(tmpBin, "codex", codexReplying("await Bun.stdin.text()"));
     prependPath(tmpBin);
 
     const result = await inference({ user: "hello-codex", timeout: 5000 });
@@ -138,7 +138,9 @@ describe("inference dispatcher — codex spawn integration (fake binary)", () =>
     writeFakeBin(
       tmpBin,
       "codex",
-      `console.log(\`sentinel=\${process.env.${SPAWN_GUARD_ENV.SENTINEL}} claudecode=[\${process.env.CLAUDECODE ?? ""}]\`);\n`
+      codexReplying(
+        `\`sentinel=\${process.env.${SPAWN_GUARD_ENV.SENTINEL}} claudecode=[\${process.env.CLAUDECODE ?? ""}]\``
+      )
     );
     prependPath(tmpBin);
     process.env.CLAUDECODE = "1"; // parent has it set
@@ -147,6 +149,42 @@ describe("inference dispatcher — codex spawn integration (fake binary)", () =>
     expect(result.success).toBe(true);
     expect(result.output).toBe("sentinel=1 claudecode=[]");
     expect(process.env.CLAUDECODE).toBe("1"); // parent untouched
+  });
+
+  test("the call is logged with the tokens codex reported, cache taken out of input", async () => {
+    writeFakeBin(
+      tmpBin,
+      "codex",
+      codexReplying(`"hi"`, {
+        input_tokens: 16389,
+        cached_input_tokens: 2,
+        cache_write_input_tokens: 16386,
+        output_tokens: 32,
+        reasoning_output_tokens: 7,
+      })
+    );
+    prependPath(tmpBin);
+
+    await inference({ user: "hi", timeout: 5000 });
+    expect(eventsSince("inference_call", new Date(0))[0]).toMatchObject({
+      route: "codex-spawn",
+      inputTokens: 1,
+      outputTokens: 32,
+      thinkingTokens: 7,
+      cacheWrite5m: 16386,
+      cacheRead: 2,
+    });
+  });
+
+  test("the reply is codex's last message, not its first", async () => {
+    writeFakeBin(
+      tmpBin,
+      "codex",
+      `${codexReplying(`"draft"`)}console.log(JSON.stringify({ type: "item.completed", item: { type: "agent_message", text: "final" } }));\n`
+    );
+    prependPath(tmpBin);
+
+    expect((await inference({ user: "hi", timeout: 5000 })).output).toBe("final");
   });
 
   test("non-zero exit from fake codex returns success: false", async () => {
@@ -158,7 +196,7 @@ describe("inference dispatcher — codex spawn integration (fake binary)", () =>
   });
 
   test("JSON-schema path parses fake codex JSON output", async () => {
-    writeFakeBin(tmpBin, "codex", `console.log('{"verdict":"ok"}');\n`);
+    writeFakeBin(tmpBin, "codex", codexReplying(`'{"verdict":"ok"}'`));
     prependPath(tmpBin);
 
     const result = await inference({

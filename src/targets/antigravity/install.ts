@@ -6,7 +6,7 @@
  * never touched.
  */
 
-import { copyFileSync, existsSync, mkdirSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { skillsDirOf } from "../../hooks/lib/agent-registry";
 import { ensureAntigravityRule } from "../../hooks/lib/claude-md";
@@ -23,6 +23,7 @@ import {
   mergeSettings,
   nativeAgentsDir,
   readJson,
+  replaceJsonConfig,
   writeJson,
 } from "../lib";
 
@@ -49,8 +50,7 @@ log.success("PAL hooks → hooks.json");
 
 const SETTINGS = platform.antigravitySettings();
 mkdirSync(dirname(SETTINGS), { recursive: true });
-if (existsSync(SETTINGS)) copyFileSync(SETTINGS, `${SETTINGS}.bak.${Date.now()}`);
-writeJson(
+replaceJsonConfig(
   SETTINGS,
   addStatuslineConfig(
     mergeSettings(

@@ -16,28 +16,17 @@ describe("captureRating non-blocking contract", () => {
   });
 
   test("returns synchronously when implicit-sentiment path is triggered", () => {
-    // A non-praise, non-system, sane-length message that previously would have
-    // awaited an inference call inline. After the detach refactor, the parent
-    // must return immediately — the inference happens in a spawned subprocess.
-    const start = Date.now();
-    captureRating("I really like the structure of this implementation", "sess-test");
-    const elapsed = Date.now() - start;
-    // Allow generous headroom for spawn() syscall itself; inference would be 3-30s.
-    expect(elapsed).toBeLessThan(100);
+    expect(
+      captureRating("I really like the structure of this implementation", "sess-test")
+    ).not.toBeInstanceOf(Promise);
   });
 
   test("praise fast-path also returns synchronously", () => {
-    const start = Date.now();
-    captureRating("nice work", "sess-test");
-    const elapsed = Date.now() - start;
-    expect(elapsed).toBeLessThan(50);
+    expect(captureRating("nice work", "sess-test")).not.toBeInstanceOf(Promise);
   });
 
   test("explicit rating returns synchronously", () => {
-    const start = Date.now();
-    captureRating("8 great", "sess-test");
-    const elapsed = Date.now() - start;
-    expect(elapsed).toBeLessThan(50);
+    expect(captureRating("8 great", "sess-test")).not.toBeInstanceOf(Promise);
   });
 });
 

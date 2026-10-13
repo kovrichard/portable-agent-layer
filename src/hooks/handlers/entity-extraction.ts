@@ -23,7 +23,6 @@ import { newResearchTargets, researchNewEntities } from "../lib/entity-research"
 import { canInfer, inference } from "../lib/inference";
 import { logDebug, logError } from "../lib/log";
 import { identity, isEnabled, isOptedIn } from "../lib/settings";
-import { logTokenUsage } from "../lib/token-usage";
 import { parseMessages } from "../lib/transcript";
 
 function sourceId(sessionId: string, count: number): string {
@@ -56,7 +55,6 @@ export async function extractSessionEntities(
     caller: "entity-extraction",
     sessionId,
   });
-  if (result.usage) logTokenUsage("entity-extraction", result.usage);
   if (!result.success || !result.output) return;
 
   const source = sourceId(sessionId, count);

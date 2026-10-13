@@ -11,7 +11,7 @@
  *   4. otherwise                   → { success: false }
  *
  * The claude-spawn path mirrors PAI/TOOLS/Inference.ts in spawn args:
- *   --print --tools '' --setting-sources '' --output-format text --system-prompt …
+ *   --print --tools '' --setting-sources '' --output-format json --system-prompt …
  * These flags prevent the spawned subprocess from loading PAL hooks or making
  * tool calls — the primary recursion defense. PAL's spawn-guard env sentinel
  * is the secondary belt-and-suspenders layer (see lib/spawn-guard.ts).
@@ -20,10 +20,12 @@
  * yet wired and currently fall through to the API path.
  */
 
+import { readFileSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { z } from "zod";
+import type { TranscriptUsage } from "../../tools/lib/transcript-usage";
 import {
   getActiveAgent,
   isAntigravity,
@@ -40,6 +42,22 @@ import {
   streamJsonPrompt,
   writeInferenceAgent,
 } from "./antigravity-inference";
+import { logInferenceCall, SCHEMA_MISMATCH } from "./inference-events";
+import {
+  anthropicUsage,
+  antigravitySpawnUsage,
+  claudeResult,
+  claudeSpawnUsage,
+  codexSpawnUsage,
+  copilotSessionId,
+  copilotShutdownUsage,
+  copilotSpawnUsage,
+  type InferenceUsage,
+  jsonLines,
+  type OpenAiUsage,
+  openAiUsage,
+  opencodeSpawnUsage,
+} from "./inference-usage";
 import { logDebug, logError } from "./log";
 import {
   type FixedModelRoute,
@@ -49,6 +67,7 @@ import {
 } from "./models";
 import { opencodeTierModel, writeInstructionFreeConfig } from "./opencode-config";
 import { withPalEnv } from "./pal-env";
+import { platform } from "./paths";
 import { buildSpawnGuardEnv, getInferenceDepth, SPAWN_GUARD_ENV } from "./spawn-guard";
 import { findBinaryOnPath } from "./which";
 
@@ -174,7 +193,9 @@ interface InferenceResult {
   output?: string;
   /** First line of a failed CLI's error output. */
   error?: string;
-  usage?: { inputTokens: number; outputTokens: number };
+  usage?: InferenceUsage;
+  /** The model the route ran on, when PAL picked it. */
+  model?: string;
 }
 
 function schemaProblem(
@@ -188,7 +209,23 @@ function schemaProblem(
     .join("; ");
 }
 
+function plannedRoute(opts: InferenceOptions): { route: string; model: string | null } {
+  const { route } = previewRoute();
+  if (route === "opencode-spawn")
+    return { route, model: opencodeTierModel(opts.tier ?? "small") };
+  if (isFixedModelRoute(route)) return { route, model: modelFor(route, opts) };
+  return { route, model: null };
+}
+
 export async function inference(opts: InferenceOptions): Promise<InferenceResult> {
+  const started = performance.now();
+  const result = await checkedInference(opts);
+  const planned = plannedRoute(opts);
+  logInferenceCall(opts, planned, result, performance.now() - started);
+  return { ...result, model: planned.model ?? undefined };
+}
+
+async function checkedInference(opts: InferenceOptions): Promise<InferenceResult> {
   const result = await routeInference(opts);
   if (!opts.jsonSchema || !result.success || !result.output) return result;
   const problem = schemaProblem(result.output, opts.jsonSchema);
@@ -200,7 +237,7 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
   return {
     ...result,
     success: false,
-    error: `the reply does not match the schema: ${problem}`,
+    error: `${SCHEMA_MISMATCH}: ${problem}`,
   };
 }
 
@@ -237,7 +274,13 @@ async function routeInference(opts: InferenceOptions): Promise<InferenceResult> 
     const bin = getCodexBinary();
     if (bin) {
       logDebug("inference", `${tag} route=codex-spawn agent=${agent}`);
-      return inferenceViaCliSpawn(bin, buildCodexArgs(opts), buildCliPrompt(opts), opts);
+      return inferenceViaCliSpawn(
+        bin,
+        buildCodexArgs(opts),
+        buildCliPrompt(opts),
+        opts,
+        CODEX_REPLY
+      );
     }
   }
   if (isCodex() && hasOpenAiKey()) {
@@ -255,12 +298,7 @@ async function routeInference(opts: InferenceOptions): Promise<InferenceResult> 
     const bin = getCopilotBinary();
     if (bin) {
       logDebug("inference", `${tag} route=copilot-spawn agent=${agent}`);
-      return inferenceViaCliSpawn(
-        bin,
-        buildCopilotArgs(opts),
-        buildCliPrompt(opts),
-        opts
-      );
+      return inferenceViaCopilotSpawn(bin, opts);
     }
   }
   if (isCursor()) {
@@ -374,13 +412,21 @@ export function buildClaudeArgs(
     modelFor("claude-spawn", opts),
     ...claudeTools(opts),
     "--output-format",
-    "text",
+    "json",
     "--setting-sources",
     "",
   ];
   if (systemPromptFile) args.push("--system-prompt-file", systemPromptFile);
   return args;
 }
+
+const CLAUDE_REPLY: CliReply = {
+  text: (raw) => {
+    const result = claudeResult(raw);
+    return result?.is_error ? "" : String(result?.result ?? "").trim();
+  },
+  usage: claudeSpawnUsage,
+};
 
 type ClaudeAuthMode = "token" | "native";
 
@@ -418,7 +464,7 @@ async function inferenceViaClaudeSpawn(
 ): Promise<InferenceResult> {
   const mode = claudeAuthMode();
   const spawnClaude = (args: string[]) =>
-    inferenceViaCliSpawn(bin, args, opts.user, opts, undefined, {
+    inferenceViaCliSpawn(bin, args, opts.user, opts, CLAUDE_REPLY, {
       env: credentialOverridesFor(mode),
       logTag: `auth=${mode}`,
     });
@@ -445,6 +491,7 @@ async function inferenceViaClaudeSpawn(
  *   --ignore-rules        → no execpolicy .rules files load
  *   --sandbox read-only   → child cannot execute shell commands even if it tries
  *   --ephemeral           → no session persistence; one-shot only
+ *   --json                → NDJSON events: the reply and the turn's token usage
  *
  * Codex has no --system-prompt equivalent, so system + user + JSON-schema become
  * one prompt. That prompt goes in on stdin, not as a positional argument, because
@@ -468,9 +515,25 @@ export function buildCodexArgs(opts: InferenceOptions): string[] {
     "--sandbox",
     "read-only",
     "--ephemeral",
+    "--json",
     ...(opts.web ? ["-c", "web_search=live"] : []),
   ];
 }
+
+interface CodexItem {
+  type?: string;
+  text?: string;
+}
+
+const CODEX_REPLY: CliReply = {
+  text: (raw) =>
+    jsonLines(raw)
+      .filter((event) => event.type === "item.completed")
+      .map((event) => event.item as CodexItem)
+      .findLast((item) => item?.type === "agent_message")
+      ?.text?.trim() ?? "",
+  usage: codexSpawnUsage,
+};
 
 /**
  * Build the argv for `opencode run …` from inference options. Pure.
@@ -513,7 +576,7 @@ async function inferenceViaOpencodeSpawn(
       buildOpencodeArgs(opts),
       buildCliPrompt(opts),
       opts,
-      extractOpencodeText,
+      { text: extractOpencodeText, usage: opencodeSpawnUsage },
       { cwd: dir, env: { XDG_CONFIG_HOME: dir, ...OPENCODE_WITHOUT_EXTERNAL_CONTEXT } }
     );
   } finally {
@@ -584,7 +647,7 @@ async function inferenceViaAntigravitySpawn(
       buildAntigravityArgs(opts),
       streamJsonPrompt(buildCliPrompt(opts)),
       opts,
-      extractAntigravityText,
+      { text: extractAntigravityText, usage: antigravitySpawnUsage },
       { cwd: dir, afterRun: removeSpawnedConversation }
     );
   } finally {
@@ -606,6 +669,7 @@ async function inferenceViaAntigravitySpawn(
  *                                naming an unknown tool hides every tool
  *   --deny-tool=…             → backstop: deny rules win over any allow rule
  *   --silent                  → keeps the tool-filter notices out of stdout
+ *   --output-format json      → JSONL events: the reply and the prompt's token usage
  *   web: only web_fetch, pre-approved for every URL; Copilot has no search tool,
  *        so it fetches search pages itself
  *
@@ -622,10 +686,77 @@ export function buildCopilotArgs(opts: InferenceOptions): string[] {
     "--no-auto-update",
     "--no-color",
     "--silent",
+    "--output-format",
+    "json",
     ...copilotTools(opts),
     "--deny-tool=shell",
     "--deny-tool=write",
   ];
+}
+
+interface CopilotMessage {
+  content?: string;
+}
+
+const COPILOT_REPLY: CliReply = {
+  text: (raw) =>
+    jsonLines(raw)
+      .filter((event) => event.type === "assistant.message")
+      .map((event) => (event.data as CopilotMessage | undefined)?.content?.trim())
+      .findLast(Boolean) ?? "",
+  usage: copilotSpawnUsage,
+};
+
+function copilotSessionUsage(home: string, raw: string): InferenceUsage | undefined {
+  const id = copilotSessionId(raw);
+  if (!id) return undefined;
+  try {
+    return copilotShutdownUsage(
+      readFileSync(join(home, "session-state", id, "events.jsonl"), "utf-8")
+    );
+  } catch {
+    return undefined;
+  }
+}
+
+/** stdout reports only the prompt side; the run's own session file in its home has the rest. */
+function copilotReply(home: string): CliReply {
+  return {
+    ...COPILOT_REPLY,
+    usage: (raw) => copilotSessionUsage(home, raw) ?? copilotSpawnUsage(raw),
+  };
+}
+
+const COPILOT_TOKEN_ENV = ["COPILOT_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"];
+
+/** A /login account lives in COPILOT_HOME's config.json; only a token variable logs in without it. */
+function copilotLogsInWithoutHome(env: NodeJS.ProcessEnv): boolean {
+  return COPILOT_TOKEN_ENV.some((name) => Boolean(env[name]));
+}
+
+/** --no-custom-instructions still loads COPILOT_HOME/instructions, where PAL's identity lives. */
+async function inferenceViaCopilotSpawn(
+  bin: string,
+  opts: InferenceOptions
+): Promise<InferenceResult> {
+  const spawn = (home: string, place?: SpawnPlace) =>
+    inferenceViaCliSpawn(
+      bin,
+      buildCopilotArgs(opts),
+      buildCliPrompt(opts),
+      opts,
+      copilotReply(home),
+      place
+    );
+  const env = withPalEnv(process.env);
+  if (!copilotLogsInWithoutHome(env))
+    return spawn(env.COPILOT_HOME || platform.copilotDir());
+  const dir = await mkdtemp(join(tmpdir(), "pal-copilot-"));
+  try {
+    return await spawn(dir, { cwd: dir, env: { COPILOT_HOME: dir } });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 }
 
 function copilotTools(opts: InferenceOptions): string[] {
@@ -815,6 +946,14 @@ async function singleCliAttempt(
   });
 }
 
+/** How to read a CLI's stdout: the reply's text, and what the call cost. */
+interface CliReply {
+  text: (rawStdout: string) => string;
+  usage: (rawStdout: string) => InferenceUsage | undefined;
+}
+
+const PLAIN_REPLY: CliReply = { text: (raw) => raw, usage: () => undefined };
+
 interface SpawnPlace {
   cwd?: string;
   env?: Record<string, string | undefined>;
@@ -833,7 +972,7 @@ async function inferenceViaCliSpawn(
   args: string[],
   stdinInput: string,
   opts: InferenceOptions,
-  extractText?: (rawStdout: string) => string,
+  reply: CliReply = PLAIN_REPLY,
   place: SpawnPlace = {}
 ): Promise<InferenceResult> {
   const timeout = opts.timeout ?? 15000;
@@ -871,12 +1010,13 @@ async function inferenceViaCliSpawn(
 
   place.afterRun?.(attempt.stdout);
   const elapsedMs = Date.now() - started;
+  const usage = reply.usage(attempt.stdout);
   const finish = (result: InferenceResult): InferenceResult => {
     logDebug(
       "inference:spawn",
       `${tag} done binary=${binaryName} success=${result.success} bytes=${result.output?.length ?? 0} elapsedMs=${elapsedMs}`
     );
-    return result;
+    return { ...result, usage };
   };
 
   if (attempt.timedOut) {
@@ -892,7 +1032,7 @@ async function inferenceViaCliSpawn(
   }
   const rawText = attempt.stdout.trim();
   if (!rawText) return finish({ success: false });
-  const text = extractText ? extractText(rawText) : rawText;
+  const text = reply.text(rawText);
   if (!text) {
     // Extraction returned empty — the binary succeeded but our extractor found
     // no usable text. Log the raw stdout so we can see what was actually emitted.
@@ -957,13 +1097,7 @@ async function inferenceViaApi(opts: InferenceOptions): Promise<InferenceResult>
     }
 
     const data = (await response.json()) as Record<string, unknown>;
-    const rawUsage = data?.usage as
-      | { input_tokens?: number; output_tokens?: number }
-      | undefined;
-    const usage =
-      rawUsage?.input_tokens != null && rawUsage?.output_tokens != null
-        ? { inputTokens: rawUsage.input_tokens, outputTokens: rawUsage.output_tokens }
-        : undefined;
+    const usage = data?.usage ? anthropicUsage(data.usage as TranscriptUsage) : undefined;
 
     const content = data?.content as Array<{ text?: string }> | undefined;
     const text = content?.[0]?.text?.trim();
@@ -1028,16 +1162,7 @@ async function inferenceViaOpenAiApi(opts: InferenceOptions): Promise<InferenceR
     }
 
     const data = (await response.json()) as Record<string, unknown>;
-    const rawUsage = data?.usage as
-      | { prompt_tokens?: number; completion_tokens?: number }
-      | undefined;
-    const usage =
-      rawUsage?.prompt_tokens != null && rawUsage?.completion_tokens != null
-        ? {
-            inputTokens: rawUsage.prompt_tokens,
-            outputTokens: rawUsage.completion_tokens,
-          }
-        : undefined;
+    const usage = data?.usage ? openAiUsage(data.usage as OpenAiUsage) : undefined;
 
     const choices = data?.choices as
       | Array<{ message?: { content?: string } }>

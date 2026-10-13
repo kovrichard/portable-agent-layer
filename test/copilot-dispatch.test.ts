@@ -1,8 +1,16 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
+import { existsSync, writeFileSync } from "node:fs";
+import { basename, resolve } from "node:path";
+import { eventsSince } from "../src/hooks/lib/events";
 import { buildCliPrompt, buildCopilotArgs, inference } from "../src/hooks/lib/inference";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
-import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
+import { copilotReplying, prependPath, writeFakeBin } from "./fixtures/fake-bin";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
+
+const COPILOT_TOKEN_ENV = ["COPILOT_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"];
 
 const PRESERVED = [
   "PAL_AGENT",
@@ -11,6 +19,8 @@ const PRESERVED = [
   "PAL_INFERENCE_DISABLED",
   "PATH",
   "CLAUDECODE",
+  "COPILOT_HOME",
+  ...COPILOT_TOKEN_ENV,
   SPAWN_GUARD_ENV.SENTINEL,
   SPAWN_GUARD_ENV.DEPTH,
 ] as const;
@@ -64,6 +74,11 @@ describe("buildCopilotArgs", () => {
     expect(buildCopilotArgs({ user: "hi" })).toContain("--silent");
   });
 
+  test("prints JSON events, so the reply and its usage can be read apart", () => {
+    const args = buildCopilotArgs({ user: "hi" });
+    expect(args[args.indexOf("--output-format") + 1]).toBe("json");
+  });
+
   test("no argv element carries the prompt or a newline", () => {
     const args = buildCopilotArgs({ system: "Be terse", user: "summarize this" });
     expect(args).not.toContain("summarize this");
@@ -108,16 +123,48 @@ describe("inference dispatcher — copilot spawn integration (fake binary)", () 
     delete process.env[SPAWN_GUARD_ENV.SENTINEL];
     delete process.env[SPAWN_GUARD_ENV.DEPTH];
     delete process.env.PAL_INFERENCE_DISABLED;
+    for (const name of COPILOT_TOKEN_ENV) delete process.env[name];
+    process.env.COPILOT_HOME = "/users/own-copilot-home";
     process.env.PAL_AGENT = "copilot";
+  });
+
+  const reportsWhereItRan = () =>
+    copilotReplying(
+      "JSON.stringify({ home: process.env.COPILOT_HOME, cwd: process.cwd() })"
+    );
+
+  async function whereCopilotRan(): Promise<{ home: string; cwd: string }> {
+    writeFakeBin(tmpBin, "copilot", reportsWhereItRan());
+    prependPath(tmpBin);
+    const result = await inference({ user: "hi", timeout: 5000 });
+    return JSON.parse(result.output ?? "{}");
+  }
+
+  test.each(COPILOT_TOKEN_ENV)("with %s, PAL's instructions stay out", async (name) => {
+    process.env[name] = "set";
+    const seen = await whereCopilotRan();
+    expect(basename(seen.cwd)).toBe(basename(seen.home));
+    expect(basename(seen.home)).toStartWith("pal-copilot-");
+    expect(seen.cwd).not.toBe(process.cwd());
+    expect(existsSync(seen.home)).toBe(false);
+  });
+
+  test("a token in PAL's .env counts too", async () => {
+    writeFileSync(resolve(tmpBin, ".env"), "GH_TOKEN=set\n");
+    expect((await whereCopilotRan()).home).not.toBe("/users/own-copilot-home");
+  });
+
+  test("without a token copilot keeps its own home, where its /login account lives", async () => {
+    process.env.GITHUB_TOKEN = "";
+    expect(await whereCopilotRan()).toEqual({
+      home: "/users/own-copilot-home",
+      cwd: process.cwd(),
+    });
   });
 
   test("end-to-end: fake copilot echoes stdin, dispatcher captures it", async () => {
     // Reads stdin rather than argv: that is where the prompt now travels.
-    writeFakeBin(
-      tmpBin,
-      "copilot",
-      `for await (const c of Bun.stdin.stream()) Bun.write(Bun.stdout, c);\n`
-    );
+    writeFakeBin(tmpBin, "copilot", copilotReplying("await Bun.stdin.text()"));
     prependPath(tmpBin);
 
     const result = await inference({ user: "hello-copilot", timeout: 5000 });
@@ -129,7 +176,9 @@ describe("inference dispatcher — copilot spawn integration (fake binary)", () 
     writeFakeBin(
       tmpBin,
       "copilot",
-      `console.log(\`sentinel=\${process.env.${SPAWN_GUARD_ENV.SENTINEL}} claudecode=[\${process.env.CLAUDECODE ?? ""}]\`);\n`
+      copilotReplying(
+        `\`sentinel=\${process.env.${SPAWN_GUARD_ENV.SENTINEL}} claudecode=[\${process.env.CLAUDECODE ?? ""}]\``
+      )
     );
     prependPath(tmpBin);
     process.env.CLAUDECODE = "1";
@@ -138,6 +187,72 @@ describe("inference dispatcher — copilot spawn integration (fake binary)", () 
     expect(result.success).toBe(true);
     expect(result.output).toBe("sentinel=1 claudecode=[]");
     expect(process.env.CLAUDECODE).toBe("1");
+  });
+
+  test("the call is logged with the prompt tokens copilot reported, output left unknown", async () => {
+    writeFakeBin(
+      tmpBin,
+      "copilot",
+      copilotReplying(`"pong"`, { prompt_tokens: 4289, cache_read: 1, cache_write: 4286 })
+    );
+    prependPath(tmpBin);
+
+    await inference({ user: "hi", timeout: 5000 });
+    expect(eventsSince("inference_call", new Date(0))[0]).toMatchObject({
+      route: "copilot-spawn",
+      inputTokens: 2,
+      cacheRead: 1,
+      cacheWrite5m: 4286,
+      outputTokens: null,
+    });
+  });
+
+  const RUN_USAGE = {
+    inputTokens: 4289,
+    outputTokens: 87,
+    cacheReadTokens: 1,
+    cacheWriteTokens: 4286,
+    reasoningTokens: 65,
+  };
+
+  async function loggedRunUsage() {
+    writeFakeBin(
+      tmpBin,
+      "copilot",
+      copilotReplying(`"pong"`, { prompt_tokens: 4289 }, RUN_USAGE)
+    );
+    prependPath(tmpBin);
+    await inference({ user: "hi", timeout: 5000 });
+    return eventsSince("inference_call", new Date(0))[0];
+  }
+
+  const FULL_USAGE = {
+    inputTokens: 2,
+    outputTokens: 87,
+    cacheRead: 1,
+    cacheWrite5m: 4286,
+    thinkingTokens: 65,
+  };
+
+  test("with a token, the run's session file gives its output before the home is removed", async () => {
+    process.env.GH_TOKEN = "set";
+    expect(await loggedRunUsage()).toMatchObject(FULL_USAGE);
+  });
+
+  test("without a token, the run's session file is read from copilot's own home", async () => {
+    process.env.COPILOT_HOME = resolve(tmpBin, "own-home");
+    expect(await loggedRunUsage()).toMatchObject(FULL_USAGE);
+  });
+
+  test("the reply is copilot's last message, not its first", async () => {
+    writeFakeBin(
+      tmpBin,
+      "copilot",
+      `console.log(JSON.stringify({ type: "assistant.message", data: { content: "draft" } }));\n${copilotReplying(`"final"`)}`
+    );
+    prependPath(tmpBin);
+
+    expect((await inference({ user: "hi", timeout: 5000 })).output).toBe("final");
   });
 
   test("non-zero exit from fake copilot returns success: false", async () => {
@@ -149,7 +264,7 @@ describe("inference dispatcher — copilot spawn integration (fake binary)", () 
   });
 
   test("JSON-schema path parses fake copilot JSON output", async () => {
-    writeFakeBin(tmpBin, "copilot", `console.log('{"verdict":"ok"}');\n`);
+    writeFakeBin(tmpBin, "copilot", copilotReplying(`'{"verdict":"ok"}'`));
     prependPath(tmpBin);
 
     const result = await inference({

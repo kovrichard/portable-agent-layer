@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -14,7 +14,10 @@ import {
 import { paths } from "../src/hooks/lib/paths";
 import { reload } from "../src/hooks/lib/settings";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 // The gate is the whole feature: everything downstream of it is `pal cli update`,
 // which has its own tests. So each state that must NOT start an update is built
@@ -183,6 +186,57 @@ describe("a run that fails", () => {
     expect(ledger.ok).toBe(false);
     expect(ledger.error).toBeTruthy();
     expect(shouldAutoUpdate()).toBe(false);
+  });
+});
+
+function updateEvents(): Record<string, unknown>[] {
+  const file = resolve(
+    HOME,
+    "memory",
+    "events",
+    `${new Date().toISOString().slice(0, 7)}.jsonl`
+  );
+  if (!existsSync(file)) return [];
+  return readFileSync(file, "utf-8")
+    .trim()
+    .split("\n")
+    .map((l) => JSON.parse(l))
+    .filter((e) => e.type === "pal_update");
+}
+
+describe("the event log", () => {
+  test("a failed run is logged with the version it started from", () => {
+    setSettings({ enabled: true, decided: true });
+    runAutoUpdate();
+    expect(updateEvents()).toEqual([
+      expect.objectContaining({ outcome: "failed", from: "0.76.1", to: "0.76.1" }),
+    ]);
+  });
+
+  test("a skip is logged with its reason", () => {
+    writeFileSync(resolve(PKG, "work.txt"), "unstaged change", "utf-8");
+    runAutoUpdate();
+    expect(updateEvents()[0]).toMatchObject({
+      outcome: "skipped",
+      skipReason: "uncommitted changes in the PAL repo",
+    });
+  });
+
+  test("a run that moved the version is logged as an update between the two", () => {
+    mkdirSync(resolve(PKG, "src", "cli"), { recursive: true });
+    writeFileSync(
+      resolve(PKG, "src", "cli", "index.ts"),
+      `require("node:fs").writeFileSync(${JSON.stringify(resolve(PKG, "package.json"))}, '{"version":"0.77.0"}');`,
+      "utf-8"
+    );
+    git("add", "-A");
+    git("commit", "-m", "fake update");
+    runAutoUpdate();
+    expect(updateEvents()[0]).toMatchObject({
+      outcome: "updated",
+      from: "0.76.1",
+      to: "0.77.0",
+    });
   });
 });
 

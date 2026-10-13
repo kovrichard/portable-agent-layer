@@ -11,6 +11,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { writeBinding } from "../../hooks/lib/bindings";
+import { logCommitment } from "../../hooks/lib/commitment-events";
 import { paths, toPath } from "../../hooks/lib/paths";
 import {
   defaultSlug,
@@ -27,6 +28,7 @@ import {
 } from "../../hooks/lib/projects";
 import { isServesKind, SERVES_KINDS, setServes } from "../../hooks/lib/serves";
 import { group, type Leaf, leaf, runCommand, UsageError } from "../lib/command";
+import { decisionRow, emitHistoryRow, registrationRow } from "../lib/project-history";
 import {
   archiveLine,
   completeIsc,
@@ -168,6 +170,7 @@ function cmdCreate(given: string | undefined, values: CreateValues): undefined {
     ...(values["serves-note"] ? { serves_note: values["serves-note"] } : {}),
   };
   writeProject(project);
+  emitHistoryRow(registrationRow(project));
   ok({ created: true, project });
 }
 
@@ -257,11 +260,13 @@ function addDecision(name: string, decision: string, rationale: string): undefin
   const what = nonBlank(decision, "<decision>");
   const why = nonBlank(rationale, "<rationale...>");
   const p = requireProject(name);
-  const date = new Date().toISOString().slice(0, 10);
+  const ts = now();
+  const date = ts.slice(0, 10);
   const line = `- ${date}: ${what} (${why})`;
   p.decisions = p.decisions ? `${p.decisions}\n${line}` : line;
-  p.updated = now();
+  p.updated = ts;
   writeProject(p);
+  emitHistoryRow({ ...decisionRow(name, date, `${what} (${why})`), ts });
   ok({ updated: true, name });
 }
 
@@ -433,6 +438,7 @@ function cmdAddIsc(name: string, text: string): undefined {
   p.criteria = current ? `${current.trimEnd()}\n${newLine}` : newLine;
   p.updated = now();
   writeProject(p);
+  logCommitment(name, id, "opened", "cli");
   ok({
     added: true,
     id,
@@ -454,6 +460,7 @@ function cmdCompleteIsc(name: string, id: number): undefined {
     return;
   }
   applyIscMove(p, move);
+  logCommitment(name, id, "kept", "cli");
   ok({ checked: true, id, archived: true });
 }
 
@@ -479,6 +486,7 @@ function cmdReopenIsc(name: string, id: number): undefined {
     return;
   }
   applyIscMove(p, move);
+  logCommitment(name, id, "reopened", "cli");
   ok({ checked: false, id });
 }
 
@@ -546,6 +554,7 @@ function cmdRetireIsc(name: string, id: number, by: number | null): undefined {
   );
   p.updated = now();
   writeProject(p);
+  logCommitment(name, id, "dropped", "cli");
   ok({ retired: true, id, supersededBy: by, archived: true });
 }
 

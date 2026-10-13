@@ -6,6 +6,7 @@
 
 import { Database } from "bun:sqlite";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { basename, resolve } from "node:path";
 import {
   type AgentUsage,
@@ -107,14 +108,16 @@ export function readCodex(
   now: Date = new Date()
 ): AgentUsage {
   const tally = usageTally(projectFilter, now);
+  for (const filepath of codexRollouts(codexDir)) recordCodexRollout(filepath, tally);
+  return tally.usage;
+}
+
+export function codexRollouts(codexDir: string): string[] {
   const isRollout = (name: string) =>
     name.startsWith("rollout-") && name.endsWith(".jsonl");
-  for (const sub of ["sessions", "archived_sessions"]) {
-    for (const filepath of filesUnder(resolve(codexDir, sub), isRollout)) {
-      recordCodexRollout(filepath, tally);
-    }
-  }
-  return tally.usage;
+  return ["sessions", "archived_sessions"].flatMap((sub) =>
+    filesUnder(resolve(codexDir, sub), isRollout)
+  );
 }
 
 interface OpencodeMessage {
@@ -143,6 +146,11 @@ function opencodeTokens(message: OpencodeMessage): Tokens {
 }
 
 const anyTokens = (tokens: Tokens) => Object.values(tokens).some((n) => n > 0);
+
+export function opencodeDatabase(): string {
+  const dataHome = process.env.XDG_DATA_HOME || resolve(homedir(), ".local", "share");
+  return resolve(dataHome, "opencode", "opencode.db");
+}
 
 interface OpencodeRow {
   time_created: number;
@@ -210,13 +218,14 @@ interface CopilotEvent {
   };
 }
 
-/** Copilot counts cache reads inside inputTokens. */
+/** Copilot counts cache reads and writes inside inputTokens. */
 function copilotTokens(usage: CopilotModelMetrics["usage"] = {}): Tokens {
   const cacheRead = usage.cacheReadTokens ?? 0;
+  const cacheWrite = usage.cacheWriteTokens ?? 0;
   return {
-    input: (usage.inputTokens ?? 0) - cacheRead,
+    input: (usage.inputTokens ?? 0) - cacheRead - cacheWrite,
     output: usage.outputTokens ?? 0,
-    cacheWrite5m: usage.cacheWriteTokens ?? 0,
+    cacheWrite5m: cacheWrite,
     cacheWrite1h: 0,
     cacheRead,
   };

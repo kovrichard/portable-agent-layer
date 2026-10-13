@@ -1,10 +1,20 @@
-import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import {
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  setDefaultTimeout,
+  test,
+} from "bun:test";
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
-import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
+import { claudeReplying, prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir, testHome } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 const TEST_HOME = testHome(import.meta.file);
 const ORIGINAL_PATH = process.env.PATH;
@@ -193,11 +203,7 @@ describe("recommendations without an API key", () => {
     delete process.env[SPAWN_GUARD_ENV.DEPTH];
     process.env.PAL_AGENT = "claude";
     const reply = { recommendations: ["Check the npm registry before installing."] };
-    writeFakeBin(
-      binDir,
-      "claude",
-      `console.log(${JSON.stringify(JSON.stringify(reply))});\n`
-    );
+    writeFakeBin(binDir, "claude", claudeReplying(JSON.stringify(JSON.stringify(reply))));
     prependPath(binDir);
   });
 

@@ -31,6 +31,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
+import { logEntityFirstSeen, type SeenEntity } from "../../hooks/lib/entity-events";
 import { ensureDir, paths } from "../../hooks/lib/paths";
 
 // --- Constants --------------------------------------------------------------
@@ -410,11 +411,24 @@ export function exists(domain: Domain, slug: string, rootDir?: string): boolean 
   return existsSync(entityPath(domain, slug, rootDir));
 }
 
+export function seenEntity(entity: Entity): SeenEntity {
+  return {
+    domain: entity.domain,
+    slug: entity.slug,
+    entityType: entity.frontmatter.type,
+    name: entity.frontmatter.title,
+  };
+}
+
 export function save(entity: Entity, rootDir?: string): void {
   const p = entityPath(entity.domain, entity.slug, rootDir);
+  const firstSeenInTheStore = !rootDir && !existsSync(p);
   const tmp = `${p}.tmp`;
   writeFileSync(tmp, serialize(entity), "utf-8");
   renameSync(tmp, p);
+  if (firstSeenInTheStore) {
+    logEntityFirstSeen(seenEntity(entity));
+  }
 }
 
 export function load(domain: Domain, slug: string, rootDir?: string): Entity | null {

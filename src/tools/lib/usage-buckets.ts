@@ -4,10 +4,11 @@
  * rather than finding it themselves, which is what makes them testable.
  */
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
+import { relative, resolve } from "node:path";
+import type { LoggedEvent } from "../../hooks/lib/events";
 import { costOfUsage } from "../../hooks/lib/models";
-import { cacheWritesOf, type TranscriptUsage } from "./transcript-usage";
+import { cacheWritesOf, finalPerMessage, type TranscriptUsage } from "./transcript-usage";
 
 export interface Bucket {
   input: number;
@@ -90,8 +91,13 @@ function addCall(bucket: Bucket, tokens: Tokens, cost: number | null, calls = 1)
   if (cost === null) bucket.unpriced += calls;
 }
 
-export function addToBucket(bucket: Bucket, model: string, tokens: Tokens): void {
-  addCall(bucket, tokens, costOfUsage(model, tokens));
+export function addToBucket(
+  bucket: Bucket,
+  model: string,
+  tokens: Tokens,
+  ts: string
+): void {
+  addCall(bucket, tokens, costOfUsage(model, tokens, ts));
 }
 
 /**
@@ -117,7 +123,7 @@ export function addToTimeBuckets(
   tokens: Tokens,
   horizons: Horizons
 ): void {
-  addToWindows(buckets, ts, horizons, (bucket) => addToBucket(bucket, model, tokens));
+  addToWindows(buckets, ts, horizons, (bucket) => addToBucket(bucket, model, tokens, ts));
 }
 
 export function totalTokens(bucket: Bucket): number {
@@ -180,7 +186,7 @@ export function usageTally(projectFilter?: string, now: Date = new Date()): Usag
 interface TranscriptLine {
   type?: string;
   timestamp?: string;
-  message?: { model?: string; usage?: TranscriptUsage };
+  message?: { id?: string; model?: string; usage?: TranscriptUsage };
 }
 
 /**
@@ -188,10 +194,18 @@ interface TranscriptLine {
  * wrote — those sit one level down and are billed to the same project, so
  * missing them undercounts every session that spawned one.
  */
-function transcriptsIn(projPath: string): string[] {
+function entriesOf(dir: string): Dirent[] {
+  try {
+    return readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+}
+
+function transcriptsIn(projPath: string, extension = ".jsonl"): string[] {
   const files: string[] = [];
-  for (const entry of readdirSync(projPath, { withFileTypes: true })) {
-    if (entry.isFile() && entry.name.endsWith(".jsonl")) {
+  for (const entry of entriesOf(projPath)) {
+    if (entry.isFile() && entry.name.endsWith(extension)) {
       files.push(resolve(projPath, entry.name));
       continue;
     }
@@ -199,7 +213,7 @@ function transcriptsIn(projPath: string): string[] {
     const subagentsDir = resolve(projPath, entry.name, "subagents");
     try {
       for (const sub of readdirSync(subagentsDir)) {
-        if (sub.endsWith(".jsonl")) files.push(resolve(subagentsDir, sub));
+        if (sub.endsWith(extension)) files.push(resolve(subagentsDir, sub));
       }
     } catch {
       /* no subagents dir */
@@ -208,7 +222,15 @@ function transcriptsIn(projPath: string): string[] {
   return files;
 }
 
+export function claudeTranscripts(projectsDir: string): string[] {
+  if (!existsSync(projectsDir)) return [];
+  return readdirSync(projectsDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .flatMap((entry) => transcriptsIn(resolve(projectsDir, entry.name)));
+}
+
 interface PricedCall {
+  messageId?: string;
   ts: string;
   model: string;
   tokens: Tokens;
@@ -230,6 +252,7 @@ function pricedCallOf(line: string): PricedCall | null {
   if (!usage || !model || !ts) return null;
 
   return {
+    messageId: entry.message?.id,
     ts,
     model,
     tokens: {
@@ -241,44 +264,83 @@ function pricedCallOf(line: string): PricedCall | null {
   };
 }
 
+const projectDirsIn = (dir: string) =>
+  entriesOf(dir)
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name);
+
+const GZIP = ".gz";
+
+/** Claude Code deletes a transcript after cleanupPeriodDays; PAL's gzipped copy outlives it. */
+function deletedTranscriptsIn(archivedProject: string, liveProject: string): string[] {
+  return transcriptsIn(archivedProject, `.jsonl${GZIP}`).filter((copy) => {
+    const original = relative(archivedProject, copy).slice(0, -GZIP.length);
+    return !existsSync(resolve(liveProject, original));
+  });
+}
+
+function transcriptText(filepath: string): string | null {
+  try {
+    const raw = readFileSync(filepath);
+    return filepath.endsWith(GZIP)
+      ? new TextDecoder().decode(Bun.gunzipSync(raw))
+      : raw.toString("utf-8");
+  } catch {
+    return null;
+  }
+}
+
+function projectTranscripts(
+  claudeDir: string,
+  archiveDir: string | undefined,
+  dirName: string
+) {
+  const live = resolve(claudeDir, dirName);
+  return [
+    ...transcriptsIn(live),
+    ...(archiveDir ? deletedTranscriptsIn(resolve(archiveDir, dirName), live) : []),
+  ];
+}
+
 export function readClaudeCode(
   claudeDir: string,
   projectFilter?: string,
-  now: Date = new Date()
+  now: Date = new Date(),
+  archiveDir?: string
 ): AgentUsage {
   const tally = usageTally(projectFilter, now);
-  if (!existsSync(claudeDir)) return tally.usage;
-
-  const projectDirs = readdirSync(claudeDir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name);
+  const calls: (PricedCall & { project: string })[] = [];
+  const projectDirs = new Set([
+    ...projectDirsIn(claudeDir),
+    ...(archiveDir ? projectDirsIn(archiveDir) : []),
+  ]);
 
   for (const dirName of projectDirs) {
     const projName = projectNameOf(dirName);
     if (typeof projectFilter === "string" && !projName.includes(projectFilter)) continue;
 
-    for (const filepath of transcriptsIn(resolve(claudeDir, dirName))) {
-      let content: string;
-      try {
-        content = readFileSync(filepath, "utf-8");
-      } catch {
-        continue;
-      }
+    for (const filepath of projectTranscripts(claudeDir, archiveDir, dirName)) {
+      const content = transcriptText(filepath);
+      if (content === null) continue;
 
       for (const line of content.split("\n")) {
         // Cheap reject before the parse: most lines are not model turns.
         if (!line.includes('"usage"')) continue;
         const call = pricedCallOf(line);
-        if (!call) continue;
-        tally.record({
-          ...call,
-          project: projName,
-          cost: costOfUsage(call.model, call.tokens),
-        });
+        if (call) calls.push({ ...call, project: projName });
       }
     }
   }
 
+  for (const call of finalPerMessage(calls, (c) => c.messageId)) {
+    tally.record({
+      ts: call.ts,
+      model: call.model,
+      tokens: call.tokens,
+      project: call.project,
+      cost: costOfUsage(call.model, call.tokens, call.ts),
+    });
+  }
   return tally.usage;
 }
 
@@ -288,27 +350,27 @@ export interface PalInferenceUsage {
   byCaller: Record<string, Bucket>;
 }
 
-interface InferenceLine {
-  ts: string;
-  caller: string;
-  model: string;
-  inputTokens: number;
-  outputTokens: number;
-}
+const countOf = (value: unknown) => (typeof value === "number" ? value : null);
 
-/** PAL's own calls are plain prompts: no cache to write and none to read. */
-function inferenceTokens(entry: InferenceLine): Tokens {
+/** A call whose input or output went unreported has no tokens to count. */
+function inferenceTokens(call: LoggedEvent): Tokens | null {
+  const input = countOf(call.inputTokens);
+  const output = countOf(call.outputTokens);
+  if (input === null || output === null) return null;
   return {
-    input: entry.inputTokens,
-    output: entry.outputTokens,
-    cacheWrite5m: 0,
-    cacheWrite1h: 0,
-    cacheRead: 0,
+    input,
+    output,
+    cacheWrite5m: countOf(call.cacheWrite5m) ?? 0,
+    cacheWrite1h: countOf(call.cacheWrite1h) ?? 0,
+    cacheRead: countOf(call.cacheRead) ?? 0,
   };
 }
 
+const textOr = (value: unknown, fallback: string) =>
+  typeof value === "string" ? value : fallback;
+
 export function readPalInference(
-  filepath: string,
+  events: LoggedEvent[],
   now: Date = new Date()
 ): PalInferenceUsage {
   const horizons = horizonsFrom(now);
@@ -317,33 +379,20 @@ export function readPalInference(
     byModel: {},
     byCaller: {},
   };
-  if (!existsSync(filepath)) return result;
 
-  const content = readFileSync(filepath, "utf-8").trim();
-  if (!content) return result;
+  for (const call of events.filter((e) => e.type === "inference_call")) {
+    const tokens = inferenceTokens(call);
+    if (tokens === null) continue;
+    const model = textOr(call.model, "unknown");
+    const caller = textOr(call.caller, "anonymous");
 
-  for (const line of content.split("\n")) {
-    let entry: InferenceLine;
-    try {
-      entry = JSON.parse(line) as InferenceLine;
-    } catch {
-      continue;
-    }
-    const tokens = inferenceTokens(entry);
+    addToTimeBuckets(result.buckets, call.ts, model, tokens, horizons);
 
-    addToTimeBuckets(result.buckets, entry.ts, entry.model, tokens, horizons);
+    result.byModel[model] ??= emptyTimeBuckets();
+    addToTimeBuckets(result.byModel[model], call.ts, model, tokens, horizons);
 
-    result.byModel[entry.model] ??= emptyTimeBuckets();
-    addToTimeBuckets(
-      result.byModel[entry.model],
-      entry.ts,
-      entry.model,
-      tokens,
-      horizons
-    );
-
-    result.byCaller[entry.caller] ??= emptyBucket();
-    addToBucket(result.byCaller[entry.caller], entry.model, tokens);
+    result.byCaller[caller] ??= emptyBucket();
+    addToBucket(result.byCaller[caller], model, tokens, call.ts);
   }
 
   return result;

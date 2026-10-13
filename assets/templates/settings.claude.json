@@ -158,7 +158,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts --agent=claude"
+            "command": "bun run {{PKG_ROOT}}/src/hooks/PostToolOrchestrator.ts --agent=claude --only=ledger"
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/PostToolOrchestrator.ts --agent=claude --only=events",
+            "async": true
           }
         ]
       }
@@ -169,7 +179,39 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerUnapplied.ts --agent=claude"
+            "command": "bun run {{PKG_ROOT}}/src/hooks/PostToolOrchestrator.ts --agent=claude --only=ledger"
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/PostToolOrchestrator.ts --agent=claude --only=events",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/AttentionEvent.ts --agent=claude"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/AttentionEvent.ts --agent=claude"
           }
         ]
       }
@@ -180,7 +222,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerUnapplied.ts --agent=claude"
+            "command": "bun run {{PKG_ROOT}}/src/hooks/PostToolOrchestrator.ts --agent=claude --only=ledger"
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/PostToolOrchestrator.ts --agent=claude --only=events",
+            "async": true
           }
         ]
       }

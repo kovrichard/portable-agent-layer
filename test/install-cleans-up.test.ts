@@ -14,8 +14,7 @@ function write(path: string, content: unknown): void {
   writeFileSync(path, typeof content === "string" ? content : JSON.stringify(content));
 }
 
-const removedHook = () =>
-  `bun run ${at("old", "src", "hooks", "PostToolOrchestrator.ts")}`;
+const removedHook = () => `bun run ${at("old", "src", "hooks", "LedgerCommit.ts")}`;
 
 function plantLeftovers(): void {
   write(at("home", "memory", "pal-settings.json"), {
@@ -90,7 +89,7 @@ describe.skipIf(process.platform === "win32")(
       const settings = json(at(".claude", "settings.json"));
       expect(settings.permissions.allow).not.toContain("Grep(//*)");
       expect(settings.permissions.allow).not.toContain("Glob(//*)");
-      expect(JSON.stringify(settings.hooks)).not.toContain("PostToolOrchestrator");
+      expect(JSON.stringify(settings.hooks)).not.toContain("LedgerCommit");
     });
 
     test("files under names PAL no longer uses", () => {

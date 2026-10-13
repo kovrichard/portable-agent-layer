@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -6,11 +6,15 @@ import {
   INFERENCE_AGENT,
   streamJsonPrompt,
 } from "../src/hooks/lib/antigravity-inference";
+import { eventsSince } from "../src/hooks/lib/events";
 import { buildAntigravityArgs, inference } from "../src/hooks/lib/inference";
 import { inferenceModel } from "../src/hooks/lib/models";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 const PRESERVED = [
   "PAL_AGENT",
@@ -175,6 +179,35 @@ console.log(JSON.stringify({ event: "result", result: { status: "SUCCESS", respo
     });
     expect(result.success).toBe(true);
     expect(JSON.parse(result.output ?? "{}")).toEqual({ rating: 9 });
+  });
+
+  test("the call is logged with the tokens the result reported", async () => {
+    const result = JSON.stringify({
+      event: "result",
+      result: {
+        status: "SUCCESS",
+        response: "OK",
+        usage: {
+          input_tokens: 120,
+          output_tokens: 30,
+          thinking_tokens: 12,
+          cache_read_tokens: 40,
+          total_tokens: 202,
+        },
+      },
+    });
+    writeFakeBin(tmpBin, "agy", `console.log(${JSON.stringify(result)});\n`);
+    prependPath(tmpBin);
+
+    await inference({ user: "hi" });
+    expect(eventsSince("inference_call", new Date(0))[0]).toMatchObject({
+      route: "antigravity-spawn",
+      inputTokens: 120,
+      outputTokens: 30,
+      thinkingTokens: 12,
+      cacheRead: 40,
+      cacheWrite5m: null,
+    });
   });
 
   test("an ERROR result with a non-zero exit fails", async () => {

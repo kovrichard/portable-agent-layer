@@ -22,7 +22,7 @@ const DEFAULT_PROMPT = `Analyze this video and provide:
 - **People & Companies** mentioned (with context)
 - **Notable Quotes** (verbatim if possible)`;
 
-const MODEL = "gemini-3.1-flash-lite-preview";
+const MODEL = "gemini-3.8-flash";
 
 function loadApiKey(): string {
   const key = process.env.PAL_GEMINI_API_KEY;

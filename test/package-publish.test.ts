@@ -1,9 +1,12 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 const REPO = resolve(import.meta.dir, "..");
 
@@ -33,11 +36,15 @@ describe("package publish surface", () => {
   test("packed tarball contains .husky/install.mjs", () => {
     const sandbox = freshTestDir(import.meta.file);
     try {
-      const pack = spawnSync("bun", ["pm", "pack", "--destination", sandbox], {
-        cwd: REPO,
-        encoding: "utf-8",
-        timeout: 60000,
-      });
+      const pack = spawnSync(
+        "bun",
+        ["pm", "pack", "--ignore-scripts", "--destination", sandbox],
+        {
+          cwd: REPO,
+          encoding: "utf-8",
+          timeout: 60000,
+        }
+      );
       expect(pack.status).toBe(0);
 
       const tarball = pack.stdout

@@ -1,11 +1,15 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import {
   type ContextEnvelope,
   contextEnvelope,
   copilotInstructions,
   isSubagentSession,
   needsAgentsMd,
+  writeCopilotInstructions,
 } from "../src/hooks/lib/session-context";
+import { freshTestDir } from "./lib/test-home";
 
 // The four runtimes disagree on every part of this: whether AGENTS.md is already
 // loaded, which JSON key carries the context, and whether stdout is read at all.
@@ -117,5 +121,17 @@ describe("the file Copilot's extension reads", () => {
 
   test("and the context after it", () => {
     expect(copilotInstructions("body")).toEndWith("body");
+  });
+
+  test("is written where the extension looks, creating the folder", () => {
+    const dir = resolve(freshTestDir(import.meta.file), "copilot");
+    process.env.PAL_COPILOT_DIR = dir;
+    try {
+      writeCopilotInstructions("body");
+      const path = resolve(dir, "instructions", "pal-session.instructions.md");
+      expect(readFileSync(path, "utf-8")).toBe(copilotInstructions("body"));
+    } finally {
+      delete process.env.PAL_COPILOT_DIR;
+    }
   });
 });

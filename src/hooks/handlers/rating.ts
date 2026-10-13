@@ -21,7 +21,6 @@ import { spawnDetachedInference } from "../lib/detached-inference";
 import { canInfer, inference } from "../lib/inference";
 import { replyEnd } from "../lib/interaction-samples";
 import { logDebug } from "../lib/log";
-import { HAIKU_5_5_MODEL } from "../lib/models";
 import { paths } from "../lib/paths";
 import { isSystemText, stripInjectedTags } from "../lib/prompt-text";
 import {
@@ -44,7 +43,6 @@ import {
 } from "../lib/rule-drafter";
 import { emitRating } from "../lib/signals";
 import { now } from "../lib/time";
-import { logTokenUsage } from "../lib/token-usage";
 
 /** Read cached last assistant response (written by StopOrchestrator), looked up by session */
 function getLastResponse(sessionId?: string): string {
@@ -225,13 +223,11 @@ function handleImplicitReaction(message: string, sentAt: Date, sessionId?: strin
 
 async function labelReaction(reply: string, message: string, sessionId?: string) {
   const result = await inference(reactionRequest(reply, message, sessionId));
-  if (result.usage) logTokenUsage("rating", result.usage);
   return result.success ? parseReactionLabel(result.output) : null;
 }
 
 async function checkCorrection(reply: string, message: string, sessionId?: string) {
   const result = await inference(correctionCheckRequest(reply, message, sessionId));
-  if (result.usage) logTokenUsage("rating", result.usage);
   return result.success ? parseCorrectionCheck(result.output) : null;
 }
 
@@ -250,7 +246,6 @@ async function draftRuleCandidate(sessionId?: string): Promise<void> {
   const known = knownRules();
   if (!canRepeat(corrections) && !canWiden(corrections, known)) return;
   const result = await inference(drafterRequest(corrections, known, sessionId));
-  if (result.usage) logTokenUsage("rule-drafter", result.usage, HAIKU_5_5_MODEL);
   const candidate = result.success ? parseDraft(result.output, corrections, known) : null;
   if (candidate) recordCandidate(candidate, turns);
   else logDebug("rule-drafter", `no candidate: ${result.output ?? result.error ?? ""}`);

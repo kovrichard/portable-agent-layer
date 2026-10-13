@@ -10,7 +10,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { costOfUsage } from "../../hooks/lib/models";
-import { cacheWritesOf, type TranscriptUsage } from "./transcript-usage";
+import { cacheWritesOf, finalPerMessage, type TranscriptUsage } from "./transcript-usage";
 
 export interface SessionUsage {
   input: number;
@@ -94,7 +94,7 @@ interface TranscriptLine {
   type?: string;
   timestamp?: string;
   sessionId?: string;
-  message?: { model?: string; usage?: TranscriptUsage };
+  message?: { id?: string; model?: string; usage?: TranscriptUsage };
 }
 
 function emptyUsage(): SessionUsage {
@@ -113,6 +113,7 @@ function emptyUsage(): SessionUsage {
 
 export function accumulateUsage(transcript: string, sessionId: string): SessionUsage {
   const total = emptyUsage();
+  const assistantTurns: TranscriptLine[] = [];
   let firstTs = "";
   let lastTs = "";
 
@@ -133,7 +134,10 @@ export function accumulateUsage(transcript: string, sessionId: string): SessionU
       lastTs = entry.timestamp;
     }
 
-    if (entry.type !== "assistant") continue;
+    if (entry.type === "assistant") assistantTurns.push(entry);
+  }
+
+  for (const entry of finalPerMessage(assistantTurns, (e) => e.message?.id)) {
     const usage = entry.message?.usage;
     const model = entry.message?.model;
     if (!usage || !model) continue;
@@ -143,13 +147,17 @@ export function accumulateUsage(transcript: string, sessionId: string): SessionU
     const cacheRead = usage.cache_read_input_tokens ?? 0;
     const { cacheWrite5m, cacheWrite1h } = cacheWritesOf(usage);
 
-    total.cost += costOfUsage(model, {
-      input,
-      output,
-      cacheWrite5m,
-      cacheWrite1h,
-      cacheRead,
-    });
+    total.cost += costOfUsage(
+      model,
+      {
+        input,
+        output,
+        cacheWrite5m,
+        cacheWrite1h,
+        cacheRead,
+      },
+      entry.timestamp
+    );
     total.input += input;
     total.output += output;
     total.cacheWrite5m += cacheWrite5m;

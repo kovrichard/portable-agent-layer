@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run {{PKG_ROOT}}/src/hooks/LedgerCommit.ts --agent=antigravity"
+            "command": "bun run {{PKG_ROOT}}/src/hooks/PostToolOrchestrator.ts --agent=antigravity"
           }
         ]
       }

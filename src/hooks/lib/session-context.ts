@@ -7,7 +7,10 @@
  * context for weeks — and none of it was reachable from a test.
  */
 
+import { mkdirSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import type { AgentName } from "./agent-registry";
+import { platform } from "./paths";
 
 export interface ContextEnvelope {
   /** Whether the agent parses stdout as JSON or reads it as raw text. */
@@ -95,4 +98,11 @@ export function contextEnvelope(
 /** The file Copilot's VS Code extension reads, with the applyTo header it needs. */
 export function copilotInstructions(context: string): string {
   return `---\napplyTo: "**"\n---\n\n${context}`;
+}
+
+export function writeCopilotInstructions(context: string): void {
+  const dir = resolve(platform.copilotDir(), "instructions");
+  mkdirSync(dir, { recursive: true });
+  const path = resolve(dir, "pal-session.instructions.md");
+  writeFileSync(path, copilotInstructions(context), "utf-8");
 }

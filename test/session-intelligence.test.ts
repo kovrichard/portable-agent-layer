@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -13,9 +13,12 @@ import {
 } from "../src/hooks/lib/capture-store";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { readProjectHistory } from "../src/hooks/lib/work-tracking";
-import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
+import { claudeReplying, prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { removeOnceReleased } from "./lib/remove-once-released";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 // Every case here fails a guard that returns before canInfer(), so no inference
 // is ever reached. That is the point: the gating is what decides whether a
@@ -132,11 +135,7 @@ describe("an unfinished session", () => {
       next: "Wire the model handoff into last-handoff.json, then run the gates.",
       waitingOn: "",
     };
-    writeFakeBin(
-      binDir,
-      "claude",
-      `console.log(${JSON.stringify(JSON.stringify(reply))});\n`
-    );
+    writeFakeBin(binDir, "claude", claudeReplying(JSON.stringify(JSON.stringify(reply))));
     prependPath(binDir);
   });
 

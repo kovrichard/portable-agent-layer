@@ -110,7 +110,10 @@ export default {
   //   rung 3 — 2026-08-18: 62.22% ring -> break 57  [last whole-ring measurement]
   //            (relationship.ts 0.00% -> 75.73%, synthesize.ts 1.79% -> 69.53%)
   //            since: context.ts 2.70% -> 63.24%, stop.ts 1.82% -> 77.27%
-  thresholds: { high: 80, low: 60, break: 57 },
+  //   rung 4 — 2026-10-13: diff runs -> break 70
+  //            (last 11 PR branches scored 78-100%; only the older entity and
+  //            event-log PRs, 62-69%, would have broken)
+  thresholds: { high: 90, low: 80, break: 70 },
   // Stryker copies the project into a sandbox with fs.copyFile, which throws ENOTSUP on a
   // symlink. Every entry below is either a symlink farm (agent config dirs, the installed
   // test homes, the vendored skill node_modules) or bulk the suite never reads.

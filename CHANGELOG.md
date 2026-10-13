@@ -1,3 +1,227 @@
+# [0.106.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.105.0...v0.106.0) (2026-10-13)
+
+
+### Features
+
+* **models:** price the current openai line and kimi k3 on fireworks ([56c7d4c](https://github.com/kovrichard/portable-agent-layer/commit/56c7d4cd92a1aedaa38a6f5222857b3215352091))
+
+# [0.105.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.104.2...v0.105.0) (2026-10-13)
+
+
+### Bug Fixes
+
+* **antigravity:** back up settings.json only when it changes ([05b4df1](https://github.com/kovrichard/portable-agent-layer/commit/05b4df1cb4e660b490da12d54ab0cce79a0473df))
+* **claude:** back up settings.json only when install or uninstall changes it ([f707230](https://github.com/kovrichard/portable-agent-layer/commit/f707230ca0c982097607ee5aaa504ba2219ac2a5))
+* **codex:** back up hooks and allowlist rules only when they change ([0b56002](https://github.com/kovrichard/portable-agent-layer/commit/0b5600239bc083b4f9d84574a7146c88e0322ae4))
+* **cursor:** back up hooks and cli-config only when they change ([f9116a8](https://github.com/kovrichard/portable-agent-layer/commit/f9116a8571cccd2f3570e9bfd5e9d93da9ca7fea))
+
+
+### Features
+
+* **targets:** write a config only when it changes, keeping five backups ([a7c258c](https://github.com/kovrichard/portable-agent-layer/commit/a7c258c80a786a74b8682d1abb075e6c265e3100))
+
+## [0.104.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.104.1...v0.104.2) (2026-10-13)
+
+
+### Bug Fixes
+
+* **usage:** label pal inference sections with the model version ([16068f8](https://github.com/kovrichard/portable-agent-layer/commit/16068f856de5ab6a15c5b2bafe79266f82679571))
+
+## [0.104.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.104.0...v0.104.1) (2026-10-13)
+
+
+### Bug Fixes
+
+* **usage:** read claude code transcripts it deleted from pal's archive ([6a13bdd](https://github.com/kovrichard/portable-agent-layer/commit/6a13bdd1f72bf1009440c0bc9fe70882d73752fa))
+
+# [0.104.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.103.1...v0.104.0) (2026-10-13)
+
+
+### Bug Fixes
+
+* **cost:** stop counting copilot cache writes as uncached input ([0a54b80](https://github.com/kovrichard/portable-agent-layer/commit/0a54b80696203f1ea681946e66170da149e12c0c))
+
+
+### Features
+
+* **inference:** read copilot's output tokens from its session file ([37b614e](https://github.com/kovrichard/portable-agent-layer/commit/37b614ebcdf6ebd6a8f6b7e58019e1f8cdb8ba51))
+
+## [0.103.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.103.0...v0.103.1) (2026-10-13)
+
+
+### Bug Fixes
+
+* **inference:** keep pal's instructions out of copilot spawns ([58307c2](https://github.com/kovrichard/portable-agent-layer/commit/58307c2e0877f1ee7d4c047f36aa3dd5c7eda238))
+
+# [0.103.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.102.0...v0.103.0) (2026-10-13)
+
+
+### Features
+
+* **cost:** cost per commit and per closed isc, and cache hit rate ([8fc45bc](https://github.com/kovrichard/portable-agent-layer/commit/8fc45bc68980c9be04c2542cdfa36b22bbafe57c))
+* **cost:** model mix and pal's own spend per caller ([de3f717](https://github.com/kovrichard/portable-agent-layer/commit/de3f71750007b43594f9fcbc7fb6efeb9274c97e))
+* **cost:** most expensive projects, sessions, days and turns ([7bc741d](https://github.com/kovrichard/portable-agent-layer/commit/7bc741d830c5188fa879f70ee54e11c74c294048))
+* **cost:** pal's context overhead per session ([04789e1](https://github.com/kovrichard/portable-agent-layer/commit/04789e13e5d6035e45553ad49032a3f648dba6ff))
+* **hooks:** log how much context pal injects per session ([f61cd8b](https://github.com/kovrichard/portable-agent-layer/commit/f61cd8bdb800ef2da9fa6d8dbfd9cada4c9bdbef))
+
+# [0.102.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.101.0...v0.102.0) (2026-10-13)
+
+
+### Features
+
+* **patterns:** focus blocks ([2f629eb](https://github.com/kovrichard/portable-agent-layer/commit/2f629ebbd5d1b1fb58678cfc4c7972b527d43bd3))
+* **patterns:** one-project days and context switches ([cb446a9](https://github.com/kovrichard/portable-agent-layer/commit/cb446a942388886e7928523134a29804f423b5b8))
+* **patterns:** pal cli patterns prints the current sprint and quiet projects ([7b2ff05](https://github.com/kovrichard/portable-agent-layer/commit/7b2ff05dae9b9044e47b3cad0db07c4801c57a17))
+* **patterns:** per-project profile and agent and channel mix ([8019aaa](https://github.com/kovrichard/portable-agent-layer/commit/8019aaa6404984575dae40b51f0bdc5321139295))
+* **wrapped:** most active weekday and month ([02f8131](https://github.com/kovrichard/portable-agent-layer/commit/02f8131b09191c30bcf7d4dba4d4770840609fe9))
+
+# [0.101.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.100.0...v0.101.0) (2026-10-13)
+
+
+### Features
+
+* **wrapped:** agents ([77f8b8f](https://github.com/kovrichard/portable-agent-layer/commit/77f8b8f362f001615d71154925a8cc5b0726239f))
+* **wrapped:** habits ([93f7c42](https://github.com/kovrichard/portable-agent-layer/commit/93f7c42c53bb34d0d83795f949aea68996d2780f))
+* **wrapped:** pal cli wrapped prints the year's totals ([52db636](https://github.com/kovrichard/portable-agent-layer/commit/52db6367c9eed79ab32ce2c2c00661bdada07e92))
+* **wrapped:** records ([43d4197](https://github.com/kovrichard/portable-agent-layer/commit/43d419730762c2421846c45447c9f99768e9378c))
+* **wrapped:** skills, rules and promises ([4fde90c](https://github.com/kovrichard/portable-agent-layer/commit/4fde90c15b6bf417b4e3fc838f0782ec2b17ea25))
+
+# [0.100.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.99.2...v0.100.0) (2026-10-13)
+
+
+### Bug Fixes
+
+* **hooks:** count klint gate runs as hook runs in both configs ([b8cf7e7](https://github.com/kovrichard/portable-agent-layer/commit/b8cf7e7ae883183b8e92ef6a8149973a18c4ad28))
+* **token-usage:** log the model inference ran on, not Haiku ([7a0e9ac](https://github.com/kovrichard/portable-agent-layer/commit/7a0e9acaa6d94756da6b8916ea5489f1d8aa7070))
+
+
+### Features
+
+* **inference:** log inference usage in model_call's token fields ([b930ee6](https://github.com/kovrichard/portable-agent-layer/commit/b930ee6fce3542bbb0a7f3b4550a1e0238b76e66))
+* **inference:** read antigravity spawns' tokens from its result event ([7287eb3](https://github.com/kovrichard/portable-agent-layer/commit/7287eb3f7cb743d5eafc71523fe6acb171a79768))
+* **inference:** read claude spawns' tokens from its JSON result ([dc85ac7](https://github.com/kovrichard/portable-agent-layer/commit/dc85ac7ac8a661f630f12805e75be9fc82285bd0))
+* **inference:** read codex spawns' tokens from its JSON events ([1c44683](https://github.com/kovrichard/portable-agent-layer/commit/1c44683090808622e0276a80daea876c8d17686a))
+* **inference:** read copilot spawns' prompt tokens from its JSON events ([db05d49](https://github.com/kovrichard/portable-agent-layer/commit/db05d4957f6f97066a88a9472bbeb746abf604de))
+* **inference:** read opencode spawns' tokens from its step events ([0797982](https://github.com/kovrichard/portable-agent-layer/commit/079798217a08fc71c6cbbdea2201a18cc8cbe2ed))
+
+## [0.99.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.99.1...v0.99.2) (2026-10-13)
+
+
+### Performance Improvements
+
+* **deep-research:** search with gemini-3.8-flash ([63d7782](https://github.com/kovrichard/portable-agent-layer/commit/63d77828c41edac8b5b0451a9544ba844a3dae4d))
+
+## [0.99.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.99.0...v0.99.1) (2026-10-13)
+
+
+### Performance Improvements
+
+* **analyze-youtube:** analyze videos with gemini-3.8-flash ([e024603](https://github.com/kovrichard/portable-agent-layer/commit/e024603e73d7dfe65426af9dc186032265e251a0))
+
+# [0.99.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.98.0...v0.99.0) (2026-10-13)
+
+
+### Features
+
+* **events:** backfill knowledge entities as entity_first_seen events ([b00bfad](https://github.com/kovrichard/portable-agent-layer/commit/b00bfad80773df0d53f2372f115f5f54b5486829))
+* **events:** backfill project registrations, ISC closes and decisions ([5a5e298](https://github.com/kovrichard/portable-agent-layer/commit/5a5e2988e5d48bcf6a34de1b968cc3a0bddec272))
+* **events:** backfill the Discord bot's promises as promise events ([85ad67d](https://github.com/kovrichard/portable-agent-layer/commit/85ad67db09101bb01678c577e348b63c8d97bfda))
+* **events:** collect a deleted Claude transcript from PAL's copy ([a86d2c3](https://github.com/kovrichard/portable-agent-layer/commit/a86d2c348eb6c0db68a59e535f3318cc3faee0fd))
+* **events:** log ISA history as commitments and stream it live ([0cacb3d](https://github.com/kovrichard/portable-agent-layer/commit/0cacb3dcb83a7a418523473e8d3da1518c219c88))
+
+# [0.98.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.97.0...v0.98.0) (2026-10-12)
+
+
+### Bug Fixes
+
+* **cli:** load the event backfill only when it runs ([a13f007](https://github.com/kovrichard/portable-agent-layer/commit/a13f00745ab7b3739b3787a8026123bbf3716568))
+* **events:** leave the test suite's leaked ledger rows out of the backfill ([167d687](https://github.com/kovrichard/portable-agent-layer/commit/167d6875acc7a227de1a9845153d65bba7241fc8))
+* **events:** type a Claude model call's timestamp instead of defaulting it ([18571c0](https://github.com/kovrichard/portable-agent-layer/commit/18571c09514dfc5225efcab103e93eb6e6a58403))
+* **usage:** price Opus 5.5, Sonnet 5.5 and Fable 5.1 at their own rates ([d4b25cd](https://github.com/kovrichard/portable-agent-layer/commit/d4b25cd2cfd68ac3e2cdb3363e6a9d9bc641ff0a))
+
+
+### Features
+
+* **events:** backfill git history as commit events ([9f2b64c](https://github.com/kovrichard/portable-agent-layer/commit/9f2b64c7496e6a93159bbc2e161b48bc8bdcac35))
+* **events:** backfill legacy turn files as turn events ([f643ebe](https://github.com/kovrichard/portable-agent-layer/commit/f643ebe753adc16f3289751fe5a1b1cde6e08e8c))
+* **events:** backfill ratings as rating events ([7103c79](https://github.com/kovrichard/portable-agent-layer/commit/7103c793b2c03bc926012d21ff9b6c028cc9d206))
+* **events:** backfill recorded sessions as session_end events ([d42381c](https://github.com/kovrichard/portable-agent-layer/commit/d42381cd92e372f9c571be74c8e777c7bfd035f7))
+* **events:** backfill the action ledger as action events ([bd1fd0d](https://github.com/kovrichard/portable-agent-layer/commit/bd1fd0d0b2eae14821b1caeba5945aaf896924a9))
+* **events:** record each agent's billing mode on its model calls ([2e132bc](https://github.com/kovrichard/portable-agent-layer/commit/2e132bc86685df0e22108bfb0a9cf2443ce64a6b))
+* **events:** stream ledger entries live as action events ([bbfe393](https://github.com/kovrichard/portable-agent-layer/commit/bbfe393a6441fbb3143c1d97223e030fc80d4ebe))
+* **events:** stream ratings live as rating events ([56e7ad0](https://github.com/kovrichard/portable-agent-layer/commit/56e7ad07dda431f11d1d522f14400e49902e8e27))
+* **usage:** date what each subscription plan costs per month ([551e6ec](https://github.com/kovrichard/portable-agent-layer/commit/551e6ec7d3b73e1dee0d764d761172c320f16b2a))
+* **usage:** pal cli cost, each month paid against its API-equivalent ([1d0dffd](https://github.com/kovrichard/portable-agent-layer/commit/1d0dffdcc6e2d7d580fce2443afeefafb04cebe5))
+* **usage:** price every call at the rate in force on its date ([2371518](https://github.com/kovrichard/portable-agent-layer/commit/237151893270756e85dfcc0985efecacd811d09b))
+
+# [0.97.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.96.1...v0.97.0) (2026-10-12)
+
+
+### Features
+
+* **events:** log opencode tool calls that fail ([25d69a5](https://github.com/kovrichard/portable-agent-layer/commit/25d69a54878b1a3e397c5783100e723cebe37bdd))
+* **events:** time Antigravity's prompt hook ([8919050](https://github.com/kovrichard/portable-agent-layer/commit/89190502aee59439592c48d815a8bdd42c876e6c))
+
+## [0.96.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.96.0...v0.96.1) (2026-10-12)
+
+
+### Bug Fixes
+
+* **control-room:** build the page once, and only when it is out of date ([6262e50](https://github.com/kovrichard/portable-agent-layer/commit/6262e50a92226348a695ee1c31cdcd0f103505da))
+
+# [0.96.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.95.1...v0.96.0) (2026-10-12)
+
+
+### Features
+
+* **events:** collect Antigravity's conversations ([a4ebd8d](https://github.com/kovrichard/portable-agent-layer/commit/a4ebd8dafb84984bc5a5fbcbb49b2ea06731ec2d))
+* **events:** collect at session stop, at most every quarter hour ([577d103](https://github.com/kovrichard/portable-agent-layer/commit/577d1039e68197f4a2d44e67d4958c51a0dbee65))
+* **events:** collect Claude Code's model calls into the event log ([0ce1e88](https://github.com/kovrichard/portable-agent-layer/commit/0ce1e88a603eaa146c5497681eb035b42c02b276))
+* **events:** collect Codex's model calls ([702e0b2](https://github.com/kovrichard/portable-agent-layer/commit/702e0b29a7debcd105eb32870228fe455d8d9a3f))
+* **events:** collect Copilot's model calls from its session store ([20ed5bd](https://github.com/kovrichard/portable-agent-layer/commit/20ed5bd68c4fbda8ec146996442bf69757d29f43))
+* **events:** collect opencode's model calls through a credential-proof reader ([6082aa5](https://github.com/kovrichard/portable-agent-layer/commit/6082aa5ee4ae581e868075ef38f2ec308da2c0e5))
+
+## [0.95.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.95.0...v0.95.1) (2026-10-12)
+
+
+### Bug Fixes
+
+* **usage:** bill a message at its last line, not a streaming partial ([c667e26](https://github.com/kovrichard/portable-agent-layer/commit/c667e26ca8e17c2181611608ed362c7f074eaef6))
+* **usage:** bill each Claude Code message once, not once per content block ([f1856c2](https://github.com/kovrichard/portable-agent-layer/commit/f1856c2128b4c07a89932084243063147d7484af))
+
+# [0.95.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.94.0...v0.95.0) (2026-10-12)
+
+
+### Bug Fixes
+
+* **events:** logging never fails the hook it runs in ([786918d](https://github.com/kovrichard/portable-agent-layer/commit/786918d186d0081549bf236ab6e6eec89b2d83d2))
+
+
+### Features
+
+* **content:** keep a gzipped copy of every Claude Code transcript ([b5abb1a](https://github.com/kovrichard/portable-agent-layer/commit/b5abb1aefbacdf25b1e5dcebbcf77a906af897b5))
+* **events:** a commitment event when an ISC is kept, dropped, snoozed or reopened ([744490d](https://github.com/kovrichard/portable-agent-layer/commit/744490d0de47ae3d3556c6342fdc0260faf948a5))
+* **events:** a tool_call event for every tool call on every agent ([0c6e327](https://github.com/kovrichard/portable-agent-layer/commit/0c6e32792807a1815142a116397f36613e385e15))
+* **events:** entity_first_seen when a new entity enters the knowledge store ([759e928](https://github.com/kovrichard/portable-agent-layer/commit/759e928f3561ce342ff684865333c7e755de4a11))
+* **events:** hook_timing for the stop and prompt hooks ([0a01741](https://github.com/kovrichard/portable-agent-layer/commit/0a01741e69eb68617bbfe890b79af395244f83b2))
+* **events:** inference_call for every inference PAL makes ([4ca83a9](https://github.com/kovrichard/portable-agent-layer/commit/4ca83a9b7a15e62e4f9b1713855b77724576f82a))
+* **events:** local append-only event stream with content store ([748a540](https://github.com/kovrichard/portable-agent-layer/commit/748a540888c54b9b7e532e9d1c1de5243d5fdef0))
+* **events:** log compaction on Cursor, Copilot and Codex ([e09043f](https://github.com/kovrichard/portable-agent-layer/commit/e09043f68dbd9a0b07965302995afe59be225a3a))
+* **events:** log opencode session starts, compactions and denied calls ([a0294b9](https://github.com/kovrichard/portable-agent-layer/commit/a0294b991e7dd680898f057fa07967eea440140a))
+* **events:** pal cli events discord-nag for the bot's nags and answer times ([ecb3cfe](https://github.com/kovrichard/portable-agent-layer/commit/ecb3cfe37d9c3c3b13a1b92c4550d2f95077e401))
+* **events:** pal_update for every self-update attempt and skip ([c1d83e1](https://github.com/kovrichard/portable-agent-layer/commit/c1d83e152375b7374cf8efa83fb69d686baa9580))
+* **events:** permission prompts, notifications and how long the user took ([b5a66c6](https://github.com/kovrichard/portable-agent-layer/commit/b5a66c6f5516da7c8f4986eacdea341019afee57))
+* **events:** session model, branch and size, and the program a shell call ran ([30c5978](https://github.com/kovrichard/portable-agent-layer/commit/30c59781a079bc02f6ec1c33d895fe6502be64fd))
+* **events:** session start, end and compaction events ([0965879](https://github.com/kovrichard/portable-agent-layer/commit/0965879f6f7206b1fe057135678f58365bc43832))
+* **interaction:** log turns as events in the stream ([897d172](https://github.com/kovrichard/portable-agent-layer/commit/897d172442a3c6edd1c24ea86cd867467bb01bce))
+* **interaction:** turn extras and reply events ([97cbf8b](https://github.com/kovrichard/portable-agent-layer/commit/97cbf8b74194afcc63f0171c0e8c8cdb08a01506))
+* **work-tracking:** archive sessions pruned from sessions.json ([3d1f22d](https://github.com/kovrichard/portable-agent-layer/commit/3d1f22d92a25539fdff829d2049bd047854d45ad))
+
+
+### Performance Improvements
+
+* **events:** log tool calls without a blocking process ([a96f2e4](https://github.com/kovrichard/portable-agent-layer/commit/a96f2e43b8a7c88575f3f5494869c0d0b6ddacf2))
+
 # [0.94.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.93.0...v0.94.0) (2026-10-10)
 
 

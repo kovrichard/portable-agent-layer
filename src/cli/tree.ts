@@ -14,17 +14,22 @@ import {
   type OptionSpecs,
 } from "../tools/lib/command";
 import { builtinTools, builtinToolVerbs } from "./builtin-tools";
+import { contentCommand } from "./content";
+import { costCommand } from "./cost";
+import { eventsCommand } from "./events";
 import { identityCommand } from "./identity";
 import { inferCommand } from "./infer";
 import { knowledgeCommand } from "./knowledge";
 import { ledgerCommand } from "./ledger-command";
 import { runMigrate } from "./migrate";
+import { patternsCommand } from "./patterns";
 import { telosCommand, timezoneCommand } from "./personal-context";
 import { ruleCommand } from "./rule";
 import { serverCommand } from "./server";
 import { skillCommand } from "./skill";
 import { subagentCommand } from "./subagent";
 import { usageCommand } from "./usage";
+import { wrappedCommand } from "./wrapped";
 
 type Handler = Leaf["run"];
 export type DebugState = "on" | "off" | "status";
@@ -151,6 +156,11 @@ export function cliTree(admin: AdminHandlers): Group {
     commands: {
       ...adminCommands(admin),
       usage: usageCommand,
+      cost: costCommand,
+      wrapped: wrappedCommand,
+      patterns: patternsCommand,
+      content: contentCommand,
+      events: eventsCommand,
       infer: inferCommand,
       actor: identityCommand("actor"),
       machine: identityCommand("machine"),
