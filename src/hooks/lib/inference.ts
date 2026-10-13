@@ -51,6 +51,7 @@ import {
   jsonLines,
   type OpenAiUsage,
   openAiUsage,
+  opencodeSpawnUsage,
 } from "./inference-usage";
 import { logDebug, logError } from "./log";
 import {
@@ -571,7 +572,7 @@ async function inferenceViaOpencodeSpawn(
       buildOpencodeArgs(opts),
       buildCliPrompt(opts),
       opts,
-      { text: extractOpencodeText, usage: () => undefined },
+      { text: extractOpencodeText, usage: opencodeSpawnUsage },
       { cwd: dir, env: { XDG_CONFIG_HOME: dir, ...OPENCODE_WITHOUT_EXTERNAL_CONTEXT } }
     );
   } finally {

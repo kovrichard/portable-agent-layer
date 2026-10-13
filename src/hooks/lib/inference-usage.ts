@@ -109,3 +109,32 @@ export function codexSpawnUsage(raw: string): InferenceUsage | undefined {
     cacheRead,
   };
 }
+
+interface OpencodeStep {
+  tokens?: {
+    input?: number;
+    output?: number;
+    reasoning?: number;
+    cache?: { read?: number; write?: number };
+  } | null;
+  cost?: number | null;
+}
+
+/** opencode reports reasoning apart from output; model_call counts it in both. */
+export function opencodeSpawnUsage(raw: string): InferenceUsage | undefined {
+  const steps = jsonLines(raw)
+    .filter((event) => event.type === "step_finish")
+    .map((event) => (event.part ?? {}) as OpencodeStep)
+    .filter((step) => step.tokens);
+  if (steps.length === 0) return undefined;
+  const output = sum(steps.map((s) => s.tokens?.output));
+  const reasoning = sum(steps.map((s) => s.tokens?.reasoning));
+  return {
+    inputTokens: sum(steps.map((s) => s.tokens?.input)),
+    outputTokens: sum([output, reasoning]),
+    thinkingTokens: reasoning,
+    cacheWrite5m: sum(steps.map((s) => s.tokens?.cache?.write)),
+    cacheRead: sum(steps.map((s) => s.tokens?.cache?.read)),
+    costUsd: sum(steps.map((s) => s.cost ?? undefined)),
+  };
+}
