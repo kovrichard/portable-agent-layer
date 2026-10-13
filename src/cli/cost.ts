@@ -1,8 +1,9 @@
 import { labelOfRuntime } from "../hooks/lib/agent-registry";
 import { allEventsSince } from "../hooks/lib/events";
 import { leaf } from "../tools/lib/command";
+import { efficiency } from "../tools/lib/cost/efficiency";
 import { leaderboards } from "../tools/lib/cost/leaderboards";
-import { leaderboardLines } from "../tools/lib/cost/render";
+import { efficiencyLines, leaderboardLines } from "../tools/lib/cost/render";
 import { costLines, costMonths } from "../tools/lib/cost-report";
 import { ofType } from "../tools/lib/wrapped/year";
 
@@ -12,6 +13,7 @@ function printCost(): undefined {
   const lines = [
     ...costLines(months, labelOfRuntime),
     ...leaderboardLines(leaderboards(events)),
+    ...efficiencyLines(efficiency(events)),
   ];
   for (const line of lines) console.log(line);
 }

@@ -1,5 +1,6 @@
 import { count } from "../report-rows";
 import { fmtCost } from "../token-report";
+import type { Efficiency, PerUnit } from "./efficiency";
 import type { Entry, Leaderboards } from "./leaderboards";
 
 function entryLine({ label, cost, unpriced }: Entry): string {
@@ -18,5 +19,24 @@ export function leaderboardLines(boards: Leaderboards): string[] {
     ...boardLines("sessions", boards.sessions),
     ...boardLines("days", boards.days),
     ...boardLines("turns", boards.turns),
+  ];
+}
+
+function perUnitText(per: PerUnit | null, unit: string): string {
+  if (per === null) return "unknown";
+  const atLeast = per.lowerBound ? "at least " : "";
+  return `${atLeast}${fmtCost(per.cost)} over ${count(per.units)} ${unit}`;
+}
+
+const percent = (rate: number | null) =>
+  rate === null ? "unknown" : `${(rate * 100).toFixed(1)}%`;
+
+export function efficiencyLines(efficiency: Efficiency | null): string[] {
+  if (efficiency === null) return [];
+  return [
+    `\n  Since ${efficiency.since}\n`,
+    `    Per commit       ${perUnitText(efficiency.perCommit, "commits")}`,
+    `    Per closed ISC   ${perUnitText(efficiency.perClosedIsc, "ISCs")}`,
+    `    Cache hit rate   ${percent(efficiency.cacheHitRate)}`,
   ];
 }
