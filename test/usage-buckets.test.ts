@@ -246,6 +246,60 @@ describe("readClaudeCode", () => {
     expect(result.byProject.pal.total.calls).toBe(2);
   });
 
+  describe("with PAL's archive of the transcripts", () => {
+    const turn = (input: number) =>
+      assistantLine(NOW.toISOString(), "claude-opus-5", {
+        input_tokens: input,
+        output_tokens: 0,
+      });
+
+    function transcript(path: string, input: number): void {
+      mkdirSync(join(path, ".."), { recursive: true });
+      writeFileSync(path, turn(input));
+    }
+
+    function archived(path: string, input: number): void {
+      mkdirSync(join(path, ".."), { recursive: true });
+      writeFileSync(`${path}.gz`, Bun.gzipSync(turn(input)));
+    }
+
+    function homes() {
+      const dir = tempHome();
+      return { live: join(dir, "projects"), archive: join(dir, "archive") };
+    }
+
+    test("a transcript Claude Code deleted is still read from PAL's archive", () => {
+      const { live, archive } = homes();
+      transcript(join(live, "-w-pal", "kept.jsonl"), 1);
+      archived(join(archive, "-w-pal", "kept.jsonl"), 1);
+      archived(join(archive, "-w-pal", "deleted.jsonl"), 10);
+      archived(join(archive, "-w-pal", "deleted", "subagents", "agent-a.jsonl"), 100);
+      archived(join(archive, "-w-gone", "only.jsonl"), 1000);
+
+      const usage = readClaudeCode(live, undefined, NOW, archive);
+      expect(usage.buckets.total.input).toBe(1111);
+      expect(usage.byProject.pal.total.input).toBe(111);
+      expect(usage.byProject.gone.total.input).toBe(1000);
+    });
+
+    test("without an archive only the live transcripts count", () => {
+      const { live, archive } = homes();
+      transcript(join(live, "-w-pal", "kept.jsonl"), 1);
+      archived(join(archive, "-w-pal", "deleted.jsonl"), 10);
+      expect(readClaudeCode(live, undefined, NOW).buckets.total.input).toBe(1);
+      expect(
+        readClaudeCode(live, undefined, NOW, join(archive, "absent")).buckets.total.input
+      ).toBe(1);
+    });
+
+    test("an archived copy that is not gzip is skipped", () => {
+      const { live, archive } = homes();
+      mkdirSync(join(archive, "-w-pal"), { recursive: true });
+      writeFileSync(join(archive, "-w-pal", "broken.jsonl.gz"), "not gzip");
+      expect(readClaudeCode(live, undefined, NOW, archive).buckets.total.calls).toBe(0);
+    });
+  });
+
   test("a message written as one line per content block is billed once, at its final usage", () => {
     const dir = tempHome();
     const proj = join(dir, "-p-real");

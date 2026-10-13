@@ -34,10 +34,12 @@ interface PreserveLocations {
 
 type Manifest = Record<string, string>;
 
+export const transcriptArchive = () => resolve(paths.content(), "claude");
+
 function defaultLocations(): PreserveLocations {
   return {
     source: resolve(platform.claudeDir(), "projects"),
-    target: resolve(paths.content(), "claude"),
+    target: transcriptArchive(),
     manifest: resolve(paths.state(), "transcript-copies.json"),
   };
 }

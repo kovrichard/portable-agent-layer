@@ -5,7 +5,7 @@
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import type { LoggedEvent } from "../../hooks/lib/events";
 import { costOfUsage } from "../../hooks/lib/models";
 import { cacheWritesOf, finalPerMessage, type TranscriptUsage } from "./transcript-usage";
@@ -194,10 +194,10 @@ interface TranscriptLine {
  * wrote — those sit one level down and are billed to the same project, so
  * missing them undercounts every session that spawned one.
  */
-function transcriptsIn(projPath: string): string[] {
+function transcriptsIn(projPath: string, extension = ".jsonl"): string[] {
   const files: string[] = [];
   for (const entry of readdirSync(projPath, { withFileTypes: true })) {
-    if (entry.isFile() && entry.name.endsWith(".jsonl")) {
+    if (entry.isFile() && entry.name.endsWith(extension)) {
       files.push(resolve(projPath, entry.name));
       continue;
     }
@@ -205,7 +205,7 @@ function transcriptsIn(projPath: string): string[] {
     const subagentsDir = resolve(projPath, entry.name, "subagents");
     try {
       for (const sub of readdirSync(subagentsDir)) {
-        if (sub.endsWith(".jsonl")) files.push(resolve(subagentsDir, sub));
+        if (sub.endsWith(extension)) files.push(resolve(subagentsDir, sub));
       }
     } catch {
       /* no subagents dir */
@@ -256,30 +256,67 @@ function pricedCallOf(line: string): PricedCall | null {
   };
 }
 
+const projectDirsIn = (dir: string) =>
+  existsSync(dir)
+    ? readdirSync(dir, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name)
+    : [];
+
+const GZIP = ".gz";
+
+/** Claude Code deletes a transcript after cleanupPeriodDays; PAL's gzipped copy outlives it. */
+function deletedTranscriptsIn(archivedProject: string, liveProject: string): string[] {
+  if (!existsSync(archivedProject)) return [];
+  return transcriptsIn(archivedProject, `.jsonl${GZIP}`).filter((copy) => {
+    const original = relative(archivedProject, copy).slice(0, -GZIP.length);
+    return !existsSync(resolve(liveProject, original));
+  });
+}
+
+function transcriptText(filepath: string): string | null {
+  try {
+    const raw = readFileSync(filepath);
+    return filepath.endsWith(GZIP)
+      ? new TextDecoder().decode(Bun.gunzipSync(raw))
+      : raw.toString("utf-8");
+  } catch {
+    return null;
+  }
+}
+
+function projectTranscripts(
+  claudeDir: string,
+  archiveDir: string | undefined,
+  dirName: string
+) {
+  const live = resolve(claudeDir, dirName);
+  return [
+    ...(existsSync(live) ? transcriptsIn(live) : []),
+    ...(archiveDir ? deletedTranscriptsIn(resolve(archiveDir, dirName), live) : []),
+  ];
+}
+
 export function readClaudeCode(
   claudeDir: string,
   projectFilter?: string,
-  now: Date = new Date()
+  now: Date = new Date(),
+  archiveDir?: string
 ): AgentUsage {
   const tally = usageTally(projectFilter, now);
-  if (!existsSync(claudeDir)) return tally.usage;
   const calls: (PricedCall & { project: string })[] = [];
-
-  const projectDirs = readdirSync(claudeDir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name);
+  const projectDirs = new Set([
+    ...projectDirsIn(claudeDir),
+    ...(archiveDir ? projectDirsIn(archiveDir) : []),
+  ]);
 
   for (const dirName of projectDirs) {
     const projName = projectNameOf(dirName);
     if (typeof projectFilter === "string" && !projName.includes(projectFilter)) continue;
 
-    for (const filepath of transcriptsIn(resolve(claudeDir, dirName))) {
-      let content: string;
-      try {
-        content = readFileSync(filepath, "utf-8");
-      } catch {
-        continue;
-      }
+    for (const filepath of projectTranscripts(claudeDir, archiveDir, dirName)) {
+      const content = transcriptText(filepath);
+      if (content === null) continue;
 
       for (const line of content.split("\n")) {
         // Cheap reject before the parse: most lines are not model turns.

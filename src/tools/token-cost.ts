@@ -8,6 +8,7 @@ import { resolve } from "node:path";
 import { AGENT_REGISTRY, type AgentName } from "../hooks/lib/agent-registry";
 import { eventsSince } from "../hooks/lib/events";
 import { platform } from "../hooks/lib/paths";
+import { transcriptArchive } from "../hooks/lib/transcript-preserve";
 import { findBinaryOnPath } from "../hooks/lib/which";
 import {
   opencodeDatabase,
@@ -32,7 +33,12 @@ function agentReports(project: string | undefined): AgentReport[] {
   });
   return [
     report("claude", () =>
-      readClaudeCode(resolve(platform.claudeDir(), "projects"), project)
+      readClaudeCode(
+        resolve(platform.claudeDir(), "projects"),
+        project,
+        new Date(),
+        transcriptArchive()
+      )
     ),
     report("codex", () => readCodex(platform.codexDir(), project)),
     report("opencode", () => readOpencode(opencodeDatabase(), project)),
