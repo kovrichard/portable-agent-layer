@@ -1,5 +1,8 @@
+import { labelOfRuntime } from "../../../hooks/lib/agent-registry";
+import type { CostTotals } from "../cost-report";
 import { fmtDuration } from "../session-usage";
 import { fmtCost } from "../token-report";
+import type { RuntimeCost, WrappedAgents } from "./agents";
 import type { WrappedHabits } from "./habits";
 import type { Best, WrappedRecords } from "./records";
 import type { WrappedTotals } from "./totals";
@@ -77,11 +80,33 @@ function tokensLabel(totals: WrappedTotals): string {
     : count(totals.tokens);
 }
 
-function apiEquivalentLabel({ cost }: WrappedTotals): string {
+function apiEquivalentLabel(cost: CostTotals): string {
   const priced = fmtCost(cost.apiEquivalent);
   return cost.unpriced > 0
     ? `${priced} + ${count(cost.unpriced)} unpriced calls`
     : priced;
+}
+
+const paidLabel = (paid: number | null) => (paid === null ? "unknown" : fmtCost(paid));
+
+function runtimeCostLabel({ runtime, calls, cost }: RuntimeCost): string {
+  const api = cost.unpriced === calls ? "unknown" : apiEquivalentLabel(cost);
+  return `${labelOfRuntime(runtime)}  API-equivalent ${api}, paid ${paidLabel(cost.paid)}`;
+}
+
+const labelled = (tallies: Tally[]) =>
+  tallies.map((t) => ({ ...t, name: labelOfRuntime(t.name) }));
+
+/** No agent reports which of Cursor's lines a human typed yet. */
+export function agentsLines(agents: WrappedAgents): string[] {
+  const [first, ...rest] = agents.costs.map(runtimeCostLabel);
+  return [
+    "\n  Agents\n",
+    row("messages by agent", tallyLabel(labelled(agents.messages))),
+    row("cost by agent", first ?? "unknown"),
+    ...rest.map((label) => row("", label)),
+    row("Cursor human vs AI", "unknown"),
+  ];
 }
 
 export function totalsLines(totals: WrappedTotals): string[] {
@@ -91,7 +116,7 @@ export function totalsLines(totals: WrappedTotals): string[] {
     row("sessions", count(totals.sessions)),
     row("commits", count(totals.commits)),
     row("tokens", tokensLabel(totals)),
-    row("API-equivalent", apiEquivalentLabel(totals)),
-    row("paid", totals.cost.paid === null ? "unknown" : fmtCost(totals.cost.paid)),
+    row("API-equivalent", apiEquivalentLabel(totals.cost)),
+    row("paid", paidLabel(totals.cost.paid)),
   ];
 }

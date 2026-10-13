@@ -1,7 +1,13 @@
 import { leaf, UsageError } from "../tools/lib/command";
+import { wrappedAgents } from "../tools/lib/wrapped/agents";
 import { wrappedHabits } from "../tools/lib/wrapped/habits";
 import { wrappedRecords } from "../tools/lib/wrapped/records";
-import { habitsLines, recordsLines, totalsLines } from "../tools/lib/wrapped/render";
+import {
+  agentsLines,
+  habitsLines,
+  recordsLines,
+  totalsLines,
+} from "../tools/lib/wrapped/render";
 import { wrappedTotals } from "../tools/lib/wrapped/totals";
 import { eventsOfYear } from "../tools/lib/wrapped/year";
 
@@ -22,6 +28,7 @@ function printWrapped(year: number): undefined {
     ...totalsLines(wrappedTotals(events)),
     ...recordsLines(wrappedRecords(events)),
     ...habitsLines(wrappedHabits(events)),
+    ...agentsLines(wrappedAgents(events)),
   ];
   for (const line of lines) console.log(line);
 }

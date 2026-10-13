@@ -86,3 +86,7 @@ export function skillsDirOf(agent: AgentName): string {
 export function isAgentName(value: string): value is AgentName {
   return Object.hasOwn(AGENT_REGISTRY, value);
 }
+
+export function labelOfRuntime(runtime: string): string {
+  return isAgentName(runtime) ? AGENT_REGISTRY[runtime].label : runtime;
+}
