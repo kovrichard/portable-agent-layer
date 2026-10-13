@@ -1,6 +1,6 @@
 import type { LoggedEvent } from "../../../hooks/lib/events";
 import { apiPriceOf } from "../cost-report";
-import { dayOf, numberOf, ofType } from "./year";
+import { dayOf, isUserActivity, numberOf, ofType } from "./year";
 
 export interface Best {
   value: number;
@@ -49,11 +49,6 @@ function longestProject(events: LoggedEvent[]): Best | null {
     })
   );
 }
-
-const isUserActivity = (e: LoggedEvent) =>
-  e.type === "commit" ||
-  e.type === "turn" ||
-  (e.type === "model_call" && e.entrypoint !== "sdk-cli");
 
 function longestStreak(events: LoggedEvent[]): Best | null {
   const days = [...new Set(events.filter(isUserActivity).map(dayOf))].sort();

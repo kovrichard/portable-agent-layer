@@ -1,7 +1,9 @@
 import { fmtDuration } from "../session-usage";
 import { fmtCost } from "../token-report";
+import type { WrappedHabits } from "./habits";
 import type { Best, WrappedRecords } from "./records";
 import type { WrappedTotals } from "./totals";
+import type { Tally } from "./year";
 
 const count = (n: number) => n.toLocaleString("en-US");
 
@@ -41,6 +43,30 @@ export function recordsLines(records: WrappedRecords): string[] {
       records.biggestToolBurst,
       (n) => `${count(n)} tool calls`
     ),
+  ];
+}
+
+const percent = (share: number | null) =>
+  share === null ? "unknown" : `${Math.round(share * 100)}%`;
+
+function tallyLabel(tallies: Tally[]): string {
+  if (tallies.length === 0) return "unknown";
+  return tallies.map((t) => `${t.name} ${count(t.count)}`).join(" · ");
+}
+
+export function habitsLines(habits: WrappedHabits): string[] {
+  const hour = habits.mostActiveHour;
+  return [
+    "\n  Habits\n",
+    row(
+      "most active hour",
+      hour === null ? "unknown" : `${hour.label}  (active on ${days(hour.value)})`
+    ),
+    row("at night (22-06)", percent(habits.nightShare)),
+    row("on weekends", percent(habits.weekendShare)),
+    row("messages by channel", tallyLabel(habits.channels)),
+    row("skimmed replies", percent(habits.skimRate)),
+    row("corrections", percent(habits.correctionRate)),
   ];
 }
 
