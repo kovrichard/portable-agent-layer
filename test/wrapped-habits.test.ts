@@ -13,6 +13,8 @@ describe("habits", () => {
   test("nothing logged shows no habit", () => {
     expect(wrappedHabits([])).toEqual({
       mostActiveHour: null,
+      mostActiveWeekday: null,
+      mostActiveMonth: null,
       nightShare: null,
       weekendShare: null,
       channels: [],
@@ -36,6 +38,26 @@ describe("habits", () => {
       commitAt("2026-03-02T08:00:00.000Z"),
     ]);
     expect(habits.mostActiveHour?.label).toBe("09:00");
+  });
+
+  test("the busiest weekday and month count active hours, not how busy each was", () => {
+    const habits = wrappedHabits([
+      ...[1, 2, 3, 4, 5].map((m) => commitAt(`2026-03-02T08:0${m}:00.000Z`)),
+      commitAt("2026-04-07T08:00:00.000Z"),
+      commitAt("2026-04-07T09:00:00.000Z"),
+      commitAt("2026-04-30T21:59:00.000Z"),
+      commitAt("2026-04-30T22:00:00.000Z"),
+    ]);
+    expect(habits.mostActiveWeekday).toEqual({ value: 2, label: "Tue" });
+    expect(habits.mostActiveMonth).toEqual({ value: 3, label: "2026-04" });
+  });
+
+  test("a month tie goes to the earlier month", () => {
+    const habits = wrappedHabits([
+      commitAt("2026-05-04T08:00:00.000Z"),
+      commitAt("2026-03-02T08:00:00.000Z"),
+    ]);
+    expect(habits.mostActiveMonth?.label).toBe("2026-03");
   });
 
   test("night is 22:00 to 06:00 local and weekends are Saturday and Sunday", () => {
@@ -101,6 +123,8 @@ describe("the habits as printed", () => {
     expect(
       habitsLines({
         mostActiveHour: { value: 90, label: "21:00" },
+        mostActiveWeekday: { value: 1, label: "Tue" },
+        mostActiveMonth: { value: 1239, label: "2026-09" },
         nightShare: 0.064,
         weekendShare: null,
         channels: [
@@ -113,6 +137,8 @@ describe("the habits as printed", () => {
     ).toEqual([
       "\n  Habits\n",
       "    most active hour     21:00  (active on 90 days)",
+      "    most active weekday  Tue  (1 active hour)",
+      "    most active month    2026-09  (1,239 active hours)",
       "    at night (22-06)     6%",
       "    on weekends          unknown",
       "    messages by channel  discord-desktop 1,276 · terminal 3",
@@ -125,6 +151,8 @@ describe("the habits as printed", () => {
     expect(
       habitsLines({
         mostActiveHour: null,
+        mostActiveWeekday: null,
+        mostActiveMonth: null,
         nightShare: null,
         weekendShare: null,
         channels: [],
@@ -133,6 +161,8 @@ describe("the habits as printed", () => {
       }).slice(1)
     ).toEqual([
       "    most active hour     unknown",
+      "    most active weekday  unknown",
+      "    most active month    unknown",
       "    at night (22-06)     unknown",
       "    on weekends          unknown",
       "    messages by channel  unknown",

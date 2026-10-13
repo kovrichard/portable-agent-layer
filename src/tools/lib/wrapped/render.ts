@@ -46,14 +46,21 @@ export function recordsLines(records: WrappedRecords): string[] {
 const percent = (share: number | null) =>
   share === null ? "unknown" : `${Math.round(share * 100)}%`;
 
+const hours = (n: number) => `${count(n)} active ${n === 1 ? "hour" : "hours"}`;
+
+function busiestLabel(best: Best | null, unit: (n: number) => string): string {
+  return best === null ? "unknown" : `${best.label}  (${unit(best.value)})`;
+}
+
 export function habitsLines(habits: WrappedHabits): string[] {
-  const hour = habits.mostActiveHour;
   return [
     "\n  Habits\n",
     row(
       "most active hour",
-      hour === null ? "unknown" : `${hour.label}  (active on ${days(hour.value)})`
+      busiestLabel(habits.mostActiveHour, (n) => `active on ${days(n)}`)
     ),
+    row("most active weekday", busiestLabel(habits.mostActiveWeekday, hours)),
+    row("most active month", busiestLabel(habits.mostActiveMonth, hours)),
     row("at night (22-06)", percent(habits.nightShare)),
     row("on weekends", percent(habits.weekendShare)),
     row("messages by channel", tallyLabel(habits.channels)),
