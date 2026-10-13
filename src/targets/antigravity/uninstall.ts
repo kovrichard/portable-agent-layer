@@ -5,14 +5,7 @@
  * removing the folder never walks into the skills they point at.
  */
 
-import {
-  copyFileSync,
-  existsSync,
-  lstatSync,
-  readdirSync,
-  rmSync,
-  unlinkSync,
-} from "node:fs";
+import { existsSync, lstatSync, readdirSync, rmSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
 import { skillsDirOf } from "../../hooks/lib/agent-registry";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
@@ -22,8 +15,8 @@ import {
   readJson,
   removeStatusline,
   removeStatuslineConfig,
+  replaceJsonConfig,
   unmergeSettings,
-  writeJson,
 } from "../lib";
 
 function unlinkSkillLinks(dir: string): string[] {
@@ -47,12 +40,11 @@ if (existsSync(PLUGIN_DIR)) {
 
 const SETTINGS = platform.antigravitySettings();
 if (existsSync(SETTINGS)) {
-  copyFileSync(SETTINGS, `${SETTINGS}.bak.${Date.now()}`);
   const template = loadSettingsTemplate(
     assets.antigravitySettingsTemplate(),
     palPkg().replaceAll("\\", "/")
   );
-  writeJson(
+  replaceJsonConfig(
     SETTINGS,
     removeStatuslineConfig(
       unmergeSettings(readJson(SETTINGS, {}), template),

@@ -250,6 +250,7 @@ describe("pal cli install (smoke)", () => {
     { flag: "--cursor", dir: CURSOR_DIR },
     { flag: "--codex", dir: CODEX_DIR },
     { flag: "--codex", dir: resolve(CODEX_DIR, "rules") },
+    { flag: "--antigravity", dir: resolve(GEMINI_DIR, "antigravity-cli") },
   ];
   for (const { flag, dir } of reinstalls) {
     const where = relative(TEST_HOME, dir);
