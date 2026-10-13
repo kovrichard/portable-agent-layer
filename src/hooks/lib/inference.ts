@@ -20,6 +20,7 @@
  * yet wired and currently fall through to the API path.
  */
 
+import { readFileSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
@@ -48,6 +49,8 @@ import {
   claudeResult,
   claudeSpawnUsage,
   codexSpawnUsage,
+  copilotSessionId,
+  copilotShutdownUsage,
   copilotSpawnUsage,
   type InferenceUsage,
   jsonLines,
@@ -64,6 +67,7 @@ import {
 } from "./models";
 import { opencodeTierModel, writeInstructionFreeConfig } from "./opencode-config";
 import { withPalEnv } from "./pal-env";
+import { platform } from "./paths";
 import { buildSpawnGuardEnv, getInferenceDepth, SPAWN_GUARD_ENV } from "./spawn-guard";
 import { findBinaryOnPath } from "./which";
 
@@ -703,6 +707,26 @@ const COPILOT_REPLY: CliReply = {
   usage: copilotSpawnUsage,
 };
 
+function copilotSessionUsage(home: string, raw: string): InferenceUsage | undefined {
+  const id = copilotSessionId(raw);
+  if (!id) return undefined;
+  try {
+    return copilotShutdownUsage(
+      readFileSync(join(home, "session-state", id, "events.jsonl"), "utf-8")
+    );
+  } catch {
+    return undefined;
+  }
+}
+
+/** stdout reports only the prompt side; the run's own session file in its home has the rest. */
+function copilotReply(home: string): CliReply {
+  return {
+    ...COPILOT_REPLY,
+    usage: (raw) => copilotSessionUsage(home, raw) ?? copilotSpawnUsage(raw),
+  };
+}
+
 const COPILOT_TOKEN_ENV = ["COPILOT_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"];
 
 /** A /login account lives in COPILOT_HOME's config.json; only a token variable logs in without it. */
@@ -715,19 +739,21 @@ async function inferenceViaCopilotSpawn(
   bin: string,
   opts: InferenceOptions
 ): Promise<InferenceResult> {
-  const spawn = (place?: SpawnPlace) =>
+  const spawn = (home: string, place?: SpawnPlace) =>
     inferenceViaCliSpawn(
       bin,
       buildCopilotArgs(opts),
       buildCliPrompt(opts),
       opts,
-      COPILOT_REPLY,
+      copilotReply(home),
       place
     );
-  if (!copilotLogsInWithoutHome(withPalEnv(process.env))) return spawn();
+  const env = withPalEnv(process.env);
+  if (!copilotLogsInWithoutHome(env))
+    return spawn(env.COPILOT_HOME || platform.copilotDir());
   const dir = await mkdtemp(join(tmpdir(), "pal-copilot-"));
   try {
-    return await spawn({ cwd: dir, env: { COPILOT_HOME: dir } });
+    return await spawn(dir, { cwd: dir, env: { COPILOT_HOME: dir } });
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

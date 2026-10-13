@@ -207,6 +207,43 @@ describe("inference dispatcher — copilot spawn integration (fake binary)", () 
     });
   });
 
+  const RUN_USAGE = {
+    inputTokens: 4289,
+    outputTokens: 87,
+    cacheReadTokens: 1,
+    cacheWriteTokens: 4286,
+    reasoningTokens: 65,
+  };
+
+  async function loggedRunUsage() {
+    writeFakeBin(
+      tmpBin,
+      "copilot",
+      copilotReplying(`"pong"`, { prompt_tokens: 4289 }, RUN_USAGE)
+    );
+    prependPath(tmpBin);
+    await inference({ user: "hi", timeout: 5000 });
+    return eventsSince("inference_call", new Date(0))[0];
+  }
+
+  const FULL_USAGE = {
+    inputTokens: 2,
+    outputTokens: 87,
+    cacheRead: 1,
+    cacheWrite5m: 4286,
+    thinkingTokens: 65,
+  };
+
+  test("with a token, the run's session file gives its output before the home is removed", async () => {
+    process.env.GH_TOKEN = "set";
+    expect(await loggedRunUsage()).toMatchObject(FULL_USAGE);
+  });
+
+  test("without a token, the run's session file is read from copilot's own home", async () => {
+    process.env.COPILOT_HOME = resolve(tmpBin, "own-home");
+    expect(await loggedRunUsage()).toMatchObject(FULL_USAGE);
+  });
+
   test("the reply is copilot's last message, not its first", async () => {
     writeFakeBin(
       tmpBin,
