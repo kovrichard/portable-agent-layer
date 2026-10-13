@@ -1,3 +1,14 @@
+# [0.102.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.101.0...v0.102.0) (2026-10-13)
+
+
+### Features
+
+* **patterns:** focus blocks ([2f629eb](https://github.com/kovrichard/portable-agent-layer/commit/2f629ebbd5d1b1fb58678cfc4c7972b527d43bd3))
+* **patterns:** one-project days and context switches ([cb446a9](https://github.com/kovrichard/portable-agent-layer/commit/cb446a942388886e7928523134a29804f423b5b8))
+* **patterns:** pal cli patterns prints the current sprint and quiet projects ([7b2ff05](https://github.com/kovrichard/portable-agent-layer/commit/7b2ff05dae9b9044e47b3cad0db07c4801c57a17))
+* **patterns:** per-project profile and agent and channel mix ([8019aaa](https://github.com/kovrichard/portable-agent-layer/commit/8019aaa6404984575dae40b51f0bdc5321139295))
+* **wrapped:** most active weekday and month ([02f8131](https://github.com/kovrichard/portable-agent-layer/commit/02f8131b09191c30bcf7d4dba4d4770840609fe9))
+
 # [0.101.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.100.0...v0.101.0) (2026-10-13)
 
 
