@@ -65,6 +65,19 @@ describe("an inference call", () => {
     expect(call?.latencyMs as number).toBeGreaterThanOrEqual(0);
   });
 
+  test("a reply that reports no usage logs every token field as unknown, not zero", async () => {
+    await inference({ user: "hi" });
+    expect(calls()[0]).toMatchObject({
+      inputTokens: null,
+      outputTokens: null,
+      cacheWrite5m: null,
+      cacheWrite1h: null,
+      cacheRead: null,
+      thinkingTokens: null,
+      costUsd: null,
+    });
+  });
+
   test("a JSON reply that misses its schema, and a reply with no JSON, are told apart", async () => {
     const jsonSchema = {
       type: "object",

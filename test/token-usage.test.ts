@@ -27,6 +27,13 @@ describe("logTokenUsage", () => {
     expect(entry.ts).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 
+  test("a call whose output count is unknown is not summed as zero", () => {
+    logTokenUsage("rating", { inputTokens: 100 });
+    expect(existsSync(resolve(TEST_HOME, "memory", "signals", "token-usage.jsonl"))).toBe(
+      false
+    );
+  });
+
   test("defaults to HAIKU model when model not specified", () => {
     logTokenUsage("session-name", { inputTokens: 10, outputTokens: 5 });
 

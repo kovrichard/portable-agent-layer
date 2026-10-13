@@ -5,6 +5,7 @@
 
 import { appendFileSync } from "node:fs";
 import { resolve } from "node:path";
+import type { InferenceUsage } from "./inference-usage";
 import { HAIKU_MODEL } from "./models";
 import { ensureDir, paths } from "./paths";
 
@@ -33,15 +34,17 @@ interface TokenUsageEntry {
 
 export function logTokenUsage(
   caller: TokenCaller,
-  usage: { inputTokens: number; outputTokens: number },
+  usage: InferenceUsage,
   model?: string
 ): void {
+  const { inputTokens, outputTokens } = usage;
+  if (inputTokens === undefined || outputTokens === undefined) return;
   const entry: TokenUsageEntry = {
     ts: new Date().toISOString(),
     caller,
     model: model ?? HAIKU_MODEL,
-    inputTokens: usage.inputTokens,
-    outputTokens: usage.outputTokens,
+    inputTokens,
+    outputTokens,
   };
 
   const dir = ensureDir(paths.signals());

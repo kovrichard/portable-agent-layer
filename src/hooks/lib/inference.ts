@@ -24,6 +24,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { z } from "zod";
+import type { TranscriptUsage } from "../../tools/lib/transcript-usage";
 import {
   getActiveAgent,
   isAntigravity,
@@ -41,6 +42,12 @@ import {
   writeInferenceAgent,
 } from "./antigravity-inference";
 import { logInferenceCall, SCHEMA_MISMATCH } from "./inference-events";
+import {
+  anthropicUsage,
+  type InferenceUsage,
+  type OpenAiUsage,
+  openAiUsage,
+} from "./inference-usage";
 import { logDebug, logError } from "./log";
 import {
   type FixedModelRoute,
@@ -175,7 +182,7 @@ interface InferenceResult {
   output?: string;
   /** First line of a failed CLI's error output. */
   error?: string;
-  usage?: { inputTokens: number; outputTokens: number };
+  usage?: InferenceUsage;
 }
 
 function schemaProblem(
@@ -973,13 +980,7 @@ async function inferenceViaApi(opts: InferenceOptions): Promise<InferenceResult>
     }
 
     const data = (await response.json()) as Record<string, unknown>;
-    const rawUsage = data?.usage as
-      | { input_tokens?: number; output_tokens?: number }
-      | undefined;
-    const usage =
-      rawUsage?.input_tokens != null && rawUsage?.output_tokens != null
-        ? { inputTokens: rawUsage.input_tokens, outputTokens: rawUsage.output_tokens }
-        : undefined;
+    const usage = data?.usage ? anthropicUsage(data.usage as TranscriptUsage) : undefined;
 
     const content = data?.content as Array<{ text?: string }> | undefined;
     const text = content?.[0]?.text?.trim();
@@ -1044,16 +1045,7 @@ async function inferenceViaOpenAiApi(opts: InferenceOptions): Promise<InferenceR
     }
 
     const data = (await response.json()) as Record<string, unknown>;
-    const rawUsage = data?.usage as
-      | { prompt_tokens?: number; completion_tokens?: number }
-      | undefined;
-    const usage =
-      rawUsage?.prompt_tokens != null && rawUsage?.completion_tokens != null
-        ? {
-            inputTokens: rawUsage.prompt_tokens,
-            outputTokens: rawUsage.completion_tokens,
-          }
-        : undefined;
+    const usage = data?.usage ? openAiUsage(data.usage as OpenAiUsage) : undefined;
 
     const choices = data?.choices as
       | Array<{ message?: { content?: string } }>

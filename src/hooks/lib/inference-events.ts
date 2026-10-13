@@ -4,6 +4,7 @@
  */
 
 import { appendEvent, logQuietly } from "./events";
+import { type InferenceUsage, USAGE_FIELDS } from "./inference-usage";
 
 interface InferenceCall {
   caller?: string;
@@ -16,7 +17,11 @@ interface InferenceOutcome {
   success: boolean;
   output?: string;
   error?: string;
-  usage?: { inputTokens: number; outputTokens: number };
+  usage?: InferenceUsage;
+}
+
+function knownOrNull(usage: InferenceUsage = {}) {
+  return Object.fromEntries(USAGE_FIELDS.map((field) => [field, usage[field] ?? null]));
 }
 
 export const SCHEMA_MISMATCH = "the reply does not match the schema";
@@ -47,8 +52,7 @@ export function logInferenceCall(
         web: Boolean(call.web),
         latencyMs: Math.round(latencyMs),
         failure: failureOf(outcome, planned.route),
-        inputTokens: outcome.usage?.inputTokens ?? null,
-        outputTokens: outcome.usage?.outputTokens ?? null,
+        ...knownOrNull(outcome.usage),
       },
       { session: call.sessionId ?? null }
     )
