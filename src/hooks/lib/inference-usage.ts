@@ -159,3 +159,39 @@ export function antigravitySpawnUsage(raw: string): InferenceUsage | undefined {
     cacheRead: usage.cache_read_tokens,
   };
 }
+
+interface CopilotModelCache {
+  prompt_tokens?: number;
+  cache_read?: number;
+  cache_write?: number;
+}
+
+function copilotModelCaches(event: Record<string, unknown>): CopilotModelCache[] {
+  const data = event.data as
+    | { promptCacheBreakState?: { models?: Record<string, CopilotModelCache> }[] }
+    | undefined;
+  return (data?.promptCacheBreakState ?? []).flatMap((state) =>
+    Object.values(state.models ?? {})
+  );
+}
+
+/**
+ * Copilot's JSON output reports the prompt side of a call only, in its last
+ * usage checkpoint, and counts cache reads and writes inside prompt_tokens.
+ */
+export function copilotSpawnUsage(raw: string): InferenceUsage | undefined {
+  const checkpoint = jsonLines(raw).findLast(
+    (event) => event.type === "session.usage_checkpoint"
+  );
+  const models = checkpoint ? copilotModelCaches(checkpoint) : [];
+  if (models.length === 0) return undefined;
+  const prompt = sum(models.map((m) => m.prompt_tokens));
+  const cacheRead = sum(models.map((m) => m.cache_read));
+  const cacheWrite = sum(models.map((m) => m.cache_write));
+  return {
+    inputTokens:
+      prompt === undefined ? undefined : prompt - (cacheRead ?? 0) - (cacheWrite ?? 0),
+    cacheWrite5m: cacheWrite,
+    cacheRead,
+  };
+}

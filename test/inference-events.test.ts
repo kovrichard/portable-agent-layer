@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { inference } from "../src/hooks/lib/inference";
 import { reload } from "../src/hooks/lib/settings";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
-import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
+import { copilotReplying, prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
@@ -41,11 +41,7 @@ beforeEach(() => {
   delete process.env[SPAWN_GUARD_ENV.SENTINEL];
   delete process.env[SPAWN_GUARD_ENV.DEPTH];
   reload();
-  writeFakeBin(
-    home,
-    "copilot",
-    `for await (const c of Bun.stdin.stream()) Bun.write(Bun.stdout, c);\n`
-  );
+  writeFakeBin(home, "copilot", copilotReplying("await Bun.stdin.text()"));
   prependPath(home);
 });
 
@@ -84,9 +80,9 @@ describe("an inference call", () => {
       properties: { x: { type: "string" } },
       required: ["x"],
     };
-    writeFakeBin(home, "copilot", `console.log('{"y":1}');\n`);
+    writeFakeBin(home, "copilot", copilotReplying(`'{"y":1}'`));
     await inference({ user: "q", caller: "session-name", jsonSchema });
-    writeFakeBin(home, "copilot", `console.log("just prose");\n`);
+    writeFakeBin(home, "copilot", copilotReplying(`"just prose"`));
     await inference({ user: "q", caller: "session-name", jsonSchema });
     expect(calls().map((c) => c.failure)).toEqual(["schema", "unparsable"]);
   });

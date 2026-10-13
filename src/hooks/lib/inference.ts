@@ -48,6 +48,7 @@ import {
   claudeResult,
   claudeSpawnUsage,
   codexSpawnUsage,
+  copilotSpawnUsage,
   type InferenceUsage,
   jsonLines,
   type OpenAiUsage,
@@ -294,7 +295,8 @@ async function routeInference(opts: InferenceOptions): Promise<InferenceResult> 
         bin,
         buildCopilotArgs(opts),
         buildCliPrompt(opts),
-        opts
+        opts,
+        COPILOT_REPLY
       );
     }
   }
@@ -666,6 +668,7 @@ async function inferenceViaAntigravitySpawn(
  *                                naming an unknown tool hides every tool
  *   --deny-tool=…             → backstop: deny rules win over any allow rule
  *   --silent                  → keeps the tool-filter notices out of stdout
+ *   --output-format json      → JSONL events: the reply and the prompt's token usage
  *   web: only web_fetch, pre-approved for every URL; Copilot has no search tool,
  *        so it fetches search pages itself
  *
@@ -682,11 +685,26 @@ export function buildCopilotArgs(opts: InferenceOptions): string[] {
     "--no-auto-update",
     "--no-color",
     "--silent",
+    "--output-format",
+    "json",
     ...copilotTools(opts),
     "--deny-tool=shell",
     "--deny-tool=write",
   ];
 }
+
+interface CopilotMessage {
+  content?: string;
+}
+
+const COPILOT_REPLY: CliReply = {
+  text: (raw) =>
+    jsonLines(raw)
+      .filter((event) => event.type === "assistant.message")
+      .map((event) => (event.data as CopilotMessage | undefined)?.content?.trim())
+      .findLast(Boolean) ?? "",
+  usage: copilotSpawnUsage,
+};
 
 function copilotTools(opts: InferenceOptions): string[] {
   return opts.web
