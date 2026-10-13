@@ -4,7 +4,7 @@
  * rather than finding it themselves, which is what makes them testable.
  */
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import type { LoggedEvent } from "../../hooks/lib/events";
 import { costOfUsage } from "../../hooks/lib/models";
@@ -194,9 +194,17 @@ interface TranscriptLine {
  * wrote — those sit one level down and are billed to the same project, so
  * missing them undercounts every session that spawned one.
  */
+function entriesOf(dir: string): Dirent[] {
+  try {
+    return readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+}
+
 function transcriptsIn(projPath: string, extension = ".jsonl"): string[] {
   const files: string[] = [];
-  for (const entry of readdirSync(projPath, { withFileTypes: true })) {
+  for (const entry of entriesOf(projPath)) {
     if (entry.isFile() && entry.name.endsWith(extension)) {
       files.push(resolve(projPath, entry.name));
       continue;
@@ -257,17 +265,14 @@ function pricedCallOf(line: string): PricedCall | null {
 }
 
 const projectDirsIn = (dir: string) =>
-  existsSync(dir)
-    ? readdirSync(dir, { withFileTypes: true })
-        .filter((entry) => entry.isDirectory())
-        .map((entry) => entry.name)
-    : [];
+  entriesOf(dir)
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name);
 
 const GZIP = ".gz";
 
 /** Claude Code deletes a transcript after cleanupPeriodDays; PAL's gzipped copy outlives it. */
 function deletedTranscriptsIn(archivedProject: string, liveProject: string): string[] {
-  if (!existsSync(archivedProject)) return [];
   return transcriptsIn(archivedProject, `.jsonl${GZIP}`).filter((copy) => {
     const original = relative(archivedProject, copy).slice(0, -GZIP.length);
     return !existsSync(resolve(liveProject, original));
@@ -292,7 +297,7 @@ function projectTranscripts(
 ) {
   const live = resolve(claudeDir, dirName);
   return [
-    ...(existsSync(live) ? transcriptsIn(live) : []),
+    ...transcriptsIn(live),
     ...(archiveDir ? deletedTranscriptsIn(resolve(archiveDir, dirName), live) : []),
   ];
 }

@@ -275,6 +275,7 @@ describe("readClaudeCode", () => {
       archived(join(archive, "-w-pal", "deleted.jsonl"), 10);
       archived(join(archive, "-w-pal", "deleted", "subagents", "agent-a.jsonl"), 100);
       archived(join(archive, "-w-gone", "only.jsonl"), 1000);
+      archived(join(archive, "-w-gone", "notes.json"), 10_000);
 
       const usage = readClaudeCode(live, undefined, NOW, archive);
       expect(usage.buckets.total.input).toBe(1111);
