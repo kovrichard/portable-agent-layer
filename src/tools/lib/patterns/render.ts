@@ -1,6 +1,7 @@
-import { count, days, row } from "../report-rows";
+import { count, days, row, tallyLabel } from "../report-rows";
 import type { DayShape, Switches } from "./days";
 import type { Focus } from "./focus";
+import type { ProjectProfile } from "./profiles";
 import type { QuietProject, Sprint } from "./sprint";
 
 function shapeLabel({ oneProject, manyProjects }: DayShape): string {
@@ -38,6 +39,22 @@ export function focusLines(focus: Focus | null): string[] {
     ),
     row("longest", longestLabel(focus)),
   ];
+}
+
+function profileLines(profile: ProjectProfile): string[] {
+  return [
+    row(
+      profile.project,
+      `${days(profile.activeDays)}, most at ${profile.hour} on ${profile.weekday}`
+    ),
+    row("  agents", tallyLabel(profile.agents)),
+    row("  channels", tallyLabel(profile.channels)),
+  ];
+}
+
+export function projectsLines(profiles: ProjectProfile[]): string[] {
+  if (profiles.length === 0) return ["\n  Projects\n", row("projects", "unknown")];
+  return ["\n  Projects\n", ...profiles.flatMap(profileLines)];
 }
 
 export function daysLines(shape: DayShape, switches: Switches | null): string[] {

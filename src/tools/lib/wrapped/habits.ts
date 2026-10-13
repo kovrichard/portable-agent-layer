@@ -49,7 +49,7 @@ const hourOf = ({ hour }: HourSlot) => `${String(hour).padStart(2, "0")}:00`;
 
 const isNight = ({ hour }: HourSlot) => hour >= NIGHT_FROM || hour < NIGHT_UNTIL;
 
-const channelOf = (turn: LoggedEvent) =>
+export const channelOf = (turn: LoggedEvent) =>
   typeof turn.channel === "string" ? turn.channel : "terminal";
 
 /** Skimming is only measured on a turn that answered a reply. */

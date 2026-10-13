@@ -4,7 +4,13 @@ import { leaf } from "../tools/lib/command";
 import { projectActivity } from "../tools/lib/patterns/activity";
 import { contextSwitches, dayShape } from "../tools/lib/patterns/days";
 import { focusBlocks } from "../tools/lib/patterns/focus";
-import { daysLines, focusLines, momentumLines } from "../tools/lib/patterns/render";
+import { projectProfiles } from "../tools/lib/patterns/profiles";
+import {
+  daysLines,
+  focusLines,
+  momentumLines,
+  projectsLines,
+} from "../tools/lib/patterns/render";
 import { currentSprint, quietAfterBurst } from "../tools/lib/patterns/sprint";
 
 function printPatterns(): undefined {
@@ -14,6 +20,7 @@ function printPatterns(): undefined {
     ...momentumLines(currentSprint(activity), quietAfterBurst(activity, localDay())),
     ...daysLines(dayShape(activity), contextSwitches(activity)),
     ...focusLines(focusBlocks(activity)),
+    ...projectsLines(projectProfiles(activity)),
   ];
   for (const line of lines) console.log(line);
 }
