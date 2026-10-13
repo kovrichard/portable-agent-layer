@@ -1,3 +1,10 @@
+# [0.106.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.105.0...v0.106.0) (2026-10-13)
+
+
+### Features
+
+* **models:** price the current openai line and kimi k3 on fireworks ([56c7d4c](https://github.com/kovrichard/portable-agent-layer/commit/56c7d4cd92a1aedaa38a6f5222857b3215352091))
+
 # [0.105.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.104.2...v0.105.0) (2026-10-13)
 
 
