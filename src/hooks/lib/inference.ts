@@ -294,13 +294,7 @@ async function routeInference(opts: InferenceOptions): Promise<InferenceResult> 
     const bin = getCopilotBinary();
     if (bin) {
       logDebug("inference", `${tag} route=copilot-spawn agent=${agent}`);
-      return inferenceViaCliSpawn(
-        bin,
-        buildCopilotArgs(opts),
-        buildCliPrompt(opts),
-        opts,
-        COPILOT_REPLY
-      );
+      return inferenceViaCopilotSpawn(bin, opts);
     }
   }
   if (isCursor()) {
@@ -708,6 +702,36 @@ const COPILOT_REPLY: CliReply = {
       .findLast(Boolean) ?? "",
   usage: copilotSpawnUsage,
 };
+
+const COPILOT_TOKEN_ENV = ["COPILOT_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"];
+
+/** A /login account lives in COPILOT_HOME's config.json; only a token variable logs in without it. */
+function copilotLogsInWithoutHome(env: NodeJS.ProcessEnv): boolean {
+  return COPILOT_TOKEN_ENV.some((name) => Boolean(env[name]));
+}
+
+/** --no-custom-instructions still loads COPILOT_HOME/instructions, where PAL's identity lives. */
+async function inferenceViaCopilotSpawn(
+  bin: string,
+  opts: InferenceOptions
+): Promise<InferenceResult> {
+  const spawn = (place?: SpawnPlace) =>
+    inferenceViaCliSpawn(
+      bin,
+      buildCopilotArgs(opts),
+      buildCliPrompt(opts),
+      opts,
+      COPILOT_REPLY,
+      place
+    );
+  if (!copilotLogsInWithoutHome(withPalEnv(process.env))) return spawn();
+  const dir = await mkdtemp(join(tmpdir(), "pal-copilot-"));
+  try {
+    return await spawn({ cwd: dir, env: { COPILOT_HOME: dir } });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
 
 function copilotTools(opts: InferenceOptions): string[] {
   return opts.web
