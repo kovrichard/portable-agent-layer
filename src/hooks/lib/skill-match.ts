@@ -45,7 +45,7 @@ function normalize(text: string): string {
     .trim()} `;
 }
 
-function readSkillIndex(): SkillIndex | null {
+export function readSkillIndex(): SkillIndex | null {
   const path = resolve(paths.state(), "skill-index.json");
   if (!existsSync(path)) return null;
   try {

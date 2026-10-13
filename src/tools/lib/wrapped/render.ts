@@ -4,6 +4,7 @@ import { fmtDuration } from "../session-usage";
 import { fmtCost } from "../token-report";
 import type { RuntimeCost, WrappedAgents } from "./agents";
 import type { WrappedHabits } from "./habits";
+import type { SkillsNeverUsed, WrappedPal } from "./pal";
 import type { Best, WrappedRecords } from "./records";
 import type { WrappedTotals } from "./totals";
 import type { Tally } from "./year";
@@ -70,6 +71,28 @@ export function habitsLines(habits: WrappedHabits): string[] {
     row("messages by channel", tallyLabel(habits.channels)),
     row("skimmed replies", percent(habits.skimRate)),
     row("corrections", percent(habits.correctionRate)),
+  ];
+}
+
+function neverUsedLines(never: SkillsNeverUsed | null): string[] {
+  if (never === null) return [row("skills never used", "unknown")];
+  const summary = `${count(never.names.length)} of ${count(never.installed)} since ${never.since}`;
+  const names = never.names.length > 0 ? [row("", never.names.join(", "))] : [];
+  return [row("skills never used", summary), ...names];
+}
+
+/** Nothing logs a steering rule being approved yet. */
+export function palLines(pal: WrappedPal): string[] {
+  const onTime = pal.promisesOnTime;
+  return [
+    "\n  PAL\n",
+    row("skills used", tallyLabel(pal.skillsUsed)),
+    ...neverUsedLines(pal.skillsNeverUsed),
+    row("rules approved", "unknown"),
+    row(
+      "promises on time",
+      onTime === null ? "unknown" : `${count(onTime)} of ${count(pal.promisesKept)}`
+    ),
   ];
 }
 

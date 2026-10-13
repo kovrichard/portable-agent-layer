@@ -1,10 +1,13 @@
+import { readSkillIndex } from "../hooks/lib/skill-match";
 import { leaf, UsageError } from "../tools/lib/command";
 import { wrappedAgents } from "../tools/lib/wrapped/agents";
 import { wrappedHabits } from "../tools/lib/wrapped/habits";
+import { wrappedPal } from "../tools/lib/wrapped/pal";
 import { wrappedRecords } from "../tools/lib/wrapped/records";
 import {
   agentsLines,
   habitsLines,
+  palLines,
   recordsLines,
   totalsLines,
 } from "../tools/lib/wrapped/render";
@@ -29,6 +32,7 @@ function printWrapped(year: number): undefined {
     ...recordsLines(wrappedRecords(events)),
     ...habitsLines(wrappedHabits(events)),
     ...agentsLines(wrappedAgents(events)),
+    ...palLines(wrappedPal(events, readSkillIndex())),
   ];
   for (const line of lines) console.log(line);
 }
