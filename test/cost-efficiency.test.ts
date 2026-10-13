@@ -80,12 +80,12 @@ describe("efficiency as printed", () => {
       efficiencyLines({
         since: "2026-06-01",
         perCommit: { cost: 1, units: 3, lowerBound: false },
-        perClosedIsc: { cost: 4, units: 2, lowerBound: false },
+        perClosedIsc: { cost: 4, units: 1, lowerBound: false },
         cacheHitRate: null,
       }).slice(1)
     ).toEqual([
       "    Per commit       $1.00 over 3 commits",
-      "    Per closed ISC   $4.00 over 2 ISCs",
+      "    Per closed ISC   $4.00 over 1 ISC",
       "    Cache hit rate   unknown",
     ]);
   });
