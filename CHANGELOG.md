@@ -1,3 +1,10 @@
+## [0.103.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.103.0...v0.103.1) (2026-10-13)
+
+
+### Bug Fixes
+
+* **inference:** keep pal's instructions out of copilot spawns ([58307c2](https://github.com/kovrichard/portable-agent-layer/commit/58307c2e0877f1ee7d4c047f36aa3dd5c7eda238))
+
 # [0.103.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.102.0...v0.103.0) (2026-10-13)
 
 
