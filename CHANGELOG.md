@@ -1,3 +1,15 @@
+# [0.104.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.103.1...v0.104.0) (2026-10-13)
+
+
+### Bug Fixes
+
+* **cost:** stop counting copilot cache writes as uncached input ([0a54b80](https://github.com/kovrichard/portable-agent-layer/commit/0a54b80696203f1ea681946e66170da149e12c0c))
+
+
+### Features
+
+* **inference:** read copilot's output tokens from its session file ([37b614e](https://github.com/kovrichard/portable-agent-layer/commit/37b614ebcdf6ebd6a8f6b7e58019e1f8cdb8ba51))
+
 ## [0.103.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.103.0...v0.103.1) (2026-10-13)
 
 
