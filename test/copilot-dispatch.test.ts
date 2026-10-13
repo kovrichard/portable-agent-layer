@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
+import { existsSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { eventsSince } from "../src/hooks/lib/events";
 import { buildCliPrompt, buildCopilotArgs, inference } from "../src/hooks/lib/inference";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
@@ -8,6 +10,8 @@ import { freshTestDir } from "./lib/test-home";
 
 setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
+const COPILOT_TOKEN_ENV = ["COPILOT_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"];
+
 const PRESERVED = [
   "PAL_AGENT",
   "PAL_ANTHROPIC_API_KEY",
@@ -15,6 +19,8 @@ const PRESERVED = [
   "PAL_INFERENCE_DISABLED",
   "PATH",
   "CLAUDECODE",
+  "COPILOT_HOME",
+  ...COPILOT_TOKEN_ENV,
   SPAWN_GUARD_ENV.SENTINEL,
   SPAWN_GUARD_ENV.DEPTH,
 ] as const;
@@ -117,7 +123,42 @@ describe("inference dispatcher — copilot spawn integration (fake binary)", () 
     delete process.env[SPAWN_GUARD_ENV.SENTINEL];
     delete process.env[SPAWN_GUARD_ENV.DEPTH];
     delete process.env.PAL_INFERENCE_DISABLED;
+    for (const name of COPILOT_TOKEN_ENV) delete process.env[name];
+    process.env.COPILOT_HOME = "/users/own-copilot-home";
     process.env.PAL_AGENT = "copilot";
+  });
+
+  const reportsWhereItRan = () =>
+    copilotReplying(
+      "JSON.stringify({ home: process.env.COPILOT_HOME, cwd: process.cwd() })"
+    );
+
+  async function whereCopilotRan(): Promise<{ home: string; cwd: string }> {
+    writeFakeBin(tmpBin, "copilot", reportsWhereItRan());
+    prependPath(tmpBin);
+    const result = await inference({ user: "hi", timeout: 5000 });
+    return JSON.parse(result.output ?? "{}");
+  }
+
+  test.each(COPILOT_TOKEN_ENV)("with %s, PAL's instructions stay out", async (name) => {
+    process.env[name] = "set";
+    const seen = await whereCopilotRan();
+    expect(seen.home).toBe(seen.cwd);
+    expect(seen.cwd).not.toBe(process.cwd());
+    expect(existsSync(seen.home)).toBe(false);
+  });
+
+  test("a token in PAL's .env counts too", async () => {
+    writeFileSync(resolve(tmpBin, ".env"), "GH_TOKEN=set\n");
+    expect((await whereCopilotRan()).home).not.toBe("/users/own-copilot-home");
+  });
+
+  test("without a token copilot keeps its own home, where its /login account lives", async () => {
+    process.env.GITHUB_TOKEN = "";
+    expect(await whereCopilotRan()).toEqual({
+      home: "/users/own-copilot-home",
+      cwd: process.cwd(),
+    });
   });
 
   test("end-to-end: fake copilot echoes stdin, dispatcher captures it", async () => {
