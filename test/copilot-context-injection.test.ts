@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
@@ -69,4 +69,18 @@ describe("LoadContext on Copilot", () => {
     const written = resolve(copilotDir, "instructions", "pal-session.instructions.md");
     expect(existsSync(written)).toBe(true);
   });
+
+  test("logs how much context it injected", () => {
+    const logged = injectedEvents();
+    expect(logged).toHaveLength(1);
+    expect(logged[0].dynamicChars).toBeGreaterThan(0);
+  });
 });
+
+function injectedEvents(): Record<string, number>[] {
+  const dir = resolve(sandbox, "home", "memory", "events");
+  return readdirSync(dir)
+    .flatMap((file) => readFileSync(resolve(dir, file), "utf-8").trim().split("\n"))
+    .map((line) => JSON.parse(line))
+    .filter((event) => event.type === "context_injected");
+}

@@ -11,4 +11,7 @@ export function tallyLabel(tallies: Tally[]): string {
   return tallies.map((t) => `${t.name} ${count(t.count)}`).join(" · ");
 }
 
-export const days = (n: number) => `${count(n)} ${n === 1 ? "day" : "days"}`;
+export const counted = (n: number, noun: string) =>
+  `${count(n)} ${noun}${n === 1 ? "" : "s"}`;
+
+export const days = (n: number) => counted(n, "day");
