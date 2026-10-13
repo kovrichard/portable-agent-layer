@@ -24,7 +24,7 @@ export type CostMonths = Map<string, Map<string, AgentMonth>>;
 const numberOf = (value: unknown) => (typeof value === "number" ? value : 0);
 
 /** Claude Code at its dated rates, opencode at the cost it recorded, anything else unknown. */
-function apiPriceOf(event: LoggedEvent): number | null {
+export function apiPriceOf(event: LoggedEvent): number | null {
   if (event.runtime === "opencode")
     return typeof event.costUsd === "number" ? event.costUsd : null;
   if (event.runtime !== "claude" || typeof event.model !== "string") return null;
@@ -91,6 +91,25 @@ function paidFor(month: AgentMonth): number | null {
     paid += price;
   }
   return paid;
+}
+
+export interface CostTotals {
+  apiEquivalent: number;
+  unpriced: number;
+  paid: number | null;
+}
+
+/** Paid is null when any agent-month's payment is unknown. */
+export function costTotals(months: CostMonths): CostTotals {
+  const agentMonths = [...months.values()].flatMap((agents) => [...agents.values()]);
+  const paids = agentMonths.map(paidFor);
+  return {
+    apiEquivalent: agentMonths.reduce((sum, m) => sum + m.apiEquivalent, 0),
+    unpriced: agentMonths.reduce((sum, m) => sum + m.unpriced, 0),
+    paid: paids.includes(null)
+      ? null
+      : paids.reduce<number>((sum, p) => sum + (p ?? 0), 0),
+  };
 }
 
 /** Null unless both sides are known and something was paid. */

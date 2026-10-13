@@ -19,17 +19,25 @@ const FIELDS = {
   hourCycle: "h23",
 } as const;
 
+const formatters = new Map<string, Intl.DateTimeFormat>();
+
+function formatterFor(timeZone: string): Intl.DateTimeFormat {
+  const cached = formatters.get(timeZone);
+  if (cached) return cached;
+  const formatter = new Intl.DateTimeFormat("en-US", { ...FIELDS, timeZone });
+  formatters.set(timeZone, formatter);
+  return formatter;
+}
+
 function fieldsIn(now: Date, timeZone: string): Record<string, string> {
-  const parts = new Intl.DateTimeFormat("en-US", { ...FIELDS, timeZone }).formatToParts(
-    now
-  );
+  const parts = formatterFor(timeZone).formatToParts(now);
   return Object.fromEntries(parts.map((p) => [p.type, p.value]));
 }
 
 /** The IANA name Intl settles on, or null when it does not recognise the input. */
 export function canonicalTimeZone(timeZone: string): string | null {
   try {
-    return new Intl.DateTimeFormat("en-US", { timeZone }).resolvedOptions().timeZone;
+    return formatterFor(timeZone).resolvedOptions().timeZone;
   } catch {
     return null;
   }

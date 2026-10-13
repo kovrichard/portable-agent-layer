@@ -160,6 +160,15 @@ describe("reading events back", () => {
     );
     expect(words).toEqual([2, 3]);
   });
+
+  test("the cut is the instant itself, not the month it falls in", () => {
+    appendEvent("turn", { words: 1 }, { ts: "2026-09-15T09:59:59.999Z" });
+    appendEvent("turn", { words: 2 }, { ts: "2026-09-15T10:00:00.000Z" });
+    const words = eventsSince("turn", new Date("2026-09-15T10:00:00Z")).map(
+      (e) => e.words
+    );
+    expect(words).toEqual([2]);
+  });
 });
 
 describe("cost", () => {
