@@ -31,6 +31,7 @@ describe("context overhead", () => {
       contextOverhead([
         injected("s", "2026-06-02T10:00:00.000Z", [100, 40, 10]),
         injected("s", "2026-06-02T12:00:00.000Z", [100, 40, 20]),
+        injected("s", "2026-06-02T13:00:00.000Z", [0, 0, 0]),
         injected(null, "2026-06-01T21:59:00.000Z", [100, 40, 30]),
         injected(null, "2026-06-02T09:00:00.000Z", [100, undefined, 60]),
       ])
