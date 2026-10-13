@@ -218,13 +218,14 @@ interface CopilotEvent {
   };
 }
 
-/** Copilot counts cache reads inside inputTokens. */
+/** Copilot counts cache reads and writes inside inputTokens. */
 function copilotTokens(usage: CopilotModelMetrics["usage"] = {}): Tokens {
   const cacheRead = usage.cacheReadTokens ?? 0;
+  const cacheWrite = usage.cacheWriteTokens ?? 0;
   return {
-    input: (usage.inputTokens ?? 0) - cacheRead,
+    input: (usage.inputTokens ?? 0) - cacheRead - cacheWrite,
     output: usage.outputTokens ?? 0,
-    cacheWrite5m: usage.cacheWriteTokens ?? 0,
+    cacheWrite5m: cacheWrite,
     cacheWrite1h: 0,
     cacheRead,
   };

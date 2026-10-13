@@ -35,15 +35,25 @@ export function codexReplying(replyExpr: string, usage: object = {}): string {
 }
 
 /** A fake copilot's logic that answers `replyExpr` the way `--output-format json` does. */
-export function copilotReplying(replyExpr: string, modelUsage?: object): string {
+const COPILOT_RUN_ID = "run-1";
+
+export function copilotReplying(
+  replyExpr: string,
+  modelUsage?: object,
+  runUsage?: object
+): string {
   const checkpoint = modelUsage
     ? `console.log(JSON.stringify({ type: "session.usage_checkpoint", data: { promptCacheBreakState: [{ models: { m: ${JSON.stringify(modelUsage)} } }] } }));`
+    : "";
+  const shutdown = runUsage
+    ? `await Bun.write(process.env.COPILOT_HOME + "/session-state/${COPILOT_RUN_ID}/events.jsonl", JSON.stringify({ type: "session.shutdown", data: { modelMetrics: { m: { usage: ${JSON.stringify(runUsage)} } } } }) + "\\n");`
     : "";
   return [
     `const reply = ${replyExpr};`,
     `console.log(JSON.stringify({ type: "assistant.message", data: { content: String(reply), phase: "final_answer" } }));`,
     checkpoint,
-    `console.log(JSON.stringify({ type: "result", exitCode: 0 }));`,
+    shutdown,
+    `console.log(JSON.stringify({ type: "result", sessionId: "${COPILOT_RUN_ID}", exitCode: 0 }));`,
     "",
   ].join("\n");
 }

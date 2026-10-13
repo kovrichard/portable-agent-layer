@@ -207,7 +207,7 @@ describe("readCopilot", () => {
     ]);
     const usage = readCopilot(dir, undefined, NOW);
     expect(usage.buckets.today).toMatchObject({
-      input: 140,
+      input: 130,
       cacheRead: 60,
       output: 20,
       cacheWrite5m: 10,

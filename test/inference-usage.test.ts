@@ -4,6 +4,8 @@ import {
   antigravitySpawnUsage,
   claudeResult,
   codexSpawnUsage,
+  copilotSessionId,
+  copilotShutdownUsage,
   copilotSpawnUsage,
   jsonLines,
   openAiUsage,
@@ -100,6 +102,51 @@ describe("copilot's and antigravity's usage", () => {
         })
       )
     ).toEqual({ inputTokens: undefined, cacheWrite5m: undefined, cacheRead: 2 });
+  });
+
+  test("a copilot run's id is read from its result, and only a plain name counts", () => {
+    expect(copilotSessionId(lines({ type: "result", sessionId: "a1-b2" }))).toBe("a1-b2");
+    expect(
+      copilotSessionId(lines({ type: "result", sessionId: "../x" }))
+    ).toBeUndefined();
+    expect(copilotSessionId(lines({ type: "result", sessionId: 7 }))).toBeUndefined();
+    expect(copilotSessionId(lines({ type: "info", sessionId: "a" }))).toBeUndefined();
+  });
+
+  test("a copilot run's shutdown sums every model, and without one there is no usage", () => {
+    const usage = (inputTokens: number) => ({
+      usage: {
+        inputTokens,
+        outputTokens: 5,
+        cacheReadTokens: 1,
+        cacheWriteTokens: 2,
+        reasoningTokens: 3,
+      },
+    });
+    expect(
+      copilotShutdownUsage(
+        lines(
+          { type: "session.shutdown", data: { modelMetrics: { a: usage(10) } } },
+          {
+            type: "session.shutdown",
+            data: { modelMetrics: { a: usage(10), b: usage(20) } },
+          },
+          { type: "session.info", data: { modelMetrics: { a: usage(99) } } }
+        )
+      )
+    ).toEqual({
+      inputTokens: 24,
+      outputTokens: 10,
+      cacheRead: 2,
+      cacheWrite5m: 4,
+      thinkingTokens: 6,
+    });
+    expect(copilotShutdownUsage(lines({ type: "session.start" }))).toBeUndefined();
+    expect(
+      copilotShutdownUsage(
+        lines({ type: "session.shutdown", data: { modelMetrics: { a: {} } } })
+      )
+    ).toEqual({});
   });
 
   test("antigravity without a result event is no usage", () => {
