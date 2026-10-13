@@ -25,7 +25,7 @@ export const USAGE_FIELDS = [
   "costUsd",
 ] as const satisfies readonly (keyof InferenceUsage)[];
 
-function jsonLines(raw: string): Record<string, unknown>[] {
+export function jsonLines(raw: string): Record<string, unknown>[] {
   return raw.split("\n").flatMap((line) => {
     try {
       const value: unknown = JSON.parse(line);
@@ -35,6 +35,11 @@ function jsonLines(raw: string): Record<string, unknown>[] {
     }
   });
 }
+
+const sum = (values: (number | undefined)[]) =>
+  values.some((v) => v !== undefined)
+    ? values.reduce<number>((total, v) => total + (v ?? 0), 0)
+    : undefined;
 
 export function anthropicUsage(usage: TranscriptUsage, costUsd?: number): InferenceUsage {
   return {
@@ -76,4 +81,31 @@ export function claudeSpawnUsage(raw: string): InferenceUsage | undefined {
   const result = claudeResult(raw);
   if (!result?.usage) return undefined;
   return anthropicUsage(result.usage as TranscriptUsage, result.total_cost_usd as number);
+}
+
+interface CodexUsage {
+  input_tokens?: number;
+  cached_input_tokens?: number;
+  cache_write_input_tokens?: number;
+  output_tokens?: number;
+  reasoning_output_tokens?: number;
+}
+
+/** Codex counts cache reads and writes inside input_tokens. */
+export function codexSpawnUsage(raw: string): InferenceUsage | undefined {
+  const turns = jsonLines(raw)
+    .filter((event) => event.type === "turn.completed" && event.usage)
+    .map((event) => event.usage as CodexUsage);
+  if (turns.length === 0) return undefined;
+  const cacheRead = sum(turns.map((u) => u.cached_input_tokens));
+  const cacheWrite = sum(turns.map((u) => u.cache_write_input_tokens));
+  const input = sum(turns.map((u) => u.input_tokens));
+  return {
+    inputTokens:
+      input === undefined ? undefined : input - (cacheRead ?? 0) - (cacheWrite ?? 0),
+    outputTokens: sum(turns.map((u) => u.output_tokens)),
+    thinkingTokens: sum(turns.map((u) => u.reasoning_output_tokens)),
+    cacheWrite5m: cacheWrite,
+    cacheRead,
+  };
 }

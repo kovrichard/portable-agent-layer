@@ -46,7 +46,9 @@ import {
   anthropicUsage,
   claudeResult,
   claudeSpawnUsage,
+  codexSpawnUsage,
   type InferenceUsage,
+  jsonLines,
   type OpenAiUsage,
   openAiUsage,
 } from "./inference-usage";
@@ -262,7 +264,13 @@ async function routeInference(opts: InferenceOptions): Promise<InferenceResult> 
     const bin = getCodexBinary();
     if (bin) {
       logDebug("inference", `${tag} route=codex-spawn agent=${agent}`);
-      return inferenceViaCliSpawn(bin, buildCodexArgs(opts), buildCliPrompt(opts), opts);
+      return inferenceViaCliSpawn(
+        bin,
+        buildCodexArgs(opts),
+        buildCliPrompt(opts),
+        opts,
+        CODEX_REPLY
+      );
     }
   }
   if (isCodex() && hasOpenAiKey()) {
@@ -478,6 +486,7 @@ async function inferenceViaClaudeSpawn(
  *   --ignore-rules        → no execpolicy .rules files load
  *   --sandbox read-only   → child cannot execute shell commands even if it tries
  *   --ephemeral           → no session persistence; one-shot only
+ *   --json                → NDJSON events: the reply and the turn's token usage
  *
  * Codex has no --system-prompt equivalent, so system + user + JSON-schema become
  * one prompt. That prompt goes in on stdin, not as a positional argument, because
@@ -501,9 +510,25 @@ export function buildCodexArgs(opts: InferenceOptions): string[] {
     "--sandbox",
     "read-only",
     "--ephemeral",
+    "--json",
     ...(opts.web ? ["-c", "web_search=live"] : []),
   ];
 }
+
+interface CodexItem {
+  type?: string;
+  text?: string;
+}
+
+const CODEX_REPLY: CliReply = {
+  text: (raw) =>
+    jsonLines(raw)
+      .filter((event) => event.type === "item.completed")
+      .map((event) => event.item as CodexItem)
+      .findLast((item) => item?.type === "agent_message")
+      ?.text?.trim() ?? "",
+  usage: codexSpawnUsage,
+};
 
 /**
  * Build the argv for `opencode run …` from inference options. Pure.
