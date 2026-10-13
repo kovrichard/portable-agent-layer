@@ -193,13 +193,63 @@ export function copilotSpawnUsage(raw: string): InferenceUsage | undefined {
   );
   const models = checkpoint ? copilotModelCaches(checkpoint) : [];
   if (models.length === 0) return undefined;
-  const prompt = sum(models.map((m) => m.prompt_tokens));
   const cacheRead = sum(models.map((m) => m.cache_read));
   const cacheWrite = sum(models.map((m) => m.cache_write));
   return {
-    inputTokens:
-      prompt === undefined ? undefined : prompt - (cacheRead ?? 0) - (cacheWrite ?? 0),
+    inputTokens: uncachedInput(
+      sum(models.map((m) => m.prompt_tokens)),
+      cacheRead,
+      cacheWrite
+    ),
     cacheWrite5m: cacheWrite,
     cacheRead,
+  };
+}
+
+function uncachedInput(
+  prompt: number | undefined,
+  cacheRead: number | undefined,
+  cacheWrite: number | undefined
+): number | undefined {
+  return prompt === undefined ? undefined : prompt - (cacheRead ?? 0) - (cacheWrite ?? 0);
+}
+
+const COPILOT_SESSION_ID = /^[\w-]+$/;
+
+export function copilotSessionId(raw: string): string | undefined {
+  const id = jsonLines(raw).findLast((event) => event.type === "result")?.sessionId;
+  return typeof id === "string" && COPILOT_SESSION_ID.test(id) ? id : undefined;
+}
+
+interface CopilotRunUsage {
+  inputTokens?: number;
+  outputTokens?: number;
+  cacheReadTokens?: number;
+  cacheWriteTokens?: number;
+  reasoningTokens?: number;
+}
+
+/** A run's session.shutdown carries all of its usage, output included; inputTokens folds in cache reads and writes. */
+export function copilotShutdownUsage(eventsJsonl: string): InferenceUsage | undefined {
+  const shutdown = jsonLines(eventsJsonl).findLast(
+    (event) => event.type === "session.shutdown"
+  );
+  const data = shutdown?.data as
+    | { modelMetrics?: Record<string, { usage?: CopilotRunUsage }> }
+    | undefined;
+  const runs = Object.values(data?.modelMetrics ?? {}).map((model) => model.usage ?? {});
+  if (runs.length === 0) return undefined;
+  const cacheRead = sum(runs.map((u) => u.cacheReadTokens));
+  const cacheWrite = sum(runs.map((u) => u.cacheWriteTokens));
+  return {
+    inputTokens: uncachedInput(
+      sum(runs.map((u) => u.inputTokens)),
+      cacheRead,
+      cacheWrite
+    ),
+    outputTokens: sum(runs.map((u) => u.outputTokens)),
+    cacheWrite5m: cacheWrite,
+    cacheRead,
+    thinkingTokens: sum(runs.map((u) => u.reasoningTokens)),
   };
 }
