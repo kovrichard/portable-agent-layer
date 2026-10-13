@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { basename, resolve } from "node:path";
 import { eventsSince } from "../src/hooks/lib/events";
 import { buildCliPrompt, buildCopilotArgs, inference } from "../src/hooks/lib/inference";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
@@ -143,7 +143,8 @@ describe("inference dispatcher — copilot spawn integration (fake binary)", () 
   test.each(COPILOT_TOKEN_ENV)("with %s, PAL's instructions stay out", async (name) => {
     process.env[name] = "set";
     const seen = await whereCopilotRan();
-    expect(seen.home).toBe(seen.cwd);
+    expect(basename(seen.cwd)).toBe(basename(seen.home));
+    expect(basename(seen.home)).toStartWith("pal-copilot-");
     expect(seen.cwd).not.toBe(process.cwd());
     expect(existsSync(seen.home)).toBe(false);
   });
