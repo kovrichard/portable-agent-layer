@@ -28,6 +28,7 @@ import { serverCommand } from "./server";
 import { skillCommand } from "./skill";
 import { subagentCommand } from "./subagent";
 import { usageCommand } from "./usage";
+import { wrappedCommand } from "./wrapped";
 
 type Handler = Leaf["run"];
 export type DebugState = "on" | "off" | "status";
@@ -155,6 +156,7 @@ export function cliTree(admin: AdminHandlers): Group {
       ...adminCommands(admin),
       usage: usageCommand,
       cost: costCommand,
+      wrapped: wrappedCommand,
       content: contentCommand,
       events: eventsCommand,
       infer: inferCommand,

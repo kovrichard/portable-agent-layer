@@ -322,7 +322,7 @@ export function eventsInMonth(type: EventType, month: Date): LoggedEvent[] {
   return parseLines(file).filter((e) => e.type === type);
 }
 
-export function eventsSince(type: EventType, since: Date): LoggedEvent[] {
+export function allEventsSince(since: Date): LoggedEvent[] {
   const dir = eventsDir();
   const sinceTs = since.toISOString();
   const fromMonth = monthOf(sinceTs);
@@ -330,5 +330,9 @@ export function eventsSince(type: EventType, since: Date): LoggedEvent[] {
     .filter((f) => f.endsWith(".jsonl") && f.slice(0, 7) >= fromMonth)
     .sort()
     .flatMap((f) => parseLines(resolve(dir, f)))
-    .filter((e) => e.type === type && e.ts >= sinceTs);
+    .filter((e) => e.ts >= sinceTs);
+}
+
+export function eventsSince(type: EventType, since: Date): LoggedEvent[] {
+  return allEventsSince(since).filter((e) => e.type === type);
 }

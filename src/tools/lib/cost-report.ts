@@ -93,6 +93,25 @@ function paidFor(month: AgentMonth): number | null {
   return paid;
 }
 
+export interface CostTotals {
+  apiEquivalent: number;
+  unpriced: number;
+  paid: number | null;
+}
+
+/** Paid is null when any agent-month's payment is unknown. */
+export function costTotals(months: CostMonths): CostTotals {
+  const agentMonths = [...months.values()].flatMap((agents) => [...agents.values()]);
+  const paids = agentMonths.map(paidFor);
+  return {
+    apiEquivalent: agentMonths.reduce((sum, m) => sum + m.apiEquivalent, 0),
+    unpriced: agentMonths.reduce((sum, m) => sum + m.unpriced, 0),
+    paid: paids.includes(null)
+      ? null
+      : paids.reduce<number>((sum, p) => sum + (p ?? 0), 0),
+  };
+}
+
 /** Null unless both sides are known and something was paid. */
 function leverageOf(month: AgentMonth): number | null {
   const paid = paidFor(month);
