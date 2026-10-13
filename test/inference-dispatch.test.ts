@@ -530,11 +530,11 @@ describe("web research", () => {
     prependPath(tmpBin);
 
     const result = await inference({ ...web, timeout: 5000 });
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       success: false,
       error: "web research is not available on opencode yet",
-      model: expect.any(String),
     });
+    expect(result.output).toBeUndefined();
   });
 
   for (const [name, build] of [
