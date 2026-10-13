@@ -29,6 +29,7 @@ describe("logTokenUsage", () => {
 
   test("a call whose output count is unknown is not summed as zero", () => {
     logTokenUsage("rating", { inputTokens: 100 });
+    logTokenUsage("rating", { outputTokens: 100 });
     expect(existsSync(resolve(TEST_HOME, "memory", "signals", "token-usage.jsonl"))).toBe(
       false
     );

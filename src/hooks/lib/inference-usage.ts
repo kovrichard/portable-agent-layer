@@ -110,32 +110,40 @@ export function codexSpawnUsage(raw: string): InferenceUsage | undefined {
   };
 }
 
+interface OpencodeTokens {
+  input?: number;
+  output?: number;
+  reasoning?: number;
+  cache?: { read?: number; write?: number };
+}
+
 interface OpencodeStep {
-  tokens?: {
-    input?: number;
-    output?: number;
-    reasoning?: number;
-    cache?: { read?: number; write?: number };
-  } | null;
+  tokens?: OpencodeTokens | null;
   cost?: number | null;
+}
+
+function opencodeSteps(raw: string): (OpencodeTokens & { cost?: number })[] {
+  return jsonLines(raw)
+    .filter((event) => event.type === "step_finish")
+    .flatMap((event) => {
+      const { tokens, cost } = (event.part ?? {}) as OpencodeStep;
+      return tokens ? [{ ...tokens, cost: cost ?? undefined }] : [];
+    });
 }
 
 /** opencode reports reasoning apart from output; model_call counts it in both. */
 export function opencodeSpawnUsage(raw: string): InferenceUsage | undefined {
-  const steps = jsonLines(raw)
-    .filter((event) => event.type === "step_finish")
-    .map((event) => (event.part ?? {}) as OpencodeStep)
-    .filter((step) => step.tokens);
+  const steps = opencodeSteps(raw);
   if (steps.length === 0) return undefined;
-  const output = sum(steps.map((s) => s.tokens?.output));
-  const reasoning = sum(steps.map((s) => s.tokens?.reasoning));
+  const output = sum(steps.map((s) => s.output));
+  const reasoning = sum(steps.map((s) => s.reasoning));
   return {
-    inputTokens: sum(steps.map((s) => s.tokens?.input)),
+    inputTokens: sum(steps.map((s) => s.input)),
     outputTokens: sum([output, reasoning]),
     thinkingTokens: reasoning,
-    cacheWrite5m: sum(steps.map((s) => s.tokens?.cache?.write)),
-    cacheRead: sum(steps.map((s) => s.tokens?.cache?.read)),
-    costUsd: sum(steps.map((s) => s.cost ?? undefined)),
+    cacheWrite5m: sum(steps.map((s) => s.cache?.write)),
+    cacheRead: sum(steps.map((s) => s.cache?.read)),
+    costUsd: sum(steps.map((s) => s.cost)),
   };
 }
 
