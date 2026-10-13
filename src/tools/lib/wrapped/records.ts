@@ -65,13 +65,13 @@ function longestAgentRun(events: LoggedEvent[]): Best | null {
   );
 }
 
-interface TurnSpan {
+export interface TurnSpan {
   turn: LoggedEvent;
   inside: LoggedEvent[];
 }
 
 /** Each user turn and what happened in its session until the next one. */
-function turnSpans(events: LoggedEvent[]): TurnSpan[] {
+export function turnSpans(events: LoggedEvent[]): TurnSpan[] {
   const open = new Map<string, TurnSpan>();
   const spans: TurnSpan[] = [];
   const inTimeOrder = [...events].sort((a, b) => a.ts.localeCompare(b.ts));
@@ -86,11 +86,11 @@ function turnSpans(events: LoggedEvent[]): TurnSpan[] {
   return spans;
 }
 
-const whereAndWhen = (turn: LoggedEvent) =>
+export const whereAndWhen = (turn: LoggedEvent) =>
   turn.project === null ? dayOf(turn) : `${dayOf(turn)}, ${turn.project}`;
 
 /** A turn with any call PAL cannot price is left out rather than undercounted. */
-function turnCost({ inside }: TurnSpan): number | null {
+export function turnCost({ inside }: TurnSpan): number | null {
   const prices = ofType(inside, "model_call").map(apiPriceOf);
   if (prices.length === 0 || prices.includes(null)) return null;
   return prices.reduce<number>((sum, p) => sum + (p ?? 0), 0);
