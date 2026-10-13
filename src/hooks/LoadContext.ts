@@ -8,23 +8,21 @@
  * Which agent gets what, in which envelope, is in lib/session-context.ts.
  */
 
-import { mkdirSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { getActiveAgent } from "./lib/agent";
 import { autoUpdateOnStart } from "./lib/auto-update";
 import { buildClaudeMd, regenerateIfNeeded } from "./lib/claude-md";
 import { type AgentTarget, buildSystemReminder } from "./lib/context";
+import { logContextInjected } from "./lib/context-overhead";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { logContextSnapshot, logDebug, logError } from "./lib/log";
-import { platform } from "./lib/paths";
 import {
   contextEnvelope,
   contextForSource,
-  copilotInstructions,
   isSubagentSession,
   needsAgentsMd,
+  writeCopilotInstructions,
 } from "./lib/session-context";
-import { logSessionStart } from "./lib/session-events";
+import { logSessionStart, type SessionStartPayload } from "./lib/session-events";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
 
@@ -49,7 +47,7 @@ try {
 
 try {
   const active = getActiveAgent();
-  const input = await readStdinJSON<{ source?: string }>();
+  const input = await readStdinJSON<SessionStartPayload>();
   logSessionStart(input);
   const wanted = contextForSource(active, input?.source);
   if (wanted === "none") {
@@ -75,15 +73,11 @@ try {
   );
   if (!envelope) process.exit(0);
 
-  if (envelope.file) {
-    const dir = resolve(platform.copilotDir(), "instructions");
-    mkdirSync(dir, { recursive: true });
-    const path = resolve(dir, "pal-session.instructions.md");
-    writeFileSync(path, copilotInstructions(envelope.file), "utf-8");
-  }
+  if (envelope.file) writeCopilotInstructions(envelope.file);
 
   if (envelope.kind === "text") console.log(envelope.payload);
   else process.stdout.write(envelope.payload);
+  logContextInjected(input, reminder);
   logDebug("LoadContext", `Reminder injected: ${reminder.length} chars`);
 } catch (err) {
   logError("LoadContext:reminder", err);

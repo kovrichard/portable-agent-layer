@@ -20,7 +20,7 @@ const SESSION_LOOKBACK_MS = 7 * 24 * 60 * 60 * 1000;
 const TRANSCRIPT_TAIL_BYTES = 256 * 1024;
 const MAX_FIELD = 64;
 
-interface SessionStartPayload extends HookTurnPayload {
+export interface SessionStartPayload extends HookTurnPayload {
   source?: string;
   model?: unknown;
 }

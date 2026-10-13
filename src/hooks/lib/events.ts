@@ -54,6 +54,7 @@ export const EVENT_FIELDS = {
   ],
   session_end: ["reason", "durationSec", "turns", "messages", "status"],
   compaction: ["trigger", "withInstructions", "contextTokens"],
+  context_injected: ["instructionsChars", "semiStaticChars", "dynamicChars"],
   hook_timing: ["hook", "totalMs", "handlers"],
   inference_call: [
     "caller",

@@ -48,7 +48,7 @@ export function antigravityRule(description: string, content: string): string {
   return `---\ntrigger: always_on\ndescription: ${description}\n---\n\n${content}`;
 }
 
-function readFileSafe(path: string): string {
+export function readFileSafe(path: string): string {
   try {
     if (!existsSync(path)) return "";
     return readFileSync(path, "utf-8").trim();
