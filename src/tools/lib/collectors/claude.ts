@@ -7,8 +7,8 @@
  * cursor stops where it starts.
  */
 
-import { readFileSync, statSync } from "node:fs";
-import { relative, sep } from "node:path";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { relative, resolve, sep } from "node:path";
 import { appendEvent } from "../../../hooks/lib/events";
 import { cacheWritesOf, type TranscriptUsage } from "../transcript-usage";
 import { claudeTranscripts } from "../usage-buckets";
@@ -60,8 +60,7 @@ function parsed(text: string): ClaudeLine | null {
   }
 }
 
-function completeLinesFrom(filepath: string, offset: number) {
-  const bytes = readFileSync(filepath);
+function completeLinesFrom(bytes: Buffer, offset: number) {
   const end = bytes.lastIndexOf(10) + 1;
   if (end <= offset) return { lines: [], end: offset };
   const lines: { text: string; start: number }[] = [];
@@ -76,12 +75,8 @@ function completeLinesFrom(filepath: string, offset: number) {
   return { lines, end };
 }
 
-function settledMessages(
-  filepath: string,
-  offset: number,
-  settled: boolean
-): SettledRead {
-  const { lines, end } = completeLinesFrom(filepath, offset);
+function settledMessages(bytes: Buffer, offset: number, settled: boolean): SettledRead {
+  const { lines, end } = completeLinesFrom(bytes, offset);
   const groups = new Map<string, { start: number; line: ModelCallLine }>();
   let newest: string | undefined;
   for (const { text, start } of lines) {
@@ -136,21 +131,58 @@ function isSettled(filepath: string, now: Date): boolean {
   return now.getTime() - statSync(filepath).mtimeMs > SETTLE_MS;
 }
 
+interface Transcript {
+  key: string;
+  bytes: () => Buffer;
+  settled: boolean;
+}
+
+function liveTranscripts(projectsDir: string, now: Date): Transcript[] {
+  return claudeTranscripts(projectsDir).map((filepath) => ({
+    key: relative(projectsDir, filepath).split(sep).join("/"),
+    bytes: () => readFileSync(filepath),
+    settled: isSettled(filepath, now),
+  }));
+}
+
+function copiesOfDeletedTranscripts(
+  copiesDir: string,
+  projectsDir: string
+): Transcript[] {
+  if (!existsSync(copiesDir)) return [];
+  return readdirSync(copiesDir, { recursive: true, encoding: "utf-8" })
+    .map((file) => file.split(sep).join("/"))
+    .filter((file) => file.endsWith(".jsonl.gz"))
+    .map((file) => file.slice(0, -".gz".length))
+    .filter((key) => !existsSync(resolve(projectsDir, key)))
+    .map((key) => ({
+      key,
+      bytes: () =>
+        Buffer.from(Bun.gunzipSync(readFileSync(resolve(copiesDir, `${key}.gz`)))),
+      settled: true,
+    }));
+}
+
+/** Reads each transcript from its cursor; one Claude Code already deleted is read from PAL's copy. */
 export function collectClaude(
   projectsDir: string,
   now: Date = new Date(),
-  billingAt: (at: string) => Billing = () => UNKNOWN
+  billingAt: (at: string) => Billing = () => UNKNOWN,
+  copiesDir?: string
 ): number {
   const cursor = readCursor("claude");
   let emitted = 0;
-  for (const filepath of claudeTranscripts(projectsDir)) {
-    const key = relative(projectsDir, filepath).split(sep).join("/");
-    const offset = Number(cursor[key] ?? 0);
-    const read = settledMessages(filepath, offset, isSettled(filepath, now));
+  const transcripts = [
+    ...liveTranscripts(projectsDir, now),
+    ...(copiesDir ? copiesOfDeletedTranscripts(copiesDir, projectsDir) : []),
+  ];
+  for (const transcript of transcripts) {
+    const offset = Number(cursor[transcript.key] ?? 0);
+    const read = settledMessages(transcript.bytes(), offset, transcript.settled);
     if (read.resumeAt === offset) continue;
     for (const line of read.messages) emitModelCall(line, billingAt(line.timestamp));
     emitted += read.messages.length;
-    cursor[key] = read.resumeAt;
+    cursor[transcript.key] = read.resumeAt;
     writeCursor("claude", cursor);
   }
   return emitted;

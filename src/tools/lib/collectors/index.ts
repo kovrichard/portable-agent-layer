@@ -25,7 +25,8 @@ const COLLECTORS: Record<string, () => number> = {
     collectClaude(
       resolve(platform.claudeDir(), "projects"),
       new Date(),
-      claudeBilling(claudeConfigFile())
+      claudeBilling(claudeConfigFile()),
+      resolve(paths.content(), "claude")
     ),
   opencode: () => collectOpencode(opencodeDatabase()),
   codex: () => collectCodex(platform.codexDir()),

@@ -116,6 +116,9 @@ export const EVENT_FIELDS = {
     "aiCoAuthored",
   ],
   rating: ["rating", "source"],
+  project: ["change", "status"],
+  decision: ["words"],
+  promise: ["change", "dueInSec", "lateSec", "snoozes", "nags"],
   action: [
     "tool",
     "outcome",
@@ -178,6 +181,7 @@ export interface AppendOptions {
   session?: string | null;
   runtime?: AgentType | "git" | "unknown";
   attribution?: Partial<RecordAttribution>;
+  project?: string | null;
   channel?: string | null;
   cwd?: string;
   content?: Record<string, unknown>;
@@ -241,9 +245,14 @@ function envelope(type: EventType, options: AppendOptions): EventEnvelope {
     ...options.attribution,
     channel:
       options.channel !== undefined ? options.channel : process.env.PAL_CHANNEL || null,
-    project: cwd ? projectOf(cwd) : null,
+    project: projectFor(options, cwd),
     cwd,
   };
+}
+
+function projectFor(options: AppendOptions, cwd: string): string | null {
+  if (options.project !== undefined) return options.project;
+  return cwd ? projectOf(cwd) : null;
 }
 
 /** Appends one event and returns its id, or null when the log is off or the write failed. */
