@@ -25,6 +25,17 @@ export const USAGE_FIELDS = [
   "costUsd",
 ] as const satisfies readonly (keyof InferenceUsage)[];
 
+function jsonLines(raw: string): Record<string, unknown>[] {
+  return raw.split("\n").flatMap((line) => {
+    try {
+      const value: unknown = JSON.parse(line);
+      return value && typeof value === "object" ? [value as Record<string, unknown>] : [];
+    } catch {
+      return [];
+    }
+  });
+}
+
 export function anthropicUsage(usage: TranscriptUsage, costUsd?: number): InferenceUsage {
   return {
     inputTokens: usage.input_tokens,
@@ -55,4 +66,14 @@ export function openAiUsage(usage: OpenAiUsage): InferenceUsage {
     cacheRead,
     thinkingTokens: usage.completion_tokens_details?.reasoning_tokens,
   };
+}
+
+export function claudeResult(raw: string): Record<string, unknown> | undefined {
+  return jsonLines(raw).find((event) => event.type === "result");
+}
+
+export function claudeSpawnUsage(raw: string): InferenceUsage | undefined {
+  const result = claudeResult(raw);
+  if (!result?.usage) return undefined;
+  return anthropicUsage(result.usage as TranscriptUsage, result.total_cost_usd as number);
 }

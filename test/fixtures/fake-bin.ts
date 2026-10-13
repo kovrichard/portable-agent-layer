@@ -18,6 +18,11 @@
 import { chmodSync, writeFileSync } from "node:fs";
 import { delimiter, resolve } from "node:path";
 
+/** A fake claude's logic that answers `replyExpr` the way `--output-format json` does. */
+export function claudeReplying(replyExpr: string, usage: object = {}): string {
+  return `const reply = ${replyExpr};\nconsole.log(JSON.stringify({ type: "result", is_error: false, result: String(reply), usage: ${JSON.stringify(usage)} }));\n`;
+}
+
 /** Prepend a directory to process.env.PATH using the platform delimiter. */
 export function prependPath(dir: string): void {
   process.env.PATH = `${dir}${delimiter}${process.env.PATH ?? ""}`;

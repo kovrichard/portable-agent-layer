@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { eventsSince } from "../src/hooks/lib/events";
 import {
   buildClaudeArgs,
   buildCodexArgs,
@@ -17,7 +18,7 @@ import {
 } from "../src/hooks/lib/inference";
 import { logPromptSnapshot, recentHookErrors } from "../src/hooks/lib/log";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
-import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
+import { claudeReplying, prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
@@ -64,7 +65,7 @@ describe("buildClaudeArgs", () => {
     expect(args[ssIdx + 1]).toBe("");
     expect(args).toContain("--output-format");
     const ofIdx = args.indexOf("--output-format");
-    expect(args[ofIdx + 1]).toBe("text");
+    expect(args[ofIdx + 1]).toBe("json");
   });
 
   // The system text goes to a file and only the path rides in argv, so a
@@ -214,11 +215,7 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
 
   test("end-to-end: fake claude binary echoes stdin, dispatcher returns it", async () => {
     // Fake claude: echoes stdin to stdout, exits 0.
-    writeFakeBin(
-      tmpBin,
-      "claude",
-      `for await (const c of Bun.stdin.stream()) Bun.write(Bun.stdout, c);\n`
-    );
+    writeFakeBin(tmpBin, "claude", claudeReplying("await Bun.stdin.text()"));
     prependPath(tmpBin);
 
     const result = await inference({ user: "hello from PAL", timeout: 5000 });
@@ -226,11 +223,53 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
     expect(result.output).toBe("hello from PAL");
   });
 
+  test("the call is logged with the tokens claude reported", async () => {
+    writeFakeBin(
+      tmpBin,
+      "claude",
+      claudeReplying(`"hi"`, {
+        input_tokens: 9,
+        output_tokens: 51,
+        cache_read_input_tokens: 0,
+        cache_creation_input_tokens: 6576,
+        cache_creation: { ephemeral_5m_input_tokens: 0, ephemeral_1h_input_tokens: 6576 },
+        output_tokens_details: { thinking_tokens: 32 },
+      })
+    );
+    prependPath(tmpBin);
+
+    await inference({ user: "hi", caller: "rating", timeout: 5000 });
+    const [call] = eventsSince("inference_call", new Date(0));
+    expect(call).toMatchObject({
+      route: "claude-spawn",
+      inputTokens: 9,
+      outputTokens: 51,
+      cacheWrite5m: 0,
+      cacheWrite1h: 6576,
+      cacheRead: 0,
+      thinkingTokens: 32,
+    });
+  });
+
+  test("a reply claude marks as an error is not taken as the answer", async () => {
+    writeFakeBin(
+      tmpBin,
+      "claude",
+      `console.log(JSON.stringify({ type: "result", is_error: true, result: "Prompt is too long" }));\n`
+    );
+    prependPath(tmpBin);
+
+    const result = await inference({ user: "hi", timeout: 5000 });
+    expect(result.success).toBe(false);
+  });
+
   test("fake claude binary sees PAL_SPAWNED_INFERENCE=1 in its env", async () => {
     writeFakeBin(
       tmpBin,
       "claude",
-      `console.log(\`sentinel=\${process.env.${SPAWN_GUARD_ENV.SENTINEL}} depth=\${process.env.${SPAWN_GUARD_ENV.DEPTH}}\`);\n`
+      claudeReplying(
+        `\`sentinel=\${process.env.${SPAWN_GUARD_ENV.SENTINEL}} depth=\${process.env.${SPAWN_GUARD_ENV.DEPTH}}\``
+      )
     );
     prependPath(tmpBin);
 
@@ -247,7 +286,7 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
     writeFakeBin(
       tmpBin,
       "claude",
-      `console.log(\`claudecode=[\${process.env.CLAUDECODE ?? ""}]\`);\n`
+      claudeReplying(`\`claudecode=[\${process.env.CLAUDECODE ?? ""}]\``)
     );
     prependPath(tmpBin);
 
@@ -263,7 +302,7 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
     writeFakeBin(
       tmpBin,
       "claude",
-      `console.log(\`token=[\${process.env.CLAUDE_CODE_OAUTH_TOKEN ?? ""}]\`);\n`
+      claudeReplying(`\`token=[\${process.env.CLAUDE_CODE_OAUTH_TOKEN ?? ""}]\``)
     );
     prependPath(tmpBin);
 
@@ -291,7 +330,9 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
     writeFakeBin(
       tmpBin,
       "claude",
-      `console.log(\`key=[\${process.env.ANTHROPIC_API_KEY ?? ""}] auth=[\${process.env.ANTHROPIC_AUTH_TOKEN ?? ""}]\`);\n`
+      claudeReplying(
+        `\`key=[\${process.env.ANTHROPIC_API_KEY ?? ""}] auth=[\${process.env.ANTHROPIC_AUTH_TOKEN ?? ""}]\``
+      )
     );
     prependPath(tmpBin);
 
@@ -324,7 +365,7 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
   });
 
   test("logDebug emits route=claude-spawn line when debug enabled", async () => {
-    writeFakeBin(tmpBin, "claude", `console.log("hello");\n`);
+    writeFakeBin(tmpBin, "claude", claudeReplying(`"hello"`));
     prependPath(tmpBin);
 
     const palHomeSaved = process.env.PAL_HOME;
@@ -369,7 +410,7 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
   });
 
   test("JSON-schema path parses fake claude's JSON output", async () => {
-    writeFakeBin(tmpBin, "claude", `console.log('{"verdict":"good"}');\n`);
+    writeFakeBin(tmpBin, "claude", claudeReplying(`'{"verdict":"good"}'`));
     prependPath(tmpBin);
 
     const result = await inference({
@@ -382,7 +423,7 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
   });
 
   test("a JSON reply that breaks the schema fails and names the field", async () => {
-    writeFakeBin(tmpBin, "claude", `console.log('{"verdict":7,"extra":true}');\n`);
+    writeFakeBin(tmpBin, "claude", claudeReplying(`'{"verdict":7,"extra":true}'`));
     prependPath(tmpBin);
 
     const result = await inference({

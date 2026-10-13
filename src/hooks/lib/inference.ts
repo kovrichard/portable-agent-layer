@@ -11,7 +11,7 @@
  *   4. otherwise                   → { success: false }
  *
  * The claude-spawn path mirrors PAI/TOOLS/Inference.ts in spawn args:
- *   --print --tools '' --setting-sources '' --output-format text --system-prompt …
+ *   --print --tools '' --setting-sources '' --output-format json --system-prompt …
  * These flags prevent the spawned subprocess from loading PAL hooks or making
  * tool calls — the primary recursion defense. PAL's spawn-guard env sentinel
  * is the secondary belt-and-suspenders layer (see lib/spawn-guard.ts).
@@ -44,6 +44,8 @@ import {
 import { logInferenceCall, SCHEMA_MISMATCH } from "./inference-events";
 import {
   anthropicUsage,
+  claudeResult,
+  claudeSpawnUsage,
   type InferenceUsage,
   type OpenAiUsage,
   openAiUsage,
@@ -397,13 +399,21 @@ export function buildClaudeArgs(
     modelFor("claude-spawn", opts),
     ...claudeTools(opts),
     "--output-format",
-    "text",
+    "json",
     "--setting-sources",
     "",
   ];
   if (systemPromptFile) args.push("--system-prompt-file", systemPromptFile);
   return args;
 }
+
+const CLAUDE_REPLY: CliReply = {
+  text: (raw) => {
+    const result = claudeResult(raw);
+    return result?.is_error ? "" : String(result?.result ?? "").trim();
+  },
+  usage: claudeSpawnUsage,
+};
 
 type ClaudeAuthMode = "token" | "native";
 
@@ -441,7 +451,7 @@ async function inferenceViaClaudeSpawn(
 ): Promise<InferenceResult> {
   const mode = claudeAuthMode();
   const spawnClaude = (args: string[]) =>
-    inferenceViaCliSpawn(bin, args, opts.user, opts, undefined, {
+    inferenceViaCliSpawn(bin, args, opts.user, opts, CLAUDE_REPLY, {
       env: credentialOverridesFor(mode),
       logTag: `auth=${mode}`,
     });
@@ -536,7 +546,7 @@ async function inferenceViaOpencodeSpawn(
       buildOpencodeArgs(opts),
       buildCliPrompt(opts),
       opts,
-      extractOpencodeText,
+      { text: extractOpencodeText, usage: () => undefined },
       { cwd: dir, env: { XDG_CONFIG_HOME: dir, ...OPENCODE_WITHOUT_EXTERNAL_CONTEXT } }
     );
   } finally {
@@ -607,7 +617,7 @@ async function inferenceViaAntigravitySpawn(
       buildAntigravityArgs(opts),
       streamJsonPrompt(buildCliPrompt(opts)),
       opts,
-      extractAntigravityText,
+      { text: extractAntigravityText, usage: () => undefined },
       { cwd: dir, afterRun: removeSpawnedConversation }
     );
   } finally {
@@ -838,6 +848,14 @@ async function singleCliAttempt(
   });
 }
 
+/** How to read a CLI's stdout: the reply's text, and what the call cost. */
+interface CliReply {
+  text: (rawStdout: string) => string;
+  usage: (rawStdout: string) => InferenceUsage | undefined;
+}
+
+const PLAIN_REPLY: CliReply = { text: (raw) => raw, usage: () => undefined };
+
 interface SpawnPlace {
   cwd?: string;
   env?: Record<string, string | undefined>;
@@ -856,7 +874,7 @@ async function inferenceViaCliSpawn(
   args: string[],
   stdinInput: string,
   opts: InferenceOptions,
-  extractText?: (rawStdout: string) => string,
+  reply: CliReply = PLAIN_REPLY,
   place: SpawnPlace = {}
 ): Promise<InferenceResult> {
   const timeout = opts.timeout ?? 15000;
@@ -894,12 +912,13 @@ async function inferenceViaCliSpawn(
 
   place.afterRun?.(attempt.stdout);
   const elapsedMs = Date.now() - started;
+  const usage = reply.usage(attempt.stdout);
   const finish = (result: InferenceResult): InferenceResult => {
     logDebug(
       "inference:spawn",
       `${tag} done binary=${binaryName} success=${result.success} bytes=${result.output?.length ?? 0} elapsedMs=${elapsedMs}`
     );
-    return result;
+    return { ...result, usage };
   };
 
   if (attempt.timedOut) {
@@ -915,7 +934,7 @@ async function inferenceViaCliSpawn(
   }
   const rawText = attempt.stdout.trim();
   if (!rawText) return finish({ success: false });
-  const text = extractText ? extractText(rawText) : rawText;
+  const text = reply.text(rawText);
   if (!text) {
     // Extraction returned empty — the binary succeeded but our extractor found
     // no usable text. Log the raw stdout so we can see what was actually emitted.
