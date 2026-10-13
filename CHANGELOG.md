@@ -1,3 +1,10 @@
+## [0.104.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.104.0...v0.104.1) (2026-10-13)
+
+
+### Bug Fixes
+
+* **usage:** read claude code transcripts it deleted from pal's archive ([6a13bdd](https://github.com/kovrichard/portable-agent-layer/commit/6a13bdd1f72bf1009440c0bc9fe70882d73752fa))
+
 # [0.104.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.103.1...v0.104.0) (2026-10-13)
 
 
