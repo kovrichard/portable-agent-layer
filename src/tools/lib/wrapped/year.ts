@@ -9,6 +9,12 @@ export function dayOf(event: LoggedEvent): string {
   return localDay(new Date(event.ts));
 }
 
+const DAY_MS = 86_400_000;
+
+export function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(to) - Date.parse(from)) / DAY_MS);
+}
+
 export function ofType(events: LoggedEvent[], type: EventType): LoggedEvent[] {
   return events.filter((e) => e.type === type);
 }

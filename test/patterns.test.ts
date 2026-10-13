@@ -1,0 +1,126 @@
+import { beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { patternsCommand } from "../src/cli/patterns";
+import { appendEvent } from "../src/hooks/lib/events";
+import { runCommand } from "../src/tools/lib/command";
+import { projectActivity } from "../src/tools/lib/patterns/activity";
+import { momentumLines } from "../src/tools/lib/patterns/render";
+import { currentSprint, quietAfterBurst } from "../src/tools/lib/patterns/sprint";
+import { budapestHome, event } from "./lib/wrapped-events";
+
+beforeEach(() => {
+  budapestHome(import.meta.file);
+});
+
+const work = (project: string, day: string) =>
+  event("commit", {}, { project, ts: `${day}T10:00:00.000Z` });
+
+const activityOf = (...events: ReturnType<typeof event>[]) => projectActivity(events);
+
+describe("current sprint", () => {
+  test("nothing logged has no sprint", () => {
+    expect(currentSprint([])).toBeNull();
+  });
+
+  test("the longest run on the latest day wins, counted in days the user worked", () => {
+    const activity = activityOf(
+      work("a", "2026-06-01"),
+      work("b", "2026-06-02"),
+      work("a", "2026-06-04"),
+      work("b", "2026-06-04"),
+      work("b", "2026-06-05"),
+      work("a", "2026-06-05")
+    );
+    expect(currentSprint(activity)).toEqual({
+      project: "b",
+      days: 3,
+      since: "2026-06-02",
+    });
+  });
+
+  test("a tie goes to the first name", () => {
+    const activity = activityOf(work("b", "2026-06-01"), work("a", "2026-06-01"));
+    expect(currentSprint(activity)?.project).toBe("a");
+  });
+
+  test("days are local, and only the user's own work in a project counts", () => {
+    const activity = activityOf(
+      work("a", "2026-06-01"),
+      event("commit", {}, { project: "b", ts: "2026-06-01T22:30:00.000Z" }),
+      event(
+        "model_call",
+        { entrypoint: "sdk-cli" },
+        { project: "c", ts: "2026-06-03T10:00:00.000Z" }
+      ),
+      event("rating", {}, { project: "c", ts: "2026-06-03T10:00:00.000Z" }),
+      event("commit", {}, { ts: "2026-06-03T10:00:00.000Z" })
+    );
+    expect(currentSprint(activity)).toEqual({
+      project: "b",
+      days: 1,
+      since: "2026-06-02",
+    });
+  });
+});
+
+describe("quiet after a burst", () => {
+  test("3 active days within 7, then 14 days without any, latest first", () => {
+    const activity = activityOf(
+      ...["2026-06-01", "2026-06-03", "2026-06-07"].map((d) => work("burst", d)),
+      ...["2026-06-01", "2026-06-05", "2026-06-08"].map((d) => work("spread", d)),
+      ...["2026-06-10", "2026-06-11", "2026-06-12", "2026-06-17"].map((d) =>
+        work("edge", d)
+      ),
+      ...["2026-06-15", "2026-06-16", "2026-06-17", "2026-06-18"].map((d) =>
+        work("recent", d)
+      )
+    );
+    expect(quietAfterBurst(activity, "2026-07-01")).toEqual([
+      { project: "edge", lastActive: "2026-06-17", quietDays: 14, burstDays: 3 },
+      { project: "burst", lastActive: "2026-06-07", quietDays: 24, burstDays: 3 },
+    ]);
+  });
+});
+
+describe("momentum as printed", () => {
+  test("the sprint and the quiet projects print with their days", () => {
+    expect(
+      momentumLines({ project: "pal", days: 1, since: "2026-10-13" }, [
+        { project: "a", lastActive: "2026-09-01", quietDays: 42, burstDays: 5 },
+        { project: "b", lastActive: "2026-08-01", quietDays: 1, burstDays: 3 },
+      ])
+    ).toEqual([
+      "\n  Momentum\n",
+      "    current sprint       pal, 1 day of work since 2026-10-13",
+      "    quiet after a burst  a (quiet 42 days) · b (quiet 1 day)",
+    ]);
+  });
+
+  test("no quiet project says none; no activity at all says unknown", () => {
+    expect(momentumLines({ project: "pal", days: 2, since: "2026-10-12" }, [])[2]).toBe(
+      "    quiet after a burst  none"
+    );
+    expect(momentumLines(null, []).slice(1)).toEqual([
+      "    current sprint       unknown",
+      "    quiet after a burst  unknown",
+    ]);
+  });
+});
+
+async function patterns(): Promise<string> {
+  const log = spyOn(console, "log").mockImplementation(() => {});
+  try {
+    expect(await runCommand(patternsCommand, [], ["pal", "cli", "patterns"])).toBe(0);
+    return log.mock.calls.map((c) => c.join(" ")).join("\n");
+  } finally {
+    log.mockRestore();
+  }
+}
+
+describe("pal cli patterns", () => {
+  test("prints the patterns read from the event log", async () => {
+    appendEvent("commit", {}, { project: "pal", ts: "2026-06-01T10:00:00.000Z" });
+    const text = await patterns();
+    expect(text).toContain("PAL Patterns");
+    expect(text).toContain("current sprint       pal, 1 day of work since 2026-06-01");
+  });
+});

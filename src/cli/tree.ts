@@ -22,6 +22,7 @@ import { inferCommand } from "./infer";
 import { knowledgeCommand } from "./knowledge";
 import { ledgerCommand } from "./ledger-command";
 import { runMigrate } from "./migrate";
+import { patternsCommand } from "./patterns";
 import { telosCommand, timezoneCommand } from "./personal-context";
 import { ruleCommand } from "./rule";
 import { serverCommand } from "./server";
@@ -157,6 +158,7 @@ export function cliTree(admin: AdminHandlers): Group {
       usage: usageCommand,
       cost: costCommand,
       wrapped: wrappedCommand,
+      patterns: patternsCommand,
       content: contentCommand,
       events: eventsCommand,
       infer: inferCommand,
