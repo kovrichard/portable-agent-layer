@@ -130,6 +130,7 @@ describe("modelLabel", () => {
   test("drops a release date, keeping the version", () => {
     expect(modelLabel("claude-haiku-4-5-20251001")).toBe("haiku-4-5");
     expect(modelLabel("gpt-6-2026")).toBe("gpt-6-2026");
+    expect(modelLabel("m-20251001-preview")).toBe("m-20251001-preview");
   });
 });
 
