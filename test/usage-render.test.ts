@@ -54,6 +54,26 @@ describe("the usage report", () => {
     expect(renderUsage(createStyle(pipe), data())).toEqual(usageLines(data()));
   });
 
+  test("on a terminal, a PAL inference section names the model and its version", () => {
+    const haiku = emptyTimeBuckets();
+    addToTimeBuckets(
+      haiku,
+      "2026-09-06T08:00:00.000Z",
+      "claude-haiku-4-5-20251001",
+      { input: 10, output: 0, cacheWrite5m: 0, cacheWrite1h: 0, cacheRead: 0 },
+      horizonsFrom(NOW)
+    );
+    const pal = {
+      buckets: haiku,
+      byModel: { "claude-haiku-4-5-20251001": haiku },
+      byCaller: {},
+    };
+    const lines = unstyled(renderUsage(createStyle(tty), data({ pal })));
+    expect(lines.find((line) => line.includes("haiku-4-5"))).toMatch(
+      /PAL inference.*haiku-4-5$/
+    );
+  });
+
   test("on a terminal, it opens with the total and the agents that made a call", () => {
     const lines = unstyled(renderUsage(createStyle(tty), data()));
     expect(lines[1]).toMatch(/PAL usage {2}\$\d+\.\d{2} {2}Claude Code$/);
