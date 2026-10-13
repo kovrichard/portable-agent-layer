@@ -1,3 +1,10 @@
+## [0.99.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.99.0...v0.99.1) (2026-10-13)
+
+
+### Performance Improvements
+
+* **analyze-youtube:** analyze videos with gemini-3.8-flash ([e024603](https://github.com/kovrichard/portable-agent-layer/commit/e024603e73d7dfe65426af9dc186032265e251a0))
+
 # [0.99.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.98.0...v0.99.0) (2026-10-13)
 
 
