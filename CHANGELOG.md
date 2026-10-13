@@ -1,3 +1,10 @@
+## [0.99.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.99.1...v0.99.2) (2026-10-13)
+
+
+### Performance Improvements
+
+* **deep-research:** search with gemini-3.8-flash ([63d7782](https://github.com/kovrichard/portable-agent-layer/commit/63d77828c41edac8b5b0451a9544ba844a3dae4d))
+
 ## [0.99.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.99.0...v0.99.1) (2026-10-13)
 
 
