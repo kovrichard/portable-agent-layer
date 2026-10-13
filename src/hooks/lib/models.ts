@@ -115,8 +115,48 @@ interface SupersededRates {
 /** A model's earlier rates, oldest first; a price change moves today's row here. */
 export const PRICE_HISTORY: Record<string, SupersededRates[]> = {};
 
-/** Pricing per million tokens (USD) in force today — from https://platform.claude.com/docs/en/about-claude/pricing */
+const withoutWritePremium = (
+  input: number,
+  cacheRead: number,
+  output: number
+): ModelPricing => ({
+  input,
+  output,
+  cacheWrite5m: input,
+  cacheWrite1h: input,
+  cacheRead,
+});
+
+/**
+ * Standard-tier rates from https://developers.openai.com/api/docs/pricing; prompts over
+ * 272K tokens cost more, and PAL's never get there. OpenAI bills no cache-write premium.
+ */
+const OPENAI_PRICING: Record<string, ModelPricing> = {
+  "gpt-6-astra": withoutWritePremium(10, 1, 50),
+  "gpt-6.1-sol": withoutWritePremium(2, 0.1, 10),
+  "gpt-6-sol": withoutWritePremium(2, 0.2, 10),
+  "gpt-6-luna": withoutWritePremium(0.1, 0.01, 0.5),
+  "gpt-5.6-sol": withoutWritePremium(4, 0.4, 20),
+  "gpt-5.6-terra": withoutWritePremium(2, 0.2, 12),
+  "gpt-5.6-luna": withoutWritePremium(0.2, 0.02, 1.2),
+  "gpt-5.5": withoutWritePremium(5, 0.5, 30),
+  "gpt-5.5-pro": withoutWritePremium(30, 30, 180),
+  "gpt-5.4": withoutWritePremium(2.5, 0.25, 15),
+  "gpt-5.4-pro": withoutWritePremium(30, 30, 180),
+  "gpt-5.4-mini": withoutWritePremium(0.75, 0.075, 4.5),
+  "gpt-5.4-nano": withoutWritePremium(0.2, 0.02, 1.25),
+  "gpt-5.3-codex": withoutWritePremium(1.75, 0.175, 14),
+};
+
+/** Standard-tier serverless rates from https://docs.fireworks.ai/serverless/pricing */
+const FIREWORKS_PRICING: Record<string, ModelPricing> = {
+  "fireworks-ai/accounts/fireworks/models/kimi-k3": withoutWritePremium(3, 0.3, 15),
+};
+
+/** Pricing per million tokens (USD) in force today; Claude's from https://platform.claude.com/docs/en/about-claude/pricing */
 export const MODEL_PRICING: Record<string, ModelPricing> = {
+  ...OPENAI_PRICING,
+  ...FIREWORKS_PRICING,
   [HAIKU_MODEL]: {
     input: 1,
     output: 5,
