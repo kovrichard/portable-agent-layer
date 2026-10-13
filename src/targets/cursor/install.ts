@@ -4,7 +4,7 @@
  * Symlinks skills. Generates AGENTS.md.
  */
 
-import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
 import {
@@ -17,7 +17,7 @@ import {
   log,
   mergeCursorHooks,
   readJson,
-  writeJson,
+  replaceJsonConfig,
 } from "../lib";
 
 const PKG_ROOT = palPkg().replaceAll("\\", "/");
@@ -29,17 +29,11 @@ const CLI_CONFIG = resolve(CURSOR_DIR, "cli-config.json");
 mkdirSync(CURSOR_DIR, { recursive: true });
 
 // --- Merge hooks ---
-if (existsSync(HOOKS_FILE)) {
-  const backup = `${HOOKS_FILE}.bak.${Date.now()}`;
-  copyFileSync(HOOKS_FILE, backup);
-  log.info("Backed up hooks.json");
-}
-
 const template = loadCursorHooksTemplate(assets.cursorHooksTemplate(), PKG_ROOT);
 const existing = readJson<Record<string, unknown>>(HOOKS_FILE, {});
 const merged = mergeCursorHooks(existing, template);
 
-writeJson(HOOKS_FILE, merged);
+replaceJsonConfig(HOOKS_FILE, merged);
 log.success(`Merged PAL hooks into ${HOOKS_FILE}`);
 
 // --- Symlink skills to ~/.cursor/skills/ ---
@@ -56,12 +50,9 @@ copyStatusline("cursor");
 if (!existsSync(CLI_CONFIG)) {
   writeFileSync(CLI_CONFIG, "{}\n", "utf-8");
   log.info("Created new cli-config.json");
-} else {
-  copyFileSync(CLI_CONFIG, `${CLI_CONFIG}.bak.${Date.now()}`);
-  log.info("Backed up cli-config.json");
 }
 const cliConfig = readJson<Record<string, unknown>>(CLI_CONFIG, {});
-writeJson(CLI_CONFIG, addStatuslineConfig(cliConfig, "cursor"));
+replaceJsonConfig(CLI_CONFIG, addStatuslineConfig(cliConfig, "cursor"));
 log.success("Merged statusLine into cli-config.json");
 
 log.info(

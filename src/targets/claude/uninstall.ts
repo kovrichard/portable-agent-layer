@@ -3,7 +3,7 @@
  * Removes exactly what the settings template added, plus skills, agents, and PAL docs.
  */
 
-import { copyFileSync, existsSync, unlinkSync } from "node:fs";
+import { existsSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
 import {
@@ -15,8 +15,8 @@ import {
   removeSkills,
   removeStatusline,
   removeStatuslineConfig,
+  replaceJsonConfig,
   unmergeSettings,
-  writeJson,
 } from "../lib";
 
 const PKG_ROOT = palPkg().replaceAll("\\", "/");
@@ -28,10 +28,6 @@ if (!existsSync(SETTINGS)) {
   process.exit(0);
 }
 
-// --- Backup ---
-copyFileSync(SETTINGS, `${SETTINGS}.bak.${Date.now()}`);
-log.info("Backed up settings.json");
-
 // --- Load template and unmerge from existing settings ---
 const template = loadSettingsTemplate(assets.claudeSettingsTemplate(), PKG_ROOT);
 const existing = readJson<Record<string, unknown>>(SETTINGS, {});
@@ -40,7 +36,7 @@ let cleaned = unmergeSettings(existing, template);
 // Remove statusLine config
 cleaned = removeStatuslineConfig(cleaned);
 
-writeJson(SETTINGS, cleaned);
+replaceJsonConfig(SETTINGS, cleaned);
 log.success("Removed PAL settings from settings.json");
 
 // --- Remove PAL skills ---

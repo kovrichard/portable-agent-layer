@@ -4,13 +4,7 @@
  * Symlinks skills, renders agents to TOML. Ensures AGENTS.md symlink via regenerateIfNeeded().
  */
 
-import {
-  copyFileSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
 import {
@@ -24,7 +18,8 @@ import {
   mergeCodexHooks,
   mergeCodexRules,
   readJson,
-  writeJson,
+  replaceConfig,
+  replaceJsonConfig,
 } from "../lib";
 
 /**
@@ -74,27 +69,18 @@ const RULES_FILE = resolve(CODEX_DIR, "rules", "default.rules");
 mkdirSync(CODEX_DIR, { recursive: true });
 
 // --- Merge hooks ---
-if (existsSync(HOOKS_FILE)) {
-  copyFileSync(HOOKS_FILE, `${HOOKS_FILE}.bak.${Date.now()}`);
-  log.info("Backed up hooks.json");
-}
-
 const template = loadCodexHooksTemplate(assets.codexHooksTemplate(), PKG_ROOT);
 const existing = readJson<Record<string, unknown>>(HOOKS_FILE, {});
 const merged = mergeCodexHooks(existing, template);
 
-writeJson(HOOKS_FILE, merged);
+replaceJsonConfig(HOOKS_FILE, merged);
 log.success(`Merged PAL hooks into ${HOOKS_FILE}`);
 
 // --- Merge allowlist rules ---
 mkdirSync(resolve(CODEX_DIR, "rules"), { recursive: true });
-if (existsSync(RULES_FILE)) {
-  copyFileSync(RULES_FILE, `${RULES_FILE}.bak.${Date.now()}`);
-  log.info("Backed up rules/default.rules");
-}
 const rulesTemplate = loadCodexRulesTemplate(assets.codexRulesTemplate());
 const existingRules = existsSync(RULES_FILE) ? readFileSync(RULES_FILE, "utf-8") : "";
-writeFileSync(RULES_FILE, mergeCodexRules(existingRules, rulesTemplate), "utf-8");
+replaceConfig(RULES_FILE, mergeCodexRules(existingRules, rulesTemplate));
 log.success("Merged PAL allowlist rules into ~/.codex/rules/default.rules");
 
 // --- Symlink skills to ~/.codex/skills/ ---

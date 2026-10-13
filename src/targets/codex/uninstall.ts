@@ -4,7 +4,7 @@
  * Removes PAL skill symlinks and PAL agents.
  */
 
-import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
 import {
@@ -14,9 +14,10 @@ import {
   removeAgentsFromCodex,
   removeCodexStatuslineConfig,
   removeSkills,
+  replaceConfig,
+  replaceJsonConfig,
   unmergeCodexHooks,
   unmergeCodexRules,
-  writeJson,
 } from "../lib";
 
 /**
@@ -54,14 +55,11 @@ const RULES_FILE = resolve(CODEX_DIR, "rules", "default.rules");
 
 // --- Remove PAL hooks from hooks.json ---
 if (existsSync(HOOKS_FILE)) {
-  copyFileSync(HOOKS_FILE, `${HOOKS_FILE}.bak.${Date.now()}`);
-  log.info("Backed up hooks.json");
-
   const template = loadCodexHooksTemplate(assets.codexHooksTemplate(), PKG_ROOT);
   const existing = readJson<Record<string, unknown>>(HOOKS_FILE, {});
   const cleaned = unmergeCodexHooks(existing, template);
 
-  writeJson(HOOKS_FILE, cleaned);
+  replaceJsonConfig(HOOKS_FILE, cleaned);
   log.success("Removed PAL hooks from ~/.codex/hooks.json");
 } else {
   log.info("No hooks.json found, nothing to do");
@@ -69,11 +67,8 @@ if (existsSync(HOOKS_FILE)) {
 
 // --- Remove PAL allowlist rules from default.rules ---
 if (existsSync(RULES_FILE)) {
-  copyFileSync(RULES_FILE, `${RULES_FILE}.bak.${Date.now()}`);
-  log.info("Backed up rules/default.rules");
-
   const cleanedRules = unmergeCodexRules(readFileSync(RULES_FILE, "utf-8"));
-  writeFileSync(RULES_FILE, cleanedRules, "utf-8");
+  replaceConfig(RULES_FILE, cleanedRules);
   log.success("Removed PAL allowlist rules from ~/.codex/rules/default.rules");
 } else {
   log.info("No default.rules found, nothing to do");
