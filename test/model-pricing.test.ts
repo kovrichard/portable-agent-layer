@@ -57,6 +57,39 @@ describe("model pricing table", () => {
     });
   });
 
+  test("OpenAI models carry their standard rates, cache writes billed as input", () => {
+    expect(pricingFor("gpt-6-luna")).toEqual({
+      input: 0.1,
+      output: 0.5,
+      cacheWrite5m: 0.1,
+      cacheWrite1h: 0.1,
+      cacheRead: 0.01,
+    });
+    expect(pricingFor("gpt-6.1-sol")?.cacheRead).toBe(0.1);
+    expect(pricingFor("gpt-6-sol")?.cacheRead).toBe(0.2);
+    expect(pricingFor("gpt-5.4-mini")?.output).toBe(4.5);
+  });
+
+  test("a pro model is not billed at its base model's rates", () => {
+    expect(pricingFor("gpt-5.4-pro")).toEqual({
+      input: 30,
+      output: 180,
+      cacheWrite5m: 30,
+      cacheWrite1h: 30,
+      cacheRead: 30,
+    });
+  });
+
+  test("Kimi K3 on Fireworks is priced under the ID opencode logs", () => {
+    expect(pricingFor("fireworks-ai/accounts/fireworks/models/kimi-k3")).toEqual({
+      input: 3,
+      output: 15,
+      cacheWrite5m: 3,
+      cacheWrite1h: 3,
+      cacheRead: 0.3,
+    });
+  });
+
   test("every entry prices all five token categories above zero", () => {
     for (const p of Object.values(MODEL_PRICING)) {
       expect(Object.values(p).every((rate) => rate > 0)).toBe(true);
@@ -85,7 +118,7 @@ describe("pricingFor", () => {
   });
 
   test("returns null for an unknown vendor model", () => {
-    expect(pricingFor("gpt-5.5")).toBeNull();
+    expect(pricingFor("acme-model-1")).toBeNull();
   });
 });
 
@@ -160,7 +193,7 @@ describe("costOfUsage", () => {
 
   test("bills an unpriced model as zero", () => {
     expect(
-      costOfUsage("gpt-5.5", {
+      costOfUsage("acme-model-1", {
         input: 1_000_000,
         output: 1_000_000,
         cacheWrite5m: 0,
