@@ -4,7 +4,7 @@
  * Copies skills, agents, and PAL docs. Generates CLAUDE.md from TELOS.
  */
 
-import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { assets, palHome, palPkg, platform } from "../../hooks/lib/paths";
 import { identity, raw as readPalSettings } from "../../hooks/lib/settings";
@@ -21,7 +21,7 @@ import {
   log,
   mergeSettings,
   readJson,
-  writeJson,
+  replaceJsonConfig,
 } from "../lib";
 
 const PKG_ROOT = palPkg().replaceAll("\\", "/");
@@ -34,11 +34,6 @@ if (!existsSync(SETTINGS)) {
   writeFileSync(SETTINGS, "{}\n", "utf-8");
   log.info("Created new settings.json");
 }
-
-// --- Backup ---
-const backup = `${SETTINGS}.bak.${Date.now()}`;
-copyFileSync(SETTINGS, backup);
-log.info("Backed up settings.json");
 
 // --- Load template and merge into existing settings ---
 const template = loadSettingsTemplate(assets.claudeSettingsTemplate(), PKG_ROOT);
@@ -58,7 +53,7 @@ if (attribution?.decided) {
   });
 }
 
-writeJson(SETTINGS, merged);
+replaceJsonConfig(SETTINGS, merged);
 log.success("Merged PAL settings into settings.json");
 
 // --- Copy skills ---
