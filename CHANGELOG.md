@@ -1,3 +1,10 @@
+## [0.104.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.104.1...v0.104.2) (2026-10-13)
+
+
+### Bug Fixes
+
+* **usage:** label pal inference sections with the model version ([16068f8](https://github.com/kovrichard/portable-agent-layer/commit/16068f856de5ab6a15c5b2bafe79266f82679571))
+
 ## [0.104.1](https://github.com/kovrichard/portable-agent-layer/compare/v0.104.0...v0.104.1) (2026-10-13)
 
 
