@@ -573,6 +573,7 @@ describe("readPalInference", () => {
       [
         palCall(NOW.toISOString(), { inputTokens: null }),
         palCall(NOW.toISOString(), { outputTokens: null }),
+        palCall(NOW.toISOString(), { inputTokens: undefined }),
         palCall(NOW.toISOString(), { model: null, caller: null }),
         event("model_call", { inputTokens: 1, outputTokens: 1 }),
       ],
