@@ -138,3 +138,24 @@ export function opencodeSpawnUsage(raw: string): InferenceUsage | undefined {
     costUsd: sum(steps.map((s) => s.cost ?? undefined)),
   };
 }
+
+interface AntigravityUsage {
+  input_tokens?: number;
+  output_tokens?: number;
+  thinking_tokens?: number;
+  cache_read_tokens?: number;
+}
+
+export function antigravitySpawnUsage(raw: string): InferenceUsage | undefined {
+  const result = jsonLines(raw).find((event) => event.event === "result")?.result as
+    | { usage?: AntigravityUsage }
+    | undefined;
+  const usage = result?.usage;
+  if (!usage) return undefined;
+  return {
+    inputTokens: usage.input_tokens,
+    outputTokens: usage.output_tokens,
+    thinkingTokens: usage.thinking_tokens,
+    cacheRead: usage.cache_read_tokens,
+  };
+}

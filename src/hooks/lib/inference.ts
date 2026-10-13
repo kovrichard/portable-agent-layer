@@ -44,6 +44,7 @@ import {
 import { logInferenceCall, SCHEMA_MISMATCH } from "./inference-events";
 import {
   anthropicUsage,
+  antigravitySpawnUsage,
   claudeResult,
   claudeSpawnUsage,
   codexSpawnUsage,
@@ -643,7 +644,7 @@ async function inferenceViaAntigravitySpawn(
       buildAntigravityArgs(opts),
       streamJsonPrompt(buildCliPrompt(opts)),
       opts,
-      { text: extractAntigravityText, usage: () => undefined },
+      { text: extractAntigravityText, usage: antigravitySpawnUsage },
       { cwd: dir, afterRun: removeSpawnedConversation }
     );
   } finally {
