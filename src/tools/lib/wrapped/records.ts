@@ -1,6 +1,6 @@
 import type { LoggedEvent } from "../../../hooks/lib/events";
 import { apiPriceOf } from "../cost-report";
-import { dayOf, isUserActivity, numberOf, ofType } from "./year";
+import { dayOf, daysBetween, isUserActivity, numberOf, ofType } from "./year";
 
 export interface Best {
   value: number;
@@ -17,8 +17,6 @@ export interface WrappedRecords {
   biggestToolBurst: Best | null;
 }
 
-const DAY_MS = 86_400_000;
-
 function best(candidates: Best[]): Best | null {
   return candidates.reduce<Best | null>(
     (top, c) => (top === null || c.value > top.value ? c : top),
@@ -30,10 +28,6 @@ function countBy(events: LoggedEvent[], keyOf: (e: LoggedEvent) => string): Best
   const counts = new Map<string, number>();
   for (const e of events) counts.set(keyOf(e), (counts.get(keyOf(e)) ?? 0) + 1);
   return [...counts].map(([label, value]) => ({ label, value }));
-}
-
-function daysBetween(from: string, to: string): number {
-  return Math.round((Date.parse(to) - Date.parse(from)) / DAY_MS);
 }
 
 function longestProject(events: LoggedEvent[]): Best | null {

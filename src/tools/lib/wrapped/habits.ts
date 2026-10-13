@@ -5,6 +5,8 @@ import { dayOf, isUserActivity, ofType, type Tally, tally } from "./year";
 
 export interface WrappedHabits {
   mostActiveHour: Best | null;
+  mostActiveWeekday: Best | null;
+  mostActiveMonth: Best | null;
   nightShare: number | null;
   weekendShare: number | null;
   channels: Tally[];
@@ -13,6 +15,7 @@ export interface WrappedHabits {
 }
 
 interface HourSlot {
+  day: string;
   hour: number;
   weekday: string;
 }
@@ -25,8 +28,9 @@ const WEEKEND = new Set(["Sat", "Sun"]);
 function activeSlots(events: LoggedEvent[]): HourSlot[] {
   const slots = new Map<string, HourSlot>();
   for (const e of events.filter(isUserActivity)) {
+    const day = dayOf(e);
     const clock = localClock(new Date(e.ts));
-    slots.set(`${dayOf(e)} ${clock.hour}`, clock);
+    slots.set(`${day} ${clock.hour}`, { day, ...clock });
   }
   return [...slots.values()];
 }
@@ -35,16 +39,17 @@ function shareOf<T>(items: T[], matches: (item: T) => boolean): number | null {
   return items.length === 0 ? null : items.filter(matches).length / items.length;
 }
 
-function mostActiveHour(slots: HourSlot[]): Best | null {
-  const perHour = new Map<number, number>();
-  for (const { hour } of slots) perHour.set(hour, (perHour.get(hour) ?? 0) + 1);
-  const [top] = [...perHour].sort(([ha, a], [hb, b]) => b - a || ha - hb);
-  return top ? { value: top[1], label: `${String(top[0]).padStart(2, "0")}:00` } : null;
+/** Ties go to the first label, which for hours and months is the earliest. */
+function busiest(slots: HourSlot[], labelOf: (slot: HourSlot) => string): Best | null {
+  const [top] = tally(slots, labelOf);
+  return top ? { value: top.count, label: top.name } : null;
 }
+
+const hourOf = ({ hour }: HourSlot) => `${String(hour).padStart(2, "0")}:00`;
 
 const isNight = ({ hour }: HourSlot) => hour >= NIGHT_FROM || hour < NIGHT_UNTIL;
 
-const channelOf = (turn: LoggedEvent) =>
+export const channelOf = (turn: LoggedEvent) =>
   typeof turn.channel === "string" ? turn.channel : "terminal";
 
 /** Skimming is only measured on a turn that answered a reply. */
@@ -52,7 +57,9 @@ export function wrappedHabits(events: LoggedEvent[]): WrappedHabits {
   const slots = activeSlots(events);
   const turns = ofType(events, "turn");
   return {
-    mostActiveHour: mostActiveHour(slots),
+    mostActiveHour: busiest(slots, hourOf),
+    mostActiveWeekday: busiest(slots, (s) => s.weekday),
+    mostActiveMonth: busiest(slots, (s) => s.day.slice(0, 7)),
     nightShare: shareOf(slots, isNight),
     weekendShare: shareOf(slots, (s) => WEEKEND.has(s.weekday)),
     channels: tally(turns, channelOf),

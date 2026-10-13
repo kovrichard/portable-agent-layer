@@ -1,5 +1,6 @@
 import { labelOfRuntime } from "../../../hooks/lib/agent-registry";
 import type { CostTotals } from "../cost-report";
+import { count, days, row, tallyLabel } from "../report-rows";
 import { fmtDuration } from "../session-usage";
 import { fmtCost } from "../token-report";
 import type { RuntimeCost, WrappedAgents } from "./agents";
@@ -8,12 +9,6 @@ import type { SkillsNeverUsed, WrappedPal } from "./pal";
 import type { Best, WrappedRecords } from "./records";
 import type { WrappedTotals } from "./totals";
 import type { Tally } from "./year";
-
-const count = (n: number) => n.toLocaleString("en-US");
-
-function row(label: string, value: string): string {
-  return `    ${label.padEnd(20)} ${value}`;
-}
 
 function recordRow(
   label: string,
@@ -24,8 +19,6 @@ function recordRow(
     record === null ? "unknown" : `${format(record.value)}  (${record.label})`;
   return `    ${label.padEnd(36)} ${value}`;
 }
-
-const days = (n: number) => `${count(n)} ${n === 1 ? "day" : "days"}`;
 
 export function recordsLines(records: WrappedRecords): string[] {
   return [
@@ -53,19 +46,21 @@ export function recordsLines(records: WrappedRecords): string[] {
 const percent = (share: number | null) =>
   share === null ? "unknown" : `${Math.round(share * 100)}%`;
 
-function tallyLabel(tallies: Tally[]): string {
-  if (tallies.length === 0) return "unknown";
-  return tallies.map((t) => `${t.name} ${count(t.count)}`).join(" · ");
+const hours = (n: number) => `${count(n)} active ${n === 1 ? "hour" : "hours"}`;
+
+function busiestLabel(best: Best | null, unit: (n: number) => string): string {
+  return best === null ? "unknown" : `${best.label}  (${unit(best.value)})`;
 }
 
 export function habitsLines(habits: WrappedHabits): string[] {
-  const hour = habits.mostActiveHour;
   return [
     "\n  Habits\n",
     row(
       "most active hour",
-      hour === null ? "unknown" : `${hour.label}  (active on ${days(hour.value)})`
+      busiestLabel(habits.mostActiveHour, (n) => `active on ${days(n)}`)
     ),
+    row("most active weekday", busiestLabel(habits.mostActiveWeekday, hours)),
+    row("most active month", busiestLabel(habits.mostActiveMonth, hours)),
     row("at night (22-06)", percent(habits.nightShare)),
     row("on weekends", percent(habits.weekendShare)),
     row("messages by channel", tallyLabel(habits.channels)),
