@@ -31,10 +31,11 @@ export function projectsByDay(activity: Activity[]): Map<string, Set<string>> {
   return byDay;
 }
 
+/** Oldest day first, as the activity is. */
 export function daysByProject(activity: Activity[]): Map<string, string[]> {
   const byProject = new Map<string, Set<string>>();
   for (const { day, project } of activity) {
     byProject.set(project, (byProject.get(project) ?? new Set()).add(day));
   }
-  return new Map([...byProject].map(([project, days]) => [project, [...days].sort()]));
+  return new Map([...byProject].map(([project, days]) => [project, [...days]]));
 }

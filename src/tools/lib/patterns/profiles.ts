@@ -30,7 +30,7 @@ function slotsOf(activity: Activity[]): Slot[] {
 }
 
 const topOf = (slots: Slot[], labelOf: (slot: Slot) => string) =>
-  tally(slots, labelOf)[0]?.name ?? "unknown";
+  tally(slots, labelOf)[0].name;
 
 function profileOf(project: string, activity: Activity[]): ProjectProfile {
   const slots = slotsOf(activity);

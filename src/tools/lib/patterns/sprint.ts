@@ -20,14 +20,13 @@ const QUIET_DAYS = 14;
 
 /** Counted in the days the user worked at all, so a weekend off does not end it. */
 export function currentSprint(activity: Activity[]): Sprint | null {
-  const projectsOn = projectsByDay(activity);
-  const days = [...projectsOn.keys()].sort();
+  const days = [...projectsByDay(activity)];
   const latest = days.at(-1);
   if (latest === undefined) return null;
-  const sprints = [...(projectsOn.get(latest) ?? [])].map((project) => {
+  const sprints = [...latest[1]].map((project) => {
     let start = days.length - 1;
-    while (start > 0 && projectsOn.get(days[start - 1])?.has(project)) start--;
-    return { project, days: days.length - start, since: days[start] };
+    while (start > 0 && days[start - 1][1].has(project)) start--;
+    return { project, days: days.length - start, since: days[start][0] };
   });
   return sprints.sort((a, b) => b.days - a.days || a.project.localeCompare(b.project))[0];
 }
