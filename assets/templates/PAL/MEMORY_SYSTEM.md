@@ -15,8 +15,7 @@ memory/
 │   ├── pending-failure.json            # Deferred failure capture
 │   ├── captured-learnings.json         # Session-intelligence dedup map
 │   ├── session-names.json              # Generated session titles
-│   ├── debug.log[.1-.5]                # Rotated hook execution logs
-│   └── token-usage.jsonl               # Per-call inference token usage
+│   └── debug.log[.1-.5]                # Rotated hook execution logs
 │
 ├── signals/
 │   ├── ratings.jsonl                   # Append-only rating signals (explicit + implicit)

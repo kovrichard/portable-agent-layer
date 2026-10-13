@@ -27,7 +27,6 @@ import { logDebug, logError } from "../lib/log";
 import { ensureDir, paths } from "../lib/paths";
 import { sessionDir } from "../lib/session-dir";
 import { fileTimestamp, monthPath } from "../lib/time";
-import { logTokenUsage } from "../lib/token-usage";
 import {
   extractContent,
   extractLastAssistant,
@@ -161,8 +160,6 @@ export async function captureSessionIntelligence(
       caller: "session-intelligence",
       sessionId,
     });
-
-    logTokenUsage("session-intelligence", result);
 
     if (result.success && result.output) {
       output = JSON.parse(result.output) as IntelligenceOutput;

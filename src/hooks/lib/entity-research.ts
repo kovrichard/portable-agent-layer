@@ -14,7 +14,6 @@ import {
 } from "./entity-extraction";
 import type { inference } from "./inference";
 import { logDebug, logError } from "./log";
-import { logTokenUsage } from "./token-usage";
 
 export interface ResearchTarget {
   kind: ExtractedEntity["kind"];
@@ -180,7 +179,6 @@ export async function researchEntity(
     caller: "entity-research",
     web: true,
   });
-  logTokenUsage("entity-research", result);
   const profile = result.success ? parseProfile(result.output) : null;
   if (!profile) return { found: false, reason: result.error ?? "no usable reply" };
   if (profile.match !== "sure")

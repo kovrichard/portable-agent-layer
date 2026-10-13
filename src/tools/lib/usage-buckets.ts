@@ -6,6 +6,7 @@
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import type { LoggedEvent } from "../../hooks/lib/events";
 import { costOfUsage } from "../../hooks/lib/models";
 import { cacheWritesOf, finalPerMessage, type TranscriptUsage } from "./transcript-usage";
 
@@ -307,27 +308,27 @@ export interface PalInferenceUsage {
   byCaller: Record<string, Bucket>;
 }
 
-interface InferenceLine {
-  ts: string;
-  caller: string;
-  model: string;
-  inputTokens: number;
-  outputTokens: number;
-}
+const countOf = (value: unknown) => (typeof value === "number" ? value : null);
 
-/** PAL's own calls are plain prompts: no cache to write and none to read. */
-function inferenceTokens(entry: InferenceLine): Tokens {
+/** A call whose input or output went unreported has no tokens to count. */
+function inferenceTokens(call: LoggedEvent): Tokens | null {
+  const input = countOf(call.inputTokens);
+  const output = countOf(call.outputTokens);
+  if (input === null || output === null) return null;
   return {
-    input: entry.inputTokens,
-    output: entry.outputTokens,
-    cacheWrite5m: 0,
-    cacheWrite1h: 0,
-    cacheRead: 0,
+    input,
+    output,
+    cacheWrite5m: countOf(call.cacheWrite5m) ?? 0,
+    cacheWrite1h: countOf(call.cacheWrite1h) ?? 0,
+    cacheRead: countOf(call.cacheRead) ?? 0,
   };
 }
 
+const textOr = (value: unknown, fallback: string) =>
+  typeof value === "string" ? value : fallback;
+
 export function readPalInference(
-  filepath: string,
+  events: LoggedEvent[],
   now: Date = new Date()
 ): PalInferenceUsage {
   const horizons = horizonsFrom(now);
@@ -336,33 +337,20 @@ export function readPalInference(
     byModel: {},
     byCaller: {},
   };
-  if (!existsSync(filepath)) return result;
 
-  const content = readFileSync(filepath, "utf-8").trim();
-  if (!content) return result;
+  for (const call of events.filter((e) => e.type === "inference_call")) {
+    const tokens = inferenceTokens(call);
+    if (tokens === null) continue;
+    const model = textOr(call.model, "unknown");
+    const caller = textOr(call.caller, "anonymous");
 
-  for (const line of content.split("\n")) {
-    let entry: InferenceLine;
-    try {
-      entry = JSON.parse(line) as InferenceLine;
-    } catch {
-      continue;
-    }
-    const tokens = inferenceTokens(entry);
+    addToTimeBuckets(result.buckets, call.ts, model, tokens, horizons);
 
-    addToTimeBuckets(result.buckets, entry.ts, entry.model, tokens, horizons);
+    result.byModel[model] ??= emptyTimeBuckets();
+    addToTimeBuckets(result.byModel[model], call.ts, model, tokens, horizons);
 
-    result.byModel[entry.model] ??= emptyTimeBuckets();
-    addToTimeBuckets(
-      result.byModel[entry.model],
-      entry.ts,
-      entry.model,
-      tokens,
-      horizons
-    );
-
-    result.byCaller[entry.caller] ??= emptyBucket();
-    addToBucket(result.byCaller[entry.caller], entry.model, tokens, entry.ts);
+    result.byCaller[caller] ??= emptyBucket();
+    addToBucket(result.byCaller[caller], model, tokens, call.ts);
   }
 
   return result;
