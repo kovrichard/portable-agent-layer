@@ -245,12 +245,17 @@ describe("pal cli install (smoke)", () => {
     expect(after).toBe(before);
   }, 180000);
 
-  test("reinstalling over an unchanged settings.json leaves no new backup", () => {
-    const settingsBackups = () =>
-      readdirSync(CLAUDE_DIR).filter((name) => name.startsWith("settings.json.bak."));
-    expect(pal("cli", "install", "--claude").status).toBe(0);
-    const before = settingsBackups();
-    expect(pal("cli", "install", "--claude").status).toBe(0);
-    expect(settingsBackups()).toEqual(before);
-  }, 180000);
+  const reinstalls = [
+    { flag: "--claude", dir: CLAUDE_DIR },
+    { flag: "--cursor", dir: CURSOR_DIR },
+  ];
+  for (const { flag, dir } of reinstalls) {
+    test(`reinstalling ${flag} over unchanged configs leaves no new backup`, () => {
+      const backups = () => readdirSync(dir).filter((name) => /\.bak\.\d+$/.test(name));
+      expect(pal("cli", "install", flag).status).toBe(0);
+      const before = backups();
+      expect(pal("cli", "install", flag).status).toBe(0);
+      expect(backups()).toEqual(before);
+    }, 180000);
+  }
 });
