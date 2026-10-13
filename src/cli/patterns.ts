@@ -3,7 +3,8 @@ import { localDay } from "../hooks/lib/wall-clock";
 import { leaf } from "../tools/lib/command";
 import { projectActivity } from "../tools/lib/patterns/activity";
 import { contextSwitches, dayShape } from "../tools/lib/patterns/days";
-import { daysLines, momentumLines } from "../tools/lib/patterns/render";
+import { focusBlocks } from "../tools/lib/patterns/focus";
+import { daysLines, focusLines, momentumLines } from "../tools/lib/patterns/render";
 import { currentSprint, quietAfterBurst } from "../tools/lib/patterns/sprint";
 
 function printPatterns(): undefined {
@@ -12,6 +13,7 @@ function printPatterns(): undefined {
   const lines = [
     ...momentumLines(currentSprint(activity), quietAfterBurst(activity, localDay())),
     ...daysLines(dayShape(activity), contextSwitches(activity)),
+    ...focusLines(focusBlocks(activity)),
   ];
   for (const line of lines) console.log(line);
 }

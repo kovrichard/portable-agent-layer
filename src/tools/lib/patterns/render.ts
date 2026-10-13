@@ -1,5 +1,6 @@
 import { count, days, row } from "../report-rows";
 import type { DayShape, Switches } from "./days";
+import type { Focus } from "./focus";
 import type { QuietProject, Sprint } from "./sprint";
 
 function shapeLabel({ oneProject, manyProjects }: DayShape): string {
@@ -12,6 +13,31 @@ function switchesLabel(switches: Switches | null): string {
   if (switches === null) return "unknown";
   const { value, label } = switches.mostInADay;
   return `${switches.perDay.toFixed(1)} a day, at most ${count(value)} (${label})`;
+}
+
+function hoursAndMinutes(minutes: number): string {
+  const whole = Math.round(minutes);
+  return `${Math.floor(whole / 60)}h ${String(whole % 60).padStart(2, "0")}m`;
+}
+
+function longestLabel(focus: Focus): string {
+  const longest = focus.longest;
+  return longest === null
+    ? "none"
+    : `${hoursAndMinutes(longest.value)} (${longest.label})`;
+}
+
+export function focusLines(focus: Focus | null): string[] {
+  if (focus === null)
+    return ["\n  Focus\n", row("focus blocks", "unknown"), row("longest", "unknown")];
+  return [
+    "\n  Focus\n",
+    row(
+      "focus blocks",
+      `${count(focus.blocks)}, ${hoursAndMinutes(focus.minutes)} in all`
+    ),
+    row("longest", longestLabel(focus)),
+  ];
 }
 
 export function daysLines(shape: DayShape, switches: Switches | null): string[] {

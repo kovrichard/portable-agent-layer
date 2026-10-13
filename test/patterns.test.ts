@@ -4,7 +4,8 @@ import { appendEvent } from "../src/hooks/lib/events";
 import { runCommand } from "../src/tools/lib/command";
 import { projectActivity } from "../src/tools/lib/patterns/activity";
 import { contextSwitches, dayShape } from "../src/tools/lib/patterns/days";
-import { daysLines, momentumLines } from "../src/tools/lib/patterns/render";
+import { focusBlocks } from "../src/tools/lib/patterns/focus";
+import { daysLines, focusLines, momentumLines } from "../src/tools/lib/patterns/render";
 import { currentSprint, quietAfterBurst } from "../src/tools/lib/patterns/sprint";
 import { budapestHome, event } from "./lib/wrapped-events";
 
@@ -140,6 +141,90 @@ describe("days as printed", () => {
     expect(daysLines({ oneProject: 0, manyProjects: 0 }, null).slice(1)).toEqual([
       "    project days         unknown",
       "    context switches     unknown",
+    ]);
+  });
+});
+
+const minutesIn = (
+  type: "turn" | "commit" | "model_call",
+  project: string,
+  minute: number
+) => at(type, project, new Date(Date.UTC(2026, 5, 1, 6) + minute * 60_000).toISOString());
+
+describe("focus blocks", () => {
+  test("nothing logged has no focus", () => {
+    expect(focusBlocks([])).toBeNull();
+  });
+
+  test("90 minutes on one project with no gap over 30 count, and the longest is named", () => {
+    const focus = focusBlocks(
+      activityOf(
+        ...[0, 30, 60, 90].map((m) => minutesIn("turn", "a", m)),
+        ...[200, 230, 261, 290].map((m) => minutesIn("turn", "b", m)),
+        ...[400, 430, 460, 489].map((m) => minutesIn("turn", "c", m)),
+        ...[600, 630, 660, 690, 720].map((m) => minutesIn("commit", "d", m))
+      )
+    );
+    expect(focus).toEqual({
+      blocks: 2,
+      minutes: 90 + 120,
+      longest: { value: 120, label: "d, 2026-06-01" },
+    });
+  });
+
+  test("another session's model calls leave a block alone; the user moving there ends it", () => {
+    const focus = focusBlocks(
+      activityOf(
+        minutesIn("turn", "a", 0),
+        minutesIn("model_call", "b", 20),
+        minutesIn("model_call", "a", 25),
+        minutesIn("turn", "a", 50),
+        minutesIn("turn", "a", 75),
+        minutesIn("turn", "a", 95),
+        minutesIn("turn", "b", 100),
+        minutesIn("turn", "b", 130),
+        minutesIn("turn", "a", 140),
+        minutesIn("turn", "b", 190)
+      )
+    );
+    expect(focus).toEqual({
+      blocks: 1,
+      minutes: 95,
+      longest: { value: 95, label: "a, 2026-06-01" },
+    });
+  });
+
+  test("activity with no block long enough has none", () => {
+    expect(focusBlocks(activityOf(minutesIn("turn", "a", 0)))).toEqual({
+      blocks: 0,
+      minutes: 0,
+      longest: null,
+    });
+  });
+});
+
+describe("focus as printed", () => {
+  test("blocks print in hours and minutes, rounded to the minute", () => {
+    expect(
+      focusLines({
+        blocks: 1200,
+        minutes: 119.6,
+        longest: { value: 90.2, label: "a, 2026-06-01" },
+      })
+    ).toEqual([
+      "\n  Focus\n",
+      "    focus blocks         1,200, 2h 00m in all",
+      "    longest              1h 30m (a, 2026-06-01)",
+    ]);
+  });
+
+  test("no block says none; no activity says unknown", () => {
+    expect(focusLines({ blocks: 0, minutes: 0, longest: null })[2]).toBe(
+      "    longest              none"
+    );
+    expect(focusLines(null).slice(1)).toEqual([
+      "    focus blocks         unknown",
+      "    longest              unknown",
     ]);
   });
 });

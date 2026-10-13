@@ -1,5 +1,5 @@
 import type { Best } from "../wrapped/records";
-import { type Activity, projectsByDay } from "./activity";
+import { type Activity, movesAttention, projectsByDay } from "./activity";
 
 export interface DayShape {
   oneProject: number;
@@ -18,9 +18,6 @@ export function dayShape(activity: Activity[]): DayShape {
     manyProjects: sizes.filter((n) => n > 1).length,
   };
 }
-
-const movesAttention = ({ event }: Activity) =>
-  event.type === "turn" || event.type === "commit";
 
 /** Model calls are left out: two sessions running side by side interleave theirs without the user moving. */
 export function contextSwitches(activity: Activity[]): Switches | null {

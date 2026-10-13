@@ -20,6 +20,9 @@ export function projectActivity(events: LoggedEvent[]): Activity[] {
     .sort((a, b) => a.ms - b.ms);
 }
 
+export const movesAttention = ({ event }: Activity) =>
+  event.type === "turn" || event.type === "commit";
+
 export function projectsByDay(activity: Activity[]): Map<string, Set<string>> {
   const byDay = new Map<string, Set<string>>();
   for (const { day, project } of activity) {
