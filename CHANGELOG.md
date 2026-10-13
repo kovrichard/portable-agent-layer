@@ -1,3 +1,18 @@
+# [0.105.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.104.2...v0.105.0) (2026-10-13)
+
+
+### Bug Fixes
+
+* **antigravity:** back up settings.json only when it changes ([05b4df1](https://github.com/kovrichard/portable-agent-layer/commit/05b4df1cb4e660b490da12d54ab0cce79a0473df))
+* **claude:** back up settings.json only when install or uninstall changes it ([f707230](https://github.com/kovrichard/portable-agent-layer/commit/f707230ca0c982097607ee5aaa504ba2219ac2a5))
+* **codex:** back up hooks and allowlist rules only when they change ([0b56002](https://github.com/kovrichard/portable-agent-layer/commit/0b5600239bc083b4f9d84574a7146c88e0322ae4))
+* **cursor:** back up hooks and cli-config only when they change ([f9116a8](https://github.com/kovrichard/portable-agent-layer/commit/f9116a8571cccd2f3570e9bfd5e9d93da9ca7fea))
+
+
+### Features
+
+* **targets:** write a config only when it changes, keeping five backups ([a7c258c](https://github.com/kovrichard/portable-agent-layer/commit/a7c258c80a786a74b8682d1abb075e6c265e3100))
+
 ## [0.104.2](https://github.com/kovrichard/portable-agent-layer/compare/v0.104.1...v0.104.2) (2026-10-13)
 
 
