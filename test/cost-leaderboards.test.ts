@@ -49,11 +49,11 @@ describe("leaderboards", () => {
       call(1, { session: "session-one", ts: "2026-06-02T10:00:00.000Z", project: "a" }),
       call(1, { session: "session-one", ts: "2026-06-02T11:00:00.000Z" }),
       call(1, { session: "session-one", ts: "2026-06-02T12:00:00.000Z" }),
-      call(0.5),
+      call(0.5, { project: "z" }),
     ]);
     expect(boards.sessions).toEqual([
       { label: "session- (a, 2026-06-01)", cost: 6, unpriced: 0 },
-      { label: "no session (no project, 2026-06-01)", cost: 0.5, unpriced: 0 },
+      { label: "no session (z, 2026-06-01)", cost: 0.5, unpriced: 0 },
     ]);
   });
 
