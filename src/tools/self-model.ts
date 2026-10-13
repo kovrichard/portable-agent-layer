@@ -21,7 +21,6 @@ import { parseArgs } from "node:util";
 import { inference } from "../hooks/lib/inference";
 import { ensureDir, paths } from "../hooks/lib/paths";
 import { identity as loadSettingsIdentity } from "../hooks/lib/settings";
-import { logTokenUsage } from "../hooks/lib/token-usage";
 import {
   archiveDateOf,
   buildPrompt,
@@ -89,7 +88,6 @@ async function composeSelfModel(days: number): Promise<string> {
     caller: "self-model",
   });
 
-  logTokenUsage("self-model", result);
   if (result.success && result.output) {
     return result.output.trimEnd() + metaFooter(data);
   }

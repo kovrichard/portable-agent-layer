@@ -20,7 +20,6 @@ import { logDebug, logError } from "../lib/log";
 import { readAllProjects } from "../lib/projects";
 import { isServesKind, SERVES_KINDS, setServes } from "../lib/serves";
 import { readTelosGoals } from "../lib/telos-goals";
-import { logTokenUsage } from "../lib/token-usage";
 
 const FRESH_HOURS = 6;
 const MAX_PROJECTS_PER_GUESS = 40;
@@ -181,7 +180,6 @@ async function guessMissingServes(sessionId?: string): Promise<number> {
     caller: "agenda-serves",
     sessionId,
   });
-  logTokenUsage("agenda-serves", result);
   if (!result.success || !result.output) return 0;
 
   const parsed = parsePayload<{
@@ -255,7 +253,6 @@ async function refreshGoalLinks(
     caller: "agenda-goal-links",
     sessionId,
   });
-  logTokenUsage("agenda-goal-links", result);
   if (!result.success || !result.output) return "failed";
 
   const parsed = parsePayload<{ links: { goalId: string; projects: unknown }[] }>(
@@ -309,7 +306,6 @@ async function extractWaitingOn(sessionId?: string): Promise<number> {
       caller: "agenda-waiting-on",
       sessionId,
     });
-    logTokenUsage("agenda-waiting-on", result);
     if (!result.success || !result.output) continue;
 
     const parsed = parsePayload<{ question: string }>(result.output, "agenda:waiting-on");
@@ -355,7 +351,6 @@ async function writeMoves(sessionId?: string): Promise<boolean> {
     caller: "agenda-moves",
     sessionId,
   });
-  logTokenUsage("agenda-moves", result);
   if (!result.success || !result.output) return false;
 
   const parsed = parsePayload<{ moves: (AgendaMove & { project?: unknown })[] }>(
