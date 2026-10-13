@@ -3,7 +3,8 @@ import { patternsCommand } from "../src/cli/patterns";
 import { appendEvent } from "../src/hooks/lib/events";
 import { runCommand } from "../src/tools/lib/command";
 import { projectActivity } from "../src/tools/lib/patterns/activity";
-import { momentumLines } from "../src/tools/lib/patterns/render";
+import { contextSwitches, dayShape } from "../src/tools/lib/patterns/days";
+import { daysLines, momentumLines } from "../src/tools/lib/patterns/render";
 import { currentSprint, quietAfterBurst } from "../src/tools/lib/patterns/sprint";
 import { budapestHome, event } from "./lib/wrapped-events";
 
@@ -77,6 +78,68 @@ describe("quiet after a burst", () => {
     expect(quietAfterBurst(activity, "2026-07-01")).toEqual([
       { project: "edge", lastActive: "2026-06-17", quietDays: 14, burstDays: 3 },
       { project: "burst", lastActive: "2026-06-07", quietDays: 24, burstDays: 3 },
+    ]);
+  });
+});
+
+const at = (type: "turn" | "commit" | "model_call", project: string, ts: string) =>
+  event(type, {}, { project, ts });
+
+describe("days", () => {
+  test("a day is on one project or on several", () => {
+    const activity = activityOf(
+      work("a", "2026-06-01"),
+      work("a", "2026-06-01"),
+      work("a", "2026-06-02"),
+      work("b", "2026-06-02"),
+      work("b", "2026-06-03")
+    );
+    expect(dayShape(activity)).toEqual({ oneProject: 2, manyProjects: 1 });
+  });
+
+  test("a switch is the user's next message or commit landing in another project the same day", () => {
+    const activity = activityOf(
+      at("turn", "a", "2026-06-01T08:00:00.000Z"),
+      at("model_call", "b", "2026-06-01T08:01:00.000Z"),
+      at("commit", "a", "2026-06-01T08:02:00.000Z"),
+      at("turn", "b", "2026-06-01T08:03:00.000Z"),
+      at("turn", "a", "2026-06-01T08:04:00.000Z"),
+      at("turn", "b", "2026-06-02T08:00:00.000Z"),
+      at("turn", "b", "2026-06-02T08:01:00.000Z"),
+      at("turn", "a", "2026-06-03T08:00:00.000Z"),
+      at("commit", "b", "2026-06-03T08:01:00.000Z"),
+      at("turn", "c", "2026-06-03T08:02:00.000Z")
+    );
+    expect(contextSwitches(activity)).toEqual({
+      perDay: 4 / 3,
+      mostInADay: { value: 2, label: "2026-06-01" },
+    });
+  });
+
+  test("nothing logged has no switches and no days", () => {
+    expect(contextSwitches([])).toBeNull();
+    expect(dayShape([])).toEqual({ oneProject: 0, manyProjects: 0 });
+  });
+});
+
+describe("days as printed", () => {
+  test("day shape and switches print with their share and busiest day", () => {
+    expect(
+      daysLines(
+        { oneProject: 3, manyProjects: 1 },
+        { perDay: 1.25, mostInADay: { value: 1200, label: "2026-06-01" } }
+      )
+    ).toEqual([
+      "\n  Days\n",
+      "    project days         3 days on one project, 1 day on several (75% focused)",
+      "    context switches     1.3 a day, at most 1,200 (2026-06-01)",
+    ]);
+  });
+
+  test("with no activity both are unknown", () => {
+    expect(daysLines({ oneProject: 0, manyProjects: 0 }, null).slice(1)).toEqual([
+      "    project days         unknown",
+      "    context switches     unknown",
     ]);
   });
 });

@@ -1,5 +1,26 @@
-import { days, row } from "../report-rows";
+import { count, days, row } from "../report-rows";
+import type { DayShape, Switches } from "./days";
 import type { QuietProject, Sprint } from "./sprint";
+
+function shapeLabel({ oneProject, manyProjects }: DayShape): string {
+  const total = oneProject + manyProjects;
+  if (total === 0) return "unknown";
+  return `${days(oneProject)} on one project, ${days(manyProjects)} on several (${Math.round((oneProject / total) * 100)}% focused)`;
+}
+
+function switchesLabel(switches: Switches | null): string {
+  if (switches === null) return "unknown";
+  const { value, label } = switches.mostInADay;
+  return `${switches.perDay.toFixed(1)} a day, at most ${count(value)} (${label})`;
+}
+
+export function daysLines(shape: DayShape, switches: Switches | null): string[] {
+  return [
+    "\n  Days\n",
+    row("project days", shapeLabel(shape)),
+    row("context switches", switchesLabel(switches)),
+  ];
+}
 
 function quietLabel(quiet: QuietProject[]): string {
   if (quiet.length === 0) return "none";

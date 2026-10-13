@@ -2,7 +2,8 @@ import { allEventsSince } from "../hooks/lib/events";
 import { localDay } from "../hooks/lib/wall-clock";
 import { leaf } from "../tools/lib/command";
 import { projectActivity } from "../tools/lib/patterns/activity";
-import { momentumLines } from "../tools/lib/patterns/render";
+import { contextSwitches, dayShape } from "../tools/lib/patterns/days";
+import { daysLines, momentumLines } from "../tools/lib/patterns/render";
 import { currentSprint, quietAfterBurst } from "../tools/lib/patterns/sprint";
 
 function printPatterns(): undefined {
@@ -10,6 +11,7 @@ function printPatterns(): undefined {
   console.log("\n  PAL Patterns");
   const lines = [
     ...momentumLines(currentSprint(activity), quietAfterBurst(activity, localDay())),
+    ...daysLines(dayShape(activity), contextSwitches(activity)),
   ];
   for (const line of lines) console.log(line);
 }
