@@ -105,9 +105,9 @@ function byCost<T>(entries: [string, T][], costOf: (value: T) => number): [strin
   return entries.sort((a, b) => costOf(b[1]) - costOf(a[1]));
 }
 
-/** Drops the vendor's prefix and any provider path, so `accounts/x/models/kimi` reads `kimi`. */
+/** Drops the vendor's prefix, any provider path and a release date, so `accounts/x/models/kimi` reads `kimi`. */
 export function modelLabel(model: string): string {
-  return (model.split("/").at(-1) ?? model).replace("claude-", "");
+  return (model.split("/").at(-1) ?? model).replace("claude-", "").replace(/-\d{8}$/, "");
 }
 
 export const usedAgents = (agents: AgentReport[]) =>
@@ -160,18 +160,12 @@ function byProjectLines(agents: AgentReport[]): string[] {
   ];
 }
 
-export function inferenceLabel(model: string): string {
-  if (model.includes("haiku")) return "Haiku";
-  if (model.includes("sonnet")) return "Sonnet";
-  return model.replace("claude-", "");
-}
-
 export const usedInferenceModels = (pal: PalInferenceUsage) =>
   Object.entries(pal.byModel).filter(([, buckets]) => buckets.total.calls > 0);
 
 function palInferenceLines(pal: PalInferenceUsage): string[] {
   return usedInferenceModels(pal).flatMap(([model, buckets]) => [
-    `\n  PAL Inference (${inferenceLabel(model)})\n`,
+    `\n  PAL Inference (${modelLabel(model)})\n`,
     ...windowLines(buckets),
   ]);
 }

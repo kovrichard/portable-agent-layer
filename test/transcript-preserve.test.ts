@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import {
   preserveTranscripts,
   preserveTranscriptsOnce,
+  transcriptArchive,
 } from "../src/hooks/lib/transcript-preserve";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
@@ -89,6 +90,13 @@ describe("PreserveTranscripts entrypoint", () => {
     expect(
       existsSync(resolve(home, "memory", "content", "claude", "-proj", "s1.jsonl.gz"))
     ).toBe(true);
+  });
+});
+
+describe("transcriptArchive", () => {
+  test("is the Claude folder of the PAL home's content store, where usage reads deleted transcripts", () => {
+    process.env.PAL_HOME = root;
+    expect(transcriptArchive()).toBe(resolve(root, "memory", "content", "claude"));
   });
 });
 
