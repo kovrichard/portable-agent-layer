@@ -251,6 +251,16 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
     });
   });
 
+  test("the caller learns the model the call was logged under", async () => {
+    writeFakeBin(tmpBin, "claude", claudeReplying(`"hi"`));
+    prependPath(tmpBin);
+
+    const result = await inference({ user: "hi", caller: "rating", timeout: 5000 });
+    const [call] = eventsSince("inference_call", new Date(0));
+    expect(result.model).toEqual(expect.any(String));
+    expect(call.model).toBe(result.model);
+  });
+
   test("a reply claude marks as an error is not taken as the answer", async () => {
     writeFakeBin(
       tmpBin,
@@ -523,6 +533,7 @@ describe("web research", () => {
     expect(result).toEqual({
       success: false,
       error: "web research is not available on opencode yet",
+      model: expect.any(String),
     });
   });
 

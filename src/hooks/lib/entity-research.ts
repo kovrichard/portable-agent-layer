@@ -180,7 +180,7 @@ export async function researchEntity(
     caller: "entity-research",
     web: true,
   });
-  if (result.usage) logTokenUsage("entity-research", result.usage);
+  logTokenUsage("entity-research", result);
   const profile = result.success ? parseProfile(result.output) : null;
   if (!profile) return { found: false, reason: result.error ?? "no usable reply" };
   if (profile.match !== "sure")

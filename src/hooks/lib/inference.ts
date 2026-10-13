@@ -190,6 +190,8 @@ interface InferenceResult {
   /** First line of a failed CLI's error output. */
   error?: string;
   usage?: InferenceUsage;
+  /** The model the route ran on, when PAL picked it. */
+  model?: string;
 }
 
 function schemaProblem(
@@ -214,8 +216,9 @@ function plannedRoute(opts: InferenceOptions): { route: string; model: string | 
 export async function inference(opts: InferenceOptions): Promise<InferenceResult> {
   const started = performance.now();
   const result = await checkedInference(opts);
-  logInferenceCall(opts, plannedRoute(opts), result, performance.now() - started);
-  return result;
+  const planned = plannedRoute(opts);
+  logInferenceCall(opts, planned, result, performance.now() - started);
+  return { ...result, model: planned.model ?? undefined };
 }
 
 async function checkedInference(opts: InferenceOptions): Promise<InferenceResult> {

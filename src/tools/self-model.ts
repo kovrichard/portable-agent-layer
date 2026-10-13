@@ -19,7 +19,6 @@ import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { inference } from "../hooks/lib/inference";
-import { SONNET_MODEL } from "../hooks/lib/models";
 import { ensureDir, paths } from "../hooks/lib/paths";
 import { identity as loadSettingsIdentity } from "../hooks/lib/settings";
 import { logTokenUsage } from "../hooks/lib/token-usage";
@@ -90,7 +89,7 @@ async function composeSelfModel(days: number): Promise<string> {
     caller: "self-model",
   });
 
-  if (result.usage) logTokenUsage("self-model", result.usage, SONNET_MODEL);
+  logTokenUsage("self-model", result);
   if (result.success && result.output) {
     return result.output.trimEnd() + metaFooter(data);
   }

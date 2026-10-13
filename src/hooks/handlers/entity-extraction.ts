@@ -56,7 +56,7 @@ export async function extractSessionEntities(
     caller: "entity-extraction",
     sessionId,
   });
-  if (result.usage) logTokenUsage("entity-extraction", result.usage);
+  logTokenUsage("entity-extraction", result);
   if (!result.success || !result.output) return;
 
   const source = sourceId(sessionId, count);

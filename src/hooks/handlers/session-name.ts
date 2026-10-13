@@ -76,7 +76,7 @@ async function upgradeWithInference(
       sessionId,
     });
 
-    if (result.usage) logTokenUsage("session-name", result.usage);
+    logTokenUsage("session-name", result);
     if (!result.success || !result.output) return;
 
     const label = labelFromModel(result.output);
