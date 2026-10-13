@@ -133,7 +133,7 @@ function backupsOf(path: string): string[] {
 }
 
 function pruneBackups(path: string): void {
-  for (const old of backupsOf(path).slice(KEPT_BACKUPS)) rmSync(old, { force: true });
+  for (const old of backupsOf(path).slice(KEPT_BACKUPS)) unlinkSync(old);
 }
 
 /** Writes a config only when its content changes, backing up what it replaces. */
