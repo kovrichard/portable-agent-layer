@@ -130,7 +130,6 @@ export default {
     ".test",
     "backups",
     "docs",
-    "eval",
     "**/node_modules",
     "pal-export-*.zip",
   ],
