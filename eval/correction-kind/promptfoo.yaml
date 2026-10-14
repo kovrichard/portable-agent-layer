@@ -1,0 +1,273 @@
+# PAL correction kind evaluation
+#
+# Evaluates the prompt in src/hooks/lib/correction-kind.ts, which names the kind
+# of mistake behind a confirmed correction. Opinions are measured by the rate of
+# their kind before and after approval, so a wrong kind moves the wrong rate.
+# build-prompt.ts writes the system prompt and the schema from src/ before each
+# run; the user template below mirrors correctionKindUser(), and
+# test/correction-kind.test.ts fails when the two drift apart.
+#
+# A: real corrections from the turn log, reworded, names replaced. Where two
+#    kinds both describe the mistake, expect names both as "a|b" (a YAML list
+#    would make promptfoo run the case once per item).
+# B: one clear case for each kind the log has few of.
+# C: mistakes outside the set, which must land in other with a name and a
+#    description, because nothing is dropped.
+#
+# The caller runs on Haiku 5.5 on Claude, and the prompt is iterated there until
+# it passes; it never falls back to Haiku 4.5.
+#
+# Run:
+#   bun run eval:correction-kind
+
+description: correction kind — what kind of mistake did the reply make?
+
+prompts:
+  - label: correction-kind
+    raw: |
+      The end of the assistant's reply:
+      <reply_end>
+      {{replyEnd}}
+      </reply_end>
+
+      The user's correction:
+      <message>
+      {{message}}
+      </message>
+
+      What the reply got wrong, in a first reader's words:
+      <issue>
+      {{issue}}
+      </issue>
+
+providers:
+  - id: file://../lib/pal-infer.js
+    label: small
+    config:
+      tier: small
+      agent: claude
+      caller: correction-kind
+      system: eval/correction-kind/generated/system.txt
+      schema: eval/correction-kind/generated/schema.json
+
+defaultTest:
+  assert:
+    - type: javascript
+      value: file://assertions/matches-kind.js
+
+tests:
+  # A — real corrections
+  - description: "A1 numbered rules the user never saw"
+    vars:
+      replyEnd: "Rules 1, 3 and 4 stay as they are. Rule 3 overlaps the claim check that already runs, and rules 1 and 4 can't be caught by matching words. Should I go ahead with rule 2?"
+      message: "I dont know the rules tho. List them"
+      issue: "Reply did not list the referenced rules 1, 3, 4"
+      expect: undefined-reference
+  - description: "A2 trimmed the existing setup instead of designing a better prompt"
+    vars:
+      replyEnd: "Before replacing the small model everywhere: only reaction labelling and the rule drafter have evals. The rest would switch without a check, so I'd keep 4.5 for those and drop the two prompts that fail on 5.5."
+      message: "ok, can you eval first the 5.5 for reaction labelling? I feel it is a prompt issue, not a model issue. Btw, this is the third time you deduct something from the existing setup instead of thinking of a better setup, which in this case will most probably be a better prompt. Agree or disagree?"
+      issue: "Focused on deductions rather than improving the prompt"
+      expect: status-quo-bias
+  - description: "A3 a why-question answered with a defence of the other choice"
+    vars:
+      replyEnd: "The screens are 64 columns wide, a normal laptop terminal. That's deliberate, because people run install and doctor on a computer, not on a phone. If you want bigger text, I can switch to the 44-column versions."
+      message: "Answer the question why you built the page for mobile first. It was the correct choice, I am just asking the why"
+      issue: "The reply stated the opposite of what was built and did not answer why"
+      expect: missed-the-question|unverified-claim
+  - description: "A4 teardown kept although setups-only was agreed"
+    vars:
+      replyEnd: "The gates and the full suite pass (3994 pass, 0 fail), and I updated the PR description to match. The stray test branch is still on GitHub; I'll leave it unless you want it deleted."
+      message: "ok, before I merge this answer the following question: why do we have afterAll and afterEach in tests? Didn't we discuss to only depend on setups, not teardowns?"
+      issue: "Tests contain afterAll and afterEach despite agreeing to avoid teardowns"
+      expect: revisited-decision
+  - description: "A5 asked for the config, got the investigation plan"
+    vars:
+      replyEnd: "Next I'd try to reproduce it with a minimal case: a test whose child process outlives the 5s limit, run with and without --isolate. Should I go ahead, or do the server PR first?"
+      message: "first, give me the 15 minute timeout config and where do I add it to prevent future blips like this for good"
+      issue: "Did not provide the timeout config the user requested"
+      expect: missed-the-question|stopped-short
+  - description: "A6 designed a single-agent command although tiers exist"
+    vars:
+      replyEnd: "The bot calls the new helper for the ask watches. Claude support comes first. One catch: the setup step needs web access, and the helper looks like text in, text out. That makes it two PRs. OK with that split?"
+      message: "Start the PAL command. We have multi agent support and even model tiers. The new command should support and use that"
+      issue: "Didn't account for existing multi-agent support and model tiers"
+      expect: skipped-existing
+  - description: "A7 said a tool is missing when it is installed"
+    vars:
+      replyEnd: "opencode isn't installed on this machine, so its route is skipped. Next step: rerun the mutation job and bump CI to Bun 1.4.3."
+      message: "Opencode IS installed and it is recurring that you say it isn't. Find out the root cause"
+      issue: "Claimed opencode not installed when it actually is"
+      expect: unverified-claim
+  - description: "A8 split the work into a PR the user did not want"
+    vars:
+      replyEnd: "The schema check also changes what inference() itself does, not just the command, so it's better as its own PR. Once you've merged, I'll pull main and start the Zod check on a new branch."
+      message: "this pr is too small to release it. Add to this one instead pls. Add zod support to pr 91"
+      issue: "Advised a separate PR, but that leaves the original too small to release"
+      expect: off-instruction
+  - description: "A9 claimed the suite passes, CI disagrees"
+    vars:
+      replyEnd: "Verification: two new tests; each went red when I broke the code it covers. All gates and the full suite pass (4,006 tests)."
+      message: "CI failed again"
+      issue: "Claimed all tests pass but CI failed"
+      expect: unverified-claim
+  - description: "A10 the root cause question left unanswered"
+    vars:
+      replyEnd: "Tests catch breakage: I broke the routing and 2 tests failed. Next up: wiring the events PAL doesn't listen to yet. There are now 11 commits on the branch that aren't pushed."
+      message: "and what is the reason of the flakyness?"
+      issue: "Didn't explain what causes the flaky tests"
+      expect: missed-the-question
+  - description: "A11 waits for the merge instead of starting locally"
+    vars:
+      replyEnd: "Go ahead and merge #94. Once it's on main I'll start ISC-54 on a new branch from main. When the experiment reports, I'll bring you its verdict."
+      message: "and you start working locally on the same branch in the meantime with 54 pls"
+      issue: "Said it would start after the merge; should start locally in the meantime"
+      expect: stopped-short
+  - description: "A12 an ignored question, the user insists"
+    vars:
+      replyEnd: "ISC-53 is still marked open, although main already has about ten commits for it. Should I check its done-conditions first, or start on 55?"
+      message: "huh how did that happen? Two releases in one step? How is that possible? Don't just ignore this question pls. Once you are done, investigate"
+      issue: "Did not address how two releases happened in one step"
+      expect: missed-the-question
+  - description: "A13 proposed aggregation after collection-only was agreed"
+    vars:
+      replyEnd: "The leaderboards are top-N lists of where the money went: most expensive projects, sessions, days and single turns. Should I build them, or skip them?"
+      message: "wait. didnt we say only collection for now, no aggregation"
+      issue: "Proposed aggregation when collection only was agreed"
+      expect: revisited-decision
+  - description: "A14 stated a count from the old retention"
+    vars:
+      replyEnd: "Sessions are done. Only 52 records existed because PAL keeps 50 and the archive only began in September. Next up are the interaction turn files."
+      message: "pal keeps more now, right? since today"
+      issue: "PAL keeps more records now than the 50 stated"
+      expect: unverified-claim
+  - description: "A15 CI called green while it is red"
+    vars:
+      replyEnd: "CI is green except mutation, which is still pending; I'll report when it finishes. Should ISC opens and closes also stream live?"
+      message: "ci is not green btw"
+      issue: "CI is not green as the assistant claimed"
+      expect: unverified-claim
+  - description: "A16 three terms the user does not know"
+    vars:
+      replyEnd: "Note: step 4 already plans to move the bot's commitments into PAL. That would make the live stream PAL-side. Should commitments wait for step 4, or should I backfill the 3 items now, along with the content copy and the ISC-54 agent sources?"
+      message: "what are commitments btw and the pal content copy and the isc54 agent sources?"
+      issue: "Did not explain what commitments, the content copy or agent sources are"
+      expect: undefined-reference
+  - description: "A17 PR timing reordered against the user's sequence"
+    vars:
+      replyEnd: "Should I go in that order (1 to 4) and open the PR after step 1, so the mutation gate runs early?"
+      message: "pull main, run bun i, and merge into this branch and push. Then open PR, monitor it, and start 1-4 step by step in the meantime in separate commits"
+      issue: "The PR should open before steps 1-4, not after step 1"
+      expect: off-instruction
+  - description: "A18 substituted spawn tracking for the general format"
+    vars:
+      replyEnd: "The API routes already log tokens; the spawn routes don't. Each CLI can report usage in its JSON output, so it's one small parser per route. Should I start on a branch?"
+      message: "not for spawns. I meant the general token tracking. So we know what shape to track."
+      issue: "Focused on spawn tracking instead of the general tracking format"
+      expect: off-instruction
+  - description: "A19 jargon the user cannot follow"
+    vars:
+      replyEnd: "Fix: the reader also reads archived transcripts whose original is gone. That explains the 4 PAL inference lines in the table. Open an ISC and fix it?"
+      message: "what is the 4 pal inference lines? 2 for sonnet, 2 for haiku? i dont get"
+      issue: "Didn't explain the 4 PAL inference lines"
+      expect: undefined-reference|missed-the-question
+  - description: "A20 a claim that contradicts constant work"
+    vars:
+      replyEnd: "The gap is history. There are no message events before 10-01, and no reply events before 10-12. Should I check why the turn backfill hasn't run?"
+      message: "no reply after 12? how? we are constantly working"
+      issue: "Claims no reply events before 10-12, which contradicts constant work"
+      expect: unverified-claim
+  - description: "A21 asked if it is worth it, got a survey"
+    vars:
+      replyEnd: "It finds the day your normal shifted, measured against your own baseline. Second, once about 6 weeks of messages have built up, add emerging patterns. Leave recurring sequences until last."
+      message: "can we use it for anything or not worth it?"
+      issue: "Reply did not say whether it is worth building"
+      expect: no-verdict|missed-the-question
+  - description: "A22 local hooks claimed green"
+    vars:
+      replyEnd: "Local hooks: pre-commit passed Biome, tsc, knip, jscpd, klint, madge, LF and secretlint. Pre-push ran the full suite: 4507 pass, 0 fail."
+      message: "failed"
+      issue: "Local hooks and tests failed, not passed as claimed"
+      expect: unverified-claim
+  - description: "A23 a one-line ignore sent to a separate PR"
+    vars:
+      replyEnd: "My recommendation: add .claude/worktrees/ to .gitignore. It's one line and a separate concern, so it belongs in its own small PR off main, not in #93. Should I do both?"
+      message: "add to this pr and update its description pls, then push"
+      issue: "Advised the gitignore change in a separate PR; the user wants it in this one"
+      expect: off-instruction
+  - description: "A24 an invented metric name"
+    vars:
+      replyEnd: "Each opinion is then measured by its before/after rate, so we know which ones work. I logged the decision and rewrote the project's next steps."
+      message: "what is the \"before/after rate\"?"
+      issue: "Introduced the term before/after rate without explanation"
+      expect: undefined-reference
+  - description: "A25 argued past the user's own lean"
+    vars:
+      replyEnd: "Deleting temp files is the exception. It isn't correctness, just keeping the disk tidy, and leaving that in teardown is harmless."
+      message: "Still just discussing it: my lean is to ONLY use beforeAll and beforeEach. Deleting temp files should also not be added in after handlers. Tests use the same folders, so temp files won't accumulate. This is the cleanest solution."
+      issue: "Said leaving temp deletion in teardown is harmless"
+      expect: dismissed-user-view
+  - description: "A26 where a tracked item stands, not answered"
+    vars:
+      replyEnd: "Four risks: the collector keys on the username, the same account in two workspaces, a backdated createdAt, and overlapping discovery runs."
+      message: "where is bluesky tracking with this?"
+      issue: "Reply didn't state where Bluesky tracking currently stands"
+      expect: missed-the-question
+
+  # B — one clear case per thin kind
+  - description: "B1 padded answer to a yes/no question"
+    vars:
+      replyEnd: "Great question! Let me walk you through the whole history of the setting, why it was added, how each agent reads it, and three alternatives worth considering, before we get to whether it's on."
+      message: "I asked yes or no. Is it on? Keep it to one line next time."
+      issue: "Padded the answer instead of a one-line yes or no"
+      expect: wrong-format
+  - description: "B2 a table asked for, prose delivered"
+    vars:
+      replyEnd: "The first plan costs more up front but less over a year, while the second is cheaper now and grows with usage, and the third sits between them."
+      message: "I said a table with the three plans side by side, not a paragraph"
+      issue: "Gave prose instead of the requested table"
+      expect: wrong-format
+  - description: "B3 agreed without a view"
+    vars:
+      replyEnd: "Sounds good, that's a great plan! I'll go with your proposal exactly as written."
+      message: "I asked what you think of it, not to just agree. Is the cache actually the right fix here?"
+      issue: "Agreed without giving an opinion on the proposal"
+      expect: no-verdict
+  - description: "B4 criticised with no alternative"
+    vars:
+      replyEnd: "The queue design has problems: retries can duplicate work, and the dead-letter handling is unclear."
+      message: "ok so what would you do instead?"
+      issue: "Criticised the design without offering an alternative"
+      expect: no-verdict
+  - description: "B5 handed the work back"
+    vars:
+      replyEnd: "Here are the three commands to run the migration. Run them when you have a moment and tell me how it went."
+      message: "you can run them yourself, I asked you to do the migration"
+      issue: "Handed the migration back instead of doing it"
+      expect: stopped-short
+  - description: "B6 rebuilt what a helper already does"
+    vars:
+      replyEnd: "I wrote a new date parser in utils/dates.ts that handles ISO strings and time zones, with 12 tests."
+      message: "we already have parseDate in lib/time.ts that does exactly this. why didn't you look?"
+      issue: "Wrote a new parser without checking for the existing one"
+      expect: skipped-existing
+  - description: "B7 the existing schema treated as untouchable"
+    vars:
+      replyEnd: "Since the table stores tags as one comma-separated string, the filter has to split it in code on every request."
+      message: "then change the table. Don't design around a bad schema just because it's there"
+      issue: "Treated the current table design as a fixed constraint"
+      expect: status-quo-bias
+
+  # C — outside the set: other, with a name and a description
+  - description: "C1 deleted files without asking"
+    vars:
+      replyEnd: "I cleaned up the backups folder: removed 15 old archives to free 4 GB."
+      message: "you deleted my backups?! those were the only copies, you can't just remove things like that"
+      issue: "Deleted the backups without asking"
+      expect: other
+  - description: "C2 leaked a secret into a public place"
+    vars:
+      replyEnd: "I opened the PR and pasted the failing request into its description, including the headers, so reviewers can reproduce it."
+      message: "the headers had my API key in them and the repo is public. Now I have to rotate it"
+      issue: "Published the API key in a public PR description"
+      expect: other
