@@ -1,6 +1,6 @@
 ---
 name: deep-research
-description: "Multi-agent parallel research — quick/standard/extensive modes with specialized researcher agents for depth, breadth, and verification. Use when researching a topic, finding information, or investigating something thoroughly."
+description: "Multi-agent parallel research — quick/standard/extensive modes with specialized researcher agents for depth, breadth, and verification. Use when researching a topic, finding information, or investigating something thoroughly. Not for health, medical or other scientific-evidence questions; those go to scientific-research."
 argument-hint: <topic or question>
 metadata:
   source: portable-agent-layer
@@ -104,3 +104,10 @@ Keep total output under 1500 words unless the user asks for more.
 - Do NOT skip the spawns and answer from your own knowledge. That is a failed invocation
 - Each agent returns independently — expect different formats and overlapping findings
 - The synthesis step is YOUR job as the orchestrating agent, not the subagents'
+
+## Do NOT use
+
+- For a health, medical, nutrition, drug or other scientific-evidence question. Use
+  `scientific-research`, which cites only peer-reviewed literature and clinical
+  guidelines and verifies every claim.
+- To research a company or person. Use `research-entity`.
