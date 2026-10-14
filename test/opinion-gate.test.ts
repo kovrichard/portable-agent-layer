@@ -130,6 +130,14 @@ describe("gateAdvice", () => {
     );
   });
 
+  test("holds a duplicate of an opinion that cannot be measured at all", () => {
+    const undated = rule({ decidedAt: undefined });
+
+    expect(gateAdvice(duplicate, [undated], before, now)).toBe(
+      "opinion o1's effect is not measurable yet (no effect); held beside it"
+    );
+  });
+
   test("points at an undecided draft, or a target no longer active", () => {
     const pending = rule({ id: "o1", status: "draft", delivery: undefined });
 
