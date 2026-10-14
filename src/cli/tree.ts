@@ -15,6 +15,7 @@ import {
 } from "../tools/lib/command";
 import { builtinTools, builtinToolVerbs } from "./builtin-tools";
 import { contentCommand } from "./content";
+import { correctionCommand } from "./correction";
 import { costCommand } from "./cost";
 import { eventsCommand } from "./events";
 import { identityCommand } from "./identity";
@@ -169,6 +170,7 @@ export function cliTree(admin: AdminHandlers): Group {
       knowledge: knowledgeCommand,
       ledger: ledgerCommand,
       rule: ruleCommand,
+      correction: correctionCommand,
       server: serverCommand,
       skill: skillCommand,
       subagent: subagentCommand,

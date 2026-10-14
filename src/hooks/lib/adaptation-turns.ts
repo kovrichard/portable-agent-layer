@@ -6,7 +6,15 @@
  * other's lines; a month is deleted whole once it ends before the window.
  */
 
-import { appendFileSync, existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { resolve } from "node:path";
 import { paths } from "./paths";
 
@@ -105,6 +113,31 @@ function parseLine(line: string): Turn | null {
     return typeof parsed.ts === "string" ? parsed : null;
   } catch {
     return null;
+  }
+}
+
+export function turnKey(turn: Turn): string {
+  return `${turn.session} ${turn.ts}`;
+}
+
+function replacedLine(line: string, replacements: Map<string, Turn>): string {
+  const turn = parseLine(line);
+  const replacement = turn && replacements.get(turnKey(turn));
+  return replacement ? JSON.stringify(replacement) : line;
+}
+
+/**
+ * Rewrites the given turns in place. Each month file is read and replaced in one
+ * synchronous step, leaving only microseconds in which another session's append
+ * could be lost; a backfill runs once, so that window is accepted.
+ */
+export function replaceTurns(replacements: Map<string, Turn>): void {
+  for (const file of monthFiles()) {
+    const path = resolve(paths.adaptation(), file);
+    const lines = readFileSync(path, "utf-8").split("\n");
+    const rewritten = lines.map((line) => replacedLine(line, replacements));
+    writeFileSync(`${path}.tmp`, rewritten.join("\n"));
+    renameSync(`${path}.tmp`, path);
   }
 }
 
