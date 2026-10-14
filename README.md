@@ -216,6 +216,7 @@ PAL ships with built-in skills that extend your agent's capabilities:
 | `reflect` | Diagnose why a PAL behavior didn't trigger |
 | `research-entity` | Research a company or person on the web: links, registry entry, recent news |
 | `rule-review` | Approve or deny the rules PAL drafted from your corrections |
+| `scientific-research` | Answer health and scientific questions from cited, verified sources: PubMed, guidelines, NEJM, Lancet, JAMA, BMJ |
 | `telos` | Inspect or update goals, beliefs, strategies, narratives |
 | `think` | Structured first-pass reasoning on a problem |
 
