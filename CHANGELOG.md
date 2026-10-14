@@ -1,3 +1,25 @@
+# [0.109.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.108.0...v0.109.0) (2026-10-14)
+
+
+### Bug Fixes
+
+* **adaptation:** correction-kind prompt reads the issue as a hint ([2295882](https://github.com/kovrichard/portable-agent-layer/commit/229588278d2c16d9a879d1ef6b9f0b3c7c6deec3))
+* **update:** never offer an older npm latest as an update ([2c5a34c](https://github.com/kovrichard/portable-agent-layer/commit/2c5a34c6fc4d98100c560f4025169aa8f3539730))
+
+
+### Features
+
+* **adaptation:** a correction-kind labeller on Haiku 5.5 ([3387bf0](https://github.com/kovrichard/portable-agent-layer/commit/3387bf018a4a45c100894a75d95c2bd50003e81b))
+* **adaptation:** a kind on every draft, and a failed trigger is offered as an opinion ([f8497fe](https://github.com/kovrichard/portable-agent-layer/commit/f8497feb7bc2da33c90ae65227ab25eaacfdaf82))
+* **adaptation:** an opinion needs five corrections of its kind, and a duplicate gets advice ([72cbf4c](https://github.com/kovrichard/portable-agent-layer/commit/72cbf4c6e8a0f980084956b35caec0bf4e89813f))
+* **adaptation:** an opinion's effect needs 5 corrections before and beats the other kinds ([20266f8](https://github.com/kovrichard/portable-agent-layer/commit/20266f88d078ad79980825db6cf328440b494688))
+* **adaptation:** every draft is an opinion, and a rule only when its optional trigger proves ([a8e4395](https://github.com/kovrichard/portable-agent-layer/commit/a8e439571dd9ccbbcc9c100de509990acf70e1ea))
+* **adaptation:** one labelling per rate, one opinion per kind ([064e025](https://github.com/kovrichard/portable-agent-layer/commit/064e0257a8fa1eb8dc89f8ec9d478e5d18bafad0))
+* **adaptation:** opinions as approved rules without a trigger ([a3c9baf](https://github.com/kovrichard/portable-agent-layer/commit/a3c9baf1d4ed49031347c786533892ab4d94c47b))
+* **adaptation:** store each confirmed correction's kind on its turn ([b5084f3](https://github.com/kovrichard/portable-agent-layer/commit/b5084f3dbf7a7c7898e03f4069c935d163ed6ebd))
+* **cli:** pal cli correction reports each kind per 100 turns and backfills kinds ([d22279a](https://github.com/kovrichard/portable-agent-layer/commit/d22279a864864cf76b1e40e508a3f6626171bcde))
+* **control-room:** offer each draft the decisions its proof allows, and retire from the page ([f8c1e00](https://github.com/kovrichard/portable-agent-layer/commit/f8c1e00a88f35122bb04664e0acdb1b052fee0d9))
+
 # [0.108.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.107.0...v0.108.0) (2026-10-14)
 
 
