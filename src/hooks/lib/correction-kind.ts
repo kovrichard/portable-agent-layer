@@ -15,7 +15,7 @@ const NAMED_KINDS = {
   "unverified-claim":
     "the reply stated a fact or the state of something (tests pass, CI is green, a tool is missing, a fix is merged) that was wrong or never checked",
   "off-instruction":
-    "the reply went against an instruction the user gave before it: it reordered their steps, worked on a different target than the one they named, changed the scope, or put the work somewhere else, such as a separate PR",
+    "the reply went against an instruction the user had given in an earlier message: it reordered their steps, worked on a different target than the one they named, changed the scope, or put the work somewhere else, such as a separate PR",
   "revisited-decision":
     "the reply proposed or kept something the user had already ruled out or decided against earlier",
   "stopped-short":
@@ -62,11 +62,17 @@ Judge the mistake, not the topic: a wrong claim about CI is unverified-claim, an
 
 The user's correction is often a question itself. That alone does not make it missed-the-question: missed-the-question means the reply failed to answer something the user had asked before the reply. When the correction asks a new question, find the mistake that made the user ask it.
 
+The first reader's words are a hint, not the answer. It writes "did not answer" or "did not address the question" for many kinds of mistake, so do not pick missed-the-question because of that wording; judge the reply and the message yourself.
+
+missed-the-question is the most general kind, so pick it last: only when no more specific kind below explains the mistake.
+
 When kinds overlap, prefer the most specific one:
-- the user does not know something the reply referred to: undefined-reference, even when they ask about it;
+- the user does not know or understand something the reply referred to ("what is X?", "I don't get", "list them"): undefined-reference, even when they ask about it;
+- the user asked whether something is worth it, right, or should be done, and the reply gave no clear yes or no: no-verdict;
+- the user asked why, and the reply argued for something else instead of giving the reason: missed-the-question, not dismissed-user-view, even when the issue says the reply contradicted the user. dismissed-user-view needs a view or idea the user had put forward that the reply rejected;
 - the user says they meant a different thing than the reply worked on: off-instruction;
-- the user reminds the reply of something agreed or ruled out earlier ("didn't we say", "we discussed"): revisited-decision;
-- the reply put off work the user wanted now: stopped-short, even when it also changed the order.
+- a correction nearly always tells the assistant what to do instead. That alone is never off-instruction, which needs an instruction from an earlier message that the reply broke;- the user reminds the reply of something agreed or ruled out earlier ("didn't we say", "we discussed"): revisited-decision;
+- the reply put off work the user wanted now, or said it would start only after something else happened (a merge, a review, an answer): stopped-short, even when it also changed the order.
 
 Pick a kind only when its description fits the mistake itself. When a kind fits only loosely, answer other.
 

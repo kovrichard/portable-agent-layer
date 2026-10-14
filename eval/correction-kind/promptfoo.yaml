@@ -170,7 +170,7 @@ tests:
       replyEnd: "Fix: the reader also reads archived transcripts whose original is gone. That explains the 4 PAL inference lines in the table. Open an ISC and fix it?"
       message: "what is the 4 pal inference lines? 2 for sonnet, 2 for haiku? i dont get"
       issue: "Didn't explain the 4 PAL inference lines"
-      expect: undefined-reference|missed-the-question
+      expect: undefined-reference
   - description: "A20 a claim that contradicts constant work"
     vars:
       replyEnd: "The gap is history. There are no message events before 10-01, and no reply events before 10-12. Should I check why the turn backfill hasn't run?"
@@ -182,7 +182,7 @@ tests:
       replyEnd: "It finds the day your normal shifted, measured against your own baseline. Second, once about 6 weeks of messages have built up, add emerging patterns. Leave recurring sequences until last."
       message: "can we use it for anything or not worth it?"
       issue: "Reply did not say whether it is worth building"
-      expect: no-verdict|missed-the-question
+      expect: no-verdict
   - description: "A22 local hooks claimed green"
     vars:
       replyEnd: "Local hooks: pre-commit passed Biome, tsc, knip, jscpd, klint, madge, LF and secretlint. Pre-push ran the full suite: 4507 pass, 0 fail."
@@ -213,6 +213,46 @@ tests:
       message: "where is bluesky tracking with this?"
       issue: "Reply didn't state where Bluesky tracking currently stands"
       expect: missed-the-question
+
+  # L — live corrections the first labeller got wrong, checked by a second labeller
+  - description: "L1 why-question met with a defence of the opposite"
+    vars:
+      replyEnd: |-
+        The screens themselves are 64 columns wide, a normal laptop terminal. That's deliberate, because people run install, init, update and doctor in a terminal on a computer, not on a phone. So you're seeing the real design shrunk down to fit, not a mobile version.
+
+        If you want bigger text, I can switch the page to the 44-column versions, which come out at about 13px on your phone. I'd keep it as is, since what you'd be approving is the real 64-column design.
+      message: "Answer the question why you built the page for mobile first. It was the correct choice, I am just asking the why"
+      issue: "The reply stated the opposite: designed for desktop 64-column terminal, not mobile-first."
+      expect: missed-the-question
+  - description: "L2 waits for a merge before starting"
+    vars:
+      replyEnd: |-
+        - **Limits I set:** nothing runs locally, no workflow edits, no `--no-verify`, and no changes to PR #95 itself this round.
+        - **Handoff:** recorded in the project handoff.
+
+        Go ahead and merge #94. Once it's on main I'll start ISC-54 on a new branch from main. When the experiment reports, I'll bring you its verdict, along with a fix.
+      message: "and you start working locally on the same branch in the meantime with 54 pls"
+      issue: "Said start ISC-54 after merge; should start locally in meantime"
+      expect: stopped-short
+  - description: "L3 the user does not get a term from the reply"
+    vars:
+      replyEnd: |-
+        - **The usage tracker misses them.** `readClaudeCode` reads only the live originals, never PAL's gzipped archive. So Total shrinks toward 30d. Your machine still differs ($1,468 vs $969) only because some sessions predate the 30-day window.
+
+        Fix: `readClaudeCode` also reads archived transcripts whose original is gone. PR #110 CI is still running. Open an ISC and fix it?
+      message: "what is the 4 pal inference lines? 2 for sonnet, 2 for haiku? i dont get"
+      issue: "Didn't address user's question about 4 PAL inference lines"
+      expect: undefined-reference
+  - description: "L4 worth-it question met with a plan, not a verdict"
+    vars:
+      replyEnd: |-
+        - **It answers "what's emerging" for one person.** It finds the day your normal shifted, measured against your own baseline.
+        - **It's cheap and easy to read.** It's a small algorithm with no training, and each result is just "X shifted on date D".
+
+        Second, once about 6 weeks of messages have built up, add emerging patterns. Leave recurring sequences and MDL until last, because they need the most data.
+      message: "can we use it for anything or not worth it?"
+      issue: "Reply did not clearly establish practical utility"
+      expect: no-verdict
 
   # B — one clear case per thin kind
   - description: "B1 padded answer to a yes/no question"
