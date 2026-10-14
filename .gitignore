@@ -11,6 +11,9 @@ src/tools/control-room/ui/dist/
 
 .test/
 
+# Claude Code's isolated agent worktrees
+.claude/worktrees/
+
 # Eval runner logs (promptfoo writes error/debug logs to cwd)
 eval/logs/
 # Prompt files an eval builds from src/ before it runs
