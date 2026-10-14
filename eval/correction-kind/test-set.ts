@@ -1,7 +1,7 @@
 /**
- * Scores the correction-kind prompt on a private, frozen set of live
- * corrections. Never tune the prompt on it.
- *   bun run eval:correction-kind:heldout [file]
+ * Scores the correction-kind prompt on its test set: a private, frozen set of
+ * live corrections. Never tune the prompt on it.
+ *   bun run eval:correction-kind:test [file]
  */
 
 import { resolve } from "node:path";
@@ -9,7 +9,7 @@ import type { Turn } from "../../src/hooks/lib/adaptation-turns";
 import { labelWithInference } from "../../src/hooks/lib/correction-backfill";
 import { paths } from "../../src/hooks/lib/paths";
 
-interface HeldOutCase {
+interface TestCase {
   id: string;
   replyEnd: string;
   message: string;
@@ -18,16 +18,16 @@ interface HeldOutCase {
 }
 
 function defaultSetPath(): string {
-  return resolve(paths.adaptation(), "heldout", "correction-kind.jsonl");
+  return resolve(paths.adaptation(), "test-sets", "correction-kind.jsonl");
 }
 
-async function readCases(path: string): Promise<HeldOutCase[]> {
+async function readCases(path: string): Promise<TestCase[]> {
   const lines = (await Bun.file(path).text()).trim().split("\n");
-  return lines.map((line) => JSON.parse(line) as HeldOutCase);
+  return lines.map((line) => JSON.parse(line) as TestCase);
 }
 
-async function labelCase(c: HeldOutCase) {
-  const turn: Turn = { ...c, ts: c.id, session: "heldout", reaction: "corrected" };
+async function labelCase(c: TestCase) {
+  const turn: Turn = { ...c, ts: c.id, session: "test-set", reaction: "corrected" };
   const kind = (await labelWithInference(turn))?.kind ?? "failed";
   return { ...c, kind, accepted: c.accept.includes(kind), first: c.accept[0] === kind };
 }

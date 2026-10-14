@@ -1,6 +1,6 @@
 /**
- * Rule-drafter cases: real corrections from the turn log, reworded, names
- * replaced. Each case lists the corrections oldest first (the last is the
+ * Rule-drafter validation set: real corrections from the turn log, reworded,
+ * names replaced; tune the prompt on these, never on the test set. Each case lists the corrections oldest first (the last is the
  * newest), the known rules, and what the drafter must do with them.
  */
 

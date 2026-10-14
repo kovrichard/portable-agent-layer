@@ -1,5 +1,5 @@
 /**
- * Grades one dev-case output for promptfoo; the proof runs over the case's
+ * Grades one validation-case output for promptfoo; the proof runs over the case's
  * corrections and the ordinary turns in cases.ts.
  *   stdin: {"caseId": "D1", "output": "<model output>"}
  *   argv: [next] grades whether the trigger catches the later correction,

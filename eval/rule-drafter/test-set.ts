@@ -1,11 +1,11 @@
 /**
- * Scores the rule drafter on a private, frozen replay of live corrections.
- * Never tune the prompt on it.
- *   bun run eval:rule-drafter:heldout [runs] [file]
+ * Scores the rule drafter on its test set: a private, frozen replay of live
+ * corrections. Never tune the prompt on it.
+ *   bun run eval:rule-drafter:test [runs] [file]
  *
  * Each record is a confirmed correction with the groups it belongs to: a group
  * is the corrections one instruction would have prevented. Every correction not
- * used for the dev cases becomes the newest once, with every earlier one before
+ * used for the validation cases becomes the newest once, with every earlier one before
  * it, as the drafter sees them live. It must draft when an earlier correction
  * shares a group and cite only those; otherwise it must not. The proof runs
  * over the live log as it stood at the newest record.
@@ -19,13 +19,14 @@ import { drafterRequest } from "../../src/hooks/lib/rule-drafter";
 import { asTurns, type DrafterCase } from "./cases";
 import { type Grade, grade, gradeNext, gradeTrigger } from "./grading";
 
-interface HeldOutRecord {
+interface TestRecord {
   ts: string;
   prompt: string;
   replyEnd: string;
   message: string;
   issue: string;
   groups: string[];
+  /** Used for a validation case; the frozen file names it dev. */
   dev: boolean;
 }
 
@@ -33,18 +34,18 @@ const CONCURRENCY = 4;
 const PROOF_DAYS = 30;
 
 function defaultSetPath(): string {
-  return resolve(paths.adaptation(), "heldout", "rule-drafter.jsonl");
+  return resolve(paths.adaptation(), "test-sets", "rule-drafter.jsonl");
 }
 
-async function readRecords(path: string): Promise<HeldOutRecord[]> {
+async function readRecords(path: string): Promise<TestRecord[]> {
   const lines = (await Bun.file(path).text()).trim().split("\n");
-  return lines.map((line) => JSON.parse(line) as HeldOutRecord);
+  return lines.map((line) => JSON.parse(line) as TestRecord);
 }
 
-const shareGroup = (a: HeldOutRecord, b: HeldOutRecord) =>
+const shareGroup = (a: TestRecord, b: TestRecord) =>
   a.groups.some((group) => b.groups.includes(group));
 
-function caseFor(records: HeldOutRecord[], index: number): DrafterCase {
+function caseFor(records: TestRecord[], index: number): DrafterCase {
   const newest = records[index];
   const earlier = records.slice(0, index);
   const outside = earlier.flatMap((r, n) => (shareGroup(r, newest) ? [] : [n]));
