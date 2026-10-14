@@ -1,3 +1,10 @@
+# [0.107.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.106.0...v0.107.0) (2026-10-14)
+
+
+### Features
+
+* **skills:** scientific-research answers from cited, verified sources ([d030952](https://github.com/kovrichard/portable-agent-layer/commit/d030952ee7f1fe2335e34d15f74b457c763897f3))
+
 # [0.106.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.105.0...v0.106.0) (2026-10-13)
 
 
