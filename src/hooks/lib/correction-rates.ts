@@ -3,6 +3,7 @@
  * works when the rate of its kind drops after it is approved.
  */
 
+import { type AdaptationRule, isOpinion } from "./adaptation-rules";
 import type { Turn } from "./adaptation-turns";
 import { hasCurrentKind } from "./correction-kind";
 
@@ -123,6 +124,19 @@ export function opinionEffect(
     ? "stale-labels"
     : effectVerdict(own, control);
   return { kind, ...own, control, verdict };
+}
+
+export const EFFECT_WINDOW_DAYS = (2 * MAX_WINDOW_MS) / 86_400_000;
+
+export function opinionEffectOf(
+  rule: AdaptationRule,
+  rules: AdaptationRule[],
+  turns: Turn[],
+  now: Date = new Date()
+): OpinionEffect | null {
+  if (!isOpinion(rule) || !rule.kind || !rule.decidedAt) return null;
+  const opinionKinds = rules.filter(isOpinion).flatMap((r) => (r.kind ? [r.kind] : []));
+  return opinionEffect(rule.kind, new Date(rule.decidedAt), turns, opinionKinds, now);
 }
 
 export function splitRates(

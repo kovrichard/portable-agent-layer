@@ -3,6 +3,8 @@
  * server's own error text, so a refusal reads the same wherever it surfaces.
  */
 
+import type { PageDecision } from "../../relationship";
+
 export async function post(path: string, body: unknown): Promise<string | null> {
   try {
     const res = await fetch(path, {
@@ -46,7 +48,7 @@ export function setAutoUpdate(enabled: boolean) {
   return post("/api/update", { enabled });
 }
 
-export function decideRule(id: string, decision: "approved" | "denied") {
+export function decideRule(id: string, decision: PageDecision) {
   return post("/api/rule", { id, decision });
 }
 

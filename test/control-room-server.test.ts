@@ -772,6 +772,20 @@ describe("the relationship tab", () => {
     expect(second.status).toBe(409);
   });
 
+  test("a rule write keeps an opinion and retires it", async () => {
+    const draft = await draftRule();
+    const base = await listen();
+
+    const kept = await post(base, "/api/rule", { id: draft.id, decision: "opinion" });
+    expect(kept.status).toBe(409);
+    expect(await kept.json()).toMatchObject({
+      error: `Rule ${draft.id} has no correction kind, so its effect could not be measured`,
+    });
+    await post(base, "/api/rule", { id: draft.id, decision: "approved" });
+    const retired = await post(base, "/api/rule", { id: draft.id, decision: "retired" });
+    expect(retired.status).toBe(200);
+  });
+
   test("a rule write refuses what it cannot act on", async () => {
     const base = await listen();
     expect((await post(base, "/api/rule", { id: "x", decision: "maybe" })).status).toBe(

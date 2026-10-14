@@ -21,12 +21,14 @@ import {
 } from "../hooks/lib/adaptation-rules";
 import { readTurns, type Turn } from "../hooks/lib/adaptation-turns";
 import { CORRECTION_KINDS, type CorrectionKindName } from "../hooks/lib/correction-kind";
-import { type OpinionEffect, opinionEffect } from "../hooks/lib/correction-rates";
+import {
+  EFFECT_WINDOW_DAYS,
+  type OpinionEffect,
+  opinionEffectOf,
+} from "../hooks/lib/correction-rates";
 import { group, leaf, runCommand, UsageError } from "../tools/lib/command";
 
 type DecideResult = ReturnType<typeof decideRule>;
-
-const EFFECT_WINDOW_DAYS = 60;
 
 export const ruleCommand = group({
   summary: "Review the rules PAL drafted from your corrections",
@@ -90,19 +92,14 @@ function cmdList(all: boolean, json: boolean): number {
     console.log(all ? "No rules yet." : "No drafts waiting.");
     return 0;
   }
-  const measure: Measure = {
-    turns: readTurns(EFFECT_WINDOW_DAYS),
-    opinionKinds: readRules()
-      .filter(isOpinion)
-      .flatMap((r) => (r.kind ? [r.kind] : [])),
-  };
+  const measure: Measure = { turns: readTurns(EFFECT_WINDOW_DAYS), rules: readRules() };
   console.log(rules.map((rule) => formatRule(rule, measure)).join("\n\n"));
   return 0;
 }
 
 interface Measure {
   turns: Turn[];
-  opinionKinds: string[];
+  rules: AdaptationRule[];
 }
 
 function formatRule(rule: AdaptationRule, measure: Measure): string {
@@ -125,9 +122,9 @@ function formatRule(rule: AdaptationRule, measure: Measure): string {
   ].join("\n");
 }
 
-function effectLines(rule: AdaptationRule, { turns, opinionKinds }: Measure): string[] {
-  if (!isOpinion(rule) || !rule.kind || !rule.decidedAt) return [];
-  const effect = opinionEffect(rule.kind, new Date(rule.decidedAt), turns, opinionKinds);
+function effectLines(rule: AdaptationRule, { turns, rules }: Measure): string[] {
+  const effect = opinionEffectOf(rule, rules, turns);
+  if (!effect) return [];
   return [
     `  effect: ${formatWindows(effect)} (${effect.verdict})`,
     `  other kinds: ${formatWindows(effect.control)}`,

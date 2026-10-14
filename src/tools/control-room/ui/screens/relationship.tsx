@@ -3,7 +3,13 @@ import type {
   AdaptationRule,
   TriggerProof,
 } from "../../../../hooks/lib/adaptation-rules";
-import type { ActiveRule, PipelineCandidate, RelationshipView } from "../../relationship";
+import type { OpinionEffect } from "../../../../hooks/lib/correction-rates";
+import type {
+  ActiveRule,
+  PageDecision,
+  PipelineCandidate,
+  RelationshipView,
+} from "../../relationship";
 import { Badge } from "../components/badge";
 import { Button } from "../components/button";
 import { clock } from "../format";
@@ -65,6 +71,44 @@ function replacedTrigger(rule: AdaptationRule, active: ActiveRule[]): string | u
   return `/${target.trigger.pattern}/i`;
 }
 
+function useDecision(id: string, onDecided: () => void) {
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const decide = (decision: PageDecision) => {
+    setBusy(true);
+    void decideRule(id, decision).then((failure) => {
+      setBusy(false);
+      setError(failure);
+      if (!failure) onDecided();
+    });
+  };
+  return { error, busy, decide };
+}
+
+function Refusal({ error }: { error: string | null }) {
+  if (!error) return null;
+  return (
+    <p className="border-l-2 border-alarm bg-alarm/10 px-3 py-2 text-[12px] text-alarm">
+      {error}
+    </p>
+  );
+}
+
+function offeredDecisions(rule: AdaptationRule): [PageDecision, string][] {
+  if (rule.widens) return [["approved", "Approve"]];
+  const asOpinion: [PageDecision, string][] = rule.kind
+    ? [["opinion", "Keep as opinion"]]
+    : [];
+  if (rule.offer === "opinion-only") return asOpinion;
+  return [["approved", "Approve as rule"], ...asOpinion];
+}
+
+function offerLine(rule: AdaptationRule): string | undefined {
+  return rule.offer === "opinion-only"
+    ? "the trigger did not prove; keep it as an opinion or deny it"
+    : undefined;
+}
+
 function Draft({
   rule,
   active,
@@ -74,30 +118,31 @@ function Draft({
   active: ActiveRule[];
   onDecided: () => void;
 }) {
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const decide = (decision: "approved" | "denied") => {
-    setBusy(true);
-    void decideRule(rule.id, decision).then((failure) => {
-      setBusy(false);
-      setError(failure);
-      if (!failure) onDecided();
-    });
-  };
+  const { error, busy, decide } = useDecision(rule.id, onDecided);
   return (
     <div className="flex flex-col gap-3 border-t border-divider py-3 first:border-t-0">
       <div className="font-heading text-[15px] font-semibold">{rule.when}</div>
-      <Facts rows={[["replaces", replacedTrigger(rule, active)], ...ruleFacts(rule)]} />
+      <Facts
+        rows={[
+          ["replaces", replacedTrigger(rule, active)],
+          ...ruleFacts(rule),
+          ["kind", rule.kind],
+          ["offer", offerLine(rule)],
+        ]}
+      />
       <Evidence items={rule.evidence} />
-      {error && (
-        <p className="border-l-2 border-alarm bg-alarm/10 px-3 py-2 text-[12px] text-alarm">
-          {error}
-        </p>
-      )}
-      <div className="flex gap-3">
-        <Button variant="primary" disabled={busy} onClick={() => decide("approved")}>
-          Approve
-        </Button>
+      <Refusal error={error} />
+      <div className="flex flex-wrap gap-3">
+        {offeredDecisions(rule).map(([decision, label], i) => (
+          <Button
+            key={decision}
+            variant={i === 0 ? "primary" : undefined}
+            disabled={busy}
+            onClick={() => decide(decision)}
+          >
+            {label}
+          </Button>
+        ))}
         <Button disabled={busy} onClick={() => decide("denied")}>
           Deny
         </Button>
@@ -106,18 +151,39 @@ function Draft({
   );
 }
 
-function effectLine(rule: ActiveRule): string {
+function firingLine(rule: ActiveRule): string {
   const { fired, sentBack, judged, correctedAfter } = rule.effect;
   if (fired === 0) return "has not fired yet";
   const back = rule.trigger?.side === "reply" ? `, sent back ${sentBack}` : "";
   return `fired ${fired}${back} · corrected after ${correctedAfter} of ${judged} judged`;
 }
 
-function Active({ rule }: { rule: ActiveRule }) {
+function windowsLine({ before, after }: Pick<OpinionEffect, "before" | "after">): string {
+  return `${before.per100.toFixed(1)}/100 before (${before.count} in ${before.turns}) → ${after.per100.toFixed(1)}/100 after (${after.count} in ${after.turns})`;
+}
+
+function effectRows(rule: ActiveRule): [string, string | undefined][] {
+  const opinion = rule.opinionEffect;
+  if (!opinion) return [["effect", firingLine(rule)]];
+  return [
+    ["kind", opinion.kind],
+    ["effect", `${windowsLine(opinion)} · ${opinion.verdict}`],
+    ["other kinds", windowsLine(opinion.control)],
+  ];
+}
+
+function Active({ rule, onDecided }: { rule: ActiveRule; onDecided: () => void }) {
+  const { error, busy, decide } = useDecision(rule.id, onDecided);
   return (
     <div className="flex flex-col gap-2 border-t border-divider py-3 first:border-t-0">
       <div className="font-heading text-[15px] font-semibold">{rule.when}</div>
-      <Facts rows={[...ruleFacts(rule), ["effect", effectLine(rule)]]} />
+      <Facts rows={[...ruleFacts(rule), ...effectRows(rule)]} />
+      <Refusal error={error} />
+      <div>
+        <Button disabled={busy} onClick={() => decide("retired")}>
+          Retire
+        </Button>
+      </div>
     </div>
   );
 }
@@ -235,7 +301,7 @@ export function Relationship() {
         {active.length === 0 ? (
           <Empty>No rule approved yet.</Empty>
         ) : (
-          active.map((rule) => <Active key={rule.id} rule={rule} />)
+          active.map((rule) => <Active key={rule.id} rule={rule} onDecided={reload} />)
         )}
       </Panel>
       <LastDays view={view.data} />
