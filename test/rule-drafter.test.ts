@@ -301,6 +301,15 @@ describe("parseDraft", () => {
     expect(parseDraft(output, two)?.trigger?.pattern).toBe("tests?\\s+pass");
   });
 
+  test("a trigger may match the user's request", () => {
+    const output = JSON.stringify({ ...draft, side: "prompt", pattern: "is it done" });
+
+    expect(parseDraft(output, two)?.trigger).toEqual({
+      side: "prompt",
+      pattern: "is it done",
+    });
+  });
+
   test("a draft without a pattern is an opinion draft with no trigger", () => {
     const parsed = parseDraft(JSON.stringify({ ...draft, side: "", pattern: "" }), two);
 
