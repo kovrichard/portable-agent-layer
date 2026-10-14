@@ -58,6 +58,15 @@ describe("inferenceModel", () => {
     );
   });
 
+  test("the correction-kind labeller runs on Haiku 5.5 on the claude routes", () => {
+    expect(inferenceModel("claude-spawn", "small", "correction-kind")).toBe(
+      HAIKU_5_5_MODEL
+    );
+    expect(inferenceModel("anthropic-api", "small", "correction-kind")).toBe(
+      HAIKU_5_5_MODEL
+    );
+  });
+
   test("a caller nobody evaluated stays on the route's own model", () => {
     expect(inferenceModel("claude-spawn", "small", "rating")).toBe(HAIKU_MODEL);
     expect(inferenceModel("codex-spawn", "small", "rule-drafter")).toBe("gpt-6-luna");
