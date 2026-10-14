@@ -10,7 +10,9 @@ import type { TurnInput } from "./adaptation-turns";
 /** Bump on every change to the kinds or the prompt: rates compare only labels of one version. */
 export const CORRECTION_KINDS_VERSION = 2;
 
-export function hasCurrentKind(turn: TurnInput): boolean {
+export function hasCurrentKind<T extends TurnInput>(
+  turn: T
+): turn is T & Required<Pick<TurnInput, "correctionKind">> {
   return turn.correctionKind?.version === CORRECTION_KINDS_VERSION;
 }
 

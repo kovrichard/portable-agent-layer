@@ -195,21 +195,18 @@ function citedEvidence(cites: number[], corrections: Correction[]): string[] {
 function namedKindsOf(cited: Correction[]): string[] {
   return cited
     .filter(hasCurrentKind)
-    .map((c) => c.correctionKind?.kind ?? "")
-    .filter((kind) => kind !== "" && kind !== "other");
+    .map((c) => c.correctionKind.kind)
+    .filter((kind) => kind !== "other");
 }
 
 export function citedKind(
   cites: number[],
   corrections: Correction[]
 ): string | undefined {
-  const kinds = namedKindsOf(cites.map((n) => corrections[n]));
-  const count = (kind: string) => kinds.filter((k) => k === kind).length;
-  const newestFirst = [...kinds].reverse();
-  return newestFirst.reduce<string | undefined>(
-    (best, kind) => (best === undefined || count(kind) > count(best) ? kind : best),
-    undefined
-  );
+  const newestFirst = namedKindsOf(cites.map((n) => corrections[n])).reverse();
+  const count = (kind: string) => newestFirst.filter((k) => k === kind).length;
+  const most = Math.max(...newestFirst.map(count));
+  return newestFirst.find((kind) => count(kind) === most);
 }
 
 function withKind<T extends CandidateInput>(candidate: T, kind: string | undefined): T {
