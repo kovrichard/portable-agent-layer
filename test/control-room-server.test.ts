@@ -762,6 +762,31 @@ describe("the relationship tab", () => {
     expect(body.drafts.map((d) => d.id)).toEqual([draft.id]);
   });
 
+  test("/api/relationship says why a gated draft is not offered as an opinion", async () => {
+    const { addDraft } = await import("../src/hooks/lib/adaptation-rules");
+    const open = await draftRule();
+    const gated = addDraft({
+      when: "Claiming CI is green",
+      trigger: { side: "reply", pattern: "ci is green" },
+      steering: "Link the run.",
+      kind: "unverified-claim",
+      evidence: [],
+      opinionGate: { corrections: 2 },
+    });
+    const base = await listen();
+    const body = await getJson<{ drafts: { id: string; gateAdvice?: string }[] }>(
+      `${base}/api/relationship`
+    );
+    expect(body.drafts).toMatchObject([
+      { id: open.id },
+      {
+        id: gated.id,
+        gateAdvice: "2 corrections of its kind so far; an opinion needs 5",
+      },
+    ]);
+    expect(body.drafts[0].gateAdvice).toBeUndefined();
+  });
+
   test("approving from the page decides the draft, and a second decision is refused", async () => {
     const draft = await draftRule();
     const base = await listen();
@@ -770,6 +795,33 @@ describe("the relationship tab", () => {
     expect(first.status).toBe(200);
     const second = await post(base, "/api/rule", { id: draft.id, decision: "denied" });
     expect(second.status).toBe(409);
+  });
+
+  test("a rule write keeps an opinion and retires it", async () => {
+    const draft = await draftRule();
+    const base = await listen();
+
+    const kept = await post(base, "/api/rule", { id: draft.id, decision: "opinion" });
+    expect(kept.status).toBe(409);
+    expect(await kept.json()).toMatchObject({
+      error: `Rule ${draft.id} has no correction kind, so its effect could not be measured`,
+    });
+    await post(base, "/api/rule", { id: draft.id, decision: "approved" });
+    const retired = await post(base, "/api/rule", { id: draft.id, decision: "retired" });
+    expect(retired.status).toBe(200);
+    expect(await retired.json()).toEqual({
+      id: draft.id,
+      decision: "retired",
+      changed: true,
+    });
+  });
+
+  test("a rule write names the decisions it takes", async () => {
+    const base = await listen();
+    const refused = await post(base, "/api/rule", { id: "x", decision: "maybe" });
+    expect(await refused.json()).toEqual({
+      error: "decision must be one of approved, denied, opinion, retired",
+    });
   });
 
   test("a rule write refuses what it cannot act on", async () => {

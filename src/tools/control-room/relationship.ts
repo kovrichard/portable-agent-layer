@@ -1,8 +1,8 @@
 /**
  * The Relationship tab: the rule drafts waiting on the user, what the approved
  * rules did, the candidates still being proven, and the last 30 days of labelled
- * turns. A decision goes through `decideRule`, the same rule the CLI and the
- * rule-review skill use.
+ * turns. A decision goes through `decideRule` or `retireRule`, the same rules the
+ * CLI and the rule-review skill use.
  */
 
 import { type Candidate, readCandidates } from "../../hooks/lib/adaptation-candidates";
@@ -10,8 +10,16 @@ import {
   type AdaptationRule,
   decideRule,
   readRules,
+  retireRule,
+  type TriggerProof,
 } from "../../hooks/lib/adaptation-rules";
 import { readTurns, type Turn } from "../../hooks/lib/adaptation-turns";
+import {
+  EFFECT_WINDOW_DAYS,
+  type OpinionEffect,
+  opinionEffectOf,
+} from "../../hooks/lib/correction-rates";
+import { gateAdvice } from "../../hooks/lib/opinion-gate";
 import {
   type RuleEffect,
   readRuleEvents,
@@ -25,11 +33,20 @@ const RECENT_CORRECTIONS = 10;
 
 export interface ActiveRule extends AdaptationRule {
   effect: RuleEffect;
+  opinionEffect: OpinionEffect | null;
 }
 
-export interface PipelineCandidate extends Candidate {
-  ordinaryNeeded: number;
+export interface DraftRule extends AdaptationRule {
+  /** Why it cannot be kept as an opinion, and what to do instead. */
+  gateAdvice?: string;
 }
+
+export type PageDecision = "approved" | "denied" | "opinion" | "retired";
+
+export type PipelineCandidate = Candidate & {
+  proof: TriggerProof;
+  ordinaryNeeded: number;
+};
 
 interface TurnStats {
   total: number;
@@ -40,7 +57,7 @@ interface TurnStats {
 
 export interface RelationshipView {
   windowDays: number;
-  drafts: AdaptationRule[];
+  drafts: DraftRule[];
   active: ActiveRule[];
   denied: AdaptationRule[];
   pipeline: PipelineCandidate[];
@@ -69,33 +86,41 @@ export function relationship(now: Date = new Date()): RelationshipView {
   const rules = readRules();
   const turns = readTurns(WINDOW_DAYS, now);
   const effects = ruleEffects(readRuleEvents(WINDOW_DAYS, now), turns);
+  const opinionTurns = readTurns(EFFECT_WINDOW_DAYS, now);
   const withStatus = (status: AdaptationRule["status"]) =>
     rules.filter((rule) => rule.status === status);
   return {
     windowDays: WINDOW_DAYS,
-    drafts: withStatus("draft"),
+    drafts: withStatus("draft").map((rule) => {
+      const advice = gateAdvice(rule, rules, opinionTurns, now);
+      return advice ? { ...rule, gateAdvice: advice } : rule;
+    }),
     active: withStatus("approved").map((rule) => ({
       ...rule,
       effect: effects[rule.id] ?? NO_EFFECT,
+      opinionEffect: opinionEffectOf(rule, rules, opinionTurns, now),
     })),
     denied: withStatus("denied"),
-    pipeline: readCandidates()
-      .filter((candidate) => candidate.verdict !== "passed")
-      .map((candidate) => ({
-        ...candidate,
-        ordinaryNeeded:
-          candidate.verdict === "waiting" ? ordinaryTurnsNeeded(candidate.proof) : 0,
-      })),
+    pipeline: readCandidates().flatMap((candidate) =>
+      candidate.verdict === "passed" || candidate.verdict === "untriggered"
+        ? []
+        : [
+            {
+              ...candidate,
+              ordinaryNeeded:
+                candidate.verdict === "waiting"
+                  ? ordinaryTurnsNeeded(candidate.proof)
+                  : 0,
+            },
+          ]
+    ),
     turns: turnStats(turns),
   };
 }
 
-export function decideFromPage(
-  id: string,
-  decision: "approved" | "denied"
-): WriteOutcome {
+export function decideFromPage(id: string, decision: PageDecision): WriteOutcome {
   const known = readRules().some((rule) => rule.id === id);
-  const result = decideRule(id, decision);
+  const result = decision === "retired" ? retireRule(id) : decideRule(id, decision);
   if (result.ok) return { ok: true, changed: true };
   return { ok: false, status: known ? 409 : 404, error: result.reason };
 }

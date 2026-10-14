@@ -1,8 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import type { Turn } from "../src/hooks/lib/adaptation-turns";
 import {
+  CORRECTION_KINDS_VERSION,
+  type CorrectionKindName,
+} from "../src/hooks/lib/correction-kind";
+import {
   canRepeat,
   canWiden,
+  citedKind,
   correctionsToDraftFrom,
   drafterRequest,
   type KnownRule,
@@ -54,6 +59,56 @@ const two = [
   { ...correction({ message: "they never ran" }), prompt: "" },
   { ...correction({ message: "you did not run them" }), prompt: "" },
 ];
+
+const kinded = (kind: CorrectionKindName, version = CORRECTION_KINDS_VERSION) => ({
+  kind,
+  suggested: "",
+  description: "",
+  version,
+});
+
+const ofKinds = (...kinds: Parameters<typeof kinded>[]) =>
+  kinds.map((args) => ({ ...two[0], correctionKind: kinded(...args) }));
+
+describe("citedKind", () => {
+  test("is the kind most cited corrections share, even when the newest differs", () => {
+    const cited = ofKinds(["no-verdict"], ["no-verdict"], ["stopped-short"]);
+    expect(citedKind([0, 1, 2], cited)).toBe("no-verdict");
+  });
+
+  test("a tie goes to the newest correction's kind", () => {
+    expect(citedKind([0, 1], ofKinds(["no-verdict"], ["stopped-short"]))).toBe(
+      "stopped-short"
+    );
+    expect(citedKind([0, 1], ofKinds(["stopped-short"], ["no-verdict"]))).toBe(
+      "no-verdict"
+    );
+  });
+
+  test("counts only the corrections cited", () => {
+    const cited = ofKinds(["no-verdict"], ["stopped-short"], ["stopped-short"]);
+    expect(citedKind([0, 1], cited)).toBe("stopped-short");
+    expect(citedKind([0], cited)).toBe("no-verdict");
+  });
+
+  test("ignores other, unlabelled corrections and labels from an older prompt", () => {
+    const cited = [
+      ...ofKinds(
+        ["stopped-short"],
+        ["other"],
+        ["other"],
+        ["no-verdict", 1],
+        ["no-verdict", 1]
+      ),
+      two[1],
+    ];
+    expect(citedKind([0, 1, 2, 3, 4, 5], cited)).toBe("stopped-short");
+  });
+
+  test("is unknown when no cited correction has a current named kind", () => {
+    expect(citedKind([0, 1], two)).toBeUndefined();
+  });
+});
 
 describe("correctionsToDraftFrom", () => {
   test("keeps confirmed corrections, newest last, with the request they answered", () => {
@@ -119,6 +174,14 @@ describe("drafterRequest", () => {
     );
   });
 
+  test("shows an opinion as an opinion, without a trigger to fire", () => {
+    const request = drafterRequest(missed, [{ ...verdictRule, delivery: "always" }]);
+
+    expect(request.user).toContain(
+      "- opinion r1: The user asks for an opinion. Give a verdict."
+    );
+  });
+
   test("names the rule a pending widening is for", () => {
     const request = drafterRequest(missed, [
       { ...verdictRule, id: "w1", status: "draft", widens: "r1" },
@@ -140,6 +203,7 @@ describe("canWiden", () => {
 
   test("only an approved rule is widened", () => {
     expect(canWiden(missed, [{ ...verdictRule, status: "draft" }])).toBe(false);
+    expect(canWiden(missed, [{ ...verdictRule, delivery: "always" }])).toBe(false);
     expect(canWiden([], [verdictRule])).toBe(false);
   });
 });
@@ -206,6 +270,15 @@ describe("parseDraft", () => {
     });
   });
 
+  test("a candidate carries the kind of the corrections it cites", () => {
+    const labelled = two.map((c) => ({
+      ...c,
+      correctionKind: kinded("unverified-claim"),
+    }));
+
+    expect(parseDraft(JSON.stringify(draft), labelled)?.kind).toBe("unverified-claim");
+  });
+
   test("nothing recurring means no candidate", () => {
     expect(parseDraft(JSON.stringify({ ...draft, recurring: false }), two)).toBeNull();
   });
@@ -225,13 +298,42 @@ describe("parseDraft", () => {
 
   test("a pattern written as a /literal/ is stored as its bare expression", () => {
     const output = JSON.stringify({ ...draft, pattern: "/tests?\\s+pass/i" });
-    expect(parseDraft(output, two)?.trigger.pattern).toBe("tests?\\s+pass");
+    expect(parseDraft(output, two)?.trigger?.pattern).toBe("tests?\\s+pass");
   });
 
-  test("a pattern that is not a valid expression is rejected", () => {
-    expect(
-      parseDraft(JSON.stringify({ ...draft, pattern: "tests (pass" }), two)
-    ).toBeNull();
+  test("a trigger may match the user's request", () => {
+    const output = JSON.stringify({ ...draft, side: "prompt", pattern: "is it done" });
+
+    expect(parseDraft(output, two)?.trigger).toEqual({
+      side: "prompt",
+      pattern: "is it done",
+    });
+  });
+
+  test("a draft without a pattern is an opinion draft with no trigger", () => {
+    const parsed = parseDraft(JSON.stringify({ ...draft, side: "", pattern: "" }), two);
+
+    expect(parsed).toMatchObject({ when: "Reporting that tests pass" });
+    expect(parsed).not.toHaveProperty("trigger");
+  });
+
+  test("a pattern that is not a valid expression, or on no side, is dropped", () => {
+    const broken = parseDraft(JSON.stringify({ ...draft, pattern: "tests (pass" }), two);
+    const sideless = parseDraft(JSON.stringify({ ...draft, side: "" }), two);
+    const blank = parseDraft(JSON.stringify({ ...draft, pattern: " " }), two);
+
+    for (const parsed of [broken, sideless, blank]) {
+      expect(parsed?.steering).toBe("Run the tests before saying they pass.");
+      expect(parsed).not.toHaveProperty("trigger");
+    }
+  });
+
+  test("the schema lets the drafter leave the side empty", () => {
+    expect(drafterRequest(two, []).jsonSchema.properties.side.enum).toEqual([
+      "prompt",
+      "reply",
+      "",
+    ]);
   });
 
   test("an empty instruction is rejected", () => {

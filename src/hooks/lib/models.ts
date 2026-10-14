@@ -56,12 +56,16 @@ export function isFixedModelRoute(route: string): route is FixedModelRoute {
   return Object.hasOwn(INFERENCE_MODELS, route);
 }
 
-/** Callers whose prompt has been evaluated on Haiku 5.5; the rest stay on HAIKU_MODEL until theirs is. */
-const ANTHROPIC_EVALUATED_ON_HAIKU_5_5 = new Set(["rule-drafter"]);
+/**
+ * Callers on Haiku 5.5: those whose prompt passed its eval there, and every new
+ * caller, whose eval is iterated on 5.5 until it passes. The rest stay on
+ * HAIKU_MODEL until theirs is evaluated.
+ */
+const ANTHROPIC_ON_HAIKU_5_5 = new Set(["rule-drafter", "correction-kind"]);
 
 function evaluatedModel(models: RouteModels, caller?: string): string | undefined {
   const onAnthropic = models === ANTHROPIC_MODELS;
-  return onAnthropic && caller && ANTHROPIC_EVALUATED_ON_HAIKU_5_5.has(caller)
+  return onAnthropic && caller && ANTHROPIC_ON_HAIKU_5_5.has(caller)
     ? HAIKU_5_5_MODEL
     : undefined;
 }

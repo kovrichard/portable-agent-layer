@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { addOpinion } from "../src/hooks/lib/adaptation-rules";
 import {
   buildSystemReminder,
   loadRelationshipContext,
@@ -243,6 +244,26 @@ describe("buildSystemReminder", () => {
     frame("development", "### Injected principle [CRYSTAL: 90%]\nbody");
 
     expect(buildSystemReminder({ agent: "codex" })).toContain("Injected principle");
+  });
+
+  test("includes approved opinions for Codex and leaves them to native loading elsewhere", () => {
+    addOpinion({
+      when: "Designing a system",
+      steering: "Treat the setup as a choice.",
+      kind: "status-quo-bias",
+      evidence: [],
+    });
+
+    expect(buildSystemReminder({ agent: "codex" })).toContain(
+      "- Designing a system: Treat the setup as a choice."
+    );
+    expect(buildSystemReminder({ agent: "claude" })).not.toContain("Designing a system");
+    write(
+      "memory/pal-settings.json",
+      JSON.stringify({ dynamicContext: { opinions: false } })
+    );
+    reload();
+    expect(buildSystemReminder({ agent: "codex" })).not.toContain("Designing a system");
   });
 
   test("drops only the handoff when asked to go without it", () => {

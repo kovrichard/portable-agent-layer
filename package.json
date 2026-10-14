@@ -70,7 +70,11 @@
     "eval:waiting-on": "bun eval/run.ts waiting-on",
     "eval:reaction": "bun eval/run.ts reaction",
     "eval:correction-check": "bun eval/run.ts correction-check",
-    "eval:entity-extraction": "bun eval/entity-extraction/build-prompt.ts && bun eval/run.ts entity-extraction"
+    "eval:entity-extraction": "bun eval/entity-extraction/build-prompt.ts && bun eval/run.ts entity-extraction",
+    "eval:correction-kind": "bun eval/correction-kind/build-prompt.ts && bun eval/run.ts correction-kind",
+    "eval:correction-kind:test": "bun eval/correction-kind/test-set.ts",
+    "eval:rule-drafter": "bun eval/rule-drafter/build-prompt.ts && bun eval/run.ts rule-drafter",
+    "eval:rule-drafter:test": "bun eval/rule-drafter/test-set.ts"
   },
   "lint-staged": {
     "*.ts": [

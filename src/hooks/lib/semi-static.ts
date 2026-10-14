@@ -8,8 +8,8 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
+import { opinionsContext } from "./adaptation-rules";
 import { type FailureEntry, readFailures } from "./learning-store";
-import { loadOpinionContext } from "./opinions";
 import { palHome, paths } from "./paths";
 import { type ProjectProgress, readAllProjects, resolveProjectFromCwd } from "./projects";
 import { readFramePrinciples } from "./wisdom";
@@ -148,7 +148,7 @@ export function getSemiStaticSources(): SemiStaticSource[] {
       writesDigest: true,
       load: () => {
         try {
-          return loadOpinionContext();
+          return opinionsContext();
         } catch {
           return "";
         }

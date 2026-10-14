@@ -56,6 +56,21 @@ describe("relationship view", () => {
     expect(view.denied.map((r) => r.id)).toEqual([denied.id]);
   });
 
+  test("an active opinion carries the rate of its kind, a trigger rule does not", () => {
+    const opinion = addDraft({ ...rule, when: "opinion", kind: "unverified-claim" });
+    const triggered = addDraft({ ...rule, when: "rule" });
+    decideRule(opinion.id, "opinion");
+    decideRule(triggered.id, "approved");
+
+    const byWhen = Object.fromEntries(relationship().active.map((r) => [r.when, r]));
+
+    expect(byWhen.opinion.opinionEffect).toMatchObject({
+      kind: "unverified-claim",
+      verdict: "too-early",
+    });
+    expect(byWhen.rule.opinionEffect).toBeNull();
+  });
+
   test("an active rule carries what it did in the window", () => {
     const active = addDraft(rule);
     decideRule(active.id, "approved");
@@ -111,7 +126,7 @@ describe("relationship view", () => {
     });
   });
 
-  test("the pipeline shows waiting and failed candidates, not passed ones", () => {
+  test("the pipeline shows waiting and failed candidates, not passed or untriggered ones", () => {
     const candidate: CandidateInput = { ...rule, check: "Quotes a run." };
     const corrections = [1, 2].map((n) => ({
       ...turn({ reaction: "corrected", confirmed: true, replyEnd: "tests pass" }),
@@ -127,6 +142,8 @@ describe("relationship view", () => {
     recordCandidate({ ...candidate, when: "waiting" }, [...corrections, ...ordinary(12)]);
     recordCandidate({ ...candidate, when: "passed" }, [...corrections, ...ordinary(20)]);
     recordCandidate({ ...candidate, when: "failed" }, corrections.slice(0, 1));
+    const { trigger: _trigger, ...untriggered } = candidate;
+    recordCandidate({ ...untriggered, when: "untriggered" }, corrections);
 
     const pipeline = relationship(NOW).pipeline;
 
@@ -143,6 +160,16 @@ describe("decideFromPage", () => {
 
     expect(decideFromPage(draft.id, "approved")).toEqual({ ok: true, changed: true });
     expect(readRules()[0].status).toBe("approved");
+  });
+
+  test("a draft kept as an opinion, then retired, goes through the CLI's rules", () => {
+    const draft = addDraft({ ...rule, kind: "unverified-claim" });
+
+    expect(decideFromPage(draft.id, "opinion")).toEqual({ ok: true, changed: true });
+    expect(readRules()[0]).toMatchObject({ status: "approved", delivery: "always" });
+    expect(decideFromPage(draft.id, "retired")).toEqual({ ok: true, changed: true });
+    expect(readRules()[0].status).toBe("retired");
+    expect(decideFromPage(draft.id, "retired")).toMatchObject({ ok: false, status: 409 });
   });
 
   test("an unknown id is a 404", () => {

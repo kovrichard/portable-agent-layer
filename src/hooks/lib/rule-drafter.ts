@@ -1,12 +1,14 @@
 /**
  * The rule drafter: after a confirmed correction, the small model decides
- * whether it repeats an earlier one and, if so, drafts a rule that would have
- * prevented them all.
+ * whether it repeats an earlier one and, if so, drafts the instruction that
+ * would have prevented them all: an opinion, or a rule when its optional
+ * trigger proves.
  */
 
 import type { CandidateInput } from "./adaptation-candidates";
-import type { RuleTrigger } from "./adaptation-rules";
+import { isTriggerRule, type RuleTrigger } from "./adaptation-rules";
 import { type RequestedTurn, type Turn, withRequests } from "./adaptation-turns";
+import { hasCurrentKind } from "./correction-kind";
 import { firesOn } from "./rule-proof";
 
 const MIN_CITED = 2;
@@ -18,14 +20,17 @@ type Correction = RequestedTurn;
 export interface KnownRule {
   id: string;
   when: string;
-  trigger: RuleTrigger;
+  trigger?: RuleTrigger;
   steering: string;
   check?: string;
   status: string;
+  delivery?: "always";
   widens?: string;
 }
 
-const DRAFTER_SYSTEM_PROMPT = `You turn an AI assistant's repeated mistakes into one rule that prevents them.
+type TriggeredRule = KnownRule & { trigger: RuleTrigger };
+
+const DRAFTER_SYSTEM_PROMPT = `You turn an AI assistant's repeated mistakes into one instruction that prevents them.
 
 You get the corrections the user made recently, numbered and oldest first. Each has the end of the assistant's reply the user corrected, the user's correcting message, what the reply got wrong, and, when known, the user's request the reply answered. The newest one just happened. Then the known rules; an approved rule shows its trigger and whether that trigger fires on the newest correction.
 
@@ -37,9 +42,9 @@ Otherwise set widens to an empty string and decide whether the newest correction
 
 If it is not, or another known rule already covers it, set recurring to false, say why in reason in one sentence, leave the text fields empty and set cites to [].
 
-If it is, draft one rule:
-- when: the situation, in one sentence.
-- side and pattern: a case-insensitive JavaScript regular expression for that situation. Side "reply" matches the end of the assistant's reply; side "prompt" matches the user's request. It must match the cited corrections, stay general enough to catch the next one, and not match ordinary turns.
+If it is, draft one instruction. It steers every session unless a trigger proves it can fire only when needed:
+- when: the situation, in one sentence, general enough to cover the next time and not tied to these corrections' topics.
+- side and pattern: optional. Leave both empty unless the situation always shows in the same words, in the user's request (side "prompt") or at the end of the assistant's reply (side "reply"). Then give a case-insensitive JavaScript regular expression that matches every cited correction on that side, would match the next one, and does not match ordinary turns. A pattern built from the words of these corrections or of the user's correcting message is worse than none.
 - steering: the instruction to the assistant, imperative, at most two sentences.
 - check: how to tell from a reply whether the instruction was followed, in one sentence.
 - cites: the numbers of the corrections this rule would have prevented, including the newest.
@@ -52,7 +57,7 @@ const DRAFTER_SCHEMA = {
     widens: { type: "string" },
     reason: { type: "string" },
     when: { type: "string" },
-    side: { enum: ["prompt", "reply"] },
+    side: { enum: ["prompt", "reply", ""] },
     pattern: { type: "string" },
     steering: { type: "string" },
     check: { type: "string" },
@@ -80,12 +85,13 @@ export function canRepeat(corrections: Correction[]): boolean {
   return corrections.length >= MIN_CITED;
 }
 
-function missedApprovedRules(corrections: Correction[], known: KnownRule[]): KnownRule[] {
+function missedApprovedRules(
+  corrections: Correction[],
+  known: KnownRule[]
+): TriggeredRule[] {
   const newest = corrections.at(-1);
   if (!newest) return [];
-  return known.filter(
-    (rule) => rule.status === "approved" && !firesOn(rule.trigger, newest)
-  );
+  return known.filter(isTriggerRule).filter((rule) => !firesOn(rule.trigger, newest));
 }
 
 export function canWiden(corrections: Correction[], known: KnownRule[]): boolean {
@@ -99,9 +105,11 @@ function correctionBlock(correction: Correction, n: number, newest: boolean): st
 
 function knownRuleLine(rule: KnownRule, newest: Correction | undefined): string {
   if (rule.widens)
-    return `- draft widening of rule ${rule.widens}: ${rule.trigger.pattern}`;
-  if (rule.status !== "approved")
-    return `- ${rule.status}: ${rule.when}. ${rule.steering}`;
+    return `- draft widening of rule ${rule.widens}: ${rule.trigger?.pattern}`;
+  if (!isTriggerRule(rule)) {
+    const label = rule.delivery === "always" ? `opinion ${rule.id}` : rule.status;
+    return `- ${label}: ${rule.when}. ${rule.steering}`;
+  }
   const fires = newest && firesOn(rule.trigger, newest) ? "yes" : "no";
   return `- approved rule ${rule.id}: ${rule.when}. ${rule.steering} Trigger on the ${rule.trigger.side}: ${rule.trigger.pattern}. Fires on the newest correction: ${fires}.`;
 }
@@ -134,7 +142,7 @@ interface DraftOutput {
   recurring: boolean;
   widens?: string;
   when: string;
-  side: "prompt" | "reply";
+  side: "prompt" | "reply" | "";
   pattern: string;
   steering: string;
   check: string;
@@ -185,23 +193,48 @@ function citedEvidence(cites: number[], corrections: Correction[]): string[] {
   });
 }
 
+function namedKindsOf(cited: Correction[]): string[] {
+  return cited
+    .filter(hasCurrentKind)
+    .map((c) => c.correctionKind.kind)
+    .filter((kind) => kind !== "other");
+}
+
+export function citedKind(
+  cites: number[],
+  corrections: Correction[]
+): string | undefined {
+  const newestFirst = namedKindsOf(cites.map((n) => corrections[n])).reverse();
+  const count = (kind: string) => newestFirst.filter((k) => k === kind).length;
+  const most = Math.max(...newestFirst.map(count));
+  return newestFirst.find((kind) => count(kind) === most);
+}
+
+function withKind<T extends CandidateInput>(candidate: T, kind: string | undefined): T {
+  return kind ? { ...candidate, kind } : candidate;
+}
+
+function optionalTrigger({ side, pattern }: DraftOutput): RuleTrigger | undefined {
+  if ((side !== "prompt" && side !== "reply") || !hasText(pattern)) return undefined;
+  const bare = bareExpression(pattern);
+  return isValidPattern(bare) ? { side, pattern: bare } : undefined;
+}
+
 function parseNewRule(
   draft: DraftOutput,
   corrections: Correction[]
 ): CandidateInput | null {
   const cites = validCites(draft.cites, corrections.length, MIN_CITED);
-  const sideOk = draft.side === "prompt" || draft.side === "reply";
-  if (!cites || !sideOk || !hasText(draft.pattern)) return null;
-  const pattern = bareExpression(draft.pattern);
-  if (!isValidPattern(pattern)) return null;
-  if (!hasText(draft.when, draft.steering, draft.check)) return null;
-  return {
+  if (!cites || !hasText(draft.when, draft.steering, draft.check)) return null;
+  const trigger = optionalTrigger(draft);
+  const candidate = {
     when: draft.when.trim(),
-    trigger: { side: draft.side, pattern },
+    ...(trigger && { trigger }),
     steering: draft.steering.trim(),
     check: draft.check.trim(),
     evidence: citedEvidence(cites, corrections),
   };
+  return withKind(candidate, citedKind(cites, corrections));
 }
 
 function parseWidening(

@@ -88,6 +88,17 @@ describe("prompt-side rules", () => {
     expect(promptRulesReminder("delete the logs", "s1", NOW)).toBeNull();
   });
 
+  test("an opinion steers through the session context, not its trigger", () => {
+    const opinion = addDraft({
+      ...replyRule,
+      evidence: [],
+      trigger: { side: "prompt", pattern: "logs" },
+    });
+    decideRule(opinion.id, "opinion");
+
+    expect(promptRulesReminder("delete the logs", "s1", NOW)).toBeNull();
+  });
+
   test("a rule with a broken pattern is skipped, not fatal", () => {
     approved({ trigger: { side: "prompt", pattern: "delete (" } });
     approved({ steering: "Ask first." });

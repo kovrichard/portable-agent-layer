@@ -17,6 +17,12 @@ import {
 } from "../lib/adaptation-candidates";
 import { readRules } from "../lib/adaptation-rules";
 import { appendTurn, readTurns, withRequests } from "../lib/adaptation-turns";
+import {
+  correctionKindRequest,
+  needsCorrectionKind,
+  parseCorrectionKind,
+  withCorrectionKind,
+} from "../lib/correction-kind";
 import { spawnDetachedInference } from "../lib/detached-inference";
 import { canInfer, inference } from "../lib/inference";
 import { replyEnd } from "../lib/interaction-samples";
@@ -231,6 +237,16 @@ async function checkCorrection(reply: string, message: string, sessionId?: strin
   return result.success ? parseCorrectionCheck(result.output) : null;
 }
 
+async function labelCorrectionKind(
+  reply: string,
+  message: string,
+  issue: string,
+  sessionId?: string
+) {
+  const result = await inference(correctionKindRequest(reply, message, issue, sessionId));
+  return result.success ? parseCorrectionKind(result.output) : null;
+}
+
 function knownRules() {
   const waiting = readCandidates().filter((candidate) => candidate.verdict === "waiting");
   return [
@@ -251,7 +267,7 @@ async function draftRuleCandidate(sessionId?: string): Promise<void> {
   else logDebug("rule-drafter", `no candidate: ${result.output ?? result.error ?? ""}`);
 }
 
-/** Background mode: label the reaction, check a possible correction, store the rating. */
+/** Background mode: label the reaction, check a possible correction, name a confirmed one's kind, store the rating. */
 async function runReactionRatingAndStore(
   message: string,
   reply: string,
@@ -273,7 +289,10 @@ async function runReactionRatingAndStore(
       label,
       check
     );
-    if (turn) appendTurn(turn, sentAt);
+    const kind = needsCorrectionKind(turn)
+      ? await labelCorrectionKind(reply, message, turn.issue, sessionId)
+      : null;
+    if (turn) appendTurn(withCorrectionKind(turn, kind), sentAt);
     if (turn?.confirmed) await draftRuleCandidate(sessionId);
   } catch (err) {
     const { logError } = await import("../lib/log");

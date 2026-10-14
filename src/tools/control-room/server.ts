@@ -18,7 +18,7 @@ import { agenda, agentsAtWork, board, handoffs, signal, summary } from "./data";
 import { projectDetail } from "./detail";
 import { matrix } from "./matrix";
 import { type PrefUpdate, readPrefs, validatePrefs, writePrefs } from "./prefs";
-import { decideFromPage, relationship } from "./relationship";
+import { decideFromPage, type PageDecision, relationship } from "./relationship";
 import { DEFAULT_PORT, LOOPBACK } from "./server-config";
 import { MAX_SNOOZE_DAYS, setSnooze } from "./snooze";
 import { indexHtml, staticAsset } from "./static";
@@ -290,16 +290,23 @@ async function prefsWrite(request: Request): Promise<Response> {
   return failure ? json({ error: failure }, 400) : json(writePrefs(body as PrefUpdate));
 }
 
-/** Approve or deny a rule draft — the same rule `pal cli rule` reaches. */
+const PAGE_DECISIONS: readonly PageDecision[] = [
+  "approved",
+  "denied",
+  "opinion",
+  "retired",
+];
+
+/** Decide a rule draft or retire a rule — the same rules `pal cli rule` reaches. */
 async function ruleWrite(request: Request): Promise<Response> {
   const body = await readBody(request);
   if (!body) return json({ error: "expected a JSON body" }, 400);
   const { id, decision } = body;
   if (typeof id !== "string" || !id) return json({ error: "id is required" }, 400);
-  if (decision !== "approved" && decision !== "denied") {
-    return json({ error: "decision must be approved or denied" }, 400);
+  if (!PAGE_DECISIONS.includes(decision as PageDecision)) {
+    return json({ error: `decision must be one of ${PAGE_DECISIONS.join(", ")}` }, 400);
   }
-  return answer(decideFromPage(id, decision), { id, decision });
+  return answer(decideFromPage(id, decision as PageDecision), { id, decision });
 }
 
 const WRITES: Record<string, (request: Request) => Promise<Response>> = {
