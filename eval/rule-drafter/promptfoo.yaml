@@ -6,8 +6,10 @@
 # build-prompt.ts writes the system prompt, the schema and every test's user
 # message from drafterRequest(), so nothing here mirrors the template.
 # check.ts grades each output with parseDraft() and firesOn(): a pass is a
-# draft that would really become a candidate, cite the right corrections, fire
-# on the newest and pass the proof against the ordinary turns in cases.ts.
+# draft that would really become a candidate and cite the right corrections; a
+# widening must also fire on the newest and pass the proof against the ordinary
+# turns in cases.ts. A new draft is an opinion unless its optional trigger
+# proves: trigger-proves grades that apart, passing a draft without a trigger.
 # catches-next tries the trigger on a later correction of the same mistake that
 # the drafter never sees: a trigger that only memorised the cited text misses it.
 #
@@ -37,6 +39,9 @@ defaultTest:
     - type: javascript
       metric: drafts-as-expected
       value: file://assertions/drafts-as-expected.js
+    - type: javascript
+      metric: trigger-proves
+      value: file://assertions/trigger-proves.js
     - type: javascript
       metric: catches-next
       value: file://assertions/catches-next.js

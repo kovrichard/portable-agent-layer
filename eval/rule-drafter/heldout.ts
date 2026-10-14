@@ -17,7 +17,7 @@ import { inference } from "../../src/hooks/lib/inference";
 import { paths } from "../../src/hooks/lib/paths";
 import { drafterRequest } from "../../src/hooks/lib/rule-drafter";
 import { asTurns, type DrafterCase } from "./cases";
-import { type Grade, grade, gradeNext } from "./grading";
+import { type Grade, grade, gradeNext, gradeTrigger } from "./grading";
 
 interface HeldOutRecord {
   ts: string;
@@ -76,6 +76,7 @@ async function inBatches<T, R>(items: T[], run: (item: T) => Promise<R>): Promis
 interface Scored {
   c: DrafterCase;
   decided: Grade;
+  trigger: Grade & { tried: boolean };
   next: Grade;
 }
 
@@ -95,8 +96,16 @@ function summary(scored: Scored[]): string[] {
       (s) => !recurring(s),
       (s) => s.decided.pass
     )}`,
-    `catches the next one: ${of(
-      (s) => !!s.c.next,
+    `decided drafts with a trigger that proves: ${of(
+      (s) => recurring(s) && s.decided.pass && s.trigger.tried,
+      (s) => s.trigger.pass
+    )}`,
+    `  of all decided drafts, with a trigger: ${of(
+      (s) => recurring(s) && s.decided.pass,
+      (s) => s.trigger.tried
+    )}`,
+    `triggers that catch the next one: ${of(
+      (s) => !!s.c.next && s.trigger.tried,
       (s) => s.next.pass
     )}`,
   ];
@@ -111,10 +120,13 @@ const attempts = Array.from({ length: runs }, () => cases).flat();
 
 const scored = await inBatches(attempts, async (c) => {
   const output = await draftOutput(c);
-  return { c, decided: grade(c, output, proofTurns), next: gradeNext(c, output) };
+  return {
+    c,
+    decided: grade(c, output, proofTurns),
+    trigger: gradeTrigger(c, output, proofTurns),
+    next: gradeNext(c, output),
+  };
 });
-for (const s of scored.filter((s) => !s.decided.pass || !s.next.pass))
-  console.log(
-    `${s.c.id} ${s.c.description}  ${s.decided.pass ? "" : s.decided.reason}${s.next.pass ? "" : `  next: ${s.next.reason}`}`
-  );
+for (const s of scored.filter((s) => !s.decided.pass))
+  console.log(`${s.c.id} ${s.c.description}  ${s.decided.reason}`);
 console.log(summary(scored).join("\n"));
