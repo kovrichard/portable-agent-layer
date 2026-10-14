@@ -134,6 +134,11 @@ async function checkRepo(): Promise<UpdateCache> {
   }
 }
 
+/** npm's latest tag lags a fresh release by seconds; an older latest is never an update. */
+export function isNewerRelease(latest: string, current: string): boolean {
+  return Bun.semver.order(latest, current) === 1;
+}
+
 async function checkNpm(): Promise<UpdateCache> {
   const current = getInstalledVersion();
 
@@ -149,7 +154,7 @@ async function checkNpm(): Promise<UpdateCache> {
 
     return {
       checkedAt: new Date().toISOString(),
-      available: latest !== current,
+      available: isNewerRelease(latest, current),
       current,
       latest,
       mode: "package",

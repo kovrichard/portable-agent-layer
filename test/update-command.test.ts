@@ -10,6 +10,7 @@ import {
   checkForUpdate,
   clearUpdateCache,
   getUpdateNotice,
+  isNewerRelease,
   type UpdateCache,
 } from "../src/hooks/handlers/update-check";
 import { paths } from "../src/hooks/lib/paths";
@@ -180,5 +181,17 @@ describe("pal cli update — repo mode ignores local unpushed commits", () => {
       expect(result.mode).toBe("repo");
       expect(result.available).toBe(false);
     });
+  });
+});
+
+describe("isNewerRelease", () => {
+  test("a newer npm latest is an update", () => {
+    expect(isNewerRelease("0.107.0", "0.106.0")).toBe(true);
+    expect(isNewerRelease("0.110.0", "0.99.1")).toBe(true);
+  });
+
+  test("an npm latest that lags a fresh release is no downgrade", () => {
+    expect(isNewerRelease("0.106.0", "0.107.0")).toBe(false);
+    expect(isNewerRelease("0.107.0", "0.107.0")).toBe(false);
   });
 });
