@@ -1,6 +1,7 @@
 /**
  * Labels the confirmed corrections logged before the labeller existed, so the
- * rate of each kind has a history from the first opinion on.
+ * rate of each kind has a history from the first opinion on. A relabel runs over
+ * every confirmed correction again, after the prompt changed.
  */
 
 import { readTurns, replaceTurns, type Turn, turnKey } from "./adaptation-turns";
@@ -19,25 +20,33 @@ export interface BackfillResult {
   failed: number;
 }
 
-export function unlabelledCorrections(turns: Turn[]): Turn[] {
-  return turns.filter((turn) => turn.confirmed === true && !turn.correctionKind);
+export interface BackfillOptions {
+  label?: KindLabeller;
+  relabel?: boolean;
+  onLabelled?: (turn: Turn, kind: CorrectionKind | null) => void;
 }
 
-async function labelWithInference(turn: Turn): Promise<CorrectionKind | null> {
+export function correctionsToLabel(turns: Turn[], relabel = false): Turn[] {
+  return turns.filter(
+    (turn) => turn.confirmed === true && (relabel || !turn.correctionKind)
+  );
+}
+
+export async function labelWithInference(turn: Turn): Promise<CorrectionKind | null> {
   const request = correctionKindRequest(turn.replyEnd, turn.message, turn.issue);
   const result = await inference(request);
   return result.success ? parseCorrectionKind(result.output) : null;
 }
 
 export async function backfillCorrectionKinds(
-  label: KindLabeller = labelWithInference,
-  onLabelled: (turn: Turn, kind: CorrectionKind | null) => void = () => {}
+  options: BackfillOptions = {}
 ): Promise<BackfillResult> {
+  const label = options.label ?? labelWithInference;
   const replacements = new Map<string, Turn>();
   let failed = 0;
-  for (const turn of unlabelledCorrections(readTurns())) {
+  for (const turn of correctionsToLabel(readTurns(), options.relabel)) {
     const kind = await label(turn);
-    onLabelled(turn, kind);
+    options.onLabelled?.(turn, kind);
     if (!kind) failed++;
     else replacements.set(turnKey(turn), { ...turn, ...withCorrectionKind(turn, kind) });
   }

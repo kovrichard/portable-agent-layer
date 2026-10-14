@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { appendTurn, readTurns, type Turn } from "../src/hooks/lib/adaptation-turns";
 import {
   backfillCorrectionKinds,
-  unlabelledCorrections,
+  correctionsToLabel,
 } from "../src/hooks/lib/correction-backfill";
 import { kindRates, splitRates } from "../src/hooks/lib/correction-rates";
 import { paths } from "../src/hooks/lib/paths";
@@ -121,9 +121,11 @@ describe("backfillCorrectionKinds", () => {
     const before = logTurns();
 
     const seen: string[] = [];
-    const result = await backfillCorrectionKinds(async (t) => {
-      seen.push(t.message);
-      return { kind: "unverified-claim", suggested: "", description: "" };
+    const result = await backfillCorrectionKinds({
+      label: async (t) => {
+        seen.push(t.message);
+        return { kind: "unverified-claim", suggested: "", description: "" };
+      },
     });
 
     expect(seen).toEqual(["ci red"]);
@@ -138,7 +140,32 @@ describe("backfillCorrectionKinds", () => {
       description: "",
       version: 1,
     });
-    expect(unlabelledCorrections(readTurns())).toEqual([]);
+    expect(correctionsToLabel(readTurns())).toEqual([]);
+  });
+
+  test("a relabel labels every confirmed correction again", async () => {
+    appendTurn({
+      session: "s",
+      message: "m",
+      replyEnd: "r",
+      reaction: "corrected",
+      issue: "i",
+      confirmed: true,
+    });
+    const label = (kind: "unverified-claim" | "stopped-short") => async () => ({
+      kind,
+      suggested: "",
+      description: "",
+    });
+    await backfillCorrectionKinds({ label: label("unverified-claim") });
+    expect(await backfillCorrectionKinds({ label: label("stopped-short") })).toEqual({
+      labelled: 0,
+      failed: 0,
+    });
+    expect(
+      await backfillCorrectionKinds({ label: label("stopped-short"), relabel: true })
+    ).toEqual({ labelled: 1, failed: 0 });
+    expect(readTurns()[0].correctionKind?.kind).toBe("stopped-short");
   });
 
   test("a failed label leaves the turn for the next run", async () => {
@@ -150,8 +177,8 @@ describe("backfillCorrectionKinds", () => {
       issue: "i",
       confirmed: true,
     });
-    const result = await backfillCorrectionKinds(async () => null);
+    const result = await backfillCorrectionKinds({ label: async () => null });
     expect(result).toEqual({ labelled: 0, failed: 1 });
-    expect(unlabelledCorrections(readTurns())).toHaveLength(1);
+    expect(correctionsToLabel(readTurns())).toHaveLength(1);
   });
 });
