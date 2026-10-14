@@ -1,0 +1,44 @@
+# PAL rule drafter evaluation
+#
+# Evaluates the prompt in src/hooks/lib/rule-drafter.ts, which decides after a
+# confirmed correction whether it repeats an earlier one and drafts the rule
+# that would have prevented them, or widens an approved rule that missed it.
+# build-prompt.ts writes the system prompt, the schema and every test's user
+# message from drafterRequest(), so nothing here mirrors the template.
+# check.ts grades each output with parseDraft() and firesOn(): a pass is a
+# draft that would really become a candidate, cite the right corrections, fire
+# on the newest and pass the proof against the ordinary turns in cases.ts.
+# catches-next tries the trigger on a later correction of the same mistake that
+# the drafter never sees: a trigger that only memorised the cited text misses it.
+#
+# The caller runs on Haiku 5.5 on Claude; it never falls back to Haiku 4.5.
+#
+# Run:
+#   bun run eval:rule-drafter
+
+description: rule drafter — does the newest correction repeat an earlier one?
+
+prompts:
+  - label: rule-drafter
+    raw: "{{user}}"
+
+providers:
+  - id: file://../lib/pal-infer.js
+    label: small
+    config:
+      tier: small
+      agent: claude
+      caller: rule-drafter
+      system: eval/rule-drafter/generated/system.txt
+      schema: eval/rule-drafter/generated/schema.json
+
+defaultTest:
+  assert:
+    - type: javascript
+      metric: drafts-as-expected
+      value: file://assertions/drafts-as-expected.js
+    - type: javascript
+      metric: catches-next
+      value: file://assertions/catches-next.js
+
+tests: file://generated/tests.json

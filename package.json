@@ -72,7 +72,8 @@
     "eval:correction-check": "bun eval/run.ts correction-check",
     "eval:entity-extraction": "bun eval/entity-extraction/build-prompt.ts && bun eval/run.ts entity-extraction",
     "eval:correction-kind": "bun eval/correction-kind/build-prompt.ts && bun eval/run.ts correction-kind",
-    "eval:correction-kind:heldout": "bun eval/correction-kind/heldout.ts"
+    "eval:correction-kind:heldout": "bun eval/correction-kind/heldout.ts",
+    "eval:rule-drafter": "bun eval/rule-drafter/build-prompt.ts && bun eval/run.ts rule-drafter"
   },
   "lint-staged": {
     "*.ts": [
