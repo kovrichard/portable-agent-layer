@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { runRule } from "../src/cli/rule";
-import { addDraft, readRules } from "../src/hooks/lib/adaptation-rules";
+import { addDraft, decideRule, readRules } from "../src/hooks/lib/adaptation-rules";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
@@ -43,20 +43,31 @@ describe("pal cli rule list", () => {
 
   test("says when a draft can only be kept as an opinion", async () => {
     const offer = "  offer: the trigger did not prove; keep it as an opinion or deny it";
-    seed("Claiming work is finished");
-    addDraft({
+    const proven = seed("Claiming work is finished");
+    const opinionOnly = addDraft({
       when: "Claiming tests pass",
       trigger: { side: "reply", pattern: "tests pass" },
       steering: "Show the run.",
-      kind: "unverified-claim",
+      kind: "no-verdict",
       evidence: [],
       offer: "opinion-only",
     });
 
     expect(await runRule(["list"])).toBe(0);
     const [provenBlock, opinionOnlyBlock] = printed.join("\n").split("\n\n");
-    expect(provenBlock).not.toContain(offer);
+    expect(provenBlock.split("\n")).toEqual([
+      `${proven.id}  [draft]  Claiming work is finished`,
+      "  trigger (reply): done",
+      "  steering: Show the evidence.",
+      "  kind: unverified-claim",
+      "  evidence: Claimed done without a test run.",
+    ]);
     expect(opinionOnlyBlock.split("\n")).toContain(offer);
+
+    decideRule(opinionOnly.id, "opinion");
+    printed = [];
+    expect(await runRule(["list", "--all"])).toBe(0);
+    expect(printed.join("\n").split("\n")).not.toContain(offer);
   });
 
   test("shows the check and where the trigger fired in the turn log", async () => {

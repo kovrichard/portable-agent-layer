@@ -71,14 +71,18 @@ const ofKinds = (...kinds: Parameters<typeof kinded>[]) =>
   kinds.map((args) => ({ ...two[0], correctionKind: kinded(...args) }));
 
 describe("citedKind", () => {
-  test("is the kind most cited corrections share", () => {
-    const cited = ofKinds(["no-verdict"], ["stopped-short"], ["no-verdict"]);
+  test("is the kind most cited corrections share, even when the newest differs", () => {
+    const cited = ofKinds(["no-verdict"], ["no-verdict"], ["stopped-short"]);
     expect(citedKind([0, 1, 2], cited)).toBe("no-verdict");
   });
 
   test("a tie goes to the newest correction's kind", () => {
-    const cited = ofKinds(["no-verdict"], ["stopped-short"]);
-    expect(citedKind([0, 1], cited)).toBe("stopped-short");
+    expect(citedKind([0, 1], ofKinds(["no-verdict"], ["stopped-short"]))).toBe(
+      "stopped-short"
+    );
+    expect(citedKind([0, 1], ofKinds(["stopped-short"], ["no-verdict"]))).toBe(
+      "no-verdict"
+    );
   });
 
   test("counts only the corrections cited", () => {
@@ -87,9 +91,18 @@ describe("citedKind", () => {
     expect(citedKind([0], cited)).toBe("no-verdict");
   });
 
-  test("ignores other and labels from an older prompt", () => {
-    const cited = ofKinds(["other"], ["other"], ["no-verdict", 1], ["stopped-short"]);
-    expect(citedKind([0, 1, 2, 3], cited)).toBe("stopped-short");
+  test("ignores other, unlabelled corrections and labels from an older prompt", () => {
+    const cited = [
+      ...ofKinds(
+        ["stopped-short"],
+        ["other"],
+        ["other"],
+        ["no-verdict", 1],
+        ["no-verdict", 1]
+      ),
+      two[1],
+    ];
+    expect(citedKind([0, 1, 2, 3, 4, 5], cited)).toBe("stopped-short");
   });
 
   test("is unknown when no cited correction has a current named kind", () => {
