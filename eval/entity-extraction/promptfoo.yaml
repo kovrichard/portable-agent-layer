@@ -1,0 +1,170 @@
+# PAL entity extraction evaluation
+#
+# Evaluates the prompt in src/hooks/lib/entity-extraction.ts as the background
+# extractor sends it. build-prompt.ts writes the system prompt and the schema from
+# src/ before each run; the user template below mirrors extractionUser(), and
+# test/entity-extraction-eval.test.ts fails when the two drift apart.
+#
+# The provider runs `pal cli infer`, so a case takes the route of the agent active
+# on this machine. medium is what the extractor ships with; small answers "would
+# the cheaper tier do?". The latency threshold is the extractor's own timeout.
+#
+# Alex and Atlas stand in for the user and the assistant; every name is invented.
+#
+# Run:
+#   bun run eval:entity-extraction
+
+description: entity extraction — who does the user talk about?
+
+# One call at a time: latency is under test, and parallel calls inflate it.
+evaluateOptions:
+  maxConcurrency: 1
+
+prompts:
+  - label: extraction
+    raw: |
+      Known entries (slug | kind | name):
+      {{known}}
+
+      Messages:
+      {{messages}}
+
+providers:
+  - id: file://../lib/pal-infer.js
+    label: medium
+    config:
+      tier: medium
+      caller: eval-entity-extraction
+      system: eval/entity-extraction/generated/system.txt
+      schema: eval/entity-extraction/generated/schema.json
+  - id: file://../lib/pal-infer.js
+    label: small
+    config:
+      tier: small
+      caller: eval-entity-extraction
+      system: eval/entity-extraction/generated/system.txt
+      schema: eval/entity-extraction/generated/schema.json
+
+defaultTest:
+  vars:
+    known: |-
+      fenwick-consult-zrt | company | Fenwick Consult Zrt.
+      mira-holt | person | Mira Holt
+      pip-lanter | person | Pip Lanter (also: Pipster)
+      brightmoor-io | company | Brightmoor Kft.
+  assert:
+    - type: javascript
+      value: file://assertions/matches-expected.js
+    - type: latency
+      threshold: 90000
+
+tests:
+  # B — people and companies it must find
+  - description: "B1 known person by first name, with a new fact"
+    vars:
+      messages: "1. Talked with Mira yesterday, she is moving to Tidewell Labs full time."
+      expect:
+        present: [{ name: Mira Holt, kind: person, existing: mira-holt, organization: Tidewell }]
+  - description: "B2 prospect company, named by a known person"
+    vars:
+      messages: "1. Pip wants us to pitch Quarrybell next week, they could become a client."
+      expect:
+        present:
+          - { name: Quarrybell, kind: company, existing: "", relation: "prospect|client" }
+          - { name: Pip Lanter, kind: person, existing: pip-lanter }
+  - description: "B3 new contact at a known company: both entities"
+    vars:
+      messages: "1. Kalló Dénes from Fenwick Consult is our new contact there, he handles the procurement."
+      expect:
+        present:
+          - { name: Kalló Dénes, kind: person, existing: "", organization: Fenwick }
+          - { name: Fenwick Consult, kind: company, existing: fenwick-consult-zrt }
+  - description: "B4 new person with role and company"
+    vars:
+      messages: "1. I had a call with Lena Marsh, the CTO of Orbitline. She wants a proposal from us by Friday."
+      expect:
+        present:
+          - { name: Lena Marsh, kind: person, role: CTO, organization: Orbitline }
+          - { name: Orbitline, kind: company }
+  - description: "B5 several entities across two messages"
+    vars:
+      messages: |-
+        1. Signed the contract with Halvorsen Bt. today, they are our client from now on.
+        2. Their PM, Odo Ferris, will be my contact, and Mira joins the kickoff.
+      expect:
+        present:
+          - { name: Halvorsen Bt., kind: company, relation: client }
+          - { name: Odo Ferris, kind: person, organization: Halvorsen }
+          - { name: Mira Holt, kind: person, existing: mira-holt }
+  - description: "B6 the live-test turn: five names and a vendor in two messages"
+    vars:
+      messages: |-
+        1. I talked with Bram yesterday, he is moving to Stonegate Systems full time. Also Mira wants us to pitch Quarrybell next week, they could become a client.
+        2. Kalló Dénes from Fenwick Consult is our new contact there, he handles the procurement. We deploy everything on Cloudflare anyway.
+      expect:
+        present:
+          - { name: Mira Holt, kind: person, existing: mira-holt }
+          - { name: Quarrybell, kind: company, relation: "prospect|client" }
+          - { name: Kalló Dénes, kind: person, organization: Fenwick }
+          - { name: Fenwick Consult, kind: company, existing: fenwick-consult-zrt }
+        absent: [Cloudflare]
+
+  # A — what it must leave out
+  - description: "A1 tools and vendors that are only used"
+    vars:
+      messages: "1. We deploy everything on Cloudflare anyway, payments go through Stripe and Bun runs the tests."
+      expect: { none: true }
+  - description: "A2 the user and the assistant"
+    vars:
+      messages: "1. Atlas, note that Alex still has to send the invoice today, then we continue with the parser."
+      expect: { absent: [Alex, Atlas] }
+  - description: "A3 public figure cited only for their work"
+    vars:
+      messages: "1. As Linus Torvalds put it, talk is cheap, show me the code. Let's ship the fix."
+      expect: { none: true }
+  - description: "A4 names only inside a pasted email header"
+    vars:
+      messages: |-
+        1. Can you summarise this?
+        From: Greta Vonn
+        Subject: Q3 numbers from Sablewood
+
+        Please see the attached figures and confirm the totals.
+      expect: { absent: [Greta Vonn, Sablewood] }
+  - description: "A5 a bare mention gets no invented details"
+    vars:
+      messages: "1. Ran into Theo Brandt at the meetup last night."
+      expect:
+        present: [{ name: Theo Brandt, kind: person, empty: [role, organization, relation] }]
+
+  # C — nobody to list
+  - description: "C1 plain development chat"
+    vars:
+      messages: "1. Refactor the parser so it handles nested arrays, then run the tests again."
+      expect: { none: true }
+  - description: "C2 capitalised words that are not names"
+    vars:
+      messages: "1. On Monday we review the Billing page. Dark Mode still breaks the Settings layout."
+      expect: { none: true }
+
+  # D — explicit statements it must keep
+  - description: "D1 stated relation"
+    vars:
+      messages: "1. Remember that Sable & Finch has been our client since March."
+      expect:
+        present: [{ name: Sable & Finch, kind: company, relation: client }]
+  - description: "D2 stated nickname becomes an alias"
+    vars:
+      messages: "1. Mira Holt, we call her Mimi, will run the workshop on Thursday."
+      expect:
+        present: [{ name: Mira Holt, kind: person, existing: mira-holt, aliases: [Mimi] }]
+  - description: "D3 known person reached through an alias"
+    vars:
+      messages: "1. Pipster sent over the signed NDA this morning."
+      expect:
+        present: [{ name: Pip Lanter, kind: person, existing: pip-lanter }]
+  - description: "D4 family-name-first person with a role"
+    vars:
+      messages: "1. Szabó Kinga joined our team as a designer this week."
+      expect:
+        present: [{ name: Szabó Kinga, kind: person, existing: "", role: designer }]

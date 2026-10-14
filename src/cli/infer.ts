@@ -6,7 +6,7 @@
 
 import { readFileSync } from "node:fs";
 import { z } from "zod";
-import { inference } from "../hooks/lib/inference";
+import { inference, plannedInferenceRoute } from "../hooks/lib/inference";
 import { INFERENCE_TIERS, type InferenceTier } from "../hooks/lib/models";
 import { leaf } from "../tools/lib/command";
 
@@ -19,9 +19,11 @@ interface InferValues {
   timeout?: string;
   caller?: string;
   web?: boolean;
+  route?: boolean;
 }
 
 type Infer = typeof inference;
+type PlanRoute = typeof plannedInferenceRoute;
 
 class InferInputError extends Error {}
 
@@ -115,6 +117,19 @@ export async function inferFromCli(
   return 0;
 }
 
+export function routeFromCli(
+  values: InferValues,
+  plan: PlanRoute = plannedInferenceRoute
+): number {
+  try {
+    console.log(JSON.stringify(plan(tierOf(values.tier), values.caller)));
+    return 0;
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : String(err));
+    return 1;
+  }
+}
+
 export const inferCommand = leaf({
   summary: "Run one inference call on the active agent's model; prompt on stdin",
   options: {
@@ -143,6 +158,11 @@ export const inferCommand = leaf({
       type: "boolean",
       description: "Let the model search and read the web (Claude, Codex, Copilot)",
     },
+    route: {
+      type: "boolean",
+      description: "Print the agent, route and model as JSON instead of calling",
+    },
   },
-  run: async ({ values }) => inferFromCli(values, await Bun.stdin.text()),
+  run: async ({ values }) =>
+    values.route ? routeFromCli(values) : inferFromCli(values, await Bun.stdin.text()),
 });

@@ -26,6 +26,7 @@
       "stryker.config.mjs",
       "!.stryker-tmp",
       "!.test",
+      "!eval/*/generated",
       "!src/tools/control-room/ui/theme.css",
       "!src/tools/control-room/ui/dist",
       "!!.claude/worktrees"

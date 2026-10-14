@@ -217,6 +217,13 @@ function plannedRoute(opts: InferenceOptions): { route: string; model: string | 
   return { route, model: null };
 }
 
+export function plannedInferenceRoute(
+  tier: InferenceTier,
+  caller?: string
+): { agent: string; route: string; model: string | null } {
+  return { agent: previewRoute().agent, ...plannedRoute({ user: "", tier, caller }) };
+}
+
 export async function inference(opts: InferenceOptions): Promise<InferenceResult> {
   const started = performance.now();
   const result = await checkedInference(opts);
