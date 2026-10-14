@@ -90,12 +90,22 @@ function cmdList(all: boolean, json: boolean): number {
     console.log(all ? "No rules yet." : "No drafts waiting.");
     return 0;
   }
-  const turns = readTurns(EFFECT_WINDOW_DAYS);
-  console.log(rules.map((rule) => formatRule(rule, turns)).join("\n\n"));
+  const measure: Measure = {
+    turns: readTurns(EFFECT_WINDOW_DAYS),
+    opinionKinds: readRules()
+      .filter(isOpinion)
+      .flatMap((r) => (r.kind ? [r.kind] : [])),
+  };
+  console.log(rules.map((rule) => formatRule(rule, measure)).join("\n\n"));
   return 0;
 }
 
-function formatRule(rule: AdaptationRule, turns: Turn[]): string {
+interface Measure {
+  turns: Turn[];
+  opinionKinds: string[];
+}
+
+function formatRule(rule: AdaptationRule, measure: Measure): string {
   const label = isOpinion(rule) ? "opinion" : rule.status;
   return [
     `${rule.id}  [${label}]  ${rule.when}`,
@@ -107,22 +117,25 @@ function formatRule(rule: AdaptationRule, turns: Turn[]): string {
     ...(rule.kind ? [`  kind: ${rule.kind}`] : []),
     ...(rule.check ? [`  check: ${rule.check}`] : []),
     ...(rule.proof ? [`  proof: ${formatProof(rule.proof)}`] : []),
-    ...effectLines(rule, turns),
+    ...effectLines(rule, measure),
     ...rule.evidence.map((e) => `  evidence: ${e}`),
   ].join("\n");
 }
 
-function effectLines(rule: AdaptationRule, turns: Turn[]): string[] {
+function effectLines(rule: AdaptationRule, { turns, opinionKinds }: Measure): string[] {
   if (!isOpinion(rule) || !rule.kind || !rule.decidedAt) return [];
+  const effect = opinionEffect(rule.kind, new Date(rule.decidedAt), turns, opinionKinds);
   return [
-    `  effect: ${formatEffect(opinionEffect(rule.kind, new Date(rule.decidedAt), turns))}`,
+    `  effect: ${formatWindows(effect)} (${effect.verdict})`,
+    `  other kinds: ${formatWindows(effect.control)}`,
   ];
 }
 
-function formatEffect(effect: OpinionEffect): string {
-  const { before, after } = effect;
-  const rates = `${before.per100.toFixed(1)}/100 over ${before.turns} turns before, ${after.per100.toFixed(1)}/100 over ${after.turns} after`;
-  return `${rates} (${effect.verdict})`;
+function formatWindows({
+  before,
+  after,
+}: Pick<OpinionEffect, "before" | "after">): string {
+  return `${before.count} in ${before.turns} turns before (${before.per100.toFixed(1)}/100), ${after.count} in ${after.turns} after (${after.per100.toFixed(1)}/100)`;
 }
 
 function formatProof(proof: TriggerProof): string {

@@ -55,6 +55,7 @@ export function kindRates(turns: Turn[]): KindRates {
 }
 
 const MIN_TURNS_AFTER = 200;
+const MIN_CORRECTIONS_BEFORE = 5;
 const MAX_WINDOW_MS = 30 * 86_400_000;
 
 interface WindowRate {
@@ -63,41 +64,54 @@ interface WindowRate {
   per100: number;
 }
 
-export interface OpinionEffect {
-  kind: string;
+interface Windows {
   before: WindowRate;
   after: WindowRate;
-  verdict: "too-early" | "lower" | "not-lower";
 }
 
-function windowRate(kind: string, turns: Turn[]): WindowRate {
-  const rate = kindRates(turns).kinds.find((k) => k.kind === kind);
-  return { turns: turns.length, count: rate?.count ?? 0, per100: rate?.per100 ?? 0 };
+export interface OpinionEffect extends Windows {
+  kind: string;
+  /** The kinds no opinion targets, over the same windows: what changed anyway. */
+  control: Windows;
+  verdict: "too-early" | "too-few" | "lower" | "not-lower";
 }
 
-function effectVerdict(before: WindowRate, after: WindowRate): OpinionEffect["verdict"] {
-  if (after.turns < MIN_TURNS_AFTER) return "too-early";
-  return after.per100 < before.per100 ? "lower" : "not-lower";
+function windowRate(counts: (kind: string) => boolean, turns: Turn[]): WindowRate {
+  const count = kindRates(turns)
+    .kinds.filter((k) => counts(k.kind))
+    .reduce((sum, k) => sum + k.count, 0);
+  return { turns: turns.length, count, per100: per100(count, turns.length) };
+}
+
+function ratio({ before, after }: Windows): number {
+  return before.per100 === 0 ? 1 : after.per100 / before.per100;
+}
+
+function effectVerdict(own: Windows, control: Windows): OpinionEffect["verdict"] {
+  if (own.after.turns < MIN_TURNS_AFTER) return "too-early";
+  if (own.before.count < MIN_CORRECTIONS_BEFORE) return "too-few";
+  return ratio(own) < ratio(control) ? "lower" : "not-lower";
 }
 
 export function opinionEffect(
   kind: string,
   approvedAt: Date,
   turns: Turn[],
+  opinionKinds: string[] = [kind],
   now: Date = new Date()
 ): OpinionEffect {
   const cut = approvedAt.getTime();
   const span = Math.min(MAX_WINDOW_MS, now.getTime() - cut);
   const at = (turn: Turn) => Date.parse(turn.ts);
-  const before = windowRate(
-    kind,
-    turns.filter((t) => at(t) >= cut - span && at(t) < cut)
-  );
-  const after = windowRate(
-    kind,
-    turns.filter((t) => at(t) >= cut && at(t) < cut + span)
-  );
-  return { kind, before, after, verdict: effectVerdict(before, after) };
+  const beforeTurns = turns.filter((t) => at(t) >= cut - span && at(t) < cut);
+  const afterTurns = turns.filter((t) => at(t) >= cut && at(t) < cut + span);
+  const windows = (counts: (k: string) => boolean): Windows => ({
+    before: windowRate(counts, beforeTurns),
+    after: windowRate(counts, afterTurns),
+  });
+  const own = windows((k) => k === kind);
+  const control = windows((k) => k !== kind && !opinionKinds.includes(k));
+  return { kind, ...own, control, verdict: effectVerdict(own, control) };
 }
 
 export function splitRates(

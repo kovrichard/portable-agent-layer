@@ -97,31 +97,72 @@ describe("opinionEffect", () => {
       ...ordinaryTurns(9, 1),
     ];
 
-    const effect = opinionEffect("status-quo-bias", approvedAt, turns, new Date(at(5)));
+    const effect = opinionEffect(
+      "status-quo-bias",
+      approvedAt,
+      turns,
+      ["status-quo-bias"],
+      new Date(at(5))
+    );
 
     expect(effect.before).toEqual({ turns: 10, count: 2, per100: 20 });
     expect(effect.after).toEqual({ turns: 10, count: 1, per100: 10 });
+    expect(effect.control.before).toEqual({ turns: 10, count: 1, per100: 10 });
     expect(effect.verdict).toBe("too-early");
   });
 
-  test("gives a verdict once 200 turns followed the approval", () => {
-    const now = new Date(at(48));
-    const before = [correction(at(-1), "status-quo-bias"), ...ordinaryTurns(199, -24)];
-    const lower = opinionEffect(
-      "status-quo-bias",
-      approvedAt,
-      [...before, ...ordinaryTurns(200, 1)],
-      now
-    );
-    const same = opinionEffect(
-      "status-quo-bias",
-      approvedAt,
-      [...before, correction(at(2), "status-quo-bias"), ...ordinaryTurns(199, 3)],
-      now
-    );
+  const corrections = (count: number, kind: string, fromHour: number) =>
+    Array.from({ length: count }, (_, i) => correction(at(fromHour + i / 10), kind));
 
-    expect(lower.verdict).toBe("lower");
-    expect(same.verdict).toBe("not-lower");
+  function effectOf(after: Turn[], before: Turn[] = []) {
+    const defaultBefore = [
+      ...corrections(5, "status-quo-bias", -2),
+      ...corrections(5, "unverified-claim", -3),
+      ...ordinaryTurns(190, -24),
+    ];
+    return opinionEffect(
+      "status-quo-bias",
+      approvedAt,
+      [...(before.length ? before : defaultBefore), ...after],
+      ["status-quo-bias", "wrong-format"],
+      new Date(at(48))
+    );
+  }
+
+  test("an opinion's kind dropping while the other kinds hold is lower", () => {
+    const effect = effectOf([
+      ...corrections(2, "status-quo-bias", 1),
+      ...corrections(5, "unverified-claim", 2),
+      ...ordinaryTurns(193, 3),
+    ]);
+
+    expect(effect.verdict).toBe("lower");
+  });
+
+  test("every kind dropping together is not credited to the opinion", () => {
+    const effect = effectOf([
+      ...corrections(2, "status-quo-bias", 1),
+      ...corrections(1, "unverified-claim", 2),
+      ...ordinaryTurns(197, 3),
+    ]);
+
+    expect(effect.control.after.count).toBe(1);
+    expect(effect.verdict).toBe("not-lower");
+  });
+
+  test("another opinion's kind is left out of the control", () => {
+    const effect = effectOf([
+      ...corrections(9, "wrong-format", 1),
+      ...ordinaryTurns(191, 3),
+    ]);
+
+    expect(effect.control.after.count).toBe(0);
+  });
+
+  test("before 200 turns, or with under 5 corrections before, there is no verdict", () => {
+    expect(effectOf(ordinaryTurns(199, 1)).verdict).toBe("too-early");
+    const thin = [...corrections(4, "status-quo-bias", -2), ...ordinaryTurns(196, -24)];
+    expect(effectOf(ordinaryTurns(200, 1), thin).verdict).toBe("too-few");
   });
 });
 

@@ -156,7 +156,10 @@ describe("pal cli rule opinions", () => {
     expect(out).toContain(`${rule.id}  [opinion]  Designing a system`);
     expect(out).toContain("  kind: status-quo-bias");
     expect(out).toContain(
-      "  effect: 0.0/100 over 0 turns before, 0.0/100 over 0 after (too-early)"
+      [
+        "  effect: 0 in 0 turns before (0.0/100), 0 in 0 after (0.0/100) (too-early)",
+        "  other kinds: 0 in 0 turns before (0.0/100), 0 in 0 after (0.0/100)",
+      ].join("\n")
     );
     expect(out).not.toContain("trigger");
   });
