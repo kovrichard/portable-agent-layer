@@ -31,12 +31,10 @@ export interface CandidateInput extends DraftInput {
   check: string;
 }
 
-export interface Candidate extends CandidateInput {
+export type Candidate = CandidateInput & {
   id: string;
   createdAt: string;
-  verdict: ProofVerdict;
-  proof: TriggerProof;
-}
+} & ({ verdict: ProofVerdict; proof: TriggerProof } | { verdict: "untriggered" });
 
 function candidatesPath(): string {
   return resolve(paths.adaptation(), "candidates.jsonl");
@@ -68,13 +66,15 @@ function writeCandidates(candidates: Candidate[]): void {
 }
 
 function prove(candidate: Candidate, turns: RequestedTurn[]): Candidate {
+  if (!candidate.trigger) return { ...candidate, verdict: "untriggered" };
   const proof = proveTrigger(candidate.trigger, turns);
   const verdict = candidate.widens ? widenedProofVerdict(proof) : proofVerdict(proof);
   return { ...candidate, proof, verdict };
 }
 
 function canOnlyBeOpinion(candidate: Candidate): boolean {
-  return candidate.verdict === "failed" && !candidate.widens;
+  const unproven = candidate.verdict === "failed" || candidate.verdict === "untriggered";
+  return unproven && !candidate.widens;
 }
 
 function gateFor(candidate: Candidate, turns: RequestedTurn[]): OpinionGate | undefined {

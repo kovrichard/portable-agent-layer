@@ -126,7 +126,7 @@ describe("relationship view", () => {
     });
   });
 
-  test("the pipeline shows waiting and failed candidates, not passed ones", () => {
+  test("the pipeline shows waiting and failed candidates, not passed or untriggered ones", () => {
     const candidate: CandidateInput = { ...rule, check: "Quotes a run." };
     const corrections = [1, 2].map((n) => ({
       ...turn({ reaction: "corrected", confirmed: true, replyEnd: "tests pass" }),
@@ -142,6 +142,8 @@ describe("relationship view", () => {
     recordCandidate({ ...candidate, when: "waiting" }, [...corrections, ...ordinary(12)]);
     recordCandidate({ ...candidate, when: "passed" }, [...corrections, ...ordinary(20)]);
     recordCandidate({ ...candidate, when: "failed" }, corrections.slice(0, 1));
+    const { trigger: _trigger, ...untriggered } = candidate;
+    recordCandidate({ ...untriggered, when: "untriggered" }, corrections);
 
     const pipeline = relationship(NOW).pipeline;
 

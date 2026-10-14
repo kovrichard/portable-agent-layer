@@ -298,13 +298,33 @@ describe("parseDraft", () => {
 
   test("a pattern written as a /literal/ is stored as its bare expression", () => {
     const output = JSON.stringify({ ...draft, pattern: "/tests?\\s+pass/i" });
-    expect(parseDraft(output, two)?.trigger.pattern).toBe("tests?\\s+pass");
+    expect(parseDraft(output, two)?.trigger?.pattern).toBe("tests?\\s+pass");
   });
 
-  test("a pattern that is not a valid expression is rejected", () => {
-    expect(
-      parseDraft(JSON.stringify({ ...draft, pattern: "tests (pass" }), two)
-    ).toBeNull();
+  test("a draft without a pattern is an opinion draft with no trigger", () => {
+    const parsed = parseDraft(JSON.stringify({ ...draft, side: "", pattern: "" }), two);
+
+    expect(parsed).toMatchObject({ when: "Reporting that tests pass" });
+    expect(parsed).not.toHaveProperty("trigger");
+  });
+
+  test("a pattern that is not a valid expression, or on no side, is dropped", () => {
+    const broken = parseDraft(JSON.stringify({ ...draft, pattern: "tests (pass" }), two);
+    const sideless = parseDraft(JSON.stringify({ ...draft, side: "" }), two);
+    const blank = parseDraft(JSON.stringify({ ...draft, pattern: " " }), two);
+
+    for (const parsed of [broken, sideless, blank]) {
+      expect(parsed?.steering).toBe("Run the tests before saying they pass.");
+      expect(parsed).not.toHaveProperty("trigger");
+    }
+  });
+
+  test("the schema lets the drafter leave the side empty", () => {
+    expect(drafterRequest(two, []).jsonSchema.properties.side.enum).toEqual([
+      "prompt",
+      "reply",
+      "",
+    ]);
   });
 
   test("an empty instruction is rejected", () => {

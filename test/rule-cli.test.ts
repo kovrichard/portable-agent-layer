@@ -70,6 +70,21 @@ describe("pal cli rule list", () => {
     expect(printed.join("\n").split("\n")).not.toContain(offer);
   });
 
+  test("says when a draft has no trigger", async () => {
+    addDraft({
+      when: "Reporting a result",
+      steering: "Quote the evidence.",
+      kind: "unverified-claim",
+      evidence: [],
+      offer: "opinion-only",
+    });
+
+    expect(await runRule(["list"])).toBe(0);
+    const lines = printed.join("\n").split("\n");
+    expect(lines).toContain("  offer: no trigger; keep it as an opinion or deny it");
+    expect(lines.some((line) => line.startsWith("  trigger"))).toBe(false);
+  });
+
   test("says why a gated draft is not offered as an opinion", async () => {
     const offer = "  offer: the trigger did not prove; keep it as an opinion or deny it";
     addDraft({

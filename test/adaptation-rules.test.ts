@@ -214,6 +214,17 @@ describe("decideRule", () => {
     expect(decideRule(addDraft(opinionOnly).id, "denied").ok).toBe(true);
   });
 
+  test("a draft without a trigger can be kept as an opinion, not approved", () => {
+    const { trigger: _trigger, ...untriggered } = draft;
+    const { id } = addDraft({ ...untriggered, kind: "no-verdict" });
+
+    expect(decideRule(id, "approved")).toEqual({
+      ok: false,
+      reason: `Rule ${id} has no trigger; keep it as an opinion or deny it`,
+    });
+    expect(decideRule(id, "opinion").ok).toBe(true);
+  });
+
   test("a draft behind a closed gate is refused as an opinion, not as a rule", () => {
     const few = addDraft({
       ...draft,

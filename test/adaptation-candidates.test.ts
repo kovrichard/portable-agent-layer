@@ -124,6 +124,34 @@ describe("recordCandidate", () => {
     });
   });
 
+  test("a candidate without a trigger skips the proof and is offered as an opinion", () => {
+    const { trigger: _trigger, ...opinion } = kinded;
+
+    const recorded = recordCandidate(opinion, [...ofKind(5), ...ordinary(20)]);
+
+    expect(recorded.verdict).toBe("untriggered");
+    expect(recorded).not.toHaveProperty("proof");
+    expect(readRules()).toMatchObject([{ status: "draft", offer: "opinion-only" }]);
+  });
+
+  test("a candidate without a trigger meets the gate like a failed one", () => {
+    const { trigger: _trigger, ...opinion } = kinded;
+
+    recordCandidate(opinion, [...ofKind(4), ...ordinary(20)]);
+
+    expect(readRules()).toEqual([]);
+  });
+
+  test("a candidate without a trigger is not proven again", () => {
+    const { trigger: _trigger, ...opinion } = kinded;
+    recordCandidate(opinion, [...ofKind(5), ...ordinary(5)]);
+
+    reproveWaiting([...ofKind(5), ...ordinary(30)]);
+
+    expect(readCandidates()[0].verdict).toBe("untriggered");
+    expect(readRules()).toHaveLength(1);
+  });
+
   test("a proven candidate without a kind carries no gate", () => {
     recordCandidate(candidate, [...corrections, ...ordinary(20)]);
 

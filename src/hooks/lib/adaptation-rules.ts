@@ -33,7 +33,8 @@ export interface TriggerProof {
 
 export interface DraftInput {
   when: string;
-  trigger: RuleTrigger;
+  /** Absent when the situation shows in no text a pattern could match; it can only be an opinion. */
+  trigger?: RuleTrigger;
   steering: string;
   /** The correction kind the rule prevents; its rate measures the rule. */
   kind?: string;
@@ -51,9 +52,7 @@ export interface DraftInput {
 
 export type OpinionGate = { corrections: number } | { duplicates: string };
 
-export interface AdaptationRule extends Omit<DraftInput, "trigger"> {
-  /** Absent only on an opinion written by hand. */
-  trigger?: RuleTrigger;
+export interface AdaptationRule extends DraftInput {
   id: string;
   status: RuleStatus;
   /** "always" makes an approved rule an opinion, injected every session. */
@@ -189,6 +188,8 @@ function decisionRefusal(rule: AdaptationRule, decision: Decision): string | nul
     return `Rule ${rule.id} has no correction kind, so its effect could not be measured`;
   if (decision === "opinion" && rule.opinionGate)
     return `Rule ${rule.id} cannot be an opinion: ${gateReason(rule.opinionGate)}`;
+  if (decision === "approved" && !rule.trigger)
+    return `Rule ${rule.id} has no trigger; keep it as an opinion or deny it`;
   if (decision === "approved" && rule.offer === "opinion-only")
     return `Rule ${rule.id}'s trigger did not prove; keep it as an opinion or deny it`;
   return null;

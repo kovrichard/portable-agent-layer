@@ -115,13 +115,18 @@ function formatRule(rule: AdaptationRule, measure: Measure): string {
     ...(rule.kind ? [`  kind: ${rule.kind}`] : []),
     ...(rule.check ? [`  check: ${rule.check}`] : []),
     ...(rule.proof ? [`  proof: ${formatProof(rule.proof)}`] : []),
-    ...(rule.offer === "opinion-only" && rule.status === "draft" && !rule.opinionGate
-      ? ["  offer: the trigger did not prove; keep it as an opinion or deny it"]
-      : []),
+    ...offerLines(rule),
     ...gateLines(rule, measure),
     ...effectLines(rule, measure),
     ...rule.evidence.map((e) => `  evidence: ${e}`),
   ].join("\n");
+}
+
+function offerLines(rule: AdaptationRule): string[] {
+  if (rule.offer !== "opinion-only" || rule.status !== "draft" || rule.opinionGate)
+    return [];
+  const why = rule.trigger ? "the trigger did not prove" : "no trigger";
+  return [`  offer: ${why}; keep it as an opinion or deny it`];
 }
 
 function gateLines(rule: AdaptationRule, { turns, rules }: Measure): string[] {

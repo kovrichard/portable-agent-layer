@@ -104,9 +104,9 @@ function offeredDecisions(rule: AdaptationRule): [PageDecision, string][] {
 }
 
 function offerLine(rule: AdaptationRule): string | undefined {
-  return rule.offer === "opinion-only" && !rule.opinionGate
-    ? "the trigger did not prove; keep it as an opinion or deny it"
-    : undefined;
+  if (rule.offer !== "opinion-only" || rule.opinionGate) return undefined;
+  const why = rule.trigger ? "the trigger did not prove" : "no trigger";
+  return `${why}; keep it as an opinion or deny it`;
 }
 
 function Draft({

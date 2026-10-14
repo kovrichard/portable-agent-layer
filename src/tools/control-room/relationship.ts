@@ -11,6 +11,7 @@ import {
   decideRule,
   readRules,
   retireRule,
+  type TriggerProof,
 } from "../../hooks/lib/adaptation-rules";
 import { readTurns, type Turn } from "../../hooks/lib/adaptation-turns";
 import {
@@ -42,9 +43,10 @@ export interface DraftRule extends AdaptationRule {
 
 export type PageDecision = "approved" | "denied" | "opinion" | "retired";
 
-export interface PipelineCandidate extends Candidate {
+export type PipelineCandidate = Candidate & {
+  proof: TriggerProof;
   ordinaryNeeded: number;
-}
+};
 
 interface TurnStats {
   total: number;
@@ -99,13 +101,19 @@ export function relationship(now: Date = new Date()): RelationshipView {
       opinionEffect: opinionEffectOf(rule, rules, opinionTurns, now),
     })),
     denied: withStatus("denied"),
-    pipeline: readCandidates()
-      .filter((candidate) => candidate.verdict !== "passed")
-      .map((candidate) => ({
-        ...candidate,
-        ordinaryNeeded:
-          candidate.verdict === "waiting" ? ordinaryTurnsNeeded(candidate.proof) : 0,
-      })),
+    pipeline: readCandidates().flatMap((candidate) =>
+      candidate.verdict === "passed" || candidate.verdict === "untriggered"
+        ? []
+        : [
+            {
+              ...candidate,
+              ordinaryNeeded:
+                candidate.verdict === "waiting"
+                  ? ordinaryTurnsNeeded(candidate.proof)
+                  : 0,
+            },
+          ]
+    ),
     turns: turnStats(turns),
   };
 }
