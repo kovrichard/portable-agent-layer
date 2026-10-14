@@ -9,6 +9,7 @@ import {
 } from "../src/hooks/lib/adaptation-candidates";
 import { readRules } from "../src/hooks/lib/adaptation-rules";
 import type { RequestedTurn } from "../src/hooks/lib/adaptation-turns";
+import { CORRECTION_KINDS_VERSION } from "../src/hooks/lib/correction-kind";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
@@ -42,6 +43,24 @@ const corrections = [
   turn({ reaction: "corrected", confirmed: true, replyEnd: "Tests pass now." }),
 ];
 const ordinary = (count: number) => Array.from({ length: count }, () => turn({}));
+const loud = Array.from({ length: 20 }, () => turn({ replyEnd: "tests pass" }));
+
+const KIND = "unverified-claim";
+const kinded: CandidateInput = { ...candidate, kind: KIND };
+const ofKind = (count: number) =>
+  Array.from({ length: count }, () =>
+    turn({
+      reaction: "corrected",
+      confirmed: true,
+      replyEnd: "All tests pass.",
+      correctionKind: {
+        kind: KIND,
+        suggested: "",
+        description: "",
+        version: CORRECTION_KINDS_VERSION,
+      },
+    })
+  );
 
 describe("recordCandidate", () => {
   test("no file reads as no candidates", () => {
@@ -63,17 +82,55 @@ describe("recordCandidate", () => {
   });
 
   test("a failed candidate becomes a draft that can only be kept as an opinion", () => {
-    const loud = Array.from({ length: 20 }, () => turn({ replyEnd: "tests pass" }));
-
-    recordCandidate(candidate, [...corrections, ...loud]);
+    recordCandidate(kinded, [...ofKind(5), ...loud]);
 
     expect(readCandidates()[0]).toMatchObject({ verdict: "failed" });
     expect(readRules()).toMatchObject([{ status: "draft", offer: "opinion-only" }]);
+    expect(readRules()[0].opinionGate).toBeUndefined();
+  });
+
+  test("a failed candidate whose kind has too few corrections becomes no draft", () => {
+    recordCandidate(kinded, [...ofKind(4), ...loud]);
+
+    expect(readCandidates()[0]).toMatchObject({ verdict: "failed" });
+    expect(readRules()).toEqual([]);
+  });
+
+  test("a failed candidate without a kind becomes no draft", () => {
+    recordCandidate(candidate, [...ofKind(5), ...loud]);
+
+    expect(readRules()).toEqual([]);
+  });
+
+  test("a proven candidate whose kind has too few corrections is offered only as a rule", () => {
+    recordCandidate(kinded, [...ofKind(4), ...ordinary(20)]);
+
+    expect(readRules()).toMatchObject([
+      { status: "draft", opinionGate: { corrections: 4 } },
+    ]);
+    expect(readRules()[0].offer).toBeUndefined();
+  });
+
+  test("a candidate repeating an undecided draft's kind carries the duplicate", () => {
+    recordCandidate(kinded, [...ofKind(5), ...loud]);
+    const [first] = readRules();
+
+    recordCandidate({ ...kinded, when: "again" }, [...ofKind(6), ...loud]);
+
+    expect(readRules()[1]).toMatchObject({
+      when: "again",
+      offer: "opinion-only",
+      opinionGate: { duplicates: first.id },
+    });
+  });
+
+  test("a proven candidate without a kind carries no gate", () => {
+    recordCandidate(candidate, [...corrections, ...ordinary(20)]);
+
+    expect(readRules()[0].opinionGate).toBeUndefined();
   });
 
   test("a failed widening becomes no draft", () => {
-    const loud = Array.from({ length: 20 }, () => turn({ replyEnd: "tests pass" }));
-
     recordCandidate({ ...candidate, widens: "r1" }, [corrections[0], ...loud]);
 
     expect(readCandidates()[0]).toMatchObject({ verdict: "failed" });
@@ -130,6 +187,21 @@ describe("reproveWaiting", () => {
       proof: { ordinary: 25 },
     });
     expect(readRules()).toHaveLength(1);
+  });
+
+  test("a waiting candidate meets the gate as the log stands when it is proven", () => {
+    recordCandidate(kinded, [...ofKind(2), ...ordinary(5)]);
+
+    reproveWaiting([...ofKind(5), ...ordinary(20)]);
+
+    expect(readRules()[0].opinionGate).toBeUndefined();
+  });
+
+  test("a widening carries no gate", () => {
+    recordCandidate({ ...kinded, widens: "r1" }, [corrections[0], ...ordinary(20)]);
+
+    expect(readRules()[0]).toMatchObject({ widens: "r1" });
+    expect(readRules()[0].opinionGate).toBeUndefined();
   });
 
   test("a waiting widening is proven again as a widening", () => {

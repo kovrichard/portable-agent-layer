@@ -26,6 +26,7 @@ import {
   type OpinionEffect,
   opinionEffectOf,
 } from "../hooks/lib/correction-rates";
+import { gateAdvice } from "../hooks/lib/opinion-gate";
 import { group, leaf, runCommand, UsageError } from "../tools/lib/command";
 
 type DecideResult = ReturnType<typeof decideRule>;
@@ -114,12 +115,18 @@ function formatRule(rule: AdaptationRule, measure: Measure): string {
     ...(rule.kind ? [`  kind: ${rule.kind}`] : []),
     ...(rule.check ? [`  check: ${rule.check}`] : []),
     ...(rule.proof ? [`  proof: ${formatProof(rule.proof)}`] : []),
-    ...(rule.offer === "opinion-only" && rule.status === "draft"
+    ...(rule.offer === "opinion-only" && rule.status === "draft" && !rule.opinionGate
       ? ["  offer: the trigger did not prove; keep it as an opinion or deny it"]
       : []),
+    ...gateLines(rule, measure),
     ...effectLines(rule, measure),
     ...rule.evidence.map((e) => `  evidence: ${e}`),
   ].join("\n");
+}
+
+function gateLines(rule: AdaptationRule, { turns, rules }: Measure): string[] {
+  const advice = gateAdvice(rule, rules, turns);
+  return advice ? [`  no opinion: ${advice}`] : [];
 }
 
 function effectLines(rule: AdaptationRule, { turns, rules }: Measure): string[] {

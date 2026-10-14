@@ -6,6 +6,7 @@ import type {
 import type { OpinionEffect } from "../../../../hooks/lib/correction-rates";
 import type {
   ActiveRule,
+  DraftRule,
   PageDecision,
   PipelineCandidate,
   RelationshipView,
@@ -96,15 +97,14 @@ function Refusal({ error }: { error: string | null }) {
 
 function offeredDecisions(rule: AdaptationRule): [PageDecision, string][] {
   if (rule.widens) return [["approved", "Approve"]];
-  const asOpinion: [PageDecision, string][] = rule.kind
-    ? [["opinion", "Keep as opinion"]]
-    : [];
+  const asOpinion: [PageDecision, string][] =
+    rule.kind && !rule.opinionGate ? [["opinion", "Keep as opinion"]] : [];
   if (rule.offer === "opinion-only") return asOpinion;
   return [["approved", "Approve as rule"], ...asOpinion];
 }
 
 function offerLine(rule: AdaptationRule): string | undefined {
-  return rule.offer === "opinion-only"
+  return rule.offer === "opinion-only" && !rule.opinionGate
     ? "the trigger did not prove; keep it as an opinion or deny it"
     : undefined;
 }
@@ -114,7 +114,7 @@ function Draft({
   active,
   onDecided,
 }: {
-  rule: AdaptationRule;
+  rule: DraftRule;
   active: ActiveRule[];
   onDecided: () => void;
 }) {
@@ -128,6 +128,7 @@ function Draft({
           ...ruleFacts(rule),
           ["kind", rule.kind],
           ["offer", offerLine(rule)],
+          ["no opinion", rule.gateAdvice],
         ]}
       />
       <Evidence items={rule.evidence} />

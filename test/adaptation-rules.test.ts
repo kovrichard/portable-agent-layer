@@ -214,6 +214,29 @@ describe("decideRule", () => {
     expect(decideRule(addDraft(opinionOnly).id, "denied").ok).toBe(true);
   });
 
+  test("a draft behind a closed gate is refused as an opinion, not as a rule", () => {
+    const few = addDraft({
+      ...draft,
+      kind: "no-verdict",
+      opinionGate: { corrections: 3 },
+    });
+    const dup = addDraft({
+      ...draft,
+      kind: "no-verdict",
+      opinionGate: { duplicates: "o1" },
+    });
+
+    expect(decideRule(few.id, "opinion")).toEqual({
+      ok: false,
+      reason: `Rule ${few.id} cannot be an opinion: its kind has only 3 corrections`,
+    });
+    expect(decideRule(dup.id, "opinion")).toEqual({
+      ok: false,
+      reason: `Rule ${dup.id} cannot be an opinion: o1 already targets its kind`,
+    });
+    expect(decideRule(few.id, "approved").ok).toBe(true);
+  });
+
   test("an opinion past the cap is refused and stays a draft", () => {
     const ofKindDraft = (i: number) => addDraft({ ...draft, kind: CORRECTION_KINDS[i] });
     for (let i = 0; i < 8; i++) decideRule(ofKindDraft(i).id, "opinion");

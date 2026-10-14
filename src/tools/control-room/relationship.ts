@@ -18,6 +18,7 @@ import {
   type OpinionEffect,
   opinionEffectOf,
 } from "../../hooks/lib/correction-rates";
+import { gateAdvice } from "../../hooks/lib/opinion-gate";
 import {
   type RuleEffect,
   readRuleEvents,
@@ -32,6 +33,11 @@ const RECENT_CORRECTIONS = 10;
 export interface ActiveRule extends AdaptationRule {
   effect: RuleEffect;
   opinionEffect: OpinionEffect | null;
+}
+
+export interface DraftRule extends AdaptationRule {
+  /** Why it cannot be kept as an opinion, and what to do instead. */
+  gateAdvice?: string;
 }
 
 export type PageDecision = "approved" | "denied" | "opinion" | "retired";
@@ -49,7 +55,7 @@ interface TurnStats {
 
 export interface RelationshipView {
   windowDays: number;
-  drafts: AdaptationRule[];
+  drafts: DraftRule[];
   active: ActiveRule[];
   denied: AdaptationRule[];
   pipeline: PipelineCandidate[];
@@ -83,7 +89,10 @@ export function relationship(now: Date = new Date()): RelationshipView {
     rules.filter((rule) => rule.status === status);
   return {
     windowDays: WINDOW_DAYS,
-    drafts: withStatus("draft"),
+    drafts: withStatus("draft").map((rule) => {
+      const advice = gateAdvice(rule, rules, opinionTurns, now);
+      return advice ? { ...rule, gateAdvice: advice } : rule;
+    }),
     active: withStatus("approved").map((rule) => ({
       ...rule,
       effect: effects[rule.id] ?? NO_EFFECT,

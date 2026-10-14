@@ -70,6 +70,26 @@ describe("pal cli rule list", () => {
     expect(printed.join("\n").split("\n")).not.toContain(offer);
   });
 
+  test("says why a gated draft is not offered as an opinion", async () => {
+    const offer = "  offer: the trigger did not prove; keep it as an opinion or deny it";
+    addDraft({
+      when: "Claiming tests pass",
+      trigger: { side: "reply", pattern: "tests pass" },
+      steering: "Show the run.",
+      kind: "no-verdict",
+      evidence: [],
+      offer: "opinion-only",
+      opinionGate: { duplicates: "o1" },
+    });
+
+    expect(await runRule(["list"])).toBe(0);
+    const lines = printed.join("\n").split("\n");
+    expect(lines).toContain(
+      "  no opinion: o1 targeted this kind and is no longer active"
+    );
+    expect(lines).not.toContain(offer);
+  });
+
   test("shows the check and where the trigger fired in the turn log", async () => {
     addDraft({
       when: "Claiming tests pass",

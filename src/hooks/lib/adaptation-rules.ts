@@ -45,7 +45,11 @@ export interface DraftInput {
   widens?: string;
   /** Its trigger failed the proof, so it can only be kept as an opinion or denied. */
   offer?: "opinion-only";
+  /** Why it cannot be kept as an opinion: too few corrections of its kind, or another targets it. */
+  opinionGate?: OpinionGate;
 }
+
+export type OpinionGate = { corrections: number } | { duplicates: string };
 
 export interface AdaptationRule extends Omit<DraftInput, "trigger"> {
   /** Absent only on an opinion written by hand. */
@@ -172,11 +176,19 @@ function replaceRule(rules: AdaptationRule[], rule: AdaptationRule): DecideResul
   return { ok: true, rule };
 }
 
+function gateReason(gate: OpinionGate): string {
+  return "corrections" in gate
+    ? `its kind has only ${gate.corrections} corrections`
+    : `${gate.duplicates} already targets its kind`;
+}
+
 function decisionRefusal(rule: AdaptationRule, decision: Decision): string | null {
   if (decision === "opinion" && rule.widens)
     return `Rule ${rule.id} widens a trigger; it cannot be an opinion`;
   if (decision === "opinion" && !rule.kind)
     return `Rule ${rule.id} has no correction kind, so its effect could not be measured`;
+  if (decision === "opinion" && rule.opinionGate)
+    return `Rule ${rule.id} cannot be an opinion: ${gateReason(rule.opinionGate)}`;
   if (decision === "approved" && rule.offer === "opinion-only")
     return `Rule ${rule.id}'s trigger did not prove; keep it as an opinion or deny it`;
   return null;

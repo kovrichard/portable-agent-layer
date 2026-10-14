@@ -2,15 +2,23 @@
  * Rule candidates: drafts the small model wrote from repeated corrections, each
  * with the proof of its trigger. A proven candidate becomes a draft rule; one
  * whose trigger failed becomes a draft that can only be kept as an opinion, since
- * the mistake recurs even when no pattern catches it. One the log is still too
- * short to judge waits and is proven again as the log grows.
+ * the mistake recurs even when no pattern catches it, but only once its kind has
+ * recurred enough to measure. One the log is still too short to judge waits and
+ * is proven again as the log grows.
  */
 
 import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { addDraft, type DraftInput, type TriggerProof } from "./adaptation-rules";
+import {
+  addDraft,
+  type DraftInput,
+  type OpinionGate,
+  readRules,
+  type TriggerProof,
+} from "./adaptation-rules";
 import type { RequestedTurn } from "./adaptation-turns";
+import { opinionGate } from "./opinion-gate";
 import { paths } from "./paths";
 import {
   type ProofVerdict,
@@ -69,10 +77,24 @@ function canOnlyBeOpinion(candidate: Candidate): boolean {
   return candidate.verdict === "failed" && !candidate.widens;
 }
 
-function promoteIfDecided(candidate: Candidate): void {
-  if (candidate.verdict !== "passed" && !canOnlyBeOpinion(candidate)) return;
+function gateFor(candidate: Candidate, turns: RequestedTurn[]): OpinionGate | undefined {
+  if (!candidate.kind || candidate.widens) return undefined;
+  return opinionGate(candidate.kind, readRules(), turns);
+}
+
+function draftOf(candidate: Candidate, turns: RequestedTurn[]): DraftInput | null {
   const { id: _id, createdAt: _createdAt, verdict: _verdict, ...draft } = candidate;
-  addDraft(canOnlyBeOpinion(candidate) ? { ...draft, offer: "opinion-only" } : draft);
+  const gate = gateFor(candidate, turns);
+  const gated = gate ? { ...draft, opinionGate: gate } : draft;
+  if (!canOnlyBeOpinion(candidate)) return gated;
+  if (!candidate.kind || (gate && "corrections" in gate)) return null;
+  return { ...gated, offer: "opinion-only" };
+}
+
+function promoteIfDecided(candidate: Candidate, turns: RequestedTurn[]): void {
+  if (candidate.verdict !== "passed" && !canOnlyBeOpinion(candidate)) return;
+  const draft = draftOf(candidate, turns);
+  if (draft) addDraft(draft);
 }
 
 export function recordCandidate(
@@ -87,7 +109,7 @@ export function recordCandidate(
   } as Candidate;
   const candidate = prove(fresh, turns);
   writeCandidates([...readCandidates(), candidate]);
-  promoteIfDecided(candidate);
+  promoteIfDecided(candidate, turns);
   return candidate;
 }
 
@@ -96,7 +118,6 @@ export function reproveWaiting(turns: RequestedTurn[]): void {
   if (!candidates.some((c) => c.verdict === "waiting")) return;
   const updated = candidates.map((c) => (c.verdict === "waiting" ? prove(c, turns) : c));
   writeCandidates(updated);
-  updated
-    .filter((_c, i) => candidates[i].verdict === "waiting")
-    .forEach(promoteIfDecided);
+  for (const candidate of updated.filter((_c, i) => candidates[i].verdict === "waiting"))
+    promoteIfDecided(candidate, turns);
 }
