@@ -83,8 +83,17 @@ export function opinionsContext(): string {
   ].join("\n");
 }
 
-function overCap(rules: AdaptationRule[], added: AdaptationRule): string | null {
+function sameKindOpinion(rules: AdaptationRule[], added: AdaptationRule): string | null {
+  const taken = added.kind && rules.find((r) => isOpinion(r) && r.kind === added.kind);
+  return taken
+    ? `Opinion ${taken.id} already targets ${added.kind}, and two would share one rate; retire it first`
+    : null;
+}
+
+function opinionRefusal(rules: AdaptationRule[], added: AdaptationRule): string | null {
   const opinions = [...rules.filter(isOpinion), added];
+  const sameKind = sameKindOpinion(rules, added);
+  if (sameKind) return sameKind;
   if (opinions.length > OPINION_CAP)
     return `Opinions are capped at ${OPINION_CAP}; retire one first`;
   const size = opinions.map(opinionLine).join("\n").length;
@@ -171,7 +180,7 @@ export function decideRule(id: string, decision: Decision): DecideResult {
     return { ok: false, reason: `Rule ${id} widens a trigger; it cannot be an opinion` };
   if (rule.widens && decision === "approved") return approveWidening(rules, rule);
   const result = decided(rule, decision);
-  const refusal = isOpinion(result) ? overCap(rules, result) : null;
+  const refusal = isOpinion(result) ? opinionRefusal(rules, result) : null;
   return refusal ? { ok: false, reason: refusal } : replaceRule(rules, result);
 }
 
@@ -193,7 +202,7 @@ export function addOpinion(input: OpinionInput): DecideResult {
     decidedAt: now,
   };
   const rules = readRules();
-  const refusal = overCap(rules, opinion);
+  const refusal = opinionRefusal(rules, opinion);
   if (refusal) return { ok: false, reason: refusal };
   writeRules([...rules, opinion]);
   return { ok: true, rule: opinion };

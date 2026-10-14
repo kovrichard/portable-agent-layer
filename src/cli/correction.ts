@@ -3,7 +3,7 @@
  *
  * Subcommands:
  *   kinds [--days N] [--split DATE] [--json]   Corrections per 100 turns, by kind
- *   backfill [--relabel]                        Label the confirmed corrections logged without a kind
+ *   backfill [--relabel]                        Label the confirmed corrections without a current kind
  */
 
 import { readTurns } from "../hooks/lib/adaptation-turns";
@@ -29,7 +29,7 @@ function correctionCommandFor(label: KindLabeller) {
         run: ({ values }) => cmdKinds(values.days, values.split, values.json === true),
       }),
       backfill: leaf({
-        summary: "Label the confirmed corrections logged without a kind",
+        summary: "Label the confirmed corrections without a kind of the current version",
         options: {
           relabel: {
             type: "boolean",
@@ -71,7 +71,8 @@ function kindLine(name: string, count: string, rate: string, extra = ""): string
 }
 
 function formatRates(rates: KindRates, title: string): string {
-  const header = `${title}: ${rates.turns} turns, ${rates.corrections} confirmed corrections, ${rates.unlabelled} without a kind`;
+  const stale = rates.stale ? `, ${rates.stale} labelled by an older prompt` : "";
+  const header = `${title}: ${rates.turns} turns, ${rates.corrections} confirmed corrections, ${rates.unlabelled} without a kind${stale}`;
   const rows = rates.kinds.map((rate) => {
     const names = rate.suggestions.length
       ? `  (${[...new Set(rate.suggestions)].join(", ")})`

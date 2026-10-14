@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { runCorrection } from "../src/cli/correction";
 import { appendTurn, readTurns, type TurnInput } from "../src/hooks/lib/adaptation-turns";
 import type { KindLabeller } from "../src/hooks/lib/correction-backfill";
+import { CORRECTION_KINDS_VERSION } from "../src/hooks/lib/correction-kind";
 import { freshTestDir } from "./lib/test-home";
 
 let printed: string[];
@@ -37,7 +38,14 @@ function corrected(kind?: string, suggested = ""): TurnInput {
     reaction: "corrected",
     issue: "Said CI was green",
     confirmed: true,
-    ...(kind && { correctionKind: { kind, suggested, description: "", version: 1 } }),
+    ...(kind && {
+      correctionKind: {
+        kind,
+        suggested,
+        description: "",
+        version: CORRECTION_KINDS_VERSION,
+      },
+    }),
   };
 }
 
@@ -60,6 +68,26 @@ describe("pal cli correction kinds", () => {
         "  other                    1   10.0  (destructive-action)",
         "  unverified-claim         1   10.0",
       ].join("\n")
+    );
+  });
+
+  test("the header counts kinds from an older labelling", async () => {
+    appendTurn(
+      {
+        ...corrected(),
+        correctionKind: {
+          kind: "wrong-format",
+          suggested: "",
+          description: "",
+          version: 1,
+        },
+      },
+      daysAgo(1)
+    );
+
+    expect(await runCorrection(["kinds"])).toBe(0);
+    expect(output().split("\n")[0]).toBe(
+      "Last 30 days: 1 turns, 1 confirmed corrections, 0 without a kind, 1 labelled by an older prompt"
     );
   });
 
@@ -93,6 +121,7 @@ describe("pal cli correction kinds", () => {
       turns: 1,
       corrections: 1,
       unlabelled: 0,
+      stale: 0,
       kinds: [{ kind: "wrong-format", count: 1, per100: 100, suggestions: [] }],
     });
   });

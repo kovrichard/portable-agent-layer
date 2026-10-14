@@ -14,6 +14,7 @@ import {
   retireRule,
   rulesPath,
 } from "../src/hooks/lib/adaptation-rules";
+import { CORRECTION_KINDS } from "../src/hooks/lib/correction-kind";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
@@ -211,6 +212,10 @@ const opinion: OpinionInput = {
   evidence: [],
 };
 
+function ofKind(index: number, base: OpinionInput = opinion): OpinionInput {
+  return { ...base, kind: CORRECTION_KINDS[index] };
+}
+
 describe("addOpinion", () => {
   test("stores an approved opinion with its kind", () => {
     const result = addOpinion(opinion);
@@ -221,12 +226,21 @@ describe("addOpinion", () => {
     ]);
   });
 
+  test("a second opinion on the same kind is refused, since both would share one rate", () => {
+    const first = addOpinion(opinion);
+
+    expect(addOpinion({ ...opinion, when: "Reviewing a design" })).toEqual({
+      ok: false,
+      reason: `Opinion ${first.ok ? first.rule.id : ""} already targets status-quo-bias, and two would share one rate; retire it first`,
+    });
+  });
+
   test("opinions past the character cap are refused", () => {
     const long = { ...opinion, steering: "x".repeat(700) };
-    addOpinion(long);
-    addOpinion(long);
+    addOpinion(ofKind(0, long));
+    addOpinion(ofKind(1, long));
 
-    const result = addOpinion(long);
+    const result = addOpinion(ofKind(2, long));
 
     expect(result.ok).toBe(false);
     expect(result.ok ? "" : result.reason).toStartWith(
@@ -236,15 +250,18 @@ describe("addOpinion", () => {
   });
 
   test("a retired opinion frees its place under the cap", () => {
-    const ids = Array.from({ length: 8 }, () => {
-      const result = addOpinion(opinion);
+    const ids = Array.from({ length: 8 }, (_, i) => {
+      const result = addOpinion(ofKind(i));
       return result.ok ? result.rule.id : "";
     });
-    expect(addOpinion(opinion).ok).toBe(false);
+    expect(addOpinion(ofKind(8))).toEqual({
+      ok: false,
+      reason: "Opinions are capped at 8; retire one first",
+    });
 
     retireRule(ids[0]);
 
-    expect(addOpinion(opinion).ok).toBe(true);
+    expect(addOpinion(ofKind(8)).ok).toBe(true);
   });
 });
 

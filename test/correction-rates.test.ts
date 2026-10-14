@@ -6,6 +6,7 @@ import {
   backfillCorrectionKinds,
   correctionsToLabel,
 } from "../src/hooks/lib/correction-backfill";
+import { CORRECTION_KINDS_VERSION } from "../src/hooks/lib/correction-kind";
 import { kindRates, opinionEffect, splitRates } from "../src/hooks/lib/correction-rates";
 import { paths } from "../src/hooks/lib/paths";
 import { freshTestDir } from "./lib/test-home";
@@ -27,7 +28,14 @@ function correction(ts: string, kind?: string, suggested = ""): Turn {
     reaction: "corrected",
     issue: "wrong",
     confirmed: true,
-    ...(kind && { correctionKind: { kind, suggested, description: "", version: 1 } }),
+    ...(kind && {
+      correctionKind: {
+        kind,
+        suggested,
+        description: "",
+        version: CORRECTION_KINDS_VERSION,
+      },
+    }),
   });
 }
 
@@ -60,7 +68,29 @@ describe("kindRates", () => {
   });
 
   test("no turns is a zero rate, not a division by zero", () => {
-    expect(kindRates([])).toEqual({ turns: 0, corrections: 0, unlabelled: 0, kinds: [] });
+    expect(kindRates([])).toEqual({
+      turns: 0,
+      corrections: 0,
+      unlabelled: 0,
+      stale: 0,
+      kinds: [],
+    });
+  });
+
+  test("a kind from an older labelling counts as stale", () => {
+    const stale = turn("2026-10-01T00:00:00.000Z", {
+      reaction: "corrected",
+      confirmed: true,
+      correctionKind: {
+        kind: "stopped-short",
+        suggested: "",
+        description: "",
+        version: 1,
+      },
+    });
+    const current = correction("2026-10-02T00:00:00.000Z", "stopped-short");
+
+    expect(kindRates([stale, current]).stale).toBe(1);
   });
 });
 
@@ -164,6 +194,26 @@ describe("opinionEffect", () => {
     const thin = [...corrections(4, "status-quo-bias", -2), ...ordinaryTurns(196, -24)];
     expect(effectOf(ordinaryTurns(200, 1), thin).verdict).toBe("too-few");
   });
+
+  test("a correction labelled by an older prompt in either window withholds the verdict", () => {
+    const old = turn(at(2), {
+      reaction: "corrected",
+      confirmed: true,
+      correctionKind: {
+        kind: "wrong-format",
+        suggested: "",
+        description: "",
+        version: 1,
+      },
+    });
+    const effect = effectOf([
+      ...corrections(2, "status-quo-bias", 1),
+      old,
+      ...ordinaryTurns(197, 3),
+    ]);
+
+    expect(effect.verdict).toBe("stale-labels");
+  });
 });
 
 describe("backfillCorrectionKinds", () => {
@@ -226,7 +276,7 @@ describe("backfillCorrectionKinds", () => {
       kind: "unverified-claim",
       suggested: "",
       description: "",
-      version: 1,
+      version: CORRECTION_KINDS_VERSION,
     });
     expect(correctionsToLabel(readTurns())).toEqual([]);
   });
@@ -254,6 +304,33 @@ describe("backfillCorrectionKinds", () => {
       await backfillCorrectionKinds({ label: label("stopped-short"), relabel: true })
     ).toEqual({ labelled: 1, failed: 0 });
     expect(readTurns()[0].correctionKind?.kind).toBe("stopped-short");
+  });
+
+  test("a kind from an older labelling is labelled again without --relabel", async () => {
+    appendTurn({
+      session: "s",
+      message: "m",
+      replyEnd: "r",
+      reaction: "corrected",
+      issue: "i",
+      confirmed: true,
+      correctionKind: {
+        kind: "wrong-format",
+        suggested: "",
+        description: "",
+        version: 1,
+      },
+    });
+
+    const result = await backfillCorrectionKinds({
+      label: async () => ({ kind: "stopped-short", suggested: "", description: "" }),
+    });
+
+    expect(result).toEqual({ labelled: 1, failed: 0 });
+    expect(readTurns()[0].correctionKind).toMatchObject({
+      kind: "stopped-short",
+      version: CORRECTION_KINDS_VERSION,
+    });
   });
 
   test("a failed label leaves the turn for the next run", async () => {

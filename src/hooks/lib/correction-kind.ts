@@ -7,7 +7,12 @@
 
 import type { TurnInput } from "./adaptation-turns";
 
-const CORRECTION_KINDS_VERSION = 1;
+/** Bump on every change to the kinds or the prompt: rates compare only labels of one version. */
+export const CORRECTION_KINDS_VERSION = 2;
+
+export function hasCurrentKind(turn: TurnInput): boolean {
+  return turn.correctionKind?.version === CORRECTION_KINDS_VERSION;
+}
 
 const NAMED_KINDS = {
   "missed-the-question":

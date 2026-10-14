@@ -172,11 +172,14 @@ describe("pal cli rule opinions", () => {
     expect(readRules()).toEqual([]);
   });
 
-  test("add-opinion past the cap fails with the reason", async () => {
-    for (let i = 0; i < 8; i++) await runRule(addArgs);
+  test("a refused add-opinion fails with the reason", async () => {
+    await runRule(addArgs);
+    const [first] = readRules();
 
     expect(await runRule(addArgs)).toBe(1);
-    expect(printed.at(-1)).toBe("Opinions are capped at 8; retire one first");
+    expect(printed.at(-1)).toBe(
+      `Opinion ${first.id} already targets status-quo-bias, and two would share one rate; retire it first`
+    );
   });
 
   test("retire ends an approved rule", async () => {

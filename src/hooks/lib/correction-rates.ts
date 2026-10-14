@@ -4,6 +4,7 @@
  */
 
 import type { Turn } from "./adaptation-turns";
+import { hasCurrentKind } from "./correction-kind";
 
 interface KindRate {
   kind: string;
@@ -16,6 +17,8 @@ export interface KindRates {
   turns: number;
   corrections: number;
   unlabelled: number;
+  /** Labelled by an older prompt or kind set; backfill relabels them. */
+  stale: number;
   kinds: KindRate[];
 }
 
@@ -50,6 +53,7 @@ export function kindRates(turns: Turn[]): KindRates {
     turns: turns.length,
     corrections: corrections.length,
     unlabelled: corrections.length - labelled.length,
+    stale: labelled.filter((turn) => !hasCurrentKind(turn)).length,
     kinds,
   };
 }
@@ -73,7 +77,11 @@ export interface OpinionEffect extends Windows {
   kind: string;
   /** The kinds no opinion targets, over the same windows: what changed anyway. */
   control: Windows;
-  verdict: "too-early" | "too-few" | "lower" | "not-lower";
+  verdict: "stale-labels" | "too-early" | "too-few" | "lower" | "not-lower";
+}
+
+function hasStaleLabels(turns: Turn[]): boolean {
+  return confirmedCorrections(turns).some((turn) => !hasCurrentKind(turn));
 }
 
 function windowRate(counts: (kind: string) => boolean, turns: Turn[]): WindowRate {
@@ -111,7 +119,10 @@ export function opinionEffect(
   });
   const own = windows((k) => k === kind);
   const control = windows((k) => k !== kind && !opinionKinds.includes(k));
-  return { kind, ...own, control, verdict: effectVerdict(own, control) };
+  const verdict = hasStaleLabels([...beforeTurns, ...afterTurns])
+    ? "stale-labels"
+    : effectVerdict(own, control);
+  return { kind, ...own, control, verdict };
 }
 
 export function splitRates(

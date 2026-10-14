@@ -73,6 +73,6 @@ test("a confirmed correction is stored with its kind and the kind-set version", 
     kind: "unverified-claim",
     suggested: "",
     description: "",
-    version: 1,
+    version: 2,
   });
 });

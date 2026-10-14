@@ -1,13 +1,14 @@
 /**
- * Labels the confirmed corrections logged before the labeller existed, so the
- * rate of each kind has a history from the first opinion on. A relabel runs over
- * every confirmed correction again, after the prompt changed.
+ * Labels the confirmed corrections that carry no kind of the current version, so
+ * the rate of each kind has one labelling across its history. A relabel runs over
+ * every confirmed correction again.
  */
 
 import { readTurns, replaceTurns, type Turn, turnKey } from "./adaptation-turns";
 import {
   type CorrectionKind,
   correctionKindRequest,
+  hasCurrentKind,
   parseCorrectionKind,
   withCorrectionKind,
 } from "./correction-kind";
@@ -28,7 +29,7 @@ export interface BackfillOptions {
 
 export function correctionsToLabel(turns: Turn[], relabel = false): Turn[] {
   return turns.filter(
-    (turn) => turn.confirmed === true && (relabel || !turn.correctionKind)
+    (turn) => turn.confirmed === true && (relabel || !hasCurrentKind(turn))
   );
 }
 
