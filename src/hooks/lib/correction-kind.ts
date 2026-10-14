@@ -5,6 +5,10 @@
  * model's own name for it, which a later check can promote to a kind.
  */
 
+import type { TurnInput } from "./adaptation-turns";
+
+const CORRECTION_KINDS_VERSION = 1;
+
 const NAMED_KINDS = {
   "missed-the-question":
     "the reply did not answer what the user asked, or buried the answer",
@@ -133,4 +137,16 @@ export function parseCorrectionKind(
   } catch {
     return null;
   }
+}
+
+export function needsCorrectionKind(turn: TurnInput | null): turn is TurnInput {
+  return turn?.confirmed === true;
+}
+
+export function withCorrectionKind(
+  turn: TurnInput,
+  kind: CorrectionKind | null
+): TurnInput {
+  if (!kind) return turn;
+  return { ...turn, correctionKind: { ...kind, version: CORRECTION_KINDS_VERSION } };
 }

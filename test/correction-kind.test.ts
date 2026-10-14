@@ -4,7 +4,9 @@ import {
   CORRECTION_KINDS,
   correctionKindRequest,
   correctionKindUser,
+  needsCorrectionKind,
   parseCorrectionKind,
+  withCorrectionKind,
 } from "../src/hooks/lib/correction-kind";
 
 const CONFIG = resolve(import.meta.dir, "../eval/correction-kind/promptfoo.yaml");
@@ -65,6 +67,27 @@ describe("correctionKindRequest", () => {
     expect(request.jsonSchema.properties.kind.enum).toEqual([...CORRECTION_KINDS]);
     expect(CORRECTION_KINDS.at(-1)).toBe("other");
     for (const kind of CORRECTION_KINDS) expect(request.system).toContain(`- ${kind}:`);
+  });
+});
+
+describe("storing a kind on a turn", () => {
+  const turn = {
+    session: "s",
+    message: "m",
+    replyEnd: "r",
+    reaction: "corrected",
+    issue: "i",
+  };
+
+  test("only a confirmed correction is labelled", () => {
+    expect(needsCorrectionKind({ ...turn, confirmed: true })).toBe(true);
+    expect(needsCorrectionKind({ ...turn, confirmed: false })).toBe(false);
+    expect(needsCorrectionKind({ ...turn, reaction: "approved" })).toBe(false);
+    expect(needsCorrectionKind(null)).toBe(false);
+  });
+
+  test("a turn without a kind is stored as it was", () => {
+    expect(withCorrectionKind(turn, null)).toEqual(turn);
   });
 });
 

@@ -24,6 +24,15 @@ export interface TurnInput {
   issue: string;
   /** Set on a correction: whether the second label agreed. */
   confirmed?: boolean;
+  /** Set on a confirmed correction: its kind, under the kind set's version. */
+  correctionKind?: StoredCorrectionKind;
+}
+
+interface StoredCorrectionKind {
+  kind: string;
+  suggested: string;
+  description: string;
+  version: number;
 }
 
 export interface Turn extends TurnInput {
