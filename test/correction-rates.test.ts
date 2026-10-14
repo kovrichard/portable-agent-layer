@@ -1,13 +1,20 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import type { AdaptationRule } from "../src/hooks/lib/adaptation-rules";
 import { appendTurn, readTurns, type Turn } from "../src/hooks/lib/adaptation-turns";
 import {
   backfillCorrectionKinds,
   correctionsToLabel,
 } from "../src/hooks/lib/correction-backfill";
 import { CORRECTION_KINDS_VERSION } from "../src/hooks/lib/correction-kind";
-import { kindRates, opinionEffect, splitRates } from "../src/hooks/lib/correction-rates";
+import {
+  EFFECT_WINDOW_DAYS,
+  kindRates,
+  opinionEffect,
+  opinionEffectOf,
+  splitRates,
+} from "../src/hooks/lib/correction-rates";
 import { paths } from "../src/hooks/lib/paths";
 import { freshTestDir } from "./lib/test-home";
 
@@ -139,6 +146,56 @@ describe("opinionEffect", () => {
     expect(effect.after).toEqual({ turns: 10, count: 1, per100: 10 });
     expect(effect.control.before).toEqual({ turns: 10, count: 1, per100: 10 });
     expect(effect.verdict).toBe("too-early");
+  });
+
+  describe("opinionEffectOf", () => {
+    const rule = (over: Partial<AdaptationRule>): AdaptationRule => ({
+      id: "o1",
+      when: "w",
+      steering: "s",
+      evidence: [],
+      status: "approved",
+      delivery: "always",
+      kind: "status-quo-bias",
+      createdAt: approvedAt.toISOString(),
+      decidedAt: approvedAt.toISOString(),
+      ...over,
+    });
+
+    test("measures only an opinion with a kind and a decision", () => {
+      const turns = [correction(at(-1), "status-quo-bias")];
+      const now = new Date(at(5));
+      const trigger = rule({ delivery: undefined });
+      const undecided = rule({ decidedAt: undefined });
+
+      expect(opinionEffectOf(rule({}), [], turns, now)?.before.count).toBe(1);
+      expect(opinionEffectOf(trigger, [trigger], turns, now)).toBeNull();
+      expect(opinionEffectOf(rule({ kind: undefined }), [], turns, now)).toBeNull();
+      expect(opinionEffectOf(undecided, [undecided], turns, now)).toBeNull();
+    });
+
+    test("the control leaves out every opinion's kind, not a trigger rule's", () => {
+      const own = rule({});
+      const rules = [
+        own,
+        rule({ id: "o2", kind: "unverified-claim" }),
+        rule({ id: "r1", delivery: undefined, kind: "off-instruction" }),
+        rule({ id: "o3", kind: undefined }),
+      ];
+      const turns = [
+        correction(at(-3), "unverified-claim"),
+        correction(at(-2), "off-instruction"),
+        correction(at(-1), "off-instruction"),
+      ];
+
+      const effect = opinionEffectOf(own, rules, turns, new Date(at(5)));
+
+      expect(effect?.control.before.count).toBe(2);
+    });
+
+    test("reads two windows of turns", () => {
+      expect(EFFECT_WINDOW_DAYS).toBe(60);
+    });
   });
 
   const corrections = (count: number, kind: string, fromHour: number) =>

@@ -784,6 +784,19 @@ describe("the relationship tab", () => {
     await post(base, "/api/rule", { id: draft.id, decision: "approved" });
     const retired = await post(base, "/api/rule", { id: draft.id, decision: "retired" });
     expect(retired.status).toBe(200);
+    expect(await retired.json()).toEqual({
+      id: draft.id,
+      decision: "retired",
+      changed: true,
+    });
+  });
+
+  test("a rule write names the decisions it takes", async () => {
+    const base = await listen();
+    const refused = await post(base, "/api/rule", { id: "x", decision: "maybe" });
+    expect(await refused.json()).toEqual({
+      error: "decision must be one of approved, denied, opinion, retired",
+    });
   });
 
   test("a rule write refuses what it cannot act on", async () => {
