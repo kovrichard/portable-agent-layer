@@ -117,6 +117,9 @@ function formatRule(rule: AdaptationRule, measure: Measure): string {
     ...(rule.kind ? [`  kind: ${rule.kind}`] : []),
     ...(rule.check ? [`  check: ${rule.check}`] : []),
     ...(rule.proof ? [`  proof: ${formatProof(rule.proof)}`] : []),
+    ...(rule.offer === "opinion-only" && rule.status === "draft"
+      ? ["  offer: the trigger did not prove; keep it as an opinion or deny it"]
+      : []),
     ...effectLines(rule, measure),
     ...rule.evidence.map((e) => `  evidence: ${e}`),
   ].join("\n");

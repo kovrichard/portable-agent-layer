@@ -7,6 +7,7 @@
 import type { CandidateInput } from "./adaptation-candidates";
 import { isTriggerRule, type RuleTrigger } from "./adaptation-rules";
 import { type RequestedTurn, type Turn, withRequests } from "./adaptation-turns";
+import { hasCurrentKind } from "./correction-kind";
 import { firesOn } from "./rule-proof";
 
 const MIN_CITED = 2;
@@ -191,6 +192,30 @@ function citedEvidence(cites: number[], corrections: Correction[]): string[] {
   });
 }
 
+function namedKindsOf(cited: Correction[]): string[] {
+  return cited
+    .filter(hasCurrentKind)
+    .map((c) => c.correctionKind?.kind ?? "")
+    .filter((kind) => kind !== "" && kind !== "other");
+}
+
+export function citedKind(
+  cites: number[],
+  corrections: Correction[]
+): string | undefined {
+  const kinds = namedKindsOf(cites.map((n) => corrections[n]));
+  const count = (kind: string) => kinds.filter((k) => k === kind).length;
+  const newestFirst = [...kinds].reverse();
+  return newestFirst.reduce<string | undefined>(
+    (best, kind) => (best === undefined || count(kind) > count(best) ? kind : best),
+    undefined
+  );
+}
+
+function withKind<T extends CandidateInput>(candidate: T, kind: string | undefined): T {
+  return kind ? { ...candidate, kind } : candidate;
+}
+
 function parseNewRule(
   draft: DraftOutput,
   corrections: Correction[]
@@ -201,13 +226,14 @@ function parseNewRule(
   const pattern = bareExpression(draft.pattern);
   if (!isValidPattern(pattern)) return null;
   if (!hasText(draft.when, draft.steering, draft.check)) return null;
-  return {
+  const candidate = {
     when: draft.when.trim(),
     trigger: { side: draft.side, pattern },
     steering: draft.steering.trim(),
     check: draft.check.trim(),
     evidence: citedEvidence(cites, corrections),
   };
+  return withKind(candidate, citedKind(cites, corrections));
 }
 
 function parseWidening(

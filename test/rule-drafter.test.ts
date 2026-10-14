@@ -1,8 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import type { Turn } from "../src/hooks/lib/adaptation-turns";
 import {
+  CORRECTION_KINDS_VERSION,
+  type CorrectionKindName,
+} from "../src/hooks/lib/correction-kind";
+import {
   canRepeat,
   canWiden,
+  citedKind,
   correctionsToDraftFrom,
   drafterRequest,
   type KnownRule,
@@ -54,6 +59,43 @@ const two = [
   { ...correction({ message: "they never ran" }), prompt: "" },
   { ...correction({ message: "you did not run them" }), prompt: "" },
 ];
+
+const kinded = (kind: CorrectionKindName, version = CORRECTION_KINDS_VERSION) => ({
+  kind,
+  suggested: "",
+  description: "",
+  version,
+});
+
+const ofKinds = (...kinds: Parameters<typeof kinded>[]) =>
+  kinds.map((args) => ({ ...two[0], correctionKind: kinded(...args) }));
+
+describe("citedKind", () => {
+  test("is the kind most cited corrections share", () => {
+    const cited = ofKinds(["no-verdict"], ["stopped-short"], ["no-verdict"]);
+    expect(citedKind([0, 1, 2], cited)).toBe("no-verdict");
+  });
+
+  test("a tie goes to the newest correction's kind", () => {
+    const cited = ofKinds(["no-verdict"], ["stopped-short"]);
+    expect(citedKind([0, 1], cited)).toBe("stopped-short");
+  });
+
+  test("counts only the corrections cited", () => {
+    const cited = ofKinds(["no-verdict"], ["stopped-short"], ["stopped-short"]);
+    expect(citedKind([0, 1], cited)).toBe("stopped-short");
+    expect(citedKind([0], cited)).toBe("no-verdict");
+  });
+
+  test("ignores other and labels from an older prompt", () => {
+    const cited = ofKinds(["other"], ["other"], ["no-verdict", 1], ["stopped-short"]);
+    expect(citedKind([0, 1, 2, 3], cited)).toBe("stopped-short");
+  });
+
+  test("is unknown when no cited correction has a current named kind", () => {
+    expect(citedKind([0, 1], two)).toBeUndefined();
+  });
+});
 
 describe("correctionsToDraftFrom", () => {
   test("keeps confirmed corrections, newest last, with the request they answered", () => {
@@ -213,6 +255,15 @@ describe("parseDraft", () => {
         "claimed tests pass: you did not run them",
       ],
     });
+  });
+
+  test("a candidate carries the kind of the corrections it cites", () => {
+    const labelled = two.map((c) => ({
+      ...c,
+      correctionKind: kinded("unverified-claim"),
+    }));
+
+    expect(parseDraft(JSON.stringify(draft), labelled)?.kind).toBe("unverified-claim");
   });
 
   test("nothing recurring means no candidate", () => {

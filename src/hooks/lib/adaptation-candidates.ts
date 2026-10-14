@@ -1,8 +1,9 @@
 /**
  * Rule candidates: drafts the small model wrote from repeated corrections, each
- * with the proof of its trigger. Only a proven candidate becomes a draft in the
- * rule store for the user to review; one the log is still too short to judge
- * waits and is proven again as the log grows.
+ * with the proof of its trigger. A proven candidate becomes a draft rule; one
+ * whose trigger failed becomes a draft that can only be kept as an opinion, since
+ * the mistake recurs even when no pattern catches it. One the log is still too
+ * short to judge waits and is proven again as the log grows.
  */
 
 import { randomUUID } from "node:crypto";
@@ -64,10 +65,14 @@ function prove(candidate: Candidate, turns: RequestedTurn[]): Candidate {
   return { ...candidate, proof, verdict };
 }
 
-function promoteIfPassed(candidate: Candidate): void {
-  if (candidate.verdict !== "passed") return;
+function canOnlyBeOpinion(candidate: Candidate): boolean {
+  return candidate.verdict === "failed" && !candidate.widens;
+}
+
+function promoteIfDecided(candidate: Candidate): void {
+  if (candidate.verdict !== "passed" && !canOnlyBeOpinion(candidate)) return;
   const { id: _id, createdAt: _createdAt, verdict: _verdict, ...draft } = candidate;
-  addDraft(draft);
+  addDraft(canOnlyBeOpinion(candidate) ? { ...draft, offer: "opinion-only" } : draft);
 }
 
 export function recordCandidate(
@@ -82,7 +87,7 @@ export function recordCandidate(
   } as Candidate;
   const candidate = prove(fresh, turns);
   writeCandidates([...readCandidates(), candidate]);
-  promoteIfPassed(candidate);
+  promoteIfDecided(candidate);
   return candidate;
 }
 
@@ -91,5 +96,7 @@ export function reproveWaiting(turns: RequestedTurn[]): void {
   if (!candidates.some((c) => c.verdict === "waiting")) return;
   const updated = candidates.map((c) => (c.verdict === "waiting" ? prove(c, turns) : c));
   writeCandidates(updated);
-  updated.filter((c, i) => candidates[i].verdict === "waiting").forEach(promoteIfPassed);
+  updated
+    .filter((_c, i) => candidates[i].verdict === "waiting")
+    .forEach(promoteIfDecided);
 }

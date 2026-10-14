@@ -62,13 +62,28 @@ describe("recordCandidate", () => {
     ]);
   });
 
-  test("a failed candidate is kept with its proof and never becomes a draft", () => {
+  test("a failed candidate becomes a draft that can only be kept as an opinion", () => {
     const loud = Array.from({ length: 20 }, () => turn({ replyEnd: "tests pass" }));
 
     recordCandidate(candidate, [...corrections, ...loud]);
 
     expect(readCandidates()[0]).toMatchObject({ verdict: "failed" });
+    expect(readRules()).toMatchObject([{ status: "draft", offer: "opinion-only" }]);
+  });
+
+  test("a failed widening becomes no draft", () => {
+    const loud = Array.from({ length: 20 }, () => turn({ replyEnd: "tests pass" }));
+
+    recordCandidate({ ...candidate, widens: "r1" }, [corrections[0], ...loud]);
+
+    expect(readCandidates()[0]).toMatchObject({ verdict: "failed" });
     expect(readRules()).toEqual([]);
+  });
+
+  test("a proven candidate is offered as a rule", () => {
+    recordCandidate(candidate, [...corrections, ...ordinary(20)]);
+
+    expect(readRules()[0].offer).toBeUndefined();
   });
 
   test("a candidate without enough ordinary turns waits", () => {

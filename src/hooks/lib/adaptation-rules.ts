@@ -43,6 +43,8 @@ export interface DraftInput {
   proof?: TriggerProof;
   /** The approved rule whose trigger this draft replaces with a wider one. */
   widens?: string;
+  /** Its trigger failed the proof, so it can only be kept as an opinion or denied. */
+  offer?: "opinion-only";
 }
 
 export interface AdaptationRule extends Omit<DraftInput, "trigger"> {
@@ -170,14 +172,24 @@ function replaceRule(rules: AdaptationRule[], rule: AdaptationRule): DecideResul
   return { ok: true, rule };
 }
 
+function decisionRefusal(rule: AdaptationRule, decision: Decision): string | null {
+  if (decision === "opinion" && rule.widens)
+    return `Rule ${rule.id} widens a trigger; it cannot be an opinion`;
+  if (decision === "opinion" && !rule.kind)
+    return `Rule ${rule.id} has no correction kind, so its effect could not be measured`;
+  if (decision === "approved" && rule.offer === "opinion-only")
+    return `Rule ${rule.id}'s trigger did not prove; keep it as an opinion or deny it`;
+  return null;
+}
+
 export function decideRule(id: string, decision: Decision): DecideResult {
   const rules = readRules();
   const rule = rules.find((r) => r.id === id);
   if (!rule) return { ok: false, reason: `No rule with id ${id}` };
   if (rule.status !== "draft")
     return { ok: false, reason: `Rule ${id} was already ${rule.status}` };
-  if (rule.widens && decision === "opinion")
-    return { ok: false, reason: `Rule ${id} widens a trigger; it cannot be an opinion` };
+  const refused = decisionRefusal(rule, decision);
+  if (refused) return { ok: false, reason: refused };
   if (rule.widens && decision === "approved") return approveWidening(rules, rule);
   const result = decided(rule, decision);
   const refusal = isOpinion(result) ? opinionRefusal(rules, result) : null;

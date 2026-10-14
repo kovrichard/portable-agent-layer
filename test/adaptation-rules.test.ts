@@ -173,7 +173,7 @@ describe("decideRule", () => {
   });
 
   test("keeping a draft as an opinion approves it to steer every session", () => {
-    const { id } = addDraft(draft);
+    const { id } = addDraft({ ...draft, kind: "no-verdict" });
 
     expect(decideRule(id, "opinion").ok).toBe(true);
     const [rule] = readRules();
@@ -193,9 +193,31 @@ describe("decideRule", () => {
     });
   });
 
+  test("a draft without a kind cannot be kept as an opinion", () => {
+    const { id } = addDraft(draft);
+
+    expect(decideRule(id, "opinion")).toEqual({
+      ok: false,
+      reason: `Rule ${id} has no correction kind, so its effect could not be measured`,
+    });
+  });
+
+  test("an opinion-only draft can be kept as an opinion or denied, not approved", () => {
+    const opinionOnly = { ...draft, kind: "no-verdict", offer: "opinion-only" as const };
+    const { id } = addDraft(opinionOnly);
+
+    expect(decideRule(id, "approved")).toEqual({
+      ok: false,
+      reason: `Rule ${id}'s trigger did not prove; keep it as an opinion or deny it`,
+    });
+    expect(decideRule(id, "opinion").ok).toBe(true);
+    expect(decideRule(addDraft(opinionOnly).id, "denied").ok).toBe(true);
+  });
+
   test("an opinion past the cap is refused and stays a draft", () => {
-    for (let i = 0; i < 8; i++) decideRule(addDraft(draft).id, "opinion");
-    const ninth = addDraft(draft);
+    const ofKindDraft = (i: number) => addDraft({ ...draft, kind: CORRECTION_KINDS[i] });
+    for (let i = 0; i < 8; i++) decideRule(ofKindDraft(i).id, "opinion");
+    const ninth = ofKindDraft(8);
 
     expect(decideRule(ninth.id, "opinion")).toEqual({
       ok: false,
