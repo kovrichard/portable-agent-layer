@@ -1,3 +1,15 @@
+# [0.108.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.107.0...v0.108.0) (2026-10-14)
+
+
+### Bug Fixes
+
+* **mutation:** copy eval/ into the Stryker sandbox ([53fc19b](https://github.com/kovrichard/portable-agent-layer/commit/53fc19b899cd643aa1950f0465799a445abf84db))
+
+
+### Features
+
+* **cli:** pal cli infer --route prints the planned agent, route and model ([36e47f8](https://github.com/kovrichard/portable-agent-layer/commit/36e47f8104e69d80450b701aac665bee6a26e431))
+
 # [0.107.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.106.0...v0.107.0) (2026-10-14)
 
 
