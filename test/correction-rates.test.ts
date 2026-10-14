@@ -6,7 +6,7 @@ import {
   backfillCorrectionKinds,
   correctionsToLabel,
 } from "../src/hooks/lib/correction-backfill";
-import { kindRates, splitRates } from "../src/hooks/lib/correction-rates";
+import { kindRates, opinionEffect, splitRates } from "../src/hooks/lib/correction-rates";
 import { paths } from "../src/hooks/lib/paths";
 import { freshTestDir } from "./lib/test-home";
 
@@ -76,6 +76,53 @@ test("splitRates puts a turn at the split date after it", () => {
   expect(before.turns).toBe(1);
   expect(after.turns).toBe(2);
   expect(after.kinds[0]).toMatchObject({ kind: "stopped-short", count: 1, per100: 50 });
+});
+
+describe("opinionEffect", () => {
+  const HOUR_MS = 3_600_000;
+  const approvedAt = new Date("2026-10-10T00:00:00.000Z");
+  const at = (hours: number) =>
+    new Date(approvedAt.getTime() + hours * HOUR_MS).toISOString();
+  const ordinaryTurns = (count: number, fromHour: number) =>
+    Array.from({ length: count }, (_, i) => turn(at(fromHour + i / count)));
+
+  test("compares the kind's rate in equal windows before and after approval", () => {
+    const turns = [
+      turn(at(-30)),
+      correction(at(-3), "status-quo-bias"),
+      correction(at(-2), "status-quo-bias"),
+      correction(at(-1), "unverified-claim"),
+      ...ordinaryTurns(7, -1),
+      correction(at(1), "status-quo-bias"),
+      ...ordinaryTurns(9, 1),
+    ];
+
+    const effect = opinionEffect("status-quo-bias", approvedAt, turns, new Date(at(5)));
+
+    expect(effect.before).toEqual({ turns: 10, count: 2, per100: 20 });
+    expect(effect.after).toEqual({ turns: 10, count: 1, per100: 10 });
+    expect(effect.verdict).toBe("too-early");
+  });
+
+  test("gives a verdict once 200 turns followed the approval", () => {
+    const now = new Date(at(48));
+    const before = [correction(at(-1), "status-quo-bias"), ...ordinaryTurns(199, -24)];
+    const lower = opinionEffect(
+      "status-quo-bias",
+      approvedAt,
+      [...before, ...ordinaryTurns(200, 1)],
+      now
+    );
+    const same = opinionEffect(
+      "status-quo-bias",
+      approvedAt,
+      [...before, correction(at(2), "status-quo-bias"), ...ordinaryTurns(199, 3)],
+      now
+    );
+
+    expect(lower.verdict).toBe("lower");
+    expect(same.verdict).toBe("not-lower");
+  });
 });
 
 describe("backfillCorrectionKinds", () => {

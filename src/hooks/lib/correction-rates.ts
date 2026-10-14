@@ -54,6 +54,52 @@ export function kindRates(turns: Turn[]): KindRates {
   };
 }
 
+const MIN_TURNS_AFTER = 200;
+const MAX_WINDOW_MS = 30 * 86_400_000;
+
+interface WindowRate {
+  turns: number;
+  count: number;
+  per100: number;
+}
+
+export interface OpinionEffect {
+  kind: string;
+  before: WindowRate;
+  after: WindowRate;
+  verdict: "too-early" | "lower" | "not-lower";
+}
+
+function windowRate(kind: string, turns: Turn[]): WindowRate {
+  const rate = kindRates(turns).kinds.find((k) => k.kind === kind);
+  return { turns: turns.length, count: rate?.count ?? 0, per100: rate?.per100 ?? 0 };
+}
+
+function effectVerdict(before: WindowRate, after: WindowRate): OpinionEffect["verdict"] {
+  if (after.turns < MIN_TURNS_AFTER) return "too-early";
+  return after.per100 < before.per100 ? "lower" : "not-lower";
+}
+
+export function opinionEffect(
+  kind: string,
+  approvedAt: Date,
+  turns: Turn[],
+  now: Date = new Date()
+): OpinionEffect {
+  const cut = approvedAt.getTime();
+  const span = Math.min(MAX_WINDOW_MS, now.getTime() - cut);
+  const at = (turn: Turn) => Date.parse(turn.ts);
+  const before = windowRate(
+    kind,
+    turns.filter((t) => at(t) >= cut - span && at(t) < cut)
+  );
+  const after = windowRate(
+    kind,
+    turns.filter((t) => at(t) >= cut && at(t) < cut + span)
+  );
+  return { kind, before, after, verdict: effectVerdict(before, after) };
+}
+
 export function splitRates(
   turns: Turn[],
   at: Date

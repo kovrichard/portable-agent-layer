@@ -5,7 +5,7 @@
  */
 
 import type { CandidateInput } from "./adaptation-candidates";
-import type { RuleTrigger } from "./adaptation-rules";
+import { isTriggerRule, type RuleTrigger } from "./adaptation-rules";
 import { type RequestedTurn, type Turn, withRequests } from "./adaptation-turns";
 import { firesOn } from "./rule-proof";
 
@@ -18,12 +18,15 @@ type Correction = RequestedTurn;
 export interface KnownRule {
   id: string;
   when: string;
-  trigger: RuleTrigger;
+  trigger?: RuleTrigger;
   steering: string;
   check?: string;
   status: string;
+  delivery?: "always";
   widens?: string;
 }
+
+type TriggeredRule = KnownRule & { trigger: RuleTrigger };
 
 const DRAFTER_SYSTEM_PROMPT = `You turn an AI assistant's repeated mistakes into one rule that prevents them.
 
@@ -80,12 +83,13 @@ export function canRepeat(corrections: Correction[]): boolean {
   return corrections.length >= MIN_CITED;
 }
 
-function missedApprovedRules(corrections: Correction[], known: KnownRule[]): KnownRule[] {
+function missedApprovedRules(
+  corrections: Correction[],
+  known: KnownRule[]
+): TriggeredRule[] {
   const newest = corrections.at(-1);
   if (!newest) return [];
-  return known.filter(
-    (rule) => rule.status === "approved" && !firesOn(rule.trigger, newest)
-  );
+  return known.filter(isTriggerRule).filter((rule) => !firesOn(rule.trigger, newest));
 }
 
 export function canWiden(corrections: Correction[], known: KnownRule[]): boolean {
@@ -99,9 +103,11 @@ function correctionBlock(correction: Correction, n: number, newest: boolean): st
 
 function knownRuleLine(rule: KnownRule, newest: Correction | undefined): string {
   if (rule.widens)
-    return `- draft widening of rule ${rule.widens}: ${rule.trigger.pattern}`;
-  if (rule.status !== "approved")
-    return `- ${rule.status}: ${rule.when}. ${rule.steering}`;
+    return `- draft widening of rule ${rule.widens}: ${rule.trigger?.pattern}`;
+  if (!isTriggerRule(rule)) {
+    const label = rule.delivery === "always" ? `opinion ${rule.id}` : rule.status;
+    return `- ${label}: ${rule.when}. ${rule.steering}`;
+  }
   const fires = newest && firesOn(rule.trigger, newest) ? "yes" : "no";
   return `- approved rule ${rule.id}: ${rule.when}. ${rule.steering} Trigger on the ${rule.trigger.side}: ${rule.trigger.pattern}. Fires on the newest correction: ${fires}.`;
 }

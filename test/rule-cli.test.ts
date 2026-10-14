@@ -118,3 +118,70 @@ describe("pal cli rule approve / deny", () => {
     expect(await runRule(["approve"])).toBe(1);
   });
 });
+
+describe("pal cli rule opinions", () => {
+  const addArgs = [
+    "add-opinion",
+    "--kind",
+    "status-quo-bias",
+    "--when",
+    "Designing a system",
+    "--steering",
+    "Treat the current setup as a choice.",
+  ];
+
+  test("opinion keeps a draft as an opinion", async () => {
+    const rule = seed("Claiming work is finished");
+
+    expect(await runRule(["opinion", rule.id])).toBe(0);
+    expect(printed.at(-1)).toBe(
+      `Rule ${rule.id} kept as an opinion: Claiming work is finished`
+    );
+    expect(readRules()[0]).toMatchObject({ status: "approved", delivery: "always" });
+  });
+
+  test("add-opinion stores an approved opinion, and list --all shows its effect", async () => {
+    expect(
+      await runRule([...addArgs, "--evidence", "Kept a dev dependency as a reason"])
+    ).toBe(0);
+    const [rule] = readRules();
+    expect(rule).toMatchObject({
+      kind: "status-quo-bias",
+      evidence: ["Kept a dev dependency as a reason"],
+    });
+    expect(printed.at(-1)).toBe(`Rule ${rule.id} kept as an opinion: Designing a system`);
+
+    await runRule(["list", "--all"]);
+    const out = printed.join("\n");
+    expect(out).toContain(`${rule.id}  [opinion]  Designing a system`);
+    expect(out).toContain("  kind: status-quo-bias");
+    expect(out).toContain(
+      "  effect: 0.0/100 over 0 turns before, 0.0/100 over 0 after (too-early)"
+    );
+    expect(out).not.toContain("trigger");
+  });
+
+  test("add-opinion refuses an unknown kind and a missing field", async () => {
+    expect(await runRule([...addArgs.slice(0, 2), "vibes", ...addArgs.slice(3)])).toBe(1);
+    expect(printed.join("\n")).toContain("--kind must be one of missed-the-question");
+    expect(await runRule(addArgs.slice(0, 5))).toBe(1);
+    expect(printed.join("\n")).toContain("--steering is required");
+    expect(readRules()).toEqual([]);
+  });
+
+  test("add-opinion past the cap fails with the reason", async () => {
+    for (let i = 0; i < 8; i++) await runRule(addArgs);
+
+    expect(await runRule(addArgs)).toBe(1);
+    expect(printed.at(-1)).toBe("Opinions are capped at 8; retire one first");
+  });
+
+  test("retire ends an approved rule", async () => {
+    const rule = seed("Claiming work is finished");
+    await runRule(["approve", rule.id]);
+
+    expect(await runRule(["retire", rule.id])).toBe(0);
+    expect(printed.at(-1)).toBe(`Rule ${rule.id} retired: Claiming work is finished`);
+    expect(await runRule(["retire", rule.id])).toBe(1);
+  });
+});

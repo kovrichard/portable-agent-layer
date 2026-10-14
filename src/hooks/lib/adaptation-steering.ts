@@ -5,7 +5,12 @@
  */
 
 import { appendFileSync } from "node:fs";
-import { type AdaptationRule, type RuleTrigger, readRules } from "./adaptation-rules";
+import {
+  type AdaptationRule,
+  isTriggerRule,
+  type RuleTrigger,
+  readRules,
+} from "./adaptation-rules";
 import { alreadySentBack } from "./claim-log";
 import { hookFinalReply, hookSessionId } from "./hook-turn";
 import { replyEnd } from "./interaction-samples";
@@ -20,7 +25,7 @@ const REMINDER_HEADER =
 type Side = RuleTrigger["side"];
 
 function triggers(rule: AdaptationRule, side: Side, text: string): boolean {
-  if (rule.status !== "approved" || rule.trigger.side !== side) return false;
+  if (!isTriggerRule(rule) || rule.trigger.side !== side) return false;
   try {
     return new RegExp(rule.trigger.pattern, "i").test(text);
   } catch {

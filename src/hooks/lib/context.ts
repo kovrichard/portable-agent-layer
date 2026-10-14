@@ -5,11 +5,11 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { opinionsContext } from "./adaptation-rules";
 import type { AgentName } from "./agent-registry";
 import { resolveAnchor } from "./anchor";
 import { dueNudgeSections } from "./daily-nudge";
 import { loadHandoffContext } from "./handoff-context";
-import { loadOpinionContext } from "./opinions";
 import { paths, toPath } from "./paths";
 import { loadActiveProjectsContext } from "./projects";
 import { loadRecentNotes } from "./relationship";
@@ -215,7 +215,7 @@ export function buildSystemReminder(
   const failures =
     settings.isEnabled("failurePatterns") && !skipSemiStatic ? loadFailurePatterns() : "";
   const opinions =
-    !skipSemiStatic && settings.isEnabled("opinions") ? loadOpinionContext() : "";
+    !skipSemiStatic && settings.isEnabled("opinions") ? opinionsContext() : "";
   const selfModel =
     !skipSemiStatic && settings.isEnabled("selfModel") ? loadSelfModel() : "";
   const steering = skipSemiStatic ? "" : loadSteeringRules();

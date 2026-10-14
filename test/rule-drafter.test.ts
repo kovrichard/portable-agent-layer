@@ -119,6 +119,14 @@ describe("drafterRequest", () => {
     );
   });
 
+  test("shows an opinion as an opinion, without a trigger to fire", () => {
+    const request = drafterRequest(missed, [{ ...verdictRule, delivery: "always" }]);
+
+    expect(request.user).toContain(
+      "- opinion r1: The user asks for an opinion. Give a verdict."
+    );
+  });
+
   test("names the rule a pending widening is for", () => {
     const request = drafterRequest(missed, [
       { ...verdictRule, id: "w1", status: "draft", widens: "r1" },
@@ -140,6 +148,7 @@ describe("canWiden", () => {
 
   test("only an approved rule is widened", () => {
     expect(canWiden(missed, [{ ...verdictRule, status: "draft" }])).toBe(false);
+    expect(canWiden(missed, [{ ...verdictRule, delivery: "always" }])).toBe(false);
     expect(canWiden([], [verdictRule])).toBe(false);
   });
 });

@@ -2,6 +2,8 @@
  * Adaptation rules: "when this happens, steer like this", learned from the
  * user's corrections. A rule starts as a draft and only steers once the user
  * approves it. A denied rule stays on record so the same rule is not drafted again.
+ * An opinion is an approved rule without a trigger: it steers every session, so
+ * the opinions together are capped, and a new one past the cap is refused.
  */
 
 import { randomUUID } from "node:crypto";
@@ -9,8 +11,11 @@ import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { paths } from "./paths";
 
-export type RuleStatus = "draft" | "approved" | "denied";
-type Decision = Exclude<RuleStatus, "draft">;
+type RuleStatus = "draft" | "approved" | "denied" | "retired";
+type Decision = "approved" | "denied" | "opinion";
+
+const OPINION_CAP = 8;
+const OPINION_CHARS = 1500;
 
 export interface RuleTrigger {
   /** Whether the pattern is matched against the user's prompt or the assistant's reply. */
@@ -30,6 +35,8 @@ export interface DraftInput {
   when: string;
   trigger: RuleTrigger;
   steering: string;
+  /** The correction kind the rule prevents; its rate measures the rule. */
+  kind?: string;
   evidence: string[];
   /** How to tell from a reply whether the steering was followed. */
   check?: string;
@@ -38,11 +45,52 @@ export interface DraftInput {
   widens?: string;
 }
 
-export interface AdaptationRule extends DraftInput {
+export interface AdaptationRule extends Omit<DraftInput, "trigger"> {
+  /** Absent only on an opinion written by hand. */
+  trigger?: RuleTrigger;
   id: string;
   status: RuleStatus;
+  /** "always" makes an approved rule an opinion, injected every session. */
+  delivery?: "always";
   createdAt: string;
   decidedAt?: string;
+  retiredAt?: string;
+}
+
+export function isOpinion(rule: AdaptationRule): boolean {
+  return rule.status === "approved" && rule.delivery === "always";
+}
+
+type Deliverable = Pick<AdaptationRule, "delivery" | "trigger"> & { status: string };
+
+export function isTriggerRule<R extends Deliverable>(
+  rule: R
+): rule is R & { trigger: RuleTrigger } {
+  return rule.status === "approved" && rule.delivery !== "always" && !!rule.trigger;
+}
+
+function opinionLine(rule: Pick<AdaptationRule, "when" | "steering">): string {
+  return `- ${rule.when}: ${rule.steering}`;
+}
+
+export function opinionsContext(): string {
+  const opinions = readRules().filter(isOpinion);
+  if (opinions.length === 0) return "";
+  return [
+    "## Opinions",
+    "The user approved these from past corrections. Follow them on every turn:",
+    ...opinions.map(opinionLine),
+  ].join("\n");
+}
+
+function overCap(rules: AdaptationRule[], added: AdaptationRule): string | null {
+  const opinions = [...rules.filter(isOpinion), added];
+  if (opinions.length > OPINION_CAP)
+    return `Opinions are capped at ${OPINION_CAP}; retire one first`;
+  const size = opinions.map(opinionLine).join("\n").length;
+  if (size > OPINION_CHARS)
+    return `Opinions are capped at ${OPINION_CHARS} characters, this one would make ${size}; retire one first`;
+  return null;
 }
 
 type DecideResult = { ok: true; rule: AdaptationRule } | { ok: false; reason: string };
@@ -101,18 +149,65 @@ function approveWidening(
   return { ok: true, rule: widened };
 }
 
+function decided(rule: AdaptationRule, decision: Decision): AdaptationRule {
+  const decidedAt = new Date().toISOString();
+  if (decision === "opinion")
+    return { ...rule, status: "approved", delivery: "always", decidedAt };
+  return { ...rule, status: decision, decidedAt };
+}
+
+function replaceRule(rules: AdaptationRule[], rule: AdaptationRule): DecideResult {
+  writeRules(rules.map((r) => (r.id === rule.id ? rule : r)));
+  return { ok: true, rule };
+}
+
 export function decideRule(id: string, decision: Decision): DecideResult {
   const rules = readRules();
   const rule = rules.find((r) => r.id === id);
   if (!rule) return { ok: false, reason: `No rule with id ${id}` };
   if (rule.status !== "draft")
     return { ok: false, reason: `Rule ${id} was already ${rule.status}` };
+  if (rule.widens && decision === "opinion")
+    return { ok: false, reason: `Rule ${id} widens a trigger; it cannot be an opinion` };
   if (rule.widens && decision === "approved") return approveWidening(rules, rule);
-  const decided: AdaptationRule = {
-    ...rule,
-    status: decision,
-    decidedAt: new Date().toISOString(),
+  const result = decided(rule, decision);
+  const refusal = isOpinion(result) ? overCap(rules, result) : null;
+  return refusal ? { ok: false, reason: refusal } : replaceRule(rules, result);
+}
+
+export interface OpinionInput {
+  when: string;
+  steering: string;
+  kind: string;
+  evidence: string[];
+}
+
+export function addOpinion(input: OpinionInput): DecideResult {
+  const now = new Date().toISOString();
+  const opinion: AdaptationRule = {
+    ...input,
+    id: randomUUID().slice(0, 8),
+    status: "approved",
+    delivery: "always",
+    createdAt: now,
+    decidedAt: now,
   };
-  writeRules(rules.map((r) => (r.id === id ? decided : r)));
-  return { ok: true, rule: decided };
+  const rules = readRules();
+  const refusal = overCap(rules, opinion);
+  if (refusal) return { ok: false, reason: refusal };
+  writeRules([...rules, opinion]);
+  return { ok: true, rule: opinion };
+}
+
+export function retireRule(id: string): DecideResult {
+  const rules = readRules();
+  const rule = rules.find((r) => r.id === id);
+  if (!rule) return { ok: false, reason: `No rule with id ${id}` };
+  if (rule.status !== "approved")
+    return { ok: false, reason: `Rule ${id} is ${rule.status}, not approved` };
+  return replaceRule(rules, {
+    ...rule,
+    status: "retired",
+    retiredAt: new Date().toISOString(),
+  });
 }

@@ -3,9 +3,15 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   addDraft,
+  addOpinion,
   type DraftInput,
   decideRule,
+  isOpinion,
+  isTriggerRule,
+  type OpinionInput,
+  opinionsContext,
   readRules,
+  retireRule,
   rulesPath,
 } from "../src/hooks/lib/adaptation-rules";
 import { freshTestDir } from "./lib/test-home";
@@ -142,7 +148,7 @@ describe("decideRule", () => {
 
     decideRule(widening.id, "denied");
 
-    expect(readRules().map((r) => [r.status, r.trigger.pattern])).toEqual([
+    expect(readRules().map((r) => [r.status, r.trigger?.pattern])).toEqual([
       ["approved", "what do you think"],
       ["denied", "x|y"],
     ]);
@@ -163,5 +169,123 @@ describe("decideRule", () => {
     decideRule(id, "approved");
 
     expect(() => JSON.parse(readFileSync(rulesPath(), "utf-8"))).not.toThrow();
+  });
+
+  test("keeping a draft as an opinion approves it to steer every session", () => {
+    const { id } = addDraft(draft);
+
+    expect(decideRule(id, "opinion").ok).toBe(true);
+    const [rule] = readRules();
+    expect(rule).toMatchObject({ status: "approved", delivery: "always" });
+    expect(isOpinion(rule)).toBe(true);
+    expect(isTriggerRule(rule)).toBe(false);
+  });
+
+  test("a widening cannot be kept as an opinion", () => {
+    const rule = addDraft(draft);
+    decideRule(rule.id, "approved");
+    const widening = addDraft({ ...draft, widens: rule.id });
+
+    expect(decideRule(widening.id, "opinion")).toEqual({
+      ok: false,
+      reason: `Rule ${widening.id} widens a trigger; it cannot be an opinion`,
+    });
+  });
+
+  test("an opinion past the cap is refused and stays a draft", () => {
+    for (let i = 0; i < 8; i++) decideRule(addDraft(draft).id, "opinion");
+    const ninth = addDraft(draft);
+
+    expect(decideRule(ninth.id, "opinion")).toEqual({
+      ok: false,
+      reason: "Opinions are capped at 8; retire one first",
+    });
+    expect(readRules().find((r) => r.id === ninth.id)?.status).toBe("draft");
+  });
+});
+
+const opinion: OpinionInput = {
+  when: "Designing a system",
+  steering: "Treat the current setup as a choice, not a constraint.",
+  kind: "status-quo-bias",
+  evidence: [],
+};
+
+describe("addOpinion", () => {
+  test("stores an approved opinion with its kind", () => {
+    const result = addOpinion(opinion);
+
+    expect(result.ok).toBe(true);
+    expect(readRules()).toEqual([
+      expect.objectContaining({ ...opinion, status: "approved", delivery: "always" }),
+    ]);
+  });
+
+  test("opinions past the character cap are refused", () => {
+    const long = { ...opinion, steering: "x".repeat(700) };
+    addOpinion(long);
+    addOpinion(long);
+
+    const result = addOpinion(long);
+
+    expect(result.ok).toBe(false);
+    expect(result.ok ? "" : result.reason).toStartWith(
+      "Opinions are capped at 1500 characters"
+    );
+    expect(readRules()).toHaveLength(2);
+  });
+
+  test("a retired opinion frees its place under the cap", () => {
+    const ids = Array.from({ length: 8 }, () => {
+      const result = addOpinion(opinion);
+      return result.ok ? result.rule.id : "";
+    });
+    expect(addOpinion(opinion).ok).toBe(false);
+
+    retireRule(ids[0]);
+
+    expect(addOpinion(opinion).ok).toBe(true);
+  });
+});
+
+describe("retireRule", () => {
+  test("ends an approved rule and stamps when", () => {
+    const { id } = addDraft(draft);
+    decideRule(id, "approved");
+
+    expect(retireRule(id).ok).toBe(true);
+    expect(readRules()[0]).toMatchObject({ status: "retired" });
+    expect(readRules()[0].retiredAt).toBeDefined();
+  });
+
+  test("a draft or an unknown id is refused", () => {
+    const { id } = addDraft(draft);
+
+    expect(retireRule(id)).toEqual({
+      ok: false,
+      reason: `Rule ${id} is draft, not approved`,
+    });
+    expect(retireRule("nope")).toEqual({ ok: false, reason: "No rule with id nope" });
+  });
+});
+
+describe("opinionsContext", () => {
+  test("lists approved opinions only, situation then steering", () => {
+    addOpinion(opinion);
+    const retired = addOpinion({ ...opinion, when: "Gone" });
+    if (retired.ok) retireRule(retired.rule.id);
+    decideRule(addDraft(draft).id, "approved");
+
+    expect(opinionsContext()).toBe(
+      [
+        "## Opinions",
+        "The user approved these from past corrections. Follow them on every turn:",
+        "- Designing a system: Treat the current setup as a choice, not a constraint.",
+      ].join("\n")
+    );
+  });
+
+  test("no opinions is no context", () => {
+    expect(opinionsContext()).toBe("");
   });
 });

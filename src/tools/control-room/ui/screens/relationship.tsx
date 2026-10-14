@@ -33,9 +33,14 @@ function Facts({ rows }: { rows: [string, string | undefined][] }) {
   );
 }
 
+function triggerLine(rule: AdaptationRule): string {
+  if (rule.delivery === "always") return "none, an opinion steers every session";
+  return rule.trigger ? `${rule.trigger.side} · /${rule.trigger.pattern}/i` : "none";
+}
+
 function ruleFacts(rule: AdaptationRule): [string, string | undefined][] {
   return [
-    ["trigger", `${rule.trigger.side} · /${rule.trigger.pattern}/i`],
+    ["trigger", triggerLine(rule)],
     ["steering", rule.steering],
     ["check", rule.check],
     ["proof", proofLine(rule.proof)],
@@ -56,7 +61,7 @@ function Evidence({ items }: { items: string[] }) {
 function replacedTrigger(rule: AdaptationRule, active: ActiveRule[]): string | undefined {
   if (!rule.widens) return undefined;
   const target = active.find((r) => r.id === rule.widens);
-  if (!target) return `the trigger of rule ${rule.widens}`;
+  if (!target?.trigger) return `the trigger of rule ${rule.widens}`;
   return `/${target.trigger.pattern}/i`;
 }
 
@@ -104,7 +109,7 @@ function Draft({
 function effectLine(rule: ActiveRule): string {
   const { fired, sentBack, judged, correctedAfter } = rule.effect;
   if (fired === 0) return "has not fired yet";
-  const back = rule.trigger.side === "reply" ? `, sent back ${sentBack}` : "";
+  const back = rule.trigger?.side === "reply" ? `, sent back ${sentBack}` : "";
   return `fired ${fired}${back} · corrected after ${correctedAfter} of ${judged} judged`;
 }
 
