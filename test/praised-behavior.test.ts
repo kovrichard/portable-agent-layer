@@ -3,6 +3,7 @@ import {
   needsPraisedBehavior,
   parsePraisedBehavior,
   praisedBehaviorRequest,
+  reinforcementDraft,
   withPraisedBehavior,
 } from "../src/hooks/lib/praised-behavior";
 
@@ -75,4 +76,24 @@ test("the request carries the reply end and the praise", () => {
   expect(request.caller).toBe("praised-behavior");
   expect(request.user).toContain("Upkeep is safer.");
   expect(request.user).toContain("love the pushback");
+});
+
+describe("reinforcementDraft", () => {
+  const behavior = { when: "the user counter-proposes", steering: "Argue again" };
+
+  test("a praised behavior drafts a reinforcement with the praise as evidence", () => {
+    expect(reinforcementDraft({ behavior, explicit: true }, "keep this up")).toEqual({
+      ...behavior,
+      polarity: "reinforce",
+      evidence: ['Asked to keep it: "keep this up"'],
+    });
+    expect(reinforcementDraft({ behavior, explicit: false }, "nice")?.evidence).toEqual([
+      'Praised: "nice"',
+    ]);
+  });
+
+  test("praise of the output alone, or no answer, drafts nothing", () => {
+    expect(reinforcementDraft({ explicit: true }, "love it")).toBeNull();
+    expect(reinforcementDraft(null, "love it")).toBeNull();
+  });
 });

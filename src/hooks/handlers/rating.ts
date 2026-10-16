@@ -15,7 +15,7 @@ import {
   recordCandidate,
   reproveWaiting,
 } from "../lib/adaptation-candidates";
-import { readRules } from "../lib/adaptation-rules";
+import { addDraft, readRules } from "../lib/adaptation-rules";
 import { appendTurn, readTurns, withRequests } from "../lib/adaptation-turns";
 import {
   correctionKindRequest,
@@ -32,6 +32,7 @@ import {
   needsPraisedBehavior,
   parsePraisedBehavior,
   praisedBehaviorRequest,
+  reinforcementDraft,
   withPraisedBehavior,
 } from "../lib/praised-behavior";
 import { isSystemText, stripInjectedTags } from "../lib/prompt-text";
@@ -308,6 +309,8 @@ async function runReactionRatingAndStore(
       : null;
     if (turn)
       appendTurn(withPraisedBehavior(withCorrectionKind(turn, kind), praise), sentAt);
+    const reinforcement = reinforcementDraft(praise, message);
+    if (reinforcement) addDraft(reinforcement);
     if (turn?.confirmed) await draftRuleCandidate(sessionId);
   } catch (err) {
     const { logError } = await import("../lib/log");

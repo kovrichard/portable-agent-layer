@@ -5,6 +5,7 @@
  * repeat and is stored as such, which is how the share of usable praise is measured.
  */
 
+import type { DraftInput } from "./adaptation-rules";
 import type { PraisedBehavior, TurnInput } from "./adaptation-turns";
 
 const PRAISED_BEHAVIOR_SYSTEM = `The user praised an AI assistant's reply. Decide whether the praise points at a repeatable behavior: something the assistant did that it could do again in a different situation later.
@@ -86,4 +87,24 @@ export function withPraisedBehavior(
   praise: PraisedBehavior | null
 ): TurnInput {
   return praise ? { ...turn, praisedBehavior: praise } : turn;
+}
+
+const EVIDENCE_CHARS = 200;
+
+function praiseEvidence(praise: PraisedBehavior, message: string): string {
+  const quoted = `"${message.slice(0, EVIDENCE_CHARS)}"`;
+  return praise.explicit ? `Asked to keep it: ${quoted}` : `Praised: ${quoted}`;
+}
+
+/** One praise is enough to draft: it is too rare to wait for a second. */
+export function reinforcementDraft(
+  praise: PraisedBehavior | null,
+  message: string
+): DraftInput | null {
+  if (!praise?.behavior) return null;
+  return {
+    ...praise.behavior,
+    polarity: "reinforce",
+    evidence: [praiseEvidence(praise, message)],
+  };
 }

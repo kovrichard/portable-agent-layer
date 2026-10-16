@@ -114,4 +114,15 @@ test("praise is stored with the behavior it points at", async () => {
     },
     explicit: true,
   });
+  const rules = JSON.parse(
+    readFileSync(resolve(home, "memory", "adaptation", "rules.json"), "utf-8")
+  );
+  expect(rules).toMatchObject([
+    {
+      status: "draft",
+      polarity: "reinforce",
+      when: "the user counter-proposes",
+      evidence: ['Asked to keep it: "love the pushback, keep this up"'],
+    },
+  ]);
 });
