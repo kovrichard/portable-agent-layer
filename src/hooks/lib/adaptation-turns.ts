@@ -34,6 +34,15 @@ export interface TurnInput {
   confirmed?: boolean;
   /** Set on a confirmed correction: its kind, under the kind set's version. */
   correctionKind?: StoredCorrectionKind;
+  /** Set on praise: the behavior it points at, if any. */
+  praisedBehavior?: PraisedBehavior;
+}
+
+export interface PraisedBehavior {
+  /** Absent when the praise is about this output's content, not a behavior. */
+  behavior?: { when: string; steering: string };
+  /** The user asked for the behavior to continue ("keep this up"). */
+  explicit: boolean;
 }
 
 interface StoredCorrectionKind {

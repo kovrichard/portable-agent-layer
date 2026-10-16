@@ -28,6 +28,12 @@ import { canInfer, inference } from "../lib/inference";
 import { replyEnd } from "../lib/interaction-samples";
 import { logDebug } from "../lib/log";
 import { paths } from "../lib/paths";
+import {
+  needsPraisedBehavior,
+  parsePraisedBehavior,
+  praisedBehaviorRequest,
+  withPraisedBehavior,
+} from "../lib/praised-behavior";
 import { isSystemText, stripInjectedTags } from "../lib/prompt-text";
 import {
   correctionCheckRequest,
@@ -247,6 +253,11 @@ async function labelCorrectionKind(
   return result.success ? parseCorrectionKind(result.output) : null;
 }
 
+async function readPraisedBehavior(reply: string, message: string, sessionId?: string) {
+  const result = await inference(praisedBehaviorRequest(reply, message, sessionId));
+  return result.success ? parsePraisedBehavior(result.output) : null;
+}
+
 function knownRules() {
   const waiting = readCandidates().filter((candidate) => candidate.verdict === "waiting");
   return [
@@ -267,7 +278,7 @@ async function draftRuleCandidate(sessionId?: string): Promise<void> {
   else logDebug("rule-drafter", `no candidate: ${result.output ?? result.error ?? ""}`);
 }
 
-/** Background mode: label the reaction, check a possible correction, name a confirmed one's kind, store the rating. */
+/** Background mode: label the reaction, check a possible correction, name a confirmed one's kind or a praise's behavior, store the rating. */
 async function runReactionRatingAndStore(
   message: string,
   reply: string,
@@ -292,7 +303,11 @@ async function runReactionRatingAndStore(
     const kind = needsCorrectionKind(turn)
       ? await labelCorrectionKind(reply, message, turn.issue, sessionId)
       : null;
-    if (turn) appendTurn(withCorrectionKind(turn, kind), sentAt);
+    const praise = needsPraisedBehavior(turn)
+      ? await readPraisedBehavior(reply, message, sessionId)
+      : null;
+    if (turn)
+      appendTurn(withPraisedBehavior(withCorrectionKind(turn, kind), praise), sentAt);
     if (turn?.confirmed) await draftRuleCandidate(sessionId);
   } catch (err) {
     const { logError } = await import("../lib/log");

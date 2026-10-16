@@ -22,6 +22,16 @@ const ANSWER_BY_SYSTEM_PROMPT = `(() => {
   return "{}";
 })()`;
 
+const PRAISING = `(() => {
+  const args = Bun.argv;
+  const system = require("node:fs").readFileSync(args[args.indexOf("--system-prompt-file") + 1], "utf-8");
+  if (system.startsWith("You classify how a user reacted"))
+    return JSON.stringify({ reaction: "praised", issue: "" });
+  if (system.startsWith("The user praised"))
+    return JSON.stringify({ repeatable: true, when: "the user counter-proposes", steering: "Argue again with the reason", explicit: true });
+  return "{}";
+})()`;
+
 function childEnv(home: string): Record<string, string | undefined> {
   const env: Record<string, string | undefined> = {
     ...process.env,
@@ -74,5 +84,34 @@ test("a confirmed correction is stored with its kind and the kind-set version", 
     suggested: "",
     description: "",
     version: 2,
+  });
+});
+
+test("praise is stored with the behavior it points at", async () => {
+  const home = freshTestDir(import.meta.file);
+  writeFakeBin(home, "claude", claudeReplying(PRAISING));
+  const b64 = (text: string) => Buffer.from(text).toString("base64");
+  const child = Bun.spawn(
+    [
+      "bun",
+      RATING,
+      "--sentiment",
+      "s1",
+      b64("love the pushback, keep this up"),
+      b64("Upkeep is still safer."),
+      new Date().toISOString(),
+    ],
+    { env: childEnv(home), stdout: "ignore", stderr: "ignore" }
+  );
+  await child.exited;
+
+  const [turn] = storedTurns(home);
+  expect(turn.reaction).toBe("praised");
+  expect(turn.praisedBehavior).toEqual({
+    behavior: {
+      when: "the user counter-proposes",
+      steering: "Argue again with the reason",
+    },
+    explicit: true,
   });
 });
