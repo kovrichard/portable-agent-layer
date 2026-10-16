@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { runRule } from "../src/cli/rule";
-import { addDraft, decideRule, readRules } from "../src/hooks/lib/adaptation-rules";
+import {
+  addDraft,
+  decideRule,
+  flagContradiction,
+  readRules,
+} from "../src/hooks/lib/adaptation-rules";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
@@ -244,6 +249,44 @@ describe("pal cli rule opinions", () => {
     expect(await runRule(addArgs)).toBe(1);
     expect(printed.at(-1)).toBe(
       `Opinion ${first.id} already targets status-quo-bias, and two would share one rate; retire it first`
+    );
+  });
+
+  test("add-reinforcement keeps a praised behavior, labelled as one", async () => {
+    expect(
+      await runRule([
+        "add-reinforcement",
+        "--when",
+        "Rico counter-proposes",
+        "--steering",
+        "Argue again with the reason.",
+      ])
+    ).toBe(0);
+    const [rule] = readRules();
+    expect(printed.at(-1)).toBe(
+      `Rule ${rule.id} kept as a reinforcement: Rico counter-proposes`
+    );
+
+    await runRule(["list", "--all"]);
+    expect(printed.join("\n")).toContain(
+      `${rule.id}  [reinforcement]  Rico counter-proposes`
+    );
+  });
+
+  test("a contradicted reinforcement shows the correction beside it", async () => {
+    await runRule([
+      "add-reinforcement",
+      "--when",
+      "Pushing back",
+      "--steering",
+      "Argue.",
+    ]);
+    const [rule] = readRules();
+    flagContradiction(rule.id, "stop arguing");
+
+    await runRule(["list", "--all"]);
+    expect(printed.join("\n")).toContain(
+      '  contradicted: "stop arguing" — retire it if that still holds'
     );
   });
 

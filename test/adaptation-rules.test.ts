@@ -4,8 +4,10 @@ import { resolve } from "node:path";
 import {
   addDraft,
   addOpinion,
+  addReinforcement,
   type DraftInput,
   decideRule,
+  isApprovedReinforcement,
   isOpinion,
   isTriggerRule,
   type OpinionInput,
@@ -360,5 +362,69 @@ describe("opinionsContext", () => {
 
   test("no opinions is no context", () => {
     expect(opinionsContext()).toBe("");
+  });
+});
+
+describe("reinforcements", () => {
+  const praise = {
+    when: "The user counter-proposes after a disagreement",
+    steering: "Argue again when a concrete flaw remains.",
+    evidence: ["keep this up"],
+  };
+
+  test("addReinforcement stores an approved reinforcement, not an opinion", () => {
+    const result = addReinforcement(praise);
+    if (!result.ok) throw new Error(result.reason);
+
+    expect(result.rule).toMatchObject({
+      polarity: "reinforce",
+      status: "approved",
+      delivery: "always",
+    });
+    expect(isApprovedReinforcement(result.rule)).toBe(true);
+    expect(isOpinion(result.rule)).toBe(false);
+  });
+
+  test("a reinforcement draft is approved to steer every session, never kept as an opinion", () => {
+    const rule = addDraft({ ...praise, polarity: "reinforce" });
+
+    expect(decideRule(rule.id, "opinion")).toEqual({
+      ok: false,
+      reason: `Rule ${rule.id} is a reinforcement; approve or deny it`,
+    });
+    const approved = decideRule(rule.id, "approved");
+    expect(approved.ok && approved.rule.delivery).toBe("always");
+  });
+
+  test("reinforcements past their own cap are refused", () => {
+    for (let i = 0; i < 5; i++) addReinforcement({ ...praise, when: `Case ${i}` });
+
+    expect(addReinforcement(praise)).toEqual({
+      ok: false,
+      reason: "Reinforcements are capped at 5; retire one first",
+    });
+  });
+
+  test("reinforcements never take an opinion's place under its cap", () => {
+    for (let i = 0; i < 5; i++) addReinforcement({ ...praise, when: `Case ${i}` });
+
+    expect(addOpinion(opinion).ok).toBe(true);
+  });
+
+  test("they get their own section after the opinions", () => {
+    addOpinion(opinion);
+    addReinforcement(praise);
+
+    expect(opinionsContext()).toBe(
+      [
+        "## Opinions",
+        "The user approved these from past corrections. Follow them on every turn:",
+        "- Designing a system: Treat the current setup as a choice, not a constraint.",
+        "",
+        "## Keep doing",
+        "The user praised these and asked to keep them. Keep doing them:",
+        "- The user counter-proposes after a disagreement: Argue again when a concrete flaw remains.",
+      ].join("\n")
+    );
   });
 });

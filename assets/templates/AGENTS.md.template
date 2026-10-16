@@ -71,7 +71,7 @@ Load context on-demand by reading the file at the path listed. Only load what th
 | System architecture | `~/.pal/docs/SYSTEM_ARCHITECTURE.md` |
 | Memory format & guidelines | `~/.pal/docs/MEMORY_SYSTEM.md` |
 | Work tracking (projects, sessions) | `~/.pal/docs/WORK_TRACKING.md` |
-| Opinion tracking | `~/.pal/docs/OPINION_TRACKING.md` |
+| Opinions and reinforcements | `~/.pal/docs/OPINION_TRACKING.md` |
 | Steering rules | `~/.pal/docs/STEERING_RULES.md` |
 | Algorithm (complex work phases) | `~/.pal/docs/ALGORITHM.md` |
 | Project lookup AND lifecycle (find paths, resume state, register, manage) | `~/.pal/skills/projects/SKILL.md` |

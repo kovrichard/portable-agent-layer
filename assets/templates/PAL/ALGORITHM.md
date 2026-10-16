@@ -281,9 +281,9 @@ pal cli relationship-note --o "User prefers one verified change at a time, not b
 - ✓ "Debugged the race condition in the message queue consumer and fixed the ack logic"
 - ✗ "Helped with backend improvements" — too vague, no system named
 
-**When to write O vs use the opinion tool (step 6):**
-- O notes → subtle patterns you observed, not yet confirmed → goes into daily file → synthesis promotes to opinions.json over time
-- Opinion tool → explicit user confirmation/correction → goes directly to opinions.json immediately
+**When to write O vs reinforce (step 6):**
+- O notes → subtle patterns you observed, not yet confirmed → goes into daily file
+- Reinforce skill → the user explicitly praised how you worked → becomes a reinforcement that steers every session once they say yes
 
 Skip only if the session was a trivial lookup or typo fix (same rule as step 2).
 
@@ -323,24 +323,13 @@ pal cli thread --add --title "brief title" --context "why it matters, what needs
 pal cli thread --resolve --id <id>
 ```
 
-**6. Opinion capture** — scan the conversation for moments where the user:
-- Confirmed something you did: "yes exactly", "keep doing that", "10 rated", accepted without pushback
-- Corrected something you did: "no", "don't do that", "stop", "that's not what I meant"
-- Revealed a preference by repeating a pattern (asked for concise answers twice, always checked PAI first, etc.)
+**6. Reinforcement capture** — scan the conversation for moments where the user praised how you worked, not only what you produced: "keep this up", "love that you pushed back", "exactly, more of this".
 
-For each, invoke the opinion tool:
-```bash
-# User confirmed a preference
-pal cli skill run opinion opinion evidence "matching keywords" --confirmation "what they confirmed"
+For each one not already decided this session, use the `reinforce` skill: ask once whether to keep it, and record the answer with `pal cli rule approve | deny | add-reinforcement`.
 
-# User corrected a preference
-pal cli skill run opinion opinion evidence "matching keywords" --contradiction "what they corrected"
+Corrections need no step here: PAL labels them in the background and drafts rules from them, which the user reviews with `pal cli rule list`.
 
-# New pattern observed (no existing opinion matches)
-pal cli skill run opinion opinion add "the preference" --category communication|technical|workflow|general
-```
-
-Skip if nothing in the conversation touched preferences or working style.
+Skip if nothing in the conversation praised a behavior.
 
 **7. Wisdom Frame** (Extended+ only) — if the session produced a genuine, reusable insight:
 
