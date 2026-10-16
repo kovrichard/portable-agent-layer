@@ -1,7 +1,7 @@
 ---
 name: scientific-research
 license: MIT
-description: "Answers scientific questions from trustworthy primary sources only (PubMed-indexed peer-reviewed literature, clinical guidelines from ERC, ESC, AHA, CDC and specialty societies, NEJM, The Lancet, JAMA, BMJ, UpToDate when accessible), with every claim cited to a source that was actually read, graded by evidence level and year, and cross-checked by a verifier agent. Use for EVERY health, medical, nutrition, drug, supplement, symptom, disease, treatment, diagnosis, exercise-physiology or other empirical scientific question, including 'is it safe to', 'does X work', 'what does the evidence say', 'side effects of', 'how much should I take' and 'what do the guidelines recommend'. Never answer such questions from memory; route them here."
+description: "Answers scientific questions from trustworthy primary sources only (PubMed-indexed peer-reviewed literature, clinical guidelines from ERC, ESC, AHA, CDC and specialty societies, NEJM, The Lancet, JAMA, BMJ, UpToDate when accessible), with every claim cited to a source that was actually read, graded by evidence level and year, its funding and any vendor ties named, and cross-checked by a verifier agent. Excludes preprints and MDPI journals and prefers SJR Q1 journals. Use for EVERY health, medical, nutrition, drug, supplement, symptom, disease, treatment, diagnosis, exercise-physiology or other empirical scientific question, including 'is it safe to', 'does X work', 'what does the evidence say', 'side effects of', 'how much should I take' and 'what do the guidelines recommend'. Never answer such questions from memory; route them here."
 argument-hint: <scientific or health question>
 metadata:
   source: portable-agent-layer
@@ -57,9 +57,26 @@ specialty society (WHO, NICE, EMA, FDA and their peers). Label each such
 source in the answer as "outside the core list".
 
 Not sources, under any circumstances: blogs, news sites, forums, supplement or
-vendor sites, encyclopedias, press releases, lecture slides, model memory. Preprints
-may be mentioned only when the answer labels them "preprint, not peer-reviewed" and
-no peer-reviewed source covers the claim.
+vendor sites, encyclopedias, press releases, lecture slides, model memory.
+
+Excluded even when they look peer-reviewed:
+
+- **Preprints and repositories**: bioRxiv, medRxiv, PsyArXiv, arXiv, SSRN, Research
+  Square, OSF Preprints, Preprints.org and any other server of unreviewed
+  manuscripts. Do not search them. PubMed and Europe PMC also index preprints, so
+  add `NOT preprint[pt]` to PubMed queries and drop any record whose publication type
+  is Preprint.
+- **MDPI journals** (Nutrients, Medicina, IJMS, Healthcare and the rest), identified
+  by publisher, not by title: a DOI starting with `10.3390` or a page on `mdpi.com`.
+  Add `-site:mdpi.com` to web searches.
+
+### Journal rank
+
+Prefer journals ranked Q1 by SCImago (SJR, `scimagojr.com`) in the subject category
+that fits the question. Rank breaks ties within one evidence level and never
+outranks study design: a Q2 RCT beats a Q1 observational study. Cite a journal below
+Q1 only when no Q1 source covers the claim, and label it with its quartile, for
+example "SJR Q2". Guidelines and official bodies are not ranked.
 
 ## Citation and evidence rules
 
@@ -74,12 +91,23 @@ For every claim record and later print:
   review.
 - **Year** of publication or of the guideline edition, so stale evidence is visible.
   When a newer edition of a guideline exists, cite the newer one.
+- **Journal quartile**: the SJR quartile of the journal, for every journal article.
+- **Funding and conflicts of interest**, read from the source's Funding, Acknowledgements
+  and Competing Interests sections, never inferred. Name the funders, then add one label:
+  - **vendor-funded**: a funder sells the product or intervention studied, or is a
+    trade group of its sellers (manufacturer, supplement brand, food or drug industry
+    association).
+  - **vendor-linked authors**: the funding is independent, but an author is employed,
+    paid or holds shares in such a company.
+  - **funding not stated**: the opened source has no funding statement.
+  - **funding not accessible**: the statement sits behind a paywall that did not open.
 
 Apply these tests before keeping a claim:
 
 1. Does the opened source state this claim, in this population, at this dose or in
    this setting? Paraphrase the source, do not extrapolate from it.
-2. Does the source belong to the allowed set? If not, discard the claim.
+2. Does the source belong to the allowed set, and is it neither a preprint nor an MDPI
+   journal? If not, discard the claim.
 3. Is the number or direction of effect quoted exactly as the source gives it
    (effect size, confidence interval, absolute versus relative risk)?
 
@@ -144,12 +172,20 @@ Rules:
 - Search only your lane's domains (use site: restricted queries). Open each
   candidate and read the relevant section before using it.
 - Prefer the newest guideline edition, then systematic reviews and meta-analyses,
-  then RCTs, then observational work.
+  then RCTs, then observational work. Within one level, prefer journals ranked SJR
+  Q1 in the question's subject category.
+- Never search or cite preprint servers (bioRxiv, medRxiv, PsyArXiv, arXiv, SSRN,
+  Research Square, OSF Preprints, Preprints.org). Add NOT preprint[pt] to PubMed
+  queries and drop any record typed Preprint.
+- Never cite an MDPI journal: a DOI starting with 10.3390 or a page on mdpi.com. Add
+  -site:mdpi.com to web searches.
 - For each claim return: the claim in one sentence, quoted as the source states it;
   population and setting; effect size with confidence interval when given; evidence
   level (guideline recommendation with class/level or GRADE, meta-analysis, RCT,
   observational, expert opinion); year; full citation (authors or body, title,
-  journal or body, year, PMID or DOI or URL).
+  journal or body, year, PMID or DOI or URL); the journal's SJR quartile; funding:
+  the funders named in the source and one label, vendor-funded, vendor-linked
+  authors, funding not stated or funding not accessible.
 - Lane D only: if UpToDate does not open or shows a paywall, return the single line
   "UpToDate inaccessible" and nothing else.
 - Do not fill gaps from memory. If your lane has nothing on a sub-question, say
@@ -180,8 +216,15 @@ For every claim:
    numbers. Mark "confirmed" or "could not verify: <what differs>".
 3. Confirm the source is in the allowed set: PubMed-indexed peer-reviewed journal,
    ERC/ESC/AHA/CDC or another official health body or specialty society, NEJM, The
-   Lancet, JAMA, BMJ, or UpToDate. Otherwise mark "could not verify: source not
-   allowed".
+   Lancet, JAMA, BMJ, or UpToDate. A preprint, a record typed Preprint in PubMed, or
+   an MDPI journal (DOI starting with 10.3390) is never allowed. Otherwise mark
+   "could not verify: source not allowed".
+4. Check the journal's SJR quartile on scimagojr.com and correct it when the lane
+   got it wrong.
+5. Open the source's Funding and Competing Interests sections and confirm the
+   funders and the label (vendor-funded, vendor-linked authors, funding not stated,
+   funding not accessible). Correct the label when it differs, and flag every
+   vendor-funded or vendor-linked study.
 
 Then return three sections:
 - Confirmed matches: claims supported by two or more independent sources, with
@@ -203,8 +246,10 @@ Then:
 1. **Bottom line** — two to four sentences answering the question directly, with
    citation numbers.
 2. **Key findings** — one bullet per claim: the claim, inline citation number(s)
-   `[n]`, evidence level, year. Group by sub-question when there are several. Mark
-   any source outside the core list.
+   `[n]`, evidence level, year, funding label. Write **vendor-funded** or
+   **vendor-linked authors** in bold and name the company. Group by sub-question
+   when there are several. Mark any source outside the core list and any journal
+   below SJR Q1 with its quartile.
 3. **Agreement and contradictions** — the verifier's confirmed matches and
    contradictions, each contradiction with who says what and the likely reason.
 4. **What is uncertain / not found** — sub-questions with no trustworthy evidence
@@ -214,7 +259,8 @@ Then:
 5. **Method** — one line: parallel subagents or sequential lanes; UpToDate read or
    inaccessible; number of sources opened.
 6. **References** — numbered list matching the inline numbers: authors or body,
-   title, journal or body, year, PMID or DOI or URL.
+   title, journal or body, year, PMID or DOI or URL, SJR quartile, and funding (the
+   funders and the label).
 
 For a question about the user's own health, add exactly one plain sentence after the
 Bottom line: this is a summary of published evidence, not individual medical advice,
