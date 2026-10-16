@@ -8,13 +8,17 @@
  *   deny <id>               Reject a draft; it stays on record so it is not redrafted
  *   retire <id>             End an approved rule or opinion
  *   add-opinion --kind K --when W --steering S [--evidence E]
+ *   add-reinforcement --when W --steering S [--evidence E]
  */
 
 import {
   type AdaptationRule,
   addOpinion,
+  addReinforcement,
   decideRule,
+  isApprovedReinforcement,
   isOpinion,
+  isReinforcement,
   readRules,
   retireRule,
   type TriggerProof,
@@ -76,6 +80,16 @@ export const ruleCommand = group({
       run: ({ values }) =>
         cmdAddOpinion(values.kind, values.when, values.steering, values.evidence),
     }),
+    "add-reinforcement": leaf({
+      summary: "Keep a praised behavior by hand; it is approved at once",
+      options: {
+        when: { type: "string", description: "The situation, in one sentence" },
+        steering: { type: "string", description: "The behavior to keep, imperative" },
+        evidence: { type: "string", description: "The praise it comes from" },
+      },
+      run: ({ values }) =>
+        cmdAddReinforcement(values.when, values.steering, values.evidence),
+    }),
   },
 });
 
@@ -103,8 +117,14 @@ interface Measure {
   rules: AdaptationRule[];
 }
 
+function ruleLabel(rule: AdaptationRule): string {
+  if (isOpinion(rule)) return "opinion";
+  if (isApprovedReinforcement(rule)) return "reinforcement";
+  return isReinforcement(rule) ? `${rule.status} reinforcement` : rule.status;
+}
+
 function formatRule(rule: AdaptationRule, measure: Measure): string {
-  const label = isOpinion(rule) ? "opinion" : rule.status;
+  const label = ruleLabel(rule);
   return [
     `${rule.id}  [${label}]  ${rule.when}`,
     ...(rule.widens ? [`  widens: ${rule.widens}`] : []),
@@ -157,8 +177,12 @@ function formatProof(proof: TriggerProof): string {
 function resultLine(id: string, rule: AdaptationRule): string {
   if (rule.id !== id)
     return `Rule ${rule.id} now triggers on: ${rule.trigger?.pattern} (widened by ${id})`;
-  const label = isOpinion(rule) ? "kept as an opinion" : rule.status;
-  return `Rule ${id} ${label}: ${rule.when}`;
+  return `Rule ${id} ${decisionLabel(rule)}: ${rule.when}`;
+}
+
+function decisionLabel(rule: AdaptationRule): string {
+  if (isOpinion(rule)) return "kept as an opinion";
+  return isApprovedReinforcement(rule) ? "kept as a reinforcement" : rule.status;
 }
 
 function report(id: string, result: DecideResult): number {
@@ -189,6 +213,19 @@ function cmdAddOpinion(
 ): number {
   const result = addOpinion({
     kind: correctionKind(kind),
+    when: required("when", when),
+    steering: required("steering", steering),
+    evidence: evidence?.trim() ? [evidence.trim()] : [],
+  });
+  return report(result.ok ? result.rule.id : "", result);
+}
+
+function cmdAddReinforcement(
+  when: string | undefined,
+  steering: string | undefined,
+  evidence: string | undefined
+): number {
+  const result = addReinforcement({
     when: required("when", when),
     steering: required("steering", steering),
     evidence: evidence?.trim() ? [evidence.trim()] : [],

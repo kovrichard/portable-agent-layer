@@ -247,6 +247,27 @@ describe("pal cli rule opinions", () => {
     );
   });
 
+  test("add-reinforcement keeps a praised behavior, labelled as one", async () => {
+    expect(
+      await runRule([
+        "add-reinforcement",
+        "--when",
+        "Rico counter-proposes",
+        "--steering",
+        "Argue again with the reason.",
+      ])
+    ).toBe(0);
+    const [rule] = readRules();
+    expect(printed.at(-1)).toBe(
+      `Rule ${rule.id} kept as a reinforcement: Rico counter-proposes`
+    );
+
+    await runRule(["list", "--all"]);
+    expect(printed.join("\n")).toContain(
+      `${rule.id}  [reinforcement]  Rico counter-proposes`
+    );
+  });
+
   test("retire ends an approved rule", async () => {
     const rule = seed("Claiming work is finished");
     await runRule(["approve", rule.id]);
