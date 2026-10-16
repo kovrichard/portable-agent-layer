@@ -16,7 +16,7 @@ import { containment, similarity } from "./text-similarity";
 // ── Types ──
 
 export type EvidenceType = "supporting" | "counter" | "confirmation" | "contradiction";
-export type OpinionCategory = "communication" | "technical" | "workflow" | "general";
+type OpinionCategory = "communication" | "technical" | "workflow" | "general";
 
 interface Evidence {
   date: string;

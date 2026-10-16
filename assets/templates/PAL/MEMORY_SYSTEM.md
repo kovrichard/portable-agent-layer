@@ -70,5 +70,5 @@ Almost everything in `state/`, `signals/`, `relationship/opinions.json`, `learni
 
 - Trivial exchanges (greetings, brief acknowledgments) → skip
 - Anything already captured in TELOS → skip
-- Anything that duplicates an existing wisdom frame or opinion → use the opinion skill to reinforce instead
+- Anything that duplicates an existing wisdom frame or opinion → skip; if the user praised the behavior, use the reinforce skill instead
 - Anything the user has not validated yet — record it as a relationship note first, let it graduate naturally

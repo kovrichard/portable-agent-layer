@@ -52,11 +52,4 @@ Most recent observations:
 After showing results, say:
 > "Want to review the full opinions list, or is there a specific pattern you'd like to reinforce or correct?"
 
-If the user confirms or corrects something, use the opinion tool:
-```bash
-# Confirmed
-pal cli skill run opinion opinion evidence "keywords" --confirmation "what they confirmed"
-
-# Corrected
-pal cli skill run opinion opinion evidence "keywords" --contradiction "what they corrected"
-```
+If the user confirms a behavior they want kept, use the `reinforce` skill to record it as a reinforcement. A correction needs no step: PAL drafts rules from corrections on its own, reviewed with `pal cli rule list`.
