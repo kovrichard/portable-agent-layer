@@ -54,6 +54,8 @@ export interface DraftInput {
   opinionGate?: OpinionGate;
   /** Learned from praise: a behavior to keep, not a mistake to prevent. */
   polarity?: "reinforce";
+  /** A later correction that asked to stop this behavior; the user decides whether to retire it. */
+  contradicted?: { at: string; message: string };
 }
 
 export type OpinionGate = { corrections: number } | { duplicates: string };
@@ -312,6 +314,11 @@ export function addReinforcement(input: ReinforcementInput): DecideResult {
   if (refusal) return { ok: false, reason: refusal };
   writeRules([...rules, kept]);
   return { ok: true, rule: kept };
+}
+
+export function flagContradiction(id: string, message: string): void {
+  const contradicted = { at: new Date().toISOString(), message };
+  writeRules(readRules().map((r) => (r.id === id ? { ...r, contradicted } : r)));
 }
 
 export function retireRule(id: string): DecideResult {

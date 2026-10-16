@@ -15,7 +15,12 @@ import {
   recordCandidate,
   reproveWaiting,
 } from "../lib/adaptation-candidates";
-import { addDraft, readRules } from "../lib/adaptation-rules";
+import {
+  addDraft,
+  flagContradiction,
+  isApprovedReinforcement,
+  readRules,
+} from "../lib/adaptation-rules";
 import { appendTurn, readTurns, withRequests } from "../lib/adaptation-turns";
 import {
   correctionKindRequest,
@@ -47,6 +52,7 @@ import {
   settledLabel,
   turnFromLabels,
 } from "../lib/reaction-rating";
+import { conflictRequest, parseConflict } from "../lib/reinforcement-conflict";
 import {
   canRepeat,
   canWiden,
@@ -259,6 +265,20 @@ async function readPraisedBehavior(reply: string, message: string, sessionId?: s
   return result.success ? parsePraisedBehavior(result.output) : null;
 }
 
+const CONTRADICTION_CHARS = 200;
+
+async function flagContradictedReinforcement(
+  message: string,
+  issue: string,
+  sessionId?: string
+): Promise<void> {
+  const kept = readRules().filter(isApprovedReinforcement);
+  if (kept.length === 0) return;
+  const result = await inference(conflictRequest(message, issue, kept, sessionId));
+  const hit = result.success ? parseConflict(result.output, kept) : null;
+  if (hit) flagContradiction(hit.id, message.slice(0, CONTRADICTION_CHARS));
+}
+
 function knownRules() {
   const waiting = readCandidates().filter((candidate) => candidate.verdict === "waiting");
   return [
@@ -311,6 +331,8 @@ async function runReactionRatingAndStore(
       appendTurn(withPraisedBehavior(withCorrectionKind(turn, kind), praise), sentAt);
     const reinforcement = reinforcementDraft(praise, message);
     if (reinforcement) addDraft(reinforcement);
+    if (turn?.confirmed)
+      await flagContradictedReinforcement(message, turn.issue, sessionId);
     if (turn?.confirmed) await draftRuleCandidate(sessionId);
   } catch (err) {
     const { logError } = await import("../lib/log");

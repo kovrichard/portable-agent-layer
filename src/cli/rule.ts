@@ -139,6 +139,9 @@ function formatRule(rule: AdaptationRule, measure: Measure): string {
     ...gateLines(rule, measure),
     ...effectLines(rule, measure),
     ...rule.evidence.map((e) => `  evidence: ${e}`),
+    ...(rule.contradicted
+      ? [`  contradicted: "${rule.contradicted.message}" — retire it if that still holds`]
+      : []),
   ].join("\n");
 }
 
