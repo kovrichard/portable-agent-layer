@@ -78,7 +78,13 @@ const tree = group({
     nested: group({
       summary: "Nested",
       fallback: "show",
-      commands: { show: leaf({ summary: "Show", run: record(7) }) },
+      commands: {
+        show: leaf({
+          summary: "Show",
+          options: { verbose: { type: "boolean", description: "More" } },
+          run: record(7),
+        }),
+      },
     }),
   },
 });
@@ -173,6 +179,16 @@ describe("dispatch", () => {
 
   test("a group with a fallback runs it when given no command", async () => {
     expect(await run("nested")).toBe(7);
+  });
+
+  test("a group with a fallback hands it options that come first", async () => {
+    expect(await run("nested", "--verbose")).toBe(7);
+    expect(calls[0]?.values).toEqual({ verbose: true });
+  });
+
+  test("help still wins over the fallback", async () => {
+    expect(await run("nested", "--help")).toBe(0);
+    expect(calls).toHaveLength(0);
   });
 
   test("a variadic slot takes every word", async () => {
