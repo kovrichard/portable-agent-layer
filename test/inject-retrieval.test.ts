@@ -155,6 +155,16 @@ describe("injectPromptContext handler", () => {
     expect(out).toContain("Repo: ");
   });
 
+  test("the active work-tree node rides along once the scope has work", async () => {
+    const { appendEvent, scopeOf } = await import("../src/hooks/lib/work-tree");
+    const { sessionDir } = await import("../src/hooks/lib/session-dir");
+    appendEvent(scopeOf(sessionDir()), "n1", "open", { title: "Gate", parent: null });
+    const { injectPromptContext } = await loadHandlers();
+    const out = await captureStdout(() => injectPromptContext("anything goes here"));
+    expect(out).toContain("Work: Gate [n1]");
+    removeOnceReleased(resolve(TEST_HOME, "memory", "work-tree"));
+  });
+
   test("emits empty when prompt is empty", async () => {
     const { injectPromptContext } = await loadHandlers();
     const out = await captureStdout(() => injectPromptContext(""));

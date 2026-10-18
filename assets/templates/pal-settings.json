@@ -27,6 +27,8 @@
     "skillMatching": true,
     "wallClock": true,
     "repoState": true,
+    "workTree": true,
+    "workTreeGate": true,
     "dueReminders": false,
     "interactionAwareness": true,
     "reactionSampling": true,

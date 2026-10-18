@@ -18,6 +18,7 @@ import { sessionDir } from "./session-dir";
 import * as settings from "./settings";
 import { readFramePrinciples } from "./wisdom";
 import { lastSessionTitle } from "./work-tracking";
+import { loadWorkTreeContext } from "./work-tree-context";
 
 /** Load and concatenate loadAtStartup files */
 function loadStartupFiles(): string {
@@ -223,10 +224,12 @@ export function buildSystemReminder(
     !opts.withoutHandoff && settings.isEnabled("handoff")
       ? loadHandoffContext(sessionDir())
       : "";
+  const workTree = loadWorkTreeContext(sessionDir());
   const dueNudges = opts.agent === "cursor" ? dueNudgeSections() : [];
   const parts: string[] = [];
   if (startup) parts.push(startup);
   if (handoff) parts.push(handoff);
+  if (workTree) parts.push(workTree);
   parts.push(...dueNudges);
   if (selfModel) parts.push(selfModel);
   if (wisdom) parts.push(wisdom);
