@@ -139,21 +139,22 @@ function isUserPrompt(entry: TranscriptLine): boolean {
 
 const ran = (input: unknown) => JSON.stringify(input ?? {});
 
-function commandsIn(entry: TranscriptLine): string[] {
+function callsIn(entry: TranscriptLine, tools: ReadonlySet<string>): string[] {
   if (entry.type === "PLANNER_RESPONSE")
     return toolCallsOf(entry)
-      .filter((call) => COMMAND_TOOLS.has(call.name ?? ""))
+      .filter((call) => tools.has(call.name ?? ""))
       .map((call) => ran(call.args));
   if (entry.type === "assistant")
     return blocks(entry.message?.content)
-      .filter((b) => b.type === "tool_use" && COMMAND_TOOLS.has(b.name ?? ""))
+      .filter((b) => b.type === "tool_use" && tools.has(b.name ?? ""))
       .map((b) => ran(b.input));
   const call = entry.payload;
   if (entry.type !== "response_item" || !call) return [];
   const input = call.input ?? call.arguments ?? call.action;
-  if (call.type === "local_shell_call") return [ran(input)];
+  if (call.type === "local_shell_call")
+    return tools === COMMAND_TOOLS ? [ran(input)] : [];
   const isCall = call.type === "function_call" || call.type === "custom_tool_call";
-  return isCall && COMMAND_TOOLS.has(call.name ?? "") ? [ran(input)] : [];
+  return isCall && tools.has(call.name ?? "") ? [ran(input)] : [];
 }
 
 function isTurnEntry(entry: TranscriptLine): boolean {
@@ -162,17 +163,24 @@ function isTurnEntry(entry: TranscriptLine): boolean {
   );
 }
 
-/** What each command this turn ran. Null when no line reads as a turn, so an
- *  unknown transcript format never counts as none. */
-export function commandsThisTurn(lines: string[]): string[] | null {
+/** The input of each call this turn made to one of the tools. Null when no line reads
+ *  as a turn, so an unknown transcript format never counts as none. */
+export function callsThisTurn(
+  lines: string[],
+  tools: ReadonlySet<string>
+): string[] | null {
   const entries = lines.map(parsed).filter((e): e is TranscriptLine => e !== null);
   if (!entries.some(isTurnEntry)) return null;
-  let commands: string[] = [];
+  let calls: string[] = [];
   for (const entry of entries) {
-    if (isUserPrompt(entry)) commands = [];
-    commands.push(...commandsIn(entry));
+    if (isUserPrompt(entry)) calls = [];
+    calls.push(...callsIn(entry, tools));
   }
-  return commands;
+  return calls;
+}
+
+export function commandsThisTurn(lines: string[]): string[] | null {
+  return callsThisTurn(lines, COMMAND_TOOLS);
 }
 
 function isBacked(claim: string, commands: string[]): boolean {

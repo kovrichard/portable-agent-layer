@@ -20,6 +20,7 @@ import { logError } from "./lib/log";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
 import { type StopTurnPayload, stopTurn } from "./lib/stop";
+import { stopWorkTree } from "./lib/work-tree-gate";
 
 // Recursion guard — spawned inference subprocesses must not record session
 // learning, ratings, or handoffs from their throwaway transcript.
@@ -61,5 +62,14 @@ try {
   }
 } catch (err) {
   logError("StopOrchestrator:adaptation-rules", err);
+}
+try {
+  const sendBack = stopWorkTree(payload);
+  if (sendBack) {
+    process.stdout.write(stopBlockResponse(sendBack));
+    process.exit(0);
+  }
+} catch (err) {
+  logError("StopOrchestrator:work-tree", err);
 }
 await stopTurn(payload);
