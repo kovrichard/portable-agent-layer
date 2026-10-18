@@ -309,6 +309,8 @@
     "home/memory/pal-settings.json#dynamicContext.steeringTestReport",
     "home/memory/pal-settings.json#dynamicContext.wallClock",
     "home/memory/pal-settings.json#dynamicContext.wisdom",
+    "home/memory/pal-settings.json#dynamicContext.workTree",
+    "home/memory/pal-settings.json#dynamicContext.workTreeGate",
     "home/memory/pal-settings.json#identity.ai.catchphrase",
     "home/memory/pal-settings.json#identity.ai.displayName",
     "home/memory/pal-settings.json#identity.ai.fullName",
