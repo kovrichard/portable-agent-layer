@@ -326,7 +326,7 @@ function registryLines(r: ResearchProfile["registry"]): string[] {
     ["Tax number", r.taxNumber],
     ["Seat", r.seat],
     ["Status", r.status],
-    ["Main activity", r.activity ?? ""],
+    ["Main activity", r.activity],
     ["Managing directors", r.managers.join(", ")],
     ["Registry entry", r.url],
   ];

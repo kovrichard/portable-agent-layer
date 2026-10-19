@@ -215,9 +215,54 @@ describe("researchEntity", () => {
     test("the register's facts are handed to the model to tell namesakes apart", async () => {
       const { calls, deps: d } = withRegister({});
       await researchEntity(HUNGARIAN, d);
-      expect(calls[0].user).toContain("registration number: 09-09-000001");
-      expect(calls[0].user).toContain(
-        "main activity: 2740 Villamos világítóeszköz gyártása"
+      expect(calls[0].user).toEndWith(
+        [
+          "The company register, already read: use it to tell this company from namesakes and do not search the register again.",
+          "registered name: Brightmoor Világítás Korlátolt Felelősségű Társaság",
+          "registration number: 09-09-000001",
+          "seat: 4024 Debrecen, Példa utca 2.",
+          "main activity: 2740 Villamos világítóeszköz gyártása",
+        ].join("\n")
+      );
+    });
+
+    test("a register entry without seat or activity hands over only what it has", async () => {
+      const sparse = { ...ENTRY, fullName: "", seat: "", activity: "" };
+      const { calls, deps: d } = withRegister({}, async () => sparse);
+      await researchEntity(HUNGARIAN, d);
+      expect(calls[0].user).toEndWith(
+        "registered name: Brightmoor Világítás Kft.\nregistration number: 09-09-000001"
+      );
+    });
+
+    test("the register alone makes a whole profile", async () => {
+      const outcome = await researchEntity(HUNGARIAN, withRegister(null).deps);
+      expect(outcome).toEqual({
+        found: true,
+        profile: {
+          match: "sure",
+          summary:
+            "Brightmoor Világítás Kft.: 2740 Villamos világítóeszköz gyártása. Seat: 4024 Debrecen, Példa utca 2., founded 2019.",
+          role: "",
+          organization: "",
+          website: "",
+          linkedin: "",
+          socials: [],
+          registry: expect.objectContaining({ number: "09-09-000001" }),
+          news: [],
+          sources: ENTRY.sources,
+        },
+      });
+    });
+
+    test("a register entry without activity or founding year still reads as a sentence", async () => {
+      const sparse = { ...ENTRY, activity: "", founded: "" };
+      const outcome = await researchEntity(
+        HUNGARIAN,
+        withRegister(null, async () => sparse).deps
+      );
+      expect(outcome.found && outcome.profile.summary).toBe(
+        "Brightmoor Világítás Kft.: Hungarian company. Seat: 4024 Debrecen, Példa utca 2.."
       );
     });
 
@@ -272,6 +317,14 @@ describe("researchEntity", () => {
       );
       expect(asked).toBe(false);
     });
+  });
+
+  test("without a date given, the research is dated today", async () => {
+    const { calls, deps: d } = deps({});
+    await researchEntity(COMPANY, { ...d, today: undefined });
+    expect(calls[0].user).toStartWith(
+      `Today is ${new Date().toISOString().slice(0, 10)}.`
+    );
   });
 
   test("an agent that cannot search says why", async () => {
@@ -337,6 +390,7 @@ describe("accepting a researched profile", () => {
     for (const shown of [
       "https://www.linkedin.com/company/brightmoor-example",
       "Registration number: 09-09-000000",
+      "- Main activity: 2740 Lighting equipment manufacturing",
       "2026-09-02 Brightmoor opens a second plant",
     ])
       expect(out.text()).toContain(shown);

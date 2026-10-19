@@ -31,6 +31,7 @@ const NEMZETICEGTAR = "https://www.nemzeticegtar.hu/";
 const USER_AGENT = "Mozilla/5.0 (compatible; PAL knowledge research)";
 const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_REDIRECTS = 5;
+const REDIRECTS = new Set([301, 302, 303, 307, 308]);
 const SEARCH_TOKEN_RE = /name="ceginfo_csrf_token" value="([^"]+)"/;
 const OFFICERS_RE = /Cégjegyzésre jogosultak<\/h3>([\s\S]*?)<\/ul>/;
 const PROCEEDINGS_RE = /<p[^>]*>([^<]*(?:felszámolási|végelszámolási)[^<]*)<\/p>/;
@@ -45,35 +46,27 @@ const LONG_FORMS: Array<[RegExp, string]> = [
 const SHORT_FORM_RE = /(?:^|\s)(?:kft|zrt|nyrt|bt|kkt|rt)\.?$/i;
 
 export function isHungarianCompanyName(name: string): boolean {
-  const trimmed = name.trim();
-  return SHORT_FORM_RE.test(trimmed) || LONG_FORMS.some(([re]) => re.test(trimmed));
+  return SHORT_FORM_RE.test(name) || LONG_FORMS.some(([re]) => re.test(name));
 }
 
 function comparable(name: string): string {
-  const short = LONG_FORMS.reduce((n, [re, form]) => n.replace(re, form), name.trim());
-  return short.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+  const short = LONG_FORMS.reduce((n, [re, form]) => n.replace(re, form), name);
+  return short.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
 }
 
-const ENTITIES: Record<string, string> = {
-  amp: "&",
-  quot: '"',
-  apos: "'",
-  lt: "<",
-  gt: ">",
-  nbsp: " ",
-};
+const ENTITIES: Record<string, string> = { amp: "&", quot: '"', nbsp: " " };
 
 function decoded(html: string): string {
   return html.replace(/&(#x?[0-9a-f]+|\w+);/gi, (whole, code: string) => {
     if (code.startsWith("#x"))
       return String.fromCodePoint(Number.parseInt(code.slice(2), 16));
     if (code.startsWith("#")) return String.fromCodePoint(Number(code.slice(1)));
-    return ENTITIES[code.toLowerCase()] ?? whole;
+    return ENTITIES[code] ?? whole;
   });
 }
 
 function plainText(html: string): string {
-  return decoded(html.replace(/<[^>]+>/g, " "))
+  return decoded(html.replace(/<[^>]+>/g, ""))
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -82,7 +75,7 @@ function remember(response: Response, jar: Map<string, string>): void {
   for (const cookie of response.headers.getSetCookie()) {
     const [pair] = cookie.split(";");
     const at = pair.indexOf("=");
-    if (at > 0) jar.set(pair.slice(0, at).trim(), pair.slice(at + 1).trim());
+    jar.set(pair.slice(0, at), pair.slice(at + 1));
   }
 }
 
@@ -106,7 +99,7 @@ function session(fetchImpl: Fetch) {
       });
       remember(response, jar);
       const location = response.headers.get("location");
-      if (response.status >= 300 && response.status < 400 && location) {
+      if (location && REDIRECTS.has(response.status)) {
         current = new URL(location, current).href;
         body = undefined;
         continue;
@@ -167,7 +160,7 @@ function managers(html: string): string[] {
   const block = OFFICERS_RE.exec(html)?.[1] ?? "";
   return Array.from(block.matchAll(/<strong[^>]*>([\s\S]*?)<\/strong>/g), ([, n]) =>
     plainText(n)
-  ).filter(Boolean);
+  );
 }
 
 function proceedings(html: string): string {
@@ -182,7 +175,7 @@ function formattedNumber(digits: string): string {
 function entryFrom(hit: Hit, record: Page): HungarianRegistryEntry {
   const html = record.html;
   return {
-    name: field(html, "Rövidített név") || hit.name,
+    name: hit.name,
     fullName: field(html, "Teljes név"),
     number: formattedNumber(hit.number),
     taxNumber: field(html, "Adószám"),
@@ -201,9 +194,10 @@ export async function lookupHungarianCompany(
   name: string,
   fetchImpl: Fetch = fetch
 ): Promise<HungarianRegistryEntry | null> {
-  if (!isHungarianCompanyName(name)) return null;
+  const wanted = name.trim();
+  if (!isHungarianCompanyName(wanted)) return null;
   const browse = session(fetchImpl);
-  const hit = await findRegistered(name, browse);
+  const hit = await findRegistered(wanted, browse);
   if (!hit) return null;
   const record = await browse(`${NEMZETICEGTAR}${hit.slug}-c${hit.number}.html`);
   return entryFrom(hit, record);
