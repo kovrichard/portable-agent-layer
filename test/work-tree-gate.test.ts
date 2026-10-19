@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { reload } from "../src/hooks/lib/settings";
 import type { StopTurnPayload } from "../src/hooks/lib/stop";
+import { workSession } from "../src/hooks/lib/work-session";
 import { appendEvent } from "../src/hooks/lib/work-tree";
 import { decisionSendBack, workTreeSendBack } from "../src/hooks/lib/work-tree-gate";
 import { freshTestDir } from "./lib/test-home";
@@ -49,7 +50,15 @@ describe("the work-tree gate", () => {
   });
 
   test("names the active node so the agent knows where to record", () => {
-    appendEvent(folder, "n1", "open", { title: "Gate", parent: null });
+    appendEvent(
+      folder,
+      "n1",
+      "open",
+      { title: "Gate", parent: null },
+      undefined,
+      undefined,
+      workSession("s")
+    );
     expect(check([prompt("ship it"), bash("git commit -m x")])).toContain(
       "Work: Gate [n1]"
     );
