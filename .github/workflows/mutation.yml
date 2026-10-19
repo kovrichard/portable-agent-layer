@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - canary
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref }}

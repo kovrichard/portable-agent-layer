@@ -62,6 +62,32 @@ describe("which releases are new", () => {
     });
   });
 
+  test("a canary is older than its release and newer than the canary before it", () => {
+    expect(newer("0.91.0-canary.3", "0.91.0-canary.2")).toBe(true);
+    expect(newer("0.91.0-canary.10", "0.91.0-canary.9")).toBe(true);
+    expect(newer("0.91.0", "0.91.0-canary.3")).toBe(true);
+    expect(newer("0.91.0-canary.1", "0.90.0")).toBe(true);
+  });
+
+  const withCanaries: Release[] = [
+    { tag_name: "v0.91.0", body: body(["stable"]) },
+    { tag_name: "v0.91.0-canary.2", body: body(["second canary"]) },
+    { tag_name: "v0.91.0-canary.1", body: body(["first canary"]) },
+    { tag_name: "v0.90.0", body: body(["already had"]) },
+  ];
+
+  test("a stable update shows the stable notes, not the canaries they already cover", () => {
+    expect(summarizeReleases(withCanaries, "0.90.0", "0.91.0", "o/r")?.items).toEqual([
+      "Stable",
+    ]);
+  });
+
+  test("a canary update shows the canaries since the installed version", () => {
+    expect(
+      summarizeReleases(withCanaries, "0.91.0-canary.1", "0.91.0-canary.2", "o/r")?.items
+    ).toEqual(["Second canary"]);
+  });
+
   test("nothing when no release in the range has notes", () => {
     expect(summarizeReleases(releases, "0.90.0", "0.90.0", "o/r")).toBeNull();
   });
