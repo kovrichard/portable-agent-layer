@@ -1,0 +1,16 @@
+{
+  "baseBranch": "canary",
+  "prepare": "bun install",
+  "gate": [
+    { "name": "lint", "run": "bun run check" },
+    { "name": "types", "run": "bun run type-check" },
+    { "name": "knip", "run": "bun run knip" },
+    { "name": "jscpd", "run": "bun run jscpd" },
+    { "name": "klint", "run": "bun run klint" },
+    { "name": "madge", "run": "bun run madge" },
+    { "name": "lf", "run": "bun run lf" },
+    { "name": "secretlint", "run": "bun run secretlint" },
+    { "name": "tests", "run": "bun run test" }
+  ],
+  "uiPaths": ["src/tools/control-room/ui/"]
+}
