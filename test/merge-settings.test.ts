@@ -290,3 +290,79 @@ describe("the Antigravity command allowlist", () => {
     );
   });
 });
+
+describe("PAL's plugin marketplace", () => {
+  const marketplace = (path: string) => ({
+    pal: { source: { source: "directory", path } },
+  });
+  const template = {
+    extraKnownMarketplaces: marketplace("/pkg"),
+    enabledPlugins: { "dark-factory@pal": true },
+  };
+
+  test("the shipped template registers the package as a marketplace and enables dark-factory", () => {
+    const shipped = loadSettingsTemplate(
+      resolve(import.meta.dir, "../assets/templates/settings.claude.json"),
+      "/pkg"
+    );
+    expect(shipped.extraKnownMarketplaces).toEqual(marketplace("/pkg"));
+    expect(shipped.enabledPlugins).toEqual({ "dark-factory@pal": true });
+  });
+
+  test("install adds the marketplace and the plugin beside the user's own", () => {
+    const merged = mergeSettings(
+      {
+        extraKnownMarketplaces: { mine: { source: { source: "github", repo: "a/b" } } },
+        enabledPlugins: { "other@mine": true },
+      },
+      template
+    );
+    expect(merged.extraKnownMarketplaces).toEqual({
+      mine: { source: { source: "github", repo: "a/b" } },
+      ...marketplace("/pkg"),
+    });
+    expect(merged.enabledPlugins).toEqual({
+      "other@mine": true,
+      "dark-factory@pal": true,
+    });
+  });
+
+  test("reinstalling from another location moves the marketplace to the new path", () => {
+    const merged = mergeSettings(
+      { extraKnownMarketplaces: marketplace("/old") },
+      template
+    );
+    expect(merged.extraKnownMarketplaces).toEqual(marketplace("/pkg"));
+  });
+
+  test("a user who disabled dark-factory keeps it disabled", () => {
+    const merged = mergeSettings(
+      { enabledPlugins: { "dark-factory@pal": false } },
+      template
+    );
+    expect(merged.enabledPlugins).toEqual({ "dark-factory@pal": false });
+  });
+
+  test("uninstall removes only PAL's entries", () => {
+    const cleaned = unmergeSettings(
+      {
+        extraKnownMarketplaces: {
+          ...marketplace("/pkg"),
+          mine: { source: { source: "github", repo: "a/b" } },
+        },
+        enabledPlugins: { "dark-factory@pal": true, "other@mine": true },
+      },
+      template
+    );
+    expect(cleaned.extraKnownMarketplaces).toEqual({
+      mine: { source: { source: "github", repo: "a/b" } },
+    });
+    expect(cleaned.enabledPlugins).toEqual({ "other@mine": true });
+  });
+
+  test("uninstall drops the keys once nothing else is left in them", () => {
+    const cleaned = unmergeSettings(mergeSettings({}, template), template);
+    expect(cleaned).not.toHaveProperty("extraKnownMarketplaces");
+    expect(cleaned).not.toHaveProperty("enabledPlugins");
+  });
+});
