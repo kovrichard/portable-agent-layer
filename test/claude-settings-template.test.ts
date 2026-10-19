@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
 import { loadSettingsTemplate } from "../src/targets/lib";
 
-const PKG = resolve(import.meta.dir, "..");
+const PKG = resolve(import.meta.dir, "..").replaceAll("\\", "/");
 const TEMPLATE = resolve(PKG, "assets/templates/settings.claude.json");
 
 describe("the Claude Code settings template", () => {

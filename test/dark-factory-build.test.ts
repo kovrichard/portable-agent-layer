@@ -95,6 +95,13 @@ describe("build workflow trace delivery", () => {
     ]);
   });
 
+  test("the trace command carries the events as plain JSON, not an encoding of them", async () => {
+    const { commands, finished } = runBuildWithoutRuntimeGlobals();
+    await finished;
+    const traceCommand = commands.find((command) => command.includes("task.mjs trace"));
+    expect(traceCommand).toContain('"event":"role_run"');
+  });
+
   test("quotes, dollar signs, newlines and non-Latin-1 text in a trace field arrive unchanged", async () => {
     const { finished } = runBuildWithoutRuntimeGlobals();
     await finished;
