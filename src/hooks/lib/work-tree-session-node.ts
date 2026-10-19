@@ -1,0 +1,36 @@
+/**
+ * A session starts at its project's root, and its first record opens the
+ * session's own node there, so a new session never floats and a session
+ * that records nothing leaves nothing behind.
+ */
+
+import { readSessionNames } from "./session-names";
+import { appendEvent, newNodeId } from "./work-tree";
+
+export function sessionNodeTitle(
+  session: string | undefined,
+  now: Date = new Date(),
+  names: Record<string, string> = readSessionNames()
+): string {
+  const named = session ? names[session] : undefined;
+  return named ?? `Session ${now.toISOString().slice(0, 16).replace("T", " ")}`;
+}
+
+export function openSessionNode(
+  scope: string,
+  session: string | undefined,
+  file?: string,
+  now: Date = new Date()
+): string {
+  const id = newNodeId(now.getTime());
+  appendEvent(
+    scope,
+    id,
+    "open",
+    { title: sessionNodeTitle(session, now), parent: null },
+    file,
+    now,
+    session
+  );
+  return id;
+}

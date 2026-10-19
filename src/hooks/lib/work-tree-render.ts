@@ -46,9 +46,10 @@ function due(followUp: { due?: string }): string {
 }
 
 export function renderNodeDetail(tree: ScopeTree, node: WorkNode): string {
-  const path = activePath({ ...tree, active: node.id })
-    .map((n) => n.title)
-    .join(" › ");
+  const path = [
+    tree.scope,
+    ...activePath({ ...tree, active: node.id }).map((n) => n.title),
+  ].join(" › ");
   const lines = [
     `${label(node)} — ${node.status}`,
     `Path: ${path}`,
@@ -78,11 +79,13 @@ export function renderNodeDetail(tree: ScopeTree, node: WorkNode): string {
   return lines.join("\n");
 }
 
-function childrenOf(tree: ScopeTree, parent: string | null): WorkNode[] {
+function parentIn(tree: ScopeTree, node: WorkNode): string {
+  return node.parent && tree.nodes.has(node.parent) ? node.parent : tree.root.id;
+}
+
+function childrenOf(tree: ScopeTree, parent: string): WorkNode[] {
   return [...tree.nodes.values()]
-    .filter(
-      (n) => n.parent === parent || (parent === null && !tree.nodes.has(n.parent ?? ""))
-    )
+    .filter((n) => parentIn(tree, n) === parent)
     .sort((a, b) => a.opened.localeCompare(b.opened));
 }
 
@@ -101,14 +104,19 @@ export function renderTreeList(tree: ScopeTree, includeDone: boolean): string {
     lines.push(`${"  ".repeat(depth)}${MARK[node.status]} ${label(node)}${stop}`);
     for (const child of childrenOf(tree, node.id)) walk(child, depth + 1);
   };
-  for (const root of childrenOf(tree, null)) walk(root, 0);
-  return lines.length ? lines.join("\n") : `No work recorded for ${tree.scope} yet.`;
+  for (const top of childrenOf(tree, tree.root.id)) walk(top, 1);
+  return lines.length
+    ? [`◆ ${tree.root.title}`, ...lines].join("\n")
+    : `No work recorded for ${tree.scope} yet.`;
 }
 
 function activeSection(tree: ScopeTree): string[] {
   const path = activePath(tree);
   const active = path.at(-1);
-  if (!active) return ["Active: none in this session — enter a node below or open one."];
+  if (!active)
+    return [
+      `Active: the project root (${tree.scope}) — this session's first stopped/decide/attach opens its node here; to continue earlier work, enter a node below.`,
+    ];
   const lines = [`Active: ${label(active)}${stoppedClause(active)}`];
   if (path.length > 1) lines.push(`  Inside: ${path.map((n) => n.title).join(" › ")}`);
   for (const d of active.decisions.slice(-RECENT_DECISIONS))
@@ -162,7 +170,7 @@ export function renderPromptLine(tree: ScopeTree, newTopic: boolean): string | n
   const elsewhere = activeElsewhere(tree).length;
   const head = active
     ? `Work: ${label(active)}${stoppedClause(active)}`
-    : "Work: no active node in this session";
+    : `Work: ${tree.scope} root — this session has no node yet`;
   const tail = elsewhere ? ` · ${elsewhere} active in other sessions` : "";
   const line = clip(`${head} · ${parked} parked${tail}`, PROMPT_LINE_MAX);
   return newTopic ? `${line}\n${NEW_TOPIC_HINT}` : line;

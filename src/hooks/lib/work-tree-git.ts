@@ -6,6 +6,7 @@
 import { spawnSync } from "node:child_process";
 import { workSession } from "./work-session";
 import { appendEvent, readTree, scopeOf } from "./work-tree";
+import { openSessionNode } from "./work-tree-session-node";
 
 const GIT_TIMEOUT_MS = 1000;
 const MAX_COMMITS = 20;
@@ -54,7 +55,30 @@ function ownCommitsSince(cwd: string, from: string, to: string, email: string): 
     .reverse();
 }
 
-/** A scope with no work yet is left alone, so visiting a repo writes nothing. */
+interface GitMoves {
+  scope: string;
+  node: string;
+  branch: string | null;
+  commits: Commit[];
+  file?: string;
+  now: Date;
+}
+
+function attachMoves({ scope, node, branch, commits, file, now }: GitMoves): void {
+  if (branch)
+    appendEvent(scope, node, "attach", { kind: "branch", ref: branch }, file, now);
+  for (const commit of commits)
+    appendEvent(
+      scope,
+      node,
+      "attach",
+      { kind: "commit", ref: commit.sha, label: commit.subject },
+      file,
+      now
+    );
+}
+
+/** A scope with no work yet is left alone, so visiting a repo writes nothing; a commit made from the root opens the session's node. */
 export function attachGitProgress(
   cwd: string,
   file?: string,
@@ -69,25 +93,13 @@ export function attachGitProgress(
   const cursor = tree.gitCursor;
   if (cursor?.head === current.head && cursor.branch === current.branch) return;
 
-  if (cursor && tree.active) {
-    if (cursor.branch !== current.branch)
-      appendEvent(
-        scope,
-        tree.active,
-        "attach",
-        { kind: "branch", ref: current.branch },
-        file,
-        now
-      );
-    for (const commit of ownCommitsSince(cwd, cursor.head, current.head, current.email))
-      appendEvent(
-        scope,
-        tree.active,
-        "attach",
-        { kind: "commit", ref: commit.sha, label: commit.subject },
-        file,
-        now
-      );
+  if (cursor) {
+    const branch = cursor.branch !== current.branch ? current.branch : null;
+    const commits = ownCommitsSince(cwd, cursor.head, current.head, current.email);
+    const node =
+      tree.active ??
+      (commits.length > 0 ? openSessionNode(scope, session, file, now) : null);
+    if (node) attachMoves({ scope, node, branch, commits, file, now });
   }
   appendEvent(
     scope,

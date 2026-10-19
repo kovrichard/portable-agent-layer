@@ -104,9 +104,17 @@ interface GitCursor {
   head: string;
 }
 
-/** `active` is the viewing session's node; `lanes` holds every session's, keyed by session ("" for none). */
+export const PROJECT_ROOT = "root";
+
+/**
+ * One project's tree: `root` is the project itself, the parent of every
+ * top-level node, shared by all sessions and never stored. `active` is the
+ * viewing session's node (null while it sits at the root); `lanes` holds every
+ * session's, keyed by session ("" for none).
+ */
 export interface ScopeTree {
   scope: string;
+  root: WorkNode;
   active: string | null;
   lanes: Map<string, string>;
   nodes: Map<string, WorkNode>;
@@ -279,7 +287,8 @@ function apply(tree: ScopeTree, event: WorkEvent): void {
     return;
   }
   if (event.type === "open") {
-    const node = emptyNode(event.node, event.title, event.parent, event.ts);
+    const parent = event.parent ?? PROJECT_ROOT;
+    const node = emptyNode(event.node, event.title, parent, event.ts);
     node.links = event.links ?? {};
     tree.nodes.set(node.id, node);
     activate(tree, node, laneOf(event));
@@ -296,6 +305,7 @@ export function buildTree(
 ): ScopeTree {
   const tree: ScopeTree = {
     scope,
+    root: emptyNode(PROJECT_ROOT, scope, null, ""),
     active: null,
     lanes: new Map(),
     nodes: new Map(),
