@@ -239,9 +239,10 @@ describe("CI", () => {
 describe("notify", () => {
   test("the configured command receives the message and the task in its environment", () => {
     const out = join(home, "notified.txt");
+    const bashPath = out.replaceAll("\\", "/");
     const result = notify("t1", "ready", "PR is green", {
       ...env,
-      DARK_FACTORY_NOTIFY: `{ echo "$DARK_FACTORY_TASK $DARK_FACTORY_KIND"; cat; } > ${out}`,
+      DARK_FACTORY_NOTIFY: `{ echo "$DARK_FACTORY_TASK $DARK_FACTORY_KIND"; cat; } > "${bashPath}"`,
     });
     expect(result).toEqual({ delivered: true, configured: true });
     expect(readFileSync(out, "utf8")).toBe("t1 ready\nPR is green");
