@@ -176,6 +176,29 @@ describe("work tree", () => {
       expect(view("s2").active).toBe("a");
     });
 
+    test("a session at the root that records on a parked node wakes it", () => {
+      openIn("s1", "a");
+      appendEvent("pal", "a", "park", {}, file, at(), "s1");
+      appendEvent("pal", "a", "stopped", { text: "back on it" }, file, at(), "s2");
+      expect(view("s2").active).toBe("a");
+      expect(view("s2").nodes.get("a")?.status).toBe("active");
+    });
+
+    test("recording on a parked node does not pull a session off its own node", () => {
+      openIn("s1", "a");
+      openIn("s1", "b");
+      appendEvent("pal", "a", "decide", { text: "noted" }, file, at(), "s1");
+      expect(view("s1").active).toBe("b");
+      expect(view("s1").nodes.get("a")?.status).toBe("parked");
+    });
+
+    test("recording on a node another session holds does not take it over", () => {
+      openIn("s1", "a");
+      appendEvent("pal", "a", "stopped", { text: "peek" }, file, at(), "s2");
+      expect(view("s1").active).toBe("a");
+      expect(view("s2").active).toBeNull();
+    });
+
     test("events without a session share one lane, as before", () => {
       openIn("s1", "a");
       openIn("", "b");
