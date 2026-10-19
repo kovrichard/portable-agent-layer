@@ -84,13 +84,13 @@ describe("pal cli work", () => {
     await work("attach", "pr", "#119", "--label", "draft");
     await work("follow-up", "installer", "--due", "2026-10-25");
     const id = activeId();
-    await work("wait", "Rico", "picks");
+    await work("wait", "Pratt", "picks");
     const node = tree().nodes.get(id);
     expect(node?.decisions[0]).toMatchObject({ text: "keep SJR", why: "main had it" });
     expect(node?.artifacts[0]).toMatchObject({ kind: "pr", ref: "#119", label: "draft" });
     expect(node?.followUps[0]).toMatchObject({ text: "installer", due: "2026-10-25" });
     expect(node?.status).toBe("waiting");
-    expect(node?.waitingOn).toBe("Rico picks");
+    expect(node?.waitingOn).toBe("Pratt picks");
   });
 
   test("a write with no active node and no --node fails without recording", async () => {

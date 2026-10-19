@@ -37,7 +37,7 @@ describe("session context", () => {
     open("a", "Workflow test");
     appendEvent("pal", "a", "stopped", { text: "restore WIP wording" }, file, at());
     open("w", "Pick a wording", null);
-    appendEvent("pal", "w", "wait", { on: "Rico chooses" }, file, at());
+    appendEvent("pal", "w", "wait", { on: "Pratt chooses" }, file, at());
     appendEvent("pal", "a", "enter", {}, file, at());
     open("b", "Merge conflict", "a");
     appendEvent("pal", "b", "decide", { text: "keep SJR" }, file, at());
@@ -55,7 +55,7 @@ describe("session context", () => {
     expect(text).toContain("Active: Merge conflict [b] — no stopped-at recorded");
     expect(text).toContain("Inside: Workflow test › Merge conflict");
     expect(text).toContain("Decided 2026-10-18: keep SJR");
-    expect(text).toContain("- Pick a wording [w]: Rico chooses");
+    expect(text).toContain("- Pick a wording [w]: Pratt chooses");
     expect(text).toContain("- Workflow test [a] — stopped at: restore WIP wording");
     expect(text).toContain("- installer (due 2026-10-25) — on Merge conflict");
     expect(text).toContain("pal cli work");

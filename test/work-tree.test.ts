@@ -77,11 +77,11 @@ describe("work tree", () => {
     expect(tree.nodes.get("a")?.stoppedAt).toBe("step 3");
 
     appendEvent("pal", "a", "enter", {}, file, at());
-    appendEvent("pal", "a", "wait", { on: "Rico picks the wording" }, file, at());
+    appendEvent("pal", "a", "wait", { on: "Pratt picks the wording" }, file, at());
     tree = readTree("pal", file);
     expect(tree.active).toBeNull();
     expect(tree.nodes.get("a")?.status).toBe("waiting");
-    expect(tree.nodes.get("a")?.waitingOn).toBe("Rico picks the wording");
+    expect(tree.nodes.get("a")?.waitingOn).toBe("Pratt picks the wording");
   });
 
   test("entering a waiting node makes it active and clears what it waited on", () => {
@@ -124,9 +124,9 @@ describe("work tree", () => {
 
   test("scopes do not see each other's nodes", () => {
     open("a", "pal work", null, "pal");
-    open("b", "letterbox work", null, "letterbox");
+    open("b", "harbor work", null, "harbor");
     expect([...readTree("pal", file).nodes.keys()]).toEqual(["a"]);
-    expect(readTree("letterbox", file).active).toBe("b");
+    expect(readTree("harbor", file).active).toBe("b");
   });
 
   test("the git cursor is the latest one recorded", () => {
