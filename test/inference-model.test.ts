@@ -26,7 +26,8 @@ function flagValue(args: string[], flag: string): string | undefined {
 }
 
 describe("inferenceModel", () => {
-  test("claude routes use Haiku for small and Sonnet for medium", () => {
+  test("claude routes use Haiku for small and Sonnet 5.5 for medium", () => {
+    expect(SONNET_MODEL).toBe("claude-sonnet-5-5");
     expect(inferenceModel("claude-spawn", "small")).toBe(HAIKU_MODEL);
     expect(inferenceModel("claude-spawn", "medium")).toBe(SONNET_MODEL);
     expect(inferenceModel("anthropic-api", "small")).toBe(HAIKU_MODEL);

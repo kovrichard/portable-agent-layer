@@ -6,8 +6,8 @@ import type { AgentType } from "./agent";
 
 export const HAIKU_MODEL = "claude-haiku-4-5-20251001";
 export const HAIKU_5_5_MODEL = "claude-haiku-5-5";
-export const SONNET_MODEL = "claude-sonnet-5";
-export const FABLE_MODEL = "claude-fable-5";
+export const SONNET_MODEL = "claude-sonnet-5-5";
+export const FABLE_MODEL = "claude-fable-5-1";
 
 export const INFERENCE_TIERS = ["small", "medium"] as const;
 export type InferenceTier = (typeof INFERENCE_TIERS)[number];
@@ -176,14 +176,14 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
     cacheWrite1h: 0.2,
     cacheRead: 0.01,
   },
-  "claude-fable-5-1": {
+  [FABLE_MODEL]: {
     input: 10,
     output: 50,
     cacheWrite5m: 12.5,
     cacheWrite1h: 20,
     cacheRead: 0.25,
   },
-  [FABLE_MODEL]: {
+  "claude-fable-5": {
     input: 10,
     output: 50,
     cacheWrite5m: 12.5,

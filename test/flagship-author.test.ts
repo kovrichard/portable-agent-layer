@@ -27,9 +27,9 @@ function authorModel(agent: string | undefined) {
 }
 
 describe("flagship authoring registry", () => {
-  test("claude resolves to Fable 5", () => {
+  test("claude resolves to Fable 5.1", () => {
     expect(flagshipAuthorModel("claude")).toBe(FABLE_MODEL);
-    expect(FABLE_MODEL).toBe("claude-fable-5");
+    expect(FABLE_MODEL).toBe("claude-fable-5-1");
   });
 
   test("codex resolves to GPT-6 Astra", () => {
