@@ -223,13 +223,11 @@ type Settings = Record<string, unknown> & {
 };
 
 /**
- * Load a settings template, replacing {{PKG_ROOT}} and {{PAL_HOME}} with the actual paths.
+ * Load a settings template, replacing {{PKG_ROOT}} with the actual package root.
  */
 export function loadSettingsTemplate(templatePath: string, pkgRoot: string): Settings {
   const raw = readFileSync(templatePath, "utf-8");
-  const resolved = raw
-    .replaceAll("{{PKG_ROOT}}", pkgRoot)
-    .replaceAll("{{PAL_HOME}}", palHome().replaceAll("\\", "/"));
+  const resolved = raw.replaceAll("{{PKG_ROOT}}", pkgRoot);
   try {
     return JSON.parse(resolved) as Settings;
   } catch (e) {

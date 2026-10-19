@@ -367,26 +367,8 @@ describe("PAL's plugin marketplace", () => {
   });
 });
 
-describe("dark-factory's state under the PAL home", () => {
+describe("env variables from the settings template", () => {
   const template = { env: { DARK_FACTORY_HOME: "/home/pal/dark-factory" } };
-
-  test("the shipped template points the factory at the PAL home", () => {
-    const previous = process.env.PAL_HOME;
-    const palHome = resolve("/home/pal");
-    process.env.PAL_HOME = palHome;
-    try {
-      const shipped = loadSettingsTemplate(
-        resolve(import.meta.dir, "../assets/templates/settings.claude.json"),
-        "/pkg"
-      );
-      expect(shipped.env).toEqual({
-        DARK_FACTORY_HOME: `${palHome.replaceAll("\\", "/")}/dark-factory`,
-      });
-    } finally {
-      if (previous === undefined) delete process.env.PAL_HOME;
-      else process.env.PAL_HOME = previous;
-    }
-  });
 
   test("install adds the variable beside the user's own", () => {
     const merged = mergeSettings({ env: { EDITOR: "vim" } }, template);
