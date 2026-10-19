@@ -111,13 +111,11 @@ describe("tasks", () => {
   });
 
   test("a workflow trace arrives as one event per entry, tagged with the task", () => {
-    const encoded = Buffer.from(
-      JSON.stringify([
-        { event: "role_run", role: "planner" },
-        { event: "review", round: 1 },
-      ])
-    ).toString("base64");
-    expect(recordTrace("t1", encoded, env)).toEqual({ recorded: 2 });
+    const trace = JSON.stringify([
+      { event: "role_run", role: "planner" },
+      { event: "review", round: 1 },
+    ]);
+    expect(recordTrace("t1", trace, env)).toEqual({ recorded: 2 });
     expect(eventsNamed("role_run")).toEqual([
       expect.objectContaining({ task: "t1", role: "planner" }),
     ]);

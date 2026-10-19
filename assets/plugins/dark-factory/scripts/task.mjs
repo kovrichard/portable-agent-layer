@@ -107,8 +107,8 @@ export function prepare(id, env = process.env) {
   };
 }
 
-export function recordTrace(id, encoded, env = process.env) {
-  const events = JSON.parse(Buffer.from(encoded, "base64").toString("utf8"));
+export function recordTrace(id, traceJson, env = process.env) {
+  const events = JSON.parse(traceJson);
   for (const event of events) appendEvent({ ...event, task: id }, env);
   return { recorded: events.length };
 }

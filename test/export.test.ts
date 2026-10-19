@@ -76,6 +76,12 @@ beforeAll(() => {
   writeFileSync(resolve(factory, "tasks", "t1", "spec.md"), "# Spec\n");
   writeFileSync(resolve(factory, "worktrees", "t1", "index.ts"), "code\n");
 
+  mkdirSync(resolve(TEST_HOME, "memory", "work-tree"), { recursive: true });
+  writeFileSync(
+    resolve(TEST_HOME, "memory", "work-tree", "events.jsonl"),
+    '{"op":"open"}\n'
+  );
+
   process.env.PAL_HOME = TEST_HOME;
 });
 
@@ -117,12 +123,11 @@ describe("collectExportFiles", () => {
     expect(shipped).toHaveLength(0);
   });
 
-  test("carries the dark-factory tasks and events but not its worktrees", async () => {
+  test("leaves the dark-factory folder on its machine but carries the progress tree", async () => {
     const { collectExportFiles } = await import("../src/hooks/lib/export");
     const files = collectExportFiles();
-    expect(files).toContain("dark-factory/events.jsonl");
-    expect(files).toContain("dark-factory/tasks/t1/spec.md");
-    expect(files.filter((f) => f.startsWith("dark-factory/worktrees"))).toEqual([]);
+    expect(files.filter((f) => f.startsWith("dark-factory"))).toEqual([]);
+    expect(files).toContain("memory/work-tree/events.jsonl");
   });
 
   test("never collects the credentials in ~/.pal/.env", async () => {

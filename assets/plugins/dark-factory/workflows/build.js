@@ -26,7 +26,7 @@ const CI_ROUNDS = 3
 const CI_POLLS = 6
 
 const { task, pluginRoot } = args
-const S = `node ${pluginRoot}/scripts`
+const S = `node ${quoted(pluginRoot)}/scripts`
 const trace = []
 let attempt = 0
 
@@ -151,8 +151,8 @@ async function untilGreen(p, ladder, instructions) {
 }
 
 async function finish(p, status, message) {
-  const encoded = btoa(JSON.stringify(trace.map((event) => ({ ...event, task }))))
-  await script(`${S}/task.mjs trace ${task} ${encoded}`, 'Ship', 'trace')
+  const traceJson = JSON.stringify(trace.map((event) => ({ ...event, task })))
+  await script(`${S}/task.mjs trace ${task} ${quoted(traceJson)}`, 'Ship', 'trace')
   await script(`${S}/task.mjs status ${task} ${status} ${quoted(message)}`, 'Ship', 'status')
   await script(`${S}/notify.mjs ${task} ${status} ${quoted(message)}`, 'Ship', 'notify')
   return { task, status, message, pr: p?.pr }

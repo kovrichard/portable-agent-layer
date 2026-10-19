@@ -1,6 +1,6 @@
 import { existsSync, lstatSync, readlinkSync, renameSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
-import { paths, platform } from "../hooks/lib/paths";
+import { palHome, paths, platform } from "../hooks/lib/paths";
 import { readJson, writeJson } from "../targets/lib";
 
 /** Something an older PAL wrote that the current one neither writes nor reads. */
@@ -39,6 +39,30 @@ const claudeFileToolRules: Leftover = {
     permissions.allow = permissions.allow.filter(
       (rule) => !isPathScopedFileToolRule(rule)
     );
+    writeJson(claudeSettings(), settings);
+  },
+};
+
+const palWrittenFactoryHome = () => resolve(palHome(), "dark-factory");
+
+function pinnedFactoryHome(): string | null {
+  const env = (readJson<Json>(claudeSettings(), {}).env ?? {}) as Json;
+  const value = env.DARK_FACTORY_HOME;
+  return typeof value === "string" && resolve(value) === palWrittenFactoryHome()
+    ? value
+    : null;
+}
+
+const claudeFactoryHomeOverride: Leftover = {
+  id: "claude-factory-home-override",
+  description:
+    "Remove the DARK_FACTORY_HOME PAL wrote into Claude Code settings, so the factory keeps its own home under ~/.dark-factory",
+  find: () => (pinnedFactoryHome() ? ["env.DARK_FACTORY_HOME"] : []),
+  remove() {
+    const settings = readJson<Json>(claudeSettings(), {});
+    const env = settings.env as Json;
+    delete env.DARK_FACTORY_HOME;
+    if (Object.keys(env).length === 0) delete settings.env;
     writeJson(claudeSettings(), settings);
   },
 };
@@ -111,6 +135,7 @@ const debugLogPrev: Leftover = {
 
 export const LEFTOVERS: Leftover[] = [
   claudeFileToolRules,
+  claudeFactoryHomeOverride,
   startupProjectsFile,
   opencodePluginOldName,
   copilotInstructionsLink,
