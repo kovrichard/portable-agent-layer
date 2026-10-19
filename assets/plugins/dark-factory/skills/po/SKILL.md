@@ -11,20 +11,21 @@ The scripts live in `${CLAUDE_PLUGIN_ROOT}/scripts`. Run them with `node`. Task 
 
 ## A new request
 
-1. Read enough of the repository to understand what the request touches. The repo needs a `.dark-factory.json`; if it is missing, write one with the user (see the plugin README).
-2. Ask the user only what the code cannot tell you: what they want to happen, and how they will know it works. Batch the questions; one round is the goal.
-3. Pick the category, deterministically by these rules:
+1. Run `node ${CLAUDE_PLUGIN_ROOT}/scripts/task.mjs doctor`. If it names missing tools, tell the user what to install and stop.
+2. Read enough of the repository to understand what the request touches. The repo needs a `.dark-factory.json`; if it is missing, write one with the user (see the plugin README).
+3. Ask the user only what the code cannot tell you: what they want to happen, and how they will know it works. Batch the questions; one round is the goal.
+4. Pick the category, deterministically by these rules:
    - `small`: copy, config, or a change with no new behaviour.
    - `bug`: existing behaviour is wrong.
    - `feature`: new behaviour inside the existing structure.
    - `big-feature`: new behaviour that needs new modules or data.
    - `refactor`: structure changes, behaviour does not.
-4. Create the task: `node ${CLAUDE_PLUGIN_ROOT}/scripts/task.mjs new "<title>" <repo-path> <category>`. It prints the task id and the spec path.
-5. Write the spec at that path:
+5. Create the task: `node ${CLAUDE_PLUGIN_ROOT}/scripts/task.mjs new "<title>" <repo-path> <category>`. It prints the task id and the spec path.
+6. Write the spec at that path:
    - **Goal**: one paragraph, in the user's terms.
    - **Acceptance criteria**: numbered, each one checkable by a test or by using the app.
    - **Out of scope**: what this task must not touch.
-6. Show the user the spec and the category, and wait for an explicit go.
+7. Show the user the spec and the category, and wait for an explicit go.
 
 ## On go
 

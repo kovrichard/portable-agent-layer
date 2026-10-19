@@ -13,6 +13,15 @@ Without PAL:
 
 With PAL, it is installed for you.
 
+## Requirements
+
+- `node`: runs the factory's scripts.
+- `git`: worktrees, branches and pushes.
+- `gh`, signed in with `gh auth login`: opens the pull request and reads its CI checks.
+- `bash`: runs the gate and the notify commands. On Windows it comes with Git for Windows.
+
+The PO checks for these before it takes a request, and every build checks again before it starts.
+
 ## Use
 
 Run `/dark-factory:po` and say what you want. The PO writes a spec with acceptance criteria, shows it to you, and starts the build once you say go. You hear back when the pull request is ready, or when the factory needs an answer only you can give.
