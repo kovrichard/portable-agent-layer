@@ -5,6 +5,7 @@
  */
 
 import type { IngestInput, IngestResult } from "../../tools/knowledge/ingest";
+import type { RegisterEntry } from "./company-register";
 import {
   closedObject,
   type ExtractedEntity,
@@ -12,7 +13,6 @@ import {
   type ResearchProfile,
   type ReviewItem,
 } from "./entity-extraction";
-import type { HungarianRegistryEntry } from "./hungarian-registry";
 import type { inference } from "./inference";
 import { logDebug, logError } from "./log";
 
@@ -28,7 +28,7 @@ export interface ResearchDeps {
   principal: string;
   infer: typeof inference;
   today?: string;
-  registry?: (name: string) => Promise<HungarianRegistryEntry | null>;
+  registry?: (name: string) => Promise<RegisterEntry | null>;
 }
 
 const MAX_TARGETS = 3;
@@ -127,7 +127,7 @@ export function researchSystem(principal: string, kind: ResearchTarget["kind"]):
   ].join("\n");
 }
 
-function registryFacts(entry: HungarianRegistryEntry): string {
+function registryFacts(entry: RegisterEntry): string {
   return [
     "The company register, already read: use it to tell this company from namesakes and do not search the register again.",
     `registered name: ${entry.fullName || entry.name}`,
@@ -142,7 +142,7 @@ function registryFacts(entry: HungarianRegistryEntry): string {
 function researchUser(
   target: ResearchTarget,
   today: string,
-  registry: HungarianRegistryEntry | null
+  registry: RegisterEntry | null
 ): string {
   return [
     `Today is ${today}.`,
@@ -189,7 +189,7 @@ export type ResearchOutcome =
 async function registryEntry(
   target: ResearchTarget,
   deps: ResearchDeps
-): Promise<HungarianRegistryEntry | null> {
+): Promise<RegisterEntry | null> {
   if (target.kind !== "company" || !deps.registry) return null;
   try {
     return await deps.registry(target.name);
@@ -199,11 +199,12 @@ async function registryEntry(
   }
 }
 
-function registryOnlyProfile(entry: HungarianRegistryEntry): ResearchProfile {
+function registryOnlyProfile(entry: RegisterEntry): ResearchProfile {
   const founded = entry.founded ? `, founded ${entry.founded}` : "";
+  const what = entry.activity || `company registered in ${entry.country}`;
   return {
     match: "sure",
-    summary: `${entry.name}: ${entry.activity || "Hungarian company"}. Seat: ${entry.seat}${founded}.`,
+    summary: `${entry.name}: ${what}. Seat: ${entry.seat}${founded}.`,
     role: "",
     organization: "",
     website: "",
@@ -215,7 +216,7 @@ function registryOnlyProfile(entry: HungarianRegistryEntry): ResearchProfile {
   };
 }
 
-function registryOf(entry: HungarianRegistryEntry): ResearchProfile["registry"] {
+function registryOf(entry: RegisterEntry): ResearchProfile["registry"] {
   return {
     name: entry.fullName || entry.name,
     number: entry.number,
@@ -232,7 +233,7 @@ function registryOf(entry: HungarianRegistryEntry): ResearchProfile["registry"] 
  *  enough to keep the profile even when the web turned up nothing. */
 function withRegistry(
   profile: ResearchProfile | null,
-  entry: HungarianRegistryEntry
+  entry: RegisterEntry
 ): ResearchProfile {
   const base =
     profile?.match === "sure" ? withWebUrlsOnly(profile) : registryOnlyProfile(entry);

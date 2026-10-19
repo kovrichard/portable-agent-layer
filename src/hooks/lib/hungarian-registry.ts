@@ -1,25 +1,11 @@
 /**
  * The Hungarian company register, read directly. Web search does not index it, so a
  * young or small Kft. is invisible to a search-only lookup. Only a name ending in a
- * Hungarian legal form is looked up: ceginfo.hu resolves the exact name to its
+ * Hungarian legal form is recognized: ceginfo.hu resolves the exact name to its
  * registration number, nemzeticegtar.hu shows the record for free.
  */
 
-export interface HungarianRegistryEntry {
-  name: string;
-  fullName: string;
-  number: string;
-  taxNumber: string;
-  seat: string;
-  status: string;
-  activity: string;
-  founded: string;
-  managers: string[];
-  url: string;
-  sources: string[];
-}
-
-type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
+import type { CompanyRegister, Fetch, RegisteredCompany } from "./company-register";
 
 interface Page {
   url: string;
@@ -45,7 +31,7 @@ const LONG_FORMS: Array<[RegExp, string]> = [
 ];
 const SHORT_FORM_RE = /(?:^|\s)(?:kft|zrt|nyrt|bt|kkt|rt)\.?$/i;
 
-export function isHungarianCompanyName(name: string): boolean {
+function isHungarianCompanyName(name: string): boolean {
   return SHORT_FORM_RE.test(name) || LONG_FORMS.some(([re]) => re.test(name));
 }
 
@@ -172,7 +158,7 @@ function formattedNumber(digits: string): string {
   return `${digits.slice(0, 2)}-${digits.slice(2, 4)}-${digits.slice(4)}`;
 }
 
-function entryFrom(hit: Hit, record: Page): HungarianRegistryEntry {
+function entryFrom(hit: Hit, record: Page): RegisteredCompany {
   const html = record.html;
   return {
     name: hit.name,
@@ -189,16 +175,20 @@ function entryFrom(hit: Hit, record: Page): HungarianRegistryEntry {
   };
 }
 
-/** Null for a name without a Hungarian legal form, and for anything but one exact match. */
-export async function lookupHungarianCompany(
+/** Null for anything but one exact match. */
+async function lookupHungarianCompany(
   name: string,
-  fetchImpl: Fetch = fetch
-): Promise<HungarianRegistryEntry | null> {
-  const wanted = name.trim();
-  if (!isHungarianCompanyName(wanted)) return null;
+  fetchImpl: Fetch
+): Promise<RegisteredCompany | null> {
   const browse = session(fetchImpl);
-  const hit = await findRegistered(wanted, browse);
+  const hit = await findRegistered(name, browse);
   if (!hit) return null;
   const record = await browse(`${NEMZETICEGTAR}${hit.slug}-c${hit.number}.html`);
   return entryFrom(hit, record);
 }
+
+export const hungarianRegister: CompanyRegister = {
+  country: "Hungary",
+  recognizes: isHungarianCompanyName,
+  lookup: lookupHungarianCompany,
+};

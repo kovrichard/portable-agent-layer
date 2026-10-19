@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { runKnowledge } from "../src/cli/knowledge";
 import { researchFromCli } from "../src/cli/knowledge-research";
+import type { RegisterEntry } from "../src/hooks/lib/company-register";
 import type { ResearchProfile } from "../src/hooks/lib/entity-extraction";
 import {
   newResearchTargets,
@@ -14,7 +15,6 @@ import {
   researchSystem,
 } from "../src/hooks/lib/entity-research";
 import { acceptReview, pendingReviews } from "../src/hooks/lib/entity-review";
-import type { HungarianRegistryEntry } from "../src/hooks/lib/hungarian-registry";
 import type { inference } from "../src/hooks/lib/inference";
 import { reload } from "../src/hooks/lib/settings";
 import { ingestEntities } from "../src/tools/knowledge/ingest";
@@ -187,7 +187,8 @@ describe("researchEntity", () => {
   });
 
   describe("with the Hungarian register", () => {
-    const ENTRY: HungarianRegistryEntry = {
+    const ENTRY: RegisterEntry = {
+      country: "Hungary",
       name: "Brightmoor Világítás Kft.",
       fullName: "Brightmoor Világítás Korlátolt Felelősségű Társaság",
       number: "09-09-000001",
@@ -262,7 +263,7 @@ describe("researchEntity", () => {
         withRegister(null, async () => sparse).deps
       );
       expect(outcome.found && outcome.profile.summary).toBe(
-        "Brightmoor Világítás Kft.: Hungarian company. Seat: 4024 Debrecen, Példa utca 2.."
+        "Brightmoor Világítás Kft.: company registered in Hungary. Seat: 4024 Debrecen, Példa utca 2.."
       );
     });
 

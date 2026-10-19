@@ -1,8 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import {
-  isHungarianCompanyName,
-  lookupHungarianCompany,
-} from "../src/hooks/lib/hungarian-registry";
+import { lookupCompanyRegister } from "../src/hooks/lib/company-register-router";
+import { hungarianRegister } from "../src/hooks/lib/hungarian-registry";
 
 const HOME = `<form action="https://ceginfo.hu/cegkereso/rapid" method="post">
 <input type="hidden" name="ceginfo_csrf_token" value="tok123"></form>`;
@@ -94,7 +92,7 @@ describe("which names are Hungarian companies", () => {
     "Brightmoor Világítás Korlátolt Felelősségű Társaság",
     "Corran Zártkörűen Működő Részvénytársaság",
   ])("%s is", (name) => {
-    expect(isHungarianCompanyName(name)).toBe(true);
+    expect(hungarianRegister.recognizes(name)).toBe(true);
   });
 
   test.each([
@@ -110,20 +108,21 @@ describe("which names are Hungarian companies", () => {
     "Betéti Társaság Partners",
     "Közkereseti Társaság Studio",
   ])("%s is not", (name) => {
-    expect(isHungarianCompanyName(name)).toBe(false);
+    expect(hungarianRegister.recognizes(name)).toBe(false);
   });
 });
 
 describe("looking a company up in the Hungarian register", () => {
   test("a non-Hungarian name is never looked up", async () => {
     const { seen, fetchImpl } = registrySites(ONE_HIT);
-    expect(await lookupHungarianCompany("Brightmoor Ltd.", fetchImpl)).toBeNull();
+    expect(await lookupCompanyRegister("Brightmoor Ltd.", fetchImpl)).toBeNull();
     expect(seen).toEqual([]);
   });
 
   test("the exact name resolves to its number, and the record fills in the rest", async () => {
     const { fetchImpl } = registrySites(ONE_HIT);
-    expect(await lookupHungarianCompany(NAME, fetchImpl)).toEqual({
+    expect(await lookupCompanyRegister(NAME, fetchImpl)).toEqual({
+      country: "Hungary",
       name: NAME,
       fullName: "Brightmoor Világítás Korlátolt Felelősségű Társaság",
       number: "09-09-000000",
@@ -144,14 +143,14 @@ describe("looking a company up in the Hungarian register", () => {
 
   test("a name with spaces around it still resolves", async () => {
     const { fetchImpl } = registrySites(ONE_HIT);
-    expect((await lookupHungarianCompany(`  ${NAME} `, fetchImpl))?.number).toBe(
+    expect((await lookupCompanyRegister(`  ${NAME} `, fetchImpl))?.number).toBe(
       "09-09-000000"
     );
   });
 
   test("an officer's mother's name and home address are not kept", async () => {
     const { fetchImpl } = registrySites(ONE_HIT);
-    const kept = JSON.stringify(await lookupHungarianCompany(NAME, fetchImpl));
+    const kept = JSON.stringify(await lookupCompanyRegister(NAME, fetchImpl));
     expect(kept).not.toContain("Minta Anna");
     expect(kept).not.toContain("Otthon utca");
   });
@@ -166,14 +165,14 @@ describe("looking a company up in the Hungarian register", () => {
     const { fetchImpl } = registrySites(
       hit("brightmoor-vilagitas", "0909000000", `Brightmoor Világítás ${short}`)
     );
-    const entry = await lookupHungarianCompany(`Brightmoor Világítás ${long}`, fetchImpl);
+    const entry = await lookupCompanyRegister(`Brightmoor Világítás ${long}`, fetchImpl);
     expect(entry?.number).toBe("09-09-000000");
   });
 
   test("entities in a listed name are read as the characters they stand for", async () => {
     const listed = "Brightmoor &amp; Társa &quot;Fény&quot;&nbsp;Kft.";
     const { fetchImpl } = registrySites(hit("brightmoor-es-tarsa", "0909000002", listed));
-    const entry = await lookupHungarianCompany(
+    const entry = await lookupCompanyRegister(
       'Brightmoor & Társa "Fény" Kft.',
       fetchImpl
     );
@@ -182,7 +181,7 @@ describe("looking a company up in the Hungarian register", () => {
 
   test("the search is posted with its token, inside the session the home page opened", async () => {
     const { seen, fetchImpl } = registrySites(ONE_HIT);
-    await lookupHungarianCompany(NAME, fetchImpl);
+    await lookupCompanyRegister(NAME, fetchImpl);
     expect(seen.map((s) => s.method)).toEqual(["GET", "POST", "GET", "GET", "GET"]);
     const search = seen[1];
     expect(search.cookie).toBe("ci_session=abc; lang=hu");
@@ -195,7 +194,7 @@ describe("looking a company up in the Hungarian register", () => {
 
   test("a home page with no search token is an error, not an empty result", async () => {
     const { fetchImpl } = registrySites(ONE_HIT, "<form></form>");
-    await expect(lookupHungarianCompany(NAME, fetchImpl)).rejects.toThrow(
+    await expect(lookupCompanyRegister(NAME, fetchImpl)).rejects.toThrow(
       "ceginfo.hu: the search form has no token"
     );
   });
@@ -208,25 +207,25 @@ describe("looking a company up in the Hungarian register", () => {
         "Brightmoor Világítás Plusz Kft."
       )
     );
-    expect(await lookupHungarianCompany(NAME, fetchImpl)).toBeNull();
+    expect(await lookupCompanyRegister(NAME, fetchImpl)).toBeNull();
   });
 
   test("two companies listed under the exact name are not told apart by guessing", async () => {
     const { fetchImpl } = registrySites(
       ONE_HIT + hit("brightmoor-vilagitas-kft", "1309000003", NAME)
     );
-    expect(await lookupHungarianCompany(NAME, fetchImpl)).toBeNull();
+    expect(await lookupCompanyRegister(NAME, fetchImpl)).toBeNull();
   });
 
   test("no hit is no entry", async () => {
     const { fetchImpl } = registrySites("<div class='talalatok'></div>");
-    expect(await lookupHungarianCompany(NAME, fetchImpl)).toBeNull();
+    expect(await lookupCompanyRegister(NAME, fetchImpl)).toBeNull();
   });
 
   test("a record missing fields leaves them empty", async () => {
     const sparse = `<h6>Teljes név</h6><p>Brightmoor Világítás Korlátolt Felelősségű Társaság</p>`;
     const { fetchImpl } = registrySites(ONE_HIT, HOME, sparse);
-    expect(await lookupHungarianCompany(NAME, fetchImpl)).toMatchObject({
+    expect(await lookupCompanyRegister(NAME, fetchImpl)).toMatchObject({
       taxNumber: "",
       seat: "",
       status: "",
@@ -238,7 +237,7 @@ describe("looking a company up in the Hungarian register", () => {
 
   test("a site that is down fails loudly rather than reading as no company", async () => {
     const down = async () => new Response("busy", { status: 503 });
-    await expect(lookupHungarianCompany(NAME, down)).rejects.toThrow("HTTP 503");
+    await expect(lookupCompanyRegister(NAME, down)).rejects.toThrow("HTTP 503");
   });
 
   test("a redirect that never ends is cut off after five hops", async () => {
@@ -247,7 +246,7 @@ describe("looking a company up in the Hungarian register", () => {
       requests++;
       return new Response(null, { status: 302, headers: { location: "/again" } });
     };
-    await expect(lookupHungarianCompany(NAME, loop)).rejects.toThrow(
+    await expect(lookupCompanyRegister(NAME, loop)).rejects.toThrow(
       "https://ceginfo.hu/: too many redirects"
     );
     expect(requests).toBe(6);
@@ -259,9 +258,9 @@ describe("looking a company up in the Hungarian register", () => {
       urls.push(url);
       return new Response(HOME, { status, headers: { location: "/elsewhere" } });
     };
-    await expect(lookupHungarianCompany(NAME, located(404))).rejects.toThrow("HTTP 404");
+    await expect(lookupCompanyRegister(NAME, located(404))).rejects.toThrow("HTTP 404");
     urls.length = 0;
-    expect(await lookupHungarianCompany(NAME, located(200))).toBeNull();
+    expect(await lookupCompanyRegister(NAME, located(200))).toBeNull();
     expect(urls).toEqual(["https://ceginfo.hu/", "https://ceginfo.hu/cegkereso/rapid"]);
   });
 });

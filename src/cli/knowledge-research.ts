@@ -3,6 +3,7 @@
  * the active agent, print the profile, and optionally queue it for review.
  */
 
+import { lookupCompanyRegister } from "../hooks/lib/company-register-router";
 import { loadKnownEntities, loadNameIndex } from "../hooks/lib/entity-cards";
 import { queueForReview } from "../hooks/lib/entity-extraction";
 import { lookupName } from "../hooks/lib/entity-names";
@@ -13,7 +14,6 @@ import {
   researchEntity,
   researchItem,
 } from "../hooks/lib/entity-research";
-import { lookupHungarianCompany } from "../hooks/lib/hungarian-registry";
 import { inference } from "../hooks/lib/inference";
 import { identity } from "../hooks/lib/settings";
 import { leaf, UsageError } from "../tools/lib/command";
@@ -50,7 +50,7 @@ export async function researchFromCli(
   deps: ResearchDeps = {
     principal: identity().principal.name,
     infer: inference,
-    registry: lookupHungarianCompany,
+    registry: lookupCompanyRegister,
   }
 ): Promise<number> {
   if (!name?.trim()) throw new UsageError("name the person or company to research");
