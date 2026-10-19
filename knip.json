@@ -21,6 +21,8 @@
       "ignore": [".opencode/plugins/lint.ts", "src/targets/opencode/plugin.ts"],
       "ignoreDependencies": [
         "@semantic-release/github",
+        "@semantic-release/changelog",
+        "@semantic-release/git",
         "promptfoo",
         "@stryker-mutator/bun-runner",
         "@stryker-mutator/api",
