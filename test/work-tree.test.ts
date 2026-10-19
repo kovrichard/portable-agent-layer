@@ -7,6 +7,7 @@ import {
   buildTree,
   findNode,
   nodesWithStatus,
+  PROJECT_ROOT,
   readEvents,
   readTree,
   type WorkEvent,
@@ -127,6 +128,16 @@ describe("work tree", () => {
     open("b", "harbor work", null, "harbor");
     expect([...readTree("pal", file).nodes.keys()]).toEqual(["a"]);
     expect(readTree("harbor", file).active).toBe("b");
+  });
+
+  test("the project is the root of every top-level node, so each project is one tree", () => {
+    open("a", "one");
+    open("b", "two", "a");
+    const tree = readTree("pal", file);
+    expect(tree.root).toMatchObject({ id: PROJECT_ROOT, title: "pal", parent: null });
+    expect(tree.nodes.get("a")?.parent).toBe(PROJECT_ROOT);
+    expect(tree.nodes.get("b")?.parent).toBe("a");
+    expect(tree.nodes.has(PROJECT_ROOT)).toBe(false);
   });
 
   describe("parallel sessions", () => {

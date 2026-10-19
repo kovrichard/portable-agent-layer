@@ -3,6 +3,7 @@
  * stopped, the decisions and artifacts of each piece of work.
  */
 
+import { workSession } from "../hooks/lib/work-session";
 import {
   ARTIFACT_KINDS,
   type ArtifactKind,
@@ -20,6 +21,7 @@ import {
   renderTreeList,
   suffix,
 } from "../hooks/lib/work-tree-render";
+import { openSessionNode } from "../hooks/lib/work-tree-session-node";
 import { group, leaf, runCommand, UsageError } from "../tools/lib/command";
 
 const SCOPE = {
@@ -68,15 +70,25 @@ function guarded(run: () => void): number {
   }
 }
 
+function nodeToRecordOn(scope: string, idOrPrefix: string | undefined): WorkNode {
+  const tree = readTree(scope);
+  if (idOrPrefix || tree.active) return targetNode(tree, idOrPrefix);
+  const id = openSessionNode(scope, workSession());
+  return targetNode(readTree(scope), id);
+}
+
 function record<T extends Parameters<typeof appendEvent>[2]>(
   values: { scope?: string; node?: string },
   type: T,
   payload: Parameters<typeof appendEvent<T>>[3],
-  done: (node: WorkNode) => string
+  done: (node: WorkNode) => string,
+  fromRoot = false
 ): number {
   return guarded(() => {
     const scope = scopeFrom(values);
-    const node = targetNode(readTree(scope), values.node);
+    const node = fromRoot
+      ? nodeToRecordOn(scope, values.node)
+      : targetNode(readTree(scope), values.node);
     appendEvent(scope, node.id, type, payload);
     console.log(done(node));
   });
@@ -275,7 +287,8 @@ export const workCommand = group({
           values,
           "stopped",
           { text: requireText(positionals.join(" "), "Where it stopped") },
-          (n) => `Stopped-at recorded on ${n.title} [${n.id}].`
+          (n) => `Stopped-at recorded on ${n.title} [${n.id}].`,
+          true
         ),
     }),
     decide: leaf({
@@ -294,7 +307,8 @@ export const workCommand = group({
             text: requireText(positionals.join(" "), "A decision"),
             ...(values.why && { why: values.why }),
           },
-          (n) => `Decision recorded on ${n.title} [${n.id}].`
+          (n) => `Decision recorded on ${n.title} [${n.id}].`,
+          true
         ),
     }),
     attach: leaf({
@@ -314,7 +328,8 @@ export const workCommand = group({
             ref: requireText(positionals.slice(1).join(" "), "A ref"),
             ...(values.label && { label: values.label }),
           },
-          (n) => `Attached to ${n.title} [${n.id}].`
+          (n) => `Attached to ${n.title} [${n.id}].`,
+          true
         ),
     }),
     "follow-up": leaf({
@@ -333,7 +348,8 @@ export const workCommand = group({
             text: requireText(positionals.join(" "), "A follow-up"),
             ...(values.due && { due: values.due }),
           },
-          (n) => `Follow-up recorded on ${n.title} [${n.id}].`
+          (n) => `Follow-up recorded on ${n.title} [${n.id}].`,
+          true
         ),
     }),
   },

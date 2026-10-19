@@ -69,6 +69,40 @@ describe("attaching git progress to the active node", () => {
     expect(node()?.artifacts).toEqual([]);
   });
 
+  describe("from the project root", () => {
+    const atRoot = () => {
+      appendEvent(
+        scope(),
+        "n1",
+        "open",
+        { title: "Old", parent: null },
+        file,
+        undefined,
+        "s0"
+      );
+      attachGitProgress(repo, file, undefined, "s1");
+    };
+    const sessionNodes = () =>
+      [...readTree(scope(), file, "s1").nodes.values()].filter((n) => n.id !== "n1");
+
+    test("a commit opens the session's node and lands on it", () => {
+      atRoot();
+      commit("feat: from root");
+      attachGitProgress(repo, file, undefined, "s1");
+      const [opened] = sessionNodes();
+      expect(readTree(scope(), file, "s1").active).toBe(opened.id);
+      expect(opened.artifacts.map((a) => a.label)).toEqual(["feat: from root"]);
+      expect(node()?.artifacts).toEqual([]);
+    });
+
+    test("a branch switch alone opens nothing", () => {
+      atRoot();
+      git("checkout", "-q", "-b", "look-around");
+      attachGitProgress(repo, file, undefined, "s1");
+      expect(sessionNodes()).toEqual([]);
+    });
+  });
+
   test("a branch switch is attached as the branch", () => {
     appendEvent(scope(), "n1", "open", { title: "Gate", parent: null }, file);
     attachGitProgress(repo, file);

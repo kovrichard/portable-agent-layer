@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { runWork } from "../src/cli/work";
-import { readTree } from "../src/hooks/lib/work-tree";
+import { PROJECT_ROOT, readTree } from "../src/hooks/lib/work-tree";
 import { freshTestDir } from "./lib/test-home";
 
 let printed: string[];
@@ -39,7 +39,7 @@ describe("pal cli work", () => {
     const nodes = tree().nodes;
     expect(nodes.get(parent)?.title).toBe("Workflow test");
     expect(nodes.get(child)?.parent).toBe(parent);
-    expect(nodes.get(activeId())?.parent).toBeNull();
+    expect(nodes.get(activeId())?.parent).toBe(PROJECT_ROOT);
   });
 
   test("open links an ISC and a commitment, and refuses an ISC that is not a number", async () => {
@@ -95,8 +95,16 @@ describe("pal cli work", () => {
     expect(node?.waitingOn).toBe("Pratt picks");
   });
 
-  test("a write with no active node and no --node fails without recording", async () => {
-    expect(await work("decide", "something")).toBe(1);
+  test("a record from the project root opens the session's node and lands there", async () => {
+    expect(await work("decide", "something")).toBe(0);
+    const node = tree().nodes.get(activeId());
+    expect(node?.parent).toBe(PROJECT_ROOT);
+    expect(node?.title).toStartWith("Session ");
+    expect(node?.decisions.map((d) => d.text)).toEqual(["something"]);
+  });
+
+  test("park and done with no active node still fail without recording", async () => {
+    expect(await work("park")).toBe(1);
     expect(output()).toContain("No active node in demo");
     expect(tree().nodes.size).toBe(0);
   });
