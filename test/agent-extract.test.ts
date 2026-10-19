@@ -174,7 +174,7 @@ describe("agent removal per platform", () => {
   test("leaves an unrelated file in the directory alone", () => {
     const dir = tmp();
     copyAgentsForCopilot(dir);
-    Bun.write(resolve(dir, "mine.md"), "keep me");
+    writeFileSync(resolve(dir, "mine.md"), "keep me");
 
     removeAgentsFromCopilot(dir);
 
