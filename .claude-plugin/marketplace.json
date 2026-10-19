@@ -1,6 +1,6 @@
 {
   "name": "pal",
-  "description": "Plugins from the Portable Agent Layer.",
+  "description": "Plugins from Portable Agent Layer.",
   "owner": {
     "name": "Portable Agent Layer",
     "url": "https://github.com/kovrichard/portable-agent-layer"
