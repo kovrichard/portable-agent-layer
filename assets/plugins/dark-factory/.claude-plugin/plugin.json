@@ -1,0 +1,12 @@
+{
+  "name": "dark-factory",
+  "version": "0.1.0",
+  "description": "A software factory of agents. You talk to the product owner; the planner, test writer, code writer, debugger, reviewer and tester turn your request into a pull request that is green and reviewed before you see it. Every pass or fail verdict comes from code, and every step is logged so failures and usage can be measured.",
+  "author": {
+    "name": "Portable Agent Layer",
+    "url": "https://github.com/kovrichard/portable-agent-layer"
+  },
+  "repository": "https://github.com/kovrichard/portable-agent-layer",
+  "license": "MIT",
+  "keywords": ["software-factory", "dark-factory", "agents", "workflow", "tdd", "code-review", "pull-request"]
+}

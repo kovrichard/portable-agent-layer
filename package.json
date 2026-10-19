@@ -9,6 +9,7 @@
   "files": [
     "src/",
     "assets/",
+    ".claude-plugin/",
     ".husky/install.mjs",
     "README.md",
     "LICENSE"
@@ -61,7 +62,8 @@
     "prepack": "bun run build:ui",
     "install:all": "bun run src/cli/index.ts cli install",
     "uninstall": "bun run src/cli/index.ts cli uninstall",
-    "tool:synthesize": "bun run src/tools/agent/synthesize.ts",
+    "stamp:factory": "bun run src/tools/dark-factory/stamp.ts",
+    "tool:synthesize":"bun run src/tools/agent/synthesize.ts",
     "tool:thread": "bun run src/tools/agent/thread.ts",
     "tool:wisdom-frame": "bun run src/tools/agent/wisdom-frame.ts",
     "tool:reflect": "bun run src/tools/agent/relationship-reflect.ts",

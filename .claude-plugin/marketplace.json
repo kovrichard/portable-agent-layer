@@ -1,0 +1,15 @@
+{
+  "name": "pal",
+  "description": "Plugins from the Portable Agent Layer.",
+  "owner": {
+    "name": "Portable Agent Layer",
+    "url": "https://github.com/kovrichard/portable-agent-layer"
+  },
+  "plugins": [
+    {
+      "name": "dark-factory",
+      "source": "./assets/plugins/dark-factory",
+      "description": "A software factory of agents that turns a request into a green, reviewed pull request."
+    }
+  ]
+}
