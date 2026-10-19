@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
-import { appendEvent, readTree } from "../src/hooks/lib/work-tree";
+import { appendEvent, readTree } from "../src/hooks/lib/progress-tree";
 import {
   renderNodeDetail,
   renderPromptLine,
   renderSessionContext,
   renderTreeList,
-} from "../src/hooks/lib/work-tree-render";
+} from "../src/hooks/lib/progress-tree-render";
 import { freshTestDir } from "./lib/test-home";
 
 let file: string;
@@ -51,14 +51,14 @@ describe("session context", () => {
     );
 
     const text = renderSessionContext(tree());
-    expect(text).toContain("## Work tree — pal");
+    expect(text).toContain("## Progress tree — pal");
     expect(text).toContain("Active: Merge conflict [b] — no stopped-at recorded");
     expect(text).toContain("Inside: Workflow test › Merge conflict");
     expect(text).toContain("Decided 2026-10-18: keep SJR");
     expect(text).toContain("- Pick a wording [w]: Pratt chooses");
     expect(text).toContain("- Workflow test [a] — stopped at: restore WIP wording");
     expect(text).toContain("- installer (due 2026-10-25) — on Merge conflict");
-    expect(text).toContain("pal cli work");
+    expect(text).toContain("pal cli progress");
   });
 
   test("says when nothing is active", () => {
@@ -86,7 +86,7 @@ describe("prompt line", () => {
     open("b", "Two", null);
     appendEvent("pal", "b", "stopped", { text: "half way" }, file, at());
     expect(renderPromptLine(tree(), false)).toBe(
-      "Work: Two [b] — stopped at: half way · 1 parked"
+      "Progress: Two [b] — stopped at: half way · 1 parked"
     );
   });
 
@@ -94,14 +94,14 @@ describe("prompt line", () => {
     open("a", "One");
     const line = renderPromptLine(tree(), true) ?? "";
     expect(line.split("\n")).toHaveLength(2);
-    expect(line).toContain("pal cli work park --stopped");
+    expect(line).toContain("pal cli progress park --stopped");
   });
 
   test("says when no node is active", () => {
     open("a", "One");
     appendEvent("pal", "a", "park", {}, file, at());
     expect(renderPromptLine(tree(), false)).toBe(
-      "Work: pal root — this session has no node yet · 1 parked"
+      "Progress: pal root — this session has no node yet · 1 parked"
     );
   });
 
@@ -109,7 +109,7 @@ describe("prompt line", () => {
     appendEvent("pal", "a", "open", { title: "One", parent: null }, file, at(), "s1");
     const mine = readTree("pal", file, "s2");
     expect(renderPromptLine(mine, false)).toBe(
-      "Work: pal root — this session has no node yet · 0 parked · 1 active in other sessions"
+      "Progress: pal root — this session has no node yet · 0 parked · 1 active in other sessions"
     );
     expect(renderSessionContext(mine)).toContain(
       "Active in other sessions:\n- One [a] — no stopped-at recorded"

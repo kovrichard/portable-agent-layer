@@ -1,20 +1,20 @@
 /**
- * Where the work tree enters an agent's context: the block every new or
+ * Where the progress tree enters an agent's context: the block every new or
  * compacted session starts with, and the line every prompt carries.
  */
 
 import { reactionTo } from "./interaction-reaction";
+import { progressSession } from "./progress-session";
+import { readTree, scopeOf } from "./progress-tree";
+import { renderPromptLine, renderSessionContext } from "./progress-tree-render";
 import { sessionDir } from "./session-dir";
 import { isOptedIn } from "./settings";
-import { workSession } from "./work-session";
-import { readTree, scopeOf } from "./work-tree";
-import { renderPromptLine, renderSessionContext } from "./work-tree-render";
 
 function sessionTree(cwd: string, hookSession: string | undefined) {
-  return readTree(scopeOf(cwd), undefined, workSession(hookSession));
+  return readTree(scopeOf(cwd), undefined, progressSession(hookSession));
 }
 
-export function loadWorkTreeContext(
+export function loadProgressTreeContext(
   cwd: string = sessionDir(),
   hookSession?: string
 ): string {
@@ -22,7 +22,7 @@ export function loadWorkTreeContext(
   return renderSessionContext(sessionTree(cwd, hookSession));
 }
 
-export function workTreePromptLine(
+export function progressTreePromptLine(
   userText: string,
   cwd: string = sessionDir(),
   hookSession?: string

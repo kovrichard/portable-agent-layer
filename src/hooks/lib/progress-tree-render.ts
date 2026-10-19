@@ -1,5 +1,5 @@
 /**
- * How the work tree reads as text: the CLI's views, the block a new or
+ * How the progress tree reads as text: the CLI's views, the block a new or
  * compacted session starts with, and the one line every prompt carries.
  */
 
@@ -9,7 +9,7 @@ import {
   nodesWithStatus,
   type ScopeTree,
   type WorkNode,
-} from "./work-tree";
+} from "./progress-tree";
 
 const SESSION_BUDGET = 2_000;
 const RECENT_DECISIONS = 3;
@@ -17,7 +17,7 @@ const LISTED_PARKED = 5;
 const PROMPT_LINE_MAX = 300;
 
 const RECORD_HINT =
-  "Record as you go: pal cli work stopped|decide|attach|follow-up|open|done (pal cli work --help)";
+  "Record as you go: pal cli progress stopped|decide|attach|follow-up|open|done (pal cli progress --help)";
 
 export function suffix(
   lead: string,
@@ -134,7 +134,7 @@ export function renderSessionContext(tree: ScopeTree): string {
   const nodes = [...tree.nodes.values()];
   const open = nodes.filter((n) => n.status !== "done");
   const lines = [
-    `## Work tree — ${tree.scope}`,
+    `## Progress tree — ${tree.scope}`,
     ...activeSection(tree),
     ...listSection(
       "Active in other sessions:",
@@ -160,7 +160,7 @@ export function renderSessionContext(tree: ScopeTree): string {
 }
 
 const NEW_TOPIC_HINT =
-  'New topic: if this is separate work, park the active node with its stopped-at (pal cli work park --stopped "…") and open one for this (pal cli work open "…").';
+  'New topic: if this is separate work, park the active node with its stopped-at (pal cli progress park --stopped "…") and open one for this (pal cli progress open "…").';
 
 /** The line every prompt carries, so the active node survives anything that drops context. */
 export function renderPromptLine(tree: ScopeTree, newTopic: boolean): string | null {
@@ -169,8 +169,8 @@ export function renderPromptLine(tree: ScopeTree, newTopic: boolean): string | n
   const parked = nodesWithStatus(tree, "parked").length;
   const elsewhere = activeElsewhere(tree).length;
   const head = active
-    ? `Work: ${label(active)}${stoppedClause(active)}`
-    : `Work: ${tree.scope} root — this session has no node yet`;
+    ? `Progress: ${label(active)}${stoppedClause(active)}`
+    : `Progress: ${tree.scope} root — this session has no node yet`;
   const tail = elsewhere ? ` · ${elsewhere} active in other sessions` : "";
   const line = clip(`${head} · ${parked} parked${tail}`, PROMPT_LINE_MAX);
   return newTopic ? `${line}\n${NEW_TOPIC_HINT}` : line;

@@ -79,14 +79,14 @@ describe("buildClaudeMd", () => {
     expect(result).toContain("~/.pal/telos/GOALS.md");
   });
 
-  test("carries the work-tree rule only once the work tree is opted into", async () => {
+  test("carries the progress-tree rule only once the progress tree is opted into", async () => {
     const { buildClaudeMd } = await import("../src/hooks/lib/claude-md");
     const { reload } = await import("../src/hooks/lib/settings");
     const settingsPath = resolve(TEST_HOME, "memory", "pal-settings.json");
     const original = readFileSync(settingsPath, "utf-8");
-    const rule = "\n- **Keep the work tree true** —";
+    const rule = "\n- **Keep the progress tree true** —";
 
-    expect(buildClaudeMd()).not.toContain("Keep the work tree true");
+    expect(buildClaudeMd()).not.toContain("Keep the progress tree true");
     expect(buildClaudeMd()).not.toContain("{{IF");
 
     writeFileSync(

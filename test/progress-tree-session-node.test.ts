@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { sessionNodeTitle } from "../src/hooks/lib/work-tree-session-node";
+import { sessionNodeTitle } from "../src/hooks/lib/progress-tree-session-node";
 
 const now = new Date("2026-10-19T12:51:30Z");
 

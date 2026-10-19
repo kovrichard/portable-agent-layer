@@ -1,12 +1,12 @@
 /**
- * New commits and branch switches land on the active work-tree node at the end
+ * New commits and branch switches land on the active progress-tree node at the end
  * of a turn, so the tree knows what the work produced without being told.
  */
 
 import { spawnSync } from "node:child_process";
-import { workSession } from "./work-session";
-import { appendEvent, readTree, scopeOf } from "./work-tree";
-import { openSessionNode } from "./work-tree-session-node";
+import { progressSession } from "./progress-session";
+import { appendEvent, readTree, scopeOf } from "./progress-tree";
+import { openSessionNode } from "./progress-tree-session-node";
 
 const GIT_TIMEOUT_MS = 1000;
 const MAX_COMMITS = 20;
@@ -83,7 +83,7 @@ export function attachGitProgress(
   cwd: string,
   file?: string,
   now: Date = new Date(),
-  session: string | undefined = workSession()
+  session: string | undefined = progressSession()
 ): void {
   const scope = scopeOf(cwd);
   const tree = readTree(scope, file, session);
