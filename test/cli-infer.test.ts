@@ -54,7 +54,9 @@ describe("pal cli infer", () => {
 
     await inferFromCli({}, "q", infer);
     await inferFromCli({ tier: "medium" }, "q", infer);
-    expect(calls.map((c) => c.tier)).toEqual(["small", "medium"]);
+    await inferFromCli({ tier: "large" }, "q", infer);
+    await inferFromCli({ tier: "flagship" }, "q", infer);
+    expect(calls.map((c) => c.tier)).toEqual(["small", "medium", "large", "flagship"]);
   });
 
   test("passes the system prompt and the JSON schema from their files", async () => {

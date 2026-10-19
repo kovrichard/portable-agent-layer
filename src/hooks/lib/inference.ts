@@ -62,6 +62,7 @@ import { logDebug, logError } from "./log";
 import {
   type FixedModelRoute,
   type InferenceTier,
+  inferenceEffort,
   inferenceModel,
   isFixedModelRoute,
 } from "./models";
@@ -224,10 +225,21 @@ export function plannedInferenceRoute(
   return { agent: previewRoute().agent, ...plannedRoute({ user: "", tier, caller }) };
 }
 
+function routeWithModel(
+  opts: InferenceOptions
+): ReturnType<typeof plannedRoute> | { error: string } {
+  try {
+    return plannedRoute(opts);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
 export async function inference(opts: InferenceOptions): Promise<InferenceResult> {
+  const planned = routeWithModel(opts);
+  if ("error" in planned) return { success: false, error: planned.error };
   const started = performance.now();
   const result = await checkedInference(opts);
-  const planned = plannedRoute(opts);
   logInferenceCall(opts, planned, result, performance.now() - started);
   return { ...result, model: planned.model ?? undefined };
 }
@@ -524,7 +536,13 @@ export function buildCodexArgs(opts: InferenceOptions): string[] {
     "--ephemeral",
     "--json",
     ...(opts.web ? ["-c", "web_search=live"] : []),
+    ...codexEffortArgs(opts),
   ];
+}
+
+function codexEffortArgs(opts: InferenceOptions): string[] {
+  const effort = inferenceEffort("codex-spawn", opts.tier);
+  return effort ? ["-c", `model_reasoning_effort="${effort}"`] : [];
 }
 
 interface CodexItem {
@@ -1124,31 +1142,38 @@ async function inferenceViaApi(opts: InferenceOptions): Promise<InferenceResult>
 // structured-output schema for JSON-mode callers.
 // ─────────────────────────────────────────────────────────────────────────────
 
+export function buildOpenAiBody(opts: InferenceOptions): Record<string, unknown> {
+  const { system, user, maxTokens = 500, jsonSchema } = opts;
+  const messages: Array<{ role: string; content: string }> = [];
+  if (system) messages.push({ role: "system", content: system });
+  messages.push({ role: "user", content: user });
+
+  const body: Record<string, unknown> = {
+    model: modelFor("openai-api", opts),
+    max_tokens: maxTokens,
+    messages,
+  };
+  const effort = inferenceEffort("openai-api", opts.tier);
+  if (effort) body.reasoning_effort = effort;
+  if (jsonSchema) {
+    body.response_format = {
+      type: "json_schema",
+      json_schema: { name: "structured_response", strict: true, schema: jsonSchema },
+    };
+  }
+  return body;
+}
+
 async function inferenceViaOpenAiApi(opts: InferenceOptions): Promise<InferenceResult> {
   const apiKey = withPalEnv().PAL_OPENAI_API_KEY;
   if (!apiKey) return { success: false };
 
-  const { system, user, maxTokens = 500, timeout = 15000, jsonSchema } = opts;
+  const { timeout = 15000 } = opts;
 
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
-
-    const messages: Array<{ role: string; content: string }> = [];
-    if (system) messages.push({ role: "system", content: system });
-    messages.push({ role: "user", content: user });
-
-    const body: Record<string, unknown> = {
-      model: modelFor("openai-api", opts),
-      max_tokens: maxTokens,
-      messages,
-    };
-    if (jsonSchema) {
-      body.response_format = {
-        type: "json_schema",
-        json_schema: { name: "structured_response", strict: true, schema: jsonSchema },
-      };
-    }
+    const body = buildOpenAiBody(opts);
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",

@@ -6,6 +6,7 @@
  */
 
 import { ingestEntities } from "../../tools/knowledge/ingest";
+import { lookupCompanyRegister } from "../lib/company-register-router";
 import { excludedNames, loadKnownEntities, loadNameIndex } from "../lib/entity-cards";
 import {
   extractionSchema,
@@ -69,6 +70,7 @@ export async function extractSessionEntities(
     await researchNewEntities(newResearchTargets(plan.ingest, written), {
       principal: id.principal.name,
       infer: inference,
+      registry: lookupCompanyRegister,
     });
 }
 
