@@ -9,7 +9,7 @@ export const HAIKU_5_5_MODEL = "claude-haiku-5-5";
 export const SONNET_MODEL = "claude-sonnet-5-5";
 export const FABLE_MODEL = "claude-fable-5-1";
 
-export const INFERENCE_TIERS = ["small", "medium"] as const;
+export const INFERENCE_TIERS = ["small", "medium", "flagship"] as const;
 export type InferenceTier = (typeof INFERENCE_TIERS)[number];
 
 export type FixedModelRoute =
@@ -19,24 +19,28 @@ export type FixedModelRoute =
   | "openai-api"
   | "antigravity-spawn";
 
-/** `large` is the flagship that authors skills and subagents; without one, the agent authors inline. */
-type RouteModels = Record<InferenceTier, string> & { large?: string };
+type RouteModels = Record<Exclude<InferenceTier, "flagship">, string> & {
+  flagship?: string;
+};
 
 const ANTHROPIC_MODELS: RouteModels = {
   small: HAIKU_MODEL,
   medium: SONNET_MODEL,
-  large: FABLE_MODEL,
+  flagship: FABLE_MODEL,
 };
 const OPENAI_MODELS: RouteModels = {
   small: "gpt-6-luna",
   medium: "gpt-6-sol",
-  large: "gpt-6-astra",
+  flagship: "gpt-6-astra",
 };
-/** An Antigravity subagent's `model:` takes only a tier name, so `large` is `pro`. */
 const GEMINI_MODELS: RouteModels = {
   small: "gemini-3.8-flash-low",
   medium: "gemini-3.8-flash-high",
-  large: "pro",
+};
+
+/** An Antigravity subagent's `model:` takes only a tier name, never a model id. */
+const SUBAGENT_FLAGSHIP: Partial<Record<FixedModelRoute, string>> = {
+  "antigravity-spawn": "pro",
 };
 
 /**
@@ -63,9 +67,13 @@ export function isFixedModelRoute(route: string): route is FixedModelRoute {
  */
 const ANTHROPIC_ON_HAIKU_5_5 = new Set(["rule-drafter", "correction-kind"]);
 
-function evaluatedModel(models: RouteModels, caller?: string): string | undefined {
-  const onAnthropic = models === ANTHROPIC_MODELS;
-  return onAnthropic && caller && ANTHROPIC_ON_HAIKU_5_5.has(caller)
+function evaluatedModel(
+  models: RouteModels,
+  tier: InferenceTier,
+  caller?: string
+): string | undefined {
+  const onAnthropicSmall = models === ANTHROPIC_MODELS && tier === "small";
+  return onAnthropicSmall && caller && ANTHROPIC_ON_HAIKU_5_5.has(caller)
     ? HAIKU_5_5_MODEL
     : undefined;
 }
@@ -76,7 +84,9 @@ export function inferenceModel(
   caller?: string
 ): string {
   const models = INFERENCE_MODELS[route];
-  return evaluatedModel(models, caller) ?? models[tier];
+  const model = evaluatedModel(models, tier, caller) ?? models[tier];
+  if (!model) throw new Error(`${route} has no ${tier} model`);
+  return model;
 }
 
 const AGENT_SPAWN_ROUTE: Partial<Record<AgentType, FixedModelRoute>> = {
@@ -88,11 +98,13 @@ const AGENT_SPAWN_ROUTE: Partial<Record<AgentType, FixedModelRoute>> = {
 /**
  * The model an agent's `skill-author` / `subagent-author` runs on, or undefined
  * when `create-skill` and `create-subagent` should author inline. A new provider
- * needs a `large` model on its route and a platform block in assets/agents/*-author.md.
+ * needs a flagship model on its route and a platform block in assets/agents/*-author.md.
  */
 export function flagshipAuthorModel(agent: AgentType): string | undefined {
   const route = AGENT_SPAWN_ROUTE[agent];
-  return route ? INFERENCE_MODELS[route].large : undefined;
+  return route
+    ? (SUBAGENT_FLAGSHIP[route] ?? INFERENCE_MODELS[route].flagship)
+    : undefined;
 }
 
 export interface ModelPricing {

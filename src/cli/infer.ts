@@ -136,7 +136,7 @@ export const inferCommand = leaf({
     tier: {
       type: "string",
       value: "<tier>",
-      description: `Model size: ${INFERENCE_TIERS.join(" or ")} (default small)`,
+      description: `Model size: ${INFERENCE_TIERS.join(", ")} (default small)`,
     },
     system: { type: "string", value: "<file>", description: "System prompt file" },
     schema: {

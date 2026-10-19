@@ -224,10 +224,21 @@ export function plannedInferenceRoute(
   return { agent: previewRoute().agent, ...plannedRoute({ user: "", tier, caller }) };
 }
 
+function routeWithModel(
+  opts: InferenceOptions
+): ReturnType<typeof plannedRoute> | { error: string } {
+  try {
+    return plannedRoute(opts);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
 export async function inference(opts: InferenceOptions): Promise<InferenceResult> {
+  const planned = routeWithModel(opts);
+  if ("error" in planned) return { success: false, error: planned.error };
   const started = performance.now();
   const result = await checkedInference(opts);
-  const planned = plannedRoute(opts);
   logInferenceCall(opts, planned, result, performance.now() - started);
   return { ...result, model: planned.model ?? undefined };
 }
