@@ -11,7 +11,7 @@ import {
   readEvents,
   readTree,
   type WorkEvent,
-} from "../src/hooks/lib/work-tree";
+} from "../src/hooks/lib/progress-tree";
 import { freshTestDir } from "./lib/test-home";
 
 let file: string;
@@ -31,10 +31,10 @@ function open(node: string, title: string, parent: string | null = null, scope =
   appendEvent(scope, node, "open", { title, parent }, file, at());
 }
 
-describe("work tree", () => {
+describe("progress tree", () => {
   test("opening a node makes it active and parks the one before", () => {
     open("a", "Lane D wording");
-    open("b", "Work tree", null);
+    open("b", "Progress tree", null);
     const tree = readTree("pal", file);
     expect(tree.active).toBe("b");
     expect(tree.nodes.get("a")?.status).toBe("parked");

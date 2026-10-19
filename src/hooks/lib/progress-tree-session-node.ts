@@ -4,8 +4,8 @@
  * that records nothing leaves nothing behind.
  */
 
+import { appendEvent, newNodeId } from "./progress-tree";
 import { readSessionNames } from "./session-names";
-import { appendEvent, newNodeId } from "./work-tree";
 
 export function sessionNodeTitle(
   session: string | undefined,

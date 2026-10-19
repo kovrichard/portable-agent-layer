@@ -1,5 +1,5 @@
 /**
- * The work tree: what the user is working on, what is parked and where each
+ * The progress tree: what the user is working on, what is parked and where each
  * piece of work stopped, kept as an append-only event log so a compaction, a
  * new session or a detour never loses it. The tree is derived on every read;
  * nothing but the events is stored.
@@ -8,8 +8,8 @@
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ensureDir, paths } from "./paths";
+import { progressSession } from "./progress-session";
 import { readAllProjects, resolveProjectFromCwd } from "./projects";
-import { workSession } from "./work-session";
 
 export type NodeStatus = "active" | "parked" | "waiting" | "done";
 
@@ -121,7 +121,7 @@ export interface ScopeTree {
   gitCursor: GitCursor | null;
 }
 
-function workTreeFile(): string {
+function progressTreeFile(): string {
   return resolve(ensureDir(resolve(paths.memory(), "work-tree")), "events.jsonl");
 }
 
@@ -146,7 +146,7 @@ function parseLine(line: string): WorkEvent[] {
 }
 
 /** Ordered by time, so the union an import merges in replays the same as one machine's log. */
-export function readEvents(file: string = workTreeFile()): WorkEvent[] {
+export function readEvents(file: string = progressTreeFile()): WorkEvent[] {
   if (!existsSync(file)) return [];
   return readFileSync(file, "utf-8")
     .split("\n")
@@ -160,9 +160,9 @@ export function appendEvent<T extends WorkEvent["type"]>(
   node: string,
   type: T,
   payload: Payload<T>,
-  file: string = workTreeFile(),
+  file: string = progressTreeFile(),
   now: Date = new Date(),
-  session: string | undefined = workSession()
+  session: string | undefined = progressSession()
 ): WorkEvent {
   const event = {
     id: newNodeId(now.getTime()),
@@ -333,8 +333,8 @@ export function buildTree(
 
 export function readTree(
   scope: string,
-  file: string = workTreeFile(),
-  session: string | undefined = workSession()
+  file: string = progressTreeFile(),
+  session: string | undefined = progressSession()
 ): ScopeTree {
   return buildTree(scope, readEvents(file), session);
 }

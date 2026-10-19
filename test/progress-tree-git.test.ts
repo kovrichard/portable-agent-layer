@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { appendEvent, readEvents, readTree } from "../src/hooks/lib/work-tree";
-import { attachGitProgress } from "../src/hooks/lib/work-tree-git";
+import { appendEvent, readEvents, readTree } from "../src/hooks/lib/progress-tree";
+import { attachGitProgress } from "../src/hooks/lib/progress-tree-git";
 import { freshTestDir } from "./lib/test-home";
 
 let repo: string;
@@ -106,10 +106,10 @@ describe("attaching git progress to the active node", () => {
   test("a branch switch is attached as the branch", () => {
     appendEvent(scope(), "n1", "open", { title: "Gate", parent: null }, file);
     attachGitProgress(repo, file);
-    git("checkout", "-q", "-b", "feat/work-tree");
+    git("checkout", "-q", "-b", "feat/progress-tree");
     attachGitProgress(repo, file);
     expect(node()?.artifacts.map((a) => [a.kind, a.ref])).toEqual([
-      ["branch", "feat/work-tree"],
+      ["branch", "feat/progress-tree"],
     ]);
   });
 

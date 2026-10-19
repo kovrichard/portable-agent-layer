@@ -1,6 +1,6 @@
 /**
  * Whether a turn settled a decision. Code can see that a turn committed or
- * opened a PR, but a decision is only words, so the work-tree gate asks the
+ * opened a PR, but a decision is only words, so the progress-tree gate asks the
  * small model and sends the turn back when nothing was recorded.
  */
 
