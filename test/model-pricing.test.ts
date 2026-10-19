@@ -57,17 +57,37 @@ describe("model pricing table", () => {
     });
   });
 
-  test("OpenAI models carry their standard rates, cache writes billed as input", () => {
+  test("OpenAI models carry their standard rates", () => {
     expect(pricingFor("gpt-6-luna")).toEqual({
       input: 0.1,
       output: 0.5,
-      cacheWrite5m: 0.1,
-      cacheWrite1h: 0.1,
+      cacheWrite5m: 0.125,
+      cacheWrite1h: 0.125,
       cacheRead: 0.01,
     });
     expect(pricingFor("gpt-6.1-sol")?.cacheRead).toBe(0.1);
     expect(pricingFor("gpt-6-sol")?.cacheRead).toBe(0.2);
     expect(pricingFor("gpt-5.4-mini")?.output).toBe(4.5);
+  });
+
+  test("GPT-6 and GPT-5.6 models bill cache writes at their published premium", () => {
+    expect(pricingFor("gpt-6-astra")).toEqual({
+      input: 10,
+      output: 50,
+      cacheWrite5m: 12.5,
+      cacheWrite1h: 12.5,
+      cacheRead: 1,
+    });
+    expect(pricingFor("gpt-6-sol")?.cacheWrite5m).toBe(2.5);
+    expect(pricingFor("gpt-6.1-sol")?.cacheWrite5m).toBe(2.5);
+    expect(pricingFor("gpt-5.6-sol")?.cacheWrite5m).toBe(5);
+    expect(pricingFor("gpt-5.6-terra")?.cacheWrite5m).toBe(2.5);
+    expect(pricingFor("gpt-5.6-luna")?.cacheWrite5m).toBe(0.25);
+  });
+
+  test("older OpenAI models with no published cache-write price bill writes as input", () => {
+    expect(pricingFor("gpt-5.5")?.cacheWrite5m).toBe(5);
+    expect(pricingFor("gpt-5.4")?.cacheWrite1h).toBe(2.5);
   });
 
   test("a pro model is not billed at its base model's rates", () => {

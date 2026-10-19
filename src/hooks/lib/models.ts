@@ -6,11 +6,13 @@ import type { AgentType } from "./agent";
 
 export const HAIKU_MODEL = "claude-haiku-4-5-20251001";
 export const HAIKU_5_5_MODEL = "claude-haiku-5-5";
-export const SONNET_MODEL = "claude-sonnet-5";
-export const FABLE_MODEL = "claude-fable-5";
+export const SONNET_MODEL = "claude-sonnet-5-5";
+export const OPUS_MODEL = "claude-opus-5-5";
+export const FABLE_MODEL = "claude-fable-5-1";
 
-export const INFERENCE_TIERS = ["small", "medium"] as const;
+export const INFERENCE_TIERS = ["small", "medium", "large", "flagship"] as const;
 export type InferenceTier = (typeof INFERENCE_TIERS)[number];
+type ReasoningEffort = "low" | "medium" | "high";
 
 export type FixedModelRoute =
   | "claude-spawn"
@@ -19,24 +21,37 @@ export type FixedModelRoute =
   | "openai-api"
   | "antigravity-spawn";
 
-/** `large` is the flagship that authors skills and subagents; without one, the agent authors inline. */
-type RouteModels = Record<InferenceTier, string> & { large?: string };
+type RouteModels = Record<"small" | "medium" | "large", string> & { flagship?: string };
 
 const ANTHROPIC_MODELS: RouteModels = {
   small: HAIKU_MODEL,
   medium: SONNET_MODEL,
-  large: FABLE_MODEL,
+  large: OPUS_MODEL,
+  flagship: FABLE_MODEL,
 };
 const OPENAI_MODELS: RouteModels = {
   small: "gpt-6-luna",
   medium: "gpt-6-sol",
-  large: "gpt-6-astra",
+  large: "gpt-6-sol",
+  flagship: "gpt-6-astra",
 };
-/** An Antigravity subagent's `model:` takes only a tier name, so `large` is `pro`. */
 const GEMINI_MODELS: RouteModels = {
   small: "gemini-3.8-flash-low",
-  medium: "gemini-3.8-flash-high",
-  large: "pro",
+  medium: "gemini-3.8-flash-medium",
+  large: "gemini-3.8-flash-high",
+};
+
+const OPENAI_EFFORTS: Partial<Record<InferenceTier, ReasoningEffort>> = { large: "high" };
+const INFERENCE_EFFORTS: Partial<
+  Record<FixedModelRoute, Partial<Record<InferenceTier, ReasoningEffort>>>
+> = {
+  "codex-spawn": OPENAI_EFFORTS,
+  "openai-api": OPENAI_EFFORTS,
+};
+
+/** An Antigravity subagent's `model:` takes only a tier name, never a model id. */
+const SUBAGENT_FLAGSHIP: Partial<Record<FixedModelRoute, string>> = {
+  "antigravity-spawn": "pro",
 };
 
 /**
@@ -63,9 +78,13 @@ export function isFixedModelRoute(route: string): route is FixedModelRoute {
  */
 const ANTHROPIC_ON_HAIKU_5_5 = new Set(["rule-drafter", "correction-kind"]);
 
-function evaluatedModel(models: RouteModels, caller?: string): string | undefined {
-  const onAnthropic = models === ANTHROPIC_MODELS;
-  return onAnthropic && caller && ANTHROPIC_ON_HAIKU_5_5.has(caller)
+function evaluatedModel(
+  models: RouteModels,
+  tier: InferenceTier,
+  caller?: string
+): string | undefined {
+  const onAnthropicSmall = models === ANTHROPIC_MODELS && tier === "small";
+  return onAnthropicSmall && caller && ANTHROPIC_ON_HAIKU_5_5.has(caller)
     ? HAIKU_5_5_MODEL
     : undefined;
 }
@@ -76,7 +95,17 @@ export function inferenceModel(
   caller?: string
 ): string {
   const models = INFERENCE_MODELS[route];
-  return evaluatedModel(models, caller) ?? models[tier];
+  const model = evaluatedModel(models, tier, caller) ?? models[tier];
+  if (!model) throw new Error(`${route} has no ${tier} model`);
+  return model;
+}
+
+/** The reasoning effort a tier asks of a model it shares with another tier; undefined keeps the model's default. */
+export function inferenceEffort(
+  route: FixedModelRoute,
+  tier: InferenceTier = "small"
+): ReasoningEffort | undefined {
+  return INFERENCE_EFFORTS[route]?.[tier];
 }
 
 const AGENT_SPAWN_ROUTE: Partial<Record<AgentType, FixedModelRoute>> = {
@@ -88,11 +117,13 @@ const AGENT_SPAWN_ROUTE: Partial<Record<AgentType, FixedModelRoute>> = {
 /**
  * The model an agent's `skill-author` / `subagent-author` runs on, or undefined
  * when `create-skill` and `create-subagent` should author inline. A new provider
- * needs a `large` model on its route and a platform block in assets/agents/*-author.md.
+ * needs a flagship model on its route and a platform block in assets/agents/*-author.md.
  */
 export function flagshipAuthorModel(agent: AgentType): string | undefined {
   const route = AGENT_SPAWN_ROUTE[agent];
-  return route ? INFERENCE_MODELS[route].large : undefined;
+  return route
+    ? (SUBAGENT_FLAGSHIP[route] ?? INFERENCE_MODELS[route].flagship)
+    : undefined;
 }
 
 export interface ModelPricing {
@@ -131,18 +162,31 @@ const withoutWritePremium = (
   cacheRead,
 });
 
+const withWritePremium = (
+  input: number,
+  cacheRead: number,
+  output: number
+): ModelPricing => ({
+  input,
+  output,
+  cacheWrite5m: input * 1.25,
+  cacheWrite1h: input * 1.25,
+  cacheRead,
+});
+
 /**
  * Standard-tier rates from https://developers.openai.com/api/docs/pricing; prompts over
- * 272K tokens cost more, and PAL's never get there. OpenAI bills no cache-write premium.
+ * 272K tokens cost more, and PAL's never get there. GPT-6 and GPT-5.6 bill cache writes
+ * at 1.25x input; older models publish no cache-write price, so writes bill as input.
  */
 const OPENAI_PRICING: Record<string, ModelPricing> = {
-  "gpt-6-astra": withoutWritePremium(10, 1, 50),
-  "gpt-6.1-sol": withoutWritePremium(2, 0.1, 10),
-  "gpt-6-sol": withoutWritePremium(2, 0.2, 10),
-  "gpt-6-luna": withoutWritePremium(0.1, 0.01, 0.5),
-  "gpt-5.6-sol": withoutWritePremium(4, 0.4, 20),
-  "gpt-5.6-terra": withoutWritePremium(2, 0.2, 12),
-  "gpt-5.6-luna": withoutWritePremium(0.2, 0.02, 1.2),
+  "gpt-6-astra": withWritePremium(10, 1, 50),
+  "gpt-6.1-sol": withWritePremium(2, 0.1, 10),
+  "gpt-6-sol": withWritePremium(2, 0.2, 10),
+  "gpt-6-luna": withWritePremium(0.1, 0.01, 0.5),
+  "gpt-5.6-sol": withWritePremium(4, 0.4, 20),
+  "gpt-5.6-terra": withWritePremium(2, 0.2, 12),
+  "gpt-5.6-luna": withWritePremium(0.2, 0.02, 1.2),
   "gpt-5.5": withoutWritePremium(5, 0.5, 30),
   "gpt-5.5-pro": withoutWritePremium(30, 30, 180),
   "gpt-5.4": withoutWritePremium(2.5, 0.25, 15),
@@ -176,14 +220,14 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
     cacheWrite1h: 0.2,
     cacheRead: 0.01,
   },
-  "claude-fable-5-1": {
+  [FABLE_MODEL]: {
     input: 10,
     output: 50,
     cacheWrite5m: 12.5,
     cacheWrite1h: 20,
     cacheRead: 0.25,
   },
-  [FABLE_MODEL]: {
+  "claude-fable-5": {
     input: 10,
     output: 50,
     cacheWrite5m: 12.5,
