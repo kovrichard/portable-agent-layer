@@ -12,6 +12,7 @@ import {
   type ResearchProfile,
   type ReviewItem,
 } from "./entity-extraction";
+import type { HungarianRegistryEntry } from "./hungarian-registry";
 import type { inference } from "./inference";
 import { logDebug, logError } from "./log";
 
@@ -27,6 +28,7 @@ export interface ResearchDeps {
   principal: string;
   infer: typeof inference;
   today?: string;
+  registry?: (name: string) => Promise<HungarianRegistryEntry | null>;
 }
 
 const MAX_TARGETS = 3;
@@ -83,6 +85,7 @@ export function researchSchema() {
       taxNumber: text,
       seat: text,
       status: text,
+      activity: text,
       managers: list(text),
       url: text,
     }),
@@ -96,7 +99,7 @@ const CHECKLIST = {
     "- website: the official website.",
     "- linkedin: the LinkedIn company page.",
     "- socials: other official accounts (X, Facebook, Instagram, YouTube, GitHub).",
-    "- registry: its entry in the official company register of its country: registered name, registration number, tax number, registered seat, status (active, in liquidation…), managing directors, and the URL you read it on. For a Hungarian company (Kft., Zrt., Bt., Nyrt., a .hu site) that is the cégjegyzék: e-cegjegyzek.hu, or public mirrors such as ceginformacio.hu, nemzeticegtar.hu or opten.hu.",
+    "- registry: its entry in the official company register of its country: registered name, registration number, tax number, registered seat, status (active, in liquidation…), main activity, managing directors, and the URL you read it on. For a Hungarian company (Kft., Zrt., Bt., Nyrt., a .hu site) that is the cégjegyzék: e-cegjegyzek.hu, or public mirrors such as ceginformacio.hu, nemzeticegtar.hu or opten.hu.",
     "- news: up to five news items or public statements from the last 12 months, newest first.",
     "- summary: two or three sentences on what the company does, its size and where it is based.",
   ],
@@ -124,13 +127,30 @@ export function researchSystem(principal: string, kind: ResearchTarget["kind"]):
   ].join("\n");
 }
 
-function researchUser(target: ResearchTarget, today: string): string {
+function registryFacts(entry: HungarianRegistryEntry): string {
+  return [
+    "The company register, already read: use it to tell this company from namesakes and do not search the register again.",
+    `registered name: ${entry.fullName || entry.name}`,
+    `registration number: ${entry.number}`,
+    entry.seat && `seat: ${entry.seat}`,
+    entry.activity && `main activity: ${entry.activity}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+function researchUser(
+  target: ResearchTarget,
+  today: string,
+  registry: HungarianRegistryEntry | null
+): string {
   return [
     `Today is ${today}.`,
     `${target.kind}: ${target.name}`,
     target.organization && `organization: ${target.organization}`,
     target.fact &&
       `what ${target.kind === "person" ? "was said about them" : "was said about it"}: ${target.fact}`,
+    registry && registryFacts(registry),
   ]
     .filter(Boolean)
     .join("\n");
@@ -166,13 +186,75 @@ export type ResearchOutcome =
   | { found: true; profile: ResearchProfile }
   | { found: false; reason: string };
 
+async function registryEntry(
+  target: ResearchTarget,
+  deps: ResearchDeps
+): Promise<HungarianRegistryEntry | null> {
+  if (target.kind !== "company" || !deps.registry) return null;
+  try {
+    return await deps.registry(target.name);
+  } catch (err) {
+    logError(`entity-research:registry:${target.name}`, err);
+    return null;
+  }
+}
+
+function registryOnlyProfile(entry: HungarianRegistryEntry): ResearchProfile {
+  const founded = entry.founded ? `, founded ${entry.founded}` : "";
+  return {
+    match: "sure",
+    summary: `${entry.name}: ${entry.activity || "Hungarian company"}. Seat: ${entry.seat}${founded}.`,
+    role: "",
+    organization: "",
+    website: "",
+    linkedin: "",
+    socials: [],
+    registry: registryOf(entry),
+    news: [],
+    sources: [],
+  };
+}
+
+function registryOf(entry: HungarianRegistryEntry): ResearchProfile["registry"] {
+  return {
+    name: entry.fullName || entry.name,
+    number: entry.number,
+    taxNumber: entry.taxNumber,
+    seat: entry.seat,
+    status: entry.status,
+    activity: entry.activity,
+    managers: entry.managers,
+    url: entry.url,
+  };
+}
+
+/** What the register says replaces what the model read, and an exact register match is
+ *  enough to keep the profile even when the web turned up nothing. */
+function withRegistry(
+  profile: ResearchProfile | null,
+  entry: HungarianRegistryEntry
+): ResearchProfile {
+  const base =
+    profile?.match === "sure" ? withWebUrlsOnly(profile) : registryOnlyProfile(entry);
+  return {
+    ...base,
+    registry: registryOf(entry),
+    sources: [...new Set([...entry.sources, ...base.sources])],
+  };
+}
+
 export async function researchEntity(
   target: ResearchTarget,
   deps: ResearchDeps
 ): Promise<ResearchOutcome> {
+  const registry = await registryEntry(target, deps);
   const result = await deps.infer({
     system: researchSystem(deps.principal, target.kind),
-    user: researchUser(target, deps.today ?? new Date().toISOString().slice(0, 10)),
+    user: researchUser(
+      target,
+      deps.today ?? new Date().toISOString().slice(0, 10),
+      registry
+    ),
     tier: "medium",
     timeout: RESEARCH_TIMEOUT_MS,
     jsonSchema: researchSchema(),
@@ -180,6 +262,7 @@ export async function researchEntity(
     web: true,
   });
   const profile = result.success ? parseProfile(result.output) : null;
+  if (registry) return { found: true, profile: withRegistry(profile, registry) };
   if (!profile) return { found: false, reason: result.error ?? "no usable reply" };
   if (profile.match !== "sure")
     return { found: false, reason: `match: ${profile.match}. ${profile.summary}`.trim() };
@@ -243,6 +326,7 @@ function registryLines(r: ResearchProfile["registry"]): string[] {
     ["Tax number", r.taxNumber],
     ["Seat", r.seat],
     ["Status", r.status],
+    ["Main activity", r.activity ?? ""],
     ["Managing directors", r.managers.join(", ")],
     ["Registry entry", r.url],
   ];

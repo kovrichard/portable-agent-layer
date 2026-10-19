@@ -13,6 +13,7 @@ import {
   researchEntity,
   researchItem,
 } from "../hooks/lib/entity-research";
+import { lookupHungarianCompany } from "../hooks/lib/hungarian-registry";
 import { inference } from "../hooks/lib/inference";
 import { identity } from "../hooks/lib/settings";
 import { leaf, UsageError } from "../tools/lib/command";
@@ -46,7 +47,11 @@ function targetFrom(name: string, values: ResearchValues): ResearchTarget {
 export async function researchFromCli(
   name: string | undefined,
   values: ResearchValues,
-  deps: ResearchDeps = { principal: identity().principal.name, infer: inference }
+  deps: ResearchDeps = {
+    principal: identity().principal.name,
+    infer: inference,
+    registry: lookupHungarianCompany,
+  }
 ): Promise<number> {
   if (!name?.trim()) throw new UsageError("name the person or company to research");
   const target = targetFrom(name.trim(), values);

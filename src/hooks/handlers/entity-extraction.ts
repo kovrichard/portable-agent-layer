@@ -20,6 +20,7 @@ import {
   worthExtracting,
 } from "../lib/entity-extraction";
 import { newResearchTargets, researchNewEntities } from "../lib/entity-research";
+import { lookupHungarianCompany } from "../lib/hungarian-registry";
 import { canInfer, inference } from "../lib/inference";
 import { logDebug, logError } from "../lib/log";
 import { identity, isEnabled, isOptedIn } from "../lib/settings";
@@ -69,6 +70,7 @@ export async function extractSessionEntities(
     await researchNewEntities(newResearchTargets(plan.ingest, written), {
       principal: id.principal.name,
       infer: inference,
+      registry: lookupHungarianCompany,
     });
 }
 

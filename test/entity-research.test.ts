@@ -14,6 +14,7 @@ import {
   researchSystem,
 } from "../src/hooks/lib/entity-research";
 import { acceptReview, pendingReviews } from "../src/hooks/lib/entity-review";
+import type { HungarianRegistryEntry } from "../src/hooks/lib/hungarian-registry";
 import type { inference } from "../src/hooks/lib/inference";
 import { reload } from "../src/hooks/lib/settings";
 import { ingestEntities } from "../src/tools/knowledge/ingest";
@@ -39,6 +40,7 @@ const PROFILE: ResearchProfile = {
     taxNumber: "00000000-2-09",
     seat: "4024 Debrecen, Példa utca 1.",
     status: "active",
+    activity: "2740 Lighting equipment manufacturing",
     managers: ["Odo Pratt"],
     url: "https://www.e-cegjegyzek.hu/?cegadatlap/0909000000/TaroltCegkivonat",
   },
@@ -182,6 +184,94 @@ describe("researchEntity", () => {
       deps({ sources: ["somewhere"] }).deps
     );
     expect(sourceless).toEqual({ found: false, reason: "no sources given" });
+  });
+
+  describe("with the Hungarian register", () => {
+    const ENTRY: HungarianRegistryEntry = {
+      name: "Brightmoor Világítás Kft.",
+      fullName: "Brightmoor Világítás Korlátolt Felelősségű Társaság",
+      number: "09-09-000001",
+      taxNumber: "00000001-2-09",
+      seat: "4024 Debrecen, Példa utca 2.",
+      status: "Nem áll eljárás alatt.",
+      activity: "2740 Villamos világítóeszköz gyártása",
+      founded: "2019",
+      managers: ["Pratt Odo"],
+      url: "https://www.nemzeticegtar.hu/brightmoor-e10000001.html",
+      sources: [
+        "https://ceginfo.hu/ceg-adatlap/brightmoor-0909000001.html",
+        "https://www.nemzeticegtar.hu/brightmoor-e10000001.html",
+      ],
+    };
+    const HUNGARIAN: ResearchTarget = { ...COMPANY, name: "Brightmoor Világítás Kft." };
+    const withRegister = (
+      reply: Partial<ResearchProfile> | null,
+      registry: ResearchDeps["registry"] = async () => ENTRY
+    ) => {
+      const built = deps(reply, "no web search");
+      return { calls: built.calls, deps: { ...built.deps, registry } };
+    };
+
+    test("the register's facts are handed to the model to tell namesakes apart", async () => {
+      const { calls, deps: d } = withRegister({});
+      await researchEntity(HUNGARIAN, d);
+      expect(calls[0].user).toContain("registration number: 09-09-000001");
+      expect(calls[0].user).toContain(
+        "main activity: 2740 Villamos világítóeszköz gyártása"
+      );
+    });
+
+    test("what the register says replaces what the model read", async () => {
+      const outcome = await researchEntity(HUNGARIAN, withRegister({}).deps);
+      expect(outcome.found && outcome.profile.registry).toEqual({
+        name: "Brightmoor Világítás Korlátolt Felelősségű Társaság",
+        number: "09-09-000001",
+        taxNumber: "00000001-2-09",
+        seat: "4024 Debrecen, Példa utca 2.",
+        status: "Nem áll eljárás alatt.",
+        activity: "2740 Villamos világítóeszköz gyártása",
+        managers: ["Pratt Odo"],
+        url: "https://www.nemzeticegtar.hu/brightmoor-e10000001.html",
+      });
+      expect(outcome.found && outcome.profile.website).toBe(PROFILE.website);
+      expect(outcome.found && outcome.profile.sources).toEqual([
+        ...ENTRY.sources,
+        ...PROFILE.sources,
+      ]);
+    });
+
+    test("a register match is kept even when the web turned up nothing", async () => {
+      for (const reply of [{ match: "none" as const }, null]) {
+        const outcome = await researchEntity(HUNGARIAN, withRegister(reply).deps);
+        expect(outcome.found).toBe(true);
+        expect(outcome.found && outcome.profile.website).toBe("");
+        expect(outcome.found && outcome.profile.registry.number).toBe("09-09-000001");
+        expect(outcome.found && outcome.profile.summary).toContain("founded 2019");
+      }
+    });
+
+    test("a register that fails leaves the web research as it was", async () => {
+      const outcome = await researchEntity(
+        HUNGARIAN,
+        withRegister({}, async () => {
+          throw new Error("HTTP 503");
+        }).deps
+      );
+      expect(outcome).toEqual({ found: true, profile: PROFILE });
+    });
+
+    test("a person is never looked up in the register", async () => {
+      let asked = false;
+      const person: ResearchTarget = { ...HUNGARIAN, kind: "person" };
+      await researchEntity(
+        person,
+        withRegister({}, async () => {
+          asked = true;
+          return ENTRY;
+        }).deps
+      );
+      expect(asked).toBe(false);
+    });
   });
 
   test("an agent that cannot search says why", async () => {

@@ -23,6 +23,7 @@ Research the company or person named in $ARGUMENTS and show a sourced profile. T
 1. Work out from $ARGUMENTS and the conversation:
    - the exact name;
    - whether it is a company or a person;
+   - for a Hungarian company, its registered name with the legal form (Kft., Zrt., Nyrt., Bt., Kkt.), not a brand or short name. Only a name ending in a Hungarian legal form is looked up in the Hungarian company register;
    - for a person, where they work;
    - one sentence of what the user said about them.
    If you cannot tell a company from a person, ask.
@@ -34,6 +35,7 @@ Research the company or person named in $ARGUMENTS and show a sourced profile. T
    ```bash
    pal cli knowledge research "<name>" --person --organization "<employer>" --context "<what the user said>"
    ```
+   For a Hungarian company the command first reads the company register directly, because web search does not index it. An exact registered-name match fills in the registration number, tax number, seat, main activity, managing directors and status, and the profile is kept even when the web finds nothing else. A brand name, a similar name, or a company from any other country goes through web search alone.
    It takes one to several minutes. Add `--queue` when the user wants the profile saved; it then waits in the review queue.
 3. If the command exits 1, tell the user the reason it printed. Usual reasons:
    - the model found only namesakes (`match: unsure`): ask for something that tells them apart, such as an employer, a city or a website, and run it again with that in `--context` or `--organization`;
