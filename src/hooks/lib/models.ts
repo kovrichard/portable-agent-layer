@@ -7,10 +7,12 @@ import type { AgentType } from "./agent";
 export const HAIKU_MODEL = "claude-haiku-4-5-20251001";
 export const HAIKU_5_5_MODEL = "claude-haiku-5-5";
 export const SONNET_MODEL = "claude-sonnet-5-5";
+export const OPUS_MODEL = "claude-opus-5-5";
 export const FABLE_MODEL = "claude-fable-5-1";
 
-export const INFERENCE_TIERS = ["small", "medium", "flagship"] as const;
+export const INFERENCE_TIERS = ["small", "medium", "large", "flagship"] as const;
 export type InferenceTier = (typeof INFERENCE_TIERS)[number];
+type ReasoningEffort = "low" | "medium" | "high";
 
 export type FixedModelRoute =
   | "claude-spawn"
@@ -19,23 +21,32 @@ export type FixedModelRoute =
   | "openai-api"
   | "antigravity-spawn";
 
-type RouteModels = Record<Exclude<InferenceTier, "flagship">, string> & {
-  flagship?: string;
-};
+type RouteModels = Record<"small" | "medium" | "large", string> & { flagship?: string };
 
 const ANTHROPIC_MODELS: RouteModels = {
   small: HAIKU_MODEL,
   medium: SONNET_MODEL,
+  large: OPUS_MODEL,
   flagship: FABLE_MODEL,
 };
 const OPENAI_MODELS: RouteModels = {
   small: "gpt-6-luna",
   medium: "gpt-6-sol",
+  large: "gpt-6-sol",
   flagship: "gpt-6-astra",
 };
 const GEMINI_MODELS: RouteModels = {
   small: "gemini-3.8-flash-low",
-  medium: "gemini-3.8-flash-high",
+  medium: "gemini-3.8-flash-medium",
+  large: "gemini-3.8-flash-high",
+};
+
+const OPENAI_EFFORTS: Partial<Record<InferenceTier, ReasoningEffort>> = { large: "high" };
+const INFERENCE_EFFORTS: Partial<
+  Record<FixedModelRoute, Partial<Record<InferenceTier, ReasoningEffort>>>
+> = {
+  "codex-spawn": OPENAI_EFFORTS,
+  "openai-api": OPENAI_EFFORTS,
 };
 
 /** An Antigravity subagent's `model:` takes only a tier name, never a model id. */
@@ -87,6 +98,14 @@ export function inferenceModel(
   const model = evaluatedModel(models, tier, caller) ?? models[tier];
   if (!model) throw new Error(`${route} has no ${tier} model`);
   return model;
+}
+
+/** The reasoning effort a tier asks of a model it shares with another tier; undefined keeps the model's default. */
+export function inferenceEffort(
+  route: FixedModelRoute,
+  tier: InferenceTier = "small"
+): ReasoningEffort | undefined {
+  return INFERENCE_EFFORTS[route]?.[tier];
 }
 
 const AGENT_SPAWN_ROUTE: Partial<Record<AgentType, FixedModelRoute>> = {

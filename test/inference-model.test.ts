@@ -6,6 +6,7 @@ import {
   buildCodexArgs,
   buildCopilotArgs,
   buildCursorArgs,
+  buildOpenAiBody,
   buildOpencodeArgs,
   inference,
   plannedInferenceRoute,
@@ -15,8 +16,10 @@ import {
   FABLE_MODEL,
   HAIKU_5_5_MODEL,
   HAIKU_MODEL,
+  inferenceEffort,
   inferenceModel,
   isFixedModelRoute,
+  OPUS_MODEL,
   SONNET_MODEL,
 } from "../src/hooks/lib/models";
 import { opencodeTierModel } from "../src/hooks/lib/opencode-config";
@@ -36,9 +39,25 @@ describe("inferenceModel", () => {
     expect(inferenceModel("anthropic-api", "medium")).toBe(SONNET_MODEL);
   });
 
-  test("the agy route uses Gemini Flash at low and high effort", () => {
+  test("the agy route steps Gemini Flash through low, medium and high effort", () => {
     expect(inferenceModel("antigravity-spawn", "small")).toBe("gemini-3.8-flash-low");
-    expect(inferenceModel("antigravity-spawn", "medium")).toBe("gemini-3.8-flash-high");
+    expect(inferenceModel("antigravity-spawn", "medium")).toBe("gemini-3.8-flash-medium");
+    expect(inferenceModel("antigravity-spawn", "large")).toBe("gemini-3.8-flash-high");
+  });
+
+  test("large is Opus 5.5 on the claude routes and GPT-6 Sol on the openai routes", () => {
+    expect(OPUS_MODEL).toBe("claude-opus-5-5");
+    expect(inferenceModel("claude-spawn", "large")).toBe(OPUS_MODEL);
+    expect(inferenceModel("anthropic-api", "large")).toBe(OPUS_MODEL);
+    expect(inferenceModel("codex-spawn", "large")).toBe("gpt-6-sol");
+    expect(inferenceModel("openai-api", "large")).toBe("gpt-6-sol");
+  });
+
+  test("openai large runs Sol at high effort; other tiers keep the model's default", () => {
+    expect(inferenceEffort("codex-spawn", "large")).toBe("high");
+    expect(inferenceEffort("openai-api", "large")).toBe("high");
+    expect(inferenceEffort("codex-spawn", "medium")).toBeUndefined();
+    expect(inferenceEffort("claude-spawn", "large")).toBeUndefined();
   });
 
   test("openai routes use gpt-6-luna for small", () => {
@@ -128,6 +147,24 @@ describe("argv carries the tier's model", () => {
   test("claude flagship uses Fable", () => {
     const args = buildClaudeArgs({ user: "hi", tier: "flagship" });
     expect(flagValue(args, "--model")).toBe(FABLE_MODEL);
+  });
+
+  test("codex large passes Sol and its high reasoning effort", () => {
+    const args = buildCodexArgs({ user: "hi", tier: "large" });
+    expect(flagValue(args, "-m")).toBe("gpt-6-sol");
+    expect(args).toContain('model_reasoning_effort="high"');
+  });
+
+  test("codex medium leaves the reasoning effort to the model", () => {
+    const args = buildCodexArgs({ user: "hi", tier: "medium" });
+    expect(args.some((arg) => arg.startsWith("model_reasoning_effort"))).toBe(false);
+  });
+
+  test("the openai api body carries the large tier's reasoning effort", () => {
+    expect(buildOpenAiBody({ user: "hi", tier: "large" }).reasoning_effort).toBe("high");
+    expect(buildOpenAiBody({ user: "hi", tier: "medium" })).not.toHaveProperty(
+      "reasoning_effort"
+    );
   });
 
   test("codex passes its small model with -m", () => {
