@@ -3,7 +3,13 @@
  * compacted session starts with, and the one line every prompt carries.
  */
 
-import { activePath, nodesWithStatus, type ScopeTree, type WorkNode } from "./work-tree";
+import {
+  activeElsewhere,
+  activePath,
+  nodesWithStatus,
+  type ScopeTree,
+  type WorkNode,
+} from "./work-tree";
 
 const SESSION_BUDGET = 2_000;
 const RECENT_DECISIONS = 3;
@@ -102,7 +108,7 @@ export function renderTreeList(tree: ScopeTree, includeDone: boolean): string {
 function activeSection(tree: ScopeTree): string[] {
   const path = activePath(tree);
   const active = path.at(-1);
-  if (!active) return ["Active: none — enter a parked node or open one."];
+  if (!active) return ["Active: none in this session — enter a node below or open one."];
   const lines = [`Active: ${label(active)}${stoppedClause(active)}`];
   if (path.length > 1) lines.push(`  Inside: ${path.map((n) => n.title).join(" › ")}`);
   for (const d of active.decisions.slice(-RECENT_DECISIONS))
@@ -122,6 +128,10 @@ export function renderSessionContext(tree: ScopeTree): string {
   const lines = [
     `## Work tree — ${tree.scope}`,
     ...activeSection(tree),
+    ...listSection(
+      "Active in other sessions:",
+      activeElsewhere(tree).map((n) => `${label(n)}${stoppedClause(n)}`)
+    ),
     ...listSection(
       "Waiting on the user:",
       nodesWithStatus(tree, "waiting").map((n) => `${label(n)}: ${n.waitingOn}`)
@@ -149,9 +159,11 @@ export function renderPromptLine(tree: ScopeTree, newTopic: boolean): string | n
   if (tree.nodes.size === 0) return null;
   const active = tree.active ? tree.nodes.get(tree.active) : undefined;
   const parked = nodesWithStatus(tree, "parked").length;
+  const elsewhere = activeElsewhere(tree).length;
   const head = active
     ? `Work: ${label(active)}${stoppedClause(active)}`
-    : "Work: no active node";
-  const line = clip(`${head} · ${parked} parked`, PROMPT_LINE_MAX);
+    : "Work: no active node in this session";
+  const tail = elsewhere ? ` · ${elsewhere} active in other sessions` : "";
+  const line = clip(`${head} · ${parked} parked${tail}`, PROMPT_LINE_MAX);
   return newTopic ? `${line}\n${NEW_TOPIC_HINT}` : line;
 }

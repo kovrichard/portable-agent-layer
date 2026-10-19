@@ -100,7 +100,20 @@ describe("prompt line", () => {
   test("says when no node is active", () => {
     open("a", "One");
     appendEvent("pal", "a", "park", {}, file, at());
-    expect(renderPromptLine(tree(), false)).toBe("Work: no active node · 1 parked");
+    expect(renderPromptLine(tree(), false)).toBe(
+      "Work: no active node in this session · 1 parked"
+    );
+  });
+
+  test("counts the nodes other sessions are working on", () => {
+    appendEvent("pal", "a", "open", { title: "One", parent: null }, file, at(), "s1");
+    const mine = readTree("pal", file, "s2");
+    expect(renderPromptLine(mine, false)).toBe(
+      "Work: no active node in this session · 0 parked · 1 active in other sessions"
+    );
+    expect(renderSessionContext(mine)).toContain(
+      "Active in other sessions:\n- One [a] — no stopped-at recorded"
+    );
   });
 });
 

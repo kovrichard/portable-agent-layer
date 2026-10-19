@@ -131,9 +131,12 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
 
   return {
     // --- Per-message: Inject dynamic system reminder ---
-    "experimental.chat.system.transform": async (_input, output) => {
+    "experimental.chat.system.transform": async (input, output) => {
       if (isPalSpawnedInference()) return;
-      const reminder = buildSystemReminder({ agent: "opencode" });
+      const reminder = buildSystemReminder({
+        agent: "opencode",
+        sessionId: input.sessionID,
+      });
       if (reminder) output.system.push(reminder);
     },
 
@@ -285,10 +288,11 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
 
     // --- Inject PAL_DIR into shell environment ---
     "shell.env": async (
-      _input: { cwd: string; sessionID?: string; callID?: string },
+      input: { cwd: string; sessionID?: string; callID?: string },
       output: { env: Record<string, string> }
     ) => {
       output.env.PAL_DIR = PAL_DIR;
+      if (input.sessionID) output.env.PAL_OPENCODE_SESSION_ID = input.sessionID;
     },
   };
 };
