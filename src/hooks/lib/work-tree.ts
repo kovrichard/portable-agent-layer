@@ -9,6 +9,7 @@ import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ensureDir, paths } from "./paths";
 import { readAllProjects, resolveProjectFromCwd } from "./projects";
+import { workSession } from "./work-session";
 
 export type NodeStatus = "active" | "parked" | "waiting" | "done";
 
@@ -41,6 +42,7 @@ interface EventBase {
   ts: string;
   scope: string;
   node: string;
+  session?: string;
 }
 
 export type WorkEvent = EventBase &
@@ -102,9 +104,11 @@ interface GitCursor {
   head: string;
 }
 
+/** `active` is the viewing session's node; `lanes` holds every session's, keyed by session ("" for none). */
 export interface ScopeTree {
   scope: string;
   active: string | null;
+  lanes: Map<string, string>;
   nodes: Map<string, WorkNode>;
   gitCursor: GitCursor | null;
 }
@@ -149,13 +153,15 @@ export function appendEvent<T extends WorkEvent["type"]>(
   type: T,
   payload: Payload<T>,
   file: string = workTreeFile(),
-  now: Date = new Date()
+  now: Date = new Date(),
+  session: string | undefined = workSession()
 ): WorkEvent {
   const event = {
     id: newNodeId(now.getTime()),
     ts: now.toISOString(),
     scope,
     node,
+    ...(session && { session }),
     type,
     ...payload,
   } as WorkEvent;
@@ -186,50 +192,64 @@ function emptyNode(
   };
 }
 
-function parkActive(tree: ScopeTree): void {
-  const current = tree.active ? tree.nodes.get(tree.active) : undefined;
-  if (current?.status === "active") current.status = "parked";
-  tree.active = null;
+function laneOf(event: WorkEvent): string {
+  return event.session ?? "";
 }
 
-function activate(tree: ScopeTree, node: WorkNode): void {
-  if (tree.active !== node.id) parkActive(tree);
+function parkLane(tree: ScopeTree, lane: string): void {
+  const current = tree.nodes.get(tree.lanes.get(lane) ?? "");
+  if (current?.status === "active") current.status = "parked";
+  tree.lanes.delete(lane);
+}
+
+/** The lane that held the node, if one did. */
+function release(tree: ScopeTree, node: WorkNode): string | undefined {
+  const held = [...tree.lanes].find(([, id]) => id === node.id)?.[0];
+  if (held !== undefined) tree.lanes.delete(held);
+  return held;
+}
+
+/** A node is active in one session at a time, so entering it takes it over. */
+function activate(tree: ScopeTree, node: WorkNode, lane: string): void {
+  if (tree.lanes.get(lane) !== node.id) parkLane(tree, lane);
+  release(tree, node);
   node.status = "active";
   node.waitingOn = null;
-  tree.active = node.id;
+  tree.lanes.set(lane, node.id);
 }
 
-/** Finishing a detour hands the work back to the nearest unfinished ancestor. */
-function returnToParent(tree: ScopeTree, node: WorkNode): void {
+function heldElsewhere(tree: ScopeTree, node: WorkNode): boolean {
+  return [...tree.lanes.values()].includes(node.id);
+}
+
+/** Finishing a detour hands the work back to the nearest unfinished ancestor no other session holds. */
+function returnToParent(tree: ScopeTree, node: WorkNode, lane: string): void {
   let parent = node.parent ? tree.nodes.get(node.parent) : undefined;
   while (parent && parent.status === "done")
     parent = parent.parent ? tree.nodes.get(parent.parent) : undefined;
-  if (parent) activate(tree, parent);
+  if (parent && !heldElsewhere(tree, parent)) activate(tree, parent, lane);
 }
 
 function applyToNode(tree: ScopeTree, node: WorkNode, event: WorkEvent): void {
   switch (event.type) {
     case "enter":
-      activate(tree, node);
+      activate(tree, node, laneOf(event));
       break;
     case "park":
       if (event.stoppedAt) node.stoppedAt = event.stoppedAt;
       node.status = "parked";
-      if (tree.active === node.id) tree.active = null;
+      release(tree, node);
       break;
     case "wait":
       node.status = "waiting";
       node.waitingOn = event.on;
-      if (tree.active === node.id) tree.active = null;
+      release(tree, node);
       break;
     case "done": {
-      const wasActive = tree.active === node.id;
       node.status = "done";
       node.summary = event.summary ?? node.summary;
-      if (wasActive) {
-        tree.active = null;
-        returnToParent(tree, node);
-      }
+      const lane = release(tree, node);
+      if (lane !== undefined) returnToParent(tree, node, lane);
       break;
     }
     case "stopped":
@@ -262,21 +282,41 @@ function apply(tree: ScopeTree, event: WorkEvent): void {
     const node = emptyNode(event.node, event.title, event.parent, event.ts);
     node.links = event.links ?? {};
     tree.nodes.set(node.id, node);
-    activate(tree, node);
+    activate(tree, node, laneOf(event));
     return;
   }
   const node = tree.nodes.get(event.node);
   if (node) applyToNode(tree, node, event);
 }
 
-export function buildTree(scope: string, events: WorkEvent[]): ScopeTree {
-  const tree: ScopeTree = { scope, active: null, nodes: new Map(), gitCursor: null };
+export function buildTree(
+  scope: string,
+  events: WorkEvent[],
+  session?: string
+): ScopeTree {
+  const tree: ScopeTree = {
+    scope,
+    active: null,
+    lanes: new Map(),
+    nodes: new Map(),
+    gitCursor: null,
+  };
   for (const event of events) if (event.scope === scope) apply(tree, event);
+  tree.active = tree.lanes.get(session ?? "") ?? null;
   return tree;
 }
 
-export function readTree(scope: string, file: string = workTreeFile()): ScopeTree {
-  return buildTree(scope, readEvents(file));
+export function readTree(
+  scope: string,
+  file: string = workTreeFile(),
+  session: string | undefined = workSession()
+): ScopeTree {
+  return buildTree(scope, readEvents(file), session);
+}
+
+/** Nodes another session is working on right now. */
+export function activeElsewhere(tree: ScopeTree): WorkNode[] {
+  return nodesWithStatus(tree, "active").filter((n) => n.id !== tree.active);
 }
 
 /** From the root down to the active node: the detours the user is inside of. */

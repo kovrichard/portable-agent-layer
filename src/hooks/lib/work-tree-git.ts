@@ -4,6 +4,7 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { workSession } from "./work-session";
 import { appendEvent, readTree, scopeOf } from "./work-tree";
 
 const GIT_TIMEOUT_MS = 1000;
@@ -57,10 +58,11 @@ function ownCommitsSince(cwd: string, from: string, to: string, email: string): 
 export function attachGitProgress(
   cwd: string,
   file?: string,
-  now: Date = new Date()
+  now: Date = new Date(),
+  session: string | undefined = workSession()
 ): void {
   const scope = scopeOf(cwd);
-  const tree = readTree(scope, file);
+  const tree = readTree(scope, file, session);
   if (tree.nodes.size === 0) return;
   const current = snapshot(cwd);
   if (!current) return;

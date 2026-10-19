@@ -89,7 +89,7 @@ export async function getPromptContext(
     getWallClockReminder(),
     userText && withinBudget(() => promptRulesReminder(userText, sessionId), BUDGET_MS),
     withinBudget(() => getRepoStateReminder(), BUDGET_MS),
-    withinBudget(() => workTreePromptLine(userText), BUDGET_MS),
+    withinBudget(() => workTreePromptLine(userText, undefined, sessionId), BUDGET_MS),
     userText && withinBudget(() => observeTurn(userText, sessionId), BUDGET_MS),
     withinBudget(() => dueNudgeReminder(), BUDGET_MS),
     userText && getSteeringReminder(userText),

@@ -129,6 +129,51 @@ describe("work tree", () => {
     expect(readTree("harbor", file).active).toBe("b");
   });
 
+  describe("parallel sessions", () => {
+    const openIn = (session: string, node: string, parent: string | null = null) =>
+      appendEvent("pal", node, "open", { title: node, parent }, file, at(), session);
+    const view = (session?: string) => readTree("pal", file, session);
+
+    test("each session keeps its own active node", () => {
+      openIn("s1", "a");
+      openIn("s2", "b");
+      expect(view("s1").active).toBe("a");
+      expect(view("s2").active).toBe("b");
+      expect(view("s1").nodes.get("a")?.status).toBe("active");
+    });
+
+    test("a new session starts with no active node", () => {
+      openIn("s1", "a");
+      expect(view("s3").active).toBeNull();
+    });
+
+    test("entering another session's node takes it over", () => {
+      openIn("s1", "a");
+      openIn("s2", "b");
+      appendEvent("pal", "a", "enter", {}, file, at(), "s2");
+      expect(view("s2").active).toBe("a");
+      expect(view("s1").active).toBeNull();
+      expect(view("s2").nodes.get("b")?.status).toBe("parked");
+    });
+
+    test("a finished detour does not take back a parent another session holds", () => {
+      openIn("s1", "a");
+      openIn("s1", "b", "a");
+      appendEvent("pal", "a", "enter", {}, file, at(), "s2");
+      appendEvent("pal", "b", "done", {}, file, at(), "s1");
+      expect(view("s1").active).toBeNull();
+      expect(view("s2").active).toBe("a");
+    });
+
+    test("events without a session share one lane, as before", () => {
+      openIn("s1", "a");
+      openIn("", "b");
+      expect(view("").active).toBe("b");
+      expect(view("s1").active).toBe("a");
+      expect(readEvents(file).at(-1)).not.toHaveProperty("session");
+    });
+  });
+
   test("the git cursor is the latest one recorded", () => {
     appendEvent("pal", "", "git-cursor", { branch: "main", head: "aaa" }, file, at());
     appendEvent("pal", "", "git-cursor", { branch: "feat", head: "bbb" }, file, at());

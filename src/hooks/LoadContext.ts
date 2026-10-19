@@ -14,6 +14,7 @@ import { buildClaudeMd, regenerateIfNeeded } from "./lib/claude-md";
 import { type AgentTarget, buildSystemReminder } from "./lib/context";
 import { logContextInjected } from "./lib/context-overhead";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
+import { hookSessionId } from "./lib/hook-turn";
 import { logContextSnapshot, logDebug, logError } from "./lib/log";
 import {
   contextEnvelope,
@@ -62,6 +63,7 @@ try {
   const reminder = buildSystemReminder({
     agent: target,
     withoutHandoff: wanted === "without-handoff",
+    sessionId: hookSessionId(input),
   });
   if (!reminder) process.exit(0);
   logContextSnapshot(reminder);

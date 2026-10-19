@@ -194,7 +194,7 @@ export type AgentTarget = Extract<
  * wisdom, opinions) that load natively via @imports in CLAUDE.md.
  */
 export function buildSystemReminder(
-  opts: { agent?: AgentTarget; withoutHandoff?: boolean } = {}
+  opts: { agent?: AgentTarget; withoutHandoff?: boolean; sessionId?: string } = {}
 ): string {
   // Semi-static sections loaded natively via @imports (Claude Code) or
   // instructions[] (opencode). Skip them from hook output for those agents.
@@ -224,7 +224,7 @@ export function buildSystemReminder(
     !opts.withoutHandoff && settings.isEnabled("handoff")
       ? loadHandoffContext(sessionDir())
       : "";
-  const workTree = loadWorkTreeContext(sessionDir());
+  const workTree = loadWorkTreeContext(sessionDir(), opts.sessionId);
   const dueNudges = opts.agent === "cursor" ? dueNudgeSections() : [];
   const parts: string[] = [];
   if (startup) parts.push(startup);

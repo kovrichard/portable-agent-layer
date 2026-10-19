@@ -7,11 +7,12 @@
 import { callsThisTurn, commandsThisTurn, promptThisTurn } from "./claim-check";
 import { alreadySentBack, transcriptLines } from "./claim-log";
 import { type DecisionLabel, decisionRequest, parseDecision } from "./decision-label";
-import { hookFinalReply } from "./hook-turn";
+import { hookFinalReply, hookSessionId } from "./hook-turn";
 import { inference } from "./inference";
 import { sessionDir } from "./session-dir";
 import { isOptedIn } from "./settings";
 import type { StopTurnPayload } from "./stop";
+import { workSession } from "./work-session";
 import { readTree, scopeOf } from "./work-tree";
 import { attachGitProgress } from "./work-tree-git";
 import { renderPromptLine } from "./work-tree-render";
@@ -38,12 +39,17 @@ function producedThisTurn(commands: string[], lines: string[]): string[] {
   return produced;
 }
 
-function whereWorkStands(scope: string): string {
-  return renderPromptLine(readTree(scope), false) ?? "Work: nothing recorded yet";
+function whereWorkStands(scope: string, payload: StopTurnPayload): string {
+  const tree = readTree(scope, undefined, workSession(hookSessionId(payload)));
+  return renderPromptLine(tree, false) ?? "Work: nothing recorded yet";
 }
 
-function sendBackReason(produced: string[], scope: string): string {
-  const where = whereWorkStands(scope);
+function sendBackReason(
+  produced: string[],
+  scope: string,
+  payload: StopTurnPayload
+): string {
+  const where = whereWorkStands(scope, payload);
   return [
     `This turn ${produced.join(", ")} but recorded nothing in the work tree (${where}).`,
     'Record where the work stands with `pal cli work stopped "…"`, plus `decide` or `attach` where they fit;',
@@ -61,7 +67,7 @@ export function workTreeSendBack(
   const commands = commandsThisTurn(lines);
   if (commands === null || commands.some((c) => RECORDS_WORK_RE.test(c))) return null;
   const produced = producedThisTurn(commands, lines);
-  return produced.length > 0 ? sendBackReason(produced, scopeOf(cwd)) : null;
+  return produced.length > 0 ? sendBackReason(produced, scopeOf(cwd), payload) : null;
 }
 
 type LabelDecision = (message: string, reply: string) => Promise<DecisionLabel | null>;
@@ -71,9 +77,9 @@ async function labelWithInference(message: string, reply: string) {
   return result.success ? parseDecision(result.output) : null;
 }
 
-function decisionReason(what: string, scope: string): string {
+function decisionReason(what: string, scope: string, payload: StopTurnPayload): string {
   return [
-    `This turn settled a decision (${what}) but recorded none in the work tree (${whereWorkStands(scope)}).`,
+    `This turn settled a decision (${what}) but recorded none in the work tree (${whereWorkStands(scope, payload)}).`,
     'Record it with `pal cli work decide "…"`; if no node fits, open one first with `pal cli work open "…"`.',
   ].join(" ");
 }
@@ -92,7 +98,7 @@ export async function decisionSendBack(
   const reply = hookFinalReply(payload);
   if (!message || !reply) return null;
   const decided = await label(message, reply);
-  return decided?.decision ? decisionReason(decided.what, scopeOf(cwd)) : null;
+  return decided?.decision ? decisionReason(decided.what, scopeOf(cwd), payload) : null;
 }
 
 /** The reason to send the turn back with, or null after attaching what git moved. */
@@ -106,6 +112,6 @@ export async function stopWorkTree(
     workTreeSendBack(payload, lines, cwd) ??
     (await decisionSendBack(payload, lines, cwd));
   if (sendBack) return sendBack;
-  attachGitProgress(cwd);
+  attachGitProgress(cwd, undefined, undefined, workSession(hookSessionId(payload)));
   return null;
 }
