@@ -1,3 +1,11 @@
+# [0.111.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.110.0...v0.111.0) (2026-10-19)
+
+
+### Features
+
+* **research-entity:** read the Hungarian company register directly ([1aaa2cc](https://github.com/kovrichard/portable-agent-layer/commit/1aaa2cc43c380a49ed09fd2832428a7ffead6977))
+* **research-entity:** route company lookups through a table of country registers ([4a62fca](https://github.com/kovrichard/portable-agent-layer/commit/4a62fcaba66bc17ed7e5f18ddb6898c56b59310b))
+
 # [0.110.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.109.0...v0.110.0) (2026-10-19)
 
 
