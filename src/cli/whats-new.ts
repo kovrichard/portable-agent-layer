@@ -15,16 +15,22 @@ export interface WhatsNew {
 
 const SHOWN = 3;
 
-function parts(version: string): number[] {
-  return version.replace(/^v/, "").split(".").map(Number);
+function bare(version: string): string {
+  return version.replace(/^v/, "");
 }
 
 export function newer(a: string, b: string): boolean {
-  const [x, y] = [parts(a), parts(b)];
-  for (let i = 0; i < 3; i++) {
-    if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) > (y[i] ?? 0);
-  }
-  return false;
+  return Bun.semver.order(bare(a), bare(b)) === 1;
+}
+
+function isPrerelease(version: string): boolean {
+  return bare(version).includes("-");
+}
+
+/** A stable release's notes already cover the canaries before it, so a stable update skips them. */
+function inRange(tag: string, from: string, to: string): boolean {
+  if (isPrerelease(tag) && !isPrerelease(to)) return false;
+  return newer(tag, from) && !newer(tag, to);
 }
 
 /** "* **rating:** confirm corrections ([abc](url))" reads "Confirm corrections". */
@@ -71,7 +77,7 @@ export function summarizeReleases(
   slug: string
 ): WhatsNew | null {
   const items = releases
-    .filter((r) => newer(r.tag_name, from) && !newer(r.tag_name, to))
+    .filter((r) => inRange(r.tag_name, from, to))
     .flatMap((r) => releaseNotes(r.body ?? ""));
   if (items.length === 0) return null;
   return {

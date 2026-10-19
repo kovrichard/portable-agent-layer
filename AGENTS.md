@@ -71,6 +71,10 @@ To add a gate: a script in `package.json`, a wrapper in `.agents/hooks/`, and an
 
 Git hooks in `.husky/` enforce the same gates independently of any agent: `pre-commit` runs lint-staged plus every gate except the test suite, `pre-push` runs `bun run test`, and `commit-msg` runs commitlint — so commit messages must be conventional commits.
 
+## Branches and releases
+
+Open pull requests against `canary`, not `main`. semantic-release publishes every `feat` / `fix` merged into `canary` as a prerelease (`0.112.0-canary.N`) on the npm `canary` tag, without a changelog entry or release commit. A stable release is one merge of `canary` into `main`; afterwards merge `main` back into `canary` so it continues from the new version. `pal cli update` installs the stable release; `pal cli update --canary` installs the latest canary.
+
 ## Coding rules
 
 These are project-wide. Every PR follows them; agents enforce them as they write code.

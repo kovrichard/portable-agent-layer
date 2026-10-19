@@ -49,7 +49,7 @@ const tree = cliTree({
     process.exit(await install(resolveTargets(argv), argv));
   },
   uninstall: ({ argv }) => uninstall(argv),
-  update: () => update(),
+  update: ({ values }) => update(values.canary === true),
   export: ({ argv }) => exportState(argv),
   import: ({ argv }) => importState(argv),
   status: () => status(),
@@ -553,15 +553,23 @@ async function importState(args: string[]) {
   log.info("Run 'pal cli install' to re-register hooks.");
 }
 
-async function update() {
-  const { checkForUpdate, clearUpdateCache } = await import(
+async function update(canary: boolean) {
+  const { checkCanary, checkForUpdate, clearUpdateCache, isRepoMode } = await import(
     "../hooks/handlers/update-check"
   );
   const { reinstallInFreshProcess } = await import("./reinstall");
-  const { runUpdate } = await import("./update-flow");
+  const { CANARY_NEEDS_PACKAGE, runUpdate, updateCheck } = await import("./update-flow");
+  const check = updateCheck(canary, isRepoMode(), {
+    stable: () => checkForUpdate(true),
+    canary: checkCanary,
+  });
+  if (!check) {
+    log.error(CANARY_NEEDS_PACKAGE);
+    process.exit(1);
+  }
   process.exit(
     await runUpdate({
-      check: () => checkForUpdate(true),
+      check,
       reinstall: (env) => {
         clearUpdateCache();
         return reinstallInFreshProcess(process.argv[1], env);

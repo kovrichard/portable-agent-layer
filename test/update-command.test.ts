@@ -5,9 +5,11 @@ import { resolve } from "node:path";
 import { LiveRail } from "../src/cli/ui/live";
 import { createStyle } from "../src/cli/ui/style";
 import type { Terminal } from "../src/cli/ui/terminal";
-import { downloadCommand, runUpdate } from "../src/cli/update-flow";
+import { downloadCommand, runUpdate, updateCheck } from "../src/cli/update-flow";
 import {
+  checkCanary,
   checkForUpdate,
+  checkNpm,
   clearUpdateCache,
   getUpdateNotice,
   isNewerRelease,
@@ -193,5 +195,51 @@ describe("isNewerRelease", () => {
   test("an npm latest that lags a fresh release is no downgrade", () => {
     expect(isNewerRelease("0.106.0", "0.107.0")).toBe(false);
     expect(isNewerRelease("0.107.0", "0.107.0")).toBe(false);
+  });
+
+  test("a canary install stays until the stable release it leads to is out", () => {
+    expect(isNewerRelease("0.107.0", "0.108.0-canary.3")).toBe(false);
+    expect(isNewerRelease("0.108.0", "0.108.0-canary.3")).toBe(true);
+  });
+});
+
+describe("pal cli update --canary", () => {
+  function registry(version: string) {
+    const asked: string[] = [];
+    const fetchImpl = (async (url: string) => {
+      asked.push(url);
+      return Response.json({ version });
+    }) as unknown as typeof fetch;
+    return { asked, fetchImpl };
+  }
+
+  test("the stable release is the default channel", async () => {
+    const { asked, fetchImpl } = registry("0.0.1");
+    await checkNpm(undefined, fetchImpl);
+    expect(asked).toEqual(["https://registry.npmjs.org/portable-agent-layer/latest"]);
+  });
+
+  test("asks npm for the canary tag and offers it when it is newer", async () => {
+    const { asked, fetchImpl } = registry("999.0.0-canary.1");
+    const update = await checkCanary(fetchImpl);
+    expect(asked).toEqual(["https://registry.npmjs.org/portable-agent-layer/canary"]);
+    expect(update).toMatchObject({ available: true, latest: "999.0.0-canary.1" });
+    expect(downloadCommand(update).slice(0, 2)).toEqual([
+      "bun",
+      ["add", "-g", "portable-agent-layer@999.0.0-canary.1"],
+    ]);
+  });
+
+  const stable = async () => release("package");
+  const canary = async () => release("package");
+
+  test("picks the stable check unless --canary is given", () => {
+    expect(updateCheck(false, false, { stable, canary })).toBe(stable);
+    expect(updateCheck(true, false, { stable, canary })).toBe(canary);
+    expect(updateCheck(false, true, { stable, canary })).toBe(stable);
+  });
+
+  test("a repo install refuses --canary, since it follows git rather than npm", () => {
+    expect(updateCheck(true, true, { stable, canary })).toBeNull();
   });
 });

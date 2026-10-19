@@ -109,7 +109,17 @@ function adminCommands(admin: AdminHandlers): Record<string, Leaf | Group> {
       options: agentOptions("Uninstall from"),
       run: admin.uninstall,
     }),
-    update: leaf({ summary: "Update PAL (git pull or bun add -g)", run: admin.update }),
+    update: leaf({
+      summary: "Update PAL (git pull or bun add -g)",
+      options: {
+        canary: {
+          type: "boolean",
+          description:
+            "Install the latest canary prerelease instead of the stable release",
+        },
+      },
+      run: admin.update,
+    }),
     export: leaf({
       summary: "Export your state to a zip",
       args: "[path]",

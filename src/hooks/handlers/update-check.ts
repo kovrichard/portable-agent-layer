@@ -139,12 +139,18 @@ export function isNewerRelease(latest: string, current: string): boolean {
   return Bun.semver.order(latest, current) === 1;
 }
 
-async function checkNpm(): Promise<UpdateCache> {
+/** latest is the stable release from main; canary is the prerelease from the canary branch. */
+export type Channel = "latest" | "canary";
+
+export async function checkNpm(
+  channel: Channel = "latest",
+  fetchImpl: typeof fetch = fetch
+): Promise<UpdateCache> {
   const current = getInstalledVersion();
 
   try {
-    const response = await fetch(
-      "https://registry.npmjs.org/portable-agent-layer/latest",
+    const response = await fetchImpl(
+      `https://registry.npmjs.org/portable-agent-layer/${channel}`,
       { signal: AbortSignal.timeout(5000) }
     );
 
@@ -168,6 +174,11 @@ async function checkNpm(): Promise<UpdateCache> {
       mode: "package",
     };
   }
+}
+
+/** The canary check is never cached: the cache feeds the stable update notice. */
+export function checkCanary(fetchImpl: typeof fetch = fetch): Promise<UpdateCache> {
+  return checkNpm("canary", fetchImpl);
 }
 
 /** Run update check. Caches result. Use force=true to skip cache (e.g. for `pal cli update`). */

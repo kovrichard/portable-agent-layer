@@ -33,6 +33,21 @@ export interface UpdateSteps {
   run?: Run;
 }
 
+export const CANARY_NEEDS_PACKAGE =
+  "--canary installs from npm. A repo install follows its git checkout: check out the canary branch there instead.";
+
+type Check = UpdateSteps["check"];
+
+/** Null when --canary is asked of a repo install, which has no npm channel to follow. */
+export function updateCheck(
+  canary: boolean,
+  repoMode: boolean,
+  checks: { stable: Check; canary: Check }
+): Check | null {
+  if (!canary) return checks.stable;
+  return repoMode ? null : checks.canary;
+}
+
 /** `bun update -g` keeps the caret range, and on 0.x a caret allows only patch bumps. */
 export function downloadCommand(
   update: UpdateCache
