@@ -69,6 +69,13 @@ beforeAll(() => {
 
   writeFileSync(resolve(TEST_HOME, ".env"), "CLAUDE_CODE_OAUTH_TOKEN=fake-token\n");
 
+  const factory = resolve(TEST_HOME, "dark-factory");
+  mkdirSync(resolve(factory, "tasks", "t1"), { recursive: true });
+  mkdirSync(resolve(factory, "worktrees", "t1"), { recursive: true });
+  writeFileSync(resolve(factory, "events.jsonl"), '{"event":"gate"}\n');
+  writeFileSync(resolve(factory, "tasks", "t1", "spec.md"), "# Spec\n");
+  writeFileSync(resolve(factory, "worktrees", "t1", "index.ts"), "code\n");
+
   process.env.PAL_HOME = TEST_HOME;
 });
 
@@ -108,6 +115,14 @@ describe("collectExportFiles", () => {
     const files = collectExportFiles();
     const shipped = files.filter((f) => f.startsWith("skills/shipped-skill"));
     expect(shipped).toHaveLength(0);
+  });
+
+  test("carries the dark-factory tasks and events but not its worktrees", async () => {
+    const { collectExportFiles } = await import("../src/hooks/lib/export");
+    const files = collectExportFiles();
+    expect(files).toContain("dark-factory/events.jsonl");
+    expect(files).toContain("dark-factory/tasks/t1/spec.md");
+    expect(files.filter((f) => f.startsWith("dark-factory/worktrees"))).toEqual([]);
   });
 
   test("never collects the credentials in ~/.pal/.env", async () => {

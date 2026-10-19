@@ -223,11 +223,13 @@ type Settings = Record<string, unknown> & {
 };
 
 /**
- * Load a settings template, replacing {{PKG_ROOT}} with the actual path.
+ * Load a settings template, replacing {{PKG_ROOT}} and {{PAL_HOME}} with the actual paths.
  */
 export function loadSettingsTemplate(templatePath: string, pkgRoot: string): Settings {
   const raw = readFileSync(templatePath, "utf-8");
-  const resolved = raw.replaceAll("{{PKG_ROOT}}", pkgRoot);
+  const resolved = raw
+    .replaceAll("{{PKG_ROOT}}", pkgRoot)
+    .replaceAll("{{PAL_HOME}}", palHome().replaceAll("\\", "/"));
   try {
     return JSON.parse(resolved) as Settings;
   } catch (e) {
@@ -250,10 +252,11 @@ const USER_OWNED_SETTINGS = [
   "autoMemoryEnabled",
 ] as const;
 
-/** Entries PAL owns by key: its marketplace follows the install path, the user's plugin choice wins. */
+/** Entries PAL owns by key: its marketplace follows the install path, the user's choices win. */
 const PAL_KEYED_SETTINGS = {
   extraKnownMarketplaces: "pal-wins",
   enabledPlugins: "user-wins",
+  env: "user-wins",
 } as const;
 
 type KeyedEntries = Record<string, unknown>;

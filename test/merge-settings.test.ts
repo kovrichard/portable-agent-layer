@@ -366,3 +366,43 @@ describe("PAL's plugin marketplace", () => {
     expect(cleaned).not.toHaveProperty("enabledPlugins");
   });
 });
+
+describe("dark-factory's state under the PAL home", () => {
+  const template = { env: { DARK_FACTORY_HOME: "/home/pal/dark-factory" } };
+
+  test("the shipped template points the factory at the PAL home", () => {
+    const previous = process.env.PAL_HOME;
+    process.env.PAL_HOME = "/home/pal";
+    try {
+      const shipped = loadSettingsTemplate(
+        resolve(import.meta.dir, "../assets/templates/settings.claude.json"),
+        "/pkg"
+      );
+      expect(shipped.env).toEqual({ DARK_FACTORY_HOME: "/home/pal/dark-factory" });
+    } finally {
+      if (previous === undefined) delete process.env.PAL_HOME;
+      else process.env.PAL_HOME = previous;
+    }
+  });
+
+  test("install adds the variable beside the user's own", () => {
+    const merged = mergeSettings({ env: { EDITOR: "vim" } }, template);
+    expect(merged.env).toEqual({
+      EDITOR: "vim",
+      DARK_FACTORY_HOME: "/home/pal/dark-factory",
+    });
+  });
+
+  test("a user who moved the factory keeps their location", () => {
+    const merged = mergeSettings({ env: { DARK_FACTORY_HOME: "/elsewhere" } }, template);
+    expect(merged.env).toEqual({ DARK_FACTORY_HOME: "/elsewhere" });
+  });
+
+  test("uninstall removes only PAL's variable", () => {
+    const cleaned = unmergeSettings(
+      { env: { EDITOR: "vim", DARK_FACTORY_HOME: "/home/pal/dark-factory" } },
+      template
+    );
+    expect(cleaned.env).toEqual({ EDITOR: "vim" });
+  });
+});

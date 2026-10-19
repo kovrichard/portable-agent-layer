@@ -271,5 +271,8 @@
   },
   "enabledPlugins": {
     "dark-factory@pal": true
+  },
+  "env": {
+    "DARK_FACTORY_HOME": "{{PAL_HOME}}/dark-factory"
   }
 }

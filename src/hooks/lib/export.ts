@@ -17,10 +17,10 @@ import { palHome } from "./paths";
  * Shipped skills live in `skills/` only as symlinks back to the repo, and
  * walkDir skips symlinks (see below) — so only real, user-owned files travel.
  */
-const EXPORT_DIRS = ["telos", "memory", "skills", "agents"];
+const EXPORT_DIRS = ["telos", "memory", "skills", "agents", "dark-factory"];
 
 /** Subdirectories/files to skip during export. */
-const SKIP_PATTERNS = ["memory/downloads", "memory/content"];
+const SKIP_PATTERNS = ["memory/downloads", "memory/content", "dark-factory/worktrees"];
 
 function shouldSkip(relPath: string): boolean {
   const normalized = relPath.replaceAll("\\", "/");
