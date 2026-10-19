@@ -11,7 +11,7 @@ import {
   readEvents,
   readTree,
   type WorkEvent,
-} from "../src/hooks/lib/work-tree";
+} from "../src/hooks/lib/progress-tree";
 import { freshTestDir } from "./lib/test-home";
 
 let file: string;
@@ -31,10 +31,10 @@ function open(node: string, title: string, parent: string | null = null, scope =
   appendEvent(scope, node, "open", { title, parent }, file, at());
 }
 
-describe("work tree", () => {
+describe("progress tree", () => {
   test("opening a node makes it active and parks the one before", () => {
     open("a", "Lane D wording");
-    open("b", "Work tree", null);
+    open("b", "Progress tree", null);
     const tree = readTree("pal", file);
     expect(tree.active).toBe("b");
     expect(tree.nodes.get("a")?.status).toBe("parked");
@@ -174,6 +174,29 @@ describe("work tree", () => {
       appendEvent("pal", "b", "done", {}, file, at(), "s1");
       expect(view("s1").active).toBeNull();
       expect(view("s2").active).toBe("a");
+    });
+
+    test("a session at the root that records on a parked node wakes it", () => {
+      openIn("s1", "a");
+      appendEvent("pal", "a", "park", {}, file, at(), "s1");
+      appendEvent("pal", "a", "stopped", { text: "back on it" }, file, at(), "s2");
+      expect(view("s2").active).toBe("a");
+      expect(view("s2").nodes.get("a")?.status).toBe("active");
+    });
+
+    test("recording on a parked node does not pull a session off its own node", () => {
+      openIn("s1", "a");
+      openIn("s1", "b");
+      appendEvent("pal", "a", "decide", { text: "noted" }, file, at(), "s1");
+      expect(view("s1").active).toBe("b");
+      expect(view("s1").nodes.get("a")?.status).toBe("parked");
+    });
+
+    test("recording on a node another session holds does not take it over", () => {
+      openIn("s1", "a");
+      appendEvent("pal", "a", "stopped", { text: "peek" }, file, at(), "s2");
+      expect(view("s1").active).toBe("a");
+      expect(view("s2").active).toBeNull();
     });
 
     test("events without a session share one lane, as before", () => {

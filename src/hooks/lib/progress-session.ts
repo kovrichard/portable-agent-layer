@@ -1,7 +1,7 @@
 /**
- * Which session a piece of work-tree activity belongs to, so parallel sessions
+ * Which session a piece of progress-tree activity belongs to, so parallel sessions
  * in one project each keep their own active node. A hook knows its session
- * from the payload, but `pal cli work` runs in the agent's shell and knows it
+ * from the payload, but `pal cli progress` runs in the agent's shell and knows it
  * only from what the agent exports there, so only agents that export it get
  * their own lane; the rest share one, as every session did before.
  */
@@ -17,7 +17,7 @@ const SHELL_SESSION_ENV: Partial<Record<AgentType, string>> = {
   cursor: "CURSOR_CONVERSATION_ID",
 };
 
-export function workSession(
+export function progressSession(
   hookSession?: string,
   env: NodeJS.ProcessEnv = process.env,
   agent: AgentType = getActiveAgent()

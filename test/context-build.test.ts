@@ -8,10 +8,10 @@ import {
   loadSessionIntelligence,
   loadWisdomContext,
 } from "../src/hooks/lib/context";
+import { appendEvent } from "../src/hooks/lib/progress-tree";
 import { writeProject } from "../src/hooks/lib/projects";
 import { reload } from "../src/hooks/lib/settings";
 import { appendProjectHistory } from "../src/hooks/lib/work-tracking";
-import { appendEvent } from "../src/hooks/lib/work-tree";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { testHome } from "./lib/test-home";
@@ -319,26 +319,28 @@ describe("buildSystemReminder", () => {
     return dir;
   }
 
-  test("starts the session with the work tree of the project it started in", () => {
+  test("starts the session with the progress tree of the project it started in", () => {
     const dir = projectWithWork();
     const out = withSessionIn(dir, () => buildSystemReminder({ agent: "claude" }));
-    expect(out).toContain("## Work tree — tree-project");
+    expect(out).toContain("## Progress tree — tree-project");
     expect(out).toContain(
       "Active: Lane D wording [n1] — stopped at: restore WIP wording"
     );
   });
 
-  test("keeps the work tree after a compaction, which drops the handoff", () => {
+  test("keeps the progress tree after a compaction, which drops the handoff", () => {
     const dir = projectWithWork();
     const out = withSessionIn(dir, () => buildSystemReminder({ withoutHandoff: true }));
     expect(out).toContain("stopped at: restore WIP wording");
   });
 
-  test("leaves the work tree out until it is opted into", () => {
+  test("leaves the progress tree out until it is opted into", () => {
     const dir = projectWithWork();
     write("memory/pal-settings.json", JSON.stringify({ dynamicContext: {} }));
     reload();
-    expect(withSessionIn(dir, () => buildSystemReminder())).not.toContain("## Work tree");
+    expect(withSessionIn(dir, () => buildSystemReminder())).not.toContain(
+      "## Progress tree"
+    );
   });
 
   test("leaves past sessions to the handoff and the active projects list", () => {

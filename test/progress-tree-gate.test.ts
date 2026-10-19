@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { progressSession } from "../src/hooks/lib/progress-session";
+import { appendEvent } from "../src/hooks/lib/progress-tree";
+import {
+  decisionSendBack,
+  progressTreeSendBack,
+} from "../src/hooks/lib/progress-tree-gate";
 import { reload } from "../src/hooks/lib/settings";
 import type { StopTurnPayload } from "../src/hooks/lib/stop";
-import { workSession } from "../src/hooks/lib/work-session";
-import { appendEvent } from "../src/hooks/lib/work-tree";
-import { decisionSendBack, workTreeSendBack } from "../src/hooks/lib/work-tree-gate";
 import { freshTestDir } from "./lib/test-home";
 
 let home: string;
@@ -29,7 +32,7 @@ const bash = (command: string) => call("Bash", { command });
 
 const payload: StopTurnPayload = { session_id: "s" };
 const check = (entries: unknown[], p: StopTurnPayload = payload) =>
-  workTreeSendBack(p, lines(entries), folder);
+  progressTreeSendBack(p, lines(entries), folder);
 
 function setting(key: string, value: boolean | undefined) {
   mkdirSync(resolve(home, "memory"), { recursive: true });
@@ -42,11 +45,13 @@ function setting(key: string, value: boolean | undefined) {
   reload();
 }
 
-describe("the work-tree gate", () => {
+describe("the progress-tree gate", () => {
   test("sends back a turn that committed and recorded nothing", () => {
     const reason = check([prompt("ship it"), bash("git commit -m 'feat: x'")]);
-    expect(reason).toContain("This turn committed but recorded nothing in the work tree");
-    expect(reason).toContain("pal cli work stopped");
+    expect(reason).toContain(
+      "This turn committed but recorded nothing in the progress tree"
+    );
+    expect(reason).toContain("pal cli progress stopped");
   });
 
   test("names the active node so the agent knows where to record", () => {
@@ -57,10 +62,10 @@ describe("the work-tree gate", () => {
       { title: "Gate", parent: null },
       undefined,
       undefined,
-      workSession("s")
+      progressSession("s")
     );
     expect(check([prompt("ship it"), bash("git commit -m x")])).toContain(
-      "Work: Gate [n1]"
+      "Progress: Gate [n1]"
     );
   });
 
@@ -69,9 +74,18 @@ describe("the work-tree gate", () => {
       check([
         prompt("ship it"),
         bash("git commit -m x"),
-        bash('pal cli work stopped "committed the gate"'),
+        bash('pal cli progress stopped "committed the gate"'),
       ])
     ).toBeNull();
+  });
+
+  test("the removed pal cli work command no longer counts as recording", () => {
+    const reason = check([
+      prompt("ship it"),
+      bash("git commit -m x"),
+      bash('pal cli work stopped "x"'),
+    ]);
+    expect(reason).toContain("recorded nothing in the progress tree");
   });
 
   test.each([
@@ -116,7 +130,7 @@ describe("the work-tree gate", () => {
   });
 
   test("an unreadable transcript is never sent back", () => {
-    expect(workTreeSendBack(payload, ["not json"], folder)).toBeNull();
+    expect(progressTreeSendBack(payload, ["not json"], folder)).toBeNull();
   });
 
   test.each([
@@ -148,7 +162,7 @@ describe("the decision gate", () => {
   test("sends back a turn that settled a decision and recorded none", async () => {
     const reason = await decide([prompt("PRs go to canary from now on")]);
     expect(reason).toContain("This turn settled a decision (PRs target canary)");
-    expect(reason).toContain("pal cli work decide");
+    expect(reason).toContain("pal cli progress decide");
     expect(asked).toEqual([["PRs go to canary from now on", "Done."]]);
   });
 
@@ -157,7 +171,10 @@ describe("the decision gate", () => {
   });
 
   test("lets a turn through that recorded the decision, without asking the model", async () => {
-    const entries = [prompt("canary"), bash('pal cli work decide "PRs target canary"')];
+    const entries = [
+      prompt("canary"),
+      bash('pal cli progress decide "PRs target canary"'),
+    ];
     expect(await decide(entries)).toBeNull();
     expect(asked).toEqual([]);
   });

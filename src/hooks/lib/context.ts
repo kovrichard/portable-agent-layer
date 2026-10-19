@@ -11,6 +11,7 @@ import { resolveAnchor } from "./anchor";
 import { dueNudgeSections } from "./daily-nudge";
 import { loadHandoffContext } from "./handoff-context";
 import { paths, toPath } from "./paths";
+import { loadProgressTreeContext } from "./progress-tree-context";
 import { loadActiveProjectsContext } from "./projects";
 import { loadRecentNotes } from "./relationship";
 import { loadFailurePatterns, loadSteeringRules } from "./semi-static";
@@ -18,7 +19,6 @@ import { sessionDir } from "./session-dir";
 import * as settings from "./settings";
 import { readFramePrinciples } from "./wisdom";
 import { lastSessionTitle } from "./work-tracking";
-import { loadWorkTreeContext } from "./work-tree-context";
 
 /** Load and concatenate loadAtStartup files */
 function loadStartupFiles(): string {
@@ -224,12 +224,12 @@ export function buildSystemReminder(
     !opts.withoutHandoff && settings.isEnabled("handoff")
       ? loadHandoffContext(sessionDir())
       : "";
-  const workTree = loadWorkTreeContext(sessionDir(), opts.sessionId);
+  const progressTree = loadProgressTreeContext(sessionDir(), opts.sessionId);
   const dueNudges = opts.agent === "cursor" ? dueNudgeSections() : [];
   const parts: string[] = [];
   if (startup) parts.push(startup);
   if (handoff) parts.push(handoff);
-  if (workTree) parts.push(workTree);
+  if (progressTree) parts.push(progressTree);
   parts.push(...dueNudges);
   if (selfModel) parts.push(selfModel);
   if (wisdom) parts.push(wisdom);

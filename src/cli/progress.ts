@@ -1,9 +1,9 @@
 /**
- * pal cli work — the work tree: what is active, what is parked and where it
+ * pal cli progress — the progress tree: what is active, what is parked and where it
  * stopped, the decisions and artifacts of each piece of work.
  */
 
-import { workSession } from "../hooks/lib/work-session";
+import { progressSession } from "../hooks/lib/progress-session";
 import {
   ARTIFACT_KINDS,
   type ArtifactKind,
@@ -14,14 +14,14 @@ import {
   type ScopeTree,
   scopeOf,
   type WorkNode,
-} from "../hooks/lib/work-tree";
+} from "../hooks/lib/progress-tree";
 import {
   renderNodeDetail,
   renderSessionContext,
   renderTreeList,
   suffix,
-} from "../hooks/lib/work-tree-render";
-import { openSessionNode } from "../hooks/lib/work-tree-session-node";
+} from "../hooks/lib/progress-tree-render";
+import { openSessionNode } from "../hooks/lib/progress-tree-session-node";
 import { group, leaf, runCommand, UsageError } from "../tools/lib/command";
 
 const SCOPE = {
@@ -73,7 +73,7 @@ function guarded(run: () => void): number {
 function nodeToRecordOn(scope: string, idOrPrefix: string | undefined): WorkNode {
   const tree = readTree(scope);
   if (idOrPrefix || tree.active) return targetNode(tree, idOrPrefix);
-  const id = openSessionNode(scope, workSession());
+  const id = openSessionNode(scope, progressSession());
   return targetNode(readTree(scope), id);
 }
 
@@ -190,8 +190,9 @@ function cmdList(values: { scope?: string; all?: boolean; json?: boolean }): num
   return 0;
 }
 
-export const workCommand = group({
-  summary: "The work tree: what is active, parked, waiting, and where each piece stopped",
+export const progressCommand = group({
+  summary:
+    "The progress tree: what is active, parked, waiting, and where each piece stopped",
   fallback: "show",
   commands: {
     show: leaf({
@@ -355,6 +356,6 @@ export const workCommand = group({
   },
 });
 
-export function runWork(args: string[]): Promise<number> {
-  return runCommand(workCommand, args, ["pal", "cli", "work"]);
+export function runProgress(args: string[]): Promise<number> {
+  return runCommand(progressCommand, args, ["pal", "cli", "progress"]);
 }

@@ -65,8 +65,20 @@ describe("every pal cli command", () => {
       "pal cli interaction report",
       "pal cli thread",
       "pal cli debug on",
+      "pal cli progress show",
+      "pal cli progress follow-up",
     ])
       expect(paths).toContain(expected);
+  });
+
+  test("pal cli work is gone, with no alias", async () => {
+    expect(await runCommand(cliTree(admin), ["work", "show"], ["pal", "cli"])).toBe(1);
+    expect(err.join("\n")).toContain("unknown command 'work'");
+    expect(TREE.some(([path]) => path[2] === "work")).toBe(false);
+    out = [];
+    await runCommand(cliTree(admin), ["--help"], ["pal", "cli"]);
+    expect(out.join("\n")).not.toMatch(/^\s+work\b/m);
+    expect(out.join("\n")).toMatch(/^\s+progress\b/m);
   });
 
   test.each(
