@@ -26,7 +26,7 @@ const CI_ROUNDS = 3
 const CI_POLLS = 6
 
 const { task, pluginRoot } = args
-const S = `node ${pluginRoot}/scripts`
+const S = `node ${quoted(pluginRoot)}/scripts`
 const trace = []
 let attempt = 0
 
