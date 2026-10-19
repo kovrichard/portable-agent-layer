@@ -30,6 +30,7 @@ import { serverCommand } from "./server";
 import { skillCommand } from "./skill";
 import { subagentCommand } from "./subagent";
 import { usageCommand } from "./usage";
+import { workCommand } from "./work";
 import { wrappedCommand } from "./wrapped";
 
 type Handler = Leaf["run"];
@@ -171,6 +172,7 @@ export function cliTree(admin: AdminHandlers): Group {
       ledger: ledgerCommand,
       rule: ruleCommand,
       correction: correctionCommand,
+      work: workCommand,
       server: serverCommand,
       skill: skillCommand,
       subagent: subagentCommand,

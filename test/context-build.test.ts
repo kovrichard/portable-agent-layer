@@ -11,6 +11,7 @@ import {
 import { writeProject } from "../src/hooks/lib/projects";
 import { reload } from "../src/hooks/lib/settings";
 import { appendProjectHistory } from "../src/hooks/lib/work-tracking";
+import { appendEvent } from "../src/hooks/lib/work-tree";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { testHome } from "./lib/test-home";
@@ -284,6 +285,60 @@ describe("buildSystemReminder", () => {
     const out = buildSystemReminder({ withoutHandoff: true });
     expect(out).not.toContain("finish the gate");
     expect(out).toContain("- W: a fact");
+  });
+
+  function withSessionIn<T>(dir: string, run: () => T): T {
+    const savedStart = process.env.CLAUDE_PROJECT_DIR;
+    process.env.CLAUDE_PROJECT_DIR = dir;
+    try {
+      return run();
+    } finally {
+      if (savedStart === undefined) delete process.env.CLAUDE_PROJECT_DIR;
+      else process.env.CLAUDE_PROJECT_DIR = savedStart;
+    }
+  }
+
+  function projectWithWork(): string {
+    const dir = resolve(HOME, "tree-project");
+    mkdirSync(dir, { recursive: true });
+    const now = new Date().toISOString();
+    writeProject({
+      name: "tree-project",
+      path: dir,
+      status: "active",
+      created: now,
+      updated: now,
+    });
+    appendEvent("tree-project", "n1", "open", { title: "Lane D wording", parent: null });
+    appendEvent("tree-project", "n1", "stopped", { text: "restore WIP wording" });
+    write(
+      "memory/pal-settings.json",
+      JSON.stringify({ dynamicContext: { workTree: true } })
+    );
+    reload();
+    return dir;
+  }
+
+  test("starts the session with the work tree of the project it started in", () => {
+    const dir = projectWithWork();
+    const out = withSessionIn(dir, () => buildSystemReminder({ agent: "claude" }));
+    expect(out).toContain("## Work tree — tree-project");
+    expect(out).toContain(
+      "Active: Lane D wording [n1] — stopped at: restore WIP wording"
+    );
+  });
+
+  test("keeps the work tree after a compaction, which drops the handoff", () => {
+    const dir = projectWithWork();
+    const out = withSessionIn(dir, () => buildSystemReminder({ withoutHandoff: true }));
+    expect(out).toContain("stopped at: restore WIP wording");
+  });
+
+  test("leaves the work tree out until it is opted into", () => {
+    const dir = projectWithWork();
+    write("memory/pal-settings.json", JSON.stringify({ dynamicContext: {} }));
+    reload();
+    expect(withSessionIn(dir, () => buildSystemReminder())).not.toContain("## Work tree");
   });
 
   test("leaves past sessions to the handoff and the active projects list", () => {

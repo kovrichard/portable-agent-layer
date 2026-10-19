@@ -22,6 +22,7 @@ import { isEnabled } from "../lib/settings";
 import { getSkillReminder } from "../lib/skill-match";
 import { getSteeringReminder } from "../lib/steering";
 import { getWallClockReminder } from "../lib/wall-clock";
+import { workTreePromptLine } from "../lib/work-tree-context";
 
 const BUDGET_MS = 250;
 
@@ -88,6 +89,7 @@ export async function getPromptContext(
     getWallClockReminder(),
     userText && withinBudget(() => promptRulesReminder(userText, sessionId), BUDGET_MS),
     withinBudget(() => getRepoStateReminder(), BUDGET_MS),
+    withinBudget(() => workTreePromptLine(userText), BUDGET_MS),
     userText && withinBudget(() => observeTurn(userText, sessionId), BUDGET_MS),
     withinBudget(() => dueNudgeReminder(), BUDGET_MS),
     userText && getSteeringReminder(userText),

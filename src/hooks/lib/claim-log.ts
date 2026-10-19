@@ -40,7 +40,7 @@ function monthFile(date: Date): string {
   return resolve(claimsDir(), `${date.toISOString().slice(0, 7)}.jsonl`);
 }
 
-function transcriptLines(payload: StopTurnPayload): string[] {
+export function transcriptLines(payload: StopTurnPayload): string[] {
   const path = payload.transcript_path ?? payload.transcriptPath;
   if (!path || !existsSync(path)) return [];
   return readFileSync(path, "utf-8").split("\n").filter(Boolean);

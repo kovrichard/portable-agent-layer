@@ -78,7 +78,15 @@ export async function runCommand(
     : runLeaf(command, args, path);
 }
 
+function startsWithFallbackOption(command: Group, args: string[]): boolean {
+  const first = args[0];
+  if (!command.fallback || first === undefined || !first.startsWith("-")) return false;
+  return !HELP_FLAGS.has(first) && !command.aliases?.[first];
+}
+
 async function runGroup(command: Group, args: string[], path: string[]): Promise<number> {
+  if (command.fallback && startsWithFallbackOption(command, args))
+    return runGroup(command, [command.fallback, ...args], path);
   const [first, ...rest] = args;
   const name = first === undefined ? command.fallback : first;
   if (name === undefined || name === "help" || HELP_FLAGS.has(name)) {
