@@ -14,7 +14,6 @@
     ".claude/settings.json#attribution.sessionUrl",
     ".claude/settings.json#autoMemoryEnabled",
     ".claude/settings.json#enabledPlugins.dark-factory@pal",
-    ".claude/settings.json#env.DARK_FACTORY_HOME",
     ".claude/settings.json#extraKnownMarketplaces.pal.source.path",
     ".claude/settings.json#extraKnownMarketplaces.pal.source.source",
     ".claude/settings.json#hook=AttentionEvent.ts",
@@ -356,6 +355,7 @@
     "home/tools -> {pkg}/src/tools/agent"
   ],
   "retired": [
+    ".claude/settings.json#env.DARK_FACTORY_HOME",
     ".claude/settings.json#hook=LedgerCommit.ts",
     ".claude/settings.json#hook=LedgerUnapplied.ts",
     ".claude/settings.json#hook=ToolEvent.ts",
