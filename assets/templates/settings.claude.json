@@ -260,5 +260,19 @@
       }
     ]
   },
-  "autoMemoryEnabled": false
+  "autoMemoryEnabled": false,
+  "extraKnownMarketplaces": {
+    "pal": {
+      "source": {
+        "source": "directory",
+        "path": "{{PKG_ROOT}}"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "dark-factory@pal": true
+  },
+  "env": {
+    "DARK_FACTORY_HOME": "{{PAL_HOME}}/dark-factory"
+  }
 }
