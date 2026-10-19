@@ -1,3 +1,10 @@
+# [0.113.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.112.0...v0.113.0) (2026-10-19)
+
+
+### Features
+
+* **update:** canary prerelease channel with pal cli update --canary ([9dc5426](https://github.com/kovrichard/portable-agent-layer/commit/9dc5426e3766c5406beaf23f4170f839814576b4))
+
 # [0.112.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.111.0...v0.112.0) (2026-10-19)
 
 
