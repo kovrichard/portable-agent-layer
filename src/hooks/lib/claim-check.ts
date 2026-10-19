@@ -137,6 +137,14 @@ function isUserPrompt(entry: TranscriptLine): boolean {
   return text !== null && !isSystemText(text) && !isCodexInjectedContext(text);
 }
 
+export function promptThisTurn(lines: string[]): string | null {
+  const prompts = lines
+    .map(parsed)
+    .filter((e): e is TranscriptLine => e !== null && isUserPrompt(e));
+  const last = prompts.at(-1);
+  return last ? promptText(last) : null;
+}
+
 const ran = (input: unknown) => JSON.stringify(input ?? {});
 
 function callsIn(entry: TranscriptLine, tools: ReadonlySet<string>): string[] {

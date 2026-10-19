@@ -29,6 +29,7 @@
     "repoState": true,
     "workTree": false,
     "workTreeGate": false,
+    "workTreeDecisionGate": false,
     "dueReminders": false,
     "interactionAwareness": true,
     "reactionSampling": true,
