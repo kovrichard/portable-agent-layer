@@ -1,3 +1,18 @@
+# [0.110.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.109.0...v0.110.0) (2026-10-19)
+
+
+### Bug Fixes
+
+* **models:** bill GPT-6 and GPT-5.6 cache writes at OpenAI's premium ([39dbc24](https://github.com/kovrichard/portable-agent-layer/commit/39dbc2486203e188f5046cbc9efe63355cda9ce4))
+
+
+### Features
+
+* **infer:** add a flagship tier ([41a9683](https://github.com/kovrichard/portable-agent-layer/commit/41a9683831a37feae26f0ac7c902edeed6280170))
+* **infer:** add a large tier, with reasoning effort where models run out ([e9a531a](https://github.com/kovrichard/portable-agent-layer/commit/e9a531a531cadbde29a5f8297ab5f830fe1a698f))
+* **models:** run medium on Sonnet 5.5 and the flagship on Fable 5.1 ([8ff6204](https://github.com/kovrichard/portable-agent-layer/commit/8ff6204fc300e0447c82f40a9561728faa89985e))
+* **scientific-research:** drop preprints and MDPI, prefer Q1, name every funder ([811a877](https://github.com/kovrichard/portable-agent-layer/commit/811a877dbd61c80cd09259fc1c9ddd4480aae4a7))
+
 # [0.109.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.108.0...v0.109.0) (2026-10-14)
 
 
