@@ -143,18 +143,31 @@ const withoutWritePremium = (
   cacheRead,
 });
 
+const withWritePremium = (
+  input: number,
+  cacheRead: number,
+  output: number
+): ModelPricing => ({
+  input,
+  output,
+  cacheWrite5m: input * 1.25,
+  cacheWrite1h: input * 1.25,
+  cacheRead,
+});
+
 /**
  * Standard-tier rates from https://developers.openai.com/api/docs/pricing; prompts over
- * 272K tokens cost more, and PAL's never get there. OpenAI bills no cache-write premium.
+ * 272K tokens cost more, and PAL's never get there. GPT-6 and GPT-5.6 bill cache writes
+ * at 1.25x input; older models publish no cache-write price, so writes bill as input.
  */
 const OPENAI_PRICING: Record<string, ModelPricing> = {
-  "gpt-6-astra": withoutWritePremium(10, 1, 50),
-  "gpt-6.1-sol": withoutWritePremium(2, 0.1, 10),
-  "gpt-6-sol": withoutWritePremium(2, 0.2, 10),
-  "gpt-6-luna": withoutWritePremium(0.1, 0.01, 0.5),
-  "gpt-5.6-sol": withoutWritePremium(4, 0.4, 20),
-  "gpt-5.6-terra": withoutWritePremium(2, 0.2, 12),
-  "gpt-5.6-luna": withoutWritePremium(0.2, 0.02, 1.2),
+  "gpt-6-astra": withWritePremium(10, 1, 50),
+  "gpt-6.1-sol": withWritePremium(2, 0.1, 10),
+  "gpt-6-sol": withWritePremium(2, 0.2, 10),
+  "gpt-6-luna": withWritePremium(0.1, 0.01, 0.5),
+  "gpt-5.6-sol": withWritePremium(4, 0.4, 20),
+  "gpt-5.6-terra": withWritePremium(2, 0.2, 12),
+  "gpt-5.6-luna": withWritePremium(0.2, 0.02, 1.2),
   "gpt-5.5": withoutWritePremium(5, 0.5, 30),
   "gpt-5.5-pro": withoutWritePremium(30, 30, 180),
   "gpt-5.4": withoutWritePremium(2.5, 0.25, 15),
