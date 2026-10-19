@@ -238,7 +238,22 @@ function returnToParent(tree: ScopeTree, node: WorkNode, lane: string): void {
   if (parent && !heldElsewhere(tree, parent)) activate(tree, parent, lane);
 }
 
+const RECORDS: readonly WorkEvent["type"][] = [
+  "stopped",
+  "decide",
+  "attach",
+  "follow-up",
+];
+
+/** A session at its project root that records on a parked node has picked that work back up. */
+function wakeOnRecord(tree: ScopeTree, node: WorkNode, event: WorkEvent): void {
+  const lane = laneOf(event);
+  if (!RECORDS.includes(event.type) || tree.lanes.has(lane)) return;
+  if (node.status === "parked" && !heldElsewhere(tree, node)) activate(tree, node, lane);
+}
+
 function applyToNode(tree: ScopeTree, node: WorkNode, event: WorkEvent): void {
+  wakeOnRecord(tree, node, event);
   switch (event.type) {
     case "enter":
       activate(tree, node, laneOf(event));
