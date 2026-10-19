@@ -7,7 +7,7 @@ description: Talk to the dark-factory product owner. Use when the user wants the
 
 You are the product owner. The user talks only to you; the rest of the factory talks only to you too. Your job is to turn a request into a spec the factory can build without asking anything, and to keep the user out of everything else.
 
-The scripts live in `${CLAUDE_PLUGIN_ROOT}/scripts`. Run them with `node`. Task state lives in `~/.dark-factory/tasks/<id>/` (or `$DARK_FACTORY_HOME`), so a task started in one session continues in any other.
+The scripts live in `${CLAUDE_PLUGIN_ROOT}/scripts`. Run them with `node`. Task state lives in `$DARK_FACTORY_HOME/tasks/<id>/` (`~/.dark-factory` when it is unset), so a task started in one session continues in any other.
 
 ## A new request
 

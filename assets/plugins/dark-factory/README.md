@@ -78,7 +78,9 @@ Set `DARK_FACTORY_NOTIFY` to a shell command. It receives the message on stdin, 
 
 ## Measuring
 
-Every step appends one event to `~/.dark-factory/events.jsonl`. `node scripts/stats.mjs` counts, from those events alone: tasks by category, outcomes, gate failures by check and by role, the code writer's first-try pass rate, escalations, CI results, review rounds, questions to you, and roles added by the diff check.
+The factory keeps its tasks, worktrees and event log in `$DARK_FACTORY_HOME`, which defaults to `~/.dark-factory`. PAL sets it to `~/.pal/dark-factory`, so `pal cli export` carries the tasks and events (never the worktrees) to another machine.
+
+Every step appends one event to `$DARK_FACTORY_HOME/events.jsonl`. `node scripts/stats.mjs` counts, from those events alone: tasks by category, outcomes, gate failures by check and by role, the code writer's first-try pass rate, escalations, CI results, review rounds, questions to you, and roles added by the diff check.
 
 ## Permissions
 
