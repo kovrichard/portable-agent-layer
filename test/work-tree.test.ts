@@ -7,6 +7,7 @@ import {
   buildTree,
   findNode,
   nodesWithStatus,
+  PROJECT_ROOT,
   readEvents,
   readTree,
   type WorkEvent,
@@ -127,6 +128,61 @@ describe("work tree", () => {
     open("b", "harbor work", null, "harbor");
     expect([...readTree("pal", file).nodes.keys()]).toEqual(["a"]);
     expect(readTree("harbor", file).active).toBe("b");
+  });
+
+  test("the project is the root of every top-level node, so each project is one tree", () => {
+    open("a", "one");
+    open("b", "two", "a");
+    const tree = readTree("pal", file);
+    expect(tree.root).toMatchObject({ id: PROJECT_ROOT, title: "pal", parent: null });
+    expect(tree.nodes.get("a")?.parent).toBe(PROJECT_ROOT);
+    expect(tree.nodes.get("b")?.parent).toBe("a");
+    expect(tree.nodes.has(PROJECT_ROOT)).toBe(false);
+  });
+
+  describe("parallel sessions", () => {
+    const openIn = (session: string, node: string, parent: string | null = null) =>
+      appendEvent("pal", node, "open", { title: node, parent }, file, at(), session);
+    const view = (session?: string) => readTree("pal", file, session);
+
+    test("each session keeps its own active node", () => {
+      openIn("s1", "a");
+      openIn("s2", "b");
+      expect(view("s1").active).toBe("a");
+      expect(view("s2").active).toBe("b");
+      expect(view("s1").nodes.get("a")?.status).toBe("active");
+    });
+
+    test("a new session starts with no active node", () => {
+      openIn("s1", "a");
+      expect(view("s3").active).toBeNull();
+    });
+
+    test("entering another session's node takes it over", () => {
+      openIn("s1", "a");
+      openIn("s2", "b");
+      appendEvent("pal", "a", "enter", {}, file, at(), "s2");
+      expect(view("s2").active).toBe("a");
+      expect(view("s1").active).toBeNull();
+      expect(view("s2").nodes.get("b")?.status).toBe("parked");
+    });
+
+    test("a finished detour does not take back a parent another session holds", () => {
+      openIn("s1", "a");
+      openIn("s1", "b", "a");
+      appendEvent("pal", "a", "enter", {}, file, at(), "s2");
+      appendEvent("pal", "b", "done", {}, file, at(), "s1");
+      expect(view("s1").active).toBeNull();
+      expect(view("s2").active).toBe("a");
+    });
+
+    test("events without a session share one lane, as before", () => {
+      openIn("s1", "a");
+      openIn("", "b");
+      expect(view("").active).toBe("b");
+      expect(view("s1").active).toBe("a");
+      expect(readEvents(file).at(-1)).not.toHaveProperty("session");
+    });
   });
 
   test("the git cursor is the latest one recorded", () => {

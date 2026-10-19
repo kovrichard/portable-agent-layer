@@ -64,7 +64,7 @@ describe("session context", () => {
   test("says when nothing is active", () => {
     open("a", "One");
     appendEvent("pal", "a", "park", { stoppedAt: "x" }, file, at());
-    expect(renderSessionContext(tree())).toContain("Active: none");
+    expect(renderSessionContext(tree())).toContain("Active: the project root (pal)");
   });
 
   test("stays inside its budget however much work there is", () => {
@@ -100,7 +100,20 @@ describe("prompt line", () => {
   test("says when no node is active", () => {
     open("a", "One");
     appendEvent("pal", "a", "park", {}, file, at());
-    expect(renderPromptLine(tree(), false)).toBe("Work: no active node · 1 parked");
+    expect(renderPromptLine(tree(), false)).toBe(
+      "Work: pal root — this session has no node yet · 1 parked"
+    );
+  });
+
+  test("counts the nodes other sessions are working on", () => {
+    appendEvent("pal", "a", "open", { title: "One", parent: null }, file, at(), "s1");
+    const mine = readTree("pal", file, "s2");
+    expect(renderPromptLine(mine, false)).toBe(
+      "Work: pal root — this session has no node yet · 0 parked · 1 active in other sessions"
+    );
+    expect(renderSessionContext(mine)).toContain(
+      "Active in other sessions:\n- One [a] — no stopped-at recorded"
+    );
   });
 });
 
@@ -110,10 +123,11 @@ describe("CLI views", () => {
     open("b", "Detour", "a");
     open("c", "Other", null);
     appendEvent("pal", "c", "done", {}, file, at());
-    const list = renderTreeList(tree(), true);
-    expect(list).toContain("‖ Root [a]");
-    expect(list).toContain("  ‖ Detour [b]");
-    expect(list).toContain("✓ Other [c]");
+    const list = renderTreeList(tree(), true).split("\n");
+    expect(list[0]).toBe("◆ pal");
+    expect(list).toContain("  ‖ Root [a] — no stopped-at recorded");
+    expect(list).toContain("    ‖ Detour [b] — no stopped-at recorded");
+    expect(list).toContain("  ✓ Other [c]");
   });
 
   test("a node's detail lists its decisions with reasons and its artifacts", () => {
