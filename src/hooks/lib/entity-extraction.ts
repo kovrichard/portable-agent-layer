@@ -49,6 +49,7 @@ export interface ResearchProfile {
     taxNumber: string;
     seat: string;
     status: string;
+    activity: string;
     managers: string[];
     url: string;
   };

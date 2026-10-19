@@ -3,6 +3,7 @@
  * the active agent, print the profile, and optionally queue it for review.
  */
 
+import { lookupCompanyRegister } from "../hooks/lib/company-register-router";
 import { loadKnownEntities, loadNameIndex } from "../hooks/lib/entity-cards";
 import { queueForReview } from "../hooks/lib/entity-extraction";
 import { lookupName } from "../hooks/lib/entity-names";
@@ -46,7 +47,11 @@ function targetFrom(name: string, values: ResearchValues): ResearchTarget {
 export async function researchFromCli(
   name: string | undefined,
   values: ResearchValues,
-  deps: ResearchDeps = { principal: identity().principal.name, infer: inference }
+  deps: ResearchDeps = {
+    principal: identity().principal.name,
+    infer: inference,
+    registry: lookupCompanyRegister,
+  }
 ): Promise<number> {
   if (!name?.trim()) throw new UsageError("name the person or company to research");
   const target = targetFrom(name.trim(), values);

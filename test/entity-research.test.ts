@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { runKnowledge } from "../src/cli/knowledge";
 import { researchFromCli } from "../src/cli/knowledge-research";
+import type { RegisterEntry } from "../src/hooks/lib/company-register";
 import type { ResearchProfile } from "../src/hooks/lib/entity-extraction";
 import {
   newResearchTargets,
@@ -39,6 +40,7 @@ const PROFILE: ResearchProfile = {
     taxNumber: "00000000-2-09",
     seat: "4024 Debrecen, Példa utca 1.",
     status: "active",
+    activity: "2740 Lighting equipment manufacturing",
     managers: ["Odo Pratt"],
     url: "https://www.e-cegjegyzek.hu/?cegadatlap/0909000000/TaroltCegkivonat",
   },
@@ -184,6 +186,148 @@ describe("researchEntity", () => {
     expect(sourceless).toEqual({ found: false, reason: "no sources given" });
   });
 
+  describe("with the Hungarian register", () => {
+    const ENTRY: RegisterEntry = {
+      country: "Hungary",
+      name: "Brightmoor Világítás Kft.",
+      fullName: "Brightmoor Világítás Korlátolt Felelősségű Társaság",
+      number: "09-09-000001",
+      taxNumber: "00000001-2-09",
+      seat: "4024 Debrecen, Példa utca 2.",
+      status: "Nem áll eljárás alatt.",
+      activity: "2740 Villamos világítóeszköz gyártása",
+      founded: "2019",
+      managers: ["Pratt Odo"],
+      url: "https://www.nemzeticegtar.hu/brightmoor-e10000001.html",
+      sources: [
+        "https://ceginfo.hu/ceg-adatlap/brightmoor-0909000001.html",
+        "https://www.nemzeticegtar.hu/brightmoor-e10000001.html",
+      ],
+    };
+    const HUNGARIAN: ResearchTarget = { ...COMPANY, name: "Brightmoor Világítás Kft." };
+    const withRegister = (
+      reply: Partial<ResearchProfile> | null,
+      registry: ResearchDeps["registry"] = async () => ENTRY
+    ) => {
+      const built = deps(reply, "no web search");
+      return { calls: built.calls, deps: { ...built.deps, registry } };
+    };
+
+    test("the register's facts are handed to the model to tell namesakes apart", async () => {
+      const { calls, deps: d } = withRegister({});
+      await researchEntity(HUNGARIAN, d);
+      expect(calls[0].user).toEndWith(
+        [
+          "The company register, already read: use it to tell this company from namesakes and do not search the register again.",
+          "registered name: Brightmoor Világítás Korlátolt Felelősségű Társaság",
+          "registration number: 09-09-000001",
+          "seat: 4024 Debrecen, Példa utca 2.",
+          "main activity: 2740 Villamos világítóeszköz gyártása",
+        ].join("\n")
+      );
+    });
+
+    test("a register entry without seat or activity hands over only what it has", async () => {
+      const sparse = { ...ENTRY, fullName: "", seat: "", activity: "" };
+      const { calls, deps: d } = withRegister({}, async () => sparse);
+      await researchEntity(HUNGARIAN, d);
+      expect(calls[0].user).toEndWith(
+        "registered name: Brightmoor Világítás Kft.\nregistration number: 09-09-000001"
+      );
+    });
+
+    test("the register alone makes a whole profile", async () => {
+      const outcome = await researchEntity(HUNGARIAN, withRegister(null).deps);
+      expect(outcome).toEqual({
+        found: true,
+        profile: {
+          match: "sure",
+          summary:
+            "Brightmoor Világítás Kft.: 2740 Villamos világítóeszköz gyártása. Seat: 4024 Debrecen, Példa utca 2., founded 2019.",
+          role: "",
+          organization: "",
+          website: "",
+          linkedin: "",
+          socials: [],
+          registry: expect.objectContaining({ number: "09-09-000001" }),
+          news: [],
+          sources: ENTRY.sources,
+        },
+      });
+    });
+
+    test("a register entry without activity or founding year still reads as a sentence", async () => {
+      const sparse = { ...ENTRY, activity: "", founded: "" };
+      const outcome = await researchEntity(
+        HUNGARIAN,
+        withRegister(null, async () => sparse).deps
+      );
+      expect(outcome.found && outcome.profile.summary).toBe(
+        "Brightmoor Világítás Kft.: company registered in Hungary. Seat: 4024 Debrecen, Példa utca 2.."
+      );
+    });
+
+    test("what the register says replaces what the model read", async () => {
+      const outcome = await researchEntity(HUNGARIAN, withRegister({}).deps);
+      expect(outcome.found && outcome.profile.registry).toEqual({
+        name: "Brightmoor Világítás Korlátolt Felelősségű Társaság",
+        number: "09-09-000001",
+        taxNumber: "00000001-2-09",
+        seat: "4024 Debrecen, Példa utca 2.",
+        status: "Nem áll eljárás alatt.",
+        activity: "2740 Villamos világítóeszköz gyártása",
+        managers: ["Pratt Odo"],
+        url: "https://www.nemzeticegtar.hu/brightmoor-e10000001.html",
+      });
+      expect(outcome.found && outcome.profile.website).toBe(PROFILE.website);
+      expect(outcome.found && outcome.profile.sources).toEqual([
+        ...ENTRY.sources,
+        ...PROFILE.sources,
+      ]);
+    });
+
+    test("a register match is kept even when the web turned up nothing", async () => {
+      for (const reply of [{ match: "none" as const }, null]) {
+        const outcome = await researchEntity(HUNGARIAN, withRegister(reply).deps);
+        expect(outcome.found).toBe(true);
+        expect(outcome.found && outcome.profile.website).toBe("");
+        expect(outcome.found && outcome.profile.registry.number).toBe("09-09-000001");
+        expect(outcome.found && outcome.profile.summary).toContain("founded 2019");
+      }
+    });
+
+    test("a register that fails leaves the web research as it was", async () => {
+      const outcome = await researchEntity(
+        HUNGARIAN,
+        withRegister({}, async () => {
+          throw new Error("HTTP 503");
+        }).deps
+      );
+      expect(outcome).toEqual({ found: true, profile: PROFILE });
+    });
+
+    test("a person is never looked up in the register", async () => {
+      let asked = false;
+      const person: ResearchTarget = { ...HUNGARIAN, kind: "person" };
+      await researchEntity(
+        person,
+        withRegister({}, async () => {
+          asked = true;
+          return ENTRY;
+        }).deps
+      );
+      expect(asked).toBe(false);
+    });
+  });
+
+  test("without a date given, the research is dated today", async () => {
+    const { calls, deps: d } = deps({});
+    await researchEntity(COMPANY, { ...d, today: undefined });
+    expect(calls[0].user).toStartWith(
+      `Today is ${new Date().toISOString().slice(0, 10)}.`
+    );
+  });
+
   test("an agent that cannot search says why", async () => {
     const outcome = await researchEntity(
       COMPANY,
@@ -247,6 +391,7 @@ describe("accepting a researched profile", () => {
     for (const shown of [
       "https://www.linkedin.com/company/brightmoor-example",
       "Registration number: 09-09-000000",
+      "- Main activity: 2740 Lighting equipment manufacturing",
       "2026-09-02 Brightmoor opens a second plant",
     ])
       expect(out.text()).toContain(shown);
