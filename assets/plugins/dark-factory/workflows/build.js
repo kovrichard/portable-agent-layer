@@ -90,26 +90,6 @@ function quoted(text) {
   return `'${String(text).replaceAll("'", escapedQuote)}'`
 }
 
-const BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-
-function utf8ByteString(text) {
-  return encodeURIComponent(text).replace(/%([0-9A-F]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
-}
-
-function base64Of(byteString) {
-  let encoded = ''
-  for (let offset = 0; offset < byteString.length; offset += 3) {
-    const group =
-      (byteString.charCodeAt(offset) << 16) |
-      ((byteString.charCodeAt(offset + 1) || 0) << 8) |
-      (byteString.charCodeAt(offset + 2) || 0)
-    const kept = Math.min(byteString.length - offset, 3) + 1
-    const sextets = [18, 12, 6, 0].slice(0, kept).map((shift) => BASE64_ALPHABET[(group >> shift) & 63])
-    encoded += sextets.join('') + '='.repeat(4 - kept)
-  }
-  return encoded
-}
-
 function parsed(result) {
   try {
     return JSON.parse(result.stdout.trim().split('\n').pop())
@@ -171,8 +151,8 @@ async function untilGreen(p, ladder, instructions) {
 }
 
 async function finish(p, status, message) {
-  const encoded = base64Of(utf8ByteString(JSON.stringify(trace.map((event) => ({ ...event, task })))))
-  await script(`${S}/task.mjs trace ${task} ${encoded}`, 'Ship', 'trace')
+  const traceJson = JSON.stringify(trace.map((event) => ({ ...event, task })))
+  await script(`${S}/task.mjs trace ${task} ${quoted(traceJson)}`, 'Ship', 'trace')
   await script(`${S}/task.mjs status ${task} ${status} ${quoted(message)}`, 'Ship', 'status')
   await script(`${S}/notify.mjs ${task} ${status} ${quoted(message)}`, 'Ship', 'notify')
   return { task, status, message, pr: p?.pr }
