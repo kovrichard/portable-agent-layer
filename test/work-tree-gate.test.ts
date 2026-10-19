@@ -15,7 +15,7 @@ beforeEach(() => {
   folder = resolve(home, "repo");
   mkdirSync(folder, { recursive: true });
   process.env.PAL_HOME = home;
-  reload();
+  setting("workTree", true);
 });
 
 const lines = (entries: unknown[]) => entries.map((e) => JSON.stringify(e));
@@ -30,11 +30,13 @@ const payload: StopTurnPayload = { session_id: "s" };
 const check = (entries: unknown[], p: StopTurnPayload = payload) =>
   workTreeSendBack(p, lines(entries), folder);
 
-function setting(key: string, value: boolean) {
+function setting(key: string, value: boolean | undefined) {
   mkdirSync(resolve(home, "memory"), { recursive: true });
   writeFileSync(
     resolve(home, "memory", "pal-settings.json"),
-    JSON.stringify({ dynamicContext: { [key]: value } })
+    JSON.stringify({
+      dynamicContext: { workTree: true, workTreeGate: true, [key]: value },
+    })
   );
   reload();
 }
@@ -111,8 +113,10 @@ describe("the work-tree gate", () => {
   test.each([
     "workTree",
     "workTreeGate",
-  ])("turning %s off lets everything through", (key) => {
+  ])("turning %s off, or never opting into it, lets everything through", (key) => {
     setting(key, false);
+    expect(check([prompt("go"), bash("git commit -m x")])).toBeNull();
+    setting(key, undefined);
     expect(check([prompt("go"), bash("git commit -m x")])).toBeNull();
   });
 });

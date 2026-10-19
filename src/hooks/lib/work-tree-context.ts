@@ -5,12 +5,12 @@
 
 import { reactionTo } from "./interaction-reaction";
 import { sessionDir } from "./session-dir";
-import { isEnabled } from "./settings";
+import { isOptedIn } from "./settings";
 import { readTree, scopeOf } from "./work-tree";
 import { renderPromptLine, renderSessionContext } from "./work-tree-render";
 
 export function loadWorkTreeContext(cwd: string = sessionDir()): string {
-  if (!isEnabled("workTree")) return "";
+  if (!isOptedIn("workTree")) return "";
   return renderSessionContext(readTree(scopeOf(cwd)));
 }
 
@@ -18,7 +18,7 @@ export function workTreePromptLine(
   userText: string,
   cwd: string = sessionDir()
 ): string | null {
-  if (!isEnabled("workTree")) return null;
+  if (!isOptedIn("workTree")) return null;
   const newTopic = userText !== "" && reactionTo(userText, undefined) === "new-topic";
   const line = renderPromptLine(readTree(scopeOf(cwd)), newTopic);
   return line ? `<system-reminder>${line}</system-reminder>` : null;

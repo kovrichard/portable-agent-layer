@@ -156,6 +156,7 @@ describe("injectPromptContext handler", () => {
   });
 
   test("the active work-tree node rides along once the scope has work", async () => {
+    await setSettings({ dynamicContext: { workTree: true } });
     const { appendEvent, scopeOf } = await import("../src/hooks/lib/work-tree");
     const { sessionDir } = await import("../src/hooks/lib/session-dir");
     appendEvent(scopeOf(sessionDir()), "n1", "open", { title: "Gate", parent: null });

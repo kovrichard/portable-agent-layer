@@ -76,11 +76,11 @@
         },
         "workTree": {
           "type": "boolean",
-          "description": "The work tree (pal cli work): the active node, the detours it sits inside, parked work and what waits on the user at session start and after compaction, one line of it with every prompt, and new commits and branches attached to the active node at the end of a turn."
+          "description": "Opt-in, off by default until 1.0. The work tree (pal cli work): the active node, the detours it sits inside, parked work and what waits on the user at session start and after compaction, one line of it with every prompt, and new commits and branches attached to the active node at the end of a turn."
         },
         "workTreeGate": {
           "type": "boolean",
-          "description": "Send a turn back when it committed, made a branch, opened a PR or published an artifact without recording it in the work tree (pal cli work). Needs workTree."
+          "description": "Opt-in, off by default until 1.0. Send a turn back when it committed, made a branch, opened a PR or published an artifact without recording it in the work tree (pal cli work). Needs workTree."
         },
         "dueReminders": {
           "type": "boolean",

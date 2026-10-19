@@ -7,7 +7,7 @@
 import { callsThisTurn, commandsThisTurn } from "./claim-check";
 import { alreadySentBack, transcriptLines } from "./claim-log";
 import { sessionDir } from "./session-dir";
-import { isEnabled } from "./settings";
+import { isOptedIn } from "./settings";
 import type { StopTurnPayload } from "./stop";
 import { readTree, scopeOf } from "./work-tree";
 import { attachGitProgress } from "./work-tree-git";
@@ -48,7 +48,7 @@ export function workTreeSendBack(
   lines: string[],
   cwd: string
 ): string | null {
-  if (!isEnabled("workTree") || !isEnabled("workTreeGate")) return null;
+  if (!isOptedIn("workTree") || !isOptedIn("workTreeGate")) return null;
   if (alreadySentBack(payload)) return null;
   const commands = commandsThisTurn(lines);
   if (commands === null || commands.some((c) => RECORDS_WORK_RE.test(c))) return null;
@@ -58,7 +58,7 @@ export function workTreeSendBack(
 
 /** The reason to send the turn back with, or null after attaching what git moved. */
 export function stopWorkTree(payload: StopTurnPayload | null): string | null {
-  if (!payload || !isEnabled("workTree")) return null;
+  if (!payload || !isOptedIn("workTree")) return null;
   const cwd = sessionDir();
   const sendBack = workTreeSendBack(payload, transcriptLines(payload), cwd);
   if (sendBack) return sendBack;

@@ -17,14 +17,14 @@ beforeEach(() => {
   folder = resolve(home, "some-folder");
   mkdirSync(folder, { recursive: true });
   process.env.PAL_HOME = home;
-  reload();
+  setWorkTree(true);
 });
 
-function turnOff(key: string) {
+function setWorkTree(on: boolean | undefined) {
   mkdirSync(resolve(home, "memory"), { recursive: true });
   writeFileSync(
     resolve(home, "memory", "pal-settings.json"),
-    JSON.stringify({ dynamicContext: { [key]: false } })
+    JSON.stringify({ dynamicContext: { workTree: on } })
   );
   reload();
 }
@@ -51,9 +51,12 @@ describe("work tree in context", () => {
     expect(workTreePromptLine("go on", folder)).not.toContain("park --stopped");
   });
 
-  test("turning it off silences both", () => {
+  test.each([
+    ["turned off", false],
+    ["never opted into", undefined],
+  ])("%s, it silences both", (_, on) => {
     appendEvent(folder, "n1", "open", { title: "Loose work", parent: null });
-    turnOff("workTree");
+    setWorkTree(on);
     expect(loadWorkTreeContext(folder)).toBe("");
     expect(workTreePromptLine("go on", folder)).toBeNull();
   });

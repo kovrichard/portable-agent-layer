@@ -311,6 +311,11 @@ describe("buildSystemReminder", () => {
     });
     appendEvent("tree-project", "n1", "open", { title: "Lane D wording", parent: null });
     appendEvent("tree-project", "n1", "stopped", { text: "restore WIP wording" });
+    write(
+      "memory/pal-settings.json",
+      JSON.stringify({ dynamicContext: { workTree: true } })
+    );
+    reload();
     return dir;
   }
 
@@ -329,12 +334,9 @@ describe("buildSystemReminder", () => {
     expect(out).toContain("stopped at: restore WIP wording");
   });
 
-  test("leaves the work tree out when it is turned off", () => {
+  test("leaves the work tree out until it is opted into", () => {
     const dir = projectWithWork();
-    write(
-      "memory/pal-settings.json",
-      JSON.stringify({ dynamicContext: { workTree: false } })
-    );
+    write("memory/pal-settings.json", JSON.stringify({ dynamicContext: {} }));
     reload();
     expect(withSessionIn(dir, () => buildSystemReminder())).not.toContain("## Work tree");
   });
