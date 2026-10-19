@@ -8,6 +8,7 @@ import {
   printJson,
   readRepoConfig,
   readTask,
+  requireTools,
   taskDir,
   writeTask,
 } from "./lib.mjs";
@@ -82,6 +83,7 @@ function runPrepareCommand(command, cwd) {
 }
 
 export function prepare(id, env = process.env) {
+  requireTools(env);
   const task = readTask(id, env);
   const config = readRepoConfig(task.repo);
   const base = config.baseBranch ?? defaultBranch(task.repo);
@@ -112,6 +114,10 @@ export function recordTrace(id, encoded, env = process.env) {
 }
 
 const COMMANDS = {
+  doctor: () => {
+    requireTools();
+    return { ready: true };
+  },
   trace: ([id, encoded]) => recordTrace(id, encoded),
   new: ([title, repo, category]) => newTask({ title, repo, category }),
   prepare: ([id]) => prepare(id),

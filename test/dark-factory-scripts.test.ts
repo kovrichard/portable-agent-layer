@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  checksFrom,
   classifyChecks,
   waitForCi,
 } from "../assets/plugins/dark-factory/scripts/ci-wait.mjs";
@@ -9,6 +10,8 @@ import { runGate } from "../assets/plugins/dark-factory/scripts/gate.mjs";
 import {
   readEvents,
   readTask,
+  requireTools,
+  spawnTool,
   writeTask,
 } from "../assets/plugins/dark-factory/scripts/lib.mjs";
 import { notify } from "../assets/plugins/dark-factory/scripts/notify.mjs";
@@ -20,6 +23,7 @@ import { summarize } from "../assets/plugins/dark-factory/scripts/stats.mjs";
 import {
   listTasks,
   newTask,
+  prepare,
   recordQuestion,
   recordTrace,
   setStatus,
@@ -34,6 +38,13 @@ let env: Record<string, string | undefined>;
 beforeEach(() => {
   home = freshTestDir(import.meta.file);
   env = { ...process.env, DARK_FACTORY_HOME: home };
+});
+
+const withoutTools = () => ({
+  ...Object.fromEntries(
+    Object.entries(env).filter(([key]) => key.toLowerCase() !== "path")
+  ),
+  PATH: home,
 });
 
 const eventsNamed = (name: string) =>
@@ -222,6 +233,34 @@ describe("CI", () => {
     expect(eventsNamed("ci")).toEqual([expect.objectContaining({ result: "pass" })]);
   });
 
+  test("without gh the wait fails loudly instead of reporting a repo with no CI", () => {
+    writeTask({ id: "t1", pr: "https://pr/1", worktree: home }, env);
+    expect(() =>
+      waitForCi("t1", { env: withoutTools(), pause: () => {}, pollMs: 1, timeoutMs: 10 })
+    ).toThrow("gh is not installed");
+    expect(eventsNamed("ci")).toEqual([]);
+  });
+
+  test("a gh error such as a lapsed login is raised, never read as no checks", () => {
+    const lapsedLogin = { status: 1, stdout: "", stderr: "HTTP 401: Bad credentials" };
+    expect(() => checksFrom(lapsedLogin)).toThrow("Bad credentials");
+  });
+
+  test("gh reporting no checks, or pending checks with exit 8, is still read as checks", () => {
+    const noChecks = {
+      status: 1,
+      stdout: "",
+      stderr: "no checks reported on the 'x' branch",
+    };
+    expect(checksFrom(noChecks)).toEqual([]);
+    const pending = {
+      status: 8,
+      stdout: '[{"name":"a","bucket":"pending"}]',
+      stderr: "",
+    };
+    expect(checksFrom(pending)).toEqual([{ name: "a", bucket: "pending" }]);
+  });
+
   test("a wait that runs out of time reports pending so the caller can wait again", () => {
     writeTask({ id: "t1", pr: "https://pr/1", worktree: "/wt" }, env);
     const outcome = waitForCi("t1", {
@@ -287,6 +326,26 @@ describe("stats", () => {
 
   test("no first tries means no pass rate, not zero", () => {
     expect(summarize([]).codeWriterFirstTryPassRate).toBeNull();
+  });
+});
+
+describe("tools", () => {
+  test("a missing tool is named with how to install it", () => {
+    expect(() => spawnTool("gh", ["--version"], { env: withoutTools() })).toThrow(
+      "gh is not installed or not on PATH; install it from https://cli.github.com"
+    );
+  });
+
+  test("the preflight names every missing tool at once", () => {
+    expect(() => requireTools(withoutTools())).toThrow("missing tools: git, gh, bash");
+  });
+
+  test("a build stops at the preflight before it touches the repo", () => {
+    expect(() => prepare("never-created", withoutTools())).toThrow("missing tools");
+  });
+
+  test("the preflight passes when the tools are on PATH", () => {
+    expect(() => requireTools(env, ["git"])).not.toThrow();
   });
 });
 

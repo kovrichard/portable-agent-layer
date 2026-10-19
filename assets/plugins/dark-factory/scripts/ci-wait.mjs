@@ -1,5 +1,4 @@
-import { spawnSync } from "node:child_process";
-import { appendEvent, isMain, printJson, readTask } from "./lib.mjs";
+import { appendEvent, isMain, printJson, readTask, spawnTool } from "./lib.mjs";
 
 const POLL_MS = 30_000;
 const TIMEOUT_MS = 9 * 60_000;
@@ -15,13 +14,16 @@ export function classifyChecks(checks) {
   return { state: "pass", failed: [] };
 }
 
-function readChecks(pr, cwd) {
-  const result = spawnSync("gh", ["pr", "checks", pr, "--json", "name,bucket"], {
-    cwd,
-    encoding: "utf8",
-  });
-  if (result.status !== 0 && !result.stdout) return [];
-  return JSON.parse(result.stdout || "[]");
+export function checksFrom(result) {
+  if (result.status === 0 || result.stdout) return JSON.parse(result.stdout || "[]");
+  if (result.stderr.includes("no checks reported")) return [];
+  throw new Error(`gh pr checks failed: ${result.stderr.trim()}`);
+}
+
+function readChecks(pr, cwd, env) {
+  return checksFrom(
+    spawnTool("gh", ["pr", "checks", pr, "--json", "name,bucket"], { cwd, env })
+  );
 }
 
 function sleep(ms) {
@@ -41,7 +43,7 @@ export function waitForCi(
   const task = readTask(id, env);
   const graceForChecksToAppear = 4;
   for (let waited = 0, polls = 0; waited <= timeoutMs; waited += pollMs, polls += 1) {
-    const outcome = classifyChecks(read(task.pr, task.worktree));
+    const outcome = classifyChecks(read(task.pr, task.worktree, env));
     const settled = outcome.state === "pass" || outcome.state === "fail";
     if (settled || (outcome.state === "none" && polls >= graceForChecksToAppear)) {
       appendEvent(

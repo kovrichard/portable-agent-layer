@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import {
   appendFileSync,
   existsSync,
@@ -52,6 +53,33 @@ export function writeTask(task, env = process.env) {
   const dir = taskDir(task.id, env);
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, "task.json"), `${JSON.stringify(task, null, 2)}\n`);
+}
+
+const INSTALL_HINTS = {
+  git: "install it from https://git-scm.com",
+  gh: "install it from https://cli.github.com and sign in with gh auth login",
+  bash: "on Windows it comes with Git for Windows",
+};
+
+function missingToolMessage(name) {
+  return `${name} is not installed or not on PATH; ${INSTALL_HINTS[name] ?? "install it"}`;
+}
+
+export function spawnTool(command, args, options = {}) {
+  const result = spawnSync(command, args, { encoding: "utf8", ...options });
+  if (result.error?.code === "ENOENT") throw new Error(missingToolMessage(command));
+  return result;
+}
+
+function isInstalled(name, env) {
+  return spawnSync(name, ["--version"], { env }).error?.code !== "ENOENT";
+}
+
+export function requireTools(env = process.env, names = Object.keys(INSTALL_HINTS)) {
+  const missing = names.filter((name) => !isInstalled(name, env));
+  if (missing.length === 0) return;
+  const hints = missing.map(missingToolMessage).join("\n");
+  throw new Error(`missing tools: ${missing.join(", ")}\n${hints}`);
 }
 
 export function readRepoConfig(repo) {

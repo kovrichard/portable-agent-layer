@@ -1,10 +1,17 @@
-import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { appendEvent, isMain, printJson, readTask, taskDir, writeTask } from "./lib.mjs";
+import {
+  appendEvent,
+  isMain,
+  printJson,
+  readTask,
+  spawnTool,
+  taskDir,
+  writeTask,
+} from "./lib.mjs";
 
 function run(command, args, cwd) {
-  const result = spawnSync(command, args, { cwd, encoding: "utf8" });
+  const result = spawnTool(command, args, { cwd });
   return {
     ok: result.status === 0,
     out: (result.stdout ?? "").trim(),
