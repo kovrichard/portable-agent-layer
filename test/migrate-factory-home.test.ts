@@ -69,6 +69,7 @@ function repoWithWorktreeInOldFactory(id: string): string {
   git(repo, "init", "-q", "-b", "main");
   git(repo, "config", "user.email", "t@example.com");
   git(repo, "config", "user.name", "t");
+  git(repo, "config", "core.autocrlf", "false");
   writeFileSync(resolve(repo, "file.txt"), "content\n");
   git(repo, "add", ".");
   git(repo, "commit", "-q", "-m", "init");
@@ -89,7 +90,7 @@ const registeredWorktrees = (repo: string) =>
   git(repo, "worktree", "list", "--porcelain")
     .split("\n")
     .filter((line) => line.startsWith("worktree "))
-    .map((line) => line.slice("worktree ".length));
+    .map((line) => resolve(line.slice("worktree ".length)));
 
 function writeTask(factory: string, id: string, spec: string): void {
   mkdirSync(resolve(factory, "tasks", id), { recursive: true });
