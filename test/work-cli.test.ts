@@ -72,8 +72,10 @@ describe("pal cli work", () => {
     const one = activeId();
     await work("park", "--stopped", "half way");
     await work("open", "Two", "--root");
+    const two = activeId();
+    const firstDifference = [...one].findIndex((c, i) => c !== two[i]);
     printed = [];
-    expect(await work("enter", one.slice(0, 6))).toBe(0);
+    expect(await work("enter", one.slice(0, firstDifference + 1))).toBe(0);
     expect(tree().active).toBe(one);
     expect(output()).toContain("stopped at: half way");
   });
