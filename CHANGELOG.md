@@ -1,3 +1,15 @@
+# [0.112.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.111.0...v0.112.0) (2026-10-19)
+
+
+### Features
+
+* **work-tree:** an append-only work tree and pal cli work ([3a5e240](https://github.com/kovrichard/portable-agent-layer/commit/3a5e240c75c665bce76d45cb9923a03bb1834692))
+* **work-tree:** attach git progress at turn end and send back unrecorded work ([3a7e74c](https://github.com/kovrichard/portable-agent-layer/commit/3a7e74c8bf381d3e0a1fcdb9ed38286662c31c79))
+* **work-tree:** carry the tree into every session and every prompt ([93e96df](https://github.com/kovrichard/portable-agent-layer/commit/93e96dfc9ef0397b89e50daed65518536d5f5220))
+* **work-tree:** make the work tree and its gate opt-in until 1.0 ([607795f](https://github.com/kovrichard/portable-agent-layer/commit/607795f8e4b6f728039f7aae11797ea91a988bdc))
+* **work-tree:** ship the work-tree rule only to installs that opted in ([b29a2e3](https://github.com/kovrichard/portable-agent-layer/commit/b29a2e3698a311bef4a2c14cb2c9a9c6d991e200))
+* **work-tree:** tell agents to keep the work tree true ([6417ca4](https://github.com/kovrichard/portable-agent-layer/commit/6417ca42a05cf96990a1859894656847cbd45beb))
+
 # [0.111.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.110.0...v0.111.0) (2026-10-19)
 
 
