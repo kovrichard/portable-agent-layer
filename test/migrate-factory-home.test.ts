@@ -177,6 +177,29 @@ describe("the factory folder under the PAL home", () => {
     expect(git(moved, "status", "--short")).toBe("");
   });
 
+  test("a migrated task.json points at the new worktree path", () => {
+    repoWithWorktreeInOldFactory("t1");
+    writeTask(oldFactory, "t1", "# Spec\n");
+    writeFileSync(
+      resolve(oldFactory, "tasks", "t1", "task.json"),
+      JSON.stringify({ id: "t1", worktree: resolve(oldFactory, "worktrees", "t1") })
+    );
+
+    migrate();
+
+    const task = JSON.parse(
+      readFileSync(resolve(newFactory, "tasks", "t1", "task.json"), "utf-8")
+    );
+    expect(task.worktree).toBe(resolve(newFactory, "worktrees", "t1"));
+  });
+
+  test("a task that only collides is not left pending", () => {
+    writeTask(oldFactory, "same", "# old\n");
+    writeTask(newFactory, "same", "# new\n");
+
+    expect(hasPendingMigration()).toBe(false);
+  });
+
   test("a colliding task is not overwritten and the run reports it skipped, while the others move", () => {
     writeTask(oldFactory, "same", "# from the old home\n");
     writeTask(oldFactory, "fresh", "# fresh\n");

@@ -784,6 +784,22 @@ function moveWorktree(from: string, to: string): void {
   git(["--git-dir", commonDir, "worktree", "move", from, to], dirname(commonDir));
 }
 
+function repointWorktreeInTask(taskDir: string): void {
+  const file = resolve(taskDir, "task.json");
+  if (!existsSync(file)) return;
+  let task: { worktree?: unknown };
+  try {
+    task = JSON.parse(readFileSync(file, "utf-8"));
+  } catch {
+    return;
+  }
+  const oldPrefix = resolve(oldFactoryFolder(), "worktrees");
+  if (typeof task.worktree !== "string" || !task.worktree.startsWith(oldPrefix)) return;
+  const relative = task.worktree.slice(oldPrefix.length);
+  task.worktree = resolve(newFactoryFolder(), "worktrees") + relative;
+  writeFileSync(file, `${JSON.stringify(task, null, 2)}\n`, "utf-8");
+}
+
 function factoryFolderStep(kind: "task" | "worktree", id: string): FactoryStep {
   const from = resolve(oldFactoryFolder(), `${kind}s`, id);
   const to = resolve(newFactoryFolder(), `${kind}s`, id);
@@ -794,8 +810,9 @@ function factoryFolderStep(kind: "task" | "worktree", id: string): FactoryStep {
     pending: "would move",
     apply() {
       mkdirSync(dirname(to), { recursive: true });
-      if (kind === "task") renameSync(from, to);
-      else moveWorktree(from, to);
+      if (kind === "worktree") return moveWorktree(from, to);
+      renameSync(from, to);
+      repointWorktreeInTask(to);
     },
   };
 }
@@ -837,7 +854,7 @@ const v8FactoryHome: Migration = {
   movesSources: true,
 
   check() {
-    const steps = factoryFolderSteps();
+    const steps = factoryFolderSteps().filter((step) => !step.blocked);
     return {
       pending: steps.length > 0,
       detail:
