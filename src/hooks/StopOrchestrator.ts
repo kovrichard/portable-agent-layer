@@ -64,7 +64,7 @@ try {
   logError("StopOrchestrator:adaptation-rules", err);
 }
 try {
-  const sendBack = stopWorkTree(payload);
+  const sendBack = await stopWorkTree(payload);
   if (sendBack) {
     process.stdout.write(stopBlockResponse(sendBack));
     process.exit(0);

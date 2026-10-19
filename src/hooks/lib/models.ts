@@ -76,7 +76,11 @@ export function isFixedModelRoute(route: string): route is FixedModelRoute {
  * caller, whose eval is iterated on 5.5 until it passes. The rest stay on
  * HAIKU_MODEL until theirs is evaluated.
  */
-const ANTHROPIC_ON_HAIKU_5_5 = new Set(["rule-drafter", "correction-kind"]);
+const ANTHROPIC_ON_HAIKU_5_5 = new Set([
+  "rule-drafter",
+  "correction-kind",
+  "decision-label",
+]);
 
 function evaluatedModel(
   models: RouteModels,

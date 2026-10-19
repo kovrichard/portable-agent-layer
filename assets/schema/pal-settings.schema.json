@@ -82,6 +82,10 @@
           "type": "boolean",
           "description": "Opt-in, off by default until 1.0. Send a turn back when it committed, made a branch, opened a PR or published an artifact without recording it in the work tree (pal cli work). Needs workTree."
         },
+        "workTreeDecisionGate": {
+          "type": "boolean",
+          "description": "Opt-in, off by default until 1.0. Send a turn back when a small-model check finds it settled a decision that no pal cli work decide recorded. One small-model call at the end of every turn. Needs workTree."
+        },
         "dueReminders": {
           "type": "boolean",
           "description": "Opt-in, off by default until 1.0. Due maintenance reminders (learning analysis, relationship reflect) with every prompt until a reply names their command; then quiet until the next day."

@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { reload } from "../src/hooks/lib/settings";
 import type { StopTurnPayload } from "../src/hooks/lib/stop";
 import { appendEvent } from "../src/hooks/lib/work-tree";
-import { workTreeSendBack } from "../src/hooks/lib/work-tree-gate";
+import { decisionSendBack, workTreeSendBack } from "../src/hooks/lib/work-tree-gate";
 import { freshTestDir } from "./lib/test-home";
 
 let home: string;
@@ -118,5 +118,64 @@ describe("the work-tree gate", () => {
     expect(check([prompt("go"), bash("git commit -m x")])).toBeNull();
     setting(key, undefined);
     expect(check([prompt("go"), bash("git commit -m x")])).toBeNull();
+  });
+});
+
+describe("the decision gate", () => {
+  const replied: StopTurnPayload = { session_id: "s", last_assistant_message: "Done." };
+  const asked: string[][] = [];
+  const decided = (decision: boolean) => async (message: string, reply: string) => {
+    asked.push([message, reply]);
+    return { decision, what: decision ? "PRs target canary" : "" };
+  };
+  const decide = (entries: unknown[], decision = true, p = replied) =>
+    decisionSendBack(p, lines(entries), folder, decided(decision));
+
+  beforeEach(() => {
+    asked.length = 0;
+    setting("workTreeDecisionGate", true);
+  });
+
+  test("sends back a turn that settled a decision and recorded none", async () => {
+    const reason = await decide([prompt("PRs go to canary from now on")]);
+    expect(reason).toContain("This turn settled a decision (PRs target canary)");
+    expect(reason).toContain("pal cli work decide");
+    expect(asked).toEqual([["PRs go to canary from now on", "Done."]]);
+  });
+
+  test("lets a turn through that settled nothing", async () => {
+    expect(await decide([prompt("fix CI")], false)).toBeNull();
+  });
+
+  test("lets a turn through that recorded the decision, without asking the model", async () => {
+    const entries = [prompt("canary"), bash('pal cli work decide "PRs target canary"')];
+    expect(await decide(entries)).toBeNull();
+    expect(asked).toEqual([]);
+  });
+
+  test("judges only the latest user message", async () => {
+    await decide([prompt("make it opt in"), prompt("thanks")]);
+    expect(asked[0]?.[0]).toBe("thanks");
+  });
+
+  test("sends a turn back only once", async () => {
+    const again = { ...replied, stop_hook_active: true } as StopTurnPayload;
+    expect(await decide([prompt("canary")], true, again)).toBeNull();
+  });
+
+  test("asks nothing without a reply to judge", async () => {
+    expect(await decide([prompt("canary")], true, payload)).toBeNull();
+    expect(asked).toEqual([]);
+  });
+
+  test.each([
+    "workTree",
+    "workTreeDecisionGate",
+  ])("turning %s off, or never opting into it, asks nothing", async (key) => {
+    setting(key, false);
+    expect(await decide([prompt("canary")])).toBeNull();
+    setting(key, undefined);
+    expect(await decide([prompt("canary")])).toBeNull();
+    expect(asked).toEqual([]);
   });
 });
