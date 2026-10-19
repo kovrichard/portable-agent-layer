@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -9,12 +9,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
-import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
+import { checkPendingMigrations, runMigrate } from "../src/cli/migrate";
 import { freshTestDir } from "./lib/test-home";
-
-setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
-
-const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 
 let root: string;
 let userHome: string;
@@ -32,25 +28,25 @@ beforeEach(() => {
   newFactory = resolve(userHome, ".dark-factory");
   mkdirSync(claudeDir, { recursive: true });
   mkdirSync(palHome, { recursive: true });
+  process.env.PAL_HOME = palHome;
+  process.env.PAL_CLAUDE_DIR = claudeDir;
+  process.env.DARK_FACTORY_HOME = newFactory;
 });
 
-function migrate(...args: string[]) {
-  const result = spawnSync("bun", [CLI, "cli", "migrate", ...args], {
-    env: {
-      ...process.env,
-      HOME: userHome,
-      USERPROFILE: userHome,
-      PAL_HOME: palHome,
-      PAL_CLAUDE_DIR: claudeDir,
-      DARK_FACTORY_HOME: undefined,
-    },
-    encoding: "utf-8",
-    timeout: 60_000,
-  });
-  return `${result.stdout}${result.stderr}`;
+function migrate(...args: string[]): string {
+  const captured: string[] = [];
+  const log = console.log;
+  console.log = (...parts: unknown[]) => captured.push(parts.join(" "));
+  try {
+    runMigrate(args);
+  } finally {
+    console.log = log;
+  }
+  return captured.join("\n");
 }
 
-const hasPendingMigration = () => !migrate("--list").includes("No pending migrations.");
+const pendingIds = () => checkPendingMigrations().map((m) => m.id);
+const hasPendingMigration = () => pendingIds().length > 0;
 
 const settingsPath = () => resolve(claudeDir, "settings.json");
 const writeClaudeSettings = (value: unknown) =>
@@ -244,5 +240,37 @@ describe("the factory folder under the PAL home", () => {
     );
     expect(readdirSync(resolve(oldFactory, "worktrees"))).toEqual(["t1"]);
     expect(registeredWorktrees(repo)).toContain(resolve(oldFactory, "worktrees", "t1"));
+  });
+
+  test("--list names the migration and how many items wait under the old folder", () => {
+    writeTask(oldFactory, "t1", "# one\n");
+    writeTask(oldFactory, "t2", "# two\n");
+
+    expect(pendingIds()).toContain("v8-factory-home");
+    expect(migrate("--list")).toContain(`v8-factory-home`);
+    expect(migrate("--list")).toContain(`2 item(s) under ${oldFactory}`);
+  });
+
+  test("a run that moved the folder does not claim the sources were preserved", () => {
+    writeTask(oldFactory, "t1", "# Spec\n");
+
+    expect(migrate()).not.toContain("Source files preserved");
+  });
+
+  test("a DARK_FACTORY_HOME that still names the old folder is not taken as the target", () => {
+    const id = `never-in-a-real-home-${crypto.randomUUID()}`;
+    writeTask(oldFactory, id, "# Spec\n");
+    process.env.DARK_FACTORY_HOME = oldFactory;
+
+    expect(pendingIds()).toContain("v8-factory-home");
+    expect(migrate("--dry-run")).toContain(`task/${id}: would move`);
+  });
+});
+
+describe("the settings migration", () => {
+  test("is listed under its own id while PAL's DARK_FACTORY_HOME is there", () => {
+    writeClaudeSettings({ env: { DARK_FACTORY_HOME: resolve(palHome, "dark-factory") } });
+
+    expect(pendingIds()).toEqual(["claude-factory-home-override"]);
   });
 });

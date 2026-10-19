@@ -760,7 +760,13 @@ interface FactoryStep {
 }
 
 const oldFactoryFolder = () => resolve(palHome(), "dark-factory");
-const newFactoryFolder = () => resolve(homedir(), ".dark-factory");
+function homeTheFactoryReads(): string | null {
+  const pinned = process.env.DARK_FACTORY_HOME;
+  return pinned && resolve(pinned) !== oldFactoryFolder() ? resolve(pinned) : null;
+}
+
+const newFactoryFolder = () =>
+  homeTheFactoryReads() ?? resolve(homedir(), ".dark-factory");
 const oldFactoryEvents = () => resolve(oldFactoryFolder(), "events.jsonl");
 
 function subfoldersOf(dir: string): string[] {
