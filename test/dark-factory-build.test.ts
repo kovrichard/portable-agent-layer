@@ -747,3 +747,169 @@ describe("runTotals", () => {
     expect(totals).toEqual({ costUsd: 0.5, tokens: 19, roleRuns: 2 });
   });
 });
+
+describe("the config frozen by prepare", () => {
+  const EXTRA_CHECK = { name: "extra", run: "test -f extra.txt" };
+  const TWO_CHECKS = { ...DEFAULT_CONFIG, gate: [...DEFAULT_CONFIG.gate, EXTRA_CHECK] };
+  const weaken = (config: object) => ({
+    write: { "feature.txt": "code", ".dark-factory.json": JSON.stringify(config) },
+    commit: true,
+  });
+  const gateCheckNames = () => eventsNamed("gate_check").map((event) => event.check);
+
+  test("prepare stores the checkout's config in task.json", () => {
+    setup("small", {}, TWO_CHECKS);
+    runBuild();
+    expect(storedTask().config).toEqual(TWO_CHECKS);
+  });
+
+  test("a rerun stores the config as it is in the checkout now", () => {
+    const question = { done: false, summary: "", question: "which file?" };
+    setup("small", {
+      roles: {
+        "code-writer": [{ ...NOOP, reply: question }],
+        po: [{ reply: { userQuestion: "Which database?" } }],
+      },
+    });
+    expect(runBuild().exitCode).toBe(3);
+    expect(storedTask().config).toEqual(DEFAULT_CONFIG);
+    writeFileSync(join(ctx.repo, ".dark-factory.json"), JSON.stringify(TWO_CHECKS));
+    writeFileSync(
+      join(ctx.factory, "tasks", TASK, "spec.md"),
+      `${specText()}- Rico: use postgres\n`
+    );
+    setScenario({
+      roles: { "code-writer": [{ write: { "extra.txt": "x" }, commit: true }] },
+    });
+    runBuild();
+    expect(storedTask().config).toEqual(TWO_CHECKS);
+  });
+
+  test("a task started before this change, with no config, gets one on the next prepare", () => {
+    setup("small");
+    expect(storedTask().config).toBeUndefined();
+    const run = runBuild();
+    expect(resultOf(run).status).toBe("ready");
+    expect(storedTask().config).toEqual(DEFAULT_CONFIG);
+  });
+
+  test("a role deleting a gate check from the worktree's config does not weaken the gate", () => {
+    setup("small", { roles: { "code-writer": [weaken(DEFAULT_CONFIG)] } }, TWO_CHECKS);
+    runBuild();
+    expect(eventsNamed("gate")[0]?.result).toBe("fail");
+    expect(gateCheckNames().slice(0, 2)).toEqual(["tests", "extra"]);
+    expect(eventsNamed("gate").every((event) => event.result === "fail")).toBe(true);
+  });
+
+  test("a config that is not on the base branch still drives the gate", () => {
+    setup("feature");
+    git(ctx.repo, "rm", "-q", "--cached", ".dark-factory.json");
+    git(ctx.repo, "commit", "-q", "-m", "untrack config");
+    git(ctx.repo, "push", "-q", "origin", "canary");
+    const run = runBuild();
+    expect(resultOf(run).status).toBe("ready");
+    expect(eventsNamed("tests_red")).toHaveLength(1);
+    expect(gateCheckNames()).toContain("tests");
+    expect(eventsNamed("gate").at(-1)?.result).toBe("pass");
+  });
+
+  test("the red-test proof uses the frozen config, not the worktree's", () => {
+    setup("feature", {
+      roles: {
+        "test-writer": [
+          {
+            write: {
+              "feature.test.txt": "test",
+              ".dark-factory.json": JSON.stringify({
+                ...DEFAULT_CONFIG,
+                gate: [{ name: "tests", run: "echo ' 1 pass'" }],
+              }),
+            },
+            commit: false,
+          },
+        ],
+      },
+    });
+    runBuild();
+    expect(eventsNamed("tests_red")).toEqual([
+      expect.objectContaining({ exitCode: 1, failing: 2 }),
+    ]);
+  });
+
+  test("the red-test proof still finds its check when the worktree's config loses it", () => {
+    setup("feature", {
+      roles: {
+        "test-writer": [
+          {
+            write: {
+              "feature.test.txt": "test",
+              ".dark-factory.json": JSON.stringify({ ...DEFAULT_CONFIG, gate: [] }),
+            },
+            commit: false,
+          },
+        ],
+      },
+    });
+    const run = runBuild();
+    expect(resultOf(run).message).not.toContain('no check named "tests"');
+    expect(eventsNamed("tests_red")).toHaveLength(1);
+  });
+
+  test("the roles after the diff use the frozen uiPaths, not the worktree's", () => {
+    const config = { ...DEFAULT_CONFIG, uiPaths: ["ui/"] };
+    setup(
+      "small",
+      {
+        roles: {
+          "code-writer": [
+            {
+              write: {
+                "feature.txt": "code",
+                "ui/page.txt": "x",
+                ".dark-factory.json": JSON.stringify(DEFAULT_CONFIG),
+              },
+              commit: true,
+            },
+          ],
+        },
+      },
+      config
+    );
+    runBuild();
+    expect(roleNames()).toContain("tester");
+    expect(eventsNamed("roles_added")).toEqual([
+      expect.objectContaining({ task: TASK, role: "tester" }),
+    ]);
+  });
+});
+
+describe("the reviewer is told when the config changes", () => {
+  const reviewerStdin = () => calls().find((call) => call.role === "reviewer")?.stdin;
+
+  test("a diff that touches .dark-factory.json is flagged in the reviewer's instructions", () => {
+    setup("small", {
+      roles: {
+        "code-writer": [
+          {
+            write: {
+              "feature.txt": "code",
+              ".dark-factory.json": JSON.stringify({ ...DEFAULT_CONFIG, uiPaths: [] }),
+            },
+            commit: true,
+          },
+        ],
+      },
+    });
+    runBuild();
+    const text = reviewerStdin() ?? "";
+    expect(text).toContain(".dark-factory.json");
+    expect(text).toMatch(/finding/i);
+  });
+
+  test("a diff that does not touch it carries no such note", () => {
+    setup("small");
+    runBuild();
+    expect(reviewerStdin()).toBeDefined();
+    expect(reviewerStdin()).not.toContain(".dark-factory.json");
+  });
+});
