@@ -308,6 +308,23 @@ describe("the generality check (criterion 9)", () => {
     ).toBe("src/lib/widgetRows.mjs");
   });
 
+  test("a plain lowercase key or variable from the diff does not block an ordinary word in a rule", () => {
+    const keyed = [
+      "+++ b/src/run.mjs",
+      '+  appendEvent({ event: "x", task: taskId, body });',
+      "+  const user = userPart(env);",
+      '+  setup({ role: "reviewer" });',
+    ].join("\n");
+    const names = diffNames(keyed);
+    expect(names).toEqual(["src/run.mjs", "run.mjs"]);
+    expect(
+      generalityViolation(
+        "A role must check the task body before telling the user.",
+        names
+      )
+    ).toBeNull();
+  });
+
   test("a rule that names nothing from the diff is stored", () => {
     const result = { findings: [coachResult()], updates: [] };
     const { store, events } = apply([], result, diffNames(diff));
