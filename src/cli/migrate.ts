@@ -24,6 +24,7 @@ import {
 import { homedir } from "node:os";
 import { basename, dirname, resolve } from "node:path";
 import { readBindings } from "../hooks/lib/bindings";
+import { mergeJsonlLines } from "../hooks/lib/import-merge";
 import { foldHistoryInto } from "../hooks/lib/parked-history";
 import { palHome, paths } from "../hooks/lib/paths";
 import {
@@ -675,6 +676,10 @@ function readSettingsObject(): Record<string, Record<string, unknown>> | null {
   }
 }
 
+function writeSettingsObject(settings: Record<string, Record<string, unknown>>): void {
+  writeFileSync(settingsFile(), `${JSON.stringify(settings, null, 2)}\n`, "utf-8");
+}
+
 export function retiredKeysIn(
   settings: Record<string, Record<string, unknown>>
 ): string[] {
@@ -708,7 +713,7 @@ const v7RetiredSettingsKeys: Migration = {
         const [section, key] = path.split(".");
         delete settings[section][key];
       }
-      writeFileSync(settingsFile(), `${JSON.stringify(settings, null, 2)}\n`, "utf-8");
+      writeSettingsObject(settings);
     }
     const verb = dryRun ? "would remove" : "removed";
     return {
@@ -901,6 +906,139 @@ const v8FactoryHome: Migration = {
   },
 };
 
+// ── v9-progress-tree-names: the progress tree's stored names ────
+
+const PROGRESS_TREE_KEY_RENAMES: Record<string, string> = {
+  workTree: "progressTree",
+  workTreeGate: "progressTreeGate",
+  workTreeDecisionGate: "progressTreeDecisionGate",
+};
+const EVENTS_FILE = "events.jsonl";
+const OLD_PROGRESS_TREE_LABEL = "memory/work-tree/";
+const oldProgressTreeFolder = () => resolve(paths.memory(), "work-tree");
+const newProgressTreeFolder = () => resolve(paths.memory(), "progress-tree");
+
+interface FolderStep {
+  results: string[];
+  skipped: number;
+}
+
+function oldProgressTreeKeysIn(
+  settings: Record<string, Record<string, unknown>> | null
+): string[] {
+  const section = settings?.dynamicContext;
+  if (typeof section !== "object" || section === null) return [];
+  return Object.keys(PROGRESS_TREE_KEY_RENAMES).filter((key) => key in section);
+}
+
+function renameProgressTreeKeys(
+  section: Record<string, unknown>
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(section).flatMap(([key, value]) => {
+      if (!Object.hasOwn(PROGRESS_TREE_KEY_RENAMES, key)) return [[key, value]];
+      const renamed = PROGRESS_TREE_KEY_RENAMES[key];
+      return renamed in section ? [] : [[renamed, value]];
+    })
+  );
+}
+
+function progressTreeKeysStep(dryRun: boolean): string[] {
+  const settings = readSettingsObject();
+  const old = oldProgressTreeKeysIn(settings);
+  if (!settings || old.length === 0) return [];
+  if (!dryRun) {
+    settings.dynamicContext = renameProgressTreeKeys(settings.dynamicContext);
+    writeSettingsObject(settings);
+  }
+  const moves = old.map(
+    (key) => `dynamicContext.${key} → dynamicContext.${PROGRESS_TREE_KEY_RENAMES[key]}`
+  );
+  return [
+    `pal-settings.json: ${dryRun ? "would rename" : "renamed"} ${moves.join(", ")}`,
+  ];
+}
+
+function mergeOldProgressTreeEvents(): number {
+  const oldFile = resolve(oldProgressTreeFolder(), EVENTS_FILE);
+  if (!existsSync(oldFile)) return 0;
+  const newFile = resolve(newProgressTreeFolder(), EVENTS_FILE);
+  const newRaw = existsSync(newFile) ? readFileSync(newFile, "utf-8") : "";
+  const { text, added } = mergeJsonlLines(readFileSync(oldFile, "utf-8"), newRaw);
+  writeFileSync(newFile, text, "utf-8");
+  unlinkSync(oldFile);
+  return added;
+}
+
+function appendOldProgressTree(): FolderStep {
+  const appended = mergeOldProgressTreeEvents();
+  discardEmptyFolder(oldProgressTreeFolder());
+  const results = [
+    `${OLD_PROGRESS_TREE_LABEL}: ${appended} event(s) appended before memory/progress-tree/events.jsonl`,
+  ];
+  if (!existsSync(oldProgressTreeFolder())) return { results, skipped: 0 };
+  return {
+    results: [
+      ...results,
+      `${OLD_PROGRESS_TREE_LABEL}: skipped (holds files other than events.jsonl)`,
+    ],
+    skipped: 1,
+  };
+}
+
+function progressTreeFolderStep(dryRun: boolean): FolderStep {
+  if (!existsSync(oldProgressTreeFolder())) return { results: [], skipped: 0 };
+  const bothExist = existsSync(newProgressTreeFolder());
+  if (dryRun) {
+    const verb = bothExist
+      ? "would append its events before memory/progress-tree/events.jsonl"
+      : "would move to memory/progress-tree/";
+    return { results: [`${OLD_PROGRESS_TREE_LABEL}: ${verb}`], skipped: 0 };
+  }
+  try {
+    if (!bothExist) {
+      renameSync(oldProgressTreeFolder(), newProgressTreeFolder());
+      return {
+        results: [`${OLD_PROGRESS_TREE_LABEL}: moved to memory/progress-tree/`],
+        skipped: 0,
+      };
+    }
+    return appendOldProgressTree();
+  } catch (e) {
+    return {
+      results: [`${OLD_PROGRESS_TREE_LABEL}: skipped (${(e as Error).message})`],
+      skipped: 1,
+    };
+  }
+}
+
+const v9ProgressTreeNames: Migration = {
+  id: "v9-progress-tree-names",
+  description: "Rename the progress tree's settings and data folder from work-tree names",
+  movesSources: true,
+
+  check() {
+    const keys = oldProgressTreeKeysIn(readSettingsObject()).map(
+      (key) => `dynamicContext.${key}`
+    );
+    const found = existsSync(oldProgressTreeFolder())
+      ? [...keys, OLD_PROGRESS_TREE_LABEL]
+      : keys;
+    return { pending: found.length > 0, detail: found.join(", ") || undefined };
+  },
+
+  run(dryRun = false): MigrationResult {
+    const keyResults = progressTreeKeysStep(dryRun);
+    const folder = progressTreeFolderStep(dryRun);
+    const results = [...keyResults, ...folder.results];
+    return {
+      migrated: results.length - folder.skipped,
+      skipped: folder.skipped,
+      results,
+    };
+  },
+};
+
 const MIGRATIONS: Migration[] = [
   v1Projects,
   v2ThreadsToIsc,
@@ -910,6 +1048,7 @@ const MIGRATIONS: Migration[] = [
   v6HistorySlugs,
   v7RetiredSettingsKeys,
   v8FactoryHome,
+  v9ProgressTreeNames,
   ...LEFTOVERS.map(leftoverMigration),
 ];
 

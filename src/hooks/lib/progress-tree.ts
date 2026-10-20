@@ -122,7 +122,7 @@ export interface ScopeTree {
 }
 
 function progressTreeFile(): string {
-  return resolve(ensureDir(resolve(paths.memory(), "work-tree")), "events.jsonl");
+  return resolve(ensureDir(resolve(paths.memory(), "progress-tree")), "events.jsonl");
 }
 
 /** A registered project is its own scope wherever in it the agent stands; anything else is its folder. */

@@ -18,7 +18,7 @@ export function loadProgressTreeContext(
   cwd: string = sessionDir(),
   hookSession?: string
 ): string {
-  if (!isOptedIn("workTree")) return "";
+  if (!isOptedIn("progressTree")) return "";
   return renderSessionContext(sessionTree(cwd, hookSession));
 }
 
@@ -27,7 +27,7 @@ export function progressTreePromptLine(
   cwd: string = sessionDir(),
   hookSession?: string
 ): string | null {
-  if (!isOptedIn("workTree")) return null;
+  if (!isOptedIn("progressTree")) return null;
   const newTopic = userText !== "" && reactionTo(userText, undefined) === "new-topic";
   const line = renderPromptLine(sessionTree(cwd, hookSession), newTopic);
   return line ? `<system-reminder>${line}</system-reminder>` : null;

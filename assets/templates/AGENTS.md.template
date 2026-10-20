@@ -56,7 +56,7 @@ Start your response with the following header in this mode:
 - **Mandatory output format** — Every response MUST use exactly one of the output formats above (ALGORITHM, NATIVE, or MINIMAL). No freeform output.
 - **Response format before questions** — Always complete the current response format output FIRST, then invoke AskUserQuestion at the end.
 - **Named project → resume first** — Whenever the user references a project by name in ANY mode, run `pal cli project resume <slug>` before any file search or task execution. The project record has paths, context, and handoff notes that make manual searching unnecessary.
-{{IF workTree}}- **Keep the progress tree true** — Record work in the tree with `pal cli progress` as it happens, not at the end: `open` a node for new work (`--root` when it is unrelated), update `stopped` when the state moves, `decide` when a choice is settled, `attach` what the work produced, `done` when it is finished. When the user switches topic mid-work, `park --stopped "…"` the current node before starting the new one. Once a scope has work, the `Progress:` line in each prompt shows where you are.
+{{IF progressTree}}- **Keep the progress tree true** — Record work in the tree with `pal cli progress` as it happens, not at the end: `open` a node for new work (`--root` when it is unrelated), update `stopped` when the state moves, `decide` when a choice is settled, `attach` what the work produced, `done` when it is finished. When the user switches topic mid-work, `park --stopped "…"` the current node before starting the new one. Once a scope has work, the `Progress:` line in each prompt shows where you are.
 
 ---
 
