@@ -160,6 +160,19 @@ describe("invocation", () => {
     expect(stdin).not.toContain("[Workflow harness");
   });
 
+  test("a reviewer cannot write files through git output flags", () => {
+    fakeClaude({ replyFile: SUCCESS });
+    runRoleHeadless("t1", "reviewer", { env: envWith(bin) });
+    expect(listAfter(recorded().argv, "--disallowedTools")).toEqual(
+      expect.arrayContaining([
+        "Bash(git diff *--output*)",
+        "Bash(git log *--output*)",
+        "Bash(git show *--output*)",
+        "Bash(git diff *--ext-diff*)",
+      ])
+    );
+  });
+
   test("a role that writes code gets Edit, Write and Bash and no deny list", () => {
     fakeClaude({ replyFile: SUCCESS });
     runRoleHeadless("t1", "code-writer", { env: envWith(bin) });

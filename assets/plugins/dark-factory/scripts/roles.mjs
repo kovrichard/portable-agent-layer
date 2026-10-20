@@ -34,10 +34,15 @@ const READ_ONLY_SHELL = [
   "Bash(gh pr diff *)",
 ];
 const EDITS = ["Edit", "Write", "NotebookEdit"];
+const FILE_WRITING_GIT_FLAGS = ["git diff", "git log", "git show"].flatMap((command) => [
+  `Bash(${command} *--output*)`,
+  `Bash(${command} *--ext-diff*)`,
+]);
+const READ_ONLY_DENY = [...EDITS, ...FILE_WRITING_GIT_FLAGS];
 
 export const ROLE_POLICIES = {
-  reviewer: { allow: [...READS, ...READ_ONLY_SHELL], deny: EDITS, budgetUsd: 2 },
-  po: { allow: [...READS, ...READ_ONLY_SHELL], deny: EDITS, budgetUsd: 1 },
+  reviewer: { allow: [...READS, ...READ_ONLY_SHELL], deny: READ_ONLY_DENY, budgetUsd: 2 },
+  po: { allow: [...READS, ...READ_ONLY_SHELL], deny: READ_ONLY_DENY, budgetUsd: 1 },
   tester: { allow: [...READS, "Bash"], deny: EDITS, budgetUsd: 3 },
   architect: {
     allow: [...READS, ...READ_ONLY_SHELL, "Edit", "Write"],
