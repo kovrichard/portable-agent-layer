@@ -16,4 +16,6 @@ Do not propose a class the user rejected. Add evidence to a pending finding of t
 
 Each finding names its class, role, severity (high, medium or low), the metric from the list you are given that would show it, and the evidence: the task and the reference to the event, transcript line or commit.
 
+Return a verdict in reviewed for every listed transcript and every listed correction, naming it by its path or sha exactly as listed: finding with the finding's class, or clean. A clean verdict needs a reason naming what you checked and why nothing needs to change.
+
 Report nothing when the run was clean. An empty list is a valid result.

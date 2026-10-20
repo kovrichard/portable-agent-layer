@@ -3,6 +3,14 @@ import { existsSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { prMergedAt, recordCorrectionsGiven, userCorrections } from "./corrections.mjs";
 import {
+  expectedInputs,
+  mergeCoachResults,
+  missingInputs,
+  resumeInstructions,
+  reviewedCount,
+  reviewedOf,
+} from "./coverage.mjs";
+import {
   applyCoachResult,
   diffNames,
   findingById,
@@ -156,6 +164,87 @@ export function coachInstructions({
   ].join("\n");
 }
 
+function knownClassesOf(result, openFindings) {
+  return [
+    ...result.findings.map((finding) => finding.class),
+    ...openFindings
+      .filter((finding) => finding.status === "pending")
+      .map((finding) => finding.class),
+  ];
+}
+
+function missingOf(result, { expected, openFindings }) {
+  return missingInputs({
+    expected,
+    reviewed: result.reviewed,
+    knownClasses: knownClassesOf(result, openFindings),
+  });
+}
+
+function coveredResult(taskId, outcome, { env, expected, openFindings }) {
+  const first = mergeCoachResults(outcome.structured, {});
+  const missing = missingOf(first, { expected, openFindings });
+  if (missing.length === 0) return { result: first, missing };
+  const resumed = runRoleHeadless(taskId, "coach", {
+    env,
+    instructions: resumeInstructions(missing),
+    resumeSessionId: outcome.sessionId,
+  });
+  if (resumed.exitCode !== 0 || resumed.structured === null)
+    return {
+      result: first,
+      missing,
+      resumeError: resumed.error ?? "the coach returned no result",
+    };
+  const result = mergeCoachResults(first, resumed.structured);
+  return { result, missing: missingOf(result, { expected, openFindings }) };
+}
+
+function correctionsReviewed(corrections, missing) {
+  const missingSources = new Set(missing.map((item) => item.source));
+  return corrections.filter((correction) =>
+    correction.commits.every((commit) => !missingSources.has(commit.sha))
+  );
+}
+
+function recordIncomplete(taskId, missing, resumeError, env) {
+  if (missing.length === 0) return;
+  appendEvent(
+    {
+      event: "coach_incomplete",
+      task: taskId,
+      missing,
+      ...(resumeError === undefined ? {} : { resumeError }),
+    },
+    env
+  );
+}
+
+function storeResult(taskId, covered, { env, names, now, corrections, expected }) {
+  const { result, missing, resumeError } = covered;
+  const applied = withFindingsLock(env, () => {
+    const stored = applyCoachResult(readFindings(env), result, { taskId, names, now });
+    writeFindings(stored.store, env);
+    return stored;
+  });
+  for (const event of applied.events) appendEvent(event, env);
+  recordIncomplete(taskId, missing, resumeError, env);
+  if (!discardedEveryRule(applied))
+    recordCorrectionsGiven(correctionsReviewed(corrections, missing), env);
+  appendEvent(
+    {
+      event: "coach_finished",
+      task: taskId,
+      created: applied.created.length,
+      updated: applied.updated.length,
+      reviewed: reviewedCount(expected, reviewedOf(result)),
+      expected: expected.length,
+    },
+    env
+  );
+  return applied;
+}
+
 function coachRun(taskId, env, now) {
   const task = readTask(taskId, env);
   if (!existsSync(task.worktree))
@@ -167,38 +256,29 @@ function coachRun(taskId, env, now) {
   );
   const names = diffNames([text, ...correctionDiffs].join("\n"));
   const dir = taskDir(taskId, env);
+  const transcripts = taskTranscripts(task, env);
+  const openFindings = openFindingsOf(env);
+  const expected = expectedInputs(transcripts, corrections);
   const instructions = coachInstructions({
     specPath: join(dir, "spec.md"),
     artifacts: artifactPaths(dir),
     eventsPath: join(dir, "events.jsonl"),
     diffCommand: command,
-    transcripts: taskTranscripts(task, env),
-    openFindings: openFindingsOf(env),
+    transcripts,
+    openFindings,
     corrections,
   });
   const outcome = runRoleHeadless(taskId, "coach", { env, instructions });
   if (outcome.exitCode !== 0 || outcome.structured === null)
     return coachFailed(taskId, outcome.error ?? "the coach returned no result", env);
-  const applied = withFindingsLock(env, () => {
-    const result = applyCoachResult(readFindings(env), outcome.structured, {
-      taskId,
-      names,
-      now,
-    });
-    writeFindings(result.store, env);
-    return result;
+  const covered = coveredResult(taskId, outcome, { env, expected, openFindings });
+  const applied = storeResult(taskId, covered, {
+    env,
+    names,
+    now,
+    corrections,
+    expected,
   });
-  for (const event of applied.events) appendEvent(event, env);
-  if (!discardedEveryRule(applied)) recordCorrectionsGiven(corrections, env);
-  appendEvent(
-    {
-      event: "coach_finished",
-      task: taskId,
-      created: applied.created.length,
-      updated: applied.updated.length,
-    },
-    env
-  );
   return {
     task: taskId,
     created: applied.created,
@@ -206,6 +286,7 @@ function coachRun(taskId, env, now) {
     rejectedRules: applied.events
       .filter((event) => event.event === "coach_rule_rejected")
       .map((event) => ({ class: event.class, matched: event.matched })),
+    missing: covered.missing,
   };
 }
 
