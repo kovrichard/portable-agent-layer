@@ -57,6 +57,13 @@ export type WorkEvent = EventBase &
     | { type: "attach"; kind: ArtifactKind; ref: string; label?: string }
     | { type: "follow-up"; text: string; due?: string }
     | { type: "git-cursor"; branch: string; head: string }
+    | {
+        type: "pr-settled";
+        ref: string;
+        state: "merged" | "closed";
+        at: string;
+        stoppedAt?: string;
+      }
   );
 
 type Payload<T extends WorkEvent["type"]> = Omit<
@@ -119,6 +126,7 @@ export interface ScopeTree {
   lanes: Map<string, string>;
   nodes: Map<string, WorkNode>;
   gitCursor: GitCursor | null;
+  settledPrs: Set<string>;
 }
 
 function progressTreeFile(): string {
@@ -296,9 +304,22 @@ function applyToNode(tree: ScopeTree, node: WorkNode, event: WorkEvent): void {
   node.updated = event.ts;
 }
 
+function settlePr(
+  tree: ScopeTree,
+  event: Extract<WorkEvent, { type: "pr-settled" }>
+): void {
+  tree.settledPrs.add(event.ref);
+  const node = tree.nodes.get(event.node);
+  if (event.stoppedAt && node) node.stoppedAt = event.stoppedAt;
+}
+
 function apply(tree: ScopeTree, event: WorkEvent): void {
   if (event.type === "git-cursor") {
     tree.gitCursor = { branch: event.branch, head: event.head };
+    return;
+  }
+  if (event.type === "pr-settled") {
+    settlePr(tree, event);
     return;
   }
   if (event.type === "open") {
@@ -325,6 +346,7 @@ export function buildTree(
     lanes: new Map(),
     nodes: new Map(),
     gitCursor: null,
+    settledPrs: new Set(),
   };
   for (const event of events) if (event.scope === scope) apply(tree, event);
   tree.active = tree.lanes.get(session ?? "") ?? null;

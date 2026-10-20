@@ -260,4 +260,51 @@ describe("progress tree", () => {
       nodesWithStatus(buildTree("pal", readEvents(file)), "parked").map((n) => n.id)
     ).toEqual(["a", "b"]);
   });
+
+  describe("settled PRs", () => {
+    const ref = "https://github.com/o/r/pull/126";
+    const settle = (stoppedAt?: string) =>
+      appendEvent(
+        "pal",
+        "a",
+        "pr-settled",
+        {
+          ref,
+          state: "merged",
+          at: "2026-10-19T14:00:00Z",
+          ...(stoppedAt ? { stoppedAt } : {}),
+        },
+        file,
+        at()
+      );
+
+    test("a settled PR with a line sets the node's stopped-at and remembers the ref", () => {
+      open("a", "one");
+      settle("PR #126 merged 2026-10-19");
+      const tree = readTree("pal", file);
+      expect(tree.nodes.get("a")?.stoppedAt).toBe("PR #126 merged 2026-10-19");
+      expect(tree.settledPrs.has(ref)).toBe(true);
+    });
+
+    test("a settled PR without a line remembers the ref and leaves stopped-at as it was", () => {
+      open("a", "one");
+      appendEvent("pal", "a", "stopped", { text: "CI running" }, file, at());
+      settle();
+      const tree = readTree("pal", file);
+      expect(tree.nodes.get("a")?.stoppedAt).toBe("CI running");
+      expect(tree.settledPrs.has(ref)).toBe(true);
+    });
+
+    test("a settled PR on a parked node changes nothing but its line", () => {
+      open("a", "one");
+      open("b", "two");
+      const before = readTree("pal", file);
+      const updatedBefore = before.nodes.get("a")?.updated;
+      settle("PR #126 merged 2026-10-19");
+      const after = readTree("pal", file);
+      expect(after.nodes.get("a")?.status).toBe("parked");
+      expect(after.active).toBe(before.active);
+      expect(after.nodes.get("a")?.updated).toBe(updatedBefore);
+    });
+  });
 });
