@@ -69,6 +69,29 @@ describe("attaching git progress to the active node", () => {
     expect(node()?.artifacts).toEqual([]);
   });
 
+  test("the user's own commits that a pull brings in are not attached", () => {
+    const elsewhere = resolve(repo, "..", "elsewhere");
+    git("worktree", "add", "-q", "-b", "upstream", elsewhere);
+    writeFileSync(resolve(elsewhere, "elsewhere.txt"), "elsewhere");
+    spawnSync("git", ["-C", elsewhere, "add", "-A"]);
+    spawnSync("git", ["-C", elsewhere, "commit", "-q", "-m", "feat: made elsewhere"]);
+    appendEvent(scope(), "n1", "open", { title: "Gate", parent: null }, file);
+    attachGitProgress(repo, file);
+    git("pull", "-q", "--ff-only", ".", "upstream");
+    commit("feat: made here");
+    attachGitProgress(repo, file);
+    expect(node()?.artifacts.map((a) => a.label)).toEqual(["feat: made here"]);
+  });
+
+  test("an amended commit made here is attached", () => {
+    appendEvent(scope(), "n1", "open", { title: "Gate", parent: null }, file);
+    attachGitProgress(repo, file);
+    commit("feat: first try");
+    git("commit", "-q", "--amend", "-m", "feat: amended");
+    attachGitProgress(repo, file);
+    expect(node()?.artifacts.map((a) => a.label)).toEqual(["feat: amended"]);
+  });
+
   describe("from the project root", () => {
     const atRoot = () => {
       appendEvent(

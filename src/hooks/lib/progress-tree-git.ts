@@ -10,6 +10,7 @@ import { openSessionNode } from "./progress-tree-session-node";
 
 const GIT_TIMEOUT_MS = 1000;
 const MAX_COMMITS = 20;
+const MAX_REFLOG = 200;
 
 interface GitSnapshot {
   branch: string;
@@ -37,21 +38,35 @@ function snapshot(cwd: string): GitSnapshot | null {
   return { head, branch, email: git(cwd, "config", "user.email") ?? "" };
 }
 
-/** Only the user's own commits: a pull brings other people's work, which this turn did not make. */
+/** A pull or merge moves HEAD too; only reflog entries that git commit wrote mark commits made here. */
+function committedHere(cwd: string): Set<string> {
+  const reflog = git(cwd, "reflog", `-${MAX_REFLOG}`, "--format=%H%x09%gs");
+  if (!reflog) return new Set();
+  return new Set(
+    reflog
+      .split("\n")
+      .map((line) => line.split("\t"))
+      .filter(([, action]) => action?.startsWith("commit"))
+      .map(([sha]) => sha)
+  );
+}
+
+/** Only the user's own commits made in this checkout: a pull brings work this turn did not make, even the user's own. */
 function ownCommitsSince(cwd: string, from: string, to: string, email: string): Commit[] {
   const log = git(
     cwd,
     "log",
     `-${MAX_COMMITS}`,
-    "--format=%h%x09%ae%x09%s",
+    "--format=%H%x09%h%x09%ae%x09%s",
     `${from}..${to}`
   );
   if (!log) return [];
+  const madeHere = committedHere(cwd);
   return log
     .split("\n")
     .map((line) => line.split("\t"))
-    .filter(([, author]) => author === email)
-    .map(([sha, , subject]) => ({ sha, subject }))
+    .filter(([full, , author]) => author === email && madeHere.has(full))
+    .map(([, sha, , subject]) => ({ sha, subject }))
     .reverse();
 }
 
