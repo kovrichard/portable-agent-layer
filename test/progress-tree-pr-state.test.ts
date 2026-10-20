@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { delimiter, resolve } from "node:path";
 import { appendEvent, readTree } from "../src/hooks/lib/progress-tree";
 import { loadProgressTreeContext } from "../src/hooks/lib/progress-tree-context";
 import { reload } from "../src/hooks/lib/settings";
@@ -21,26 +21,41 @@ function prUrl(n: number): string {
   return `https://github.com/acme/repo/pull/${n}`;
 }
 
+function fakeGhScript(): string {
+  return [
+    'import { appendFileSync, closeSync, existsSync, readFileSync } from "node:fs";',
+    'import { join } from "node:path";',
+    `const dir = ${JSON.stringify(ghDir)};`,
+    "const args = process.argv.slice(2);",
+    `appendFileSync(${JSON.stringify(ghLog)}, args.join(" ") + "\\n");`,
+    'const n = (args.at(-1) ?? "").split("/").pop();',
+    "const marker = (ext) => join(dir, n + ext);",
+    'if (existsSync(marker(".sleep"))) { closeSync(1); closeSync(2); setTimeout(() => {}, 10_000); }',
+    'else if (existsSync(marker(".fail"))) { console.error("gh: not logged in"); process.exit(1); }',
+    'else if (existsSync(marker(".json"))) process.stdout.write(readFileSync(marker(".json")));',
+    "else process.exit(1);",
+    "",
+  ].join("\n");
+}
+
+function writeFakeGhLauncher(bin: string) {
+  if (process.platform === "win32") {
+    writeFileSync(resolve(bin, "gh.js"), fakeGhScript());
+    writeFileSync(resolve(bin, "gh.cmd"), `@echo off\r\nbun "%~dp0gh.js" %*\r\n`);
+    return;
+  }
+  writeFileSync(resolve(bin, "gh"), `#!/usr/bin/env bun\n${fakeGhScript()}`);
+  chmodSync(resolve(bin, "gh"), 0o755);
+}
+
 function installFakeGh() {
   ghDir = resolve(home, "fake-gh");
   mkdirSync(ghDir, { recursive: true });
   ghLog = resolve(ghDir, "calls.log");
-  const script = [
-    "#!/bin/sh",
-    `echo "$@" >> "${ghLog}"`,
-    'for arg in "$@"; do last="$arg"; done',
-    `n="\${last##*/}"`,
-    `if [ -f "${ghDir}/$n.sleep" ]; then exec sleep 10; fi`,
-    `if [ -f "${ghDir}/$n.fail" ]; then echo "gh: not logged in" >&2; exit 1; fi`,
-    `if [ -f "${ghDir}/$n.json" ]; then cat "${ghDir}/$n.json"; exit 0; fi`,
-    "exit 1",
-    "",
-  ].join("\n");
   const bin = resolve(ghDir, "bin");
   mkdirSync(bin, { recursive: true });
-  writeFileSync(resolve(bin, "gh"), script);
-  chmodSync(resolve(bin, "gh"), 0o755);
-  process.env.PATH = `${bin}:${originalPath}`;
+  writeFakeGhLauncher(bin);
+  process.env.PATH = `${bin}${delimiter}${originalPath}`;
 }
 
 function removeGhFromPath() {
