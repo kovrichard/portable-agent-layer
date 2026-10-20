@@ -4,10 +4,14 @@ A software factory of agents for Claude Code. You talk to the product owner; the
 
 ## Install
 
+Without PAL:
+
 ```
 /plugin marketplace add kovrichard/portable-agent-layer
 /plugin install dark-factory@pal
 ```
+
+With PAL, it is installed for you.
 
 ## Requirements
 
