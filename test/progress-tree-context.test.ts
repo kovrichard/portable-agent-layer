@@ -6,6 +6,7 @@ import {
   loadProgressTreeContext,
   progressTreePromptLine,
 } from "../src/hooks/lib/progress-tree-context";
+import type { GhRunner } from "../src/hooks/lib/progress-tree-prs";
 import { reload } from "../src/hooks/lib/settings";
 import { freshTestDir } from "./lib/test-home";
 
@@ -59,5 +60,42 @@ describe("progress tree in context", () => {
     setProgressTree(on);
     expect(loadProgressTreeContext(folder)).toBe("");
     expect(progressTreePromptLine("go on", folder)).toBeNull();
+  });
+
+  describe("a session start settles the PRs attached to open nodes", () => {
+    const prRef = "https://github.com/o/r/pull/126";
+
+    function openNodeWithMergedPr() {
+      appendEvent(folder, "n1", "open", { title: "Loose work", parent: null });
+      appendEvent(folder, "n1", "attach", { kind: "pr", ref: prRef });
+    }
+
+    function recordingGh(calls: string[]): GhRunner {
+      return (ref) => {
+        calls.push(ref);
+        return JSON.stringify({
+          state: "MERGED",
+          mergedAt: "2026-10-19T14:00:00Z",
+          closedAt: "2026-10-19T14:00:00Z",
+        });
+      };
+    }
+
+    test("an opted-in session start shows the merged PR on its node", () => {
+      openNodeWithMergedPr();
+      const context = loadProgressTreeContext(folder, undefined, recordingGh([]));
+      expect(context).toContain("PR #126 merged 2026-10-19");
+    });
+
+    test.each([
+      ["turned off", false],
+      ["never opted into", undefined],
+    ])("%s, it asks gh nothing", (_, on) => {
+      openNodeWithMergedPr();
+      setProgressTree(on);
+      const calls: string[] = [];
+      expect(loadProgressTreeContext(folder, undefined, recordingGh(calls))).toBe("");
+      expect(calls).toEqual([]);
+    });
   });
 });
