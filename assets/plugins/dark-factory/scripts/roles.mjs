@@ -21,6 +21,47 @@ export function rolesFor(category) {
   return roles;
 }
 
+const READS = ["Read", "Grep", "Glob"];
+const READ_ONLY_SHELL = [
+  "Bash(git diff *)",
+  "Bash(git log *)",
+  "Bash(git show *)",
+  "Bash(git status *)",
+  "Bash(git rev-parse *)",
+  "Bash(git merge-base *)",
+  "Bash(git blame *)",
+  "Bash(gh pr view *)",
+  "Bash(gh pr diff *)",
+];
+const EDITS = ["Edit", "Write", "NotebookEdit"];
+
+export const ROLE_POLICIES = {
+  reviewer: { allow: [...READS, ...READ_ONLY_SHELL], deny: EDITS, budgetUsd: 2 },
+  po: { allow: [...READS, ...READ_ONLY_SHELL], deny: EDITS, budgetUsd: 1 },
+  tester: { allow: [...READS, "Bash"], deny: EDITS, budgetUsd: 3 },
+  architect: {
+    allow: [...READS, ...READ_ONLY_SHELL, "Edit", "Write"],
+    deny: ["NotebookEdit"],
+    budgetUsd: 3,
+  },
+  planner: {
+    allow: [...READS, ...READ_ONLY_SHELL, "Edit", "Write"],
+    deny: ["NotebookEdit"],
+    budgetUsd: 3,
+  },
+  "test-writer": { allow: [...READS, "Edit", "Write", "Bash"], deny: [], budgetUsd: 3 },
+  "code-writer": { allow: [...READS, "Edit", "Write", "Bash"], deny: [], budgetUsd: 2 },
+  debugger: { allow: [...READS, "Edit", "Write", "Bash"], deny: [], budgetUsd: 5 },
+};
+
+export function policyFor(role) {
+  if (!Object.hasOwn(ROLE_POLICIES, role))
+    throw new Error(
+      `unknown role "${role}"; use one of ${Object.keys(ROLE_POLICIES).join(", ")}`
+    );
+  return ROLE_POLICIES[role];
+}
+
 function touchesUi(changedFiles, uiPaths = []) {
   return changedFiles.some((file) => uiPaths.some((prefix) => file.startsWith(prefix)));
 }
