@@ -10,7 +10,7 @@ import {
   writeTask,
 } from "./lib.mjs";
 
-function run(command, args, cwd, env, input) {
+export function run(command, args, cwd, env, input) {
   const result = spawnTool(command, args, { cwd, env, input });
   return {
     ok: result.status === 0,
@@ -19,7 +19,7 @@ function run(command, args, cwd, env, input) {
   };
 }
 
-function must(command, args, cwd, env, input) {
+export function must(command, args, cwd, env, input) {
   const result = run(command, args, cwd, env, input);
   if (!result.ok) throw new Error(`${command} ${args.join(" ")} failed: ${result.err}`);
   return result.out;
@@ -37,7 +37,8 @@ export function push(id, env = process.env) {
     task.worktree,
     env
   );
-  appendEvent({ event: "pushed", task: id }, env);
+  const head = must("git", ["rev-parse", "HEAD"], task.worktree, env);
+  appendEvent({ event: "pushed", task: id, head }, env);
   return { pushed: task.branch };
 }
 
