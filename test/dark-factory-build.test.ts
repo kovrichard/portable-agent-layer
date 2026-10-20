@@ -566,7 +566,13 @@ describe("review and test rounds", () => {
     });
     const run = runBuild();
     expect(run.exitCode).toBe(0);
-    expect(roleNames()).toEqual(["code-writer", "reviewer", "code-writer", "reviewer"]);
+    expect(roleNames()).toEqual([
+      "code-writer",
+      "reviewer",
+      "code-writer",
+      "reviewer",
+      "coach",
+    ]);
     expect(modelOf(calls()[2] as Call)).toBe(FACTORY_MODELS.medium);
     expect(calls()[2]?.stdin).toContain("bad name");
     expect(eventsNamed("review").map((event) => event.findings)).toEqual([1, 0]);
@@ -585,6 +591,7 @@ describe("review and test rounds", () => {
       "code-writer",
       "reviewer",
       "code-writer",
+      "coach",
     ]);
   });
 
@@ -616,7 +623,13 @@ describe("review and test rounds", () => {
     );
     const run = runBuild();
     expect(run.exitCode).toBe(0);
-    expect(roleNames()).toEqual(["code-writer", "reviewer", "tester", "code-writer"]);
+    expect(roleNames()).toEqual([
+      "code-writer",
+      "reviewer",
+      "tester",
+      "code-writer",
+      "coach",
+    ]);
     expect(eventsNamed("roles_added")).toEqual([
       expect.objectContaining({ task: TASK, role: "tester" }),
     ]);
@@ -652,7 +665,7 @@ describe("CI rounds", () => {
     expect(result.status).toBe("stuck");
     expect(result.message).toContain("could not read CI");
     expect(result.message).toContain("HTTP 401");
-    expect(roleNames()).toEqual(["code-writer", "reviewer"]);
+    expect(roleNames()).toEqual(["code-writer", "reviewer", "coach"]);
   });
 });
 
@@ -693,7 +706,13 @@ describe("questions go to the PO and the role continues", () => {
     });
     const run = runBuild();
     expect(run.exitCode).toBe(0);
-    expect(roleNames()).toEqual(["code-writer", "po", "code-writer", "reviewer"]);
+    expect(roleNames()).toEqual([
+      "code-writer",
+      "po",
+      "code-writer",
+      "reviewer",
+      "coach",
+    ]);
     const [asked, po, resumed] = calls() as [Call, Call, Call];
     expect(po.stdin).toContain("which file?");
     expect(po.stdin).toContain(join(ctx.factory, "tasks", TASK, "spec.md"));
@@ -781,7 +800,7 @@ describe("red tests", () => {
     expect(run.exitCode).toBe(1);
     expect(resultOf(run).message).toContain("the new tests pass before the code exists");
     expect(eventsNamed("tests_red")).toEqual([expect.objectContaining({ exitCode: 0 })]);
-    expect(roleNames()).toEqual(["planner", "test-writer"]);
+    expect(roleNames()).toEqual(["planner", "test-writer", "coach"]);
   });
 
   test("a gate with no check named tests is stuck with a message that says so", () => {
@@ -789,7 +808,7 @@ describe("red tests", () => {
     const run = runBuild();
     expect(run.exitCode).toBe(1);
     expect(resultOf(run).message).toContain('no check named "tests"');
-    expect(roleNames()).toEqual(["planner", "test-writer"]);
+    expect(roleNames()).toEqual(["planner", "test-writer", "coach"]);
   });
 
   test("no commit in the worktree is made by the orchestrator before the code writer", () => {
