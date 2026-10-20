@@ -73,8 +73,58 @@ function missingToolMessage(name) {
   return `${name} is not installed or not on PATH; ${INSTALL_HINTS[name] ?? "install it"}`;
 }
 
+const BATCH_FILE = /\.(cmd|bat)$/i;
+const CMD_META_CHARS = /([()\][%!^"`<>&|;, *?])/g;
+
+function pathEntries(env) {
+  const key = Object.keys(env).find((name) => name.toUpperCase() === "PATH");
+  return (key ? env[key] : "").split(";").filter(Boolean);
+}
+
+function windowsExecutable(command, env) {
+  const extensions = (env.PATHEXT || ".COM;.EXE;.BAT;.CMD").split(";").filter(Boolean);
+  const candidates = pathEntries(env).flatMap((dir) =>
+    extensions.map((extension) => join(dir, `${command}${extension}`))
+  );
+  return candidates.find((candidate) => existsSync(candidate)) ?? null;
+}
+
+function batchFileFor(command, env) {
+  if (process.platform !== "win32") return null;
+  const resolved = BATCH_FILE.test(command) ? command : windowsExecutable(command, env);
+  return resolved && BATCH_FILE.test(resolved) ? resolved : null;
+}
+
+function quotedForBatchFile(arg) {
+  const escapedQuotes = String(arg)
+    .replace(/(\\*)"/g, '$1$1\\"')
+    .replace(/(\\*)$/, "$1$1");
+  return `"${escapedQuotes}"`.replace(CMD_META_CHARS, "^^^$1");
+}
+
+// cmd.exe parses a batch file's command line twice (once to start it, again where it expands %*), so each argument is caret-escaped for both passes.
+function batchFileCommandLine(file, args) {
+  const command = file.replace(CMD_META_CHARS, "^$1");
+  return [command, ...args.map(quotedForBatchFile)].join(" ");
+}
+
+function spawnArgs(command, args, env) {
+  const batchFile = batchFileFor(command, env);
+  if (!batchFile) return [command, args, {}];
+  return [batchFileCommandLine(batchFile, args), [], { shell: true }];
+}
+
 export function spawnTool(command, args, options = {}) {
-  const result = spawnSync(command, args, { encoding: "utf8", ...options });
+  const [file, fileArgs, shellOptions] = spawnArgs(
+    command,
+    args,
+    options.env ?? process.env
+  );
+  const result = spawnSync(file, fileArgs, {
+    encoding: "utf8",
+    ...options,
+    ...shellOptions,
+  });
   if (result.error?.code === "ENOENT") throw new Error(missingToolMessage(command));
   return result;
 }

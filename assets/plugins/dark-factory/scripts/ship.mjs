@@ -10,8 +10,8 @@ import {
   writeTask,
 } from "./lib.mjs";
 
-function run(command, args, cwd, env) {
-  const result = spawnTool(command, args, { cwd, env });
+function run(command, args, cwd, env, input) {
+  const result = spawnTool(command, args, { cwd, env, input });
   return {
     ok: result.status === 0,
     out: (result.stdout ?? "").trim(),
@@ -19,8 +19,8 @@ function run(command, args, cwd, env) {
   };
 }
 
-function must(command, args, cwd, env) {
-  const result = run(command, args, cwd, env);
+function must(command, args, cwd, env, input) {
+  const result = run(command, args, cwd, env, input);
   if (!result.ok) throw new Error(`${command} ${args.join(" ")} failed: ${result.err}`);
   return result.out;
 }
@@ -84,11 +84,12 @@ export function openPr(id, env = process.env) {
       task.branch,
       "--title",
       task.title,
-      "--body",
-      prBody(spec),
+      "--body-file",
+      "-",
     ],
     task.worktree,
-    env
+    env,
+    prBody(spec)
   );
   writeTask({ ...task, pr: url }, env);
   appendEvent({ event: "pr_opened", task: id, pr: url }, env);
