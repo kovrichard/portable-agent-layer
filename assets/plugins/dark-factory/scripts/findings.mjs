@@ -1,4 +1,12 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { factoryHome } from "./lib.mjs";
 
@@ -37,6 +45,46 @@ export function writeFindings(findings, env = process.env) {
     findings.map((finding) => `${JSON.stringify(finding)}\n`).join("")
   );
   renameSync(temporary, file);
+}
+
+const LOCK_POLL_MS = 50;
+const LOCK_STALE_MS = 60000;
+const LOCK_TIMEOUT_MS = 30000;
+
+function pause(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+function removeIfStale(lock) {
+  try {
+    if (Date.now() - statSync(lock).mtimeMs > LOCK_STALE_MS)
+      rmSync(lock, { force: true });
+  } catch {}
+}
+
+function acquire(lock) {
+  const deadline = Date.now() + LOCK_TIMEOUT_MS;
+  for (;;) {
+    try {
+      writeFileSync(lock, String(process.pid), { flag: "wx" });
+      return;
+    } catch (error) {
+      if (error.code !== "EEXIST" || Date.now() > deadline) throw error;
+      removeIfStale(lock);
+      pause(LOCK_POLL_MS);
+    }
+  }
+}
+
+export function withFindingsLock(env, action) {
+  const lock = join(dirname(findingsFile(env)), "findings.lock");
+  mkdirSync(dirname(lock), { recursive: true });
+  acquire(lock);
+  try {
+    return action();
+  } finally {
+    rmSync(lock, { force: true });
+  }
 }
 
 function isDistinctiveIdentifier(name) {
@@ -199,6 +247,10 @@ export function findingById(id, env = process.env) {
 }
 
 function transitionPending(id, changes, env, now) {
+  return withFindingsLock(env, () => transitionPendingLocked(id, changes, env, now));
+}
+
+function transitionPendingLocked(id, changes, env, now) {
   const store = readFindings(env);
   const index = store.findIndex((finding) => finding.id === id);
   if (index === -1) throw new Error(`unknown finding "${id}"`);

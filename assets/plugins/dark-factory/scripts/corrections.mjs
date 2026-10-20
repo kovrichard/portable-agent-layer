@@ -35,6 +35,18 @@ function correctionsGivenAfter(events, taskId, ts) {
   );
 }
 
+function alreadyHandledAfter(events, taskId, ts) {
+  return (
+    correctionsGivenAfter(events, taskId, ts) ||
+    eventsOf(events, taskId, "coach_checked").some((event) => isLater(event.ts, ts))
+  );
+}
+
+function markChecked(taskId, env) {
+  appendEvent({ event: "coach_checked", task: taskId }, env);
+  return [];
+}
+
 function fetchBranch(task, env) {
   run("git", ["fetch", "origin", task.branch], task.repo, env);
 }
@@ -66,13 +78,15 @@ function commitOf(task, sha, env) {
 function correctionOf(task, events, env) {
   if (!task.pr || !task.branch) return [];
   const lastPush = eventsOf(events, task.id, "pushed").at(-1);
-  if (!lastPush || correctionsGivenAfter(events, task.id, lastPush.ts)) return [];
+  if (!lastPush || alreadyHandledAfter(events, task.id, lastPush.ts)) return [];
   const mergedAt = prMergedAt(task, env);
-  if (!mergedAt || !isLater(mergedAt, lastPush.ts)) return [];
+  if (!mergedAt) return [];
+  if (!isLater(mergedAt, lastPush.ts)) return markChecked(task.id, env);
   fetchBranch(task, env);
   const shas = shasSince(task, lastPush, refFor(task, env), env);
   const commits = shas.map((sha) => commitOf(task, sha, env));
-  return commits.length > 0 ? [{ task: task.id, pr: task.pr, commits }] : [];
+  if (commits.length === 0) return markChecked(task.id, env);
+  return [{ task: task.id, pr: task.pr, commits }];
 }
 
 export function userCorrections(env = process.env) {

@@ -9,6 +9,7 @@ import {
   markApproved,
   readFindings,
   rejectFinding,
+  withFindingsLock,
   writeFindings,
 } from "./findings.mjs";
 import {
@@ -171,12 +172,15 @@ function coachRun(taskId, env, now) {
   const outcome = runRoleHeadless(taskId, "coach", { env, instructions });
   if (outcome.exitCode !== 0 || outcome.structured === null)
     return coachFailed(taskId, outcome.error ?? "the coach returned no result", env);
-  const applied = applyCoachResult(readFindings(env), outcome.structured, {
-    taskId,
-    names,
-    now,
+  const applied = withFindingsLock(env, () => {
+    const result = applyCoachResult(readFindings(env), outcome.structured, {
+      taskId,
+      names,
+      now,
+    });
+    writeFindings(result.store, env);
+    return result;
   });
-  writeFindings(applied.store, env);
   for (const event of applied.events) appendEvent(event, env);
   recordCorrectionsGiven(corrections, env);
   appendEvent(

@@ -111,7 +111,9 @@ The coach reads the spec, the artifacts, the task's events, the diff of the run,
 
 Its findings live in `$DARK_FACTORY_HOME/coach/findings.jsonl`. Each finding has an `id`, a `role`, a `class`, a `rule`, a `severity`, a `metric`, its `evidence` and a `status`: `pending`, `rejected`, or `approved` once a task is created for it.
 
-A deterministic generality check drops a rule that names a path, basename or identifier the run's diff changed, and records it as `coach_rule_rejected`.
+A deterministic generality check drops a rule that names a path, basename or identifier the run's diff changed, and records it as `coach_rule_rejected`. An added function or variable name only counts when it is camelCase, contains `_` or a digit, and has at least 3 characters; a plain lowercase name such as `parse` or `slug` passes, because it would match ordinary words in a rule.
+
+The coach runs with `--add-dir` for the factory home, the transcripts folder and the plugin directory, so it can read the transcripts and the role prompts. Concurrent coach runs take a lock on `coach/findings.lock` while they update the findings, and a task whose merged PR has no later commits is recorded as `coach_checked` and not queried again.
 
 `node scripts/coach.mjs` has these commands:
 
