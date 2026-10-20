@@ -60,6 +60,13 @@ export function startCoach(taskId, status, env = process.env) {
   }
 }
 
+function discardedEveryRule(applied) {
+  const stored = applied.created.length + applied.updated.length;
+  return (
+    stored === 0 && applied.events.some((event) => event.event === "coach_rule_rejected")
+  );
+}
+
 function coachFailed(taskId, error, env) {
   appendEvent({ event: "coach_failed", task: taskId, error }, env);
   return { task: taskId, error };
@@ -182,7 +189,7 @@ function coachRun(taskId, env, now) {
     return result;
   });
   for (const event of applied.events) appendEvent(event, env);
-  recordCorrectionsGiven(corrections, env);
+  if (!discardedEveryRule(applied)) recordCorrectionsGiven(corrections, env);
   appendEvent(
     {
       event: "coach_finished",

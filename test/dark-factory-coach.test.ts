@@ -559,6 +559,39 @@ describe("running the coach on a task (criteria 1, 4)", () => {
     expect(eventNames()).toContain("coach_rule_rejected");
   });
 
+  function seedCorrectedRun() {
+    seedRepoWithRemote();
+    commitFile(repo, "feature.txt", "factory\n", "feat: factory work");
+    git(repo, "push", "-q", "origin", "factory/t1");
+    seedTask("t1", { pr: "https://github.com/o/r/pull/7" });
+    appendEvent(
+      { event: "pushed", task: "t1", head: git(repo, "rev-parse", "HEAD") },
+      env()
+    );
+    commitFile(repo, "fix.txt", "user fix\n", "fix: the user corrected it");
+    git(repo, "push", "-q", "origin", "factory/t1");
+  }
+
+  test("a run whose every rule is rejected leaves the user's correction for the next run", () => {
+    seedCorrectedRun();
+    replyWith({
+      findings: [coachResult({ rule: "Always keep fix.txt." })],
+      updates: [],
+    });
+    runCoach("t1", { env: env(), now: NOW });
+    expect(eventNames()).toContain("coach_rule_rejected");
+    expect(eventNames()).not.toContain("coach_corrections_given");
+    expect(userCorrections(env())).toHaveLength(1);
+  });
+
+  test("a run that stores a finding marks the user's correction as given", () => {
+    seedCorrectedRun();
+    replyWith({ findings: [coachResult()], updates: [] });
+    runCoach("t1", { env: env(), now: NOW });
+    expect(eventNames()).toContain("coach_corrections_given");
+    expect(userCorrections(env())).toEqual([]);
+  });
+
   test("pending and rejected findings are handed to the coach", () => {
     seedFinishedRun();
     writeFindings(
