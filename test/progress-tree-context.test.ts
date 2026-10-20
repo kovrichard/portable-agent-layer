@@ -24,7 +24,7 @@ function setProgressTree(on: boolean | undefined) {
   mkdirSync(resolve(home, "memory"), { recursive: true });
   writeFileSync(
     resolve(home, "memory", "pal-settings.json"),
-    JSON.stringify({ dynamicContext: { workTree: on } })
+    JSON.stringify({ dynamicContext: { progressTree: on } })
   );
   reload();
 }

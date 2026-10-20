@@ -156,14 +156,14 @@ describe("injectPromptContext handler", () => {
   });
 
   test("the active progress-tree node rides along once the scope has work", async () => {
-    await setSettings({ dynamicContext: { workTree: true } });
+    await setSettings({ dynamicContext: { progressTree: true } });
     const { appendEvent, scopeOf } = await import("../src/hooks/lib/progress-tree");
     const { sessionDir } = await import("../src/hooks/lib/session-dir");
     appendEvent(scopeOf(sessionDir()), "n1", "open", { title: "Gate", parent: null });
     const { injectPromptContext } = await loadHandlers();
     const out = await captureStdout(() => injectPromptContext("anything goes here"));
     expect(out).toContain("Progress: Gate [n1]");
-    removeOnceReleased(resolve(TEST_HOME, "memory", "work-tree"));
+    removeOnceReleased(resolve(TEST_HOME, "memory", "progress-tree"));
   });
 
   test("emits empty when prompt is empty", async () => {

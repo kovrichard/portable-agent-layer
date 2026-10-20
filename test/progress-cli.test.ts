@@ -147,7 +147,7 @@ describe("pal cli progress", () => {
   });
 
   test("a tree recorded before the rename still shows", async () => {
-    const dataFolder = resolve(process.env.PAL_HOME as string, "memory", "work-tree");
+    const dataFolder = resolve(process.env.PAL_HOME as string, "memory", "progress-tree");
     mkdirSync(dataFolder, { recursive: true });
     writeFileSync(
       resolve(dataFolder, "events.jsonl"),

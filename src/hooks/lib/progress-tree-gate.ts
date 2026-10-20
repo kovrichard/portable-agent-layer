@@ -62,7 +62,7 @@ export function progressTreeSendBack(
   lines: string[],
   cwd: string
 ): string | null {
-  if (!isOptedIn("workTree") || !isOptedIn("workTreeGate")) return null;
+  if (!isOptedIn("progressTree") || !isOptedIn("progressTreeGate")) return null;
   if (alreadySentBack(payload)) return null;
   const commands = commandsThisTurn(lines);
   if (commands === null || commands.some((c) => RECORDS_PROGRESS_RE.test(c))) return null;
@@ -90,7 +90,7 @@ export async function decisionSendBack(
   cwd: string,
   label: LabelDecision = labelWithInference
 ): Promise<string | null> {
-  if (!isOptedIn("workTree") || !isOptedIn("workTreeDecisionGate")) return null;
+  if (!isOptedIn("progressTree") || !isOptedIn("progressTreeDecisionGate")) return null;
   if (alreadySentBack(payload)) return null;
   const commands = commandsThisTurn(lines);
   if (commands === null || commands.some((c) => RECORDS_DECISION_RE.test(c))) return null;
@@ -105,7 +105,7 @@ export async function decisionSendBack(
 export async function stopProgressTree(
   payload: StopTurnPayload | null
 ): Promise<string | null> {
-  if (!payload || !isOptedIn("workTree")) return null;
+  if (!payload || !isOptedIn("progressTree")) return null;
   const cwd = sessionDir();
   const lines = transcriptLines(payload);
   const sendBack =
