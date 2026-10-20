@@ -147,6 +147,26 @@ export function readRepoConfig(repo) {
   return JSON.parse(readFileSync(file, "utf8"));
 }
 
+export function userHome(env = process.env) {
+  return env.HOME || env.USERPROFILE || homedir();
+}
+
+export function readUserConfig(env = process.env) {
+  const file = join(factoryHome(env), "config.json");
+  if (!existsSync(file)) return {};
+  let value;
+  try {
+    value = JSON.parse(readFileSync(file, "utf8"));
+  } catch (error) {
+    throw new Error(`${file} is not valid JSON: ${error.message}`);
+  }
+  return isPlainObject(value) ? value : {};
+}
+
+function isPlainObject(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 export function isMain(moduleUrl) {
   return (
     Boolean(process.argv[1]) && resolve(process.argv[1]) === fileURLToPath(moduleUrl)
