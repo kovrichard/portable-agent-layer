@@ -729,6 +729,32 @@ describe("the plugin's own files", () => {
     }
   });
 
+  test("the debugger ends repro.md with a Fix section that picks one fix and names the helpers", () => {
+    const agent = readFileSync(join(PLUGIN_ROOT, "agents/debugger.md"), "utf8");
+    expect(agent).toContain("End `repro.md` with a **Fix** section");
+    expect(agent).toContain("picks exactly one fix, with no alternatives left open");
+    expect(agent).toContain("lists each file to change, with the path and the functions");
+    expect(agent).toContain("names the existing helpers to reuse, by path and name");
+    expect(agent).toContain(
+      "says not to write new code where a helper already does the job"
+    );
+  });
+
+  test("the reviewer reports duplicated helpers and unrequested complexity", () => {
+    const agent = readFileSync(join(PLUGIN_ROOT, "agents/reviewer.md"), "utf8");
+    expect(agent).toContain(
+      "new code that duplicates an existing helper in the repo, naming the helper by path and name"
+    );
+    expect(agent).toContain("complexity the spec does not ask for");
+  });
+
+  test("the code-writer follows the Fix section of repro.md when there is no plan", () => {
+    const agent = readFileSync(join(PLUGIN_ROOT, "agents/code-writer.md"), "utf8");
+    expect(agent).toContain(
+      "When there is no `plan.md`, follow the **Fix** section of `repro.md` the same way"
+    );
+  });
+
   test("the workflow file is gone", () => {
     expect(existsSync(join(PLUGIN_ROOT, "workflows/build.js"))).toBe(false);
   });

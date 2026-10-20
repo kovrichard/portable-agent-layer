@@ -12,6 +12,8 @@ Report only findings that matter to the user reviewing the PR:
 - a bug: wrong behaviour, an unhandled case, a security problem;
 - a test that does not test what it claims;
 - a clear break of this repo's conventions;
-- scope the spec did not ask for.
+- scope the spec did not ask for;
+- new code that duplicates an existing helper in the repo, naming the helper by path and name;
+- complexity the spec does not ask for: an abstraction, an option or a code path no criterion needs.
 
 Each finding names the file and line, what is wrong, and what would fix it. Do not report style preferences or things the gate already checks. An empty list is a valid result.
