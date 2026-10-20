@@ -222,6 +222,10 @@ function proveTestsRed(run) {
     return stuck(
       `the new tests pass before the code exists, so they prove nothing:\n${output.slice(-FAILURE_TAIL)}`
     );
+  if (failing === null)
+    return stuck(
+      `the test run failed but reported no failing test count, so it does not prove the new tests fail:\n${output.slice(-FAILURE_TAIL)}`
+    );
   return null;
 }
 
@@ -242,8 +246,14 @@ function hasCommitsAheadOfBase(run) {
   return result.status === 0 && Number(result.stdout.trim()) > 0;
 }
 
+function testsProvedRedBefore(run) {
+  return readEvents(run.env).some(
+    (event) => event.event === "tests_red" && event.task === run.id && event.failing > 0
+  );
+}
+
 function beforeRolesStep(run) {
-  if (hasCommitsAheadOfBase(run)) return null;
+  if (hasCommitsAheadOfBase(run) || testsProvedRedBefore(run)) return null;
   for (const role of run.before) {
     const stop = roleStop(role, runRole(run, role, BEFORE_INSTRUCTIONS[role]));
     if (stop) return stop;
@@ -389,6 +399,7 @@ function ciStep(run) {
     const ci = pollCi(run);
     if (ci.state === "unreadable") return stuck(`could not read CI: ${ci.error}`);
     if (ci.state === "pass" || ci.state === "none") return null;
+    if (ci.state !== "fail") return stuck(`CI did not finish: ${ciSummary(ci)}`);
     if (round === CI_ROUNDS)
       return stuck(`CI still fails after ${CI_ROUNDS} rounds: ${ciSummary(ci)}`);
     const stop = ciFixStep(run, ci);
