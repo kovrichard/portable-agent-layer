@@ -147,7 +147,7 @@ export function rolesAfterDiff(category, changedFiles, config) {
   return after;
 }
 
-function changedFilesSince(repo, base, env) {
+export function changedFilesSince(repo, base, env) {
   const result = spawnSync("git", ["diff", "--name-only", `${base}...HEAD`], {
     cwd: repo,
     encoding: "utf8",
@@ -157,12 +157,14 @@ function changedFilesSince(repo, base, env) {
   return result.stdout.split("\n").filter(Boolean);
 }
 
-export function rolesAfter(category, repo, base, env = process.env) {
-  const roles = rolesAfterDiff(
-    category,
-    changedFilesSince(repo, base, env),
-    readRepoConfig(repo)
-  );
+export function rolesAfter(
+  category,
+  repo,
+  base,
+  env = process.env,
+  config = readRepoConfig(repo)
+) {
+  const roles = rolesAfterDiff(category, changedFilesSince(repo, base, env), config);
   const added = roles.filter((role) => !rolesFor(category).after.includes(role));
   return { roles, added };
 }

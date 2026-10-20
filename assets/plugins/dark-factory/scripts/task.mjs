@@ -102,12 +102,13 @@ export function prepare(id, env = process.env) {
     git(["worktree", "add", "-b", branch, worktree, `origin/${base}`], task.repo, env);
     runPrepareCommand(config.prepare, worktree, env);
   }
-  writeTask({ ...task, base, branch, worktree, status: "running" }, env);
+  writeTask({ ...task, base, branch, worktree, status: "running", config }, env);
   appendEvent({ event: "task_started", task: id, category: task.category }, env);
   return {
     worktree,
     branch,
     base,
+    config,
     category: task.category,
     before: rolesFor(task.category).before,
     taskDir: taskDir(id, env),

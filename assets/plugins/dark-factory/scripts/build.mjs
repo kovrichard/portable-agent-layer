@@ -5,13 +5,12 @@ import {
   isMain,
   printJson,
   readEvents,
-  readRepoConfig,
   readTask,
   spawnTool,
 } from "./lib.mjs";
 import { notify } from "./notify.mjs";
 import { runRoleHeadless } from "./role.mjs";
-import { rolesAfter } from "./roles.mjs";
+import { changedFilesSince, rolesAfter } from "./roles.mjs";
 import { markReady, openPr, push, sync } from "./ship.mjs";
 import { appendDecision, prepare, recordQuestion, setStatus } from "./task.mjs";
 
@@ -48,6 +47,8 @@ const BEFORE_INSTRUCTIONS = {
     "Write the failing tests for every acceptance criterion and leave them uncommitted; the code writer commits them with the code.",
 };
 const REVIEW_INSTRUCTIONS = "Review the branch diff against its base and the spec.";
+const CONFIG_FILE = ".dark-factory.json";
+const CONFIG_CHANGED_NOTE = `The diff changes ${CONFIG_FILE}. Report that change as a finding unless the spec asks for it.`;
 const TESTER_INSTRUCTIONS = "Test every acceptance criterion in the running app.";
 
 function stuck(message) {
@@ -177,7 +178,7 @@ function gateFor(run, step) {
       attempt: run.attempt,
       model: TIER_MODELS[step.tier],
     },
-    { env: run.env }
+    { env: run.env, config: run.config }
   );
 }
 
@@ -203,7 +204,7 @@ export function failingTestCount(output) {
 }
 
 function redTestCheck(run) {
-  return readRepoConfig(run.worktree).gate.find((entry) => entry.name === RED_TEST_CHECK);
+  return run.config.gate.find((entry) => entry.name === RED_TEST_CHECK);
 }
 
 function proveTestsRed(run) {
@@ -290,7 +291,8 @@ function rolesAfterStep(run) {
     run.category,
     run.worktree,
     `origin/${run.base}`,
-    run.env
+    run.env,
+    run.config
   );
   run.after = roles;
   for (const role of added)
@@ -307,9 +309,16 @@ function reviewFindingsStep(run, findings) {
   return fixStop(fixed, "review findings");
 }
 
+function reviewInstructions(run) {
+  const changed = changedFilesSince(run.worktree, `origin/${run.base}`, run.env);
+  return changed.includes(CONFIG_FILE)
+    ? `${REVIEW_INSTRUCTIONS}\n\n${CONFIG_CHANGED_NOTE}`
+    : REVIEW_INSTRUCTIONS;
+}
+
 function reviewStep(run) {
   for (let round = 1; round <= REVIEW_ROUNDS; round += 1) {
-    const review = runRole(run, "reviewer", REVIEW_INSTRUCTIONS);
+    const review = runRole(run, "reviewer", reviewInstructions(run));
     const stop = roleStop("reviewer", review);
     if (stop) return stop;
     const findings = review.outcome.structured.findings ?? [];
