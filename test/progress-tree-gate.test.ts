@@ -6,6 +6,7 @@ import { appendEvent } from "../src/hooks/lib/progress-tree";
 import {
   decisionSendBack,
   progressTreeSendBack,
+  stopProgressTree,
 } from "../src/hooks/lib/progress-tree-gate";
 import { reload } from "../src/hooks/lib/settings";
 import type { StopTurnPayload } from "../src/hooks/lib/stop";
@@ -203,5 +204,42 @@ describe("the decision gate", () => {
     setting(key, undefined);
     expect(await decide([prompt("canary")])).toBeNull();
     expect(asked).toEqual([]);
+  });
+});
+
+describe("stopProgressTree", () => {
+  const committedTurn = () => {
+    const transcript = resolve(home, "transcript.jsonl");
+    writeFileSync(
+      transcript,
+      lines([prompt("ship it"), bash("git commit -m x")]).join("\n")
+    );
+    return { session_id: "s", transcript_path: transcript } as StopTurnPayload;
+  };
+
+  async function stopInFolder(p: StopTurnPayload | null) {
+    const saved = process.env.CLAUDE_PROJECT_DIR;
+    process.env.CLAUDE_PROJECT_DIR = folder;
+    try {
+      return await stopProgressTree(p);
+    } finally {
+      if (saved === undefined) delete process.env.CLAUDE_PROJECT_DIR;
+      else process.env.CLAUDE_PROJECT_DIR = saved;
+    }
+  }
+
+  test("sends back a committed turn that recorded nothing", async () => {
+    expect(await stopInFolder(committedTurn())).toContain(
+      "committed but recorded nothing in the progress tree"
+    );
+  });
+
+  test("does nothing without a payload", async () => {
+    expect(await stopInFolder(null)).toBeNull();
+  });
+
+  test("does nothing with progressTree off, even when the gate is on", async () => {
+    setting("progressTree", false);
+    expect(await stopInFolder(committedTurn())).toBeNull();
   });
 });

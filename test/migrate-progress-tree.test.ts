@@ -203,6 +203,99 @@ describe("v9-progress-tree-names: data folder", () => {
   });
 });
 
+describe("v9-progress-tree-names: what it reports", () => {
+  const EVENT = '{"type":"open","id":"old-1"}';
+  const v9Lines = () =>
+    applyPendingMigrations()
+      .filter((line) => line.startsWith(`${MIGRATION}: `))
+      .map((line) => line.slice(MIGRATION.length + 2));
+  const v9Detail = () => checkPendingMigrations().find((m) => m.id === MIGRATION)?.detail;
+
+  test("names each renamed key and nothing else when only settings change", () => {
+    writeSettings({ dynamicContext: { workTree: true, workTreeGate: false } });
+    expect(v9Lines()).toEqual([
+      "pal-settings.json: renamed dynamicContext.workTree → dynamicContext.progressTree, dynamicContext.workTreeGate → dynamicContext.progressTreeGate",
+    ]);
+  });
+
+  test("a dry run says it would rename", () => {
+    writeSettings({ dynamicContext: { workTree: true } });
+    expect(quietly(() => runMigrate(["--dry-run"]))).toContain(
+      "pal-settings.json: would rename dynamicContext.workTree → dynamicContext.progressTree"
+    );
+  });
+
+  test("the pending detail lists the old keys and the old folder", () => {
+    writeSettings({ dynamicContext: { workTree: true, workTreeGate: false } });
+    writeEvents(oldFolder(), [EVENT]);
+    expect(v9Detail()).toBe(
+      "dynamicContext.workTree, dynamicContext.workTreeGate, memory/work-tree/"
+    );
+  });
+
+  test("settings without old keys are left out of the report", () => {
+    writeSettings({ dynamicContext: { wisdom: true } });
+    writeEvents(oldFolder(), [EVENT]);
+    expect(v9Detail()).toBe("memory/work-tree/");
+    expect(v9Lines()).toEqual(["memory/work-tree/: moved to memory/progress-tree/"]);
+  });
+
+  test("a null dynamicContext is no old key", () => {
+    writeSettings({ dynamicContext: null });
+    writeEvents(oldFolder(), [EVENT]);
+    expect(v9Detail()).toBe("memory/work-tree/");
+  });
+
+  test("with both folders it reports how many events it appended", () => {
+    writeEvents(oldFolder(), [EVENT, '{"type":"open","id":"old-2"}']);
+    writeEvents(newFolder(), ['{"type":"open","id":"new-1"}']);
+    expect(v9Lines()).toEqual([
+      "memory/work-tree/: 2 event(s) appended before memory/progress-tree/events.jsonl",
+    ]);
+  });
+
+  test.each([
+    [false, "memory/work-tree/: would move to memory/progress-tree/"],
+    [
+      true,
+      "memory/work-tree/: would append its events before memory/progress-tree/events.jsonl",
+    ],
+  ])("a dry run with the new folder present=%p says what it would do", (both, line) => {
+    writeEvents(oldFolder(), [EVENT]);
+    if (both) writeEvents(newFolder(), [EVENT]);
+    expect(quietly(() => runMigrate(["--dry-run"]))).toContain(line);
+  });
+
+  test("an old folder holding other files is kept and counted as skipped", () => {
+    writeEvents(oldFolder(), [EVENT]);
+    writeFileSync(resolve(oldFolder(), "notes.txt"), "mine");
+    writeEvents(newFolder(), ['{"type":"open","id":"new-1"}']);
+
+    const output = quietly(() => runMigrate([]));
+
+    expect(output).toContain(
+      "memory/work-tree/: 1 event(s) appended before memory/progress-tree/events.jsonl"
+    );
+    expect(output).toContain(
+      "memory/work-tree/: skipped (holds files other than events.jsonl)"
+    );
+    expect(output).toContain("Migrated: 1 | Skipped: 1");
+    expect(readFileSync(resolve(oldFolder(), "notes.txt"), "utf-8")).toBe("mine");
+  });
+
+  test("an old folder without events appends none", () => {
+    mkdirSync(oldFolder(), { recursive: true });
+    writeFileSync(resolve(oldFolder(), "notes.txt"), "mine");
+    writeEvents(newFolder(), [EVENT]);
+
+    expect(v9Lines()).toEqual([
+      "memory/work-tree/: 0 event(s) appended before memory/progress-tree/events.jsonl",
+      "memory/work-tree/: skipped (holds files other than events.jsonl)",
+    ]);
+    expect(readEventLines(newFolder())).toEqual([EVENT]);
+  });
+});
+
 describe("an install with the tree on keeps it on after migrating", () => {
   test("settings with workTree: true and old events show the same nodes", () => {
     const scope = resolve(HOME, "some-folder");

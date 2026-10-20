@@ -964,10 +964,13 @@ function mergeOldProgressTreeEvents(): number {
   if (!existsSync(oldFile)) return 0;
   const newFile = resolve(newProgressTreeFolder(), EVENTS_FILE);
   const newRaw = existsSync(newFile) ? readFileSync(newFile, "utf-8") : "";
-  const { text, added } = mergeJsonlLines(readFileSync(oldFile, "utf-8"), newRaw);
+  const { text, added: keptFromNew } = mergeJsonlLines(
+    readFileSync(oldFile, "utf-8"),
+    newRaw
+  );
   writeFileSync(newFile, text, "utf-8");
   unlinkSync(oldFile);
-  return added;
+  return text.split("\n").filter(Boolean).length - keptFromNew;
 }
 
 function appendOldProgressTree(): FolderStep {
