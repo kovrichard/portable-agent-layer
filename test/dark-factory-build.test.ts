@@ -640,6 +640,32 @@ describe("questions go to the PO and the role continues", () => {
     expect(git(ctx.worktree, "rev-list", "--count", "origin/canary..HEAD")).toBe("2");
     expect(existsSync(join(ctx.worktree, "part.txt"))).toBe(true);
   });
+
+  test("a rerun of a feature task that stopped in the code step does not redo the before roles", () => {
+    setup("feature", {
+      roles: {
+        "code-writer": [
+          { write: { "feature.txt": "code" }, commit: true, reply: question },
+        ],
+        po: [{ reply: { userQuestion: "Which database?" } }],
+      },
+    });
+    expect(runBuild().exitCode).toBe(3);
+    writeFileSync(
+      join(ctx.factory, "tasks", TASK, "spec.md"),
+      `${specText()}- Rico: use postgres\n`
+    );
+    setScenario({});
+    const callsBeforeRerun = calls().length;
+    const run = runBuild();
+    expect(run.exitCode).toBe(0);
+    expect(resultOf(run).status).toBe("ready");
+    const rerunRoles = calls()
+      .slice(callsBeforeRerun)
+      .map((call) => call.role);
+    expect(rerunRoles).not.toContain("test-writer");
+    expect(rerunRoles).not.toContain("planner");
+  });
 });
 
 describe("red tests", () => {

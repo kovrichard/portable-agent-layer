@@ -7,6 +7,7 @@ import {
   readEvents,
   readRepoConfig,
   readTask,
+  spawnTool,
 } from "./lib.mjs";
 import { notify } from "./notify.mjs";
 import { runRoleHeadless } from "./role.mjs";
@@ -233,7 +234,16 @@ function prepareStep(run) {
   }
 }
 
+function hasCommitsAheadOfBase(run) {
+  const result = spawnTool("git", ["rev-list", "--count", `origin/${run.base}..HEAD`], {
+    cwd: run.worktree,
+    env: run.env,
+  });
+  return result.status === 0 && Number(result.stdout.trim()) > 0;
+}
+
 function beforeRolesStep(run) {
+  if (hasCommitsAheadOfBase(run)) return null;
   for (const role of run.before) {
     const stop = roleStop(role, runRole(run, role, BEFORE_INSTRUCTIONS[role]));
     if (stop) return stop;
