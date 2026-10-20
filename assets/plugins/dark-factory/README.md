@@ -19,12 +19,28 @@ With PAL, it is installed for you.
 - `git`: worktrees, branches and pushes.
 - `gh`, signed in with `gh auth login`: opens the pull request and reads its CI checks.
 - `bash`: runs the gate and the notify commands. On Windows it comes with Git for Windows.
+- `claude`, signed in: every role runs as a headless `claude -p` session.
 
 The PO checks for these before it takes a request, and every build checks again before it starts.
 
 ## Use
 
 Run `/dark-factory:po` and say what you want. The PO writes a spec with acceptance criteria, shows it to you, and starts the build once you say go. You hear back when the pull request is ready, or when the factory needs an answer only you can give.
+
+The build is a plain Node program, `scripts/build.mjs`, that the PO starts in the background. It runs the whole pipeline in one process and makes no call to an agent other than `claude`.
+
+### From a terminal or cron
+
+```
+node <plugin folder>/scripts/build.mjs <task-id>
+```
+
+Inside Claude Code the plugin folder is `${CLAUDE_PLUGIN_ROOT}`.
+
+- It needs `claude` and `gh` signed in. Set `DARK_FACTORY_HOME` when the default `~/.dark-factory` isn't the home.
+- It prints one JSON line, `{task, status, message, pr}`.
+- It exits 0 for ready, 1 for stuck and 3 for waiting.
+- A rerun after an answer goes in the spec's **Decisions** section, and the rerun continues the task.
 
 ## Roles
 
@@ -72,6 +88,8 @@ Each repository the factory works on has a `.dark-factory.json` at its root:
 }
 ```
 
+The categories with a test writer (`bug`, `feature` and `big-feature`) need a gate check named exactly `tests`. The build runs it right after the test writer, and the task is stuck when no test fails.
+
 ## Notifications
 
 Set `DARK_FACTORY_NOTIFY` to a shell command. It receives the message on stdin, with `DARK_FACTORY_TASK` and `DARK_FACTORY_KIND` (`ready`, `waiting` or `stuck`) in its environment.
@@ -82,14 +100,17 @@ The factory keeps its tasks, worktrees and event log in `$DARK_FACTORY_HOME`, wh
 
 Every step appends one event to `$DARK_FACTORY_HOME/events.jsonl`. `node scripts/stats.mjs` counts, from those events alone: tasks by category, outcomes, gate failures by check and by role, the code writer's first-try pass rate, escalations, CI results, review rounds, questions to you, and roles added by the diff check.
 
+Every role run appends `role_finished` with its cost and tokens, and the red-test proof appends `tests_red` with the exit code and the failing count. Every build appends `run_finished` with the outcome, the total `costUsd`, the total tokens, the number of role runs and `wallMs`. `node scripts/task.mjs show <id>` prints the task with its latest step.
+
 ## Permissions
 
-The build runs git, gh and your gate commands without you watching. Allow them before the first run, for example in `.claude/settings.json`:
+- Roles run isolated: `--setting-sources ""`, the plugin from `--plugin-dir`, and their own tool policy from `roles.mjs`, so user hooks and settings don't reach them.
+- The PO session only needs `"Bash(node *dark-factory*/scripts/*)"`, for example in `.claude/settings.json`:
 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(node *dark-factory*/scripts/*)", "Bash(git *)", "Bash(gh pr *)", "Bash(gh run *)"]
+    "allow": ["Bash(node *dark-factory*/scripts/*)"]
   }
 }
 ```

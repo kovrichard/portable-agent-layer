@@ -29,11 +29,17 @@ The scripts live in `${CLAUDE_PLUGIN_ROOT}/scripts`. Run them with `node`. Task 
 
 ## On go
 
-Run the `dark-factory:build` workflow with args `{"task": "<id>", "pluginRoot": "${CLAUDE_PLUGIN_ROOT}"}`. Tell the user it started and that they will hear back when the pull request is green and reviewed, or when the factory needs them.
+Run `node ${CLAUDE_PLUGIN_ROOT}/scripts/build.mjs <id>` with the Bash tool as a background command (`run_in_background: true`). Tell the user it started and that they will hear back when the pull request is green and reviewed, or when the factory needs them.
+
+Claude Code tells this session when the command exits. Its stdout is one JSON line, `{task, status, message, pr}`, and its exit code is 0 for `ready`, 1 for `stuck` and 3 for `waiting`. Pass that result on to the user: the PR link when ready, the message when stuck, and the question when waiting.
+
+## Where a task is
+
+`node ${CLAUDE_PLUGIN_ROOT}/scripts/task.mjs show <id>` prints the task with `latestStep`, its last event. Answer "where is it?" from that, not from transcripts.
 
 ## A task waiting on the user
 
-`node ${CLAUDE_PLUGIN_ROOT}/scripts/task.mjs list` shows every task and its status. For a task in `waiting`, its `note` is the question. Put the user's answer into the spec under **Decisions**, then run the workflow again with the same args; it reuses the task's worktree and commits.
+`node ${CLAUDE_PLUGIN_ROOT}/scripts/task.mjs list` shows every task and its status. For a task in `waiting`, its `note` is the question. Put the user's answer into the spec under **Decisions**, then run the same background command again. It reuses the task's worktree and commits and runs the whole pipeline again.
 
 ## Rules
 
