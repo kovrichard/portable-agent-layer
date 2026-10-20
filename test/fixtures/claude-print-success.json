@@ -70,6 +70,7 @@
   "subtype": "success",
   "api_error_status": null,
   "result": "ok",
+  "structured_output": { "done": true, "summary": "ok" },
   "ttft_ms": 896,
   "type": "result",
   "duration_ms": 917,

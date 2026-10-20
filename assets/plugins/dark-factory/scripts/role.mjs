@@ -1,15 +1,27 @@
 import { join } from "node:path";
-import { appendEvent, isMain, printJson, readTask, spawnTool, taskDir } from "./lib.mjs";
-import { policyFor } from "./roles.mjs";
+import {
+  appendEvent,
+  isMain,
+  PLUGIN_ROOT,
+  printJson,
+  readTask,
+  spawnTool,
+  taskDir,
+} from "./lib.mjs";
+import { policyFor, schemaFor } from "./roles.mjs";
 
 export const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000;
+export const ONE_COMMAND_PER_CALL =
+  "Run one command per Bash call, with no &&, ; or pipes, so every call matches the tools you are allowed.";
 const TIMEOUT_EXIT = 124;
 const MISSING_EXIT = 127;
 const SETUP_EXIT = 2;
 const MAX_BUFFER_BYTES = 64 * 1024 * 1024;
+const NO_STRUCTURED_ERROR = "claude returned no structured output";
 const USAGE =
-  "usage: role.mjs <task-id> <role> [--max-budget-usd <usd>] [--timeout-ms <ms>] [-- <extra claude args>]";
+  "usage: role.mjs <task-id> <role> [--max-budget-usd <usd>] [--timeout-ms <ms>] [--model <id>] [--resume <session-id>] [-- <extra claude args>]";
 const NUMERIC_FLAGS = { "--max-budget-usd": "budgetUsd", "--timeout-ms": "timeoutMs" };
+const STRING_FLAGS = { "--model": "model", "--resume": "resumeSessionId" };
 
 const ROLE_INSTRUCTIONS = {
   architect: "Write design.md for this change.",
@@ -17,11 +29,11 @@ const ROLE_INSTRUCTIONS = {
   debugger:
     "Reproduce the bug described in the spec and write repro.md with the root cause.",
   "test-writer":
-    "Write the failing tests for every acceptance criterion and commit them.",
+    "Write the failing tests for every acceptance criterion and leave them uncommitted; the code writer commits them with the code.",
   "code-writer":
     "Implement the change described in plan.md when it exists, otherwise in the spec.",
   reviewer:
-    'Review the branch diff against its base and the spec. Report each finding with its file, line, what is wrong and what would fix it, or reply "No findings." when there are none.',
+    "Review the branch diff against its base and the spec. Report each finding with its file, line, what is wrong and what would fix it.",
   tester:
     "Test every acceptance criterion in the running app. Report each criterion as met or not met, with what you did and what you saw.",
   po: 'Read the spec and list every question in it that only the user can answer, or reply "No questions." when there are none.',
@@ -98,12 +110,16 @@ export function parseClaudeReply(stdout) {
   return parseObject(text) ?? parseObject(text.split("\n").at(-1));
 }
 
+function structuredOf(reply) {
+  return isPlainObject(reply.structured_output) ? reply.structured_output : null;
+}
+
 function emptyStats() {
   return statsFrom({});
 }
 
 function failed(taskId, role, exitCode, error, stats = emptyStats()) {
-  return { task: taskId, role, ...stats, exitCode, error };
+  return { task: taskId, role, ...stats, structured: null, exitCode, error };
 }
 
 function tail(text, size = 500) {
@@ -122,6 +138,12 @@ function firstReplyError(reply) {
 function replyError(reply, status) {
   if (status === 0 && reply.is_error !== true) return null;
   return firstReplyError(reply) ?? `claude exited with code ${status}`;
+}
+
+function replyErrorOf(reply, status, structured) {
+  const error = replyError(reply, status);
+  if (error === null && structured === null) return NO_STRUCTURED_ERROR;
+  return error;
 }
 
 function exitCodeFor(status, error) {
@@ -164,11 +186,13 @@ function replyOutcome(taskId, role, spawned) {
   const status = spawned.status ?? 1;
   const reply = parseClaudeReply(spawned.stdout);
   if (reply === null) return noReplyOutcome(taskId, role, spawned, status);
-  const error = replyError(reply, status);
+  const structured = structuredOf(reply);
+  const error = replyErrorOf(reply, status, structured);
   return {
     task: taskId,
     role,
     ...statsFrom(reply),
+    structured,
     exitCode: exitCodeFor(status, error),
     error,
   };
@@ -188,38 +212,74 @@ function outcomeFrom(taskId, role, spawned, timeoutMs) {
   return replyOutcome(taskId, role, spawned);
 }
 
-export function rolePrompt(task, role, env = process.env) {
+function askLine(role) {
+  return schemaFor(role).properties.question
+    ? "Never ask the user anything. If you cannot continue without an answer, set question and stop."
+    : "Never ask the user anything.";
+}
+
+export function rolePrompt(
+  task,
+  role,
+  instructions = ROLE_INSTRUCTIONS[role],
+  env = process.env
+) {
   const folder = taskDir(task.id, env);
   return [
     `Task ${task.id}: ${task.title}`,
     `Task folder: ${folder} (the spec is ${join(folder, "spec.md")}; plan.md, design.md, repro.md and tests.md live here when they exist).`,
     `Work only inside the git worktree ${task.worktree}. The branch is ${task.branch}, based on ${task.base}.`,
-    "Never ask the user anything. If you cannot continue without an answer, say what you need and stop.",
+    ONE_COMMAND_PER_CALL,
+    askLine(role),
     "",
-    ROLE_INSTRUCTIONS[role],
+    instructions,
   ].join("\n");
+}
+
+function promptFor(task, role, { instructions, resumeSessionId, env }) {
+  return resumeSessionId ? instructions : rolePrompt(task, role, instructions, env);
 }
 
 function disallowedArgs(deny) {
   return deny.length > 0 ? ["--disallowedTools", deny.join(",")] : [];
 }
 
+function optionalFlag(flag, value) {
+  return value ? [flag, value] : [];
+}
+
 export function claudeInvocation(
   task,
   role,
-  { budgetUsd = 0, extraArgs = [], env = process.env } = {}
+  {
+    budgetUsd = 0,
+    extraArgs = [],
+    env = process.env,
+    model,
+    instructions,
+    resumeSessionId,
+    pluginDir = PLUGIN_ROOT,
+  } = {}
 ) {
   const policy = policyFor(role);
   return {
     command: "claude",
     cwd: task.worktree,
-    prompt: rolePrompt(task, role, env),
+    prompt: promptFor(task, role, { instructions, resumeSessionId, env }),
     args: [
       "-p",
       "--agent",
       `dark-factory:${role}`,
       "--output-format",
       "json",
+      "--setting-sources",
+      "",
+      "--plugin-dir",
+      pluginDir,
+      ...optionalFlag("--model", model),
+      ...optionalFlag("--resume", resumeSessionId),
+      "--json-schema",
+      JSON.stringify(schemaFor(role)),
       "--max-budget-usd",
       String(budgetUsd > 0 ? budgetUsd : policy.budgetUsd),
       "--permission-mode",
@@ -234,18 +294,31 @@ export function claudeInvocation(
   };
 }
 
-function withoutResult(outcome) {
-  return Object.fromEntries(Object.entries(outcome).filter(([key]) => key !== "result"));
+function withoutReplyBody(outcome) {
+  return Object.fromEntries(
+    Object.entries(outcome).filter(([key]) => key !== "result" && key !== "structured")
+  );
 }
 
 function recordFinished(outcome, env) {
-  appendEvent({ event: "role_finished", ...withoutResult(outcome) }, env);
+  appendEvent({ event: "role_finished", ...withoutReplyBody(outcome) }, env);
 }
 
-function attempt(taskId, role, { env, budgetUsd, timeoutMs, extraArgs }) {
+function attempt(
+  taskId,
+  role,
+  { env, budgetUsd, timeoutMs, extraArgs, model, instructions, resumeSessionId }
+) {
   try {
     const task = readTask(taskId, env);
-    const invocation = claudeInvocation(task, role, { budgetUsd, extraArgs, env });
+    const invocation = claudeInvocation(task, role, {
+      budgetUsd,
+      extraArgs,
+      env,
+      model,
+      instructions,
+      resumeSessionId,
+    });
     return outcomeFrom(taskId, role, spawnClaude(invocation, timeoutMs, env), timeoutMs);
   } catch (error) {
     return failed(taskId, role, SETUP_EXIT, error.message);
@@ -255,9 +328,25 @@ function attempt(taskId, role, { env, budgetUsd, timeoutMs, extraArgs }) {
 export function runRoleHeadless(
   taskId,
   role,
-  { env = process.env, budgetUsd, timeoutMs = DEFAULT_TIMEOUT_MS, extraArgs = [] } = {}
+  {
+    env = process.env,
+    budgetUsd,
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+    extraArgs = [],
+    model,
+    instructions,
+    resumeSessionId,
+  } = {}
 ) {
-  const outcome = attempt(taskId, role, { env, budgetUsd, timeoutMs, extraArgs });
+  const outcome = attempt(taskId, role, {
+    env,
+    budgetUsd,
+    timeoutMs,
+    extraArgs,
+    model,
+    instructions,
+    resumeSessionId,
+  });
   recordFinished(outcome, env);
   return outcome;
 }
@@ -269,6 +358,20 @@ function positiveNumber(flag, value) {
   return number;
 }
 
+function stringFlagValue(flag, value) {
+  if (typeof value === "string" && value.length > 0 && !value.startsWith("--"))
+    return value;
+  throw new Error(`${flag} needs a value`);
+}
+
+function flagValue(token, value) {
+  if (Object.hasOwn(NUMERIC_FLAGS, token))
+    return [NUMERIC_FLAGS[token], positiveNumber(token, value)];
+  if (Object.hasOwn(STRING_FLAGS, token))
+    return [STRING_FLAGS[token], stringFlagValue(token, value)];
+  throw new Error(USAGE);
+}
+
 function splitFlags(tokens) {
   const positionals = [];
   const flags = {};
@@ -278,8 +381,8 @@ function splitFlags(tokens) {
       positionals.push(token);
       continue;
     }
-    if (!Object.hasOwn(NUMERIC_FLAGS, token)) throw new Error(USAGE);
-    flags[NUMERIC_FLAGS[token]] = positiveNumber(token, tokens[index + 1]);
+    const [key, value] = flagValue(token, tokens[index + 1]);
+    flags[key] = value;
     index += 1;
   }
   return { positionals, flags };
@@ -297,14 +400,23 @@ export function parseCliArgs(argv) {
     role,
     budgetUsd: flags.budgetUsd,
     timeoutMs: flags.timeoutMs,
+    model: flags.model,
+    resumeSessionId: flags.resumeSessionId,
     extraArgs,
   };
 }
 
 function mainOutcome(argv) {
   try {
-    const { taskId, role, budgetUsd, timeoutMs, extraArgs } = parseCliArgs(argv);
-    return runRoleHeadless(taskId, role, { budgetUsd, timeoutMs, extraArgs });
+    const { taskId, role, budgetUsd, timeoutMs, model, resumeSessionId, extraArgs } =
+      parseCliArgs(argv);
+    return runRoleHeadless(taskId, role, {
+      budgetUsd,
+      timeoutMs,
+      model,
+      resumeSessionId,
+      extraArgs,
+    });
   } catch (error) {
     return failed(argv[0] ?? null, argv[1] ?? null, SETUP_EXIT, error.message);
   }

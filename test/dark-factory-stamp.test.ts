@@ -1,14 +1,21 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import * as stamp from "../src/tools/dark-factory/stamp";
 import {
   FACTORY_MODELS,
   PLUGIN_DIR,
   ROLE_TIERS,
   stampAgent,
   stampedFiles,
-  stampWorkflow,
 } from "../src/tools/dark-factory/stamp";
+
+const stampTierModels = (content: string, models: Record<string, string>): string =>
+  (
+    stamp as unknown as {
+      stampTierModels: (content: string, models: Record<string, string>) => string;
+    }
+  ).stampTierModels(content, models);
 
 describe("dark-factory model stamping", () => {
   test("the committed plugin files carry the stamped model names", () => {
@@ -34,17 +41,18 @@ describe("dark-factory model stamping", () => {
     );
   });
 
-  test("the workflow's MODELS constant is replaced with every tier's model", () => {
-    const stale = "const A = 1\nconst MODELS = { small: 'x' }\nconst B = 2\n";
-    expect(stampWorkflow(stale, { small: "s", medium: "m", large: "l" })).toBe(
-      "const A = 1\nconst MODELS = { small: 's', medium: 'm', large: 'l' }\nconst B = 2\n"
+  test("the orchestrator's TIER_MODELS block is replaced with every tier's model", () => {
+    const stale =
+      'const A = 1;\nexport const TIER_MODELS = {\n  small: "x",\n};\nconst B = 2;\n';
+    expect(stampTierModels(stale, { small: "s", medium: "m", large: "l" })).toBe(
+      'const A = 1;\nexport const TIER_MODELS = {\n  small: "s",\n  medium: "m",\n  large: "l",\n};\nconst B = 2;\n'
     );
   });
 
   test("a file without a place to stamp is refused, not silently left alone", () => {
     expect(() => stampAgent("---\nname: x\n---\n", "m")).toThrow("no model line");
-    expect(() => stampWorkflow("const X = 1\n", FACTORY_MODELS)).toThrow(
-      "no MODELS constant"
+    expect(() => stampTierModels("const X = 1;\n", FACTORY_MODELS)).toThrow(
+      "no TIER_MODELS constant"
     );
   });
 

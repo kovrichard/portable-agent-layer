@@ -3,9 +3,10 @@ import { appendEvent, isMain, printJson, readRepoConfig } from "./lib.mjs";
 
 const OUTPUT_TAIL = 4000;
 
-function runShell(command, cwd) {
+export function runCheck(command, cwd, env = process.env) {
   const result = spawnSync("bash", ["-c", command], {
     cwd,
+    env,
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
   });
@@ -18,10 +19,10 @@ function runShell(command, cwd) {
 export function runGate(
   repo,
   context,
-  { run = runShell, config = readRepoConfig(repo), env = process.env } = {}
+  { run = runCheck, config = readRepoConfig(repo), env = process.env } = {}
 ) {
   const checks = config.gate.map(({ name, run: command }) => {
-    const { exitCode, output } = run(command, repo);
+    const { exitCode, output } = run(command, repo, env);
     appendEvent(
       {
         event: "gate_check",

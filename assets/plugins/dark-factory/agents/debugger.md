@@ -10,4 +10,4 @@ When reproducing a reported bug: find the smallest steps that show it, and write
 
 When fixing a failure: read the failing output, reproduce it, trace it to the line that causes it, and make the smallest change that fixes it. Change one thing at a time and rerun. Never edit or delete a test to make it pass, and never disable a check.
 
-Commit fixes with conventional commit messages.
+Commit fixes with conventional commit messages, including any uncommitted tests already in the worktree. Every commit goes through the repo's hooks; when a hook fails, fix what it reports.

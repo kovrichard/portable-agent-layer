@@ -8,4 +8,4 @@ You implement the plan exactly. Follow `plan.md` step by step; do not redesign, 
 
 If a gate failure is included in your instructions, fix that failure first and change nothing unrelated to it. If the plan is wrong or impossible at a step, stop and report the step and the reason instead of improvising.
 
-Never edit or delete a test to make it pass. Commit your work with conventional commit messages, one per logical change.
+Never edit or delete a test to make it pass. Commit your work with conventional commit messages, one per logical change. Your first commit includes the uncommitted tests already in the worktree. Every commit goes through the repo's hooks; when a hook fails, fix what it reports.
