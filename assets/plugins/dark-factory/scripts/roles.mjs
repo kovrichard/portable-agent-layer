@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { isMain, printJson, readRepoConfig } from "./lib.mjs";
+import { METRICS } from "./stats.mjs";
 
 export const CATEGORIES = {
   small: { before: [], after: ["reviewer"] },
@@ -78,18 +79,6 @@ const TEST_RESULT = {
   required: ["criteria"],
 };
 
-export const RESULT_SCHEMAS = { ROLE_RESULT, PO_RESULT, REVIEW_RESULT, TEST_RESULT };
-
-const ROLE_SCHEMAS = {
-  reviewer: REVIEW_RESULT,
-  tester: TEST_RESULT,
-  po: PO_RESULT,
-};
-
-export function schemaFor(role) {
-  return Object.hasOwn(ROLE_SCHEMAS, role) ? ROLE_SCHEMAS[role] : ROLE_RESULT;
-}
-
 const READS = ["Read", "Grep", "Glob"];
 const READ_ONLY_SHELL = [
   "Bash(git diff *)",
@@ -126,6 +115,12 @@ export const ROLE_POLICIES = {
   "test-writer": { allow: [...READS, "Edit", "Write", "Bash"], deny: [], budgetUsd: 3 },
   "code-writer": { allow: [...READS, "Edit", "Write", "Bash"], deny: [], budgetUsd: 2 },
   debugger: { allow: [...READS, "Edit", "Write", "Bash"], deny: [], budgetUsd: 5 },
+  coach: {
+    allow: [...READS, ...READ_ONLY_SHELL],
+    deny: READ_ONLY_DENY,
+    budgetUsd: 10,
+    addDirs: ["factoryHome", "transcripts", "plugin"],
+  },
 };
 
 export function policyFor(role) {
@@ -134,6 +129,73 @@ export function policyFor(role) {
       `unknown role "${role}"; use one of ${Object.keys(ROLE_POLICIES).join(", ")}`
     );
   return ROLE_POLICIES[role];
+}
+
+const EVIDENCE = {
+  type: "array",
+  items: {
+    type: "object",
+    properties: { task: { type: "string" }, ref: { type: "string" } },
+    required: ["task", "ref"],
+  },
+};
+
+const COACH_RESULT = {
+  type: "object",
+  properties: {
+    findings: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          class: { type: "string" },
+          role: { type: "string", enum: Object.keys(ROLE_POLICIES) },
+          rule: { type: "string" },
+          evidence: EVIDENCE,
+          severity: { type: "string", enum: ["high", "medium", "low"] },
+          metric: { type: "string", enum: Object.keys(METRICS) },
+          elsewhere: { type: "string" },
+        },
+        required: [
+          "class",
+          "role",
+          "rule",
+          "evidence",
+          "severity",
+          "metric",
+          "elsewhere",
+        ],
+      },
+    },
+    updates: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { id: { type: "string" }, evidence: EVIDENCE },
+        required: ["id", "evidence"],
+      },
+    },
+  },
+  required: ["findings", "updates"],
+};
+
+export const RESULT_SCHEMAS = {
+  ROLE_RESULT,
+  PO_RESULT,
+  REVIEW_RESULT,
+  TEST_RESULT,
+  COACH_RESULT,
+};
+
+const ROLE_SCHEMAS = {
+  reviewer: REVIEW_RESULT,
+  tester: TEST_RESULT,
+  po: PO_RESULT,
+  coach: COACH_RESULT,
+};
+
+export function schemaFor(role) {
+  return Object.hasOwn(ROLE_SCHEMAS, role) ? ROLE_SCHEMAS[role] : ROLE_RESULT;
 }
 
 function touchesUi(changedFiles, uiPaths = []) {
