@@ -96,15 +96,26 @@ Set `DARK_FACTORY_NOTIFY` to a shell command. It receives the message on stdin, 
 
 ## Measuring
 
-The factory keeps its tasks, worktrees and event log in `$DARK_FACTORY_HOME`, which defaults to `~/.dark-factory` on every machine. `pal cli export` does not carry them: a factory task cannot continue on another machine, so its history stays where it ran.
+The factory keeps its tasks, worktrees and event log in `$DARK_FACTORY_HOME`, which defaults to `~/.dark-factory` on every machine. A factory task cannot continue on another machine, so its history stays where it ran.
 
 Every step appends one event to `$DARK_FACTORY_HOME/events.jsonl`, and the events of a task are also appended to `tasks/<task>/events.jsonl`, with its `run_finished` line. A role's `role_finished` event carries its `sessionId`, the name of its transcript. `node scripts/stats.mjs` counts, from those events alone: tasks by category, outcomes, gate failures by check and by role, the code writer's first-try pass rate, escalations, CI results, review rounds, questions to you, and roles added by the diff check.
 
 Every role run appends `role_finished` with its cost and tokens, and the red-test proof appends `tests_red` with the exit code and the failing count. Every build appends `run_finished` with the outcome, the total `costUsd`, the total tokens, the number of role runs and `wallMs`. `node scripts/task.mjs show <id>` prints the task with its latest step.
 
+## Instructions
+
+Every role gets your instructions appended to its system prompt: first the user's `~/.claude/CLAUDE.md`, then the repo's `CLAUDE.md`, each headed by its path. An `@path` line in either file imports that file, as Claude Code does: the path is relative to the file that contains the line, `~/` is your home folder, imports nest up to 5 levels, and lines inside code blocks are never imports. A file that doesn't exist is skipped. An import that can't be read stays as written in the instructions and is logged as an `instructions_import_missing` event.
+
+The repo's `CLAUDE.md` is read from your checkout when the task starts, so a role that edits it in the worktree doesn't change what the later roles are told.
+
+- `"repoInstructions": false` in `.dark-factory.json` leaves out the repo's `CLAUDE.md`.
+- `"userInstructions": false` in `$DARK_FACTORY_HOME/config.json` (`~/.dark-factory/config.json`, optional; a missing file means both parts are on) leaves out your `~/.claude/CLAUDE.md`.
+
+Hooks never run in a role, and neither do your settings or MCP servers.
+
 ## Permissions
 
-- Roles run isolated: `--setting-sources ""`, the plugin from `--plugin-dir`, and their own tool policy from `roles.mjs`, so user hooks and settings don't reach them.
+- Roles run isolated: `--setting-sources ""`, the plugin from `--plugin-dir`, and their own tool policy from `roles.mjs`, so user hooks and settings don't reach them; only the CLAUDE.md instructions above do.
 - The PO session only needs `"Bash(node *dark-factory*/scripts/*)"`, for example in `.claude/settings.json`:
 
 ```json

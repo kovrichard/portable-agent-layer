@@ -7,6 +7,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { readInstructions, recordMissingImports } from "./instructions.mjs";
 import {
   appendEvent,
   factoryHome,
@@ -90,10 +91,19 @@ function runPrepareCommand(command, cwd, env) {
   if (result.status !== 0) throw new Error(`prepare command failed: ${command}`);
 }
 
+function repoClaudeMdFor(task, config, env) {
+  if (config.repoInstructions === false) return null;
+  const found = readInstructions(join(task.repo, "CLAUDE.md"), env);
+  if (found === null) return null;
+  recordMissingImports(task.id, found.missing, env);
+  return { path: found.path, text: found.text };
+}
+
 export function prepare(id, env = process.env) {
   requireTools(env);
   const task = readTask(id, env);
   const config = readRepoConfig(task.repo);
+  const repoClaudeMd = repoClaudeMdFor(task, config, env);
   const base = config.baseBranch ?? defaultBranch(task.repo, env);
   const branch = `factory/${id}`;
   const worktree = join(factoryHome(env), "worktrees", id);
@@ -102,7 +112,10 @@ export function prepare(id, env = process.env) {
     git(["worktree", "add", "-b", branch, worktree, `origin/${base}`], task.repo, env);
     runPrepareCommand(config.prepare, worktree, env);
   }
-  writeTask({ ...task, base, branch, worktree, status: "running", config }, env);
+  writeTask(
+    { ...task, base, branch, worktree, status: "running", config, repoClaudeMd },
+    env
+  );
   appendEvent({ event: "task_started", task: id, category: task.category }, env);
   return {
     worktree,

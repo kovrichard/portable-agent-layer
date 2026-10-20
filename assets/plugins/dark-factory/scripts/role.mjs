@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { writeRoleInstructions } from "./instructions.mjs";
 import {
   appendEvent,
   isMain,
@@ -259,6 +260,7 @@ export function claudeInvocation(
     instructions,
     resumeSessionId,
     pluginDir = PLUGIN_ROOT,
+    instructionsFile,
   } = {}
 ) {
   const policy = policyFor(role);
@@ -276,6 +278,7 @@ export function claudeInvocation(
       "",
       "--plugin-dir",
       pluginDir,
+      ...optionalFlag("--append-system-prompt-file", instructionsFile),
       ...optionalFlag("--model", model),
       ...optionalFlag("--resume", resumeSessionId),
       "--json-schema",
@@ -311,6 +314,7 @@ function attempt(
 ) {
   try {
     const task = readTask(taskId, env);
+    const instructionsFile = writeRoleInstructions(task, env);
     const invocation = claudeInvocation(task, role, {
       budgetUsd,
       extraArgs,
@@ -318,6 +322,7 @@ function attempt(
       model,
       instructions,
       resumeSessionId,
+      instructionsFile,
     });
     return outcomeFrom(taskId, role, spawnClaude(invocation, timeoutMs, env), timeoutMs);
   } catch (error) {
