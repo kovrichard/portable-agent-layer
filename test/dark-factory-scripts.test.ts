@@ -512,14 +512,17 @@ describe("where a task is", () => {
     });
   });
 
-  test("a task with no events yet has no latest step", () => {
+  test("a just-created task's latest step is its task_created event", () => {
     const { id } = newTask(
       { title: "Fix login", repo: "/repo", category: "small" },
       env,
       NOW
     );
     const shown = runScript("task.mjs", ["show", id], pathWith(home));
-    expect(lastJson(shown.stdout).latestStep).toBeNull();
+    expect(lastJson(shown.stdout).latestStep).toMatchObject({
+      event: "task_created",
+      task: id,
+    });
   });
 });
 

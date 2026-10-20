@@ -1,11 +1,18 @@
 import { spawnSync } from "node:child_process";
-import { appendFileSync, existsSync, readdirSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import {
   appendEvent,
   factoryHome,
   isMain,
   printJson,
+  readEvents,
   readRepoConfig,
   readTask,
   requireTools,
@@ -58,24 +65,25 @@ export function listTasks(env = process.env) {
     .map((id) => readTask(id, env));
 }
 
-function git(args, cwd) {
-  const result = spawnSync("git", args, { cwd, encoding: "utf8" });
+function git(args, cwd, env) {
+  const result = spawnSync("git", args, { cwd, env, encoding: "utf8" });
   if (result.status !== 0)
     throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
   return result.stdout.trim();
 }
 
-function defaultBranch(repo) {
-  return git(["symbolic-ref", "--short", "refs/remotes/origin/HEAD"], repo).replace(
+function defaultBranch(repo, env) {
+  return git(["symbolic-ref", "--short", "refs/remotes/origin/HEAD"], repo, env).replace(
     /^origin\//,
     ""
   );
 }
 
-function runPrepareCommand(command, cwd) {
+function runPrepareCommand(command, cwd, env) {
   if (!command) return;
   const result = spawnSync("bash", ["-c", command], {
     cwd,
+    env,
     encoding: "utf8",
     stdio: ["ignore", 2, 2],
   });
@@ -86,13 +94,13 @@ export function prepare(id, env = process.env) {
   requireTools(env);
   const task = readTask(id, env);
   const config = readRepoConfig(task.repo);
-  const base = config.baseBranch ?? defaultBranch(task.repo);
+  const base = config.baseBranch ?? defaultBranch(task.repo, env);
   const branch = `factory/${id}`;
   const worktree = join(factoryHome(env), "worktrees", id);
   if (!existsSync(worktree)) {
-    git(["fetch", "origin", base], task.repo);
-    git(["worktree", "add", "-b", branch, worktree, `origin/${base}`], task.repo);
-    runPrepareCommand(config.prepare, worktree);
+    git(["fetch", "origin", base], task.repo, env);
+    git(["worktree", "add", "-b", branch, worktree, `origin/${base}`], task.repo, env);
+    runPrepareCommand(config.prepare, worktree, env);
   }
   writeTask({ ...task, base, branch, worktree, status: "running" }, env);
   appendEvent({ event: "task_started", task: id, category: task.category }, env);
@@ -107,10 +115,47 @@ export function prepare(id, env = process.env) {
   };
 }
 
-export function recordTrace(id, traceJson, env = process.env) {
-  const events = JSON.parse(traceJson);
-  for (const event of events) appendEvent({ ...event, task: id }, env);
-  return { recorded: events.length };
+function oneLine(text) {
+  return String(text)
+    .replace(/\s*[\r\n]+\s*/g, " ")
+    .trim();
+}
+
+export function decisionLine({ role, question, answer }, now = new Date()) {
+  return `- ${now.toISOString().slice(0, 10)}: the ${role} asked "${oneLine(question)}"; the PO answered: ${oneLine(answer)}`;
+}
+
+export function withDecision(spec, line) {
+  if (spec.trim() === "") return `## Decisions\n\n${line}\n`;
+  const lines = spec.trimEnd().split("\n");
+  const start = lines.findIndex((text) => /^## Decisions\s*$/.test(text));
+  if (start === -1) return `${lines.join("\n")}\n\n## Decisions\n\n${line}\n`;
+  const next = lines.findIndex((text, index) => index > start && text.startsWith("## "));
+  const end = next === -1 ? lines.length : next;
+  let last = end - 1;
+  while (last > start && lines[last].trim() === "") last -= 1;
+  const insert = last === start ? ["", line] : [line];
+  return `${[...lines.slice(0, last + 1), ...insert, ...lines.slice(last + 1)].join("\n")}\n`;
+}
+
+export function appendDecision(
+  id,
+  { role, question, answer },
+  env = process.env,
+  now = new Date()
+) {
+  const line = decisionLine({ role, question, answer }, now);
+  const specPath = join(taskDir(id, env), "spec.md");
+  writeFileSync(specPath, withDecision(readFileSync(specPath, "utf8"), line));
+  appendEvent({ event: "decision", task: id, role }, env, now);
+  return { line };
+}
+
+export function showTask(id, env = process.env) {
+  const latestStep = readEvents(env)
+    .filter((event) => event.task === id)
+    .at(-1);
+  return { ...readTask(id, env), latestStep: latestStep ?? null };
 }
 
 const COMMANDS = {
@@ -118,13 +163,12 @@ const COMMANDS = {
     requireTools();
     return { ready: true };
   },
-  trace: ([id, encoded]) => recordTrace(id, encoded),
   new: ([title, repo, category]) => newTask({ title, repo, category }),
   prepare: ([id]) => prepare(id),
   status: ([id, status, note]) => setStatus(id, status, note),
   ask: ([id, question]) => recordQuestion(id, question),
   list: () => listTasks(),
-  show: ([id]) => readTask(id),
+  show: ([id]) => showTask(id),
 };
 
 if (isMain(import.meta.url)) {

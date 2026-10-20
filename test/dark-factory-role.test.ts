@@ -561,6 +561,8 @@ describe("cli", () => {
       role: "reviewer",
       budgetUsd: 1.5,
       timeoutMs: 1000,
+      model: undefined,
+      resumeSessionId: undefined,
       extraArgs: ["--plugin-dir", "/p"],
     });
     expect(() => parseCliArgs(["t1", "reviewer", "--max-budget-usd", "0"])).toThrow(

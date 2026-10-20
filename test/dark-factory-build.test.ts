@@ -72,7 +72,7 @@ const fs = require("node:fs");
 const cp = require("node:child_process");
 const scenario = JSON.parse(fs.readFileSync(process.env.FAKE_SCENARIO, "utf8"));
 const argv = process.argv.slice(2);
-const valueOf = (flag) => argv[argv.indexOf(flag) + 1];
+const valueOf = (flag) => (argv.includes(flag) ? argv[argv.indexOf(flag) + 1] : undefined);
 const role = valueOf("--agent").replace("dark-factory:", "");
 const stdin = await Bun.stdin.text();
 const log = process.env.FAKE_CLAUDE_LOG;

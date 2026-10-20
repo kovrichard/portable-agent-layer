@@ -27,21 +27,24 @@ export const PLUGIN_DIR = resolve(
 );
 
 const MODEL_LINE = /^model: .*$/m;
-const MODELS_CONST = /^const MODELS = \{.*\}$/m;
+const TIER_MODELS_CONST = /^export const TIER_MODELS = \{\n[^}]*\};$/m;
 
 export function stampAgent(content: string, model: string): string {
   if (!MODEL_LINE.test(content)) throw new Error("agent file has no model line to stamp");
   return content.replace(MODEL_LINE, `model: ${model}`);
 }
 
-export function stampWorkflow(
+export function stampTierModels(
   content: string,
   models: Record<FactoryTier, string>
 ): string {
-  if (!MODELS_CONST.test(content))
-    throw new Error("workflow has no MODELS constant to stamp");
-  const entries = Object.entries(models).map(([tier, model]) => `${tier}: '${model}'`);
-  return content.replace(MODELS_CONST, `const MODELS = { ${entries.join(", ")} }`);
+  if (!TIER_MODELS_CONST.test(content))
+    throw new Error("build.mjs has no TIER_MODELS constant to stamp");
+  const entries = Object.entries(models).map(([tier, model]) => `  ${tier}: "${model}",`);
+  return content.replace(
+    TIER_MODELS_CONST,
+    `export const TIER_MODELS = {\n${entries.join("\n")}\n};`
+  );
 }
 
 function roleOf(file: string): string {
@@ -58,8 +61,8 @@ export function stampedFiles(pluginDir = PLUGIN_DIR): Map<string, string> {
     const tier = ROLE_TIERS[roleOf(file)] as FactoryTier;
     files.set(path, stampAgent(readFileSync(path, "utf8"), FACTORY_MODELS[tier]));
   }
-  const workflow = join(pluginDir, "workflows", "build.js");
-  files.set(workflow, stampWorkflow(readFileSync(workflow, "utf8"), FACTORY_MODELS));
+  const build = join(pluginDir, "scripts", "build.mjs");
+  files.set(build, stampTierModels(readFileSync(build, "utf8"), FACTORY_MODELS));
   return files;
 }
 

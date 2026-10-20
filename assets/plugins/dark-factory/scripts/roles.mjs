@@ -21,6 +21,75 @@ export function rolesFor(category) {
   return roles;
 }
 
+const ROLE_RESULT = {
+  type: "object",
+  properties: {
+    done: { type: "boolean" },
+    summary: { type: "string" },
+    question: {
+      type: "string",
+      description: "Set only when you cannot continue without an answer",
+    },
+  },
+  required: ["done", "summary"],
+};
+
+const PO_RESULT = {
+  type: "object",
+  properties: { answer: { type: "string" }, userQuestion: { type: "string" } },
+};
+
+const REVIEW_RESULT = {
+  type: "object",
+  properties: {
+    findings: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          file: { type: "string" },
+          line: { type: "number" },
+          problem: { type: "string" },
+          fix: { type: "string" },
+        },
+        required: ["file", "problem", "fix"],
+      },
+    },
+  },
+  required: ["findings"],
+};
+
+const TEST_RESULT = {
+  type: "object",
+  properties: {
+    criteria: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          criterion: { type: "string" },
+          met: { type: "boolean" },
+          evidence: { type: "string" },
+        },
+        required: ["criterion", "met", "evidence"],
+      },
+    },
+  },
+  required: ["criteria"],
+};
+
+export const RESULT_SCHEMAS = { ROLE_RESULT, PO_RESULT, REVIEW_RESULT, TEST_RESULT };
+
+const ROLE_SCHEMAS = {
+  reviewer: REVIEW_RESULT,
+  tester: TEST_RESULT,
+  po: PO_RESULT,
+};
+
+export function schemaFor(role) {
+  return Object.hasOwn(ROLE_SCHEMAS, role) ? ROLE_SCHEMAS[role] : ROLE_RESULT;
+}
+
 const READS = ["Read", "Grep", "Glob"];
 const READ_ONLY_SHELL = [
   "Bash(git diff *)",
@@ -78,25 +147,28 @@ export function rolesAfterDiff(category, changedFiles, config) {
   return after;
 }
 
-function changedFilesSince(repo, base) {
+function changedFilesSince(repo, base, env) {
   const result = spawnSync("git", ["diff", "--name-only", `${base}...HEAD`], {
     cwd: repo,
     encoding: "utf8",
+    env,
   });
   if (result.status !== 0) throw new Error(`git diff failed: ${result.stderr}`);
   return result.stdout.split("\n").filter(Boolean);
 }
 
+export function rolesAfter(category, repo, base, env = process.env) {
+  const roles = rolesAfterDiff(
+    category,
+    changedFilesSince(repo, base, env),
+    readRepoConfig(repo)
+  );
+  const added = roles.filter((role) => !rolesFor(category).after.includes(role));
+  return { roles, added };
+}
+
 if (isMain(import.meta.url)) {
   const [mode, category, repo, base] = process.argv.slice(2);
   if (mode === "before") printJson(rolesFor(category).before);
-  else {
-    const roles = rolesAfterDiff(
-      category,
-      changedFilesSince(repo, base),
-      readRepoConfig(repo)
-    );
-    const added = roles.filter((role) => !rolesFor(category).after.includes(role));
-    printJson({ roles, added });
-  }
+  else printJson(rolesAfter(category, repo, base));
 }
