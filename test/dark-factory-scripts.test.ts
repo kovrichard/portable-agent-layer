@@ -17,10 +17,12 @@ import {
 import * as gateModule from "../assets/plugins/dark-factory/scripts/gate.mjs";
 import { runGate } from "../assets/plugins/dark-factory/scripts/gate.mjs";
 import {
+  appendEvent,
   readEvents,
   readTask,
   requireTools,
   spawnTool,
+  taskDir,
   writeTask,
 } from "../assets/plugins/dark-factory/scripts/lib.mjs";
 import { notify } from "../assets/plugins/dark-factory/scripts/notify.mjs";
@@ -82,6 +84,22 @@ describe("tasks", () => {
     expect(eventsNamed("task_created")).toEqual([
       expect.objectContaining({ task: id, category: "feature" }),
     ]);
+  });
+
+  test("a task's events are also written to its own folder, and a task-less event is not", () => {
+    const { id } = newTask(
+      { title: "Add CSV export!", repo: "/repo", category: "feature" },
+      env,
+      NOW
+    );
+    appendEvent({ event: "gate", task: id }, env);
+    appendEvent({ event: "other" }, env);
+    const lines = readFileSync(join(taskDir(id, env), "events.jsonl"), "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    expect(lines.map((line) => line.event)).toContain("gate");
+    expect(lines.map((line) => line.event)).not.toContain("other");
   });
 
   test("an unknown category is refused before anything is written", () => {

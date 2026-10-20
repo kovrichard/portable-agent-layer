@@ -27,7 +27,15 @@ export function eventsFile(env = process.env) {
 export function appendEvent(event, env = process.env, now = new Date()) {
   const file = eventsFile(env);
   mkdirSync(dirname(file), { recursive: true });
-  appendFileSync(file, `${JSON.stringify({ ts: now.toISOString(), ...event })}\n`);
+  const line = `${JSON.stringify({ ts: now.toISOString(), ...event })}\n`;
+  appendFileSync(file, line);
+  appendToTaskLog(event.task, line, env);
+}
+
+function appendToTaskLog(taskId, line, env) {
+  if (!taskId) return;
+  const dir = taskDir(taskId, env);
+  if (existsSync(dir)) appendFileSync(join(dir, "events.jsonl"), line);
 }
 
 export function readEvents(env = process.env) {

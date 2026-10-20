@@ -98,7 +98,7 @@ Set `DARK_FACTORY_NOTIFY` to a shell command. It receives the message on stdin, 
 
 The factory keeps its tasks, worktrees and event log in `$DARK_FACTORY_HOME`, which defaults to `~/.dark-factory` on every machine. `pal cli export` does not carry them: a factory task cannot continue on another machine, so its history stays where it ran.
 
-Every step appends one event to `$DARK_FACTORY_HOME/events.jsonl`. `node scripts/stats.mjs` counts, from those events alone: tasks by category, outcomes, gate failures by check and by role, the code writer's first-try pass rate, escalations, CI results, review rounds, questions to you, and roles added by the diff check.
+Every step appends one event to `$DARK_FACTORY_HOME/events.jsonl`, and the events of a task are also appended to `tasks/<task>/events.jsonl`, with its `run_finished` line. A role's `role_finished` event carries its `sessionId`, the name of its transcript. `node scripts/stats.mjs` counts, from those events alone: tasks by category, outcomes, gate failures by check and by role, the code writer's first-try pass rate, escalations, CI results, review rounds, questions to you, and roles added by the diff check.
 
 Every role run appends `role_finished` with its cost and tokens, and the red-test proof appends `tests_red` with the exit code and the failing count. Every build appends `run_finished` with the outcome, the total `costUsd`, the total tokens, the number of role runs and `wallMs`. `node scripts/task.mjs show <id>` prints the task with its latest step.
 
