@@ -29,7 +29,7 @@ function installFakeGh() {
     "#!/bin/sh",
     `echo "$@" >> "${ghLog}"`,
     'for arg in "$@"; do last="$arg"; done',
-    'n="${last##*/}"',
+    `n="\${last##*/}"`,
     `if [ -f "${ghDir}/$n.sleep" ]; then exec sleep 10; fi`,
     `if [ -f "${ghDir}/$n.fail" ]; then echo "gh: not logged in" >&2; exit 1; fi`,
     `if [ -f "${ghDir}/$n.json" ]; then cat "${ghDir}/$n.json"; exit 0; fi`,
