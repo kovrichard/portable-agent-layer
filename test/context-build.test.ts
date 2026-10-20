@@ -313,7 +313,7 @@ describe("buildSystemReminder", () => {
     appendEvent("tree-project", "n1", "stopped", { text: "restore WIP wording" });
     write(
       "memory/pal-settings.json",
-      JSON.stringify({ dynamicContext: { workTree: true } })
+      JSON.stringify({ dynamicContext: { progressTree: true } })
     );
     reload();
     return dir;

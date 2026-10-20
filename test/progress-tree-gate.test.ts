@@ -19,7 +19,7 @@ beforeEach(() => {
   folder = resolve(home, "repo");
   mkdirSync(folder, { recursive: true });
   process.env.PAL_HOME = home;
-  setting("workTree", true);
+  setting("progressTree", true);
 });
 
 const lines = (entries: unknown[]) => entries.map((e) => JSON.stringify(e));
@@ -39,7 +39,7 @@ function setting(key: string, value: boolean | undefined) {
   writeFileSync(
     resolve(home, "memory", "pal-settings.json"),
     JSON.stringify({
-      dynamicContext: { workTree: true, workTreeGate: true, [key]: value },
+      dynamicContext: { progressTree: true, progressTreeGate: true, [key]: value },
     })
   );
   reload();
@@ -134,8 +134,8 @@ describe("the progress-tree gate", () => {
   });
 
   test.each([
-    "workTree",
-    "workTreeGate",
+    "progressTree",
+    "progressTreeGate",
   ])("turning %s off, or never opting into it, lets everything through", (key) => {
     setting(key, false);
     expect(check([prompt("go"), bash("git commit -m x")])).toBeNull();
@@ -156,7 +156,7 @@ describe("the decision gate", () => {
 
   beforeEach(() => {
     asked.length = 0;
-    setting("workTreeDecisionGate", true);
+    setting("progressTreeDecisionGate", true);
   });
 
   test("sends back a turn that settled a decision and recorded none", async () => {
@@ -195,8 +195,8 @@ describe("the decision gate", () => {
   });
 
   test.each([
-    "workTree",
-    "workTreeDecisionGate",
+    "progressTree",
+    "progressTreeDecisionGate",
   ])("turning %s off, or never opting into it, asks nothing", async (key) => {
     setting(key, false);
     expect(await decide([prompt("canary")])).toBeNull();

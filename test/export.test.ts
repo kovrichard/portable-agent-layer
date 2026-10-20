@@ -76,9 +76,9 @@ beforeAll(() => {
   writeFileSync(resolve(factory, "tasks", "t1", "spec.md"), "# Spec\n");
   writeFileSync(resolve(factory, "worktrees", "t1", "index.ts"), "code\n");
 
-  mkdirSync(resolve(TEST_HOME, "memory", "work-tree"), { recursive: true });
+  mkdirSync(resolve(TEST_HOME, "memory", "progress-tree"), { recursive: true });
   writeFileSync(
-    resolve(TEST_HOME, "memory", "work-tree", "events.jsonl"),
+    resolve(TEST_HOME, "memory", "progress-tree", "events.jsonl"),
     '{"op":"open"}\n'
   );
 
@@ -127,7 +127,7 @@ describe("collectExportFiles", () => {
     const { collectExportFiles } = await import("../src/hooks/lib/export");
     const files = collectExportFiles();
     expect(files.filter((f) => f.startsWith("dark-factory"))).toEqual([]);
-    expect(files).toContain("memory/work-tree/events.jsonl");
+    expect(files).toContain("memory/progress-tree/events.jsonl");
   });
 
   test("never collects the credentials in ~/.pal/.env", async () => {

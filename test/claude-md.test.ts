@@ -91,7 +91,7 @@ describe("buildClaudeMd", () => {
 
     writeFileSync(
       settingsPath,
-      JSON.stringify({ ...JSON.parse(original), dynamicContext: { workTree: true } })
+      JSON.stringify({ ...JSON.parse(original), dynamicContext: { progressTree: true } })
     );
     reload();
     try {
