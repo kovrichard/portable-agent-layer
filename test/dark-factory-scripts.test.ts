@@ -664,9 +664,29 @@ describe("coach support in the shared scripts", () => {
     expect(pushed?.head).toBe(git(clone, "rev-parse", "HEAD"));
   });
 
-  test("the coach result requires both findings and updates", () => {
+  test("the coach result requires findings, updates and reviewed", () => {
     const schema = roleLib.schemaFor?.("coach") as { required?: string[] };
-    expect(schema.required).toEqual(["findings", "updates"]);
+    expect(schema.required).toEqual(["findings", "updates", "reviewed"]);
+  });
+
+  test("each reviewed item needs a source, a verdict and a reason", () => {
+    const schema = roleLib.schemaFor?.("coach") as {
+      properties: {
+        reviewed: {
+          items: {
+            required: string[];
+            properties: {
+              verdict: { enum: string[] };
+              class: { type: string };
+            };
+          };
+        };
+      };
+    };
+    const item = schema.properties.reviewed.items;
+    expect(item.required).toEqual(["source", "verdict", "reason"]);
+    expect(item.properties.verdict.enum).toEqual(["finding", "clean"]);
+    expect(item.properties.class.type).toBe("string");
   });
 });
 

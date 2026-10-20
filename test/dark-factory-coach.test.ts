@@ -10,6 +10,10 @@ import {
 } from "../assets/plugins/dark-factory/scripts/coach.mjs";
 import { userCorrections } from "../assets/plugins/dark-factory/scripts/corrections.mjs";
 import {
+  expectedInputs,
+  missingInputs,
+} from "../assets/plugins/dark-factory/scripts/coverage.mjs";
+import {
   applyCoachResult,
   diffNames,
   generalityViolation,
@@ -46,6 +50,7 @@ let bin: string;
 let repo: string;
 let claudeLog: string;
 let claudeReply: string;
+let claudeResumeReply: string;
 let mergedAt: string;
 
 const processEnvWithoutPath = () =>
@@ -60,6 +65,7 @@ const env = () =>
     DARK_FACTORY_HOME: home,
     FAKE_CLAUDE_LOG: claudeLog,
     FAKE_CLAUDE_REPLY: claudeReply,
+    FAKE_CLAUDE_RESUME_REPLY: claudeResumeReply,
     FAKE_MERGED_AT: mergedAt,
     PATH: [bin, process.env.PATH ?? ""].join(delimiter),
   }) as Record<string, string>;
@@ -97,7 +103,9 @@ function fakeBins() {
       `const fs = require("node:fs");`,
       `const stdin = await Bun.stdin.text();`,
       `fs.appendFileSync(process.env.FAKE_CLAUDE_LOG, JSON.stringify({ argv: process.argv.slice(2), stdin }) + "\\n");`,
-      `const structured = JSON.parse(fs.readFileSync(process.env.FAKE_CLAUDE_REPLY, "utf8"));`,
+      `const resuming = process.argv.includes("--resume") && process.env.FAKE_CLAUDE_RESUME_REPLY;`,
+      `const replyFile = resuming ? process.env.FAKE_CLAUDE_RESUME_REPLY : process.env.FAKE_CLAUDE_REPLY;`,
+      `const structured = JSON.parse(fs.readFileSync(replyFile, "utf8"));`,
       `process.stdout.write(JSON.stringify({ type: "result", subtype: "success", is_error: false, result: "", session_id: "sess-coach", total_cost_usd: 0.1, num_turns: 1, duration_ms: 1, usage: {}, structured_output: structured }));`,
       "",
     ].join("\n")
@@ -116,6 +124,17 @@ function fakeBins() {
 
 function replyWith(result: object) {
   writeFileSync(claudeReply, JSON.stringify(result));
+}
+
+function resumeWith(result: object) {
+  writeFileSync(claudeResumeReply, JSON.stringify(result));
+}
+
+function claudeCalls(): { argv: string[]; stdin: string }[] {
+  return readFileSync(claudeLog, "utf8")
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line));
 }
 
 function seedTask(id: string, extra: object = {}) {
@@ -188,10 +207,12 @@ beforeEach(() => {
   repo = join(root, "repo");
   claudeLog = join(root, "claude.jsonl");
   claudeReply = join(root, "reply.json");
+  claudeResumeReply = join(root, "resume.json");
   mergedAt = "2999-01-01T00:00:00Z";
   mkdirSync(home, { recursive: true });
   fakeBins();
   replyWith({ findings: [], updates: [] });
+  resumeWith({ findings: [], updates: [], reviewed: [] });
 });
 
 describe("the findings store (criteria 7, 8)", () => {
@@ -570,6 +591,7 @@ describe("running the coach on a task (criteria 1, 4)", () => {
     );
     commitFile(repo, "fix.txt", "user fix\n", "fix: the user corrected it");
     git(repo, "push", "-q", "origin", "factory/t1");
+    return git(repo, "rev-parse", "HEAD");
   }
 
   test("a run whose every rule is rejected leaves the user's correction for the next run", () => {
@@ -585,11 +607,99 @@ describe("running the coach on a task (criteria 1, 4)", () => {
   });
 
   test("a run that stores a finding marks the user's correction as given", () => {
-    seedCorrectedRun();
-    replyWith({ findings: [coachResult()], updates: [] });
+    const sha = seedCorrectedRun();
+    replyWith({
+      findings: [coachResult()],
+      updates: [],
+      reviewed: [
+        { source: sha, verdict: "finding", class: "spec reports", reason: "The fix." },
+      ],
+    });
     runCoach("t1", { env: env(), now: NOW });
     expect(eventNames()).toContain("coach_corrections_given");
     expect(userCorrections(env())).toEqual([]);
+  });
+
+  describe("resume and incomplete runs (criteria 3, 4, 5)", () => {
+    const A = "/transcripts/sess-a.jsonl";
+    const B = "/transcripts/sess-b.jsonl";
+    const clean = (source: string) => ({
+      source,
+      verdict: "clean",
+      reason: "Read it; nothing needs to change.",
+    });
+    const finishedEvent = () =>
+      readEvents(env()).find((e: { event: string }) => e.event === "coach_finished");
+    const incompleteEvents = () =>
+      readEvents(env()).filter((e: { event: string }) => e.event === "coach_incomplete");
+
+    test("a run that completes on resume merges both results", () => {
+      seedFinishedRun();
+      replyWith({
+        findings: [coachResult()],
+        updates: [],
+        reviewed: [
+          { source: A, verdict: "finding", class: "spec reports", reason: "Routed." },
+        ],
+      });
+      resumeWith({
+        findings: [coachResult({ class: "late checks", rule: "Check late." })],
+        updates: [],
+        reviewed: [
+          { source: B, verdict: "finding", class: "late checks", reason: "Late." },
+        ],
+      });
+      runCoach("t1", { env: env(), now: NOW });
+      const calls = claudeCalls();
+      expect(calls).toHaveLength(2);
+      const argv = calls[1]?.argv ?? [];
+      expect(argv.join(" ")).toContain("--resume sess-coach");
+      expect(calls[1]?.stdin).toContain(B);
+      expect(calls[1]?.stdin).not.toContain("sess-a");
+      expect(
+        readFindings(env())
+          .map((f: { class: string }) => f.class)
+          .sort()
+      ).toEqual(["late checks", "spec reports"]);
+      expect(incompleteEvents()).toEqual([]);
+      expect(finishedEvent()).toMatchObject({ reviewed: 2, expected: 2 });
+    });
+
+    test("a run complete the first time makes one call and counts every input", () => {
+      seedFinishedRun();
+      replyWith({ findings: [], updates: [], reviewed: [clean(A), clean(B)] });
+      runCoach("t1", { env: env(), now: NOW });
+      expect(claudeCalls()).toHaveLength(1);
+      expect(finishedEvent()).toMatchObject({ reviewed: 2, expected: 2 });
+      expect(incompleteEvents()).toEqual([]);
+    });
+
+    test("inputs still missing after the resume are recorded and the findings kept", () => {
+      seedFinishedRun();
+      replyWith({
+        findings: [coachResult()],
+        updates: [],
+        reviewed: [
+          { source: A, verdict: "finding", class: "spec reports", reason: "Routed." },
+        ],
+      });
+      runCoach("t1", { env: env(), now: NOW });
+      expect(claudeCalls()).toHaveLength(2);
+      const events = incompleteEvents();
+      expect(events).toHaveLength(1);
+      expect(JSON.stringify(events[0]?.missing)).toContain(B);
+      expect(JSON.stringify(events[0]?.missing)).not.toContain("sess-a");
+      expect(readFindings(env())).toHaveLength(1);
+      expect(finishedEvent()).toMatchObject({ reviewed: 1, expected: 2 });
+    });
+
+    test("a correction without a verdict is not marked given", () => {
+      seedCorrectedRun();
+      runCoach("t1", { env: env(), now: NOW });
+      expect(incompleteEvents()).toHaveLength(1);
+      expect(eventNames()).not.toContain("coach_corrections_given");
+      expect(userCorrections(env())).toHaveLength(1);
+    });
   });
 
   test("pending and rejected findings are handed to the coach", () => {
@@ -615,6 +725,53 @@ describe("running the coach on a task (criteria 1, 4)", () => {
   });
 });
 
+describe("coverage of the coach's inputs (criterion 2)", () => {
+  const transcripts = [{ path: "/t/a.jsonl" }, { path: "/t/b.jsonl" }];
+  const corrections = [{ task: "t1", commits: [{ sha: "aaaa93c" }] }];
+  const expected = expectedInputs(transcripts, corrections);
+  const clean = (source: string) => ({ source, verdict: "clean", reason: "Checked." });
+  const check = (reviewed: object[], knownClasses: string[] = []) =>
+    missingInputs({ expected, reviewed, knownClasses });
+
+  test("the inputs are every transcript path and every correction sha", () => {
+    expect(expected).toEqual(["/t/a.jsonl", "/t/b.jsonl", "aaaa93c"]);
+  });
+
+  test("a complete result misses nothing", () => {
+    expect(check(expected.map(clean))).toEqual([]);
+  });
+
+  test("a transcript with no verdict is missing", () => {
+    const reviewed = [clean("/t/a.jsonl"), clean("aaaa93c")];
+    expect(check(reviewed)).toEqual([{ source: "/t/b.jsonl", problem: "no verdict" }]);
+  });
+
+  test("a correction with no verdict is missing", () => {
+    const reviewed = [clean("/t/a.jsonl"), clean("/t/b.jsonl")];
+    expect(check(reviewed)).toEqual([{ source: "aaaa93c", problem: "no verdict" }]);
+  });
+
+  test("a finding verdict with an unknown class is missing", () => {
+    const reviewed = [
+      clean("/t/a.jsonl"),
+      clean("/t/b.jsonl"),
+      { source: "aaaa93c", verdict: "finding", class: "ghost", reason: "x" },
+    ];
+    expect(check(reviewed, ["other"])).toEqual([
+      { source: "aaaa93c", problem: 'unknown class "ghost"' },
+    ]);
+  });
+
+  test("a finding verdict naming a pending class, in any case, is accepted", () => {
+    const reviewed = [
+      clean("/t/a.jsonl"),
+      clean("/t/b.jsonl"),
+      { source: "aaaa93c", verdict: "finding", class: " Open Repro ", reason: "x" },
+    ];
+    expect(check(reviewed, ["open repro"])).toEqual([]);
+  });
+});
+
 describe("agents/coach.md (criteria 3, 5, 13)", () => {
   const prompt = readFileSync(join(PLUGIN_ROOT, "agents/coach.md"), "utf8");
 
@@ -634,6 +791,13 @@ describe("agents/coach.md (criteria 3, 5, 13)", () => {
     "Do not propose a class the user rejected. Add evidence to a pending finding of the same class through updates.",
     "Report nothing when the run was clean. An empty list is a valid result.",
   ])("it tells the coach: %s", (sentence) => {
+    expect(prompt).toContain(sentence);
+  });
+
+  test.each([
+    "Return a verdict in reviewed for every listed transcript and every listed correction, naming it by its path or sha exactly as listed: finding with the finding's class, or clean.",
+    "A clean verdict needs a reason naming what you checked and why nothing needs to change.",
+  ])("it requires a verdict for every input (criterion 6): %s", (sentence) => {
     expect(prompt).toContain(sentence);
   });
 });
@@ -658,6 +822,10 @@ describe("the po skill and the readme (criteria 11, 14)", () => {
       "approve",
       "coach.repo",
       "coach_rule_rejected",
+      "reviewed",
+      "--resume",
+      "coach_incomplete",
+      "expected",
     ]) {
       expect(readme).toContain(part);
     }

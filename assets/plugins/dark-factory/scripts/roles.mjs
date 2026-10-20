@@ -140,9 +140,34 @@ const EVIDENCE = {
   },
 };
 
+const REVIEWED = {
+  type: "array",
+  items: {
+    type: "object",
+    properties: {
+      source: {
+        type: "string",
+        description: "A transcript path or correction commit sha, exactly as listed",
+      },
+      verdict: { type: "string", enum: ["finding", "clean"] },
+      class: {
+        type: "string",
+        description: "The finding's class, when verdict is finding",
+      },
+      reason: {
+        type: "string",
+        description:
+          "One sentence; for clean, what you checked and why nothing needs to change",
+      },
+    },
+    required: ["source", "verdict", "reason"],
+  },
+};
+
 const COACH_RESULT = {
   type: "object",
   properties: {
+    reviewed: REVIEWED,
     findings: {
       type: "array",
       items: {
@@ -176,7 +201,7 @@ const COACH_RESULT = {
       },
     },
   },
-  required: ["findings", "updates"],
+  required: ["findings", "updates", "reviewed"],
 };
 
 export const RESULT_SCHEMAS = {
