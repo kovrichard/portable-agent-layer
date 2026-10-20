@@ -171,6 +171,16 @@
             "async": true
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/PostToolOrchestrator.ts --agent=claude --only=progress-tree",
+            "async": true
+          }
+        ]
       }
     ],
     "PostToolUseFailure": [

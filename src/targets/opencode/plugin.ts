@@ -63,6 +63,9 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   const { runStopHandlers } = await lib<typeof import("../../hooks/lib/stop")>("stop.ts");
   const { logToolCall } =
     await lib<typeof import("../../hooks/lib/tool-events")>("tool-events.ts");
+  const { attachProgressFromToolCall } = await lib<
+    typeof import("../../hooks/lib/progress-tree-tool")
+  >("progress-tree-tool.ts");
   const { logAttention } =
     await lib<typeof import("../../hooks/lib/attention-events")>("attention-events.ts");
   const {
@@ -279,6 +282,16 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
         session_id: input.sessionID,
         tool_response: output?.output,
       });
+      attachProgressFromToolCall(
+        {
+          tool_name: input.tool,
+          tool_input: input.args,
+          session_id: input.sessionID,
+          tool_response: output?.output,
+          exit_code: (output?.metadata as { exit?: unknown } | undefined)?.exit,
+        },
+        directory
+      );
       const call = ledgeredOpencodeCall(input.tool, input.callID, input.args);
       if (!call) return;
 

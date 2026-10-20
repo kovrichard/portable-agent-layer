@@ -19,6 +19,7 @@ import {
   unappliedVerdictOf,
 } from "./ledger-hook";
 import { logDebug } from "./log";
+import { attachProgressFromToolCall } from "./progress-tree-tool";
 import { logToolCall } from "./tool-events";
 
 type Payload = Record<string, unknown>;
@@ -49,6 +50,7 @@ function recordInLedger(payload: Payload): void {
 const HANDLERS: Record<string, (payload: Payload) => void> = {
   events: logToolCall,
   ledger: recordInLedger,
+  "progress-tree": (payload) => attachProgressFromToolCall(payload),
 };
 
 /**

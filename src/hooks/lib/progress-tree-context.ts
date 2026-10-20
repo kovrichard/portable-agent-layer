@@ -6,6 +6,7 @@
 import { reactionTo } from "./interaction-reaction";
 import { progressSession } from "./progress-session";
 import { readTree, scopeOf } from "./progress-tree";
+import { attachFactoryPrs } from "./progress-tree-factory";
 import { type GhRunner, ghPrView, settleAttachedPrs } from "./progress-tree-prs";
 import { renderPromptLine, renderSessionContext } from "./progress-tree-render";
 import { sessionDir } from "./session-dir";
@@ -21,6 +22,7 @@ export function loadProgressTreeContext(
   gh: GhRunner = ghPrView
 ): string {
   if (!isOptedIn("progressTree")) return "";
+  attachFactoryPrs(scopeOf(cwd));
   settleAttachedPrs(scopeOf(cwd), cwd, { gh });
   return renderSessionContext(sessionTree(cwd, hookSession));
 }
