@@ -8,7 +8,6 @@ import {
   missingInputs,
   resumeInstructions,
   reviewedCount,
-  reviewedOf,
 } from "./coverage.mjs";
 import {
   applyCoachResult,
@@ -237,7 +236,7 @@ function storeResult(taskId, covered, { env, names, now, corrections, expected }
       task: taskId,
       created: applied.created.length,
       updated: applied.updated.length,
-      reviewed: reviewedCount(expected, reviewedOf(result)),
+      reviewed: reviewedCount(expected, missing),
       expected: expected.length,
     },
     env

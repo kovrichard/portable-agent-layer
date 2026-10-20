@@ -55,8 +55,7 @@ export function resumeInstructions(missing) {
   ].join("\n");
 }
 
-export function reviewedCount(expected, reviewed) {
-  const distinct = new Set(expected);
-  return [...distinct].filter((source) => reviewed.some((item) => item.source === source))
-    .length;
+export function reviewedCount(expected, missing) {
+  const missingSources = new Set(missing.map((item) => item.source));
+  return [...new Set(expected)].filter((source) => !missingSources.has(source)).length;
 }
