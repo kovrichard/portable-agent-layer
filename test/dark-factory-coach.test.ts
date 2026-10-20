@@ -48,9 +48,14 @@ let claudeLog: string;
 let claudeReply: string;
 let mergedAt: string;
 
+const processEnvWithoutPath = () =>
+  Object.fromEntries(
+    Object.entries(process.env).filter(([key]) => key.toLowerCase() !== "path")
+  );
+
 const env = () =>
   ({
-    ...process.env,
+    ...processEnvWithoutPath(),
     ...GIT_ENV,
     DARK_FACTORY_HOME: home,
     FAKE_CLAUDE_LOG: claudeLog,
