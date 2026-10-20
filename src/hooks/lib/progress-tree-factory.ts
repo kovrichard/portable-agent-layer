@@ -89,11 +89,15 @@ function attachHeldPr(
   nodes: Map<string, WorkNode>,
   holders: Map<string, TaskHolder>,
   { task, pr }: FactoryPr,
+  attached: Set<string>,
   options: FactoryOptions
 ): void {
   const holder = holders.get(task);
   const node = holder ? nodes.get(holder.node) : undefined;
   if (!holder || !node) return;
+  const key = JSON.stringify([node.id, pr]);
+  if (attached.has(key)) return;
+  attached.add(key);
   attachOnce(
     scope,
     node,
@@ -112,7 +116,8 @@ export function attachFactoryPrs(scope: string, options: FactoryOptions = {}): v
     const holders = taskHolders(events, scope);
     if (holders.size === 0) return;
     const { nodes } = buildTree(scope, events);
-    for (const pr of prs) attachHeldPr(scope, nodes, holders, pr, options);
+    const attached = new Set<string>();
+    for (const pr of prs) attachHeldPr(scope, nodes, holders, pr, attached, options);
   } catch {
     return;
   }

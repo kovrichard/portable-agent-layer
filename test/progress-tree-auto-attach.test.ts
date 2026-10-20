@@ -347,6 +347,15 @@ describe("the factory's PR reaches the node holding the task", () => {
     expect(attachments().filter(([, kind]) => kind === "pr")).toEqual([["n1", "pr", PR]]);
   });
 
+  test("two tasks on one node reporting the same PR attach it once", () => {
+    nodeHoldingTask();
+    attach("n1", "run", `dark-factory:${OTHER_TASK}`);
+    factoryEvent("pr_adopted", TASK);
+    factoryEvent("pr_opened", OTHER_TASK);
+    sessionStart();
+    expect(attachments().filter(([, kind]) => kind === "pr")).toEqual([["n1", "pr", PR]]);
+  });
+
   test("a missing factory log writes nothing and fails nothing", () => {
     nodeHoldingTask();
     const before = readEvents().length;
