@@ -7,11 +7,10 @@ import {
   readTask,
   writeTask,
 } from "../assets/plugins/dark-factory/scripts/lib.mjs";
+import * as roleModule from "../assets/plugins/dark-factory/scripts/role.mjs";
 import {
-  claudeInvocation,
   DEFAULT_TIMEOUT_MS,
   parseCliArgs,
-  runRoleHeadless,
 } from "../assets/plugins/dark-factory/scripts/role.mjs";
 import { ROLE_POLICIES } from "../assets/plugins/dark-factory/scripts/roles.mjs";
 import { writeFakeBin } from "./fixtures/fake-bin";
@@ -19,6 +18,16 @@ import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
 setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
+
+type Options = Record<string, unknown>;
+type Outcome = Record<string, unknown> & { exitCode: number; error: string | null };
+type Invocation = { args: string[]; prompt: string; command: string; cwd: string };
+const roleApi = roleModule as unknown as {
+  runRoleHeadless: (taskId: string, role: string, options?: Options) => Outcome;
+  claudeInvocation: (task: unknown, role: string, options?: Options) => Invocation;
+};
+const runRoleHeadless = roleApi.runRoleHeadless;
+const claudeInvocation = roleApi.claudeInvocation;
 
 const PLUGIN_ROOT = resolve(import.meta.dir, "../assets/plugins/dark-factory");
 const ROLE_SCRIPT = join(PLUGIN_ROOT, "scripts/role.mjs");
@@ -78,8 +87,15 @@ function fakeClaude({
 const recorded = () => JSON.parse(readFileSync(record, "utf8"));
 const finishedEvents = () =>
   readEvents(envWith(bin)).filter((e: { event: string }) => e.event === "role_finished");
-const valueAfter = (argv: string[], flag: string) => argv[argv.indexOf(flag) + 1];
+const valueAfter = (argv: string[], flag: string) => {
+  if (!argv.includes(flag)) throw new Error(`argv has no ${flag}`);
+  return argv[argv.indexOf(flag) + 1] as string;
+};
 const listAfter = (argv: string[], flag: string) => valueAfter(argv, flag).split(",");
+
+const ONE_COMMAND_SENTENCE =
+  "Run one command per Bash call, with no &&, ; or pipes, so every call matches the tools you are allowed.";
+const STRUCTURED = { done: true, summary: "ok" };
 
 const NULL_STATS = {
   model: null,
@@ -199,11 +215,12 @@ describe("invocation", () => {
     const task = readTask("t1", env);
     for (const role of Object.keys(ROLE_POLICIES)) {
       const { args, prompt } = claudeInvocation(task, role, { env });
-      for (const arg of args) {
+      args.forEach((arg: string, index: number) => {
+        const isSchema = args[index - 1] === "--json-schema";
         expect(arg).not.toContain("\n");
-        expect(arg).not.toContain('"');
+        if (!isSchema) expect(arg).not.toContain('"');
         expect(arg).not.toBe(prompt);
-      }
+      });
     }
   });
 
@@ -225,12 +242,20 @@ describe("reply", () => {
       ...SUCCESS_STATS,
       exitCode: 0,
       result: "ok",
+      structured: STRUCTURED,
       error: null,
     });
   });
 
   test("a field the reply lacks is null, never invented", () => {
-    fakeClaude({ stdout: '{"type":"result","is_error":false,"result":"ok"}' });
+    fakeClaude({
+      stdout: JSON.stringify({
+        type: "result",
+        is_error: false,
+        result: "ok",
+        structured_output: STRUCTURED,
+      }),
+    });
     const outcome = runRoleHeadless("t1", "reviewer", { env: envWith(bin) });
     expect(outcome).toEqual({
       task: "t1",
@@ -238,8 +263,23 @@ describe("reply", () => {
       ...NULL_STATS,
       exitCode: 0,
       result: "ok",
+      structured: STRUCTURED,
       error: null,
     });
+  });
+
+  test("a reply without structured_output is a failure, and the text result is never parsed instead", () => {
+    fakeClaude({
+      stdout: JSON.stringify({
+        type: "result",
+        is_error: false,
+        result: '{"done":true,"summary":"from text"}',
+      }),
+    });
+    const outcome = runRoleHeadless("t1", "reviewer", { env: envWith(bin) });
+    expect(outcome.exitCode).toBe(1);
+    expect(outcome.error).toContain("no structured output");
+    expect(outcome.structured).toBeNull();
   });
 });
 
@@ -298,7 +338,7 @@ describe("failures", () => {
 });
 
 describe("event", () => {
-  test("a finished run appends one role_finished event with the stats and no result", () => {
+  test("a finished run appends one role_finished event with the stats and no result or structured body", () => {
     fakeClaude({ replyFile: SUCCESS });
     runRoleHeadless("t1", "reviewer", { env: envWith(bin) });
     const events = finishedEvents();
@@ -312,6 +352,7 @@ describe("event", () => {
     });
     expect(typeof events[0].ts).toBe("string");
     expect(events[0]).not.toHaveProperty("result");
+    expect(events[0]).not.toHaveProperty("structured");
   });
 
   test("a failed run also appends exactly one event, with its error", () => {
@@ -323,7 +364,163 @@ describe("event", () => {
   });
 });
 
+describe("isolation", () => {
+  test("every role runs with no setting sources and the plugin as its only plugin dir", () => {
+    const env = envWith(bin);
+    const task = readTask("t1", env);
+    for (const role of Object.keys(ROLE_POLICIES)) {
+      const { args } = claudeInvocation(task, role, { env });
+      expect(valueAfter(args, "--setting-sources")).toBe("");
+      expect(valueAfter(args, "--plugin-dir")).toBe(PLUGIN_ROOT);
+    }
+  });
+
+  test("the plugin dir can be pointed elsewhere", () => {
+    const env = envWith(bin);
+    const task = readTask("t1", env);
+    const { args } = claudeInvocation(task, "reviewer", { env, pluginDir: "/elsewhere" });
+    expect(valueAfter(args, "--plugin-dir")).toBe("/elsewhere");
+  });
+
+  test("a spawned role receives an empty --setting-sources value and the plugin dir", () => {
+    fakeClaude({ replyFile: SUCCESS });
+    runRoleHeadless("t1", "reviewer", { env: envWith(bin) });
+    const { argv } = recorded();
+    expect(valueAfter(argv, "--setting-sources")).toBe("");
+    expect(valueAfter(argv, "--plugin-dir")).toBe(PLUGIN_ROOT);
+  });
+});
+
+describe("model and resume", () => {
+  test("a model passed to the role reaches claude as --model", () => {
+    fakeClaude({ replyFile: SUCCESS });
+    runRoleHeadless("t1", "code-writer", { env: envWith(bin), model: "claude-opus-x" });
+    expect(valueAfter(recorded().argv, "--model")).toBe("claude-opus-x");
+  });
+
+  test("without a model there is no --model, so the agent definition decides", () => {
+    fakeClaude({ replyFile: SUCCESS });
+    runRoleHeadless("t1", "code-writer", { env: envWith(bin) });
+    expect(recorded().argv).not.toContain("--model");
+  });
+
+  test("resuming passes --resume and sends only the new instructions", () => {
+    fakeClaude({ replyFile: SUCCESS });
+    runRoleHeadless("t1", "code-writer", {
+      env: envWith(bin),
+      resumeSessionId: "sess-9",
+      instructions: "The PO answered: use a.txt",
+    });
+    const { argv, stdin } = recorded();
+    expect(valueAfter(argv, "--resume")).toBe("sess-9");
+    expect(stdin).toBe("The PO answered: use a.txt");
+  });
+
+  test("a fresh run has no --resume", () => {
+    fakeClaude({ replyFile: SUCCESS });
+    runRoleHeadless("t1", "code-writer", { env: envWith(bin) });
+    expect(recorded().argv).not.toContain("--resume");
+  });
+});
+
+describe("structured output", () => {
+  const schemaOf = (role: string) => {
+    const env = envWith(bin);
+    const { args } = claudeInvocation(readTask("t1", env), role, { env });
+    return JSON.parse(valueAfter(args, "--json-schema"));
+  };
+
+  test("the reviewer must return findings", () => {
+    const schema = schemaOf("reviewer");
+    expect(schema.required).toEqual(["findings"]);
+    expect(schema.properties.findings.items.required).toEqual(["file", "problem", "fix"]);
+  });
+
+  test("the tester must return criteria with met and evidence", () => {
+    const schema = schemaOf("tester");
+    expect(schema.required).toEqual(["criteria"]);
+    expect(schema.properties.criteria.items.required).toEqual([
+      "criterion",
+      "met",
+      "evidence",
+    ]);
+  });
+
+  test("the product owner answers or hands a question to the user", () => {
+    const schema = schemaOf("po");
+    expect(Object.keys(schema.properties).sort()).toEqual(["answer", "userQuestion"]);
+  });
+
+  test("a working role reports done and a summary, with an optional question", () => {
+    for (const role of [
+      "architect",
+      "planner",
+      "debugger",
+      "test-writer",
+      "code-writer",
+    ]) {
+      const schema = schemaOf(role);
+      expect(schema.required).toEqual(["done", "summary"]);
+      expect(schema.properties.question.type).toBe("string");
+    }
+  });
+
+  test("the reply's structured_output reaches the outcome untouched", () => {
+    const structured = { findings: [{ file: "a.ts", problem: "p", fix: "f" }] };
+    fakeClaude({
+      stdout: JSON.stringify({
+        type: "result",
+        is_error: false,
+        result: "",
+        structured_output: structured,
+      }),
+    });
+    const outcome = runRoleHeadless("t1", "reviewer", { env: envWith(bin) });
+    expect(outcome.structured).toEqual(structured);
+    expect(outcome.exitCode).toBe(0);
+  });
+});
+
+describe("prompt", () => {
+  test("every role's prompt tells it to run one command per Bash call", () => {
+    const task = readTask("t1", envWith(bin));
+    for (const role of Object.keys(ROLE_POLICIES)) {
+      expect(roleModule.rolePrompt(task, role)).toContain(ONE_COMMAND_SENTENCE);
+    }
+  });
+
+  test("a role that can ask is told to set question and stop, one that cannot only not to ask", () => {
+    const task = readTask("t1", envWith(bin));
+    expect(roleModule.rolePrompt(task, "code-writer")).toContain("set question and stop");
+    expect(roleModule.rolePrompt(task, "reviewer")).not.toContain("set question");
+    expect(roleModule.rolePrompt(task, "reviewer")).toContain(
+      "Never ask the user anything."
+    );
+  });
+
+  test("the test-writer is told to leave its tests uncommitted", () => {
+    const task = readTask("t1", envWith(bin));
+    const prompt = roleModule.rolePrompt(task, "test-writer");
+    expect(prompt).toContain("uncommitted");
+    expect(prompt).not.toContain("and commit them");
+  });
+});
+
 describe("cli", () => {
+  test("parses the model and the session to resume", () => {
+    expect(
+      parseCliArgs(["t1", "code-writer", "--model", "m-1", "--resume", "sess-3"])
+    ).toMatchObject({
+      taskId: "t1",
+      role: "code-writer",
+      model: "m-1",
+      resumeSessionId: "sess-3",
+    });
+    expect(() => parseCliArgs(["t1", "code-writer", "--model"])).toThrow(
+      "--model needs a value"
+    );
+  });
+
   test("prints exactly one JSON line and exits with its exitCode", () => {
     fakeClaude({ replyFile: SUCCESS });
     const run = spawnSync(process.execPath, [ROLE_SCRIPT, "t1", "reviewer"], {
