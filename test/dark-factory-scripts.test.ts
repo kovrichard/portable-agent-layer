@@ -653,6 +653,23 @@ describe("opening the pull request", () => {
   });
 });
 
+describe("coach support in the shared scripts", () => {
+  test("pushed records the head commit that was pushed", () => {
+    const { clone } = remoteWithClone();
+    commitFile(clone, "g.txt", "mine\n");
+    taskAt(clone);
+    const run = runScript("ship.mjs", ["push", "t1"], pathWith(join(home, "nobin")));
+    expect(run.status).toBe(0);
+    const [pushed] = eventsNamed("pushed") as { head?: string }[];
+    expect(pushed?.head).toBe(git(clone, "rev-parse", "HEAD"));
+  });
+
+  test("the coach result requires both findings and updates", () => {
+    const schema = roleLib.schemaFor?.("coach") as { required?: string[] };
+    expect(schema.required).toEqual(["findings", "updates"]);
+  });
+});
+
 describe("syncing with the base", () => {
   test("a rebase that cannot start is a failure, not a conflict with the base", () => {
     const { clone } = remoteWithClone();

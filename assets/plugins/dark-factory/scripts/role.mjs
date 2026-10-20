@@ -1,13 +1,16 @@
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { writeRoleInstructions } from "./instructions.mjs";
 import {
   appendEvent,
+  factoryHome,
   isMain,
   PLUGIN_ROOT,
   printJson,
   readTask,
   spawnTool,
   taskDir,
+  userHome,
 } from "./lib.mjs";
 import { policyFor, schemaFor } from "./roles.mjs";
 
@@ -38,6 +41,8 @@ const ROLE_INSTRUCTIONS = {
   tester:
     "Test every acceptance criterion in the running app. Report each criterion as met or not met, with what you did and what you saw.",
   po: 'Read the spec and list every question in it that only the user can answer, or reply "No questions." when there are none.',
+  coach:
+    "Coach this finished run: report what went wrong or cost more than it should, as general rules for the role prompts.",
 };
 
 function isPlainObject(value) {
@@ -120,7 +125,39 @@ function emptyStats() {
 }
 
 function failed(taskId, role, exitCode, error, stats = emptyStats()) {
-  return { task: taskId, role, ...stats, structured: null, exitCode, error };
+  return {
+    task: taskId,
+    role,
+    ...stats,
+    transcriptPath: null,
+    structured: null,
+    exitCode,
+    error,
+  };
+}
+
+function claudeProjectsDir(worktree, env = process.env) {
+  const configDir = env.CLAUDE_CONFIG_DIR || join(userHome(env), ".claude");
+  return join(configDir, "projects", worktree.replace(/[^a-zA-Z0-9]/g, "-"));
+}
+
+export function transcriptPathFor(worktree, sessionId, env = process.env) {
+  if (!worktree || typeof sessionId !== "string" || sessionId.length === 0) return null;
+  const file = join(claudeProjectsDir(worktree, env), `${sessionId}.jsonl`);
+  return existsSync(file) ? file : null;
+}
+
+const ADD_DIRS = {
+  factoryHome: (_task, env) => factoryHome(env),
+  transcripts: (task, env) => claudeProjectsDir(task.worktree, env),
+  plugin: (_task, _env, pluginDir) => pluginDir,
+};
+
+function policyAddDirArgs(policy, task, env, pluginDir) {
+  return (policy.addDirs ?? [])
+    .map((name) => ADD_DIRS[name](task, env, pluginDir))
+    .filter((dir) => existsSync(dir))
+    .flatMap((dir) => ["--add-dir", dir]);
 }
 
 function tail(text, size = 500) {
@@ -289,6 +326,7 @@ export function claudeInvocation(
       "dontAsk",
       "--add-dir",
       taskDir(task.id, env),
+      ...policyAddDirArgs(policy, task, env, pluginDir),
       "--allowedTools",
       policy.allow.join(","),
       ...disallowedArgs(policy.deny),
@@ -324,7 +362,16 @@ function attempt(
       resumeSessionId,
       instructionsFile,
     });
-    return outcomeFrom(taskId, role, spawnClaude(invocation, timeoutMs, env), timeoutMs);
+    const outcome = outcomeFrom(
+      taskId,
+      role,
+      spawnClaude(invocation, timeoutMs, env),
+      timeoutMs
+    );
+    return {
+      ...outcome,
+      transcriptPath: transcriptPathFor(task.worktree, outcome.sessionId, env),
+    };
   } catch (error) {
     return failed(taskId, role, SETUP_EXIT, error.message);
   }

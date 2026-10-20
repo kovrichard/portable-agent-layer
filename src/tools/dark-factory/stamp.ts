@@ -19,6 +19,7 @@ export const ROLE_TIERS: Record<string, FactoryTier> = {
   debugger: "large",
   reviewer: "medium",
   tester: "medium",
+  coach: "large",
 };
 
 export const PLUGIN_DIR = resolve(

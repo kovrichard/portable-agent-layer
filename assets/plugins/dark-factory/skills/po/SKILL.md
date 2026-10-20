@@ -41,8 +41,16 @@ Claude Code tells this session when the command exits. Its stdout is one JSON li
 
 `node ${CLAUDE_PLUGIN_ROOT}/scripts/task.mjs list` shows every task and its status. For a task in `waiting`, its `note` is the question. Put the user's answer into the spec under **Decisions**, then run the same background command again. It reuses the task's worktree and commits and runs the whole pipeline again.
 
+## Coach findings
+
+- When the user asks what the coach found, run `node ${CLAUDE_PLUGIN_ROOT}/scripts/coach.mjs list`. Show each finding's role, class, severity, rule and evidence count. Use `show <id>` for the details.
+- On the user's rejection, run `coach.mjs reject <id> "<reason>"` with the user's reason.
+- On the user's approval of a finding, run `coach.mjs approve <id>`. Add `--repo <path>` when `coach.repo` isn't set in `$DARK_FACTORY_HOME/config.json`. Show the user the generated spec at the printed `specPath`, and wait for an explicit go, as for any task. On go, run build as in "On go".
+- `coach.mjs list --applied` reports each merged rule's metric before and after its merge.
+
 ## Rules
 
 - Never start a run without the user's go on the spec.
+- Never approve or build a coach finding without the user.
 - Never ask the user a technical question the code or the spec can settle.
 - Measure, don't guess: `node ${CLAUDE_PLUGIN_ROOT}/scripts/stats.mjs` reports failures, escalations, review rounds and questions to the user from the event log.

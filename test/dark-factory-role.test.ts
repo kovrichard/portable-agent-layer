@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readdirSync, readFileSync, realpathSync } from "node:fs";
+import {
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  writeFileSync,
+} from "node:fs";
 import { delimiter, join, resolve } from "node:path";
 import {
   readEvents,
@@ -176,6 +182,49 @@ describe("invocation", () => {
     expect(stdin).not.toContain("[Workflow harness");
   });
 
+  test("the coach is read-only, reads the factory home and has the highest budget", () => {
+    const env = envWith(bin);
+    const task = readTask("t1", env);
+    const { args } = claudeInvocation(task, "coach", { env });
+    expect(args).toContain(home);
+    expect(args[args.indexOf(home) - 1]).toBe("--add-dir");
+    const allowed = listAfter(args, "--allowedTools");
+    expect(allowed).not.toContain("Edit");
+    expect(allowed).not.toContain("Write");
+    expect(listAfter(args, "--disallowedTools")).toEqual(
+      expect.arrayContaining(["Edit", "Write"])
+    );
+    const others = Object.entries(ROLE_POLICIES).filter(([role]) => role !== "coach");
+    for (const [, policy] of others) {
+      expect(ROLE_POLICIES.coach.budgetUsd).toBeGreaterThan(policy.budgetUsd);
+    }
+  });
+
+  test("a transcript path is recorded only when the session file exists", () => {
+    const env = { ...envWith(bin), HOME: home, USERPROFILE: home } as Record<
+      string,
+      string
+    >;
+    delete env.CLAUDE_CONFIG_DIR;
+    const slug = worktree.replace(/[^a-zA-Z0-9]/g, "-");
+    const transcriptPathFor = (
+      roleModule as unknown as Record<string, (...args: never) => unknown>
+    ).transcriptPathFor as (w: string, s: string | null, e: object) => string | null;
+    expect(transcriptPathFor(worktree, "sess-1", env)).toBeNull();
+    const file = join(home, ".claude", "projects", slug, "sess-1.jsonl");
+    mkdirSync(join(file, ".."), { recursive: true });
+    writeFileSync(file, "{}\n");
+    expect(transcriptPathFor(worktree, "sess-1", env)).toBe(file);
+    expect(transcriptPathFor(worktree, null, env)).toBeNull();
+  });
+
+  test("role_finished carries transcriptPath, null when there is no session file", () => {
+    fakeClaude({ replyFile: SUCCESS });
+    runRoleHeadless("t1", "reviewer", { env: envWith(bin) });
+    const [finished] = finishedEvents();
+    expect(finished).toHaveProperty("transcriptPath");
+  });
+
   test("a reviewer cannot write files through git output flags", () => {
     fakeClaude({ replyFile: SUCCESS });
     runRoleHeadless("t1", "reviewer", { env: envWith(bin) });
@@ -240,6 +289,7 @@ describe("reply", () => {
       task: "t1",
       role: "reviewer",
       ...SUCCESS_STATS,
+      transcriptPath: null,
       exitCode: 0,
       result: "ok",
       structured: STRUCTURED,
@@ -261,6 +311,7 @@ describe("reply", () => {
       task: "t1",
       role: "reviewer",
       ...NULL_STATS,
+      transcriptPath: null,
       exitCode: 0,
       result: "ok",
       structured: STRUCTURED,
