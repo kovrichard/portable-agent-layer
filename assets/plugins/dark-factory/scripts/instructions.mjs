@@ -6,6 +6,7 @@ const MAX_IMPORT_DEPTH = 5;
 const IMPORT_LINE = /^@(\S+)/;
 const FENCE = /^ {0,3}(```|~~~)/;
 const INSTRUCTIONS_FILE = "role-instructions.md";
+const MISSING_SEEN_FILE = "instructions-missing-recorded.txt";
 
 function importTarget(path, fromFile, env) {
   if (path.startsWith("~/")) return join(userHome(env), path.slice(2));
@@ -60,6 +61,16 @@ export function recordMissingImports(taskId, missing, env = process.env) {
   }
 }
 
+function recordNewMissingImports(taskId, missing, env) {
+  if (missing.length === 0) return;
+  const file = join(taskDir(taskId, env), MISSING_SEEN_FILE);
+  const seen = (readOrNull(file) ?? "").split("\n").filter(Boolean);
+  const fresh = [...new Set(missing)].filter((path) => !seen.includes(path));
+  if (fresh.length === 0) return;
+  recordMissingImports(taskId, fresh, env);
+  writeFileSync(file, `${[...seen, ...fresh].join("\n")}\n`);
+}
+
 function userPart(env) {
   if (readUserConfig(env).userInstructions === false) return null;
   return readInstructions(join(userHome(env), ".claude", "CLAUDE.md"), env);
@@ -73,7 +84,7 @@ function instructionsText(parts) {
 
 export function writeRoleInstructions(task, env = process.env) {
   const user = userPart(env);
-  if (user) recordMissingImports(task.id, user.missing, env);
+  if (user) recordNewMissingImports(task.id, user.missing, env);
   const parts = [user, task.repoClaudeMd ?? null].filter(Boolean);
   const text = instructionsText(parts);
   if (text === null) return null;
