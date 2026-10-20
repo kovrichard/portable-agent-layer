@@ -6,7 +6,7 @@ import {
   applyCoachResult,
   diffNames,
   findingById,
-  markApproved,
+  markApprovedWithLockHeld,
   readFindings,
   rejectFinding,
   withFindingsLock,
@@ -246,7 +246,12 @@ export function approvalSpec(finding) {
   ].join("\n");
 }
 
-export function approveFinding(id, { repo, env = process.env, now = new Date() } = {}) {
+export function approveFinding(id, options = {}) {
+  const env = options.env ?? process.env;
+  return withFindingsLock(env, () => approveFindingLocked(id, options));
+}
+
+function approveFindingLocked(id, { repo, env = process.env, now = new Date() }) {
   const finding = findingById(id, env);
   if (finding.status !== "pending")
     throw new Error(`finding ${id} is ${finding.status}, not pending`);
@@ -265,7 +270,7 @@ export function approveFinding(id, { repo, env = process.env, now = new Date() }
     now
   );
   writeFileSync(specPath, approvalSpec(finding));
-  markApproved(id, taskId, env, now);
+  markApprovedWithLockHeld(id, taskId, env, now);
   appendEvent({ event: "coach_finding_approved", id, task: taskId }, env);
   return { id, task: taskId, specPath };
 }

@@ -14,6 +14,9 @@ const PATH_LINE = /^(?:---|\+\+\+) [ab]\/(.+)$/;
 const DECLARATION = /\b(?:function\*?|class|const|let|var|def|fn)\s+([A-Za-z_$][\w$]*)/g;
 const ASSIGNED_FUNCTION =
   /\b([A-Za-z_$][\w$]*)\s*[=:]\s*(?:async\s+)?(?:function\b|\([^)]*\)\s*=>|[A-Za-z_$][\w$]*\s*=>)/g;
+const ASSIGNED_OR_KEYED = /\b([A-Za-z_$][\w$]*)\s*(?:=(?![=>])|:(?!:))/g;
+const DESTRUCTURED = /\b(?:const|let|var)\s*[{[]([^}\]=]*)[}\]]/g;
+const IDENTIFIER = /[A-Za-z_$][\w$]*/g;
 const MIN_BASENAME_LENGTH = 3;
 const MIN_IDENTIFIER_LENGTH = 3;
 
@@ -87,11 +90,101 @@ export function withFindingsLock(env, action) {
   }
 }
 
+const COMMON_WORDS = new Set([
+  "the",
+  "and",
+  "for",
+  "not",
+  "new",
+  "get",
+  "set",
+  "let",
+  "var",
+  "const",
+  "def",
+  "fn",
+  "function",
+  "class",
+  "return",
+  "async",
+  "await",
+  "export",
+  "import",
+  "from",
+  "default",
+  "true",
+  "false",
+  "null",
+  "undefined",
+  "this",
+  "self",
+  "args",
+  "arg",
+  "value",
+  "values",
+  "key",
+  "keys",
+  "name",
+  "names",
+  "type",
+  "types",
+  "data",
+  "item",
+  "items",
+  "list",
+  "map",
+  "text",
+  "line",
+  "lines",
+  "file",
+  "files",
+  "path",
+  "result",
+  "results",
+  "error",
+  "index",
+  "options",
+  "option",
+  "config",
+  "state",
+  "props",
+  "node",
+  "test",
+  "main",
+  "init",
+  "run",
+  "str",
+  "num",
+  "obj",
+  "len",
+  "max",
+  "min",
+  "tmp",
+  "env",
+  "id",
+  "if",
+  "else",
+  "try",
+  "catch",
+  "throw",
+  "while",
+  "switch",
+  "case",
+  "break",
+  "continue",
+  "static",
+  "public",
+  "private",
+  "interface",
+  "enum",
+  "extends",
+  "implements",
+  "typeof",
+  "instanceof",
+]);
+
 function isDistinctiveIdentifier(name) {
-  return (
-    name.length >= MIN_IDENTIFIER_LENGTH &&
-    (/.[A-Z]/.test(name) || name.includes("_") || /\d/.test(name))
-  );
+  return name.length >= MIN_IDENTIFIER_LENGTH && !COMMON_WORDS.has(name.toLowerCase());
 }
 
 function pathNames(line) {
@@ -104,9 +197,14 @@ function pathNames(line) {
 
 function identifiersIn(line) {
   if (!line.startsWith("+") || line.startsWith("+++")) return [];
-  return [DECLARATION, ASSIGNED_FUNCTION].flatMap((pattern) =>
+  const direct = [DECLARATION, ASSIGNED_FUNCTION, ASSIGNED_OR_KEYED].flatMap((pattern) =>
     Array.from(line.matchAll(pattern), (match) => match[1])
   );
+  const destructured = Array.from(
+    line.matchAll(DESTRUCTURED),
+    (match) => match[1].match(IDENTIFIER) ?? []
+  ).flat();
+  return [...direct, ...destructured];
 }
 
 function namesOfLine(line) {
@@ -267,11 +365,15 @@ export function rejectFinding(id, reason, env = process.env, now = new Date()) {
   return transitionPending(id, { status: "rejected", rejectReason: reason }, env, now);
 }
 
-export function markApproved(id, taskId, env = process.env, now = new Date()) {
-  return transitionPending(
-    id,
-    { status: "approved", taskId, approvedAt: now.toISOString() },
-    env,
-    now
-  );
+function approvedChanges(taskId, now) {
+  return { status: "approved", taskId, approvedAt: now.toISOString() };
+}
+
+export function markApprovedWithLockHeld(
+  id,
+  taskId,
+  env = process.env,
+  now = new Date()
+) {
+  return transitionPendingLocked(id, approvedChanges(taskId, now), env, now);
 }
