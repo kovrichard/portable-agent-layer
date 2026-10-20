@@ -95,7 +95,8 @@ const step = { reply: { done: true, summary: "done" }, ...(defaults[role] ?? {})
 const run = (command, args) => cp.spawnSync(command, args, { encoding: "utf8" });
 if (step.shell) run("sh", ["-c", step.shell]);
 for (const [file, content] of Object.entries(step.write ?? {})) {
-  fs.mkdirSync(require("node:path").dirname(file), { recursive: true });
+  const dir = require("node:path").dirname(file);
+  if (dir !== ".") fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(file, content);
 }
 if (step.commit) {
