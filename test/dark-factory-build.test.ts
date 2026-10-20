@@ -89,6 +89,7 @@ const defaults = {
   debugger: work,
   reviewer: { reply: { findings: [] } },
   tester: { reply: { criteria: [] } },
+  coach: { reply: { findings: [], updates: [] } },
   po: { reply: { answer: "ok" } },
 };
 const step = { reply: { done: true, summary: "done" }, ...(defaults[role] ?? {}), ...((scenario.roles?.[role] ?? [])[index] ?? {}) };
@@ -208,8 +209,20 @@ function runBuild(taskId = TASK) {
     env: buildEnv() as Record<string, string>,
     encoding: "utf8",
   });
+  waitForCoach();
   const lines = run.stdout.trim().split("\n").filter(Boolean);
   return { exitCode: run.status, stdout: run.stdout, stderr: run.stderr, lines };
+}
+
+function waitForCoach() {
+  const count = (name: string) => eventsNamed(name).length;
+  const deadline = Date.now() + 60_000;
+  while (
+    count("coach_started") > count("coach_finished") + count("coach_failed") &&
+    Date.now() < deadline
+  ) {
+    Bun.sleepSync(100);
+  }
 }
 
 function resultOf(run: ReturnType<typeof runBuild>) {
@@ -273,6 +286,86 @@ beforeEach(() => {
   mkdirSync(ctx.factory, { recursive: true });
 });
 
+describe("the coach at the end of a run", () => {
+  const stuckScenario = {
+    roles: { "code-writer": [NOOP, NOOP, NOOP, NOOP], debugger: [NOOP, NOOP] },
+  };
+  const waitingScenario = {
+    roles: {
+      "code-writer": [
+        { ...NOOP, reply: { done: false, summary: "", question: "which file?" } },
+      ],
+      po: [{ reply: { userQuestion: "Which database?" } }],
+    },
+  };
+
+  test("a ready run is coached after run_finished and records the counts", () => {
+    setup("small");
+    expect(runBuild().exitCode).toBe(0);
+    expect(roleNames().at(-1)).toBe("coach");
+    expect(flow().slice(-3)).toEqual(["run_finished", "coach_started", "coach_finished"]);
+    expect(eventsNamed("coach_finished")[0]).toMatchObject({
+      task: TASK,
+      created: 0,
+      updated: 0,
+    });
+  });
+
+  test("a stuck run is coached", () => {
+    setup("small", stuckScenario);
+    expect(runBuild().exitCode).toBe(1);
+    expect(roleNames().at(-1)).toBe("coach");
+    expect(eventsNamed("coach_finished")).toHaveLength(1);
+  });
+
+  test("a waiting run is not coached", () => {
+    setup("small", waitingScenario);
+    expect(runBuild().exitCode).toBe(3);
+    expect(roleNames()).not.toContain("coach");
+    expect(eventsNamed("coach_started")).toHaveLength(0);
+    expect(eventsNamed("coach_finished")).toHaveLength(0);
+  });
+
+  test("the coach runs after the status is saved and the user is notified", () => {
+    setup("small");
+    runBuild();
+    const labels = flow();
+    expect(labels.indexOf("notify")).toBeLessThan(labels.indexOf("coach_started"));
+    expect(labels.indexOf("task_status")).toBeLessThan(labels.indexOf("coach_started"));
+  });
+
+  test("a failing coach is recorded and changes neither the exit code nor the JSON", () => {
+    setup("small");
+    const good = runBuild();
+    const goodResult = resultOf(good);
+    beforeEachReset();
+    setup("small", { roles: { coach: [{ exit: 1 }] } });
+    const bad = runBuild();
+    expect(eventsNamed("coach_failed")).toHaveLength(1);
+    expect(eventsNamed("coach_finished")).toHaveLength(0);
+    expect(bad.exitCode).toBe(good.exitCode);
+    expect(resultOf(bad)).toEqual(goodResult);
+  });
+});
+
+function beforeEachReset() {
+  const root = freshTestDir(import.meta.file);
+  ctx = {
+    ...ctx,
+    root,
+    factory: join(root, "factory"),
+    repo: join(root, "repo"),
+    remote: join(root, "remote.git"),
+    bin: join(root, "bin"),
+    worktree: join(root, "factory", "worktrees", TASK),
+    claudeLog: join(root, "claude-calls.jsonl"),
+    ghLog: join(root, "gh-calls.log"),
+    scenario: join(root, "scenario.json"),
+    notified: join(root, "notified.txt"),
+  };
+  mkdirSync(ctx.factory, { recursive: true });
+}
+
 describe("a whole feature run", () => {
   test("runs the pipeline in order and ends ready with one JSON line and exit 0", () => {
     setup("feature");
@@ -288,6 +381,7 @@ describe("a whole feature run", () => {
       "code-writer",
       "reviewer",
       "tester",
+      "coach",
     ]);
     expect(flow()).toEqual([
       "task_started",
@@ -308,6 +402,8 @@ describe("a whole feature run", () => {
       "task_status",
       "notify",
       "run_finished",
+      "coach_started",
+      "coach_finished",
     ]);
     expect(ghCalls().some((call) => call.startsWith("pr ready"))).toBe(true);
     expect(storedTask()).toMatchObject({ status: "ready", pr: PR_URL });
@@ -452,7 +548,8 @@ describe("the code ladder", () => {
     expect(run.exitCode).toBe(1);
     expect(resultOf(run)).toMatchObject({ status: "stuck", pr: null });
     expect(resultOf(run).message).toContain("gate still fails after 6 attempts");
-    expect(roleNames()).toHaveLength(6);
+    expect(roleNames()).toHaveLength(7);
+    expect(roleNames().at(-1)).toBe("coach");
     expect(ghCalls()).toEqual([]);
     expect(storedTask().status).toBe("stuck");
   });
@@ -535,7 +632,13 @@ describe("CI rounds", () => {
     const run = runBuild();
     expect(run.exitCode).toBe(1);
     expect(resultOf(run).message).toContain("CI still fails after 3 rounds");
-    expect(roleNames()).toEqual(["code-writer", "reviewer", "debugger", "debugger"]);
+    expect(roleNames()).toEqual([
+      "code-writer",
+      "reviewer",
+      "debugger",
+      "debugger",
+      "coach",
+    ]);
     expect(modelOf(calls()[2] as Call)).toBe(FACTORY_MODELS.large);
     expect(eventsNamed("ci")).toHaveLength(3);
     expect(eventsNamed("pushed")).toHaveLength(3);
