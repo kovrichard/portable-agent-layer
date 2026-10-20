@@ -1,4 +1,5 @@
 import { waitForCi } from "./ci-wait.mjs";
+import { startCoach } from "./coach.mjs";
 import { runCheck, runGate } from "./gate.mjs";
 import {
   appendEvent,
@@ -498,6 +499,7 @@ function finishRun(run, outcome) {
     },
     run.env
   );
+  startCoach(run.id, outcome.status, run.env);
   return { task: run.id, status: outcome.status, message, pr: run.pr ?? null };
 }
 
