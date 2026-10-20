@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { prMergedAt, recordCorrectionsGiven, userCorrections } from "./corrections.mjs";
 import {

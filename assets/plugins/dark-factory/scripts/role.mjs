@@ -148,9 +148,9 @@ export function transcriptPathFor(worktree, sessionId, env = process.env) {
 }
 
 const ADD_DIRS = {
-  factoryHome: (task, env) => factoryHome(env),
+  factoryHome: (_task, env) => factoryHome(env),
   transcripts: (task, env) => claudeProjectsDir(task.worktree, env),
-  plugin: (task, env, pluginDir) => pluginDir,
+  plugin: (_task, _env, pluginDir) => pluginDir,
 };
 
 function policyAddDirArgs(policy, task, env, pluginDir) {
