@@ -185,6 +185,20 @@ export function appendEvent<T extends WorkEvent["type"]>(
   return event;
 }
 
+export function attachOnce(
+  scope: string,
+  node: WorkNode,
+  artifact: { kind: ArtifactKind; ref: string; label?: string },
+  file: string = progressTreeFile(),
+  now: Date = new Date(),
+  session: string | undefined = progressSession()
+): boolean {
+  if (node.artifacts.some((a) => a.kind === artifact.kind && a.ref === artifact.ref))
+    return false;
+  appendEvent(scope, node.id, "attach", artifact, file, now, session);
+  return true;
+}
+
 function emptyNode(
   id: string,
   title: string,

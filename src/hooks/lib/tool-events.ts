@@ -13,9 +13,9 @@ import { permissionWaitSec } from "./waiting-on-user";
 
 const RESULT_KEYS = ["tool_response", "toolResult", "tool_output", "result"];
 const DURATION_KEYS = ["duration_ms", "durationMs"];
-const COMMAND_KEYS = ["command", "commandLine", "CommandLine", "script"];
+export const COMMAND_KEYS = ["command", "commandLine", "CommandLine", "script"];
 
-function stringIn(input: Record<string, unknown>, keys: string[]): string | null {
+export function stringIn(input: Record<string, unknown>, keys: string[]): string | null {
   const found = keys.map((k) => input[k]).find((v) => typeof v === "string" && v);
   return (found as string | undefined) ?? null;
 }
@@ -27,7 +27,7 @@ function numberIn(source: unknown, keys: string[]): number | null {
   return (found as number | undefined) ?? null;
 }
 
-function resultOf(payload: Record<string, unknown>): unknown {
+export function resultOf(payload: Record<string, unknown>): unknown {
   return RESULT_KEYS.map((k) => payload[k]).find((v) => v !== undefined);
 }
 

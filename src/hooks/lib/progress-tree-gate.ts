@@ -11,6 +11,7 @@ import { hookFinalReply, hookSessionId } from "./hook-turn";
 import { inference } from "./inference";
 import { progressSession } from "./progress-session";
 import { readTree, scopeOf } from "./progress-tree";
+import { attachFactoryPrs } from "./progress-tree-factory";
 import { attachGitProgress } from "./progress-tree-git";
 import { renderPromptLine } from "./progress-tree-render";
 import { sessionDir } from "./session-dir";
@@ -107,6 +108,7 @@ export async function stopProgressTree(
 ): Promise<string | null> {
   if (!payload || !isOptedIn("progressTree")) return null;
   const cwd = sessionDir();
+  attachFactoryPrs(scopeOf(cwd));
   const lines = transcriptLines(payload);
   const sendBack =
     progressTreeSendBack(payload, lines, cwd) ??
