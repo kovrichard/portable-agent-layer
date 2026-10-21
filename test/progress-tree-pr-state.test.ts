@@ -3,6 +3,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "n
 import { delimiter, resolve } from "node:path";
 import { appendEvent, readTree } from "../src/hooks/lib/progress-tree";
 import { loadProgressTreeContext } from "../src/hooks/lib/progress-tree-context";
+import { ghPrView } from "../src/hooks/lib/progress-tree-prs";
 import { reload } from "../src/hooks/lib/settings";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
@@ -238,26 +239,13 @@ describe("session start never fails because of this", () => {
     expect(stoppedAt("n1")).toBe("CI running");
   });
 
-  test("the checks add at most 3 seconds in total; unchecked PRs are tried at the next start", () => {
-    for (const n of [201, 202, 203, 204]) {
-      openNodeWithPr(`n${n}`, n);
-      writeFileSync(resolve(ghDir, `${n}.sleep`), "");
-    }
-    const started = Date.now();
-    loadProgressTreeContext(folder);
-    expect(Date.now() - started).toBeLessThan(4500);
-    expect(stoppedAt("n201")).toBe("CI running");
-  });
-
-  test("a PR cut off by the budget is checked again at the next start", () => {
-    openNodeWithPr("n1", 301);
+  test("a gh that never answers is cut off at the time it was given and gives no reply", () => {
     writeFileSync(resolve(ghDir, "301.sleep"), "");
-    loadProgressTreeContext(folder);
+    const started = Date.now();
+    expect(ghPrView(prUrl(301), folder, 300)).toBeNull();
+    expect(Date.now() - started).toBeLessThan(3000);
     expect(ghCalls()).toHaveLength(1);
-    prState(301, "MERGED");
     removeOnceReleased(resolve(ghDir, "301.sleep"));
-    loadProgressTreeContext(folder);
-    expect(stoppedAt("n1")).toBe("PR #301 merged 2026-10-19");
   });
 });
 

@@ -214,6 +214,8 @@ function runBuild(taskId = TASK) {
   return { exitCode: run.status, stdout: run.stdout, stderr: run.stderr, lines };
 }
 
+const COACH_POLL_MS = 5;
+
 function waitForCoach() {
   const count = (name: string) => eventsNamed(name).length;
   const deadline = Date.now() + 60_000;
@@ -221,7 +223,7 @@ function waitForCoach() {
     count("coach_started") > count("coach_finished") + count("coach_failed") &&
     Date.now() < deadline
   ) {
-    Bun.sleepSync(100);
+    Bun.sleepSync(COACH_POLL_MS);
   }
 }
 
