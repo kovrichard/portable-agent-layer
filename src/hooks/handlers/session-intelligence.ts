@@ -102,7 +102,7 @@ export function openingAndClosing(text: string, each: number): string {
 
 // ── Main handler ──
 
-/** @lintignore exercised directly by test/session-intelligence.test.ts */
+/** @lintignore exercised directly by test/session-intelligence.spawn.test.ts */
 export async function captureSessionIntelligence(
   transcript: string,
   sessionId?: string

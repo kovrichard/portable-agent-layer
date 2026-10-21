@@ -1,44 +1,14 @@
-import {
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  setDefaultTimeout,
-  test,
-} from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { removeOnceReleased } from "./lib/remove-once-released";
-import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
-import { testHome } from "./lib/test-home";
+import {
+  captureStdout,
+  injectRetrievalHome,
+  loadHandlers,
+  setSettings,
+} from "./lib/inject-retrieval-fixture";
 
-setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
-
-const TEST_HOME = testHome(import.meta.file);
-
-beforeAll(() => {
-  process.env.PAL_HOME = TEST_HOME;
-  removeOnceReleased(TEST_HOME);
-  mkdirSync(TEST_HOME, { recursive: true });
-  mkdirSync(resolve(TEST_HOME, "memory"), { recursive: true });
-});
-
-beforeEach(async () => {
-  for (const dir of [
-    resolve(TEST_HOME, "memory", "learning"),
-    resolve(TEST_HOME, "memory", "wisdom"),
-    resolve(TEST_HOME, "memory", "state"),
-    resolve(TEST_HOME, "memory", "adaptation"),
-  ]) {
-    removeOnceReleased(dir);
-  }
-  const settingsPath = resolve(TEST_HOME, "memory", "pal-settings.json");
-  removeOnceReleased(settingsPath);
-  // Bust the in-memory settings cache so a test that disabled the flag
-  // doesn't poison the next test that wants the default-true behavior.
-  const settings = await import("../src/hooks/lib/settings");
-  settings.reload();
-});
+const TEST_HOME = injectRetrievalHome(import.meta.file);
 
 function seedCapture(slug: string, ctx: string, principle: string) {
   const dir = resolve(TEST_HOME, "memory", "learning", "failures", "2026", "04", slug);
@@ -54,24 +24,6 @@ function seedCapture(slug: string, ctx: string, principle: string) {
     "",
   ].join("\n");
   writeFileSync(resolve(dir, "capture.md"), fm);
-}
-
-async function setSettings(data: Record<string, unknown>) {
-  writeFileSync(resolve(TEST_HOME, "memory", "pal-settings.json"), JSON.stringify(data));
-  const settings = await import("../src/hooks/lib/settings");
-  settings.reload();
-}
-
-async function loadHandlers() {
-  const t = Date.now();
-  const mod = await import(`../src/hooks/handlers/inject-retrieval.ts?t=${t}`);
-  return {
-    injectPromptContext: mod.injectPromptContext as (prompt: string) => Promise<void>,
-    getRetrievalReminder: mod.getRetrievalReminder as (
-      prompt: string
-    ) => Promise<string | null>,
-    withinBudget: mod.withinBudget as <T>(work: () => T, ms: number) => T | null,
-  };
 }
 
 function seedSkillIndex() {
@@ -108,22 +60,6 @@ function blockFor(ms: number): string {
   return "completed";
 }
 
-async function captureStdout(work: () => Promise<void>): Promise<string> {
-  const original = process.stdout.write.bind(process.stdout);
-  let captured = "";
-  // biome-ignore lint/suspicious/noExplicitAny: test stub
-  (process.stdout as any).write = (chunk: string | Uint8Array) => {
-    captured += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString();
-    return true;
-  };
-  try {
-    await work();
-  } finally {
-    process.stdout.write = original;
-  }
-  return captured;
-}
-
 describe("injectPromptContext handler", () => {
   // The wall clock and the repo state ride on every prompt by design, so these cases
   // silence them to keep asserting what they are about: whether retrieval and skills emit.
@@ -146,24 +82,6 @@ describe("injectPromptContext handler", () => {
     const out = await captureStdout(() => injectPromptContext("anything goes here"));
     expect(out).toContain("Now: ");
     expect(out.trim().split("\n")).toHaveLength(1);
-  });
-
-  test("the repo state of the working directory rides along", async () => {
-    await setSettings({ dynamicContext: { wallClock: false } });
-    const { injectPromptContext } = await loadHandlers();
-    const out = await captureStdout(() => injectPromptContext("anything goes here"));
-    expect(out).toContain("Repo: ");
-  });
-
-  test("the active progress-tree node rides along once the scope has work", async () => {
-    await setSettings({ dynamicContext: { progressTree: true } });
-    const { appendEvent, scopeOf } = await import("../src/hooks/lib/progress-tree");
-    const { sessionDir } = await import("../src/hooks/lib/session-dir");
-    appendEvent(scopeOf(sessionDir()), "n1", "open", { title: "Gate", parent: null });
-    const { injectPromptContext } = await loadHandlers();
-    const out = await captureStdout(() => injectPromptContext("anything goes here"));
-    expect(out).toContain("Progress: Gate [n1]");
-    removeOnceReleased(resolve(TEST_HOME, "memory", "progress-tree"));
   });
 
   test("emits empty when prompt is empty", async () => {

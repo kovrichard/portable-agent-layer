@@ -18,7 +18,7 @@ jobs:
   test:
     name: test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 8
+    timeout-minutes: 10
 
     strategy:
       fail-fast: false
@@ -41,9 +41,19 @@ jobs:
         with:
           bun-version: "1.4.3"
 
+      - name: Cache Bun packages
+        # Windows only: installing takes 60-120 s there and under 20 s elsewhere.
+        if: runner.os == 'Windows'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/bun-cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+
       - name: Install dependencies
         # No lifecycle scripts, so no dependency can run arbitrary code on install.
         run: bun install --frozen-lockfile --ignore-scripts
+        env:
+          BUN_INSTALL_CACHE_DIR: ${{ runner.temp }}/bun-cache
 
       - name: Audit dependencies
         # Informational only — bun audit lacks a --production flag, and all
@@ -77,8 +87,11 @@ jobs:
       - name: Secretlint
         run: bun run secretlint
 
-      - name: Test
-        run: bun run test
+      - name: Fast tests
+        run: bun run test --fast --only-failures
+
+      - name: Spawn tests
+        run: bun run test --spawn --only-failures
 
   browser-smoke:
     # Windows only, deliberately: chromium.launch hung under Bun on Windows and
@@ -88,7 +101,7 @@ jobs:
     # parallel, so it costs no wall-clock time there.
     name: browser-smoke (windows-latest)
     runs-on: windows-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
 
     env:
       PAL_SKIP_DOCTOR: "1"
@@ -103,9 +116,17 @@ jobs:
         with:
           bun-version: "1.4.3"
 
+      - name: Cache Bun packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/bun-cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+
       - name: Install dependencies
         # No lifecycle scripts, so no dependency can run arbitrary code on install.
         run: bun install --frozen-lockfile --ignore-scripts
+        env:
+          BUN_INSTALL_CACHE_DIR: ${{ runner.temp }}/bun-cache
 
       - name: Cache Chromium
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -119,7 +140,7 @@ jobs:
           PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/ms-playwright
 
       - name: Launch a browser and capture a screenshot
-        run: bun test test/browser-smoke.test.ts
+        run: bun test test/browser-smoke.spawn.test.ts
         env:
           PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/ms-playwright
 
@@ -129,7 +150,7 @@ jobs:
     # packs, installs and reinstalls PAL about forty times.
     name: doctor-fixes (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 8
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
@@ -152,12 +173,12 @@ jobs:
         run: bun install --frozen-lockfile --ignore-scripts
 
       - name: Run every fix the doctor prints
-        run: bun test test/doctor-fixes.test.ts
+        run: bun test test/doctor-fixes.spawn.test.ts
 
   pkg-e2e:
     name: pkg-e2e (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 8
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
@@ -176,9 +197,18 @@ jobs:
         with:
           bun-version: "1.4.3"
 
+      - name: Cache Bun packages
+        if: runner.os == 'Windows'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/bun-cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+
       - name: Install dependencies
         # No lifecycle scripts, so no dependency can run arbitrary code on install.
         run: bun install --frozen-lockfile --ignore-scripts
+        env:
+          BUN_INSTALL_CACHE_DIR: ${{ runner.temp }}/bun-cache
 
       - name: Pack tarball
         shell: bash
@@ -231,7 +261,7 @@ jobs:
     needs: [test, pkg-e2e, browser-smoke, doctor-fixes]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/canary')
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     permissions:
       id-token: write
       contents: write

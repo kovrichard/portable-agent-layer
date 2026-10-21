@@ -8,6 +8,7 @@
  */
 import { beforeEach } from "bun:test";
 import { guardFile, sharedRepoConfig } from "./lib/repo-config-tripwire";
+import { refuseSubprocessesOutsideSpawnFiles } from "./lib/subprocess-guard";
 import { TEST_ROOT } from "./lib/test-home";
 
 process.env.PAL_INFERENCE_DISABLED = "1";
@@ -78,3 +79,5 @@ function failTheTestAfterOneThatRewritesTheRealRepoConfig() {
 }
 
 failTheTestAfterOneThatRewritesTheRealRepoConfig();
+
+refuseSubprocessesOutsideSpawnFiles();

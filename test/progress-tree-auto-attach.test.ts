@@ -1,92 +1,27 @@
-import { beforeEach, describe, expect, test } from "bun:test";
-import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { describe, expect, test } from "bun:test";
+import { appendFileSync, mkdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runPostToolHandlers } from "../src/hooks/lib/post-tool";
-import {
-  appendEvent,
-  readEvents,
-  readTree,
-  scopeOf,
-} from "../src/hooks/lib/progress-tree";
-import { loadProgressTreeContext } from "../src/hooks/lib/progress-tree-context";
+import { appendEvent, readEvents, readTree } from "../src/hooks/lib/progress-tree";
 import { stopProgressTree } from "../src/hooks/lib/progress-tree-gate";
-import { reload } from "../src/hooks/lib/settings";
-import { freshTestDir } from "./lib/test-home";
+import {
+  attach,
+  attachments,
+  factoryEvent,
+  nodeHoldingTask,
+  OTHER_TASK,
+  openNode,
+  PR,
+  paths,
+  SESSION,
+  sessionStart,
+  setting,
+  startEachTestInAFreshHome,
+  TASK,
+  tree,
+} from "./lib/progress-tree-auto-attach-fixture";
 
-const PR = "https://github.com/acme/widgets/pull/42";
-const TASK = "2026-10-20-some-task";
-const OTHER_TASK = "2026-10-20-other-task";
-const SESSION = "sess-1";
-const SAVED_ENV = ["PAL_HOME", "PAL_AGENT", "CLAUDE_PROJECT_DIR", "DARK_FACTORY_HOME"];
-
-let home: string;
-let folder: string;
-let factoryLog: string;
-let saved: Record<string, string | undefined> | undefined;
-
-function setting(value: boolean) {
-  mkdirSync(resolve(home, "memory"), { recursive: true });
-  writeFileSync(
-    resolve(home, "memory", "pal-settings.json"),
-    JSON.stringify({ dynamicContext: { progressTree: value } })
-  );
-  reload();
-}
-
-function restoreEnv(): void {
-  if (saved) {
-    for (const k of SAVED_ENV) {
-      if (saved[k] === undefined) delete process.env[k];
-      else process.env[k] = saved[k];
-    }
-  }
-  reload();
-}
-
-beforeEach(() => {
-  restoreEnv();
-  saved = Object.fromEntries(SAVED_ENV.map((k) => [k, process.env[k]]));
-  home = freshTestDir(import.meta.file);
-  folder = resolve(home, "repo");
-  mkdirSync(folder, { recursive: true });
-  factoryLog = resolve(home, "factory", "events.jsonl");
-  mkdirSync(resolve(home, "factory"), { recursive: true });
-  process.env.PAL_HOME = home;
-  process.env.PAL_AGENT = "claude";
-  process.env.CLAUDE_PROJECT_DIR = folder;
-  process.env.DARK_FACTORY_HOME = resolve(home, "factory");
-  setting(true);
-});
-
-const scope = () => scopeOf(folder);
-const tree = () => readTree(scope(), undefined, SESSION);
-const attachments = () =>
-  [...tree().nodes.values()].flatMap((n) =>
-    n.artifacts.map((a) => [n.id, a.kind, a.ref])
-  );
-
-function openNode(id = "n1") {
-  appendEvent(
-    scope(),
-    id,
-    "open",
-    { title: "Work", parent: null },
-    undefined,
-    undefined,
-    SESSION
-  );
-}
-
-function attach(node: string, kind: "pr" | "run", ref: string) {
-  appendEvent(scope(), node, "attach", { kind, ref }, undefined, undefined, SESSION);
-}
-
-function factoryEvent(event: string, task: string, pr = PR) {
-  appendFileSync(
-    factoryLog,
-    `${JSON.stringify({ ts: new Date().toISOString(), event, task, pr })}\n`
-  );
-}
+startEachTestInAFreshHome(import.meta.file);
 
 const runClaude = (command: string, stdout = "", extra: Record<string, unknown> = {}) =>
   runPostToolHandlers(
@@ -157,7 +92,7 @@ describe("gh pr create attaches the PR", () => {
   });
 
   test("a broken progress-tree log never throws out of the hook", () => {
-    mkdirSync(resolve(home, "memory", "progress-tree", "events.jsonl"), {
+    mkdirSync(resolve(paths.home, "memory", "progress-tree", "events.jsonl"), {
       recursive: true,
     });
     expect(() => runClaude("gh pr create --fill", `${PR}\n`)).not.toThrow();
@@ -287,28 +222,12 @@ describe("a started factory build attaches its task", () => {
 });
 
 describe("the factory's PR reaches the node holding the task", () => {
-  const sessionStart = () => loadProgressTreeContext(folder, SESSION, () => null);
   const endOfTurn = () => stopProgressTree({ session_id: SESSION });
-
-  function nodeHoldingTask(id = "n1", task = TASK) {
-    openNode(id);
-    attach(id, "run", `dark-factory:${task}`);
-  }
 
   test.each(["pr_opened", "pr_adopted"])("%s attaches at session start", (event) => {
     nodeHoldingTask();
     factoryEvent(event, TASK);
     sessionStart();
-    expect(attachments()).toContainEqual(["n1", "pr", PR]);
-  });
-
-  test.each([
-    "pr_opened",
-    "pr_adopted",
-  ])("%s attaches at the end of a turn", async (event) => {
-    nodeHoldingTask();
-    factoryEvent(event, TASK);
-    await endOfTurn();
     expect(attachments()).toContainEqual(["n1", "pr", PR]);
   });
 
@@ -326,25 +245,6 @@ describe("the factory's PR reaches the node holding the task", () => {
     factoryEvent("pr_opened", OTHER_TASK, "https://github.com/acme/widgets/pull/7");
     sessionStart();
     expect(attachments().filter(([, kind]) => kind === "pr")).toEqual([]);
-  });
-
-  test("a PR attached by hand is not attached again, across checks", async () => {
-    nodeHoldingTask();
-    attach("n1", "pr", PR);
-    factoryEvent("pr_opened", TASK);
-    sessionStart();
-    await endOfTurn();
-    await endOfTurn();
-    expect(attachments().filter(([, kind]) => kind === "pr")).toEqual([["n1", "pr", PR]]);
-  });
-
-  test("repeated checks attach the PR once", async () => {
-    nodeHoldingTask();
-    factoryEvent("pr_opened", TASK);
-    sessionStart();
-    sessionStart();
-    await endOfTurn();
-    expect(attachments().filter(([, kind]) => kind === "pr")).toEqual([["n1", "pr", PR]]);
   });
 
   test("two tasks on one node reporting the same PR attach it once", () => {
@@ -365,7 +265,7 @@ describe("the factory's PR reaches the node holding the task", () => {
 
   test("a line that does not parse is skipped and the rest still count", () => {
     nodeHoldingTask();
-    appendFileSync(factoryLog, "{not json\n");
+    appendFileSync(paths.factoryLog, "{not json\n");
     factoryEvent("pr_opened", TASK);
     expect(() => sessionStart()).not.toThrow();
     expect(attachments()).toContainEqual(["n1", "pr", PR]);
@@ -373,7 +273,7 @@ describe("the factory's PR reaches the node holding the task", () => {
 
   test("only the session's own scope is checked", () => {
     nodeHoldingTask();
-    const elsewhere = resolve(home, "elsewhere");
+    const elsewhere = resolve(paths.home, "elsewhere");
     mkdirSync(elsewhere, { recursive: true });
     appendEvent(
       elsewhere,
@@ -402,9 +302,9 @@ describe("the factory's PR reaches the node holding the task", () => {
   test("the factory log is read without being changed", () => {
     nodeHoldingTask();
     factoryEvent("pr_opened", TASK);
-    const before = readFileSync(factoryLog, "utf-8");
+    const before = readFileSync(paths.factoryLog, "utf-8");
     sessionStart();
-    expect(readFileSync(factoryLog, "utf-8")).toEqual(before);
+    expect(readFileSync(paths.factoryLog, "utf-8")).toEqual(before);
   });
 
   test("the progress tree off reads and writes nothing", async () => {
