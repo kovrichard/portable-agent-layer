@@ -29,9 +29,16 @@
     "memory",
     "telos",
     "agent",
-    "portable"
+    "portable",
+    "claude-code",
+    "cursor",
+    "codex",
+    "copilot",
+    "antigravity",
+    "skills"
   ],
   "license": "MIT",
+  "homepage": "https://pal.konvert7.com",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/kovrichard/portable-agent-layer.git"
