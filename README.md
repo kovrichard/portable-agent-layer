@@ -1,10 +1,16 @@
 # Portable Agent Layer (PAL)
 
-A cross-platform, cross-agent layer for portable AI workflows, memory, and accumulated knowledge.
+[![PAL: stop re-explaining yourself to every AI tool](https://raw.githubusercontent.com/kovrichard/portable-agent-layer/main/docs/images/pal-banner.png)](https://pal.konvert7.com)
+
+[![npm version](https://img.shields.io/npm/v/portable-agent-layer)](https://www.npmjs.com/package/portable-agent-layer) [![npm downloads](https://img.shields.io/npm/dm/portable-agent-layer)](https://www.npmjs.com/package/portable-agent-layer) [![License: MIT](https://img.shields.io/npm/l/portable-agent-layer)](LICENSE)
+
+**Your AI forgets you. PAL doesn't.** Free, open-source memory, skills and rules shared by Claude Code, opencode, Cursor, GitHub Copilot, Codex and Antigravity CLI. Install it once, and every agent starts the next session knowing who you are, what you're working on and where you left off.
+
+**Website:** [pal.konvert7.com](https://pal.konvert7.com)
 
 PAL lets you carry your agent context across **Windows**, **macOS**, and **Linux**, and work across different agent runtimes and interfaces such as **Claude Code**, **opencode**, **Cursor**, **GitHub Copilot**, **Codex**, and **Antigravity CLI**. Its core idea is simple: your knowledge and workflows should belong to **you**, not to a single machine, tool, or vendor.
 
-> Inspired in part by [Daniel Miessler](https://danielmiessler.com)'s work on [Personal AI Infrastructure](https://github.com/danielmiessler/Personal_AI_Infrastructure). PAL is an independent open-source implementation focused on portability across platforms and agents. It is not affiliated with or endorsed by Daniel Miessler.
+> Inspired in part by [Daniel Miessler](https://danielmiessler.com)'s work on [LifeOS](https://github.com/danielmiessler/LifeOS). PAL is an independent open-source implementation focused on portability across platforms and agents. It is not affiliated with or endorsed by Daniel Miessler.
 
 ---
 
@@ -245,14 +251,17 @@ Your setup should be able to travel with you.
 
 ## Features
 
-- **Cross-platform**: works on Windows, macOS, and Linux
-- **Cross-agent**: full support for Claude Code, opencode, Cursor, GitHub Copilot, Codex, and Antigravity CLI
-- **Subscription-first inference**: background inference routes through whichever subscription CLI is active — no API key needed by default
-- **Portable knowledge**: export and import accumulated knowledge
-- **A morning screen, not a dashboard**: `pal cli server` ranks your projects *and* your written goals in one urgent/important grid. Urgency is read off the files — blockers, an unfinished handoff, a date in a next step, an important thing gone quiet. Importance comes from one fact per project: whether it serves a goal you wrote down, is a way the work could pay, or is kept for its own sake. PAL guesses that once at session stop; you correct it on the page or with `project.ts serves <name> goal|revenue|fun`, and the correction survives every later guess
-- **TypeScript-first**: built in TypeScript from day one
-- **Open source**: hackable, inspectable, extensible
-- **Composable**: intended to fit into real developer workflows
+- **Memory across sessions**: when a session starts, PAL loads who you are, your active projects and the handoff from your last session. When it ends, PAL saves a summary and any corrections for next time
+- **Learns from your corrections**: tell an agent it got something wrong and PAL labels the mistake, drafts a rule and asks you once. Approve it with `pal cli rule approve` and every agent follows it from the next session
+- **Done means checked**: real work runs through five phases (observe, plan, execute, verify, learn), and nothing is done until each criterion has evidence
+- **Built-in skills**: research, PDFs, slide decks, frontend design, humanizing text and more. See [Skills](#skills)
+- **Cross-agent**: one memory shared by Claude Code, opencode, Cursor, GitHub Copilot, Codex and Antigravity CLI
+- **Cross-platform**: works on Windows, macOS and Linux
+- **No API key needed**: background work like session summaries runs through the CLI of the agent you're using, on the subscription you already pay for
+- **Guardrails**: a hook checks every command before it runs and blocks the destructive ones, like a recursive delete of your home directory, a disk format or a download piped into a shell
+- **A morning screen**: `pal cli server start` runs a local page that shows three moves for today and ranks every project and goal by urgency and importance
+- **Portable plain files**: your memory lives in `~/.pal` as plain files. `pal cli export` packs it into one zip and `pal cli import` restores it on another machine
+- **Open source**: MIT licensed, so you can read and change every line
 
 ---
 
