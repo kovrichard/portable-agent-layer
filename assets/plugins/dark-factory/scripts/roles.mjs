@@ -251,7 +251,11 @@ export function rolesAfter(
   env = process.env,
   config = readRepoConfig(repo)
 ) {
-  const roles = rolesAfterDiff(category, changedFilesSince(repo, base, env), config);
+  return rolesAfterChanges(category, changedFilesSince(repo, base, env), config);
+}
+
+export function rolesAfterChanges(category, changedFiles, config) {
+  const roles = rolesAfterDiff(category, changedFiles, config);
   const added = roles.filter((role) => !rolesFor(category).after.includes(role));
   return { roles, added };
 }

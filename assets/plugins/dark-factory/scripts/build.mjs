@@ -11,9 +11,23 @@ import {
 } from "./lib.mjs";
 import { notify } from "./notify.mjs";
 import { runRoleHeadless } from "./role.mjs";
-import { changedFilesSince, rolesAfter } from "./roles.mjs";
+import { changedFilesSince, rolesAfterChanges } from "./roles.mjs";
 import { markReady, openPr, push, sync } from "./ship.mjs";
 import { appendDecision, prepare, recordQuestion, setStatus } from "./task.mjs";
+
+const REAL_EFFECTS = {
+  runRoleHeadless,
+  runCheck,
+  spawnTool,
+  changedFilesSince,
+  prepare,
+  sync,
+  push,
+  openPr,
+  markReady,
+  waitForCi,
+  startCoach,
+};
 
 export const TIER_MODELS = {
   small: "claude-haiku-5-5",
@@ -80,7 +94,7 @@ function poReply(outcome, question) {
 }
 
 function askPo(run, role, question) {
-  const outcome = runRoleHeadless(run.id, "po", {
+  const outcome = run.effects.runRoleHeadless(run.id, "po", {
     env: run.env,
     instructions: poInstructions(role, question),
   });
@@ -98,7 +112,7 @@ function askPo(run, role, question) {
 }
 
 function resumeWithAnswer(run, role, outcome, model, question, answer) {
-  const resumed = runRoleHeadless(run.id, role, {
+  const resumed = run.effects.runRoleHeadless(run.id, role, {
     env: run.env,
     model,
     resumeSessionId: outcome.sessionId,
@@ -131,7 +145,11 @@ function runRole(run, role, instructions, { tier } = {}) {
     { event: "role_run", task: run.id, role, model: model ?? "default" },
     run.env
   );
-  const outcome = runRoleHeadless(run.id, role, { env: run.env, model, instructions });
+  const outcome = run.effects.runRoleHeadless(run.id, role, {
+    env: run.env,
+    model,
+    instructions,
+  });
   return afterQuestion(run, role, outcome, model);
 }
 
@@ -179,7 +197,7 @@ function gateFor(run, step) {
       attempt: run.attempt,
       model: TIER_MODELS[step.tier],
     },
-    { env: run.env, config: run.config }
+    { env: run.env, config: run.config, run: run.effects.runCheck }
   );
 }
 
@@ -214,7 +232,7 @@ function proveTestsRed(run) {
     return stuck(
       `the gate has no check named "${RED_TEST_CHECK}" to prove the new tests fail`
     );
-  const { exitCode, output } = runCheck(check.run, run.worktree, run.env);
+  const { exitCode, output } = run.effects.runCheck(check.run, run.worktree, run.env);
   const failing = failingTestCount(output);
   appendEvent(
     { event: "tests_red", task: run.id, check: RED_TEST_CHECK, exitCode, failing },
@@ -233,7 +251,7 @@ function proveTestsRed(run) {
 
 function prepareStep(run) {
   try {
-    Object.assign(run, prepare(run.id, run.env));
+    Object.assign(run, run.effects.prepare(run.id, run.env));
     return null;
   } catch (error) {
     return stuck(`prepare failed: ${error.message}`);
@@ -241,10 +259,14 @@ function prepareStep(run) {
 }
 
 function hasCommitsAheadOfBase(run) {
-  const result = spawnTool("git", ["rev-list", "--count", `origin/${run.base}..HEAD`], {
-    cwd: run.worktree,
-    env: run.env,
-  });
+  const result = run.effects.spawnTool(
+    "git",
+    ["rev-list", "--count", `origin/${run.base}..HEAD`],
+    {
+      cwd: run.worktree,
+      env: run.env,
+    }
+  );
   return result.status === 0 && Number(result.stdout.trim()) > 0;
 }
 
@@ -288,11 +310,9 @@ function codeStep(run) {
 }
 
 function rolesAfterStep(run) {
-  const { roles, added } = rolesAfter(
+  const { roles, added } = rolesAfterChanges(
     run.category,
-    run.worktree,
-    `origin/${run.base}`,
-    run.env,
+    run.effects.changedFilesSince(run.worktree, `origin/${run.base}`, run.env),
     run.config
   );
   run.after = roles;
@@ -311,7 +331,11 @@ function reviewFindingsStep(run, findings) {
 }
 
 function reviewInstructions(run) {
-  const changed = changedFilesSince(run.worktree, `origin/${run.base}`, run.env);
+  const changed = run.effects.changedFilesSince(
+    run.worktree,
+    `origin/${run.base}`,
+    run.env
+  );
   return changed.includes(CONFIG_FILE)
     ? `${REVIEW_INSTRUCTIONS}\n\n${CONFIG_CHANGED_NOTE}`
     : REVIEW_INSTRUCTIONS;
@@ -357,7 +381,7 @@ function testerStep(run) {
 function syncStep(run) {
   let synced;
   try {
-    synced = sync(run.id, run.env);
+    synced = run.effects.sync(run.id, run.env);
   } catch (error) {
     return stuck(`sync failed: ${error.message}`);
   }
@@ -369,8 +393,8 @@ function syncStep(run) {
 }
 
 function shipStep(run) {
-  push(run.id, run.env);
-  run.pr = openPr(run.id, run.env).pr;
+  run.effects.push(run.id, run.env);
+  run.pr = run.effects.openPr(run.id, run.env).pr;
   return null;
 }
 
@@ -378,7 +402,7 @@ function readCi(run) {
   if (!readTask(run.id, run.env).pr)
     return { state: "unreadable", error: "the task has no pull request" };
   try {
-    return waitForCi(run.id, { env: run.env });
+    return run.effects.waitForCi(run.id, { env: run.env });
   } catch (error) {
     return { state: "unreadable", error: error.message };
   }
@@ -414,13 +438,13 @@ function ciStep(run) {
       return stuck(`CI still fails after ${CI_ROUNDS} rounds: ${ciSummary(ci)}`);
     const stop = ciFixStep(run, ci);
     if (stop) return stop;
-    push(run.id, run.env);
+    run.effects.push(run.id, run.env);
   }
   return null;
 }
 
 function readyStep(run) {
-  markReady(run.id, run.env);
+  run.effects.markReady(run.id, run.env);
   return { status: "ready", message: `Ready for your review: ${run.pr}` };
 }
 
@@ -499,12 +523,19 @@ function finishRun(run, outcome) {
     },
     run.env
   );
-  startCoach(run.id, outcome.status, run.env);
+  run.effects.startCoach(run.id, outcome.status, run.env);
   return { task: run.id, status: outcome.status, message, pr: run.pr ?? null };
 }
 
-export function runBuild(taskId, { env = process.env } = {}) {
-  const run = { id: taskId, env, startedAt: new Date(), attempt: 0, pr: null };
+export function runBuild(taskId, { env = process.env, effects = {} } = {}) {
+  const run = {
+    id: taskId,
+    env,
+    effects: { ...REAL_EFFECTS, ...effects },
+    startedAt: new Date(),
+    attempt: 0,
+    pr: null,
+  };
   let outcome;
   try {
     outcome = pipeline(run);
