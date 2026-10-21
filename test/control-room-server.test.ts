@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { AutoUpdateStatus } from "../src/hooks/lib/auto-update";
@@ -11,42 +11,24 @@ import type {
 import type { Matrix } from "../src/tools/control-room/matrix";
 import type { ServerStatus } from "../src/tools/control-room/server";
 import type { LedgerView } from "../src/tools/ledger/view";
-import { buildPageFirst } from "./lib/built-page";
-import { removeOnceReleased } from "./lib/remove-once-released";
-import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
-import { freshTestDir } from "./lib/test-home";
-
-setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
+import {
+  controlRoomHome,
+  controlRoomPerTest,
+  getJson,
+  listen,
+  post,
+  registerProject,
+  runningServer,
+} from "./lib/control-room-server-fixture";
 
 // The HTTP surface is small enough to pin completely: where it listens, what
 // each route answers, and that a bad window is refused rather than widened.
 
-let HOME: string;
-let server: ReturnType<typeof Bun.serve> | null = null;
-
-buildPageFirst();
-
-beforeEach(() => {
-  server?.stop(true);
-  server = null;
-  HOME = freshTestDir(import.meta.file);
-  process.env.PAL_HOME = HOME;
-  mkdirSync(resolve(HOME, "memory", "ledger"), { recursive: true });
-});
-
-async function listen(): Promise<string> {
-  const { startControlRoom } = await import("../src/tools/control-room/server");
-  server = startControlRoom(0);
-  return `http://127.0.0.1:${server.port}`;
-}
-
-async function getJson<T>(url: string): Promise<T> {
-  return (await (await fetch(url)).json()) as T;
-}
+controlRoomPerTest(import.meta.file);
 
 function writeLedger(rows: Record<string, unknown>[]): void {
   writeFileSync(
-    resolve(HOME, "memory", "ledger", "actions.jsonl"),
+    resolve(controlRoomHome(), "memory", "ledger", "actions.jsonl"),
     `${rows.map((r) => JSON.stringify(r)).join("\n")}\n`,
     "utf-8"
   );
@@ -70,24 +52,10 @@ function entry(overrides: Record<string, unknown> = {}): Record<string, unknown>
   };
 }
 
-function registerProject(
-  slug: string,
-  body = "## Goal\n\nnone\n",
-  updated = "2026-09-01T00:00:00.000Z"
-): void {
-  const dir = resolve(HOME, "memory", "projects", slug);
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(
-    resolve(dir, "ISA.md"),
-    `---\nname: ${slug}\nstatus: active\ncreated: 2026-09-01T00:00:00.000Z\nupdated: ${updated}\npath: ${HOME}\n---\n\n${body}`,
-    "utf-8"
-  );
-}
-
 describe("where it listens", () => {
   test("loopback only", async () => {
     await listen();
-    expect(server?.hostname).toBe("127.0.0.1");
+    expect(runningServer()?.hostname).toBe("127.0.0.1");
   });
 
   test("vite proxies /api to the port the server actually uses", async () => {
@@ -101,16 +69,6 @@ describe("where it listens", () => {
 });
 
 describe("what each route answers", () => {
-  test("/ is the bundled page, not a template", async () => {
-    const base = await listen();
-    const res = await fetch(`${base}/`);
-    expect(res.status).toBe(200);
-    expect(res.headers.get("content-type")).toContain("text/html");
-    const html = await res.text();
-    expect(html).toContain('id="root"');
-    expect(html).not.toContain("app.tsx");
-  });
-
   test("/api/ledger is the view", async () => {
     writeLedger([entry()]);
     const base = await listen();
@@ -161,7 +119,7 @@ describe("what each route answers", () => {
     const base = await listen();
     const cards = await getJson<ProjectCard[]>(`${base}/api/board`);
     expect(cards.map((c) => c.slug)).toEqual(["alpha"]);
-    expect(cards[0].path).toBe(HOME);
+    expect(cards[0].path).toBe(controlRoomHome());
   });
 
   test("/api/handoffs is empty when nothing is in progress", async () => {
@@ -193,7 +151,7 @@ describe("what each route answers", () => {
     const base = await listen();
     const body = await getJson<ServerStatus>(`${base}/api/status`);
     expect(body.pid).toBe(process.pid);
-    expect(body.port).toBe(server?.port ?? -1);
+    expect(body.port).toBe(runningServer()?.port ?? -1);
     expect(typeof body.startedAt).toBe("string");
     expect(body.ledgerFiles).toBe(0);
   });
@@ -209,7 +167,7 @@ describe("what each route answers", () => {
     });
 
     writeFileSync(
-      resolve(HOME, "memory", "state", "agenda.json"),
+      resolve(controlRoomHome(), "memory", "state", "agenda.json"),
       JSON.stringify({
         generatedAt: new Date().toISOString(),
         moves: [{ move: "Send the one-pager", because: "blocked on you" }],
@@ -343,55 +301,9 @@ describe("one project", () => {
   });
 });
 
-async function post(base: string, path: string, body: unknown): Promise<Response> {
-  return fetch(`${base}${path}`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
-}
-
-interface DetailBody {
-  iscs: { id: number; status: string }[];
-  placed: string | null;
-}
-
 describe("what the page may change", () => {
   const withCriteria =
     "## Criteria\n\n- [ ] ISC-1: the open one\n- [ ] ISC-2: the other\n";
-
-  test("closing an ISC archives it, and reopening walks it back", async () => {
-    registerProject("demo", withCriteria);
-    const base = await listen();
-    const statuses = async () =>
-      (await getJson<DetailBody>(`${base}/api/project?slug=demo`)).iscs.map(
-        (i) => `${i.id}:${i.status}`
-      );
-
-    expect(await statuses()).toEqual(["1:open", "2:open"]);
-
-    expect(
-      (await post(base, "/api/isc", { project: "demo", id: 1, status: "done" })).ok
-    ).toBe(true);
-    expect(await statuses()).toEqual(["2:open", "1:done"]);
-
-    expect(
-      (await post(base, "/api/isc", { project: "demo", id: 1, status: "open" })).ok
-    ).toBe(true);
-    expect(await statuses()).toEqual(["2:open", "1:open"]);
-  });
-
-  test("closing one that is already closed changes nothing and says so", async () => {
-    registerProject("demo", withCriteria);
-    const base = await listen();
-    await post(base, "/api/isc", { project: "demo", id: 1, status: "done" });
-    const again = await post(base, "/api/isc", {
-      project: "demo",
-      id: 1,
-      status: "done",
-    });
-    expect(await again.json()).toMatchObject({ changed: false });
-  });
 
   test("an ISC write refuses what it cannot act on", async () => {
     registerProject("demo", withCriteria);
@@ -409,30 +321,6 @@ describe("what the page may change", () => {
     expect(
       (await post(base, "/api/isc", { project: "demo", id: 99, status: "done" })).status
     ).toBe(404);
-  });
-
-  test("a placement overrules the grid's own guess and survives on the record", async () => {
-    registerProject("demo", withCriteria);
-    const base = await listen();
-    const quadrantOf = async () => {
-      const grid = await getJson<Matrix>(`${base}/api/matrix`);
-      for (const key of ["now", "plan", "noise", "later"] as const) {
-        if (grid[key].some((i) => i.id === "demo")) return key;
-      }
-      return null;
-    };
-
-    expect(await quadrantOf()).toBe("later");
-    expect(
-      (await post(base, "/api/placement", { project: "demo", quadrant: "now" })).ok
-    ).toBe(true);
-    expect(await quadrantOf()).toBe("now");
-
-    const detail = await getJson<DetailBody>(`${base}/api/project?slug=demo`);
-    expect(detail.placed).toBe("now");
-
-    await post(base, "/api/placement", { project: "demo", quadrant: null });
-    expect(await quadrantOf()).toBe("later");
   });
 
   test("a placement refuses a quadrant that is not one", async () => {
@@ -475,11 +363,11 @@ describe("what needs your attention", () => {
       entry({ id: "refused", ts: justNow, outcome: "denied", reason: "you said no" }),
     ]);
     registerProject("demo");
-    mkdirSync(resolve(HOME, "memory", "state"), { recursive: true });
+    mkdirSync(resolve(controlRoomHome(), "memory", "state"), { recursive: true });
     writeFileSync(
-      resolve(HOME, "memory", "state", "last-handoff.json"),
+      resolve(controlRoomHome(), "memory", "state", "last-handoff.json"),
       JSON.stringify({
-        [HOME]: {
+        [controlRoomHome()]: {
           timestamp: justNow,
           title: "t",
           status: "in-progress",
@@ -535,11 +423,11 @@ describe("the knobs behind the grid", () => {
   test("the quiet threshold is the user's, not a constant", async () => {
     // serves is written into the record rather than posted, because setServes
     // bumps `updated` — which is the very thing "gone quiet" measures.
-    const dir = resolve(HOME, "memory", "projects", "demo");
+    const dir = resolve(controlRoomHome(), "memory", "projects", "demo");
     mkdirSync(dir, { recursive: true });
     writeFileSync(
       resolve(dir, "ISA.md"),
-      `---\nname: demo\nstatus: active\ncreated: 2026-08-01T00:00:00.000Z\nupdated: 2026-08-25T00:00:00.000Z\nserves: goal\nserves_by: user\npath: ${HOME}\n---\n\n## Goal\n\nnone\n`,
+      `---\nname: demo\nstatus: active\ncreated: 2026-08-01T00:00:00.000Z\nupdated: 2026-08-25T00:00:00.000Z\nserves: goal\nserves_by: user\npath: ${controlRoomHome()}\n---\n\n## Goal\n\nnone\n`,
       "utf-8"
     );
     const base = await listen();
@@ -576,8 +464,6 @@ describe("the knobs behind the grid", () => {
   });
 });
 
-// The button's own route is pointed at a PAL_PKG that holds no PAL, so the child
-// it spawns finds nothing to run. What is under test is the route, not the update.
 describe("keeping PAL up to date", () => {
   test("the page reads the toggle and the installed version", async () => {
     const base = await listen();
@@ -606,19 +492,6 @@ describe("keeping PAL up to date", () => {
     const base = await listen();
     expect((await post(base, "/api/update", { enabled: "yes" })).status).toBe(400);
     expect((await post(base, "/api/update", {})).status).toBe(400);
-  });
-
-  test("the button answers at once rather than waiting for the update", async () => {
-    const prevPkg = process.env.PAL_PKG;
-    process.env.PAL_PKG = freshTestDir(import.meta.file);
-    const base = await listen();
-    try {
-      expect((await post(base, "/api/update/run", {})).status).toBe(202);
-    } finally {
-      removeOnceReleased(process.env.PAL_PKG);
-      if (prevPkg === undefined) delete process.env.PAL_PKG;
-      else process.env.PAL_PKG = prevPkg;
-    }
   });
 });
 
@@ -656,30 +529,6 @@ describe("snoozing a criterion", () => {
 });
 
 describe("how the page itself is served", () => {
-  test("a deep link into the page is served the page, not a 404", async () => {
-    const base = await listen();
-    for (const path of ["/", "/projects", "/projects/portable-agent-layer", "/log"]) {
-      const res = await fetch(`${base}${path}`);
-      expect(res.status).toBe(200);
-      expect(res.headers.get("content-type")).toContain("text/html");
-    }
-  });
-
-  test("the page's own assets are served, and only those", async () => {
-    const base = await listen();
-    const html = await (await fetch(`${base}/`)).text();
-    const asset = /src="(\/assets\/[^"]+)"/.exec(html)?.[1];
-    expect(asset).toBeTruthy();
-
-    const served = await fetch(`${base}${asset}`);
-    expect(served.status).toBe(200);
-    expect(Number(served.headers.get("content-length"))).toBeGreaterThan(0);
-
-    for (const climb of ["/../package.json", "/assets/../../../package.json"]) {
-      expect((await fetch(`${base}${climb}`)).status).toBe(404);
-    }
-  });
-
   test("the page routes never shadow the API", async () => {
     const base = await listen();
     const res = await fetch(`${base}/api/status`);
@@ -701,20 +550,6 @@ describe("the one thing the page may change", () => {
       body: typeof body === "string" ? body : JSON.stringify(body),
     });
   }
-
-  test("an override is written as the user's own answer", async () => {
-    registerProject("alpha");
-    const base = await listen();
-    const res = await post(base, { project: "alpha", serves: "revenue", note: "a bet" });
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ project: "alpha", serves: "revenue", by: "user" });
-
-    const grid = await getJson<Matrix>(`${base}/api/matrix`);
-    const item = grid.plan.find((i) => i.id === "alpha");
-    expect(item?.serves).toBe("revenue");
-    expect(item?.servesBy).toBe("user");
-    expect(grid.unranked).toBe(0);
-  });
 
   test("it refuses a kind that is not one of the three", async () => {
     registerProject("alpha");
@@ -747,13 +582,6 @@ describe("the relationship tab", () => {
       evidence: [],
     });
   };
-
-  test("/relationship is the page", async () => {
-    const base = await listen();
-    const res = await fetch(`${base}/relationship`);
-    expect(res.status).toBe(200);
-    expect(await res.text()).toContain('id="root"');
-  });
 
   test("/api/relationship lists the drafts waiting", async () => {
     const draft = await draftRule();
