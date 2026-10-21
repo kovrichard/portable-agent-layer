@@ -119,7 +119,7 @@ jobs:
           PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/ms-playwright
 
       - name: Launch a browser and capture a screenshot
-        run: bun test test/browser-smoke.test.ts
+        run: bun test test/browser-smoke.spawn.test.ts
         env:
           PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/ms-playwright
 
@@ -152,7 +152,7 @@ jobs:
         run: bun install --frozen-lockfile --ignore-scripts
 
       - name: Run every fix the doctor prints
-        run: bun test test/doctor-fixes.test.ts
+        run: bun test test/doctor-fixes.spawn.test.ts
 
   pkg-e2e:
     name: pkg-e2e (${{ matrix.os }})
