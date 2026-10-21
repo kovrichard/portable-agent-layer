@@ -11,30 +11,32 @@ function isSpawnFile(file: string): boolean {
   return file.endsWith(".spawn.test.ts");
 }
 
-function testFilesOf(spawn: boolean): string[] {
-  return Array.from(new Glob("test/**/*.test.ts").scanSync())
+export function testFilesOf(spawn: boolean, root = "."): string[] {
+  return Array.from(new Glob("test/**/*.test.ts").scanSync(root))
+    .map((file) => file.replaceAll("\\", "/"))
     .filter((file) => isSpawnFile(file) === spawn)
-    .map((file) => `./${file.replaceAll("\\", "/")}`)
     .sort();
 }
 
 function tierFiles(args: string[]): string[] {
   const tier = args.find((arg): arg is keyof typeof TIERS => arg in TIERS);
-  return tier ? testFilesOf(TIERS[tier]) : [];
+  return tier ? testFilesOf(TIERS[tier]).map((file) => `./${file}`) : [];
 }
 
-const args = process.argv.slice(2);
+function runTests(args: string[]): number {
+  const result = Bun.spawnSync(
+    [
+      "bun",
+      "test",
+      "--randomize",
+      "--isolate",
+      `--parallel=${workersForThisPlatform()}`,
+      ...args.filter((arg) => !(arg in TIERS)),
+      ...tierFiles(args),
+    ],
+    { stdio: ["inherit", "inherit", "inherit"] }
+  );
+  return result.exitCode ?? 1;
+}
 
-const result = Bun.spawnSync(
-  [
-    "bun",
-    "test",
-    "--randomize",
-    "--isolate",
-    `--parallel=${workersForThisPlatform()}`,
-    ...args.filter((arg) => !(arg in TIERS)),
-    ...tierFiles(args),
-  ],
-  { stdio: ["inherit", "inherit", "inherit"] }
-);
-process.exit(result.exitCode ?? 1);
+if (import.meta.main) process.exit(runTests(process.argv.slice(2)));
