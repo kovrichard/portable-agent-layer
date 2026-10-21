@@ -18,7 +18,7 @@ jobs:
   test:
     name: test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 8
+    timeout-minutes: 10
 
     strategy:
       fail-fast: false
@@ -91,7 +91,7 @@ jobs:
     # parallel, so it costs no wall-clock time there.
     name: browser-smoke (windows-latest)
     runs-on: windows-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
 
     env:
       PAL_SKIP_DOCTOR: "1"
@@ -132,7 +132,7 @@ jobs:
     # packs, installs and reinstalls PAL about forty times.
     name: doctor-fixes (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 8
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
@@ -160,7 +160,7 @@ jobs:
   pkg-e2e:
     name: pkg-e2e (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 8
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
@@ -234,7 +234,7 @@ jobs:
     needs: [test, pkg-e2e, browser-smoke, doctor-fixes]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/canary')
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     permissions:
       id-token: write
       contents: write
