@@ -6,14 +6,17 @@
 import {
   activeElsewhere,
   activePath,
+  idleElsewhere,
   nodesWithStatus,
   type ScopeTree,
   type WorkNode,
 } from "./progress-tree";
+import { mergedButOpen, recentlyFinished } from "./progress-tree-tidy";
 
 const SESSION_BUDGET = 2_000;
 const RECENT_DECISIONS = 3;
 const LISTED_PARKED = 5;
+const LISTED_FINISHED = 3;
 const PROMPT_LINE_MAX = 300;
 
 const RECORD_HINT =
@@ -96,12 +99,35 @@ const MARK: Record<WorkNode["status"], string> = {
   done: "✓",
 };
 
-export function renderTreeList(tree: ScopeTree, includeDone: boolean): string {
+const MERGED_MARK = "✓?";
+
+function idleClause(since: string): string {
+  return ` (idle since ${since.slice(0, 10)})`;
+}
+
+function idleSinceById(tree: ScopeTree, now: Date): Map<string, string> {
+  return new Map(idleElsewhere(tree, now).map(({ node, since }) => [node.id, since]));
+}
+
+export function renderTreeList(
+  tree: ScopeTree,
+  includeDone: boolean,
+  now: Date = new Date()
+): string {
+  const idle = idleSinceById(tree, now);
+  const merged = new Set(mergedButOpen(tree).map(({ node }) => node.id));
+  const markOf = (node: WorkNode) => {
+    if (merged.has(node.id)) return MERGED_MARK;
+    return idle.has(node.id) ? MARK.parked : MARK[node.status];
+  };
   const lines: string[] = [];
   const walk = (node: WorkNode, depth: number) => {
     if (node.status === "done" && !includeDone) return;
+    const since = idle.get(node.id);
     const stop = node.status === "done" ? "" : stoppedClause(node);
-    lines.push(`${"  ".repeat(depth)}${MARK[node.status]} ${label(node)}${stop}`);
+    lines.push(
+      `${"  ".repeat(depth)}${markOf(node)} ${label(node)}${since ? idleClause(since) : ""}${stop}`
+    );
     for (const child of childrenOf(tree, node.id)) walk(child, depth + 1);
   };
   for (const top of childrenOf(tree, tree.root.id)) walk(top, 1);
@@ -128,8 +154,38 @@ function listSection(title: string, rows: string[]): string[] {
   return rows.length ? [title, ...rows.map((r) => `- ${r}`)] : [];
 }
 
+function prNumber(ref: string): string {
+  const digits = /(\d+)$/.exec(ref)?.[1];
+  return digits ? `#${digits}` : ref;
+}
+
+function mergedRows(tree: ScopeTree): string[] {
+  return mergedButOpen(tree).map(
+    ({ node, lastMerge }) =>
+      `${label(node)} — ${prNumber(lastMerge.ref)} merged ${lastMerge.at.slice(0, 10)}; close with pal cli progress done --node ${node.id}`
+  );
+}
+
+function parkedRows(tree: ScopeTree, now: Date): string[] {
+  const idle = idleSinceById(tree, now);
+  const held = [...idle.keys()].flatMap((id) => tree.nodes.get(id) ?? []);
+  return [...nodesWithStatus(tree, "parked"), ...held]
+    .sort((a, b) => b.updated.localeCompare(a.updated))
+    .slice(0, LISTED_PARKED)
+    .map((n) => {
+      const since = idle.get(n.id);
+      return `${label(n)}${since ? idleClause(since) : ""}${stoppedClause(n)}`;
+    });
+}
+
+function finishedRows(tree: ScopeTree, now: Date): string[] {
+  return recentlyFinished(tree, now)
+    .slice(0, LISTED_FINISHED)
+    .map((n) => `${label(n)}${suffix(" — ", n.summary)}`);
+}
+
 /** What a new or compacted session needs to pick the work back up without digging. */
-export function renderSessionContext(tree: ScopeTree): string {
+export function renderSessionContext(tree: ScopeTree, now: Date = new Date()): string {
   if (tree.nodes.size === 0) return "";
   const nodes = [...tree.nodes.values()];
   const open = nodes.filter((n) => n.status !== "done");
@@ -138,18 +194,15 @@ export function renderSessionContext(tree: ScopeTree): string {
     ...activeSection(tree),
     ...listSection(
       "Active in other sessions:",
-      activeElsewhere(tree).map((n) => `${label(n)}${stoppedClause(n)}`)
+      activeElsewhere(tree, now).map((n) => `${label(n)}${stoppedClause(n)}`)
     ),
+    ...listSection("Done? (every PR merged, nothing recorded since):", mergedRows(tree)),
     ...listSection(
       "Waiting on the user:",
       nodesWithStatus(tree, "waiting").map((n) => `${label(n)}: ${n.waitingOn}`)
     ),
-    ...listSection(
-      "Parked:",
-      nodesWithStatus(tree, "parked")
-        .slice(0, LISTED_PARKED)
-        .map((n) => `${label(n)}${stoppedClause(n)}`)
-    ),
+    ...listSection("Parked:", parkedRows(tree, now)),
+    ...listSection("Finished lately (enter one to reopen it):", finishedRows(tree, now)),
     ...listSection(
       "Follow-ups:",
       open.flatMap((n) => n.followUps.map((f) => `${f.text}${due(f)} — on ${n.title}`))
@@ -163,11 +216,15 @@ const NEW_TOPIC_HINT =
   'New topic: if this is separate work, park the active node with its stopped-at (pal cli progress park --stopped "…") and open one for this (pal cli progress open "…").';
 
 /** The line every prompt carries, so the active node survives anything that drops context. */
-export function renderPromptLine(tree: ScopeTree, newTopic: boolean): string | null {
+export function renderPromptLine(
+  tree: ScopeTree,
+  newTopic: boolean,
+  now: Date = new Date()
+): string | null {
   if (tree.nodes.size === 0) return null;
   const active = tree.active ? tree.nodes.get(tree.active) : undefined;
-  const parked = nodesWithStatus(tree, "parked").length;
-  const elsewhere = activeElsewhere(tree).length;
+  const parked = nodesWithStatus(tree, "parked").length + idleElsewhere(tree, now).length;
+  const elsewhere = activeElsewhere(tree, now).length;
   const head = active
     ? `Progress: ${label(active)}${stoppedClause(active)}`
     : `Progress: ${tree.scope} root — this session has no node yet`;

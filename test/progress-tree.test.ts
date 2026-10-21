@@ -283,7 +283,9 @@ describe("progress tree", () => {
       settle("PR #126 merged 2026-10-19");
       const tree = readTree("pal", file);
       expect(tree.nodes.get("a")?.stoppedAt).toBe("PR #126 merged 2026-10-19");
-      expect(tree.settledPrs.has(ref)).toBe(true);
+      expect(tree.nodes.get("a")?.settledPrs).toEqual([
+        { ref, state: "merged", at: "2026-10-19T14:00:00Z" },
+      ]);
     });
 
     test("a settled PR without a line remembers the ref and leaves stopped-at as it was", () => {
@@ -292,7 +294,7 @@ describe("progress tree", () => {
       settle();
       const tree = readTree("pal", file);
       expect(tree.nodes.get("a")?.stoppedAt).toBe("CI running");
-      expect(tree.settledPrs.has(ref)).toBe(true);
+      expect(tree.nodes.get("a")?.settledPrs.map((pr) => pr.ref)).toEqual([ref]);
     });
 
     test("a settled PR on a parked node changes nothing but its line", () => {

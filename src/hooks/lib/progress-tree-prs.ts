@@ -1,7 +1,8 @@
 /**
- * A PR attached to a node is asked about at session start. A merged or closed PR writes
- * its outcome to the node's stopped-at line once and is never asked again; an open PR is
- * asked again next time. All the gh calls share one time budget, so a session never waits on them.
+ * Every PR attached to a node is asked about at session start. A merged or closed PR is
+ * settled on that node and never asked again, and the one that settled last writes the
+ * node's stopped-at line; an open PR is asked again next time. All the gh calls share one
+ * time budget, so a session never waits on them.
  */
 
 import { spawnSync } from "node:child_process";
@@ -76,8 +77,10 @@ function parsePrView(stdout: string): PrView | null {
   }
 }
 
-function lastPrRef(node: WorkNode): string | null {
-  return node.artifacts.filter((artifact) => artifact.kind === "pr").at(-1)?.ref ?? null;
+function unsettledPrRefs(node: WorkNode): string[] {
+  const settled = new Set(node.settledPrs.map((pr) => pr.ref));
+  const refs = node.artifacts.filter((a) => a.kind === "pr").map((a) => a.ref);
+  return [...new Set(refs)].filter((ref) => !settled.has(ref));
 }
 
 function settledOutcome(view: PrView): Outcome | null {
@@ -129,26 +132,52 @@ function lineIsNewer(lineTs: string | null, at: string): boolean {
 function unsettledCandidates(tree: ScopeTree): Candidate[] {
   return [...tree.nodes.values()]
     .filter((node) => node.status !== "done")
-    .map((node) => ({ node, ref: lastPrRef(node) }))
-    .filter(
-      (candidate): candidate is Candidate =>
-        candidate.ref !== null && !tree.settledPrs.has(candidate.ref)
-    );
+    .flatMap((node) => unsettledPrRefs(node).map((ref) => ({ node, ref })));
+}
+
+interface Result {
+  candidate: Candidate;
+  settled: Settled;
+}
+
+function settledWithinBudget(
+  tree: ScopeTree,
+  cwd: string,
+  options: SettleOptions
+): Result[] {
+  const gh = options.gh ?? ghPrView;
+  const clock = options.clock ?? Date.now;
+  const deadline = clock() + (options.budgetMs ?? PR_CHECK_BUDGET_MS);
+  const results: Result[] = [];
+  for (const candidate of unsettledCandidates(tree)) {
+    const remaining = deadline - clock();
+    if (remaining <= 0) break;
+    const settled = settledOf(candidate.ref, gh(candidate.ref, cwd, remaining));
+    if (settled) results.push({ candidate, settled });
+  }
+  return results;
+}
+
+function newestPerNode(results: Result[]): Set<Result> {
+  const newest = new Map<string, Result>();
+  for (const result of results) {
+    const held = newest.get(result.candidate.node.id);
+    const later =
+      !held ||
+      Date.parse(result.settled.outcome.at) > Date.parse(held.settled.outcome.at);
+    if (later) newest.set(result.candidate.node.id, result);
+  }
+  return new Set(newest.values());
 }
 
 function recordSettled(
   scope: string,
-  candidate: Candidate,
-  settled: Settled,
-  events: WorkEvent[],
+  { candidate, settled }: Result,
+  writesLine: boolean,
   file: string | undefined,
   now: Date
 ): void {
-  const keepsNewerLine = lineIsNewer(
-    lastLineTs(events, scope, candidate.node.id),
-    settled.outcome.at
-  );
-  const stoppedAt = keepsNewerLine ? {} : { stoppedAt: settledLine(settled) };
+  const stoppedAt = writesLine ? { stoppedAt: settledLine(settled) } : {};
   appendEvent(
     scope,
     candidate.node.id,
@@ -161,16 +190,14 @@ function recordSettled(
 
 function checkCandidates(scope: string, cwd: string, options: SettleOptions): void {
   const events = readEvents(options.file);
-  const tree = buildTree(scope, events);
-  const gh = options.gh ?? ghPrView;
-  const clock = options.clock ?? Date.now;
+  const results = settledWithinBudget(buildTree(scope, events), cwd, options);
+  const newest = newestPerNode(results);
   const now = options.now ?? new Date();
-  const deadline = clock() + (options.budgetMs ?? PR_CHECK_BUDGET_MS);
-  for (const candidate of unsettledCandidates(tree)) {
-    const remaining = deadline - clock();
-    if (remaining <= 0) break;
-    const settled = settledOf(candidate.ref, gh(candidate.ref, cwd, remaining));
-    if (settled) recordSettled(scope, candidate, settled, events, options.file, now);
+  for (const result of results) {
+    const lineTs = lastLineTs(events, scope, result.candidate.node.id);
+    const writesLine =
+      newest.has(result) && !lineIsNewer(lineTs, result.settled.outcome.at);
+    recordSettled(scope, result, writesLine, options.file, now);
   }
 }
 

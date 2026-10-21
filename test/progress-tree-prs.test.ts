@@ -63,6 +63,10 @@ function stoppedAtOf(node: string): string | null {
   return readTree("pal", file).nodes.get(node)?.stoppedAt ?? null;
 }
 
+function settledRefsOf(node: string): string[] {
+  return (readTree("pal", file).nodes.get(node)?.settledPrs ?? []).map((pr) => pr.ref);
+}
+
 describe("a merged or closed PR writes its node's stopped-at line", () => {
   test("merged: 'PR #n merged <date>'", () => {
     open("a");
@@ -88,15 +92,35 @@ describe("a merged or closed PR writes its node's stopped-at line", () => {
     expect(stoppedAtOf("a")).toBe("CI running");
   });
 
-  test("only the PR attached last is asked about", () => {
+  test("every PR on the node is asked about, so an earlier one that merged settles while a later one is open", () => {
     open("a");
     attach("a", 126);
     attach("a", 133);
     const calls: string[] = [];
-    const before = readEvents(file).length;
     settle(fakeGh({ [prRef(126)]: MERGED, [prRef(133)]: OPEN }, calls));
-    expect(calls).toEqual([prRef(133)]);
-    expect(readEvents(file)).toHaveLength(before);
+    expect(calls).toEqual([prRef(126), prRef(133)]);
+    expect(settledRefsOf("a")).toEqual([prRef(126)]);
+    expect(stoppedAtOf("a")).toBe("PR #126 merged 2026-10-19");
+  });
+
+  test("when two PRs merge, the line names the one that merged last, whatever the attach order", () => {
+    open("a");
+    attach("a", 126);
+    attach("a", 133);
+    const earlier = { ...MERGED, mergedAt: "2026-10-19T12:00:00Z" };
+    settle(fakeGh({ [prRef(126)]: MERGED, [prRef(133)]: earlier }));
+    expect(stoppedAtOf("a")).toBe("PR #126 merged 2026-10-19");
+    expect(settledRefsOf("a").sort()).toEqual([prRef(126), prRef(133)]);
+  });
+
+  test("a PR attached to two nodes settles on both", () => {
+    open("a");
+    attach("a", 126);
+    open("b");
+    attach("b", 126);
+    settle(fakeGh({ [prRef(126)]: MERGED }));
+    expect(settledRefsOf("a")).toEqual([prRef(126)]);
+    expect(settledRefsOf("b")).toEqual([prRef(126)]);
   });
 
   test("the line names the latest PR when it is merged and the earlier one closed", () => {
@@ -120,7 +144,7 @@ describe("a merged or closed PR writes its node's stopped-at line", () => {
     );
     settle(fakeGh({ [prRef(126)]: MERGED }));
     expect(stoppedAtOf("a")).toBe("follow up");
-    expect(readTree("pal", file).settledPrs.has(prRef(126))).toBe(true);
+    expect(settledRefsOf("a")).toEqual([prRef(126)]);
   });
 
   test("a stopped-at line written before the merge is overwritten", () => {
