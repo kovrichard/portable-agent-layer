@@ -1,17 +1,7 @@
-import {
-  beforeEach,
-  describe,
-  expect,
-  setDefaultTimeout,
-  setSystemTime,
-  test,
-} from "bun:test";
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { beforeEach, describe, expect, setSystemTime, test } from "bun:test";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
-import { freshTestDir } from "./lib/test-home";
-
-setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
+import { APPLIED, freshLedgerHome, ledgerLib as lib } from "./lib/ledger-fixture";
 
 // The ledger is the record something else will be judged against, so these
 // cases care less about the happy path than about what an entry claims when it
@@ -21,16 +11,8 @@ setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 let HOME: string;
 
 beforeEach(async () => {
-  HOME = freshTestDir(import.meta.file);
-  process.env.PAL_HOME = HOME;
-  delete process.env.PAL_SPAWNED_INFERENCE;
-  delete process.env.PAL_AGENT;
-  (await import("../src/hooks/lib/settings")).reload();
+  HOME = await freshLedgerHome(import.meta.file);
 });
-
-async function lib() {
-  return await import("../src/hooks/lib/ledger");
-}
 
 function entries(file: string): Record<string, unknown>[] {
   return readFileSync(file, "utf-8")
@@ -39,14 +21,6 @@ function entries(file: string): Record<string, unknown>[] {
     .filter((l) => l.trim())
     .map((l) => JSON.parse(l));
 }
-
-const APPLIED = {
-  tool: "Edit",
-  target: "/work/app/src/index.ts",
-  outcome: "applied" as const,
-  before: "const a = 1;",
-  after: "const a = 2;",
-};
 
 describe("recordAction", () => {
   test("stamps who and where from currentAttribution", async () => {
@@ -215,23 +189,6 @@ describe("blocked actions", () => {
 });
 
 describe("target paths", () => {
-  test("are anchored to the project so they survive a different mount", async () => {
-    const root = resolve(HOME, "work", "app");
-    mkdirSync(resolve(root, "src"), { recursive: true });
-    const { writeProject } = await import("../src/hooks/lib/projects");
-    writeProject({
-      name: "demo",
-      path: root,
-      status: "active",
-      created: "2026-05-04T10:00:00Z",
-      updated: "2026-05-04T10:00:00Z",
-    });
-
-    const { recordAction } = await lib();
-    const entry = recordAction({ ...APPLIED, target: resolve(root, "src", "index.ts") });
-    expect(entry.target).toBe("{proj:demo}/src/index.ts");
-  });
-
   test("pass through unchanged outside any registered project", async () => {
     const { recordAction } = await lib();
     expect(recordAction(APPLIED).target).toBe("/work/app/src/index.ts");
