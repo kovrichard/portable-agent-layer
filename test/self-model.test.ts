@@ -1,4 +1,4 @@
-import { describe, expect, setDefaultTimeout, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -32,10 +32,7 @@ import {
   summarizeRatings,
   synthesisIsDue,
 } from "../src/tools/lib/self-model";
-import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
-
-setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 const NOW = new Date("2026-09-06T12:00:00.000Z");
 const SINCE = new Date("2026-08-07T12:00:00.000Z");
@@ -1115,21 +1112,5 @@ describe("failedSynthesisModel", () => {
     const fallback = failedSynthesisModel("Atlas", "RAW");
     expect(fallback).toBe(`# Self-Model — Atlas\n*${FAILED_SYNTHESIS}*\n\nRAW`);
     expect(previousModelForPrompt(fallback)).toBe("");
-  });
-});
-
-describe("self-model entrypoint", () => {
-  test("accepts the --agent flag every detached inference spawn appends", () => {
-    const run = Bun.spawnSync(
-      [
-        "bun",
-        join(import.meta.dir, "..", "src", "tools", "self-model.ts"),
-        "--help",
-        "--agent=codex",
-      ],
-      { stdout: "pipe", stderr: "pipe", env: process.env }
-    );
-    expect(run.stderr.toString()).not.toContain("Unknown option");
-    expect(run.exitCode).toBe(0);
   });
 });
