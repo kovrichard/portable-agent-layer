@@ -54,11 +54,7 @@ const writeClaudeSettings = (value: unknown) =>
 const readClaudeSettings = () => JSON.parse(readFileSync(settingsPath(), "utf-8"));
 
 function git(cwd: string, ...args: string[]): string {
-  const result = spawnSync("git", args, {
-    cwd,
-    encoding: "utf-8",
-    env: { ...process.env, GIT_CEILING_DIRECTORIES: undefined },
-  });
+  const result = spawnSync("git", args, { cwd, encoding: "utf-8" });
   if (result.status !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr}`);
   return result.stdout;
 }
