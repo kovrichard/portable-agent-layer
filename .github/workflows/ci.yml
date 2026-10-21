@@ -77,8 +77,11 @@ jobs:
       - name: Secretlint
         run: bun run secretlint
 
-      - name: Test
-        run: bun run test
+      - name: Fast tests
+        run: bun run test --fast
+
+      - name: Spawn tests
+        run: bun run test --spawn
 
   browser-smoke:
     # Windows only, deliberately: chromium.launch hung under Bun on Windows and
