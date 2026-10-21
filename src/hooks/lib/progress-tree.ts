@@ -90,6 +90,12 @@ interface FollowUp {
   due?: string;
 }
 
+export interface SettledPr {
+  ref: string;
+  state: "merged" | "closed";
+  at: string;
+}
+
 export interface WorkNode {
   id: string;
   title: string;
@@ -101,6 +107,7 @@ export interface WorkNode {
   decisions: Decision[];
   artifacts: Artifact[];
   followUps: FollowUp[];
+  settledPrs: SettledPr[];
   links: NodeLinks;
   opened: string;
   updated: string;
@@ -117,17 +124,19 @@ export const PROJECT_ROOT = "root";
  * One project's tree: `root` is the project itself, the parent of every
  * top-level node, shared by all sessions and never stored. `active` is the
  * viewing session's node (null while it sits at the root); `lanes` holds every
- * session's, keyed by session ("" for none).
+ * session's, keyed by session ("" for none), and `laneSeen` when each last wrote.
  */
 export interface ScopeTree {
   scope: string;
   root: WorkNode;
   active: string | null;
   lanes: Map<string, string>;
+  laneSeen: Map<string, string>;
   nodes: Map<string, WorkNode>;
   gitCursor: GitCursor | null;
-  settledPrs: Set<string>;
 }
+
+const IDLE_AFTER_MS = 2 * 60 * 60 * 1000;
 
 function progressTreeFile(): string {
   return resolve(ensureDir(resolve(paths.memory(), "progress-tree")), "events.jsonl");
@@ -216,6 +225,7 @@ function emptyNode(
     decisions: [],
     artifacts: [],
     followUps: [],
+    settledPrs: [],
     links: {},
     opened: ts,
     updated: ts,
@@ -322,12 +332,14 @@ function settlePr(
   tree: ScopeTree,
   event: Extract<WorkEvent, { type: "pr-settled" }>
 ): void {
-  tree.settledPrs.add(event.ref);
   const node = tree.nodes.get(event.node);
-  if (event.stoppedAt && node) node.stoppedAt = event.stoppedAt;
+  if (!node) return;
+  node.settledPrs.push({ ref: event.ref, state: event.state, at: event.at });
+  if (event.stoppedAt) node.stoppedAt = event.stoppedAt;
 }
 
 function apply(tree: ScopeTree, event: WorkEvent): void {
+  tree.laneSeen.set(laneOf(event), event.ts);
   if (event.type === "git-cursor") {
     tree.gitCursor = { branch: event.branch, head: event.head };
     return;
@@ -358,9 +370,9 @@ export function buildTree(
     root: emptyNode(PROJECT_ROOT, scope, null, ""),
     active: null,
     lanes: new Map(),
+    laneSeen: new Map(),
     nodes: new Map(),
     gitCursor: null,
-    settledPrs: new Set(),
   };
   for (const event of events) if (event.scope === scope) apply(tree, event);
   tree.active = tree.lanes.get(session ?? "") ?? null;
@@ -375,9 +387,36 @@ export function readTree(
   return buildTree(scope, readEvents(file), session);
 }
 
+export interface IdleNode {
+  node: WorkNode;
+  since: string;
+}
+
+/** Nodes another session holds: those it wrote to lately, and those it left idle. */
+function heldByOthers(
+  tree: ScopeTree,
+  now: Date
+): { busy: WorkNode[]; idle: IdleNode[] } {
+  const busy: WorkNode[] = [];
+  const idle: IdleNode[] = [];
+  for (const [lane, id] of tree.lanes) {
+    const node = tree.nodes.get(id);
+    if (!node || id === tree.active) continue;
+    const since = tree.laneSeen.get(lane) ?? node.updated;
+    if (now.getTime() - Date.parse(since) < IDLE_AFTER_MS) busy.push(node);
+    else idle.push({ node, since });
+  }
+  return { busy: busy.sort(byRecent), idle };
+}
+
 /** Nodes another session is working on right now. */
-export function activeElsewhere(tree: ScopeTree): WorkNode[] {
-  return nodesWithStatus(tree, "active").filter((n) => n.id !== tree.active);
+export function activeElsewhere(tree: ScopeTree, now: Date = new Date()): WorkNode[] {
+  return heldByOthers(tree, now).busy;
+}
+
+/** Nodes held by a session that has written nothing for a while: parked in all but name. */
+export function idleElsewhere(tree: ScopeTree, now: Date = new Date()): IdleNode[] {
+  return heldByOthers(tree, now).idle;
 }
 
 /** From the root down to the active node: the detours the user is inside of. */

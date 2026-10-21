@@ -153,12 +153,12 @@ describe("a session start refreshes stopped-at lines from the PRs on open nodes"
     expect(ghCalls()).toHaveLength(1);
   });
 
-  test("only the PR attached last drives the line; an earlier merged PR is ignored", () => {
+  test("an earlier PR that merged writes the line while a later one is still open", () => {
     openNodeWithPr("n1", 126, 133);
     prState(126, "MERGED");
     prState(133, "OPEN");
     loadProgressTreeContext(folder);
-    expect(stoppedAt("n1")).toBe("CI running");
+    expect(stoppedAt("n1")).toBe("PR #126 merged 2026-10-19");
   });
 
   test("the latest PR merged wins over an earlier closed one", () => {

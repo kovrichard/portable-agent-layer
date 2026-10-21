@@ -108,12 +108,62 @@ describe("prompt line", () => {
   test("counts the nodes other sessions are working on", () => {
     appendEvent("pal", "a", "open", { title: "One", parent: null }, file, at(), "s1");
     const mine = readTree("pal", file, "s2");
-    expect(renderPromptLine(mine, false)).toBe(
+    const now = new Date(clock + HOUR);
+    expect(renderPromptLine(mine, false, now)).toBe(
       "Progress: pal root — this session has no node yet · 0 parked · 1 active in other sessions"
     );
-    expect(renderSessionContext(mine)).toContain(
+    expect(renderSessionContext(mine, now)).toContain(
       "Active in other sessions:\n- One [a] — no stopped-at recorded"
     );
+  });
+
+  test("a node held by a session that wrote nothing for 2 hours counts as parked, idle since its last event", () => {
+    appendEvent("pal", "a", "open", { title: "One", parent: null }, file, at(), "s1");
+    const mine = readTree("pal", file, "s2");
+    const now = new Date(clock + 3 * HOUR);
+    expect(renderPromptLine(mine, false, now)).toBe(
+      "Progress: pal root — this session has no node yet · 1 parked"
+    );
+    const text = renderSessionContext(mine, now);
+    expect(text).not.toContain("Active in other sessions");
+    expect(text).toContain("Parked:\n- One [a] (idle since 2026-10-18) — no stopped-at");
+    expect(renderTreeList(mine, false, now)).toContain(
+      "  ‖ One [a] (idle since 2026-10-18)"
+    );
+  });
+});
+
+const HOUR = 60 * 60 * 1000;
+
+describe("tidying hints", () => {
+  test("a node whose PRs all merged with nothing since is listed with the command that closes it", () => {
+    open("a", "Rename");
+    appendEvent("pal", "a", "attach", { kind: "pr", ref: "#131" }, file, at());
+    appendEvent("pal", "a", "park", {}, file, at());
+    appendEvent(
+      "pal",
+      "a",
+      "pr-settled",
+      { ref: "#131", state: "merged", at: "2026-10-19T15:44:00Z" },
+      file,
+      at()
+    );
+    expect(renderSessionContext(tree())).toContain(
+      "Done? (every PR merged, nothing recorded since):\n- Rename [a] — #131 merged 2026-10-19; close with pal cli progress done --node a"
+    );
+    expect(renderTreeList(tree(), false)).toContain("  ✓? Rename [a]");
+  });
+
+  test("nodes finished in the last 30 days are listed with their ids, so they can be entered again", () => {
+    open("a", "Bump klint");
+    appendEvent("pal", "a", "done", { summary: "PR #128 merged" }, file, at());
+    open("b", "Still going");
+    const dayLater = renderSessionContext(tree(), new Date(clock + 24 * HOUR));
+    expect(dayLater).toContain(
+      "Finished lately (enter one to reopen it):\n- Bump klint [a] — PR #128 merged"
+    );
+    const monthLater = renderSessionContext(tree(), new Date(clock + 31 * 24 * HOUR));
+    expect(monthLater).not.toContain("Finished lately");
   });
 });
 

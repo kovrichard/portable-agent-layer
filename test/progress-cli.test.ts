@@ -52,6 +52,23 @@ describe("pal cli progress", () => {
     expect(tree().nodes.size).toBe(1);
   });
 
+  test("open refuses a title most of whose words a node already has, names it, and --new opens anyway", async () => {
+    await progress("open", "Rename work tree to progress tree");
+    const existing = activeId();
+    await progress("park", "--stopped", "PR open");
+    printed = [];
+
+    expect(await progress("open", "Rename Work Tree Progress")).toBe(1);
+    expect(output()).toContain(
+      `Rename work tree to progress tree [${existing}] (parked)`
+    );
+    expect(output()).toContain(`pal cli progress enter ${existing}`);
+    expect(tree().nodes.size).toBe(1);
+
+    expect(await progress("open", "Rename Work Tree Progress", "--new")).toBe(0);
+    expect(tree().nodes.size).toBe(2);
+  });
+
   test("done on a detour says where the parent stopped", async () => {
     await progress("open", "Workflow test");
     await progress("stopped", "restore", "WIP", "wording");

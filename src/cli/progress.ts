@@ -22,6 +22,7 @@ import {
   suffix,
 } from "../hooks/lib/progress-tree-render";
 import { openSessionNode } from "../hooks/lib/progress-tree-session-node";
+import { similarNodes } from "../hooks/lib/progress-tree-tidy";
 import { group, leaf, runCommand, UsageError } from "../tools/lib/command";
 
 const SCOPE = {
@@ -108,12 +109,27 @@ function optionalIsc(isc: string | undefined): number | undefined {
   return parsed;
 }
 
+function refuseRepeatedTopic(tree: ScopeTree, title: string): void {
+  const similar = similarNodes(tree, title);
+  if (!similar.length) return;
+  const rows = similar.map(
+    (n) => `- ${n.title} [${n.id}] (${n.status}) · pal cli progress enter ${n.id}`
+  );
+  throw new NodeError(
+    [
+      `Similar nodes in ${tree.scope}; enter one to carry on there, or pass --new to open anyway:`,
+      ...rows,
+    ].join("\n")
+  );
+}
+
 function cmdOpen(
   title: string | undefined,
   values: {
     scope?: string;
     under?: string;
     root?: boolean;
+    new?: boolean;
     isc?: string;
     commitment?: string;
   }
@@ -123,6 +139,7 @@ function cmdOpen(
   return guarded(() => {
     const scope = scopeFrom(values);
     const tree = readTree(scope);
+    if (!values.new) refuseRepeatedTopic(tree, text);
     const parent = parentFor(tree, values.under, values.root === true);
     const id = newNodeId();
     const links = {
@@ -222,6 +239,10 @@ export const progressCommand = group({
         root: {
           type: "boolean",
           description: "Open at the top level, not under the active node",
+        },
+        new: {
+          type: "boolean",
+          description: "Open even when a node with a similar title exists",
         },
         isc: { type: "string", description: "The project ISC this node works on" },
         commitment: {
