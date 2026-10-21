@@ -41,9 +41,19 @@ jobs:
         with:
           bun-version: "1.4.3"
 
+      - name: Cache Bun packages
+        # Windows only: installing takes 60-120 s there and under 20 s elsewhere.
+        if: runner.os == 'Windows'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/bun-cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+
       - name: Install dependencies
         # No lifecycle scripts, so no dependency can run arbitrary code on install.
         run: bun install --frozen-lockfile --ignore-scripts
+        env:
+          BUN_INSTALL_CACHE_DIR: ${{ runner.temp }}/bun-cache
 
       - name: Audit dependencies
         # Informational only — bun audit lacks a --production flag, and all
@@ -106,9 +116,17 @@ jobs:
         with:
           bun-version: "1.4.3"
 
+      - name: Cache Bun packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/bun-cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+
       - name: Install dependencies
         # No lifecycle scripts, so no dependency can run arbitrary code on install.
         run: bun install --frozen-lockfile --ignore-scripts
+        env:
+          BUN_INSTALL_CACHE_DIR: ${{ runner.temp }}/bun-cache
 
       - name: Cache Chromium
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -179,9 +197,18 @@ jobs:
         with:
           bun-version: "1.4.3"
 
+      - name: Cache Bun packages
+        if: runner.os == 'Windows'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/bun-cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+
       - name: Install dependencies
         # No lifecycle scripts, so no dependency can run arbitrary code on install.
         run: bun install --frozen-lockfile --ignore-scripts
+        env:
+          BUN_INSTALL_CACHE_DIR: ${{ runner.temp }}/bun-cache
 
       - name: Pack tarball
         shell: bash
