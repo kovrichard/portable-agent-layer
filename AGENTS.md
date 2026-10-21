@@ -24,6 +24,8 @@ This repo uses [Bun](https://bun.sh) ≥ 1.4.0 — never `npm`, `pnpm`, or `node
 ```bash
 bun install                                     # frozen on CI
 bun test                                        # full suite
+bun run test --fast                             # every test that starts no subprocess, in about 2 s
+bun run test --spawn                            # only the *.spawn.test.ts files
 bun test test/cli.spawn.test.ts                 # one file
 bun test --test-name-pattern "scaffolds telos"  # one test by name
 ```
