@@ -24,11 +24,11 @@ This repo uses [Bun](https://bun.sh) ≥ 1.4.0 — never `npm`, `pnpm`, or `node
 ```bash
 bun install                                     # frozen on CI
 bun test                                        # full suite
-bun test test/cli.test.ts                       # one file
+bun test test/cli.spawn.test.ts                 # one file
 bun test --test-name-pattern "scaffolds telos"  # one test by name
 ```
 
-Run the CLI against a sandboxed home with `PAL_HOME=./.test/cli/home bun src/cli/index.ts cli init`. `.test/cli/home/` is wiped at the start of `bun test test/cli.test.ts`. Every test home lives under `.test/`, one folder per test file, built by `test/lib/test-home.ts`.
+Run the CLI against a sandboxed home with `PAL_HOME=./.test/cli.spawn/home bun src/cli/index.ts cli init`. `.test/cli.spawn/home/` is wiped at the start of `bun test test/cli.spawn.test.ts`. Every test home lives under `.test/`, one folder per test file, built by `test/lib/test-home.ts`.
 
 The control room's page is the one part of `src/` that is built rather than served from source: Bun's CSS bundler passes Tailwind's `@theme` / `@utility` directives through as unknown at-rules, so `vite.config.ts` builds `src/tools/control-room/ui/` into `ui/dist/`, which is gitignored and emitted at `prepack`.
 

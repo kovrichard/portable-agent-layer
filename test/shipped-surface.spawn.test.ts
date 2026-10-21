@@ -4,7 +4,7 @@
  * from a machine an older PAL left it on — so retiring anything needs the
  * migration that cleans it up. Refresh the list with:
  *
- *   PAL_SURFACE_UPDATE=1 bun test test/shipped-surface.test.ts
+ *   PAL_SURFACE_UPDATE=1 bun test test/shipped-surface.spawn.test.ts
  */
 
 import { beforeAll, describe, expect, test } from "bun:test";
