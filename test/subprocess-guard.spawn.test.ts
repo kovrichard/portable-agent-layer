@@ -35,8 +35,10 @@ const SPAWNS_NODE_STYLE = [
 ].join("\n");
 const CATCHES_THE_REFUSAL = [
   'test("catches", () => { try { Bun.spawnSync(["bun", "--version"]); } catch {} });',
+  'test("catches after an await", async () => { await Promise.resolve(); try { Bun.spawnSync(["bun", "--version"]); } catch {} });',
   'test("next", () => { expect(1).toBe(1); });',
 ].join("\n");
+const SPAWNS_THEN_PASSES = `${SPAWNS_BUN}\ntest("next", () => { expect(1).toBe(1); });`;
 
 describe("a test file that is not *.spawn.test.ts cannot start a subprocess", () => {
   test("Bun.spawnSync fails the test and names the file to move it into", () => {
@@ -54,12 +56,22 @@ describe("a test file that is not *.spawn.test.ts cannot start a subprocess", ()
     expect(output).toContain("started a subprocess (bun)");
   });
 
-  test("code that catches the refusal still fails the test after it", () => {
+  test("code that catches the refusal still fails the test that spawned", () => {
     const { exitCode, output } = runTests(
       writeTestFile("catches.test.ts", CATCHES_THE_REFUSAL)
     );
     expect(exitCode).not.toBe(0);
-    expect(output).toContain("the previous test: ");
+    expect(output).toContain("(fail) catches");
+    expect(output).toContain("(fail) catches after an await");
+    expect(output).toContain(" 1 pass");
+    expect(output).toContain(" 2 fail");
+  });
+
+  test("only the test that spawned fails, not the one after it", () => {
+    const { output } = runTests(writeTestFile("then-passes.test.ts", SPAWNS_THEN_PASSES));
+    expect(output).toContain("(fail) spawns");
+    expect(output).toContain(" 1 pass");
+    expect(output).toContain(" 1 fail");
   });
 });
 

@@ -1,4 +1,4 @@
-import { beforeEach, mock } from "bun:test";
+import { mock } from "bun:test";
 import childProcess from "node:child_process";
 import { basename, relative } from "node:path";
 
@@ -28,23 +28,20 @@ function commandName(args: unknown[]): string {
   return String(argv?.[0] ?? "unknown");
 }
 
-let swallowedRefusal: string | null = null;
+function failTheRunningTestEvenIfTheCodeCatchesIt(refusal: Error) {
+  queueMicrotask(() => {
+    throw refusal;
+  });
+}
 
 function refuseOutsideSpawnFiles<T extends (...args: never[]) => unknown>(real: T): T {
   return ((...args: Parameters<T>) => {
     const file = Bun.main;
     if (isSpawnTestFile(file)) return real(...args);
-    swallowedRefusal ??= spawnRefusal(file, commandName(args));
-    throw new Error(swallowedRefusal);
+    const refusal = new Error(spawnRefusal(file, commandName(args)));
+    failTheRunningTestEvenIfTheCodeCatchesIt(refusal);
+    throw refusal;
   }) as T;
-}
-
-function failTheTestAfterOneWhoseCodeCaughtTheRefusal() {
-  beforeEach(() => {
-    const refusal = swallowedRefusal;
-    swallowedRefusal = null;
-    if (refusal) throw new Error(`the previous test: ${refusal}`);
-  });
 }
 
 function guardChildProcess() {
@@ -66,5 +63,4 @@ function guardBunSpawn() {
 export function refuseSubprocessesOutsideSpawnFiles() {
   guardChildProcess();
   guardBunSpawn();
-  failTheTestAfterOneWhoseCodeCaughtTheRefusal();
 }
