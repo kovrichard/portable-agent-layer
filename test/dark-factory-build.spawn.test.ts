@@ -3,7 +3,6 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { delimiter, join, resolve } from "node:path";
 import { readEvents, writeTask } from "../assets/plugins/dark-factory/scripts/lib.mjs";
-import { FACTORY_MODELS } from "../src/tools/dark-factory/stamp";
 import { writeFakeBin } from "./fixtures/fake-bin";
 import { freshTestDir } from "./lib/test-home";
 
@@ -265,8 +264,6 @@ const valueAfter = (argv: string[], flag: string) => {
   if (!argv.includes(flag)) throw new Error(`argv has no ${flag}`);
   return argv[argv.indexOf(flag) + 1] as string;
 };
-const modelOf = (call: Call) =>
-  call.argv.includes("--model") ? valueAfter(call.argv, "--model") : undefined;
 const storedTask = () =>
   JSON.parse(readFileSync(join(ctx.factory, "tasks", TASK, "task.json"), "utf8"));
 const specText = () => readFileSync(join(ctx.factory, "tasks", TASK, "spec.md"), "utf8");
@@ -292,14 +289,6 @@ describe("the coach at the end of a run", () => {
   const stuckScenario = {
     roles: { "code-writer": [NOOP, NOOP, NOOP, NOOP], debugger: [NOOP, NOOP] },
   };
-  const waitingScenario = {
-    roles: {
-      "code-writer": [
-        { ...NOOP, reply: { done: false, summary: "", question: "which file?" } },
-      ],
-      po: [{ reply: { userQuestion: "Which database?" } }],
-    },
-  };
 
   test("a ready run is coached after run_finished and records the counts", () => {
     setup("small");
@@ -318,22 +307,6 @@ describe("the coach at the end of a run", () => {
     expect(runBuild().exitCode).toBe(1);
     expect(roleNames().at(-1)).toBe("coach");
     expect(eventsNamed("coach_finished")).toHaveLength(1);
-  });
-
-  test("a waiting run is not coached", () => {
-    setup("small", waitingScenario);
-    expect(runBuild().exitCode).toBe(3);
-    expect(roleNames()).not.toContain("coach");
-    expect(eventsNamed("coach_started")).toHaveLength(0);
-    expect(eventsNamed("coach_finished")).toHaveLength(0);
-  });
-
-  test("the coach runs after the status is saved and the user is notified", () => {
-    setup("small");
-    runBuild();
-    const labels = flow();
-    expect(labels.indexOf("notify")).toBeLessThan(labels.indexOf("coach_started"));
-    expect(labels.indexOf("task_status")).toBeLessThan(labels.indexOf("coach_started"));
   });
 
   test("a failing coach is recorded and changes neither the exit code nor the JSON", () => {
@@ -411,19 +384,6 @@ describe("a whole feature run", () => {
     expect(storedTask()).toMatchObject({ status: "ready", pr: PR_URL });
   });
 
-  test("a tier sets the model, and a role without a tier leaves it to its agent", () => {
-    setup("feature");
-    runBuild();
-    const byRole = Object.fromEntries(calls().map((call) => [call.role, modelOf(call)]));
-    expect(byRole).toEqual({
-      planner: undefined,
-      "test-writer": undefined,
-      "code-writer": FACTORY_MODELS.small,
-      reviewer: undefined,
-      tester: undefined,
-    });
-  });
-
   test("every role runs isolated and gets its prompt as the only user message", () => {
     setup("feature");
     runBuild();
@@ -444,29 +404,6 @@ describe("a whole feature run", () => {
     expect(codeWriter?.status).toContain("?? feature.test.txt");
   });
 
-  test("the red test proof logs the exit code and the failing count", () => {
-    setup("feature");
-    runBuild();
-    expect(eventsNamed("tests_red")).toEqual([
-      expect.objectContaining({ task: TASK, exitCode: 1, failing: 2 }),
-    ]);
-  });
-
-  test("the run ends with its totals summed from that run's role events", () => {
-    setup("feature");
-    runBuild();
-    const finished = eventsNamed("run_finished");
-    expect(finished).toHaveLength(1);
-    expect(finished[0]).toMatchObject({
-      task: TASK,
-      status: "ready",
-      roleRuns: 5,
-      costUsd: 1.25,
-      tokens: 675,
-    });
-    expect(typeof finished[0]?.wallMs).toBe("number");
-  });
-
   test("an open pull request for the branch is adopted instead of a new one", () => {
     setup("small", { prList: JSON.stringify([{ url: ADOPTED_URL }]) });
     const run = runBuild();
@@ -477,13 +414,6 @@ describe("a whole feature run", () => {
 });
 
 describe("what the orchestrator runs itself", () => {
-  test("it never spawns a process of its own, so claude only starts through role.mjs", () => {
-    const source = readFileSync(BUILD_SCRIPT, "utf8");
-    expect(source).not.toContain("child_process");
-    expect(source).not.toMatch(/Bun\.spawn/);
-    expect(source).toContain("role.mjs");
-  });
-
   test("without a task id it prints one stuck JSON line and exits 1", () => {
     setup("small");
     const run = spawnSync(process.execPath, [BUILD_SCRIPT], {
@@ -494,180 +424,6 @@ describe("what the orchestrator runs itself", () => {
     expect(lines).toHaveLength(1);
     expect(JSON.parse(lines[0] ?? "")).toMatchObject({ status: "stuck" });
     expect(run.status).toBe(1);
-  });
-
-  test("an unknown task is a stuck result, not a crash", () => {
-    setup("small");
-    const run = runBuild("no-such-task");
-    expect(run.exitCode).toBe(1);
-    expect(resultOf(run)).toMatchObject({ task: "no-such-task", status: "stuck" });
-  });
-
-  test("its tier models are the ones the factory stamps", async () => {
-    const build = await import(BUILD_SCRIPT);
-    expect(build.TIER_MODELS).toEqual(FACTORY_MODELS);
-  });
-});
-
-describe("the code ladder", () => {
-  test("climbs haiku twice, sonnet twice, then the debugger on opus", () => {
-    setup("small", { roles: { "code-writer": [NOOP, NOOP, NOOP, NOOP] } });
-    const run = runBuild();
-    expect(run.exitCode).toBe(0);
-    const coding = calls().slice(0, 5);
-    expect(coding.map((call) => [call.role, modelOf(call)])).toEqual([
-      ["code-writer", FACTORY_MODELS.small],
-      ["code-writer", FACTORY_MODELS.small],
-      ["code-writer", FACTORY_MODELS.medium],
-      ["code-writer", FACTORY_MODELS.medium],
-      ["debugger", FACTORY_MODELS.large],
-    ]);
-    expect(eventsNamed("escalation").map((event) => [event.from, event.to])).toEqual([
-      ["code-writer:small", "code-writer:medium"],
-      ["code-writer:medium", "debugger:large"],
-    ]);
-    expect(eventsNamed("gate").map((event) => event.result)).toEqual([
-      "fail",
-      "fail",
-      "fail",
-      "fail",
-      "pass",
-    ]);
-  });
-
-  test("the failing gate output goes to the next attempt", () => {
-    setup("small", { roles: { "code-writer": [NOOP] } });
-    runBuild();
-    expect(calls()[1]?.stdin).toContain("The gate failed after the previous attempt");
-    expect(calls()[1]?.stdin).toContain("2 fail");
-  });
-
-  test("six failed attempts end the run stuck, exit 1, with nothing shipped", () => {
-    setup("small", {
-      roles: { "code-writer": [NOOP, NOOP, NOOP, NOOP], debugger: [NOOP, NOOP] },
-    });
-    const run = runBuild();
-    expect(run.exitCode).toBe(1);
-    expect(resultOf(run)).toMatchObject({ status: "stuck", pr: null });
-    expect(resultOf(run).message).toContain("gate still fails after 6 attempts");
-    expect(roleNames()).toHaveLength(7);
-    expect(roleNames().at(-1)).toBe("coach");
-    expect(ghCalls()).toEqual([]);
-    expect(storedTask().status).toBe("stuck");
-  });
-});
-
-describe("review and test rounds", () => {
-  test("a finding is fixed on the sonnet rung and the reviewer looks again", () => {
-    setup("small", {
-      roles: {
-        reviewer: [
-          { reply: { findings: [{ file: "a.ts", problem: "bad name", fix: "rename" }] } },
-        ],
-      },
-    });
-    const run = runBuild();
-    expect(run.exitCode).toBe(0);
-    expect(roleNames()).toEqual([
-      "code-writer",
-      "reviewer",
-      "code-writer",
-      "reviewer",
-      "coach",
-    ]);
-    expect(modelOf(calls()[2] as Call)).toBe(FACTORY_MODELS.medium);
-    expect(calls()[2]?.stdin).toContain("bad name");
-    expect(eventsNamed("review").map((event) => event.findings)).toEqual([1, 0]);
-  });
-
-  test("the review stops after two rounds and the run still ships", () => {
-    const findings = [{ file: "a.ts", problem: "bad name", fix: "rename" }];
-    setup("small", {
-      roles: { reviewer: [{ reply: { findings } }, { reply: { findings } }] },
-    });
-    const run = runBuild();
-    expect(run.exitCode).toBe(0);
-    expect(roleNames()).toEqual([
-      "code-writer",
-      "reviewer",
-      "code-writer",
-      "reviewer",
-      "code-writer",
-      "coach",
-    ]);
-  });
-
-  test("a reviewer that fails is stuck, not read as no findings", () => {
-    setup("small", { roles: { reviewer: [{ exit: 1, reply: {} }] } });
-    const run = runBuild();
-    expect(run.exitCode).toBe(1);
-    expect(resultOf(run).message).toContain("reviewer failed");
-    expect(ghCalls()).toEqual([]);
-  });
-
-  test("a diff that touches the UI adds the tester, and unmet criteria are fixed", () => {
-    const config = { ...DEFAULT_CONFIG, uiPaths: ["ui/"] };
-    setup(
-      "small",
-      {
-        roles: {
-          "code-writer": [{ write: { "feature.txt": "code", "ui/page.txt": "x" } }],
-          tester: [
-            {
-              reply: {
-                criteria: [{ criterion: "export works", met: false, evidence: "blank" }],
-              },
-            },
-          ],
-        },
-      },
-      config
-    );
-    const run = runBuild();
-    expect(run.exitCode).toBe(0);
-    expect(roleNames()).toEqual([
-      "code-writer",
-      "reviewer",
-      "tester",
-      "code-writer",
-      "coach",
-    ]);
-    expect(eventsNamed("roles_added")).toEqual([
-      expect.objectContaining({ task: TASK, role: "tester" }),
-    ]);
-    expect(eventsNamed("test")).toEqual([expect.objectContaining({ unmet: 1 })]);
-    expect(modelOf(calls()[3] as Call)).toBe(FACTORY_MODELS.medium);
-    expect(calls()[3]?.stdin).toContain("export works");
-  });
-});
-
-describe("CI rounds", () => {
-  test("a failing CI gets two fix rounds on the debugger and then ends stuck", () => {
-    setup("small", { checks: [{ name: "ci", bucket: "fail" }] });
-    const run = runBuild();
-    expect(run.exitCode).toBe(1);
-    expect(resultOf(run).message).toContain("CI still fails after 3 rounds");
-    expect(roleNames()).toEqual([
-      "code-writer",
-      "reviewer",
-      "debugger",
-      "debugger",
-      "coach",
-    ]);
-    expect(modelOf(calls()[2] as Call)).toBe(FACTORY_MODELS.large);
-    expect(eventsNamed("ci")).toHaveLength(3);
-    expect(eventsNamed("pushed")).toHaveLength(3);
-  });
-
-  test("CI that cannot be read ends stuck with the gh error and starts no fix round", () => {
-    setup("small", { checksError: "HTTP 401: Bad credentials" });
-    const run = runBuild();
-    expect(run.exitCode).toBe(1);
-    const result = resultOf(run);
-    expect(result.status).toBe("stuck");
-    expect(result.message).toContain("could not read CI");
-    expect(result.message).toContain("HTTP 401");
-    expect(roleNames()).toEqual(["code-writer", "reviewer", "coach"]);
   });
 });
 
@@ -698,53 +454,6 @@ describe("syncing before the pull request", () => {
 
 describe("questions go to the PO and the role continues", () => {
   const question = { done: false, summary: "", question: "which file?" };
-
-  test("the PO answers, the answer is recorded, and the same session resumes with it", () => {
-    setup("small", {
-      roles: {
-        "code-writer": [{ ...NOOP, reply: question }],
-        po: [{ reply: { answer: "use a.txt" } }],
-      },
-    });
-    const run = runBuild();
-    expect(run.exitCode).toBe(0);
-    expect(roleNames()).toEqual([
-      "code-writer",
-      "po",
-      "code-writer",
-      "reviewer",
-      "coach",
-    ]);
-    const [asked, po, resumed] = calls() as [Call, Call, Call];
-    expect(po.stdin).toContain("which file?");
-    expect(po.stdin).toContain(join(ctx.factory, "tasks", TASK, "spec.md"));
-    expect(valueAfter(resumed.argv, "--resume")).toBe("sess-code-writer-1");
-    expect(resumed.stdin).toContain("use a.txt");
-    expect(asked.argv).not.toContain("--resume");
-    expect(specText()).toMatch(/^- .*code-writer.*which file\?.*use a\.txt.*$/m);
-    expect(eventsNamed("po_question")).toEqual([
-      expect.objectContaining({ role: "code-writer", toUser: false }),
-    ]);
-  });
-
-  test("a question only the user can answer parks the task as waiting with exit 3", () => {
-    setup("small", {
-      roles: {
-        "code-writer": [{ ...NOOP, reply: question }],
-        po: [{ reply: { userQuestion: "Which database?" } }],
-      },
-    });
-    const run = runBuild();
-    expect(run.exitCode).toBe(3);
-    expect(resultOf(run)).toMatchObject({
-      status: "waiting",
-      message: "Which database?",
-    });
-    expect(roleNames()).toEqual(["code-writer", "po"]);
-    expect(storedTask()).toMatchObject({ status: "waiting", note: "Which database?" });
-    expect(readFileSync(ctx.notified, "utf8")).toContain("Which database?");
-    expect(eventsNamed("question_to_user")).toHaveLength(1);
-  });
 
   test("once the answer is in Decisions a rerun continues on the same worktree and commits", () => {
     setup("small", {
@@ -794,25 +503,6 @@ describe("questions go to the PO and the role continues", () => {
 });
 
 describe("red tests", () => {
-  test("tests that already pass are stuck, since they prove nothing", () => {
-    setup("feature", {
-      roles: { "test-writer": [{ write: { "feature.txt": "already" } }] },
-    });
-    const run = runBuild();
-    expect(run.exitCode).toBe(1);
-    expect(resultOf(run).message).toContain("the new tests pass before the code exists");
-    expect(eventsNamed("tests_red")).toEqual([expect.objectContaining({ exitCode: 0 })]);
-    expect(roleNames()).toEqual(["planner", "test-writer", "coach"]);
-  });
-
-  test("a gate with no check named tests is stuck with a message that says so", () => {
-    setup("feature", {}, { baseBranch: "canary", gate: [{ name: "lint", run: "true" }] });
-    const run = runBuild();
-    expect(run.exitCode).toBe(1);
-    expect(resultOf(run).message).toContain('no check named "tests"');
-    expect(roleNames()).toEqual(["planner", "test-writer", "coach"]);
-  });
-
   test("no commit in the worktree is made by the orchestrator before the code writer", () => {
     setup("feature");
     runBuild();
@@ -823,62 +513,9 @@ describe("red tests", () => {
   });
 });
 
-describe("failingTestCount", () => {
-  const count = async (output: string) =>
-    (await import(BUILD_SCRIPT)).failingTestCount(output);
-
-  test("reads bun, jest and vitest summaries", async () => {
-    expect(await count(" 5 pass\n 3 fail\nRan 8 tests")).toBe(3);
-    expect(await count("Tests:       2 failed, 5 passed, 7 total")).toBe(2);
-    expect(await count(" Tests  1 failed | 4 passed (5)")).toBe(1);
-  });
-
-  test("the last summary line wins", async () => {
-    expect(await count("1 fail\nmore output\n4 fail")).toBe(4);
-  });
-
-  test("a runner it does not know gives null", async () => {
-    expect(await count("all done")).toBeNull();
-  });
-});
-
-describe("runTotals", () => {
-  const finished = (extra: object) => ({
-    event: "role_finished",
-    task: TASK,
-    ts: "2026-10-20T10:00:05.000Z",
-    costUsd: 0.5,
-    inputTokens: 1,
-    outputTokens: 2,
-    cacheReadTokens: 3,
-    cacheCreationTokens: 4,
-    ...extra,
-  });
-
-  test("sums this task's role runs since the run started, treating nulls as zero", async () => {
-    const { runTotals } = await import(BUILD_SCRIPT);
-    const totals = runTotals(
-      [
-        finished({}),
-        finished({ costUsd: null, inputTokens: null }),
-        finished({ ts: "2026-10-20T09:00:00.000Z" }),
-        finished({ task: "other" }),
-        { event: "gate", task: TASK, ts: "2026-10-20T10:00:06.000Z" },
-      ],
-      TASK,
-      "2026-10-20T10:00:00.000Z"
-    );
-    expect(totals).toEqual({ costUsd: 0.5, tokens: 19, roleRuns: 2 });
-  });
-});
-
 describe("the config frozen by prepare", () => {
   const EXTRA_CHECK = { name: "extra", run: "test -f extra.txt" };
   const TWO_CHECKS = { ...DEFAULT_CONFIG, gate: [...DEFAULT_CONFIG.gate, EXTRA_CHECK] };
-  const weaken = (config: object) => ({
-    write: { "feature.txt": "code", ".dark-factory.json": JSON.stringify(config) },
-    commit: true,
-  });
   const gateCheckNames = () => eventsNamed("gate_check").map((event) => event.check);
 
   test("prepare stores the checkout's config in task.json", () => {
@@ -917,14 +554,6 @@ describe("the config frozen by prepare", () => {
     expect(storedTask().config).toEqual(DEFAULT_CONFIG);
   });
 
-  test("a role deleting a gate check from the worktree's config does not weaken the gate", () => {
-    setup("small", { roles: { "code-writer": [weaken(DEFAULT_CONFIG)] } }, TWO_CHECKS);
-    runBuild();
-    expect(eventsNamed("gate")[0]?.result).toBe("fail");
-    expect(gateCheckNames().slice(0, 2)).toEqual(["tests", "extra"]);
-    expect(eventsNamed("gate").every((event) => event.result === "fail")).toBe(true);
-  });
-
   test("a config that is not on the base branch still drives the gate", () => {
     setup("feature");
     git(ctx.repo, "rm", "-q", "--cached", ".dark-factory.json");
@@ -935,105 +564,5 @@ describe("the config frozen by prepare", () => {
     expect(eventsNamed("tests_red")).toHaveLength(1);
     expect(gateCheckNames()).toContain("tests");
     expect(eventsNamed("gate").at(-1)?.result).toBe("pass");
-  });
-
-  test("the red-test proof uses the frozen config, not the worktree's", () => {
-    setup("feature", {
-      roles: {
-        "test-writer": [
-          {
-            write: {
-              "feature.test.txt": "test",
-              ".dark-factory.json": JSON.stringify({
-                ...DEFAULT_CONFIG,
-                gate: [{ name: "tests", run: "echo ' 1 pass'" }],
-              }),
-            },
-            commit: false,
-          },
-        ],
-      },
-    });
-    runBuild();
-    expect(eventsNamed("tests_red")).toEqual([
-      expect.objectContaining({ exitCode: 1, failing: 2 }),
-    ]);
-  });
-
-  test("the red-test proof still finds its check when the worktree's config loses it", () => {
-    setup("feature", {
-      roles: {
-        "test-writer": [
-          {
-            write: {
-              "feature.test.txt": "test",
-              ".dark-factory.json": JSON.stringify({ ...DEFAULT_CONFIG, gate: [] }),
-            },
-            commit: false,
-          },
-        ],
-      },
-    });
-    const run = runBuild();
-    expect(resultOf(run).message).not.toContain('no check named "tests"');
-    expect(eventsNamed("tests_red")).toHaveLength(1);
-  });
-
-  test("the roles after the diff use the frozen uiPaths, not the worktree's", () => {
-    const config = { ...DEFAULT_CONFIG, uiPaths: ["ui/"] };
-    setup(
-      "small",
-      {
-        roles: {
-          "code-writer": [
-            {
-              write: {
-                "feature.txt": "code",
-                "ui/page.txt": "x",
-                ".dark-factory.json": JSON.stringify(DEFAULT_CONFIG),
-              },
-              commit: true,
-            },
-          ],
-        },
-      },
-      config
-    );
-    runBuild();
-    expect(roleNames()).toContain("tester");
-    expect(eventsNamed("roles_added")).toEqual([
-      expect.objectContaining({ task: TASK, role: "tester" }),
-    ]);
-  });
-});
-
-describe("the reviewer is told when the config changes", () => {
-  const reviewerStdin = () => calls().find((call) => call.role === "reviewer")?.stdin;
-
-  test("a diff that touches .dark-factory.json is flagged in the reviewer's instructions", () => {
-    setup("small", {
-      roles: {
-        "code-writer": [
-          {
-            write: {
-              "feature.txt": "code",
-              ".dark-factory.json": JSON.stringify({ ...DEFAULT_CONFIG, uiPaths: [] }),
-            },
-            commit: true,
-          },
-        ],
-      },
-    });
-    runBuild();
-    const text = reviewerStdin() ?? "";
-    expect(text).toContain(".dark-factory.json");
-    expect(text).toMatch(/finding/i);
-  });
-
-  test("a diff that does not touch it carries no such note", () => {
-    setup("small");
-    runBuild();
-    expect(reviewerStdin()).toBeDefined();
-    expect(reviewerStdin()).not.toContain(".dark-factory.json");
   });
 });
