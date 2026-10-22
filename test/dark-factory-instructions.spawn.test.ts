@@ -1,4 +1,11 @@
-import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
+import {
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  setDefaultTimeout,
+  test,
+} from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { delimiter, dirname, join, resolve } from "node:path";
@@ -131,7 +138,30 @@ function appended(): string {
   return text;
 }
 
+let probeStamp = performance.now();
+function probe(label: string) {
+  const now = performance.now();
+  console.log(`[stall-probe] ${label} +${Math.round(now - probeStamp)}ms`);
+  probeStamp = now;
+}
+
+beforeAll(() => {
+  probe("file loaded");
+  seedClone();
+  probe("warm-up seed");
+  setup();
+  probe("warm-up setup");
+  run();
+  probe("warm-up run");
+});
+
 beforeEach(() => {
+  probe("previous test done");
+  seedClone();
+  probe("seed");
+});
+
+function seedClone() {
   home = freshTestDir(import.meta.file);
   userHome = join(home, "user");
   clone = join(home, "clone");
@@ -151,7 +181,7 @@ beforeEach(() => {
   git(seed, "push", "-q", "origin", "canary");
   git(home, "clone", "-q", remote, clone);
   git(clone, "checkout", "-q", "canary");
-});
+}
 
 describe("instructions reach the roles", () => {
   test("the user's and the repo's CLAUDE.md are passed in that order, each headed by its path", () => {
