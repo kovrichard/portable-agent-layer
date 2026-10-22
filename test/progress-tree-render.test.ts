@@ -56,7 +56,9 @@ describe("session context", () => {
     expect(text).toContain("Inside: Workflow test › Merge conflict");
     expect(text).toContain("Decided 2026-10-18: keep SJR");
     expect(text).toContain("- Pick a wording [w]: Pratt chooses");
-    expect(text).toContain("- Workflow test [a] — stopped at: restore WIP wording");
+    expect(text).toContain(
+      "- Workflow test [a] (touched 2026-10-18) — stopped at: restore WIP wording"
+    );
     expect(text).toContain("- installer (due 2026-10-25) — on Merge conflict");
     expect(text).toContain("pal cli progress");
   });
@@ -95,6 +97,17 @@ describe("prompt line", () => {
     const line = renderPromptLine(tree(), true) ?? "";
     expect(line.split("\n")).toHaveLength(2);
     expect(line).toContain("pal cli progress park --stopped");
+  });
+
+  test("parked work is listed newest first, each with the day it was last touched", () => {
+    open("a", "Older");
+    appendEvent("pal", "a", "park", {}, file, at());
+    clock += 2 * 24 * HOUR;
+    open("b", "Newer");
+    appendEvent("pal", "b", "park", {}, file, at());
+    expect(renderSessionContext(tree())).toContain(
+      "Parked:\n- Newer [b] (touched 2026-10-20) — no stopped-at recorded\n- Older [a] (touched 2026-10-18) — no stopped-at recorded"
+    );
   });
 
   test("says when no node is active", () => {
@@ -152,6 +165,26 @@ describe("tidying hints", () => {
       "Done? (every PR merged, nothing recorded since):\n- Rename [a] — #131 merged 2026-10-19; close with pal cli progress done --node a"
     );
     expect(renderTreeList(tree(), false)).toContain("  ✓? Rename [a]");
+  });
+
+  test("a node listed under Done? is neither listed nor counted as parked", () => {
+    open("a", "Rename");
+    appendEvent("pal", "a", "attach", { kind: "pr", ref: "#131" }, file, at());
+    appendEvent("pal", "a", "park", {}, file, at());
+    appendEvent(
+      "pal",
+      "a",
+      "pr-settled",
+      { ref: "#131", state: "merged", at: "2026-10-19T15:44:00Z" },
+      file,
+      at()
+    );
+    open("b", "Coach trial");
+    appendEvent("pal", "b", "park", {}, file, at());
+    const text = renderSessionContext(tree());
+    expect(text).toContain("Parked:\n- Coach trial [b]");
+    expect(text).not.toMatch(/Parked:[\s\S]*Rename \[a\]/);
+    expect(renderPromptLine(tree(), false)).toContain("· 1 parked");
   });
 
   test("nodes finished in the last 30 days are listed with their ids, so they can be entered again", () => {

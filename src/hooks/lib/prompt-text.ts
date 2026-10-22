@@ -10,15 +10,24 @@ export function stripInjectedTags(prompt: string): string {
   return prompt.replace(INJECTED_TAG_RE, "").trim();
 }
 
-const SYSTEM_TEXT_PATTERNS = [
+const OPENS_TURN_WITHOUT_USER = [
   /^<task-notification>/i,
+  /^Another Claude session sent a message:/i,
+  /^<agent-message\b/i,
+];
+
+const SYSTEM_TEXT_PATTERNS = [
+  ...OPENS_TURN_WITHOUT_USER,
   /^<system-reminder>/i,
   /^This session is being continued from a previous conversation/i,
   /^Please continue the conversation/i,
   /^Note:.*was read before/i,
-  /^Another Claude session sent a message:/i,
-  /^<agent-message\b/i,
 ];
+
+export function opensTurnWithoutUser(prompt: string): boolean {
+  const trimmed = prompt.trim();
+  return OPENS_TURN_WITHOUT_USER.some((re) => re.test(trimmed));
+}
 
 export function isSystemText(prompt: string): boolean {
   const trimmed = prompt.trim();

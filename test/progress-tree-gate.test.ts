@@ -185,6 +185,20 @@ describe("the decision gate", () => {
     expect(asked[0]?.[0]).toBe("thanks");
   });
 
+  test("asks nothing on a turn a background task opened, since the user said nothing", async () => {
+    const notification = prompt(
+      "<task-notification>\n<task-id>b1</task-id>\n<status>completed</status>\n</task-notification>"
+    );
+    expect(await decide([prompt("yes pls"), notification])).toBeNull();
+    expect(asked).toEqual([]);
+  });
+
+  test("still judges the user's message that answers a notification turn", async () => {
+    const notification = prompt("<task-notification>done</task-notification>");
+    await decide([notification, prompt("close it")]);
+    expect(asked[0]?.[0]).toBe("close it");
+  });
+
   test("sends a turn back only once", async () => {
     const again = { ...replied, stop_hook_active: true } as StopTurnPayload;
     expect(await decide([prompt("canary")], true, again)).toBeNull();
