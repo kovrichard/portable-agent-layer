@@ -166,15 +166,28 @@ function mergedRows(tree: ScopeTree): string[] {
   );
 }
 
+function touchedClause(updated: string): string {
+  return ` (touched ${updated.slice(0, 10)})`;
+}
+
+function parkedNodes(tree: ScopeTree, now: Date): WorkNode[] {
+  const held = [...idleSinceById(tree, now).keys()].flatMap(
+    (id) => tree.nodes.get(id) ?? []
+  );
+  const listedAsDone = new Set(mergedButOpen(tree).map(({ node }) => node.id));
+  return [...nodesWithStatus(tree, "parked"), ...held].filter(
+    (n) => !listedAsDone.has(n.id)
+  );
+}
+
 function parkedRows(tree: ScopeTree, now: Date): string[] {
   const idle = idleSinceById(tree, now);
-  const held = [...idle.keys()].flatMap((id) => tree.nodes.get(id) ?? []);
-  return [...nodesWithStatus(tree, "parked"), ...held]
+  return parkedNodes(tree, now)
     .sort((a, b) => b.updated.localeCompare(a.updated))
     .slice(0, LISTED_PARKED)
     .map((n) => {
       const since = idle.get(n.id);
-      return `${label(n)}${since ? idleClause(since) : ""}${stoppedClause(n)}`;
+      return `${label(n)}${since ? idleClause(since) : touchedClause(n.updated)}${stoppedClause(n)}`;
     });
 }
 
@@ -223,7 +236,7 @@ export function renderPromptLine(
 ): string | null {
   if (tree.nodes.size === 0) return null;
   const active = tree.active ? tree.nodes.get(tree.active) : undefined;
-  const parked = nodesWithStatus(tree, "parked").length + idleElsewhere(tree, now).length;
+  const parked = parkedNodes(tree, now).length;
   const elsewhere = activeElsewhere(tree, now).length;
   const head = active
     ? `Progress: ${label(active)}${stoppedClause(active)}`

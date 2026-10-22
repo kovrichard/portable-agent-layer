@@ -6,7 +6,7 @@
  */
 
 import { toolCallsOf, typedRequest } from "./antigravity-transcript";
-import { isSystemText } from "./prompt-text";
+import { isSystemText, opensTurnWithoutUser } from "./prompt-text";
 import { isCodexInjectedContext } from "./transcript";
 
 const CLAIM_RE =
@@ -143,6 +143,19 @@ export function promptThisTurn(lines: string[]): string | null {
     .filter((e): e is TranscriptLine => e !== null && isUserPrompt(e));
   const last = prompts.at(-1);
   return last ? promptText(last) : null;
+}
+
+function opensTurn(entry: TranscriptLine): boolean {
+  const text = promptText(entry);
+  return text !== null && (isUserPrompt(entry) || opensTurnWithoutUser(text));
+}
+
+export function userOpenedThisTurn(lines: string[]): boolean {
+  const opener = lines
+    .map(parsed)
+    .filter((e): e is TranscriptLine => e !== null && opensTurn(e))
+    .at(-1);
+  return opener !== undefined && isUserPrompt(opener);
 }
 
 const ran = (input: unknown) => JSON.stringify(input ?? {});

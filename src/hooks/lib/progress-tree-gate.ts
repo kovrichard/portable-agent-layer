@@ -4,7 +4,12 @@
  * nothing in the tree is sent back once to record it.
  */
 
-import { callsThisTurn, commandsThisTurn, promptThisTurn } from "./claim-check";
+import {
+  callsThisTurn,
+  commandsThisTurn,
+  promptThisTurn,
+  userOpenedThisTurn,
+} from "./claim-check";
 import { alreadySentBack, transcriptLines } from "./claim-log";
 import { type DecisionLabel, decisionRequest, parseDecision } from "./decision-label";
 import { hookFinalReply, hookSessionId } from "./hook-turn";
@@ -95,6 +100,7 @@ export async function decisionSendBack(
   if (alreadySentBack(payload)) return null;
   const commands = commandsThisTurn(lines);
   if (commands === null || commands.some((c) => RECORDS_DECISION_RE.test(c))) return null;
+  if (!userOpenedThisTurn(lines)) return null;
   const message = promptThisTurn(lines);
   const reply = hookFinalReply(payload);
   if (!message || !reply) return null;
