@@ -33,7 +33,7 @@ async function run(): Promise<void> {
   if (!subcommand) return; // codex/opencode — no rtk hook processor
 
   const rtk = findBinaryOnPath("rtk");
-  if (!rtk) return; // fail-open: rtk not installed → command runs unchanged
+  if (!rtk) return;
 
   const stdin = await Bun.stdin.text();
   const proc = Bun.spawn([rtk, "hook", subcommand], {
@@ -50,6 +50,4 @@ async function run(): Promise<void> {
 
 try {
   await run();
-} catch {
-  // Fail open — emit nothing, allow the original command.
-}
+} catch {}

@@ -30,18 +30,15 @@ export async function captureSessionName(
 ): Promise<void> {
   if (!sessionId) return;
 
-  // Skip if this session is already named (non-untitled)
   const names = readSessionNames();
   const existing = names[sessionId];
   if (existing && existing !== "untitled session") return;
 
-  // Try deterministic name from this message's keywords
   const name = extractFallbackName(message);
   if (name === "untitled session") return; // not enough keywords yet
   writeSessionName(sessionId, name);
   logDebug("session-name", `Named from prompt: "${name}"`);
 
-  // Spawn detached background process to upgrade via inference
   if (!canInfer()) return;
   const promptB64 = Buffer.from(message.slice(0, 800)).toString("base64");
   spawnDetachedInference(
@@ -61,7 +58,6 @@ async function upgradeWithInference(
   expectedName: string
 ): Promise<void> {
   try {
-    // Version guard: if name changed since we were spawned, skip
     const currentNames = readSessionNames();
     if (currentNames[sessionId] !== expectedName) return;
 
@@ -80,7 +76,6 @@ async function upgradeWithInference(
     const label = labelFromModel(result.output);
     if (!label) return;
 
-    // Only write if name hasn't changed (re-read under guard)
     const freshNames = readSessionNames();
     if (freshNames[sessionId] !== expectedName) return;
 
@@ -91,7 +86,6 @@ async function upgradeWithInference(
   }
 }
 
-// Background upgrade entry point
 if (process.argv[2] === "--upgrade") {
   const sid = process.argv[3];
   const prompt = process.argv[4];

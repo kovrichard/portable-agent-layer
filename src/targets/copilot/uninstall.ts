@@ -22,7 +22,6 @@ const COPILOT_DIR = platform.copilotDir();
 const HOOKS_FILE = resolve(COPILOT_DIR, "hooks", "pal-hooks.json");
 const VSCODE_HOOKS_FILE = resolve(COPILOT_DIR, "hooks", "pal-vscode-hooks.json");
 
-// --- Remove hooks files ---
 function removeHooksFile(path: string, label: string): void {
   if (!existsSync(path)) {
     log.info(`No ${label} found, nothing to do`);
@@ -36,7 +35,6 @@ function removeHooksFile(path: string, label: string): void {
 removeHooksFile(HOOKS_FILE, "pal-hooks.json");
 removeHooksFile(VSCODE_HOOKS_FILE, "pal-vscode-hooks.json");
 
-// --- Remove skill symlinks ---
 const copilotSkillsDir = resolve(COPILOT_DIR, "skills");
 const removed = removeSkills(copilotSkillsDir);
 if (removed.length > 0) {
@@ -45,16 +43,13 @@ if (removed.length > 0) {
   log.info("No PAL skills found");
 }
 
-// --- Remove agents ---
 const removedAgents = removeAgentsFromCopilot(resolve(COPILOT_DIR, "agents"));
 if (removedAgents.length > 0) {
   log.success(`Removed ${removedAgents.length} agent(s): ${removedAgents.join(", ")}`);
 }
 
-// --- Remove PAL docs ---
 removePalDocs();
 
-// --- Remove ~/.copilot/instructions/pal-*.instructions.md ---
 const removedInstructions = removePalContextFiles(
   resolve(COPILOT_DIR, "instructions"),
   ".instructions.md"
@@ -63,7 +58,6 @@ log.success(
   `Removed ${removedInstructions.length} ~/.copilot/instructions/pal-*.instructions.md`
 );
 
-// --- Remove ~/.copilot/instructions entry from VS Code settings ---
 const vsSettingsPath = vscodeSettingsFile();
 if (vsSettingsPath && existsSync(vsSettingsPath)) {
   const settings = readJson<Record<string, unknown>>(vsSettingsPath, {});

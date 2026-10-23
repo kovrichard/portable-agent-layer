@@ -28,18 +28,15 @@ if (!existsSync(SETTINGS)) {
   process.exit(0);
 }
 
-// --- Load template and unmerge from existing settings ---
 const template = loadSettingsTemplate(assets.claudeSettingsTemplate(), PKG_ROOT);
 const existing = readJson<Record<string, unknown>>(SETTINGS, {});
 let cleaned = unmergeSettings(existing, template);
 
-// Remove statusLine config
 cleaned = removeStatuslineConfig(cleaned);
 
 replaceJsonConfig(SETTINGS, cleaned);
 log.success("Removed PAL settings from settings.json");
 
-// --- Remove PAL skills ---
 const removed = removeSkills(resolve(CLAUDE_DIR, "skills"));
 if (removed.length > 0) {
   log.success(`Removed ${removed.length} skill(s): ${removed.join(", ")}`);
@@ -47,7 +44,6 @@ if (removed.length > 0) {
   log.info("No PAL skills found");
 }
 
-// --- Remove PAL agents ---
 const removedAgents = removeAgents();
 if (removedAgents.length > 0) {
   log.success(`Removed ${removedAgents.length} agent(s): ${removedAgents.join(", ")}`);
@@ -55,13 +51,10 @@ if (removedAgents.length > 0) {
   log.info("No PAL agents found");
 }
 
-// --- Remove statusline script ---
 removeStatusline();
 
-// --- Remove PAL system docs ---
 removePalDocs();
 
-// --- Remove AGENTS.md and CLAUDE.md ---
 const agentsMd = resolve(platform.opencodeDir(), "AGENTS.md");
 const claudeMd = resolve(CLAUDE_DIR, "CLAUDE.md");
 try {
