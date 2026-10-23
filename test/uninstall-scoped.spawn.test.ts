@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, lstatSync, readdirSync, readlinkSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
@@ -41,8 +41,36 @@ const shippedSkills = () =>
     existsSync(resolve(REPO_SKILLS, name, "SKILL.md"))
   );
 
-const unresolvedIn = (dir: string) =>
-  shippedSkills().filter((name) => !existsSync(resolve(dir, name, "SKILL.md")));
+function describeLink(path: string): string {
+  try {
+    const kind = lstatSync(path).isSymbolicLink() ? "link" : "real";
+    const target = kind === "link" ? ` -> ${readlinkSync(path)}` : "";
+    return `${path} ${kind}${target} exists=${existsSync(path)}`;
+  } catch (err) {
+    return `${path} ${(err as NodeJS.ErrnoException).code}`;
+  }
+}
+
+function reportBrokenChain(dir: string, name: string) {
+  console.error(
+    [
+      `DIAG first unresolved in ${dir}: ${name}`,
+      describeLink(resolve(dir, name)),
+      describeLink(at(".pal", "skills")),
+      describeLink(at(".pal", "skills", name)),
+      describeLink(resolve(REPO_SKILLS, name, "SKILL.md")),
+      `DIAG .pal/skills entries: ${existsSync(at(".pal", "skills")) ? readdirSync(at(".pal", "skills")).length : "none"}`,
+    ].join("\nDIAG ")
+  );
+}
+
+const unresolvedIn = (dir: string) => {
+  const unresolved = shippedSkills().filter(
+    (name) => !existsSync(resolve(dir, name, "SKILL.md"))
+  );
+  if (unresolved.length > 0) reportBrokenChain(dir, unresolved[0]);
+  return unresolved;
+};
 
 beforeEach(() => {
   removeOnceReleased(SANDBOX);
