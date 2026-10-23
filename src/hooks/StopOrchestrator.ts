@@ -22,8 +22,6 @@ import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
 import { type StopTurnPayload, stopTurn } from "./lib/stop";
 
-// Recursion guard — spawned inference subprocesses must not record session
-// learning, ratings, or handoffs from their throwaway transcript.
 if (isPalSpawnedInference()) process.exit(0);
 if (duplicatesCursorHooks()) process.exit(0);
 
@@ -32,7 +30,6 @@ if (isSideStop(received)) process.exit(0);
 const payload = withTranscriptReply(received);
 enterHookWorkspace(payload);
 
-// Check README sync before anything else — may block the session
 try {
   // A block carrying no reason stops the turn without telling the model why, so it
   // is worth less than not blocking at all — require the reason to raise one.

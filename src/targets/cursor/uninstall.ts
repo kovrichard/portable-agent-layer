@@ -26,7 +26,6 @@ const CURSOR_DIR = platform.cursorDir();
 const HOOKS_FILE = resolve(CURSOR_DIR, "hooks.json");
 const CLI_CONFIG = resolve(CURSOR_DIR, "cli-config.json");
 
-// --- Remove PAL hooks from hooks.json ---
 if (existsSync(HOOKS_FILE)) {
   const template = loadCursorHooksTemplate(assets.cursorHooksTemplate(), PKG_ROOT);
   const existing = readJson<Record<string, unknown>>(HOOKS_FILE, {});
@@ -38,7 +37,6 @@ if (existsSync(HOOKS_FILE)) {
   log.info("No hooks.json found, nothing to do");
 }
 
-// --- Remove PAL skill symlinks ---
 const cursorSkillsDir = resolve(CURSOR_DIR, "skills");
 const removed = removeSkills(cursorSkillsDir);
 if (removed.length > 0) {
@@ -47,16 +45,13 @@ if (removed.length > 0) {
   log.info("No PAL skills found");
 }
 
-// --- Remove PAL agents ---
 const removedAgents = removeAgentsFromCursor(resolve(CURSOR_DIR, "agents"));
 if (removedAgents.length > 0) {
   log.success(`Removed ${removedAgents.length} agent(s): ${removedAgents.join(", ")}`);
 }
 
-// --- Remove PAL system docs ---
 removePalDocs();
 
-// --- Remove statusline script and cli-config statusLine ---
 if (existsSync(CLI_CONFIG)) {
   const cliConfig = readJson<Record<string, unknown>>(CLI_CONFIG, {});
   replaceJsonConfig(CLI_CONFIG, removeStatuslineConfig(cliConfig, "cursor"));
@@ -66,7 +61,6 @@ if (existsSync(CLI_CONFIG)) {
 }
 removeStatusline("cursor");
 
-// --- Remove ~/.cursor/rules/pal-*.mdc ---
 const removedRules = removePalContextFiles(resolve(CURSOR_DIR, "rules"), ".mdc");
 log.success(`Removed ${removedRules.length} ~/.cursor/rules/pal-*.mdc`);
 

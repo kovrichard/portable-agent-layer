@@ -288,9 +288,8 @@ export function mergeSettings(existing: Settings, template: Settings): Settings 
   const result = { ...existing };
   mergeKeyedSettings(result, template);
 
-  // Merge hooks — strip old-path PAL entries first, then insert current template entries.
-  // This handles reinstalling from a different path (repo vs global install) without
-  // leaving orphan hook entries that fire twice per event.
+  // Strip old-path PAL entries before inserting the template's, so reinstalling from a
+  // different path (repo vs global) leaves no orphan entries that fire twice per event.
   if (template.hooks) {
     result.hooks ??= {};
 

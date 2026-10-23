@@ -16,7 +16,6 @@ const OC_PLUGINS_DIR = resolve(OC_GLOBAL_DIR, "plugins");
 
 mkdirSync(OC_PLUGINS_DIR, { recursive: true });
 
-// --- 1. Deploy plugin ---
 const pluginSrc = resolve(PKG_ROOT, "src", "targets", "opencode", "plugin.ts");
 const pluginDst = resolve(OC_PLUGINS_DIR, "pal-plugin.ts");
 // Embed PKG_ROOT as a hardcoded constant so no env config is needed
@@ -27,7 +26,6 @@ const pluginContent = readFileSync(pluginSrc, "utf-8").replace(
 writeFileSync(pluginDst, pluginContent, "utf-8");
 log.success(`Deployed plugin to ${pluginDst}`);
 
-// --- 2. Ensure package.json for plugin deps ---
 const pkgPath = resolve(OC_PLUGINS_DIR, "package.json");
 if (!existsSync(pkgPath)) {
   writeJson(pkgPath, { dependencies: { "@opencode-ai/plugin": "latest" } });
@@ -40,16 +38,13 @@ try {
   log.warn(`Could not install plugin deps — run 'bun install' in ${OC_PLUGINS_DIR}`);
 }
 
-// --- 3. Install skills into ~/.pal/skills/ ---
 const claudeSkillsDir = resolve(platform.claudeDir(), "skills");
 copySkills(claudeSkillsDir);
 
-// --- 4. Install agents into ~/.config/opencode/agents/ ---
 const ocAgentsDir = resolve(OC_GLOBAL_DIR, "agents");
 const agentCount = copyAgentsForOpencode(ocAgentsDir);
 log.success(`${countSkills()} skills · ${agentCount} agents → ~/.config/opencode/`);
 
-// --- 5. Add semi-static digest files to instructions[] in config.json ---
 const configPath = resolve(OC_GLOBAL_DIR, "config.json");
 const staticFiles = getSemiStaticSources().map((s) => s.path);
 let ocConfig: Record<string, unknown> = {};
