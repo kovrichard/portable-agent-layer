@@ -34,11 +34,8 @@ const READ_ONLY_ARGS: Record<string, string[]> = {
   "handoff-note": ["--help"],
   interaction: ["report"],
   project: ["list"],
-  "relationship-note": ["--help"],
-  "relationship-reflect": ["--help"],
   synthesize: ["--help"],
   thread: ["--list"],
-  "wisdom-frame": ["--help"],
 };
 
 beforeAll(() => {
@@ -72,16 +69,6 @@ describe("pal cli <tool> — the tilde-free path to a built-in tool", () => {
  * the assertion Phase 2's doc rewrite actually rests on.
  */
 const WRITE_CASES: Record<string, string[]> = {
-  "relationship-note": [
-    "--o",
-    "prefers terse output",
-    "--confidence",
-    "0.9",
-    "--w",
-    "builds with bun",
-    "--b",
-    "closed the verb gap",
-  ],
   "algorithm-reflect": [
     "--task",
     "close the verb gap",
@@ -105,14 +92,6 @@ const WRITE_CASES: Record<string, string[]> = {
     "phase 1 verb surface",
     "--text",
     "phase 2 rewrites the docs",
-  ],
-  "wisdom-frame": [
-    "--domain",
-    "workflow",
-    "--observation",
-    "prove write paths differentially",
-    "--type",
-    "principle",
   ],
   synthesize: ["--force", "--days", "7"],
   analyze: ["--actionable"],

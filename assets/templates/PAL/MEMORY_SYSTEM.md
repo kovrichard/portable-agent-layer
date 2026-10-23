@@ -21,21 +21,14 @@ memory/
 │   └── interaction/YYYY-MM.jsonl       # Measured features of each user turn (never the text)
 │
 ├── relationship/
-│   ├── YYYY-MM/YYYY-MM-DD.md           # Daily interaction notes (W / O / B)
-│   ├── opinions.json                   # Confidence-tracked opinions
-│   └── reflections/                    # Periodic reflection reports
-│
-├── self-model/
-│   └── current.md                      # Synthesized self-model (auto-imported into CLAUDE.md)
+│   └── opinions-context.md             # Approved opinions, rendered for native loading
 │
 ├── learning/
-│   ├── session/YYYY-MM/*.md            # Per-session learnings with frontmatter
 │   ├── failures/YYYY-MM/*.md           # Low-rating captures from older versions, no longer written
-│   └── synthesis/YYYY-MM/*.md          # Weekly/monthly synthesis reports
+│   └── reflections/                    # Algorithm reflections
 │
 ├── wisdom/
-│   ├── frames/<domain>.md              # Crystallized principles per domain
-│   └── state/                          # Wisdom graduation bookkeeping
+│   └── state/                          # Graduation bookkeeping for pal-analyze
 │
 └── projects/
     └── <slug>/                         # Per-project history, threads, progress
@@ -43,12 +36,12 @@ memory/
 
 ## Where to write
 
-Almost everything in `state/`, `signals/`, `relationship/opinions.json`, `learning/`, `wisdom/`, and `self-model/` is hook-managed — **never edit these directly**. Use the relevant skill or tool instead.
+Almost everything in `state/`, `signals/`, `relationship/`, `learning/`, and `wisdom/` is hook-managed — **never edit these directly**. Use the relevant skill or tool instead.
 
 | You want to capture | Go through | Lands at |
 |---------------------|------------|----------|
 | A rule the user states should hold from now on | `pal cli rule add-opinion` (algorithm LEARN phase) | `adaptation/rules.json` |
-| A reusable session insight | Session-intelligence handler (automatic) | `learning/session/YYYY-MM/*.md` |
+| What a session did | Session-intelligence handler (automatic) | `projects/<slug>/` history |
 | A rating signal | UserPromptOrchestrator rating capture | `signals/ratings.jsonl` |
 | How a user turn went (pace, length, skimming, how it received the last reply) | Prompt-time interaction measurement (automatic, every agent; see the per-agent turn contract in SYSTEM_ARCHITECTURE.md); read it with `pal cli interaction report` | `signals/interaction/YYYY-MM.jsonl` |
 | A rolling sample of labelled messages, for auditing the reaction rules | Prompt-time interaction measurement (automatic, `reactionSampling`) | `state/reaction-samples.json` |
@@ -56,14 +49,11 @@ Almost everything in `state/`, `signals/`, `relationship/opinions.json`, `learni
 
 ## Format conventions
 
-- **Wisdom frames**: One `.md` file per domain. Bullet-point principles, each tagged with a confidence value (e.g. `(85%)`). Append to existing files when possible; create a new domain only when none fits.
-- **Relationship notes**: Daily `.md` file. Each bullet is typed: `W` (world fact), `O(c=0.85)` (opinion), or `B(c=0.75)` (behavior pattern), with a confidence in `c=...`.
-- **Session learnings**: Frontmatter (`title`, `category`, `date`, `cwd`, optional `session`) + a body split into `## What Was Done` and `## Insights`.
-- **Synthesis reports**: One `.md` per period (`YYYY-MM-DD_weekly.md` etc.) aggregating recurring patterns from session learnings + failures.
+- **Opinions**: One `when` situation and one imperative `steering` line each, stored in `adaptation/rules.json` and rendered to `relationship/opinions-context.md`.
 
 ## When NOT to write
 
 - Trivial exchanges (greetings, brief acknowledgments) → skip
 - Anything already captured in TELOS → skip
-- Anything that duplicates an existing wisdom frame or opinion → use the opinion skill to reinforce instead
-- Anything the user has not validated yet — record it as a relationship note first, let it graduate naturally
+- Anything that duplicates an existing opinion → skip
+- Anything the user has not stated as a rule — corrections are picked up from the turns automatically

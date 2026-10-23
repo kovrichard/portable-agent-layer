@@ -16,7 +16,7 @@ import { reportLines } from "../lib/analyze-report";
 import { leaf, runCommand } from "../lib/command";
 import { scriptArgs } from "../lib/script-args";
 
-const DETAILS = `Reads all captured failures (rating ≤3) and session learnings,
+const DETAILS = `Reads all captured failures (rating ≤3),
 groups recurring patterns via Dice similarity on context text,
 and summarizes rating trends.
 
@@ -25,8 +25,8 @@ Sections:
   Graduation    Patterns with 3+ occurrences → ready to crystallize
   Emerging      Patterns with 2 occurrences → one more to graduate
 
-To crystallize a graduated pattern, add it to the target wisdom frame:
-  - Your principle here [CRYSTAL: 85%]`;
+To crystallize a graduated pattern, record it as a standing opinion:
+  pal cli rule add-opinion --kind <kind> --when "<situation>" --steering "<instruction>"`;
 
 export const command = leaf({
   summary: "PAL Learning Analysis — unified graduation + ratings report",

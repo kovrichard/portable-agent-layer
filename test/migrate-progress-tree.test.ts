@@ -81,12 +81,12 @@ describe("v9-progress-tree-names: settings keys", () => {
     });
 
     test("when the key is missing, adds nothing and is not pending", () => {
-      writeSettings({ dynamicContext: { wisdom: true } });
+      writeSettings({ dynamicContext: { opinions: true } });
       expect(pendingIds()).not.toContain(MIGRATION);
 
       quietly(() => runMigrate([]));
 
-      expect(readSettings()).toEqual({ dynamicContext: { wisdom: true } });
+      expect(readSettings()).toEqual({ dynamicContext: { opinions: true } });
     });
 
     test("when both names exist, the new value wins and the old key goes", () => {
@@ -103,7 +103,7 @@ describe("v9-progress-tree-names: settings keys", () => {
     writeSettings({
       identity: { ai: { name: "A" } },
       dynamicContext: {
-        wisdom: true,
+        opinions: true,
         workTree: true,
         claimChek: false,
         workTreeGate: false,
@@ -117,7 +117,7 @@ describe("v9-progress-tree-names: settings keys", () => {
     const settings = readSettings();
     expect(settings.identity).toEqual({ ai: { name: "A" } });
     expect(settings.dynamicContext).toEqual({
-      wisdom: true,
+      opinions: true,
       progressTree: true,
       claimChek: false,
       progressTreeGate: false,
@@ -125,7 +125,7 @@ describe("v9-progress-tree-names: settings keys", () => {
       last: 1,
     });
     expect(Object.keys(settings.dynamicContext)).toEqual([
-      "wisdom",
+      "opinions",
       "progressTree",
       "claimChek",
       "progressTreeGate",
@@ -234,7 +234,7 @@ describe("v9-progress-tree-names: what it reports", () => {
   });
 
   test("settings without old keys are left out of the report", () => {
-    writeSettings({ dynamicContext: { wisdom: true } });
+    writeSettings({ dynamicContext: { opinions: true } });
     writeEvents(oldFolder(), [EVENT]);
     expect(v9Detail()).toBe("memory/work-tree/");
     expect(v9Lines()).toEqual(["memory/work-tree/: moved to memory/progress-tree/"]);

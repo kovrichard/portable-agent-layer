@@ -104,13 +104,13 @@ describe("the reply the model reads", () => {
 
 describe("a session already captured", () => {
   test("is not captured again when it has barely grown", async () => {
-    markCaptured("s1", "/learning/a.md", 20);
+    markCaptured("s1", 20);
     await captureSessionIntelligence(transcript(24, 500), "s1");
     expect(learningFiles()).toEqual([]);
   });
 
   test("a session that has grown enough is no longer stopped here", async () => {
-    markCaptured("s1", "/learning/a.md", 20);
+    markCaptured("s1", 20);
     // Asserting on the decision, not on what follows it: past this guard the
     // handler reaches the inference gate, whose answer depends on the machine.
     expect(isRecaptureWorthwhile(readCapture("s1"), 40)).toBe(true);
@@ -156,6 +156,15 @@ describe("an unfinished session", () => {
     });
   });
 
+  test("records project history but writes no session-learning file", async () => {
+    await captureSessionIntelligence(transcript(12, 300), "s-history");
+
+    expect(readProjectHistory(process.cwd()).map((e) => e.session)).toContain(
+      "s-history"
+    );
+    expect(learningFiles()).toEqual([]);
+  });
+
   test("files the session under the folder it started in, not the one it ended in", async () => {
     const startDir = freshTestDir(import.meta.file);
     const savedStart = process.env.CLAUDE_PROJECT_DIR;
@@ -181,8 +190,8 @@ describe("an unfinished session", () => {
     expect(readProjectHistory(process.cwd())).toEqual([]);
   });
 
-  test("summarises the handoff again after a new message, before the learning is due", async () => {
-    markCaptured("s-turn", "/learning/a.md", 20);
+  test("summarises the handoff again after a new message, before the history is due", async () => {
+    markCaptured("s-turn", 20);
     claimHandoffSummary("s-turn", 10);
 
     await captureSessionIntelligence(transcript(22, 300), "s-turn");
@@ -193,7 +202,7 @@ describe("an unfinished session", () => {
   });
 
   test("does not summarise the same turn twice", async () => {
-    markCaptured("s-twice", "/learning/a.md", 20);
+    markCaptured("s-twice", 20);
     claimHandoffSummary("s-twice", 11);
 
     await captureSessionIntelligence(transcript(22, 300), "s-twice");

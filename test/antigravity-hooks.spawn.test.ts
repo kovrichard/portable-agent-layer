@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { claimChecksSince } from "../src/hooks/lib/claim-log";
 import { eventsSince } from "../src/hooks/lib/events";
 import { invocationContext } from "../src/hooks/lib/invocation-context";
-import { paths } from "../src/hooks/lib/paths";
+import { palHome, paths } from "../src/hooks/lib/paths";
 import { reload } from "../src/hooks/lib/settings";
 import {
   CONVERSATION,
@@ -138,12 +138,12 @@ describe("PreInvocation injects context as one user step", () => {
 
   // agy already loads these from the plugin's rules; injecting them again doubles them.
   test("the session context leaves out what agy loads natively", async () => {
-    const selfModel = resolve(paths.memory(), "self-model", "current.md");
-    mkdirSync(resolve(selfModel, ".."), { recursive: true });
-    writeFileSync(selfModel, "SELF-MODEL-9902", "utf-8");
+    const steering = resolve(palHome(), "docs", "STEERING_RULES.md");
+    mkdirSync(resolve(steering, ".."), { recursive: true });
+    writeFileSync(steering, "STEERING-9902", "utf-8");
     const text = injectedText(await invocationContext(preInvocation(0)));
     expect(text).toContain("SEED-NOTE-4471");
-    expect(text).not.toContain("SELF-MODEL-9902");
+    expect(text).not.toContain("STEERING-9902");
   });
 
   test("the prompt is captured like any other agent's, here as the session name", async () => {

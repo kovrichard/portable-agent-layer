@@ -40,10 +40,8 @@
       "Bash(pal cli analyze *)",
       "Bash(pal cli handoff-note *)",
       "Bash(pal cli project *)",
-      "Bash(pal cli relationship-note *)",
       "Bash(pal cli synthesize *)",
-      "Bash(pal cli thread *)",
-      "Bash(pal cli wisdom-frame *)"
+      "Bash(pal cli thread *)"
     ]
   },
   "skillOverrides": {

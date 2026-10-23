@@ -35,7 +35,7 @@ Read the console output and summarize the key signals. Focus on what's actionabl
 
 **Graduation candidates:**
 - Name the top 1-3 patterns ready to crystallize
-- Suggest the wisdom domain they'd live in
+- Phrase each as a situation and an instruction
 
 **Emerging patterns:**
 - Name any 2-occurrence patterns worth watching
@@ -48,7 +48,7 @@ Ratings: X.X/10 avg | N low (≤4) | N high (≥7)
 Top low-rating context: "[cluster description]"
 
 Ready to graduate (3+ occurrences):
-- "[pattern]" → suggest adding to wisdom/[domain].md
+- "[pattern]" → when [situation]: [instruction]
 
 Emerging (2 occurrences — one more to graduate):
 - "[pattern]"
@@ -57,9 +57,9 @@ Emerging (2 occurrences — one more to graduate):
 ## 3. Offer to act
 
 After showing results, ask:
-> "Want to crystallize any of these into a wisdom frame, or dig into the low-rating clusters?"
+> "Want to crystallize any of these into a standing opinion, or dig into the low-rating clusters?"
 
 If yes to crystallizing:
 ```bash
-pal cli wisdom-frame --domain <domain> --observation "<principle>"
+pal cli rule add-opinion --kind <correction kind> --when "<situation>" --steering "<instruction>" --evidence "<the recurring pattern>"
 ```

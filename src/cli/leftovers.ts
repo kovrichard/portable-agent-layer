@@ -20,13 +20,15 @@ function isPathScopedFileToolRule(rule: string): boolean {
   return /^(?:Grep|Glob)\(/.test(rule);
 }
 
-function claudeAllowRules(): string[] {
-  const settings = readJson<Json>(claudeSettings(), {});
+function allowRulesIn(settingsPath: string): string[] {
+  const settings = readJson<Json>(settingsPath, {});
   const allow = (settings.permissions as { allow?: unknown } | undefined)?.allow;
   return Array.isArray(allow)
     ? allow.filter((r): r is string => typeof r === "string")
     : [];
 }
+
+const claudeAllowRules = () => allowRulesIn(claudeSettings());
 
 const claudeFileToolRules: Leftover = {
   id: "claude-file-tool-rules",
@@ -120,15 +122,7 @@ const copilotInstructionsLink: Leftover = {
   remove: () => unlinkSync(oldCopilotInstructions()),
 };
 
-const failuresDigest = () => resolve(paths.memory(), "learning", "failures-digest.md");
 const opencodeConfig = () => resolve(platform.opencodeDir(), "config.json");
-
-const failuresDigestCopies = () =>
-  [
-    resolve(platform.cursorDir(), "rules", "pal-failures.mdc"),
-    resolve(platform.copilotDir(), "instructions", "pal-failures.instructions.md"),
-    resolve(platform.antigravityPluginDir(), "rules", "pal-failures.md"),
-  ].filter((path) => existsSync(path));
 
 function opencodeInstructions(): string[] {
   const instructions = readJson<Json>(opencodeConfig(), {}).instructions;
@@ -137,24 +131,101 @@ function opencodeInstructions(): string[] {
     : [];
 }
 
-const opencodeLoadsFailuresDigest = () =>
-  opencodeInstructions().includes(failuresDigest());
+interface RetiredContextSource {
+  id: string;
+  name: string;
+  slug: string;
+  digest: () => string;
+}
 
-const failuresDigestContext: Leftover = {
+function retiredContextSource(source: RetiredContextSource): Leftover {
+  const copies = () =>
+    [
+      resolve(platform.cursorDir(), "rules", `pal-${source.slug}.mdc`),
+      resolve(
+        platform.copilotDir(),
+        "instructions",
+        `pal-${source.slug}.instructions.md`
+      ),
+      resolve(platform.antigravityPluginDir(), "rules", `pal-${source.slug}.md`),
+    ].filter((path) => existsSync(path));
+  const opencodeLoadsIt = () => opencodeInstructions().includes(source.digest());
+  return {
+    id: source.id,
+    description: `Stop loading the ${source.name} into Cursor, Copilot, Antigravity and opencode — PAL no longer writes it`,
+    find: () => [
+      ...copies(),
+      ...(opencodeLoadsIt() ? [`${opencodeConfig()}#instructions`] : []),
+    ],
+    remove() {
+      for (const path of copies()) unlinkSync(path);
+      if (!opencodeLoadsIt()) return;
+      const config = readJson<Json>(opencodeConfig(), {});
+      config.instructions = opencodeInstructions().filter((i) => i !== source.digest());
+      writeJson(opencodeConfig(), config);
+    },
+  };
+}
+
+const failuresDigestContext = retiredContextSource({
   id: "failures-digest-context",
+  name: "failures digest",
+  slug: "failures",
+  digest: () => resolve(paths.memory(), "learning", "failures-digest.md"),
+});
+
+const selfModelContext = retiredContextSource({
+  id: "self-model-context",
+  name: "self-model",
+  slug: "self-model",
+  digest: () => resolve(paths.memory(), "self-model", "current.md"),
+});
+
+const wisdomContext = retiredContextSource({
+  id: "wisdom-context",
+  name: "wisdom digest",
+  slug: "wisdom",
+  digest: () => resolve(paths.memory(), "wisdom", "context.md"),
+});
+
+const RETIRED_VERBS = ["relationship-note", "wisdom-frame"];
+
+const isRetiredVerbRule = (rule: string) =>
+  RETIRED_VERBS.some(
+    (verb) => rule === `Bash(pal cli ${verb} *)` || rule === `command(pal cli ${verb})`
+  );
+
+const settingsWithRetiredVerbs = () =>
+  [claudeSettings(), platform.antigravitySettings()].filter((path) =>
+    allowRulesIn(path).some(isRetiredVerbRule)
+  );
+
+const retiredVerbRules: Leftover = {
+  id: "retired-verb-rules",
   description:
-    "Stop loading the failures digest into Cursor, Copilot, Antigravity and opencode — PAL no longer writes it",
-  find: () => [
-    ...failuresDigestCopies(),
-    ...(opencodeLoadsFailuresDigest() ? [`${opencodeConfig()}#instructions`] : []),
-  ],
+    "Remove the allow rules for the relationship-note and wisdom-frame verbs — those commands are gone",
+  find: () =>
+    settingsWithRetiredVerbs().flatMap((path) =>
+      allowRulesIn(path).filter(isRetiredVerbRule)
+    ),
   remove() {
-    for (const path of failuresDigestCopies()) unlinkSync(path);
-    if (!opencodeLoadsFailuresDigest()) return;
-    const config = readJson<Json>(opencodeConfig(), {});
-    config.instructions = opencodeInstructions().filter((i) => i !== failuresDigest());
-    writeJson(opencodeConfig(), config);
+    for (const path of settingsWithRetiredVerbs()) {
+      const settings = readJson<Json>(path, {});
+      const permissions = settings.permissions as { allow: string[] };
+      permissions.allow = permissions.allow.filter((rule) => !isRetiredVerbRule(rule));
+      writeJson(path, settings);
+    }
   },
+};
+
+const opinionTrackingDoc = () => resolve(palHome(), "docs", "OPINION_TRACKING.md");
+
+const opinionTrackingDocCopy: Leftover = {
+  id: "opinion-tracking-doc",
+  description:
+    "Remove OPINION_TRACKING.md — it described the opinion skill, which no longer ships",
+  find: () => (existsSync(opinionTrackingDoc()) ? [opinionTrackingDoc()] : []),
+  remove: () => unlinkSync(opinionTrackingDoc()),
 };
 
 const debugLog = () => resolve(paths.debug(), "debug.log");
@@ -177,5 +248,9 @@ export const LEFTOVERS: Leftover[] = [
   opencodePluginOldName,
   copilotInstructionsLink,
   failuresDigestContext,
+  selfModelContext,
+  wisdomContext,
+  retiredVerbRules,
+  opinionTrackingDocCopy,
   debugLogPrev,
 ];

@@ -69,11 +69,8 @@ export default {
     // library call — the same case as src/cli and src/hooks/*.ts above. Their
     // decisions live in src/tools/lib/, which is measured.
     "!src/tools/session-summary.ts",
-    "!src/tools/agent/relationship-note.ts",
     "!src/tools/agent/analyze.ts",
     "!src/tools/token-cost.ts",
-    "!src/tools/relationship-reflect.ts",
-    "!src/tools/self-model.ts",
     "!src/tools/agent/handoff-note.ts",
     "!src/tools/agent/algorithm-reflect.ts",
     "!src/tools/agent/thread.ts",

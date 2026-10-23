@@ -2,9 +2,8 @@
 /**
  * Synthesize — Aggregate recent PAL activity into compact state for hook injection.
  *
- * Deterministic (no LLM call). Reads threads, reflections, session notes,
- * and ratings, then writes compact JSON state that the session-start hook
- * reads and formats with behavioral guidance.
+ * Deterministic (no LLM call). Reads reflections and ratings, then writes
+ * compact JSON state that the control room's signal view reads.
  *
  * Usage:
  *   pal cli synthesize [--days 7] [--force]
@@ -13,12 +12,11 @@
  * Output: ~/.pal/memory/state/synthesis.json
  */
 
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ensureDir, paths } from "../../hooks/lib/paths";
 import { leaf, runCommand, UsageError } from "../lib/command";
 import { scriptArgs } from "../lib/script-args";
-import { readJsonl } from "../lib/self-model";
 
 // ── Config ──
 
@@ -29,8 +27,6 @@ const SYNTHESIS_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 interface SynthesisState {
   timestamp: string;
   days: number;
-  sessions: { date: string; titles: string[] }[];
-  sessionCount: number;
   ratings: {
     count: number;
     avg: number;
@@ -83,9 +79,13 @@ function formatDate(iso: string): string {
   return iso.slice(0, 10);
 }
 
-function safeReaddir(dir: string): string[] {
+function readJsonl<T>(path: string): T[] {
+  if (!existsSync(path)) return [];
   try {
-    return readdirSync(dir);
+    return readFileSync(path, "utf-8")
+      .split("\n")
+      .filter((line) => line.trim())
+      .map((line) => JSON.parse(line) as T);
   } catch {
     return [];
   }
@@ -198,46 +198,6 @@ function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
 
-function getRecentSessions(since: Date): {
-  sessions: SynthesisState["sessions"];
-  count: number;
-} {
-  const baseDir = resolve(paths.learning(), "session");
-  if (!existsSync(baseDir)) return { sessions: [], count: 0 };
-
-  const sinceStr = formatDate(since.toISOString());
-  const byDate = new Map<string, string[]>();
-
-  for (const year of safeReaddir(baseDir)) {
-    const yearDir = resolve(baseDir, year);
-    for (const month of safeReaddir(yearDir)) {
-      const monthDir = resolve(yearDir, month);
-      for (const file of safeReaddir(monthDir).filter((f) => f.endsWith(".md"))) {
-        const dateStr = file.slice(0, 8);
-        const isoDate = `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}`;
-        if (isoDate < sinceStr) continue;
-
-        const content = readFileSync(resolve(monthDir, file), "utf-8");
-        const titleMatch =
-          new RegExp(/^title:\s*"?(.+?)"?\s*$/m).exec(content) ??
-          new RegExp(/^\*\*Title:\*\*\s*(.+?)\s*$/m).exec(content);
-        const title = titleMatch?.[1] ?? file.replace(/\.md$/, "");
-
-        const existing = byDate.get(isoDate) ?? [];
-        existing.push(title);
-        byDate.set(isoDate, existing);
-      }
-    }
-  }
-
-  const sessions = [...byDate.entries()]
-    .sort((a, b) => b[0].localeCompare(a[0]))
-    .map(([date, titles]) => ({ date, titles }));
-
-  const count = sessions.reduce((s, d) => s + d.titles.length, 0);
-  return { sessions, count };
-}
-
 // ── Synthesize ──
 
 export function writeSynthesis(state: SynthesisState): string {
@@ -288,15 +248,12 @@ function writeSignalCache(): void {
 
 export function synthesize(days: number): SynthesisState {
   const since = daysAgo(days);
-  const { sessions, count: sessionCount } = getRecentSessions(since);
   const ratings = getRatingStats(since);
   const algorithm = getAlgorithmStats(since);
 
   return {
     timestamp: new Date().toISOString(),
     days,
-    sessions,
-    sessionCount,
     ratings,
     algorithm,
   };
@@ -351,7 +308,6 @@ function synthesizeUnlessFresh(days: number, force: boolean): undefined {
       {
         success: true,
         path: sp,
-        sessions: state.sessionCount,
         ratings: state.ratings.count,
         reflections: state.algorithm.reflectionCount,
         message: `Synthesis written (${days}-day window)`,

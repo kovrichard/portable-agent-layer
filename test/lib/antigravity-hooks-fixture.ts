@@ -134,20 +134,18 @@ export function writeTranscript(...steps: unknown[]): void {
   );
 }
 
-function localDay(): { month: string; day: string } {
-  const now = new Date();
-  const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  return { month, day: `${month}-${String(now.getDate()).padStart(2, "0")}` };
-}
-
 /** Something for the session reminder to carry, so its presence can be seen. */
-function seedRelationshipNote(marker: string): void {
-  const { month, day } = localDay();
-  const dir = resolve(paths.relationship(), month);
-  mkdirSync(dir, { recursive: true });
+function seedHandoffElsewhere(marker: string): void {
   writeFileSync(
-    resolve(dir, `${day}.md`),
-    `# Relationship Notes — ${day}\n\n## 10:00\n- W: ${marker}\n`,
+    resolve(paths.state(), "last-handoff.json"),
+    JSON.stringify({
+      "/elsewhere": {
+        title: "elsewhere",
+        handoff: marker,
+        status: "in-progress",
+        timestamp: new Date().toISOString(),
+      },
+    }),
     "utf-8"
   );
 }
@@ -155,7 +153,7 @@ function seedRelationshipNote(marker: string): void {
 export function startUserTurnUnderAgy(): void {
   process.env.PAL_AGENT = "antigravity";
   writeTranscript(userInput("fix the build"));
-  seedRelationshipNote("SEED-NOTE-4471");
+  seedHandoffElsewhere("SEED-NOTE-4471");
 }
 
 export const injectedText = (reply: string | null) =>

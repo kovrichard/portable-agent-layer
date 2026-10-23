@@ -2,31 +2,22 @@
  * Stop handler: unified session intelligence capture.
  *
  * Produces: title, summary, insights, status and a done/next/waiting handoff via Haiku.
- * Writes: session learning file, project history, auto handoff.
+ * Writes: project history, auto handoff.
  *
- * Relationship notes → written in ALGORITHM LEARN phase via relationship-note.ts
- * Handoff notes     → written in ALGORITHM LEARN phase via handoff-note.ts
+ * Handoff notes → written in ALGORITHM LEARN phase via handoff-note.ts
  *
  */
 
-import { existsSync } from "node:fs";
-import { unlink, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
 import {
   claimHandoffSummary,
   isHandoffStale,
   isRecaptureWorthwhile,
-  learningSlug,
   markCaptured,
   readCapture,
 } from "../lib/capture-store";
-import { stringify } from "../lib/frontmatter";
 import { canInfer, inference } from "../lib/inference";
-import { categorizeLearning } from "../lib/learning-category";
 import { logDebug, logError } from "../lib/log";
-import { ensureDir, paths } from "../lib/paths";
 import { sessionDir } from "../lib/session-dir";
-import { fileTimestamp, monthPath } from "../lib/time";
 import {
   extractContent,
   extractLastAssistant,
@@ -112,8 +103,8 @@ export async function captureSessionIntelligence(
 
   const userMessageCount = messages.filter((m) => m.role === "user").length;
   const previous = sessionId ? readCapture(sessionId) : null;
-  const learningDue = isRecaptureWorthwhile(previous, messages.length);
-  if (!learningDue && !isHandoffStale(previous, userMessageCount)) return;
+  const historyDue = isRecaptureWorthwhile(previous, messages.length);
+  if (!historyDue && !isHandoffStale(previous, userMessageCount)) return;
 
   // Skip if no inference path is available (no CLI binary AND no API key)
   if (!canInfer()) {
@@ -181,47 +172,7 @@ export async function captureSessionIntelligence(
       sessionId,
     });
   }
-  if (!learningDue) return;
-
-  // ── Write session learning file ──
-
-  const category = categorizeLearning(title, summary);
-  const slug = learningSlug(title);
-  const dir = ensureDir(resolve(paths.sessionLearning(), monthPath()));
-  const filename = `${fileTimestamp()}_${category}_${slug}.md`;
-
-  const meta: Record<string, unknown> = {
-    title,
-    category,
-    date: new Date().toISOString().slice(0, 10),
-    cwd: process.cwd(),
-  };
-  if (sessionId) meta.session = sessionId;
-
-  const body = [
-    "## What Was Done",
-    summary,
-    "",
-    "## Insights",
-    insights || "*No insights captured.*",
-  ].join("\n");
-
-  const content = stringify(meta, body);
-
-  // Remove previous capture for this session
-  if (sessionId) {
-    const prev = readCapture(sessionId);
-    if (prev?.filepath && existsSync(prev.filepath)) {
-      try {
-        await unlink(prev.filepath);
-      } catch {
-        /* ignore */
-      }
-    }
-  }
-
-  const filepath = resolve(dir, filename);
-  await writeFile(filepath, content, "utf-8");
+  if (!historyDue) return;
 
   if (output) {
     appendProjectHistory(sessionDir(), {
@@ -233,8 +184,8 @@ export async function captureSessionIntelligence(
     });
   }
 
-  if (sessionId) markCaptured(sessionId, filepath, messages.length);
-  logDebug("session-intelligence", `Learning captured: ${title}`);
+  if (sessionId) markCaptured(sessionId, messages.length);
+  logDebug("session-intelligence", `Session summarized: ${title}`);
 }
 
 // Detached child entry point — re-reads transcript from tmp path, then unlinks it.

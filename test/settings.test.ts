@@ -26,8 +26,8 @@ beforeAll(async () => {
         },
       },
       dynamicContext: {
-        selfModel: false,
-        wisdom: true,
+        projects: false,
+        handoff: true,
       },
     })
   );
@@ -70,12 +70,12 @@ describe("isEnabled", () => {
   test("returns false when explicitly disabled", async () => {
     const { isEnabled, reload } = await import("../src/hooks/lib/settings");
     reload();
-    expect(isEnabled("selfModel")).toBe(false);
+    expect(isEnabled("projects")).toBe(false);
   });
 
   test("returns true when explicitly enabled", async () => {
     const { isEnabled } = await import("../src/hooks/lib/settings");
-    expect(isEnabled("wisdom")).toBe(true);
+    expect(isEnabled("handoff")).toBe(true);
   });
 
   test("defaults to true for unset keys", async () => {
@@ -95,12 +95,12 @@ describe("cache", () => {
   test("a different PAL_HOME reads its own settings, not the cached ones", async () => {
     const { isEnabled, reload } = await import("../src/hooks/lib/settings");
     reload();
-    expect(isEnabled("selfModel")).toBe(false);
+    expect(isEnabled("projects")).toBe(false);
     const otherHome = testHome(import.meta.file, "other");
     mkdirSync(resolve(otherHome, "memory"), { recursive: true });
     try {
       process.env.PAL_HOME = otherHome;
-      expect(isEnabled("selfModel")).toBe(true);
+      expect(isEnabled("projects")).toBe(true);
     } finally {
       process.env.PAL_HOME = TEST_HOME;
       removeOnceReleased(otherHome);

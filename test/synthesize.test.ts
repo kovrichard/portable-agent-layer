@@ -216,57 +216,16 @@ describe("synthesize — algorithm reflections", () => {
   });
 });
 
-describe("synthesize — sessions", () => {
-  test("reports no sessions when the directory is absent", () => {
-    const state = synthesize(7);
-
-    expect(state.sessions).toEqual([]);
-    expect(state.sessionCount).toBe(0);
-  });
-
-  test("reads the title from a frontmatter title field", () => {
-    writeSession(ymd(1), 'title: "Fixed the parser"\n\nbody');
-
-    expect(synthesize(7).sessions[0].titles).toEqual(["Fixed the parser"]);
-  });
-
-  test("reads the title from a bold Title marker", () => {
-    writeSession(ymd(1), "**Title:** Bold style\n\nbody");
-
-    expect(synthesize(7).sessions[0].titles).toEqual(["Bold style"]);
-  });
-
-  test("falls back to the filename when no title is present", () => {
-    writeSession(ymd(1), "no title here");
-
-    expect(synthesize(7).sessions[0].titles).toEqual([`${ymd(1)}-run`]);
-  });
-
-  test("groups titles by date, newest first", () => {
-    writeSession(ymd(1), "title: Yesterday");
-    writeSession(ymd(0), "title: Today");
-
-    const dates = synthesize(7).sessions.map((s) => s.date);
-
-    expect(dates).toEqual([...dates].sort().reverse());
-    expect(dates[0]).toBe(iso(0).slice(0, 10));
-  });
-
-  test("counts every session across all dates", () => {
-    writeSession(ymd(1), "title: One");
-    writeSession(ymd(2), "title: Two");
-
-    expect(synthesize(7).sessionCount).toBe(2);
-  });
-
-  test("excludes sessions older than the window", () => {
+describe("synthesize — session learnings", () => {
+  test("no longer reads the retired session-learning files", () => {
     writeSession(ymd(1), "title: Recent");
-    writeSession(ymd(40), "title: Ancient");
 
-    const titles = synthesize(7).sessions.flatMap((s) => s.titles);
-
-    expect(titles).toContain("Recent");
-    expect(titles).not.toContain("Ancient");
+    expect(Object.keys(synthesize(7)).sort()).toEqual([
+      "algorithm",
+      "days",
+      "ratings",
+      "timestamp",
+    ]);
   });
 });
 

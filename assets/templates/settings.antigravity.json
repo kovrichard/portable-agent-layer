@@ -35,10 +35,8 @@
       "command(pal cli analyze)",
       "command(pal cli handoff-note)",
       "command(pal cli project)",
-      "command(pal cli relationship-note)",
       "command(pal cli synthesize)",
-      "command(pal cli thread)",
-      "command(pal cli wisdom-frame)"
+      "command(pal cli thread)"
     ]
   }
 }

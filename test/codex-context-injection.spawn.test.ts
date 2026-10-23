@@ -39,11 +39,6 @@ function runLoadContext() {
 beforeAll(() => {
   sandbox = freshTestDir(import.meta.file);
   seed("telos/GOALS.md", "# Goals\n\n- ship PAL\n");
-  seed("memory/self-model/current.md", "# Self-Model\nCodex self-model marker");
-  seed(
-    "memory/wisdom/frames/development.md",
-    "### Codex wisdom marker [CRYSTAL: 90%]\nbody"
-  );
   seed("docs/STEERING_RULES.md", "# Steering Rules\nCodex steering marker");
   const result = runLoadContext();
   const parsed = JSON.parse(result.stdout) as {
@@ -55,14 +50,6 @@ beforeAll(() => {
 // Codex's AGENTS.md is plain text with no @imports, and no digest file is
 // written for it, so the SessionStart hook is its only route to these.
 describe("LoadContext on Codex", () => {
-  test("hands over the self-model", () => {
-    expect(additionalContext).toContain("Codex self-model marker");
-  });
-
-  test("hands over the wisdom principles", () => {
-    expect(additionalContext).toContain("Codex wisdom marker");
-  });
-
   test("hands over the steering rules", () => {
     expect(additionalContext).toContain("Codex steering marker");
   });
