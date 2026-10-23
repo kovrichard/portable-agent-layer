@@ -23,21 +23,15 @@ function printTurns(turns: EvidenceTurn[], json: boolean): undefined {
   console.log(`${turns.length} turns`);
 }
 
-function requiredId(id: string | undefined): string {
-  if (!id) throw new UsageError("give the event id");
-  return id;
-}
-
-function printContent(id: string | undefined): undefined {
-  const row = contentFor(requiredId(id));
+function printContent(id: string): undefined {
+  const row = contentFor(id);
   if (!row) throw new UsageError(`no stored text for ${id}`);
   console.log(JSON.stringify(row, null, 2));
 }
 
-function printForgotten(id: string | undefined): undefined {
-  const target = requiredId(id);
-  if (!forget(target)) throw new UsageError(`no stored text for ${target}`);
-  console.log(`Forgot ${target}`);
+function printForgotten(id: string): undefined {
+  if (!forget(id)) throw new UsageError(`no stored text for ${id}`);
+  console.log(`Forgot ${id}`);
 }
 
 export const evidenceCommand = group({
@@ -58,12 +52,12 @@ export const evidenceCommand = group({
     show: leaf({
       summary: "The stored text of one event",
       args: "<id>",
-      run: ({ positionals }) => printContent(positionals[0]),
+      run: ({ positionals }) => printContent(positionals[0] as string),
     }),
     forget: leaf({
       summary: "Remove one event's text and keep it out of everything PAL learns",
       args: "<id>",
-      run: ({ positionals }) => printForgotten(positionals[0]),
+      run: ({ positionals }) => printForgotten(positionals[0] as string),
     }),
   },
 });

@@ -10,6 +10,8 @@ import {
   allEventsSince,
   appendEvent,
   contentDir,
+  type EventType,
+  eventsSince,
   type LoggedEvent,
   parseLines,
 } from "./events";
@@ -28,15 +30,14 @@ export interface EvidenceTurn {
   reply: { id: string; text: string | null } | null;
 }
 
-function contentFiles(fromMonth = ""): string[] {
+function contentFiles(): string[] {
   return readdirSync(contentDir())
-    .filter((f) => f.endsWith(".jsonl") && f.slice(0, 7) >= fromMonth)
-    .sort()
+    .filter((f) => f.endsWith(".jsonl"))
     .map((f) => resolve(contentDir(), f));
 }
 
-function contentById(fromMonth = ""): Map<string, ContentRow> {
-  const rows = contentFiles(fromMonth).flatMap((f) => parseLines<ContentRow>(f));
+function contentById(): Map<string, ContentRow> {
+  const rows = contentFiles().flatMap((f) => parseLines<ContentRow>(f));
   return new Map(rows.map((row) => [row.id, row]));
 }
 
@@ -48,28 +49,23 @@ export function contentFor(id: string): ContentRow | null {
 }
 
 function forgottenIds(): Set<string> {
-  return new Set(
-    allEventsSince(new Date(0))
-      .filter((e) => e.type === "forgotten")
-      .map((e) => String(e.target))
-  );
+  return new Set(eventsSince("forgotten", new Date(0)).map((e) => String(e.target)));
 }
 
-function repliesByTurn(events: LoggedEvent[]): Map<string, LoggedEvent> {
-  return new Map(
-    events
-      .filter((e) => e.type === "reply" && typeof e.turn === "string")
-      .map((e) => [e.turn as string, e])
-  );
+function repliesByTurn(events: LoggedEvent[]): Map<unknown, LoggedEvent> {
+  return new Map(ofType(events, "reply").map((e) => [e.turn, e]));
 }
+
+const ofType = (events: LoggedEvent[], type: EventType) =>
+  events.filter((e) => e.type === type);
 
 export function userTurnsSince(since: Date): EvidenceTurn[] {
   const events = allEventsSince(since);
-  const content = contentById(since.toISOString().slice(0, 7));
+  const content = contentById();
   const replies = repliesByTurn(events);
   const forgotten = forgottenIds();
-  return events
-    .filter((e) => e.type === "turn" && e.authority === "user" && !forgotten.has(e.id))
+  return ofType(events, "turn")
+    .filter((e) => e.authority === "user" && !forgotten.has(e.id))
     .map((turn) => {
       const reply = replies.get(turn.id);
       return {
@@ -82,12 +78,7 @@ export function userTurnsSince(since: Date): EvidenceTurn[] {
         text: textOf(content.get(turn.id), "prompt"),
         pastedChars: typeof turn.pastedChars === "number" ? turn.pastedChars : null,
         reply: reply
-          ? {
-              id: reply.id,
-              text: forgotten.has(reply.id)
-                ? null
-                : textOf(content.get(reply.id), "reply"),
-            }
+          ? { id: reply.id, text: textOf(content.get(reply.id), "reply") }
           : null,
       };
     });
