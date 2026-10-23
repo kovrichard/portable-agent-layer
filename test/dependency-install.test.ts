@@ -19,18 +19,25 @@ describe("installing PAL's dependencies", () => {
   test("a checkout installs exactly what its lockfile pins, dev tools included", () => {
     dependsOn();
 
-    expect(dependencyInstall(PKG, true)).toEqual(["install", "--frozen-lockfile"]);
+    expect(dependencyInstall(PKG, true, false)).toEqual(["install", "--frozen-lockfile"]);
   });
 
   test("a package whose dependencies resolve installs nothing", () => {
     dependsOn();
 
-    expect(dependencyInstall(PKG, false)).toBeNull();
+    expect(dependencyInstall(PKG, false, false)).toBeNull();
   });
 
   test("a package missing a dependency installs production dependencies only", () => {
     dependsOn("pal-dependency-that-does-not-exist");
 
-    expect(dependencyInstall(PKG, false)).toEqual(["install", "--production"]);
+    expect(dependencyInstall(PKG, false, false)).toEqual(["install", "--production"]);
+  });
+
+  test("the test sandbox never installs into the developer's checkout", () => {
+    dependsOn("pal-dependency-that-does-not-exist");
+
+    expect(dependencyInstall(PKG, true)).toBeNull();
+    expect(dependencyInstall(PKG, false)).toBeNull();
   });
 });
