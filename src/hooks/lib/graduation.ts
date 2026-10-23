@@ -87,7 +87,7 @@ function classifyDomain(text: string): string {
 // ── Data Collection ──
 
 const MIN_TEXT_LENGTH = 30;
-export const SIMILARITY_THRESHOLD = 0.3;
+const SIMILARITY_THRESHOLD = 0.3;
 const MIN_OCCURRENCES = 3;
 
 function toAnalysisEntries(

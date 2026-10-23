@@ -12,7 +12,6 @@ memory/
 │   ├── sessions.json                   # Session registry
 │   ├── counts.json                     # Cached counts for greeting
 │   ├── last-responses.json             # Cached responses for rating correlation
-│   ├── pending-failure.json            # Deferred failure capture
 │   ├── captured-learnings.json         # Session-intelligence dedup map
 │   ├── session-names.json              # Generated session titles
 │   └── debug.log[.1-.5]                # Rotated hook execution logs
@@ -31,9 +30,8 @@ memory/
 │
 ├── learning/
 │   ├── session/YYYY-MM/*.md            # Per-session learnings with frontmatter
-│   ├── failures/YYYY-MM/*.md           # Low-rating context captures
-│   ├── synthesis/YYYY-MM/*.md          # Weekly/monthly synthesis reports
-│   └── .retrieval-index.json           # Embedding index for retrieval
+│   ├── failures/YYYY-MM/*.md           # Low-rating captures from older versions, no longer written
+│   └── synthesis/YYYY-MM/*.md          # Weekly/monthly synthesis reports
 │
 ├── wisdom/
 │   ├── frames/<domain>.md              # Crystallized principles per domain
@@ -49,10 +47,8 @@ Almost everything in `state/`, `signals/`, `relationship/opinions.json`, `learni
 
 | You want to capture | Go through | Lands at |
 |---------------------|------------|----------|
-| A new validated principle | `skill: opinion` (confirm) or wisdom frame edit | `wisdom/frames/<domain>.md` |
-| A daily observation about the user | Relationship note in algorithm LEARN phase | `relationship/YYYY-MM/YYYY-MM-DD.md` |
+| A rule the user states should hold from now on | `pal cli rule add-opinion` (algorithm LEARN phase) | `adaptation/rules.json` |
 | A reusable session insight | Session-intelligence handler (automatic) | `learning/session/YYYY-MM/*.md` |
-| A failure worth learning from | Failure-principle handler (automatic, low ratings) | `learning/failures/YYYY-MM/*.md` |
 | A rating signal | UserPromptOrchestrator rating capture | `signals/ratings.jsonl` |
 | How a user turn went (pace, length, skimming, how it received the last reply) | Prompt-time interaction measurement (automatic, every agent; see the per-agent turn contract in SYSTEM_ARCHITECTURE.md); read it with `pal cli interaction report` | `signals/interaction/YYYY-MM.jsonl` |
 | A rolling sample of labelled messages, for auditing the reaction rules | Prompt-time interaction measurement (automatic, `reactionSampling`) | `state/reaction-samples.json` |
@@ -63,7 +59,6 @@ Almost everything in `state/`, `signals/`, `relationship/opinions.json`, `learni
 - **Wisdom frames**: One `.md` file per domain. Bullet-point principles, each tagged with a confidence value (e.g. `(85%)`). Append to existing files when possible; create a new domain only when none fits.
 - **Relationship notes**: Daily `.md` file. Each bullet is typed: `W` (world fact), `O(c=0.85)` (opinion), or `B(c=0.75)` (behavior pattern), with a confidence in `c=...`.
 - **Session learnings**: Frontmatter (`title`, `category`, `date`, `cwd`, optional `session`) + a body split into `## What Was Done` and `## Insights`.
-- **Failure captures**: One `.md` per failure, named `{YYYYMMDD-HHmmss}_{slug}.md`, describing what went wrong, why, and what to do differently.
 - **Synthesis reports**: One `.md` per period (`YYYY-MM-DD_weekly.md` etc.) aggregating recurring patterns from session learnings + failures.
 
 ## When NOT to write

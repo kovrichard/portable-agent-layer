@@ -19,7 +19,6 @@ Assign ONE tier at the start of OBSERVE. Default is Standard — only escalate i
 |---------|----------|-----------|
 | Capability audit format | One-line summary | Full USE/DECLINE/N/A |
 | Plan Mode (EnterPlanMode) | Skip | Use for user alignment |
-| LEARN phase | Reflection log + threads | + Wisdom frame |
 | Constraint extraction | Inline in reverse engineering | Numbered [EX-N] list |
 | Criteria tracking | Inline checklist only | + TaskCreate one task per criterion at end of OBSERVE |
 
@@ -249,45 +248,7 @@ pal cli algorithm-reflect --task "description" --criteria N --passed N --failed 
 
 Set `--scope task-specific` when the Q2 idea is bound to this one task (e.g. a criterion that only matters for the specific file, API, or dataset you were handling) and would not generalize to the algorithm; use `general` (the default) for reusable structural improvements. This keeps the algorithm-update synthesis focused on changes worth folding into ALGORITHM.md.
 
-**3. Relationship note** — write behavioral observations (O, W) and a session diary entry (--b).
-
-The goal is behavioral intelligence about the user, not a session log. Session logs belong in handoff notes and project history. This step captures *who the user is* — observable patterns, preferences, world facts.
-
-```bash
-# Opinion — behavioral observation about the user (what you noticed about how they work):
-pal cli relationship-note --o "User prefers reviewing existing code before adding anything new" --confidence 0.80
-
-# World fact — objective fact about the user's situation (tech stack, project state, context):
-pal cli relationship-note --w "User is building a backend service in TypeScript with Bun"
-
-# Session diary — what the agent did this session (first-person, specific):
-pal cli relationship-note --b "Refactored the auth middleware to support refresh token rotation"
-
-# Multiple notes in one call:
-pal cli relationship-note --o "User prefers one verified change at a time, not batches" --confidence 0.80 --b "Fixed the path-normalization bug in the hook merge logic"
-```
-
-**O (Opinion) — what to write:**
-- Preference patterns: "User prefers short answers with a recommendation over exhaustive options"
-- Correction patterns: "User redirects scope drift immediately without elaborating on why"
-- Working style: "User verifies each change before asking for the next one"
-- Confidence guide: 0.70 = single observation, 0.80 = confirmed twice, 0.85+ = established pattern
-
-**W (World) — what to write:**
-- Tech stack facts: "User's current project uses PostgreSQL, tRPC, and Next.js"
-- Situation facts: "User is in the middle of a database migration with live traffic"
-
-**--b (Session diary) — keep it sharp:**
-- ✓ "Debugged the race condition in the message queue consumer and fixed the ack logic"
-- ✗ "Helped with backend improvements" — too vague, no system named
-
-**When to write O vs use the opinion tool (step 6):**
-- O notes → subtle patterns you observed, not yet confirmed → goes into daily file → synthesis promotes to opinions.json over time
-- Opinion tool → explicit user confirmation/correction → goes directly to opinions.json immediately
-
-Skip only if the session was a trivial lookup or typo fix (same rule as step 2).
-
-**4. Handoff note** — if work is unfinished, write what remains so the next session can pick up immediately:
+**3. Handoff note** — if work is unfinished, write what remains so the next session can pick up immediately:
 
 ```bash
 # Work still in progress:
@@ -301,7 +262,7 @@ pal cli handoff-note --done --title "what we completed"
 - Skip if the session fully resolved everything it set out to do
 - `--text` should answer: what's next, what was decided, what to watch out for
 
-**5. Open work** — close what this session finished; open what it didn't:
+**4. Open work** — close what this session finished; open what it didn't:
 
 **Project work** — use ISCs, not threads:
 ```bash
@@ -323,33 +284,13 @@ pal cli thread --add --title "brief title" --context "why it matters, what needs
 pal cli thread --resolve --id <id>
 ```
 
-**6. Opinion capture** — scan the conversation for moments where the user:
-- Confirmed something you did: "yes exactly", "keep doing that", "10 rated", accepted without pushback
-- Corrected something you did: "no", "don't do that", "stop", "that's not what I meant"
-- Revealed a preference by repeating a pattern (asked for concise answers twice, always checked PAI first, etc.)
-
-For each, invoke the opinion tool:
-```bash
-# User confirmed a preference
-pal cli skill run opinion opinion evidence "matching keywords" --confirmation "what they confirmed"
-
-# User corrected a preference
-pal cli skill run opinion opinion evidence "matching keywords" --contradiction "what they corrected"
-
-# New pattern observed (no existing opinion matches)
-pal cli skill run opinion opinion add "the preference" --category communication|technical|workflow|general
-```
-
-Skip if nothing in the conversation touched preferences or working style.
-
-**7. Wisdom Frame** (Extended+ only) — if the session produced a genuine, reusable insight:
+**5. Standing rules** — when the user states a rule that should hold from now on, record it:
 
 ```bash
-pal cli wisdom-frame --domain <domain> --observation "insight" [--type principle|contextual-rule|anti-pattern|evolution]
+pal cli rule add-opinion --kind <correction kind> --when "the situation" --steering "the instruction" --evidence "what the user said"
 ```
 
-Domains: `development`, `workflow`, `communication`, `infrastructure`, `integration`, or any fitting domain.
-Only write if the insight is **genuine and reusable** — not every session produces one. When in doubt, skip.
+Corrections the user does not state as a rule are picked up from the turns automatically; do not record them here.
 
 ## Output Format
 
@@ -391,5 +332,4 @@ Only write if the insight is **genuine and reusable** — not every session prod
 🪞 Q2 — Algorithm: [structural improvement]
 🪞 Q3 — AI: [reasoning blind spot]
 📊 REFLECTION LOG: [appended to algorithm-reflections.jsonl]
-📝 WISDOM: [frame update if genuine insight, or "No new insight"]
 ```

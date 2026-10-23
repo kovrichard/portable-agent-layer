@@ -149,7 +149,6 @@ Every session, every insight, every decision — captured automatically:
 - Learnings captured per session
 - Ratings tracked (explicit and implicit)
 - Wisdom crystallized from recurring patterns
-- Failures logged for pattern avoidance
 
 ### 13. Permission to Fail
 
@@ -215,7 +214,7 @@ Brief description.
 │  User Prompt Submit │──► UserPromptOrchestrator.ts
 │                     │    - Prompt context (one merged system-reminder):
 │                     │      contextual steering, skill trigger matches,
-│                     │      prior-lesson retrieval
+│                     │      approved rules, entity cards
 │                     │    - Rating capture (explicit/implicit)
 │                     │    - Session naming (first prompt)
 └─────────────────────┘
@@ -232,7 +231,6 @@ Brief description.
 │       Stop          │──► StopOrchestrator.ts → runStopHandlers()
 │                     │    Detached (inference-bearing, fire-and-forget):
 │                     │    - Session intelligence (title, summary, insights, handoff)
-│                     │    - Failure principle extraction (low ratings)
 │                     │    - Auto-graduate wisdom (24h TTL, idempotent)
 │                     │    Concurrent (Promise.allSettled):
 │                     │    - Work session capture
@@ -268,7 +266,7 @@ The Copilot CLI drops what its `userPromptSubmitted` hook returns, so that hook 
 ### Design Principles
 
 - **Fail-open**: Hook errors never block the user's session
-- **Detached inference**: Long inference calls (session intelligence, failure principle, auto-graduate) spawn detached child processes that survive the hook returning. The parent hook exits in milliseconds — cold-start latency for the subscription CLI no longer blocks the next prompt.
+- **Detached inference**: Long inference calls (session intelligence, entity extraction, auto-graduate) spawn detached child processes that survive the hook returning. The parent hook exits in milliseconds — cold-start latency for the subscription CLI no longer blocks the next prompt.
 - **Parallel execution**: Non-inference handlers run via `Promise.allSettled` — one failure doesn't block others
 - **Idempotent**: Handlers check for existing state before writing (auto-graduate uses 24h TTL + content dedup; session intelligence dedups by message count)
 - **Timeout-aware**: Inference calls have hard timeouts (60s default; longer because they run detached and don't block the user)
@@ -306,7 +304,6 @@ memory/
 │   ├── projects.json              # Multi-session project tracking
 │   ├── counts.json                # Cached counts for greeting
 │   ├── last-responses.json        # Cached responses for rating correlation
-│   ├── pending-failure.json       # Deferred failure capture
 │   └── debug.log                  # Hook execution logs
 │
 ├── signals/                       # User feedback
@@ -322,9 +319,7 @@ memory/
 │   └── YYYY-MM/
 │       └── YYYY-MM-DD_title.md    # Session learning with frontmatter
 │
-├── failures/                      # Low-rating context dumps
-│   └── YYYY-MM/
-│       └── YYYY-MM-DD_context.md  # Failed session context for avoidance
+├── failures/                      # Low-rating captures from older versions, no longer written
 │
 ├── wisdom/                        # Crystallized principles
 │   └── frames/
@@ -345,8 +340,6 @@ Session interaction
   ├─► [Stop] Relationship extraction (Haiku) ──► relationship/YYYY-MM/YYYY-MM-DD.md
   │
   ├─► [Stop] Work learning capture ──► session-learning/YYYY-MM/...
-  │
-  ├─► [Stop] Failure capture (low ratings) ──► failures/YYYY-MM/...
   │
   ├─► [Periodic] Reflect trigger ──► relationship/opinions.json
   │                                  relationship/reflections/...
@@ -392,7 +385,7 @@ Relationship notes (O/B types)
 - Loaded once per session, always available, never re-fetched
 
 **Tier 2 — Semi-static** (pre-compiled at previous session stop, loaded natively):
-- Self-model, wisdom, opinions, synthesis, failures, steering rules
+- Self-model, wisdom, opinions, steering rules
 - Written to disk by `writeContextDigests()` at Stop time
 - Loaded natively per-agent: `@imports` in CLAUDE.md (Claude Code), `instructions[]` in opencode config, `.mdc` rules in `~/.cursor/rules/` (Cursor), `.instructions.md` in `~/.copilot/instructions/` (Copilot), always-on rules in `~/.gemini/config/plugins/pal/rules/` (Antigravity)
 - Content is global/user-level — safe to pre-compile (not project-scoped)
@@ -446,7 +439,7 @@ Everything else loads via the routing table in CLAUDE.md. The AI reads files onl
 
 ### Subscription-First Model
 
-PAL's background inference (session naming, summaries, failure capture, wisdom graduation, etc.) routes through whichever subscription CLI is currently hosting the session. No API key is required by default — the user already pays for the subscription that comes with their agent.
+PAL's background inference (session naming, summaries, correction checks, wisdom graduation, etc.) routes through whichever subscription CLI is currently hosting the session. No API key is required by default — the user already pays for the subscription that comes with their agent.
 
 ### Routing Table
 
@@ -475,18 +468,13 @@ The `CLAUDECODE` env var is unset *scoped to the child process only* (not delete
 
 ### Detached Inference Pattern
 
-Long inference calls (session intelligence, failure principle extraction, auto-graduate) run via `spawnDetachedInference()`. The parent hook writes the transcript to a tmp file, spawns a detached child with `--run <args>`, and returns immediately. The child reads the tmp file, runs inference, writes results to disk, and unlinks the tmp file.
+Long inference calls (session intelligence, entity extraction, auto-graduate) run via `spawnDetachedInference()`. The parent hook writes the transcript to a tmp file, spawns a detached child with `--run <args>`, and returns immediately. The child reads the tmp file, runs inference, writes results to disk, and unlinks the tmp file.
 
 ```
 StopOrchestrator
   │
   ├─► detachSessionIntelligence(transcript, sessionId)
   │     └─► [child] inference → session-learning/YYYY-MM/...
-  │
-  ├─► detachFailurePrinciple(transcript)
-  │     ├─► Atomic claim: rename pending-failure.json → tmp/pending.json
-  │     │   (ENOENT means another concurrent Stop hook claimed it — benign)
-  │     └─► [child] inference → failures/YYYY-MM/...
   │
   └─► detachAutoGraduate()
         └─► [child] 24h TTL + content dedup → wisdom/frames/...

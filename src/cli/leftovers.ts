@@ -120,6 +120,43 @@ const copilotInstructionsLink: Leftover = {
   remove: () => unlinkSync(oldCopilotInstructions()),
 };
 
+const failuresDigest = () => resolve(paths.memory(), "learning", "failures-digest.md");
+const opencodeConfig = () => resolve(platform.opencodeDir(), "config.json");
+
+const failuresDigestCopies = () =>
+  [
+    resolve(platform.cursorDir(), "rules", "pal-failures.mdc"),
+    resolve(platform.copilotDir(), "instructions", "pal-failures.instructions.md"),
+    resolve(platform.antigravityPluginDir(), "rules", "pal-failures.md"),
+  ].filter((path) => existsSync(path));
+
+function opencodeInstructions(): string[] {
+  const instructions = readJson<Json>(opencodeConfig(), {}).instructions;
+  return Array.isArray(instructions)
+    ? instructions.filter((i): i is string => typeof i === "string")
+    : [];
+}
+
+const opencodeLoadsFailuresDigest = () =>
+  opencodeInstructions().includes(failuresDigest());
+
+const failuresDigestContext: Leftover = {
+  id: "failures-digest-context",
+  description:
+    "Stop loading the failures digest into Cursor, Copilot, Antigravity and opencode — PAL no longer writes it",
+  find: () => [
+    ...failuresDigestCopies(),
+    ...(opencodeLoadsFailuresDigest() ? [`${opencodeConfig()}#instructions`] : []),
+  ],
+  remove() {
+    for (const path of failuresDigestCopies()) unlinkSync(path);
+    if (!opencodeLoadsFailuresDigest()) return;
+    const config = readJson<Json>(opencodeConfig(), {});
+    config.instructions = opencodeInstructions().filter((i) => i !== failuresDigest());
+    writeJson(opencodeConfig(), config);
+  },
+};
+
 const debugLog = () => resolve(paths.debug(), "debug.log");
 
 const debugLogPrev: Leftover = {
@@ -139,5 +176,6 @@ export const LEFTOVERS: Leftover[] = [
   startupProjectsFile,
   opencodePluginOldName,
   copilotInstructionsLink,
+  failuresDigestContext,
   debugLogPrev,
 ];

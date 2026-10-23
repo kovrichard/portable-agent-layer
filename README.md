@@ -137,7 +137,7 @@ pal cli install               # all available (default)
 | Codex | Full | Yes | Yes | Yes | Yes | `codex exec` |
 | Antigravity CLI | Full | Yes | Yes (plugin) | Yes (via the plugin's `rules/`) | Yes | `agy` |
 
-PAL's background inference (session naming, summaries, failure capture, etc.) runs through whichever subscription CLI is active — no API key required by default.
+PAL's background inference (session naming, summaries, correction checks, etc.) runs through whichever subscription CLI is active — no API key required by default.
 
 ---
 

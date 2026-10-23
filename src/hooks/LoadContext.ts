@@ -3,7 +3,7 @@
  *
  * Static context (TELOS, setup prompt) is loaded natively from AGENTS.md /
  * CLAUDE.md. This hook injects dynamic context only: wisdom principles,
- * relationship notes, learning digest, signal trends, failure patterns, work state.
+ * relationship notes, opinions, work state.
  *
  * Which agent gets what, in which envelope, is in lib/session-context.ts.
  */

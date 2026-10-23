@@ -90,33 +90,13 @@ describe("injectPromptContext handler", () => {
     expect(out).toBe("");
   });
 
-  test("emits empty when settings flag disabled", async () => {
-    seedCapture(
-      "20260415-100000_db-mock",
-      "DB mock test failed",
-      "Never mock the database"
-    );
-    await setSettings({
-      dynamicContext: {
-        learningInjection: false,
-        contextualSteering: false,
-        ...everyPromptOff,
-      },
-    });
-    const { injectPromptContext } = await loadHandlers();
-    const out = await captureStdout(() =>
-      injectPromptContext("should I mock the database in this test")
-    );
-    expect(out).toBe("");
-  });
-
-  test("emits empty when corpus is empty", async () => {
+  test("emits empty when nothing matches", async () => {
     const { injectPromptContext } = await loadHandlers();
     const out = await captureStdout(() => injectPromptContext("anything goes here"));
     expect(out).toBe("");
   });
 
-  test("emits system-reminder when query matches a capture", async () => {
+  test("a failure capture matching the prompt is not injected as a prior lesson", async () => {
     seedCapture(
       "20260415-100000_db-mock",
       "Mocked database hid a migration bug",
@@ -126,22 +106,8 @@ describe("injectPromptContext handler", () => {
     const out = await captureStdout(() =>
       injectPromptContext("should I mock the database in this integration test")
     );
-    expect(out).toContain("<system-reminder>");
-    expect(out).toContain("Never mock the database");
-    expect(out).toContain("</system-reminder>");
-  });
-
-  test("emits empty when query is unrelated to corpus", async () => {
-    seedCapture(
-      "20260415-100000_db-mock",
-      "Mocked database hid a migration bug",
-      "Never mock the database in integration tests"
-    );
-    const { injectPromptContext } = await loadHandlers();
-    const out = await captureStdout(() =>
-      injectPromptContext("kubernetes autoscaler manifests in helm chart")
-    );
-    expect(out).toBe("");
+    expect(out).not.toContain("Relevant prior lessons");
+    expect(out).not.toContain("Never mock the database");
   });
 
   test("merges a skill trigger match into the injection", async () => {
@@ -198,55 +164,11 @@ describe("injectPromptContext handler", () => {
   });
 });
 
-describe("getRetrievalReminder", () => {
-  test("returns null when prompt is empty", async () => {
-    const { getRetrievalReminder } = await loadHandlers();
-    expect(await getRetrievalReminder("")).toBeNull();
-  });
-
-  test("returns null when settings flag disabled", async () => {
-    seedCapture(
-      "20260415-100000_db-mock",
-      "DB mock test failed",
-      "Never mock the database"
-    );
-    await setSettings({ dynamicContext: { learningInjection: false } });
-    const { getRetrievalReminder } = await loadHandlers();
-    expect(
-      await getRetrievalReminder("should I mock the database in this test")
-    ).toBeNull();
-  });
-
-  test("returns null when corpus is empty", async () => {
-    const { getRetrievalReminder } = await loadHandlers();
-    expect(await getRetrievalReminder("anything goes here")).toBeNull();
-  });
-
-  test("returns reminder string when query matches a capture", async () => {
-    seedCapture(
-      "20260415-100000_db-mock",
-      "Mocked database hid a migration bug",
-      "Never mock the database in integration tests"
-    );
-    const { getRetrievalReminder } = await loadHandlers();
-    const result = await getRetrievalReminder(
-      "should I mock the database in this integration test"
-    );
-    expect(result).not.toBeNull();
-    expect(result).toContain("<system-reminder>");
-    expect(result).toContain("Never mock the database");
-  });
-
-  test("returns null when query is unrelated to corpus", async () => {
-    seedCapture(
-      "20260415-100000_db-mock",
-      "Mocked database hid a migration bug",
-      "Never mock the database in integration tests"
-    );
-    const { getRetrievalReminder } = await loadHandlers();
-    expect(
-      await getRetrievalReminder("kubernetes autoscaler manifests in helm chart")
-    ).toBeNull();
+describe("tier-2 context sources", () => {
+  test("the failures digest is not a semi-static source", async () => {
+    const { getSemiStaticSources } = await import("../src/hooks/lib/semi-static");
+    const slugs = getSemiStaticSources().map((s) => s.slug);
+    expect(slugs).not.toContain("failures");
   });
 });
 

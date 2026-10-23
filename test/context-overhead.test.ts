@@ -34,7 +34,7 @@ beforeEach(() => {
 describe("logContextInjected", () => {
   test("logs each tier's size in chars against the session", () => {
     writeMemory(["self-model", "current.md"], "  model  \n");
-    writeMemory(["learning", "failures-digest.md"], "lessons");
+    writeMemory(["wisdom", "context.md"], "lessons");
     logContextInjected({ session_id: "s1" }, "reminder", NOW);
     expect(injected()).toMatchObject([
       {

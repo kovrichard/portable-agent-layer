@@ -57,6 +57,16 @@ describe("v7-retired-settings-keys", () => {
     expect(pendingIds()).not.toContain("v7-retired-settings-keys");
   });
 
+  test("removes the switches for the failures digest and prior lessons", () => {
+    writeSettings({
+      dynamicContext: { failurePatterns: true, learningInjection: false, wisdom: true },
+    });
+
+    runMigrate([]);
+
+    expect(readSettings()).toEqual({ dynamicContext: { wisdom: true } });
+  });
+
   test("a dry run leaves the file alone", () => {
     writeSettings({ dynamicContext: { learningDigest: true } });
 

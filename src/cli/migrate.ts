@@ -660,6 +660,8 @@ const RETIRED_SETTINGS_KEYS: Record<string, string[]> = {
     "synthesis",
     "signalTrends",
     "activeWork",
+    "failurePatterns",
+    "learningInjection",
   ],
 };
 
