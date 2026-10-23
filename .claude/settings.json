@@ -39,6 +39,12 @@
         ]
       }
     ],
+    "PreToolUse": [
+      {
+        "matcher": "Agent",
+        "hooks": [{ "type": "command", "command": "bun .agents/scripts/agent-isolation.ts" }]
+      }
+    ],
     "SubagentStop": [
       {
         "hooks": [
