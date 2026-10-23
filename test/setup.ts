@@ -52,6 +52,15 @@ function stopGitAtTestHomes() {
 
 stopGitAtTestHomes();
 
+/** A commit, fetch or push otherwise starts `git maintenance run --auto`: a tenth of a dark-factory test's processes. */
+function skipGitHousekeeping() {
+  process.env.GIT_CONFIG_COUNT = "1";
+  process.env.GIT_CONFIG_KEY_0 = "maintenance.auto";
+  process.env.GIT_CONFIG_VALUE_0 = "false";
+}
+
+skipGitHousekeeping();
+
 function seeTheTerminalCiSees() {
   process.stdout.isTTY = false;
   delete process.env.FORCE_COLOR;
