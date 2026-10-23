@@ -125,7 +125,6 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   };
 
   return {
-    // --- Per-message: Inject dynamic system reminder ---
     "experimental.chat.system.transform": async (input, output) => {
       if (isPalSpawnedInference()) return;
       const reminder = buildSystemReminder({
@@ -135,7 +134,6 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       if (reminder) output.system.push(reminder);
     },
 
-    // --- Session events: start and stop handling ---
     event: async ({ event }) => {
       if (isPalSpawnedInference()) return;
       if (isSessionEvent(event.type)) logDebug("opencode:event", `Event: ${event.type}`);
@@ -191,7 +189,6 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       }
     },
 
-    // --- Capture ratings + session naming from user messages (shared handlers) ---
     "chat.message": async (input, output) => {
       if (isPalSpawnedInference()) return;
       const text = partsToText(output.parts ?? []);
@@ -219,7 +216,6 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       }
     },
 
-    // --- Security: block dangerous tool executions ---
     "tool.execute.before": async (
       _input: { tool: string; sessionID: string; callID: string },
       output: { args: Record<string, unknown> | string }
@@ -291,7 +287,6 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       if (entry) logDebug("opencode:ledger", `recorded ${entry.id} ${entry.target}`);
     },
 
-    // --- Inject PAL_DIR into shell environment ---
     "shell.env": async (
       input: { cwd: string; sessionID?: string; callID?: string },
       output: { env: Record<string, string> }
