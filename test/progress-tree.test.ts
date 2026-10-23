@@ -94,6 +94,32 @@ describe("progress tree", () => {
     expect(node?.waitingOn).toBeNull();
   });
 
+  test("the same PR or commit attached under two spellings is listed once, keeping its label", () => {
+    open("a", "one");
+    const attach = (artifact: { kind: "pr" | "commit"; ref: string; label?: string }) =>
+      appendEvent("pal", "a", "attach", artifact, file, at());
+    attach({ kind: "pr", ref: "152" });
+    attach({ kind: "pr", ref: "https://github.com/o/r/pull/152" });
+    attach({ kind: "pr", ref: "#153" });
+    attach({ kind: "commit", ref: "cda2685" });
+    attach({ kind: "commit", ref: "cda2685f1e", label: "test: split" });
+    attach({ kind: "commit", ref: "0a90e8f" });
+    const node = readTree("pal", file).nodes.get("a");
+    expect(node?.artifacts.map((x) => [x.kind, x.ref, x.label])).toEqual([
+      ["pr", "152", undefined],
+      ["pr", "#153", undefined],
+      ["commit", "cda2685", "test: split"],
+      ["commit", "0a90e8f", undefined],
+    ]);
+  });
+
+  test("PRs with the same number in two repositories stay apart", () => {
+    open("a", "one");
+    for (const ref of ["https://github.com/o/a/pull/7", "https://github.com/o/b/pull/7"])
+      appendEvent("pal", "a", "attach", { kind: "pr", ref }, file, at());
+    expect(readTree("pal", file).nodes.get("a")?.artifacts).toHaveLength(2);
+  });
+
   test("decisions, artifacts and follow-ups collect on their node", () => {
     open("a", "one");
     appendEvent(

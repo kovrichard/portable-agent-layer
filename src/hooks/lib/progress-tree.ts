@@ -194,6 +194,39 @@ export function appendEvent<T extends WorkEvent["type"]>(
   return event;
 }
 
+type ArtifactRef = { kind: ArtifactKind; ref: string };
+
+const PR_URL_RE = /^https?:\/\//;
+const SHORT_SHA_LENGTH = 7;
+
+function prNumberOf(ref: string): string | null {
+  return /(\d+)$/.exec(ref)?.[1] ?? null;
+}
+
+function samePr(a: string, b: string): boolean {
+  if (PR_URL_RE.test(a) && PR_URL_RE.test(b)) return a === b;
+  const number = prNumberOf(a);
+  return number !== null && number === prNumberOf(b);
+}
+
+function sameCommit(a: string, b: string): boolean {
+  const [short, long] = a.length <= b.length ? [a, b] : [b, a];
+  return short.length >= SHORT_SHA_LENGTH && long.startsWith(short);
+}
+
+function sameArtifact(a: ArtifactRef, b: ArtifactRef): boolean {
+  if (a.kind !== b.kind) return false;
+  if (a.kind === "pr") return samePr(a.ref, b.ref);
+  if (a.kind === "commit") return sameCommit(a.ref, b.ref);
+  return a.ref === b.ref;
+}
+
+function addArtifact(node: WorkNode, artifact: Artifact): void {
+  const known = node.artifacts.find((a) => sameArtifact(a, artifact));
+  if (!known) node.artifacts.push(artifact);
+  else known.label ??= artifact.label;
+}
+
 export function attachOnce(
   scope: string,
   node: WorkNode,
@@ -202,8 +235,7 @@ export function attachOnce(
   now: Date = new Date(),
   session: string | undefined = progressSession()
 ): boolean {
-  if (node.artifacts.some((a) => a.kind === artifact.kind && a.ref === artifact.ref))
-    return false;
+  if (node.artifacts.some((a) => sameArtifact(a, artifact))) return false;
   appendEvent(scope, node.id, "attach", artifact, file, now, session);
   return true;
 }
@@ -314,7 +346,7 @@ function applyToNode(tree: ScopeTree, node: WorkNode, event: WorkEvent): void {
       node.decisions.push({ ts: event.ts, text: event.text, why: event.why });
       break;
     case "attach":
-      node.artifacts.push({
+      addArtifact(node, {
         ts: event.ts,
         kind: event.kind,
         ref: event.ref,

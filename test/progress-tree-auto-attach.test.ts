@@ -205,6 +205,15 @@ describe("a started factory build attaches its task", () => {
     expect(attachments()).toEqual([["n1", "run", `dark-factory:${TASK}`]]);
   });
 
+  test("a command that only names the script, like git add, attaches nothing", () => {
+    openNode();
+    runClaude(
+      "git add assets/plugins/dark-factory/scripts/build.mjs assets/plugins/dark-factory/scripts/roles.mjs"
+    );
+    runClaude("cat /plugins/dark-factory/scripts/build.mjs | head");
+    expect(attachments()).toEqual([]);
+  });
+
   test("the same task is not attached twice", () => {
     openNode();
     runClaude(`${BUILD} ${TASK}`);
