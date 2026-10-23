@@ -49,7 +49,8 @@ const tree = cliTree({
     process.exit(await install(resolveTargets(argv), argv));
   },
   uninstall: ({ argv }) => uninstall(argv),
-  update: ({ values }) => update(values.canary === true),
+  update: ({ values }) =>
+    update({ canary: values.canary === true, stable: values.stable === true }),
   export: ({ argv }) => exportState(argv),
   import: ({ argv }) => importState(argv),
   status: () => status(),
@@ -553,28 +554,47 @@ async function importState(args: string[]) {
   log.info("Run 'pal cli install' to re-register hooks.");
 }
 
-async function update(canary: boolean) {
-  const { checkCanary, checkForUpdate, clearUpdateCache, isRepoMode } = await import(
-    "../hooks/handlers/update-check"
-  );
+async function update(flags: { canary?: boolean; stable?: boolean }) {
+  const {
+    checkForUpdate,
+    clearUpdateCache,
+    isRepoMode,
+    setUpdateChannel,
+    updateChannel,
+  } = await import("../hooks/handlers/update-check");
   const { reinstallInFreshProcess } = await import("./reinstall");
-  const { CANARY_NEEDS_PACKAGE, runUpdate, updateCheck } = await import("./update-flow");
-  const check = updateCheck(canary, isRepoMode(), {
-    stable: () => checkForUpdate(true),
-    canary: checkCanary,
-  });
-  if (!check) {
+  const {
+    CANARY_NEEDS_PACKAGE,
+    ONE_CHANNEL,
+    channelSwitchLine,
+    requestedChannel,
+    runUpdate,
+  } = await import("./update-flow");
+  const { createStyle } = await import("./ui/style");
+  if (isRepoMode() && flags.canary) {
     log.error(CANARY_NEEDS_PACKAGE);
     process.exit(1);
   }
+  const from = isRepoMode() ? "stable" : updateChannel();
+  const to = requestedChannel(flags, from);
+  if (!to) {
+    log.error(ONE_CHANNEL);
+    process.exit(1);
+  }
+  if (to !== from) setUpdateChannel(to);
+  const style = createStyle();
   process.exit(
-    await runUpdate({
-      check,
-      reinstall: (env) => {
-        clearUpdateCache();
-        return reinstallInFreshProcess(process.argv[1], env);
+    await runUpdate(
+      {
+        check: () => checkForUpdate(true, to),
+        switched: (checked) => channelSwitchLine(style, from, to, checked),
+        reinstall: (env) => {
+          clearUpdateCache();
+          return reinstallInFreshProcess(process.argv[1], env);
+        },
       },
-    })
+      style
+    )
   );
 }
 

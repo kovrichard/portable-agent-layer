@@ -83,7 +83,7 @@ pal cli status        # check your setup
 | `pal cli init` | Scaffold PAL home directory and install hooks |
 | `pal cli install` | Register hooks/skills for targets |
 | `pal cli uninstall` | Remove hooks/skills for targets |
-| `pal cli update` | Update PAL (git pull or npm update) and reinstall hooks. Install asks once whether to do this on its own: when a session closes PAL checks for a release (at most hourly) and installs it, so opening PAL is never slowed. A failed update waits a day before retrying. The switch lives in the control room under Settings → Updates. On a repo install an update waits while the clone has uncommitted changes. `--canary` installs the latest prerelease from the `canary` branch instead; auto-update always follows the stable release |
+| `pal cli update` | Update PAL (git pull or npm update) and reinstall hooks. Install asks once whether to do this on its own: when a session closes PAL checks for a release (at most hourly) and installs it, so opening PAL is never slowed. A failed update waits a day before retrying. The switch lives in the control room under Settings → Updates. On a repo install an update waits while the clone has uncommitted changes. `--canary` switches a package install to the `canary` prerelease channel; from then on plain `pal cli update`, auto-update and the update notice follow canary until `--stable` switches back. Neither ever installs an older version than the one you have |
 | `pal cli export` | Export user state (telos, memory) to a zip |
 | `pal cli import` | Import user state from a zip |
 | `pal cli status` | Show current PAL configuration |
