@@ -53,12 +53,25 @@ function env(): Env {
   };
 }
 
+function timed<T>(label: string, work: () => T): T {
+  const start = performance.now();
+  try {
+    return work();
+  } finally {
+    const ms = performance.now() - start;
+    if (ms > Number(process.env.DIAG_MS ?? 750))
+      console.error(`DIAG slow ${Math.round(ms)}ms ${label}`);
+  }
+}
+
 function git(cwd: string, ...args: string[]) {
-  const result = spawnSync("git", args, {
-    cwd,
-    encoding: "utf8",
-    env: { ...process.env, ...GIT_ENV },
-  });
+  const result = timed(`git ${args.join(" ")}`, () =>
+    spawnSync("git", args, {
+      cwd,
+      encoding: "utf8",
+      env: { ...process.env, ...GIT_ENV },
+    })
+  );
   if (result.status !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr}`);
 }
 
@@ -117,12 +130,14 @@ function setup({ user, repo, repoConfig = {}, factoryConfig }: Setup = {}) {
     })
   );
   put(join(home, "tasks", "t1", "spec.md"), "## Goal\n\nx\n");
-  prepare("t1", e);
-  fakeClaude();
+  timed("prepare", () => prepare("t1", e));
+  timed("fakeClaude", () => fakeClaude());
 }
 
 function run(role = "reviewer") {
-  return runRoleHeadless("t1", role, { env: env() });
+  return timed(`runRoleHeadless ${role}`, () =>
+    runRoleHeadless("t1", role, { env: env() })
+  );
 }
 
 function appended(): string {
@@ -131,7 +146,13 @@ function appended(): string {
   return text;
 }
 
+let testStart = 0;
+
 beforeEach(() => {
+  const ms = performance.now() - testStart;
+  if (testStart > 0 && ms > 3000)
+    console.error(`DIAG previous test total ${Math.round(ms)}ms`);
+  testStart = performance.now();
   home = freshTestDir(import.meta.file);
   userHome = join(home, "user");
   clone = join(home, "clone");
