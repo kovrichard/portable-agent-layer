@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { delimiter, join } from "node:path";
+import { delimiter, dirname, join } from "node:path";
 import { waitForCi } from "../assets/plugins/dark-factory/scripts/ci-wait.mjs";
 import * as gateModule from "../assets/plugins/dark-factory/scripts/gate.mjs";
 import {
@@ -81,6 +81,22 @@ describe("tools", () => {
 
   test("the preflight passes when the tools are on PATH", () => {
     expect(() => requireTools(env, ["git"])).not.toThrow();
+  });
+
+  test("the preflight finds the tools without running them", () => {
+    const bin = join(home, "bin");
+    const ran = join(bin, "ran.log");
+    mkdirSync(bin, { recursive: true });
+    for (const tool of ["git", "gh", "bash"])
+      writeFakeBin(
+        bin,
+        tool,
+        `require("node:fs").appendFileSync(${JSON.stringify(ran)}, "${tool}\\n");\n`
+      );
+
+    const path = [bin, dirname(process.execPath)].join(delimiter);
+    expect(() => requireTools({ ...withoutTools(), PATH: path })).not.toThrow();
+    expect(existsSync(ran)).toBe(false);
   });
 });
 

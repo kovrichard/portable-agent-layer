@@ -7,7 +7,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { delimiter, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const PLUGIN_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -78,7 +78,7 @@ const CMD_META_CHARS = /([()\][%!^"`<>&|;, *?])/g;
 
 function pathEntries(env) {
   const key = Object.keys(env).find((name) => name.toUpperCase() === "PATH");
-  return (key ? env[key] : "").split(";").filter(Boolean);
+  return (key ? env[key] : "").split(delimiter).filter(Boolean);
 }
 
 function windowsExecutable(command, env) {
@@ -129,8 +129,10 @@ export function spawnTool(command, args, options = {}) {
   return result;
 }
 
+/** Found on PATH, never run: `gh --version` alone has taken 19 s on a Windows runner. */
 function isInstalled(name, env) {
-  return spawnSync(name, ["--version"], { env }).error?.code !== "ENOENT";
+  if (process.platform === "win32") return windowsExecutable(name, env) !== null;
+  return pathEntries(env).some((dir) => existsSync(join(dir, name)));
 }
 
 export function requireTools(env = process.env, names = Object.keys(INSTALL_HINTS)) {
