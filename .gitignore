@@ -27,6 +27,9 @@ assets/skills/consulting-report/demo/*.pdf
 assets/skills/consulting-report/demo/*.html
 assets/skills/consulting-report/demo/diagrams-compressed/
 
+# Local design notes and plans, kept out of version control
+plans/
+
 # Mutation testing sandbox + reports
 .stryker-tmp/
 stryker.log
