@@ -14,6 +14,8 @@ beforeEach(() => {
   process.env.PAL_CLAUDE_DIR = at(".claude");
   process.env.PAL_OPENCODE_DIR = at(".opencode");
   process.env.PAL_COPILOT_DIR = at(".copilot");
+  process.env.PAL_CURSOR_DIR = at(".cursor");
+  process.env.PAL_GEMINI_DIR = at(".gemini");
 });
 
 function write(path: string, content: unknown): void {
@@ -102,6 +104,38 @@ describe.skipIf(process.platform === "win32")("Copilot instructions link", () =>
     write(at(".copilot", "copilot-instructions.md"), "my own instructions");
 
     expect(leftover("copilot-instructions-link").find()).toEqual([]);
+  });
+});
+
+describe("failures digest wired into the agents", () => {
+  const digest = () => at("home", "memory", "learning", "failures-digest.md");
+
+  test("removes each agent's copy and opencode's entry, keeps the digest itself", () => {
+    write(digest(), "lessons");
+    write(at(".cursor", "rules", "pal-failures.mdc"), "lessons");
+    write(at(".cursor", "rules", "pal-opinions.mdc"), "opinions");
+    write(at(".copilot", "instructions", "pal-failures.instructions.md"), "lessons");
+    write(
+      at(".gemini", "config", "plugins", "pal", "rules", "pal-failures.md"),
+      "lessons"
+    );
+    write(at(".opencode", "config.json"), {
+      instructions: [digest(), "/keep/me.md"],
+      model: "keep",
+    });
+
+    expect(cleanUp("failures-digest-context")).toHaveLength(4);
+
+    expect(existsSync(digest())).toBe(true);
+    expect(existsSync(at(".cursor", "rules", "pal-opinions.mdc"))).toBe(true);
+    expect(json(at(".opencode", "config.json"))).toEqual({
+      instructions: ["/keep/me.md"],
+      model: "keep",
+    });
+  });
+
+  test("nothing to do on a fresh install", () => {
+    expect(leftover("failures-digest-context").find()).toEqual([]);
   });
 });
 

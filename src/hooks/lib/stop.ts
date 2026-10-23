@@ -5,7 +5,7 @@
 
 import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { mkdtemp, rename, writeFile } from "node:fs/promises";
+import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { autoBackup } from "../handlers/backup";
@@ -173,7 +173,6 @@ export async function runStopHandlers(
   await timing.time("detach-inference", async () => {
     await detachSessionIntelligence(transcript, options.sessionId);
     await detachEntityExtraction(transcript, options.sessionId);
-    await detachFailurePrinciple(transcript);
     detachAgenda(options.sessionId);
   });
   // Failure auto-graduation is intentionally NOT wired here: every pattern it
@@ -339,43 +338,5 @@ async function detachEntityExtraction(
     );
   } catch (err) {
     logError("detachEntityExtraction", err);
-  }
-}
-
-/**
- * If a pending-failure exists, rename it to a unique path (race-free claim),
- * write the transcript to tmp, spawn the failure-principle handler detached.
- */
-async function detachFailurePrinciple(transcript: string): Promise<void> {
-  const pendingPath = resolve(paths.state(), "pending-failure.json");
-  if (!existsSync(pendingPath)) return;
-
-  // Rename to claim the pending file atomically — prevents two Stop hooks
-  // racing on the same low rating (opencode notably fires session.idle AND
-  // session.diff concurrently, so runStopHandlers runs twice in parallel).
-  // The claim stays inside the state directory: rename fails with EXDEV across
-  // devices, and the OS temp dir is on another volume often enough to matter.
-  const claimId: string = randomUUID();
-  const claimedPath = resolve(paths.state(), `pending-failure.${claimId}.json`);
-  try {
-    await rename(pendingPath, claimedPath);
-  } catch (err) {
-    // ENOENT means another concurrent Stop hook already claimed it. That's
-    // expected and benign — the other process will handle the failure.
-    if ((err as NodeJS.ErrnoException)?.code === "ENOENT") return;
-    logError("detachFailurePrinciple", err);
-    return;
-  }
-
-  try {
-    const transcriptPath = await writeTranscriptTmp(transcript);
-    const scriptPath = resolve(assets.hooks(), "handlers", "failure-principle.ts");
-    spawnDetachedInference(
-      scriptPath,
-      ["--run", claimedPath, transcriptPath],
-      "failure-principle"
-    );
-  } catch (err) {
-    logError("detachFailurePrinciple", err);
   }
 }

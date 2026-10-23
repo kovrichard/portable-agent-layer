@@ -44,9 +44,6 @@ export async function loadHandlers() {
   const mod = await import(`../../src/hooks/handlers/inject-retrieval.ts?t=${t}`);
   return {
     injectPromptContext: mod.injectPromptContext as (prompt: string) => Promise<void>,
-    getRetrievalReminder: mod.getRetrievalReminder as (
-      prompt: string
-    ) => Promise<string | null>,
     withinBudget: mod.withinBudget as <T>(work: () => T, ms: number) => T | null,
   };
 }

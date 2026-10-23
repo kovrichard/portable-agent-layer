@@ -19,7 +19,6 @@
     "wisdom": true,
     "opinions": true,
     "relationship": true,
-    "failurePatterns": true,
     "projects": true,
     "handoff": true,
     "selfModel": true,

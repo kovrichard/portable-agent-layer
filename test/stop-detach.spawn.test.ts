@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { assets } from "../src/hooks/lib/paths";
 import { runStopHandlers } from "../src/hooks/lib/stop";
@@ -35,40 +35,10 @@ describe("runStopHandlers — Stop hook non-blocking contract", () => {
     expect(elapsed).toBeLessThan(10_000);
   }, 15_000);
 
-  test("returns even when pending-failure exists (spawns failure-principle detached)", async () => {
-    const stateDir = resolve(tmp, "memory", "state");
-    require("node:fs").mkdirSync(stateDir, { recursive: true });
-    writeFileSync(
-      resolve(stateDir, "pending-failure.json"),
-      JSON.stringify({
-        rating: 3,
-        context: "test context",
-        cwd: tmp,
-      }),
-      "utf-8"
-    );
-
-    const messages = Array.from({ length: 8 }, (_, i) => ({
-      role: i % 2 === 0 ? "user" : "assistant",
-      content: `message ${i} `.repeat(50),
-    }));
-    const transcript = JSON.stringify(messages);
-
-    const start = Date.now();
-    await runStopHandlers(transcript, { sessionId: "test-stop-fast-fail" });
-    const elapsed = Date.now() - start;
-    expect(elapsed).toBeLessThan(10_000);
-  }, 15_000);
-
   // Each detached handler is spawned by path, so a rename is invisible to the
   // type checker and only shows up as a hook that quietly stopped running.
   test("every handler the stop hook spawns by path is on disk", () => {
-    const spawned = [
-      "agenda",
-      "session-intelligence",
-      "entity-extraction",
-      "failure-principle",
-    ];
+    const spawned = ["agenda", "session-intelligence", "entity-extraction"];
     for (const name of spawned) {
       expect(
         existsSync(resolve(assets.hooks(), "handlers", `${name}.ts`)),

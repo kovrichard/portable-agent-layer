@@ -57,7 +57,6 @@
         "wisdom": { "type": "boolean", "description": "Crystallized wisdom principles." },
         "opinions": { "type": "boolean", "description": "Tracked user opinions." },
         "relationship": { "type": "boolean", "description": "Recent relationship notes." },
-        "failurePatterns": { "type": "boolean", "description": "Recurring failure patterns." },
         "projects": { "type": "boolean", "description": "Active projects list." },
         "handoff": { "type": "boolean", "description": "Handoff note from the previous session." },
         "selfModel": { "type": "boolean", "description": "The assistant's self-model synthesis." },

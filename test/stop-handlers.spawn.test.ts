@@ -187,29 +187,3 @@ describe("runStopHandlers — last-response cache", () => {
     expect(cache["keep-00"]).toBeDefined();
   });
 });
-
-describe("runStopHandlers — pending failure claim", () => {
-  function pendingPath(): string {
-    return resolve(HOME, "memory", "state", "pending-failure.json");
-  }
-
-  test("claims a pending failure by moving it out of the state directory", async () => {
-    mkdirSync(resolve(HOME, "memory", "state"), { recursive: true });
-    writeFileSync(
-      pendingPath(),
-      JSON.stringify({ rating: 3, context: "bad", cwd: HOME }),
-      "utf-8"
-    );
-
-    await runStopHandlers(transcriptOf("q", "an answer"), { sessionId: "sess-a" });
-
-    expect(existsSync(pendingPath())).toBe(false);
-  });
-
-  test("completes normally when no pending failure exists", async () => {
-    await runStopHandlers(transcriptOf("q", "an answer"), { sessionId: "sess-a" });
-
-    expect(existsSync(pendingPath())).toBe(false);
-    expect(readCache()["sess-a"]).toBeDefined();
-  });
-});

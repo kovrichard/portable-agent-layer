@@ -14,7 +14,7 @@ import { paths, toPath } from "./paths";
 import { loadProgressTreeContext } from "./progress-tree-context";
 import { loadActiveProjectsContext } from "./projects";
 import { loadRecentNotes } from "./relationship";
-import { loadFailurePatterns, loadSteeringRules } from "./semi-static";
+import { loadSteeringRules } from "./semi-static";
 import { sessionDir } from "./session-dir";
 import * as settings from "./settings";
 import { readFramePrinciples } from "./wisdom";
@@ -213,8 +213,6 @@ export function buildSystemReminder(
   const activeProjects = settings.isEnabled("projects")
     ? loadActiveProjectsContext(sessionDir(), lastSessionTitle)
     : "";
-  const failures =
-    settings.isEnabled("failurePatterns") && !skipSemiStatic ? loadFailurePatterns() : "";
   const opinions =
     !skipSemiStatic && settings.isEnabled("opinions") ? opinionsContext() : "";
   const selfModel =
@@ -236,7 +234,6 @@ export function buildSystemReminder(
   if (opinions) parts.push(opinions);
   if (relationship) parts.push(relationship);
   if (activeProjects) parts.push(activeProjects);
-  if (failures) parts.push(failures);
   if (steering) parts.push(steering);
   if (parts.length === 0) return "";
 

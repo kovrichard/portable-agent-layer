@@ -4,11 +4,9 @@
  * - Explicit: "7", "8 - great work", "rating: 8"
  * - Implicit: a model labels the reaction to the previous reply; only a confirmed
  *   correction or plain praise becomes a rating
- * - Low ratings (<=4) write pending-failure.json; the Stop handler writes the
- *   lesson from the transcript
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   readCandidates,
@@ -48,7 +46,6 @@ import {
   parseDraft,
 } from "../lib/rule-drafter";
 import { emitRating } from "../lib/signals";
-import { now } from "../lib/time";
 
 /** Read cached last assistant response (written by StopOrchestrator), looked up by session */
 function getLastResponse(sessionId?: string): string {
@@ -161,38 +158,6 @@ function isPraise(prompt: string): boolean {
   );
 }
 
-// ── Rating Handling ──
-
-function handleRating(
-  rating: number,
-  context: string,
-  source: string,
-  responsePreview: string,
-  userMessage?: string
-): void {
-  emitRating(rating, context, source, responsePreview);
-
-  if (rating <= 4) {
-    writeFileSync(
-      resolve(paths.state(), "pending-failure.json"),
-      JSON.stringify(
-        {
-          rating,
-          context,
-          source,
-          responsePreview,
-          userPreview: userMessage?.slice(0, 400),
-          cwd: process.cwd(),
-          ts: now(),
-        },
-        null,
-        2
-      ),
-      "utf-8"
-    );
-  }
-}
-
 // ── Implicit Rating ──
 
 function handleImplicitReaction(message: string, sentAt: Date, sessionId?: string): void {
@@ -200,7 +165,7 @@ function handleImplicitReaction(message: string, sentAt: Date, sessionId?: strin
   const reply = replyEnd(getLastResponse(sessionId));
 
   if (isPraise(trimmed)) {
-    handleRating(8, `Direct praise: "${trimmed}"`, "implicit", reply, trimmed);
+    emitRating(8, `Direct praise: "${trimmed}"`, "implicit", reply);
     return;
   }
 
@@ -282,7 +247,7 @@ async function runReactionRatingAndStore(
     const label = settledLabel(first, check);
     const rating = ratingFromLabels(label, check);
     if (label && rating !== null) {
-      handleRating(rating, ratingContext(label, message), "implicit", reply, message);
+      emitRating(rating, ratingContext(label, message), "implicit", reply);
     }
     const turn = turnFromLabels(
       { session: sessionId ?? "", message, replyEnd: reply },
@@ -313,12 +278,11 @@ export function captureRating(
   // Path 1: Explicit rating
   const explicit = parseExplicitRating(cleaned);
   if (explicit) {
-    handleRating(
+    emitRating(
       explicit.rating,
       explicit.comment || cleaned.slice(0, 200),
       "explicit",
-      getLastResponse(sessionId).slice(0, 500),
-      cleaned
+      getLastResponse(sessionId).slice(0, 500)
     );
     return;
   }

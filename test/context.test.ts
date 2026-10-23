@@ -4,7 +4,6 @@ import {
   loadRelationshipContext,
   loadWisdomContext,
 } from "../src/hooks/lib/context";
-import { loadFailurePatterns } from "../src/hooks/lib/semi-static";
 import { readFramePrinciples } from "../src/hooks/lib/wisdom";
 import { freshTestDir } from "./lib/test-home";
 
@@ -37,10 +36,6 @@ describe("wisdom", () => {
 describe("context builders", () => {
   test("loadWisdomContext returns string", () => {
     expect(typeof loadWisdomContext()).toBe("string");
-  });
-
-  test("loadFailurePatterns returns string", () => {
-    expect(typeof loadFailurePatterns()).toBe("string");
   });
 
   test("loadRelationshipContext returns string", () => {
