@@ -81,6 +81,16 @@ describe("RtkWrap", () => {
     expect(out).toBe("");
   });
 
+  test("leaves git alone in an agent worktree, where Claude Code refuses rtk git", async () => {
+    writeFakeRtk(`process.stdout.write(${JSON.stringify(FAKE_OUTPUT)});`);
+    const stdin = JSON.stringify({
+      cwd: resolve(dir, ".claude", "worktrees", "agent-abc"),
+      tool_input: { command: "git log -1" },
+    });
+    const out = await runHook({ PATH: shadowPath(), PAL_AGENT: "claude" }, stdin);
+    expect(out).toBe("");
+  });
+
   test("no-op for codex (allow/deny only — cannot rewrite)", async () => {
     writeFakeRtk(`process.stdout.write(${JSON.stringify(FAKE_OUTPUT)});`);
     const out = await runHook({ PATH: shadowPath(), PAL_AGENT: "codex" });
