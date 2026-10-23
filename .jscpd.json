@@ -17,6 +17,8 @@
     "assets/skills/presentation/vendor/**",
     "assets/skills/presentation/theme-base/**",
     "test/**",
-    ".claude/worktrees"
+    ".claude/worktrees",
+    ".claude/skills/**",
+    ".cursor/skills/**"
   ]
 }
