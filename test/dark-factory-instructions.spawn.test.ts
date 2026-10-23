@@ -130,6 +130,11 @@ function setup({ user, repo, repoConfig = {}, factoryConfig }: Setup = {}) {
     })
   );
   put(join(home, "tasks", "t1", "spec.md"), "## Goal\n\nx\n");
+  for (const tool of ["git", "gh", "bash"])
+    timed(`${tool} --version`, () => spawnSync(tool, ["--version"], { env: e }));
+  timed("git fetch", () =>
+    spawnSync("git", ["fetch", "origin", "canary"], { cwd: clone, env: e })
+  );
   timed("prepare", () => prepare("t1", e));
   timed("fakeClaude", () => fakeClaude());
 }
