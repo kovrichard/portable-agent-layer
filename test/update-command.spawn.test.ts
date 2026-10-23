@@ -5,11 +5,11 @@ import { resolve } from "node:path";
 import { LiveRail } from "../src/cli/ui/live";
 import { createStyle } from "../src/cli/ui/style";
 import type { Terminal } from "../src/cli/ui/terminal";
-import { downloadCommand, runUpdate, updateCheck } from "../src/cli/update-flow";
+import { downloadCommand, runUpdate } from "../src/cli/update-flow";
 import {
-  checkCanary,
   checkForUpdate,
   checkNpm,
+  checkPackage,
   clearUpdateCache,
   getUpdateNotice,
   isNewerRelease,
@@ -221,25 +221,12 @@ describe("pal cli update --canary", () => {
 
   test("asks npm for the canary tag and offers it when it is newer", async () => {
     const { asked, fetchImpl } = registry("999.0.0-canary.1");
-    const update = await checkCanary(fetchImpl);
+    const update = await checkPackage("canary", fetchImpl);
     expect(asked).toEqual(["https://registry.npmjs.org/portable-agent-layer/canary"]);
     expect(update).toMatchObject({ available: true, latest: "999.0.0-canary.1" });
     expect(downloadCommand(update).slice(0, 2)).toEqual([
       "bun",
       ["add", "-g", "portable-agent-layer@999.0.0-canary.1"],
     ]);
-  });
-
-  const stable = async () => release("package");
-  const canary = async () => release("package");
-
-  test("picks the stable check unless --canary is given", () => {
-    expect(updateCheck(false, false, { stable, canary })).toBe(stable);
-    expect(updateCheck(true, false, { stable, canary })).toBe(canary);
-    expect(updateCheck(false, true, { stable, canary })).toBe(stable);
-  });
-
-  test("a repo install refuses --canary, since it follows git rather than npm", () => {
-    expect(updateCheck(true, true, { stable, canary })).toBeNull();
   });
 });

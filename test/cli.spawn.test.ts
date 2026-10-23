@@ -11,7 +11,10 @@ setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 const TEST_HOME = testHome(import.meta.file);
 
-function pal(...args: string[]) {
+const SPAWN_TIMEOUT_MS = 15_000;
+const INIT_TIMEOUT_MS = 50_000;
+
+function palWithin(timeout: number, ...args: string[]) {
   return spawnSync("bun", ["run", CLI, ...args], {
     env: {
       ...process.env,
@@ -28,19 +31,21 @@ function pal(...args: string[]) {
       PAL_AGENTS_DIR: resolve(TEST_HOME, ".agents"),
     },
     encoding: "utf-8",
-    timeout: 15000,
+    timeout,
   });
 }
+
+const pal = (...args: string[]) => palWithin(SPAWN_TIMEOUT_MS, ...args);
 
 let init: ReturnType<typeof pal>;
 
 // `pal cli init` runs `bun install --frozen-lockfile` + telos scaffolding + doctor
-// pre-flight; on Windows this is ~5–6s, occasionally over bun-test's 5s default.
+// pre-flight; on a Windows runner it has taken over 15s.
 beforeAll(() => {
   removeOnceReleased(TEST_HOME);
   mkdirSync(TEST_HOME, { recursive: true });
-  init = pal("cli", "init");
-}, 30000);
+  init = palWithin(INIT_TIMEOUT_MS, "cli", "init");
+}, INIT_TIMEOUT_MS + 10_000);
 
 describe("pal help", () => {
   test("shows help text", () => {
@@ -69,7 +74,11 @@ describe("pal cli version", () => {
 
 describe("pal cli init", () => {
   test("scaffolds telos and memory directories", () => {
-    expect(init.status).toBe(0);
+    expect({
+      status: init.status,
+      signal: init.signal,
+      stderr: String(init.stderr).slice(-2000),
+    }).toMatchObject({ status: 0 });
 
     const telosDir = resolve(TEST_HOME, "telos");
     expect(existsSync(telosDir)).toBe(true);

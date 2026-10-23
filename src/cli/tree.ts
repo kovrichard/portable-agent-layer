@@ -115,7 +115,11 @@ function adminCommands(admin: AdminHandlers): Record<string, Leaf | Group> {
         canary: {
           type: "boolean",
           description:
-            "Install the latest canary prerelease instead of the stable release",
+            "Switch to the canary channel: this and every later update installs prereleases",
+        },
+        stable: {
+          type: "boolean",
+          description: "Switch back to the stable channel",
         },
       },
       run: admin.update,

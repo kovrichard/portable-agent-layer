@@ -77,7 +77,7 @@ Git hooks in `.husky/` enforce the same gates independently of any agent: `pre-c
 
 ## Branches and releases
 
-Open pull requests against `canary`, not `main`. semantic-release publishes every `feat` / `fix` merged into `canary` as a prerelease (`0.112.0-canary.N`) on the npm `canary` tag, without a changelog entry or release commit. A stable release is one merge of `canary` into `main`; afterwards merge `main` back into `canary` so it continues from the new version. `pal cli update` installs the stable release; `pal cli update --canary` installs the latest canary.
+Open pull requests against `canary`, not `main`. semantic-release publishes every `feat` / `fix` merged into `canary` as a prerelease (`0.112.0-canary.N`) on the npm `canary` tag, without a changelog entry or release commit. A stable release is one merge of `canary` into `main`; afterwards merge `main` back into `canary` so it continues from the new version. `pal cli update --canary` switches an install to the canary channel, which plain `pal cli update` and auto-update then follow until `pal cli update --stable`.
 
 ## Coding rules
 

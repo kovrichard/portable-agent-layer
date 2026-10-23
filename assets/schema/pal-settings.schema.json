@@ -121,6 +121,10 @@
         "steeringTestReport": { "type": "boolean", "description": "When true, the assistant notes to the user which steering self-check fired. For the dual-live test period; ships false." }
       }
     },
+    "updateChannel": {
+      "enum": ["stable", "canary"],
+      "description": "Release channel that plain and unattended updates follow. Set by `pal cli update --canary` / `--stable`; absent means stable."
+    },
     "attribution": {
       "type": "object",
       "description": "Git co-author attribution opt-in.",

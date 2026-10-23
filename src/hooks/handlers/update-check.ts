@@ -11,6 +11,7 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { logDebug } from "../lib/log";
 import { ensureDir, palPkg, paths } from "../lib/paths";
+import { raw as rawSettings, write as writeSettings } from "../lib/settings";
 
 export interface UpdateCache {
   checkedAt: string;
@@ -176,13 +177,29 @@ export async function checkNpm(
   }
 }
 
-/** The canary check is never cached: the cache feeds the stable update notice. */
-export function checkCanary(fetchImpl: typeof fetch = fetch): Promise<UpdateCache> {
-  return checkNpm("canary", fetchImpl);
+/** Which releases a package install follows; set by `pal cli update --canary` / `--stable`. */
+export type UpdateChannel = "stable" | "canary";
+
+export function updateChannel(): UpdateChannel {
+  return rawSettings().updateChannel === "canary" ? "canary" : "stable";
+}
+
+export function setUpdateChannel(channel: UpdateChannel): void {
+  writeSettings({ ...rawSettings(), updateChannel: channel });
+}
+
+export function checkPackage(
+  channel: UpdateChannel,
+  fetchImpl: typeof fetch = fetch
+): Promise<UpdateCache> {
+  return checkNpm(channel === "canary" ? "canary" : "latest", fetchImpl);
 }
 
 /** Run update check. Caches result. Use force=true to skip cache (e.g. for `pal cli update`). */
-export async function checkForUpdate(force = false): Promise<UpdateCache> {
+export async function checkForUpdate(
+  force = false,
+  channel: UpdateChannel = updateChannel()
+): Promise<UpdateCache> {
   if (!force) {
     const cached = readCache();
     if (cached) {
@@ -191,7 +208,7 @@ export async function checkForUpdate(force = false): Promise<UpdateCache> {
     }
   }
 
-  const result = isRepoMode() ? await checkRepo() : await checkNpm();
+  const result = isRepoMode() ? await checkRepo() : await checkPackage(channel);
   writeCache(result);
 
   if (result.available) {
