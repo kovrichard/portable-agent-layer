@@ -41,7 +41,7 @@ export const EVENT_FIELDS = {
     "command",
     "backAfterSec",
   ],
-  reply: ["words", "listItems", "headings", "asked", "mode", "latencySec"],
+  reply: ["words", "listItems", "headings", "asked", "mode", "latencySec", "turn"],
   session_start: [
     "source",
     "model",
@@ -117,6 +117,7 @@ export const EVENT_FIELDS = {
     "aiCoAuthored",
   ],
   rating: ["rating", "source"],
+  forgotten: ["target", "undone"],
   project: ["change", "status"],
   decision: ["words"],
   promise: ["change", "dueInSec", "lateSec", "snoozes", "nags"],
@@ -229,7 +230,7 @@ function eventsDir(): string {
   return ensureDir(resolve(paths.memory(), "events"));
 }
 
-function contentDir(): string {
+export function contentDir(): string {
   return ensureDir(resolve(paths.content(), "events"));
 }
 
@@ -293,14 +294,14 @@ export function logQuietly(label: string, write: () => void): void {
   }
 }
 
-function parseLines(file: string): LoggedEvent[] {
+export function parseLines<T = LoggedEvent>(file: string): T[] {
   if (!existsSync(file)) return [];
   return readFileSync(file, "utf-8")
     .split("\n")
     .filter(Boolean)
     .flatMap((line) => {
       try {
-        return [JSON.parse(line) as LoggedEvent];
+        return [JSON.parse(line) as T];
       } catch {
         return [];
       }
