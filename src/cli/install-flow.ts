@@ -96,7 +96,6 @@ function openRail(rail: LiveRail, style: Style, plan: InstallPlan): void {
 }
 
 async function installDependencies(): Promise<Done | null> {
-  if (process.env.PAL_TEST_SANDBOX === "1") return null;
   const { dependencyInstall } = await import("./dependencies");
   const { isRepoMode } = await import("../hooks/handlers/update-check");
   const args = dependencyInstall(palPkg(), isRepoMode());
