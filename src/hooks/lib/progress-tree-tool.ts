@@ -21,7 +21,7 @@ import { COMMAND_KEYS, resultOf, stringIn } from "./tool-events";
 const GH_PR_CREATE_RE = /\bgh\s+pr\s+create\b/;
 const PR_URL_RE = /https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/\d+/g;
 const FACTORY_BUILD_RE =
-  /\bdark-factory[\\/](?:\S*[\\/])?scripts[\\/]build\.mjs["']?\s+["']?(\w[\w.-]*)/;
+  /\b(?:node|bun)(?:\.exe)?\s+(?:run\s+)?["']?\S*\bdark-factory[\\/](?:\S*[\\/])?scripts[\\/]build\.mjs["']?\s+["']?(\w[\w.-]*)/;
 const FACTORY_RUN_PREFIX = "dark-factory:";
 const OUTPUT_KEYS = [
   "stdout",
