@@ -10,7 +10,6 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { opinionsContext } from "./adaptation-rules";
 import { palHome, paths } from "./paths";
-import { readFramePrinciples } from "./wisdom";
 
 /** A single semi-static context source — built at session stop, loaded natively at session start. */
 interface SemiStaticSource {
@@ -70,30 +69,6 @@ export function loadSteeringRules(): string {
 export function getSemiStaticSources(): SemiStaticSource[] {
   const memory = paths.memory();
   return [
-    {
-      path: resolve(memory, "self-model", "current.md"),
-      writesDigest: false,
-      load: () => readFileSafe(resolve(memory, "self-model", "current.md")),
-      slug: "self-model",
-      description: "PAL self-model",
-    },
-    {
-      path: resolve(memory, "wisdom", "context.md"),
-      writesDigest: true,
-      load: () => {
-        try {
-          const principles = readFramePrinciples();
-          if (principles.length === 0) return "";
-          return ["## Crystallized Principles", ...principles.map((p) => `- ${p}`)].join(
-            "\n"
-          );
-        } catch {
-          return "";
-        }
-      },
-      slug: "wisdom",
-      description: "PAL wisdom",
-    },
     {
       path: resolve(memory, "relationship", "opinions-context.md"),
       writesDigest: true,

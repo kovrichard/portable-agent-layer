@@ -4,20 +4,16 @@
  */
 
 import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { opinionsContext } from "./adaptation-rules";
 import type { AgentName } from "./agent-registry";
-import { resolveAnchor } from "./anchor";
 import { dueNudgeSections } from "./daily-nudge";
 import { loadHandoffContext } from "./handoff-context";
-import { paths, toPath } from "./paths";
+import { toPath } from "./paths";
 import { loadProgressTreeContext } from "./progress-tree-context";
 import { loadActiveProjectsContext } from "./projects";
-import { loadRecentNotes } from "./relationship";
 import { loadSteeringRules } from "./semi-static";
 import { sessionDir } from "./session-dir";
 import * as settings from "./settings";
-import { readFramePrinciples } from "./wisdom";
 import { lastSessionTitle } from "./work-tracking";
 
 /** Load and concatenate loadAtStartup files */
@@ -41,139 +37,6 @@ function loadStartupFiles(): string {
   return sections.join("\n\n---\n\n");
 }
 
-/** Load high-confidence wisdom principles for injection into system-reminder */
-export function loadWisdomContext(): string {
-  try {
-    const principles = readFramePrinciples();
-    if (principles.length === 0) return "";
-    return ["## Crystallized Principles", ...principles.map((p) => `- ${p}`)].join("\n");
-  } catch {
-    return "";
-  }
-}
-
-/** Load self-model for session context injection */
-function loadSelfModel(): string {
-  try {
-    const p = resolve(paths.memory(), "self-model", "current.md");
-    if (!existsSync(p)) return "";
-    const content = readFileSync(p, "utf-8").trim();
-    if (!content) return "";
-    return content;
-  } catch {
-    return "";
-  }
-}
-
-function stampedPath(stamp: string): string {
-  const resolved = resolveAnchor(stamp);
-  return resolved.state === "unresolvable" ? stamp : resolved.path;
-}
-
-/**
- * Filter raw relationship note lines:
- * - O entries: stripped (loaded natively via digest)
- * - HTML comments: stripped, but cwd is extracted from session comments
- * - Session entries: kept only if block cwd matches current project (or legacy with no cwd)
- * - W entries and structural lines: always kept
- */
-function filterRelationshipNotes(notes: string, cwd: string): string {
-  const lines = notes.split("\n");
-  const out: string[] = [];
-  let blockCwd: string | null = null;
-
-  for (const line of lines) {
-    if (/^## \d{2}:\d{2}/.test(line)) {
-      blockCwd = null;
-      out.push(line);
-      continue;
-    }
-    const cwdMatch = new RegExp(/<!--.*cwd:(\S+)/).exec(line);
-    if (cwdMatch) {
-      blockCwd = stampedPath(cwdMatch[1]);
-      continue;
-    }
-    if (/^\s*<!--/.test(line)) continue;
-    if (/^\s*- O\(/.test(line)) continue;
-    if (/^\s*- Session:/.test(line)) {
-      if (blockCwd === null || blockCwd === cwd) out.push(line);
-      continue;
-    }
-    out.push(line);
-  }
-  return out.join("\n");
-}
-
-/** Load recent relationship notes (today + yesterday), scoped to current project */
-export function loadRelationshipContext(): string {
-  try {
-    const notes = loadRecentNotes(2);
-    if (!notes) return "";
-    const filtered = filterRelationshipNotes(notes, process.cwd());
-    return capSection(`## Recent Interaction Notes\n${filtered}`, 1500);
-  } catch {
-    return "";
-  }
-}
-
-/**
- * Off the startup context until the reflection stats are reliable enough to act on.
- * @lintignore exercised directly by test/context-build.test.ts
- */
-export function loadSessionIntelligence(): string {
-  try {
-    const p = resolve(paths.state(), "synthesis.json");
-    if (!existsSync(p)) return "";
-    const state = JSON.parse(readFileSync(p, "utf-8"));
-
-    const lines: string[] = ["## Session Intelligence"];
-
-    if (state.algorithm?.reflectionCount > 0) {
-      const a = state.algorithm;
-      lines.push(
-        "",
-        `**Algorithm:** ${a.reflectionCount} reflections, ${a.passRate}% criteria pass rate, ${a.avgSentiment}/10 sentiment.`
-      );
-      if (a.passRate < 80) {
-        lines.push(
-          "→ Criteria pass rate is low. Invest more time in OBSERVE and PLAN phases."
-        );
-      }
-      if (a.recentObservations?.length > 0) {
-        const cwd = process.cwd();
-        const relevant = a.recentObservations.filter(
-          (o: { cwd?: string }) => !o.cwd || o.cwd === cwd
-        );
-        if (relevant.length > 0) {
-          lines.push("Recent self-observations (this project):");
-          for (const o of relevant) {
-            lines.push(`- [${o.date}] ${o.task}: "${o.observation}"`);
-          }
-        }
-      }
-    }
-
-    return lines.length > 1 ? capSection(lines.join("\n"), 2000) : "";
-  } catch {
-    return "";
-  }
-}
-
-/** Truncate text to maxChars at the last complete line boundary */
-function capSection(text: string, maxChars: number): string {
-  if (text.length <= maxChars) return text;
-  const lines = text.split("\n");
-  const kept: string[] = [];
-  let total = 0;
-  for (const line of lines) {
-    const next = total + line.length + 1;
-    if (next > maxChars) break;
-    kept.push(line);
-    total = next;
-  }
-  return kept.join("\n");
-}
-
 /**
  * Agent targets — determines which context sections are skipped due to native loading.
  * Codex has no native include for them, so its reminder carries them.
@@ -190,8 +53,8 @@ export type AgentTarget = Extract<
  * loaded natively by Claude Code / opencode. This injects dynamic context only —
  * things that change per-session and can't live in a static file.
  *
- * opts.agent — agent target; Claude Code skips semi-static sections (self-model,
- * wisdom, opinions) that load natively via @imports in CLAUDE.md.
+ * opts.agent — agent target; Claude Code skips semi-static sections (opinions,
+ * steering) that load natively via @imports in CLAUDE.md.
  */
 export function buildSystemReminder(
   opts: { agent?: AgentTarget; withoutHandoff?: boolean; sessionId?: string } = {}
@@ -205,18 +68,11 @@ export function buildSystemReminder(
     opts.agent === "copilot";
 
   const startup = loadStartupFiles();
-  const wisdom =
-    !skipSemiStatic && settings.isEnabled("wisdom") ? loadWisdomContext() : "";
-  const relationship = settings.isEnabled("relationship")
-    ? loadRelationshipContext()
-    : "";
   const activeProjects = settings.isEnabled("projects")
     ? loadActiveProjectsContext(sessionDir(), lastSessionTitle)
     : "";
   const opinions =
     !skipSemiStatic && settings.isEnabled("opinions") ? opinionsContext() : "";
-  const selfModel =
-    !skipSemiStatic && settings.isEnabled("selfModel") ? loadSelfModel() : "";
   const steering = skipSemiStatic ? "" : loadSteeringRules();
   const handoff =
     !opts.withoutHandoff && settings.isEnabled("handoff")
@@ -229,10 +85,7 @@ export function buildSystemReminder(
   if (handoff) parts.push(handoff);
   if (progressTree) parts.push(progressTree);
   parts.push(...dueNudges);
-  if (selfModel) parts.push(selfModel);
-  if (wisdom) parts.push(wisdom);
   if (opinions) parts.push(opinions);
-  if (relationship) parts.push(relationship);
   if (activeProjects) parts.push(activeProjects);
   if (steering) parts.push(steering);
   if (parts.length === 0) return "";

@@ -13,11 +13,8 @@ import { command as analyze } from "../tools/agent/analyze";
 import { command as handoffNote } from "../tools/agent/handoff-note";
 import { command as interaction } from "../tools/agent/interaction";
 import { command as project } from "../tools/agent/project";
-import { command as relationshipNote } from "../tools/agent/relationship-note";
-import { command as relationshipReflect } from "../tools/agent/relationship-reflect";
 import { command as synthesize } from "../tools/agent/synthesize";
 import { command as thread } from "../tools/agent/thread";
-import { command as wisdomFrame } from "../tools/agent/wisdom-frame";
 import type { Command } from "../tools/lib/command";
 
 export const builtinTools: Record<string, Command> = {
@@ -27,11 +24,8 @@ export const builtinTools: Record<string, Command> = {
   "handoff-note": handoffNote,
   interaction,
   project,
-  "relationship-note": relationshipNote,
-  "relationship-reflect": relationshipReflect,
   synthesize,
   thread,
-  "wisdom-frame": wisdomFrame,
 };
 
 export const builtinToolVerbs = Object.keys(builtinTools).sort();

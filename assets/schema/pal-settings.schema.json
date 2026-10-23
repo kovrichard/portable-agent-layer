@@ -54,12 +54,9 @@
       "description": "Dynamic context sections injected at session start. Set any key to false to disable it; absent keys default to enabled.",
       "additionalProperties": { "type": "boolean" },
       "properties": {
-        "wisdom": { "type": "boolean", "description": "Crystallized wisdom principles." },
         "opinions": { "type": "boolean", "description": "Tracked user opinions." },
-        "relationship": { "type": "boolean", "description": "Recent relationship notes." },
         "projects": { "type": "boolean", "description": "Active projects list." },
         "handoff": { "type": "boolean", "description": "Handoff note from the previous session." },
-        "selfModel": { "type": "boolean", "description": "The assistant's self-model synthesis." },
         "contextualSteering": { "type": "boolean", "description": "Prompt-time steering self-checks (see the steering section)." },
         "skillMatching": {
           "type": "boolean",

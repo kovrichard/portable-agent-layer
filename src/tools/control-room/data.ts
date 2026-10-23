@@ -6,7 +6,6 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
-import { loadReflectNudge } from "../../hooks/handlers/reflect-trigger";
 import { type AgendaMove, readAgenda } from "../../hooks/lib/agenda-store";
 import {
   isMaintainerEnv,
@@ -109,7 +108,6 @@ export interface SignalView {
   due: {
     analysis: DueBadge;
     algorithmReview: DueBadge;
-    relationshipReflect: DueBadge;
   };
 }
 
@@ -302,7 +300,6 @@ export function dueBadges(now: Date = new Date(), maintainer = isMaintainerEnv()
     algorithmReview: maintainer
       ? badgeFromNudge(loadAlgorithmReviewNudge(now))
       : { state: "n/a" as const, detail: "only in a maintainer checkout" },
-    relationshipReflect: badgeFromNudge(loadReflectNudge()),
   };
 }
 

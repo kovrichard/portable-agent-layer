@@ -13,8 +13,6 @@ import { writeContextDigests } from "../handlers/context-digests";
 import { notifyDesktop } from "../handlers/desktop-notify";
 import { persistLastExchange } from "../handlers/persist-last-exchange";
 import { projectTouch } from "../handlers/project-touch";
-import { checkReflectTrigger } from "../handlers/reflect-trigger";
-import { checkSelfModelTrigger } from "../handlers/self-model-trigger";
 import { runSynthesis } from "../handlers/synthesis";
 import { resetTab } from "../handlers/tab";
 import { updateCounts } from "../handlers/update-counts";
@@ -175,10 +173,6 @@ export async function runStopHandlers(
     await detachEntityExtraction(transcript, options.sessionId);
     detachAgenda(options.sessionId);
   });
-  // Failure auto-graduation is intentionally NOT wired here: every pattern it
-  // ever promoted was a frustration log, not a principle. Wisdom frames are
-  // populated by Claude in-conversation (see wisdom.ts header). The handler
-  // (handlers/auto-graduate.ts) remains runnable manually via `--run`.
 
   // Run remaining (non-inference) handlers concurrently.
   // project-touch only fires when cwd resolves to an active registered project.
@@ -187,8 +181,6 @@ export async function runStopHandlers(
     tab: resetTab(),
     "update-counts": updateCounts(),
     backup: autoBackup(),
-    "reflect-trigger": checkReflectTrigger(),
-    "self-model-trigger": checkSelfModelTrigger(),
     synthesis: runSynthesis(),
     "project-touch": projectTouch(options.lastAssistantMessage),
     "desktop-notify": notifyDesktop(options.sessionId),

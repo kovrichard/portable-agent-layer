@@ -150,12 +150,8 @@ describe("graduation candidates", () => {
     expect(lines[label + 1]).toContain("memory/failures/f1.md");
   });
 
-  test("point at the frame the pattern would graduate into", () => {
-    expect(rendered(CANDIDATES)).toContain("memory/wisdom/frames/development.md");
-  });
-
-  test("close with how to crystallize one", () => {
-    expect(rendered(CANDIDATES)).toContain("To crystallize");
+  test("close with the command that crystallizes one", () => {
+    expect(rendered(CANDIDATES)).toContain("pal cli rule add-opinion");
   });
 
   // That closing instruction is about candidates, so it has no place in a

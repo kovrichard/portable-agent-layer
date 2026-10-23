@@ -211,7 +211,6 @@ describe("signal", () => {
     const due = dueBadges(NOW, false);
     expect(due.algorithmReview.state).toBe("n/a");
     expect(due.analysis.state).toBe("due");
-    expect(due.relationshipReflect.state).toBe("clear");
   });
 
   test("the rating series is the tail of ratings.jsonl, bad lines skipped", () => {

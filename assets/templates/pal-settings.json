@@ -16,12 +16,9 @@
     "files": []
   },
   "dynamicContext": {
-    "wisdom": true,
     "opinions": true,
-    "relationship": true,
     "projects": true,
     "handoff": true,
-    "selfModel": true,
     "contextualSteering": true,
     "skillMatching": true,
     "wallClock": true,

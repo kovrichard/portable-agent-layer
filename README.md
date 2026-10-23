@@ -214,9 +214,7 @@ PAL ships with built-in skills that extend your agent's capabilities:
 | `fyzz-chat-api` | Query Fyzz Chat conversations via API |
 | `humanize` | Rewrite text to strip AI tells and read as human |
 | `onboarding` | Interview the user to fill empty TELOS topics and the timezone, one topic at a time |
-| `opinion` | Confirm or contradict tracked opinions (confidence-weighted) |
 | `pal-analyze` | Surface rating trends, failure patterns, and graduation candidates |
-| `pal-reflect` | Promote recurring observations into tracked opinions |
 | `playwright` | Screenshot a page for a visual check |
 | `presentation` | Build branded slide decks from outlines |
 | `projects` | Look up, resume, register, or manage tracked projects |

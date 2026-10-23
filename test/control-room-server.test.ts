@@ -127,14 +127,10 @@ describe("what each route answers", () => {
     expect(await getJson<unknown[]>(`${base}/api/handoffs`)).toEqual([]);
   });
 
-  test("/api/signal always carries the three badges", async () => {
+  test("/api/signal always carries the two badges", async () => {
     const base = await listen();
     const body = await getJson<SignalView>(`${base}/api/signal`);
-    expect(Object.keys(body.due).sort()).toEqual([
-      "algorithmReview",
-      "analysis",
-      "relationshipReflect",
-    ]);
+    expect(Object.keys(body.due).sort()).toEqual(["algorithmReview", "analysis"]);
     expect(body.series).toEqual([]);
   });
 

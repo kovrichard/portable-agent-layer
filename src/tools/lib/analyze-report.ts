@@ -20,7 +20,6 @@ const c = {
   yellow: (s: string) => `\x1b[33m${s}\x1b[0m`,
   green: (s: string) => `\x1b[32m${s}\x1b[0m`,
   red: (s: string) => `\x1b[31m${s}\x1b[0m`,
-  magenta: (s: string) => `\x1b[35m${s}\x1b[0m`,
 };
 
 const RULE = c.dim("─────────────────────────────────────────────────");
@@ -59,7 +58,6 @@ function fileLines(group: PatternGroup): string[] {
 }
 
 function candidateLines(candidate: PatternGroup): string[] {
-  const framePath = c.magenta(`memory/wisdom/frames/${candidate.domain}.md`);
   return [
     `${headingOf(candidate)} occurrences`,
     "",
@@ -67,7 +65,6 @@ function candidateLines(candidate: PatternGroup): string[] {
     `\n  ${c.dim("Files:")}`,
     ...fileLines(candidate),
     "",
-    `  Target frame: ${framePath}`,
     `  ${RULE}\n`,
   ];
 }
@@ -111,8 +108,8 @@ export function reportLines(result: AnalysisResult): string[] {
 
   if (result.candidates.length > 0) {
     lines.push(
-      "  To crystallize: add a line to the wisdom frame file.",
-      `  Format: ${c.green("- Your principle here [CRYSTAL: 85%]")}\n`
+      "  To crystallize: record it as a standing opinion.",
+      `  ${c.green('pal cli rule add-opinion --kind <kind> --when "<situation>" --steering "<instruction>"')}\n`
     );
   }
 

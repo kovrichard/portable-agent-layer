@@ -1,9 +1,9 @@
 /**
- * Which sessions have already had their learning captured, and where the file went.
+ * Which sessions have already been summarized, and at what length.
  *
  * A session's Stop event fires after every response, so the same session reaches
  * the capture handler many times. Without a record of what was already written,
- * each pass would produce another near-identical learning file for one session.
+ * each pass would append another near-identical project-history entry.
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -11,7 +11,6 @@ import { resolve } from "node:path";
 import { paths } from "./paths";
 
 export interface CaptureEntry {
-  filepath: string;
   messageCount: number;
   userMessageCount?: number;
 }
@@ -33,8 +32,14 @@ export function capturedPath(): string {
  * direction for a record whose message count was never written down.
  */
 function asEntry(value: unknown): CaptureEntry | null {
-  if (typeof value === "string") return { filepath: value, messageCount: 0 };
-  if (value && typeof value === "object") return value as CaptureEntry;
+  if (typeof value === "string") return { messageCount: 0 };
+  if (value && typeof value === "object") {
+    const { messageCount, userMessageCount } = value as CaptureEntry;
+    return {
+      messageCount,
+      ...(userMessageCount === undefined ? {} : { userMessageCount }),
+    };
+  }
   return null;
 }
 
@@ -86,7 +91,7 @@ export function isHandoffStale(
 
 function updateCapture(sessionId: string, update: Partial<CaptureEntry>): void {
   const data = readAll();
-  const current = data[sessionId] ?? { filepath: "", messageCount: 0 };
+  const current = data[sessionId] ?? { messageCount: 0 };
   data[sessionId] = { ...current, ...update };
   const entries = Object.entries(data);
   const kept = entries.length > MAX_REMEMBERED ? entries.slice(-MAX_REMEMBERED) : entries;
@@ -97,30 +102,11 @@ function updateCapture(sessionId: string, update: Partial<CaptureEntry>): void {
   );
 }
 
-export function markCaptured(
-  sessionId: string,
-  filepath: string,
-  messageCount: number
-): void {
-  updateCapture(sessionId, { filepath, messageCount });
+export function markCaptured(sessionId: string, messageCount: number): void {
+  updateCapture(sessionId, { messageCount });
 }
 
 /** Claimed before the model call, so a second Stop for the same turn finds it taken. */
 export function claimHandoffSummary(sessionId: string, userMessageCount: number): void {
   updateCapture(sessionId, { userMessageCount });
-}
-
-/**
- * The readable half of a learning file's name. Four words, because the rest of
- * the name is already a timestamp and a category and the whole thing has to stay
- * a filename.
- */
-export function learningSlug(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, "")
-    .trim()
-    .split(/\s+/)
-    .slice(0, 4)
-    .join("-");
 }

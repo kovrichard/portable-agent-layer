@@ -3,11 +3,8 @@ import { run as algorithmReflect } from "../src/tools/agent/algorithm-reflect";
 import { run as algorithmSynthesize } from "../src/tools/agent/algorithm-synthesize";
 import { run as analyze } from "../src/tools/agent/analyze";
 import { run as handoffNote } from "../src/tools/agent/handoff-note";
-import { run as relationshipNote } from "../src/tools/agent/relationship-note";
-import { run as relationshipReflect } from "../src/tools/agent/relationship-reflect";
 import { run as synthesize } from "../src/tools/agent/synthesize";
 import { run as thread } from "../src/tools/agent/thread";
-import { run as wisdomFrame } from "../src/tools/agent/wisdom-frame";
 import { freshTestDir } from "./lib/test-home";
 
 const TOOLS: [string, (argv: string[]) => Promise<number>][] = [
@@ -15,11 +12,8 @@ const TOOLS: [string, (argv: string[]) => Promise<number>][] = [
   ["algorithm-synthesize", algorithmSynthesize],
   ["analyze", analyze],
   ["handoff-note", handoffNote],
-  ["relationship-note", relationshipNote],
-  ["relationship-reflect", relationshipReflect],
   ["synthesize", synthesize],
   ["thread", thread],
-  ["wisdom-frame", wisdomFrame],
 ];
 
 let home: string;
@@ -63,8 +57,6 @@ const MISUSE: [string, string[], string][] = [
   ["thread", [], "one of --add, --resolve, --list is required"],
   ["thread", ["--add"], "--add needs --title"],
   ["thread", ["--resolve"], "--resolve needs --id"],
-  ["wisdom-frame", ["-d", "workflow"], "--domain and --observation are required"],
-  ["relationship-note", [], "Required: at least one of --o, --w, --b"],
   ["synthesize", ["--days", "x"], "--days must be a number"],
   ["algorithm-synthesize", ["--since", "nope"], "--since is not a date"],
 ];
