@@ -96,6 +96,18 @@ describe("measuring a turn", () => {
     expect(JSON.stringify(reply)).not.toContain("the answer");
   });
 
+  test("a reply names the id of the turn it answered", () => {
+    observeTurn("first question here", "s1", T0);
+    recordReply("s1", "an answer", at(10));
+    const events = readFileSync(resolve(eventsDir(), "2026-09.jsonl"), "utf-8")
+      .trim()
+      .split("\n")
+      .map((l) => JSON.parse(l));
+    const turn = events.find((e) => e.type === "turn");
+    const reply = events.find((e) => e.type === "reply");
+    expect(reply.turn).toBe(turn.id);
+  });
+
   test("the gap runs from the reply that answered the previous prompt", () => {
     observeTurn("first question here", "s1", T0);
     recordReply("s1", "an answer", at(30));
