@@ -1,7 +1,9 @@
 import {
   contentFor,
   type EvidenceTurn,
+  exclusions,
   forget,
+  unforget,
   userTurnsSince,
 } from "../hooks/lib/evidence";
 import { group, leaf, UsageError } from "../tools/lib/command";
@@ -31,8 +33,29 @@ function printContent(id: string): undefined {
 
 function printForgotten(id: string): undefined {
   if (!forget(id)) throw new UsageError(`no stored text for ${id}`);
-  console.log(`Forgot ${id}`);
+  console.log(
+    `Forgot ${id}; its text is kept, undo with: pal cli evidence unforget ${id}`
+  );
 }
+
+function printUnforgotten(id: string): undefined {
+  if (!unforget(id)) throw new UsageError(`${id} is not forgotten`);
+  console.log(`${id} counts as evidence again`);
+}
+
+function printExclusions(): undefined {
+  const excluded = exclusions();
+  for (const { id, since } of excluded) {
+    const row = contentFor(id);
+    console.log(`${since}  ${id}  ${oneLine(textOf(row))}`);
+  }
+  console.log(`${excluded.length} forgotten`);
+}
+
+const textOf = (row: ReturnType<typeof contentFor>): string | null => {
+  const text = row?.prompt ?? row?.reply;
+  return typeof text === "string" ? text : null;
+};
 
 export const evidenceCommand = group({
   summary: "What PAL learns from: the turns the user typed, with their text",
@@ -55,9 +78,18 @@ export const evidenceCommand = group({
       run: ({ positionals }) => printContent(positionals[0] as string),
     }),
     forget: leaf({
-      summary: "Remove one event's text and keep it out of everything PAL learns",
+      summary: "Keep one event out of everything PAL learns; its text is kept",
       args: "<id>",
       run: ({ positionals }) => printForgotten(positionals[0] as string),
+    }),
+    unforget: leaf({
+      summary: "Count a forgotten event as evidence again",
+      args: "<id>",
+      run: ({ positionals }) => printUnforgotten(positionals[0] as string),
+    }),
+    forgotten: leaf({
+      summary: "Every forgotten event, when it was forgotten, and its text",
+      run: () => printExclusions(),
     }),
   },
 });

@@ -3,7 +3,13 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { evidenceCommand } from "../src/cli/evidence";
 import { appendEvent, eventsSince } from "../src/hooks/lib/events";
-import { contentFor, forget, userTurnsSince } from "../src/hooks/lib/evidence";
+import {
+  contentFor,
+  exclusions,
+  forget,
+  unforget,
+  userTurnsSince,
+} from "../src/hooks/lib/evidence";
 import { observeTurn, recordReply } from "../src/hooks/lib/interaction";
 import { reload } from "../src/hooks/lib/settings";
 import { runCommand } from "../src/tools/lib/command";
@@ -89,15 +95,62 @@ describe("the evidence read", () => {
 });
 
 describe("forget", () => {
-  test("removes the turn from every read and its text from the content store", () => {
+  test("keeps the turn out of every read, and its text as it was", () => {
     exchange("my secret plan for friday", "noted");
     const [turn] = userTurnsSince(T0);
 
     expect(forget(turn.id)).toBe(true);
 
     expect(userTurnsSince(T0)).toEqual([]);
-    expect(contentFor(turn.id)).toMatchObject({ id: turn.id, forgotten: true });
-    expect(readFileSync(storeFile("2026-09"), "utf-8")).not.toContain("secret plan");
+    expect(contentFor(turn.id)).toMatchObject({ prompt: "my secret plan for friday" });
+    expect(readFileSync(storeFile("2026-09"), "utf-8")).toContain("secret plan");
+  });
+
+  test("unforget makes the turn evidence again", () => {
+    exchange("my secret plan for friday", "noted");
+    const [turn] = userTurnsSince(T0);
+    forget(turn.id);
+
+    expect(unforget(turn.id)).toBe(true);
+
+    expect(userTurnsSince(T0)).toEqual([turn]);
+    expect(exclusions()).toEqual([]);
+  });
+
+  test("with the event log off, forget and unforget refuse instead of claiming success", () => {
+    exchange("rename the helper please", "renamed it");
+    const [turn] = userTurnsSince(T0);
+    forget(turn.id);
+    writeFileSync(
+      resolve(home, "memory", "pal-settings.json"),
+      JSON.stringify({ eventLog: { enabled: false } })
+    );
+    reload();
+
+    expect(forget(turn.reply?.id as string)).toBe(false);
+    expect(unforget(turn.id)).toBe(false);
+  });
+
+  test("unforget refuses an id that is not forgotten", () => {
+    exchange("rename the helper please", "renamed it");
+    const [turn] = userTurnsSince(T0);
+    expect(unforget(turn.id)).toBe(false);
+    expect(eventsSince("forgotten", new Date(0))).toEqual([]);
+  });
+
+  test("the latest forget or unforget decides, and both stay in the log", () => {
+    exchange("rename the helper please", "renamed it");
+    const [turn] = userTurnsSince(T0);
+    forget(turn.id);
+    unforget(turn.id);
+    forget(turn.id);
+
+    expect(exclusions()).toEqual([{ id: turn.id, since: expect.any(String) }]);
+    expect(eventsSince("forgotten", new Date(0)).map((e) => e.undone)).toEqual([
+      false,
+      true,
+      false,
+    ]);
   });
 
   test("leaves the other turns and their text as they were", () => {
@@ -135,16 +188,8 @@ describe("forget", () => {
     const [august] = userTurnsSince(new Date("2026-08-01T00:00:00Z"));
 
     expect(forget(august.id)).toBe(true);
-    expect(readFileSync(storeFile("2026-08"), "utf-8")).not.toContain("august request");
-  });
-
-  test("leaves a tombstone event naming what was forgotten", () => {
-    exchange("my secret plan for friday", "noted");
-    const [turn] = userTurnsSince(T0);
-    forget(turn.id);
-
-    expect(eventsSince("forgotten", new Date(0))).toEqual([
-      expect.objectContaining({ target: turn.id }),
+    expect(userTurnsSince(new Date("2026-08-01T00:00:00Z"))).toEqual([
+      expect.objectContaining({ text: "a september request" }),
     ]);
   });
 
@@ -209,7 +254,35 @@ describe("pal cli evidence", () => {
     const [turn] = userTurnsSince(T0);
 
     expect(await run("forget", turn.id)).toBe(0);
-    expect(printed).toEqual([`Forgot ${turn.id}`]);
+    expect(printed).toEqual([
+      `Forgot ${turn.id}; its text is kept, undo with: pal cli evidence unforget ${turn.id}`,
+    ]);
     expect(await run("forget", "no-such-id")).not.toBe(0);
+  });
+
+  test("forgotten lists each forgotten turn and reply with its text", async () => {
+    exchange("rename the helper please", "renamed it");
+    const [turn] = userTurnsSince(T0);
+    forget(turn.id);
+    forget(turn.reply?.id as string);
+    const [first, second] = exclusions();
+
+    expect(await run("forgotten")).toBe(0);
+
+    expect(printed).toEqual([
+      `${first.since}  ${turn.id}  rename the helper please`,
+      `${second.since}  ${turn.reply?.id}  renamed it`,
+      "2 forgotten",
+    ]);
+  });
+
+  test("unforget reports it, and fails on an id that is not forgotten", async () => {
+    exchange("rename the helper please", "renamed it");
+    const [turn] = userTurnsSince(T0);
+    forget(turn.id);
+
+    expect(await run("unforget", turn.id)).toBe(0);
+    expect(printed).toEqual([`${turn.id} counts as evidence again`]);
+    expect(await run("unforget", turn.id)).not.toBe(0);
   });
 });

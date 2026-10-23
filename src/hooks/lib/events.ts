@@ -117,7 +117,7 @@ export const EVENT_FIELDS = {
     "aiCoAuthored",
   ],
   rating: ["rating", "source"],
-  forgotten: ["target"],
+  forgotten: ["target", "undone"],
   project: ["change", "status"],
   decision: ["words"],
   promise: ["change", "dueInSec", "lateSec", "snoozes", "nags"],

@@ -1,10 +1,10 @@
 /**
  * The evidence PAL learns from: what the user typed, each turn joined with its
- * text and the reply it got. Only user-authority turns count, and a forgotten
- * turn is gone from every read.
+ * text and the reply it got. Only user-authority turns count. Forgetting never
+ * deletes: it records an exclusion that can be undone, and the text stays.
  */
 
-import { readdirSync, renameSync, writeFileSync } from "node:fs";
+import { readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   allEventsSince,
@@ -30,6 +30,11 @@ export interface EvidenceTurn {
   reply: { id: string; text: string | null } | null;
 }
 
+export interface Exclusion {
+  id: string;
+  since: string;
+}
+
 function contentFiles(): string[] {
   return readdirSync(contentDir())
     .filter((f) => f.endsWith(".jsonl"))
@@ -48,8 +53,14 @@ export function contentFor(id: string): ContentRow | null {
   return contentById().get(id) ?? null;
 }
 
-function forgottenIds(): Set<string> {
-  return new Set(eventsSince("forgotten", new Date(0)).map((e) => String(e.target)));
+/** The latest forget or unforget of each id decides; the full history stays in the log. */
+export function exclusions(): Exclusion[] {
+  const latest = new Map<string, LoggedEvent>();
+  for (const event of eventsSince("forgotten", new Date(0)))
+    latest.set(String(event.target), event);
+  return [...latest.entries()]
+    .filter(([, event]) => event.undone !== true)
+    .map(([id, event]) => ({ id, since: event.ts }));
 }
 
 function repliesByTurn(events: LoggedEvent[]): Map<unknown, LoggedEvent> {
@@ -63,9 +74,11 @@ export function userTurnsSince(since: Date): EvidenceTurn[] {
   const events = allEventsSince(since);
   const content = contentById();
   const replies = repliesByTurn(events);
-  const forgotten = forgottenIds();
+  const excluded = new Set(exclusions().map((e) => e.id));
+  const textIfKept = (id: string, field: string) =>
+    excluded.has(id) ? null : textOf(content.get(id), field);
   return ofType(events, "turn")
-    .filter((e) => e.authority === "user" && !forgotten.has(e.id))
+    .filter((e) => e.authority === "user" && !excluded.has(e.id))
     .map((turn) => {
       const reply = replies.get(turn.id);
       return {
@@ -75,31 +88,20 @@ export function userTurnsSince(since: Date): EvidenceTurn[] {
         runtime: turn.runtime,
         channel: turn.channel,
         project: turn.project,
-        text: textOf(content.get(turn.id), "prompt"),
+        text: textIfKept(turn.id, "prompt"),
         pastedChars: typeof turn.pastedChars === "number" ? turn.pastedChars : null,
-        reply: reply
-          ? { id: reply.id, text: textOf(content.get(reply.id), "reply") }
-          : null,
+        reply: reply ? { id: reply.id, text: textIfKept(reply.id, "reply") } : null,
       };
     });
 }
 
-function redacted({ id, ts, type }: ContentRow): ContentRow {
-  return { id, ts, type, forgotten: true };
-}
-
-function redactIn(file: string, id: string): boolean {
-  const rows = parseLines<ContentRow>(file);
-  if (!rows.some((row) => row.id === id)) return false;
-  const kept = rows.map((row) => (row.id === id ? redacted(row) : row));
-  writeFileSync(`${file}.tmp`, kept.map((row) => `${JSON.stringify(row)}\n`).join(""));
-  renameSync(`${file}.tmp`, file);
-  return true;
-}
-
-/** Records that the user took this back, and removes its text from the content store. */
+/** Keeps the event out of everything PAL learns from; its text is left as it was. */
 export function forget(id: string): boolean {
-  const found = contentFiles().some((file) => redactIn(file, id));
-  if (found) appendEvent("forgotten", { target: id });
-  return found;
+  if (!contentFor(id)) return false;
+  return appendEvent("forgotten", { target: id, undone: false }) !== null;
+}
+
+export function unforget(id: string): boolean {
+  if (!exclusions().some((e) => e.id === id)) return false;
+  return appendEvent("forgotten", { target: id, undone: true }) !== null;
 }
