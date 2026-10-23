@@ -38,6 +38,20 @@
           }
         ]
       }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bun .agents/hooks/check.ts --subagent" },
+          { "type": "command", "command": "bun .agents/hooks/type-check.ts --subagent" },
+          { "type": "command", "command": "bun .agents/hooks/knip.ts --subagent" },
+          { "type": "command", "command": "bun .agents/hooks/jscpd.ts --subagent" },
+          { "type": "command", "command": "bun .agents/hooks/klint.ts --subagent" },
+          { "type": "command", "command": "bun .agents/hooks/secretlint.ts --subagent" },
+          { "type": "command", "command": "bun .agents/hooks/madge.ts --subagent" },
+          { "type": "command", "command": "bun .agents/hooks/lf.ts --subagent" }
+        ]
+      }
     ]
   },
   "permissions": {

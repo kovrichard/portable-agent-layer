@@ -132,6 +132,35 @@ describe("run-hook clean-worktree skip", () => {
     expect(JSON.parse(r.stdout)).toEqual({ decision: "continue", reason: "broken" });
   });
 
+  test("a subagent sharing the main checkout is not gated, since the parent's Stop is", () => {
+    const dir = makeRepo("subagent-shared");
+    writeFileSync(resolve(dir, "tracked.txt"), "changed\n");
+
+    const r = spawnSync("bun", ["run", HOOK, "--subagent", "exit", "3"], {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+
+    expect(r.status).toBe(0);
+    expect(JSON.parse(r.stdout).output).toBe(
+      "skipped: subagent shares the parent's checkout, which the parent's Stop gates"
+    );
+  });
+
+  test("a subagent in its own git worktree is gated there", () => {
+    const dir = makeRepo("subagent-worktree");
+    const worktree = resolve(ROOT, "subagent-worktree-agent");
+    git(dir, "worktree", "add", "-q", worktree);
+    writeFileSync(resolve(worktree, "tracked.txt"), "changed\n");
+
+    const r = spawnSync("bun", ["run", HOOK, "--subagent", "exit", "3"], {
+      cwd: worktree,
+      encoding: "utf-8",
+    });
+
+    expect(r.status).toBe(2);
+  });
+
   test("a clean worktree skips a gate that would otherwise fail", () => {
     const dir = makeRepo("clean-failing");
 

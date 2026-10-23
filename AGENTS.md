@@ -60,11 +60,11 @@ Each gate, its script, and its wrapper in `.agents/hooks/`:
 
 ## The `.agents/hooks/` system
 
-Every wrapper above is wired into the Stop / session-end event of each agent configured here. Each wrapper is a thin call into `run-hook.ts`, which does the subprocess plumbing and skips the whole chain when `git status` is empty — so a conversational turn that changed nothing costs a single git call. A failing gate makes `run-hook.ts` exit 2, which the agent treats as a blocked session-end: it must fix the underlying issue before it can stop. Antigravity CLI is the exception: it gets a Stop `continue` reply with exit 0, and it runs the gates from `.agents/`, so its commands are relative to that folder.
+Every wrapper above is wired into the Stop / session-end event of each agent configured here. Each wrapper is a thin call into `run-hook.ts`, which does the subprocess plumbing and skips the whole chain when `git status` is empty — so a conversational turn that changed nothing costs a single git call. A failing gate makes `run-hook.ts` exit 2, which the agent treats as a blocked session-end: it must fix the underlying issue before it can stop. Antigravity CLI is the exception: it gets a Stop `continue` reply with exit 0, and it runs the gates from `.agents/`, so its commands are relative to that folder. Claude Code's `SubagentStop` passes `--subagent`, which gates a subagent only in its own git worktree; one sharing the main checkout is covered by the parent's `Stop`.
 
 | Agent           | Config file                 | Event          |
 | --------------- | --------------------------- | -------------- |
-| Claude Code     | `.claude/settings.json`     | `Stop`         |
+| Claude Code     | `.claude/settings.json`     | `Stop`, `SubagentStop` |
 | Cursor          | `.cursor/hooks.json`        | `stop`         |
 | Codex           | `.codex/hooks.json`         | `Stop`         |
 | Copilot         | `.github/hooks/gates.json`  | `agentStop`    |
