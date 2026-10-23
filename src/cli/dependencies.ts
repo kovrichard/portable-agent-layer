@@ -5,7 +5,12 @@ import { unresolvedDependencies } from "./doctor/state";
  * they already do. A published package ships no lockfile, and `bun add -g` has
  * already installed its dependencies next to it.
  */
-export function dependencyInstall(pkg: string, repoMode: boolean): string[] | null {
+export function dependencyInstall(
+  pkg: string,
+  repoMode: boolean,
+  underTest = process.env.PAL_TEST_SANDBOX === "1"
+): string[] | null {
+  if (underTest) return null;
   if (repoMode) return ["install", "--frozen-lockfile"];
   return unresolvedDependencies(pkg).length > 0 ? ["install", "--production"] : null;
 }
