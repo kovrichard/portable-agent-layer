@@ -13,14 +13,17 @@ import {
   type ClaimVerdict,
   checkClaims,
   commandsThisTurn,
+  isPromptLine,
   isVersionControlClaim,
 } from "./claim-check";
 import { hookFinalReply, hookSessionId } from "./hook-turn";
 import { ensureDir, paths } from "./paths";
 import { isEnabled, isOptedIn } from "./settings";
 import type { StopTurnPayload } from "./stop";
+import { readTranscriptTail } from "./transcript";
 
 const CLAIM_MAX = 200;
+const TURN_FIRST_READ_BYTES = 1 << 20;
 
 export interface ClaimRecord {
   ts: string;
@@ -40,10 +43,16 @@ function monthFile(date: Date): string {
   return resolve(claimsDir(), `${date.toISOString().slice(0, 7)}.jsonl`);
 }
 
-export function transcriptLines(payload: StopTurnPayload): string[] {
+export function transcriptLines(
+  payload: StopTurnPayload,
+  firstReadBytes = TURN_FIRST_READ_BYTES
+): string[] {
   const path = payload.transcript_path ?? payload.transcriptPath;
   if (!path || !existsSync(path)) return [];
-  return readFileSync(path, "utf-8").split("\n").filter(Boolean);
+  for (let bytes = firstReadBytes; ; bytes *= 4) {
+    const { lines, whole } = readTranscriptTail(path, bytes);
+    if (whole || lines.some(isPromptLine)) return lines;
+  }
 }
 
 function needsAudit(verdict: ClaimVerdict): boolean {
