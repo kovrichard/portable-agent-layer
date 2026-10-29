@@ -137,6 +137,11 @@ function isUserPrompt(entry: TranscriptLine): boolean {
   return text !== null && !isSystemText(text) && !isCodexInjectedContext(text);
 }
 
+export function isPromptLine(line: string): boolean {
+  const entry = parsed(line);
+  return entry !== null && isUserPrompt(entry);
+}
+
 export function promptThisTurn(lines: string[]): string | null {
   const prompts = lines
     .map(parsed)
