@@ -15,7 +15,6 @@ import {
 } from "./progress-tree";
 import { openSessionNode } from "./progress-tree-session-node";
 import { sessionDir } from "./session-dir";
-import { isOptedIn } from "./settings";
 import { COMMAND_KEYS, resultOf, stringIn } from "./tool-events";
 
 const GH_PR_CREATE_RE = /\bgh\s+pr\s+create\b/;
@@ -150,7 +149,7 @@ export function attachProgressFromToolCall(
   now: Date = new Date()
 ): void {
   try {
-    if (!isOptedIn("progressTree") || callDenied(payload)) return;
+    if (callDenied(payload)) return;
     const session = progressSession(hookSessionId(payload));
     const artifact = callFailed(payload) ? null : publishedArtifact(payload);
     if (artifact) attachToSessionNode(cwd, session, artifact, file, now);

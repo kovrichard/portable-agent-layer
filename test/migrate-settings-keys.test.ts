@@ -82,6 +82,16 @@ describe("v7-retired-settings-keys", () => {
     expect(readSettings()).toEqual({ dynamicContext: { opinions: true } });
   });
 
+  test("removes the switches for the retired handoff and the always-on progress tree", () => {
+    writeSettings({
+      dynamicContext: { handoff: true, progressTree: false, opinions: true },
+    });
+
+    runMigrate([]);
+
+    expect(readSettings()).toEqual({ dynamicContext: { opinions: true } });
+  });
+
   test("a dry run leaves the file alone", () => {
     writeSettings({ dynamicContext: { learningDigest: true } });
 

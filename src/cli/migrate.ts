@@ -665,8 +665,11 @@ const RETIRED_SETTINGS_KEYS: Record<string, string[]> = {
     "wisdom",
     "relationship",
     "selfModel",
+    "handoff",
+    "workTree",
     "workTreeGate",
     "workTreeDecisionGate",
+    "progressTree",
     "progressTreeGate",
     "progressTreeDecisionGate",
   ],
@@ -917,9 +920,6 @@ const v8FactoryHome: Migration = {
 
 // ── v9-progress-tree-names: the progress tree's stored names ────
 
-const PROGRESS_TREE_KEY_RENAMES: Record<string, string> = {
-  workTree: "progressTree",
-};
 const EVENTS_FILE = "events.jsonl";
 const OLD_PROGRESS_TREE_LABEL = "memory/work-tree/";
 const oldProgressTreeFolder = () => resolve(paths.memory(), "work-tree");
@@ -928,42 +928,6 @@ const newProgressTreeFolder = () => resolve(paths.memory(), "progress-tree");
 interface FolderStep {
   results: string[];
   skipped: number;
-}
-
-function oldProgressTreeKeysIn(
-  settings: Record<string, Record<string, unknown>> | null
-): string[] {
-  const section = settings?.dynamicContext;
-  if (typeof section !== "object" || section === null) return [];
-  return Object.keys(PROGRESS_TREE_KEY_RENAMES).filter((key) => key in section);
-}
-
-function renameProgressTreeKeys(
-  section: Record<string, unknown>
-): Record<string, unknown> {
-  return Object.fromEntries(
-    Object.entries(section).flatMap(([key, value]) => {
-      if (!Object.hasOwn(PROGRESS_TREE_KEY_RENAMES, key)) return [[key, value]];
-      const renamed = PROGRESS_TREE_KEY_RENAMES[key];
-      return renamed in section ? [] : [[renamed, value]];
-    })
-  );
-}
-
-function progressTreeKeysStep(dryRun: boolean): string[] {
-  const settings = readSettingsObject();
-  const old = oldProgressTreeKeysIn(settings);
-  if (!settings || old.length === 0) return [];
-  if (!dryRun) {
-    settings.dynamicContext = renameProgressTreeKeys(settings.dynamicContext);
-    writeSettingsObject(settings);
-  }
-  const moves = old.map(
-    (key) => `dynamicContext.${key} → dynamicContext.${PROGRESS_TREE_KEY_RENAMES[key]}`
-  );
-  return [
-    `pal-settings.json: ${dryRun ? "would rename" : "renamed"} ${moves.join(", ")}`,
-  ];
 }
 
 function mergeOldProgressTreeEvents(): number {
@@ -1024,28 +988,17 @@ function progressTreeFolderStep(dryRun: boolean): FolderStep {
 
 const v9ProgressTreeNames: Migration = {
   id: "v9-progress-tree-names",
-  description: "Rename the progress tree's settings and data folder from work-tree names",
+  description: "Move the progress tree's data folder from memory/work-tree",
   movesSources: true,
 
   check() {
-    const keys = oldProgressTreeKeysIn(readSettingsObject()).map(
-      (key) => `dynamicContext.${key}`
-    );
-    const found = existsSync(oldProgressTreeFolder())
-      ? [...keys, OLD_PROGRESS_TREE_LABEL]
-      : keys;
-    return { pending: found.length > 0, detail: found.join(", ") || undefined };
+    const pending = existsSync(oldProgressTreeFolder());
+    return { pending, detail: pending ? OLD_PROGRESS_TREE_LABEL : undefined };
   },
 
   run(dryRun = false): MigrationResult {
-    const keyResults = progressTreeKeysStep(dryRun);
-    const folder = progressTreeFolderStep(dryRun);
-    const results = [...keyResults, ...folder.results];
-    return {
-      migrated: results.length - folder.skipped,
-      skipped: folder.skipped,
-      results,
-    };
+    const { results, skipped } = progressTreeFolderStep(dryRun);
+    return { migrated: results.length - skipped, skipped, results };
   },
 };
 

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { appendEvent } from "../src/hooks/lib/progress-tree";
 import {
@@ -18,17 +18,8 @@ beforeEach(() => {
   folder = resolve(home, "some-folder");
   mkdirSync(folder, { recursive: true });
   process.env.PAL_HOME = home;
-  setProgressTree(true);
-});
-
-function setProgressTree(on: boolean | undefined) {
-  mkdirSync(resolve(home, "memory"), { recursive: true });
-  writeFileSync(
-    resolve(home, "memory", "pal-settings.json"),
-    JSON.stringify({ dynamicContext: { progressTree: on } })
-  );
   reload();
-}
+});
 
 describe("progress tree in context", () => {
   test("a folder outside every project is its own scope", () => {
@@ -52,16 +43,6 @@ describe("progress tree in context", () => {
     expect(progressTreePromptLine("go on", folder)).not.toContain("park --stopped");
   });
 
-  test.each([
-    ["turned off", false],
-    ["never opted into", undefined],
-  ])("%s, it silences both", (_, on) => {
-    appendEvent(folder, "n1", "open", { title: "Loose work", parent: null });
-    setProgressTree(on);
-    expect(loadProgressTreeContext(folder)).toBe("");
-    expect(progressTreePromptLine("go on", folder)).toBeNull();
-  });
-
   describe("a session start settles the PRs attached to open nodes", () => {
     const prRef = "https://github.com/o/r/pull/126";
 
@@ -81,21 +62,10 @@ describe("progress tree in context", () => {
       };
     }
 
-    test("an opted-in session start shows the merged PR on its node", () => {
+    test("a session start shows the merged PR on its node", () => {
       openNodeWithMergedPr();
       const context = loadProgressTreeContext(folder, undefined, recordingGh([]));
       expect(context).toContain("PR #126 merged 2026-10-19");
-    });
-
-    test.each([
-      ["turned off", false],
-      ["never opted into", undefined],
-    ])("%s, it asks gh nothing", (_, on) => {
-      openNodeWithMergedPr();
-      setProgressTree(on);
-      const calls: string[] = [];
-      expect(loadProgressTreeContext(folder, undefined, recordingGh(calls))).toBe("");
-      expect(calls).toEqual([]);
     });
   });
 });

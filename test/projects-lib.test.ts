@@ -87,6 +87,16 @@ describe("read/write/delete", () => {
     expect(deleteProject("ghost")).toBe(false);
   });
 
+  test("a handoff an older PAL left in the record is not read back", () => {
+    const dir = resolve(TEST_HOME, "memory", "projects", "old");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      resolve(dir, "ISA.md"),
+      "---\nname: old\nstatus: active\ncreated: 2026-01-01\nupdated: 2026-01-01\nhandoff: ', with  queued.'\n---\n"
+    );
+    expect(readProject("old")).not.toHaveProperty("handoff");
+  });
+
   test("malformed ISA.md in projects dir is skipped, not crashed on", () => {
     writeProject(fakeProject({ name: "valid", path: "/tmp/v" }));
     const dir = resolve(TEST_HOME, "memory", "projects", "broken");

@@ -182,7 +182,7 @@ export async function runStopHandlers(
     "update-counts": updateCounts(),
     backup: autoBackup(),
     synthesis: runSynthesis(),
-    "project-touch": projectTouch(options.lastAssistantMessage),
+    "project-touch": projectTouch(),
     "desktop-notify": notifyDesktop(options.sessionId),
     "context-digests": Promise.resolve(writeContextDigests()),
     "collect-events": Promise.resolve(spawnCollectIfDue()),

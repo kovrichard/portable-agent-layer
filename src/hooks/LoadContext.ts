@@ -2,8 +2,8 @@
  * Hook: SessionStart — Injects dynamic context + regenerates AGENTS.md if stale.
  *
  * Static context (TELOS, setup prompt) is loaded natively from AGENTS.md /
- * CLAUDE.md. This hook injects dynamic context only: handoff, opinions,
- * work state.
+ * CLAUDE.md. This hook injects dynamic context only: the progress tree,
+ * opinions, work state.
  *
  * Which agent gets what, in which envelope, is in lib/session-context.ts.
  */
@@ -62,7 +62,6 @@ try {
     active === "copilot" || active === "cursor" || active === "codex" ? active : "claude";
   const reminder = buildSystemReminder({
     agent: target,
-    withoutHandoff: wanted === "without-handoff",
     sessionId: hookSessionId(input),
   });
   if (!reminder) process.exit(0);

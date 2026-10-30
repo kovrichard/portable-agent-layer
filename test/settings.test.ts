@@ -27,7 +27,7 @@ beforeAll(async () => {
       },
       dynamicContext: {
         projects: false,
-        handoff: true,
+        opinions: true,
       },
     })
   );
@@ -75,7 +75,7 @@ describe("isEnabled", () => {
 
   test("returns true when explicitly enabled", async () => {
     const { isEnabled } = await import("../src/hooks/lib/settings");
-    expect(isEnabled("handoff")).toBe(true);
+    expect(isEnabled("opinions")).toBe(true);
   });
 
   test("defaults to true for unset keys", async () => {

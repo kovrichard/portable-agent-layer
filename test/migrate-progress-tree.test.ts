@@ -22,7 +22,8 @@ import { reload } from "../src/hooks/lib/settings";
 import { freshTestDir } from "./lib/test-home";
 
 const MIGRATION = "v9-progress-tree-names";
-const RETIRED_GATES = [
+const RETIRED_KEY_PAIRS = [
+  ["workTree", "progressTree"],
   ["workTreeGate", "progressTreeGate"],
   ["workTreeDecisionGate", "progressTreeDecisionGate"],
 ] as const;
@@ -67,38 +68,10 @@ beforeEach(() => {
   reload();
 });
 
-describe("v9-progress-tree-names: settings keys", () => {
-  test.each([true, false])("keeps workTree's value %p as progressTree", (value) => {
-    writeSettings({ dynamicContext: { workTree: value } });
-    expect(pendingIds()).toContain(MIGRATION);
-
-    quietly(() => runMigrate([]));
-
-    expect(readSettings()).toEqual({ dynamicContext: { progressTree: value } });
-    expect(pendingIds()).not.toContain(MIGRATION);
-  });
-
-  test("when the key is missing, adds nothing and is not pending", () => {
-    writeSettings({ dynamicContext: { opinions: true } });
-    expect(pendingIds()).not.toContain(MIGRATION);
-
-    quietly(() => runMigrate([]));
-
-    expect(readSettings()).toEqual({ dynamicContext: { opinions: true } });
-  });
-
-  test("when both names exist, the new value wins and the old key goes", () => {
-    writeSettings({ dynamicContext: { workTree: true, progressTree: false } });
-    expect(pendingIds()).toContain(MIGRATION);
-
-    quietly(() => runMigrate([]));
-
-    expect(readSettings()).toEqual({ dynamicContext: { progressTree: false } });
-  });
-
+describe("the progress tree's old settings", () => {
   test.each(
-    RETIRED_GATES
-  )("one run removes the retired gate as %s and as %s", (oldKey, newKey) => {
+    RETIRED_KEY_PAIRS
+  )("one run removes the setting as %s and as %s", (oldKey, newKey) => {
     writeSettings({
       dynamicContext: { opinions: true, [oldKey]: true, [newKey]: false },
     });
@@ -109,43 +82,8 @@ describe("v9-progress-tree-names: settings keys", () => {
     expect(checkPendingMigrations()).toEqual([]);
   });
 
-  test("renames workTree and drops the gates, keeping other keys and their order", () => {
-    writeSettings({
-      identity: { ai: { name: "A" } },
-      dynamicContext: {
-        opinions: true,
-        workTree: true,
-        claimChek: false,
-        workTreeGate: false,
-        workTreeDecisionGate: true,
-        last: 1,
-      },
-    });
-
-    quietly(() => runMigrate([]));
-
-    const settings = readSettings();
-    expect(settings.identity).toEqual({ ai: { name: "A" } });
-    expect(Object.entries(settings.dynamicContext)).toEqual([
-      ["opinions", true],
-      ["progressTree", true],
-      ["claimChek", false],
-      ["last", 1],
-    ]);
-  });
-
-  test("a dry run reports the rename and leaves the file alone", () => {
-    const before = { dynamicContext: { workTree: true, workTreeGate: false } };
-    writeSettings(before);
-
-    const output = quietly(() => runMigrate(["--dry-run"]));
-
-    expect(output).toContain(MIGRATION);
-    expect(readSettings()).toEqual(before);
-    expect(pendingIds()).toContain(MIGRATION);
-  });
-
-  test("is not pending without a settings file or folders", () => {
+  test("v9 leaves settings to v7 and is not pending without the old folder", () => {
+    writeSettings({ dynamicContext: { workTree: true } });
     expect(pendingIds()).not.toContain(MIGRATION);
   });
 });
@@ -211,37 +149,11 @@ describe("v9-progress-tree-names: what it reports", () => {
       .map((line) => line.slice(MIGRATION.length + 2));
   const v9Detail = () => checkPendingMigrations().find((m) => m.id === MIGRATION)?.detail;
 
-  test("names each renamed key and nothing else when only settings change", () => {
-    writeSettings({ dynamicContext: { workTree: true, workTreeGate: false } });
-    expect(v9Lines()).toEqual([
-      "pal-settings.json: renamed dynamicContext.workTree → dynamicContext.progressTree",
-    ]);
-  });
-
-  test("a dry run says it would rename", () => {
+  test("names the old folder and reports the move", () => {
     writeSettings({ dynamicContext: { workTree: true } });
-    expect(quietly(() => runMigrate(["--dry-run"]))).toContain(
-      "pal-settings.json: would rename dynamicContext.workTree → dynamicContext.progressTree"
-    );
-  });
-
-  test("the pending detail lists the old keys and the old folder", () => {
-    writeSettings({ dynamicContext: { workTree: true, workTreeGate: false } });
-    writeEvents(oldFolder(), [EVENT]);
-    expect(v9Detail()).toBe("dynamicContext.workTree, memory/work-tree/");
-  });
-
-  test("settings without old keys are left out of the report", () => {
-    writeSettings({ dynamicContext: { opinions: true } });
     writeEvents(oldFolder(), [EVENT]);
     expect(v9Detail()).toBe("memory/work-tree/");
     expect(v9Lines()).toEqual(["memory/work-tree/: moved to memory/progress-tree/"]);
-  });
-
-  test("a null dynamicContext is no old key", () => {
-    writeSettings({ dynamicContext: null });
-    writeEvents(oldFolder(), [EVENT]);
-    expect(v9Detail()).toBe("memory/work-tree/");
   });
 
   test("with both folders it reports how many events it appended", () => {
@@ -294,8 +206,8 @@ describe("v9-progress-tree-names: what it reports", () => {
   });
 });
 
-describe("an install with the tree on keeps it on after migrating", () => {
-  test("settings with workTree: true and old events show the same nodes", () => {
+describe("an install from before the rename", () => {
+  test("shows its old events and keeps no old setting", () => {
     const scope = resolve(HOME, "some-folder");
     mkdirSync(scope, { recursive: true });
     writeSettings({ dynamicContext: { workTree: true, workTreeGate: true } });
@@ -313,7 +225,7 @@ describe("an install with the tree on keeps it on after migrating", () => {
     applyPendingMigrations();
     reload();
 
-    expect(readSettings().dynamicContext).toEqual({ progressTree: true });
+    expect(readSettings().dynamicContext).toEqual({});
     expect(loadProgressTreeContext(scope)).toContain("Before the rename");
     expect(progressTreePromptLine("go on", scope)).toContain("Before the rename");
     expect(nodesWithStatus(readTree(scope), "active").map((n) => n.title)).toEqual([
@@ -322,7 +234,7 @@ describe("an install with the tree on keeps it on after migrating", () => {
   });
 });
 
-describe("the schema and the template name only the new keys", () => {
+describe("the schema and the template name no progress-tree switch", () => {
   const assets = resolve(import.meta.dir, "..", "assets");
   const schema = JSON.parse(
     readFileSync(resolve(assets, "schema", "pal-settings.schema.json"), "utf-8")
@@ -331,45 +243,11 @@ describe("the schema and the template name only the new keys", () => {
     readFileSync(resolve(assets, "templates", "pal-settings.json"), "utf-8")
   ).dynamicContext;
 
-  test("workTree is replaced by progressTree in both", () => {
-    expect(schema.progressTree?.type).toBe("boolean");
-    expect(schema.workTree).toBeUndefined();
-    expect(template.progressTree).toBe(false);
-    expect("workTree" in template).toBe(false);
-  });
-
-  test.each(
-    RETIRED_GATES
-  )("the removed gates %s and %s are in neither", (oldKey, newKey) => {
+  test.each(RETIRED_KEY_PAIRS)("%s and %s are in neither", (oldKey, newKey) => {
     for (const key of [oldKey, newKey]) {
       expect(schema[key]).toBeUndefined();
       expect(key in template).toBe(false);
     }
-  });
-});
-
-describe("AGENTS.md.template", () => {
-  const rule = "- **Keep the progress tree true**";
-
-  test("renders the progress-tree rule with the key on and omits it off", async () => {
-    const { buildClaudeMd } = await import("../src/hooks/lib/claude-md");
-    writeSettings({ dynamicContext: { progressTree: true } });
-    reload();
-    expect(buildClaudeMd()).toContain(rule);
-
-    writeSettings({ dynamicContext: { progressTree: false } });
-    reload();
-    const off = buildClaudeMd();
-    expect(off).not.toContain(rule);
-    expect(off).not.toContain("{{IF");
-  });
-
-  test("the template block is keyed on progressTree", () => {
-    const template = readFileSync(
-      resolve(import.meta.dir, "..", "assets", "templates", "AGENTS.md.template"),
-      "utf-8"
-    );
-    expect(template).toContain("{{IF progressTree}}");
   });
 });
 

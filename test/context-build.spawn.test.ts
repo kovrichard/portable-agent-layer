@@ -54,19 +54,11 @@ describe("buildSystemReminder", () => {
     );
   });
 
-  test("keeps the progress tree after a compaction, which drops the handoff", () => {
-    const dir = projectWithWork();
-    const out = withSessionIn(dir, () => buildSystemReminder({ withoutHandoff: true }));
-    expect(out).toContain("stopped at: restore WIP wording");
-  });
-
-  test("leaves the progress tree out until it is opted into", () => {
+  test("shows the progress tree with no setting for it", () => {
     const dir = projectWithWork();
     write("memory/pal-settings.json", JSON.stringify({ dynamicContext: {} }));
     reload();
-    expect(withSessionIn(dir, () => buildSystemReminder())).not.toContain(
-      "## Progress tree"
-    );
+    expect(withSessionIn(dir, () => buildSystemReminder())).toContain("## Progress tree");
   });
 
   test("marks the project the session started in, not the folder it moved to", () => {

@@ -2,7 +2,7 @@
 name: projects
 license: MIT
 description: "Project context management. PROACTIVE — use when the user references a project (by name or as \"this repo\", \"current work\"), asks to add/update/complete a project, says \"store under a named project\", \"track this\", \"what am I working on\", \"my projects\", \"my priorities\". Also triggered by ISC/ISA terminology — ISC stands for Ideal State Criteria, a project's verifiable done-conditions stored as `ISC-N:` lines in the Criteria section of its ISA.md spec. Phrases like \"ISC\", \"open/opening the ISC\", \"open ISCs\" (unfinished criteria), \"create/creating a ticket for a project\", \"new ticket\", or \"project ticket\" all map here: use `list-isc` to read them, `add-isc` to create one, `complete-isc`/`reopen-isc` to change status."
-argument-hint: "[list | create | resume | add-next | add-blocker | add-decision | add-handoff | update-section | criteria | isa-init | complete | archive | pause]"
+argument-hint: "[list | create | resume | add-next | add-blocker | add-decision | update-section | criteria | isa-init | complete | archive | pause]"
 metadata:
   source: portable-agent-layer
   triggers:
@@ -44,7 +44,6 @@ Output is JSON.
 | `add-next <name> "text"` | Append a next step (array, instantly appendable) |
 | `add-blocker <name> "text"` | Append a blocker (array, instantly appendable) |
 | `add-decision <name> "decision" "rationale"` | Log a timestamped decision entry to the Decisions section |
-| `add-handoff <name> "text"` | Overwrite the handoff field (single-value, replaces) |
 | `rm-next \| rm-blocker <name> <index>` | Remove a next/blocker entry by zero-based index |
 | `update-section <name> <section> "content"` | Set an ISA body section (problem, goal, criteria, vision, constraints, out_of_scope, context, decisions, changelog) |
 | `criteria <name>` | Print the Criteria section (verifiable success conditions) |
@@ -88,7 +87,7 @@ The body of each ISA.md holds spec sections. Use `update-section` to set them:
 | "register this" / "track this" / cwd is unregistered work | `create` (default the name from cwd basename, confirm before writing) |
 | "store under <project>: X" / "note on <project>: X" | Pick the field — durable reference → `update-section <slug> context "..."`, work item → `add-next`, obstacle → `add-blocker`. If unclear, ask. |
 | "we decided X because Y" | `add-decision <name> "X" "Y"` |
-| "handoff for <project>" / "next session pick up at X" | `add-handoff <name> "<text>"` |
+| "handoff for <project>" / "next session pick up at X" | `pal cli progress stopped "<text>"` (the progress tree, not the project record) |
 | "set the goal for <project>" / "describe the problem" | `update-section <name> goal "..."` or `update-section <name> problem "..."` |
 | "what are the criteria for <project>" / "what counts as done" | `criteria <name>` |
 | "mark X complete" / "X is done" | `complete <name>` |

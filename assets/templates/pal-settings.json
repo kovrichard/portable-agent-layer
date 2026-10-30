@@ -18,12 +18,10 @@
   "dynamicContext": {
     "opinions": true,
     "projects": true,
-    "handoff": true,
     "contextualSteering": true,
     "skillMatching": true,
     "wallClock": true,
     "repoState": true,
-    "progressTree": false,
     "dueReminders": false,
     "interactionAwareness": true,
     "reactionSampling": true,

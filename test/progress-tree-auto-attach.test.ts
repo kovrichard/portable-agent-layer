@@ -3,7 +3,6 @@ import { appendFileSync, mkdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runPostToolHandlers } from "../src/hooks/lib/post-tool";
 import { appendEvent, readEvents, readTree } from "../src/hooks/lib/progress-tree";
-import { stopProgressTree } from "../src/hooks/lib/progress-tree-stop";
 import {
   attach,
   attachments,
@@ -15,7 +14,6 @@ import {
   paths,
   SESSION,
   sessionStart,
-  setting,
   startEachTestInAFreshHome,
   TASK,
   tree,
@@ -81,14 +79,6 @@ describe("gh pr create attaches the PR", () => {
     attach("n1", "pr", PR);
     runClaude("gh pr create --fill", `${PR}\n`);
     expect(attachments()).toEqual([["n1", "pr", PR]]);
-  });
-
-  test("the progress tree off reads and writes nothing", () => {
-    openNode();
-    setting(false);
-    const before = readEvents().length;
-    runClaude("gh pr create --fill", `${PR}\n`);
-    expect(readEvents()).toHaveLength(before);
   });
 
   test("a broken progress-tree log never throws out of the hook", () => {
@@ -312,19 +302,9 @@ describe("a started factory build attaches its task", () => {
     runClaude(`${BUILD} ${TASK}`);
     expect(attachments()).toEqual([["n1", "run", `dark-factory:${TASK}`]]);
   });
-
-  test("the progress tree off writes nothing", () => {
-    openNode();
-    setting(false);
-    const before = readEvents().length;
-    runClaude(`${BUILD} ${TASK}`);
-    expect(readEvents()).toHaveLength(before);
-  });
 });
 
 describe("the factory's PR reaches the node holding the task", () => {
-  const endOfTurn = () => stopProgressTree({ session_id: SESSION });
-
   test.each(["pr_opened", "pr_adopted"])("%s attaches at session start", (event) => {
     nodeHoldingTask();
     factoryEvent(event, TASK);
@@ -406,15 +386,5 @@ describe("the factory's PR reaches the node holding the task", () => {
     const before = readFileSync(paths.factoryLog, "utf-8");
     sessionStart();
     expect(readFileSync(paths.factoryLog, "utf-8")).toEqual(before);
-  });
-
-  test("the progress tree off reads and writes nothing", async () => {
-    nodeHoldingTask();
-    factoryEvent("pr_opened", TASK);
-    setting(false);
-    const before = readEvents().length;
-    sessionStart();
-    await endOfTurn();
-    expect(readEvents()).toHaveLength(before);
   });
 });

@@ -284,13 +284,4 @@ describe("what the check does not touch", () => {
     loadProgressTreeContext(folder);
     expect(ghCalls()).toHaveLength(0);
   });
-
-  test("with the progress tree off, no gh call is made", () => {
-    openNodeWithPr("n1", 126);
-    prState(126, "MERGED");
-    setProgressTree(false);
-    loadProgressTreeContext(folder);
-    expect(ghCalls()).toHaveLength(0);
-    expect(stoppedAt("n1")).toBe("CI running");
-  });
 });

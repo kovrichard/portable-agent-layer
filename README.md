@@ -94,7 +94,7 @@ pal cli status        # check your setup
 | `pal cli cost` | What each month was paid against its API-equivalent cost, per agent |
 | `pal cli wrapped [--year <yyyy>]` | A year of your work in numbers, read from the event log |
 | `pal cli patterns` | How you work across projects, read from the event log |
-| `pal cli progress [show\|list\|open\|enter\|park\|wait\|done\|stopped\|decide\|attach\|follow-up]` | The progress tree: what you are on in this project, where it stopped, what is parked or waiting, and the decisions and artifacts on each node. Detours are child nodes and `done` returns to the parent. With `dynamicContext.progressTree` opted into, the active node rides along in every session and prompt, and your own commits attach to it at turn end |
+| `pal cli progress [show\|list\|open\|enter\|park\|wait\|done\|stopped\|decide\|attach\|follow-up]` | The progress tree: what you are on in this project, where it stopped, what is parked or waiting, and the decisions and artifacts on each node. Detours are child nodes and `done` returns to the parent. The active node rides along in every session and prompt, and your own commits attach to it at turn end |
 | `pal cli content preserve` | Copy every Claude Code transcript, gzipped, into `memory/content/` before Claude Code deletes it (30 days by default). Runs on its own whenever a session closes; the content store never leaves the machine, so `export` skips it |
 | `pal cli events discord-nag <sent\|answered>` | For a bot outside PAL: record a nag it sent (`--kind <kind>`), or the answer to one and how long it took (`--after-sec <n>`), in the local event log |
 | `pal cli infer` | One model call for scripts and bots, on the active agent's route: prompt on stdin, reply on stdout. `--tier small\|medium\|large\|flagship` (on Claude: Haiku, Sonnet, Opus, Fable; on Codex: Luna, Sol, Sol at high effort, Astra; on Antigravity: Flash at low, medium and high effort, and no flagship; an agent without the tier asked refuses it), `--system <file>`, `--schema <file>` for a JSON reply checked against it, `--timeout <seconds>`. The call loads no PAL hooks or context; exits 1 with the reason when no route answers |
@@ -249,7 +249,7 @@ Your setup should be able to travel with you.
 
 ## Features
 
-- **Memory across sessions**: when a session starts, PAL loads who you are, your active projects and the handoff from your last session. When it ends, PAL saves a summary and any corrections for next time
+- **Memory across sessions**: when a session starts, PAL loads who you are, your active projects and where your last session's work stopped. When it ends, PAL saves a summary and any corrections for next time
 - **Learns from your corrections**: tell an agent it got something wrong and PAL labels the mistake, drafts a rule and asks you once. Approve it with `pal cli rule approve` and every agent follows it from the next session
 - **Done means checked**: real work runs through five phases (observe, plan, execute, verify, learn), and nothing is done until each criterion has evidence
 - **Built-in skills**: research, PDFs, slide decks, frontend design, humanizing text and more. See [Skills](#skills)

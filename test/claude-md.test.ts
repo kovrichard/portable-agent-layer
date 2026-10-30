@@ -79,27 +79,9 @@ describe("buildClaudeMd", () => {
     expect(result).toContain("~/.pal/telos/GOALS.md");
   });
 
-  test("carries the progress-tree rule only once the progress tree is opted into", async () => {
+  test("always carries the progress-tree rule", async () => {
     const { buildClaudeMd } = await import("../src/hooks/lib/claude-md");
-    const { reload } = await import("../src/hooks/lib/settings");
-    const settingsPath = resolve(TEST_HOME, "memory", "pal-settings.json");
-    const original = readFileSync(settingsPath, "utf-8");
-    const rule = "\n- **Keep the progress tree true** —";
-
-    expect(buildClaudeMd()).not.toContain("Keep the progress tree true");
-    expect(buildClaudeMd()).not.toContain("{{IF");
-
-    writeFileSync(
-      settingsPath,
-      JSON.stringify({ ...JSON.parse(original), dynamicContext: { progressTree: true } })
-    );
-    reload();
-    try {
-      expect(buildClaudeMd()).toContain(rule);
-    } finally {
-      writeFileSync(settingsPath, original);
-      reload();
-    }
+    expect(buildClaudeMd()).toContain("\n- **Keep the progress tree true** —");
   });
 
   test("omits setup prompt when setup is complete", async () => {

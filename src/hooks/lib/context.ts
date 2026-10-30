@@ -7,7 +7,6 @@ import { existsSync, readFileSync } from "node:fs";
 import { opinionsContext } from "./adaptation-rules";
 import type { AgentName } from "./agent-registry";
 import { dueNudgeSections } from "./daily-nudge";
-import { loadHandoffContext } from "./handoff-context";
 import { toPath } from "./paths";
 import { loadProgressTreeContext } from "./progress-tree-context";
 import { loadActiveProjectsContext } from "./projects";
@@ -57,7 +56,7 @@ export type AgentTarget = Extract<
  * steering) that load natively via @imports in CLAUDE.md.
  */
 export function buildSystemReminder(
-  opts: { agent?: AgentTarget; withoutHandoff?: boolean; sessionId?: string } = {}
+  opts: { agent?: AgentTarget; sessionId?: string } = {}
 ): string {
   // Semi-static sections loaded natively via @imports (Claude Code) or
   // instructions[] (opencode). Skip them from hook output for those agents.
@@ -74,15 +73,10 @@ export function buildSystemReminder(
   const opinions =
     !skipSemiStatic && settings.isEnabled("opinions") ? opinionsContext() : "";
   const steering = skipSemiStatic ? "" : loadSteeringRules();
-  const handoff =
-    !opts.withoutHandoff && settings.isEnabled("handoff")
-      ? loadHandoffContext(sessionDir())
-      : "";
   const progressTree = loadProgressTreeContext(sessionDir(), opts.sessionId);
   const dueNudges = opts.agent === "cursor" ? dueNudgeSections() : [];
   const parts: string[] = [];
   if (startup) parts.push(startup);
-  if (handoff) parts.push(handoff);
   if (progressTree) parts.push(progressTree);
   parts.push(...dueNudges);
   if (opinions) parts.push(opinions);
