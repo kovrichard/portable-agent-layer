@@ -88,15 +88,17 @@ describe("v9-progress-tree-names: settings keys", () => {
 
       expect(readSettings()).toEqual({ dynamicContext: { opinions: true } });
     });
+  });
 
-    test("when both names exist, the new value wins and the old key goes", () => {
-      writeSettings({ dynamicContext: { [oldKey]: true, [newKey]: false } });
-      expect(pendingIds()).toContain(MIGRATION);
+  test.each(
+    KEY_PAIRS.slice(1)
+  )("when both %s and %s exist, the new value wins and the old key goes", (oldKey, newKey) => {
+    writeSettings({ dynamicContext: { [oldKey]: true, [newKey]: false } });
+    expect(pendingIds()).toContain(MIGRATION);
 
-      quietly(() => runMigrate([]));
+    quietly(() => runMigrate([]));
 
-      expect(readSettings()).toEqual({ dynamicContext: { [newKey]: false } });
-    });
+    expect(readSettings()).toEqual({ dynamicContext: { [newKey]: false } });
   });
 
   test("renames all three, keeping other keys and their order", () => {
@@ -327,7 +329,7 @@ describe("an install with the tree on keeps it on after migrating", () => {
   });
 });
 
-describe("the schema and the template name only the new keys", () => {
+describe("the schema and the template name no progress-tree switch", () => {
   const assets = resolve(import.meta.dir, "..", "assets");
   const schema = JSON.parse(
     readFileSync(resolve(assets, "schema", "pal-settings.schema.json"), "utf-8")
@@ -336,45 +338,11 @@ describe("the schema and the template name only the new keys", () => {
     readFileSync(resolve(assets, "templates", "pal-settings.json"), "utf-8")
   ).dynamicContext;
 
-  test("workTree is replaced by progressTree in both", () => {
-    expect(schema.progressTree?.type).toBe("boolean");
-    expect(schema.workTree).toBeUndefined();
-    expect(template.progressTree).toBe(false);
-    expect("workTree" in template).toBe(false);
-  });
-
-  test.each(
-    KEY_PAIRS.slice(1)
-  )("the removed gates %s and %s are in neither", (oldKey, newKey) => {
+  test.each(KEY_PAIRS)("%s and %s are in neither", (oldKey, newKey) => {
     for (const key of [oldKey, newKey]) {
       expect(schema[key]).toBeUndefined();
       expect(key in template).toBe(false);
     }
-  });
-});
-
-describe("AGENTS.md.template", () => {
-  const rule = "- **Keep the progress tree true**";
-
-  test("renders the progress-tree rule with the key on and omits it off", async () => {
-    const { buildClaudeMd } = await import("../src/hooks/lib/claude-md");
-    writeSettings({ dynamicContext: { progressTree: true } });
-    reload();
-    expect(buildClaudeMd()).toContain(rule);
-
-    writeSettings({ dynamicContext: { progressTree: false } });
-    reload();
-    const off = buildClaudeMd();
-    expect(off).not.toContain(rule);
-    expect(off).not.toContain("{{IF");
-  });
-
-  test("the template block is keyed on progressTree", () => {
-    const template = readFileSync(
-      resolve(import.meta.dir, "..", "assets", "templates", "AGENTS.md.template"),
-      "utf-8"
-    );
-    expect(template).toContain("{{IF progressTree}}");
   });
 });
 

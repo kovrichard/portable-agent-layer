@@ -45,7 +45,7 @@ Almost everything in `state/`, `signals/`, `relationship/`, `learning/`, and `wi
 | A rating signal | UserPromptOrchestrator rating capture | `signals/ratings.jsonl` |
 | How a user turn went (pace, length, skimming, how it received the last reply) | Prompt-time interaction measurement (automatic, every agent; see the per-agent turn contract in SYSTEM_ARCHITECTURE.md); read it with `pal cli interaction report` | `signals/interaction/YYYY-MM.jsonl` |
 | A rolling sample of labelled messages, for auditing the reaction rules | Prompt-time interaction measurement (automatic, `reactionSampling`) | `state/reaction-samples.json` |
-| A project handoff | Project skill / detached handlers | `projects/<slug>/` |
+| Where a session's work stopped | `pal cli progress stopped`, or the session-intelligence handler at the end of a session | `progress-tree/events.jsonl` |
 
 ## Format conventions
 

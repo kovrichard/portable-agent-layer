@@ -38,7 +38,6 @@
       "Bash(pal cli algorithm-reflect *)",
       "Bash(pal cli algorithm-synthesize *)",
       "Bash(pal cli analyze *)",
-      "Bash(pal cli handoff-note *)",
       "Bash(pal cli project *)",
       "Bash(pal cli synthesize *)",
       "Bash(pal cli thread *)"

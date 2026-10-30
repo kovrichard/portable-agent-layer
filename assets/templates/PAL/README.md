@@ -63,7 +63,7 @@ Event hooks across the session lifecycle:
 - **SessionStart** → `LoadContext.ts` — inject dynamic context, regenerate CLAUDE.md if stale
 - **UserPromptSubmit** → `UserPromptOrchestrator.ts` — rating capture, session naming
 - **PreToolUse** → `SecurityValidator.ts` — block dangerous commands; `SkillGuard.ts` — block false-positive skill matches
-- **Stop** → `StopOrchestrator.ts` — work tracking, handoff, project history, backups
+- **Stop** → `StopOrchestrator.ts` — work tracking, progress tree, project history, backups
 
 ### Memory (`memory/`)
 Persistent storage across sessions:

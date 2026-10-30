@@ -2,10 +2,7 @@
  * Stop handler: unified session intelligence capture.
  *
  * Produces: title, summary, insights, status and a done/next/waiting handoff via Haiku.
- * Writes: project history, auto handoff.
- *
- * Handoff notes → written in ALGORITHM LEARN phase via handoff-note.ts
- *
+ * Writes: project history, and the stopped-at of the session's progress-tree node.
  */
 
 import {
@@ -17,6 +14,8 @@ import {
 } from "../lib/capture-store";
 import { canInfer, inference } from "../lib/inference";
 import { logDebug, logError } from "../lib/log";
+import { progressSession } from "../lib/progress-session";
+import { recordWhereSessionStopped } from "../lib/progress-tree-session-end";
 import { sessionDir } from "../lib/session-dir";
 import {
   extractContent,
@@ -25,7 +24,6 @@ import {
   parseMessages,
 } from "../lib/transcript";
 import { appendProjectHistory } from "../lib/work-tracking";
-import { structuredHandoff, writeAutoHandoff } from "./persist-last-exchange";
 
 // ── JSON schema for merged Haiku call ──
 
@@ -163,15 +161,13 @@ export async function captureSessionIntelligence(
   const title = output?.title || extractContent(lastUser).slice(0, 80) || "session";
   const summary = output?.summary || lastAssistantText.slice(0, 600);
   const insights = output?.insights || "";
-  if (output) {
-    writeAutoHandoff(sessionDir(), {
+  if (output)
+    recordWhereSessionStopped(sessionDir(), progressSession(sessionId), {
       title,
-      status: output.status,
-      handoff: structuredHandoff(output),
+      done: output.done,
+      next: output.next,
       waitingOn: output.waitingOn,
-      sessionId,
     });
-  }
   if (!historyDue) return;
 
   if (output) {

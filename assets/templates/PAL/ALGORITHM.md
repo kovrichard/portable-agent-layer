@@ -248,21 +248,7 @@ pal cli algorithm-reflect --task "description" --criteria N --passed N --failed 
 
 Set `--scope task-specific` when the Q2 idea is bound to this one task (e.g. a criterion that only matters for the specific file, API, or dataset you were handling) and would not generalize to the algorithm; use `general` (the default) for reusable structural improvements. This keeps the algorithm-update synthesis focused on changes worth folding into ALGORITHM.md.
 
-**3. Handoff note** — if work is unfinished, write what remains so the next session can pick up immediately:
-
-```bash
-# Work still in progress:
-pal cli handoff-note --title "what we were doing" --text "what remains, decisions made, next steps"
-
-# Work finished — clear any previous in-progress handoff:
-pal cli handoff-note --done --title "what we completed"
-```
-
-- Write if anything is left mid-flight: unfinished implementation, open decision, partially debugged issue
-- Skip if the session fully resolved everything it set out to do
-- `--text` should answer: what's next, what was decided, what to watch out for
-
-**4. Open work** — close what this session finished; open what it didn't:
+**3. Open work** — close what this session finished; open what it didn't:
 
 **Project work** — use ISCs, not threads:
 ```bash
@@ -284,7 +270,7 @@ pal cli thread --add --title "brief title" --context "why it matters, what needs
 pal cli thread --resolve --id <id>
 ```
 
-**5. Standing rules** — when the user states a rule that should hold from now on, record it:
+**4. Standing rules** — when the user states a rule that should hold from now on, record it:
 
 ```bash
 pal cli rule add-opinion --kind <correction kind> --when "the situation" --steering "the instruction" --evidence "what the user said"

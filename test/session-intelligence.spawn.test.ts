@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
-import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   captureSessionIntelligence,
@@ -11,6 +11,7 @@ import {
   markCaptured,
   readCapture,
 } from "../src/hooks/lib/capture-store";
+import { readTree, scopeOf } from "../src/hooks/lib/progress-tree";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { readProjectHistory } from "../src/hooks/lib/work-tracking";
 import { claudeReplying, prependPath, writeFakeBin } from "./fixtures/fake-bin";
@@ -47,12 +48,8 @@ function transcript(messageCount: number, padding: number): string {
   return JSON.stringify(messages);
 }
 
-function handoffPath(): string {
-  return resolve(HOME, "memory", "state", "last-handoff.json");
-}
-
-function handoffs(): Record<string, unknown> {
-  return JSON.parse(readFileSync(handoffPath(), "utf-8"));
+function sessionNodes(session: string) {
+  return [...readTree(scopeOf(process.cwd()), undefined, session).nodes.values()];
 }
 
 /** Learning files, wherever under the month directories they landed. */
@@ -132,28 +129,25 @@ describe("an unfinished session", () => {
       insights: "",
       status: "in-progress",
       done: "Traced where the handoff is written.",
-      next: "Wire the model handoff into last-handoff.json, then run the gates.",
+      next: "Write the next step into the progress tree, then run the gates.",
       waitingOn: "",
     };
     writeFakeBin(binDir, "claude", claudeReplying(JSON.stringify(JSON.stringify(reply))));
     prependPath(binDir);
   });
 
-  test("leaves the model's handoff for the next session, not the raw last exchange", async () => {
+  test("leaves the model's next step on the session's node for the next session", async () => {
     await captureSessionIntelligence(transcript(12, 300), "s-open");
 
-    const handoffs = JSON.parse(
-      readFileSync(resolve(HOME, "memory", "state", "last-handoff.json"), "utf-8")
-    );
-    expect(handoffs[process.cwd()]).toMatchObject({
-      title: "Handoff wiring",
-      status: "in-progress",
-      handoff:
-        "Done: Traced where the handoff is written.\n" +
-        "Next: Wire the model handoff into last-handoff.json, then run the gates.",
-      source: "auto",
-      sessionId: "s-open",
-    });
+    expect(sessionNodes("s-open")).toMatchObject([
+      {
+        title: "Handoff wiring",
+        status: "active",
+        stoppedAt:
+          "Next: Write the next step into the progress tree, then run the gates.",
+      },
+    ]);
+    expect(existsSync(resolve(HOME, "memory", "state", "last-handoff.json"))).toBe(false);
   });
 
   test("records project history but writes no session-learning file", async () => {
@@ -196,7 +190,7 @@ describe("an unfinished session", () => {
 
     await captureSessionIntelligence(transcript(22, 300), "s-turn");
 
-    expect(handoffs()[process.cwd()]).toMatchObject({ title: "Handoff wiring" });
+    expect(sessionNodes("s-turn").map((n) => n.title)).toEqual(["Handoff wiring"]);
     expect(learningFiles()).toEqual([]);
     expect(readProjectHistory(process.cwd())).toEqual([]);
   });
@@ -207,6 +201,6 @@ describe("an unfinished session", () => {
 
     await captureSessionIntelligence(transcript(22, 300), "s-twice");
 
-    expect(existsSync(handoffPath())).toBe(false);
+    expect(sessionNodes("s-twice")).toEqual([]);
   });
 });

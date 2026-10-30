@@ -40,9 +40,8 @@ resume <name>                                 print full project JSON
 complete | archive | pause | unpause <name>   change status
 add-fact | add-objective | add-next | add-blocker <name> "text"
 add-decision <name> "decision" "rationale"
-add-handoff <name> "text"
 rm-fact | rm-objective | rm-next | rm-blocker <name> <index>
 rm <name>                                     delete the project file (rare; prefer archive)
 ```
 
-The Stop hook auto-touches `updated` (and optionally writes a `handoff`) whenever cwd resolves to an active project — you don't need to refresh timestamps manually.
+The Stop hook auto-touches `updated` whenever cwd resolves to an active project — you don't need to refresh timestamps manually.

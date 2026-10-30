@@ -665,6 +665,8 @@ const RETIRED_SETTINGS_KEYS: Record<string, string[]> = {
     "wisdom",
     "relationship",
     "selfModel",
+    "handoff",
+    "progressTree",
   ],
 };
 
