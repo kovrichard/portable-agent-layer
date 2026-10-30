@@ -22,8 +22,7 @@ import { reload } from "../src/hooks/lib/settings";
 import { freshTestDir } from "./lib/test-home";
 
 const MIGRATION = "v9-progress-tree-names";
-const KEY_PAIRS = [
-  ["workTree", "progressTree"],
+const RETIRED_GATES = [
   ["workTreeGate", "progressTreeGate"],
   ["workTreeDecisionGate", "progressTreeDecisionGate"],
 ] as const;
@@ -69,37 +68,48 @@ beforeEach(() => {
 });
 
 describe("v9-progress-tree-names: settings keys", () => {
-  describe.each(KEY_PAIRS)("%s → %s", (oldKey, newKey) => {
-    test.each([true, false])("keeps the value %p under the new name", (value) => {
-      writeSettings({ dynamicContext: { [oldKey]: value } });
-      expect(pendingIds()).toContain(MIGRATION);
+  test.each([true, false])("keeps workTree's value %p as progressTree", (value) => {
+    writeSettings({ dynamicContext: { workTree: value } });
+    expect(pendingIds()).toContain(MIGRATION);
 
-      quietly(() => runMigrate([]));
+    quietly(() => runMigrate([]));
 
-      expect(readSettings()).toEqual({ dynamicContext: { [newKey]: value } });
-      expect(pendingIds()).not.toContain(MIGRATION);
-    });
-
-    test("when the key is missing, adds nothing and is not pending", () => {
-      writeSettings({ dynamicContext: { opinions: true } });
-      expect(pendingIds()).not.toContain(MIGRATION);
-
-      quietly(() => runMigrate([]));
-
-      expect(readSettings()).toEqual({ dynamicContext: { opinions: true } });
-    });
-
-    test("when both names exist, the new value wins and the old key goes", () => {
-      writeSettings({ dynamicContext: { [oldKey]: true, [newKey]: false } });
-      expect(pendingIds()).toContain(MIGRATION);
-
-      quietly(() => runMigrate([]));
-
-      expect(readSettings()).toEqual({ dynamicContext: { [newKey]: false } });
-    });
+    expect(readSettings()).toEqual({ dynamicContext: { progressTree: value } });
+    expect(pendingIds()).not.toContain(MIGRATION);
   });
 
-  test("renames all three, keeping other keys and their order", () => {
+  test("when the key is missing, adds nothing and is not pending", () => {
+    writeSettings({ dynamicContext: { opinions: true } });
+    expect(pendingIds()).not.toContain(MIGRATION);
+
+    quietly(() => runMigrate([]));
+
+    expect(readSettings()).toEqual({ dynamicContext: { opinions: true } });
+  });
+
+  test("when both names exist, the new value wins and the old key goes", () => {
+    writeSettings({ dynamicContext: { workTree: true, progressTree: false } });
+    expect(pendingIds()).toContain(MIGRATION);
+
+    quietly(() => runMigrate([]));
+
+    expect(readSettings()).toEqual({ dynamicContext: { progressTree: false } });
+  });
+
+  test.each(
+    RETIRED_GATES
+  )("one run removes the retired gate as %s and as %s", (oldKey, newKey) => {
+    writeSettings({
+      dynamicContext: { opinions: true, [oldKey]: true, [newKey]: false },
+    });
+
+    quietly(() => runMigrate([]));
+
+    expect(readSettings()).toEqual({ dynamicContext: { opinions: true } });
+    expect(checkPendingMigrations()).toEqual([]);
+  });
+
+  test("renames workTree and drops the gates, keeping other keys and their order", () => {
     writeSettings({
       identity: { ai: { name: "A" } },
       dynamicContext: {
@@ -116,21 +126,11 @@ describe("v9-progress-tree-names: settings keys", () => {
 
     const settings = readSettings();
     expect(settings.identity).toEqual({ ai: { name: "A" } });
-    expect(settings.dynamicContext).toEqual({
-      opinions: true,
-      progressTree: true,
-      claimChek: false,
-      progressTreeGate: false,
-      progressTreeDecisionGate: true,
-      last: 1,
-    });
-    expect(Object.keys(settings.dynamicContext)).toEqual([
-      "opinions",
-      "progressTree",
-      "claimChek",
-      "progressTreeGate",
-      "progressTreeDecisionGate",
-      "last",
+    expect(Object.entries(settings.dynamicContext)).toEqual([
+      ["opinions", true],
+      ["progressTree", true],
+      ["claimChek", false],
+      ["last", 1],
     ]);
   });
 
@@ -214,7 +214,7 @@ describe("v9-progress-tree-names: what it reports", () => {
   test("names each renamed key and nothing else when only settings change", () => {
     writeSettings({ dynamicContext: { workTree: true, workTreeGate: false } });
     expect(v9Lines()).toEqual([
-      "pal-settings.json: renamed dynamicContext.workTree → dynamicContext.progressTree, dynamicContext.workTreeGate → dynamicContext.progressTreeGate",
+      "pal-settings.json: renamed dynamicContext.workTree → dynamicContext.progressTree",
     ]);
   });
 
@@ -228,9 +228,7 @@ describe("v9-progress-tree-names: what it reports", () => {
   test("the pending detail lists the old keys and the old folder", () => {
     writeSettings({ dynamicContext: { workTree: true, workTreeGate: false } });
     writeEvents(oldFolder(), [EVENT]);
-    expect(v9Detail()).toBe(
-      "dynamicContext.workTree, dynamicContext.workTreeGate, memory/work-tree/"
-    );
+    expect(v9Detail()).toBe("dynamicContext.workTree, memory/work-tree/");
   });
 
   test("settings without old keys are left out of the report", () => {
@@ -315,10 +313,7 @@ describe("an install with the tree on keeps it on after migrating", () => {
     applyPendingMigrations();
     reload();
 
-    expect(readSettings().dynamicContext).toEqual({
-      progressTree: true,
-      progressTreeGate: true,
-    });
+    expect(readSettings().dynamicContext).toEqual({ progressTree: true });
     expect(loadProgressTreeContext(scope)).toContain("Before the rename");
     expect(progressTreePromptLine("go on", scope)).toContain("Before the rename");
     expect(nodesWithStatus(readTree(scope), "active").map((n) => n.title)).toEqual([
@@ -344,7 +339,7 @@ describe("the schema and the template name only the new keys", () => {
   });
 
   test.each(
-    KEY_PAIRS.slice(1)
+    RETIRED_GATES
   )("the removed gates %s and %s are in neither", (oldKey, newKey) => {
     for (const key of [oldKey, newKey]) {
       expect(schema[key]).toBeUndefined();

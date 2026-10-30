@@ -665,6 +665,10 @@ const RETIRED_SETTINGS_KEYS: Record<string, string[]> = {
     "wisdom",
     "relationship",
     "selfModel",
+    "workTreeGate",
+    "workTreeDecisionGate",
+    "progressTreeGate",
+    "progressTreeDecisionGate",
   ],
 };
 
@@ -915,8 +919,6 @@ const v8FactoryHome: Migration = {
 
 const PROGRESS_TREE_KEY_RENAMES: Record<string, string> = {
   workTree: "progressTree",
-  workTreeGate: "progressTreeGate",
-  workTreeDecisionGate: "progressTreeDecisionGate",
 };
 const EVENTS_FILE = "events.jsonl";
 const OLD_PROGRESS_TREE_LABEL = "memory/work-tree/";
