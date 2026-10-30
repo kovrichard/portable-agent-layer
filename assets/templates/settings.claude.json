@@ -278,6 +278,6 @@
     }
   },
   "enabledPlugins": {
-    "dark-factory@pal": true
+    "dark-factory@pal": false
   }
 }
