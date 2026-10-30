@@ -336,16 +336,19 @@ describe("the schema and the template name only the new keys", () => {
     readFileSync(resolve(assets, "templates", "pal-settings.json"), "utf-8")
   ).dynamicContext;
 
-  test.each(KEY_PAIRS)("%s is replaced by %s in both", (oldKey, newKey) => {
-    expect(schema[newKey]?.type).toBe("boolean");
-    expect(schema[oldKey]).toBeUndefined();
-    expect(template[newKey]).toBe(false);
-    expect(oldKey in template).toBe(false);
+  test("workTree is replaced by progressTree in both", () => {
+    expect(schema.progressTree?.type).toBe("boolean");
+    expect(schema.workTree).toBeUndefined();
+    expect(template.progressTree).toBe(false);
+    expect("workTree" in template).toBe(false);
   });
 
-  test("the gates' descriptions say Needs progressTree.", () => {
-    for (const key of ["progressTreeGate", "progressTreeDecisionGate"]) {
-      expect(schema[key].description).toEndWith("Needs progressTree.");
+  test.each(
+    KEY_PAIRS.slice(1)
+  )("the removed gates %s and %s are in neither", (oldKey, newKey) => {
+    for (const key of [oldKey, newKey]) {
+      expect(schema[key]).toBeUndefined();
+      expect(key in template).toBe(false);
     }
   });
 });

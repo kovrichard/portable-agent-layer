@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { stopProgressTree } from "../src/hooks/lib/progress-tree-gate";
+import { stopProgressTree } from "../src/hooks/lib/progress-tree-stop";
 import {
   attach,
   attachments,
