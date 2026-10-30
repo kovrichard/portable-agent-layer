@@ -11,7 +11,7 @@ Without PAL:
 /plugin install dark-factory@pal
 ```
 
-With PAL, it is installed for you.
+With PAL, the marketplace is registered but the plugin starts disabled; turn it on with `/plugin enable dark-factory@pal`.
 
 ## Requirements
 
