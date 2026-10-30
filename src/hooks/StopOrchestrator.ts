@@ -17,7 +17,7 @@ import { watchClaims } from "./lib/claim-log";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { enterHookWorkspace } from "./lib/hook-turn";
 import { logError } from "./lib/log";
-import { stopProgressTree } from "./lib/progress-tree-gate";
+import { stopProgressTree } from "./lib/progress-tree-stop";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
 import { type StopTurnPayload, stopTurn } from "./lib/stop";
@@ -61,11 +61,7 @@ try {
   logError("StopOrchestrator:adaptation-rules", err);
 }
 try {
-  const sendBack = await stopProgressTree(payload);
-  if (sendBack) {
-    process.stdout.write(stopBlockResponse(sendBack));
-    process.exit(0);
-  }
+  stopProgressTree(payload);
 } catch (err) {
   logError("StopOrchestrator:progress-tree", err);
 }

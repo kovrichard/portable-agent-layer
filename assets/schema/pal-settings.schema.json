@@ -74,14 +74,6 @@
           "type": "boolean",
           "description": "Opt-in, off by default until 1.0. The progress tree (pal cli progress): the active node, the detours it sits inside, parked work and what waits on the user at session start and after compaction, one line of it with every prompt, and new commits and branches attached to the active node at the end of a turn."
         },
-        "progressTreeGate": {
-          "type": "boolean",
-          "description": "Opt-in, off by default until 1.0. Send a turn back when it committed, made a branch, opened a PR or published an artifact without recording it in the progress tree (pal cli progress). Needs progressTree."
-        },
-        "progressTreeDecisionGate": {
-          "type": "boolean",
-          "description": "Opt-in, off by default until 1.0. Send a turn back when a small-model check finds it settled a decision that no pal cli progress decide recorded. One small-model call at the end of every turn. Needs progressTree."
-        },
         "dueReminders": {
           "type": "boolean",
           "description": "Opt-in, off by default until 1.0. Due maintenance reminders (learning analysis, relationship reflect) with every prompt until a reply names their command; then quiet until the next day."

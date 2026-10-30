@@ -24,11 +24,6 @@ const SYSTEM_TEXT_PATTERNS = [
   /^Note:.*was read before/i,
 ];
 
-export function opensTurnWithoutUser(prompt: string): boolean {
-  const trimmed = prompt.trim();
-  return OPENS_TURN_WITHOUT_USER.some((re) => re.test(trimmed));
-}
-
 export function isSystemText(prompt: string): boolean {
   const trimmed = prompt.trim();
   return SYSTEM_TEXT_PATTERNS.some((re) => re.test(trimmed));

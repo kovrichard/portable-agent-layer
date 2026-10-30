@@ -80,9 +80,7 @@
     "eval:correction-kind": "bun eval/correction-kind/build-prompt.ts && bun eval/run.ts correction-kind",
     "eval:correction-kind:test": "bun eval/correction-kind/test-set.ts",
     "eval:rule-drafter": "bun eval/rule-drafter/build-prompt.ts && bun eval/run.ts rule-drafter",
-    "eval:rule-drafter:test": "bun eval/rule-drafter/test-set.ts",
-    "eval:decision": "bun eval/decision/score.ts validation",
-    "eval:decision:test": "bun eval/decision/score.ts test"
+    "eval:rule-drafter:test": "bun eval/rule-drafter/test-set.ts"
   },
   "lint-staged": {
     "*.ts": [

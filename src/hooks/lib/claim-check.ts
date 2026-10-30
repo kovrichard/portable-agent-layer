@@ -6,7 +6,7 @@
  */
 
 import { toolCallsOf, typedRequest } from "./antigravity-transcript";
-import { isSystemText, opensTurnWithoutUser } from "./prompt-text";
+import { isSystemText } from "./prompt-text";
 import { isCodexInjectedContext } from "./transcript";
 
 const CLAIM_RE =
@@ -142,27 +142,6 @@ export function isPromptLine(line: string): boolean {
   return entry !== null && isUserPrompt(entry);
 }
 
-export function promptThisTurn(lines: string[]): string | null {
-  const prompts = lines
-    .map(parsed)
-    .filter((e): e is TranscriptLine => e !== null && isUserPrompt(e));
-  const last = prompts.at(-1);
-  return last ? promptText(last) : null;
-}
-
-function opensTurn(entry: TranscriptLine): boolean {
-  const text = promptText(entry);
-  return text !== null && (isUserPrompt(entry) || opensTurnWithoutUser(text));
-}
-
-export function userOpenedThisTurn(lines: string[]): boolean {
-  const opener = lines
-    .map(parsed)
-    .filter((e): e is TranscriptLine => e !== null && opensTurn(e))
-    .at(-1);
-  return opener !== undefined && isUserPrompt(opener);
-}
-
 const ran = (input: unknown) => JSON.stringify(input ?? {});
 
 function callsIn(entry: TranscriptLine, tools: ReadonlySet<string>): string[] {
@@ -191,10 +170,7 @@ function isTurnEntry(entry: TranscriptLine): boolean {
 
 /** The input of each call this turn made to one of the tools. Null when no line reads
  *  as a turn, so an unknown transcript format never counts as none. */
-export function callsThisTurn(
-  lines: string[],
-  tools: ReadonlySet<string>
-): string[] | null {
+function callsThisTurn(lines: string[], tools: ReadonlySet<string>): string[] | null {
   const entries = lines.map(parsed).filter((e): e is TranscriptLine => e !== null);
   if (!entries.some(isTurnEntry)) return null;
   let calls: string[] = [];

@@ -24,8 +24,6 @@
     "wallClock": true,
     "repoState": true,
     "progressTree": false,
-    "progressTreeGate": false,
-    "progressTreeDecisionGate": false,
     "dueReminders": false,
     "interactionAwareness": true,
     "reactionSampling": true,
