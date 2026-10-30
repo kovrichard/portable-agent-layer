@@ -300,13 +300,13 @@ describe("PAL's plugin marketplace", () => {
     enabledPlugins: { "dark-factory@pal": true },
   };
 
-  test("the shipped template registers the package as a marketplace and enables dark-factory", () => {
+  test("the shipped template registers the package as a marketplace with dark-factory off", () => {
     const shipped = loadSettingsTemplate(
       resolve(import.meta.dir, "../assets/templates/settings.claude.json"),
       "/pkg"
     );
     expect(shipped.extraKnownMarketplaces).toEqual(marketplace("/pkg"));
-    expect(shipped.enabledPlugins).toEqual({ "dark-factory@pal": true });
+    expect(shipped.enabledPlugins).toEqual({ "dark-factory@pal": false });
   });
 
   test("install adds the marketplace and the plugin beside the user's own", () => {

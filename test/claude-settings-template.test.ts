@@ -16,8 +16,8 @@ describe("the Claude Code settings template", () => {
     expect(settings.env?.DARK_FACTORY_HOME).toBeUndefined();
   });
 
-  test("still registers the pal marketplace and enables the dark-factory plugin", () => {
+  test("registers the pal marketplace but leaves the unfinished dark-factory plugin off", () => {
     expect(settings.extraKnownMarketplaces?.pal).toBeDefined();
-    expect(settings.enabledPlugins?.["dark-factory@pal"]).toBe(true);
+    expect(settings.enabledPlugins?.["dark-factory@pal"]).toBe(false);
   });
 });
