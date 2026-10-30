@@ -31,7 +31,7 @@ memory/
 │   └── state/                          # Graduation bookkeeping for pal-analyze
 │
 └── projects/
-    └── <slug>/                         # Per-project history, threads, progress
+    └── <slug>/                         # Per-project history, progress
 ```
 
 ## Where to write
