@@ -39,7 +39,7 @@ export interface MergeResult {
 /**
  * Paths that must never cross machines. `machine.json` carries this install's
  * identity — importing it would give two machines one id and silently break
- * every origin-scoped read. The retrieval index is rebuilt from its sources.
+ * every origin-scoped read. The retrieval index is a cache older versions wrote.
  */
 const NEVER_IMPORT = [
   "machine.json",

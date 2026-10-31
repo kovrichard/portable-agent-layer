@@ -40,7 +40,6 @@ export interface ProjectProgress {
   updated: string;
   next?: string[];
   blockers?: string[];
-  handoff?: string;
   /** What this project is for — the fact importance is ranked from. */
   serves?: ServesKind;
   serves_note?: string;
@@ -80,7 +79,6 @@ interface LegacyProject {
   objectives?: string[];
   next_steps?: string[];
   blockers?: string[];
-  handoff?: string;
   decisions?: LegacyDecision[];
 }
 
@@ -98,7 +96,6 @@ export function legacyJsonToProgress(raw: unknown): ProjectProgress | null {
     status: r.status,
     created: r.created ?? new Date().toISOString(),
     updated: r.updated ?? new Date().toISOString(),
-    ...(r.handoff ? { handoff: r.handoff } : {}),
     ...(r.next_steps?.length ? { next: r.next_steps } : {}),
     ...(r.blockers?.length ? { blockers: r.blockers } : {}),
   };
@@ -134,7 +131,6 @@ type IsaMeta = {
   updated: string;
   next?: string[];
   blockers?: string[];
-  handoff?: string;
   serves?: ServesKind;
   serves_note?: string;
   serves_by?: ServesAuthority;
@@ -241,13 +237,14 @@ export function readProject(
   if (!existsSync(file)) return null;
   try {
     const content = readFileSync(file, "utf-8");
-    const { meta, body } = parse<IsaMeta>(content);
+    const { meta, body } = parse<IsaMeta & { handoff?: string }>(content);
     if (!meta?.name || !meta?.status) return null;
     // `path` is machine-local: the binding is the real source, and meta.path is
     // only still read so records written before this change keep resolving.
     const bound = bindings[meta.name] ?? meta.path;
     const path = bound ? resolve(bound) : undefined;
-    return { ...meta, path, ...extractSections(body) };
+    const { handoff: _retired, ...kept } = meta;
+    return { ...kept, path, ...extractSections(body) };
   } catch {
     return null;
   }
@@ -278,7 +275,6 @@ export function writeProject(p: ProjectProgress): void {
   if (p.remote) meta.remote = p.remote;
   if (p.next?.length) meta.next = p.next;
   if (p.blockers?.length) meta.blockers = p.blockers;
-  if (p.handoff) meta.handoff = p.handoff;
   if (p.serves) meta.serves = p.serves;
   if (p.serves_note) meta.serves_note = p.serves_note;
   if (p.serves_by) meta.serves_by = p.serves_by;

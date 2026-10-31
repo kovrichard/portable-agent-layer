@@ -14,7 +14,6 @@ const SYNTHESIS_TTL_MS = 24 * 60 * 60 * 1000;
 export async function runSynthesis(): Promise<void> {
   const statePath = resolve(paths.state(), "synthesis.json");
 
-  // Check 24h guard
   if (existsSync(statePath)) {
     try {
       const data = JSON.parse(await readFile(statePath, "utf-8")) as {

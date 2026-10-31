@@ -1,10 +1,9 @@
 /**
- * UserPromptSubmit handler: inject the top-N matching prior lessons into the prompt.
+ * UserPromptSubmit handler: inject the prompt-time context into the prompt.
  *
- * Called from UserPromptOrchestrator. Reads the retrieval index, ranks the prompt
- * against the corpus, prints a `<system-reminder>` block to stdout (Claude Code
- * prepends UserPromptSubmit hook stdout to the prompt). Fail-closed: any error
- * produces empty output, never blocks the prompt.
+ * Called from UserPromptOrchestrator. Prints a `<system-reminder>` block to stdout
+ * (Claude Code prepends UserPromptSubmit hook stdout to the prompt). Fail-closed:
+ * any error produces empty output, never blocks the prompt.
  */
 
 import { promptRulesReminder } from "../lib/adaptation-steering";
@@ -14,15 +13,13 @@ import { getEntityReminder } from "../lib/entity-cards";
 import { observeTurn } from "../lib/interaction";
 import { logDebug, logError } from "../lib/log";
 import { parkPromptContext } from "../lib/parked-context";
+import { progressTreePromptLine } from "../lib/progress-tree-context";
 import { isSystemText } from "../lib/prompt-text";
 import { getRepoStateReminder } from "../lib/repo-state";
-import { runRetrieval } from "../lib/retrieval";
-import { ensureIndex } from "../lib/retrieval-index";
 import { isEnabled } from "../lib/settings";
 import { getSkillReminder } from "../lib/skill-match";
 import { getSteeringReminder } from "../lib/steering";
 import { getWallClockReminder } from "../lib/wall-clock";
-import { workTreePromptLine } from "../lib/work-tree-context";
 
 const BUDGET_MS = 250;
 
@@ -45,28 +42,6 @@ export function withinBudget<T>(work: () => T, ms: number): T | null {
   }
 }
 
-/** Returns the retrieval reminder string, or null if nothing to inject.
- *  @lintignore exercised directly by test/inject-retrieval.test.ts */
-export async function getRetrievalReminder(prompt: string): Promise<string | null> {
-  if (!prompt?.trim()) return null;
-  if (!isEnabled("learningInjection")) return null;
-
-  const result = withinBudget(() => {
-    const index = ensureIndex();
-    if (index.corpusSize === 0) return null;
-    return runRetrieval(prompt, index, process.cwd());
-  }, BUDGET_MS);
-
-  if (!result?.reminder) return null;
-
-  logDebug(
-    "inject-retrieval",
-    `${result.matches.length} matches; top score=${result.matches[0]?.confidence.toFixed(3)}`
-  );
-
-  return result.reminder;
-}
-
 /** MUST be called at most once per hook run — the JSON shapes are a single object
  *  on stdout, so all prompt-time context is merged before this call. */
 function writeForAgent(reminder: string, sessionId?: string): void {
@@ -76,7 +51,7 @@ function writeForAgent(reminder: string, sessionId?: string): void {
 }
 
 /** Merge every prompt-time source — the wall clock, the repo state, contextual steering, skill
- *  matches, prior-lesson retrieval — into one payload, or null when none of them
+ *  matches, entity cards — into one payload, or null when none of them
  *  produced anything. The clock leads: it is the only part that is true of the
  *  moment rather than of the prompt.
  *  @lintignore dynamically imported by opencode plugin */
@@ -89,7 +64,7 @@ export async function getPromptContext(
     getWallClockReminder(),
     userText && withinBudget(() => promptRulesReminder(userText, sessionId), BUDGET_MS),
     withinBudget(() => getRepoStateReminder(), BUDGET_MS),
-    withinBudget(() => workTreePromptLine(userText), BUDGET_MS),
+    withinBudget(() => progressTreePromptLine(userText, undefined, sessionId), BUDGET_MS),
     userText && withinBudget(() => observeTurn(userText, sessionId), BUDGET_MS),
     withinBudget(() => dueNudgeReminder(), BUDGET_MS),
     userText && getSteeringReminder(userText),
@@ -97,7 +72,6 @@ export async function getPromptContext(
     userText &&
       isEnabled("entityCards") &&
       withinBudget(() => getEntityReminder(userText), BUDGET_MS),
-    userText && (await getRetrievalReminder(userText)),
   ].filter((p): p is string => Boolean(p));
 
   return parts.length > 0 ? parts.join("\n\n") : null;

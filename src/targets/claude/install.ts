@@ -28,19 +28,16 @@ const PKG_ROOT = palPkg().replaceAll("\\", "/");
 const CLAUDE_DIR = platform.claudeDir();
 const SETTINGS = resolve(CLAUDE_DIR, "settings.json");
 
-// --- Ensure settings.json exists ---
 mkdirSync(CLAUDE_DIR, { recursive: true });
 if (!existsSync(SETTINGS)) {
   writeFileSync(SETTINGS, "{}\n", "utf-8");
   log.info("Created new settings.json");
 }
 
-// --- Load template and merge into existing settings ---
 const template = loadSettingsTemplate(assets.claudeSettingsTemplate(), PKG_ROOT);
 const existing = readJson<Record<string, unknown>>(SETTINGS, {});
 let merged = mergeSettings(existing, template);
 
-// Add platform-specific statusLine config
 merged = addStatuslineConfig(merged);
 
 // Apply the user's git-attribution choice (composed from identity name at runtime —
@@ -56,14 +53,11 @@ if (attribution?.decided) {
 replaceJsonConfig(SETTINGS, merged);
 log.success("Merged PAL settings into settings.json");
 
-// --- Copy skills ---
 const skillsDir = resolve(CLAUDE_DIR, "skills");
 copySkills(skillsDir);
 
-// --- Copy agents ---
 copyAgents();
 
-// --- Copy statusline script ---
 copyStatusline();
 
 log.success(

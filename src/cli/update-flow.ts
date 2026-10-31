@@ -3,7 +3,7 @@
  * reinstalls and continues the same rail.
  */
 
-import type { UpdateCache } from "../hooks/handlers/update-check";
+import type { UpdateCache, UpdateChannel } from "../hooks/handlers/update-check";
 import { palPkg } from "../hooks/lib/paths";
 import { type Captured, runCaptured } from "./install-flow";
 import { type Done, LiveRail } from "./ui/live";
@@ -31,21 +31,48 @@ export interface UpdateSteps {
   check: () => Promise<UpdateCache>;
   reinstall: (env: Record<string, string>) => number;
   run?: Run;
+  switched?: (update: UpdateCache) => string | null;
 }
 
 export const CANARY_NEEDS_PACKAGE =
   "--canary installs from npm. A repo install follows its git checkout: check out the canary branch there instead.";
 
-type Check = UpdateSteps["check"];
+export const ONE_CHANNEL = "Pass --canary or --stable, not both.";
 
-/** Null when --canary is asked of a repo install, which has no npm channel to follow. */
-export function updateCheck(
-  canary: boolean,
-  repoMode: boolean,
-  checks: { stable: Check; canary: Check }
-): Check | null {
-  if (!canary) return checks.stable;
-  return repoMode ? null : checks.canary;
+/** Null when both flags are given; without either, the update stays on the current channel. */
+export function requestedChannel(
+  flags: { canary?: boolean; stable?: boolean },
+  current: UpdateChannel
+): UpdateChannel | null {
+  if (flags.canary && flags.stable) return null;
+  if (flags.canary) return "canary";
+  if (flags.stable) return "stable";
+  return current;
+}
+
+const isOlder = (latest: string, current: string) =>
+  Bun.semver.order(latest, current) === -1;
+
+function switchedText(to: UpdateChannel, update: UpdateCache): string {
+  if (to === "canary")
+    return "Switched to the canary channel: plain updates and auto-update now install prereleases";
+  if (isOlder(update.latest, update.current))
+    return `Switched to the stable channel, but stable ${update.latest} is older than ${update.current} — staying on this version until a stable release catches up`;
+  return "Switched to the stable channel: plain updates and auto-update now install stable releases only";
+}
+
+/** The one line a channel switch prints; null when the channel did not change. */
+export function channelSwitchLine(
+  style: Style,
+  from: UpdateChannel,
+  to: UpdateChannel,
+  update: UpdateCache
+): string | null {
+  if (from === to) return null;
+  const back = `pal cli update --${from}`;
+  const text = switchedText(to, update);
+  if (!style.term.rich) return `warn ${text} -> ${back} to go back`;
+  return `  ${mark(style, "warn")} ${text} ${style.dim(style.glyph.arrow)} ${style.cmd(back)} ${style.soft("to go back")}`;
 }
 
 /** `bun update -g` keeps the caret range, and on 0.x a caret allows only patch bumps. */
@@ -91,12 +118,14 @@ async function downloaded(rail: LiveRail, style: Style, update: UpdateCache, run
 
 /** Exit code for the parent; the reinstall runs in a fresh process that reads PAL_UPDATED_FROM. */
 export async function runUpdate(
-  { check, reinstall, run = runCaptured }: UpdateSteps,
+  { check, reinstall, run = runCaptured, switched }: UpdateSteps,
   style: Style = createStyle(),
   rail: LiveRail = new LiveRail(style)
 ): Promise<number> {
   const update = await check();
   rail.line();
+  const switchLine = switched?.(update);
+  if (switchLine) rail.line(switchLine);
   if (!update.available) {
     rail.line(upToDate(style, update.current));
     rail.line();

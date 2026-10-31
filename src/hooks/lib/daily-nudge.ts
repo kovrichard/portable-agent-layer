@@ -1,6 +1,5 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { loadReflectNudge } from "../handlers/reflect-trigger";
 import { loadAlgorithmReviewNudge } from "./algorithm-review";
 import { loadAnalyzeNudge } from "./analyze-nudge";
 import { loadEntityReviewNudge } from "./entity-review";
@@ -25,7 +24,6 @@ const DUE_NUDGES: DueNudge[] = [
     load: loadAlgorithmReviewNudge,
   },
   { key: "reaction-audit", command: "/reaction-audit", load: loadReactionAuditNudge },
-  { key: "reflect", command: "/pal-reflect", load: loadReflectNudge },
   { key: "analyze", command: "/pal-analyze", load: loadAnalyzeNudge },
 ];
 

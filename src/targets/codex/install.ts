@@ -65,10 +65,8 @@ const CODEX_DIR = platform.codexDir();
 const HOOKS_FILE = resolve(CODEX_DIR, "hooks.json");
 const RULES_FILE = resolve(CODEX_DIR, "rules", "default.rules");
 
-// --- Ensure ~/.codex/ exists ---
 mkdirSync(CODEX_DIR, { recursive: true });
 
-// --- Merge hooks ---
 const template = loadCodexHooksTemplate(assets.codexHooksTemplate(), PKG_ROOT);
 const existing = readJson<Record<string, unknown>>(HOOKS_FILE, {});
 const merged = mergeCodexHooks(existing, template);
@@ -76,23 +74,19 @@ const merged = mergeCodexHooks(existing, template);
 replaceJsonConfig(HOOKS_FILE, merged);
 log.success(`Merged PAL hooks into ${HOOKS_FILE}`);
 
-// --- Merge allowlist rules ---
 mkdirSync(resolve(CODEX_DIR, "rules"), { recursive: true });
 const rulesTemplate = loadCodexRulesTemplate(assets.codexRulesTemplate());
 const existingRules = existsSync(RULES_FILE) ? readFileSync(RULES_FILE, "utf-8") : "";
 replaceConfig(RULES_FILE, mergeCodexRules(existingRules, rulesTemplate));
 log.success("Merged PAL allowlist rules into ~/.codex/rules/default.rules");
 
-// --- Symlink skills to ~/.codex/skills/ ---
 const codexSkillsDir = resolve(CODEX_DIR, "skills");
 copySkills(codexSkillsDir);
 log.success(`${countSkills()} skills → ~/.codex/skills/`);
 
-// --- Render agents to ~/.codex/agents/ ---
 const agentCount = copyAgentsForCodex(resolve(CODEX_DIR, "agents"));
 log.success(`${agentCount} agents → ~/.codex/agents/`);
 
-// --- Enable hooks in config.toml ---
 const CONFIG_FILE = resolve(CODEX_DIR, "config.toml");
 enableCodexHooks(CONFIG_FILE);
 enableCodexStatusline(CONFIG_FILE);

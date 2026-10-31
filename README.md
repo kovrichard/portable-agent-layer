@@ -83,7 +83,7 @@ pal cli status        # check your setup
 | `pal cli init` | Scaffold PAL home directory and install hooks |
 | `pal cli install` | Register hooks/skills for targets |
 | `pal cli uninstall` | Remove hooks/skills for targets |
-| `pal cli update` | Update PAL (git pull or npm update) and reinstall hooks. Install asks once whether to do this on its own: when a session closes PAL checks for a release (at most hourly) and installs it, so opening PAL is never slowed. A failed update waits a day before retrying. The switch lives in the control room under Settings → Updates. On a repo install an update waits while the clone has uncommitted changes. `--canary` installs the latest prerelease from the `canary` branch instead; auto-update always follows the stable release |
+| `pal cli update` | Update PAL (git pull or npm update) and reinstall hooks. Install asks once whether to do this on its own: when a session closes PAL checks for a release (at most hourly) and installs it, so opening PAL is never slowed. A failed update waits a day before retrying. The switch lives in the control room under Settings → Updates. On a repo install an update waits while the clone has uncommitted changes. `--canary` switches a package install to the `canary` prerelease channel; from then on plain `pal cli update`, auto-update and the update notice follow canary until `--stable` switches back. Neither ever installs an older version than the one you have |
 | `pal cli export` | Export user state (telos, memory) to a zip |
 | `pal cli import` | Import user state from a zip |
 | `pal cli status` | Show current PAL configuration |
@@ -94,7 +94,7 @@ pal cli status        # check your setup
 | `pal cli cost` | What each month was paid against its API-equivalent cost, per agent |
 | `pal cli wrapped [--year <yyyy>]` | A year of your work in numbers, read from the event log |
 | `pal cli patterns` | How you work across projects, read from the event log |
-| `pal cli work [show\|list\|open\|enter\|park\|wait\|done\|stopped\|decide\|attach\|follow-up]` | The work tree: what you are on in this project, where it stopped, what is parked or waiting, and the decisions and artifacts on each node. Detours are child nodes and `done` returns to the parent. With `dynamicContext.workTree` opted into, the active node rides along in every session and prompt, and your own commits attach to it at turn end |
+| `pal cli progress [show\|list\|open\|enter\|park\|wait\|done\|stopped\|decide\|attach\|follow-up]` | The progress tree: what you are on in this project, where it stopped, what is parked or waiting, and the decisions and artifacts on each node. Detours are child nodes and `done` returns to the parent. The active node rides along in every session and prompt, and your own commits attach to it at turn end |
 | `pal cli content preserve` | Copy every Claude Code transcript, gzipped, into `memory/content/` before Claude Code deletes it (30 days by default). Runs on its own whenever a session closes; the content store never leaves the machine, so `export` skips it |
 | `pal cli events discord-nag <sent\|answered>` | For a bot outside PAL: record a nag it sent (`--kind <kind>`), or the answer to one and how long it took (`--after-sec <n>`), in the local event log |
 | `pal cli infer` | One model call for scripts and bots, on the active agent's route: prompt on stdin, reply on stdout. `--tier small\|medium\|large\|flagship` (on Claude: Haiku, Sonnet, Opus, Fable; on Codex: Luna, Sol, Sol at high effort, Astra; on Antigravity: Flash at low, medium and high effort, and no flagship; an agent without the tier asked refuses it), `--system <file>`, `--schema <file>` for a JSON reply checked against it, `--timeout <seconds>`. The call loads no PAL hooks or context; exits 1 with the reason when no route answers |
@@ -137,7 +137,7 @@ pal cli install               # all available (default)
 | Codex | Full | Yes | Yes | Yes | Yes | `codex exec` |
 | Antigravity CLI | Full | Yes | Yes (plugin) | Yes (via the plugin's `rules/`) | Yes | `agy` |
 
-PAL's background inference (session naming, summaries, failure capture, etc.) runs through whichever subscription CLI is active — no API key required by default.
+PAL's background inference (session naming, summaries, correction checks, etc.) runs through whichever subscription CLI is active — no API key required by default.
 
 ---
 
@@ -214,9 +214,7 @@ PAL ships with built-in skills that extend your agent's capabilities:
 | `fyzz-chat-api` | Query Fyzz Chat conversations via API |
 | `humanize` | Rewrite text to strip AI tells and read as human |
 | `onboarding` | Interview the user to fill empty TELOS topics and the timezone, one topic at a time |
-| `opinion` | Confirm or contradict tracked opinions (confidence-weighted) |
 | `pal-analyze` | Surface rating trends, failure patterns, and graduation candidates |
-| `pal-reflect` | Promote recurring observations into tracked opinions |
 | `playwright` | Screenshot a page for a visual check |
 | `presentation` | Build branded slide decks from outlines |
 | `projects` | Look up, resume, register, or manage tracked projects |
@@ -251,7 +249,7 @@ Your setup should be able to travel with you.
 
 ## Features
 
-- **Memory across sessions**: when a session starts, PAL loads who you are, your active projects and the handoff from your last session. When it ends, PAL saves a summary and any corrections for next time
+- **Memory across sessions**: when a session starts, PAL loads who you are, your active projects and where your last session's work stopped. When it ends, PAL saves a summary and any corrections for next time
 - **Learns from your corrections**: tell an agent it got something wrong and PAL labels the mistake, drafts a rule and asks you once. Approve it with `pal cli rule approve` and every agent follows it from the next session
 - **Done means checked**: real work runs through five phases (observe, plan, execute, verify, learn), and nothing is done until each criterion has evidence
 - **Built-in skills**: research, PDFs, slide decks, frontend design, humanizing text and more. See [Skills](#skills)

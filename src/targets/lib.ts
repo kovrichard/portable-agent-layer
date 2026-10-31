@@ -223,7 +223,7 @@ type Settings = Record<string, unknown> & {
 };
 
 /**
- * Load a settings template, replacing {{PKG_ROOT}} with the actual path.
+ * Load a settings template, replacing {{PKG_ROOT}} with the actual package root.
  */
 export function loadSettingsTemplate(templatePath: string, pkgRoot: string): Settings {
   const raw = readFileSync(templatePath, "utf-8");
@@ -250,12 +250,46 @@ const USER_OWNED_SETTINGS = [
   "autoMemoryEnabled",
 ] as const;
 
+/** Entries PAL owns by key: its marketplace follows the install path, the user's choices win. */
+const PAL_KEYED_SETTINGS = {
+  extraKnownMarketplaces: "pal-wins",
+  enabledPlugins: "user-wins",
+  env: "user-wins",
+} as const;
+
+type KeyedEntries = Record<string, unknown>;
+
+function mergeKeyedSettings(result: Settings, template: Settings): void {
+  for (const [key, owner] of Object.entries(PAL_KEYED_SETTINGS)) {
+    const palEntries = template[key] as KeyedEntries | undefined;
+    if (!palEntries) continue;
+    const entries = { ...((result[key] as KeyedEntries | undefined) ?? {}) };
+    for (const [name, value] of Object.entries(palEntries)) {
+      if (owner === "pal-wins" || !(name in entries)) entries[name] = value;
+    }
+    result[key] = entries;
+  }
+}
+
+function unmergeKeyedSettings(result: Settings, template: Settings): void {
+  for (const key of Object.keys(PAL_KEYED_SETTINGS)) {
+    const palEntries = template[key] as KeyedEntries | undefined;
+    const entries = result[key] as KeyedEntries | undefined;
+    if (!palEntries || !entries) continue;
+    const kept = Object.fromEntries(
+      Object.entries(entries).filter(([name]) => !(name in palEntries))
+    );
+    if (Object.keys(kept).length === 0) delete result[key];
+    else result[key] = kept;
+  }
+}
+
 export function mergeSettings(existing: Settings, template: Settings): Settings {
   const result = { ...existing };
+  mergeKeyedSettings(result, template);
 
-  // Merge hooks — strip old-path PAL entries first, then insert current template entries.
-  // This handles reinstalling from a different path (repo vs global install) without
-  // leaving orphan hook entries that fire twice per event.
+  // Strip old-path PAL entries before inserting the template's, so reinstalling from a
+  // different path (repo vs global) leaves no orphan entries that fire twice per event.
   if (template.hooks) {
     result.hooks ??= {};
 
@@ -341,6 +375,7 @@ export function mergeSettings(existing: Settings, template: Settings): Settings 
  */
 export function unmergeSettings(existing: Settings, template: Settings): Settings {
   const result = { ...existing };
+  unmergeKeyedSettings(result, template);
 
   // Collect canonical PAL hook commands from template (path-normalized)
   if (template.hooks && result.hooks) {

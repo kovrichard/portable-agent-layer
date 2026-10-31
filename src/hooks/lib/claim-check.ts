@@ -137,6 +137,11 @@ function isUserPrompt(entry: TranscriptLine): boolean {
   return text !== null && !isSystemText(text) && !isCodexInjectedContext(text);
 }
 
+export function isPromptLine(line: string): boolean {
+  const entry = parsed(line);
+  return entry !== null && isUserPrompt(entry);
+}
+
 const ran = (input: unknown) => JSON.stringify(input ?? {});
 
 function callsIn(entry: TranscriptLine, tools: ReadonlySet<string>): string[] {
@@ -165,10 +170,7 @@ function isTurnEntry(entry: TranscriptLine): boolean {
 
 /** The input of each call this turn made to one of the tools. Null when no line reads
  *  as a turn, so an unknown transcript format never counts as none. */
-export function callsThisTurn(
-  lines: string[],
-  tools: ReadonlySet<string>
-): string[] | null {
+function callsThisTurn(lines: string[], tools: ReadonlySet<string>): string[] | null {
   const entries = lines.map(parsed).filter((e): e is TranscriptLine => e !== null);
   if (!entries.some(isTurnEntry)) return null;
   let calls: string[] = [];

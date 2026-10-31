@@ -270,17 +270,6 @@ function addDecision(name: string, decision: string, rationale: string): undefin
   ok({ updated: true, name });
 }
 
-// ── handoff ───────────────────────────────────────────────────────
-
-function addHandoff(name: string, text: string): undefined {
-  const handoff = nonBlank(text, "handoff text");
-  const p = requireProject(name);
-  p.handoff = handoff;
-  p.updated = now();
-  writeProject(p);
-  ok({ updated: true, name });
-}
-
 // ── set-path ──────────────────────────────────────────────────────
 
 // Where a project lives is machine-local, so this writes a binding rather than a
@@ -766,7 +755,6 @@ export const command = group({
       run: ({ positionals: [name, decision, ...rationale] }) =>
         addDecision(name, decision, joined(rationale)),
     }),
-    "add-handoff": textLeaf("Overwrite handoff field", "<text...>", addHandoff),
     "rm-next": removeLeaf("Remove next step by index", "next"),
     "rm-blocker": removeLeaf("Remove blocker by index", "blockers"),
     "update-section": leaf({

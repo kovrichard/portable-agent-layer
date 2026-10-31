@@ -54,13 +54,8 @@
       "description": "Dynamic context sections injected at session start. Set any key to false to disable it; absent keys default to enabled.",
       "additionalProperties": { "type": "boolean" },
       "properties": {
-        "wisdom": { "type": "boolean", "description": "Crystallized wisdom principles." },
         "opinions": { "type": "boolean", "description": "Tracked user opinions." },
-        "relationship": { "type": "boolean", "description": "Recent relationship notes." },
-        "failurePatterns": { "type": "boolean", "description": "Recurring failure patterns." },
         "projects": { "type": "boolean", "description": "Active projects list." },
-        "handoff": { "type": "boolean", "description": "Handoff note from the previous session." },
-        "selfModel": { "type": "boolean", "description": "The assistant's self-model synthesis." },
         "contextualSteering": { "type": "boolean", "description": "Prompt-time steering self-checks (see the steering section)." },
         "skillMatching": {
           "type": "boolean",
@@ -73,14 +68,6 @@
         "repoState": {
           "type": "boolean",
           "description": "One line with every prompt saying whether the work in the current directory is committed, pushed and released; a registered project without git is named as such."
-        },
-        "workTree": {
-          "type": "boolean",
-          "description": "Opt-in, off by default until 1.0. The work tree (pal cli work): the active node, the detours it sits inside, parked work and what waits on the user at session start and after compaction, one line of it with every prompt, and new commits and branches attached to the active node at the end of a turn."
-        },
-        "workTreeGate": {
-          "type": "boolean",
-          "description": "Opt-in, off by default until 1.0. Send a turn back when it committed, made a branch, opened a PR or published an artifact without recording it in the work tree (pal cli work). Needs workTree."
         },
         "dueReminders": {
           "type": "boolean",
@@ -120,6 +107,10 @@
         },
         "steeringTestReport": { "type": "boolean", "description": "When true, the assistant notes to the user which steering self-check fired. For the dual-live test period; ships false." }
       }
+    },
+    "updateChannel": {
+      "enum": ["stable", "canary"],
+      "description": "Release channel that plain and unattended updates follow. Set by `pal cli update --canary` / `--stable`; absent means stable."
     },
     "attribution": {
       "type": "object",

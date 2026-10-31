@@ -1,44 +1,14 @@
-import {
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  setDefaultTimeout,
-  test,
-} from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { removeOnceReleased } from "./lib/remove-once-released";
-import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
-import { testHome } from "./lib/test-home";
+import {
+  captureStdout,
+  injectRetrievalHome,
+  loadHandlers,
+  setSettings,
+} from "./lib/inject-retrieval-fixture";
 
-setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
-
-const TEST_HOME = testHome(import.meta.file);
-
-beforeAll(() => {
-  process.env.PAL_HOME = TEST_HOME;
-  removeOnceReleased(TEST_HOME);
-  mkdirSync(TEST_HOME, { recursive: true });
-  mkdirSync(resolve(TEST_HOME, "memory"), { recursive: true });
-});
-
-beforeEach(async () => {
-  for (const dir of [
-    resolve(TEST_HOME, "memory", "learning"),
-    resolve(TEST_HOME, "memory", "wisdom"),
-    resolve(TEST_HOME, "memory", "state"),
-    resolve(TEST_HOME, "memory", "adaptation"),
-  ]) {
-    removeOnceReleased(dir);
-  }
-  const settingsPath = resolve(TEST_HOME, "memory", "pal-settings.json");
-  removeOnceReleased(settingsPath);
-  // Bust the in-memory settings cache so a test that disabled the flag
-  // doesn't poison the next test that wants the default-true behavior.
-  const settings = await import("../src/hooks/lib/settings");
-  settings.reload();
-});
+const TEST_HOME = injectRetrievalHome(import.meta.file);
 
 function seedCapture(slug: string, ctx: string, principle: string) {
   const dir = resolve(TEST_HOME, "memory", "learning", "failures", "2026", "04", slug);
@@ -54,24 +24,6 @@ function seedCapture(slug: string, ctx: string, principle: string) {
     "",
   ].join("\n");
   writeFileSync(resolve(dir, "capture.md"), fm);
-}
-
-async function setSettings(data: Record<string, unknown>) {
-  writeFileSync(resolve(TEST_HOME, "memory", "pal-settings.json"), JSON.stringify(data));
-  const settings = await import("../src/hooks/lib/settings");
-  settings.reload();
-}
-
-async function loadHandlers() {
-  const t = Date.now();
-  const mod = await import(`../src/hooks/handlers/inject-retrieval.ts?t=${t}`);
-  return {
-    injectPromptContext: mod.injectPromptContext as (prompt: string) => Promise<void>,
-    getRetrievalReminder: mod.getRetrievalReminder as (
-      prompt: string
-    ) => Promise<string | null>,
-    withinBudget: mod.withinBudget as <T>(work: () => T, ms: number) => T | null,
-  };
 }
 
 function seedSkillIndex() {
@@ -108,22 +60,6 @@ function blockFor(ms: number): string {
   return "completed";
 }
 
-async function captureStdout(work: () => Promise<void>): Promise<string> {
-  const original = process.stdout.write.bind(process.stdout);
-  let captured = "";
-  // biome-ignore lint/suspicious/noExplicitAny: test stub
-  (process.stdout as any).write = (chunk: string | Uint8Array) => {
-    captured += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString();
-    return true;
-  };
-  try {
-    await work();
-  } finally {
-    process.stdout.write = original;
-  }
-  return captured;
-}
-
 describe("injectPromptContext handler", () => {
   // The wall clock and the repo state ride on every prompt by design, so these cases
   // silence them to keep asserting what they are about: whether retrieval and skills emit.
@@ -148,57 +84,19 @@ describe("injectPromptContext handler", () => {
     expect(out.trim().split("\n")).toHaveLength(1);
   });
 
-  test("the repo state of the working directory rides along", async () => {
-    await setSettings({ dynamicContext: { wallClock: false } });
-    const { injectPromptContext } = await loadHandlers();
-    const out = await captureStdout(() => injectPromptContext("anything goes here"));
-    expect(out).toContain("Repo: ");
-  });
-
-  test("the active work-tree node rides along once the scope has work", async () => {
-    await setSettings({ dynamicContext: { workTree: true } });
-    const { appendEvent, scopeOf } = await import("../src/hooks/lib/work-tree");
-    const { sessionDir } = await import("../src/hooks/lib/session-dir");
-    appendEvent(scopeOf(sessionDir()), "n1", "open", { title: "Gate", parent: null });
-    const { injectPromptContext } = await loadHandlers();
-    const out = await captureStdout(() => injectPromptContext("anything goes here"));
-    expect(out).toContain("Work: Gate [n1]");
-    removeOnceReleased(resolve(TEST_HOME, "memory", "work-tree"));
-  });
-
   test("emits empty when prompt is empty", async () => {
     const { injectPromptContext } = await loadHandlers();
     const out = await captureStdout(() => injectPromptContext(""));
     expect(out).toBe("");
   });
 
-  test("emits empty when settings flag disabled", async () => {
-    seedCapture(
-      "20260415-100000_db-mock",
-      "DB mock test failed",
-      "Never mock the database"
-    );
-    await setSettings({
-      dynamicContext: {
-        learningInjection: false,
-        contextualSteering: false,
-        ...everyPromptOff,
-      },
-    });
-    const { injectPromptContext } = await loadHandlers();
-    const out = await captureStdout(() =>
-      injectPromptContext("should I mock the database in this test")
-    );
-    expect(out).toBe("");
-  });
-
-  test("emits empty when corpus is empty", async () => {
+  test("emits empty when nothing matches", async () => {
     const { injectPromptContext } = await loadHandlers();
     const out = await captureStdout(() => injectPromptContext("anything goes here"));
     expect(out).toBe("");
   });
 
-  test("emits system-reminder when query matches a capture", async () => {
+  test("a failure capture matching the prompt is not injected as a prior lesson", async () => {
     seedCapture(
       "20260415-100000_db-mock",
       "Mocked database hid a migration bug",
@@ -208,22 +106,8 @@ describe("injectPromptContext handler", () => {
     const out = await captureStdout(() =>
       injectPromptContext("should I mock the database in this integration test")
     );
-    expect(out).toContain("<system-reminder>");
-    expect(out).toContain("Never mock the database");
-    expect(out).toContain("</system-reminder>");
-  });
-
-  test("emits empty when query is unrelated to corpus", async () => {
-    seedCapture(
-      "20260415-100000_db-mock",
-      "Mocked database hid a migration bug",
-      "Never mock the database in integration tests"
-    );
-    const { injectPromptContext } = await loadHandlers();
-    const out = await captureStdout(() =>
-      injectPromptContext("kubernetes autoscaler manifests in helm chart")
-    );
-    expect(out).toBe("");
+    expect(out).not.toContain("Relevant prior lessons");
+    expect(out).not.toContain("Never mock the database");
   });
 
   test("merges a skill trigger match into the injection", async () => {
@@ -280,55 +164,11 @@ describe("injectPromptContext handler", () => {
   });
 });
 
-describe("getRetrievalReminder", () => {
-  test("returns null when prompt is empty", async () => {
-    const { getRetrievalReminder } = await loadHandlers();
-    expect(await getRetrievalReminder("")).toBeNull();
-  });
-
-  test("returns null when settings flag disabled", async () => {
-    seedCapture(
-      "20260415-100000_db-mock",
-      "DB mock test failed",
-      "Never mock the database"
-    );
-    await setSettings({ dynamicContext: { learningInjection: false } });
-    const { getRetrievalReminder } = await loadHandlers();
-    expect(
-      await getRetrievalReminder("should I mock the database in this test")
-    ).toBeNull();
-  });
-
-  test("returns null when corpus is empty", async () => {
-    const { getRetrievalReminder } = await loadHandlers();
-    expect(await getRetrievalReminder("anything goes here")).toBeNull();
-  });
-
-  test("returns reminder string when query matches a capture", async () => {
-    seedCapture(
-      "20260415-100000_db-mock",
-      "Mocked database hid a migration bug",
-      "Never mock the database in integration tests"
-    );
-    const { getRetrievalReminder } = await loadHandlers();
-    const result = await getRetrievalReminder(
-      "should I mock the database in this integration test"
-    );
-    expect(result).not.toBeNull();
-    expect(result).toContain("<system-reminder>");
-    expect(result).toContain("Never mock the database");
-  });
-
-  test("returns null when query is unrelated to corpus", async () => {
-    seedCapture(
-      "20260415-100000_db-mock",
-      "Mocked database hid a migration bug",
-      "Never mock the database in integration tests"
-    );
-    const { getRetrievalReminder } = await loadHandlers();
-    expect(
-      await getRetrievalReminder("kubernetes autoscaler manifests in helm chart")
-    ).toBeNull();
+describe("tier-2 context sources", () => {
+  test("the failures digest is not a semi-static source", async () => {
+    const { getSemiStaticSources } = await import("../src/hooks/lib/semi-static");
+    const slugs = getSemiStaticSources().map((s) => s.slug);
+    expect(slugs).not.toContain("failures");
   });
 });
 

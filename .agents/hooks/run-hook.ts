@@ -10,8 +10,25 @@ export function hookFormatFromArgs(args: string[] = process.argv.slice(2)): Hook
   return flag ? (flag.slice(2) as HookFormat) : "claude";
 }
 
+const SUBAGENT_FLAG = "--subagent";
+
 function withoutFormatFlags(args: string[]): string[] {
-  return args.filter((arg) => !FORMAT_FLAGS.includes(arg));
+  return args.filter((arg) => !FORMAT_FLAGS.includes(arg) && arg !== SUBAGENT_FLAG);
+}
+
+function gitPath(cwd: string, flag: string): string | null {
+  const r = spawnSync("git", ["rev-parse", "--path-format=absolute", flag], {
+    cwd,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+  return r.status === 0 ? r.stdout.trim() : null;
+}
+
+/** Fails closed: anything git cannot answer counts as a worktree of its own, so the gates run. */
+function sharesMainCheckout(cwd: string): boolean {
+  const gitDir = gitPath(cwd, "--git-dir");
+  return gitDir !== null && gitDir === gitPath(cwd, "--git-common-dir");
 }
 
 /** agy starts a hook in the folder holding its hooks.json, `<workspace>/.agents`. */
@@ -56,11 +73,21 @@ function worktreeHasChanges(cwd: string): boolean {
 // success, and a continuation prompt written to stderr on failure. Antigravity
 // reads any stdout as a JSON reply, so it gets none on success and a Stop
 // `continue` on failure, with exit 0.
-export function runHook(args: string[], format = hookFormatFromArgs()): number {
+export function runHook(
+  args: string[],
+  format = hookFormatFromArgs(),
+  subagent = process.argv.includes(SUBAGENT_FLAG)
+): number {
   if (args.length === 0) {
     return writeFailure(format, "run-hook: no command provided");
   }
   const cwd = workspaceDir(format);
+  if (subagent && sharesMainCheckout(cwd)) {
+    return writeSuccess(
+      format,
+      "skipped: subagent shares the parent's checkout, which the parent's Stop gates"
+    );
+  }
   if (!worktreeHasChanges(cwd)) {
     return writeSuccess(
       format,

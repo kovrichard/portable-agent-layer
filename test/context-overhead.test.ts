@@ -33,8 +33,9 @@ beforeEach(() => {
 
 describe("logContextInjected", () => {
   test("logs each tier's size in chars against the session", () => {
-    writeMemory(["self-model", "current.md"], "  model  \n");
-    writeMemory(["learning", "failures-digest.md"], "lessons");
+    writeMemory(["relationship", "opinions-context.md"], "  model  \n");
+    mkdirSync(resolve(home, "docs"), { recursive: true });
+    writeFileSync(resolve(home, "docs", "STEERING_RULES.md"), "lessons");
     logContextInjected({ session_id: "s1" }, "reminder", NOW);
     expect(injected()).toMatchObject([
       {

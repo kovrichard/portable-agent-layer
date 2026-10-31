@@ -13,6 +13,7 @@
       "test/**",
       "assets/**/*.ts",
       "assets/**/*.tsx",
+      "assets/plugins/**/*.mjs",
       ".agents/**/*.ts",
       ".opencode/**/*.ts",
       "!node_modules",

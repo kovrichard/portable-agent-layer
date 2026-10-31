@@ -1,24 +1,18 @@
 /**
  * Unified Learning Analysis — graduation + ratings summary in one pipeline.
  *
- * Reads failures and session learnings via learning-store, detects recurring
- * patterns via Dice similarity on context text, and generates a ratings summary
- * with recommendations via Haiku inference.
+ * Reads failures via learning-store, detects recurring patterns via Dice
+ * similarity on context text, and generates a ratings summary with
+ * recommendations via Haiku inference.
  *
  * A pattern qualifies for graduation when it appears 3+ times across different sessions.
  * Confidence starts at 60% and increases by 10% per additional occurrence (capped at 95%).
- * At 85%+, the entry gets the [CRYSTAL: N%] tag and is loaded every session.
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { canInfer } from "./inference";
-import {
-  type FailureEntry,
-  type LearningEntry,
-  readFailures,
-  readLearnings,
-} from "./learning-store";
+import { type FailureEntry, readFailures } from "./learning-store";
 import { logDebug } from "./log";
 import { ensureDir, paths } from "./paths";
 import { extractKeywords, similarity } from "./text-similarity";
@@ -87,39 +81,18 @@ function classifyDomain(text: string): string {
 // ── Data Collection ──
 
 const MIN_TEXT_LENGTH = 30;
-export const SIMILARITY_THRESHOLD = 0.3;
+const SIMILARITY_THRESHOLD = 0.3;
 const MIN_OCCURRENCES = 3;
 
-function toAnalysisEntries(
-  failures: FailureEntry[],
-  learnings: LearningEntry[]
-): AnalysisEntry[] {
-  const entries: AnalysisEntry[] = [];
-
-  for (const f of failures) {
-    if (f.context.length >= MIN_TEXT_LENGTH) {
-      entries.push({
-        source: `failure:${f.slug}`,
-        path: f.path,
-        text: f.context.slice(0, 300),
-        date: f.date,
-      });
-    }
-  }
-
-  for (const l of learnings) {
-    const text = [l.title, l.insights].filter(Boolean).join(" ");
-    if (text.length >= MIN_TEXT_LENGTH) {
-      entries.push({
-        source: `learning:${l.filename}`,
-        path: l.path,
-        text: text.slice(0, 300),
-        date: l.date,
-      });
-    }
-  }
-
-  return entries;
+function toAnalysisEntries(failures: FailureEntry[]): AnalysisEntry[] {
+  return failures
+    .filter((f) => f.context.length >= MIN_TEXT_LENGTH)
+    .map((f) => ({
+      source: `failure:${f.slug}`,
+      path: f.path,
+      text: f.context.slice(0, 300),
+      date: f.date,
+    }));
 }
 
 // ── Pattern Grouping ──
@@ -316,13 +289,9 @@ interface AnalyzeOptions {
 export async function analyze(opts: AnalyzeOptions = {}): Promise<AnalysisResult> {
   const state = readState();
   const failures = readFailures(paths.failures());
-  const learnings = readLearnings(paths.sessionLearning());
-  const all = toAnalysisEntries(failures, learnings);
+  const all = toAnalysisEntries(failures);
 
-  logDebug(
-    "analyze",
-    `Collected ${failures.length} failures, ${learnings.length} learnings`
-  );
+  logDebug("analyze", `Collected ${failures.length} failures`);
 
   const allGroups = groupPatterns(all);
   const candidates = allGroups.filter((g) => g.entries.length >= MIN_OCCURRENCES);

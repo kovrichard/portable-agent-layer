@@ -11,14 +11,10 @@ import type { Plugin, PluginInput } from "@opencode-ai/plugin";
 
 const PAL_DIR = process.env.PAL_DIR || resolve(import.meta.dir, "../../..");
 
-// Identify ourselves as opencode for the shared detector in hooks/lib/agent.ts.
-// Force-override (= not ??=) so an inherited PAL_AGENT from the parent shell
-// — common when launching opencode from a Claude Code terminal — doesn't make
-// the dispatcher route inference to the wrong agent's CLI. Mirrors how
-// .claude/settings.json template prefixes every hook command with PAL_AGENT=claude.
+// Force-override (= not ??=): a PAL_AGENT inherited from the parent shell, as when
+// opencode starts from a Claude Code terminal, would route inference to that CLI.
 process.env.PAL_AGENT = "opencode";
 
-// Dynamic imports from shared lib — resolved at runtime via PAL_DIR
 async function lib<T>(mod: string): Promise<T> {
   return await import(resolve(PAL_DIR, "src", "hooks", "lib", mod));
 }
@@ -30,7 +26,6 @@ function isSessionEvent(type: string): boolean {
 }
 
 const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
-  // Pre-load shared modules
   const { buildSystemReminder } =
     await lib<typeof import("../../hooks/lib/context")>("context.ts");
   const { checkBashCommand, checkFilePath } =
@@ -38,10 +33,8 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   const { findBinaryOnPath } =
     await lib<typeof import("../../hooks/lib/which")>("which.ts");
 
-  // rtk output compression — PAL gates on presence, rtk owns the rewrite.
-  // `rtk hook check <cmd>` prints the rewritten command (exit 0) or nothing
-  // (exit 1) when a command isn't worth wrapping. Fail-open: absent rtk or any
-  // error leaves the command untouched.
+  // `rtk hook check <cmd>` prints the rewritten command (exit 0), or nothing
+  // (exit 1) when a command isn't worth wrapping.
   const rtkBin = findBinaryOnPath("rtk");
   const rtkRewrite = (cmd: string): string | null => {
     if (!rtkBin || !cmd) return null;
@@ -59,10 +52,12 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   const { logDebug, logError, logPromptSnapshot } =
     await lib<typeof import("../../hooks/lib/log")>("log.ts");
 
-  // Load shared handlers
   const { runStopHandlers } = await lib<typeof import("../../hooks/lib/stop")>("stop.ts");
   const { logToolCall } =
     await lib<typeof import("../../hooks/lib/tool-events")>("tool-events.ts");
+  const { attachProgressFromToolCall } = await lib<
+    typeof import("../../hooks/lib/progress-tree-tool")
+  >("progress-tree-tool.ts");
   const { logAttention } =
     await lib<typeof import("../../hooks/lib/attention-events")>("attention-events.ts");
   const {
@@ -130,14 +125,15 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   };
 
   return {
-    // --- Per-message: Inject dynamic system reminder ---
-    "experimental.chat.system.transform": async (_input, output) => {
+    "experimental.chat.system.transform": async (input, output) => {
       if (isPalSpawnedInference()) return;
-      const reminder = buildSystemReminder({ agent: "opencode" });
+      const reminder = buildSystemReminder({
+        agent: "opencode",
+        sessionId: input.sessionID,
+      });
       if (reminder) output.system.push(reminder);
     },
 
-    // --- Session events: start and stop handling ---
     event: async ({ event }) => {
       if (isPalSpawnedInference()) return;
       if (isSessionEvent(event.type)) logDebug("opencode:event", `Event: ${event.type}`);
@@ -193,7 +189,6 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       }
     },
 
-    // --- Capture ratings + session naming from user messages (shared handlers) ---
     "chat.message": async (input, output) => {
       if (isPalSpawnedInference()) return;
       const text = partsToText(output.parts ?? []);
@@ -221,7 +216,6 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       }
     },
 
-    // --- Security: block dangerous tool executions ---
     "tool.execute.before": async (
       _input: { tool: string; sessionID: string; callID: string },
       output: { args: Record<string, unknown> | string }
@@ -276,6 +270,16 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
         session_id: input.sessionID,
         tool_response: output?.output,
       });
+      attachProgressFromToolCall(
+        {
+          tool_name: input.tool,
+          tool_input: input.args,
+          session_id: input.sessionID,
+          tool_response: output?.output,
+          exit_code: (output?.metadata as { exit?: unknown } | undefined)?.exit,
+        },
+        directory
+      );
       const call = ledgeredOpencodeCall(input.tool, input.callID, input.args);
       if (!call) return;
 
@@ -283,12 +287,12 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       if (entry) logDebug("opencode:ledger", `recorded ${entry.id} ${entry.target}`);
     },
 
-    // --- Inject PAL_DIR into shell environment ---
     "shell.env": async (
-      _input: { cwd: string; sessionID?: string; callID?: string },
+      input: { cwd: string; sessionID?: string; callID?: string },
       output: { env: Record<string, string> }
     ) => {
       output.env.PAL_DIR = PAL_DIR;
+      if (input.sessionID) output.env.PAL_OPENCODE_SESSION_ID = input.sessionID;
     },
   };
 };

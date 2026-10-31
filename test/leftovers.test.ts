@@ -14,6 +14,8 @@ beforeEach(() => {
   process.env.PAL_CLAUDE_DIR = at(".claude");
   process.env.PAL_OPENCODE_DIR = at(".opencode");
   process.env.PAL_COPILOT_DIR = at(".copilot");
+  process.env.PAL_CURSOR_DIR = at(".cursor");
+  process.env.PAL_GEMINI_DIR = at(".gemini");
 });
 
 function write(path: string, content: unknown): void {
@@ -102,6 +104,97 @@ describe.skipIf(process.platform === "win32")("Copilot instructions link", () =>
     write(at(".copilot", "copilot-instructions.md"), "my own instructions");
 
     expect(leftover("copilot-instructions-link").find()).toEqual([]);
+  });
+});
+
+const RETIRED_CONTEXT_SOURCES: [string, string, string[]][] = [
+  ["failures-digest-context", "failures", ["learning", "failures-digest.md"]],
+  ["self-model-context", "self-model", ["self-model", "current.md"]],
+  ["wisdom-context", "wisdom", ["wisdom", "context.md"]],
+];
+
+describe.each(
+  RETIRED_CONTEXT_SOURCES
+)("%s wired into the agents", (id, slug, digestPath) => {
+  const digest = () => at("home", "memory", ...digestPath);
+
+  test("removes each agent's copy and opencode's entry, keeps the digest itself", () => {
+    write(digest(), "lessons");
+    write(at(".cursor", "rules", `pal-${slug}.mdc`), "lessons");
+    write(at(".cursor", "rules", "pal-opinions.mdc"), "opinions");
+    write(at(".copilot", "instructions", `pal-${slug}.instructions.md`), "lessons");
+    write(
+      at(".gemini", "config", "plugins", "pal", "rules", `pal-${slug}.md`),
+      "lessons"
+    );
+    write(at(".opencode", "config.json"), {
+      instructions: [digest(), "/keep/me.md"],
+      model: "keep",
+    });
+
+    expect(cleanUp(id)).toHaveLength(4);
+
+    expect(existsSync(digest())).toBe(true);
+    expect(existsSync(at(".cursor", "rules", "pal-opinions.mdc"))).toBe(true);
+    expect(json(at(".opencode", "config.json"))).toEqual({
+      instructions: ["/keep/me.md"],
+      model: "keep",
+    });
+  });
+
+  test("nothing to do on a fresh install", () => {
+    expect(leftover(id).find()).toEqual([]);
+  });
+});
+
+describe("allow rules for retired pal cli verbs", () => {
+  test("removes them from Claude Code and Antigravity and keeps every other rule", () => {
+    write(at(".claude", "settings.json"), {
+      permissions: {
+        allow: [
+          "Bash(pal cli project *)",
+          "Bash(pal cli thread *)",
+          "Bash(pal cli relationship-note *)",
+          "Bash(pal cli wisdom-frame *)",
+        ],
+      },
+      model: "keep",
+    });
+    write(at(".gemini", "antigravity-cli", "settings.json"), {
+      permissions: {
+        allow: ["command(pal cli project)", "command(pal cli thread)"],
+      },
+    });
+
+    expect(cleanUp("retired-verb-rules")).toEqual([
+      "Bash(pal cli thread *)",
+      "Bash(pal cli relationship-note *)",
+      "Bash(pal cli wisdom-frame *)",
+      "command(pal cli thread)",
+    ]);
+    expect(json(at(".claude", "settings.json"))).toEqual({
+      permissions: { allow: ["Bash(pal cli project *)"] },
+      model: "keep",
+    });
+    expect(json(at(".gemini", "antigravity-cli", "settings.json"))).toEqual({
+      permissions: { allow: ["command(pal cli project)"] },
+    });
+  });
+
+  test("nothing to do without agent settings", () => {
+    expect(leftover("retired-verb-rules").find()).toEqual([]);
+  });
+});
+
+describe("OPINION_TRACKING.md in the PAL docs", () => {
+  test("is removed and the other docs stay", () => {
+    write(at("home", "docs", "OPINION_TRACKING.md"), "old");
+    write(at("home", "docs", "STEERING_RULES.md"), "keep");
+
+    expect(cleanUp("opinion-tracking-doc")).toEqual([
+      at("home", "docs", "OPINION_TRACKING.md"),
+    ]);
+    expect(existsSync(at("home", "docs", "STEERING_RULES.md"))).toBe(true);
   });
 });
 

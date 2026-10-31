@@ -15,7 +15,6 @@ PAL is a persistent, cross-platform, cross-agent layer for portable AI workflows
   docs/                            # System documentation (engine-managed)
     ALGORITHM.md                   # The execution engine (4-phase)
     MEMORY_SYSTEM.md               # Memory guidelines
-    OPINION_TRACKING.md            # Opinion system reference
     STEERING_RULES.md              # Behavioral rules
     WORK_TRACKING.md               # Work tracking reference
   tools/                           # Agent CLI tools (symlink → repo src/tools/agent/)
@@ -40,14 +39,9 @@ PAL is a persistent, cross-platform, cross-agent layer for portable AI workflows
 <PAL package>/memory/              # Persistent memory (gitignored)
   state/                           # Runtime state (sessions, counts, caches)
   signals/                         # Rating signals (ratings.jsonl)
-  relationship/                    # Daily interaction notes + opinions
-    YYYY-MM/YYYY-MM-DD.md          # Daily relationship notes
-    opinions.json                  # Confidence-tracked opinions
-    reflections/                   # Periodic reflection reports
-  session-learning/                # Per-session learnings
-  failures/                        # Low-rating context dumps
-  wisdom/                          # Crystallized principles (frames)
-  synthesis/                       # Pattern synthesis reports
+  adaptation/                      # Rules drafted from corrections, and approved opinions
+  relationship/                    # opinions-context.md, the opinions rendered for native loading
+  failures/                        # Low-rating context dumps from older versions
 ```
 
 ## Core Subsystems
@@ -69,20 +63,18 @@ Event hooks across the session lifecycle:
 - **SessionStart** → `LoadContext.ts` — inject dynamic context, regenerate CLAUDE.md if stale
 - **UserPromptSubmit** → `UserPromptOrchestrator.ts` — rating capture, session naming
 - **PreToolUse** → `SecurityValidator.ts` — block dangerous commands; `SkillGuard.ts` — block false-positive skill matches
-- **Stop** → `StopOrchestrator.ts` — work tracking, relationship capture, learnings, backups, reflect trigger
+- **Stop** → `StopOrchestrator.ts` — work tracking, progress tree, project history, backups
 
 ### Memory (`memory/`)
 Persistent storage across sessions:
 - **signals/** — User satisfaction ratings (explicit + implicit)
-- **relationship/** — Daily interaction notes, confidence-tracked opinions, reflection reports
-- **session-learning/** — Per-session context and learnings
-- **failures/** — Low-rating session context dumps for pattern avoidance
-- **wisdom/** — Crystallized principles that compound over time
-- **synthesis/** — Weekly pattern synthesis reports
+- **adaptation/** — Rules drafted from the user's corrections, and approved opinions
+- **relationship/** — The approved opinions, rendered for native loading
+- **failures/** — Low-rating session context dumps from older versions
 - **state/** — Session registry, counts cache, debug logs
 
 ### Tools (`src/tools/`)
-CLI utilities: `tool:opinion` (manage opinions), `tool:reflect` (relationship reflection), `tool:analyze` (learning analysis), `pal cli usage` (token usage tracking), `pal cli export` / `pal cli import` (state portability).
+CLI utilities: `pal cli rule` (review rules and opinions), `pal cli analyze` (learning analysis), `pal cli usage` (token usage tracking), `pal cli export` / `pal cli import` (state portability).
 
 ### TELOS (`telos/`)
 From Greek τέλος (télos) — end, purpose, goal. The persistent personal context that orients PAL around who the user is and what they're working toward: mission, goals, beliefs, challenges, strategies, ideas, learnings, mental models, narratives. Managed via the telos skill.

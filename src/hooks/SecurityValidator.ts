@@ -27,15 +27,12 @@ try {
 
   process.stdout.write(blockResponse(refusal.message, refusal.hookEventName));
 
-  // After the deny has gone out, in its own try/catch: this hook is fail-open,
-  // and a ledger that threw on its way to recording a block would turn the
-  // block into an allow.
+  // Own try/catch, after the deny: a throwing ledger must not turn a block into an allow.
   try {
     recordBlocked(refusal);
   } catch (err) {
     logError("SecurityValidator:ledger", err);
   }
 } catch {
-  // Fail open
   process.exit(0);
 }

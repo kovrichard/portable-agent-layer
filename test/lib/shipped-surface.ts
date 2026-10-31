@@ -146,7 +146,16 @@ function setKey(config: Json, path: string, leaf: (current: unknown) => unknown)
   parent[last] = leaf(parent[last]);
 }
 
-function plantInConfig(path: string, spec: string): void {
+const VALUES_AN_OLDER_PAL_WROTE: Record<string, string> = {
+  "env.DARK_FACTORY_HOME": "{root}/home/dark-factory",
+};
+
+function plantedValue(root: string, key: string): unknown {
+  const written = VALUES_AN_OLDER_PAL_WROTE[key];
+  return written === undefined ? true : written.replaceAll("{root}", root);
+}
+
+function plantInConfig(path: string, spec: string, root: string): void {
   if (path.endsWith(".toml")) {
     if (spec.includes("[]=")) throw new Error(`cannot plant a TOML list entry: ${spec}`);
     writeFileSync(path, `${spec} = true\n${readFileSync(path, "utf-8")}`);
@@ -155,7 +164,9 @@ function plantInConfig(path: string, spec: string): void {
   const config = existsSync(path) ? JSON.parse(readFileSync(path, "utf-8")) : {};
   const [key, entry] = spec.split("[]=");
   setKey(config, key, (current) =>
-    entry === undefined ? true : [...(Array.isArray(current) ? current : []), entry]
+    entry === undefined
+      ? plantedValue(root, key)
+      : [...(Array.isArray(current) ? current : []), entry]
   );
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, JSON.stringify(config, null, 2));
@@ -193,5 +204,5 @@ export function plant(root: string, pkg: string, item: string): void {
   if (spec === undefined) plantFile(root, pkg, item);
   else if (spec.startsWith("hook="))
     plantHook(resolve(root, file), pkg, spec.slice("hook=".length));
-  else plantInConfig(resolve(root, file), spec);
+  else plantInConfig(resolve(root, file), spec, root);
 }

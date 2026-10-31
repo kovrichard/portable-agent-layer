@@ -1,8 +1,5 @@
 /**
- * Learning Store — single collection layer for reading failures and session learnings.
- *
- * Both context.ts (session injection) and graduation.ts (pattern detection) read from
- * the same directories. This module provides a shared, deduplicated API for both.
+ * Learning Store — reads the failure captures and algorithm reflections on disk.
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -19,17 +16,6 @@ export interface FailureEntry {
   principle: string;
   date: string;
   ts: string;
-  cwd: string;
-}
-
-export interface LearningEntry {
-  filename: string;
-  path: string;
-  title: string;
-  category: string;
-  principle: string;
-  date: string;
-  insights: string;
   cwd: string;
 }
 
@@ -90,59 +76,6 @@ export function readFailures(baseDir: string, limit?: number): FailureEntry[] {
             principle: meta.principle || "",
             date: meta.date || (meta.ts ? String(meta.ts).slice(0, 10) : ""),
             ts: meta.ts ? String(meta.ts) : "",
-            cwd: meta.cwd || "",
-          });
-
-          if (limit && entries.length >= limit) return entries;
-        } catch {
-          /* skip malformed */
-        }
-      }
-    } catch {
-      /* skip invalid month dirs */
-    }
-  }
-
-  return entries;
-}
-
-// ── Learnings ──
-
-export function readLearnings(baseDir: string, limit?: number): LearningEntry[] {
-  const entries: LearningEntry[] = [];
-
-  for (const { monthDir } of walkMonthDirs(baseDir)) {
-    try {
-      const files = readdirSync(monthDir)
-        .filter((f) => f.endsWith(".md"))
-        .sort()
-        .reverse();
-
-      for (const file of files) {
-        try {
-          const content = readFileSync(resolve(monthDir, file), "utf-8");
-          const { meta, body } = parse<{
-            title?: string;
-            category?: string;
-            principle?: string;
-            date?: string;
-            cwd?: string;
-          }>(content);
-
-          if (!meta.title) continue;
-
-          const insightsMatch = new RegExp(/## Insights\n([\s\S]*?)(?=\n##|$)/).exec(
-            body
-          );
-
-          entries.push({
-            filename: file,
-            path: resolve(monthDir, file),
-            title: meta.title,
-            category: meta.category || "algorithm",
-            principle: meta.principle || "",
-            date: meta.date || "",
-            insights: insightsMatch?.[1]?.trim() || "",
             cwd: meta.cwd || "",
           });
 

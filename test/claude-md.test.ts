@@ -79,27 +79,9 @@ describe("buildClaudeMd", () => {
     expect(result).toContain("~/.pal/telos/GOALS.md");
   });
 
-  test("carries the work-tree rule only once the work tree is opted into", async () => {
+  test("always carries the progress-tree rule", async () => {
     const { buildClaudeMd } = await import("../src/hooks/lib/claude-md");
-    const { reload } = await import("../src/hooks/lib/settings");
-    const settingsPath = resolve(TEST_HOME, "memory", "pal-settings.json");
-    const original = readFileSync(settingsPath, "utf-8");
-    const rule = "\n- **Keep the work tree true** —";
-
-    expect(buildClaudeMd()).not.toContain("Keep the work tree true");
-    expect(buildClaudeMd()).not.toContain("{{IF");
-
-    writeFileSync(
-      settingsPath,
-      JSON.stringify({ ...JSON.parse(original), dynamicContext: { workTree: true } })
-    );
-    reload();
-    try {
-      expect(buildClaudeMd()).toContain(rule);
-    } finally {
-      writeFileSync(settingsPath, original);
-      reload();
-    }
+    expect(buildClaudeMd()).toContain("\n- **Keep the progress tree true** —");
   });
 
   test("omits setup prompt when setup is complete", async () => {
@@ -118,19 +100,19 @@ describe("buildClaudeCodeMd", () => {
     expect(result).toContain("MINIMAL");
   });
 
-  test("prepends @import for self-model when file exists", async () => {
-    const selfModelDir = resolve(TEST_HOME, "memory", "self-model");
-    mkdirSync(selfModelDir, { recursive: true });
-    writeFileSync(resolve(selfModelDir, "current.md"), "# Self Model\ntest content");
+  test("prepends @import for the opinions digest when file exists", async () => {
+    const relationshipDir = resolve(TEST_HOME, "memory", "relationship");
+    mkdirSync(relationshipDir, { recursive: true });
+    writeFileSync(resolve(relationshipDir, "opinions-context.md"), "## Opinions\n- a");
 
     const { buildClaudeCodeMd } = await import("../src/hooks/lib/claude-md");
     const result = buildClaudeCodeMd();
-    expect(result).toMatch(/^@.*self-model.*current\.md/);
+    expect(result).toMatch(/^@.*relationship.*opinions-context\.md/);
 
-    removeOnceReleased(selfModelDir);
+    removeOnceReleased(relationshipDir);
   });
 
-  test("omits @import when self-model does not exist", async () => {
+  test("omits @import when the opinions digest does not exist", async () => {
     const { buildClaudeCodeMd } = await import("../src/hooks/lib/claude-md");
     const result = buildClaudeCodeMd();
     expect(result).not.toContain("@");

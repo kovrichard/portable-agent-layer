@@ -3,7 +3,7 @@
  * Used by Stop handlers and the opencode plugin.
  */
 
-import { readFileSync } from "node:fs";
+import { closeSync, openSync, readFileSync, readSync, statSync } from "node:fs";
 import { antigravityMessage } from "./antigravity-transcript";
 
 interface Message {
@@ -109,6 +109,25 @@ export function readTranscriptFile(path: string): Message[] {
   } catch {
     return [];
   }
+}
+
+/** The complete lines in the last `bytes` of a transcript; `whole` once that reaches its start. */
+export function readTranscriptTail(
+  path: string,
+  bytes: number
+): { lines: string[]; whole: boolean } {
+  const size = statSync(path).size;
+  const length = Math.min(size, bytes);
+  const buffer = Buffer.alloc(length);
+  const fd = openSync(path, "r");
+  try {
+    readSync(fd, buffer, 0, length, size - length);
+  } finally {
+    closeSync(fd);
+  }
+  const whole = length === size;
+  const lines = buffer.toString("utf-8").split("\n");
+  return { lines: (whole ? lines : lines.slice(1)).filter(Boolean), whole };
 }
 
 /** Extract string content from a message object */

@@ -53,7 +53,6 @@ const CODEX_DIR = platform.codexDir();
 const HOOKS_FILE = resolve(CODEX_DIR, "hooks.json");
 const RULES_FILE = resolve(CODEX_DIR, "rules", "default.rules");
 
-// --- Remove PAL hooks from hooks.json ---
 if (existsSync(HOOKS_FILE)) {
   const template = loadCodexHooksTemplate(assets.codexHooksTemplate(), PKG_ROOT);
   const existing = readJson<Record<string, unknown>>(HOOKS_FILE, {});
@@ -65,7 +64,6 @@ if (existsSync(HOOKS_FILE)) {
   log.info("No hooks.json found, nothing to do");
 }
 
-// --- Remove PAL allowlist rules from default.rules ---
 if (existsSync(RULES_FILE)) {
   const cleanedRules = unmergeCodexRules(readFileSync(RULES_FILE, "utf-8"));
   replaceConfig(RULES_FILE, cleanedRules);
@@ -74,7 +72,6 @@ if (existsSync(RULES_FILE)) {
   log.info("No default.rules found, nothing to do");
 }
 
-// --- Remove PAL skill symlinks ---
 const codexSkillsDir = resolve(CODEX_DIR, "skills");
 const removed = removeSkills(codexSkillsDir);
 if (removed.length > 0) {
@@ -83,13 +80,11 @@ if (removed.length > 0) {
   log.info("No PAL skills found");
 }
 
-// --- Remove PAL agents ---
 const removedAgents = removeAgentsFromCodex(resolve(CODEX_DIR, "agents"));
 if (removedAgents.length > 0) {
   log.success(`Removed ${removedAgents.length} agent(s): ${removedAgents.join(", ")}`);
 }
 
-// --- Disable hooks in config.toml ---
 const CONFIG_FILE = resolve(CODEX_DIR, "config.toml");
 disableCodexHooks(CONFIG_FILE);
 disableCodexStatusline(CONFIG_FILE);

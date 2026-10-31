@@ -1,11 +1,4 @@
-import {
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  setDefaultTimeout,
-  test,
-} from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -13,41 +6,14 @@ import {
   deleteProject,
   isStale,
   looksLikeProjectRoot,
-  type ProjectProgress,
   readAllProjects,
   readProject,
   resolveProjectFromCwd,
   writeProject,
 } from "../src/hooks/lib/projects";
-import { removeOnceReleased } from "./lib/remove-once-released";
-import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
-import { testHome } from "./lib/test-home";
+import { fakeProject, projectsHome } from "./lib/projects-lib-fixture";
 
-setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
-
-const TEST_HOME = testHome(import.meta.file);
-
-beforeAll(() => {
-  process.env.PAL_HOME = TEST_HOME;
-  removeOnceReleased(TEST_HOME);
-  mkdirSync(TEST_HOME, { recursive: true });
-});
-
-beforeEach(() => {
-  const dir = resolve(TEST_HOME, "memory", "projects");
-  removeOnceReleased(dir);
-});
-
-function fakeProject(overrides: Partial<ProjectProgress> = {}): ProjectProgress {
-  return {
-    name: "demo",
-    path: "/tmp/demo",
-    status: "active",
-    created: "2026-05-04T10:00:00Z",
-    updated: "2026-05-04T10:00:00Z",
-    ...overrides,
-  };
-}
+const TEST_HOME = projectsHome(import.meta.file);
 
 describe("defaultSlug — load-bearing slug derivation", () => {
   test("hyphenated basename stays whole — NOT split on '-'", () => {
@@ -99,36 +65,7 @@ describe("looksLikeProjectRoot", () => {
   });
 });
 
-/** A directory that actually exists — writeProject binds only real paths. */
-function checkoutDir(name: string): string {
-  const dir = resolve(TEST_HOME, "checkouts", name);
-  mkdirSync(dir, { recursive: true });
-  return dir;
-}
-
 describe("read/write/delete", () => {
-  test("write then read round-trips", () => {
-    const p = fakeProject({ name: "alpha", path: checkoutDir("alpha") });
-    writeProject(p);
-    const got = readProject("alpha");
-    expect(got).toEqual(p);
-  });
-
-  test("write then read round-trips with ISA body sections", () => {
-    const p = fakeProject({
-      name: "rich",
-      path: checkoutDir("rich"),
-      goal: "Ship ISA support",
-      criteria: "- All tests pass\n- ISA.md is created on create",
-      context: "PAL source repo\nReference: ~/pai",
-      next: ["Build it", "Test it"],
-      blockers: ["Need design approval"],
-    });
-    writeProject(p);
-    const got = readProject("rich");
-    expect(got).toEqual(p);
-  });
-
   test("readAllProjects returns all written projects", () => {
     writeProject(fakeProject({ name: "a", path: "/tmp/a" }));
     writeProject(fakeProject({ name: "b", path: "/tmp/b" }));
@@ -148,6 +85,16 @@ describe("read/write/delete", () => {
 
   test("deleteProject returns false when project doesn't exist", () => {
     expect(deleteProject("ghost")).toBe(false);
+  });
+
+  test("a handoff an older PAL left in the record is not read back", () => {
+    const dir = resolve(TEST_HOME, "memory", "projects", "old");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      resolve(dir, "ISA.md"),
+      "---\nname: old\nstatus: active\ncreated: 2026-01-01\nupdated: 2026-01-01\nhandoff: ', with  queued.'\n---\n"
+    );
+    expect(readProject("old")).not.toHaveProperty("handoff");
   });
 
   test("malformed ISA.md in projects dir is skipped, not crashed on", () => {

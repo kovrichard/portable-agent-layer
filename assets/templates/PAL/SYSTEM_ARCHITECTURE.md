@@ -59,9 +59,7 @@ PAL is built around a universal pattern for accomplishing any task: **Current St
 Everything feeds back into improving The Algorithm:
 - The **Memory System** captures signals from every interaction
 - The **Hook System** detects sentiment, ratings, and behavioral patterns
-- The **Learning System** organizes evidence by session
-- The **Wisdom System** crystallizes recurring patterns into principles
-- The **Relationship System** tracks how the user works and what they prefer
+- The **Adaptation System** turns the user's corrections into rules and standing opinions
 
 ### 4. Scaffolding > Model
 
@@ -145,11 +143,9 @@ Skills are active orchestrators, not passive documentation:
 **Automatic capture and preservation of valuable work.**
 
 Every session, every insight, every decision — captured automatically:
-- Relationship notes extracted via inference
-- Learnings captured per session
+- Session summaries kept as project history
 - Ratings tracked (explicit and implicit)
-- Wisdom crystallized from recurring patterns
-- Failures logged for pattern avoidance
+- Corrections drafted into rules for the user to approve
 
 ### 13. Permission to Fail
 
@@ -215,7 +211,7 @@ Brief description.
 │  User Prompt Submit │──► UserPromptOrchestrator.ts
 │                     │    - Prompt context (one merged system-reminder):
 │                     │      contextual steering, skill trigger matches,
-│                     │      prior-lesson retrieval
+│                     │      approved rules, entity cards
 │                     │    - Rating capture (explicit/implicit)
 │                     │    - Session naming (first prompt)
 └─────────────────────┘
@@ -231,16 +227,12 @@ Brief description.
 ┌─────────────────────┐
 │       Stop          │──► StopOrchestrator.ts → runStopHandlers()
 │                     │    Detached (inference-bearing, fire-and-forget):
-│                     │    - Session intelligence (title, summary, insights, handoff)
-│                     │    - Failure principle extraction (low ratings)
-│                     │    - Auto-graduate wisdom (24h TTL, idempotent)
+│                     │    - Session intelligence (title, summary, insights, stopped-at)
 │                     │    Concurrent (Promise.allSettled):
 │                     │    - Work session capture
 │                     │    - Project touch / history
-│                     │    - Persist last exchange (handoff seed)
+│                     │    - Persist last exchange (compaction recall)
 │                     │    - Cache last response (rating correlation)
-│                     │    - Reflect trigger check
-│                     │    - Self-model trigger check
 │                     │    - Synthesis pipeline
 │                     │    - Desktop notify
 │                     │    - Write context digests (semi-static sources)
@@ -263,14 +255,14 @@ Every agent's turns are measured and its replies filed under the session id the 
 | Cursor | `beforeSubmitPrompt` → `additional_context`, undocumented | `afterAgentResponse` `text` (`AgentResponse.ts`) |
 | Copilot CLI | `userPromptTransformed` → `modifiedTransformedPrompt` (`PromptTransformed.ts`) | `agentStop` transcript |
 
-The Copilot CLI drops what its `userPromptSubmitted` hook returns, so that hook only measures the turn and parks the context; `userPromptTransformed` fires next and appends it to the prompt the model receives. It also writes the reply to the `agentStop` transcript only after that hook returns, so a stop whose transcript still ends on the user's message hands off to a detached `StopDeferred.ts`, which waits for the reply before running the stop handlers. Cursor documents no context field on `beforeSubmitPrompt`, so PAL offers `additional_context` there but logs no interaction hint as sent until it is shown to reach the model; its documented context channel is session start. cursor-agent also runs every hook in `~/.claude/settings.json`, so when PAL's own Cursor hooks are installed, the copy registered with `--agent=claude` exits at once (`lib/cursor-shadow.ts`) and each Cursor event runs PAL once. `test/agent-turns.test.ts` holds each agent to this table.
+The Copilot CLI drops what its `userPromptSubmitted` hook returns, so that hook only measures the turn and parks the context; `userPromptTransformed` fires next and appends it to the prompt the model receives. It also writes the reply to the `agentStop` transcript only after that hook returns, so a stop whose transcript still ends on the user's message hands off to a detached `StopDeferred.ts`, which waits for the reply before running the stop handlers. Cursor documents no context field on `beforeSubmitPrompt`, so PAL offers `additional_context` there but logs no interaction hint as sent until it is shown to reach the model; its documented context channel is session start. cursor-agent also runs every hook in `~/.claude/settings.json`, so when PAL's own Cursor hooks are installed, the copy registered with `--agent=claude` exits at once (`lib/cursor-shadow.ts`) and each Cursor event runs PAL once. `test/agent-turns.test.ts` and `test/agent-turns.spawn.test.ts` hold each agent to this table.
 
 ### Design Principles
 
 - **Fail-open**: Hook errors never block the user's session
-- **Detached inference**: Long inference calls (session intelligence, failure principle, auto-graduate) spawn detached child processes that survive the hook returning. The parent hook exits in milliseconds — cold-start latency for the subscription CLI no longer blocks the next prompt.
+- **Detached inference**: Long inference calls (session intelligence, entity extraction) spawn detached child processes that survive the hook returning. The parent hook exits in milliseconds — cold-start latency for the subscription CLI no longer blocks the next prompt.
 - **Parallel execution**: Non-inference handlers run via `Promise.allSettled` — one failure doesn't block others
-- **Idempotent**: Handlers check for existing state before writing (auto-graduate uses 24h TTL + content dedup; session intelligence dedups by message count)
+- **Idempotent**: Handlers check for existing state before writing (session intelligence dedups by message count)
 - **Timeout-aware**: Inference calls have hard timeouts (60s default; longer because they run detached and don't block the user)
 - **Race-safe**: Detached claim files use atomic `rename()` with ENOENT treated as a benign "already claimed" signal (opencode fires `session.idle` + `session.diff` concurrently)
 - **Subagent-aware**: `LoadContext.ts` skips heavy context loading for subagent sessions
@@ -306,33 +298,19 @@ memory/
 │   ├── projects.json              # Multi-session project tracking
 │   ├── counts.json                # Cached counts for greeting
 │   ├── last-responses.json        # Cached responses for rating correlation
-│   ├── pending-failure.json       # Deferred failure capture
 │   └── debug.log                  # Hook execution logs
 │
 ├── signals/                       # User feedback
 │   └── ratings.jsonl              # Explicit + implicit ratings
 │
-├── relationship/                  # Interaction tracking
-│   ├── YYYY-MM/
-│   │   └── YYYY-MM-DD.md         # Daily notes (W/O/B format)
-│   ├── opinions.json              # Confidence-tracked opinions
-│   └── reflections/               # Periodic reflection reports
+├── adaptation/                    # Rules drafted from corrections, and approved opinions
 │
-├── session-learning/              # Per-session learnings
-│   └── YYYY-MM/
-│       └── YYYY-MM-DD_title.md    # Session learning with frontmatter
+├── relationship/
+│   └── opinions-context.md        # Approved opinions, rendered for native loading
 │
-├── failures/                      # Low-rating context dumps
-│   └── YYYY-MM/
-│       └── YYYY-MM-DD_context.md  # Failed session context for avoidance
+├── projects/                      # Per-project session history
 │
-├── wisdom/                        # Crystallized principles
-│   └── frames/
-│       └── domain.md              # Domain-specific principles with confidence
-│
-└── synthesis/                     # Pattern aggregation
-    └── YYYY-MM/
-        └── YYYY-MM-DD_period.md   # Weekly/monthly synthesis reports
+└── failures/                      # Low-rating captures from older versions, no longer written
 ```
 
 ### Data Flow
@@ -340,45 +318,25 @@ memory/
 ```
 Session interaction
   │
-  ├─► [Stop] Rating capture ──► signals/ratings.jsonl
+  ├─► [Prompt] Rating capture ──► signals/ratings.jsonl
   │
-  ├─► [Stop] Relationship extraction (Haiku) ──► relationship/YYYY-MM/YYYY-MM-DD.md
+  ├─► [Stop] Session intelligence (Haiku) ──► projects/<slug>/ history, progress-tree stopped-at
   │
-  ├─► [Stop] Work learning capture ──► session-learning/YYYY-MM/...
+  ├─► [Stop] Correction check ──► adaptation/ rule drafts, approved with `pal cli rule`
   │
-  ├─► [Stop] Failure capture (low ratings) ──► failures/YYYY-MM/...
-  │
-  ├─► [Periodic] Reflect trigger ──► relationship/opinions.json
-  │                                  relationship/reflections/...
-  │
-  ├─► [Periodic] Synthesis ──► synthesis/YYYY-MM/...
-  │
-  └─► [Periodic] Wisdom graduation ──► wisdom/frames/...
-```
-
-### Relationship Note Format
-
-Three note types, captured via Haiku inference at session end:
-
-```
-W — World facts (user's situation, projects, tools)
-O(c=0.85) — Opinions/preferences with confidence
-B(c=0.75) — Beliefs/behavioral patterns with confidence
+  └─► [Stop] Synthesis ──► state/synthesis.json (read by the control room)
 ```
 
 ### Opinion Lifecycle
 
 ```
-Relationship notes (O/B types)
-  │
-  ├─► Reflect tool groups similar notes
-  │   ├─► 2+ occurrences → new opinion at 50% confidence
-  │   └─► Matches existing → +2% supporting evidence
-  │
-  ├─► AI confirmation → +10% (via tool:opinion)
-  ├─► AI contradiction → -20% (via tool:opinion)
-  │
-  └─► At ≥85% confidence → auto-injected into session context
+A rule the user states            A correction PAL detects
+  │                                 │
+  └─► pal cli rule add-opinion      └─► rule draft ──► pal cli rule opinion <id>
+                │                                 │
+                └────────► adaptation/ opinion ◄──┘
+                                  │
+                                  └─► relationship/opinions-context.md, loaded natively every session
 ```
 
 ---
@@ -392,13 +350,13 @@ Relationship notes (O/B types)
 - Loaded once per session, always available, never re-fetched
 
 **Tier 2 — Semi-static** (pre-compiled at previous session stop, loaded natively):
-- Self-model, wisdom, opinions, synthesis, failures, steering rules
+- Opinions, steering rules
 - Written to disk by `writeContextDigests()` at Stop time
 - Loaded natively per-agent: `@imports` in CLAUDE.md (Claude Code), `instructions[]` in opencode config, `.mdc` rules in `~/.cursor/rules/` (Cursor), `.instructions.md` in `~/.copilot/instructions/` (Copilot), always-on rules in `~/.gemini/config/plugins/pal/rules/` (Antigravity)
 - Content is global/user-level — safe to pre-compile (not project-scoped)
 
 **Tier 3 — Dynamic** (injected fresh each session by LoadContext hook):
-- Handoff notes, session intelligence, relationship notes, project history
+- Progress tree, active projects
 - Changes per-session or is project-scoped — can't be pre-compiled
 - Injected as `<system-reminder>` block via stdout
 - Each section independently toggleable in `pal-settings.json → dynamicContext`
@@ -416,13 +374,11 @@ LoadContext.ts
   │
   └─► Build system-reminder (dynamic sections only):
       1. loadAtStartup files (user-configured)
-      2. Handoff note (in-progress work from last session)
-      3. Due nudges (algorithm review, relationship reflect, learning analysis)
-      4. Session intelligence (rating trend, algorithm performance)
-      5. Recent interaction notes (last 2 days)
-      6. Active projects
-      7. Project session history (this project)
-      8. Other recent learnings (other projects, titles only)
+      2. Progress tree
+      3. Due nudges (algorithm review, learning analysis; Cursor only)
+      4. Opinions (Codex only; other agents load them natively)
+      5. Active projects
+      6. Steering rules (Codex only)
 ```
 
 ### Injection Budget
@@ -446,7 +402,7 @@ Everything else loads via the routing table in CLAUDE.md. The AI reads files onl
 
 ### Subscription-First Model
 
-PAL's background inference (session naming, summaries, failure capture, wisdom graduation, etc.) routes through whichever subscription CLI is currently hosting the session. No API key is required by default — the user already pays for the subscription that comes with their agent.
+PAL's background inference (session naming, summaries, correction checks, etc.) routes through whichever subscription CLI is currently hosting the session. No API key is required by default — the user already pays for the subscription that comes with their agent.
 
 ### Routing Table
 
@@ -475,21 +431,13 @@ The `CLAUDECODE` env var is unset *scoped to the child process only* (not delete
 
 ### Detached Inference Pattern
 
-Long inference calls (session intelligence, failure principle extraction, auto-graduate) run via `spawnDetachedInference()`. The parent hook writes the transcript to a tmp file, spawns a detached child with `--run <args>`, and returns immediately. The child reads the tmp file, runs inference, writes results to disk, and unlinks the tmp file.
+Long inference calls (session intelligence, entity extraction) run via `spawnDetachedInference()`. The parent hook writes the transcript to a tmp file, spawns a detached child with `--run <args>`, and returns immediately. The child reads the tmp file, runs inference, writes results to disk, and unlinks the tmp file.
 
 ```
 StopOrchestrator
   │
-  ├─► detachSessionIntelligence(transcript, sessionId)
-  │     └─► [child] inference → session-learning/YYYY-MM/...
-  │
-  ├─► detachFailurePrinciple(transcript)
-  │     ├─► Atomic claim: rename pending-failure.json → tmp/pending.json
-  │     │   (ENOENT means another concurrent Stop hook claimed it — benign)
-  │     └─► [child] inference → failures/YYYY-MM/...
-  │
-  └─► detachAutoGraduate()
-        └─► [child] 24h TTL + content dedup → wisdom/frames/...
+  └─► detachSessionIntelligence(transcript, sessionId)
+        └─► [child] inference → projects/<slug>/ history, progress-tree stopped-at
 ```
 
 The orchestrator returns in milliseconds; subscription-CLI cold-start latency no longer blocks the user's next prompt.
@@ -592,6 +540,6 @@ All paths resolve through `src/hooks/lib/paths.ts`:
 | Hook files | PascalCase | `LoadContext.ts`, `StopOrchestrator.ts` |
 | Handler files | kebab-case | `session-name.ts`, `work-learning.ts` |
 | Library files | kebab-case | `text-similarity.ts`, `signal-trends.ts` |
-| Tool files | kebab-case | `relationship-reflect.ts`, `token-cost.ts` |
+| Tool files | kebab-case | `algorithm-reflect.ts`, `token-cost.ts` |
 | Memory files | date-prefixed | `2026-03-24.md`, `2026-03-24_weekly.md` |
 | Template files | UPPER_SNAKE | `ALGORITHM.md`, `MEMORY_SYSTEM.md` |

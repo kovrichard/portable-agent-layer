@@ -25,10 +25,8 @@ const CURSOR_DIR = platform.cursorDir();
 const HOOKS_FILE = resolve(CURSOR_DIR, "hooks.json");
 const CLI_CONFIG = resolve(CURSOR_DIR, "cli-config.json");
 
-// --- Ensure ~/.cursor/ exists ---
 mkdirSync(CURSOR_DIR, { recursive: true });
 
-// --- Merge hooks ---
 const template = loadCursorHooksTemplate(assets.cursorHooksTemplate(), PKG_ROOT);
 const existing = readJson<Record<string, unknown>>(HOOKS_FILE, {});
 const merged = mergeCursorHooks(existing, template);
@@ -36,16 +34,13 @@ const merged = mergeCursorHooks(existing, template);
 replaceJsonConfig(HOOKS_FILE, merged);
 log.success(`Merged PAL hooks into ${HOOKS_FILE}`);
 
-// --- Symlink skills to ~/.cursor/skills/ ---
 const cursorSkillsDir = resolve(CURSOR_DIR, "skills");
 copySkills(cursorSkillsDir);
 
-// --- Copy agents to ~/.cursor/agents/ ---
 const cursorAgentsDir = resolve(CURSOR_DIR, "agents");
 const agentCount = copyAgentsForCursor(cursorAgentsDir);
 log.success(`${countSkills()} skills · ${agentCount} agents → ~/.cursor/`);
 
-// --- Statusline script + cli-config.json statusLine ---
 copyStatusline("cursor");
 if (!existsSync(CLI_CONFIG)) {
   writeFileSync(CLI_CONFIG, "{}\n", "utf-8");

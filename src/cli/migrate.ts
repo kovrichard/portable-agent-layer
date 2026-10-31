@@ -10,8 +10,10 @@
  * its leftovers. Install runs pending migrations first; the doctor lists them.
  */
 
+import { spawnSync } from "node:child_process";
 import {
   existsSync,
+  mkdirSync,
   readdirSync,
   readFileSync,
   renameSync,
@@ -19,10 +21,14 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
+import { homedir } from "node:os";
 import { basename, dirname, resolve } from "node:path";
+import { resolveAnchor } from "../hooks/lib/anchor";
 import { readBindings } from "../hooks/lib/bindings";
+import { mergeJsonlLines } from "../hooks/lib/import-merge";
 import { foldHistoryInto } from "../hooks/lib/parked-history";
 import { palHome, paths } from "../hooks/lib/paths";
+import { appendEvent, scopeOf } from "../hooks/lib/progress-tree";
 import {
   legacyJsonToProgress,
   type ProjectProgress,
@@ -656,6 +662,18 @@ const RETIRED_SETTINGS_KEYS: Record<string, string[]> = {
     "synthesis",
     "signalTrends",
     "activeWork",
+    "failurePatterns",
+    "learningInjection",
+    "wisdom",
+    "relationship",
+    "selfModel",
+    "handoff",
+    "workTree",
+    "workTreeGate",
+    "workTreeDecisionGate",
+    "progressTree",
+    "progressTreeGate",
+    "progressTreeDecisionGate",
   ],
 };
 
@@ -670,6 +688,10 @@ function readSettingsObject(): Record<string, Record<string, unknown>> | null {
   } catch {
     return null;
   }
+}
+
+function writeSettingsObject(settings: Record<string, Record<string, unknown>>): void {
+  writeFileSync(settingsFile(), `${JSON.stringify(settings, null, 2)}\n`, "utf-8");
 }
 
 export function retiredKeysIn(
@@ -705,7 +727,7 @@ const v7RetiredSettingsKeys: Migration = {
         const [section, key] = path.split(".");
         delete settings[section][key];
       }
-      writeFileSync(settingsFile(), `${JSON.stringify(settings, null, 2)}\n`, "utf-8");
+      writeSettingsObject(settings);
     }
     const verb = dryRun ? "would remove" : "removed";
     return {
@@ -739,6 +761,323 @@ function leftoverMigration(leftover: Leftover): Migration {
   };
 }
 
+// ── v8-factory-home: the factory's folder, out of the PAL home ────
+
+/**
+ * PAL used to point the factory at `<PAL home>/dark-factory`, which put its git
+ * worktrees under the PAL home. The factory keeps its folder at `~/.dark-factory`
+ * on every machine, so this carries an install's tasks, worktrees and events
+ * there. Nothing is overwritten: an item already in the new folder is left where
+ * it is and reported as skipped, and event lines are appended.
+ */
+interface FactoryStep {
+  label: string;
+  blocked: string | null;
+  done: string;
+  pending: string;
+  apply(): void;
+}
+
+const oldFactoryFolder = () => resolve(palHome(), "dark-factory");
+function homeTheFactoryReads(): string | null {
+  const pinned = process.env.DARK_FACTORY_HOME;
+  return pinned && resolve(pinned) !== oldFactoryFolder() ? resolve(pinned) : null;
+}
+
+const newFactoryFolder = () =>
+  homeTheFactoryReads() ?? resolve(homedir(), ".dark-factory");
+const oldFactoryEvents = () => resolve(oldFactoryFolder(), "events.jsonl");
+
+function subfoldersOf(dir: string): string[] {
+  return existsSync(dir) ? readdirSync(dir) : [];
+}
+
+function git(args: string[], cwd: string): string {
+  const result = spawnSync("git", args, { cwd, encoding: "utf-8" });
+  if (result.status !== 0) {
+    throw new Error((result.stderr || "git failed").trim().split("\n")[0]);
+  }
+  return result.stdout.trim();
+}
+
+/** Moves a worktree and rewrites its registration in the repo that owns it. */
+function moveWorktree(from: string, to: string): void {
+  const commonDir = git(
+    ["rev-parse", "--path-format=absolute", "--git-common-dir"],
+    from
+  );
+  git(["--git-dir", commonDir, "worktree", "move", from, to], dirname(commonDir));
+}
+
+function repointWorktreeInTask(taskDir: string): void {
+  const file = resolve(taskDir, "task.json");
+  if (!existsSync(file)) return;
+  let task: { worktree?: unknown };
+  try {
+    task = JSON.parse(readFileSync(file, "utf-8"));
+  } catch {
+    return;
+  }
+  const oldPrefix = resolve(oldFactoryFolder(), "worktrees");
+  if (typeof task.worktree !== "string" || !task.worktree.startsWith(oldPrefix)) return;
+  const relative = task.worktree.slice(oldPrefix.length);
+  task.worktree = resolve(newFactoryFolder(), "worktrees") + relative;
+  writeFileSync(file, `${JSON.stringify(task, null, 2)}\n`, "utf-8");
+}
+
+function factoryFolderStep(kind: "task" | "worktree", id: string): FactoryStep {
+  const from = resolve(oldFactoryFolder(), `${kind}s`, id);
+  const to = resolve(newFactoryFolder(), `${kind}s`, id);
+  return {
+    label: `${kind}/${id}`,
+    blocked: existsSync(to) ? `already in ${newFactoryFolder()}` : null,
+    done: "moved",
+    pending: "would move",
+    apply() {
+      mkdirSync(dirname(to), { recursive: true });
+      if (kind === "worktree") return moveWorktree(from, to);
+      renameSync(from, to);
+      repointWorktreeInTask(to);
+    },
+  };
+}
+
+function eventsStep(): FactoryStep {
+  const target = resolve(newFactoryFolder(), "events.jsonl");
+  return {
+    label: "events.jsonl",
+    blocked: null,
+    done: "appended",
+    pending: "would append",
+    apply() {
+      foldHistoryInto(target, oldFactoryEvents());
+      unlinkSync(oldFactoryEvents());
+    },
+  };
+}
+
+function factoryFolderSteps(): FactoryStep[] {
+  const old = oldFactoryFolder();
+  const steps = [
+    ...subfoldersOf(resolve(old, "worktrees")).map((id) =>
+      factoryFolderStep("worktree", id)
+    ),
+    ...subfoldersOf(resolve(old, "tasks")).map((id) => factoryFolderStep("task", id)),
+  ];
+  return existsSync(oldFactoryEvents()) ? [...steps, eventsStep()] : steps;
+}
+
+function discardEmptyFactoryFolders(): void {
+  const old = oldFactoryFolder();
+  for (const sub of ["worktrees", "tasks"]) discardEmptyFolder(resolve(old, sub));
+  discardEmptyFolder(old);
+}
+
+const v8FactoryHome: Migration = {
+  id: "v8-factory-home",
+  description: "Move the dark-factory folder from the PAL home to ~/.dark-factory",
+  movesSources: true,
+
+  check() {
+    const steps = factoryFolderSteps().filter((step) => !step.blocked);
+    return {
+      pending: steps.length > 0,
+      detail:
+        steps.length > 0
+          ? `${steps.length} item(s) under ${oldFactoryFolder()}`
+          : undefined,
+    };
+  },
+
+  run(dryRun = false): MigrationResult {
+    const results: string[] = [];
+    let migrated = 0;
+    let skipped = 0;
+
+    for (const step of factoryFolderSteps()) {
+      if (step.blocked) {
+        skipped++;
+        results.push(`${step.label}: skipped (${step.blocked})`);
+        continue;
+      }
+      if (dryRun) {
+        migrated++;
+        results.push(`${step.label}: ${step.pending}`);
+        continue;
+      }
+      try {
+        step.apply();
+        migrated++;
+        results.push(`${step.label}: ${step.done}`);
+      } catch (e) {
+        skipped++;
+        results.push(`${step.label}: skipped (${(e as Error).message})`);
+      }
+    }
+
+    if (!dryRun) discardEmptyFactoryFolders();
+    return { migrated, skipped, results };
+  },
+};
+
+// ── v9-progress-tree-names: the progress tree's stored names ────
+
+const EVENTS_FILE = "events.jsonl";
+const OLD_PROGRESS_TREE_LABEL = "memory/work-tree/";
+const oldProgressTreeFolder = () => resolve(paths.memory(), "work-tree");
+const newProgressTreeFolder = () => resolve(paths.memory(), "progress-tree");
+
+interface FolderStep {
+  results: string[];
+  skipped: number;
+}
+
+function mergeOldProgressTreeEvents(): number {
+  const oldFile = resolve(oldProgressTreeFolder(), EVENTS_FILE);
+  if (!existsSync(oldFile)) return 0;
+  const newFile = resolve(newProgressTreeFolder(), EVENTS_FILE);
+  const newRaw = existsSync(newFile) ? readFileSync(newFile, "utf-8") : "";
+  const { text, added: keptFromNew } = mergeJsonlLines(
+    readFileSync(oldFile, "utf-8"),
+    newRaw
+  );
+  writeFileSync(newFile, text, "utf-8");
+  unlinkSync(oldFile);
+  return text.split("\n").filter(Boolean).length - keptFromNew;
+}
+
+function appendOldProgressTree(): FolderStep {
+  const appended = mergeOldProgressTreeEvents();
+  discardEmptyFolder(oldProgressTreeFolder());
+  const results = [
+    `${OLD_PROGRESS_TREE_LABEL}: ${appended} event(s) appended before memory/progress-tree/events.jsonl`,
+  ];
+  if (!existsSync(oldProgressTreeFolder())) return { results, skipped: 0 };
+  return {
+    results: [
+      ...results,
+      `${OLD_PROGRESS_TREE_LABEL}: skipped (holds files other than events.jsonl)`,
+    ],
+    skipped: 1,
+  };
+}
+
+function progressTreeFolderStep(dryRun: boolean): FolderStep {
+  if (!existsSync(oldProgressTreeFolder())) return { results: [], skipped: 0 };
+  const bothExist = existsSync(newProgressTreeFolder());
+  if (dryRun) {
+    const verb = bothExist
+      ? "would append its events before memory/progress-tree/events.jsonl"
+      : "would move to memory/progress-tree/";
+    return { results: [`${OLD_PROGRESS_TREE_LABEL}: ${verb}`], skipped: 0 };
+  }
+  try {
+    if (!bothExist) {
+      renameSync(oldProgressTreeFolder(), newProgressTreeFolder());
+      return {
+        results: [`${OLD_PROGRESS_TREE_LABEL}: moved to memory/progress-tree/`],
+        skipped: 0,
+      };
+    }
+    return appendOldProgressTree();
+  } catch (e) {
+    return {
+      results: [`${OLD_PROGRESS_TREE_LABEL}: skipped (${(e as Error).message})`],
+      skipped: 1,
+    };
+  }
+}
+
+const v9ProgressTreeNames: Migration = {
+  id: "v9-progress-tree-names",
+  description: "Move the progress tree's data folder from memory/work-tree",
+  movesSources: true,
+
+  check() {
+    const pending = existsSync(oldProgressTreeFolder());
+    return { pending, detail: pending ? OLD_PROGRESS_TREE_LABEL : undefined };
+  },
+
+  run(dryRun = false): MigrationResult {
+    const { results, skipped } = progressTreeFolderStep(dryRun);
+    return { migrated: results.length - skipped, skipped, results };
+  },
+};
+
+// ── v10-threads-to-progress-tree: open threads → parked nodes ────
+
+function nodeOf(line: string): string[] {
+  try {
+    const { node } = JSON.parse(line);
+    return typeof node === "string" ? [node] : [];
+  } catch {
+    return [];
+  }
+}
+
+function progressTreeNodeIds(): Set<string> {
+  const file = resolve(newProgressTreeFolder(), EVENTS_FILE);
+  if (!existsSync(file)) return new Set();
+  return new Set(readFileSync(file, "utf-8").split("\n").flatMap(nodeOf));
+}
+
+function openThreadsNotInTree(): Thread[] {
+  const nodes = progressTreeNodeIds();
+  return readThreads().filter((t) => t.status === "open" && !nodes.has(t.id));
+}
+
+function threadScope(cwd: string): string {
+  const anchor = resolveAnchor(cwd);
+  return anchor.state === "unresolvable" ? anchor.slug : scopeOf(anchor.path);
+}
+
+function openedAt(thread: Thread): Date {
+  const created = new Date(thread.created);
+  return Number.isNaN(created.getTime()) ? new Date() : created;
+}
+
+const laneNoSessionHeld = (thread: Thread) => `thread-${thread.id}`;
+
+function parkThread(thread: Thread): void {
+  const scope = threadScope(thread.cwd);
+  const at = openedAt(thread);
+  const lane = laneNoSessionHeld(thread);
+  const open = { title: thread.title, parent: null };
+  const park = { stoppedAt: thread.context || undefined };
+  appendEvent(scope, thread.id, "open", open, undefined, at, lane);
+  appendEvent(scope, thread.id, "park", park, undefined, at, lane);
+}
+
+const v10ThreadsToProgressTree: Migration = {
+  id: "v10-threads-to-progress-tree",
+  description: "Park every open thread as a node in the progress tree",
+
+  check() {
+    const pending = openThreadsNotInTree();
+    return {
+      pending: pending.length > 0,
+      detail: pending.length > 0 ? `${pending.length} open thread(s)` : undefined,
+    };
+  },
+
+  run(dryRun = false): MigrationResult {
+    const results: string[] = [];
+    let skipped = 0;
+    for (const thread of openThreadsNotInTree()) {
+      try {
+        if (!dryRun) parkThread(thread);
+        results.push(
+          `${thread.id}: ${dryRun ? "would park" : "parked"} "${thread.title}" in ${threadScope(thread.cwd)} (thread source kept)`
+        );
+      } catch (e) {
+        skipped++;
+        results.push(`${thread.id}: skipped (${(e as Error).message})`);
+      }
+    }
+    return { migrated: results.length - skipped, skipped, results };
+  },
+};
+
 const MIGRATIONS: Migration[] = [
   v1Projects,
   v2ThreadsToIsc,
@@ -747,6 +1086,9 @@ const MIGRATIONS: Migration[] = [
   v5AttributionKeys,
   v6HistorySlugs,
   v7RetiredSettingsKeys,
+  v8FactoryHome,
+  v9ProgressTreeNames,
+  v10ThreadsToProgressTree,
   ...LEFTOVERS.map(leftoverMigration),
 ];
 

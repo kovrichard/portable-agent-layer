@@ -29,7 +29,7 @@ export function isSubagentSession(env: NodeJS.ProcessEnv): boolean {
   return env.CLAUDE_PROJECT_DIR?.includes("/.claude/Agents/") ?? false;
 }
 
-export type SessionStartContext = "full" | "without-handoff" | "none";
+export type SessionStartContext = "full" | "none";
 
 /**
  * Claude Code and Codex replay the context injected at startup when a session
@@ -38,16 +38,11 @@ export type SessionStartContext = "full" | "without-handoff" | "none";
  */
 const RESUME_KEEPS_CONTEXT: ReadonlySet<string> = new Set<AgentName>(["claude", "codex"]);
 
-/**
- * After a compaction, CompactRecover restores the last exchange, so the
- * handoff is redundant. Agents that name no source get everything.
- */
 export function contextForSource(
   agent: string,
   source: string | undefined
 ): SessionStartContext {
   if (source === "resume" && RESUME_KEEPS_CONTEXT.has(agent)) return "none";
-  if (source === "compact") return "without-handoff";
   return "full";
 }
 

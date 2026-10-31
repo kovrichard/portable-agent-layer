@@ -40,7 +40,7 @@ describe("v7-retired-settings-keys", () => {
         synthesis: true,
         signalTrends: true,
         activeWork: true,
-        wisdom: false,
+        opinions: false,
         claimChek: true,
       },
       steering: { _docs: "old", disable: ["testing"] },
@@ -51,10 +51,45 @@ describe("v7-retired-settings-keys", () => {
     expect(readSettings()).toEqual({
       identity: { ai: { name: "A" } },
       loadAtStartup: { files: ["x.md"] },
-      dynamicContext: { wisdom: false, claimChek: true },
+      dynamicContext: { opinions: false, claimChek: true },
       steering: { disable: ["testing"] },
     });
     expect(pendingIds()).not.toContain("v7-retired-settings-keys");
+  });
+
+  test("removes the switches for the failures digest and prior lessons", () => {
+    writeSettings({
+      dynamicContext: { failurePatterns: true, learningInjection: false, opinions: true },
+    });
+
+    runMigrate([]);
+
+    expect(readSettings()).toEqual({ dynamicContext: { opinions: true } });
+  });
+
+  test("removes the switches for wisdom, relationship notes and the self-model", () => {
+    writeSettings({
+      dynamicContext: {
+        wisdom: true,
+        relationship: false,
+        selfModel: true,
+        opinions: true,
+      },
+    });
+
+    runMigrate([]);
+
+    expect(readSettings()).toEqual({ dynamicContext: { opinions: true } });
+  });
+
+  test("removes the switches for the retired handoff and the always-on progress tree", () => {
+    writeSettings({
+      dynamicContext: { handoff: true, progressTree: false, opinions: true },
+    });
+
+    runMigrate([]);
+
+    expect(readSettings()).toEqual({ dynamicContext: { opinions: true } });
   });
 
   test("a dry run leaves the file alone", () => {

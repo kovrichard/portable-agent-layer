@@ -19,7 +19,6 @@ if (!OC_GLOBAL_DIR || !PAL_CLAUDE_DIR) {
   process.exit(1);
 }
 
-// --- Remove plugin ---
 const pluginPath = resolve(OC_GLOBAL_DIR, "plugins", "pal-plugin.ts");
 try {
   unlinkSync(pluginPath);
@@ -28,17 +27,14 @@ try {
   log.info("No PAL plugin found");
 }
 
-// --- Remove agents ---
 const removedAgents = removeAgentsFromOpencode(resolve(OC_GLOBAL_DIR, "agents"));
 if (removedAgents.length > 0)
   log.success(
     `Removed ${removedAgents.length} opencode agent(s): ${removedAgents.join(", ")}`
   );
 
-// --- Remove PAL system docs ---
 removePalDocs();
 
-// --- Remove AGENTS.md and CLAUDE.md ---
 const agentsMd = resolve(OC_GLOBAL_DIR, "AGENTS.md");
 const claudeMd = resolve(PAL_CLAUDE_DIR, "CLAUDE.md");
 try {
@@ -54,7 +50,6 @@ try {
   /* gone */
 }
 
-// --- Remove PAL entries from config.json instructions[] and permission ---
 const configPath = resolve(OC_GLOBAL_DIR, "config.json");
 if (existsSync(configPath) && statSync(configPath).size > 0) {
   try {

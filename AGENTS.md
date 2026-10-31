@@ -24,11 +24,15 @@ This repo uses [Bun](https://bun.sh) ≥ 1.4.0 — never `npm`, `pnpm`, or `node
 ```bash
 bun install                                     # frozen on CI
 bun test                                        # full suite
-bun test test/cli.test.ts                       # one file
+bun run test --fast                             # every test that starts no subprocess, in about 2 s
+bun run test --spawn                            # only the *.spawn.test.ts files
+bun test test/cli.spawn.test.ts                 # one file
 bun test --test-name-pattern "scaffolds telos"  # one test by name
 ```
 
-Run the CLI against a sandboxed home with `PAL_HOME=./.test/cli/home bun src/cli/index.ts cli init`. `.test/cli/home/` is wiped at the start of `bun test test/cli.test.ts`. Every test home lives under `.test/`, one folder per test file, built by `test/lib/test-home.ts`.
+A test that starts a subprocess (`Bun.spawn`, `node:child_process`) lives in a `*.spawn.test.ts` file; anywhere else the `test/setup.ts` preload fails it, which keeps `--fast` fast.
+
+Run the CLI against a sandboxed home with `PAL_HOME=./.test/cli.spawn/home bun src/cli/index.ts cli init`. `.test/cli.spawn/home/` is wiped at the start of `bun test test/cli.spawn.test.ts`. Every test home lives under `.test/`, one folder per test file, built by `test/lib/test-home.ts`.
 
 The control room's page is the one part of `src/` that is built rather than served from source: Bun's CSS bundler passes Tailwind's `@theme` / `@utility` directives through as unknown at-rules, so `vite.config.ts` builds `src/tools/control-room/ui/` into `ui/dist/`, which is gitignored and emitted at `prepack`.
 
@@ -56,11 +60,11 @@ Each gate, its script, and its wrapper in `.agents/hooks/`:
 
 ## The `.agents/hooks/` system
 
-Every wrapper above is wired into the Stop / session-end event of each agent configured here. Each wrapper is a thin call into `run-hook.ts`, which does the subprocess plumbing and skips the whole chain when `git status` is empty — so a conversational turn that changed nothing costs a single git call. A failing gate makes `run-hook.ts` exit 2, which the agent treats as a blocked session-end: it must fix the underlying issue before it can stop. Antigravity CLI is the exception: it gets a Stop `continue` reply with exit 0, and it runs the gates from `.agents/`, so its commands are relative to that folder.
+Every wrapper above is wired into the Stop / session-end event of each agent configured here. Each wrapper is a thin call into `run-hook.ts`, which does the subprocess plumbing and skips the whole chain when `git status` is empty — so a conversational turn that changed nothing costs a single git call. A failing gate makes `run-hook.ts` exit 2, which the agent treats as a blocked session-end: it must fix the underlying issue before it can stop. Antigravity CLI is the exception: it gets a Stop `continue` reply with exit 0, and it runs the gates from `.agents/`, so its commands are relative to that folder. Claude Code's `SubagentStop` passes `--subagent`, which gates a subagent only in its own git worktree; one sharing the main checkout is covered by the parent's `Stop`. The same gates also run as a `PreToolUse` hook on `SubagentHandback`, because a subagent that has already handed its report back cannot be resumed, so Claude Code drops its `SubagentStop` block. A `PreToolUse` hook (`.agents/scripts/agent-isolation.ts`) refuses to launch a subagent that can edit files unless it has `isolation: "worktree"`; only read-only types share the checkout.
 
 | Agent           | Config file                 | Event          |
 | --------------- | --------------------------- | -------------- |
-| Claude Code     | `.claude/settings.json`     | `Stop`         |
+| Claude Code     | `.claude/settings.json`     | `Stop`, `SubagentStop` |
 | Cursor          | `.cursor/hooks.json`        | `stop`         |
 | Codex           | `.codex/hooks.json`         | `Stop`         |
 | Copilot         | `.github/hooks/gates.json`  | `agentStop`    |
@@ -73,7 +77,7 @@ Git hooks in `.husky/` enforce the same gates independently of any agent: `pre-c
 
 ## Branches and releases
 
-Open pull requests against `canary`, not `main`. semantic-release publishes every `feat` / `fix` merged into `canary` as a prerelease (`0.112.0-canary.N`) on the npm `canary` tag, without a changelog entry or release commit. A stable release is one merge of `canary` into `main`; afterwards merge `main` back into `canary` so it continues from the new version. `pal cli update` installs the stable release; `pal cli update --canary` installs the latest canary.
+Open pull requests against `canary`, not `main`. semantic-release publishes every `feat` / `fix` merged into `canary` as a prerelease (`0.112.0-canary.N`) on the npm `canary` tag, without a changelog entry or release commit. A stable release is one merge of `canary` into `main`; afterwards merge `main` back into `canary` so it continues from the new version. `pal cli update --canary` switches an install to the canary channel, which plain `pal cli update` and auto-update then follow until `pal cli update --stable`.
 
 ## Coding rules
 
@@ -151,8 +155,8 @@ PAL uses a 3-tier system to keep the hook's dynamic output small while ensuring 
 | Tier | What | How | Written |
 | ---- | ---- | --- | ------- |
 | **1 — Operational** | CLAUDE.md / AGENTS.md — identity, modes, routing | Loaded natively by each agent at startup | On install / AGENTS.md change |
-| **2 — Semi-static** | Self-model, wisdom, opinions, synthesis, failures, steering | `@imports` (Claude Code), `instructions[]` (opencode), `.mdc` rules (Cursor), `.instructions.md` (Copilot), plugin `rules/` (Antigravity) | Written at session stop by `writeContextDigests()` |
-| **3 — Dynamic** | Handoff, threads, relationship notes, active projects | Hook stdout via `LoadContext` → `buildSystemReminder()` | Injected fresh each session |
+| **2 — Semi-static** | Opinions, steering | `@imports` (Claude Code), `instructions[]` (opencode), `.mdc` rules (Cursor), `.instructions.md` (Copilot), plugin `rules/` (Antigravity) | Written at session stop by `writeContextDigests()` |
+| **3 — Dynamic** | Progress tree, relationship notes, active projects | Hook stdout via `LoadContext` → `buildSystemReminder()` | Injected fresh each session |
 
 **Single registry.** All semi-static sources are defined in `src/hooks/lib/semi-static.ts` via `getSemiStaticSources()`. Adding one entry there propagates automatically to: CLAUDE.md `@imports`, opencode `instructions[]`, Cursor `.mdc` filenames, Copilot `.instructions.md` filenames, Antigravity plugin rule filenames, and the session-stop digest writer. No other files need touching.
 

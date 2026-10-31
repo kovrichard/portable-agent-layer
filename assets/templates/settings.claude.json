@@ -38,12 +38,8 @@
       "Bash(pal cli algorithm-reflect *)",
       "Bash(pal cli algorithm-synthesize *)",
       "Bash(pal cli analyze *)",
-      "Bash(pal cli handoff-note *)",
       "Bash(pal cli project *)",
-      "Bash(pal cli relationship-note *)",
-      "Bash(pal cli synthesize *)",
-      "Bash(pal cli thread *)",
-      "Bash(pal cli wisdom-frame *)"
+      "Bash(pal cli synthesize *)"
     ]
   },
   "skillOverrides": {
@@ -171,6 +167,16 @@
             "async": true
           }
         ]
+      },
+      {
+        "matcher": "Bash|Artifact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/PostToolOrchestrator.ts --agent=claude --only=progress-tree",
+            "async": true
+          }
+        ]
       }
     ],
     "PostToolUseFailure": [
@@ -260,5 +266,16 @@
       }
     ]
   },
-  "autoMemoryEnabled": false
+  "autoMemoryEnabled": false,
+  "extraKnownMarketplaces": {
+    "pal": {
+      "source": {
+        "source": "directory",
+        "path": "{{PKG_ROOT}}"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "dark-factory@pal": false
+  }
 }

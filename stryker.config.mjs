@@ -5,21 +5,21 @@ import { readdirSync } from "node:fs";
 // score as uncovered no matter how well they assert — leaving them out keeps the ring
 // honest instead of padding it with phantom survivors.
 const SUBPROCESS_SUITES = new Set([
-  "test/cli.test.ts",
-  "test/copilot-context-injection.test.ts",
-  "test/export.test.ts",
-  "test/flagship-author.test.ts",
-  "test/import-merge.test.ts",
-  "test/install-smoke.test.ts",
-  "test/ledger-hooks.test.ts",
-  "test/package-publish.test.ts",
-  "test/project-cli.test.ts",
-  "test/rtk-wrap.test.ts",
-  "test/security-tool-names.test.ts",
-  "test/skill-doctor-cli.test.ts",
-  "test/skill-link.test.ts",
-  "test/spawn-guard.test.ts",
-  "test/subagent-link.test.ts",
+  "test/cli.spawn.test.ts",
+  "test/copilot-context-injection.spawn.test.ts",
+  "test/export.spawn.test.ts",
+  "test/flagship-author.spawn.test.ts",
+  "test/import-merge.spawn.test.ts",
+  "test/install-smoke.spawn.test.ts",
+  "test/ledger-hooks.spawn.test.ts",
+  "test/package-publish.spawn.test.ts",
+  "test/project-cli.spawn.test.ts",
+  "test/rtk-wrap.spawn.test.ts",
+  "test/security-tool-names.spawn.test.ts",
+  "test/skill-doctor-cli.spawn.test.ts",
+  "test/skill-link.spawn.test.ts",
+  "test/spawn-guard.spawn.test.ts",
+  "test/subagent-link.spawn.test.ts",
 ]);
 
 function isInProcessSuite(file) {
@@ -63,20 +63,15 @@ export default {
     "!src/cli/setup-auto-update.ts",
     "!src/cli/setup-identity.ts",
     "!src/cli/usage.ts",
-    // Read as text by update-command.test.ts.
+    // Read as text by update-command.spawn.test.ts.
     "!src/hooks/handlers/update-check.ts",
     // Tools that are only ever spawned and now hold nothing but argv and one
     // library call — the same case as src/cli and src/hooks/*.ts above. Their
     // decisions live in src/tools/lib/, which is measured.
     "!src/tools/session-summary.ts",
-    "!src/tools/agent/relationship-note.ts",
     "!src/tools/agent/analyze.ts",
     "!src/tools/token-cost.ts",
-    "!src/tools/relationship-reflect.ts",
-    "!src/tools/self-model.ts",
-    "!src/tools/agent/handoff-note.ts",
     "!src/tools/agent/algorithm-reflect.ts",
-    "!src/tools/agent/thread.ts",
     "!src/tools/skill-doctor.ts",
     // Not glue: ~25 spawned subcommands that read a project, transform it, write
     // it back and print. The transforms they call are in src/tools/lib/project-isc.ts,

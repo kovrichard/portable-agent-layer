@@ -3,8 +3,8 @@
  *
  * AGENTS.md (opencode, codex, copilot) is regenerated when setup.json or any
  * telos file is newer. CLAUDE.md (Claude Code) is a real file — not a symlink —
- * and prepends an @import for the self-model so that large static context loads
- * natively rather than through the hook's stdout.
+ * and prepends @imports for the semi-static sources so that large static context
+ * loads natively rather than through the hook's stdout.
  */
 
 import {
@@ -110,16 +110,7 @@ export function needsRebuild(): boolean {
   return latestMtime(...sources) > outputMtime;
 }
 
-import { identity, isOptedIn } from "./settings";
-
-const OPT_IN_LINE_RE = /^\{\{IF (\w+)\}\}(.*\n?)/gm;
-
-/** A `{{IF key}}` line stays, without its prefix, only when that setting is opted into. */
-function withOptedInLines(template: string): string {
-  return template.replace(OPT_IN_LINE_RE, (_, key: string, line: string) =>
-    isOptedIn(key) ? line : ""
-  );
-}
+import { identity } from "./settings";
 
 /** Render AGENTS.md from the template using current state */
 export function buildClaudeMd(): string {
@@ -129,7 +120,7 @@ export function buildClaudeMd(): string {
 
   const id = identity();
 
-  return withOptedInLines(template)
+  return template
     .replaceAll("{{IDENTITY_NAME}}", id.ai.name)
     .replaceAll("{{IDENTITY_DISPLAY}}", id.ai.displayName)
     .replaceAll("{{IDENTITY_CATCHPHRASE}}", id.ai.catchphrase)
@@ -148,7 +139,7 @@ function buildClaudeCodeImports(): string {
   return lines.length > 0 ? `${lines.join("\n")}\n\n` : "";
 }
 
-/** Build CLAUDE.md content for Claude Code — prepends @import for self-model. */
+/** Build CLAUDE.md content for Claude Code — prepends the semi-static @imports. */
 export function buildClaudeCodeMd(): string {
   return buildClaudeCodeImports() + buildClaudeMd();
 }

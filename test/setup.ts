@@ -7,6 +7,8 @@
  * deleting this env var in their own beforeEach.
  */
 import { beforeEach } from "bun:test";
+import { guardFile, sharedRepoConfig } from "./lib/repo-config-tripwire";
+import { refuseSubprocessesOutsideSpawnFiles } from "./lib/subprocess-guard";
 import { TEST_ROOT } from "./lib/test-home";
 
 process.env.PAL_INFERENCE_DISABLED = "1";
@@ -50,6 +52,15 @@ function stopGitAtTestHomes() {
 
 stopGitAtTestHomes();
 
+/** A commit, fetch or push otherwise starts `git maintenance run --auto`: a tenth of a dark-factory test's processes. */
+function skipGitHousekeeping() {
+  process.env.GIT_CONFIG_COUNT = "1";
+  process.env.GIT_CONFIG_KEY_0 = "maintenance.auto";
+  process.env.GIT_CONFIG_VALUE_0 = "false";
+}
+
+skipGitHousekeeping();
+
 function seeTheTerminalCiSees() {
   process.stdout.isTTY = false;
   delete process.env.FORCE_COLOR;
@@ -65,3 +76,17 @@ function startEveryTestOnTheOriginalPath() {
 }
 
 startEveryTestOnTheOriginalPath();
+
+function failTheTestAfterOneThatRewritesTheRealRepoConfig() {
+  const config = sharedRepoConfig(import.meta.dir);
+  if (!config) return;
+  const changed = guardFile(config);
+  beforeEach(() => {
+    const problem = changed();
+    if (problem) throw new Error(problem);
+  });
+}
+
+failTheTestAfterOneThatRewritesTheRealRepoConfig();
+
+refuseSubprocessesOutsideSpawnFiles();

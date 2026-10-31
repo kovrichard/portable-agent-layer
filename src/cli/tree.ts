@@ -25,12 +25,12 @@ import { ledgerCommand } from "./ledger-command";
 import { runMigrate } from "./migrate";
 import { patternsCommand } from "./patterns";
 import { telosCommand, timezoneCommand } from "./personal-context";
+import { progressCommand } from "./progress";
 import { ruleCommand } from "./rule";
 import { serverCommand } from "./server";
 import { skillCommand } from "./skill";
 import { subagentCommand } from "./subagent";
 import { usageCommand } from "./usage";
-import { workCommand } from "./work";
 import { wrappedCommand } from "./wrapped";
 
 type Handler = Leaf["run"];
@@ -115,7 +115,11 @@ function adminCommands(admin: AdminHandlers): Record<string, Leaf | Group> {
         canary: {
           type: "boolean",
           description:
-            "Install the latest canary prerelease instead of the stable release",
+            "Switch to the canary channel: this and every later update installs prereleases",
+        },
+        stable: {
+          type: "boolean",
+          description: "Switch back to the stable channel",
         },
       },
       run: admin.update,
@@ -182,7 +186,7 @@ export function cliTree(admin: AdminHandlers): Group {
       ledger: ledgerCommand,
       rule: ruleCommand,
       correction: correctionCommand,
-      work: workCommand,
+      progress: progressCommand,
       server: serverCommand,
       skill: skillCommand,
       subagent: subagentCommand,

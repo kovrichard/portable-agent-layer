@@ -126,9 +126,8 @@ function stem(word: string): string {
   return stemOnce(stemOnce(word));
 }
 
-/** Lowercase → strip punctuation → split → drop stop-words and shorts → stem → drop shorts.
- *  Returns the token stream WITH duplicates (needed for term-frequency counting). */
-export function tokenize(text: string): string[] {
+/** Lowercase → strip punctuation → split → drop stop-words and shorts → stem → drop shorts. */
+function tokenize(text: string): string[] {
   return text
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, " ")
