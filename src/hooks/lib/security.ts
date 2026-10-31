@@ -224,8 +224,30 @@ function pathsNamedIn(segment: string): string[] {
     .map((token) => token.replace(HOME_PREFIX, () => homedir()));
 }
 
+const QUOTED = /(["'])([\s\S]*?)\1/g;
+const CODE_RUNNER =
+  /(?:^|[\s/\\])(?:(?:ba|z|da|k|fi)?sh|python[\d.]*|node|bun|deno|perl|ruby|php|pwsh|powershell|cmd)(?:\.exe)?(?=\s|$)/i;
+const INLINE_CODE_FLAG =
+  /\s(?:-[a-z]*[ceEpr]|--eval|-command|-encodedcommand|\/c)(?=\s|$)/i;
+
+function runsInlineCode(segment: string): boolean {
+  const unquoted = segment.replace(QUOTED, " ");
+  if (/(?:^|\s)eval(?=\s|$)/.test(unquoted)) return true;
+  return CODE_RUNNER.test(unquoted) && INLINE_CODE_FLAG.test(unquoted);
+}
+
+function withoutQuotedProse(segment: string): string {
+  return segment.replace(QUOTED, (whole, _quote, body: string) =>
+    /\s/.test(body) ? " " : whole
+  );
+}
+
+function textThatCanNamePaths(segment: string): string {
+  return runsInlineCode(segment) ? segment : withoutQuotedProse(segment);
+}
+
 function managedReasonInSegment(segment: string): string | null {
-  for (const path of pathsNamedIn(segment)) {
+  for (const path of pathsNamedIn(textThatCanNamePaths(segment))) {
     const reason = managedPathReason(path);
     if (reason) return reason;
   }
@@ -238,8 +260,13 @@ const READ_ONLY_COMMANDS =
 
 const COMMAND_SEPARATORS = new Set(["|", ";", "&"]);
 
-function unquotedSegments(cmd: string): string[] {
-  const segments: string[] = [];
+interface CommandPiece {
+  text: string;
+  separator: string;
+}
+
+function splitOnUnquotedSeparators(cmd: string): CommandPiece[] {
+  const pieces: CommandPiece[] = [];
   let current = "";
   let quote: string | null = null;
   for (const char of cmd) {
@@ -248,18 +275,35 @@ function unquotedSegments(cmd: string): string[] {
     } else if (char === "'" || char === '"') {
       quote = char;
     } else if (COMMAND_SEPARATORS.has(char)) {
-      segments.push(current.trim());
+      pieces.push({ text: current, separator: char });
       current = "";
       continue;
     }
     current += char;
   }
-  segments.push(current.trim());
-  return segments;
+  pieces.push({ text: current, separator: "" });
+  return pieces;
+}
+
+const PAL_CLI_INVOCATION = /^\s*(?:[A-Za-z_]\w*=\S*\s+)*pal\s+cli(?=\s|$)/;
+
+function isPalCliInvocation(segment: string): boolean {
+  return PAL_CLI_INVOCATION.test(segment);
+}
+
+function withoutPalCliInvocations(cmd: string): string {
+  return splitOnUnquotedSeparators(cmd)
+    .map((piece) => (isPalCliInvocation(piece.text) ? " " : piece.text) + piece.separator)
+    .join("");
+}
+
+function unquotedSegments(cmd: string): string[] {
+  return splitOnUnquotedSeparators(cmd).map((piece) => piece.text.trim());
 }
 
 /** Check a bash command against blocked patterns. Returns reason string or null. */
-export function checkBashCommand(cmd: string): string | null {
+export function checkBashCommand(fullCommand: string): string | null {
+  const cmd = withoutPalCliInvocations(fullCommand);
   for (const [pattern, reason] of BLOCKED_COMMANDS) {
     if (pattern.test(cmd)) return reason;
   }
