@@ -31,6 +31,14 @@ if (isSideStop(received)) process.exit(0);
 const payload = withTranscriptReply(received);
 enterHookWorkspace(payload);
 
+// First: it reads only git and PRs, so every stop attempt attaches new commits, even one a block below refuses.
+try {
+  stopProgressTree(payload);
+} catch (err) {
+  logError("StopOrchestrator:progress-tree", err);
+}
+
+// Fix requests come before the keep-working block; the README first, as it blocks every attempt until fixed.
 try {
   // A block carrying no reason stops the turn without telling the model why, so it
   // is worth less than not blocking at all — require the reason to raise one.
@@ -43,6 +51,7 @@ try {
   logError("StopOrchestrator:readme-sync", err);
 }
 
+// Reply checks next: they share one send-back per turn, so a later attempt is never held by them.
 try {
   const sendBack = watchClaims(payload);
   if (sendBack) {
@@ -52,6 +61,7 @@ try {
 } catch (err) {
   logError("StopOrchestrator:claim-check", err);
 }
+// After the claim check: an unverified claim outweighs a style rule, and only one send-back fits a turn.
 try {
   const sendBack = watchReplyRules(payload);
   if (sendBack) {
@@ -61,11 +71,7 @@ try {
 } catch (err) {
   logError("StopOrchestrator:adaptation-rules", err);
 }
-try {
-  stopProgressTree(payload);
-} catch (err) {
-  logError("StopOrchestrator:progress-tree", err);
-}
+// After the reply checks: a reply that needs fixing goes back for the fix, not for the next task.
 try {
   const keepGoing = unattendedStopReason(process.cwd());
   if (keepGoing) {
@@ -75,4 +81,5 @@ try {
 } catch (err) {
   logError("StopOrchestrator:unattended", err);
 }
+// Last: it writes to the terminal and starts inference, which only a stop that really ends may do.
 await stopTurn(payload);

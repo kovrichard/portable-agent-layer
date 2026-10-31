@@ -25,7 +25,13 @@ function commit(subject: string) {
   git("commit", "-q", "-m", subject);
 }
 
-function stop() {
+function transcriptWithoutCommands(): string {
+  const path = resolve(repo, "..", "transcript.jsonl");
+  writeFileSync(path, JSON.stringify({ type: "user", message: { content: "go" } }));
+  return path;
+}
+
+function stop(reply = "Working on the next task.") {
   return spawnSync(
     "bun",
     ["run", resolve(HOOKS, "StopOrchestrator.ts"), "--agent=claude"],
@@ -33,7 +39,8 @@ function stop() {
       input: JSON.stringify({
         session_id: "night",
         cwd: repo,
-        last_assistant_message: "Working on the next task.",
+        last_assistant_message: reply,
+        transcript_path: transcriptWithoutCommands(),
       }),
       encoding: "utf-8",
       cwd: repo,
@@ -79,5 +86,26 @@ describe("a stop held by an unattended run", () => {
 
     expect(proc.stdout).toContain('"decision":"block"');
     expect(attachedCommits()).toEqual(["feat: night step"]);
+  });
+});
+
+describe("a stop sent back by the claim check", () => {
+  test("still attaches the commits made since the last turn", () => {
+    const memory = resolve(process.env.PAL_HOME as string, "memory");
+    mkdirSync(memory, { recursive: true });
+    writeFileSync(
+      resolve(memory, "pal-settings.json"),
+      JSON.stringify({ dynamicContext: { claimCheckBlocks: true } })
+    );
+    appendEvent(scopeOf(repo), "n1", "open", { title: "Fix", parent: null });
+    attachGitProgress(repo);
+    commit("fix: parser");
+
+    const proc = stop("Fixed the parser. All tests pass.");
+
+    expect(proc.stdout).toContain(
+      "Your reply claims what no command in this turn showed"
+    );
+    expect(attachedCommits()).toEqual(["fix: parser"]);
   });
 });
