@@ -74,6 +74,10 @@ function gitDirOf(start: string): string | null {
   }
 }
 
+export function isInGitRepo(cwd: string): boolean {
+  return gitDirOf(cwd) !== null;
+}
+
 export function gitBranchOf(cwd: string): string | null {
   try {
     const gitDir = gitDirOf(cwd);

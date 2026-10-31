@@ -6,16 +6,17 @@
 import { scopeOf } from "../hooks/lib/progress-tree";
 import {
   clearRun,
-  DEFAULT_UNATTENDED_RULES,
   deadlineFrom,
   describeRun,
   newRun,
   type Run,
   type RunKind,
   readRun,
+  unattendedRules,
   untilLabel,
   writeRun,
 } from "../hooks/lib/run-mode";
+import { isInGitRepo } from "../hooks/lib/session-events";
 import { group, leaf, UsageError } from "../tools/lib/command";
 
 const FOR = {
@@ -118,7 +119,7 @@ function startUnattended(values: {
     report: values.report,
     tasks: values.task,
     fallbacks: values.fallback ?? [],
-    rules: [...DEFAULT_UNATTENDED_RULES, ...(values.rule ?? [])],
+    rules: unattendedRules(isInGitRepo(process.cwd()), values.rule),
   });
   writeRun(run);
   console.log(describeRun(run));

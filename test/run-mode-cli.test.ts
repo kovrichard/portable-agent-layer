@@ -4,6 +4,7 @@ import { scopeOf } from "../src/hooks/lib/progress-tree";
 import {
   DEFAULT_UNATTENDED_RULES,
   describeRun,
+  GIT_RULE,
   type Run,
   readRun,
   untilLabel,
@@ -116,7 +117,7 @@ describe("pal cli unattended", () => {
       kind: "unattended",
       tasks: ["fix parser", "add tests"],
       fallbacks: ["lint"],
-      rules: [...DEFAULT_UNATTENDED_RULES, "no downloads"],
+      rules: [...DEFAULT_UNATTENDED_RULES, GIT_RULE, "no downloads"],
       report: "report.md",
     });
     expect(printed).toEqual([describeRun(run)]);
@@ -133,10 +134,17 @@ describe("pal cli unattended", () => {
   test("log appends timestamped entries", async () => {
     await unattended("start", "--for", "8h", "--task", "t");
     printed = [];
+    const before = Date.now();
     await unattended("log", "parser", "fixed");
     await unattended("log", "tests added");
+    const after = Date.now();
     expect(printed).toEqual(["Logged (1 entries).", "Logged (2 entries)."]);
-    expect(stored()?.log.map((l) => l.entry)).toEqual(["parser fixed", "tests added"]);
+    const log = stored()?.log ?? [];
+    expect(log.map((l) => l.entry)).toEqual(["parser fixed", "tests added"]);
+    for (const { at } of log) {
+      expect(Date.parse(at)).toBeGreaterThanOrEqual(before);
+      expect(Date.parse(at)).toBeLessThanOrEqual(after);
+    }
   });
 
   test("done marks the run done and keeps it until the user is back", async () => {

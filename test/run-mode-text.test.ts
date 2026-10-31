@@ -4,13 +4,16 @@ import { resolve } from "node:path";
 import { scopeOf } from "../src/hooks/lib/progress-tree";
 import {
   clearRun,
+  DEFAULT_UNATTENDED_RULES,
   deadlineFrom,
   describeRun,
+  GIT_RULE,
   isOver,
   minutesLeft,
   newRun,
   type Run,
   readRun,
+  unattendedRules,
   writeRun,
 } from "../src/hooks/lib/run-mode";
 import {
@@ -157,6 +160,21 @@ describe("the stored run", () => {
   test("counts a started minute as a minute left, and never below zero", () => {
     expect(minutesLeft(run("timebox"), new Date("2026-10-31T16:29:30Z"))).toBe(1);
     expect(minutesLeft(run("timebox"), AFTER)).toBe(0);
+  });
+});
+
+describe("unattended rules", () => {
+  test("outside a git repository carry no commit rule", () => {
+    expect(unattendedRules(false)).toEqual(DEFAULT_UNATTENDED_RULES);
+    expect(DEFAULT_UNATTENDED_RULES.join(" ")).not.toMatch(/commit|branch/i);
+  });
+
+  test("in a git repository add the commit rule, and the user's rules come last", () => {
+    expect(unattendedRules(true, ["no downloads"])).toEqual([
+      ...DEFAULT_UNATTENDED_RULES,
+      GIT_RULE,
+      "no downloads",
+    ]);
   });
 });
 

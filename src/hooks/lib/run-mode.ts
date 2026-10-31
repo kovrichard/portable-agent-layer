@@ -42,10 +42,17 @@ export const DEFAULT_UNATTENDED_RULES = [
   "Before listing a question, search the project's notes and earlier sessions for an answer.",
   "Do only the approved tasks, then the fallbacks. Anything else goes in the report as a suggestion.",
   "Never delete, push, deploy or publish anything other than the report.",
-  "Work on a branch, one logical step per commit, staging only your own changes.",
   "One heavy process at a time. No subagents or workflows.",
   "Verify each step as you would with the user present, and log it when it lands.",
 ];
+
+export const GIT_RULE =
+  "Work on a branch, one logical step per commit, staging only your own changes. Never push.";
+
+/** The default rules, plus the commit rule when the work happens in a git repository. */
+export function unattendedRules(inGitRepo: boolean, extra: string[] = []): string[] {
+  return [...DEFAULT_UNATTENDED_RULES, ...(inGitRepo ? [GIT_RULE] : []), ...extra];
+}
 
 function runDir(): string {
   return ensureDir(resolve(paths.state(), "run-mode"));

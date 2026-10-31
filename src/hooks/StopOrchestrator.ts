@@ -62,6 +62,11 @@ try {
   logError("StopOrchestrator:adaptation-rules", err);
 }
 try {
+  stopProgressTree(payload);
+} catch (err) {
+  logError("StopOrchestrator:progress-tree", err);
+}
+try {
   const keepGoing = unattendedStopReason(process.cwd());
   if (keepGoing) {
     process.stdout.write(stopBlockResponse(keepGoing));
@@ -69,10 +74,5 @@ try {
   }
 } catch (err) {
   logError("StopOrchestrator:unattended", err);
-}
-try {
-  stopProgressTree(payload);
-} catch (err) {
-  logError("StopOrchestrator:progress-tree", err);
 }
 await stopTurn(payload);
