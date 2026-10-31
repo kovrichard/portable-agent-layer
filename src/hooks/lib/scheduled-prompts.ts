@@ -16,7 +16,7 @@ export const USER_SCOPE = "user";
 export const MAX_TEXT = 500;
 const DAY_MINUTES = 1440;
 const DAY_MS = 86_400_000;
-const WEEKDAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
 export interface Schedule {
   id: string;
@@ -83,7 +83,7 @@ function weekdayRange(part: string): number[] {
   return Array.from({ length }, (_, i) => (first + i) % 7);
 }
 
-/** `mon-fri`, `sat,sun` or `mon,wed,fri` as weekday numbers, Sunday being 0. */
+/** `mon-fri`, `sat,sun` or `mon,wed,fri` as weekday numbers, Monday being 0. */
 export function parseDays(spec: string): number[] {
   const days = new Set(spec.split(",").flatMap(weekdayRange));
   return [...days].sort((a, b) => a - b);

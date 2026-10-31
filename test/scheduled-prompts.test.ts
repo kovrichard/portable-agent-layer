@@ -86,10 +86,10 @@ describe("a schedule's fields", () => {
   });
 
   test.each([
-    ["mon-fri", [1, 2, 3, 4, 5]],
-    ["sat,sun", [0, 6]],
-    ["fri-mon", [0, 1, 5, 6]],
-    ["Monday,wed", [1, 3]],
+    ["mon-fri", [0, 1, 2, 3, 4]],
+    ["sat,sun", [5, 6]],
+    ["fri-mon", [0, 4, 5, 6]],
+    ["Monday,wed", [0, 2]],
   ])("days %p are weekdays %p", (spec, days) => {
     expect(parseDays(spec)).toEqual(days);
   });
