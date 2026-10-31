@@ -279,7 +279,7 @@ describe("checkBashCommand", () => {
     // Tool that writes to a non-managed file but mentions a managed root in another arg
     expect(
       checkBashCommand(
-        'bun ~/.pal/tools/thread.ts --add --title "fix pal-settings.json scoping"'
+        'bun ~/.pal/tools/synthesize.ts --note "fix pal-settings.json scoping"'
       )
     ).toBeNull();
   });
@@ -439,7 +439,7 @@ describe("checkFilePath", () => {
   });
 
   test("blocks writes to ~/.pal/tools/ with actionable message", () => {
-    expect(checkFilePath(home(".pal", "tools", "thread.ts"))).toMatch(
+    expect(checkFilePath(home(".pal", "tools", "synthesize.ts"))).toMatch(
       /managed by 'pal install'.*PAL repo/
     );
   });

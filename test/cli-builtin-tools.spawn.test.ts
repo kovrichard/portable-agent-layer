@@ -34,7 +34,6 @@ const READ_ONLY_ARGS: Record<string, string[]> = {
   interaction: ["report"],
   project: ["list"],
   synthesize: ["--help"],
-  thread: ["--list"],
 };
 
 beforeAll(() => {

@@ -34,8 +34,7 @@
       "command(pal cli algorithm-synthesize)",
       "command(pal cli analyze)",
       "command(pal cli project)",
-      "command(pal cli synthesize)",
-      "command(pal cli thread)"
+      "command(pal cli synthesize)"
     ]
   }
 }

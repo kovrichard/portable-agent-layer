@@ -238,16 +238,3 @@ describe("currentAttribution", () => {
     expect(fromCursor.runtime).not.toBe(fromClaude.runtime);
   });
 });
-
-describe("records carry the attribution stamp", () => {
-  test("a thread records actor, runtime and authority alongside the machine", async () => {
-    const { addThread } = await import("../src/tools/lib/thread");
-    const { loadActor } = await lib();
-    process.env.PAL_AGENT = "claude";
-    const t = addThread("a title", "some context");
-    expect(t.actor).toBe(loadActor(HOME).id);
-    expect(t.machine.length).toBeGreaterThan(0);
-    expect(t.runtime).toBe("claude");
-    expect(t.authority).toBe("user");
-  });
-});

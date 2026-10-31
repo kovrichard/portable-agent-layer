@@ -250,7 +250,7 @@ Set `--scope task-specific` when the Q2 idea is bound to this one task (e.g. a c
 
 **3. Open work** — close what this session finished; open what it didn't:
 
-**Project work** — use ISCs, not threads:
+**Project work** — use ISCs:
 ```bash
 # Close completed ISCs:
 pal cli project complete-isc <project-name> <id>
@@ -264,10 +264,13 @@ pal cli project add-isc <project-name> "what remains"
 pal cli project complete-task-isa <slug>
 ```
 
-**Cross-project or non-project follow-ups** — use threads:
+**Unfinished work outside the ISCs** — keep it in the progress tree:
 ```bash
-pal cli thread --add --title "brief title" --context "why it matters, what needs to happen"
-pal cli thread --resolve --id <id>
+# Park the node, saying where it stopped:
+pal cli progress park --stopped "where it stopped, what comes next"
+
+# Or note what must happen later on the node it belongs to:
+pal cli progress follow-up "what must happen" [--due 2026-11-02]
 ```
 
 **4. Standing rules** — when the user states a rule that should hold from now on, record it:

@@ -23,10 +23,12 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, resolve } from "node:path";
+import { resolveAnchor } from "../hooks/lib/anchor";
 import { readBindings } from "../hooks/lib/bindings";
 import { mergeJsonlLines } from "../hooks/lib/import-merge";
 import { foldHistoryInto } from "../hooks/lib/parked-history";
 import { palHome, paths } from "../hooks/lib/paths";
+import { appendEvent, scopeOf } from "../hooks/lib/progress-tree";
 import {
   legacyJsonToProgress,
   type ProjectProgress,
@@ -1002,6 +1004,80 @@ const v9ProgressTreeNames: Migration = {
   },
 };
 
+// ── v10-threads-to-progress-tree: open threads → parked nodes ────
+
+function nodeOf(line: string): string[] {
+  try {
+    const { node } = JSON.parse(line);
+    return typeof node === "string" ? [node] : [];
+  } catch {
+    return [];
+  }
+}
+
+function progressTreeNodeIds(): Set<string> {
+  const file = resolve(newProgressTreeFolder(), EVENTS_FILE);
+  if (!existsSync(file)) return new Set();
+  return new Set(readFileSync(file, "utf-8").split("\n").flatMap(nodeOf));
+}
+
+function openThreadsNotInTree(): Thread[] {
+  const nodes = progressTreeNodeIds();
+  return readThreads().filter((t) => t.status === "open" && !nodes.has(t.id));
+}
+
+function threadScope(cwd: string): string {
+  const anchor = resolveAnchor(cwd);
+  return anchor.state === "unresolvable" ? anchor.slug : scopeOf(anchor.path);
+}
+
+function openedAt(thread: Thread): Date {
+  const created = new Date(thread.created);
+  return Number.isNaN(created.getTime()) ? new Date() : created;
+}
+
+const laneNoSessionHeld = (thread: Thread) => `thread-${thread.id}`;
+
+function parkThread(thread: Thread): void {
+  const scope = threadScope(thread.cwd);
+  const at = openedAt(thread);
+  const lane = laneNoSessionHeld(thread);
+  const open = { title: thread.title, parent: null };
+  const park = { stoppedAt: thread.context || undefined };
+  appendEvent(scope, thread.id, "open", open, undefined, at, lane);
+  appendEvent(scope, thread.id, "park", park, undefined, at, lane);
+}
+
+const v10ThreadsToProgressTree: Migration = {
+  id: "v10-threads-to-progress-tree",
+  description: "Park every open thread as a node in the progress tree",
+
+  check() {
+    const pending = openThreadsNotInTree();
+    return {
+      pending: pending.length > 0,
+      detail: pending.length > 0 ? `${pending.length} open thread(s)` : undefined,
+    };
+  },
+
+  run(dryRun = false): MigrationResult {
+    const results: string[] = [];
+    let skipped = 0;
+    for (const thread of openThreadsNotInTree()) {
+      try {
+        if (!dryRun) parkThread(thread);
+        results.push(
+          `${thread.id}: ${dryRun ? "would park" : "parked"} "${thread.title}" in ${threadScope(thread.cwd)} (thread source kept)`
+        );
+      } catch (e) {
+        skipped++;
+        results.push(`${thread.id}: skipped (${(e as Error).message})`);
+      }
+    }
+    return { migrated: results.length - skipped, skipped, results };
+  },
+};
+
 const MIGRATIONS: Migration[] = [
   v1Projects,
   v2ThreadsToIsc,
@@ -1012,6 +1088,7 @@ const MIGRATIONS: Migration[] = [
   v7RetiredSettingsKeys,
   v8FactoryHome,
   v9ProgressTreeNames,
+  v10ThreadsToProgressTree,
   ...LEFTOVERS.map(leftoverMigration),
 ];
 
