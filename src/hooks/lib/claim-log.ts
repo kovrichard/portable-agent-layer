@@ -18,6 +18,7 @@ import {
 } from "./claim-check";
 import { hookFinalReply, hookSessionId } from "./hook-turn";
 import { ensureDir, paths } from "./paths";
+import { alreadySentBack } from "./send-back-guard";
 import { isEnabled, isOptedIn } from "./settings";
 import type { StopTurnPayload } from "./stop";
 import { readTranscriptTail } from "./transcript";
@@ -79,14 +80,6 @@ function record({ check, commands, session, blocked }: Watched, now: Date) {
     ...(blocked && { blocked }),
   };
   appendFileSync(monthFile(now), `${JSON.stringify(line)}\n`);
-}
-
-export function alreadySentBack(payload: StopTurnPayload): boolean {
-  return (
-    payload.stop_hook_active === true ||
-    (payload.loop_count ?? 0) > 0 ||
-    (payload.executionNum ?? 0) > 0
-  );
 }
 
 function sendsBack(payload: StopTurnPayload, check: ClaimCheck): boolean {

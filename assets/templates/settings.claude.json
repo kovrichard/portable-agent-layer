@@ -112,7 +112,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash|Write|Edit",
+        "matcher": "Bash|Write|Edit|NotebookEdit|WebSearch|WebFetch|AskUserQuestion|Agent|Task|Workflow",
         "hooks": [
           {
             "type": "command",

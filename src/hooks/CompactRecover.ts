@@ -15,7 +15,9 @@ import {
   type SavedExchange,
 } from "./lib/compact-recall";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
+import { enterHookWorkspace } from "./lib/hook-turn";
 import { logDebug, logError } from "./lib/log";
+import { runModeRecall } from "./lib/run-mode-gate";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
 
@@ -38,19 +40,26 @@ try {
     process.exit(0);
   }
 
+  enterHookWorkspace(input);
   const sessionId = input?.session_id;
+  const run = runModeRecall(process.cwd());
   const file = findSavedExchange(sessionId);
-  if (!file) {
-    logDebug("CompactRecover", "No saved exchange found — silent no-op");
+  if (!file && !run) {
+    logDebug("CompactRecover", "No saved exchange or run found — silent no-op");
     process.exit(0);
   }
 
-  const saved = JSON.parse(await readFile(file, "utf-8")) as SavedExchange;
-  const out = buildRecall(saved);
+  const exchange = file
+    ? buildRecall(JSON.parse(await readFile(file, "utf-8")) as SavedExchange)
+    : "";
+  const out = [run, exchange].filter(Boolean).join("\n\n");
   process.stdout.write(isCursor() ? JSON.stringify({ additional_context: out }) : out);
-  logDebug("CompactRecover", `Re-injected ${out.length} chars from ${file}`);
+  logDebug(
+    "CompactRecover",
+    `Re-injected ${out.length} chars from ${file ?? "run mode"}`
+  );
 
-  if (isConsumable(file, sessionId)) await unlink(file);
+  if (file && isConsumable(file, sessionId)) await unlink(file);
 } catch (err) {
   logError("CompactRecover", err);
 }

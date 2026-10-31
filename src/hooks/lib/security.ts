@@ -297,6 +297,22 @@ function withoutPalCliInvocations(cmd: string): string {
     .join("");
 }
 
+const STREAM_REDIRECT = /\d?>&\d/g;
+const OUTPUT_FILTER = /^\s*(?:head|tail)\b/;
+
+/** True when the command is `pal cli …`, optionally chained to more of it or piped into head/tail. */
+export function runsOnlyPalCli(cmd: string): boolean {
+  const pieces = splitOnUnquotedSeparators(cmd.replace(STREAM_REDIRECT, " "))
+    .map((piece) => piece.text)
+    .filter((text) => text.trim() !== "");
+  const [first, ...rest] = pieces;
+  return (
+    first !== undefined &&
+    isPalCliInvocation(first) &&
+    rest.every((text) => isPalCliInvocation(text) || OUTPUT_FILTER.test(text))
+  );
+}
+
 function unquotedSegments(cmd: string): string[] {
   return splitOnUnquotedSeparators(cmd).map((piece) => piece.text.trim());
 }
