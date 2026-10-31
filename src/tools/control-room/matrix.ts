@@ -4,7 +4,7 @@
  * Two rules, both readable off disk, because a screen you open before a terminal
  * cannot wait for a model. Importance comes from what a project serves, which
  * PAL guesses once and the user can overrule. Urgency comes from what the files
- * already say: a blocker, an unfinished handoff, a date coming up, or an
+ * already say: a blocker, work in progress, a date coming up, or an
  * important thing that has gone quiet.
  *
  * Every placement carries the reason it landed there, so a wrong guess argues
@@ -24,11 +24,10 @@ import {
 } from "../../hooks/lib/projects";
 import { isImportant, SERVES_MEANING } from "../../hooks/lib/serves";
 import { dueFrom, readTelosGoals, type TelosGoal } from "../../hooks/lib/telos-goals";
-import type { HandoffEntry } from "../lib/handoff-note";
 import { parseIscs } from "../lib/project-isc";
-import { freshHandoffs } from "./data";
 import { type ControlRoomPrefs, readPrefs } from "./prefs";
 import { readSnoozes, snoozedUntil } from "./snooze";
+import { isInProgress, openWork, type WorkCard, workOf } from "./work";
 
 const RANKED_STATUSES = new Set(["active", "paused"]);
 
@@ -92,7 +91,7 @@ function projectUrgency(
   important: boolean,
   waiting: string | null,
   due: string | null,
-  hasHandoff: boolean,
+  inProgress: boolean,
   now: Date,
   prefs: ControlRoomPrefs
 ): string[] {
@@ -100,7 +99,7 @@ function projectUrgency(
   const blockers = p.blockers?.length ?? 0;
   if (blockers > 0) reasons.push(plural(blockers, "blocker"));
   if (waiting) reasons.push("waiting on you");
-  else if (hasHandoff) reasons.push("handoff in progress");
+  else if (inProgress) reasons.push("work in progress");
   if (dueSoon(due, now, prefs.urgentWithinDays)) reasons.push(`next step dated ${due}`);
   if (
     important &&
@@ -114,12 +113,12 @@ function projectUrgency(
 
 function projectItem(
   p: ProjectProgress,
-  handoffs: Map<string, HandoffEntry>,
+  work: WorkCard[],
   now: Date,
   prefs: ControlRoomPrefs
 ): MatrixItem {
-  const entry = p.path ? handoffs.get(p.path) : undefined;
-  const waiting = entry?.waitingOn ?? null;
+  const own = workOf(p.name, work);
+  const waiting = own.find((c) => c.waitingOn)?.waitingOn ?? null;
   const important = isImportant(p.serves);
   const due = earliestDue(p.next ?? []);
   const urgentBecause = projectUrgency(
@@ -127,7 +126,7 @@ function projectItem(
     important,
     waiting,
     due,
-    entry !== undefined,
+    own.some(isInProgress),
     now,
     prefs
   );
@@ -237,13 +236,13 @@ export function buildMatrix(items: MatrixItem[], unranked: number): Matrix {
 
 export function matrix(now: Date = new Date()): Matrix {
   const prefs = readPrefs();
-  const handoffs = new Map(freshHandoffs(now));
+  const work = openWork(now);
   const all = readAllProjects();
   const ranked = all.filter((p) => RANKED_STATUSES.has(p.status));
   const links = readGoalLinks();
   const criteria = criteriaBySlug(all, readSnoozes(now));
   const items = [
-    ...ranked.map((p) => projectItem(p, handoffs, now, prefs)),
+    ...ranked.map((p) => projectItem(p, work, now, prefs)),
     ...(prefs.rankGoals
       ? readTelosGoals().map((g) =>
           goalItem(g, now, prefs, progressFor(g.id, links, criteria))

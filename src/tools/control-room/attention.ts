@@ -2,7 +2,7 @@
  * What is waiting on you, and what you have already seen.
  *
  * Every item here is a template over a fact PAL already holds — a refused tool
- * call, an unanswered handoff, a project with no purpose on record. Nothing is
+ * call, a node waiting on you, a project with no purpose on record. Nothing is
  * inferred: the bell is the one surface that must be instant and always right,
  * and a model in that path would fail silently exactly when it mattered.
  */
@@ -14,8 +14,8 @@ import { ensureDir, paths } from "../../hooks/lib/paths";
 import { readAllProjects } from "../../hooks/lib/projects";
 import { queryLedger } from "../ledger/query";
 import { displayTarget } from "../ledger/view";
-import { freshHandoffs } from "./data";
 import { type AttentionSource, readPrefs } from "./prefs";
+import { openWork, waitingOnUser } from "./work";
 
 const DAY_MS = 86_400_000;
 const REFUSAL_WINDOW_DAYS = 7;
@@ -89,27 +89,17 @@ function anchorProject(target: string): string | null {
 }
 
 function waiting(now: Date): AttentionItem[] {
-  const slugByPath = new Map(
-    readAllProjects()
-      .filter((p) => p.path)
-      .map((p) => [p.path as string, p.name])
-  );
-  return freshHandoffs(now)
-    .filter(([, h]) => h.waitingOn)
-    .map(([cwd, h]) => {
-      const slug = slugByPath.get(cwd) ?? null;
-      return {
-        id: `waiting:${cwd}:${h.timestamp}`,
-        source: "waiting" as const,
-        severity: "waiting" as const,
-        title: `${slug ?? cwd} is waiting on you`,
-        detail: h.waitingOn as string,
-        at: h.timestamp,
-        project: slug,
-        href: slug ? `/projects/${slug}` : "/",
-        read: false,
-      };
-    });
+  return waitingOnUser(openWork(now)).map((card) => ({
+    id: `waiting:${card.scope}:${card.node}:${card.at}`,
+    source: "waiting" as const,
+    severity: "waiting" as const,
+    title: `${card.label}: ${card.title}`,
+    detail: card.waitingOn as string,
+    at: card.at,
+    project: card.slug,
+    href: card.slug ? `/projects/${card.slug}` : "/",
+    read: false,
+  }));
 }
 
 function unranked(): AttentionItem[] {

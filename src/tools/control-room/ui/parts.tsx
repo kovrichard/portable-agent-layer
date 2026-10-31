@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 import type { AgendaMove } from "../../../hooks/lib/agenda-store";
-import type { HandoffCard } from "../data";
 import type { MatrixItem } from "../matrix";
+import type { WorkCard } from "../work";
 import { Badge } from "./components/badge";
 import { NativeSelect } from "./components/input";
 import { age } from "./format";
@@ -178,32 +178,36 @@ export function MovesList({
   );
 }
 
-export function HandoffList({ cards }: { cards: HandoffCard[] }) {
-  if (cards.length === 0) {
-    return <Empty>Nothing in progress. Every handoff is closed.</Empty>;
-  }
+export function WorkList({ cards, empty }: { cards: WorkCard[]; empty: string }) {
+  if (cards.length === 0) return <Empty>{empty}</Empty>;
   return (
     <div className="flex flex-col gap-3">
-      {cards.map((h) => (
-        <div key={h.cwd} className="flex flex-col gap-1">
+      {cards.map((w) => (
+        <div key={`${w.scope}:${w.node}`} className="flex flex-col gap-1">
           <span className="flex justify-between gap-2 text-[11px] text-neutral-600">
-            {h.slug ? (
+            {w.slug ? (
               <Link
-                to={`/projects/${h.slug}`}
+                to={`/projects/${w.slug}`}
                 className="font-semibold text-ink hover:text-accent"
               >
-                {h.label}
+                {w.label}
               </Link>
             ) : (
-              <b className="font-semibold text-ink">{h.label}</b>
+              <b className="font-semibold text-ink">{w.label}</b>
             )}
             <span>
-              {h.source} · {age(h.ageDays)}
+              {w.status} · {age(w.ageDays)}
             </span>
           </span>
-          <span className="text-[12.5px] text-pretty" title={h.handoff}>
-            {h.sentence}
-          </span>
+          <span className="text-[12.5px] font-semibold text-pretty">{w.title}</span>
+          {w.stoppedAt && (
+            <span className="text-[12.5px] text-pretty">{w.stoppedAt}</span>
+          )}
+          {w.waitingOn && (
+            <p className="bg-accent-100 px-2 py-1.5 text-[12px] text-accent-900">
+              waiting on you · {w.waitingOn}
+            </p>
+          )}
         </div>
       ))}
     </div>

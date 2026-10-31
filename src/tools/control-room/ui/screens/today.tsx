@@ -1,6 +1,7 @@
 import { useState } from "react";
-import type { AgendaView, HandoffCard, SignalView, SummaryView } from "../../data";
+import type { AgendaView, SignalView, SummaryView } from "../../data";
 import type { Matrix, MatrixItem } from "../../matrix";
+import type { WorkCard } from "../../work";
 import { Badge } from "../components/badge";
 import {
   Table,
@@ -14,7 +15,9 @@ import { tenths } from "../format";
 import { Empty, Panel, Pending } from "../frame";
 import { type Loaded, useLoaded } from "../lib/api";
 import { cn } from "../lib/cn";
-import { GoalsList, HandoffList, ItemCard, MovesList, ReasonTags } from "../parts";
+import { GoalsList, ItemCard, MovesList, ReasonTags, WorkList } from "../parts";
+
+const NOTHING_IN_PROGRESS = "Nothing in progress in any progress tree this week.";
 
 export const LAYOUTS = [
   { value: "matrix", label: "matrix" },
@@ -142,11 +145,11 @@ function DueBadges() {
   );
 }
 
-function Sidebar({ matrix, handoffs }: { matrix: Matrix; handoffs: HandoffCard[] }) {
+function Sidebar({ matrix, work }: { matrix: Matrix; work: WorkCard[] }) {
   return (
     <aside className="flex flex-col gap-6">
       <Panel title="Where you left off">
-        <HandoffList cards={handoffs} />
+        <WorkList cards={work} empty={NOTHING_IN_PROGRESS} />
       </Panel>
       <Panel title="Goals">
         <GoalsList goals={goalsOf(matrix)} />
@@ -161,12 +164,12 @@ function Sidebar({ matrix, handoffs }: { matrix: Matrix; handoffs: HandoffCard[]
 
 function MatrixLayout({
   matrix,
-  handoffs,
+  work,
   moves,
   onSaved,
 }: {
   matrix: Matrix;
-  handoffs: HandoffCard[];
+  work: WorkCard[];
   moves: AgendaView["moves"];
   onSaved: () => void;
 }) {
@@ -217,18 +220,18 @@ function MatrixLayout({
           ))}
         </div>
       </div>
-      <Sidebar matrix={matrix} handoffs={handoffs} />
+      <Sidebar matrix={matrix} work={work} />
     </div>
   );
 }
 
 function ListLayout({
   matrix,
-  handoffs,
+  work,
   moves,
 }: {
   matrix: Matrix;
-  handoffs: HandoffCard[];
+  work: WorkCard[];
   moves: AgendaView["moves"];
   onSaved: () => void;
 }) {
@@ -280,7 +283,7 @@ function ListLayout({
           </div>
         </Panel>
         <Panel title="Where you left off">
-          <HandoffList cards={handoffs} />
+          <WorkList cards={work} empty={NOTHING_IN_PROGRESS} />
         </Panel>
       </aside>
     </div>
@@ -289,12 +292,12 @@ function ListLayout({
 
 function BriefingLayout({
   matrix,
-  handoffs,
+  work,
   moves,
   onSaved,
 }: {
   matrix: Matrix;
-  handoffs: HandoffCard[];
+  work: WorkCard[];
   moves: AgendaView["moves"];
   onSaved: () => void;
 }) {
@@ -307,7 +310,7 @@ function BriefingLayout({
         </div>
         <div>
           <h6 className="eyebrow mb-2">Where you left off</h6>
-          <HandoffList cards={handoffs} />
+          <WorkList cards={work} empty={NOTHING_IN_PROGRESS} />
         </div>
       </div>
       <div className="flex flex-col gap-6">
@@ -366,17 +369,17 @@ export function Today({ layout }: { layout: Layout }) {
   const [nonce, setNonce] = useState(0);
   const matrix = useLoaded<Matrix>(`/api/matrix?v=${nonce}`);
   const agenda = useLoaded<AgendaView>("/api/agenda");
-  const handoffs = useLoaded<HandoffCard[]>("/api/handoffs");
+  const work = useLoaded<WorkCard[]>("/api/work");
   const reload = () => setNonce((n) => n + 1);
 
-  const waiting: Loaded<unknown>[] = [matrix, agenda, handoffs];
+  const waiting: Loaded<unknown>[] = [matrix, agenda, work];
   const notReady = waiting.find((v) => v.state !== "ready");
   if (notReady || matrix.state !== "ready") return <Pending value={notReady ?? matrix} />;
-  if (agenda.state !== "ready" || handoffs.state !== "ready") return null;
+  if (agenda.state !== "ready" || work.state !== "ready") return null;
 
   const shared = {
     matrix: matrix.data,
-    handoffs: handoffs.data,
+    work: work.data,
     moves: agenda.data.moves,
     onSaved: reload,
   };

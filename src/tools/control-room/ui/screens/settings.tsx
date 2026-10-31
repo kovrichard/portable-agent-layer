@@ -184,7 +184,7 @@ function Updates({ initial }: { initial: AutoUpdateStatus }) {
 
 const ATTENTION_LABELS: Record<string, string> = {
   refusals: "A hook blocked a call, or you denied one",
-  waiting: "A handoff left a question for you",
+  waiting: "A progress-tree node is waiting on you",
   unranked: "A project has no purpose on record",
   rules: "A rule drafted from your corrections waits for your decision",
 };
