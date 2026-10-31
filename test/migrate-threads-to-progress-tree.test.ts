@@ -11,6 +11,7 @@ import { freshTestDir } from "./lib/test-home";
 
 const MIGRATION = "v10-threads-to-progress-tree";
 const CREATED = "2026-09-10T08:00:00.000Z";
+const FOLDER = resolve("/work/somewhere");
 
 let HOME: string;
 
@@ -19,7 +20,7 @@ const threadsFile = () => resolve(HOME, "memory", "state", "threads.jsonl");
 function thread(id: string, fields: Record<string, unknown> = {}) {
   return {
     id,
-    cwd: "/work/somewhere",
+    cwd: FOLDER,
     title: `title ${id}`,
     context: `context ${id}`,
     status: "open",
@@ -62,7 +63,7 @@ describe(MIGRATION, () => {
 
     applyPendingMigrations();
 
-    const node = treeOf("/work/somewhere").nodes.get("t1");
+    const node = treeOf(FOLDER).nodes.get("t1");
     expect(node).toMatchObject({
       title: "title t1",
       status: "parked",
@@ -104,7 +105,7 @@ describe(MIGRATION, () => {
 
   test("leaves the node a session-less lane held at that time active", () => {
     appendEvent(
-      "/work/somewhere",
+      FOLDER,
       "held",
       "open",
       { title: "held work", parent: null },
@@ -116,7 +117,7 @@ describe(MIGRATION, () => {
 
     applyPendingMigrations();
 
-    const tree = treeOf("/work/somewhere");
+    const tree = treeOf(FOLDER);
     expect(tree.nodes.get("held")?.status).toBe("active");
     expect(tree.active).toBe("held");
   });
@@ -130,7 +131,7 @@ describe(MIGRATION, () => {
   test("a dry run names the thread and writes nothing", () => {
     writeThreads(thread("t1"));
     const output = quietly(() => runMigrate(["--dry-run"]));
-    expect(output).toContain('t1: would park "title t1" in /work/somewhere');
+    expect(output).toContain(`t1: would park "title t1" in ${FOLDER}`);
     expect(readEvents()).toEqual([]);
   });
 });
