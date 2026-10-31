@@ -93,7 +93,7 @@ export function isOver(run: Run, now: Date = new Date()): boolean {
 
 function parseDuration(text: string): number | null {
   const m = /^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/.exec(text.trim());
-  if (!m || text.trim() === "") return null;
+  if (!m) return null;
   const [, h = "0", min = "0", s = "0"] = m;
   const ms = (Number(h) * 3600 + Number(min) * 60 + Number(s)) * 1000;
   return ms > 0 ? ms : null;
@@ -102,8 +102,9 @@ function parseDuration(text: string): number | null {
 function nextLocalTime(text: string, now: Date): Date | null {
   const m = /^(\d{1,2}):(\d{2})$/.exec(text.trim());
   if (!m) return null;
-  const target = Number(m[1]) * 60 + Number(m[2]);
-  if (Number(m[1]) > 23 || Number(m[2]) > 59) return null;
+  const [hour, minute] = [Number(m[1]), Number(m[2])];
+  if (hour > 23 || minute > 59) return null;
+  const target = hour * 60 + minute;
   const ahead =
     (target - localMinuteOfDay(now) + DAY_MINUTES) % DAY_MINUTES || DAY_MINUTES;
   const minuteStart = now.getTime() - (now.getTime() % MINUTE_MS);

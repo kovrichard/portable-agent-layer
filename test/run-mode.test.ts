@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
+import { scopeOf } from "../src/hooks/lib/progress-tree";
 import {
   deadlineFrom,
   newRun,
@@ -28,7 +29,8 @@ beforeEach(() => {
 });
 
 function start(kind: Run["kind"], extra: Partial<Run> = {}, cwd = CWD): Run {
-  const run = { ...newRun({ kind, scope: cwd, until: UNTIL, now: NOW }), ...extra };
+  const scope = scopeOf(cwd);
+  const run = { ...newRun({ kind, scope, until: UNTIL, now: NOW }), ...extra };
   writeRun(run);
   return run;
 }
@@ -62,8 +64,8 @@ describe("deadlineFrom", () => {
 describe("a stored run", () => {
   test("is forgotten 12 hours after its deadline, so a later session is not held by it", () => {
     start("timebox");
-    expect(readRun(CWD, new Date("2026-10-31T20:00:00Z"))).not.toBeNull();
-    expect(readRun(CWD, new Date("2026-11-01T05:00:00Z"))).toBeNull();
+    expect(readRun(scopeOf(CWD), new Date("2026-10-31T20:00:00Z"))).not.toBeNull();
+    expect(readRun(scopeOf(CWD), new Date("2026-11-01T05:00:00Z"))).toBeNull();
   });
 });
 
@@ -117,7 +119,7 @@ describe("an unattended run", () => {
   test("keeps the agent from stopping while work is left, and counts each block", () => {
     start("unattended");
     expect(unattendedStopReason(CWD, BEFORE)).toContain("next approved task");
-    expect(readRun(CWD, BEFORE)?.stopBlocks).toBe(1);
+    expect(readRun(scopeOf(CWD), BEFORE)?.stopBlocks).toBe(1);
   });
 
   test("asks for the report when it stops after the deadline", () => {
@@ -158,7 +160,7 @@ describe("the prompt line", () => {
   test("clears a run once the user writes after its deadline", () => {
     start("timebox");
     expect(runModePromptLine(CWD, AFTER)).toBeNull();
-    expect(readRun(CWD, AFTER)).toBeNull();
+    expect(readRun(scopeOf(CWD), AFTER)).toBeNull();
   });
 });
 
@@ -178,7 +180,7 @@ describe("the security gate", () => {
     writeRun(
       newRun({
         kind: "unattended",
-        scope: CWD,
+        scope: scopeOf(CWD),
         until: new Date(now.getTime() + 3_600_000),
         now,
       })
