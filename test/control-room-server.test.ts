@@ -20,6 +20,7 @@ import {
   registerProject,
   runningServer,
 } from "./lib/control-room-server-fixture";
+import { seedWorkNode } from "./lib/work-node-fixture";
 
 // The HTTP surface is small enough to pin completely: where it listens, what
 // each route answers, and that a bad window is refused rather than widened.
@@ -122,9 +123,18 @@ describe("what each route answers", () => {
     expect(cards[0].path).toBe(controlRoomHome());
   });
 
-  test("/api/handoffs is empty when nothing is in progress", async () => {
+  test("/api/work is empty when nothing is in progress", async () => {
     const base = await listen();
-    expect(await getJson<unknown[]>(`${base}/api/handoffs`)).toEqual([]);
+    expect(await getJson<unknown[]>(`${base}/api/work`)).toEqual([]);
+  });
+
+  test("/api/work lists fresh open nodes from the progress tree", async () => {
+    seedWorkNode("demo", "a", { at: new Date().toISOString(), stoppedAt: "half way" });
+    const base = await listen();
+    const cards = await getJson<{ node: string; stoppedAt: string }[]>(
+      `${base}/api/work`
+    );
+    expect(cards.map((c) => [c.node, c.stoppedAt])).toEqual([["a", "half way"]]);
   });
 
   test("/api/signal always carries the two badges", async () => {
@@ -353,27 +363,17 @@ interface AttentionBody {
 }
 
 describe("what needs your attention", () => {
-  test("a refusal, an unanswered handoff and an unranked project all light it", async () => {
+  test("a refusal, a node waiting on you and an unranked project all light it", async () => {
     const justNow = new Date().toISOString();
     writeLedger([
       entry({ id: "refused", ts: justNow, outcome: "denied", reason: "you said no" }),
     ]);
     registerProject("demo");
-    mkdirSync(resolve(controlRoomHome(), "memory", "state"), { recursive: true });
-    writeFileSync(
-      resolve(controlRoomHome(), "memory", "state", "last-handoff.json"),
-      JSON.stringify({
-        [controlRoomHome()]: {
-          timestamp: justNow,
-          title: "t",
-          status: "in-progress",
-          handoff: "mid-flight",
-          artifacts: [],
-          source: "deliberate",
-          waitingOn: "which policy?",
-        },
-      })
-    );
+    seedWorkNode("demo", "w", {
+      at: justNow,
+      status: "waiting",
+      waitingOn: "which policy?",
+    });
 
     const base = await listen();
     const body = await getJson<AttentionBody>(`${base}/api/attention`);

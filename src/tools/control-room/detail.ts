@@ -16,10 +16,9 @@ import {
 import { SERVES_MEANING } from "../../hooks/lib/serves";
 import { anchorSlugOf, queryLedger } from "../ledger/query";
 import { type LedgerViewRow, viewRows } from "../ledger/view";
-import type { HandoffEntry } from "../lib/handoff-note";
 import { type Isc, parseIscs } from "../lib/project-isc";
-import { freshHandoffs, handoffSentence } from "./data";
 import { readSnoozes, snoozedUntil } from "./snooze";
+import { openWork, type WorkCard, workOf } from "./work";
 
 const DAY_MS = 86_400_000;
 const RECENT_ACTIONS = 8;
@@ -29,14 +28,6 @@ export interface Decision {
   date: string | null;
   text: string;
   why: string | null;
-}
-
-interface DetailHandoff {
-  sentence: string;
-  full: string;
-  at: string;
-  source: HandoffEntry["source"];
-  waitingOn: string | null;
 }
 
 export interface SnoozableIsc extends Isc {
@@ -59,7 +50,7 @@ export interface ProjectDetailView {
   blockers: string[];
   decisions: Decision[];
   context: string[];
-  handoff: DetailHandoff | null;
+  work: WorkCard[];
   runtimes: Record<string, number>;
   recent: LedgerViewRow[];
 }
@@ -95,17 +86,6 @@ export function parseBullets(section: string | undefined): string[] {
   return chosen.map((l) => l.replace(/^[-*+]\s+/, ""));
 }
 
-function detailHandoff(entry: HandoffEntry | undefined): DetailHandoff | null {
-  if (!entry) return null;
-  return {
-    sentence: handoffSentence(entry.handoff),
-    full: entry.handoff,
-    at: entry.timestamp,
-    source: entry.source,
-    waitingOn: entry.waitingOn ?? null,
-  };
-}
-
 function activity(slug: string, since: Date) {
   const entries = queryLedger({ since }).filter((e) => anchorSlugOf(e.target) === slug);
   const runtimes = Object.fromEntries(
@@ -123,7 +103,6 @@ export function projectDetail(
   const project = readProject(slug);
   if (!project) return null;
 
-  const handoffs = new Map(freshHandoffs(now));
   const snoozes = readSnoozes(now);
   const { runtimes, recent } = activity(
     slug,
@@ -151,7 +130,7 @@ export function projectDetail(
     blockers: project.blockers ?? [],
     decisions: parseDecisions(project.decisions),
     context: parseBullets(project.context),
-    handoff: detailHandoff(project.path ? handoffs.get(project.path) : undefined),
+    work: workOf(slug, openWork(now)),
     runtimes,
     recent,
   };

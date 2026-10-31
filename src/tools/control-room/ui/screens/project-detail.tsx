@@ -10,6 +10,7 @@ import { Empty, Panel, Pending } from "../frame";
 import { useLoaded } from "../lib/api";
 import { cn } from "../lib/cn";
 import { setIsc, setSnooze } from "../lib/write";
+import { WorkList } from "../parts";
 
 const ISC_MARK: Record<SnoozableIsc["status"], string> = {
   open: "",
@@ -253,21 +254,11 @@ export function ProjectDetail({ slug }: { slug: string }) {
           </Panel>
         </div>
         <aside className="flex flex-col gap-6">
-          <Panel title="Handoff">
-            {d.handoff ? (
-              <>
-                <p className="text-[12.5px] text-pretty" title={d.handoff.full}>
-                  {d.handoff.sentence}
-                </p>
-                {d.handoff.waitingOn && (
-                  <p className="mt-2 bg-accent-100 px-2 py-1.5 text-[12px] text-accent-900">
-                    waiting on you · {d.handoff.waitingOn}
-                  </p>
-                )}
-              </>
-            ) : (
-              <Empty>No handoff. Every session on this project closed cleanly.</Empty>
-            )}
+          <Panel title="Where it stopped">
+            <WorkList
+              cards={d.work}
+              empty="No open work in this project's progress tree."
+            />
           </Panel>
           <Panel
             title="Agents on this project · 14d"

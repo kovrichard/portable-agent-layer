@@ -7,14 +7,12 @@ import {
   badgeFromNudge,
   board,
   dueBadges,
-  firstSentence,
-  handoffSentence,
-  handoffs,
   type ProjectCard,
   ratingSeries,
   sortBoard,
 } from "../src/tools/control-room/data";
 import { freshTestDir } from "./lib/test-home";
+import { seedWorkNode } from "./lib/work-node-fixture";
 
 // Every number the page shows comes from one of these functions, so each one
 // is pinned against a fixture home rather than against the live ~/.pal.
@@ -70,24 +68,6 @@ function writeHistory(slug: string, dates: string[]): void {
   );
 }
 
-function writeHandoffs(entries: Record<string, Record<string, unknown>>): void {
-  const dir = resolve(HOME, "memory", "state");
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(resolve(dir, "last-handoff.json"), JSON.stringify(entries), "utf-8");
-}
-
-function handoffEntry(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    timestamp: "2026-09-04T18:00:00.000Z",
-    title: "the title",
-    status: "in-progress",
-    handoff: "Finish the thing. Then start the other thing.",
-    artifacts: [],
-    source: "deliberate",
-    ...overrides,
-  };
-}
-
 function card(overrides: Partial<ProjectCard>): ProjectCard {
   return {
     slug: "x",
@@ -133,23 +113,34 @@ describe("board", () => {
     expect(c.sessions30d).toBe(1);
   });
 
-  test("a fresh in-progress handoff on the project's path is a reason", () => {
-    const path = registerProject("demo");
-    writeHandoffs({ [path]: handoffEntry() });
-    expect(board(NOW)[0].asking).toEqual(["handoff in progress"]);
+  test("fresh work in the project's progress tree is a reason", () => {
+    registerProject("demo");
+    seedWorkNode("demo", "a");
+    expect(board(NOW)[0].asking).toEqual(["work in progress"]);
   });
 
-  test("asking reasons: handoff, blockers, quiet while active", () => {
+  test("a node waiting on you outranks plain work in progress", () => {
+    registerProject("demo");
+    seedWorkNode("demo", "a");
+    seedWorkNode("demo", "b", { status: "waiting", waitingOn: "pick a price" });
+    expect(board(NOW)[0].asking).toEqual(["waiting on you"]);
+  });
+
+  test("parked work asks nothing", () => {
+    registerProject("demo");
+    seedWorkNode("demo", "a", { status: "parked" });
+    expect(board(NOW)[0].asking).toEqual([]);
+  });
+
+  test("asking reasons: blockers, quiet while active", () => {
     const base = { name: "p", status: "active", created: "", updated: "" } as const;
-    expect(askingReasons({ ...base }, undefined, false)).toEqual([]);
-    expect(askingReasons({ ...base, blockers: ["a"] }, undefined, false)).toEqual([
-      "1 blocker",
-    ]);
-    expect(askingReasons({ ...base, blockers: ["a", "b"] }, undefined, true)).toEqual([
+    expect(askingReasons({ ...base }, [], false)).toEqual([]);
+    expect(askingReasons({ ...base, blockers: ["a"] }, [], false)).toEqual(["1 blocker"]);
+    expect(askingReasons({ ...base, blockers: ["a", "b"] }, [], true)).toEqual([
       "2 blockers",
       "gone quiet",
     ]);
-    expect(askingReasons({ ...base, status: "paused" }, undefined, true)).toEqual([]);
+    expect(askingReasons({ ...base, status: "paused" }, [], true)).toEqual([]);
   });
 
   test("sorts the projects asking for you first, then by recency", () => {
@@ -159,42 +150,6 @@ describe("board", () => {
       card({ slug: "asking", updated: "2026-07-01", asking: ["1 blocker"] }),
     ]);
     expect(sorted.map((c) => c.slug)).toEqual(["asking", "new-quiet", "old-quiet"]);
-  });
-});
-
-describe("handoffs", () => {
-  test("first sentence, whitespace collapsed", () => {
-    expect(firstSentence("Finish   the thing.\nThen more.")).toBe("Finish the thing.");
-    expect(firstSentence("v0.70.0 is out. Next?")).toBe("v0.70.0 is out.");
-    expect(firstSentence("no terminator here")).toBe("no terminator here");
-  });
-
-  test("an automatic handoff is reduced to the user's own last words", () => {
-    expect(
-      handoffSentence(
-        "Last user message: do you think Misfire is a better name? Maybe not. Last assistant response: ══════ PAL | NATIVE ══════"
-      )
-    ).toBe("do you think Misfire is a better name?");
-    expect(
-      handoffSentence("Last user message: log this pls Last assistant response: done.")
-    ).toBe("log this pls");
-    expect(handoffSentence("Finish the thing. Then more.")).toBe("Finish the thing.");
-  });
-
-  test("in-progress and fresh only, mapped to the project by path, newest first", () => {
-    const demo = registerProject("demo");
-    writeHandoffs({
-      [demo]: handoffEntry({ timestamp: "2026-09-03T00:00:00.000Z" }),
-      "/elsewhere/unregistered": handoffEntry({ timestamp: "2026-09-04T00:00:00.000Z" }),
-      "/elsewhere/done": handoffEntry({ status: "completed" }),
-      "/elsewhere/old": handoffEntry({ timestamp: "2026-08-01T00:00:00.000Z" }),
-    });
-    const cards = handoffs(NOW);
-    expect(cards.map((h) => [h.slug, h.label, h.ageDays])).toEqual([
-      [null, "unregistered", 1],
-      ["demo", "demo", 2],
-    ]);
-    expect(cards[1].sentence).toBe("Finish the thing.");
   });
 });
 

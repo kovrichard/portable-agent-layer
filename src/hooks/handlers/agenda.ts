@@ -10,9 +10,7 @@
  *    answer to "what now" is rarely "open a repository".
  */
 
-import { writeFile } from "node:fs/promises";
 import { matrix } from "../../tools/control-room/matrix";
-import { handoffFile, readHandoffs, withWaitingOn } from "../../tools/lib/handoff-note";
 import { type AgendaMove, readAgenda, writeAgenda } from "../lib/agenda-store";
 import { linkInputs, readGoalLinks, writeGoalLinks } from "../lib/goal-links";
 import { canInfer, inference } from "../lib/inference";
@@ -23,7 +21,6 @@ import { readTelosGoals } from "../lib/telos-goals";
 
 const FRESH_HOURS = 6;
 const MAX_PROJECTS_PER_GUESS = 40;
-const MAX_WAITING_PER_RUN = 3;
 
 function hoursSince(iso: string, now: Date): number {
   const at = new Date(iso).getTime();
@@ -80,19 +77,6 @@ const LINKS_SCHEMA = {
     },
   },
   required: ["links"] as const,
-};
-
-const WAITING_SCHEMA = {
-  type: "object" as const,
-  additionalProperties: false,
-  properties: {
-    question: {
-      type: "string" as const,
-      description:
-        "The one thing the work needs from the person before it can move, in their own terms. Empty string when the handoff asks nothing of them.",
-    },
-  },
-  required: ["question"] as const,
 };
 
 const MOVES_SCHEMA = {
@@ -276,48 +260,6 @@ async function refreshGoalLinks(
   return "written";
 }
 
-/**
- * An auto handoff is a transcript excerpt nobody framed, so it never carries the
- * question the work is stuck on — which is exactly the field three surfaces read.
- * Most handoffs are stuck on nothing, so an empty answer is the common one.
- */
-async function extractWaitingOn(sessionId?: string): Promise<number> {
-  const pending = Object.entries(readHandoffs()).filter(
-    ([, h]) =>
-      h.source === "auto" && h.status === "in-progress" && h.handoff && !h.waitingOn
-  );
-  if (pending.length === 0) return 0;
-
-  let written = 0;
-  for (const [cwd, entry] of pending.slice(0, MAX_WAITING_PER_RUN)) {
-    const result = await inference({
-      system: [
-        "You are given the last exchange of a coding session that stopped mid-work.",
-        "Decide whether the work is blocked on the person — a decision only they can make, a question they were asked and did not answer, an approval the work needs.",
-        "Most sessions are not blocked on anyone. Waiting for an agent to continue is not being blocked on the person.",
-        "When it is blocked, answer with the question in their own terms, under fifteen words.",
-        "When it is not, answer with an empty string. That is the ordinary answer.",
-      ].join("\n"),
-      user: entry.handoff,
-      maxTokens: 120,
-      timeout: 60000,
-      jsonSchema: WAITING_SCHEMA,
-      tier: "medium",
-      caller: "agenda-waiting-on",
-      sessionId,
-    });
-    if (!result.success || !result.output) continue;
-
-    const parsed = parsePayload<{ question: string }>(result.output, "agenda:waiting-on");
-    const question = parsed?.question?.trim();
-    if (!question) continue;
-    const store = withWaitingOn(readHandoffs(), cwd, question);
-    await writeFile(handoffFile(), JSON.stringify(store, null, 2), "utf-8");
-    written++;
-  }
-  return written;
-}
-
 function rankedItems(grid: ReturnType<typeof matrix>) {
   return [...grid.now, ...grid.plan, ...grid.noise];
 }
@@ -384,11 +326,10 @@ export async function refreshAgenda(
 
   const guessed = await guessMissingServes(sessionId);
   const linked = await refreshGoalLinks(sessionId);
-  const waiting = await extractWaitingOn(sessionId);
   const wrote = await writeMoves(sessionId);
   logDebug(
     "agenda",
-    `serves guessed: ${guessed}, links: ${linked}, waitingOn: ${waiting}, moves written: ${wrote}`
+    `serves guessed: ${guessed}, links: ${linked}, moves written: ${wrote}`
   );
   return wrote ? "written" : "failed";
 }
