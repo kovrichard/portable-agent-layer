@@ -71,6 +71,18 @@ export function localClock(now: Date = new Date()): { hour: number; weekday: str
   return { hour: Number(f.hour), weekday: f.weekday };
 }
 
+/** Minutes since local midnight in the principal's timezone. */
+export function localMinuteOfDay(now: Date = new Date()): number {
+  const f = fieldsIn(now, zoneOrUtc(identity().principal.timezone));
+  return Number(f.hour) * 60 + Number(f.minute);
+}
+
+/** HH:MM in the principal's timezone. */
+export function localHourMinute(at: Date): string {
+  const f = fieldsIn(at, zoneOrUtc(identity().principal.timezone));
+  return `${f.hour}:${f.minute}`;
+}
+
 export function getWallClockReminder(now: Date = new Date()): string | null {
   if (!isEnabled("wallClock")) return null;
   const line = wallClockLine(now, identity().principal.timezone);

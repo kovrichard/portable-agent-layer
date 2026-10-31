@@ -27,6 +27,7 @@ import { patternsCommand } from "./patterns";
 import { telosCommand, timezoneCommand } from "./personal-context";
 import { progressCommand } from "./progress";
 import { ruleCommand } from "./rule";
+import { timeboxCommand, unattendedCommand } from "./run-mode";
 import { serverCommand } from "./server";
 import { skillCommand } from "./skill";
 import { subagentCommand } from "./subagent";
@@ -187,6 +188,8 @@ export function cliTree(admin: AdminHandlers): Group {
       rule: ruleCommand,
       correction: correctionCommand,
       progress: progressCommand,
+      timebox: timeboxCommand,
+      unattended: unattendedCommand,
       server: serverCommand,
       skill: skillCommand,
       subagent: subagentCommand,

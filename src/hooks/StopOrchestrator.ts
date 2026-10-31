@@ -18,6 +18,7 @@ import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { enterHookWorkspace } from "./lib/hook-turn";
 import { logError } from "./lib/log";
 import { stopProgressTree } from "./lib/progress-tree-stop";
+import { unattendedStopReason } from "./lib/run-mode-gate";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
 import { type StopTurnPayload, stopTurn } from "./lib/stop";
@@ -59,6 +60,15 @@ try {
   }
 } catch (err) {
   logError("StopOrchestrator:adaptation-rules", err);
+}
+try {
+  const keepGoing = unattendedStopReason(process.cwd());
+  if (keepGoing) {
+    process.stdout.write(stopBlockResponse(keepGoing));
+    process.exit(0);
+  }
+} catch (err) {
+  logError("StopOrchestrator:unattended", err);
 }
 try {
   stopProgressTree(payload);
