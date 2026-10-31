@@ -21,9 +21,10 @@ function writeTestFile(name: string, body: string): string {
 }
 
 function runTests(...files: string[]) {
+  // Without an explicit env, Bun.spawnSync passes the worker's start-up FORCE_COLOR=1 that setup.ts deleted.
   const result = Bun.spawnSync(
     ["bun", "test", ...files.map((file) => `./${relative(REPO, file)}`)],
-    { cwd: REPO, stdout: "pipe", stderr: "pipe" }
+    { cwd: REPO, env: { ...process.env }, stdout: "pipe", stderr: "pipe" }
   );
   return { exitCode: result.exitCode, output: `${result.stdout}${result.stderr}` };
 }
