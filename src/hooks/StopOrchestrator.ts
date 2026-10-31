@@ -6,18 +6,17 @@
  */
 
 import { checkReadmeSync } from "./handlers/readme-sync";
-import { watchReplyRules } from "./lib/adaptation-steering";
 import { stopBlockResponse } from "./lib/agent";
 import {
   type AntigravityStopFields,
   isSideStop,
   withTranscriptReply,
 } from "./lib/antigravity-transcript";
-import { watchClaims } from "./lib/claim-log";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { enterHookWorkspace } from "./lib/hook-turn";
 import { logError } from "./lib/log";
 import { stopProgressTree } from "./lib/progress-tree-stop";
+import { replySendBack } from "./lib/reply-checks";
 import { unattendedStopReason } from "./lib/run-mode-gate";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
@@ -51,25 +50,15 @@ try {
   logError("StopOrchestrator:readme-sync", err);
 }
 
-// Reply checks next: they share one send-back per turn, so a later attempt is never held by them.
+// Reply checks next, claims before style rules: one send-back per reply, so the corrected reply goes through.
 try {
-  const sendBack = watchClaims(payload);
+  const sendBack = replySendBack(payload);
   if (sendBack) {
     process.stdout.write(stopBlockResponse(sendBack));
     process.exit(0);
   }
 } catch (err) {
-  logError("StopOrchestrator:claim-check", err);
-}
-// After the claim check: an unverified claim outweighs a style rule, and only one send-back fits a turn.
-try {
-  const sendBack = watchReplyRules(payload);
-  if (sendBack) {
-    process.stdout.write(stopBlockResponse(sendBack));
-    process.exit(0);
-  }
-} catch (err) {
-  logError("StopOrchestrator:adaptation-rules", err);
+  logError("StopOrchestrator:reply-checks", err);
 }
 // After the reply checks: a reply that needs fixing goes back for the fix, not for the next task.
 try {

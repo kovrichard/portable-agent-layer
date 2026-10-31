@@ -7,6 +7,7 @@ import {
   transcriptLines,
   watchClaims,
 } from "../src/hooks/lib/claim-log";
+import { rememberSendBack } from "../src/hooks/lib/send-back-guard";
 import { reload } from "../src/hooks/lib/settings";
 import { claimCheckLines } from "../src/tools/lib/interaction-report";
 import { freshTestDir } from "./lib/test-home";
@@ -143,6 +144,7 @@ describe("sending an unbacked claim back, when opted in", () => {
     ["Cursor", { loop_count: 1 }],
   ])("sends a reply back once at most (%s)", (_, sentBack) => {
     optIn();
+    rememberSendBack({ session_id: "s1" }, true);
     const path = transcript([prompt]);
 
     expect(
@@ -157,6 +159,23 @@ describe("sending an unbacked claim back, when opted in", () => {
       )
     ).toBeNull();
     expect(claimChecksSince(since)[0].blocked).toBeUndefined();
+  });
+
+  test("checks a continued stop again when something else held the last one", () => {
+    optIn();
+    rememberSendBack({ session_id: "s1" }, false);
+
+    expect(
+      watchClaims(
+        {
+          session_id: "s1",
+          last_assistant_message: "All tests pass.",
+          transcript_path: transcript([prompt]),
+          stop_hook_active: true,
+        },
+        NOW
+      )
+    ).toContain("All tests pass");
   });
 });
 

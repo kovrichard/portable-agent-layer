@@ -11,10 +11,10 @@ import {
   type RuleTrigger,
   readRules,
 } from "./adaptation-rules";
-import { alreadySentBack } from "./claim-log";
 import { hookFinalReply, hookSessionId } from "./hook-turn";
 import { replyEnd } from "./interaction-samples";
 import { ruleEventsPath } from "./rule-effect";
+import { alreadySentBack } from "./send-back-guard";
 import { isEnabled } from "./settings";
 import type { StopTurnPayload } from "./stop";
 

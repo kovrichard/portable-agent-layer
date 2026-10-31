@@ -31,7 +31,7 @@ function transcriptWithoutCommands(): string {
   return path;
 }
 
-function stop(reply = "Working on the next task.") {
+function stop(reply = "Working on the next task.", continued = false) {
   return spawnSync(
     "bun",
     ["run", resolve(HOOKS, "StopOrchestrator.ts"), "--agent=claude"],
@@ -41,6 +41,7 @@ function stop(reply = "Working on the next task.") {
         cwd: repo,
         last_assistant_message: reply,
         transcript_path: transcriptWithoutCommands(),
+        stop_hook_active: continued,
       }),
       encoding: "utf-8",
       cwd: repo,
@@ -67,45 +68,63 @@ beforeEach(() => {
   commit("initial");
 });
 
+function startUnattendedRun() {
+  const now = new Date();
+  writeRun(
+    newRun({
+      kind: "unattended",
+      scope: scopeOf(repo),
+      until: new Date(now.getTime() + 3_600_000),
+      now,
+    })
+  );
+}
+
+function optIntoClaimSendBack() {
+  const memory = resolve(process.env.PAL_HOME as string, "memory");
+  mkdirSync(memory, { recursive: true });
+  writeFileSync(
+    resolve(memory, "pal-settings.json"),
+    JSON.stringify({ dynamicContext: { claimCheckBlocks: true } })
+  );
+}
+
+const CLAIM_SENT_BACK = "Your reply claims what no command in this turn showed";
+const KEEP_WORKING = "the user is not here to take a reply";
+
 describe("a stop held by an unattended run", () => {
   test("still attaches the commits made since the last turn", () => {
     appendEvent(scopeOf(repo), "n1", "open", { title: "Night", parent: null });
     attachGitProgress(repo);
     commit("feat: night step");
-    const now = new Date();
-    writeRun(
-      newRun({
-        kind: "unattended",
-        scope: scopeOf(repo),
-        until: new Date(now.getTime() + 3_600_000),
-        now,
-      })
-    );
+    startUnattendedRun();
 
     const proc = stop();
 
     expect(proc.stdout).toContain('"decision":"block"');
     expect(attachedCommits()).toEqual(["feat: night step"]);
   });
+
+  test("leaves the next reply to the claim check, which sends it back once", () => {
+    optIntoClaimSendBack();
+    startUnattendedRun();
+
+    expect(stop().stdout).toContain(KEEP_WORKING);
+    expect(stop("Fixed it. All tests pass.", true).stdout).toContain(CLAIM_SENT_BACK);
+    expect(stop("Fixed it. All tests pass.", true).stdout).toContain(KEEP_WORKING);
+  });
 });
 
 describe("a stop sent back by the claim check", () => {
   test("still attaches the commits made since the last turn", () => {
-    const memory = resolve(process.env.PAL_HOME as string, "memory");
-    mkdirSync(memory, { recursive: true });
-    writeFileSync(
-      resolve(memory, "pal-settings.json"),
-      JSON.stringify({ dynamicContext: { claimCheckBlocks: true } })
-    );
+    optIntoClaimSendBack();
     appendEvent(scopeOf(repo), "n1", "open", { title: "Fix", parent: null });
     attachGitProgress(repo);
     commit("fix: parser");
 
     const proc = stop("Fixed the parser. All tests pass.");
 
-    expect(proc.stdout).toContain(
-      "Your reply claims what no command in this turn showed"
-    );
+    expect(proc.stdout).toContain(CLAIM_SENT_BACK);
     expect(attachedCommits()).toEqual(["fix: parser"]);
   });
 });

@@ -6,6 +6,7 @@ import {
   promptRulesReminder,
   watchReplyRules,
 } from "../src/hooks/lib/adaptation-steering";
+import { rememberSendBack } from "../src/hooks/lib/send-back-guard";
 import { reload } from "../src/hooks/lib/settings";
 import { freshTestDir } from "./lib/test-home";
 
@@ -155,6 +156,7 @@ describe("reply-side rules", () => {
 
   test("a reply already sent back once goes through, and the fire is still logged", () => {
     const rule = approved(replyRule);
+    rememberSendBack({ session_id: "s1" }, true);
 
     expect(stop("All tests pass.", { stop_hook_active: true })).toBeNull();
     expect(events()).toEqual([
