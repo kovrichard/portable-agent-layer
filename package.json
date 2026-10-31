@@ -71,7 +71,6 @@
     "uninstall": "bun run src/cli/index.ts cli uninstall",
     "stamp:factory": "bun run src/tools/dark-factory/stamp.ts",
     "tool:synthesize":"bun run src/tools/agent/synthesize.ts",
-    "tool:thread": "bun run src/tools/agent/thread.ts",
     "eval:goal-links": "bun eval/run.ts goal-links",
     "eval:waiting-on": "bun eval/run.ts waiting-on",
     "eval:reaction": "bun eval/run.ts reaction",

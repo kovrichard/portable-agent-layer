@@ -152,6 +152,7 @@ describe("allow rules for retired pal cli verbs", () => {
     write(at(".claude", "settings.json"), {
       permissions: {
         allow: [
+          "Bash(pal cli project *)",
           "Bash(pal cli thread *)",
           "Bash(pal cli relationship-note *)",
           "Bash(pal cli wisdom-frame *)",
@@ -161,21 +162,22 @@ describe("allow rules for retired pal cli verbs", () => {
     });
     write(at(".gemini", "antigravity-cli", "settings.json"), {
       permissions: {
-        allow: ["command(pal cli thread)", "command(pal cli wisdom-frame)"],
+        allow: ["command(pal cli project)", "command(pal cli thread)"],
       },
     });
 
     expect(cleanUp("retired-verb-rules")).toEqual([
+      "Bash(pal cli thread *)",
       "Bash(pal cli relationship-note *)",
       "Bash(pal cli wisdom-frame *)",
-      "command(pal cli wisdom-frame)",
+      "command(pal cli thread)",
     ]);
     expect(json(at(".claude", "settings.json"))).toEqual({
-      permissions: { allow: ["Bash(pal cli thread *)"] },
+      permissions: { allow: ["Bash(pal cli project *)"] },
       model: "keep",
     });
     expect(json(at(".gemini", "antigravity-cli", "settings.json"))).toEqual({
-      permissions: { allow: ["command(pal cli thread)"] },
+      permissions: { allow: ["command(pal cli project)"] },
     });
   });
 

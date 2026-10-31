@@ -39,8 +39,7 @@
       "Bash(pal cli algorithm-synthesize *)",
       "Bash(pal cli analyze *)",
       "Bash(pal cli project *)",
-      "Bash(pal cli synthesize *)",
-      "Bash(pal cli thread *)"
+      "Bash(pal cli synthesize *)"
     ]
   },
   "skillOverrides": {

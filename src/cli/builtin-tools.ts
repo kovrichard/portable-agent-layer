@@ -13,7 +13,6 @@ import { command as analyze } from "../tools/agent/analyze";
 import { command as interaction } from "../tools/agent/interaction";
 import { command as project } from "../tools/agent/project";
 import { command as synthesize } from "../tools/agent/synthesize";
-import { command as thread } from "../tools/agent/thread";
 import type { Command } from "../tools/lib/command";
 
 export const builtinTools: Record<string, Command> = {
@@ -23,7 +22,6 @@ export const builtinTools: Record<string, Command> = {
   interaction,
   project,
   synthesize,
-  thread,
 };
 
 export const builtinToolVerbs = Object.keys(builtinTools).sort();
