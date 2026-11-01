@@ -128,7 +128,26 @@ export async function captureSessionIntelligence(
   if (sessionId) claimHandoffSummary(sessionId, userMessageCount);
 
   const output = await summarizeSession(userWindow, assistantWindow, sessionId);
+  recordSessionOutcome(output, {
+    lastUser,
+    lastAssistantText,
+    sessionId,
+    historyDue,
+    messageCount: messages.length,
+  });
+}
 
+function recordSessionOutcome(
+  output: IntelligenceOutput | null,
+  session: {
+    lastUser: ReturnType<typeof extractLastUser>;
+    lastAssistantText: string;
+    sessionId: string | undefined;
+    historyDue: boolean;
+    messageCount: number;
+  }
+): void {
+  const { lastUser, lastAssistantText, sessionId, historyDue } = session;
   // Fallbacks
   const title = output?.title || extractContent(lastUser).slice(0, 80) || "session";
   const summary = output?.summary || lastAssistantText.slice(0, 600);
@@ -152,7 +171,7 @@ export async function captureSessionIntelligence(
     });
   }
 
-  if (sessionId) markCaptured(sessionId, messages.length);
+  if (sessionId) markCaptured(sessionId, session.messageCount);
   logDebug("session-intelligence", `Session summarized: ${title}`);
 }
 
