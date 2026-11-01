@@ -472,30 +472,37 @@ export function mergeCursorHooks(
 
   if (template.hooks) {
     result.hooks ??= {};
-
-    // Collect canonical forms of all template hook commands
-    const palCanonical = new Set<string>();
-    for (const entries of Object.values(template.hooks)) {
-      for (const entry of entries) palCanonical.add(canonicalPalCmd(entry.command));
-    }
-
-    // Strip existing PAL hooks that match canonically (removes old-path duplicates)
-    for (const [event, entries] of Object.entries(result.hooks)) {
-      result.hooks[event] = entries.filter(
-        (e) => !isOutdatedPalHook(e.command, palCanonical)
-      );
-      if (result.hooks[event].length === 0) delete result.hooks[event];
-    }
-
-    // Insert template entries (old-path versions were just stripped)
-    for (const [event, entries] of Object.entries(template.hooks)) {
-      const current = result.hooks[event] ?? [];
-      for (const entry of entries) current.push(entry);
-      result.hooks[event] = current;
-    }
+    const palCanonical = canonicalTemplateCommands(template.hooks);
+    stripOutdatedPalHooks(result.hooks, palCanonical);
+    appendTemplateHooks(result.hooks, template.hooks);
   }
 
   return result;
+}
+
+type CursorHookMap = NonNullable<CursorHooks["hooks"]>;
+
+function canonicalTemplateCommands(templateHooks: CursorHookMap): Set<string> {
+  const palCanonical = new Set<string>();
+  for (const entries of Object.values(templateHooks)) {
+    for (const entry of entries) palCanonical.add(canonicalPalCmd(entry.command));
+  }
+  return palCanonical;
+}
+
+function stripOutdatedPalHooks(hooks: CursorHookMap, palCanonical: Set<string>): void {
+  for (const [event, entries] of Object.entries(hooks)) {
+    hooks[event] = entries.filter((e) => !isOutdatedPalHook(e.command, palCanonical));
+    if (hooks[event].length === 0) delete hooks[event];
+  }
+}
+
+function appendTemplateHooks(hooks: CursorHookMap, templateHooks: CursorHookMap): void {
+  for (const [event, entries] of Object.entries(templateHooks)) {
+    const current = hooks[event] ?? [];
+    for (const entry of entries) current.push(entry);
+    hooks[event] = current;
+  }
 }
 
 /**
