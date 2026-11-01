@@ -181,6 +181,40 @@ function buildExplicitEdges(graph: KnowledgeGraph, entities: Entity[]): void {
 }
 
 function buildTagEdges(graph: KnowledgeGraph): void {
+  const seen = new Set<string>();
+  for (const [tag, slugs] of indexByStructuralTag(graph)) {
+    if (slugs.length < 2) continue;
+    // Deterministic ordering before capping so behavior doesn't depend on
+    // `list()` iteration order across platforms.
+    const sorted = [...slugs].sort();
+    const group = sorted.length > TAG_GROUP_CAP ? sorted.slice(0, TAG_GROUP_CAP) : sorted;
+    linkTagGroup(graph, tag, group, seen);
+  }
+}
+
+function linkTagGroup(
+  graph: KnowledgeGraph,
+  tag: string,
+  group: string[],
+  seen: Set<string>
+): void {
+  for (let i = 0; i < group.length; i++) {
+    for (let j = i + 1; j < group.length; j++) {
+      const a = group[i];
+      const b = group[j];
+      const key = `${a}|${b}|${tag}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      pushEdge(
+        graph,
+        { from: a, to: b, weight: WEIGHT_TAG, edgeType: "tag", label: tag },
+        true
+      );
+    }
+  }
+}
+
+function indexByStructuralTag(graph: KnowledgeGraph): Map<string, string[]> {
   const tagIndex = new Map<string, string[]>();
   for (const node of graph.nodes.values()) {
     for (const tag of node.tags) {
@@ -193,35 +227,7 @@ function buildTagEdges(graph: KnowledgeGraph): void {
       else tagIndex.set(tag, [node.slug]);
     }
   }
-
-  const seen = new Set<string>();
-  for (const [tag, slugs] of tagIndex) {
-    if (slugs.length < 2) continue;
-    // Deterministic ordering before capping so behavior doesn't depend on
-    // `list()` iteration order across platforms.
-    const sorted = [...slugs].sort();
-    const group = sorted.length > TAG_GROUP_CAP ? sorted.slice(0, TAG_GROUP_CAP) : sorted;
-    for (let i = 0; i < group.length; i++) {
-      for (let j = i + 1; j < group.length; j++) {
-        const a = group[i];
-        const b = group[j];
-        const key = `${a}|${b}|${tag}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        pushEdge(
-          graph,
-          {
-            from: a,
-            to: b,
-            weight: WEIGHT_TAG,
-            edgeType: "tag",
-            label: tag,
-          },
-          true
-        );
-      }
-    }
-  }
+  return tagIndex;
 }
 
 export function buildGraph(rootDir?: string): KnowledgeGraph {
@@ -298,30 +304,7 @@ export function traverse(
     });
     if (entry.hop >= maxHops) continue;
 
-    const outgoing = graph.adjacency.get(entry.slug) ?? [];
-    const incoming = graph.reverseAdjacency.get(entry.slug) ?? [];
-    const bestPerTarget = new Map<string, GraphEdge>();
-    for (const edge of outgoing) {
-      if (visited.has(edge.to)) continue;
-      const existing = bestPerTarget.get(edge.to);
-      if (!existing || edge.weight > existing.weight) {
-        bestPerTarget.set(edge.to, edge);
-      }
-    }
-    for (const edge of incoming) {
-      // edge.to is the current node; edge.from is the "other" endpoint.
-      const other = edge.from;
-      if (visited.has(other) || other === entry.slug) continue;
-      const existing = bestPerTarget.get(other);
-      if (!existing || edge.weight > existing.weight) {
-        bestPerTarget.set(other, edge);
-      }
-    }
-
-    const sorted = [...bestPerTarget.entries()].sort(
-      (a, b) => b[1].weight - a[1].weight || a[0].localeCompare(b[0])
-    );
-    for (const [target, edge] of sorted) {
+    for (const [target, edge] of bestEdgePerNeighbour(graph, entry.slug, visited)) {
       if (visited.has(target)) continue;
       visited.add(target);
       queue.push({
@@ -336,7 +319,44 @@ export function traverse(
   return out;
 }
 
+function keepHeaviest(best: Map<string, GraphEdge>, target: string, edge: GraphEdge) {
+  const existing = best.get(target);
+  if (!existing || edge.weight > existing.weight) best.set(target, edge);
+}
+
+/** Unvisited neighbours in both edge directions, heaviest edge each, heaviest first. */
+function bestEdgePerNeighbour(
+  graph: KnowledgeGraph,
+  slug: string,
+  visited: Set<string>
+): [string, GraphEdge][] {
+  const bestPerTarget = new Map<string, GraphEdge>();
+  for (const edge of graph.adjacency.get(slug) ?? []) {
+    if (!visited.has(edge.to)) keepHeaviest(bestPerTarget, edge.to, edge);
+  }
+  for (const edge of graph.reverseAdjacency.get(slug) ?? []) {
+    const other = edge.from;
+    if (!visited.has(other) && other !== slug) keepHeaviest(bestPerTarget, other, edge);
+  }
+  return [...bestPerTarget.entries()].sort(
+    (a, b) => b[1].weight - a[1].weight || a[0].localeCompare(b[0])
+  );
+}
+
 // --- Stats ------------------------------------------------------------------
+
+function connectionsOf(edges: KnowledgeGraph["edges"]): Map<string, Set<string>> {
+  const connections = new Map<string, Set<string>>();
+  for (const edge of edges) {
+    const a = connections.get(edge.from) ?? new Set<string>();
+    a.add(edge.to);
+    connections.set(edge.from, a);
+    const b = connections.get(edge.to) ?? new Set<string>();
+    b.add(edge.from);
+    connections.set(edge.to, b);
+  }
+  return connections;
+}
 
 export function stats(graph: KnowledgeGraph): GraphStats {
   const nodesByDomain: Record<Domain, number> = {
@@ -358,15 +378,7 @@ export function stats(graph: KnowledgeGraph): GraphStats {
     edgesByType[edge.edgeType]++;
   }
 
-  const connections = new Map<string, Set<string>>();
-  for (const edge of graph.edges) {
-    const a = connections.get(edge.from) ?? new Set<string>();
-    a.add(edge.to);
-    connections.set(edge.from, a);
-    const b = connections.get(edge.to) ?? new Set<string>();
-    b.add(edge.from);
-    connections.set(edge.to, b);
-  }
+  const connections = connectionsOf(graph.edges);
 
   let isolated = 0;
   let mostConnected: { slug: string; count: number } | null = null;

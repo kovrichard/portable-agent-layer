@@ -30,6 +30,30 @@ function isBulletLayout(ctx: SlideContext): boolean {
   return BULLET_LAYOUTS.has(ctx.layout);
 }
 
+function rhythmRunAt(
+  shapes: string[],
+  i: number,
+  minLength: Record<number, number>
+): { period: number; length: number } | null {
+  for (const p of [1, 2, 3]) {
+    let runLen = p;
+    while (i + runLen < shapes.length && shapes[i + runLen] === shapes[i + runLen - p]) {
+      runLen++;
+    }
+    if (runLen >= minLength[p]) return { period: p, length: runLen }; // smallest period wins
+  }
+  return null;
+}
+
+function isNonProseLine(line: string, trimmed: string): boolean {
+  if (!trimmed) return true;
+  if (/^#/.test(trimmed)) return true; // heading
+  if (/^\s*(?:[-*]\s|\d+\.\s)/.test(line)) return true; // any-indent bullet
+  if (/^>/.test(trimmed)) return true; // blockquote
+  if (/^<!--/.test(trimmed)) return true; // comment
+  return /^<\/?\w/.test(trimmed); // html tag
+}
+
 function isExerciseSlide(ctx: SlideContext): boolean {
   // Detect by filename (what I see) OR by h2 prefix (what the room sees).
   if (/exercise/i.test(ctx.name)) return true;
@@ -273,12 +297,7 @@ export const RULES: Rule[] = [
         }
         if (inFence) continue;
         const trimmed = line.trim();
-        if (!trimmed) continue;
-        if (/^#/.test(trimmed)) continue; // heading
-        if (/^\s*(?:[-*]\s|\d+\.\s)/.test(line)) continue; // any-indent bullet
-        if (/^>/.test(trimmed)) continue; // blockquote
-        if (/^<!--/.test(trimmed)) continue; // comment
-        if (/^<\/?\w/.test(trimmed)) continue; // html tag
+        if (isNonProseLine(line, trimmed)) continue;
         if (trimmed.length > 80) {
           findings.push({
             rule: "prose-paragraph-in-body",
@@ -695,25 +714,9 @@ export const RULES: Rule[] = [
       for (let i = 0; i < shapes.length; i++) {
         if (used[i]) continue;
 
-        let chosenPeriod = -1;
-        let chosenLen = 0;
-
-        for (const p of [1, 2, 3]) {
-          let runLen = p;
-          while (
-            i + runLen < shapes.length &&
-            shapes[i + runLen] === shapes[i + runLen - p]
-          ) {
-            runLen++;
-          }
-          if (runLen >= minLength[p]) {
-            chosenPeriod = p;
-            chosenLen = runLen;
-            break; // smallest period wins
-          }
-        }
-
-        if (chosenPeriod < 0) continue;
+        const run = rhythmRunAt(shapes, i, minLength);
+        if (!run) continue;
+        const { period: chosenPeriod, length: chosenLen } = run;
 
         const startName = ctx.slides[i].name;
         const endName = ctx.slides[i + chosenLen - 1].name;

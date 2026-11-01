@@ -10,23 +10,25 @@ const SCANNED = ["assets", "src"];
 
 /** Every `pal cli …` command PAL ships in instruction text, with where it came from. */
 function shippedInvocations(pattern: RegExp): { file: string; command: string }[] {
-  const found: { file: string; command: string }[] = [];
-  const walk = (dir: string) => {
-    for (const entry of readdirSync(dir)) {
-      const path = resolve(dir, entry);
-      if (statSync(path).isDirectory()) {
-        if (entry !== "node_modules" && entry !== "dist") walk(path);
-        continue;
-      }
-      if (!/\.(md|ts|json|rules|template)$/.test(entry)) continue;
-      const text = readFileSync(path, "utf-8");
-      for (const match of text.matchAll(pattern)) {
-        found.push({ file: path.slice(ROOT.length + 1), command: match[0] });
-      }
+  return SCANNED.flatMap((dir) => instructionFilesUnder(resolve(ROOT, dir))).flatMap(
+    (path) =>
+      Array.from(readFileSync(path, "utf-8").matchAll(pattern), (match) => ({
+        file: path.slice(ROOT.length + 1),
+        command: match[0],
+      }))
+  );
+}
+
+function instructionFilesUnder(dir: string): string[] {
+  return readdirSync(dir).flatMap((entry) => {
+    const path = resolve(dir, entry);
+    if (statSync(path).isDirectory()) {
+      return entry !== "node_modules" && entry !== "dist"
+        ? instructionFilesUnder(path)
+        : [];
     }
-  };
-  for (const dir of SCANNED) walk(resolve(ROOT, dir));
-  return found;
+    return /\.(md|ts|json|rules|template)$/.test(entry) ? [path] : [];
+  });
 }
 
 function toolIsShipped(skill: string, tool: string): boolean {

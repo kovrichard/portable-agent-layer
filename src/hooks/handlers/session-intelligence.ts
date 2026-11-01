@@ -127,6 +127,59 @@ export async function captureSessionIntelligence(
 
   if (sessionId) claimHandoffSummary(sessionId, userMessageCount);
 
+  const output = await summarizeSession(userWindow, assistantWindow, sessionId);
+  recordSessionOutcome(output, {
+    lastUser,
+    lastAssistantText,
+    sessionId,
+    historyDue,
+    messageCount: messages.length,
+  });
+}
+
+function recordSessionOutcome(
+  output: IntelligenceOutput | null,
+  session: {
+    lastUser: ReturnType<typeof extractLastUser>;
+    lastAssistantText: string;
+    sessionId: string | undefined;
+    historyDue: boolean;
+    messageCount: number;
+  }
+): void {
+  const { lastUser, lastAssistantText, sessionId, historyDue } = session;
+  // Fallbacks
+  const title = output?.title || extractContent(lastUser).slice(0, 80) || "session";
+  const summary = output?.summary || lastAssistantText.slice(0, 600);
+  const insights = output?.insights || "";
+  if (output)
+    recordWhereSessionStopped(sessionDir(), progressSession(sessionId), {
+      title,
+      done: output.done,
+      next: output.next,
+      waitingOn: output.waitingOn,
+    });
+  if (!historyDue) return;
+
+  if (output) {
+    appendProjectHistory(sessionDir(), {
+      date: new Date().toISOString().slice(0, 10),
+      title,
+      summary,
+      insights,
+      session: sessionId,
+    });
+  }
+
+  if (sessionId) markCaptured(sessionId, session.messageCount);
+  logDebug("session-intelligence", `Session summarized: ${title}`);
+}
+
+async function summarizeSession(
+  userWindow: string[],
+  assistantWindow: string,
+  sessionId: string | undefined
+): Promise<IntelligenceOutput | null> {
   // Single Haiku call
   logDebug("session-intelligence", "Calling inference...");
   const numberedMessages = userWindow.map((m, i) => `${i + 1}. ${m}`).join("\n");
@@ -156,32 +209,7 @@ export async function captureSessionIntelligence(
   } catch (err) {
     logError("session-intelligence", err);
   }
-
-  // Fallbacks
-  const title = output?.title || extractContent(lastUser).slice(0, 80) || "session";
-  const summary = output?.summary || lastAssistantText.slice(0, 600);
-  const insights = output?.insights || "";
-  if (output)
-    recordWhereSessionStopped(sessionDir(), progressSession(sessionId), {
-      title,
-      done: output.done,
-      next: output.next,
-      waitingOn: output.waitingOn,
-    });
-  if (!historyDue) return;
-
-  if (output) {
-    appendProjectHistory(sessionDir(), {
-      date: new Date().toISOString().slice(0, 10),
-      title,
-      summary,
-      insights,
-      session: sessionId,
-    });
-  }
-
-  if (sessionId) markCaptured(sessionId, messages.length);
-  logDebug("session-intelligence", `Session summarized: ${title}`);
+  return output;
 }
 
 // Detached child entry point — re-reads transcript from tmp path, then unlinks it.

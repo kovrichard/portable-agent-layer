@@ -297,10 +297,19 @@ export function lintSubagent(file: string): SubagentReport {
     return { file, name: null, findings, errors: 1, warnings: 0 };
   }
 
-  const { name, description, descriptionQuoted, platforms, body } = parsed;
+  checkSubagentName(parsed.name, basename(file).replace(/\.md$/, ""), add);
+  checkSubagentDescription(parsed, add);
+  checkGlobalFields(parsed, add);
+  checkPlatformBlocks(parsed.platforms, add);
+  checkSubagentBody(parsed.body, add);
+  checkSubagentAbsolutePaths(readFileSync(file, "utf-8"), add);
 
-  // ── name ──
-  const stem = basename(file).replace(/\.md$/, "");
+  const errors = findings.filter((f) => f.level === "error").length;
+  const warnings = findings.filter((f) => f.level === "warn").length;
+  return { file, name: parsed.name, findings, errors, warnings };
+}
+
+function checkSubagentName(name: string | null, stem: string, add: AddFinding): void {
   if (!name) {
     add("error", "name", "Missing `name` in frontmatter");
   } else {
@@ -333,8 +342,12 @@ export function lintSubagent(file: string): SubagentReport {
         )
       : add("pass", "name.collision", "does not collide with a shipped subagent");
   }
+}
 
-  // ── description ──
+function checkSubagentDescription(
+  { description, descriptionQuoted }: ParsedSubagent,
+  add: AddFinding
+): void {
   if (!description) {
     add("error", "description", "Missing `description` in frontmatter");
   } else {
@@ -371,7 +384,9 @@ export function lintSubagent(file: string): SubagentReport {
           "no 'when to use' trigger — add 'Use when …' so the model knows when to delegate"
         );
   }
+}
 
+function checkGlobalFields(parsed: ParsedSubagent, add: AddFinding): void {
   const unmappedGlobals = topLevelKeys(parsed.global).filter(
     (key) => !SHARED_FIELDS.includes(key)
   );
@@ -382,8 +397,12 @@ export function lintSubagent(file: string): SubagentReport {
       `global ${unmappedGlobals.join(", ")} has no Codex key, so linking fails — move it into the platform blocks that use it`
     );
   }
+}
 
-  // ── platform blocks ──
+function checkPlatformBlocks(
+  platforms: ParsedSubagent["platforms"],
+  add: AddFinding
+): void {
   const present = AGENT_NAMES.filter((p) => (platforms[p]?.length ?? 0) > 0);
   const blockKeys = AGENT_NAMES.map((p) => p.concat(":")).join("/");
   present.length > 0
@@ -411,8 +430,9 @@ export function lintSubagent(file: string): SubagentReport {
       );
     }
   }
+}
 
-  // ── body ──
+function checkSubagentBody(body: string, add: AddFinding): void {
   const bodyLines = body.split("\n").length;
   bodyLines <= MAX_BODY_LINES
     ? add("pass", "body.length", `${bodyLines}/${MAX_BODY_LINES} lines`)
@@ -428,10 +448,11 @@ export function lintSubagent(file: string): SubagentReport {
         "body.present",
         "empty body — a subagent needs a system prompt after the frontmatter"
       );
+}
 
-  // ── absolute-path portability ──
+function checkSubagentAbsolutePaths(content: string, add: AddFinding): void {
   const hits: string[] = [];
-  const allLines = readFileSync(file, "utf-8").split("\n");
+  const allLines = content.split("\n");
   for (let i = 0; i < allLines.length; i++) {
     const m = ABSOLUTE_PATH_RE.exec(allLines[i]);
     if (m) hits.push(`${i + 1} → ${m[0]}`);
@@ -444,10 +465,6 @@ export function lintSubagent(file: string): SubagentReport {
         `hardcoded machine-specific path(s): ${hits.slice(0, 3).join("; ")}${more} — prefer $HOME/~ or an env var`
       )
     : add("pass", "paths.absolute", "no machine-specific absolute paths");
-
-  const errors = findings.filter((f) => f.level === "error").length;
-  const warnings = findings.filter((f) => f.level === "warn").length;
-  return { file, name, findings, errors, warnings };
 }
 
 /** Render a subagent report as a human-readable string. */

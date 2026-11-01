@@ -90,43 +90,53 @@ async function session(sessionArgs: string[]) {
   try {
     const projectsDir = resolve(homedir(), ".claude", "projects");
     if (!existsSync(projectsDir)) process.exit(exitCode);
-
-    // Find most recently modified .jsonl file
-    let latestFile = "";
-    let latestMtime = 0;
-
-    for (const project of readdirSync(projectsDir, { withFileTypes: true })) {
-      if (!project.isDirectory()) continue;
-      const dir = resolve(projectsDir, project.name);
-      for (const file of readdirSync(dir)) {
-        if (!file.endsWith(".jsonl")) continue;
-        const filepath = resolve(dir, file);
-        const { mtimeMs } = statSync(filepath);
-        if (mtimeMs > latestMtime) {
-          latestMtime = mtimeMs;
-          latestFile = filepath;
-        }
-      }
-    }
-
-    if (latestFile) {
-      const content = readFileSync(latestFile, "utf-8").trim();
-      const lastLine = content.split("\n").pop();
-      if (lastLine) {
-        const sessionId = JSON.parse(lastLine).sessionId;
-        if (sessionId) {
-          const summaryScript = resolve(palPkg(), "src", "tools", "session-summary.ts");
-          spawnSync("bun", ["run", summaryScript, "--", "--session", sessionId], {
-            stdio: "inherit",
-          });
-        }
-      }
-    }
+    summarizeSession(latestTranscript(projectsDir));
   } catch {
     // Silently ignore summary errors
   }
 
-  // Check for updates and display notice
+  await showUpdateNotices();
+  process.exit(exitCode);
+}
+
+function latestTranscript(projectsDir: string): string {
+  let latestFile = "";
+  let latestMtime = 0;
+  for (const project of readdirSync(projectsDir, { withFileTypes: true })) {
+    if (!project.isDirectory()) continue;
+    const dir = resolve(projectsDir, project.name);
+    for (const file of readdirSync(dir).filter((f) => f.endsWith(".jsonl"))) {
+      const filepath = resolve(dir, file);
+      const { mtimeMs } = statSync(filepath);
+      if (mtimeMs > latestMtime) {
+        latestMtime = mtimeMs;
+        latestFile = filepath;
+      }
+    }
+  }
+  return latestFile;
+}
+
+function sessionIdOf(line: string): string | undefined {
+  try {
+    return JSON.parse(line).sessionId;
+  } catch {
+    return undefined;
+  }
+}
+
+function summarizeSession(transcript: string): void {
+  if (!transcript) return;
+  const lastLine = readFileSync(transcript, "utf-8").trim().split("\n").pop();
+  const sessionId = lastLine ? sessionIdOf(lastLine) : undefined;
+  if (!sessionId) return;
+  const summaryScript = resolve(palPkg(), "src", "tools", "session-summary.ts");
+  spawnSync("bun", ["run", summaryScript, "--", "--session", sessionId], {
+    stdio: "inherit",
+  });
+}
+
+async function showUpdateNotices(): Promise<void> {
   try {
     const { checkForUpdate, getUpdateNotice } = await import(
       "../hooks/handlers/update-check"
@@ -140,8 +150,6 @@ async function session(sessionArgs: string[]) {
   } catch {
     // Non-critical
   }
-
-  process.exit(exitCode);
 }
 
 async function doctor(args: string[]): Promise<never> {
@@ -391,9 +399,82 @@ async function exportState(args: string[]) {
   }
 }
 
-async function importState(args: string[]) {
-  const { statSync } = await import("node:fs");
+function findLatestArchiveIn(dirs: string[]): string | null {
+  const candidates: string[] = [];
+  for (const dir of dirs) {
+    try {
+      candidates.push(
+        ...readdirSync(dir)
+          .filter(
+            (f) =>
+              (f.startsWith("pal-export-") || f.startsWith("pal-backup-")) &&
+              f.endsWith(".zip")
+          )
+          .map((f) => resolve(dir, f))
+      );
+    } catch {
+      /* empty */
+    }
+  }
+  if (candidates.length === 0) return null;
+  return candidates.sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0];
+}
+
+type AdmZipClass = new (path: string) => { getEntries(): unknown[] };
+
+/** An explicit file is taken as given; a folder or no argument picks the newest archive and asks first. */
+async function chooseImportArchive(
+  pathArg: string | undefined,
+  home: string,
+  AdmZip: AdmZipClass
+): Promise<string> {
+  const resolvedArg = pathArg ? toPath(pathArg) : null;
+  const argIsDir =
+    resolvedArg !== null &&
+    existsSync(resolvedArg) &&
+    statSync(resolvedArg).isDirectory();
+
+  if (resolvedArg && !argIsDir) {
+    logDebug("import", `using provided path=${resolvedArg}`);
+    return resolvedArg;
+  }
+  const searchDirs = argIsDir ? [resolvedArg] : [home, resolve(home, "backups")];
+  logDebug("import", `searching dirs=${searchDirs.join(",")}`);
+  const latest = findLatestArchiveIn(searchDirs);
+  if (!latest) {
+    logDebug("import", "no export/backup files found");
+    log.error("No export or backup files found. Provide a path: pal cli import <path>");
+    process.exit(1);
+  }
+  logDebug("import", `auto-selected latest=${latest}`);
+  console.log(`Found: ${latest}`);
+  const zip = new AdmZip(latest);
+  console.log(
+    `Contains ${zip.getEntries().length} files, created ${statSync(latest).mtime.toISOString().slice(0, 16).replace("T", " ")}`
+  );
+  if (!(await confirmImport())) {
+    console.log("Cancelled.");
+    process.exit(0);
+  }
+  return latest;
+}
+
+async function confirmImport(): Promise<boolean> {
   const { createInterface } = await import("node:readline");
+  const rl = createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+  const answer = await new Promise<string>((res) =>
+    rl.question("Import this file? [y/N] ", (a) => {
+      rl.close();
+      res(a);
+    })
+  );
+  return answer.trim().toLowerCase() === "y";
+}
+
+async function importState(args: string[]) {
   const AdmZip = (await import("adm-zip")).default;
 
   const home = palHome();
@@ -402,71 +483,7 @@ async function importState(args: string[]) {
   const pathArg = args.find((a) => !a.startsWith("-"));
   logDebug("import", `start dryRun=${dryRun} pathArg=${pathArg ?? "(auto)"}`);
 
-  function findLatestIn(dirs: string[]): string | null {
-    const candidates: string[] = [];
-    for (const dir of dirs) {
-      try {
-        candidates.push(
-          ...readdirSync(dir)
-            .filter(
-              (f) =>
-                (f.startsWith("pal-export-") || f.startsWith("pal-backup-")) &&
-                f.endsWith(".zip")
-            )
-            .map((f) => resolve(dir, f))
-        );
-      } catch {
-        /* empty */
-      }
-    }
-    if (candidates.length === 0) return null;
-    return candidates.sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0];
-  }
-
-  let zipPath: string;
-
-  const resolvedArg = pathArg ? toPath(pathArg) : null;
-  const argIsDir =
-    resolvedArg !== null &&
-    existsSync(resolvedArg) &&
-    statSync(resolvedArg).isDirectory();
-
-  if (resolvedArg && !argIsDir) {
-    zipPath = resolvedArg;
-    logDebug("import", `using provided path=${zipPath}`);
-  } else {
-    const searchDirs = argIsDir ? [resolvedArg] : [home, resolve(home, "backups")];
-    logDebug("import", `searching dirs=${searchDirs.join(",")}`);
-    const latest = findLatestIn(searchDirs);
-    if (!latest) {
-      logDebug("import", "no export/backup files found");
-      log.error("No export or backup files found. Provide a path: pal cli import <path>");
-      process.exit(1);
-    }
-    logDebug("import", `auto-selected latest=${latest}`);
-    console.log(`Found: ${latest}`);
-    const zip = new AdmZip(latest);
-    console.log(
-      `Contains ${zip.getEntries().length} files, created ${statSync(latest).mtime.toISOString().slice(0, 16).replace("T", " ")}`
-    );
-
-    const rl = createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
-    const answer = await new Promise<string>((res) =>
-      rl.question("Import this file? [y/N] ", (a) => {
-        rl.close();
-        res(a);
-      })
-    );
-    if (answer.trim().toLowerCase() !== "y") {
-      console.log("Cancelled.");
-      process.exit(0);
-    }
-    zipPath = latest;
-  }
-
+  const zipPath = await chooseImportArchive(pathArg, home, AdmZip);
   const zip = new AdmZip(zipPath);
   const entries = zip.getEntries();
 

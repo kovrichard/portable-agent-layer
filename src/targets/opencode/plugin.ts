@@ -7,7 +7,7 @@
 
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
-import type { Plugin, PluginInput } from "@opencode-ai/plugin";
+import type { Hooks, Plugin, PluginInput } from "@opencode-ai/plugin";
 
 const PAL_DIR = process.env.PAL_DIR || resolve(import.meta.dir, "../../..");
 
@@ -24,6 +24,8 @@ type TranscriptMessage = { role: string; content: string };
 function isSessionEvent(type: string): boolean {
   return type.startsWith("session.");
 }
+
+type OpencodeEvent = Parameters<NonNullable<Hooks["event"]>>[0]["event"];
 
 const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   const { buildSystemReminder } =
@@ -113,11 +115,68 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       .filter((m) => m.content.length > 0);
   }
 
+  async function runStopHandlersOnIdle(event: unknown): Promise<void> {
+    const sessionID = (event as { properties?: { sessionID?: string } })?.properties
+      ?.sessionID;
+    if (!sessionID) {
+      logDebug("opencode:event", "Skipping stop handlers: missing sessionID");
+      return;
+    }
+
+    const messages = await buildSessionTranscript(sessionID);
+    logDebug("opencode:event", `Got ${messages.length} transcript messages`);
+    if (messages.length < 2) return;
+
+    // Last assistant message feeds response caching (parity with Claude Code).
+    const lastAssistant = messages
+      .filter((m: TranscriptMessage) => m.role === "assistant")
+      .pop();
+
+    await runStopHandlers(JSON.stringify(messages), {
+      sessionId: sessionID,
+      lastAssistantMessage: lastAssistant?.content,
+    });
+    logDebug("opencode:event", "Stop handlers complete");
+  }
+
+  function guardShellCall(output: { args: Record<string, unknown> | string }): void {
+    const cmd =
+      typeof output.args === "string"
+        ? output.args
+        : ((output.args?.command as string) ?? "");
+    const reason = checkBashCommand(cmd);
+    if (reason) {
+      throw new Error(`PAL Security: Blocked — ${reason}`);
+    }
+    const rewritten = rtkRewrite(cmd);
+    if (!rewritten) return;
+    if (typeof output.args === "string") output.args = rewritten;
+    else (output.args as Record<string, unknown>).command = rewritten;
+  }
+
+  function guardFileWrite(args: Record<string, string>): void {
+    const filePath = args?.file_path ?? args?.filePath ?? args?.path ?? "";
+    const fileReason = checkFilePath(filePath);
+    if (fileReason) {
+      throw new Error(`PAL Security: ${fileReason}`);
+    }
+  }
+
   const { isPalSpawnedInference } =
     await lib<typeof import("../../hooks/lib/spawn-guard")>("spawn-guard.ts");
 
   const { commitApplied, ledgeredTarget, snapshotCall } =
     await lib<typeof import("../../hooks/lib/ledger-hook")>("ledger-hook.ts");
+
+  function logEventDetails(event: OpencodeEvent): void {
+    if (event.type === "session.created")
+      logOpencodeSessionCreated(event.properties.info);
+    if (event.type === "session.compacted")
+      logOpencodeCompaction(event.properties.sessionID);
+    if (event.type === "permission.replied") logOpencodePermissionReply(event.properties);
+    if (event.type === "message.part.updated")
+      logOpencodeToolFailure(event.properties.part);
+  }
 
   const ledgeredOpencodeCall = (tool: string, callID: string, args: unknown) => {
     const target = ledgeredTarget(tool, (args ?? {}) as Record<string, unknown>);
@@ -144,14 +203,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
         autoUpdateOnClose();
       }
 
-      if (event.type === "session.created")
-        logOpencodeSessionCreated(event.properties.info);
-      if (event.type === "session.compacted")
-        logOpencodeCompaction(event.properties.sessionID);
-      if (event.type === "permission.replied")
-        logOpencodePermissionReply(event.properties);
-      if (event.type === "message.part.updated")
-        logOpencodeToolFailure(event.properties.part);
+      logEventDetails(event);
 
       if (event.type === "session.created" || event.type === "session.updated") {
         const { regenerateIfNeeded } =
@@ -162,27 +214,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       if (event.type === "session.idle") {
         logDebug("opencode:event", "Running stop handlers...");
         try {
-          const sessionID = (event as { properties?: { sessionID?: string } })?.properties
-            ?.sessionID;
-          if (!sessionID) {
-            logDebug("opencode:event", "Skipping stop handlers: missing sessionID");
-            return;
-          }
-
-          const messages = await buildSessionTranscript(sessionID);
-          logDebug("opencode:event", `Got ${messages.length} transcript messages`);
-          if (messages.length < 2) return;
-
-          // Extract last assistant message for response caching (parity with Claude Code)
-          const lastAssistant = messages
-            .filter((m: TranscriptMessage) => m.role === "assistant")
-            .pop();
-
-          await runStopHandlers(JSON.stringify(messages), {
-            sessionId: sessionID,
-            lastAssistantMessage: lastAssistant?.content,
-          });
-          logDebug("opencode:event", "Stop handlers complete");
+          await runStopHandlersOnIdle(event);
         } catch (err) {
           logError("opencode:session.stop", err);
         }
@@ -221,30 +253,9 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       output: { args: Record<string, unknown> | string }
     ) => {
       const toolName = _input.tool;
-
-      if (toolName === "shell" || toolName === "bash") {
-        const cmd =
-          typeof output.args === "string"
-            ? output.args
-            : ((output.args?.command as string) ?? "");
-        const reason = checkBashCommand(cmd);
-        if (reason) {
-          throw new Error(`PAL Security: Blocked — ${reason}`);
-        }
-        const rewritten = rtkRewrite(cmd);
-        if (rewritten) {
-          if (typeof output.args === "string") output.args = rewritten;
-          else (output.args as Record<string, unknown>).command = rewritten;
-        }
-      }
-
+      if (toolName === "shell" || toolName === "bash") guardShellCall(output);
       if (toolName === "write" || toolName === "edit" || toolName === "patch") {
-        const args = output.args as Record<string, string>;
-        const filePath = args?.file_path ?? args?.filePath ?? args?.path ?? "";
-        const fileReason = checkFilePath(filePath);
-        if (fileReason) {
-          throw new Error(`PAL Security: ${fileReason}`);
-        }
+        guardFileWrite(output.args as Record<string, string>);
       }
 
       const call = ledgeredOpencodeCall(toolName, _input.callID, output.args);

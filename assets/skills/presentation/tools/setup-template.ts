@@ -101,11 +101,7 @@ const isHex = (s: string) => /^#[0-9a-fA-F]{6}$/.test(s);
 
 // HSL hue rotation by 180° → suggested complementary; brighten lightness for dark primaries
 // so a deep navy gives a warm/light accent rather than another dark colour.
-function complementary(hex: string): string {
-  const h = hex.replace("#", "");
-  const r = parseInt(h.slice(0, 2), 16) / 255;
-  const g = parseInt(h.slice(2, 4), 16) / 255;
-  const b = parseInt(h.slice(4, 6), 16) / 255;
+function hslOf(r: number, g: number, b: number): { H: number; S: number; L: number } {
   const max = Math.max(r, g, b),
     min = Math.min(r, g, b);
   let H = 0,
@@ -119,19 +115,31 @@ function complementary(hex: string): string {
     else H = (r - g) / d + 4;
     H *= 60;
   }
-  H = (H + 180) % 360;
-  const newL = Math.min(0.78, Math.max(0.5, L + 0.35));
-  const newS = Math.max(S, 0.55);
+  return { H, S, L };
+}
+
+function hueSector(H: number, c: number, x: number): [number, number, number] {
+  if (H < 60) return [c, x, 0];
+  if (H < 120) return [x, c, 0];
+  if (H < 180) return [0, c, x];
+  if (H < 240) return [0, x, c];
+  if (H < 300) return [x, 0, c];
+  return [c, 0, x];
+}
+
+function complementary(hex: string): string {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16) / 255;
+  const g = parseInt(h.slice(2, 4), 16) / 255;
+  const b = parseInt(h.slice(4, 6), 16) / 255;
+  const hsl = hslOf(r, g, b);
+  const H = (hsl.H + 180) % 360;
+  const newL = Math.min(0.78, Math.max(0.5, hsl.L + 0.35));
+  const newS = Math.max(hsl.S, 0.55);
   const c = (1 - Math.abs(2 * newL - 1)) * newS;
   const x = c * (1 - Math.abs(((H / 60) % 2) - 1));
   const m = newL - c / 2;
-  let [rr, gg, bb] = [0, 0, 0];
-  if (H < 60) [rr, gg, bb] = [c, x, 0];
-  else if (H < 120) [rr, gg, bb] = [x, c, 0];
-  else if (H < 180) [rr, gg, bb] = [0, c, x];
-  else if (H < 240) [rr, gg, bb] = [0, x, c];
-  else if (H < 300) [rr, gg, bb] = [x, 0, c];
-  else [rr, gg, bb] = [c, 0, x];
+  const [rr, gg, bb] = hueSector(H, c, x);
   const toHex = (n: number) =>
     Math.round((n + m) * 255)
       .toString(16)
@@ -146,144 +154,224 @@ async function ask(rl: readline.Interface, q: string, def?: string): Promise<str
   return ans || def || "";
 }
 
+type Prompter = readline.Interface | null;
+
+interface TemplateSettings {
+  name: string;
+  tplPath: string;
+  logo: string;
+  primary: string;
+  accent: string;
+  footer: string;
+  logoPlacement: LogoPlacement;
+  fonts: string;
+  aspect: Aspect;
+  showcase: boolean | undefined;
+}
+
+function fail(message: string): never {
+  console.error(message);
+  process.exit(1);
+}
+
+async function askUntilValid(
+  rl: readline.Interface,
+  question: string,
+  isValid: (answer: string) => boolean | Promise<boolean>,
+  errorFor: (answer: string) => string
+): Promise<string> {
+  while (true) {
+    const answer = await ask(rl, question);
+    if (await isValid(answer)) return answer;
+    console.error(errorFor(answer));
+  }
+}
+
+async function askOr(
+  given: string | undefined,
+  rl: Prompter,
+  question: string,
+  def: string
+): Promise<string> {
+  return given ?? (rl ? await ask(rl, question, def) : def);
+}
+
+async function resolveChoice<T extends string>(
+  given: T | undefined,
+  rl: Prompter,
+  question: string,
+  options: readonly T[],
+  fallback: T
+): Promise<T> {
+  if (given || !rl) return given ?? fallback;
+  const answer = await ask(rl, question, fallback);
+  return (options as readonly string[]).includes(answer) ? (answer as T) : fallback;
+}
+
+async function resolveName(args: Args, rl: Prompter): Promise<string> {
+  const name =
+    args.name ||
+    (rl
+      ? await askUntilValid(
+          rl,
+          "Template name (slug, e.g. 'my-company'):",
+          (s) => /^[a-z0-9][a-z0-9-]*$/.test(s),
+          () => "  ✘ name must be lowercase alphanumerics + dashes"
+        )
+      : "");
+  if (!name) fail("--name required");
+  return name;
+}
+
+async function resolveTemplatePath(args: Args, rl: Prompter, name: string) {
+  const defaultPath = join(TEMPLATES_ROOT, name);
+  if (args.path) return resolve(args.path);
+  if (rl) return resolve(await ask(rl, "Storage path:", defaultPath));
+  return defaultPath;
+}
+
+async function resolveLogo(args: Args, rl: Prompter): Promise<string> {
+  const given =
+    args.logo ||
+    (rl
+      ? await askUntilValid(
+          rl,
+          "Logo file path (.svg preferred, .png ok):",
+          async (s) => s !== "" && (await exists(resolve(s))),
+          (s) => `  ✘ file not found: ${s}`
+        )
+      : "");
+  if (!given) fail("--logo required");
+  const logo = resolve(given);
+  if (!(await exists(logo))) fail(`logo not found: ${logo}`);
+  return logo;
+}
+
+async function resolvePrimary(args: Args, rl: Prompter): Promise<string> {
+  const primary =
+    args.primary ||
+    (rl
+      ? await askUntilValid(
+          rl,
+          "Primary brand color (hex, e.g. #0E1335):",
+          isHex,
+          () => "  ✘ must be 6-digit hex like #0E1335"
+        )
+      : "");
+  if (!primary || !isHex(primary)) fail("--primary must be hex like #0E1335");
+  return primary;
+}
+
+async function resolveAccent(args: Args, rl: Prompter, primary: string) {
+  const suggested = complementary(primary);
+  const accent =
+    args.accent ||
+    (rl ? await ask(rl, `Accent color (hex) [derived: ${suggested}]:`, suggested) : "");
+  return accent && isHex(accent) ? accent : suggested;
+}
+
+async function resolveShowcase(args: Args, rl: Prompter) {
+  if (args.showcase !== undefined || !rl) return args.showcase;
+  const answer = await ask(
+    rl,
+    "Generate showcase deck demonstrating every layout? (y/n):",
+    "n"
+  );
+  return answer.toLowerCase().startsWith("y");
+}
+
+async function collectSettings(args: Args, rl: Prompter): Promise<TemplateSettings> {
+  const name = await resolveName(args, rl);
+  const tplPath = await resolveTemplatePath(args, rl, name);
+  const logo = await resolveLogo(args, rl);
+  const primary = await resolvePrimary(args, rl);
+  const accent = await resolveAccent(args, rl, primary);
+  const footer = await askOr(args.footer, rl, "Footer text (blank for none):", "");
+  const logoPlacement = await resolveChoice<LogoPlacement>(
+    args.logoPlacement,
+    rl,
+    "Logo placement [cover-only / footer / both / none]:",
+    ["cover-only", "footer", "both", "none"],
+    "footer"
+  );
+  const fonts = await askOr(
+    args.fonts,
+    rl,
+    "Fonts ['system' or Google Fonts URL]:",
+    "system"
+  );
+  const aspect = await resolveChoice<Aspect>(
+    args.aspect,
+    rl,
+    "Aspect ratio [16:9 / 4:3 / 16:10]:",
+    ["16:9", "4:3", "16:10"],
+    "16:9"
+  );
+  const showcase = await resolveShowcase(args, rl);
+  return {
+    name,
+    tplPath,
+    logo,
+    primary,
+    accent,
+    footer,
+    logoPlacement,
+    fonts,
+    aspect,
+    showcase,
+  };
+}
+
+function printSummary(s: TemplateSettings): void {
+  console.log("\nSummary:");
+  console.log(`  name           ${s.name}`);
+  console.log(`  path           ${s.tplPath}`);
+  console.log(`  logo           ${s.logo}`);
+  console.log(`  primary        ${s.primary}`);
+  console.log(`  accent         ${s.accent}`);
+  console.log(`  footer         ${s.footer || "(none)"}`);
+  console.log(`  logoPlacement  ${s.logoPlacement}`);
+  console.log(`  fonts          ${s.fonts}`);
+  console.log(`  aspect         ${s.aspect}`);
+  console.log(`  showcase       ${s.showcase ? "yes" : "no"}`);
+}
+
+async function confirmWrite(rl: readline.Interface): Promise<void> {
+  const ok = (await rl.question("\nWrite template? (y/n) [y]: ")).trim().toLowerCase();
+  if (ok && !ok.startsWith("y")) {
+    console.log("aborted");
+    rl.close();
+    process.exit(1);
+  }
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const interactive = !(args.name && args.logo && args.primary);
   const rl = interactive ? readline.createInterface({ input, output }) : null;
-
-  // 1. Name
-  let name = args.name;
-  if (!name && rl) {
-    while (true) {
-      name = await ask(rl, "Template name (slug, e.g. 'my-company'):");
-      if (/^[a-z0-9][a-z0-9-]*$/.test(name)) break;
-      console.error("  ✘ name must be lowercase alphanumerics + dashes");
-    }
-  }
-  if (!name) {
-    console.error("--name required");
-    process.exit(1);
-  }
-
-  // 2. Path
-  const defaultPath = join(TEMPLATES_ROOT, name);
-  let tplPath: string;
-  if (args.path) {
-    tplPath = resolve(args.path);
-  } else if (rl) {
-    tplPath = resolve(await ask(rl, "Storage path:", defaultPath));
-  } else {
-    tplPath = defaultPath;
-  }
-
-  // 3. Logo
-  let logo = args.logo;
-  if (!logo && rl) {
-    while (true) {
-      logo = (await rl.question("Logo file path (.svg preferred, .png ok): ")).trim();
-      if (logo && (await exists(resolve(logo)))) break;
-      console.error(`  ✘ file not found: ${logo}`);
-    }
-  }
-  if (!logo) {
-    console.error("--logo required");
-    process.exit(1);
-  }
-  logo = resolve(logo);
-  if (!(await exists(logo))) {
-    console.error(`logo not found: ${logo}`);
-    process.exit(1);
-  }
-
-  // 4. Primary
-  let primary = args.primary;
-  if (!primary && rl) {
-    while (true) {
-      primary = (await rl.question("Primary brand color (hex, e.g. #0E1335): ")).trim();
-      if (isHex(primary)) break;
-      console.error("  ✘ must be 6-digit hex like #0E1335");
-    }
-  }
-  if (!primary || !isHex(primary)) {
-    console.error("--primary must be hex like #0E1335");
-    process.exit(1);
-  }
-
-  // 5. Accent — default = derived complementary
-  const suggested = complementary(primary);
-  let accent = args.accent;
-  if (!accent && rl) {
-    accent = await ask(rl, `Accent color (hex) [derived: ${suggested}]:`, suggested);
-    if (!isHex(accent)) accent = suggested;
-  }
-  if (!accent || !isHex(accent)) accent = suggested;
-
-  // 6. Footer
-  const footer =
-    args.footer ?? (rl ? await ask(rl, "Footer text (blank for none):", "") : "");
-
-  // 7. Logo placement
-  let logoPlacement = args.logoPlacement;
-  if (!logoPlacement && rl) {
-    const a = await ask(
-      rl,
-      "Logo placement [cover-only / footer / both / none]:",
-      "footer"
-    );
-    logoPlacement = (
-      ["cover-only", "footer", "both", "none"].includes(a) ? a : "footer"
-    ) as LogoPlacement;
-  }
-  logoPlacement ??= "footer";
-
-  // 8. Fonts
-  const fonts =
-    args.fonts ??
-    (rl ? await ask(rl, "Fonts ['system' or Google Fonts URL]:", "system") : "system");
-
-  // 9. Aspect
-  let aspect = args.aspect;
-  if (!aspect && rl) {
-    const a = await ask(rl, "Aspect ratio [16:9 / 4:3 / 16:10]:", "16:9");
-    aspect = (["16:9", "4:3", "16:10"].includes(a) ? a : "16:9") as Aspect;
-  }
-  aspect ??= "16:9";
-
-  // 10. Showcase deck?
-  let showcase = args.showcase;
-  if (showcase === undefined && rl) {
-    const a = (
-      await ask(rl, "Generate showcase deck demonstrating every layout? (y/n):", "n")
-    ).toLowerCase();
-    showcase = a.startsWith("y");
-  }
+  const settings = await collectSettings(args, rl);
 
   if (rl) {
-    console.log("\nSummary:");
-    console.log(`  name           ${name}`);
-    console.log(`  path           ${tplPath}`);
-    console.log(`  logo           ${logo}`);
-    console.log(`  primary        ${primary}`);
-    console.log(`  accent         ${accent}`);
-    console.log(`  footer         ${footer || "(none)"}`);
-    console.log(`  logoPlacement  ${logoPlacement}`);
-    console.log(`  fonts          ${fonts}`);
-    console.log(`  aspect         ${aspect}`);
-    console.log(`  showcase       ${showcase ? "yes" : "no"}`);
-    if (!args.yes) {
-      const ok = (await rl.question("\nWrite template? (y/n) [y]: "))
-        .trim()
-        .toLowerCase();
-      if (ok && !ok.startsWith("y")) {
-        console.log("aborted");
-        rl.close();
-        process.exit(1);
-      }
-    }
+    printSummary(settings);
+    if (!args.yes) await confirmWrite(rl);
     rl.close();
   }
 
-  // Write template files
+  await writeTemplate(settings);
+  const { name, tplPath, showcase } = settings;
+  console.log(`\n✓ template "${name}" registered`);
+  console.log(`  path: ${tplPath}`);
+
+  if (showcase) await createShowcaseDeck(tplPath, name);
+
+  console.log(
+    `\nNext: pal cli skill run presentation new-deck <deck-dir> --template ${name}`
+  );
+}
+
+async function writeTemplate(settings: TemplateSettings): Promise<void> {
+  const { name, tplPath, logo, primary, accent, footer, logoPlacement, fonts, aspect } =
+    settings;
   await mkdir(tplPath, { recursive: true });
   const ext = extname(logo).toLowerCase() || ".svg";
   await copyFile(logo, join(tplPath, `logo${ext}`));
@@ -315,37 +403,30 @@ aspect: "${aspect}"
     path: tplPath,
     meta: { primary, accent, footer, logoPlacement, fonts, aspect },
   });
+}
 
-  console.log(`\n✓ template "${name}" registered`);
-  console.log(`  path: ${tplPath}`);
-
-  if (showcase) {
-    const showcaseDir = join(tplPath, "showcase-deck");
-    const newDeckScript = fileURLToPath(new URL("./new-deck.ts", import.meta.url));
-    await new Promise<void>((res, rej) => {
-      const p = spawn(
-        "bun",
-        [
-          newDeckScript,
-          showcaseDir,
-          "--template",
-          name,
-          "--showcase",
-          "--title",
-          `${name} — showcase`,
-        ],
-        { stdio: "inherit" }
-      );
-      p.on("exit", (code) =>
-        code === 0 ? res() : rej(new Error(`new-deck exited ${code}`))
-      );
-    });
-    console.log(`\n  showcase deck: ${showcaseDir}`);
-  }
-
-  console.log(
-    `\nNext: pal cli skill run presentation new-deck <deck-dir> --template ${name}`
-  );
+async function createShowcaseDeck(tplPath: string, name: string): Promise<void> {
+  const showcaseDir = join(tplPath, "showcase-deck");
+  const newDeckScript = fileURLToPath(new URL("./new-deck.ts", import.meta.url));
+  await new Promise<void>((res, rej) => {
+    const p = spawn(
+      "bun",
+      [
+        newDeckScript,
+        showcaseDir,
+        "--template",
+        name,
+        "--showcase",
+        "--title",
+        `${name} — showcase`,
+      ],
+      { stdio: "inherit" }
+    );
+    p.on("exit", (code) =>
+      code === 0 ? res() : rej(new Error(`new-deck exited ${code}`))
+    );
+  });
+  console.log(`\n  showcase deck: ${showcaseDir}`);
 }
 
 main().catch((e) => {
