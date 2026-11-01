@@ -893,6 +893,15 @@ interface RawSpawnResult {
   timedOut: boolean;
 }
 
+async function readPipe(pipe: unknown): Promise<string> {
+  if (!pipe || typeof pipe === "number") return "";
+  try {
+    return await new Response(pipe as ReadableStream<Uint8Array>).text();
+  } catch {
+    return "";
+  }
+}
+
 /**
  * One CLI invocation. Returns raw streams + exit info, no parsing.
  * Used by every per-agent dispatcher (claude --print, codex exec, etc).
@@ -906,8 +915,6 @@ async function singleCliAttempt(
   cwd?: string
 ): Promise<RawSpawnResult> {
   return new Promise<RawSpawnResult>((resolve) => {
-    let stdout = "";
-    let stderr = "";
     let timedOut = false;
     let settled = false;
     const finish = (r: RawSpawnResult) => {
@@ -959,24 +966,8 @@ async function singleCliAttempt(
     }
 
     void (async () => {
-      const stdoutStream =
-        proc.stdout && typeof proc.stdout !== "number"
-          ? (proc.stdout as ReadableStream<Uint8Array>)
-          : null;
-      const stderrStream =
-        proc.stderr && typeof proc.stderr !== "number"
-          ? (proc.stderr as ReadableStream<Uint8Array>)
-          : null;
-      try {
-        if (stdoutStream) stdout = await new Response(stdoutStream).text();
-      } catch {
-        /* ignore */
-      }
-      try {
-        if (stderrStream) stderr = await new Response(stderrStream).text();
-      } catch {
-        /* ignore */
-      }
+      const stdout = await readPipe(proc.stdout);
+      const stderr = await readPipe(proc.stderr);
       await proc.exited;
       clearTimeout(timer);
       finish({ code: proc.exitCode, stdout, stderr, timedOut });
