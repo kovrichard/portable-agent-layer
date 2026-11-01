@@ -113,6 +113,14 @@ export function detectStatus(lastAssistant: string): SessionRecord["status"] {
   return completionSignals.test(lastAssistant) ? "completed" : "in-progress";
 }
 
+function mentionedPaths(content: unknown): string[] {
+  const text = typeof content === "string" ? content : "";
+  // Match file paths: /absolute/paths and relative/paths with extensions
+  const pathMatches = text.match(/(?:\/[\w./-]+\.\w+|[\w./-]+\/[\w.-]+\.\w+)/g) ?? [];
+  // Skip URLs, common noise
+  return pathMatches.filter((p) => !p.includes("://") && !p.includes("node_modules"));
+}
+
 /** Extract file paths mentioned in assistant messages */
 export function extractArtifacts(
   messages: { role: string; content: string | unknown }[]
@@ -122,13 +130,7 @@ export function extractArtifacts(
 
   for (const msg of messages) {
     if (msg.role !== "assistant") continue;
-    const text = typeof msg.content === "string" ? msg.content : "";
-    // Match file paths: /absolute/paths and relative/paths with extensions
-    const pathMatches = text.match(/(?:\/[\w./-]+\.\w+|[\w./-]+\/[\w.-]+\.\w+)/g);
-    if (!pathMatches) continue;
-    for (const p of pathMatches) {
-      // Skip URLs, common noise
-      if (p.includes("://") || p.includes("node_modules")) continue;
+    for (const p of mentionedPaths(msg.content)) {
       if (!seen.has(p)) {
         seen.add(p);
         artifacts.push(p);

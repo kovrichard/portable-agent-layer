@@ -456,6 +456,29 @@ function otherProjectLine(p: ProjectProgress, last: string | undefined): string 
  * counts and the last session's title, enough to follow up from any folder.
  * Quiet ones (>14d) collapse to a single line of names.
  */
+function activeProjectLines(
+  visible: ProjectProgress[],
+  resolvedName: string | undefined,
+  lastSessionTitle: (project: string) => string | undefined
+): string[] {
+  const lines = ["## Active Projects", ""];
+  const sorted = [...visible].sort((a, b) => b.updated.localeCompare(a.updated));
+  const quiet: string[] = [];
+  for (const p of sorted) {
+    if (resolvedName !== undefined && p.name === resolvedName) {
+      lines.push(...resolvedProjectLines(p));
+    } else if (isStale(p)) {
+      quiet.push(p.name);
+    } else {
+      lines.push(otherProjectLine(p, lastSessionTitle(p.name)));
+    }
+  }
+  if (quiet.length > 0) {
+    lines.push(`- Quiet for ${PROJECT_STALE_DAYS_DEFAULT}+ days: ${quiet.join(", ")}`);
+  }
+  return lines;
+}
+
 export function loadActiveProjectsContext(
   cwd: string = process.cwd(),
   lastSessionTitle: (project: string) => string | undefined = () => undefined
@@ -474,21 +497,7 @@ export function loadActiveProjectsContext(
   const lines: string[] = [];
 
   if (visible.length > 0) {
-    lines.push("## Active Projects", "");
-    const sorted = [...visible].sort((a, b) => b.updated.localeCompare(a.updated));
-    const quiet: string[] = [];
-    for (const p of sorted) {
-      if (resolved !== null && p.name === resolved.name) {
-        lines.push(...resolvedProjectLines(p));
-      } else if (isStale(p)) {
-        quiet.push(p.name);
-      } else {
-        lines.push(otherProjectLine(p, lastSessionTitle(p.name)));
-      }
-    }
-    if (quiet.length > 0) {
-      lines.push(`- Quiet for ${PROJECT_STALE_DAYS_DEFAULT}+ days: ${quiet.join(", ")}`);
-    }
+    lines.push(...activeProjectLines(visible, resolved?.name, lastSessionTitle));
   }
 
   if (showHint) {

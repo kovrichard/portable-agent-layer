@@ -30,6 +30,15 @@ function isBulletLayout(ctx: SlideContext): boolean {
   return BULLET_LAYOUTS.has(ctx.layout);
 }
 
+function isNonProseLine(line: string, trimmed: string): boolean {
+  if (!trimmed) return true;
+  if (/^#/.test(trimmed)) return true; // heading
+  if (/^\s*(?:[-*]\s|\d+\.\s)/.test(line)) return true; // any-indent bullet
+  if (/^>/.test(trimmed)) return true; // blockquote
+  if (/^<!--/.test(trimmed)) return true; // comment
+  return /^<\/?\w/.test(trimmed); // html tag
+}
+
 function isExerciseSlide(ctx: SlideContext): boolean {
   // Detect by filename (what I see) OR by h2 prefix (what the room sees).
   if (/exercise/i.test(ctx.name)) return true;
@@ -273,12 +282,7 @@ export const RULES: Rule[] = [
         }
         if (inFence) continue;
         const trimmed = line.trim();
-        if (!trimmed) continue;
-        if (/^#/.test(trimmed)) continue; // heading
-        if (/^\s*(?:[-*]\s|\d+\.\s)/.test(line)) continue; // any-indent bullet
-        if (/^>/.test(trimmed)) continue; // blockquote
-        if (/^<!--/.test(trimmed)) continue; // comment
-        if (/^<\/?\w/.test(trimmed)) continue; // html tag
+        if (isNonProseLine(line, trimmed)) continue;
         if (trimmed.length > 80) {
           findings.push({
             rule: "prose-paragraph-in-body",
