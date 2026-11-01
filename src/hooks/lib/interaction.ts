@@ -7,6 +7,7 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { hearsPromptContext } from "./agent";
+import { currentChannel } from "./channel";
 import {
   appendEvent,
   eventsInMonth,
@@ -339,7 +340,7 @@ export function observeTurn(
   prompt: string,
   session: string | undefined,
   now: Date = new Date(),
-  channel: string | null = process.env.PAL_CHANNEL || null
+  channel: string | null = currentChannel(prompt)
 ): string | null {
   if (!session || isSystemText(prompt) || !isEnabled("interactionAwareness")) return null;
   const text = stripInjectedTags(prompt);
