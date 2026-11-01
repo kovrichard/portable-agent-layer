@@ -113,6 +113,30 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       .filter((m) => m.content.length > 0);
   }
 
+  async function runStopHandlersOnIdle(event: unknown): Promise<void> {
+    const sessionID = (event as { properties?: { sessionID?: string } })?.properties
+      ?.sessionID;
+    if (!sessionID) {
+      logDebug("opencode:event", "Skipping stop handlers: missing sessionID");
+      return;
+    }
+
+    const messages = await buildSessionTranscript(sessionID);
+    logDebug("opencode:event", `Got ${messages.length} transcript messages`);
+    if (messages.length < 2) return;
+
+    // Last assistant message feeds response caching (parity with Claude Code).
+    const lastAssistant = messages
+      .filter((m: TranscriptMessage) => m.role === "assistant")
+      .pop();
+
+    await runStopHandlers(JSON.stringify(messages), {
+      sessionId: sessionID,
+      lastAssistantMessage: lastAssistant?.content,
+    });
+    logDebug("opencode:event", "Stop handlers complete");
+  }
+
   const { isPalSpawnedInference } =
     await lib<typeof import("../../hooks/lib/spawn-guard")>("spawn-guard.ts");
 
@@ -162,27 +186,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       if (event.type === "session.idle") {
         logDebug("opencode:event", "Running stop handlers...");
         try {
-          const sessionID = (event as { properties?: { sessionID?: string } })?.properties
-            ?.sessionID;
-          if (!sessionID) {
-            logDebug("opencode:event", "Skipping stop handlers: missing sessionID");
-            return;
-          }
-
-          const messages = await buildSessionTranscript(sessionID);
-          logDebug("opencode:event", `Got ${messages.length} transcript messages`);
-          if (messages.length < 2) return;
-
-          // Extract last assistant message for response caching (parity with Claude Code)
-          const lastAssistant = messages
-            .filter((m: TranscriptMessage) => m.role === "assistant")
-            .pop();
-
-          await runStopHandlers(JSON.stringify(messages), {
-            sessionId: sessionID,
-            lastAssistantMessage: lastAssistant?.content,
-          });
-          logDebug("opencode:event", "Stop handlers complete");
+          await runStopHandlersOnIdle(event);
         } catch (err) {
           logError("opencode:session.stop", err);
         }

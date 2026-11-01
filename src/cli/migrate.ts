@@ -324,63 +324,56 @@ const v3EntitiesToKnowledge: Migration = {
     const idx = readLegacyIndex();
     if (!idx) return { migrated: 0, skipped: 0, results: [] };
 
-    let migrated = 0;
-    let skipped = 0;
-    const results: string[] = [];
-
     // Refuse to silently drop links/sources if a future legacy index has them.
     const linksCount = Object.keys(idx.links ?? {}).length;
     const sourcesCount = Object.keys(idx.sources ?? {}).length;
     if (linksCount > 0 || sourcesCount > 0) {
-      results.push(
-        `aborted: legacy index has ${linksCount} link(s) and ${sourcesCount} source(s) — no destination in new store`
-      );
-      return { migrated: 0, skipped: linksCount + sourcesCount, results };
+      return {
+        migrated: 0,
+        skipped: linksCount + sourcesCount,
+        results: [
+          `aborted: legacy index has ${linksCount} link(s) and ${sourcesCount} source(s) — no destination in new store`,
+        ],
+      };
     }
 
-    for (const legacy of Object.values(idx.people ?? {})) {
-      const entity = legacyPersonToEntity(legacy);
-      if (knowledgeExists(entity.domain, entity.slug)) {
-        skipped++;
-        results.push(`People/${entity.slug}: skipped (already in new store)`);
-        continue;
-      }
-      if (!dryRun) knowledgeSave(entity);
-      migrated++;
-      results.push(`People/${entity.slug}: ${dryRun ? "would migrate" : "migrated"}`);
+    const tally: MigrationResult = { migrated: 0, skipped: 0, results: [] };
+    const people = Object.values(idx.people ?? {}).map(legacyPersonToEntity);
+    const companies = Object.values(idx.companies ?? {}).map(legacyCompanyToEntity);
+    for (const entity of [...people, ...companies]) {
+      migrateEntity(entity, dryRun, tally);
     }
 
-    for (const legacy of Object.values(idx.companies ?? {})) {
-      const entity = legacyCompanyToEntity(legacy);
-      if (knowledgeExists(entity.domain, entity.slug)) {
-        skipped++;
-        results.push(`Companies/${entity.slug}: skipped (already in new store)`);
-        continue;
-      }
-      if (!dryRun) knowledgeSave(entity);
-      migrated++;
-      results.push(`Companies/${entity.slug}: ${dryRun ? "would migrate" : "migrated"}`);
-    }
-
-    // After a successful, non-dry-run migration, archive the legacy file so
-    // re-runs don't repeatedly load and skip its contents.
-    if (!dryRun && migrated > 0) {
-      const src = legacyEntitiesPath();
-      if (existsSync(src)) {
-        const date = new Date().toISOString().slice(0, 10);
-        const archived = `${src}.migrated-${date}`;
-        try {
-          renameSync(src, archived);
-          results.push(`archived legacy index → ${archived}`);
-        } catch (e) {
-          results.push(`warn: could not rename legacy index (${(e as Error).message})`);
-        }
-      }
-    }
-
-    return { migrated, skipped, results };
+    if (!dryRun && tally.migrated > 0) archiveLegacyIndex(tally.results);
+    return tally;
   },
 };
+
+function migrateEntity(entity: Entity, dryRun: boolean, tally: MigrationResult): void {
+  const label = `${entity.domain}/${entity.slug}`;
+  if (knowledgeExists(entity.domain, entity.slug)) {
+    tally.skipped++;
+    tally.results.push(`${label}: skipped (already in new store)`);
+    return;
+  }
+  if (!dryRun) knowledgeSave(entity);
+  tally.migrated++;
+  tally.results.push(`${label}: ${dryRun ? "would migrate" : "migrated"}`);
+}
+
+/** So re-runs don't repeatedly load and skip the legacy contents. */
+function archiveLegacyIndex(results: string[]): void {
+  const src = legacyEntitiesPath();
+  if (!existsSync(src)) return;
+  const date = new Date().toISOString().slice(0, 10);
+  const archived = `${src}.migrated-${date}`;
+  try {
+    renameSync(src, archived);
+    results.push(`archived legacy index → ${archived}`);
+  } catch (e) {
+    results.push(`warn: could not rename legacy index (${(e as Error).message})`);
+  }
+}
 
 // ── Registry ──────────────────────────────────────────────────────
 
