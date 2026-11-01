@@ -399,9 +399,82 @@ async function exportState(args: string[]) {
   }
 }
 
-async function importState(args: string[]) {
-  const { statSync } = await import("node:fs");
+function findLatestArchiveIn(dirs: string[]): string | null {
+  const candidates: string[] = [];
+  for (const dir of dirs) {
+    try {
+      candidates.push(
+        ...readdirSync(dir)
+          .filter(
+            (f) =>
+              (f.startsWith("pal-export-") || f.startsWith("pal-backup-")) &&
+              f.endsWith(".zip")
+          )
+          .map((f) => resolve(dir, f))
+      );
+    } catch {
+      /* empty */
+    }
+  }
+  if (candidates.length === 0) return null;
+  return candidates.sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0];
+}
+
+type AdmZipClass = new (path: string) => { getEntries(): unknown[] };
+
+/** An explicit file is taken as given; a folder or no argument picks the newest archive and asks first. */
+async function chooseImportArchive(
+  pathArg: string | undefined,
+  home: string,
+  AdmZip: AdmZipClass
+): Promise<string> {
+  const resolvedArg = pathArg ? toPath(pathArg) : null;
+  const argIsDir =
+    resolvedArg !== null &&
+    existsSync(resolvedArg) &&
+    statSync(resolvedArg).isDirectory();
+
+  if (resolvedArg && !argIsDir) {
+    logDebug("import", `using provided path=${resolvedArg}`);
+    return resolvedArg;
+  }
+  const searchDirs = argIsDir ? [resolvedArg] : [home, resolve(home, "backups")];
+  logDebug("import", `searching dirs=${searchDirs.join(",")}`);
+  const latest = findLatestArchiveIn(searchDirs);
+  if (!latest) {
+    logDebug("import", "no export/backup files found");
+    log.error("No export or backup files found. Provide a path: pal cli import <path>");
+    process.exit(1);
+  }
+  logDebug("import", `auto-selected latest=${latest}`);
+  console.log(`Found: ${latest}`);
+  const zip = new AdmZip(latest);
+  console.log(
+    `Contains ${zip.getEntries().length} files, created ${statSync(latest).mtime.toISOString().slice(0, 16).replace("T", " ")}`
+  );
+  if (!(await confirmImport())) {
+    console.log("Cancelled.");
+    process.exit(0);
+  }
+  return latest;
+}
+
+async function confirmImport(): Promise<boolean> {
   const { createInterface } = await import("node:readline");
+  const rl = createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+  const answer = await new Promise<string>((res) =>
+    rl.question("Import this file? [y/N] ", (a) => {
+      rl.close();
+      res(a);
+    })
+  );
+  return answer.trim().toLowerCase() === "y";
+}
+
+async function importState(args: string[]) {
   const AdmZip = (await import("adm-zip")).default;
 
   const home = palHome();
@@ -410,71 +483,7 @@ async function importState(args: string[]) {
   const pathArg = args.find((a) => !a.startsWith("-"));
   logDebug("import", `start dryRun=${dryRun} pathArg=${pathArg ?? "(auto)"}`);
 
-  function findLatestIn(dirs: string[]): string | null {
-    const candidates: string[] = [];
-    for (const dir of dirs) {
-      try {
-        candidates.push(
-          ...readdirSync(dir)
-            .filter(
-              (f) =>
-                (f.startsWith("pal-export-") || f.startsWith("pal-backup-")) &&
-                f.endsWith(".zip")
-            )
-            .map((f) => resolve(dir, f))
-        );
-      } catch {
-        /* empty */
-      }
-    }
-    if (candidates.length === 0) return null;
-    return candidates.sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0];
-  }
-
-  let zipPath: string;
-
-  const resolvedArg = pathArg ? toPath(pathArg) : null;
-  const argIsDir =
-    resolvedArg !== null &&
-    existsSync(resolvedArg) &&
-    statSync(resolvedArg).isDirectory();
-
-  if (resolvedArg && !argIsDir) {
-    zipPath = resolvedArg;
-    logDebug("import", `using provided path=${zipPath}`);
-  } else {
-    const searchDirs = argIsDir ? [resolvedArg] : [home, resolve(home, "backups")];
-    logDebug("import", `searching dirs=${searchDirs.join(",")}`);
-    const latest = findLatestIn(searchDirs);
-    if (!latest) {
-      logDebug("import", "no export/backup files found");
-      log.error("No export or backup files found. Provide a path: pal cli import <path>");
-      process.exit(1);
-    }
-    logDebug("import", `auto-selected latest=${latest}`);
-    console.log(`Found: ${latest}`);
-    const zip = new AdmZip(latest);
-    console.log(
-      `Contains ${zip.getEntries().length} files, created ${statSync(latest).mtime.toISOString().slice(0, 16).replace("T", " ")}`
-    );
-
-    const rl = createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
-    const answer = await new Promise<string>((res) =>
-      rl.question("Import this file? [y/N] ", (a) => {
-        rl.close();
-        res(a);
-      })
-    );
-    if (answer.trim().toLowerCase() !== "y") {
-      console.log("Cancelled.");
-      process.exit(0);
-    }
-    zipPath = latest;
-  }
-
+  const zipPath = await chooseImportArchive(pathArg, home, AdmZip);
   const zip = new AdmZip(zipPath);
   const entries = zip.getEntries();
 

@@ -137,6 +137,29 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
     logDebug("opencode:event", "Stop handlers complete");
   }
 
+  function guardShellCall(output: { args: Record<string, unknown> | string }): void {
+    const cmd =
+      typeof output.args === "string"
+        ? output.args
+        : ((output.args?.command as string) ?? "");
+    const reason = checkBashCommand(cmd);
+    if (reason) {
+      throw new Error(`PAL Security: Blocked — ${reason}`);
+    }
+    const rewritten = rtkRewrite(cmd);
+    if (!rewritten) return;
+    if (typeof output.args === "string") output.args = rewritten;
+    else (output.args as Record<string, unknown>).command = rewritten;
+  }
+
+  function guardFileWrite(args: Record<string, string>): void {
+    const filePath = args?.file_path ?? args?.filePath ?? args?.path ?? "";
+    const fileReason = checkFilePath(filePath);
+    if (fileReason) {
+      throw new Error(`PAL Security: ${fileReason}`);
+    }
+  }
+
   const { isPalSpawnedInference } =
     await lib<typeof import("../../hooks/lib/spawn-guard")>("spawn-guard.ts");
 
@@ -225,30 +248,9 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       output: { args: Record<string, unknown> | string }
     ) => {
       const toolName = _input.tool;
-
-      if (toolName === "shell" || toolName === "bash") {
-        const cmd =
-          typeof output.args === "string"
-            ? output.args
-            : ((output.args?.command as string) ?? "");
-        const reason = checkBashCommand(cmd);
-        if (reason) {
-          throw new Error(`PAL Security: Blocked — ${reason}`);
-        }
-        const rewritten = rtkRewrite(cmd);
-        if (rewritten) {
-          if (typeof output.args === "string") output.args = rewritten;
-          else (output.args as Record<string, unknown>).command = rewritten;
-        }
-      }
-
+      if (toolName === "shell" || toolName === "bash") guardShellCall(output);
       if (toolName === "write" || toolName === "edit" || toolName === "patch") {
-        const args = output.args as Record<string, string>;
-        const filePath = args?.file_path ?? args?.filePath ?? args?.path ?? "";
-        const fileReason = checkFilePath(filePath);
-        if (fileReason) {
-          throw new Error(`PAL Security: ${fileReason}`);
-        }
+        guardFileWrite(output.args as Record<string, string>);
       }
 
       const call = ledgeredOpencodeCall(toolName, _input.callID, output.args);

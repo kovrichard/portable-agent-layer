@@ -181,6 +181,40 @@ function buildExplicitEdges(graph: KnowledgeGraph, entities: Entity[]): void {
 }
 
 function buildTagEdges(graph: KnowledgeGraph): void {
+  const seen = new Set<string>();
+  for (const [tag, slugs] of indexByStructuralTag(graph)) {
+    if (slugs.length < 2) continue;
+    // Deterministic ordering before capping so behavior doesn't depend on
+    // `list()` iteration order across platforms.
+    const sorted = [...slugs].sort();
+    const group = sorted.length > TAG_GROUP_CAP ? sorted.slice(0, TAG_GROUP_CAP) : sorted;
+    linkTagGroup(graph, tag, group, seen);
+  }
+}
+
+function linkTagGroup(
+  graph: KnowledgeGraph,
+  tag: string,
+  group: string[],
+  seen: Set<string>
+): void {
+  for (let i = 0; i < group.length; i++) {
+    for (let j = i + 1; j < group.length; j++) {
+      const a = group[i];
+      const b = group[j];
+      const key = `${a}|${b}|${tag}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      pushEdge(
+        graph,
+        { from: a, to: b, weight: WEIGHT_TAG, edgeType: "tag", label: tag },
+        true
+      );
+    }
+  }
+}
+
+function indexByStructuralTag(graph: KnowledgeGraph): Map<string, string[]> {
   const tagIndex = new Map<string, string[]>();
   for (const node of graph.nodes.values()) {
     for (const tag of node.tags) {
@@ -193,35 +227,7 @@ function buildTagEdges(graph: KnowledgeGraph): void {
       else tagIndex.set(tag, [node.slug]);
     }
   }
-
-  const seen = new Set<string>();
-  for (const [tag, slugs] of tagIndex) {
-    if (slugs.length < 2) continue;
-    // Deterministic ordering before capping so behavior doesn't depend on
-    // `list()` iteration order across platforms.
-    const sorted = [...slugs].sort();
-    const group = sorted.length > TAG_GROUP_CAP ? sorted.slice(0, TAG_GROUP_CAP) : sorted;
-    for (let i = 0; i < group.length; i++) {
-      for (let j = i + 1; j < group.length; j++) {
-        const a = group[i];
-        const b = group[j];
-        const key = `${a}|${b}|${tag}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        pushEdge(
-          graph,
-          {
-            from: a,
-            to: b,
-            weight: WEIGHT_TAG,
-            edgeType: "tag",
-            label: tag,
-          },
-          true
-        );
-      }
-    }
-  }
+  return tagIndex;
 }
 
 export function buildGraph(rootDir?: string): KnowledgeGraph {
