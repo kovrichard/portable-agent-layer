@@ -42,61 +42,73 @@ export async function promptIdentity(): Promise<boolean> {
 
   if (!needsPrincipal && !needsAi && !needsCatchphrase && !needsTimezone) return false;
 
-  if (needsPrincipal) {
-    const name = await clack.text({
-      message: "What's your name?",
-      placeholder: "e.g. John",
-      validate: (v) => (!v || v.length === 0 ? "Name is required" : undefined),
-    });
-    if (clack.isCancel(name)) {
-      clack.cancel("Setup cancelled");
-      return true;
-    }
-    principal.name = name;
-  }
-
-  if (needsAi) {
-    const name = await clack.text({
-      message: "Name your assistant",
-      defaultValue: "Assistant",
-      placeholder: "e.g. Jarvis, Friday, Atlas",
-    });
-    if (clack.isCancel(name)) {
-      clack.cancel("Setup cancelled");
-      return true;
-    }
-    ai.name = name;
-    ai.fullName = `${name} — Personal AI`;
-    ai.displayName = name.toUpperCase();
-  }
-
-  if (needsCatchphrase) {
-    const catchphrase = await clack.text({
-      message: "Startup catchphrase ({name} gets replaced with AI name)",
-      defaultValue: "{name} here, ready when you are.",
-      placeholder: "{name} online. What's the mission?",
-    });
-    if (clack.isCancel(catchphrase)) {
-      clack.cancel("Setup cancelled");
-      return true;
-    }
-    ai.catchphrase = catchphrase;
-  }
-
-  if (needsTimezone) {
-    const guess = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const tz = await clack.text({
-      message: `Your timezone (Enter keeps ${guess})`,
-      defaultValue: guess,
-      validate: timezoneProblem,
-    });
-    if (clack.isCancel(tz)) {
-      clack.cancel("Setup cancelled");
-      return true;
-    }
-    principal.timezone = tz;
-  }
+  if (needsPrincipal && (await cancelledAskingPrincipalName(principal))) return true;
+  if (needsAi && (await cancelledAskingAiName(ai))) return true;
+  if (needsCatchphrase && (await cancelledAskingCatchphrase(ai))) return true;
+  if (needsTimezone && (await cancelledAskingTimezone(principal))) return true;
 
   writeSettings(settings);
   return true;
+}
+
+type Identity = NonNullable<PalSettingsData["identity"]>;
+type AiIdentity = NonNullable<Identity["ai"]>;
+type PrincipalIdentity = NonNullable<Identity["principal"]>;
+
+async function askText(opts: Parameters<typeof clack.text>[0]): Promise<string | null> {
+  const value = await clack.text(opts);
+  if (clack.isCancel(value)) {
+    clack.cancel("Setup cancelled");
+    return null;
+  }
+  return value;
+}
+
+async function cancelledAskingPrincipalName(
+  principal: PrincipalIdentity
+): Promise<boolean> {
+  const name = await askText({
+    message: "What's your name?",
+    placeholder: "e.g. John",
+    validate: (v) => (!v || v.length === 0 ? "Name is required" : undefined),
+  });
+  if (name === null) return true;
+  principal.name = name;
+  return false;
+}
+
+async function cancelledAskingAiName(ai: AiIdentity): Promise<boolean> {
+  const name = await askText({
+    message: "Name your assistant",
+    defaultValue: "Assistant",
+    placeholder: "e.g. Jarvis, Friday, Atlas",
+  });
+  if (name === null) return true;
+  ai.name = name;
+  ai.fullName = `${name} — Personal AI`;
+  ai.displayName = name.toUpperCase();
+  return false;
+}
+
+async function cancelledAskingCatchphrase(ai: AiIdentity): Promise<boolean> {
+  const catchphrase = await askText({
+    message: "Startup catchphrase ({name} gets replaced with AI name)",
+    defaultValue: "{name} here, ready when you are.",
+    placeholder: "{name} online. What's the mission?",
+  });
+  if (catchphrase === null) return true;
+  ai.catchphrase = catchphrase;
+  return false;
+}
+
+async function cancelledAskingTimezone(principal: PrincipalIdentity): Promise<boolean> {
+  const guess = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const tz = await askText({
+    message: `Your timezone (Enter keeps ${guess})`,
+    defaultValue: guess,
+    validate: timezoneProblem,
+  });
+  if (tz === null) return true;
+  principal.timezone = tz;
+  return false;
 }

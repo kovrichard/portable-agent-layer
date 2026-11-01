@@ -191,44 +191,56 @@ export function lintSkill(skillDir: string): DoctorReport {
         `skill file is "${skillFile}" — must be exactly "SKILL.md" or the skill is silently ignored`
       );
 
-  const {
-    name,
-    description,
-    descriptionQuoted,
-    triggers,
-    shipped,
-    license,
-    derivedFrom,
-    body,
-  } = parseSkill(readFileSync(resolve(skillDir, skillFile), "utf-8"));
+  const skill = parseSkill(readFileSync(resolve(skillDir, skillFile), "utf-8"));
+  checkProvenance(skill, add);
+  checkNameMatchesFolder(skill.name, skillDir, add);
+  checkName(skill.name, add);
+  checkDescription(skill, add);
+  checkTriggers(skill, add);
+  checkBody(skill.body, add);
+  checkReferenceDepth(skill.body, skillDir, resolve(skillDir, skillFile), add);
+  checkWindowsPaths(skill.body, add);
+  checkAbsolutePaths(skillDir, add);
 
-  // ── provenance (shipped skills only) ──
-  if (shipped) {
-    if (license) add("pass", "license", `licensed ${license}`);
-    else if (derivedFrom)
-      add("pass", "license", `unlicensed by design — derived from ${derivedFrom}`);
-    else
-      add(
-        "warn",
-        "license",
-        "shipped skill declares no license — add `license: MIT`, or `metadata.derived-from: <origin>` when the idea comes from another project"
-      );
-  }
+  const errors = findings.filter((f) => f.level === "error").length;
+  const warnings = findings.filter((f) => f.level === "warn").length;
+  return { dir: skillDir, name: skill.name, findings, errors, warnings };
+}
 
-  // The runtime keys a skill by its folder name; a mismatched frontmatter `name`
-  // makes the skill silently fail to load.
+type AddFinding = (level: Level, check: string, message: string) => void;
+
+function checkProvenance(skill: ParsedSkill, add: AddFinding): void {
+  if (!skill.shipped) return;
+  if (skill.license) add("pass", "license", `licensed ${skill.license}`);
+  else if (skill.derivedFrom)
+    add("pass", "license", `unlicensed by design — derived from ${skill.derivedFrom}`);
+  else
+    add(
+      "warn",
+      "license",
+      "shipped skill declares no license — add `license: MIT`, or `metadata.derived-from: <origin>` when the idea comes from another project"
+    );
+}
+
+// The runtime keys a skill by its folder name; a mismatched frontmatter `name`
+// makes the skill silently fail to load.
+function checkNameMatchesFolder(
+  name: string | null,
+  skillDir: string,
+  add: AddFinding
+): void {
+  if (!name) return;
   const folder = basename(skillDir);
-  if (name) {
-    name === folder
-      ? add("pass", "name.folder", `matches folder "${folder}"`)
-      : add(
-          "error",
-          "name.folder",
-          `name "${name}" must equal the folder name "${folder}" verbatim — otherwise the skill is silently ignored`
-        );
-  }
+  name === folder
+    ? add("pass", "name.folder", `matches folder "${folder}"`)
+    : add(
+        "error",
+        "name.folder",
+        `name "${name}" must equal the folder name "${folder}" verbatim — otherwise the skill is silently ignored`
+      );
+}
 
-  // ── name ──
+function checkName(name: string | null, add: AddFinding): void {
   if (!name) {
     add("error", "name", "Missing `name` in frontmatter");
   } else {
@@ -247,8 +259,12 @@ export function lintSkill(skillDir: string): DoctorReport {
       ? add("error", "name.reserved", `contains reserved word "${reserved}"`)
       : add("pass", "name.reserved", "no reserved words");
   }
+}
 
-  // ── description ──
+function checkDescription(
+  { description, descriptionQuoted }: ParsedSkill,
+  add: AddFinding
+): void {
   if (!description) {
     add("error", "description", "Missing `description` in frontmatter");
   } else {
@@ -294,8 +310,9 @@ export function lintSkill(skillDir: string): DoctorReport {
         )
       : add("pass", "description.pov", "third person");
   }
+}
 
-  // ── triggers ──
+function checkTriggers({ name, triggers }: ParsedSkill, add: AddFinding): void {
   if (triggers.length === 0) {
     add(
       "warn",
@@ -325,8 +342,9 @@ export function lintSkill(skillDir: string): DoctorReport {
           `triggers must lead with ${wanted} — found ${found}`
         );
   }
+}
 
-  // ── body ──
+function checkBody(body: string, add: AddFinding): void {
   const bodyLines = body.split("\n").length;
   bodyLines <= MAX_BODY_LINES
     ? add("pass", "body.length", `${bodyLines}/${MAX_BODY_LINES} lines`)
@@ -346,10 +364,15 @@ export function lintSkill(skillDir: string): DoctorReport {
         "body uses first-person author voice — write it as second-person instructions to the assistant"
       )
     : add("pass", "body.pov", "instructional voice");
+}
 
-  // ── reference depth (one level deep) ──
+function checkReferenceDepth(
+  body: string,
+  skillDir: string,
+  skillFilePath: string,
+  add: AddFinding
+): void {
   const linkRe = /\[[^\]]+\]\(([^)]+\.md)\)/g;
-  const skillFilePath = resolve(skillDir, skillFile);
   // A reference back to the entry SKILL.md is a return-link, not a deeper chain.
   const isDeeperRef = (target: string) =>
     !/^https?:/.test(target) && resolve(skillDir, target) !== skillFilePath;
@@ -373,8 +396,9 @@ export function lintSkill(skillDir: string): DoctorReport {
     }
   }
   if (!nested) add("pass", "references.depth", "references are one level deep");
+}
 
-  // ── windows-style paths ──
+function checkWindowsPaths(body: string, add: AddFinding): void {
   // Skip lines that are deliberate Windows examples (cmd.exe / %ENV% paths) —
   // a cross-platform skill may legitimately document the Windows invocation.
   const winPathRe = /\b[\w.-]+\\[\w.-]+\.(py|ts|js|sh|md|json)\b/;
@@ -383,8 +407,9 @@ export function lintSkill(skillDir: string): DoctorReport {
   body.split("\n").some((l) => winPathRe.test(l) && !isIntentionalWindows(l))
     ? add("warn", "paths", "Windows-style backslash path found — use forward slashes")
     : add("pass", "paths", "forward-slash paths");
+}
 
-  // ── machine-specific absolute paths (portability) ──
+function checkAbsolutePaths(skillDir: string, add: AddFinding): void {
   // A personal skill MAY legitimately hardcode a machine-specific path (e.g. a
   // cloud-mount vault), so this is a warning, never an error — it flags paths
   // that will not survive being exported to another machine or user.
@@ -400,10 +425,6 @@ export function lintSkill(skillDir: string): DoctorReport {
   } else {
     add("pass", "paths.absolute", "no machine-specific absolute paths");
   }
-
-  const errors = findings.filter((f) => f.level === "error").length;
-  const warnings = findings.filter((f) => f.level === "warn").length;
-  return { dir: skillDir, name, findings, errors, warnings };
 }
 
 /** Render a report as a human-readable string. */

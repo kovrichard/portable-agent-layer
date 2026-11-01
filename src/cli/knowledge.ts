@@ -271,24 +271,35 @@ function cmdGraph(query: string, hops: number): number {
   const trail = traverse(g, slug, hops);
   console.log(`\n🗺  ${start.domain}/${slug} — "${start.title}"`);
   console.log(`   ${hops} hop${hops === 1 ? "" : "s"} · ${trail.length - 1} reachable\n`);
-  const byHop = new Map<number, typeof trail>();
+  const byHop = groupByHop(trail);
+  for (const [hop, items] of [...byHop.entries()].sort((a, b) => a[0] - b[0])) {
+    printHop(hop, items);
+  }
+  console.log();
+  return 0;
+}
+
+type TrailStep = ReturnType<typeof traverse>[number];
+
+function groupByHop(trail: TrailStep[]): Map<number, TrailStep[]> {
+  const byHop = new Map<number, TrailStep[]>();
   for (const t of trail) {
     if (t.hop === 0) continue;
     const bucket = byHop.get(t.hop);
     if (bucket) bucket.push(t);
     else byHop.set(t.hop, [t]);
   }
-  for (const [hop, items] of [...byHop.entries()].sort((a, b) => a[0] - b[0])) {
-    console.log(`  hop ${hop}:`);
-    for (const t of items) {
-      const edge = t.viaEdge;
-      const labelSuffix = edge?.label ? `:${edge.label}` : "";
-      const via = edge ? `via ${edge.edgeType}${labelSuffix} (w=${edge.weight})` : "";
-      console.log(`    → ${t.node.domain}/${t.node.slug} — "${t.node.title}"  ${via}`);
-    }
+  return byHop;
+}
+
+function printHop(hop: number, items: TrailStep[]): void {
+  console.log(`  hop ${hop}:`);
+  for (const t of items) {
+    const edge = t.viaEdge;
+    const labelSuffix = edge?.label ? `:${edge.label}` : "";
+    const via = edge ? `via ${edge.edgeType}${labelSuffix} (w=${edge.weight})` : "";
+    console.log(`    → ${t.node.domain}/${t.node.slug} — "${t.node.title}"  ${via}`);
   }
-  console.log();
-  return 0;
 }
 
 // ── stats ──────────────────────────────────────────────────────────

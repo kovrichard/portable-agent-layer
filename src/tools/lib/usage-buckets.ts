@@ -302,6 +302,22 @@ function projectTranscripts(
   ];
 }
 
+function pricedCallsIn(
+  filepath: string,
+  project: string
+): (PricedCall & { project: string })[] {
+  const content = transcriptText(filepath);
+  if (content === null) return [];
+  const calls: (PricedCall & { project: string })[] = [];
+  for (const line of content.split("\n")) {
+    // Cheap reject before the parse: most lines are not model turns.
+    if (!line.includes('"usage"')) continue;
+    const call = pricedCallOf(line);
+    if (call) calls.push({ ...call, project });
+  }
+  return calls;
+}
+
 export function readClaudeCode(
   claudeDir: string,
   projectFilter?: string,
@@ -318,17 +334,8 @@ export function readClaudeCode(
   for (const dirName of projectDirs) {
     const projName = projectNameOf(dirName);
     if (typeof projectFilter === "string" && !projName.includes(projectFilter)) continue;
-
     for (const filepath of projectTranscripts(claudeDir, archiveDir, dirName)) {
-      const content = transcriptText(filepath);
-      if (content === null) continue;
-
-      for (const line of content.split("\n")) {
-        // Cheap reject before the parse: most lines are not model turns.
-        if (!line.includes('"usage"')) continue;
-        const call = pricedCallOf(line);
-        if (call) calls.push({ ...call, project: projName });
-      }
+      calls.push(...pricedCallsIn(filepath, projName));
     }
   }
 

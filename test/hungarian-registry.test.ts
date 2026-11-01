@@ -57,25 +57,32 @@ function registrySites(results: string, home = HOME, record = RECORD) {
       cookie: headers.get("cookie") ?? "",
       body: String(init.body ?? ""),
     });
-    if (url === "https://ceginfo.hu/")
-      return new Response(home, {
-        headers: [
-          ["set-cookie", "ci_session=abc; path=/"],
-          ["set-cookie", "lang=hu; path=/"],
-        ],
-      });
-    if (url.endsWith("/cegkereso/rapid"))
-      return new Response(null, {
-        status: 303,
-        headers: { location: "/ceglista/cegek" },
-      });
-    if (url === "https://ceginfo.hu/ceglista/cegek") return new Response(results);
-    if (RECORD_BY_NUMBER_RE.test(url))
-      return new Response(null, { status: 301, headers: { location: RECORD_URL } });
-    if (url === RECORD_URL) return new Response(record);
-    return new Response("not found", { status: 404 });
+    return fakeRegistryResponse(url, { home, results, record });
   };
   return { seen, fetchImpl };
+}
+
+function fakeRegistryResponse(
+  url: string,
+  pages: { home: string; results: string; record: string }
+): Response {
+  if (url === "https://ceginfo.hu/")
+    return new Response(pages.home, {
+      headers: [
+        ["set-cookie", "ci_session=abc; path=/"],
+        ["set-cookie", "lang=hu; path=/"],
+      ],
+    });
+  if (url.endsWith("/cegkereso/rapid"))
+    return new Response(null, {
+      status: 303,
+      headers: { location: "/ceglista/cegek" },
+    });
+  if (url === "https://ceginfo.hu/ceglista/cegek") return new Response(pages.results);
+  if (RECORD_BY_NUMBER_RE.test(url))
+    return new Response(null, { status: 301, headers: { location: RECORD_URL } });
+  if (url === RECORD_URL) return new Response(pages.record);
+  return new Response("not found", { status: 404 });
 }
 
 const NAME = "Brightmoor Világítás Kft.";
