@@ -32,6 +32,7 @@ beforeEach(() => {
   process.env.PAL_HOME = home;
   process.env.PAL_AGENT = "claude";
   delete process.env.PAL_CHANNEL;
+  delete process.env.PAL_CHANNEL_FILE;
   mkdirSync(resolve(home, "memory"), { recursive: true });
   setSettings({});
 });
@@ -68,6 +69,30 @@ describe("the event envelope", () => {
       "discord-mobile",
       null,
     ]);
+  });
+
+  test("a channel file names each message's channel, so one long-lived process can serve several", () => {
+    const file = resolve(home, "channel");
+    process.env.PAL_CHANNEL = "discord";
+    process.env.PAL_CHANNEL_FILE = file;
+    writeFileSync(file, "discord-mobile\n");
+    appendEvent("turn", {}, { ts: "2026-09-10T10:00:00.000Z" });
+    writeFileSync(file, "discord-voice");
+    appendEvent("turn", {}, { ts: "2026-09-10T10:00:01.000Z" });
+    expect(streamLines("2026-09").map((e) => e.channel)).toEqual([
+      "discord-mobile",
+      "discord-voice",
+    ]);
+  });
+
+  test("a missing or empty channel file falls back to PAL_CHANNEL", () => {
+    const file = resolve(home, "channel");
+    process.env.PAL_CHANNEL = "discord";
+    process.env.PAL_CHANNEL_FILE = file;
+    appendEvent("turn", {}, { ts: "2026-09-10T10:00:00.000Z" });
+    writeFileSync(file, "  \n");
+    appendEvent("turn", {}, { ts: "2026-09-10T10:00:01.000Z" });
+    expect(streamLines("2026-09").map((e) => e.channel)).toEqual(["discord", "discord"]);
   });
 
   test("a backfilled event keeps the id derived from its source", () => {
