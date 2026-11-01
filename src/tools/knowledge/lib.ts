@@ -249,96 +249,68 @@ function parseFrontmatter(fmText: string): EntityFrontmatter {
   const lines = fmText.split("\n");
   let i = 0;
   while (i < lines.length) {
-    const line = lines[i];
-    if (line.trim() === "") {
-      i++;
-      continue;
-    }
-
-    // Top-level keys start with no indentation.
-    if (line.startsWith(" ") || line.startsWith("\t") || line.startsWith("-")) {
-      i++;
-      continue;
-    }
-
-    const colonIdx = line.indexOf(":");
-    if (colonIdx < 0) {
-      i++;
-      continue;
-    }
-
-    const key = line.slice(0, colonIdx).trim();
-    const rawVal = line.slice(colonIdx + 1);
-
+    const entry = parseTopLevelKey(lines[i]);
+    i++;
+    if (!entry) continue;
+    const { key, rawVal } = entry;
+    const v = rawVal.trim();
     if (key === "tags") {
       out.tags = parseStringArray(rawVal);
-      i++;
-      continue;
-    }
-
-    if (key === "related") {
-      const v = rawVal.trim();
-      if (v === "[]" || v === "") {
-        // Could be inline empty or block-style. Look ahead.
-        if (v === "[]") {
-          out.related = [];
-          i++;
-          continue;
-        }
-        const items: Related[] = [];
-        i++;
-        let current: Partial<Related> | null = null;
-        while (i < lines.length) {
-          const child = lines[i];
-          if (
-            child.trim() === "" ||
-            (!child.startsWith(" ") && !child.startsWith("\t"))
-          ) {
-            break;
-          }
-          const t = child.trim();
-          if (t.startsWith("- slug:")) {
-            if (current?.slug) {
-              items.push({
-                slug: current.slug,
-                type: (current.type ?? "related") as RelationType,
-              });
-            }
-            current = {
-              slug: String(parseScalar(t.slice("- slug:".length))),
-            };
-          } else if (t.startsWith("slug:") && current) {
-            current.slug = String(parseScalar(t.slice("slug:".length)));
-          } else if (t.startsWith("type:") && current) {
-            current.type = parseScalar(t.slice("type:".length)) as RelationType;
-          }
-          i++;
-        }
-        if (current?.slug) {
-          items.push({
-            slug: current.slug,
-            type: (current.type ?? "related") as RelationType,
-          });
-        }
-        out.related = items;
-        continue;
-      }
+    } else if (key === "related" && v === "") {
+      const block = parseRelatedBlock(lines, i);
+      out.related = block.items;
+      i = block.next;
+    } else if (key === "related") {
       out.related = [];
-      i++;
-      continue;
-    }
-
-    // Inline string-array values.
-    const v = rawVal.trim();
-    if (v.startsWith("[") && v.endsWith("]")) {
+    } else if (v.startsWith("[") && v.endsWith("]")) {
       out[key] = parseStringArray(v);
     } else {
       out[key] = parseScalar(v);
     }
-    i++;
   }
 
   return out as EntityFrontmatter;
+}
+
+function parseTopLevelKey(line: string): { key: string; rawVal: string } | null {
+  if (line.trim() === "") return null;
+  if (line.startsWith(" ") || line.startsWith("\t") || line.startsWith("-")) return null;
+  const colonIdx = line.indexOf(":");
+  if (colonIdx < 0) return null;
+  return { key: line.slice(0, colonIdx).trim(), rawVal: line.slice(colonIdx + 1) };
+}
+
+function isIndentedChild(line: string): boolean {
+  return line.trim() !== "" && (line.startsWith(" ") || line.startsWith("\t"));
+}
+
+function toRelated(partial: Partial<Related> | null): Related | null {
+  if (!partial?.slug) return null;
+  return { slug: partial.slug, type: (partial.type ?? "related") as RelationType };
+}
+
+function parseRelatedBlock(
+  lines: string[],
+  start: number
+): { items: Related[]; next: number } {
+  const items: Related[] = [];
+  let current: Partial<Related> | null = null;
+  let i = start;
+  for (; i < lines.length && isIndentedChild(lines[i]); i++) {
+    const t = lines[i].trim();
+    if (t.startsWith("- slug:")) {
+      const done = toRelated(current);
+      if (done) items.push(done);
+      current = { slug: String(parseScalar(t.slice("- slug:".length))) };
+    } else if (t.startsWith("slug:") && current) {
+      current.slug = String(parseScalar(t.slice("slug:".length)));
+    } else if (t.startsWith("type:") && current) {
+      current.type = parseScalar(t.slice("type:".length)) as RelationType;
+    }
+  }
+  const last = toRelated(current);
+  if (last) items.push(last);
+  return { items, next: i };
 }
 
 // --- Validation -------------------------------------------------------------
