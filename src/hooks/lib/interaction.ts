@@ -67,6 +67,7 @@ interface SessionTrack {
   updated: string;
   lastPrompt?: string;
   lastPromptAt?: string;
+  lastTurnId?: string;
   reply?: ReplyShape;
   replyEnd?: string;
   recent: TurnEvent[];
@@ -143,7 +144,7 @@ function legacyTurnsDir(): string {
   return ensureDir(resolve(paths.signals(), "interaction"));
 }
 
-function logTurn(event: TurnEvent, prompt: string, text: string): void {
+function logTurn(event: TurnEvent, prompt: string, text: string, id: string): void {
   const { ts, session, channel, ...fields } = event;
   logQuietly("turn", () =>
     appendEvent(
@@ -153,7 +154,7 @@ function logTurn(event: TurnEvent, prompt: string, text: string): void {
         ...turnExtras(prompt, text),
         backAfterSec: backAfterNotificationSec(session, new Date(ts)),
       },
-      { ts, session, channel, content: { prompt: text } }
+      { id, ts, session, channel, content: { prompt: text } }
     )
   );
 }
@@ -177,6 +178,7 @@ function logReply(
         ...features,
         mode: responseModeOf(reply),
         latencySec: secondsBetween(track.lastPromptAt, new Date(at)),
+        turn: track.lastTurnId ?? null,
       },
       { ts: at, session, content: { reply } }
     )
@@ -353,6 +355,7 @@ export function observeTurn(
   const complied = hearsPromptContext()
     ? followedHint(track.mood, replyWords, usualReply)
     : null;
+  const turnId = crypto.randomUUID();
   const recent = [...track.recent, event].slice(-RECENT_KEPT);
   const mood = readMood(recent, baseline(history));
   const reminder = joinReminders(
@@ -367,7 +370,8 @@ export function observeTurn(
       ...(complied !== null && { complied }),
     },
     prompt,
-    text
+    text,
+    turnId
   );
   sampleReaction(event, text, track);
   writeTrack(session, {
@@ -375,6 +379,7 @@ export function observeTurn(
     updated: now.toISOString(),
     lastPrompt: text,
     lastPromptAt: now.toISOString(),
+    lastTurnId: turnId,
     recent,
     mood: mood.key,
   });
