@@ -4,6 +4,27 @@ Working notes for any AI agent contributing to this repository.
 
 > User-facing intro lives in `README.md`. This file is for agents — start here.
 
+## Principles
+
+These rank above every other rule in this file. Every new feature is designed against them, and a change that breaks one says which one and why. Some already hold, some are in progress, some are not followed yet; that is a reason to move code toward them, not to treat them as optional.
+
+1. **Every decision is audited, denials and failures most of all.** The audit trail is how PAL builds its in-house ontology. Log the actor wherever it can be known.
+   - **Bronze** is one append-only log of events plus the text they point to. It is always written; no setting turns it off. Nothing in it is edited or deleted; a correction is a newer event.
+   - **Silver and gold** are every system built from bronze, filtered by forget and similar rules. Any of them can be deleted and rebuilt by replaying bronze; a store holding something bronze lacks breaks this principle.
+   - **Redaction** is the one exception: on the user's approval, an event's text is blanked and a new event records who redacted it and when. The event itself stays.
+2. **Deterministic checks over inference wherever possible.** Hooks and regex rules decide first; a model is asked only when code cannot decide. Every model verdict lands in bronze, so a later rule that agrees with it can take over.
+3. **`pal cli` for everything.** No per-model calls, no custom transcript saving, no custom anything. PAL writes the adapters; skills and background inference reach them through `pal cli` commands, one interface for all agents.
+   - Adapters are the only code that knows an agent exists. Everything else goes through `pal cli`, including hook entry points and every inference call.
+   - Callers ask for a tier (`small`, `medium`, `large`, `flagship`), never a model id. The adapter maps the tier to the active agent's model.
+4. **Background prompts are evaluated and backtested, never guessed.** This covers deterministic classifiers too.
+   - The pass bar and the kill criteria are written down before the eval runs.
+   - A new prompt or rule starts in **shadow mode**: it runs and its verdicts land in bronze, but nothing acts on them until it passes a backtest against that data.
+5. **Two systems hold what PAL learns from working with the user.** The progress tree holds what we work on; the opinion system holds how the user works, with TELOS as the user's stated input to it. A new learned store becomes part of one of them, or its design says why not. Two stores sit outside, and the other principles still bind them:
+   - **Settings:** what the user sets explicitly. Not learned; every change is a decision in bronze.
+   - **The knowledge store:** facts about the world (people, companies, research). Silver over bronze, not a model of the user.
+6. **Irreversible actions are approved by the user.** Anything that cannot be undone or that leaves this machine: redacting bronze, a push or deploy, a message sent on the user's behalf, deleting what bronze does not hold.
+7. **Reversible actions may be auto-applied.** Each one lands in bronze with its actor, has a working undo, and is shown to the user. One that changes agent behavior broadly, such as a new rule, still goes to the user unless it has passed shadow mode.
+
 ## What is PAL
 
 The Portable Agent Layer is cross-platform, cross-agent infrastructure for carrying personal AI context (TELOS, memory, skills, hooks) between machines and between AI runtimes (Claude Code, opencode, Cursor, Copilot, Codex, Antigravity CLI). It ships as a CLI (`pal`) plus a curated set of skills, hooks, and tooling that targets each agent's native config format.
@@ -123,7 +144,7 @@ encapsulation.
 
 ### Every capability is a `pal cli` command
 
-Skills, hooks, the control room and outside programs reach PAL through `pal cli …`,
+This is how principle 3 applies to code. Skills, hooks, the control room and outside programs reach PAL through `pal cli …`,
 never through a raw script path (`bun …/tools/x.ts`) or a direct agent call
 (`claude -p`, `codex exec`, `copilot`). The command owns the platform and agent
 differences: which agent is active, its flags, its model per tier, Windows shims.
