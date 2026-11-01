@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { claimChecksSince, watchClaims } from "../src/hooks/lib/claim-log";
+import { commandsThisTurn } from "../src/hooks/lib/claim-check";
+import {
+  claimChecksSince,
+  transcriptLines,
+  watchClaims,
+} from "../src/hooks/lib/claim-log";
+import { rememberSendBack } from "../src/hooks/lib/send-back-guard";
 import { reload } from "../src/hooks/lib/settings";
 import { claimCheckLines } from "../src/tools/lib/interaction-report";
 import { freshTestDir } from "./lib/test-home";
@@ -138,6 +144,7 @@ describe("sending an unbacked claim back, when opted in", () => {
     ["Cursor", { loop_count: 1 }],
   ])("sends a reply back once at most (%s)", (_, sentBack) => {
     optIn();
+    rememberSendBack({ session_id: "s1" }, true);
     const path = transcript([prompt]);
 
     expect(
@@ -152,6 +159,23 @@ describe("sending an unbacked claim back, when opted in", () => {
       )
     ).toBeNull();
     expect(claimChecksSince(since)[0].blocked).toBeUndefined();
+  });
+
+  test("checks a continued stop again when something else held the last one", () => {
+    optIn();
+    rememberSendBack({ session_id: "s1" }, false);
+
+    expect(
+      watchClaims(
+        {
+          session_id: "s1",
+          last_assistant_message: "All tests pass.",
+          transcript_path: transcript([prompt]),
+          stop_hook_active: true,
+        },
+        NOW
+      )
+    ).toContain("All tests pass");
   });
 });
 
@@ -169,5 +193,47 @@ describe("reporting the watched claims", () => {
 
   test("says nothing when no reply made a claim", () => {
     expect(claimCheckLines([])).toEqual([]);
+  });
+});
+
+describe("transcriptLines reads only the current turn", () => {
+  const earlier = { type: "user", message: { content: "an earlier request" } };
+  const filler = { type: "assistant", message: { content: "x".repeat(400) } };
+  const current = { type: "user", message: { content: "the current request" } };
+  const toolResult = {
+    type: "user",
+    message: { content: [{ type: "tool_result", content: "ok" }] },
+  };
+
+  function payloadFor(entries: unknown[]) {
+    return { session_id: "s1", transcript_path: transcript(entries) };
+  }
+
+  test("a long session's earlier turns are not read", () => {
+    const payload = payloadFor([earlier, ...new Array(50).fill(filler), current, bash]);
+    const lines = transcriptLines(payload, 1024);
+    expect(lines.some((l) => l.includes("an earlier request"))).toBe(false);
+    expect(lines.some((l) => l.includes("the current request"))).toBe(true);
+  });
+
+  test("a turn longer than the first read window is still read back to its prompt", () => {
+    const entries = [
+      earlier,
+      current,
+      bash,
+      ...new Array(20).fill(filler),
+      toolResult,
+      bash,
+    ];
+    const lines = transcriptLines(payloadFor(entries), 64);
+    expect(lines.some((l) => l.includes("the current request"))).toBe(true);
+    expect(commandsThisTurn(lines)).toEqual(
+      commandsThisTurn(entries.map((e) => JSON.stringify(e)))
+    );
+  });
+
+  test("a transcript without any prompt is read whole", () => {
+    const entries = [filler, bash, filler];
+    expect(transcriptLines(payloadFor(entries), 64)).toHaveLength(3);
   });
 });

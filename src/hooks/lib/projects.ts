@@ -40,7 +40,6 @@ export interface ProjectProgress {
   updated: string;
   next?: string[];
   blockers?: string[];
-  handoff?: string;
   /** What this project is for — the fact importance is ranked from. */
   serves?: ServesKind;
   serves_note?: string;
@@ -80,7 +79,6 @@ interface LegacyProject {
   objectives?: string[];
   next_steps?: string[];
   blockers?: string[];
-  handoff?: string;
   decisions?: LegacyDecision[];
 }
 
@@ -98,7 +96,6 @@ export function legacyJsonToProgress(raw: unknown): ProjectProgress | null {
     status: r.status,
     created: r.created ?? new Date().toISOString(),
     updated: r.updated ?? new Date().toISOString(),
-    ...(r.handoff ? { handoff: r.handoff } : {}),
     ...(r.next_steps?.length ? { next: r.next_steps } : {}),
     ...(r.blockers?.length ? { blockers: r.blockers } : {}),
   };
@@ -134,7 +131,6 @@ type IsaMeta = {
   updated: string;
   next?: string[];
   blockers?: string[];
-  handoff?: string;
   serves?: ServesKind;
   serves_note?: string;
   serves_by?: ServesAuthority;
@@ -241,13 +237,14 @@ export function readProject(
   if (!existsSync(file)) return null;
   try {
     const content = readFileSync(file, "utf-8");
-    const { meta, body } = parse<IsaMeta>(content);
+    const { meta, body } = parse<IsaMeta & { handoff?: string }>(content);
     if (!meta?.name || !meta?.status) return null;
     // `path` is machine-local: the binding is the real source, and meta.path is
     // only still read so records written before this change keep resolving.
     const bound = bindings[meta.name] ?? meta.path;
     const path = bound ? resolve(bound) : undefined;
-    return { ...meta, path, ...extractSections(body) };
+    const { handoff: _retired, ...kept } = meta;
+    return { ...kept, path, ...extractSections(body) };
   } catch {
     return null;
   }
@@ -278,7 +275,6 @@ export function writeProject(p: ProjectProgress): void {
   if (p.remote) meta.remote = p.remote;
   if (p.next?.length) meta.next = p.next;
   if (p.blockers?.length) meta.blockers = p.blockers;
-  if (p.handoff) meta.handoff = p.handoff;
   if (p.serves) meta.serves = p.serves;
   if (p.serves_note) meta.serves_note = p.serves_note;
   if (p.serves_by) meta.serves_by = p.serves_by;
@@ -408,6 +404,50 @@ function factsLine(project: string, context: string): string {
   return `  Facts: ${shown.join("; ")}${more}`;
 }
 
+function bulletItems(text: string): string[] {
+  return text
+    .split("\n")
+    .map((l) => l.replace(/^[-*]\s*/, "").trim())
+    .filter(Boolean);
+}
+
+function inlineList(label: string, items: string[] | undefined): string[] {
+  if (!items?.length) return [];
+  return [inlineListAlways(label, items)];
+}
+
+function statusAndAgo(p: ProjectProgress): string {
+  const statusPrefix = p.status === "paused" ? "paused, " : "";
+  return `${statusPrefix}${formatAgo(p.updated)}`;
+}
+
+function resolvedProjectLines(p: ProjectProgress): string[] {
+  const stale = isStale(p) ? " ⚠ stale" : "";
+  return [
+    `- **${p.name}** (${statusAndAgo(p)})${stale} → here`,
+    ...(p.context ? [factsLine(p.name, p.context)] : []),
+    ...(p.goal ? [inlineListAlways("Objectives", bulletItems(p.goal))] : []),
+    ...(p.constraints
+      ? [inlineListAlways("Constraints", bulletItems(p.constraints))]
+      : []),
+    ...inlineList("Next", p.next),
+    ...inlineList("Blockers", p.blockers),
+  ];
+}
+
+function inlineListAlways(label: string, items: string[]): string {
+  return `  ${label}: ${items.slice(0, MAX_INLINE_BULLETS).join("; ")}`;
+}
+
+function otherProjectLine(p: ProjectProgress, last: string | undefined): string {
+  const counts: string[] = [];
+  if (p.next?.length) counts.push(`${p.next.length} next`);
+  if (p.blockers?.length) counts.push(`${p.blockers.length} blockers`);
+  const countsSuffix = counts.length > 0 ? ` — ${counts.join(", ")}` : "";
+  const lastSuffix = last ? ` — last: ${last}` : "";
+  return `- **${p.name}** (${statusAndAgo(p)})${countsSuffix}${lastSuffix}`;
+}
+
 /**
  * Format the SessionStart "Active Projects" section.
  *
@@ -416,6 +456,29 @@ function factsLine(project: string, context: string): string {
  * counts and the last session's title, enough to follow up from any folder.
  * Quiet ones (>14d) collapse to a single line of names.
  */
+function activeProjectLines(
+  visible: ProjectProgress[],
+  resolvedName: string | undefined,
+  lastSessionTitle: (project: string) => string | undefined
+): string[] {
+  const lines = ["## Active Projects", ""];
+  const sorted = [...visible].sort((a, b) => b.updated.localeCompare(a.updated));
+  const quiet: string[] = [];
+  for (const p of sorted) {
+    if (resolvedName !== undefined && p.name === resolvedName) {
+      lines.push(...resolvedProjectLines(p));
+    } else if (isStale(p)) {
+      quiet.push(p.name);
+    } else {
+      lines.push(otherProjectLine(p, lastSessionTitle(p.name)));
+    }
+  }
+  if (quiet.length > 0) {
+    lines.push(`- Quiet for ${PROJECT_STALE_DAYS_DEFAULT}+ days: ${quiet.join(", ")}`);
+  }
+  return lines;
+}
+
 export function loadActiveProjectsContext(
   cwd: string = process.cwd(),
   lastSessionTitle: (project: string) => string | undefined = () => undefined
@@ -434,54 +497,7 @@ export function loadActiveProjectsContext(
   const lines: string[] = [];
 
   if (visible.length > 0) {
-    lines.push("## Active Projects", "");
-    const sorted = [...visible].sort((a, b) => b.updated.localeCompare(a.updated));
-    const quiet: string[] = [];
-    for (const p of sorted) {
-      const ago = formatAgo(p.updated);
-      const stale = isStale(p) ? " ⚠ stale" : "";
-      const isResolved = resolved !== null && p.name === resolved.name;
-      const here = isResolved ? " → here" : "";
-      const statusPrefix = p.status === "paused" ? "paused, " : "";
-
-      if (isResolved) {
-        lines.push(`- **${p.name}** (${statusPrefix}${ago})${stale}${here}`);
-        if (p.context) lines.push(factsLine(p.name, p.context));
-        if (p.goal) {
-          const bullets = p.goal
-            .split("\n")
-            .map((l) => l.replace(/^[-*]\s*/, "").trim())
-            .filter(Boolean);
-          lines.push(`  Objectives: ${bullets.slice(0, MAX_INLINE_BULLETS).join("; ")}`);
-        }
-        if (p.constraints) {
-          const bullets = p.constraints
-            .split("\n")
-            .map((l) => l.replace(/^[-*]\s*/, "").trim())
-            .filter(Boolean);
-          lines.push(`  Constraints: ${bullets.slice(0, MAX_INLINE_BULLETS).join("; ")}`);
-        }
-        if (p.next?.length) {
-          lines.push(`  Next: ${p.next.slice(0, MAX_INLINE_BULLETS).join("; ")}`);
-        }
-        if (p.blockers?.length) {
-          lines.push(`  Blockers: ${p.blockers.slice(0, MAX_INLINE_BULLETS).join("; ")}`);
-        }
-      } else if (stale) {
-        quiet.push(p.name);
-      } else {
-        const counts: string[] = [];
-        if (p.next?.length) counts.push(`${p.next.length} next`);
-        if (p.blockers?.length) counts.push(`${p.blockers.length} blockers`);
-        const countsSuffix = counts.length > 0 ? ` — ${counts.join(", ")}` : "";
-        const last = lastSessionTitle(p.name);
-        const lastSuffix = last ? ` — last: ${last}` : "";
-        lines.push(`- **${p.name}** (${statusPrefix}${ago})${countsSuffix}${lastSuffix}`);
-      }
-    }
-    if (quiet.length > 0) {
-      lines.push(`- Quiet for ${PROJECT_STALE_DAYS_DEFAULT}+ days: ${quiet.join(", ")}`);
-    }
+    lines.push(...activeProjectLines(visible, resolved?.name, lastSessionTitle));
   }
 
   if (showHint) {

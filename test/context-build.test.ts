@@ -75,26 +75,7 @@ describe("buildSystemReminder", () => {
     expect(buildSystemReminder({ agent: "codex" })).not.toContain("Designing a system");
   });
 
-  test("drops only the handoff when asked to go without it", () => {
-    write(
-      "memory/state/last-handoff.json",
-      JSON.stringify({
-        [process.cwd()]: {
-          title: "open work",
-          handoff: "finish the gate",
-          status: "in-progress",
-          timestamp: new Date().toISOString(),
-        },
-      })
-    );
-
-    expect(buildSystemReminder()).toContain("finish the gate");
-    const out = buildSystemReminder({ withoutHandoff: true });
-    expect(out).not.toContain("finish the gate");
-    expect(out).toContain("**Current time:**");
-  });
-
-  test("leaves past sessions to the handoff and the active projects list", () => {
+  test("leaves past sessions to the active projects list", () => {
     appendProjectHistory(process.cwd(), {
       date: "2026-09-30",
       title: "An earlier session here",
@@ -106,61 +87,17 @@ describe("buildSystemReminder", () => {
   });
 });
 
-function handoff(over: Record<string, unknown> = {}) {
-  write(
-    "memory/state/last-handoff.json",
-    JSON.stringify({
-      [process.cwd()]: {
-        handoff: "the remaining work",
-        title: "a previous session",
-        status: "in-progress",
-        timestamp: new Date().toISOString(),
-        ...over,
-      },
-    })
-  );
-}
-
-describe("handoff", () => {
-  test("is absent when no handoff was recorded", () => {
-    expect(buildSystemReminder()).not.toContain("Pick Up Where You Left Off");
-  });
-
-  test("surfaces an in-progress handoff for this project", () => {
-    handoff();
-
-    const out = buildSystemReminder();
-
-    expect(out).toContain("## Pick Up Where You Left Off");
-    expect(out).toContain("*Previous session: a previous session · 0m ago*");
-    expect(out).toContain("the remaining work");
-    expect(out).toContain("→ Continue this work");
-  });
-
-  test("a finished session stays available for follow-ups, not as open work", () => {
-    handoff({ status: "completed", lastUser: "what about the gate?" });
-
-    const out = buildSystemReminder();
-    expect(out).toContain("- User: what about the gate?");
-    expect(out).not.toContain("→ Continue this work");
-  });
-
-  test("drops a handoff older than a week", () => {
-    handoff({ timestamp: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString() });
-
-    expect(buildSystemReminder()).not.toContain("Pick Up Where You Left Off");
-  });
-
-  test("keeps a handoff from within the week", () => {
-    handoff({ timestamp: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString() });
-
-    expect(buildSystemReminder()).toContain("Pick Up Where You Left Off");
-  });
-
-  test("shows another folder's handoff only as the conversation elsewhere", () => {
+describe("a handoff left by an earlier PAL", () => {
+  test("no longer reaches the session, here or from another folder", () => {
     write(
       "memory/state/last-handoff.json",
       JSON.stringify({
+        [process.cwd()]: {
+          handoff: "the remaining work",
+          title: "a previous session",
+          status: "in-progress",
+          timestamp: new Date().toISOString(),
+        },
         "/elsewhere": {
           handoff: "someone else work",
           title: "t",
@@ -171,8 +108,7 @@ describe("handoff", () => {
     );
 
     const out = buildSystemReminder();
-    expect(out).not.toContain("Pick Up Where You Left Off");
-    expect(out).toContain("## Last Conversation Elsewhere");
-    expect(out).toContain("someone else work");
+    expect(out).not.toContain("the remaining work");
+    expect(out).not.toContain("someone else work");
   });
 });

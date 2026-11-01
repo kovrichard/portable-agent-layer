@@ -14,7 +14,7 @@ import { PAGE_OUTCOMES } from "../ledger/outcomes";
 import { type LedgerFilter, ledgerFiles, parseSince } from "../ledger/query";
 import { ledgerView } from "../ledger/view";
 import { attention, markRead } from "./attention";
-import { agenda, agentsAtWork, board, handoffs, signal, summary } from "./data";
+import { agenda, agentsAtWork, board, signal, summary } from "./data";
 import { projectDetail } from "./detail";
 import { matrix } from "./matrix";
 import { type PrefUpdate, readPrefs, validatePrefs, writePrefs } from "./prefs";
@@ -22,6 +22,7 @@ import { decideFromPage, type PageDecision, relationship } from "./relationship"
 import { DEFAULT_PORT, LOOPBACK } from "./server-config";
 import { MAX_SNOOZE_DAYS, setSnooze } from "./snooze";
 import { indexHtml, staticAsset } from "./static";
+import { inProgressWork, openWork } from "./work";
 import {
   type InstallSettings,
   isQuadrant,
@@ -344,8 +345,8 @@ export function startControlRoom(port: number = DEFAULT_PORT) {
           return json(matrix());
         case "/api/board":
           return json(board());
-        case "/api/handoffs":
-          return json(handoffs());
+        case "/api/work":
+          return json(inProgressWork(openWork()));
         case "/api/signal":
           return json(signal());
         case "/api/agents":

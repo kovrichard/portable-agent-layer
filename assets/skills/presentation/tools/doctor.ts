@@ -153,18 +153,9 @@ async function main() {
 
   const { slides, reports, deckFindings } = await lintDeck(deckDir);
 
-  let errors = 0;
-  let warnings = 0;
-  for (const r of reports) {
-    for (const f of r.findings) {
-      if (f.severity === "E") errors++;
-      else warnings++;
-    }
-  }
-  for (const f of deckFindings) {
-    if (f.severity === "E") errors++;
-    else warnings++;
-  }
+  const allFindings = [...reports.flatMap((r) => r.findings), ...deckFindings];
+  const errors = allFindings.filter((f) => f.severity === "E").length;
+  const warnings = allFindings.length - errors;
 
   const total = errors + warnings;
   if (total === 0) {

@@ -18,7 +18,6 @@ import { persistLastExchange } from "./handlers/persist-last-exchange";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { logDebug, logError } from "./lib/log";
 import { paths } from "./lib/paths";
-import { sessionDir } from "./lib/session-dir";
 import { logCompaction } from "./lib/session-events";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
@@ -51,7 +50,6 @@ const main = async () => {
       process.exit(0);
     }
     const sessionId = input.session_id ?? "unknown";
-    const cwd = sessionDir();
 
     // Stop fires after every response and is authoritative. Skip if it already
     // wrote latest.json for this session — PreCompact is a safety net only.
@@ -71,7 +69,7 @@ const main = async () => {
       }
     }
 
-    persistLastExchange(messages, sessionId, cwd);
+    persistLastExchange(messages, sessionId);
     logDebug(
       "PreCompactPersist",
       `Persisted exchange before compaction for session ${sessionId}`

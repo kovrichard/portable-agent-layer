@@ -314,7 +314,7 @@ describe("project CLI", () => {
     const resumed = JSON.parse((await runCli(["resume", "legacy-proj"])).stdout);
     expect(resumed.project.next).toEqual(["do the thing"]);
     expect(resumed.project.blockers).toEqual(["waiting on review"]);
-    expect(resumed.project.handoff).toBe("pick up at step 3");
+    expect(resumed.project).not.toHaveProperty("handoff");
     expect(resumed.project.context).toContain("ref at ~/pai");
     expect(resumed.project.goal).toContain("Ship it");
     expect(resumed.project.decisions).toContain("use ISA");

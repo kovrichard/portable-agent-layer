@@ -1,6 +1,6 @@
 {
   "name": "portable-agent-layer",
-  "version": "0.113.0",
+  "version": "0.114.0",
   "description": "PAL — Portable Agent Layer: persistent personal context for AI coding assistants",
   "type": "module",
   "bin": {
@@ -70,19 +70,15 @@
     "install:all": "bun run src/cli/index.ts cli install",
     "uninstall": "bun run src/cli/index.ts cli uninstall",
     "stamp:factory": "bun run src/tools/dark-factory/stamp.ts",
-    "tool:synthesize":"bun run src/tools/agent/synthesize.ts",
-    "tool:thread": "bun run src/tools/agent/thread.ts",
+    "tool:synthesize": "bun run src/tools/agent/synthesize.ts",
     "eval:goal-links": "bun eval/run.ts goal-links",
-    "eval:waiting-on": "bun eval/run.ts waiting-on",
     "eval:reaction": "bun eval/run.ts reaction",
     "eval:correction-check": "bun eval/run.ts correction-check",
     "eval:entity-extraction": "bun eval/entity-extraction/build-prompt.ts && bun eval/run.ts entity-extraction",
     "eval:correction-kind": "bun eval/correction-kind/build-prompt.ts && bun eval/run.ts correction-kind",
     "eval:correction-kind:test": "bun eval/correction-kind/test-set.ts",
     "eval:rule-drafter": "bun eval/rule-drafter/build-prompt.ts && bun eval/run.ts rule-drafter",
-    "eval:rule-drafter:test": "bun eval/rule-drafter/test-set.ts",
-    "eval:decision": "bun eval/decision/score.ts validation",
-    "eval:decision:test": "bun eval/decision/score.ts test"
+    "eval:rule-drafter:test": "bun eval/rule-drafter/test-set.ts"
   },
   "lint-staged": {
     "*.ts": [

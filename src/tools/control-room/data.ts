@@ -5,7 +5,7 @@
  */
 
 import { existsSync, readFileSync } from "node:fs";
-import { basename, resolve } from "node:path";
+import { resolve } from "node:path";
 import { type AgendaMove, readAgenda } from "../../hooks/lib/agenda-store";
 import {
   isMaintainerEnv,
@@ -24,12 +24,11 @@ import {
 import { readProjectHistory } from "../../hooks/lib/work-tracking";
 import { anchorSlugOf, type LedgerFilter, queryLedger } from "../ledger/query";
 import { viewStats } from "../ledger/view";
-import { type HandoffEntry, readHandoffs } from "../lib/handoff-note";
 import { parseIscs } from "../lib/project-isc";
 import { readSnoozes, snoozedUntil } from "./snooze";
+import { isInProgress, openWork, type WorkCard, workOf } from "./work";
 
 const DAY_MS = 86_400_000;
-const HANDOFF_FRESH_DAYS = 7;
 const SESSION_WINDOW_DAYS = 30;
 const SERIES_LENGTH = 60;
 
@@ -59,18 +58,6 @@ export interface SummaryView {
   actions: number;
   refusals: number;
   rating: number | null;
-}
-
-export interface HandoffCard {
-  slug: string | null;
-  label: string;
-  cwd: string;
-  title: string;
-  sentence: string;
-  handoff: string;
-  at: string;
-  ageDays: number;
-  source: HandoffEntry["source"];
 }
 
 export interface AgendaView {
@@ -140,22 +127,14 @@ function sessionsSince(path: string | null, since: Date): number {
   return readProjectHistory(path, 200).filter((h) => h.date >= floor).length;
 }
 
-export function freshHandoffs(now: Date): [string, HandoffEntry][] {
-  return Object.entries(readHandoffs()).filter(
-    ([, h]) =>
-      h.status === "in-progress" &&
-      h.handoff &&
-      daysBetween(h.timestamp, now) < HANDOFF_FRESH_DAYS
-  );
-}
-
 export function askingReasons(
   p: ProjectProgress,
-  handoff: HandoffEntry | undefined,
+  work: WorkCard[],
   stale: boolean
 ): string[] {
   const reasons: string[] = [];
-  if (handoff) reasons.push("handoff in progress");
+  if (work.some((c) => c.waitingOn)) reasons.push("waiting on you");
+  else if (work.some(isInProgress)) reasons.push("work in progress");
   const blockers = p.blockers?.length ?? 0;
   if (blockers > 0) reasons.push(blockers === 1 ? "1 blocker" : `${blockers} blockers`);
   if (stale && p.status === "active") reasons.push("gone quiet");
@@ -181,7 +160,7 @@ function runtimesBySlug(since: Date): Map<string, Record<string, number>> {
 
 function toCard(
   p: ProjectProgress,
-  handoff: HandoffEntry | undefined,
+  work: WorkCard[],
   now: Date,
   runtimes: Record<string, number>,
   snoozes: Record<string, string>
@@ -207,7 +186,7 @@ function toCard(
       path,
       new Date(now.getTime() - SESSION_WINDOW_DAYS * DAY_MS)
     ),
-    asking: askingReasons(p, handoff, stale),
+    asking: askingReasons(p, work, stale),
     serves: p.serves ?? null,
     servesBy: p.serves_by ?? null,
     runtimes,
@@ -221,54 +200,14 @@ export function sortBoard(cards: ProjectCard[]): ProjectCard[] {
 }
 
 export function board(now: Date = new Date()): ProjectCard[] {
-  const handoffs = new Map(freshHandoffs(now));
+  const work = openWork(now);
   const runtimes = runtimesBySlug(new Date(now.getTime() - SESSION_WINDOW_DAYS * DAY_MS));
   const snoozes = readSnoozes(now);
   return sortBoard(
     readAllProjects().map((p) =>
-      toCard(
-        p,
-        p.path ? handoffs.get(p.path) : undefined,
-        now,
-        runtimes.get(p.name) ?? {},
-        snoozes
-      )
+      toCard(p, workOf(p.name, work), now, runtimes.get(p.name) ?? {}, snoozes)
     )
   );
-}
-
-export function firstSentence(text: string): string {
-  const flat = text.replace(/\s+/g, " ").trim();
-  const match = new RegExp(/^.*?[.!?](?=\s|$)/).exec(flat);
-  return match ? match[0] : flat;
-}
-
-/** An automatic handoff is a transcript excerpt; the user's own words are the part worth a sentence. */
-export function handoffSentence(text: string): string {
-  const [, userTurn] = text.split(/Last user message:\s*/, 2);
-  const spoken = userTurn ? userTurn.split(/\s*Last assistant response:/, 1)[0] : text;
-  return firstSentence(spoken);
-}
-
-export function handoffs(now: Date = new Date()): HandoffCard[] {
-  const slugByPath = new Map(
-    readAllProjects()
-      .filter((p) => p.path)
-      .map((p) => [p.path as string, p.name])
-  );
-  return freshHandoffs(now)
-    .map(([cwd, h]) => ({
-      slug: slugByPath.get(cwd) ?? null,
-      label: slugByPath.get(cwd) ?? basename(cwd),
-      cwd,
-      title: h.title,
-      sentence: handoffSentence(h.handoff),
-      handoff: h.handoff,
-      at: h.timestamp,
-      ageDays: daysBetween(h.timestamp, now),
-      source: h.source,
-    }))
-    .sort((a, b) => b.at.localeCompare(a.at));
 }
 
 /**

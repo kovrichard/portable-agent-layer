@@ -179,43 +179,6 @@ describe("projectTouch — auto-write contract", () => {
     await expect(projectTouch()).resolves.toBeUndefined();
   });
 
-  test("handoff captured from lastAssistantMessage, capped at 300 chars", async () => {
-    const repo = fixtureRepo("handoff-test");
-    writeProject({
-      name: "handoff-test",
-      path: repo,
-      status: "active",
-      created: nowIso(),
-      updated: nowIso(),
-    });
-    process.chdir(repo);
-
-    const longMsg = `Next steps: ${"x".repeat(500)}`;
-    const projectTouch = await freshHandler();
-    await projectTouch(longMsg);
-
-    const after = readProject("handoff-test");
-    expect(after?.handoff).toBeDefined();
-    expect((after?.handoff ?? "").length).toBeLessThanOrEqual(300);
-  });
-
-  test("no lastAssistantMessage → handoff field NOT set on first run", async () => {
-    const repo = fixtureRepo("no-handoff");
-    writeProject({
-      name: "no-handoff",
-      path: repo,
-      status: "active",
-      created: nowIso(),
-      updated: nowIso(),
-    });
-    process.chdir(repo);
-
-    const projectTouch = await freshHandler();
-    await projectTouch();
-
-    expect(readProject("no-handoff")?.handoff).toBeUndefined();
-  });
-
   test("rapid-call idempotency: 50× calls leave a stable, parseable JSON", async () => {
     const repo = fixtureRepo("rapid");
     writeProject({
@@ -229,14 +192,13 @@ describe("projectTouch — auto-write contract", () => {
 
     const projectTouch = await freshHandler();
     for (let i = 0; i < 50; i++) {
-      await projectTouch("Next steps: keep iterating");
+      await projectTouch();
     }
 
     // Each call updates timestamp — that's by design (it's a touch).
     // The contract is: file remains parseable, no duplicate side-effects in any list.
     const after = readProject("rapid");
     expect(after).not.toBeNull();
-    expect(after?.handoff).toBe("Next steps: keep iterating");
     expect(after?.next ?? []).toEqual([]);
     expect(after?.blockers ?? []).toEqual([]);
     // decisions body section should never be touched by project-touch

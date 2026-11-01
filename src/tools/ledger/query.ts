@@ -93,11 +93,20 @@ function inProject(entry: LedgerEntry, slug: string): boolean {
   return resolve(entry.target).startsWith(resolve(root.path));
 }
 
-function matchesFilter(entry: LedgerEntry, filter: LedgerFilter): boolean {
+function inTimeWindow(entry: LedgerEntry, filter: LedgerFilter): boolean {
   const at = new Date(entry.ts).getTime();
   if (filter.since && at < filter.since.getTime()) return false;
   if (filter.until && at > filter.until.getTime()) return false;
+  return true;
+}
+
+function matchesFilter(entry: LedgerEntry, filter: LedgerFilter): boolean {
+  if (!inTimeWindow(entry, filter)) return false;
   if (filter.project && !inProject(entry, filter.project)) return false;
+  return matchesFields(entry, filter);
+}
+
+function matchesFields(entry: LedgerEntry, filter: LedgerFilter): boolean {
   if (filter.actor && entry.actor !== filter.actor) return false;
   if (filter.machine && entry.machine !== filter.machine) return false;
   if (filter.runtime && entry.runtime !== filter.runtime) return false;

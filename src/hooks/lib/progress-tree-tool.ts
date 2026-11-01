@@ -1,5 +1,5 @@
 /**
- * A PR the session opened with `gh pr create`, and a dark-factory build it started, land on its active node without being recorded by hand.
+ * A PR the session opened with `gh pr create`, a dark-factory build it started, and an artifact it published land on its active node without being recorded by hand.
  */
 
 import { normalizeToolUse } from "./agent";
@@ -15,7 +15,6 @@ import {
 } from "./progress-tree";
 import { openSessionNode } from "./progress-tree-session-node";
 import { sessionDir } from "./session-dir";
-import { isOptedIn } from "./settings";
 import { COMMAND_KEYS, resultOf, stringIn } from "./tool-events";
 
 const GH_PR_CREATE_RE = /\bgh\s+pr\s+create\b/;
@@ -23,6 +22,7 @@ const PR_URL_RE = /https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/\d+/g;
 const FACTORY_BUILD_RE =
   /\b(?:node|bun)(?:\.exe)?\s+(?:run\s+)?["']?\S*\bdark-factory[\\/](?:\S*[\\/])?scripts[\\/]build\.mjs["']?\s+["']?(\w[\w.-]*)/;
 const FACTORY_RUN_PREFIX = "dark-factory:";
+const ARTIFACT_TOOL = "Artifact";
 const OUTPUT_KEYS = [
   "stdout",
   "output",
@@ -35,6 +35,7 @@ const EXIT_KEYS = ["exit_code", "exitCode", "exit"];
 interface Artifact {
   kind: ArtifactKind;
   ref: string;
+  label?: string;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -103,6 +104,20 @@ function startedFactoryTask(command: string): string | null {
   return FACTORY_BUILD_RE.exec(command)?.[1] ?? null;
 }
 
+function isPagePublish(input: Record<string, unknown>): boolean {
+  return (input.action === undefined || input.action === "publish") && !input.asset;
+}
+
+function publishedArtifact(payload: Record<string, unknown>): Artifact | null {
+  const call = normalizeToolUse(payload);
+  if (call?.toolName !== ARTIFACT_TOOL || !isPagePublish(call.toolInput)) return null;
+  const result = recordOf(resultOf(payload));
+  const url = result ? stringIn(result, ["url"]) : null;
+  if (!url) return null;
+  const title = result ? stringIn(result, ["title"]) : null;
+  return { kind: "artifact", ref: url, ...(title && { label: title }) };
+}
+
 function sessionNodeFor(
   scope: string,
   session: string | undefined,
@@ -134,10 +149,12 @@ export function attachProgressFromToolCall(
   now: Date = new Date()
 ): void {
   try {
-    if (!isOptedIn("progressTree")) return;
-    const command = commandOf(payload);
-    if (!command || callDenied(payload)) return;
+    if (callDenied(payload)) return;
     const session = progressSession(hookSessionId(payload));
+    const artifact = callFailed(payload) ? null : publishedArtifact(payload);
+    if (artifact) attachToSessionNode(cwd, session, artifact, file, now);
+    const command = commandOf(payload);
+    if (!command) return;
     const task = startedFactoryTask(command);
     if (task)
       attachToSessionNode(

@@ -1,6 +1,7 @@
 import { mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { agentDirOverrides, paths } from "../../src/hooks/lib/paths";
+import { agentDirOverrides, ensureDir, paths } from "../../src/hooks/lib/paths";
+import { reload } from "../../src/hooks/lib/settings";
 import { freshTestDir } from "./test-home";
 
 // Every payload and transcript step below was captured from agy 1.3.1 by a hook
@@ -135,25 +136,22 @@ export function writeTranscript(...steps: unknown[]): void {
 }
 
 /** Something for the session reminder to carry, so its presence can be seen. */
-function seedHandoffElsewhere(marker: string): void {
+function seedStartupFile(marker: string): void {
+  const memory = ensureDir(paths.memory());
+  const file = resolve(memory, "startup-note.md");
+  writeFileSync(file, marker, "utf-8");
   writeFileSync(
-    resolve(paths.state(), "last-handoff.json"),
-    JSON.stringify({
-      "/elsewhere": {
-        title: "elsewhere",
-        handoff: marker,
-        status: "in-progress",
-        timestamp: new Date().toISOString(),
-      },
-    }),
+    resolve(memory, "pal-settings.json"),
+    JSON.stringify({ loadAtStartup: { files: [file] } }),
     "utf-8"
   );
+  reload();
 }
 
 export function startUserTurnUnderAgy(): void {
   process.env.PAL_AGENT = "antigravity";
   writeTranscript(userInput("fix the build"));
-  seedHandoffElsewhere("SEED-NOTE-4471");
+  seedStartupFile("SEED-NOTE-4471");
 }
 
 export const injectedText = (reply: string | null) =>

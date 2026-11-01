@@ -71,9 +71,7 @@ export default {
     "!src/tools/session-summary.ts",
     "!src/tools/agent/analyze.ts",
     "!src/tools/token-cost.ts",
-    "!src/tools/agent/handoff-note.ts",
     "!src/tools/agent/algorithm-reflect.ts",
-    "!src/tools/agent/thread.ts",
     "!src/tools/skill-doctor.ts",
     // Not glue: ~25 spawned subcommands that read a project, transform it, write
     // it back and print. The transforms they call are in src/tools/lib/project-isc.ts,

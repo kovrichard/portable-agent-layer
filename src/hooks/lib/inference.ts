@@ -112,15 +112,7 @@ export function previewInferenceRoute(): RoutePreview & { model?: string } {
   return { ...preview, model: smallModelOf(preview.route) };
 }
 
-function previewRoute(): RoutePreview {
-  const agent = getActiveAgent();
-  if (process.env.PAL_INFERENCE_DISABLED === "1") {
-    return {
-      agent,
-      route: "disabled",
-      reason: "PAL_INFERENCE_DISABLED=1 (test kill-switch)",
-    };
-  }
+function nativeRoutePreview(agent: RoutePreview["agent"]): RoutePreview | null {
   if (isClaude() && hasClaudeBinary())
     return { agent, route: "claude-spawn", reason: "claude binary on PATH" };
   if (isCodex() && hasCodexBinary())
@@ -139,6 +131,20 @@ function previewRoute(): RoutePreview {
     return { agent, route: "cursor-spawn", reason: "cursor-agent binary on PATH" };
   if (isAntigravity() && hasAntigravityBinary())
     return { agent, route: "antigravity-spawn", reason: "agy binary on PATH" };
+  return null;
+}
+
+function previewRoute(): RoutePreview {
+  const agent = getActiveAgent();
+  if (process.env.PAL_INFERENCE_DISABLED === "1") {
+    return {
+      agent,
+      route: "disabled",
+      reason: "PAL_INFERENCE_DISABLED=1 (test kill-switch)",
+    };
+  }
+  const native = nativeRoutePreview(agent);
+  if (native) return native;
   if (hasApiKey())
     return {
       agent,
@@ -260,6 +266,74 @@ async function checkedInference(opts: InferenceOptions): Promise<InferenceResult
   };
 }
 
+type RunInference = () => Promise<InferenceResult>;
+
+interface RouteCandidate {
+  name: string;
+  modelRoute?: FixedModelRoute;
+  pick: (opts: InferenceOptions) => RunInference | null;
+}
+
+function spawnRoute(
+  name: string,
+  isActive: () => boolean,
+  binary: () => string | null,
+  run: (bin: string, opts: InferenceOptions) => Promise<InferenceResult>,
+  modelRoute?: FixedModelRoute
+): RouteCandidate {
+  return {
+    name,
+    modelRoute,
+    pick: (opts) => {
+      if (!isActive()) return null;
+      const bin = binary();
+      return bin ? () => run(bin, opts) : null;
+    },
+  };
+}
+
+function keyRoute(
+  name: string,
+  isReady: () => boolean,
+  run: (opts: InferenceOptions) => Promise<InferenceResult>
+): RouteCandidate {
+  return { name, pick: (opts) => (isReady() ? () => run(opts) : null) };
+}
+
+/** First match wins, so the order is the routing priority. */
+const INFERENCE_ROUTES: RouteCandidate[] = [
+  spawnRoute(
+    "claude-spawn",
+    isClaude,
+    getClaudeBinary,
+    inferenceViaClaudeSpawn,
+    "claude-spawn"
+  ),
+  spawnRoute("codex-spawn", isCodex, getCodexBinary, (bin, opts) =>
+    inferenceViaCliSpawn(
+      bin,
+      buildCodexArgs(opts),
+      buildCliPrompt(opts),
+      opts,
+      CODEX_REPLY
+    )
+  ),
+  keyRoute("openai-api", () => isCodex() && hasOpenAiKey(), inferenceViaOpenAiApi),
+  spawnRoute("opencode-spawn", isOpencode, getOpencodeBinary, inferenceViaOpencodeSpawn),
+  spawnRoute("copilot-spawn", isCopilot, getCopilotBinary, inferenceViaCopilotSpawn),
+  spawnRoute("cursor-spawn", isCursor, getCursorBinary, (bin, opts) =>
+    inferenceViaCliSpawn(bin, buildCursorArgs(opts), buildCliPrompt(opts), opts)
+  ),
+  spawnRoute(
+    "antigravity-spawn",
+    isAntigravity,
+    getAntigravityBinary,
+    inferenceViaAntigravitySpawn,
+    "antigravity-spawn"
+  ),
+  keyRoute("anthropic-api", hasApiKey, inferenceViaApi),
+];
+
 async function routeInference(opts: InferenceOptions): Promise<InferenceResult> {
   // Hard kill-switch — set by the test suite to guarantee no real inference
   // ever fires from tests (no spawn, no API call). Production code never sets it.
@@ -279,67 +353,12 @@ async function routeInference(opts: InferenceOptions): Promise<InferenceResult> 
     logDebug("inference", `${tag} refuse: no web route agent=${agent}`);
     return { success: false, error: `web research is not available on ${agent} yet` };
   }
-  if (isClaude()) {
-    const bin = getClaudeBinary();
-    if (bin) {
-      logDebug(
-        "inference",
-        `${tag} route=claude-spawn agent=${agent} model=${modelFor("claude-spawn", opts)}`
-      );
-      return inferenceViaClaudeSpawn(bin, opts);
-    }
-  }
-  if (isCodex()) {
-    const bin = getCodexBinary();
-    if (bin) {
-      logDebug("inference", `${tag} route=codex-spawn agent=${agent}`);
-      return inferenceViaCliSpawn(
-        bin,
-        buildCodexArgs(opts),
-        buildCliPrompt(opts),
-        opts,
-        CODEX_REPLY
-      );
-    }
-  }
-  if (isCodex() && hasOpenAiKey()) {
-    logDebug("inference", `${tag} route=openai-api agent=${agent}`);
-    return inferenceViaOpenAiApi(opts);
-  }
-  if (isOpencode()) {
-    const bin = getOpencodeBinary();
-    if (bin) {
-      logDebug("inference", `${tag} route=opencode-spawn agent=${agent}`);
-      return inferenceViaOpencodeSpawn(bin, opts);
-    }
-  }
-  if (isCopilot()) {
-    const bin = getCopilotBinary();
-    if (bin) {
-      logDebug("inference", `${tag} route=copilot-spawn agent=${agent}`);
-      return inferenceViaCopilotSpawn(bin, opts);
-    }
-  }
-  if (isCursor()) {
-    const bin = getCursorBinary();
-    if (bin) {
-      logDebug("inference", `${tag} route=cursor-spawn agent=${agent}`);
-      return inferenceViaCliSpawn(bin, buildCursorArgs(opts), buildCliPrompt(opts), opts);
-    }
-  }
-  if (isAntigravity()) {
-    const bin = getAntigravityBinary();
-    if (bin) {
-      logDebug(
-        "inference",
-        `${tag} route=antigravity-spawn agent=${agent} model=${modelFor("antigravity-spawn", opts)}`
-      );
-      return inferenceViaAntigravitySpawn(bin, opts);
-    }
-  }
-  if (hasApiKey()) {
-    logDebug("inference", `${tag} route=anthropic-api agent=${agent}`);
-    return inferenceViaApi(opts);
+  for (const route of INFERENCE_ROUTES) {
+    const run = route.pick(opts);
+    if (!run) continue;
+    const model = route.modelRoute ? ` model=${modelFor(route.modelRoute, opts)}` : "";
+    logDebug("inference", `${tag} route=${route.name} agent=${agent}${model}`);
+    return run();
   }
   logDebug(
     "inference",
@@ -880,6 +899,15 @@ interface RawSpawnResult {
   timedOut: boolean;
 }
 
+async function readPipe(pipe: unknown): Promise<string> {
+  if (!pipe || typeof pipe === "number") return "";
+  try {
+    return await new Response(pipe as ReadableStream<Uint8Array>).text();
+  } catch {
+    return "";
+  }
+}
+
 /**
  * One CLI invocation. Returns raw streams + exit info, no parsing.
  * Used by every per-agent dispatcher (claude --print, codex exec, etc).
@@ -893,8 +921,6 @@ async function singleCliAttempt(
   cwd?: string
 ): Promise<RawSpawnResult> {
   return new Promise<RawSpawnResult>((resolve) => {
-    let stdout = "";
-    let stderr = "";
     let timedOut = false;
     let settled = false;
     const finish = (r: RawSpawnResult) => {
@@ -946,24 +972,8 @@ async function singleCliAttempt(
     }
 
     void (async () => {
-      const stdoutStream =
-        proc.stdout && typeof proc.stdout !== "number"
-          ? (proc.stdout as ReadableStream<Uint8Array>)
-          : null;
-      const stderrStream =
-        proc.stderr && typeof proc.stderr !== "number"
-          ? (proc.stderr as ReadableStream<Uint8Array>)
-          : null;
-      try {
-        if (stdoutStream) stdout = await new Response(stdoutStream).text();
-      } catch {
-        /* ignore */
-      }
-      try {
-        if (stderrStream) stderr = await new Response(stderrStream).text();
-      } catch {
-        /* ignore */
-      }
+      const stdout = await readPipe(proc.stdout);
+      const stderr = await readPipe(proc.stderr);
       await proc.exited;
       clearTimeout(timer);
       finish({ code: proc.exitCode, stdout, stderr, timedOut });

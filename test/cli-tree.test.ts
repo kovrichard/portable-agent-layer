@@ -63,7 +63,6 @@ describe("every pal cli command", () => {
       "pal cli knowledge search",
       "pal cli project add-next",
       "pal cli interaction report",
-      "pal cli thread",
       "pal cli debug on",
       "pal cli progress show",
       "pal cli progress follow-up",
@@ -79,6 +78,14 @@ describe("every pal cli command", () => {
     await runCommand(cliTree(admin), ["--help"], ["pal", "cli"]);
     expect(out.join("\n")).not.toMatch(/^\s+work\b/m);
     expect(out.join("\n")).toMatch(/^\s+progress\b/m);
+  });
+
+  test("pal cli thread is gone: open work lives in the progress tree", async () => {
+    expect(await runCommand(cliTree(admin), ["thread", "--list"], ["pal", "cli"])).toBe(
+      1
+    );
+    expect(err.join("\n")).toContain("unknown command 'thread'");
+    expect(TREE.some(([path]) => path[2] === "thread")).toBe(false);
   });
 
   test.each(

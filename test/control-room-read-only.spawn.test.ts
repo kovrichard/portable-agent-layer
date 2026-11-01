@@ -71,7 +71,7 @@ const GETS = [
   "/api/agenda",
   "/api/matrix",
   "/api/board",
-  "/api/handoffs",
+  "/api/work",
   "/api/signal",
   "/api/agents",
   "/api/ledger",

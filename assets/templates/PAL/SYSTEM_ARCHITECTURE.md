@@ -227,11 +227,11 @@ Brief description.
 ┌─────────────────────┐
 │       Stop          │──► StopOrchestrator.ts → runStopHandlers()
 │                     │    Detached (inference-bearing, fire-and-forget):
-│                     │    - Session intelligence (title, summary, insights, handoff)
+│                     │    - Session intelligence (title, summary, insights, stopped-at)
 │                     │    Concurrent (Promise.allSettled):
 │                     │    - Work session capture
 │                     │    - Project touch / history
-│                     │    - Persist last exchange (handoff seed)
+│                     │    - Persist last exchange (compaction recall)
 │                     │    - Cache last response (rating correlation)
 │                     │    - Synthesis pipeline
 │                     │    - Desktop notify
@@ -320,7 +320,7 @@ Session interaction
   │
   ├─► [Prompt] Rating capture ──► signals/ratings.jsonl
   │
-  ├─► [Stop] Session intelligence (Haiku) ──► projects/<slug>/ history, state/last-handoff.json
+  ├─► [Stop] Session intelligence (Haiku) ──► projects/<slug>/ history, progress-tree stopped-at
   │
   ├─► [Stop] Correction check ──► adaptation/ rule drafts, approved with `pal cli rule`
   │
@@ -356,7 +356,7 @@ A rule the user states            A correction PAL detects
 - Content is global/user-level — safe to pre-compile (not project-scoped)
 
 **Tier 3 — Dynamic** (injected fresh each session by LoadContext hook):
-- Handoff notes, progress tree, active projects
+- Progress tree, active projects
 - Changes per-session or is project-scoped — can't be pre-compiled
 - Injected as `<system-reminder>` block via stdout
 - Each section independently toggleable in `pal-settings.json → dynamicContext`
@@ -374,12 +374,11 @@ LoadContext.ts
   │
   └─► Build system-reminder (dynamic sections only):
       1. loadAtStartup files (user-configured)
-      2. Handoff note (in-progress work from last session)
-      3. Progress tree
-      4. Due nudges (algorithm review, learning analysis; Cursor only)
-      5. Opinions (Codex only; other agents load them natively)
-      6. Active projects
-      7. Steering rules (Codex only)
+      2. Progress tree
+      3. Due nudges (algorithm review, learning analysis; Cursor only)
+      4. Opinions (Codex only; other agents load them natively)
+      5. Active projects
+      6. Steering rules (Codex only)
 ```
 
 ### Injection Budget
@@ -438,7 +437,7 @@ Long inference calls (session intelligence, entity extraction) run via `spawnDet
 StopOrchestrator
   │
   └─► detachSessionIntelligence(transcript, sessionId)
-        └─► [child] inference → projects/<slug>/ history, state/last-handoff.json
+        └─► [child] inference → projects/<slug>/ history, progress-tree stopped-at
 ```
 
 The orchestrator returns in milliseconds; subscription-CLI cold-start latency no longer blocks the user's next prompt.
@@ -541,6 +540,6 @@ All paths resolve through `src/hooks/lib/paths.ts`:
 | Hook files | PascalCase | `LoadContext.ts`, `StopOrchestrator.ts` |
 | Handler files | kebab-case | `session-name.ts`, `work-learning.ts` |
 | Library files | kebab-case | `text-similarity.ts`, `signal-trends.ts` |
-| Tool files | kebab-case | `handoff-note.ts`, `token-cost.ts` |
+| Tool files | kebab-case | `algorithm-reflect.ts`, `token-cost.ts` |
 | Memory files | date-prefixed | `2026-03-24.md`, `2026-03-24_weekly.md` |
 | Template files | UPPER_SNAKE | `ALGORITHM.md`, `MEMORY_SYSTEM.md` |

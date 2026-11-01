@@ -10,22 +10,18 @@
 import { command as algorithmReflect } from "../tools/agent/algorithm-reflect";
 import { command as algorithmSynthesize } from "../tools/agent/algorithm-synthesize";
 import { command as analyze } from "../tools/agent/analyze";
-import { command as handoffNote } from "../tools/agent/handoff-note";
 import { command as interaction } from "../tools/agent/interaction";
 import { command as project } from "../tools/agent/project";
 import { command as synthesize } from "../tools/agent/synthesize";
-import { command as thread } from "../tools/agent/thread";
 import type { Command } from "../tools/lib/command";
 
 export const builtinTools: Record<string, Command> = {
   "algorithm-reflect": algorithmReflect,
   "algorithm-synthesize": algorithmSynthesize,
   analyze,
-  "handoff-note": handoffNote,
   interaction,
   project,
   synthesize,
-  thread,
 };
 
 export const builtinToolVerbs = Object.keys(builtinTools).sort();

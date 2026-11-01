@@ -2,18 +2,14 @@ import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { run as algorithmReflect } from "../src/tools/agent/algorithm-reflect";
 import { run as algorithmSynthesize } from "../src/tools/agent/algorithm-synthesize";
 import { run as analyze } from "../src/tools/agent/analyze";
-import { run as handoffNote } from "../src/tools/agent/handoff-note";
 import { run as synthesize } from "../src/tools/agent/synthesize";
-import { run as thread } from "../src/tools/agent/thread";
 import { freshTestDir } from "./lib/test-home";
 
 const TOOLS: [string, (argv: string[]) => Promise<number>][] = [
   ["algorithm-reflect", algorithmReflect],
   ["algorithm-synthesize", algorithmSynthesize],
   ["analyze", analyze],
-  ["handoff-note", handoffNote],
   ["synthesize", synthesize],
-  ["thread", thread],
 ];
 
 let home: string;
@@ -53,10 +49,6 @@ describe.each(TOOLS)("pal cli %s", (name, run) => {
 
 const MISUSE: [string, string[], string][] = [
   ["algorithm-reflect", ["--task", "t", "--q1", "a"], "missing --q2, --q3"],
-  ["handoff-note", ["--waiting", "x"], "--title and --text are required"],
-  ["thread", [], "one of --add, --resolve, --list is required"],
-  ["thread", ["--add"], "--add needs --title"],
-  ["thread", ["--resolve"], "--resolve needs --id"],
   ["synthesize", ["--days", "x"], "--days must be a number"],
   ["algorithm-synthesize", ["--since", "nope"], "--since is not a date"],
 ];

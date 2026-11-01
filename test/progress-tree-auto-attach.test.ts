@@ -3,7 +3,6 @@ import { appendFileSync, mkdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runPostToolHandlers } from "../src/hooks/lib/post-tool";
 import { appendEvent, readEvents, readTree } from "../src/hooks/lib/progress-tree";
-import { stopProgressTree } from "../src/hooks/lib/progress-tree-gate";
 import {
   attach,
   attachments,
@@ -15,7 +14,6 @@ import {
   paths,
   SESSION,
   sessionStart,
-  setting,
   startEachTestInAFreshHome,
   TASK,
   tree,
@@ -83,19 +81,103 @@ describe("gh pr create attaches the PR", () => {
     expect(attachments()).toEqual([["n1", "pr", PR]]);
   });
 
-  test("the progress tree off reads and writes nothing", () => {
-    openNode();
-    setting(false);
-    const before = readEvents().length;
-    runClaude("gh pr create --fill", `${PR}\n`);
-    expect(readEvents()).toHaveLength(before);
-  });
-
   test("a broken progress-tree log never throws out of the hook", () => {
     mkdirSync(resolve(paths.home, "memory", "progress-tree", "events.jsonl"), {
       recursive: true,
     });
     expect(() => runClaude("gh pr create --fill", `${PR}\n`)).not.toThrow();
+  });
+});
+
+describe("a published artifact attaches its URL", () => {
+  const URL = "https://claude.ai/artifact/UaUjbDTmpECFALyrtswoFF";
+  const published = { url: URL, title: "Suspect Van", seq: 1 };
+  const runArtifact = (
+    input: Record<string, unknown>,
+    response: unknown = published,
+    extra: Record<string, unknown> = {}
+  ) =>
+    runPostToolHandlers(
+      {
+        hook_event_name: "PostToolUse",
+        session_id: SESSION,
+        tool_name: "Artifact",
+        tool_input: input,
+        tool_response: response,
+        ...extra,
+      },
+      ["--only=progress-tree"]
+    );
+  const labels = () =>
+    [...tree().nodes.values()].flatMap((n) => n.artifacts.map((a) => a.label));
+
+  test("a publish attaches the URL with the page's title to the active node", () => {
+    openNode();
+    runArtifact({ file_path: "/tmp/van.html", icon: "car" });
+    expect(attachments()).toEqual([["n1", "artifact", URL]]);
+    expect(labels()).toEqual(["Suspect Van"]);
+  });
+
+  test("an explicit publish action attaches too", () => {
+    openNode();
+    runArtifact({ action: "publish", file_path: "/tmp/van.html" });
+    expect(attachments()).toEqual([["n1", "artifact", URL]]);
+  });
+
+  test("with no active node the session's node opens and takes the artifact", () => {
+    runArtifact({ file_path: "/tmp/van.html" });
+    const nodes = [...tree().nodes.values()];
+    expect(nodes).toHaveLength(1);
+    expect(nodes[0].artifacts.map((a) => [a.kind, a.ref])).toEqual([["artifact", URL]]);
+  });
+
+  test("a republish of the same page is not attached again", () => {
+    openNode();
+    runArtifact({ file_path: "/tmp/van.html" });
+    runArtifact({ file_path: "/tmp/van.html" }, { ...published, seq: 2 });
+    expect(attachments()).toEqual([["n1", "artifact", URL]]);
+  });
+
+  test.each([
+    ["read", { action: "read", url: URL }, published],
+    ["list", { action: "list" }, { artifacts: [{ url: URL }], total: 1 }],
+    ["delete", { action: "delete", url: URL }, { artifact_delete: { url: URL } }],
+    ["open", { action: "open", url: URL }, published],
+    ["an asset upload", { url: URL, file_path: "/tmp/a.png", asset: true }, published],
+  ])("%s attaches nothing", (_, input, response) => {
+    openNode();
+    const before = readEvents().length;
+    runArtifact(input, response);
+    expect(readEvents()).toHaveLength(before);
+  });
+
+  test("a failed publish attaches nothing", () => {
+    openNode();
+    const before = readEvents().length;
+    runArtifact({ file_path: "/tmp/van.html" }, undefined, {
+      hook_event_name: "PostToolUseFailure",
+      error: "Publish refused",
+    });
+    expect(readEvents()).toHaveLength(before);
+  });
+
+  test("a result with no URL attaches nothing", () => {
+    openNode();
+    const before = readEvents().length;
+    runArtifact({ file_path: "/tmp/van.html" }, "Published somewhere");
+    expect(readEvents()).toHaveLength(before);
+  });
+
+  test("Claude Code runs the progress-tree handler on Artifact calls", async () => {
+    const settings = await Bun.file(
+      resolve(import.meta.dir, "../assets/templates/settings.claude.json")
+    ).json();
+    const matchers = (
+      settings.hooks.PostToolUse as { matcher: string; hooks: { command: string }[] }[]
+    )
+      .filter((h) => h.hooks.some((c) => c.command.includes("--only=progress-tree")))
+      .map((h) => h.matcher);
+    expect(matchers.some((m) => new RegExp(`^(?:${m})$`).test("Artifact"))).toBe(true);
   });
 });
 
@@ -220,19 +302,9 @@ describe("a started factory build attaches its task", () => {
     runClaude(`${BUILD} ${TASK}`);
     expect(attachments()).toEqual([["n1", "run", `dark-factory:${TASK}`]]);
   });
-
-  test("the progress tree off writes nothing", () => {
-    openNode();
-    setting(false);
-    const before = readEvents().length;
-    runClaude(`${BUILD} ${TASK}`);
-    expect(readEvents()).toHaveLength(before);
-  });
 });
 
 describe("the factory's PR reaches the node holding the task", () => {
-  const endOfTurn = () => stopProgressTree({ session_id: SESSION });
-
   test.each(["pr_opened", "pr_adopted"])("%s attaches at session start", (event) => {
     nodeHoldingTask();
     factoryEvent(event, TASK);
@@ -314,15 +386,5 @@ describe("the factory's PR reaches the node holding the task", () => {
     const before = readFileSync(paths.factoryLog, "utf-8");
     sessionStart();
     expect(readFileSync(paths.factoryLog, "utf-8")).toEqual(before);
-  });
-
-  test("the progress tree off reads and writes nothing", async () => {
-    nodeHoldingTask();
-    factoryEvent("pr_opened", TASK);
-    setting(false);
-    const before = readEvents().length;
-    sessionStart();
-    await endOfTurn();
-    expect(readEvents()).toHaveLength(before);
   });
 });

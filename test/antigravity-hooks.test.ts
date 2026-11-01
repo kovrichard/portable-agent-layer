@@ -12,17 +12,14 @@ import {
   withTranscriptReply,
 } from "../src/hooks/lib/antigravity-transcript";
 import { commandsThisTurn } from "../src/hooks/lib/claim-check";
-import {
-  alreadySentBack,
-  claimChecksSince,
-  watchClaims,
-} from "../src/hooks/lib/claim-log";
+import { claimChecksSince, watchClaims } from "../src/hooks/lib/claim-log";
 import { eventsSince } from "../src/hooks/lib/events";
 import { enterHookWorkspace } from "../src/hooks/lib/hook-turn";
 import { invocationContext } from "../src/hooks/lib/invocation-context";
 import { landedCalls, ledgeredCalls } from "../src/hooks/lib/ledger-hook";
 import { paths } from "../src/hooks/lib/paths";
 import { decideRefusal } from "../src/hooks/lib/security-gate";
+import { alreadySentBack, rememberSendBack } from "../src/hooks/lib/send-back-guard";
 import { reload } from "../src/hooks/lib/settings";
 import { readTranscriptFile } from "../src/hooks/lib/transcript";
 import {
@@ -142,6 +139,7 @@ describe("agy's replies", () => {
   });
 
   test("a stop agy already continued once is not sent back again", () => {
+    rememberSendBack(stop(), true);
     expect(alreadySentBack(stop({ executionNum: 1 }))).toBe(true);
     expect(alreadySentBack(stop())).toBe(false);
   });

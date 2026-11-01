@@ -9,6 +9,7 @@
 
 import { ANTIGRAVITY_WRITE_TOOLS, FILE_TARGET_KEYS, normalizeToolUse } from "./agent";
 import { logDebug } from "./log";
+import { type RunToolCall, runModeRefusal } from "./run-mode-gate";
 import { checkBashCommand, checkFilePath } from "./security";
 
 /** beforeShellExecution (Cursor only) — flat, no tool-name wrapper. */
@@ -100,18 +101,61 @@ function writesFile(toolName: string): boolean {
  * `cwd` is passed rather than read so a test can pin the target of a refused
  * command, which has no file of its own to name.
  */
+function runModeGateRefusal(
+  call: RunToolCall,
+  cwd: string,
+  hookEventName?: string
+): GateRefusal | null {
+  const message = runModeRefusal(call, cwd);
+  if (!message) return null;
+  return {
+    tool: call.tool,
+    target: call.filePath ?? cwd,
+    command: call.command,
+    reason: "run mode",
+    message,
+    hookEventName,
+  };
+}
+
+function shellExecRefusal(input: ShellExecInput, cwd: string): GateRefusal | null {
+  const runRefusal = runModeGateRefusal({ tool: "shell", command: input.command }, cwd);
+  if (runRefusal) return runRefusal;
+  const reason = checkBashCommand(input.command);
+  if (!reason) return null;
+  return {
+    tool: "shell",
+    target: cwd,
+    command: input.command,
+    reason,
+    message: `Blocked: ${reason}`,
+  };
+}
+
+function shellCommandRefusal(
+  toolUse: NonNullable<ReturnType<typeof normalizeToolUse>>,
+  command: string,
+  cwd: string
+): GateRefusal | null {
+  const reason = checkBashCommand(command);
+  // "No output" from a downstream tool is indistinguishable between "denied,
+  // never ran" and "ran, produced nothing" — logging the verdict here, next
+  // to the literal command, is what actually tells the two apart.
+  const verdict = reason ? `BLOCK(${reason})` : "ALLOW";
+  logDebug("SecurityValidator", `bashVerdict=${verdict} command=${command}`);
+  if (!reason) return null;
+  return {
+    tool: toolUse.toolName,
+    target: cwd,
+    command,
+    reason,
+    message: `Blocked: ${reason}`,
+    hookEventName: toolUse.hookEventName,
+  };
+}
+
 export function decideRefusal(input: SecurityInput, cwd: string): GateRefusal | null {
-  if (isShellExec(input)) {
-    const reason = checkBashCommand(input.command);
-    if (!reason) return null;
-    return {
-      tool: "shell",
-      target: cwd,
-      command: input.command,
-      reason,
-      message: `Blocked: ${reason}`,
-    };
-  }
+  if (isShellExec(input)) return shellExecRefusal(input, cwd);
 
   const toolUse = normalizeToolUse(input);
   if (!toolUse) return null;
@@ -129,26 +173,23 @@ export function decideRefusal(input: SecurityInput, cwd: string): GateRefusal | 
     "CommandLine",
     "script",
   ]);
+  const filePath = firstStringArg(toolUse.toolInput, FILE_TARGET_KEYS);
+  const runRefusal = runModeGateRefusal(
+    {
+      tool: toolUse.toolName,
+      command: runsShellCommand(toolUse.toolName) ? command : undefined,
+      filePath: writesFile(toolUse.toolName) ? filePath : undefined,
+    },
+    cwd,
+    toolUse.hookEventName
+  );
+  if (runRefusal) return runRefusal;
+
   if (runsShellCommand(toolUse.toolName) && command) {
-    const reason = checkBashCommand(command);
-    // "No output" from a downstream tool is indistinguishable between "denied,
-    // never ran" and "ran, produced nothing" — logging the verdict here, next
-    // to the literal command, is what actually tells the two apart.
-    const verdict = reason ? `BLOCK(${reason})` : "ALLOW";
-    logDebug("SecurityValidator", `bashVerdict=${verdict} command=${command}`);
-    if (reason) {
-      return {
-        tool: toolUse.toolName,
-        target: cwd,
-        command,
-        reason,
-        message: `Blocked: ${reason}`,
-        hookEventName: toolUse.hookEventName,
-      };
-    }
+    const shellRefusal = shellCommandRefusal(toolUse, command, cwd);
+    if (shellRefusal) return shellRefusal;
   }
 
-  const filePath = firstStringArg(toolUse.toolInput, FILE_TARGET_KEYS);
   if (writesFile(toolUse.toolName) && filePath) {
     const reason = checkFilePath(filePath);
     if (reason) {

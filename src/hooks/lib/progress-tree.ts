@@ -52,7 +52,7 @@ export type WorkEvent = EventBase &
     | { type: "park"; stoppedAt?: string }
     | { type: "wait"; on: string }
     | { type: "done"; summary?: string }
-    | { type: "stopped"; text: string }
+    | { type: "stopped"; text: string; auto?: true }
     | { type: "decide"; text: string; why?: string }
     | { type: "attach"; kind: ArtifactKind; ref: string; label?: string }
     | { type: "follow-up"; text: string; due?: string }

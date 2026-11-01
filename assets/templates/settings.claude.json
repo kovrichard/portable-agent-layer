@@ -38,10 +38,8 @@
       "Bash(pal cli algorithm-reflect *)",
       "Bash(pal cli algorithm-synthesize *)",
       "Bash(pal cli analyze *)",
-      "Bash(pal cli handoff-note *)",
       "Bash(pal cli project *)",
-      "Bash(pal cli synthesize *)",
-      "Bash(pal cli thread *)"
+      "Bash(pal cli synthesize *)"
     ]
   },
   "skillOverrides": {
@@ -114,7 +112,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash|Write|Edit",
+        "matcher": "Bash|Write|Edit|NotebookEdit|WebSearch|WebFetch|AskUserQuestion|Agent|Task|Workflow",
         "hooks": [
           {
             "type": "command",
@@ -171,7 +169,7 @@
         ]
       },
       {
-        "matcher": "Bash",
+        "matcher": "Bash|Artifact",
         "hooks": [
           {
             "type": "command",
@@ -278,6 +276,6 @@
     }
   },
   "enabledPlugins": {
-    "dark-factory@pal": true
+    "dark-factory@pal": false
   }
 }

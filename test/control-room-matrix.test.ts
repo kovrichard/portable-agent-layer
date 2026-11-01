@@ -8,6 +8,7 @@ import {
   matrix,
 } from "../src/tools/control-room/matrix";
 import { freshTestDir } from "./lib/test-home";
+import { seedWorkNode } from "./lib/work-node-fixture";
 
 // Every placement on the morning screen has to be defensible from files alone,
 // so each rule that can move an item between quadrants gets its own fixture.
@@ -59,26 +60,6 @@ function registerProject(slug: string, opts: ProjectFixture = {}): string {
 function writeGoals(content: string): void {
   mkdirSync(resolve(HOME, "telos"), { recursive: true });
   writeFileSync(resolve(HOME, "telos", "GOALS.md"), content, "utf-8");
-}
-
-function writeHandoff(path: string, entry: Record<string, unknown>): void {
-  const dir = resolve(HOME, "memory", "state");
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(
-    resolve(dir, "last-handoff.json"),
-    JSON.stringify({
-      [path]: {
-        timestamp: "2026-09-04T18:00:00.000Z",
-        title: "the title",
-        status: "in-progress",
-        handoff: "unfinished",
-        artifacts: [],
-        source: "deliberate",
-        ...entry,
-      },
-    }),
-    "utf-8"
-  );
 }
 
 function find(grid: Matrix, id: string): { quadrant: string; item: MatrixItem } {
@@ -212,21 +193,25 @@ describe("urgency", () => {
     expect(find(matrix(NOW), "later").item.urgent).toBe(false);
   });
 
-  test("waiting on the human outranks a plain unfinished handoff", () => {
-    const path = registerProject("stuck", { serves: "goal" });
-    writeHandoff(path, { waitingOn: "a decision on pricing" });
+  test("a node waiting on the human outranks plain work in progress", () => {
+    registerProject("stuck", { serves: "goal" });
+    seedWorkNode("stuck", "w", { status: "waiting", waitingOn: "a decision on pricing" });
     const { item } = find(matrix(NOW), "stuck");
     expect(item.waitingOn).toBe("a decision on pricing");
     expect(item.urgentBecause).toContain("waiting on you");
-    expect(item.urgentBecause).not.toContain("handoff in progress");
+    expect(item.urgentBecause).not.toContain("work in progress");
   });
 
-  test("an unfinished handoff with nobody blocked is still urgent", () => {
-    const path = registerProject("midway", { serves: "goal" });
-    writeHandoff(path, {});
-    expect(find(matrix(NOW), "midway").item.urgentBecause).toEqual([
-      "handoff in progress",
-    ]);
+  test("fresh work with nobody blocked is still urgent", () => {
+    registerProject("midway", { serves: "goal" });
+    seedWorkNode("midway", "a");
+    expect(find(matrix(NOW), "midway").item.urgentBecause).toEqual(["work in progress"]);
+  });
+
+  test("parked work does not make a project urgent", () => {
+    registerProject("shelved", { serves: "goal" });
+    seedWorkNode("shelved", "a", { status: "parked" });
+    expect(find(matrix(NOW), "shelved").item.urgent).toBe(false);
   });
 
   test("an important project going quiet is urgent; a fun one is just quiet", () => {

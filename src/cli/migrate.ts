@@ -23,10 +23,12 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, resolve } from "node:path";
+import { resolveAnchor } from "../hooks/lib/anchor";
 import { readBindings } from "../hooks/lib/bindings";
 import { mergeJsonlLines } from "../hooks/lib/import-merge";
 import { foldHistoryInto } from "../hooks/lib/parked-history";
 import { palHome, paths } from "../hooks/lib/paths";
+import { appendEvent, scopeOf } from "../hooks/lib/progress-tree";
 import {
   legacyJsonToProgress,
   type ProjectProgress,
@@ -143,6 +145,18 @@ function pendingThreadsForProjects(): { thread: Thread; project: ProjectProgress
   return results;
 }
 
+function addThreadAsIsc(thread: Thread, projectName: string): Thread | null {
+  const p = readProject(projectName);
+  if (!p) return null;
+  const current = p.criteria ?? "";
+  const id = nextIscId(current);
+  const newLine = `- [ ] ISC-${id}: ${thread.title}`;
+  p.criteria = current ? `${current.trimEnd()}\n${newLine}` : newLine;
+  p.updated = new Date().toISOString();
+  writeProject(p);
+  return { ...thread, status: "resolved", resolved: new Date().toISOString() };
+}
+
 const v2ThreadsToIsc: Migration = {
   id: "v2-threads-to-isc",
   description: "Migrate open project-scoped threads to ISCs on their project ISA",
@@ -166,23 +180,13 @@ const v2ThreadsToIsc: Migration = {
     for (const { thread, project } of pending) {
       try {
         if (!dryRun) {
-          const p = readProject(project.name);
-          if (!p) {
+          const resolvedThread = addThreadAsIsc(thread, project.name);
+          if (!resolvedThread) {
             skipped++;
             results.push(`${thread.id}: skipped (project "${project.name}" unreadable)`);
             continue;
           }
-          const current = p.criteria ?? "";
-          const id = nextIscId(current);
-          const newLine = `- [ ] ISC-${id}: ${thread.title}`;
-          p.criteria = current ? `${current.trimEnd()}\n${newLine}` : newLine;
-          p.updated = new Date().toISOString();
-          writeProject(p);
-          threadUpdates.set(thread.id, {
-            ...thread,
-            status: "resolved",
-            resolved: new Date().toISOString(),
-          });
+          threadUpdates.set(thread.id, resolvedThread);
         }
         migrated++;
         results.push(
@@ -322,63 +326,56 @@ const v3EntitiesToKnowledge: Migration = {
     const idx = readLegacyIndex();
     if (!idx) return { migrated: 0, skipped: 0, results: [] };
 
-    let migrated = 0;
-    let skipped = 0;
-    const results: string[] = [];
-
     // Refuse to silently drop links/sources if a future legacy index has them.
     const linksCount = Object.keys(idx.links ?? {}).length;
     const sourcesCount = Object.keys(idx.sources ?? {}).length;
     if (linksCount > 0 || sourcesCount > 0) {
-      results.push(
-        `aborted: legacy index has ${linksCount} link(s) and ${sourcesCount} source(s) — no destination in new store`
-      );
-      return { migrated: 0, skipped: linksCount + sourcesCount, results };
+      return {
+        migrated: 0,
+        skipped: linksCount + sourcesCount,
+        results: [
+          `aborted: legacy index has ${linksCount} link(s) and ${sourcesCount} source(s) — no destination in new store`,
+        ],
+      };
     }
 
-    for (const legacy of Object.values(idx.people ?? {})) {
-      const entity = legacyPersonToEntity(legacy);
-      if (knowledgeExists(entity.domain, entity.slug)) {
-        skipped++;
-        results.push(`People/${entity.slug}: skipped (already in new store)`);
-        continue;
-      }
-      if (!dryRun) knowledgeSave(entity);
-      migrated++;
-      results.push(`People/${entity.slug}: ${dryRun ? "would migrate" : "migrated"}`);
+    const tally: MigrationResult = { migrated: 0, skipped: 0, results: [] };
+    const people = Object.values(idx.people ?? {}).map(legacyPersonToEntity);
+    const companies = Object.values(idx.companies ?? {}).map(legacyCompanyToEntity);
+    for (const entity of [...people, ...companies]) {
+      migrateEntity(entity, dryRun, tally);
     }
 
-    for (const legacy of Object.values(idx.companies ?? {})) {
-      const entity = legacyCompanyToEntity(legacy);
-      if (knowledgeExists(entity.domain, entity.slug)) {
-        skipped++;
-        results.push(`Companies/${entity.slug}: skipped (already in new store)`);
-        continue;
-      }
-      if (!dryRun) knowledgeSave(entity);
-      migrated++;
-      results.push(`Companies/${entity.slug}: ${dryRun ? "would migrate" : "migrated"}`);
-    }
-
-    // After a successful, non-dry-run migration, archive the legacy file so
-    // re-runs don't repeatedly load and skip its contents.
-    if (!dryRun && migrated > 0) {
-      const src = legacyEntitiesPath();
-      if (existsSync(src)) {
-        const date = new Date().toISOString().slice(0, 10);
-        const archived = `${src}.migrated-${date}`;
-        try {
-          renameSync(src, archived);
-          results.push(`archived legacy index → ${archived}`);
-        } catch (e) {
-          results.push(`warn: could not rename legacy index (${(e as Error).message})`);
-        }
-      }
-    }
-
-    return { migrated, skipped, results };
+    if (!dryRun && tally.migrated > 0) archiveLegacyIndex(tally.results);
+    return tally;
   },
 };
+
+function migrateEntity(entity: Entity, dryRun: boolean, tally: MigrationResult): void {
+  const label = `${entity.domain}/${entity.slug}`;
+  if (knowledgeExists(entity.domain, entity.slug)) {
+    tally.skipped++;
+    tally.results.push(`${label}: skipped (already in new store)`);
+    return;
+  }
+  if (!dryRun) knowledgeSave(entity);
+  tally.migrated++;
+  tally.results.push(`${label}: ${dryRun ? "would migrate" : "migrated"}`);
+}
+
+/** So re-runs don't repeatedly load and skip the legacy contents. */
+function archiveLegacyIndex(results: string[]): void {
+  const src = legacyEntitiesPath();
+  if (!existsSync(src)) return;
+  const date = new Date().toISOString().slice(0, 10);
+  const archived = `${src}.migrated-${date}`;
+  try {
+    renameSync(src, archived);
+    results.push(`archived legacy index → ${archived}`);
+  } catch (e) {
+    results.push(`warn: could not rename legacy index (${(e as Error).message})`);
+  }
+}
 
 // ── Registry ──────────────────────────────────────────────────────
 
@@ -665,6 +662,13 @@ const RETIRED_SETTINGS_KEYS: Record<string, string[]> = {
     "wisdom",
     "relationship",
     "selfModel",
+    "handoff",
+    "workTree",
+    "workTreeGate",
+    "workTreeDecisionGate",
+    "progressTree",
+    "progressTreeGate",
+    "progressTreeDecisionGate",
   ],
 };
 
@@ -913,11 +917,6 @@ const v8FactoryHome: Migration = {
 
 // ── v9-progress-tree-names: the progress tree's stored names ────
 
-const PROGRESS_TREE_KEY_RENAMES: Record<string, string> = {
-  workTree: "progressTree",
-  workTreeGate: "progressTreeGate",
-  workTreeDecisionGate: "progressTreeDecisionGate",
-};
 const EVENTS_FILE = "events.jsonl";
 const OLD_PROGRESS_TREE_LABEL = "memory/work-tree/";
 const oldProgressTreeFolder = () => resolve(paths.memory(), "work-tree");
@@ -926,42 +925,6 @@ const newProgressTreeFolder = () => resolve(paths.memory(), "progress-tree");
 interface FolderStep {
   results: string[];
   skipped: number;
-}
-
-function oldProgressTreeKeysIn(
-  settings: Record<string, Record<string, unknown>> | null
-): string[] {
-  const section = settings?.dynamicContext;
-  if (typeof section !== "object" || section === null) return [];
-  return Object.keys(PROGRESS_TREE_KEY_RENAMES).filter((key) => key in section);
-}
-
-function renameProgressTreeKeys(
-  section: Record<string, unknown>
-): Record<string, unknown> {
-  return Object.fromEntries(
-    Object.entries(section).flatMap(([key, value]) => {
-      if (!Object.hasOwn(PROGRESS_TREE_KEY_RENAMES, key)) return [[key, value]];
-      const renamed = PROGRESS_TREE_KEY_RENAMES[key];
-      return renamed in section ? [] : [[renamed, value]];
-    })
-  );
-}
-
-function progressTreeKeysStep(dryRun: boolean): string[] {
-  const settings = readSettingsObject();
-  const old = oldProgressTreeKeysIn(settings);
-  if (!settings || old.length === 0) return [];
-  if (!dryRun) {
-    settings.dynamicContext = renameProgressTreeKeys(settings.dynamicContext);
-    writeSettingsObject(settings);
-  }
-  const moves = old.map(
-    (key) => `dynamicContext.${key} → dynamicContext.${PROGRESS_TREE_KEY_RENAMES[key]}`
-  );
-  return [
-    `pal-settings.json: ${dryRun ? "would rename" : "renamed"} ${moves.join(", ")}`,
-  ];
 }
 
 function mergeOldProgressTreeEvents(): number {
@@ -1022,28 +985,91 @@ function progressTreeFolderStep(dryRun: boolean): FolderStep {
 
 const v9ProgressTreeNames: Migration = {
   id: "v9-progress-tree-names",
-  description: "Rename the progress tree's settings and data folder from work-tree names",
+  description: "Move the progress tree's data folder from memory/work-tree",
   movesSources: true,
 
   check() {
-    const keys = oldProgressTreeKeysIn(readSettingsObject()).map(
-      (key) => `dynamicContext.${key}`
-    );
-    const found = existsSync(oldProgressTreeFolder())
-      ? [...keys, OLD_PROGRESS_TREE_LABEL]
-      : keys;
-    return { pending: found.length > 0, detail: found.join(", ") || undefined };
+    const pending = existsSync(oldProgressTreeFolder());
+    return { pending, detail: pending ? OLD_PROGRESS_TREE_LABEL : undefined };
   },
 
   run(dryRun = false): MigrationResult {
-    const keyResults = progressTreeKeysStep(dryRun);
-    const folder = progressTreeFolderStep(dryRun);
-    const results = [...keyResults, ...folder.results];
+    const { results, skipped } = progressTreeFolderStep(dryRun);
+    return { migrated: results.length - skipped, skipped, results };
+  },
+};
+
+// ── v10-threads-to-progress-tree: open threads → parked nodes ────
+
+function nodeOf(line: string): string[] {
+  try {
+    const { node } = JSON.parse(line);
+    return typeof node === "string" ? [node] : [];
+  } catch {
+    return [];
+  }
+}
+
+function progressTreeNodeIds(): Set<string> {
+  const file = resolve(newProgressTreeFolder(), EVENTS_FILE);
+  if (!existsSync(file)) return new Set();
+  return new Set(readFileSync(file, "utf-8").split("\n").flatMap(nodeOf));
+}
+
+function openThreadsNotInTree(): Thread[] {
+  const nodes = progressTreeNodeIds();
+  return readThreads().filter((t) => t.status === "open" && !nodes.has(t.id));
+}
+
+function threadScope(cwd: string): string {
+  const anchor = resolveAnchor(cwd);
+  return anchor.state === "unresolvable" ? anchor.slug : scopeOf(anchor.path);
+}
+
+function openedAt(thread: Thread): Date {
+  const created = new Date(thread.created);
+  return Number.isNaN(created.getTime()) ? new Date() : created;
+}
+
+const laneNoSessionHeld = (thread: Thread) => `thread-${thread.id}`;
+
+function parkThread(thread: Thread): void {
+  const scope = threadScope(thread.cwd);
+  const at = openedAt(thread);
+  const lane = laneNoSessionHeld(thread);
+  const open = { title: thread.title, parent: null };
+  const park = { stoppedAt: thread.context || undefined };
+  appendEvent(scope, thread.id, "open", open, undefined, at, lane);
+  appendEvent(scope, thread.id, "park", park, undefined, at, lane);
+}
+
+const v10ThreadsToProgressTree: Migration = {
+  id: "v10-threads-to-progress-tree",
+  description: "Park every open thread as a node in the progress tree",
+
+  check() {
+    const pending = openThreadsNotInTree();
     return {
-      migrated: results.length - folder.skipped,
-      skipped: folder.skipped,
-      results,
+      pending: pending.length > 0,
+      detail: pending.length > 0 ? `${pending.length} open thread(s)` : undefined,
     };
+  },
+
+  run(dryRun = false): MigrationResult {
+    const results: string[] = [];
+    let skipped = 0;
+    for (const thread of openThreadsNotInTree()) {
+      try {
+        if (!dryRun) parkThread(thread);
+        results.push(
+          `${thread.id}: ${dryRun ? "would park" : "parked"} "${thread.title}" in ${threadScope(thread.cwd)} (thread source kept)`
+        );
+      } catch (e) {
+        skipped++;
+        results.push(`${thread.id}: skipped (${(e as Error).message})`);
+      }
+    }
+    return { migrated: results.length - skipped, skipped, results };
   },
 };
 
@@ -1057,6 +1083,7 @@ const MIGRATIONS: Migration[] = [
   v7RetiredSettingsKeys,
   v8FactoryHome,
   v9ProgressTreeNames,
+  v10ThreadsToProgressTree,
   ...LEFTOVERS.map(leftoverMigration),
 ];
 
@@ -1083,32 +1110,36 @@ export function checkPendingMigrations(): PendingMigration[] {
   });
 }
 
+function printMigrationList(): void {
+  const pending = checkPendingMigrations();
+  const done = MIGRATIONS.filter((m) => !m.check().pending);
+
+  console.log("");
+  if (pending.length > 0) {
+    console.log("  Pending migrations:");
+    for (const m of pending) {
+      const detail = m.detail ? ` (${m.detail})` : "";
+      console.log(`    ⚠ ${m.id} — ${m.description}${detail}`);
+    }
+  } else {
+    console.log("  No pending migrations.");
+  }
+  if (done.length > 0) {
+    console.log("  Done:");
+    for (const m of done) {
+      console.log(`    ✓ ${m.id} — ${m.description}`);
+    }
+  }
+  console.log("");
+}
+
 /** Entry point for `pal cli migrate`. */
 export function runMigrate(args: string[]): void {
   const dryRun = args.includes("--dry-run");
   const list = args.includes("--list");
 
   if (list) {
-    const pending = checkPendingMigrations();
-    const done = MIGRATIONS.filter((m) => !m.check().pending);
-
-    console.log("");
-    if (pending.length > 0) {
-      console.log("  Pending migrations:");
-      for (const m of pending) {
-        const detail = m.detail ? ` (${m.detail})` : "";
-        console.log(`    ⚠ ${m.id} — ${m.description}${detail}`);
-      }
-    } else {
-      console.log("  No pending migrations.");
-    }
-    if (done.length > 0) {
-      console.log("  Done:");
-      for (const m of done) {
-        console.log(`    ✓ ${m.id} — ${m.description}`);
-      }
-    }
-    console.log("");
+    printMigrationList();
     return;
   }
 

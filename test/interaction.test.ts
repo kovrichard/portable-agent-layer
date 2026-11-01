@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { observeTurn, recordReply, type TurnEvent } from "../src/hooks/lib/interaction";
@@ -47,6 +48,8 @@ beforeEach(() => {
   TEST_HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = TEST_HOME;
   process.env.PAL_AGENT = "claude";
+  delete process.env.PAL_CHANNEL;
+  delete process.env.PAL_CHANNEL_FILE;
   mkdirSync(resolve(TEST_HOME, "memory"), { recursive: true });
   setSettings({});
 });
@@ -62,6 +65,28 @@ describe("measuring a turn", () => {
     expect(readFileSync(content, "utf-8")).toContain(
       "please rotate the staging credentials"
     );
+  });
+
+  test("a queued message keeps its own channel though a later message wrote the channel file first", () => {
+    const sha = (text: string) => createHash("sha256").update(text).digest("hex");
+    const file = resolve(TEST_HOME, "channel.jsonl");
+    process.env.PAL_CHANNEL_FILE = file;
+    const lines = [
+      {
+        sha256: sha("[Sent from Discord mobile]\nalso check the logs"),
+        channel: "discord-mobile",
+      },
+      { sha256: sha("[Voice channel.]\nand the tests"), channel: "discord-voice" },
+    ];
+    writeFileSync(file, lines.map((line) => JSON.stringify(line)).join("\n"));
+    observeTurn("[Sent from Discord mobile]\nalso check the logs", "s1", T0);
+    observeTurn("[Voice channel.]\nand the tests", "s1", at(1));
+    observeTurn("a message the bot never wrote", "s1", at(2));
+    expect(loggedEvents().map((e) => e.channel)).toEqual([
+      "discord-mobile",
+      "discord-voice",
+      "discord-voice",
+    ]);
   });
 
   test("a turn records its language, pastes, images and slash command", () => {

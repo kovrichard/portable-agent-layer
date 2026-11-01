@@ -31,16 +31,14 @@ prefix_rule(
         "bun",
         [
             "~/.pal/tools/analyze.ts",
-            "~/.pal/tools/handoff-note.ts",
             "~/.pal/tools/synthesize.ts",
-            "~/.pal/tools/thread.ts",
         ],
     ],
     decision = "allow",
     justification = "PAL installed agent tools are safe to run without repeated approval",
     match = [
-        "bun ~/.pal/tools/thread.ts --list",
-        "bun ~/.pal/tools/handoff-note.ts --help",
+        "bun ~/.pal/tools/analyze.ts --help",
+        "bun ~/.pal/tools/synthesize.ts --help",
     ],
     not_match = [
         "bun ~/.pal/tools/project.ts list",
@@ -81,16 +79,14 @@ prefix_rule(
         [
             "algorithm-synthesize",
             "analyze",
-            "handoff-note",
             "synthesize",
-            "thread",
         ],
     ],
     decision = "allow",
     justification = "PAL installed agent tools are safe to run without repeated approval",
     match = [
-        "pal cli thread --list",
-        "pal cli handoff-note --help",
+        "pal cli analyze --help",
+        "pal cli synthesize --help",
     ],
     not_match = [
         "pal cli project list",

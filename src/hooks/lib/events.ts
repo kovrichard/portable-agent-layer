@@ -8,6 +8,7 @@ import { appendFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { currentAttribution, type RecordAttribution } from "./actor";
 import type { AgentType } from "./agent";
+import { currentChannel } from "./channel";
 import { USAGE_FIELDS } from "./inference-usage";
 import { logError } from "./log";
 import { ensureDir, paths } from "./paths";
@@ -245,8 +246,7 @@ function envelope(type: EventType, options: AppendOptions): EventEnvelope {
     ...currentAttribution(),
     ...(options.runtime && { runtime: options.runtime }),
     ...options.attribution,
-    channel:
-      options.channel !== undefined ? options.channel : process.env.PAL_CHANNEL || null,
+    channel: options.channel !== undefined ? options.channel : currentChannel(),
     project: projectFor(options, cwd),
     cwd,
   };

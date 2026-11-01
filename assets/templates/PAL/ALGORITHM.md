@@ -248,23 +248,9 @@ pal cli algorithm-reflect --task "description" --criteria N --passed N --failed 
 
 Set `--scope task-specific` when the Q2 idea is bound to this one task (e.g. a criterion that only matters for the specific file, API, or dataset you were handling) and would not generalize to the algorithm; use `general` (the default) for reusable structural improvements. This keeps the algorithm-update synthesis focused on changes worth folding into ALGORITHM.md.
 
-**3. Handoff note** — if work is unfinished, write what remains so the next session can pick up immediately:
+**3. Open work** — close what this session finished; open what it didn't:
 
-```bash
-# Work still in progress:
-pal cli handoff-note --title "what we were doing" --text "what remains, decisions made, next steps"
-
-# Work finished — clear any previous in-progress handoff:
-pal cli handoff-note --done --title "what we completed"
-```
-
-- Write if anything is left mid-flight: unfinished implementation, open decision, partially debugged issue
-- Skip if the session fully resolved everything it set out to do
-- `--text` should answer: what's next, what was decided, what to watch out for
-
-**4. Open work** — close what this session finished; open what it didn't:
-
-**Project work** — use ISCs, not threads:
+**Project work** — use ISCs:
 ```bash
 # Close completed ISCs:
 pal cli project complete-isc <project-name> <id>
@@ -278,13 +264,16 @@ pal cli project add-isc <project-name> "what remains"
 pal cli project complete-task-isa <slug>
 ```
 
-**Cross-project or non-project follow-ups** — use threads:
+**Unfinished work outside the ISCs** — keep it in the progress tree:
 ```bash
-pal cli thread --add --title "brief title" --context "why it matters, what needs to happen"
-pal cli thread --resolve --id <id>
+# Park the node, saying where it stopped:
+pal cli progress park --stopped "where it stopped, what comes next"
+
+# Or note what must happen later on the node it belongs to:
+pal cli progress follow-up "what must happen" [--due 2026-11-02]
 ```
 
-**5. Standing rules** — when the user states a rule that should hold from now on, record it:
+**4. Standing rules** — when the user states a rule that should hold from now on, record it:
 
 ```bash
 pal cli rule add-opinion --kind <correction kind> --when "the situation" --steering "the instruction" --evidence "what the user said"

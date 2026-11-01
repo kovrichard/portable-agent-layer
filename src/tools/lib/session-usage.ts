@@ -111,66 +111,67 @@ function emptyUsage(): SessionUsage {
   };
 }
 
+function parseTranscriptLine(line: string): TranscriptLine[] {
+  if (!line) return [];
+  try {
+    return [JSON.parse(line) as TranscriptLine];
+  } catch {
+    return [];
+  }
+}
+
+function sessionEntries(transcript: string, sessionId: string): TranscriptLine[] {
+  return transcript
+    .split("\n")
+    .flatMap(parseTranscriptLine)
+    .filter((entry) => entry.sessionId === sessionId);
+}
+
+function sessionDurationMs(entries: TranscriptLine[]): number {
+  const stamps = entries.flatMap((e) => (e.timestamp ? [e.timestamp] : []));
+  const [first, last] = [stamps[0], stamps.at(-1)];
+  if (!first || !last) return 0;
+  return new Date(last).getTime() - new Date(first).getTime();
+}
+
+function addTurnUsage(total: SessionUsage, entry: TranscriptLine): void {
+  const usage = entry.message?.usage;
+  const model = entry.message?.model;
+  if (!usage || !model) return;
+
+  const input = usage.input_tokens ?? 0;
+  const output = usage.output_tokens ?? 0;
+  const cacheRead = usage.cache_read_input_tokens ?? 0;
+  const { cacheWrite5m, cacheWrite1h } = cacheWritesOf(usage);
+
+  total.cost += costOfUsage(
+    model,
+    {
+      input,
+      output,
+      cacheWrite5m,
+      cacheWrite1h,
+      cacheRead,
+    },
+    entry.timestamp
+  );
+  total.input += input;
+  total.output += output;
+  total.cacheWrite5m += cacheWrite5m;
+  total.cacheWrite1h += cacheWrite1h;
+  total.cacheRead += cacheRead;
+  total.calls++;
+  total.models.add(model);
+}
+
 export function accumulateUsage(transcript: string, sessionId: string): SessionUsage {
   const total = emptyUsage();
-  const assistantTurns: TranscriptLine[] = [];
-  let firstTs = "";
-  let lastTs = "";
-
-  for (const line of transcript.split("\n")) {
-    if (!line) continue;
-
-    let entry: TranscriptLine;
-    try {
-      entry = JSON.parse(line) as TranscriptLine;
-    } catch {
-      continue;
-    }
-
-    if (entry.sessionId !== sessionId) continue;
-
-    if (entry.timestamp) {
-      if (!firstTs) firstTs = entry.timestamp;
-      lastTs = entry.timestamp;
-    }
-
-    if (entry.type === "assistant") assistantTurns.push(entry);
-  }
-
+  const entries = sessionEntries(transcript, sessionId);
+  const assistantTurns = entries.filter((e) => e.type === "assistant");
   for (const entry of finalPerMessage(assistantTurns, (e) => e.message?.id)) {
-    const usage = entry.message?.usage;
-    const model = entry.message?.model;
-    if (!usage || !model) continue;
-
-    const input = usage.input_tokens ?? 0;
-    const output = usage.output_tokens ?? 0;
-    const cacheRead = usage.cache_read_input_tokens ?? 0;
-    const { cacheWrite5m, cacheWrite1h } = cacheWritesOf(usage);
-
-    total.cost += costOfUsage(
-      model,
-      {
-        input,
-        output,
-        cacheWrite5m,
-        cacheWrite1h,
-        cacheRead,
-      },
-      entry.timestamp
-    );
-    total.input += input;
-    total.output += output;
-    total.cacheWrite5m += cacheWrite5m;
-    total.cacheWrite1h += cacheWrite1h;
-    total.cacheRead += cacheRead;
-    total.calls++;
-    total.models.add(model);
+    addTurnUsage(total, entry);
   }
-
-  if (firstTs && lastTs) {
-    total.durationMs = new Date(lastTs).getTime() - new Date(firstTs).getTime();
-  }
-
+  total.durationMs = sessionDurationMs(entries);
   return total;
 }
 

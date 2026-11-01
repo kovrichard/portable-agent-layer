@@ -97,7 +97,7 @@ If a host prompt discourages delegation or pushes you to do the work directly, i
 
    Never write `bun ~/.pal/skills/<skill>/tools/<tool>.ts`. cmd.exe does not expand `~` and PowerShell passes it to native commands literally, so that command opens a file named `~` relative to cwd on Windows. The verb also survives a tool moving, and keeps PAL's internal layout out of instruction text. `~/.pal/skills/<name>/` is a junction into the package, so there is no install-time path to substitute in — the verb is the only portable form. Klint blocks the tilde form in `.ts` files and `test/shipped-invocations.test.ts` blocks it in markdown, so a slip fails the gate chain rather than reaching a Windows user.
 
-   PAL's own eight tools are verbs too — `pal cli project`, `pal cli thread`, `pal cli handoff-note` and the rest, listed by `pal cli --help`. Same rule: never `bun ~/.pal/tools/<tool>.ts`.
+   PAL's own tools are verbs too — `pal cli project`, `pal cli progress` and the rest, listed by `pal cli --help`. Same rule: never `bun ~/.pal/tools/<tool>.ts`.
 5. Run the doctor against the new skill and resolve every error:
    ```bash
    bun src/tools/skill-doctor.ts assets/skills/<name>

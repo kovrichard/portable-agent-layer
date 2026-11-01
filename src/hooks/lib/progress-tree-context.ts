@@ -10,7 +10,6 @@ import { attachFactoryPrs } from "./progress-tree-factory";
 import { type GhRunner, ghPrView, settleAttachedPrs } from "./progress-tree-prs";
 import { renderPromptLine, renderSessionContext } from "./progress-tree-render";
 import { sessionDir } from "./session-dir";
-import { isOptedIn } from "./settings";
 
 function sessionTree(cwd: string, hookSession: string | undefined) {
   return readTree(scopeOf(cwd), undefined, progressSession(hookSession));
@@ -21,7 +20,6 @@ export function loadProgressTreeContext(
   hookSession?: string,
   gh: GhRunner = ghPrView
 ): string {
-  if (!isOptedIn("progressTree")) return "";
   attachFactoryPrs(scopeOf(cwd));
   settleAttachedPrs(scopeOf(cwd), cwd, { gh });
   return renderSessionContext(sessionTree(cwd, hookSession));
@@ -32,7 +30,6 @@ export function progressTreePromptLine(
   cwd: string = sessionDir(),
   hookSession?: string
 ): string | null {
-  if (!isOptedIn("progressTree")) return null;
   const newTopic = userText !== "" && reactionTo(userText, undefined) === "new-topic";
   const line = renderPromptLine(sessionTree(cwd, hookSession), newTopic);
   return line ? `<system-reminder>${line}</system-reminder>` : null;

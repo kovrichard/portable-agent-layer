@@ -188,7 +188,7 @@ const wisdomContext = retiredContextSource({
   digest: () => resolve(paths.memory(), "wisdom", "context.md"),
 });
 
-const RETIRED_VERBS = ["relationship-note", "wisdom-frame"];
+const RETIRED_VERBS = ["relationship-note", "wisdom-frame", "handoff-note", "thread"];
 
 const isRetiredVerbRule = (rule: string) =>
   RETIRED_VERBS.some(
@@ -203,7 +203,7 @@ const settingsWithRetiredVerbs = () =>
 const retiredVerbRules: Leftover = {
   id: "retired-verb-rules",
   description:
-    "Remove the allow rules for the relationship-note and wisdom-frame verbs — those commands are gone",
+    "Remove the allow rules for the relationship-note, wisdom-frame, handoff-note and thread verbs — those commands are gone",
   find: () =>
     settingsWithRetiredVerbs().flatMap((path) =>
       allowRulesIn(path).filter(isRetiredVerbRule)

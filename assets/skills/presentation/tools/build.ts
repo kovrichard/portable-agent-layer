@@ -205,32 +205,43 @@ async function buildConcat(deckDir: string): Promise<string> {
   throw new Error(`no slides/ directory or content.md found in ${deckDir}`);
 }
 
-async function main() {
-  const argv = process.argv.slice(2);
-  if (argv.length === 0) {
-    console.error("usage: build.ts <deck-dir> [--out <dir>] [--force]");
-    process.exit(1);
-  }
-  const deckDir = resolve(argv[0]);
+function fail(message: string): never {
+  console.error(message);
+  process.exit(1);
+}
 
+function parseBuildArgs(argv: string[]) {
+  if (argv.length === 0) fail("usage: build.ts <deck-dir> [--out <dir>] [--force]");
+  const deckDir = resolve(argv[0]);
   let outRoot = deckDir;
   let force = false;
   for (let i = 1; i < argv.length; i++) {
     if (argv[i] === "--out") outRoot = resolve(argv[++i]);
     else if (argv[i] === "--force") force = true;
   }
+  return { deckDir, outRoot, force };
+}
 
+async function readDeckConfig(deckDir: string) {
   const cfgPath = join(deckDir, "slides.config.yml");
-  if (!(await exists(cfgPath))) {
-    console.error(`slides.config.yml not found at ${cfgPath}`);
-    process.exit(1);
-  }
+  if (!(await exists(cfgPath))) fail(`slides.config.yml not found at ${cfgPath}`);
   const cfg = parseSimpleYaml(await readText(cfgPath));
-  const templateName = cfg.template;
-  if (!templateName) {
-    console.error("slides.config.yml missing 'template'");
-    process.exit(1);
-  }
+  if (!cfg.template) fail("slides.config.yml missing 'template'");
+  return { cfg, templateName: cfg.template };
+}
+
+async function refuseOverwrite(paths: string[]): Promise<void> {
+  const collisions: string[] = [];
+  for (const p of paths) if (await exists(p)) collisions.push(p);
+  if (collisions.length === 0) return;
+  console.error("refusing to overwrite existing output (pass --force to replace):");
+  for (const p of collisions) console.error(`  - ${p}`);
+  process.exit(1);
+}
+
+async function main() {
+  const { deckDir, outRoot, force } = parseBuildArgs(process.argv.slice(2));
+  const { cfg, templateName } = await readDeckConfig(deckDir);
 
   const slug = deckSlug(deckDir);
   // When --out is the deck-dir itself (the default), write directly into it —
@@ -240,16 +251,7 @@ async function main() {
   const concatPath = join(outDir, `${slug}.md`);
   const htmlPath = join(outDir, `${slug}.html`);
 
-  if (!force) {
-    const collisions: string[] = [];
-    if (await exists(concatPath)) collisions.push(concatPath);
-    if (await exists(htmlPath)) collisions.push(htmlPath);
-    if (collisions.length > 0) {
-      console.error("refusing to overwrite existing output (pass --force to replace):");
-      for (const p of collisions) console.error(`  - ${p}`);
-      process.exit(1);
-    }
-  }
+  if (!force) await refuseOverwrite([concatPath, htmlPath]);
 
   // Step 1 — concatenate slides to a single on-disk markdown artifact.
   const concatMd = await buildConcat(deckDir);

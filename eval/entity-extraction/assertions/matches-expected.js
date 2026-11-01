@@ -40,15 +40,19 @@ function presentProblems(entities, want) {
     if (want[field] && !says(e[field], want[field]))
       problems.push(`${want.name}: ${field} "${e[field]}", wanted /${want[field]}/`);
   }
-  for (const alias of want.aliases ?? []) {
-    if (!(e.aliases ?? []).some((a) => sameName(a, alias)))
-      problems.push(`${want.name}: no alias ${alias}`);
-  }
-  for (const field of want.empty ?? []) {
-    if (String(e[field] ?? "").trim())
-      problems.push(`${want.name}: invented ${field} "${e[field]}"`);
-  }
-  return problems;
+  return [...problems, ...aliasProblems(e, want), ...inventedProblems(e, want)];
+}
+
+function aliasProblems(e, want) {
+  return (want.aliases ?? [])
+    .filter((alias) => !(e.aliases ?? []).some((a) => sameName(a, alias)))
+    .map((alias) => `${want.name}: no alias ${alias}`);
+}
+
+function inventedProblems(e, want) {
+  return (want.empty ?? [])
+    .filter((field) => String(e[field] ?? "").trim())
+    .map((field) => `${want.name}: invented ${field} "${e[field]}"`);
 }
 
 module.exports = (output, context) => {
