@@ -287,84 +287,91 @@ function unmergeKeyedSettings(result: Settings, template: Settings): void {
 export function mergeSettings(existing: Settings, template: Settings): Settings {
   const result = { ...existing };
   mergeKeyedSettings(result, template);
-
-  // Strip old-path PAL entries before inserting the template's, so reinstalling from a
-  // different path (repo vs global) leaves no orphan entries that fire twice per event.
-  if (template.hooks) {
-    result.hooks ??= {};
-
-    // Collect canonical forms of all template hook commands
-    const palCanonical = new Set<string>();
-    for (const entries of Object.values(template.hooks)) {
-      for (const entry of entries) {
-        const cmd = entry.hooks?.[0]?.command;
-        if (cmd) palCanonical.add(canonicalPalCmd(cmd));
-      }
-    }
-
-    // Strip existing PAL hooks that match canonically (removes old-path duplicates)
-    for (const [event, entries] of Object.entries(result.hooks)) {
-      result.hooks[event] = entries.filter((e) => {
-        const cmd = e.hooks?.[0]?.command;
-        return !cmd || !isOutdatedPalHook(cmd, palCanonical);
-      });
-      if (result.hooks[event].length === 0) delete result.hooks[event];
-    }
-
-    // Insert template entries (old-path versions were just stripped)
-    for (const [event, entries] of Object.entries(template.hooks)) {
-      const current = result.hooks[event] ?? [];
-      for (const entry of entries) current.push(entry);
-      result.hooks[event] = current;
-    }
-  }
-
-  // Merge permissions.allow (deduplicate)
-  if (template.permissions?.allow) {
-    result.permissions ??= {};
-    result.permissions.allow ??= [];
-    for (const perm of template.permissions.allow) {
-      if (!result.permissions.allow.includes(perm)) {
-        result.permissions.allow.push(perm);
-      }
-    }
-  }
-  // Merge skillOverrides (object with skill name keys, add if not present)
-  if (template.skillOverrides && typeof template.skillOverrides === "object") {
-    result.skillOverrides ??= {};
-    const resultOverrides = result.skillOverrides as Record<string, unknown>;
-    for (const [skill, value] of Object.entries(template.skillOverrides)) {
-      if (!(skill in resultOverrides)) {
-        resultOverrides[skill] = value;
-      }
-    }
-  }
-
+  mergeHooks(result, template);
+  mergePermissions(result, template);
+  mergeSkillOverrides(result, template);
   for (const key of USER_OWNED_SETTINGS) {
     if (key in template && !(key in result)) result[key] = template[key];
   }
+  mergeSpinnerTips(result, template);
+  return result;
+}
 
-  // Merge spinnerTipsOverride (merge tips array, deduplicate by content)
-  if (
-    template.spinnerTipsOverride &&
-    typeof template.spinnerTipsOverride === "object" &&
-    "tips" in template.spinnerTipsOverride &&
-    Array.isArray((template.spinnerTipsOverride as Record<string, unknown>).tips)
-  ) {
-    result.spinnerTipsOverride ??= { tips: [] };
-    const resultOverride = result.spinnerTipsOverride as Record<string, unknown>;
-    resultOverride.tips ??= [];
-    const tips = resultOverride.tips as string[];
-    const templateTips = (template.spinnerTipsOverride as Record<string, unknown>)
-      .tips as string[];
-    for (const tip of templateTips) {
-      if (typeof tip === "string" && !tips.includes(tip)) {
-        tips.push(tip);
-      }
+function palHookCommands(templateHooks: Record<string, HookEntry[]>): Set<string> {
+  const palCanonical = new Set<string>();
+  for (const entries of Object.values(templateHooks)) {
+    for (const entry of entries) {
+      const cmd = entry.hooks?.[0]?.command;
+      if (cmd) palCanonical.add(canonicalPalCmd(cmd));
     }
   }
+  return palCanonical;
+}
 
-  return result;
+function removeHooksWhere(
+  hooks: Record<string, HookEntry[]>,
+  isPal: (cmd: string) => boolean
+): void {
+  for (const [event, entries] of Object.entries(hooks)) {
+    hooks[event] = entries.filter((e) => {
+      const cmd = e.hooks?.[0]?.command;
+      return !cmd || !isPal(cmd);
+    });
+    if (hooks[event].length === 0) delete hooks[event];
+  }
+}
+
+/** Strips old-path PAL entries first, so reinstalling from a different path (repo vs global) leaves no orphans that fire twice. */
+function mergeHooks(result: Settings, template: Settings): void {
+  if (!template.hooks) return;
+  result.hooks ??= {};
+  const palCanonical = palHookCommands(template.hooks);
+  removeHooksWhere(result.hooks, (cmd) => isOutdatedPalHook(cmd, palCanonical));
+  for (const [event, entries] of Object.entries(template.hooks)) {
+    const current = result.hooks[event] ?? [];
+    for (const entry of entries) current.push(entry);
+    result.hooks[event] = current;
+  }
+}
+
+function mergePermissions(result: Settings, template: Settings): void {
+  if (!template.permissions?.allow) return;
+  result.permissions ??= {};
+  result.permissions.allow ??= [];
+  for (const perm of template.permissions.allow) {
+    if (!result.permissions.allow.includes(perm)) result.permissions.allow.push(perm);
+  }
+}
+
+function mergeSkillOverrides(result: Settings, template: Settings): void {
+  if (!template.skillOverrides || typeof template.skillOverrides !== "object") return;
+  result.skillOverrides ??= {};
+  const resultOverrides = result.skillOverrides as Record<string, unknown>;
+  for (const [skill, value] of Object.entries(template.skillOverrides)) {
+    if (!(skill in resultOverrides)) resultOverrides[skill] = value;
+  }
+}
+
+function hasTipsArray(
+  value: unknown
+): value is Record<string, unknown> & { tips: string[] } {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    "tips" in value &&
+    Array.isArray((value as Record<string, unknown>).tips)
+  );
+}
+
+function mergeSpinnerTips(result: Settings, template: Settings): void {
+  if (!hasTipsArray(template.spinnerTipsOverride)) return;
+  result.spinnerTipsOverride ??= { tips: [] };
+  const resultOverride = result.spinnerTipsOverride as Record<string, unknown>;
+  resultOverride.tips ??= [];
+  const tips = resultOverride.tips as string[];
+  for (const tip of template.spinnerTipsOverride.tips) {
+    if (typeof tip === "string" && !tips.includes(tip)) tips.push(tip);
+  }
 }
 
 /**
@@ -376,79 +383,52 @@ export function mergeSettings(existing: Settings, template: Settings): Settings 
 export function unmergeSettings(existing: Settings, template: Settings): Settings {
   const result = { ...existing };
   unmergeKeyedSettings(result, template);
-
-  // Collect canonical PAL hook commands from template (path-normalized)
-  if (template.hooks && result.hooks) {
-    const palCanonical = new Set<string>();
-    for (const entries of Object.values(template.hooks)) {
-      for (const entry of entries) {
-        const cmd = entry.hooks?.[0]?.command;
-        if (cmd) palCanonical.add(canonicalPalCmd(cmd));
-      }
-    }
-
-    for (const [event, entries] of Object.entries(result.hooks)) {
-      result.hooks[event] = entries.filter((e) => {
-        const cmd = e.hooks?.[0]?.command;
-        return !cmd || !palCanonical.has(canonicalPalCmd(cmd));
-      });
-      if (result.hooks[event].length === 0) delete result.hooks[event];
-    }
-    if (Object.keys(result.hooks).length === 0) delete result.hooks;
-  }
-
-  // Remove PAL permissions
-  if (template.permissions?.allow && result.permissions?.allow) {
-    const palPerms = new Set(template.permissions.allow);
-    result.permissions.allow = result.permissions.allow.filter((p) => !palPerms.has(p));
-    if (result.permissions.allow.length === 0) delete result.permissions.allow;
-    if (Object.keys(result.permissions).length === 0) delete result.permissions;
-  }
-
-  // Remove PAL skillOverrides (remove keys that appear in template)
-  if (
-    template.skillOverrides &&
-    typeof template.skillOverrides === "object" &&
-    result.skillOverrides &&
-    typeof result.skillOverrides === "object"
-  ) {
-    const palSkills = new Set(Object.keys(template.skillOverrides));
-    for (const skill of palSkills) {
-      delete (result.skillOverrides as Record<string, unknown>)[skill];
-    }
-    if (Object.keys(result.skillOverrides).length === 0) delete result.skillOverrides;
-  }
-
+  unmergeHooks(result, template);
+  unmergePermissions(result, template);
+  unmergeSkillOverrides(result, template);
   for (const key of USER_OWNED_SETTINGS) {
     if (key in template) delete result[key];
   }
-
-  // Remove PAL spinnerTipsOverride (remove only template tips, preserve user tips)
-  if (
-    template.spinnerTipsOverride &&
-    typeof template.spinnerTipsOverride === "object" &&
-    "tips" in template.spinnerTipsOverride &&
-    Array.isArray((template.spinnerTipsOverride as Record<string, unknown>).tips) &&
-    result.spinnerTipsOverride &&
-    typeof result.spinnerTipsOverride === "object" &&
-    "tips" in result.spinnerTipsOverride &&
-    Array.isArray((result.spinnerTipsOverride as Record<string, unknown>).tips)
-  ) {
-    const templateTipsArray = (template.spinnerTipsOverride as Record<string, unknown>)
-      .tips as string[];
-    const templateTips = new Set(templateTipsArray);
-    const resultOverride = result.spinnerTipsOverride as Record<string, unknown>;
-    const tips = resultOverride.tips as string[];
-    resultOverride.tips = tips.filter((tip) => !templateTips.has(tip));
-    if (
-      (resultOverride.tips as string[]).length === 0 &&
-      Object.keys(resultOverride).length === 1
-    ) {
-      delete result.spinnerTipsOverride;
-    }
-  }
-
+  unmergeSpinnerTips(result, template);
   return result;
+}
+
+function unmergeHooks(result: Settings, template: Settings): void {
+  if (!template.hooks || !result.hooks) return;
+  const palCanonical = palHookCommands(template.hooks);
+  removeHooksWhere(result.hooks, (cmd) => palCanonical.has(canonicalPalCmd(cmd)));
+  if (Object.keys(result.hooks).length === 0) delete result.hooks;
+}
+
+function unmergePermissions(result: Settings, template: Settings): void {
+  if (!template.permissions?.allow || !result.permissions?.allow) return;
+  const palPerms = new Set(template.permissions.allow);
+  result.permissions.allow = result.permissions.allow.filter((p) => !palPerms.has(p));
+  if (result.permissions.allow.length === 0) delete result.permissions.allow;
+  if (Object.keys(result.permissions).length === 0) delete result.permissions;
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object";
+}
+
+function unmergeSkillOverrides(result: Settings, template: Settings): void {
+  if (!isObject(template.skillOverrides) || !isObject(result.skillOverrides)) return;
+  for (const skill of Object.keys(template.skillOverrides)) {
+    delete result.skillOverrides[skill];
+  }
+  if (Object.keys(result.skillOverrides).length === 0) delete result.skillOverrides;
+}
+
+function unmergeSpinnerTips(result: Settings, template: Settings): void {
+  const templateOverride = template.spinnerTipsOverride;
+  const resultOverride = result.spinnerTipsOverride;
+  if (!hasTipsArray(templateOverride) || !hasTipsArray(resultOverride)) return;
+  const templateTips = new Set(templateOverride.tips);
+  resultOverride.tips = resultOverride.tips.filter((tip) => !templateTips.has(tip));
+  if (resultOverride.tips.length === 0 && Object.keys(resultOverride).length === 1) {
+    delete result.spinnerTipsOverride;
+  }
 }
 
 // --- Cursor hooks.json merge/unmerge ---
