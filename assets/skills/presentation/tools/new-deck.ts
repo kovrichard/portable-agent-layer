@@ -19,8 +19,7 @@ async function exists(p: string): Promise<boolean> {
   }
 }
 
-async function main() {
-  const argv = process.argv.slice(2);
+function parseNewDeckArgs(argv: string[]) {
   if (argv.length === 0) {
     console.error(
       'usage: new-deck.ts <deck-dir> [--template <name>] [--title "Deck title"] [--showcase]'
@@ -36,18 +35,19 @@ async function main() {
     else if (argv[i] === "--title") title = argv[++i];
     else if (argv[i] === "--showcase") showcase = true;
   }
+  return { target, templateName, title, showcase };
+}
 
-  if (await exists(target)) {
-    console.error(`target already exists: ${target}`);
-    process.exit(1);
-  }
-
+async function chooseTemplate(
+  requested: string | undefined
+): Promise<string | undefined> {
   const all = await listTemplates();
   if (all.length === 0) {
     console.error("no templates registered. run setup-template.ts first.");
     process.exit(1);
   }
 
+  let templateName = requested;
   if (!templateName) {
     if (all.length === 1) templateName = all[0].name;
     else {
@@ -60,6 +60,18 @@ async function main() {
     console.error(`template "${templateName}" not registered`);
     process.exit(1);
   }
+  return templateName;
+}
+
+async function main() {
+  const { target, title, showcase, ...args } = parseNewDeckArgs(process.argv.slice(2));
+
+  if (await exists(target)) {
+    console.error(`target already exists: ${target}`);
+    process.exit(1);
+  }
+
+  const templateName = await chooseTemplate(args.templateName);
 
   await mkdir(target, { recursive: true });
   await mkdir(join(target, "assets"), { recursive: true });

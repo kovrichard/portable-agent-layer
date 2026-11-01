@@ -7,7 +7,7 @@
 
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
-import type { Plugin, PluginInput } from "@opencode-ai/plugin";
+import type { Hooks, Plugin, PluginInput } from "@opencode-ai/plugin";
 
 const PAL_DIR = process.env.PAL_DIR || resolve(import.meta.dir, "../../..");
 
@@ -24,6 +24,8 @@ type TranscriptMessage = { role: string; content: string };
 function isSessionEvent(type: string): boolean {
   return type.startsWith("session.");
 }
+
+type OpencodeEvent = Parameters<NonNullable<Hooks["event"]>>[0]["event"];
 
 const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   const { buildSystemReminder } =
@@ -166,6 +168,16 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   const { commitApplied, ledgeredTarget, snapshotCall } =
     await lib<typeof import("../../hooks/lib/ledger-hook")>("ledger-hook.ts");
 
+  function logEventDetails(event: OpencodeEvent): void {
+    if (event.type === "session.created")
+      logOpencodeSessionCreated(event.properties.info);
+    if (event.type === "session.compacted")
+      logOpencodeCompaction(event.properties.sessionID);
+    if (event.type === "permission.replied") logOpencodePermissionReply(event.properties);
+    if (event.type === "message.part.updated")
+      logOpencodeToolFailure(event.properties.part);
+  }
+
   const ledgeredOpencodeCall = (tool: string, callID: string, args: unknown) => {
     const target = ledgeredTarget(tool, (args ?? {}) as Record<string, unknown>);
     return target ? { toolUseId: callID, tool, target } : null;
@@ -191,14 +203,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
         autoUpdateOnClose();
       }
 
-      if (event.type === "session.created")
-        logOpencodeSessionCreated(event.properties.info);
-      if (event.type === "session.compacted")
-        logOpencodeCompaction(event.properties.sessionID);
-      if (event.type === "permission.replied")
-        logOpencodePermissionReply(event.properties);
-      if (event.type === "message.part.updated")
-        logOpencodeToolFailure(event.properties.part);
+      logEventDetails(event);
 
       if (event.type === "session.created" || event.type === "session.updated") {
         const { regenerateIfNeeded } =

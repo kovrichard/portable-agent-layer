@@ -1108,32 +1108,36 @@ export function checkPendingMigrations(): PendingMigration[] {
   });
 }
 
+function printMigrationList(): void {
+  const pending = checkPendingMigrations();
+  const done = MIGRATIONS.filter((m) => !m.check().pending);
+
+  console.log("");
+  if (pending.length > 0) {
+    console.log("  Pending migrations:");
+    for (const m of pending) {
+      const detail = m.detail ? ` (${m.detail})` : "";
+      console.log(`    ⚠ ${m.id} — ${m.description}${detail}`);
+    }
+  } else {
+    console.log("  No pending migrations.");
+  }
+  if (done.length > 0) {
+    console.log("  Done:");
+    for (const m of done) {
+      console.log(`    ✓ ${m.id} — ${m.description}`);
+    }
+  }
+  console.log("");
+}
+
 /** Entry point for `pal cli migrate`. */
 export function runMigrate(args: string[]): void {
   const dryRun = args.includes("--dry-run");
   const list = args.includes("--list");
 
   if (list) {
-    const pending = checkPendingMigrations();
-    const done = MIGRATIONS.filter((m) => !m.check().pending);
-
-    console.log("");
-    if (pending.length > 0) {
-      console.log("  Pending migrations:");
-      for (const m of pending) {
-        const detail = m.detail ? ` (${m.detail})` : "";
-        console.log(`    ⚠ ${m.id} — ${m.description}${detail}`);
-      }
-    } else {
-      console.log("  No pending migrations.");
-    }
-    if (done.length > 0) {
-      console.log("  Done:");
-      for (const m of done) {
-        console.log(`    ✓ ${m.id} — ${m.description}`);
-      }
-    }
-    console.log("");
+    printMigrationList();
     return;
   }
 
