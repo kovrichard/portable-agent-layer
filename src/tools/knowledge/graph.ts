@@ -298,30 +298,7 @@ export function traverse(
     });
     if (entry.hop >= maxHops) continue;
 
-    const outgoing = graph.adjacency.get(entry.slug) ?? [];
-    const incoming = graph.reverseAdjacency.get(entry.slug) ?? [];
-    const bestPerTarget = new Map<string, GraphEdge>();
-    for (const edge of outgoing) {
-      if (visited.has(edge.to)) continue;
-      const existing = bestPerTarget.get(edge.to);
-      if (!existing || edge.weight > existing.weight) {
-        bestPerTarget.set(edge.to, edge);
-      }
-    }
-    for (const edge of incoming) {
-      // edge.to is the current node; edge.from is the "other" endpoint.
-      const other = edge.from;
-      if (visited.has(other) || other === entry.slug) continue;
-      const existing = bestPerTarget.get(other);
-      if (!existing || edge.weight > existing.weight) {
-        bestPerTarget.set(other, edge);
-      }
-    }
-
-    const sorted = [...bestPerTarget.entries()].sort(
-      (a, b) => b[1].weight - a[1].weight || a[0].localeCompare(b[0])
-    );
-    for (const [target, edge] of sorted) {
+    for (const [target, edge] of bestEdgePerNeighbour(graph, entry.slug, visited)) {
       if (visited.has(target)) continue;
       visited.add(target);
       queue.push({
@@ -334,6 +311,30 @@ export function traverse(
   }
 
   return out;
+}
+
+function keepHeaviest(best: Map<string, GraphEdge>, target: string, edge: GraphEdge) {
+  const existing = best.get(target);
+  if (!existing || edge.weight > existing.weight) best.set(target, edge);
+}
+
+/** Unvisited neighbours in both edge directions, heaviest edge each, heaviest first. */
+function bestEdgePerNeighbour(
+  graph: KnowledgeGraph,
+  slug: string,
+  visited: Set<string>
+): [string, GraphEdge][] {
+  const bestPerTarget = new Map<string, GraphEdge>();
+  for (const edge of graph.adjacency.get(slug) ?? []) {
+    if (!visited.has(edge.to)) keepHeaviest(bestPerTarget, edge.to, edge);
+  }
+  for (const edge of graph.reverseAdjacency.get(slug) ?? []) {
+    const other = edge.from;
+    if (!visited.has(other) && other !== slug) keepHeaviest(bestPerTarget, other, edge);
+  }
+  return [...bestPerTarget.entries()].sort(
+    (a, b) => b[1].weight - a[1].weight || a[0].localeCompare(b[0])
+  );
 }
 
 // --- Stats ------------------------------------------------------------------

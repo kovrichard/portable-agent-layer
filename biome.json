@@ -65,7 +65,7 @@
         "useOptionalChain": "error",
         "noExcessiveCognitiveComplexity": {
           "level": "error",
-          "options": { "maxAllowedComplexity": 34 }
+          "options": { "maxAllowedComplexity": 32 }
         }
       },
       "style": {
