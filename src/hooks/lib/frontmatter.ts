@@ -46,36 +46,43 @@ export function parse<T = Record<string, string>>(content: string): Parsed<T> {
     const match = new RegExp(/^(\w[\w-]*)\s*:\s*(.*)$/).exec(line);
     if (!match) continue;
     const [, key, rawValue] = match;
-    const value = rawValue.trim();
-
-    // Inline JSON array
-    if (value.startsWith("[") && value.endsWith("]")) {
-      try {
-        meta[key] = JSON.parse(value);
-        continue;
-      } catch {
-        // Fall through to string handling
-      }
-    }
-
-    // Strip quotes
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      meta[key] = value.slice(1, -1).replaceAll('\\"', '"');
-      continue;
-    }
-
-    // Type coercion
-    if (value === "true") meta[key] = true;
-    else if (value === "false") meta[key] = false;
-    else if (/^\d+$/.test(value)) meta[key] = Number.parseInt(value, 10);
-    else if (/^\d+\.\d+$/.test(value)) meta[key] = Number.parseFloat(value);
-    else meta[key] = value;
+    meta[key] = parseValue(rawValue.trim());
   }
 
   return { meta: meta as T, body };
+}
+
+const NOT_JSON = Symbol("not-json");
+
+function parseInlineArray(value: string): unknown {
+  if (!(value.startsWith("[") && value.endsWith("]"))) return NOT_JSON;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return NOT_JSON;
+  }
+}
+
+function isQuoted(value: string): boolean {
+  return (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  );
+}
+
+function coerceScalar(value: string): unknown {
+  if (value === "true") return true;
+  if (value === "false") return false;
+  if (/^\d+$/.test(value)) return Number.parseInt(value, 10);
+  if (/^\d+\.\d+$/.test(value)) return Number.parseFloat(value);
+  return value;
+}
+
+function parseValue(value: string): unknown {
+  const array = parseInlineArray(value);
+  if (array !== NOT_JSON) return array;
+  if (isQuoted(value)) return value.slice(1, -1).replaceAll('\\"', '"');
+  return coerceScalar(value);
 }
 
 /**

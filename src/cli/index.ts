@@ -90,43 +90,53 @@ async function session(sessionArgs: string[]) {
   try {
     const projectsDir = resolve(homedir(), ".claude", "projects");
     if (!existsSync(projectsDir)) process.exit(exitCode);
-
-    // Find most recently modified .jsonl file
-    let latestFile = "";
-    let latestMtime = 0;
-
-    for (const project of readdirSync(projectsDir, { withFileTypes: true })) {
-      if (!project.isDirectory()) continue;
-      const dir = resolve(projectsDir, project.name);
-      for (const file of readdirSync(dir)) {
-        if (!file.endsWith(".jsonl")) continue;
-        const filepath = resolve(dir, file);
-        const { mtimeMs } = statSync(filepath);
-        if (mtimeMs > latestMtime) {
-          latestMtime = mtimeMs;
-          latestFile = filepath;
-        }
-      }
-    }
-
-    if (latestFile) {
-      const content = readFileSync(latestFile, "utf-8").trim();
-      const lastLine = content.split("\n").pop();
-      if (lastLine) {
-        const sessionId = JSON.parse(lastLine).sessionId;
-        if (sessionId) {
-          const summaryScript = resolve(palPkg(), "src", "tools", "session-summary.ts");
-          spawnSync("bun", ["run", summaryScript, "--", "--session", sessionId], {
-            stdio: "inherit",
-          });
-        }
-      }
-    }
+    summarizeSession(latestTranscript(projectsDir));
   } catch {
     // Silently ignore summary errors
   }
 
-  // Check for updates and display notice
+  await showUpdateNotices();
+  process.exit(exitCode);
+}
+
+function latestTranscript(projectsDir: string): string {
+  let latestFile = "";
+  let latestMtime = 0;
+  for (const project of readdirSync(projectsDir, { withFileTypes: true })) {
+    if (!project.isDirectory()) continue;
+    const dir = resolve(projectsDir, project.name);
+    for (const file of readdirSync(dir).filter((f) => f.endsWith(".jsonl"))) {
+      const filepath = resolve(dir, file);
+      const { mtimeMs } = statSync(filepath);
+      if (mtimeMs > latestMtime) {
+        latestMtime = mtimeMs;
+        latestFile = filepath;
+      }
+    }
+  }
+  return latestFile;
+}
+
+function sessionIdOf(line: string): string | undefined {
+  try {
+    return JSON.parse(line).sessionId;
+  } catch {
+    return undefined;
+  }
+}
+
+function summarizeSession(transcript: string): void {
+  if (!transcript) return;
+  const lastLine = readFileSync(transcript, "utf-8").trim().split("\n").pop();
+  const sessionId = lastLine ? sessionIdOf(lastLine) : undefined;
+  if (!sessionId) return;
+  const summaryScript = resolve(palPkg(), "src", "tools", "session-summary.ts");
+  spawnSync("bun", ["run", summaryScript, "--", "--session", sessionId], {
+    stdio: "inherit",
+  });
+}
+
+async function showUpdateNotices(): Promise<void> {
   try {
     const { checkForUpdate, getUpdateNotice } = await import(
       "../hooks/handlers/update-check"
@@ -140,8 +150,6 @@ async function session(sessionArgs: string[]) {
   } catch {
     // Non-critical
   }
-
-  process.exit(exitCode);
 }
 
 async function doctor(args: string[]): Promise<never> {
