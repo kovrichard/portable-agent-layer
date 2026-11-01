@@ -345,6 +345,19 @@ function bestEdgePerNeighbour(
 
 // --- Stats ------------------------------------------------------------------
 
+function connectionsOf(edges: KnowledgeGraph["edges"]): Map<string, Set<string>> {
+  const connections = new Map<string, Set<string>>();
+  for (const edge of edges) {
+    const a = connections.get(edge.from) ?? new Set<string>();
+    a.add(edge.to);
+    connections.set(edge.from, a);
+    const b = connections.get(edge.to) ?? new Set<string>();
+    b.add(edge.from);
+    connections.set(edge.to, b);
+  }
+  return connections;
+}
+
 export function stats(graph: KnowledgeGraph): GraphStats {
   const nodesByDomain: Record<Domain, number> = {
     People: 0,
@@ -365,15 +378,7 @@ export function stats(graph: KnowledgeGraph): GraphStats {
     edgesByType[edge.edgeType]++;
   }
 
-  const connections = new Map<string, Set<string>>();
-  for (const edge of graph.edges) {
-    const a = connections.get(edge.from) ?? new Set<string>();
-    a.add(edge.to);
-    connections.set(edge.from, a);
-    const b = connections.get(edge.to) ?? new Set<string>();
-    b.add(edge.from);
-    connections.set(edge.to, b);
-  }
+  const connections = connectionsOf(graph.edges);
 
   let isolated = 0;
   let mostConnected: { slug: string; count: number } | null = null;

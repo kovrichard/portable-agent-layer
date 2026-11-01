@@ -112,15 +112,7 @@ export function previewInferenceRoute(): RoutePreview & { model?: string } {
   return { ...preview, model: smallModelOf(preview.route) };
 }
 
-function previewRoute(): RoutePreview {
-  const agent = getActiveAgent();
-  if (process.env.PAL_INFERENCE_DISABLED === "1") {
-    return {
-      agent,
-      route: "disabled",
-      reason: "PAL_INFERENCE_DISABLED=1 (test kill-switch)",
-    };
-  }
+function nativeRoutePreview(agent: RoutePreview["agent"]): RoutePreview | null {
   if (isClaude() && hasClaudeBinary())
     return { agent, route: "claude-spawn", reason: "claude binary on PATH" };
   if (isCodex() && hasCodexBinary())
@@ -139,6 +131,20 @@ function previewRoute(): RoutePreview {
     return { agent, route: "cursor-spawn", reason: "cursor-agent binary on PATH" };
   if (isAntigravity() && hasAntigravityBinary())
     return { agent, route: "antigravity-spawn", reason: "agy binary on PATH" };
+  return null;
+}
+
+function previewRoute(): RoutePreview {
+  const agent = getActiveAgent();
+  if (process.env.PAL_INFERENCE_DISABLED === "1") {
+    return {
+      agent,
+      route: "disabled",
+      reason: "PAL_INFERENCE_DISABLED=1 (test kill-switch)",
+    };
+  }
+  const native = nativeRoutePreview(agent);
+  if (native) return native;
   if (hasApiKey())
     return {
       agent,

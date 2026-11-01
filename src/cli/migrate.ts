@@ -145,6 +145,18 @@ function pendingThreadsForProjects(): { thread: Thread; project: ProjectProgress
   return results;
 }
 
+function addThreadAsIsc(thread: Thread, projectName: string): Thread | null {
+  const p = readProject(projectName);
+  if (!p) return null;
+  const current = p.criteria ?? "";
+  const id = nextIscId(current);
+  const newLine = `- [ ] ISC-${id}: ${thread.title}`;
+  p.criteria = current ? `${current.trimEnd()}\n${newLine}` : newLine;
+  p.updated = new Date().toISOString();
+  writeProject(p);
+  return { ...thread, status: "resolved", resolved: new Date().toISOString() };
+}
+
 const v2ThreadsToIsc: Migration = {
   id: "v2-threads-to-isc",
   description: "Migrate open project-scoped threads to ISCs on their project ISA",
@@ -168,23 +180,13 @@ const v2ThreadsToIsc: Migration = {
     for (const { thread, project } of pending) {
       try {
         if (!dryRun) {
-          const p = readProject(project.name);
-          if (!p) {
+          const resolvedThread = addThreadAsIsc(thread, project.name);
+          if (!resolvedThread) {
             skipped++;
             results.push(`${thread.id}: skipped (project "${project.name}" unreadable)`);
             continue;
           }
-          const current = p.criteria ?? "";
-          const id = nextIscId(current);
-          const newLine = `- [ ] ISC-${id}: ${thread.title}`;
-          p.criteria = current ? `${current.trimEnd()}\n${newLine}` : newLine;
-          p.updated = new Date().toISOString();
-          writeProject(p);
-          threadUpdates.set(thread.id, {
-            ...thread,
-            status: "resolved",
-            resolved: new Date().toISOString(),
-          });
+          threadUpdates.set(thread.id, resolvedThread);
         }
         migrated++;
         results.push(

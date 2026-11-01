@@ -197,7 +197,10 @@ function parseStringArray(raw: string): string[] {
   if (!(trimmed.startsWith("[") && trimmed.endsWith("]"))) return [];
   const inner = trimmed.slice(1, -1).trim();
   if (inner === "") return [];
-  // Split on commas not inside quotes.
+  return splitOutsideQuotes(inner).map((piece) => String(parseScalar(piece)));
+}
+
+function splitOutsideQuotes(inner: string): string[] {
   const out: string[] = [];
   let buf = "";
   let inStr = false;
@@ -219,13 +222,13 @@ function parseStringArray(raw: string): string[] {
       continue;
     }
     if (ch === "," && !inStr) {
-      out.push(String(parseScalar(buf)));
+      out.push(buf);
       buf = "";
       continue;
     }
     buf += ch;
   }
-  if (buf.trim() !== "") out.push(String(parseScalar(buf)));
+  if (buf.trim() !== "") out.push(buf);
   return out;
 }
 
