@@ -17,6 +17,7 @@ import { progressTreePromptLine } from "../lib/progress-tree-context";
 import { isSystemText } from "../lib/prompt-text";
 import { getRepoStateReminder } from "../lib/repo-state";
 import { runModePromptLine } from "../lib/run-mode-gate";
+import { scheduledPromptsReminder } from "../lib/scheduled-prompts";
 import { isEnabled } from "../lib/settings";
 import { getSkillReminder } from "../lib/skill-match";
 import { getSteeringReminder } from "../lib/steering";
@@ -64,6 +65,8 @@ export async function getPromptContext(
   const parts = [
     getWallClockReminder(),
     withinBudget(() => runModePromptLine(process.cwd()), BUDGET_MS),
+    userText &&
+      withinBudget(() => scheduledPromptsReminder(process.cwd(), sessionId), BUDGET_MS),
     userText && withinBudget(() => promptRulesReminder(userText, sessionId), BUDGET_MS),
     withinBudget(() => getRepoStateReminder(), BUDGET_MS),
     withinBudget(() => progressTreePromptLine(userText, undefined, sessionId), BUDGET_MS),

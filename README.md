@@ -96,6 +96,7 @@ pal cli status        # check your setup
 | `pal cli patterns` | How you work across projects, read from the event log |
 | `pal cli progress [show\|list\|open\|enter\|park\|wait\|done\|stopped\|decide\|attach\|follow-up]` | The progress tree: what you are on in this project, where it stopped, what is parked or waiting, and the decisions and artifacts on each node. Detours are child nodes and `done` returns to the parent. The active node rides along in every session and prompt, and your own commits attach to it at turn end |
 | `pal cli timebox [start\|status\|end]` | Stop work at a deadline: `start --for 15m` or `--until 18:00`. After the deadline every working tool call is refused except `pal cli` and edits to the report, so the agent stops and reports what it has |
+| `pal cli schedule [add\|list\|remove]` | Prompts added at a time of day, for you or for one project: `add --from 20:00 "suggest tasks that can run overnight"`. A due schedule is added to the next prompt you write inside its window, once a day by default (`--every-session`, `--every-prompt`), and nothing fires while no session is open |
 | `pal cli unattended [start\|log\|status\|done\|end]` | Work without you until a deadline: `start --until 05:30 --task … --fallback …`. Questions and subagents are refused, the agent cannot stop while approved tasks are left, and the rules, tasks and log come back after a compaction |
 | `pal cli content preserve` | Copy every Claude Code transcript, gzipped, into `memory/content/` before Claude Code deletes it (30 days by default). Runs on its own whenever a session closes; the content store never leaves the machine, so `export` skips it |
 | `pal cli events discord-nag <sent\|answered>` | For a bot outside PAL: record a nag it sent (`--kind <kind>`), or the answer to one and how long it took (`--after-sec <n>`), in the local event log |
@@ -223,6 +224,7 @@ PAL ships with built-in skills that extend your agent's capabilities:
 | `reflect` | Diagnose why a PAL behavior didn't trigger |
 | `research-entity` | Research a company or person on the web: links, registry entry, recent news |
 | `rule-review` | Approve or deny the rules PAL drafted from your corrections |
+| `scheduled-prompts` | Set up a prompt that arrives at a time of day from now on, for you or one project |
 | `scientific-research` | Answer health and scientific questions from cited, verified sources: PubMed, guidelines, NEJM, Lancet, JAMA, BMJ |
 | `telos` | Inspect or update goals, beliefs, strategies, narratives |
 | `think` | Structured first-pass reasoning on a problem |

@@ -67,6 +67,7 @@ describe("injectPromptContext handler", () => {
 
   beforeEach(async () => {
     await setSettings({ dynamicContext: everyPromptOff });
+    writeFileSync(resolve(TEST_HOME, "memory", "schedules.json"), "[]");
   });
 
   test("a due reminder rides along once the user opts in", async () => {
@@ -74,6 +75,30 @@ describe("injectPromptContext handler", () => {
     const { injectPromptContext } = await loadHandlers();
     const out = await captureStdout(() => injectPromptContext("anything goes here"));
     expect(out).toContain("/pal-analyze");
+  });
+
+  test("a due scheduled prompt rides on a user prompt, not on a task notification", async () => {
+    writeFileSync(
+      resolve(TEST_HOME, "memory", "schedules.json"),
+      JSON.stringify([
+        {
+          id: "always",
+          scope: "user",
+          from: "00:00",
+          to: null,
+          days: null,
+          repeat: "every-prompt",
+          text: "suggest night tasks",
+        },
+      ])
+    );
+    const { injectPromptContext } = await loadHandlers();
+    const notified = await captureStdout(() =>
+      injectPromptContext("<task-notification>done</task-notification>")
+    );
+    const prompted = await captureStdout(() => injectPromptContext("anything goes here"));
+    expect(notified).not.toContain("suggest night tasks");
+    expect(prompted).toContain("(00:00–24:00, user) suggest night tasks");
   });
 
   test("the wall clock rides along even when nothing else matches", async () => {
