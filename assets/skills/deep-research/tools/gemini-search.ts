@@ -91,6 +91,24 @@ async function geminiSearch(query: string, maxTokens: number): Promise<void> {
 
   const url = `${API_BASE}/models/${DEFAULT_MODEL}:generateContent?key=${apiKey}`;
 
+  const candidate = await postGemini(url, body);
+  const textParts = (candidate.content?.parts ?? []).flatMap((part) =>
+    part.text ? [part.text] : []
+  );
+
+  if (textParts.length === 0) fail("Error: No text content in Gemini response.");
+
+  console.log(textParts.join("\n\n"));
+
+  if (candidate.groundingMetadata) printGrounding(candidate.groundingMetadata);
+}
+
+function fail(message: string): never {
+  console.error(message);
+  process.exit(1);
+}
+
+async function postGemini(url: string, body: unknown): Promise<Candidate> {
   const response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -99,55 +117,30 @@ async function geminiSearch(query: string, maxTokens: number): Promise<void> {
 
   if (!response.ok) {
     const err = await response.text().catch(() => "");
-    console.error(`Error: HTTP ${response.status} — ${err.slice(0, 500)}`);
-    process.exit(1);
+    fail(`Error: HTTP ${response.status} — ${err.slice(0, 500)}`);
   }
 
   const data = (await response.json()) as GeminiResponse;
-
-  if (data.error) {
-    console.error(`Error: ${data.error.message}`);
-    process.exit(1);
-  }
-
+  if (data.error) fail(`Error: ${data.error.message}`);
   if (!data.candidates || data.candidates.length === 0) {
-    console.error("Error: No candidates in Gemini response.");
-    process.exit(1);
+    fail("Error: No candidates in Gemini response.");
   }
+  return data.candidates[0];
+}
 
-  const candidate = data.candidates[0];
-
-  // Extract text
-  const textParts: string[] = [];
-  if (candidate.content?.parts) {
-    for (const part of candidate.content.parts) {
-      if (part.text) textParts.push(part.text);
+function printGrounding(meta: GroundingMetadata): void {
+  if (meta.webSearchQueries && meta.webSearchQueries.length > 0) {
+    console.log("\n---\n## Search Queries Used\n");
+    for (const q of meta.webSearchQueries) {
+      console.log(`- ${q}`);
     }
   }
 
-  if (textParts.length === 0) {
-    console.error("Error: No text content in Gemini response.");
-    process.exit(1);
-  }
-
-  console.log(textParts.join("\n\n"));
-
-  // Extract grounding metadata
-  const meta = candidate.groundingMetadata;
-  if (meta) {
-    if (meta.webSearchQueries && meta.webSearchQueries.length > 0) {
-      console.log("\n---\n## Search Queries Used\n");
-      for (const q of meta.webSearchQueries) {
-        console.log(`- ${q}`);
-      }
-    }
-
-    if (meta.groundingChunks && meta.groundingChunks.length > 0) {
-      console.log("\n---\n## Sources\n");
-      for (const chunk of meta.groundingChunks) {
-        if (chunk.web) {
-          console.log(`- [${chunk.web.title}](${chunk.web.uri})`);
-        }
+  if (meta.groundingChunks && meta.groundingChunks.length > 0) {
+    console.log("\n---\n## Sources\n");
+    for (const chunk of meta.groundingChunks) {
+      if (chunk.web) {
+        console.log(`- [${chunk.web.title}](${chunk.web.uri})`);
       }
     }
   }

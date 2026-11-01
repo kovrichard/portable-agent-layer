@@ -93,6 +93,27 @@ async function grokSearch(
     max_output_tokens: maxTokens,
   };
 
+  const output = await postGrok(apiKey, body);
+  const { textParts, citations } = collectOutput(output);
+
+  if (textParts.length === 0) fail("Error: No text content in Grok response.");
+
+  console.log(textParts.join("\n\n"));
+
+  if (citations.size > 0) {
+    console.log("\n---\n## Sources\n");
+    for (const [url, title] of citations) {
+      console.log(`- [${title}](${url})`);
+    }
+  }
+}
+
+function fail(message: string): never {
+  console.error(message);
+  process.exit(1);
+}
+
+async function postGrok(apiKey: string, body: unknown): Promise<OutputItem[]> {
   const response = await fetch(`${API_BASE}/responses`, {
     method: "POST",
     headers: {
@@ -104,55 +125,37 @@ async function grokSearch(
 
   if (!response.ok) {
     const err = await response.text().catch(() => "");
-    console.error(`Error: HTTP ${response.status} — ${err.slice(0, 500)}`);
-    process.exit(1);
+    fail(`Error: HTTP ${response.status} — ${err.slice(0, 500)}`);
   }
 
   const data = (await response.json()) as GrokResponse;
-
-  if (data.error) {
-    console.error(`Error: ${data.error.message}`);
-    process.exit(1);
-  }
-
+  if (data.error) fail(`Error: ${data.error.message}`);
   if (!data.output || data.output.length === 0) {
-    console.error("Error: No response output from Grok.");
-    process.exit(1);
+    fail("Error: No response output from Grok.");
   }
+  return data.output;
+}
 
-  // Extract text and citations from message output items
+function addCitations(citations: Map<string, string>, part: ContentPart): void {
+  for (const ann of part.annotations ?? []) {
+    if (ann.type === "url_citation" && ann.url) {
+      citations.set(ann.url, ann.title ?? ann.url);
+    }
+  }
+}
+
+/** Text and url → title citations from the message output items. */
+function collectOutput(output: OutputItem[]) {
   const textParts: string[] = [];
-  const citations = new Map<string, string>(); // url → title
-
-  for (const item of data.output) {
+  const citations = new Map<string, string>();
+  for (const item of output) {
     if (item.type !== "message" || !item.content) continue;
     for (const part of item.content) {
-      if (part.type === "output_text" && part.text) {
-        textParts.push(part.text);
-      }
-      if (part.annotations) {
-        for (const ann of part.annotations) {
-          if (ann.type === "url_citation" && ann.url) {
-            citations.set(ann.url, ann.title ?? ann.url);
-          }
-        }
-      }
+      if (part.type === "output_text" && part.text) textParts.push(part.text);
+      addCitations(citations, part);
     }
   }
-
-  if (textParts.length === 0) {
-    console.error("Error: No text content in Grok response.");
-    process.exit(1);
-  }
-
-  console.log(textParts.join("\n\n"));
-
-  if (citations.size > 0) {
-    console.log("\n---\n## Sources\n");
-    for (const [url, title] of citations) {
-      console.log(`- [${title}](${url})`);
-    }
-  }
+  return { textParts, citations };
 }
 
 async function run() {
