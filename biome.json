@@ -62,7 +62,11 @@
         "noUndeclaredVariables": "error"
       },
       "complexity": {
-        "useOptionalChain": "error"
+        "useOptionalChain": "error",
+        "noExcessiveCognitiveComplexity": {
+          "level": "error",
+          "options": { "maxAllowedComplexity": 64 }
+        }
       },
       "style": {
         "noNestedTernary": "error",
