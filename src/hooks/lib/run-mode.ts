@@ -32,6 +32,7 @@ export interface Run {
   done: boolean;
   stopBlocks: number;
   estimateMinutes?: number | null;
+  sessions?: string[];
 }
 
 const MINUTE_MS = 60_000;

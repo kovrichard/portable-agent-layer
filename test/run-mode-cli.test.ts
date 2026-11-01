@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { timeboxCommand, unattendedCommand } from "../src/cli/run-mode";
+import { appendEvent } from "../src/hooks/lib/events";
 import { scopeOf } from "../src/hooks/lib/progress-tree";
 import {
   type RunEstimateRecord,
@@ -19,12 +20,15 @@ import {
 import { type Command, runCommand } from "../src/tools/lib/command";
 import { freshTestDir } from "./lib/test-home";
 
+const RUN_SESSION = "night-session";
 let printed: string[];
 let errors: string[];
 
 beforeEach(() => {
   mock.restore();
   process.env.PAL_HOME = freshTestDir(import.meta.file);
+  process.env.PAL_AGENT = "claude";
+  process.env.CLAUDE_CODE_SESSION_ID = RUN_SESSION;
   printed = [];
   errors = [];
   spyOn(console, "log").mockImplementation((...args) => printed.push(args.join(" ")));
@@ -223,6 +227,37 @@ describe("estimated against actual time", () => {
       logEntries: 1,
     });
     expect(Date.parse(records[0].finishedAt as string)).toBeGreaterThanOrEqual(before);
+  });
+
+  test("done stores what the run did, read off the event log", async () => {
+    await startNight();
+    const here = process.cwd();
+    const call = (tool: string, outcome: string, session: string | null, cwd: string) =>
+      appendEvent("tool_call", { tool, outcome }, { session, cwd });
+    call("Bash", "ok", RUN_SESSION, here);
+    call("Edit", "failed", RUN_SESSION, "/elsewhere");
+    call("Read", "ok", "someone-else", here);
+    call("Write", "ok", null, here);
+    call("Grep", "ok", null, "/elsewhere");
+    await unattended("done");
+    expect(estimateRecords()[0]).toMatchObject({
+      stopBlocks: 0,
+      stats: {
+        complete: true,
+        sessions: 1,
+        toolCalls: 3,
+        toolCallsFailed: 1,
+        byTool: { Bash: 1, Edit: 1, Write: 1 },
+      },
+    });
+  });
+
+  test("the run keeps every session that worked on it", async () => {
+    await startNight();
+    process.env.CLAUDE_CODE_SESSION_ID = "after-a-restart";
+    await unattended("log", "resumed");
+    await unattended("log", "again");
+    expect(stored()?.sessions).toEqual([RUN_SESSION, "after-a-restart"]);
   });
 
   test("a run ended before it was done is recorded as unfinished", async () => {

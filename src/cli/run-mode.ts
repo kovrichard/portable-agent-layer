@@ -3,6 +3,7 @@
  * deadline for the current project or folder. The hooks enforce it.
  */
 
+import { progressSession } from "../hooks/lib/progress-session";
 import { scopeOf } from "../hooks/lib/progress-tree";
 import { recordRunEstimate } from "../hooks/lib/run-estimates";
 import {
@@ -20,6 +21,7 @@ import {
 } from "../hooks/lib/run-mode";
 import { isInGitRepo } from "../hooks/lib/session-events";
 import { group, leaf, UsageError } from "../tools/lib/command";
+import { gatherRunStats } from "../tools/lib/run-stats";
 
 const FOR = {
   type: "string",
@@ -75,8 +77,32 @@ function printStatus(kind: RunKind): number {
   return 0;
 }
 
+function statsUntil(run: Run, at: Date) {
+  const window = {
+    scope: run.scope,
+    startedAt: run.startedAt,
+    finishedAt: at.toISOString(),
+    sessions: run.sessions ?? [],
+  };
+  return gatherRunStats(window, process.cwd());
+}
+
+/** A run that outlives its session (a restart after a crash) keeps every session it worked in. */
+function withCurrentSession(run: Run): Run {
+  const session = progressSession();
+  const sessions = run.sessions ?? [];
+  if (!session || sessions.includes(session)) return run;
+  return { ...run, sessions: [...sessions, session] };
+}
+
+function recordFinished(run: Run): void {
+  const finishedAt = new Date();
+  recordRunEstimate(run, finishedAt, statsUntil(run, finishedAt));
+}
+
 function recordIfEndedUnfinished(run: Run): void {
-  if (run.kind === "unattended" && !run.done) recordRunEstimate(run, null);
+  if (run.kind === "unattended" && !run.done)
+    recordRunEstimate(run, null, statsUntil(run, new Date()));
 }
 
 function endRun(kind: RunKind): number {
@@ -142,23 +168,25 @@ function startUnattended(values: {
     fallbacks: values.fallback ?? [],
     rules: unattendedRules(isInGitRepo(process.cwd()), values.rule),
   });
-  writeRun(run);
+  writeRun(withCurrentSession(run));
   console.log(describeRun(run));
   return 0;
 }
 
 function logEntry(text: string): number {
-  const run = runOf("unattended");
-  if (!run) return noRun("unattended");
+  const found = runOf("unattended");
+  if (!found) return noRun("unattended");
+  const run = withCurrentSession(found);
   writeRun({ ...run, log: [...run.log, { at: new Date().toISOString(), entry: text }] });
   console.log(`Logged (${run.log.length + 1} entries).`);
   return 0;
 }
 
 function markDone(): number {
-  const run = runOf("unattended");
-  if (!run) return noRun("unattended");
-  if (!run.done) recordRunEstimate(run, new Date());
+  const found = runOf("unattended");
+  if (!found) return noRun("unattended");
+  const run = withCurrentSession(found);
+  if (!run.done) recordFinished(run);
   writeRun({ ...run, done: true });
   console.log("Marked done: the agent may stop. The run ends when the user is back.");
   return 0;

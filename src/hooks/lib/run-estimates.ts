@@ -23,6 +23,8 @@ export interface RunEstimateRecord {
   tasks: string[];
   fallbacks: string[];
   logEntries: number;
+  stopBlocks: number;
+  stats: object | null;
 }
 
 export function runEstimatesFile(): string {
@@ -33,7 +35,11 @@ function minutesBetween(from: string, to: Date): number {
   return Math.round((to.getTime() - Date.parse(from)) / MINUTE_MS);
 }
 
-export function runEstimateRecord(run: Run, finishedAt: Date | null): RunEstimateRecord {
+export function runEstimateRecord(
+  run: Run,
+  finishedAt: Date | null,
+  stats: object | null = null
+): RunEstimateRecord {
   return {
     kind: run.kind,
     scope: run.scope,
@@ -46,13 +52,19 @@ export function runEstimateRecord(run: Run, finishedAt: Date | null): RunEstimat
     tasks: run.tasks,
     fallbacks: run.fallbacks,
     logEntries: run.log.length,
+    stopBlocks: run.stopBlocks,
+    stats,
   };
 }
 
 /** `finishedAt` is null for a run ended before it was marked done. */
-export function recordRunEstimate(run: Run, finishedAt: Date | null): void {
+export function recordRunEstimate(
+  run: Run,
+  finishedAt: Date | null,
+  stats: object | null = null
+): void {
   appendFileSync(
     runEstimatesFile(),
-    `${JSON.stringify(runEstimateRecord(run, finishedAt))}\n`
+    `${JSON.stringify(runEstimateRecord(run, finishedAt, stats))}\n`
   );
 }
