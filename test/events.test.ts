@@ -71,13 +71,16 @@ describe("the event envelope", () => {
     ]);
   });
 
-  test("a channel file names each message's channel, so one long-lived process can serve several", () => {
-    const file = resolve(home, "channel");
+  test("without a message to match, the newest line of the channel file names the channel", () => {
+    const file = resolve(home, "channel.jsonl");
     process.env.PAL_CHANNEL = "discord";
     process.env.PAL_CHANNEL_FILE = file;
-    writeFileSync(file, "discord-mobile\n");
+    writeFileSync(file, '{"sha256":"a","channel":"discord-mobile"}\n');
     appendEvent("turn", {}, { ts: "2026-09-10T10:00:00.000Z" });
-    writeFileSync(file, "discord-voice");
+    writeFileSync(
+      file,
+      '{"sha256":"a","channel":"discord-mobile"}\n{"sha256":"b","channel":"discord-voice"}\n'
+    );
     appendEvent("turn", {}, { ts: "2026-09-10T10:00:01.000Z" });
     expect(streamLines("2026-09").map((e) => e.channel)).toEqual([
       "discord-mobile",
@@ -85,14 +88,20 @@ describe("the event envelope", () => {
     ]);
   });
 
-  test("a missing or empty channel file falls back to PAL_CHANNEL", () => {
-    const file = resolve(home, "channel");
+  test("a missing, empty or unreadable channel file falls back to PAL_CHANNEL", () => {
+    const file = resolve(home, "channel.jsonl");
     process.env.PAL_CHANNEL = "discord";
     process.env.PAL_CHANNEL_FILE = file;
     appendEvent("turn", {}, { ts: "2026-09-10T10:00:00.000Z" });
-    writeFileSync(file, "  \n");
+    writeFileSync(file, "\n");
     appendEvent("turn", {}, { ts: "2026-09-10T10:00:01.000Z" });
-    expect(streamLines("2026-09").map((e) => e.channel)).toEqual(["discord", "discord"]);
+    writeFileSync(file, 'discord-mobile\n{"sha256":"a"}\n');
+    appendEvent("turn", {}, { ts: "2026-09-10T10:00:02.000Z" });
+    expect(streamLines("2026-09").map((e) => e.channel)).toEqual([
+      "discord",
+      "discord",
+      "discord",
+    ]);
   });
 
   test("a backfilled event keeps the id derived from its source", () => {

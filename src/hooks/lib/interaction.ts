@@ -340,7 +340,7 @@ export function observeTurn(
   prompt: string,
   session: string | undefined,
   now: Date = new Date(),
-  channel: string | null = currentChannel()
+  channel: string | null = currentChannel(prompt)
 ): string | null {
   if (!session || isSystemText(prompt) || !isEnabled("interactionAwareness")) return null;
   const text = stripInjectedTags(prompt);

@@ -1,19 +1,52 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
-function channelFromFile(path: string | undefined): string | null {
-  if (!path) return null;
+interface ChannelLine {
+  sha256: string;
+  channel: string;
+}
+
+function parseLine(line: string): ChannelLine | null {
   try {
-    return readFileSync(path, "utf-8").trim() || null;
+    const parsed = JSON.parse(line) as Partial<ChannelLine>;
+    return typeof parsed.channel === "string" && parsed.channel
+      ? (parsed as ChannelLine)
+      : null;
   } catch {
     return null;
   }
 }
 
-/**
- * Where the current message came from. A long-lived process serving several
- * channels names a file in PAL_CHANNEL_FILE and rewrites it before each message,
- * because its environment is fixed at spawn; PAL_CHANNEL is the per-process fallback.
- */
-export function currentChannel(env: NodeJS.ProcessEnv = process.env): string | null {
-  return channelFromFile(env.PAL_CHANNEL_FILE) ?? (env.PAL_CHANNEL || null);
+function channelLines(path: string | undefined): ChannelLine[] {
+  if (!path) return [];
+  try {
+    return readFileSync(path, "utf-8")
+      .split("\n")
+      .map(parseLine)
+      .filter((line): line is ChannelLine => line !== null);
+  } catch {
+    return [];
+  }
+}
+
+function hashOf(prompt: string): string {
+  return createHash("sha256").update(prompt).digest("hex");
+}
+
+/** Claude Code runs a queued message's prompt hook only when it takes the message in, often after later messages were written. */
+function ownChannel(
+  lines: ChannelLine[],
+  prompt: string | undefined
+): string | undefined {
+  if (prompt === undefined) return undefined;
+  const sha = hashOf(prompt);
+  return lines.findLast((line) => line.sha256 === sha)?.channel;
+}
+
+export function currentChannel(
+  prompt?: string,
+  env: NodeJS.ProcessEnv = process.env
+): string | null {
+  const lines = channelLines(env.PAL_CHANNEL_FILE);
+  return ownChannel(lines, prompt) ?? lines.at(-1)?.channel ?? (env.PAL_CHANNEL || null);
 }
