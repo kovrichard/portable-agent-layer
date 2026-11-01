@@ -31,6 +31,7 @@ export interface Run {
   log: RunLogEntry[];
   done: boolean;
   stopBlocks: number;
+  estimateMinutes?: number | null;
 }
 
 const MINUTE_MS = 60_000;
@@ -106,6 +107,13 @@ function parseDuration(text: string): number | null {
   return ms > 0 ? ms : null;
 }
 
+/** `30m`, `2h` or `1h30m` as whole minutes, at least one. */
+export function estimateMinutesFrom(text: string): number {
+  const ms = parseDuration(text);
+  if (ms === null) throw new Error(`Not a duration: "${text}". Use 15m, 2h or 1h30m.`);
+  return Math.max(1, Math.round(ms / MINUTE_MS));
+}
+
 function nextLocalTime(text: string, now: Date): Date | null {
   const m = /^(\d{1,2}):(\d{2})$/.exec(text.trim());
   if (!m) return null;
@@ -148,8 +156,10 @@ export function newRun(fields: {
   tasks?: string[];
   fallbacks?: string[];
   rules?: string[];
+  estimateMinutes?: number | null;
 }): Run {
   return {
+    ...(fields.estimateMinutes ? { estimateMinutes: fields.estimateMinutes } : {}),
     kind: fields.kind,
     scope: fields.scope,
     startedAt: (fields.now ?? new Date()).toISOString(),
@@ -192,6 +202,7 @@ function timeLine(run: Run, now: Date): string {
 export function describeRun(run: Run, now: Date = new Date()): string {
   const lines = [timeLine(run, now)];
   if (run.task) lines.push(`Task: ${run.task}`);
+  if (run.estimateMinutes) lines.push(`Estimated: ${run.estimateMinutes} min`);
   if (run.report) lines.push(`Report: ${run.report}`);
   if (run.rules.length) lines.push("Rules:", ...numbered(run.rules));
   if (run.tasks.length) lines.push("Tasks, in order:", ...numbered(run.tasks));

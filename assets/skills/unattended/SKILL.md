@@ -38,10 +38,11 @@ Default rules every run carries (`pal cli unattended start` stores them; `--rule
 
 ## Phase B — Run (after approval)
 
-1. Set the deadline about 30 minutes before the return time so the report is final when the user is back. Start the run:
+1. Set the deadline about 30 minutes before the return time so the report is final when the user is back. Add up the Phase A times of the tasks and fallbacks into one estimate. Start the run:
    ```bash
-   pal cli unattended start --until <HH:MM> --task "<task 1>" --task "<task 2>" --fallback "<fallback>" --rule "<extra rule>" --report <path|url>
+   pal cli unattended start --until <HH:MM> --estimate <duration> --task "<task 1>" --task "<task 2>" --fallback "<fallback>" --rule "<extra rule>" --report <path|url>
    ```
+   `pal cli unattended done` records the estimate next to the time the run took, so give your honest guess, not the time until the deadline.
    Then `pal cli progress open "<run title>"` for the run's progress node.
 2. In a git repository, create the work branch. Take tasks in the approved order, one at a time.
 3. For each task: do it; verify it the way Phase A agreed (when the project has tests, run them twice and break-check every new test; when it has a build, run it); in a git repository, commit. Then `pal cli unattended log "<result> and how it was verified"` and `pal cli progress stopped "<next step>"`. Commits attach to the progress node on their own; do not attach them by hand.

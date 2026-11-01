@@ -1,10 +1,17 @@
 import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
+import { existsSync, readFileSync } from "node:fs";
 import { timeboxCommand, unattendedCommand } from "../src/cli/run-mode";
 import { scopeOf } from "../src/hooks/lib/progress-tree";
+import {
+  type RunEstimateRecord,
+  runEstimateRecord,
+  runEstimatesFile,
+} from "../src/hooks/lib/run-estimates";
 import {
   DEFAULT_UNATTENDED_RULES,
   describeRun,
   GIT_RULE,
+  newRun,
   type Run,
   readRun,
   untilLabel,
@@ -34,6 +41,19 @@ function unattended(...args: string[]): Promise<number> {
 
 function stored(): Run | null {
   return readRun(scopeOf(process.cwd()));
+}
+
+function startNight(): Promise<number> {
+  return unattended("start", "--for", "8h", "--estimate", "45m", "--task", "t");
+}
+
+function estimateRecords(): RunEstimateRecord[] {
+  const file = runEstimatesFile();
+  if (!existsSync(file)) return [];
+  return readFileSync(file, "utf-8")
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line) as RunEstimateRecord);
 }
 
 describe("pal cli timebox", () => {
@@ -90,8 +110,20 @@ describe("pal cli timebox", () => {
 
 describe("pal cli unattended", () => {
   test("start needs at least one approved task", async () => {
-    expect(await unattended("start", "--for", "8h")).toBe(1);
+    expect(await unattended("start", "--for", "8h", "--estimate", "1h")).toBe(1);
     expect(errors.join("\n")).toContain("give each approved task with --task");
+    expect(stored()).toBeNull();
+  });
+
+  test("start needs an estimate it can read", async () => {
+    expect(await unattended("start", "--for", "8h", "--task", "t")).toBe(1);
+    expect(errors.join("\n")).toContain(
+      "give how long the tasks and fallbacks will take with --estimate"
+    );
+    expect(
+      await unattended("start", "--for", "8h", "--task", "t", "--estimate", "x")
+    ).toBe(1);
+    expect(errors.join("\n")).toContain('Not a duration: "x"');
     expect(stored()).toBeNull();
   });
 
@@ -100,6 +132,8 @@ describe("pal cli unattended", () => {
       "start",
       "--for",
       "8h",
+      "--estimate",
+      "1h30m",
       "--task",
       "fix parser",
       "--task",
@@ -119,6 +153,7 @@ describe("pal cli unattended", () => {
       fallbacks: ["lint"],
       rules: [...DEFAULT_UNATTENDED_RULES, GIT_RULE, "no downloads"],
       report: "report.md",
+      estimateMinutes: 90,
     });
     expect(printed).toEqual([describeRun(run)]);
   });
@@ -132,7 +167,7 @@ describe("pal cli unattended", () => {
   });
 
   test("log appends timestamped entries", async () => {
-    await unattended("start", "--for", "8h", "--task", "t");
+    await startNight();
     printed = [];
     const before = Date.now();
     await unattended("log", "parser", "fixed");
@@ -148,7 +183,7 @@ describe("pal cli unattended", () => {
   });
 
   test("done marks the run done and keeps it until the user is back", async () => {
-    await unattended("start", "--for", "8h", "--task", "t");
+    await startNight();
     printed = [];
     expect(await unattended("done")).toBe(0);
     expect(stored()?.done).toBe(true);
@@ -158,8 +193,66 @@ describe("pal cli unattended", () => {
   });
 
   test("end clears the run", async () => {
-    await unattended("start", "--for", "8h", "--task", "t");
+    await startNight();
     expect(await unattended("end")).toBe(0);
     expect(stored()).toBeNull();
+  });
+});
+
+describe("estimated against actual time", () => {
+  test("done records the estimate next to the minutes it took, once", async () => {
+    await startNight();
+    const run = stored() as Run;
+    await unattended("log", "parser fixed");
+    const before = Date.now();
+    await unattended("done");
+    await unattended("done");
+    await unattended("end");
+    const records = estimateRecords();
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({
+      kind: "unattended",
+      scope: run.scope,
+      startedAt: run.startedAt,
+      until: run.until,
+      estimateMinutes: 45,
+      finished: true,
+      actualMinutes: 0,
+      tasks: ["t"],
+      fallbacks: [],
+      logEntries: 1,
+    });
+    expect(Date.parse(records[0].finishedAt as string)).toBeGreaterThanOrEqual(before);
+  });
+
+  test("a run ended before it was done is recorded as unfinished", async () => {
+    await startNight();
+    await unattended("end");
+    expect(estimateRecords()).toEqual([
+      expect.objectContaining({
+        estimateMinutes: 45,
+        finished: false,
+        finishedAt: null,
+        actualMinutes: null,
+      }),
+    ]);
+  });
+
+  test("a time box records nothing", async () => {
+    await timebox("start", "--for", "15m");
+    await timebox("end");
+    expect(estimateRecords()).toEqual([]);
+  });
+
+  test("the minutes taken run from the start to done", () => {
+    const run = newRun({
+      kind: "unattended",
+      scope: "s",
+      now: new Date("2026-10-31T16:00:00Z"),
+      until: new Date("2026-10-31T20:00:00Z"),
+    });
+    expect(runEstimateRecord(run, new Date("2026-10-31T17:14:40Z")).actualMinutes).toBe(
+      75
+    );
   });
 });
