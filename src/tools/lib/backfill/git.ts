@@ -96,11 +96,19 @@ function tagsOf(refs: string): string[] {
     .map((ref) => ref.slice("tag: ".length));
 }
 
+function conventionalFlags(subject: string, body: string) {
+  const conventional = CONVENTIONAL.exec(subject);
+  return {
+    commitType: conventional?.[1] ?? null,
+    breaking: !!conventional?.[3] || /^BREAKING CHANGE:/m.test(body),
+    revert: conventional?.[1] === "revert" || subject.startsWith("Revert "),
+  };
+}
+
 function commitOf(record: string): Commit | null {
   const [hash, aI, cI, an, ae, cn, ce, refs, parents, subject, body, numstat] =
     record.split(FIELD);
   if (!hash || !aI || !cI) return null;
-  const conventional = CONVENTIONAL.exec(subject ?? "");
   const coAuthors = coAuthorLines(body ?? "");
   return {
     hash,
@@ -112,9 +120,7 @@ function commitOf(record: string): Commit | null {
     committerEmail: ce ?? "",
     subject: subject ?? "",
     ...numstatOf(numstat ?? ""),
-    commitType: conventional?.[1] ?? null,
-    breaking: !!conventional?.[3] || /^BREAKING CHANGE:/m.test(body ?? ""),
-    revert: conventional?.[1] === "revert" || (subject ?? "").startsWith("Revert "),
+    ...conventionalFlags(subject ?? "", body ?? ""),
     merge: (parents ?? "").trim().split(" ").length > 1,
     tags: tagsOf(refs ?? ""),
     coAuthors: coAuthors.length,

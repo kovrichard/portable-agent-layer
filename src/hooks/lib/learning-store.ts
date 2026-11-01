@@ -116,24 +116,27 @@ export interface ReflectionEntry {
  * reflection produced at the end of an Algorithm run (q1 = what I'd do differently,
  * q2 = algorithm improvement, q3 = AI-level insight).
  */
+function reflectionOf(o: ReturnType<typeof JSON.parse>): ReflectionEntry {
+  return {
+    ts: o.timestamp || "",
+    cwd: o.cwd || "",
+    task: o.task || "",
+    sentiment: typeof o.sentiment === "number" ? o.sentiment : 0,
+    q1: o.q1 || "",
+    q2: o.q2 || "",
+    q3: o.q3 || "",
+    // Untagged (e.g. the existing backlog) defaults to general — the common case.
+    scope: o.scope === "task-specific" ? "task-specific" : "general",
+  };
+}
+
 export function readReflections(file: string, limit?: number): ReflectionEntry[] {
   if (!existsSync(file)) return [];
   const entries: ReflectionEntry[] = [];
   for (const line of readFileSync(file, "utf-8").split("\n")) {
     if (!line.trim()) continue;
     try {
-      const o = JSON.parse(line);
-      entries.push({
-        ts: o.timestamp || "",
-        cwd: o.cwd || "",
-        task: o.task || "",
-        sentiment: typeof o.sentiment === "number" ? o.sentiment : 0,
-        q1: o.q1 || "",
-        q2: o.q2 || "",
-        q3: o.q3 || "",
-        // Untagged (e.g. the existing backlog) defaults to general — the common case.
-        scope: o.scope === "task-specific" ? "task-specific" : "general",
-      });
+      entries.push(reflectionOf(JSON.parse(line)));
     } catch {
       /* skip malformed line */
     }

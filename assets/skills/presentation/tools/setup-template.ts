@@ -101,11 +101,7 @@ const isHex = (s: string) => /^#[0-9a-fA-F]{6}$/.test(s);
 
 // HSL hue rotation by 180° → suggested complementary; brighten lightness for dark primaries
 // so a deep navy gives a warm/light accent rather than another dark colour.
-function complementary(hex: string): string {
-  const h = hex.replace("#", "");
-  const r = parseInt(h.slice(0, 2), 16) / 255;
-  const g = parseInt(h.slice(2, 4), 16) / 255;
-  const b = parseInt(h.slice(4, 6), 16) / 255;
+function hslOf(r: number, g: number, b: number): { H: number; S: number; L: number } {
   const max = Math.max(r, g, b),
     min = Math.min(r, g, b);
   let H = 0,
@@ -119,19 +115,31 @@ function complementary(hex: string): string {
     else H = (r - g) / d + 4;
     H *= 60;
   }
-  H = (H + 180) % 360;
-  const newL = Math.min(0.78, Math.max(0.5, L + 0.35));
-  const newS = Math.max(S, 0.55);
+  return { H, S, L };
+}
+
+function hueSector(H: number, c: number, x: number): [number, number, number] {
+  if (H < 60) return [c, x, 0];
+  if (H < 120) return [x, c, 0];
+  if (H < 180) return [0, c, x];
+  if (H < 240) return [0, x, c];
+  if (H < 300) return [x, 0, c];
+  return [c, 0, x];
+}
+
+function complementary(hex: string): string {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16) / 255;
+  const g = parseInt(h.slice(2, 4), 16) / 255;
+  const b = parseInt(h.slice(4, 6), 16) / 255;
+  const hsl = hslOf(r, g, b);
+  const H = (hsl.H + 180) % 360;
+  const newL = Math.min(0.78, Math.max(0.5, hsl.L + 0.35));
+  const newS = Math.max(hsl.S, 0.55);
   const c = (1 - Math.abs(2 * newL - 1)) * newS;
   const x = c * (1 - Math.abs(((H / 60) % 2) - 1));
   const m = newL - c / 2;
-  let [rr, gg, bb] = [0, 0, 0];
-  if (H < 60) [rr, gg, bb] = [c, x, 0];
-  else if (H < 120) [rr, gg, bb] = [x, c, 0];
-  else if (H < 180) [rr, gg, bb] = [0, c, x];
-  else if (H < 240) [rr, gg, bb] = [0, x, c];
-  else if (H < 300) [rr, gg, bb] = [x, 0, c];
-  else [rr, gg, bb] = [c, 0, x];
+  const [rr, gg, bb] = hueSector(H, c, x);
   const toHex = (n: number) =>
     Math.round((n + m) * 255)
       .toString(16)

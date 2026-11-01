@@ -138,33 +138,39 @@ function emitFrontmatter(fm: EntityFrontmatter): string {
     `status: ${emitScalar(fm.status)}`,
   ];
 
-  if (fm.related.length === 0) {
-    lines.push("related: []");
-  } else {
-    lines.push("related:");
-    for (const r of fm.related) {
-      lines.push(`  - slug: ${emitScalar(r.slug)}`, `    type: ${emitScalar(r.type)}`);
-    }
-  }
+  lines.push(...relatedLines(fm.related));
 
   for (const [k, v] of Object.entries(fm)) {
     if (CANONICAL_KEYS.has(k)) continue;
-    if (v === undefined || v === null) continue;
-    if (Array.isArray(v)) {
-      if (v.every((x) => typeof x === "string")) {
-        lines.push(`${k}: ${emitStringArray(v as string[])}`);
-      }
-      // Other array shapes are out of scope in v1 — skipped silently.
-      continue;
-    }
-    if (typeof v === "object") {
-      // Nested objects out of scope in v1.
-      continue;
-    }
-    lines.push(`${k}: ${emitScalar(v)}`);
+    const line = extraKeyLine(k, v);
+    if (line !== null) lines.push(line);
   }
   lines.push("---");
   return lines.join("\n");
+}
+
+function relatedLines(related: EntityFrontmatter["related"]): string[] {
+  if (related.length === 0) return ["related: []"];
+  return [
+    "related:",
+    ...related.flatMap((r) => [
+      `  - slug: ${emitScalar(r.slug)}`,
+      `    type: ${emitScalar(r.type)}`,
+    ]),
+  ];
+}
+
+function extraKeyLine(k: string, v: unknown): string | null {
+  if (v === undefined || v === null) return null;
+  if (Array.isArray(v)) {
+    // Other array shapes are out of scope in v1 — skipped silently.
+    return v.every((x) => typeof x === "string")
+      ? `${k}: ${emitStringArray(v as string[])}`
+      : null;
+  }
+  // Nested objects out of scope in v1.
+  if (typeof v === "object") return null;
+  return `${k}: ${emitScalar(v)}`;
 }
 
 // --- YAML parser (bounded schema) ------------------------------------------

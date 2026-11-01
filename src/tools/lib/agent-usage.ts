@@ -81,25 +81,34 @@ function recordCodexRollout(filepath: string, tally: UsageTally): void {
   let model = "unknown";
   let lastTotal = -1;
   for (const line of linesOf(filepath)) {
-    if (!CODEX_KEYS.some((key) => line.includes(key))) continue;
-    const entry = parsed<CodexLine>(line);
+    const entry = codexEntryOf(line);
     const payload = entry?.payload;
     if (!entry || !payload) continue;
     if (entry.type === "session_meta") project = projectOf(payload.cwd);
     if (entry.type === "turn_context" && payload.model) model = payload.model;
-    const info = payload.type === "token_count" ? payload.info : null;
-    const last = info?.last_token_usage;
-    const total = info?.total_token_usage?.total_tokens ?? -1;
-    if (!last || !entry.timestamp || total === lastTotal) continue;
-    lastTotal = total;
+    const count = tokenCountOf(payload);
+    if (!count || !entry.timestamp || count.total === lastTotal) continue;
+    lastTotal = count.total;
     tally.record({
       ts: entry.timestamp,
       model,
       project,
-      tokens: codexTokens(last),
+      tokens: codexTokens(count.last),
       cost: null,
     });
   }
+}
+
+function codexEntryOf(line: string): CodexLine | null {
+  if (!CODEX_KEYS.some((key) => line.includes(key))) return null;
+  return parsed<CodexLine>(line);
+}
+
+function tokenCountOf(payload: NonNullable<CodexLine["payload"]>) {
+  const info = payload.type === "token_count" ? payload.info : null;
+  const last = info?.last_token_usage;
+  if (!last) return null;
+  return { last, total: info?.total_token_usage?.total_tokens ?? -1 };
 }
 
 export function readCodex(
