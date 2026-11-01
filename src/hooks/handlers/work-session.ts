@@ -13,15 +13,28 @@ import {
   extractContent,
   extractLastAssistant,
   extractLastUser,
+  type Message,
   parseMessages,
+  runningCount,
 } from "../lib/transcript";
 import {
   detectStatus,
   extractArtifacts,
   extractHandoff,
+  readSession,
   type SessionRecord,
   writeSession,
 } from "../lib/work-tracking";
+
+function sessionLength(
+  messages: Message[],
+  previous: SessionRecord | undefined
+): Pick<SessionRecord, "messageCount" | "lastMessageId"> {
+  return {
+    messageCount: runningCount(messages, previous?.messageCount, previous?.lastMessageId),
+    lastMessageId: messages.at(-1)?.id,
+  };
+}
 
 export async function captureWorkSession(
   transcript: string,
@@ -61,7 +74,7 @@ export async function captureWorkSession(
       summary,
       artifacts: extractArtifacts(messages),
       handoff: extractHandoff(lastAssistantText),
-      messageCount: messages.length,
+      ...sessionLength(messages, readSession(id)),
     };
 
     writeSession(record);

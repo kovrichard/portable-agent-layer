@@ -222,8 +222,8 @@ describe("agy's transcript read as the turns of a conversation", () => {
       said("All tests pass.")
     );
     expect(readTranscriptFile(transcript)).toEqual([
-      { role: "user", content: "run the tests" },
-      { role: "assistant", content: "All tests pass." },
+      { role: "user", content: "run the tests", id: "0" },
+      { role: "assistant", content: "All tests pass.", id: "2" },
     ]);
   });
 });

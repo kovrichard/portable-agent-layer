@@ -16,7 +16,7 @@ import {
   parseExtraction,
   planExtraction,
   queueForReview,
-  seenCount,
+  seenCursor,
   unseenUserText,
   worthExtracting,
 } from "../lib/entity-extraction";
@@ -26,8 +26,9 @@ import { logDebug, logError } from "../lib/log";
 import { identity, isEnabled, isOptedIn } from "../lib/settings";
 import { parseMessages } from "../lib/transcript";
 
-function sourceId(sessionId: string, count: number): string {
-  return `chat ${new Date().toISOString().slice(0, 10)} ${sessionId.slice(0, 8)} #${count}`;
+function sourceId(sessionId: string, lastId: string | undefined): string {
+  const turn = lastId ? ` #${lastId.slice(0, 8)}` : "";
+  return `chat ${new Date().toISOString().slice(0, 10)} ${sessionId.slice(0, 8)}${turn}`;
 }
 
 /** @lintignore exercised directly by test/entity-extraction.test.ts */
@@ -36,13 +37,15 @@ export async function extractSessionEntities(
   sessionId?: string
 ): Promise<void> {
   if (!sessionId || !isEnabled("entityExtraction")) return;
-  const seen = seenCount(sessionId);
-  const { text, count } = unseenUserText(parseMessages(transcript), seen);
-  if (count <= seen) return;
+  const { text, count, lastId } = unseenUserText(
+    parseMessages(transcript),
+    seenCursor(sessionId)
+  );
+  if (lastId) markSeen(sessionId, lastId);
+  if (count === 0) return;
 
   const index = loadNameIndex(loadKnownEntities());
   const excluded = excludedNames();
-  markSeen(sessionId, count);
   if (!worthExtracting(text, index, excluded) || !canInfer()) return;
 
   const id = identity();
@@ -58,7 +61,7 @@ export async function extractSessionEntities(
   });
   if (!result.success || !result.output) return;
 
-  const source = sourceId(sessionId, count);
+  const source = sourceId(sessionId, lastId);
   const plan = planExtraction(parseExtraction(result.output), index, excluded, source);
   const written = ingestEntities(plan.ingest, source);
   queueForReview(plan.review);

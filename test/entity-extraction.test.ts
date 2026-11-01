@@ -9,7 +9,7 @@ import {
   planExtraction,
   queueForReview,
   reviewQueueFile,
-  seenCount,
+  seenCursor,
   unseenUserText,
   worthExtracting,
 } from "../src/hooks/lib/entity-extraction";
@@ -214,31 +214,65 @@ describe("worthExtracting", () => {
 
 describe("unseenUserText", () => {
   const messages = [
-    { role: "user", content: "first about Pip" },
-    { role: "assistant", content: "reply" },
-    { role: "user", content: "<system-reminder>x</system-reminder>" },
-    { role: "user", content: "second about Odo" },
+    { role: "user", content: "first about Pip", id: "u1" },
+    { role: "assistant", content: "reply", id: "a1" },
+    { role: "user", content: "<system-reminder>x</system-reminder>", id: "u2" },
+    { role: "user", content: "second about Odo", id: "u3" },
+    { role: "assistant", content: "ok", id: "a2" },
   ];
 
-  test("returns only the user's own messages after the cursor", () => {
-    expect(unseenUserText(messages, 1)).toEqual({
+  test("returns only the user's own messages after the cursor id", () => {
+    expect(unseenUserText(messages, "a1")).toEqual({
       text: "1. second about Odo",
-      count: 2,
+      count: 1,
+      lastId: "a2",
+    });
+  });
+
+  test("a new session reads every message", () => {
+    expect(unseenUserText(messages, undefined).count).toBe(2);
+  });
+
+  test("a cursor older than the tail reads the whole tail", () => {
+    expect(unseenUserText(messages, "gone").count).toBe(2);
+  });
+
+  test("a count cursor from before ids counts as read up to now", () => {
+    expect(unseenUserText(messages, 40)).toEqual({ text: "", count: 0, lastId: "a2" });
+  });
+
+  test("a transcript without ids reads only its latest user turn", () => {
+    const bare = messages.map(({ role, content }) => ({ role, content }));
+    expect(unseenUserText(bare, undefined)).toEqual({
+      text: "1. second about Odo",
+      count: 1,
+      lastId: undefined,
     });
   });
 });
 
 describe("extractSessionEntities", () => {
+  const turn = [
+    { role: "user", content: "we met Odo Vance from Northwind yesterday", id: "u1" },
+    { role: "assistant", content: "noted", id: "a1" },
+  ];
+
   test("without inference it only advances the cursor and writes nothing", async () => {
-    const transcript = JSON.stringify([
-      { role: "user", content: "we met Odo Vance from Northwind yesterday" },
-      { role: "assistant", content: "noted" },
-    ]);
-    await extractSessionEntities(transcript, "session-a");
-    expect(seenCount("session-a")).toBe(1);
+    await extractSessionEntities(JSON.stringify(turn), "session-a");
+    expect(seenCursor("session-a")).toBe("a1");
     expect(
       existsSync(resolve(HOME, "memory", "knowledge", "People", "odo-vance.md"))
     ).toBe(false);
+  });
+
+  test("the cursor moves to the newest id of a tail that no longer holds it", async () => {
+    await extractSessionEntities(JSON.stringify(turn), "session-b");
+    const tail = [
+      { role: "user", content: "and then Pip", id: "u9" },
+      { role: "assistant", content: "fine", id: "a9" },
+    ];
+    await extractSessionEntities(JSON.stringify(tail), "session-b");
+    expect(seenCursor("session-b")).toBe("a9");
   });
 });
 
