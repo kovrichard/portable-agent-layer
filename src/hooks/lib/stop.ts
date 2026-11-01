@@ -33,8 +33,8 @@ import { assets, ensureDir, paths } from "./paths";
 import {
   extractContent,
   extractLastAssistant,
-  parseMessages,
-  readTranscriptFile,
+  type Message,
+  recentMessages,
   withFinalReply,
 } from "./transcript";
 
@@ -46,7 +46,10 @@ export interface StopTurnPayload extends HookTurnPayload {
   executionNum?: number;
 }
 
-type Transcript = ReturnType<typeof readTranscriptFile>;
+type Transcript = Message[];
+
+/** Session-intelligence reads the last 10 user messages; nothing else reads further back. */
+const STOP_USER_MESSAGES = 10;
 
 interface ReplyWait {
   timeoutMs: number;
@@ -57,7 +60,7 @@ const REPLY_WAIT: ReplyWait = { timeoutMs: 15_000, intervalMs: 200 };
 
 function transcriptOf(payload: StopTurnPayload | null): Transcript {
   const transcriptPath = payload?.transcript_path ?? payload?.transcriptPath;
-  return transcriptPath ? readTranscriptFile(transcriptPath) : [];
+  return transcriptPath ? recentMessages(transcriptPath, STOP_USER_MESSAGES) : [];
 }
 
 /** The Copilot CLI writes the reply to its transcript only after agentStop returns. */
@@ -130,7 +133,7 @@ async function runTurnStop(
   messages: Transcript
 ): Promise<void> {
   if (messages.length >= 2) {
-    await runStopHandlers(JSON.stringify(messages), {
+    await runStopHandlers(messages, {
       lastAssistantMessage: hookFinalReply(payload),
       sessionId: hookSessionId(payload),
     });
@@ -145,13 +148,12 @@ interface RunStopHandlersOptions {
   sessionId?: string;
 }
 
-/** Run all stop handlers with a transcript string */
+/** Run all stop handlers on the newest messages of the transcript */
 export async function runStopHandlers(
-  fileTranscript: string,
+  fileMessages: Message[],
   options: RunStopHandlersOptions = {}
 ): Promise<void> {
   const timing = startHookTiming("stop");
-  const fileMessages = parseMessages(fileTranscript);
   if (fileMessages.length < 2) return;
   const messages = withFinalReply(fileMessages, options.lastAssistantMessage);
   const transcript = JSON.stringify(messages);
@@ -213,7 +215,7 @@ interface CachedResponse {
 }
 
 function cacheLastResponse(
-  msgs: ReturnType<typeof parseMessages>,
+  msgs: Message[],
   lastAssistantMessage?: string,
   sessionId?: string
 ): void {
@@ -263,10 +265,7 @@ function cacheLastResponse(
   }
 }
 
-function recordFinalReply(
-  messages: ReturnType<typeof parseMessages>,
-  sessionId: string
-): void {
+function recordFinalReply(messages: Message[], sessionId: string): void {
   try {
     const reply = extractContent(extractLastAssistant(messages));
     recordReply(sessionId, reply);

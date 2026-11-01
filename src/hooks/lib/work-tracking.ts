@@ -26,6 +26,7 @@ export interface SessionRecord {
   artifacts: string[];
   handoff: string;
   messageCount: number;
+  lastMessageId?: string;
   projectId?: string;
 }
 
@@ -87,6 +88,10 @@ function archiveSessions(records: SessionRecord[]): void {
   for (const record of records) {
     appendFileSync(sessionArchiveFile(record), `${JSON.stringify(record)}\n`, "utf-8");
   }
+}
+
+export function readSession(sessionId: string): SessionRecord | undefined {
+  return readSessions().find((s) => s.sessionId === sessionId);
 }
 
 export function writeSession(record: SessionRecord): void {

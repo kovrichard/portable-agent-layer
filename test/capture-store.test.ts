@@ -8,6 +8,7 @@ import {
   markCaptured,
   readCapture,
 } from "../src/hooks/lib/capture-store";
+import { runningCount } from "../src/hooks/lib/transcript";
 import { freshTestDir } from "./lib/test-home";
 
 // Stop fires after every response, so one session reaches the capture handler
@@ -118,6 +119,43 @@ describe("whether a re-capture is worth writing", () => {
 
   test("a transcript that shrank is not", () => {
     expect(isRecaptureWorthwhile({ messageCount: 30 }, 12)).toBe(false);
+  });
+});
+
+describe("a session's length seen through a transcript tail", () => {
+  const tail = Array.from({ length: 6 }, (_, i) => ({
+    role: i % 2 === 0 ? "user" : "assistant",
+    content: `m${i}`,
+    id: `id${i}`,
+  }));
+
+  test("adds the messages after the recorded id to the recorded count", () => {
+    expect(runningCount(tail, 500, "id3")).toBe(502);
+  });
+
+  test("keeps growing past the tail's own length, so long sessions still re-capture", () => {
+    const count = runningCount(tail, 500, "id1");
+    expect(
+      isRecaptureWorthwhile({ messageCount: 490, lastMessageId: "id1" }, count)
+    ).toBe(true);
+  });
+
+  test("a count recorded without an id adds the whole tail, re-capturing once", () => {
+    expect(runningCount(tail, 500, undefined)).toBe(506);
+  });
+
+  test("a session never recorded counts its tail", () => {
+    expect(runningCount(tail, undefined, undefined)).toBe(6);
+  });
+
+  test("a transcript without ids counts itself, as before", () => {
+    const bare = tail.map(({ role, content }) => ({ role, content }));
+    expect(runningCount(bare, 500, "id3")).toBe(6);
+  });
+
+  test("the recorded id survives a write and a read", () => {
+    markCaptured("s1", 12, "id5");
+    expect(readCapture("s1")).toEqual({ messageCount: 12, lastMessageId: "id5" });
   });
 });
 
