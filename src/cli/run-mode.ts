@@ -3,11 +3,14 @@
  * deadline for the current project or folder. The hooks enforce it.
  */
 
+import { progressSession } from "../hooks/lib/progress-session";
 import { scopeOf } from "../hooks/lib/progress-tree";
+import { recordRunEstimate } from "../hooks/lib/run-estimates";
 import {
   clearRun,
   deadlineFrom,
   describeRun,
+  estimateMinutesFrom,
   newRun,
   type Run,
   type RunKind,
@@ -18,6 +21,7 @@ import {
 } from "../hooks/lib/run-mode";
 import { isInGitRepo } from "../hooks/lib/session-events";
 import { group, leaf, UsageError } from "../tools/lib/command";
+import { gatherRunStats } from "../tools/lib/run-stats";
 
 const FOR = {
   type: "string",
@@ -73,9 +77,38 @@ function printStatus(kind: RunKind): number {
   return 0;
 }
 
+function statsUntil(run: Run, at: Date) {
+  const window = {
+    scope: run.scope,
+    startedAt: run.startedAt,
+    finishedAt: at.toISOString(),
+    sessions: run.sessions ?? [],
+  };
+  return gatherRunStats(window, process.cwd());
+}
+
+/** A run that outlives its session (a restart after a crash) keeps every session it worked in. */
+function withCurrentSession(run: Run): Run {
+  const session = progressSession();
+  const sessions = run.sessions ?? [];
+  if (!session || sessions.includes(session)) return run;
+  return { ...run, sessions: [...sessions, session] };
+}
+
+function recordFinished(run: Run): void {
+  const finishedAt = new Date();
+  recordRunEstimate(run, finishedAt, statsUntil(run, finishedAt));
+}
+
+function recordIfEndedUnfinished(run: Run): void {
+  if (run.kind === "unattended" && !run.done)
+    recordRunEstimate(run, null, statsUntil(run, new Date()));
+}
+
 function endRun(kind: RunKind): number {
   const run = runOf(kind);
   if (!run) return noRun(kind);
+  recordIfEndedUnfinished(run);
   clearRun(run.scope);
   console.log(`Ended the ${kind} run that was due at ${untilLabel(run)}.`);
   return 0;
@@ -102,9 +135,22 @@ function startTimebox(values: {
   return 0;
 }
 
+function estimate(text: string | undefined): number {
+  if (text === undefined)
+    throw new UsageError(
+      "give how long the tasks and fallbacks will take with --estimate"
+    );
+  try {
+    return estimateMinutesFrom(text);
+  } catch (err) {
+    throw new UsageError((err as Error).message);
+  }
+}
+
 function startUnattended(values: {
   until?: string;
   for?: string;
+  estimate?: string;
   task?: string[];
   fallback?: string[];
   rule?: string[];
@@ -116,27 +162,31 @@ function startUnattended(values: {
     kind: "unattended",
     scope: currentScope(),
     until: deadline(values),
+    estimateMinutes: estimate(values.estimate),
     report: values.report,
     tasks: values.task,
     fallbacks: values.fallback ?? [],
     rules: unattendedRules(isInGitRepo(process.cwd()), values.rule),
   });
-  writeRun(run);
+  writeRun(withCurrentSession(run));
   console.log(describeRun(run));
   return 0;
 }
 
 function logEntry(text: string): number {
-  const run = runOf("unattended");
-  if (!run) return noRun("unattended");
+  const found = runOf("unattended");
+  if (!found) return noRun("unattended");
+  const run = withCurrentSession(found);
   writeRun({ ...run, log: [...run.log, { at: new Date().toISOString(), entry: text }] });
   console.log(`Logged (${run.log.length + 1} entries).`);
   return 0;
 }
 
 function markDone(): number {
-  const run = runOf("unattended");
-  if (!run) return noRun("unattended");
+  const found = runOf("unattended");
+  if (!found) return noRun("unattended");
+  const run = withCurrentSession(found);
+  if (!run.done) recordFinished(run);
   writeRun({ ...run, done: true });
   console.log("Marked done: the agent may stop. The run ends when the user is back.");
   return 0;
@@ -171,6 +221,12 @@ export const unattendedCommand = group({
       options: {
         until: UNTIL,
         for: FOR,
+        estimate: {
+          type: "string",
+          value: "<duration>",
+          description:
+            "How long the tasks and fallbacks should take, e.g. 90m; compared with the real time at done",
+        },
         task: {
           type: "string",
           multiple: true,

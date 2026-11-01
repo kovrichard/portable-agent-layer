@@ -7,6 +7,7 @@ import {
   DEFAULT_UNATTENDED_RULES,
   deadlineFrom,
   describeRun,
+  estimateMinutesFrom,
   GIT_RULE,
   isOver,
   minutesLeft,
@@ -132,6 +133,19 @@ describe("the stored run", () => {
     });
   });
 
+  test("keeps an estimate in whole minutes", () => {
+    const run = newRun({
+      kind: "unattended",
+      scope: "s",
+      until: UNTIL,
+      now: NOW,
+      estimateMinutes: estimateMinutesFrom("1h30m"),
+    });
+    expect(run.estimateMinutes).toBe(90);
+    expect(estimateMinutesFrom("20s")).toBe(1);
+    expect(() => estimateMinutesFrom("soon")).toThrow('Not a duration: "soon"');
+  });
+
   test("is kept until exactly 12 hours past the deadline", () => {
     start("timebox");
     const limit = UNTIL.getTime() + 12 * HOUR;
@@ -182,6 +196,7 @@ describe("describeRun", () => {
   test("prints every part of an unattended run in order", () => {
     const full = run("unattended", {
       task: "night",
+      estimateMinutes: 90,
       report: "report.md",
       rules: ["never ask"],
       tasks: ["fix parser", "add tests"],
@@ -193,6 +208,7 @@ describe("describeRun", () => {
       [
         "Unattended until 16:30 (20 min left).",
         "Task: night",
+        "Estimated: 90 min",
         "Report: report.md",
         "Rules:",
         "  1. never ask",
