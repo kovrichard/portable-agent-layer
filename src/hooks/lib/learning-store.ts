@@ -49,47 +49,52 @@ export function readFailures(baseDir: string, limit?: number): FailureEntry[] {
   const entries: FailureEntry[] = [];
 
   for (const { monthDir } of walkMonthDirs(baseDir)) {
-    try {
-      for (const slug of readdirSync(monthDir).sort().reverse()) {
-        const capturePath = resolve(monthDir, slug, "capture.md");
-        if (!existsSync(capturePath)) continue;
-
-        try {
-          const content = readFileSync(capturePath, "utf-8");
-          const { meta } = parse<{
-            rating?: number;
-            context?: string;
-            principle?: string;
-            date?: string;
-            ts?: string;
-            slug?: string;
-            cwd?: string;
-          }>(content);
-
-          if (!meta.context) continue;
-
-          entries.push({
-            slug: meta.slug || slug,
-            path: capturePath,
-            rating: meta.rating ?? 0,
-            context: meta.context,
-            principle: meta.principle || "",
-            date: meta.date || (meta.ts ? String(meta.ts).slice(0, 10) : ""),
-            ts: meta.ts ? String(meta.ts) : "",
-            cwd: meta.cwd || "",
-          });
-
-          if (limit && entries.length >= limit) return entries;
-        } catch {
-          /* skip malformed */
-        }
-      }
-    } catch {
-      /* skip invalid month dirs */
+    for (const slug of newestFirstEntries(monthDir)) {
+      const entry = readCapture(resolve(monthDir, slug, "capture.md"), slug);
+      if (!entry) continue;
+      entries.push(entry);
+      if (limit && entries.length >= limit) return entries;
     }
   }
 
   return entries;
+}
+
+function newestFirstEntries(dir: string): string[] {
+  try {
+    return readdirSync(dir).sort().reverse();
+  } catch {
+    return [];
+  }
+}
+
+/** Null when the capture is missing, malformed or has no context. */
+function readCapture(capturePath: string, slug: string): FailureEntry | null {
+  if (!existsSync(capturePath)) return null;
+  try {
+    const { meta } = parse<{
+      rating?: number;
+      context?: string;
+      principle?: string;
+      date?: string;
+      ts?: string;
+      slug?: string;
+      cwd?: string;
+    }>(readFileSync(capturePath, "utf-8"));
+    if (!meta.context) return null;
+    return {
+      slug: meta.slug || slug,
+      path: capturePath,
+      rating: meta.rating ?? 0,
+      context: meta.context,
+      principle: meta.principle || "",
+      date: meta.date || (meta.ts ? String(meta.ts).slice(0, 10) : ""),
+      ts: meta.ts ? String(meta.ts) : "",
+      cwd: meta.cwd || "",
+    };
+  } catch {
+    return null;
+  }
 }
 
 // ── Reflections ──
