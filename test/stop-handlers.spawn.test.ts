@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test"
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runStopHandlers } from "../src/hooks/lib/stop";
+import type { Message } from "../src/hooks/lib/transcript";
 import { sandboxContextRuleDirs } from "./lib/context-rule-dirs";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
@@ -11,13 +12,11 @@ setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 const HOME = testHome(import.meta.file);
 
-function transcriptOf(...contents: string[]): string {
-  return JSON.stringify(
-    contents.map((content, i) => ({
-      role: i % 2 === 0 ? "user" : "assistant",
-      content,
-    }))
-  );
+function transcriptOf(...contents: string[]): Message[] {
+  return contents.map((content, i) => ({
+    role: i % 2 === 0 ? "user" : "assistant",
+    content,
+  }));
 }
 
 function cachePath(): string {
@@ -43,12 +42,6 @@ beforeEach(() => {
 describe("runStopHandlers — transcript gate", () => {
   test("does nothing for a transcript with fewer than two messages", async () => {
     await runStopHandlers(transcriptOf("only one"), { sessionId: "s1" });
-
-    expect(existsSync(cachePath())).toBe(false);
-  });
-
-  test("does nothing for an unparseable transcript", async () => {
-    await runStopHandlers("not json at all", { sessionId: "s1" });
 
     expect(existsSync(cachePath())).toBe(false);
   });

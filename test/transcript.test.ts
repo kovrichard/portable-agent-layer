@@ -1,7 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { readTranscriptFile, withFinalReply } from "../src/hooks/lib/transcript";
+import {
+  messagesAfter,
+  readTranscriptFile,
+  recentMessages,
+  runningCount,
+  withFinalReply,
+} from "../src/hooks/lib/transcript";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
@@ -36,6 +42,129 @@ function withTmpFile(content: string, fn: (path: string) => void): void {
     removeOnceReleased(dir);
   }
 }
+
+function claudeLine(role: "user" | "assistant", text: string, uuid: string): string {
+  return JSON.stringify({ type: role, uuid, message: { role, content: text } });
+}
+
+function turns(count: number, padding = ""): string {
+  return Array.from({ length: count }, (_, i) =>
+    [
+      claudeLine("user", `ask ${i}`, `u${i}`),
+      claudeLine("assistant", `answer ${i}${padding}`, `a${i}`),
+    ].join("\n")
+  ).join("\n");
+}
+
+function assistantLines(count: number): string {
+  return Array.from({ length: count }, (_, i) =>
+    claudeLine("assistant", `note ${i} ${"y".repeat(1000)}`, `n${i}`)
+  ).join("\n");
+}
+
+describe("message ids", () => {
+  test("a line that is not a message is skipped even when it carries an id", () => {
+    const lines = [
+      claudeLine("user", "hi", "u1"),
+      JSON.stringify({ type: "system", uuid: "sys-1", subtype: "compact" }),
+    ].join("\n");
+    withTmpFile(lines, (path) => {
+      expect(readTranscriptFile(path).map((m) => m.id)).toEqual(["u1"]);
+    });
+  });
+
+  test("each agent's line id becomes the message id", () => {
+    const lines = [
+      claudeLine("user", "claude", "uuid-1"),
+      JSON.stringify({ type: "user.message", id: "cp-1", data: { content: "copilot" } }),
+      JSON.stringify({
+        type: "response_item",
+        payload: {
+          type: "message",
+          role: "user",
+          id: "cx-1",
+          content: [{ text: "codex" }],
+        },
+      }),
+    ].join("\n");
+    withTmpFile(lines, (path) => {
+      expect(readTranscriptFile(path).map((m) => m.id)).toEqual([
+        "uuid-1",
+        "cp-1",
+        "cx-1",
+      ]);
+    });
+  });
+});
+
+describe("recentMessages", () => {
+  test("reads only the end of a transcript far larger than its budget", () => {
+    withTmpFile(turns(2000, " pad".repeat(50)), (path) => {
+      const recent = recentMessages(path, 3, 64 * 1024);
+      expect(recent.length).toBeLessThan(400);
+      expect(recent.at(-1)?.id).toBe("a1999");
+    });
+  });
+
+  test("grows the read until it holds enough user messages", () => {
+    withTmpFile([turns(12), assistantLines(2000)].join("\n"), (path) => {
+      const users = recentMessages(path, 10).filter((m) => m.role === "user");
+      expect(users.length).toBeGreaterThanOrEqual(10);
+    });
+  });
+
+  test("stops at the first read once it holds enough user messages", () => {
+    withTmpFile(turns(3000, " pad".repeat(50)), (path) => {
+      const recent = recentMessages(path, 3);
+      expect(recent.length).toBeGreaterThan(0);
+      expect(recent.length).toBeLessThan(readTranscriptFile(path).length / 2);
+    });
+  });
+
+  test("stops at the byte cap even without enough user messages", () => {
+    withTmpFile(assistantLines(2000), (path) => {
+      expect(recentMessages(path, 10, 64 * 1024).length).toBeLessThan(100);
+    });
+  });
+
+  test("returns the whole transcript when it is smaller than the budget", () => {
+    withTmpFile(turns(3), (path) => {
+      expect(recentMessages(path, 10)).toEqual(readTranscriptFile(path));
+    });
+  });
+
+  test("a missing file reads as no messages", () => {
+    expect(recentMessages("/nonexistent/transcript.jsonl", 10)).toEqual([]);
+  });
+});
+
+describe("messagesAfter", () => {
+  const messages = [
+    { role: "user", content: "a", id: "1" },
+    { role: "assistant", content: "b", id: "2" },
+    { role: "user", content: "c", id: "3" },
+  ];
+
+  test("returns what follows the id", () => {
+    expect(messagesAfter(messages, "2").map((m) => m.id)).toEqual(["3"]);
+  });
+
+  test("returns everything for an unknown or missing id", () => {
+    expect(messagesAfter(messages, "9")).toHaveLength(3);
+    expect(messagesAfter(messages, undefined)).toHaveLength(3);
+  });
+});
+
+describe("runningCount", () => {
+  test("keeps a running total when only some messages carry an id", () => {
+    const mixed = [
+      { role: "user", content: "no id" },
+      { role: "assistant", content: "b", id: "2" },
+      { role: "user", content: "c", id: "3" },
+    ];
+    expect(runningCount(mixed, 10, "2")).toBe(11);
+  });
+});
 
 describe("readTranscriptFile — Claude Code shape", () => {
   test("extracts string content", () => {

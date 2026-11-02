@@ -19,7 +19,7 @@ async function lib<T>(mod: string): Promise<T> {
   return await import(resolve(PAL_DIR, "src", "hooks", "lib", mod));
 }
 
-type TranscriptMessage = { role: string; content: string };
+type TranscriptMessage = { role: string; content: string; id?: string };
 
 function isSessionEvent(type: string): boolean {
   return type.startsWith("session.");
@@ -102,7 +102,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
     }
 
     const rows = result.data as Array<{
-      info: { role?: string };
+      info: { role?: string; id?: string };
       parts: Array<Record<string, unknown>>;
     }>;
 
@@ -110,7 +110,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       .map((row) => {
         const role = row?.info?.role ?? "unknown";
         const content = partsToText(row?.parts ?? []);
-        return { role, content };
+        return { role, content, id: row?.info?.id };
       })
       .filter((m) => m.content.length > 0);
   }
@@ -132,7 +132,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       .filter((m: TranscriptMessage) => m.role === "assistant")
       .pop();
 
-    await runStopHandlers(JSON.stringify(messages), {
+    await runStopHandlers(messages, {
       sessionId: sessionID,
       lastAssistantMessage: lastAssistant?.content,
     });

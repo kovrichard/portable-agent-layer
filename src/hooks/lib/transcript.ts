@@ -6,9 +6,10 @@
 import { closeSync, openSync, readFileSync, readSync, statSync } from "node:fs";
 import { antigravityMessage } from "./antigravity-transcript";
 
-interface Message {
+export interface Message {
   role: string;
   content: string | unknown;
+  id?: string;
 }
 
 /** Parse raw transcript string into messages array. Returns [] on failure. */
@@ -92,23 +93,88 @@ function parseTranscriptEntry(entry: {
  */
 export function readTranscriptFile(path: string): Message[] {
   try {
-    const content = readFileSync(path, "utf-8");
-    const messages: Message[] = [];
-
-    for (const line of content.split("\n")) {
-      if (!line.trim()) continue;
-      try {
-        const parsed = parseTranscriptEntry(JSON.parse(line));
-        if (parsed) messages.push(parsed);
-      } catch {
-        /* skip malformed lines */
-      }
-    }
-
-    return messages;
+    return messagesOf(readFileSync(path, "utf-8").split("\n"));
   } catch {
     return [];
   }
+}
+
+interface EntryIds {
+  uuid?: string;
+  id?: string;
+  payload?: { id?: string };
+  step_index?: number;
+}
+
+/** Claude Code, Copilot, Codex and Antigravity each name a line's id differently. */
+function entryId(entry: EntryIds): string | undefined {
+  const id = entry.uuid ?? entry.id ?? entry.payload?.id ?? entry.step_index;
+  return id === undefined ? undefined : String(id);
+}
+
+function messageOfLine(line: string): Message | null {
+  try {
+    const entry = JSON.parse(line);
+    const message = parseTranscriptEntry(entry);
+    const id = message && entryId(entry);
+    return message && id ? { ...message, id } : message;
+  } catch {
+    return null;
+  }
+}
+
+function messagesOf(lines: string[]): Message[] {
+  return lines.flatMap((line) => {
+    const message = line.trim() ? messageOfLine(line) : null;
+    return message ? [message] : [];
+  });
+}
+
+const TAIL_FIRST_READ_BYTES = 256 * 1024;
+const TAIL_MAX_BYTES = 16 * 1024 * 1024;
+
+/**
+ * The newest messages of a transcript, read from its end: the read grows until it
+ * holds `minUserMessages` user messages, reaches the start of the file, or hits
+ * `maxBytes`, so a Stop hook costs the same on a 1 GB transcript as on a 1 MB one.
+ */
+export function recentMessages(
+  path: string,
+  minUserMessages: number,
+  maxBytes = TAIL_MAX_BYTES
+): Message[] {
+  try {
+    for (let bytes = Math.min(TAIL_FIRST_READ_BYTES, maxBytes); ; bytes *= 4) {
+      const read = Math.min(bytes, maxBytes);
+      const { lines, whole } = readTranscriptTail(path, read);
+      const messages = messagesOf(lines);
+      const users = messages.filter((m) => m.role === "user").length;
+      if (whole || users >= minUserMessages || read >= maxBytes) return messages;
+    }
+  } catch {
+    return [];
+  }
+}
+
+/** The messages after the one with `id`; all of them when `id` is not among them. */
+export function messagesAfter(messages: Message[], id: string | undefined): Message[] {
+  const index = id ? messages.findIndex((m) => m.id === id) : -1;
+  return messages.slice(index + 1);
+}
+
+/**
+ * A Stop hook sees only the transcript's tail, so a session's length is a running
+ * total: the count last recorded plus the messages after the id recorded with it.
+ * An id missing from the tail adds the whole tail, which errs toward counting more.
+ * A transcript without ids has no running total, so its own length stands.
+ */
+export function runningCount(
+  messages: Message[],
+  recorded: number | undefined,
+  lastId: string | undefined
+): number {
+  if (recorded === undefined || !messages.some((m) => m.id)) return messages.length;
+  return recorded + messagesAfter(messages, lastId).length;
 }
 
 /** The complete lines in the last `bytes` of a transcript; `whole` once that reaches its start. */

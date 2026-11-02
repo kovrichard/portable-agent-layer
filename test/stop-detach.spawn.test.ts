@@ -23,10 +23,8 @@ describe("runStopHandlers — Stop hook non-blocking contract", () => {
       role: i % 2 === 0 ? "user" : "assistant",
       content: `message ${i} `.repeat(50),
     }));
-    const transcript = JSON.stringify(messages);
-
     const start = Date.now();
-    await runStopHandlers(transcript, { sessionId: "test-stop-fast" });
+    await runStopHandlers(messages, { sessionId: "test-stop-fast" });
     const elapsed = Date.now() - start;
     // Non-inference handlers (synthesis, auto-graduate, etc.) still run
     // synchronously and may do real I/O. The contract this test enforces is
