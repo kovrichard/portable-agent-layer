@@ -32,6 +32,7 @@ import { scheduleCommand } from "./schedule";
 import { serverCommand } from "./server";
 import { skillCommand } from "./skill";
 import { subagentCommand } from "./subagent";
+import { telemetryCommand } from "./telemetry";
 import { usageCommand } from "./usage";
 import { wrappedCommand } from "./wrapped";
 
@@ -195,6 +196,7 @@ export function cliTree(admin: AdminHandlers): Group {
       server: serverCommand,
       skill: skillCommand,
       subagent: subagentCommand,
+      telemetry: telemetryCommand,
       ...builtinTools,
       debug: debugCommand(admin),
       version: leaf({ summary: "Print the installed PAL version", run: admin.version }),

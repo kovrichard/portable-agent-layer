@@ -194,6 +194,22 @@ pal cli debug       # show current status and log path
 | `PAL_NOTIFICATIONS_DISABLED` | Set to `1` to suppress desktop notifications (used by the test suite) |
 | `PAL_TEST_SANDBOX` | Set by the test suite. Without a `PAL_HOME`, state goes to a temp directory instead of `~/.pal`, and installers refuse to touch real agent directories |
 
+### Telemetry
+
+Once a day PAL sends one anonymous heartbeat so we can count how many people use it. It holds exactly these fields and nothing else:
+
+| Field | Example |
+|-------|---------|
+| `install_id` | A random id created on first run (`~/.pal/telemetry.json`), not derived from your machine or name |
+| `version` | `0.115.0` |
+| `channel` | `stable` or `canary` |
+| `os` / `arch` | `darwin` / `arm64` |
+| `agents` | The agents PAL is installed into, e.g. `["claude", "codex"]` |
+
+Every send, failure and skip is written to your local event log with the exact payload. `pal cli telemetry show` prints them, and `pal cli telemetry status` shows whether it is on.
+
+Turn it off with `pal cli telemetry off`, or set `DO_NOT_TRACK=1` or `PAL_TELEMETRY_DISABLED=1`. It never runs in CI or in the test suite.
+
 ---
 
 ## Skills

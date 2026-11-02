@@ -52,6 +52,7 @@ These come from PAL code, not from a runtime hook, so every runtime has them.
 | ----- | ------------ |
 | `inference_call` | PAL makes a model call of its own (`pal cli infer`, ratings, naming, …) |
 | `pal_update` | A self-update runs or is skipped, including `pal cli update` |
+| `pal_heartbeat` | The daily heartbeat is sent, fails or is skipped, with the exact payload sent |
 | `commitment` | An ISC is kept, dropped, reopened or snoozed, from the CLI or the control room |
 | `entity_first_seen` | A person, company, idea or research topic first enters the knowledge store |
 | `discord_nag` | The Discord bot reports a nag or its answer through `pal cli events discord-nag` |

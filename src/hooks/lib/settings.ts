@@ -36,6 +36,8 @@ export interface PalSettingsData {
   ledger?: { redactPaths?: string[] };
   /** Local event log (memory/events) and content store (memory/content). On unless disabled. */
   eventLog?: { enabled?: boolean };
+  /** Daily anonymous heartbeat that counts installs. On unless disabled. */
+  telemetry?: { enabled?: boolean; noticeShown?: boolean };
   /** Control-room ranking knobs and attention sources — see src/tools/control-room/prefs.ts. */
   controlRoom?: Record<string, unknown>;
   /** Contextual-steering user extension: personal rules + shipped rules to suppress by tag. */
@@ -126,6 +128,10 @@ export function isOptedIn(key: string): boolean {
 
 export function eventLogEnabled(): boolean {
   return load().eventLog?.enabled !== false;
+}
+
+export function telemetryEnabled(): boolean {
+  return load().telemetry?.enabled !== false;
 }
 
 /** Get the loadAtStartup file list */
