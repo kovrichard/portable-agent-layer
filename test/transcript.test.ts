@@ -5,6 +5,7 @@ import {
   messagesAfter,
   readTranscriptFile,
   recentMessages,
+  runningCount,
   withFinalReply,
 } from "../src/hooks/lib/transcript";
 import { removeOnceReleased } from "./lib/remove-once-released";
@@ -55,7 +56,23 @@ function turns(count: number, padding = ""): string {
   ).join("\n");
 }
 
+function assistantLines(count: number): string {
+  return Array.from({ length: count }, (_, i) =>
+    claudeLine("assistant", `note ${i} ${"y".repeat(1000)}`, `n${i}`)
+  ).join("\n");
+}
+
 describe("message ids", () => {
+  test("a line that is not a message is skipped even when it carries an id", () => {
+    const lines = [
+      claudeLine("user", "hi", "u1"),
+      JSON.stringify({ type: "system", uuid: "sys-1", subtype: "compact" }),
+    ].join("\n");
+    withTmpFile(lines, (path) => {
+      expect(readTranscriptFile(path).map((m) => m.id)).toEqual(["u1"]);
+    });
+  });
+
   test("each agent's line id becomes the message id", () => {
     const lines = [
       claudeLine("user", "claude", "uuid-1"),
@@ -90,10 +107,23 @@ describe("recentMessages", () => {
   });
 
   test("grows the read until it holds enough user messages", () => {
-    const longReply = claudeLine("assistant", "x".repeat(600 * 1024), "big");
-    withTmpFile([turns(12), longReply].join("\n"), (path) => {
+    withTmpFile([turns(12), assistantLines(2000)].join("\n"), (path) => {
       const users = recentMessages(path, 10).filter((m) => m.role === "user");
       expect(users.length).toBeGreaterThanOrEqual(10);
+    });
+  });
+
+  test("stops at the first read once it holds enough user messages", () => {
+    withTmpFile(turns(3000, " pad".repeat(50)), (path) => {
+      const recent = recentMessages(path, 3);
+      expect(recent.length).toBeGreaterThan(0);
+      expect(recent.length).toBeLessThan(readTranscriptFile(path).length / 2);
+    });
+  });
+
+  test("stops at the byte cap even without enough user messages", () => {
+    withTmpFile(assistantLines(2000), (path) => {
+      expect(recentMessages(path, 10, 64 * 1024).length).toBeLessThan(100);
     });
   });
 
@@ -122,6 +152,17 @@ describe("messagesAfter", () => {
   test("returns everything for an unknown or missing id", () => {
     expect(messagesAfter(messages, "9")).toHaveLength(3);
     expect(messagesAfter(messages, undefined)).toHaveLength(3);
+  });
+});
+
+describe("runningCount", () => {
+  test("keeps a running total when only some messages carry an id", () => {
+    const mixed = [
+      { role: "user", content: "no id" },
+      { role: "assistant", content: "b", id: "2" },
+      { role: "user", content: "c", id: "3" },
+    ];
+    expect(runningCount(mixed, 10, "2")).toBe(11);
   });
 });
 

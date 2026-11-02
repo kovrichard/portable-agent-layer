@@ -241,6 +241,18 @@ describe("unseenUserText", () => {
     expect(unseenUserText(messages, 40)).toEqual({ text: "", count: 0, lastId: "a2" });
   });
 
+  test("a transcript where only some messages carry an id still reads from the cursor", () => {
+    const mixed = [{ role: "user", content: "no id about Pip" }, ...messages];
+    expect(unseenUserText(mixed, "a1").text).toBe("1. second about Odo");
+  });
+
+  test("keeps only the newest 4000 characters", () => {
+    const long = [{ role: "user", content: `${"a".repeat(5000)} end`, id: "u1" }];
+    const { text } = unseenUserText(long, undefined);
+    expect(text).toHaveLength(4000);
+    expect(text.endsWith(" end")).toBe(true);
+  });
+
   test("a transcript without ids reads only its latest user turn", () => {
     const bare = messages.map(({ role, content }) => ({ role, content }));
     expect(unseenUserText(bare, undefined)).toEqual({
@@ -273,6 +285,13 @@ describe("extractSessionEntities", () => {
     ];
     await extractSessionEntities(JSON.stringify(tail), "session-b");
     expect(seenCursor("session-b")).toBe("a9");
+  });
+
+  test("a transcript without ids leaves the cursor where it was", async () => {
+    await extractSessionEntities(JSON.stringify(turn), "session-c");
+    const bare = turn.map(({ role, content }) => ({ role, content }));
+    await extractSessionEntities(JSON.stringify(bare), "session-c");
+    expect(seenCursor("session-c")).toBe("a1");
   });
 });
 

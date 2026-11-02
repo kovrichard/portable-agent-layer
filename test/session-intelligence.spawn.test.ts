@@ -48,6 +48,18 @@ function transcript(messageCount: number, padding: number): string {
   return JSON.stringify(messages);
 }
 
+function transcriptTail(from: number, to: number, padding: number): string {
+  const messages = Array.from({ length: to - from }, (_, k) => {
+    const i = from + k;
+    return {
+      role: i % 2 === 0 ? "user" : "assistant",
+      content: `message ${i} ${"x".repeat(padding)}`,
+      id: `m${i}`,
+    };
+  });
+  return JSON.stringify(messages);
+}
+
 function sessionNodes(session: string) {
   return [...readTree(scopeOf(process.cwd()), undefined, session).nodes.values()];
 }
@@ -193,6 +205,30 @@ describe("an unfinished session", () => {
     expect(sessionNodes("s-turn").map((n) => n.title)).toEqual(["Handoff wiring"]);
     expect(learningFiles()).toEqual([]);
     expect(readProjectHistory(process.cwd())).toEqual([]);
+  });
+
+  test("records where it stopped by id, so a later tail can count from there", async () => {
+    await captureSessionIntelligence(transcriptTail(0, 12, 300), "s-ids");
+
+    expect(readCapture("s-ids")).toStrictEqual({
+      messageCount: 12,
+      userMessageCount: 6,
+      lastMessageId: "m11",
+      lastUserMessageId: "m10",
+    });
+  });
+
+  test("a long session seen only through its tail still re-captures", async () => {
+    markCaptured("s-long", 500, "m9");
+    claimHandoffSummary("s-long", 250, "m8");
+
+    await captureSessionIntelligence(transcriptTail(4, 22, 300), "s-long");
+
+    expect(readProjectHistory(process.cwd()).map((e) => e.session)).toContain("s-long");
+    expect(readCapture("s-long")).toMatchObject({
+      messageCount: 512,
+      userMessageCount: 256,
+    });
   });
 
   test("does not summarise the same turn twice", async () => {

@@ -29,4 +29,10 @@ describe("a session's recorded length through a transcript tail", () => {
     await captureWorkSession(JSON.stringify(tail(2, 8)), "s1");
     expect(readSession("s1")).toMatchObject({ messageCount: 8, lastMessageId: "id7" });
   });
+
+  test("each session keeps its own length", async () => {
+    await captureWorkSession(JSON.stringify(tail(0, 4)), "s1");
+    await captureWorkSession(JSON.stringify(tail(0, 6)), "s2");
+    expect(readSession("s1")).toMatchObject({ sessionId: "s1", messageCount: 4 });
+  });
 });

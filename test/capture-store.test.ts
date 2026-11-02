@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import {
   type CaptureEntry,
   capturedPath,
+  claimHandoffSummary,
   isRecaptureWorthwhile,
   markCaptured,
   readCapture,
@@ -43,7 +44,18 @@ describe("reading what was already captured", () => {
 
   test("a session reads back what was written for it", () => {
     markCaptured("s1", 12);
-    expect(readCapture("s1")).toEqual({ messageCount: 12 });
+    expect(readCapture("s1")).toStrictEqual({ messageCount: 12 });
+  });
+
+  test("the ids a capture stopped at read back with it", () => {
+    markCaptured("s1", 12, "m11");
+    claimHandoffSummary("s1", 6, "m10");
+    expect(readCapture("s1")).toStrictEqual({
+      messageCount: 12,
+      userMessageCount: 6,
+      lastMessageId: "m11",
+      lastUserMessageId: "m10",
+    });
   });
 
   test("one session's capture is not another's", () => {
