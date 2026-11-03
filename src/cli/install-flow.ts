@@ -135,12 +135,14 @@ async function askSetupQuestions(): Promise<boolean> {
   const { promptIdentity } = await import("./setup-identity");
   const { promptAttribution } = await import("./setup-attribution");
   const { promptAutoUpdate } = await import("./setup-auto-update");
+  const { noticeTelemetry } = await import("./setup-telemetry");
   scaffoldTelos();
   scaffoldPalSettings();
   const asked = [
     await promptIdentity(),
     await promptAttribution(),
     await promptAutoUpdate(),
+    await noticeTelemetry(),
   ];
   const { ensureActorRegistered } = await import("../hooks/lib/actor");
   ensureActorRegistered();

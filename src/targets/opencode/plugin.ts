@@ -178,6 +178,19 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       logOpencodeToolFailure(event.properties.part);
   }
 
+  async function onSessionOpenedOrUpdated(event: OpencodeEvent): Promise<void> {
+    if (event.type === "session.created") {
+      const { heartbeatOnStart } =
+        await lib<typeof import("../../hooks/lib/telemetry")>("telemetry.ts");
+      heartbeatOnStart();
+    }
+    if (event.type === "session.created" || event.type === "session.updated") {
+      const { regenerateIfNeeded } =
+        await lib<typeof import("../../hooks/lib/claude-md")>("claude-md.ts");
+      regenerateIfNeeded();
+    }
+  }
+
   const ledgeredOpencodeCall = (tool: string, callID: string, args: unknown) => {
     const target = ledgeredTarget(tool, (args ?? {}) as Record<string, unknown>);
     return target ? { toolUseId: callID, tool, target } : null;
@@ -204,12 +217,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       }
 
       logEventDetails(event);
-
-      if (event.type === "session.created" || event.type === "session.updated") {
-        const { regenerateIfNeeded } =
-          await lib<typeof import("../../hooks/lib/claude-md")>("claude-md.ts");
-        regenerateIfNeeded();
-      }
+      await onSessionOpenedOrUpdated(event);
 
       if (event.type === "session.idle") {
         logDebug("opencode:event", "Running stop handlers...");

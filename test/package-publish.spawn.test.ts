@@ -45,6 +45,8 @@ describe("package publish surface", () => {
           timeout: 60000,
         }
       );
+      if (pack.status !== 0)
+        console.error("PACKDEBUG", pack.stderr, pack.stdout.slice(-2000));
       expect(pack.status).toBe(0);
 
       const tarball = pack.stdout

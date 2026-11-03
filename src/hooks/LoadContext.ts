@@ -26,6 +26,7 @@ import {
 import { logSessionStart, type SessionStartPayload } from "./lib/session-events";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
+import { heartbeatOnStart } from "./lib/telemetry";
 
 if (isPalSpawnedInference()) process.exit(0);
 if (duplicatesCursorHooks()) process.exit(0);
@@ -45,6 +46,8 @@ try {
 } catch (err) {
   logError("LoadContext:auto-update", err);
 }
+
+heartbeatOnStart();
 
 try {
   const active = getActiveAgent();

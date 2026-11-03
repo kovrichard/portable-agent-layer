@@ -38,7 +38,7 @@ With PAL, you can:
 
 > **Bun is required.** PAL is built on [Bun](https://bun.sh) and will not work with Node.js or other runtimes. Install it with `curl -fsSL https://bun.sh/install | bash`.
 
-- [Bun](https://bun.sh) >= 1.4.0
+- [Bun](https://bun.sh) >= 1.4.4
 - At least one of: [Claude Code](https://claude.ai/code), [opencode](https://opencode.ai), [Cursor](https://cursor.com), [GitHub Copilot CLI](https://docs.github.com/en/copilot/github-copilot-in-the-cli), [Codex](https://openai.com/index/introducing-codex/), or [Antigravity CLI](https://antigravity.google/product/antigravity-cli)
 
 ### Package mode (recommended)
@@ -193,6 +193,22 @@ pal cli debug       # show current status and log path
 | `PAL_INFERENCE_DISABLED` | Set to `1` to disable all inference (used by the test suite to prevent real CLI spawns) |
 | `PAL_NOTIFICATIONS_DISABLED` | Set to `1` to suppress desktop notifications (used by the test suite) |
 | `PAL_TEST_SANDBOX` | Set by the test suite. Without a `PAL_HOME`, state goes to a temp directory instead of `~/.pal`, and installers refuse to touch real agent directories |
+
+### Telemetry
+
+Once a day PAL sends one anonymous heartbeat so we can count how many people use it. It holds exactly these fields and nothing else:
+
+| Field | Example |
+|-------|---------|
+| `install_id` | A random id created on first run (`~/.pal/telemetry.json`), not derived from your machine or name |
+| `version` | `0.115.0` |
+| `channel` | `stable` or `canary` |
+| `os` / `arch` | `darwin` / `arm64` |
+| `agents` | The agents PAL is installed into, e.g. `["claude", "codex"]` |
+
+Every send, failure and skip is written to your local event log with the exact payload. `pal cli telemetry show` prints them, and `pal cli telemetry status` shows whether it is on.
+
+Turn it off with `pal cli telemetry off`, or set `DO_NOT_TRACK=1` or `PAL_TELEMETRY_DISABLED=1`. It never runs in CI or in the test suite.
 
 ---
 
