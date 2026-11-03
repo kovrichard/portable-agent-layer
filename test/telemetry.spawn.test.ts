@@ -7,6 +7,7 @@ import { freshTestDir } from "./lib/test-home";
 setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
+const LIB = resolve(import.meta.dir, "../src/hooks/lib/telemetry.ts");
 
 let home: string;
 let received: unknown[];
@@ -31,6 +32,7 @@ function unsandboxedEnv(): Record<string, string | undefined> {
   const env: Record<string, string | undefined> = {
     ...process.env,
     PAL_HOME: home,
+    PAL_PKG: resolve(import.meta.dir, ".."),
     PAL_SKIP_DOCTOR: "1",
     PAL_TELEMETRY_URL: `http://127.0.0.1:${server?.port}/beat`,
   };
@@ -59,4 +61,25 @@ test("pal cli telemetry send posts the heartbeat and logs exactly what it posted
   expect(await new Response(child.stdout).text()).toContain("sent");
   expect(received).toHaveLength(1);
   expect(loggedPayloads()).toEqual(received);
+});
+
+async function receivedWithin(ms: number): Promise<unknown[]> {
+  const deadline = Date.now() + ms;
+  while (received.length === 0 && Date.now() < deadline) await Bun.sleep(100);
+  return received;
+}
+
+function startSession(env: Record<string, string | undefined>) {
+  const script = `import { heartbeatOnStart } from ${JSON.stringify(LIB)}; heartbeatOnStart();`;
+  return Bun.spawn(["bun", "-e", script], { env, stdout: "ignore", stderr: "ignore" });
+}
+
+test("session start sends a due heartbeat in the background", async () => {
+  expect(await startSession(unsandboxedEnv()).exited).toBe(0);
+  expect(await receivedWithin(10_000)).toHaveLength(1);
+});
+
+test("session start sends nothing when the heartbeat is not due", async () => {
+  expect(await startSession({ ...unsandboxedEnv(), DO_NOT_TRACK: "1" }).exited).toBe(0);
+  expect(await receivedWithin(2000)).toEqual([]);
 });

@@ -74,12 +74,12 @@ describe("what turns the heartbeat off", () => {
   });
 
   test.each([
-    ["DO_NOT_TRACK", "1"],
-    ["PAL_TELEMETRY_DISABLED", "1"],
-    ["PAL_TEST_SANDBOX", "1"],
-    ["CI", "true"],
-  ])("%s=%s", (name, value) => {
-    expect(optOutReason({ [name]: value })).not.toBeNull();
+    ["DO_NOT_TRACK", "1", "DO_NOT_TRACK is set"],
+    ["PAL_TELEMETRY_DISABLED", "1", "PAL_TELEMETRY_DISABLED is set"],
+    ["PAL_TEST_SANDBOX", "1", "test sandbox"],
+    ["CI", "true", "running in CI"],
+  ])("%s=%s", (name, value, reason) => {
+    expect(optOutReason({ [name]: value })).toBe(reason);
   });
 
   test("the setting", () => {
@@ -102,6 +102,17 @@ describe("what is sent", () => {
         agents: ["claude", "codex"],
       },
     ]);
+  });
+
+  test("as one JSON POST", async () => {
+    let request: RequestInit | undefined;
+    const fetchImpl = (async (_url: string, init: RequestInit) => {
+      request = init;
+      return new Response(null, { status: 204 });
+    }) as unknown as typeof fetch;
+    await sendHeartbeat([], { env: ON, fetchImpl });
+    expect(request?.method).toBe("POST");
+    expect(request?.headers).toEqual({ "content-type": "application/json" });
   });
 
   test("the install id is not the machine id", async () => {
@@ -174,6 +185,13 @@ describe("once a day", () => {
     expect(heartbeatDue(ON, now + DAY_MS + 1000)).toBe(true);
   });
 
+  test("exactly a day later it is due again", async () => {
+    const { fetchImpl } = recordingFetch();
+    const now = Date.now();
+    await sendHeartbeat([], { env: ON, fetchImpl, now });
+    expect(heartbeatDue(ON, now + DAY_MS)).toBe(true);
+  });
+
   test("a failed send also waits until tomorrow", async () => {
     const now = Date.now();
     await sendHeartbeat([], { env: ON, fetchImpl: failingFetch, now });
@@ -195,14 +213,48 @@ describe("once a day", () => {
 
 describe("pal cli telemetry", () => {
   test("off turns it off and on turns it back on", async () => {
-    await telemetry("off");
+    expect(await telemetry("off")).toBe("Telemetry off. Nothing will be sent.");
     expect(raw().telemetry?.enabled).toBe(false);
-    await telemetry("on");
+    expect(await telemetry("on")).toBe("Telemetry on.");
     expect(raw().telemetry?.enabled).toBe(true);
   });
 
   test("status names the install id", async () => {
     expect(await telemetry("status")).toContain(telemetryState().id);
+  });
+
+  test("status says why it is off, which endpoint, and that nothing was tried yet", async () => {
+    process.env.PAL_TELEMETRY_URL = "";
+    try {
+      expect((await telemetry("status")).split("\n")).toEqual([
+        "telemetry    off (test sandbox)",
+        `install id   ${telemetryState().id}`,
+        "endpoint     none configured",
+        "last attempt never",
+      ]);
+    } finally {
+      delete process.env.PAL_TELEMETRY_URL;
+    }
+  });
+
+  test("status shows the last attempt", async () => {
+    const { fetchImpl } = recordingFetch();
+    const now = Date.now();
+    await sendHeartbeat([], { env: ON, fetchImpl, now });
+    expect(await telemetry("status")).toContain(
+      `last attempt ${new Date(now).toISOString()}`
+    );
+  });
+
+  test("show says so when nothing was sent", async () => {
+    expect(await telemetry("show")).toBe("Nothing sent or skipped in the last 30 days.");
+  });
+
+  test("show gives the reason for a skipped heartbeat", async () => {
+    await sendHeartbeat([], { env: { ...ON, DO_NOT_TRACK: "1" } });
+    expect(await telemetry("show")).toContain(
+      `skipped  ${JSON.stringify({ skipReason: "DO_NOT_TRACK is set" })}`
+    );
   });
 
   test("show prints what was sent", async () => {

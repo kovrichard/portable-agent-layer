@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { agentFindings, rosterFindings } from "../src/cli/doctor/agents";
+import { agentFindings, agentsWithPal, rosterFindings } from "../src/cli/doctor/agents";
 import { AGENT_NAMES } from "../src/hooks/lib/agent-registry";
 import {
   copyAgents,
@@ -320,5 +320,27 @@ describe("which agents are installed", () => {
 
   test("every supported agent installed lists nothing", () => {
     expect(rosterFindings([...AGENT_NAMES])).toEqual([]);
+  });
+});
+
+describe("the agents PAL is wired into", () => {
+  test("an agent whose hooks run PAL counts, one whose hooks do not is left out", () => {
+    claudeSettings([palCommand(hookScript("LoadContext"))]);
+    write(
+      resolve(ROOT, "cursor", "hooks.json"),
+      JSON.stringify({ hooks: { stop: [{ command: "/opt/my-own-hook.sh" }] } })
+    );
+
+    expect(agentsWithPal()).toEqual(["claude"]);
+  });
+
+  test("opencode counts by its installed plugin file", () => {
+    write(resolve(ROOT, "opencode", "plugins", "pal-plugin.ts"), "");
+
+    expect(agentsWithPal()).toEqual(["opencode"]);
+  });
+
+  test("a fresh machine has none", () => {
+    expect(agentsWithPal()).toEqual([]);
   });
 });
