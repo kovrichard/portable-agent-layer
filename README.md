@@ -38,7 +38,7 @@ With PAL, you can:
 
 > **Bun is required.** PAL is built on [Bun](https://bun.sh) and will not work with Node.js or other runtimes. Install it with `curl -fsSL https://bun.sh/install | bash`.
 
-- [Bun](https://bun.sh) >= 1.4.0
+- [Bun](https://bun.sh) >= 1.4.4
 - At least one of: [Claude Code](https://claude.ai/code), [opencode](https://opencode.ai), [Cursor](https://cursor.com), [GitHub Copilot CLI](https://docs.github.com/en/copilot/github-copilot-in-the-cli), [Codex](https://openai.com/index/introducing-codex/), or [Antigravity CLI](https://antigravity.google/product/antigravity-cli)
 
 ### Package mode (recommended)

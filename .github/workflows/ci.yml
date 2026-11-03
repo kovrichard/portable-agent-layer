@@ -39,7 +39,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          bun-version: "1.4.3"
+          bun-version: "1.4.4"
 
       - name: Cache Bun packages
         # Windows only: installing takes 60-120 s there and under 20 s elsewhere.
@@ -114,7 +114,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          bun-version: "1.4.3"
+          bun-version: "1.4.4"
 
       - name: Cache Bun packages
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -166,7 +166,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          bun-version: "1.4.3"
+          bun-version: "1.4.4"
 
       - name: Install dependencies
         # No lifecycle scripts, so no dependency can run arbitrary code on install.
@@ -195,7 +195,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          bun-version: "1.4.3"
+          bun-version: "1.4.4"
 
       - name: Cache Bun packages
         if: runner.os == 'Windows'

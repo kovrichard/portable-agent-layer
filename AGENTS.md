@@ -40,7 +40,7 @@ When PAL is installed, `~/.pal/skills/<name>/` may be a directory junction back 
 
 ## Running and testing
 
-This repo uses [Bun](https://bun.sh) ≥ 1.4.0 — never `npm`, `pnpm`, or `node`.
+This repo uses [Bun](https://bun.sh) ≥ 1.4.4 — never `npm`, `pnpm`, or `node`.
 
 ```bash
 bun install                                     # frozen on CI
