@@ -27,6 +27,18 @@ describe("the repository config tripwire", () => {
     expect(sharedRepoConfig(import.meta.dir)).toMatch(/\.git[\\/]config$/);
   });
 
+  test("a linked worktree resolves to the main checkout's config", () => {
+    const root = freshTestDir(import.meta.file);
+    const common = resolve(root, "main", ".git");
+    const linked = resolve(common, "worktrees", "wt");
+    mkdirSync(linked, { recursive: true });
+    writeFileSync(resolve(common, "config"), "");
+    writeFileSync(resolve(linked, "commondir"), "../..\n");
+    mkdirSync(resolve(root, "wt", "sub"), { recursive: true });
+    writeFileSync(resolve(root, "wt", ".git"), `gitdir: ${linked}\n`);
+    expect(sharedRepoConfig(resolve(root, "wt", "sub"))).toBe(resolve(common, "config"));
+  });
+
   test("outside any checkout there is nothing to guard", () => {
     const outside = outsideRepoHome(import.meta.file);
     mkdirSync(outside, { recursive: true });
