@@ -186,6 +186,52 @@ describe("pal cli update — repo mode ignores local unpushed commits", () => {
   });
 });
 
+describe("pal cli update — repo mode follows the checked-out branch", () => {
+  const home = freshTestDir(import.meta.file);
+  const origin = freshTestDir(import.meta.file);
+  const clone = freshTestDir(import.meta.file);
+
+  const git = (cwd: string, ...args: string[]) =>
+    spawnSync("git", args, { cwd, stdio: "ignore" });
+
+  const commit = (cwd: string, version: string) => {
+    writeFileSync(resolve(cwd, "package.json"), JSON.stringify({ version }));
+    git(cwd, "add", "-A");
+    git(cwd, "commit", "-m", version);
+  };
+
+  test("a clone on canary compares against origin/canary, not origin/main", () => {
+    git(origin, "init", "--bare", "-b", "main");
+    git(clone, "init", "-b", "main");
+    git(clone, "config", "user.email", "t@t.t");
+    git(clone, "config", "user.name", "t");
+    git(clone, "remote", "add", "origin", origin);
+    commit(clone, "0.114.0");
+    git(clone, "switch", "-c", "canary");
+    commit(clone, "0.115.0-canary.6");
+    commit(clone, "0.115.0-canary.7");
+    git(clone, "push", "-u", "origin", "canary");
+    git(clone, "switch", "main");
+    commit(clone, "0.114.1");
+    git(clone, "push", "-u", "origin", "main");
+    git(clone, "switch", "canary");
+    git(clone, "reset", "--hard", "HEAD~1");
+
+    process.env.PAL_HOME = home;
+    process.env.PAL_PKG = clone;
+    clearUpdateCache();
+
+    return checkForUpdate(true).then((result) => {
+      expect(result).toMatchObject({
+        mode: "repo",
+        available: true,
+        current: "0.115.0-canary.6",
+        latest: "0.115.0-canary.7",
+      });
+    });
+  });
+});
+
 describe("isNewerRelease", () => {
   test("a newer npm latest is an update", () => {
     expect(isNewerRelease("0.107.0", "0.106.0")).toBe(true);
