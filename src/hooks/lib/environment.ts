@@ -130,13 +130,17 @@ const VERSION_TIMEOUT_MS = 2000;
 export const systemProbe: Probe = {
   which: (command) => Bun.which(command),
   versionOutput: (path) => {
-    const run = Bun.spawnSync([path, "--version"], {
-      stdout: "pipe",
-      stderr: "pipe",
-      timeout: VERSION_TIMEOUT_MS,
-    });
-    if (run.exitCode !== 0) return null;
-    return `${run.stdout.toString()}\n${run.stderr.toString()}`;
+    try {
+      const run = Bun.spawnSync([path, "--version"], {
+        stdout: "pipe",
+        stderr: "pipe",
+        timeout: VERSION_TIMEOUT_MS,
+      });
+      if (run.exitCode !== 0) return null;
+      return `${run.stdout.toString()}\n${run.stderr.toString()}`;
+    } catch {
+      return null;
+    }
   },
 };
 

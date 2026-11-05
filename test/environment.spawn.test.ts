@@ -14,7 +14,11 @@ describe("the system probe", () => {
   test.skipIf(process.platform === "win32")(
     "a command that exits non-zero gives no version",
     () => {
-      expect(systemProbe.versionOutput("/bin/false")).toBeNull();
+      expect(systemProbe.versionOutput(Bun.which("false") ?? "false")).toBeNull();
     }
   );
+
+  test("a command that cannot be started gives no version instead of throwing", () => {
+    expect(systemProbe.versionOutput("/no/such/interpreter-pal")).toBeNull();
+  });
 });
