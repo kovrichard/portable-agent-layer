@@ -1,3 +1,6 @@
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { waitForCi } from "./ci-wait.mjs";
 import { startCoach } from "./coach.mjs";
 import { runCheck, runGate } from "./gate.mjs";
@@ -14,7 +17,13 @@ import { notify } from "./notify.mjs";
 import { runRoleHeadless } from "./role.mjs";
 import { changedFilesSince, rolesAfterChanges } from "./roles.mjs";
 import { markReady, openPr, push, sync } from "./ship.mjs";
-import { appendDecision, prepare, recordQuestion, setStatus } from "./task.mjs";
+import {
+  appendDecision,
+  prepare,
+  recordQuestion,
+  setStatus,
+  withoutDecisions,
+} from "./task.mjs";
 import { superviseBuild } from "./worker.mjs";
 
 const REAL_EFFECTS = {
@@ -63,6 +72,8 @@ const BEFORE_INSTRUCTIONS = {
   "test-writer":
     "Write the failing tests for every acceptance criterion and leave them uncommitted; the code writer commits them with the code.",
 };
+const REPLAN_INSTRUCTIONS =
+  "The spec changed since plan.md was written. Revise plan.md for the change. The branch already has commits, so plan only what is still to do.";
 const REVIEW_INSTRUCTIONS = "Review the branch diff against its base and the spec.";
 const CONFIG_FILE = ".dark-factory.json";
 const CONFIG_CHANGED_NOTE = `The diff changes ${CONFIG_FILE}. Report that change as a finding unless the spec asks for it.`;
@@ -301,10 +312,64 @@ function testsProvedRedBefore(run) {
   );
 }
 
+function specSha256(run) {
+  return createHash("sha256")
+    .update(withoutDecisions(readFileSync(run.specPath, "utf8")))
+    .digest("hex");
+}
+
+function recordPlanWritten(run, specHash) {
+  appendEvent({ event: "plan_written", task: run.id, specSha256: specHash }, run.env);
+}
+
+function runPlanner(run, instructions, reason) {
+  const specHash = specSha256(run);
+  const stop = roleStop("planner", runRole(run, "planner", instructions, { reason }));
+  if (!stop) recordPlanWritten(run, specHash);
+  return stop;
+}
+
+function latestPlanSha256(run) {
+  const plans = readEvents(run.env).filter(
+    (event) => event.event === "plan_written" && event.task === run.id
+  );
+  return plans.at(-1)?.specSha256 ?? null;
+}
+
+function planPath(run) {
+  return join(run.taskDir, "plan.md");
+}
+
+function planOlderThanSpec(run) {
+  return statSync(run.specPath).mtimeMs > statSync(planPath(run)).mtimeMs;
+}
+
+function specChangedSincePlan(run) {
+  if (!run.before.includes("planner")) return false;
+  if (!existsSync(planPath(run))) return true;
+  const recorded = latestPlanSha256(run);
+  if (recorded !== null) return recorded !== specSha256(run);
+  return planOlderThanSpec(run);
+}
+
+function resumeFromTheStart(run) {
+  run.resume = { head: null, through: -1 };
+}
+
+function replanIfSpecChanged(run) {
+  if (!specChangedSincePlan(run)) return null;
+  resumeFromTheStart(run);
+  return runPlanner(run, REPLAN_INSTRUCTIONS, "spec-changed");
+}
+
 function beforeRolesStep(run) {
-  if (hasCommitsAheadOfBase(run) || testsProvedRedBefore(run)) return null;
+  if (hasCommitsAheadOfBase(run) || testsProvedRedBefore(run))
+    return replanIfSpecChanged(run);
   for (const role of run.before) {
-    const stop = roleStop(role, runRole(run, role, BEFORE_INSTRUCTIONS[role]));
+    const stop =
+      role === "planner"
+        ? runPlanner(run, BEFORE_INSTRUCTIONS.planner, "pipeline")
+        : roleStop(role, runRole(run, role, BEFORE_INSTRUCTIONS[role]));
     if (stop) return stop;
     if (role === "test-writer") {
       const red = proveTestsRed(run);

@@ -1,9 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import * as build from "../assets/plugins/dark-factory/scripts/build.mjs";
 import { startCoach } from "../assets/plugins/dark-factory/scripts/coach.mjs";
-import { taskDir } from "../assets/plugins/dark-factory/scripts/lib.mjs";
+import { appendEvent, taskDir } from "../assets/plugins/dark-factory/scripts/lib.mjs";
 import { FACTORY_MODELS } from "../src/tools/dark-factory/stamp";
 import {
   buildWorld,
@@ -19,7 +20,7 @@ import {
 } from "./lib/dark-factory-build-fixture";
 
 const NOOP: RoleStep = { codes: false };
-const NOISE = new Set(["role_finished", "gate_check", "handover"]);
+const NOISE = new Set(["role_finished", "gate_check", "handover", "plan_written"]);
 const QUESTION = { done: false, summary: "", question: "which file?" };
 
 type Options = Parameters<typeof buildWorld>[1];
@@ -408,6 +409,17 @@ describe("questions go to the PO and the role continues", () => {
 
   test("a rerun with commits ahead of the base skips the before roles", () => {
     const world = worldFor({ category: "feature", commitsAhead: 1 });
+    writeFileSync(join(taskDir(TASK, world.env), "plan.md"), "plan\n");
+    appendEvent(
+      {
+        event: "plan_written",
+        task: TASK,
+        specSha256: createHash("sha256")
+          .update("# Add export\n\n## Goal\n\nExport.\n\n")
+          .digest("hex"),
+      },
+      world.env
+    );
     expect(runBuild(world).status).toBe("ready");
     expect(roleNames(world)).not.toContain("planner");
     expect(roleNames(world)).not.toContain("test-writer");

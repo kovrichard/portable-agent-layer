@@ -27,7 +27,13 @@ const GIT_ENV = {
 };
 
 const NOOP = { write: {}, commit: false };
-const NOISE = new Set(["role_finished", "role_settings", "gate_check", "handover"]);
+const NOISE = new Set([
+  "role_finished",
+  "role_settings",
+  "gate_check",
+  "handover",
+  "plan_written",
+]);
 
 type Step = {
   shell?: string;
@@ -489,6 +495,7 @@ describe("questions go to the PO and the role continues", () => {
       },
     });
     expect(runBuild().exitCode).toBe(3);
+    writeFileSync(join(ctx.factory, "tasks", TASK, "plan.md"), "plan\n");
     writeFileSync(
       join(ctx.factory, "tasks", TASK, "spec.md"),
       `${specText()}- Rico: use postgres\n`
