@@ -224,7 +224,11 @@ describe("how a re-plan is recorded and stopped", () => {
 
 describe("a re-plan and a resumed build", () => {
   function cleanWorktreeAt(world: World, head: string) {
-    const answers: Record<string, string> = { "rev-list": "1", "rev-parse": head, status: "" };
+    const answers: Record<string, string> = {
+      "rev-list": "1",
+      "rev-parse": head,
+      status: "",
+    };
     world.effects.spawnTool = (_command: string, args: string[]) => ({
       status: 0,
       stdout: answers[args[0]] ?? "",
