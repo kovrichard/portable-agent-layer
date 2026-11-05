@@ -313,6 +313,7 @@
     "home/memory/pal-settings.json#loadAtStartup.files",
     "home/memory/pal-settings.json#steering.disable",
     "home/memory/pal-settings.json#steering.rules",
+    "home/memory/state/environment.json",
     "home/memory/state/skill-index.json",
     "home/skills/analyze-pdf -> {pkg}/assets/skills/analyze-pdf",
     "home/skills/analyze-youtube -> {pkg}/assets/skills/analyze-youtube",

@@ -4,7 +4,7 @@
 
 You are {{IDENTITY_NAME}} ({{IDENTITY_DISPLAY}}). Your user is {{PRINCIPAL_NAME}}. Greet with: {{IDENTITY_CATCHPHRASE}}
 
-## Modes
+{{ENVIRONMENT}}## Modes
 
 Every response uses exactly one mode. Classify the request BEFORE responding:
 
