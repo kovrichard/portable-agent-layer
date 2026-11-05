@@ -99,26 +99,23 @@ const FILE_WRITING_GIT_FLAGS = ["git diff", "git log", "git show"].flatMap((comm
 const READ_ONLY_DENY = [...EDITS, ...FILE_WRITING_GIT_FLAGS];
 
 export const ROLE_POLICIES = {
-  reviewer: { allow: [...READS, ...READ_ONLY_SHELL], deny: READ_ONLY_DENY, budgetUsd: 2 },
-  po: { allow: [...READS, ...READ_ONLY_SHELL], deny: READ_ONLY_DENY, budgetUsd: 1 },
-  tester: { allow: [...READS, "Bash"], deny: EDITS, budgetUsd: 3 },
+  reviewer: { allow: [...READS, ...READ_ONLY_SHELL], deny: READ_ONLY_DENY },
+  po: { allow: [...READS, ...READ_ONLY_SHELL], deny: READ_ONLY_DENY },
+  tester: { allow: [...READS, "Bash"], deny: EDITS },
   architect: {
     allow: [...READS, ...READ_ONLY_SHELL, "Edit", "Write"],
     deny: ["NotebookEdit"],
-    budgetUsd: 3,
   },
   planner: {
     allow: [...READS, ...READ_ONLY_SHELL, "Edit", "Write"],
     deny: ["NotebookEdit"],
-    budgetUsd: 3,
   },
-  "test-writer": { allow: [...READS, "Edit", "Write", "Bash"], deny: [], budgetUsd: 3 },
-  "code-writer": { allow: [...READS, "Edit", "Write", "Bash"], deny: [], budgetUsd: 2 },
-  debugger: { allow: [...READS, "Edit", "Write", "Bash"], deny: [], budgetUsd: 5 },
+  "test-writer": { allow: [...READS, "Edit", "Write", "Bash"], deny: [] },
+  "code-writer": { allow: [...READS, "Edit", "Write", "Bash"], deny: [] },
+  debugger: { allow: [...READS, "Edit", "Write", "Bash"], deny: [] },
   coach: {
     allow: [...READS, ...READ_ONLY_SHELL],
     deny: READ_ONLY_DENY,
-    budgetUsd: 10,
     addDirs: ["factoryHome", "transcripts", "plugin"],
   },
 };
