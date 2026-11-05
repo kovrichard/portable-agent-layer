@@ -70,6 +70,7 @@ Load context on-demand by reading the file at the path listed. Only load what th
 |-------|------|
 | PAL system overview | `~/.pal/docs/README.md` |
 | System architecture | `~/.pal/docs/SYSTEM_ARCHITECTURE.md` |
+| Agent hooks: each agent's hook and settings docs, how a pre-tool hook blocks | `~/.pal/docs/AGENT_HOOKS.md` |
 | Memory format & guidelines | `~/.pal/docs/MEMORY_SYSTEM.md` |
 | Work tracking (projects, sessions) | `~/.pal/docs/WORK_TRACKING.md` |
 | Steering rules | `~/.pal/docs/STEERING_RULES.md` |

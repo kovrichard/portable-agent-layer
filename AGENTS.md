@@ -188,6 +188,7 @@ PAL uses a 3-tier system to keep the hook's dynamic output small while ensuring 
 | Add a new skill (shared, ships in repo) | `.agents/skills/author-pal-skill/SKILL.md` — repo-only scaffolder (symlinked into `.claude/skills/` and `.cursor/skills/`, like `klint-rules`) that writes into `assets/skills/` with the shared-skill rules baked in. (The shipped `create-skill` is the downstream counterpart: it scaffolds a user's *private* skill into `~/.pal/skills/`.) |
 | Add a new agent target | `src/targets/<agent>/install.ts` + `uninstall.ts`; register in `src/cli/index.ts`. |
 | Add a new tool | `src/tools/<area>/<tool>.ts` with `import.meta.main` guard so it stays testable. |
+| Look up an agent's hook events, settings, or how its pre-tool hook blocks | `assets/templates/PAL/AGENT_HOOKS.md` (installed as `~/.pal/docs/AGENT_HOOKS.md`) — links to every agent's hook and settings docs, where PAL installs, and each deny shape. Read it before searching the web. |
 | Add a runtime PAL hook | `src/hooks/<name>.ts`; the install routine in `src/targets/*/install.ts` wires it into the target agent's config. |
 | Add a semi-static context source | Add one entry to `getSemiStaticSources()` in `src/hooks/lib/semi-static.ts`. That's it. |
 | Run only doctor on a deck | `bun assets/skills/presentation/tools/doctor.ts <deck-dir>` |
