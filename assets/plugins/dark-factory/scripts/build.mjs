@@ -15,6 +15,7 @@ import { runRoleHeadless } from "./role.mjs";
 import { changedFilesSince, rolesAfterChanges } from "./roles.mjs";
 import { markReady, openPr, push, sync } from "./ship.mjs";
 import { appendDecision, prepare, recordQuestion, setStatus } from "./task.mjs";
+import { superviseBuild } from "./worker.mjs";
 
 const REAL_EFFECTS = {
   runRoleHeadless,
@@ -573,13 +574,13 @@ export function runBuild(taskId, { env = process.env, effects = {} } = {}) {
   return finishRun(run, outcome);
 }
 
-function cliResult([taskId]) {
+async function cliResult([taskId]) {
   if (!taskId) return { task: null, status: "stuck", message: USAGE, pr: null };
-  return runBuild(taskId);
+  return superviseBuild(taskId);
 }
 
 if (isMain(import.meta.url)) {
-  const result = cliResult(process.argv.slice(2));
+  const result = await cliResult(process.argv.slice(2));
   printJson(result);
   process.exitCode = EXIT_CODES[result.status];
 }
