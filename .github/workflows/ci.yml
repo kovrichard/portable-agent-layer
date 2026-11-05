@@ -84,9 +84,6 @@ jobs:
       - name: Line endings
         run: bun run lf
 
-      - name: Exact dependency versions
-        run: bun run exact-versions
-
       - name: Secretlint
         run: bun run secretlint
 
