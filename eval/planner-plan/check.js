@@ -13,9 +13,11 @@ function sectionAfter(output, headingPattern) {
   const lines = output.split("\n");
   const start = lines.findIndex((line) => headingPattern.test(line));
   if (start === -1) return "";
+  const startLevel = lines[start].match(/^#+/)?.[0].length ?? 1;
   const body = [];
   for (const line of lines.slice(start + 1)) {
-    if (line.startsWith("#")) break;
+    const level = line.match(/^(#+)\s/)?.[1].length;
+    if (level !== undefined && level <= startLevel) break;
     body.push(line);
   }
   return body.join("\n");
