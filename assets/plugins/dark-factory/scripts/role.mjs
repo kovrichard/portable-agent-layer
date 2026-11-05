@@ -25,8 +25,8 @@ const SETUP_EXIT = 2;
 const MAX_BUFFER_BYTES = 64 * 1024 * 1024;
 const NO_STRUCTURED_ERROR = "claude returned no structured output";
 const USAGE =
-  "usage: role.mjs <task-id> <role> [--max-budget-usd <usd>] [--timeout-ms <ms>] [--model <id>] [--resume <session-id>] [-- <extra claude args>]";
-const NUMERIC_FLAGS = { "--max-budget-usd": "budgetUsd", "--timeout-ms": "timeoutMs" };
+  "usage: role.mjs <task-id> <role> [--timeout-ms <ms>] [--model <id>] [--resume <session-id>] [-- <extra claude args>]";
+const NUMERIC_FLAGS = { "--timeout-ms": "timeoutMs" };
 const STRING_FLAGS = { "--model": "model", "--resume": "resumeSessionId" };
 
 const ROLE_INSTRUCTIONS = {
@@ -292,7 +292,6 @@ export function claudeInvocation(
   task,
   role,
   {
-    budgetUsd = 0,
     extraArgs = [],
     env = process.env,
     model,
@@ -324,8 +323,6 @@ export function claudeInvocation(
       ...optionalFlag("--resume", resumeSessionId),
       "--json-schema",
       JSON.stringify(schemaFor(role)),
-      "--max-budget-usd",
-      String(budgetUsd > 0 ? budgetUsd : policy.budgetUsd),
       "--permission-mode",
       "dontAsk",
       "--add-dir",
@@ -374,14 +371,13 @@ function recordFinished(outcome, env) {
 function attempt(
   taskId,
   role,
-  { env, budgetUsd, timeoutMs, extraArgs, model, instructions, resumeSessionId }
+  { env, timeoutMs, extraArgs, model, instructions, resumeSessionId }
 ) {
   try {
     const task = readTask(taskId, env);
     const instructionsFile = writeRoleInstructions(task, env);
     const settingsFile = writeRoleSettings(task, env);
     const invocation = claudeInvocation(task, role, {
-      budgetUsd,
       extraArgs,
       env,
       model,
@@ -410,7 +406,6 @@ export function runRoleHeadless(
   role,
   {
     env = process.env,
-    budgetUsd,
     timeoutMs = DEFAULT_TIMEOUT_MS,
     extraArgs = [],
     model,
@@ -420,7 +415,6 @@ export function runRoleHeadless(
 ) {
   const outcome = attempt(taskId, role, {
     env,
-    budgetUsd,
     timeoutMs,
     extraArgs,
     model,
@@ -478,7 +472,6 @@ export function parseCliArgs(argv) {
   return {
     taskId,
     role,
-    budgetUsd: flags.budgetUsd,
     timeoutMs: flags.timeoutMs,
     model: flags.model,
     resumeSessionId: flags.resumeSessionId,
@@ -488,10 +481,9 @@ export function parseCliArgs(argv) {
 
 function mainOutcome(argv) {
   try {
-    const { taskId, role, budgetUsd, timeoutMs, model, resumeSessionId, extraArgs } =
+    const { taskId, role, timeoutMs, model, resumeSessionId, extraArgs } =
       parseCliArgs(argv);
     return runRoleHeadless(taskId, role, {
-      budgetUsd,
       timeoutMs,
       model,
       resumeSessionId,

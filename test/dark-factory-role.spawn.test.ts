@@ -182,7 +182,7 @@ describe("invocation", () => {
     expect(stdin).not.toContain("[Workflow harness");
   });
 
-  test("the coach is read-only, reads the factory home and has the highest budget", () => {
+  test("the coach is read-only and reads the factory home", () => {
     const env = envWith(bin);
     const task = readTask("t1", env);
     const { args } = claudeInvocation(task, "coach", { env });
@@ -194,10 +194,6 @@ describe("invocation", () => {
     expect(listAfter(args, "--disallowedTools")).toEqual(
       expect.arrayContaining(["Edit", "Write"])
     );
-    const others = Object.entries(ROLE_POLICIES).filter(([role]) => role !== "coach");
-    for (const [, policy] of others) {
-      expect(ROLE_POLICIES.coach.budgetUsd).toBeGreaterThan(policy.budgetUsd);
-    }
   });
 
   test("a transcript path is recorded only when the session file exists", () => {
@@ -248,15 +244,14 @@ describe("invocation", () => {
     expect(argv).not.toContain("--disallowedTools");
   });
 
-  test("the spending cap defaults per role and can be overridden", () => {
+  test("no role runs with a spending cap", () => {
     const env = envWith(bin);
     const task = readTask("t1", env);
-    const byDefault = claudeInvocation(task, "reviewer", { env }).args;
-    expect(valueAfter(byDefault, "--max-budget-usd")).toBe(
-      String(ROLE_POLICIES.reviewer.budgetUsd)
-    );
-    const overridden = claudeInvocation(task, "reviewer", { budgetUsd: 0.5, env }).args;
-    expect(valueAfter(overridden, "--max-budget-usd")).toBe("0.5");
+    for (const role of Object.keys(ROLE_POLICIES)) {
+      expect(claudeInvocation(task, role, { env }).args).not.toContain(
+        "--max-budget-usd"
+      );
+    }
   });
 
   test("no argument holds a newline or a double quote, and the prompt is not in argv", () => {
@@ -335,7 +330,7 @@ describe("reply", () => {
 });
 
 describe("failures", () => {
-  test("a budget stop ends non-zero with the budget error and the real tokens", () => {
+  test("an error reply ends non-zero with claude's error and the real tokens", () => {
     fakeClaude({ replyFile: BUDGET, exitCode: 1 });
     const outcome = runRoleHeadless("t1", "reviewer", { env: envWith(bin) });
     expect(outcome.exitCode).toBe(1);
@@ -632,30 +627,19 @@ describe("cli", () => {
     expect(run.stderr).not.toMatch(/\n\s+at /);
   });
 
-  test("parses the budget, the timeout and the pass-through arguments", () => {
+  test("parses the timeout and the pass-through arguments", () => {
     expect(
-      parseCliArgs([
-        "t1",
-        "reviewer",
-        "--max-budget-usd",
-        "1.5",
-        "--timeout-ms",
-        "1000",
-        "--",
-        "--plugin-dir",
-        "/p",
-      ])
+      parseCliArgs(["t1", "reviewer", "--timeout-ms", "1000", "--", "--plugin-dir", "/p"])
     ).toEqual({
       taskId: "t1",
       role: "reviewer",
-      budgetUsd: 1.5,
       timeoutMs: 1000,
       model: undefined,
       resumeSessionId: undefined,
       extraArgs: ["--plugin-dir", "/p"],
     });
-    expect(() => parseCliArgs(["t1", "reviewer", "--max-budget-usd", "0"])).toThrow(
-      "--max-budget-usd needs a positive number"
+    expect(() => parseCliArgs(["t1", "reviewer", "--timeout-ms", "0"])).toThrow(
+      "--timeout-ms needs a positive number"
     );
     expect(DEFAULT_TIMEOUT_MS).toBe(1800000);
   });
