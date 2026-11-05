@@ -179,6 +179,39 @@ if (Test-Path $updateCache) {
   } catch {}
 }
 
+# Dark factory: one line per task that is building or waiting on the user.
+# Reads the tail of each task's own event log, so it stays fast as logs grow.
+$FACTORY_LINES = @()
+$factoryHome = if ($env:DARK_FACTORY_HOME) { $env:DARK_FACTORY_HOME } else { Join-Path $env:USERPROFILE ".dark-factory" }
+$factoryTasks = Join-Path $factoryHome "tasks"
+if (Test-Path $factoryTasks) {
+  foreach ($taskJson in Get-ChildItem -Path $factoryTasks -Filter "task.json" -Recurse -Depth 1 -ErrorAction SilentlyContinue) {
+    try {
+      $t = Get-Content $taskJson.FullName -Raw | ConvertFrom-Json
+      if ($t.status -ne "running" -and $t.status -ne "waiting") { continue }
+      $name = ($t.id -replace '^\d{4}-\d{2}-\d{2}-', '')
+      if ($name.Length -gt 28) { $name = $name.Substring(0, 28) }
+      if ($t.status -eq "waiting") { $FACTORY_LINES += "[factory] $name - waiting on you"; continue }
+      $eventsPath = Join-Path $taskJson.DirectoryName "events.jsonl"
+      $events = @()
+      if (Test-Path $eventsPath) {
+        $events = @(Get-Content $eventsPath -Tail 300 -ErrorAction SilentlyContinue | ForEach-Object { try { $_ | ConvertFrom-Json } catch {} })
+      }
+      $now = [DateTimeOffset]::UtcNow
+      $minsSince = { param($ts) [math]::Floor(($now - [DateTimeOffset]::Parse($ts)).TotalMinutes) }
+      $run = $events | Where-Object { $_.event -eq "role_run" } | Select-Object -Last 1
+      $gate = $events | Where-Object { $_.event -eq "gate" } | Select-Object -Last 1
+      $latest = $events | Select-Object -Last 1
+      $line = "[factory] $name"
+      $line += if ($run) { " - $($run.role) $(& $minsSince $run.ts)m" } else { " - starting" }
+      if ($gate) { $line += if ($gate.result -eq "pass") { " - gate ok" } else { " - gate FAIL" } }
+      if ($t.pr -match '/pull/(\d+)') { $line += " - PR #$($Matches[1])" }
+      if ($latest -and (& $minsSince $latest.ts) -ge 35) { $line += " - no activity $(& $minsSince $latest.ts)m" }
+      $FACTORY_LINES += $line
+    } catch {}
+  }
+}
+
 # Build PAL indicators
 $HOOK_STR = if ($HOOK_ERRORS -gt 0) { "  " + $RED + "! $HOOK_ERRORS hook err" + $RESET } else { "" }
 $ISC_STR  = if ($OPEN_ISCS -gt 0)   { "  " + $DIM + "$OPEN_ISCS open ISCs" + $RESET }  else { "" }
@@ -192,6 +225,9 @@ Write-Host ($BAR_COLOR + $BAR + $RESET + " " + $CTX_STR + $DIM + $RATE_STR + $RE
 
 # Line 3: Update available (only when cache says available AND versions differ)
 if ($UPDATE_LINE) { Write-Host ($YELLOW + $UPDATE_LINE + $RESET) }
+
+# Line 3b: Dark-factory tasks that are building or waiting on the user
+foreach ($factoryLine in $FACTORY_LINES) { Write-Host ($CYAN + $factoryLine + $RESET) }
 
 # Line 4: Rotating quote (changes every 30 minutes)
 $QUOTES = @(
