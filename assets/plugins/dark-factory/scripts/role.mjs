@@ -13,6 +13,7 @@ import {
   userHome,
 } from "./lib.mjs";
 import { policyFor, schemaFor } from "./roles.mjs";
+import { writeRoleSettings } from "./settings.mjs";
 
 export const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000;
 export const ONE_COMMAND_PER_CALL =
@@ -298,6 +299,7 @@ export function claudeInvocation(
     resumeSessionId,
     pluginDir = PLUGIN_ROOT,
     instructionsFile,
+    settingsFile,
   } = {}
 ) {
   const policy = policyFor(role);
@@ -312,7 +314,8 @@ export function claudeInvocation(
       "--output-format",
       "json",
       "--setting-sources",
-      "",
+      "project,local",
+      ...optionalFlag("--settings", settingsFile),
       "--plugin-dir",
       pluginDir,
       ...optionalFlag("--append-system-prompt-file", instructionsFile),
@@ -353,6 +356,7 @@ function attempt(
   try {
     const task = readTask(taskId, env);
     const instructionsFile = writeRoleInstructions(task, env);
+    const settingsFile = writeRoleSettings(task, env);
     const invocation = claudeInvocation(task, role, {
       budgetUsd,
       extraArgs,
@@ -361,6 +365,7 @@ function attempt(
       instructions,
       resumeSessionId,
       instructionsFile,
+      settingsFile,
     });
     const outcome = outcomeFrom(
       taskId,
