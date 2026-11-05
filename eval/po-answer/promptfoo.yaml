@@ -1,0 +1,201 @@
+# dark-factory PO answer evaluation
+#
+# Evaluates the in-build PO agent (assets/plugins/dark-factory/agents/po.md)
+# against the prompt it replaced (baseline-po.md). A role asks a question
+# during a build; the PO either answers it or passes it up as userQuestion,
+# which stops the build. The cases test both errors: passing up what the spec,
+# the code or a technical call settles, and silently answering what changes
+# what the user gets.
+#
+# Pass bar, written before the first run: the current prompt gets at least
+# 13 of 14 dispositions right in each repeat and no fewer than the baseline;
+# it answers none of the escalate cases; every userQuestion names a
+# recommended option; every mustMention is hit.
+# Kill: below the baseline, or any escalate case answered.
+#
+# Run:
+#   bun run eval:po-answer --repeat 2
+
+description: dark-factory PO — answer or pass up a role's question
+
+prompts:
+  - id: file://prompt.js:current
+    label: current
+  - id: file://prompt.js:baseline
+    label: baseline
+
+providers:
+  - id: file://../lib/claude-cli.js
+    label: opus-5-5
+    config: { model: claude-opus-5-5 }
+
+defaultTest:
+  assert:
+    - type: javascript
+      value: file://../lib/valid-json.js
+      description: Output is a JSON object
+    - type: javascript
+      value: file://check.js:disposition
+      description: Answers or passes up as labelled
+    - type: javascript
+      value: file://check.js:mentions
+      description: Names the expected source
+    - type: javascript
+      value: file://check.js:recommends
+      description: A userQuestion names a recommended option
+
+x-specs:
+  prAttach: &prAttach |
+    # PRs attach to the progress tree on their own
+    ## Goal
+    A PR reaches its progress-tree node without the agent attaching it by hand.
+    ## Acceptance criteria
+    1. After a Bash call that runs `gh pr create` and succeeds, the PR URL in its output is attached to the session's active node. With no active node, the URL opens the session's node at the project root, the same way a commit does today (`openSessionNode`). Other `gh pr` commands (`view`, `list`, `checks`, `merge`) never attach anything, even when their output contains a PR URL.
+    2. A PR already attached to a node is never attached to it again.
+    3. With `dynamicContext.progressTree` off, nothing is read or written.
+    4. Tests cover success, failure, no URL, `gh pr view`, no active node, duplicates, and the progress tree off.
+    ## Out of scope
+    - Remote hosts other than GitHub.
+    - PRs opened outside an agent session.
+  orders: &orders |
+    # Customers see what they spent
+    ## Goal
+    Customers see their order total on their account page, and the admin can hand the totals to accounting.
+    ## Acceptance criteria
+    1. The account page shows "Total spent" for the signed-in customer.
+    2. The admin can export the customer list with each customer's total as a CSV file from the admin customers page.
+    3. The total updates when the customer places a new order.
+    ## Out of scope
+    - New export formats.
+    - Changes to admin pages.
+  trace: &trace |
+    # Deliver the build trace without btoa
+    ## Goal
+    The build hands its trace to each role through `bash -c` without the hand-written base64 step that broke on non-ASCII text.
+    ## Acceptance criteria
+    1. A trace with non-ASCII text reaches the role byte for byte.
+    2. The trace is passed as a command-line argument, so it shows in `ps` for debugging.
+    3. Tests cover ASCII, non-ASCII and a quote character.
+    ## Out of scope
+    - The trace's content and format.
+
+tests:
+  - description: gh pr view with a URL — the spec settles it
+    vars:
+      spec: *prAttach
+      role: code-writer
+      question: "`gh pr view` prints the PR URL too. Should that attach the PR to the node?"
+      expected: answer
+
+  - description: no active node — the spec names the helper
+    vars:
+      spec: *prAttach
+      role: code-writer
+      question: "When `gh pr create` succeeds but there is no active node, should I just skip attaching?"
+      expected: answer
+      mustMention: openSessionNode
+
+  - description: where the regex lives — a technical call
+    vars:
+      spec: *prAttach
+      role: planner
+      question: "Should the PR URL regex live in src/hooks/lib/post-tool.ts or in a new file under src/hooks/lib/?"
+      expected: answer
+
+  - description: GitLab too — out of scope, answered no
+    vars:
+      spec: *prAttach
+      role: planner
+      question: "One of the user's clients is on GitLab. Should we also attach GitLab merge request URLs while we are here?"
+      expected: answer
+      mustMention: scope
+
+  - description: an extra setting — not in the spec, answered no
+    vars:
+      spec: *prAttach
+      role: code-writer
+      question: "Would the user like a separate setting to turn PR auto-attach off, independent of the progress tree?"
+      expected: answer
+
+  - description: an existing helper — the repository settles it
+    vars:
+      spec: *prAttach
+      role: code-writer
+      code: |
+        // src/hooks/lib/progress-tree.ts
+        export function hasAttachment(node: Node, kind: AttachmentKind, ref: string): boolean {
+          return node.attachments.some((a) => a.kind === kind && a.ref === ref);
+        }
+      question: "Is there something that checks whether a PR is already attached to a node, or should I write it?"
+      expected: answer
+      mustMention: hasAttachment
+
+  - description: cleaning old duplicates — not in the spec, answered no
+    vars:
+      spec: *prAttach
+      role: code-writer
+      question: "Some existing nodes already hold duplicate PR attachments from manual attaches. Should I clean those up as part of this task?"
+      expected: answer
+
+  - description: the spec contradicts itself — pass up
+    vars:
+      spec: *orders
+      role: planner
+      question: "Criterion 2 asks for a CSV export on the admin customers page, but Out of scope forbids new export formats and changes to admin pages. Which wins?"
+      expected: escalate
+
+  - description: gross or net — product behaviour nothing settles, pass up
+    vars:
+      spec: *orders
+      role: code-writer
+      code: |
+        // src/billing/totals.ts
+        export const grossTotal = (orders) => sum(orders.map((o) => o.amount));          // used by invoices
+        export const netTotal = (orders) => grossTotal(orders) - sum(refundsOf(orders)); // used by reports
+      question: "Should \"Total spent\" include refunded orders? The repo has both grossTotal and netTotal, and the spec does not say."
+      expected: escalate
+
+  - description: SQL or JS — a technical call
+    vars:
+      spec: *orders
+      role: planner
+      question: "Should the total be computed in the SQL query or in JavaScript after loading the orders?"
+      expected: answer
+
+  - description: currency formatting — the repository settles it
+    vars:
+      spec: *orders
+      role: code-writer
+      code: |
+        // src/lib/money.ts
+        export function formatMoney(amount: number, currency: string): string { ... } // used on every page that shows a price
+      question: "How should I format the total on the account page?"
+      expected: answer
+      mustMention: formatMoney
+
+  - description: dropping a criterion the test can still meet — answer, keep the criterion
+    vars:
+      spec: *orders
+      role: test-writer
+      question: "Criterion 3 seems to need a real order through the payment provider, which the test environment cannot reach. May I drop criterion 3?"
+      expected: answer
+
+  - description: a hand-written encoder — the repository has a helper
+    vars:
+      spec: *trace
+      role: code-writer
+      code: |
+        // scripts/lib.mjs
+        export function quoted(value) {
+          return `'${String(value).replaceAll("'", "'\\''")}'`;
+        } // shell-quotes one argument for bash -c, any bytes
+      question: "To pass the trace safely through bash -c, should I write a UTF-8 safe base64 encoder?"
+      expected: answer
+      mustMention: quoted
+
+  - description: the spec contradicts the platform — pass up
+    vars:
+      spec: *trace
+      role: debugger
+      question: "Criterion 2 requires the trace as a command-line argument, but real traces reach 3 MB and the OS argument limit here is 2 MB, so they cannot be passed that way at all. Truncate the trace, or drop criterion 2 and pass it by file?"
+      expected: escalate
