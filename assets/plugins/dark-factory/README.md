@@ -136,11 +136,13 @@ The repo's `CLAUDE.md` is read from your checkout when the task starts, so a rol
 - `"repoInstructions": false` in `.dark-factory.json` leaves out the repo's `CLAUDE.md`.
 - `"userInstructions": false` in `$DARK_FACTORY_HOME/config.json` (`~/.dark-factory/config.json`, optional; a missing file means both parts are on) leaves out your `~/.claude/CLAUDE.md`.
 
-Hooks never run in a role, and neither do your settings or MCP servers.
+Your own hooks never run in a role, and neither do MCP servers. The repo's hooks do run, so a repo `Stop` hook that fails its checks keeps the role working until they pass; the gate stays as the check for repos without hooks.
+
+A role loads the repo's `.claude/settings.json` and `.claude/settings.local.json` from its worktree as Claude Code does, permissions included. Your `~/.claude/settings.json` (or `CLAUDE_CONFIG_DIR`) is passed in `--settings` without `hooks`, `permissions`, `enabledPlugins` and `extraKnownMarketplaces`, so commit attribution and your other preferences apply. Each role call records which of your keys it passed and dropped as a `role_settings` event, without their values.
 
 ## Permissions
 
-- Roles run isolated: `--setting-sources ""`, the plugin from `--plugin-dir`, and their own tool policy from `roles.mjs`, so user hooks and settings don't reach them; only the CLAUDE.md instructions above do.
+- Roles run with `--setting-sources project,local`, the plugin from `--plugin-dir`, and their own tool policy from `roles.mjs`. Your user settings come only through the filtered `--settings` file, so your hooks don't reach them. A repo's `permissions.allow` can widen a role's tools; the role's denies still win.
 - The PO session only needs `"Bash(node *dark-factory*/scripts/*)"`, for example in `.claude/settings.json`:
 
 ```json
