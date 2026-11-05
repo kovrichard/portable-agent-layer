@@ -2,17 +2,17 @@ import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test"
 import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
+import { POWERSHELL_SPAWN_TEST_MS, SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
-setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
+const isWindows = process.platform === "win32";
+setDefaultTimeout(isWindows ? POWERSHELL_SPAWN_TEST_MS : SPAWN_HEAVY_TEST_MS);
 
 const repo = resolve(import.meta.dir, "..");
 const SESSION_JSON = JSON.stringify({
   model: { display_name: "Opus" },
   workspace: { current_dir: "/tmp" },
 });
-const isWindows = process.platform === "win32";
 
 let HOME: string;
 
