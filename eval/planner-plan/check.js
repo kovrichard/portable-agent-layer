@@ -24,9 +24,7 @@ function sectionAfter(output, headingPattern) {
 const NEGATION = /\b(no|not|never|without|n't)\b/i;
 
 function addedByStep(output, pattern) {
-  return output
-    .split("\n")
-    .some((line) => pattern.test(line) && !NEGATION.test(line));
+  return output.split("\n").some((line) => pattern.test(line) && !NEGATION.test(line));
 }
 
 function inventedWork(output, runtimeModel) {
