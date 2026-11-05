@@ -304,6 +304,24 @@ describe("stats", () => {
     });
   });
 
+  test("handovers are counted by route and by reason", () => {
+    const stats = summarize([
+      { event: "handover", from: "code-writer", to: "reviewer", reason: "pipeline" },
+      {
+        event: "handover",
+        from: "reviewer",
+        to: "code-writer",
+        reason: "review-findings",
+      },
+      { event: "handover", from: "code-writer", to: "reviewer", reason: "pipeline" },
+    ]);
+    expect(stats.handovers).toEqual({
+      "code-writer->reviewer": 2,
+      "reviewer->code-writer": 1,
+    });
+    expect(stats.handoversByReason).toEqual({ pipeline: 2, "review-findings": 1 });
+  });
+
   test("no first tries means no pass rate, not zero", () => {
     expect(summarize([]).codeWriterFirstTryPassRate).toBeNull();
   });

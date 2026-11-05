@@ -27,7 +27,7 @@ const GIT_ENV = {
 };
 
 const NOOP = { write: {}, commit: false };
-const NOISE = new Set(["role_finished", "role_settings", "gate_check"]);
+const NOISE = new Set(["role_finished", "role_settings", "gate_check", "handover"]);
 
 type Step = {
   shell?: string;

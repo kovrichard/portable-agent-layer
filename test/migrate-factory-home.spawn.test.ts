@@ -264,6 +264,27 @@ describe("the factory folder under the PAL home", () => {
   });
 });
 
+describe("without DARK_FACTORY_HOME the target is .dark-factory under HOME as set now", () => {
+  test("HOME wins over USERPROFILE, read at call time, and a dry run writes nothing", () => {
+    const id = `never-in-a-real-home-${crypto.randomUUID()}`;
+    writeTask(oldFactory, id, "# Spec\n");
+    writeTask(newFactory, id, "# Spec\n");
+    writeTask(oldFactory, `${id}-movable`, "# Spec\n");
+    const { HOME, USERPROFILE } = process.env;
+    delete process.env.DARK_FACTORY_HOME;
+    process.env.HOME = userHome;
+    process.env.USERPROFILE = resolve(root, "other-profile");
+    try {
+      expect(migrate("--dry-run")).toContain(
+        `task/${id}: skipped (already in ${newFactory})`
+      );
+    } finally {
+      process.env.HOME = HOME;
+      process.env.USERPROFILE = USERPROFILE;
+    }
+  });
+});
+
 describe("the settings migration", () => {
   test("is listed under its own id while PAL's DARK_FACTORY_HOME is there", () => {
     writeClaudeSettings({ env: { DARK_FACTORY_HOME: resolve(palHome, "dark-factory") } });
