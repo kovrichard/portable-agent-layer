@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { savePayload } from "./handover.mjs";
 import { writeRoleInstructions } from "./instructions.mjs";
 import {
   appendEvent,
@@ -341,8 +342,30 @@ function withoutReplyBody(outcome) {
   );
 }
 
+function savedReply(outcome, env) {
+  const body = { result: outcome.result ?? null, structured: outcome.structured ?? null };
+  try {
+    return savePayload(
+      outcome.task,
+      "replies",
+      `${outcome.role}.json`,
+      `${JSON.stringify(body, null, 2)}\n`,
+      env
+    );
+  } catch {
+    return null;
+  }
+}
+
 function recordFinished(outcome, env) {
-  appendEvent({ event: "role_finished", ...withoutReplyBody(outcome) }, env);
+  appendEvent(
+    {
+      event: "role_finished",
+      ...withoutReplyBody(outcome),
+      reply: savedReply(outcome, env),
+    },
+    env
+  );
 }
 
 function attempt(

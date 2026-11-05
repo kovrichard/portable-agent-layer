@@ -19,7 +19,7 @@ import {
 } from "./lib/dark-factory-build-fixture";
 
 const NOOP: RoleStep = { codes: false };
-const NOISE = new Set(["role_finished", "gate_check"]);
+const NOISE = new Set(["role_finished", "gate_check", "handover"]);
 const QUESTION = { done: false, summary: "", question: "which file?" };
 
 type Options = Parameters<typeof buildWorld>[1];
@@ -138,6 +138,63 @@ describe("a whole feature run, in process", () => {
       tokens: 675,
     });
     expect(typeof finished[0]?.wallMs).toBe("number");
+  });
+});
+
+describe("handovers between roles", () => {
+  const finding = { file: "a.ts", problem: "bad name", fix: "rename" };
+  const handovers = (world: World) =>
+    eventsNamed(world, "handover").map(
+      (event) => `${event.from}->${event.to}:${event.reason}`
+    );
+  const payloadOf = (world: World, event: Record<string, unknown>) =>
+    readFileSync(
+      join(taskDir(TASK, world.env), (event.payload as { file: string }).file),
+      "utf8"
+    );
+
+  test("every role start is a handover from the role before it, with its reason", () => {
+    const world = worldFor({ roles: { reviewer: [{ reply: { findings: [finding] } }] } });
+    runBuild(world);
+    expect(handovers(world)).toEqual([
+      "po->code-writer:pipeline",
+      "code-writer->reviewer:pipeline",
+      "reviewer->code-writer:review-findings",
+      "code-writer->reviewer:pipeline",
+    ]);
+  });
+
+  test("a gate retry is a handover for the failed gate", () => {
+    const world = worldFor({ roles: { "code-writer": [NOOP] } });
+    runBuild(world);
+    expect(handovers(world).slice(0, 2)).toEqual([
+      "po->code-writer:pipeline",
+      "code-writer->code-writer:gate-failed",
+    ]);
+  });
+
+  test("the payload is the instructions the role received, saved with its hash", () => {
+    const world = worldFor({ roles: { reviewer: [{ reply: { findings: [finding] } }] } });
+    runBuild(world);
+    const fixRound = eventsNamed(world, "handover")[2] as Record<string, unknown>;
+    const payload = fixRound.payload as { sha256: string; bytes: number };
+    const text = payloadOf(world, fixRound);
+    expect(text).toBe(world.roleCalls[2]?.instructions ?? "");
+    expect(text).toContain("bad name");
+    expect(payload.bytes).toBe(Buffer.byteLength(text));
+    expect(payload.sha256).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  test("a question to the PO and its answer are both handovers", () => {
+    const world = worldFor({
+      roles: {
+        "code-writer": [{ ...NOOP, reply: QUESTION }],
+        po: [{ reply: { answer: "use a.ts" } }],
+      },
+    });
+    runBuild(world);
+    expect(handovers(world)).toContain("code-writer->po:question");
+    expect(handovers(world)).toContain("po->code-writer:po-answer");
   });
 });
 

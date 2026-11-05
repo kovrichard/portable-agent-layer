@@ -41,6 +41,8 @@ export function summarize(events) {
     questionsToUser: of("question_to_user").length,
     rolesAddedByDiff: countBy(of("roles_added"), "role"),
     roleRuns: countBy(of("role_run"), "role"),
+    handovers: countBy(of("handover"), (event) => `${event.from}->${event.to}`),
+    handoversByReason: countBy(of("handover"), "reason"),
   };
 }
 

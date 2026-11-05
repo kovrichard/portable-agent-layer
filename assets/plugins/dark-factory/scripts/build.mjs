@@ -1,6 +1,7 @@
 import { waitForCi } from "./ci-wait.mjs";
 import { startCoach } from "./coach.mjs";
 import { runCheck, runGate } from "./gate.mjs";
+import { recordHandover } from "./handover.mjs";
 import {
   appendEvent,
   isMain,
@@ -94,9 +95,15 @@ function poReply(outcome, question) {
 }
 
 function askPo(run, role, question) {
+  const instructions = poInstructions(role, question);
+  recordHandover(
+    run.id,
+    { from: role, to: "po", reason: "question", payload: instructions },
+    run.env
+  );
   const outcome = run.effects.runRoleHeadless(run.id, "po", {
     env: run.env,
-    instructions: poInstructions(role, question),
+    instructions,
   });
   const reply = poReply(outcome, question);
   appendEvent(
@@ -112,11 +119,17 @@ function askPo(run, role, question) {
 }
 
 function resumeWithAnswer(run, role, outcome, model, question, answer) {
+  const instructions = answerPrompt(question, answer);
+  recordHandover(
+    run.id,
+    { from: "po", to: role, reason: "po-answer", payload: instructions },
+    run.env
+  );
   const resumed = run.effects.runRoleHeadless(run.id, role, {
     env: run.env,
     model,
     resumeSessionId: outcome.sessionId,
-    instructions: answerPrompt(question, answer),
+    instructions,
   });
   return isUsable(resumed) ? { outcome: resumed } : { failed: resumed.error };
 }
@@ -139,8 +152,18 @@ function afterQuestion(run, role, outcome, model) {
   return answerQuestion(run, role, outcome, model, question);
 }
 
-function runRole(run, role, instructions, { tier } = {}) {
+function handOver(run, role, reason, instructions) {
+  recordHandover(
+    run.id,
+    { from: run.lastRole ?? "po", to: role, reason, payload: instructions },
+    run.env
+  );
+  run.lastRole = role;
+}
+
+function runRole(run, role, instructions, { tier, reason = "pipeline" } = {}) {
   const model = tier ? TIER_MODELS[tier] : undefined;
+  handOver(run, role, reason, instructions);
   appendEvent(
     { event: "role_run", task: run.id, role, model: model ?? "default" },
     run.env
@@ -201,12 +224,13 @@ function gateFor(run, step) {
   );
 }
 
-function untilGreen(run, ladder, instructions) {
+function untilGreen(run, ladder, instructions, reason) {
   let failure = null;
   for (const [index, step] of ladder.entries()) {
     recordEscalation(run, ladder[index - 1], step);
     const result = runRole(run, step.role, withFailure(instructions, failure), {
       tier: step.tier,
+      reason: failure ? "gate-failed" : reason,
     });
     if (result.waitingOn) return { waitingOn: result.waitingOn };
     const gate = gateFor(run, step);
@@ -299,7 +323,8 @@ function codeStep(run) {
   const coded = untilGreen(
     run,
     CODE_LADDER,
-    `Implement the change described in ${codeSource(run.before)}. Commit the uncommitted tests already in the worktree together with your code; every commit goes through the repo's hooks.`
+    `Implement the change described in ${codeSource(run.before)}. Commit the uncommitted tests already in the worktree together with your code; every commit goes through the repo's hooks.`,
+    "pipeline"
   );
   if (coded.waitingOn) return waiting(coded.waitingOn);
   if (!coded.passed)
@@ -325,7 +350,8 @@ function reviewFindingsStep(run, findings) {
   const fixed = untilGreen(
     run,
     FIX_LADDER,
-    `Fix these review findings:\n${JSON.stringify(findings, null, 2)}`
+    `Fix these review findings:\n${JSON.stringify(findings, null, 2)}`,
+    "review-findings"
   );
   return fixStop(fixed, "review findings");
 }
@@ -373,7 +399,8 @@ function testerStep(run) {
   const fixed = untilGreen(
     run,
     FIX_LADDER,
-    `The tester found unmet criteria in the running app:\n${JSON.stringify(unmet, null, 2)}`
+    `The tester found unmet criteria in the running app:\n${JSON.stringify(unmet, null, 2)}`,
+    "unmet-criteria"
   );
   return fixStop(fixed, "tester findings");
 }
@@ -423,7 +450,8 @@ function ciFixStep(run, ci) {
   const fixed = untilGreen(
     run,
     CI_FIX_LADDER,
-    `CI failed on the pull request: ${ciSummary(ci)}. Read the failing logs with gh run view and fix the cause.`
+    `CI failed on the pull request: ${ciSummary(ci)}. Read the failing logs with gh run view and fix the cause.`,
+    "ci-failed"
   );
   return fixStop(fixed, "CI failures");
 }
