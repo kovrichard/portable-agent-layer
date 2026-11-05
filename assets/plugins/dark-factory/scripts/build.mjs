@@ -490,9 +490,66 @@ const STEPS = [
   readyStep,
 ];
 
+const RESUMABLE_STEPS = new Map([
+  [codeStep, "code"],
+  [reviewStep, "review"],
+  [testerStep, "tester"],
+]);
+const RESUME_ORDER = ["code", "review", "tester"];
+
+function gitOutput(run, args) {
+  const result = run.effects.spawnTool("git", args, { cwd: run.worktree, env: run.env });
+  return result.status === 0 ? result.stdout.trim() : null;
+}
+
+function worktreeHead(run) {
+  return gitOutput(run, ["rev-parse", "HEAD"]);
+}
+
+function isWorktreeClean(run) {
+  return gitOutput(run, ["status", "--porcelain"]) === "";
+}
+
+function latestStepDone(run) {
+  return readEvents(run.env)
+    .filter((event) => event.event === "step_done" && event.task === run.id)
+    .at(-1);
+}
+
+function resumePoint(run) {
+  const head = worktreeHead(run);
+  const latest = latestStepDone(run);
+  const through =
+    head !== null && latest?.head === head && isWorktreeClean(run)
+      ? RESUME_ORDER.indexOf(latest.step)
+      : -1;
+  return { head, through };
+}
+
+function finishedAtHead(run, name) {
+  run.resume ??= resumePoint(run);
+  return RESUME_ORDER.indexOf(name) <= run.resume.through;
+}
+
+function recordStep(run, event, name, head) {
+  appendEvent({ event, task: run.id, step: name, head }, run.env);
+}
+
+function runStep(run, step) {
+  const name = RESUMABLE_STEPS.get(step);
+  if (!name) return step(run);
+  if (finishedAtHead(run, name)) {
+    recordStep(run, "step_skipped", name, run.resume.head);
+    return null;
+  }
+  const stop = step(run);
+  if (!stop) recordStep(run, "step_done", name, worktreeHead(run));
+  return stop;
+}
+
 function pipeline(run) {
   for (const step of STEPS) {
-    const stop = step(run);
+    const stop = runStep(run, step);
     if (stop) return stop;
   }
   return stuck("the pipeline ended without an outcome");
