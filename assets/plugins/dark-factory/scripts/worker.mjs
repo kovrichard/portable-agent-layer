@@ -81,11 +81,10 @@ function tryCreateLock(files) {
 
 function claimLock(files) {
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    const holder = liveLockPid(files.dir);
-    if (holder !== null) return { claimed: false, pid: holder };
-    if (tryCreateLock(files)) return { claimed: true, pid: process.pid };
+    if (liveLockPid(files.dir) !== null) return false;
+    if (tryCreateLock(files)) return true;
   }
-  return { claimed: false, pid: liveLockPid(files.dir) };
+  return false;
 }
 
 export function writeResult(resultFile, result) {
@@ -171,9 +170,12 @@ function saveStuckStatus(taskId, env) {
 }
 
 function workerDied(taskId, files, env) {
-  saveStuckStatus(taskId, env);
+  const statusError = saveStuckStatus(taskId, env);
   rmSync(files.lock, { force: true });
-  return stuckResult(taskId, WORKER_DIED);
+  const message = statusError
+    ? `${WORKER_DIED}; could not set the task status to stuck: ${statusError}`
+    : WORKER_DIED;
+  return stuckResult(taskId, message);
 }
 
 async function waitForResult(taskId, files, env) {
@@ -192,8 +194,7 @@ export async function superviseBuild(taskId, { env = process.env } = {}) {
       taskId,
       `task ${taskId} does not exist: ${files.dir} has no task.json`
     );
-  const lock = claimLock(files);
-  if (lock.claimed) {
+  if (claimLock(files)) {
     const failed = startWorker(taskId, files, env);
     if (failed) return failed;
   }
