@@ -41,6 +41,11 @@
         "type": "command",
         "command": "bun .agents/hooks/lf.ts",
         "timeoutSec": 120
+      },
+      {
+        "type": "command",
+        "command": "bun .agents/hooks/exact-versions.ts",
+        "timeoutSec": 120
       }
     ]
   }
