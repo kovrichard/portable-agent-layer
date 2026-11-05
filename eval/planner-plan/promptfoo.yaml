@@ -58,8 +58,8 @@ tests:
       spec: file://cases/coach-learns/spec.md
       code: file://cases/coach-learns/code.md
       hazard:
-        - '(no|not|never|must not|nothing)[^\n]{0,80}(coach_started|start(ed)? event|other events?|new events?|extra events?)'
-        - 'coach_started[^\n]{0,80}(not|no criterion|unrequested)'
+        - '\b(no|not|never|must not|nothing)\b[^\n]{0,80}\bcoach_started\b'
+        - '\bcoach_started\b[^\n]{0,80}\b(not|no criterion|unrequested|unasked|not asked)\b'
 
   - description: coach — no undocumented --add-dir
     vars:
@@ -94,16 +94,19 @@ tests:
       spec: file://cases/coach-learns/spec.md
       code: file://cases/coach-learns/code.md
       hazard:
-        - '(lock|atomic|rename|concurren|overlap|race|two runs)[^\n]{0,200}findings'
-        - 'findings[^\n]{0,200}(lock|atomic|concurren|overlap|race|two runs)'
+        - '\b(lock|locks|locking|atomic(ally)?|atomic write)\b[^\n]{0,200}findings\.jsonl[^\n]{0,200}\b(overlap\w*|concurren\w*|two runs|simultaneous)\b'
+        - 'findings\.jsonl[^\n]{0,200}\b(overlap\w*|concurren\w*|two runs|simultaneous)\b[^\n]{0,200}\b(lock|locks|locking|atomic(ally)?)\b'
+        - '\b(overlap\w*|concurren\w*|two runs|simultaneous)\b[^\n]{0,200}\b(lock|locks|locking|atomic(ally)?)\b[^\n]{0,200}findings\.jsonl'
+        - '\b(overlap\w*|concurren\w*|two runs|simultaneous)\b[^\n]{0,200}findings\.jsonl[^\n]{0,200}\b(lock|locks|locking|atomic(ally)?)\b'
 
   - description: coach — approve checks status inside the lock
     vars:
       spec: file://cases/coach-learns/spec.md
       code: file://cases/coach-learns/code.md
       hazard:
-        - 'approv[^\n]{0,200}(lock|race|concurren|atomic|re-?read|inside)'
-        - '(lock|race|concurren|atomic)[^\n]{0,200}approv'
+        - '\bapprov\w*[^\n]{0,200}\b(status|state)\b[^\n]{0,120}\b(inside|within|under|while holding|after taking)\b[^\n]{0,40}\block\b'
+        - '\bapprov\w*[^\n]{0,200}\b(inside|within|under|while holding)\b[^\n]{0,40}\block\b[^\n]{0,120}\b(status|state)\b'
+        - '\b(status|state)\b[^\n]{0,120}\b(checked|check|read|re-?read)\b[^\n]{0,60}\b(inside|within|under)\b[^\n]{0,40}\block\b[^\n]{0,200}\bapprov'
 
   - description: coach — gh pr view once, not on every run
     vars:

@@ -192,3 +192,8 @@ test("criterion 7: control fails a plan that adds locking or once-per-task bookk
 test("criterion 7: control passes any plan for a non-control case", () => {
   expect(passed(run("control", "Step 1: take a lock.", { control: false }))).toBe(true);
 });
+
+test("criterion 8: package.json has the eval:planner-plan script", () => {
+  const pkg = JSON.parse(readFileSync(resolve(ROOT, "package.json"), "utf8"));
+  expect(pkg.scripts["eval:planner-plan"]).toBe("bun eval/run.ts planner-plan");
+});
