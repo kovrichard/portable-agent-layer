@@ -3,7 +3,8 @@ import { tmpdir } from "node:os";
 import { basename, resolve } from "node:path";
 import { removeOnceReleased } from "./remove-once-released";
 
-export const TEST_ROOT = resolve(import.meta.dir, "../../.test");
+export const TEST_ROOT =
+  process.env.PAL_TEST_ROOT ?? resolve(import.meta.dir, "../../.test");
 
 function suiteName(file: string): string {
   return basename(file).replace(/\.test\.ts$/, "");
