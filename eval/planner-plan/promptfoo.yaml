@@ -74,16 +74,18 @@ tests:
       spec: file://cases/coach-verdict/spec.md
       code: file://cases/coach-verdict/code.md
       hazard:
-        - 'reviewed[^\n]{0,160}missing'
-        - 'missing[^\n]{0,160}reviewed'
-        - '(same|consistent|agree|match)[^\n]{0,80}(reviewed|expected)[^\n]{0,80}(missing|count)'
+        - 'reviewed[^\n]{0,120}(exclud|minus|not count|never count|only count|except|without)[^\n]{0,80}missing'
+        - '(exclud|minus|not count|never count|except|without)[^\n]{0,80}missing[^\n]{0,120}reviewed'
+        - 'expected\s*(-|minus)\s*missing'
+        - '(same|consistent|agree|match)[^\n]{0,80}(reviewed|expected)[^\n]{0,80}missing (list|inputs|set)'
 
   - description: PR attach — dedupe per node and PR
     vars:
       spec: file://cases/pr-attach/spec.md
       code: file://cases/pr-attach/code.md
       hazard:
-        - '(node|nodeId)[^\n]{0,40}(and|,|\+|/)[^\n]{0,10}(pr|url)\b'
+        - '(dedup|duplicate|already attached|key)[^\n]{0,80}(node|nodeId)[^\n]{0,30}(and|\+|plus|/)[^\n]{0,10}(pr|url)\b'
+        - '(dedup|duplicate|already attached|key)[^\n]{0,80}(pr|url)[^\n]{0,30}(and|\+|plus|/|per|on)[^\n]{0,10}(node|nodeId)'
         - '(per|same|that|each)[^\n]{0,10}node[^\n]{0,80}(again|already|duplicate|dedup)'
         - '(already|duplicate|dedup)[^\n]{0,80}(on|to|for|in) (that|the same|this) node'
 
