@@ -21,9 +21,21 @@ function sectionAfter(output, headingPattern) {
   return body.join("\n");
 }
 
+const NEGATION = /\b(no|not|never|without|n't)\b/i;
+const STEP_LINE = /^\s*(\d+[.)]|[-*])\s/;
+
+function addedByStep(output, pattern) {
+  return output
+    .split("\n")
+    .some((line) => STEP_LINE.test(line) && pattern.test(line) && !NEGATION.test(line));
+}
+
 function inventedWork(output, runtimeModel) {
-  if (LOCK.test(output)) return "adds a lock";
-  if (ONCE_PER.test(output.replace(runtimeModel, ""))) return "adds once-per bookkeeping";
+  const mustNotAdd = sectionAfter(output, SECTIONS["must not add"]);
+  const planned = mustNotAdd ? output.replace(mustNotAdd, "") : output;
+  if (addedByStep(planned, LOCK)) return "adds a lock";
+  if (addedByStep(planned.replace(runtimeModel, ""), ONCE_PER))
+    return "adds once-per bookkeeping";
   const filled = runtimeModel.split("\n").filter((line) => line.trim() !== "");
   if (filled.length > 6) return "runtime model longer than six lines";
   if (!NO_SHARED_STATE.test(runtimeModel))
