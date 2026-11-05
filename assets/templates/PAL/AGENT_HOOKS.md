@@ -2,7 +2,7 @@
 
 Where each agent PAL supports documents its hooks and settings, where PAL installs into it, and how a pre-tool hook blocks a call. Read this before changing a hook, and check the agent's own page before relying on a detail; agents change their hook contracts often.
 
-Links last checked: 2026-11-05.
+Links last checked: 2026-11-05. Paths under `src/` and `assets/` are relative to the PAL package.
 
 ## The seven surfaces
 
