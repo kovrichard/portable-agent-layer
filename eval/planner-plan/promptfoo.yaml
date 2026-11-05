@@ -1,0 +1,127 @@
+# dark-factory planner plan evaluation
+#
+# Evaluates the planner agent (assets/plugins/dark-factory/agents/planner.md)
+# against the prompt it replaced (baseline-planner.md). Each case is a real
+# spec whose built code drew a reviewer finding (spec drift, shared state or
+# repeated work), with an excerpt of the code at the task's base commit. A
+# plan passes a case when it names the hazard before any code exists. One
+# control case, a refactor with neither, catches a prompt that invents work.
+#
+# Pass bar, written before the first run: in each of 2 repeats, current names
+# the hazard in at least 7 of 9 cases and in at least 3 more cases than
+# baseline; every current plan has all three sections (criteria map, must not
+# add, runtime model); the control plan adds no locking, no once-per-task
+# bookkeeping and no runtime-model steps beyond saying the change has no
+# shared state.
+# Kill: current names fewer hazards than baseline, or the control case gains
+# invented work.
+#
+# Run:
+#   bun run eval:planner-plan --repeat 2
+
+description: dark-factory planner — plans name spec drift, shared state and repeated work
+
+prompts:
+  - id: file://prompt.js:current
+    label: current
+  - id: file://prompt.js:baseline
+    label: baseline
+
+providers:
+  - id: file://../lib/claude-cli.js
+    label: opus-5-5
+    config: { model: claude-opus-5-5, timeoutMs: 600000 }
+
+defaultTest:
+  assert:
+    - type: javascript
+      value: file://check.js:hazard
+      description: Names the case's hazard
+    - type: javascript
+      value: file://check.js:sections
+      description: Has the three sections
+    - type: javascript
+      value: file://check.js:control
+      description: Control adds no invented work
+
+tests:
+  - description: coach criterion 9 — any added name, not only distinctive ones
+    vars:
+      spec: file://cases/coach-learns/spec.md
+      code: file://cases/coach-learns/code.md
+      hazard:
+        - '\bany\b[^\n]{0,60}names?\b[^\n]{0,160}(literal|every|all|even short|even common|not only|not just|narrow)'
+        - '(distinctive|short|common|generic)[^\n]{0,40}names?[^\n]{0,160}(question|PO|literal|still)'
+
+  - description: coach — no unrequested start event
+    vars:
+      spec: file://cases/coach-learns/spec.md
+      code: file://cases/coach-learns/code.md
+      hazard:
+        - '(no|not|never|must not|nothing)[^\n]{0,80}(coach_started|start(ed)? event|other events?|new events?|extra events?)'
+        - 'coach_started[^\n]{0,80}(not|no criterion|unrequested)'
+
+  - description: coach — no undocumented --add-dir
+    vars:
+      spec: file://cases/coach-learns/spec.md
+      code: file://cases/coach-learns/code.md
+      hazard:
+        - 'add-dir[^\n]{0,160}(only|not|no |never|document|README|criterion)'
+        - '(no|not|never|must not)[^\n]{0,80}(add-dir|extra director|additional director)'
+
+  - description: coach verdict — reviewed count agrees with the missing list
+    vars:
+      spec: file://cases/coach-verdict/spec.md
+      code: file://cases/coach-verdict/code.md
+      hazard:
+        - 'reviewed[^\n]{0,160}missing'
+        - 'missing[^\n]{0,160}reviewed'
+        - '(same|consistent|agree|match)[^\n]{0,80}(reviewed|expected)[^\n]{0,80}(missing|count)'
+
+  - description: PR attach — dedupe per node and PR
+    vars:
+      spec: file://cases/pr-attach/spec.md
+      code: file://cases/pr-attach/code.md
+      hazard:
+        - '(node|nodeId)[^\n]{0,40}(and|,|\+|/)[^\n]{0,10}(pr|url)\b'
+        - '(per|same|that|each)[^\n]{0,10}node[^\n]{0,80}(again|already|duplicate|dedup)'
+        - '(already|duplicate|dedup)[^\n]{0,80}(on|to|for|in) (that|the same|this) node'
+
+  - description: coach — findings.jsonl written by overlapping runs
+    vars:
+      spec: file://cases/coach-learns/spec.md
+      code: file://cases/coach-learns/code.md
+      hazard:
+        - '(lock|atomic|rename|concurren|overlap|race|two runs)[^\n]{0,200}findings'
+        - 'findings[^\n]{0,200}(lock|atomic|concurren|overlap|race|two runs)'
+
+  - description: coach — approve checks status inside the lock
+    vars:
+      spec: file://cases/coach-learns/spec.md
+      code: file://cases/coach-learns/code.md
+      hazard:
+        - 'approv[^\n]{0,200}(lock|race|concurren|atomic|re-?read|inside)'
+        - '(lock|race|concurren|atomic)[^\n]{0,200}approv'
+
+  - description: coach — gh pr view once, not on every run
+    vars:
+      spec: file://cases/coach-learns/spec.md
+      code: file://cases/coach-learns/code.md
+      hazard:
+        - 'gh pr view[^\n]{0,160}(once|cache|every|each|record|remember|grows?)'
+        - '(cache|memoi[sz]|remember|record)[^\n]{0,120}(merged|merge state|pr state)'
+        - '(merge|pr)[^\n]{0,80}(once per task|only once|grows? with history)'
+
+  - description: instructions — import missing recorded once per task
+    vars:
+      spec: file://cases/instructions/spec.md
+      code: file://cases/instructions/code.md
+      hazard:
+        - 'instructions_import_missing[^\n]{0,200}(once|already|dedup|per task|first)'
+        - '(once per task|only once|already recorded|dedup|first role)[^\n]{0,200}(import|instructions)'
+
+  - description: control — rename 2026-10-19-rename-the-work-tree-to-progress-tree with no shared state or per-call work
+    vars:
+      spec: file://cases/control-rename/spec.md
+      code: file://cases/control-rename/code.md
+      control: true

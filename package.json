@@ -75,6 +75,7 @@
     "eval:reaction": "bun eval/run.ts reaction",
     "eval:correction-check": "bun eval/run.ts correction-check",
     "eval:po-answer": "bun eval/run.ts po-answer",
+    "eval:planner-plan": "bun eval/run.ts planner-plan",
     "eval:entity-extraction": "bun eval/entity-extraction/build-prompt.ts && bun eval/run.ts entity-extraction",
     "eval:correction-kind": "bun eval/correction-kind/build-prompt.ts && bun eval/run.ts correction-kind",
     "eval:correction-kind:test": "bun eval/correction-kind/test-set.ts",

@@ -22,6 +22,7 @@ class ClaudeCliProvider {
   constructor(options = {}) {
     this.model = options.config?.model ?? DEFAULT_MODEL;
     this.label = options.label ?? this.model;
+    this.timeoutMs = options.config?.timeoutMs ?? TIMEOUT_MS;
   }
 
   id() {
@@ -45,7 +46,7 @@ class ClaudeCliProvider {
       {
         input: prompt,
         encoding: "utf-8",
-        timeout: TIMEOUT_MS,
+        timeout: this.timeoutMs,
         env: { ...process.env, CLAUDECODE: undefined },
       }
     );
