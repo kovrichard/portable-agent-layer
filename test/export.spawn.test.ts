@@ -22,6 +22,7 @@ function palCli(args: string[], opts: { input?: string } = {}) {
 }
 
 const TEST_HOME = testHome(import.meta.file);
+const childHome = () => process.env.HOME ?? homedir();
 
 beforeAll(() => {
   removeOnceReleased(TEST_HOME);
@@ -268,7 +269,7 @@ describe("a tilde in the path positional", () => {
   test("export names the file under the home, not under a directory called ~", () => {
     const r = palCli(["export", "--dry-run", "~/pal-export-dest"]);
     expect(r.status).toBe(0);
-    expect(r.stdout).toContain(resolve(homedir(), "pal-export-dest"));
+    expect(r.stdout).toContain(resolve(childHome(), "pal-export-dest"));
     expect(r.stdout).not.toContain("~/pal-export-dest");
   });
 
@@ -281,7 +282,7 @@ describe("a tilde in the path positional", () => {
     try {
       palCli(["import", "~/pal-import-nowhere.zip"], { input: "n\n" });
       const contents = readFileSync(log, "utf-8");
-      expect(contents).toContain(resolve(homedir(), "pal-import-nowhere.zip"));
+      expect(contents).toContain(resolve(childHome(), "pal-import-nowhere.zip"));
     } finally {
       removeOnceReleased(marker);
       removeOnceReleased(log);

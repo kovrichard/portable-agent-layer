@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 export const PLUGIN_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 export function factoryHome(env = process.env) {
-  return env.DARK_FACTORY_HOME || join(homedir(), ".dark-factory");
+  return env.DARK_FACTORY_HOME || join(userHome(env), ".dark-factory");
 }
 
 export function taskDir(id, env = process.env) {
