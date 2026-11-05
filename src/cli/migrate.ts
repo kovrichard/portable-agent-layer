@@ -779,8 +779,10 @@ function homeTheFactoryReads(): string | null {
   return pinned && resolve(pinned) !== oldFactoryFolder() ? resolve(pinned) : null;
 }
 
+const userHomeAsSetNow = () => process.env.HOME || process.env.USERPROFILE || homedir();
+
 const newFactoryFolder = () =>
-  homeTheFactoryReads() ?? resolve(homedir(), ".dark-factory");
+  homeTheFactoryReads() ?? resolve(userHomeAsSetNow(), ".dark-factory");
 const oldFactoryEvents = () => resolve(oldFactoryFolder(), "events.jsonl");
 
 function subfoldersOf(dir: string): string[] {

@@ -6,7 +6,10 @@
  * inference dispatcher (e.g. via a fake binary on PATH) opt back in by
  * deleting this env var in their own beforeEach.
  */
+
 import { beforeEach } from "bun:test";
+import { mkdirSync } from "node:fs";
+import { resolve } from "node:path";
 import { guardFile, sharedRepoConfig } from "./lib/repo-config-tripwire";
 import { refuseSubprocessesOutsideSpawnFiles } from "./lib/subprocess-guard";
 import { TEST_ROOT } from "./lib/test-home";
@@ -45,6 +48,15 @@ function detachFromHookRepository() {
 }
 
 detachFromHookRepository();
+
+function keepTestsOutOfTheRealHome() {
+  const home = resolve(TEST_ROOT, "user-home");
+  mkdirSync(home, { recursive: true });
+  process.env.HOME = home;
+  process.env.USERPROFILE = home;
+}
+
+keepTestsOutOfTheRealHome();
 
 function stopGitAtTestHomes() {
   process.env.GIT_CEILING_DIRECTORIES = TEST_ROOT;
