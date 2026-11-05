@@ -31,6 +31,8 @@ function errorText(error: unknown): string {
  * runs and settles into one line; anywhere else it prints one plain line when done.
  */
 export class LiveRail {
+  private failedNotes = 0;
+
   constructor(
     private readonly style: Style,
     private readonly write: (text: string) => void = (text) => {
@@ -42,10 +44,18 @@ export class LiveRail {
     this.write(`${text}\n`);
   }
 
+  get reportedFailure(): boolean {
+    return this.failedNotes > 0;
+  }
+
   async step(name: string, pending: string, work: Work): Promise<Done | null> {
-    return this.style.term.rich
-      ? this.richStep(name, pending, work)
-      : this.plainStep(name, work);
+    const done = this.style.term.rich
+      ? await this.richStep(name, pending, work)
+      : await this.plainStep(name, work);
+    this.failedNotes += (done?.notes ?? []).filter(
+      (note) => note.level === "fail"
+    ).length;
+    return done;
   }
 
   private noteLines(note: Note): string[] {

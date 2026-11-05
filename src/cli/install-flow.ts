@@ -329,5 +329,13 @@ export async function runInstall(plan: InstallPlan): Promise<number> {
   if (plan.updatedFrom) await showWhatsNew(rail, style, plan.updatedFrom, plan.version);
   closeRail(rail, style, report);
   if (plan.kind === "init") showNextSteps(rail, style);
+  return installExitCode(rail.reportedFailure, report);
+}
+
+export function installExitCode(
+  stepFailed: boolean,
+  report: Pick<DoctorReport, "findings"> | null
+): number {
+  if (stepFailed) return 1;
   return report ? doctorExitCode(report.findings) : 0;
 }

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { LiveRail, stepTime } from "../src/cli/ui/live";
+import { installExitCode } from "../src/cli/install-flow";
+import { LiveRail, type Note, stepTime } from "../src/cli/ui/live";
 import { createStyle } from "../src/cli/ui/style";
 import type { Terminal } from "../src/cli/ui/terminal";
 
@@ -86,6 +87,43 @@ describe("a step, at a terminal", () => {
 
     await expect(failing).rejects.toThrow("offline");
     expect(finalLines(output())).toEqual(["✖  Download     offline"]);
+  });
+});
+
+describe("a failure a step reports in its notes", () => {
+  const stepWith = (level: Note["level"]) => () => ({
+    detail: ["done"],
+    notes: [{ level, text: "something" }],
+  });
+
+  test.each([true, false])("marks the rail, rich: %p", async (rich) => {
+    const { rail } = railOn({ rich });
+    expect(rail.reportedFailure).toBe(false);
+
+    await rail.step("Claude Code", "installing…", stepWith("warn"));
+    expect(rail.reportedFailure).toBe(false);
+
+    await rail.step("Cursor", "installing…", stepWith("fail"));
+    await rail.step("Shared", "indexing…", () => null);
+    expect(rail.reportedFailure).toBe(true);
+  });
+});
+
+describe("the exit code of an install", () => {
+  const failing = { findings: [{ severity: "fail" }] } as unknown as Parameters<
+    typeof installExitCode
+  >[1];
+  const passing = { findings: [] };
+
+  test("a step that reported a failure is 1, even when the doctor is happy", () => {
+    expect(installExitCode(true, passing)).toBe(1);
+    expect(installExitCode(true, null)).toBe(1);
+  });
+
+  test("otherwise it is the doctor's verdict, or 0 when the doctor was skipped", () => {
+    expect(installExitCode(false, passing)).toBe(0);
+    expect(installExitCode(false, failing)).toBe(1);
+    expect(installExitCode(false, null)).toBe(0);
   });
 });
 

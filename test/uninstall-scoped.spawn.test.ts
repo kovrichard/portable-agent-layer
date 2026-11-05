@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
@@ -27,13 +27,19 @@ const env = {
 const SPAWN_TIMEOUT = 90_000;
 const INSTALL_THEN_UNINSTALL = 2 * SPAWN_TIMEOUT;
 
-function pal(...args: string[]) {
-  const result = spawnSync("bun", ["run", CLI, "cli", ...args], {
+const runPal = (...args: string[]) =>
+  spawnSync("bun", ["run", CLI, "cli", ...args], {
     env,
     encoding: "utf-8",
     timeout: SPAWN_TIMEOUT,
   });
-  expect(result.status).toBe(0);
+
+function pal(...args: string[]) {
+  const result = runPal(...args);
+  if (result.status !== 0)
+    throw new Error(
+      `pal ${args.join(" ")} exited ${result.status}\n${result.stdout}\n${result.stderr}`
+    );
 }
 
 const shippedSkills = () =>
@@ -86,3 +92,25 @@ describe("a per-agent uninstall", () => {
     INSTALL_THEN_UNINSTALL
   );
 });
+
+describe.skipIf(process.platform === "win32")(
+  "an install that cannot link a skill",
+  () => {
+    test(
+      "exits non-zero and names the skill and the error",
+      () => {
+        const store = at(".pal", "skills");
+        mkdirSync(store, { recursive: true });
+        chmodSync(store, 0o500);
+        try {
+          const result = runPal("install", "--claude");
+          expect(result.status).toBe(1);
+          expect(result.stdout + result.stderr).toMatch(/Could not install skill \S+ — /);
+        } finally {
+          chmodSync(store, 0o700);
+        }
+      },
+      SPAWN_TIMEOUT
+    );
+  }
+);
