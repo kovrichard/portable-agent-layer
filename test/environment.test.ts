@@ -28,7 +28,19 @@ beforeAll(() => {
   removeOnceReleased(TEST_HOME);
   mkdirSync(resolve(TEST_HOME, "memory", "state"), { recursive: true });
   process.env.PAL_HOME = TEST_HOME;
+  for (const [name, dir] of Object.entries(AGENT_DIRS))
+    process.env[name] = resolve(TEST_HOME, "agents", dir);
 });
+
+const AGENT_DIRS = {
+  PAL_CLAUDE_DIR: "claude",
+  PAL_OPENCODE_DIR: "opencode",
+  PAL_CURSOR_DIR: "cursor",
+  PAL_COPILOT_DIR: "copilot",
+  PAL_CODEX_DIR: "codex",
+  PAL_GEMINI_DIR: "gemini",
+  PAL_AGENTS_DIR: "agents-dir",
+};
 
 const EVERY_COMMAND = [
   "sh",
@@ -280,6 +292,8 @@ describe("pal cli env", () => {
   });
 
   test("--refresh detects again and rewrites the agents' instructions", () => {
+    expect(palPlatform.claudeDir().startsWith(TEST_HOME)).toBe(true);
+    expect(palPlatform.opencodeDir().startsWith(TEST_HOME)).toBe(true);
     refreshEnvironment(fakeProbe({}));
     const env = currentEnvironment(true, fakeProbe({ deno: "deno 2.1.4" }));
     expect(readEnvironment()).toEqual(env);
