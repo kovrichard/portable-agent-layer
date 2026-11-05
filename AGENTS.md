@@ -75,6 +75,7 @@ Each gate, its script, and its wrapper in `.agents/hooks/`:
 | `bun run madge`            | Circular-import detection          | `madge.ts`        |
 | `bun run lf`               | CRLF guard on tracked files        | `lf.ts`           |
 | `bun run lf:fix`           | Converts offenders to LF           | (manual)          |
+| `bun run exact-versions`   | Every dependency pinned exactly (no `^`, `~`, `latest`) | `exact-versions.ts` |
 | `bun run secretlint`       | Secret scanning                    | `secretlint.ts`   |
 | `bun run test`             | Bun test runner (randomized)       | (pre-push and CI) |
 | `bun run test:mutate:diff` | Stryker on the changed lines       | (CI on PRs)       |

@@ -9,6 +9,7 @@
     { "name": "klint", "run": "bun run klint" },
     { "name": "madge", "run": "bun run madge" },
     { "name": "lf", "run": "bun run lf" },
+    { "name": "exact-versions", "run": "bun run exact-versions" },
     { "name": "secretlint", "run": "bun run secretlint" },
     { "name": "tests", "run": "bun run test" }
   ],
