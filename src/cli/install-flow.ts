@@ -156,32 +156,22 @@ function noteFor(level: LogLevel, message: string, verbose: boolean): Note | nul
   return verbose ? { level: "info", text } : null;
 }
 
-async function runInstaller(
-  plan: InstallPlan,
-  agent: AgentName,
-  notes: Note[],
-  failures: Note[]
-) {
+async function runInstaller(plan: InstallPlan, agent: AgentName, notes: Note[]) {
   await capturingLog((level, message) => {
     const note = noteFor(level, message, plan.verbose);
     if (note) notes.push(note);
-    if (note?.level === "fail") failures.push(note);
   }, plan.installers[agent]);
 }
 
-async function installOne(
-  plan: InstallPlan,
-  agent: AgentName,
-  failures: Note[]
-): Promise<Done> {
+async function installOne(plan: InstallPlan, agent: AgentName): Promise<Done> {
   const notes: Note[] = [];
-  await runInstaller(plan, agent, notes, failures);
+  await runInstaller(plan, agent, notes);
   return { detail: agentInventory(agent), notes };
 }
 
-async function installAll(plan: InstallPlan, failures: Note[]): Promise<Done> {
+async function installAll(plan: InstallPlan): Promise<Done> {
   const notes: Note[] = [];
-  for (const agent of plan.agents) await runInstaller(plan, agent, notes, failures);
+  for (const agent of plan.agents) await runInstaller(plan, agent, notes);
   return { detail: plan.agents, notes };
 }
 
@@ -306,19 +296,13 @@ function showNextSteps(rail: LiveRail, style: Style): void {
   rail.line();
 }
 
-async function installAgents(
-  rail: LiveRail,
-  plan: InstallPlan,
-  failures: Note[]
-): Promise<void> {
+async function installAgents(rail: LiveRail, plan: InstallPlan): Promise<void> {
   if (plan.kind === "update") {
-    await rail.step("Reinstall", "reinstalling…", () => installAll(plan, failures));
+    await rail.step("Reinstall", "reinstalling…", () => installAll(plan));
     return;
   }
   for (const agent of plan.agents)
-    await rail.step(labelOf(agent), "installing…", () =>
-      installOne(plan, agent, failures)
-    );
+    await rail.step(labelOf(agent), "installing…", () => installOne(plan, agent));
 }
 
 export async function runInstall(plan: InstallPlan): Promise<number> {
@@ -337,8 +321,7 @@ export async function runInstall(plan: InstallPlan): Promise<number> {
   await rail.step("Chromium", "downloading the browser…", downloadChromium);
   if ((await askSetupQuestions()) && style.term.rich) rail.line(railGap(style));
   const docs = await prepareShared();
-  const failures: Note[] = [];
-  await installAgents(rail, plan, failures);
+  await installAgents(rail, plan);
   await rail.step("Shared", "indexing…", () => finishShared(docs));
   await rail.step("Control room", "refreshing…", refreshControlRoom);
   const report =
@@ -346,6 +329,13 @@ export async function runInstall(plan: InstallPlan): Promise<number> {
   if (plan.updatedFrom) await showWhatsNew(rail, style, plan.updatedFrom, plan.version);
   closeRail(rail, style, report);
   if (plan.kind === "init") showNextSteps(rail, style);
-  if (failures.length > 0) return 1;
+  return installExitCode(rail.reportedFailure, report);
+}
+
+export function installExitCode(
+  stepFailed: boolean,
+  report: Pick<DoctorReport, "findings"> | null
+): number {
+  if (stepFailed) return 1;
   return report ? doctorExitCode(report.findings) : 0;
 }

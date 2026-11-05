@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import {
+  chmodSync,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -9,6 +10,7 @@ import {
 } from "node:fs";
 import { resolve } from "node:path";
 import {
+  capturingLog,
   copyPalDocs,
   copySkills,
   copyStatusline,
@@ -184,6 +186,28 @@ describe("shipped skills", () => {
     expect(removed).toHaveLength(count);
     expect(readdirSync(claudeSkills)).toHaveLength(0);
   });
+
+  test.skipIf(process.platform === "win32")(
+    "a skill it cannot link is an error naming the skill, and the rest still run",
+    async () => {
+      const store = resolve(HOME, "skills");
+      mkdirSync(store, { recursive: true });
+      chmodSync(store, 0o500);
+      const logged: { level: string; message: string }[] = [];
+      try {
+        const count = await capturingLog(
+          (level, message) => logged.push({ level, message }),
+          async () => copySkills(resolve(ENV.PAL_CLAUDE_DIR, "skills"))
+        );
+        expect(count).toBe(0);
+      } finally {
+        chmodSync(store, 0o700);
+      }
+      const errors = logged.filter((entry) => entry.level === "error");
+      expect(errors.length).toBeGreaterThan(1);
+      expect(errors[0]?.message).toMatch(/^Could not install skill \S+ — \S/);
+    }
+  );
 
   test("keeps the shared skill store other agents link through", () => {
     const count = copySkills(resolve(ENV.PAL_CLAUDE_DIR, "skills"));
