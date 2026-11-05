@@ -269,7 +269,7 @@ The Copilot CLI drops what its `userPromptSubmitted` hook returns, so that hook 
 
 ### Configuration
 
-Hooks are registered in the agent's settings file during `pal cli install`:
+Hooks are registered in the agent's settings file during `pal cli install`. Each agent's hook docs, settings docs and deny shape are listed in [docs/agent-hooks.md](https://github.com/kovrichard/portable-agent-layer/blob/canary/docs/agent-hooks.md).
 
 ```json
 {
