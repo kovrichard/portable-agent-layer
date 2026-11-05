@@ -406,6 +406,20 @@ describe("event", () => {
     expect(events[0]).not.toHaveProperty("structured");
   });
 
+  test("the reply is kept in a file the event points to, with its hash", () => {
+    fakeClaude({ replyFile: SUCCESS });
+    runRoleHeadless("t1", "reviewer", { env: envWith(bin) });
+    const reply = finishedEvents()[0].reply;
+    expect(reply.file).toBe(join("replies", "001-reviewer.json"));
+    const text = readFileSync(join(home, "tasks", "t1", reply.file), "utf8");
+    expect(JSON.parse(text)).toEqual({
+      result: "ok",
+      structured: { done: true, summary: "ok" },
+    });
+    expect(reply.bytes).toBe(Buffer.byteLength(text));
+    expect(reply.sha256).toMatch(/^[0-9a-f]{64}$/);
+  });
+
   test("a failed run also appends exactly one event, with its error", () => {
     fakeClaude({ stdout: "not json", exitCode: 0 });
     runRoleHeadless("t1", "reviewer", { env: envWith(bin) });
