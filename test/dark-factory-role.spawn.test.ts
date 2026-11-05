@@ -430,14 +430,38 @@ describe("event", () => {
 });
 
 describe("isolation", () => {
-  test("every role runs with no setting sources and the plugin as its only plugin dir", () => {
+  test("every role loads only the repo's setting sources and the plugin as its only plugin dir", () => {
     const env = envWith(bin);
     const task = readTask("t1", env);
     for (const role of Object.keys(ROLE_POLICIES)) {
       const { args } = claudeInvocation(task, role, { env });
-      expect(valueAfter(args, "--setting-sources")).toBe("");
+      expect(valueAfter(args, "--setting-sources")).toBe("project,local");
       expect(valueAfter(args, "--plugin-dir")).toBe(PLUGIN_ROOT);
     }
+  });
+
+  test("a spawned role gets the user's attribution through --settings, without their hooks", () => {
+    const userHomeDir = join(home, "user-home");
+    mkdirSync(join(userHomeDir, ".claude"), { recursive: true });
+    writeFileSync(
+      join(userHomeDir, ".claude/settings.json"),
+      JSON.stringify({
+        attribution: { commit: "Co-authored by Jarvis" },
+        hooks: { Stop: [] },
+        permissions: { allow: ["Bash(touch *)"] },
+      })
+    );
+    fakeClaude({ replyFile: SUCCESS });
+    const env: Record<string, string | undefined> = {
+      ...envWith(bin),
+      HOME: userHomeDir,
+    };
+    delete env.CLAUDE_CONFIG_DIR;
+    runRoleHeadless("t1", "reviewer", { env });
+    const { argv } = recorded();
+    expect(valueAfter(argv, "--setting-sources")).toBe("project,local");
+    const passed = JSON.parse(readFileSync(valueAfter(argv, "--settings"), "utf8"));
+    expect(passed).toEqual({ attribution: { commit: "Co-authored by Jarvis" } });
   });
 
   test("the plugin dir can be pointed elsewhere", () => {
@@ -447,11 +471,11 @@ describe("isolation", () => {
     expect(valueAfter(args, "--plugin-dir")).toBe("/elsewhere");
   });
 
-  test("a spawned role receives an empty --setting-sources value and the plugin dir", () => {
+  test("a spawned role loads only the repo's settings sources and the plugin dir", () => {
     fakeClaude({ replyFile: SUCCESS });
     runRoleHeadless("t1", "reviewer", { env: envWith(bin) });
     const { argv } = recorded();
-    expect(valueAfter(argv, "--setting-sources")).toBe("");
+    expect(valueAfter(argv, "--setting-sources")).toBe("project,local");
     expect(valueAfter(argv, "--plugin-dir")).toBe(PLUGIN_ROOT);
   });
 });

@@ -27,7 +27,7 @@ const GIT_ENV = {
 };
 
 const NOOP = { write: {}, commit: false };
-const NOISE = new Set(["role_finished", "gate_check", "handover"]);
+const NOISE = new Set(["role_finished", "role_settings", "gate_check", "handover"]);
 
 type Step = {
   shell?: string;
@@ -389,7 +389,7 @@ describe("a whole feature run", () => {
     runBuild();
     expect(calls().length).toBeGreaterThan(0);
     for (const call of calls()) {
-      expect(valueAfter(call.argv, "--setting-sources")).toBe("");
+      expect(valueAfter(call.argv, "--setting-sources")).toBe("project,local");
       expect(valueAfter(call.argv, "--plugin-dir")).toBe(PLUGIN_ROOT);
       expect(call.argv).toContain(`dark-factory:${call.role}`);
       expect(call.stdin.startsWith(`Task ${TASK}:`)).toBe(true);
