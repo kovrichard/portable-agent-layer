@@ -27,7 +27,7 @@ The PO checks for these before it takes a request, and every build checks again 
 
 Run `/dark-factory:po` and say what you want. The PO reads the code first and asks you, in one batch with a recommended answer for each, only what the code and what it knows about you cannot settle. It writes a spec with acceptance criteria and starts the build: your request is the go, the factory goes as far as an open pull request, and merging stays with you. Ask to see the spec first if you want to. You hear back when the pull request is ready, or, rarely, when the factory needs an answer only you can give.
 
-The build is a plain Node program, `scripts/build.mjs`, that the PO starts in the background. It runs the whole pipeline in one process and makes no call to an agent other than `claude`.
+The build is a plain Node program, `scripts/build.mjs`, that the PO starts in the background. The command starts the pipeline in a detached worker process (on Linux through `systemd-run --user --scope` when available, so it has its own cgroup scope) and waits for it; the build keeps running if the session ends. It still makes no call to an agent other than `claude`.
 
 ### From a terminal or cron
 
@@ -41,6 +41,10 @@ Inside Claude Code the plugin folder is `${CLAUDE_PLUGIN_ROOT}`.
 - It prints one JSON line, `{task, status, message, pr}`.
 - It exits 0 for ready, 1 for stuck and 3 for waiting.
 - A rerun after an answer goes in the spec's **Decisions** section, and the rerun continues the task.
+- The worker writes its output to `tasks/<id>/build.log` and its outcome to `tasks/<id>/result.json`; `tasks/<id>/build.lock` holds its pid.
+- Running the same command while the build runs waits for it and prints its result; running it after the worker died resumes it.
+- A rerun on a clean worktree skips the code, review and tester steps already finished at its current commit.
+- `node scripts/task.mjs show <id>` tells where it is.
 
 ## Roles
 
@@ -103,7 +107,7 @@ Every step appends one event to `$DARK_FACTORY_HOME/events.jsonl`, and the event
 
 Every role start appends `handover` with `from`, `to` and the `reason`: `pipeline`, `gate-failed`, `review-findings`, `unmet-criteria`, `ci-failed`, `question` or `po-answer`. The instructions the role received are saved as `tasks/<task>/handovers/NNN-<from>-to-<to>.md`, and the event carries the file, its `sha256` and its `bytes`. A role's reply, its `result` and `structured` output, is saved as `tasks/<task>/replies/NNN-<role>.json`, and `role_finished` points to it in `reply`, so a review finding or an unmet criterion outlives the transcript.
 
-Every role run appends `role_finished` with its cost and tokens, and the red-test proof appends `tests_red` with the exit code and the failing count. Every build appends `run_finished` with the outcome, the total `costUsd`, the total tokens, the number of role runs and `wallMs`. `node scripts/task.mjs show <id>` prints the task with its latest step.
+Every role run appends `role_finished` with its cost and tokens, and the red-test proof appends `tests_red` with the exit code and the failing count. Every build appends `run_finished` with the outcome, the total `costUsd`, the total tokens, the number of role runs and `wallMs`. The worker appends `run_started` with its `pid` and `isolation` (`systemd-scope` or `detached`); each finished code, review and tester step appends `step_done` with the step and the worktree's `head`, and a rerun appends `step_skipped` for each step it skips. `node scripts/task.mjs show <id>` prints the task with its latest step.
 
 ## Coach
 

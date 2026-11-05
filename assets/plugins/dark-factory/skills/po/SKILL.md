@@ -52,17 +52,19 @@ The user's request is the go: the factory may go as far as an open pull request,
 
 Run `node ${CLAUDE_PLUGIN_ROOT}/scripts/build.mjs <id>` with the Bash tool as a background command (`run_in_background: true`). Tell the user in a few lines what will be built, the category, the decisions you made for them, and that they will hear back when the pull request is green and reviewed. They can still stop or redirect it.
 
+The command starts the build in a detached worker (on Linux in its own systemd scope) and only waits for it, so the build keeps running if this session ends or is killed. The worker's output is in the task folder's `build.log` and its result in `result.json`. Running the same `build.mjs <id>` again waits for a build that is still running instead of starting a second one, and resumes a dead one, skipping the code, review and tester steps already finished at the worktree's current commit.
+
 Claude Code tells this session when the command exits. Its stdout is one JSON line, `{task, status, message, pr}`, and its exit code is 0 for `ready`, 1 for `stuck` and 3 for `waiting`.
 
 ## When the build ends
 
 - **`ready`**: read the spec and the task's artifacts in its task folder, then report the PR link, each acceptance criterion with how it was checked, the decisions made without the user, and anything not done.
-- **`stuck`**: report the message and what was tried. Fix the spec yourself when the cause is a gap in it, then run the build again.
+- **`stuck`**: report the message and what was tried. Fix the spec yourself when the cause is a gap in it, then run the build again. A message saying the build worker died means the worker was killed; run the same `build.mjs <id>` command again, which resumes it.
 - **`waiting`**: the question is for you. Answer it yourself whenever the spec, the code or what you know about the user settles it. Only when the answer changes what the user gets and nothing settles it, ask the user, once, with your recommended answer. Either way, put the answer in the spec under **Decisions**, note what the first reading of the request missed, and run the same background command again. It reuses the task's worktree and commits.
 
 ## Where a task is
 
-`node ${CLAUDE_PLUGIN_ROOT}/scripts/task.mjs show <id>` prints the task with `latestStep`, its last event. Answer "where is it?" from that, not from transcripts. `task.mjs list` shows every task and its status; a `waiting` task's `note` is its question.
+`node ${CLAUDE_PLUGIN_ROOT}/scripts/task.mjs show <id>` prints the task with `latestStep`, its last event, which shows how far a build got, also after the session that started it is gone. Answer "where is it?" from that, not from transcripts. `task.mjs list` shows every task and its status; a `waiting` task's `note` is its question.
 
 ## Coach findings
 
