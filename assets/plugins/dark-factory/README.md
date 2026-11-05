@@ -25,7 +25,7 @@ The PO checks for these before it takes a request, and every build checks again 
 
 ## Use
 
-Run `/dark-factory:po` and say what you want. The PO writes a spec with acceptance criteria, shows it to you, and starts the build once you say go. You hear back when the pull request is ready, or when the factory needs an answer only you can give.
+Run `/dark-factory:po` and say what you want. The PO reads the code first and asks you, in one batch with a recommended answer for each, only what the code and what it knows about you cannot settle. It writes a spec with acceptance criteria and starts the build: your request is the go, the factory goes as far as an open pull request, and merging stays with you. Ask to see the spec first if you want to. You hear back when the pull request is ready, or, rarely, when the factory needs an answer only you can give.
 
 The build is a plain Node program, `scripts/build.mjs`, that the PO starts in the background. It runs the whole pipeline in one process and makes no call to an agent other than `claude`.
 
@@ -46,7 +46,7 @@ Inside Claude Code the plugin folder is `${CLAUDE_PLUGIN_ROOT}`.
 
 | Role | Model | Job |
 | --- | --- | --- |
-| PO | Opus | Writes the spec, answers the other roles, asks you only what changes the product |
+| PO | Opus | Settles every decision before the build, writes the spec, answers the other roles, asks you only what changes the product and nothing settles |
 | Architect | Opus | Designs large changes |
 | Planner | Opus | Writes a plan detailed enough for a small model |
 | Test writer | Sonnet | Writes failing tests for every acceptance criterion |
