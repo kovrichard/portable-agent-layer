@@ -18,6 +18,7 @@
 
 import { getActiveAgent } from "./lib/agent";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
+import { keepJqUnwrapped } from "./lib/rtk-jq";
 import { isWorktreeAgentGitCall } from "./lib/rtk-worktree";
 import { findBinaryOnPath } from "./lib/which";
 
@@ -46,7 +47,7 @@ async function run(): Promise<void> {
   const out = await new Response(proc.stdout).text();
   await proc.exited;
   if (proc.exitCode === 0 && out) {
-    process.stdout.write(out);
+    process.stdout.write(keepJqUnwrapped(out));
   }
 }
 
