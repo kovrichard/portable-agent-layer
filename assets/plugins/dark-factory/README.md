@@ -25,7 +25,7 @@ The PO checks for these before it takes a request, and every build checks again 
 
 ## Use
 
-Run `/dark-factory:po` and say what you want. The PO writes a spec with acceptance criteria, shows it to you, and starts the build once you say go. You hear back when the pull request is ready, or when the factory needs an answer only you can give.
+Run `/dark-factory:po` and say what you want. The PO reads the code first and asks you, in one batch with a recommended answer for each, only what the code and what it knows about you cannot settle. It writes a spec with acceptance criteria and starts the build: your request is the go, the factory goes as far as an open pull request, and merging stays with you. Ask to see the spec first if you want to. You hear back when the pull request is ready, or, rarely, when the factory needs an answer only you can give.
 
 The build is a plain Node program, `scripts/build.mjs`, that the PO starts in the background. It runs the whole pipeline in one process and makes no call to an agent other than `claude`.
 
@@ -46,7 +46,7 @@ Inside Claude Code the plugin folder is `${CLAUDE_PLUGIN_ROOT}`.
 
 | Role | Model | Job |
 | --- | --- | --- |
-| PO | Opus | Writes the spec, answers the other roles, asks you only what changes the product |
+| PO | Opus | Settles every decision before the build, writes the spec, answers the other roles, asks you only what changes the product and nothing settles |
 | Architect | Opus | Designs large changes |
 | Planner | Opus | Writes a plan detailed enough for a small model |
 | Test writer | Sonnet | Writes failing tests for every acceptance criterion |
@@ -136,11 +136,13 @@ The repo's `CLAUDE.md` is read from your checkout when the task starts, so a rol
 - `"repoInstructions": false` in `.dark-factory.json` leaves out the repo's `CLAUDE.md`.
 - `"userInstructions": false` in `$DARK_FACTORY_HOME/config.json` (`~/.dark-factory/config.json`, optional; a missing file means both parts are on) leaves out your `~/.claude/CLAUDE.md`.
 
-Hooks never run in a role, and neither do your settings or MCP servers.
+Your own hooks never run in a role, and neither do MCP servers. The repo's hooks do run, so a repo `Stop` hook that fails its checks keeps the role working until they pass; the gate stays as the check for repos without hooks.
+
+A role loads the repo's `.claude/settings.json` and `.claude/settings.local.json` from its worktree as Claude Code does, permissions included. Your `~/.claude/settings.json` (or `CLAUDE_CONFIG_DIR`) is passed in `--settings` without `hooks`, `permissions`, `enabledPlugins` and `extraKnownMarketplaces`, so commit attribution and your other preferences apply. Each role call records which of your keys it passed and dropped as a `role_settings` event, without their values.
 
 ## Permissions
 
-- Roles run isolated: `--setting-sources ""`, the plugin from `--plugin-dir`, and their own tool policy from `roles.mjs`, so user hooks and settings don't reach them; only the CLAUDE.md instructions above do.
+- Roles run with `--setting-sources project,local`, the plugin from `--plugin-dir`, and their own tool policy from `roles.mjs`. Your user settings come only through the filtered `--settings` file, so your hooks don't reach them. A repo's `permissions.allow` can widen a role's tools; the role's denies still win.
 - The PO session only needs `"Bash(node *dark-factory*/scripts/*)"`, for example in `.claude/settings.json`:
 
 ```json
