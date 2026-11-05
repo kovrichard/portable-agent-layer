@@ -97,6 +97,9 @@ function fakeRole(world: World, options: WorldOptions) {
     if (step.codes) world.coded = true;
     world.changedFiles.push(...(step.changes ?? []));
     const exitCode = step.exit ?? 0;
+    if (role === "planner" && exitCode === 0) {
+      writeFileSync(join(taskDir(taskId, world.env), "plan.md"), "plan\n");
+    }
     const outcome = {
       task: taskId,
       role,
