@@ -17,6 +17,7 @@ import { builtinTools, builtinToolVerbs } from "./builtin-tools";
 import { contentCommand } from "./content";
 import { correctionCommand } from "./correction";
 import { costCommand } from "./cost";
+import { envCommand } from "./env";
 import { eventsCommand } from "./events";
 import { identityCommand } from "./identity";
 import { inferCommand } from "./infer";
@@ -177,6 +178,7 @@ export function cliTree(admin: AdminHandlers): Group {
       usage: usageCommand,
       cost: costCommand,
       wrapped: wrappedCommand,
+      env: envCommand,
       patterns: patternsCommand,
       content: contentCommand,
       events: eventsCommand,

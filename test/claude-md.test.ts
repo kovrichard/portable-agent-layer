@@ -90,6 +90,36 @@ describe("buildClaudeMd", () => {
 
     expect(result).not.toContain("SETUP_PROMPT");
   });
+
+  test("carries the environment detected at install, right after the identity", async () => {
+    const envFile = resolve(TEST_HOME, "memory", "state", "environment.json");
+    writeFileSync(
+      envFile,
+      JSON.stringify({
+        os: "Windows 11 (build 22631)",
+        arch: "x64",
+        found: [{ name: "python", version: "3.12.1" }],
+        missing: ["perl"],
+        detectedAt: "2026-11-05",
+      })
+    );
+    try {
+      const { buildClaudeMd } = await import("../src/hooks/lib/claude-md");
+      const result = buildClaudeMd();
+      expect(result).toContain("ready to test.\n\n## Environment\n");
+      expect(result).toContain("- OS: Windows 11 (build 22631), x64\n");
+      expect(result).toContain("- Not found: perl\n\n## Modes");
+    } finally {
+      removeOnceReleased(envFile);
+    }
+  });
+
+  test("leaves no placeholder when nothing was detected yet", async () => {
+    const { buildClaudeMd } = await import("../src/hooks/lib/claude-md");
+    const result = buildClaudeMd();
+    expect(result).not.toContain("{{ENVIRONMENT}}");
+    expect(result).toContain("ready to test.\n\n## Modes");
+  });
 });
 
 describe("buildClaudeCodeMd", () => {

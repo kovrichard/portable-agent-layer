@@ -20,6 +20,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
+import { environmentFile, readEnvironment, renderEnvironment } from "./environment";
 import { assets, ensureDir, paths, platform } from "./paths";
 import { antigravityRule, getSemiStaticSources } from "./semi-static";
 
@@ -96,6 +97,7 @@ export function needsRebuild(): boolean {
     TEMPLATE_PATH,
     resolve(paths.state(), "setup.json"),
     resolve(paths.memory(), "pal-settings.json"),
+    environmentFile(),
     ...getSemiStaticSources().map((s) => s.path),
   ];
 
@@ -119,8 +121,10 @@ export function buildClaudeMd(): string {
     : "# PAL Context\n";
 
   const id = identity();
+  const env = readEnvironment();
 
   return template
+    .replaceAll("{{ENVIRONMENT}}", env ? renderEnvironment(env) : "")
     .replaceAll("{{IDENTITY_NAME}}", id.ai.name)
     .replaceAll("{{IDENTITY_DISPLAY}}", id.ai.displayName)
     .replaceAll("{{IDENTITY_CATCHPHRASE}}", id.ai.catchphrase)
