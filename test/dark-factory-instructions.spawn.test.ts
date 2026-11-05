@@ -195,7 +195,7 @@ describe("instructions reach the roles", () => {
     setup({ user: "U\n", repo: "R\n" });
     run();
     const { argv } = recorded();
-    expect(argv[argv.indexOf("--setting-sources") + 1]).toBe("");
+    expect(argv[argv.indexOf("--setting-sources") + 1]).toBe("project,local");
   });
 });
 
@@ -339,12 +339,13 @@ describe("the plugin works on its own", () => {
     expect(hits).toEqual([]);
   });
 
-  test("the README says what roles receive, how to switch each part off, and that hooks never run", () => {
+  test("the README says what roles receive, how to switch each part off, and that only repo hooks run", () => {
     const readme = readFileSync(join(PLUGIN_ROOT, "README.md"), "utf8");
     expect(readme).toContain("CLAUDE.md");
     expect(readme).toContain("repoInstructions");
     expect(readme).toContain("userInstructions");
     expect(readme).toContain("~/.dark-factory/config.json");
-    expect(readme.toLowerCase()).toMatch(/hooks? (never|do not|don't) run/);
+    expect(readme).toContain("Your own hooks never run in a role");
+    expect(readme).toContain("The repo's hooks do run");
   });
 });
