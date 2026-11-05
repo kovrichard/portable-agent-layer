@@ -82,6 +82,7 @@ function tryCreateLock(files) {
 function claimLock(files) {
   for (let attempt = 0; attempt < 2; attempt += 1) {
     if (liveLockPid(files.dir) !== null) return false;
+    rmSync(files.result, { force: true });
     if (tryCreateLock(files)) return true;
   }
   return false;
@@ -135,7 +136,6 @@ function stuckResult(taskId, message) {
 }
 
 function startWorker(taskId, files, env) {
-  rmSync(files.result, { force: true });
   const isolation = chooseIsolation({ probe: () => probeSystemdScope(env) });
   const { command, args } = workerCommand(taskId, isolation);
   const logFd = openSync(files.log, "a");
