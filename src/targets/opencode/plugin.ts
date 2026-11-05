@@ -57,6 +57,8 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   const { runStopHandlers } = await lib<typeof import("../../hooks/lib/stop")>("stop.ts");
   const { logToolCall } =
     await lib<typeof import("../../hooks/lib/tool-events")>("tool-events.ts");
+  const { recordSlurpCheck } =
+    await lib<typeof import("../../hooks/lib/slurp-check")>("slurp-check.ts");
   const { attachProgressFromToolCall } = await lib<
     typeof import("../../hooks/lib/progress-tree-tool")
   >("progress-tree-tool.ts");
@@ -289,6 +291,16 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
         session_id: input.sessionID,
         tool_response: output?.output,
       });
+      recordSlurpCheck(
+        {
+          tool_name: input.tool,
+          tool_input: input.args,
+          session_id: input.sessionID,
+          tool_response: output?.output,
+          exit_code: (output?.metadata as { exit?: unknown } | undefined)?.exit,
+        },
+        directory
+      );
       attachProgressFromToolCall(
         {
           tool_name: input.tool,

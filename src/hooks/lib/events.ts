@@ -150,6 +150,15 @@ export const EVENT_FIELDS = {
     "mcpServer",
     "host",
   ],
+  slurp_check: [
+    "mode",
+    "predicted",
+    "oom",
+    "hitCount",
+    "maxBytes",
+    "thresholdBytes",
+    "idioms",
+  ],
 } as const satisfies Record<string, readonly string[]>;
 
 export type EventType = keyof typeof EVENT_FIELDS;
