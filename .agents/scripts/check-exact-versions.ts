@@ -1,10 +1,13 @@
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 const DEPENDENCY_SECTIONS = [
   "dependencies",
   "devDependencies",
   "optionalDependencies",
   "peerDependencies",
+  "overrides",
 ] as const;
 
 const EXACT_SEMVER = /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/;
@@ -25,15 +28,27 @@ export function nonExactVersions(manifest: Manifest): NonExactVersion[] {
   );
 }
 
+export function trackedManifests(root: string): string[] {
+  const listed = spawnSync("git", ["ls-files", "package.json", "**/package.json"], {
+    cwd: root,
+    encoding: "utf8",
+  });
+  if (listed.status !== 0) throw new Error(listed.stderr || "git ls-files failed");
+  return listed.stdout.split("\n").filter(Boolean);
+}
+
 if (import.meta.main) {
-  const offenders = nonExactVersions(JSON.parse(readFileSync("package.json", "utf8")));
+  const offenders = trackedManifests(".").flatMap((path) =>
+    nonExactVersions(JSON.parse(readFileSync(resolve(path), "utf8"))).map(
+      (o) => `  ${path} ${o.section}: ${o.name} ${o.version}`
+    )
+  );
   if (offenders.length === 0) {
-    process.stdout.write("Every dependency in package.json is pinned exactly.\n");
+    process.stdout.write("Every dependency in every package.json is pinned exactly.\n");
     process.exit(0);
   }
-  const lines = offenders.map((o) => `  ${o.section}: ${o.name} ${o.version}`);
   process.stderr.write(
-    `package.json has dependencies without an exact version:\n${lines.join("\n")}\n` +
+    `Dependencies without an exact version:\n${offenders.join("\n")}\n` +
       "Pin each to the version bun.lock resolves (bun add --exact <name>@<version>).\n"
   );
   process.exit(1);

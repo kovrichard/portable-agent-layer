@@ -1,6 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { nonExactVersions } from "../.agents/scripts/check-exact-versions";
 
 describe("nonExactVersions", () => {
@@ -32,10 +30,9 @@ describe("nonExactVersions", () => {
     expect(nonExactVersions({ engines: { bun: ">=1.4.4" } })).toEqual([]);
   });
 
-  test("this repo's package.json pins every dependency exactly", () => {
-    const manifest = JSON.parse(
-      readFileSync(resolve(import.meta.dir, "..", "package.json"), "utf8")
-    );
-    expect(nonExactVersions(manifest)).toEqual([]);
+  test("flags a non-exact override", () => {
+    expect(nonExactVersions({ overrides: { "playwright-core": "*" } })).toEqual([
+      { section: "overrides", name: "playwright-core", version: "*" },
+    ]);
   });
 });

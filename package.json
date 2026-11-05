@@ -122,5 +122,8 @@
     "playwright": "1.60.0",
     "unpdf": "0.12.2",
     "zod": "4.4.3"
+  },
+  "overrides": {
+    "playwright-core": "1.60.0"
   }
 }
