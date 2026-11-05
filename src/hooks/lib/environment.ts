@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { arch, platform, release } from "node:os";
 import { resolve } from "node:path";
 import { paths } from "./paths";
@@ -87,14 +87,15 @@ function readIfPresent(path: string): string | null {
   }
 }
 
-function osName(os: NodeJS.Platform = platform(), osRelease = release()): string {
+export function osName(
+  os: NodeJS.Platform = platform(),
+  osRelease = release(),
+  read: (path: string) => string | null = readIfPresent
+): string {
   if (os === "win32") return windowsName(osRelease);
   if (os === "darwin")
-    return macName(
-      readIfPresent("/System/Library/CoreServices/SystemVersion.plist"),
-      osRelease
-    );
-  if (os === "linux") return linuxName(readIfPresent("/etc/os-release"), osRelease);
+    return macName(read("/System/Library/CoreServices/SystemVersion.plist"), osRelease);
+  if (os === "linux") return linuxName(read("/etc/os-release"), osRelease);
   return `${os} ${osRelease}`;
 }
 
@@ -126,7 +127,7 @@ export function detectLanguages(
 
 const VERSION_TIMEOUT_MS = 2000;
 
-const systemProbe: Probe = {
+export const systemProbe: Probe = {
   which: (command) => Bun.which(command),
   versionOutput: (path) => {
     const run = Bun.spawnSync([path, "--version"], {
@@ -139,7 +140,10 @@ const systemProbe: Probe = {
   },
 };
 
-function detectEnvironment(probe: Probe = systemProbe, today = new Date()): Environment {
+export function detectEnvironment(
+  probe: Probe = systemProbe,
+  today = new Date()
+): Environment {
   return {
     os: osName(),
     arch: arch(),
@@ -171,10 +175,10 @@ export function environmentFile(): string {
 }
 
 export function readEnvironment(): Environment | null {
-  const file = environmentFile();
-  if (!existsSync(file)) return null;
+  const text = readIfPresent(environmentFile());
+  if (text === null) return null;
   try {
-    return JSON.parse(readFileSync(file, "utf-8")) as Environment;
+    return JSON.parse(text) as Environment;
   } catch {
     return null;
   }
