@@ -18,6 +18,7 @@ import {
   readTask,
   writeTask,
 } from "../assets/plugins/dark-factory/scripts/lib.mjs";
+import { writeFakeBin } from "./fixtures/fake-bin";
 import {
   coachResult,
   env,
@@ -133,6 +134,109 @@ describe("what the user changed after the factory (criterion 6)", () => {
     pushedTask(true);
     paths.mergedAt = "";
     expect(userCorrections(env())).toEqual([]);
+  });
+});
+
+describe("a task whose repo folder is gone", () => {
+  const GONE_PR = "https://github.com/o/r/pull/8";
+
+  function logEveryGhCall() {
+    const log = join(paths.root, "gh.log");
+    writeFakeBin(
+      paths.bin,
+      "gh",
+      [
+        `const args = process.argv.slice(2);`,
+        `require("node:fs").appendFileSync(${JSON.stringify(log)}, args.join(" ") + "\\n");`,
+        `if (args[0] === "pr" && args[1] === "view") process.stdout.write(JSON.stringify({ mergedAt: process.env.FAKE_MERGED_AT }));`,
+        `if (args[0] === "pr" && args[1] === "diff") process.stdout.write("");`,
+        "",
+      ].join("\n")
+    );
+    return () => (existsSync(log) ? readFileSync(log, "utf8") : "");
+  }
+
+  function seedMergedTaskWithGoneRepo(id: string, extra: object = {}) {
+    const gone = join(paths.root, `deleted-${id}`);
+    seedTask(id, {
+      pr: GONE_PR,
+      branch: `factory/${id}`,
+      repo: gone,
+      worktree: gone,
+      ...extra,
+    });
+    appendEvent({ event: "pushed", task: id, head: "abc" }, env());
+  }
+
+  function seedCorrectedTask() {
+    seedRepoWithRemote();
+    commitFile(paths.repo, "feature.txt", "factory\n", "feat: factory work");
+    git(paths.repo, "push", "-q", "origin", "factory/t1");
+    seedTask("t1", { pr: "https://github.com/o/r/pull/7" });
+    appendEvent(
+      { event: "pushed", task: "t1", head: git(paths.repo, "rev-parse", "HEAD") },
+      env()
+    );
+    commitFile(paths.repo, "fix.txt", "user fix\n", "fix: the user corrected it");
+    git(paths.repo, "push", "-q", "origin", "factory/t1");
+  }
+
+  const skippedEvents = () =>
+    readEvents(env()).filter((e: { event: string }) => e.event === "coach_tasks_skipped");
+
+  test("it is skipped without gh, and the other task's correction is still returned", () => {
+    const ghCalls = logEveryGhCall();
+    seedCorrectedTask();
+    seedMergedTaskWithGoneRepo("old");
+    const corrections = userCorrections(env());
+    expect(corrections.map((c: { task: string }) => c.task)).toEqual(["t1"]);
+    expect(ghCalls()).toContain("pull/7");
+    expect(ghCalls()).not.toContain("pull/8");
+  });
+
+  test("a task with no repo in task.json is skipped like a missing folder", () => {
+    const ghCalls = logEveryGhCall();
+    seedCorrectedTask();
+    seedMergedTaskWithGoneRepo("old", { repo: undefined });
+    const corrections = userCorrections(env());
+    expect(corrections.map((c: { task: string }) => c.task)).toEqual(["t1"]);
+    expect(ghCalls()).not.toContain("pull/8");
+  });
+
+  test("a coach run records one coach_tasks_skipped event naming the skipped task ids", () => {
+    seedCorrectedTask();
+    seedMergedTaskWithGoneRepo("old1");
+    seedMergedTaskWithGoneRepo("old2");
+    runCoach("t1", { env: env(), now: NOW });
+    const events = skippedEvents();
+    expect(events).toHaveLength(1);
+    const text = JSON.stringify(events[0]);
+    expect(text).toContain("old1");
+    expect(text).toContain("old2");
+    expect(text).not.toContain('"t1"');
+  });
+
+  test("a coach run with nothing skipped records no coach_tasks_skipped event", () => {
+    seedCorrectedTask();
+    runCoach("t1", { env: env(), now: NOW });
+    expect(skippedEvents()).toEqual([]);
+  });
+
+  test("a coach run over a task with a deleted repo finishes instead of failing", () => {
+    seedCorrectedTask();
+    seedMergedTaskWithGoneRepo("old");
+    const result = runCoach("t1", { env: env(), now: NOW }) as Record<string, unknown>;
+    expect(result.error).toBeUndefined();
+    expect(eventNames()).toContain("coach_finished");
+    expect(eventNames()).not.toContain("coach_failed");
+  });
+
+  test("the same stale store through the coach.mjs command ends in coach_finished", () => {
+    seedCorrectedTask();
+    seedMergedTaskWithGoneRepo("old");
+    cli(["run", "t1"]);
+    expect(eventNames()).toContain("coach_finished");
+    expect(eventNames()).not.toContain("coach_failed");
   });
 });
 

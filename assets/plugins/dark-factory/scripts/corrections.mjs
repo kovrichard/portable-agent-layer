@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { appendEvent, readEvents } from "./lib.mjs";
 import { run } from "./ship.mjs";
 import { listTasks } from "./task.mjs";
@@ -89,9 +90,30 @@ function correctionOf(task, events, env) {
   return [{ task: task.id, pr: task.pr, commits }];
 }
 
+export function hasRepoFolder(task) {
+  return Boolean(task.repo) && existsSync(task.repo);
+}
+
 export function userCorrections(env = process.env) {
   const events = readEvents(env);
-  return listTasks(env).flatMap((task) => correctionOf(task, events, env));
+  return listTasks(env)
+    .filter(hasRepoFolder)
+    .flatMap((task) => correctionOf(task, events, env));
+}
+
+export function recordTasksSkipped(env = process.env) {
+  const skipped = listTasks(env)
+    .filter((task) => !hasRepoFolder(task))
+    .map((task) => task.id);
+  if (skipped.length === 0) return;
+  appendEvent(
+    {
+      event: "coach_tasks_skipped",
+      tasks: skipped,
+      reason: "repo folder missing",
+    },
+    env
+  );
 }
 
 export function recordCorrectionsGiven(corrections, env = process.env) {

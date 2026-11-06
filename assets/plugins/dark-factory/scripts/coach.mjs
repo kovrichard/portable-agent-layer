@@ -1,7 +1,12 @@
 import { spawn } from "node:child_process";
 import { existsSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { prMergedAt, recordCorrectionsGiven, userCorrections } from "./corrections.mjs";
+import {
+  prMergedAt,
+  recordCorrectionsGiven,
+  recordTasksSkipped,
+  userCorrections,
+} from "./corrections.mjs";
 import {
   expectedInputs,
   mergeCoachResults,
@@ -249,6 +254,7 @@ function coachRun(taskId, env, now) {
   if (!existsSync(task.worktree))
     throw new Error(`the worktree of ${taskId} is gone: ${task.worktree}`);
   const corrections = userCorrections(env);
+  recordTasksSkipped(env);
   const { text, command } = runDiff(task, env);
   const correctionDiffs = corrections.flatMap((correction) =>
     correction.commits.map((commit) => commit.diff)
