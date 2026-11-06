@@ -438,6 +438,19 @@ describe("CI rounds", () => {
     expect(roleNames(world).filter((role) => role === "debugger")).toHaveLength(1);
   });
 
+  test("an unreadable worktree HEAD around the fix step ends stuck without pushing again", () => {
+    const world = worldFor({
+      ci: [failing({ name: "ci", link: runLink(1) })],
+      roles: { debugger: [{ commits: true }] },
+      gitHeadUnreadable: true,
+    });
+    const result = runBuild(world);
+    expect(result.status).toBe("stuck");
+    expect(result.message).toContain("could not read CI: worktree HEAD unreadable");
+    expect(world.pushes).toBe(1);
+    expect(world.reruns).toEqual([]);
+  });
+
   test("a worktree HEAD that cannot be read after the fix ends stuck as could not read CI", () => {
     const world = worldFor({
       ci: [failing({ name: "ci", link: runLink(1) })],

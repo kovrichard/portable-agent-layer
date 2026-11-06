@@ -44,6 +44,7 @@ type WorldOptions = {
   commitsAhead?: number;
   rerunFails?: boolean;
   headUnreadable?: boolean;
+  gitHeadUnreadable?: boolean;
 };
 
 export type World = {
@@ -180,7 +181,7 @@ function fakeSpawnTool(world: World, options: WorldOptions) {
       return { status: options.rerunFails ? 1 : 0, stdout: "", stderr: "" };
     }
     if (command === "git" && args[0] === "rev-parse" && args[1] === "HEAD") {
-      return options.headUnreadable
+      return options.headUnreadable || options.gitHeadUnreadable
         ? { status: 128, stdout: "", stderr: "fatal" }
         : { status: 0, stdout: `sha-${world.head}\n`, stderr: "" };
     }

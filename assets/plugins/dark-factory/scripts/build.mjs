@@ -575,7 +575,7 @@ function rerunCiStep(run, ci) {
   const rerun = rerunFailedRuns(run, ci.runs ?? []);
   recordRerun(run, ci, rerun);
   if (!rerun.ok) return stuck(`${externalFailure(ci)}; the rerun failed: ${rerun.error}`);
-  const again = pollCi(run, { staleLinks: ci.links ?? [] });
+  const again = pollCi(run);
   const stop = unfinishedCiStop(again);
   if (stop) return stop;
   if (ciPassed(again)) return null;
@@ -583,7 +583,7 @@ function rerunCiStep(run, ci) {
 }
 
 function fixCommitted(before, after) {
-  return before === null || after === null || before !== after;
+  return before !== after;
 }
 
 function ciStep(run) {
@@ -597,7 +597,10 @@ function ciStep(run) {
     const headBefore = worktreeHead(run);
     const fixStopped = ciFixStep(run, ci);
     if (fixStopped) return fixStopped;
-    if (!fixCommitted(headBefore, worktreeHead(run))) return rerunCiStep(run, ci);
+    const headAfter = worktreeHead(run);
+    if (headBefore === null || headAfter === null)
+      return stuck("could not read CI: worktree HEAD unreadable");
+    if (!fixCommitted(headBefore, headAfter)) return rerunCiStep(run, ci);
     run.effects.push(run.id, run.env);
   }
   return null;
