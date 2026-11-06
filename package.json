@@ -108,7 +108,7 @@
     "knip": "6.14.1",
     "lint-staged": "17.0.5",
     "madge": "8.0.0",
-    "promptfoo": "0.121.14",
+    "promptfoo": "0.125.1",
     "secretlint": "13.0.2",
     "semantic-release": "25.0.3",
     "typescript": "5.9.3"
