@@ -78,6 +78,7 @@ describe("a whole feature run, in process", () => {
       pr: PR_URL,
     });
     expect(roleNames(world)).toEqual([
+      "test-writer",
       "planner",
       "reviewer",
       "test-writer",
@@ -87,11 +88,12 @@ describe("a whole feature run, in process", () => {
     ]);
     expect(flow(world)).toEqual([
       "task_started",
+      "role:test-writer",
+      "tests_red",
       "role:planner",
       "role:reviewer",
       "plan_gate",
       "role:test-writer",
-      "tests_red",
       "role:code-writer",
       "gate",
       "step_done",
@@ -117,7 +119,7 @@ describe("a whole feature run, in process", () => {
       Object.fromEntries(world.roleCalls.map((call) => [call.role, call.model]))
     ).toEqual({
       planner: undefined,
-      "test-writer": undefined,
+      "test-writer": FACTORY_MODELS.small,
       "code-writer": FACTORY_MODELS.small,
       reviewer: undefined,
       tester: undefined,
@@ -140,9 +142,9 @@ describe("a whole feature run, in process", () => {
     expect(finished[0]).toMatchObject({
       task: TASK,
       status: "ready",
-      roleRuns: 6,
-      costUsd: 1.5,
-      tokens: 810,
+      roleRuns: 7,
+      costUsd: 1.75,
+      tokens: 945,
     });
     expect(typeof finished[0]?.wallMs).toBe("number");
   });
@@ -563,7 +565,7 @@ describe("red tests", () => {
     expect(eventsNamed(world, "tests_red")).toEqual([
       expect.objectContaining({ exitCode: 0 }),
     ]);
-    expect(roleNames(world)).toEqual(["planner", "reviewer", "test-writer"]);
+    expect(roleNames(world)).toEqual(["test-writer"]);
   });
 
   test("a gate with no check named tests is stuck with a message that says so", () => {
@@ -574,8 +576,162 @@ describe("red tests", () => {
     const result = runBuild(world);
     expect(result.status).toBe("stuck");
     expect(result.message).toContain('no check named "tests"');
-    expect(roleNames(world)).toEqual(["planner", "reviewer", "test-writer"]);
+    expect(roleNames(world)).toEqual(["test-writer"]);
   });
+});
+
+describe("acceptance tests before the plan", () => {
+  const callsOf = (world: World, role: string) =>
+    world.roleCalls.filter((call) => call.role === role);
+
+  test("a feature run is test writer, planner, plan gate, unit typist, code writer", () => {
+    const world = worldFor({ category: "feature" });
+    runBuild(world);
+    expect(roleNames(world).slice(0, 5)).toEqual([
+      "test-writer",
+      "planner",
+      "reviewer",
+      "test-writer",
+      "code-writer",
+    ]);
+  });
+
+  test("a big-feature run starts architect, test writer, planner", () => {
+    const world = worldFor({ category: "big-feature" });
+    runBuild(world);
+    expect(roleNames(world).slice(0, 3)).toEqual(["architect", "test-writer", "planner"]);
+    const labels = flow(world);
+    expect(labels.indexOf("tests_red")).toBeGreaterThan(-1);
+    expect(labels.indexOf("tests_red")).toBeLessThan(labels.indexOf("role:planner"));
+  });
+
+  test("the first test writer works from spec.md only and writes tests.md", () => {
+    const world = worldFor({ category: "feature" });
+    runBuild(world);
+    const instructions = callsOf(world, "test-writer")[0]?.instructions ?? "";
+    expect(instructions).toContain("spec.md only");
+    expect(instructions).toContain("tests.md");
+  });
+
+  test("the first planner is told the failing tests in tests.md exist and must pass unchanged", () => {
+    const world = worldFor({ category: "feature" });
+    runBuild(world);
+    expect(callsOf(world, "planner")[0]?.instructions ?? "").toContain("tests.md");
+  });
+
+  test("a bug run keeps its test writer's instructions and runs no typist", () => {
+    const world = worldFor({
+      category: "bug",
+      roles: { debugger: [{ codes: false }] },
+    });
+    runBuild(world);
+    expect(roleNames(world).slice(0, 3)).toEqual([
+      "debugger",
+      "test-writer",
+      "code-writer",
+    ]);
+    expect(callsOf(world, "test-writer")[0]?.instructions ?? "").not.toContain(
+      "spec.md only"
+    );
+    expect(callsOf(world, "test-writer")).toHaveLength(1);
+  });
+
+  test("a refactor run's planner gets today's instructions and no typist", () => {
+    const world = worldFor({ category: "refactor" });
+    runBuild(world);
+    expect(callsOf(world, "planner")[0]?.instructions).toBe(
+      "Write plan.md for this change."
+    );
+    expect(roleNames(world)).not.toContain("test-writer");
+  });
+});
+
+describe("the unit typist", () => {
+  const typist = (world: World) =>
+    world.roleCalls.filter((call) => call.role === "test-writer")[1];
+
+  test("a typist that adds files runs on the small model and the red proof runs again", () => {
+    const world = worldFor({
+      category: "feature",
+      roles: { "test-writer": [{}, { leavesChanges: true }] },
+    });
+    const result = runBuild(world);
+    expect(typist(world)?.model).toBe(build.TIER_MODELS.small);
+    expect(eventsNamed(world, "tests_red")).toHaveLength(2);
+    expect(result.status).toBe("ready");
+  });
+
+  test("a typist that changes nothing gets no second red proof and the code step runs", () => {
+    const world = worldFor({ category: "feature" });
+    runBuild(world);
+    expect(eventsNamed(world, "tests_red")).toHaveLength(1);
+    expect(roleNames(world).slice(3, 5)).toEqual(["test-writer", "code-writer"]);
+  });
+
+  test("the typist's instructions", () => {
+    const world = worldFor({ category: "feature" });
+    runBuild(world);
+    const instructions = typist(world)?.instructions ?? "";
+    for (const text of [
+      "example table",
+      "plan.md",
+      "change no other file",
+      "uncommitted",
+      "change nothing",
+    ])
+      expect(instructions).toContain(text);
+  });
+
+  test("a typist that leaves the tests passing is stuck as the red proof says", () => {
+    const world = worldFor({
+      category: "feature",
+      roles: { "test-writer": [{}, { leavesChanges: true, codes: true }] },
+    });
+    const result = runBuild(world);
+    expect(result.status).toBe("stuck");
+    expect(result.message).toContain("the new tests pass before the code exists");
+    expect(roleNames(world)).not.toContain("code-writer");
+  });
+
+  test("an unreadable git status around the typist runs the red proof", () => {
+    const world = worldFor({ category: "feature" });
+    const original = world.effects.spawnTool as (
+      command: string,
+      args: string[]
+    ) => unknown;
+    world.effects.spawnTool = (command: string, args: string[]) =>
+      args[0] === "status"
+        ? { status: 128, stdout: "", stderr: "fatal" }
+        : original(command, args);
+    runBuild(world);
+    expect(eventsNamed(world, "tests_red")).toHaveLength(2);
+  });
+
+  test("a failing unit typist is stuck as test-writer failed", () => {
+    const world = worldFor({
+      category: "feature",
+      roles: { "test-writer": [{}, { exit: 1 }] },
+    });
+    const result = runBuild(world);
+    expect(result.status).toBe("stuck");
+    expect(result.message).toContain("test-writer failed");
+  });
+});
+
+describe("worktreeStatusChanged", () => {
+  const rows: [string | null, string | null, boolean][] = [
+    ["", "", false],
+    ["", "?? a.test.ts", true],
+    ["?? a.test.ts", "?? a.test.ts", false],
+    ["?? a.test.ts", "?? a.test.ts\n?? b.test.ts", true],
+    [null, "", true],
+    ["", null, true],
+    [null, null, true],
+  ];
+  for (const [before, after, changed] of rows)
+    test(`${JSON.stringify(before)} → ${JSON.stringify(after)} is ${changed}`, () => {
+      expect(build.worktreeStatusChanged(before, after)).toBe(changed);
+    });
 });
 
 describe("the config frozen by prepare", () => {
