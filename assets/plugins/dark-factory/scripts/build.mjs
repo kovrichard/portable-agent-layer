@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { waitForCi } from "./ci-wait.mjs";
 import { startCoach } from "./coach.mjs";
@@ -505,13 +506,13 @@ function unitTestsStep(run) {
   if (!run.before.includes("test-writer")) return null;
   const taken = takeBaseline(run);
   if (taken.stop) return taken.stop;
-  const before = worktreeStatus(run);
+  const before = worktreeFingerprint(run);
   const stop = roleStop(
     "test-writer",
     runRole(run, "test-writer", UNIT_TESTS_INSTRUCTIONS, { tier: "small" })
   );
   if (stop) return stop;
-  const stopAfterProof = worktreeStatusChanged(before, worktreeStatus(run))
+  const stopAfterProof = worktreeStatusChanged(before, worktreeFingerprint(run))
     ? proveTestsRed(run, taken.baseline)
     : null;
   if (!stopAfterProof) appendEvent({ event: "unit_tests_done", task: run.id }, run.env);
@@ -869,6 +870,21 @@ function worktreeHead(run) {
 
 function worktreeStatus(run) {
   return gitOutput(run, ["status", "--porcelain"]);
+}
+
+export function worktreeFingerprint(run) {
+  const dir = mkdtempSync(join(tmpdir(), "dark-factory-index-"));
+  try {
+    const options = {
+      cwd: run.worktree,
+      env: { ...run.env, GIT_INDEX_FILE: join(dir, "index") },
+    };
+    if (run.effects.spawnTool("git", ["add", "-A"], options).status !== 0) return null;
+    const tree = run.effects.spawnTool("git", ["write-tree"], options);
+    return tree.status === 0 ? tree.stdout.trim() : null;
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 function isWorktreeClean(run) {
