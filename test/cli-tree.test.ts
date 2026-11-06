@@ -88,35 +88,37 @@ describe("every pal cli command", () => {
     expect(TREE.some(([path]) => path[2] === "thread")).toBe(false);
   });
 
-  test.each(
-    TREE.map(([path, command]) => [path.join(" "), path, command] as const)
-  )("%s: --help and -h print its own usage, run nothing, exit 0", async (name, path, command) => {
-    for (const flag of ["--help", "-h"]) {
-      out = [];
-      expect(await runCommand(cliTree(admin), [...at(path), flag], ["pal", "cli"])).toBe(
-        0
-      );
-      const text = out.join("\n");
-      expect(text).toStartWith(`Usage: ${name}`);
-      expect(text).toContain(command.summary);
+  test.each(TREE.map(([path, command]) => [path.join(" "), path, command] as const))(
+    "%s: --help and -h print its own usage, run nothing, exit 0",
+    async (name, path, command) => {
+      for (const flag of ["--help", "-h"]) {
+        out = [];
+        expect(
+          await runCommand(cliTree(admin), [...at(path), flag], ["pal", "cli"])
+        ).toBe(0);
+        const text = out.join("\n");
+        expect(text).toStartWith(`Usage: ${name}`);
+        expect(text).toContain(command.summary);
+      }
+      expect(err).toEqual([]);
+      expect(readdirSync(sandbox)).toEqual([]);
     }
-    expect(err).toEqual([]);
-    expect(readdirSync(sandbox)).toEqual([]);
-  });
+  );
 
-  test.each(
-    TREE.map(([path]) => [path.join(" "), path] as const)
-  )("%s: an unknown flag prints the error and its usage, exit 1", async (name, path) => {
-    expect(
-      await runCommand(
-        cliTree(admin),
-        [...at(path), "--definitely-bogus"],
-        ["pal", "cli"]
-      )
-    ).toBe(1);
-    expect(out).toEqual([]);
-    expect(err.join("\n")).toMatch(/^error: .*--definitely-bogus/);
-    expect(err.join("\n")).toContain(`Usage: ${name}`);
-    expect(readdirSync(sandbox)).toEqual([]);
-  });
+  test.each(TREE.map(([path]) => [path.join(" "), path] as const))(
+    "%s: an unknown flag prints the error and its usage, exit 1",
+    async (name, path) => {
+      expect(
+        await runCommand(
+          cliTree(admin),
+          [...at(path), "--definitely-bogus"],
+          ["pal", "cli"]
+        )
+      ).toBe(1);
+      expect(out).toEqual([]);
+      expect(err.join("\n")).toMatch(/^error: .*--definitely-bogus/);
+      expect(err.join("\n")).toContain(`Usage: ${name}`);
+      expect(readdirSync(sandbox)).toEqual([]);
+    }
+  );
 });

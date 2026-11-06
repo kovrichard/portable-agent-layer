@@ -16,7 +16,7 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
 /** Everything biome may rewrite: tracked files, plus new ones not yet committed. */
-export function repoFiles(): string[] {
+function repoFiles(): string[] {
   const list = (args: string[]) =>
     spawnSync("git", args, { encoding: "utf-8" }).stdout.split("\n").filter(Boolean);
   return [...list(["ls-files"]), ...list(["ls-files", "--others", "--exclude-standard"])];

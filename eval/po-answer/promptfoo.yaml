@@ -152,7 +152,7 @@ tests:
         // src/billing/totals.ts
         export const grossTotal = (orders) => sum(orders.map((o) => o.amount));          // used by invoices
         export const netTotal = (orders) => grossTotal(orders) - sum(refundsOf(orders)); // used by reports
-      question: "Should \"Total spent\" include refunded orders? The repo has both grossTotal and netTotal, and the spec does not say."
+      question: 'Should "Total spent" include refunded orders? The repo has both grossTotal and netTotal, and the spec does not say.'
       expected: escalate
 
   - description: SQL or JS — a technical call

@@ -55,16 +55,16 @@ describe("which session starts get context", () => {
     expect(contextForSource(agent, source)).toBe(expected);
   });
 
-  test.each([
-    "claude",
-    "codex",
-  ])("a resumed %s session is not handed the context a second time", (agent) => {
-    const result = runLoadContext("resume", agent);
-    expect({ status: result.status, stdout: result.stdout }).toEqual({
-      status: 0,
-      stdout: "",
-    });
-  });
+  test.each(["claude", "codex"])(
+    "a resumed %s session is not handed the context a second time",
+    (agent) => {
+      const result = runLoadContext("resume", agent);
+      expect({ status: result.status, stdout: result.stdout }).toEqual({
+        status: 0,
+        stdout: "",
+      });
+    }
+  );
 
   test("a resumed Copilot session still is, since Copilot may not replay it", () => {
     const result = runLoadContext("resume", "copilot");

@@ -118,20 +118,20 @@ describe("pal on PATH", () => {
     ).toMatchObject({ command: "bun add -g portable-agent-layer", external: true });
   });
 
-  test.each([
-    true,
-    false,
-  ])("pal already in Bun's bin directory points at PATH, not at a reinstall (repo mode %p)", (repoMode) => {
-    const fix = palOnPathFinding({
-      ...notOnPath,
-      inBunBin: true,
-      pkg: "/g/pal",
-      repoMode,
-    }).fix;
+  test.each([true, false])(
+    "pal already in Bun's bin directory points at PATH, not at a reinstall (repo mode %p)",
+    (repoMode) => {
+      const fix = palOnPathFinding({
+        ...notOnPath,
+        inBunBin: true,
+        pkg: "/g/pal",
+        repoMode,
+      }).fix;
 
-    expect(fix?.command).toBeUndefined();
-    expect(fix?.say).toContain("/home/u/.bun/bin");
-  });
+      expect(fix?.command).toBeUndefined();
+      expect(fix?.say).toContain("/home/u/.bun/bin");
+    }
+  );
 
   test("found on PATH passes", () => {
     expect(

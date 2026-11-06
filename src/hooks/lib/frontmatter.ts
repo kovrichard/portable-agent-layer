@@ -34,7 +34,7 @@ export function splitFrontmatter(content: string): FrontmatterSplit | null {
  */
 export function parse<T = Record<string, string>>(content: string): Parsed<T> {
   const split = splitFrontmatter(content);
-  if (!split || split.leading.trim() !== "") {
+  if (split?.leading.trim() !== "") {
     return { meta: {} as T, body: content };
   }
 

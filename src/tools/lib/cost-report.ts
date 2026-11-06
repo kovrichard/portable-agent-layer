@@ -9,7 +9,7 @@ import { costOfUsage } from "../../hooks/lib/models";
 import { planPriceFor } from "./plan-prices";
 import { fmtCost } from "./token-report";
 
-export interface AgentMonth {
+interface AgentMonth {
   calls: number;
   unpriced: number;
   apiEquivalent: number;

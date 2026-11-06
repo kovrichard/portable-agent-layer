@@ -119,14 +119,12 @@ describe("which tool names the gate recognises", () => {
     expect(decideRefusal(wrapped("WebFetch", { command: DANGEROUS }), CWD)).toBeNull();
   });
 
-  test.each([
-    "command",
-    "commandLine",
-    "CommandLine",
-    "script",
-  ])("the command is found however it is spelled: %s", (key) => {
-    expect(decideRefusal(wrapped("Bash", { [key]: DANGEROUS }), CWD)).not.toBeNull();
-  });
+  test.each(["command", "commandLine", "CommandLine", "script"])(
+    "the command is found however it is spelled: %s",
+    (key) => {
+      expect(decideRefusal(wrapped("Bash", { [key]: DANGEROUS }), CWD)).not.toBeNull();
+    }
+  );
 
   test("a shell tool carrying no command is not checked", () => {
     expect(decideRefusal(wrapped("Bash", { description: "list" }), CWD)).toBeNull();
@@ -156,14 +154,12 @@ describe("a refused file write", () => {
     expect(refusal?.message).toBe(refusal?.reason);
   });
 
-  test.each([
-    "file_path",
-    "filePath",
-    "path",
-    "TargetFile",
-  ])("the path is found however it is spelled: %s", (key) => {
-    expect(decideRefusal(wrapped("Write", { [key]: PROTECTED }), CWD)).not.toBeNull();
-  });
+  test.each(["file_path", "filePath", "path", "TargetFile"])(
+    "the path is found however it is spelled: %s",
+    (key) => {
+      expect(decideRefusal(wrapped("Write", { [key]: PROTECTED }), CWD)).not.toBeNull();
+    }
+  );
 
   test.each(FILE_WRITE_TOOLS)("%s writes a file, whatever the agent calls it", (name) => {
     expect(decideRefusal(wrapped(name, { file_path: PROTECTED }), CWD)).not.toBeNull();

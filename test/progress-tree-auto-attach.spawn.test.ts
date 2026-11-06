@@ -17,15 +17,15 @@ startEachTestInAFreshHome(import.meta.file);
 describe("the factory's PR reaches the node holding the task", () => {
   const endOfTurn = () => stopProgressTree({ session_id: SESSION });
 
-  test.each([
-    "pr_opened",
-    "pr_adopted",
-  ])("%s attaches at the end of a turn", async (event) => {
-    nodeHoldingTask();
-    factoryEvent(event, TASK);
-    await endOfTurn();
-    expect(attachments()).toContainEqual(["n1", "pr", PR]);
-  });
+  test.each(["pr_opened", "pr_adopted"])(
+    "%s attaches at the end of a turn",
+    async (event) => {
+      nodeHoldingTask();
+      factoryEvent(event, TASK);
+      await endOfTurn();
+      expect(attachments()).toContainEqual(["n1", "pr", PR]);
+    }
+  );
 
   test("a PR attached by hand is not attached again, across checks", async () => {
     nodeHoldingTask();

@@ -64,7 +64,8 @@ tests:
     vars:
       messages: "1. Talked with Mira yesterday, she is moving to Tidewell Labs full time."
       expect:
-        present: [{ name: Mira Holt, kind: person, existing: mira-holt, organization: Tidewell }]
+        present:
+          [{ name: Mira Holt, kind: person, existing: mira-holt, organization: Tidewell }]
   - description: "B2 prospect company, named by a known person"
     vars:
       messages: "1. Pip wants us to pitch Quarrybell next week, they could become a client."
@@ -135,7 +136,8 @@ tests:
     vars:
       messages: "1. Ran into Theo Brandt at the meetup last night."
       expect:
-        present: [{ name: Theo Brandt, kind: person, empty: [role, organization, relation] }]
+        present:
+          [{ name: Theo Brandt, kind: person, empty: [role, organization, relation] }]
 
   # C — nobody to list
   - description: "C1 plain development chat"

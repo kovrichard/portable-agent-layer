@@ -95,7 +95,7 @@ function stopMessage(run: Run, now: Date): string {
 /** The reason to keep an unattended agent going, or null to let it stop. Counts each block. */
 export function unattendedStopReason(cwd: string, now: Date = new Date()): string | null {
   const run = runIn(cwd, now);
-  if (!run || run.kind !== "unattended" || run.done) return null;
+  if (run?.kind !== "unattended" || run.done) return null;
   if (run.stopBlocks >= MAX_STOP_BLOCKS) return null;
   writeRun({ ...run, stopBlocks: run.stopBlocks + 1 });
   return stopMessage(run, now);

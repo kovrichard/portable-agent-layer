@@ -69,18 +69,19 @@ beforeEach(() => {
 });
 
 describe("the progress tree's old settings", () => {
-  test.each(
-    RETIRED_KEY_PAIRS
-  )("one run removes the setting as %s and as %s", (oldKey, newKey) => {
-    writeSettings({
-      dynamicContext: { opinions: true, [oldKey]: true, [newKey]: false },
-    });
+  test.each(RETIRED_KEY_PAIRS)(
+    "one run removes the setting as %s and as %s",
+    (oldKey, newKey) => {
+      writeSettings({
+        dynamicContext: { opinions: true, [oldKey]: true, [newKey]: false },
+      });
 
-    quietly(() => runMigrate([]));
+      quietly(() => runMigrate([]));
 
-    expect(readSettings()).toEqual({ dynamicContext: { opinions: true } });
-    expect(checkPendingMigrations()).toEqual([]);
-  });
+      expect(readSettings()).toEqual({ dynamicContext: { opinions: true } });
+      expect(checkPendingMigrations()).toEqual([]);
+    }
+  );
 
   test("v9 leaves settings to v7 and is not pending without the old folder", () => {
     writeSettings({ dynamicContext: { workTree: true } });

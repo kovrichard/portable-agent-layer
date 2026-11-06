@@ -98,11 +98,11 @@ describe("the bot's promises become events", () => {
     expect(backfillEvents()).toMatchObject({ promises: 0 });
   });
 
-  test.each([
-    "{}",
-    "{ half written",
-  ])("a store reading %p yields no promises", (store) => {
-    writeFileSync(resolve(home, "memory", "commitments.json"), store);
-    expect(backfillEvents()).toMatchObject({ promises: 0 });
-  });
+  test.each(["{}", "{ half written"])(
+    "a store reading %p yields no promises",
+    (store) => {
+      writeFileSync(resolve(home, "memory", "commitments.json"), store);
+      expect(backfillEvents()).toMatchObject({ promises: 0 });
+    }
+  );
 });

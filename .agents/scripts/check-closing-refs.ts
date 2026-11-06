@@ -19,7 +19,7 @@ function targetsThisRepo(slug: string | undefined, repo: string): boolean {
   return slug === undefined || slug === repo;
 }
 
-export function closingRefsIn(source: Source, repo: string): ClosingRef[] {
+function closingRefsIn(source: Source, repo: string): ClosingRef[] {
   return parseGithub(source.text)
     .actions.close.filter((action) => targetsThisRepo(action.slug, repo))
     .map((action) => ({

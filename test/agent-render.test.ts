@@ -126,15 +126,16 @@ describe("markdown agent rendering", () => {
 describe("shipped agents", () => {
   const sources = readdirSync(SHIPPED).filter((f) => f.endsWith(".md"));
 
-  test.each(
-    AGENT_NAMES.map((platform) => [platform])
-  )("every one renders for %s", (platform) => {
-    for (const file of sources) {
-      expect(() =>
-        renderAgentForPlatform(readFileSync(resolve(SHIPPED, file), "utf-8"), platform)
-      ).not.toThrow();
+  test.each(AGENT_NAMES.map((platform) => [platform]))(
+    "every one renders for %s",
+    (platform) => {
+      for (const file of sources) {
+        expect(() =>
+          renderAgentForPlatform(readFileSync(resolve(SHIPPED, file), "utf-8"), platform)
+        ).not.toThrow();
+      }
     }
-  });
+  );
 
   test("codex gets a .toml file and the rest get .md", () => {
     expect(agentFileName("researcher", "codex")).toBe("researcher.toml");

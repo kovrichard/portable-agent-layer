@@ -259,7 +259,9 @@ describe("a gate check on its own", () => {
   });
 
   test("runCheck runs in the folder it is given", () => {
-    const output = (gateLib.runCheck?.("pwd", home, env) as { output: string }).output;
+    const output =
+      (gateLib.runCheck?.("pwd", home, env) as { output: string } | undefined)?.output ??
+      "";
     expect(output.trim().length).toBeGreaterThan(0);
     expect(output).toContain(home.split(/[\\/]/).at(-1) as string);
   });

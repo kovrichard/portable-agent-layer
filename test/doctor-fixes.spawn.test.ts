@@ -333,7 +333,7 @@ describe.skipIf(!PROVING).each(["package", "repo"] as Mode[])(
         const finding = doctor(sandbox).find((f) => f.id === breakage.id);
         expect(finding?.fix).toMatchObject({ external: false });
 
-        const command = (finding?.fix?.command as string).replace(
+        const command = String(finding?.fix?.command ?? "").replace(
           "<path>",
           breakage.path?.(sandbox) ?? "<path>"
         );

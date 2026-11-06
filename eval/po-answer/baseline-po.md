@@ -1,4 +1,5 @@
 ---
+
 name: po
 description: Product owner of a dark-factory task. Answers questions from the other roles using the task spec, and decides which ones only the user can answer.
 model: claude-opus-5-5
