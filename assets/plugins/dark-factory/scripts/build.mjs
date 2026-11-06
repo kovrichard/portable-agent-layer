@@ -94,6 +94,11 @@ const CONFIG_CHANGED_NOTE = `The diff changes ${CONFIG_FILE}. Report that change
 const TESTER_INSTRUCTIONS = "Test every acceptance criterion in the running app.";
 const TASK_DOCUMENTS = ["spec.md", "plan.md", "design.md", "repro.md", "tests.md"];
 const UNPLANNED_FILES_ASKER = "build";
+const TEST_FIX_LIMIT = 2;
+const FINGERPRINT_UNREADABLE =
+  "could not fingerprint the worktree around the test fix, so the files it changed cannot be checked";
+const TEST_FIX_DIFF_UNREADABLE =
+  "could not list the files the test fix changed: git diff --name-only failed";
 
 function stuck(message) {
   return { status: "stuck", message };
@@ -118,7 +123,8 @@ function poInstructions(role, question) {
 function poReply(outcome, question) {
   const answer = isUsable(outcome) ? outcome.structured : {};
   if (answer.userQuestion) return { userQuestion: answer.userQuestion };
-  if (answer.answer) return { answer: answer.answer, revert: answer.revert };
+  if (answer.answer)
+    return { answer: answer.answer, revert: answer.revert, testFix: answer.testFix };
   return { userQuestion: question };
 }
 
@@ -166,7 +172,16 @@ function answerQuestion(run, role, outcome, model, question) {
   const reply = askPo(run, role, question);
   if (reply.userQuestion) return { waitingOn: reply.userQuestion };
   appendDecision(run.id, { role, question, answer: reply.answer }, run.env);
-  return resumeWithAnswer(run, role, outcome, model, question, reply.answer);
+  const fixed = fixTestIfRuled(run, role, reply);
+  if (fixed.stop) return { stop: fixed.stop };
+  return resumeWithAnswer(
+    run,
+    role,
+    outcome,
+    model,
+    question,
+    withFixedTests(reply.answer, fixed.files)
+  );
 }
 
 function afterQuestion(run, role, outcome, model) {
@@ -178,6 +193,87 @@ function afterQuestion(run, role, outcome, model) {
       failed: "the role asked a question but claude returned no session id to resume",
     };
   return answerQuestion(run, role, outcome, model, question);
+}
+
+export function requestedTestFix(testFix) {
+  if (!testFix || !Array.isArray(testFix.files) || testFix.files.length === 0)
+    return null;
+  return {
+    files: testFix.files,
+    change: typeof testFix.change === "string" ? testFix.change : "",
+  };
+}
+
+export function testFixInstructions(testFix, answer) {
+  return `The PO ruled that a test contradicts the spec, and the test, not the code, must change. Change these test files:
+${fileList(testFix.files)}
+
+What must change: "${testFix.change}"
+
+The PO's answer: "${answer}"
+
+Change only these files, and only as the answer says. Leave the changes uncommitted.`;
+}
+
+function unchangedNamedMessage(named, outside) {
+  const base = `the test the PO ruled wrong was not changed: the test writer changed none of ${named.join(", ")}`;
+  if (outside.length === 0) return base;
+  return `${base}, and changed files the PO did not name: ${outside.join(", ")}`;
+}
+
+export function testFixScopeMessage(named, changed) {
+  const outside = changed.filter((file) => !named.includes(file));
+  const namedChanged = changed.some((file) => named.includes(file));
+  if (!namedChanged) return unchangedNamedMessage(named, outside);
+  if (outside.length === 0) return null;
+  return `the test writer changed files the PO did not name: ${outside.join(", ")}`;
+}
+
+export function withFixedTests(answer, files) {
+  if (files.length === 0) return answer;
+  return `${answer}\n\nThe test writer changed these test files as the PO answered: ${files.join(", ")}`;
+}
+
+function changedBetween(run, before, after) {
+  const output = gitOutput(run, ["diff", "--name-only", before, after]);
+  if (output === null) return null;
+  return output.split("\n").filter(Boolean);
+}
+
+function changedAfterFix(run, askedBy, testFix, before) {
+  const after = worktreeFingerprint(run);
+  if (after === null) return { stop: stuck(FINGERPRINT_UNREADABLE) };
+  const changed = changedBetween(run, before, after);
+  if (changed === null) return { stop: stuck(TEST_FIX_DIFF_UNREADABLE) };
+  const message = testFixScopeMessage(testFix.files, changed);
+  if (message) return { stop: stuck(message) };
+  appendEvent({ event: "test_fixed", task: run.id, askedBy, files: changed }, run.env);
+  return { files: changed };
+}
+
+function runTestFix(run, askedBy, testFix, answer) {
+  const before = worktreeFingerprint(run);
+  if (before === null) return { stop: stuck(FINGERPRINT_UNREADABLE) };
+  const written = runRole(run, "test-writer", testFixInstructions(testFix, answer), {
+    reason: "test-fix",
+  });
+  const roleStopped = roleStop("test-writer", written);
+  if (roleStopped) return { stop: roleStopped };
+  return changedAfterFix(run, askedBy, testFix, before);
+}
+
+function fixTestIfRuled(run, askedBy, reply) {
+  const testFix = requestedTestFix(reply.testFix);
+  if (!testFix) return { files: [] };
+  if (run.testFixes >= TEST_FIX_LIMIT) {
+    appendEvent(
+      { event: "test_fix_skipped", task: run.id, files: testFix.files },
+      run.env
+    );
+    return { files: [] };
+  }
+  run.testFixes += 1;
+  return runTestFix(run, askedBy, testFix, reply.answer);
 }
 
 function handOver(run, role, reason, instructions) {
@@ -211,12 +307,14 @@ function runRole(
 }
 
 function roleStop(role, result) {
+  if (result.stop) return result.stop;
   if (result.waitingOn) return waiting(result.waitingOn);
   if ("failed" in result) return stuck(`${role} failed: ${result.failed}`);
   return null;
 }
 
 function fixStop(fixed, what) {
+  if (fixed.stop) return fixed.stop;
   if (fixed.waitingOn) return waiting(fixed.waitingOn);
   if (!fixed.passed) return stuck(`${what} could not be fixed with the gate green`);
   return null;
@@ -267,6 +365,7 @@ function untilGreen(run, ladder, instructions, reason) {
       reason: failure ? "gate-failed" : reason,
     });
     if (result.waitingOn) return { waitingOn: result.waitingOn };
+    if (result.stop) return { stop: result.stop };
     const gate = gateFor(run, step);
     if (gate.passed) return { passed: true };
     failure = failureReport(gate.failed);
@@ -622,6 +721,7 @@ function codeStep(run) {
     `Implement the change described in ${codeSource(run.before)}. Commit the uncommitted tests already in the worktree together with your code; every commit goes through the repo's hooks.`,
     "pipeline"
   );
+  if (coded.stop) return coded.stop;
   if (coded.waitingOn) return waiting(coded.waitingOn);
   if (!coded.passed)
     return stuck(
@@ -1135,6 +1235,7 @@ export function runBuild(taskId, { env = process.env, effects = {} } = {}) {
     effects: { ...REAL_EFFECTS, ...effects },
     startedAt: new Date(),
     attempt: 0,
+    testFixes: 0,
     pr: null,
   };
   let outcome;
