@@ -9,9 +9,9 @@ updates:
     commit-message:
       prefix: "chore(deps)"
     groups:
-      dependencies:
-        patterns: ["*"]
-        
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
   - package-ecosystem: "github-actions"
     directory: "/"
     target-branch: "canary"
