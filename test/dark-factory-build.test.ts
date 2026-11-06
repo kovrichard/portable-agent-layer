@@ -714,7 +714,7 @@ describe("the unit typist", () => {
       args: string[]
     ) => unknown;
     world.effects.spawnTool = (command: string, args: string[]) =>
-      args[0] === "status"
+      args[0] === "status" || args[0] === "write-tree"
         ? { status: 128, stdout: "", stderr: "fatal" }
         : original(command, args);
     runBuild(world);
@@ -880,6 +880,42 @@ describe("the unit typist must raise the failing count", () => {
     expect(checksWhenCodeWriterStarts[0]).toBe(2);
     expect(unitDone(world)).toHaveLength(1);
     expect(eventsNamed(world, "tests_red")).toHaveLength(1);
+  });
+
+  test("a typist that edits a file the acceptance tests already modified still gets the proof", () => {
+    const world = worldFor({
+      category: "feature",
+      roles: { "test-writer": [{ leavesChanges: true }, { editsModifiedFile: true }] },
+      checks: sequenced([acceptance, failRun(3), failRun(4)]),
+    });
+    const porcelain: string[] = [];
+    const original = world.effects.spawnTool as (
+      command: string,
+      args: string[]
+    ) => { stdout: string };
+    world.effects.spawnTool = (command: string, args: string[]) => {
+      const answer = original(command, args);
+      if (args[0] === "status") porcelain.push(answer.stdout);
+      return answer;
+    };
+    const result = runBuild(world);
+    expect(new Set(porcelain.filter((line) => line !== "")).size).toBe(1);
+    expect(eventsNamed(world, "tests_red")).toHaveLength(2);
+    expect(eventsNamed(world, "tests_red").at(-1)).toEqual(
+      expect.objectContaining({ failing: 4, baseline: 3 })
+    );
+    expect(result.status).toBe("ready");
+  });
+
+  test("an edit to an already-modified file that does not raise the count is stuck", () => {
+    const world = worldFor({
+      category: "feature",
+      roles: { "test-writer": [{ leavesChanges: true }, { editsModifiedFile: true }] },
+      checks: sequenced([acceptance, failRun(3), failRun(3)]),
+    });
+    const result = runBuild(world);
+    expect(result.status).toBe("stuck");
+    expect(unitDone(world)).toHaveLength(0);
   });
 
   test("a resume that owes the typist also takes the baseline before it", () => {
@@ -1075,6 +1111,65 @@ describe("worktreeStatusChanged", () => {
     test(`${JSON.stringify(before)} → ${JSON.stringify(after)} is ${changed}`, () => {
       expect(build.worktreeStatusChanged(before, after)).toBe(changed);
     });
+});
+
+describe("worktreeFingerprint", () => {
+  type Worktree = {
+    files: Record<string, string>;
+    addStatus: number;
+    writeTreeStatus: number;
+  };
+
+  const fakeRun = (worktree: Worktree) => {
+    const spawnTool = (command: string, args: string[]) => {
+      if (args[0] === "add")
+        return { status: worktree.addStatus, stdout: "", stderr: "" };
+      if (args[0] === "write-tree") {
+        const tree = createHash("sha1")
+          .update(JSON.stringify(worktree.files))
+          .digest("hex");
+        return { status: worktree.writeTreeStatus, stdout: `${tree}\n`, stderr: "" };
+      }
+      return { status: 1, stdout: "", stderr: `unexpected ${command}` };
+    };
+    return { worktree: "/fake/worktree", env: {}, effects: { spawnTool } };
+  };
+
+  const fresh = (files: Record<string, string> = { "a.test.ts": "old" }): Worktree => ({
+    files,
+    addStatus: 0,
+    writeTreeStatus: 0,
+  });
+
+  test("the same worktree gives the same tree id both times", () => {
+    const run = fakeRun(fresh());
+    const first = build.worktreeFingerprint(run);
+    expect(first).not.toBeNull();
+    expect(build.worktreeFingerprint(run)).toBe(first);
+  });
+
+  test("editing a file that is already modified gives a different tree id", () => {
+    const worktree = fresh();
+    const run = fakeRun(worktree);
+    const before = build.worktreeFingerprint(run);
+    worktree.files["a.test.ts"] = "new";
+    expect(build.worktreeFingerprint(run)).not.toBe(before);
+  });
+
+  test("a new untracked file gives a different tree id", () => {
+    const worktree = fresh();
+    const run = fakeRun(worktree);
+    const before = build.worktreeFingerprint(run);
+    worktree.files["new.test.ts"] = "added";
+    expect(build.worktreeFingerprint(run)).not.toBe(before);
+  });
+
+  test("git add -A or git write-tree exiting non-zero gives null", () => {
+    expect(build.worktreeFingerprint(fakeRun({ ...fresh(), addStatus: 1 }))).toBeNull();
+    expect(
+      build.worktreeFingerprint(fakeRun({ ...fresh(), writeTreeStatus: 1 }))
+    ).toBeNull();
+  });
 });
 
 describe("the config frozen by prepare", () => {
