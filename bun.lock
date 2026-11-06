@@ -18,7 +18,7 @@
         "@biomejs/biome": "2.6.4",
         "@commitlint/cli": "21.2.4",
         "@commitlint/config-conventional": "21.2.4",
-        "@hughescr/stryker-bun-runner": "1.6.0",
+        "@hughescr/stryker-bun-runner": "1.3.8",
         "@konvert7/klint": "0.36.0",
         "@opencode-ai/plugin": "1.19.5",
         "@secretlint/secretlint-rule-preset-recommend": "13.1.0",
@@ -424,7 +424,7 @@
 
     "@hono/node-server": ["@hono/node-server@2.1.5", "", { "peerDependencies": { "hono": "^4 || ^5.0.0-0" } }, "sha512-MgP/I06GdvsilDspMk/qmRzpk8LOUStP6jFAbSRi40W09DhoyUn+Mj7eyKICPqeYKybOjVFLVIAQzvu1bfIa7Q=="],
 
-    "@hughescr/stryker-bun-runner": ["@hughescr/stryker-bun-runner@1.6.0", "", { "dependencies": { "@stryker-mutator/api": "^9.0.0 || ^10.0.0", "smol-toml": "^1.7.0", "tinyglobby": "^0.2.17", "ws": "^8.21.0" }, "peerDependencies": { "@stryker-mutator/core": "^9.0.0 || ^10.0.0", "typescript": "<7" } }, "sha512-P1QUMkY8ZRCyT+Ee5sa8/BbnEv9mmv7Zrqw+RoNbgjARoUfv8C+b/OYfCb5cXaIfu+p7jKjW/9Bh4Pfr+3B/jA=="],
+    "@hughescr/stryker-bun-runner": ["@hughescr/stryker-bun-runner@1.3.8", "", { "dependencies": { "@stryker-mutator/api": "9.6.1", "smol-toml": "1.7.0", "tinyglobby": "0.2.17", "ws": "8.21.0" }, "peerDependencies": { "@stryker-mutator/core": "^9.0.0" } }, "sha512-WxDLdHQW/ZxrvhapBjbHj1P+s/hARwiD6tlIP6w3vmDaSDHBk0jVFwChj0T5BdWlz/ZttTtcBWuHCkgRiQu5zg=="],
 
     "@img/colour": ["@img/colour@1.1.0", "", {}, "sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ=="],
 

@@ -8,6 +8,8 @@ updates:
     versioning-strategy: "increase"
     commit-message:
       prefix: "chore(deps)"
+    ignore:
+      - dependency-name: "@hughescr/stryker-bun-runner"
     groups:
       minor-and-patch:
         update-types: ["minor", "patch"]
