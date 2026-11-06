@@ -73,12 +73,20 @@ const BEFORE_INSTRUCTIONS = {
   "test-writer":
     "Write the failing tests for every acceptance criterion and leave them uncommitted; the code writer commits them with the code.",
 };
+const ACCEPTANCE_TESTS_INSTRUCTIONS =
+  "Write the failing acceptance tests from spec.md only; there is no plan yet, so do not read plan.md. Write tests.md in the task folder mapping each test to the acceptance criteria it covers. Leave the tests uncommitted; the code writer commits them with the code.";
+const PLAN_AFTER_TESTS_INSTRUCTIONS =
+  "Write plan.md for this change. Failing acceptance tests already exist in the worktree (see tests.md in the task folder); the plan must make them pass without changing them.";
+const UNIT_TESTS_INSTRUCTIONS =
+  "Type one unit test per row of each example table in plan.md, in the test files the plan names. Test only what the tables state, change no other file, and leave the tests uncommitted. When plan.md has no example tables, change nothing.";
+const SETTLE_PLAN_INSTRUCTIONS =
+  "The plan gate ended with findings it could not settle, and their answers are now in the spec's Decisions. Read spec.md again and apply its Decisions to plan.md.";
 const REPLAN_INSTRUCTIONS =
   "The spec changed since plan.md was written. Revise plan.md for the change. The branch already has commits, so plan only what is still to do.";
 const PLAN_GATE_INSTRUCTIONS =
   'This is the plan gate: there is no code and no diff yet, so ignore the branch diff. Review plan.md against spec.md only. Report one finding with file "plan.md" for each place where the plan narrows an acceptance criterion; adds behaviour, events, options, flags, files or dependencies that no criterion asks for; contradicts the spec, its Decisions or its Must not change; or leaves a decision to the code writer. Return an empty findings list when the plan does none of these.';
 const TESTS_AFTER_REPLAN_INSTRUCTIONS =
-  "The spec changed and plan.md was revised. Add failing tests only for the acceptance criteria that tests.md does not cover yet, update tests.md, and leave the new tests uncommitted; the code writer commits them with the code. When tests.md already covers every criterion, change nothing.";
+  "The spec changed and plan.md was revised. Work from spec.md only and do not read plan.md. Add failing tests only for the acceptance criteria that tests.md does not cover yet, update tests.md, and leave the new tests uncommitted; the code writer commits them with the code. When tests.md already covers every criterion, change nothing.";
 const REVIEW_INSTRUCTIONS = "Review the branch diff against its base and the spec.";
 const CONFIG_FILE = ".dark-factory.json";
 const CONFIG_CHANGED_NOTE = `The diff changes ${CONFIG_FILE}. Report that change as a finding unless the spec asks for it.`;
@@ -269,6 +277,19 @@ export function failingTestCount(output) {
   return last ? Number(last[1]) : null;
 }
 
+export function planGateEndedWithFindings(events, taskId) {
+  const gates = events.filter(
+    (event) => event.event === "plan_gate" && event.task === taskId
+  );
+  const latest = gates.at(-1);
+  return Boolean(latest) && latest.findings > 0;
+}
+
+export function worktreeStatusChanged(before, after) {
+  if (before === null || after === null) return true;
+  return before !== after;
+}
+
 function redTestCheck(run) {
   return run.config.gate.find((entry) => entry.name === RED_TEST_CHECK);
 }
@@ -452,25 +473,105 @@ function testsAfterReplan(run) {
   return proveTestsRed(run);
 }
 
+function unitTestsStep(run) {
+  if (!run.before.includes("test-writer")) return null;
+  const before = worktreeStatus(run);
+  const stop = roleStop(
+    "test-writer",
+    runRole(run, "test-writer", UNIT_TESTS_INSTRUCTIONS, { tier: "small" })
+  );
+  if (stop) return stop;
+  const stopAfterProof = worktreeStatusChanged(before, worktreeStatus(run))
+    ? proveTestsRed(run)
+    : null;
+  if (!stopAfterProof) appendEvent({ event: "unit_tests_done", task: run.id }, run.env);
+  return stopAfterProof;
+}
+
+function unitTestsOwed(run) {
+  if (!run.before.includes("planner") || !run.before.includes("test-writer"))
+    return false;
+  const kinds = readEvents(run.env)
+    .filter((event) => event.task === run.id)
+    .map((event) => event.event);
+  const lastPlan = kinds.lastIndexOf("plan_written");
+  return lastPlan >= 0 && kinds.lastIndexOf("unit_tests_done") < lastPlan;
+}
+
+function resumeUnitTests(run) {
+  if (!unitTestsOwed(run)) return null;
+  return planGateStep(run) ?? unitTestsStep(run);
+}
+
+function testsAfterSettle(run, specChanged) {
+  return specChanged ? testsAfterReplan(run) : null;
+}
+
+function settlePlanStep(run) {
+  const specChanged = specChangedSincePlan(run);
+  resumeFromTheStart(run);
+  const sessionId = latestPlannerSessionId(readEvents(run.env), run.id);
+  return (
+    runPlanner(run, SETTLE_PLAN_INSTRUCTIONS, "plan-findings", sessionId ?? undefined) ??
+    planGateStep(run) ??
+    testsAfterSettle(run, specChanged) ??
+    unitTestsStep(run)
+  );
+}
+
 function replanIfSpecChanged(run) {
   if (!specChangedSincePlan(run)) return null;
   resumeFromTheStart(run);
-  return replan(run) ?? planGateStep(run) ?? testsAfterReplan(run);
+  return replan(run) ?? planGateStep(run) ?? testsAfterReplan(run) ?? unitTestsStep(run);
+}
+
+function testWriterInstructions(before) {
+  return before.includes("planner")
+    ? ACCEPTANCE_TESTS_INSTRUCTIONS
+    : BEFORE_INSTRUCTIONS["test-writer"];
+}
+
+function plannerInstructions(before) {
+  return before.includes("test-writer")
+    ? PLAN_AFTER_TESTS_INSTRUCTIONS
+    : BEFORE_INSTRUCTIONS.planner;
+}
+
+function beforeRoleStep(run, role) {
+  if (role === "planner")
+    return (
+      planAndGate(run, plannerInstructions(run.before), "pipeline") ?? unitTestsStep(run)
+    );
+  if (role === "test-writer")
+    return (
+      roleStop(role, runRole(run, role, testWriterInstructions(run.before))) ??
+      proveTestsRed(run)
+    );
+  return roleStop(role, runRole(run, role, BEFORE_INSTRUCTIONS[role]));
+}
+
+function firstPlanStillOwed(run) {
+  return (
+    run.before.includes("planner") &&
+    !existsSync(planPath(run)) &&
+    latestPlanSha256(run) === null
+  );
+}
+
+function resumeFirstPlan(run) {
+  return beforeRoleStep(run, "planner");
 }
 
 function beforeRolesStep(run) {
-  if (hasCommitsAheadOfBase(run) || testsProvedRedBefore(run))
-    return replanIfSpecChanged(run);
+  if (planGateEndedWithFindings(readEvents(run.env), run.id)) return settlePlanStep(run);
+  const hasCommits = hasCommitsAheadOfBase(run);
+  if (!hasCommits && testsProvedRedBefore(run) && firstPlanStillOwed(run))
+    return resumeFirstPlan(run);
+  if (hasCommits) return replanIfSpecChanged(run);
+  if (testsProvedRedBefore(run)) return replanIfSpecChanged(run) ?? resumeUnitTests(run);
   for (const role of run.before) {
-    const stop =
-      role === "planner"
-        ? planAndGate(run, BEFORE_INSTRUCTIONS.planner, "pipeline")
-        : roleStop(role, runRole(run, role, BEFORE_INSTRUCTIONS[role]));
+    const stop = beforeRoleStep(run, role);
     if (stop) return stop;
-    if (role === "test-writer") {
-      const red = proveTestsRed(run);
-      if (red) return red;
-    }
   }
   return null;
 }
@@ -736,8 +837,12 @@ function worktreeHead(run) {
   return gitOutput(run, ["rev-parse", "HEAD"]);
 }
 
+function worktreeStatus(run) {
+  return gitOutput(run, ["status", "--porcelain"]);
+}
+
 function isWorktreeClean(run) {
-  return gitOutput(run, ["status", "--porcelain"]) === "";
+  return worktreeStatus(run) === "";
 }
 
 function latestStepDone(run) {

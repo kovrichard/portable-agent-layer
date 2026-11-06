@@ -94,9 +94,10 @@ describe("a rerun after the spec changed", () => {
     recordPlanWritten(world, STALE_HASH);
     commitsAhead(world);
     expect(runBuild(world).status).toBe("ready");
-    expect(roleNames(world).slice(0, 4)).toEqual([
+    expect(roleNames(world).slice(0, 5)).toEqual([
       "planner",
       "reviewer",
+      "test-writer",
       "test-writer",
       "code-writer",
     ]);
@@ -113,12 +114,27 @@ describe("a rerun after the spec changed", () => {
     recordPlanWritten(world, STALE_HASH);
     appendEvent({ event: "tests_red", task: TASK, exitCode: 1, failing: 2 }, world.env);
     runBuild(world);
+    expect(roleNames(world).slice(0, 5)).toEqual([
+      "planner",
+      "reviewer",
+      "test-writer",
+      "test-writer",
+      "code-writer",
+    ]);
+  });
+
+  test("tests proved red but no plan yet: the first plan is written with the plan-after-tests instructions", () => {
+    const world = worldFor();
+    appendEvent({ event: "tests_red", task: TASK, exitCode: 1, failing: 2 }, world.env);
+    runBuild(world);
     expect(roleNames(world).slice(0, 4)).toEqual([
       "planner",
       "reviewer",
       "test-writer",
       "code-writer",
     ]);
+    expect(handoverReasonsTo(world, "planner")).toEqual(["pipeline"]);
+    expect(plannerCalls(world)[0]?.instructions ?? "").not.toContain("spec changed");
   });
 
   test("a matching hash runs no planner", () => {
@@ -156,10 +172,11 @@ describe("a rerun after the spec changed", () => {
     expect(roleNames(world)).not.toContain("planner");
   });
 
-  test("a first run is unchanged: planner and test writer run, no spec-changed handover", () => {
+  test("a first run is test writer, planner, plan gate, unit typist, code writer, with no spec-changed handover", () => {
     const world = worldFor();
     runBuild(world);
-    expect(roleNames(world).slice(0, 4)).toEqual([
+    expect(roleNames(world).slice(0, 5)).toEqual([
+      "test-writer",
       "planner",
       "reviewer",
       "test-writer",
@@ -251,9 +268,10 @@ describe("a re-plan and a resumed build", () => {
     appendEvent({ event: "step_done", task: TASK, step: "code", head: "abc" }, world.env);
     cleanWorktreeAt(world, "abc");
     runBuild(world);
-    expect(roleNames(world).slice(0, 4)).toEqual([
+    expect(roleNames(world).slice(0, 5)).toEqual([
       "planner",
       "reviewer",
+      "test-writer",
       "test-writer",
       "code-writer",
     ]);

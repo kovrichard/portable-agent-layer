@@ -5,9 +5,9 @@ import { METRICS } from "./stats.mjs";
 export const CATEGORIES = {
   small: { before: [], after: ["reviewer"] },
   bug: { before: ["debugger", "test-writer"], after: ["reviewer"] },
-  feature: { before: ["planner", "test-writer"], after: ["reviewer", "tester"] },
+  feature: { before: ["test-writer", "planner"], after: ["reviewer", "tester"] },
   "big-feature": {
-    before: ["architect", "planner", "test-writer"],
+    before: ["architect", "test-writer", "planner"],
     after: ["reviewer", "tester"],
   },
   refactor: { before: ["planner"], after: ["reviewer"] },

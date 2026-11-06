@@ -131,10 +131,11 @@ describe("roles", () => {
   test("each category maps to a fixed set of roles before and after the code", () => {
     expect(rolesFor("small")).toEqual({ before: [], after: ["reviewer"] });
     expect(rolesFor("bug").before).toEqual(["debugger", "test-writer"]);
+    expect(rolesFor("feature").before).toEqual(["test-writer", "planner"]);
     expect(rolesFor("big-feature").before).toEqual([
       "architect",
-      "planner",
       "test-writer",
+      "planner",
     ]);
   });
 
@@ -590,6 +591,22 @@ describe("the plugin's own files", () => {
     const agent = readFileSync(join(PLUGIN_ROOT, "agents/test-writer.md"), "utf8");
     expect(agent).toContain("uncommitted");
     expect(agent).not.toContain("Commit the tests");
+  });
+
+  test("the test-writer agent tests each criterion at its widest reading, twice for state, never from plan.md", () => {
+    const agent = readFileSync(join(PLUGIN_ROOT, "agents/test-writer.md"), "utf8");
+    for (const word of [
+      "widest",
+      "twice",
+      "plan.md",
+      "any",
+      "every",
+      "each",
+      "never",
+      "always",
+    ])
+      expect(agent).toContain(word);
+    expect(agent).toContain("Never read plan.md");
   });
 
   test("the code-writer and the debugger commit the waiting tests through the hooks", () => {
