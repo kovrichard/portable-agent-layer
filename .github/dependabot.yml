@@ -1,0 +1,24 @@
+version: 2
+updates: 
+  - package-ecosystem: "bun"
+    directory: "/"
+    target-branch: "canary"
+    schedule:
+      interval: "weekly"
+    versioning-strategy: "increase"
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      dependencies:
+        patterns: ["*"]
+        
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    target-branch: "canary"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore(ci)"
+    groups:
+      actions:
+        patterns: ["*"]
