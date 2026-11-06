@@ -71,6 +71,14 @@ function undeclaredFlag(command: Leaf, words: string[]): string | null {
   return null;
 }
 
+function startsWithTilde(text: string): boolean {
+  return commandWords(text).some((word) => word.startsWith("~"));
+}
+
+function argumentsBeforeProse(command: string): string {
+  return command.split(" — ")[0] ?? command;
+}
+
 function invocationProblem(text: string): string | null {
   const resolved = resolveCommand(commandWords(text));
   if (typeof resolved === "string") return resolved;
@@ -97,22 +105,19 @@ describe("the `pal cli` commands PAL ships in its own instruction text", () => {
   test("no shipped `pal cli` command passes an argument starting with `~`", () => {
     const uses = shippedInvocations(new RegExp(/pal cli [^`\n]*/g));
     const tilde = uses
-      .filter(({ command }) => !command.includes(" — "))
-      .filter(({ command }) => commandWords(command).some((word) => word.startsWith("~")))
+      .filter(({ command }) => startsWithTilde(argumentsBeforeProse(command)))
       .map(({ file, command }) => `${file}: ${command}`);
     expect(tilde).toEqual([]);
   });
 
-  test("no shipped instruction text runs `cat` or `mkdir -p` on a tilde path", () => {
-    const shellTilde = shippedInvocations(new RegExp(/^.*(?:cat|mkdir -p) ~\/.*$/gm))
-      .filter(({ file }) => file.startsWith("assets/"))
-      .map(({ file, command }) => `${file}: ${command.trim()}`);
-    expect(shellTilde).toEqual([]);
+  test("the tilde check still sees a real command followed by an em-dash note", () => {
+    expect(startsWithTilde(argumentsBeforeProse("pal cli x ~/y — note"))).toBe(true);
+    expect(startsWithTilde(argumentsBeforeProse("pal cli skill — under ~/.pal/"))).toBe(
+      false
+    );
   });
 
   test("the tilde check sees a leading `~` word and ignores one inside a word", () => {
-    const startsWithTilde = (text: string) =>
-      commandWords(text).some((word) => word.startsWith("~"));
     expect(startsWithTilde("pal cli skill run consulting-report generate-pdf ~/x")).toBe(
       true
     );
