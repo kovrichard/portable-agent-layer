@@ -94,6 +94,31 @@ describe("the `pal cli` commands PAL ships in its own instruction text", () => {
     expect(broken).toEqual([]);
   });
 
+  test("no shipped `pal cli` command passes an argument starting with `~`", () => {
+    const uses = shippedInvocations(new RegExp(/pal cli [^`\n]*/g));
+    const tilde = uses
+      .filter(({ command }) => !command.includes(" — "))
+      .filter(({ command }) => commandWords(command).some((word) => word.startsWith("~")))
+      .map(({ file, command }) => `${file}: ${command}`);
+    expect(tilde).toEqual([]);
+  });
+
+  test("no shipped instruction text runs `cat` or `mkdir -p` on a tilde path", () => {
+    const shellTilde = shippedInvocations(new RegExp(/^.*(?:cat|mkdir -p) ~\/.*$/gm))
+      .filter(({ file }) => file.startsWith("assets/"))
+      .map(({ file, command }) => `${file}: ${command.trim()}`);
+    expect(shellTilde).toEqual([]);
+  });
+
+  test("the tilde check sees a leading `~` word and ignores one inside a word", () => {
+    const startsWithTilde = (text: string) =>
+      commandWords(text).some((word) => word.startsWith("~"));
+    expect(startsWithTilde("pal cli skill run consulting-report generate-pdf ~/x")).toBe(
+      true
+    );
+    expect(startsWithTilde("pal cli presentation build --path=~/x")).toBe(false);
+  });
+
   test("the call check rejects an unknown command and an undeclared flag", () => {
     expect(invocationProblem("pal cli frobnicate")).toBe("unknown command 'frobnicate'");
     expect(invocationProblem("pal cli doctor --nope")).toBe("--nope is not declared");
