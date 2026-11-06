@@ -94,23 +94,35 @@ function hasRepoFolder(task) {
   return Boolean(task.repo) && existsSync(task.repo);
 }
 
-export function userCorrections(env = process.env) {
-  const events = readEvents(env);
-  return listTasks(env)
-    .filter(hasRepoFolder)
-    .flatMap((task) => correctionOf(task, events, env));
+function wouldHaveBeenRead(task, events) {
+  if (!task.pr || !task.branch) return false;
+  const lastPush = eventsOf(events, task.id, "pushed").at(-1);
+  return Boolean(lastPush) && !alreadyHandledAfter(events, task.id, lastPush.ts);
 }
 
-export function recordTasksSkipped(env = process.env) {
-  const skipped = listTasks(env)
-    .filter((task) => !hasRepoFolder(task))
-    .map((task) => task.id);
+export function readCorrections(env = process.env) {
+  const events = readEvents(env);
+  const corrections = [];
+  const skipped = [];
+  for (const task of listTasks(env)) {
+    if (hasRepoFolder(task)) corrections.push(...correctionOf(task, events, env));
+    else if (wouldHaveBeenRead(task, events)) skipped.push(task.id);
+  }
+  return { corrections, skipped };
+}
+
+export function userCorrections(env = process.env) {
+  return readCorrections(env).corrections;
+}
+
+export function recordTasksSkipped(skipped, env = process.env) {
   if (skipped.length === 0) return;
   appendEvent(
     {
       event: "coach_tasks_skipped",
       tasks: skipped,
-      reason: "repo folder missing",
+      reason:
+        "repo folder missing; pushed task with a PR could not be checked for corrections",
     },
     env
   );

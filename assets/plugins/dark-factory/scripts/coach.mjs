@@ -3,9 +3,9 @@ import { existsSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import {
   prMergedAt,
+  readCorrections,
   recordCorrectionsGiven,
   recordTasksSkipped,
-  userCorrections,
 } from "./corrections.mjs";
 import {
   expectedInputs,
@@ -253,8 +253,8 @@ function coachRun(taskId, env, now) {
   const task = readTask(taskId, env);
   if (!existsSync(task.worktree))
     throw new Error(`the worktree of ${taskId} is gone: ${task.worktree}`);
-  const corrections = userCorrections(env);
-  recordTasksSkipped(env);
+  const { corrections, skipped } = readCorrections(env);
+  recordTasksSkipped(skipped, env);
   const { text, command } = runDiff(task, env);
   const correctionDiffs = corrections.flatMap((correction) =>
     correction.commits.map((commit) => commit.diff)
