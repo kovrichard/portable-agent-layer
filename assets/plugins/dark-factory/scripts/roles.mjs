@@ -45,6 +45,20 @@ const PO_RESULT = {
       items: { type: "string" },
       description: "Only for an unplanned-files question: the listed files to revert",
     },
+    testFix: {
+      type: "object",
+      description:
+        "Only when a test contradicts the spec or its Decisions and the test, not the code, must change",
+      properties: {
+        files: {
+          type: "array",
+          items: { type: "string" },
+          description: "The test files to change, repo-relative",
+        },
+        change: { type: "string", description: "What must change in them" },
+      },
+      required: ["files", "change"],
+    },
   },
 };
 
