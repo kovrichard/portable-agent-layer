@@ -98,7 +98,7 @@
     "@semantic-release/changelog": "7.0.0",
     "@semantic-release/git": "11.0.1",
     "@semantic-release/github": "12.0.10",
-    "@stryker-mutator/core": "9.6.1",
+    "@stryker-mutator/core": "10.1.1",
     "@types/bun": "1.4.4",
     "@types/node": "25.9.1",
     "husky": "9.1.7",
