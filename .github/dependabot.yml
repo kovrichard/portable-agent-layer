@@ -10,6 +10,8 @@ updates:
       prefix: "chore(deps)"
     ignore:
       - dependency-name: "@hughescr/stryker-bun-runner"
+      - dependency-name: "@stryker-mutator/core"
+        update-types: ["version-update:semver-major"]
       - dependency-name: "promptfoo"
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
