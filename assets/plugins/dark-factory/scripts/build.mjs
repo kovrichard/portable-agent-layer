@@ -481,7 +481,26 @@ function unitTestsStep(run) {
     runRole(run, "test-writer", UNIT_TESTS_INSTRUCTIONS, { tier: "small" })
   );
   if (stop) return stop;
-  return worktreeStatusChanged(before, worktreeStatus(run)) ? proveTestsRed(run) : null;
+  const stopAfterProof = worktreeStatusChanged(before, worktreeStatus(run))
+    ? proveTestsRed(run)
+    : null;
+  if (!stopAfterProof) appendEvent({ event: "unit_tests_done", task: run.id }, run.env);
+  return stopAfterProof;
+}
+
+function unitTestsOwed(run) {
+  if (!run.before.includes("planner") || !run.before.includes("test-writer"))
+    return false;
+  const kinds = readEvents(run.env)
+    .filter((event) => event.task === run.id)
+    .map((event) => event.event);
+  const lastPlan = kinds.lastIndexOf("plan_written");
+  return lastPlan >= 0 && kinds.lastIndexOf("unit_tests_done") < lastPlan;
+}
+
+function resumeUnitTests(run) {
+  if (!unitTestsOwed(run)) return null;
+  return planGateStep(run) ?? unitTestsStep(run);
 }
 
 function testsAfterSettle(run, specChanged) {
@@ -548,7 +567,8 @@ function beforeRolesStep(run) {
   const hasCommits = hasCommitsAheadOfBase(run);
   if (!hasCommits && testsProvedRedBefore(run) && firstPlanStillOwed(run))
     return resumeFirstPlan(run);
-  if (hasCommits || testsProvedRedBefore(run)) return replanIfSpecChanged(run);
+  if (hasCommits) return replanIfSpecChanged(run);
+  if (testsProvedRedBefore(run)) return replanIfSpecChanged(run) ?? resumeUnitTests(run);
   for (const role of run.before) {
     const stop = beforeRoleStep(run, role);
     if (stop) return stop;

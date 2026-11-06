@@ -20,7 +20,13 @@ import {
 } from "./lib/dark-factory-build-fixture";
 
 const NOOP: RoleStep = { codes: false };
-const NOISE = new Set(["role_finished", "gate_check", "handover", "plan_written"]);
+const NOISE = new Set([
+  "role_finished",
+  "gate_check",
+  "handover",
+  "plan_written",
+  "unit_tests_done",
+]);
 const QUESTION = { done: false, summary: "", question: "which file?" };
 
 type Options = Parameters<typeof buildWorld>[1];
@@ -715,6 +721,55 @@ describe("the unit typist", () => {
     const result = runBuild(world);
     expect(result.status).toBe("stuck");
     expect(result.message).toContain("test-writer failed");
+  });
+});
+
+describe("a rerun before the first code step", () => {
+  const SPEC_HASH = createHash("sha256")
+    .update("# Add export\n\n## Goal\n\nExport.\n\n")
+    .digest("hex");
+  const redProof = { event: "tests_red", task: TASK, exitCode: 1, failing: 2 };
+
+  function worldWithPlan(events: object[]) {
+    const world = worldFor({ category: "feature" });
+    writeFileSync(join(taskDir(TASK, world.env), "plan.md"), "plan\n");
+    for (const event of events) appendEvent(event as never, world.env);
+    return world;
+  }
+
+  test("a plan written but unit typist not finished runs the plan gate and the typist", () => {
+    const world = worldWithPlan([
+      redProof,
+      { event: "plan_written", task: TASK, specSha256: SPEC_HASH },
+    ]);
+    runBuild(world);
+    expect(roleNames(world).slice(0, 3)).toEqual([
+      "reviewer",
+      "test-writer",
+      "code-writer",
+    ]);
+  });
+
+  test("a finished unit typist is not run again", () => {
+    const world = worldWithPlan([
+      redProof,
+      { event: "plan_written", task: TASK, specSha256: SPEC_HASH },
+      { event: "unit_tests_done", task: TASK },
+    ]);
+    runBuild(world);
+    expect(roleNames(world)[0]).toBe("code-writer");
+  });
+
+  test("tests proved red but no plan yet runs the planner, gate and typist", () => {
+    const world = worldFor({ category: "feature" });
+    appendEvent(redProof as never, world.env);
+    runBuild(world);
+    expect(roleNames(world).slice(0, 4)).toEqual([
+      "planner",
+      "reviewer",
+      "test-writer",
+      "code-writer",
+    ]);
   });
 });
 
