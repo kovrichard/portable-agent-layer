@@ -21,6 +21,7 @@ export type RoleStep = {
   codes?: boolean;
   commits?: boolean;
   changes?: string[];
+  leavesChanges?: boolean;
 };
 
 export type RoleCall = {
@@ -51,6 +52,7 @@ export type World = {
   env: Record<string, string>;
   worktree: string;
   coded: boolean;
+  uncommitted: boolean;
   changedFiles: string[];
   roleCalls: RoleCall[];
   checkCommands: string[];
@@ -97,14 +99,19 @@ function seedTask(env: Record<string, string>, category: string) {
   writeFileSync(join(taskDir(TASK, env), "spec.md"), SPEC);
 }
 
+function recordStepEffects(world: World, step: RoleStep) {
+  if (step.codes) world.coded = true;
+  if (step.commits) world.head += 1;
+  world.changedFiles.push(...(step.changes ?? []));
+  if (step.leavesChanges) world.uncommitted = true;
+}
+
 function fakeRole(world: World, options: WorldOptions) {
   return (taskId: string, role: string, args: Omit<RoleCall, "role">) => {
     const index = world.roleCalls.filter((call) => call.role === role).length;
     world.roleCalls.push({ role, ...args });
     const step = stepFor(options, role, index);
-    if (step.codes) world.coded = true;
-    if (step.commits) world.head += 1;
-    world.changedFiles.push(...(step.changes ?? []));
+    recordStepEffects(world, step);
     const exitCode = step.exit ?? 0;
     if (role === "planner" && exitCode === 0) {
       writeFileSync(join(taskDir(taskId, world.env), "plan.md"), "plan\n");
@@ -181,19 +188,38 @@ function fakeCi(world: World, options: WorldOptions) {
   };
 }
 
+function gitAnswer(world: World, options: WorldOptions, args: string[]) {
+  if (args[0] === "rev-parse" && args[1] === "HEAD") {
+    return options.headUnreadable || options.gitHeadUnreadable
+      ? { status: 128, stdout: "", stderr: "fatal" }
+      : { status: 0, stdout: `sha-${world.head}\n`, stderr: "" };
+  }
+  if (args[0] === "status") {
+    return { status: 0, stdout: world.uncommitted ? "?? new.test.ts\n" : "", stderr: "" };
+  }
+  return null;
+}
+
+function spawnAnswer(
+  world: World,
+  options: WorldOptions,
+  command: string,
+  args: string[]
+) {
+  if (command === "gh" && args[0] === "run" && args[1] === "rerun") {
+    world.reruns.push(args);
+    return { status: options.rerunFails ? 1 : 0, stdout: "", stderr: "" };
+  }
+  return command === "git" ? gitAnswer(world, options, args) : null;
+}
+
 function fakeSpawnTool(world: World, options: WorldOptions) {
-  return (command: string, args: string[]) => {
-    if (command === "gh" && args[0] === "run" && args[1] === "rerun") {
-      world.reruns.push(args);
-      return { status: options.rerunFails ? 1 : 0, stdout: "", stderr: "" };
-    }
-    if (command === "git" && args[0] === "rev-parse" && args[1] === "HEAD") {
-      return options.headUnreadable || options.gitHeadUnreadable
-        ? { status: 128, stdout: "", stderr: "fatal" }
-        : { status: 0, stdout: `sha-${world.head}\n`, stderr: "" };
-    }
-    return { status: 0, stdout: String(options.commitsAhead ?? 0), stderr: "" };
-  };
+  return (command: string, args: string[]) =>
+    spawnAnswer(world, options, command, args) ?? {
+      status: 0,
+      stdout: String(options.commitsAhead ?? 0),
+      stderr: "",
+    };
 }
 
 function fakeShip(world: World) {
@@ -221,6 +247,7 @@ export function buildWorld(testFile: string, options: WorldOptions = {}): World 
     env,
     worktree: join(root, "worktree"),
     coded: false,
+    uncommitted: false,
     changedFiles: [],
     roleCalls: [],
     checkCommands: [],

@@ -360,6 +360,7 @@ describe("a whole feature run", () => {
     expect(result.message).toContain(PR_URL);
     expect(roleNames()).toEqual([
       "planner",
+      "reviewer",
       "test-writer",
       "code-writer",
       "reviewer",
@@ -370,6 +371,8 @@ describe("a whole feature run", () => {
       "run_started",
       "task_started",
       "role:planner",
+      "role:reviewer",
+      "plan_gate",
       "role:test-writer",
       "tests_red",
       "role:code-writer",

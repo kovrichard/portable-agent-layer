@@ -79,6 +79,7 @@ describe("a whole feature run, in process", () => {
     });
     expect(roleNames(world)).toEqual([
       "planner",
+      "reviewer",
       "test-writer",
       "code-writer",
       "reviewer",
@@ -87,6 +88,8 @@ describe("a whole feature run, in process", () => {
     expect(flow(world)).toEqual([
       "task_started",
       "role:planner",
+      "role:reviewer",
+      "plan_gate",
       "role:test-writer",
       "tests_red",
       "role:code-writer",
@@ -137,9 +140,9 @@ describe("a whole feature run, in process", () => {
     expect(finished[0]).toMatchObject({
       task: TASK,
       status: "ready",
-      roleRuns: 5,
-      costUsd: 1.25,
-      tokens: 675,
+      roleRuns: 6,
+      costUsd: 1.5,
+      tokens: 810,
     });
     expect(typeof finished[0]?.wallMs).toBe("number");
   });
@@ -560,7 +563,7 @@ describe("red tests", () => {
     expect(eventsNamed(world, "tests_red")).toEqual([
       expect.objectContaining({ exitCode: 0 }),
     ]);
-    expect(roleNames(world)).toEqual(["planner", "test-writer"]);
+    expect(roleNames(world)).toEqual(["planner", "reviewer", "test-writer"]);
   });
 
   test("a gate with no check named tests is stuck with a message that says so", () => {
@@ -571,7 +574,7 @@ describe("red tests", () => {
     const result = runBuild(world);
     expect(result.status).toBe("stuck");
     expect(result.message).toContain('no check named "tests"');
-    expect(roleNames(world)).toEqual(["planner", "test-writer"]);
+    expect(roleNames(world)).toEqual(["planner", "reviewer", "test-writer"]);
   });
 });
 
