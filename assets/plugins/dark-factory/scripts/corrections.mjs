@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { appendEvent, readEvents } from "./lib.mjs";
 import { run } from "./ship.mjs";
 import { listTasks } from "./task.mjs";
@@ -89,9 +90,42 @@ function correctionOf(task, events, env) {
   return [{ task: task.id, pr: task.pr, commits }];
 }
 
-export function userCorrections(env = process.env) {
+function hasRepoFolder(task) {
+  return Boolean(task.repo) && existsSync(task.repo);
+}
+
+function wouldHaveBeenRead(task, events) {
+  if (!task.pr || !task.branch) return false;
+  const lastPush = eventsOf(events, task.id, "pushed").at(-1);
+  return Boolean(lastPush) && !alreadyHandledAfter(events, task.id, lastPush.ts);
+}
+
+export function readCorrections(env = process.env) {
   const events = readEvents(env);
-  return listTasks(env).flatMap((task) => correctionOf(task, events, env));
+  const corrections = [];
+  const skipped = [];
+  for (const task of listTasks(env)) {
+    if (hasRepoFolder(task)) corrections.push(...correctionOf(task, events, env));
+    else if (wouldHaveBeenRead(task, events)) skipped.push(task.id);
+  }
+  return { corrections, skipped };
+}
+
+export function userCorrections(env = process.env) {
+  return readCorrections(env).corrections;
+}
+
+export function recordTasksSkipped(skipped, env = process.env) {
+  if (skipped.length === 0) return;
+  appendEvent(
+    {
+      event: "coach_tasks_skipped",
+      tasks: skipped,
+      reason:
+        "repo folder missing; pushed task with a PR could not be checked for corrections",
+    },
+    env
+  );
 }
 
 export function recordCorrectionsGiven(corrections, env = process.env) {
