@@ -353,6 +353,10 @@ function beforeEachReset() {
 describe("a whole feature run", () => {
   test("runs the pipeline in order and ends ready with one JSON line and exit 0", () => {
     setup("feature");
+    writeFileSync(
+      join(ctx.factory, "tasks", TASK, "plan.md"),
+      "feature.txt\nfeature.test.txt\n"
+    );
     const run = runBuild();
     expect(run.exitCode).toBe(0);
     const result = resultOf(run);

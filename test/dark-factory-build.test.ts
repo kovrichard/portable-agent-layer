@@ -336,6 +336,7 @@ describe("review and test rounds", () => {
         tester: [{ reply: { criteria: [unmet] } }],
       },
     });
+    writeFileSync(join(taskDir(TASK, world.env), "plan.md"), "feature.txt\nui/\n");
     expect(runBuild(world).status).toBe("ready");
     expect(roleNames(world)).toEqual([
       "code-writer",
@@ -349,6 +350,34 @@ describe("review and test rounds", () => {
     expect(eventsNamed(world, "test")).toEqual([expect.objectContaining({ unmet: 1 })]);
     expect(world.roleCalls[3]?.model).toBe(FACTORY_MODELS.medium);
     expect(world.roleCalls[3]?.instructions).toContain("export works");
+  });
+});
+
+describe("unplanned files on resume", () => {
+  test("a revert that stopped waiting is asked again on the resumed run", () => {
+    const world = worldFor({
+      roles: {
+        po: [
+          { reply: { answer: "revert one.ts", revert: ["one.ts"] } },
+          { reply: { userQuestion: "Which file?" } },
+          { reply: { answer: "keep one.ts" } },
+        ],
+        "code-writer": [{ codes: true }, { reply: QUESTION }],
+      },
+    });
+    world.changedFiles.push("one.ts");
+    expect(runBuild(world).status).toBe("waiting");
+    expect(eventsNamed(world, "unplanned_files")).toHaveLength(0);
+    runBuild(world);
+    const questions = world.roleCalls.filter(
+      (call) =>
+        call.role === "po" && call.instructions?.includes("named in no task document")
+    );
+    expect(questions).toHaveLength(2);
+    expect(questions[1]?.instructions).toContain("one.ts");
+    expect(eventsNamed(world, "unplanned_files")).toEqual([
+      expect.objectContaining({ files: ["one.ts"], reverted: [] }),
+    ]);
   });
 });
 
@@ -905,5 +934,120 @@ describe("runTotals", () => {
       "2026-10-20T10:00:00.000Z"
     );
     expect(totals).toEqual({ costUsd: 0.5, tokens: 19, roleRuns: 2 });
+  });
+});
+
+describe("unplannedFiles", () => {
+  test("lists a changed file that no document names", () => {
+    expect(
+      build.unplannedFiles(
+        ["src/named.ts", "src/stray.ts"],
+        ["Edit src/named.ts only.\n"],
+        []
+      )
+    ).toEqual(["src/stray.ts"]);
+  });
+
+  test("a file under a directory named with a slash, and a file under a deeper named directory, are both named", () => {
+    expect(
+      build.unplannedFiles(
+        ["test/a.test.ts", "src/deep/b.ts"],
+        ["tests live in test/ and src/deep/\n"],
+        []
+      )
+    ).toEqual([]);
+  });
+
+  test("a file whose full path is in a document is not listed, and a sibling file in the same directory is", () => {
+    expect(
+      build.unplannedFiles(
+        ["test/a.test.ts", "test/other.test.ts"],
+        ["Add test/a.test.ts\n"],
+        []
+      )
+    ).toEqual(["test/other.test.ts"]);
+  });
+
+  test("matching is case-sensitive", () => {
+    expect(build.unplannedFiles(["src/Thing.ts"], ["src/thing.ts\n"], [])).toEqual([
+      "src/Thing.ts",
+    ]);
+  });
+
+  test("a file listed before is not listed again", () => {
+    expect(build.unplannedFiles(["old.ts", "new.ts"], [], ["old.ts"])).toEqual([
+      "new.ts",
+    ]);
+  });
+
+  test("bun.lock gets no exemption", () => {
+    expect(build.unplannedFiles(["bun.lock"], ["run bun install\n"], [])).toEqual([
+      "bun.lock",
+    ]);
+  });
+
+  test("a glob that mentions a directory's files does not name a file in it", () => {
+    expect(
+      build.unplannedFiles(["test/x.test.ts"], ["see `test/*.test.ts`\n"], [])
+    ).toEqual([]);
+  });
+
+  test("a directory followed by a slash in prose names its files", () => {
+    expect(
+      build.unplannedFiles(["test/x.test.ts"], ["tests live in test/\n"], [])
+    ).toEqual([]);
+  });
+
+  test("a directory mentioned in prose names the files under it", () => {
+    expect(
+      build.unplannedFiles(["test/lib/x.ts"], ["tests live in test/ only\n"], [])
+    ).toEqual([]);
+  });
+
+  test("a different file in a named file's directory is still listed", () => {
+    expect(build.unplannedFiles(["test/lib/b.ts"], ["Add test/lib/a.ts\n"], [])).toEqual([
+      "test/lib/b.ts",
+    ]);
+  });
+
+  test("a directory followed by a slash at the end of a sentence names its files", () => {
+    expect(build.unplannedFiles(["test/x.ts"], ["files under test/.\n"], [])).toEqual([
+      "test/x.ts",
+    ]);
+  });
+
+  test("no changed files gives no listed files", () => {
+    expect(build.unplannedFiles([], ["anything"], [])).toEqual([]);
+  });
+});
+
+describe("filesToRevert", () => {
+  test("returns the listed file that revert names", () => {
+    expect(build.filesToRevert(["one.ts", "two.ts"], ["one.ts"])).toEqual(["one.ts"]);
+  });
+
+  test("ignores a revert entry that is not among the listed files", () => {
+    expect(build.filesToRevert(["one.ts"], ["two.ts", "ghost.ts"])).toEqual([]);
+  });
+
+  test("keeps only the listed files that revert names, when revert also names an unlisted file", () => {
+    expect(build.filesToRevert(["one.ts", "two.ts"], ["one.ts", "ghost.ts"])).toEqual([
+      "one.ts",
+    ]);
+  });
+
+  test("an undefined revert keeps every listed file", () => {
+    expect(build.filesToRevert(["one.ts", "two.ts"], undefined)).toEqual([]);
+  });
+
+  test("an empty revert keeps every listed file", () => {
+    expect(build.filesToRevert(["one.ts", "two.ts"], [])).toEqual([]);
+  });
+
+  test("returns the reverted files in listed order, not revert order", () => {
+    expect(build.filesToRevert(["one.ts", "two.ts"], ["two.ts", "one.ts"])).toEqual([
+      "one.ts",
+      "two.ts",
+    ]);
   });
 });

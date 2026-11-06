@@ -91,6 +91,8 @@ const REVIEW_INSTRUCTIONS = "Review the branch diff against its base and the spe
 const CONFIG_FILE = ".dark-factory.json";
 const CONFIG_CHANGED_NOTE = `The diff changes ${CONFIG_FILE}. Report that change as a finding unless the spec asks for it.`;
 const TESTER_INSTRUCTIONS = "Test every acceptance criterion in the running app.";
+const TASK_DOCUMENTS = ["spec.md", "plan.md", "design.md", "repro.md", "tests.md"];
+const UNPLANNED_FILES_ASKER = "build";
 
 function stuck(message) {
   return { status: "stuck", message };
@@ -115,7 +117,7 @@ function poInstructions(role, question) {
 function poReply(outcome, question) {
   const answer = isUsable(outcome) ? outcome.structured : {};
   if (answer.userQuestion) return { userQuestion: answer.userQuestion };
-  if (answer.answer) return { answer: answer.answer };
+  if (answer.answer) return { answer: answer.answer, revert: answer.revert };
   return { userQuestion: question };
 }
 
@@ -609,6 +611,137 @@ function rolesAfterStep(run) {
   return null;
 }
 
+function parentDirectories(file) {
+  return file
+    .split("/")
+    .slice(0, -1)
+    .map((_, index, parts) => parts.slice(0, index + 1).join("/"));
+}
+
+function mentionsDirectory(text, directory) {
+  return text
+    .split(`${directory}/`)
+    .slice(1)
+    .some((rest) => !/^[\w.-]/.test(rest));
+}
+
+function namesFile(text, file) {
+  return (
+    text.includes(file) ||
+    parentDirectories(file).some((directory) => mentionsDirectory(text, directory))
+  );
+}
+
+export function unplannedFiles(changed, documentTexts, listedBefore) {
+  return changed.filter(
+    (file) =>
+      !listedBefore.includes(file) && !documentTexts.some((text) => namesFile(text, file))
+  );
+}
+
+export function filesToRevert(listed, revert) {
+  return Array.isArray(revert) ? listed.filter((file) => revert.includes(file)) : [];
+}
+
+function fileList(files) {
+  return files.map((file) => `- ${file}`).join("\n");
+}
+
+function unplannedFilesQuestion(files) {
+  return `These changed files are named in no task document (spec, plan, design, repro or tests):
+${fileList(files)}
+
+Decide for each file whether to keep or revert it. Put the files to revert in revert, exactly as listed here, and give the reason for each decision in answer.`;
+}
+
+function revertInstructions(base, files) {
+  return `The PO decided to revert these files, which no task document names:
+${fileList(files)}
+
+Restore each of them to its version on origin/${base}, and delete any of them that does not exist on origin/${base}. Change no other file. Commit the revert; every commit goes through the repo's hooks.`;
+}
+
+function matchableText(name, text) {
+  return name === "spec.md" ? withoutDecisions(text) : text;
+}
+
+function taskDocumentTexts(run) {
+  return TASK_DOCUMENTS.filter((name) => existsSync(join(run.taskDir, name))).map(
+    (name) => matchableText(name, readFileSync(join(run.taskDir, name), "utf8"))
+  );
+}
+
+function filesListedBefore(run) {
+  return readEvents(run.env)
+    .filter((event) => event.event === "unplanned_files" && event.task === run.id)
+    .flatMap((event) => event.files ?? []);
+}
+
+function differsFromBase(run, file) {
+  const result = run.effects.spawnTool(
+    "git",
+    ["diff", "--name-only", `origin/${run.base}`, "HEAD", "--", file],
+    { cwd: run.worktree, env: run.env }
+  );
+  return result.status !== 0 || result.stdout.trim() !== "";
+}
+
+function stillDiffering(run, files) {
+  return files.filter((file) => differsFromBase(run, file));
+}
+
+function recordUnplannedFiles(run, files, reverted) {
+  appendEvent({ event: "unplanned_files", task: run.id, files, reverted }, run.env);
+}
+
+function stillDifferingMessage(base, differing) {
+  if (differing.length === 0) return null;
+  return `these files still differ from origin/${base} after the revert: ${differing.join(", ")}`;
+}
+
+function revertStop(ladderStop, differingMessage) {
+  if (!differingMessage) return ladderStop;
+  if (!ladderStop) return stuck(differingMessage);
+  return stuck(`${ladderStop.message}; ${differingMessage}`);
+}
+
+function revertUnplannedFiles(run, listed, chosen) {
+  const fixed = untilGreen(
+    run,
+    FIX_LADDER,
+    revertInstructions(run.base, chosen),
+    "unplanned-files"
+  );
+  if (fixed.waitingOn) return waiting(fixed.waitingOn);
+  const stop = revertStop(
+    fixStop(fixed, "the revert of unplanned files"),
+    stillDifferingMessage(run.base, stillDiffering(run, chosen))
+  );
+  if (!stop) recordUnplannedFiles(run, listed, chosen);
+  return stop;
+}
+
+function unplannedFilesStep(run) {
+  const listed = unplannedFiles(
+    run.effects.changedFilesSince(run.worktree, `origin/${run.base}`, run.env),
+    taskDocumentTexts(run),
+    filesListedBefore(run)
+  );
+  if (listed.length === 0) return null;
+  const question = unplannedFilesQuestion(listed);
+  const reply = askPo(run, UNPLANNED_FILES_ASKER, question);
+  if (reply.userQuestion) return waiting(reply.userQuestion);
+  appendDecision(
+    run.id,
+    { role: UNPLANNED_FILES_ASKER, question, answer: reply.answer },
+    run.env
+  );
+  const chosen = filesToRevert(listed, reply.revert);
+  if (chosen.length > 0) return revertUnplannedFiles(run, listed, chosen);
+  recordUnplannedFiles(run, listed, []);
+  return null;
+}
+
 function reviewFindingsStep(run, findings) {
   const fixed = untilGreen(
     run,
@@ -813,6 +946,7 @@ const STEPS = [
   beforeRolesStep,
   codeStep,
   rolesAfterStep,
+  unplannedFilesStep,
   reviewStep,
   testerStep,
   syncStep,

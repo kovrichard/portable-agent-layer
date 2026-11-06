@@ -37,7 +37,15 @@ const ROLE_RESULT = {
 
 const PO_RESULT = {
   type: "object",
-  properties: { answer: { type: "string" }, userQuestion: { type: "string" } },
+  properties: {
+    answer: { type: "string" },
+    userQuestion: { type: "string" },
+    revert: {
+      type: "array",
+      items: { type: "string" },
+      description: "Only for an unplanned-files question: the listed files to revert",
+    },
+  },
 };
 
 const REVIEW_RESULT = {
