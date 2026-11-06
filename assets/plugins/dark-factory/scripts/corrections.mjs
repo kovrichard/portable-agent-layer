@@ -90,7 +90,7 @@ function correctionOf(task, events, env) {
   return [{ task: task.id, pr: task.pr, commits }];
 }
 
-export function hasRepoFolder(task) {
+function hasRepoFolder(task) {
   return Boolean(task.repo) && existsSync(task.repo);
 }
 
