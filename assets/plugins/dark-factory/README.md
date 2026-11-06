@@ -93,6 +93,8 @@ Each repository the factory works on has a `.dark-factory.json` at its root:
 }
 ```
 
+The build keeps the code step from editing a test. Right before the code step it fingerprints the worktree, and every test file in it is protected; after the code step a protected file that changed or was deleted is listed in a `test_edits_restored` event and restored by the fix ladder, and a second change stops the task stuck. A file is a test file when its path starts with an entry of `testPaths`, for example `"testPaths": ["spec/"]`. Without `testPaths`, a file is a test file when its name contains `.test.` or `.spec.`, or a directory in its path is named `test`, `tests` or `__tests__`. New test files are allowed.
+
 The categories with a test writer (`bug`, `feature` and `big-feature`) need a gate check named exactly `tests`. The build runs it right after the test writer, and the task is stuck when no test fails.
 
 ## Notifications

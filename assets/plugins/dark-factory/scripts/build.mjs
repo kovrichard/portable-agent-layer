@@ -99,6 +99,7 @@ const FINGERPRINT_UNREADABLE =
   "could not fingerprint the worktree around the test fix, so the files it changed cannot be checked";
 const TEST_FIX_DIFF_UNREADABLE =
   "could not list the files the test fix changed: git diff --name-only failed";
+const TEST_EDITS_EVENT = "test_edits_restored";
 
 function stuck(message) {
   return { status: "stuck", message };
@@ -247,6 +248,7 @@ function changedAfterFix(run, askedBy, testFix, before) {
   if (changed === null) return { stop: stuck(TEST_FIX_DIFF_UNREADABLE) };
   const message = testFixScopeMessage(testFix.files, changed);
   if (message) return { stop: stuck(message) };
+  run.testFixTrees.push({ tree: after, files: changed });
   appendEvent({ event: "test_fixed", task: run.id, askedBy, files: changed }, run.env);
   return { files: changed };
 }
@@ -714,7 +716,7 @@ function codeSource(before) {
   return "the spec";
 }
 
-function codeStep(run) {
+function codeLadderStep(run) {
   const coded = untilGreen(
     run,
     CODE_LADDER,
@@ -728,6 +730,75 @@ function codeStep(run) {
       `the gate still fails after ${CODE_LADDER.length} attempts:\n${coded.failure.slice(-FAILURE_TAIL)}`
     );
   return null;
+}
+
+function codeStep(run) {
+  const start = worktreeFingerprint(run);
+  if (start === null) return stuck(FINGERPRINT_UNREADABLE);
+  const fixesFrom = run.testFixTrees.length;
+  return codeLadderStep(run) ?? testEditsStep(run, start, fixesFrom);
+}
+
+function protectedTestFiles(run, tree) {
+  const output = gitOutput(run, ["ls-tree", "-r", "--name-only", tree]);
+  if (output === null) return null;
+  return output
+    .split("\n")
+    .filter(Boolean)
+    .filter((file) => isTestFile(file, run.config.testPaths));
+}
+
+function filesChangedBetween(run, before, after) {
+  const output = gitOutput(run, ["diff", "--name-only", "--no-renames", before, after]);
+  if (output === null) return null;
+  return output.split("\n").filter(Boolean);
+}
+
+function changedFilesByTree(run, baselines, end) {
+  const changedByTree = new Map();
+  for (const tree of new Set(baselines.map((entry) => entry.tree))) {
+    const changed = filesChangedBetween(run, tree, end);
+    if (changed === null) return null;
+    changedByTree.set(tree, changed);
+  }
+  return changedByTree;
+}
+
+function editedTestFiles(run, start, fixesFrom) {
+  const end = worktreeFingerprint(run);
+  if (end === null) return { stop: stuck(FINGERPRINT_UNREADABLE) };
+  const files = protectedTestFiles(run, start);
+  if (files === null) return { stop: stuck(FINGERPRINT_UNREADABLE) };
+  const baselines = baselineTrees(files, start, run.testFixTrees.slice(fixesFrom));
+  const changedByTree = changedFilesByTree(run, baselines, end);
+  if (changedByTree === null) return { stop: stuck(FINGERPRINT_UNREADABLE) };
+  return { edits: editedBaselines(baselines, changedByTree) };
+}
+
+function testEditsStep(run, start, fixesFrom) {
+  const found = editedTestFiles(run, start, fixesFrom);
+  if (found.stop) return found.stop;
+  if (found.edits.length === 0) return null;
+  return restoreTestEdits(run, start, fixesFrom, found.edits);
+}
+
+function restoreTestEdits(run, start, fixesFrom, edits) {
+  appendEvent(
+    { event: TEST_EDITS_EVENT, task: run.id, files: edits.map((edit) => edit.file) },
+    run.env
+  );
+  const fixed = untilGreen(
+    run,
+    FIX_LADDER,
+    restoreTestEditsInstructions(edits),
+    "test-edits"
+  );
+  const stop = fixStop(fixed, "the restore of the edited test files");
+  if (stop) return stop;
+  const again = editedTestFiles(run, start, fixesFrom);
+  if (again.stop) return again.stop;
+  if (again.edits.length === 0) return null;
+  return stuck(testEditsAgainMessage(again.edits.map((edit) => edit.file)));
 }
 
 function rolesAfterStep(run) {
@@ -761,6 +832,45 @@ function namesFile(text, file) {
     text.includes(file) ||
     parentDirectories(file).some((directory) => mentionsDirectory(text, directory))
   );
+}
+
+const TEST_DIRECTORIES = ["test", "tests", "__tests__"];
+const TEST_NAME_MARKERS = [".test.", ".spec."];
+
+export function isTestFile(file, testPaths) {
+  if (Array.isArray(testPaths))
+    return testPaths.some((prefix) => file.startsWith(prefix));
+  const parts = file.split("/");
+  const name = parts.at(-1);
+  const directories = parts.slice(0, -1);
+  return (
+    TEST_NAME_MARKERS.some((marker) => name.includes(marker)) ||
+    directories.some((directory) => TEST_DIRECTORIES.includes(directory))
+  );
+}
+
+export function baselineTrees(protectedFiles, startTree, fixes) {
+  return protectedFiles.map((file) => {
+    const lastFix = fixes.filter((fix) => fix.files.includes(file)).at(-1);
+    return { file, tree: lastFix ? lastFix.tree : startTree };
+  });
+}
+
+export function editedBaselines(baselines, changedByTree) {
+  return baselines.filter(({ file, tree }) =>
+    (changedByTree.get(tree) ?? []).includes(file)
+  );
+}
+
+export function restoreTestEditsInstructions(edits) {
+  return `The code step changed these test files, and the code writer and the debugger never edit a test:
+${edits.map((edit) => `- ${edit.file} (tree ${edit.tree})`).join("\n")}
+
+Restore each file to its content in the git tree named next to it, for example with \`git checkout <tree> -- <file>\`; a deleted file is recreated that way. Commit the restore; every commit goes through the repo's hooks. Then make the gate pass without editing any test. When a test seems wrong, ask the PO a question instead of changing it. Change none of these files again: a second change stops the build.`;
+}
+
+export function testEditsAgainMessage(files) {
+  return `the test files were changed again after a restore: ${files.join(", ")}`;
 }
 
 export function unplannedFiles(changed, documentTexts, listedBefore) {
@@ -1236,6 +1346,7 @@ export function runBuild(taskId, { env = process.env, effects = {} } = {}) {
     startedAt: new Date(),
     attempt: 0,
     testFixes: 0,
+    testFixTrees: [],
     pr: null,
   };
   let outcome;

@@ -1452,3 +1452,214 @@ describe("filesToRevert", () => {
     ]);
   });
 });
+
+describe("isTestFile", () => {
+  test("a .test. file with no testPaths is a test file", () => {
+    expect(build.isTestFile("src/a.test.ts", undefined)).toBe(true);
+  });
+
+  test("a .spec. file with no testPaths is a test file", () => {
+    expect(build.isTestFile("src/b.spec.js", undefined)).toBe(true);
+  });
+
+  test("a file in a test directory with no testPaths is a test file", () => {
+    expect(build.isTestFile("test/helper.ts", undefined)).toBe(true);
+  });
+
+  test("a non-code file in a tests directory is a test file", () => {
+    expect(build.isTestFile("tests/fixtures/data.json", undefined)).toBe(true);
+  });
+
+  test("a file in a __tests__ directory is a test file", () => {
+    expect(build.isTestFile("src/__tests__/x.ts", undefined)).toBe(true);
+  });
+
+  test("a file in a nested test directory is a test file", () => {
+    expect(build.isTestFile("lib/test/y.ts", undefined)).toBe(true);
+  });
+
+  test("a file whose name only contains test as a word fragment is not a test file", () => {
+    expect(build.isTestFile("src/latest.ts", undefined)).toBe(false);
+  });
+
+  test("a directory whose name only contains test as a fragment is not a test file", () => {
+    expect(build.isTestFile("contest/a.ts", undefined)).toBe(false);
+  });
+
+  test("a directory named testing is not a test directory", () => {
+    expect(build.isTestFile("src/testing/x.ts", undefined)).toBe(false);
+  });
+
+  test("a file named test.ts is not a test file", () => {
+    expect(build.isTestFile("src/test.ts", undefined)).toBe(false);
+  });
+
+  test("a bare path named test is not a test file", () => {
+    expect(build.isTestFile("test", undefined)).toBe(false);
+  });
+
+  test("a file under a testPaths prefix is a test file", () => {
+    expect(build.isTestFile("spec/a.ts", ["spec/"])).toBe(true);
+  });
+
+  test("a .test. file outside the testPaths prefixes is not a test file", () => {
+    expect(build.isTestFile("src/a.test.ts", ["spec/"])).toBe(false);
+  });
+
+  test("a file under a spec directory that is not at the start of its path is not a test file", () => {
+    expect(build.isTestFile("src/spec/a.ts", ["spec/"])).toBe(false);
+  });
+
+  test("an empty testPaths list makes no file a test file, even a .test. file", () => {
+    expect(build.isTestFile("test/a.test.ts", [])).toBe(false);
+  });
+});
+
+describe("baselineTrees", () => {
+  test("a single protected file with no fixes is compared with the start tree", () => {
+    expect(build.baselineTrees(["t/a.test.ts"], "S", [])).toEqual([
+      { file: "t/a.test.ts", tree: "S" },
+    ]);
+  });
+
+  test("a file a test fix did not change keeps the start tree, and a changed one takes the fix tree", () => {
+    expect(
+      build.baselineTrees(["t/a.test.ts", "t/b.test.ts"], "S", [
+        { tree: "F1", files: ["t/b.test.ts"] },
+      ])
+    ).toEqual([
+      { file: "t/a.test.ts", tree: "S" },
+      { file: "t/b.test.ts", tree: "F1" },
+    ]);
+  });
+
+  test("a file changed by two test fixes takes the tree of the last fix", () => {
+    expect(
+      build.baselineTrees(["t/b.test.ts"], "S", [
+        { tree: "F1", files: ["t/b.test.ts"] },
+        { tree: "F2", files: ["t/b.test.ts"] },
+      ])
+    ).toEqual([{ file: "t/b.test.ts", tree: "F2" }]);
+  });
+
+  test("a fix that changed only other files leaves a protected file on the start tree", () => {
+    expect(
+      build.baselineTrees(["t/a.test.ts"], "S", [
+        { tree: "F1", files: ["t/new.test.ts"] },
+      ])
+    ).toEqual([{ file: "t/a.test.ts", tree: "S" }]);
+  });
+
+  test("no protected files gives no baselines", () => {
+    expect(
+      build.baselineTrees([], "S", [{ tree: "F1", files: ["t/x.test.ts"] }])
+    ).toEqual([]);
+  });
+});
+
+describe("editedBaselines", () => {
+  test("a baseline whose tree shows its file changed is returned", () => {
+    expect(
+      build.editedBaselines([{ file: "a", tree: "S" }], new Map([["S", ["a"]]]))
+    ).toEqual([{ file: "a", tree: "S" }]);
+  });
+
+  test("a baseline whose file did not change in its tree is not returned", () => {
+    expect(
+      build.editedBaselines(
+        [
+          { file: "a", tree: "S" },
+          { file: "b", tree: "F1" },
+        ],
+        new Map([
+          ["S", ["b"]],
+          ["F1", []],
+        ])
+      )
+    ).toEqual([]);
+  });
+
+  test("each baseline is compared with its own tree, and both are returned in order", () => {
+    expect(
+      build.editedBaselines(
+        [
+          { file: "a", tree: "S" },
+          { file: "b", tree: "F1" },
+        ],
+        new Map([
+          ["S", ["a", "b"]],
+          ["F1", ["b"]],
+        ])
+      )
+    ).toEqual([
+      { file: "a", tree: "S" },
+      { file: "b", tree: "F1" },
+    ]);
+  });
+
+  test("a changed file that is not a baseline is not returned", () => {
+    expect(
+      build.editedBaselines([{ file: "a", tree: "S" }], new Map([["S", ["src/x.ts"]]]))
+    ).toEqual([]);
+  });
+
+  test("no baselines gives nothing, whatever the map holds", () => {
+    expect(build.editedBaselines([], new Map())).toEqual([]);
+  });
+});
+
+describe("restoreTestEditsInstructions", () => {
+  const CLOSING_PARAGRAPH =
+    "Restore each file to its content in the git tree named next to it, for example with `git checkout <tree> -- <file>`; a deleted file is recreated that way. Commit the restore; every commit goes through the repo's hooks. Then make the gate pass without editing any test. When a test seems wrong, ask the PO a question instead of changing it. Change none of these files again: a second change stops the build.";
+
+  test("one edit names its file and tree, and the text covers restore, commit, the PO and no second change", () => {
+    const text = build.restoreTestEditsInstructions([
+      { file: "test/a.test.ts", tree: "abc123" },
+    ]);
+    expect(text).toContain("- test/a.test.ts (tree abc123)");
+    expect(text).toContain("Restore");
+    expect(text).toContain("Commit");
+    expect(text).toContain("without editing any test");
+    expect(text).toContain("PO");
+    expect(text).toContain("again");
+  });
+
+  test("two edits each get their own line, in the order given", () => {
+    const text = build.restoreTestEditsInstructions([
+      { file: "test/a.test.ts", tree: "S" },
+      { file: "test/b.test.ts", tree: "F" },
+    ]);
+    const first = text.indexOf("- test/a.test.ts (tree S)");
+    const second = text.indexOf("- test/b.test.ts (tree F)");
+    expect(first).toBeGreaterThanOrEqual(0);
+    expect(second).toBeGreaterThan(first);
+  });
+
+  test("a file of any kind gets its line, and the closing paragraph stays as written", () => {
+    const text = build.restoreTestEditsInstructions([
+      { file: "tests/x.json", tree: "S" },
+    ]);
+    expect(text).toContain("- tests/x.json (tree S)");
+    expect(text).toContain(CLOSING_PARAGRAPH);
+  });
+});
+
+describe("testEditsAgainMessage", () => {
+  test("one changed file is named after the restore message", () => {
+    expect(build.testEditsAgainMessage(["test/a.test.ts"])).toBe(
+      "the test files were changed again after a restore: test/a.test.ts"
+    );
+  });
+
+  test("two changed files are named in order, separated by a comma", () => {
+    expect(build.testEditsAgainMessage(["test/a.test.ts", "test/b.test.ts"])).toBe(
+      "the test files were changed again after a restore: test/a.test.ts, test/b.test.ts"
+    );
+  });
+
+  test("an empty list gives the message with nothing after the colon", () => {
+    expect(build.testEditsAgainMessage([])).toBe(
+      "the test files were changed again after a restore: "
+    );
+  });
+});
