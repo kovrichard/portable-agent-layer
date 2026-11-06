@@ -22,8 +22,17 @@ const SUBPROCESS_SUITES = new Set([
   "test/subagent-link.spawn.test.ts",
 ]);
 
+// The sandbox lives under the gitignored .stryker-tmp/, where git lists no tracked files.
+const SUITES_THAT_READ_THE_GIT_CHECKOUT = new Set([
+  "test/check-exact-versions.spawn.test.ts",
+]);
+
 function isInProcessSuite(file) {
-  return file.endsWith(".test.ts") && !SUBPROCESS_SUITES.has(file);
+  return (
+    file.endsWith(".test.ts") &&
+    !SUBPROCESS_SUITES.has(file) &&
+    !SUITES_THAT_READ_THE_GIT_CHECKOUT.has(file)
+  );
 }
 
 // The bun runner passes testFiles to `bun test` verbatim and never expands globs, so a
