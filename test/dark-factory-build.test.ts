@@ -888,18 +888,36 @@ describe("the unit typist must raise the failing count", () => {
       roles: { "test-writer": [{ leavesChanges: true }, { editsModifiedFile: true }] },
       checks: sequenced([acceptance, failRun(3), failRun(4)]),
     });
-    const porcelain: string[] = [];
-    const original = world.effects.spawnTool as (
+    const original = world.effects.runRoleHeadless as (
+      taskId: string,
+      role: string,
+      args: object
+    ) => unknown;
+    const spawn = world.effects.spawnTool as (
       command: string,
       args: string[]
     ) => { stdout: string };
-    world.effects.spawnTool = (command: string, args: string[]) => {
-      const answer = original(command, args);
-      if (args[0] === "status") porcelain.push(answer.stdout);
-      return answer;
+    const read = (args: string[]) => spawn("git", args).stdout;
+    const snapshots: { porcelain: string[]; tree: string[] } = {
+      porcelain: [],
+      tree: [],
+    };
+    let typistCalls = 0;
+    world.effects.runRoleHeadless = (taskId: string, role: string, args: object) => {
+      if (role !== "test-writer" || ++typistCalls !== 2)
+        return original(taskId, role, args);
+      snapshots.porcelain.push(read(["status", "--porcelain"]));
+      snapshots.tree.push(read(["write-tree"]));
+      const outcome = original(taskId, role, args);
+      snapshots.porcelain.push(read(["status", "--porcelain"]));
+      snapshots.tree.push(read(["write-tree"]));
+      return outcome;
     };
     const result = runBuild(world);
-    expect(new Set(porcelain.filter((line) => line !== "")).size).toBe(1);
+    expect(snapshots.porcelain).toHaveLength(2);
+    expect(snapshots.porcelain[0]).not.toBe("");
+    expect(snapshots.porcelain[1]).toBe(snapshots.porcelain[0]);
+    expect(snapshots.tree[1]).not.toBe(snapshots.tree[0]);
     expect(eventsNamed(world, "tests_red")).toHaveLength(2);
     expect(eventsNamed(world, "tests_red").at(-1)).toEqual(
       expect.objectContaining({ failing: 4, baseline: 3 })
