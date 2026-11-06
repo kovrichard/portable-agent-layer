@@ -33,6 +33,7 @@ const NOISE = new Set([
   "gate_check",
   "handover",
   "plan_written",
+  "unit_tests_done",
 ]);
 
 type Step = {
