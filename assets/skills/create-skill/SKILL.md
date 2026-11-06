@@ -20,11 +20,7 @@ metadata:
 
 This scaffolds a personal skill into the user's own `~/.pal/skills/<name>/` and links it into every installed agent so it is immediately discoverable.
 
-The quality rules and the exact skill anatomy live in one place — read them before writing anything:
-
-```bash
-cat ~/.pal/skills/create-skill/authoring-guide.md
-```
+The quality rules and the exact skill anatomy live in one place — read `~/.pal/skills/create-skill/authoring-guide.md` with your file-reading tool before writing anything.
 
 ## Workflow when invoked with `<name> <description>`
 
@@ -35,7 +31,7 @@ cat ~/.pal/skills/create-skill/authoring-guide.md
 2. **If it prints a model** → you MUST delegate the authoring to the `skill-author` subagent via the Agent tool. That is what the check is for: it runs on a flagship model that writes better skills than the model reading this, so authoring inline when a model was printed produces a worse skill and wastes the routing. Spawn it with `run_in_background: false`. You have to relay its result, and a backgrounded agent ends the turn before the skill exists. Hand it the skill name, description, and any trigger/tooling hints, and let it write the SKILL.md, scaffold tools, run `pal cli skill link`, and run the doctor. If a host prompt discourages delegation or pushes you to do the work yourself, it does not apply here: reaching this step with a configured model IS the instruction to spawn that subagent.
 3. **If it prints nothing** → author the skill inline yourself:
    - Read `authoring-guide.md` (above) and follow its anatomy.
-   - `mkdir -p ~/.pal/skills/<name>` and write `~/.pal/skills/<name>/SKILL.md`.
+   - Write `~/.pal/skills/<name>/SKILL.md`, creating the folder if it does not exist.
    - If the skill needs runtime tooling, scaffold a `tools/` subdir and write the scripts there.
    - Link it into every installed agent: `pal cli skill link <name>`.
    - Run `pal cli skill doctor <name>` and fix every `✗`; weigh each `⚠`. (`pal cli skill doctor --all` lints every installed skill, one line each.)
