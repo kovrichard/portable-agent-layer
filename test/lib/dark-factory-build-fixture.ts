@@ -19,6 +19,7 @@ export type RoleStep = {
   reply?: object;
   exit?: number;
   codes?: boolean;
+  commits?: boolean;
   changes?: string[];
 };
 
@@ -30,7 +31,8 @@ export type RoleCall = {
 };
 
 type CheckResult = { exitCode: number; output: string };
-type CiState = { state: string; failed: object[] };
+type CiCheck = string | { name: string; link?: string };
+type CiState = { state: string; failed: CiCheck[] };
 
 type WorldOptions = {
   category?: string;
@@ -40,6 +42,8 @@ type WorldOptions = {
   ci?: CiState[];
   ciError?: string;
   commitsAhead?: number;
+  rerunFails?: boolean;
+  headUnreadable?: boolean;
 };
 
 export type World = {
@@ -51,6 +55,8 @@ export type World = {
   checkCommands: string[];
   pushes: number;
   ciReads: number;
+  head: number;
+  reruns: string[][];
   effects: Record<string, unknown>;
 };
 
@@ -95,6 +101,7 @@ function fakeRole(world: World, options: WorldOptions) {
     world.roleCalls.push({ role, ...args });
     const step = stepFor(options, role, index);
     if (step.codes) world.coded = true;
+    if (step.commits) world.head += 1;
     world.changedFiles.push(...(step.changes ?? []));
     const exitCode = step.exit ?? 0;
     if (role === "planner" && exitCode === 0) {
@@ -140,14 +147,44 @@ function fakePrepare(world: World, options: WorldOptions) {
   };
 }
 
+function runIdOf(check: CiCheck): string | undefined {
+  return typeof check === "string"
+    ? undefined
+    : check.link?.match(/\/actions\/runs\/(\d+)/)?.[1];
+}
+
+function ciResult(entry: CiState) {
+  const names = entry.failed.map((check) =>
+    typeof check === "string" ? check : check.name
+  );
+  const runs = entry.failed.map(runIdOf).filter((id): id is string => Boolean(id));
+  return { state: entry.state, failed: names, runs: [...new Set(runs)] };
+}
+
 function fakeCi(world: World, options: WorldOptions) {
   return () => {
     world.ciReads += 1;
     if (options.ciError) throw new Error(options.ciError);
-    return (
-      options.ci?.[world.ciReads - 1] ??
-      options.ci?.at(-1) ?? { state: "pass", failed: [] }
-    );
+    if (options.headUnreadable)
+      throw new Error("could not read the worktree HEAD: fatal");
+    const entry = options.ci?.[world.ciReads - 1] ??
+      options.ci?.at(-1) ?? { state: "pass", failed: [] };
+    return ciResult(entry);
+  };
+}
+
+function fakeSpawnTool(world: World, options: WorldOptions) {
+  return (command: string, args: string[]) => {
+    if (command === "gh" && args[0] === "run" && args[1] === "rerun") {
+      world.reruns.push(args);
+      return { status: options.rerunFails ? 1 : 0, stdout: "", stderr: "" };
+    }
+    if (command === "git" && args[0] === "rev-parse" && args[1] === "HEAD") {
+      return options.headUnreadable
+        ? { status: 128, stdout: "", stderr: "fatal" }
+        : { status: 0, stdout: `sha-${world.head}\n`, stderr: "" };
+    }
+    return { status: 0, stdout: String(options.commitsAhead ?? 0), stderr: "" };
   };
 }
 
@@ -181,6 +218,8 @@ export function buildWorld(testFile: string, options: WorldOptions = {}): World 
     checkCommands: [],
     pushes: 0,
     ciReads: 0,
+    head: 0,
+    reruns: [],
     effects: {},
   };
   mkdirSync(world.worktree, { recursive: true });
@@ -195,7 +234,7 @@ export function buildWorld(testFile: string, options: WorldOptions = {}): World 
       world.checkCommands.push(command);
       return checks[command]?.(world) ?? { exitCode: 0, output: "" };
     },
-    spawnTool: () => ({ status: 0, stdout: String(options.commitsAhead ?? 0) }),
+    spawnTool: fakeSpawnTool(world, options),
     changedFilesSince: () => [...world.changedFiles],
     prepare: fakePrepare(world, options),
     waitForCi: fakeCi(world, options),

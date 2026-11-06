@@ -218,6 +218,21 @@ describe("CI", () => {
     expect(classifyChecks([]).state).toBe("none");
   });
 
+  const matchingHeads = { readPrHead: () => "abc123", readLocalHead: () => "abc123" };
+  const staleHeads = { readPrHead: () => "old111", readLocalHead: () => "new222" };
+
+  function waitWith(checks: object[], heads: object, timeoutMs = 10) {
+    writeTask({ id: "t1", pr: "https://pr/1", worktree: "/wt" }, env);
+    return waitForCi("t1", {
+      env,
+      read: () => checks,
+      pause: () => {},
+      pollMs: 1,
+      timeoutMs,
+      ...heads,
+    });
+  }
+
   test("waiting polls until the checks settle and logs the result once", () => {
     writeTask({ id: "t1", pr: "https://pr/1", worktree: "/wt" }, env);
     const answers = [[{ name: "a", bucket: "pending" }], [{ name: "a", bucket: "pass" }]];
@@ -227,9 +242,66 @@ describe("CI", () => {
       pause: () => {},
       pollMs: 1,
       timeoutMs: 10,
+      ...matchingHeads,
     });
     expect(outcome.state).toBe("pass");
     expect(eventsNamed("ci")).toEqual([expect.objectContaining({ result: "pass" })]);
+  });
+
+  test("checks of another commit than the worktree HEAD are never read as pass", () => {
+    const outcome = waitWith([{ name: "a", bucket: "pass" }], staleHeads);
+    expect(outcome.state).toBe("pending");
+    expect(eventsNamed("ci")).toEqual([]);
+  });
+
+  test("checks of another commit than the worktree HEAD are never read as fail", () => {
+    const outcome = waitWith([{ name: "a", bucket: "fail" }], staleHeads);
+    expect(outcome.state).toBe("pending");
+    expect(eventsNamed("ci")).toEqual([]);
+  });
+
+  test("no checks at another commit are not read as none even after the grace", () => {
+    const outcome = waitWith([], staleHeads, 20);
+    expect(outcome.state).toBe("pending");
+  });
+
+  test("at a matching commit pass, fail, pending and none read as classifyChecks says", () => {
+    expect(waitWith([{ name: "a", bucket: "pass" }], matchingHeads).state).toBe("pass");
+    expect(waitWith([{ name: "a", bucket: "fail" }], matchingHeads)).toMatchObject({
+      state: "fail",
+      failed: ["a"],
+    });
+    expect(waitWith([{ name: "a", bucket: "pending" }], matchingHeads, 3).state).toBe(
+      "pending"
+    );
+    expect(waitWith([], matchingHeads, 10).state).toBe("none");
+  });
+
+  test("the ci event records the head sha the result belongs to", () => {
+    waitWith([{ name: "a", bucket: "pass" }], matchingHeads);
+    expect(eventsNamed("ci")).toEqual([
+      expect.objectContaining({ result: "pass", sha: "abc123" }),
+    ]);
+  });
+
+  test("a PR without a head commit is unreadable, like a failing gh pr checks", () => {
+    expect(() =>
+      waitWith([{ name: "a", bucket: "pass" }], {
+        readPrHead: () => null,
+        readLocalHead: () => "abc123",
+      })
+    ).toThrow();
+  });
+
+  test("a PR head read that fails is raised, never read as checks", () => {
+    expect(() =>
+      waitWith([{ name: "a", bucket: "pass" }], {
+        readPrHead: () => {
+          throw new Error("gh pr view failed");
+        },
+        readLocalHead: () => "abc123",
+      })
+    ).toThrow("gh pr view failed");
   });
 
   test("a gh error such as a lapsed login is raised, never read as no checks", () => {
@@ -260,6 +332,8 @@ describe("CI", () => {
       pause: () => {},
       pollMs: 1,
       timeoutMs: 3,
+      readPrHead: () => "abc123",
+      readLocalHead: () => "abc123",
     });
     expect(outcome.state).toBe("pending");
     expect(eventsNamed("ci")).toEqual([]);
