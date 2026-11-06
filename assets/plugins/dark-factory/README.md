@@ -73,7 +73,7 @@ Not every task runs every role. The PO picks a category, and code maps it to rol
 
 A diff that touches the paths in `uiPaths` always adds the tester.
 
-When the gate fails, the code writer gets two attempts on Haiku, then two on Sonnet, then the debugger gets two on Opus. After that the task is marked stuck and you are told what was tried. Review findings get two fix rounds, CI failures two. CI counts only once the pull request's head is the pushed commit. When a CI fix commits nothing, the failed runs are rerun once instead, and a second failure ends the task stuck as external or flaky.
+When the gate fails, the code writer gets two attempts on Haiku, then two on Sonnet, then the debugger gets two on Opus. After that the task is marked stuck and you are told what was tried. Review findings get two fix rounds, CI failures two. CI counts only once the pull request's head is the pushed commit. When a CI fix commits nothing, the failed runs are rerun once instead, and a second failure ends the task stuck as external or flaky. After a rerun, a failed check that still shows the old attempt's job link counts as still running.
 
 ## Repo config
 

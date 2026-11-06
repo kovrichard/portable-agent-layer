@@ -30,6 +30,24 @@ export function failedRunIds(checks) {
   return [...new Set(ids)];
 }
 
+function isLink(value) {
+  return typeof value === "string" && value !== "";
+}
+
+function failedLinks(checks) {
+  return checks
+    .filter(isFailed)
+    .map((check) => check.link)
+    .filter(isLink);
+}
+
+function withoutStaleFailures(checks, staleLinks) {
+  const stale = new Set(staleLinks.filter(isLink));
+  return checks.map((check) =>
+    isFailed(check) && stale.has(check.link) ? { ...check, bucket: "pending" } : check
+  );
+}
+
 function requireSha(head) {
   if (typeof head !== "string" || head === "")
     throw new Error("gh pr view returned no head commit");
@@ -71,9 +89,9 @@ function readSnapshot(task, env, readers) {
   return { sha, checks, current };
 }
 
-function outcomeAt(snapshot) {
+function outcomeAt(snapshot, staleLinks) {
   if (!snapshot.current) return { state: "pending", failed: [] };
-  return classifyChecks(snapshot.checks);
+  return classifyChecks(withoutStaleFailures(snapshot.checks, staleLinks));
 }
 
 export function waitForCi(
@@ -86,6 +104,7 @@ export function waitForCi(
     pause = sleep,
     pollMs = POLL_MS,
     timeoutMs = TIMEOUT_MS,
+    staleLinks = /** @type {string[]} */ ([]),
   } = {}
 ) {
   const task = readTask(id, env);
@@ -93,7 +112,7 @@ export function waitForCi(
   const graceForChecksToAppear = 4;
   for (let waited = 0, polls = 0; waited <= timeoutMs; waited += pollMs, polls += 1) {
     const snapshot = readSnapshot(task, env, readers);
-    const outcome = outcomeAt(snapshot);
+    const outcome = outcomeAt(snapshot, staleLinks);
     const settled = outcome.state === "pass" || outcome.state === "fail";
     if (settled || (outcome.state === "none" && polls >= graceForChecksToAppear)) {
       appendEvent(
@@ -110,6 +129,7 @@ export function waitForCi(
         ...outcome,
         sha: snapshot.sha,
         runs: failedRunIds(snapshot.checks),
+        links: failedLinks(snapshot.checks),
       };
     }
     pause(pollMs);

@@ -58,6 +58,7 @@ export type World = {
   ciReads: number;
   head: number;
   reruns: string[][];
+  ciOptions: Record<string, unknown>[];
   effects: Record<string, unknown>;
 };
 
@@ -148,10 +149,12 @@ function fakePrepare(world: World, options: WorldOptions) {
   };
 }
 
+function linkOf(check: CiCheck): string | undefined {
+  return typeof check === "string" ? undefined : check.link;
+}
+
 function runIdOf(check: CiCheck): string | undefined {
-  return typeof check === "string"
-    ? undefined
-    : check.link?.match(/\/actions\/runs\/(\d+)/)?.[1];
+  return linkOf(check)?.match(/\/actions\/runs\/(\d+)/)?.[1];
 }
 
 function ciResult(entry: CiState) {
@@ -159,11 +162,15 @@ function ciResult(entry: CiState) {
     typeof check === "string" ? check : check.name
   );
   const runs = entry.failed.map(runIdOf).filter((id): id is string => Boolean(id));
-  return { state: entry.state, failed: names, runs: [...new Set(runs)] };
+  const links = entry.failed
+    .map(linkOf)
+    .filter((link): link is string => typeof link === "string" && link !== "");
+  return { state: entry.state, failed: names, runs: [...new Set(runs)], links };
 }
 
 function fakeCi(world: World, options: WorldOptions) {
-  return () => {
+  return (_id: string, ciOptions: Record<string, unknown> = {}) => {
+    world.ciOptions.push(ciOptions);
     world.ciReads += 1;
     if (options.ciError) throw new Error(options.ciError);
     if (options.headUnreadable)
@@ -221,6 +228,7 @@ export function buildWorld(testFile: string, options: WorldOptions = {}): World 
     ciReads: 0,
     head: 0,
     reruns: [],
+    ciOptions: [],
     effects: {},
   };
   mkdirSync(world.worktree, { recursive: true });

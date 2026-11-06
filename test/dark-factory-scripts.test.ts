@@ -284,6 +284,71 @@ describe("CI", () => {
     ]);
   });
 
+  const OLD = "https://github.com/o/r/actions/runs/5/job/1";
+  const NEW = "https://github.com/o/r/actions/runs/5/job/2";
+
+  function waitReading(answers: object[][], staleLinks: string[], timeoutMs = 10) {
+    writeTask({ id: "t1", pr: "https://pr/1", worktree: "/wt" }, env);
+    let reads = 0;
+    const outcome = waitForCi("t1", {
+      env,
+      read: () => {
+        reads += 1;
+        return answers.shift() ?? answers.at(-1) ?? [];
+      },
+      pause: () => {},
+      pollMs: 1,
+      timeoutMs,
+      staleLinks,
+      ...matchingHeads,
+    });
+    return { outcome, reads };
+  }
+
+  test("after a rerun, a failed check with the old attempt's link is pending, not fail", () => {
+    const { outcome, reads } = waitReading(
+      [[{ name: "a", bucket: "fail", link: OLD }]],
+      [OLD],
+      3
+    );
+    expect(outcome.state).toBe("pending");
+    expect(reads).toBeGreaterThan(1);
+    expect(eventsNamed("ci")).toEqual([]);
+  });
+
+  test("a new attempt's link that fails is read as fail", () => {
+    const { outcome, reads } = waitReading(
+      [
+        [{ name: "a", bucket: "fail", link: OLD }],
+        [{ name: "a", bucket: "fail", link: NEW }],
+      ],
+      [OLD]
+    );
+    expect(outcome).toMatchObject({ state: "fail", failed: ["a"], links: [NEW] });
+    expect(reads).toBe(2);
+  });
+
+  test("a new attempt's link that passes is read as pass", () => {
+    const { outcome } = waitReading(
+      [
+        [{ name: "a", bucket: "fail", link: OLD }],
+        [{ name: "a", bucket: "pass", link: NEW }],
+      ],
+      [OLD]
+    );
+    expect(outcome.state).toBe("pass");
+  });
+
+  test("a failed check without a link is never held as stale", () => {
+    const { outcome } = waitReading([[{ name: "ext", bucket: "fail" }]], [OLD]);
+    expect(outcome.state).toBe("fail");
+  });
+
+  test("without staleLinks a failed check reads as fail and its link is returned", () => {
+    const outcome = waitWith([{ name: "a", bucket: "fail", link: OLD }], matchingHeads);
+    expect(outcome).toMatchObject({ state: "fail", links: [OLD] });
+  });
+
   test("a PR without a head commit is unreadable, like a failing gh pr checks", () => {
     expect(() =>
       waitWith([{ name: "a", bucket: "pass" }], {

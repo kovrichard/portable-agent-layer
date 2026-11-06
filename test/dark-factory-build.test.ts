@@ -422,6 +422,19 @@ describe("CI rounds", () => {
     expect(world.pushes).toBe(1);
   });
 
+  test("the read after a rerun treats the failed links from before the rerun as the old attempt", () => {
+    const world = worldFor({
+      ci: [
+        failing({ name: "flaky-suite", link: runLink(5) }),
+        { state: "pass", failed: [] },
+      ],
+      roles: { debugger: [NOOP] },
+    });
+    expect(runBuild(world).status).toBe("ready");
+    expect(world.ciOptions[0]?.staleLinks).toBeUndefined();
+    expect(world.ciOptions[1]).toMatchObject({ staleLinks: [runLink(5)] });
+  });
+
   test("a failing rerun command is recorded with ok false and ends stuck as external", () => {
     const world = worldFor({
       ci: [failing({ name: "flaky-suite", link: runLink(5) })],
