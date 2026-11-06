@@ -594,13 +594,19 @@ function replan(run) {
 
 function testsAfterReplan(run) {
   if (!run.before.includes("test-writer")) return null;
-  const testWriter = runRole(run, "test-writer", TESTS_AFTER_REPLAN_INSTRUCTIONS, {
-    reason: "spec-changed",
-  });
-  const stop = roleStop("test-writer", testWriter);
+  const taken = takeBaseline(run);
+  if (taken.stop) return taken.stop;
+  const before = worktreeFingerprint(run);
+  const stop = roleStop(
+    "test-writer",
+    runRole(run, "test-writer", TESTS_AFTER_REPLAN_INSTRUCTIONS, {
+      reason: "spec-changed",
+    })
+  );
   if (stop) return stop;
-  if (isWorktreeClean(run)) return null;
-  return proveTestsRed(run);
+  return worktreeStatusChanged(before, worktreeFingerprint(run))
+    ? proveTestsRed(run, taken.baseline)
+    : null;
 }
 
 function unitTestsStep(run) {
