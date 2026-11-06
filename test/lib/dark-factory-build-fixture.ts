@@ -22,6 +22,7 @@ export type RoleStep = {
   commits?: boolean;
   changes?: string[];
   leavesChanges?: boolean;
+  editsModifiedFile?: boolean;
 };
 
 export type RoleCall = {
@@ -53,6 +54,7 @@ export type World = {
   worktree: string;
   coded: boolean;
   uncommitted: boolean;
+  treeEdits: number;
   changedFiles: string[];
   roleCalls: RoleCall[];
   checkCommands: string[];
@@ -104,6 +106,7 @@ function recordStepEffects(world: World, step: RoleStep) {
   if (step.commits) world.head += 1;
   world.changedFiles.push(...(step.changes ?? []));
   if (step.leavesChanges) world.uncommitted = true;
+  if (step.leavesChanges || step.editsModifiedFile) world.treeEdits += 1;
 }
 
 function fakeRole(world: World, options: WorldOptions) {
@@ -197,6 +200,9 @@ function gitAnswer(world: World, options: WorldOptions, args: string[]) {
   if (args[0] === "status") {
     return { status: 0, stdout: world.uncommitted ? "?? new.test.ts\n" : "", stderr: "" };
   }
+  if (args[0] === "write-tree") {
+    return { status: 0, stdout: `tree-${world.treeEdits}\n`, stderr: "" };
+  }
   return null;
 }
 
@@ -248,6 +254,7 @@ export function buildWorld(testFile: string, options: WorldOptions = {}): World 
     worktree: join(root, "worktree"),
     coded: false,
     uncommitted: false,
+    treeEdits: 0,
     changedFiles: [],
     roleCalls: [],
     checkCommands: [],

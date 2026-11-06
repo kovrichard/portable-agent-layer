@@ -689,6 +689,14 @@ describe("the unit typist", () => {
     const world = worldFor({
       category: "feature",
       roles: { "test-writer": [{}, { leavesChanges: true }] },
+      checks: {
+        [TESTS_COMMAND]: (w) =>
+          [
+            { exitCode: 1, output: " 2 fail" },
+            { exitCode: 1, output: " 2 fail" },
+            { exitCode: 1, output: " 4 fail" },
+          ][w.checkCommands.length - 1] ?? { exitCode: 0, output: " 3 pass" },
+      },
     });
     const result = runBuild(world);
     expect(typist(world)?.model).toBe(build.TIER_MODELS.small);
@@ -735,7 +743,7 @@ describe("the unit typist", () => {
       args: string[]
     ) => unknown;
     world.effects.spawnTool = (command: string, args: string[]) =>
-      args[0] === "status"
+      args[0] === "status" || args[0] === "write-tree"
         ? { status: 128, stdout: "", stderr: "fatal" }
         : original(command, args);
     runBuild(world);
@@ -750,6 +758,340 @@ describe("the unit typist", () => {
     const result = runBuild(world);
     expect(result.status).toBe("stuck");
     expect(result.message).toContain("test-writer failed");
+  });
+});
+
+describe("the unit typist must raise the failing count", () => {
+  const failOutput = (count: number, pad = "") => `${pad} 1 pass\n ${count} fail`;
+  const failRun = (count: number, pad = "") => ({
+    exitCode: 1,
+    output: failOutput(count, pad),
+  });
+  type Run = { exitCode: number; output: string };
+
+  function sequenced(runs: Run[]) {
+    return {
+      [TESTS_COMMAND]: (world: World): Run =>
+        runs[world.checkCommands.length - 1] ?? { exitCode: 0, output: " 3 pass" },
+    };
+  }
+
+  function worldWithCounts(runs: Run[], typistStep: object = { leavesChanges: true }) {
+    return worldFor({
+      category: "feature",
+      roles: { "test-writer": [{}, typistStep] },
+      checks: sequenced(runs),
+    });
+  }
+
+  const acceptance = failRun(2);
+  const unitDone = (world: World) => eventsNamed(world, "unit_tests_done");
+
+  test("the tests check runs once before the typist and once after it", () => {
+    const world = worldWithCounts([acceptance, failRun(3), failRun(4)]);
+    const original = world.effects.runRoleHeadless as (
+      taskId: string,
+      role: string,
+      args: object
+    ) => unknown;
+    const checksAtTypistStart: number[] = [];
+    let testWriterRuns = 0;
+    world.effects.runRoleHeadless = (taskId: string, role: string, args: object) => {
+      if (role === "test-writer" && ++testWriterRuns === 2)
+        checksAtTypistStart.push(world.checkCommands.length);
+      return original(taskId, role, args);
+    };
+    runBuild(world);
+    expect(checksAtTypistStart).toEqual([2]);
+    expect(world.checkCommands.slice(0, 3)).toEqual([
+      TESTS_COMMAND,
+      TESTS_COMMAND,
+      TESTS_COMMAND,
+    ]);
+  });
+
+  test("baseline 3 and after 4 proves the rise and goes on to unit_tests_done", () => {
+    const world = worldWithCounts([acceptance, failRun(3), failRun(4)]);
+    const result = runBuild(world);
+    expect(result.status).toBe("ready");
+    expect(unitDone(world)).toHaveLength(1);
+    expect(roleNames(world)).toContain("code-writer");
+  });
+
+  test("the typist's tests_red event records the baseline", () => {
+    const world = worldWithCounts([acceptance, failRun(3), failRun(4)]);
+    runBuild(world);
+    expect(eventsNamed(world, "tests_red").at(-1)).toEqual(
+      expect.objectContaining({ task: TASK, exitCode: 1, failing: 4, baseline: 3 })
+    );
+  });
+
+  test("the same count after the typist is stuck, naming both counts and the output tail", () => {
+    const world = worldWithCounts([acceptance, failRun(7), failRun(7, "AFTERRUN")]);
+    const result = runBuild(world);
+    expect(result.status).toBe("stuck");
+    expect(result.message).toContain("7");
+    expect(result.message).toContain("AFTERRUN");
+    expect(unitDone(world)).toHaveLength(0);
+    expect(roleNames(world)).not.toContain("code-writer");
+  });
+
+  test("a lower count after the typist is stuck, naming both counts", () => {
+    const world = worldWithCounts([acceptance, failRun(7), failRun(5)]);
+    const result = runBuild(world);
+    expect(result.status).toBe("stuck");
+    expect(result.message).toMatch(/\b7\b/);
+    expect(result.message).toMatch(/\b5\b/);
+    expect(unitDone(world)).toHaveLength(0);
+  });
+
+  test("the stuck message carries only the last FAILURE_TAIL characters of the output", () => {
+    const longRun = {
+      exitCode: 1,
+      output: `HEADMARK${"x".repeat(5000)}TAILMARK\n 3 fail`,
+    };
+    const world = worldWithCounts([acceptance, failRun(3), longRun]);
+    const result = runBuild(world);
+    expect(result.status).toBe("stuck");
+    expect(result.message).toContain("TAILMARK");
+    expect(result.message).not.toContain("HEADMARK");
+  });
+
+  test("a baseline of 0 failures lets any failing test after the typist prove the rise", () => {
+    const world = worldWithCounts([
+      acceptance,
+      { exitCode: 0, output: " 5 pass" },
+      failRun(1),
+    ]);
+    const result = runBuild(world);
+    expect(result.status).toBe("ready");
+    expect(unitDone(world)).toHaveLength(1);
+    expect(eventsNamed(world, "tests_red").at(-1)).toEqual(
+      expect.objectContaining({ baseline: 0, failing: 1 })
+    );
+  });
+
+  test("a file that fails to load keeps the count flat and the message says it counts as one failure", () => {
+    const world = worldWithCounts([acceptance, failRun(1), failRun(1)]);
+    const result = runBuild(world);
+    expect(result.status).toBe("stuck");
+    expect(result.message).toMatch(/fail(s|ing)? to load/i);
+    expect(result.message).toMatch(/one failure/i);
+  });
+
+  test("a baseline with no failing count stops stuck before the typist runs", () => {
+    const world = worldWithCounts([
+      acceptance,
+      { exitCode: 1, output: "segfault, no summary" },
+    ]);
+    const result = runBuild(world);
+    expect(result.status).toBe("stuck");
+    expect(result.message).toContain("reported no failing test count");
+    expect(world.roleCalls.filter((call) => call.role === "test-writer")).toHaveLength(1);
+    expect(unitDone(world)).toHaveLength(0);
+  });
+
+  test("a typist that leaves the worktree unchanged runs only the baseline and finishes", () => {
+    const world = worldWithCounts([acceptance, failRun(3), failRun(3)], {});
+    const original = world.effects.runRoleHeadless as (
+      taskId: string,
+      role: string,
+      args: object
+    ) => unknown;
+    const checksWhenCodeWriterStarts: number[] = [];
+    world.effects.runRoleHeadless = (taskId: string, role: string, args: object) => {
+      if (role === "code-writer")
+        checksWhenCodeWriterStarts.push(world.checkCommands.length);
+      return original(taskId, role, args);
+    };
+    const result = runBuild(world);
+    expect(result.status).toBe("ready");
+    expect(checksWhenCodeWriterStarts[0]).toBe(2);
+    expect(unitDone(world)).toHaveLength(1);
+    expect(eventsNamed(world, "tests_red")).toHaveLength(1);
+  });
+
+  test("a typist that edits a file the acceptance tests already modified still gets the proof", () => {
+    const world = worldFor({
+      category: "feature",
+      roles: { "test-writer": [{ leavesChanges: true }, { editsModifiedFile: true }] },
+      checks: sequenced([acceptance, failRun(3), failRun(4)]),
+    });
+    const original = world.effects.runRoleHeadless as (
+      taskId: string,
+      role: string,
+      args: object
+    ) => unknown;
+    const spawn = world.effects.spawnTool as (
+      command: string,
+      args: string[]
+    ) => { stdout: string };
+    const read = (args: string[]) => spawn("git", args).stdout;
+    const snapshots: { porcelain: string[]; tree: string[] } = {
+      porcelain: [],
+      tree: [],
+    };
+    let typistCalls = 0;
+    world.effects.runRoleHeadless = (taskId: string, role: string, args: object) => {
+      if (role !== "test-writer" || ++typistCalls !== 2)
+        return original(taskId, role, args);
+      snapshots.porcelain.push(read(["status", "--porcelain"]));
+      snapshots.tree.push(read(["write-tree"]));
+      const outcome = original(taskId, role, args);
+      snapshots.porcelain.push(read(["status", "--porcelain"]));
+      snapshots.tree.push(read(["write-tree"]));
+      return outcome;
+    };
+    const result = runBuild(world);
+    expect(snapshots.porcelain).toHaveLength(2);
+    expect(snapshots.porcelain[0]).not.toBe("");
+    expect(snapshots.porcelain[1]).toBe(snapshots.porcelain[0]);
+    expect(snapshots.tree[1]).not.toBe(snapshots.tree[0]);
+    expect(eventsNamed(world, "tests_red")).toHaveLength(2);
+    expect(eventsNamed(world, "tests_red").at(-1)).toEqual(
+      expect.objectContaining({ failing: 4, baseline: 3 })
+    );
+    expect(result.status).toBe("ready");
+  });
+
+  test("an edit to an already-modified file that does not raise the count is stuck", () => {
+    const world = worldFor({
+      category: "feature",
+      roles: { "test-writer": [{ leavesChanges: true }, { editsModifiedFile: true }] },
+      checks: sequenced([acceptance, failRun(3), failRun(3)]),
+    });
+    const result = runBuild(world);
+    expect(result.status).toBe("stuck");
+    expect(unitDone(world)).toHaveLength(0);
+  });
+
+  test("a resume that owes the typist also takes the baseline before it", () => {
+    const world = worldFor({
+      category: "feature",
+      roles: { "test-writer": [{ leavesChanges: true }] },
+      checks: sequenced([failRun(3), failRun(3)]),
+    });
+    writeFileSync(join(taskDir(TASK, world.env), "plan.md"), "plan\n");
+    appendEvent(
+      { event: "tests_red", task: TASK, exitCode: 1, failing: 2 } as never,
+      world.env
+    );
+    appendEvent(
+      {
+        event: "plan_written",
+        task: TASK,
+        specSha256: createHash("sha256")
+          .update("# Add export\n\n## Goal\n\nExport.\n\n")
+          .digest("hex"),
+      } as never,
+      world.env
+    );
+    const result = runBuild(world);
+    expect(result.status).toBe("stuck");
+    expect(unitDone(world)).toHaveLength(0);
+    expect(world.checkCommands.length).toBe(2);
+  });
+
+  const missingCountHead =
+    "the test run failed but reported no failing test count, so it does not prove the new tests fail:";
+  const noRiseHead = (baseline: number, failing: number) =>
+    `the unit tests did not raise the failing test count (${baseline} before the typist, ${failing} after), so they prove nothing; a test file that fails to load counts as one failure, however many tests it holds:`;
+
+  test("a baseline output of 'segfault, no summary' is named in the missing-count message", () => {
+    const world = worldWithCounts([
+      acceptance,
+      { exitCode: 1, output: "segfault, no summary" },
+    ]);
+    expect(runBuild(world).message).toBe(`${missingCountHead}\nsegfault, no summary`);
+    expect(world.roleCalls.filter((call) => call.role === "test-writer")).toHaveLength(1);
+  });
+
+  test("an empty baseline output gives the missing-count message with nothing after it", () => {
+    const world = worldWithCounts([acceptance, { exitCode: 1, output: "" }]);
+    expect(runBuild(world).message).toBe(`${missingCountHead}\n`);
+    expect(world.roleCalls.filter((call) => call.role === "test-writer")).toHaveLength(1);
+  });
+
+  test("a baseline output of 1501 characters keeps only its last 1500 in the missing-count message", () => {
+    const world = worldWithCounts([
+      acceptance,
+      { exitCode: 1, output: `A${"x".repeat(1500)}` },
+    ]);
+    expect(runBuild(world).message).toBe(`${missingCountHead}\n${"x".repeat(1500)}`);
+    expect(world.roleCalls.filter((call) => call.role === "test-writer")).toHaveLength(1);
+  });
+
+  test("baseline 7 and after 7 with ' 1 pass\\n 7 fail' gives the no-rise message with that output", () => {
+    const world = worldWithCounts([acceptance, failRun(7), failRun(7)]);
+    expect(runBuild(world).message).toBe(`${noRiseHead(7, 7)}\n 1 pass\n 7 fail`);
+  });
+
+  test("baseline 7 and after 5 with ' 5 fail' gives the no-rise message with that output", () => {
+    const world = worldWithCounts([
+      acceptance,
+      failRun(7),
+      { exitCode: 1, output: " 5 fail" },
+    ]);
+    expect(runBuild(world).message).toBe(`${noRiseHead(7, 5)}\n 5 fail`);
+  });
+
+  test("baseline 3 and after 3 with a 1500-character tail keeps only that tail, not the head", () => {
+    const output = `HEAD${"x".repeat(1500)}\n 3 fail`;
+    const world = worldWithCounts([acceptance, failRun(3), { exitCode: 1, output }]);
+    expect(runBuild(world).message).toBe(`${noRiseHead(3, 3)}\n${output.slice(-1500)}`);
+  });
+
+  test("a baseline run that exits 0 with ' 5 pass' counts as a baseline of 0", () => {
+    const world = worldWithCounts([
+      acceptance,
+      { exitCode: 0, output: " 5 pass" },
+      failRun(1),
+    ]);
+    expect(runBuild(world).status).toBe("ready");
+    expect(eventsNamed(world, "tests_red").at(-1)).toEqual(
+      expect.objectContaining({ baseline: 0 })
+    );
+  });
+
+  test("a baseline run that exits 0 with ' 1 pass\\n 2 fail' counts as a baseline of 0", () => {
+    const world = worldWithCounts([
+      acceptance,
+      { exitCode: 0, output: " 1 pass\n 2 fail" },
+      failRun(1),
+    ]);
+    expect(runBuild(world).status).toBe("ready");
+    expect(eventsNamed(world, "tests_red").at(-1)).toEqual(
+      expect.objectContaining({ baseline: 0 })
+    );
+  });
+
+  test("a baseline run that exits 1 with ' 1 pass\\n 3 fail' counts as a baseline of 3", () => {
+    const world = worldWithCounts([acceptance, failRun(3), failRun(4)]);
+    expect(runBuild(world).status).toBe("ready");
+    expect(eventsNamed(world, "tests_red").at(-1)).toEqual(
+      expect.objectContaining({ baseline: 3 })
+    );
+  });
+
+  test("a baseline run that exits 1 with ' 0 fail' counts as a baseline of 0", () => {
+    const world = worldWithCounts([
+      acceptance,
+      { exitCode: 1, output: " 0 fail" },
+      failRun(1),
+    ]);
+    expect(runBuild(world).status).toBe("ready");
+    expect(eventsNamed(world, "tests_red").at(-1)).toEqual(
+      expect.objectContaining({ baseline: 0 })
+    );
+  });
+
+  test("a baseline run that exits 1 with 'segfault, no summary' stops stuck before the typist", () => {
+    const world = worldWithCounts([
+      acceptance,
+      { exitCode: 1, output: "segfault, no summary" },
+    ]);
+    expect(runBuild(world).status).toBe("stuck");
+    expect(world.roleCalls.filter((call) => call.role === "test-writer")).toHaveLength(1);
   });
 });
 
@@ -816,6 +1158,65 @@ describe("worktreeStatusChanged", () => {
     test(`${JSON.stringify(before)} → ${JSON.stringify(after)} is ${changed}`, () => {
       expect(build.worktreeStatusChanged(before, after)).toBe(changed);
     });
+});
+
+describe("worktreeFingerprint", () => {
+  type Worktree = {
+    files: Record<string, string>;
+    addStatus: number;
+    writeTreeStatus: number;
+  };
+
+  const fakeRun = (worktree: Worktree) => {
+    const spawnTool = (command: string, args: string[]) => {
+      if (args[0] === "add")
+        return { status: worktree.addStatus, stdout: "", stderr: "" };
+      if (args[0] === "write-tree") {
+        const tree = createHash("sha1")
+          .update(JSON.stringify(worktree.files))
+          .digest("hex");
+        return { status: worktree.writeTreeStatus, stdout: `${tree}\n`, stderr: "" };
+      }
+      return { status: 1, stdout: "", stderr: `unexpected ${command}` };
+    };
+    return { worktree: "/fake/worktree", env: {}, effects: { spawnTool } };
+  };
+
+  const fresh = (files: Record<string, string> = { "a.test.ts": "old" }): Worktree => ({
+    files,
+    addStatus: 0,
+    writeTreeStatus: 0,
+  });
+
+  test("the same worktree gives the same tree id both times", () => {
+    const run = fakeRun(fresh());
+    const first = build.worktreeFingerprint(run);
+    expect(first).not.toBeNull();
+    expect(build.worktreeFingerprint(run)).toBe(first);
+  });
+
+  test("editing a file that is already modified gives a different tree id", () => {
+    const worktree = fresh();
+    const run = fakeRun(worktree);
+    const before = build.worktreeFingerprint(run);
+    worktree.files["a.test.ts"] = "new";
+    expect(build.worktreeFingerprint(run)).not.toBe(before);
+  });
+
+  test("a new untracked file gives a different tree id", () => {
+    const worktree = fresh();
+    const run = fakeRun(worktree);
+    const before = build.worktreeFingerprint(run);
+    worktree.files["new.test.ts"] = "added";
+    expect(build.worktreeFingerprint(run)).not.toBe(before);
+  });
+
+  test("git add -A or git write-tree exiting non-zero gives null", () => {
+    expect(build.worktreeFingerprint(fakeRun({ ...fresh(), addStatus: 1 }))).toBeNull();
+    expect(
+      build.worktreeFingerprint(fakeRun({ ...fresh(), writeTreeStatus: 1 }))
+    ).toBeNull();
+  });
 });
 
 describe("the config frozen by prepare", () => {
