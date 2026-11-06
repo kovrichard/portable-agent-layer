@@ -73,6 +73,11 @@ function missingToolMessage(name) {
   return `${name} is not installed or not on PATH; ${INSTALL_HINTS[name] ?? "install it"}`;
 }
 
+function spawnErrorMessage(command, cwd) {
+  if (cwd && !existsSync(cwd)) return `working folder ${cwd} does not exist`;
+  return missingToolMessage(command);
+}
+
 const BATCH_FILE = /\.(cmd|bat)$/i;
 const CMD_META_CHARS = /([()\][%!^"`<>&|;, *?])/g;
 
@@ -125,7 +130,8 @@ export function spawnTool(command, args, options = {}) {
     ...options,
     ...shellOptions,
   });
-  if (result.error?.code === "ENOENT") throw new Error(missingToolMessage(command));
+  if (result.error?.code === "ENOENT")
+    throw new Error(spawnErrorMessage(command, options.cwd));
   return result;
 }
 

@@ -71,6 +71,39 @@ describe("tools", () => {
     );
   });
 
+  test("an installed command with a missing working folder names the folder, not the tool", () => {
+    const gone = join(home, "deleted-repo");
+    let message = "";
+    try {
+      spawnTool("git", ["--version"], { env, cwd: gone });
+    } catch (error) {
+      message = (error as Error).message;
+    }
+    expect(message).toBe(`working folder ${gone} does not exist`);
+    expect(message).not.toContain("not installed");
+  });
+
+  test("a missing command with an existing working folder stays the missing-tool message", () => {
+    expect(() =>
+      spawnTool("gh", ["--version"], { env: withoutTools(), cwd: home })
+    ).toThrow(
+      "gh is not installed or not on PATH; install it from https://cli.github.com"
+    );
+  });
+
+  test("a command that does not exist at all, with no cwd, is the missing-tool message", () => {
+    expect(() => spawnTool("no-such-tool-xyz", ["--version"], { env })).toThrow(
+      "no-such-tool-xyz is not installed or not on PATH; install it"
+    );
+  });
+
+  test("a missing command and a missing working folder at once: the folder wins", () => {
+    const gone = join(home, "deleted-repo");
+    expect(() => spawnTool("no-such-tool-xyz", [], { env, cwd: gone })).toThrow(
+      `working folder ${gone} does not exist`
+    );
+  });
+
   test("the preflight names every missing tool at once", () => {
     expect(() => requireTools(withoutTools())).toThrow("missing tools: git, gh, bash");
   });
