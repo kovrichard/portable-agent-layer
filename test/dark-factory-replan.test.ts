@@ -159,8 +159,9 @@ describe("a rerun after the spec changed", () => {
   test("a first run is unchanged: planner and test writer run, no spec-changed handover", () => {
     const world = worldFor();
     runBuild(world);
-    expect(roleNames(world).slice(0, 3)).toEqual([
+    expect(roleNames(world).slice(0, 4)).toEqual([
       "planner",
+      "reviewer",
       "test-writer",
       "code-writer",
     ]);

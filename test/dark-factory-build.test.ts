@@ -563,7 +563,7 @@ describe("red tests", () => {
     expect(eventsNamed(world, "tests_red")).toEqual([
       expect.objectContaining({ exitCode: 0 }),
     ]);
-    expect(roleNames(world)).toEqual(["planner", "test-writer"]);
+    expect(roleNames(world)).toEqual(["planner", "reviewer", "test-writer"]);
   });
 
   test("a gate with no check named tests is stuck with a message that says so", () => {
@@ -574,7 +574,7 @@ describe("red tests", () => {
     const result = runBuild(world);
     expect(result.status).toBe("stuck");
     expect(result.message).toContain('no check named "tests"');
-    expect(roleNames(world)).toEqual(["planner", "test-writer"]);
+    expect(roleNames(world)).toEqual(["planner", "reviewer", "test-writer"]);
   });
 });
 
