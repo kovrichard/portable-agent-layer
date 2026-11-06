@@ -51,7 +51,7 @@ export function runCorrection(
   return runCommand(correctionCommandFor(label), args, ["pal", "cli", "correction"]);
 }
 
-function windowDays(days: string | undefined): number {
+export function windowDays(days: string | undefined): number {
   if (days === undefined) return 30;
   const parsed = Number(days);
   if (!Number.isInteger(parsed) || parsed < 1)

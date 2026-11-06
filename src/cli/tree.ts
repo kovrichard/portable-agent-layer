@@ -19,6 +19,7 @@ import { correctionCommand } from "./correction";
 import { costCommand } from "./cost";
 import { envCommand } from "./env";
 import { eventsCommand } from "./events";
+import { evidenceCommand } from "./evidence";
 import { identityCommand } from "./identity";
 import { inferCommand } from "./infer";
 import { knowledgeCommand } from "./knowledge";
@@ -182,6 +183,7 @@ export function cliTree(admin: AdminHandlers): Group {
       patterns: patternsCommand,
       content: contentCommand,
       events: eventsCommand,
+      evidence: evidenceCommand,
       infer: inferCommand,
       actor: identityCommand("actor"),
       machine: identityCommand("machine"),
