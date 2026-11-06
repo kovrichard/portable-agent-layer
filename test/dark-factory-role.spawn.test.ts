@@ -535,6 +535,7 @@ describe("structured output", () => {
     expect(Object.keys(schema.properties).sort()).toEqual([
       "answer",
       "revert",
+      "testFix",
       "userQuestion",
     ]);
   });
