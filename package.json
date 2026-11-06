@@ -57,7 +57,7 @@
     "knip": "knip-bun",
     "klint": "klint && klint --config test",
     "klint:hook": "klint --json --hook && klint --config test --json --hook",
-    "jscpd": "jscpd --noTips",
+    "jscpd": "jscpd --no-tips",
     "madge": "madge --circular --extensions ts --ts-config tsconfig.json src",
     "lf": "bun .agents/scripts/check-lf.ts",
     "lf:fix": "bun .agents/scripts/check-lf.ts --fix",
