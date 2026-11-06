@@ -532,7 +532,11 @@ describe("structured output", () => {
 
   test("the product owner answers or hands a question to the user", () => {
     const schema = schemaOf("po");
-    expect(Object.keys(schema.properties).sort()).toEqual(["answer", "userQuestion"]);
+    expect(Object.keys(schema.properties).sort()).toEqual([
+      "answer",
+      "revert",
+      "userQuestion",
+    ]);
   });
 
   test("a working role reports done and a summary, with an optional question", () => {
