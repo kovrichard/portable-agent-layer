@@ -240,6 +240,18 @@ describe("inference dispatcher — claude spawn integration (fake binary)", () =
     expect(result.error).toBe("Model unavailable on this plan");
   });
 
+  test("a failed spawn that reports in JSON carries its result, not the JSON", async () => {
+    writeFakeBin(
+      tmpBin,
+      "claude",
+      `console.log(JSON.stringify({ duration_api_ms: 0, usage: { input_tokens: 0 }, is_error: true, result: "Invalid API key" }));\nprocess.exit(1);\n`
+    );
+    prependPath(tmpBin);
+
+    const result = await inference({ user: "hi", timeout: 5000 });
+    expect(result.error).toBe("Invalid API key");
+  });
+
   test("JSON-schema path parses fake claude's JSON output", async () => {
     writeFakeBin(tmpBin, "claude", claudeReplying(`'{"verdict":"good"}'`));
     prependPath(tmpBin);

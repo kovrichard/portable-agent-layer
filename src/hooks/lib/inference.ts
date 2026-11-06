@@ -885,6 +885,15 @@ export function parseJsonFromOutput(output: string): unknown | null {
   return null;
 }
 
+export function agentFailureText(stdout: string): string {
+  try {
+    const result = (JSON.parse(stdout) as { result?: unknown }).result;
+    return typeof result === "string" ? result : stdout;
+  } catch {
+    return stdout;
+  }
+}
+
 function firstLine(text: string): string | undefined {
   return text
     .split("\n")
@@ -1059,11 +1068,12 @@ async function inferenceViaCliSpawn(
     return finish({ success: false });
   }
   if (attempt.code !== 0) {
+    const said = agentFailureText(attempt.stdout);
     logError(
       "inference:spawn",
-      `${tag} exited=${attempt.code} binary=${binaryName} argv=${JSON.stringify(args)} stderr(${attempt.stderr.length})=${attempt.stderr.slice(0, 300)} stdout(${attempt.stdout.length})=${attempt.stdout.slice(0, 300)}`
+      `${tag} exited=${attempt.code} binary=${binaryName} argv=${JSON.stringify(args)} stderr(${attempt.stderr.length})=${attempt.stderr.slice(0, 300)} stdout(${attempt.stdout.length})=${said.slice(0, 300)}`
     );
-    return finish({ success: false, error: firstLine(attempt.stderr || attempt.stdout) });
+    return finish({ success: false, error: firstLine(attempt.stderr || said) });
   }
   const rawText = attempt.stdout.trim();
   if (!rawText) return finish({ success: false });
