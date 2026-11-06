@@ -9,9 +9,9 @@ See `SKILL.md` for the full workflow. TL;DR:
 pal cli skill run presentation setup-template
 
 # per deck
-pal cli skill run presentation new-deck ~/decks/my-talk --template my-brand
-$EDITOR ~/decks/my-talk/slides/
-pal cli skill run presentation build ~/decks/my-talk
+pal cli skill run presentation new-deck my-talk --template my-brand
+$EDITOR my-talk/slides/
+pal cli skill run presentation build my-talk
 # → ./my-talk/my-talk.html (and ./my-talk/my-talk.md — concatenated source)
 # open the .html in your browser; refresh after each rebuild
 ```
