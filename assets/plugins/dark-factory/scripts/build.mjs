@@ -57,6 +57,7 @@ const CODE_LADDER = [
 const FIX_LADDER = CODE_LADDER.slice(2);
 const CI_FIX_LADDER = FIX_LADDER.slice(2);
 const REVIEW_ROUNDS = 2;
+const PLAN_GATE_ROUNDS = 2;
 const CI_ROUNDS = 2;
 const CI_POLLS = 6;
 const EXIT_CODES = { ready: 0, stuck: 1, waiting: 3 };
@@ -74,6 +75,10 @@ const BEFORE_INSTRUCTIONS = {
 };
 const REPLAN_INSTRUCTIONS =
   "The spec changed since plan.md was written. Revise plan.md for the change. The branch already has commits, so plan only what is still to do.";
+const PLAN_GATE_INSTRUCTIONS =
+  'This is the plan gate: there is no code and no diff yet, so ignore the branch diff. Review plan.md against spec.md only. Report one finding with file "plan.md" for each place where the plan narrows an acceptance criterion; adds behaviour, events, options, flags, files or dependencies that no criterion asks for; contradicts the spec, its Decisions or its Must not change; or leaves a decision to the code writer. Return an empty findings list when the plan does none of these.';
+const TESTS_AFTER_REPLAN_INSTRUCTIONS =
+  "The spec changed and plan.md was revised. Add failing tests only for the acceptance criteria that tests.md does not cover yet, update tests.md, and leave the new tests uncommitted; the code writer commits them with the code. When tests.md already covers every criterion, change nothing.";
 const REVIEW_INSTRUCTIONS = "Review the branch diff against its base and the spec.";
 const CONFIG_FILE = ".dark-factory.json";
 const CONFIG_CHANGED_NOTE = `The diff changes ${CONFIG_FILE}. Report that change as a finding unless the spec asks for it.`;
@@ -173,7 +178,12 @@ function handOver(run, role, reason, instructions) {
   run.lastRole = role;
 }
 
-function runRole(run, role, instructions, { tier, reason = "pipeline" } = {}) {
+function runRole(
+  run,
+  role,
+  instructions,
+  { tier, reason = "pipeline", resumeSessionId } = {}
+) {
   const model = tier ? TIER_MODELS[tier] : undefined;
   handOver(run, role, reason, instructions);
   appendEvent(
@@ -184,6 +194,7 @@ function runRole(run, role, instructions, { tier, reason = "pipeline" } = {}) {
     env: run.env,
     model,
     instructions,
+    resumeSessionId,
   });
   return afterQuestion(run, role, outcome, model);
 }
@@ -322,11 +333,15 @@ function recordPlanWritten(run, specHash) {
   appendEvent({ event: "plan_written", task: run.id, specSha256: specHash }, run.env);
 }
 
-function runPlanner(run, instructions, reason) {
+function planWith(run, instructions, reason, resumeSessionId) {
   const specHash = specSha256(run);
-  const stop = roleStop("planner", runRole(run, "planner", instructions, { reason }));
-  if (!stop) recordPlanWritten(run, specHash);
-  return stop;
+  const result = runRole(run, "planner", instructions, { reason, resumeSessionId });
+  if (!roleStop("planner", result)) recordPlanWritten(run, specHash);
+  return result;
+}
+
+function runPlanner(run, instructions, reason, resumeSessionId) {
+  return roleStop("planner", planWith(run, instructions, reason, resumeSessionId));
 }
 
 function latestPlanSha256(run) {
@@ -334,6 +349,18 @@ function latestPlanSha256(run) {
     (event) => event.event === "plan_written" && event.task === run.id
   );
   return plans.at(-1)?.specSha256 ?? null;
+}
+
+function latestPlannerSessionId(events, taskId) {
+  const sessions = events.filter(
+    (event) =>
+      event.event === "role_finished" &&
+      event.task === taskId &&
+      event.role === "planner" &&
+      typeof event.sessionId === "string" &&
+      event.sessionId !== ""
+  );
+  return sessions.at(-1)?.sessionId ?? null;
 }
 
 function planPath(run) {
@@ -356,10 +383,79 @@ function resumeFromTheStart(run) {
   run.resume = { head: null, through: -1 };
 }
 
+function planRevisionInstructions(findings) {
+  return `The plan gate found these problems in plan.md:\n${JSON.stringify(findings, null, 2)}\n\nRevise plan.md to fix only these findings and change nothing else.`;
+}
+
+function planGateUnsettled(findings) {
+  const listed = findings.map((finding) => `- ${finding.problem} Fix: ${finding.fix}`);
+  return `The plan gate still reports findings after ${PLAN_GATE_ROUNDS} rounds; the PO settles them:\n${listed.join("\n")}`;
+}
+
+function recordPlanGate(run, round, findings) {
+  appendEvent(
+    { event: "plan_gate", task: run.id, round, findings: findings.length },
+    run.env
+  );
+}
+
+function revisePlan(run, findings) {
+  const sessionId = latestPlannerSessionId(readEvents(run.env), run.id);
+  return runPlanner(
+    run,
+    planRevisionInstructions(findings),
+    "plan-findings",
+    sessionId ?? undefined
+  );
+}
+
+function planGateStep(run) {
+  for (let round = 1; round <= PLAN_GATE_ROUNDS; round += 1) {
+    const review = runRole(run, "reviewer", PLAN_GATE_INSTRUCTIONS, {
+      reason: "plan-gate",
+    });
+    const stop = roleStop("reviewer", review);
+    if (stop) return stop;
+    const findings = review.outcome.structured.findings ?? [];
+    recordPlanGate(run, round, findings);
+    if (findings.length === 0) return null;
+    if (round === PLAN_GATE_ROUNDS) return waiting(planGateUnsettled(findings));
+    const revisionStop = revisePlan(run, findings);
+    if (revisionStop) return revisionStop;
+  }
+  return null;
+}
+
+function planAndGate(run, instructions, reason) {
+  const stop = runPlanner(run, instructions, reason);
+  if (stop) return stop;
+  return planGateStep(run);
+}
+
+function replan(run) {
+  const sessionId = latestPlannerSessionId(readEvents(run.env), run.id);
+  if (sessionId) {
+    const resumed = planWith(run, REPLAN_INSTRUCTIONS, "spec-changed", sessionId);
+    if (!("failed" in resumed)) return roleStop("planner", resumed);
+  }
+  return runPlanner(run, REPLAN_INSTRUCTIONS, "spec-changed");
+}
+
+function testsAfterReplan(run) {
+  if (!run.before.includes("test-writer")) return null;
+  const testWriter = runRole(run, "test-writer", TESTS_AFTER_REPLAN_INSTRUCTIONS, {
+    reason: "spec-changed",
+  });
+  const stop = roleStop("test-writer", testWriter);
+  if (stop) return stop;
+  if (isWorktreeClean(run)) return null;
+  return proveTestsRed(run);
+}
+
 function replanIfSpecChanged(run) {
   if (!specChangedSincePlan(run)) return null;
   resumeFromTheStart(run);
-  return runPlanner(run, REPLAN_INSTRUCTIONS, "spec-changed");
+  return replan(run) ?? planGateStep(run) ?? testsAfterReplan(run);
 }
 
 function beforeRolesStep(run) {
@@ -368,7 +464,7 @@ function beforeRolesStep(run) {
   for (const role of run.before) {
     const stop =
       role === "planner"
-        ? runPlanner(run, BEFORE_INSTRUCTIONS.planner, "pipeline")
+        ? planAndGate(run, BEFORE_INSTRUCTIONS.planner, "pipeline")
         : roleStop(role, runRole(run, role, BEFORE_INSTRUCTIONS[role]));
     if (stop) return stop;
     if (role === "test-writer") {
