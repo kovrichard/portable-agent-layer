@@ -294,7 +294,15 @@ function redTestCheck(run) {
   return run.config.gate.find((entry) => entry.name === RED_TEST_CHECK);
 }
 
-function proveTestsRed(run) {
+function missingCountMessage(output) {
+  return `the test run failed but reported no failing test count, so it does not prove the new tests fail:\n${output.slice(-FAILURE_TAIL)}`;
+}
+
+function noRiseMessage(baseline, failing, output) {
+  return `the unit tests did not raise the failing test count (${baseline} before the typist, ${failing} after), so they prove nothing; a test file that fails to load counts as one failure, however many tests it holds:\n${output.slice(-FAILURE_TAIL)}`;
+}
+
+function proveTestsRed(run, baseline) {
   const check = redTestCheck(run);
   if (!check)
     return stuck(
@@ -303,18 +311,38 @@ function proveTestsRed(run) {
   const { exitCode, output } = run.effects.runCheck(check.run, run.worktree, run.env);
   const failing = failingTestCount(output);
   appendEvent(
-    { event: "tests_red", task: run.id, check: RED_TEST_CHECK, exitCode, failing },
+    {
+      event: "tests_red",
+      task: run.id,
+      check: RED_TEST_CHECK,
+      exitCode,
+      failing,
+      baseline,
+    },
     run.env
   );
   if (exitCode === 0 || failing === 0)
     return stuck(
       `the new tests pass before the code exists, so they prove nothing:\n${output.slice(-FAILURE_TAIL)}`
     );
-  if (failing === null)
-    return stuck(
-      `the test run failed but reported no failing test count, so it does not prove the new tests fail:\n${output.slice(-FAILURE_TAIL)}`
-    );
+  if (failing === null) return stuck(missingCountMessage(output));
+  if (baseline !== undefined && failing <= baseline)
+    return stuck(noRiseMessage(baseline, failing, output));
   return null;
+}
+
+function baselineFailingCount(exitCode, output) {
+  if (exitCode === 0) return 0;
+  return failingTestCount(output);
+}
+
+function takeBaseline(run) {
+  const check = redTestCheck(run);
+  if (!check) return { baseline: 0 };
+  const { exitCode, output } = run.effects.runCheck(check.run, run.worktree, run.env);
+  const baseline = baselineFailingCount(exitCode, output);
+  if (baseline === null) return { stop: stuck(missingCountMessage(output)) };
+  return { baseline };
 }
 
 function prepareStep(run) {
@@ -475,6 +503,8 @@ function testsAfterReplan(run) {
 
 function unitTestsStep(run) {
   if (!run.before.includes("test-writer")) return null;
+  const taken = takeBaseline(run);
+  if (taken.stop) return taken.stop;
   const before = worktreeStatus(run);
   const stop = roleStop(
     "test-writer",
@@ -482,7 +512,7 @@ function unitTestsStep(run) {
   );
   if (stop) return stop;
   const stopAfterProof = worktreeStatusChanged(before, worktreeStatus(run))
-    ? proveTestsRed(run)
+    ? proveTestsRed(run, taken.baseline)
     : null;
   if (!stopAfterProof) appendEvent({ event: "unit_tests_done", task: run.id }, run.env);
   return stopAfterProof;
