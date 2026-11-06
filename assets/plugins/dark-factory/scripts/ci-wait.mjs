@@ -71,8 +71,18 @@ function readSnapshot(task, env, readers) {
   return { sha, checks, current };
 }
 
-function outcomeAt(snapshot) {
+export function failedLinks(checks) {
+  return checks.filter(isFailed).map((check) => check.link);
+}
+
+function stillStale(checks, staleLinks) {
+  const stale = new Set(staleLinks);
+  return checks.some((check) => isFailed(check) && stale.has(check.link));
+}
+
+function outcomeAt(snapshot, staleLinks) {
   if (!snapshot.current) return { state: "pending", failed: [] };
+  if (stillStale(snapshot.checks, staleLinks)) return { state: "pending", failed: [] };
   return classifyChecks(snapshot.checks);
 }
 
@@ -86,16 +96,15 @@ export function waitForCi(
     pause = sleep,
     pollMs = POLL_MS,
     timeoutMs = TIMEOUT_MS,
-    settleFirst = false,
+    staleLinks = [],
   } = {}
 ) {
   const task = readTask(id, env);
   const readers = { read, readPrHead, readLocalHead };
   const graceForChecksToAppear = 4;
-  if (settleFirst) pause(pollMs);
   for (let waited = 0, polls = 0; waited <= timeoutMs; waited += pollMs, polls += 1) {
     const snapshot = readSnapshot(task, env, readers);
-    const outcome = outcomeAt(snapshot);
+    const outcome = outcomeAt(snapshot, staleLinks);
     const settled = outcome.state === "pass" || outcome.state === "fail";
     if (settled || (outcome.state === "none" && polls >= graceForChecksToAppear)) {
       appendEvent(
@@ -108,7 +117,12 @@ export function waitForCi(
         },
         env
       );
-      return { ...outcome, sha: snapshot.sha, runs: failedRunIds(snapshot.checks) };
+      return {
+        ...outcome,
+        sha: snapshot.sha,
+        runs: failedRunIds(snapshot.checks),
+        links: failedLinks(snapshot.checks),
+      };
     }
     pause(pollMs);
   }

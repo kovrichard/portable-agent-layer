@@ -575,7 +575,7 @@ function rerunCiStep(run, ci) {
   const rerun = rerunFailedRuns(run, ci.runs ?? []);
   recordRerun(run, ci, rerun);
   if (!rerun.ok) return stuck(`${externalFailure(ci)}; the rerun failed: ${rerun.error}`);
-  const again = pollCi(run, { settleFirst: true });
+  const again = pollCi(run, { staleLinks: ci.links ?? [] });
   const stop = unfinishedCiStop(again);
   if (stop) return stop;
   if (ciPassed(again)) return null;
