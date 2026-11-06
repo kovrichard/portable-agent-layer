@@ -66,6 +66,8 @@ export function getInstalledVersion(): string {
   }
 }
 
+const PULLED_BRANCH = "@{upstream}";
+
 async function checkRepo(): Promise<UpdateCache> {
   const repoDir = palPkg();
   const current = getInstalledVersion();
@@ -79,7 +81,7 @@ async function checkRepo(): Promise<UpdateCache> {
     });
     await fetch.exited;
 
-    const remote = Bun.spawn(["git", "rev-parse", "origin/main"], {
+    const remote = Bun.spawn(["git", "rev-parse", PULLED_BRANCH], {
       cwd: repoDir,
       stdout: "pipe",
       stderr: "ignore",
@@ -88,8 +90,8 @@ async function checkRepo(): Promise<UpdateCache> {
     const remoteHash = (await new Response(remote.stdout).text()).trim();
 
     // "Ahead" (local unpushed commits) is not an update — only remote commits we
-    // lack are. Count HEAD..origin/main so being ahead or diverged never nags.
-    const behind = Bun.spawn(["git", "rev-list", "--count", "HEAD..origin/main"], {
+    // lack are. Count HEAD..upstream so being ahead or diverged never nags.
+    const behind = Bun.spawn(["git", "rev-list", "--count", `HEAD..${PULLED_BRANCH}`], {
       cwd: repoDir,
       stdout: "pipe",
       stderr: "ignore",
@@ -100,11 +102,10 @@ async function checkRepo(): Promise<UpdateCache> {
 
     const available = behindCount > 0 && remoteHash.length > 0;
 
-    // Get remote version from package.json on origin/main
     let latest = current;
     if (available) {
       try {
-        const show = Bun.spawn(["git", "show", "origin/main:package.json"], {
+        const show = Bun.spawn(["git", "show", `${PULLED_BRANCH}:package.json`], {
           cwd: repoDir,
           stdout: "pipe",
           stderr: "ignore",

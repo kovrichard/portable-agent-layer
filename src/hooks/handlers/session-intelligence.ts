@@ -22,6 +22,7 @@ import {
   extractLastAssistant,
   extractLastUser,
   parseMessages,
+  runningCount,
 } from "../lib/transcript";
 import { appendProjectHistory } from "../lib/work-tracking";
 
@@ -99,9 +100,19 @@ export async function captureSessionIntelligence(
   const messages = parseMessages(transcript);
   if (messages.length < 6 || transcript.length < 2000) return;
 
-  const userMessageCount = messages.filter((m) => m.role === "user").length;
+  const users = messages.filter((m) => m.role === "user");
   const previous = sessionId ? readCapture(sessionId) : null;
-  const historyDue = isRecaptureWorthwhile(previous, messages.length);
+  const messageCount = runningCount(
+    messages,
+    previous?.messageCount,
+    previous?.lastMessageId
+  );
+  const userMessageCount = runningCount(
+    users,
+    previous?.userMessageCount,
+    previous?.lastUserMessageId
+  );
+  const historyDue = isRecaptureWorthwhile(previous, messageCount);
   if (!historyDue && !isHandoffStale(previous, userMessageCount)) return;
 
   // Skip if no inference path is available (no CLI binary AND no API key)
@@ -125,7 +136,7 @@ export async function captureSessionIntelligence(
 
   if (userWindow.length < 3) return;
 
-  if (sessionId) claimHandoffSummary(sessionId, userMessageCount);
+  if (sessionId) claimHandoffSummary(sessionId, userMessageCount, users.at(-1)?.id);
 
   const output = await summarizeSession(userWindow, assistantWindow, sessionId);
   recordSessionOutcome(output, {
@@ -133,7 +144,8 @@ export async function captureSessionIntelligence(
     lastAssistantText,
     sessionId,
     historyDue,
-    messageCount: messages.length,
+    messageCount,
+    lastMessageId: messages.at(-1)?.id,
   });
 }
 
@@ -145,6 +157,7 @@ function recordSessionOutcome(
     sessionId: string | undefined;
     historyDue: boolean;
     messageCount: number;
+    lastMessageId: string | undefined;
   }
 ): void {
   const { lastUser, lastAssistantText, sessionId, historyDue } = session;
@@ -171,7 +184,7 @@ function recordSessionOutcome(
     });
   }
 
-  if (sessionId) markCaptured(sessionId, session.messageCount);
+  if (sessionId) markCaptured(sessionId, session.messageCount, session.lastMessageId);
   logDebug("session-intelligence", `Session summarized: ${title}`);
 }
 

@@ -25,6 +25,9 @@
       },
       {
         "command": "bun .agents/hooks/lf.ts"
+      },
+      {
+        "command": "bun .agents/hooks/exact-versions.ts"
       }
     ]
   }

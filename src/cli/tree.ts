@@ -17,6 +17,7 @@ import { builtinTools, builtinToolVerbs } from "./builtin-tools";
 import { contentCommand } from "./content";
 import { correctionCommand } from "./correction";
 import { costCommand } from "./cost";
+import { envCommand } from "./env";
 import { eventsCommand } from "./events";
 import { evidenceCommand } from "./evidence";
 import { identityCommand } from "./identity";
@@ -33,6 +34,7 @@ import { scheduleCommand } from "./schedule";
 import { serverCommand } from "./server";
 import { skillCommand } from "./skill";
 import { subagentCommand } from "./subagent";
+import { telemetryCommand } from "./telemetry";
 import { usageCommand } from "./usage";
 import { wrappedCommand } from "./wrapped";
 
@@ -177,6 +179,7 @@ export function cliTree(admin: AdminHandlers): Group {
       usage: usageCommand,
       cost: costCommand,
       wrapped: wrappedCommand,
+      env: envCommand,
       patterns: patternsCommand,
       content: contentCommand,
       events: eventsCommand,
@@ -197,6 +200,7 @@ export function cliTree(admin: AdminHandlers): Group {
       server: serverCommand,
       skill: skillCommand,
       subagent: subagentCommand,
+      telemetry: telemetryCommand,
       ...builtinTools,
       debug: debugCommand(admin),
       version: leaf({ summary: "Print the installed PAL version", run: admin.version }),

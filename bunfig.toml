@@ -1,3 +1,6 @@
+[install]
+exact = true
+
 [test]
 coverageThreshold = { line = 72, function = 72 }
 preload = ["./test/setup.ts"]

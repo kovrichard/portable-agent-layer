@@ -23,6 +23,9 @@ import {
 } from "./entity-names";
 import { paths } from "./paths";
 import { isSystemText, stripInjectedTags } from "./prompt-text";
+import { type Message, messagesAfter } from "./transcript";
+
+type Cursor = string | number;
 
 export interface ExtractedEntity {
   kind: "person" | "company";
@@ -101,11 +104,6 @@ const MIN_TEXT = 20;
 const MAX_KNOWN = 120;
 const CURSOR_KEEP = 200;
 
-interface Message {
-  role: string;
-  content: unknown;
-}
-
 function userTexts(messages: Message[]): string[] {
   return messages
     .filter((m) => m.role === "user" && typeof m.content === "string")
@@ -113,15 +111,26 @@ function userTexts(messages: Message[]): string[] {
     .filter((t) => t.length > 0 && !isSystemText(t));
 }
 
-/** The user's words since the last extraction, and the new high-water mark. */
+/**
+ * A count cursor predates id cursors: its session counts as read up to now. A
+ * transcript without ids can hold no cursor, so only its latest user turn is new.
+ */
+function unseenMessages(messages: Message[], cursor: Cursor | undefined): Message[] {
+  if (!messages.some((m) => m.id))
+    return messages.slice(messages.findLastIndex((m) => m.role === "user"));
+  if (typeof cursor === "number") return [];
+  return messagesAfter(messages, cursor);
+}
+
+/** The user's words since the last extraction, and the id to resume after. */
 export function unseenUserText(
   messages: Message[],
-  seen: number
-): { text: string; count: number } {
-  const texts = userTexts(messages);
-  const fresh = texts.slice(Math.min(seen, texts.length));
+  cursor: Cursor | undefined
+): { text: string; count: number; lastId?: string } {
+  const fresh = userTexts(unseenMessages(messages, cursor));
   const text = fresh.map((t, i) => `${i + 1}. ${proseOnly(t).trim()}`).join("\n");
-  return { text: text.slice(-MAX_TEXT), count: texts.length };
+  const lastId = messages.findLast((m) => m.id)?.id;
+  return { text: text.slice(-MAX_TEXT), count: fresh.length, lastId };
 }
 
 function hasUnknownProperName(text: string, ignored: Set<string>): boolean {
@@ -323,22 +332,22 @@ function cursorFile(): string {
   return resolve(paths.state(), "entity-extraction.json");
 }
 
-function readCursors(): Record<string, number> {
+function readCursors(): Record<string, Cursor> {
   const file = cursorFile();
   if (!existsSync(file)) return {};
   try {
-    return JSON.parse(readFileSync(file, "utf-8")) as Record<string, number>;
+    return JSON.parse(readFileSync(file, "utf-8")) as Record<string, Cursor>;
   } catch {
     return {};
   }
 }
 
-export function seenCount(sessionId: string): number {
-  return readCursors()[sessionId] ?? 0;
+export function seenCursor(sessionId: string): Cursor | undefined {
+  return readCursors()[sessionId];
 }
 
-export function markSeen(sessionId: string, count: number): void {
-  const cursors = Object.entries({ ...readCursors(), [sessionId]: count }).slice(
+export function markSeen(sessionId: string, lastId: string): void {
+  const cursors = Object.entries({ ...readCursors(), [sessionId]: lastId }).slice(
     -CURSOR_KEEP
   );
   writeFileSync(

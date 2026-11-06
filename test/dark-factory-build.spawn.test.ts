@@ -27,7 +27,14 @@ const GIT_ENV = {
 };
 
 const NOOP = { write: {}, commit: false };
-const NOISE = new Set(["role_finished", "gate_check"]);
+const NOISE = new Set([
+  "role_finished",
+  "role_settings",
+  "gate_check",
+  "handover",
+  "plan_written",
+  "unit_tests_done",
+]);
 
 type Step = {
   shell?: string;
@@ -120,6 +127,7 @@ process.exit(step.exit ?? 0);
 
 const FAKE_GH = `
 const fs = require("node:fs");
+const cp = require("node:child_process");
 const scenario = JSON.parse(fs.readFileSync(process.env.FAKE_SCENARIO, "utf8"));
 const args = process.argv.slice(2);
 fs.appendFileSync(process.env.FAKE_GH_LOG, args.join(" ") + "\\n");
@@ -135,6 +143,7 @@ if (group === "pr" && action === "checks") {
   process.stdout.write(JSON.stringify(checks));
   process.exit(checks.some((check) => check.bucket === "fail") ? 1 : 0);
 }
+if (group === "pr" && action === "view") process.stdout.write(JSON.stringify({ headRefOid: cp.execFileSync("git", ["rev-parse", "HEAD"]).toString().trim() }));
 `;
 
 function git(cwd: string, ...args: string[]): string {
@@ -351,7 +360,9 @@ describe("a whole feature run", () => {
     expect(result).toMatchObject({ task: TASK, status: "ready", pr: PR_URL });
     expect(result.message).toContain(PR_URL);
     expect(roleNames()).toEqual([
+      "test-writer",
       "planner",
+      "reviewer",
       "test-writer",
       "code-writer",
       "reviewer",
@@ -359,16 +370,23 @@ describe("a whole feature run", () => {
       "coach",
     ]);
     expect(flow()).toEqual([
+      "run_started",
       "task_started",
-      "role:planner",
       "role:test-writer",
       "tests_red",
+      "role:planner",
+      "role:reviewer",
+      "plan_gate",
+      "role:test-writer",
       "role:code-writer",
       "gate",
+      "step_done",
       "role:reviewer",
       "review",
+      "step_done",
       "role:tester",
       "test",
+      "step_done",
       "sync",
       "pushed",
       "pr_opened",
@@ -389,7 +407,7 @@ describe("a whole feature run", () => {
     runBuild();
     expect(calls().length).toBeGreaterThan(0);
     for (const call of calls()) {
-      expect(valueAfter(call.argv, "--setting-sources")).toBe("");
+      expect(valueAfter(call.argv, "--setting-sources")).toBe("project,local");
       expect(valueAfter(call.argv, "--plugin-dir")).toBe(PLUGIN_ROOT);
       expect(call.argv).toContain(`dark-factory:${call.role}`);
       expect(call.stdin.startsWith(`Task ${TASK}:`)).toBe(true);
@@ -485,6 +503,7 @@ describe("questions go to the PO and the role continues", () => {
       },
     });
     expect(runBuild().exitCode).toBe(3);
+    writeFileSync(join(ctx.factory, "tasks", TASK, "plan.md"), "plan\n");
     writeFileSync(
       join(ctx.factory, "tasks", TASK, "spec.md"),
       `${specText()}- Rico: use postgres\n`

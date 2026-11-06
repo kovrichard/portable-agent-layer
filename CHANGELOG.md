@@ -1,3 +1,26 @@
+# [0.115.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.114.0...v0.115.0) (2026-11-04)
+
+
+### Bug Fixes
+
+* **events:** match a queued message to its own channel by its hash ([c5c2726](https://github.com/kovrichard/portable-agent-layer/commit/c5c272622cc09151681b6cef3a63bf377ff149cd))
+* **events:** read the channel per message from PAL_CHANNEL_FILE ([a2c384e](https://github.com/kovrichard/portable-agent-layer/commit/a2c384e7f119b8ddbdbb87bb6da6281e2db2aa58))
+* **hooks:** read only the transcript tail in the Stop hook ([5291264](https://github.com/kovrichard/portable-agent-layer/commit/5291264fc68f817f6076daf179e119441e2f7de7))
+* print error in package test ([e37cc4d](https://github.com/kovrichard/portable-agent-layer/commit/e37cc4d25d951beb1cd061490a11a4acd2103843))
+* repo mode on canary updates canary ([021e738](https://github.com/kovrichard/portable-agent-layer/commit/021e738aaf9cd86c9e1620b4e7d93cb819dbb30f))
+* **run-mode:** general unattended rules, attach commits during the run ([e69863b](https://github.com/kovrichard/portable-agent-layer/commit/e69863bd7c0cd46b5fbbbfb8a7fa6d90ce7a9967))
+* **stop:** attach commits before any stop block ([f2f0d37](https://github.com/kovrichard/portable-agent-layer/commit/f2f0d37b7c2dc75103e537dbf94a412f3e9af5a3))
+* **stop:** check replies again after a stop held for another reason ([21abcb3](https://github.com/kovrichard/portable-agent-layer/commit/21abcb3e9ea13ce9d244d98719837a86416bb4ca))
+
+
+### Features
+
+* **run-mode:** timebox and unattended runs with hook enforcement ([e148c18](https://github.com/kovrichard/portable-agent-layer/commit/e148c182f565d4297e35b5b4791b4b2f7a10c6e4))
+* **schedule:** prompts added at a time of day, per user or project ([b96a2c0](https://github.com/kovrichard/portable-agent-layer/commit/b96a2c0b7e539fde6ffdebef9397055a2eccee1f))
+* **telemetry:** implement daily anonymous heartbeat for usage tracking ([576c79d](https://github.com/kovrichard/portable-agent-layer/commit/576c79d4366fc48e82cb29737b0258a2f970172c))
+* **unattended:** record the estimated against the actual run time ([42eff53](https://github.com/kovrichard/portable-agent-layer/commit/42eff53766832e2ee9fd05f9ce9f4f102ca90108))
+* **unattended:** store what a run did next to its estimate ([5a6bf3e](https://github.com/kovrichard/portable-agent-layer/commit/5a6bf3e4082482fdc1fbba787f89edd9b8b77eb3))
+
 # [0.114.0](https://github.com/kovrichard/portable-agent-layer/compare/v0.113.0...v0.114.0) (2026-10-31)
 
 

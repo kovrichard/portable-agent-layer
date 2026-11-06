@@ -182,7 +182,7 @@ describe("invocation", () => {
     expect(stdin).not.toContain("[Workflow harness");
   });
 
-  test("the coach is read-only, reads the factory home and has the highest budget", () => {
+  test("the coach is read-only and reads the factory home", () => {
     const env = envWith(bin);
     const task = readTask("t1", env);
     const { args } = claudeInvocation(task, "coach", { env });
@@ -194,10 +194,6 @@ describe("invocation", () => {
     expect(listAfter(args, "--disallowedTools")).toEqual(
       expect.arrayContaining(["Edit", "Write"])
     );
-    const others = Object.entries(ROLE_POLICIES).filter(([role]) => role !== "coach");
-    for (const [, policy] of others) {
-      expect(ROLE_POLICIES.coach.budgetUsd).toBeGreaterThan(policy.budgetUsd);
-    }
   });
 
   test("a transcript path is recorded only when the session file exists", () => {
@@ -248,15 +244,14 @@ describe("invocation", () => {
     expect(argv).not.toContain("--disallowedTools");
   });
 
-  test("the spending cap defaults per role and can be overridden", () => {
+  test("no role runs with a spending cap", () => {
     const env = envWith(bin);
     const task = readTask("t1", env);
-    const byDefault = claudeInvocation(task, "reviewer", { env }).args;
-    expect(valueAfter(byDefault, "--max-budget-usd")).toBe(
-      String(ROLE_POLICIES.reviewer.budgetUsd)
-    );
-    const overridden = claudeInvocation(task, "reviewer", { budgetUsd: 0.5, env }).args;
-    expect(valueAfter(overridden, "--max-budget-usd")).toBe("0.5");
+    for (const role of Object.keys(ROLE_POLICIES)) {
+      expect(claudeInvocation(task, role, { env }).args).not.toContain(
+        "--max-budget-usd"
+      );
+    }
   });
 
   test("no argument holds a newline or a double quote, and the prompt is not in argv", () => {
@@ -335,7 +330,7 @@ describe("reply", () => {
 });
 
 describe("failures", () => {
-  test("a budget stop ends non-zero with the budget error and the real tokens", () => {
+  test("an error reply ends non-zero with claude's error and the real tokens", () => {
     fakeClaude({ replyFile: BUDGET, exitCode: 1 });
     const outcome = runRoleHeadless("t1", "reviewer", { env: envWith(bin) });
     expect(outcome.exitCode).toBe(1);
@@ -406,6 +401,20 @@ describe("event", () => {
     expect(events[0]).not.toHaveProperty("structured");
   });
 
+  test("the reply is kept in a file the event points to, with its hash", () => {
+    fakeClaude({ replyFile: SUCCESS });
+    runRoleHeadless("t1", "reviewer", { env: envWith(bin) });
+    const reply = finishedEvents()[0].reply;
+    expect(reply.file).toBe(join("replies", "001-reviewer.json"));
+    const text = readFileSync(join(home, "tasks", "t1", reply.file), "utf8");
+    expect(JSON.parse(text)).toEqual({
+      result: "ok",
+      structured: { done: true, summary: "ok" },
+    });
+    expect(reply.bytes).toBe(Buffer.byteLength(text));
+    expect(reply.sha256).toMatch(/^[0-9a-f]{64}$/);
+  });
+
   test("a failed run also appends exactly one event, with its error", () => {
     fakeClaude({ stdout: "not json", exitCode: 0 });
     runRoleHeadless("t1", "reviewer", { env: envWith(bin) });
@@ -416,14 +425,38 @@ describe("event", () => {
 });
 
 describe("isolation", () => {
-  test("every role runs with no setting sources and the plugin as its only plugin dir", () => {
+  test("every role loads only the repo's setting sources and the plugin as its only plugin dir", () => {
     const env = envWith(bin);
     const task = readTask("t1", env);
     for (const role of Object.keys(ROLE_POLICIES)) {
       const { args } = claudeInvocation(task, role, { env });
-      expect(valueAfter(args, "--setting-sources")).toBe("");
+      expect(valueAfter(args, "--setting-sources")).toBe("project,local");
       expect(valueAfter(args, "--plugin-dir")).toBe(PLUGIN_ROOT);
     }
+  });
+
+  test("a spawned role gets the user's attribution through --settings, without their hooks", () => {
+    const userHomeDir = join(home, "user-home");
+    mkdirSync(join(userHomeDir, ".claude"), { recursive: true });
+    writeFileSync(
+      join(userHomeDir, ".claude/settings.json"),
+      JSON.stringify({
+        attribution: { commit: "Co-authored by Jarvis" },
+        hooks: { Stop: [] },
+        permissions: { allow: ["Bash(touch *)"] },
+      })
+    );
+    fakeClaude({ replyFile: SUCCESS });
+    const env: Record<string, string | undefined> = {
+      ...envWith(bin),
+      HOME: userHomeDir,
+    };
+    delete env.CLAUDE_CONFIG_DIR;
+    runRoleHeadless("t1", "reviewer", { env });
+    const { argv } = recorded();
+    expect(valueAfter(argv, "--setting-sources")).toBe("project,local");
+    const passed = JSON.parse(readFileSync(valueAfter(argv, "--settings"), "utf8"));
+    expect(passed).toEqual({ attribution: { commit: "Co-authored by Jarvis" } });
   });
 
   test("the plugin dir can be pointed elsewhere", () => {
@@ -433,11 +466,11 @@ describe("isolation", () => {
     expect(valueAfter(args, "--plugin-dir")).toBe("/elsewhere");
   });
 
-  test("a spawned role receives an empty --setting-sources value and the plugin dir", () => {
+  test("a spawned role loads only the repo's settings sources and the plugin dir", () => {
     fakeClaude({ replyFile: SUCCESS });
     runRoleHeadless("t1", "reviewer", { env: envWith(bin) });
     const { argv } = recorded();
-    expect(valueAfter(argv, "--setting-sources")).toBe("");
+    expect(valueAfter(argv, "--setting-sources")).toBe("project,local");
     expect(valueAfter(argv, "--plugin-dir")).toBe(PLUGIN_ROOT);
   });
 });
@@ -594,30 +627,19 @@ describe("cli", () => {
     expect(run.stderr).not.toMatch(/\n\s+at /);
   });
 
-  test("parses the budget, the timeout and the pass-through arguments", () => {
+  test("parses the timeout and the pass-through arguments", () => {
     expect(
-      parseCliArgs([
-        "t1",
-        "reviewer",
-        "--max-budget-usd",
-        "1.5",
-        "--timeout-ms",
-        "1000",
-        "--",
-        "--plugin-dir",
-        "/p",
-      ])
+      parseCliArgs(["t1", "reviewer", "--timeout-ms", "1000", "--", "--plugin-dir", "/p"])
     ).toEqual({
       taskId: "t1",
       role: "reviewer",
-      budgetUsd: 1.5,
       timeoutMs: 1000,
       model: undefined,
       resumeSessionId: undefined,
       extraArgs: ["--plugin-dir", "/p"],
     });
-    expect(() => parseCliArgs(["t1", "reviewer", "--max-budget-usd", "0"])).toThrow(
-      "--max-budget-usd needs a positive number"
+    expect(() => parseCliArgs(["t1", "reviewer", "--timeout-ms", "0"])).toThrow(
+      "--timeout-ms needs a positive number"
     );
     expect(DEFAULT_TIMEOUT_MS).toBe(1800000);
   });

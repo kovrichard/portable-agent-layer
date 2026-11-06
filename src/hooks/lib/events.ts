@@ -68,6 +68,7 @@ export const EVENT_FIELDS = {
     ...USAGE_FIELDS,
   ],
   pal_update: ["outcome", "from", "to", "durationSec", "skipReason"],
+  pal_heartbeat: ["outcome", "payload", "status", "skipReason"],
   commitment: ["iscProject", "isc", "outcome", "surface", "snoozeDays"],
   entity_first_seen: ["domain", "entityType"],
   discord_nag: ["stage", "kind", "responseSec"],
@@ -149,6 +150,15 @@ export const EVENT_FIELDS = {
     "subagentTools",
     "mcpServer",
     "host",
+  ],
+  slurp_check: [
+    "mode",
+    "predicted",
+    "oom",
+    "hitCount",
+    "maxBytes",
+    "thresholdBytes",
+    "idioms",
   ],
 } as const satisfies Record<string, readonly string[]>;
 

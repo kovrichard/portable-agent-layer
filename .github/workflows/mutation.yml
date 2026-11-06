@@ -25,7 +25,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Full history so the merge-base against the PR base branch resolves.
           fetch-depth: 0
@@ -36,7 +36,7 @@ jobs:
           # Pinned, not floated: bun 1.3.14 changed async-promise cleanup in a way that
           # broke the Stryker bun runner, which held this at 1.3.13 until 1.4.0 ran a
           # mutation pass clean again. Re-check with a local `stryker run` before moving it.
-          bun-version: "1.4.3"
+          bun-version: "1.4.4"
 
       - name: Install dependencies
         # No lifecycle scripts, so no dependency can run arbitrary code on install.
@@ -47,7 +47,7 @@ jobs:
 
       - name: Upload mutation report
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: mutation-report
           path: reports/mutation.html

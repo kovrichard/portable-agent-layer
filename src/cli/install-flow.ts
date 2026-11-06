@@ -135,12 +135,14 @@ async function askSetupQuestions(): Promise<boolean> {
   const { promptIdentity } = await import("./setup-identity");
   const { promptAttribution } = await import("./setup-attribution");
   const { promptAutoUpdate } = await import("./setup-auto-update");
+  const { noticeTelemetry } = await import("./setup-telemetry");
   scaffoldTelos();
   scaffoldPalSettings();
   const asked = [
     await promptIdentity(),
     await promptAttribution(),
     await promptAutoUpdate(),
+    await noticeTelemetry(),
   ];
   const { ensureActorRegistered } = await import("../hooks/lib/actor");
   ensureActorRegistered();
@@ -176,7 +178,9 @@ async function installAll(plan: InstallPlan): Promise<Done> {
 async function prepareShared(): Promise<number> {
   const { copyPalDocs } = await import("../targets/lib");
   const { regenerateIfNeeded } = await import("../hooks/lib/claude-md");
+  const { refreshEnvironment } = await import("../hooks/lib/environment");
   const docs = copyPalDocs();
+  refreshEnvironment();
   regenerateIfNeeded();
   return docs;
 }
@@ -327,5 +331,13 @@ export async function runInstall(plan: InstallPlan): Promise<number> {
   if (plan.updatedFrom) await showWhatsNew(rail, style, plan.updatedFrom, plan.version);
   closeRail(rail, style, report);
   if (plan.kind === "init") showNextSteps(rail, style);
+  return installExitCode(rail.reportedFailure, report);
+}
+
+export function installExitCode(
+  stepFailed: boolean,
+  report: Pick<DoctorReport, "findings"> | null
+): number {
+  if (stepFailed) return 1;
   return report ? doctorExitCode(report.findings) : 0;
 }

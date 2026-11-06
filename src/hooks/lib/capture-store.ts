@@ -13,6 +13,8 @@ import { paths } from "./paths";
 export interface CaptureEntry {
   messageCount: number;
   userMessageCount?: number;
+  lastMessageId?: string;
+  lastUserMessageId?: string;
 }
 
 /** Below this many new messages, a re-capture would restate what was already written. */
@@ -34,10 +36,13 @@ export function capturedPath(): string {
 function asEntry(value: unknown): CaptureEntry | null {
   if (typeof value === "string") return { messageCount: 0 };
   if (value && typeof value === "object") {
-    const { messageCount, userMessageCount } = value as CaptureEntry;
+    const { messageCount, userMessageCount, lastMessageId, lastUserMessageId } =
+      value as CaptureEntry;
     return {
       messageCount,
       ...(userMessageCount === undefined ? {} : { userMessageCount }),
+      ...(lastMessageId === undefined ? {} : { lastMessageId }),
+      ...(lastUserMessageId === undefined ? {} : { lastUserMessageId }),
     };
   }
   return null;
@@ -102,11 +107,19 @@ function updateCapture(sessionId: string, update: Partial<CaptureEntry>): void {
   );
 }
 
-export function markCaptured(sessionId: string, messageCount: number): void {
-  updateCapture(sessionId, { messageCount });
+export function markCaptured(
+  sessionId: string,
+  messageCount: number,
+  lastMessageId?: string
+): void {
+  updateCapture(sessionId, { messageCount, lastMessageId });
 }
 
 /** Claimed before the model call, so a second Stop for the same turn finds it taken. */
-export function claimHandoffSummary(sessionId: string, userMessageCount: number): void {
-  updateCapture(sessionId, { userMessageCount });
+export function claimHandoffSummary(
+  sessionId: string,
+  userMessageCount: number,
+  lastUserMessageId?: string
+): void {
+  updateCapture(sessionId, { userMessageCount, lastUserMessageId });
 }

@@ -10,7 +10,9 @@ setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 const REPO = resolve(import.meta.dir, "..");
 
 function filesBunDiscovers(): string[] {
-  const report = resolve(freshTestDir(import.meta.file), "discovered.xml");
+  const discoveryDir = freshTestDir(import.meta.file);
+  const report = resolve(discoveryDir, "discovered.xml");
+  const sandboxesTheDiscoveryRunCanWipe = resolve(discoveryDir, "test-root");
   Bun.spawnSync(
     [
       "bun",
@@ -20,7 +22,12 @@ function filesBunDiscovers(): string[] {
       "--reporter=junit",
       `--reporter-outfile=${report}`,
     ],
-    { cwd: REPO, stdout: "ignore", stderr: "ignore" }
+    {
+      cwd: REPO,
+      env: { ...process.env, PAL_TEST_ROOT: sandboxesTheDiscoveryRunCanWipe },
+      stdout: "ignore",
+      stderr: "ignore",
+    }
   );
   const files = Array.from(
     readFileSync(report, "utf-8").matchAll(/<testsuite [^>]*?file="([^"]+)"/g),

@@ -19,7 +19,7 @@ async function lib<T>(mod: string): Promise<T> {
   return await import(resolve(PAL_DIR, "src", "hooks", "lib", mod));
 }
 
-type TranscriptMessage = { role: string; content: string };
+type TranscriptMessage = { role: string; content: string; id?: string };
 
 function isSessionEvent(type: string): boolean {
   return type.startsWith("session.");
@@ -57,6 +57,8 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   const { runStopHandlers } = await lib<typeof import("../../hooks/lib/stop")>("stop.ts");
   const { logToolCall } =
     await lib<typeof import("../../hooks/lib/tool-events")>("tool-events.ts");
+  const { recordSlurpCheck } =
+    await lib<typeof import("../../hooks/lib/slurp-check")>("slurp-check.ts");
   const { attachProgressFromToolCall } = await lib<
     typeof import("../../hooks/lib/progress-tree-tool")
   >("progress-tree-tool.ts");
@@ -102,7 +104,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
     }
 
     const rows = result.data as Array<{
-      info: { role?: string };
+      info: { role?: string; id?: string };
       parts: Array<Record<string, unknown>>;
     }>;
 
@@ -110,7 +112,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       .map((row) => {
         const role = row?.info?.role ?? "unknown";
         const content = partsToText(row?.parts ?? []);
-        return { role, content };
+        return { role, content, id: row?.info?.id };
       })
       .filter((m) => m.content.length > 0);
   }
@@ -132,7 +134,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       .filter((m: TranscriptMessage) => m.role === "assistant")
       .pop();
 
-    await runStopHandlers(JSON.stringify(messages), {
+    await runStopHandlers(messages, {
       sessionId: sessionID,
       lastAssistantMessage: lastAssistant?.content,
     });
@@ -178,6 +180,19 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       logOpencodeToolFailure(event.properties.part);
   }
 
+  async function onSessionOpenedOrUpdated(event: OpencodeEvent): Promise<void> {
+    if (event.type === "session.created") {
+      const { heartbeatOnStart } =
+        await lib<typeof import("../../hooks/lib/telemetry")>("telemetry.ts");
+      heartbeatOnStart();
+    }
+    if (event.type === "session.created" || event.type === "session.updated") {
+      const { regenerateIfNeeded } =
+        await lib<typeof import("../../hooks/lib/claude-md")>("claude-md.ts");
+      regenerateIfNeeded();
+    }
+  }
+
   const ledgeredOpencodeCall = (tool: string, callID: string, args: unknown) => {
     const target = ledgeredTarget(tool, (args ?? {}) as Record<string, unknown>);
     return target ? { toolUseId: callID, tool, target } : null;
@@ -204,12 +219,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       }
 
       logEventDetails(event);
-
-      if (event.type === "session.created" || event.type === "session.updated") {
-        const { regenerateIfNeeded } =
-          await lib<typeof import("../../hooks/lib/claude-md")>("claude-md.ts");
-        regenerateIfNeeded();
-      }
+      await onSessionOpenedOrUpdated(event);
 
       if (event.type === "session.idle") {
         logDebug("opencode:event", "Running stop handlers...");
@@ -281,6 +291,16 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
         session_id: input.sessionID,
         tool_response: output?.output,
       });
+      recordSlurpCheck(
+        {
+          tool_name: input.tool,
+          tool_input: input.args,
+          session_id: input.sessionID,
+          tool_response: output?.output,
+          exit_code: (output?.metadata as { exit?: unknown } | undefined)?.exit,
+        },
+        directory
+      );
       attachProgressFromToolCall(
         {
           tool_name: input.tool,

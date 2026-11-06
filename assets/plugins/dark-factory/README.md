@@ -25,9 +25,9 @@ The PO checks for these before it takes a request, and every build checks again 
 
 ## Use
 
-Run `/dark-factory:po` and say what you want. The PO writes a spec with acceptance criteria, shows it to you, and starts the build once you say go. You hear back when the pull request is ready, or when the factory needs an answer only you can give.
+Run `/dark-factory:po` and say what you want. The PO reads the code first and asks you, in one batch with a recommended answer for each, only what the code and what it knows about you cannot settle. It writes a spec with acceptance criteria and starts the build: your request is the go, the factory goes as far as an open pull request, and merging stays with you. Ask to see the spec first if you want to. You hear back when the pull request is ready, or, rarely, when the factory needs an answer only you can give.
 
-The build is a plain Node program, `scripts/build.mjs`, that the PO starts in the background. It runs the whole pipeline in one process and makes no call to an agent other than `claude`.
+The build is a plain Node program, `scripts/build.mjs`, that the PO starts in the background. The command starts the pipeline in a detached worker process (on Linux through `systemd-run --user --scope` when available, so it has its own cgroup scope) and waits for it; the build keeps running if the session ends. It still makes no call to an agent other than `claude`.
 
 ### From a terminal or cron
 
@@ -41,12 +41,16 @@ Inside Claude Code the plugin folder is `${CLAUDE_PLUGIN_ROOT}`.
 - It prints one JSON line, `{task, status, message, pr}`.
 - It exits 0 for ready, 1 for stuck and 3 for waiting.
 - A rerun after an answer goes in the spec's **Decisions** section, and the rerun continues the task.
+- The worker writes its output to `tasks/<id>/build.log` and its outcome to `tasks/<id>/result.json`; `tasks/<id>/build.lock` holds its pid.
+- Running the same command while the build runs waits for it and prints its result; running it after the worker died resumes it.
+- A rerun on a clean worktree skips the code, review and tester steps already finished at its current commit.
+- `node scripts/task.mjs show <id>` tells where it is.
 
 ## Roles
 
 | Role | Model | Job |
 | --- | --- | --- |
-| PO | Opus | Writes the spec, answers the other roles, asks you only what changes the product |
+| PO | Opus | Settles every decision before the build, writes the spec, answers the other roles, asks you only what changes the product and nothing settles |
 | Architect | Opus | Designs large changes |
 | Planner | Opus | Writes a plan detailed enough for a small model |
 | Test writer | Sonnet | Writes failing tests for every acceptance criterion |
@@ -69,7 +73,7 @@ Not every task runs every role. The PO picks a category, and code maps it to rol
 
 A diff that touches the paths in `uiPaths` always adds the tester.
 
-When the gate fails, the code writer gets two attempts on Haiku, then two on Sonnet, then the debugger gets two on Opus. After that the task is marked stuck and you are told what was tried. Review findings get two fix rounds, CI failures three.
+When the gate fails, the code writer gets two attempts on Haiku, then two on Sonnet, then the debugger gets two on Opus. After that the task is marked stuck and you are told what was tried. Review findings get two fix rounds, CI failures two. CI counts only once the pull request's head is the pushed commit. When a CI fix commits nothing, the failed runs are rerun once instead, and a second failure ends the task stuck as external or flaky. After a rerun, a failed check that still shows the old attempt's job link counts as still running.
 
 ## Repo config
 
@@ -99,9 +103,11 @@ Set `DARK_FACTORY_NOTIFY` to a shell command. It receives the message on stdin, 
 
 The factory keeps its tasks, worktrees and event log in `$DARK_FACTORY_HOME`, which defaults to `~/.dark-factory` on every machine. A factory task cannot continue on another machine, so its history stays where it ran.
 
-Every step appends one event to `$DARK_FACTORY_HOME/events.jsonl`, and the events of a task are also appended to `tasks/<task>/events.jsonl`, with its `run_finished` line. A role's `role_finished` event carries its `sessionId`, the name of its transcript. `node scripts/stats.mjs` counts, from those events alone: tasks by category, outcomes, gate failures by check and by role, the code writer's first-try pass rate, escalations, CI results, review rounds, questions to you, and roles added by the diff check.
+Every step appends one event to `$DARK_FACTORY_HOME/events.jsonl`, and the events of a task are also appended to `tasks/<task>/events.jsonl`, with its `run_finished` line. A role's `role_finished` event carries its `sessionId`, the name of its transcript. `node scripts/stats.mjs` counts, from those events alone: tasks by category, outcomes, gate failures by check and by role, the code writer's first-try pass rate, escalations, CI results, review rounds, questions to you, roles added by the diff check, and handovers by route and by reason.
 
-Every role run appends `role_finished` with its cost and tokens, and the red-test proof appends `tests_red` with the exit code and the failing count. Every build appends `run_finished` with the outcome, the total `costUsd`, the total tokens, the number of role runs and `wallMs`. `node scripts/task.mjs show <id>` prints the task with its latest step.
+Every role start appends `handover` with `from`, `to` and the `reason`: `pipeline`, `gate-failed`, `review-findings`, `unmet-criteria`, `ci-failed`, `question` or `po-answer`. The instructions the role received are saved as `tasks/<task>/handovers/NNN-<from>-to-<to>.md`, and the event carries the file, its `sha256` and its `bytes`. A role's reply, its `result` and `structured` output, is saved as `tasks/<task>/replies/NNN-<role>.json`, and `role_finished` points to it in `reply`, so a review finding or an unmet criterion outlives the transcript.
+
+Every role run appends `role_finished` with its cost and tokens, and the red-test proof appends `tests_red` with the exit code and the failing count. Every build appends `run_finished` with the outcome, the total `costUsd`, the total tokens, the number of role runs and `wallMs`. The worker appends `run_started` with its `pid` and `isolation` (`systemd-scope` or `detached`); each finished code, review and tester step appends `step_done` with the step and the worktree's `head`, and a rerun appends `step_skipped` for each step it skips. `node scripts/task.mjs show <id>` prints the task with its latest step.
 
 ## Coach
 
@@ -136,11 +142,13 @@ The repo's `CLAUDE.md` is read from your checkout when the task starts, so a rol
 - `"repoInstructions": false` in `.dark-factory.json` leaves out the repo's `CLAUDE.md`.
 - `"userInstructions": false` in `$DARK_FACTORY_HOME/config.json` (`~/.dark-factory/config.json`, optional; a missing file means both parts are on) leaves out your `~/.claude/CLAUDE.md`.
 
-Hooks never run in a role, and neither do your settings or MCP servers.
+Your own hooks never run in a role, and neither do MCP servers. The repo's hooks do run, so a repo `Stop` hook that fails its checks keeps the role working until they pass; the gate stays as the check for repos without hooks.
+
+A role loads the repo's `.claude/settings.json` and `.claude/settings.local.json` from its worktree as Claude Code does, permissions included. Your `~/.claude/settings.json` (or `CLAUDE_CONFIG_DIR`) is passed in `--settings` without `hooks`, `permissions`, `enabledPlugins` and `extraKnownMarketplaces`, so commit attribution and your other preferences apply. Each role call records which of your keys it passed and dropped as a `role_settings` event, without their values.
 
 ## Permissions
 
-- Roles run isolated: `--setting-sources ""`, the plugin from `--plugin-dir`, and their own tool policy from `roles.mjs`, so user hooks and settings don't reach them; only the CLAUDE.md instructions above do.
+- Roles run with `--setting-sources project,local`, the plugin from `--plugin-dir`, and their own tool policy from `roles.mjs`. Your user settings come only through the filtered `--settings` file, so your hooks don't reach them. A repo's `permissions.allow` can widen a role's tools; the role's denies still win.
 - The PO session only needs `"Bash(node *dark-factory*/scripts/*)"`, for example in `.claude/settings.json`:
 
 ```json

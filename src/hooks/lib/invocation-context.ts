@@ -20,6 +20,7 @@ import { type HookTurnPayload, hookSessionId } from "./hook-turn";
 import { logContextSnapshot, logError, logPromptSnapshot } from "./log";
 import { paths } from "./paths";
 import { capturePrompt } from "./prompt-capture";
+import { heartbeatOnStart } from "./telemetry";
 
 export interface InvocationPayload extends HookTurnPayload {
   invocationNum?: number;
@@ -61,6 +62,7 @@ function attempt(label: string, work: () => unknown): void {
 function sessionStartReminder(): string {
   attempt("regenerate", regenerateIfNeeded);
   attempt("auto-update", autoUpdateOnStart);
+  attempt("heartbeat", heartbeatOnStart);
   const reminder = buildSystemReminder({ agent: "claude" });
   if (reminder) logContextSnapshot(reminder);
   return reminder;

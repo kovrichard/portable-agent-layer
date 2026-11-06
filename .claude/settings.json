@@ -35,6 +35,10 @@
           {
             "type": "command",
             "command": "bun .agents/hooks/lf.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun .agents/hooks/exact-versions.ts"
           }
         ]
       }
@@ -54,7 +58,8 @@
           { "type": "command", "command": "bun .agents/hooks/klint.ts --subagent" },
           { "type": "command", "command": "bun .agents/hooks/secretlint.ts --subagent" },
           { "type": "command", "command": "bun .agents/hooks/madge.ts --subagent" },
-          { "type": "command", "command": "bun .agents/hooks/lf.ts --subagent" }
+          { "type": "command", "command": "bun .agents/hooks/lf.ts --subagent" },
+          { "type": "command", "command": "bun .agents/hooks/exact-versions.ts --subagent" }
         ]
       }
     ],
@@ -68,7 +73,8 @@
           { "type": "command", "command": "bun .agents/hooks/klint.ts --subagent" },
           { "type": "command", "command": "bun .agents/hooks/secretlint.ts --subagent" },
           { "type": "command", "command": "bun .agents/hooks/madge.ts --subagent" },
-          { "type": "command", "command": "bun .agents/hooks/lf.ts --subagent" }
+          { "type": "command", "command": "bun .agents/hooks/lf.ts --subagent" },
+          { "type": "command", "command": "bun .agents/hooks/exact-versions.ts --subagent" }
         ]
       }
     ]

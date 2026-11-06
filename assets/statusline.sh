@@ -223,6 +223,40 @@ if [ -f "$UPDATE_CACHE" ]; then
   fi
 fi
 
+# Dark factory: one line per task that is building or waiting on the user.
+# Reads the tail of each task's own event log, so it stays fast as logs grow.
+FACTORY_JQ='
+def secs: sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601;
+def mins: (now - secs) / 60 | floor;
+$task[0] as $t
+| ($t.id | sub("^[0-9]{4}-[0-9]{2}-[0-9]{2}-"; "") | .[0:28]) as $name
+| (try ($t.pr | capture("/pull/(?<n>[0-9]+)").n) catch "") as $pr
+| if $t.status == "waiting" then "🏭 \($name) · ⏸ waiting on you"
+  else
+    (map(select(.event == "role_run")) | last) as $run
+    | (map(select(.event == "gate")) | last) as $gate
+    | last as $latest
+    | "🏭 \($name)"
+      + (if $run then " · \($run.role) \($run.ts | mins)m" else " · starting" end)
+      + (if $gate == null then "" elif $gate.result == "pass" then " · gate ✓" else " · gate ✗" end)
+      + (if $pr != "" then " · PR #\($pr)" else "" end)
+      + (if $latest != null and ($latest.ts | mins) >= 35 then " · ⚠ no activity \($latest.ts | mins)m" else "" end)
+  end'
+FACTORY_LINES=()
+FACTORY_TASKS="${DARK_FACTORY_HOME:-$HOME/.dark-factory}/tasks"
+if [ -d "$FACTORY_TASKS" ]; then
+  for TASK_JSON in "$FACTORY_TASKS"/*/task.json; do
+    [ -f "$TASK_JSON" ] || continue
+    case "$(jq -r '.status // ""' "$TASK_JSON" 2>/dev/null)" in
+      running|waiting) ;;
+      *) continue ;;
+    esac
+    TASK_EVENTS="${TASK_JSON%/task.json}/events.jsonl"
+    FACTORY_LINE=$( { tail -n 300 "$TASK_EVENTS" 2>/dev/null || true; } | jq -rs --slurpfile task "$TASK_JSON" "$FACTORY_JQ" 2>/dev/null)
+    [ -n "$FACTORY_LINE" ] && FACTORY_LINES+=("$FACTORY_LINE")
+  done
+fi
+
 # Build PAL indicators
 HOOK_STR=""
 [ "$HOOK_ERRORS" -gt 0 ] && HOOK_STR="  ${RED}⚠️  ${HOOK_ERRORS} hook err${RESET}"
@@ -241,6 +275,11 @@ fi
 
 # Line 3: Update available (only when cache says available AND versions differ)
 [ -n "$UPDATE_LINE" ] && echo -e "${YELLOW}${UPDATE_LINE}${RESET}"
+
+# Line 3b: Dark-factory tasks that are building or waiting on the user
+for FACTORY_LINE in "${FACTORY_LINES[@]}"; do
+  echo -e "${CYAN}${FACTORY_LINE}${RESET}"
+done
 
 # Line 4: Rotating quote (changes every 30 minutes)
 QUOTES=(

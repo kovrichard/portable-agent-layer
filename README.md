@@ -38,7 +38,7 @@ With PAL, you can:
 
 > **Bun is required.** PAL is built on [Bun](https://bun.sh) and will not work with Node.js or other runtimes. Install it with `curl -fsSL https://bun.sh/install | bash`.
 
-- [Bun](https://bun.sh) >= 1.4.0
+- [Bun](https://bun.sh) >= 1.4.4
 - At least one of: [Claude Code](https://claude.ai/code), [opencode](https://opencode.ai), [Cursor](https://cursor.com), [GitHub Copilot CLI](https://docs.github.com/en/copilot/github-copilot-in-the-cli), [Codex](https://openai.com/index/introducing-codex/), or [Antigravity CLI](https://antigravity.google/product/antigravity-cli)
 
 ### Package mode (recommended)
@@ -93,6 +93,7 @@ pal cli status        # check your setup
 | `pal cli usage` | Summarize token usage and estimated cost |
 | `pal cli cost` | What each month was paid against its API-equivalent cost, per agent |
 | `pal cli wrapped [--year <yyyy>]` | A year of your work in numbers, read from the event log |
+| `pal cli env [--refresh]` | The OS and script languages PAL tells every agent about; `--refresh` detects again after you install one |
 | `pal cli patterns` | How you work across projects, read from the event log |
 | `pal cli progress [show\|list\|open\|enter\|park\|wait\|done\|stopped\|decide\|attach\|follow-up]` | The progress tree: what you are on in this project, where it stopped, what is parked or waiting, and the decisions and artifacts on each node. Detours are child nodes and `done` returns to the parent. The active node rides along in every session and prompt, and your own commits attach to it at turn end |
 | `pal cli timebox [start\|status\|end]` | Stop work at a deadline: `start --for 15m` or `--until 18:00`. After the deadline every working tool call is refused except `pal cli` and edits to the report, so the agent stops and reports what it has |
@@ -194,6 +195,22 @@ pal cli debug       # show current status and log path
 | `PAL_INFERENCE_DISABLED` | Set to `1` to disable all inference (used by the test suite to prevent real CLI spawns) |
 | `PAL_NOTIFICATIONS_DISABLED` | Set to `1` to suppress desktop notifications (used by the test suite) |
 | `PAL_TEST_SANDBOX` | Set by the test suite. Without a `PAL_HOME`, state goes to a temp directory instead of `~/.pal`, and installers refuse to touch real agent directories |
+
+### Telemetry
+
+Once a day PAL sends one anonymous heartbeat so we can count how many people use it. It holds exactly these fields and nothing else:
+
+| Field | Example |
+|-------|---------|
+| `install_id` | A random id created on first run (`~/.pal/telemetry.json`), not derived from your machine or name |
+| `version` | `0.115.0` |
+| `channel` | `stable` or `canary` |
+| `os` / `arch` | `darwin` / `arm64` |
+| `agents` | The agents PAL is installed into, e.g. `["claude", "codex"]` |
+
+Every send, failure and skip is written to your local event log with the exact payload. `pal cli telemetry show` prints them, and `pal cli telemetry status` shows whether it is on.
+
+Turn it off with `pal cli telemetry off`, or set `DO_NOT_TRACK=1` or `PAL_TELEMETRY_DISABLED=1`. It never runs in CI or in the test suite.
 
 ---
 

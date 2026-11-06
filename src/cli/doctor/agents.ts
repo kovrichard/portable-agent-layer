@@ -263,8 +263,12 @@ function hookFindings(agent: AgentName, file: string, contextHook: string): Find
   return findings;
 }
 
+function opencodePluginFile(): string {
+  return resolve(platform.opencodeDir(), "plugins", "pal-plugin.ts");
+}
+
 function opencodePluginFindings(): Finding[] {
-  const installed = resolve(platform.opencodeDir(), "plugins", "pal-plugin.ts");
+  const installed = opencodePluginFile();
   const source = resolve(palPkg(), "src", "targets", "opencode", "plugin.ts");
   if (!existsSync(installed))
     return [
@@ -338,6 +342,12 @@ function palHookCount(agent: AgentName): number {
   const file = WIRING[agent].hookFile?.();
   const commands = file ? readHookCommands(file) : "missing";
   return Array.isArray(commands) ? commands.filter((c) => isPalHook(c, agent)).length : 0;
+}
+
+export function agentsWithPal(): AgentName[] {
+  return AGENT_NAMES.filter((agent) =>
+    agent === "opencode" ? existsSync(opencodePluginFile()) : palHookCount(agent) > 0
+  );
 }
 
 /** What PAL put into an agent, in the few words an install step reports it in. */

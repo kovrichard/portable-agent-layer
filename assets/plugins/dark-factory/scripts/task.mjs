@@ -152,6 +152,17 @@ export function withDecision(spec, line) {
   return `${[...lines.slice(0, last + 1), ...insert, ...lines.slice(last + 1)].join("\n")}\n`;
 }
 
+export function withoutDecisions(spec) {
+  const lines = spec.split("\n");
+  const start = lines.findIndex((text) => /^## Decisions\s*$/.test(text));
+  if (start === -1) return spec;
+  const next = lines.findIndex((text, index) => index > start && text.startsWith("## "));
+  const end = next === -1 ? lines.length : next;
+  const before = lines.slice(0, start).join("\n").trimEnd();
+  const after = lines.slice(end).join("\n");
+  return after === "" ? `${before}\n\n` : `${before}\n\n${after}`;
+}
+
 export function appendDecision(
   id,
   { role, question, answer },
