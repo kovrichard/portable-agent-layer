@@ -531,10 +531,24 @@ function beforeRoleStep(run, role) {
   return roleStop(role, runRole(run, role, BEFORE_INSTRUCTIONS[role]));
 }
 
+function firstPlanStillOwed(run) {
+  return (
+    run.before.includes("planner") &&
+    !existsSync(planPath(run)) &&
+    latestPlanSha256(run) === null
+  );
+}
+
+function resumeFirstPlan(run) {
+  return beforeRoleStep(run, "planner");
+}
+
 function beforeRolesStep(run) {
   if (planGateEndedWithFindings(readEvents(run.env), run.id)) return settlePlanStep(run);
-  if (hasCommitsAheadOfBase(run) || testsProvedRedBefore(run))
-    return replanIfSpecChanged(run);
+  const hasCommits = hasCommitsAheadOfBase(run);
+  if (!hasCommits && testsProvedRedBefore(run) && firstPlanStillOwed(run))
+    return resumeFirstPlan(run);
+  if (hasCommits || testsProvedRedBefore(run)) return replanIfSpecChanged(run);
   for (const role of run.before) {
     const stop = beforeRoleStep(run, role);
     if (stop) return stop;

@@ -123,6 +123,20 @@ describe("a rerun after the spec changed", () => {
     ]);
   });
 
+  test("tests proved red but no plan yet: the first plan is written with the plan-after-tests instructions", () => {
+    const world = worldFor();
+    appendEvent({ event: "tests_red", task: TASK, exitCode: 1, failing: 2 }, world.env);
+    runBuild(world);
+    expect(roleNames(world).slice(0, 4)).toEqual([
+      "planner",
+      "reviewer",
+      "test-writer",
+      "code-writer",
+    ]);
+    expect(handoverReasonsTo(world, "planner")).toEqual(["pipeline"]);
+    expect(plannerCalls(world)[0]?.instructions ?? "").not.toContain("spec changed");
+  });
+
   test("a matching hash runs no planner", () => {
     const world = worldFor();
     writeFileSync(planPath(world), "plan");
