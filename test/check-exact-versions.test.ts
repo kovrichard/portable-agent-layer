@@ -26,6 +26,21 @@ describe("nonExactVersions", () => {
     expect(nonExactVersions(manifest)).toEqual([]);
   });
 
+  test("accepts an npm alias pinned exactly and flags one that is not", () => {
+    const manifest = {
+      devDependencies: {
+        typescript: "npm:@typescript/typescript6@6.0.2",
+        typescript7: "npm:typescript@7.0.2",
+        loose: "npm:typescript@^7.0.2",
+        bare: "npm:typescript",
+      },
+    };
+    expect(nonExactVersions(manifest)).toEqual([
+      { section: "devDependencies", name: "loose", version: "npm:typescript@^7.0.2" },
+      { section: "devDependencies", name: "bare", version: "npm:typescript" },
+    ]);
+  });
+
   test("ignores engines and a manifest without dependency sections", () => {
     expect(nonExactVersions({ engines: { bun: ">=1.4.4" } })).toEqual([]);
   });

@@ -11,6 +11,12 @@ const DEPENDENCY_SECTIONS = [
 ] as const;
 
 const EXACT_SEMVER = /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/;
+const NPM_ALIAS = /^npm:(@[^/@]+\/)?[^/@]+@(?<version>.+)$/;
+
+function isExact(version: string): boolean {
+  const aliased = NPM_ALIAS.exec(version)?.groups?.version;
+  return EXACT_SEMVER.test(aliased ?? version);
+}
 
 type Manifest = Partial<Record<string, unknown>>;
 
@@ -23,7 +29,7 @@ interface NonExactVersion {
 export function nonExactVersions(manifest: Manifest): NonExactVersion[] {
   return DEPENDENCY_SECTIONS.flatMap((section) =>
     Object.entries((manifest[section] ?? {}) as Record<string, string>)
-      .filter(([, version]) => !EXACT_SEMVER.test(version))
+      .filter(([, version]) => !isExact(version))
       .map(([name, version]) => ({ section, name, version }))
   );
 }
