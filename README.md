@@ -1,10 +1,8 @@
 # Portable Agent Layer (PAL)
 
-[![HOL Guard](https://img.shields.io/endpoint?url=https%3A%2F%2Fhol.org%2Fapi%2Fregistry%2Fbadges%2Fplugin%3Fslug%3Dkovrichard%252Fportable-agent-layer%26metric%3Drelease)](https://hol.org/registry/plugins/kovrichard%2Fportable-agent-layer?utm_source=hol_marketplace&utm_medium=plugins_badge&utm_campaign=plugins&utm_content=kovrichard%2Fportable-agent-layer&ref=plugin-author-dcb780a6)
-
 [![PAL: stop re-explaining yourself to every AI tool](https://raw.githubusercontent.com/kovrichard/portable-agent-layer/main/docs/images/pal-banner.png)](https://pal.konvert7.com)
 
-[![npm version](https://img.shields.io/npm/v/portable-agent-layer)](https://www.npmjs.com/package/portable-agent-layer) [![npm downloads](https://img.shields.io/npm/dm/portable-agent-layer)](https://www.npmjs.com/package/portable-agent-layer) [![License: MIT](https://img.shields.io/npm/l/portable-agent-layer)](LICENSE)
+[![npm version](https://img.shields.io/npm/v/portable-agent-layer)](https://www.npmjs.com/package/portable-agent-layer) [![npm downloads](https://img.shields.io/npm/dm/portable-agent-layer)](https://www.npmjs.com/package/portable-agent-layer) [![License: MIT](https://img.shields.io/npm/l/portable-agent-layer)](LICENSE) [![HOL Guard](https://img.shields.io/endpoint?url=https%3A%2F%2Fhol.org%2Fapi%2Fregistry%2Fbadges%2Fplugin%3Fslug%3Dkovrichard%252Fportable-agent-layer%26metric%3Drelease)](https://hol.org/registry/plugins/kovrichard%2Fportable-agent-layer?utm_source=hol_marketplace&utm_medium=plugins_badge&utm_campaign=plugins&utm_content=kovrichard%2Fportable-agent-layer&ref=plugin-author-dcb780a6)
 
 **Your AI forgets you. PAL doesn't.** Free, open-source memory, skills and rules shared by Claude Code, opencode, Cursor, GitHub Copilot, Codex and Antigravity CLI. Install it once, and every agent starts the next session knowing who you are, what you're working on and where you left off.
 
