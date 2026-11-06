@@ -94,9 +94,13 @@ describe("a rerun after the spec changed", () => {
     recordPlanWritten(world, STALE_HASH);
     commitsAhead(world);
     expect(runBuild(world).status).toBe("ready");
-    expect(roleNames(world).slice(0, 2)).toEqual(["planner", "code-writer"]);
+    expect(roleNames(world).slice(0, 4)).toEqual([
+      "planner",
+      "reviewer",
+      "test-writer",
+      "code-writer",
+    ]);
     expect(plannerCalls(world)).toHaveLength(1);
-    expect(roleNames(world)).not.toContain("test-writer");
     const instructions = plannerCalls(world)[0]?.instructions ?? "";
     expect(instructions).toContain("spec changed");
     expect(instructions).toContain("plan.md");
@@ -109,8 +113,12 @@ describe("a rerun after the spec changed", () => {
     recordPlanWritten(world, STALE_HASH);
     appendEvent({ event: "tests_red", task: TASK, exitCode: 1, failing: 2 }, world.env);
     runBuild(world);
-    expect(roleNames(world).slice(0, 2)).toEqual(["planner", "code-writer"]);
-    expect(roleNames(world)).not.toContain("test-writer");
+    expect(roleNames(world).slice(0, 4)).toEqual([
+      "planner",
+      "reviewer",
+      "test-writer",
+      "code-writer",
+    ]);
   });
 
   test("a matching hash runs no planner", () => {
@@ -137,7 +145,7 @@ describe("a rerun after the spec changed", () => {
     recordPlanWritten(world, SPEC_HASH);
     commitsAhead(world);
     runBuild(world);
-    expect(roleNames(world).slice(0, 2)).toEqual(["planner", "code-writer"]);
+    expect(roleNames(world).slice(0, 2)).toEqual(["planner", "reviewer"]);
   });
 
   test("a category without a planner never re-plans", () => {
@@ -168,7 +176,7 @@ describe("a task planned before plan_written existed", () => {
     setTimes(specPath(world), 2_000_000);
     commitsAhead(world);
     runBuild(world);
-    expect(roleNames(world).slice(0, 2)).toEqual(["planner", "code-writer"]);
+    expect(roleNames(world).slice(0, 2)).toEqual(["planner", "reviewer"]);
   });
 
   test("spec.md older than plan.md does not re-plan", () => {
@@ -242,7 +250,12 @@ describe("a re-plan and a resumed build", () => {
     appendEvent({ event: "step_done", task: TASK, step: "code", head: "abc" }, world.env);
     cleanWorktreeAt(world, "abc");
     runBuild(world);
-    expect(roleNames(world).slice(0, 2)).toEqual(["planner", "code-writer"]);
+    expect(roleNames(world).slice(0, 4)).toEqual([
+      "planner",
+      "reviewer",
+      "test-writer",
+      "code-writer",
+    ]);
   });
 
   test("without a spec change the finished code step is still skipped", () => {
