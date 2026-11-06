@@ -96,7 +96,7 @@
     "@opencode-ai/plugin": "1.19.5",
     "@secretlint/secretlint-rule-preset-recommend": "13.1.0",
     "@semantic-release/changelog": "7.0.0",
-    "@semantic-release/git": "10.0.1",
+    "@semantic-release/git": "11.0.1",
     "@semantic-release/github": "12.0.10",
     "@stryker-mutator/core": "9.6.1",
     "@types/bun": "1.4.4",
