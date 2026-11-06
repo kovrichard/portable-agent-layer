@@ -11,6 +11,8 @@ updates:
     ignore:
       - dependency-name: "@hughescr/stryker-bun-runner"
       - dependency-name: "promptfoo"
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     groups:
       minor-and-patch:
         update-types: ["minor", "patch"]
