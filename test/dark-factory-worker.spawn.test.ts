@@ -73,11 +73,13 @@ process.stdout.write(JSON.stringify({
 `;
 
 const FAKE_GH = `
+const cp = require("node:child_process");
 const args = process.argv.slice(2);
 const [group, action] = args;
 if (group === "pr" && action === "list") process.stdout.write("[]");
 if (group === "pr" && action === "create") process.stdout.write("${PR_URL}\\n");
 if (group === "pr" && action === "checks") process.stdout.write(JSON.stringify([{ name: "ci", bucket: "pass" }]));
+if (group === "pr" && action === "view") process.stdout.write(JSON.stringify({ headRefOid: cp.execFileSync("git", ["rev-parse", "HEAD"]).toString().trim() }));
 `;
 
 function git(cwd: string, ...args: string[]) {

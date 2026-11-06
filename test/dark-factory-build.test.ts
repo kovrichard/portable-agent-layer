@@ -342,15 +342,137 @@ describe("review and test rounds", () => {
 });
 
 describe("CI rounds", () => {
-  test("a failing CI gets two fix rounds on the debugger and then ends stuck", () => {
-    const world = worldFor({ ci: [{ state: "fail", failed: [{ name: "ci" }] }] });
+  const failing = (...checks: { name: string; link?: string }[]) => ({
+    state: "fail",
+    failed: checks,
+  });
+  const runLink = (id: number) => `https://github.com/o/r/actions/runs/${id}/job/9`;
+
+  test("a CI that keeps failing gets one committed fix round, two reads, then ends stuck", () => {
+    const world = worldFor({
+      ci: [failing({ name: "ci", link: runLink(1) })],
+      roles: { debugger: [{ commits: true }] },
+    });
     const result = runBuild(world);
     expect(result.status).toBe("stuck");
-    expect(result.message).toContain("CI still fails after 3 rounds");
-    expect(roleNames(world)).toEqual(["code-writer", "reviewer", "debugger", "debugger"]);
+    expect(roleNames(world)).toEqual(["code-writer", "reviewer", "debugger"]);
     expect(world.roleCalls[2]?.model).toBe(FACTORY_MODELS.large);
-    expect(world.ciReads).toBe(3);
-    expect(world.pushes).toBe(3);
+    expect(world.ciReads).toBe(2);
+    expect(world.pushes).toBe(2);
+    expect(world.reruns).toEqual([]);
+  });
+
+  test("a fix step that commits is pushed and CI is read again without a rerun", () => {
+    const world = worldFor({
+      ci: [failing({ name: "ci", link: runLink(1) }), { state: "pass", failed: [] }],
+      roles: { debugger: [{ commits: true }] },
+    });
+    expect(runBuild(world).status).toBe("ready");
+    expect(world.pushes).toBe(2);
+    expect(world.reruns).toEqual([]);
+    expect(eventsNamed(world, "ci_rerun")).toEqual([]);
+  });
+
+  test("a fix step that commits nothing reruns the failed run once and reads CI without pushing", () => {
+    const world = worldFor({
+      ci: [failing({ name: "ci", link: runLink(42) }), { state: "pass", failed: [] }],
+      roles: { debugger: [NOOP] },
+    });
+    expect(runBuild(world).status).toBe("ready");
+    expect(world.reruns).toHaveLength(1);
+    expect(world.reruns[0]).toEqual(expect.arrayContaining(["run", "rerun", "--failed"]));
+    expect(world.reruns[0]).toContain("42");
+    expect(eventsNamed(world, "ci_rerun")).toEqual([
+      expect.objectContaining({ task: TASK, ok: true }),
+    ]);
+    expect(world.pushes).toBe(1);
+    expect(world.ciReads).toBe(2);
+    expect(roleNames(world).filter((role) => role === "debugger")).toHaveLength(1);
+  });
+
+  test("each failed run is rerun once, taken from the failed checks' links", () => {
+    const world = worldFor({
+      ci: [
+        failing(
+          { name: "lint", link: runLink(11) },
+          { name: "unit", link: runLink(22) },
+          { name: "unit-2", link: runLink(22) }
+        ),
+        { state: "pass", failed: [] },
+      ],
+      roles: { debugger: [NOOP] },
+    });
+    runBuild(world);
+    const ids = world.reruns.map((args) => args.find((arg) => /^\d+$/.test(arg)));
+    expect(ids.sort()).toEqual(["11", "22"]);
+  });
+
+  test("CI still failing after the rerun ends stuck as external, naming the failed checks", () => {
+    const world = worldFor({
+      ci: [failing({ name: "flaky-suite", link: runLink(5) })],
+      roles: { debugger: [NOOP] },
+    });
+    const result = runBuild(world);
+    expect(result.status).toBe("stuck");
+    expect(result.message).toContain("flaky-suite");
+    expect(result.message).toContain("external");
+    expect(world.reruns).toHaveLength(1);
+    expect(world.ciReads).toBe(2);
+    expect(roleNames(world).filter((role) => role === "debugger")).toHaveLength(1);
+    expect(world.pushes).toBe(1);
+  });
+
+  test("the read after a rerun treats the failed links from before the rerun as the old attempt", () => {
+    const world = worldFor({
+      ci: [
+        failing({ name: "flaky-suite", link: runLink(5) }),
+        { state: "pass", failed: [] },
+      ],
+      roles: { debugger: [NOOP] },
+    });
+    expect(runBuild(world).status).toBe("ready");
+    expect(world.ciOptions[0]?.staleLinks).toBeUndefined();
+    expect(world.ciOptions[1]).toMatchObject({ staleLinks: [runLink(5)] });
+  });
+
+  test("a failing rerun command is recorded with ok false and ends stuck as external", () => {
+    const world = worldFor({
+      ci: [failing({ name: "flaky-suite", link: runLink(5) })],
+      roles: { debugger: [NOOP] },
+      rerunFails: true,
+    });
+    const result = runBuild(world);
+    expect(result.status).toBe("stuck");
+    expect(result.message).toContain("external");
+    expect(eventsNamed(world, "ci_rerun")).toEqual([
+      expect.objectContaining({ ok: false }),
+    ]);
+    expect(world.ciReads).toBe(1);
+    expect(roleNames(world).filter((role) => role === "debugger")).toHaveLength(1);
+  });
+
+  test("an unreadable worktree HEAD around the fix step ends stuck without pushing again", () => {
+    const world = worldFor({
+      ci: [failing({ name: "ci", link: runLink(1) })],
+      roles: { debugger: [{ commits: true }] },
+      gitHeadUnreadable: true,
+    });
+    const result = runBuild(world);
+    expect(result.status).toBe("stuck");
+    expect(result.message).toContain("could not read CI: worktree HEAD unreadable");
+    expect(world.pushes).toBe(1);
+    expect(world.reruns).toEqual([]);
+  });
+
+  test("a worktree HEAD that cannot be read after the fix ends stuck as could not read CI", () => {
+    const world = worldFor({
+      ci: [failing({ name: "ci", link: runLink(1) })],
+      roles: { debugger: [NOOP] },
+      headUnreadable: true,
+    });
+    const result = runBuild(world);
+    expect(result.status).toBe("stuck");
+    expect(result.message).toContain("could not read CI");
   });
 
   test("CI that cannot be read ends stuck with the gh error and starts no fix round", () => {

@@ -126,6 +126,7 @@ process.exit(step.exit ?? 0);
 
 const FAKE_GH = `
 const fs = require("node:fs");
+const cp = require("node:child_process");
 const scenario = JSON.parse(fs.readFileSync(process.env.FAKE_SCENARIO, "utf8"));
 const args = process.argv.slice(2);
 fs.appendFileSync(process.env.FAKE_GH_LOG, args.join(" ") + "\\n");
@@ -141,6 +142,7 @@ if (group === "pr" && action === "checks") {
   process.stdout.write(JSON.stringify(checks));
   process.exit(checks.some((check) => check.bucket === "fail") ? 1 : 0);
 }
+if (group === "pr" && action === "view") process.stdout.write(JSON.stringify({ headRefOid: cp.execFileSync("git", ["rev-parse", "HEAD"]).toString().trim() }));
 `;
 
 function git(cwd: string, ...args: string[]): string {

@@ -57,7 +57,7 @@ const CODE_LADDER = [
 const FIX_LADDER = CODE_LADDER.slice(2);
 const CI_FIX_LADDER = FIX_LADDER.slice(2);
 const REVIEW_ROUNDS = 2;
-const CI_ROUNDS = 3;
+const CI_ROUNDS = 2;
 const CI_POLLS = 6;
 const EXIT_CODES = { ready: 0, stuck: 1, waiting: 3 };
 const RED_TEST_CHECK = "tests";
@@ -491,20 +491,20 @@ function shipStep(run) {
   return null;
 }
 
-function readCi(run) {
+function readCi(run, options = {}) {
   if (!readTask(run.id, run.env).pr)
     return { state: "unreadable", error: "the task has no pull request" };
   try {
-    return run.effects.waitForCi(run.id, { env: run.env });
+    return run.effects.waitForCi(run.id, { env: run.env, ...options });
   } catch (error) {
     return { state: "unreadable", error: error.message };
   }
 }
 
-function pollCi(run) {
+function pollCi(run, options = {}) {
   let ci = { state: "pending", failed: [] };
   for (let poll = 0; poll < CI_POLLS && ci.state === "pending"; poll += 1)
-    ci = readCi(run);
+    ci = readCi(run, options);
   return ci;
 }
 
@@ -522,16 +522,85 @@ function ciFixStep(run, ci) {
   return fixStop(fixed, "CI failures");
 }
 
+function unfinishedCiStop(ci) {
+  if (ci.state === "unreadable") return stuck(`could not read CI: ${ci.error}`);
+  if (ci.state === "pass" || ci.state === "none" || ci.state === "fail") return null;
+  return stuck(`CI did not finish: ${ciSummary(ci)}`);
+}
+
+function ciPassed(ci) {
+  return ci.state === "pass" || ci.state === "none";
+}
+
+function externalFailure(ci) {
+  return `CI fails on ${ci.failed.join(", ")} although the fix step committed nothing, so the failure is not caused by the branch's changes (external or flaky)`;
+}
+
+function rerunOne(run, id) {
+  let result;
+  try {
+    result = run.effects.spawnTool("gh", ["run", "rerun", id, "--failed"], {
+      cwd: run.worktree,
+      env: run.env,
+    });
+  } catch (error) {
+    return `${id}: ${error.message}`;
+  }
+  if (result.status === 0) return null;
+  return `${id}: ${result.stderr.trim() || `exit ${result.status}`}`;
+}
+
+function rerunFailedRuns(run, runIds) {
+  if (runIds.length === 0)
+    return { ok: false, error: "no failed GitHub Actions run to rerun" };
+  const failures = runIds.map((id) => rerunOne(run, id)).filter(Boolean);
+  return { ok: failures.length === 0, error: failures.join("; ") || null };
+}
+
+function recordRerun(run, ci, rerun) {
+  appendEvent(
+    {
+      event: "ci_rerun",
+      task: run.id,
+      sha: ci.sha ?? null,
+      runs: ci.runs ?? [],
+      ok: rerun.ok,
+      error: rerun.error,
+    },
+    run.env
+  );
+}
+
+function rerunCiStep(run, ci) {
+  const rerun = rerunFailedRuns(run, ci.runs ?? []);
+  recordRerun(run, ci, rerun);
+  if (!rerun.ok) return stuck(`${externalFailure(ci)}; the rerun failed: ${rerun.error}`);
+  const again = pollCi(run, { staleLinks: ci.links ?? [] });
+  const stop = unfinishedCiStop(again);
+  if (stop) return stop;
+  if (ciPassed(again)) return null;
+  return stuck(externalFailure(again));
+}
+
+function fixCommitted(before, after) {
+  return before !== after;
+}
+
 function ciStep(run) {
   for (let round = 1; round <= CI_ROUNDS; round += 1) {
     const ci = pollCi(run);
-    if (ci.state === "unreadable") return stuck(`could not read CI: ${ci.error}`);
-    if (ci.state === "pass" || ci.state === "none") return null;
-    if (ci.state !== "fail") return stuck(`CI did not finish: ${ciSummary(ci)}`);
+    const stop = unfinishedCiStop(ci);
+    if (stop) return stop;
+    if (ciPassed(ci)) return null;
     if (round === CI_ROUNDS)
       return stuck(`CI still fails after ${CI_ROUNDS} rounds: ${ciSummary(ci)}`);
-    const stop = ciFixStep(run, ci);
-    if (stop) return stop;
+    const headBefore = worktreeHead(run);
+    const fixStopped = ciFixStep(run, ci);
+    if (fixStopped) return fixStopped;
+    const headAfter = worktreeHead(run);
+    if (headBefore === null || headAfter === null)
+      return stuck("could not read CI: worktree HEAD unreadable");
+    if (!fixCommitted(headBefore, headAfter)) return rerunCiStep(run, ci);
     run.effects.push(run.id, run.env);
   }
   return null;
