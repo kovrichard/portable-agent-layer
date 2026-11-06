@@ -1,6 +1,6 @@
 # Security Policy
 
-The dark-factory plugin ships with the Portable Agent Layer and follows its
+The dark-factory plugin ships with Portable Agent Layer and follows its
 [security policy](https://github.com/kovrichard/portable-agent-layer/blob/canary/SECURITY.md).
 
 ## Reporting a vulnerability
