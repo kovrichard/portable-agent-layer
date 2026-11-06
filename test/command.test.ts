@@ -93,17 +93,15 @@ const PATH = ["pal", "cli", "x"];
 const run = (...args: string[]) => runCommand(tree, args, PATH);
 
 describe("help", () => {
-  test.each([
-    [[]],
-    [["--help"]],
-    [["-h"]],
-    [["help"]],
-  ])("a group prints its commands for %p and exits 0", async (args) => {
-    expect(await run(...args)).toBe(0);
-    expect(out.join("\n")).toStartWith("Usage: pal cli x <command>");
-    expect(out.join("\n")).toContain("  list | ls ");
-    expect(out.join("\n")).toContain("add <name> [note]");
-  });
+  test.each([[[]], [["--help"]], [["-h"]], [["help"]]])(
+    "a group prints its commands for %p and exits 0",
+    async (args) => {
+      expect(await run(...args)).toBe(0);
+      expect(out.join("\n")).toStartWith("Usage: pal cli x <command>");
+      expect(out.join("\n")).toContain("  list | ls ");
+      expect(out.join("\n")).toContain("add <name> [note]");
+    }
+  );
 
   test("a leaf prints its options, value placeholders and the help flag", async () => {
     expect(await run("list", "--limit", "3", "-h")).toBe(0);

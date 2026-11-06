@@ -36,14 +36,13 @@ describe("which agents need AGENTS.md prepended", () => {
     expect(envelopeOf(agent).payload).toContain("AGENTS.md");
   });
 
-  test.each([
-    "claude",
-    "codex",
-    "opencode",
-  ])("%s already has it, so sending it again would be duplication", (agent) => {
-    expect(needsAgentsMd(agent)).toBe(false);
-    expect(envelopeOf(agent).payload).not.toContain("identity and routing");
-  });
+  test.each(["claude", "codex", "opencode"])(
+    "%s already has it, so sending it again would be duplication",
+    (agent) => {
+      expect(needsAgentsMd(agent)).toBe(false);
+      expect(envelopeOf(agent).payload).not.toContain("identity and routing");
+    }
+  );
 });
 
 describe("the envelope each agent is handed", () => {

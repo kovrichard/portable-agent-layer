@@ -201,36 +201,38 @@ describe("API keys", () => {
     expect(anthropic?.title).toContain("claude CLI");
   });
 
-  test.each([
-    "PAL_GEMINI_API_KEY",
-    "PAL_FYZZ_API_KEY",
-  ])("an unset skill key is not advertised: %s", (name) => {
-    expect(finding(name)).toBeUndefined();
-  });
+  test.each(["PAL_GEMINI_API_KEY", "PAL_FYZZ_API_KEY"])(
+    "an unset skill key is not advertised: %s",
+    (name) => {
+      expect(finding(name)).toBeUndefined();
+    }
+  );
 
-  test.each([
-    "PAL_ANTHROPIC_API_KEY",
-    "PAL_GEMINI_API_KEY",
-    "PAL_FYZZ_API_KEY",
-  ])("a key only in ~/.pal/.env passes: %s", (name) => {
-    expect(finding(name, {}, { [name]: "from-file" })?.severity).toBe("ok");
-  });
+  test.each(["PAL_ANTHROPIC_API_KEY", "PAL_GEMINI_API_KEY", "PAL_FYZZ_API_KEY"])(
+    "a key only in ~/.pal/.env passes: %s",
+    (name) => {
+      expect(finding(name, {}, { [name]: "from-file" })?.severity).toBe("ok");
+    }
+  );
 
   test.each([
     ["missing from the file", undefined, "never see it", "Move it to"],
     ["duplicated in the file", "shell-value", "duplicated in", "Remove it from"],
     ["different in the file", "file-value", "overrides the different", "Remove it from"],
-  ])("a key set in the shell warns when it is %s", (_case, fileValue, consequence, advice) => {
-    for (const name of ["PAL_ANTHROPIC_API_KEY", "PAL_FYZZ_API_KEY"]) {
-      const file = fileValue === undefined ? {} : { [name]: fileValue };
-      const shellKey = finding(name, { [name]: "shell-value" }, file);
+  ])(
+    "a key set in the shell warns when it is %s",
+    (_case, fileValue, consequence, advice) => {
+      for (const name of ["PAL_ANTHROPIC_API_KEY", "PAL_FYZZ_API_KEY"]) {
+        const file = fileValue === undefined ? {} : { [name]: fileValue };
+        const shellKey = finding(name, { [name]: "shell-value" }, file);
 
-      expect(shellKey?.severity).toBe("warn");
-      expect(shellKey?.title).toContain(consequence);
-      expect(shellKey?.fix?.say).toContain(advice);
-      expect(JSON.stringify(shellKey)).not.toContain("-value");
+        expect(shellKey?.severity).toBe("warn");
+        expect(shellKey?.title).toContain(consequence);
+        expect(shellKey?.fix?.say).toContain(advice);
+        expect(JSON.stringify(shellKey)).not.toContain("-value");
+      }
     }
-  });
+  );
 });
 
 describe("inference route", () => {

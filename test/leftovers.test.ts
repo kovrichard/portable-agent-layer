@@ -113,39 +113,40 @@ const RETIRED_CONTEXT_SOURCES: [string, string, string[]][] = [
   ["wisdom-context", "wisdom", ["wisdom", "context.md"]],
 ];
 
-describe.each(
-  RETIRED_CONTEXT_SOURCES
-)("%s wired into the agents", (id, slug, digestPath) => {
-  const digest = () => at("home", "memory", ...digestPath);
+describe.each(RETIRED_CONTEXT_SOURCES)(
+  "%s wired into the agents",
+  (id, slug, digestPath) => {
+    const digest = () => at("home", "memory", ...digestPath);
 
-  test("removes each agent's copy and opencode's entry, keeps the digest itself", () => {
-    write(digest(), "lessons");
-    write(at(".cursor", "rules", `pal-${slug}.mdc`), "lessons");
-    write(at(".cursor", "rules", "pal-opinions.mdc"), "opinions");
-    write(at(".copilot", "instructions", `pal-${slug}.instructions.md`), "lessons");
-    write(
-      at(".gemini", "config", "plugins", "pal", "rules", `pal-${slug}.md`),
-      "lessons"
-    );
-    write(at(".opencode", "config.json"), {
-      instructions: [digest(), "/keep/me.md"],
-      model: "keep",
+    test("removes each agent's copy and opencode's entry, keeps the digest itself", () => {
+      write(digest(), "lessons");
+      write(at(".cursor", "rules", `pal-${slug}.mdc`), "lessons");
+      write(at(".cursor", "rules", "pal-opinions.mdc"), "opinions");
+      write(at(".copilot", "instructions", `pal-${slug}.instructions.md`), "lessons");
+      write(
+        at(".gemini", "config", "plugins", "pal", "rules", `pal-${slug}.md`),
+        "lessons"
+      );
+      write(at(".opencode", "config.json"), {
+        instructions: [digest(), "/keep/me.md"],
+        model: "keep",
+      });
+
+      expect(cleanUp(id)).toHaveLength(4);
+
+      expect(existsSync(digest())).toBe(true);
+      expect(existsSync(at(".cursor", "rules", "pal-opinions.mdc"))).toBe(true);
+      expect(json(at(".opencode", "config.json"))).toEqual({
+        instructions: ["/keep/me.md"],
+        model: "keep",
+      });
     });
 
-    expect(cleanUp(id)).toHaveLength(4);
-
-    expect(existsSync(digest())).toBe(true);
-    expect(existsSync(at(".cursor", "rules", "pal-opinions.mdc"))).toBe(true);
-    expect(json(at(".opencode", "config.json"))).toEqual({
-      instructions: ["/keep/me.md"],
-      model: "keep",
+    test("nothing to do on a fresh install", () => {
+      expect(leftover(id).find()).toEqual([]);
     });
-  });
-
-  test("nothing to do on a fresh install", () => {
-    expect(leftover(id).find()).toEqual([]);
-  });
-});
+  }
+);
 
 describe("allow rules for retired pal cli verbs", () => {
   test("removes them from Claude Code and Antigravity and keeps every other rule", () => {

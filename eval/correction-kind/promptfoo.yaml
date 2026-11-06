@@ -198,7 +198,7 @@ tests:
   - description: "A24 an invented metric name"
     vars:
       replyEnd: "Each opinion is then measured by its before/after rate, so we know which ones work. I logged the decision and rewrote the project's next steps."
-      message: "what is the \"before/after rate\"?"
+      message: 'what is the "before/after rate"?'
       issue: "Introduced the term before/after rate without explanation"
       expect: undefined-reference
   - description: "A25 argued past the user's own lean"

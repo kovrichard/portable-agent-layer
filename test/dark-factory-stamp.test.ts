@@ -1,21 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import * as stamp from "../src/tools/dark-factory/stamp";
 import {
   FACTORY_MODELS,
   PLUGIN_DIR,
   ROLE_TIERS,
   stampAgent,
   stampedFiles,
+  stampTierModels,
 } from "../src/tools/dark-factory/stamp";
-
-const stampTierModels = (content: string, models: Record<string, string>): string =>
-  (
-    stamp as unknown as {
-      stampTierModels: (content: string, models: Record<string, string>) => string;
-    }
-  ).stampTierModels(content, models);
 
 describe("dark-factory model stamping", () => {
   test("the committed plugin files carry the stamped model names", () => {

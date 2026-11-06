@@ -200,13 +200,12 @@ describe("pal cli wrapped", () => {
     expect(text).toContain(`PAL Wrapped ${new Date().getFullYear()}`);
   });
 
-  test.each([
-    "26",
-    "2026x",
-    "x2026",
-  ])("--year %s is refused and says why", async (year) => {
-    const { code, errors } = await wrapped("--year", year);
-    expect(code).not.toBe(0);
-    expect(errors).toContain(`--year takes a year, got: ${year}`);
-  });
+  test.each(["26", "2026x", "x2026"])(
+    "--year %s is refused and says why",
+    async (year) => {
+      const { code, errors } = await wrapped("--year", year);
+      expect(code).not.toBe(0);
+      expect(errors).toContain(`--year takes a year, got: ${year}`);
+    }
+  );
 });

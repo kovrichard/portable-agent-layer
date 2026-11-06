@@ -81,9 +81,12 @@ describe("a reply's outcome, read from the next message", () => {
     "add a retry to the fetch",
     "add pls. but use the smaller model",
     "push. the tests still need a rename though",
-  ])("an opener, a failure report or a go-ahead with conditions is not approval: %s", (text) => {
-    expect(["approved", "go-ahead"]).not.toContain(react(text));
-  });
+  ])(
+    "an opener, a failure report or a go-ahead with conditions is not approval: %s",
+    (text) => {
+      expect(["approved", "go-ahead"]).not.toContain(react(text));
+    }
+  );
 
   test("asking the same thing again is a repeat, even before approval words", () => {
     expect(
