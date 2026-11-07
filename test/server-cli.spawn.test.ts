@@ -1,4 +1,5 @@
 import {
+  afterAll,
   beforeAll,
   beforeEach,
   describe,
@@ -24,6 +25,7 @@ let HOME: string;
 let PORT: number;
 
 beforeAll(stopServersLeftByLastRun);
+afterAll(stopServersLeftByLastRun);
 
 beforeEach(() => {
   if (HOME) pal("stop");
