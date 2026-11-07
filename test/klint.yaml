@@ -24,7 +24,11 @@ arch:
       only: "lib/test-home.ts"
       message: "Build test folders with testHome() or freshTestDir() from test/lib/test-home.ts — a random temp dir piles up once nothing tears it down. Code that walks up to a project root gets outsideRepoHome()."
 
+    - pattern: 're:\bafterAll\b'
+      only: "server-cli.spawn.test.ts"
+      message: "afterAll is allowed only here, to stop the control-room server the last test started, because a factory worktree never runs the suite again. Everywhere else, tests undo state at the start of beforeEach."
+
   forbidden:
-    - pattern: 're:\b(afterEach|afterAll)\b'
+    - pattern: 're:\bafterEach\b'
       in: ["."]
       message: "Tests only set up, never tear down: undo the previous test's state at the start of beforeEach instead."
