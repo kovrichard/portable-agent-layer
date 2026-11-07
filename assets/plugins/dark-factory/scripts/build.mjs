@@ -95,7 +95,7 @@ const TESTER_INSTRUCTIONS = "Test every acceptance criterion in the running app.
 const TASK_DOCUMENTS = ["spec.md", "plan.md", "design.md", "repro.md", "tests.md"];
 const UNPLANNED_FILES_ASKER = "build";
 const TEST_FIX_LIMIT = 2;
-const FINGERPRINT_UNREADABLE =
+export const FINGERPRINT_UNREADABLE =
   "could not fingerprint the worktree around the test fix, so the files it changed cannot be checked";
 const TEST_FIX_DIFF_UNREADABLE =
   "could not list the files the test fix changed: git diff --name-only failed";
@@ -460,7 +460,7 @@ function measureTestsRed(run, baseline) {
   return {};
 }
 
-function proveTestsRed(run, baseline) {
+export function proveTestsRed(run, baseline) {
   const proof = measureTestsRed(run, baseline);
   if (proof.noRise)
     return stuck(noRiseMessage(baseline, proof.noRise.failing, proof.noRise.output));
@@ -472,7 +472,7 @@ function baselineFailingCount(exitCode, output) {
   return failingTestCount(output);
 }
 
-function takeBaseline(run) {
+export function takeBaseline(run) {
   const check = redTestCheck(run);
   if (!check) return { baseline: 0 };
   const { exitCode, output } = run.effects.runCheck(check.run, run.worktree, run.env);
@@ -828,7 +828,7 @@ function changedFilesByTree(run, baselines, end) {
   return changedByTree;
 }
 
-function editedTestFiles(run, start, fixesFrom) {
+export function editedTestFiles(run, start, fixesFrom) {
   const end = worktreeFingerprint(run);
   if (end === null) return { stop: stuck(FINGERPRINT_UNREADABLE) };
   const files = protectedTestFiles(run, start);
@@ -970,13 +970,13 @@ function matchableText(name, text) {
   return name === "spec.md" ? withoutDecisions(text) : text;
 }
 
-function taskDocumentTexts(run) {
+export function taskDocumentTexts(run) {
   return TASK_DOCUMENTS.filter((name) => existsSync(join(run.taskDir, name))).map(
     (name) => matchableText(name, readFileSync(join(run.taskDir, name), "utf8"))
   );
 }
 
-function filesListedBefore(run) {
+export function filesListedBefore(run) {
   return readEvents(run.env)
     .filter((event) => event.event === "unplanned_files" && event.task === run.id)
     .flatMap((event) => event.files ?? []);

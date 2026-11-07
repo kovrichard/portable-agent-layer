@@ -86,10 +86,23 @@ function gitPath(cwd: string, flag: string): string | null {
   return r.status === 0 ? r.stdout.trim() : null;
 }
 
+export function kindOfCheckout(
+  gitDir: string | null,
+  commonDir: string | null
+): "main" | "linked" | null {
+  if (gitDir === null || commonDir === null) return null;
+  return gitDir === commonDir ? "main" : "linked";
+}
+
+export function checkoutKind(cwd: string): "main" | "linked" | null {
+  const gitDir = gitPath(cwd, "--git-dir");
+  if (gitDir === null) return null;
+  return kindOfCheckout(gitDir, gitPath(cwd, "--git-common-dir"));
+}
+
 /** Fails closed: anything git cannot answer counts as a worktree of its own, so the gates run. */
 function sharesMainCheckout(cwd: string): boolean {
-  const gitDir = gitPath(cwd, "--git-dir");
-  return gitDir !== null && gitDir === gitPath(cwd, "--git-common-dir");
+  return checkoutKind(cwd) === "main";
 }
 
 /** agy starts a hook in the folder holding its hooks.json, `<workspace>/.agents`. */
