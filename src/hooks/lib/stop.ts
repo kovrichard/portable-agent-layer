@@ -294,7 +294,7 @@ async function writeTranscriptHandoff(transcript: string): Promise<string> {
 }
 
 /** Delete hand-off files a child never got to remove. */
-function sweepStaleHandoffs(now: number = Date.now()): void {
+export function sweepStaleHandoffs(now: number = Date.now()): void {
   try {
     const dir = paths.transcriptHandoff();
     for (const name of readdirSync(dir)) {
