@@ -1,5 +1,4 @@
 import {
-  afterAll,
   beforeAll,
   beforeEach,
   describe,
@@ -30,10 +29,6 @@ beforeEach(() => {
   if (HOME) pal("stop");
   HOME = freshTestDir(import.meta.file);
   PORT = portNobodyListensOn();
-});
-
-afterAll(() => {
-  if (HOME) pal("stop");
 });
 
 /**
