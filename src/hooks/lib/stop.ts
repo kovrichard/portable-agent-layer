@@ -4,9 +4,16 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { mkdtemp, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { autoBackup } from "../handlers/backup";
 import { writeContextDigests } from "../handlers/context-digests";
@@ -171,6 +178,7 @@ export async function runStopHandlers(
   // any in-hook budget. These spawn detached bun subprocesses that run the
   // inference and write results to disk; they don't block this hook.
   await timing.time("detach-inference", async () => {
+    sweepStaleHandoffs();
     await detachSessionIntelligence(transcript, options.sessionId);
     await detachEntityExtraction(transcript, options.sessionId);
     detachAgenda(options.sessionId);
@@ -275,16 +283,31 @@ function recordFinalReply(messages: Message[], sessionId: string): void {
   }
 }
 
-/** Write transcript to a fresh tmp file and return the path. Child unlinks it. */
-async function writeTranscriptTmp(transcript: string): Promise<string> {
-  const dir = await mkdtemp(resolve(tmpdir(), "pal-transcript-"));
-  const file = resolve(dir, "transcript.txt");
+/** Write transcript to a new hand-off file under PAL home and return the path. Child unlinks it. */
+async function writeTranscriptHandoff(transcript: string): Promise<string> {
+  const handoffId: string = randomUUID();
+  const file = resolve(paths.transcriptHandoff(), `${handoffId}.txt`);
   await writeFile(file, transcript, "utf-8");
   return file;
 }
 
+const HANDOFF_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+function sweepStaleHandoffs(now: number = Date.now()): void {
+  try {
+    const dir = paths.transcriptHandoff();
+    for (const name of readdirSync(dir)) {
+      const file = resolve(dir, name);
+      if (now - statSync(file).mtimeMs < HANDOFF_MAX_AGE_MS) continue;
+      unlinkSync(file);
+    }
+  } catch (err) {
+    logError("sweepStaleHandoffs", err);
+  }
+}
+
 /**
- * The agenda reads files, not the transcript, so it needs no tmp copy — but it
+ * The agenda reads files, not the transcript, so it needs no hand-off copy — but it
  * calls a model, so it detaches like the others. It no-ops on a fresh agenda.
  */
 function detachAgenda(sessionId?: string): void {
@@ -296,13 +319,13 @@ function detachAgenda(sessionId?: string): void {
   }
 }
 
-/** Spawn a detached child to run session-intelligence on a tmp copy of the transcript. */
+/** Spawn a detached child to run session-intelligence on a hand-off copy of the transcript. */
 async function detachSessionIntelligence(
   transcript: string,
   sessionId?: string
 ): Promise<void> {
   try {
-    const transcriptPath = await writeTranscriptTmp(transcript);
+    const transcriptPath = await writeTranscriptHandoff(transcript);
     const scriptPath = resolve(assets.hooks(), "handlers", "session-intelligence.ts");
     spawnDetachedInference(
       scriptPath,
@@ -320,7 +343,7 @@ async function detachEntityExtraction(
 ): Promise<void> {
   if (!sessionId) return;
   try {
-    const transcriptPath = await writeTranscriptTmp(transcript);
+    const transcriptPath = await writeTranscriptHandoff(transcript);
     const scriptPath = resolve(assets.hooks(), "handlers", "entity-extraction.ts");
     spawnDetachedInference(
       scriptPath,

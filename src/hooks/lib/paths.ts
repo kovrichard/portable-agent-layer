@@ -98,6 +98,7 @@ export const paths = {
   learning: () => ensureDir(home("memory", "learning")),
   signals: () => ensureDir(home("memory", "signals")),
   state: () => ensureDir(home("memory", "state")),
+  transcriptHandoff: () => ensureDir(home("memory", "state", "transcript-handoff")),
   research: () => ensureDir(home("memory", "research")),
   wisdomState: () => ensureDir(home("memory", "wisdom", "state")),
   adaptation: () => ensureDir(home("memory", "adaptation")),
