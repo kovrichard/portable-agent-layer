@@ -69,7 +69,9 @@ describe("the Stop hook's transcript hand-off", () => {
 
     const names = [...seen.names];
     expect(names.length).toBeGreaterThanOrEqual(2);
-    for (const name of names) expect(existsSync(resolve(handoffDir(), name))).toBe(true);
+    expect(
+      readdirSync(handoffDir(), { withFileTypes: true }).every((e) => e.isFile())
+    ).toBe(true);
     expect(readdirSync(OS_TMP).filter((n) => n.startsWith("pal-transcript-"))).toEqual(
       []
     );
