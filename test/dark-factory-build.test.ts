@@ -747,7 +747,7 @@ describe("the unit typist", () => {
         ? { status: 128, stdout: "", stderr: "fatal" }
         : original(command, args);
     runBuild(world);
-    expect(eventsNamed(world, "tests_red")).toHaveLength(2);
+    expect(eventsNamed(world, "tests_red")).toHaveLength(3);
   });
 
   test("a failing unit typist is stuck as test-writer failed", () => {
@@ -827,7 +827,12 @@ describe("the unit typist must raise the failing count", () => {
   });
 
   test("the same count after the typist is stuck, naming both counts and the output tail", () => {
-    const world = worldWithCounts([acceptance, failRun(7), failRun(7, "AFTERRUN")]);
+    const world = worldWithCounts([
+      acceptance,
+      failRun(7),
+      failRun(7),
+      failRun(7, "AFTERRUN"),
+    ]);
     const result = runBuild(world);
     expect(result.status).toBe("stuck");
     expect(result.message).toContain("7");
@@ -837,7 +842,7 @@ describe("the unit typist must raise the failing count", () => {
   });
 
   test("a lower count after the typist is stuck, naming both counts", () => {
-    const world = worldWithCounts([acceptance, failRun(7), failRun(5)]);
+    const world = worldWithCounts([acceptance, failRun(7), failRun(7), failRun(5)]);
     const result = runBuild(world);
     expect(result.status).toBe("stuck");
     expect(result.message).toMatch(/\b7\b/);
@@ -850,7 +855,7 @@ describe("the unit typist must raise the failing count", () => {
       exitCode: 1,
       output: `HEADMARK${"x".repeat(5000)}TAILMARK\n 3 fail`,
     };
-    const world = worldWithCounts([acceptance, failRun(3), longRun]);
+    const world = worldWithCounts([acceptance, failRun(3), failRun(3), longRun]);
     const result = runBuild(world);
     expect(result.status).toBe("stuck");
     expect(result.message).toContain("TAILMARK");
@@ -872,7 +877,7 @@ describe("the unit typist must raise the failing count", () => {
   });
 
   test("a file that fails to load keeps the count flat and the message says it counts as one failure", () => {
-    const world = worldWithCounts([acceptance, failRun(1), failRun(1)]);
+    const world = worldWithCounts([acceptance, failRun(1), failRun(1), failRun(1)]);
     const result = runBuild(world);
     expect(result.status).toBe("stuck");
     expect(result.message).toMatch(/fail(s|ing)? to load/i);
@@ -958,7 +963,7 @@ describe("the unit typist must raise the failing count", () => {
     const world = worldFor({
       category: "feature",
       roles: { "test-writer": [{ leavesChanges: true }, { editsModifiedFile: true }] },
-      checks: sequenced([acceptance, failRun(3), failRun(3)]),
+      checks: sequenced([acceptance, failRun(3), failRun(3), failRun(3)]),
     });
     const result = runBuild(world);
     expect(result.status).toBe("stuck");
@@ -969,7 +974,7 @@ describe("the unit typist must raise the failing count", () => {
     const world = worldFor({
       category: "feature",
       roles: { "test-writer": [{ leavesChanges: true }] },
-      checks: sequenced([failRun(3), failRun(3)]),
+      checks: sequenced([failRun(3), failRun(3), failRun(3)]),
     });
     writeFileSync(join(taskDir(TASK, world.env), "plan.md"), "plan\n");
     appendEvent(
@@ -989,7 +994,7 @@ describe("the unit typist must raise the failing count", () => {
     const result = runBuild(world);
     expect(result.status).toBe("stuck");
     expect(unitDone(world)).toHaveLength(0);
-    expect(world.checkCommands.length).toBe(2);
+    expect(world.checkCommands.length).toBe(3);
   });
 
   const missingCountHead =
@@ -1022,13 +1027,14 @@ describe("the unit typist must raise the failing count", () => {
   });
 
   test("baseline 7 and after 7 with ' 1 pass\\n 7 fail' gives the no-rise message with that output", () => {
-    const world = worldWithCounts([acceptance, failRun(7), failRun(7)]);
+    const world = worldWithCounts([acceptance, failRun(7), failRun(7), failRun(7)]);
     expect(runBuild(world).message).toBe(`${noRiseHead(7, 7)}\n 1 pass\n 7 fail`);
   });
 
   test("baseline 7 and after 5 with ' 5 fail' gives the no-rise message with that output", () => {
     const world = worldWithCounts([
       acceptance,
+      failRun(7),
       failRun(7),
       { exitCode: 1, output: " 5 fail" },
     ]);
@@ -1037,7 +1043,12 @@ describe("the unit typist must raise the failing count", () => {
 
   test("baseline 3 and after 3 with a 1500-character tail keeps only that tail, not the head", () => {
     const output = `HEAD${"x".repeat(1500)}\n 3 fail`;
-    const world = worldWithCounts([acceptance, failRun(3), { exitCode: 1, output }]);
+    const world = worldWithCounts([
+      acceptance,
+      failRun(3),
+      failRun(3),
+      { exitCode: 1, output },
+    ]);
     expect(runBuild(world).message).toBe(`${noRiseHead(3, 3)}\n${output.slice(-1500)}`);
   });
 

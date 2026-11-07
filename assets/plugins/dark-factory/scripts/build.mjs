@@ -100,6 +100,7 @@ const FINGERPRINT_UNREADABLE =
 const TEST_FIX_DIFF_UNREADABLE =
   "could not list the files the test fix changed: git diff --name-only failed";
 const TEST_EDITS_EVENT = "test_edits_restored";
+const UNIT_TESTS_NO_RISE_EVENT = "unit_tests_no_rise";
 
 function stuck(message) {
   return { status: "stuck", message };
@@ -216,6 +217,21 @@ The PO's answer: "${answer}"
 Change only these files, and only as the answer says. Leave the changes uncommitted.`;
 }
 
+function changedFilesText(files) {
+  if (files === null)
+    return "The files you changed could not be listed: git diff --name-only failed.";
+  return `You changed these files:\n${fileList(files)}`;
+}
+
+function noRiseRetryInstructions(baseline, failing, files) {
+  const changed = changedFilesText(files);
+  return `Your unit tests did not raise the failing test count: ${baseline} before you typed them, ${failing} after. A test file that fails to load counts as one failure, however many tests it holds.
+
+${changed}
+
+Move the tests you added into a new test file that no other test uses, keep the tests themselves as they are, leave them uncommitted, and change no other file.`;
+}
+
 function unchangedNamedMessage(named, outside) {
   const base = `the test the PO ruled wrong was not changed: the test writer changed none of ${named.join(", ")}`;
   if (outside.length === 0) return base;
@@ -239,6 +255,11 @@ function changedBetween(run, before, after) {
   const output = gitOutput(run, ["diff", "--name-only", before, after]);
   if (output === null) return null;
   return output.split("\n").filter(Boolean);
+}
+
+function typistChangedFiles(run, before, after) {
+  if (before === null || after === null) return null;
+  return changedBetween(run, before, after);
 }
 
 function changedAfterFix(run, askedBy, testFix, before) {
@@ -406,12 +427,14 @@ function noRiseMessage(baseline, failing, output) {
   return `the unit tests did not raise the failing test count (${baseline} before the typist, ${failing} after), so they prove nothing; a test file that fails to load counts as one failure, however many tests it holds:\n${output.slice(-FAILURE_TAIL)}`;
 }
 
-function proveTestsRed(run, baseline) {
+function measureTestsRed(run, baseline) {
   const check = redTestCheck(run);
   if (!check)
-    return stuck(
-      `the gate has no check named "${RED_TEST_CHECK}" to prove the new tests fail`
-    );
+    return {
+      stop: stuck(
+        `the gate has no check named "${RED_TEST_CHECK}" to prove the new tests fail`
+      ),
+    };
   const { exitCode, output } = run.effects.runCheck(check.run, run.worktree, run.env);
   const failing = failingTestCount(output);
   appendEvent(
@@ -426,13 +449,22 @@ function proveTestsRed(run, baseline) {
     run.env
   );
   if (exitCode === 0 || failing === 0)
-    return stuck(
-      `the new tests pass before the code exists, so they prove nothing:\n${output.slice(-FAILURE_TAIL)}`
-    );
-  if (failing === null) return stuck(missingCountMessage(output));
+    return {
+      stop: stuck(
+        `the new tests pass before the code exists, so they prove nothing:\n${output.slice(-FAILURE_TAIL)}`
+      ),
+    };
+  if (failing === null) return { stop: stuck(missingCountMessage(output)) };
   if (baseline !== undefined && failing <= baseline)
-    return stuck(noRiseMessage(baseline, failing, output));
-  return null;
+    return { noRise: { failing, output } };
+  return {};
+}
+
+function proveTestsRed(run, baseline) {
+  const proof = measureTestsRed(run, baseline);
+  if (proof.noRise)
+    return stuck(noRiseMessage(baseline, proof.noRise.failing, proof.noRise.output));
+  return proof.stop ?? null;
 }
 
 function baselineFailingCount(exitCode, output) {
@@ -611,18 +643,44 @@ function testsAfterReplan(run) {
     : null;
 }
 
+function retryUnitTests(run, baseline, failing, typist) {
+  const files = typistChangedFiles(run, typist.before, typist.after);
+  appendEvent(
+    { event: UNIT_TESTS_NO_RISE_EVENT, task: run.id, baseline, failing, files },
+    run.env
+  );
+  const retried = runRole(
+    run,
+    "test-writer",
+    noRiseRetryInstructions(baseline, failing, files),
+    { tier: "small", resumeSessionId: typist.sessionId ?? undefined }
+  );
+  const stop = roleStop("test-writer", retried);
+  if (stop) return stop;
+  return proveTestsRed(run, baseline);
+}
+
+function proveUnitTestsRed(run, baseline, typist) {
+  const proof = measureTestsRed(run, baseline);
+  if (!proof.noRise) return proof.stop ?? null;
+  return retryUnitTests(run, baseline, proof.noRise.failing, typist);
+}
+
 function unitTestsStep(run) {
   if (!run.before.includes("test-writer")) return null;
   const taken = takeBaseline(run);
   if (taken.stop) return taken.stop;
   const before = worktreeFingerprint(run);
-  const stop = roleStop(
-    "test-writer",
-    runRole(run, "test-writer", UNIT_TESTS_INSTRUCTIONS, { tier: "small" })
-  );
+  const typed = runRole(run, "test-writer", UNIT_TESTS_INSTRUCTIONS, { tier: "small" });
+  const stop = roleStop("test-writer", typed);
   if (stop) return stop;
-  const stopAfterProof = worktreeStatusChanged(before, worktreeFingerprint(run))
-    ? proveTestsRed(run, taken.baseline)
+  const after = worktreeFingerprint(run);
+  const stopAfterProof = worktreeStatusChanged(before, after)
+    ? proveUnitTestsRed(run, taken.baseline, {
+        before,
+        after,
+        sessionId: typed.outcome.sessionId,
+      })
     : null;
   if (!stopAfterProof) appendEvent({ event: "unit_tests_done", task: run.id }, run.env);
   return stopAfterProof;
