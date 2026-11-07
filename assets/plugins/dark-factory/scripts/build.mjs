@@ -796,11 +796,15 @@ function codeLadderStep(run) {
   return null;
 }
 
-function codeStep(run) {
+function guardedLadder(run, ladderStep) {
   const start = worktreeFingerprint(run);
   if (start === null) return stuck(FINGERPRINT_UNREADABLE);
   const fixesFrom = run.testFixTrees.length;
-  return codeLadderStep(run) ?? testEditsStep(run, start, fixesFrom);
+  return ladderStep() ?? testEditsStep(run, start, fixesFrom);
+}
+
+function codeStep(run) {
+  return guardedLadder(run, () => codeLadderStep(run));
 }
 
 function protectedTestFiles(run, tree) {
@@ -828,11 +832,43 @@ function changedFilesByTree(run, baselines, end) {
   return changedByTree;
 }
 
+const EXEMPT_TEST_FILES_HEADING = "## Test files this task changes";
+
+export function specTestFiles(specText) {
+  const lines = String(specText)
+    .split("\n")
+    .map((line) => line.trimEnd());
+  const start = lines.indexOf(EXEMPT_TEST_FILES_HEADING);
+  if (start === -1) return [];
+  const section = [];
+  for (const line of lines.slice(start + 1)) {
+    if (line.startsWith("#")) break;
+    section.push(line);
+  }
+  return section
+    .filter((line) => line.startsWith("- "))
+    .map((line) =>
+      line
+        .slice(2)
+        .trim()
+        .replace(/^`(.*)`$/, "$1")
+    )
+    .filter((file) => file !== "");
+}
+
+function exemptTestFiles(run) {
+  const specPath = join(run.taskDir, "spec.md");
+  if (!existsSync(specPath)) return [];
+  return specTestFiles(readFileSync(specPath, "utf8"));
+}
+
 export function editedTestFiles(run, start, fixesFrom) {
   const end = worktreeFingerprint(run);
   if (end === null) return { stop: stuck(FINGERPRINT_UNREADABLE) };
-  const files = protectedTestFiles(run, start);
-  if (files === null) return { stop: stuck(FINGERPRINT_UNREADABLE) };
+  const protectedFiles = protectedTestFiles(run, start);
+  if (protectedFiles === null) return { stop: stuck(FINGERPRINT_UNREADABLE) };
+  const exempt = exemptTestFiles(run);
+  const files = protectedFiles.filter((file) => !exempt.includes(file));
   const baselines = baselineTrees(files, start, run.testFixTrees.slice(fixesFrom));
   const changedByTree = changedFilesByTree(run, baselines, end);
   if (changedByTree === null) return { stop: stuck(FINGERPRINT_UNREADABLE) };
@@ -1048,13 +1084,15 @@ function unplannedFilesStep(run) {
 }
 
 function reviewFindingsStep(run, findings) {
-  const fixed = untilGreen(
-    run,
-    FIX_LADDER,
-    `Fix these review findings:\n${JSON.stringify(findings, null, 2)}`,
-    "review-findings"
-  );
-  return fixStop(fixed, "review findings");
+  return guardedLadder(run, () => {
+    const fixed = untilGreen(
+      run,
+      FIX_LADDER,
+      `Fix these review findings:\n${JSON.stringify(findings, null, 2)}`,
+      "review-findings"
+    );
+    return fixStop(fixed, "review findings");
+  });
 }
 
 function reviewInstructions(run) {
@@ -1097,13 +1135,15 @@ function testerStep(run) {
   const unmet = unmetCriteria(tested);
   appendEvent({ event: "test", task: run.id, unmet: unmet.length }, run.env);
   if (unmet.length === 0) return null;
-  const fixed = untilGreen(
-    run,
-    FIX_LADDER,
-    `The tester found unmet criteria in the running app:\n${JSON.stringify(unmet, null, 2)}`,
-    "unmet-criteria"
-  );
-  return fixStop(fixed, "tester findings");
+  return guardedLadder(run, () => {
+    const fixed = untilGreen(
+      run,
+      FIX_LADDER,
+      `The tester found unmet criteria in the running app:\n${JSON.stringify(unmet, null, 2)}`,
+      "unmet-criteria"
+    );
+    return fixStop(fixed, "tester findings");
+  });
 }
 
 function syncStep(run) {
@@ -1148,13 +1188,15 @@ function ciSummary(ci) {
 }
 
 function ciFixStep(run, ci) {
-  const fixed = untilGreen(
-    run,
-    CI_FIX_LADDER,
-    `CI failed on the pull request: ${ciSummary(ci)}. Read the failing logs with gh run view and fix the cause.`,
-    "ci-failed"
-  );
-  return fixStop(fixed, "CI failures");
+  return guardedLadder(run, () => {
+    const fixed = untilGreen(
+      run,
+      CI_FIX_LADDER,
+      `CI failed on the pull request: ${ciSummary(ci)}. Read the failing logs with gh run view and fix the cause.`,
+      "ci-failed"
+    );
+    return fixStop(fixed, "CI failures");
+  });
 }
 
 function unfinishedCiStop(ci) {

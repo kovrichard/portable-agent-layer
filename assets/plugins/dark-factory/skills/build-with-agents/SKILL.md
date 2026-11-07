@@ -58,13 +58,15 @@ The task's category decides the roles before and after the code (`roles.mjs` `CA
 
 ### 3. After the code
 
+Every fix ladder from here on (the reviewer's findings, the tester's unmet criteria and the CI failures) is guarded like the code ladder: run `node $S/step.mjs snapshot <id>` once before the ladder's first rung, not before each rung, and `node $S/step.mjs test-edits <id>` after the ladder passes the gate. Handle a non-zero exit of `test-edits` as step 2.3 does.
+
 - **reviewer** (sonnet), up to 2 rounds: "Review the branch diff against its base and the spec." Each finding goes to the fix ladder, then the gate.
 - **tester** (sonnet): "Test every acceptance criterion in the running app." Each unmet criterion goes to the fix ladder, then the gate.
 
 ### 4. Ship
 
 1. `node $S/ship.mjs sync <id>`, then `ship.mjs push <id>`, then `ship.mjs pr <id>`.
-2. `node $S/ci-wait.mjs <id>`: exit 0 is green. Exit 1 sends the failed checks to the CI fix ladder (opus, opus), then push and wait again, at most 2 rounds.
+2. `node $S/ci-wait.mjs <id>`: exit 0 is green. Exit 1 sends the failed checks to the CI fix ladder (opus, opus), guarded as step 3 says, then push and wait again, at most 2 rounds.
 3. `node $S/ship.mjs ready <id>`, then `node $S/task.mjs status <id> ready "<pr url>"`.
 
 ## Stopping

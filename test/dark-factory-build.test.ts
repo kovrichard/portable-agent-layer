@@ -1568,6 +1568,58 @@ describe("baselineTrees", () => {
   });
 });
 
+describe("specTestFiles", () => {
+  test("the bullets under the exact heading are listed, backticks optional", () => {
+    expect(
+      build.specTestFiles(
+        "# t\n\n## Test files this task changes\n\n- `test/a.test.ts`\n- test/b.test.ts\n"
+      )
+    ).toEqual(["test/a.test.ts", "test/b.test.ts"]);
+  });
+
+  test("a spec without the heading lists nothing, even when a test path is mentioned in prose", () => {
+    expect(
+      build.specTestFiles(
+        "# t\n\n## Goal\n\nThis task changes test/a.test.ts on purpose.\n"
+      )
+    ).toEqual([]);
+  });
+
+  test("a heading with text after it does not match", () => {
+    expect(
+      build.specTestFiles("## Test files this task changes (draft)\n\n- test/a.test.ts\n")
+    ).toEqual([]);
+  });
+
+  test("the heading with no bullets lists nothing", () => {
+    expect(build.specTestFiles("## Test files this task changes\n\n")).toEqual([]);
+  });
+
+  test("the list ends at the next heading, so a later section's bullets are not listed", () => {
+    expect(
+      build.specTestFiles(
+        "## Test files this task changes\n- `test/a.test.ts`\n\n## Decisions\n\n- test/c.test.ts\n"
+      )
+    ).toEqual(["test/a.test.ts"]);
+  });
+
+  test("a CRLF spec lists its bullets without the carriage return", () => {
+    expect(
+      build.specTestFiles("## Test files this task changes\r\n- test/a.test.ts\r\n")
+    ).toEqual(["test/a.test.ts"]);
+  });
+
+  test("only dash bullets are listed, and an empty bullet is dropped", () => {
+    expect(
+      build.specTestFiles("## Test files this task changes\n\n* test/a.test.ts\n- \n")
+    ).toEqual([]);
+  });
+
+  test("an empty spec lists nothing", () => {
+    expect(build.specTestFiles("")).toEqual([]);
+  });
+});
+
 describe("editedBaselines", () => {
   test("a baseline whose tree shows its file changed is returned", () => {
     expect(

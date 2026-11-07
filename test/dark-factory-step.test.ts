@@ -244,6 +244,74 @@ describe("step test-edits", () => {
     expect(step("test-edits").result).toEqual({ files: ["checks/a.ts"] });
   });
 
+  describe("the spec's exempt test files", () => {
+    const section = (...files: string[]) =>
+      `# t\n\n## Goal\n\nDo it.\n\n## Test files this task changes\n\n${files.map((f) => `- \`${f}\``).join("\n")}\n`;
+    const bothEdited = () => {
+      snapshotAt("tree-start");
+      git["ls-tree tree-start"] = "test/a.test.ts\ntest/b.test.ts";
+      git["diff tree-start tree-now"] = "test/a.test.ts\ntest/b.test.ts";
+    };
+
+    test("a file listed in spec.md is left out, an unlisted one is listed", () => {
+      writeFileSync(join(taskDir(TASK, env), "spec.md"), section("test/a.test.ts"));
+      bothEdited();
+      expect(step("test-edits")).toEqual({
+        exitCode: 1,
+        result: { files: ["test/b.test.ts"] },
+      });
+    });
+
+    test("when every edited file is listed it exits 0 with no files", () => {
+      writeFileSync(
+        join(taskDir(TASK, env), "spec.md"),
+        section("test/a.test.ts", "test/b.test.ts")
+      );
+      bothEdited();
+      expect(step("test-edits")).toEqual({ exitCode: 0, result: { files: [] } });
+    });
+
+    test("the same section in plan.md, tests.md, repro.md or design.md exempts nothing", () => {
+      for (const name of ["plan.md", "tests.md", "repro.md", "design.md"]) {
+        writeFileSync(join(taskDir(TASK, env), name), section("test/a.test.ts"));
+      }
+      bothEdited();
+      expect(step("test-edits").result).toEqual({
+        files: ["test/a.test.ts", "test/b.test.ts"],
+      });
+    });
+
+    test("an empty section exempts nothing", () => {
+      writeFileSync(
+        join(taskDir(TASK, env), "spec.md"),
+        "# t\n\n## Test files this task changes\n\n"
+      );
+      bothEdited();
+      expect(step("test-edits").result).toEqual({
+        files: ["test/a.test.ts", "test/b.test.ts"],
+      });
+    });
+
+    test("a listed path that is not a test file or does not exist is ignored", () => {
+      writeFileSync(
+        join(taskDir(TASK, env), "spec.md"),
+        section("src/app.ts", "test/missing.test.ts")
+      );
+      bothEdited();
+      expect(step("test-edits").result).toEqual({
+        files: ["test/a.test.ts", "test/b.test.ts"],
+      });
+    });
+
+    test("running it twice gives the same answer and records nothing", () => {
+      writeFileSync(join(taskDir(TASK, env), "spec.md"), section("test/a.test.ts"));
+      bothEdited();
+      const before = (readEvents(env) as unknown[]).length;
+      expect(step("test-edits")).toEqual(step("test-edits"));
+      expect((readEvents(env) as unknown[]).length).toBe(before);
+    });
+  });
+
   test("without a snapshot it exits 1 telling to run snapshot first", () => {
     const { exitCode, result } = step("test-edits");
     expect(exitCode).toBe(1);
