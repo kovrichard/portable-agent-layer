@@ -2,12 +2,14 @@ import { describe, expect, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import * as build from "../assets/plugins/dark-factory/scripts/build.mjs";
+import { taskDir } from "../assets/plugins/dark-factory/scripts/lib.mjs";
 import { FACTORY_MODELS } from "../src/tools/dark-factory/stamp";
 import {
   buildWorld,
   DEFAULT_CONFIG,
   eventsNamed,
   type RoleStep,
+  SPEC,
   TASK,
   TESTS_COMMAND,
   type World,
@@ -32,6 +34,7 @@ type Setup = {
   actions?: Record<string, Action>;
   checks?: Record<string, (world: World) => { exitCode: number; output: string }>;
   failWriteTreeFrom?: number;
+  ci?: NonNullable<Parameters<typeof buildWorld>[1]>["ci"];
 };
 
 type Spawn = { status: number; stdout: string; stderr: string };
@@ -151,6 +154,7 @@ function scenario(setup: Setup = {}) {
     roles: setup.roles,
     config: setup.config ?? DEFAULT_CONFIG,
     checks: setup.checks,
+    ci: setup.ci,
   });
   initRepo(world.worktree, setup.committed ?? {});
   put(world.worktree, setup.uncommitted ?? {});
@@ -560,5 +564,325 @@ describe("when git cannot fingerprint the worktree", () => {
     expect(result.status).toBe("stuck");
     expect(result.message).toContain("could not fingerprint the worktree");
     expect(world.roleCalls.map((call) => call.role)).not.toContain("reviewer");
+  });
+});
+
+const SECTION = "## Test files this task changes";
+const A = "test/a.test.ts";
+const B = "test/b.test.ts";
+const BOTH = { [A]: ORIGINAL, [B]: ORIGINAL };
+
+const specListing = (...bullets: string[]) =>
+  `${SPEC}\n${SECTION}\n\n${bullets.map((bullet) => `- ${bullet}`).join("\n")}\n`;
+
+const writeTaskDocument =
+  (world: World, name: string, text: string): Action =>
+  () =>
+    writeFileSync(join(taskDir(TASK, world.env), name), text);
+
+function listing(world: World, ...bullets: string[]) {
+  writeTaskDocument(world, "spec.md", specListing(...bullets))(world.worktree);
+}
+
+const editsBoth = together(write(A, EDITED), write(B, EDITED));
+const restoresBoth = together(write(A, ORIGINAL), write(B, ORIGINAL));
+
+function codeStepEditsBoth(...bullets: string[]) {
+  const scene = scenario({
+    committed: BOTH,
+    actions: {
+      "code-writer#0": editsBoth,
+      [FIXER]: together(write(B, ORIGINAL), commitAll),
+    },
+  });
+  if (bullets.length > 0) listing(scene.world, ...bullets);
+  return scene.world;
+}
+
+describe("a spec that lists the test files the task changes", () => {
+  test("a listed file is not restored, an unlisted one is", () => {
+    const world = codeStepEditsBoth(A);
+    expect(run(world).status).toBe("ready");
+    expect(restoredFiles(world)).toEqual([B]);
+    expect(readFileSync(join(world.worktree, A), "utf8")).toBe(EDITED);
+  });
+
+  test("a task that edits only listed files restores nothing and runs no fixer", () => {
+    const { world } = scenario({
+      committed: BOTH,
+      actions: { "code-writer#0": editsBoth },
+    });
+    listing(world, A, B);
+    expect(run(world).status).toBe("ready");
+    expect(restoredEvents(world)).toHaveLength(0);
+    expect(codeWriterRuns(world)).toBe(1);
+  });
+
+  test("backticks around the path are optional", () => {
+    const { world } = scenario({
+      committed: BOTH,
+      actions: { "code-writer#0": editsBoth },
+    });
+    listing(world, `\`${A}\``, B);
+    expect(run(world).status).toBe("ready");
+    expect(restoredEvents(world)).toHaveLength(0);
+  });
+
+  test("a listed file deleted by the code writer is allowed", () => {
+    const { world } = scenario({
+      committed: BOTH,
+      actions: { "code-writer#0": remove(A) },
+    });
+    listing(world, A);
+    expect(run(world).status).toBe("ready");
+    expect(restoredEvents(world)).toHaveLength(0);
+  });
+
+  test("a listed file changed again after a restore does not stop the build", () => {
+    const { world } = scenario({
+      committed: BOTH,
+      actions: {
+        "code-writer#0": editsBoth,
+        [FIXER]: together(write(B, ORIGINAL), write(A, STRAY)),
+      },
+    });
+    listing(world, A);
+    expect(run(world).status).toBe("ready");
+    expect(restoredFiles(world)).toEqual([B]);
+  });
+
+  test("a listed path that is not a test file or does not exist is ignored", () => {
+    const { world } = scenario({
+      committed: { ...BOTH, "src/app.ts": ORIGINAL },
+      actions: {
+        "code-writer#0": together(editsBoth, write("src/app.ts", EDITED)),
+        [FIXER]: together(write(B, ORIGINAL), write(A, ORIGINAL)),
+      },
+    });
+    listing(world, "src/app.ts", "test/ghost.test.ts");
+    expect(run(world).status).toBe("ready");
+    expect(restoredFiles(world).sort()).toEqual([A, B]);
+  });
+
+  test("an empty section exempts nothing", () => {
+    const { world } = scenario({
+      committed: { [A]: ORIGINAL },
+      actions: {
+        "code-writer#0": write(A, EDITED),
+        [FIXER]: write(A, ORIGINAL),
+      },
+    });
+    writeTaskDocument(world, "spec.md", `${SPEC}\n${SECTION}\n\n`)(world.worktree);
+    expect(run(world).status).toBe("ready");
+    expect(restoredFiles(world)).toEqual([A]);
+  });
+
+  test("a heading that is not exact, or a passing mention, exempts nothing", () => {
+    const { world } = scenario({
+      committed: { [A]: ORIGINAL },
+      actions: {
+        "code-writer#0": write(A, EDITED),
+        [FIXER]: write(A, ORIGINAL),
+      },
+    });
+    writeTaskDocument(
+      world,
+      "spec.md",
+      `${SPEC}\nThis task changes ${A}.\n\n### Test files this task changes\n\n- ${A}\n`
+    )(world.worktree);
+    expect(run(world).status).toBe("ready");
+    expect(restoredFiles(world)).toEqual([A]);
+  });
+
+  test("the spec is read when the guard runs, so a listing added during the build counts", () => {
+    const holder: { world?: World } = {};
+    const scene = scenario({
+      committed: { [A]: ORIGINAL },
+      actions: {
+        "code-writer#0": together(write(A, EDITED), () =>
+          listing(holder.world as World, A)
+        ),
+      },
+    });
+    holder.world = scene.world;
+    expect(run(scene.world).status).toBe("ready");
+    expect(restoredEvents(scene.world)).toHaveLength(0);
+  });
+
+  test("running the build twice adds nothing and changes nothing", () => {
+    const world = codeStepEditsBoth(A);
+    run(world);
+    const events = restoredEvents(world).length;
+    const codeRuns = codeWriterRuns(world);
+    run(world);
+    expect(restoredEvents(world)).toHaveLength(events);
+    expect(codeWriterRuns(world)).toBe(codeRuns);
+    expect(readFileSync(join(world.worktree, A), "utf8")).toBe(EDITED);
+  });
+});
+
+describe("only spec.md grants the exemption", () => {
+  test.each(["plan.md", "tests.md", "repro.md", "design.md"])(
+    "the section in %s alone exempts nothing",
+    (name) => {
+      const { world } = scenario({
+        committed: BOTH,
+        actions: { "code-writer#0": editsBoth, [FIXER]: restoresBoth },
+      });
+      writeTaskDocument(world, name, specListing(A))(world.worktree);
+      expect(run(world).status).toBe("ready");
+      expect(restoredFiles(world).sort()).toEqual([A, B]);
+    }
+  );
+
+  test("with the section only in plan.md the listed-looking file is restored", () => {
+    const { world } = scenario({
+      committed: { [A]: ORIGINAL },
+      actions: {
+        "code-writer#0": write(A, EDITED),
+        [FIXER]: write(A, ORIGINAL),
+      },
+    });
+    writeTaskDocument(world, "plan.md", specListing(A))(world.worktree);
+    expect(run(world).status).toBe("ready");
+    expect(restoredFiles(world)).toEqual([A]);
+  });
+});
+
+const finding = { file: "a.ts", problem: "bad name", fix: "rename" };
+const REVIEW_FINDS = { reviewer: [{ reply: { findings: [finding] } }] };
+const REVIEW_FIXER = "code-writer#1";
+const REVIEW_RESTORER = "code-writer#2";
+
+function reviewFixEdits(
+  extra: Partial<Setup> = {},
+  actions: Record<string, Action> = {}
+) {
+  return scenario({
+    committed: BOTH,
+    roles: REVIEW_FINDS,
+    actions: { [REVIEW_FIXER]: write(B, EDITED), ...actions },
+    ...extra,
+  }).world;
+}
+
+describe("the review-fix ladder is guarded like the code ladder", () => {
+  test("a test file edited by a review fix is restored and the event recorded", () => {
+    const world = reviewFixEdits({}, { [REVIEW_RESTORER]: write(B, ORIGINAL) });
+    expect(run(world).status).toBe("ready");
+    expect(restoredFiles(world)).toEqual([B]);
+    expect(readFileSync(join(world.worktree, B), "utf8")).toBe(ORIGINAL);
+    expect(world.roleCalls[3]?.instructions).toContain(B);
+  });
+
+  test("a listed file edited by a review fix is not restored", () => {
+    const world = reviewFixEdits();
+    listing(world, B);
+    expect(run(world).status).toBe("ready");
+    expect(restoredEvents(world)).toHaveLength(0);
+    expect(readFileSync(join(world.worktree, B), "utf8")).toBe(EDITED);
+  });
+
+  test("an edit the restore does not undo stops stuck with the again message", () => {
+    const world = reviewFixEdits({}, { [REVIEW_RESTORER]: write(B, STRAY) });
+    const result = run(world);
+    expect(result.status).toBe("stuck");
+    expect(result.message).toBe(build.testEditsAgainMessage([B]));
+  });
+
+  test("an edit by an earlier rung that failed the gate does not survive a later passing rung", () => {
+    const world = reviewFixEdits(
+      {
+        checks: {
+          [TESTS_COMMAND]: (w) =>
+            w.roleCalls.length === 3
+              ? { exitCode: 1, output: " 1 pass\n 2 fail" }
+              : { exitCode: 0, output: " 3 pass" },
+        },
+      },
+      {
+        [REVIEW_RESTORER]: write("src/other.ts", EDITED),
+        "code-writer#3": write(B, ORIGINAL),
+      }
+    );
+    expect(run(world).status).toBe("ready");
+    expect(restoredFiles(world)).toEqual([B]);
+    expect(readFileSync(join(world.worktree, B), "utf8")).toBe(ORIGINAL);
+  });
+
+  test("running the build twice adds no second restore", () => {
+    const world = reviewFixEdits({}, { [REVIEW_RESTORER]: write(B, ORIGINAL) });
+    run(world);
+    const events = restoredEvents(world).length;
+    const codeRuns = codeWriterRuns(world);
+    expect(events).toBe(1);
+    run(world);
+    expect(restoredEvents(world)).toHaveLength(events);
+    expect(codeWriterRuns(world)).toBe(codeRuns);
+  });
+});
+
+describe("the tester fix ladder is guarded", () => {
+  const unmet = { criterion: "export works", met: false, evidence: "blank" };
+
+  function testerFixEdits(listed: boolean) {
+    const { world } = scenario({
+      committed: BOTH,
+      config: { ...DEFAULT_CONFIG, uiPaths: ["ui/"] },
+      roles: {
+        "code-writer": [{ codes: true, changes: ["feature.txt", "ui/page.txt"] }],
+        tester: [{ reply: { criteria: [unmet] } }],
+      },
+      actions: {
+        "code-writer#1": write(B, EDITED),
+        "code-writer#2": write(B, ORIGINAL),
+      },
+    });
+    writeTaskDocument(world, "plan.md", "feature.txt\nui/\n")(world.worktree);
+    if (listed) listing(world, B);
+    return world;
+  }
+
+  test("a test file edited by a tester fix is restored and the event recorded", () => {
+    const world = testerFixEdits(false);
+    expect(run(world).status).toBe("ready");
+    expect(restoredFiles(world)).toEqual([B]);
+  });
+
+  test("a listed file edited by a tester fix is not restored", () => {
+    const world = testerFixEdits(true);
+    expect(run(world).status).toBe("ready");
+    expect(restoredEvents(world)).toHaveLength(0);
+  });
+});
+
+describe("the CI fix ladder is guarded", () => {
+  const failing = { state: "fail", failed: [{ name: "ci" }] };
+
+  function ciFixEdits(listed: boolean) {
+    const { world } = scenario({
+      committed: BOTH,
+      ci: [failing, { state: "pass", failed: [] }],
+      roles: { debugger: [{ commits: true }] },
+      actions: {
+        "debugger#0": together(write(B, EDITED), commitAll),
+        "code-writer#1": together(write(B, ORIGINAL), commitAll),
+      },
+    });
+    if (listed) listing(world, B);
+    return world;
+  }
+
+  test("a test file edited by a CI fix is restored and the event recorded", () => {
+    const world = ciFixEdits(false);
+    expect(run(world).status).toBe("ready");
+    expect(restoredFiles(world)).toEqual([B]);
+    expect(readFileSync(join(world.worktree, B), "utf8")).toBe(ORIGINAL);
+  });
+
+  test("a listed file edited by a CI fix is not restored", () => {
+    const world = ciFixEdits(true);
+    expect(run(world).status).toBe("ready");
+    expect(restoredEvents(world)).toHaveLength(0);
   });
 });

@@ -45,6 +45,7 @@ The scripts live in `${CLAUDE_PLUGIN_ROOT}/scripts`. Run them with `node`. Task 
 - **Out of scope**: what this task must not touch.
 - **Decisions**: each decision, its reason, and who made it: the code, you, or the user.
 - **Weakest assumption**: the one the spec depends on most, and what would prove it wrong.
+- **Test files this task changes** (optional): a section headed exactly `## Test files this task changes`, with one repo-relative path per `- ` bullet. Use it only when changing those tests is the point of the task: the build's test-edit guard then lets exactly these files through. Only `spec.md` grants it.
 
 ## Start the build
 

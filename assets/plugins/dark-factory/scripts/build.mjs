@@ -828,12 +828,20 @@ function changedFilesByTree(run, baselines, end) {
   return changedByTree;
 }
 
+function exemptTestFiles(run) {
+  const specPath = join(run.taskDir, "spec.md");
+  if (!existsSync(specPath)) return [];
+  return testFilesTheTaskChanges(readFileSync(specPath, "utf8"));
+}
+
 export function editedTestFiles(run, start, fixesFrom) {
   const end = worktreeFingerprint(run);
   if (end === null) return { stop: stuck(FINGERPRINT_UNREADABLE) };
   const files = protectedTestFiles(run, start);
   if (files === null) return { stop: stuck(FINGERPRINT_UNREADABLE) };
-  const baselines = baselineTrees(files, start, run.testFixTrees.slice(fixesFrom));
+  const exempt = exemptTestFiles(run);
+  const guarded = files.filter((file) => !exempt.includes(file));
+  const baselines = baselineTrees(guarded, start, run.testFixTrees.slice(fixesFrom));
   const changedByTree = changedFilesByTree(run, baselines, end);
   if (changedByTree === null) return { stop: stuck(FINGERPRINT_UNREADABLE) };
   return { edits: editedBaselines(baselines, changedByTree) };
@@ -863,6 +871,14 @@ function restoreTestEdits(run, start, fixesFrom, edits) {
   if (again.stop) return again.stop;
   if (again.edits.length === 0) return null;
   return stuck(testEditsAgainMessage(again.edits.map((edit) => edit.file)));
+}
+
+function guardedFixLadder(run, ladder, instructions, reason, what) {
+  const start = worktreeFingerprint(run);
+  if (start === null) return stuck(FINGERPRINT_UNREADABLE);
+  const fixesFrom = run.testFixTrees.length;
+  const fixed = untilGreen(run, ladder, instructions, reason);
+  return fixStop(fixed, what) ?? testEditsStep(run, start, fixesFrom);
 }
 
 function rolesAfterStep(run) {
@@ -900,6 +916,29 @@ function namesFile(text, file) {
 
 const TEST_DIRECTORIES = ["test", "tests", "__tests__"];
 const TEST_NAME_MARKERS = [".test.", ".spec."];
+const LISTED_TEST_FILES_HEADING = "## Test files this task changes";
+
+function bulletPath(line) {
+  const text = line.slice(2).trim();
+  const isBackticked = text.length >= 2 && text.startsWith("`") && text.endsWith("`");
+  return isBackticked ? text.slice(1, -1).trim() : text;
+}
+
+export function testFilesTheTaskChanges(specText) {
+  const files = [];
+  let inSection = false;
+  for (const line of specText.split("\n")) {
+    if (line.trimEnd() === LISTED_TEST_FILES_HEADING) {
+      inSection = true;
+    } else if (line.startsWith("#")) {
+      inSection = false;
+    } else if (inSection && line.startsWith("- ")) {
+      const path = bulletPath(line);
+      if (path !== "") files.push(path);
+    }
+  }
+  return files;
+}
 
 export function isTestFile(file, testPaths) {
   if (Array.isArray(testPaths))
@@ -1048,13 +1087,13 @@ function unplannedFilesStep(run) {
 }
 
 function reviewFindingsStep(run, findings) {
-  const fixed = untilGreen(
+  return guardedFixLadder(
     run,
     FIX_LADDER,
     `Fix these review findings:\n${JSON.stringify(findings, null, 2)}`,
-    "review-findings"
+    "review-findings",
+    "review findings"
   );
-  return fixStop(fixed, "review findings");
 }
 
 function reviewInstructions(run) {
@@ -1097,13 +1136,13 @@ function testerStep(run) {
   const unmet = unmetCriteria(tested);
   appendEvent({ event: "test", task: run.id, unmet: unmet.length }, run.env);
   if (unmet.length === 0) return null;
-  const fixed = untilGreen(
+  return guardedFixLadder(
     run,
     FIX_LADDER,
     `The tester found unmet criteria in the running app:\n${JSON.stringify(unmet, null, 2)}`,
-    "unmet-criteria"
+    "unmet-criteria",
+    "tester findings"
   );
-  return fixStop(fixed, "tester findings");
 }
 
 function syncStep(run) {
@@ -1148,13 +1187,13 @@ function ciSummary(ci) {
 }
 
 function ciFixStep(run, ci) {
-  const fixed = untilGreen(
+  return guardedFixLadder(
     run,
     CI_FIX_LADDER,
     `CI failed on the pull request: ${ciSummary(ci)}. Read the failing logs with gh run view and fix the cause.`,
-    "ci-failed"
+    "ci-failed",
+    "CI failures"
   );
-  return fixStop(fixed, "CI failures");
 }
 
 function unfinishedCiStop(ci) {

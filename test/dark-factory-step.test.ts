@@ -244,6 +244,86 @@ describe("step test-edits", () => {
     expect(step("test-edits").result).toEqual({ files: ["checks/a.ts"] });
   });
 
+  describe("the spec's list of test files the task changes", () => {
+    const SECTION = "## Test files this task changes";
+    const writeDocument = (name: string, bullets: string[]) =>
+      writeFileSync(
+        join(taskDir(TASK, env), name),
+        `# t\n\n${SECTION}\n\n${bullets.map((bullet) => `- ${bullet}`).join("\n")}\n`
+      );
+    const bothEdited = () => {
+      snapshotAt("tree-start");
+      git["ls-tree tree-start"] = "test/a.test.ts\ntest/b.test.ts";
+      git["diff tree-start tree-now"] = "test/a.test.ts\ntest/b.test.ts";
+    };
+
+    test("a listed file is left out, an unlisted one is listed", () => {
+      bothEdited();
+      writeDocument("spec.md", ["test/a.test.ts"]);
+      expect(step("test-edits")).toEqual({
+        exitCode: 1,
+        result: { files: ["test/b.test.ts"] },
+      });
+    });
+
+    test("backticks are optional and listing every edited file exits 0", () => {
+      bothEdited();
+      writeDocument("spec.md", ["`test/a.test.ts`", "test/b.test.ts"]);
+      expect(step("test-edits")).toEqual({ exitCode: 0, result: { files: [] } });
+    });
+
+    test("a deleted listed file is allowed", () => {
+      snapshotAt("tree-start");
+      git["ls-tree tree-start"] = "test/a.test.ts";
+      git["diff tree-start tree-now"] = "test/a.test.ts";
+      writeDocument("spec.md", ["test/a.test.ts"]);
+      expect(step("test-edits").result).toEqual({ files: [] });
+    });
+
+    test.each(["plan.md", "tests.md", "repro.md", "design.md"])(
+      "the section in %s alone exempts nothing",
+      (name) => {
+        bothEdited();
+        writeDocument(name, ["test/a.test.ts"]);
+        expect(step("test-edits").result).toEqual({
+          files: ["test/a.test.ts", "test/b.test.ts"],
+        });
+      }
+    );
+
+    test("an empty section, a listed non-test path and a missing path exempt nothing", () => {
+      bothEdited();
+      writeDocument("spec.md", []);
+      expect(step("test-edits").result).toEqual({
+        files: ["test/a.test.ts", "test/b.test.ts"],
+      });
+      writeDocument("spec.md", ["src/a.ts", "test/ghost.test.ts"]);
+      expect(step("test-edits").result).toEqual({
+        files: ["test/a.test.ts", "test/b.test.ts"],
+      });
+    });
+
+    test("a different heading exempts nothing", () => {
+      bothEdited();
+      writeFileSync(
+        join(taskDir(TASK, env), "spec.md"),
+        "# t\n\n### Test files this task changes\n\n- test/a.test.ts\n"
+      );
+      expect(step("test-edits").result).toEqual({
+        files: ["test/a.test.ts", "test/b.test.ts"],
+      });
+    });
+
+    test("it records nothing and prints the same twice", () => {
+      bothEdited();
+      writeDocument("spec.md", ["test/a.test.ts"]);
+      const before = readEvents(env).length;
+      const first = step("test-edits");
+      expect(step("test-edits")).toEqual(first);
+      expect(readEvents(env)).toHaveLength(before);
+    });
+  });
+
   test("without a snapshot it exits 1 telling to run snapshot first", () => {
     const { exitCode, result } = step("test-edits");
     expect(exitCode).toBe(1);
