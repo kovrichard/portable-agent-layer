@@ -144,7 +144,7 @@ The repo's `CLAUDE.md` is read from your checkout when the task starts, so a rol
 - `"repoInstructions": false` in `.dark-factory.json` leaves out the repo's `CLAUDE.md`.
 - `"userInstructions": false` in `$DARK_FACTORY_HOME/config.json` (`~/.dark-factory/config.json`, optional; a missing file means both parts are on) leaves out your `~/.claude/CLAUDE.md`.
 
-Your own hooks never run in a role, and neither do MCP servers. The repo's hooks do run, so a repo `Stop` hook that fails its checks keeps the role working until they pass; the gate stays as the check for repos without hooks.
+Your own hooks never run in a role, and neither do MCP servers. The repo's hooks do run, but a role's `Stop` hooks fire only after it has handed in its result, too late to send it back. To gate a role before that, match a `PreToolUse` hook on `StructuredOutput`, the tool the result goes through; each role runs with `DARK_FACTORY_ROLE` set to its name, so the hook can tell roles apart. This repo's `.agents/hooks/run-hook.ts` is an example. The build's gate stays as the check for repos without such a hook.
 
 A role loads the repo's `.claude/settings.json` and `.claude/settings.local.json` from its worktree as Claude Code does, permissions included. Your `~/.claude/settings.json` (or `CLAUDE_CONFIG_DIR`) is passed in `--settings` without `hooks`, `permissions`, `enabledPlugins` and `extraKnownMarketplaces`, so commit attribution and your other preferences apply. Each role call records which of your keys it passed and dropped as a `role_settings` event, without their values.
 

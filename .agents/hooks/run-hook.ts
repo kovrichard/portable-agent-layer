@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 type HookFormat = "claude" | "cursor" | "opencode" | "codex" | "antigravity";
@@ -11,9 +12,69 @@ export function hookFormatFromArgs(args: string[] = process.argv.slice(2)): Hook
 }
 
 const SUBAGENT_FLAG = "--subagent";
+const NEEDS_CODE_FLAG = "--needs-code";
+const HOOK_FLAGS = [...FORMAT_FLAGS, SUBAGENT_FLAG, NEEDS_CODE_FLAG];
 
 function withoutFormatFlags(args: string[]): string[] {
-  return args.filter((arg) => !FORMAT_FLAGS.includes(arg) && arg !== SUBAGENT_FLAG);
+  return args.filter((arg) => !HOOK_FLAGS.includes(arg));
+}
+
+const FACTORY_ROLES_THAT_WRITE = ["test-writer", "code-writer", "debugger"];
+
+type HookInput = {
+  tool_name?: unknown;
+  tool_input?: { done?: unknown; question?: unknown };
+};
+
+function asksAQuestion(result: { question?: unknown }): boolean {
+  return typeof result.question === "string" && result.question.trim() !== "";
+}
+
+/** A factory role hands its result back through StructuredOutput; only a finished code-writing role is gated. */
+export function factoryHandbackSkip(
+  input: HookInput,
+  role: string | undefined,
+  needsCode: boolean
+): string | null {
+  if (input.tool_name !== "StructuredOutput") return null;
+  if (!role || !FACTORY_ROLES_THAT_WRITE.includes(role))
+    return "skipped: not the handback of a factory role that writes files";
+  const result = input.tool_input ?? {};
+  if (result.done !== true) return "skipped: the role is not done, so the build decides";
+  if (asksAQuestion(result)) return "skipped: the role asks the PO a question";
+  if (role === "test-writer" && needsCode)
+    return "skipped: the test writer's tests come before the code this gate checks";
+  return null;
+}
+
+function parseHookInput(text: string): HookInput {
+  try {
+    const parsed = JSON.parse(text);
+    return parsed !== null && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+let cachedHookInput: HookInput | undefined;
+
+function hookInput(): HookInput {
+  if (cachedHookInput) return cachedHookInput;
+  if (process.stdin.isTTY) return {};
+  try {
+    cachedHookInput = parseHookInput(readFileSync(0, "utf8"));
+  } catch {
+    cachedHookInput = {};
+  }
+  return cachedHookInput;
+}
+
+function handbackSkipFromProcess(): string | null {
+  return factoryHandbackSkip(
+    hookInput(),
+    process.env.DARK_FACTORY_ROLE,
+    process.argv.includes(NEEDS_CODE_FLAG)
+  );
 }
 
 function gitPath(cwd: string, flag: string): string | null {
@@ -76,11 +137,13 @@ function worktreeHasChanges(cwd: string): boolean {
 export function runHook(
   args: string[],
   format = hookFormatFromArgs(),
-  subagent = process.argv.includes(SUBAGENT_FLAG)
+  subagent = process.argv.includes(SUBAGENT_FLAG),
+  handbackSkip = handbackSkipFromProcess()
 ): number {
   if (args.length === 0) {
     return writeFailure(format, "run-hook: no command provided");
   }
+  if (handbackSkip) return writeSuccess(format, handbackSkip);
   const cwd = workspaceDir(format);
   if (subagent && sharesMainCheckout(cwd)) {
     return writeSuccess(

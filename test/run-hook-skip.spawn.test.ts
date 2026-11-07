@@ -161,6 +161,27 @@ describe("run-hook clean-worktree skip", () => {
     expect(r.status).toBe(2);
   });
 
+  test("a factory role's finished StructuredOutput handback is gated by the role it names", () => {
+    const dir = makeRepo("factory-handback");
+    writeFileSync(resolve(dir, "tracked.txt"), "changed\n");
+    const handback = JSON.stringify({
+      tool_name: "StructuredOutput",
+      tool_input: { done: true, summary: "tests written" },
+    });
+    const runAs = (role: string, ...flags: string[]) =>
+      spawnSync("bun", ["run", HOOK, ...flags, "exit", "3"], {
+        cwd: dir,
+        encoding: "utf-8",
+        input: handback,
+        env: { ...process.env, DARK_FACTORY_ROLE: role },
+      });
+
+    expect(runAs("test-writer").status).toBe(2);
+    expect(runAs("test-writer", "--needs-code").status).toBe(0);
+    expect(runAs("code-writer", "--needs-code").status).toBe(2);
+    expect(runAs("reviewer").status).toBe(0);
+  });
+
   test("a clean worktree skips a gate that would otherwise fail", () => {
     const dir = makeRepo("clean-failing");
 
