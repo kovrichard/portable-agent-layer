@@ -22,12 +22,8 @@ single file with merged multi-platform frontmatter — then installs a per-platf
 copy into every agent the user has installed, so it is immediately available as a
 delegate. It does not touch the subagents PAL ships (those live in the repo).
 
-The per-platform frontmatter schema and every field rule live in one place — read it
-before writing anything:
-
-```bash
-cat ~/.pal/skills/create-subagent/authoring-guide.md
-```
+The per-platform frontmatter schema and every field rule live in one place — read
+`~/.pal/skills/create-subagent/authoring-guide.md` with your file-reading tool before writing anything.
 
 ## Workflow when invoked with `<name> <description>`
 

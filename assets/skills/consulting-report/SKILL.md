@@ -147,10 +147,10 @@ Override with `--pdf <path>`. Pass `--skip-build` to re-render the PDF from the 
 ## Demo
 
 ```bash
-pal cli skill run consulting-report generate-pdf ~/.pal/skills/consulting-report/demo
+pal cli skill run consulting-report generate-pdf --demo
 ```
 
-Renders the bundled Acme Industries example end-to-end. Inspect the resulting PDF to see the full layout before authoring your own.
+Copies the bundled Acme Industries example to `./consulting-report-demo` in the current directory (an existing folder is reused, not overwritten), renders it end-to-end, and writes the PDF inside that folder. Inspect the resulting PDF to see the full layout before authoring your own.
 
 ## Important
 

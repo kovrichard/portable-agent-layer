@@ -71,6 +71,10 @@ function undeclaredFlag(command: Leaf, words: string[]): string | null {
   return null;
 }
 
+function startsWithTilde(text: string): boolean {
+  return commandWords(text).some((word) => word.startsWith("~"));
+}
+
 function invocationProblem(text: string): string | null {
   const resolved = resolveCommand(commandWords(text));
   if (typeof resolved === "string") return resolved;
@@ -92,6 +96,21 @@ describe("the `pal cli` commands PAL ships in its own instruction text", () => {
       }))
       .filter(({ problem }) => problem !== null);
     expect(broken).toEqual([]);
+  });
+
+  test("no shipped `pal cli` command passes an argument starting with `~`", () => {
+    const uses = shippedInvocations(new RegExp(/pal cli [^`\n—]*/g));
+    const tilde = uses
+      .filter(({ command }) => startsWithTilde(command))
+      .map(({ file, command }) => `${file}: ${command}`);
+    expect(tilde).toEqual([]);
+  });
+
+  test("the tilde check sees a leading `~` word and ignores one inside a word", () => {
+    expect(startsWithTilde("pal cli skill run consulting-report generate-pdf ~/x")).toBe(
+      true
+    );
+    expect(startsWithTilde("pal cli presentation build --path=~/x")).toBe(false);
   });
 
   test("the call check rejects an unknown command and an undeclared flag", () => {

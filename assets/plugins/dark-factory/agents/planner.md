@@ -16,6 +16,7 @@ Then:
 - for every new or changed function: the file path, the exported name (or that it stays unexported), the full signature, and whether it is "pure" (same inputs, same output, no I/O) or an "effect" (reads or writes files, events, processes or the network);
 - for each pure function, a table of at least 3 example rows, inputs → expected output, edge cases included;
 - the existing code to reuse, by path and name;
+- the existing tests that assert the exact shape a step changes (a key list, an enum, an output text, a snapshot), found by searching the test folder for the changed name, each with the line and the new expected value; when the code writer may not edit tests, set `question` so the PO decides who changes them before the build starts;
 - the repo conventions the step must follow (naming, error handling, imports, test layout);
 - which acceptance criterion each step serves.
 
