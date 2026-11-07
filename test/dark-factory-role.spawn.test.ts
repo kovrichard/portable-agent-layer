@@ -80,7 +80,7 @@ function fakeClaude({
     : JSON.stringify(stdout);
   const logic = [
     `const fs = require("node:fs");`,
-    `fs.writeFileSync(${JSON.stringify(record)}, JSON.stringify({ argv: process.argv.slice(2), cwd: process.cwd(), stdin: await Bun.stdin.text() }));`,
+    `fs.writeFileSync(${JSON.stringify(record)}, JSON.stringify({ argv: process.argv.slice(2), cwd: process.cwd(), role: process.env.DARK_FACTORY_ROLE ?? null, stdin: await Bun.stdin.text() }));`,
     sleepMs ? `await Bun.sleep(${sleepMs});` : "",
     `process.stderr.write(${JSON.stringify(stderr)});`,
     `process.stdout.write(${reply});`,
@@ -149,6 +149,12 @@ beforeEach(() => {
 });
 
 describe("invocation", () => {
+  test("the role runs with its name in DARK_FACTORY_ROLE, so the repo's hooks can tell roles apart", () => {
+    fakeClaude({ replyFile: SUCCESS });
+    runRoleHeadless("t1", "test-writer", { env: envWith(bin) });
+    expect(recorded().role).toBe("test-writer");
+  });
+
   test("a reviewer runs headless in the worktree, read-only, with the task in the prompt", () => {
     fakeClaude({ replyFile: SUCCESS });
     runRoleHeadless("t1", "reviewer", { env: envWith(bin) });

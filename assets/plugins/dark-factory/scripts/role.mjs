@@ -192,6 +192,10 @@ function exitCodeFor(status, error) {
   return 0;
 }
 
+function roleEnv(env, role) {
+  return { ...env, DARK_FACTORY_ROLE: role };
+}
+
 function spawnClaude(invocation, timeoutMs, env) {
   try {
     return spawnTool(invocation.command, invocation.args, {
@@ -389,7 +393,7 @@ function attempt(
     const outcome = outcomeFrom(
       taskId,
       role,
-      spawnClaude(invocation, timeoutMs, env),
+      spawnClaude(invocation, timeoutMs, roleEnv(env, role)),
       timeoutMs
     );
     return {
