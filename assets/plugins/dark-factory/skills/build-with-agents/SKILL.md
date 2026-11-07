@@ -7,7 +7,7 @@ description: Run a written dark-factory task to a pull request with the factory'
 
 You are the product owner, and this session is the build. You run the same pipeline as `scripts/build.mjs`, but each role is a `dark-factory:<role>` subagent of this session, and every subagent works in this session's folder: the task's worktree. Code decides every pass or fail: you run the step commands and act on their exit codes, you never judge a check yourself.
 
-The scripts live in `${CLAUDE_PLUGIN_ROOT}/scripts`; run them with `node`. Below, `$S` stands for that folder and `<id>` for the task id.
+The scripts live in `${CLAUDE_PLUGIN_ROOT}/scripts`; run them with `node`, without `head` or `tail`: a crash prints its message above the stack trace, and a cut output loses it. Below, `$S` stands for that folder and `<id>` for the task id.
 
 ## Before you start
 
@@ -52,7 +52,7 @@ The task's category decides the roles before and after the code (`roles.mjs` `CA
 ### 2. The code
 
 1. `node $S/step.mjs snapshot <id>`.
-2. Climb the code ladder until the gate passes: **code-writer** haiku, haiku, sonnet, sonnet, then **debugger** opus, opus. Instructions: "Implement the change described in plan.md (repro.md for a bug without a plan). Commit the uncommitted tests already in the worktree together with your code; every commit goes through the repo's hooks." After each rung run `node $S/gate.mjs <worktree> <id> <role> <rung> <model>`. Exit 0 ends the ladder. Otherwise give the next rung the failed checks. After the last rung the build is `stuck`.
+2. Climb the code ladder until the gate passes: **code-writer** haiku, haiku, sonnet, sonnet, then **debugger** opus, opus. Instructions: "Implement the change described in <source>. Commit the uncommitted tests already in the worktree together with your code; every commit goes through the repo's hooks." `<source>` is `plan.md` when the category has a planner, `repro.md` when it has a debugger and no planner, and `the spec` otherwise, as `build.mjs` `codeSource` picks it. After each rung run `node $S/gate.mjs <worktree> <id> <role> <rung> <model>`. Exit 0 ends the ladder. Otherwise give the next rung the failed checks. After the last rung the build is `stuck`.
 3. `node $S/step.mjs test-edits <id>`. When it lists files, the next rung of the fix ladder (sonnet, sonnet, opus, opus) restores each listed file to its snapshot content, commits, and makes the gate pass without editing a test. Run `test-edits` again; files listed a second time stop the build `stuck`.
 4. `node $S/step.mjs unplanned <id>`. For each listed file decide keep or revert, record the decision in the spec, and revert with `git checkout origin/<base> -- <file>` and a commit.
 
