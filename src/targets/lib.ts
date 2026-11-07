@@ -857,7 +857,8 @@ function reportOnlyOnFailure(label: string, install: () => void): boolean {
  */
 export function copySkills(claudeSkillsDir: string): number {
   const skillsDir = assets.skills();
-  if (!existsSync(skillsDir)) return 0;
+  if (!existsSync(skillsDir))
+    throw new Error(`PAL's skills folder is missing: ${skillsDir}`);
 
   mkdirSync(palSkillsDir(), { recursive: true });
   mkdirSync(claudeSkillsDir, { recursive: true });

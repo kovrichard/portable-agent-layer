@@ -1,17 +1,21 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, readdirSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { linkDir } from "./lib/links";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
+import { describeUnresolvedSkills } from "./lib/unresolved-skills-report";
 
 const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
-const REPO_SKILLS = resolve(import.meta.dir, "../assets/skills");
+const REPO_ROOT = resolve(import.meta.dir, "..");
+const REPO_SKILLS = resolve(REPO_ROOT, "assets/skills");
 const SANDBOX = freshTestDir(import.meta.file);
 const at = (...parts: string[]) => resolve(SANDBOX, ...parts);
 
 const env = {
   ...process.env,
+  PAL_PKG: REPO_ROOT,
   PAL_HOME: at(".pal"),
   PAL_SKIP_DOCTOR: "1",
   PAL_SKIP_BROWSER_INSTALL: "1",
@@ -27,12 +31,14 @@ const env = {
 const SPAWN_TIMEOUT = 90_000;
 const INSTALL_THEN_UNINSTALL = 2 * SPAWN_TIMEOUT;
 
-const runPal = (...args: string[]) =>
+const runPalWith = (runEnv: Record<string, string | undefined>, ...args: string[]) =>
   spawnSync("bun", ["run", CLI, "cli", ...args], {
-    env,
+    env: runEnv,
     encoding: "utf-8",
     timeout: SPAWN_TIMEOUT,
   });
+
+const runPal = (...args: string[]) => runPalWith(env, ...args);
 
 function pal(...args: string[]) {
   const result = runPal(...args);
@@ -50,6 +56,14 @@ const shippedSkills = () =>
 const unresolvedIn = (dir: string) =>
   shippedSkills().filter((name) => !existsSync(resolve(dir, name, "SKILL.md")));
 
+function expectSkillsResolve(dir: string, step: "install" | "uninstall") {
+  const unresolved = unresolvedIn(dir);
+  if (unresolved.length > 0)
+    throw new Error(
+      `skills unresolved in ${dir} after ${step}\n${describeUnresolvedSkills(dir, unresolved)}`
+    );
+}
+
 beforeEach(() => {
   removeOnceReleased(SANDBOX);
 });
@@ -59,11 +73,14 @@ describe("a per-agent uninstall", () => {
     "leaves the shared skill store and other agents' skills resolving",
     () => {
       pal("install", "--claude", "--cursor");
+      expectSkillsResolve(at(".pal", "skills"), "install");
+      expectSkillsResolve(at(".claude", "skills"), "install");
+      expectSkillsResolve(at(".agents", "skills"), "install");
       pal("uninstall", "--cursor");
 
-      expect(unresolvedIn(at(".pal", "skills"))).toEqual([]);
-      expect(unresolvedIn(at(".claude", "skills"))).toEqual([]);
-      expect(unresolvedIn(at(".agents", "skills"))).toEqual([]);
+      expectSkillsResolve(at(".pal", "skills"), "uninstall");
+      expectSkillsResolve(at(".claude", "skills"), "uninstall");
+      expectSkillsResolve(at(".agents", "skills"), "uninstall");
     },
     INSTALL_THEN_UNINSTALL
   );
@@ -72,6 +89,7 @@ describe("a per-agent uninstall", () => {
     "removes the uninstalled agent's own skill links",
     () => {
       pal("install", "--claude", "--cursor");
+      expectSkillsResolve(at(".cursor", "skills"), "install");
       pal("uninstall", "--cursor");
 
       expect(
@@ -85,11 +103,34 @@ describe("a per-agent uninstall", () => {
     "leaves Claude's skill links alone when opencode is uninstalled",
     () => {
       pal("install", "--claude", "--opencode");
+      expectSkillsResolve(at(".claude", "skills"), "install");
       pal("uninstall", "--opencode");
 
-      expect(unresolvedIn(at(".claude", "skills"))).toEqual([]);
+      expectSkillsResolve(at(".claude", "skills"), "uninstall");
     },
     INSTALL_THEN_UNINSTALL
+  );
+});
+
+describe("an install whose package has no skills folder", () => {
+  test(
+    "exits 1 and names the missing folder",
+    () => {
+      const emptyPkg = at("empty-pkg");
+      mkdirSync(resolve(emptyPkg, "assets"), { recursive: true });
+      linkDir(
+        resolve(REPO_ROOT, "assets/templates"),
+        resolve(emptyPkg, "assets", "templates")
+      );
+      writeFileSync(resolve(emptyPkg, "package.json"), '{"name":"x","version":"0.0.0"}');
+      const result = runPalWith({ ...env, PAL_PKG: emptyPkg }, "install", "--claude");
+
+      expect(result.status).toBe(1);
+      expect(result.stdout + result.stderr).toContain(
+        resolve(emptyPkg, "assets", "skills")
+      );
+    },
+    SPAWN_TIMEOUT
   );
 });
 
