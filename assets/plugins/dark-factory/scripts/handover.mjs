@@ -28,4 +28,5 @@ export function recordHandover(taskId, { from, to, reason, payload }, env = proc
     env
   );
   appendEvent({ event: "handover", task: taskId, from, to, reason, payload: saved }, env);
+  return saved;
 }

@@ -200,13 +200,14 @@ function pathWith(bin: string) {
   return { ...env, ...GIT_ENV, PATH: [bin, process.env.PATH ?? ""].join(delimiter) };
 }
 
-function runScript(script: string, args: string[], scriptEnv: object) {
+function runScript(script: string, args: string[], scriptEnv: object, input = "") {
   const run = spawnSync(
     process.execPath,
     [join(PLUGIN_ROOT, "scripts", script), ...args],
     {
       env: scriptEnv as Record<string, string>,
       encoding: "utf8",
+      input,
     }
   );
   return { status: run.status, stdout: run.stdout, stderr: run.stderr };
@@ -237,6 +238,26 @@ describe("where a task is", () => {
       id,
       latestStep: { event: "gate", task: id, result: "fail" },
     });
+  });
+
+  test("handover saves the prompt read from stdin as the PO's handover", () => {
+    const { id } = newTask(
+      { title: "Fix login", repo: "/repo", category: "small" },
+      env,
+      NOW
+    );
+    const prompt = "Review the branch diff against its base and the spec.\n";
+    const run = runScript(
+      "task.mjs",
+      ["handover", id, "reviewer", "pipeline"],
+      pathWith(home),
+      prompt
+    );
+    const { file } = lastJson(run.stdout);
+    expect(readFileSync(join(home, "tasks", id, file), "utf8")).toBe(prompt);
+    expect(eventsNamed("handover")).toEqual([
+      expect.objectContaining({ from: "po", to: "reviewer", reason: "pipeline" }),
+    ]);
   });
 
   test("a just-created task's latest step is its task_created event", () => {

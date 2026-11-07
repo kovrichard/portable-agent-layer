@@ -7,6 +7,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { recordHandover } from "./handover.mjs";
 import { readInstructions, recordMissingImports } from "./instructions.mjs";
 import {
   appendEvent,
@@ -56,6 +57,16 @@ export function recordQuestion(id, question, env = process.env, now = new Date()
   );
   appendEvent({ event: "question_to_user", task: id }, env, now);
   return setStatus(id, "waiting", question, env);
+}
+
+export function recordPoHandover(id, role, reason, prompt, env = process.env) {
+  readTask(id, env);
+  const { file } = recordHandover(
+    id,
+    { from: "po", to: role, reason, payload: prompt },
+    env
+  );
+  return { file };
 }
 
 export function listTasks(env = process.env) {
@@ -192,6 +203,8 @@ const COMMANDS = {
   prepare: ([id]) => prepare(id),
   status: ([id, status, note]) => setStatus(id, status, note),
   ask: ([id, question]) => recordQuestion(id, question),
+  handover: ([id, role, reason]) =>
+    recordPoHandover(id, role, reason, readFileSync(0, "utf8")),
   list: () => listTasks(),
   show: ([id]) => showTask(id),
 };

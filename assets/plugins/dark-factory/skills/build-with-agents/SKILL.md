@@ -17,7 +17,14 @@ The scripts live in `${CLAUDE_PLUGIN_ROOT}/scripts`; run them with `node`. Below
 
 ## Running a role
 
-- Start a role with the Agent tool: `subagent_type: "dark-factory:<role>"`, never `isolation`, and the `model` the step names. The prompt names the task id, the task folder, and the step's instructions below.
+- Start a role with the Agent tool: `subagent_type: "dark-factory:<role>"`, never `isolation`, and the `model` the step names.
+- The prompt is fixed, as in `build.mjs`, so the A/B compares orchestration and not prompts. It holds exactly:
+  - the task id, the task folder, the worktree and the base branch;
+  - the step's instructions below, word for word;
+  - for a fix-ladder rung, an answer or a continued subagent: the step command's output, the gate's failed checks, the reviewer's findings or the PO's answer, pasted verbatim.
+
+  Nothing else. Never add what to focus on, what an earlier role reported, what to confirm, or that findings are optional: a reviewer told what to check checks only that.
+- Before every Agent and `SendMessage` call, record the exact prompt: `node $S/task.mjs handover <id> <role> <reason>` with the prompt on stdin, where reason is `pipeline`, `plan-gate`, `plan-findings`, `gate-failed`, `test-fix`, `review-findings`, `ci-failed`, `question` or `po-answer`, as `build.mjs` names them.
 - When a role's reply asks a question, answer it yourself from the spec, the code and what you know about the user, add the answer to the spec under **Decisions**, and continue the same subagent with `SendMessage`. When you rule that a test is wrong, start `dark-factory:test-writer` to fix only that test, then continue the role that asked. Ask the user only what nothing settles, once, with your recommended answer, and wait.
 - Record every role run: `node $S/task.mjs status <id> running "<role>: <one line>"`.
 
