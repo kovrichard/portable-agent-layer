@@ -828,12 +828,20 @@ function changedFilesByTree(run, baselines, end) {
   return changedByTree;
 }
 
+function exemptTestFiles(run) {
+  const specPath = join(run.taskDir, "spec.md");
+  if (!existsSync(specPath)) return [];
+  return testFilesTheTaskChanges(readFileSync(specPath, "utf8"));
+}
+
 export function editedTestFiles(run, start, fixesFrom) {
   const end = worktreeFingerprint(run);
   if (end === null) return { stop: stuck(FINGERPRINT_UNREADABLE) };
   const files = protectedTestFiles(run, start);
   if (files === null) return { stop: stuck(FINGERPRINT_UNREADABLE) };
-  const baselines = baselineTrees(files, start, run.testFixTrees.slice(fixesFrom));
+  const exempt = exemptTestFiles(run);
+  const guarded = files.filter((file) => !exempt.includes(file));
+  const baselines = baselineTrees(guarded, start, run.testFixTrees.slice(fixesFrom));
   const changedByTree = changedFilesByTree(run, baselines, end);
   if (changedByTree === null) return { stop: stuck(FINGERPRINT_UNREADABLE) };
   return { edits: editedBaselines(baselines, changedByTree) };
