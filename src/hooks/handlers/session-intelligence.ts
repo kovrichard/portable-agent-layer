@@ -225,7 +225,7 @@ async function summarizeSession(
   return output;
 }
 
-// Detached child entry point — re-reads transcript from tmp path, then unlinks it.
+// Detached child entry point — re-reads transcript from the hand-off path, then unlinks it.
 if (process.argv[2] === "--run") {
   const sid = process.argv[3];
   const transcriptPath = process.argv[4];

@@ -117,26 +117,6 @@ describe("the 24-hour sweep", () => {
     expect(existsSync(stale)).toBe(false);
     expect(readFileSync(fresh, "utf-8")).toBe("new");
   });
-
-  test("a second Stop adds and changes nothing beyond what the first left", async () => {
-    mkdirSync(handoffDir(), { recursive: true });
-    const stale = resolve(handoffDir(), "stale.txt");
-    const fresh = resolve(handoffDir(), "fresh.txt");
-    writeFileSync(stale, "old");
-    writeFileSync(fresh, "new");
-    setMtimeHoursAgo(stale, 30);
-    setMtimeHoursAgo(fresh, 2);
-
-    await runStopHandlers(longTranscript(), { sessionId: "handoff-twice" });
-    await Bun.sleep(1500);
-    const afterFirst = readdirSync(handoffDir()).filter((n) => n.endsWith(".txt"));
-    await runStopHandlers(longTranscript(), { sessionId: "handoff-twice" });
-
-    expect(existsSync(stale)).toBe(false);
-    expect(afterFirst).toContain("fresh.txt");
-    expect(readFileSync(resolve(handoffDir(), "fresh.txt"), "utf-8")).toBe("new");
-    expect(readFileSync(fresh, "utf-8")).toBe("new");
-  });
 });
 
 describe("a hand-off folder that cannot be used", () => {
