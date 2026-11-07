@@ -55,7 +55,7 @@ node <plugin folder>/scripts/task.mjs prepare <task-id>
 cd <worktree> && claude -p "/dark-factory:build-with-agents <task-id>"
 ```
 
-It is the other half of an A/B against `build.mjs` (ISC-97): every pass or fail still comes from the step commands below, `gate.mjs`, `ship.mjs` and `ci-wait.mjs`.
+It is the other half of an A/B against `build.mjs` (ISC-97): every pass or fail still comes from the step commands below, `gate.mjs`, `ship.mjs` and `ci-wait.mjs`. Each role gets the same fixed instructions as in `build.mjs`, and the session records every prompt it hands a subagent with `task.mjs handover <task-id> <role> <reason>`, the prompt on stdin. That writes the same `handover` event `build.mjs` writes, with `from: "po"`, so `stats.mjs` counts both sides alike.
 
 ### One step at a time
 

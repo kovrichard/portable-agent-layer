@@ -25,6 +25,7 @@ import * as taskModule from "../assets/plugins/dark-factory/scripts/task.mjs";
 import {
   listTasks,
   newTask,
+  recordPoHandover,
   recordQuestion,
   setStatus,
   slugify,
@@ -119,6 +120,25 @@ describe("tasks", () => {
     expect(readTask(id, env)).toMatchObject({ status: "stuck", note: "gate still red" });
     expect(eventsNamed("task_status")).toEqual([
       expect.objectContaining({ status: "stuck" }),
+    ]);
+  });
+
+  test("a prompt the PO hands to a role is saved and logged as a handover", () => {
+    const { id } = newTask(
+      { title: "Fix login", repo: "/repo", category: "bug" },
+      env,
+      NOW
+    );
+    const { file } = recordPoHandover(
+      id,
+      "reviewer",
+      "pipeline",
+      "Review the diff.",
+      env
+    );
+    expect(readFileSync(join(taskDir(id, env), file), "utf8")).toBe("Review the diff.");
+    expect(eventsNamed("handover")).toEqual([
+      expect.objectContaining({ from: "po", to: "reviewer", reason: "pipeline" }),
     ]);
   });
 
