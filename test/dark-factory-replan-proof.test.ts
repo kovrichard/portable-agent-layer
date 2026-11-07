@@ -70,10 +70,12 @@ function checksWhenRoleStarts(world: World, wanted: string, nth: number) {
   return seen;
 }
 
-function unreadableFingerprint(world: World) {
+function fingerprintUnreadableUntilCheck(world: World, lastCheck: number) {
   const original = world.effects.spawnTool as Spawn;
+  const fingerprinting = (args: string[]) =>
+    args[0] === "add" || args[0] === "write-tree";
   world.effects.spawnTool = (command: string, args: string[]) =>
-    args[0] === "add" || args[0] === "write-tree"
+    fingerprinting(args) && world.checkCommands.length < lastCheck
       ? { status: 128, stdout: "", stderr: "fatal" }
       : original(command, args);
 }
@@ -167,7 +169,7 @@ for (const { name, make } of SCENARIOS) {
       const world = make([failRun(3), failRun(4), failRun(4), failRun(5)], {
         roles: { "test-writer": [{}, {}] },
       });
-      unreadableFingerprint(world);
+      fingerprintUnreadableUntilCheck(world, 4);
       const result = runBuild(world);
       expect(result.status).toBe("ready");
       expect(eventsNamed(world, "tests_red")).toEqual([
