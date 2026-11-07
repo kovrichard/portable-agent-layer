@@ -46,6 +46,17 @@ Inside Claude Code the plugin folder is `${CLAUDE_PLUGIN_ROOT}`.
 - A rerun on a clean worktree skips the code, review and tester steps already finished at its current commit.
 - `node scripts/task.mjs show <id>` tells where it is.
 
+### With subagents
+
+`/dark-factory:build-with-agents <task-id>` runs a written task through the same pipeline with each role as a `dark-factory:<role>` subagent of the session instead of a `claude -p` process. The session has to start in the task's worktree, because its subagents work in the folder it started in and share it:
+
+```
+node <plugin folder>/scripts/task.mjs prepare <task-id>
+cd <worktree> && claude -p "/dark-factory:build-with-agents <task-id>"
+```
+
+It is the other half of an A/B against `build.mjs` (ISC-97): every pass or fail still comes from the step commands below, `gate.mjs`, `ship.mjs` and `ci-wait.mjs`.
+
 ### One step at a time
 
 A PO session can run the build's deterministic checks one at a time with `node <plugin folder>/scripts/step.mjs <command> <task-id>`. Each command uses the build's own functions, reads the worktree, base and gate from `task.json`, and prints one JSON line. It exits 0 when the check passes and 1 when it fails or the task or its worktree is missing; a missing command or task id prints the usage line and exits 2.
