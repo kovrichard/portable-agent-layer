@@ -209,6 +209,19 @@ describe("shipped skills", () => {
     }
   );
 
+  test("a missing skills folder is an error naming the folder", () => {
+    const savedPkg = process.env.PAL_PKG;
+    process.env.PAL_PKG = HOME;
+    try {
+      expect(() => copySkills(resolve(ENV.PAL_CLAUDE_DIR, "skills"))).toThrow(
+        `PAL's skills folder is missing: ${resolve(HOME, "assets", "skills")}`
+      );
+    } finally {
+      if (savedPkg === undefined) delete process.env.PAL_PKG;
+      else process.env.PAL_PKG = savedPkg;
+    }
+  });
+
   test("keeps the shared skill store other agents link through", () => {
     const count = copySkills(resolve(ENV.PAL_CLAUDE_DIR, "skills"));
 
