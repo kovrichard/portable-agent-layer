@@ -41,15 +41,9 @@ You author a single new personal skill for this user. You are handed a **skill n
 
 ## Steps
 
-1. Read the authoring guide — it is the single source of truth for what a good skill is and the exact anatomy to follow:
-   ```bash
-   cat ~/.pal/skills/create-skill/authoring-guide.md
-   ```
+1. Read `~/.pal/skills/create-skill/authoring-guide.md` with your file-reading tool — it is the single source of truth for what a good skill is and the exact anatomy to follow.
 2. Validate the name: lowercase-kebab, no spaces, not colliding with an existing skill (check `~/.pal/skills/` and the active skill list). If it collides or is malformed, stop and report the conflict instead of overwriting.
-3. Create the skill and write its `SKILL.md`, populated per the guide's anatomy (frontmatter + Workflow + Output format + When to use):
-   ```bash
-   mkdir -p ~/.pal/skills/<name>
-   ```
+3. Create the skill and write its `SKILL.md` to `~/.pal/skills/<name>/SKILL.md`, creating the folder if it does not exist, populated per the guide's anatomy (frontmatter + Workflow + Output format + When to use).
 4. If the skill needs runtime tooling, scaffold a `tools/` subdir alongside `SKILL.md` and write the scripts there.
 5. Link the skill into every installed agent:
    ```bash

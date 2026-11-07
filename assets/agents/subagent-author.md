@@ -41,10 +41,7 @@ You author a single new personal subagent for this user. You are handed a **suba
 
 ## Steps
 
-1. Read the authoring guide — it is the single source of truth for the merged frontmatter schema and per-platform field rules:
-   ```bash
-   cat ~/.pal/skills/create-subagent/authoring-guide.md
-   ```
+1. Read `~/.pal/skills/create-subagent/authoring-guide.md` with your file-reading tool — it is the single source of truth for the merged frontmatter schema and per-platform field rules.
 2. Validate the name: lowercase-kebab, no spaces. It must not collide with an existing personal subagent (`pal cli subagent list`) or a shipped one. If it collides or is malformed, stop and report the conflict instead of overwriting.
 3. Write `~/.pal/agents/<name>.md` (create `~/.pal/agents/` if missing), populated per the guide's merged schema: global `name` + `description`, then only the platform blocks that matter (`claude:`, `opencode:`, `cursor:`, `copilot:`, `codex:`, `antigravity:`), then the system prompt body. Remember: `skills:` is Claude-only and preloads — for other agents, name intended skills in the body.
 4. Install it into every installed agent:

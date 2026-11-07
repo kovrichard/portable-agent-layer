@@ -6,13 +6,14 @@
 //
 // Usage:
 //   pal cli skill run consulting-report generate-pdf <report-dir> [--pdf <out>] [--html <out>] [--skip-build]
+//   pal cli skill run consulting-report generate-pdf --demo [--pdf <out>] [--html <out>] [--skip-build]
 
 import { spawnSync } from "node:child_process";
 import { createReadStream, constants as fsConstants } from "node:fs";
-import { access, readFile, stat, unlink, writeFile } from "node:fs/promises";
+import { access, cp, readFile, stat, unlink, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
-import { extname, join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { dirname, extname, join, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { PDFDocument } from "pdf-lib";
 import { chromium } from "playwright";
 
@@ -249,12 +250,21 @@ async function renderPdf(
   }
 }
 
-interface GenerateOptions {
-  reportDir: string;
+interface ReportOptions {
   pdfOut?: string;
   htmlOut?: string;
   skipBuild?: boolean;
 }
+
+interface GenerateOptions extends ReportOptions {
+  reportDir: string;
+}
+
+type ParsedArgs = ReportOptions &
+  ({ demo: true; reportDir?: undefined } | { demo: false; reportDir: string });
+
+const DEMO_FOLDER = "consulting-report-demo";
+const USAGE = "usage: generate-pdf <report-dir> | --demo [--pdf <out>] [--skip-build]";
 
 async function generate(opts: GenerateOptions): Promise<{
   htmlPath: string;
@@ -284,22 +294,40 @@ async function generate(opts: GenerateOptions): Promise<{
   return { htmlPath, pdfPath };
 }
 
-function parseArgs(argv: string[]): GenerateOptions {
-  if (argv.length === 0) {
-    throw new Error("usage: generate-pdf.ts <report-dir> [--pdf <out>] [--skip-build]");
+function demoDir(): string {
+  const here = dirname(fileURLToPath(import.meta.url));
+  return resolve(here, "..", "demo");
+}
+
+export async function prepareDemo(cwd: string): Promise<string> {
+  const target = join(cwd, DEMO_FOLDER);
+  if (!(await exists(target))) {
+    await cp(demoDir(), target, { recursive: true });
   }
-  const opts: GenerateOptions = { reportDir: argv[0] };
-  for (let i = 1; i < argv.length; i++) {
-    if (argv[i] === "--pdf") opts.pdfOut = argv[++i];
-    else if (argv[i] === "--html") opts.htmlOut = argv[++i];
-    else if (argv[i] === "--skip-build") opts.skipBuild = true;
+  return target;
+}
+
+export function parseArgs(argv: string[]): ParsedArgs {
+  let reportDir: string | undefined;
+  let demo = false;
+  const options: ReportOptions = {};
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === "--demo") demo = true;
+    else if (arg === "--pdf") options.pdfOut = argv[++i];
+    else if (arg === "--html") options.htmlOut = argv[++i];
+    else if (arg === "--skip-build") options.skipBuild = true;
+    else if (!arg.startsWith("--")) reportDir ??= arg;
   }
-  return opts;
+  if (demo) return { ...options, demo: true };
+  if (reportDir === undefined) throw new Error(USAGE);
+  return { ...options, demo: false, reportDir };
 }
 
 async function run(argv: string[] = process.argv.slice(2)): Promise<void> {
-  const opts = parseArgs(argv);
-  const { htmlPath, pdfPath } = await generate(opts);
+  const parsed = parseArgs(argv);
+  const reportDir = parsed.demo ? await prepareDemo(process.cwd()) : parsed.reportDir;
+  const { htmlPath, pdfPath } = await generate({ ...parsed, reportDir });
   const [htmlStat, pdfStat] = await Promise.all([stat(htmlPath), stat(pdfPath)]);
   console.log(`HTML: ${htmlPath} (${(htmlStat.size / 1024).toFixed(1)} KB)`);
   console.log(`PDF:  ${pdfPath} (${(pdfStat.size / 1024).toFixed(1)} KB)`);
