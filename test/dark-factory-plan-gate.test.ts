@@ -8,6 +8,7 @@ import {
   buildWorld,
   eventsNamed,
   TASK,
+  TESTS_COMMAND,
   type World,
 } from "./lib/dark-factory-build-fixture";
 
@@ -163,6 +164,18 @@ describe("a re-plan and its plan gate", () => {
     const world = worldFor({
       commitsAhead: 1,
       roles: { "test-writer": [{ leavesChanges: true }] },
+      checks: {
+        [TESTS_COMMAND]: (current) => {
+          if (current.coded) return { exitCode: 0, output: " 3 pass" };
+          const testWriterRan = current.roleCalls.some(
+            (call) => call.role === "test-writer"
+          );
+          return {
+            exitCode: 1,
+            output: testWriterRan ? " 1 pass\n 3 fail" : " 1 pass\n 2 fail",
+          };
+        },
+      },
     });
     seedStalePlan(world);
     runBuild(world);
@@ -173,7 +186,10 @@ describe("a re-plan and its plan gate", () => {
       "test-writer",
       "code-writer",
     ]);
-    expect(eventsNamed(world, "tests_red")).toHaveLength(1);
+    const redEvents = eventsNamed(world, "tests_red");
+    expect(redEvents).toHaveLength(1);
+    expect(redEvents[0]?.baseline).toBe(2);
+    expect(redEvents[0]?.failing).toBe(3);
     const instructions =
       world.roleCalls.find((call) => call.role === "test-writer")?.instructions ?? "";
     expect(instructions).toContain("tests.md");

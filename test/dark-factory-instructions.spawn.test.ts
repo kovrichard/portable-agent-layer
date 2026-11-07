@@ -213,8 +213,11 @@ describe("@path imports", () => {
     expect(text).toContain("A BODY");
     expect(text).toContain("B BODY");
     expect(text).not.toContain("@docs/a.md");
-    expect(text.indexOf("before")).toBeLessThan(text.indexOf("A BODY"));
-    expect(text.indexOf("A BODY")).toBeLessThan(text.indexOf("after"));
+    expect(text.indexOf("before\n")).not.toBe(-1);
+    expect(text.indexOf("A BODY")).not.toBe(-1);
+    expect(text.indexOf("\nafter\n")).not.toBe(-1);
+    expect(text.indexOf("before\n")).toBeLessThan(text.indexOf("A BODY"));
+    expect(text.indexOf("A BODY")).toBeLessThan(text.indexOf("\nafter\n"));
   });
 
   test("~/ expands to the home folder", () => {
