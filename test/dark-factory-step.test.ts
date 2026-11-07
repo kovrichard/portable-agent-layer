@@ -298,7 +298,7 @@ describe("every command", () => {
         },
       });
       expect(exitCode).toBe(1);
-      expect(JSON.stringify(result)).toContain(missing);
+      expect((result as { message: string }).message).toContain(missing);
     }
   });
 });
