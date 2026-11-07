@@ -112,6 +112,7 @@ export const paths = {
   progress: () => ensureDir(home("memory", "state", "progress")),
   projectHistory: () => ensureDir(home("memory", "projects")),
   unboundHistory: () => ensureDir(home("memory", "state", "unbound-history")),
+  transcriptHandoff: () => ensureDir(home("memory", "state", "transcript-handoff")),
   work: () => ensureDir(home("memory", "work")),
   backups: () => ensureDir(home("backups")),
   debug: () => ensureDir(home("debug")),

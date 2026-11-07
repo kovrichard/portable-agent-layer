@@ -4,9 +4,16 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { mkdtemp, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { autoBackup } from "../handlers/backup";
 import { writeContextDigests } from "../handlers/context-digests";
@@ -171,6 +178,7 @@ export async function runStopHandlers(
   // any in-hook budget. These spawn detached bun subprocesses that run the
   // inference and write results to disk; they don't block this hook.
   await timing.time("detach-inference", async () => {
+    sweepStaleHandoffs();
     await detachSessionIntelligence(transcript, options.sessionId);
     await detachEntityExtraction(transcript, options.sessionId);
     detachAgenda(options.sessionId);
@@ -275,12 +283,28 @@ function recordFinalReply(messages: Message[], sessionId: string): void {
   }
 }
 
-/** Write transcript to a fresh tmp file and return the path. Child unlinks it. */
-async function writeTranscriptTmp(transcript: string): Promise<string> {
-  const dir = await mkdtemp(resolve(tmpdir(), "pal-transcript-"));
-  const file = resolve(dir, "transcript.txt");
+const HANDOFF_MAX_AGE_MS = 24 * 60 * 60_000;
+
+/** Write transcript to a uniquely named hand-off file and return the path. Child unlinks it. */
+async function writeTranscriptHandoff(transcript: string): Promise<string> {
+  const id: string = randomUUID();
+  const file = resolve(paths.transcriptHandoff(), `${id}.txt`);
   await writeFile(file, transcript, "utf-8");
   return file;
+}
+
+/** Delete hand-off files a child never got to remove. */
+function sweepStaleHandoffs(now: number = Date.now()): void {
+  try {
+    const dir = paths.transcriptHandoff();
+    for (const name of readdirSync(dir)) {
+      const file = resolve(dir, name);
+      if (now - statSync(file).mtimeMs <= HANDOFF_MAX_AGE_MS) continue;
+      unlinkSync(file);
+    }
+  } catch (err) {
+    logError("sweepStaleHandoffs", err);
+  }
 }
 
 /**
@@ -296,13 +320,13 @@ function detachAgenda(sessionId?: string): void {
   }
 }
 
-/** Spawn a detached child to run session-intelligence on a tmp copy of the transcript. */
+/** Spawn a detached child to run session-intelligence on a hand-off copy of the transcript. */
 async function detachSessionIntelligence(
   transcript: string,
   sessionId?: string
 ): Promise<void> {
   try {
-    const transcriptPath = await writeTranscriptTmp(transcript);
+    const transcriptPath = await writeTranscriptHandoff(transcript);
     const scriptPath = resolve(assets.hooks(), "handlers", "session-intelligence.ts");
     spawnDetachedInference(
       scriptPath,
@@ -320,7 +344,7 @@ async function detachEntityExtraction(
 ): Promise<void> {
   if (!sessionId) return;
   try {
-    const transcriptPath = await writeTranscriptTmp(transcript);
+    const transcriptPath = await writeTranscriptHandoff(transcript);
     const scriptPath = resolve(assets.hooks(), "handlers", "entity-extraction.ts");
     spawnDetachedInference(
       scriptPath,
