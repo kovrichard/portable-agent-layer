@@ -900,6 +900,29 @@ function namesFile(text, file) {
 
 const TEST_DIRECTORIES = ["test", "tests", "__tests__"];
 const TEST_NAME_MARKERS = [".test.", ".spec."];
+const LISTED_TEST_FILES_HEADING = "## Test files this task changes";
+
+function bulletPath(line) {
+  const text = line.slice(2).trim();
+  const isBackticked = text.length >= 2 && text.startsWith("`") && text.endsWith("`");
+  return isBackticked ? text.slice(1, -1).trim() : text;
+}
+
+export function testFilesTheTaskChanges(specText) {
+  const files = [];
+  let inSection = false;
+  for (const line of specText.split("\n")) {
+    if (line.trimEnd() === LISTED_TEST_FILES_HEADING) {
+      inSection = true;
+    } else if (line.startsWith("#")) {
+      inSection = false;
+    } else if (inSection && line.startsWith("- ")) {
+      const path = bulletPath(line);
+      if (path !== "") files.push(path);
+    }
+  }
+  return files;
+}
 
 export function isTestFile(file, testPaths) {
   if (Array.isArray(testPaths))
