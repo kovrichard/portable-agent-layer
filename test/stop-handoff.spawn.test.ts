@@ -69,6 +69,7 @@ describe("the Stop hook's transcript hand-off", () => {
 
     const names = [...seen.names];
     expect(names.length).toBeGreaterThanOrEqual(2);
+    expect(names.every((n) => /^[^/\\]+\.txt$/.test(n))).toBe(true);
     expect(
       readdirSync(handoffDir(), { withFileTypes: true }).every((e) => e.isFile())
     ).toBe(true);

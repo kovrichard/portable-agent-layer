@@ -293,14 +293,21 @@ async function writeTranscriptHandoff(transcript: string): Promise<string> {
 
 const HANDOFF_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
+function removeIfStale(file: string, now: number): void {
+  try {
+    if (now - statSync(file).mtimeMs < HANDOFF_MAX_AGE_MS) return;
+    unlinkSync(file);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      logError("sweepStaleHandoffs:file", err);
+    }
+  }
+}
+
 function sweepStaleHandoffs(now: number = Date.now()): void {
   try {
     const dir = paths.transcriptHandoff();
-    for (const name of readdirSync(dir)) {
-      const file = resolve(dir, name);
-      if (now - statSync(file).mtimeMs < HANDOFF_MAX_AGE_MS) continue;
-      unlinkSync(file);
-    }
+    for (const name of readdirSync(dir)) removeIfStale(resolve(dir, name), now);
   } catch (err) {
     logError("sweepStaleHandoffs", err);
   }
