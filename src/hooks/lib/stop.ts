@@ -299,8 +299,14 @@ function sweepStaleHandoffs(now: number = Date.now()): void {
     const dir = paths.transcriptHandoff();
     for (const name of readdirSync(dir)) {
       const file = resolve(dir, name);
-      if (now - statSync(file).mtimeMs <= HANDOFF_MAX_AGE_MS) continue;
-      unlinkSync(file);
+      try {
+        if (now - statSync(file).mtimeMs <= HANDOFF_MAX_AGE_MS) continue;
+        unlinkSync(file);
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+          logError("sweepStaleHandoffs", err);
+        }
+      }
     }
   } catch (err) {
     logError("sweepStaleHandoffs", err);
