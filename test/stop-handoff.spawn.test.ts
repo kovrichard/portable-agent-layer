@@ -11,6 +11,7 @@ import {
 import { resolve } from "node:path";
 import { runStopHandlers } from "../src/hooks/lib/stop";
 import { sandboxContextRuleDirs } from "./lib/context-rule-dirs";
+import { linkFile } from "./lib/links";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
@@ -24,6 +25,10 @@ let OS_TMP: string;
 
 function handoffDir(): string {
   return resolve(HOME, "memory", "state", "transcript-handoff");
+}
+
+function debugLog(): string {
+  return resolve(HOME, "debug", "debug.log");
 }
 
 function longTranscript() {
@@ -117,6 +122,34 @@ describe("the 24-hour sweep", () => {
     expect(existsSync(stale)).toBe(false);
     expect(readFileSync(fresh, "utf-8")).toBe("new");
   });
+
+  test("logs an entry it cannot remove and still sweeps the rest", async () => {
+    const stuck = resolve(handoffDir(), "stuck");
+    const stale = resolve(handoffDir(), "stale.txt");
+    mkdirSync(stuck, { recursive: true });
+    writeFileSync(stale, "old");
+    setMtimeHoursAgo(stuck, 25);
+    setMtimeHoursAgo(stale, 25);
+
+    await runStopHandlers(longTranscript(), { sessionId: "handoff-stuck" });
+
+    expect(existsSync(stuck)).toBe(true);
+    expect(existsSync(stale)).toBe(false);
+    expect(readFileSync(debugLog(), "utf-8")).toContain("ERROR sweepStaleHandoffs:file:");
+  });
+
+  test.skipIf(process.platform === "win32")(
+    "does not log an entry that vanished before it was read",
+    async () => {
+      mkdirSync(handoffDir(), { recursive: true });
+      linkFile(resolve(HOME, "gone.txt"), resolve(handoffDir(), "dangling.txt"));
+
+      await runStopHandlers(longTranscript(), { sessionId: "handoff-vanished" });
+
+      const log = existsSync(debugLog()) ? readFileSync(debugLog(), "utf-8") : "";
+      expect(log).not.toContain("sweepStaleHandoffs");
+    }
+  );
 });
 
 describe("a hand-off folder that cannot be used", () => {
@@ -128,9 +161,8 @@ describe("a hand-off folder that cannot be used", () => {
       runStopHandlers(longTranscript(), { sessionId: "handoff-broken" })
     ).resolves.toBeUndefined();
 
-    const log = resolve(HOME, "debug", "debug.log");
-    expect(existsSync(log)).toBe(true);
-    expect(readFileSync(log, "utf-8")).toContain("ERROR");
+    expect(existsSync(debugLog())).toBe(true);
+    expect(readFileSync(debugLog(), "utf-8")).toContain("ERROR sweepStaleHandoffs: ");
     expect(readdirSync(OS_TMP)).toEqual([]);
   });
 });
