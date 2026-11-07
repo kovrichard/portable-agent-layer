@@ -46,6 +46,16 @@ Inside Claude Code the plugin folder is `${CLAUDE_PLUGIN_ROOT}`.
 - A rerun on a clean worktree skips the code, review and tester steps already finished at its current commit.
 - `node scripts/task.mjs show <id>` tells where it is.
 
+### One step at a time
+
+A PO session can run the build's deterministic checks one at a time with `node <plugin folder>/scripts/step.mjs <command> <task-id>`. Each command uses the build's own functions, reads the worktree, base and gate from `task.json`, and prints one JSON line. It exits 0 when the check passes and 1 when it fails or the task or its worktree is missing; a missing command or task id prints the usage line and exits 2.
+
+- `baseline` runs the tests and records `tests_baseline`. It prints `{"failing": N}`, or `{"failing": null, "message": "…"}` when the run reports no count.
+- `prove-red` checks that the new tests fail more than at the latest baseline and records `tests_red`. It prints `{"ok": true}`, or `{"ok": false, "message": "…"}`.
+- `snapshot` records the worktree's `tree_snapshot`. It prints `{"tree": "<sha>"}`.
+- `test-edits` lists the test files changed or deleted since the latest `tree_snapshot`, and records nothing. It prints `{"files": []}` when none changed, or `{"files": [...]}` with exit 1.
+- `unplanned` lists the changed files that no task document names, and records nothing. It prints `{"files": [...]}`.
+
 ## Roles
 
 | Role | Model | Job |
