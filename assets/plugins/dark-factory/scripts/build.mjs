@@ -873,6 +873,14 @@ function restoreTestEdits(run, start, fixesFrom, edits) {
   return stuck(testEditsAgainMessage(again.edits.map((edit) => edit.file)));
 }
 
+function guardedFixLadder(run, ladder, instructions, reason, what) {
+  const start = worktreeFingerprint(run);
+  if (start === null) return stuck(FINGERPRINT_UNREADABLE);
+  const fixesFrom = run.testFixTrees.length;
+  const fixed = untilGreen(run, ladder, instructions, reason);
+  return fixStop(fixed, what) ?? testEditsStep(run, start, fixesFrom);
+}
+
 function rolesAfterStep(run) {
   const { roles, added } = rolesAfterChanges(
     run.category,
@@ -1079,13 +1087,13 @@ function unplannedFilesStep(run) {
 }
 
 function reviewFindingsStep(run, findings) {
-  const fixed = untilGreen(
+  return guardedFixLadder(
     run,
     FIX_LADDER,
     `Fix these review findings:\n${JSON.stringify(findings, null, 2)}`,
-    "review-findings"
+    "review-findings",
+    "review findings"
   );
-  return fixStop(fixed, "review findings");
 }
 
 function reviewInstructions(run) {
@@ -1128,13 +1136,13 @@ function testerStep(run) {
   const unmet = unmetCriteria(tested);
   appendEvent({ event: "test", task: run.id, unmet: unmet.length }, run.env);
   if (unmet.length === 0) return null;
-  const fixed = untilGreen(
+  return guardedFixLadder(
     run,
     FIX_LADDER,
     `The tester found unmet criteria in the running app:\n${JSON.stringify(unmet, null, 2)}`,
-    "unmet-criteria"
+    "unmet-criteria",
+    "tester findings"
   );
-  return fixStop(fixed, "tester findings");
 }
 
 function syncStep(run) {
@@ -1179,13 +1187,13 @@ function ciSummary(ci) {
 }
 
 function ciFixStep(run, ci) {
-  const fixed = untilGreen(
+  return guardedFixLadder(
     run,
     CI_FIX_LADDER,
     `CI failed on the pull request: ${ciSummary(ci)}. Read the failing logs with gh run view and fix the cause.`,
-    "ci-failed"
+    "ci-failed",
+    "CI failures"
   );
-  return fixStop(fixed, "CI failures");
 }
 
 function unfinishedCiStop(ci) {
