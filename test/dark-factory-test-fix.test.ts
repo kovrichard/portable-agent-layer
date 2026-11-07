@@ -26,16 +26,23 @@ const EDITS: RoleStep = { editsModifiedFile: true };
 type Setup = {
   roles: Record<string, RoleStep[]>;
   treeDiff?: string[];
-  writeTreeFails?: boolean;
+  writeTreeFailsFrom?: number;
 };
 
 function scenario(setup: Setup) {
   const world = buildWorld(import.meta.file, { roles: setup.roles });
   const effects = world.effects as Record<string, (...args: never[]) => unknown>;
   const realSpawn = effects.spawnTool as (c: string, a: string[]) => unknown;
+  let writeTreeCalls = 0;
   effects.spawnTool = ((command: string, args: string[]) => {
-    if (command === "git" && args[0] === "write-tree" && setup.writeTreeFails)
-      return { status: 128, stdout: "", stderr: "fatal" };
+    if (command === "git" && args[0] === "write-tree") {
+      writeTreeCalls += 1;
+      if (
+        setup.writeTreeFailsFrom !== undefined &&
+        writeTreeCalls >= setup.writeTreeFailsFrom
+      )
+        return { status: 128, stdout: "", stderr: "fatal" };
+    }
     if (
       command === "git" &&
       args[0] === "diff" &&
@@ -263,10 +270,23 @@ describe("the scope check after the test writer", () => {
         po: [{ reply: FIX_REPLY }],
         "test-writer": [EDITS],
       },
-      writeTreeFails: true,
+      writeTreeFailsFrom: 2,
     });
-    expect(run(world).status).toBe("stuck");
+    const result = run(world);
+    expect(result.status).toBe("stuck");
+    expect(result.message).toContain("could not fingerprint the worktree");
     expect(names(world).filter((role) => role === "code-writer")).toHaveLength(1);
+  });
+
+  test("an unreadable fingerprint before the code step is stuck and the code writer never runs", () => {
+    const world = scenario({
+      roles: { "code-writer": [{ codes: true }] },
+      writeTreeFailsFrom: 1,
+    });
+    const result = run(world);
+    expect(result.status).toBe("stuck");
+    expect(result.message).toContain("could not fingerprint the worktree");
+    expect(names(world)).not.toContain("code-writer");
   });
 });
 
