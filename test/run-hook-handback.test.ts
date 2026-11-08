@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { factoryHandbackSkip } from "../.agents/hooks/run-hook";
+import { factoryHandbackSkip, factorySubagentSkip } from "../.agents/hooks/run-hook";
 
 const finished = {
   tool_name: "StructuredOutput",
@@ -56,5 +56,55 @@ describe("factoryHandbackSkip", () => {
   test("a blank question does not count as a question", () => {
     const blank = { ...finished, tool_input: { done: true, question: "  " } };
     expect(factoryHandbackSkip(blank, "code-writer", false)).toBeNull();
+  });
+});
+
+const subagentStop = (agentType: string) => ({
+  hook_event_name: "SubagentStop",
+  agent_type: agentType,
+});
+
+describe("factorySubagentSkip", () => {
+  test("a test-writer subagent skips the gates that need the code", () => {
+    expect(factorySubagentSkip(subagentStop("dark-factory:test-writer"), true)).toBe(
+      "skipped: the test writer's tests come before the code this gate checks"
+    );
+  });
+
+  test("a test-writer subagent runs the gates that need no code", () => {
+    expect(
+      factorySubagentSkip(subagentStop("dark-factory:test-writer"), false)
+    ).toBeNull();
+  });
+
+  test("code-writer and debugger subagents run every gate", () => {
+    for (const role of ["code-writer", "debugger"]) {
+      expect(factorySubagentSkip(subagentStop(`dark-factory:${role}`), true)).toBeNull();
+    }
+  });
+
+  test("factory subagents that write no files are skipped", () => {
+    for (const role of ["reviewer", "planner", "tester", "architect", "po"]) {
+      expect(factorySubagentSkip(subagentStop(`dark-factory:${role}`), false)).toBe(
+        "skipped: not a factory role that writes files"
+      );
+    }
+  });
+
+  test("a factory subagent's own handback follows the same rules", () => {
+    const handback = {
+      tool_name: "SubagentHandback",
+      agent_type: "dark-factory:test-writer",
+    };
+    expect(factorySubagentSkip(handback, true)).toBe(
+      "skipped: the test writer's tests come before the code this gate checks"
+    );
+  });
+
+  test("a subagent outside the factory, or no subagent, is never skipped here", () => {
+    expect(factorySubagentSkip(subagentStop("general-purpose"), true)).toBeNull();
+    expect(factorySubagentSkip(subagentStop("Explore"), false)).toBeNull();
+    expect(factorySubagentSkip({ hook_event_name: "SubagentStop" }, true)).toBeNull();
+    expect(factorySubagentSkip({}, true)).toBeNull();
   });
 });

@@ -182,6 +182,25 @@ describe("run-hook clean-worktree skip", () => {
     expect(runAs("reviewer").status).toBe(0);
   });
 
+  test("a build-with-agents subagent's stop is gated by the role in its agent_type", () => {
+    const dir = makeRepo("factory-subagent-stop");
+    writeFileSync(resolve(dir, "tracked.txt"), "changed\n");
+    const { DARK_FACTORY_ROLE: _unset, ...envWithoutRole } = process.env;
+    const stopAs = (agentType: string, ...flags: string[]) =>
+      spawnSync("bun", ["run", HOOK, ...flags, "exit", "3"], {
+        cwd: dir,
+        encoding: "utf-8",
+        input: JSON.stringify({ hook_event_name: "SubagentStop", agent_type: agentType }),
+        env: envWithoutRole,
+      });
+
+    expect(stopAs("dark-factory:test-writer", "--needs-code").status).toBe(0);
+    expect(stopAs("dark-factory:test-writer").status).toBe(2);
+    expect(stopAs("dark-factory:code-writer", "--needs-code").status).toBe(2);
+    expect(stopAs("dark-factory:reviewer").status).toBe(0);
+    expect(stopAs("general-purpose", "--needs-code").status).toBe(2);
+  });
+
   test("a clean worktree skips a gate that would otherwise fail", () => {
     const dir = makeRepo("clean-failing");
 
