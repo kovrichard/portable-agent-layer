@@ -8,6 +8,7 @@
  */
 
 import { injectPromptContext } from "./handlers/inject-retrieval";
+import { recordCompactionNear } from "./lib/compaction-near";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { startHookTiming } from "./lib/hook-timing";
 import { type HookTurnPayload, hookSessionId } from "./lib/hook-turn";
@@ -27,6 +28,7 @@ interface PromptSubmitInput extends HookTurnPayload {
 
 const input = await readStdinJSON<PromptSubmitInput>();
 logDebug("UserPromptOrchestrator", `Input: ${JSON.stringify(input).slice(0, 200)}`);
+recordCompactionNear(input);
 if (!input?.prompt) process.exit(0);
 
 const timing = startHookTiming("prompt");

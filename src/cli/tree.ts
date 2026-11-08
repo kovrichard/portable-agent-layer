@@ -14,6 +14,7 @@ import {
   type OptionSpecs,
 } from "../tools/lib/command";
 import { builtinTools, builtinToolVerbs } from "./builtin-tools";
+import { compactionCommand } from "./compaction";
 import { contentCommand } from "./content";
 import { correctionCommand } from "./correction";
 import { costCommand } from "./cost";
@@ -193,6 +194,7 @@ export function cliTree(admin: AdminHandlers): Group {
       ledger: ledgerCommand,
       rule: ruleCommand,
       correction: correctionCommand,
+      compaction: compactionCommand,
       progress: progressCommand,
       timebox: timeboxCommand,
       unattended: unattendedCommand,
