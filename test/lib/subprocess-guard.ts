@@ -53,10 +53,32 @@ function guardChildProcess() {
   mock.module("child_process", () => guarded);
 }
 
+function withCurrentEnv(
+  options: Record<string, unknown> | undefined
+): Record<string, unknown> {
+  const given = options ?? {};
+  return given.env === undefined ? { ...given, env: process.env } : given;
+}
+
+function defaultToCurrentEnv<T extends (...args: never[]) => unknown>(real: T): T {
+  const call = real as unknown as (...args: unknown[]) => unknown;
+  return ((...args: unknown[]) => {
+    if (Array.isArray(args[0])) {
+      return call(
+        args[0],
+        withCurrentEnv(args[1] as Record<string, unknown> | undefined)
+      );
+    }
+    return call(withCurrentEnv(args[0] as Record<string, unknown> | undefined));
+  }) as unknown as T;
+}
+
 function guardBunSpawn() {
-  Bun.spawn = refuseOutsideSpawnFiles(Bun.spawn.bind(Bun)) as typeof Bun.spawn;
+  Bun.spawn = refuseOutsideSpawnFiles(
+    defaultToCurrentEnv(Bun.spawn.bind(Bun))
+  ) as typeof Bun.spawn;
   Bun.spawnSync = refuseOutsideSpawnFiles(
-    Bun.spawnSync.bind(Bun)
+    defaultToCurrentEnv(Bun.spawnSync.bind(Bun))
   ) as typeof Bun.spawnSync;
 }
 

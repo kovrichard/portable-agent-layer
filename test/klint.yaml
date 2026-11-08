@@ -26,6 +26,7 @@ arch:
 
   forbidden:
     # The server-cli suite's detached server outlives the run, so only afterAll can stop the last test's one.
+    # setup.ts is the framework's single cleanup point: it removes the run's temp folder.
     - pattern: 're:\b(afterEach|afterAll)\b'
-      in: [".", "!server-cli.spawn.test.ts"]
-      message: "Tests only set up, never tear down: undo the previous test's state at the start of beforeEach instead."
+      in: [".", "!server-cli.spawn.test.ts", "!setup.ts"]
+      message: "Tests only set up for themselves, never tear down: undo the previous test's state at the start of beforeEach. Cleanup belongs in the framework's afterAll in test/setup.ts."
