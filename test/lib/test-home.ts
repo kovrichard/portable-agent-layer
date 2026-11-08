@@ -6,8 +6,46 @@ import { removeOnceReleased } from "./remove-once-released";
 export const TEST_ROOT =
   process.env.PAL_TEST_ROOT ?? resolve(import.meta.dir, "../../.test");
 
+const checkout = Bun.hash(TEST_ROOT).toString(36);
+const TEMP_PREFIX = `pal-test-${checkout}-`;
+let ownTemp: string | undefined;
+
 function suiteName(file: string): string {
   return basename(file).replace(/\.test\.ts$/, "");
+}
+
+function processIsGone(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return false;
+  } catch (err) {
+    return (err as NodeJS.ErrnoException).code === "ESRCH";
+  }
+}
+
+/**
+ * Points TMPDIR, TMP and TEMP at a folder this test process owns, and removes the
+ * folders left by runs whose process is gone. Called from test/setup.ts before each file.
+ */
+export function redirectTempIntoTestFolder(): void {
+  const systemTmp = tmpdir();
+  for (const name of readdirSync(systemTmp)) {
+    if (!name.startsWith(TEMP_PREFIX)) continue;
+    const pid = Number(name.slice(TEMP_PREFIX.length));
+    if (Number.isInteger(pid) && processIsGone(pid)) {
+      removeOnceReleased(resolve(systemTmp, name));
+    }
+  }
+  ownTemp = resolve(systemTmp, `${TEMP_PREFIX}${process.pid}`);
+  mkdirSync(ownTemp, { recursive: true });
+  process.env.TMPDIR = ownTemp;
+  process.env.TMP = ownTemp;
+  process.env.TEMP = ownTemp;
+}
+
+/** Removes the folder redirectTempIntoTestFolder() created. The preload in test/setup.ts calls it at the end of each file. */
+export function removeTestTempFolder(): void {
+  if (ownTemp) removeOnceReleased(ownTemp);
 }
 
 /** A fixed folder for this suite under .test/, so a rerun reuses it instead of piling up. */
@@ -17,11 +55,11 @@ export function testHome(file: string, label = "home"): string {
 
 /**
  * A fixed folder for this suite with no project above it, for code that walks up
- * to the nearest .git or package.json. Keyed by checkout so Stryker sandboxes never share one.
+ * to the nearest .git or package.json. It lives in the run's temp folder, which the
+ * framework removes at the end of each file, so nothing stays in the system temp folder.
  */
 export function outsideRepoHome(file: string): string {
-  const checkout = Bun.hash(TEST_ROOT).toString(36);
-  return resolve(tmpdir(), `pal-test-${checkout}`, suiteName(file));
+  return resolve(tmpdir(), suiteName(file));
 }
 
 /** What the previous run's freshTestDir() handed out, until this run's first call wipes it. */

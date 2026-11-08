@@ -53,7 +53,7 @@ bun test --test-name-pattern "scaffolds telos"  # one test by name
 
 A test that starts a subprocess (`Bun.spawn`, `node:child_process`) lives in a `*.spawn.test.ts` file; anywhere else the `test/setup.ts` preload fails it, which keeps `--fast` fast.
 
-Run the CLI against a sandboxed home with `PAL_HOME=./.test/cli.spawn/home bun src/cli/index.ts cli init`. `.test/cli.spawn/home/` is wiped at the start of `bun test test/cli.spawn.test.ts`. Every test home lives under `.test/`, one folder per test file, built by `test/lib/test-home.ts`.
+Run the CLI against a sandboxed home with `PAL_HOME=./.test/cli.spawn/home bun src/cli/index.ts cli init`. `.test/cli.spawn/home/` is wiped at the start of `bun test test/cli.spawn.test.ts`. Every test home lives under `.test/`, one folder per test file, built by `test/lib/test-home.ts`. Tests set up only for themselves and never tear down; the framework (`test/setup.ts`) points `TMPDIR` at a per-process folder and removes it in `afterAll`, so a run, passing or failing, leaves nothing in the system temp folder. A run killed before `afterAll` has its folder removed by the next run.
 
 The control room's page is the one part of `src/` that is built rather than served from source: Bun's CSS bundler passes Tailwind's `@theme` / `@utility` directives through as unknown at-rules, so `vite.config.ts` builds `src/tools/control-room/ui/` into `ui/dist/`, which is gitignored and emitted at `prepack`.
 
