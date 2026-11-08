@@ -24,7 +24,7 @@ The scripts live in `${CLAUDE_PLUGIN_ROOT}/scripts`; run them with `node`, witho
   - for a fix-ladder rung, an answer or a continued subagent: the step command's output, the gate's failed checks, the reviewer's findings or the PO's answer, pasted verbatim.
 
   Nothing else. Never add what to focus on, what an earlier role reported, what to confirm, or that findings are optional: a reviewer told what to check checks only that.
-- Before every Agent and `SendMessage` call, record the exact prompt: `node $S/task.mjs handover <id> <role> <reason>` with the prompt on stdin, where reason is `pipeline`, `plan-gate`, `plan-findings`, `gate-failed`, `test-fix`, `review-findings`, `ci-failed`, `question` or `po-answer`, as `build.mjs` names them.
+- Before every Agent and `SendMessage` call, record the exact prompt: `node $S/task.mjs handover <id> <role> <reason> <model>` with the prompt on stdin, where model is the one the step names and reason is `pipeline`, `plan-gate`, `plan-findings`, `gate-failed`, `test-fix`, `review-findings`, `ci-failed`, `question` or `po-answer`, as `build.mjs` names them.
 - When a role's reply asks a question, answer it yourself from the spec, the code and what you know about the user, add the answer to the spec under **Decisions**, and continue the same subagent with `SendMessage`. When you rule that a test is wrong, start `dark-factory:test-writer` to fix only that test, then continue the role that asked. Ask the user only what nothing settles, once, with your recommended answer, and wait.
 - Record every role run: `node $S/task.mjs status <id> running "<role>: <one line>"`.
 
@@ -60,8 +60,8 @@ The task's category decides the roles before and after the code (`roles.mjs` `CA
 
 Every fix ladder from here on (the reviewer's findings, the tester's unmet criteria and the CI failures) is guarded like the code ladder: run `node $S/step.mjs snapshot <id>` once before the ladder's first rung, not before each rung, and `node $S/step.mjs test-edits <id>` after the ladder passes the gate. Handle a non-zero exit of `test-edits` as step 2.3 does.
 
-- **reviewer** (sonnet), up to 2 rounds: "Review the branch diff against its base and the spec." Each finding goes to the fix ladder, then the gate.
-- **tester** (sonnet): "Test every acceptance criterion in the running app." Each unmet criterion goes to the fix ladder, then the gate.
+- **reviewer** (sonnet), up to 2 rounds: "Review the branch diff against its base and the spec." Record the round: `node $S/task.mjs review <id> <round> <findings>`. Each finding goes to the fix ladder, then the gate.
+- **tester** (sonnet): "Test every acceptance criterion in the running app." Record it: `node $S/task.mjs test <id> <unmet>`. Each unmet criterion goes to the fix ladder, then the gate.
 
 ### 4. Ship
 
