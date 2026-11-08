@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, resolve } from "node:path";
+import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
 import { removeOnceReleased } from "./remove-once-released";
 
 export const TEST_ROOT =
@@ -43,9 +43,13 @@ export function redirectTempIntoTestFolder(): void {
   process.env.TEMP = ownTemp;
 }
 
-/** Removes the folder redirectTempIntoTestFolder() created. The preload in test/setup.ts calls it once per test process, after the last test. */
+/** Removes the folder redirectTempIntoTestFolder() created, leaving it first if a test chdir'd into it: Windows cannot delete a working directory. */
 export function removeTestTempFolder(): void {
-  if (ownTemp) removeOnceReleased(ownTemp);
+  if (!ownTemp) return;
+  const fromTemp = relative(ownTemp, process.cwd());
+  if (!fromTemp.startsWith("..") && !isAbsolute(fromTemp))
+    process.chdir(dirname(ownTemp));
+  removeOnceReleased(ownTemp);
 }
 
 /** A fixed folder for this suite under .test/, so a rerun reuses it instead of piling up. */
