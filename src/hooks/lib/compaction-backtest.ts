@@ -21,6 +21,7 @@ export interface WindowEntry {
 export interface BacktestLabels {
   threshold: number;
   idle: number;
+  no_context: number;
   unexplained: number;
 }
 
@@ -54,7 +55,7 @@ interface Segment {
   end: Ending | null;
 }
 
-type Label = "threshold" | "idle" | "unexplained";
+type Label = "threshold" | "idle" | "no_context" | "unexplained";
 
 interface SessionItem {
   ts: number;
@@ -147,13 +148,16 @@ function labelOf(segment: Segment, windowAt: WindowAt): Label | null {
     const point = compactionPoint(compactionInput(model, window));
     if (
       point - THRESHOLD_SLACK_TOKENS <= end.contextTokens &&
-      end.contextTokens <= point
+      end.contextTokens <= point + THRESHOLD_SLACK_TOKENS
     ) {
       return "threshold";
     }
   }
   const previous = end.previousCall;
   if (previous && end.ts - previous.ts >= IDLE_LABEL_AFTER_MS) return "idle";
+  if (typeof end.contextTokens !== "number" || end.contextTokens === 0) {
+    return "no_context";
+  }
   return "unexplained";
 }
 
@@ -221,7 +225,7 @@ export function backtestCompaction(
     segment,
     label: labelOf(segment, windowAt),
   }));
-  const labels: BacktestLabels = { threshold: 0, idle: 0, unexplained: 0 };
+  const labels: BacktestLabels = { threshold: 0, idle: 0, no_context: 0, unexplained: 0 };
   for (const { label } of scored) if (label) labels[label]++;
   return {
     labels,

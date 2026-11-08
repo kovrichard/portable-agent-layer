@@ -88,7 +88,7 @@ async function backtest(...args: string[]) {
 
 function json() {
   return JSON.parse(printed[0] ?? "{}") as {
-    labels: { threshold: number; idle: number; unexplained: number };
+    labels: { threshold: number; idle: number; unexplained: number; no_context: number };
     rows: Record<string, number | null>[];
   };
 }
@@ -99,7 +99,12 @@ describe("pal cli compaction backtest", () => {
     const { code } = await backtest("--window", "500000", "--json");
     expect(code).toBe(0);
     const result = json();
-    expect(result.labels).toEqual({ threshold: 2, idle: 1, unexplained: 1 });
+    expect(result.labels).toEqual({
+      threshold: 2,
+      idle: 1,
+      unexplained: 1,
+      no_context: 0,
+    });
     expect(result.rows).toHaveLength(1);
     expect(result.rows[0]).toMatchObject({
       margin: 0.2,
@@ -154,14 +159,24 @@ describe("pal cli compaction backtest", () => {
   test("a threshold compaction with no model calls counts as missed, not idle", async () => {
     compaction("bare", 5, "auto", 465_000);
     await backtest("--window", "500000", "--json");
-    expect(json().labels).toEqual({ threshold: 1, idle: 0, unexplained: 0 });
+    expect(json().labels).toEqual({
+      threshold: 1,
+      idle: 0,
+      unexplained: 0,
+      no_context: 0,
+    });
     expect(json().rows[0]).toMatchObject({ warned: 0, missed: 1 });
   });
 
   test("a compaction with no previous call and no threshold match is unexplained", async () => {
     compaction("bare", 5, "auto", 150_000);
     await backtest("--window", "500000", "--json");
-    expect(json().labels).toEqual({ threshold: 0, idle: 0, unexplained: 1 });
+    expect(json().labels).toEqual({
+      threshold: 0,
+      idle: 0,
+      unexplained: 1,
+      no_context: 0,
+    });
   });
 
   test("the same history scores differently under two window schedules", async () => {
@@ -217,7 +232,12 @@ describe("pal cli compaction backtest", () => {
   test("--days excludes older history", async () => {
     seedHistory();
     await backtest("--window", "500000", "--days", "1", "--json");
-    expect(json().labels).toEqual({ threshold: 0, idle: 0, unexplained: 0 });
+    expect(json().labels).toEqual({
+      threshold: 0,
+      idle: 0,
+      unexplained: 0,
+      no_context: 0,
+    });
   });
 
   test("an empty history reports zeros without error", async () => {

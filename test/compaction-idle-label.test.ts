@@ -36,14 +36,29 @@ async function labelsAfterGap(gapMinutes: number) {
 
 describe("idle label cutoff is 52 minutes", () => {
   test("a compaction 53.9 minutes after the previous call is idle", async () => {
-    expect(await labelsAfterGap(53.9)).toEqual({ threshold: 0, idle: 1, unexplained: 0 });
+    expect(await labelsAfterGap(53.9)).toEqual({
+      threshold: 0,
+      idle: 1,
+      unexplained: 0,
+      no_context: 0,
+    });
   });
 
   test("a compaction exactly 52 minutes after the previous call is idle", async () => {
-    expect(await labelsAfterGap(52)).toEqual({ threshold: 0, idle: 1, unexplained: 0 });
+    expect(await labelsAfterGap(52)).toEqual({
+      threshold: 0,
+      idle: 1,
+      unexplained: 0,
+      no_context: 0,
+    });
   });
 
   test("a compaction 51 minutes after the previous call is unexplained", async () => {
-    expect(await labelsAfterGap(51)).toEqual({ threshold: 0, idle: 0, unexplained: 1 });
+    expect(await labelsAfterGap(51)).toEqual({
+      threshold: 0,
+      idle: 0,
+      unexplained: 1,
+      no_context: 0,
+    });
   });
 });

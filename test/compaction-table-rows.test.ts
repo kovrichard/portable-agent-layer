@@ -361,7 +361,7 @@ describe("compaction backtest table rows", () => {
   const MIN = 60_000;
   const BASE = Date.now() - 3 * 86_400_000;
   const at = (minute: number) => new Date(BASE + minute * MIN).toISOString();
-  const ZERO_LABELS = { threshold: 0, idle: 0, unexplained: 0 };
+  const ZERO_LABELS = { threshold: 0, idle: 0, unexplained: 0, no_context: 0 };
   const LEAD_START = 380_000;
 
   function call(
@@ -422,7 +422,12 @@ describe("compaction backtest table rows", () => {
 
   function json() {
     return JSON.parse(printed[0] ?? "{}") as {
-      labels: { threshold: number; idle: number; unexplained: number };
+      labels: {
+        threshold: number;
+        idle: number;
+        unexplained: number;
+        no_context: number;
+      };
       rows: Record<string, number | null>[];
     };
   }
@@ -614,35 +619,35 @@ describe("compaction backtest table rows", () => {
         [],
         [compactionEvent(20, "auto", 462_000)],
         500_000,
-        { threshold: 1, idle: 0, unexplained: 0 },
+        { threshold: 1, idle: 0, unexplained: 0, no_context: 0 },
       ],
       [
         "auto 250000 after a call 100 min earlier is idle",
         [call1(0, 100_000)],
         [compactionEvent(100, "auto", 250_000)],
         500_000,
-        { threshold: 0, idle: 1, unexplained: 0 },
+        { threshold: 0, idle: 1, unexplained: 0, no_context: 0 },
       ],
       [
         "auto 150000 after a call 10 min earlier is unexplained",
         [call1(0, 100_000)],
         [compactionEvent(10, "auto", 150_000)],
         500_000,
-        { threshold: 0, idle: 0, unexplained: 1 },
+        { threshold: 0, idle: 0, unexplained: 1, no_context: 0 },
       ],
       [
         "auto 150000 with no previous call is unexplained",
         [],
         [compactionEvent(20, "auto", 150_000)],
         500_000,
-        { threshold: 0, idle: 0, unexplained: 1 },
+        { threshold: 0, idle: 0, unexplained: 1, no_context: 0 },
       ],
       [
-        "auto 470000 above the point after a call 10 min earlier is unexplained",
+        "auto 470000 above the point after a call 10 min earlier is threshold",
         [call1(0, 100_000)],
         [compactionEvent(10, "auto", 470_000)],
         500_000,
-        { threshold: 0, idle: 0, unexplained: 1 },
+        { threshold: 1, idle: 0, unexplained: 0, no_context: 0 },
       ],
       [
         "manual 465000 is not labelled",
@@ -656,7 +661,7 @@ describe("compaction backtest table rows", () => {
         [call1(0, 100_000)],
         [compactionEvent(40, "auto", 462_000)],
         300_000,
-        { threshold: 0, idle: 0, unexplained: 1 },
+        { threshold: 0, idle: 0, unexplained: 1, no_context: 0 },
       ],
     ])("%s", async (_name, calls, compactions, window, expected) => {
       const { backtestCompaction } = await backtestLib();

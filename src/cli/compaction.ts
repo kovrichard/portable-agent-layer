@@ -75,7 +75,8 @@ function formatRow(row: BacktestRow): string {
 }
 
 function formatLabels(labels: BacktestLabels): string {
-  return `auto compactions: ${labels.threshold} threshold, ${labels.idle} idle, ${labels.unexplained} unexplained`;
+  const noContext = labels.no_context > 0 ? `, ${labels.no_context} no_context` : "";
+  return `auto compactions: ${labels.threshold} threshold, ${labels.idle} idle${noContext}, ${labels.unexplained} unexplained`;
 }
 
 function cmdBacktest(values: {
