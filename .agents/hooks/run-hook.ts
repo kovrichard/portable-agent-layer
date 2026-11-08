@@ -24,7 +24,30 @@ const FACTORY_ROLES_THAT_WRITE = ["test-writer", "code-writer", "debugger"];
 type HookInput = {
   tool_name?: unknown;
   tool_input?: { done?: unknown; question?: unknown };
+  hook_event_name?: unknown;
+  agent_type?: unknown;
 };
+
+const FACTORY_AGENT_PREFIX = "dark-factory:";
+const TESTS_BEFORE_CODE =
+  "skipped: the test writer's tests come before the code this gate checks";
+
+function factorySubagentRole(input: HookInput): string | null {
+  const agentType = input.agent_type;
+  if (typeof agentType !== "string" || !agentType.startsWith(FACTORY_AGENT_PREFIX))
+    return null;
+  return agentType.slice(FACTORY_AGENT_PREFIX.length);
+}
+
+/** A build-with-agents role is a subagent, so its role comes from the hook input's agent_type, not DARK_FACTORY_ROLE. */
+export function factorySubagentSkip(input: HookInput, needsCode: boolean): string | null {
+  const role = factorySubagentRole(input);
+  if (role === null) return null;
+  if (!FACTORY_ROLES_THAT_WRITE.includes(role))
+    return "skipped: not a factory role that writes files";
+  if (role === "test-writer" && needsCode) return TESTS_BEFORE_CODE;
+  return null;
+}
 
 function asksAQuestion(result: { question?: unknown }): boolean {
   return typeof result.question === "string" && result.question.trim() !== "";
@@ -42,8 +65,7 @@ export function factoryHandbackSkip(
   const result = input.tool_input ?? {};
   if (result.done !== true) return "skipped: the role is not done, so the build decides";
   if (asksAQuestion(result)) return "skipped: the role asks the PO a question";
-  if (role === "test-writer" && needsCode)
-    return "skipped: the test writer's tests come before the code this gate checks";
+  if (role === "test-writer" && needsCode) return TESTS_BEFORE_CODE;
   return null;
 }
 
@@ -70,10 +92,10 @@ function hookInput(): HookInput {
 }
 
 function handbackSkipFromProcess(): string | null {
-  return factoryHandbackSkip(
-    hookInput(),
-    process.env.DARK_FACTORY_ROLE,
-    process.argv.includes(NEEDS_CODE_FLAG)
+  const needsCode = process.argv.includes(NEEDS_CODE_FLAG);
+  return (
+    factoryHandbackSkip(hookInput(), process.env.DARK_FACTORY_ROLE, needsCode) ??
+    factorySubagentSkip(hookInput(), needsCode)
   );
 }
 
