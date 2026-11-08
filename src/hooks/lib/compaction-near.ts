@@ -241,6 +241,13 @@ export function recordIdleCompactionNear(payload: CompactionHookPayload | null):
     if (contextTokens === null) return;
     const idleMinTokens = idleCompactMinTokens(process.env);
     if (contextTokens < idleMinTokens) return;
+    const settingsFiles = claudeSettingsFiles(
+      hookProjectDir(payload),
+      platform.claudeDir(),
+      process.platform
+    );
+    if (settingsFiles.some((file) => readJsonObject(file).idleCompaction === false))
+      return;
     appendEvent(
       "compaction_near",
       { mode: "shadow", trigger: "idle", contextTokens, idleMinTokens, predicted: true },
