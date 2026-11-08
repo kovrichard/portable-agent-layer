@@ -290,7 +290,7 @@ function writeTrack(session: string, track: SessionTrack): void {
     .sort(([, a], [, b]) => b.updated.localeCompare(a.updated))
     .slice(0, MAX_TRACKED_SESSIONS);
   const pending = `${tracksFile()}.${process.pid}.tmp`;
-  writeFileSync(pending, JSON.stringify(Object.fromEntries(kept)), "utf-8");
+  writeFileSync(pending, JSON.stringify(Object.fromEntries(kept)));
   renameSync(pending, tracksFile());
 }
 
