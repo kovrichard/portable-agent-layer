@@ -114,7 +114,7 @@ describe("a factory subagent that stops", () => {
     const reply = JSON.parse(
       readFileSync(join(taskDir(id, env), finished.reply.file), "utf8")
     );
-    expect(finished.reply.file).toBe("replies/001-code-writer.json");
+    expect(finished.reply.file).toBe(join("replies", "001-code-writer.json"));
     expect(reply).toEqual({
       result: "Implemented the change; the gate passes.",
       structured: null,
