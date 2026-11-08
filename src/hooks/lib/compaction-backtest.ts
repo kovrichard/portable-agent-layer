@@ -10,6 +10,8 @@ import { median } from "./interaction-mood";
 
 const THRESHOLD_SLACK_TOKENS = 8_000;
 const MINUTE_MS = 60_000;
+const IDLE_LABEL_SLACK_MS = 2 * MINUTE_MS;
+const IDLE_LABEL_AFTER_MS = IDLE_COMPACT_AFTER_MS - IDLE_LABEL_SLACK_MS;
 
 export interface WindowEntry {
   tokens: number;
@@ -151,7 +153,7 @@ function labelOf(segment: Segment, windowAt: WindowAt): Label | null {
     }
   }
   const previous = end.previousCall;
-  if (previous && end.ts - previous.ts >= IDLE_COMPACT_AFTER_MS) return "idle";
+  if (previous && end.ts - previous.ts >= IDLE_LABEL_AFTER_MS) return "idle";
   return "unexplained";
 }
 
