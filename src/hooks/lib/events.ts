@@ -160,6 +160,18 @@ export const EVENT_FIELDS = {
     "thresholdBytes",
     "idioms",
   ],
+  compaction_near: [
+    "mode",
+    "trigger",
+    "contextTokens",
+    "windowTokens",
+    "windowSource",
+    "compactAtTokens",
+    "tokensLeft",
+    "marginTokens",
+    "predicted",
+    "idleMinTokens",
+  ],
 } as const satisfies Record<string, readonly string[]>;
 
 export type EventType = keyof typeof EVENT_FIELDS;
