@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { observeTurn, recordReply, type TurnEvent } from "../src/hooks/lib/interaction";
 import {
@@ -119,6 +119,20 @@ describe("measuring a turn", () => {
       words: 7,
     });
     expect(JSON.stringify(reply)).not.toContain("the answer");
+  });
+
+  test("the session tracks are replaced in one step, so a reader never sees half a file", () => {
+    const tracks = resolve(TEST_HOME, "memory", "state", "interaction-sessions.json");
+    observeTurn("first question here", "s1", T0);
+    recordReply("s1", "an answer", at(10));
+    const before = statSync(tracks).ino;
+
+    recordReply("s1", "a second answer", at(20));
+
+    expect(statSync(tracks).ino).not.toBe(before);
+    expect(readdirSync(resolve(TEST_HOME, "memory", "state"))).not.toContainEqual(
+      expect.stringContaining(".tmp")
+    );
   });
 
   test("a reply names the id of the turn it answered", () => {
