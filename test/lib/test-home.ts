@@ -25,7 +25,7 @@ function processIsGone(pid: number): boolean {
 
 /**
  * Points TMPDIR, TMP and TEMP at a folder this test process owns, and removes the
- * folders left by runs whose process is gone. Called from test/setup.ts before each file.
+ * folders left by runs whose process is gone. Called from test/setup.ts once per test process.
  */
 export function redirectTempIntoTestFolder(): void {
   const systemTmp = tmpdir();
@@ -43,7 +43,7 @@ export function redirectTempIntoTestFolder(): void {
   process.env.TEMP = ownTemp;
 }
 
-/** Removes the folder redirectTempIntoTestFolder() created. The preload in test/setup.ts calls it at the end of each file. */
+/** Removes the folder redirectTempIntoTestFolder() created. The preload in test/setup.ts calls it once per test process, after the last test. */
 export function removeTestTempFolder(): void {
   if (ownTemp) removeOnceReleased(ownTemp);
 }
@@ -56,7 +56,7 @@ export function testHome(file: string, label = "home"): string {
 /**
  * A fixed folder for this suite with no project above it, for code that walks up
  * to the nearest .git or package.json. It lives in the run's temp folder, which the
- * framework removes at the end of each file, so nothing stays in the system temp folder.
+ * framework removes when the test process ends, so nothing stays in the system temp folder.
  */
 export function outsideRepoHome(file: string): string {
   return resolve(tmpdir(), suiteName(file));

@@ -101,6 +101,28 @@ describe("a test run leaves nothing in the system temp folder", () => {
     ]);
     expect(existsSync(resolve(tmp, "someone-elses-folder", "keep.txt"))).toBe(true);
   });
+
+  test("a folder left by a run whose process has exited is removed by the next run", () => {
+    const dir = freshTestDir(import.meta.file);
+    const tmp = resolve(dir, "tmp");
+    mkdirSync(tmp, { recursive: true });
+    const exited = Bun.spawnSync([process.execPath, "-e", ""]);
+    const hash = Bun.hash(resolve(dir, "pal-test-root")).toString(36);
+    const stale = resolve(tmp, `pal-test-${hash}-${exited.pid}`);
+    mkdirSync(resolve(stale, "nested"), { recursive: true });
+    writeFileSync(resolve(stale, "nested", "left.txt"), "left");
+    const alive = resolve(tmp, `pal-test-${hash}-${process.pid}`);
+    mkdirSync(alive, { recursive: true });
+    writeFileSync(resolve(alive, "keep.txt"), "keep");
+
+    expect(runFixtureWithTmpdir({ fails: false, tmp, root: dir })).toBe(0);
+    expect(existsSync(stale)).toBe(false);
+    expect(existsSync(resolve(alive, "keep.txt"))).toBe(true);
+    expect(readdirSync(tmp)).toEqual([`pal-test-${hash}-${process.pid}`]);
+
+    runFixtureWithTmpdir({ fails: false, tmp, root: dir });
+    expect(readdirSync(tmp)).toEqual([`pal-test-${hash}-${process.pid}`]);
+  });
 });
 
 describe("the rule is written down and enforced", () => {
