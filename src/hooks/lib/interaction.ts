@@ -4,7 +4,13 @@
  * Per-session tracking lives in state and is discarded with the session.
  */
 
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync,
+} from "node:fs";
 import { resolve } from "node:path";
 import { hearsPromptContext } from "./agent";
 import { currentChannel } from "./channel";
@@ -283,7 +289,9 @@ function writeTrack(session: string, track: SessionTrack): void {
   const kept = Object.entries(tracks)
     .sort(([, a], [, b]) => b.updated.localeCompare(a.updated))
     .slice(0, MAX_TRACKED_SESSIONS);
-  writeFileSync(tracksFile(), JSON.stringify(Object.fromEntries(kept)), "utf-8");
+  const pending = `${tracksFile()}.${process.pid}.tmp`;
+  writeFileSync(pending, JSON.stringify(Object.fromEntries(kept)));
+  renameSync(pending, tracksFile());
 }
 
 function trackOf(session: string): SessionTrack {
