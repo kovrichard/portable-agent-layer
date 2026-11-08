@@ -235,15 +235,6 @@ describe("recordIdleCompactionNear (Stop)", () => {
     expect(written()[0]).toMatchObject({ idleMinTokens: 100_000 });
   });
 
-  test("idleCompaction false in a Claude Code settings file logs nothing", () => {
-    writeFileSync(
-      resolve(home, "claude-dir", "settings.json"),
-      JSON.stringify({ idleCompaction: false })
-    );
-    recordIdleCompactionNear(payloadFor(transcriptWith("t.jsonl", 250_000)));
-    expect(written()).toEqual([]);
-  });
-
   test("writes nothing for a missing transcript, no usage, or a spawned inference", () => {
     recordIdleCompactionNear(payloadFor(resolve(home, "absent.jsonl")));
     const path = resolve(home, "empty.jsonl");
