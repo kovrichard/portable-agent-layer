@@ -260,6 +260,28 @@ describe("where a task is", () => {
     ]);
   });
 
+  test("the SubagentStop hook logs a factory subagent's reply from stdin", () => {
+    const { id } = newTask(
+      { title: "Fix login", repo: "/repo", category: "small" },
+      env,
+      NOW
+    );
+    const worktree = join(home, "worktrees", id);
+    mkdirSync(worktree, { recursive: true });
+    writeTask({ ...readTask(id, env), worktree }, env);
+    const input = JSON.stringify({
+      agent_type: "dark-factory:reviewer",
+      agent_id: "a1",
+      last_assistant_message: "No findings.",
+      cwd: worktree,
+    });
+    const scriptEnv = { ...pathWith(home), DARK_FACTORY_ROLE: "" };
+    runScript("subagent-stop.mjs", [], scriptEnv, input);
+    expect(eventsNamed("role_finished")).toEqual([
+      expect.objectContaining({ task: id, role: "reviewer", agentId: "a1" }),
+    ]);
+  });
+
   test("a just-created task's latest step is its task_created event", () => {
     const { id } = newTask(
       { title: "Fix login", repo: "/repo", category: "small" },

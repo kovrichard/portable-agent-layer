@@ -59,14 +59,42 @@ export function recordQuestion(id, question, env = process.env, now = new Date()
   return setStatus(id, "waiting", question, env);
 }
 
-export function recordPoHandover(id, role, reason, prompt, env = process.env) {
+export function recordPoHandover(id, role, reason, prompt, env = process.env, model) {
   readTask(id, env);
   const { file } = recordHandover(
     id,
     { from: "po", to: role, reason, payload: prompt },
     env
   );
+  appendEvent({ event: "role_run", task: id, role, model: model || "default" }, env);
   return { file };
+}
+
+function wholeNumber(name, value) {
+  const number = Number(value);
+  if (!Number.isInteger(number) || number < 0) {
+    throw new Error(`${name} must be a whole number, got "${value}"`);
+  }
+  return number;
+}
+
+export function recordReview(id, round, findings, env = process.env) {
+  readTask(id, env);
+  const event = {
+    event: "review",
+    task: id,
+    round: wholeNumber("round", round),
+    findings: wholeNumber("findings", findings),
+  };
+  appendEvent(event, env);
+  return event;
+}
+
+export function recordTest(id, unmet, env = process.env) {
+  readTask(id, env);
+  const event = { event: "test", task: id, unmet: wholeNumber("unmet", unmet) };
+  appendEvent(event, env);
+  return event;
 }
 
 export function listTasks(env = process.env) {
@@ -203,8 +231,10 @@ const COMMANDS = {
   prepare: ([id]) => prepare(id),
   status: ([id, status, note]) => setStatus(id, status, note),
   ask: ([id, question]) => recordQuestion(id, question),
-  handover: ([id, role, reason]) =>
-    recordPoHandover(id, role, reason, readFileSync(0, "utf8")),
+  handover: ([id, role, reason, model]) =>
+    recordPoHandover(id, role, reason, readFileSync(0, "utf8"), process.env, model),
+  review: ([id, round, findings]) => recordReview(id, round, findings),
+  test: ([id, unmet]) => recordTest(id, unmet),
   list: () => listTasks(),
   show: ([id]) => showTask(id),
 };
