@@ -436,7 +436,7 @@ describe("isolation", () => {
     const task = readTask("t1", env);
     for (const role of Object.keys(ROLE_POLICIES)) {
       const { args } = claudeInvocation(task, role, { env });
-      expect(valueAfter(args, "--setting-sources")).toBe("project,local");
+      expect(valueAfter(args, "--setting-sources")).toBe("local");
       expect(valueAfter(args, "--plugin-dir")).toBe(PLUGIN_ROOT);
     }
   });
@@ -460,7 +460,7 @@ describe("isolation", () => {
     delete env.CLAUDE_CONFIG_DIR;
     runRoleHeadless("t1", "reviewer", { env });
     const { argv } = recorded();
-    expect(valueAfter(argv, "--setting-sources")).toBe("project,local");
+    expect(valueAfter(argv, "--setting-sources")).toBe("local");
     const passed = JSON.parse(readFileSync(valueAfter(argv, "--settings"), "utf8"));
     expect(passed).toEqual({ attribution: { commit: "Co-authored by Jarvis" } });
   });
@@ -476,7 +476,7 @@ describe("isolation", () => {
     fakeClaude({ replyFile: SUCCESS });
     runRoleHeadless("t1", "reviewer", { env: envWith(bin) });
     const { argv } = recorded();
-    expect(valueAfter(argv, "--setting-sources")).toBe("project,local");
+    expect(valueAfter(argv, "--setting-sources")).toBe("local");
     expect(valueAfter(argv, "--plugin-dir")).toBe(PLUGIN_ROOT);
   });
 });

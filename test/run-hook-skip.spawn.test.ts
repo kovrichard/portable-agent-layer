@@ -161,44 +161,41 @@ describe("run-hook clean-worktree skip", () => {
     expect(r.status).toBe(2);
   });
 
-  test("a factory role's finished StructuredOutput handback is gated by the role it names", () => {
-    const dir = makeRepo("factory-handback");
+  test("a dirty worktree is gated the same whatever factory role the session claims", () => {
+    const dir = makeRepo("no-factory-rules");
     writeFileSync(resolve(dir, "tracked.txt"), "changed\n");
     const handback = JSON.stringify({
       tool_name: "StructuredOutput",
       tool_input: { done: true, summary: "tests written" },
     });
-    const runAs = (role: string, ...flags: string[]) =>
-      spawnSync("bun", ["run", HOOK, ...flags, "exit", "3"], {
+    for (const role of ["test-writer", "code-writer", "reviewer"]) {
+      const r = spawnSync("bun", ["run", HOOK, "exit", "3"], {
         cwd: dir,
         encoding: "utf-8",
         input: handback,
         env: { ...process.env, DARK_FACTORY_ROLE: role },
       });
-
-    expect(runAs("test-writer").status).toBe(2);
-    expect(runAs("test-writer", "--needs-code").status).toBe(0);
-    expect(runAs("code-writer", "--needs-code").status).toBe(2);
-    expect(runAs("reviewer").status).toBe(0);
+      expect(r.status).toBe(2);
+    }
   });
 
-  test("a build-with-agents subagent's stop is gated by the role in its agent_type", () => {
-    const dir = makeRepo("factory-subagent-stop");
+  test("a subagent stop is gated the same whatever agent_type it names", () => {
+    const dir = makeRepo("no-factory-subagent-rules");
     writeFileSync(resolve(dir, "tracked.txt"), "changed\n");
     const { DARK_FACTORY_ROLE: _unset, ...envWithoutRole } = process.env;
-    const stopAs = (agentType: string, ...flags: string[]) =>
-      spawnSync("bun", ["run", HOOK, ...flags, "exit", "3"], {
+    for (const agentType of [
+      "dark-factory:test-writer",
+      "dark-factory:reviewer",
+      "general-purpose",
+    ]) {
+      const r = spawnSync("bun", ["run", HOOK, "exit", "3"], {
         cwd: dir,
         encoding: "utf-8",
         input: JSON.stringify({ hook_event_name: "SubagentStop", agent_type: agentType }),
         env: envWithoutRole,
       });
-
-    expect(stopAs("dark-factory:test-writer", "--needs-code").status).toBe(0);
-    expect(stopAs("dark-factory:test-writer").status).toBe(2);
-    expect(stopAs("dark-factory:code-writer", "--needs-code").status).toBe(2);
-    expect(stopAs("dark-factory:reviewer").status).toBe(0);
-    expect(stopAs("general-purpose", "--needs-code").status).toBe(2);
+      expect(r.status).toBe(2);
+    }
   });
 
   test("a clean worktree skips a gate that would otherwise fail", () => {

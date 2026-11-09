@@ -48,12 +48,13 @@ Inside Claude Code the plugin folder is `${CLAUDE_PLUGIN_ROOT}`.
 
 ### With subagents
 
-`/dark-factory:build-with-agents <task-id>` runs a written task through the same pipeline with each role as a `dark-factory:<role>` subagent of the session instead of a `claude -p` process. The session has to start in the task's worktree, because its subagents work in the folder it started in and share it:
+`/dark-factory:build-with-agents <task-id>` runs a written task through the same pipeline with each role as a `dark-factory:<role>` subagent of the session instead of a `claude -p` process. The session has to start in the task's worktree, because its subagents work in the folder it started in and share it, and without the repo's Claude Code hooks. `prepare` prints the command that starts it as `po`:
 
 ```
 node <plugin folder>/scripts/task.mjs prepare <task-id>
-cd <worktree> && claude -p "/dark-factory:build-with-agents <task-id>"
 ```
+
+Run its `po` value: `cd <worktree> && claude --setting-sources local [--settings <task folder>/role-settings.json] --plugin-dir <plugin folder> "/dark-factory:build-with-agents <task-id>"`. Add `-p` after `claude` for an unattended run.
 
 It is the other half of an A/B against `build.mjs` (ISC-97): every pass or fail still comes from the step commands below, `gate.mjs`, `ship.mjs` and `ci-wait.mjs`. Each role gets the same fixed instructions as in `build.mjs`, and the session records every prompt it hands a subagent with `task.mjs handover <task-id> <role> <reason> <model>`, the prompt on stdin. That writes the same `handover` and `role_run` events `build.mjs` writes, with `from: "po"`, so `stats.mjs` counts both sides alike. The session records each review round with `task.mjs review <task-id> <round> <findings>` and the tester's result with `task.mjs test <task-id> <unmet>`. The plugin's `SubagentStop` hook (`scripts/subagent-stop.mjs`) writes `role_finished` for every `dark-factory:` subagent that works in a task's worktree: its tokens and turns from the subagent's transcript, and its last message saved as the reply. It has no `costUsd`, because a subagent's transcript carries tokens but not cost; the session's total cost is in the `claude -p` result. Inside a `build.mjs` role (`DARK_FACTORY_ROLE` set) the hook writes nothing, because `build.mjs` logs that run itself.
 
@@ -118,7 +119,9 @@ The build keeps the code step from editing a test. Right before the code step it
 
 A spec can name the test files the task is meant to change in a section headed exactly `## Test files this task changes`, with one repo-relative path per `- ` bullet, backticks optional. The guard leaves those files out: they are not restored, not listed, and a second change does not stop the build. Only `spec.md` grants this, and the same section in `plan.md`, `tests.md`, `repro.md` or `design.md` exempts nothing. The list is read each time the guard runs, so a spec changed during the build counts. The review, tester and CI fix ladders are guarded like the code step: each fingerprints the worktree before its first rung, and once it passes the gate a protected test file it changed is restored the same way.
 
-The categories with a test writer (`bug`, `feature` and `big-feature`) need a gate check named exactly `tests`. The build runs it right after the test writer, and the task is stuck when no test fails.
+The categories with a test writer (`bug`, `feature` and `big-feature`) need a gate check named exactly `tests`. The build runs it right after the test writer, and the task is stuck when no test fails. Before that check, the build runs the gate for the role `test-writer`; when it fails, the test writer runs again with the failed checks, at most 2 more times, and then the task is stuck.
+
+A gate entry may carry `"roles"`, a list of the roles it gates, for example `{ "name": "lint", "run": "bun run lint", "roles": ["test-writer", "code-writer", "debugger"] }`. An entry without `"roles"` gates the code writer and the debugger, as before; an entry with `"roles"` gates exactly the roles listed. The build gates the test writer and the code-writing rungs; `"roles"` may name other roles, but nothing gates them. A config without any `"roles"` gates exactly as it did.
 
 ## Notifications
 
@@ -167,13 +170,13 @@ The repo's `CLAUDE.md` is read from your checkout when the task starts, so a rol
 - `"repoInstructions": false` in `.dark-factory.json` leaves out the repo's `CLAUDE.md`.
 - `"userInstructions": false` in `$DARK_FACTORY_HOME/config.json` (`~/.dark-factory/config.json`, optional; a missing file means both parts are on) leaves out your `~/.claude/CLAUDE.md`.
 
-Your own hooks never run in a role, and neither do MCP servers. The repo's hooks do run, but a role's `Stop` hooks fire only after it has handed in its result, too late to send it back. To gate a role before that, match a `PreToolUse` hook on `StructuredOutput`, the tool the result goes through; each role runs with `DARK_FACTORY_ROLE` set to its name, so the hook can tell roles apart. This repo's `.agents/hooks/run-hook.ts` is an example. The build's gate stays as the check for repos without such a hook.
+Your own hooks never run in a role, and neither do MCP servers. The repo's Claude Code hooks don't run either: roles and the PO session start with `--setting-sources local`, because other repos have different hooks or none, so the factory cannot rely on them. The factory's only gate is `.dark-factory.json`. The plugin's own hooks still run, and git hooks still run on every commit a role makes.
 
-A role loads the repo's `.claude/settings.json` and `.claude/settings.local.json` from its worktree as Claude Code does, permissions included. Your `~/.claude/settings.json` (or `CLAUDE_CONFIG_DIR`) is passed in `--settings` without `hooks`, `permissions`, `enabledPlugins` and `extraKnownMarketplaces`, so commit attribution and your other preferences apply. Each role call records which of your keys it passed and dropped as a `role_settings` event, without their values.
+A role still loads `.claude/settings.local.json` from its worktree. The repo's `.claude/settings.json` is not loaded; its `permissions` (`allow`, `deny` and `ask`) are copied into the `--settings` file after your filtered settings, never its `hooks`. Your `~/.claude/settings.json` (or `CLAUDE_CONFIG_DIR`) goes into the same file without `hooks`, `permissions`, `enabledPlugins` and `extraKnownMarketplaces`, so commit attribution and your other preferences apply. Each role call records which of your keys it passed and dropped as a `role_settings` event, without their values.
 
 ## Permissions
 
-- Roles run with `--setting-sources project,local`, the plugin from `--plugin-dir`, and their own tool policy from `roles.mjs`. Your user settings come only through the filtered `--settings` file, so your hooks don't reach them. A repo's `permissions.allow` can widen a role's tools; the role's denies still win.
+- Roles run with `--setting-sources local`, the plugin from `--plugin-dir`, and their own tool policy from `roles.mjs`. Your user settings come only through the filtered `--settings` file, so your hooks don't reach them. The repo's `permissions` come through the same file: its `allow` can widen a role's tools, its `deny` still binds, and the role's own denies still win.
 - The PO session only needs `"Bash(node *dark-factory*/scripts/*)"`, for example in `.claude/settings.json`:
 
 ```json
