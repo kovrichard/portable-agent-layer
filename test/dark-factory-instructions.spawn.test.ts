@@ -195,7 +195,7 @@ describe("instructions reach the roles", () => {
     setup({ user: "U\n", repo: "R\n" });
     run();
     const { argv } = recorded();
-    expect(argv[argv.indexOf("--setting-sources") + 1]).toBe("project,local");
+    expect(argv[argv.indexOf("--setting-sources") + 1]).toBe("local");
   });
 });
 
@@ -342,13 +342,65 @@ describe("the plugin works on its own", () => {
     expect(hits).toEqual([]);
   });
 
-  test("the README says what roles receive, how to switch each part off, and that only repo hooks run", () => {
+  test("the README says what roles receive and how to switch each part off", () => {
     const readme = readFileSync(join(PLUGIN_ROOT, "README.md"), "utf8");
     expect(readme).toContain("CLAUDE.md");
     expect(readme).toContain("repoInstructions");
     expect(readme).toContain("userInstructions");
     expect(readme).toContain("~/.dark-factory/config.json");
     expect(readme).toContain("Your own hooks never run in a role");
-    expect(readme).toContain("The repo's hooks do run");
+    expect(readme).not.toContain("The repo's hooks do run");
+  });
+});
+
+describe("the po command from prepare", () => {
+  const PO_SETTINGS = "role-settings.json";
+  const poOf = () => (prepare("t1", env()) as { po: string }).po;
+
+  test("starts claude in the worktree with local settings and the plugin folder", () => {
+    setup();
+    const po = poOf();
+    const worktree = join(home, "worktrees", "t1");
+    expect(po).toContain(worktree);
+    expect(po).toContain("claude");
+    expect(po).toContain("--setting-sources local");
+    expect(po).toContain(`--plugin-dir`);
+    expect(po).toContain(PLUGIN_ROOT);
+  });
+
+  test("passes the role settings file when one is written", () => {
+    put(
+      join(userHome, ".claude", "settings.json"),
+      JSON.stringify({ attribution: { commit: "Co-authored by Jarvis" } })
+    );
+    setup();
+    const po = poOf();
+    expect(po).toContain("--settings");
+    expect(po).toContain(join(home, "tasks", "t1", PO_SETTINGS));
+  });
+
+  test("carries the repo's permissions into the settings file, never its hooks", () => {
+    put(
+      join(clone, ".claude", "settings.json"),
+      JSON.stringify({
+        permissions: { deny: ["Bash(sed -i:*)"] },
+        hooks: { Stop: [{ hooks: [{ type: "command", command: "repo-gate" }] }] },
+      })
+    );
+    setup();
+    const po = poOf();
+    expect(po).toContain("--settings");
+    const written = readFileSync(join(home, "tasks", "t1", PO_SETTINGS), "utf8");
+    expect(JSON.parse(written)).toEqual({ permissions: { deny: ["Bash(sed -i:*)"] } });
+  });
+
+  test("with nothing to keep there is no --settings flag", () => {
+    setup();
+    expect(poOf()).not.toContain("--settings");
+  });
+
+  test("preparing twice prints the same command", () => {
+    setup();
+    expect(poOf()).toBe(poOf());
   });
 });

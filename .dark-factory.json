@@ -2,15 +2,15 @@
   "baseBranch": "canary",
   "prepare": "bun install",
   "gate": [
-    { "name": "lint", "run": "bun run check" },
+    { "name": "lint", "run": "bun run check", "roles": ["test-writer", "code-writer", "debugger"] },
     { "name": "types", "run": "bun run type-check" },
     { "name": "knip", "run": "bun run knip" },
     { "name": "jscpd", "run": "bun run jscpd" },
     { "name": "klint", "run": "bun run klint" },
     { "name": "madge", "run": "bun run madge" },
-    { "name": "lf", "run": "bun run lf" },
+    { "name": "lf", "run": "bun run lf", "roles": ["test-writer", "code-writer", "debugger"] },
     { "name": "exact-versions", "run": "bun run exact-versions" },
-    { "name": "secretlint", "run": "bun run secretlint" },
+    { "name": "secretlint", "run": "bun run secretlint", "roles": ["test-writer", "code-writer", "debugger"] },
     { "name": "tests", "run": "bun run test" }
   ],
   "uiPaths": ["src/tools/control-room/ui/"]

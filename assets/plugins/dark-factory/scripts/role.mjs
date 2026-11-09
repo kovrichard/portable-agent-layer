@@ -318,7 +318,7 @@ export function claudeInvocation(
       "--output-format",
       "json",
       "--setting-sources",
-      "project,local",
+      "local",
       ...optionalFlag("--settings", settingsFile),
       "--plugin-dir",
       pluginDir,

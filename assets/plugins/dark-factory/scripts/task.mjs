@@ -13,6 +13,7 @@ import {
   appendEvent,
   factoryHome,
   isMain,
+  PLUGIN_ROOT,
   printJson,
   readEvents,
   readRepoConfig,
@@ -22,6 +23,9 @@ import {
   writeTask,
 } from "./lib.mjs";
 import { rolesFor } from "./roles.mjs";
+import { writeRoleSettings } from "./settings.mjs";
+
+const PO_SKILL = "/dark-factory:build-with-agents";
 
 export function slugify(title) {
   return title
@@ -156,6 +160,7 @@ export function prepare(id, env = process.env) {
     env
   );
   appendEvent({ event: "task_started", task: id, category: task.category }, env);
+  const settingsFile = writeRoleSettings({ ...task, worktree }, env);
   return {
     worktree,
     branch,
@@ -165,7 +170,28 @@ export function prepare(id, env = process.env) {
     before: rolesFor(task.category).before,
     taskDir: taskDir(id, env),
     specPath: join(taskDir(id, env), "spec.md"),
+    po: poCommand({ id, worktree, settingsFile, pluginDir: PLUGIN_ROOT }),
   };
+}
+
+function shellArg(value) {
+  if (/^[A-Za-z0-9_./:@%+=,-]+$/.test(value)) return value;
+  return `"${value.replace(/[\\"$`]/g, "\\$&")}"`;
+}
+
+export function poCommand({ id, worktree, settingsFile, pluginDir }) {
+  return [
+    "cd",
+    shellArg(worktree),
+    "&&",
+    "claude",
+    "--setting-sources",
+    "local",
+    ...(settingsFile ? ["--settings", shellArg(settingsFile)] : []),
+    "--plugin-dir",
+    shellArg(pluginDir),
+    shellArg(`${PO_SKILL} ${id}`),
+  ].join(" ");
 }
 
 function oneLine(text) {

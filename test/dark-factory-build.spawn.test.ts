@@ -411,7 +411,7 @@ describe("a whole feature run", () => {
     runBuild();
     expect(calls().length).toBeGreaterThan(0);
     for (const call of calls()) {
-      expect(valueAfter(call.argv, "--setting-sources")).toBe("project,local");
+      expect(valueAfter(call.argv, "--setting-sources")).toBe("local");
       expect(valueAfter(call.argv, "--plugin-dir")).toBe(PLUGIN_ROOT);
       expect(call.argv).toContain(`dark-factory:${call.role}`);
       expect(call.stdin.startsWith(`Task ${TASK}:`)).toBe(true);

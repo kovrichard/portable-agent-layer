@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { waitForCi } from "./ci-wait.mjs";
 import { startCoach } from "./coach.mjs";
-import { runCheck, runGate } from "./gate.mjs";
+import { gateEntriesFor, runCheck, runGate } from "./gate.mjs";
 import { recordHandover } from "./handover.mjs";
 import {
   appendEvent,
@@ -95,6 +95,7 @@ const TESTER_INSTRUCTIONS = "Test every acceptance criterion in the running app.
 const TASK_DOCUMENTS = ["spec.md", "plan.md", "design.md", "repro.md", "tests.md"];
 const UNPLANNED_FILES_ASKER = "build";
 const TEST_FIX_LIMIT = 2;
+const TEST_WRITER_GATE_ATTEMPTS = 3;
 export const FINGERPRINT_UNREADABLE =
   "could not fingerprint the worktree around the test fix, so the files it changed cannot be checked";
 const TEST_FIX_DIFF_UNREADABLE =
@@ -365,18 +366,39 @@ function failureReport(failed) {
   return failed.map((check) => `${check.name}:\n${check.output}`).join("\n\n");
 }
 
-function gateFor(run, step) {
-  run.attempt += 1;
+function gateRole(run, role, attempt, tier) {
   return runGate(
     run.worktree,
-    {
-      task: run.id,
-      role: step.role,
-      attempt: run.attempt,
-      model: TIER_MODELS[step.tier],
-    },
+    { task: run.id, role, attempt, model: TIER_MODELS[tier] },
     { env: run.env, config: run.config, run: run.effects.runCheck }
   );
+}
+
+function gateFor(run, step) {
+  run.attempt += 1;
+  return gateRole(run, step.role, run.attempt, step.tier);
+}
+
+function testWriterGateStuck(failure) {
+  return stuck(
+    `the test writer's gate still fails after ${TEST_WRITER_GATE_ATTEMPTS} attempts:\n${failure.slice(-FAILURE_TAIL)}`
+  );
+}
+
+function gatedTestWriter(run, instructions, options = {}) {
+  const gated = gateEntriesFor(run.config, "test-writer").length > 0;
+  let failure = null;
+  for (let attempt = 1; attempt <= TEST_WRITER_GATE_ATTEMPTS; attempt += 1) {
+    const result = runRole(run, "test-writer", withFailure(instructions, failure), {
+      ...options,
+      reason: failure ? "gate-failed" : options.reason,
+    });
+    if (!gated || roleStop("test-writer", result)) return result;
+    const gate = gateRole(run, "test-writer", attempt, options.tier);
+    if (gate.passed) return result;
+    failure = failureReport(gate.failed);
+  }
+  return { stop: testWriterGateStuck(failure) };
 }
 
 function untilGreen(run, ladder, instructions, reason) {
@@ -633,7 +655,7 @@ function testsAfterReplan(run) {
   const before = worktreeFingerprint(run);
   const stop = roleStop(
     "test-writer",
-    runRole(run, "test-writer", TESTS_AFTER_REPLAN_INSTRUCTIONS, {
+    gatedTestWriter(run, TESTS_AFTER_REPLAN_INSTRUCTIONS, {
       reason: "spec-changed",
     })
   );
@@ -649,9 +671,8 @@ function retryUnitTests(run, baseline, failing, typist) {
     { event: UNIT_TESTS_NO_RISE_EVENT, task: run.id, baseline, failing, files },
     run.env
   );
-  const retried = runRole(
+  const retried = gatedTestWriter(
     run,
-    "test-writer",
     noRiseRetryInstructions(baseline, failing, files),
     { tier: "small", resumeSessionId: typist.sessionId ?? undefined }
   );
@@ -671,7 +692,7 @@ function unitTestsStep(run) {
   const taken = takeBaseline(run);
   if (taken.stop) return taken.stop;
   const before = worktreeFingerprint(run);
-  const typed = runRole(run, "test-writer", UNIT_TESTS_INSTRUCTIONS, { tier: "small" });
+  const typed = gatedTestWriter(run, UNIT_TESTS_INSTRUCTIONS, { tier: "small" });
   const stop = roleStop("test-writer", typed);
   if (stop) return stop;
   const after = worktreeFingerprint(run);
@@ -742,7 +763,7 @@ function beforeRoleStep(run, role) {
     );
   if (role === "test-writer")
     return (
-      roleStop(role, runRole(run, role, testWriterInstructions(run.before))) ??
+      roleStop(role, gatedTestWriter(run, testWriterInstructions(run.before))) ??
       proveTestsRed(run)
     );
   return roleStop(role, runRole(run, role, BEFORE_INSTRUCTIONS[role]));

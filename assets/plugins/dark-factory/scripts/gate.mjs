@@ -2,6 +2,15 @@ import { spawnSync } from "node:child_process";
 import { appendEvent, isMain, printJson, readRepoConfig } from "./lib.mjs";
 
 const OUTPUT_TAIL = 4000;
+const ROLES_WITHOUT_LIST = ["code-writer", "debugger"];
+
+export function gateEntriesFor(config, role) {
+  return config.gate.filter((entry) =>
+    Array.isArray(entry.roles)
+      ? entry.roles.includes(role)
+      : ROLES_WITHOUT_LIST.includes(role)
+  );
+}
 
 export function runCheck(command, cwd, env = process.env) {
   const result = spawnSync("bash", ["-c", command], {
@@ -21,7 +30,7 @@ export function runGate(
   context,
   { run = runCheck, config = readRepoConfig(repo), env = process.env } = {}
 ) {
-  const checks = config.gate.map(({ name, run: command }) => {
+  const checks = gateEntriesFor(config, context.role).map(({ name, run: command }) => {
     const { exitCode, output } = run(command, repo, env);
     appendEvent(
       {
