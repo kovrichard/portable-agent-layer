@@ -73,11 +73,11 @@ describe("the browser PDF and screenshot skills use", () => {
 });
 
 describe("installing the browser", () => {
-  test("runs the exact command the doctor would suggest", () => {
+  test("runs the exact command the doctor would suggest", async () => {
     const ran: string[] = [];
     const newUbuntu = host({ osRelease: ubuntu("26.04") });
 
-    installChromium(newUbuntu, (command) => {
+    await installChromium(newUbuntu, (command) => {
       ran.push(command);
       return true;
     });
@@ -85,11 +85,11 @@ describe("installing the browser", () => {
     expect(ran).toEqual([playwrightFinding(newUbuntu).fix?.command ?? ""]);
   });
 
-  test("skips the download when the right build is already there", () => {
+  test("skips the download when the right build is already there", async () => {
     mkdirSync(resolve(CACHE, "chromium_headless_shell-1223"));
     const ran: string[] = [];
 
-    installChromium(host(), (command) => {
+    await installChromium(host(), (command) => {
       ran.push(command);
       return true;
     });
