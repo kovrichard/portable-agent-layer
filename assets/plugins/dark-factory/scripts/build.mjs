@@ -20,6 +20,7 @@ import { changedFilesSince, rolesAfterChanges } from "./roles.mjs";
 import { markReady, openPr, push, sync } from "./ship.mjs";
 import {
   appendDecision,
+  markStarted,
   prepare,
   recordQuestion,
   setStatus,
@@ -506,6 +507,7 @@ export function takeBaseline(run) {
 function prepareStep(run) {
   try {
     Object.assign(run, run.effects.prepare(run.id, run.env));
+    if (readTask(run.id, run.env).status === "ready") markStarted(run.id, run.env);
     return null;
   } catch (error) {
     return stuck(`prepare failed: ${error.message}`);

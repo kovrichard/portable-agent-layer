@@ -74,6 +74,33 @@ describe("the coach at the end of a run", () => {
   });
 });
 
+describe("a build restarts a ready task", () => {
+  test("a ready task reads back running with one task_started once the build has started", () => {
+    const world = worldFor({
+      status: "ready",
+      roles: { "code-writer": [{ ...NOOP, reply: QUESTION }] },
+    });
+    const seen: unknown[] = [];
+    const original = world.effects.runRoleHeadless as (...args: unknown[]) => unknown;
+    world.effects.runRoleHeadless = (...args: unknown[]) => {
+      seen.push({
+        status: storedTask(world).status,
+        started: eventsNamed(world, "task_started").length,
+      });
+      return original(...args);
+    };
+    runBuild(world);
+    expect(seen[0]).toEqual({ status: "running", started: 1 });
+    expect(eventsNamed(world, "task_started")).toHaveLength(1);
+  });
+
+  test("a draft task still gets exactly one task_started and running", () => {
+    const world = worldFor();
+    runBuild(world);
+    expect(eventsNamed(world, "task_started")).toHaveLength(1);
+  });
+});
+
 describe("a whole feature run, in process", () => {
   test("runs the steps in order and ends ready with the pull request", () => {
     const world = worldFor({ category: "feature" });
