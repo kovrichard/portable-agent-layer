@@ -68,6 +68,11 @@
           "options": { "maxAllowedComplexity": 14 }
         }
       },
+      "nursery": {
+        "noFloatingPromises": "error",
+        "noMisusedPromises": "error",
+        "noBaseToString": "error"
+      },
       "style": {
         "noNestedTernary": "error",
         "noNonNullAssertion": "error",
