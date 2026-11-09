@@ -38,6 +38,7 @@ type CiState = { state: string; failed: CiCheck[] };
 
 type WorldOptions = {
   category?: string;
+  status?: string;
   config?: object;
   roles?: Record<string, RoleStep[]>;
   checks?: Record<string, (world: World) => CheckResult>;
@@ -93,11 +94,8 @@ function stepFor(options: WorldOptions, role: string, index: number): RoleStep {
   };
 }
 
-function seedTask(env: Record<string, string>, category: string) {
-  writeTask(
-    { id: TASK, title: "Add export", repo: "/repo", category, status: "draft" },
-    env
-  );
+function seedTask(env: Record<string, string>, category: string, status: string) {
+  writeTask({ id: TASK, title: "Add export", repo: "/repo", category, status }, env);
   writeFileSync(join(taskDir(TASK, env), "spec.md"), SPEC);
 }
 
@@ -141,11 +139,20 @@ function fakePrepare(world: World, options: WorldOptions) {
   return (id: string, env: Record<string, string>) => {
     const task = readTask(id, env);
     const config = options.config ?? DEFAULT_CONFIG;
+    // like the real prepare: a ready task keeps its status and logs no start
+    const keepsStatus = task.status === "ready";
     writeTask(
-      { ...task, base: "canary", worktree: world.worktree, status: "running", config },
+      {
+        ...task,
+        base: "canary",
+        worktree: world.worktree,
+        status: keepsStatus ? task.status : "running",
+        config,
+      },
       env
     );
-    appendEvent({ event: "task_started", task: id, category: task.category }, env);
+    if (!keepsStatus)
+      appendEvent({ event: "task_started", task: id, category: task.category }, env);
     return {
       worktree: world.worktree,
       branch: `factory/${id}`,
@@ -266,7 +273,7 @@ export function buildWorld(testFile: string, options: WorldOptions = {}): World 
     effects: {},
   };
   mkdirSync(world.worktree, { recursive: true });
-  seedTask(env, options.category ?? "small");
+  seedTask(env, options.category ?? "small", options.status ?? "draft");
   const checks: Record<string, (world: World) => CheckResult> = {
     [TESTS_COMMAND]: testsCheck,
     ...options.checks,

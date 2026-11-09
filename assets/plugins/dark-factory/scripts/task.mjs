@@ -142,6 +142,12 @@ function repoClaudeMdFor(task, config, env) {
   return { path: found.path, text: found.text };
 }
 
+export function markStarted(id, env = process.env) {
+  const task = readTask(id, env);
+  writeTask({ ...task, status: "running" }, env);
+  appendEvent({ event: "task_started", task: id, category: task.category }, env);
+}
+
 export function prepare(id, env = process.env) {
   requireTools(env);
   const task = readTask(id, env);
@@ -155,11 +161,8 @@ export function prepare(id, env = process.env) {
     git(["worktree", "add", "-b", branch, worktree, `origin/${base}`], task.repo, env);
     runPrepareCommand(config.prepare, worktree, env);
   }
-  writeTask(
-    { ...task, base, branch, worktree, status: "running", config, repoClaudeMd },
-    env
-  );
-  appendEvent({ event: "task_started", task: id, category: task.category }, env);
+  writeTask({ ...task, base, branch, worktree, config, repoClaudeMd }, env);
+  if (task.status !== "ready") markStarted(id, env);
   const settingsFile = writeRoleSettings({ ...task, worktree }, env);
   return {
     worktree,
