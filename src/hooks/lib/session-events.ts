@@ -188,6 +188,22 @@ export function contextTokensOf(transcriptPath: string | undefined): number | nu
   );
 }
 
+function usageMessageOf(line: string): { model?: unknown } | null {
+  try {
+    const message = JSON.parse(line)?.message;
+    return message?.usage ? message : null;
+  } catch {
+    return null;
+  }
+}
+
+export function contextModelOf(transcriptPath: string | undefined): string | null {
+  if (!transcriptPath || !existsSync(transcriptPath)) return null;
+  const lines = transcriptTail(transcriptPath).split("\n").reverse();
+  const model = lines.map(usageMessageOf).find((m) => m !== null)?.model;
+  return typeof model === "string" ? model : null;
+}
+
 function instructionsOf(payload: CompactionPayload | null): string | undefined {
   return payload?.custom_instructions ?? payload?.customInstructions;
 }

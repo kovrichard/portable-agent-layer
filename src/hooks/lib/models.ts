@@ -343,3 +343,16 @@ export function costOfUsage(model: string, usage: TokenUsage, at?: string): numb
     1_000_000
   );
 }
+
+interface ModelLimits {
+  contextWindow: number;
+  maxOutput: number;
+}
+
+const MODEL_LIMITS: Record<string, ModelLimits> = {};
+
+export function modelLimitsFor(model: string | null): ModelLimits | null {
+  return typeof model === "string" && Object.hasOwn(MODEL_LIMITS, model)
+    ? MODEL_LIMITS[model]
+    : null;
+}

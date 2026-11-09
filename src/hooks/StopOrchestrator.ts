@@ -12,6 +12,7 @@ import {
   isSideStop,
   withTranscriptReply,
 } from "./lib/antigravity-transcript";
+import { recordIdleCompactionNear } from "./lib/compaction-near";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { enterHookWorkspace } from "./lib/hook-turn";
 import { logError } from "./lib/log";
@@ -29,6 +30,7 @@ const received = await readStdinJSON<StopTurnPayload & AntigravityStopFields>();
 if (isSideStop(received)) process.exit(0);
 const payload = withTranscriptReply(received);
 enterHookWorkspace(payload);
+recordIdleCompactionNear(payload);
 
 // First: it reads only git and PRs, so every stop attempt attaches new commits, even one a block below refuses.
 try {
