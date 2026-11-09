@@ -176,7 +176,7 @@ export function prepare(id, env = process.env) {
 
 function shellArg(value) {
   if (/^[A-Za-z0-9_./:@%+=,-]+$/.test(value)) return value;
-  return `"${value.replace(/[\\"$`]/g, "\\$&")}"`;
+  return `"${value.replace(/\\(?=[\\"$`]|$)|["$`]/g, "\\$&")}"`;
 }
 
 export function poCommand({ id, worktree, settingsFile, pluginDir }) {
