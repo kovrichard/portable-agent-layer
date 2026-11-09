@@ -200,6 +200,46 @@ describe("recordCompactionNear (UserPromptSubmit)", () => {
   });
 });
 
+describe("recordCompactionNear return value", () => {
+  test("returns the verdict it logged when predicted", () => {
+    process.env[WINDOW_ENV] = "500000";
+    expect(recordCompactionNear(payloadFor(transcriptWith("t.jsonl", 400_000)))).toEqual({
+      contextTokens: 400_000,
+      compactAtTokens: 467_000,
+      tokensLeft: 67_000,
+      marginTokens: 96_000,
+      predicted: true,
+    });
+  });
+
+  test("returns the verdict when not predicted", () => {
+    process.env[WINDOW_ENV] = "500000";
+    expect(recordCompactionNear(payloadFor(transcriptWith("t.jsonl", 300_000)))).toEqual({
+      contextTokens: 300_000,
+      compactAtTokens: 467_000,
+      tokensLeft: 167_000,
+      marginTokens: 96_000,
+      predicted: false,
+    });
+  });
+
+  test("returns null when nothing was logged", () => {
+    process.env[WINDOW_ENV] = "500000";
+    expect(recordCompactionNear(payloadFor(resolve(home, "absent.jsonl")))).toBeNull();
+    expect(recordCompactionNear(null)).toBeNull();
+    process.env.PAL_SPAWNED_INFERENCE = "1";
+    expect(
+      recordCompactionNear(payloadFor(transcriptWith("t.jsonl", 400_000)))
+    ).toBeNull();
+  });
+
+  test("the event written by a direct call stays shadow", () => {
+    process.env[WINDOW_ENV] = "500000";
+    recordCompactionNear(payloadFor(transcriptWith("t.jsonl", 400_000)));
+    expect(written()[0]).toMatchObject({ mode: "shadow" });
+  });
+});
+
 describe("recordIdleCompactionNear (Stop)", () => {
   test("250k with the env var unset logs an idle event", () => {
     recordIdleCompactionNear(payloadFor(transcriptWith("t.jsonl", 250_000)));
@@ -262,5 +302,84 @@ describe("event registry", () => {
         "idleMinTokens",
       ].sort()
     );
+  });
+});
+
+describe("compactionWarningReminder table rows", () => {
+  const nearLib = () => import("../src/hooks/lib/compaction-near");
+
+  function verdictFor(
+    contextTokens: number,
+    compactAtTokens: number,
+    tokensLeft: number,
+    marginTokens: number,
+    predicted: boolean
+  ) {
+    return { contextTokens, compactAtTokens, tokensLeft, marginTokens, predicted };
+  }
+
+  test.each([
+    [
+      400_000,
+      467_000,
+      67_000,
+      96_000,
+      true,
+      "Context: 400k tokens, auto-compaction at 467k (67k left). Before the next long step, ",
+    ],
+    [
+      400_500,
+      467_000,
+      66_500,
+      96_000,
+      true,
+      "Context: 401k tokens, auto-compaction at 467k (67k left).",
+    ],
+    [
+      420_000,
+      467_000,
+      47_000,
+      96_000,
+      true,
+      "Context: 420k tokens, auto-compaction at 467k (47k left).",
+    ],
+    [
+      480_000,
+      467_000,
+      -13_000,
+      96_000,
+      true,
+      "Context: 480k tokens, auto-compaction at 467k (0k left).",
+    ],
+    [
+      466_600,
+      467_000,
+      400,
+      96_000,
+      true,
+      "Context: 467k tokens, auto-compaction at 467k (0k left).",
+    ],
+    [300_000, 467_000, 167_000, 96_000, false, null],
+  ])(
+    "row: context %i, compact at %i, left %i, margin %i",
+    async (contextTokens, compactAtTokens, tokensLeft, marginTokens, predicted, prefix) => {
+      const { compactionWarningReminder } = await nearLib();
+      const block = compactionWarningReminder(
+        verdictFor(contextTokens, compactAtTokens, tokensLeft, marginTokens, predicted)
+      );
+      if (prefix === null) {
+        expect(block).toBeNull();
+        return;
+      }
+      expect(block).not.toBeNull();
+      const lines = (block as string).split("\n");
+      expect(lines.length).toBe(3);
+      expect(lines[1].startsWith(prefix)).toBe(true);
+    }
+  );
+
+  test("a null verdict gives no warning", async () => {
+    const { compactionWarningReminder } = await nearLib();
+    expect(compactionWarningReminder(null)).toBeNull();
   });
 });

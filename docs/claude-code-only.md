@@ -10,7 +10,7 @@ lives in `event-log-coverage.md` and is not repeated here.
 | Feature | Where | Why Claude Code only | Since |
 | ------- | ----- | -------------------- | ----- |
 | Dark factory | `assets/plugins/dark-factory/` | A Claude Code plugin: roles are Claude Code subagents, `build.mjs` maps tiers to Claude model ids and launches `claude`. Breaks principle 3 (tiers through `pal cli`). | 2026-10 |
-| Compaction warning (ISC-100, shadow, in progress) | `compaction_near` event, `pal cli compaction backtest` | Reads Claude Code transcript usage and Claude Code's own compaction rules (window, summary buffer, idle compaction). | 2026-11-08 |
+| Compaction warning (ISC-100) | `compaction_near` event, `pal cli compaction backtest` | Reads Claude Code transcript usage and Claude Code's own compaction rules (window, summary buffer, idle compaction). The threshold warning is live: a predicted prompt gets one line of prompt context. The idle trigger is shadow. | 2026-11-08 |
 | Last exchange restored after compaction | `src/hooks/CompactRecover.ts` | Wired only in `settings.claude.json` (SessionStart `compact`). | — |
 
 ## Hooks wired per agent

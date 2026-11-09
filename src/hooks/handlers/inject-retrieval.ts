@@ -55,11 +55,12 @@ function writeForAgent(reminder: string, sessionId?: string): void {
 /** Merge every prompt-time source — the wall clock, the repo state, contextual steering, skill
  *  matches, entity cards — into one payload, or null when none of them
  *  produced anything. The clock leads: it is the only part that is true of the
- *  moment rather than of the prompt.
+ *  moment rather than of the prompt. The optional last part is appended after every other source.
  *  @lintignore dynamically imported by opencode plugin */
 export async function getPromptContext(
   prompt: string,
-  sessionId?: string
+  sessionId?: string,
+  lastPart?: string | null
 ): Promise<string | null> {
   const userText = isSystemText(prompt) ? "" : prompt;
   const parts = [
@@ -77,6 +78,7 @@ export async function getPromptContext(
     userText &&
       isEnabled("entityCards") &&
       withinBudget(() => getEntityReminder(userText), BUDGET_MS),
+    lastPart,
   ].filter((p): p is string => Boolean(p));
 
   return parts.length > 0 ? parts.join("\n\n") : null;
@@ -86,9 +88,10 @@ export async function getPromptContext(
  *  combined reminder that was injected, or null if there was nothing to inject. */
 export async function injectPromptContext(
   prompt: string,
-  sessionId?: string
+  sessionId?: string,
+  lastPart?: string | null
 ): Promise<string | null> {
-  const combined = await getPromptContext(prompt, sessionId);
+  const combined = await getPromptContext(prompt, sessionId, lastPart);
   if (combined) writeForAgent(combined, sessionId);
   return combined;
 }

@@ -23,8 +23,11 @@ const SUBPROCESS_SUITES = new Set([
 ]);
 
 // The sandbox lives under the gitignored .stryker-tmp/, where git lists no tracked files.
+// The same goes for files ignorePatterns below leaves out of the sandbox, such as
+// .claude/settings.json.
 const SUITES_THAT_READ_THE_GIT_CHECKOUT = new Set([
   "test/check-exact-versions.spawn.test.ts",
+  "test/dark-factory-no-repo-hooks.test.ts",
 ]);
 
 function isInProcessSuite(file) {
