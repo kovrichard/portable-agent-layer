@@ -42,6 +42,14 @@ interface CompactionHookPayload extends HookTurnPayload {
   cwd?: string;
 }
 
+interface CompactionVerdict {
+  contextTokens: number;
+  compactAtTokens: number;
+  tokensLeft: number;
+  marginTokens: number;
+  predicted: boolean;
+}
+
 function usableWindow(input: CompactionPointInput): number {
   return (
     Math.min(input.window, input.modelContextWindow) -
@@ -203,7 +211,11 @@ function hookProjectDir(payload: CompactionHookPayload): string {
     : process.cwd();
 }
 
-export function recordCompactionNear(payload: CompactionHookPayload | null): void {
+export function recordCompactionNear(
+  payload: CompactionHookPayload | null,
+  live = false
+): CompactionVerdict | null {
+  let verdict: CompactionVerdict | null = null;
   logQuietly("compaction_near", () => {
     if (!payload || isPalSpawnedInference() || !isClaude()) return;
     const transcriptPath = payload.transcript_path ?? undefined;
@@ -216,10 +228,12 @@ export function recordCompactionNear(payload: CompactionHookPayload | null): voi
     const compactAtTokens = compactionPoint(input);
     const tokensLeft = compactAtTokens - contextTokens;
     const marginTokens = compactionMarginTokens(input);
+    const predicted = compactionPredicted(tokensLeft, marginTokens);
+    verdict = { contextTokens, compactAtTokens, tokensLeft, marginTokens, predicted };
     appendEvent(
       "compaction_near",
       {
-        mode: "shadow",
+        mode: live && predicted ? "live" : "shadow",
         trigger: "threshold",
         contextTokens,
         windowTokens: compactionWindow.tokens,
@@ -227,11 +241,24 @@ export function recordCompactionNear(payload: CompactionHookPayload | null): voi
         compactAtTokens,
         tokensLeft,
         marginTokens,
-        predicted: compactionPredicted(tokensLeft, marginTokens),
+        predicted,
       },
       { session: hookSessionId(payload) ?? null }
     );
   });
+  return verdict;
+}
+
+function thousands(tokens: number): number {
+  return Math.round(tokens / 1000);
+}
+
+export function compactionWarningReminder(
+  verdict: CompactionVerdict | null
+): string | null {
+  if (!verdict?.predicted) return null;
+  const line = `Context: ${thousands(verdict.contextTokens)}k tokens, auto-compaction at ${thousands(verdict.compactAtTokens)}k (${Math.max(0, thousands(verdict.tokensLeft))}k left). Before the next long step, record where the work stands: pal cli progress stopped "<where it stands, what comes next>".`;
+  return ["<system-reminder>", line, "</system-reminder>"].join("\n");
 }
 
 export function recordIdleCompactionNear(payload: CompactionHookPayload | null): void {
