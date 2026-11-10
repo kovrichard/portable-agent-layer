@@ -220,6 +220,13 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
     cacheWrite1h: 0.2,
     cacheRead: 0.01,
   },
+  "claude-fable-5-2": {
+    input: 8,
+    output: 40,
+    cacheWrite5m: 10,
+    cacheWrite1h: 16,
+    cacheRead: 0.2,
+  },
   [FABLE_MODEL]: {
     input: 10,
     output: 50,
