@@ -149,6 +149,17 @@ describe("what a session ran with", () => {
     expect(contextTokensOf(transcript)).toBe(1015);
     expect(contextTokensOf(resolve(home, "missing.jsonl"))).toBeNull();
   });
+
+  test("the count before a compaction no longer says how full the context is", () => {
+    const transcript = resolve(home, "compacted.jsonl");
+    const usage = (n: number) =>
+      JSON.stringify({ message: { usage: { input_tokens: n } } });
+    const boundary = JSON.stringify({ type: "system", subtype: "compact_boundary" });
+    writeFileSync(transcript, `${usage(404000)}\n${boundary}\n{"type":"user"}\n`);
+    expect(contextTokensOf(transcript)).toBeNull();
+    writeFileSync(transcript, `${usage(404000)}\n${boundary}\n${usage(30000)}\n`);
+    expect(contextTokensOf(transcript)).toBe(30000);
+  });
 });
 
 // Shapes from each runtime's hook reference (cursor.com/docs/hooks,
