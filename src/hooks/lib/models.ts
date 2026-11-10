@@ -8,7 +8,7 @@ export const HAIKU_MODEL = "claude-haiku-4-5-20251001";
 export const HAIKU_5_5_MODEL = "claude-haiku-5-5";
 export const SONNET_MODEL = "claude-sonnet-5-5";
 export const OPUS_MODEL = "claude-opus-5-5";
-export const FABLE_MODEL = "claude-fable-5-1";
+export const FABLE_MODEL = "claude-fable-5-2";
 
 export const INFERENCE_TIERS = ["small", "medium", "large", "flagship"] as const;
 export type InferenceTier = (typeof INFERENCE_TIERS)[number];
@@ -221,6 +221,13 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
     cacheRead: 0.01,
   },
   [FABLE_MODEL]: {
+    input: 8,
+    output: 40,
+    cacheWrite5m: 10,
+    cacheWrite1h: 16,
+    cacheRead: 0.2,
+  },
+  "claude-fable-5-1": {
     input: 10,
     output: 50,
     cacheWrite5m: 12.5,

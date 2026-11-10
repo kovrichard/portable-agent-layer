@@ -55,6 +55,13 @@ describe("model pricing table", () => {
       cacheWrite1h: 20,
       cacheRead: 0.25,
     });
+    expect(pricingFor("claude-fable-5-2")).toEqual({
+      input: 8,
+      output: 40,
+      cacheWrite5m: 10,
+      cacheWrite1h: 16,
+      cacheRead: 0.2,
+    });
   });
 
   test("OpenAI models carry their standard rates", () => {
