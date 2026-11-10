@@ -14,12 +14,13 @@ import {
   type WorkEvent,
   type WorkNode,
 } from "./progress-tree";
+import { cleanUpNodeWorktrees } from "./progress-tree-worktrees";
 
 export type GhRunner = (ref: string, cwd: string, timeoutMs: number) => string | null;
 
 const PR_CHECK_BUDGET_MS = 3000;
 
-const PR_VIEW_FIELDS = "state,mergedAt,closedAt";
+const PR_VIEW_FIELDS = "state,mergedAt,closedAt,headRefName";
 
 export function ghPrView(
   ref: string,
@@ -51,6 +52,7 @@ interface PrView {
   state: string;
   mergedAt: string | null;
   closedAt: string | null;
+  headRefName?: string;
 }
 
 interface Outcome {
@@ -61,6 +63,7 @@ interface Outcome {
 interface Settled {
   number: number;
   outcome: Outcome;
+  branch?: string;
 }
 
 interface Candidate {
@@ -100,7 +103,10 @@ function settledOf(ref: string, stdout: string | null): Settled | null {
   const view = stdout === null ? null : parsePrView(stdout);
   const outcome = view ? settledOutcome(view) : null;
   const number = refNumber(ref);
-  return outcome && number !== null ? { number, outcome } : null;
+  if (!outcome || number === null) return null;
+  return view?.headRefName
+    ? { number, outcome, branch: view.headRefName }
+    : { number, outcome };
 }
 
 function settledLine({ number, outcome }: Settled): string {
@@ -198,7 +204,13 @@ function checkCandidates(scope: string, cwd: string, options: SettleOptions): vo
     const writesLine =
       newest.has(result) && !lineIsNewer(lineTs, result.settled.outcome.at);
     recordSettled(scope, result, writesLine, options.file, now);
+    removeMergedPrWorktree(cwd, result);
   }
+}
+
+function removeMergedPrWorktree(cwd: string, { candidate, settled }: Result): void {
+  if (settled.outcome.state === "merged" && settled.branch)
+    cleanUpNodeWorktrees(cwd, candidate.node, settled.branch);
 }
 
 export function settleAttachedPrs(

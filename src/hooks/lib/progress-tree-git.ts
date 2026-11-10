@@ -7,6 +7,11 @@ import { spawnSync } from "node:child_process";
 import { progressSession } from "./progress-session";
 import { appendEvent, readTree, scopeOf } from "./progress-tree";
 import { openSessionNode } from "./progress-tree-session-node";
+import { attachNewWorktrees, worktreePaths } from "./progress-tree-worktrees";
+
+function sameList(a: string[] | undefined, b: string[]): boolean {
+  return a !== undefined && a.length === b.length && a.every((x, i) => x === b[i]);
+}
 
 const GIT_TIMEOUT_MS = 1000;
 const MAX_COMMITS = 20;
@@ -106,7 +111,13 @@ export function attachGitProgress(
   const current = snapshot(cwd);
   if (!current) return;
   const cursor = tree.gitCursor;
-  if (cursor?.head === current.head && cursor.branch === current.branch) return;
+  const worktrees = worktreePaths(cwd);
+  if (
+    cursor?.head === current.head &&
+    cursor.branch === current.branch &&
+    sameList(cursor.worktrees, worktrees)
+  )
+    return;
 
   if (cursor) {
     const branch = cursor.branch !== current.branch ? current.branch : null;
@@ -115,12 +126,13 @@ export function attachGitProgress(
       tree.active ??
       (commits.length > 0 ? openSessionNode(scope, session, file, now) : null);
     if (node) attachMoves({ scope, node, branch, commits, file, now });
+    attachNewWorktrees(cwd, cursor.worktrees, { scope, node, file, now });
   }
   appendEvent(
     scope,
     "",
     "git-cursor",
-    { branch: current.branch, head: current.head },
+    { branch: current.branch, head: current.head, worktrees },
     file,
     now
   );
