@@ -131,7 +131,7 @@ Override with `--pdf <path>`. Pass `--skip-build` to re-render the PDF from the 
 
 ## Component Cheatsheet
 
-- `<CoverPage clientName reportTitle reportDate classification consultancyName preTitle />` — full-bleed cover
+- `<CoverPage clientName reportTitle reportDate consultancyName preTitle? consultancyLogoSrc? clientLogoSrc? metadata={[{label, value}, …]}? />` — full-bleed cover; logos fall back to text wordmarks, `metadata` rows (date, classification, version) fill the bottom strip
 - `<TableOfContents items={[{id, title}, …]} title?>` — linked TOC, anchors to section IDs
 - `<Section id title>` — top-level section with bottom-rule heading; `id` enables TOC links
 - `<Exhibit number title source?>` — bordered card for figures, tables, side data

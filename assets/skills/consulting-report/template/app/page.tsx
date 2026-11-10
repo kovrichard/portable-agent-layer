@@ -32,9 +32,12 @@ export default function ReportPage() {
         clientName={data.clientName}
         reportTitle={data.reportTitle}
         reportDate={data.reportDate}
-        classification={data.classification}
         consultancyName={data.consultancyName}
         preTitle={data.preTitle}
+        metadata={[
+          { label: "Date", value: data.reportDate },
+          { label: "Classification", value: data.classification },
+        ]}
       />
 
       <div className="report-container">
