@@ -226,6 +226,7 @@ export function poUnattendedCommand(launch) {
       shellArg(launch.pluginDir),
       "--allowedTools",
       PO_UNATTENDED_TOOLS,
+      "--",
     ]
   );
 }
