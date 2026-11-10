@@ -8,6 +8,7 @@ import {
   writeTask,
 } from "../../assets/plugins/dark-factory/scripts/lib.mjs";
 import { rolesFor } from "../../assets/plugins/dark-factory/scripts/roles.mjs";
+import { markStarted } from "../../assets/plugins/dark-factory/scripts/task.mjs";
 import { freshTestDir } from "./test-home";
 
 export const TASK = "t1";
@@ -151,8 +152,7 @@ function fakePrepare(world: World, options: WorldOptions) {
       },
       env
     );
-    if (!keepsStatus)
-      appendEvent({ event: "task_started", task: id, category: task.category }, env);
+    if (!keepsStatus) markStarted(id, env);
     return {
       worktree: world.worktree,
       branch: `factory/${id}`,

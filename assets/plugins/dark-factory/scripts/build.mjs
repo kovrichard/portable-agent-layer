@@ -28,6 +28,8 @@ import {
 } from "./task.mjs";
 import { superviseBuild } from "./worker.mjs";
 
+export { runTotals } from "./lib.mjs";
+
 const REAL_EFFECTS = {
   runRoleHeadless,
   runCheck,
@@ -1409,32 +1411,6 @@ function pipeline(run) {
   return stuck("the pipeline ended without an outcome");
 }
 
-function sumOf(events, read) {
-  return events.reduce((total, event) => total + (read(event) ?? 0), 0);
-}
-
-const TOKEN_FIELDS = [
-  "inputTokens",
-  "outputTokens",
-  "cacheReadTokens",
-  "cacheCreationTokens",
-];
-
-export function runTotals(events, taskId, startedIso) {
-  const runs = events.filter(
-    (event) =>
-      event.event === "role_finished" && event.task === taskId && event.ts >= startedIso
-  );
-  return {
-    costUsd: sumOf(runs, (event) => event.costUsd),
-    tokens: TOKEN_FIELDS.reduce(
-      (total, field) => total + sumOf(runs, (event) => event[field]),
-      0
-    ),
-    roleRuns: runs.length,
-  };
-}
-
 function saveStatus(run, outcome) {
   try {
     if (outcome.status === "waiting") recordQuestion(run.id, outcome.message, run.env);
@@ -1453,16 +1429,6 @@ function messageWithStatusError(outcome, statusError) {
 function finishRun(run, outcome) {
   const message = messageWithStatusError(outcome, saveStatus(run, outcome));
   notify(run.id, outcome.status, message, run.env);
-  appendEvent(
-    {
-      event: "run_finished",
-      task: run.id,
-      status: outcome.status,
-      ...runTotals(readEvents(run.env), run.id, run.startedAt.toISOString()),
-      wallMs: Date.now() - run.startedAt.getTime(),
-    },
-    run.env
-  );
   run.effects.startCoach(run.id, outcome.status, run.env);
   return { task: run.id, status: outcome.status, message, pr: run.pr ?? null };
 }
@@ -1472,7 +1438,6 @@ export function runBuild(taskId, { env = process.env, effects = {} } = {}) {
     id: taskId,
     env,
     effects: { ...REAL_EFFECTS, ...effects },
-    startedAt: new Date(),
     attempt: 0,
     testFixes: 0,
     testFixTrees: [],

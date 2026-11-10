@@ -299,11 +299,11 @@ describe("the coach at the end of a run", () => {
     roles: { "code-writer": [NOOP, NOOP, NOOP, NOOP], debugger: [NOOP, NOOP] },
   };
 
-  test("a ready run is coached after run_finished and records the counts", () => {
+  test("a ready run is coached after the notification and records the counts", () => {
     setup("small");
     expect(runBuild().exitCode).toBe(0);
     expect(roleNames().at(-1)).toBe("coach");
-    expect(flow().slice(-3)).toEqual(["run_finished", "coach_started", "coach_finished"]);
+    expect(flow().slice(-3)).toEqual(["notify", "coach_started", "coach_finished"]);
     expect(eventsNamed("coach_finished")[0]).toMatchObject({
       task: TASK,
       created: 0,
@@ -376,6 +376,7 @@ describe("a whole feature run", () => {
     expect(flow()).toEqual([
       "run_started",
       "task_started",
+      "estimate",
       "role:test-writer",
       "tests_red",
       "role:planner",
@@ -397,8 +398,8 @@ describe("a whole feature run", () => {
       "ci",
       "pr_ready",
       "task_status",
-      "notify",
       "run_finished",
+      "notify",
       "coach_started",
       "coach_finished",
     ]);
