@@ -5,6 +5,7 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync, realpathSync } from "node:fs";
+import { resolve } from "node:path";
 import { appendEvent } from "./events";
 
 const GIT_TIMEOUT_MS = 1000;
@@ -27,7 +28,7 @@ function linkedWorktrees(cwd: string): MergedWorktree[] {
   return blocks.slice(1).flatMap((block) => {
     const path = /^worktree (.+)$/m.exec(block)?.[1];
     const branch = /^branch refs\/heads\/(.+)$/m.exec(block)?.[1];
-    return path && branch ? [{ path, branch }] : [];
+    return path && branch ? [{ path: resolve(path), branch }] : [];
   });
 }
 
