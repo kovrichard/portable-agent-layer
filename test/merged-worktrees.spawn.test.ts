@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
+import { beforeEach, describe, expect, setDefaultTimeout, spyOn, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -75,6 +75,48 @@ function mergeAndDeleteOnRemote(dir: string, branch: string): void {
   git(dir, "fetch", "-q", "--prune");
 }
 
+function withGitThatOnRemove<T>(action: string, run: () => T): T {
+  const bin = resolve(ROOT, "fake-git");
+  mkdirSync(bin);
+  const realGit = Bun.which("git") as string;
+  writeFileSync(
+    resolve(bin, "git"),
+    `#!/bin/sh\ncase "$*" in *"worktree remove"*) ${action};; esac\nexec "${realGit}" "$@"\n`,
+    { mode: 0o755 }
+  );
+  const savedPath = process.env.PATH;
+  process.env.PATH = `${bin}:${savedPath}`;
+  try {
+    return run();
+  } finally {
+    process.env.PATH = savedPath;
+  }
+}
+
+const LOCKED =
+  "fatal: cannot remove a locked working tree;\nuse 'remove -f -f' to override or unlock first";
+
+async function runPrune(
+  dir: string,
+  dryRun: boolean
+): Promise<{ code: number; lines: string[] }> {
+  const { prune } = await import("../src/cli/worktree");
+  const { capturingLog } = await import("../src/targets/lib");
+  const lines: string[] = [];
+  const printed = spyOn(console, "log").mockImplementation((line: string) => {
+    lines.push(line);
+  });
+  try {
+    const code = await capturingLog(
+      (level, message) => lines.push(`${level}: ${message}`),
+      async () => prune(dir, dryRun)
+    );
+    return { code, lines };
+  } finally {
+    printed.mockRestore();
+  }
+}
+
 async function lib() {
   return import("../src/hooks/lib/merged-worktrees");
 }
@@ -97,7 +139,10 @@ describe("a worktree whose branch was merged and deleted on the remote", () => {
     const { mergedWorktrees, pruneMergedWorktrees } = await lib();
 
     expect(mergedWorktrees(dir)).toEqual([{ path, branch: "feat/done" }]);
-    expect(pruneMergedWorktrees(dir)).toEqual([{ path, branch: "feat/done" }]);
+    expect(pruneMergedWorktrees(dir)).toEqual({
+      removed: [{ path, branch: "feat/done" }],
+      failed: [],
+    });
     expect(existsSync(path)).toBe(false);
     expect(git(dir, "branch", "--list", "feat/done")).toContain("feat/done");
     expect(prunedEvents()).toEqual([
@@ -112,10 +157,122 @@ describe("a worktree whose branch was merged and deleted on the remote", () => {
     const { pruneMergedWorktrees } = await lib();
 
     pruneMergedWorktrees(dir);
-    expect(pruneMergedWorktrees(dir)).toEqual([]);
+    expect(pruneMergedWorktrees(dir)).toEqual({ removed: [], failed: [] });
     expect(prunedEvents()).toHaveLength(1);
   });
 
+  test.skipIf(process.platform === "win32")(
+    "a removal that takes longer than a second still finishes",
+    async () => {
+      const dir = checkout();
+      const path = pushedWorktree(dir, "feat/done");
+      mergeAndDeleteOnRemote(dir, "feat/done");
+      const { pruneMergedWorktrees } = await lib();
+
+      const { removed } = withGitThatOnRemove("sleep 1.5", () =>
+        pruneMergedWorktrees(dir)
+      );
+      expect(removed).toEqual([{ path, branch: "feat/done" }]);
+      expect(existsSync(path)).toBe(false);
+    }
+  );
+
+  test.skipIf(process.platform === "win32")(
+    "a git stopped by a signal is reported as such",
+    async () => {
+      const dir = checkout();
+      const path = pushedWorktree(dir, "feat/done");
+      mergeAndDeleteOnRemote(dir, "feat/done");
+      const { pruneMergedWorktrees } = await lib();
+
+      expect(
+        withGitThatOnRemove("kill -TERM $$", () => pruneMergedWorktrees(dir))
+      ).toEqual({
+        removed: [],
+        failed: [{ path, branch: "feat/done", reason: "git was stopped by SIGTERM" }],
+      });
+    }
+  );
+
+  test("a removal git refuses is reported with git's reason, and the worktree stays", async () => {
+    const dir = checkout();
+    const path = pushedWorktree(dir, "feat/done");
+    mergeAndDeleteOnRemote(dir, "feat/done");
+    git(dir, "worktree", "lock", path);
+
+    expect((await lib()).pruneMergedWorktrees(dir)).toEqual({
+      removed: [],
+      failed: [{ path, branch: "feat/done", reason: LOCKED }],
+    });
+    expect(existsSync(path)).toBe(true);
+    expect(prunedEvents()).toEqual([]);
+  });
+
+  test.skipIf(process.platform === "win32")(
+    "a git that fails without a word is reported by its exit code",
+    async () => {
+      const dir = checkout();
+      const path = pushedWorktree(dir, "feat/done");
+      mergeAndDeleteOnRemote(dir, "feat/done");
+      const { pruneMergedWorktrees } = await lib();
+
+      expect(withGitThatOnRemove("exit 3", () => pruneMergedWorktrees(dir))).toEqual({
+        removed: [],
+        failed: [{ path, branch: "feat/done", reason: "git exited with 3" }],
+      });
+    }
+  );
+});
+
+describe("pal cli worktree prune", () => {
+  test("names each removal with its undo and exits 0", async () => {
+    const dir = checkout();
+    const path = pushedWorktree(dir, "feat/done");
+    mergeAndDeleteOnRemote(dir, "feat/done");
+
+    const { code, lines } = await runPrune(dir, false);
+    expect(code).toBe(0);
+    expect(lines).toEqual([
+      `Removed ${path} (feat/done); undo: git worktree add ${path} feat/done`,
+    ]);
+    expect(existsSync(path)).toBe(false);
+  });
+
+  test("a dry run names what it would remove and removes nothing", async () => {
+    const dir = checkout();
+    const path = pushedWorktree(dir, "feat/done");
+    mergeAndDeleteOnRemote(dir, "feat/done");
+
+    const { code, lines } = await runPrune(dir, true);
+    expect(code).toBe(0);
+    expect(lines).toEqual([
+      `Would remove ${path} (feat/done); undo: git worktree add ${path} feat/done`,
+    ]);
+    expect(existsSync(path)).toBe(true);
+  });
+
+  test("names a removal git refused, says nothing of 'no merged worktrees', and exits 1", async () => {
+    const dir = checkout();
+    const path = pushedWorktree(dir, "feat/done");
+    mergeAndDeleteOnRemote(dir, "feat/done");
+    git(dir, "worktree", "lock", path);
+
+    const { code, lines } = await runPrune(dir, false);
+    expect(code).toBe(1);
+    expect(lines).toEqual([`error: Could not remove ${path}: ${LOCKED}`]);
+  });
+
+  test("with nothing merged it says so and exits 0", async () => {
+    const dir = checkout();
+    pushedWorktree(dir, "feat/open");
+
+    const { code, lines } = await runPrune(dir, false);
+    expect(code).toBe(0);
+    expect(lines).toEqual(["info: No merged worktrees."]);
+  });
+});
+
+describe("a worktree that is kept", () => {
   test("is kept while it has uncommitted changes", async () => {
     const dir = checkout();
     const path = pushedWorktree(dir, "feat/done");

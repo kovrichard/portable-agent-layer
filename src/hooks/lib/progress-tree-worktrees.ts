@@ -68,9 +68,7 @@ export function cleanUpNodeWorktrees(
   const cleanup: WorktreeCleanup = { removed: [], kept: [] };
   for (const worktree of nodeWorktrees(node, onlyBranch)) {
     if (!stillListed(cwd, worktree)) continue;
-    const reason =
-      removalBlocker(cwd, worktree) ??
-      (removeWorktree(cwd, worktree) ? null : "git refused to remove it");
+    const reason = removalBlocker(cwd, worktree) ?? removeWorktree(cwd, worktree);
     if (reason) cleanup.kept.push({ path: worktree.path, reason });
     else cleanup.removed.push(worktree);
   }

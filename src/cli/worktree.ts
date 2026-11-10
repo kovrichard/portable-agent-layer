@@ -5,6 +5,7 @@
 
 import { spawnSync } from "node:child_process";
 import {
+  type FailedRemoval,
   type MergedWorktree,
   mergedWorktrees,
   pruneMergedWorktrees,
@@ -16,22 +17,20 @@ function forgetBranchesDeletedOnRemote(cwd: string): void {
   spawnSync("git", ["-C", cwd, "fetch", "--prune", "--quiet"], { encoding: "utf-8" });
 }
 
-function report(worktrees: MergedWorktree[], verb: string): void {
-  if (worktrees.length === 0) {
-    log.info("No merged worktrees.");
-    return;
-  }
+function report(verb: string, worktrees: MergedWorktree[], failed: FailedRemoval[] = []) {
+  if (worktrees.length === 0 && failed.length === 0) log.info("No merged worktrees.");
   for (const { path, branch } of worktrees) {
     console.log(`${verb} ${path} (${branch}); undo: git worktree add ${path} ${branch}`);
   }
+  for (const { path, reason } of failed) log.error(`Could not remove ${path}: ${reason}`);
+  return failed.length === 0 ? 0 : 1;
 }
 
-function prune(dryRun: boolean): number {
-  const cwd = process.cwd();
+export function prune(cwd: string, dryRun: boolean): number {
   forgetBranchesDeletedOnRemote(cwd);
-  if (dryRun) report(mergedWorktrees(cwd), "Would remove");
-  else report(pruneMergedWorktrees(cwd), "Removed");
-  return 0;
+  if (dryRun) return report("Would remove", mergedWorktrees(cwd));
+  const { removed, failed } = pruneMergedWorktrees(cwd);
+  return report("Removed", removed, failed);
 }
 
 export const worktreeCommand = group({
@@ -43,7 +42,7 @@ export const worktreeCommand = group({
       options: {
         "dry-run": { type: "boolean", description: "List them without removing" },
       },
-      run: ({ values }) => prune(Boolean(values["dry-run"])),
+      run: ({ values }) => prune(process.cwd(), Boolean(values["dry-run"])),
     }),
   },
 });
