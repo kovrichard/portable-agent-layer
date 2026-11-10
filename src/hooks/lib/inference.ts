@@ -1006,6 +1006,12 @@ interface SpawnPlace {
   afterRun?: (rawStdout: string) => void;
 }
 
+function retryJitterMs(): number {
+  const fixed = process.env.PAL_INFERENCE_RETRY_JITTER_MS;
+  if (fixed !== undefined && /^\d+$/.test(fixed)) return Number(fixed);
+  return 500 + Math.floor(Math.random() * 1000);
+}
+
 /**
  * Generic CLI dispatcher: spawn `binary args`, write stdinInput to stdin (may be
  * empty for argv-only CLIs like codex), capture stdout, retry once on empty-abort.
@@ -1043,7 +1049,7 @@ async function inferenceViaCliSpawn(
     attempt.stdout.length === 0 &&
     attempt.stderr.length === 0;
   if (isEmptyAbort) {
-    const jitterMs = 500 + Math.floor(Math.random() * 1000);
+    const jitterMs = retryJitterMs();
     logDebug(
       "inference:spawn",
       `${tag} retry: empty-abort binary=${binaryName} exit=${attempt.code} after ${Date.now() - started}ms, jitter=${jitterMs}ms`
