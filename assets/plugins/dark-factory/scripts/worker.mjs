@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
-import { PLUGIN_ROOT, spawnTool, taskDir } from "./lib.mjs";
+import { appendEvent, PLUGIN_ROOT, spawnTool, taskDir } from "./lib.mjs";
 import { setStatus } from "./task.mjs";
 
 const BUILD_WORKER_SCRIPT = join(PLUGIN_ROOT, "scripts", "build-worker.mjs");
@@ -197,6 +197,11 @@ export async function superviseBuild(taskId, { env = process.env } = {}) {
   if (claimLock(files)) {
     const failed = startWorker(taskId, files, env);
     if (failed) return failed;
+  } else {
+    appendEvent(
+      { event: "build_joined", task: taskId, workerPid: readLockPid(files.lock) },
+      env
+    );
   }
   return waitForResult(taskId, files, env);
 }

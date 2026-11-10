@@ -293,7 +293,11 @@ describe("one worker per task", () => {
     await until(workerEntered, "the worker to reach the code writer");
     expect(lockPid()).toBeGreaterThan(0);
     const second = startWaiter();
-    await Bun.sleep(1500);
+    await until(
+      () => eventsNamed("build_joined").length === 1,
+      "the second build to join the worker"
+    );
+    expect(eventsNamed("build_joined")[0].workerPid).toBe(lockPid());
     releaseWorker();
     expect(await first.exited).toBe(0);
     expect(await second.exited).toBe(0);
