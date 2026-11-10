@@ -23,6 +23,10 @@ import {
 } from "../hooks/lib/progress-tree-render";
 import { openSessionNode } from "../hooks/lib/progress-tree-session-node";
 import { similarNodes } from "../hooks/lib/progress-tree-tidy";
+import {
+  cleanUpNodeWorktrees,
+  type WorktreeCleanup,
+} from "../hooks/lib/progress-tree-worktrees";
 import { group, leaf, runCommand, UsageError } from "../tools/lib/command";
 
 const SCOPE = {
@@ -170,7 +174,14 @@ function cmdDone(values: { scope?: string; node?: string; summary?: string }): n
       values.summary ? { summary: values.summary } : {}
     );
     console.log(`Done: ${node.title} [${node.id}]. ${backTo(scope)}`);
+    reportWorktreeCleanup(cleanUpNodeWorktrees(process.cwd(), node));
   });
+}
+
+function reportWorktreeCleanup({ removed, kept }: WorktreeCleanup): void {
+  for (const { path, branch } of removed)
+    console.log(`Removed worktree ${path}; undo: git worktree add ${path} ${branch}`);
+  for (const { path, reason } of kept) console.log(`Kept worktree ${path}: it ${reason}`);
 }
 
 function artifactKind(kind: string | undefined): ArtifactKind {

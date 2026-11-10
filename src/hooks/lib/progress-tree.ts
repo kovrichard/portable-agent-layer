@@ -20,7 +20,8 @@ export type ArtifactKind =
   | "artifact"
   | "file"
   | "run"
-  | "link";
+  | "link"
+  | "worktree";
 
 export const ARTIFACT_KINDS: readonly ArtifactKind[] = [
   "commit",
@@ -30,6 +31,7 @@ export const ARTIFACT_KINDS: readonly ArtifactKind[] = [
   "file",
   "run",
   "link",
+  "worktree",
 ];
 
 interface NodeLinks {
@@ -56,7 +58,7 @@ export type WorkEvent = EventBase &
     | { type: "decide"; text: string; why?: string }
     | { type: "attach"; kind: ArtifactKind; ref: string; label?: string }
     | { type: "follow-up"; text: string; due?: string }
-    | { type: "git-cursor"; branch: string; head: string }
+    | { type: "git-cursor"; branch: string; head: string; worktrees?: string[] }
     | {
         type: "pr-settled";
         ref: string;
@@ -116,6 +118,7 @@ export interface WorkNode {
 interface GitCursor {
   branch: string;
   head: string;
+  worktrees?: string[];
 }
 
 export const PROJECT_ROOT = "root";
@@ -373,7 +376,11 @@ function settlePr(
 function apply(tree: ScopeTree, event: WorkEvent): void {
   tree.laneSeen.set(laneOf(event), event.ts);
   if (event.type === "git-cursor") {
-    tree.gitCursor = { branch: event.branch, head: event.head };
+    tree.gitCursor = {
+      branch: event.branch,
+      head: event.head,
+      ...(event.worktrees && { worktrees: event.worktrees }),
+    };
     return;
   }
   if (event.type === "pr-settled") {
