@@ -1,7 +1,7 @@
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
-import { basename, resolve } from "node:path";
+import { copyFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { basename, dirname, resolve } from "node:path";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
@@ -9,6 +9,23 @@ import { freshTestDir } from "./lib/test-home";
 setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 const REPO = resolve(import.meta.dir, "..");
+
+/** `bun pm pack` walks gitignored trees such as .claude/worktrees, seconds on a used checkout. */
+function copyOfWhatGitWouldPublish(into: string): string {
+  const pkg = JSON.parse(readFileSync(resolve(REPO, "package.json"), "utf-8"));
+  const listed = spawnSync(
+    "git",
+    ["ls-files", "-co", "--exclude-standard", "-z", "--", "package.json", ...pkg.files],
+    { cwd: REPO, encoding: "utf-8" }
+  );
+  expect(listed.status).toBe(0);
+  const copy = resolve(into, "package");
+  for (const file of listed.stdout.split("\0").filter(Boolean)) {
+    mkdirSync(dirname(resolve(copy, file)), { recursive: true });
+    copyFileSync(resolve(REPO, file), resolve(copy, file));
+  }
+  return copy;
+}
 
 describe("package publish surface", () => {
   test(".husky/install.mjs ships so the prepare script can run in package mode", () => {
@@ -40,7 +57,7 @@ describe("package publish surface", () => {
         "bun",
         ["pm", "pack", "--ignore-scripts", "--destination", sandbox],
         {
-          cwd: REPO,
+          cwd: copyOfWhatGitWouldPublish(sandbox),
           encoding: "utf-8",
           timeout: 60000,
         }
