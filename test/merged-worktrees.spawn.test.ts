@@ -75,6 +75,24 @@ function mergeAndDeleteOnRemote(dir: string, branch: string): void {
   git(dir, "fetch", "-q", "--prune");
 }
 
+function withGitThatOnRemove<T>(action: string, run: () => T): T {
+  const bin = resolve(ROOT, "fake-git");
+  mkdirSync(bin);
+  const realGit = Bun.which("git") as string;
+  writeFileSync(
+    resolve(bin, "git"),
+    `#!/bin/sh\ncase "$*" in *"worktree remove"*) ${action};; esac\nexec "${realGit}" "$@"\n`,
+    { mode: 0o755 }
+  );
+  const savedPath = process.env.PATH;
+  process.env.PATH = `${bin}:${savedPath}`;
+  try {
+    return run();
+  } finally {
+    process.env.PATH = savedPath;
+  }
+}
+
 async function lib() {
   return import("../src/hooks/lib/merged-worktrees");
 }
@@ -97,7 +115,10 @@ describe("a worktree whose branch was merged and deleted on the remote", () => {
     const { mergedWorktrees, pruneMergedWorktrees } = await lib();
 
     expect(mergedWorktrees(dir)).toEqual([{ path, branch: "feat/done" }]);
-    expect(pruneMergedWorktrees(dir)).toEqual([{ path, branch: "feat/done" }]);
+    expect(pruneMergedWorktrees(dir)).toEqual({
+      removed: [{ path, branch: "feat/done" }],
+      failed: [],
+    });
     expect(existsSync(path)).toBe(false);
     expect(git(dir, "branch", "--list", "feat/done")).toContain("feat/done");
     expect(prunedEvents()).toEqual([
@@ -112,8 +133,72 @@ describe("a worktree whose branch was merged and deleted on the remote", () => {
     const { pruneMergedWorktrees } = await lib();
 
     pruneMergedWorktrees(dir);
-    expect(pruneMergedWorktrees(dir)).toEqual([]);
+    expect(pruneMergedWorktrees(dir)).toEqual({ removed: [], failed: [] });
     expect(prunedEvents()).toHaveLength(1);
+  });
+
+  test.skipIf(process.platform === "win32")(
+    "a removal that takes longer than a second still finishes",
+    async () => {
+      const dir = checkout();
+      const path = pushedWorktree(dir, "feat/done");
+      mergeAndDeleteOnRemote(dir, "feat/done");
+      const { pruneMergedWorktrees } = await lib();
+
+      const { removed } = withGitThatOnRemove("sleep 1.5", () =>
+        pruneMergedWorktrees(dir)
+      );
+      expect(removed).toEqual([{ path, branch: "feat/done" }]);
+      expect(existsSync(path)).toBe(false);
+    }
+  );
+
+  test.skipIf(process.platform === "win32")(
+    "a git stopped by a signal is reported as such",
+    async () => {
+      const dir = checkout();
+      const path = pushedWorktree(dir, "feat/done");
+      mergeAndDeleteOnRemote(dir, "feat/done");
+      const { pruneMergedWorktrees } = await lib();
+
+      expect(
+        withGitThatOnRemove("kill -TERM $$", () => pruneMergedWorktrees(dir))
+      ).toEqual({
+        removed: [],
+        failed: [{ path, branch: "feat/done", reason: "git was stopped by SIGTERM" }],
+      });
+    }
+  );
+
+  test("a removal git refuses is reported with git's reason, and the worktree stays", async () => {
+    const dir = checkout();
+    const path = pushedWorktree(dir, "feat/done");
+    mergeAndDeleteOnRemote(dir, "feat/done");
+    git(dir, "worktree", "lock", path);
+
+    expect((await lib()).pruneMergedWorktrees(dir)).toEqual({
+      removed: [],
+      failed: [{ path, branch: "feat/done", reason: expect.stringContaining("locked") }],
+    });
+    expect(existsSync(path)).toBe(true);
+    expect(prunedEvents()).toEqual([]);
+  });
+
+  test("pal cli worktree prune names a removal git refused and exits 1", () => {
+    const dir = checkout();
+    const path = pushedWorktree(dir, "feat/done");
+    mergeAndDeleteOnRemote(dir, "feat/done");
+    git(dir, "worktree", "lock", path);
+    const cli = resolve(import.meta.dir, "..", "src", "cli", "index.ts");
+
+    const result = spawnSync("bun", [cli, "cli", "worktree", "prune"], {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(`Could not remove ${path}`);
+    expect(result.stderr).toContain("locked");
+    expect(result.stdout).not.toContain("No merged worktrees");
   });
 
   test("is kept while it has uncommitted changes", async () => {

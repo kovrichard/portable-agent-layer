@@ -5,6 +5,7 @@
 
 import { spawnSync } from "node:child_process";
 import {
+  type FailedRemoval,
   type MergedWorktree,
   mergedWorktrees,
   pruneMergedWorktrees,
@@ -26,12 +27,21 @@ function report(worktrees: MergedWorktree[], verb: string): void {
   }
 }
 
+function reportFailures(failed: FailedRemoval[]): void {
+  for (const { path, reason } of failed) log.error(`Could not remove ${path}: ${reason}`);
+}
+
 function prune(dryRun: boolean): number {
   const cwd = process.cwd();
   forgetBranchesDeletedOnRemote(cwd);
-  if (dryRun) report(mergedWorktrees(cwd), "Would remove");
-  else report(pruneMergedWorktrees(cwd), "Removed");
-  return 0;
+  if (dryRun) {
+    report(mergedWorktrees(cwd), "Would remove");
+    return 0;
+  }
+  const { removed, failed } = pruneMergedWorktrees(cwd);
+  if (removed.length > 0 || failed.length === 0) report(removed, "Removed");
+  reportFailures(failed);
+  return failed.length === 0 ? 0 : 1;
 }
 
 export const worktreeCommand = group({

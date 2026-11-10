@@ -9,6 +9,7 @@ import { resolve } from "node:path";
 import { appendEvent } from "./events";
 
 const GIT_TIMEOUT_MS = 1000;
+const REMOVE_TIMEOUT_MS = 120_000;
 
 export interface MergedWorktree {
   path: string;
@@ -79,12 +80,47 @@ export function mergedWorktrees(cwd: string): MergedWorktree[] {
   );
 }
 
-export function removeWorktree(cwd: string, { path, branch }: MergedWorktree): boolean {
-  if (git(cwd, "worktree", "remove", path) === null) return false;
-  appendEvent("worktree_pruned", { branch }, { cwd, content: { path, branch } });
-  return true;
+function gitRefusal(result: ReturnType<typeof spawnSync>): string | null {
+  if (result.status === 0) return null;
+  if (result.signal) return `git was stopped by ${result.signal}`;
+  return (
+    String(result.stderr)
+      .trim()
+      .replace(/^fatal: /, "") || "git failed"
+  );
 }
 
-export function pruneMergedWorktrees(cwd: string): MergedWorktree[] {
-  return mergedWorktrees(cwd).filter((worktree) => removeWorktree(cwd, worktree));
+/** Why git did not remove the worktree, or null once it is removed. */
+export function removeWorktree(
+  cwd: string,
+  { path, branch }: MergedWorktree
+): string | null {
+  const refusal = gitRefusal(
+    spawnSync("git", ["-C", cwd, "worktree", "remove", path], {
+      encoding: "utf-8",
+      timeout: REMOVE_TIMEOUT_MS,
+    })
+  );
+  if (refusal === null)
+    appendEvent("worktree_pruned", { branch }, { cwd, content: { path, branch } });
+  return refusal;
+}
+
+export interface FailedRemoval extends MergedWorktree {
+  reason: string;
+}
+
+export interface PruneResult {
+  removed: MergedWorktree[];
+  failed: FailedRemoval[];
+}
+
+export function pruneMergedWorktrees(cwd: string): PruneResult {
+  const result: PruneResult = { removed: [], failed: [] };
+  for (const worktree of mergedWorktrees(cwd)) {
+    const reason = removeWorktree(cwd, worktree);
+    if (reason === null) result.removed.push(worktree);
+    else result.failed.push({ ...worktree, reason });
+  }
+  return result;
 }
