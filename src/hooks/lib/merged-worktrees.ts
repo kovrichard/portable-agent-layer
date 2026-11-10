@@ -9,7 +9,6 @@ import { resolve } from "node:path";
 import { appendEvent } from "./events";
 
 const GIT_TIMEOUT_MS = 1000;
-const REMOVE_TIMEOUT_MS = 120_000;
 
 export interface MergedWorktree {
   path: string;
@@ -83,11 +82,7 @@ export function mergedWorktrees(cwd: string): MergedWorktree[] {
 function gitRefusal(result: ReturnType<typeof spawnSync>): string | null {
   if (result.status === 0) return null;
   if (result.signal) return `git was stopped by ${result.signal}`;
-  return (
-    String(result.stderr)
-      .trim()
-      .replace(/^fatal: /, "") || "git failed"
-  );
+  return String(result.stderr).trim() || `git exited with ${result.status}`;
 }
 
 /** Why git did not remove the worktree, or null once it is removed. */
@@ -95,12 +90,7 @@ export function removeWorktree(
   cwd: string,
   { path, branch }: MergedWorktree
 ): string | null {
-  const refusal = gitRefusal(
-    spawnSync("git", ["-C", cwd, "worktree", "remove", path], {
-      encoding: "utf-8",
-      timeout: REMOVE_TIMEOUT_MS,
-    })
-  );
+  const refusal = gitRefusal(spawnSync("git", ["-C", cwd, "worktree", "remove", path]));
   if (refusal === null)
     appendEvent("worktree_pruned", { branch }, { cwd, content: { path, branch } });
   return refusal;
