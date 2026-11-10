@@ -118,6 +118,7 @@ pal cli status        # check your setup
 | `pal cli subagent link <name>` | Install a personal `~/.pal/agents/<name>.md` (merged multi-platform definition) into every installed agent, split per platform |
 | `pal cli subagent doctor <name>` | Evaluate a subagent definition against the authoring best practices (name/file match, per-platform blocks, model/tools/permission shape, shipped-name collision) |
 | `pal cli subagent list` | List the user-authored subagents in `~/.pal/agents/` |
+| `pal cli worktree prune` | Remove this repo's clean worktrees whose branch is merged and deleted on the remote, after a `git fetch --prune`. The branch stays, and each removal prints its undo. The repo line in the prompt names merged worktrees. `--dry-run` |
 | `pal cli version` | Print the installed PAL version. `-v` and `--version` do the same |
 
 ### Target flags
