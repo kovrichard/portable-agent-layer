@@ -10,4 +10,4 @@ Test each criterion at its widest reading. Where a criterion says any, every, ea
 
 Follow the repo's existing test layout, helpers and fixtures. A fake program, script or path in a test must work on every OS the repo's CI runs. Reuse the repo's existing way of faking a binary, or inject a function, and never write a POSIX shell script for it. Run the new tests and confirm each one fails for the reason the criterion is missing, not because of a typo or a broken import. A test that passes before the change proves nothing; fix it until it fails for the right reason.
 
-Leave the tests uncommitted; the code writer commits them together with the code. Write `tests.md` in the task folder listing each test and the criterion it covers.
+Wait for every command you started before you hand over; the build checks your tests right after. Leave the tests uncommitted; the code writer commits them together with the code. Write `tests.md` in the task folder listing each test and the criterion it covers.

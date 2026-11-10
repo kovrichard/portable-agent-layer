@@ -12,7 +12,7 @@ The scripts live in `${CLAUDE_PLUGIN_ROOT}/scripts`; run them with `node`, witho
 ## Before you start
 
 1. The task needs a written spec: `node $S/task.mjs show <id>` prints it with its category. Without a spec, write one first with the `dark-factory:po` skill, but do not start `build.mjs`.
-2. This session must run inside the task's worktree, because subagents work in the folder the session started in, and without the repo's Claude Code hooks, because the factory's only gate is `.dark-factory.json`. Run `node $S/task.mjs prepare <id>`, read `worktree` from its output, and compare it with `git rev-parse --show-toplevel`. When they differ, stop and tell the user to start the session with the `po` command from `prepare`'s output: it starts `claude` in the worktree with `--setting-sources local`, the role settings file when one is written, and `--plugin-dir` for this plugin. Unattended, the same command with `-p` after `claude`.
+2. This session must run inside the task's worktree, because subagents work in the folder the session started in, and without the repo's Claude Code hooks, because the factory's only gate is `.dark-factory.json`. Run `node $S/task.mjs prepare <id>`, read `worktree` from its output, and compare it with `git rev-parse --show-toplevel`. When they differ, stop and tell the user to start the session with the `po` command from `prepare`'s output: it starts `claude` in the worktree with `--setting-sources local`, the role settings file when one is written, and `--plugin-dir` for this plugin. Unattended, the `poUnattended` command: the same session headless, with the task folder and the PO's tools allowed.
 3. Read `spec.md` in the task folder (`$DARK_FACTORY_HOME/tasks/<id>/`, `~/.dark-factory` when it is unset).
 
 ## Running a role

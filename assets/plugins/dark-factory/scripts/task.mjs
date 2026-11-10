@@ -174,6 +174,13 @@ export function prepare(id, env = process.env) {
     taskDir: taskDir(id, env),
     specPath: join(taskDir(id, env), "spec.md"),
     po: poCommand({ id, worktree, settingsFile, pluginDir: PLUGIN_ROOT }),
+    poUnattended: poUnattendedCommand({
+      id,
+      worktree,
+      settingsFile,
+      pluginDir: PLUGIN_ROOT,
+      taskDir: taskDir(id, env),
+    }),
   };
 }
 
@@ -182,19 +189,45 @@ function shellArg(value) {
   return `"${value.replace(/\\(?=[\\"$`]|$)|["$`]/g, "\\$&")}"`;
 }
 
-export function poCommand({ id, worktree, settingsFile, pluginDir }) {
+const PO_UNATTENDED_TOOLS =
+  "Read,Grep,Glob,Bash,Edit,Write,Agent,SendMessage,Skill,TodoWrite";
+
+function poSession({ id, worktree, settingsFile, pluginDir }, headless = [], extra = []) {
   return [
     "cd",
     shellArg(worktree),
     "&&",
     "claude",
+    ...headless,
     "--setting-sources",
     "local",
     ...(settingsFile ? ["--settings", shellArg(settingsFile)] : []),
     "--plugin-dir",
     shellArg(pluginDir),
+    ...extra,
     shellArg(`${PO_SKILL} ${id}`),
   ].join(" ");
+}
+
+export function poCommand(launch) {
+  return poSession(launch);
+}
+
+export function poUnattendedCommand(launch) {
+  return poSession(
+    launch,
+    ["-p"],
+    [
+      "--permission-mode",
+      "dontAsk",
+      "--add-dir",
+      shellArg(launch.taskDir),
+      "--add-dir",
+      shellArg(launch.pluginDir),
+      "--allowedTools",
+      PO_UNATTENDED_TOOLS,
+    ]
+  );
 }
 
 function oneLine(text) {
