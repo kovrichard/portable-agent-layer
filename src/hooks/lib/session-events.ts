@@ -176,10 +176,22 @@ function usageOfLine(line: string): ContextUsage | null {
   }
 }
 
+function isCompactBoundary(line: string): boolean {
+  return line.includes('"compact_boundary"');
+}
+
+function usageSinceLastCompaction(lines: string[]): ContextUsage | null {
+  for (const line of lines.toReversed()) {
+    if (isCompactBoundary(line)) return null;
+    const usage = usageOfLine(line);
+    if (usage) return usage;
+  }
+  return null;
+}
+
 export function contextTokensOf(transcriptPath: string | undefined): number | null {
   if (!transcriptPath || !existsSync(transcriptPath)) return null;
-  const lines = transcriptTail(transcriptPath).split("\n").reverse();
-  const usage = lines.map(usageOfLine).find((u) => u !== null);
+  const usage = usageSinceLastCompaction(transcriptTail(transcriptPath).split("\n"));
   if (!usage) return null;
   return (
     (usage.input_tokens ?? 0) +
