@@ -14,6 +14,7 @@ import {
 } from "./lib/antigravity-transcript";
 import { recordIdleCompactionNear } from "./lib/compaction-near";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
+import { recordHookRunOnExit } from "./lib/hook-run";
 import { enterHookWorkspace } from "./lib/hook-turn";
 import { logError } from "./lib/log";
 import { stopProgressTree } from "./lib/progress-tree-stop";
@@ -22,6 +23,8 @@ import { unattendedStopReason } from "./lib/run-mode-gate";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
 import { type StopTurnPayload, stopTurn } from "./lib/stop";
+
+recordHookRunOnExit();
 
 if (isPalSpawnedInference()) process.exit(0);
 if (duplicatesCursorHooks()) process.exit(0);

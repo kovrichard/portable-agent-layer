@@ -18,9 +18,12 @@
 
 import { getActiveAgent } from "./lib/agent";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
+import { noteHookPayloadText, recordHookRunOnExit } from "./lib/hook-run";
 import { keepJqUnwrapped } from "./lib/rtk-jq";
 import { isWorktreeAgentGitCall } from "./lib/rtk-worktree";
 import { findBinaryOnPath } from "./lib/which";
+
+recordHookRunOnExit();
 
 if (duplicatesCursorHooks()) process.exit(0);
 
@@ -38,6 +41,7 @@ async function run(): Promise<void> {
   if (!rtk) return;
 
   const stdin = await Bun.stdin.text();
+  noteHookPayloadText(stdin);
   if (isWorktreeAgentGitCall(stdin)) return;
   const proc = Bun.spawn([rtk, "hook", subcommand], {
     stdin: Buffer.from(stdin),

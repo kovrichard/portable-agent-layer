@@ -7,7 +7,10 @@
  */
 
 import { runAutoUpdate } from "./lib/auto-update";
+import { recordHookRunOnExit } from "./lib/hook-run";
 import { logError } from "./lib/log";
+
+recordHookRunOnExit();
 
 try {
   runAutoUpdate();

@@ -28,6 +28,7 @@ missing hook is recorded here, never synthesised from another event.
 | `notification` | ✅ Notification | ⛔ | ⛔ | ⛔ | ⛔ | ⛔ |
 | `hook_timing` stop | ✅ Stop | ✅ session.idle | ✅ stop | ✅ agentStop | ✅ Stop | ✅ Stop |
 | `hook_timing` prompt | ✅ UserPromptSubmit | ⛔ in-process | ✅ beforeSubmitPrompt | ✅ userPromptSubmitted | ✅ UserPromptSubmit | ✅ PreInvocation |
+| `hook_run` | ✅ every hook | ⛔ in-process | ✅ every hook | ✅ every hook | ✅ every hook | ✅ every hook |
 | `pal_update` unattended | ✅ SessionEnd | ✅ server.instance.disposed | ✅ sessionEnd | ✅ sessionEnd | ✅ SessionEnd | ⛔ |
 
 Each post-tool event has one PAL entry, `PostToolOrchestrator.ts`, which writes
@@ -35,6 +36,11 @@ the ledger's second half and the `tool_call` event. Claude Code alone registers
 it twice: sync on edits for the ledger (`--only=ledger`), async on every tool for
 the event (`--only=events`), so a tool call never waits on the event log.
 opencode does both in-process.
+
+`hook_run` is one event per PAL hook process, written on exit: the entry's name,
+the hook event and session from its payload, the exit code, and the milliseconds
+since the process started, so start-up and module loading count. `hook_timing`
+times the handlers inside the prompt and stop hooks only.
 
 A tool that throws in opencode never reaches `tool.execute.after`; its message
 part turning to `error` is the only trace, and a call the user rejected there is

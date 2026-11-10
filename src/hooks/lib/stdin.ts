@@ -1,3 +1,5 @@
+import { noteHookPayload } from "./hook-run";
+
 /** Read all of stdin as a string */
 async function readStdin(): Promise<string> {
   const chunks: Buffer[] = [];
@@ -10,8 +12,9 @@ async function readStdin(): Promise<string> {
 /** Read stdin and parse as JSON, returning null on failure */
 export async function readStdinJSON<T = unknown>(): Promise<T | null> {
   try {
-    const raw = await readStdin();
-    return JSON.parse(raw) as T;
+    const payload = JSON.parse(await readStdin()) as T;
+    noteHookPayload(payload);
+    return payload;
   } catch {
     return null;
   }

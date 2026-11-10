@@ -9,11 +9,14 @@
 
 import { blockResponse } from "./lib/agent";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
+import { recordHookRunOnExit } from "./lib/hook-run";
 import { enterHookWorkspace } from "./lib/hook-turn";
 import { recordBlocked } from "./lib/ledger";
 import { logError } from "./lib/log";
 import { decideRefusal, type SecurityInput } from "./lib/security-gate";
 import { readStdinJSON } from "./lib/stdin";
+
+recordHookRunOnExit();
 
 if (duplicatesCursorHooks()) process.exit(0);
 

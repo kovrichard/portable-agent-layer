@@ -4,9 +4,12 @@
  */
 
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
+import { recordHookRunOnExit } from "./lib/hook-run";
 import { enterHookWorkspace } from "./lib/hook-turn";
 import { runPostToolHandlers } from "./lib/post-tool";
 import { readStdinJSON } from "./lib/stdin";
+
+recordHookRunOnExit();
 
 if (duplicatesCursorHooks()) process.exit(0);
 

@@ -6,9 +6,12 @@
 
 import { logAttention } from "./lib/attention-events";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
+import { recordHookRunOnExit } from "./lib/hook-run";
 import { enterHookWorkspace } from "./lib/hook-turn";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
+
+recordHookRunOnExit();
 
 if (isPalSpawnedInference()) process.exit(0);
 if (duplicatesCursorHooks()) process.exit(0);
