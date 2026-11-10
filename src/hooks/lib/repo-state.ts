@@ -5,6 +5,7 @@
 
 import { spawnSync } from "node:child_process";
 import { basename } from "node:path";
+import { mergedWorktrees } from "./merged-worktrees";
 import { readAllProjects, resolveProjectFromCwd } from "./projects";
 import { isEnabled } from "./settings";
 
@@ -70,6 +71,13 @@ function releaseState(cwd: string): string[] {
     : [`${count(Number(since), "commit")} since tag ${tag}`];
 }
 
+function mergedWorktreeState(cwd: string): string[] {
+  const merged = mergedWorktrees(cwd).length;
+  return merged > 0
+    ? [`${count(merged, "merged worktree")}: pal cli worktree prune`]
+    : [];
+}
+
 function workState(status: Status): string {
   if (!status.hasCommits) return "no commits yet";
   return status.changed > 0 ? `${count(status.changed, "file")} uncommitted` : "clean";
@@ -84,6 +92,7 @@ function gitLine(cwd: string, toplevel: string): string | null {
     workState(status),
     ...syncState(status),
     ...releaseState(cwd),
+    ...mergedWorktreeState(cwd),
   ].join(" · ");
 }
 

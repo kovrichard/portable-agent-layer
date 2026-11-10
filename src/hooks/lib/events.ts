@@ -172,6 +172,7 @@ export const EVENT_FIELDS = {
     "predicted",
     "idleMinTokens",
   ],
+  worktree_pruned: ["branch"],
 } as const satisfies Record<string, readonly string[]>;
 
 export type EventType = keyof typeof EVENT_FIELDS;

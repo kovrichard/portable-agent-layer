@@ -37,6 +37,7 @@ import { skillCommand } from "./skill";
 import { subagentCommand } from "./subagent";
 import { telemetryCommand } from "./telemetry";
 import { usageCommand } from "./usage";
+import { worktreeCommand } from "./worktree";
 import { wrappedCommand } from "./wrapped";
 
 type Handler = Leaf["run"];
@@ -203,6 +204,7 @@ export function cliTree(admin: AdminHandlers): Group {
       skill: skillCommand,
       subagent: subagentCommand,
       telemetry: telemetryCommand,
+      worktree: worktreeCommand,
       ...builtinTools,
       debug: debugCommand(admin),
       version: leaf({ summary: "Print the installed PAL version", run: admin.version }),
