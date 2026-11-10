@@ -17,10 +17,13 @@ type Spawned = { scriptPath: string; args: string[]; scope: string };
 let spawned: Spawned[] = [];
 let recording = false;
 
+/** Taken before mock.module: afterwards the namespace import resolves to the mock itself. */
+const realSpawn = realDetached.spawnDetachedInference;
+
 mock.module("../src/hooks/lib/detached-inference", () => ({
   ...realDetached,
   spawnDetachedInference: (scriptPath: string, args: string[], scope: string) => {
-    if (!recording) return realDetached.spawnDetachedInference(scriptPath, args, scope);
+    if (!recording) return realSpawn(scriptPath, args, scope);
     spawned.push({ scriptPath, args, scope });
   },
 }));
