@@ -27,6 +27,7 @@ The scripts live in `${CLAUDE_PLUGIN_ROOT}/scripts`; run them with `node`, witho
 - Before every Agent and `SendMessage` call, record the exact prompt: `node $S/task.mjs handover <id> <role> <reason> <model>` with the prompt on stdin, where model is the one the step names and reason is `pipeline`, `plan-gate`, `plan-findings`, `gate-failed`, `test-fix`, `review-findings`, `ci-failed`, `question` or `po-answer`, as `build.mjs` names them.
 - When a role's reply asks a question, answer it yourself from the spec, the code and what you know about the user, add the answer to the spec under **Decisions**, and continue the same subagent with `SendMessage`. When you rule that a test is wrong, start `dark-factory:test-writer` to fix only that test. Then run `node $S/step.mjs test-edits <id>`: when it lists only the files the test writer just fixed, run `node $S/step.mjs snapshot <id>` so the guard accepts your ruling, as `build.mjs` does after a test fix; when it lists any other file, handle it as step 2.3 does. Then continue the role that asked. Ask the user only what nothing settles, once, with your recommended answer, and wait.
 - Record every role run: `node $S/task.mjs status <id> running "<role>: <one line>"`.
+- The estimate is recorded at the start, when `task.mjs prepare` marks the task started, and the actual (`run_finished`) at the final status, when `task.mjs status` or `task.mjs ask` sets `ready`, `stuck` or `waiting`; there is no extra step for it.
 
 ## The pipeline
 
