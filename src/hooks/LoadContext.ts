@@ -14,6 +14,7 @@ import { buildClaudeMd, regenerateIfNeeded } from "./lib/claude-md";
 import { type AgentTarget, buildSystemReminder } from "./lib/context";
 import { logContextInjected } from "./lib/context-overhead";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
+import { recordHookRunOnExit } from "./lib/hook-run";
 import { hookSessionId } from "./lib/hook-turn";
 import { logContextSnapshot, logDebug, logError } from "./lib/log";
 import {
@@ -28,6 +29,7 @@ import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
 import { heartbeatOnStart } from "./lib/telemetry";
 
+recordHookRunOnExit();
 if (isPalSpawnedInference()) process.exit(0);
 if (duplicatesCursorHooks()) process.exit(0);
 if (isSubagentSession(process.env)) {

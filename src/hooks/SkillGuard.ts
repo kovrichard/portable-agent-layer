@@ -11,7 +11,10 @@
 
 import { blockResponse, normalizeToolUse } from "./lib/agent";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
+import { recordHookRunOnExit } from "./lib/hook-run";
 import { readStdinJSON } from "./lib/stdin";
+
+recordHookRunOnExit();
 
 if (duplicatesCursorHooks()) process.exit(0);
 

@@ -10,12 +10,15 @@
 import { injectPromptContext } from "./handlers/inject-retrieval";
 import { compactionWarningReminder, recordCompactionNear } from "./lib/compaction-near";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
+import { recordHookRunOnExit } from "./lib/hook-run";
 import { startHookTiming } from "./lib/hook-timing";
 import { type HookTurnPayload, hookSessionId } from "./lib/hook-turn";
 import { logDebug, logPromptSnapshot } from "./lib/log";
 import { capturePrompt } from "./lib/prompt-capture";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
+
+recordHookRunOnExit();
 
 // Recursion guard — the "prompt" inside a spawned inference is the dispatcher's
 // payload, not a real user message. Skip rating capture, session naming, etc.

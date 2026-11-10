@@ -173,6 +173,7 @@ export const EVENT_FIELDS = {
     "idleMinTokens",
   ],
   worktree_pruned: ["branch"],
+  hook_run: ["hook", "event", "durationMs", "exitCode"],
 } as const satisfies Record<string, readonly string[]>;
 
 export type EventType = keyof typeof EVENT_FIELDS;

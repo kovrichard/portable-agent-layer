@@ -15,11 +15,14 @@ import {
   type SavedExchange,
 } from "./lib/compact-recall";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
+import { recordHookRunOnExit } from "./lib/hook-run";
 import { enterHookWorkspace } from "./lib/hook-turn";
 import { logDebug, logError } from "./lib/log";
 import { runModeRecall } from "./lib/run-mode-gate";
 import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
+
+recordHookRunOnExit();
 
 if (isPalSpawnedInference()) process.exit(0);
 if (duplicatesCursorHooks()) process.exit(0);
