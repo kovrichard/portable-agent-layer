@@ -184,3 +184,30 @@ export function isMain(moduleUrl) {
 export function printJson(value) {
   process.stdout.write(`${JSON.stringify(value)}\n`);
 }
+
+function sumOf(events, read) {
+  return events.reduce((total, event) => total + (read(event) ?? 0), 0);
+}
+
+const TOKEN_FIELDS = [
+  "inputTokens",
+  "outputTokens",
+  "cacheReadTokens",
+  "cacheCreationTokens",
+];
+
+export function runTotals(events, taskId, startedIso) {
+  const runs = events.filter(
+    (event) =>
+      event.event === "role_finished" && event.task === taskId && event.ts >= startedIso
+  );
+  const costs = runs.filter((event) => typeof event.costUsd === "number");
+  return {
+    costUsd: costs.length > 0 ? sumOf(costs, (event) => event.costUsd) : null,
+    tokens: TOKEN_FIELDS.reduce(
+      (total, field) => total + sumOf(runs, (event) => event[field]),
+      0
+    ),
+    roleRuns: runs.length,
+  };
+}

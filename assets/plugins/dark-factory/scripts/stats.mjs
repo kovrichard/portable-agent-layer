@@ -43,6 +43,7 @@ export function summarize(events) {
     roleRuns: countBy(of("role_run"), "role"),
     handovers: countBy(of("handover"), (event) => `${event.from}->${event.to}`),
     handoversByReason: countBy(of("handover"), "reason"),
+    estimates: estimateAccuracy(runsOf(events)),
   };
 }
 
@@ -79,6 +80,57 @@ export function runsOf(events) {
     }
   }
   return runs;
+}
+
+function median(values) {
+  const numbers = values
+    .filter((value) => typeof value === "number")
+    .sort((a, b) => a - b);
+  if (numbers.length === 0) return null;
+  const middle = Math.floor(numbers.length / 2);
+  if (numbers.length % 2 === 1) return numbers[middle];
+  return (numbers[middle - 1] + numbers[middle]) / 2;
+}
+
+export function estimateFor(events, category) {
+  const history = runsOf(events)
+    .filter(
+      (run) => run.events.at(-1).status === "ready" && run.events[0].category === category
+    )
+    .slice(-10);
+  const finished = history.map((run) => run.events.at(-1));
+  return {
+    wallMs: median(finished.map((event) => event.wallMs)),
+    tokens: median(finished.map((event) => event.tokens)),
+    costUsd: median(finished.map((event) => event.costUsd)),
+    basis: history.length,
+  };
+}
+
+function estimateAccuracy(runs) {
+  const pairs = runs
+    .map((run) => ({
+      estimate: run.events.find((event) => event.event === "estimate"),
+      actual: run.events.at(-1),
+    }))
+    .filter((pair) => pair.estimate && pair.estimate.basis > 0);
+  const ratios = (field) =>
+    median(
+      pairs
+        .filter(
+          ({ estimate, actual }) =>
+            typeof estimate[field] === "number" &&
+            typeof actual[field] === "number" &&
+            estimate[field] !== 0
+        )
+        .map(({ estimate, actual }) => actual[field] / estimate[field])
+    );
+  return {
+    runs: pairs.length,
+    wallRatio: ratios("wallMs"),
+    tokensRatio: ratios("tokens"),
+    costRatio: ratios("costUsd"),
+  };
 }
 
 export function metricOver(name, runs) {

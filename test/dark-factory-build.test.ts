@@ -121,6 +121,7 @@ describe("a whole feature run, in process", () => {
     ]);
     expect(flow(world)).toEqual([
       "task_started",
+      "estimate",
       "role:test-writer",
       "tests_red",
       "role:planner",
@@ -138,8 +139,8 @@ describe("a whole feature run, in process", () => {
       "step_done",
       "pr_ready",
       "task_status",
-      "notify",
       "run_finished",
+      "notify",
       "coach_handed",
     ]);
     expect(storedTask(world)).toMatchObject({ status: "ready", pr: PR_URL });

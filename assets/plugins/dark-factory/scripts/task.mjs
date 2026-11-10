@@ -19,13 +19,16 @@ import {
   readRepoConfig,
   readTask,
   requireTools,
+  runTotals,
   taskDir,
   writeTask,
 } from "./lib.mjs";
 import { rolesFor } from "./roles.mjs";
 import { writeRoleSettings } from "./settings.mjs";
+import { estimateFor } from "./stats.mjs";
 
 const PO_SKILL = "/dark-factory:build-with-agents";
+const FINAL_STATUSES = ["ready", "stuck", "waiting"];
 
 export function slugify(title) {
   return title
@@ -47,10 +50,38 @@ export function newTask({ title, repo, category }, env = process.env, now = new 
   return { id, specPath };
 }
 
+function openRunStart(events, id) {
+  const index = events.findLastIndex(
+    (event) => event.event === "task_started" && event.task === id
+  );
+  if (index === -1) return null;
+  const finished = events
+    .slice(index + 1)
+    .some((event) => event.event === "run_finished" && event.task === id);
+  return finished ? null : events[index];
+}
+
+function recordRunFinished(id, status, env) {
+  const events = readEvents(env);
+  const start = openRunStart(events, id);
+  if (!start) return;
+  appendEvent(
+    {
+      event: "run_finished",
+      task: id,
+      status,
+      ...runTotals(events, id, start.ts),
+      wallMs: Date.now() - Date.parse(start.ts),
+    },
+    env
+  );
+}
+
 export function setStatus(id, status, note, env = process.env) {
   const task = { ...readTask(id, env), status, ...(note ? { note } : {}) };
   writeTask(task, env);
   appendEvent({ event: "task_status", task: id, status, ...(note ? { note } : {}) }, env);
+  if (FINAL_STATUSES.includes(status)) recordRunFinished(id, status, env);
   return task;
 }
 
@@ -144,8 +175,10 @@ function repoClaudeMdFor(task, config, env) {
 
 export function markStarted(id, env = process.env) {
   const task = readTask(id, env);
+  const estimate = estimateFor(readEvents(env), task.category);
   writeTask({ ...task, status: "running" }, env);
   appendEvent({ event: "task_started", task: id, category: task.category }, env);
+  appendEvent({ event: "estimate", task: id, category: task.category, ...estimate }, env);
 }
 
 export function prepare(id, env = process.env) {
@@ -279,10 +312,13 @@ export function appendDecision(
 }
 
 export function showTask(id, env = process.env) {
-  const latestStep = readEvents(env)
-    .filter((event) => event.task === id)
-    .at(-1);
-  return { ...readTask(id, env), latestStep: latestStep ?? null };
+  const mine = readEvents(env).filter((event) => event.task === id);
+  const estimate = mine.filter((event) => event.event === "estimate").at(-1);
+  return {
+    ...readTask(id, env),
+    latestStep: mine.at(-1) ?? null,
+    estimate: estimate ?? null,
+  };
 }
 
 const COMMANDS = {
