@@ -35,15 +35,32 @@ function hookName(entry: string): string {
   return basename(entry).replace(/\.[cm]?[jt]s$/, "");
 }
 
-export function recordHookRunOnExit(entry: string = process.argv[1] ?? "unknown"): void {
-  process.once("exit", (exitCode) => {
-    const durationMs = Math.round(performance.now());
-    logQuietly("hook_run", () =>
-      appendEvent(
-        "hook_run",
-        { hook: hookName(entry), event: run.event, durationMs, exitCode },
-        { session: run.session, project: null }
-      )
-    );
-  });
+export function logHookRun(
+  entry: string,
+  exitCode: number,
+  durationMs: number = performance.now()
+): void {
+  logQuietly("hook_run", () =>
+    appendEvent(
+      "hook_run",
+      {
+        hook: hookName(entry),
+        event: run.event,
+        durationMs: Math.round(durationMs),
+        exitCode,
+      },
+      { session: run.session, project: null }
+    )
+  );
+}
+
+type OnExit = (listener: (exitCode: number) => void) => void;
+
+const onProcessExit: OnExit = (listener) => process.once("exit", listener);
+
+export function recordHookRunOnExit(
+  entry: string = process.argv[1] ?? "unknown",
+  onExit: OnExit = onProcessExit
+): void {
+  onExit((exitCode) => logHookRun(entry, exitCode));
 }
