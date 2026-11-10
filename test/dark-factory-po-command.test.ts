@@ -59,8 +59,19 @@ describe("poUnattendedCommand", () => {
         taskDir: "/h/tasks/t1",
       })
     ).toBe(
-      'cd /w/t1 && claude -p --setting-sources local --settings /h/tasks/t1/role-settings.json --plugin-dir /p --permission-mode dontAsk --add-dir /h/tasks/t1 --add-dir /p --allowedTools Read,Grep,Glob,Bash,Edit,Write,Agent,SendMessage,Skill,TodoWrite "/dark-factory:build-with-agents t1"'
+      'cd /w/t1 && claude -p --setting-sources local --settings /h/tasks/t1/role-settings.json --plugin-dir /p --permission-mode dontAsk --add-dir /h/tasks/t1 --add-dir /p --allowedTools Read,Grep,Glob,Bash,Edit,Write,Agent,SendMessage,Skill,TodoWrite -- "/dark-factory:build-with-agents t1"'
     );
+  });
+
+  test("ends the options with --, so --allowedTools cannot take the prompt as a tool", () => {
+    const command = poUnattendedCommand({
+      id: "t3",
+      worktree: "/w/t3",
+      settingsFile: null,
+      pluginDir: "/p",
+      taskDir: "/h/tasks/t3",
+    });
+    expect(command.endsWith(' -- "/dark-factory:build-with-agents t3"')).toBe(true);
   });
 
   test("a task folder with spaces is quoted", () => {
