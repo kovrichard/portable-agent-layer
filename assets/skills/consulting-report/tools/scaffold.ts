@@ -9,9 +9,10 @@
 
 import { spawnSync } from "node:child_process";
 import { constants as fsConstants } from "node:fs";
-import { access, cp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { copyReportSource } from "./lib/copy-report";
 
 interface ScaffoldOptions {
   targetDir: string;
@@ -44,7 +45,7 @@ async function scaffold(opts: ScaffoldOptions): Promise<void> {
   }
 
   await mkdir(dirname(opts.targetDir), { recursive: true });
-  await cp(tpl, opts.targetDir, { recursive: true });
+  await copyReportSource(tpl, opts.targetDir);
 
   if (opts.clientName || opts.reportTitle) {
     const dataPath = join(opts.targetDir, "lib", "report-data.ts");

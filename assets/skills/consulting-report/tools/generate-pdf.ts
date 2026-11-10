@@ -10,12 +10,13 @@
 
 import { spawnSync } from "node:child_process";
 import { createReadStream, constants as fsConstants } from "node:fs";
-import { access, cp, readFile, stat, unlink, writeFile } from "node:fs/promises";
+import { access, readFile, stat, unlink, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
-import { dirname, extname, join, relative, resolve, sep } from "node:path";
+import { dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { PDFDocument } from "pdf-lib";
 import { chromium } from "playwright";
+import { copyReportSource } from "./lib/copy-report";
 
 interface ReportMeta {
   clientName: string;
@@ -294,12 +295,6 @@ async function generate(opts: GenerateOptions): Promise<{
   return { htmlPath, pdfPath };
 }
 
-const DEMO_BUILD_OUTPUT = new Set(["node_modules", ".next", "out"]);
-
-function isDemoSource(source: string): (path: string) => boolean {
-  return (path) => !DEMO_BUILD_OUTPUT.has(relative(source, path).split(sep)[0]);
-}
-
 function demoDir(): string {
   const here = dirname(fileURLToPath(import.meta.url));
   return resolve(here, "..", "demo");
@@ -308,7 +303,7 @@ function demoDir(): string {
 export async function prepareDemo(cwd: string, source = demoDir()): Promise<string> {
   const target = join(cwd, DEMO_FOLDER);
   if (!(await exists(target))) {
-    await cp(source, target, { recursive: true, filter: isDemoSource(source) });
+    await copyReportSource(source, target);
   }
   return target;
 }
