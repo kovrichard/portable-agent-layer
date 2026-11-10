@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { poCommand } from "../assets/plugins/dark-factory/scripts/task.mjs";
+import {
+  poCommand,
+  poUnattendedCommand,
+} from "../assets/plugins/dark-factory/scripts/task.mjs";
 
 describe("poCommand", () => {
   test("without a settings file the command starts claude in the worktree with the plugin", () => {
@@ -42,5 +45,33 @@ describe("poCommand", () => {
     ).toBe(
       'cd /w/t1 && claude --setting-sources local --plugin-dir /p "/dark-factory:build-with-agents t1"'
     );
+  });
+});
+
+describe("poUnattendedCommand", () => {
+  test("runs the same session headless, with the task folder and the PO's tools allowed", () => {
+    expect(
+      poUnattendedCommand({
+        id: "t1",
+        worktree: "/w/t1",
+        settingsFile: "/h/tasks/t1/role-settings.json",
+        pluginDir: "/p",
+        taskDir: "/h/tasks/t1",
+      })
+    ).toBe(
+      'cd /w/t1 && claude -p --setting-sources local --settings /h/tasks/t1/role-settings.json --plugin-dir /p --permission-mode dontAsk --add-dir /h/tasks/t1 --add-dir /p --allowedTools Read,Grep,Glob,Bash,Edit,Write,Agent,SendMessage,Skill,TodoWrite "/dark-factory:build-with-agents t1"'
+    );
+  });
+
+  test("a task folder with spaces is quoted", () => {
+    expect(
+      poUnattendedCommand({
+        id: "t2",
+        worktree: "/w/t2",
+        settingsFile: null,
+        pluginDir: "/p",
+        taskDir: "/my home/tasks/t2",
+      })
+    ).toContain('--add-dir "/my home/tasks/t2"');
   });
 });
