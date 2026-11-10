@@ -9,7 +9,9 @@
 
 import { afterAll, beforeEach } from "bun:test";
 import { mkdirSync } from "node:fs";
-import { resolve } from "node:path";
+import { homedir } from "node:os";
+import { relative, resolve } from "node:path";
+import { agentDirOverrides } from "../src/hooks/lib/paths";
 import { guardFile, sharedRepoConfig } from "./lib/repo-config-tripwire";
 import { refuseSubprocessesOutsideSpawnFiles } from "./lib/subprocess-guard";
 import {
@@ -58,6 +60,14 @@ function keepTestsOutOfTheRealHome() {
   mkdirSync(home, { recursive: true });
   process.env.HOME = home;
   process.env.USERPROFILE = home;
+  pointAgentDirsAtTheTestHome(home);
+}
+
+/** The developer's shell may export PAL_CLAUDE_DIR and friends, and Bun's homedir() ignores HOME. */
+function pointAgentDirsAtTheTestHome(home: string) {
+  for (const { env, realDir } of agentDirOverrides()) {
+    process.env[env] = resolve(home, relative(homedir(), realDir));
+  }
 }
 
 keepTestsOutOfTheRealHome();
