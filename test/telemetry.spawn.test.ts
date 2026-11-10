@@ -1,5 +1,5 @@
 import { beforeEach, expect, setDefaultTimeout, test } from "bun:test";
-import { mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
@@ -74,12 +74,27 @@ function startSession(env: Record<string, string | undefined>) {
   return Bun.spawn(["bun", "-e", script], { env, stdout: "ignore", stderr: "ignore" });
 }
 
+function spawnedHeartbeats(): number {
+  const log = resolve(home, "debug", "debug.log");
+  if (!existsSync(log)) return 0;
+  return readFileSync(log, "utf-8").split("detached heartbeat spawned").length - 1;
+}
+
+function enableDebugLog() {
+  mkdirSync(resolve(home, "memory", "state"), { recursive: true });
+  writeFileSync(resolve(home, "memory", "state", "debug-enabled"), "");
+}
+
 test("session start sends a due heartbeat in the background", async () => {
+  enableDebugLog();
   expect(await startSession(unsandboxedEnv()).exited).toBe(0);
+  expect(spawnedHeartbeats()).toBe(1);
   expect(await receivedWithin(10_000)).toHaveLength(1);
 });
 
-test("session start sends nothing when the heartbeat is not due", async () => {
+test("session start spawns no heartbeat when it is not due", async () => {
+  enableDebugLog();
   expect(await startSession({ ...unsandboxedEnv(), DO_NOT_TRACK: "1" }).exited).toBe(0);
-  expect(await receivedWithin(2000)).toEqual([]);
+  expect(spawnedHeartbeats()).toBe(0);
+  expect(received).toEqual([]);
 });

@@ -120,7 +120,8 @@ process.exit(${authExit});`
     const gh = versionControlFindings({
       platform: "darwin",
       osRelease: "",
-      timeoutMs: 1000,
+      timeoutMs: 3000,
+      loginTimeoutMs: 50,
     })[1];
     expect(gh.severity).toBe("ok");
     expect(gh.title).toContain("not checked in time");

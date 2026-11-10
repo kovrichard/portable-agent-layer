@@ -11,6 +11,7 @@ interface Host {
   platform: NodeJS.Platform;
   osRelease: string;
   timeoutMs: number;
+  loginTimeoutMs: number;
 }
 
 const GH_LINUX_DOCS = "https://github.com/cli/cli/blob/trunk/docs/install_linux.md";
@@ -90,7 +91,7 @@ function ghFinding(host: Host): Finding {
       "gh — lets PAL see PR, CI and release state",
       ghInstallHint(host.platform, host.osRelease)
     );
-  const auth = run(gh.binary, ["auth", "status"], host.timeoutMs);
+  const auth = run(gh.binary, ["auth", "status"], host.loginTimeoutMs);
   if (!auth.answered) return passed("gh", `${gh.version} — login not checked in time`);
   if (!auth.ok)
     return warning("gh.logged-out", `${gh.version} is not logged in`, {
@@ -102,10 +103,12 @@ function ghFinding(host: Host): Finding {
 }
 
 export function versionControlFindings(host: Partial<Host> = {}): Finding[] {
+  const timeoutMs = host.timeoutMs ?? 5000;
   const resolved: Host = {
     platform: host.platform ?? process.platform,
     osRelease: host.osRelease ?? readOsRelease(),
-    timeoutMs: host.timeoutMs ?? 5000,
+    timeoutMs,
+    loginTimeoutMs: host.loginTimeoutMs ?? timeoutMs,
   };
   return [gitFinding(resolved), ghFinding(resolved)];
 }
