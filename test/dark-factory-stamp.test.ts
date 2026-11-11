@@ -37,8 +37,10 @@ describe("dark-factory model stamping", () => {
   test("the orchestrator's TIER_MODELS block is replaced with every tier's model", () => {
     const stale =
       'const A = 1;\nexport const TIER_MODELS = {\n  small: "x",\n};\nconst B = 2;\n';
-    expect(stampTierModels(stale, { small: "s", medium: "m", large: "l" })).toBe(
-      'const A = 1;\nexport const TIER_MODELS = {\n  small: "s",\n  medium: "m",\n  large: "l",\n};\nconst B = 2;\n'
+    expect(
+      stampTierModels(stale, { small: "s", medium: "m", large: "l", flagship: "f" })
+    ).toBe(
+      'const A = 1;\nexport const TIER_MODELS = {\n  small: "s",\n  medium: "m",\n  large: "l",\n  flagship: "f",\n};\nconst B = 2;\n'
     );
   });
 
@@ -49,7 +51,12 @@ describe("dark-factory model stamping", () => {
     );
   });
 
-  test("the factory never uses a flagship model", () => {
-    expect(Object.keys(FACTORY_MODELS).sort()).toEqual(["large", "medium", "small"]);
+  test("the factory's tiers are small, medium, large and flagship", () => {
+    expect(Object.keys(FACTORY_MODELS).sort()).toEqual([
+      "flagship",
+      "large",
+      "medium",
+      "small",
+    ]);
   });
 });

@@ -260,15 +260,30 @@ export function prepare(id, env = process.env) {
     before: rolesFor(task.category).before,
     taskDir: taskDir(id, env),
     specPath: join(taskDir(id, env), "spec.md"),
-    po: poCommand({ id, worktree, settingsFile, pluginDir: PLUGIN_ROOT }),
+    po: poCommand({
+      id,
+      worktree,
+      settingsFile,
+      pluginDir: PLUGIN_ROOT,
+      model: poModel(),
+    }),
     poUnattended: poUnattendedCommand({
       id,
       worktree,
       settingsFile,
       pluginDir: PLUGIN_ROOT,
       taskDir: taskDir(id, env),
+      model: poModel(),
     }),
   };
+}
+
+export function poModel(pluginDir = PLUGIN_ROOT) {
+  const agentFile = join(pluginDir, "agents", "po.md");
+  if (!existsSync(agentFile)) return undefined;
+  return readFileSync(agentFile, "utf8")
+    .match(/^model: (.+)$/m)?.[1]
+    .trim();
 }
 
 function shellArg(value) {
@@ -279,13 +294,18 @@ function shellArg(value) {
 const PO_UNATTENDED_TOOLS =
   "Read,Grep,Glob,Bash,Edit,Write,Agent,SendMessage,Skill,TodoWrite";
 
-function poSession({ id, worktree, settingsFile, pluginDir }, headless = [], extra = []) {
+function poSession(
+  { id, worktree, settingsFile, pluginDir, model },
+  headless = [],
+  extra = []
+) {
   return [
     "cd",
     shellArg(worktree),
     "&&",
     "claude",
     ...headless,
+    ...(model ? ["--model", shellArg(model)] : []),
     "--setting-sources",
     "local",
     ...(settingsFile ? ["--settings", shellArg(settingsFile)] : []),

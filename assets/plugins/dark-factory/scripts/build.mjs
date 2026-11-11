@@ -48,6 +48,7 @@ export const TIER_MODELS = {
   small: "claude-haiku-5-5",
   medium: "claude-sonnet-5-5",
   large: "claude-opus-5-5",
+  flagship: "claude-fable-5-2",
 };
 
 const CODE_LADDER = [
