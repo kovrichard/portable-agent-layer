@@ -45,6 +45,12 @@ export interface PalSettingsData {
     disable?: string[];
     rules?: Array<{ tag: string; pattern: string; snippet: string }>;
   };
+  /** System One judgments: provider, pinned model and the callers in shadow or live. Absent means every caller is off. */
+  systemOne?: {
+    provider?: string;
+    model?: string;
+    callers?: Record<string, "shadow" | "live">;
+  };
   [key: string]: unknown;
 }
 
@@ -132,6 +138,10 @@ export function eventLogEnabled(): boolean {
 
 export function telemetryEnabled(): boolean {
   return load().telemetry?.enabled !== false;
+}
+
+export function systemOneSettings(): PalSettingsData["systemOne"] {
+  return load().systemOne;
 }
 
 /** Get the loadAtStartup file list */

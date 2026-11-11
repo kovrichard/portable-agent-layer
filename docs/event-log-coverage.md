@@ -57,6 +57,7 @@ These come from PAL code, not from a runtime hook, so every runtime has them.
 | Event | Written when |
 | ----- | ------------ |
 | `inference_call` | PAL makes a model call of its own (`pal cli infer`, ratings, naming, …) |
+| `judge_call` | PAL asks a typed judgment (`judge()`: ratings, correction kinds, `pal cli judge`): mode, route, System One provider, model, tokens, cost, latency, failure, and both sides' answers |
 | `pal_update` | A self-update runs or is skipped, including `pal cli update` |
 | `pal_heartbeat` | The daily heartbeat is sent, fails or is skipped, with the exact payload sent |
 | `commitment` | An ISC is kept, dropped, reopened or snoozed, from the CLI or the control room |

@@ -7,12 +7,11 @@
 import { readTurns, replaceTurns, type Turn, turnKey } from "./adaptation-turns";
 import {
   type CorrectionKind,
-  correctionKindRequest,
   hasCurrentKind,
-  parseCorrectionKind,
   withCorrectionKind,
 } from "./correction-kind";
-import { inference } from "./inference";
+import { judge } from "./judge";
+import { correctionKindJudgment, correctionKindOf } from "./rating-judgments";
 
 export type KindLabeller = (turn: Turn) => Promise<CorrectionKind | null>;
 
@@ -34,9 +33,9 @@ export function correctionsToLabel(turns: Turn[], relabel = false): Turn[] {
 }
 
 export async function labelWithInference(turn: Turn): Promise<CorrectionKind | null> {
-  const request = correctionKindRequest(turn.replyEnd, turn.message, turn.issue);
-  const result = await inference(request);
-  return result.success ? parseCorrectionKind(result.output) : null;
+  return correctionKindOf(
+    await judge(correctionKindJudgment(turn.replyEnd, turn.message, turn.issue))
+  );
 }
 
 export async function backfillCorrectionKinds(

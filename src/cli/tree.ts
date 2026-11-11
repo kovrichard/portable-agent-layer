@@ -23,6 +23,7 @@ import { eventsCommand } from "./events";
 import { evidenceCommand } from "./evidence";
 import { identityCommand } from "./identity";
 import { inferCommand } from "./infer";
+import { judgeCommand } from "./judge";
 import { knowledgeCommand } from "./knowledge";
 import { ledgerCommand } from "./ledger-command";
 import { runMigrate } from "./migrate";
@@ -187,6 +188,7 @@ export function cliTree(admin: AdminHandlers): Group {
       events: eventsCommand,
       evidence: evidenceCommand,
       infer: inferCommand,
+      judge: judgeCommand,
       actor: identityCommand("actor"),
       machine: identityCommand("machine"),
       telos: telosCommand,

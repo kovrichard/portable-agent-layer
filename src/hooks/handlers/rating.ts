@@ -15,26 +15,26 @@ import {
 } from "../lib/adaptation-candidates";
 import { readRules } from "../lib/adaptation-rules";
 import { appendTurn, readTurns, withRequests } from "../lib/adaptation-turns";
-import {
-  correctionKindRequest,
-  needsCorrectionKind,
-  parseCorrectionKind,
-  withCorrectionKind,
-} from "../lib/correction-kind";
+import { needsCorrectionKind, withCorrectionKind } from "../lib/correction-kind";
 import { spawnDetachedInference } from "../lib/detached-inference";
 import { canInfer, inference } from "../lib/inference";
 import { replyEnd } from "../lib/interaction-samples";
+import { judge } from "../lib/judge";
 import { logDebug } from "../lib/log";
 import { paths } from "../lib/paths";
 import { isSystemText, stripInjectedTags } from "../lib/prompt-text";
 import {
-  correctionCheckRequest,
+  correctionCheckJudgment,
+  correctionCheckOf,
+  correctionKindJudgment,
+  correctionKindOf,
+  reactionJudgment,
+  reactionLabelOf,
+} from "../lib/rating-judgments";
+import {
   needsCorrectionCheck,
-  parseCorrectionCheck,
-  parseReactionLabel,
   ratingContext,
   ratingFromLabels,
-  reactionRequest,
   settledLabel,
   turnFromLabels,
 } from "../lib/reaction-rating";
@@ -193,13 +193,13 @@ function handleImplicitReaction(message: string, sentAt: Date, sessionId?: strin
 }
 
 async function labelReaction(reply: string, message: string, sessionId?: string) {
-  const result = await inference(reactionRequest(reply, message, sessionId));
-  return result.success ? parseReactionLabel(result.output) : null;
+  return reactionLabelOf(await judge(reactionJudgment(reply, message, sessionId)));
 }
 
 async function checkCorrection(reply: string, message: string, sessionId?: string) {
-  const result = await inference(correctionCheckRequest(reply, message, sessionId));
-  return result.success ? parseCorrectionCheck(result.output) : null;
+  return correctionCheckOf(
+    await judge(correctionCheckJudgment(reply, message, sessionId))
+  );
 }
 
 async function labelCorrectionKind(
@@ -208,8 +208,9 @@ async function labelCorrectionKind(
   issue: string,
   sessionId?: string
 ) {
-  const result = await inference(correctionKindRequest(reply, message, issue, sessionId));
-  return result.success ? parseCorrectionKind(result.output) : null;
+  return correctionKindOf(
+    await judge(correctionKindJudgment(reply, message, issue, sessionId))
+  );
 }
 
 function knownRules() {
