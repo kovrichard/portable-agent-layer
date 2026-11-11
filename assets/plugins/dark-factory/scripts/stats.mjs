@@ -45,7 +45,7 @@ export function summarize(events) {
     handovers: countBy(of("handover"), (event) => `${event.from}->${event.to}`),
     handoversByReason: countBy(of("handover"), "reason"),
     estimates: estimateAccuracy(runsOf(events)),
-    costByRole: costByRole(of("role_finished")),
+    costByRole: costByRole(withoutCumulative(of("role_finished"))),
   };
 }
 
@@ -231,8 +231,36 @@ function runReport(runEvents) {
   };
 }
 
+const CUMULATIVE_FIELDS = [
+  "inputTokens",
+  "outputTokens",
+  "cacheReadTokens",
+  "cacheCreationTokens",
+  "cacheCreation5mTokens",
+  "cacheCreation1hTokens",
+  "turns",
+];
+
+function withoutCumulative(events) {
+  const last = new Map();
+  return events.map((event) => {
+    if (event.event !== "role_finished" || event.agentId == null) return event;
+    const key = JSON.stringify([event.task, event.agentId]);
+    const earlier = last.get(key);
+    last.set(key, event);
+    if (typeof event.costUsd === "number" || !earlier) return event;
+    const subtracted = {};
+    for (const field of CUMULATIVE_FIELDS) {
+      if (typeof event[field] === "number") {
+        subtracted[field] = Math.max(0, event[field] - (earlier[field] ?? 0));
+      }
+    }
+    return { ...event, ...subtracted };
+  });
+}
+
 function taskRuns(events, taskId) {
-  const mine = events.filter((e) => e.task === taskId);
+  const mine = withoutCumulative(events.filter((e) => e.task === taskId));
   const finished = runsOf(mine).map((run) => run.events);
   const start = mine.findLastIndex((e) => e.event === "task_started");
   const open =
