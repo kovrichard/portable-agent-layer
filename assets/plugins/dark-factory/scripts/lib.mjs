@@ -211,3 +211,73 @@ export function runTotals(events, taskId, startedIso) {
     roleRuns: runs.length,
   };
 }
+
+export function transcriptLines(path) {
+  if (!path || !existsSync(path)) return [];
+  return readFileSync(path, "utf8")
+    .split("\n")
+    .flatMap((line) => {
+      try {
+        return [JSON.parse(line)];
+      } catch {
+        return [];
+      }
+    });
+}
+
+export function onePerMessage(lines) {
+  const byId = new Map();
+  for (const line of lines) {
+    if (line.type === "assistant" && line.message?.id) byId.set(line.message.id, line);
+  }
+  return [...byId.values()];
+}
+
+function sumUsage(messages, field) {
+  return messages.reduce((sum, line) => sum + (line.message.usage?.[field] ?? 0), 0);
+}
+
+function durationMs(lines) {
+  const times = lines.map((line) => Date.parse(line.timestamp)).filter(Number.isFinite);
+  return times.length ? Math.max(...times) - Math.min(...times) : null;
+}
+
+export function cacheWriteSplit(total, fiveMin, oneHour) {
+  const hour = oneHour ?? 0;
+  const five = fiveMin ?? 0;
+  return {
+    fiveMin: five + Math.max(0, (total ?? 0) - five - hour),
+    oneHour: hour,
+  };
+}
+
+export function messageCacheWrites(usage) {
+  return cacheWriteSplit(
+    usage?.cache_creation_input_tokens,
+    usage?.cache_creation?.ephemeral_5m_input_tokens,
+    usage?.cache_creation?.ephemeral_1h_input_tokens
+  );
+}
+
+function toolCallsOf(message) {
+  const content = message.message?.content;
+  if (!Array.isArray(content)) return 0;
+  return content.filter((part) => part.type === "tool_use").length;
+}
+
+export function transcriptTotals(lines) {
+  const messages = onePerMessage(lines);
+  const writes = messages.map((line) => messageCacheWrites(line.message.usage));
+  return {
+    model: messages.at(-1)?.message.model ?? "default",
+    inputTokens: sumUsage(messages, "input_tokens"),
+    outputTokens: sumUsage(messages, "output_tokens"),
+    cacheReadTokens: sumUsage(messages, "cache_read_input_tokens"),
+    cacheCreationTokens: sumUsage(messages, "cache_creation_input_tokens"),
+    cacheCreation5mTokens: writes.reduce((sum, split) => sum + split.fiveMin, 0),
+    cacheCreation1hTokens: writes.reduce((sum, split) => sum + split.oneHour, 0),
+    turns: messages.length,
+    toolCalls: messages.reduce((sum, line) => sum + toolCallsOf(line), 0),
+    durationMs: durationMs(lines),
+  };
+}
