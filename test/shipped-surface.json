@@ -84,6 +84,7 @@
     ".claude/settings.json#spinnerTipsOverride.tips[]=Want PAL to watch a youtube video? There's /analyze-youtube for that.",
     ".claude/settings.json#statusLine.command",
     ".claude/settings.json#statusLine.padding",
+    ".claude/settings.json#statusLine.refreshInterval",
     ".claude/settings.json#statusLine.type",
     ".claude/skills/analyze-pdf -> {root}/home/skills/analyze-pdf",
     ".claude/skills/analyze-youtube -> {root}/home/skills/analyze-youtube",
