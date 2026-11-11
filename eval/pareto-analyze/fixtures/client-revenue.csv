@@ -1,0 +1,16 @@
+client,revenue,channel,size,region,evidence
+Northwind Logistics,168000,referral,enterprise,north,measured: invoicing export
+Brightwater Clinics,131000,referral,mid,south,measured: invoicing export
+Halden Foods,104000,referral,enterprise,east,measured: invoicing export
+Kestrel Insurance,14000,outbound,enterprise,north,measured: invoicing export
+Marlow Studio,12500,ads,small,west,measured: invoicing export
+Tiller Robotics,11000,conference,mid,east,measured: invoicing export
+Oakline Dental,10000,inbound,small,south,measured: invoicing export
+Summit Freight,9500,outbound,mid,north,measured: invoicing export
+Juniper Books,8500,ads,small,west,measured: invoicing export
+Corvid Analytics,7500,inbound,mid,east,measured: invoicing export
+"Pine, Reed and Co",6000,referral,small,south,measured: invoicing export
+Lantern Travel,5500,ads,small,west,measured: invoicing export
+Redfern Legal,5000,conference,small,north,measured: invoicing export
+Atlas Bakery,4000,inbound,small,south,measured: invoicing export
+Vale Fitness,3500,ads,small,east,measured: invoicing export
