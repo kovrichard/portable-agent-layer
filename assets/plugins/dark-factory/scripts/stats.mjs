@@ -65,6 +65,14 @@ export const METRICS = {
   costUsd: (events) => ofName(events, "run_finished").at(-1)?.costUsd ?? 0,
 };
 
+const isAfterRunFinished = (event) =>
+  event.event === "role_finished" && event.afterRunFinished === true;
+
+function attachAfter(runs, event) {
+  const run = runs.findLast((r) => r.task === event.task && r.finishedAt < event.ts);
+  run?.after.push(event);
+}
+
 export function runsOf(events) {
   const runs = [];
   const open = new Map();
@@ -73,15 +81,31 @@ export function runsOf(events) {
       open.set(event.task, { task: event.task, events: [event] });
       continue;
     }
+    if (isAfterRunFinished(event)) {
+      attachAfter(runs, event);
+      continue;
+    }
     const run = open.get(event.task);
     if (!run) continue;
     run.events.push(event);
     if (event.event === "run_finished") {
-      runs.push({ task: run.task, finishedAt: event.ts, events: run.events });
+      runs.push({
+        task: run.task,
+        finishedAt: event.ts,
+        events: run.events,
+        after: [],
+      });
       open.delete(event.task);
     }
   }
   return runs;
+}
+
+function runCostUsd(run) {
+  const finishedCost = run.events.at(-1).costUsd ?? null;
+  const tailCost = costTotal(run.after).costUsd;
+  if (finishedCost === null && tailCost === null) return null;
+  return (finishedCost ?? 0) + (tailCost ?? 0);
 }
 
 function median(values) {
@@ -104,8 +128,29 @@ export function estimateFor(events, category) {
   return {
     wallMs: median(finished.map((event) => event.wallMs)),
     tokens: median(finished.map((event) => event.tokens)),
-    costUsd: median(finished.map((event) => event.costUsd)),
+    costUsd: median(history.map(runCostUsd)),
     basis: history.length,
+  };
+}
+
+const TOKEN_KINDS = [
+  "inputTokens",
+  "outputTokens",
+  "cacheReadTokens",
+  "cacheCreationTokens",
+];
+
+function actualOf(run) {
+  const finished = run.events.at(-1);
+  const tail = run.after;
+  return {
+    ...finished,
+    costUsd: runCostUsd(run),
+    tokens:
+      typeof finished.tokens === "number"
+        ? finished.tokens +
+          TOKEN_KINDS.reduce((sum, field) => sum + total(tail, field), 0)
+        : finished.tokens,
   };
 }
 
@@ -113,7 +158,7 @@ function estimateAccuracy(runs) {
   const pairs = runs
     .map((run) => ({
       estimate: run.events.find((event) => event.event === "estimate"),
-      actual: run.events.at(-1),
+      actual: actualOf(run),
     }))
     .filter((pair) => pair.estimate && pair.estimate.basis > 0);
   const ratios = (field) =>
@@ -189,7 +234,7 @@ function roleRows(roleEvents) {
   return [...groups.values()].map((group) => ({
     role: group[0].role,
     model: group[0].model ?? null,
-    runs: group.length,
+    runs: group.filter((e) => !e.afterRunFinished).length,
     turns: total(group, "turns"),
     toolCalls: total(group, "toolCalls"),
     durationMs: total(group, "durationMs"),
@@ -201,11 +246,14 @@ function roleRows(roleEvents) {
   }));
 }
 
-function runReport(runEvents) {
+function runReport({ events: runEvents, after }) {
   const last = runEvents.at(-1);
   const finished = last.event === "run_finished" ? last : null;
   const estimate = runEvents.find((e) => e.event === "estimate");
-  const roles = runEvents.filter((e) => e.event === "role_finished");
+  const roles = [
+    ...runEvents.filter((e) => e.event === "role_finished"),
+    ...after,
+  ];
   return {
     status: finished?.status ?? null,
     startedAt: runEvents[0].ts,
@@ -261,11 +309,14 @@ function withoutCumulative(events) {
 
 function taskRuns(events, taskId) {
   const mine = withoutCumulative(events.filter((e) => e.task === taskId));
-  const finished = runsOf(mine).map((run) => run.events);
+  const finished = runsOf(mine).map((run) => ({
+    events: run.events,
+    after: run.after,
+  }));
   const start = mine.findLastIndex((e) => e.event === "task_started");
   const open =
     start !== -1 && !mine.slice(start + 1).some((e) => e.event === "run_finished")
-      ? [mine.slice(start)]
+      ? [{ events: mine.slice(start).filter((e) => !isAfterRunFinished(e)), after: [] }]
       : [];
   return [...finished, ...open];
 }
@@ -280,7 +331,7 @@ function costByRole(roleEvents) {
     [...groups].map(([role, group]) => [
       role,
       {
-        runs: group.length,
+        runs: group.filter((e) => !e.afterRunFinished).length,
         tasks: new Set(group.map((e) => e.task)).size,
         ...costTotal(group),
       },
