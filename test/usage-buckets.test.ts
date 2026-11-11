@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import type { Bindings } from "../src/hooks/lib/bindings";
 import { PRICE_HISTORY } from "../src/hooks/lib/models";
+import type { ProjectProgress } from "../src/hooks/lib/projects";
 import {
   addToBucket,
   addToTimeBuckets,
@@ -9,12 +11,11 @@ import {
   emptyTimeBuckets,
   grandTotal,
   horizonsFrom,
-  projectNameOf,
   readClaudeCode,
   readPalInference,
   totalTokens,
 } from "../src/tools/lib/usage-buckets";
-import { freshTestDir } from "./lib/test-home";
+import { freshTestDir, outsideRepoHome } from "./lib/test-home";
 import { event } from "./lib/wrapped-events";
 
 const NOW = new Date("2026-09-06T12:00:00.000Z");
@@ -52,10 +53,43 @@ const tokens = (input: number, output: number, cw5m = 0, cw1h = 0, cr = 0) => ({
 function assistantLine(
   ts: string,
   model: string,
-  usage: Record<string, unknown>
+  usage: Record<string, unknown>,
+  cwd?: string
 ): string {
-  return JSON.stringify({ type: "assistant", timestamp: ts, message: { model, usage } });
+  return JSON.stringify({
+    type: "assistant",
+    timestamp: ts,
+    ...(cwd === undefined ? {} : { cwd }),
+    message: { model, usage },
+  });
 }
+
+type Resolver = (cwd: string | undefined) => string;
+type ResolverFactory = (projects: ProjectProgress[], bindings: Bindings) => Resolver;
+
+async function projectResolver(): Promise<ResolverFactory> {
+  const mod = (await import("../src/tools/lib/project-resolver")) as {
+    projectResolver: ResolverFactory;
+  };
+  return mod.projectResolver;
+}
+
+const registered = (name: string) => ({ name }) as ProjectProgress;
+
+function repo(parent: string, ...parts: string[]): string {
+  const dir = join(parent, ...parts);
+  mkdirSync(join(dir, ".git"), { recursive: true });
+  return dir;
+}
+
+function transcriptIn(dir: string, folder: string, lines: string[]): void {
+  mkdirSync(join(dir, folder), { recursive: true });
+  writeFileSync(join(dir, folder, "s.jsonl"), lines.join("\n"));
+}
+
+const TS = "2026-09-06T08:00:00.000Z";
+const call = (input: number, cwd?: string) =>
+  assistantLine(TS, "claude-opus-5", { input_tokens: input }, cwd);
 
 describe("emptyBucket / emptyTimeBuckets", () => {
   test("starts every counter at zero", () => {
@@ -188,25 +222,76 @@ describe("totalTokens", () => {
   });
 });
 
-describe("projectNameOf", () => {
-  test("takes the last segment of a Claude Code project directory", () => {
-    expect(projectNameOf("-mnt-disk2-home-user-git-widgets")).toBe("widgets");
+describe("project resolver", () => {
+  test("a cwd at or inside a registered project resolves to its name, existing or not", async () => {
+    const make = await projectResolver();
+    const docs = join(tempHome(), "docs");
+    mkdirSync(docs, { recursive: true });
+    const resolveName = make([registered("bidding-ecosystem")], {
+      "bidding-ecosystem": docs,
+    });
+    expect(resolveName(docs)).toBe("bidding-ecosystem");
+    expect(resolveName(join(docs, "sub", "dir"))).toBe("bidding-ecosystem");
+    expect(resolveName(join(docs, ".claude", "worktrees", "agent-1"))).toBe(
+      "bidding-ecosystem"
+    );
   });
 
-  test("keeps a single-segment name as it is", () => {
-    expect(projectNameOf("standalone")).toBe("standalone");
+  test("a registered project wins over the repo folder's own name", async () => {
+    const make = await projectResolver();
+    const dir = repo(tempHome(), "folder-name");
+    expect(make([registered("chosen")], { chosen: dir })(dir)).toBe("chosen");
   });
 
-  // Only the leading dash is stripped. Strip any dash and "a-b" collapses to one
-  // segment, which would hand back the whole directory name instead of "b".
-  test("splits on every dash, not just the one it stripped", () => {
-    expect(projectNameOf("a-b")).toBe("b");
+  test("an unregistered repo resolves to its folder name from the root and any subfolder", async () => {
+    const make = await projectResolver();
+    const widgets = repo(tempHome(), "widgets");
+    mkdirSync(join(widgets, "crates", "core"), { recursive: true });
+    const resolveName = make([], {});
+    expect(resolveName(widgets)).toBe("widgets");
+    expect(resolveName(join(widgets, "crates", "core"))).toBe("widgets");
   });
 
-  // Stripping leaves one segment, so the name falls back to the directory —
-  // dash and all. Pinned because it is what the report has always printed.
-  test("a single segment behind a leading dash keeps the dash", () => {
-    expect(projectNameOf("-solo")).toBe("-solo");
+  test("a linked worktree resolves to its main repo, or to the project registered there", async () => {
+    const make = await projectResolver();
+    const tmp = tempHome();
+    const widgets = repo(tmp, "widgets");
+    const wt = join(tmp, "wt-1");
+    mkdirSync(wt, { recursive: true });
+    writeFileSync(
+      join(wt, ".git"),
+      `gitdir: ${join(widgets, ".git", "worktrees", "wt-1")}\n`
+    );
+    expect(make([], {})(wt)).toBe("widgets");
+    expect(make([registered("Widget Co")], { "Widget Co": widgets })(wt)).toBe(
+      "Widget Co"
+    );
+  });
+
+  test("a .git file that is not a worktree pointer makes its folder the repo", async () => {
+    const make = await projectResolver();
+    const sub = join(tempHome(), "submod");
+    mkdirSync(sub, { recursive: true });
+    writeFileSync(join(sub, ".git"), "gitdir: ../.git/modules/submod\n");
+    expect(make([], {})(sub)).toBe("submod");
+  });
+
+  test("anything unresolvable is exactly (unknown), every time it is asked", async () => {
+    const make = await projectResolver();
+    const tmp = outsideRepoHome(import.meta.file);
+    const plain = join(tmp, "plain-folder");
+    mkdirSync(plain, { recursive: true });
+    const resolveName = make([], {});
+    expect(resolveName(undefined)).toBe("(unknown)");
+    expect(resolveName(join(tmp, "gone", "worktrees", "task-1"))).toBe("(unknown)");
+    expect(resolveName(plain)).toBe("(unknown)");
+    expect(resolveName(plain)).toBe("(unknown)");
+  });
+
+  test("a repo literally named unknown keeps its name", async () => {
+    const make = await projectResolver();
+    const dir = repo(tempHome(), "unknown");
+    expect(make([], {})(dir)).toBe("unknown");
   });
 });
 
@@ -221,18 +306,23 @@ describe("readClaudeCode", () => {
   test("reads a transcript into the windows, by model and by project", () => {
     const dir = tempHome();
     const proj = join(dir, "-home-user-git-pal");
+    const pal = repo(dir, "work", "pal");
     mkdirSync(proj, { recursive: true });
     writeFileSync(
       join(proj, "s1.jsonl"),
       [
-        assistantLine("2026-09-06T08:00:00.000Z", "claude-opus-5", {
-          input_tokens: 100,
-          output_tokens: 200,
-        }),
-        assistantLine("2026-08-20T08:00:00.000Z", "claude-opus-5", {
-          input_tokens: 5,
-          output_tokens: 5,
-        }),
+        assistantLine(
+          "2026-09-06T08:00:00.000Z",
+          "claude-opus-5",
+          { input_tokens: 100, output_tokens: 200 },
+          pal
+        ),
+        assistantLine(
+          "2026-08-20T08:00:00.000Z",
+          "claude-opus-5",
+          { input_tokens: 5, output_tokens: 5 },
+          pal
+        ),
       ].join("\n")
     );
 
@@ -247,11 +337,20 @@ describe("readClaudeCode", () => {
   });
 
   describe("with PAL's archive of the transcripts", () => {
+    let palCwd = "";
+    let goneCwd = "";
+    beforeEach(() => {
+      const base = tempHome();
+      palCwd = repo(base, "pal");
+      goneCwd = repo(base, "gone");
+    });
     const turn = (input: number) =>
-      assistantLine(NOW.toISOString(), "claude-opus-5", {
-        input_tokens: input,
-        output_tokens: 0,
-      });
+      assistantLine(
+        NOW.toISOString(),
+        "claude-opus-5",
+        { input_tokens: input, output_tokens: 0 },
+        input >= 1000 ? goneCwd : palCwd
+      );
 
     function transcript(path: string, input: number): void {
       mkdirSync(join(path, ".."), { recursive: true });
@@ -346,10 +445,12 @@ describe("readClaudeCode", () => {
     mkdirSync(subagents, { recursive: true });
     writeFileSync(
       join(subagents, "sub.jsonl"),
-      assistantLine("2026-09-06T08:00:00.000Z", "claude-opus-5", {
-        input_tokens: 7,
-        output_tokens: 3,
-      })
+      assistantLine(
+        "2026-09-06T08:00:00.000Z",
+        "claude-opus-5",
+        { input_tokens: 7, output_tokens: 3 },
+        repo(dir, "work", "pal")
+      )
     );
 
     const result = readClaudeCode(dir, undefined, NOW);
@@ -412,24 +513,70 @@ describe("readClaudeCode", () => {
     expect(readClaudeCode(dir, undefined, NOW).buckets.total.calls).toBe(1);
   });
 
-  test("the project filter is a substring match on the project name", () => {
+  test("the project filter is a substring match on the resolved name", () => {
     const dir = tempHome();
-    for (const [name, input] of [
-      ["-home-user-git-portable-agent-layer", 10],
-      ["-home-user-git-widgets", 20],
-    ] as const) {
-      mkdirSync(join(dir, name), { recursive: true });
-      writeFileSync(
-        join(dir, name, "s.jsonl"),
-        assistantLine("2026-09-06T08:00:00.000Z", "claude-opus-5", {
-          input_tokens: input,
-        })
-      );
-    }
+    const layer = repo(dir, "work", "portable-agent-layer");
+    const widgets = repo(dir, "work", "widgets");
+    transcriptIn(dir, "-a", [call(10, layer)]);
+    transcriptIn(dir, "-b", [call(20, widgets)]);
 
-    const result = readClaudeCode(dir, "idge", NOW);
-    expect(Object.keys(result.byProject)).toEqual(["widgets"]);
-    expect(result.buckets.total.input).toBe(20);
+    const byWidgets = readClaudeCode(dir, "idge", NOW);
+    expect(Object.keys(byWidgets.byProject)).toEqual(["widgets"]);
+    expect(byWidgets.buckets.total.input).toBe(20);
+
+    const byLayer = readClaudeCode(dir, "portable-agent-layer", NOW);
+    expect(Object.keys(byLayer.byProject)).toEqual(["portable-agent-layer"]);
+    expect(byLayer.buckets.total.input).toBe(10);
+  });
+
+  test("the project comes from the line's cwd, whatever the folder is called", () => {
+    const dir = tempHome();
+    const layer = repo(dir, "git", "portable-agent-layer");
+    transcriptIn(dir, "-x-git-portable-agent-layer", [call(1, layer)]);
+    expect(Object.keys(readClaudeCode(dir, undefined, NOW).byProject)).toEqual([
+      "portable-agent-layer",
+    ]);
+    const other = tempHome();
+    transcriptIn(other, "-anything-else", [call(1, layer)]);
+    expect(Object.keys(readClaudeCode(other, undefined, NOW).byProject)).toEqual([
+      "portable-agent-layer",
+    ]);
+  });
+
+  test("a line without a cwd is filed under (unknown)", () => {
+    const dir = tempHome();
+    transcriptIn(dir, "-x-git-widgets", [call(1)]);
+    const result = readClaudeCode(dir, undefined, NOW);
+    expect(Object.keys(result.byProject)).toEqual(["(unknown)"]);
+    expect(result.buckets.total.calls).toBe(1);
+  });
+
+  test("each call resolves from its own line's cwd", () => {
+    const dir = tempHome();
+    const widgets = repo(dir, "widgets");
+    mkdirSync(join(widgets, "sub"), { recursive: true });
+    const other = repo(dir, "other");
+    transcriptIn(dir, "-w", [
+      call(1, widgets),
+      call(2, join(widgets, "sub")),
+      call(4, other),
+    ]);
+    const result = readClaudeCode(dir, undefined, NOW);
+    expect(result.byProject.widgets.total.input).toBe(3);
+    expect(result.byProject.other.total.input).toBe(4);
+  });
+
+  test("a registered project's name is used, via the resolver handed in", async () => {
+    const make = await projectResolver();
+    const dir = tempHome();
+    const docs = join(dir, "docs");
+    mkdirSync(docs, { recursive: true });
+    transcriptIn(dir, "-d", [call(1, join(docs, "sub"))]);
+    const resolver = make([registered("bidding-ecosystem")], {
+      "bidding-ecosystem": docs,
+    });
+    const result = readClaudeCode(dir, undefined, NOW, undefined, resolver);
+    expect(Object.keys(result.byProject)).toEqual(["bidding-ecosystem"]);
   });
 
   test("skips lines that are not assistant turns", () => {

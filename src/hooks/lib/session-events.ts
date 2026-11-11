@@ -59,18 +59,43 @@ function modelOf(model: unknown): string | null {
   return typeof id === "string" ? id : null;
 }
 
-function gitDirOf(start: string): string | null {
+function nearestDotGitDir(start: string): string | null {
   let dir = resolve(start);
   while (true) {
-    const dotGit = resolve(dir, ".git");
-    if (existsSync(dotGit)) {
-      if (statSync(dotGit).isDirectory()) return dotGit;
-      const pointer = /^gitdir:\s*(.+)$/m.exec(readFileSync(dotGit, "utf-8"))?.[1];
-      return pointer ? resolve(dir, pointer.trim()) : null;
-    }
+    if (existsSync(resolve(dir, ".git"))) return dir;
     const parent = dirname(dir);
     if (parent === dir) return null;
     dir = parent;
+  }
+}
+
+function gitDirOf(start: string): string | null {
+  const dir = nearestDotGitDir(start);
+  if (dir === null) return null;
+  const dotGit = resolve(dir, ".git");
+  if (statSync(dotGit).isDirectory()) return dotGit;
+  const pointer = /^gitdir:\s*(.+)$/m.exec(readFileSync(dotGit, "utf-8"))?.[1];
+  return pointer ? resolve(dir, pointer.trim()) : null;
+}
+
+/**
+ * The repo a folder belongs to: the main checkout for a linked worktree, otherwise
+ * the folder that holds `.git`. Reads files only; it never starts git.
+ */
+export function repoRootOf(cwd: string): string | null {
+  const dir = nearestDotGitDir(cwd);
+  if (dir === null) return null;
+  const dotGit = resolve(dir, ".git");
+  if (statSync(dotGit).isDirectory()) return dir;
+  try {
+    const pointer = /^gitdir:\s*(.+)$/m.exec(readFileSync(dotGit, "utf-8"))?.[1];
+    if (!pointer) return dir;
+    const linked = /^(.*)[\\/]\.git[\\/]worktrees[\\/][^\\/]+$/.exec(
+      resolve(dir, pointer.trim())
+    );
+    return linked ? linked[1] : dir;
+  } catch {
+    return dir;
   }
 }
 
