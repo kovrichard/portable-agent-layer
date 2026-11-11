@@ -85,14 +85,11 @@ function gitDirOf(start: string): string | null {
 export function repoRootOf(cwd: string): string | null {
   const dir = nearestDotGitDir(cwd);
   if (dir === null) return null;
-  const dotGit = resolve(dir, ".git");
-  if (statSync(dotGit).isDirectory()) return dir;
   try {
-    const pointer = /^gitdir:\s*(.+)$/m.exec(readFileSync(dotGit, "utf-8"))?.[1];
-    if (!pointer) return dir;
-    const linked = /^(.*)[\\/]\.git[\\/]worktrees[\\/][^\\/]+$/.exec(
-      resolve(dir, pointer.trim())
-    );
+    const gitDir = gitDirOf(dir);
+    const linked = gitDir
+      ? /^(.*)[\\/]\.git[\\/]worktrees[\\/][^\\/]+$/.exec(gitDir)
+      : null;
     return linked ? linked[1] : dir;
   } catch {
     return dir;
