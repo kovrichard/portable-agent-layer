@@ -246,6 +246,7 @@ PAL ships with built-in skills that extend your agent's capabilities:
 | `rule-review` | Approve or deny the rules PAL drafted from your corrections |
 | `scheduled-prompts` | Set up a prompt that arrives at a time of day from now on, for you or one project |
 | `scientific-research` | Answer health and scientific questions from cited, verified sources: PubMed, guidelines, NEJM, Lancet, JAMA, BMJ |
+| `scout` | Hand a simple, judgment-free search to a read-only subagent on the small model, and act on its report |
 | `telos` | Inspect or update goals, beliefs, strategies, narratives |
 | `think` | Structured first-pass reasoning on a problem |
 
