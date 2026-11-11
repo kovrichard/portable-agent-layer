@@ -6,7 +6,7 @@ import {
   readFileSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { recordHandover } from "./handover.mjs";
 import { readInstructions, recordMissingImports } from "./instructions.mjs";
 import {
@@ -21,8 +21,11 @@ import {
   requireTools,
   runTotals,
   taskDir,
+  transcriptLines,
+  transcriptTotals,
   writeTask,
 } from "./lib.mjs";
+import { transcriptCost } from "./prices.mjs";
 import { rolesFor } from "./roles.mjs";
 import { writeRoleSettings } from "./settings.mjs";
 import { estimateFor } from "./stats.mjs";
@@ -61,16 +64,67 @@ function openRunStart(events, id) {
   return finished ? null : events[index];
 }
 
+function poTranscriptOf(transcriptPath) {
+  if (typeof transcriptPath !== "string") return null;
+  if (basename(dirname(transcriptPath)) !== "subagents") return null;
+  const sessionDir = dirname(dirname(transcriptPath));
+  const sessionId = basename(sessionDir);
+  return { sessionId, path: join(dirname(sessionDir), `${sessionId}.jsonl`) };
+}
+
+function poSessions(events, id, startIso) {
+  const sessions = events
+    .filter((e) => e.event === "role_finished" && e.task === id && e.ts >= startIso)
+    .map((e) => poTranscriptOf(e.transcriptPath))
+    .filter(Boolean);
+  const byPath = new Map();
+  for (const session of sessions) {
+    if (!byPath.has(session.path)) byPath.set(session.path, session);
+  }
+  return [...byPath.values()];
+}
+
+function poEvent(id, session, startIso) {
+  const counted = transcriptLines(session.path).filter(
+    (line) =>
+      line.type === "assistant" && Date.parse(line.timestamp) >= Date.parse(startIso)
+  );
+  const totals = transcriptTotals(counted);
+  if (totals.turns === 0) return null;
+  return {
+    event: "role_finished",
+    task: id,
+    role: "po",
+    ...totals,
+    costUsd: transcriptCost(counted),
+    sessionId: session.sessionId,
+    transcriptPath: session.path,
+    exitCode: 0,
+    error: null,
+  };
+}
+
+function recordPoSessions(events, id, startIso, env) {
+  for (const session of poSessions(events, id, startIso)) {
+    try {
+      const event = poEvent(id, session, startIso);
+      if (event) appendEvent(event, env);
+    } catch {}
+  }
+}
+
 function recordRunFinished(id, status, env) {
-  const events = readEvents(env);
-  const start = openRunStart(events, id);
+  const start = openRunStart(readEvents(env), id);
   if (!start) return;
+  try {
+    recordPoSessions(readEvents(env), id, start.ts, env);
+  } catch {}
   appendEvent(
     {
       event: "run_finished",
       task: id,
       status,
-      ...runTotals(events, id, start.ts),
+      ...runTotals(readEvents(env), id, start.ts),
       wallMs: Date.now() - Date.parse(start.ts),
     },
     env
