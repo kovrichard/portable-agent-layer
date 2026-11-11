@@ -20,7 +20,11 @@ import { palHome } from "./paths";
 const EXPORT_DIRS = ["telos", "memory", "skills", "agents"];
 
 /** Subdirectories/files to skip during export. */
-const SKIP_PATTERNS = ["memory/downloads", "memory/content"];
+const SKIP_PATTERNS = [
+  "memory/downloads",
+  "memory/content",
+  "memory/state/transcript-handoff",
+];
 
 function shouldSkip(relPath: string): boolean {
   const normalized = relPath.replaceAll("\\", "/");
