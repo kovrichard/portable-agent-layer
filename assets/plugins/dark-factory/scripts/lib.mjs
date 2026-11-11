@@ -3,11 +3,12 @@ import {
   appendFileSync,
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { delimiter, dirname, join, resolve } from "node:path";
+import { delimiter, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const PLUGIN_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -55,6 +56,23 @@ export function readEvents(env = process.env) {
 
 export function readTask(id, env = process.env) {
   return JSON.parse(readFileSync(join(taskDir(id, env), "task.json"), "utf8"));
+}
+
+export function listTasks(env = process.env) {
+  const dir = join(factoryHome(env), "tasks");
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir)
+    .filter((id) => existsSync(join(dir, id, "task.json")))
+    .map((id) => readTask(id, env));
+}
+
+function insideFolder(folder, path) {
+  const rel = relative(resolve(folder), resolve(path));
+  return !rel.startsWith("..") && !isAbsolute(rel);
+}
+
+export function taskForFolder(cwd, env = process.env) {
+  return listTasks(env).find((task) => task.worktree && insideFolder(task.worktree, cwd));
 }
 
 export function writeTask(task, env = process.env) {
