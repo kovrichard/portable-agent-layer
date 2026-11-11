@@ -201,10 +201,16 @@ const FIREWORKS_PRICING: Record<string, ModelPricing> = {
   "fireworks-ai/accounts/fireworks/models/kimi-k3": withoutWritePremium(3, 0.3, 15),
 };
 
+/** TypeSafe bills input tokens only and has no cache, from https://docs.typesafe.ai */
+const TYPESAFE_PRICING: Record<string, ModelPricing> = {
+  "jev-1.14.0": withoutWritePremium(0.042, 0.042, 0),
+};
+
 /** Pricing per million tokens (USD) in force today; Claude's from https://platform.claude.com/docs/en/about-claude/pricing */
 export const MODEL_PRICING: Record<string, ModelPricing> = {
   ...OPENAI_PRICING,
   ...FIREWORKS_PRICING,
+  ...TYPESAFE_PRICING,
   [HAIKU_MODEL]: {
     input: 1,
     output: 5,

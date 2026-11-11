@@ -67,6 +67,19 @@ export const EVENT_FIELDS = {
     "failure",
     ...USAGE_FIELDS,
   ],
+  judge_call: [
+    "caller",
+    "mode",
+    "route",
+    "provider",
+    "model",
+    "inputTokens",
+    "costUsd",
+    "latencyMs",
+    "failure",
+    "systemOneAnswers",
+    "fallbackAnswers",
+  ],
   pal_update: ["outcome", "from", "to", "durationSec", "skipReason"],
   pal_heartbeat: ["outcome", "payload", "status", "skipReason"],
   commitment: ["iscProject", "isc", "outcome", "surface", "snoozeDays"],
@@ -177,6 +190,8 @@ export const EVENT_FIELDS = {
 } as const satisfies Record<string, readonly string[]>;
 
 export type EventType = keyof typeof EVENT_FIELDS;
+// answers keep their probabilities: question → answer → probabilities
+const NESTING_DEPTH: Partial<Record<EventType, number>> = { judge_call: 2 };
 type EventValue =
   | string
   | number
@@ -214,15 +229,18 @@ export interface AppendOptions {
   content?: Record<string, unknown>;
 }
 
-function isEventValue(value: unknown, depth = 0): value is EventValue {
+function isEventValue(value: unknown, maxDepth: number, depth = 0): value is EventValue {
   if (value === null || typeof value === "boolean") return true;
   if (typeof value === "number") return Number.isFinite(value);
   if (typeof value === "string") return value.length <= MAX_STRING;
-  if (depth > 1) return false;
+  if (depth > maxDepth) return false;
   if (Array.isArray(value))
-    return value.length <= MAX_ARRAY && value.every((v) => isEventValue(v, depth + 1));
+    return (
+      value.length <= MAX_ARRAY &&
+      value.every((v) => isEventValue(v, maxDepth, depth + 1))
+    );
   if (typeof value === "object")
-    return Object.values(value).every((v) => isEventValue(v, depth + 1));
+    return Object.values(value).every((v) => isEventValue(v, maxDepth, depth + 1));
   return false;
 }
 
@@ -231,9 +249,10 @@ export function admittedFields(
   fields: Record<string, unknown>
 ): Record<string, EventValue> {
   const allowed: readonly string[] = EVENT_FIELDS[type];
+  const maxDepth = NESTING_DEPTH[type] ?? 1;
   const kept: Record<string, EventValue> = {};
   for (const [name, value] of Object.entries(fields)) {
-    if (allowed.includes(name) && isEventValue(value)) kept[name] = value;
+    if (allowed.includes(name) && isEventValue(value, maxDepth)) kept[name] = value;
   }
   return kept;
 }
