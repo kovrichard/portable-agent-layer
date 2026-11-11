@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
-import { isAbsolute, relative, resolve } from "node:path";
+import { basename, isAbsolute, relative, resolve } from "node:path";
 
 /**
  * Turn a path string that came from outside — argv, a flag, an env override, a
@@ -40,6 +40,13 @@ export function namesAPath(input: string): boolean {
 export function isInside(parent: string, target: string): boolean {
   const rel = relative(parent, target);
   return rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
+}
+
+/** A direct entry of `parent`, not one nested deeper — compared as paths, like isInside. */
+export function isDirectChild(parent: string, target: string): boolean {
+  if (!isInside(parent, target)) return false;
+  const rel = relative(parent, target);
+  return basename(rel) === rel;
 }
 
 /** An env override names a path the same way a flag does, so it gets the same treatment. */
