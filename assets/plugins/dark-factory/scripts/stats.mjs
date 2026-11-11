@@ -127,7 +127,7 @@ export function estimateFor(events, category) {
   const finished = history.map((run) => run.events.at(-1));
   return {
     wallMs: median(finished.map((event) => event.wallMs)),
-    tokens: median(finished.map((event) => event.tokens)),
+    tokens: median(history.map(runTokens)),
     costUsd: median(history.map(runCostUsd)),
     basis: history.length,
   };
@@ -140,17 +140,21 @@ const TOKEN_KINDS = [
   "cacheCreationTokens",
 ];
 
+function runTokens(run) {
+  const finished = run.events.at(-1);
+  if (typeof finished.tokens !== "number") return finished.tokens;
+  return (
+    finished.tokens +
+    TOKEN_KINDS.reduce((sum, field) => sum + total(run.after, field), 0)
+  );
+}
+
 function actualOf(run) {
   const finished = run.events.at(-1);
-  const tail = run.after;
   return {
     ...finished,
     costUsd: runCostUsd(run),
-    tokens:
-      typeof finished.tokens === "number"
-        ? finished.tokens +
-          TOKEN_KINDS.reduce((sum, field) => sum + total(tail, field), 0)
-        : finished.tokens,
+    tokens: runTokens(run),
   };
 }
 
