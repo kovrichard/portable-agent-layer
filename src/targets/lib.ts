@@ -1331,6 +1331,7 @@ const STATUSLINE: Record<StatuslineTarget, StatuslineSlot> = {
     dir: platform.claudeDir,
     script: "~/.claude/statusline",
     powershellFlags: "-NoProfile -ExecutionPolicy Bypass",
+    extra: { refreshInterval: 20 },
   },
   cursor: {
     dir: platform.cursorDir,
@@ -1430,6 +1431,15 @@ function claudeStatuslineNeedsRefresh(cmd: string): boolean {
   return isOldGetContentClaudeCommand(cmd) || isPalWindowsClaudeCommandMissingBypass(cmd);
 }
 
+function addMissingExtras(
+  statusLine: Record<string, unknown>,
+  target: StatuslineTarget
+): void {
+  for (const [key, value] of Object.entries(STATUSLINE[target].extra ?? {})) {
+    if (!(key in statusLine)) statusLine[key] = value;
+  }
+}
+
 /** Add statusLine config if not already present or if using an old broken command */
 export function addStatuslineConfig(
   settings: Record<string, unknown>,
@@ -1441,6 +1451,7 @@ export function addStatuslineConfig(
     const cmd = statusLine.command as string;
     if (target === "claude") {
       if (!claudeStatuslineNeedsRefresh(cmd)) {
+        if (isPalStatuslineCommand(cmd, "claude")) addMissingExtras(statusLine, target);
         return settings;
       }
     } else if (!isPalStatuslineCommand(cmd, target)) {
