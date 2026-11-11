@@ -1,17 +1,23 @@
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
-import { HAIKU_5_5_MODEL, OPUS_MODEL, SONNET_MODEL } from "../../hooks/lib/models";
+import {
+  FABLE_MODEL,
+  HAIKU_5_5_MODEL,
+  OPUS_MODEL,
+  SONNET_MODEL,
+} from "../../hooks/lib/models";
 
-type FactoryTier = "small" | "medium" | "large";
+type FactoryTier = "small" | "medium" | "large" | "flagship";
 
 export const FACTORY_MODELS: Record<FactoryTier, string> = {
   small: HAIKU_5_5_MODEL,
   medium: SONNET_MODEL,
   large: OPUS_MODEL,
+  flagship: FABLE_MODEL,
 };
 
 export const ROLE_TIERS: Record<string, FactoryTier> = {
-  po: "large",
+  po: "flagship",
   architect: "large",
   planner: "large",
   "test-writer": "medium",
