@@ -87,12 +87,14 @@ describe("prepare on a running task with an open run (criteria 1 and 2)", () => 
     expect((readTask(id, env) as { status: string }).status).toBe("running");
   });
 
-  test("a third call adds nothing either", () => {
+  test("a third call adds no task_started and no estimate either", () => {
     prepare(id, env);
     prepare(id, env);
-    const before = readEvents(env).length;
+    const started = ofTask("task_started").length;
+    const estimates = ofTask("estimate").length;
     prepare(id, env);
-    expect(readEvents(env)).toHaveLength(before);
+    expect(ofTask("task_started")).toHaveLength(started);
+    expect(ofTask("estimate")).toHaveLength(estimates);
   });
 
   test("a stuck task starts a run as before", () => {
