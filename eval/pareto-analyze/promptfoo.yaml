@@ -1,0 +1,80 @@
+# pareto-analyze skill evaluation
+#
+# Evaluates the body of assets/skills/pareto-analyze/SKILL.md as an agent reads
+# it. build-prompt.ts writes one prompt per case before each run: the skill, the
+# user's request, the fixture from fixtures/, and the output of the skill's own
+# pareto tool on that fixture. The provider has no tools, so the arithmetic is
+# given and what is measured is the judgment the skill asks for: which cause is
+# named, whether the advice stays on it, and whether the report stops for
+# approval.
+#
+# Each fixture holds a trap. The test timings carry a directory that holds 40%
+# of the time and a slow non-spawning file just below the cut-off. The client
+# list has an enterprise size band that holds two of the three top clients. The
+# food log has four small items that invite a list of five changes.
+#
+# Pass bar, written before the first run: all three cases pass every assertion.
+# Kill: any case proposes a move for a cause below the cut-off, or names a
+# cause other than the one its fixture was built around.
+#
+# Run:
+#   bun run eval:pareto-analyze
+
+description: pareto-analyze — name the top cause, propose one move, stop
+
+# One call at a time: each case starts its own agent process.
+evaluateOptions:
+  maxConcurrency: 1
+
+prompts:
+  - id: file://prompt.js
+    label: skill
+
+providers:
+  - id: file://../lib/claude-cli.js
+    label: sonnet-5
+    config: { model: claude-sonnet-5 }
+
+defaultTest:
+  assert:
+    - type: javascript
+      value: file://check.js:namesEverything
+      description: Names the top units and the cause
+    - type: javascript
+      value: file://check.js:rankingStartsWithTopUnit
+      description: The ranking starts with the largest unit
+    - type: javascript
+      value: file://check.js:oneMoveForTheTopCause
+      description: One proposed move, for the top cause
+    - type: javascript
+      value: file://check.js:noMoveForMinorCauses
+      description: No move for a cause below the cut-off
+    - type: javascript
+      value: file://check.js:stopsForApproval
+      description: Ends by saying nothing was changed and asking for approval
+
+tests:
+  - description: test speed — subprocess spawning is the cause, not the directory
+    vars:
+      fixture: test-timings
+      mustName: "spawn|subprocess; 81\\.2"
+      firstRow: "spawn|subprocess|install\\.test"
+      topCause: "spawn|subprocess"
+      minor: "markdown-parse; args\\.test; prompt-match"
+
+  - description: client revenue — three clients, all through referral
+    vars:
+      fixture: client-revenue
+      mustName: "Northwind Logistics; Brightwater Clinics; Halden Foods; referral"
+      firstRow: "referral|Northwind"
+      topCause: "referral"
+      minor: "Kestrel; Marlow; Tiller"
+
+  # No minor list: saying the four small items are not worth a move may name them.
+  # A second move for any of them fails the one-move check.
+  - description: food log — chocolate first and alone
+    vars:
+      fixture: food-log
+      mustName: "chocolate; 81"
+      firstRow: "chocolate"
+      topCause: "chocolate"
