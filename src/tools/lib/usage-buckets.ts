@@ -376,6 +376,28 @@ function inferenceTokens(call: LoggedEvent): Tokens | null {
 const textOr = (value: unknown, fallback: string) =>
   typeof value === "string" ? value : fallback;
 
+/**
+ * A System One judgment that reached a model has input tokens and a cost; one
+ * that did not (mode off, no provider or key, timeout, rate limit) has neither.
+ * It has no output tokens, so it is counted on its input alone.
+ */
+function systemOneCall(
+  call: LoggedEvent
+): { model: string; tokens: Tokens; cost: number | null } | null {
+  if (typeof call.model !== "string") return null;
+  const input = countOf(call.inputTokens);
+  if (input === null) return null;
+  const tokens: Tokens = {
+    input,
+    output: 0,
+    cacheWrite5m: 0,
+    cacheWrite1h: 0,
+    cacheRead: 0,
+  };
+  const cost = countOf(call.costUsd) ?? costOfUsage(call.model, tokens, call.ts);
+  return { model: call.model, tokens, cost };
+}
+
 export function readPalInference(
   events: LoggedEvent[],
   now: Date = new Date()
@@ -387,19 +409,39 @@ export function readPalInference(
     byCaller: {},
   };
 
-  for (const call of events.filter((e) => e.type === "inference_call")) {
-    const tokens = inferenceTokens(call);
-    if (tokens === null) continue;
-    const model = textOr(call.model, "unknown");
-    const caller = textOr(call.caller, "anonymous");
+  for (const e of events) {
+    if (e.type === "judge_call") {
+      const call = systemOneCall(e);
+      if (call === null) continue;
+      const caller = textOr(e.caller, "anonymous");
 
-    addToTimeBuckets(result.buckets, call.ts, model, tokens, horizons);
+      addToWindows(result.buckets, e.ts, horizons, (b) =>
+        addCall(b, call.tokens, call.cost)
+      );
+
+      result.byModel[call.model] ??= emptyTimeBuckets();
+      addToWindows(result.byModel[call.model], e.ts, horizons, (b) =>
+        addCall(b, call.tokens, call.cost)
+      );
+
+      result.byCaller[caller] ??= emptyBucket();
+      addCall(result.byCaller[caller], call.tokens, call.cost);
+      continue;
+    }
+
+    if (e.type !== "inference_call") continue;
+    const tokens = inferenceTokens(e);
+    if (tokens === null) continue;
+    const model = textOr(e.model, "unknown");
+    const caller = textOr(e.caller, "anonymous");
+
+    addToTimeBuckets(result.buckets, e.ts, model, tokens, horizons);
 
     result.byModel[model] ??= emptyTimeBuckets();
-    addToTimeBuckets(result.byModel[model], call.ts, model, tokens, horizons);
+    addToTimeBuckets(result.byModel[model], e.ts, model, tokens, horizons);
 
     result.byCaller[caller] ??= emptyBucket();
-    addToBucket(result.byCaller[caller], model, tokens, call.ts);
+    addToBucket(result.byCaller[caller], model, tokens, e.ts);
   }
 
   return result;

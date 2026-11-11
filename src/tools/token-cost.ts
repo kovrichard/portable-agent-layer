@@ -6,7 +6,7 @@
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { AGENT_REGISTRY, type AgentName } from "../hooks/lib/agent-registry";
-import { eventsSince } from "../hooks/lib/events";
+import { allEventsSince, type LoggedEvent } from "../hooks/lib/events";
 import { platform } from "../hooks/lib/paths";
 import { transcriptArchive } from "../hooks/lib/transcript-preserve";
 import { findBinaryOnPath } from "../hooks/lib/which";
@@ -64,10 +64,17 @@ function rtkGain(): RtkGain {
   };
 }
 
+/** PAL's inference and System One judgment events, read from the log once. */
+export function palInferenceEvents(): LoggedEvent[] {
+  return allEventsSince(new Date(0)).filter(
+    (e) => e.type === "inference_call" || e.type === "judge_call"
+  );
+}
+
 export function collectUsage(project: string | undefined): UsageData {
   return {
     agents: agentReports(project),
-    pal: readPalInference(eventsSince("inference_call", new Date(0))),
+    pal: readPalInference(palInferenceEvents()),
     rtk: rtkGain(),
     untracked: installedUntracked(),
   };

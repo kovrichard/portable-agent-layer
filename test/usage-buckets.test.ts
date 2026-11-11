@@ -668,3 +668,136 @@ describe("grandTotal", () => {
     expect(a.calls).toBe(1);
   });
 });
+
+describe("readPalInference: System One judge_call events", () => {
+  const JEV = "jev-1.14.0";
+  const HAIKU = "claude-haiku-4-5-20251001";
+  const judgeCall = (fields: Record<string, unknown> = {}, ts = NOW.toISOString()) =>
+    event(
+      "judge_call",
+      {
+        caller: "judge-caller",
+        mode: "shadow",
+        route: "fallback",
+        model: JEV,
+        inputTokens: 1000,
+        costUsd: 0.000042,
+        failure: null,
+        ...fields,
+      },
+      { ts }
+    );
+
+  test("a reply from System One is one call with its input tokens only", () => {
+    const result = readPalInference([judgeCall()], NOW);
+    expect(result.byModel[JEV].total).toMatchObject({
+      calls: 1,
+      input: 1000,
+      output: 0,
+      cacheWrite5m: 0,
+      cacheWrite1h: 0,
+      cacheRead: 0,
+    });
+  });
+
+  test("the cost is the event's costUsd, not a looked-up price", () => {
+    const result = readPalInference([judgeCall({ costUsd: 0.5 })], NOW);
+    expect(result.byModel[JEV].total.cost).toBe(0.5);
+    expect(result.byModel[JEV].total.unpriced).toBe(0);
+  });
+
+  test("shadow and live calls are counted, whichever route answered", () => {
+    const result = readPalInference(
+      [
+        judgeCall({ mode: "shadow", route: "fallback" }),
+        judgeCall({ mode: "live", route: "system-one" }),
+        judgeCall({ mode: "live", route: "fallback", failure: "bad-answer" }),
+      ],
+      NOW
+    );
+    expect(result.byModel[JEV].total.calls).toBe(3);
+  });
+
+  test("a call that got no reply adds nothing", () => {
+    const result = readPalInference(
+      [
+        judgeCall({ mode: "off", model: null, inputTokens: null, costUsd: null }),
+        judgeCall({ failure: "no-key", inputTokens: null, costUsd: null }),
+        judgeCall({ failure: "timeout", inputTokens: null, costUsd: null }),
+      ],
+      NOW
+    );
+    expect(result.buckets.total.calls).toBe(0);
+    expect(result.byModel).toEqual({});
+    expect(result.byCaller).toEqual({});
+  });
+
+  test("a judgment with a judge_call and a fallback inference_call counts each once", () => {
+    const result = readPalInference(
+      [judgeCall({ costUsd: 0.25 }), palCall(NOW.toISOString())],
+      NOW
+    );
+    const fallbackCost = readPalInference([palCall(NOW.toISOString())], NOW).buckets.total
+      .cost;
+    expect(Object.keys(result.byModel).sort()).toEqual([HAIKU, JEV].sort());
+    expect(result.byModel[JEV].total.calls).toBe(1);
+    expect(result.byModel[HAIKU].total.calls).toBe(1);
+    expect(result.buckets.total.calls).toBe(2);
+    expect(result.buckets.total.cost).toBeCloseTo(0.25 + fallbackCost, 10);
+  });
+
+  test("lands in the time windows, the overall buckets and byCaller", () => {
+    const result = readPalInference(
+      [judgeCall(), judgeCall({}, "2026-07-27T12:00:00.000Z")],
+      NOW
+    );
+    expect(result.byModel[JEV].today.calls).toBe(1);
+    expect(result.byModel[JEV].month.calls).toBe(1);
+    expect(result.byModel[JEV].total.calls).toBe(2);
+    expect(result.buckets.today.calls).toBe(1);
+    expect(result.buckets.total.calls).toBe(2);
+    expect(result.byCaller["judge-caller"].calls).toBe(2);
+  });
+
+  test("zero input tokens with a model is still one call at the event's cost", () => {
+    const result = readPalInference([judgeCall({ inputTokens: 0, costUsd: 0.01 })], NOW);
+    expect(result.byModel[JEV].total).toMatchObject({ calls: 1, input: 0, cost: 0.01 });
+  });
+
+  test("a non-numeric costUsd is priced like an inference call", () => {
+    const result = readPalInference([judgeCall({ model: HAIKU, costUsd: null })], NOW);
+    const priced = readPalInference(
+      [palCall(NOW.toISOString(), { inputTokens: 1000, outputTokens: 0 })],
+      NOW
+    );
+    expect(result.byModel[HAIKU].total.calls).toBe(1);
+    expect(result.byModel[HAIKU].total.cost).toBeGreaterThan(0);
+    expect(result.byModel[HAIKU].total.cost).toBeCloseTo(
+      priced.byModel[HAIKU].total.cost,
+      10
+    );
+  });
+
+  test("numeric inputTokens without a string model adds nothing", () => {
+    const result = readPalInference([judgeCall({ model: null })], NOW);
+    expect(result.buckets.total.calls).toBe(0);
+    expect(result.byModel).toEqual({});
+  });
+
+  test("a model shared with inference_call events lands in one block", () => {
+    const result = readPalInference(
+      [judgeCall({ model: HAIKU, costUsd: 0.5 }), palCall(NOW.toISOString())],
+      NOW
+    );
+    expect(Object.keys(result.byModel)).toEqual([HAIKU]);
+    expect(result.byModel[HAIKU].total.calls).toBe(2);
+  });
+
+  test("a judge_call and an inference_call with the same caller both count", () => {
+    const result = readPalInference(
+      [judgeCall({ caller: "same" }), palCall(NOW.toISOString(), { caller: "same" })],
+      NOW
+    );
+    expect(result.byCaller.same.calls).toBe(2);
+  });
+});
