@@ -6,8 +6,10 @@
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { AGENT_REGISTRY, type AgentName } from "../hooks/lib/agent-registry";
+import { readBindings } from "../hooks/lib/bindings";
 import { allEventsSince, type LoggedEvent } from "../hooks/lib/events";
 import { platform } from "../hooks/lib/paths";
+import { readAllProjects } from "../hooks/lib/projects";
 import { transcriptArchive } from "../hooks/lib/transcript-preserve";
 import { findBinaryOnPath } from "../hooks/lib/which";
 import {
@@ -16,6 +18,7 @@ import {
   readCopilot,
   readOpencode,
 } from "./lib/agent-usage";
+import { projectResolver } from "./lib/project-resolver";
 import {
   type AgentReport,
   parseRtkSummary,
@@ -31,18 +34,24 @@ function agentReports(project: string | undefined): AgentReport[] {
     label: AGENT_REGISTRY[agent].label,
     usage: read(),
   });
+  const projectOf = projectResolver(readAllProjects(), readBindings());
   return [
     report("claude", () =>
       readClaudeCode(
         resolve(platform.claudeDir(), "projects"),
         project,
         new Date(),
-        transcriptArchive()
+        transcriptArchive(),
+        projectOf
       )
     ),
-    report("codex", () => readCodex(platform.codexDir(), project)),
-    report("opencode", () => readOpencode(opencodeDatabase(), project)),
-    report("copilot", () => readCopilot(platform.copilotDir(), project)),
+    report("codex", () => readCodex(platform.codexDir(), project, new Date(), projectOf)),
+    report("opencode", () =>
+      readOpencode(opencodeDatabase(), project, new Date(), projectOf)
+    ),
+    report("copilot", () =>
+      readCopilot(platform.copilotDir(), project, new Date(), projectOf)
+    ),
   ];
 }
 

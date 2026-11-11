@@ -7,6 +7,7 @@ import {
   grandBucket,
   modelLabel,
   parseRtkSummary,
+  projectsByCost,
   type RtkGain,
   rowLine,
   rtkLines,
@@ -383,6 +384,24 @@ describe("usageLines", () => {
     const cc: AgentUsage = { ...EMPTY_CC, byModel: { [long]: bucket } };
     const line = find(usageLines(report(cc)), "a-very-long");
     expect(line).toBe(detailedLine("a-very-long-model-identifier-9", bucket, 32));
+  });
+
+  test("files the unresolvable calls of every agent in one (unknown) row", () => {
+    const agentIn = (scale: number, extra: string) => ({
+      label: extra,
+      usage: {
+        ...EMPTY_CC,
+        byProject: {
+          "(unknown)": timeBucketsOf("claude-opus-5", scale),
+          [extra]: timeBucketsOf("claude-opus-5", 1),
+        },
+      },
+    });
+    const rows = projectsByCost([agentIn(10, "widgets"), agentIn(20, "klint")]);
+    const unknown = rows.filter(([name]) => name === "(unknown)");
+    expect(unknown).toHaveLength(1);
+    expect(unknown[0][1].total.calls).toBe(2);
+    expect(rows).toHaveLength(3);
   });
 
   test("omits the project section for a single project — it says nothing new", () => {

@@ -8,6 +8,7 @@ import { Database } from "bun:sqlite";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, resolve } from "node:path";
+import { type ProjectResolver, projectResolver } from "./project-resolver";
 import {
   type AgentUsage,
   type Tokens,
@@ -37,8 +38,6 @@ function filesUnder(dir: string, matches: (name: string) => boolean): string[] {
     .filter((path) => matches(basename(path)))
     .map((path) => resolve(dir, path));
 }
-
-const projectOf = (cwd: string | undefined) => (cwd && basename(cwd)) || "unknown";
 
 interface CodexTokenUsage {
   input_tokens?: number;
@@ -76,8 +75,12 @@ function codexTokens(usage: CodexTokenUsage): Tokens {
 const CODEX_KEYS = ['"session_meta"', '"turn_context"', '"token_count"'];
 
 /** Codex repeats a token_count event without a new call; the running total tells them apart. */
-function recordCodexRollout(filepath: string, tally: UsageTally): void {
-  let project = "unknown";
+function recordCodexRollout(
+  filepath: string,
+  tally: UsageTally,
+  projectOf: ProjectResolver
+): void {
+  let project = projectOf(undefined);
   let model = "unknown";
   let lastTotal = -1;
   for (const line of linesOf(filepath)) {
@@ -114,10 +117,12 @@ function tokenCountOf(payload: NonNullable<CodexLine["payload"]>) {
 export function readCodex(
   codexDir: string,
   projectFilter?: string,
-  now: Date = new Date()
+  now: Date = new Date(),
+  projectOf: ProjectResolver = projectResolver([], {})
 ): AgentUsage {
   const tally = usageTally(projectFilter, now);
-  for (const filepath of codexRollouts(codexDir)) recordCodexRollout(filepath, tally);
+  for (const filepath of codexRollouts(codexDir))
+    recordCodexRollout(filepath, tally, projectOf);
   return tally.usage;
 }
 
@@ -182,7 +187,8 @@ function opencodeAssistantRows(dbPath: string): OpencodeRow[] {
 export function readOpencode(
   dbPath: string,
   projectFilter?: string,
-  now: Date = new Date()
+  now: Date = new Date(),
+  projectOf: ProjectResolver = projectResolver([], {})
 ): AgentUsage {
   const tally = usageTally(projectFilter, now);
   if (!existsSync(dbPath)) return tally.usage;
@@ -241,8 +247,12 @@ function copilotTokens(usage: CopilotModelMetrics["usage"] = {}): Tokens {
 }
 
 /** Each shutdown carries the totals of its own run, so a resumed session adds, not repeats. */
-function recordCopilotSession(filepath: string, tally: UsageTally): void {
-  let project = "unknown";
+function recordCopilotSession(
+  filepath: string,
+  tally: UsageTally,
+  projectOf: ProjectResolver
+): void {
+  let project = projectOf(undefined);
   for (const line of linesOf(filepath)) {
     if (!line.includes('"session.')) continue;
     const event = parsed<CopilotEvent>(line);
@@ -265,13 +275,14 @@ function recordCopilotSession(filepath: string, tally: UsageTally): void {
 export function readCopilot(
   copilotDir: string,
   projectFilter?: string,
-  now: Date = new Date()
+  now: Date = new Date(),
+  projectOf: ProjectResolver = projectResolver([], {})
 ): AgentUsage {
   const tally = usageTally(projectFilter, now);
   const sessionsDir = resolve(copilotDir, "session-state");
   if (!existsSync(sessionsDir)) return tally.usage;
   for (const session of readdirSync(sessionsDir)) {
-    recordCopilotSession(resolve(sessionsDir, session, "events.jsonl"), tally);
+    recordCopilotSession(resolve(sessionsDir, session, "events.jsonl"), tally, projectOf);
   }
   return tally.usage;
 }

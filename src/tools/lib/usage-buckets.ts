@@ -8,6 +8,7 @@ import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import type { LoggedEvent } from "../../hooks/lib/events";
 import { costOfUsage } from "../../hooks/lib/models";
+import { type ProjectResolver, projectResolver } from "./project-resolver";
 import { cacheWritesOf, finalPerMessage, type TranscriptUsage } from "./transcript-usage";
 
 export interface Bucket {
@@ -136,12 +137,6 @@ export function totalTokens(bucket: Bucket): number {
   );
 }
 
-/** Claude Code names a project directory after its path; the last segment is the repo. */
-export function projectNameOf(dirName: string): string {
-  const segments = dirName.replace(/^-/, "").split("-");
-  return segments.length > 1 ? segments.slice(-1)[0] : dirName;
-}
-
 export interface AgentUsage {
   buckets: TimeBuckets;
   byModel: Record<string, Bucket>;
@@ -186,6 +181,7 @@ export function usageTally(projectFilter?: string, now: Date = new Date()): Usag
 interface TranscriptLine {
   type?: string;
   timestamp?: string;
+  cwd?: string;
   message?: { id?: string; model?: string; usage?: TranscriptUsage };
 }
 
@@ -234,6 +230,7 @@ interface PricedCall {
   ts: string;
   model: string;
   tokens: Tokens;
+  cwd?: string;
 }
 
 /** Null for anything that is not a priced assistant turn. */
@@ -255,6 +252,7 @@ function pricedCallOf(line: string): PricedCall | null {
     messageId: entry.message?.id,
     ts,
     model,
+    cwd: entry.cwd,
     tokens: {
       input: usage.input_tokens ?? 0,
       output: usage.output_tokens ?? 0,
@@ -302,18 +300,15 @@ function projectTranscripts(
   ];
 }
 
-function pricedCallsIn(
-  filepath: string,
-  project: string
-): (PricedCall & { project: string })[] {
+function pricedCallsIn(filepath: string): PricedCall[] {
   const content = transcriptText(filepath);
   if (content === null) return [];
-  const calls: (PricedCall & { project: string })[] = [];
+  const calls: PricedCall[] = [];
   for (const line of content.split("\n")) {
     // Cheap reject before the parse: most lines are not model turns.
     if (!line.includes('"usage"')) continue;
     const call = pricedCallOf(line);
-    if (call) calls.push({ ...call, project });
+    if (call) calls.push(call);
   }
   return calls;
 }
@@ -322,20 +317,19 @@ export function readClaudeCode(
   claudeDir: string,
   projectFilter?: string,
   now: Date = new Date(),
-  archiveDir?: string
+  archiveDir?: string,
+  projectOf: ProjectResolver = projectResolver([], {})
 ): AgentUsage {
   const tally = usageTally(projectFilter, now);
-  const calls: (PricedCall & { project: string })[] = [];
+  const calls: PricedCall[] = [];
   const projectDirs = new Set([
     ...projectDirsIn(claudeDir),
     ...(archiveDir ? projectDirsIn(archiveDir) : []),
   ]);
 
   for (const dirName of projectDirs) {
-    const projName = projectNameOf(dirName);
-    if (typeof projectFilter === "string" && !projName.includes(projectFilter)) continue;
     for (const filepath of projectTranscripts(claudeDir, archiveDir, dirName)) {
-      calls.push(...pricedCallsIn(filepath, projName));
+      calls.push(...pricedCallsIn(filepath));
     }
   }
 
@@ -344,7 +338,7 @@ export function readClaudeCode(
       ts: call.ts,
       model: call.model,
       tokens: call.tokens,
-      project: call.project,
+      project: projectOf(call.cwd),
       cost: costOfUsage(call.model, call.tokens, call.ts),
     });
   }
