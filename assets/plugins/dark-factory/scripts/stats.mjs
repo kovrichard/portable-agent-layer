@@ -1,4 +1,5 @@
-import { isMain, printJson, readEvents } from "./lib.mjs";
+import { cacheWriteSplit, isMain, printJson, readEvents } from "./lib.mjs";
+import { tokenCost } from "./prices.mjs";
 
 function countBy(items, key) {
   const counts = {};
@@ -44,6 +45,7 @@ export function summarize(events) {
     handovers: countBy(of("handover"), (event) => `${event.from}->${event.to}`),
     handoversByReason: countBy(of("handover"), "reason"),
     estimates: estimateAccuracy(runsOf(events)),
+    costByRole: costByRole(withoutCumulative(of("role_finished"))),
   };
 }
 
@@ -140,4 +142,153 @@ export function metricOver(name, runs) {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
-if (isMain(import.meta.url)) printJson(summarize(readEvents()));
+function groupBy(items, keyOf) {
+  const groups = new Map();
+  for (const item of items) {
+    const key = keyOf(item);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  }
+  return groups;
+}
+
+function eventCost(event) {
+  if (typeof event.costUsd === "number")
+    return { costUsd: event.costUsd, costEstimated: false };
+  const split = cacheWriteSplit(
+    event.cacheCreationTokens,
+    event.cacheCreation5mTokens,
+    event.cacheCreation1hTokens
+  );
+  const cost = tokenCost(event.model, {
+    input: event.inputTokens,
+    output: event.outputTokens,
+    cacheRead: event.cacheReadTokens,
+    cacheWrite5m: split.fiveMin,
+    cacheWrite1h: split.oneHour,
+  });
+  if (cost === null) return { costUsd: null, costEstimated: false };
+  return { costUsd: cost, costEstimated: true };
+}
+
+function costTotal(events) {
+  const priced = events.map(eventCost);
+  const known = priced.filter((p) => p.costUsd !== null);
+  return {
+    costUsd: known.length ? known.reduce((sum, p) => sum + p.costUsd, 0) : null,
+    costEstimated: priced.some((p) => p.costEstimated),
+  };
+}
+
+function total(events, field) {
+  return events.reduce((sum, event) => sum + (event[field] ?? 0), 0);
+}
+
+function roleRows(roleEvents) {
+  const groups = groupBy(roleEvents, (e) => JSON.stringify([e.role, e.model ?? null]));
+  return [...groups.values()].map((group) => ({
+    role: group[0].role,
+    model: group[0].model ?? null,
+    runs: group.length,
+    turns: total(group, "turns"),
+    toolCalls: total(group, "toolCalls"),
+    durationMs: total(group, "durationMs"),
+    inputTokens: total(group, "inputTokens"),
+    outputTokens: total(group, "outputTokens"),
+    cacheReadTokens: total(group, "cacheReadTokens"),
+    cacheCreationTokens: total(group, "cacheCreationTokens"),
+    ...costTotal(group),
+  }));
+}
+
+function runReport(runEvents) {
+  const last = runEvents.at(-1);
+  const finished = last.event === "run_finished" ? last : null;
+  const estimate = runEvents.find((e) => e.event === "estimate");
+  const roles = runEvents.filter((e) => e.event === "role_finished");
+  return {
+    status: finished?.status ?? null,
+    startedAt: runEvents[0].ts,
+    finishedAt: finished?.ts ?? null,
+    wallMs: finished?.wallMs ?? null,
+    ...costTotal(roles),
+    tokens: {
+      input: total(roles, "inputTokens"),
+      output: total(roles, "outputTokens"),
+      cacheRead: total(roles, "cacheReadTokens"),
+      cacheCreation: total(roles, "cacheCreationTokens"),
+    },
+    estimate: estimate
+      ? {
+          category: estimate.category,
+          basis: estimate.basis,
+          wallMs: estimate.wallMs,
+          tokens: estimate.tokens,
+          costUsd: estimate.costUsd,
+        }
+      : null,
+    byRole: roleRows(roles),
+  };
+}
+
+const CUMULATIVE_FIELDS = [
+  "inputTokens",
+  "outputTokens",
+  "cacheReadTokens",
+  "cacheCreationTokens",
+  "cacheCreation5mTokens",
+  "cacheCreation1hTokens",
+  "turns",
+];
+
+function withoutCumulative(events) {
+  const last = new Map();
+  return events.map((event) => {
+    if (event.event !== "role_finished" || event.agentId == null) return event;
+    const key = JSON.stringify([event.task, event.agentId]);
+    const earlier = last.get(key);
+    last.set(key, event);
+    if ("costUsd" in event || !earlier) return event;
+    const subtracted = {};
+    for (const field of CUMULATIVE_FIELDS) {
+      if (typeof event[field] === "number") {
+        subtracted[field] = Math.max(0, event[field] - (earlier[field] ?? 0));
+      }
+    }
+    return { ...event, ...subtracted };
+  });
+}
+
+function taskRuns(events, taskId) {
+  const mine = withoutCumulative(events.filter((e) => e.task === taskId));
+  const finished = runsOf(mine).map((run) => run.events);
+  const start = mine.findLastIndex((e) => e.event === "task_started");
+  const open =
+    start !== -1 && !mine.slice(start + 1).some((e) => e.event === "run_finished")
+      ? [mine.slice(start)]
+      : [];
+  return [...finished, ...open];
+}
+
+export function taskReport(events, taskId) {
+  return { task: taskId, runs: taskRuns(events, taskId).map(runReport) };
+}
+
+function costByRole(roleEvents) {
+  const groups = groupBy(roleEvents, (e) => e.role);
+  return Object.fromEntries(
+    [...groups].map(([role, group]) => [
+      role,
+      {
+        runs: group.length,
+        tasks: new Set(group.map((e) => e.task)).size,
+        ...costTotal(group),
+      },
+    ])
+  );
+}
+
+if (isMain(import.meta.url)) {
+  const [taskId] = process.argv.slice(2);
+  printJson(taskId ? taskReport(readEvents(), taskId) : summarize(readEvents()));
+}
