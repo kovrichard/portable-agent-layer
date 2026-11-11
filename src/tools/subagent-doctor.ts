@@ -11,11 +11,11 @@
  * CLI:      pal cli subagent doctor <name>   (see src/cli/subagent.ts)
  */
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import { parseAgentDefinition } from "../hooks/lib/agent-definition";
 import { AGENT_NAMES, type AgentName } from "../hooks/lib/agent-registry";
-import { assets, namesAPath, palHome, toPath } from "../hooks/lib/paths";
+import { assets, isDirectChild, namesAPath, palHome, toPath } from "../hooks/lib/paths";
 
 type Level = "pass" | "warn" | "error";
 
@@ -92,6 +92,13 @@ function shippedAgentNames(): Set<string> {
       .filter((f) => f.endsWith(".md"))
       .map((f) => f.replace(/\.md$/, ""))
   );
+}
+
+/** Real paths, so a relative path, `..` or a link into the shipped folder counts, and nothing else does. */
+function isShippedSubagentFile(file: string): boolean {
+  const dir = assets.agents();
+  if (!existsSync(dir) || !existsSync(file)) return false;
+  return isDirectChild(realpathSync(dir), realpathSync(file));
 }
 
 /** Split a merged subagent .md into global fields, per-platform blocks, and body. */
@@ -297,7 +304,12 @@ export function lintSubagent(file: string): SubagentReport {
     return { file, name: null, findings, errors: 1, warnings: 0 };
   }
 
-  checkSubagentName(parsed.name, basename(file).replace(/\.md$/, ""), add);
+  checkSubagentName(
+    parsed.name,
+    basename(file).replace(/\.md$/, ""),
+    isShippedSubagentFile(file),
+    add
+  );
   checkSubagentDescription(parsed, add);
   checkGlobalFields(parsed, add);
   checkPlatformBlocks(parsed.platforms, add);
@@ -309,7 +321,12 @@ export function lintSubagent(file: string): SubagentReport {
   return { file, name: parsed.name, findings, errors, warnings };
 }
 
-function checkSubagentName(name: string | null, stem: string, add: AddFinding): void {
+function checkSubagentName(
+  name: string | null,
+  stem: string,
+  shipped: boolean,
+  add: AddFinding
+): void {
   if (!name) {
     add("error", "name", "Missing `name` in frontmatter");
   } else {
@@ -334,13 +351,21 @@ function checkSubagentName(name: string | null, stem: string, add: AddFinding): 
     reserved
       ? add("error", "name.reserved", `contains reserved word "${reserved}"`)
       : add("pass", "name.reserved", "no reserved words");
-    shippedAgentNames().has(name)
-      ? add(
-          "error",
-          "name.collision",
-          `"${name}" is a shipped PAL subagent — a reinstall would overwrite it; choose another name`
-        )
-      : add("pass", "name.collision", "does not collide with a shipped subagent");
+    checkNameCollision(name, shipped, add);
+  }
+}
+
+function checkNameCollision(name: string, shipped: boolean, add: AddFinding): void {
+  if (shipped) {
+    add("pass", "name.collision", "is a shipped PAL subagent");
+  } else if (shippedAgentNames().has(name)) {
+    add(
+      "error",
+      "name.collision",
+      `"${name}" is a shipped PAL subagent — a reinstall would overwrite it; choose another name`
+    );
+  } else {
+    add("pass", "name.collision", "does not collide with a shipped subagent");
   }
 }
 
