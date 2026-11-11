@@ -78,10 +78,48 @@
         "noNonNullAssertion": "error",
         "useThrowOnlyError": "error",
         "useConsistentBuiltinInstantiation": "error",
-        "useTemplate": "error"
+        "useTemplate": "error",
+        "useNamingConvention": {
+          "level": "error",
+          "options": {
+            "strictCase": false,
+            "conventions": [
+              { "selector": { "kind": "function" }, "formats": ["camelCase"] },
+              { "selector": { "kind": "objectLiteralMember" }, "match": ".*" },
+              { "selector": { "kind": "typeMember" }, "match": ".*" },
+              { "selector": { "kind": "variable" }, "match": ".*" }
+            ]
+          }
+        }
       }
     }
   },
+  "overrides": [
+    {
+      "includes": ["**/*.tsx"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": {
+              "level": "error",
+              "options": {
+                "strictCase": false,
+                "conventions": [
+                  {
+                    "selector": { "kind": "function" },
+                    "formats": ["camelCase", "PascalCase"]
+                  },
+                  { "selector": { "kind": "objectLiteralMember" }, "match": ".*" },
+                  { "selector": { "kind": "typeMember" }, "match": ".*" },
+                  { "selector": { "kind": "variable" }, "match": ".*" }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
   "javascript": {
     "globals": ["Bun"],
     "formatter": {
