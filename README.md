@@ -239,6 +239,7 @@ PAL ships with built-in skills that extend your agent's capabilities:
 | `humanize` | Rewrite text to strip AI tells and read as human |
 | `onboarding` | Interview the user to fill empty TELOS topics and the timezone, one topic at a time |
 | `pal-analyze` | Surface rating trends, failure patterns, and graduation candidates |
+| `pareto-analyze` | Find the few units that drive most of an outcome (tests, clients, costs, habits) and propose one move per top cause |
 | `playwright` | Screenshot a page for a visual check |
 | `presentation` | Build branded slide decks from outlines |
 | `projects` | Look up, resume, register, or manage tracked projects |
