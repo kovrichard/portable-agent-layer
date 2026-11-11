@@ -78,4 +78,4 @@ Every fix ladder from here on (the reviewer's findings, the tester's unmet crite
 
 ## Report
 
-The PR link; each acceptance criterion and how it was checked; the decisions you made; the number of role runs, ladder rungs and review rounds, and the session's total cost when it is known.
+The PR link; each acceptance criterion and how it was checked; the decisions you made; the number of role runs, ladder rungs and review rounds; and the run's cost next to its estimate, with per role the runs, model, turns, tool calls, duration, tokens and cost, all taken from `node $S/stats.mjs <id>` after the final `task.mjs status`.
