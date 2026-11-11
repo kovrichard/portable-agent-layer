@@ -85,7 +85,10 @@
             "strictCase": false,
             "conventions": [
               { "selector": { "kind": "function" }, "formats": ["camelCase"] },
-              { "selector": { "kind": "any" }, "match": ".*" }
+              { "selector": { "kind": "objectLiteralMember" }, "match": ".*" },
+              { "selector": { "kind": "typeMember" }, "match": ".*" },
+              { "selector": { "kind": "variable" }, "match": ".*" },
+              { "selector": { "kind": "functionParameter" }, "match": ".*" }
             ]
           }
         }
@@ -107,7 +110,10 @@
                     "selector": { "kind": "function" },
                     "formats": ["camelCase", "PascalCase"]
                   },
-                  { "selector": { "kind": "any" }, "match": ".*" }
+                  { "selector": { "kind": "objectLiteralMember" }, "match": ".*" },
+                  { "selector": { "kind": "typeMember" }, "match": ".*" },
+                  { "selector": { "kind": "variable" }, "match": ".*" },
+                  { "selector": { "kind": "functionParameter" }, "match": ".*" }
                 ]
               }
             }
