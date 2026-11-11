@@ -144,8 +144,7 @@ function runTokens(run) {
   const finished = run.events.at(-1);
   if (typeof finished.tokens !== "number") return finished.tokens;
   return (
-    finished.tokens +
-    TOKEN_KINDS.reduce((sum, field) => sum + total(run.after, field), 0)
+    finished.tokens + TOKEN_KINDS.reduce((sum, field) => sum + total(run.after, field), 0)
   );
 }
 
