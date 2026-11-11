@@ -78,10 +78,44 @@
         "noNonNullAssertion": "error",
         "useThrowOnlyError": "error",
         "useConsistentBuiltinInstantiation": "error",
-        "useTemplate": "error"
+        "useTemplate": "error",
+        "useNamingConvention": {
+          "level": "error",
+          "options": {
+            "strictCase": false,
+            "conventions": [
+              { "selector": { "kind": "function" }, "formats": ["camelCase"] },
+              { "selector": { "kind": "any" }, "match": ".*" }
+            ]
+          }
+        }
       }
     }
   },
+  "overrides": [
+    {
+      "includes": ["**/*.tsx"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": {
+              "level": "error",
+              "options": {
+                "strictCase": false,
+                "conventions": [
+                  {
+                    "selector": { "kind": "function" },
+                    "formats": ["camelCase", "PascalCase"]
+                  },
+                  { "selector": { "kind": "any" }, "match": ".*" }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
   "javascript": {
     "globals": ["Bun"],
     "formatter": {
