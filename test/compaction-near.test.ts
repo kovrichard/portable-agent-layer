@@ -40,8 +40,8 @@ function transcriptWith(name: string, tokens: number): string {
   return path;
 }
 
-function payloadFor(transcript_path: string) {
-  return { session_id: "sess-1", transcript_path };
+function payloadFor(transcriptPath: string) {
+  return { session_id: "sess-1", transcript_path: transcriptPath };
 }
 
 const written = () => eventsSince("compaction_near", since);

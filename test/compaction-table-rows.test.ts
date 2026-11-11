@@ -40,9 +40,9 @@ describe("compaction_near table rows", () => {
     return path;
   }
 
-  const payloadFor = (transcript_path: string) => ({
+  const payloadFor = (transcriptPath: string) => ({
     session_id: "sess-1",
-    transcript_path,
+    transcript_path: transcriptPath,
   });
   const written = () => eventsSince("compaction_near", since);
 
