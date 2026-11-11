@@ -17,7 +17,7 @@ import { readRules } from "../lib/adaptation-rules";
 import { appendTurn, readTurns, withRequests } from "../lib/adaptation-turns";
 import { needsCorrectionKind, withCorrectionKind } from "../lib/correction-kind";
 import { spawnDetachedInference } from "../lib/detached-inference";
-import { canInfer, inference } from "../lib/inference";
+import { canInfer } from "../lib/inference";
 import { replyEnd } from "../lib/interaction-samples";
 import { judge } from "../lib/judge";
 import { logDebug } from "../lib/log";
@@ -45,6 +45,7 @@ import {
   drafterRequest,
   parseDraft,
 } from "../lib/rule-drafter";
+import { ruleRecurringJudgment } from "../lib/shadow-judgments";
 import { emitRating } from "../lib/signals";
 
 /** Read cached last assistant response (written by StopOrchestrator), looked up by session */
@@ -221,16 +222,19 @@ function knownRules() {
   ];
 }
 
-async function draftRuleCandidate(sessionId?: string): Promise<void> {
+/** @lintignore exercised directly by test/shadow-rule-recurring.spawn.test.ts */
+export async function draftRuleCandidate(sessionId?: string): Promise<void> {
   const turns = withRequests(readTurns());
   reproveWaiting(turns);
   const corrections = correctionsToDraftFrom(turns);
   const known = knownRules();
   if (!canRepeat(corrections) && !canWiden(corrections, known)) return;
-  const result = await inference(drafterRequest(corrections, known, sessionId));
-  const candidate = result.success ? parseDraft(result.output, corrections, known) : null;
+  const result = await judge(
+    ruleRecurringJudgment(corrections, drafterRequest(corrections, known, sessionId))
+  );
+  const candidate = parseDraft(result.fallbackOutput, corrections, known);
   if (candidate) recordCandidate(candidate, turns);
-  else logDebug("rule-drafter", `no candidate: ${result.output ?? result.error ?? ""}`);
+  else logDebug("rule-drafter", `no candidate: ${result.fallbackOutput ?? ""}`);
 }
 
 /** Background mode: label the reaction, check a possible correction, name a confirmed one's kind, store the rating. */

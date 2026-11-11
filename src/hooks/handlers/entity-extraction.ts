@@ -22,8 +22,10 @@ import {
 } from "../lib/entity-extraction";
 import { newResearchTargets, researchNewEntities } from "../lib/entity-research";
 import { canInfer, inference } from "../lib/inference";
+import { judge } from "../lib/judge";
 import { logDebug, logError } from "../lib/log";
 import { identity, isEnabled, isOptedIn } from "../lib/settings";
+import { entityPrecheckJudgment } from "../lib/shadow-judgments";
 import { parseMessages } from "../lib/transcript";
 
 function sourceId(sessionId: string, lastId: string | undefined): string {
@@ -49,20 +51,27 @@ export async function extractSessionEntities(
   if (!worthExtracting(text, index, excluded) || !canInfer()) return;
 
   const id = identity();
-  const result = await inference({
-    system: extractionSystem(id.principal.name, id.ai.name),
-    user: extractionUser(text, index),
-    tier: "medium",
-    maxTokens: 900,
-    timeout: 90000,
-    jsonSchema: extractionSchema(),
-    caller: "entity-extraction",
-    sessionId,
-  });
-  if (!result.success || !result.output) return;
+  const result = await judge(
+    entityPrecheckJudgment(text, {
+      system: extractionSystem(id.principal.name, id.ai.name),
+      user: extractionUser(text, index),
+      tier: "medium",
+      maxTokens: 900,
+      timeout: 90000,
+      jsonSchema: extractionSchema(),
+      caller: "entity-extraction",
+      sessionId,
+    })
+  );
+  if (!result.fallbackOutput) return;
 
   const source = sourceId(sessionId, lastId);
-  const plan = planExtraction(parseExtraction(result.output), index, excluded, source);
+  const plan = planExtraction(
+    parseExtraction(result.fallbackOutput),
+    index,
+    excluded,
+    source
+  );
   const written = ingestEntities(plan.ingest, source);
   queueForReview(plan.review);
   logDebug(
