@@ -13,7 +13,7 @@ import {
 } from "../hooks/lib/settings";
 import { telosStatus } from "../hooks/lib/telos-topics";
 import { canonicalTimeZone } from "../hooks/lib/wall-clock";
-import { log } from "../targets/lib";
+import { log } from "../targets/log";
 import { leaf } from "../tools/lib/command";
 
 export const telosCommand = leaf({

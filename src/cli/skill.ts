@@ -11,7 +11,8 @@ import { getActiveAgent } from "../hooks/lib/agent";
 import { flagshipAuthorModel } from "../hooks/lib/models";
 import { withPalEnv } from "../hooks/lib/pal-env";
 import { isInside, palHome, palPkg } from "../hooks/lib/paths";
-import { linkPersonalSkill, log } from "../targets/lib";
+import { log } from "../targets/log";
+import { linkPersonalSkill } from "../targets/skills";
 import { group, leaf, UsageError } from "../tools/lib/command";
 import {
   formatReport,

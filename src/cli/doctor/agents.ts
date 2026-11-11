@@ -12,7 +12,7 @@ import {
   installedShippedAgentCount,
   nativeAgentsDir,
   staleShippedAgents,
-} from "../../targets/lib";
+} from "../../targets/shipped-agents";
 import { NO_SESSION_AGENT_MESSAGE } from "../session-agent";
 import { type Finding, type Fix, failing, optional, passed, warning } from "./finding";
 

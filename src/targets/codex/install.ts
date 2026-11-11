@@ -7,20 +7,14 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
-import {
-  addCodexStatuslineConfig,
-  copyAgentsForCodex,
-  copySkills,
-  countSkills,
-  loadCodexHooksTemplate,
-  loadCodexRulesTemplate,
-  log,
-  mergeCodexHooks,
-  mergeCodexRules,
-  readJson,
-  replaceConfig,
-  replaceJsonConfig,
-} from "../lib";
+import { replaceConfig, replaceJsonConfig } from "../config-backups";
+import { readJson } from "../json-file";
+import { log } from "../log";
+import { copyAgentsForCodex } from "../shipped-agents";
+import { copySkills, countSkills } from "../skills";
+import { loadCodexHooksTemplate, mergeCodexHooks } from "./hooks";
+import { loadCodexRulesTemplate, mergeCodexRules } from "./rules";
+import { addCodexStatuslineConfig } from "./statusline";
 
 /**
  * Ensure `features.hooks = true` in config.toml without touching other content.

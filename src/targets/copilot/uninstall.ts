@@ -7,16 +7,13 @@
 import { copyFileSync, existsSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
 import { platform } from "../../hooks/lib/paths";
-import {
-  log,
-  readJson,
-  removeAgentsFromCopilot,
-  removePalContextFiles,
-  removePalDocs,
-  removeSkills,
-  vscodeSettingsFile,
-  writeJson,
-} from "../lib";
+import { removePalContextFiles } from "../context-files";
+import { readJson, writeJson } from "../json-file";
+import { log } from "../log";
+import { removePalDocs } from "../pal-docs";
+import { removeAgentsFromCopilot } from "../shipped-agents";
+import { removeSkills } from "../skills";
+import { vscodeSettingsFile } from "../vscode-settings";
 
 const COPILOT_DIR = platform.copilotDir();
 const HOOKS_FILE = resolve(COPILOT_DIR, "hooks", "pal-hooks.json");

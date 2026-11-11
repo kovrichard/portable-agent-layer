@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
 
-import { loadCopilotHooksTemplate } from "../src/targets/lib";
+import { loadCopilotHooksTemplate } from "../src/targets/copilot/hooks";
 
 const TEMPLATE = resolve(import.meta.dir, "../assets/templates/hooks.vscode.json");
 const COPILOT_TEMPLATE = resolve(

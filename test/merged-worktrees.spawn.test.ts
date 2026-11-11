@@ -101,7 +101,7 @@ async function runPrune(
   dryRun: boolean
 ): Promise<{ code: number; lines: string[] }> {
   const { prune } = await import("../src/cli/worktree");
-  const { capturingLog } = await import("../src/targets/lib");
+  const { capturingLog } = await import("../src/targets/log");
   const lines: string[] = [];
   const printed = spyOn(console, "log").mockImplementation((line: string) => {
     lines.push(line);

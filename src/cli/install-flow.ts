@@ -7,7 +7,7 @@ import { spawn } from "node:child_process";
 import { AGENT_REGISTRY, type AgentName } from "../hooks/lib/agent-registry";
 import { palHome, palPkg } from "../hooks/lib/paths";
 import { raw as readSettings } from "../hooks/lib/settings";
-import { capturingLog, type LogLevel, narrateSteps } from "../targets/lib";
+import { capturingLog, type LogLevel, narrateSteps } from "../targets/log";
 import { agentInventory, detectAgents } from "./doctor/agents";
 import {
   type DoctorReport,
@@ -131,7 +131,7 @@ async function downloadChromium(): Promise<Done | null> {
 }
 
 async function askSetupQuestions(): Promise<boolean> {
-  const { scaffoldTelos, scaffoldPalSettings } = await import("../targets/lib");
+  const { scaffoldTelos, scaffoldPalSettings } = await import("../targets/scaffold");
   const { promptIdentity } = await import("./setup-identity");
   const { promptAttribution } = await import("./setup-attribution");
   const { promptAutoUpdate } = await import("./setup-auto-update");
@@ -176,7 +176,7 @@ async function installAll(plan: InstallPlan): Promise<Done> {
 }
 
 async function prepareShared(): Promise<number> {
-  const { copyPalDocs } = await import("../targets/lib");
+  const { copyPalDocs } = await import("../targets/pal-docs");
   const { regenerateIfNeeded } = await import("../hooks/lib/claude-md");
   const { refreshEnvironment } = await import("../hooks/lib/environment");
   const docs = copyPalDocs();
@@ -186,7 +186,7 @@ async function prepareShared(): Promise<number> {
 }
 
 async function finishShared(docs: number): Promise<Done> {
-  const { generateSkillIndex } = await import("../targets/lib");
+  const { generateSkillIndex } = await import("../targets/skill-index");
   const { writeContextDigests } = await import("../hooks/handlers/context-digests");
   const skills = generateSkillIndex();
   writeContextDigests();

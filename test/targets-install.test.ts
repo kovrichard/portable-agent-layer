@@ -9,17 +9,11 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
-import {
-  capturingLog,
-  copyPalDocs,
-  copySkills,
-  copyStatusline,
-  removePalDocs,
-  removeSkills,
-  removeStatusline,
-  scaffoldPalSettings,
-  scaffoldTelos,
-} from "../src/targets/lib";
+import { capturingLog } from "../src/targets/log";
+import { copyPalDocs, removePalDocs } from "../src/targets/pal-docs";
+import { scaffoldPalSettings, scaffoldTelos } from "../src/targets/scaffold";
+import { copySkills, removeSkills } from "../src/targets/skills";
+import { copyStatusline, removeStatusline } from "../src/targets/statusline";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 

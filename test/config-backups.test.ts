@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { replaceConfig, replaceJsonConfig } from "../src/targets/lib";
+import { replaceConfig, replaceJsonConfig } from "../src/targets/config-backups";
 import { freshTestDir } from "./lib/test-home";
 
 let dir: string;

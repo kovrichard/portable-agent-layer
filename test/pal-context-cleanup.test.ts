@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { removePalContextFiles } from "../src/targets/lib";
+import { removePalContextFiles } from "../src/targets/context-files";
 import { freshTestDir } from "./lib/test-home";
 
 function dirWith(files: string[]): string {

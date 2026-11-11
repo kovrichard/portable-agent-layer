@@ -7,18 +7,14 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
-import {
-  loadCodexHooksTemplate,
-  log,
-  readJson,
-  removeAgentsFromCodex,
-  removeCodexStatuslineConfig,
-  removeSkills,
-  replaceConfig,
-  replaceJsonConfig,
-  unmergeCodexHooks,
-  unmergeCodexRules,
-} from "../lib";
+import { replaceConfig, replaceJsonConfig } from "../config-backups";
+import { readJson } from "../json-file";
+import { log } from "../log";
+import { removeAgentsFromCodex } from "../shipped-agents";
+import { removeSkills } from "../skills";
+import { loadCodexHooksTemplate, unmergeCodexHooks } from "./hooks";
+import { unmergeCodexRules } from "./rules";
+import { removeCodexStatuslineConfig } from "./statusline";
 
 /**
  * Remove `hooks = true` from config.toml.

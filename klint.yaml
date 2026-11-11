@@ -144,9 +144,9 @@ arch:
     - pattern: 're:\bsymlinkSync\('
       in:
         - "src/**"
-        - "!src/targets/lib.ts"
+        - "!src/targets/symlink.ts"
         - "!src/hooks/lib/claude-md.ts"
-      message: "Raw symlinkSync — a directory symlink needs Developer Mode on Windows. Create links in src/targets/lib.ts, where ensureSymlink() picks a junction on Windows."
+      message: "Raw symlinkSync — a directory symlink needs Developer Mode on Windows. Create links in src/targets/symlink.ts, where ensureSymlink() picks a junction on Windows."
 
   singleton:
     - pattern: "process.env.PAL_HOME"

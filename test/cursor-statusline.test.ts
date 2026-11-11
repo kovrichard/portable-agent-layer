@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { addStatuslineConfig, removeStatuslineConfig } from "../src/targets/lib";
+import { addStatuslineConfig, removeStatuslineConfig } from "../src/targets/statusline";
 
 const cursorStatuslineCommand =
   process.platform === "win32"

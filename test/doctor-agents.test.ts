@@ -3,11 +3,11 @@ import { mkdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { agentFindings, agentsWithPal, rosterFindings } from "../src/cli/doctor/agents";
 import { AGENT_NAMES } from "../src/hooks/lib/agent-registry";
+import { copyAgents } from "../src/targets/claude/agents";
 import {
-  copyAgents,
   copyAgentsForAntigravity,
   copyAgentsForCodex,
-} from "../src/targets/lib";
+} from "../src/targets/shipped-agents";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 

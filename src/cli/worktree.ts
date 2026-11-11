@@ -10,7 +10,7 @@ import {
   mergedWorktrees,
   pruneMergedWorktrees,
 } from "../hooks/lib/merged-worktrees";
-import { log } from "../targets/lib";
+import { log } from "../targets/log";
 import { group, leaf } from "../tools/lib/command";
 
 function forgetBranchesDeletedOnRemote(cwd: string): void {

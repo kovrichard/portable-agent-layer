@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
-import { vscodeSettingsFile } from "../src/targets/lib";
+import { vscodeSettingsFile } from "../src/targets/vscode-settings";
 
 const realPlatform = process.platform;
 const savedXdg = process.env.XDG_CONFIG_HOME;
