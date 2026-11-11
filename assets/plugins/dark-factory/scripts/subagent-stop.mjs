@@ -1,26 +1,16 @@
 import { existsSync, readFileSync } from "node:fs";
-import { isAbsolute, relative, resolve } from "node:path";
 import { savePayload } from "./handover.mjs";
 import {
   appendEvent,
   isMain,
   readEvents,
+  taskForFolder,
   transcriptLines,
   transcriptTotals,
 } from "./lib.mjs";
 import { transcriptCost } from "./prices.mjs";
-import { listTasks } from "./task.mjs";
 
 const ROLE_PREFIX = "dark-factory:";
-
-function insideFolder(folder, path) {
-  const rel = relative(resolve(folder), resolve(path));
-  return !rel.startsWith("..") && !isAbsolute(rel);
-}
-
-function taskForFolder(cwd, env) {
-  return listTasks(env).find((task) => task.worktree && insideFolder(task.worktree, cwd));
-}
 
 const FLUSH_WAIT_MS = 3000;
 const FLUSH_POLL_MS = 100;

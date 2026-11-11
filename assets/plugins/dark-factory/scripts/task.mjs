@@ -1,11 +1,5 @@
 import { spawnSync } from "node:child_process";
-import {
-  appendFileSync,
-  existsSync,
-  readdirSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { recordHandover } from "./handover.mjs";
 import { readInstructions, recordMissingImports } from "./instructions.mjs";
@@ -13,6 +7,7 @@ import {
   appendEvent,
   factoryHome,
   isMain,
+  listTasks,
   PLUGIN_ROOT,
   printJson,
   readEvents,
@@ -29,6 +24,8 @@ import { transcriptCost } from "./prices.mjs";
 import { rolesFor } from "./roles.mjs";
 import { writeRoleSettings } from "./settings.mjs";
 import { estimateFor } from "./stats.mjs";
+
+export { listTasks };
 
 const PO_SKILL = "/dark-factory:build-with-agents";
 const FINAL_STATUSES = ["ready", "stuck", "waiting"];
@@ -184,14 +181,6 @@ export function recordTest(id, unmet, env = process.env) {
   const event = { event: "test", task: id, unmet: wholeNumber("unmet", unmet) };
   appendEvent(event, env);
   return event;
-}
-
-export function listTasks(env = process.env) {
-  const dir = join(factoryHome(env), "tasks");
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir)
-    .filter((id) => existsSync(join(dir, id, "task.json")))
-    .map((id) => readTask(id, env));
 }
 
 function git(args, cwd, env) {
