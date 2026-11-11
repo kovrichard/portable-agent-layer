@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, posix, win32 } from "node:path";
 import type { Bindings } from "../src/hooks/lib/bindings";
 import { PRICE_HISTORY } from "../src/hooks/lib/models";
 import type { ProjectProgress } from "../src/hooks/lib/projects";
@@ -65,7 +65,11 @@ function assistantLine(
 }
 
 type Resolver = (cwd: string | undefined) => string;
-type ResolverFactory = (projects: ProjectProgress[], bindings: Bindings) => Resolver;
+type ResolverFactory = (
+  projects: ProjectProgress[],
+  bindings: Bindings,
+  paths?: typeof posix | typeof win32
+) => Resolver;
 
 async function projectResolver(): Promise<ResolverFactory> {
   const mod = (await import("../src/tools/lib/project-resolver")) as {
@@ -286,6 +290,26 @@ describe("project resolver", () => {
     expect(resolveName(join(tmp, "gone", "worktrees", "task-1"))).toBe("(unknown)");
     expect(resolveName(plain)).toBe("(unknown)");
     expect(resolveName(plain)).toBe("(unknown)");
+  });
+
+  test("on Windows a cwd matches a registered path whatever its separators, drive-letter case and letter case", async () => {
+    const make = await projectResolver();
+    const resolveName = make(
+      [registered("repo")],
+      { repo: "C:\\Users\\x\\git\\repo" },
+      win32
+    );
+    expect(resolveName("C:\\Users\\x\\git\\repo")).toBe("repo");
+    expect(resolveName("c:/users/x/git/repo")).toBe("repo");
+    expect(resolveName("C:\\USERS\\X\\GIT\\REPO\\src\\lib")).toBe("repo");
+    expect(resolveName("C:\\Users\\x\\git\\repo-other")).toBe("(unknown)");
+  });
+
+  test("on other systems the registered path match stays case-sensitive", async () => {
+    const make = await projectResolver();
+    const resolveName = make([registered("repo")], { repo: "/home/x/git/repo" }, posix);
+    expect(resolveName("/home/x/git/repo/src")).toBe("repo");
+    expect(resolveName("/home/x/git/Repo")).toBe("(unknown)");
   });
 
   test("a repo literally named unknown keeps its name", async () => {

@@ -16,11 +16,15 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { basename, dirname, parse as parsePath, resolve, sep } from "node:path";
+import * as hostPath from "node:path";
+import { basename, dirname, parse as parsePath, resolve } from "node:path";
 import { type Bindings, readBindings, writeBinding, writeBindings } from "./bindings";
 import { parse, stringify } from "./frontmatter";
 import { palHome, paths } from "./paths";
 import { detectRemote } from "./remote";
+
+/** The path functions of one platform: the host's, or `path.win32` / `path.posix` in tests. */
+export type PlatformPath = typeof hostPath.posix;
 
 export type ProjectStatus = "active" | "paused" | "complete" | "archived";
 
@@ -319,24 +323,29 @@ export function deleteProject(name: string): boolean {
  */
 export function projectPathOnThisMachine(
   project: ProjectProgress,
-  bindings: Bindings = readBindings()
+  bindings: Bindings = readBindings(),
+  paths: PlatformPath = hostPath
 ): string | null {
   const bound = bindings[project.name] ?? project.path;
-  return bound ? resolve(bound) : null;
+  return bound ? paths.resolve(bound) : null;
 }
 
 export function resolveProjectFromCwd(
   cwd: string,
   projects: ProjectProgress[],
-  bindings: Bindings = readBindings()
+  bindings: Bindings = readBindings(),
+  paths: PlatformPath = hostPath
 ): ProjectProgress | null {
-  const cwdAbs = resolve(cwd);
+  // Windows paths are case-insensitive, so both sides are folded before comparing.
+  const fold = (p: string) => (paths.sep === "\\" ? p.toLowerCase() : p);
+  const cwdAbs = fold(paths.resolve(cwd));
   const matches: { project: ProjectProgress; path: string }[] = [];
   for (const project of projects) {
-    const projAbs = projectPathOnThisMachine(project, bindings);
+    const projAbs = projectPathOnThisMachine(project, bindings, paths);
     if (!projAbs) continue;
-    if (cwdAbs === projAbs || cwdAbs.startsWith(projAbs + sep))
-      matches.push({ project, path: projAbs });
+    const key = fold(projAbs);
+    if (cwdAbs === key || cwdAbs.startsWith(key + paths.sep))
+      matches.push({ project, path: key });
   }
   if (matches.length === 0) return null;
   matches.sort((a, b) => b.path.length - a.path.length);
