@@ -238,7 +238,8 @@ export function prepare(id, env = process.env) {
     runPrepareCommand(config.prepare, worktree, env);
   }
   writeTask({ ...task, base, branch, worktree, config, repoClaudeMd }, env);
-  if (task.status !== "ready") markStarted(id, env);
+  const resumable = task.status === "running" && openRunStart(readEvents(env), id);
+  if (task.status !== "ready" && !resumable) markStarted(id, env);
   const settingsFile = writeRoleSettings({ ...task, worktree }, env);
   return {
     worktree,
