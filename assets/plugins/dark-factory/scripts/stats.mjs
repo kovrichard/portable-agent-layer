@@ -248,7 +248,7 @@ function withoutCumulative(events) {
     const key = JSON.stringify([event.task, event.agentId]);
     const earlier = last.get(key);
     last.set(key, event);
-    if (typeof event.costUsd === "number" || !earlier) return event;
+    if ("costUsd" in event || !earlier) return event;
     const subtracted = {};
     for (const field of CUMULATIVE_FIELDS) {
       if (typeof event[field] === "number") {
