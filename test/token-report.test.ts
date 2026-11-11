@@ -4,6 +4,7 @@ import {
   detailedLine,
   fmt,
   fmtCost,
+  grandBucket,
   modelLabel,
   parseRtkSummary,
   projectsByCost,
@@ -21,8 +22,10 @@ import {
   emptyTimeBuckets,
   grandTotal,
   type PalInferenceUsage,
+  readPalInference,
   type TimeBuckets,
 } from "../src/tools/lib/usage-buckets";
+import { event } from "./lib/wrapped-events";
 
 const tokens = (input: number, output: number, cw5m = 0, cw1h = 0, cr = 0) => ({
   input,
@@ -487,5 +490,32 @@ describe("usageLines", () => {
     const lines = usageLines(report());
     const rtk = lines.findIndex((l) => l.includes("rtk Compression"));
     expect(rtk).toBe(lines.length - 3);
+  });
+});
+
+describe("System One spend in the report", () => {
+  test("a judge_call gets a PAL Inference block and is in the grand total", () => {
+    const pal = readPalInference(
+      [
+        event(
+          "judge_call",
+          {
+            caller: "c",
+            mode: "shadow",
+            route: "fallback",
+            model: "jev-1.14.0",
+            inputTokens: 1000,
+            costUsd: 0.5,
+            failure: null,
+          },
+          { ts: TS }
+        ),
+      ],
+      new Date(TS)
+    );
+    const data: UsageData = { agents: [], pal, rtk: NO_RTK, untracked: [] };
+    const lines = usageLines(data).join("\n");
+    expect(lines).toContain("PAL Inference (jev-1.14.0)");
+    expect(grandBucket(data).cost).toBeCloseTo(0.5, 10);
   });
 });
