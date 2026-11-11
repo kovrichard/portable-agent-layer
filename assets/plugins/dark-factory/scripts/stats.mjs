@@ -250,10 +250,7 @@ function runReport({ events: runEvents, after }) {
   const last = runEvents.at(-1);
   const finished = last.event === "run_finished" ? last : null;
   const estimate = runEvents.find((e) => e.event === "estimate");
-  const roles = [
-    ...runEvents.filter((e) => e.event === "role_finished"),
-    ...after,
-  ];
+  const roles = [...runEvents.filter((e) => e.event === "role_finished"), ...after];
   return {
     status: finished?.status ?? null,
     startedAt: runEvents[0].ts,

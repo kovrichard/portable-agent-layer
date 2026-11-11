@@ -35,8 +35,7 @@ export function recordSessionEnd(input, env = process.env) {
   const after = Date.parse(last.ts);
   const transcriptPath = input.transcript_path ?? last.transcriptPath;
   const counted = transcriptLines(transcriptPath).filter(
-    (line) =>
-      line.type === "assistant" && Date.parse(line.timestamp) > after
+    (line) => line.type === "assistant" && Date.parse(line.timestamp) > after
   );
   const totals = transcriptTotals(counted);
   if (totals.turns === 0) return null;
