@@ -43,10 +43,8 @@ try {
   logError("StopOrchestrator:progress-tree", err);
 }
 
-// Fix requests come before the keep-working block; the README first, as it blocks every attempt until fixed.
+// Fix requests before keep-working: the README first, as it blocks every attempt, then reply checks, claims before style.
 try {
-  // A block carrying no reason stops the turn without telling the model why, so it
-  // is worth less than not blocking at all — require the reason to raise one.
   const decision = await checkReadmeSync();
   if (decision.decision === "block" && decision.reason) {
     process.stdout.write(stopBlockResponse(decision.reason));
@@ -56,7 +54,6 @@ try {
   logError("StopOrchestrator:readme-sync", err);
 }
 
-// Reply checks next, claims before style rules: one send-back per reply, so the corrected reply goes through.
 try {
   const sendBack = replySendBack(payload);
   if (sendBack) {
@@ -67,7 +64,6 @@ try {
   logError("StopOrchestrator:reply-checks", err);
 }
 
-// After the reply checks: a reply that needs fixing goes back for the fix, not for the next task.
 try {
   const keepGoing = unattendedStopReason(process.cwd());
   if (keepGoing) {

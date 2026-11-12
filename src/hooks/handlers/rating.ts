@@ -57,7 +57,6 @@ function getLastResponse(sessionId?: string): string {
       string,
       { response?: string }
     >;
-    // Look up by session, or fall back to most recent entry
     if (sessionId && cache[sessionId]) {
       return cache[sessionId].response ?? "";
     }
@@ -178,7 +177,6 @@ function handleImplicitReaction(message: string, sentAt: Date, sessionId?: strin
 
   if (!reply) return;
 
-  // Skip very short, very long, or code-like messages
   if (trimmed.length < 5 || trimmed.length > 500) return;
 
   if (/^[/$`{]/.test(trimmed) || trimmed.includes("\n\n")) return;

@@ -82,7 +82,6 @@ const ASPECTS: Record<string, [number, number]> = {
   "4:3": [1440, 1080],
 };
 
-// Minimal YAML reader — only handles flat key: value lines (sufficient for slides.config.yml + template.yml).
 function parseSimpleYaml(s: string): Record<string, string> {
   const out: Record<string, string> = {};
 
@@ -120,7 +119,6 @@ async function exists(p: string): Promise<boolean> {
 }
 
 function deckSlug(deckDir: string): string {
-  // Filesystem-safe name. Falls back to "deck" if basename is empty (shouldn't happen).
   const raw = basename(resolve(deckDir));
   const slug = raw.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
 
@@ -142,7 +140,6 @@ function injectCodeScale(slideMarkdown: string): string {
   if (lines <= 15) return slideMarkdown;
 
   const scale = Math.max(0.6, 1 - (lines - 15) * 0.04).toFixed(2);
-  // Don't double-inject if a previous build already set it.
   const extras = layoutMatch[1].replace(/\s+style="--code-scale:\s*[^"]+"/i, "").trim();
   const attrs = extras
     ? `${extras} style="--code-scale: ${scale}"`

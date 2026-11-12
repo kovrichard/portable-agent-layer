@@ -1,14 +1,11 @@
-// Types for the deck lint rule registry: a rule's check emits Findings, once per
-// slide or once per deck.
-
 export type Severity = "E" | "W";
 export type Finding = { rule: string; severity: Severity; msg: string };
 export type SlideReport = { name: string; layout: string; findings: Finding[] };
 
 export type SlideContext = {
   name: string;
-  body: string; // raw markdown, includes Note: section
-  bodyNoNotes: string; // body with the Note: section stripped
+  body: string;
+  bodyNoNotes: string;
   layout: string;
   deckDir: string;
   heads1: string[];

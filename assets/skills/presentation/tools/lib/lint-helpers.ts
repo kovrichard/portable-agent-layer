@@ -1,5 +1,3 @@
-// Helpers for the deck lint pipeline that work on markdown strings.
-
 import { constants as fsConst } from "node:fs";
 import { access } from "node:fs/promises";
 
@@ -24,7 +22,6 @@ export function hasLayoutDirective(body: string): boolean {
 }
 
 export function stripNotes(body: string): string {
-  // Remove speaker notes — every line from `Note:` onward at line start.
   const lines = body.split("\n");
   const cut = lines.findIndex((l) => /^Note:/i.test(l.trim()));
 
@@ -32,7 +29,6 @@ export function stripNotes(body: string): string {
 }
 
 export function extractNotes(body: string): string {
-  // Return only the speaker notes portion (everything from `Note:` onward).
   const lines = body.split("\n");
   const cut = lines.findIndex((l) => /^Note:/i.test(l.trim()));
 
@@ -46,7 +42,6 @@ export function countAtxHeading(body: string, level: 1 | 2): string[] {
 }
 
 export function countTopLevelListItems(body: string): number {
-  // Count lines starting with `- `, `* `, or `N. ` at column 0 (no leading indent).
   let n = 0;
 
   for (const line of body.split("\n")) {
@@ -57,7 +52,6 @@ export function countTopLevelListItems(body: string): number {
 }
 
 export function countAllListItems(body: string): number {
-  // Count all list items at any indentation (top-level + sub-bullets).
   // The visual budget is "lines you read on the slide" — sub-bullets count.
   let n = 0;
 

@@ -8,6 +8,9 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { chooseTier, parseArgs, type ShotOptions } from "./shot-lib.ts";
 
+const EXIT_NO_ENGINE_USE_MCP = 3;
+const EXIT_CAPTURE_FAILED = 1;
+
 function playwrightCliAvailable(): boolean {
   try {
     return spawnSync("playwright-cli", ["--version"], { stdio: "ignore" }).status === 0;
@@ -47,7 +50,7 @@ async function runViaNode(opts: ShotOptions, out: string): Promise<NodeResult> {
   try {
     ({ chromium } = await import("playwright"));
   } catch {
-    return "unavailable"; // package not resolvable
+    return "unavailable";
   }
 
   let browser: Awaited<ReturnType<typeof chromium.launch>>;
@@ -57,7 +60,7 @@ async function runViaNode(opts: ShotOptions, out: string): Promise<NodeResult> {
   } catch (e) {
     console.error(`chromium launch failed: ${(e as Error).message}`);
 
-    return "unavailable"; // browser not installed / can't launch
+    return "unavailable";
   }
 
   try {
@@ -111,10 +114,10 @@ async function main(): Promise<void> {
 
   if (result === "unavailable") {
     console.error("NO_PLAYWRIGHT_CLI");
-    process.exit(3); // no local engine → caller falls back to Playwright MCP
+    process.exit(EXIT_NO_ENGINE_USE_MCP);
   }
 
-  process.exit(1); // engine ran but the capture failed — a real error, not an MCP case
+  process.exit(EXIT_CAPTURE_FAILED);
 }
 
 await main();

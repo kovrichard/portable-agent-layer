@@ -55,7 +55,6 @@ arch:
       in: ["src/**", "assets/skills/**", "!assets/skills/consulting-report/template/**"]
       countDocComments: false
       message: "Encode intent in names and small functions, not prose — see the Documenting code rules in AGENTS.md."
-      severity: warn
 
   maxCommentBlock:
     - limit: 2

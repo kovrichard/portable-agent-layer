@@ -33,7 +33,6 @@ export function copyPalDocs(): number {
     count++;
   }
 
-  // ~/.pal/tools/ → repo agent tools
   const linkType = process.platform === "win32" ? "junction" : "dir";
   ensureSymlink(palToolsDir(), assets.agentTools(), linkType);
 
@@ -42,7 +41,6 @@ export function copyPalDocs(): number {
 
 /** Remove PAL system docs from ~/.pal/docs/ */
 export function removePalDocs(): void {
-  // Remove tools symlink
   try {
     unlinkSync(palToolsDir());
   } catch {
