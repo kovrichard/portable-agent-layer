@@ -1351,8 +1351,48 @@ describe("failingTestCount", () => {
     expect(build.failingTestCount(" Tests  1 failed | 4 passed (5)")).toBe(1);
   });
 
-  test("the last summary line wins", () => {
-    expect(build.failingTestCount("1 fail\nmore output\n4 fail")).toBe(4);
+  test("sums one cargo summary per test binary", () => {
+    const output = [
+      "     Running tests/config_keys.rs (target/debug/deps/config_keys-1a2b)",
+      "test result: FAILED. 10 passed; 4 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+      "     Running tests/migrate.rs (target/debug/deps/migrate-3c4d)",
+      "test result: FAILED. 0 passed; 40 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s",
+      "     Running tests/rules.rs (target/debug/deps/rules-5e6f)",
+      "test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+      "error: 2 targets failed:",
+    ].join("\n");
+    expect(build.failingTestCount(output)).toBe(44);
+  });
+
+  test("adds a bun run's count after cargo's", () => {
+    const output =
+      "test result: FAILED. 1 passed; 4 failed; 0 ignored; 0 measured; 0 filtered out\n 9 pass\n 3 fail\nRan 12 tests across 2 files.";
+    expect(build.failingTestCount(output)).toBe(7);
+  });
+
+  test("counts each separate bun run", () => {
+    expect(build.failingTestCount("1 fail\nmore output\n4 fail")).toBe(5);
+  });
+
+  test("leaves out jest and vitest per-file lines", () => {
+    expect(
+      build.failingTestCount(
+        "Test Suites: 1 failed, 2 passed, 3 total\nTests:       2 failed, 5 passed, 7 total"
+      )
+    ).toBe(2);
+    expect(
+      build.failingTestCount(
+        " Test Files  1 failed | 1 passed (2)\n      Tests  3 failed | 4 passed (7)"
+      )
+    ).toBe(3);
+  });
+
+  test("an unknown runner's last failure mention wins", () => {
+    expect(
+      build.failingTestCount(
+        "=== 1 failed ===\nlog\n==== 2 failed, 3 passed in 0.1s ===="
+      )
+    ).toBe(2);
   });
 
   test("a runner it does not know gives null", () => {
