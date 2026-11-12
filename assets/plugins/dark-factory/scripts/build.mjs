@@ -82,8 +82,9 @@ const ACCEPTANCE_TESTS_INSTRUCTIONS =
   "Write the failing acceptance tests from spec.md only; there is no plan yet, so do not read plan.md. Write tests.md in the task folder mapping each test to the acceptance criteria it covers. Leave the tests uncommitted; the code writer commits them with the code.";
 const PLAN_AFTER_TESTS_INSTRUCTIONS =
   "Write plan.md for this change. Failing acceptance tests already exist in the worktree (see tests.md in the task folder); the plan must make them pass without changing them.";
-const UNIT_TESTS_INSTRUCTIONS =
-  "Type one unit test per row of each example table in plan.md, in the test files the plan names. Test only what the tables state, change no other file, and leave the tests uncommitted. When plan.md has no example tables, change nothing.";
+const STUB_RULE =
+  "When a test names a function, type or method that plan.md defines and that does not exist yet, add it where plan.md puts it, with the plan's signature and a body that only fails when it runs (todo!() in Rust, panic in Go, a thrown error elsewhere), so the tests compile and fail; the code writer replaces it.";
+const UNIT_TESTS_INSTRUCTIONS = `Type one unit test per row of each example table in plan.md, in the test files the plan names. Test only what the tables state, change no other file except for those stubs, and leave everything uncommitted. ${STUB_RULE} When plan.md has no example tables, change nothing.`;
 const SETTLE_PLAN_INSTRUCTIONS =
   "The plan gate ended with findings it could not settle, and their answers are now in the spec's Decisions. Read spec.md again and apply its Decisions to plan.md.";
 const REPLAN_INSTRUCTIONS =
@@ -106,6 +107,7 @@ const TEST_FIX_DIFF_UNREADABLE =
   "could not list the files the test fix changed: git diff --name-only failed";
 const TEST_EDITS_EVENT = "test_edits_restored";
 const UNIT_TESTS_NO_RISE_EVENT = "unit_tests_no_rise";
+const UNIT_TESTS_NO_COMPILE_EVENT = "unit_tests_do_not_compile";
 
 function stuck(message) {
   return { status: "stuck", message };
@@ -245,6 +247,13 @@ function noRiseRetryInstructions(baseline, failing, files) {
 ${changed}
 
 Move the tests you added into a new test file that no other test uses, keep the tests themselves as they are, leave them uncommitted, and change no other file.`;
+}
+
+function noCompileRetryInstructions(error) {
+  return `Your unit tests do not compile, so the test run reports no failing test count. The first error:
+${error}
+
+${STUB_RULE} Keep the tests as they are, leave everything uncommitted, and change no other file.`;
 }
 
 function unchangedNamedMessage(named, outside) {
@@ -554,8 +563,19 @@ function redTestCheck(run) {
   return run.config.gate.find((entry) => entry.name === RED_TEST_CHECK);
 }
 
+const COMPILE_ERROR_LINE =
+  /^error(?:\[[A-Z]\d+\])?: (?!could not compile|test failed|\d+ targets? failed).*$/m;
+
+export function firstCompileError(output) {
+  return String(output).match(COMPILE_ERROR_LINE)?.[0] ?? null;
+}
+
 function missingCountMessage(output) {
-  return `the test run failed but reported no failing test count, so it does not prove the new tests fail:\n${output.slice(-FAILURE_TAIL)}`;
+  const tail = output.slice(-FAILURE_TAIL);
+  const compileError = firstCompileError(output);
+  if (compileError) return `the tests do not compile: ${compileError}\n${tail}`;
+
+  return `the test run failed but reported no failing test count, so it does not prove the new tests fail:\n${tail}`;
 }
 
 function noRiseMessage(baseline, failing, output) {
@@ -591,7 +611,11 @@ function measureTestsRed(run, baseline) {
       ),
     };
 
-  if (failing === null) return { stop: stuck(missingCountMessage(output)) };
+  if (failing === null)
+    return {
+      stop: stuck(missingCountMessage(output)),
+      compileError: firstCompileError(output),
+    };
 
   if (baseline !== undefined && failing <= baseline)
     return { noRise: { failing, output } };
@@ -806,28 +830,49 @@ function testsAfterReplan(run) {
     : null;
 }
 
-function retryUnitTests(run, baseline, failing, typist) {
-  const files = typistChangedFiles(run, typist.before, typist.after);
-  appendEvent(
-    { event: UNIT_TESTS_NO_RISE_EVENT, task: run.id, baseline, failing, files },
-    run.env
-  );
-  const retried = gatedTestWriter(
-    run,
-    noRiseRetryInstructions(baseline, failing, files),
-    { tier: "small", resumeSessionId: typist.sessionId ?? undefined }
-  );
+function retryTypistOnce(run, baseline, instructions, typist) {
+  const retried = gatedTestWriter(run, instructions, {
+    tier: "small",
+    resumeSessionId: typist.sessionId ?? undefined,
+  });
   const stop = roleStop("test-writer", retried);
   if (stop) return stop;
 
   return proveTestsRed(run, baseline);
 }
 
+function retryUnitTests(run, baseline, failing, typist) {
+  const files = typistChangedFiles(run, typist.before, typist.after);
+  appendEvent(
+    { event: UNIT_TESTS_NO_RISE_EVENT, task: run.id, baseline, failing, files },
+    run.env
+  );
+
+  return retryTypistOnce(
+    run,
+    baseline,
+    noRiseRetryInstructions(baseline, failing, files),
+    typist
+  );
+}
+
+function retryUncompiledUnitTests(run, baseline, error, typist) {
+  appendEvent(
+    { event: UNIT_TESTS_NO_COMPILE_EVENT, task: run.id, baseline, error },
+    run.env
+  );
+
+  return retryTypistOnce(run, baseline, noCompileRetryInstructions(error), typist);
+}
+
 function proveUnitTestsRed(run, baseline, typist) {
   const proof = measureTestsRed(run, baseline);
-  if (!proof.noRise) return proof.stop ?? null;
+  if (proof.noRise) return retryUnitTests(run, baseline, proof.noRise.failing, typist);
 
-  return retryUnitTests(run, baseline, proof.noRise.failing, typist);
+  if (proof.compileError)
+    return retryUncompiledUnitTests(run, baseline, proof.compileError, typist);
+
+  return proof.stop ?? null;
 }
 
 function unitTestsStep(run) {
