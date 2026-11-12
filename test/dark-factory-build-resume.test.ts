@@ -72,6 +72,17 @@ describe("resuming at the last finished step", () => {
     expect(rolesRun(world, from)).toEqual(["tester"]);
   });
 
+  test("the rerun counts its roles from 1 and plans only what is left", () => {
+    const world = worldAt({ head: HEAD, dirty: false }, { roles: TESTER_FAILS });
+    runBuild(world);
+    const firstRun = eventsNamed(world, "role_run").length;
+    runBuild(world);
+    const rerun = eventsNamed(world, "role_run").slice(firstRun);
+    expect(rerun.map((event) => [event.role, event.step, event.planned])).toEqual([
+      ["tester", 1, 1],
+    ]);
+  });
+
   test("the rerun still runs prepare", () => {
     const world = worldAt({ head: HEAD, dirty: false }, { roles: TESTER_FAILS });
     runBuild(world);

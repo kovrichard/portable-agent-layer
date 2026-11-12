@@ -16,7 +16,7 @@ import {
 } from "./lib.mjs";
 import { notify } from "./notify.mjs";
 import { runRoleHeadless } from "./role.mjs";
-import { changedFilesSince, rolesAfterChanges } from "./roles.mjs";
+import { changedFilesSince, rolesAfterChanges, rolesFor } from "./roles.mjs";
 import { markReady, openPr, push, sync } from "./ship.mjs";
 import {
   appendDecision,
@@ -336,6 +336,42 @@ function handOver(run, role, reason, instructions) {
   run.lastRole = role;
 }
 
+function planSlots(before, testsAgain = false) {
+  if (!before.includes("test-writer")) return ["planner", "plan-gate"];
+
+  return testsAgain
+    ? ["planner", "plan-gate", "test-writer", "unit-tests"]
+    : ["planner", "plan-gate", "unit-tests"];
+}
+
+function beforeSlots(before) {
+  return before.flatMap((role) => (role === "planner" ? planSlots(before) : [role]));
+}
+
+function afterSlots(run) {
+  const after = run.after ?? rolesFor(run.category).after;
+  const slots = after.includes("tester") ? RESUME_ORDER : RESUME_ORDER.slice(0, -1);
+
+  return slots.slice((run.resume?.through ?? -1) + 1);
+}
+
+function routeOf(run) {
+  return [...run.beforeSlots, ...afterSlots(run)];
+}
+
+function enterSlot(run, slot) {
+  const route = routeOf(run);
+  if (route.indexOf(slot) > route.indexOf(run.slot)) run.slot = slot;
+}
+
+function nextProgress(run) {
+  run.step += 1;
+  const route = routeOf(run);
+  const ahead = route.length - 1 - route.indexOf(run.slot);
+
+  return { step: run.step, planned: run.step + ahead };
+}
+
 function runRole(
   run,
   role,
@@ -345,7 +381,13 @@ function runRole(
   const model = tier ? TIER_MODELS[tier] : undefined;
   handOver(run, role, reason, instructions);
   appendEvent(
-    { event: "role_run", task: run.id, role, model: model ?? "default" },
+    {
+      event: "role_run",
+      task: run.id,
+      role,
+      model: model ?? "default",
+      ...nextProgress(run),
+    },
     run.env
   );
   const outcome = run.effects.runRoleHeadless(run.id, role, {
@@ -596,6 +638,7 @@ function recordPlanWritten(run, specHash) {
 }
 
 function planWith(run, instructions, reason, resumeSessionId) {
+  enterSlot(run, "planner");
   const specHash = specSha256(run);
   const result = runRole(run, "planner", instructions, { reason, resumeSessionId });
   if (!roleStop("planner", result)) recordPlanWritten(run, specHash);
@@ -679,6 +722,8 @@ function revisePlan(run, findings) {
 }
 
 function planGateStep(run) {
+  enterSlot(run, "plan-gate");
+
   for (let round = 1; round <= PLAN_GATE_ROUNDS; round += 1) {
     const review = runRole(run, "reviewer", PLAN_GATE_INSTRUCTIONS, {
       reason: "plan-gate",
@@ -717,6 +762,7 @@ function replan(run) {
 
 function testsAfterReplan(run) {
   if (!run.before.includes("test-writer")) return null;
+  enterSlot(run, "test-writer");
   const taken = takeBaseline(run);
   if (taken.stop) return taken.stop;
   const before = worktreeFingerprint(run);
@@ -759,6 +805,7 @@ function proveUnitTestsRed(run, baseline, typist) {
 
 function unitTestsStep(run) {
   if (!run.before.includes("test-writer")) return null;
+  enterSlot(run, "unit-tests");
   const taken = takeBaseline(run);
   if (taken.stop) return taken.stop;
   const before = worktreeFingerprint(run);
@@ -791,6 +838,7 @@ function unitTestsOwed(run) {
 
 function resumeUnitTests(run) {
   if (!unitTestsOwed(run)) return null;
+  run.beforeSlots = ["plan-gate", "unit-tests"];
 
   return planGateStep(run) ?? unitTestsStep(run);
 }
@@ -802,6 +850,7 @@ function testsAfterSettle(run, specChanged) {
 function settlePlanStep(run) {
   const specChanged = specChangedSincePlan(run);
   resumeFromTheStart(run);
+  run.beforeSlots = planSlots(run.before, specChanged);
   const sessionId = latestPlannerSessionId(readEvents(run.env), run.id);
 
   return (
@@ -815,6 +864,7 @@ function settlePlanStep(run) {
 function replanIfSpecChanged(run) {
   if (!specChangedSincePlan(run)) return null;
   resumeFromTheStart(run);
+  run.beforeSlots = planSlots(run.before, true);
 
   return replan(run) ?? planGateStep(run) ?? testsAfterReplan(run) ?? unitTestsStep(run);
 }
@@ -832,6 +882,8 @@ function plannerInstructions(before) {
 }
 
 function beforeRoleStep(run, role) {
+  enterSlot(run, role);
+
   if (role === "planner")
     return (
       planAndGate(run, plannerInstructions(run.before), "pipeline") ?? unitTestsStep(run)
@@ -855,6 +907,8 @@ function firstPlanStillOwed(run) {
 }
 
 function resumeFirstPlan(run) {
+  run.beforeSlots = planSlots(run.before);
+
   return beforeRoleStep(run, "planner");
 }
 
@@ -867,6 +921,7 @@ function beforeRolesStep(run) {
   if (hasCommits) return replanIfSpecChanged(run);
 
   if (testsProvedRedBefore(run)) return replanIfSpecChanged(run) ?? resumeUnitTests(run);
+  run.beforeSlots = beforeSlots(run.before);
 
   for (const role of run.before) {
     const stop = beforeRoleStep(run, role);
@@ -885,6 +940,7 @@ function codeSource(before) {
 }
 
 function codeLadderStep(run) {
+  enterSlot(run, "code");
   const coded = untilGreen(
     run,
     CODE_LADDER,
@@ -1243,6 +1299,8 @@ function reviewInstructions(run) {
 }
 
 function reviewStep(run) {
+  enterSlot(run, "review");
+
   for (let round = 1; round <= REVIEW_ROUNDS; round += 1) {
     const review = runRole(run, "reviewer", reviewInstructions(run));
     const stop = roleStop("reviewer", review);
@@ -1267,6 +1325,7 @@ function unmetCriteria(tested) {
 
 function testerStep(run) {
   if (!run.after.includes("tester")) return null;
+  enterSlot(run, "tester");
   const tested = runRole(run, "tester", TESTER_INSTRUCTIONS);
   const stop = roleStop("tester", tested);
   if (stop) return stop;
@@ -1594,6 +1653,8 @@ export function runBuild(taskId, { env = process.env, effects = {} } = {}) {
     attempt: 0,
     testFixes: 0,
     testFixTrees: [],
+    step: 0,
+    beforeSlots: [],
     pr: null,
   };
   let outcome;
