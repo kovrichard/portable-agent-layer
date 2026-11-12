@@ -8,30 +8,32 @@ include:
   - "!**/out/**"
   - "!**/dist/**"
   - "!**/vendor/**"
-plugins: [sonar]
 rules:
-  blank-line-after-block: error
-  blank-line-before-control-flow: error
-  cognitive-complexity:
-    severity: error
-    max: 14
-  function-length:
-    severity: error
-    max: 40
-    skipBlankLines: true
-  no-unguarded-json-parse: error
-  no-sync-in-async:
-    severity: error
-    include: ["src/hooks/**"]
-  no-floating-promise: error
-  no-misused-promises: error
-  no-date-equality: error
-  no-optional-chain-on-non-nullable: error
-  no-object-in-template: error
-  no-nested-template-literals: error
-  no-consecutive-array-push: error
-  no-string-match: error
-  sonar/prefer-string-raw: off
+  recommended: true
+  core:
+    blank-line-after-block: error
+    blank-line-before-control-flow: error
+    cognitive-complexity:
+      severity: error
+      max: 14
+    function-length:
+      severity: error
+      max: 40
+      skipBlankLines: true
+    no-unguarded-json-parse: error
+    no-sync-in-async:
+      severity: error
+      include: ["src/hooks/**"]
+    no-floating-promise: error
+    no-misused-promises: error
+    no-date-equality: error
+    no-optional-chain-on-non-nullable: error
+    no-object-in-template: error
+    no-nested-template-literals: error
+    no-consecutive-array-push: error
+    no-string-match: error
+  sonar:
+    prefer-string-raw: off
 
 arch:
   layers:

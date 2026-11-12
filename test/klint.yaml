@@ -5,11 +5,12 @@
 include:
   - "."
 rules:
-  blank-line-after-block: error
-  blank-line-before-control-flow: error
-  cognitive-complexity:
-    severity: error
-    max: 14
+  core:
+    blank-line-after-block: error
+    blank-line-before-control-flow: error
+    cognitive-complexity:
+      severity: error
+      max: 14
 
 arch:
   singleton:
