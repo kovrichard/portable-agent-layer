@@ -10,6 +10,7 @@ import {
   resolveCompactionWindow,
 } from "../src/hooks/lib/compaction-near";
 import { EVENT_FIELDS, eventsSince } from "../src/hooks/lib/events";
+import { logCompaction } from "../src/hooks/lib/session-events";
 import { reload } from "../src/hooks/lib/settings";
 import { freshTestDir } from "./lib/test-home";
 
@@ -381,5 +382,45 @@ describe("compactionWarningReminder table rows", () => {
   test("a null verdict gives no warning", async () => {
     const { compactionWarningReminder } = await nearLib();
     expect(compactionWarningReminder(null)).toBeNull();
+  });
+});
+
+describe("a compaction whose boundary is not yet in the transcript", () => {
+  const before = new Date(Date.now() - 60_000).toISOString();
+  const after = new Date(Date.now() + 60_000).toISOString();
+
+  function transcriptStampedAt(timestamp: string, tokens: number): string {
+    const path = resolve(home, "stamped.jsonl");
+    const usage = { input_tokens: 10, cache_read_input_tokens: tokens - 10 };
+    writeFileSync(path, `${JSON.stringify({ timestamp, message: { usage } })}\n`);
+    return path;
+  }
+
+  test("the usage from before it gives no warning", () => {
+    process.env[WINDOW_ENV] = "500000";
+    logCompaction({ session_id: "sess-1", trigger: "manual" });
+    expect(
+      recordCompactionNear(payloadFor(transcriptStampedAt(before, 459_000)))
+    ).toBeNull();
+    expect(
+      recordIdleCompactionNear(payloadFor(transcriptStampedAt(before, 459_000)))
+    ).toBeUndefined();
+    expect(written()).toHaveLength(0);
+  });
+
+  test("the usage from after it still counts", () => {
+    process.env[WINDOW_ENV] = "500000";
+    logCompaction({ session_id: "sess-1", trigger: "manual" });
+    const verdict = recordCompactionNear(payloadFor(transcriptStampedAt(after, 400_000)));
+    expect(verdict?.contextTokens).toBe(400_000);
+  });
+
+  test("another session's compaction does not hide this one's usage", () => {
+    process.env[WINDOW_ENV] = "500000";
+    logCompaction({ session_id: "other", trigger: "manual" });
+    const verdict = recordCompactionNear(
+      payloadFor(transcriptStampedAt(before, 400_000))
+    );
+    expect(verdict?.contextTokens).toBe(400_000);
   });
 });
