@@ -386,39 +386,44 @@ async function exportState(args: string[]) {
   );
 
   const dryRun = args.includes("--dry-run");
-  const pathArg = args.find((a) => !a.startsWith("-"));
-  const resolvedArg = pathArg ? toPath(pathArg) : null;
-  const argIsDir =
-    resolvedArg !== null &&
-    existsSync(resolvedArg) &&
-    statSync(resolvedArg).isDirectory();
-  const outputPath = argIsDir
-    ? resolve(resolvedArg, `pal-export-${timestamp()}.zip`)
-    : (resolvedArg ?? resolve(palHome(), `pal-export-${timestamp()}.zip`));
+  const outputPath = exportOutputPath(args, `pal-export-${timestamp()}.zip`);
 
   logDebug("export", `start dryRun=${dryRun} outputPath=${outputPath}`);
 
-  if (dryRun) {
-    const files = collectExportFiles();
-    logDebug("export", `dry-run collected ${files.length} files`);
+  if (dryRun) printExportDryRun(collectExportFiles(), outputPath);
+  else reportExport(exportZip(outputPath), outputPath);
+}
 
-    if (files.length === 0) {
-      console.log("Nothing to export.");
-    } else {
-      console.log(`Would export ${files.length} files → ${outputPath}\n`);
+function exportOutputPath(args: string[], archiveName: string): string {
+  const pathArg = args.find((a) => !a.startsWith("-"));
+  const resolvedArg = pathArg ? toPath(pathArg) : null;
 
-      for (const f of files) console.log(`  ${f}`);
-    }
-  } else {
-    const count = exportZip(outputPath);
-    logDebug("export", `done count=${count} path=${outputPath}`);
+  if (resolvedArg === null) return resolve(palHome(), archiveName);
 
-    if (count === 0) {
-      console.log("Nothing to export.");
-    } else {
-      console.log(`Exported ${count} files → ${outputPath}`);
-    }
+  const argIsDir = existsSync(resolvedArg) && statSync(resolvedArg).isDirectory();
+
+  return argIsDir ? resolve(resolvedArg, archiveName) : resolvedArg;
+}
+
+function printExportDryRun(files: string[], outputPath: string): void {
+  logDebug("export", `dry-run collected ${files.length} files`);
+
+  if (files.length === 0) {
+    console.log("Nothing to export.");
+
+    return;
   }
+
+  console.log(`Would export ${files.length} files → ${outputPath}\n`);
+
+  for (const f of files) console.log(`  ${f}`);
+}
+
+function reportExport(count: number, outputPath: string): void {
+  logDebug("export", `done count=${count} path=${outputPath}`);
+  console.log(
+    count === 0 ? "Nothing to export." : `Exported ${count} files → ${outputPath}`
+  );
 }
 
 function findLatestArchiveIn(dirs: string[]): string | null {
