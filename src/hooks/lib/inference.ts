@@ -980,6 +980,36 @@ async function readPipe(pipe: unknown): Promise<string> {
   }
 }
 
+function killQuietly(proc: ReturnType<typeof Bun.spawn>): void {
+  try {
+    proc.kill();
+  } catch {
+    /* ignore */
+  }
+}
+
+function writeStdinAndClose(
+  proc: ReturnType<typeof Bun.spawn>,
+  stdinInput: string
+): void {
+  const stdinWriter =
+    proc.stdin && typeof proc.stdin !== "number"
+      ? (proc.stdin as {
+          write: (s: string) => void;
+          end: () => void;
+          close?: () => void;
+        })
+      : null;
+  if (!stdinWriter) return;
+
+  try {
+    if (stdinInput) stdinWriter.write(stdinInput);
+    stdinWriter.end();
+  } catch (err) {
+    logError("inference:stdin", err);
+  }
+}
+
 /**
  * One CLI invocation. Returns raw streams + exit info, no parsing.
  * Used by every per-agent dispatcher (claude --print, codex exec, etc).
@@ -1021,30 +1051,10 @@ async function singleCliAttempt(
 
     const timer = setTimeout(() => {
       timedOut = true;
-
-      try {
-        proc.kill();
-      } catch {
-        /* ignore */
-      }
+      killQuietly(proc);
     }, timeout);
 
-    const stdinWriter =
-      proc.stdin && typeof proc.stdin !== "number"
-        ? (proc.stdin as {
-            write: (s: string) => void;
-            end: () => void;
-            close?: () => void;
-          })
-        : null;
-    if (stdinWriter) {
-      try {
-        if (stdinInput) stdinWriter.write(stdinInput);
-        stdinWriter.end();
-      } catch (err) {
-        logError("inference:stdin", err);
-      }
-    }
+    writeStdinAndClose(proc, stdinInput);
 
     void (async () => {
       const stdout = await readPipe(proc.stdout);
@@ -1095,86 +1105,134 @@ async function inferenceViaCliSpawn(
   const timeout = opts.timeout ?? 15000;
   const env = { ...buildSpawnGuardEnv(withPalEnv(process.env)), ...place.env };
   const started = Date.now();
-  const caller = opts.caller ?? "anonymous";
-  const session = opts.sessionId ?? "-";
-  const tag = [`caller=${caller}`, `sessionId=${session}`, place.logTag]
-    .filter(Boolean)
-    .join(" ");
-  // Friendly name for logs — strip path + extension so cross-platform diffs
-  // (e.g. C:\…\claude.cmd vs /usr/local/bin/claude) read the same in debug.log.
-  const binaryName = basename(binary).replace(/\.(cmd|bat|exe|com)$/i, "");
-
-  // Attempt 1
-  let attempt = await singleCliAttempt(binary, args, stdinInput, env, timeout, place.cwd);
-
-  // Universal retry on empty-output exit≠0 (correlates strongly with burst-
-  // concurrency races — the binary silently aborts without writing to either
-  // stream). One retry only, 500-1500ms jitter so the burst settles.
-  const isEmptyAbort =
-    attempt.code !== 0 &&
-    !attempt.timedOut &&
-    attempt.stdout.length === 0 &&
-    attempt.stderr.length === 0;
-  if (isEmptyAbort) {
-    const jitterMs = retryJitterMs();
-    logDebug(
-      "inference:spawn",
-      `${tag} retry: empty-abort binary=${binaryName} exit=${attempt.code} after ${Date.now() - started}ms, jitter=${jitterMs}ms`
-    );
-    await new Promise((r) => setTimeout(r, jitterMs));
-    attempt = await singleCliAttempt(binary, args, stdinInput, env, timeout, place.cwd);
-  }
+  const log: SpawnLog = {
+    tag: spawnLogTag(opts, place),
+    binaryName: friendlyBinaryName(binary),
+    timeout,
+    args,
+  };
+  const runOnce = () =>
+    singleCliAttempt(binary, args, stdinInput, env, timeout, place.cwd);
+  const attempt = await attemptWithEmptyAbortRetry(runOnce, log, started);
 
   place.afterRun?.(attempt.stdout);
   const elapsedMs = Date.now() - started;
   const usage = reply.usage(attempt.stdout);
-  const finish = (result: InferenceResult): InferenceResult => {
-    logDebug(
+  const result = attemptOutcome(attempt, opts, reply, log);
+  logDebug(
+    "inference:spawn",
+    `${log.tag} done binary=${log.binaryName} success=${result.success} bytes=${result.output?.length ?? 0} elapsedMs=${elapsedMs}`
+  );
+
+  return { ...result, usage };
+}
+
+interface SpawnLog {
+  tag: string;
+  binaryName: string;
+  timeout: number;
+  args: string[];
+}
+
+function spawnLogTag(opts: InferenceOptions, place: SpawnPlace): string {
+  const caller = opts.caller ?? "anonymous";
+  const session = opts.sessionId ?? "-";
+
+  return [`caller=${caller}`, `sessionId=${session}`, place.logTag]
+    .filter(Boolean)
+    .join(" ");
+}
+
+// Path and extension are stripped so cross-platform diffs
+// (e.g. C:\…\claude.cmd vs /usr/local/bin/claude) read the same in debug.log.
+function friendlyBinaryName(binary: string): string {
+  return basename(binary).replace(/\.(cmd|bat|exe|com)$/i, "");
+}
+
+function isEmptyAbort(attempt: RawSpawnResult): boolean {
+  return (
+    attempt.code !== 0 &&
+    !attempt.timedOut &&
+    attempt.stdout.length === 0 &&
+    attempt.stderr.length === 0
+  );
+}
+
+// An empty-output exit≠0 correlates strongly with burst-concurrency races — the
+// binary silently aborts without writing to either stream. One retry only,
+// 500-1500ms jitter so the burst settles.
+async function attemptWithEmptyAbortRetry(
+  runOnce: () => Promise<RawSpawnResult>,
+  log: SpawnLog,
+  started: number
+): Promise<RawSpawnResult> {
+  const attempt = await runOnce();
+  if (!isEmptyAbort(attempt)) return attempt;
+
+  const jitterMs = retryJitterMs();
+  logDebug(
+    "inference:spawn",
+    `${log.tag} retry: empty-abort binary=${log.binaryName} exit=${attempt.code} after ${Date.now() - started}ms, jitter=${jitterMs}ms`
+  );
+  await new Promise((r) => setTimeout(r, jitterMs));
+
+  return await runOnce();
+}
+
+function attemptOutcome(
+  attempt: RawSpawnResult,
+  opts: InferenceOptions,
+  reply: CliReply,
+  log: SpawnLog
+): InferenceResult {
+  if (attempt.timedOut) {
+    logError(
       "inference:spawn",
-      `${tag} done binary=${binaryName} success=${result.success} bytes=${result.output?.length ?? 0} elapsedMs=${elapsedMs}`
+      `${log.tag} timeout binary=${log.binaryName} after ${log.timeout}ms`
     );
 
-    return { ...result, usage };
-  };
-
-  if (attempt.timedOut) {
-    logError("inference:spawn", `${tag} timeout binary=${binaryName} after ${timeout}ms`);
-
-    return finish({ success: false });
+    return { success: false };
   }
 
   if (attempt.code !== 0) {
     const said = agentFailureText(attempt.stdout);
     logError(
       "inference:spawn",
-      `${tag} exited=${attempt.code} binary=${binaryName} argv=${JSON.stringify(args)} stderr(${attempt.stderr.length})=${attempt.stderr.slice(0, 300)} stdout(${attempt.stdout.length})=${said.slice(0, 300)}`
+      `${log.tag} exited=${attempt.code} binary=${log.binaryName} argv=${JSON.stringify(log.args)} stderr(${attempt.stderr.length})=${attempt.stderr.slice(0, 300)} stdout(${attempt.stdout.length})=${said.slice(0, 300)}`
     );
 
-    return finish({ success: false, error: firstLine(attempt.stderr || said) });
+    return { success: false, error: firstLine(attempt.stderr || said) };
   }
 
-  const rawText = attempt.stdout.trim();
-  if (!rawText) return finish({ success: false });
+  return replyOutcome(attempt.stdout, opts, reply, log);
+}
+
+function replyOutcome(
+  stdout: string,
+  opts: InferenceOptions,
+  reply: CliReply,
+  log: SpawnLog
+): InferenceResult {
+  const rawText = stdout.trim();
+  if (!rawText) return { success: false };
   const text = reply.text(rawText);
   if (!text) {
-    // Extraction returned empty — the binary succeeded but our extractor found
-    // no usable text. Log the raw stdout so we can see what was actually emitted.
+    // The binary succeeded but the extractor found no usable text, so the raw
+    // stdout is logged to show what was actually emitted.
     logError(
       "inference:spawn",
-      `${tag} extract-empty binary=${binaryName} rawStdout(${rawText.length})=${rawText.slice(0, 500)}`
+      `${log.tag} extract-empty binary=${log.binaryName} rawStdout(${rawText.length})=${rawText.slice(0, 500)}`
     );
 
-    return finish({ success: false });
+    return { success: false };
   }
 
-  if (opts.jsonSchema) {
-    const parsed = parseJsonFromOutput(text);
-    if (parsed === null) return finish({ success: false, output: text });
+  if (!opts.jsonSchema) return { success: true, output: text };
 
-    return finish({ success: true, output: JSON.stringify(parsed) });
-  }
+  const parsed = parseJsonFromOutput(text);
+  if (parsed === null) return { success: false, output: text };
 
-  return finish({ success: true, output: text });
+  return { success: true, output: JSON.stringify(parsed) };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

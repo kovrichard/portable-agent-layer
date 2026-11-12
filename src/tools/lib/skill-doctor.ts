@@ -281,48 +281,56 @@ function checkDescription(
   if (!description) {
     add("error", "description", "Missing `description` in frontmatter");
   } else {
-    description.length <= MAX_DESCRIPTION
-      ? add(
-          "pass",
-          "description.length",
-          `${description.length}/${MAX_DESCRIPTION} chars`
-        )
-      : add(
-          "error",
-          "description.length",
-          `${description.length} chars exceeds ${MAX_DESCRIPTION}`
-        );
-    descriptionQuoted
-      ? add("pass", "description.quoted", "value is wrapped in double quotes")
-      : add(
-          "warn",
-          "description.quoted",
-          'value is not wrapped in double quotes — unquoted YAML mis-parses on colons, commas, and quotes; wrap it in "..." (escaping any inner " as \\")'
-        );
-    /<[^>]+>/.test(description)
-      ? add(
-          "warn",
-          "description.xml",
-          "contains angle-bracket content — Anthropic disallows XML tags; rephrase placeholders like <x> in prose"
-        )
-      : add("pass", "description.xml", "no XML tags");
-    /\bwhen/i.test(description)
-      ? add("pass", "description.trigger", "states when to use the skill")
-      : add(
-          "warn",
-          "description.trigger",
-          "no 'when to use' trigger — add 'Use when …' so the dispatcher can match it"
-        );
-    /\b(I can|I['’]ll|I will|I help|you can|you will|you could|you['’]ll)\b/i.test(
-      description
-    )
-      ? add(
-          "warn",
-          "description.pov",
-          "reads first/second person — write descriptions in third person (e.g. 'Processes…', 'Generates…')"
-        )
-      : add("pass", "description.pov", "third person");
+    checkDescriptionFormat(description, descriptionQuoted, add);
+    checkDescriptionWording(description, add);
   }
+}
+
+function checkDescriptionFormat(
+  description: string,
+  descriptionQuoted: boolean,
+  add: AddFinding
+): void {
+  description.length <= MAX_DESCRIPTION
+    ? add("pass", "description.length", `${description.length}/${MAX_DESCRIPTION} chars`)
+    : add(
+        "error",
+        "description.length",
+        `${description.length} chars exceeds ${MAX_DESCRIPTION}`
+      );
+  descriptionQuoted
+    ? add("pass", "description.quoted", "value is wrapped in double quotes")
+    : add(
+        "warn",
+        "description.quoted",
+        'value is not wrapped in double quotes — unquoted YAML mis-parses on colons, commas, and quotes; wrap it in "..." (escaping any inner " as \\")'
+      );
+}
+
+function checkDescriptionWording(description: string, add: AddFinding): void {
+  /<[^>]+>/.test(description)
+    ? add(
+        "warn",
+        "description.xml",
+        "contains angle-bracket content — Anthropic disallows XML tags; rephrase placeholders like <x> in prose"
+      )
+    : add("pass", "description.xml", "no XML tags");
+  /\bwhen/i.test(description)
+    ? add("pass", "description.trigger", "states when to use the skill")
+    : add(
+        "warn",
+        "description.trigger",
+        "no 'when to use' trigger — add 'Use when …' so the dispatcher can match it"
+      );
+  /\b(I can|I['’]ll|I will|I help|you can|you will|you could|you['’]ll)\b/i.test(
+    description
+  )
+    ? add(
+        "warn",
+        "description.pov",
+        "reads first/second person — write descriptions in third person (e.g. 'Processes…', 'Generates…')"
+      )
+    : add("pass", "description.pov", "third person");
 }
 
 function checkTriggers({ name, triggers }: ParsedSkill, add: AddFinding): void {

@@ -101,7 +101,7 @@ function debugCommand(admin: AdminHandlers): Group {
   });
 }
 
-function adminCommands(admin: AdminHandlers): Record<string, Leaf | Group> {
+function lifecycleCommands(admin: AdminHandlers): Record<string, Leaf> {
   return {
     init: leaf({
       summary: "Scaffold PAL home and install (default: every installed agent)",
@@ -134,6 +134,11 @@ function adminCommands(admin: AdminHandlers): Record<string, Leaf | Group> {
       },
       run: admin.update,
     }),
+  };
+}
+
+function stateTransferCommands(admin: AdminHandlers): Record<string, Leaf> {
+  return {
     export: leaf({
       summary: "Export your state to a zip",
       args: "[path]",
@@ -149,6 +154,11 @@ function adminCommands(admin: AdminHandlers): Record<string, Leaf | Group> {
       },
       run: admin.import,
     }),
+  };
+}
+
+function maintenanceCommands(admin: AdminHandlers): Record<string, Leaf> {
+  return {
     status: leaf({ summary: "Show PAL configuration", run: admin.status }),
     doctor: leaf({
       summary: "Find what is wrong and how to fix it; exits 1 on any failure",
@@ -171,6 +181,14 @@ function adminCommands(admin: AdminHandlers): Record<string, Leaf | Group> {
       },
       run: ({ argv }) => runMigrate(argv),
     }),
+  };
+}
+
+function adminCommands(admin: AdminHandlers): Record<string, Leaf | Group> {
+  return {
+    ...lifecycleCommands(admin),
+    ...stateTransferCommands(admin),
+    ...maintenanceCommands(admin),
   };
 }
 

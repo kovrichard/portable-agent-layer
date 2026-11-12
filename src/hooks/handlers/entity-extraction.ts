@@ -34,6 +34,28 @@ function sourceId(sessionId: string, lastId: string | undefined): string {
   return `chat ${new Date().toISOString().slice(0, 10)} ${sessionId.slice(0, 8)}${turn}`;
 }
 
+async function askForEntities(
+  text: string,
+  index: ReturnType<typeof loadNameIndex>,
+  id: ReturnType<typeof identity>,
+  sessionId: string
+): Promise<string | undefined> {
+  const result = await judge(
+    entityPrecheckJudgment(text, {
+      system: extractionSystem(id.principal.name, id.ai.name),
+      user: extractionUser(text, index),
+      tier: "medium",
+      maxTokens: 900,
+      timeout: 90000,
+      jsonSchema: extractionSchema(),
+      caller: "entity-extraction",
+      sessionId,
+    })
+  );
+
+  return result.fallbackOutput || undefined;
+}
+
 /** @lintignore exercised directly by test/entity-extraction.test.ts */
 export async function extractSessionEntities(
   transcript: string,
@@ -53,27 +75,11 @@ export async function extractSessionEntities(
   if (!worthExtracting(text, index, excluded) || !canInfer()) return;
 
   const id = identity();
-  const result = await judge(
-    entityPrecheckJudgment(text, {
-      system: extractionSystem(id.principal.name, id.ai.name),
-      user: extractionUser(text, index),
-      tier: "medium",
-      maxTokens: 900,
-      timeout: 90000,
-      jsonSchema: extractionSchema(),
-      caller: "entity-extraction",
-      sessionId,
-    })
-  );
-  if (!result.fallbackOutput) return;
+  const extracted = await askForEntities(text, index, id, sessionId);
+  if (!extracted) return;
 
   const source = sourceId(sessionId, lastId);
-  const plan = planExtraction(
-    parseExtraction(result.fallbackOutput),
-    index,
-    excluded,
-    source
-  );
+  const plan = planExtraction(parseExtraction(extracted), index, excluded, source);
   const written = ingestEntities(plan.ingest, source);
   queueForReview(plan.review);
   logDebug(

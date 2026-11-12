@@ -246,33 +246,41 @@ function hookFindings(agent: AgentName, file: string, contextHook: string): Find
       ),
     ];
 
-  const findings = [
+  return [
     passed(
       `${agent}.hooks`,
       `${label}: ${pal.length} hooks registered`,
       `${pal.length} hooks`
     ),
+    ...undeclaredHookFindings(agent, pal),
+    ...brokenScriptFindings(agent, pal),
   ];
-  const undeclared = pal.filter((c) => !declaresAgent(c, agent));
-  if (undeclared.length > 0)
-    findings.push(
-      failing(
-        `${agent}.hooks.undeclared`,
-        `${label}: ${undeclared.length} of ${pal.length} hooks do not name ${agent} as their agent`,
-        reinstall(agent)
-      )
-    );
-  const broken = pal.filter((c) => scriptPaths(c).some((path) => !existsSync(path)));
-  if (broken.length > 0)
-    findings.push(
-      failing(
-        `${agent}.hooks.scripts`,
-        `${label}: ${broken.length} of ${pal.length} hooks run a script that no longer exists (${scriptPaths(broken[0]).find((p) => !existsSync(p))})`,
-        reinstall(agent)
-      )
-    );
+}
 
-  return findings;
+function undeclaredHookFindings(agent: AgentName, pal: string[]): Finding[] {
+  const undeclared = pal.filter((c) => !declaresAgent(c, agent));
+  if (undeclared.length === 0) return [];
+
+  return [
+    failing(
+      `${agent}.hooks.undeclared`,
+      `${labelOf(agent)}: ${undeclared.length} of ${pal.length} hooks do not name ${agent} as their agent`,
+      reinstall(agent)
+    ),
+  ];
+}
+
+function brokenScriptFindings(agent: AgentName, pal: string[]): Finding[] {
+  const broken = pal.filter((c) => scriptPaths(c).some((path) => !existsSync(path)));
+  if (broken.length === 0) return [];
+
+  return [
+    failing(
+      `${agent}.hooks.scripts`,
+      `${labelOf(agent)}: ${broken.length} of ${pal.length} hooks run a script that no longer exists (${scriptPaths(broken[0]).find((p) => !existsSync(p))})`,
+      reinstall(agent)
+    ),
+  ];
 }
 
 function opencodePluginFile(): string {

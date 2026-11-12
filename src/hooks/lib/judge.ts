@@ -123,6 +123,22 @@ interface SystemOneOutcome {
   failure: SystemOneFailure | null;
 }
 
+function checkedReply(
+  request: JudgeRequest,
+  reply: Awaited<ReturnType<JudgeAdapter["ask"]>>,
+  route: { provider: string; model: string },
+  started: number
+): SystemOneOutcome {
+  const inputTokens = reply.inputTokens ?? 0;
+  const latencyMs = Math.round(performance.now() - started);
+
+  if (answersProblem(request.questions, reply.answers) !== null) {
+    return { ...route, inputTokens, latencyMs, failure: "bad-answer" };
+  }
+
+  return { ...route, answers: reply.answers, inputTokens, latencyMs, failure: null };
+}
+
 async function askSystemOne(
   request: JudgeRequest,
   deadlineMs: number,
@@ -157,21 +173,8 @@ async function askSystemOne(
         }),
       deadlineMs
     );
-    const inputTokens = reply.inputTokens ?? 0;
-    const latencyMs = Math.round(performance.now() - started);
 
-    if (answersProblem(request.questions, reply.answers) !== null) {
-      return { provider, model, inputTokens, latencyMs, failure: "bad-answer" };
-    }
-
-    return {
-      provider,
-      model,
-      answers: reply.answers,
-      inputTokens,
-      latencyMs,
-      failure: null,
-    };
+    return checkedReply(request, reply, { provider, model }, started);
   } catch (err) {
     const failure = err instanceof SystemOneError ? err.failure : "http";
 
@@ -237,20 +240,11 @@ export async function judge(
   const fallback = fallbackFor(bounded);
   const deadlineMs = fallback.request.timeout ?? DEFAULT_DEADLINE_MS;
 
-  let one: SystemOneOutcome = NOT_RUN;
-  let fb: FallbackOutcome | undefined;
-
-  if (mode === "off") {
-    fb = await runFallback(fallback, infer);
-  } else if (mode === "shadow") {
-    [one, fb] = await Promise.all([
-      askSystemOne(bounded, deadlineMs, http, sleep),
-      runFallback(fallback, infer),
-    ]);
-  } else {
-    one = await askSystemOne(bounded, deadlineMs, http, sleep);
-    if (!one.answers) fb = await runFallback(fallback, infer);
-  }
+  const { one, fb } = await runByMode(
+    mode,
+    () => askSystemOne(bounded, deadlineMs, http, sleep),
+    () => runFallback(fallback, infer)
+  );
 
   const result: JudgeResult =
     mode === "live" && one.answers
@@ -262,6 +256,36 @@ export async function judge(
           fallbackOutput: fb?.output,
         };
 
+  logJudgeOutcome(request, mode, result, one, fb);
+
+  return result;
+}
+
+async function runByMode(
+  mode: JudgeMode,
+  askOne: () => Promise<SystemOneOutcome>,
+  askFallback: () => Promise<FallbackOutcome>
+): Promise<{ one: SystemOneOutcome; fb?: FallbackOutcome }> {
+  if (mode === "off") return { one: NOT_RUN, fb: await askFallback() };
+
+  if (mode === "shadow") {
+    const [one, fb] = await Promise.all([askOne(), askFallback()]);
+
+    return { one, fb };
+  }
+
+  const one = await askOne();
+
+  return { one, fb: one.answers ? undefined : await askFallback() };
+}
+
+function logJudgeOutcome(
+  request: JudgeRequest,
+  mode: JudgeMode,
+  result: JudgeResult,
+  one: SystemOneOutcome,
+  fb: FallbackOutcome | undefined
+): void {
   logJudgeCall(
     {
       caller: request.caller,
@@ -281,6 +305,4 @@ export async function judge(
     },
     request.sessionId
   );
-
-  return result;
 }

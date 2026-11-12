@@ -88,26 +88,16 @@ function projectOf(cwd: string): string {
   return cwd.split("/").filter(Boolean).pop() ?? "";
 }
 
-/**
- * Cluster Q2 reflections into candidate algorithm-improvement areas. A Q2 may
- * land in multiple buckets (ideas often span areas); `unbucketed` counts Q2s
- * that matched none, so blind spots in the bucket set stay visible.
- */
-export function synthesizeAlgorithm(since?: Date): AlgorithmSynthesis {
-  const all = readReflections(paths.reflectionsFile());
-  const filtered = since ? all.filter((r) => r.ts && new Date(r.ts) >= since) : all;
-  const withQ2 = filtered.filter((r) => r.q2.trim());
-  // Cluster only general ideas; task-specific ones don't generalize to the
-  // algorithm, so surface them separately rather than polluting the buckets.
-  const q2s = withQ2.filter((r) => r.scope !== "task-specific");
-  const taskSpecificQuotes = [
-    ...new Set(withQ2.filter((r) => r.scope === "task-specific").map((r) => r.q2.trim())),
-  ];
+type Reflection = ReturnType<typeof readReflections>[number];
 
-  const acc = new Map<
-    string,
-    { sentiments: number[]; projects: Set<string>; quotes: string[] }
-  >();
+interface BucketAcc {
+  sentiments: number[];
+  projects: Set<string>;
+  quotes: string[];
+}
+
+function sortIntoBuckets(q2s: Reflection[]) {
+  const acc = new Map<string, BucketAcc>();
 
   for (const b of BUCKETS) {
     acc.set(b.key, { sentiments: [], projects: new Set(), quotes: [] });
@@ -124,36 +114,61 @@ export function synthesizeAlgorithm(since?: Date): AlgorithmSynthesis {
       continue;
     }
 
-    for (const b of matched) {
-      const a = acc.get(b.key);
-      if (!a) continue;
-      a.sentiments.push(r.sentiment);
-
-      if (r.cwd) a.projects.add(projectOf(r.cwd));
-      a.quotes.push(r.q2.trim());
-    }
+    for (const b of matched) addToBucket(acc.get(b.key), r);
   }
 
-  const buckets: AlgorithmBucket[] = BUCKETS.map((b) => {
-    const a = acc.get(b.key);
-    const sentiments = a?.sentiments ?? [];
-    const avg = sentiments.length
-      ? sentiments.reduce((s, n) => s + n, 0) / sentiments.length
-      : 0;
-    // Full deduped membership, longest (most specific) first. Not capped here —
-    // --json carries every member so nothing is lost; the human report caps the
-    // display per bucket. Zero-loss is the contract.
-    const quotes = [...new Set(a?.quotes ?? [])].sort((x, y) => y.length - x.length);
+  return { acc, unbucketed, unbucketedQuotes };
+}
 
-    return {
-      key: b.key,
-      label: b.label,
-      count: sentiments.length,
-      avgSentiment: Math.round(avg * 10) / 10,
-      projects: a?.projects.size ?? 0,
-      quotes,
-    };
-  })
+function addToBucket(a: BucketAcc | undefined, r: Reflection): void {
+  if (!a) return;
+  a.sentiments.push(r.sentiment);
+
+  if (r.cwd) a.projects.add(projectOf(r.cwd));
+  a.quotes.push(r.q2.trim());
+}
+
+function summarizeBucket(
+  b: (typeof BUCKETS)[number],
+  a: BucketAcc | undefined
+): AlgorithmBucket {
+  const sentiments = a?.sentiments ?? [];
+  const avg = sentiments.length
+    ? sentiments.reduce((s, n) => s + n, 0) / sentiments.length
+    : 0;
+  // Full deduped membership, longest (most specific) first. Not capped here —
+  // --json carries every member so nothing is lost; the human report caps the
+  // display per bucket. Zero-loss is the contract.
+  const quotes = [...new Set(a?.quotes ?? [])].sort((x, y) => y.length - x.length);
+
+  return {
+    key: b.key,
+    label: b.label,
+    count: sentiments.length,
+    avgSentiment: Math.round(avg * 10) / 10,
+    projects: a?.projects.size ?? 0,
+    quotes,
+  };
+}
+
+/**
+ * Cluster Q2 reflections into candidate algorithm-improvement areas. A Q2 may
+ * land in multiple buckets (ideas often span areas); `unbucketed` counts Q2s
+ * that matched none, so blind spots in the bucket set stay visible.
+ */
+export function synthesizeAlgorithm(since?: Date): AlgorithmSynthesis {
+  const all = readReflections(paths.reflectionsFile());
+  const filtered = since ? all.filter((r) => r.ts && new Date(r.ts) >= since) : all;
+  const withQ2 = filtered.filter((r) => r.q2.trim());
+  // Cluster only general ideas; task-specific ones don't generalize to the
+  // algorithm, so surface them separately rather than polluting the buckets.
+  const q2s = withQ2.filter((r) => r.scope !== "task-specific");
+  const taskSpecificQuotes = [
+    ...new Set(withQ2.filter((r) => r.scope === "task-specific").map((r) => r.q2.trim())),
+  ];
+
+  const { acc, unbucketed, unbucketedQuotes } = sortIntoBuckets(q2s);
+  const buckets = BUCKETS.map((b) => summarizeBucket(b, acc.get(b.key)))
     .filter((b) => b.count > 0)
     .sort((x, y) => y.count - x.count);
 

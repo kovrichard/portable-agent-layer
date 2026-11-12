@@ -267,90 +267,117 @@ async function refuseOverwrite(paths: string[]): Promise<void> {
   process.exit(1);
 }
 
-async function main() {
-  const { deckDir, outRoot, force } = parseBuildArgs(process.argv.slice(2));
-  const { cfg, templateName } = await readDeckConfig(deckDir);
-
+// When --out is the deck-dir itself (the default), write directly into it —
+// no extra <slug>/ subdir. Otherwise create the subdir so multiple decks
+// can coexist under one shared --out.
+function deckOutputPaths(deckDir: string, outRoot: string) {
   const slug = deckSlug(deckDir);
-  // When --out is the deck-dir itself (the default), write directly into it —
-  // no extra <slug>/ subdir. Otherwise create the subdir so multiple decks
-  // can coexist under one shared --out.
   const outDir = resolve(outRoot) === deckDir ? deckDir : join(outRoot, slug);
-  const concatPath = join(outDir, `${slug}.md`);
-  const htmlPath = join(outDir, `${slug}.html`);
 
-  if (!force) await refuseOverwrite([concatPath, htmlPath]);
+  return {
+    outDir,
+    concatPath: join(outDir, `${slug}.md`),
+    htmlPath: join(outDir, `${slug}.html`),
+  };
+}
 
-  // Step 1 — concatenate slides to a single on-disk markdown artifact.
-  const concatMd = await buildConcat(deckDir);
-  await mkdir(outDir, { recursive: true });
-  await writeFile(concatPath, concatMd, "utf8");
-
-  // Step 2 — build self-contained HTML, sourcing content from the on-disk concat.
+async function readTemplateAssets(templateName: string) {
   const template = await getTemplate(templateName);
   const tplYml = parseSimpleYaml(await readText(join(template.path, "template.yml")));
   const tplCss = await readText(join(template.path, "template.css"));
   const logoFile = join(template.path, tplYml.logo || "logo.svg");
   const logoUri = await dataUri(logoFile);
 
-  const aspect = cfg.aspect || tplYml.aspect || "16:9";
-  const [width, height] = ASPECTS[aspect] || ASPECTS["16:9"];
+  return { tplYml, tplCss, logoUri };
+}
 
-  const baseCss = await readText(join(THEME_BASE, "base.css"));
-  const layoutsCss = await readText(join(THEME_BASE, "layouts.css"));
-  const skeleton = await readText(join(THEME_BASE, "skeleton.html"));
-  const revealCss = await readText(join(VENDOR_REVEAL, "reveal.css"));
-  const highlightCss = await readText(
-    join(VENDOR_REVEAL, "plugin", "highlight", "github-dark.css")
-  );
-  const revealJs = await readText(join(VENDOR_REVEAL, "reveal.js"));
-  const markdownJs = await readText(
-    join(VENDOR_REVEAL, "plugin", "markdown", "markdown.js")
-  );
-  const highlightJs = await readText(
-    join(VENDOR_REVEAL, "plugin", "highlight", "highlight.js")
-  );
-  const notesJs = await readText(join(VENDOR_REVEAL, "plugin", "notes", "notes.js"));
+async function readVendorAssets() {
+  return {
+    baseCss: await readText(join(THEME_BASE, "base.css")),
+    layoutsCss: await readText(join(THEME_BASE, "layouts.css")),
+    skeleton: await readText(join(THEME_BASE, "skeleton.html")),
+    revealCss: await readText(join(VENDOR_REVEAL, "reveal.css")),
+    highlightCss: await readText(
+      join(VENDOR_REVEAL, "plugin", "highlight", "github-dark.css")
+    ),
+    revealJs: await readText(join(VENDOR_REVEAL, "reveal.js")),
+    markdownJs: await readText(join(VENDOR_REVEAL, "plugin", "markdown", "markdown.js")),
+    highlightJs: await readText(
+      join(VENDOR_REVEAL, "plugin", "highlight", "highlight.js")
+    ),
+    notesJs: await readText(join(VENDOR_REVEAL, "plugin", "notes", "notes.js")),
+  };
+}
 
-  // Read the concat back from disk, then inline image refs as data: URIs so
-  // the HTML is self-contained. The on-disk concat keeps plain `assets/X` paths
-  // for direct markdown preview; only the HTML embeds full image bytes.
-  const contentMdRaw = await readFile(concatPath, "utf8");
-  const contentMd = await inlineImagesInMarkdown(contentMdRaw, deckDir);
-
-  let deckOverridesCss = "";
+async function readDeckOverridesCss(deckDir: string): Promise<string> {
   const overridesPath = join(deckDir, "overrides.css");
   if (await exists(overridesPath)) {
-    deckOverridesCss = `<style>${await readText(overridesPath)}</style>`;
+    return `<style>${await readText(overridesPath)}</style>`;
   }
 
-  const fontsLink =
-    tplYml.fonts && tplYml.fonts !== "system"
-      ? `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="${tplYml.fonts}">`
-      : "";
+  return "";
+}
 
-  // Use a function for replacements so $-sequences in the inserted text aren't interpreted by JS.
+function fontsLinkFor(tplYml: Record<string, string>): string {
+  return tplYml.fonts && tplYml.fonts !== "system"
+    ? `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="${tplYml.fonts}">`
+    : "";
+}
+
+// The concat is read back from disk, then image refs are inlined as data: URIs
+// so the HTML is self-contained. The on-disk concat keeps plain `assets/X` paths
+// for direct markdown preview; only the HTML embeds full image bytes.
+async function renderDeckHtml(
+  deckDir: string,
+  concatPath: string,
+  cfg: Record<string, string>,
+  templateName: string
+): Promise<string> {
+  const { tplYml, tplCss, logoUri } = await readTemplateAssets(templateName);
+  const aspect = cfg.aspect || tplYml.aspect || "16:9";
+  const [width, height] = ASPECTS[aspect] || ASPECTS["16:9"];
+  const { skeleton, ...vendor } = await readVendorAssets();
+  const contentMd = await inlineImagesInMarkdown(
+    await readFile(concatPath, "utf8"),
+    deckDir
+  );
+
   const subs: Record<string, string> = {
     LANG: cfg.lang || "en",
     TITLE: cfg.title || "Presentation",
-    FONTS_LINK: fontsLink,
-    REVEAL_CSS: revealCss,
-    HIGHLIGHT_CSS: highlightCss,
-    BASE_CSS: baseCss,
-    LAYOUTS_CSS: layoutsCss,
+    FONTS_LINK: fontsLinkFor(tplYml),
+    REVEAL_CSS: vendor.revealCss,
+    HIGHLIGHT_CSS: vendor.highlightCss,
+    BASE_CSS: vendor.baseCss,
+    LAYOUTS_CSS: vendor.layoutsCss,
     TEMPLATE_CSS: tplCss,
     LOGO_DATA_URI: logoUri,
-    DECK_OVERRIDES_CSS: deckOverridesCss,
+    DECK_OVERRIDES_CSS: await readDeckOverridesCss(deckDir),
     CONTENT_MD: escapeForTextarea(contentMd),
-    REVEAL_JS: revealJs,
-    MARKDOWN_PLUGIN_JS: markdownJs,
-    HIGHLIGHT_PLUGIN_JS: highlightJs,
-    NOTES_PLUGIN_JS: notesJs,
+    REVEAL_JS: vendor.revealJs,
+    MARKDOWN_PLUGIN_JS: vendor.markdownJs,
+    HIGHLIGHT_PLUGIN_JS: vendor.highlightJs,
+    NOTES_PLUGIN_JS: vendor.notesJs,
     WIDTH: String(width),
     HEIGHT: String(height),
   };
 
-  const html = skeleton.replace(/\{\{(\w+)\}\}/g, (_, k) => subs[k] ?? "");
+  // A function replacer keeps $-sequences in the inserted text from being interpreted.
+  return skeleton.replace(/\{\{(\w+)\}\}/g, (_, k) => subs[k] ?? "");
+}
+
+async function main() {
+  const { deckDir, outRoot, force } = parseBuildArgs(process.argv.slice(2));
+  const { cfg, templateName } = await readDeckConfig(deckDir);
+  const { outDir, concatPath, htmlPath } = deckOutputPaths(deckDir, outRoot);
+
+  if (!force) await refuseOverwrite([concatPath, htmlPath]);
+
+  const concatMd = await buildConcat(deckDir);
+  await mkdir(outDir, { recursive: true });
+  await writeFile(concatPath, concatMd, "utf8");
+
+  const html = await renderDeckHtml(deckDir, concatPath, cfg, templateName);
   await writeFile(htmlPath, html, "utf8");
 
   const sizeMb = (Buffer.byteLength(html) / 1024 / 1024).toFixed(2);

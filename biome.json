@@ -66,6 +66,10 @@
         "noExcessiveCognitiveComplexity": {
           "level": "error",
           "options": { "maxAllowedComplexity": 14 }
+        },
+        "noExcessiveLinesPerFunction": {
+          "level": "error",
+          "options": { "maxLines": 40, "skipBlankLines": true }
         }
       },
       "nursery": {
@@ -95,6 +99,16 @@
     }
   },
   "overrides": [
+    {
+      "includes": ["test/**"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noExcessiveLinesPerFunction": "off"
+          }
+        }
+      }
+    },
     {
       "includes": ["**/*.tsx"],
       "linter": {

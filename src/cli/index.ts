@@ -16,6 +16,7 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
+import type AdmZipArchive from "adm-zip";
 import {
   AGENT_NAMES,
   AGENT_REGISTRY,
@@ -528,38 +529,56 @@ async function importState(args: string[]) {
   );
 
   if (dryRun) {
-    console.log(
-      `Would ${overwrite ? "overwrite with" : "merge"} ${entries.length} files → ${home}\n`
-    );
-
-    for (const e of entries) console.log(`  ${e.entryName}`);
+    printImportDryRun(entries, home, overwrite);
 
     return;
   }
 
   if (overwrite) {
-    zip.extractAllTo(home, true);
-    logDebug("import", `done overwrote=${entries.length} to=${home}`);
-    console.log(`Imported ${entries.length} files → ${home} (overwrite)`);
-    appendImportLog(home, {
-      ts: new Date().toISOString(),
-      archive: zipPath,
-      mode: "overwrite",
-      created: 0,
-      merged: 0,
-      identical: 0,
-      conflicts: 0,
-      skipped: 0,
-      linesAdded: 0,
-      quarantineDir: null,
-    });
-    log.info("Run 'pal cli install' to re-register hooks.");
+    importByOverwrite(zip, entries, home, zipPath);
 
     return;
   }
 
-  ensureRegistered(home);
-  const quarantineDir = resolve(
+  importByMerge(entries, home, zipPath);
+}
+
+type ZipEntry = AdmZipArchive.IZipEntry;
+
+function printImportDryRun(entries: ZipEntry[], home: string, overwrite: boolean) {
+  console.log(
+    `Would ${overwrite ? "overwrite with" : "merge"} ${entries.length} files → ${home}\n`
+  );
+
+  for (const e of entries) console.log(`  ${e.entryName}`);
+}
+
+function importByOverwrite(
+  zip: AdmZipArchive,
+  entries: ZipEntry[],
+  home: string,
+  zipPath: string
+) {
+  zip.extractAllTo(home, true);
+  logDebug("import", `done overwrote=${entries.length} to=${home}`);
+  console.log(`Imported ${entries.length} files → ${home} (overwrite)`);
+  appendImportLog(home, {
+    ts: new Date().toISOString(),
+    archive: zipPath,
+    mode: "overwrite",
+    created: 0,
+    merged: 0,
+    identical: 0,
+    conflicts: 0,
+    skipped: 0,
+    linesAdded: 0,
+    quarantineDir: null,
+  });
+  log.info("Run 'pal cli install' to re-register hooks.");
+}
+
+function importQuarantineDir(home: string): string {
+  return resolve(
     home,
     "backups",
     `import-conflicts-${new Date()
@@ -567,14 +586,16 @@ async function importState(args: string[]) {
       .replace(/[-:T.]/g, "")
       .slice(0, 14)}`
   );
-  const result = mergeArchive(
-    entries.map((e) => ({ path: e.entryName, data: () => e.getData() })),
-    home,
-    quarantineDir
-  );
-  const source = readManifest(
-    entries.map((e) => ({ path: e.entryName, data: () => e.getData() }))
-  );
+}
+
+function archiveEntriesOf(entries: ZipEntry[]) {
+  return entries.map((e) => ({ path: e.entryName, data: () => e.getData() }));
+}
+
+function importByMerge(entries: ZipEntry[], home: string, zipPath: string) {
+  ensureRegistered(home);
+  const result = mergeArchive(archiveEntriesOf(entries), home, importQuarantineDir(home));
+  const source = readManifest(archiveEntriesOf(entries));
   if (source) {
     writeRegistryEntry({ id: source.machineId, label: source.label, os: source.os });
     console.log(`Source machine: ${source.label} (${source.machineId})`);
