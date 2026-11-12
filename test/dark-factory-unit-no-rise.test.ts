@@ -218,6 +218,84 @@ describe("a unit typist that does not raise the failing count goes back once", (
   });
 });
 
+const FIRST_ERROR = "error[E0425]: cannot find function `score_nesting` in this scope";
+const noCompile: Run = {
+  exitCode: 101,
+  output: [
+    "   Compiling klint-rs v0.1.0 (crates/klint-rs)",
+    FIRST_ERROR,
+    "  --> crates/klint-rs/src/rules/complexity.rs:210:9",
+    "error[E0425]: cannot find function `walk_branches` in this scope",
+    "error: could not compile `klint-rs` (lib test) due to 2 previous errors",
+  ].join("\n"),
+};
+
+describe("unit tests that do not compile go back once for stubs", () => {
+  test("the typist's first instructions ask for failing stubs of missing code", () => {
+    const world = scenario({ runs: [acceptance, failRun(3), failRun(4)] });
+    run(world);
+    const instructions = typistRuns(world)[0]?.instructions ?? "";
+    expect(instructions).toContain("does not exist yet");
+    expect(instructions).toContain("todo!()");
+  });
+
+  test("a compile error after the typist records unit_tests_do_not_compile with the first error", () => {
+    const world = scenario({ runs: [acceptance, failRun(3), noCompile, failRun(5)] });
+    run(world);
+    expect(eventsNamed(world, "unit_tests_do_not_compile")).toEqual([
+      expect.objectContaining({ task: TASK, baseline: 3, error: FIRST_ERROR }),
+    ]);
+  });
+
+  test("the retry names the first error and the stub rule, and resumes the typist", () => {
+    const world = scenario({ runs: [acceptance, failRun(3), noCompile, failRun(5)] });
+    run(world);
+    const retry = typistRuns(world)[1];
+    expect(retry?.instructions).toContain(FIRST_ERROR);
+    expect(retry?.instructions).toContain("todo!()");
+    expect(retry?.instructions).toContain("uncommitted");
+    expect(retry?.resumeSessionId).toBe("sess-test-writer-2");
+  });
+
+  test("tests that compile and rise after the retry are ready", () => {
+    const world = scenario({ runs: [acceptance, failRun(3), noCompile, failRun(5)] });
+    const result = run(world);
+    expect(result.status).toBe("ready");
+    expect(typistRuns(world)).toHaveLength(2);
+    expect(eventsNamed(world, "unit_tests_done")).toHaveLength(1);
+  });
+
+  test("tests that still do not compile are stuck naming the first error, after two typist runs", () => {
+    const world = scenario({ runs: [acceptance, failRun(3), noCompile, noCompile] });
+    const result = run(world);
+    expect(result.status).toBe("stuck");
+    expect(result.message).toContain(`the tests do not compile: ${FIRST_ERROR}`);
+    expect(typistRuns(world)).toHaveLength(2);
+    expect(roles(world)).not.toContain("code-writer");
+  });
+
+  test("acceptance tests that do not compile are stuck naming the first error, with no retry", () => {
+    const world = scenario({ runs: [noCompile] });
+    const result = run(world);
+    expect(result.status).toBe("stuck");
+    expect(result.message).toContain(`the tests do not compile: ${FIRST_ERROR}`);
+    expect(eventsNamed(world, "unit_tests_do_not_compile")).toHaveLength(0);
+  });
+
+  test("cargo's summary errors alone are not a compile error", () => {
+    const world = scenario({
+      runs: [
+        acceptance,
+        failRun(3),
+        { exitCode: 101, output: "error: test failed, to rerun pass `--lib`" },
+      ],
+    });
+    const result = run(world);
+    expect(result.message).toContain("reported no failing test count");
+    expect(typistRuns(world)).toHaveLength(1);
+  });
+});
+
 describe("the other red-proof stops get no retry", () => {
   test("tests that pass after the typist are stuck with today's message and one typist run", () => {
     const world = scenario({
