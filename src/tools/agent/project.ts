@@ -17,7 +17,6 @@ import {
   defaultSlug,
   deleteProject,
   isStale,
-  legacyJsonToProgress,
   type ProjectProgress,
   type ProjectStatus,
   proposeBinding,
@@ -26,6 +25,7 @@ import {
   type ServesKind,
   writeProject,
 } from "../../hooks/lib/projects";
+import { legacyJsonToProgress } from "../../hooks/lib/projects-legacy";
 import { isServesKind, SERVES_KINDS, setServes } from "../../hooks/lib/serves";
 import { group, type Leaf, leaf, runCommand, UsageError } from "../lib/command";
 import { decisionRow, emitHistoryRow, registrationRow } from "../lib/project-history";

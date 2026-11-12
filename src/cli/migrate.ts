@@ -30,13 +30,13 @@ import { foldHistoryInto } from "../hooks/lib/parked-history";
 import { palHome, paths } from "../hooks/lib/paths";
 import { appendEvent, scopeOf } from "../hooks/lib/progress-tree";
 import {
-  legacyJsonToProgress,
   type ProjectProgress,
   projectPathOnThisMachine,
   readAllProjects,
   readProject,
   writeProject,
 } from "../hooks/lib/projects";
+import { legacyJsonToProgress } from "../hooks/lib/projects-legacy";
 import { appendSourceLog } from "../tools/knowledge/ingest";
 import {
   type Entity,

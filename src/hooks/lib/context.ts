@@ -9,7 +9,7 @@ import type { AgentName } from "./agent-registry";
 import { dueNudgeSections } from "./daily-nudge";
 import { toPath } from "./paths";
 import { loadProgressTreeContext } from "./progress-tree-context";
-import { loadActiveProjectsContext } from "./projects";
+import { loadActiveProjectsContext } from "./projects-context";
 import { loadSteeringRules } from "./semi-static";
 import { sessionDir } from "./session-dir";
 import * as settings from "./settings";

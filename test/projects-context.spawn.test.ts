@@ -29,9 +29,14 @@ beforeEach(() => {
 
 async function freshLib() {
   const t = Date.now();
-  const mod = await import(`../src/hooks/lib/projects.ts?t=${t}`);
+  const projects = (await import(
+    `../src/hooks/lib/projects.ts?t=${t}`
+  )) as typeof import("../src/hooks/lib/projects");
+  const context = (await import(
+    `../src/hooks/lib/projects-context.ts?t=${t}`
+  )) as typeof import("../src/hooks/lib/projects-context");
 
-  return mod as typeof import("../src/hooks/lib/projects");
+  return { ...projects, ...context };
 }
 
 function fixtureRepoDir(slug: string): string {
