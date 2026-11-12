@@ -165,7 +165,6 @@ function previewRoute(): RoutePreview {
   };
 }
 
-/** True if any inference path is currently usable (subscription CLI OR API key). */
 /** Routes whose CLI can be limited to web search and fetch alone. */
 function canSearchWeb(): boolean {
   if (isClaude() && hasClaudeBinary()) return true;
@@ -175,6 +174,7 @@ function canSearchWeb(): boolean {
   return isCopilot() && hasCopilotBinary();
 }
 
+/** True if any inference path is currently usable (subscription CLI OR API key). */
 export function canInfer(): boolean {
   if (isClaude() && hasClaudeBinary()) return true;
 
