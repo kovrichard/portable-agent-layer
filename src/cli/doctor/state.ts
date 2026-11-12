@@ -20,9 +20,11 @@ interface UnknownKey {
 
 function editDistance(a: string, b: string): number {
   const row = Array.from({ length: b.length + 1 }, (_, j) => j);
+
   for (let i = 1; i <= a.length; i++) {
     let diagonal = row[0];
     row[0] = i;
+
     for (let j = 1; j <= b.length; j++) {
       const above = row[j];
       row[j] = Math.min(
@@ -33,6 +35,7 @@ function editDistance(a: string, b: string): number {
       diagonal = above;
     }
   }
+
   return row[b.length];
 }
 
@@ -41,6 +44,7 @@ function closest(key: string, candidates: string[]): string | undefined {
     .map((candidate) => ({ candidate, distance: editDistance(key, candidate) }))
     .sort((x, y) => x.distance - y.distance);
   const best = ranked[0];
+
   return best && best.distance <= 2 ? best.candidate : undefined;
 }
 
@@ -55,16 +59,21 @@ export function unknownSettingsKeys(
 ): UnknownKey[] {
   if (Array.isArray(value) && schema.items) {
     const items = schema.items;
+
     return value.flatMap((item, i) => unknownSettingsKeys(item, items, `${path}[${i}]`));
   }
+
   if (!isPlainObject(value)) return [];
   const declared = schema.properties ?? {};
   const closed = schema.properties !== undefined && schema.additionalProperties !== true;
+
   return Object.entries(value).flatMap(([key, child]) => {
     const childPath = path ? `${path}.${key}` : key;
     const childSchema = declared[key];
     if (childSchema) return unknownSettingsKeys(child, childSchema, childPath);
+
     if (!closed) return [];
+
     return [{ path: childPath, suggestion: closest(key, Object.keys(declared)) }];
   });
 }
@@ -92,6 +101,7 @@ function identityFinding(settings: Record<string, unknown>): Finding {
     | undefined;
   if (identity?.principal?.name && identity?.ai?.name)
     return passed("identity", "Identity configured");
+
   return warning("identity", "Identity is incomplete — PAL does not know both names", {
     say: "Answer the identity questions",
     command: "pal cli install",
@@ -107,6 +117,7 @@ function unknownKeysFinding(keys: UnknownKey[]): Finding {
   if (keys.length === 0)
     return passed("settings.unknown", "Every setting is one PAL reads");
   const noun = keys.length === 1 ? "a setting" : `${keys.length} settings`;
+
   return warning(
     "settings.unknown",
     `pal-settings.json has ${noun} PAL ignores: ${keys.map(describeUnknownKey).join(", ")}`,
@@ -125,6 +136,7 @@ function settingsFindings(): Finding[] {
       }),
     ];
   let settings: unknown;
+
   try {
     settings = JSON.parse(readFileSync(path, "utf-8"));
   } catch (error) {
@@ -138,6 +150,7 @@ function settingsFindings(): Finding[] {
       ),
     ];
   }
+
   if (!isPlainObject(settings))
     return [
       failing("settings.unreadable", "pal-settings.json is not a JSON object", {
@@ -151,6 +164,7 @@ function settingsFindings(): Finding[] {
   const unknown = schema
     ? unknownSettingsKeys(settings, schema).filter((k) => !leftToMigration.has(k.path))
     : [];
+
   return [identityFinding(settings), unknownKeysFinding(unknown)];
 }
 
@@ -173,6 +187,7 @@ function telosFindings(home: string): Finding[] {
   const unanswered = telosStatus(home)
     .filter((topic) => topic.priority && !topic.answered)
     .map((topic) => topic.key);
+
   return [
     passed("telos", `TELOS: ${files} files`),
     unanswered.length === 0
@@ -192,11 +207,13 @@ function bindingProblem(issue: BindingIssue): { project: string; title: string }
       project: issue.project,
       title: `Project ${issue.project} is not checked out on this machine`,
     };
+
   if (issue.kind === "missing")
     return {
       project: issue.project,
       title: `Project ${issue.project} points at ${issue.path}, which does not exist`,
     };
+
   return {
     project: issue.projects[0],
     title: `Projects ${issue.projects.join(" and ")} both point at ${issue.path} — rebind whichever is wrong`,
@@ -205,6 +222,7 @@ function bindingProblem(issue: BindingIssue): { project: string; title: string }
 
 export function bindingFinding(issue: BindingIssue): Finding {
   const { project, title } = bindingProblem(issue);
+
   return warning(`binding.${project}`, title, {
     say: "Point it at its checkout",
     command: `pal cli project set-path ${project} <path>`,
@@ -214,6 +232,7 @@ export function bindingFinding(issue: BindingIssue): Finding {
 
 function bindingFindings(): Finding[] {
   const issues = auditBindings();
+
   return issues.length === 0
     ? [passed("bindings", "Project bindings healthy")]
     : issues.map(bindingFinding);
@@ -222,10 +241,12 @@ function bindingFindings(): Finding[] {
 function resolves(name: string, from: string): boolean {
   try {
     Bun.resolveSync(`${name}/package.json`, from);
+
     return true;
   } catch {
     try {
       Bun.resolveSync(name, from);
+
       return true;
     } catch {
       return false;
@@ -238,6 +259,7 @@ export function unresolvedDependencies(pkg: string): string[] {
     const { dependencies = {} } = JSON.parse(
       readFileSync(resolve(pkg, "package.json"), "utf-8")
     );
+
     return Object.keys(dependencies).filter((name) => !resolves(name, pkg));
   } catch {
     return [];
@@ -246,6 +268,7 @@ export function unresolvedDependencies(pkg: string): string[] {
 
 function dependencyFinding(): Finding {
   const missing = unresolvedDependencies(palPkg());
+
   return missing.length === 0
     ? passed("dependencies", "Dependencies installed")
     : failing(
@@ -261,6 +284,7 @@ function dependencyFinding(): Finding {
 
 export function stateFindings(): Finding[] {
   const home = palHome();
+
   return [
     ...telosFindings(home),
     ...settingsFindings(),

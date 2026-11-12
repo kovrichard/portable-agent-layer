@@ -27,7 +27,9 @@ const PRESERVED = [
 
 function savedEnv(): Record<string, string | undefined> {
   const saved: Record<string, string | undefined> = {};
+
   for (const k of PRESERVED) saved[k] = process.env[k];
+
   return saved;
 }
 function restoreEnv(saved: Record<string, string | undefined>) {
@@ -123,6 +125,7 @@ describe("inference dispatcher — copilot spawn integration (fake binary)", () 
     delete process.env[SPAWN_GUARD_ENV.SENTINEL];
     delete process.env[SPAWN_GUARD_ENV.DEPTH];
     delete process.env.PAL_INFERENCE_DISABLED;
+
     for (const name of COPILOT_TOKEN_ENV) delete process.env[name];
     process.env.COPILOT_HOME = "/users/own-copilot-home";
     process.env.PAL_AGENT = "copilot";
@@ -137,6 +140,7 @@ describe("inference dispatcher — copilot spawn integration (fake binary)", () 
     writeFakeBin(tmpBin, "copilot", reportsWhereItRan());
     prependPath(tmpBin);
     const result = await inference({ user: "hi", timeout: 5000 });
+
     return JSON.parse(result.output ?? "{}");
   }
 
@@ -223,6 +227,7 @@ describe("inference dispatcher — copilot spawn integration (fake binary)", () 
     );
     prependPath(tmpBin);
     await inference({ user: "hi", timeout: 5000 });
+
     return eventsSince("inference_call", new Date(0))[0];
   }
 

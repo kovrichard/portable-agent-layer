@@ -13,6 +13,7 @@ const SERVES_KINDS = ["goal", "revenue", "fun"] as const;
 
 function ServesSelect({ item, onSaved }: { item: MatrixItem; onSaved: () => void }) {
   if (item.kind !== "project") return null;
+
   return (
     <NativeSelect
       aria-label={`what ${item.label} serves`}
@@ -51,6 +52,7 @@ const PLACEMENTS = [
 /** Overrules the grid's own reading. The correction survives the next guess. */
 function PlacementSelect({ item, onSaved }: { item: MatrixItem; onSaved: () => void }) {
   if (item.kind !== "project") return null;
+
   return (
     <NativeSelect
       aria-label={`where ${item.label} belongs`}
@@ -88,6 +90,7 @@ export function ReasonTags({ item }: { item: MatrixItem }) {
 
 export function ItemCard({ item, onSaved }: { item: MatrixItem; onSaved: () => void }) {
   const isProject = item.kind === "project";
+
   return (
     <article className="flex flex-col gap-2 border border-divider bg-bg px-3 py-3 hover:border-accent">
       <div className="flex items-center gap-2">
@@ -143,6 +146,7 @@ export function MovesList({
       </Empty>
     );
   }
+
   return (
     <ol className="flex list-none flex-col gap-0 p-0">
       {moves.map((move, i) => (
@@ -180,6 +184,7 @@ export function MovesList({
 
 export function WorkList({ cards, empty }: { cards: WorkCard[]; empty: string }) {
   if (cards.length === 0) return <Empty>{empty}</Empty>;
+
   return (
     <div className="flex flex-col gap-3">
       {cards.map((w) => (
@@ -216,6 +221,7 @@ export function WorkList({ cards, empty }: { cards: WorkCard[]; empty: string })
 
 export function GoalsList({ goals }: { goals: MatrixItem[] }) {
   if (goals.length === 0) return <Empty>No goals written down yet.</Empty>;
+
   return (
     <div className="flex flex-col gap-3">
       {goals.map((goal) => (

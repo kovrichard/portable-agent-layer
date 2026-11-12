@@ -100,6 +100,7 @@ function modelFor(route: FixedModelRoute, opts: InferenceOptions): string {
 
 function smallModelOf(route: InferenceRoute): string | undefined {
   if (route === "opencode-spawn") return opencodeTierModel("small") ?? undefined;
+
   return isFixedModelRoute(route) ? inferenceModel(route, "small") : undefined;
 }
 
@@ -109,33 +110,42 @@ function smallModelOf(route: InferenceRoute): string | undefined {
  */
 export function previewInferenceRoute(): RoutePreview & { model?: string } {
   const preview = previewRoute();
+
   return { ...preview, model: smallModelOf(preview.route) };
 }
 
 function nativeRoutePreview(agent: RoutePreview["agent"]): RoutePreview | null {
   if (isClaude() && hasClaudeBinary())
     return { agent, route: "claude-spawn", reason: "claude binary on PATH" };
+
   if (isCodex() && hasCodexBinary())
     return { agent, route: "codex-spawn", reason: "codex binary on PATH" };
+
   if (isCodex() && hasOpenAiKey())
     return {
       agent,
       route: "openai-api",
       reason: "codex agent without codex binary; PAL_OPENAI_API_KEY set",
     };
+
   if (isOpencode() && hasOpencodeBinary())
     return { agent, route: "opencode-spawn", reason: "opencode binary on PATH" };
+
   if (isCopilot() && hasCopilotBinary())
     return { agent, route: "copilot-spawn", reason: "copilot binary on PATH" };
+
   if (isCursor() && hasCursorBinary())
     return { agent, route: "cursor-spawn", reason: "cursor-agent binary on PATH" };
+
   if (isAntigravity() && hasAntigravityBinary())
     return { agent, route: "antigravity-spawn", reason: "agy binary on PATH" };
+
   return null;
 }
 
 function previewRoute(): RoutePreview {
   const agent = getActiveAgent();
+
   if (process.env.PAL_INFERENCE_DISABLED === "1") {
     return {
       agent,
@@ -145,12 +155,14 @@ function previewRoute(): RoutePreview {
   }
   const native = nativeRoutePreview(agent);
   if (native) return native;
+
   if (hasApiKey())
     return {
       agent,
       route: "anthropic-api",
       reason: "fallback — PAL_ANTHROPIC_API_KEY set",
     };
+
   return {
     agent,
     route: "none",
@@ -163,18 +175,27 @@ function previewRoute(): RoutePreview {
 /** Routes whose CLI can be limited to web search and fetch alone. */
 function canSearchWeb(): boolean {
   if (isClaude() && hasClaudeBinary()) return true;
+
   if (isCodex() && hasCodexBinary()) return true;
+
   return isCopilot() && hasCopilotBinary();
 }
 
 export function canInfer(): boolean {
   if (isClaude() && hasClaudeBinary()) return true;
+
   if (isCodex() && hasCodexBinary()) return true;
+
   if (isCodex() && hasOpenAiKey()) return true;
+
   if (isOpencode() && hasOpencodeBinary()) return true;
+
   if (isCopilot() && hasCopilotBinary()) return true;
+
   if (isCursor() && hasCursorBinary()) return true;
+
   if (isAntigravity() && hasAntigravityBinary()) return true;
+
   return hasApiKey();
 }
 
@@ -211,6 +232,7 @@ function schemaProblem(
 ): string | undefined {
   const checked = z.fromJSONSchema(schema).safeParse(parseJsonFromOutput(output));
   if (checked.success) return undefined;
+
   return checked.error.issues
     .map((issue) => `${issue.path.join(".") || "reply"}: ${issue.message}`)
     .join("; ");
@@ -220,7 +242,9 @@ function plannedRoute(opts: InferenceOptions): { route: string; model: string | 
   const { route } = previewRoute();
   if (route === "opencode-spawn")
     return { route, model: opencodeTierModel(opts.tier ?? "small") };
+
   if (isFixedModelRoute(route)) return { route, model: modelFor(route, opts) };
+
   return { route, model: null };
 }
 
@@ -247,6 +271,7 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
   const started = performance.now();
   const result = await checkedInference(opts);
   logInferenceCall(opts, planned, result, performance.now() - started);
+
   return { ...result, model: planned.model ?? undefined };
 }
 
@@ -259,6 +284,7 @@ async function checkedInference(opts: InferenceOptions): Promise<InferenceResult
     "inference",
     `caller=${opts.caller ?? "anonymous"} schema mismatch: ${problem}`
   );
+
   return {
     ...result,
     success: false,
@@ -287,6 +313,7 @@ function spawnRoute(
     pick: (opts) => {
       if (!isActive()) return null;
       const bin = binary();
+
       return bin ? () => run(bin, opts) : null;
     },
   };
@@ -343,27 +370,33 @@ async function routeInference(opts: InferenceOptions): Promise<InferenceResult> 
   const depth = getInferenceDepth();
   if (depth >= SPAWN_GUARD_ENV.MAX_DEPTH) {
     logDebug("inference", `refuse: depth=${depth} >= max=${SPAWN_GUARD_ENV.MAX_DEPTH}`);
+
     return { success: false };
   }
   const agent = getActiveAgent();
   const caller = opts.caller ?? "anonymous";
   const session = opts.sessionId ?? "-";
   const tag = `caller=${caller} sessionId=${session}`;
+
   if (opts.web && !canSearchWeb()) {
     logDebug("inference", `${tag} refuse: no web route agent=${agent}`);
+
     return { success: false, error: `web research is not available on ${agent} yet` };
   }
+
   for (const route of INFERENCE_ROUTES) {
     const run = route.pick(opts);
     if (!run) continue;
     const model = route.modelRoute ? ` model=${modelFor(route.modelRoute, opts)}` : "";
     logDebug("inference", `${tag} route=${route.name} agent=${agent}${model}`);
+
     return run();
   }
   logDebug(
     "inference",
     `${tag} route=none agent=${agent} hasApiKey=false hasOpenAiKey=${hasOpenAiKey()} hasClaude=${hasClaudeBinary()} hasCodex=${hasCodexBinary()} hasOpencode=${hasOpencodeBinary()} hasCopilot=${hasCopilotBinary()} hasCursor=${hasCursorBinary()} hasAgy=${hasAntigravityBinary()}`
   );
+
   return { success: false };
 }
 
@@ -376,6 +409,7 @@ const binaryCache = new Map<string, string | null>();
 function cachedBinary(name: string): string | null {
   const key = `${name}\0${process.env.PATH ?? ""}`;
   if (!binaryCache.has(key)) binaryCache.set(key, findBinaryOnPath(name));
+
   return binaryCache.get(key) ?? null;
 }
 
@@ -454,13 +488,16 @@ export function buildClaudeArgs(
     "--setting-sources",
     "",
   ];
+
   if (systemPromptFile) args.push("--system-prompt-file", systemPromptFile);
+
   return args;
 }
 
 const CLAUDE_REPLY: CliReply = {
   text: (raw) => {
     const result = claudeResult(raw);
+
     return result?.is_error ? "" : String(result?.result ?? "").trim();
   },
   usage: claudeSpawnUsage,
@@ -512,9 +549,11 @@ async function inferenceViaClaudeSpawn(
   if (!system) return spawnClaude(buildClaudeArgs(opts));
 
   const dir = await mkdtemp(join(tmpdir(), "pal-system-"));
+
   try {
     const file = join(dir, "system-prompt.md");
     await writeFile(file, system, "utf-8");
+
     return await spawnClaude(buildClaudeArgs(opts, file));
   } finally {
     await rm(dir, { recursive: true, force: true });
@@ -561,6 +600,7 @@ export function buildCodexArgs(opts: InferenceOptions): string[] {
 
 function codexEffortArgs(opts: InferenceOptions): string[] {
   const effort = inferenceEffort("codex-spawn", opts.tier);
+
   return effort ? ["-c", `model_reasoning_effort="${effort}"`] : [];
 }
 
@@ -597,6 +637,7 @@ const CODEX_REPLY: CliReply = {
  */
 export function buildOpencodeArgs(opts: InferenceOptions): string[] {
   const model = opencodeTierModel(opts.tier ?? "small");
+
   return ["run", "--pure", "--format", "json", ...(model ? ["-m", model] : [])];
 }
 
@@ -613,8 +654,10 @@ async function inferenceViaOpencodeSpawn(
   opts: InferenceOptions
 ): Promise<InferenceResult> {
   const dir = await mkdtemp(join(tmpdir(), "pal-opencode-"));
+
   try {
     writeInstructionFreeConfig(dir);
+
     return await inferenceViaCliSpawn(
       bin,
       buildOpencodeArgs(opts),
@@ -684,8 +727,10 @@ async function inferenceViaAntigravitySpawn(
   opts: InferenceOptions
 ): Promise<InferenceResult> {
   const dir = await mkdtemp(join(tmpdir(), "pal-antigravity-"));
+
   try {
     writeInferenceAgent(dir);
+
     return await inferenceViaCliSpawn(
       bin,
       buildAntigravityArgs(opts),
@@ -754,6 +799,7 @@ const COPILOT_REPLY: CliReply = {
 function copilotSessionUsage(home: string, raw: string): InferenceUsage | undefined {
   const id = copilotSessionId(raw);
   if (!id) return undefined;
+
   try {
     return copilotShutdownUsage(
       readFileSync(join(home, "session-state", id, "events.jsonl"), "utf-8")
@@ -796,6 +842,7 @@ async function inferenceViaCopilotSpawn(
   if (!copilotLogsInWithoutHome(env))
     return spawn(env.COPILOT_HOME || platform.copilotDir());
   const dir = await mkdtemp(join(tmpdir(), "pal-copilot-"));
+
   try {
     return await spawn(dir, { cwd: dir, env: { COPILOT_HOME: dir } });
   } finally {
@@ -816,8 +863,10 @@ function copilotTools(opts: InferenceOptions): string[] {
  */
 export function extractOpencodeText(rawStdout: string): string {
   const texts: string[] = [];
+
   for (const line of rawStdout.split("\n")) {
     if (!line.trim()) continue;
+
     try {
       const event = JSON.parse(line) as {
         type?: string;
@@ -830,6 +879,7 @@ export function extractOpencodeText(rawStdout: string): string {
       /* not a JSON line — opencode also emits non-JSON lines, skip them */
     }
   }
+
   return texts.join("").trim();
 }
 
@@ -855,9 +905,12 @@ export function schemaInstruction(schema: Record<string, unknown>): string {
 /** system + user + schema instruction, the single prompt a CLI agent receives. */
 export function buildCliPrompt(opts: InferenceOptions): string {
   const parts: string[] = [];
+
   if (opts.system) parts.push(opts.system);
   parts.push(opts.user);
+
   if (opts.jsonSchema) parts.push(schemaInstruction(opts.jsonSchema));
+
   return parts.join("\n\n");
 }
 
@@ -867,6 +920,7 @@ export function injectJsonSchemaInstruction(
   schema: Record<string, unknown>
 ): string {
   const schemaLine = schemaInstruction(schema);
+
   return systemPrompt ? `${systemPrompt}\n\n${schemaLine}` : schemaLine;
 }
 
@@ -874,20 +928,24 @@ export function injectJsonSchemaInstruction(
 export function parseJsonFromOutput(output: string): unknown | null {
   const objectMatch = /\{[\s\S]*\}/.exec(output);
   const arrayMatch = /\[[\s\S]*\]/.exec(output);
+
   for (const candidate of [objectMatch?.[0], arrayMatch?.[0]]) {
     if (!candidate) continue;
+
     try {
       return JSON.parse(candidate);
     } catch {
       /* try next */
     }
   }
+
   return null;
 }
 
 export function agentFailureText(stdout: string): string {
   try {
     const result = (JSON.parse(stdout) as { result?: unknown }).result;
+
     return typeof result === "string" ? result : stdout;
   } catch {
     return stdout;
@@ -910,6 +968,7 @@ interface RawSpawnResult {
 
 async function readPipe(pipe: unknown): Promise<string> {
   if (!pipe || typeof pipe === "number") return "";
+
   try {
     return await new Response(pipe as ReadableStream<Uint8Array>).text();
   } catch {
@@ -939,6 +998,7 @@ async function singleCliAttempt(
     };
 
     let proc: ReturnType<typeof Bun.spawn>;
+
     try {
       proc = Bun.spawn([binary, ...args], {
         env,
@@ -951,11 +1011,13 @@ async function singleCliAttempt(
     } catch (err) {
       logError("inference:spawn", err);
       finish({ code: null, stdout: "", stderr: "", timedOut: false });
+
       return;
     }
 
     const timer = setTimeout(() => {
       timedOut = true;
+
       try {
         proc.kill();
       } catch {
@@ -1009,6 +1071,7 @@ interface SpawnPlace {
 function retryJitterMs(): number {
   const fixed = process.env.PAL_INFERENCE_RETRY_JITTER_MS;
   if (fixed !== undefined && /^\d+$/.test(fixed)) return Number(fixed);
+
   return 500 + Math.floor(Math.random() * 1000);
 }
 
@@ -1066,19 +1129,23 @@ async function inferenceViaCliSpawn(
       "inference:spawn",
       `${tag} done binary=${binaryName} success=${result.success} bytes=${result.output?.length ?? 0} elapsedMs=${elapsedMs}`
     );
+
     return { ...result, usage };
   };
 
   if (attempt.timedOut) {
     logError("inference:spawn", `${tag} timeout binary=${binaryName} after ${timeout}ms`);
+
     return finish({ success: false });
   }
+
   if (attempt.code !== 0) {
     const said = agentFailureText(attempt.stdout);
     logError(
       "inference:spawn",
       `${tag} exited=${attempt.code} binary=${binaryName} argv=${JSON.stringify(args)} stderr(${attempt.stderr.length})=${attempt.stderr.slice(0, 300)} stdout(${attempt.stdout.length})=${said.slice(0, 300)}`
     );
+
     return finish({ success: false, error: firstLine(attempt.stderr || said) });
   }
   const rawText = attempt.stdout.trim();
@@ -1091,13 +1158,17 @@ async function inferenceViaCliSpawn(
       "inference:spawn",
       `${tag} extract-empty binary=${binaryName} rawStdout(${rawText.length})=${rawText.slice(0, 500)}`
     );
+
     return finish({ success: false });
   }
+
   if (opts.jsonSchema) {
     const parsed = parseJsonFromOutput(text);
     if (parsed === null) return finish({ success: false, output: text });
+
     return finish({ success: true, output: JSON.stringify(parsed) });
   }
+
   return finish({ success: true, output: text });
 }
 
@@ -1121,7 +1192,9 @@ async function inferenceViaApi(opts: InferenceOptions): Promise<InferenceResult>
       max_tokens: maxTokens,
       messages: [{ role: "user", content: user }],
     };
+
     if (system) body.system = system;
+
     if (jsonSchema) {
       body.output_config = {
         format: { type: "json_schema", schema: jsonSchema },
@@ -1144,6 +1217,7 @@ async function inferenceViaApi(opts: InferenceOptions): Promise<InferenceResult>
     if (!response.ok) {
       const errBody = await response.text().catch(() => "");
       logError("inference", `HTTP ${response.status}: ${errBody.slice(0, 200)}`);
+
       return { success: false };
     }
 
@@ -1157,6 +1231,7 @@ async function inferenceViaApi(opts: InferenceOptions): Promise<InferenceResult>
     return { success: true, output: text, usage };
   } catch (err) {
     logError("inference", err);
+
     return { success: false };
   }
 }
@@ -1171,6 +1246,7 @@ async function inferenceViaApi(opts: InferenceOptions): Promise<InferenceResult>
 export function buildOpenAiBody(opts: InferenceOptions): Record<string, unknown> {
   const { system, user, maxTokens = 500, jsonSchema } = opts;
   const messages: Array<{ role: string; content: string }> = [];
+
   if (system) messages.push({ role: "system", content: system });
   messages.push({ role: "user", content: user });
 
@@ -1181,12 +1257,14 @@ export function buildOpenAiBody(opts: InferenceOptions): Record<string, unknown>
   };
   const effort = inferenceEffort("openai-api", opts.tier);
   if (effort) body.reasoning_effort = effort;
+
   if (jsonSchema) {
     body.response_format = {
       type: "json_schema",
       json_schema: { name: "structured_response", strict: true, schema: jsonSchema },
     };
   }
+
   return body;
 }
 
@@ -1216,6 +1294,7 @@ async function inferenceViaOpenAiApi(opts: InferenceOptions): Promise<InferenceR
     if (!response.ok) {
       const errBody = await response.text().catch(() => "");
       logError("inference:openai", `HTTP ${response.status}: ${errBody.slice(0, 200)}`);
+
       return { success: false };
     }
 
@@ -1231,6 +1310,7 @@ async function inferenceViaOpenAiApi(opts: InferenceOptions): Promise<InferenceR
     return { success: true, output: text, usage };
   } catch (err) {
     logError("inference:openai", err);
+
     return { success: false };
   }
 }

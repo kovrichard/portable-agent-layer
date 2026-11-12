@@ -59,6 +59,7 @@ export function windowsName(osRelease: string): string {
   const build = Number(osRelease.split(".")[2]);
   if (!Number.isFinite(build)) return `Windows ${osRelease}`;
   const name = build >= WINDOWS_11_FIRST_BUILD ? "Windows 11" : "Windows 10";
+
   return `${name} (build ${build})`;
 }
 
@@ -69,6 +70,7 @@ export function macName(
   const version = /<key>ProductVersion<\/key>\s*<string>([^<]+)<\/string>/.exec(
     systemVersionPlist ?? ""
   )?.[1];
+
   return version ? `macOS ${version}` : `macOS (Darwin ${darwinRelease})`;
 }
 
@@ -76,6 +78,7 @@ export function linuxName(osReleaseFile: string | null, kernelRelease: string): 
   const pretty = /^PRETTY_NAME="?([^"\n]+)"?$/m.exec(osReleaseFile ?? "")?.[1];
   const name = pretty ?? `Linux ${kernelRelease}`;
   const wsl = /microsoft/i.test(kernelRelease) ? " (WSL)" : "";
+
   return name + wsl;
 }
 
@@ -93,9 +96,12 @@ export function osName(
   read: (path: string) => string | null = readIfPresent
 ): string {
   if (os === "win32") return windowsName(osRelease);
+
   if (os === "darwin")
     return macName(read("/System/Library/CoreServices/SystemVersion.plist"), osRelease);
+
   if (os === "linux") return linuxName(read("/etc/os-release"), osRelease);
+
   return `${os} ${osRelease}`;
 }
 
@@ -103,10 +109,12 @@ function findLanguage(language: Language, probe: Probe): FoundLanguage | null {
   for (const command of language.commands) {
     const path = probe.which(command);
     if (!path) continue;
+
     if (!language.versioned) return { name: language.name };
     const version = versionIn(probe.versionOutput(path) ?? "");
     if (version) return { name: language.name, version };
   }
+
   return null;
 }
 
@@ -116,12 +124,14 @@ export function detectLanguages(
 ): Pick<Environment, "found" | "missing"> {
   const found: FoundLanguage[] = [];
   const missing: string[] = [];
+
   for (const language of LANGUAGES) {
     if (language.platforms && !language.platforms.includes(os)) continue;
     const hit = findLanguage(language, probe);
     if (hit) found.push(hit);
     else missing.push(language.name);
   }
+
   return { found, missing };
 }
 
@@ -137,6 +147,7 @@ export const systemProbe: Probe = {
         timeout: VERSION_TIMEOUT_MS,
       });
       if (run.exitCode !== 0) return null;
+
       return `${run.stdout.toString()}\n${run.stderr.toString()}`;
     } catch {
       return null;
@@ -170,7 +181,9 @@ export function renderEnvironment(env: Environment): string {
     `- OS: ${env.os}, ${env.arch}`,
     `- Script languages: ${found || "none found"}`,
   ];
+
   if (env.missing.length > 0) lines.push(`- Not found: ${env.missing.join(", ")}`);
+
   return `${lines.join("\n")}\n\n`;
 }
 
@@ -181,6 +194,7 @@ export function environmentFile(): string {
 export function readEnvironment(): Environment | null {
   const text = readIfPresent(environmentFile());
   if (text === null) return null;
+
   try {
     return JSON.parse(text) as Environment;
   } catch {
@@ -191,5 +205,6 @@ export function readEnvironment(): Environment | null {
 export function refreshEnvironment(probe: Probe = systemProbe): Environment {
   const env = detectEnvironment(probe);
   writeFileSync(environmentFile(), `${JSON.stringify(env, null, 2)}\n`, "utf-8");
+
   return env;
 }

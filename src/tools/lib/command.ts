@@ -81,6 +81,7 @@ export async function runCommand(
 function startsWithFallbackOption(command: Group, args: string[]): boolean {
   const first = args[0];
   if (!command.fallback || first === undefined || !first.startsWith("-")) return false;
+
   return !HELP_FLAGS.has(first) && !command.aliases?.[first];
 }
 
@@ -91,11 +92,13 @@ async function runGroup(command: Group, args: string[], path: string[]): Promise
   const name = first === undefined ? command.fallback : first;
   if (name === undefined || name === "help" || HELP_FLAGS.has(name)) {
     console.log(helpText(command, path));
+
     return 0;
   }
   const resolved = command.aliases?.[name] ?? name;
   const sub = command.commands[resolved];
   if (!sub) return usageFailure(`unknown command '${name}'`, command, path);
+
   return runCommand(sub, rest, [...path, resolved]);
 }
 
@@ -103,11 +106,14 @@ async function runLeaf(command: Leaf, args: string[], path: string[]): Promise<n
   const { head, passedThrough } = splitPassThrough(command, args);
   if (head.some((arg) => HELP_FLAGS.has(arg))) {
     console.log(helpText(command, path));
+
     return 0;
   }
+
   try {
     const { values, positionals } = parseWithTextShielded(head, command.options ?? {});
     checkPositionals(command.args, positionals);
+
     return exitCode(
       await command.run({ values, positionals, passedThrough, argv: head })
     );
@@ -115,6 +121,7 @@ async function runLeaf(command: Leaf, args: string[], path: string[]): Promise<n
     if (!isUsageError(error)) throw error;
     const message =
       error instanceof UsageError ? error.message : firstSentence(error.message);
+
     return usageFailure(message, command, path);
   }
 }
@@ -132,6 +139,7 @@ function parseWithTextShielded(args: string[], options: OptionSpecs) {
       : value;
   const unshieldValue = (value: unknown): unknown => {
     if (Array.isArray(value)) return value.map(unshieldValue);
+
     return typeof value === "string" ? unshield(value) : value;
   };
   const parsed = parseArgs({
@@ -143,6 +151,7 @@ function parseWithTextShielded(args: string[], options: OptionSpecs) {
   const values = Object.fromEntries(
     Object.entries(parsed.values).map(([key, value]) => [key, unshieldValue(value)])
   ) as typeof parsed.values;
+
   return { values, positionals: parsed.positionals.map(unshield) };
 }
 
@@ -162,6 +171,7 @@ function splitPassThrough(
     ? passThroughStart(args, argSlots(command.args))
     : args.length;
   const tail = args.slice(at);
+
   return {
     head: args.slice(0, at),
     passedThrough: tail[0] === "--" ? tail.slice(1) : tail,
@@ -170,22 +180,28 @@ function splitPassThrough(
 
 function passThroughStart(args: string[], slots: ArgSlot[]): number {
   let filled = 0;
+
   for (const [index, arg] of args.entries()) {
     if (arg === "--") return index;
+
     if (!arg.startsWith("-")) filled += 1;
+
     if (filled === slots.length) return index + 1;
   }
+
   return args.length;
 }
 
 function isUsageError(error: unknown): error is Error {
   if (error instanceof UsageError) return true;
   const code = (error as { code?: unknown } | null)?.code;
+
   return typeof code === "string" && code.startsWith("ERR_PARSE_ARGS_");
 }
 
 function usageFailure(message: string, command: Command, path: string[]): number {
   console.error(`error: ${message}\n\n${helpText(command, path)}`);
+
   return 1;
 }
 
@@ -210,6 +226,7 @@ function checkPositionals(synopsis: string | undefined, positionals: string[]): 
   const slots = argSlots(synopsis);
   const missing = slots.filter((slot) => slot.required)[positionals.length];
   if (missing) throw new UsageError(`missing ${missing.name}`);
+
   if (slots.some((slot) => slot.variadic)) return;
   const extra = positionals[slots.length];
   if (extra !== undefined) throw new UsageError(`unexpected argument '${extra}'`);
@@ -230,6 +247,7 @@ function leafHelp(command: Leaf, path: string[]): string {
   const rows = Object.entries(options).map(
     ([name, spec]) => [optionLabel(name, spec), spec.description] as const
   );
+
   return [
     `Usage: ${synopsis}`,
     "",
@@ -244,6 +262,7 @@ function leafHelp(command: Leaf, path: string[]): string {
 function optionLabel(name: string, spec: OptionSpec): string {
   const short = spec.short ? `-${spec.short}, ` : "";
   const value = spec.type === "string" ? ` ${spec.value ?? "<value>"}` : "";
+
   return `${short}--${name}${value}`;
 }
 
@@ -255,6 +274,7 @@ function groupHelp(command: Group, path: string[]): string {
   const fallbackNote = command.fallback
     ? [`With no command, runs '${command.fallback}'.`]
     : [];
+
   return [
     `Usage: ${[...path, placeholder].join(" ")}`,
     "",
@@ -274,10 +294,12 @@ function commandLabel(name: string, sub: Command, parent: Group): string {
     .filter(([, target]) => target === name)
     .map(([alias]) => alias);
   const names = [name, ...aliases].join(" | ");
+
   return sub.kind === "leaf" && sub.args ? `${names} ${sub.args}` : names;
 }
 
 function table(rows: readonly (readonly [string, string])[]): string[] {
   const width = Math.max(...rows.map(([label]) => label.length));
+
   return rows.map(([label, text]) => `  ${label.padEnd(width)}  ${text}`);
 }

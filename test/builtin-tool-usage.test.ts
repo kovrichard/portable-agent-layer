@@ -24,8 +24,10 @@ async function captured(
   call: () => Promise<number>
 ): Promise<{ code: number; text: string }> {
   const spy = spyOn(console, stream).mockImplementation(() => {});
+
   try {
     const code = await call();
+
     return { code, text: spy.mock.calls.map((c) => c.join(" ")).join("\n") };
   } finally {
     spy.mockRestore();

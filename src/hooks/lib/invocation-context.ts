@@ -36,6 +36,7 @@ function startedFile(): string {
 function startedConversations(): string[] {
   try {
     const file = startedFile();
+
     return existsSync(file) ? JSON.parse(readFileSync(file, "utf-8")) : [];
   } catch {
     return [];
@@ -48,6 +49,7 @@ function claimConversationStart(conversationId: string): boolean {
   if (started.includes(conversationId)) return false;
   const kept = [...started, conversationId].slice(-REMEMBERED_CONVERSATIONS);
   writeFileSync(startedFile(), JSON.stringify(kept), "utf-8");
+
   return true;
 }
 
@@ -65,12 +67,14 @@ function sessionStartReminder(): string {
   attempt("heartbeat", heartbeatOnStart);
   const reminder = buildSystemReminder({ agent: "claude" });
   if (reminder) logContextSnapshot(reminder);
+
   return reminder;
 }
 
 async function promptReminder(prompt: string, conversationId: string) {
   const context = await getPromptContext(prompt, conversationId);
   logPromptSnapshot(prompt, context);
+
   return context;
 }
 

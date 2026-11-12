@@ -103,6 +103,7 @@ const STOP_WORDS = new Set([
 /** Strip common English suffixes to normalize word forms. Applied twice to handle stacked suffixes. */
 function stemOnce(word: string): string {
   if (word.length <= 4) return word;
+
   return word
     .replace(/(?<=.{4})tion$/, "")
     .replace(/(?<=.{4})sion$/, "")
@@ -148,6 +149,7 @@ export function similarity(a: string, b: string): number {
   if (ka.size === 0 || kb.size === 0) return 0;
 
   let intersection = 0;
+
   for (const w of ka) {
     if (kb.has(w)) intersection++;
   }
@@ -166,6 +168,7 @@ export function containment(query: string, target: string): number {
   if (q.size === 0 || t.size === 0) return 0;
 
   let intersection = 0;
+
   for (const w of q) {
     if (t.has(w)) intersection++;
   }

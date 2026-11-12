@@ -41,6 +41,7 @@ const VALID_FILES = [
 function timestamp(): string {
   const now = new Date();
   const pad = (n: number) => n.toString().padStart(2, "0");
+
   return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
 }
 
@@ -69,6 +70,7 @@ const filePath = resolve(TELOS_DIR, file);
 
 // Backup
 mkdirSync(BACKUPS_DIR, { recursive: true });
+
 if (existsSync(filePath)) {
   const backupName = `${file.replace(".md", "")}-${timestamp()}.md`;
   copyFileSync(filePath, resolve(BACKUPS_DIR, backupName));

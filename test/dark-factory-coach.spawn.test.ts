@@ -39,6 +39,7 @@ const COACH_SCRIPT = join(PLUGIN_ROOT, "scripts/coach.mjs");
 function git(cwd: string, ...args: string[]): string {
   const result = spawnSync("git", args, { cwd, encoding: "utf8", env: env() });
   if (result.status !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr}`);
+
   return result.stdout.trim();
 }
 
@@ -93,6 +94,7 @@ function cli(args: string[], extraEnv: object = {}) {
     env: { ...env(), ...extraEnv } as Record<string, string>,
     encoding: "utf8",
   });
+
   return { status: run.status, stdout: run.stdout, stderr: run.stderr };
 }
 
@@ -109,10 +111,12 @@ describe("what the user changed after the factory (criterion 6)", () => {
     const head = git(paths.repo, "rev-parse", "HEAD");
     seedTask("t1", { pr: "https://github.com/o/r/pull/7" });
     appendEvent({ event: "pushed", task: "t1", head }, env());
+
     if (withLaterCommit) {
       commitFile(paths.repo, "fix.txt", "user fix\n", "fix: the user corrected it");
       git(paths.repo, "push", "-q", "origin", "factory/t1");
     }
+
     return head;
   }
 
@@ -153,6 +157,7 @@ describe("a task whose repo folder is gone", () => {
         "",
       ].join("\n")
     );
+
     return () => (existsSync(log) ? readFileSync(log, "utf8") : "");
   }
 
@@ -327,6 +332,7 @@ describe("coach.mjs commands (criteria 10, 12)", () => {
     seedRepoWithRemote();
     seedTask("t9", { pr: "https://github.com/o/r/pull/9" });
     writeFindings([finding({ status: "approved", taskId: "t9" })], env());
+
     for (const task of ["r1", "r2"]) {
       appendEvent({ event: "task_started", task }, env());
       appendEvent({ event: "run_finished", task, costUsd: 1 }, env());
@@ -346,6 +352,7 @@ describe("coach.mjs commands (criteria 10, 12)", () => {
       [finding({ status: "approved", taskId: "t9", metric: "costUsd" })],
       env()
     );
+
     for (const task of ["r1", "r2", "r3"]) {
       appendEvent({ event: "task_started", task }, env());
       appendEvent({ event: "run_finished", task, costUsd: 2 }, env());
@@ -366,6 +373,7 @@ describe("running the coach on a task (criteria 1, 4)", () => {
     seedRepoWithRemote();
     commitFile(paths.repo, "feature.txt", "work\n", "feat: work");
     seedTask("t1");
+
     for (const [role, sessionId] of [
       ["planner", "sess-a"],
       ["code-writer", "sess-b"],
@@ -392,6 +400,7 @@ describe("running the coach on a task (criteria 1, 4)", () => {
       .trim()
       .split("\n")
       .map((l) => JSON.parse(l));
+
     for (const part of [
       join(paths.home, "tasks", "t1", "spec.md"),
       join(paths.home, "tasks", "t1", "events.jsonl"),
@@ -444,6 +453,7 @@ describe("running the coach on a task (criteria 1, 4)", () => {
     );
     commitFile(paths.repo, "fix.txt", "user fix\n", "fix: the user corrected it");
     git(paths.repo, "push", "-q", "origin", "factory/t1");
+
     return git(paths.repo, "rev-parse", "HEAD");
   }
 

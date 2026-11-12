@@ -178,16 +178,19 @@ function judgment(
 
 function reactionAnswers(output: string): JudgeAnswers | null {
   const label = parseReactionLabel(output);
+
   return label ? { reaction: { choice: label.reaction } } : null;
 }
 
 function correctedAnswers(output: string): JudgeAnswers | null {
   const label = parseCorrectionCheck(output);
+
   return label ? { corrected: { noul: label.reaction === "corrected" } } : null;
 }
 
 function kindAnswers(output: string): JudgeAnswers | null {
   const kind = parseCorrectionKind(output);
+
   return kind ? { kind: { choice: kind.kind } } : null;
 }
 

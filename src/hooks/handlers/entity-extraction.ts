@@ -30,6 +30,7 @@ import { parseMessages } from "../lib/transcript";
 
 function sourceId(sessionId: string, lastId: string | undefined): string {
   const turn = lastId ? ` #${lastId.slice(0, 8)}` : "";
+
   return `chat ${new Date().toISOString().slice(0, 10)} ${sessionId.slice(0, 8)}${turn}`;
 }
 
@@ -44,6 +45,7 @@ export async function extractSessionEntities(
     seenCursor(sessionId)
   );
   if (lastId) markSeen(sessionId, lastId);
+
   if (count === 0) return;
 
   const index = loadNameIndex(loadKnownEntities());
@@ -78,6 +80,7 @@ export async function extractSessionEntities(
     "entity-extraction",
     `${written.people.length} people, ${written.companies.length} companies, ${plan.review.length} for review`
   );
+
   if (isOptedIn("entityResearch"))
     await researchNewEntities(newResearchTargets(plan.ingest, written), {
       principal: id.principal.name,
@@ -91,6 +94,7 @@ if (process.argv[2] === "--run") {
   const transcriptPath = process.argv[4];
   if (transcriptPath) {
     const { readFile, unlink } = await import("node:fs/promises");
+
     try {
       const transcript = await readFile(transcriptPath, "utf-8");
       await extractSessionEntities(transcript, sid === "" ? undefined : sid);

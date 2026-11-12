@@ -31,6 +31,7 @@ async function loadSlides(deckDir: string): Promise<{ name: string; body: string
   if (await fileExists(slidesDir)) {
     const files = (await readdir(slidesDir)).filter((f) => f.endsWith(".md")).sort();
     if (files.length === 0) throw new Error(`slides/ is empty at ${slidesDir}`);
+
     return Promise.all(
       files.map(async (f) => ({ name: f, body: await readText(join(slidesDir, f)) }))
     );
@@ -38,6 +39,7 @@ async function loadSlides(deckDir: string): Promise<{ name: string; body: string
   const legacy = join(deckDir, "content.md");
   if (await fileExists(legacy)) {
     const raw = await readText(legacy);
+
     return raw.split(/^---$/m).map((body, i) => ({ name: `slide-${i + 1}`, body }));
   }
   throw new Error(`no slides/ directory or content.md found in ${deckDir}`);
@@ -50,6 +52,7 @@ function buildSlideContext(
 ): SlideContext {
   const body = slide.body;
   const bodyNoNotes = stripNotes(body);
+
   return {
     name: slide.name,
     body,
@@ -73,10 +76,13 @@ async function lintDeck(deckDir: string): Promise<{
 
   // Slide-scope rules
   const reports: SlideReport[] = [];
+
   for (const ctx of slides) {
     const findings: Finding[] = [];
+
     for (const rule of RULES) {
       if (rule.scope !== "slide") continue;
+
       if (rule.appliesTo && !rule.appliesTo(ctx)) continue;
       findings.push(...(await rule.check(ctx)));
     }
@@ -85,6 +91,7 @@ async function lintDeck(deckDir: string): Promise<{
 
   // Deck-scope rules
   const deckFindings: Finding[] = [];
+
   for (const rule of RULES) {
     if (rule.scope !== "deck") continue;
     deckFindings.push(...(await rule.check(deckCtx)));
@@ -99,11 +106,14 @@ export async function lintSlide(
 ): Promise<SlideReport> {
   const ctx = buildSlideContext(slide, 0, deckDir);
   const findings: Finding[] = [];
+
   for (const rule of RULES) {
     if (rule.scope !== "slide") continue;
+
     if (rule.appliesTo && !rule.appliesTo(ctx)) continue;
     findings.push(...(await rule.check(ctx)));
   }
+
   return { name: ctx.name, layout: ctx.layout, findings };
 }
 
@@ -113,32 +123,39 @@ function pad(s: string, n: number): string {
 
 function printSlideFindings(reports: SlideReport[], deckBase: string, count: number) {
   let printed = false;
+
   for (const r of reports) {
     if (r.findings.length === 0) continue;
+
     if (!printed) {
       console.log(`Doctor — ${deckBase} (${count} slides)`);
       console.log("");
       printed = true;
     }
     console.log(`  ${pad(r.name, 32)} [${r.layout}]`);
+
     for (const f of r.findings) {
       const sev = f.severity === "E" ? "ERROR" : "WARN ";
       const symbol = f.severity === "E" ? "✗" : "⚠";
       console.log(`    ${symbol} ${sev}  ${f.rule.padEnd(28)} ${f.msg}`);
     }
   }
+
   return printed;
 }
 
 function printDeckFindings(deckFindings: Finding[], anyPrintedAlready: boolean): boolean {
   if (deckFindings.length === 0) return anyPrintedAlready;
+
   if (anyPrintedAlready) console.log("");
   console.log("  (deck-level)");
+
   for (const f of deckFindings) {
     const sev = f.severity === "E" ? "ERROR" : "WARN ";
     const symbol = f.severity === "E" ? "✗" : "⚠";
     console.log(`    ${symbol} ${sev}  ${f.rule.padEnd(28)} ${f.msg}`);
   }
+
   return true;
 }
 

@@ -21,12 +21,14 @@ function writeLines(path: string, entries: unknown[]): void {
 function repoNamed(name: string): string {
   const dir = join(tempDir(), name);
   mkdirSync(join(dir, ".git"), { recursive: true });
+
   return dir;
 }
 
 function folderWithoutRepo(): string {
   const dir = join(outsideRepoHome(import.meta.file), "plain");
   mkdirSync(dir, { recursive: true });
+
   return dir;
 }
 
@@ -134,6 +136,7 @@ describe("readOpencode", () => {
     });
     insert.finalize();
     db.close();
+
     return path;
   }
 

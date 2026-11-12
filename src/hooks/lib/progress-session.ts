@@ -24,5 +24,6 @@ export function progressSession(
 ): string | undefined {
   const variable = SHELL_SESSION_ENV[agent];
   if (!variable) return undefined;
+
   return hookSession || env[variable] || undefined;
 }

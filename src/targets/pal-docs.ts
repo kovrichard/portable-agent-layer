@@ -48,7 +48,9 @@ export function removePalDocs(): void {
   } catch {
     /* gone */
   }
+
   if (!existsSync(palDocsDir())) return;
+
   try {
     rmSync(palDocsDir(), { recursive: true });
     log.info("Removed ~/.pal/docs/");

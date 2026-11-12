@@ -62,30 +62,35 @@ function minuteOf(clock: string): number | null {
   if (!m) return null;
   const [hour, minute] = [Number(m[1]), Number(m[2])];
   if (hour > 24 || minute > 59 || (hour === 24 && minute > 0)) return null;
+
   return hour * 60 + minute;
 }
 
 function clockOrThrow(clock: string): number {
   const minute = minuteOf(clock);
   if (minute === null) throw new Error(`Not a time of day: "${clock}". Use HH:MM.`);
+
   return minute;
 }
 
 function weekdayIndex(name: string): number {
   const index = WEEKDAYS.indexOf(name.trim().toLowerCase().slice(0, 3));
   if (index < 0) throw new Error(`Not a weekday: "${name}". Use mon, tue, … sun.`);
+
   return index;
 }
 
 function weekdayRange(part: string): number[] {
   const [first, last = first] = part.split("-").map(weekdayIndex);
   const length = ((last - first + 7) % 7) + 1;
+
   return Array.from({ length }, (_, i) => (first + i) % 7);
 }
 
 /** `mon-fri`, `sat,sun` or `mon,wed,fri` as weekday numbers, Monday being 0. */
 export function parseDays(spec: string): number[] {
   const days = new Set(spec.split(",").flatMap(weekdayRange));
+
   return [...days].sort((a, b) => a - b);
 }
 
@@ -99,14 +104,17 @@ export function newSchedule(fields: {
 }): Schedule {
   const text = fields.text.trim();
   if (!text) throw new Error("Give the prompt text.");
+
   if (text.length > MAX_TEXT)
     throw new Error(
       `The prompt is ${text.length} characters; keep it under ${MAX_TEXT}.`
     );
   const from = clockOrThrow(fields.from);
   if (from >= DAY_MINUTES) throw new Error("A window cannot start at 24:00; use 00:00.");
+
   if (fields.to !== undefined && clockOrThrow(fields.to) === from)
     throw new Error("The window starts and ends at the same time.");
+
   return {
     id: newNodeId(),
     scope: fields.scope,
@@ -127,6 +135,7 @@ export function removeSchedule(id: string): boolean {
   const kept = schedules.filter((s) => s.id !== id);
   if (kept.length === schedules.length) return false;
   writeSchedules(kept);
+
   return true;
 }
 
@@ -145,12 +154,15 @@ function windowStart(schedule: Schedule, now: Date): Date | null {
   const minute = localMinuteOfDay(now);
   const to = endMinute(schedule);
   if (from < to) return minute >= from && minute < to ? now : null;
+
   if (minute >= from) return now;
+
   return minute < to ? new Date(now.getTime() - DAY_MS) : null;
 }
 
 function onItsDay(schedule: Schedule, start: Date): boolean {
   if (schedule.days === null) return true;
+
   return schedule.days.includes(
     WEEKDAYS.indexOf(localClock(start).weekday.toLowerCase())
   );
@@ -159,6 +171,7 @@ function onItsDay(schedule: Schedule, start: Date): boolean {
 /** The local day of the open window, or null when the schedule is not due now. */
 export function openWindowDay(schedule: Schedule, now: Date = new Date()): string | null {
   const start = windowStart(schedule, now);
+
   return start && onItsDay(schedule, start) ? localDay(start) : null;
 }
 
@@ -169,8 +182,10 @@ function alreadyFired(
   session: string | undefined
 ): boolean {
   if (schedule.repeat === "every-prompt" || fired?.day !== day) return false;
+
   if (schedule.repeat === "every-session" && session)
     return fired.sessions.includes(session);
+
   return true;
 }
 
@@ -197,9 +212,11 @@ export function dueSchedules(
     if (!day || alreadyFired(schedule, firedById[schedule.id], day, session))
       return false;
     markFired(firedById, schedule.id, day, session);
+
     return true;
   });
   if (due.length) writeFileSync(firedFile(), JSON.stringify(firedById));
+
   return due;
 }
 
@@ -224,6 +241,7 @@ export function scheduledPromptsReminder(
   const due = dueSchedules(cwd, session, now);
   if (!due.length) return null;
   const lines = due.map((s) => `- (${windowLabel(s)}, ${s.scope}) ${s.text}`);
+
   return [
     "<system-reminder>",
     "The user scheduled these for this time of day; act on them in this reply:",

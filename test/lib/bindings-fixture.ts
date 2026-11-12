@@ -7,6 +7,7 @@ let home: string;
 export function freshBindingsHome(file: string): string {
   home = freshTestDir(file);
   process.env.PAL_HOME = home;
+
   return home;
 }
 
@@ -24,5 +25,6 @@ export async function addProject(name: string, path: string) {
 export function checkout(name: string): string {
   const dir = resolve(home, "checkouts", name);
   mkdirSync(dir, { recursive: true });
+
   return dir;
 }

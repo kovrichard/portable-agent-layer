@@ -45,6 +45,7 @@ function runGit(
   extraEnv: Record<string, string> = {}
 ): Spawn {
   const env: Record<string, string> = {};
+
   for (const [key, value] of Object.entries(process.env)) {
     if (value !== undefined && !key.startsWith("GIT_")) env[key] = value;
   }
@@ -64,6 +65,7 @@ function runGit(
     stdout: "pipe",
     stderr: "pipe",
   });
+
   return {
     status: result.exitCode,
     stdout: result.stdout.toString(),
@@ -105,6 +107,7 @@ function treeOf(dir: string): string {
   runGit(dir, ["add", "-A"], env);
   const tree = runGit(dir, ["write-tree"], env).stdout.trim();
   removeOnceReleased(index);
+
   return tree;
 }
 
@@ -129,10 +132,12 @@ function realGit(world: World, setup: Setup) {
       if (setup.failWriteTreeFrom && writeTrees >= setup.failWriteTreeFrom)
         return { status: 128, stdout: "", stderr: "fatal" };
     }
+
     if (command !== "git") return { status: 0, stdout: "", stderr: "" };
     const env = Object.fromEntries(
       Object.entries(options.env ?? {}).filter(([key]) => key.startsWith("GIT_"))
     );
+
     return runGit(options.cwd, args, env);
   };
 }
@@ -145,6 +150,7 @@ function withActions(world: World, setup: Setup, started: { tree?: string }) {
     if (role === "code-writer" && before === 0) started.tree = treeOf(world.worktree);
     const outcome = fakeRole(id, role, args);
     setup.actions?.[`${role}#${before}`]?.(world.worktree);
+
     return outcome;
   }) as never;
 }
@@ -156,6 +162,7 @@ function scenario(setup: Setup = {}) {
     checks: setup.checks,
     ci: setup.ci,
   });
+
   if (setup.spec !== undefined)
     writeFileSync(join(taskDir(TASK, world.env), "spec.md"), setup.spec);
   initRepo(world.worktree, setup.committed ?? {});
@@ -163,6 +170,7 @@ function scenario(setup: Setup = {}) {
   const started: { tree?: string } = {};
   realGit(world, setup);
   withActions(world, setup, started);
+
   return { world, started };
 }
 
@@ -802,6 +810,7 @@ function ladderScenario(ladder: Ladder, setup: Setup) {
     },
   });
   holder.world = scene.world;
+
   return scene.world;
 }
 

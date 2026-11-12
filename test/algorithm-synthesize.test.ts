@@ -34,6 +34,7 @@ function addReflection(
     q2,
     q3: "",
   };
+
   if (opts.scope) entry.scope = opts.scope;
   appendFileSync(REFL_FILE, `${JSON.stringify(entry)}\n`);
 }

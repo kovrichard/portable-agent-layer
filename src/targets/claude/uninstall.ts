@@ -53,12 +53,14 @@ removePalDocs();
 
 const agentsMd = resolve(platform.opencodeDir(), "AGENTS.md");
 const claudeMd = resolve(CLAUDE_DIR, "CLAUDE.md");
+
 try {
   unlinkSync(claudeMd);
   log.success("Removed ~/.claude/CLAUDE.md");
 } catch {
   /* gone */
 }
+
 try {
   unlinkSync(agentsMd);
   log.success("Removed ~/.config/opencode/AGENTS.md");

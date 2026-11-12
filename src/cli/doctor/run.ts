@@ -22,6 +22,7 @@ const healthGroup = (finding: Finding): Group =>
 
 function doctorFindings(health: DoctorResult): Finding[] {
   const agents = installedAgents(health);
+
   return [
     ...inGroup("Agents", rosterFindings(agents)),
     ...inGroup("Environment", environmentFindings(health.rtk)),
@@ -37,6 +38,7 @@ export function doctorReport(
   started = performance.now()
 ): DoctorReport {
   const findings = doctorFindings(health);
+
   return {
     version: getInstalledVersion(),
     agents: installedAgents(health),
@@ -50,6 +52,7 @@ export function runDoctor(args: string[], health?: DoctorResult): number {
   if (process.env.PAL_SKIP_DOCTOR === "1") return 0;
   const started = performance.now();
   const report = doctorReport(health ?? detectAgents(), started);
+
   if (args.includes("--json")) {
     const { elapsedMs: _elapsed, ...json } = report;
     console.log(JSON.stringify(json, null, 2));
@@ -60,5 +63,6 @@ export function runDoctor(args: string[], health?: DoctorResult): number {
     });
     console.log(lines.join("\n"));
   }
+
   return doctorExitCode(report.findings);
 }

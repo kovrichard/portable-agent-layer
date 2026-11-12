@@ -38,6 +38,7 @@ let serial = 0;
 
 function entry(overrides: EntryOverrides = {}): Record<string, unknown> {
   serial++;
+
   return {
     id: `id-${serial}`,
     ts: "2026-09-04T12:00:00.000Z",
@@ -344,6 +345,7 @@ describe("what the record says became of a change", () => {
     const q = await query();
     const found = q.findEntry(id);
     if (!found) throw new Error(`no entry ${id}`);
+
     return q.chainVerdict(found);
   }
 

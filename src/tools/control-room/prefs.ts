@@ -35,6 +35,7 @@ const DAY_LIMIT = 365;
 
 function storedPrefs(): Partial<ControlRoomPrefs> {
   const stored = rawSettings().controlRoom;
+
   return (stored ?? {}) as Partial<ControlRoomPrefs>;
 }
 
@@ -49,6 +50,7 @@ function positiveDays(value: unknown, fallback: number): number {
 
 export function readPrefs(): ControlRoomPrefs {
   const stored = storedPrefs();
+
   return {
     quietAfterDays: positiveDays(stored.quietAfterDays, PREF_DEFAULTS.quietAfterDays),
     urgentWithinDays: positiveDays(
@@ -66,19 +68,24 @@ export function validatePrefs(update: PrefUpdate): string | null {
   for (const key of ["quietAfterDays", "urgentWithinDays"] as const) {
     const value = update[key];
     if (value === undefined) continue;
+
     if (positiveDays(value, -1) === -1) {
       return `${key} must be a whole number of days, 1..${DAY_LIMIT}`;
     }
   }
+
   if (update.rankGoals !== undefined && typeof update.rankGoals !== "boolean") {
     return "rankGoals must be true or false";
   }
+
   for (const [key, value] of Object.entries(update.attention ?? {})) {
     if (!(ATTENTION_SOURCES as readonly string[]).includes(key)) {
       return `unknown attention source: ${key}`;
     }
+
     if (typeof value !== "boolean") return `attention.${key} must be true or false`;
   }
+
   return null;
 }
 
@@ -92,5 +99,6 @@ export function writePrefs(update: PrefUpdate): ControlRoomPrefs {
   };
   writeSettings({ ...data, controlRoom: { ...next } });
   reload();
+
   return next;
 }

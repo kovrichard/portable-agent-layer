@@ -43,6 +43,7 @@ function loadApiKey(): string {
     );
     process.exit(1);
   }
+
   return key;
 }
 
@@ -110,6 +111,7 @@ async function perplexitySearch(query: string, maxTokens: number): Promise<void>
   // Extract citations
   if (data.citations && data.citations.length > 0) {
     console.log("\n---\n## Sources\n");
+
     for (let i = 0; i < data.citations.length; i++) {
       console.log(`- [${i + 1}] ${data.citations[i]}`);
     }

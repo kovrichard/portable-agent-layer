@@ -84,6 +84,7 @@ describe("pal cli cost", () => {
       { runtime: "claude" }
     );
     const log = spyOn(console, "log").mockImplementation(() => {});
+
     try {
       expect(await runCommand(costCommand, [], ["pal", "cli", "cost"])).toBe(0);
       const text = log.mock.calls.join("\n");

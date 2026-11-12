@@ -14,6 +14,7 @@ export async function freshLedgerHome(file: string): Promise<string> {
   delete process.env.PAL_SPAWNED_INFERENCE;
   delete process.env.PAL_AGENT;
   (await import("../../src/hooks/lib/settings")).reload();
+
   return home;
 }
 

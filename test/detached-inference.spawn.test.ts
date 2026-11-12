@@ -18,6 +18,7 @@ async function readWhenWritten(path: string, attempts = 50): Promise<string> {
     }
     await new Promise((r) => setTimeout(r, 100));
   }
+
   return "";
 }
 

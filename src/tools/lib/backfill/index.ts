@@ -19,12 +19,14 @@ function projectRepos(): string[] {
   const paths = readAllProjects().flatMap((project) =>
     project.path ? [project.path] : []
   );
+
   return [...new Set(paths)];
 }
 
 export function backfillEvents(since?: string): Record<string, number> {
   if (!eventLogEnabled()) return {};
   const known = loggedEventIds();
+
   return {
     git: backfillGit(projectRepos(), known, since),
     sessions: backfillSessions(since),

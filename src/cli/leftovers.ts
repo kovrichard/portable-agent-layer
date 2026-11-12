@@ -23,6 +23,7 @@ function isPathScopedFileToolRule(rule: string): boolean {
 function allowRulesIn(settingsPath: string): string[] {
   const settings = readJson<Json>(settingsPath, {});
   const allow = (settings.permissions as { allow?: unknown } | undefined)?.allow;
+
   return Array.isArray(allow)
     ? allow.filter((r): r is string => typeof r === "string")
     : [];
@@ -50,6 +51,7 @@ const palWrittenFactoryHome = () => resolve(palHome(), "dark-factory");
 function pinnedFactoryHome(): string | null {
   const env = (readJson<Json>(claudeSettings(), {}).env ?? {}) as Json;
   const value = env.DARK_FACTORY_HOME;
+
   return typeof value === "string" && resolve(value) === palWrittenFactoryHome()
     ? value
     : null;
@@ -64,6 +66,7 @@ const claudeFactoryHomeOverride: Leftover = {
     const settings = readJson<Json>(claudeSettings(), {});
     const env = settings.env as Json;
     delete env.DARK_FACTORY_HOME;
+
     if (Object.keys(env).length === 0) delete settings.env;
     writeJson(claudeSettings(), settings);
   },
@@ -72,6 +75,7 @@ const claudeFactoryHomeOverride: Leftover = {
 function startupFiles(): string[] {
   const settings = readJson<Json>(palSettings(), {});
   const files = (settings.loadAtStartup as { files?: unknown } | undefined)?.files;
+
   return Array.isArray(files)
     ? files.filter((f): f is string => typeof f === "string")
     : [];
@@ -126,6 +130,7 @@ const opencodeConfig = () => resolve(platform.opencodeDir(), "config.json");
 
 function opencodeInstructions(): string[] {
   const instructions = readJson<Json>(opencodeConfig(), {}).instructions;
+
   return Array.isArray(instructions)
     ? instructions.filter((i): i is string => typeof i === "string")
     : [];
@@ -150,6 +155,7 @@ function retiredContextSource(source: RetiredContextSource): Leftover {
       resolve(platform.antigravityPluginDir(), "rules", `pal-${source.slug}.md`),
     ].filter((path) => existsSync(path));
   const opencodeLoadsIt = () => opencodeInstructions().includes(source.digest());
+
   return {
     id: source.id,
     description: `Stop loading the ${source.name} into Cursor, Copilot, Antigravity and opencode — PAL no longer writes it`,
@@ -159,6 +165,7 @@ function retiredContextSource(source: RetiredContextSource): Leftover {
     ],
     remove() {
       for (const path of copies()) unlinkSync(path);
+
       if (!opencodeLoadsIt()) return;
       const config = readJson<Json>(opencodeConfig(), {});
       config.instructions = opencodeInstructions().filter((i) => i !== source.digest());
@@ -236,6 +243,7 @@ const debugLogPrev: Leftover = {
   find: () => (existsSync(`${debugLog()}.prev`) ? [`${debugLog()}.prev`] : []),
   remove() {
     const prev = `${debugLog()}.prev`;
+
     if (existsSync(`${debugLog()}.1`)) unlinkSync(prev);
     else renameSync(prev, `${debugLog()}.1`);
   },

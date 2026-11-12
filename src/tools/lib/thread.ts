@@ -35,6 +35,7 @@ function parseThreads(content: string): Thread[] {
 
 export function readThreads(file: string = threadsFile()): Thread[] {
   if (!existsSync(file)) return [];
+
   try {
     return parseThreads(readFileSync(file, "utf-8"));
   } catch {

@@ -58,6 +58,7 @@ describe("normalizeRemote", () => {
 describe("detectRemote", () => {
   test("returns null outside a git repository", () => {
     const dir = freshTestDir(import.meta.file);
+
     try {
       expect(detectRemote(dir)).toBeNull();
     } finally {
@@ -67,6 +68,7 @@ describe("detectRemote", () => {
 
   test("returns null for a git repo that has no origin", () => {
     const dir = freshTestDir(import.meta.file);
+
     try {
       spawnSync("git", ["init", "-q", dir]);
       expect(detectRemote(dir)).toBeNull();
@@ -77,6 +79,7 @@ describe("detectRemote", () => {
 
   test("reads and normalizes a configured origin", () => {
     const dir = freshTestDir(import.meta.file);
+
     try {
       spawnSync("git", ["init", "-q", dir]);
       spawnSync("git", ["-C", dir, "remote", "add", "origin", "git@github.com:a/b.git"]);

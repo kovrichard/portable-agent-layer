@@ -32,7 +32,9 @@ const TRUECOLOR_TERMS = /truecolor|24bit|direct|kitty|alacritty|ghostty|wezterm/
 function forcedColor(env: TerminalProbe["env"]): ColorDepth | undefined {
   const force = env.FORCE_COLOR;
   if (force === undefined) return undefined;
+
   if (force === "0" || force === "false") return "none";
+
   return force === "3" ? "truecolor" : "256";
 }
 
@@ -50,19 +52,24 @@ function colorDepth(probe: TerminalProbe, rich: boolean): ColorDepth {
   if (probe.env.NO_COLOR) return "none";
   const forced = forcedColor(probe.env);
   if (forced === "none") return "none";
+
   if (!rich && !forced) return "none";
+
   if (forced === "truecolor" || supportsTruecolor(probe)) return "truecolor";
+
   return "256";
 }
 
 /** The legacy Windows console draws box and block characters as question marks. */
 function supportsUnicode({ env, platform }: TerminalProbe): boolean {
   if (platform !== "win32") return true;
+
   return Boolean(env.WT_SESSION || env.TERM_PROGRAM || env.ConEmuTask || env.TERM);
 }
 
 export function detectTerminal(probe: TerminalProbe = currentProbe()): Terminal {
   const rich = probe.isTTY && probe.env.TERM !== "dumb";
+
   return {
     rich,
     color: colorDepth(probe, rich),

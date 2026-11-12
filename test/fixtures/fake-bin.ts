@@ -48,6 +48,7 @@ export function copilotReplying(
   const shutdown = runUsage
     ? `await Bun.write(process.env.COPILOT_HOME + "/session-state/${COPILOT_RUN_ID}/events.jsonl", JSON.stringify({ type: "session.shutdown", data: { modelMetrics: { m: { usage: ${JSON.stringify(runUsage)} } } } }) + "\\n");`
     : "";
+
   return [
     `const reply = ${replyExpr};`,
     `console.log(JSON.stringify({ type: "assistant.message", data: { content: String(reply), phase: "final_answer" } }));`,
@@ -81,6 +82,7 @@ export function writeFakeBin(dir: string, name: string, tsLogic: string): void {
       "",
     ].join("\r\n");
     writeFileSync(cmd, body, "utf-8");
+
     return;
   }
   const sh = resolve(dir, name);

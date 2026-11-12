@@ -11,9 +11,11 @@ import { log } from "./log";
 export function reportOnlyOnFailure(label: string, install: () => void): boolean {
   try {
     install();
+
     return true;
   } catch (e) {
     log.error(`Could not install ${label} — ${(e as Error).message}`);
+
     return false;
   }
 }

@@ -146,6 +146,7 @@ describe("runStopHandlers — last-response cache", () => {
 
   test("caps the cache at twenty sessions, evicting the oldest", async () => {
     const seeded: Record<string, { response: string; ts: string }> = {};
+
     for (let i = 0; i < 20; i++) {
       seeded[`old-${String(i).padStart(2, "0")}`] = {
         response: "r",
@@ -165,6 +166,7 @@ describe("runStopHandlers — last-response cache", () => {
 
   test("leaves the cache untouched at exactly twenty sessions", async () => {
     const seeded: Record<string, { response: string; ts: string }> = {};
+
     for (let i = 0; i < 19; i++) {
       seeded[`keep-${String(i).padStart(2, "0")}`] = {
         response: "r",

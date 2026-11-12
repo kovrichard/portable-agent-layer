@@ -7,6 +7,7 @@ let clock = 0;
 
 function turn(over: Partial<TurnEvent> = {}): TurnEvent {
   clock += 60;
+
   return {
     ts: new Date(Date.UTC(2026, 9, 1, 8, 0, clock)).toISOString(),
     session: "s1",
@@ -39,6 +40,7 @@ function answered(words: number, reaction: TurnEvent["reaction"], mood = "") {
 
 function readBeforeTheSplit(event: TurnEvent): TurnEvent {
   const { reactionRules: _rules, ...older } = event;
+
   return older;
 }
 

@@ -35,6 +35,7 @@ export function parseAgentDefinition(content: string): AgentDefinition {
       platforms[current] ??= [];
       continue;
     }
+
     if (current && line.startsWith(BLOCK_INDENT)) {
       platforms[current]?.push(line.slice(BLOCK_INDENT.length));
       continue;

@@ -27,6 +27,7 @@ let pdfOut = "";
 let margin = "25mm";
 let headerArg = "";
 let footerArg = "";
+
 for (let i = 1; i < args.length; i++) {
   if (args[i] === "--html") htmlOut = resolve(args[++i]);
   else if (args[i] === "--pdf") pdfOut = resolve(args[++i]);
@@ -44,6 +45,7 @@ pdfOut ||= resolve(dir, `${stem}.pdf`);
 // Playwright's injected classes: pageNumber, totalPages, date, title, url.
 async function resolveTemplate(value: string): Promise<string> {
   if (!value) return "";
+
   try {
     return await readFile(resolve(value), "utf8");
   } catch {
@@ -98,6 +100,7 @@ ${body}
 await writeFile(htmlOut, html, "utf8");
 
 const browser = await chromium.launch();
+
 try {
   const page = await browser.newPage();
   await page.goto(pathToFileURL(htmlOut).href, { waitUntil: "networkidle" });

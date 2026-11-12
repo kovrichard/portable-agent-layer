@@ -19,6 +19,7 @@ function setEventLog(enabled: boolean): void {
 function logLines(dir: string): Record<string, unknown>[] {
   const path = resolve(home, dir, "events");
   if (!existsSync(path)) return [];
+
   return readdirSync(path)
     .flatMap((f) => readFileSync(resolve(path, f), "utf-8").trim().split("\n"))
     .filter(Boolean)
@@ -31,6 +32,7 @@ function createdBeforeStreaming(name: string): string {
   setEventLog(false);
   const created = getOrCreate({ domain: "People", name }).frontmatter.created;
   setEventLog(true);
+
   return created;
 }
 

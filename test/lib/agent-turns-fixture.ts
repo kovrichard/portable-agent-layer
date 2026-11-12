@@ -31,6 +31,7 @@ export function loggedTurns(): TurnEvent[] {
   const dir = resolve(paths.home, "memory", "events");
   if (!existsSync(dir)) return [];
   const month = new Date().toISOString().slice(0, 7);
+
   return readFileSync(resolve(dir, `${month}.jsonl`), "utf-8")
     .trim()
     .split("\n")
@@ -41,24 +42,28 @@ export function loggedTurns(): TurnEvent[] {
 export function transcriptFile(name: string, lines: unknown[]): string {
   const path = resolve(paths.home, name);
   writeFileSync(path, lines.map((l) => JSON.stringify(l)).join("\n"));
+
   return path;
 }
 
 /** The next prompt carries the shape of the reply that answered the last one. */
 export function replyFiledFor(session: string): TurnEvent["reply"] {
   observeTurn("thanks, next one", session);
+
   return loggedTurns().at(-1)?.reply ?? null;
 }
 
 export function trackedReply(session: string): { words: number } | undefined {
   const file = resolve(paths.home, "memory", "state", "interaction-sessions.json");
   if (!existsSync(file)) return undefined;
+
   return JSON.parse(readFileSync(file, "utf-8"))[session]?.reply;
 }
 
 export async function asAgent<T>(agent: string, work: () => T | Promise<T>): Promise<T> {
   const savedAgent = process.env.PAL_AGENT;
   process.env.PAL_AGENT = agent;
+
   try {
     return await work();
   } finally {
@@ -73,8 +78,10 @@ export async function promptHookOutput(agent: string, payload: PromptPayload) {
   // biome-ignore lint/suspicious/noExplicitAny: test stub
   (process.stdout as any).write = (chunk: string) => {
     out += chunk;
+
     return true;
   };
+
   try {
     await asAgent(agent, () =>
       injectPromptContext(payload.prompt, hookSessionId(payload))
@@ -82,6 +89,7 @@ export async function promptHookOutput(agent: string, payload: PromptPayload) {
   } finally {
     process.stdout.write = write;
   }
+
   return out;
 }
 
@@ -123,13 +131,16 @@ export async function opencodePlugin(): Promise<any> {
   opencode.transcriptFetches = 0;
   const messages = async () => {
     opencode.transcriptFetches++;
+
     return { data: conversation };
   };
   const hooks = await PALPlugin({
     directory: paths.home,
     client: { session: { messages } },
   } as never);
+
   if (savedAgent === undefined) delete process.env.PAL_AGENT;
   else process.env.PAL_AGENT = savedAgent;
+
   return hooks;
 }

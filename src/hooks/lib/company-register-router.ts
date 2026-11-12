@@ -20,5 +20,6 @@ export async function lookupCompanyRegister(
   const register = registers.find((r) => r.recognizes(wanted));
   if (!register) return null;
   const company = await register.lookup(wanted, fetchImpl);
+
   return company && { ...company, country: register.country };
 }

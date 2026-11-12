@@ -67,25 +67,30 @@ export function collectSkillFiles(skillDir: string): string[] {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       if (entry.name === "node_modules" || entry.name.startsWith(".")) continue;
       const full = resolve(dir, entry.name);
+
       if (entry.isDirectory()) walk(full);
       else if (entry.isFile() && SCANNABLE_EXT.has(extname(entry.name))) out.push(full);
     }
   };
   walk(skillDir);
+
   return out;
 }
 
 /** Find machine-specific absolute paths across a skill's files. */
 export function findAbsolutePaths(skillDir: string): string[] {
   const hits: string[] = [];
+
   for (const file of collectSkillFiles(skillDir)) {
     const rel = relative(skillDir, file).replaceAll("\\", "/");
     const lines = readFileSync(file, "utf-8").split("\n");
+
     for (let i = 0; i < lines.length; i++) {
       const m = ABSOLUTE_PATH_RE.exec(lines[i]);
       if (m) hits.push(`${rel}:${i + 1} → ${m[0]}`);
     }
   }
+
   return hits;
 }
 
@@ -113,6 +118,7 @@ export function parseSkill(content: string): ParsedSkill {
     rawDescription.startsWith('"') &&
     rawDescription.endsWith('"');
   const description = descriptionQuoted ? rawDescription.slice(1, -1) : rawDescription;
+
   return {
     name,
     description,
@@ -152,6 +158,7 @@ export function quoteList(triggers: string[], separator: string): string {
  */
 export function leadTriggers(name: string): string[] {
   const spaced = name.replaceAll("-", " ");
+
   return spaced === name ? [name] : [name, spaced];
 }
 
@@ -172,6 +179,7 @@ export function lintSkill(skillDir: string): DoctorReport {
 
   if (!existsSync(skillDir)) {
     add("error", "structure", `No skill directory at ${skillDir}`);
+
     return { dir: skillDir, name: null, findings, errors: 1, warnings: 0 };
   }
 
@@ -181,6 +189,7 @@ export function lintSkill(skillDir: string): DoctorReport {
   const skillFile = readdirSync(skillDir).find((e) => e.toLowerCase() === "skill.md");
   if (!skillFile) {
     add("error", "structure", `No SKILL.md found in ${skillDir}`);
+
     return { dir: skillDir, name: null, findings, errors: 1, warnings: 0 };
   }
   skillFile === "SKILL.md"
@@ -204,6 +213,7 @@ export function lintSkill(skillDir: string): DoctorReport {
 
   const errors = findings.filter((f) => f.level === "error").length;
   const warnings = findings.filter((f) => f.level === "warn").length;
+
   return { dir: skillDir, name: skill.name, findings, errors, warnings };
 }
 
@@ -211,6 +221,7 @@ type AddFinding = (level: Level, check: string, message: string) => void;
 
 function checkProvenance(skill: ParsedSkill, add: AddFinding): void {
   if (!skill.shipped) return;
+
   if (skill.license) add("pass", "license", `licensed ${skill.license}`);
   else if (skill.derivedFrom)
     add("pass", "license", `unlicensed by design — derived from ${skill.derivedFrom}`);
@@ -377,6 +388,7 @@ function checkReferenceDepth(
   const isDeeperRef = (target: string) =>
     !/^https?:/.test(target) && resolve(skillDir, target) !== skillFilePath;
   let nested = false;
+
   for (const m of body.matchAll(linkRe)) {
     const target = m[1];
     if (!isDeeperRef(target)) continue;
@@ -395,6 +407,7 @@ function checkReferenceDepth(
       );
     }
   }
+
   if (!nested) add("pass", "references.depth", "references are one level deep");
 }
 
@@ -440,19 +453,23 @@ export function formatSummary(r: DoctorReport): string {
   if (r.errors > 0) {
     return `✗ ${name} ${r.errors} error(s): ${fired("error").join(", ")}`;
   }
+
   if (r.warnings > 0) {
     return `⚠ ${name} ${r.warnings} warning(s): ${fired("warn").join(", ")}`;
   }
+
   return `✓ ${name} clean`;
 }
 
 export function formatReport(r: DoctorReport): string {
   const icon = { pass: "✓", warn: "⚠", error: "✗" } as const;
   const lines = [`skill-doctor: ${r.name ?? "(unparsed)"}  —  ${r.dir}`];
+
   for (const f of r.findings) {
     lines.push(`  ${icon[f.level]} ${f.check}: ${f.message}`);
   }
   let verdict: string;
+
   if (r.errors > 0) {
     verdict = `FAIL — ${r.errors} error(s), ${r.warnings} warning(s)`;
   } else if (r.warnings > 0) {
@@ -461,6 +478,7 @@ export function formatReport(r: DoctorReport): string {
     verdict = "PASS — all checks clean";
   }
   lines.push(`  ${verdict}`);
+
   return lines.join("\n");
 }
 
@@ -474,5 +492,6 @@ export function resolveSkillDir(arg: string): string {
   if (existsSync(resolve(asPath, "SKILL.md"))) return asPath;
   const byName = resolve(palHome(), "skills", arg);
   if (existsSync(resolve(byName, "SKILL.md"))) return byName;
+
   return asPath;
 }

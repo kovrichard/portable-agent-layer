@@ -37,6 +37,7 @@ function session(
 function logLines(dir: string): Record<string, unknown>[] {
   const path = resolve(home, dir, "events");
   if (!existsSync(path)) return [];
+
   return readdirSync(path)
     .flatMap((f) => readFileSync(resolve(path, f), "utf-8").trim().split("\n"))
     .filter(Boolean)
@@ -73,6 +74,7 @@ describe("session records become session_end events", () => {
 
   test("an archived session resumed later is logged once, at its newest state", () => {
     writeSession(session("s1", { messageCount: 4 }));
+
     for (let i = 0; i < 50; i++) writeSession(session(`filler-${i}`));
     writeSession(session("s1", { ts: "2026-09-11T10:00:00.000Z", messageCount: 30 }));
 

@@ -48,6 +48,7 @@ function transcript(): string {
 
 function stored(session: string) {
   const nodes = [...readTree(scopeOf(process.cwd()), undefined, session).nodes.values()];
+
   return {
     history: readProjectHistory(process.cwd()).filter((e) => e.session === session),
     nodes,

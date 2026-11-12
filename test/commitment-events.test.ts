@@ -18,6 +18,7 @@ function commitments(): Record<string, unknown>[] {
     `${new Date().toISOString().slice(0, 7)}.jsonl`
   );
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .trim()
     .split("\n")
@@ -29,6 +30,7 @@ const afterOpening = () => commitments().filter((e) => e.outcome !== "opened");
 
 async function cli(...args: string[]): Promise<void> {
   const quiet = spyOn(console, "log").mockImplementation(() => {});
+
   try {
     await run(args);
   } finally {

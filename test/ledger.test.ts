@@ -78,6 +78,7 @@ describe("recordAction", () => {
       recordAction(APPLIED).id,
     ];
     expect(new Set(ids).size).toBe(3);
+
     for (const id of ids) expect(id.length).toBeGreaterThan(0);
   });
 
@@ -258,6 +259,7 @@ describe("rotation", () => {
   // to survive, forced rather than waited for.
   test("a second rotation in the same instant archives beside the first, not over it", async () => {
     setSystemTime(new Date("2026-05-04T10:00:00.000Z"));
+
     try {
       const { recordAction, ledgerPath } = await lib();
       const dir = resolve(HOME, "memory", "ledger");

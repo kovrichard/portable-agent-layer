@@ -8,6 +8,7 @@ export async function readText(path: string): Promise<string> {
 export async function dataUri(path: string): Promise<string> {
   const ext = extname(path).toLowerCase();
   let mime = "application/octet-stream";
+
   if (ext === ".svg") mime = "image/svg+xml";
   else if (ext === ".png") mime = "image/png";
   else if (ext === ".jpg" || ext === ".jpeg") mime = "image/jpeg";
@@ -17,10 +18,12 @@ export async function dataUri(path: string): Promise<string> {
     // Inline SVGs as URL-encoded text — smaller than base64 and renders crisply at any size.
     const svg = await readFile(path, "utf8");
     const enc = encodeURIComponent(svg).replaceAll("'", "%27").replaceAll('"', "%22");
+
     return `url("data:${mime};utf8,${enc}")`;
   }
 
   const buf = await readFile(path);
+
   return `url("data:${mime};base64,${buf.toString("base64")}")`;
 }
 

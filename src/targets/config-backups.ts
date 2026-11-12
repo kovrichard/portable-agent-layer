@@ -14,6 +14,7 @@ const KEPT_BACKUPS = 5;
 function backupsOf(path: string): string[] {
   const prefix = `${basename(path)}.bak.`;
   const stampOf = (name: string) => Number(name.slice(prefix.length));
+
   return readdirSync(dirname(path))
     .filter((name) => name.startsWith(prefix) && /^\d+$/.test(name.slice(prefix.length)))
     .sort((a, b) => stampOf(b) - stampOf(a))

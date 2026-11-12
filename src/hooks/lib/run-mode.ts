@@ -62,6 +62,7 @@ function runDir(): string {
 
 function runFile(scope: string): string {
   const key = createHash("sha1").update(scope).digest("hex").slice(0, 16);
+
   return resolve(runDir(), `${key}.json`);
 }
 
@@ -82,6 +83,7 @@ export function readRun(scope: string, now: Date = new Date()): Run | null {
   const file = runFile(scope);
   if (!existsSync(file)) return null;
   const run = parseRun(file);
+
   return run && !isForgotten(run, now) ? run : null;
 }
 
@@ -93,6 +95,7 @@ export function clearRun(scope: string): boolean {
   const file = runFile(scope);
   if (!existsSync(file)) return false;
   rmSync(file);
+
   return true;
 }
 
@@ -105,6 +108,7 @@ function parseDuration(text: string): number | null {
   if (!m) return null;
   const [, h = "0", min = "0", s = "0"] = m;
   const ms = (Number(h) * 3600 + Number(min) * 60 + Number(s)) * 1000;
+
   return ms > 0 ? ms : null;
 }
 
@@ -112,6 +116,7 @@ function parseDuration(text: string): number | null {
 export function estimateMinutesFrom(text: string): number {
   const ms = parseDuration(text);
   if (ms === null) throw new Error(`Not a duration: "${text}". Use 15m, 2h or 1h30m.`);
+
   return Math.max(1, Math.round(ms / MINUTE_MS));
 }
 
@@ -124,6 +129,7 @@ function nextLocalTime(text: string, now: Date): Date | null {
   const ahead =
     (target - localMinuteOfDay(now) + DAY_MINUTES) % DAY_MINUTES || DAY_MINUTES;
   const minuteStart = now.getTime() - (now.getTime() % MINUTE_MS);
+
   return new Date(minuteStart + ahead * MINUTE_MS);
 }
 
@@ -136,12 +142,15 @@ export function deadlineFrom(
     const ms = parseDuration(spec.for);
     if (ms === null)
       throw new Error(`Not a duration: "${spec.for}". Use 15m, 2h or 1h30m.`);
+
     return new Date(now.getTime() + ms);
   }
+
   if (spec.until !== undefined) {
     const at = nextLocalTime(spec.until, now) ?? new Date(spec.until);
     if (Number.isNaN(at.getTime()) || at <= now)
       throw new Error(`Not a future time: "${spec.until}". Use HH:MM or an ISO time.`);
+
     return at;
   }
   throw new Error("Give --for <duration> or --until <HH:MM>.");
@@ -194,6 +203,7 @@ function logLines(run: Run): string[] {
 
 function timeLine(run: Run, now: Date): string {
   const name = run.kind === "unattended" ? "Unattended" : "Time box";
+
   return isOver(run, now)
     ? `${name} ended at ${untilLabel(run)}.`
     : `${name} until ${untilLabel(run)} (${minutesLeft(run, now)} min left).`;
@@ -202,13 +212,22 @@ function timeLine(run: Run, now: Date): string {
 /** The whole run as text: what `status` prints and what compaction recovery injects. */
 export function describeRun(run: Run, now: Date = new Date()): string {
   const lines = [timeLine(run, now)];
+
   if (run.task) lines.push(`Task: ${run.task}`);
+
   if (run.estimateMinutes) lines.push(`Estimated: ${run.estimateMinutes} min`);
+
   if (run.report) lines.push(`Report: ${run.report}`);
+
   if (run.rules.length) lines.push("Rules:", ...numbered(run.rules));
+
   if (run.tasks.length) lines.push("Tasks, in order:", ...numbered(run.tasks));
+
   if (run.fallbacks.length) lines.push("Fallbacks:", ...numbered(run.fallbacks));
+
   if (run.log.length) lines.push("Log:", ...logLines(run));
+
   if (run.done) lines.push("Marked done.");
+
   return lines.join("\n");
 }

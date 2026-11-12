@@ -82,6 +82,7 @@ function firstStringArg(
     const value = args[key];
     if (typeof value === "string" && value.length > 0) return value;
   }
+
   return undefined;
 }
 
@@ -108,6 +109,7 @@ function runModeGateRefusal(
 ): GateRefusal | null {
   const message = runModeRefusal(call, cwd);
   if (!message) return null;
+
   return {
     tool: call.tool,
     target: call.filePath ?? cwd,
@@ -123,6 +125,7 @@ function shellExecRefusal(input: ShellExecInput, cwd: string): GateRefusal | nul
   if (runRefusal) return runRefusal;
   const reason = checkBashCommand(input.command);
   if (!reason) return null;
+
   return {
     tool: "shell",
     target: cwd,
@@ -143,7 +146,9 @@ function shellCommandRefusal(
   // to the literal command, is what actually tells the two apart.
   const verdict = reason ? `BLOCK(${reason})` : "ALLOW";
   logDebug("SecurityValidator", `bashVerdict=${verdict} command=${command}`);
+
   if (!reason) return null;
+
   return {
     tool: toolUse.toolName,
     target: cwd,

@@ -36,6 +36,7 @@ export async function promptAttribution(): Promise<boolean> {
   });
   if (clack.isCancel(enabled)) {
     clack.log.warn("Skipped — will ask again next time");
+
     return true;
   }
 
@@ -45,5 +46,6 @@ export async function promptAttribution(): Promise<boolean> {
   clack.log.success(
     `${state} · change later: edit pal-settings.json, then run 'pal install'`
   );
+
   return true;
 }

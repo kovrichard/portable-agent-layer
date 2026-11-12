@@ -43,6 +43,7 @@ export function ensureSymlink(
   type: "dir" | "junction"
 ): void {
   assertInsideTestSandbox(link);
+
   try {
     const st = lstatSync(link);
     if (st.isSymbolicLink()) return; // already a symlink, leave it

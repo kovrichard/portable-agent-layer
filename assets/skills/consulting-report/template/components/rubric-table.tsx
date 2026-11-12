@@ -15,6 +15,7 @@ function colorForLevel(index: number, total: number, palette: string[]): string 
   if (total <= 1) return palette.at(-1) ?? palette[0];
   const t = index / (total - 1); // 0..1
   const pos = t * (palette.length - 1);
+
   return palette[Math.round(pos)];
 }
 
@@ -28,6 +29,7 @@ function lighten(hex: string, amount: number): string {
   const b = n & 255;
   const mix = (c: number) => Math.round(c + (255 - c) * amount);
   const toHex = (c: number) => c.toString(16).padStart(2, "0");
+
   return `#${toHex(mix(r))}${toHex(mix(g))}${toHex(mix(b))}`;
 }
 
@@ -72,6 +74,7 @@ export function RubricTable({ dimension, palette = DEFAULT_PALETTE }: RubricTabl
                   borderRight: `2px dashed ${color}`,
                 }
               : { backgroundColor: rowBg };
+
             return (
               <tr key={level.score}>
                 <td

@@ -103,6 +103,7 @@ function Quadrant({
 function Fortnight() {
   const view = useLoaded<SummaryView>(`/api/summary?days=${FORTNIGHT_DAYS}`);
   const s = view.state === "ready" ? view.data : null;
+
   return (
     <Panel title={`Last ${FORTNIGHT_DAYS} days`}>
       <dl className="m-0 grid grid-cols-3 gap-2">
@@ -133,6 +134,7 @@ function DueBadges() {
   if (signal.state !== "ready") return <Pending value={signal} />;
   const due = Object.entries(signal.data.due).filter(([, b]) => b.state === "due");
   if (due.length === 0) return <Empty>Nothing is due.</Empty>;
+
   return (
     <div className="flex flex-col gap-2">
       {due.map(([name, badge]) => (
@@ -340,6 +342,7 @@ function Heading({ agenda, matrix }: { agenda: AgendaView; matrix: Matrix }) {
   const written = agenda.generatedAt
     ? `agenda written ${agenda.ageHours ?? 0}h ago at session stop`
     : "no agenda written yet";
+
   return (
     <div className="mb-5 flex flex-wrap items-baseline justify-between gap-4">
       <div className="flex flex-wrap items-baseline gap-4">
@@ -375,6 +378,7 @@ export function Today({ layout }: { layout: Layout }) {
   const waiting: Loaded<unknown>[] = [matrix, agenda, work];
   const notReady = waiting.find((v) => v.state !== "ready");
   if (notReady || matrix.state !== "ready") return <Pending value={notReady ?? matrix} />;
+
   if (agenda.state !== "ready" || work.state !== "ready") return null;
 
   const shared = {
@@ -383,6 +387,7 @@ export function Today({ layout }: { layout: Layout }) {
     moves: agenda.data.moves,
     onSaved: reload,
   };
+
   return (
     <section>
       <Heading agenda={agenda.data} matrix={matrix.data} />

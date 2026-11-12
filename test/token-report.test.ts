@@ -40,14 +40,17 @@ const TS = "2026-09-06T12:00:00.000Z";
 function bucketOf(model: string, scale: number): Bucket {
   const bucket = emptyBucket();
   addToBucket(bucket, model, tokens(scale, scale * 2, scale, scale, scale), TS);
+
   return bucket;
 }
 
 function timeBucketsOf(model: string, scale: number): TimeBuckets {
   const buckets = emptyTimeBuckets();
+
   for (const window of [buckets.today, buckets.week, buckets.month, buckets.total]) {
     addToBucket(window, model, tokens(scale, scale * 2), TS);
   }
+
   return buckets;
 }
 
@@ -291,6 +294,7 @@ describe("usageLines", () => {
 
   test("names the agents the grand total cannot price, and leaves them out of it", () => {
     const unpriced = emptyTimeBuckets();
+
     for (const window of Object.values(unpriced)) {
       Object.assign(window, { calls: 3, unpriced: 3, input: 1_000_000 });
     }

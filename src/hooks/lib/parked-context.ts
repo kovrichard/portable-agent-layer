@@ -28,6 +28,7 @@ function parkedPath(): string {
 function readParked(): Record<string, Parked> {
   const path = parkedPath();
   if (!existsSync(path)) return {};
+
   try {
     return JSON.parse(readFileSync(path, "utf-8"));
   } catch {
@@ -58,6 +59,7 @@ function takePromptContext(session: string, now: Date): string | null {
   if (!entry) return null;
   delete parked[session];
   writeFresh(parked, now);
+
   return isFresh(entry, now) ? entry.context : null;
 }
 
@@ -71,5 +73,6 @@ export function transformedPromptResponse(
   if (!session || !facing) return null;
   const context = takePromptContext(session, now);
   if (!context) return null;
+
   return JSON.stringify({ modifiedTransformedPrompt: `${facing}\n\n${context}` });
 }

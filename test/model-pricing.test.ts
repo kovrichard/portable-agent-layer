@@ -120,6 +120,7 @@ describe("model pricing table", () => {
   test("every entry prices all five token categories above zero, except jev-1.14.0's free output", () => {
     for (const [model, p] of Object.entries(MODEL_PRICING)) {
       expect(Object.keys(p).sort()).toEqual(Object.keys(OPUS_5_RATES).sort());
+
       for (const [category, rate] of Object.entries(p)) {
         if (model === "jev-1.14.0" && category === "output") {
           expect(rate).toBe(0);

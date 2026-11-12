@@ -59,7 +59,9 @@ function installUserCursorHooks(): void {
 
 function hostEnv(host: Record<string, string>): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env, PAL_CURSOR_DIR: cursorDir, ...host };
+
   for (const key of HOST_ENV_KEYS) if (!(key in host)) delete env[key];
+
   return env;
 }
 
@@ -72,6 +74,7 @@ async function runHook(agentFlag: string, host: Record<string, string>): Promise
   });
   const out = await new Response(proc.stdout).text();
   await proc.exited;
+
   return out.trim();
 }
 
@@ -83,6 +86,7 @@ const savedEnv = Object.fromEntries(TOUCHED_ENV_KEYS.map((k) => [k, process.env[
 // Windows' case-insensitive Path/PATH, which breaks every later spawn.
 beforeEach(() => {
   process.argv = savedArgv;
+
   for (const [key, value] of Object.entries(savedEnv)) {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
@@ -91,6 +95,7 @@ beforeEach(() => {
 
 function inHost(agentFlag: string, host: Record<string, string>): void {
   process.argv = ["bun", "hook.ts", `--agent=${agentFlag}`];
+
   for (const key of HOST_ENV_KEYS) delete process.env[key];
   Object.assign(process.env, { PAL_CURSOR_DIR: cursorDir, ...host });
 }

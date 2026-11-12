@@ -43,11 +43,13 @@ function boundedState(state: JudgeState): JudgeState {
     if (typeof message === "string")
       return { ...state, message: message.slice(0, MESSAGE_MAX) };
   }
+
   return state;
 }
 
 function judgeMode(caller: string): JudgeMode {
   const mode = systemOneSettings()?.callers?.[caller];
+
   return mode === "shadow" || mode === "live" ? mode : "off";
 }
 
@@ -71,6 +73,7 @@ function resolveSystemOne(): SystemOneSetup {
   if (typeof provider !== "string" || !provider) {
     return { failure: "no-provider", provider: null, model: null };
   }
+
   if (!Object.hasOwn(JUDGE_ADAPTERS, provider)) {
     return { failure: "unknown-provider", provider, model: null };
   }
@@ -79,12 +82,14 @@ function resolveSystemOne(): SystemOneSetup {
   const model =
     typeof configured === "string" && configured ? configured : adapter.defaultModel;
   let apiKey = "";
+
   if (adapter.keyNames.length > 0) {
     const env = withPalEnv();
     const found = adapter.keyNames.map((name) => env[name]).find(Boolean);
     if (!found) return { failure: "no-key", provider, model };
     apiKey = found;
   }
+
   return { adapter, provider, model, apiKey };
 }
 
@@ -100,6 +105,7 @@ async function withDeadline<T>(
       reject(new SystemOneError("timeout"));
     }, ms);
   });
+
   try {
     return await Promise.race([work(controller.signal), expired]);
   } finally {
@@ -134,6 +140,7 @@ async function askSystemOne(
   }
   const { adapter, provider, model, apiKey } = setup;
   const started = performance.now();
+
   try {
     const reply = await withDeadline(
       (signal) =>
@@ -150,9 +157,11 @@ async function askSystemOne(
     );
     const inputTokens = reply.inputTokens ?? 0;
     const latencyMs = Math.round(performance.now() - started);
+
     if (answersProblem(request.questions, reply.answers) !== null) {
       return { provider, model, inputTokens, latencyMs, failure: "bad-answer" };
     }
+
     return {
       provider,
       model,
@@ -163,6 +172,7 @@ async function askSystemOne(
     };
   } catch (err) {
     const failure = err instanceof SystemOneError ? err.failure : "http";
+
     return {
       provider,
       model,
@@ -183,20 +193,25 @@ async function runFallback(
   infer: typeof inference
 ): Promise<FallbackOutcome> {
   let result: Awaited<ReturnType<typeof inference>>;
+
   try {
     result = await infer(fallback.request);
   } catch (err) {
     logError("judge:fallback", err);
+
     return {};
   }
+
   if (!result.success || !result.output) return {};
   const output = result.output;
   let answers: JudgeAnswers | null;
+
   try {
     answers = fallback.parse(output);
   } catch {
     answers = null;
   }
+
   return { output, answers: answers ?? undefined };
 }
 
@@ -222,6 +237,7 @@ export async function judge(
 
   let one: SystemOneOutcome = NOT_RUN;
   let fb: FallbackOutcome | undefined;
+
   if (mode === "off") {
     fb = await runFallback(fallback, infer);
   } else if (mode === "shadow") {
@@ -263,5 +279,6 @@ export async function judge(
     },
     request.sessionId
   );
+
   return result;
 }

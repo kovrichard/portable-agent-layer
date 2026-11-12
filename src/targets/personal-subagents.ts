@@ -23,6 +23,7 @@ function personalSubagentTargets(): { agent: AgentName; dir: string }[] {
 /** List the user-authored subagents in ~/.pal/agents/. */
 export function listPersonalSubagents(): string[] {
   if (!existsSync(palAgentsStore())) return [];
+
   return readdirSync(palAgentsStore())
     .filter((f) => f.endsWith(".md"))
     .map((f) => f.replace(/\.md$/, ""))
@@ -41,6 +42,7 @@ export function installPersonalSubagent(name: string): string[] {
   if (!existsSync(src)) {
     throw new Error(`No subagent found at ${src}`);
   }
+
   if (shippedAgentNames().has(name)) {
     throw new Error(
       `'${name}' is a shipped PAL subagent — choose another name (a reinstall would overwrite it).`
@@ -54,7 +56,9 @@ export function installPersonalSubagent(name: string): string[] {
       file: resolve(dir, agentFileName(name, agent)),
       text: renderForPersonalSubagent(content, agent),
     }));
+
   for (const { file, text } of renders) writeFileSync(file, text, "utf-8");
+
   return renders.map(({ agent }) => agent);
 }
 

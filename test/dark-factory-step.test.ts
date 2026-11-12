@@ -38,12 +38,14 @@ function fakeGit(args: string[]) {
   const stdout = key === "ls-tree" ? git[`ls-tree ${args.at(-1)}`] : git[key];
   if (stdout === null || stdout === undefined)
     return { status: 1, stdout: "", stderr: "fatal" };
+
   return { status: 0, stdout: `${stdout}\n`, stderr: "" };
 }
 
 const effects = () => ({
   runCheck: (command: string) => {
     checkRuns.push(command);
+
     return check;
   },
   spawnTool: (command: string, args: string[]) =>
@@ -357,6 +359,7 @@ describe("every command", () => {
       { id: TASK, base: "canary", worktree: missing, config: { gate: GATE } },
       env
     );
+
     for (const command of ["baseline", "prove-red", "snapshot", "test-edits"]) {
       const { exitCode, result } = runStep(command, TASK, {
         env,

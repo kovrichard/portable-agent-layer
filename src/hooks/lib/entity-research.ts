@@ -57,20 +57,24 @@ export function newResearchTargets(
   const newPeople = created(written.people);
   const companies = (input.companies ?? []).flatMap((c, i) => {
     const slug = written.companies[i]?.slug ?? "";
+
     return newCompanies.has(slug) ? [target("company", c.name, slug, "", c.context)] : [];
   });
   const people = (input.people ?? []).flatMap((p, i) => {
     const slug = written.people[i]?.slug ?? "";
+
     return newPeople.has(slug) && p.company
       ? [target("person", p.name, slug, p.company, p.context)]
       : [];
   });
+
   return [...companies, ...people].slice(0, MAX_TARGETS);
 }
 
 export function researchSchema() {
   const text = { type: "string" as const };
   const list = (items: Record<string, unknown>) => ({ type: "array" as const, items });
+
   return closedObject({
     match: { type: "string" as const, enum: ["sure", "unsure", "none"] },
     summary: text,
@@ -171,6 +175,7 @@ function isWebUrl(url: string): boolean {
 /** Drops any link that is not a plain http(s) URL, so the store never holds a guess dressed as one. */
 function withWebUrlsOnly(p: ResearchProfile): ResearchProfile {
   const url = (u: string) => (isWebUrl(u) ? u : "");
+
   return {
     ...p,
     website: url(p.website),
@@ -191,10 +196,12 @@ async function registryEntry(
   deps: ResearchDeps
 ): Promise<RegisterEntry | null> {
   if (target.kind !== "company" || !deps.registry) return null;
+
   try {
     return await deps.registry(target.name);
   } catch (err) {
     logError(`entity-research:registry:${target.name}`, err);
+
     return null;
   }
 }
@@ -202,6 +209,7 @@ async function registryEntry(
 function registryOnlyProfile(entry: RegisterEntry): ResearchProfile {
   const founded = entry.founded ? `, founded ${entry.founded}` : "";
   const what = entry.activity || `company registered in ${entry.country}`;
+
   return {
     match: "sure",
     summary: `${entry.name}: ${what}. Seat: ${entry.seat}${founded}.`,
@@ -237,6 +245,7 @@ function withRegistry(
 ): ResearchProfile {
   const base =
     profile?.match === "sure" ? withWebUrlsOnly(profile) : registryOnlyProfile(entry);
+
   return {
     ...base,
     registry: registryOf(entry),
@@ -263,12 +272,16 @@ export async function researchEntity(
     web: true,
   });
   const profile = result.success ? parseProfile(result.output) : null;
+
   if (registry) return { found: true, profile: withRegistry(profile, registry) };
+
   if (!profile) return { found: false, reason: result.error ?? "no usable reply" };
+
   if (profile.match !== "sure")
     return { found: false, reason: `match: ${profile.match}. ${profile.summary}`.trim() };
   const checked = withWebUrlsOnly(profile);
   if (checked.sources.length === 0) return { found: false, reason: "no sources given" };
+
   return { found: true, profile: checked };
 }
 
@@ -304,9 +317,11 @@ async function researchOrLog(
     const outcome = await researchEntity(target, deps);
     if (outcome.found) return [researchItem(target, outcome.profile)];
     logDebug("entity-research", `${target.slug}: ${outcome.reason}`);
+
     return [];
   } catch (err) {
     logError(`entity-research:${target.slug}`, err);
+
     return [];
   }
 }
@@ -331,6 +346,7 @@ function registryLines(r: ResearchProfile["registry"]): string[] {
     ["Managing directors", r.managers.join(", ")],
     ["Registry entry", r.url],
   ];
+
   return fields.filter(([, v]) => v).map(([k, v]) => `- ${k}: ${v}`);
 }
 
@@ -345,6 +361,7 @@ export function renderProfile(p: ResearchProfile): string {
     p.linkedin && `- LinkedIn: ${p.linkedin}`,
     ...p.socials.map((s) => `- ${s.platform}: ${s.url}`),
   ].filter((l): l is string => Boolean(l));
+
   return [
     p.summary,
     ...section("Links", links),
@@ -373,6 +390,7 @@ export function profileIngest(item: ReviewItem, name: string): IngestInput {
   const p = item.profile as ResearchProfile;
   const slug = item.entity.existing || null;
   const context = renderProfile(p);
+
   if (item.entity.kind === "company")
     return { companies: [{ name, slug, domain: hostname(p.website), context }] };
   const social = Object.fromEntries(
@@ -382,6 +400,7 @@ export function profileIngest(item: ReviewItem, name: string): IngestInput {
       ...p.socials.map((s) => [socialKey(s.platform), s.url]),
     ].filter(([, url]) => url)
   );
+
   return {
     people: [{ name, slug, title: p.role || null, social, context }],
   };

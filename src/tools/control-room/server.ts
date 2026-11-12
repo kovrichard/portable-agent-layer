@@ -75,10 +75,12 @@ const PASSTHROUGH = ["project", "runtime", "machine", "actor", "tool"] as const;
  */
 function filterFromQuery(params: URLSearchParams): LedgerFilter | string {
   const filter: LedgerFilter = {};
+
   for (const key of PASSTHROUGH) {
     const value = params.get(key);
     if (value) filter[key] = value;
   }
+
   for (const key of ["since", "until"] as const) {
     const spec = params.get(key);
     if (!spec) continue;
@@ -98,6 +100,7 @@ function filterFromQuery(params: URLSearchParams): LedgerFilter | string {
     if (!AUTHORITIES.includes(authority)) return `Unrecognised authority: ${authority}`;
     filter.authority = authority;
   }
+
   return filter;
 }
 
@@ -105,12 +108,14 @@ function projects(): Response {
   const slugs = readAllProjects()
     .map((p) => p.name)
     .sort((a, b) => a.localeCompare(b));
+
   return json(slugs.map((slug) => ({ slug })));
 }
 
 function oneProject(slug: string | null): Response {
   if (!slug) return json({ error: "slug is required" }, 400);
   const detail = projectDetail(slug);
+
   return detail ? json(detail) : json({ error: `no such project: ${slug}` }, 404);
 }
 
@@ -122,12 +127,14 @@ function summaryFor(spec: string | null): Response {
   if (!Number.isInteger(days) || days < 1 || days > SUMMARY_DAYS_MAX) {
     return json({ error: `days must be a whole number of 1..${SUMMARY_DAYS_MAX}` }, 400);
   }
+
   return json(summary(days));
 }
 
 function withFilter(url: URL, view: (filter: LedgerFilter) => unknown): Response {
   const filter = filterFromQuery(url.searchParams);
   if (typeof filter === "string") return json({ error: filter }, 400);
+
   return json(view(filter));
 }
 
@@ -139,6 +146,7 @@ function status(port: number, startedAt: string): Response {
     ledgerFiles: ledgerFiles().length,
     machine: loadMachine().label,
   };
+
   return json(body);
 }
 
@@ -149,6 +157,7 @@ function status(port: number, startedAt: string): Response {
  */
 async function overrideServes(request: Request): Promise<Response> {
   let body: unknown;
+
   try {
     body = await request.json();
   } catch {
@@ -158,6 +167,7 @@ async function overrideServes(request: Request): Promise<Response> {
   if (typeof project !== "string" || !project) {
     return json({ error: "project is required" }, 400);
   }
+
   if (!isServesKind(serves)) {
     return json({ error: "serves must be goal, revenue or fun" }, 400);
   }
@@ -169,6 +179,7 @@ async function overrideServes(request: Request): Promise<Response> {
     by: "user",
   });
   if (outcome === "missing") return json({ error: `no such project: ${project}` }, 404);
+
   return json({ project, serves, by: "user" });
 }
 
@@ -194,12 +205,15 @@ async function iscWrite(request: Request): Promise<Response> {
   if (typeof project !== "string" || !project) {
     return json({ error: "project is required" }, 400);
   }
+
   if (typeof id !== "number" || !Number.isInteger(id) || id < 1) {
     return json({ error: "id must be a positive integer" }, 400);
   }
+
   if (status !== "open" && status !== "done") {
     return json({ error: "status must be open or done" }, 400);
   }
+
   return answer(setIscStatus(project, id, status === "done"), { project, id, status });
 }
 
@@ -210,12 +224,14 @@ async function placementWrite(request: Request): Promise<Response> {
   if (typeof project !== "string" || !project) {
     return json({ error: "project is required" }, 400);
   }
+
   if (quadrant !== null && !isQuadrant(quadrant)) {
     return json(
       { error: `quadrant must be null or one of ${QUADRANTS.join(", ")}` },
       400
     );
   }
+
   return answer(setPlacement(project, quadrant), { project, quadrant });
 }
 
@@ -223,13 +239,16 @@ async function settingsWrite(request: Request): Promise<Response> {
   const body = await readBody(request);
   if (!body) return json({ error: "expected a JSON body" }, 400);
   const update: Partial<InstallSettings> = {};
+
   for (const key of ["actor", "timezone"] as const) {
     const value = body[key];
     if (value === undefined) continue;
+
     if (typeof value !== "string") return json({ error: `${key} must be a string` }, 400);
     update[key] = value;
   }
   const outcome = writeInstallSettings(update);
+
   return outcome.ok ? json(readInstallSettings()) : answer(outcome, {});
 }
 
@@ -240,9 +259,11 @@ async function snoozeWrite(request: Request): Promise<Response> {
   if (typeof project !== "string" || !project) {
     return json({ error: "project is required" }, 400);
   }
+
   if (typeof id !== "number" || !Number.isInteger(id) || id < 1) {
     return json({ error: "id must be a positive integer" }, 400);
   }
+
   if (
     typeof days !== "number" ||
     !Number.isInteger(days) ||
@@ -251,6 +272,7 @@ async function snoozeWrite(request: Request): Promise<Response> {
   ) {
     return json({ error: `days must be a whole number of 0..${MAX_SNOOZE_DAYS}` }, 400);
   }
+
   return json({ project, id, until: setSnooze(project, id, days) });
 }
 
@@ -261,6 +283,7 @@ async function readWrite(request: Request): Promise<Response> {
   if (!Array.isArray(ids) || ids.some((id) => typeof id !== "string")) {
     return json({ error: "ids must be an array of strings, or all must be true" }, 400);
   }
+
   return json({ marked: markRead(ids as string[]) });
 }
 
@@ -272,6 +295,7 @@ async function autoUpdateWrite(request: Request): Promise<Response> {
     return json({ error: "enabled must be true or false" }, 400);
   }
   const outcome = setAutoUpdate(enabled);
+
   return outcome.ok ? json(autoUpdateStatus()) : answer(outcome, {});
 }
 
@@ -281,6 +305,7 @@ async function autoUpdateWrite(request: Request): Promise<Response> {
  */
 function updateNow(): Promise<Response> {
   spawnAutoUpdate();
+
   return Promise.resolve(json({ started: true }, 202));
 }
 
@@ -288,6 +313,7 @@ async function prefsWrite(request: Request): Promise<Response> {
   const body = await readBody(request);
   if (!body) return json({ error: "expected a JSON body" }, 400);
   const failure = validatePrefs(body as PrefUpdate);
+
   return failure ? json({ error: failure }, 400) : json(writePrefs(body as PrefUpdate));
 }
 
@@ -304,9 +330,11 @@ async function ruleWrite(request: Request): Promise<Response> {
   if (!body) return json({ error: "expected a JSON body" }, 400);
   const { id, decision } = body;
   if (typeof id !== "string" || !id) return json({ error: "id is required" }, 400);
+
   if (!PAGE_DECISIONS.includes(decision as PageDecision)) {
     return json({ error: `decision must be one of ${PAGE_DECISIONS.join(", ")}` }, 400);
   }
+
   return answer(decideFromPage(id, decision as PageDecision), { id, decision });
 }
 
@@ -325,6 +353,7 @@ const WRITES: Record<string, (request: Request) => Promise<Response>> = {
 
 export function startControlRoom(port: number = DEFAULT_PORT) {
   const startedAt = new Date().toISOString();
+
   return Bun.serve({
     hostname: LOOPBACK,
     port,
@@ -334,10 +363,13 @@ export function startControlRoom(port: number = DEFAULT_PORT) {
       const url = new URL(request.url);
       const write = WRITES[url.pathname];
       if (request.method === "POST" && write) return write(request);
+
       if (request.method !== "GET") return json({ error: "read only" }, 405);
+
       if (!url.pathname.startsWith("/api/")) {
         return staticAsset(url.pathname) ?? json({ error: "not found" }, 404);
       }
+
       switch (url.pathname) {
         case "/api/agenda":
           return json(agenda());
@@ -381,6 +413,7 @@ export function startControlRoom(port: number = DEFAULT_PORT) {
 function portFromArgv(argv: string[]): number {
   const flag = argv.find((arg) => arg.startsWith("--port="));
   const port = flag ? Number(flag.slice("--port=".length)) : DEFAULT_PORT;
+
   return Number.isInteger(port) && port >= 0 ? port : DEFAULT_PORT;
 }
 

@@ -89,6 +89,7 @@ function addCall(bucket: Bucket, tokens: Tokens, cost: number | null, calls = 1)
   bucket.cacheRead += tokens.cacheRead;
   bucket.cost += cost ?? 0;
   bucket.calls += calls;
+
   if (cost === null) bucket.unpriced += calls;
 }
 
@@ -112,8 +113,11 @@ function addToWindows(
   add: (bucket: Bucket) => void
 ): void {
   add(buckets.total);
+
   if (ts >= horizons.monthAgo) add(buckets.month);
+
   if (ts >= horizons.weekAgo) add(buckets.week);
+
   if (ts.startsWith(horizons.todayPrefix)) add(buckets.today);
 }
 
@@ -175,6 +179,7 @@ export function usageTally(projectFilter?: string, now: Date = new Date()): Usag
     usage.byProject[call.project] ??= emptyTimeBuckets();
     addToWindows(usage.byProject[call.project], call.ts, horizons, add);
   };
+
   return { usage, record };
 }
 
@@ -200,13 +205,16 @@ function entriesOf(dir: string): Dirent[] {
 
 function transcriptsIn(projPath: string, extension = ".jsonl"): string[] {
   const files: string[] = [];
+
   for (const entry of entriesOf(projPath)) {
     if (entry.isFile() && entry.name.endsWith(extension)) {
       files.push(resolve(projPath, entry.name));
       continue;
     }
+
     if (!entry.isDirectory()) continue;
     const subagentsDir = resolve(projPath, entry.name, "subagents");
+
     try {
       for (const sub of readdirSync(subagentsDir)) {
         if (sub.endsWith(extension)) files.push(resolve(subagentsDir, sub));
@@ -215,11 +223,13 @@ function transcriptsIn(projPath: string, extension = ".jsonl"): string[] {
       /* no subagents dir */
     }
   }
+
   return files;
 }
 
 export function claudeTranscripts(projectsDir: string): string[] {
   if (!existsSync(projectsDir)) return [];
+
   return readdirSync(projectsDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .flatMap((entry) => transcriptsIn(resolve(projectsDir, entry.name)));
@@ -236,11 +246,13 @@ interface PricedCall {
 /** Null for anything that is not a priced assistant turn. */
 function pricedCallOf(line: string): PricedCall | null {
   let entry: TranscriptLine;
+
   try {
     entry = JSON.parse(line) as TranscriptLine;
   } catch {
     return null;
   }
+
   if (entry.type !== "assistant") return null;
 
   const usage = entry.message?.usage;
@@ -273,6 +285,7 @@ const GZIP = ".gz";
 function deletedTranscriptsIn(archivedProject: string, liveProject: string): string[] {
   return transcriptsIn(archivedProject, `.jsonl${GZIP}`).filter((copy) => {
     const original = relative(archivedProject, copy).slice(0, -GZIP.length);
+
     return !existsSync(resolve(liveProject, original));
   });
 }
@@ -280,6 +293,7 @@ function deletedTranscriptsIn(archivedProject: string, liveProject: string): str
 function transcriptText(filepath: string): string | null {
   try {
     const raw = readFileSync(filepath);
+
     return filepath.endsWith(GZIP)
       ? new TextDecoder().decode(Bun.gunzipSync(raw))
       : raw.toString("utf-8");
@@ -294,6 +308,7 @@ function projectTranscripts(
   dirName: string
 ) {
   const live = resolve(claudeDir, dirName);
+
   return [
     ...transcriptsIn(live),
     ...(archiveDir ? deletedTranscriptsIn(resolve(archiveDir, dirName), live) : []),
@@ -304,12 +319,14 @@ function pricedCallsIn(filepath: string): PricedCall[] {
   const content = transcriptText(filepath);
   if (content === null) return [];
   const calls: PricedCall[] = [];
+
   for (const line of content.split("\n")) {
     // Cheap reject before the parse: most lines are not model turns.
     if (!line.includes('"usage"')) continue;
     const call = pricedCallOf(line);
     if (call) calls.push(call);
   }
+
   return calls;
 }
 
@@ -342,6 +359,7 @@ export function readClaudeCode(
       cost: costOfUsage(call.model, call.tokens, call.ts),
     });
   }
+
   return tally.usage;
 }
 
@@ -358,6 +376,7 @@ function inferenceTokens(call: LoggedEvent): Tokens | null {
   const input = countOf(call.inputTokens);
   const output = countOf(call.outputTokens);
   if (input === null || output === null) return null;
+
   return {
     input,
     output,
@@ -389,6 +408,7 @@ function systemOneCall(
     cacheRead: 0,
   };
   const cost = countOf(call.costUsd) ?? costOfUsage(call.model, tokens, call.ts);
+
   return { model: call.model, tokens, cost };
 }
 
@@ -443,6 +463,7 @@ export function readPalInference(
 
 export function grandTotal(buckets: Bucket[]): Bucket {
   const grand = emptyBucket();
+
   for (const bucket of buckets) {
     grand.input += bucket.input;
     grand.output += bucket.output;
@@ -453,6 +474,7 @@ export function grandTotal(buckets: Bucket[]): Bucket {
     grand.calls += bucket.calls;
     grand.unpriced += bucket.unpriced;
   }
+
   return grand;
 }
 

@@ -114,6 +114,7 @@ export interface AgentsView {
 
 function daysBetween(from: string, now: Date): number {
   const age = now.getTime() - new Date(from).getTime();
+
   return Number.isFinite(age) && age > 0 ? Math.floor(age / DAY_MS) : 0;
 }
 
@@ -124,6 +125,7 @@ function isoDay(at: Date): string {
 function sessionsSince(path: string | null, since: Date): number {
   if (!path) return 0;
   const floor = isoDay(since);
+
   return readProjectHistory(path, 200).filter((h) => h.date >= floor).length;
 }
 
@@ -133,11 +135,14 @@ export function askingReasons(
   stale: boolean
 ): string[] {
   const reasons: string[] = [];
+
   if (work.some((c) => c.waitingOn)) reasons.push("waiting on you");
   else if (work.some(isInProgress)) reasons.push("work in progress");
   const blockers = p.blockers?.length ?? 0;
   if (blockers > 0) reasons.push(blockers === 1 ? "1 blocker" : `${blockers} blockers`);
+
   if (stale && p.status === "active") reasons.push("gone quiet");
+
   return reasons;
 }
 
@@ -146,6 +151,7 @@ function runtimesBySlug(since: Date): Map<string, Record<string, number>> {
     queryLedger({ since }),
     (e) => anchorSlugOf(e.target) ?? "unanchored"
   );
+
   return new Map(
     [...bySlug.entries()].map(([slug, entries]) => [
       slug,
@@ -169,6 +175,7 @@ function toCard(
   const stale = isStale(p, PROJECT_STALE_DAYS_DEFAULT, now);
   const history = path ? readProjectHistory(path, 1) : [];
   const last = history.at(-1);
+
   return {
     slug: p.name,
     path,
@@ -203,6 +210,7 @@ export function board(now: Date = new Date()): ProjectCard[] {
   const work = openWork(now);
   const runtimes = runtimesBySlug(new Date(now.getTime() - SESSION_WINDOW_DAYS * DAY_MS));
   const snoozes = readSnoozes(now);
+
   return sortBoard(
     readAllProjects().map((p) =>
       toCard(p, workOf(p.name, work), now, runtimes.get(p.name) ?? {}, snoozes)
@@ -218,6 +226,7 @@ export function agenda(now: Date = new Date()): AgendaView {
   const stored = readAgenda();
   if (!stored) return { generatedAt: null, ageHours: null, stale: true, moves: [] };
   const ageHours = (now.getTime() - new Date(stored.generatedAt).getTime()) / 3_600_000;
+
   return {
     generatedAt: stored.generatedAt,
     ageHours: Math.max(0, Math.round(ageHours)),
@@ -230,6 +239,7 @@ export function agenda(now: Date = new Date()): AgendaView {
 export function badgeFromNudge(nudge: string): DueBadge {
   if (!nudge) return { state: "clear", detail: "" };
   const detail = nudge.split("\n").slice(1).join(" ").replace(/^\W+/, "").trim();
+
   return { state: "due", detail };
 }
 
@@ -246,20 +256,24 @@ export function ratingSeries(limit = SERIES_LENGTH): RatingPoint[] {
   const file = resolve(paths.signals(), "ratings.jsonl");
   if (!existsSync(file)) return [];
   const points: RatingPoint[] = [];
+
   for (const line of readFileSync(file, "utf-8").split("\n")) {
     if (!line.trim()) continue;
+
     try {
       const row = JSON.parse(line) as { ts?: string; rating?: number };
       if (typeof row.rating === "number" && row.ts)
         points.push({ ts: row.ts, rating: row.rating });
     } catch {}
   }
+
   return points.slice(-limit);
 }
 
 function readSynthesis(): Record<string, unknown> | null {
   const file = resolve(paths.state(), "synthesis.json");
   if (!existsSync(file)) return null;
+
   try {
     return JSON.parse(readFileSync(file, "utf-8"));
   } catch {
@@ -271,6 +285,7 @@ export function signal(now: Date = new Date()): SignalView {
   const s = readSynthesis();
   const ratings = s?.ratings as SignalView["ratings"] | undefined;
   const algorithm = s?.algorithm as SignalView["algorithm"] | undefined;
+
   return {
     synthesizedAt: typeof s?.timestamp === "string" ? s.timestamp : null,
     ratings: ratings ?? null,
@@ -295,6 +310,7 @@ export function summary(days: number, now: Date = new Date()): SummaryView {
   const since = new Date(now.getTime() - days * DAY_MS);
   const stats = viewStats(queryLedger({ since }));
   const ratings = readSynthesis()?.ratings as SignalView["ratings"] | undefined;
+
   return {
     since: since.toISOString(),
     days,
@@ -331,6 +347,7 @@ export function agentsAtWork(filter: LedgerFilter, now: Date = new Date()): Agen
     actors: count(entries, (e) => e.actor),
     sessions: sessionsSince(pathBySlug.get(slug) ?? null, since),
   }));
+
   return {
     since: since.toISOString(),
     projects: projects.sort(

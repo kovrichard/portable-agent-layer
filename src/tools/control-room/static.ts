@@ -42,12 +42,15 @@ function newestSourceChange(page: PageBuild): number {
   const sources = readdirSync(page.sources, { recursive: true, withFileTypes: true })
     .filter((entry) => entry.isFile() && !isInside(page.dist, entry.parentPath))
     .map((entry) => resolve(entry.parentPath, entry.name));
+
   if (existsSync(page.lockfile)) sources.push(page.lockfile);
+
   return Math.max(...sources.map((file) => statSync(file).mtimeMs));
 }
 
 export function isUpToDate(page: PageBuild = THE_PAGE): boolean {
   const index = resolve(page.dist, "index.html");
+
   return existsSync(index) && statSync(index).mtimeMs >= newestSourceChange(page);
 }
 
@@ -61,6 +64,7 @@ function clearAbandonedLock(lock: string): void {
 function tryTakeBuildLock(lock: string): boolean {
   try {
     mkdirSync(lock);
+
     return true;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "EEXIST") return false;
@@ -73,6 +77,7 @@ function whileHoldingBuildLock(lock: string, build: () => boolean): boolean {
     clearAbandonedLock(lock);
     Bun.sleepSync(50);
   }
+
   try {
     return build();
   } finally {
@@ -90,6 +95,7 @@ function runViteBuild(): boolean {
     cwd: UI_ROOT,
     encoding: "utf-8",
   });
+
   return built.status === 0 && isBuilt();
 }
 
@@ -122,6 +128,7 @@ function unbuiltPage(): Response {
 
 export function indexHtml(): Response {
   if (!isBuilt()) return unbuiltPage();
+
   return new Response(Bun.file(resolve(UI_DIST, "index.html")), {
     headers: { "content-type": "text/html; charset=utf-8" },
   });
@@ -134,5 +141,6 @@ export function indexHtml(): Response {
 export function staticAsset(pathname: string): Response | null {
   const target = resolve(UI_DIST, `.${pathname}`);
   if (!isInside(UI_DIST, target)) return null;
+
   return existsSync(target) ? new Response(Bun.file(target)) : null;
 }

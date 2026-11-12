@@ -36,11 +36,13 @@ startEachTestInACleanHome(import.meta.file);
 /** A reply filed by a detached child shows up in the session's track a moment later. */
 async function filedReply(session: string, timeoutMs = 4000) {
   const deadline = Date.now() + timeoutMs;
+
   while (Date.now() < deadline) {
     const reply = trackedReply(session);
     if (reply) return reply;
     await Bun.sleep(50);
   }
+
   return undefined;
 }
 
@@ -121,6 +123,7 @@ describe("copilot, whose prompt hook output is dropped", () => {
 function hookSpecificContext(out: string): string {
   const parsed = JSON.parse(out);
   expect(parsed.hookSpecificOutput.hookEventName).toBe("UserPromptSubmit");
+
   return parsed.hookSpecificOutput.additionalContext;
 }
 

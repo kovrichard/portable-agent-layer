@@ -36,10 +36,12 @@ function updating(update: UpdateCache, code = 0) {
       check: async () => update,
       run: async (cmd, args) => {
         ran.push([cmd, ...args]);
+
         return { code, output: "remote said no" };
       },
       reinstall: (env) => {
         reinstalls.push(env);
+
         return 0;
       },
     },
@@ -48,6 +50,7 @@ function updating(update: UpdateCache, code = 0) {
       out += text;
     })
   );
+
   return { result, ran, reinstalls, output: () => out };
 }
 
@@ -254,8 +257,10 @@ describe("pal cli update --canary", () => {
     const asked: string[] = [];
     const fetchImpl = (async (url: string) => {
       asked.push(url);
+
       return Response.json({ version });
     }) as unknown as typeof fetch;
+
     return { asked, fetchImpl };
   }
 

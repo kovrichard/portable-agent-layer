@@ -20,18 +20,21 @@ function isContinuedStop(payload: StopTurnPayload): boolean {
 
 function markerOf(session: string): string {
   const dir = ensureDir(resolve(paths.state(), "reply-sent-back"));
+
   return resolve(dir, session.replace(/[^\w-]/g, "_"));
 }
 
 export function alreadySentBack(payload: StopTurnPayload): boolean {
   if (!isContinuedStop(payload)) return false;
   const session = hookSessionId(payload);
+
   return session ? existsSync(markerOf(session)) : true;
 }
 
 export function rememberSendBack(payload: StopTurnPayload, sentBack: boolean): void {
   const session = hookSessionId(payload);
   if (!session) return;
+
   if (sentBack) writeFileSync(markerOf(session), "");
   else rmSync(markerOf(session), { force: true });
 }

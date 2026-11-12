@@ -48,6 +48,7 @@ function writeLegacy(...rows: object[]): void {
 function streamedTurns(): Record<string, unknown>[] {
   const dir = resolve(home, "memory", "events");
   if (!existsSync(dir)) return [];
+
   return readdirSync(dir)
     .flatMap((f) => readFileSync(resolve(dir, f), "utf-8").trim().split("\n"))
     .filter(Boolean)

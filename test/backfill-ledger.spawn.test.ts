@@ -46,12 +46,14 @@ function beforeStreaming<T>(record: () => T): T {
   setEventLog(false);
   const entry = record();
   setEventLog(true);
+
   return entry;
 }
 
 function logLines(dir: string): Record<string, unknown>[] {
   const path = resolve(home, "pal", dir, "events");
   if (!existsSync(path)) return [];
+
   return readdirSync(path)
     .flatMap((f) => readFileSync(resolve(path, f), "utf-8").trim().split("\n"))
     .filter(Boolean)

@@ -102,9 +102,12 @@ function seedTask(env: Record<string, string>, category: string, status: string)
 
 function recordStepEffects(world: World, step: RoleStep) {
   if (step.codes) world.coded = true;
+
   if (step.commits) world.head += 1;
   world.changedFiles.push(...(step.changes ?? []));
+
   if (step.leavesChanges) world.uncommitted = true;
+
   if (step.leavesChanges || step.editsModifiedFile) world.treeEdits += 1;
 }
 
@@ -132,6 +135,7 @@ function fakeRole(world: World, options: WorldOptions) {
       cacheCreationTokens: 20,
     };
     appendEvent({ event: "role_finished", ...outcome, structured: undefined }, world.env);
+
     return outcome;
   };
 }
@@ -152,7 +156,9 @@ function fakePrepare(world: World, options: WorldOptions) {
       },
       env
     );
+
     if (!keepsStatus) markStarted(id, env);
+
     return {
       worktree: world.worktree,
       branch: `factory/${id}`,
@@ -182,6 +188,7 @@ function ciResult(entry: CiState) {
   const links = entry.failed
     .map(linkOf)
     .filter((link): link is string => typeof link === "string" && link !== "");
+
   return { state: entry.state, failed: names, runs: [...new Set(runs)], links };
 }
 
@@ -189,11 +196,14 @@ function fakeCi(world: World, options: WorldOptions) {
   return (_id: string, ciOptions: Record<string, unknown> = {}) => {
     world.ciOptions.push(ciOptions);
     world.ciReads += 1;
+
     if (options.ciError) throw new Error(options.ciError);
+
     if (options.headUnreadable)
       throw new Error("could not read the worktree HEAD: fatal");
     const entry = options.ci?.[world.ciReads - 1] ??
       options.ci?.at(-1) ?? { state: "pass", failed: [] };
+
     return ciResult(entry);
   };
 }
@@ -204,12 +214,15 @@ function gitAnswer(world: World, options: WorldOptions, args: string[]) {
       ? { status: 128, stdout: "", stderr: "fatal" }
       : { status: 0, stdout: `sha-${world.head}\n`, stderr: "" };
   }
+
   if (args[0] === "status") {
     return { status: 0, stdout: world.uncommitted ? "?? new.test.ts\n" : "", stderr: "" };
   }
+
   if (args[0] === "write-tree") {
     return { status: 0, stdout: `tree-${world.treeEdits}\n`, stderr: "" };
   }
+
   return null;
 }
 
@@ -221,8 +234,10 @@ function spawnAnswer(
 ) {
   if (command === "gh" && args[0] === "run" && args[1] === "rerun") {
     world.reruns.push(args);
+
     return { status: options.rerunFails ? 1 : 0, stdout: "", stderr: "" };
   }
+
   return command === "git" ? gitAnswer(world, options, args) : null;
 }
 
@@ -240,14 +255,17 @@ function fakeShip(world: World) {
     sync: () => ({ rebased: false, conflict: false }),
     push: () => {
       world.pushes += 1;
+
       return { pushed: `factory/${TASK}` };
     },
     openPr: (id: string, env: Record<string, string>) => {
       writeTask({ ...readTask(id, env), pr: PR_URL }, env);
+
       return { pr: PR_URL };
     },
     markReady: (id: string, env: Record<string, string>) => {
       appendEvent({ event: "pr_ready", task: id, pr: PR_URL }, env);
+
       return { ready: PR_URL };
     },
   };
@@ -282,6 +300,7 @@ export function buildWorld(testFile: string, options: WorldOptions = {}): World 
     runRoleHeadless: fakeRole(world, options),
     runCheck: (command: string) => {
       world.checkCommands.push(command);
+
       return checks[command]?.(world) ?? { exitCode: 0, output: "" };
     },
     spawnTool: fakeSpawnTool(world, options),
@@ -292,6 +311,7 @@ export function buildWorld(testFile: string, options: WorldOptions = {}): World 
       appendEvent({ event: "coach_handed", task: id, status }, env),
     ...fakeShip(world),
   };
+
   return world;
 }
 

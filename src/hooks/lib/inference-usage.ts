@@ -29,6 +29,7 @@ export function jsonLines(raw: string): Record<string, unknown>[] {
   return raw.split("\n").flatMap((line) => {
     try {
       const value: unknown = JSON.parse(line);
+
       return value && typeof value === "object" ? [value as Record<string, unknown>] : [];
     } catch {
       return [];
@@ -62,6 +63,7 @@ export interface OpenAiUsage {
 /** OpenAI counts cached tokens inside prompt_tokens. */
 export function openAiUsage(usage: OpenAiUsage): InferenceUsage {
   const cacheRead = usage.prompt_tokens_details?.cached_tokens;
+
   return {
     inputTokens:
       usage.prompt_tokens === undefined
@@ -80,6 +82,7 @@ export function claudeResult(raw: string): Record<string, unknown> | undefined {
 export function claudeSpawnUsage(raw: string): InferenceUsage | undefined {
   const result = claudeResult(raw);
   if (!result?.usage) return undefined;
+
   return anthropicUsage(result.usage as TranscriptUsage, result.total_cost_usd as number);
 }
 
@@ -100,6 +103,7 @@ export function codexSpawnUsage(raw: string): InferenceUsage | undefined {
   const cacheRead = sum(turns.map((u) => u.cached_input_tokens));
   const cacheWrite = sum(turns.map((u) => u.cache_write_input_tokens));
   const input = sum(turns.map((u) => u.input_tokens));
+
   return {
     inputTokens:
       input === undefined ? undefined : input - (cacheRead ?? 0) - (cacheWrite ?? 0),
@@ -127,6 +131,7 @@ function opencodeSteps(raw: string): (OpencodeTokens & { cost?: number })[] {
     .filter((event) => event.type === "step_finish")
     .flatMap((event) => {
       const { tokens, cost } = (event.part ?? {}) as OpencodeStep;
+
       return tokens ? [{ ...tokens, cost: cost ?? undefined }] : [];
     });
 }
@@ -137,6 +142,7 @@ export function opencodeSpawnUsage(raw: string): InferenceUsage | undefined {
   if (steps.length === 0) return undefined;
   const output = sum(steps.map((s) => s.output));
   const reasoning = sum(steps.map((s) => s.reasoning));
+
   return {
     inputTokens: sum(steps.map((s) => s.input)),
     outputTokens: sum([output, reasoning]),
@@ -160,6 +166,7 @@ export function antigravitySpawnUsage(raw: string): InferenceUsage | undefined {
     | undefined;
   const usage = result?.usage;
   if (!usage) return undefined;
+
   return {
     inputTokens: usage.input_tokens,
     outputTokens: usage.output_tokens,
@@ -178,6 +185,7 @@ function copilotModelCaches(event: Record<string, unknown>): CopilotModelCache[]
   const data = event.data as
     | { promptCacheBreakState?: { models?: Record<string, CopilotModelCache> }[] }
     | undefined;
+
   return (data?.promptCacheBreakState ?? []).flatMap((state) =>
     Object.values(state.models ?? {})
   );
@@ -195,6 +203,7 @@ export function copilotSpawnUsage(raw: string): InferenceUsage | undefined {
   if (models.length === 0) return undefined;
   const cacheRead = sum(models.map((m) => m.cache_read));
   const cacheWrite = sum(models.map((m) => m.cache_write));
+
   return {
     inputTokens: uncachedInput(
       sum(models.map((m) => m.prompt_tokens)),
@@ -218,6 +227,7 @@ const COPILOT_SESSION_ID = /^[\w-]+$/;
 
 export function copilotSessionId(raw: string): string | undefined {
   const id = jsonLines(raw).findLast((event) => event.type === "result")?.sessionId;
+
   return typeof id === "string" && COPILOT_SESSION_ID.test(id) ? id : undefined;
 }
 
@@ -241,6 +251,7 @@ export function copilotShutdownUsage(eventsJsonl: string): InferenceUsage | unde
   if (runs.length === 0) return undefined;
   const cacheRead = sum(runs.map((u) => u.cacheReadTokens));
   const cacheWrite = sum(runs.map((u) => u.cacheWriteTokens));
+
   return {
     inputTokens: uncachedInput(
       sum(runs.map((u) => u.inputTokens)),

@@ -13,11 +13,13 @@ function captureOut(fn: () => void): string[] {
   console.log = (...args: unknown[]) => {
     lines.push(args.join(" "));
   };
+
   try {
     fn();
   } finally {
     console.log = original;
   }
+
   return lines;
 }
 
@@ -105,10 +107,12 @@ async function captureOutAsync(fn: () => Promise<unknown>): Promise<string[]> {
   console.log = (...args: unknown[]) => {
     lines.push(args.join(" "));
   };
+
   try {
     await fn();
   } finally {
     console.log = original;
   }
+
   return lines;
 }

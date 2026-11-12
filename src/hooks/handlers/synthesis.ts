@@ -21,6 +21,7 @@ export async function runSynthesis(): Promise<void> {
       };
       if (Date.now() - new Date(data.timestamp).getTime() < SYNTHESIS_TTL_MS) {
         logDebug("synthesis", "Skipped — last synthesis < 24h ago");
+
         return;
       }
     } catch {

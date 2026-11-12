@@ -26,11 +26,13 @@ function fixture(skillMd: string, extra: Record<string, string> = {}): string {
   const dir = resolve(ROOT, `case-${counter}`, name);
   mkdirSync(dir, { recursive: true });
   writeFileSync(resolve(dir, "SKILL.md"), skillMd);
+
   for (const [file, content] of Object.entries(extra)) {
     const target = resolve(dir, file);
     mkdirSync(dirname(target), { recursive: true });
     writeFileSync(target, content);
   }
+
   return dir;
 }
 

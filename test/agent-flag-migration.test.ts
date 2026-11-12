@@ -24,6 +24,7 @@ describe("templates declare their agent by flag, not shell prefix", () => {
     test(`${file} declares --agent=${agent} on every hook command`, () => {
       const hookCommands = commandsIn(raw).filter((c) => c.includes("/src/hooks/"));
       expect(hookCommands.length).toBeGreaterThan(0);
+
       for (const command of hookCommands) {
         expect(command).toContain(`--agent=${agent}`);
       }

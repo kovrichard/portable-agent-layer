@@ -11,7 +11,7 @@
 import { getActiveAgent } from "./lib/agent";
 import { autoUpdateOnStart } from "./lib/auto-update";
 import { buildClaudeMd, regenerateIfNeeded } from "./lib/claude-md";
-import { type AgentTarget, buildSystemReminder } from "./lib/context";
+import { buildSystemReminder } from "./lib/context";
 import { logContextInjected } from "./lib/context-overhead";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { recordHookRunOnExit } from "./lib/hook-run";
@@ -22,6 +22,7 @@ import {
   contextForSource,
   isSubagentSession,
   needsAgentsMd,
+  reminderTarget,
   writeCopilotInstructions,
 } from "./lib/session-context";
 import { logSessionStart, type SessionStartPayload } from "./lib/session-events";
@@ -30,8 +31,11 @@ import { readStdinJSON } from "./lib/stdin";
 import { heartbeatOnStart } from "./lib/telemetry";
 
 recordHookRunOnExit();
+
 if (isPalSpawnedInference()) process.exit(0);
+
 if (duplicatesCursorHooks()) process.exit(0);
+
 if (isSubagentSession(process.env)) {
   logDebug("LoadContext", "Subagent session — skipping context loading");
   process.exit(0);
@@ -61,12 +65,8 @@ try {
     process.exit(0);
   }
 
-  // The reminder is built for one of four targets; every other agent reads the
-  // same shape Claude Code does.
-  const target: AgentTarget =
-    active === "copilot" || active === "cursor" || active === "codex" ? active : "claude";
   const reminder = buildSystemReminder({
-    agent: target,
+    agent: reminderTarget(active),
     sessionId: hookSessionId(input),
   });
   if (!reminder) process.exit(0);

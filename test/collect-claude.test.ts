@@ -28,6 +28,7 @@ const NOW = () => new Date();
 function streamed(): Record<string, unknown>[] {
   const dir = resolve(home, "memory", "events");
   if (!existsSync(dir)) return [];
+
   return readdirSync(dir)
     .filter((f) => f.endsWith(".jsonl"))
     .flatMap((f) => readFileSync(resolve(dir, f), "utf-8").trim().split("\n"))
@@ -165,12 +166,14 @@ describe("collecting Claude Code's model calls", () => {
 describe("collecting every source", () => {
   test("a source that fails is reported and the others still collect", () => {
     const overrides = [...agentDirOverrides().map(({ env }) => env), "XDG_DATA_HOME"];
+
     for (const env of overrides) process.env[env] = resolve(home, env);
     process.env.PAL_CLAUDE_DIR = resolve(home, "claude");
     mkdirSync(resolve(home, "XDG_DATA_HOME", "opencode", "opencode.db"), {
       recursive: true,
     });
     write(block("msg_1", 10), block("msg_2", 20));
+
     try {
       expect(collectEvents()).toEqual({
         claude: 1,
@@ -221,9 +224,11 @@ describe("a transcript Claude Code deleted", () => {
 
   test("pal cli events collect reads PAL's copies too", () => {
     const overrides = [...agentDirOverrides().map(({ env }) => env), "XDG_DATA_HOME"];
+
     for (const env of overrides) process.env[env] = resolve(home, env);
     process.env.PAL_CLAUDE_DIR = resolve(home, "claude");
     preserve(block("msg_1", 10), block("msg_2", 20));
+
     try {
       expect(collectEvents()).toMatchObject({ claude: 2 });
     } finally {

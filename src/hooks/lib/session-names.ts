@@ -209,12 +209,14 @@ export function extractFallbackName(prompt: string): string {
   // Deduplicate while preserving order
   const seen = new Set<string>();
   const unique: string[] = [];
+
   for (const w of words) {
     const lower = w.toLowerCase();
     if (!seen.has(lower)) {
       seen.add(lower);
       unique.push(w);
     }
+
     if (unique.length >= 4) break;
   }
 
@@ -239,6 +241,7 @@ export function labelFromModel(output: string): string | null {
     .split(/\s+/)
     .slice(0, 4);
   const substantial = words.length === 4 && words.every((w) => w.length >= 3);
+
   return substantial ? words.map(titleCase).join(" ") : null;
 }
 
@@ -249,6 +252,7 @@ function namesFilePath(): string {
 export function readSessionNames(): SessionNames {
   const filepath = namesFilePath();
   if (!existsSync(filepath)) return {};
+
   try {
     return JSON.parse(readFileSync(filepath, "utf-8")) as SessionNames;
   } catch {

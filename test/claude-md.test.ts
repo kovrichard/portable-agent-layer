@@ -103,6 +103,7 @@ describe("buildClaudeMd", () => {
         detectedAt: "2026-11-05",
       })
     );
+
     try {
       const { buildClaudeMd } = await import("../src/hooks/lib/claude-md");
       const result = buildClaudeMd();

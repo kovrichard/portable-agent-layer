@@ -19,6 +19,7 @@ function stoppedText(note: SessionStopNote): string {
     note.waitingOn && `Waiting on you: ${note.waitingOn}`,
   ].filter(Boolean);
   if (ahead.length) return ahead.join(" · ");
+
   return note.done ? `Done: ${note.done}` : "";
 }
 

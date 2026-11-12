@@ -26,10 +26,12 @@ function fakeDisk(files: Record<string, number | string>): FileProbe {
     sizeOf: (path) => {
       const entry = files[path];
       if (entry === undefined) return null;
+
       return typeof entry === "number" ? entry : entry.length;
     },
     readScript: (path) => {
       const entry = files[path];
+
       return typeof entry === "string" ? entry : null;
     },
   };

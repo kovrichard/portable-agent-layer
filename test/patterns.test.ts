@@ -368,8 +368,10 @@ describe("momentum as printed", () => {
 
 async function patterns(): Promise<string> {
   const log = spyOn(console, "log").mockImplementation(() => {});
+
   try {
     expect(await runCommand(patternsCommand, [], ["pal", "cli", "patterns"])).toBe(0);
+
     return log.mock.calls.map((c) => c.join(" ")).join("\n");
   } finally {
     log.mockRestore();
@@ -379,6 +381,7 @@ async function patterns(): Promise<string> {
 describe("pal cli patterns", () => {
   test("its help says what it reads", async () => {
     const log = spyOn(console, "log").mockImplementation(() => {});
+
     try {
       await runCommand(patternsCommand, ["--help"], ["pal", "cli", "patterns"]);
       expect(log.mock.calls.join("\n")).toContain(

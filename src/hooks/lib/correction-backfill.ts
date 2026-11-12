@@ -44,12 +44,16 @@ export async function backfillCorrectionKinds(
   const label = options.label ?? labelWithInference;
   const replacements = new Map<string, Turn>();
   let failed = 0;
+
   for (const turn of correctionsToLabel(readTurns(), options.relabel)) {
     const kind = await label(turn);
     options.onLabelled?.(turn, kind);
+
     if (!kind) failed++;
     else replacements.set(turnKey(turn), { ...turn, ...withCorrectionKind(turn, kind) });
   }
+
   if (replacements.size > 0) replaceTurns(replacements);
+
   return { labelled: replacements.size, failed };
 }

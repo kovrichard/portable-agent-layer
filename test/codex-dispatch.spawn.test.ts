@@ -26,7 +26,9 @@ const PRESERVED = [
 
 function savedEnv(): Record<string, string | undefined> {
   const saved: Record<string, string | undefined> = {};
+
   for (const k of PRESERVED) saved[k] = process.env[k];
+
   return saved;
 }
 function restoreEnv(saved: Record<string, string | undefined>) {
@@ -88,6 +90,7 @@ describe("hasOpenAiKey", () => {
   test("false when PAL_OPENAI_API_KEY is not set", () => {
     const saved = process.env.PAL_OPENAI_API_KEY;
     delete process.env.PAL_OPENAI_API_KEY;
+
     try {
       expect(hasOpenAiKey()).toBe(false);
     } finally {
@@ -98,6 +101,7 @@ describe("hasOpenAiKey", () => {
   test("true when PAL_OPENAI_API_KEY is set", () => {
     const saved = process.env.PAL_OPENAI_API_KEY;
     process.env.PAL_OPENAI_API_KEY = "sk-test";
+
     try {
       expect(hasOpenAiKey()).toBe(true);
     } finally {

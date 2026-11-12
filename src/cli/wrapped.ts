@@ -16,15 +16,19 @@ import { eventsOfYear } from "../tools/lib/wrapped/year";
 
 function yearFrom(value: string | undefined): number {
   if (value === undefined) return new Date().getFullYear();
+
   if (!/^\d{4}$/.test(value)) throw new UsageError(`--year takes a year, got: ${value}`);
+
   return Number(value);
 }
 
 function printWrapped(year: number): undefined {
   const events = eventsOfYear(year);
   console.log(`\n  PAL Wrapped ${year}`);
+
   if (events.length === 0) {
     console.log(`\n  No events logged in ${year}\n`);
+
     return;
   }
   const lines = [
@@ -34,6 +38,7 @@ function printWrapped(year: number): undefined {
     ...agentsLines(wrappedAgents(events)),
     ...palLines(wrappedPal(events, readSkillIndex())),
   ];
+
   for (const line of lines) console.log(line);
 }
 

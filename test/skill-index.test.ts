@@ -21,6 +21,7 @@ function writeSkill(name: string, frontmatter: string | null, body = "text") {
   mkdirSync(dir, { recursive: true });
   const content = frontmatter === null ? body : `---\n${frontmatter}\n---\n${body}`;
   writeFileSync(resolve(dir, "SKILL.md"), content);
+
   return dir;
 }
 
@@ -34,6 +35,7 @@ beforeEach(() => {
   removeOnceReleased(HOME);
   mkdirSync(HOME, { recursive: true });
   process.env.PAL_HOME = HOME;
+
   for (const [key, value] of Object.entries(AGENT_DIRS)) {
     process.env[key] = value;
   }
@@ -92,6 +94,7 @@ describe("generateSkillIndex", () => {
 
 function readIndexAfterGenerate() {
   generateSkillIndex();
+
   return readIndex();
 }
 
@@ -99,6 +102,7 @@ describe("generateSkillIndex — trigger extraction", () => {
   function triggersFor(description: string): string[] {
     writeSkill("probe", `name: probe\ndescription: ${description}`);
     generateSkillIndex();
+
     return readIndex().skills.probe.triggers;
   }
 

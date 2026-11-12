@@ -55,6 +55,7 @@ function bash(command: string, extra: Record<string, unknown> = {}) {
 
 function contextOf(response: string | null): string | null {
   if (!response) return null;
+
   return JSON.parse(response).hookSpecificOutput.additionalContext;
 }
 

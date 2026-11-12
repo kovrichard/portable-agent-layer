@@ -17,12 +17,15 @@ import { basename, isAbsolute, relative, resolve } from "node:path";
  */
 export function toPath(input: string, base: string = process.cwd()): string {
   if (input === "~") return homedir();
+
   if (input.startsWith("~/") || input.startsWith("~\\")) {
     return resolve(homedir(), input.slice(2));
   }
+
   if (input.startsWith("~")) {
     throw new Error(`Home-relative paths for another user are not supported: ${input}`);
   }
+
   return resolve(base, input);
 }
 
@@ -39,6 +42,7 @@ export function namesAPath(input: string): boolean {
 /** Compared as paths, not strings — a separator differs by platform. */
 export function isInside(parent: string, target: string): boolean {
   const rel = relative(parent, target);
+
   return rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
 }
 
@@ -46,12 +50,14 @@ export function isInside(parent: string, target: string): boolean {
 export function isDirectChild(parent: string, target: string): boolean {
   if (!isInside(parent, target)) return false;
   const rel = relative(parent, target);
+
   return basename(rel) === rel;
 }
 
 /** An env override names a path the same way a flag does, so it gets the same treatment. */
 function envPath(name: string, fallback: string): string {
   const override = process.env[name];
+
   return override ? toPath(override) : fallback;
 }
 
@@ -75,6 +81,7 @@ function sandboxPalHome(): string {
 
 function defaultPalHome(): string {
   if (process.env.PAL_TEST_SANDBOX) return sandboxPalHome();
+
   return resolve(homedir(), ".pal");
 }
 
@@ -85,6 +92,7 @@ export function palHome(): string {
 /** Ensure a directory exists, creating it recursively if needed */
 export function ensureDir(path: string): string {
   if (!existsSync(path)) mkdirSync(path, { recursive: true });
+
   return path;
 }
 

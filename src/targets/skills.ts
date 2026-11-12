@@ -72,6 +72,7 @@ function isDanglingSymlink(link: string): boolean {
 function symlinkPointsInto(link: string, root: string): boolean {
   try {
     const target = resolve(dirname(link), readlinkSync(link));
+
     return target === root || target.startsWith(root + sep);
   } catch {
     return false;
@@ -96,8 +97,10 @@ function pruneStaleSkillLinks(agentSkillsDir: string): string[] {
     { dir: agentSkillsDir, root: palSkillsDir() },
   ];
   const removed: string[] = [];
+
   for (const { dir, root } of ownedTrees) {
     if (!existsSync(dir)) continue;
+
     for (const name of readdirSync(dir)) {
       const link = resolve(dir, name);
       if (!isDanglingSymlink(link) || !symlinkPointsInto(link, root)) continue;
@@ -105,6 +108,7 @@ function pruneStaleSkillLinks(agentSkillsDir: string): string[] {
       removed.push(name);
     }
   }
+
   return removed;
 }
 
@@ -130,11 +134,13 @@ export function linkPersonalSkill(name: string): string[] {
   }
   const linkType = process.platform === "win32" ? "junction" : "dir";
   const linked: string[] = [];
+
   for (const { agent, dir } of perSkillAgentDirs()) {
     if (!existsSync(dir)) continue; // agent not installed
     ensureSymlink(resolve(dir, name), palLink, linkType);
     linked.push(agent);
   }
+
   return linked;
 }
 
@@ -147,6 +153,7 @@ export function removeSkills(agentSkillsDir: string): string[] {
   if (!existsSync(skillsDir)) return [];
 
   const removed: string[] = [];
+
   for (const name of readdirSync(skillsDir)) {
     if (!existsSync(resolve(skillsDir, name, "SKILL.md"))) continue;
 
@@ -165,6 +172,7 @@ export function removeSkills(agentSkillsDir: string): string[] {
 /** Count skill subdirectories in ~/.pal/skills/ */
 export function countSkills(): number {
   if (!existsSync(palSkillsDir())) return 0;
+
   try {
     return readdirSync(palSkillsDir()).filter((f) =>
       existsSync(resolve(palSkillsDir(), f, "SKILL.md"))

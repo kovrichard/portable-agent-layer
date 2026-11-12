@@ -26,6 +26,7 @@ export async function autoBackup(): Promise<void> {
     const latestMtime = (await stat(latestPath)).mtimeMs;
     if (Date.now() - latestMtime < BACKUP_INTERVAL_MS) {
       logDebug("backup", "Skipping — last backup is less than 7 days old");
+
       return;
     }
   }

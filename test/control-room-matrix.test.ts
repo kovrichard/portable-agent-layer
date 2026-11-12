@@ -54,6 +54,7 @@ function registerProject(slug: string, opts: ProjectFixture = {}): string {
     `---\n${front}\n---\n\n## Goal\n\nnone\n`,
     "utf-8"
   );
+
   return path;
 }
 

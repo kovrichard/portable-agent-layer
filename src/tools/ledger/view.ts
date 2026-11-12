@@ -94,6 +94,7 @@ export function displayTarget(target: string): string {
   const slug = anchorSlugOf(target);
   if (!slug) return target;
   const rest = target.slice(`{proj:${slug}}`.length);
+
   return rest ? `${slug} ${rest}` : slug;
 }
 
@@ -115,8 +116,11 @@ function toRow(entry: LedgerEntry, { actors, machines }: Names): LedgerViewRow {
     change: changedLines(entry),
     outcome: entry.outcome,
   };
+
   if (entry.reason) row.reason = entry.reason;
+
   if (entry.command) row.command = entry.command;
+
   return row;
 }
 
@@ -124,6 +128,7 @@ function toRow(entry: LedgerEntry, { actors, machines }: Names): LedgerViewRow {
 function knownNames(): Names {
   const actor = loadActor();
   const machine = loadMachine();
+
   return {
     actors: [{ id: actor.id, label: actor.label }, ...readActorRegistry()],
     machines: [
@@ -135,6 +140,7 @@ function knownNames(): Names {
 
 export function viewRows(entries: LedgerEntry[]): LedgerViewRow[] {
   const names = knownNames();
+
   return entries
     .slice()
     .reverse()
@@ -143,6 +149,7 @@ export function viewRows(entries: LedgerEntry[]): LedgerViewRow[] {
 
 export function ledgerView(filter: LedgerFilter = {}): LedgerView {
   const entries = queryLedger(filter);
+
   return {
     window: {
       since: filter.since?.toISOString() ?? null,

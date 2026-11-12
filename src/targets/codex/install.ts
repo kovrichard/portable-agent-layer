@@ -22,18 +22,22 @@ import { addCodexStatuslineConfig } from "./statusline";
  */
 function enableCodexHooks(configPath: string): void {
   let content = "";
+
   if (existsSync(configPath)) {
     content = readFileSync(configPath, "utf-8");
     // Already enabled — nothing to do
     if (/^\s*hooks\s*=\s*true/m.test(content)) {
       log.info("Codex hooks already enabled in config.toml");
+
       return;
     }
+
     // [features] section exists but no hooks line — insert after the header
     if (/^\[features\]/m.test(content)) {
       content = content.replace(/(\[features\][^\n]*\n)/, "$1hooks = true\n");
       writeFileSync(configPath, content, "utf-8");
       log.success("Added hooks = true to existing [features] section in config.toml");
+
       return;
     }
   }
@@ -48,6 +52,7 @@ function enableCodexStatusline(configPath: string): void {
   const updated = addCodexStatuslineConfig(content);
   if (updated === content) {
     log.info("Codex status line already configured in config.toml");
+
     return;
   }
   writeFileSync(configPath, updated, "utf-8");

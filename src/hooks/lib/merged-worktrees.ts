@@ -20,14 +20,17 @@ function git(cwd: string, ...args: string[]): string | null {
     encoding: "utf-8",
     timeout: GIT_TIMEOUT_MS,
   });
+
   return result.status === 0 ? result.stdout.trim() : null;
 }
 
 export function linkedWorktrees(cwd: string): MergedWorktree[] {
   const blocks = (git(cwd, "worktree", "list", "--porcelain") ?? "").split("\n\n");
+
   return blocks.slice(1).flatMap((block) => {
     const path = /^worktree (.+)$/m.exec(block)?.[1];
     const branch = /^branch refs\/heads\/(.+)$/m.exec(block)?.[1];
+
     return path && branch ? [{ path: resolve(path), branch }] : [];
   });
 }
@@ -39,6 +42,7 @@ function branchesGoneOnRemote(cwd: string): Set<string> {
     "--format=%(refname:short)\t%(upstream:track)",
     "refs/heads"
   );
+
   return new Set(
     (refs ?? "")
       .split("\n")
@@ -66,14 +70,19 @@ export function removalBlocker(
 ): string | null {
   const here = git(cwd, "rev-parse", "--show-toplevel");
   if (!here || !existsSync(path)) return "is not on disk";
+
   if (samePath(path, here)) return "is the checkout this runs from";
+
   if (!isClean(path)) return "has uncommitted changes";
+
   if (!reachedARemoteBranch(cwd, branch)) return "has commits on no remote branch";
+
   return null;
 }
 
 export function mergedWorktrees(cwd: string): MergedWorktree[] {
   const gone = branchesGoneOnRemote(cwd);
+
   return linkedWorktrees(cwd).filter(
     (worktree) => gone.has(worktree.branch) && removalBlocker(cwd, worktree) === null
   );
@@ -81,7 +90,9 @@ export function mergedWorktrees(cwd: string): MergedWorktree[] {
 
 function gitRefusal(result: ReturnType<typeof spawnSync>): string | null {
   if (result.status === 0) return null;
+
   if (result.signal) return `git was stopped by ${result.signal}`;
+
   return String(result.stderr).trim() || `git exited with ${result.status}`;
 }
 
@@ -93,6 +104,7 @@ export function removeWorktree(
   const refusal = gitRefusal(spawnSync("git", ["-C", cwd, "worktree", "remove", path]));
   if (refusal === null)
     appendEvent("worktree_pruned", { branch }, { cwd, content: { path, branch } });
+
   return refusal;
 }
 
@@ -107,10 +119,12 @@ export interface PruneResult {
 
 export function pruneMergedWorktrees(cwd: string): PruneResult {
   const result: PruneResult = { removed: [], failed: [] };
+
   for (const worktree of mergedWorktrees(cwd)) {
     const reason = removeWorktree(cwd, worktree);
     if (reason === null) result.removed.push(worktree);
     else result.failed.push({ ...worktree, reason });
   }
+
   return result;
 }

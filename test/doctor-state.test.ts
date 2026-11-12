@@ -106,6 +106,7 @@ describe("PAL's dependencies", () => {
       resolve(pkg, "package.json"),
       JSON.stringify({ dependencies: Object.fromEntries(deps.map((d) => [d, "1"])) })
     );
+
     for (const name of hoisted) {
       write(
         resolve(HOME, "global", "node_modules", name, "package.json"),
@@ -113,6 +114,7 @@ describe("PAL's dependencies", () => {
       );
       write(resolve(HOME, "global", "node_modules", name, "index.js"), "");
     }
+
     return pkg;
   }
 

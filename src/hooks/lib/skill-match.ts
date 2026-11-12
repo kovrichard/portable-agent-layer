@@ -48,6 +48,7 @@ function normalize(text: string): string {
 export function readSkillIndex(): SkillIndex | null {
   const path = resolve(paths.state(), "skill-index.json");
   if (!existsSync(path)) return null;
+
   try {
     return JSON.parse(readFileSync(path, "utf-8")) as SkillIndex;
   } catch {
@@ -65,15 +66,18 @@ export function matchSkills(prompt: string, index: SkillIndex): SkillMatch[] {
   if (haystack.trim() === "") return [];
 
   const matches: SkillMatch[] = [];
+
   for (const entry of Object.values(index.skills ?? {})) {
     let score = 0;
     const matched: string[] = [];
+
     for (const trigger of entry.triggers ?? []) {
       const needle = normalize(trigger);
       if (needle.trim() === "" || !haystack.includes(needle)) continue;
       score += weightOf(needle);
       matched.push(trigger);
     }
+
     if (score > 0)
       matches.push({ name: entry.name, description: entry.description, score, matched });
   }
@@ -85,32 +89,38 @@ export function matchSkills(prompt: string, index: SkillIndex): SkillMatch[] {
 
 function summarize(description: string): string {
   if (description.length <= MAX_DESCRIPTION_CHARS) return description;
+
   return `${description.slice(0, MAX_DESCRIPTION_CHARS).trimEnd()}…`;
 }
 
 function line(match: SkillMatch): string {
   const matched = match.matched.map((trigger) => `"${trigger}"`).join(", ");
+
   return `- ${match.name} — ${summarize(match.description)} (matched: ${matched})`;
 }
 
 /** Build the skill-match <system-reminder> for a prompt, or null if nothing matches. */
 export function getSkillReminder(prompt: string): string | null {
   if (!isEnabled("skillMatching")) return null;
+
   if (!prompt?.trim()) return null;
 
   const index = readSkillIndex();
   if (!index) return null;
 
   let matches: SkillMatch[];
+
   try {
     matches = matchSkills(prompt, index);
   } catch {
     return null; // fail-open: never block a prompt on a matcher error
   }
+
   if (matches.length === 0) return null;
 
   const lines: string[] = [];
   let budget = MAX_SKILL_BYTES;
+
   for (const match of matches) {
     const rendered = line(match);
     const cost = Buffer.byteLength(rendered);
@@ -118,6 +128,7 @@ export function getSkillReminder(prompt: string): string | null {
     lines.push(rendered);
     budget -= cost;
   }
+
   if (lines.length === 0) return null;
 
   return [

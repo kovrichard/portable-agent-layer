@@ -40,12 +40,14 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   const rtkBin = findBinaryOnPath("rtk");
   const rtkRewrite = (cmd: string): string | null => {
     if (!rtkBin || !cmd) return null;
+
     try {
       const r = spawnSync(rtkBin, ["hook", "check", cmd], {
         encoding: "utf8",
         stdio: ["ignore", "pipe", "ignore"],
       });
       const out = r.status === 0 ? (r.stdout ?? "").trim() : "";
+
       return out && out !== cmd ? out : null;
     } catch {
       return null;
@@ -100,6 +102,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
         "opencode:session.messages",
         `Failed to fetch messages (error=${Boolean(result.error)})`
       );
+
       return [];
     }
 
@@ -112,6 +115,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       .map((row) => {
         const role = row?.info?.role ?? "unknown";
         const content = partsToText(row?.parts ?? []);
+
         return { role, content, id: row?.info?.id };
       })
       .filter((m) => m.content.length > 0);
@@ -122,11 +126,13 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       ?.sessionID;
     if (!sessionID) {
       logDebug("opencode:event", "Skipping stop handlers: missing sessionID");
+
       return;
     }
 
     const messages = await buildSessionTranscript(sessionID);
     logDebug("opencode:event", `Got ${messages.length} transcript messages`);
+
     if (messages.length < 2) return;
 
     // Last assistant message feeds response caching (parity with Claude Code).
@@ -152,6 +158,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
     }
     const rewritten = rtkRewrite(cmd);
     if (!rewritten) return;
+
     if (typeof output.args === "string") output.args = rewritten;
     else (output.args as Record<string, unknown>).command = rewritten;
   }
@@ -173,9 +180,12 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
   function logEventDetails(event: OpencodeEvent): void {
     if (event.type === "session.created")
       logOpencodeSessionCreated(event.properties.info);
+
     if (event.type === "session.compacted")
       logOpencodeCompaction(event.properties.sessionID);
+
     if (event.type === "permission.replied") logOpencodePermissionReply(event.properties);
+
     if (event.type === "message.part.updated")
       logOpencodeToolFailure(event.properties.part);
   }
@@ -186,6 +196,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
         await lib<typeof import("../../hooks/lib/telemetry")>("telemetry.ts");
       heartbeatOnStart();
     }
+
     if (event.type === "session.created" || event.type === "session.updated") {
       const { regenerateIfNeeded } =
         await lib<typeof import("../../hooks/lib/claude-md")>("claude-md.ts");
@@ -195,6 +206,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
 
   const ledgeredOpencodeCall = (tool: string, callID: string, args: unknown) => {
     const target = ledgeredTarget(tool, (args ?? {}) as Record<string, unknown>);
+
     return target ? { toolUseId: callID, tool, target } : null;
   };
 
@@ -210,6 +222,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
 
     event: async ({ event }) => {
       if (isPalSpawnedInference()) return;
+
       if (isSessionEvent(event.type)) logDebug("opencode:event", `Event: ${event.type}`);
 
       if (event.type === "server.instance.disposed") {
@@ -223,6 +236,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
 
       if (event.type === "session.idle") {
         logDebug("opencode:event", "Running stop handlers...");
+
         try {
           await runStopHandlersOnIdle(event);
         } catch (err) {
@@ -264,6 +278,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
     ) => {
       const toolName = _input.tool;
       if (toolName === "shell" || toolName === "bash") guardShellCall(output);
+
       if (toolName === "write" || toolName === "edit" || toolName === "patch") {
         guardFileWrite(output.args as Record<string, string>);
       }
@@ -323,6 +338,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
       output: { env: Record<string, string> }
     ) => {
       output.env.PAL_DIR = PAL_DIR;
+
       if (input.sessionID) output.env.PAL_OPENCODE_SESSION_ID = input.sessionID;
     },
   };

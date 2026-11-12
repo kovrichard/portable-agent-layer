@@ -20,7 +20,9 @@ function unlinkSkillLinks(dir: string): string[] {
   const links = readdirSync(dir).filter((name) =>
     lstatSync(resolve(dir, name)).isSymbolicLink()
   );
+
   for (const name of links) unlinkSync(resolve(dir, name));
+
   return links;
 }
 

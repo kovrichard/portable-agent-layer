@@ -10,6 +10,7 @@ export function loadHooksTemplate(
     "{{PKG_ROOT}}",
     pkgRoot
   );
+
   try {
     return JSON.parse(resolved);
   } catch (e) {

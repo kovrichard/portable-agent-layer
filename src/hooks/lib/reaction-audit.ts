@@ -44,6 +44,7 @@ function markFile(): string {
 function readAuditMark(): AuditMark | null {
   try {
     const parsed = JSON.parse(readFileSync(markFile(), "utf-8"));
+
     return typeof parsed.lastAuditTs === "string" ? parsed : null;
   } catch {
     return null;
@@ -52,11 +53,13 @@ function readAuditMark(): AuditMark | null {
 
 function followUpShare(samples: ReactionSample[]): number {
   if (samples.length === 0) return 0;
+
   return samples.filter((s) => s.reaction === "follow-up").length / samples.length;
 }
 
 export function unauditedSamples(mark = readAuditMark()): ReactionSample[] {
   const samples = readSamples();
+
   return mark ? samples.filter((s) => s.ts > mark.lastAuditTs) : samples;
 }
 
@@ -77,6 +80,7 @@ export function compareLabels(
       rule: s.reaction,
       model: modelLabels[s.ts],
     }));
+
   return {
     compared: labelled.length,
     agreed: labelled.length - disagreements.length,
@@ -96,10 +100,12 @@ function auditReason(): string | null {
   const mark = readAuditMark();
   const fresh = unauditedSamples(mark);
   if (fresh.length >= NUDGE_MIN_NEW) return `${fresh.length} new labelled messages`;
+
   if (!mark || fresh.length < DRIFT_MIN_NEW) return null;
   const share = followUpShare(fresh);
   if (Math.abs(share - mark.followUpShare) < DRIFT_MIN_DELTA) return null;
   const pct = (n: number) => `${Math.round(n * 100)}%`;
+
   return `the follow-up share moved from ${pct(mark.followUpShare)} to ${pct(share)}`;
 }
 
@@ -108,6 +114,7 @@ export function loadReactionAuditNudge(cwd: string = process.cwd()): string {
   if (!isMaintainerEnv(cwd)) return "";
   const reason = auditReason();
   if (!reason) return "";
+
   return [
     "## Reaction Rules Audit Due",
     `🔎 ${reason} since the last audit — run \`/reaction-audit\` to check the reaction rules against them.`,

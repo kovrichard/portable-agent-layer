@@ -40,6 +40,7 @@ function runIn(cwd: string, now: Date): Run | null {
 
 function writesTheReport(run: Run, call: RunToolCall, cwd: string): boolean {
   if (!run.report || !call.filePath) return false;
+
   return resolve(cwd, call.filePath) === resolve(cwd, run.report);
 }
 
@@ -57,6 +58,7 @@ function closeCommand(run: Run): string {
 function deadlineMessage(run: Run): string {
   const task = run.task ? ` (${run.task})` : "";
   const report = run.report ? ` Finish the report at ${run.report}.` : "";
+
   return `Time box ended at ${untilLabel(run)}${task}. Stop working now: report what you found, what is unfinished and what comes next.${report} Only \`pal cli\` and edits to the report still run. Then run \`${closeCommand(run)}\`.`;
 }
 
@@ -64,8 +66,10 @@ function unattendedRefusal(tool: string): string | null {
   const name = tool.toLowerCase();
   if (ASK_TOOLS.has(name))
     return "Unattended run: nobody can answer. Decide, log it with `pal cli unattended log`, and put the question in the report.";
+
   if (DELEGATE_TOOLS.has(name))
     return "Unattended run: one process at a time, so no subagents or workflows. Do the step yourself.";
+
   return null;
 }
 
@@ -77,8 +81,10 @@ export function runModeRefusal(
 ): string | null {
   const run = runIn(cwd, now);
   if (!run) return null;
+
   if (isOver(run, now))
     return finishesTheRun(run, call, cwd) ? null : deadlineMessage(run);
+
   return run.kind === "unattended" ? unattendedRefusal(call.tool) : null;
 }
 
@@ -89,6 +95,7 @@ function reportPlace(run: Run): string {
 function stopMessage(run: Run, now: Date): string {
   if (isOver(run, now))
     return `Unattended run ended at ${untilLabel(run)}. Finalise the report${reportPlace(run)}, then run \`pal cli unattended done\`.`;
+
   return `Unattended until ${untilLabel(run)} (${minutesLeft(run, now)} min left): the user is not here to take a reply. Log the step you finished, then take the next approved task, or a fallback when none is left. Keep the draft report current. When every task and fallback is finished and the report is written, run \`pal cli unattended done\`.`;
 }
 
@@ -96,8 +103,10 @@ function stopMessage(run: Run, now: Date): string {
 export function unattendedStopReason(cwd: string, now: Date = new Date()): string | null {
   const run = runIn(cwd, now);
   if (run?.kind !== "unattended" || run.done) return null;
+
   if (run.stopBlocks >= MAX_STOP_BLOCKS) return null;
   writeRun({ ...run, stopBlocks: run.stopBlocks + 1 });
+
   return stopMessage(run, now);
 }
 
@@ -108,6 +117,7 @@ function taskSuffix(run: Run): string {
 function promptLine(run: Run, now: Date): string {
   if (run.kind === "timebox")
     return `Time box until ${untilLabel(run)}, ${minutesLeft(run, now)} min left${taskSuffix(run)}. Stop and report at the deadline.`;
+
   return `Unattended run until ${untilLabel(run)}, but the user just wrote: answer them. If they are back, run \`pal cli unattended end\`.`;
 }
 
@@ -115,10 +125,13 @@ function promptLine(run: Run, now: Date): string {
 export function runModePromptLine(cwd: string, now: Date = new Date()): string | null {
   const run = runIn(cwd, now);
   if (!run) return null;
+
   if (isOver(run, now)) {
     clearRun(run.scope);
+
     return null;
   }
+
   return `<system-reminder>${promptLine(run, now)}</system-reminder>`;
 }
 
@@ -126,5 +139,6 @@ export function runModePromptLine(cwd: string, now: Date = new Date()): string |
 export function runModeRecall(cwd: string, now: Date = new Date()): string | null {
   const run = runIn(cwd, now);
   if (!run) return null;
+
   return `<system-reminder>\n## Active run — re-read before doing anything else\n${describeRun(run, now)}\n</system-reminder>`;
 }

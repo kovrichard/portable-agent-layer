@@ -153,6 +153,7 @@ function git(cwd: string, ...args: string[]): string {
     env: { ...process.env, ...GIT_ENV },
   });
   if (result.status !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr}`);
+
   return result.stdout.trim();
 }
 
@@ -219,6 +220,7 @@ function runBuild(taskId = TASK) {
   });
   waitForCoach();
   const lines = run.stdout.trim().split("\n").filter(Boolean);
+
   return { exitCode: run.status, stdout: run.stdout, stderr: run.stderr, lines };
 }
 
@@ -227,6 +229,7 @@ const COACH_POLL_MS = 5;
 function waitForCoach() {
   const count = (name: string) => eventsNamed(name).length;
   const deadline = Date.now() + 60_000;
+
   while (
     count("coach_started") > count("coach_finished") + count("coach_failed") &&
     Date.now() < deadline
@@ -237,6 +240,7 @@ function waitForCoach() {
 
 function resultOf(run: ReturnType<typeof runBuild>) {
   expect(run.lines).toHaveLength(1);
+
   return JSON.parse(run.lines[0] ?? "");
 }
 
@@ -271,6 +275,7 @@ const flow = () =>
 const roleNames = () => calls().map((call) => call.role);
 const valueAfter = (argv: string[], flag: string) => {
   if (!argv.includes(flag)) throw new Error(`argv has no ${flag}`);
+
   return argv[argv.indexOf(flag) + 1] as string;
 };
 const storedTask = () =>
@@ -411,6 +416,7 @@ describe("a whole feature run", () => {
     setup("feature");
     runBuild();
     expect(calls().length).toBeGreaterThan(0);
+
     for (const call of calls()) {
       expect(valueAfter(call.argv, "--setting-sources")).toBe("local");
       expect(valueAfter(call.argv, "--plugin-dir")).toBe(PLUGIN_ROOT);

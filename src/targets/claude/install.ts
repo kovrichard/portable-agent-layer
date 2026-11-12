@@ -22,6 +22,7 @@ const CLAUDE_DIR = platform.claudeDir();
 const SETTINGS = resolve(CLAUDE_DIR, "settings.json");
 
 mkdirSync(CLAUDE_DIR, { recursive: true });
+
 if (!existsSync(SETTINGS)) {
   writeFileSync(SETTINGS, "{}\n", "utf-8");
   log.info("Created new settings.json");

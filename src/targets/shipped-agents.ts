@@ -38,6 +38,7 @@ export function installAgents(targetDir: string, platform: AgentName): number {
     });
     if (installed) count++;
   }
+
   return count;
 }
 
@@ -46,12 +47,14 @@ export function staleShippedAgents(targetDir: string, agent: AgentName): string[
   if (!existsSync(assets.agents())) return [];
   const isStale = (stem: string) => {
     const installed = resolve(targetDir, agentFileName(stem, agent));
+
     return (
       !existsSync(installed) ||
       readFileSync(installed, "utf-8") !==
         renderAgentForPlatform(shippedAgentSource(stem), agent)
     );
   };
+
   return shippedAgentStems().filter(isStale).sort();
 }
 
@@ -60,6 +63,7 @@ function uninstallAgents(targetDir: string, platform: AgentName): string[] {
   if (!existsSync(assets.agents())) return [];
 
   const removed: string[] = [];
+
   for (const stem of shippedAgentStems()) {
     const dst = resolve(targetDir, agentFileName(stem, platform));
     if (existsSync(dst)) {
@@ -68,6 +72,7 @@ function uninstallAgents(targetDir: string, platform: AgentName): string[] {
       log.detail(`Removed ${platform} agent: ${stem}`);
     }
   }
+
   return removed;
 }
 
@@ -116,6 +121,7 @@ export function nativeAgentsDir(agent: AgentName): string {
 export function shippedAgentNames(): Set<string> {
   const dir = assets.agents();
   if (!existsSync(dir)) return new Set();
+
   return new Set(
     readdirSync(dir)
       .filter((f) => f.endsWith(".md"))
@@ -125,6 +131,7 @@ export function shippedAgentNames(): Set<string> {
 
 export function installedShippedAgentCount(agent: AgentName): number {
   const dir = nativeAgentsDir(agent);
+
   return [...shippedAgentNames()].filter((name) =>
     existsSync(resolve(dir, agentFileName(name, agent)))
   ).length;

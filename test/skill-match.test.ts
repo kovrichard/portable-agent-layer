@@ -38,6 +38,7 @@ async function setSettings(data: Record<string, unknown>) {
 
 async function loadMatcher() {
   const mod = await import(`../src/hooks/lib/skill-match.ts?t=${Date.now()}`);
+
   return mod.getSkillReminder as (prompt: string) => string | null;
 }
 
@@ -87,6 +88,7 @@ describe("matchSkills", () => {
 
   test("returns at most three skills", () => {
     const skills: SkillIndex["skills"] = {};
+
     for (const n of ["a", "b", "c", "d"]) {
       skills[n] = { name: n, description: "", triggers: ["slides"] };
     }

@@ -62,6 +62,7 @@ function url(port: number): string {
 function readState(): ServerState | null {
   const file = paths.serverState();
   if (!existsSync(file)) return null;
+
   try {
     return JSON.parse(readFileSync(file, "utf-8")) as ServerState;
   } catch {
@@ -81,6 +82,7 @@ function clearState(): void {
 function alive(pid: number): boolean {
   try {
     process.kill(pid, 0);
+
     return true;
   } catch {
     return false;
@@ -92,6 +94,7 @@ async function probe(port: number): Promise<ServerStatus | null> {
     const res = await fetch(`${url(port)}api/status`, {
       signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
     });
+
     return res.ok ? ((await res.json()) as ServerStatus) : null;
   } catch {
     return null;
@@ -100,11 +103,13 @@ async function probe(port: number): Promise<ServerStatus | null> {
 
 async function waitUntilAnswering(port: number): Promise<ServerStatus | null> {
   const deadline = Date.now() + STARTUP_TIMEOUT_MS;
+
   while (Date.now() < deadline) {
     const status = await probe(port);
     if (status) return status;
     await Bun.sleep(100);
   }
+
   return null;
 }
 
@@ -119,6 +124,7 @@ async function cmdStart(port: number): Promise<number> {
   const running = await runningServer();
   if (running) {
     console.log(`Already running at ${url(running.port)} (pid ${running.pid})`);
+
     return 0;
   }
 
@@ -137,6 +143,7 @@ async function cmdStart(port: number): Promise<number> {
 
   writeState({ pid: status.pid, port, startedAt: status.startedAt });
   console.log(url(port));
+
   return 0;
 }
 
@@ -149,9 +156,11 @@ async function cmdRestart(): Promise<number> {
   const running = await runningServer();
   if (!running) {
     console.log("Not running — nothing to restart. Use `start`.");
+
     return 0;
   }
   await cmdStop();
+
   return cmdStart(running.port);
 }
 
@@ -167,6 +176,7 @@ export async function restartIfRunning(): Promise<boolean> {
 async function runningServer(): Promise<ServerState | null> {
   const state = readState();
   if (!state || !alive(state.pid)) return null;
+
   return (await probe(state.port)) ? state : null;
 }
 
@@ -174,8 +184,10 @@ async function cmdStop(): Promise<number> {
   const state = readState();
   if (!state) {
     console.log("Not running.");
+
     return 0;
   }
+
   if (alive(state.pid)) {
     process.kill(state.pid);
     console.log(`Stopped pid ${state.pid}.`);
@@ -183,6 +195,7 @@ async function cmdStop(): Promise<number> {
     console.log(`Pid ${state.pid} was already gone; cleared the stale record.`);
   }
   clearState();
+
   return 0;
 }
 
@@ -190,6 +203,7 @@ async function cmdStatus(): Promise<number> {
   const state = readState();
   if (!state) {
     console.log("Not running.");
+
     return 1;
   }
   const status = alive(state.pid) ? await probe(state.port) : null;
@@ -197,6 +211,7 @@ async function cmdStatus(): Promise<number> {
     console.log(
       `Not running (stale record for pid ${state.pid}; run \`pal cli server stop\`).`
     );
+
     return 1;
   }
   console.log(`
@@ -206,10 +221,12 @@ async function cmdStatus(): Promise<number> {
   ledger       ${status.ledgerFiles} file(s)
   machine      ${status.machine}
 `);
+
   return 0;
 }
 
 function fail(message: string): number {
   console.error(message);
+
   return 1;
 }

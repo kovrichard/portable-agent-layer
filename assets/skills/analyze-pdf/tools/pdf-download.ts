@@ -23,6 +23,7 @@ function buildDatePath(): string {
   const yyyy = now.getFullYear().toString();
   const mm = (now.getMonth() + 1).toString().padStart(2, "0");
   const dd = now.getDate().toString().padStart(2, "0");
+
   return join(yyyy, mm, dd);
 }
 
@@ -32,6 +33,7 @@ function extractFilename(url: string, override?: string): string {
   }
   const urlPath = new URL(url).pathname;
   const name = basename(urlPath);
+
   return name.endsWith(".pdf") ? name : `${name}.pdf`;
 }
 
@@ -51,6 +53,7 @@ async function main() {
 
   // Validate URL
   let parsed: URL;
+
   try {
     parsed = new URL(url);
   } catch {

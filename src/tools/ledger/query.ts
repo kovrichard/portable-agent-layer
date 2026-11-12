@@ -53,20 +53,24 @@ export function ledgerFiles(): string[] {
     .sort()
     .map((name) => resolve(dir, name));
   const active = ledgerPath();
+
   return existsSync(active) ? [...archives, active] : archives;
 }
 
 function entriesInFile(file: string): LedgerEntry[] {
   if (!existsSync(file)) return [];
   const entries: LedgerEntry[] = [];
+
   for (const line of readFileSync(file, "utf-8").split("\n")) {
     if (!line.trim()) continue;
+
     try {
       entries.push(JSON.parse(line) as LedgerEntry);
     } catch {
       /* a partially written line is not evidence; skip it */
     }
   }
+
   return entries;
 }
 
@@ -90,30 +94,42 @@ function inProject(entry: LedgerEntry, slug: string): boolean {
 
   const root = resolveAnchor(`{proj:${slug}}`);
   if (root.state !== "anchored") return false;
+
   return resolve(entry.target).startsWith(resolve(root.path));
 }
 
 function inTimeWindow(entry: LedgerEntry, filter: LedgerFilter): boolean {
   const at = new Date(entry.ts).getTime();
   if (filter.since && at < filter.since.getTime()) return false;
+
   if (filter.until && at > filter.until.getTime()) return false;
+
   return true;
 }
 
 function matchesFilter(entry: LedgerEntry, filter: LedgerFilter): boolean {
   if (!inTimeWindow(entry, filter)) return false;
+
   if (filter.project && !inProject(entry, filter.project)) return false;
+
   return matchesFields(entry, filter);
 }
 
 function matchesFields(entry: LedgerEntry, filter: LedgerFilter): boolean {
   if (filter.actor && entry.actor !== filter.actor) return false;
+
   if (filter.machine && entry.machine !== filter.machine) return false;
+
   if (filter.runtime && entry.runtime !== filter.runtime) return false;
+
   if (filter.authority && entry.authority !== filter.authority) return false;
+
   if (filter.outcome && entry.outcome !== filter.outcome) return false;
+
   if (filter.tool && entry.tool.toLowerCase() !== filter.tool.toLowerCase()) return false;
+
   if (filter.target && !entry.target.includes(filter.target)) return false;
+
   return true;
 }
 
@@ -123,6 +139,7 @@ function matchesFields(entry: LedgerEntry, filter: LedgerFilter): boolean {
  */
 export function queryLedger(filter: LedgerFilter = {}): LedgerEntry[] {
   const matched = readLedger().filter((entry) => matchesFilter(entry, filter));
+
   return filter.limit === undefined ? matched : matched.slice(-filter.limit);
 }
 
@@ -137,6 +154,7 @@ export function findEntry(id: string): LedgerEntry | null {
  */
 export function locate(entry: LedgerEntry): { path?: string; unresolvable?: string } {
   const resolved = resolveAnchor(entry.target);
+
   return resolved.state === "unresolvable"
     ? { unresolvable: resolved.slug }
     : { path: resolved.path };
@@ -155,8 +173,11 @@ export type ChangeShape =
  */
 export function changeShape(entry: LedgerEntry): ChangeShape {
   if (!entry.delta) return { kind: "none" };
+
   if (entry.delta.redacted) return { kind: "redacted" };
+
   if (entry.delta.truncated) return { kind: "truncated" };
+
   return { kind: "hunks", delta: entry.delta };
 }
 
@@ -182,6 +203,7 @@ export function changedLines(entry: LedgerEntry): string {
     default: {
       const added = shape.delta.hunks.reduce((n, h) => n + h.insert.length, 0);
       const removed = shape.delta.hunks.reduce((n, h) => n + h.remove, 0);
+
       return `+${added} -${removed}`;
     }
   }
@@ -201,6 +223,7 @@ function hashOf(content: string): string {
 function replaysToAfter(entry: LedgerEntry, onDisk: string): boolean {
   if (!entry.delta || !entry.after) return false;
   const rebuilt = applyDelta(onDisk, entry.delta);
+
   return rebuilt !== null && hashOf(rebuilt) === entry.after.hash;
 }
 
@@ -210,13 +233,16 @@ export function standing(entry: LedgerEntry): Standing {
   const found = locate(entry);
   if (!found.path)
     return { state: "unknown", why: `unknown project ${found.unresolvable}` };
+
   if (!existsSync(found.path)) return { state: "missing" };
 
   const onDisk = readFileSync(found.path, "utf-8");
   const hash = hashOf(onDisk);
   if (hash === entry.after.hash) return { state: "in-place" };
+
   if (entry.before && hash === entry.before.hash)
     return { state: "reverted", replays: replaysToAfter(entry, onDisk) };
+
   return { state: "superseded", hash };
 }
 
@@ -251,6 +277,7 @@ export function chainVerdict(entry: LedgerEntry): ChainVerdict {
 
   const undo = undoingEntry(entry, later);
   const next = undo ?? later[0];
+
   return { state: undo ? "undone" : "followed", by: next.id, at: next.ts };
 }
 
@@ -261,6 +288,7 @@ export function chainVerdict(entry: LedgerEntry): ChainVerdict {
  */
 function undoingEntry(entry: LedgerEntry, later: LedgerEntry[]): LedgerEntry | undefined {
   if (!entry.before || !entry.after) return undefined;
+
   return later.find((candidate) => candidate.after?.hash === entry.before?.hash);
 }
 
@@ -276,10 +304,12 @@ export interface LedgerStats {
 
 function tally<T>(items: T[], key: (item: T) => string): Record<string, number> {
   const counts: Record<string, number> = {};
+
   for (const item of items) {
     const k = key(item);
     counts[k] = (counts[k] ?? 0) + 1;
   }
+
   return counts;
 }
 
@@ -296,6 +326,7 @@ function rank(
 export function summarize(entries: LedgerEntry[], topTargets = 10): LedgerStats {
   const first = entries.at(0);
   const last = entries.at(-1);
+
   return {
     total: entries.length,
     span: first && last ? { first: first.ts, last: last.ts } : null,
@@ -321,9 +352,11 @@ export function parseSince(spec: string, now: Date = new Date()): Date | null {
   if (duration) {
     const unit = { s: 1e3, m: 6e4, h: 36e5, d: 864e5, w: 6048e5 }[duration[2]];
     if (!unit) return null;
+
     return new Date(now.getTime() - Number(duration[1]) * unit);
   }
 
   const at = new Date(spec);
+
   return Number.isNaN(at.getTime()) ? null : at;
 }

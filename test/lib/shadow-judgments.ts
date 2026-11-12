@@ -25,6 +25,7 @@ export function modelHome(file: string, reply: string | undefined): string {
   const home = freshTestDir(file);
   process.env.PAL_HOME = home;
   process.env.PAL_AGENT = "claude";
+
   for (const key of [
     "PAL_INFERENCE_DISABLED",
     "PAL_ANTHROPIC_API_KEY",
@@ -45,6 +46,7 @@ export function modelHome(file: string, reply: string | undefined): string {
   );
   prependPath(bin);
   setSystemOne(home, undefined);
+
   return home;
 }
 
@@ -73,6 +75,7 @@ export interface LoggedEvent {
 export function eventsOf(home: string, type: string): LoggedEvent[] {
   const dir = resolve(home, "memory", "events");
   if (!existsSync(dir)) return [];
+
   return readdirSync(dir)
     .flatMap((f) => readFileSync(resolve(dir, f), "utf-8").trim().split("\n"))
     .filter(Boolean)
@@ -93,10 +96,12 @@ export function fakeAdapter(answers: JudgeAnswers): { asked: Asked[] } {
     keyNames: [],
     ask: async (input) => {
       asked.push({ state: input.state, questions: input.questions });
+
       return { answers, inputTokens: 5 };
     },
   };
   JUDGE_ADAPTERS.fake = adapter;
+
   return { asked };
 }
 

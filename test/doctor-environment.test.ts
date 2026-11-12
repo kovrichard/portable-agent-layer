@@ -79,6 +79,7 @@ describe("installing the browser", () => {
 
     await installChromium(newUbuntu, (command) => {
       ran.push(command);
+
       return true;
     });
 
@@ -91,6 +92,7 @@ describe("installing the browser", () => {
 
     await installChromium(host(), (command) => {
       ran.push(command);
+
       return true;
     });
 

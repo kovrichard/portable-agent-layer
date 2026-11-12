@@ -21,6 +21,7 @@ function copyTo(dir: string): string {
   mkdirSync(dir, { recursive: true });
   const target = resolve(dir, "scout.md");
   copyFileSync(SCOUT, target);
+
   return target;
 }
 
@@ -72,6 +73,7 @@ describe("subagent doctor on shipped definitions", () => {
   test("every shipped definition reports 0 errors", () => {
     const files = readdirSync(SHIPPED_DIR).filter((f) => f.endsWith(".md"));
     expect(files.length).toBeGreaterThan(0);
+
     for (const file of files) {
       const report = lintSubagent(resolve(SHIPPED_DIR, file));
       const errs = report.findings.filter((f) => f.level === "error");

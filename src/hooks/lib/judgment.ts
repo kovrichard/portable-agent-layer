@@ -102,12 +102,14 @@ export function answersProblem(
     return "answers is not an object";
   }
   const map = answers as Record<string, unknown>;
+
   for (const [id, q] of Object.entries(questions)) {
     const a = map[id];
     if (typeof a !== "object" || a === null) return `${id}: missing`;
     const problem = problemOf(id, q, a);
     if (problem !== null) return problem;
   }
+
   return null;
 }
 
@@ -115,13 +117,16 @@ function problemOf(id: string, q: JudgeQuestion, a: object): string | null {
   if (q.type === "choice") {
     const choice = (a as { choice?: unknown }).choice;
     const ok = typeof choice === "string" && Object.hasOwn(q.criteria, choice);
+
     return ok ? null : `${id}: choice not in criteria`;
   }
+
   if (q.type === "noul") {
     const noul = (a as { noul?: unknown }).noul;
     const ok =
       typeof noul === "boolean" ||
       (typeof noul === "number" && Number.isFinite(noul) && noul >= 0 && noul <= 1);
+
     return ok ? null : `${id}: noul is not a boolean or a number in [0, 1]`;
   }
   const score = (a as { score?: unknown }).score;
@@ -130,6 +135,7 @@ function problemOf(id: string, q: JudgeQuestion, a: object): string | null {
     Number.isFinite(score) &&
     score >= 0 &&
     score <= q.criteria.length - 1;
+
   return ok ? null : `${id}: score is not a level index`;
 }
 

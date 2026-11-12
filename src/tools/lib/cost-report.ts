@@ -27,7 +27,9 @@ const numberOf = (value: unknown) => (typeof value === "number" ? value : 0);
 export function apiPriceOf(event: LoggedEvent): number | null {
   if (event.runtime === "opencode")
     return typeof event.costUsd === "number" ? event.costUsd : null;
+
   if (event.runtime !== "claude" || typeof event.model !== "string") return null;
+
   return costOfUsage(
     event.model,
     {
@@ -58,16 +60,21 @@ function addCall(month: AgentMonth, event: LoggedEvent): void {
   const billing = typeof event.billing === "string" ? event.billing : "unknown";
   month.calls++;
   month.billing.add(billing);
+
   if (price === null) month.unpriced++;
   else month.apiEquivalent += price;
+
   if (billing === "api") month.apiBilled += price ?? 0;
+
   if (billing === "subscription" && typeof event.plan === "string")
     month.plans.set(event.plan, month.plans.get(event.plan) ?? event.ts);
+
   if (event.extraUsage === true) month.extraUsage = true;
 }
 
 export function costMonths(events: LoggedEvent[]): CostMonths {
   const months: CostMonths = new Map();
+
   for (const event of events) {
     const month = event.ts.slice(0, 7);
     const agents = months.get(month) ?? new Map<string, AgentMonth>();
@@ -76,6 +83,7 @@ export function costMonths(events: LoggedEvent[]): CostMonths {
     agents.set(event.runtime, agent);
     addCall(agent, event);
   }
+
   return months;
 }
 
@@ -83,13 +91,17 @@ export function costMonths(events: LoggedEvent[]): CostMonths {
 function paidFor(month: AgentMonth): number | null {
   if (month.billing.has("unknown")) return null;
   let paid = month.billing.has("api") ? month.apiBilled : 0;
+
   if (!month.billing.has("subscription")) return paid;
+
   if (month.plans.size === 0) return null;
+
   for (const [plan, since] of month.plans) {
     const price = planPriceFor(plan, since);
     if (price === null) return null;
     paid += price;
   }
+
   return paid;
 }
 
@@ -103,6 +115,7 @@ export interface CostTotals {
 export function costTotals(months: CostMonths): CostTotals {
   const agentMonths = [...months.values()].flatMap((agents) => [...agents.values()]);
   const paids = agentMonths.map(paidFor);
+
   return {
     apiEquivalent: agentMonths.reduce((sum, m) => sum + m.apiEquivalent, 0),
     unpriced: agentMonths.reduce((sum, m) => sum + m.unpriced, 0),
@@ -116,12 +129,14 @@ export function costTotals(months: CostMonths): CostTotals {
 function leverageOf(month: AgentMonth): number | null {
   const paid = paidFor(month);
   if (paid === null || paid === 0 || month.unpriced > 0) return null;
+
   return month.apiEquivalent / paid;
 }
 
 function apiEquivalentLabel(month: AgentMonth): string {
   if (month.unpriced === month.calls) return "unknown";
   const priced = fmtCost(month.apiEquivalent);
+
   return month.unpriced > 0 ? `${priced} + ${month.unpriced} unpriced calls` : priced;
 }
 
@@ -129,6 +144,7 @@ function paidLabel(month: AgentMonth): string {
   const paid = paidFor(month);
   if (paid === null) return "unknown";
   const extra = month.extraUsage ? " + extra usage (unknown)" : "";
+
   return `${fmtCost(paid)}${extra}`;
 }
 
@@ -137,11 +153,13 @@ function agentLine(label: string, month: AgentMonth): string {
   const bound = month.extraUsage ? "up to " : "";
   const leverageText =
     leverage === null ? "" : `   leverage ${bound}${leverage.toFixed(1)}x`;
+
   return `    ${label.padEnd(16)} paid ${paidLabel(month)}   API-equivalent ${apiEquivalentLabel(month)}${leverageText}`;
 }
 
 export function costLines(months: CostMonths, labelOf: (runtime: string) => string) {
   if (months.size === 0) return ["\n  No model calls in the event log yet\n"];
+
   return [...months.keys()]
     .sort()
     .flatMap((month) => [

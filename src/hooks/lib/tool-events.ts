@@ -17,6 +17,7 @@ export const COMMAND_KEYS = ["command", "commandLine", "CommandLine", "script"];
 
 export function stringIn(input: Record<string, unknown>, keys: string[]): string | null {
   const found = keys.map((k) => input[k]).find((v) => typeof v === "string" && v);
+
   return (found as string | undefined) ?? null;
 }
 
@@ -24,6 +25,7 @@ function numberIn(source: unknown, keys: string[]): number | null {
   if (typeof source !== "object" || source === null) return null;
   const record = source as Record<string, unknown>;
   const found = keys.map((k) => record[k]).find((v) => typeof v === "number");
+
   return (found as number | undefined) ?? null;
 }
 
@@ -33,11 +35,13 @@ export function resultOf(payload: Record<string, unknown>): unknown {
 
 function sizeOf(value: unknown): number {
   if (value === undefined || value === null) return 0;
+
   return typeof value === "string" ? value.length : JSON.stringify(value).length;
 }
 
 function hostOf(url: string | null): string | null {
   if (!url) return null;
+
   try {
     return new URL(url).hostname;
   } catch {
@@ -51,12 +55,14 @@ function mcpServerOf(tool: string): string | null {
 
 function programOf(command: string | null): string | null {
   const first = command?.trim().split(/\s+/)[0];
+
   return first ? basename(first) : null;
 }
 
 function outcomeOf(payload: Record<string, unknown>): string {
   const verdict = unappliedVerdictOf(payload);
   if (verdict) return verdict.outcome;
+
   return typeof payload.error === "string" && payload.error ? "failed" : "ok";
 }
 
@@ -71,6 +77,7 @@ function toolCallFields(payload: Record<string, unknown>, call: ToolUseRequest) 
   const input = call.toolInput;
   const result = resultOf(payload);
   const file = stringIn(input, FILE_TARGET_KEYS);
+
   return {
     tool: call.toolName,
     outcome: outcomeOf(payload),

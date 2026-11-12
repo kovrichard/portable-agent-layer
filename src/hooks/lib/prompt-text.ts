@@ -26,5 +26,6 @@ const SYSTEM_TEXT_PATTERNS = [
 
 export function isSystemText(prompt: string): boolean {
   const trimmed = prompt.trim();
+
   return SYSTEM_TEXT_PATTERNS.some((re) => re.test(trimmed));
 }

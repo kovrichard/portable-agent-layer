@@ -27,6 +27,7 @@ function neverUsed(
   if (index === null || first === undefined) return null;
   const installed = Object.keys(index.skills).sort();
   const names = installed.filter((name) => !used.some((u) => u.name === name));
+
   return { names, installed: installed.length, since: dayOf(first) };
 }
 
@@ -36,6 +37,7 @@ function promisesKeptOnTime(events: LoggedEvent[]) {
     (p) => p.change === "done" && numberOf(p.lateSec) !== null
   );
   const onTime = kept.filter((p) => Number(p.lateSec) <= 0).length;
+
   return { promisesOnTime: kept.length === 0 ? null : onTime, promisesKept: kept.length };
 }
 
@@ -45,6 +47,7 @@ export function wrappedPal(events: LoggedEvent[], index: SkillIndex | null): Wra
     calls.filter((c) => typeof c.skill === "string"),
     skillOf
   );
+
   return {
     skillsUsed: used,
     skillsNeverUsed: neverUsed(calls, used, index),

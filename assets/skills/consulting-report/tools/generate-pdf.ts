@@ -38,6 +38,7 @@ const COLOR = {
 async function exists(p: string): Promise<boolean> {
   try {
     await access(p, fsConstants.F_OK);
+
     return true;
   } catch {
     return false;
@@ -70,11 +71,13 @@ async function logoDataUri(
   const buf = await readFile(filePath);
   const ext = extname(filePath).toLowerCase();
   let mime = "image/jpeg";
+
   if (ext === ".svg") {
     mime = "image/svg+xml";
   } else if (ext === ".png") {
     mime = "image/png";
   }
+
   return `data:${mime};base64,${buf.toString("base64")}`;
 }
 
@@ -89,6 +92,7 @@ async function loadMeta(reportDir: string): Promise<ReportMeta> {
   if (!mod.reportData) {
     throw new Error(`lib/report-data.ts must export a named 'reportData' constant`);
   }
+
   return mod.reportData;
 }
 
@@ -121,6 +125,7 @@ function serveStatic(rootDir: string): Promise<{ server: Server; url: string }> 
     ".webp": "image/webp",
     ".ico": "image/x-icon",
   };
+
   return new Promise((res) => {
     const server = createServer((req, response) => {
       const urlPath = decodeURIComponent((req.url ?? "/").split("?")[0]);
@@ -151,6 +156,7 @@ async function renderPdf(
   const outDir = resolve(htmlPath, "..");
   const { server, url } = await serveStatic(outDir);
   const browser = await chromium.launch();
+
   try {
     const page = await browser.newPage();
     await page.goto(url, { waitUntil: "networkidle" });
@@ -292,11 +298,13 @@ async function generate(opts: GenerateOptions): Promise<{
   const pdfPath = opts.pdfOut ? resolve(opts.pdfOut) : join(dir, `${slug}.pdf`);
 
   await renderPdf(htmlPath, pdfPath, meta);
+
   return { htmlPath, pdfPath };
 }
 
 function demoDir(): string {
   const here = dirname(fileURLToPath(import.meta.url));
+
   return resolve(here, "..", "demo");
 }
 
@@ -305,6 +313,7 @@ export async function prepareDemo(cwd: string, source = demoDir()): Promise<stri
   if (!(await exists(target))) {
     await copyReportSource(source, target);
   }
+
   return target;
 }
 
@@ -312,6 +321,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
   let reportDir: string | undefined;
   let demo = false;
   const options: ReportOptions = {};
+
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--demo") demo = true;
@@ -320,8 +330,11 @@ export function parseArgs(argv: string[]): ParsedArgs {
     else if (arg === "--skip-build") options.skipBuild = true;
     else if (!arg.startsWith("--")) reportDir ??= arg;
   }
+
   if (demo) return { ...options, demo: true };
+
   if (reportDir === undefined) throw new Error(USAGE);
+
   return { ...options, demo: false, reportDir };
 }
 

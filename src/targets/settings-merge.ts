@@ -13,6 +13,7 @@ export type Settings = Record<string, unknown> & {
 export function loadSettingsTemplate(templatePath: string, pkgRoot: string): Settings {
   const raw = readFileSync(templatePath, "utf-8");
   const resolved = raw.replaceAll("{{PKG_ROOT}}", pkgRoot);
+
   try {
     return JSON.parse(resolved) as Settings;
   } catch (e) {
@@ -49,6 +50,7 @@ function mergeKeyedSettings(result: Settings, template: Settings): void {
     const palEntries = template[key] as KeyedEntries | undefined;
     if (!palEntries) continue;
     const entries = { ...((result[key] as KeyedEntries | undefined) ?? {}) };
+
     for (const [name, value] of Object.entries(palEntries)) {
       if (owner === "pal-wins" || !(name in entries)) entries[name] = value;
     }
@@ -75,21 +77,25 @@ export function mergeSettings(existing: Settings, template: Settings): Settings 
   mergeHooks(result, template);
   mergePermissions(result, template);
   mergeSkillOverrides(result, template);
+
   for (const key of USER_OWNED_SETTINGS) {
     if (key in template && !(key in result)) result[key] = template[key];
   }
   mergeSpinnerTips(result, template);
+
   return result;
 }
 
 function palHookCommands(templateHooks: Record<string, HookEntry[]>): Set<string> {
   const palCanonical = new Set<string>();
+
   for (const entries of Object.values(templateHooks)) {
     for (const entry of entries) {
       const cmd = entry.hooks?.[0]?.command;
       if (cmd) palCanonical.add(canonicalPalCmd(cmd));
     }
   }
+
   return palCanonical;
 }
 
@@ -100,8 +106,10 @@ function removeHooksWhere(
   for (const [event, entries] of Object.entries(hooks)) {
     hooks[event] = entries.filter((e) => {
       const cmd = e.hooks?.[0]?.command;
+
       return !cmd || !isPal(cmd);
     });
+
     if (hooks[event].length === 0) delete hooks[event];
   }
 }
@@ -112,8 +120,10 @@ function mergeHooks(result: Settings, template: Settings): void {
   result.hooks ??= {};
   const palCanonical = palHookCommands(template.hooks);
   removeHooksWhere(result.hooks, (cmd) => isOutdatedPalHook(cmd, palCanonical));
+
   for (const [event, entries] of Object.entries(template.hooks)) {
     const current = result.hooks[event] ?? [];
+
     for (const entry of entries) current.push(entry);
     result.hooks[event] = current;
   }
@@ -123,6 +133,7 @@ function mergePermissions(result: Settings, template: Settings): void {
   if (!template.permissions?.allow) return;
   result.permissions ??= {};
   result.permissions.allow ??= [];
+
   for (const perm of template.permissions.allow) {
     if (!result.permissions.allow.includes(perm)) result.permissions.allow.push(perm);
   }
@@ -132,6 +143,7 @@ function mergeSkillOverrides(result: Settings, template: Settings): void {
   if (!template.skillOverrides || typeof template.skillOverrides !== "object") return;
   result.skillOverrides ??= {};
   const resultOverrides = result.skillOverrides as Record<string, unknown>;
+
   for (const [skill, value] of Object.entries(template.skillOverrides)) {
     if (!(skill in resultOverrides)) resultOverrides[skill] = value;
   }
@@ -154,6 +166,7 @@ function mergeSpinnerTips(result: Settings, template: Settings): void {
   const resultOverride = result.spinnerTipsOverride as Record<string, unknown>;
   resultOverride.tips ??= [];
   const tips = resultOverride.tips as string[];
+
   for (const tip of template.spinnerTipsOverride.tips) {
     if (typeof tip === "string" && !tips.includes(tip)) tips.push(tip);
   }
@@ -171,10 +184,12 @@ export function unmergeSettings(existing: Settings, template: Settings): Setting
   unmergeHooks(result, template);
   unmergePermissions(result, template);
   unmergeSkillOverrides(result, template);
+
   for (const key of USER_OWNED_SETTINGS) {
     if (key in template) delete result[key];
   }
   unmergeSpinnerTips(result, template);
+
   return result;
 }
 
@@ -182,6 +197,7 @@ function unmergeHooks(result: Settings, template: Settings): void {
   if (!template.hooks || !result.hooks) return;
   const palCanonical = palHookCommands(template.hooks);
   removeHooksWhere(result.hooks, (cmd) => palCanonical.has(canonicalPalCmd(cmd)));
+
   if (Object.keys(result.hooks).length === 0) delete result.hooks;
 }
 
@@ -189,7 +205,9 @@ function unmergePermissions(result: Settings, template: Settings): void {
   if (!template.permissions?.allow || !result.permissions?.allow) return;
   const palPerms = new Set(template.permissions.allow);
   result.permissions.allow = result.permissions.allow.filter((p) => !palPerms.has(p));
+
   if (result.permissions.allow.length === 0) delete result.permissions.allow;
+
   if (Object.keys(result.permissions).length === 0) delete result.permissions;
 }
 
@@ -199,9 +217,11 @@ function isObject(value: unknown): value is Record<string, unknown> {
 
 function unmergeSkillOverrides(result: Settings, template: Settings): void {
   if (!isObject(template.skillOverrides) || !isObject(result.skillOverrides)) return;
+
   for (const skill of Object.keys(template.skillOverrides)) {
     delete result.skillOverrides[skill];
   }
+
   if (Object.keys(result.skillOverrides).length === 0) delete result.skillOverrides;
 }
 
@@ -211,6 +231,7 @@ function unmergeSpinnerTips(result: Settings, template: Settings): void {
   if (!hasTipsArray(templateOverride) || !hasTipsArray(resultOverride)) return;
   const templateTips = new Set(templateOverride.tips);
   resultOverride.tips = resultOverride.tips.filter((tip) => !templateTips.has(tip));
+
   if (resultOverride.tips.length === 0 && Object.keys(resultOverride).length === 1) {
     delete result.spinnerTipsOverride;
   }

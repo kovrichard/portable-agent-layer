@@ -27,6 +27,7 @@ export async function capturingLog<T>(
 ): Promise<T> {
   const previous = sink;
   sink = collect;
+
   try {
     return await work();
   } finally {

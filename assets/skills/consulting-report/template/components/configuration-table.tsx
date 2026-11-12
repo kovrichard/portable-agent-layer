@@ -68,6 +68,7 @@ export function ConfigurationTable({
             {columns.map((c) => {
               const value = p[c.key];
               const isNameCol = c.key === "name";
+
               return (
                 <td key={String(c.key)} className={`${tdClass} ${c.cellClassName ?? ""}`}>
                   {value ?? (c.key === "rationale" ? "—" : "")}

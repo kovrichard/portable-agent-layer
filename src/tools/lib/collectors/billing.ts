@@ -30,11 +30,13 @@ function readJson(path: string): Json {
 
 function stringField(record: unknown, name: string): string | null {
   const value = (record as Json | undefined)?.[name];
+
   return typeof value === "string" ? value : null;
 }
 
 function booleanField(record: unknown, name: string): boolean | null {
   const value = (record as Json | undefined)?.[name];
+
   return typeof value === "boolean" ? value : null;
 }
 
@@ -47,6 +49,7 @@ interface ClaudeSubscription {
 function claudeSubscriptionOf(config: Json): ClaudeSubscription | null {
   const account = config.oauthAccount;
   if (!stringField(account, "billingType")) return null;
+
   return {
     plan:
       stringField(account, "organizationRateLimitTier") ??
@@ -65,9 +68,12 @@ export function claudeBilling(configPath: string): (at: string) => Billing {
   const config = readJson(configPath);
   const subscription = claudeSubscriptionOf(config);
   const apiKeyLogin = "primaryApiKey" in config;
+
   return (at) => {
     if (!subscription) return apiKeyLogin ? API : UNKNOWN;
+
     if (Date.parse(at) < subscription.since) return UNKNOWN;
+
     return {
       billing: "subscription",
       plan: subscription.plan,
@@ -99,6 +105,7 @@ export function opencodeBilling(
       OPENCODE_AUTH_TYPES[stringField(login, "type") ?? ""] ?? UNKNOWN,
     ])
   );
+
   return (provider) => (provider && billingOf.get(provider)) || UNKNOWN;
 }
 

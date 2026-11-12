@@ -53,6 +53,7 @@ function parsedLine(line: string): Record<string, unknown> | null {
 
 function parseFactoryLine(line: string): FactoryPr[] {
   const { event, task, pr } = parsedLine(line) ?? {};
+
   return typeof event === "string" && PR_EVENTS.has(event) && isText(task) && isText(pr)
     ? [{ task, pr }]
     : [];
@@ -60,6 +61,7 @@ function parseFactoryLine(line: string): FactoryPr[] {
 
 function readFactoryPrs(factoryFile: string): FactoryPr[] {
   if (!existsSync(factoryFile)) return [];
+
   return readFileSync(factoryFile, "utf-8")
     .split("\n")
     .filter((line) => line.trim())
@@ -72,15 +74,18 @@ function uniquePrs(prs: FactoryPr[]): FactoryPr[] {
 
 function taskHolders(events: WorkEvent[], scope: string): Map<string, TaskHolder> {
   const holders = new Map<string, TaskHolder>();
+
   for (const event of events) {
     if (event.scope !== scope || event.type !== "attach" || event.kind !== "run")
       continue;
+
     if (!event.ref.startsWith(FACTORY_RUN_PREFIX)) continue;
     holders.set(event.ref.slice(FACTORY_RUN_PREFIX.length), {
       node: event.node,
       session: event.session,
     });
   }
+
   return holders;
 }
 
@@ -117,6 +122,7 @@ export function attachFactoryPrs(scope: string, options: FactoryOptions = {}): v
     if (holders.size === 0) return;
     const { nodes } = buildTree(scope, events);
     const attached = new Set<string>();
+
     for (const pr of prs) attachHeldPr(scope, nodes, holders, pr, attached, options);
   } catch {
     return;

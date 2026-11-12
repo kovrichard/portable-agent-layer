@@ -35,9 +35,11 @@ export function capturedPath(): string {
  */
 function asEntry(value: unknown): CaptureEntry | null {
   if (typeof value === "string") return { messageCount: 0 };
+
   if (value && typeof value === "object") {
     const { messageCount, userMessageCount, lastMessageId, lastUserMessageId } =
       value as CaptureEntry;
+
     return {
       messageCount,
       ...(userMessageCount === undefined ? {} : { userMessageCount }),
@@ -45,20 +47,24 @@ function asEntry(value: unknown): CaptureEntry | null {
       ...(lastUserMessageId === undefined ? {} : { lastUserMessageId }),
     };
   }
+
   return null;
 }
 
 function readAll(): Record<string, CaptureEntry> {
   const path = capturedPath();
   if (!existsSync(path)) return {};
+
   try {
     const raw = JSON.parse(readFileSync(path, "utf-8"));
     if (Array.isArray(raw) || !raw || typeof raw !== "object") return {};
     const entries: Record<string, CaptureEntry> = {};
+
     for (const [id, value] of Object.entries(raw)) {
       const entry = asEntry(value);
       if (entry) entries[id] = entry;
     }
+
     return entries;
   } catch {
     return {};
@@ -79,6 +85,7 @@ export function isRecaptureWorthwhile(
   messageCount: number
 ): boolean {
   if (!previous) return true;
+
   return messageCount - previous.messageCount >= MIN_NEW_MESSAGES;
 }
 
@@ -91,6 +98,7 @@ export function isHandoffStale(
   userMessageCount: number
 ): boolean {
   if (!previous) return true;
+
   return userMessageCount > (previous.userMessageCount ?? 0);
 }
 

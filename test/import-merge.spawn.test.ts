@@ -13,11 +13,13 @@ const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 function findUnder(dir: string, name: string): string[] {
   if (!existsSync(dir)) return [];
   const hits: string[] = [];
+
   for (const entry of readdirSync(dir, { withFileTypes: true, recursive: true })) {
     if (entry.isFile() && entry.name === name) {
       hits.push(resolve(entry.parentPath, entry.name));
     }
   }
+
   return hits.sort();
 }
 

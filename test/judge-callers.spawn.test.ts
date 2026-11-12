@@ -26,6 +26,7 @@ const ANSWER_BY_SYSTEM_PROMPT = `(() => {
 function events(home: string, type: string): Record<string, unknown>[] {
   const dir = resolve(home, "memory", "events");
   if (!existsSync(dir)) return [];
+
   return readdirSync(dir)
     .flatMap((f) => readFileSync(resolve(dir, f), "utf-8").trim().split("\n"))
     .filter(Boolean)
@@ -42,6 +43,7 @@ test("the rating handler judges all three questions through judge(), off by defa
     PAL_AGENT: "claude",
     PATH: `${home}${delimiter}${process.env.PATH ?? ""}`,
   };
+
   for (const key of [
     "PAL_INFERENCE_DISABLED",
     "PAL_ANTHROPIC_API_KEY",
@@ -78,6 +80,7 @@ test("the rating handler judges all three questions through judge(), off by defa
   const judged = events(home, "judge_call");
   expect(judged.length).toBe(3);
   expect(new Set(judged.map((e) => e.caller)).size).toBe(3);
+
   for (const e of judged) {
     expect(e.mode).toBe("off");
     expect(e.route).toBe("fallback");

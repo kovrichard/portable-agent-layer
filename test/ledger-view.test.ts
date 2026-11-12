@@ -23,6 +23,7 @@ let serial = 0;
 
 function entry(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   serial++;
+
   return {
     id: `id-${serial}`,
     ts: `2026-09-04T12:00:${String(serial % 60).padStart(2, "0")}.000Z`,

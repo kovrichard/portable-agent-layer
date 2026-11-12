@@ -61,11 +61,13 @@ function deps(reply: Partial<ResearchProfile> | null, error?: string) {
     today: "2026-10-10",
     infer: async (call) => {
       calls.push(call);
+
       return reply
         ? { success: true, output: JSON.stringify({ ...PROFILE, ...reply }) }
         : { success: false, error };
     },
   };
+
   return { calls, deps: d };
 }
 
@@ -82,6 +84,7 @@ function captureLog(): { text: () => string; restore: () => void } {
   const spy = spyOn(console, "log").mockImplementation((...a: unknown[]) => {
     lines.push(a.join(" "));
   });
+
   return { text: () => lines.join("\n"), restore: () => spy.mockRestore() };
 }
 
@@ -210,6 +213,7 @@ describe("researchEntity", () => {
       registry: ResearchDeps["registry"] = async () => ENTRY
     ) => {
       const built = deps(reply, "no web search");
+
       return { calls: built.calls, deps: { ...built.deps, registry } };
     };
 
@@ -313,6 +317,7 @@ describe("researchEntity", () => {
         person,
         withRegister({}, async () => {
           asked = true;
+
           return ENTRY;
         }).deps
       );
@@ -358,6 +363,7 @@ describe("researchNewEntities", () => {
       ...d,
       infer: async (call) => {
         if (call.user.includes("Ilse")) throw new Error("offline");
+
         return d.infer(call);
       },
     };
@@ -379,6 +385,7 @@ describe("accepting a researched profile", () => {
       "chat test"
     );
     await researchNewEntities([COMPANY], deps({}).deps);
+
     return pendingReviews()[0].id;
   }
 
@@ -388,6 +395,7 @@ describe("accepting a researched profile", () => {
     await runKnowledge(["review"]);
     out.restore();
     expect(out.text()).toContain(`${id}  company "Brightmoor" — found on the web`);
+
     for (const shown of [
       "https://www.linkedin.com/company/brightmoor-example",
       "Registration number: 09-09-000000",

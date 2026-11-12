@@ -18,6 +18,7 @@ import { isValidTimeZone } from "../hooks/lib/wall-clock";
  */
 export function timezoneProblem(input: string | undefined): string | undefined {
   if (!input || isValidTimeZone(input)) return undefined;
+
   return `Not a timezone Intl recognises: ${input}`;
 }
 
@@ -43,11 +44,15 @@ export async function promptIdentity(): Promise<boolean> {
   if (!needsPrincipal && !needsAi && !needsCatchphrase && !needsTimezone) return false;
 
   if (needsPrincipal && (await cancelledAskingPrincipalName(principal))) return true;
+
   if (needsAi && (await cancelledAskingAiName(ai))) return true;
+
   if (needsCatchphrase && (await cancelledAskingCatchphrase(ai))) return true;
+
   if (needsTimezone && (await cancelledAskingTimezone(principal))) return true;
 
   writeSettings(settings);
+
   return true;
 }
 
@@ -59,8 +64,10 @@ async function askText(opts: Parameters<typeof clack.text>[0]): Promise<string |
   const value = await clack.text(opts);
   if (clack.isCancel(value)) {
     clack.cancel("Setup cancelled");
+
     return null;
   }
+
   return value;
 }
 
@@ -74,6 +81,7 @@ async function cancelledAskingPrincipalName(
   });
   if (name === null) return true;
   principal.name = name;
+
   return false;
 }
 
@@ -87,6 +95,7 @@ async function cancelledAskingAiName(ai: AiIdentity): Promise<boolean> {
   ai.name = name;
   ai.fullName = `${name} — Personal AI`;
   ai.displayName = name.toUpperCase();
+
   return false;
 }
 
@@ -98,6 +107,7 @@ async function cancelledAskingCatchphrase(ai: AiIdentity): Promise<boolean> {
   });
   if (catchphrase === null) return true;
   ai.catchphrase = catchphrase;
+
   return false;
 }
 
@@ -110,5 +120,6 @@ async function cancelledAskingTimezone(principal: PrincipalIdentity): Promise<bo
   });
   if (tz === null) return true;
   principal.timezone = tz;
+
   return false;
 }

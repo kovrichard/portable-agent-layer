@@ -17,11 +17,13 @@ export function linuxFamily(osRelease: string): LinuxFamily | null {
     ["alpine", ["alpine"]],
     ["suse", ["suse", "opensuse"]],
   ];
+
   return families.find(([, names]) => names.some((n) => ids.includes(n)))?.[0] ?? null;
 }
 
 export function readOsRelease(): string {
   if (process.platform !== "linux") return "";
+
   try {
     return readFileSync("/etc/os-release", "utf-8");
   } catch {

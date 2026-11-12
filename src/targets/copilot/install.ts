@@ -43,15 +43,18 @@ log.success(`${countSkills()} skills · ${agentCount} agents → ~/.copilot/`);
 const vsSettingsPath = vscodeSettingsFile();
 const manualHint =
   'Add manually: { "chat.instructionsFilesLocations": { "~/.copilot/instructions": true } }';
+
 if (vsSettingsPath) {
   try {
     const outcome = enableCopilotInstructions(vsSettingsPath);
     if (outcome === "enabled")
       log.success("Enabled ~/.copilot/instructions in VS Code settings");
+
     if (outcome === "needs-manual-edit")
       log.warn(
         `VS Code settings aren't plain JSON, so PAL left them untouched — ${manualHint}`
       );
+
     if (outcome === "vscode-never-launched")
       log.info("Skipped VS Code settings — VS Code has not been launched yet");
   } catch {

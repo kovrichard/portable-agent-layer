@@ -28,12 +28,14 @@ const SKIP_PATTERNS = [
 
 function shouldSkip(relPath: string): boolean {
   const normalized = relPath.replaceAll("\\", "/");
+
   return SKIP_PATTERNS.some((p) => normalized.startsWith(p));
 }
 
 /** Recursively collect all files under a directory, returning paths relative to root. */
 function walkDir(dir: string, root: string): string[] {
   const files: string[] = [];
+
   if (!existsSync(dir)) return files;
 
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -51,6 +53,7 @@ function walkDir(dir: string, root: string): string[] {
       files.push(relPath.replaceAll("\\", "/"));
     }
   }
+
   return files;
 }
 
@@ -82,6 +85,7 @@ export function exportZip(outputPath: string): number {
   if (files.length === 0) return 0;
 
   const zip = new AdmZip();
+
   for (const file of files) {
     const fullPath = resolve(root, file);
     const dir = file.includes("/") ? file.slice(0, file.lastIndexOf("/")) : "";
@@ -93,6 +97,7 @@ export function exportZip(outputPath: string): number {
   );
 
   zip.writeZip(outputPath);
+
   return files.length;
 }
 

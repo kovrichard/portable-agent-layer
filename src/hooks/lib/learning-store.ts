@@ -27,9 +27,11 @@ export interface FailureEntry {
  */
 function* walkMonthDirs(baseDir: string): Generator<{ monthDir: string }> {
   if (!existsSync(baseDir)) return;
+
   try {
     for (const year of readdirSync(baseDir).sort().reverse()) {
       const yearDir = resolve(baseDir, year);
+
       try {
         for (const month of readdirSync(yearDir).sort().reverse()) {
           yield { monthDir: resolve(yearDir, month) };
@@ -53,6 +55,7 @@ export function readFailures(baseDir: string, limit?: number): FailureEntry[] {
       const entry = readCapture(resolve(monthDir, slug, "capture.md"), slug);
       if (!entry) continue;
       entries.push(entry);
+
       if (limit && entries.length >= limit) return entries;
     }
   }
@@ -71,6 +74,7 @@ function newestFirstEntries(dir: string): string[] {
 /** Null when the capture is missing, malformed or has no context. */
 function readCapture(capturePath: string, slug: string): FailureEntry | null {
   if (!existsSync(capturePath)) return null;
+
   try {
     const { meta } = parse<{
       rating?: number;
@@ -82,6 +86,7 @@ function readCapture(capturePath: string, slug: string): FailureEntry | null {
       cwd?: string;
     }>(readFileSync(capturePath, "utf-8"));
     if (!meta.context) return null;
+
     return {
       slug: meta.slug || slug,
       path: capturePath,
@@ -133,8 +138,10 @@ function reflectionOf(o: ReturnType<typeof JSON.parse>): ReflectionEntry {
 export function readReflections(file: string, limit?: number): ReflectionEntry[] {
   if (!existsSync(file)) return [];
   const entries: ReflectionEntry[] = [];
+
   for (const line of readFileSync(file, "utf-8").split("\n")) {
     if (!line.trim()) continue;
+
     try {
       entries.push(reflectionOf(JSON.parse(line)));
     } catch {
@@ -142,5 +149,6 @@ export function readReflections(file: string, limit?: number): ReflectionEntry[]
     }
   }
   entries.reverse(); // JSONL is appended chronologically → newest first
+
   return limit ? entries.slice(0, limit) : entries;
 }

@@ -21,6 +21,7 @@ function setSettings(data: Record<string, unknown>) {
 function streamLines(month: string): Record<string, unknown>[] {
   const file = resolve(home, "memory", "events", `${month}.jsonl`);
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .trim()
     .split("\n")
@@ -176,6 +177,7 @@ describe("a failed write", () => {
     const dir = resolve(home, "memory", "events");
     mkdirSync(dir, { recursive: true });
     chmodSync(dir, 0o500);
+
     try {
       expect(appendEvent("turn", {}, { ts: "2026-09-10T10:00:00.000Z" })).toBeNull();
     } finally {
@@ -210,6 +212,7 @@ describe("cost", () => {
     appendEvent("turn", { words: 1 }, { ts: "2026-09-10T10:00:00.000Z" });
     const runs = 50;
     const start = performance.now();
+
     for (let i = 0; i < runs; i++) appendEvent("turn", { words: i }, {});
     expect((performance.now() - start) / runs).toBeLessThan(5);
   });

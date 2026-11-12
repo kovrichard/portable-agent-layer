@@ -25,7 +25,9 @@ import { palHome } from "../../hooks/lib/paths";
 
 function isVerbose(): boolean {
   if (process.env.PAL_QUIET === "1") return false;
+
   if (process.env.PAL_VERBOSE === "1") return true;
+
   return Boolean(process.stdout.isTTY);
 }
 
@@ -40,6 +42,7 @@ function line(stream: { write: (s: string) => void }, text: string): void {
  */
 function homeRelative(file: string): string {
   const rel = relative(palHome(), file).replaceAll("\\", "/");
+
   return rel && !rel.startsWith("..") ? rel : file.replaceAll("\\", "/");
 }
 

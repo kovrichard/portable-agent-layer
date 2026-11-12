@@ -64,11 +64,13 @@ function gitLog(repo: string, since: string | undefined): string | null {
     "--numstat",
     `--format=${FORMAT}`,
   ];
+
   if (since) args.push(`--since=${since}`);
   const result = spawnSync("git", args, {
     encoding: "utf-8",
     maxBuffer: 256 * 1024 * 1024,
   });
+
   return result.status === 0 ? result.stdout : null;
 }
 
@@ -78,6 +80,7 @@ function numstatOf(text: string) {
     .map((line) => line.split("\t"))
     .filter((cells) => cells.length === 3);
   const count = (cell: string) => (cell === "-" ? 0 : Number(cell));
+
   return {
     files: rows.length,
     added: rows.reduce((sum, [added]) => sum + count(added), 0),
@@ -98,6 +101,7 @@ function tagsOf(refs: string): string[] {
 
 function conventionalFlags(subject: string, body: string) {
   const conventional = CONVENTIONAL.exec(subject);
+
   return {
     commitType: conventional?.[1] ?? null,
     breaking: !!conventional?.[3] || /^BREAKING CHANGE:/m.test(body),
@@ -110,6 +114,7 @@ function commitOf(record: string): Commit | null {
     record.split(FIELD);
   if (!hash || !aI || !cI) return null;
   const coAuthors = coAuthorLines(body ?? "");
+
   return {
     hash,
     authoredAt: new Date(aI).toISOString(),
@@ -131,6 +136,7 @@ function commitOf(record: string): Commit | null {
 function readCommits(repo: string, since?: string): Commit[] {
   const log = gitLog(repo, since);
   if (log === null) return [];
+
   return log
     .split(RECORD)
     .map(commitOf)
@@ -177,6 +183,7 @@ function emitCommit(repo: string, commit: Commit): void {
 /** Appends the commits not yet logged and returns how many. */
 export function backfillGit(repos: string[], known: Set<string>, since?: string): number {
   let emitted = 0;
+
   for (const repo of repos) {
     for (const commit of readCommits(repo, since)) {
       const id = commitEventId(commit.hash);
@@ -186,5 +193,6 @@ export function backfillGit(repos: string[], known: Set<string>, since?: string)
       emitted++;
     }
   }
+
   return emitted;
 }

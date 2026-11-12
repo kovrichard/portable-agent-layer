@@ -15,6 +15,7 @@ import { freshTestDir, testHome } from "./lib/test-home";
 async function lint(body: string, opts: { deckDir?: string } = {}): Promise<Finding[]> {
   const deckDir = opts.deckDir ?? testHome(import.meta.file, "deck");
   const r = await lintSlide({ name: "test.md", body }, deckDir);
+
   return r.findings;
 }
 
@@ -73,6 +74,7 @@ describe("global rules", () => {
 
   test("missing-asset resolves against deck dir for present files", async () => {
     const dir = freshTestDir(import.meta.file);
+
     try {
       mkdirSync(join(dir, "assets"));
       writeFileSync(join(dir, "assets", "diagram.png"), "");

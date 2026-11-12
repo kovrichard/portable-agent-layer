@@ -244,6 +244,7 @@ describe("CI", () => {
 
   function waitWith(checks: object[], heads: object, timeoutMs = 10) {
     writeTask({ id: "t1", pr: "https://pr/1", worktree: "/wt" }, env);
+
     return waitForCi("t1", {
       env,
       read: () => checks,
@@ -315,6 +316,7 @@ describe("CI", () => {
       env,
       read: () => {
         reads += 1;
+
         return answers.shift() ?? answers.at(-1) ?? [];
       },
       pause: () => {},
@@ -323,6 +325,7 @@ describe("CI", () => {
       staleLinks,
       ...matchingHeads,
     });
+
     return { outcome, reads };
   }
 
@@ -588,6 +591,7 @@ describe("coach support in the shared scripts", () => {
 function filesUnder(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
     const path = join(dir, name);
+
     return statSync(path).isDirectory() ? filesUnder(path) : [path];
   });
 }
@@ -615,6 +619,7 @@ describe("the plugin's own files", () => {
 
   test("the test-writer agent tests each criterion at its widest reading, twice for state, never from plan.md", () => {
     const agent = readFileSync(join(PLUGIN_ROOT, "agents/test-writer.md"), "utf8");
+
     for (const word of [
       "widest",
       "twice",

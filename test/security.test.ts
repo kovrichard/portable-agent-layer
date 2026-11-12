@@ -409,6 +409,7 @@ describe("checkFilePath", () => {
 
   test("blocks managed files under a relocated PAL home", () => {
     process.env.PAL_HOME = "/srv/pal-home";
+
     try {
       expect(checkFilePath("/srv/pal-home/memory/sessions.json")).toBeTruthy();
       expect(checkFilePath(home(".pal", "memory", "sessions.json"))).toBeNull();
@@ -480,6 +481,7 @@ describe("checkFilePath", () => {
     mkdirSync(repoSkill, { recursive: true });
     linkDir(repoSkill, join(skills, "shipped"));
     mkdirSync(join(skills, "personal"), { recursive: true });
+
     try {
       expect(checkFilePath(join(skills, "shipped", "SKILL.md"))).toMatch(
         /managed by 'pal install'.*PAL repo/

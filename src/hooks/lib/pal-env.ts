@@ -24,6 +24,7 @@ function unquoted(value: string): string {
 
 export function parsePalEnv(content: string): Record<string, string> {
   const values: Record<string, string> = {};
+
   for (const raw of content.split("\n")) {
     const line = withoutExportPrefix(raw.trim());
     if (!line || line.startsWith("#")) continue;
@@ -31,6 +32,7 @@ export function parsePalEnv(content: string): Record<string, string> {
     if (eq <= 0) continue;
     values[line.slice(0, eq).trim()] = unquoted(line.slice(eq + 1).trim());
   }
+
   return values;
 }
 
@@ -44,8 +46,10 @@ export function readPalEnvFile(): Record<string, string> {
 
 export function withPalEnv(env: Env = process.env): Env {
   const merged: Env = { ...env };
+
   for (const [key, value] of Object.entries(readPalEnvFile())) {
     if (!merged[key]) merged[key] = value;
   }
+
   return merged;
 }

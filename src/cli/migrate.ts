@@ -70,6 +70,7 @@ interface Migration {
 function pendingJsonFiles(): string[] {
   const progressDir = paths.progress();
   if (!existsSync(progressDir)) return [];
+
   return readdirSync(progressDir)
     .filter((f) => f.endsWith(".json"))
     .filter((f) => !readProject(f.slice(0, -5)));
@@ -81,6 +82,7 @@ const v1Projects: Migration = {
 
   check() {
     const pending = pendingJsonFiles();
+
     return {
       pending: pending.length > 0,
       detail: pending.length > 0 ? `${pending.length} file(s) in progress/` : undefined,
@@ -107,6 +109,7 @@ const v1Projects: Migration = {
           results.push(`${slug}: skipped (malformed JSON)`);
           continue;
         }
+
         if (!dryRun) writeProject(p);
         migrated++;
         results.push(`${slug}: ${dryRun ? "would migrate" : "migrated"} (source kept)`);
@@ -124,10 +127,12 @@ const v1Projects: Migration = {
 
 function nextIscId(criteria: string): number {
   const ids: number[] = [];
+
   for (const line of criteria.split("\n")) {
     const m = new RegExp(/^-\s+\[[ x~]\]\s+ISC-(\d+):/i).exec(line);
     if (m) ids.push(Number(m[1]));
   }
+
   return ids.length > 0 ? Math.max(...ids) + 1 : 1;
 }
 
@@ -136,12 +141,14 @@ function pendingThreadsForProjects(): { thread: Thread; project: ProjectProgress
   if (threads.length === 0) return [];
   const projects = readAllProjects();
   const results: { thread: Thread; project: ProjectProgress }[] = [];
+
   for (const thread of threads) {
     const project = projects.find(
       (p) => p.path !== undefined && resolve(p.path) === resolve(thread.cwd)
     );
     if (project) results.push({ thread, project });
   }
+
   return results;
 }
 
@@ -154,6 +161,7 @@ function addThreadAsIsc(thread: Thread, projectName: string): Thread | null {
   p.criteria = current ? `${current.trimEnd()}\n${newLine}` : newLine;
   p.updated = new Date().toISOString();
   writeProject(p);
+
   return { ...thread, status: "resolved", resolved: new Date().toISOString() };
 }
 
@@ -163,6 +171,7 @@ const v2ThreadsToIsc: Migration = {
 
   check() {
     const pending = pendingThreadsForProjects();
+
     return {
       pending: pending.length > 0,
       detail: pending.length > 0 ? `${pending.length} thread(s) to migrate` : undefined,
@@ -239,12 +248,14 @@ function legacyEntitiesPath(): string {
   // computed locally now that paths.entities() is being retired alongside this migration.
   const home = palHome();
   const dir = resolve(home, "memory", "entities");
+
   return resolve(dir, "entity-index.json");
 }
 
 function readLegacyIndex(): LegacyIndex | null {
   const p = legacyEntitiesPath();
   if (!existsSync(p)) return null;
+
   try {
     return JSON.parse(readFileSync(p, "utf-8")) as LegacyIndex;
   } catch {
@@ -270,9 +281,11 @@ function legacyPersonToEntity(legacy: LegacyPerson): Entity {
     occurrences: legacy.occurrences,
   };
   let body = "";
+
   for (const sourceId of legacy.source_ids) {
     body = appendSourceLog(body, sourceId, null, {}, legacy.first_seen);
   }
+
   return { domain: "People", slug: slugify(legacy.name), frontmatter: fm, body };
 }
 
@@ -290,11 +303,14 @@ function legacyCompanyToEntity(legacy: LegacyCompany): Entity {
     legacy_id: legacy.id,
     occurrences: legacy.occurrences,
   };
+
   if (legacy.domain) fm.domain_name = legacy.domain;
   let body = "";
+
   for (const sourceId of legacy.source_ids) {
     body = appendSourceLog(body, sourceId, null, {}, legacy.first_seen);
   }
+
   return { domain: "Companies", slug: slugify(baseKey), frontmatter: fm, body };
 }
 
@@ -309,13 +325,16 @@ const v3EntitiesToKnowledge: Migration = {
     if (total === 0) return { pending: false };
     // Skip if every entity already exists in the new store (idempotent).
     let remaining = 0;
+
     for (const p of Object.values(idx.people ?? {})) {
       if (!knowledgeExists("People", slugify(p.name))) remaining++;
     }
+
     for (const c of Object.values(idx.companies ?? {})) {
       const key = c.domain?.trim() ? c.domain : c.name;
       if (!knowledgeExists("Companies", slugify(key))) remaining++;
     }
+
     return {
       pending: remaining > 0,
       detail: remaining > 0 ? `${remaining} of ${total} entries to migrate` : undefined,
@@ -342,22 +361,27 @@ const v3EntitiesToKnowledge: Migration = {
     const tally: MigrationResult = { migrated: 0, skipped: 0, results: [] };
     const people = Object.values(idx.people ?? {}).map(legacyPersonToEntity);
     const companies = Object.values(idx.companies ?? {}).map(legacyCompanyToEntity);
+
     for (const entity of [...people, ...companies]) {
       migrateEntity(entity, dryRun, tally);
     }
 
     if (!dryRun && tally.migrated > 0) archiveLegacyIndex(tally.results);
+
     return tally;
   },
 };
 
 function migrateEntity(entity: Entity, dryRun: boolean, tally: MigrationResult): void {
   const label = `${entity.domain}/${entity.slug}`;
+
   if (knowledgeExists(entity.domain, entity.slug)) {
     tally.skipped++;
     tally.results.push(`${label}: skipped (already in new store)`);
+
     return;
   }
+
   if (!dryRun) knowledgeSave(entity);
   tally.migrated++;
   tally.results.push(`${label}: ${dryRun ? "would migrate" : "migrated"}`);
@@ -369,6 +393,7 @@ function archiveLegacyIndex(results: string[]): void {
   if (!existsSync(src)) return;
   const date = new Date().toISOString().slice(0, 10);
   const archived = `${src}.migrated-${date}`;
+
   try {
     renameSync(src, archived);
     results.push(`archived legacy index → ${archived}`);
@@ -386,12 +411,14 @@ function recordsCarryingAPath(): string[] {
   const base = paths.projectHistory();
   if (!existsSync(base)) return [];
   const out: string[] = [];
+
   for (const slug of readdirSync(base)) {
     const file = resolve(base, slug, "ISA.md");
     if (!existsSync(file)) continue;
     const frontmatter = readFileSync(file, "utf-8").split("---")[1] ?? "";
     if (/^path:/m.test(frontmatter)) out.push(slug);
   }
+
   return out;
 }
 
@@ -401,6 +428,7 @@ const v4PathsToBindings: Migration = {
 
   check() {
     const stale = recordsCarryingAPath();
+
     return {
       pending: stale.length > 0,
       detail:
@@ -424,6 +452,7 @@ const v4PathsToBindings: Migration = {
         results.push(`${slug}: unreadable, left untouched`);
         continue;
       }
+
       if (dryRun) {
         migrated++;
         results.push(`${slug}: would move ${project.path ?? "(no path)"} to a binding`);
@@ -455,6 +484,7 @@ function attributionFiles(): string[] {
       if (name.endsWith(".jsonl")) files.push(resolve(signalsDir, name));
     }
   }
+
   return files.filter((f) => existsSync(f));
 }
 
@@ -466,15 +496,18 @@ function renameAttributionKey(raw: string): { text: string; changed: number } {
   const out = lines.map((line) => {
     if (!line.trim()) return line;
     let record: Record<string, unknown>;
+
     try {
       record = JSON.parse(line) as Record<string, unknown>;
     } catch {
       return line; // a malformed line is left exactly as found
     }
+
     if (!("m" in record)) return line;
 
     const { m, ...rest } = record;
     changed++;
+
     // `rest` spreads last so a record already carrying `machine` keeps that
     // value and still sheds the stale `m`.
     return JSON.stringify({ machine: m, ...rest });
@@ -495,6 +528,7 @@ const v5AttributionKeys: Migration = {
 
   check() {
     const stale = filesCarryingOldKey();
+
     return {
       pending: stale.length > 0,
       detail:
@@ -511,6 +545,7 @@ const v5AttributionKeys: Migration = {
     for (const file of filesCarryingOldKey()) {
       const { text, changed } = renameAttributionKey(readFileSync(file, "utf-8"));
       const name = file.replace(palHome(), "").replaceAll("\\", "/");
+
       if (dryRun) {
         results.push(`${name}: would rewrite ${changed} record(s)`);
         migrated++;
@@ -545,18 +580,21 @@ function orphanHistoryFolders(): { slug: string; file: string }[] {
   const base = paths.projectHistory();
   if (!existsSync(base)) return [];
   const out: { slug: string; file: string }[] = [];
+
   for (const slug of readdirSync(base)) {
     const dir = resolve(base, slug);
     const file = resolve(dir, "history.jsonl");
     if (!existsSync(file) || existsSync(resolve(dir, "ISA.md"))) continue;
     out.push({ slug, file });
   }
+
   return out;
 }
 
 function parkedHistoryFiles(): { slug: string; file: string }[] {
   const base = paths.unboundHistory();
   if (!existsSync(base)) return [];
+
   return readdirSync(base)
     .filter((f) => f.endsWith(".jsonl"))
     .map((f) => ({ slug: f.slice(0, -".jsonl".length), file: resolve(base, f) }));
@@ -567,21 +605,26 @@ function projectOwningDirectoryNamed(slug: string): string | null {
   const bindings = readBindings();
   const owners = readAllProjects().filter((p) => {
     const path = projectPathOnThisMachine(p, bindings);
+
     return path !== null && basename(path) === slug;
   });
+
   return owners.length === 1 ? owners[0].name : null;
 }
 
 /** Orphans always move; parked history moves only once its project appears. */
 function strandedHistory(): StrandedHistory[] {
   const out: StrandedHistory[] = [];
+
   for (const { slug, file } of orphanHistoryFolders()) {
     out.push({ slug, file, owner: projectOwningDirectoryNamed(slug), parked: false });
   }
+
   for (const { slug, file } of parkedHistoryFiles()) {
     const owner = projectOwningDirectoryNamed(slug);
     if (owner) out.push({ slug, file, owner, parked: true });
   }
+
   return out;
 }
 
@@ -606,6 +649,7 @@ const v6HistorySlugs: Migration = {
 
   check() {
     const stranded = strandedHistory();
+
     return {
       pending: stranded.length > 0,
       detail:
@@ -623,14 +667,17 @@ const v6HistorySlugs: Migration = {
     for (const item of strandedHistory()) {
       const target = destinationFor(item);
       const where = item.owner ? `project ${item.owner}` : "unbound-history";
+
       if (dryRun) {
         migrated++;
         results.push(`${item.slug}: would move to ${where}`);
         continue;
       }
+
       try {
         const added = foldHistoryInto(target, item.file);
         unlinkSync(item.file);
+
         if (!item.parked) discardEmptyFolder(dirname(item.file));
         migrated++;
         results.push(`${item.slug}: ${added} entr(ies) moved to ${where}`);
@@ -679,6 +726,7 @@ function settingsFile(): string {
 function readSettingsObject(): Record<string, Record<string, unknown>> | null {
   try {
     const settings = JSON.parse(readFileSync(settingsFile(), "utf-8"));
+
     return typeof settings === "object" && settings !== null ? settings : null;
   } catch {
     return null;
@@ -695,6 +743,7 @@ export function retiredKeysIn(
   return Object.entries(RETIRED_SETTINGS_KEYS).flatMap(([section, keys]) => {
     const value = settings[section];
     if (typeof value !== "object" || value === null) return [];
+
     return keys.filter((key) => key in value).map((key) => `${section}.${key}`);
   });
 }
@@ -706,6 +755,7 @@ const v7RetiredSettingsKeys: Migration = {
   check() {
     const settings = readSettingsObject();
     const retired = settings ? retiredKeysIn(settings) : [];
+
     return {
       pending: retired.length > 0,
       detail: retired.length > 0 ? retired.join(", ") : undefined,
@@ -717,6 +767,7 @@ const v7RetiredSettingsKeys: Migration = {
     const retired = settings ? retiredKeysIn(settings) : [];
     if (!settings || retired.length === 0)
       return { migrated: 0, skipped: 0, results: [] };
+
     if (!dryRun) {
       for (const path of retired) {
         const [section, key] = path.split(".");
@@ -725,6 +776,7 @@ const v7RetiredSettingsKeys: Migration = {
       writeSettingsObject(settings);
     }
     const verb = dryRun ? "would remove" : "removed";
+
     return {
       migrated: retired.length,
       skipped: 0,
@@ -740,13 +792,16 @@ function leftoverMigration(leftover: Leftover): Migration {
     movesSources: true,
     check() {
       const found = leftover.find();
+
       return { pending: found.length > 0, detail: found.join(", ") || undefined };
     },
     run(dryRun = false): MigrationResult {
       const found = leftover.find();
       if (found.length === 0) return { migrated: 0, skipped: 0, results: [] };
+
       if (!dryRun) leftover.remove();
       const verb = dryRun ? "would remove" : "removed";
+
       return {
         migrated: found.length,
         skipped: 0,
@@ -776,6 +831,7 @@ interface FactoryStep {
 const oldFactoryFolder = () => resolve(palHome(), "dark-factory");
 function homeTheFactoryReads(): string | null {
   const pinned = process.env.DARK_FACTORY_HOME;
+
   return pinned && resolve(pinned) !== oldFactoryFolder() ? resolve(pinned) : null;
 }
 
@@ -794,6 +850,7 @@ function git(args: string[], cwd: string): string {
   if (result.status !== 0) {
     throw new Error((result.stderr || "git failed").trim().split("\n")[0]);
   }
+
   return result.stdout.trim();
 }
 
@@ -810,6 +867,7 @@ function repointWorktreeInTask(taskDir: string): void {
   const file = resolve(taskDir, "task.json");
   if (!existsSync(file)) return;
   let task: { worktree?: unknown };
+
   try {
     task = JSON.parse(readFileSync(file, "utf-8"));
   } catch {
@@ -825,6 +883,7 @@ function repointWorktreeInTask(taskDir: string): void {
 function factoryFolderStep(kind: "task" | "worktree", id: string): FactoryStep {
   const from = resolve(oldFactoryFolder(), `${kind}s`, id);
   const to = resolve(newFactoryFolder(), `${kind}s`, id);
+
   return {
     label: `${kind}/${id}`,
     blocked: existsSync(to) ? `already in ${newFactoryFolder()}` : null,
@@ -832,6 +891,7 @@ function factoryFolderStep(kind: "task" | "worktree", id: string): FactoryStep {
     pending: "would move",
     apply() {
       mkdirSync(dirname(to), { recursive: true });
+
       if (kind === "worktree") return moveWorktree(from, to);
       renameSync(from, to);
       repointWorktreeInTask(to);
@@ -841,6 +901,7 @@ function factoryFolderStep(kind: "task" | "worktree", id: string): FactoryStep {
 
 function eventsStep(): FactoryStep {
   const target = resolve(newFactoryFolder(), "events.jsonl");
+
   return {
     label: "events.jsonl",
     blocked: null,
@@ -861,11 +922,13 @@ function factoryFolderSteps(): FactoryStep[] {
     ),
     ...subfoldersOf(resolve(old, "tasks")).map((id) => factoryFolderStep("task", id)),
   ];
+
   return existsSync(oldFactoryEvents()) ? [...steps, eventsStep()] : steps;
 }
 
 function discardEmptyFactoryFolders(): void {
   const old = oldFactoryFolder();
+
   for (const sub of ["worktrees", "tasks"]) discardEmptyFolder(resolve(old, sub));
   discardEmptyFolder(old);
 }
@@ -877,6 +940,7 @@ const v8FactoryHome: Migration = {
 
   check() {
     const steps = factoryFolderSteps().filter((step) => !step.blocked);
+
     return {
       pending: steps.length > 0,
       detail:
@@ -897,11 +961,13 @@ const v8FactoryHome: Migration = {
         results.push(`${step.label}: skipped (${step.blocked})`);
         continue;
       }
+
       if (dryRun) {
         migrated++;
         results.push(`${step.label}: ${step.pending}`);
         continue;
       }
+
       try {
         step.apply();
         migrated++;
@@ -913,6 +979,7 @@ const v8FactoryHome: Migration = {
     }
 
     if (!dryRun) discardEmptyFactoryFolders();
+
     return { migrated, skipped, results };
   },
 };
@@ -940,6 +1007,7 @@ function mergeOldProgressTreeEvents(): number {
   );
   writeFileSync(newFile, text, "utf-8");
   unlinkSync(oldFile);
+
   return text.split("\n").filter(Boolean).length - keptFromNew;
 }
 
@@ -949,7 +1017,9 @@ function appendOldProgressTree(): FolderStep {
   const results = [
     `${OLD_PROGRESS_TREE_LABEL}: ${appended} event(s) appended before memory/progress-tree/events.jsonl`,
   ];
+
   if (!existsSync(oldProgressTreeFolder())) return { results, skipped: 0 };
+
   return {
     results: [
       ...results,
@@ -962,20 +1032,25 @@ function appendOldProgressTree(): FolderStep {
 function progressTreeFolderStep(dryRun: boolean): FolderStep {
   if (!existsSync(oldProgressTreeFolder())) return { results: [], skipped: 0 };
   const bothExist = existsSync(newProgressTreeFolder());
+
   if (dryRun) {
     const verb = bothExist
       ? "would append its events before memory/progress-tree/events.jsonl"
       : "would move to memory/progress-tree/";
+
     return { results: [`${OLD_PROGRESS_TREE_LABEL}: ${verb}`], skipped: 0 };
   }
+
   try {
     if (!bothExist) {
       renameSync(oldProgressTreeFolder(), newProgressTreeFolder());
+
       return {
         results: [`${OLD_PROGRESS_TREE_LABEL}: moved to memory/progress-tree/`],
         skipped: 0,
       };
     }
+
     return appendOldProgressTree();
   } catch (e) {
     return {
@@ -992,11 +1067,13 @@ const v9ProgressTreeNames: Migration = {
 
   check() {
     const pending = existsSync(oldProgressTreeFolder());
+
     return { pending, detail: pending ? OLD_PROGRESS_TREE_LABEL : undefined };
   },
 
   run(dryRun = false): MigrationResult {
     const { results, skipped } = progressTreeFolderStep(dryRun);
+
     return { migrated: results.length - skipped, skipped, results };
   },
 };
@@ -1006,6 +1083,7 @@ const v9ProgressTreeNames: Migration = {
 function nodeOf(line: string): string[] {
   try {
     const { node } = JSON.parse(line);
+
     return typeof node === "string" ? [node] : [];
   } catch {
     return [];
@@ -1015,21 +1093,25 @@ function nodeOf(line: string): string[] {
 function progressTreeNodeIds(): Set<string> {
   const file = resolve(newProgressTreeFolder(), EVENTS_FILE);
   if (!existsSync(file)) return new Set();
+
   return new Set(readFileSync(file, "utf-8").split("\n").flatMap(nodeOf));
 }
 
 function openThreadsNotInTree(): Thread[] {
   const nodes = progressTreeNodeIds();
+
   return readThreads().filter((t) => t.status === "open" && !nodes.has(t.id));
 }
 
 function threadScope(cwd: string): string {
   const anchor = resolveAnchor(cwd);
+
   return anchor.state === "unresolvable" ? anchor.slug : scopeOf(anchor.path);
 }
 
 function openedAt(thread: Thread): Date {
   const created = new Date(thread.created);
+
   return Number.isNaN(created.getTime()) ? new Date() : created;
 }
 
@@ -1051,6 +1133,7 @@ const v10ThreadsToProgressTree: Migration = {
 
   check() {
     const pending = openThreadsNotInTree();
+
     return {
       pending: pending.length > 0,
       detail: pending.length > 0 ? `${pending.length} open thread(s)` : undefined,
@@ -1060,6 +1143,7 @@ const v10ThreadsToProgressTree: Migration = {
   run(dryRun = false): MigrationResult {
     const results: string[] = [];
     let skipped = 0;
+
     for (const thread of openThreadsNotInTree()) {
       try {
         if (!dryRun) parkThread(thread);
@@ -1071,6 +1155,7 @@ const v10ThreadsToProgressTree: Migration = {
         results.push(`${thread.id}: skipped (${(e as Error).message})`);
       }
     }
+
     return { migrated: results.length - skipped, skipped, results };
   },
 };
@@ -1108,6 +1193,7 @@ export function applyPendingMigrations(): string[] {
 export function checkPendingMigrations(): PendingMigration[] {
   return MIGRATIONS.flatMap((m) => {
     const { pending, detail } = m.check();
+
     return pending ? [{ id: m.id, description: m.description, detail }] : [];
   });
 }
@@ -1117,8 +1203,10 @@ function printMigrationList(): void {
   const done = MIGRATIONS.filter((m) => !m.check().pending);
 
   console.log("");
+
   if (pending.length > 0) {
     console.log("  Pending migrations:");
+
     for (const m of pending) {
       const detail = m.detail ? ` (${m.detail})` : "";
       console.log(`    ⚠ ${m.id} — ${m.description}${detail}`);
@@ -1126,8 +1214,10 @@ function printMigrationList(): void {
   } else {
     console.log("  No pending migrations.");
   }
+
   if (done.length > 0) {
     console.log("  Done:");
+
     for (const m of done) {
       console.log(`    ✓ ${m.id} — ${m.description}`);
     }
@@ -1142,12 +1232,14 @@ export function runMigrate(args: string[]): void {
 
   if (list) {
     printMigrationList();
+
     return;
   }
 
   const pending = MIGRATIONS.filter((m) => m.check().pending);
   if (pending.length === 0) {
     console.log("  Nothing to migrate — all up to date.");
+
     return;
   }
 
@@ -1161,6 +1253,7 @@ export function runMigrate(args: string[]): void {
     const result = m.run(dryRun);
     totalMigrated += result.migrated;
     totalSkipped += result.skipped;
+
     for (const r of result.results) {
       console.log(`    ${r}`);
     }
@@ -1170,6 +1263,7 @@ export function runMigrate(args: string[]): void {
   console.log(
     `  ${dryRun ? "Would migrate" : "Migrated"}: ${totalMigrated} | Skipped: ${totalSkipped}`
   );
+
   if (!dryRun && totalMigrated > 0 && pending.some((m) => !m.movesSources)) {
     console.log("  Source files preserved — delete manually once verified.");
   }

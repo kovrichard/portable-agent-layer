@@ -16,6 +16,7 @@ type CodexHooks = {
  */
 function withoutRejectedFields(config: CodexHooks): CodexHooks {
   const { version: _version, ...accepted } = config;
+
   return accepted;
 }
 
@@ -25,6 +26,7 @@ export function loadCodexHooksTemplate(
 ): CodexHooks {
   const raw = readFileSync(templatePath, "utf-8");
   const resolved = raw.replaceAll("{{PKG_ROOT}}", pkgRoot);
+
   try {
     return JSON.parse(resolved) as CodexHooks;
   } catch (e) {
@@ -56,9 +58,11 @@ function stripPalHooks(
         const filtered = (g.hooks ?? []).filter(
           (h) => !isOutdatedPalHook(h.command, palCanonical)
         );
+
         return filtered.length > 0 ? { ...g, hooks: filtered } : null;
       })
       .filter((g): g is CodexHookGroup => g !== null);
+
     if (hooks[event].length === 0) delete hooks[event];
   }
 }
@@ -66,6 +70,7 @@ function stripPalHooks(
 /** Merge PAL hooks into an existing Codex hooks.json. Deduplicates by canonical command path. */
 export function mergeCodexHooks(existing: CodexHooks, template: CodexHooks): CodexHooks {
   const result: CodexHooks = withoutRejectedFields(existing);
+
   if (!template.hooks) return result;
   result.hooks ??= {};
 
@@ -73,9 +78,11 @@ export function mergeCodexHooks(existing: CodexHooks, template: CodexHooks): Cod
 
   for (const [event, groups] of Object.entries(template.hooks)) {
     const current = result.hooks[event] ?? [];
+
     for (const group of groups) current.push(group);
     result.hooks[event] = current;
   }
+
   return result;
 }
 
@@ -88,6 +95,8 @@ export function unmergeCodexHooks(
   if (!template.hooks || !result.hooks) return result;
 
   stripPalHooks(result.hooks, collectPalCanonical(template));
+
   if (Object.keys(result.hooks).length === 0) delete result.hooks;
+
   return result;
 }

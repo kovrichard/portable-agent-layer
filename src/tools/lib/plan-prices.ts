@@ -20,5 +20,6 @@ export function planPriceFor(plan: string | null, at: string): number | null {
   const inForce = (PLAN_PRICES[plan ?? ""] ?? []).filter(
     (p) => Date.parse(p.from) <= when
   );
+
   return inForce.at(-1)?.monthlyUsd ?? null;
 }

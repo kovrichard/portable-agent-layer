@@ -10,6 +10,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { AgentName } from "./agent-registry";
+import type { AgentTarget } from "./context";
 import { platform } from "./paths";
 
 export interface ContextEnvelope {
@@ -26,6 +27,7 @@ export interface ContextEnvelope {
  */
 export function isSubagentSession(env: NodeJS.ProcessEnv): boolean {
   if (env.CLAUDE_AGENT_TYPE !== undefined) return true;
+
   return env.CLAUDE_PROJECT_DIR?.includes("/.claude/Agents/") ?? false;
 }
 
@@ -38,11 +40,22 @@ export type SessionStartContext = "full" | "none";
  */
 const RESUME_KEEPS_CONTEXT: ReadonlySet<string> = new Set<AgentName>(["claude", "codex"]);
 
+const OWN_REMINDER_SHAPE: ReadonlySet<string> = new Set<AgentTarget>([
+  "copilot",
+  "cursor",
+  "codex",
+]);
+
+export function reminderTarget(agent: string): AgentTarget {
+  return OWN_REMINDER_SHAPE.has(agent) ? (agent as AgentTarget) : "claude";
+}
+
 export function contextForSource(
   agent: string,
   source: string | undefined
 ): SessionStartContext {
   if (source === "resume" && RESUME_KEEPS_CONTEXT.has(agent)) return "none";
+
   return "full";
 }
 
@@ -75,9 +88,11 @@ export function contextEnvelope(
       file: merged,
     };
   }
+
   if (agent === "cursor") {
     return { kind: "json", payload: JSON.stringify({ additional_context: merged }) };
   }
+
   if (agent === "codex") {
     return {
       kind: "json",
@@ -86,6 +101,7 @@ export function contextEnvelope(
       }),
     };
   }
+
   // Claude Code, and opencode which uses the plugin path rather than this hook.
   return { kind: "text", payload: merged };
 }

@@ -107,6 +107,7 @@ describe("Copilot publishes no call id, so the halves pair on what it does send"
   test("each file in one patch gets its own key, or two would claim one snapshot", () => {
     const keys = ledgeredCalls(COPILOT_PATCH).map((call) => call.toolUseId);
     expect(new Set(keys).size).toBe(keys.length);
+
     for (const key of keys) expect(key).toMatch(/^derived-[0-9a-f]{32}$/);
   });
 

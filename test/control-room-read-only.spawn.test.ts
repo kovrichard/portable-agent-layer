@@ -47,23 +47,28 @@ function registerProject(slug: string, updated: string, serves?: string): void {
 /** Every file under a directory, by path relative to the home, with its bytes. */
 function snapshot(dir: string = HOME): Map<string, string> {
   const files = new Map<string, string>();
+
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = resolve(dir, entry.name);
+
     if (entry.isDirectory()) {
       for (const [k, v] of snapshot(full)) files.set(k, v);
     } else {
       files.set(relative(HOME, full), readFileSync(full, "utf-8"));
     }
   }
+
   return files;
 }
 
 /** The state the page renders — the only thing a reader could corrupt. */
 function renderedState(): Map<string, string> {
   const scoped = new Map<string, string>();
+
   for (const dir of ["memory/projects", "memory/state", "telos"]) {
     for (const [k, v] of snapshot(resolve(HOME, dir))) scoped.set(k, v);
   }
+
   return scoped;
 }
 

@@ -38,6 +38,7 @@ function transcriptWith(name: string, tokens: number): string {
   const path = resolve(home, name);
   const usage = { input_tokens: 10, cache_read_input_tokens: tokens - 10 };
   writeFileSync(path, `${JSON.stringify({ message: { usage } })}\n`);
+
   return path;
 }
 
@@ -78,6 +79,7 @@ describe("resolveCompactionWindow", () => {
   function files() {
     const settings = resolve(home, "settings.json");
     const claudeJson = resolve(home, "claude.json");
+
     return { settings, claudeJson };
   }
   const base = { model: "claude-opus-5-5", modelContextWindow: 1_000_000 };
@@ -368,8 +370,10 @@ describe("compactionWarningReminder table rows", () => {
       const block = compactionWarningReminder(
         verdictFor(contextTokens, compactAtTokens, tokensLeft, marginTokens, predicted)
       );
+
       if (prefix === null) {
         expect(block).toBeNull();
+
         return;
       }
       expect(block).not.toBeNull();
@@ -393,6 +397,7 @@ describe("a compaction whose boundary is not yet in the transcript", () => {
     const path = resolve(home, "stamped.jsonl");
     const usage = { input_tokens: 10, cache_read_input_tokens: tokens - 10 };
     writeFileSync(path, `${JSON.stringify({ timestamp, message: { usage } })}\n`);
+
     return path;
   }
 

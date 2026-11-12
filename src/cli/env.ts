@@ -16,8 +16,10 @@ export function currentEnvironment(
   if (refresh) {
     const env = refreshEnvironment(probe);
     regenerateIfNeeded();
+
     return env;
   }
+
   return readEnvironment() ?? refreshEnvironment(probe);
 }
 

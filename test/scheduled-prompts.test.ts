@@ -45,6 +45,7 @@ function schedule(
     ...fields,
   });
   addSchedule(made);
+
   return made;
 }
 

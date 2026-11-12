@@ -29,6 +29,7 @@ beforeEach(() => {
 
 function at(): Date {
   clock += 1000;
+
   return new Date(clock);
 }
 
@@ -48,6 +49,7 @@ function fakeGh(replies: Record<string, object | null>, calls: string[] = []): G
   return (ref) => {
     calls.push(ref);
     const reply = replies[ref] ?? null;
+
     return reply ? JSON.stringify(reply) : null;
   };
 }
@@ -230,6 +232,7 @@ describe("the gh calls share one time budget", () => {
       calls.push(ref);
       timeouts.push(timeoutMs);
       elapsed += 2000;
+
       return JSON.stringify(MERGED);
     };
     settle(slowGh, { budgetMs: 3000, clock: () => elapsed });

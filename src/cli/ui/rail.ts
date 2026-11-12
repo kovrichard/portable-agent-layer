@@ -8,6 +8,7 @@ export type Mark = "ok" | "fail" | "warn" | "info" | "ask" | "todo" | "spin";
 
 export function mark(style: Style, kind: Mark, frame = 0): string {
   const { glyph, paint } = style;
+
   switch (kind) {
     case "ok":
       return paint(PALETTE.green, glyph.ok);
@@ -40,6 +41,7 @@ export const railEnd = (style: Style, text: string) =>
 
 function padBetween(left: string, right: string, width: number): string {
   const room = width - visibleWidth(left) - visibleWidth(right);
+
   return right ? `${left}${" ".repeat(Math.max(2, room))}${right}` : left;
 }
 
@@ -62,6 +64,7 @@ export function railRow(
     style.dim(time),
     width
   );
+
   return [first, ...railNotes(style, detail, style.dim)];
 }
 
@@ -74,6 +77,7 @@ export function railNotes(
 ): string[] {
   const width = Math.max(10, style.term.width - 3 - visibleWidth(lead));
   const pad = " ".repeat(visibleWidth(lead));
+
   return wrapWords(text, width).map((chunk, i) =>
     railNote(style, `${i === 0 ? lead : pad}${paint(chunk.text)}`)
   );
@@ -91,12 +95,15 @@ export function healthBadge(
 ) {
   const { glyph } = style;
   const lead = (g: string) => (withGlyph ? `${g} ` : "");
+
   if (fails > 0) return style.badge(PALETTE.rose, `${lead(glyph.fail)}${fails} FAILING`);
+
   if (warns > 0)
     return style.badge(
       PALETTE.amber,
       `${lead(glyph.warn)}${warns} WARNING${warns === 1 ? "" : "S"}`
     );
+
   return style.badge(PALETTE.green, `${lead(glyph.healthy)}HEALTHY`);
 }
 
@@ -107,6 +114,7 @@ export function box(style: Style, lines: string[], inner = 50): string[] {
   const edge = (text: string) => railGlyph(style, text);
   const padded = (line: string) =>
     `${line}${" ".repeat(Math.max(0, inner - 2 - visibleWidth(line)))}`;
+
   return [
     edge(`  ${b.tl}${b.h.repeat(inner)}${b.tr}`),
     ...lines.map((line) => `  ${edge(b.v)}  ${padded(line)}${edge(b.v)}`),

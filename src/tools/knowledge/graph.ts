@@ -89,11 +89,13 @@ export interface GraphStats {
 export function extractWikilinks(body: string): string[] {
   const out: string[] = [];
   const matches = body.matchAll(WIKILINK_REGEX);
+
   for (const m of matches) {
     const raw = m[1].trim();
     const slug = raw.includes("/") ? (raw.split("/").pop() ?? raw) : raw;
     if (slug && !slug.startsWith("_")) out.push(slug);
   }
+
   return out;
 }
 
@@ -115,6 +117,7 @@ function pushEdge(graph: KnowledgeGraph, edge: GraphEdge, bidirectional = false)
   } else {
     graph.reverseAdjacency.set(edge.to, [edge]);
   }
+
   if (!bidirectional) return;
   const back: GraphEdge = {
     from: edge.to,
@@ -140,6 +143,7 @@ function pushEdge(graph: KnowledgeGraph, edge: GraphEdge, bidirectional = false)
 
 function buildNodes(entities: Entity[]): Map<string, GraphNode> {
   const nodes = new Map<string, GraphNode>();
+
   for (const e of entities) {
     nodes.set(e.slug, {
       slug: e.slug,
@@ -149,6 +153,7 @@ function buildNodes(entities: Entity[]): Map<string, GraphNode> {
       tags: e.frontmatter.tags.map((t) => t.toLowerCase()),
     });
   }
+
   return nodes;
 }
 
@@ -156,6 +161,7 @@ function buildExplicitEdges(graph: KnowledgeGraph, entities: Entity[]): void {
   for (const e of entities) {
     // Wikilinks
     const wikilinks = extractWikilinks(e.body);
+
     for (const target of wikilinks) {
       if (!graph.nodes.has(target) || target === e.slug) continue;
       pushEdge(graph, {
@@ -182,6 +188,7 @@ function buildExplicitEdges(graph: KnowledgeGraph, entities: Entity[]): void {
 
 function buildTagEdges(graph: KnowledgeGraph): void {
   const seen = new Set<string>();
+
   for (const [tag, slugs] of indexByStructuralTag(graph)) {
     if (slugs.length < 2) continue;
     // Deterministic ordering before capping so behavior doesn't depend on
@@ -216,6 +223,7 @@ function linkTagGroup(
 
 function indexByStructuralTag(graph: KnowledgeGraph): Map<string, string[]> {
   const tagIndex = new Map<string, string[]>();
+
   for (const node of graph.nodes.values()) {
     for (const tag of node.tags) {
       // ISC-18: topic:* tags are facet filters, not structural links.
@@ -227,6 +235,7 @@ function indexByStructuralTag(graph: KnowledgeGraph): Map<string, string[]> {
       else tagIndex.set(tag, [node.slug]);
     }
   }
+
   return tagIndex;
 }
 
@@ -241,6 +250,7 @@ export function buildGraph(rootDir?: string): KnowledgeGraph {
   };
   buildExplicitEdges(graph, entities);
   buildTagEdges(graph);
+
   return graph;
 }
 
@@ -258,11 +268,14 @@ export function resolveSlug(graph: KnowledgeGraph, query: string): string | null
   if (graph.nodes.has(q)) return q;
 
   const candidates: string[] = [];
+
   for (const slug of graph.nodes.keys()) {
     if (slug.includes(q)) candidates.push(slug);
   }
+
   if (candidates.length === 0) return null;
   candidates.sort((a, b) => a.length - b.length || a.localeCompare(b));
+
   return candidates[0];
 }
 
@@ -302,6 +315,7 @@ export function traverse(
       cumulativeWeight: entry.cumWeight,
       viaEdge: entry.via,
     });
+
     if (entry.hop >= maxHops) continue;
 
     for (const [target, edge] of bestEdgePerNeighbour(graph, entry.slug, visited)) {
@@ -331,13 +345,16 @@ function bestEdgePerNeighbour(
   visited: Set<string>
 ): [string, GraphEdge][] {
   const bestPerTarget = new Map<string, GraphEdge>();
+
   for (const edge of graph.adjacency.get(slug) ?? []) {
     if (!visited.has(edge.to)) keepHeaviest(bestPerTarget, edge.to, edge);
   }
+
   for (const edge of graph.reverseAdjacency.get(slug) ?? []) {
     const other = edge.from;
     if (!visited.has(other) && other !== slug) keepHeaviest(bestPerTarget, other, edge);
   }
+
   return [...bestPerTarget.entries()].sort(
     (a, b) => b[1].weight - a[1].weight || a[0].localeCompare(b[0])
   );
@@ -347,6 +364,7 @@ function bestEdgePerNeighbour(
 
 function connectionsOf(edges: KnowledgeGraph["edges"]): Map<string, Set<string>> {
   const connections = new Map<string, Set<string>>();
+
   for (const edge of edges) {
     const a = connections.get(edge.from) ?? new Set<string>();
     a.add(edge.to);
@@ -355,6 +373,7 @@ function connectionsOf(edges: KnowledgeGraph["edges"]): Map<string, Set<string>>
     b.add(edge.from);
     connections.set(edge.to, b);
   }
+
   return connections;
 }
 
@@ -365,6 +384,7 @@ export function stats(graph: KnowledgeGraph): GraphStats {
     Ideas: 0,
     Research: 0,
   };
+
   for (const node of graph.nodes.values()) {
     nodesByDomain[node.domain]++;
   }
@@ -374,6 +394,7 @@ export function stats(graph: KnowledgeGraph): GraphStats {
     wikilink: 0,
     tag: 0,
   };
+
   for (const edge of graph.edges) {
     edgesByType[edge.edgeType]++;
   }
@@ -383,11 +404,14 @@ export function stats(graph: KnowledgeGraph): GraphStats {
   let isolated = 0;
   let mostConnected: { slug: string; count: number } | null = null;
   let totalConnCount = 0;
+
   for (const slug of graph.nodes.keys()) {
     const peers = connections.get(slug);
     const count = peers ? peers.size : 0;
     totalConnCount += count;
+
     if (count === 0) isolated++;
+
     if (!mostConnected || count > mostConnected.count) {
       mostConnected = { slug, count };
     }

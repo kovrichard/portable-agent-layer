@@ -40,6 +40,7 @@ async function runHook(payload: unknown): Promise<string> {
   });
   const out = await new Response(proc.stdout).text();
   await proc.exited;
+
   return out.trim();
 }
 

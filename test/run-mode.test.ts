@@ -32,6 +32,7 @@ function start(kind: Run["kind"], extra: Partial<Run> = {}, cwd = CWD): Run {
   const scope = scopeOf(cwd);
   const run = { ...newRun({ kind, scope, until: UNTIL, now: NOW }), ...extra };
   writeRun(run);
+
   return run;
 }
 
@@ -84,6 +85,7 @@ describe("a time box", () => {
 
   test("still runs pal cli after the deadline, piped into tail too", () => {
     start("timebox");
+
     for (const command of ["pal cli timebox end", "pal cli progress show 2>&1 | tail -3"])
       expect(runModeRefusal({ tool: "Bash", command }, CWD, AFTER)).toBeNull();
   });
@@ -111,6 +113,7 @@ describe("a time box", () => {
 describe("an unattended run", () => {
   test("refuses questions and delegation before the deadline", () => {
     start("unattended");
+
     for (const tool of ["AskUserQuestion", "Agent", "Workflow"])
       expect(runModeRefusal({ tool }, CWD, BEFORE)).toContain("Unattended run");
     expect(runModeRefusal({ tool: "Bash", command: "bun test" }, CWD, BEFORE)).toBeNull();
@@ -146,6 +149,7 @@ describe("an unattended run", () => {
       log: [{ at: BEFORE.toISOString(), entry: "parser fixed, abc123" }],
     });
     const recall = runModeRecall(CWD, BEFORE) ?? "";
+
     for (const part of ["never ask", "fix the parser", "parser fixed, abc123"])
       expect(recall).toContain(part);
   });

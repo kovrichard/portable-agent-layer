@@ -72,6 +72,7 @@ function splitBy(
 
 function lengthSplit(outcomes: Outcome[]): Split {
   const cut = Math.round(median(outcomes.map((o) => o.reply.words)) ?? 0);
+
   return splitBy(
     outcomes,
     `under ${cut} words`,
@@ -82,6 +83,7 @@ function lengthSplit(outcomes: Outcome[]): Split {
 
 export function splits(events: ReactedTurn[]): Split[] {
   const reacted = outcomes(events);
+
   return [
     lengthSplit(reacted),
     splitBy(reacted, "with a list", "without a list", (r) => r.listItems > 0),
@@ -100,6 +102,7 @@ export function hasEnoughReplies(split: Split): boolean {
 
 export function isEvidence(split: Split): boolean {
   const gap = Math.abs(approvedShare(split.has) - approvedShare(split.lacks));
+
   return hasEnoughReplies(split) && gap >= MIN_GAP;
 }
 
@@ -111,5 +114,6 @@ export function reactedReplies(events: ReactedTurn[]): number {
 export function shorterApprovedMore(events: ReactedTurn[]): Split | null {
   const length = lengthSplit(outcomes(events));
   if (!isEvidence(length)) return null;
+
   return approvedShare(length.has) > approvedShare(length.lacks) ? length : null;
 }

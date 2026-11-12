@@ -26,6 +26,7 @@ function project(name: string, path?: string): ProjectProgress {
 function checkout(name: string): string {
   const dir = resolve(HOME, "checkouts", name);
   mkdirSync(dir, { recursive: true });
+
   return dir;
 }
 
@@ -81,7 +82,9 @@ describe("proposeBinding", () => {
   function repoAt(name: string, origin?: string): string {
     const dir = checkout(name);
     spawnSync("git", ["init", "-q", dir]);
+
     if (origin) spawnSync("git", ["-C", dir, "remote", "add", "origin", origin]);
+
     return dir;
   }
 

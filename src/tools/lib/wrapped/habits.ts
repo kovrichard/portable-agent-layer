@@ -27,11 +27,13 @@ const WEEKEND = new Set(["Sat", "Sun"]);
 /** One slot per local hour with any of the user's own activity, however busy it was. */
 function activeSlots(events: LoggedEvent[]): HourSlot[] {
   const slots = new Map<string, HourSlot>();
+
   for (const e of events.filter(isUserActivity)) {
     const day = dayOf(e);
     const clock = localClock(new Date(e.ts));
     slots.set(`${day} ${clock.hour}`, { day, ...clock });
   }
+
   return [...slots.values()];
 }
 
@@ -42,6 +44,7 @@ function shareOf<T>(items: T[], matches: (item: T) => boolean): number | null {
 /** Ties go to the first label, which for hours and months is the earliest. */
 function busiest(slots: HourSlot[], labelOf: (slot: HourSlot) => string): Best | null {
   const [top] = tally(slots, labelOf);
+
   return top ? { value: top.count, label: top.name } : null;
 }
 
@@ -56,6 +59,7 @@ export const channelOf = (turn: LoggedEvent) =>
 export function wrappedHabits(events: LoggedEvent[]): WrappedHabits {
   const slots = activeSlots(events);
   const turns = ofType(events, "turn");
+
   return {
     mostActiveHour: busiest(slots, hourOf),
     mostActiveWeekday: busiest(slots, (s) => s.weekday),

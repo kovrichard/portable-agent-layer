@@ -86,9 +86,11 @@ describe("what the page may change", () => {
     const base = await listen();
     const quadrantOf = async () => {
       const grid = await getJson<Matrix>(`${base}/api/matrix`);
+
       for (const key of ["now", "plan", "noise", "later"] as const) {
         if (grid[key].some((i) => i.id === "demo")) return key;
       }
+
       return null;
     };
 
@@ -113,10 +115,12 @@ describe("keeping PAL up to date", () => {
     const prevPkg = process.env.PAL_PKG;
     process.env.PAL_PKG = freshTestDir(import.meta.file);
     const base = await listen();
+
     try {
       expect((await post(base, "/api/update/run", {})).status).toBe(202);
     } finally {
       removeOnceReleased(process.env.PAL_PKG);
+
       if (prevPkg === undefined) delete process.env.PAL_PKG;
       else process.env.PAL_PKG = prevPkg;
     }
@@ -126,6 +130,7 @@ describe("keeping PAL up to date", () => {
 describe("how the page itself is served", () => {
   test("a deep link into the page is served the page, not a 404", async () => {
     const base = await listen();
+
     for (const path of ["/", "/projects", "/projects/portable-agent-layer", "/log"]) {
       const res = await fetch(`${base}${path}`);
       expect(res.status).toBe(200);

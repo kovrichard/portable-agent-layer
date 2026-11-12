@@ -36,6 +36,7 @@ export function proveTrigger(trigger: RuleTrigger, turns: RequestedTurn[]): Trig
   const fires = (turn: RequestedTurn) => firesOn(trigger, turn);
   const corrections = testable.filter(isConfirmedCorrection);
   const ordinary = testable.filter(isOrdinary);
+
   return {
     firedCorrections: corrections.filter(fires).length,
     corrections: corrections.length,
@@ -58,7 +59,9 @@ export function widenedProofVerdict(proof: TriggerProof): ProofVerdict {
 
 function verdictFiringOn(minFiredCorrections: number, proof: TriggerProof): ProofVerdict {
   if (proof.firedCorrections < minFiredCorrections) return "failed";
+
   if (proof.ordinary < MIN_ORDINARY_TURNS) return "waiting";
+
   return proof.firedOrdinary <= proof.ordinary * MAX_ORDINARY_FIRE_RATE
     ? "passed"
     : "failed";

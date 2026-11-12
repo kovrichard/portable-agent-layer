@@ -57,6 +57,7 @@ function sessionsOf(dbPath: string): Map<string, SessionRow> {
     SESSION_COLUMNS,
     { orderColumn: "created_at", idColumn: "id", order: "", id: "" }
   );
+
   return new Map(rows.map((row) => [row.id, row]));
 }
 
@@ -108,8 +109,10 @@ export function collectCopilot(dbPath: string): number {
   );
   if (rows.length === 0) return 0;
   const sessions = sessionsOf(dbPath);
+
   for (const row of rows) emitModelCall(row, sessions.get(String(row.session_id)));
   cursor.usageId = num(rows.at(-1)?.id);
   writeCursor("copilot", cursor);
+
   return rows.length;
 }

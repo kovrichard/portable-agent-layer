@@ -81,6 +81,7 @@ function opinionLine(rule: Pick<AdaptationRule, "when" | "steering">): string {
 export function opinionsContext(): string {
   const opinions = readRules().filter(isOpinion);
   if (opinions.length === 0) return "";
+
   return [
     "## Opinions",
     "The user approved these from past corrections. Follow them on every turn:",
@@ -90,6 +91,7 @@ export function opinionsContext(): string {
 
 function sameKindOpinion(rules: AdaptationRule[], added: AdaptationRule): string | null {
   const taken = added.kind && rules.find((r) => isOpinion(r) && r.kind === added.kind);
+
   return taken
     ? `Opinion ${taken.id} already targets ${added.kind}, and two would share one rate; retire it first`
     : null;
@@ -99,11 +101,13 @@ function opinionRefusal(rules: AdaptationRule[], added: AdaptationRule): string 
   const opinions = [...rules.filter(isOpinion), added];
   const sameKind = sameKindOpinion(rules, added);
   if (sameKind) return sameKind;
+
   if (opinions.length > OPINION_CAP)
     return `Opinions are capped at ${OPINION_CAP}; retire one first`;
   const size = opinions.map(opinionLine).join("\n").length;
   if (size > OPINION_CHARS)
     return `Opinions are capped at ${OPINION_CHARS} characters, this one would make ${size}; retire one first`;
+
   return null;
 }
 
@@ -116,8 +120,10 @@ export function rulesPath(): string {
 export function readRules(): AdaptationRule[] {
   const path = rulesPath();
   if (!existsSync(path)) return [];
+
   try {
     const parsed = JSON.parse(readFileSync(path, "utf-8"));
+
     return Array.isArray(parsed) ? (parsed as AdaptationRule[]) : [];
   } catch {
     return [];
@@ -139,6 +145,7 @@ export function addDraft(input: DraftInput): AdaptationRule {
     createdAt: new Date().toISOString(),
   };
   writeRules([...readRules(), rule]);
+
   return rule;
 }
 
@@ -160,18 +167,22 @@ function approveWidening(
       .filter((r) => r.id !== widening.id)
       .map((r) => (r.id === target.id ? widened : r))
   );
+
   return { ok: true, rule: widened };
 }
 
 function decided(rule: AdaptationRule, decision: Decision): AdaptationRule {
   const decidedAt = new Date().toISOString();
+
   if (decision === "opinion")
     return { ...rule, status: "approved", delivery: "always", decidedAt };
+
   return { ...rule, status: decision, decidedAt };
 }
 
 function replaceRule(rules: AdaptationRule[], rule: AdaptationRule): DecideResult {
   writeRules(rules.map((r) => (r.id === rule.id ? rule : r)));
+
   return { ok: true, rule };
 }
 
@@ -184,14 +195,19 @@ function gateReason(gate: OpinionGate): string {
 function decisionRefusal(rule: AdaptationRule, decision: Decision): string | null {
   if (decision === "opinion" && rule.widens)
     return `Rule ${rule.id} widens a trigger; it cannot be an opinion`;
+
   if (decision === "opinion" && !rule.kind)
     return `Rule ${rule.id} has no correction kind, so its effect could not be measured`;
+
   if (decision === "opinion" && rule.opinionGate)
     return `Rule ${rule.id} cannot be an opinion: ${gateReason(rule.opinionGate)}`;
+
   if (decision === "approved" && !rule.trigger)
     return `Rule ${rule.id} has no trigger; keep it as an opinion or deny it`;
+
   if (decision === "approved" && rule.offer === "opinion-only")
     return `Rule ${rule.id}'s trigger did not prove; keep it as an opinion or deny it`;
+
   return null;
 }
 
@@ -199,13 +215,16 @@ export function decideRule(id: string, decision: Decision): DecideResult {
   const rules = readRules();
   const rule = rules.find((r) => r.id === id);
   if (!rule) return { ok: false, reason: `No rule with id ${id}` };
+
   if (rule.status !== "draft")
     return { ok: false, reason: `Rule ${id} was already ${rule.status}` };
   const refused = decisionRefusal(rule, decision);
   if (refused) return { ok: false, reason: refused };
+
   if (rule.widens && decision === "approved") return approveWidening(rules, rule);
   const result = decided(rule, decision);
   const refusal = isOpinion(result) ? opinionRefusal(rules, result) : null;
+
   return refusal ? { ok: false, reason: refusal } : replaceRule(rules, result);
 }
 
@@ -230,6 +249,7 @@ export function addOpinion(input: OpinionInput): DecideResult {
   const refusal = opinionRefusal(rules, opinion);
   if (refusal) return { ok: false, reason: refusal };
   writeRules([...rules, opinion]);
+
   return { ok: true, rule: opinion };
 }
 
@@ -237,8 +257,10 @@ export function retireRule(id: string): DecideResult {
   const rules = readRules();
   const rule = rules.find((r) => r.id === id);
   if (!rule) return { ok: false, reason: `No rule with id ${id}` };
+
   if (rule.status !== "approved")
     return { ok: false, reason: `Rule ${id} is ${rule.status}, not approved` };
+
   return replaceRule(rules, {
     ...rule,
     status: "retired",

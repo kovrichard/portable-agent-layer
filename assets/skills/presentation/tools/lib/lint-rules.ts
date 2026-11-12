@@ -37,27 +37,37 @@ function rhythmRunAt(
 ): { period: number; length: number } | null {
   for (const p of [1, 2, 3]) {
     let runLen = p;
+
     while (i + runLen < shapes.length && shapes[i + runLen] === shapes[i + runLen - p]) {
       runLen++;
     }
+
     if (runLen >= minLength[p]) return { period: p, length: runLen }; // smallest period wins
   }
+
   return null;
 }
 
 function isNonProseLine(line: string, trimmed: string): boolean {
   if (!trimmed) return true;
+
   if (/^#/.test(trimmed)) return true; // heading
+
   if (/^\s*(?:[-*]\s|\d+\.\s)/.test(line)) return true; // any-indent bullet
+
   if (/^>/.test(trimmed)) return true; // blockquote
+
   if (/^<!--/.test(trimmed)) return true; // comment
+
   return /^<\/?\w/.test(trimmed); // html tag
 }
 
 function isExerciseSlide(ctx: SlideContext): boolean {
   // Detect by filename (what I see) OR by h2 prefix (what the room sees).
   if (/exercise/i.test(ctx.name)) return true;
+
   if (ctx.heads2.some((h) => /^Exercise\b/i.test(h))) return true;
+
   return false;
 }
 
@@ -69,6 +79,7 @@ export const RULES: Rule[] = [
     scope: "slide",
     check: (ctx) => {
       if (hasLayoutDirective(ctx.body)) return [];
+
       return [
         {
           rule: "no-layout",
@@ -84,6 +95,7 @@ export const RULES: Rule[] = [
     scope: "slide",
     check: (ctx) => {
       const findings: Finding[] = [];
+
       for (const h of ctx.heads1) {
         if (h.length > 60) {
           findings.push({
@@ -93,6 +105,7 @@ export const RULES: Rule[] = [
           });
         }
       }
+
       return findings;
     },
   },
@@ -102,6 +115,7 @@ export const RULES: Rule[] = [
     scope: "slide",
     check: (ctx) => {
       const findings: Finding[] = [];
+
       for (const h of ctx.heads2) {
         if (h.length > 100) {
           findings.push({
@@ -111,6 +125,7 @@ export const RULES: Rule[] = [
           });
         }
       }
+
       return findings;
     },
   },
@@ -120,6 +135,7 @@ export const RULES: Rule[] = [
     scope: "slide",
     check: async (ctx) => {
       const findings: Finding[] = [];
+
       for (const ref of findImageRefs(ctx.bodyNoNotes)) {
         // `../assets/X` is the natural relative path from a slides/*.md file —
         // resolve it from inside `slides/`. Plain `assets/X` (deck-root style)
@@ -134,6 +150,7 @@ export const RULES: Rule[] = [
           });
         }
       }
+
       return findings;
     },
   },
@@ -148,6 +165,7 @@ export const RULES: Rule[] = [
       // Inside the slide body, a bullet of the form `- foo — bar` is prose
       // pretending to be a bullet. Convert to a sub-bullet instead.
       const findings: Finding[] = [];
+
       for (const line of ctx.bodyNoNotes.split("\n")) {
         const m = new RegExp(/^(\s*)(?:[-*]\s+|\d+\.\s+)(.*)$/).exec(line);
         if (!m) continue;
@@ -160,6 +178,7 @@ export const RULES: Rule[] = [
           });
         }
       }
+
       return findings;
     },
   },
@@ -172,6 +191,7 @@ export const RULES: Rule[] = [
       // 10 fits cleanly on a slide; 11+ overflows even when each line is short.
       const all = countAllListItems(ctx.bodyNoNotes);
       if (all <= 10) return [];
+
       return [
         {
           rule: "slide-line-budget",
@@ -214,6 +234,7 @@ export const RULES: Rule[] = [
           });
         }
       });
+
       return findings;
     },
   },
@@ -226,6 +247,7 @@ export const RULES: Rule[] = [
     appliesTo: isBulletLayout,
     check: (ctx) => {
       const findings: Finding[] = [];
+
       for (const item of listItems(ctx.bodyNoNotes)) {
         if (item.indent === 0) continue;
         const wc = wordCount(item.content);
@@ -237,6 +259,7 @@ export const RULES: Rule[] = [
           });
         }
       }
+
       return findings;
     },
   },
@@ -256,17 +279,20 @@ export const RULES: Rule[] = [
     check: (ctx) => {
       const notes = extractNotes(ctx.body);
       if (!notes.trim()) return [];
+
       // No links anywhere = analysis-only notes; rule doesn't apply.
       if (!/\[[^\]]+\]\([^)]+\)/.test(notes)) return [];
       const items = listItems(notes);
       if (items.length === 0) return [];
       const first = items[0].content.trim();
       if (/^\[[^\]]+\]\([^)]+\)/.test(first)) return [];
+
       // "Sources" / "Per-X sources" parent whose children are links — allowed.
       if (/^(per-\w+ )?sources?\b/i.test(first)) {
         const sub = items.slice(1).find((it) => it.indent > items[0].indent);
         if (sub && /^\[[^\]]+\]\([^)]+\)/.test(sub.content.trim())) return [];
       }
+
       return [
         {
           rule: "notes-link-first",
@@ -290,14 +316,17 @@ export const RULES: Rule[] = [
       const findings: Finding[] = [];
       const lines = ctx.bodyNoNotes.split("\n");
       let inFence = false;
+
       for (const line of lines) {
         if (/^```/.test(line)) {
           inFence = !inFence;
           continue;
         }
+
         if (inFence) continue;
         const trimmed = line.trim();
         if (isNonProseLine(line, trimmed)) continue;
+
         if (trimmed.length > 80) {
           findings.push({
             rule: "prose-paragraph-in-body",
@@ -306,6 +335,7 @@ export const RULES: Rule[] = [
           });
         }
       }
+
       return findings;
     },
   },
@@ -328,7 +358,9 @@ export const RULES: Rule[] = [
           },
         ];
       }
+
       if (/^Exercise\s+—\s+\S/.test(h2)) return [];
+
       return [
         {
           rule: "exercise-title-prefix",
@@ -356,6 +388,7 @@ export const RULES: Rule[] = [
         "Common mistakes",
         "Anticipated questions",
       ];
+
       for (const beat of required) {
         const re = new RegExp(
           String.raw`^[-*]\s+${beat.replace(/\s+/g, "\\s+")}\b`,
@@ -369,6 +402,7 @@ export const RULES: Rule[] = [
           });
         }
       }
+
       return findings;
     },
   },
@@ -383,6 +417,7 @@ export const RULES: Rule[] = [
       if (ctx.heads1.length === 0) return []; // covered by big-stat-no-h1
       const h1 = ctx.heads1[0];
       if (/\d/.test(h1)) return [];
+
       return [
         {
           rule: "big-stat-needs-digit",
@@ -401,6 +436,7 @@ export const RULES: Rule[] = [
     appliesTo: (ctx) => ctx.layout === "title" || ctx.layout === "closing",
     check: (ctx) => {
       if (ctx.heads1.length > 0) return [];
+
       return [
         {
           rule: "title-no-h1",
@@ -417,6 +453,7 @@ export const RULES: Rule[] = [
     appliesTo: (ctx) => ctx.layout === "section",
     check: (ctx) => {
       if (ctx.heads1.length > 0) return [];
+
       return [
         {
           rule: "section-no-h1",
@@ -441,6 +478,7 @@ export const RULES: Rule[] = [
           msg: `${items} items — agenda fits 10 cleanly; split into two slides`,
         });
       }
+
       if (items === 0) {
         findings.push({
           rule: "agenda-empty",
@@ -448,6 +486,7 @@ export const RULES: Rule[] = [
           msg: "agenda layout has no list items",
         });
       }
+
       return findings;
     },
   },
@@ -459,6 +498,7 @@ export const RULES: Rule[] = [
     check: (ctx) => {
       const items = countTopLevelListItems(ctx.bodyNoNotes);
       if (items <= 7) return [];
+
       return [
         {
           rule: "content-bullets",
@@ -497,6 +537,7 @@ export const RULES: Rule[] = [
           msg: `${options} options — comparison fits 2–3 cleanly`,
         });
       }
+
       return findings;
     },
   },
@@ -529,6 +570,7 @@ export const RULES: Rule[] = [
           msg: `${metrics} metrics — grid is 3-column, expects exactly 3`,
         });
       }
+
       return findings;
     },
   },
@@ -542,6 +584,7 @@ export const RULES: Rule[] = [
       if (body.includes('class="col-left"') && body.includes('class="col-right"')) {
         return [];
       }
+
       return [
         {
           rule: "two-column-wrappers",
@@ -561,6 +604,7 @@ export const RULES: Rule[] = [
       if (body.includes('class="image"') && body.includes('class="text"')) {
         return [];
       }
+
       return [
         {
           rule: "image-text-wrappers",
@@ -577,6 +621,7 @@ export const RULES: Rule[] = [
     appliesTo: (ctx) => ctx.layout === "big-stat",
     check: (ctx) => {
       const findings: Finding[] = [];
+
       if (ctx.heads1.length === 0) {
         findings.push({
           rule: "big-stat-no-h1",
@@ -590,6 +635,7 @@ export const RULES: Rule[] = [
           msg: "multiple h1s — big-stat shows one number",
         });
       }
+
       return findings;
     },
   },
@@ -600,6 +646,7 @@ export const RULES: Rule[] = [
     appliesTo: (ctx) => ctx.layout === "quote" || ctx.layout === "pull-quote",
     check: (ctx) => {
       if (/^>\s+/m.test(ctx.bodyNoNotes)) return [];
+
       return [
         {
           rule: "quote-no-blockquote",
@@ -624,6 +671,7 @@ export const RULES: Rule[] = [
           msg: "no fenced code block found",
         });
       }
+
       for (const n of blocks) {
         if (n > 25) {
           findings.push({
@@ -633,6 +681,7 @@ export const RULES: Rule[] = [
           });
         }
       }
+
       return findings;
     },
   },
@@ -644,6 +693,7 @@ export const RULES: Rule[] = [
     check: (ctx) => {
       const rows = tableRowCount(ctx.bodyNoNotes);
       if (rows <= 10) return [];
+
       return [
         {
           rule: "table-rows",
@@ -666,6 +716,7 @@ export const RULES: Rule[] = [
       const notes = extractNotes(ctx.body);
       if (!notes.trim()) return [];
       const findings: Finding[] = [];
+
       for (const n of codeBlockLineCounts(notes)) {
         if (n > 30) {
           findings.push({
@@ -675,6 +726,7 @@ export const RULES: Rule[] = [
           });
         }
       }
+
       return findings;
     },
   },
@@ -703,6 +755,7 @@ export const RULES: Rule[] = [
         const items = listItems(s.bodyNoNotes);
         const top = items.filter((it) => it.indent === 0).length;
         const hasSubs = items.some((it) => it.indent > 0);
+
         return `content:${top}:${hasSubs ? "nested" : "flat"}`;
       };
 
@@ -733,6 +786,7 @@ export const RULES: Rule[] = [
 
         for (let k = i; k < i + chosenLen; k++) used[k] = true;
       }
+
       return findings;
     },
   },
@@ -746,6 +800,7 @@ export const RULES: Rule[] = [
     scope: "deck",
     check: (ctx) => {
       const findings: Finding[] = [];
+
       for (let i = 0; i < ctx.slides.length; i++) {
         const slide = ctx.slides[i];
         if (slide.layout !== "section") continue;
@@ -758,6 +813,7 @@ export const RULES: Rule[] = [
           });
           continue;
         }
+
         if (next.layout === "section") {
           findings.push({
             rule: "block-needs-opener",
@@ -766,6 +822,7 @@ export const RULES: Rule[] = [
           });
         }
       }
+
       return findings;
     },
   },

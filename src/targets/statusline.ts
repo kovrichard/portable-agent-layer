@@ -40,6 +40,7 @@ function statuslineAgentDir(target: StatuslineTarget): string {
 
 function statuslineCommand(target: StatuslineTarget): string {
   const { script, powershellFlags } = STATUSLINE[target];
+
   return process.platform === "win32"
     ? `powershell ${powershellFlags} -File ${script}.ps1`
     : `${script}.sh`;
@@ -63,6 +64,7 @@ export function copyStatusline(target: StatuslineTarget = "claude"): boolean {
 
   if (!existsSync(sourcePath)) {
     log.warn(`Statusline script not found at ${sourcePath}`);
+
     return false;
   }
 
@@ -74,9 +76,11 @@ export function copyStatusline(target: StatuslineTarget = "claude"): boolean {
     }
 
     log.success(`Statusline installed to ${destPath}`);
+
     return true;
   } catch (e) {
     log.warn(`Failed to copy statusline script: ${e}`);
+
     return false;
   }
 }
@@ -89,15 +93,18 @@ export function removeStatusline(target: StatuslineTarget = "claude"): boolean {
 
   if (!existsSync(scriptPath)) {
     log.info("Statusline script not found, nothing to remove");
+
     return true;
   }
 
   try {
     unlinkSync(scriptPath);
     log.success(`Removed statusline script from ${scriptPath}`);
+
     return true;
   } catch (e) {
     log.warn(`Failed to remove statusline script: ${e}`);
+
     return false;
   }
 }
@@ -137,9 +144,11 @@ export function addStatuslineConfig(
 
   if (statusLine && typeof statusLine === "object" && statusLine.command) {
     const cmd = statusLine.command as string;
+
     if (target === "claude") {
       if (!claudeStatuslineNeedsRefresh(cmd)) {
         if (isPalStatuslineCommand(cmd, "claude")) addMissingExtras(statusLine, target);
+
         return settings;
       }
     } else if (!isPalStatuslineCommand(cmd, target)) {
@@ -170,6 +179,7 @@ export function removeStatuslineConfig(
 
   if (target === "claude") {
     delete settings.statusLine;
+
     return settings;
   }
 
@@ -177,5 +187,6 @@ export function removeStatuslineConfig(
   if (cmd && isPalStatuslineCommand(cmd, target)) {
     delete settings.statusLine;
   }
+
   return settings;
 }

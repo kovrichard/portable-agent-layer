@@ -25,6 +25,7 @@ let ROOT: string;
 
 beforeEach(() => {
   ROOT = freshTestDir(import.meta.file);
+
   for (const [name, dir] of Object.entries(DIR_VARS)) {
     process.env[name] = resolve(ROOT, dir);
   }
@@ -34,6 +35,7 @@ beforeEach(() => {
 function write(path: string, content: string): string {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, content);
+
   return path;
 }
 
@@ -92,6 +94,7 @@ describe("removeAgents", () => {
   test("removes shipped agents and keeps the user's own", () => {
     const dir = resolve(ROOT, "claude", "agents");
     mkdirSync(dir, { recursive: true });
+
     for (const file of ["scout.md", "skill-author.md", "mine.md"]) {
       writeFileSync(resolve(dir, file), "x");
     }

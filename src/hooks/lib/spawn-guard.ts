@@ -40,6 +40,7 @@ export function getInferenceDepth(): number {
   const raw = process.env[SPAWN_GUARD_ENV.DEPTH];
   if (!raw) return 0;
   const n = Number.parseInt(raw, 10);
+
   return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 
@@ -52,6 +53,7 @@ export function getInferenceDepth(): number {
  */
 export function buildSpawnGuardEnv(parentEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const nextDepth = getInferenceDepthFrom(parentEnv) + 1;
+
   return {
     ...parentEnv,
     [SPAWN_GUARD_ENV.SENTINEL]: "1",
@@ -64,5 +66,6 @@ function getInferenceDepthFrom(env: NodeJS.ProcessEnv): number {
   const raw = env[SPAWN_GUARD_ENV.DEPTH];
   if (!raw) return 0;
   const n = Number.parseInt(raw, 10);
+
   return Number.isFinite(n) && n >= 0 ? n : 0;
 }

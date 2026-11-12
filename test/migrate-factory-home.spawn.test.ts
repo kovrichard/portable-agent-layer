@@ -37,11 +37,13 @@ function migrate(...args: string[]): string {
   const captured: string[] = [];
   const log = console.log;
   console.log = (...parts: unknown[]) => captured.push(parts.join(" "));
+
   try {
     runMigrate(args);
   } finally {
     console.log = log;
   }
+
   return captured.join("\n");
 }
 
@@ -56,6 +58,7 @@ const readClaudeSettings = () => JSON.parse(readFileSync(settingsPath(), "utf-8"
 function git(cwd: string, ...args: string[]): string {
   const result = spawnSync("git", args, { cwd, encoding: "utf-8" });
   if (result.status !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr}`);
+
   return result.stdout;
 }
 
@@ -79,6 +82,7 @@ function repoWithWorktreeInOldFactory(id: string): string {
     `factory/${id}`,
     resolve(oldFactory, "worktrees", id)
   );
+
   return repo;
 }
 
@@ -274,6 +278,7 @@ describe("without DARK_FACTORY_HOME the target is .dark-factory under HOME as se
     delete process.env.DARK_FACTORY_HOME;
     process.env.HOME = userHome;
     process.env.USERPROFILE = resolve(root, "other-profile");
+
     try {
       expect(migrate("--dry-run")).toContain(
         `task/${id}: skipped (already in ${newFactory})`

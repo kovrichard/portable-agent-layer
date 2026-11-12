@@ -17,6 +17,7 @@ function suiteName(file: string): string {
 function processIsGone(pid: number): boolean {
   try {
     process.kill(pid, 0);
+
     return false;
   } catch (err) {
     return (err as NodeJS.ErrnoException).code === "ESRCH";
@@ -29,6 +30,7 @@ function processIsGone(pid: number): boolean {
  */
 export function redirectTempIntoTestFolder(): void {
   const systemTmp = tmpdir();
+
   for (const name of readdirSync(systemTmp)) {
     if (!name.startsWith(TEMP_PREFIX)) continue;
     const pid = Number(name.slice(TEMP_PREFIX.length));
@@ -70,6 +72,7 @@ export function outsideRepoHome(file: string): string {
 export function leftoverTestDirs(file: string): string[] {
   const tmp = testHome(file, "tmp");
   if (!existsSync(tmp)) return [];
+
   return readdirSync(tmp).map((name) => resolve(tmp, name));
 }
 
@@ -83,5 +86,6 @@ export function freshTestDir(file: string): string {
   handedOut.set(tmp, count + 1);
   const dir = resolve(tmp, String(count + 1));
   mkdirSync(dir, { recursive: true });
+
   return dir;
 }

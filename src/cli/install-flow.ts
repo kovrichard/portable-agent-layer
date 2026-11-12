@@ -76,10 +76,13 @@ function plural(count: number, noun: string): string {
 
 function openRail(rail: LiveRail, style: Style, plan: InstallPlan): void {
   if (plan.kind === "update") return;
+
   if (!style.term.rich) {
     rail.line(`PAL ${plan.version} ${plan.kind}`);
+
     return;
   }
+
   for (const line of banner(style, plan.version)) rail.line(line);
   const title =
     plan.kind === "init"
@@ -87,6 +90,7 @@ function openRail(rail: LiveRail, style: Style, plan: InstallPlan): void {
       : `Installing into ${plural(plan.agents.length, "agent")}`;
   rail.line(railTop(style, title));
   rail.line(railGap(style));
+
   if (plan.kind !== "init") return;
   const found = plan.agents.map(labelOf).join(` ${style.glyph.dot} `);
   rail.line(
@@ -103,6 +107,7 @@ async function installDependencies(): Promise<Done | null> {
   const run = await runCaptured("bun", args, palPkg());
   if (run.code === 0)
     return /no changes/.test(run.output) ? null : { detail: ["installed"] };
+
   return {
     detail: ["bun install failed"],
     notes: [
@@ -116,6 +121,7 @@ async function applyMigrations(): Promise<Done | null> {
   const { applyPendingMigrations } = await import("./migrate");
   const lines = applyPendingMigrations();
   if (lines.length === 0) return null;
+
   return {
     detail: [`${plural(lines.length, "change")} applied`],
     notes: lines.map((text) => ({ level: "info", text })),
@@ -127,6 +133,7 @@ async function downloadChromium(): Promise<Done | null> {
   const { installChromium } = await import("./doctor/environment");
   const installed = await installChromium();
   if (installed === null) return null;
+
   return { detail: [installed ? "installed for screenshots" : "download failed"] };
 }
 
@@ -146,13 +153,17 @@ async function askSetupQuestions(): Promise<boolean> {
   ];
   const { ensureActorRegistered } = await import("../hooks/lib/actor");
   ensureActorRegistered();
+
   return asked.some(Boolean);
 }
 
 function noteFor(level: LogLevel, message: string, verbose: boolean): Note | null {
   const text = homeShortened(message);
+
   if (level === "warn") return { level: "warn", text };
+
   if (level === "error") return { level: "fail", text };
+
   return verbose ? { level: "info", text } : null;
 }
 
@@ -166,12 +177,15 @@ async function runInstaller(plan: InstallPlan, agent: AgentName, notes: Note[]) 
 async function installOne(plan: InstallPlan, agent: AgentName): Promise<Done> {
   const notes: Note[] = [];
   await runInstaller(plan, agent, notes);
+
   return { detail: agentInventory(agent), notes };
 }
 
 async function installAll(plan: InstallPlan): Promise<Done> {
   const notes: Note[] = [];
+
   for (const agent of plan.agents) await runInstaller(plan, agent, notes);
+
   return { detail: plan.agents, notes };
 }
 
@@ -182,6 +196,7 @@ async function prepareShared(): Promise<number> {
   const docs = copyPalDocs();
   refreshEnvironment();
   regenerateIfNeeded();
+
   return docs;
 }
 
@@ -190,6 +205,7 @@ async function finishShared(docs: number): Promise<Done> {
   const { writeContextDigests } = await import("../hooks/handlers/context-digests");
   const skills = generateSkillIndex();
   writeContextDigests();
+
   return {
     detail: [`${plural(skills, "skill")} indexed`, plural(docs, "doc"), "digests"],
   };
@@ -214,6 +230,7 @@ async function refreshControlRoom(): Promise<Done | null> {
   const detail = [rebuilt ? "page rebuilt" : "", restarted ? "restarted" : ""].filter(
     Boolean
   );
+
   return detail.length > 0 ? { detail } : null;
 }
 
@@ -226,6 +243,7 @@ export function notesLink(url: string, more: number, width: number): [string, st
   const room = width - label.length - 3;
   const short =
     url.length <= room ? url : url.replace(/github\.com\/[^/]+\/[^/]+/, "github.com/…");
+
   return [label, short];
 }
 
@@ -233,15 +251,18 @@ async function showWhatsNew(rail: LiveRail, style: Style, from: string, to: stri
   const news = await whatsNew(from, to);
   if (!news) return;
   const width = Math.max(30, style.term.width - 6);
+
   if (!style.term.rich) {
     for (const item of news.items) rail.line(`new  ${item}`);
     rail.line(`notes ${news.url}`);
+
     return;
   }
   const [label, url] = notesLink(news.url, news.more, width);
   rail.line(railGap(style));
   const heading = `What's new in ${to.replace(/\.0$/, "")}`;
   rail.line(`${mark(style, "info")}  ${style.bold(heading)}`);
+
   for (const item of news.items)
     rail.line(
       railNote(
@@ -256,11 +277,14 @@ async function showWhatsNew(rail: LiveRail, style: Style, from: string, to: stri
 function closeRail(rail: LiveRail, style: Style, report: DoctorReport | null): void {
   if (!report) {
     rail.line(style.term.rich ? railEnd(style, style.soft("Installed")) : "installed");
+
     return;
   }
   const t = tally(report.findings);
+
   if (!style.term.rich) {
     for (const line of [...plainProblemLines(t), plainSummary(t)]) rail.line(line);
+
     return;
   }
   const count = { fails: t.fails.length, warns: t.warns.length };
@@ -269,7 +293,9 @@ function closeRail(rail: LiveRail, style: Style, report: DoctorReport | null): v
   rail.line(railEnd(style, `${healthBadge(style, count)}  ${passedCount}`));
   const problems = problemLines(style, t, "   ");
   rail.line();
+
   for (const line of problems) rail.line(line);
+
   if (problems.length > 0) rail.line();
 }
 
@@ -277,10 +303,12 @@ function showNextSteps(rail: LiveRail, style: Style): void {
   const who = readSettings().identity;
   const name = who?.principal?.name ? `, ${who.principal.name}` : "";
   const ai = who?.ai?.name || "PAL";
+
   if (!style.term.rich) {
     rail.line(
       `Next: run pal to start your agent, ask it to "onboard me", run pal cli doctor anytime`
     );
+
     return;
   }
   const step = (n: string, command: string, what: string) =>
@@ -294,6 +322,7 @@ function showNextSteps(rail: LiveRail, style: Style): void {
     step("3", "pal cli doctor", "check health anytime"),
     "",
   ]);
+
   for (const line of lines) rail.line(line);
   rail.line();
 }
@@ -301,8 +330,10 @@ function showNextSteps(rail: LiveRail, style: Style): void {
 async function installAgents(rail: LiveRail, plan: InstallPlan): Promise<void> {
   if (plan.kind === "update") {
     await rail.step("Reinstall", "reinstalling…", () => installAll(plan));
+
     return;
   }
+
   for (const agent of plan.agents)
     await rail.step(labelOf(agent), "installing…", () => installOne(plan, agent));
 }
@@ -316,11 +347,13 @@ export async function runInstall(plan: InstallPlan): Promise<number> {
   if (prepareHome)
     await rail.step("PAL home", "creating…", async () => {
       await prepareHome();
+
       return { detail: [homeShortened(palHome()), "TELOS scaffolded"] };
     });
   await rail.step("Dependencies", "installing…", installDependencies);
   await rail.step("Migrations", "applying…", applyMigrations);
   await rail.step("Chromium", "downloading the browser…", downloadChromium);
+
   if ((await askSetupQuestions()) && style.term.rich) rail.line(railGap(style));
   const docs = await prepareShared();
   await installAgents(rail, plan);
@@ -328,9 +361,12 @@ export async function runInstall(plan: InstallPlan): Promise<number> {
   await rail.step("Control room", "refreshing…", refreshControlRoom);
   const report =
     process.env.PAL_SKIP_DOCTOR === "1" ? null : doctorReport(detectAgents());
+
   if (plan.updatedFrom) await showWhatsNew(rail, style, plan.updatedFrom, plan.version);
   closeRail(rail, style, report);
+
   if (plan.kind === "init") showNextSteps(rail, style);
+
   return installExitCode(rail.reportedFailure, report);
 }
 
@@ -339,5 +375,6 @@ export function installExitCode(
   report: Pick<DoctorReport, "findings"> | null
 ): number {
   if (stepFailed) return 1;
+
   return report ? doctorExitCode(report.findings) : 0;
 }

@@ -87,6 +87,7 @@ async function session(sessionArgs: string[]) {
 
   // Session summary (Claude only)
   if (agent !== "claude") process.exit(exitCode);
+
   try {
     const projectsDir = resolve(homedir(), ".claude", "projects");
     if (!existsSync(projectsDir)) process.exit(exitCode);
@@ -102,9 +103,11 @@ async function session(sessionArgs: string[]) {
 function latestTranscript(projectsDir: string): string {
   let latestFile = "";
   let latestMtime = 0;
+
   for (const project of readdirSync(projectsDir, { withFileTypes: true })) {
     if (!project.isDirectory()) continue;
     const dir = resolve(projectsDir, project.name);
+
     for (const file of readdirSync(dir).filter((f) => f.endsWith(".jsonl"))) {
       const filepath = resolve(dir, file);
       const { mtimeMs } = statSync(filepath);
@@ -114,6 +117,7 @@ function latestTranscript(projectsDir: string): string {
       }
     }
   }
+
   return latestFile;
 }
 
@@ -154,6 +158,7 @@ async function showUpdateNotices(): Promise<void> {
 
 async function doctor(args: string[]): Promise<never> {
   const exitCode = runDoctor(args);
+
   if (args.includes("--probe-inference") || args.includes("--probe")) {
     await probeInference();
   }
@@ -178,11 +183,13 @@ function targetsWhere(selected: (agent: AgentName) => boolean): Targets {
 
 function namedTargets(args: string[]): AgentName[] {
   if (args.includes("--all")) return AGENT_NAMES;
+
   return AGENT_NAMES.filter((agent) => args.includes(`--${agent}`));
 }
 
 function parseTargets(args: string[]): Targets {
   const named = namedTargets(args);
+
   return named.length === 0
     ? targetsWhere(() => true)
     : targetsWhere((a) => named.includes(a));
@@ -201,14 +208,17 @@ function resolveTargets(args: string[], health?: DoctorResult): Targets {
       );
       process.exit(1);
     }
+
     return requested;
   }
 
   const targets = targetsWhere((agent) => h[agent].available);
+
   for (const agent of AGENT_NAMES) {
     if (!targets[agent])
       log.info(`Skipping ${AGENT_REGISTRY[agent].label} (not installed)`);
   }
+
   return targets;
 }
 
@@ -229,15 +239,18 @@ async function probeInference(): Promise<void> {
   const dim = "\x1b[90m";
   const reset = "\x1b[0m";
   const savedAgent = process.env.PAL_AGENT;
+
   try {
     for (const agent of INFERENCE_PRIORITY) {
       process.env.PAL_AGENT = agent;
       const preview = previewInferenceRoute();
       const tag = `${agent.padEnd(10)} → ${preview.route.padEnd(15)}`;
+
       if (preview.route === "none") {
         console.log(`  ${dim}-${reset} ${tag} ${dim}(skip: ${preview.reason})${reset}`);
         continue;
       }
+
       if (preview.route === "disabled") {
         console.log(`  ${yellow}⚠${reset} ${tag} ${dim}${preview.reason}${reset}`);
         continue;
@@ -250,6 +263,7 @@ async function probeInference(): Promise<void> {
         timeout: 60_000,
       });
       const elapsedMs = Date.now() - start;
+
       if (r.success) {
         const bytes = r.output?.length ?? 0;
         console.log(
@@ -337,6 +351,7 @@ async function install(
 ): Promise<number> {
   const { runInstall } = await import("./install-flow");
   const updatedFrom = process.env.PAL_UPDATED_FROM;
+
   return runInstall({
     ...plan,
     kind: updatedFrom ? "update" : plan.kind,
@@ -379,18 +394,22 @@ async function exportState(args: string[]) {
     : (resolvedArg ?? resolve(palHome(), `pal-export-${timestamp()}.zip`));
 
   logDebug("export", `start dryRun=${dryRun} outputPath=${outputPath}`);
+
   if (dryRun) {
     const files = collectExportFiles();
     logDebug("export", `dry-run collected ${files.length} files`);
+
     if (files.length === 0) {
       console.log("Nothing to export.");
     } else {
       console.log(`Would export ${files.length} files → ${outputPath}\n`);
+
       for (const f of files) console.log(`  ${f}`);
     }
   } else {
     const count = exportZip(outputPath);
     logDebug("export", `done count=${count} path=${outputPath}`);
+
     if (count === 0) {
       console.log("Nothing to export.");
     } else {
@@ -401,6 +420,7 @@ async function exportState(args: string[]) {
 
 function findLatestArchiveIn(dirs: string[]): string | null {
   const candidates: string[] = [];
+
   for (const dir of dirs) {
     try {
       candidates.push(
@@ -416,7 +436,9 @@ function findLatestArchiveIn(dirs: string[]): string | null {
       /* empty */
     }
   }
+
   if (candidates.length === 0) return null;
+
   return candidates.sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0];
 }
 
@@ -436,6 +458,7 @@ async function chooseImportArchive(
 
   if (resolvedArg && !argIsDir) {
     logDebug("import", `using provided path=${resolvedArg}`);
+
     return resolvedArg;
   }
   const searchDirs = argIsDir ? [resolvedArg] : [home, resolve(home, "backups")];
@@ -452,10 +475,12 @@ async function chooseImportArchive(
   console.log(
     `Contains ${zip.getEntries().length} files, created ${statSync(latest).mtime.toISOString().slice(0, 16).replace("T", " ")}`
   );
+
   if (!(await confirmImport())) {
     console.log("Cancelled.");
     process.exit(0);
   }
+
   return latest;
 }
 
@@ -471,6 +496,7 @@ async function confirmImport(): Promise<boolean> {
       res(a);
     })
   );
+
   return answer.trim().toLowerCase() === "y";
 }
 
@@ -496,11 +522,14 @@ async function importState(args: string[]) {
     "import",
     `zip=${zipPath} entries=${entries.length} dryRun=${dryRun} overwrite=${overwrite}`
   );
+
   if (dryRun) {
     console.log(
       `Would ${overwrite ? "overwrite with" : "merge"} ${entries.length} files → ${home}\n`
     );
+
     for (const e of entries) console.log(`  ${e.entryName}`);
+
     return;
   }
 
@@ -521,6 +550,7 @@ async function importState(args: string[]) {
       quarantineDir: null,
     });
     log.info("Run 'pal cli install' to re-register hooks.");
+
     return;
   }
 
@@ -562,10 +592,12 @@ async function importState(args: string[]) {
 
   logDebug("import", `done merge ${summarize(result)} to=${home}`);
   console.log(`Imported → ${home}: ${summarize(result)}`);
+
   if (result.conflicts.length > 0) {
     log.warn(
       `${result.conflicts.length} file(s) diverged — local kept, incoming saved to ${result.quarantineDir}`
     );
+
     for (const c of result.conflicts) console.log(`  ${c}`);
   }
   log.info("Run 'pal cli install' to re-register hooks.");
@@ -588,6 +620,7 @@ async function update(flags: { canary?: boolean; stable?: boolean }) {
     runUpdate,
   } = await import("./update-flow");
   const { createStyle } = await import("./ui/style");
+
   if (isRepoMode() && flags.canary) {
     log.error(CANARY_NEEDS_PACKAGE);
     process.exit(1);
@@ -598,6 +631,7 @@ async function update(flags: { canary?: boolean; stable?: boolean }) {
     log.error(ONE_CHANNEL);
     process.exit(1);
   }
+
   if (to !== from) setUpdateChannel(to);
   const style = createStyle();
   process.exit(
@@ -607,6 +641,7 @@ async function update(flags: { canary?: boolean; stable?: boolean }) {
         switched: (checked) => channelSwitchLine(style, from, to, checked),
         reinstall: (env) => {
           clearUpdateCache();
+
           return reinstallInFreshProcess(process.argv[1], env);
         },
       },
@@ -621,6 +656,7 @@ function cliDebug(state: DebugState) {
   // Must match log.ts's logFile() — reporting a different path sends anyone
   // debugging a hook to an empty file.
   const logFile = resolve(paths.debug(), "debug.log");
+
   if (state === "on") {
     mkdirSync(stateDir, { recursive: true });
     writeFileSync(flagFile, "");
@@ -642,6 +678,7 @@ function packageVersion(): string {
     ) as {
       version: string;
     };
+
     return pkgJson.version;
   } catch (e) {
     throw new Error(`Failed to read package.json: ${e}`);
@@ -671,6 +708,7 @@ async function status() {
   const count = (dir: string, ext?: string) => {
     try {
       const files = readdirSync(dir);
+
       return ext ? files.filter((f) => f.endsWith(ext)).length : files.length;
     } catch {
       return 0;
@@ -686,6 +724,7 @@ async function status() {
   log.info(`Agents:   ${count(agentsDir, ".md")} installed`);
 
   const settingsPath = resolve(platform.claudeDir(), "settings.json");
+
   try {
     const settings = JSON.parse(readFileSync(settingsPath, "utf-8"));
     const hookCount = Object.values(settings.hooks || {}).flat().length;

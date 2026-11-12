@@ -25,6 +25,7 @@ const NOW = new Date("2026-06-01T00:00:00Z");
 
 function addReflections(n: number, ts: string) {
   mkdirSync(resolve(TEST_HOME, "memory", "learning", "reflections"), { recursive: true });
+
   for (let i = 0; i < n; i++) {
     appendFileSync(
       REFL_FILE,

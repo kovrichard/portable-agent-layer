@@ -22,6 +22,7 @@ import {
 function subdirIfInstalled(agentHome: () => string, subdir: string): string | null {
   try {
     const home = agentHome();
+
     return existsSync(home) ? ensureDir(resolve(home, subdir)) : null;
   } catch {
     return null;

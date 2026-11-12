@@ -21,8 +21,10 @@ import { delimiter, resolve as resolvePath } from "node:path";
 function isExecutableFile(candidate: string): boolean {
   try {
     if (!statSync(candidate).isFile()) return false;
+
     if (process.platform === "win32") return true;
     accessSync(candidate, constants.X_OK);
+
     return true;
   } catch {
     return false;
@@ -37,12 +39,15 @@ export function findBinaryOnPath(name: string): string | null {
     process.platform === "win32"
       ? (process.env.PATHEXT ?? ".COM;.EXE;.BAT;.CMD").split(";")
       : [""];
+
   for (const dir of PATH.split(delimiter)) {
     if (!dir) continue;
+
     for (const ext of exts) {
       const candidate = resolvePath(dir, name + ext);
       if (isExecutableFile(candidate)) return candidate;
     }
   }
+
   return null;
 }

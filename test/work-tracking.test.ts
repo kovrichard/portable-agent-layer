@@ -152,6 +152,7 @@ describe("writeSession / project history I/O", () => {
       "sessions-archive",
       "2026-03.jsonl"
     );
+
     for (let n = 0; n < 51; n++) writeSession(session(n));
     const hot = JSON.parse(
       readFileSync(resolve(TEST_HOME, "memory", "state", "sessions.json"), "utf-8")

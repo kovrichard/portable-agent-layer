@@ -36,6 +36,7 @@ function rateOf(kind: string, labelled: Turn[], turns: number): KindRate {
   const suggestions = ofKind
     .map((turn) => turn.correctionKind?.suggested ?? "")
     .filter((name) => name !== "");
+
   return {
     kind,
     count: ofKind.length,
@@ -50,6 +51,7 @@ export function kindRates(turns: Turn[]): KindRates {
   const kinds = [...new Set(labelled.map((turn) => turn.correctionKind?.kind ?? ""))]
     .map((kind) => rateOf(kind, labelled, turns.length))
     .sort((a, b) => b.count - a.count || a.kind.localeCompare(b.kind));
+
   return {
     turns: turns.length,
     corrections: corrections.length,
@@ -89,6 +91,7 @@ function windowRate(counts: (kind: string) => boolean, turns: Turn[]): WindowRat
   const count = kindRates(turns)
     .kinds.filter((k) => counts(k.kind))
     .reduce((sum, k) => sum + k.count, 0);
+
   return { turns: turns.length, count, per100: per100(count, turns.length) };
 }
 
@@ -98,7 +101,9 @@ function ratio({ before, after }: Windows): number {
 
 function effectVerdict(own: Windows, control: Windows): OpinionEffect["verdict"] {
   if (own.after.turns < MIN_TURNS_AFTER) return "too-early";
+
   if (own.before.count < MIN_CORRECTIONS_BEFORE) return "too-few";
+
   return ratio(own) < ratio(control) ? "lower" : "not-lower";
 }
 
@@ -123,6 +128,7 @@ export function opinionEffect(
   const verdict = hasStaleLabels([...beforeTurns, ...afterTurns])
     ? "stale-labels"
     : effectVerdict(own, control);
+
   return { kind, ...own, control, verdict };
 }
 
@@ -136,6 +142,7 @@ export function opinionEffectOf(
 ): OpinionEffect | null {
   if (!isOpinion(rule) || !rule.kind || !rule.decidedAt) return null;
   const opinionKinds = rules.filter(isOpinion).flatMap((r) => (r.kind ? [r.kind] : []));
+
   return opinionEffect(rule.kind, new Date(rule.decidedAt), turns, opinionKinds, now);
 }
 
@@ -144,6 +151,7 @@ export function splitRates(
   at: Date
 ): { before: KindRates; after: KindRates } {
   const cut = at.getTime();
+
   return {
     before: kindRates(turns.filter((turn) => Date.parse(turn.ts) < cut)),
     after: kindRates(turns.filter((turn) => Date.parse(turn.ts) >= cut)),

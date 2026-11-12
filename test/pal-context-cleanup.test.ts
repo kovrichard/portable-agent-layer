@@ -7,7 +7,9 @@ import { freshTestDir } from "./lib/test-home";
 
 function dirWith(files: string[]): string {
   const dir = freshTestDir(import.meta.file);
+
   for (const f of files) writeFileSync(resolve(dir, f), "x", "utf-8");
+
   return dir;
 }
 

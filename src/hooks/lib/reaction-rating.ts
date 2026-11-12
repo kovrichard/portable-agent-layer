@@ -129,10 +129,12 @@ export function parseCorrectionCheck(
   output: string | null | undefined
 ): ReactionLabel | null {
   if (!output) return null;
+
   try {
     const parsed = JSON.parse(output) as { reaction?: unknown; issue?: unknown };
     if (parsed.reaction !== "corrected") return { reaction: "follow-up", issue: "" };
     const issue = typeof parsed.issue === "string" ? parsed.issue.trim() : "";
+
     return { reaction: "corrected", issue };
   } catch {
     return null;
@@ -148,6 +150,7 @@ export function settledLabel(
   check: ReactionLabel | null
 ): ReactionLabel | null {
   const caughtFollowUp = first?.reaction === "follow-up" && isCorrectionLabel(check);
+
   return caughtFollowUp ? check : first;
 }
 
@@ -159,9 +162,11 @@ export function parseReactionLabel(
   output: string | null | undefined
 ): ReactionLabel | null {
   if (!output) return null;
+
   try {
     const parsed = JSON.parse(output) as { reaction?: unknown; issue?: unknown };
     if (!isModelReaction(parsed.reaction)) return null;
+
     return {
       reaction: parsed.reaction,
       issue: typeof parsed.issue === "string" ? parsed.issue.trim() : "",
@@ -187,7 +192,9 @@ export function ratingFromLabels(
   confirmation: ReactionLabel | null
 ): number | null {
   if (!first) return null;
+
   if (isCorrectionLabel(first) && !isCorrectionLabel(confirmation)) return null;
+
   return RATING_BY_REACTION[first.reaction] ?? null;
 }
 
@@ -204,6 +211,7 @@ export function turnFromLabels(
 ): TurnInput | null {
   if (!first) return null;
   const turn = { ...seen, reaction: first.reaction, issue: first.issue };
+
   return isCorrectionLabel(first)
     ? { ...turn, confirmed: isCorrectionLabel(confirmation) }
     : turn;
@@ -211,5 +219,6 @@ export function turnFromLabels(
 
 export function ratingContext(label: ReactionLabel, message: string): string {
   const what = label.reaction === "praised" ? "Praised the reply" : label.issue;
+
   return `${what || label.reaction}: ${message.slice(0, 200)}`;
 }

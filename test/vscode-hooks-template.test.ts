@@ -16,6 +16,7 @@ function entries(templatePath = TEMPLATE): Array<{ event: string; entry: Entry }
   const cfg = loadCopilotHooksTemplate(templatePath, PKG_ROOT) as {
     hooks: Record<string, Entry[]>;
   };
+
   return Object.entries(cfg.hooks).flatMap(([event, list]) =>
     list.map((entry) => ({ event, entry }))
   );

@@ -29,6 +29,7 @@ async function mapMarkdownOutsideFences(
 ): Promise<string> {
   const out: string[] = [];
   let inFence = false;
+
   for (const line of md.split("\n")) {
     if (/^```/.test(line)) {
       inFence = !inFence;
@@ -37,6 +38,7 @@ async function mapMarkdownOutsideFences(
     }
     out.push(inFence ? line : await transform(line));
   }
+
   return out.join("\n");
 }
 
@@ -49,9 +51,11 @@ function rewriteImageRefsForConcat(md: string): Promise<string> {
     line.replace(/(!\[[^\]]*\]\()([^)]+)(\))/g, (whole, open, ref, close) => {
       const trimmed = ref.trim();
       if (/^(https?:|data:)/i.test(trimmed)) return whole;
+
       if (trimmed.startsWith("../assets/")) {
         return `${open}${trimmed.slice(3)}${close}`;
       }
+
       return whole;
     })
   );
@@ -66,11 +70,13 @@ async function inlineImagesInMarkdown(md: string, deckDir: string): Promise<stri
     const matches = [...line.matchAll(/(!\[[^\]]*\]\()([^)]+)(\))/g)];
     if (matches.length === 0) return line;
     let result = line;
+
     for (const m of matches) {
       const [whole, open, ref, close] = m;
       const trimmed = ref.trim();
       if (/^(https?:|data:)/i.test(trimmed)) continue;
       const abs = resolve(deckDir, trimmed);
+
       try {
         await access(abs, fsConst.F_OK);
       } catch {
@@ -81,6 +87,7 @@ async function inlineImagesInMarkdown(md: string, deckDir: string): Promise<stri
       const inner = wrapped.replace(/^url\("/, "").replace(/"\)$/, "");
       result = result.replace(whole, `${open}${inner}${close}`);
     }
+
     return result;
   });
 }
@@ -94,6 +101,7 @@ const ASPECTS: Record<string, [number, number]> = {
 // Minimal YAML reader — only handles flat key: value lines (sufficient for slides.config.yml + template.yml).
 function parseSimpleYaml(s: string): Record<string, string> {
   const out: Record<string, string> = {};
+
   for (const raw of s.split("\n")) {
     const line = raw.replace(/\s+#.*$/, "").trim();
     if (!line || line.startsWith("#")) continue;
@@ -112,12 +120,14 @@ function parseSimpleYaml(s: string): Record<string, string> {
     }
     out[m[1]] = v;
   }
+
   return out;
 }
 
 async function exists(p: string): Promise<boolean> {
   try {
     await access(p, fsConst.F_OK);
+
     return true;
   } catch {
     return false;
@@ -128,6 +138,7 @@ function deckSlug(deckDir: string): string {
   // Filesystem-safe name. Falls back to "deck" if basename is empty (shouldn't happen).
   const raw = basename(resolve(deckDir));
   const slug = raw.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+
   return slug || "deck";
 }
 
@@ -156,6 +167,7 @@ function injectCodeScale(slideMarkdown: string): string {
     ? `${extras} style="--code-scale: ${scale}"`
     : `style="--code-scale: ${scale}"`;
   const newDirective = `<!-- .slide: data-layout="code" ${attrs} -->`;
+
   return slideMarkdown.replace(layoutMatch[0], newDirective);
 }
 
@@ -173,9 +185,11 @@ function injectTableScale(slideMarkdown: string): string {
   // separator (`| --- | --- |`) which doesn't render as a row.
   const sepRe = /^\s*\|(\s*:?-+:?\s*\|)+\s*$/;
   let rows = 0;
+
   for (const line of slideMarkdown.split("\n")) {
     if (/^\s*\|/.test(line) && !sepRe.test(line)) rows++;
   }
+
   if (rows <= 4) return slideMarkdown;
 
   const scale = Math.max(0.6, 1 - (rows - 4) * 0.067).toFixed(2);
@@ -184,6 +198,7 @@ function injectTableScale(slideMarkdown: string): string {
     ? `${extras} style="--table-scale: ${scale}"`
     : `style="--table-scale: ${scale}"`;
   const newDirective = `<!-- .slide: data-layout="table" ${attrs} -->`;
+
   return slideMarkdown.replace(layoutMatch[0], newDirective);
 }
 
@@ -196,6 +211,7 @@ async function buildConcat(deckDir: string): Promise<string> {
     }
     const parts = await Promise.all(files.map((f) => readText(join(slidesDir, f))));
     const joined = `${parts.map((p) => injectTableScale(injectCodeScale(p.trim()))).join("\n\n---\n\n")}\n`;
+
     return rewriteImageRefsForConcat(joined);
   }
   const legacy = join(deckDir, "content.md");
@@ -215,10 +231,12 @@ function parseBuildArgs(argv: string[]) {
   const deckDir = resolve(argv[0]);
   let outRoot = deckDir;
   let force = false;
+
   for (let i = 1; i < argv.length; i++) {
     if (argv[i] === "--out") outRoot = resolve(argv[++i]);
     else if (argv[i] === "--force") force = true;
   }
+
   return { deckDir, outRoot, force };
 }
 
@@ -227,14 +245,18 @@ async function readDeckConfig(deckDir: string) {
   if (!(await exists(cfgPath))) fail(`slides.config.yml not found at ${cfgPath}`);
   const cfg = parseSimpleYaml(await readText(cfgPath));
   if (!cfg.template) fail("slides.config.yml missing 'template'");
+
   return { cfg, templateName: cfg.template };
 }
 
 async function refuseOverwrite(paths: string[]): Promise<void> {
   const collisions: string[] = [];
+
   for (const p of paths) if (await exists(p)) collisions.push(p);
+
   if (collisions.length === 0) return;
   console.error("refusing to overwrite existing output (pass --force to replace):");
+
   for (const p of collisions) console.error(`  - ${p}`);
   process.exit(1);
 }

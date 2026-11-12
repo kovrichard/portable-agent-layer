@@ -13,6 +13,7 @@ import { listTemplates } from "./lib/registry";
 async function exists(p: string): Promise<boolean> {
   try {
     await access(p, fsConst.F_OK);
+
     return true;
   } catch {
     return false;
@@ -30,11 +31,13 @@ function parseNewDeckArgs(argv: string[]) {
   let templateName: string | undefined;
   let title = "New deck";
   let showcase = false;
+
   for (let i = 1; i < argv.length; i++) {
     if (argv[i] === "--template") templateName = argv[++i];
     else if (argv[i] === "--title") title = argv[++i];
     else if (argv[i] === "--showcase") showcase = true;
   }
+
   return { target, templateName, title, showcase };
 }
 
@@ -52,14 +55,17 @@ async function chooseTemplate(
     if (all.length === 1) templateName = all[0].name;
     else {
       console.error("multiple templates registered, specify --template <name>:");
+
       for (const t of all) console.error(`  - ${t.name}  (${t.meta.primary})`);
       process.exit(1);
     }
   }
+
   if (!all.find((t) => t.name === templateName)) {
     console.error(`template "${templateName}" not registered`);
     process.exit(1);
   }
+
   return templateName;
 }
 
@@ -92,6 +98,7 @@ lang: en
   const sourceFiles = (await readdir(sourceSlidesDir))
     .filter((f) => f.endsWith(".md"))
     .sort();
+
   for (const f of sourceFiles) {
     await copyFile(join(sourceSlidesDir, f), join(slidesDir, f));
   }

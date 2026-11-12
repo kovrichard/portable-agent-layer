@@ -62,6 +62,7 @@ function segmentsOf(path: string): string[] {
 
 function isLiveDotenv(name: string): boolean {
   if (name !== ".env" && !name.startsWith(".env.")) return false;
+
   return !ENV_TEMPLATE_SUFFIXES.some((suffix) => name.endsWith(suffix));
 }
 
@@ -75,6 +76,7 @@ function hasSecretExtension(name: string): boolean {
 
 function inSecretDirectory(dirs: string[]): boolean {
   if (dirs.some((dir) => SECRET_DIRECTORIES.has(dir))) return true;
+
   return SECRET_DIRECTORY_PAIRS.some(([parent, child]) =>
     dirs.some(
       (dir, i) =>
@@ -90,6 +92,7 @@ function inSecretDirectory(dirs: string[]): boolean {
 function userPatterns(): string[] {
   const configured = raw().ledger?.redactPaths;
   if (!Array.isArray(configured)) return [];
+
   return configured.filter(
     (pattern) => typeof pattern === "string" && pattern.length > 0
   );
@@ -98,6 +101,7 @@ function userPatterns(): string[] {
 function matchesUserPattern(path: string, name: string): boolean {
   return userPatterns().some((pattern) => {
     const glob = new Bun.Glob(pattern);
+
     return glob.match(path) || glob.match(name);
   });
 }
@@ -107,6 +111,7 @@ export function isSensitivePath(path: string): boolean {
   const segments = segmentsOf(path);
   const name = segments.at(-1) ?? "";
   const dirs = segments.slice(0, -1);
+
   return (
     inSecretDirectory(dirs) ||
     isLiveDotenv(name) ||
