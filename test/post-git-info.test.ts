@@ -82,11 +82,13 @@ describe("which commands count as git", () => {
 
 describe("literalCommandDir", () => {
   test("prefers git -C over cd and resolves against cwd", () => {
-    expect(literalCommandDir("cd /a && git -C sub status", "/base")).toBe("/base/sub");
+    expect(literalCommandDir("cd /a && git -C sub status", "/base")).toBe(
+      resolve("/base", "sub")
+    );
   });
 
   test("reads a quoted cd target", () => {
-    expect(literalCommandDir('cd "/x y" && git status', "/base")).toBe("/x y");
+    expect(literalCommandDir('cd "/x y" && git status', "/base")).toBe(resolve("/x y"));
   });
 
   test("ignores a directory named through a variable", () => {
@@ -188,12 +190,13 @@ describe("postGitInfoResponse", () => {
   });
 
   test("a commit no worktree shows falls back to a literal git -C directory", () => {
+    const other = resolve("/other");
     const git = fakeGit({
       ...repo("/r/main"),
-      ...repo("/other"),
+      ...repo(other),
       "/r/main: worktree list --porcelain": "worktree /r/main\nHEAD a",
       "/r/main: log -1 --format=%ct HEAD": String(NOW_SEC - 3600),
-      "/other: show --name-status --format=%h %s HEAD": "def5678 fix: x\n\nM\tz.ts",
+      [`${other}: show --name-status --format=%h %s HEAD`]: "def5678 fix: x\n\nM\tz.ts",
     });
     const context = contextOf(
       postGitInfoResponse(bash("git -C /other commit -m 'fix: x'"), git, NOW)
