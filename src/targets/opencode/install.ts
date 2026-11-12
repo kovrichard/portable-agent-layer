@@ -59,6 +59,7 @@ if (existsSync(configPath) && statSync(configPath).size > 0) {
     /* start fresh */
   }
 }
+
 const existingInstructions = Array.isArray(ocConfig.instructions)
   ? (ocConfig.instructions as string[])
   : [];

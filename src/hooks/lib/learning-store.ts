@@ -148,6 +148,7 @@ export function readReflections(file: string, limit?: number): ReflectionEntry[]
       /* skip malformed line */
     }
   }
+
   entries.reverse(); // JSONL is appended chronologically → newest first
 
   return limit ? entries.slice(0, limit) : entries;

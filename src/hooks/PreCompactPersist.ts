@@ -54,6 +54,7 @@ const main = async () => {
       logDebug("PreCompactPersist", "Transcript empty or unreadable");
       process.exit(0);
     }
+
     const sessionId = input.session_id ?? "unknown";
 
     // Stop fires after every response and is authoritative. Skip if it already

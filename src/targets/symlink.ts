@@ -56,5 +56,6 @@ export function ensureSymlink(
       /* gone */
     }
   }
+
   symlinkSync(target, link, type);
 }

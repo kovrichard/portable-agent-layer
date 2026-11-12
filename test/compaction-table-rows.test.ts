@@ -319,6 +319,7 @@ describe("compaction_near table rows", () => {
       } finally {
         process.chdir(original);
       }
+
       expect(written()[0]).toMatchObject({
         windowTokens: 400_000,
         windowSource: "settings",
@@ -336,6 +337,7 @@ describe("compaction_near table rows", () => {
       } finally {
         process.chdir(original);
       }
+
       expect(written()[0]).toMatchObject({
         windowTokens: 400_000,
         windowSource: "settings",

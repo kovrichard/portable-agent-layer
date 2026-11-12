@@ -83,6 +83,7 @@ function seedLegacy(opts?: {
       };
     }
   }
+
   writeFileSync(LEGACY_FILE, JSON.stringify(index, null, 2));
 }
 
@@ -114,6 +115,7 @@ describe("v3-entities-to-knowledge — check", () => {
     } finally {
       console.log = log;
     }
+
     const out = captured.join("\n");
     expect(out).toContain("v3-entities-to-knowledge");
     expect(out).toContain("4 of 4 entries to migrate");
@@ -131,6 +133,7 @@ describe("v3-entities-to-knowledge — check", () => {
     } finally {
       console.log = log;
     }
+
     const out = captured.join("\n");
     expect(out).toContain("✓ v3-entities-to-knowledge");
   });
@@ -146,6 +149,7 @@ describe("v3-entities-to-knowledge — check", () => {
     } finally {
       console.log = log;
     }
+
     const out = captured.join("\n");
     // v3 should appear in the "Done" section (nothing pending), not "Pending".
     const pendingSection = out.split("Done:")[0];
@@ -167,6 +171,7 @@ describe("v3 — dry-run", () => {
     } finally {
       console.log = log;
     }
+
     const out = captured.join("\n");
     expect(out).toContain("would migrate");
     expect(out).toContain("People/alice-example");
@@ -254,6 +259,7 @@ describe("v3 — idempotence", () => {
     } finally {
       console.log = log;
     }
+
     const out = captured.join("\n");
     // check() reports pending=false because all 4 already exist in new store →
     // run loop skips v3 entirely and reports "Nothing to migrate".
@@ -275,6 +281,7 @@ describe("v3 — bails on non-empty links/sources", () => {
     } finally {
       console.log = log;
     }
+
     const out = captured.join("\n");
     expect(out).toContain("aborted");
     expect(out).toContain("1 link");
@@ -294,6 +301,7 @@ describe("v3 — bails on non-empty links/sources", () => {
     } finally {
       console.log = log;
     }
+
     expect(captured.join("\n")).toContain("aborted");
     expect(exists("People", "alice-example")).toBe(false);
   });

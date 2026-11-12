@@ -55,6 +55,7 @@ if (existsSync(CLI_CONFIG)) {
 } else {
   log.info("No cli-config.json found, skipping statusLine removal");
 }
+
 removeStatusline("cursor");
 
 const removedRules = removePalContextFiles(resolve(CURSOR_DIR, "rules"), ".mdc");

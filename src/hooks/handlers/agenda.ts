@@ -357,5 +357,6 @@ if (process.argv[2] === "--run") {
   } catch (err) {
     logError("agenda:run", err);
   }
+
   process.exit(0);
 }

@@ -162,6 +162,7 @@ async function doctor(args: string[]): Promise<never> {
   if (args.includes("--probe-inference") || args.includes("--probe")) {
     await probeInference();
   }
+
   process.exit(exitCode);
 }
 
@@ -255,6 +256,7 @@ async function probeInference(): Promise<void> {
         console.log(`  ${yellow}⚠${reset} ${tag} ${dim}${preview.reason}${reset}`);
         continue;
       }
+
       const start = Date.now();
       const r = await inference({
         user: "Reply with exactly: OK",
@@ -461,6 +463,7 @@ async function chooseImportArchive(
 
     return resolvedArg;
   }
+
   const searchDirs = argIsDir ? [resolvedArg] : [home, resolve(home, "backups")];
   logDebug("import", `searching dirs=${searchDirs.join(",")}`);
   const latest = findLatestArchiveIn(searchDirs);
@@ -469,6 +472,7 @@ async function chooseImportArchive(
     log.error("No export or backup files found. Provide a path: pal cli import <path>");
     process.exit(1);
   }
+
   logDebug("import", `auto-selected latest=${latest}`);
   console.log(`Found: ${latest}`);
   const zip = new AdmZip(latest);
@@ -600,6 +604,7 @@ async function importState(args: string[]) {
 
     for (const c of result.conflicts) console.log(`  ${c}`);
   }
+
   log.info("Run 'pal cli install' to re-register hooks.");
 }
 
@@ -625,6 +630,7 @@ async function update(flags: { canary?: boolean; stable?: boolean }) {
     log.error(CANARY_NEEDS_PACKAGE);
     process.exit(1);
   }
+
   const from = isRepoMode() ? "stable" : updateChannel();
   const to = requestedChannel(flags, from);
   if (!to) {
@@ -732,5 +738,6 @@ async function status() {
   } catch {
     log.info(`Hooks:    not configured`);
   }
+
   console.log("");
 }

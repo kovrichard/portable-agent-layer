@@ -159,6 +159,7 @@ function labelOf(segment: Segment, windowAt: WindowAt): Label | null {
       return "threshold";
     }
   }
+
   const previous = end.previousCall;
   if (previous && end.ts - previous.ts >= IDLE_LABEL_AFTER_MS) return "idle";
 
@@ -283,6 +284,7 @@ export function windowResolver(
     ) {
       continue;
     }
+
     const entries = nearBySession.get(event.session) ?? [];
     entries.push({ ts: Date.parse(String(event.ts)), tokens: event.windowTokens });
     nearBySession.set(event.session, entries);

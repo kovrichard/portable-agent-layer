@@ -106,6 +106,7 @@ export function detectAgents(): DoctorResult {
       hasAgent: true,
     };
   }
+
   const agents = agentChecks((agent) => AGENT_PROBES[agent]());
 
   return {

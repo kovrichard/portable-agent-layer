@@ -8,6 +8,7 @@ async function main() {
 
     return;
   }
+
   const nameW = Math.max(4, ...all.map((t) => t.name.length));
   console.log(`${"NAME".padEnd(nameW)}  PRIMARY    ASPECT  PATH`);
 

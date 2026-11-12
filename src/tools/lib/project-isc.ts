@@ -177,6 +177,7 @@ export function completeIsc(
   if (parseIscs(sections.changelog).some((i) => i.id === id)) {
     return { ok: true, already: true, ...kept };
   }
+
   const { line, rest } = removeIscLine(sections.criteria, id);
   if (!line) return { ok: false, reason: `ISC-${id} not found` };
 
@@ -199,6 +200,7 @@ export function reopenIsc(sections: IscSections, id: number): IscMove {
   if (parseIscs(sections.criteria).some((i) => i.id === id && i.status === "open")) {
     return { ok: true, already: true, ...kept };
   }
+
   let changelog = sections.changelog;
   let criteria = sections.criteria;
   let removed = removeIscLine(changelog, id);

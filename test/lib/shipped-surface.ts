@@ -173,6 +173,7 @@ function plantInConfig(path: string, spec: string, root: string): void {
 
     return;
   }
+
   const config = existsSync(path) ? JSON.parse(readFileSync(path, "utf-8")) : {};
   const [key, entry] = spec.split("[]=");
   setKey(config, key, (current) =>

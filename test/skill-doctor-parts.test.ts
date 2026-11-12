@@ -28,6 +28,7 @@ function skillDir(files: Record<string, string>): string {
     mkdirSync(dirname(target), { recursive: true });
     writeFileSync(target, content);
   }
+
   mkdirSync(dir, { recursive: true });
 
   return dir;
@@ -518,6 +519,7 @@ describe("reference depth", () => {
       mkdirSync(dirname(target), { recursive: true });
       writeFileSync(target, content);
     }
+
     const found = lintSkill(dir).findings.filter((f) => f.check === "references.depth");
     expect(found.length).toBe(1);
 
@@ -613,6 +615,7 @@ describe("author voice is detected with either apostrophe", () => {
     for (const phrase of ["I'm here", "I’m here", "I'll go", "I’ll go", "my workflow"]) {
       expect(levelOf(lintOf("name: s", `\n${phrase}\n`), "body.pov")).toBe("warn");
     }
+
     expect(levelOf(lintOf("name: s", "\nRead the input.\n"), "body.pov")).toBe("pass");
   });
 

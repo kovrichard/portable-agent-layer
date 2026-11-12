@@ -239,6 +239,7 @@ describe("@path imports", () => {
     for (let level = 1; level <= 7; level += 1) {
       put(join(clone, `l${level}.md`), `LEVEL${level}\n@l${level + 1}.md\n`);
     }
+
     prepare("t1", env());
     run();
     const text = appended() as string;

@@ -31,6 +31,7 @@ function restoreEnv(): void {
       else process.env[k] = saved[k];
     }
   }
+
   reload();
 }
 

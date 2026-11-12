@@ -62,6 +62,7 @@ function rotateIfNeeded(path: string): void {
         }
       }
     }
+
     // Finally, current → .1
     renameSync(path, `${path}.1`);
   } catch {

@@ -23,6 +23,7 @@ function writeFakeBinary(dir: string, binary: string): void {
 
     return;
   }
+
   const path = resolve(dir, binary);
   writeFileSync(path, `#!/bin/sh\necho "${binary} 2026.10.01"\n`);
   chmodSync(path, 0o755);

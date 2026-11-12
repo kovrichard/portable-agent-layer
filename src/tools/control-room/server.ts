@@ -88,13 +88,16 @@ function filterFromQuery(params: URLSearchParams): LedgerFilter | string {
     if (!at) return `Unrecognised ${key}: ${spec}`;
     filter[key] = at;
   }
+
   const outcome = params.get("outcome");
   if (outcome) {
     if (!(PAGE_OUTCOMES as readonly string[]).includes(outcome)) {
       return `Unrecognised outcome: ${outcome}`;
     }
+
     filter.outcome = outcome;
   }
+
   const authority = params.get("authority");
   if (authority) {
     if (!AUTHORITIES.includes(authority)) return `Unrecognised authority: ${authority}`;
@@ -163,6 +166,7 @@ async function overrideServes(request: Request): Promise<Response> {
   } catch {
     return json({ error: "expected a JSON body" }, 400);
   }
+
   const { project, serves, note } = (body ?? {}) as Record<string, unknown>;
   if (typeof project !== "string" || !project) {
     return json({ error: "project is required" }, 400);
@@ -247,6 +251,7 @@ async function settingsWrite(request: Request): Promise<Response> {
     if (typeof value !== "string") return json({ error: `${key} must be a string` }, 400);
     update[key] = value;
   }
+
   const outcome = writeInstallSettings(update);
 
   return outcome.ok ? json(readInstallSettings()) : answer(outcome, {});
@@ -294,6 +299,7 @@ async function autoUpdateWrite(request: Request): Promise<Response> {
   if (typeof enabled !== "boolean") {
     return json({ error: "enabled must be true or false" }, 400);
   }
+
   const outcome = setAutoUpdate(enabled);
 
   return outcome.ok ? json(autoUpdateStatus()) : answer(outcome, {});

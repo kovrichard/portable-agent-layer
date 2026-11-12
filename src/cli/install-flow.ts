@@ -258,6 +258,7 @@ async function showWhatsNew(rail: LiveRail, style: Style, from: string, to: stri
 
     return;
   }
+
   const [label, url] = notesLink(news.url, news.more, width);
   rail.line(railGap(style));
   const heading = `What's new in ${to.replace(/\.0$/, "")}`;
@@ -280,6 +281,7 @@ function closeRail(rail: LiveRail, style: Style, report: DoctorReport | null): v
 
     return;
   }
+
   const t = tally(report.findings);
 
   if (!style.term.rich) {
@@ -287,6 +289,7 @@ function closeRail(rail: LiveRail, style: Style, report: DoctorReport | null): v
 
     return;
   }
+
   const count = { fails: t.fails.length, warns: t.warns.length };
   rail.line(railGap(style));
   const passedCount = style.soft(`${plural(t.passes.length, "check")} passed`);
@@ -311,6 +314,7 @@ function showNextSteps(rail: LiveRail, style: Style): void {
 
     return;
   }
+
   const step = (n: string, command: string, what: string) =>
     `${style.dim(n)}  ${style.cmd(command.padEnd(17))}${style.soft(what)}`;
   const lines = box(style, [

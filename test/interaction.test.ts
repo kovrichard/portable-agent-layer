@@ -458,6 +458,7 @@ describe("checking the hint worked", () => {
       recordReply("s1", "an answer", at(i * 200));
       observeTurn(words(100), "s1", at(i * 200 + 100));
     }
+
     recordReply("s1", words(300), at(1000));
     observeTurn(words(100), "s1", at(1100));
 

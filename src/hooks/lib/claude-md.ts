@@ -64,10 +64,12 @@ function ensureOneSymlink(linkPath: string, targetPath: string): void {
       const currentTarget = resolve(dirname(linkPath), readlinkSync(linkPath));
       if (currentTarget === targetPath) return;
     }
+
     unlinkSync(linkPath);
   } catch {
     // doesn't exist — create it
   }
+
   ensureDir(dirname(linkPath));
 
   try {
@@ -211,6 +213,7 @@ export function regenerateIfNeeded(): boolean {
 
     return false;
   }
+
   ensureDir(dirname(outputPath));
   writeFileSync(outputPath, buildClaudeMd(), "utf-8");
   // Write Claude Code's CLAUDE.md as a real file (removing any existing symlink)
@@ -226,6 +229,7 @@ export function regenerateIfNeeded(): boolean {
       /* ignore — CLAUDE.md write failure is non-fatal */
     }
   }
+
   ensureSymlinks();
   ensureAntigravityRule();
 

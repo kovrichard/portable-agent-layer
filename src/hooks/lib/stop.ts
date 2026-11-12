@@ -126,6 +126,7 @@ export async function finishDeferredStop(
 
     return;
   }
+
   await runTurnStop(payload, messages);
 }
 
@@ -137,6 +138,7 @@ export async function stopTurn(payload: StopTurnPayload | null): Promise<void> {
 
     return;
   }
+
   await runTurnStop(payload, messages);
 }
 
@@ -152,6 +154,7 @@ async function runTurnStop(
 
     return;
   }
+
   logDebug("stopTurn", "No readable transcript; filing only the final reply");
   fileFinalReply(payload);
 }
@@ -216,6 +219,7 @@ export async function runStopHandlers(
       logError(`runStopHandlers:${names[i]}`, r.reason);
     }
   }
+
   timing.log(options.sessionId);
 }
 

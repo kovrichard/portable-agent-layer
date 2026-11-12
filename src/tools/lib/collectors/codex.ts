@@ -133,6 +133,7 @@ export function collectCodex(codexDir: string): number {
       emitted++;
       cursor[key] = call.total;
     }
+
     cursor[`${key}@size`] = size;
     writeCursor("codex", cursor);
   }

@@ -68,6 +68,7 @@ function find(grid: Matrix, id: string): { quadrant: string; item: MatrixItem } 
     const item = grid[quadrant].find((i) => i.id === id);
     if (item) return { quadrant, item };
   }
+
   throw new Error(`${id} is in no quadrant`);
 }
 

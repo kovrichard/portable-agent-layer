@@ -199,6 +199,7 @@ describe("shipped skills", () => {
       } finally {
         chmodSync(store, 0o700);
       }
+
       const errors = logged.filter((entry) => entry.level === "error");
       expect(errors.length).toBeGreaterThan(1);
       expect(errors[0]?.message).toMatch(/^Could not install skill \S+ — \S/);

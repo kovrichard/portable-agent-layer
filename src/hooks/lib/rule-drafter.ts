@@ -114,6 +114,7 @@ function knownRuleLine(rule: KnownRule, newest: Correction | undefined): string 
 
     return `- ${label}: ${rule.when}. ${rule.steering}`;
   }
+
   const fires = newest && firesOn(rule.trigger, newest) ? "yes" : "no";
 
   return `- approved rule ${rule.id}: ${rule.when}. ${rule.steering} Trigger on the ${rule.trigger.side}: ${rule.trigger.pattern}. Fires on the newest correction: ${fires}.`;

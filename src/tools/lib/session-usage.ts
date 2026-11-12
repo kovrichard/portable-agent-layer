@@ -176,6 +176,7 @@ export function accumulateUsage(transcript: string, sessionId: string): SessionU
   for (const entry of finalPerMessage(assistantTurns, (e) => e.message?.id)) {
     addTurnUsage(total, entry);
   }
+
   total.durationMs = sessionDurationMs(entries);
 
   return total;

@@ -109,6 +109,7 @@ describe("what a session ran with", () => {
       delete process.env.CLAUDE_EFFORT;
       delete process.env.CLAUDE_CODE_ENTRYPOINT;
     }
+
     expect(streamed("session_start")[0]).toMatchObject({
       model: "claude-opus-5-5",
       effort: "high",

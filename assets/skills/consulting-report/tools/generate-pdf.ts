@@ -86,6 +86,7 @@ async function loadMeta(reportDir: string): Promise<ReportMeta> {
   if (!(await exists(dataPath))) {
     throw new Error(`lib/report-data.ts not found at ${dataPath}`);
   }
+
   const mod = (await import(pathToFileURL(dataPath).href)) as {
     reportData?: ReportMeta;
   };

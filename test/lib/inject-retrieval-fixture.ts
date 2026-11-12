@@ -24,6 +24,7 @@ export function injectRetrievalHome(file: string): string {
     ]) {
       removeOnceReleased(dir);
     }
+
     removeOnceReleased(resolve(home, "memory", "pal-settings.json"));
     // Bust the in-memory settings cache so a test that disabled the flag
     // doesn't poison the next test that wants the default-true behavior.

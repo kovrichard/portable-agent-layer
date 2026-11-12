@@ -46,6 +46,7 @@ function writeFakeGhLauncher(bin: string) {
 
     return;
   }
+
   writeFileSync(resolve(bin, "gh"), `#!/usr/bin/env bun\n${fakeGhScript()}`);
   chmodSync(resolve(bin, "gh"), 0o755);
 }

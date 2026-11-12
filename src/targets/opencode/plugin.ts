@@ -156,6 +156,7 @@ const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
     if (reason) {
       throw new Error(`PAL Security: Blocked — ${reason}`);
     }
+
     const rewritten = rtkRewrite(cmd);
     if (!rewritten) return;
 

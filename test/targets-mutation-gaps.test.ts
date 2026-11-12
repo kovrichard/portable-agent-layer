@@ -29,6 +29,7 @@ beforeEach(() => {
   for (const [name, dir] of Object.entries(DIR_VARS)) {
     process.env[name] = resolve(ROOT, dir);
   }
+
   process.env.PAL_HOME = resolve(ROOT, "home");
 });
 
@@ -98,6 +99,7 @@ describe("removeAgents", () => {
     for (const file of ["scout.md", "skill-author.md", "mine.md"]) {
       writeFileSync(resolve(dir, file), "x");
     }
+
     expect(removeAgents().sort()).toEqual(["scout", "skill-author"]);
     expect(readdirSync(dir)).toEqual(["mine.md"]);
   });

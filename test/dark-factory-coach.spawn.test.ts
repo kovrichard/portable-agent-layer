@@ -337,6 +337,7 @@ describe("coach.mjs commands (criteria 10, 12)", () => {
       appendEvent({ event: "task_started", task }, env());
       appendEvent({ event: "run_finished", task, costUsd: 1 }, env());
     }
+
     const [row] = lastJson(cli(["list", "--applied"]).stdout);
     expect(row).toMatchObject({ id: "c1", after: "not enough runs" });
     expect((appliedReport(env()) as unknown[])[0]).toMatchObject({
@@ -357,6 +358,7 @@ describe("coach.mjs commands (criteria 10, 12)", () => {
       appendEvent({ event: "task_started", task }, env());
       appendEvent({ event: "run_finished", task, costUsd: 2 }, env());
     }
+
     const [row] = lastJson(cli(["list", "--applied"]).stdout);
     expect(row.after).toBe(2);
   });
@@ -389,6 +391,7 @@ describe("running the coach on a task (criteria 1, 4)", () => {
         env()
       );
     }
+
     writeFileSync(join(paths.home, "tasks", "t1", "plan.md"), "# plan\n");
   }
 
@@ -411,6 +414,7 @@ describe("running the coach on a task (criteria 1, 4)", () => {
     ]) {
       expect(call.stdin).toContain(part);
     }
+
     expect(call.stdin).not.toContain("design.md\n");
   });
 

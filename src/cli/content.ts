@@ -8,6 +8,7 @@ function printPreserve(): undefined {
 
     return;
   }
+
   console.log(
     `Copied ${result.copied}, unchanged ${result.unchanged}, failed ${result.failed}`
   );

@@ -61,6 +61,7 @@ describe("Copilot hooks template", () => {
       expect(`${event}:${entry.bash}`).toContain("--agent=copilot");
       expect(`${event}:${entry.powershell}`).toContain("--agent=copilot");
     }
+
     expect(readFileSync(TEMPLATE, "utf-8")).not.toContain("PAL_AGENT");
   });
 

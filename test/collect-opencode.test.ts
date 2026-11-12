@@ -173,6 +173,7 @@ describe("a collector never reads a credential", () => {
         if (name.endsWith("_ALLOW_LIST")) allowLists.push(value as AllowList);
       }
     }
+
     expect(allowLists.length).toBeGreaterThanOrEqual(2);
 
     for (const allowList of allowLists) {

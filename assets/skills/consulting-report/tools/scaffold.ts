@@ -64,6 +64,7 @@ async function scaffold(opts: ScaffoldOptions): Promise<void> {
         opts.reportTitle
       );
     }
+
     await writeFile(dataPath, data, "utf8");
   }
 
@@ -88,6 +89,7 @@ function parseArgs(argv: string[]): ScaffoldOptions {
       'usage: scaffold.ts <target-dir> [--client "Name"] [--title "Title"] [--no-install]'
     );
   }
+
   const opts: ScaffoldOptions = { targetDir: resolve(argv[0]) };
 
   for (let i = 1; i < argv.length; i++) {

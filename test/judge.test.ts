@@ -43,6 +43,7 @@ beforeEach(() => {
     if (saved[k] === undefined) delete process.env[k];
     else process.env[k] = saved[k];
   }
+
   home = freshTestDir(import.meta.file);
   process.env.PAL_HOME = home;
   delete process.env.PAL_TYPESAFE_API_KEY;

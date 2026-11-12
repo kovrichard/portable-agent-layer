@@ -32,6 +32,7 @@ export function replaceConfig(path: string, content: string): void {
     if (current !== null) copyFileSync(path, `${path}.bak.${Date.now()}`);
     writeFileSync(path, content, "utf-8");
   }
+
   pruneBackups(path);
 }
 

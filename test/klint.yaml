@@ -5,6 +5,7 @@
 include:
   - "."
 rules:
+  blank-line-after-block: error
   blank-line-before-control-flow: error
 
 arch:

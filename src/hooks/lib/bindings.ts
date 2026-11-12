@@ -93,6 +93,7 @@ export function writeBindings(bindings: Bindings, home: string = palHome()): voi
   if (existsSync(file) && readFileSync(file, "utf-8").trim().length > 0) {
     copyFileSync(file, bindingsBackupPath(home));
   }
+
   const sorted: Bindings = {};
 
   for (const key of Object.keys(bindings).sort()) sorted[key] = bindings[key];

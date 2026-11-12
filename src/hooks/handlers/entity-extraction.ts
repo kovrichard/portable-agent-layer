@@ -104,5 +104,6 @@ if (process.argv[2] === "--run") {
       await unlink(transcriptPath).catch(() => {});
     }
   }
+
   process.exit(0);
 }

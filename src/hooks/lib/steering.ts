@@ -102,6 +102,7 @@ function effectiveRules(): SteeringRule[] {
     } catch {
       continue; // fail-open: skip malformed regex
     }
+
     rules.push({ tag: u.tag, pattern, snippet: u.snippet });
   }
 

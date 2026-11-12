@@ -109,6 +109,7 @@ export function writeSession(record: SessionRecord): void {
   } else {
     sessions.push(record);
   }
+
   archiveSessions(sessions.slice(0, -MAX_SESSIONS));
   writeFileSync(
     sessionsPath(),
@@ -253,6 +254,7 @@ export function appendProjectHistory(cwd: string, entry: ProjectHistoryEntry): v
 
     return;
   }
+
   const lines = readFileSync(historyPath, "utf-8").split("\n").filter(Boolean);
   const kept = withoutSession(lines, entry.session);
   writeFileSync(historyPath, `${[...kept, line].join("\n")}\n`, "utf-8");

@@ -83,6 +83,7 @@ function acceptedInput(
 
     return ingestInput(item.entity, index, known, choice.name);
   }
+
   const target = chosenEntity(item, choice.as ?? item.entity.existing, index);
 
   return profileIngest(

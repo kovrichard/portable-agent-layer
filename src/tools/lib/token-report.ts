@@ -226,6 +226,7 @@ export function rtkLines(gain: RtkGain): string[] {
   if (!summary || summary.total_commands === 0) {
     return [heading, "  rtk installed — no savings recorded yet"];
   }
+
   const saved = fmt(summary.total_saved).padStart(8);
   const pct = summary.avg_savings_pct.toFixed(1);
   const commands = fmt(summary.total_commands);

@@ -133,6 +133,7 @@ export function attachGitProgress(
     if (node) attachMoves({ scope, node, branch, commits, file, now });
     attachNewWorktrees(cwd, cursor.worktrees, { scope, node, file, now });
   }
+
   appendEvent(
     scope,
     "",

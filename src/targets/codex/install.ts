@@ -41,6 +41,7 @@ function enableCodexHooks(configPath: string): void {
       return;
     }
   }
+
   // No config.toml, or no [features] section — append the block
   const block = `${content.endsWith("\n") || content === "" ? "" : "\n"}\n[features]\nhooks = true\n`;
   writeFileSync(configPath, content + block, "utf-8");
@@ -55,6 +56,7 @@ function enableCodexStatusline(configPath: string): void {
 
     return;
   }
+
   writeFileSync(configPath, updated, "utf-8");
   log.success("Configured Codex TUI status line in ~/.codex/config.toml");
 }

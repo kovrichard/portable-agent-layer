@@ -16,6 +16,7 @@ async function readWhenWritten(path: string, attempts = 50): Promise<string> {
     } catch {
       /* child hasn't written it yet */
     }
+
     await new Promise((r) => setTimeout(r, 100));
   }
 

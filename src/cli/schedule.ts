@@ -112,6 +112,7 @@ function remove(id: string): number {
 
     return 1;
   }
+
   console.log(`Removed ${id}.`);
 
   return 0;

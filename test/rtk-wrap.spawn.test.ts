@@ -32,6 +32,7 @@ function writeFakeRtk(body: string): void {
 
     return;
   }
+
   const p = resolve(dir, "rtk");
   writeFileSync(p, `#!/usr/bin/env bun\n${script}\n`);
   chmodSync(p, 0o755);

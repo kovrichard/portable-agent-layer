@@ -405,6 +405,7 @@ function linkPersonToCompany(
   if (!load("Companies", companySlug, rootDir)) {
     upsertCompany({ name: companyName }, sourceId, rootDir);
   }
+
   const person = load("People", personSlug, rootDir);
   if (!person) return;
   // ISC-18: inherit ONLY the company's topic:* tags. Structural tags stay

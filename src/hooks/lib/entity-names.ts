@@ -219,6 +219,7 @@ export function findMentions(text: string, index: NameIndex): Mention[] {
         .join(" ");
       addMention(found, said, terms, index);
     }
+
     at += width;
   }
 

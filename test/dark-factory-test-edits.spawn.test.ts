@@ -49,6 +49,7 @@ function runGit(
   for (const [key, value] of Object.entries(process.env)) {
     if (value !== undefined && !key.startsWith("GIT_")) env[key] = value;
   }
+
   const result = Bun.spawnSync({
     cmd: [
       "git",

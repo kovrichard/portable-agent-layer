@@ -153,6 +153,7 @@ export function deadlineFrom(
 
     return at;
   }
+
   throw new Error("Give --for <duration> or --until <HH:MM>.");
 }
 

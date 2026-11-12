@@ -159,6 +159,7 @@ async function cmdRestart(): Promise<number> {
 
     return 0;
   }
+
   await cmdStop();
 
   return cmdStart(running.port);
@@ -194,6 +195,7 @@ async function cmdStop(): Promise<number> {
   } else {
     console.log(`Pid ${state.pid} was already gone; cleared the stale record.`);
   }
+
   clearState();
 
   return 0;
@@ -206,6 +208,7 @@ async function cmdStatus(): Promise<number> {
 
     return 1;
   }
+
   const status = alive(state.pid) ? await probe(state.port) : null;
   if (!status) {
     console.log(
@@ -214,6 +217,7 @@ async function cmdStatus(): Promise<number> {
 
     return 1;
   }
+
   console.log(`
   ${url(status.port)}
   pid          ${status.pid}

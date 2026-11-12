@@ -101,6 +101,7 @@ export function answersProblem(
   if (typeof answers !== "object" || answers === null || Array.isArray(answers)) {
     return "answers is not an object";
   }
+
   const map = answers as Record<string, unknown>;
 
   for (const [id, q] of Object.entries(questions)) {
@@ -129,6 +130,7 @@ function problemOf(id: string, q: JudgeQuestion, a: object): string | null {
 
     return ok ? null : `${id}: noul is not a boolean or a number in [0, 1]`;
   }
+
   const score = (a as { score?: unknown }).score;
   const ok =
     typeof score === "number" &&

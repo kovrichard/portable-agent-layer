@@ -126,6 +126,7 @@ async function main(): Promise<void> {
     console.error("NO_PLAYWRIGHT_CLI");
     process.exit(3); // no local engine → caller falls back to Playwright MCP
   }
+
   process.exit(1); // engine ran but the capture failed — a real error, not an MCP case
 }
 

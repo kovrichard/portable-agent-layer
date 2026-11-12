@@ -153,6 +153,7 @@ describe("runStopHandlers — last-response cache", () => {
         ts: `2020-01-${String(i + 1).padStart(2, "0")}T00:00:00.000Z`,
       };
     }
+
     seedCache(seeded);
 
     await runStopHandlers(transcriptOf("q", "newest"), { sessionId: "fresh" });
@@ -173,6 +174,7 @@ describe("runStopHandlers — last-response cache", () => {
         ts: `2020-01-${String(i + 1).padStart(2, "0")}T00:00:00.000Z`,
       };
     }
+
     seedCache(seeded);
 
     await runStopHandlers(transcriptOf("q", "twentieth"), { sessionId: "fresh" });

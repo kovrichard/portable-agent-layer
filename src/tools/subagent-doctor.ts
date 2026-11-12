@@ -109,6 +109,7 @@ function parseSubagent(content: string): ParsedSubagent {
   if (!definition.hasFrontmatter) {
     return { ...definition, name: null, description: null, descriptionQuoted: false };
   }
+
   const { global, platforms, body } = definition;
 
   const globalText = global.join("\n");
@@ -179,6 +180,7 @@ function checkOpencodeBlock(lines: string[], add: AddFinding): void {
   } else if (mode !== "subagent") {
     add("warn", "opencode.mode", `mode is "${mode}", not "subagent" — intended?`);
   }
+
   const model = fieldValue(lines, "model");
   if (model) validateModel(model, "opencode", add);
 
@@ -243,6 +245,7 @@ function checkAntigravityBlock(lines: string[], add: AddFinding): void {
       `model "${model}" — expected one of ${ANTIGRAVITY_MODELS.join(", ")}`
     );
   }
+
   checkAntigravityTools(antigravityTools(lines), add);
 }
 
@@ -270,6 +273,7 @@ function checkAntigravityTools(tools: unknown, add: AddFinding): void {
 
     return;
   }
+
   const unknown = tools.filter((t) => !ANTIGRAVITY_TOOLS.includes(t));
   unknown.length > 0
     ? add(
@@ -501,6 +505,7 @@ function checkSubagentAbsolutePaths(content: string, add: AddFinding): void {
     const m = ABSOLUTE_PATH_RE.exec(allLines[i]);
     if (m) hits.push(`${i + 1} → ${m[0]}`);
   }
+
   const more = hits.length > 3 ? ` (+${hits.length - 3} more)` : "";
   hits.length > 0
     ? add(
@@ -519,6 +524,7 @@ export function formatSubagentReport(r: SubagentReport): string {
   for (const f of r.findings) {
     lines.push(`  ${icon[f.level]} ${f.check}: ${f.message}`);
   }
+
   let verdict: string;
 
   if (r.errors > 0) {
@@ -528,6 +534,7 @@ export function formatSubagentReport(r: SubagentReport): string {
   } else {
     verdict = "PASS — all checks clean";
   }
+
   lines.push(`  ${verdict}`);
 
   return lines.join("\n");
@@ -549,6 +556,7 @@ if (import.meta.main) {
     console.error("Usage: pal cli subagent doctor <file-or-name>");
     process.exit(2);
   }
+
   const report = lintSubagent(resolveSubagentFile(arg));
   console.log(formatSubagentReport(report));
   process.exit(report.errors > 0 ? 1 : 0);

@@ -298,6 +298,7 @@ describe("usageLines", () => {
     for (const window of Object.values(unpriced)) {
       Object.assign(window, { calls: 3, unpriced: 3, input: 1_000_000 });
     }
+
     const lines = usageLines(
       report(EMPTY_CC, EMPTY_PAL, {
         agents: [{ label: "Codex", usage: { ...EMPTY_CC, buckets: unpriced } }],

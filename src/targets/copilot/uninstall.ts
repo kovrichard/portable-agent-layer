@@ -25,6 +25,7 @@ function removeHooksFile(path: string, label: string): void {
 
     return;
   }
+
   copyFileSync(path, `${path}.bak.${Date.now()}`);
   unlinkSync(path);
   log.success(`Removed ${label}`);
@@ -69,6 +70,7 @@ if (vsSettingsPath && existsSync(vsSettingsPath)) {
     } else {
       settings["chat.instructionsFilesLocations"] = obj;
     }
+
     writeJson(vsSettingsPath, settings);
     log.success("Removed ~/.copilot/instructions from VS Code settings");
   }

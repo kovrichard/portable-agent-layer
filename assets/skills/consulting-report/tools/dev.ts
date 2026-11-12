@@ -26,6 +26,7 @@ async function dev(reportDir: string): Promise<number> {
   if (!(await exists(pkg))) {
     throw new Error(`not a scaffolded report (missing package.json): ${dir}`);
   }
+
   const result = spawnSync("bun", ["run", "dev"], {
     cwd: dir,
     stdio: "inherit",
@@ -40,6 +41,7 @@ async function run(argv: string[] = process.argv.slice(2)): Promise<void> {
     console.error("usage: dev.ts <report-dir>");
     process.exit(1);
   }
+
   const status = await dev(argv[0]);
   process.exit(status);
 }

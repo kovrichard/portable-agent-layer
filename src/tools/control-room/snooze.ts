@@ -35,6 +35,7 @@ export function readSnoozes(now: Date = new Date()): Snoozes {
   } catch {
     return {};
   }
+
   const today = now.toISOString().slice(0, 10);
 
   return Object.fromEntries(

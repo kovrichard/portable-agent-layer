@@ -31,6 +31,7 @@ function extractFilename(url: string, override?: string): string {
   if (override) {
     return override.endsWith(".pdf") ? override : `${override}.pdf`;
   }
+
   const urlPath = new URL(url).pathname;
   const name = basename(urlPath);
 

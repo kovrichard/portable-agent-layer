@@ -36,6 +36,7 @@ async function mapMarkdownOutsideFences(
       out.push(line);
       continue;
     }
+
     out.push(inFence ? line : await transform(line));
   }
 
@@ -82,6 +83,7 @@ async function inlineImagesInMarkdown(md: string, deckDir: string): Promise<stri
       } catch {
         continue;
       }
+
       // dataUri returns `url("data:...")` for CSS use; strip the `url("…")` wrapper for <img>.
       const wrapped = await dataUri(abs);
       const inner = wrapped.replace(/^url\("/, "").replace(/"\)$/, "");
@@ -118,6 +120,7 @@ function parseSimpleYaml(s: string): Record<string, string> {
         v = v.slice(1, -1);
       }
     }
+
     out[m[1]] = v;
   }
 
@@ -209,15 +212,18 @@ async function buildConcat(deckDir: string): Promise<string> {
     if (files.length === 0) {
       throw new Error(`slides/ is empty at ${slidesDir}`);
     }
+
     const parts = await Promise.all(files.map((f) => readText(join(slidesDir, f))));
     const joined = `${parts.map((p) => injectTableScale(injectCodeScale(p.trim()))).join("\n\n---\n\n")}\n`;
 
     return rewriteImageRefsForConcat(joined);
   }
+
   const legacy = join(deckDir, "content.md");
   if (await exists(legacy)) {
     return await readText(legacy);
   }
+
   throw new Error(`no slides/ directory or content.md found in ${deckDir}`);
 }
 

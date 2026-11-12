@@ -46,6 +46,7 @@ describe("README sync", () => {
         `README out of sync:\n${result.issues.map((i) => `  - ${i}`).join("\n")}`
       );
     }
+
     expect(result.ok).toBe(true);
   });
 });

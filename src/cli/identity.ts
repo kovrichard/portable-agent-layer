@@ -80,6 +80,7 @@ function rename(subject: IdentitySubject, name: string): number {
 
     return 0;
   }
+
   log.success(`${subject} renamed: ${before.label} → ${after.label}`);
 
   return 0;

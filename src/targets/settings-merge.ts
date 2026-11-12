@@ -54,6 +54,7 @@ function mergeKeyedSettings(result: Settings, template: Settings): void {
     for (const [name, value] of Object.entries(palEntries)) {
       if (owner === "pal-wins" || !(name in entries)) entries[name] = value;
     }
+
     result[key] = entries;
   }
 }
@@ -81,6 +82,7 @@ export function mergeSettings(existing: Settings, template: Settings): Settings 
   for (const key of USER_OWNED_SETTINGS) {
     if (key in template && !(key in result)) result[key] = template[key];
   }
+
   mergeSpinnerTips(result, template);
 
   return result;
@@ -188,6 +190,7 @@ export function unmergeSettings(existing: Settings, template: Settings): Setting
   for (const key of USER_OWNED_SETTINGS) {
     if (key in template) delete result[key];
   }
+
   unmergeSpinnerTips(result, template);
 
   return result;

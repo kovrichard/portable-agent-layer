@@ -84,6 +84,7 @@ function runSkillTool(skill: string, tool: string, toolArgs: string[]): number {
 
     return 1;
   }
+
   const file = toolFileName(tool);
   const path = resolve(palHome(), "skills", skill, "tools", file);
   if (!existsSync(path)) {
@@ -91,6 +92,7 @@ function runSkillTool(skill: string, tool: string, toolArgs: string[]): number {
 
     return 1;
   }
+
   const { status } = spawnSync("bun", [path, ...toolArgs], {
     stdio: "inherit",
     env: isShippedTool(path) ? withPalEnv(process.env) : process.env,

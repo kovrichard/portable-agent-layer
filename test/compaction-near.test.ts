@@ -376,6 +376,7 @@ describe("compactionWarningReminder table rows", () => {
 
         return;
       }
+
       expect(block).not.toBeNull();
       const lines = (block as string).split("\n");
       expect(lines.length).toBe(3);

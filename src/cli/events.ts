@@ -20,10 +20,12 @@ function recordDiscordNag(
   if (!isNagStage(stage)) {
     throw new UsageError(`the stage is one of ${NAG_STAGES.join(", ")}`);
   }
+
   const responseSec = secondsFrom(afterSec);
   if (stage === "answered" && responseSec === null) {
     throw new UsageError("an answered nag needs --after-sec");
   }
+
   const id = logDiscordNag(stage, kind ?? null, responseSec);
   console.log(id ? `Recorded ${id}` : "The event log is off; nothing recorded.");
 }
@@ -35,6 +37,7 @@ function reportCollected(): undefined {
 
     return;
   }
+
   const sources = Object.entries(emitted);
   if (sources.length === 0) {
     console.log("The event log is off; nothing collected.");

@@ -189,6 +189,7 @@ describe("invocation", () => {
     ]) {
       expect(stdin).toContain(part);
     }
+
     expect(stdin).not.toContain("[Workflow harness");
   });
 

@@ -85,6 +85,7 @@ export function writeFakeBin(dir: string, name: string, tsLogic: string): void {
 
     return;
   }
+
   const sh = resolve(dir, name);
   writeFileSync(sh, `#!/bin/sh\nexec bun run "${tsFile}" "$@"\n`, "utf-8");
   chmodSync(sh, 0o755);

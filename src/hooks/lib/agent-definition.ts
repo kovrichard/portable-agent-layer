@@ -40,6 +40,7 @@ export function parseAgentDefinition(content: string): AgentDefinition {
       platforms[current]?.push(line.slice(BLOCK_INDENT.length));
       continue;
     }
+
     current = null;
     global.push(line);
   }

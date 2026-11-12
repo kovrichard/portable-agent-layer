@@ -277,6 +277,7 @@ describe("step test-edits", () => {
       for (const name of ["plan.md", "tests.md", "repro.md", "design.md"]) {
         writeFileSync(join(taskDir(TASK, env), name), section("test/a.test.ts"));
       }
+
       bothEdited();
       expect(step("test-edits").result).toEqual({
         files: ["test/a.test.ts", "test/b.test.ts"],
