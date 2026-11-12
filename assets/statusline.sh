@@ -237,7 +237,9 @@ $task[0] as $t
     | (map(select(.event == "gate")) | last) as $gate
     | last as $latest
     | "🏭 \($name)"
-      + (if $run then " · \($run.role) \($run.ts | mins)m" else " · starting" end)
+      + (if $run == null then " · starting"
+         elif $run.step != null and $run.planned != null then " · \($run.step)/\($run.planned) \($run.role) \($run.ts | mins)m"
+         else " · \($run.role) \($run.ts | mins)m" end)
       + (if $gate == null then "" elif $gate.result == "pass" then " · gate ✓" else " · gate ✗" end)
       + (if $pr != "" then " · PR #\($pr)" else "" end)
       + (if $latest != null and ($latest.ts | mins) >= 35 then " · ⚠ no activity \($latest.ts | mins)m" else "" end)
