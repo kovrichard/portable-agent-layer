@@ -256,7 +256,7 @@ describe("the schema and the template name no progress-tree switch", () => {
 });
 
 describe("the old names are gone from src/ and assets/", () => {
-  const ALLOWED = resolve(import.meta.dir, "..", "src", "cli", "migrate.ts");
+  const MIGRATIONS_DIR = resolve(import.meta.dir, "..", "src", "cli", "migrations");
   const OLD_NAME = /workTree|work-tree/;
 
   function filesUnder(dir: string): string[] {
@@ -269,11 +269,11 @@ describe("the old names are gone from src/ and assets/", () => {
     });
   }
 
-  test("only migrate.ts mentions workTree or work-tree", () => {
+  test("only the migrations mention workTree or work-tree", () => {
     const root = resolve(import.meta.dir, "..");
     const offenders = ["src", "assets"]
       .flatMap((dir) => filesUnder(resolve(root, dir)))
-      .filter((file) => file !== ALLOWED)
+      .filter((file) => !file.startsWith(MIGRATIONS_DIR))
       .filter((file) => OLD_NAME.test(readFileSync(file, "utf-8")));
     expect(offenders).toEqual([]);
   });
