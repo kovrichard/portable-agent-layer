@@ -141,6 +141,7 @@ export async function sendHeartbeat(
 
     return "skipped";
   }
+
   stampAttempt(now);
   const payload = buildHeartbeat(agents);
   const { outcome, status } = await post(

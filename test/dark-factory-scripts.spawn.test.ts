@@ -80,6 +80,7 @@ describe("tools", () => {
     } catch (error) {
       message = (error as Error).message;
     }
+
     expect(message).toBe(`working folder ${gone} does not exist`);
     expect(message).not.toContain("not installed");
   });

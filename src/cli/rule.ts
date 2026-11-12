@@ -97,6 +97,7 @@ function cmdList(all: boolean, json: boolean): number {
 
     return 0;
   }
+
   const measure: Measure = { turns: readTurns(EFFECT_WINDOW_DAYS), rules: readRules() };
   console.log(rules.map((rule) => formatRule(rule, measure)).join("\n\n"));
 
@@ -177,6 +178,7 @@ function report(id: string, result: DecideResult): number {
 
     return 1;
   }
+
   console.log(resultLine(id, result.rule));
 
   return 0;

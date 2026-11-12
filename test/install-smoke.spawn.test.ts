@@ -218,6 +218,7 @@ describe("pal cli install (smoke)", () => {
       expect(command).toEndWith(" --agent=antigravity");
       expect(existsSync(command.split(" ")[2])).toBe(true);
     }
+
     expect(Object.keys(JSON.parse(hooks).pal)).toEqual([
       "PreInvocation",
       "PreToolUse",

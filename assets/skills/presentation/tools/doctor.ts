@@ -36,12 +36,14 @@ async function loadSlides(deckDir: string): Promise<{ name: string; body: string
       files.map(async (f) => ({ name: f, body: await readText(join(slidesDir, f)) }))
     );
   }
+
   const legacy = join(deckDir, "content.md");
   if (await fileExists(legacy)) {
     const raw = await readText(legacy);
 
     return raw.split(/^---$/m).map((body, i) => ({ name: `slide-${i + 1}`, body }));
   }
+
   throw new Error(`no slides/ directory or content.md found in ${deckDir}`);
 }
 
@@ -86,6 +88,7 @@ async function lintDeck(deckDir: string): Promise<{
       if (rule.appliesTo && !rule.appliesTo(ctx)) continue;
       findings.push(...(await rule.check(ctx)));
     }
+
     reports.push({ name: ctx.name, layout: ctx.layout, findings });
   }
 
@@ -132,6 +135,7 @@ function printSlideFindings(reports: SlideReport[], deckBase: string, count: num
       console.log("");
       printed = true;
     }
+
     console.log(`  ${pad(r.name, 32)} [${r.layout}]`);
 
     for (const f of r.findings) {
@@ -165,6 +169,7 @@ async function main() {
     console.error("usage: doctor.ts <deck-dir> [--strict]");
     process.exit(2);
   }
+
   const deckDir = resolve(argv[0]);
   const strict = argv.includes("--strict");
 

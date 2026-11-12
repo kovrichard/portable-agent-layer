@@ -129,6 +129,7 @@ describe("inference dispatcher — agy spawn integration (fake binary)", () => {
       if (saved[k] === undefined) delete process.env[k];
       else process.env[k] = saved[k];
     }
+
     tmpBin = freshTestDir(import.meta.file);
     process.env.PAL_HOME = tmpBin;
     process.env.PAL_GEMINI_DIR = resolve(tmpBin, ".gemini");

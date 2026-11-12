@@ -13,6 +13,7 @@ export function wrapWords(text: string, width: number): Chunk[] {
       line.text = text.slice(line.start, start + word[0].length);
       continue;
     }
+
     line = { text: word[0], start };
     chunks.push(line);
   }

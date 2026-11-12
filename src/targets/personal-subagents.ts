@@ -48,6 +48,7 @@ export function installPersonalSubagent(name: string): string[] {
       `'${name}' is a shipped PAL subagent — choose another name (a reinstall would overwrite it).`
     );
   }
+
   const content = readFileSync(src, "utf-8");
   const renders = personalSubagentTargets()
     .filter(({ dir }) => existsSync(dir))

@@ -85,6 +85,7 @@ test("the rating handler judges all three questions through judge(), off by defa
     expect(e.mode).toBe("off");
     expect(e.route).toBe("fallback");
   }
+
   expect(events(home, "inference_call").length).toBe(3);
 });
 

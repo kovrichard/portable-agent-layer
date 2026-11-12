@@ -31,6 +31,7 @@ function printWrapped(year: number): undefined {
 
     return;
   }
+
   const lines = [
     ...totalsLines(wrappedTotals(events)),
     ...recordsLines(wrappedRecords(events)),

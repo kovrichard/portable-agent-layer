@@ -523,6 +523,7 @@ export const RULES: Rule[] = [
           msg: 'missing <div class="compare"> wrapper',
         });
       }
+
       const options = (body.match(/class="option"/g) || []).length;
       if (options === 0) {
         findings.push({
@@ -556,6 +557,7 @@ export const RULES: Rule[] = [
           msg: 'missing <div class="metrics"> wrapper',
         });
       }
+
       const metrics = (body.match(/class="metric"/g) || []).length;
       if (metrics === 0) {
         findings.push({

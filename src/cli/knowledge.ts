@@ -222,6 +222,7 @@ function scoreEntity(entity: Entity, q: string): number {
   for (const tag of entity.frontmatter.tags) {
     if (tag.toLowerCase().includes(lower)) score += 2;
   }
+
   // Count body occurrences (cap at 10 to avoid runaway weighting on huge bodies)
   const body = bodyForSearch(entity.body).toLowerCase();
   let pos = body.indexOf(lower);
@@ -231,6 +232,7 @@ function scoreEntity(entity: Entity, q: string): number {
     bodyHits++;
     pos = body.indexOf(lower, pos + lower.length);
   }
+
   score += bodyHits;
 
   return score;
@@ -243,6 +245,7 @@ function cmdSearch(q: string): number {
     const s = scoreEntity(e, q);
     if (s > 0) hits.push({ entity: e, score: s });
   }
+
   hits.sort((a, b) => b.score - a.score || a.entity.slug.localeCompare(b.entity.slug));
 
   if (hits.length === 0) {
@@ -250,6 +253,7 @@ function cmdSearch(q: string): number {
 
     return 0;
   }
+
   console.log(`\n🔎 ${hits.length} match${hits.length === 1 ? "" : "es"} for "${q}":\n`);
 
   for (const h of hits) console.log(shortLine(h.entity, `(score: ${h.score})`));
@@ -277,12 +281,14 @@ function cmdGraph(query: string, hops: number): number {
 
     return 1;
   }
+
   const start = g.nodes.get(slug);
   if (!start) {
     console.error(`Slug "${slug}" resolved but not in graph.`);
 
     return 1;
   }
+
   const trail = traverse(g, slug, hops);
   console.log(`\n🗺  ${start.domain}/${slug} — "${start.title}"`);
   console.log(`   ${hops} hop${hops === 1 ? "" : "s"} · ${trail.length - 1} reachable\n`);
@@ -291,6 +297,7 @@ function cmdGraph(query: string, hops: number): number {
   for (const [hop, items] of [...byHop.entries()].sort((a, b) => a[0] - b[0])) {
     printHop(hop, items);
   }
+
   console.log();
 
   return 0;
@@ -333,6 +340,7 @@ function cmdStats(): number {
   for (const d of DOMAINS) {
     console.log(`    ${d.padEnd(10)} ${s.nodesByDomain[d]}`);
   }
+
   console.log(`  Edges: ${s.edges}`);
   console.log(`    related:  ${s.edgesByType.related}`);
   console.log(`    wikilink: ${s.edgesByType.wikilink}`);
@@ -343,6 +351,7 @@ function cmdStats(): number {
   if (s.mostConnected) {
     console.log(`  Most connected: ${s.mostConnected.slug} (${s.mostConnected.count})`);
   }
+
   console.log();
 
   return 0;
@@ -362,6 +371,7 @@ function cmdHubs(): number {
     toSet.add(edge.from);
     counts.set(edge.to, toSet);
   }
+
   const ranked = [...counts.entries()]
     .map(([slug, set]) => ({ slug, count: set.size }))
     .sort((a, b) => b.count - a.count || a.slug.localeCompare(b.slug))
@@ -379,6 +389,7 @@ function cmdHubs(): number {
     const label = node ? `${node.domain}/${r.slug} — "${node.title}"` : r.slug;
     console.log(`  ${String(i + 1).padStart(2)}. ${label}  (${r.count} connections)`);
   }
+
   console.log();
 
   return 0;
@@ -407,6 +418,7 @@ function cmdFind(rawTag: string): number {
   )) {
     console.log(shortLine(e));
   }
+
   console.log();
 
   return 0;
@@ -422,18 +434,21 @@ function cmdShow(query: string): number {
 
     return 1;
   }
+
   const node = g.nodes.get(slug);
   if (!node) {
     console.error(`Slug "${slug}" resolved but not in graph.`);
 
     return 1;
   }
+
   const entity = load(node.domain, slug);
   if (!entity) {
     console.error(`File missing for ${node.domain}/${slug}.`);
 
     return 1;
   }
+
   console.log(`\n${entity.domain}/${entity.slug}`);
   console.log("─".repeat(50));
 
@@ -455,6 +470,7 @@ function cmdShow(query: string): number {
   if (entity.body.trim()) {
     console.log(`\n${entity.body.trim()}`);
   }
+
   console.log();
 
   return 0;
@@ -571,6 +587,7 @@ async function runInteractiveAdd(prefilled: AddFlags): Promise<AddFlags | null> 
 
     return null;
   }
+
   const tags = String(tagsInput || "")
     .split(",")
     .map((t) => t.trim())
@@ -732,6 +749,7 @@ function cmdReviewList(): number {
 
     return 0;
   }
+
   console.log(`\n${items.length} waiting for review\n`);
 
   for (const item of items) console.log(reviewLines(item).join("\n"));

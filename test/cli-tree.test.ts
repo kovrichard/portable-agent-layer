@@ -103,6 +103,7 @@ describe("every pal cli command", () => {
         expect(text).toStartWith(`Usage: ${name}`);
         expect(text).toContain(command.summary);
       }
+
       expect(err).toEqual([]);
       expect(readdirSync(sandbox)).toEqual([]);
     }

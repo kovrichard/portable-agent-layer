@@ -214,6 +214,7 @@ describe("checkBashCommand", () => {
     for (const target of ["/", "/*", "~", "~/", "~/*", "$HOME", `\${HOME}/`, '"$HOME"']) {
       expect(checkBashCommand(`rm -rf ${target}`)).toBeTruthy();
     }
+
     expect(checkBashCommand("rm -rf / && ls")).toBeTruthy();
   });
 

@@ -249,6 +249,7 @@ export function autoUpdateOnClose(reason?: string): string | null {
 
     return skippedNow ? `📦 PAL update waiting — ${ledger?.skipped}.` : null;
   }
+
   spawnAutoUpdate();
 
   return updatingNotice();

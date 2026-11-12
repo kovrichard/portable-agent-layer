@@ -132,6 +132,7 @@ export function linkPersonalSkill(name: string): string[] {
   if (!existsSync(resolve(palLink, "SKILL.md"))) {
     throw new Error(`No skill found at ${palLink}/SKILL.md`);
   }
+
   const linkType = process.platform === "win32" ? "junction" : "dir";
   const linked: string[] = [];
 
@@ -162,6 +163,7 @@ export function removeSkills(agentSkillsDir: string): string[] {
     } catch {
       /* already gone */
     }
+
     removed.push(name);
     log.detail(`Removed skill: ${name}`);
   }

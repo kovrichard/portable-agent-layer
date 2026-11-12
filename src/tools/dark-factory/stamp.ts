@@ -72,6 +72,7 @@ export function stampedFiles(pluginDir = PLUGIN_DIR): Map<string, string> {
     const tier = ROLE_TIERS[roleOf(file)] as FactoryTier;
     files.set(path, stampAgent(readFileSync(path, "utf8"), FACTORY_MODELS[tier]));
   }
+
   const build = join(pluginDir, "scripts", "build.mjs");
   files.set(build, stampTierModels(readFileSync(build, "utf8"), FACTORY_MODELS));
 

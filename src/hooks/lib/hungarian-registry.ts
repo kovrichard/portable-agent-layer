@@ -100,6 +100,7 @@ function session(fetchImpl: Fetch) {
 
       return { url: current, html: await response.text() };
     }
+
     throw new Error(`${url}: too many redirects`);
   };
 }

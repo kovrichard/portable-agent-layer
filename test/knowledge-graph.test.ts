@@ -255,6 +255,7 @@ describe("buildGraph — tag edges (weight 1, bidirectional)", () => {
         tags: ["common"],
       });
     }
+
     const g = buildGraph(ROOT);
     const commonEdges = g.edges.filter(
       (e: GraphEdge) => e.edgeType === "tag" && e.label === "common"

@@ -122,6 +122,7 @@ function goalsFrom(content: string): TelosGoal[] {
         due: dueFrom(text),
       });
     }
+
     block = [];
   };
 
@@ -137,8 +138,10 @@ function goalsFrom(content: string): TelosGoal[] {
       flush();
       continue;
     }
+
     block.push(line);
   }
+
   flush();
 
   return goals;

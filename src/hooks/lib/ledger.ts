@@ -221,6 +221,7 @@ export function applyDelta(before: string | null, delta: LedgerDelta): string | 
     out.push(...lines.slice(cursor, hunk.at), ...hunk.insert);
     cursor = hunk.at + hunk.remove;
   }
+
   out.push(...lines.slice(cursor));
 
   return out.join("\n");

@@ -27,6 +27,7 @@ function parseNewDeckArgs(argv: string[]) {
     );
     process.exit(1);
   }
+
   const target = resolve(argv[0]);
   let templateName: string | undefined;
   let title = "New deck";

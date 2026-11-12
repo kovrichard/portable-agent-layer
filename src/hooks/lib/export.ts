@@ -91,6 +91,7 @@ export function exportZip(outputPath: string): number {
     const dir = file.includes("/") ? file.slice(0, file.lastIndexOf("/")) : "";
     zip.addLocalFile(fullPath, dir);
   }
+
   zip.addFile(
     MANIFEST_NAME,
     Buffer.from(`${JSON.stringify(buildManifest(identity, files.length), null, 2)}\n`)

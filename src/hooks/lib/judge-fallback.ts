@@ -94,6 +94,7 @@ function questionBlock(id: string, q: JudgeQuestion): string {
 
     return [head, "Answer true or false.", ...lines].join("\n");
   }
+
   const levels = q.criteria.map((c, i) => `- ${i}: ${criterionText(c)}`);
 
   return [head, "Answer the number of the level:", ...levels].join("\n");

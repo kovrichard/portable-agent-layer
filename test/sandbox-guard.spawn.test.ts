@@ -61,6 +61,7 @@ beforeAll(() => {
   for (const dir of AGENT_DIRS) {
     mkdirSync(resolve(FAKE_HOME, dir, "skills"), { recursive: true });
   }
+
   mkdirSync(resolve(PAL_HOME, "skills", "guard-probe"), { recursive: true });
   writeFileSync(
     resolve(PAL_HOME, "skills", "guard-probe", "SKILL.md"),

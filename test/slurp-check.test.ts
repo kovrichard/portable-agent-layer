@@ -181,6 +181,7 @@ describe("the shadow verdict", () => {
     ]) {
       expect(showsOutOfMemory({ error })).toBe(true);
     }
+
     expect(showsOutOfMemory({ exit_code: 137 })).toBe(true);
     expect(showsOutOfMemory({ error: "Exit code 1" })).toBe(false);
   });

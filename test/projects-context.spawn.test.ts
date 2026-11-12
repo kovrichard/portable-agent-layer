@@ -251,6 +251,7 @@ describe("loadActiveProjectsContext", () => {
         next: ["a"],
       });
     }
+
     const out = lib.loadActiveProjectsContext(fixturePlainDir("notes"));
     expect(out).toMatch(/^- Quiet for 14\+ days: (rusty, dusty|dusty, rusty)$/m);
     expect(out).not.toContain("**rusty**");

@@ -96,6 +96,7 @@ function card(mention: Mention, bySlug: Map<string, Entity>): string {
 
     return `- "${mention.said}" could be: ${names}. Ask which one if it matters.`;
   }
+
   const entity = bySlug.get(entityKey(mention.entities[0]));
   const summary = entity ? describe(entity) : "";
   const name = `- **${mention.entities[0].title}**`;

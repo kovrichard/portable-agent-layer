@@ -207,6 +207,7 @@ export function readTranscriptTail(
   } finally {
     closeSync(fd);
   }
+
   const whole = length === size;
   const lines = buffer.toString("utf-8").split("\n");
 

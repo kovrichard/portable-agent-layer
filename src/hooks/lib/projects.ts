@@ -239,6 +239,7 @@ export function readAllProjects(): ProjectProgress[] {
     const p = readProject(slug, bindings);
     if (p) out.push(p);
   }
+
   seedBindings(out);
 
   return out;
@@ -281,6 +282,7 @@ export function writeProject(p: ProjectProgress): void {
     const detected = detectRemote(p.path);
     if (detected) p.remote = detected;
   }
+
   const meta: Record<string, unknown> = {
     name: p.name,
     status: p.status,
@@ -445,6 +447,7 @@ function factsLine(project: string, context: string): string {
     if ([...shown, fact].join("; ").length > FACTS_BUDGET) break;
     shown.push(fact);
   }
+
   const more =
     shown.length < facts.length ? ` (more: \`pal cli project resume ${project}\`)` : "";
 
@@ -640,6 +643,7 @@ export function auditBindings(
       issues.push({ kind: "missing", project: project.name, path });
       continue;
     }
+
     byPath.set(path, [...(byPath.get(path) ?? []), project.name]);
   }
 

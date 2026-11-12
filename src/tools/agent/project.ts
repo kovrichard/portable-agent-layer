@@ -147,6 +147,7 @@ function cmdCreate(given: string | undefined, values: CreateValues): undefined {
       `Invalid project name "${name}". Use lowercase letters, digits, hyphens, underscores.`
     );
   }
+
   const serves =
     values.serves === undefined ? undefined : servesKind(values.serves, "--serves");
 
@@ -360,6 +361,7 @@ function cmdIsaInit(name: string): undefined {
   for (const s of sections) {
     if (pr[s as string] === "") pr[s as string] = undefined;
   }
+
   p.updated = now();
   writeProject(p);
   ok({ initialized: true, name, scaffolded });
@@ -404,6 +406,7 @@ function cmdMigrate(): undefined {
         results.push(`${slug}: skipped (malformed JSON)`);
         continue;
       }
+
       writeProject(p);
       migrated++;
       results.push(`${slug}: migrated`);
@@ -461,6 +464,7 @@ function cmdCompleteIsc(name: string, id: number): undefined {
 
     return;
   }
+
   applyIscMove(p, move);
   logCommitment(name, id, "kept", "cli");
   ok({ checked: true, id, archived: true });
@@ -489,6 +493,7 @@ function cmdReopenIsc(name: string, id: number): undefined {
 
     return;
   }
+
   applyIscMove(p, move);
   logCommitment(name, id, "reopened", "cli");
   ok({ checked: false, id });
@@ -549,6 +554,7 @@ function cmdRetireIsc(name: string, id: number, by: number | null): undefined {
 
     return;
   }
+
   const { line, rest } = removeIscLine(p.criteria ?? "", id);
   if (!line) fail(`ISC-${id} not found in project "${name}"`);
   const suffix = by ? ` (superseded by ISC-${by})` : "";
@@ -615,6 +621,7 @@ function cmdPruneIsc(name: string): undefined {
     p.updated = now();
     writeProject(p);
   }
+
   const openLeft = parseIscs(p.criteria ?? "").filter((i) => i.status === "open").length;
   ok({ pruned: done.length, name, remaining_open: openLeft });
 }

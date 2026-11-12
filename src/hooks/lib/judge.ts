@@ -77,6 +77,7 @@ function resolveSystemOne(): SystemOneSetup {
   if (!Object.hasOwn(JUDGE_ADAPTERS, provider)) {
     return { failure: "unknown-provider", provider, model: null };
   }
+
   const adapter = JUDGE_ADAPTERS[provider];
   const configured = settings?.model;
   const model =
@@ -138,6 +139,7 @@ async function askSystemOne(
       failure: setup.failure,
     };
   }
+
   const { adapter, provider, model, apiKey } = setup;
   const started = performance.now();
 

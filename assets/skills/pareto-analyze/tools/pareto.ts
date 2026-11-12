@@ -335,6 +335,7 @@ function unitTable(ranked: Unit[], options: Options, topCount: number): string {
       ...(hasEvidence ? [""] : []),
     ]);
   }
+
   const header = [
     "#",
     options.unitColumn,

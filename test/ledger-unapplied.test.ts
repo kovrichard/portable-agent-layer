@@ -150,6 +150,7 @@ describe("commitUnapplied", () => {
     for (const target of ["/work/app/a.ts", "/work/app/b.ts"]) {
       commitUnapplied({ ...CALL, target }, { outcome: "failed" });
     }
+
     expect(new Set(ledgerLines().map((row) => row.target)).size).toBe(2);
   });
 });

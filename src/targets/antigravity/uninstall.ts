@@ -53,4 +53,5 @@ if (existsSync(SETTINGS)) {
     "Removed the PAL command allowlist and statusLine from antigravity-cli/settings.json"
   );
 }
+
 removeStatusline("antigravity");

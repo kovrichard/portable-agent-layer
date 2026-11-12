@@ -35,6 +35,7 @@ for (let i = 1; i < args.length; i++) {
   else if (args[i] === "--header") headerArg = args[++i];
   else if (args[i] === "--footer") footerArg = args[++i];
 }
+
 const stem = basename(input, extname(input));
 const dir = dirname(input);
 htmlOut ||= resolve(dir, `${stem}.html`);

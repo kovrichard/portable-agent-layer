@@ -41,6 +41,7 @@ export function freshAgySandbox(testFile: string): AgySandbox {
     if (savedRuntimeEnv[key] === undefined) delete process.env[key];
     else process.env[key] = savedRuntimeEnv[key];
   }
+
   const sandbox = realpathSync(freshTestDir(testFile));
   const workspace = resolve(sandbox, "workspace");
   mkdirSync(workspace, { recursive: true });

@@ -95,6 +95,7 @@ describe("pal cli telos", () => {
     ]) {
       answer(f);
     }
+
     const { runTelos } = await cli();
     const { out } = await capture(() => runTelos([]));
 

@@ -33,6 +33,7 @@ function fakeAgentsOnPath(root: string): void {
     writeFileSync(resolve(bin, agent), "#!/bin/sh\necho 1.0.0\n");
     chmodSync(resolve(bin, agent), 0o755);
   }
+
   linkFile(process.execPath, resolve(bin, "bun"));
 }
 

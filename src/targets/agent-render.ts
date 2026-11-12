@@ -88,6 +88,7 @@ function codexOverrideValue(key: string, value: unknown): string {
   if (Array.isArray(value) && value.every((item) => typeof item === "string")) {
     return `[${value.map(tomlString).join(", ")}]`;
   }
+
   throw new Error(`codex.${key} must be a string, number, boolean or list of strings`);
 }
 

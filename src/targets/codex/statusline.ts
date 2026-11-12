@@ -56,6 +56,7 @@ export function removeCodexStatuslineConfig(content: string): string {
       i++;
       continue;
     }
+
     filtered.push(lines[i] ?? "");
   }
 

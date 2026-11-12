@@ -55,6 +55,7 @@ function stripPalHooks(
         if (!g.hooks && flat.command && isOutdatedPalHook(flat.command, palCanonical)) {
           return null;
         }
+
         const filtered = (g.hooks ?? []).filter(
           (h) => !isOutdatedPalHook(h.command, palCanonical)
         );

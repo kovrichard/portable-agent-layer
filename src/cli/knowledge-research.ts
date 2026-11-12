@@ -63,6 +63,7 @@ export async function researchFromCli(
 
     return 1;
   }
+
   console.log(
     values.json
       ? JSON.stringify(outcome.profile, null, 2)

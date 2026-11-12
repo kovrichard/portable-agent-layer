@@ -27,6 +27,7 @@ async function judgeFromCli(path: string | undefined): Promise<number> {
 
     return 1;
   }
+
   let raw: unknown;
 
   try {
@@ -36,6 +37,7 @@ async function judgeFromCli(path: string | undefined): Promise<number> {
 
     return 1;
   }
+
   const checked = judgeRequestJson.safeParse(raw);
   if (!checked.success) {
     const problems = checked.error.issues
@@ -45,6 +47,7 @@ async function judgeFromCli(path: string | undefined): Promise<number> {
 
     return 1;
   }
+
   const result = await judge(checked.data);
   console.log(JSON.stringify(result));
 

@@ -34,6 +34,7 @@ async function labelsFor(
       { ts: new Date(BASE).toISOString(), session, runtime: "claude" }
     );
   }
+
   appendEvent(
     "compaction",
     {

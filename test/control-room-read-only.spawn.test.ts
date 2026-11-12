@@ -114,6 +114,7 @@ describe("reading the morning screen writes nothing", () => {
       for (const route of GETS) {
         expect((await fetch(`${base}${route}`)).status).toBe(200);
       }
+
       expect((await fetch(`${base}/`)).status).toBe(200);
     }
 

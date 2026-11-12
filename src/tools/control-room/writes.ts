@@ -68,6 +68,7 @@ export function setPlacement(project: string, quadrant: Quadrant | null): WriteO
     p.placed = undefined;
     p.placed_by = undefined;
   }
+
   p.updated = new Date().toISOString();
   writeProject(p);
 
@@ -93,6 +94,7 @@ export function writeInstallSettings(update: Partial<InstallSettings>): WriteOut
   if (update.timezone && !isTimezone(update.timezone)) {
     return { ok: false, status: 400, error: `not a timezone: ${update.timezone}` };
   }
+
   const data = rawSettings();
   const identity = data.identity ?? {};
   const principal = { ...identity.principal };

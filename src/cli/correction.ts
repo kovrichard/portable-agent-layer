@@ -95,6 +95,7 @@ function cmdKinds(days: string | undefined, split: string | undefined, json: boo
 
     return 0;
   }
+
   const sections =
     "before" in result
       ? [

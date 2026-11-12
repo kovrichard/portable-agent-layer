@@ -223,6 +223,7 @@ describe("the shipped Copilot hooks template", () => {
         expect(entry.powershell).toContain("--agent=copilot");
       }
     }
+
     expect(raw).not.toContain("PAL_AGENT=");
   });
 

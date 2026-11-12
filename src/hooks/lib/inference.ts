@@ -153,6 +153,7 @@ function previewRoute(): RoutePreview {
       reason: "PAL_INFERENCE_DISABLED=1 (test kill-switch)",
     };
   }
+
   const native = nativeRoutePreview(agent);
   if (native) return native;
 
@@ -367,12 +368,14 @@ async function routeInference(opts: InferenceOptions): Promise<InferenceResult> 
   if (process.env.PAL_INFERENCE_DISABLED === "1") {
     return { success: false };
   }
+
   const depth = getInferenceDepth();
   if (depth >= SPAWN_GUARD_ENV.MAX_DEPTH) {
     logDebug("inference", `refuse: depth=${depth} >= max=${SPAWN_GUARD_ENV.MAX_DEPTH}`);
 
     return { success: false };
   }
+
   const agent = getActiveAgent();
   const caller = opts.caller ?? "anonymous";
   const session = opts.sessionId ?? "-";
@@ -392,6 +395,7 @@ async function routeInference(opts: InferenceOptions): Promise<InferenceResult> 
 
     return run();
   }
+
   logDebug(
     "inference",
     `${tag} route=none agent=${agent} hasApiKey=false hasOpenAiKey=${hasOpenAiKey()} hasClaude=${hasClaudeBinary()} hasCodex=${hasCodexBinary()} hasOpencode=${hasOpencodeBinary()} hasCopilot=${hasCopilotBinary()} hasCursor=${hasCursorBinary()} hasAgy=${hasAntigravityBinary()}`
@@ -1148,6 +1152,7 @@ async function inferenceViaCliSpawn(
 
     return finish({ success: false, error: firstLine(attempt.stderr || said) });
   }
+
   const rawText = attempt.stdout.trim();
   if (!rawText) return finish({ success: false });
   const text = reply.text(rawText);

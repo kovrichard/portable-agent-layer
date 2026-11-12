@@ -149,6 +149,7 @@ function emitFrontmatter(fm: EntityFrontmatter): string {
     const line = extraKeyLine(k, v);
     if (line !== null) lines.push(line);
   }
+
   lines.push("---");
 
   return lines.join("\n");
@@ -246,6 +247,7 @@ function splitOutsideQuotes(inner: string): string[] {
       buf = "";
       continue;
     }
+
     buf += ch;
   }
 
@@ -347,6 +349,7 @@ function parseRelatedBlock(
       current.type = parseScalar(t.slice("type:".length)) as RelationType;
     }
   }
+
   const last = toRelated(current);
   if (last) items.push(last);
 
@@ -508,6 +511,7 @@ export function getOrCreate(input: CreateInput, rootDir?: string): Entity {
   if (!slug) {
     throw new Error(`knowledge: cannot derive slug from name "${input.name}"`);
   }
+
   const existing = load(input.domain, slug, rootDir);
   if (existing) return existing;
 

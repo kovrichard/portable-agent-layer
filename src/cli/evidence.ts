@@ -52,6 +52,7 @@ function printExclusions(): undefined {
     const row = contentFor(id);
     console.log(`${since}  ${id}  ${oneLine(textOf(row))}`);
   }
+
   console.log(`${excluded.length} forgotten`);
 }
 

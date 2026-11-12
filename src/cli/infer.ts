@@ -114,6 +114,7 @@ export async function inferFromCli(
 
     return 1;
   }
+
   const result = await infer(request);
   if (!result.success || !result.output) {
     console.error(
@@ -122,6 +123,7 @@ export async function inferFromCli(
 
     return 1;
   }
+
   console.log(result.output);
 
   return 0;

@@ -52,6 +52,7 @@ async function readReply(
     logError("judge:typesafe", `HTTP ${response.status}: ${text.slice(0, 200)}`);
     throw new SystemOneError("http");
   }
+
   let parsed: unknown;
 
   try {

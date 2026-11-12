@@ -58,6 +58,7 @@ function targetNode(tree: ScopeTree, idOrPrefix: string | undefined): WorkNode {
 
     return node;
   }
+
   const active = tree.active ? tree.nodes.get(tree.active) : undefined;
   if (!active)
     throw new NodeError(
@@ -215,6 +216,7 @@ function cmdShow(values: { scope?: string; node?: string; json?: boolean }): num
 
       return;
     }
+
     const node = targetNode(tree, values.node);
     console.log(
       values.json ? JSON.stringify(node, null, 2) : renderNodeDetail(tree, node)
@@ -230,6 +232,7 @@ function cmdList(values: { scope?: string; all?: boolean; json?: boolean }): num
 
     return 0;
   }
+
   console.log(renderTreeList(tree, values.all === true));
 
   return 0;

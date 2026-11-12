@@ -38,6 +38,7 @@ export function redirectTempIntoTestFolder(): void {
       removeOnceReleased(resolve(systemTmp, name));
     }
   }
+
   ownTemp = resolve(systemTmp, `${TEMP_PREFIX}${process.pid}`);
   mkdirSync(ownTemp, { recursive: true });
   process.env.TMPDIR = ownTemp;

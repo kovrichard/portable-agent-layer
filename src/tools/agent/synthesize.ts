@@ -180,6 +180,7 @@ function getRatingStats(since: Date): SynthesisState["ratings"] {
       trend: "stable",
     };
   }
+
   const firstHalf = ratings.slice(0, mid);
   const secondHalf = ratings.slice(mid);
   const firstAvg = firstHalf.reduce((s, r) => s + r.rating, 0) / firstHalf.length;

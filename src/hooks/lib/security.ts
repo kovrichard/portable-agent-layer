@@ -287,8 +287,10 @@ function splitOnUnquotedSeparators(cmd: string): CommandPiece[] {
       current = "";
       continue;
     }
+
     current += char;
   }
+
   pieces.push({ text: current, separator: "" });
 
   return pieces;

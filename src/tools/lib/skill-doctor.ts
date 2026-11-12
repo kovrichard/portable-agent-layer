@@ -109,6 +109,7 @@ export function parseSkill(content: string): ParsedSkill {
       body: content,
     };
   }
+
   const { frontmatter, body } = split;
   const name = /^name:\s*"?(.+?)"?\s*$/m.exec(frontmatter)?.[1] ?? null;
   const rawDescription = /^description:[ \t]*(.*?)\s*$/m.exec(frontmatter)?.[1] ?? null;
@@ -192,6 +193,7 @@ export function lintSkill(skillDir: string): DoctorReport {
 
     return { dir: skillDir, name: null, findings, errors: 1, warnings: 0 };
   }
+
   skillFile === "SKILL.md"
     ? add("pass", "file.name", "skill file is named SKILL.md")
     : add(
@@ -468,6 +470,7 @@ export function formatReport(r: DoctorReport): string {
   for (const f of r.findings) {
     lines.push(`  ${icon[f.level]} ${f.check}: ${f.message}`);
   }
+
   let verdict: string;
 
   if (r.errors > 0) {
@@ -477,6 +480,7 @@ export function formatReport(r: DoctorReport): string {
   } else {
     verdict = "PASS — all checks clean";
   }
+
   lines.push(`  ${verdict}`);
 
   return lines.join("\n");

@@ -85,6 +85,7 @@ export function mergeJsonlLines(
     seen.add(line);
     added.push(line);
   }
+
   const all = [...local, ...added];
 
   return { text: all.length > 0 ? `${all.join("\n")}\n` : "", added: added.length };
@@ -212,6 +213,7 @@ export function appendImportLog(home: string, entry: ImportLogEntry): void {
 
     return;
   }
+
   writeFileSync(logPath, line);
 }
 

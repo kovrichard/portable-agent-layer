@@ -95,6 +95,7 @@ async function runGroup(command: Group, args: string[], path: string[]): Promise
 
     return 0;
   }
+
   const resolved = command.aliases?.[name] ?? name;
   const sub = command.commands[resolved];
   if (!sub) return usageFailure(`unknown command '${name}'`, command, path);

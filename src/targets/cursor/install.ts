@@ -42,6 +42,7 @@ if (!existsSync(CLI_CONFIG)) {
   writeFileSync(CLI_CONFIG, "{}\n", "utf-8");
   log.info("Created new cli-config.json");
 }
+
 const cliConfig = readJson<Record<string, unknown>>(CLI_CONFIG, {});
 replaceJsonConfig(CLI_CONFIG, addStatuslineConfig(cliConfig, "cursor"));
 log.success("Merged statusLine into cli-config.json");

@@ -146,6 +146,7 @@ export async function runUpdate(
 
     return 0;
   }
+
   rail.line(versionJump(style, update.current, update.latest));
   rail.line();
 

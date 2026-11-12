@@ -48,6 +48,7 @@ describe("the telemetry notice at install", () => {
     } finally {
       restore();
     }
+
     expect(notes[0][1]).toBe("Anonymous usage count");
     expect(String(notes[0][0])).toContain("pal cli telemetry show");
     expect(notes[1]).toEqual(["Turn it off any time: pal cli telemetry off"]);
@@ -65,6 +66,7 @@ describe("the telemetry notice at install", () => {
     } finally {
       restore();
     }
+
     expect(rawSettings().telemetry).toEqual({ enabled: false, noticeShown: true });
   });
 
@@ -79,6 +81,7 @@ describe("the telemetry notice at install", () => {
     } finally {
       restore();
     }
+
     expect(notes).toEqual([]);
   });
 
@@ -91,6 +94,7 @@ describe("the telemetry notice at install", () => {
     } finally {
       restore();
     }
+
     expect(notes).toEqual([]);
     expect(rawSettings().telemetry).toBeUndefined();
   });

@@ -261,6 +261,7 @@ async function runReactionRatingAndStore(
     if (label && rating !== null) {
       emitRating(rating, ratingContext(label, message), "implicit", reply);
     }
+
     const turn = turnFromLabels(
       { session: sessionId ?? "", message, replyEnd: reply },
       label,
@@ -322,5 +323,6 @@ if (process.argv[2] === "--sentiment") {
       Number.isNaN(sentAt.getTime()) ? new Date() : sentAt
     );
   }
+
   process.exit(0);
 }

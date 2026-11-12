@@ -90,6 +90,7 @@ function settledMessages(bytes: Buffer, offset: number, settled: boolean): Settl
     groups.set(id, { start: groups.get(id)?.start ?? start, line });
     newest = id;
   }
+
   const unfinished = settled || !newest ? undefined : groups.get(newest);
   if (unfinished && newest) groups.delete(newest);
 

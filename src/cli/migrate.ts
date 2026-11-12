@@ -195,8 +195,10 @@ const v2ThreadsToIsc: Migration = {
             results.push(`${thread.id}: skipped (project "${project.name}" unreadable)`);
             continue;
           }
+
           threadUpdates.set(thread.id, resolvedThread);
         }
+
         migrated++;
         results.push(
           `${thread.id} → ${project.name} ISC: ${dryRun ? "would add" : "added"} "${thread.title}" (thread source kept)`
@@ -458,6 +460,7 @@ const v4PathsToBindings: Migration = {
         results.push(`${slug}: would move ${project.path ?? "(no path)"} to a binding`);
         continue;
       }
+
       writeProject(project);
       migrated++;
       results.push(`${slug}: path moved to a binding`);
@@ -551,6 +554,7 @@ const v5AttributionKeys: Migration = {
         migrated++;
         continue;
       }
+
       writeFileSync(file, text, "utf-8");
       results.push(`${name}: ${changed} record(s) rewritten`);
       migrated++;
@@ -773,8 +777,10 @@ const v7RetiredSettingsKeys: Migration = {
         const [section, key] = path.split(".");
         delete settings[section][key];
       }
+
       writeSettingsObject(settings);
     }
+
     const verb = dryRun ? "would remove" : "removed";
 
     return {
@@ -873,6 +879,7 @@ function repointWorktreeInTask(taskDir: string): void {
   } catch {
     return;
   }
+
   const oldPrefix = resolve(oldFactoryFolder(), "worktrees");
   if (typeof task.worktree !== "string" || !task.worktree.startsWith(oldPrefix)) return;
   const relative = task.worktree.slice(oldPrefix.length);
@@ -1222,6 +1229,7 @@ function printMigrationList(): void {
       console.log(`    ✓ ${m.id} — ${m.description}`);
     }
   }
+
   console.log("");
 }
 
@@ -1267,5 +1275,6 @@ export function runMigrate(args: string[]): void {
   if (!dryRun && totalMigrated > 0 && pending.some((m) => !m.movesSources)) {
     console.log("  Source files preserved — delete manually once verified.");
   }
+
   console.log("");
 }

@@ -70,6 +70,7 @@ describe("generate-pdf --demo", () => {
     for (const dir of ["lib", "node_modules/next", ".next/cache", "out"]) {
       mkdirSync(join(source, dir), { recursive: true });
     }
+
     writeFileSync(join(source, "package.json"), "{}");
     writeFileSync(join(source, "lib", "data.ts"), "export {}");
     writeFileSync(join(source, "node_modules", "next", "index.js"), "");

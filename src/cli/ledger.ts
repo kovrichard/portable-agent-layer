@@ -96,6 +96,7 @@ function cmdLog(filter: LedgerFilter, json: boolean): number {
       `${entry.ts}  ${shortId(entry.id)}  ${entry.outcome.padEnd(7)}  ${entry.runtime.padEnd(8)}  ${entry.tool.padEnd(5)}  ${changedLines(entry).padEnd(9)}  ${entry.target}`
     );
   }
+
   console.log(
     `\n${entries.length} action(s) across ${ledgerFiles().length} ledger file(s).`
   );

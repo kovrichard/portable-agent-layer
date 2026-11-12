@@ -40,6 +40,7 @@ function recordUnapplied(payload: Payload, verdict: UnappliedVerdict): void {
     const entry = commitUnapplied(call, verdict);
     logDebug("post-tool", `${entry.outcome} ${entry.id} ${entry.target}`);
   }
+
   reapStalePending();
 }
 

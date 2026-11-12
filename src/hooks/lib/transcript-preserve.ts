@@ -84,6 +84,7 @@ export function preserveTranscripts(at: PreserveLocations): PreserveResult {
         result.unchanged++;
         continue;
       }
+
       gzipCopy(file, resolve(at.target, `${key}.gz`));
       manifest[key] = version;
       result.copied++;
@@ -92,6 +93,7 @@ export function preserveTranscripts(at: PreserveLocations): PreserveResult {
       logError("transcript-preserve", err);
     }
   }
+
   ensureDir(dirname(at.manifest));
   writeFileSync(at.manifest, JSON.stringify(manifest), "utf-8");
 

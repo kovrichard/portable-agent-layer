@@ -30,6 +30,7 @@ beforeEach(() => {
   for (const [name, dir] of Object.entries(DIR_VARS)) {
     process.env[name] = resolve(ROOT, dir);
   }
+
   write(resolve(ROOT, "opencode", "AGENTS.md"), "# PAL");
 });
 

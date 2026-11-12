@@ -73,6 +73,7 @@ if (existsSync(configPath) && statSync(configPath).size > 0) {
         ocConfig.instructions = filtered;
       }
     }
+
     writeFileSync(configPath, `${JSON.stringify(ocConfig, null, 2)}\n`, "utf-8");
     log.success("Removed PAL entries from config.json");
   } catch {

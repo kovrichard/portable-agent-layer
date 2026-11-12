@@ -373,6 +373,7 @@ function applyToNode(tree: ScopeTree, node: WorkNode, event: WorkEvent): void {
       node.followUps.push({ ts: event.ts, text: event.text, due: event.due });
       break;
   }
+
   node.updated = event.ts;
 }
 
@@ -415,6 +416,7 @@ function apply(tree: ScopeTree, event: WorkEvent): void {
 
     return;
   }
+
   const node = tree.nodes.get(event.node);
   if (node) applyToNode(tree, node, event);
 }

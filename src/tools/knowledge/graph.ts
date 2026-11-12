@@ -109,6 +109,7 @@ function pushEdge(graph: KnowledgeGraph, edge: GraphEdge, bidirectional = false)
   } else {
     graph.adjacency.set(edge.from, [edge]);
   }
+
   // Mirror into reverse adjacency so traverse can walk against direction.
   // Same edge object — no copies, no direction info lost.
   const radj = graph.reverseAdjacency.get(edge.to);
@@ -133,6 +134,7 @@ function pushEdge(graph: KnowledgeGraph, edge: GraphEdge, bidirectional = false)
   } else {
     graph.adjacency.set(back.from, [back]);
   }
+
   const backRadj = graph.reverseAdjacency.get(back.to);
   if (backRadj) {
     backRadj.push(back);

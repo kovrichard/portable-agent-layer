@@ -119,9 +119,11 @@ export function collectOpencode(dbPath: string, now: Date = new Date()): number 
       emitModelCall(row, message, billingOf(message.providerID));
       emitted++;
     }
+
     cursor.order = row.time_created;
     cursor.id = row.id;
   }
+
   writeCursor("opencode", cursor);
 
   return emitted;
