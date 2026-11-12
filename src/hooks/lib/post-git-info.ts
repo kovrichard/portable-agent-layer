@@ -34,6 +34,7 @@ interface GitInfo {
 function capped(items: string[]): string {
   const more = items.length - MAX_FILES;
   const shown = items.slice(0, MAX_FILES).join(", ");
+
   return more > 0 ? `${shown}, +${more} more` : shown;
 }
 
@@ -45,6 +46,7 @@ function stateLine(toplevel: string, porcelain: string) {
   const status = parseStatus(porcelain);
   const line = repoStatusParts(toplevel, status).join(" · ");
   const files = status.files.length > 0 ? ` — ${describeChanged(status.files)}` : "";
+
   return {
     text: `Git state after this command: ${line}${files}`,
     changed: status.files.length,
@@ -62,6 +64,7 @@ function headCommitLine(git: Git, toplevel: string) {
     files.length > 0
       ? `${count(files.length, "file")}: ${capped(files)}`
       : "no file changes";
+
   return { text: `HEAD ${hash} "${quoted}" contains ${contents}`, files: files.length };
 }
 
@@ -71,6 +74,7 @@ function gitInfo(git: Git, toplevel: string, afterCommit: boolean): GitInfo | nu
   if (porcelain === null) return null;
   const state = stateLine(toplevel, porcelain);
   const head = afterCommit ? headCommitLine(git, toplevel) : null;
+
   return {
     text: head ? `${state.text}\n${head.text}` : state.text,
     changed: state.changed,
@@ -80,6 +84,7 @@ function gitInfo(git: Git, toplevel: string, afterCommit: boolean): GitInfo | nu
 
 function callStartedAtMs(payload: Payload, now: number): number {
   const duration = payload.duration_ms;
+
   return now - (typeof duration === "number" ? duration : UNKNOWN_DURATION_MS);
 }
 
@@ -111,6 +116,7 @@ function logInjection(
 function bashCommand(payload: Payload): string | null {
   const call = normalizeToolUse(payload);
   if (call?.toolName !== "Bash") return null;
+
   return stringIn(call.toolInput, COMMAND_KEYS);
 }
 
@@ -122,6 +128,7 @@ function injectedInfo(payload: Payload, git: Git, now: number): string | null {
   const info = repo ? gitInfo(git, repo.toplevel, runsGitCommit(command)) : null;
   if (!repo || !info) return null;
   logInjection(payload, command, repo, info);
+
   return info.text;
 }
 
@@ -134,6 +141,7 @@ export function postGitInfoResponse(
   try {
     const text = payload ? injectedInfo(payload, git, now) : null;
     if (!text) return null;
+
     return JSON.stringify({
       hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: text },
     });

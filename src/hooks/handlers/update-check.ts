@@ -32,6 +32,7 @@ export function cachedStatus(): UpdateCache | null {
   try {
     const fp = cachePath();
     if (!existsSync(fp)) return null;
+
     return JSON.parse(readFileSync(fp, "utf-8")) as UpdateCache;
   } catch {
     return null;
@@ -42,6 +43,7 @@ function readCache(): UpdateCache | null {
   const cache = cachedStatus();
   if (!cache) return null;
   const fresh = Date.now() - new Date(cache.checkedAt).getTime() < CACHE_TTL_MS;
+
   return fresh ? cache : null;
 }
 
@@ -60,6 +62,7 @@ export function isRepoMode(): boolean {
 export function getInstalledVersion(): string {
   try {
     const pkg = JSON.parse(readFileSync(resolve(palPkg(), "package.json"), "utf-8"));
+
     return pkg.version || "0.0.0";
   } catch {
     return "0.0.0";
@@ -103,6 +106,7 @@ async function checkRepo(): Promise<UpdateCache> {
     const available = behindCount > 0 && remoteHash.length > 0;
 
     let latest = current;
+
     if (available) {
       try {
         const show = Bun.spawn(["git", "show", `${PULLED_BRANCH}:package.json`], {
@@ -205,6 +209,7 @@ export async function checkForUpdate(
     const cached = readCache();
     if (cached) {
       logDebug("update-check", "Using cached result");
+
       return cached;
     }
   }
@@ -235,5 +240,6 @@ export function clearUpdateCache(): void {
 export function getUpdateNotice(): string | null {
   const cache = cachedStatus();
   if (!cache?.available) return null;
+
   return `📦 Update available: ${cache.current} → ${cache.latest} (pal cli update)`;
 }

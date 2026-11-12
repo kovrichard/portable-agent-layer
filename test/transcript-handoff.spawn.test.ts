@@ -52,6 +52,7 @@ function ageFile(file: string, hoursAgo: number): void {
 
 beforeEach(() => {
   restoreRules?.();
+
   if (savedTmpdir === undefined) delete process.env.TMPDIR;
   else process.env.TMPDIR = savedTmpdir;
   home = freshTestDir(import.meta.file);
@@ -74,6 +75,7 @@ describe("Stop hook transcript hand-off folder", () => {
     expect(existsSync(dir)).toBe(true);
     const entries = readdirSync(dir);
     expect(entries.length).toBe(2);
+
     for (const name of entries) expect(statSync(resolve(dir, name)).isFile()).toBe(true);
 
     const paths = spawned
@@ -83,6 +85,7 @@ describe("Stop hook transcript hand-off folder", () => {
       .map((s) => s.args[2]);
     expect(paths.length).toBe(2);
     expect(new Set(paths).size).toBe(2);
+
     for (const p of paths) {
       expect(resolve(p, "..")).toBe(dir);
       expect(JSON.parse(readFileSync(p, "utf-8"))).toEqual(
@@ -124,6 +127,7 @@ describe("Stop hook transcript hand-off folder", () => {
 
     await runStopHandlers(messages, { sessionId: "handoff-twice" });
     const afterSecond = readdirSync(handoffDir()).sort();
+
     for (const name of afterFirst) expect(afterSecond).toContain(name);
     expect(afterSecond).toContain("young.txt");
     expect(afterSecond.length).toBe(afterFirst.length + 2);
@@ -168,6 +172,7 @@ describe("detached children delete their hand-off file", () => {
       }
     );
     await proc.exited;
+
     return file;
   }
 

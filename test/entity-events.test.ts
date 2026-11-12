@@ -16,6 +16,7 @@ function lines(store: "events" | "content/events"): Record<string, unknown>[] {
     `${new Date().toISOString().slice(0, 7)}.jsonl`
   );
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .trim()
     .split("\n")

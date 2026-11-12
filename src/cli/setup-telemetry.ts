@@ -12,5 +12,6 @@ export async function noticeTelemetry(): Promise<boolean> {
   clack.note(WHAT_IS_SENT, "Anonymous usage count");
   clack.log.info("Turn it off any time: pal cli telemetry off");
   writeSettings({ ...settings, telemetry: { ...settings.telemetry, noticeShown: true } });
+
   return true;
 }

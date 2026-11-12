@@ -11,6 +11,7 @@ describe("the build lock", () => {
     const dir = taskDir(TASK, world.env);
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, "build.lock"), String(pid));
+
     return dir;
   }
 

@@ -61,6 +61,7 @@ const DECISION_LINE = /^-\s*(\d{4}-\d{2}-\d{2}):\s*(.+?)(?:\s*\((.+)\))?\s*$/;
 export function parseDecisions(section: string | undefined): Decision[] {
   if (!section) return [];
   const decisions: Decision[] = [];
+
   for (const line of section.split("\n")) {
     const trimmed = line.trim();
     if (!trimmed) continue;
@@ -71,6 +72,7 @@ export function parseDecisions(section: string | undefined): Decision[] {
         : { date: null, text: trimmed.replace(/^-\s*/, ""), why: null }
     );
   }
+
   return decisions.reverse();
 }
 
@@ -83,6 +85,7 @@ export function parseBullets(section: string | undefined): string[] {
     .filter(Boolean);
   const bullets = lines.filter((l) => /^[-*+]\s+\S/.test(l));
   const chosen = bullets.length > 0 ? bullets : lines;
+
   return chosen.map((l) => l.replace(/^[-*+]\s+/, ""));
 }
 
@@ -93,6 +96,7 @@ function activity(slug: string, since: Date) {
       .entries()
       .map(([runtime, group]) => [runtime, group.length])
   );
+
   return { runtimes, recent: viewRows(entries).slice(0, RECENT_ACTIONS) };
 }
 

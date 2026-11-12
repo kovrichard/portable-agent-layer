@@ -30,6 +30,7 @@ function registerProject(name: string, dirName: string): string {
     : {};
   current[name] = checkout;
   writeFileSync(bindings, JSON.stringify(current, null, 2));
+
   return checkout;
 }
 
@@ -134,6 +135,7 @@ describe("parked history finds its project", () => {
     mkdirSync(loose, { recursive: true });
     const { appendProjectHistory } = await import("../src/hooks/lib/work-tracking");
     appendProjectHistory(loose, entry(title));
+
     return loose;
   }
 
@@ -250,6 +252,7 @@ describe("v6 history-slugs", () => {
     const printed: string[] = [];
     const log = console.log;
     console.log = (...args: unknown[]) => printed.push(args.join(" "));
+
     try {
       await run();
     } finally {

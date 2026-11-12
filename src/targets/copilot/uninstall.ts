@@ -22,6 +22,7 @@ const VSCODE_HOOKS_FILE = resolve(COPILOT_DIR, "hooks", "pal-vscode-hooks.json")
 function removeHooksFile(path: string, label: string): void {
   if (!existsSync(path)) {
     log.info(`No ${label} found, nothing to do`);
+
     return;
   }
   copyFileSync(path, `${path}.bak.${Date.now()}`);
@@ -62,6 +63,7 @@ if (vsSettingsPath && existsSync(vsSettingsPath)) {
   if (typeof locs === "object" && locs !== null) {
     const obj = locs as Record<string, unknown>;
     delete obj["~/.copilot/instructions"];
+
     if (Object.keys(obj).length === 0) {
       delete settings["chat.instructionsFilesLocations"];
     } else {

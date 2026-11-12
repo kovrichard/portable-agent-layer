@@ -61,11 +61,13 @@ function getLastResponse(sessionId?: string): string {
     if (sessionId && cache[sessionId]) {
       return cache[sessionId].response ?? "";
     }
+
     // No session match — return empty rather than wrong context
     return "";
   } catch {
     /* non-critical */
   }
+
   return "";
 }
 
@@ -152,6 +154,7 @@ function isPraise(prompt: string): boolean {
     .replace(/[.!?,'"]/g, "");
   const words = normalized.split(/\s+/);
   if (words.length > 3) return false;
+
   return (
     POSITIVE_PRAISE_WORDS.has(normalized) ||
     POSITIVE_PHRASES.has(normalized) ||
@@ -167,14 +170,17 @@ function handleImplicitReaction(message: string, sentAt: Date, sessionId?: strin
 
   if (isPraise(trimmed)) {
     emitRating(8, `Direct praise: "${trimmed}"`, "implicit", reply);
+
     return;
   }
 
   if (isSystemText(trimmed)) return;
+
   if (!reply) return;
 
   // Skip very short, very long, or code-like messages
   if (trimmed.length < 5 || trimmed.length > 500) return;
+
   if (/^[/$`{]/.test(trimmed) || trimmed.includes("\n\n")) return;
 
   // claude --print has 3-5s of cold start, too slow for UserPromptSubmit.
@@ -216,6 +222,7 @@ async function labelCorrectionKind(
 
 function knownRules() {
   const waiting = readCandidates().filter((candidate) => candidate.verdict === "waiting");
+
   return [
     ...readRules(),
     ...waiting.map((candidate) => ({ ...candidate, status: "candidate" })),
@@ -262,7 +269,9 @@ async function runReactionRatingAndStore(
     const kind = needsCorrectionKind(turn)
       ? await labelCorrectionKind(reply, message, turn.issue, sessionId)
       : null;
+
     if (turn) appendTurn(withCorrectionKind(turn, kind), sentAt);
+
     if (turn?.confirmed) await draftRuleCandidate(sessionId);
   } catch (err) {
     const { logError } = await import("../lib/log");
@@ -289,6 +298,7 @@ export function captureRating(
       "explicit",
       getLastResponse(sessionId).slice(0, 500)
     );
+
     return;
   }
 

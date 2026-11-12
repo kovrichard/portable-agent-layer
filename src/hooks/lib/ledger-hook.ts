@@ -81,6 +81,7 @@ export function ledgeredCalls(payload: Record<string, unknown>): LedgeredCall[] 
   if (!target) return [];
 
   const toolUseId = pairingKeyOf(payload, toolUse.toolName, target);
+
   return toolUseId ? [{ toolUseId, tool: toolUse.toolName, target }] : [];
 }
 
@@ -96,6 +97,7 @@ function patchCalls(
 ): LedgeredCall[] {
   const anchor = toolUseIdOf(payload) ?? sessionOf(payload);
   if (!anchor) return [];
+
   return targets.map((target) => ({
     toolUseId: derivedPairingKey(anchor, tool, target),
     tool,
@@ -114,6 +116,7 @@ function patchedTargets(payload: Record<string, unknown>, toolName: string): str
   if (!patch) return [];
 
   const base = typeof payload.cwd === "string" ? payload.cwd : process.cwd();
+
   return Array.from(patch.matchAll(PATCHED_FILE_HEADER), (match) =>
     absoluteFrom(base, match[1].trim())
   );
@@ -123,6 +126,7 @@ function patchedTargets(payload: Record<string, unknown>, toolName: string): str
 function patchBodyOf(payload: Record<string, unknown>): string | null {
   const args = payload.toolArgs ?? payload.tool_input ?? payload.toolInput;
   if (typeof args === "string") return args.length > 0 ? args : null;
+
   return patchCommandOf(args);
 }
 
@@ -130,6 +134,7 @@ function patchBodyOf(payload: Record<string, unknown>): string | null {
 function patchCommandOf(args: unknown): string | null {
   if (typeof args !== "object" || args === null || Array.isArray(args)) return null;
   const command = (args as Record<string, unknown>).command;
+
   return typeof command === "string" && command.length > 0 ? command : null;
 }
 
@@ -147,11 +152,13 @@ function derivedPairingKey(anchor: string, tool: string, target: string): string
   const digest = new Bun.CryptoHasher("sha256")
     .update([anchor, tool, target].join(" "), "utf-8")
     .digest("hex");
+
   return `derived-${digest.slice(0, 32)}`;
 }
 
 function sessionOf(payload: Record<string, unknown>): string | null {
   const session = payload.sessionId ?? payload.session_id ?? payload.conversationId;
+
   return typeof session === "string" && session.length > 0 ? session : null;
 }
 
@@ -164,6 +171,7 @@ function pairingKeyOf(
   if (explicit) return explicit;
 
   const session = sessionOf(payload);
+
   return session ? derivedPairingKey(session, tool, target) : null;
 }
 
@@ -194,6 +202,7 @@ export interface UnappliedVerdict {
 /** Copilot names the event nowhere in its payload, so its config says so on argv. */
 function eventFromArgv(): string | undefined {
   const flag = process.argv.find((a) => a.startsWith("--event="));
+
   return flag?.slice("--event=".length) || undefined;
 }
 
@@ -215,6 +224,7 @@ export function unappliedVerdictOf(
   const reason = mapping.reasonKeys
     .map((key) => payload[key])
     .find((value): value is string => typeof value === "string" && value.length > 0);
+
   return reason ? { outcome, reason } : { outcome };
 }
 
@@ -251,6 +261,7 @@ export function commitApplied(call: LedgeredCall): LedgerEntry | null {
     after: contentsOf(call.target),
   });
   reapStalePending();
+
   return entry;
 }
 
@@ -264,6 +275,7 @@ export function unappliedBefore(
   target: string
 ): string | null {
   if (pending) return pending.before;
+
   return contentsOf(target);
 }
 
@@ -293,11 +305,13 @@ export function toolUseIdOf(payload: Record<string, unknown>): string | null {
     const value = payload[key];
     if (typeof value === "string" && value.length > 0) return value;
   }
+
   return null;
 }
 
 function readsRatherThanChanges(toolInput: Record<string, unknown>): boolean {
   const command = toolInput.command;
+
   return typeof command === "string" && READING_COMMANDS.has(command);
 }
 
@@ -310,10 +324,13 @@ export function ledgeredTarget(
   toolInput: Record<string, unknown>
 ): string | null {
   if (!LEDGERED_TOOLS.has(toolName.toLowerCase())) return null;
+
   if (readsRatherThanChanges(toolInput)) return null;
+
   for (const key of FILE_TARGET_KEYS) {
     const value = toolInput[key];
     if (typeof value === "string" && value.length > 0) return value;
   }
+
   return null;
 }

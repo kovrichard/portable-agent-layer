@@ -30,6 +30,7 @@ function transcriptWith(tokens: number): string {
   const path = resolve(home, "t.jsonl");
   const usage = { input_tokens: 10, cache_read_input_tokens: tokens - 10 };
   writeFileSync(path, `${JSON.stringify({ message: { usage } })}\n`);
+
   return path;
 }
 
@@ -54,6 +55,7 @@ function submit(tokens: number, prompt = "please continue with the work") {
     encoding: "utf-8",
     timeout: SPAWN_HEAVY_TEST_MS - 2000,
   });
+
   return result.stdout ?? "";
 }
 

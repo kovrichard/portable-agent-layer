@@ -59,6 +59,7 @@ describe("SecurityValidator under agy", () => {
       }
     );
     const out = await new Response(proc.stdout).text();
+
     return { out: out.trim(), code: await proc.exited };
   }
 

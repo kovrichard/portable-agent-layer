@@ -35,6 +35,7 @@ let dbPath: string;
 function streamed(): Record<string, unknown>[] {
   const dir = resolve(home, "memory", "events");
   if (!existsSync(dir)) return [];
+
   return readdirSync(dir)
     .filter((f) => f.endsWith(".jsonl"))
     .flatMap((f) => readFileSync(resolve(dir, f), "utf-8").trim().split("\n"))
@@ -57,6 +58,7 @@ function fixtureDb(): Database {
   db.run("INSERT INTO control_account VALUES ('c', ?1)", [SENTINEL]);
   db.run("INSERT INTO credential VALUES ('k', ?1)", [SENTINEL]);
   db.run("INSERT INTO session_share VALUES ('s', ?1)", [SENTINEL]);
+
   return db;
 }
 
@@ -163,13 +165,16 @@ describe("collecting opencode's model calls", () => {
 describe("a collector never reads a credential", () => {
   test("every shipped allow-list names no credential table or column", async () => {
     const allowLists = [];
+
     for (const file of readdirSync(COLLECTORS_DIR)) {
       const module = await import(resolve(COLLECTORS_DIR, file));
+
       for (const [name, value] of Object.entries(module)) {
         if (name.endsWith("_ALLOW_LIST")) allowLists.push(value as AllowList);
       }
     }
     expect(allowLists.length).toBeGreaterThanOrEqual(2);
+
     for (const allowList of allowLists) {
       expect(() => assertNoCredentials(allowList)).not.toThrow();
     }

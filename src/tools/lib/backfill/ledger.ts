@@ -24,5 +24,6 @@ function emitAction(entry: LedgerEntry): void {
 /** Appends the ledger entries not yet logged and returns how many. */
 export function backfillLedger(known: Set<string>, since?: string): number {
   const entries = readLedger().filter((entry) => !leakedFromTestSuite(entry));
+
   return emitUnseen(entries, actionEventId, emitAction, known, since);
 }

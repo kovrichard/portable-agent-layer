@@ -13,6 +13,7 @@ import { join, resolve } from "node:path";
 async function exists(p: string): Promise<boolean> {
   try {
     await access(p, fsConstants.F_OK);
+
     return true;
   } catch {
     return false;
@@ -30,6 +31,7 @@ async function dev(reportDir: string): Promise<number> {
     stdio: "inherit",
     shell: true,
   });
+
   return result.status ?? 1;
 }
 

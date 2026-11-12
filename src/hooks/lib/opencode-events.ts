@@ -64,6 +64,7 @@ function takeAskedTool(reply: OpencodePermissionReply): string | undefined {
   if (!id) return undefined;
   const tool = askedTools.get(id);
   askedTools.delete(id);
+
   return tool;
 }
 
@@ -79,14 +80,17 @@ export function logOpencodePermissionReply(reply: OpencodePermissionReply): void
 
 function durationOf(part: OpencodeToolPart): number | null {
   const { start, end } = part.state?.time ?? {};
+
   return start !== undefined && end !== undefined ? end - start : null;
 }
 
 function firstFailureOf(part: OpencodeToolPart | undefined): part is OpencodeToolPart {
   if (part?.type !== "tool" || part.state?.status !== "error" || !part.callID)
     return false;
+
   if (loggedFailures.has(part.callID)) return false;
   loggedFailures.add(part.callID);
+
   return true;
 }
 

@@ -39,6 +39,7 @@ function queue(...items: ExtractedEntity[]): string[] {
   const index = loadNameIndex(loadKnownEntities());
   const { review } = planExtraction(items, index, [], "chat test");
   queueForReview(review);
+
   return review.map((r) => r.id);
 }
 
@@ -47,6 +48,7 @@ function captureLog(): { text: () => string; restore: () => void } {
   const spy = spyOn(console, "log").mockImplementation((...a: unknown[]) => {
     lines.push(a.join(" "));
   });
+
   return { text: () => lines.join("\n"), restore: () => spy.mockRestore() };
 }
 

@@ -32,6 +32,7 @@ function extractTriggers(description: string): string[] {
           w.length > 3 &&
           !["when", "this", "that", "with", "from", "about", "your", "the"].includes(w)
       );
+
     for (const w of words) triggers.add(w);
   }
 
@@ -71,6 +72,7 @@ export function generateSkillIndex(): number {
       const fm = fmMatch[1];
       const nameMatch = new RegExp(/^name:\s*(.+)$/m).exec(fm);
       const descMatch = new RegExp(/^description:\s*"?(.+?)"?\s*$/m).exec(fm);
+
       if (!nameMatch) continue;
 
       const skillName = nameMatch[1].trim();

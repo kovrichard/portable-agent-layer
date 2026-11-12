@@ -75,6 +75,7 @@ async function projectResolver(): Promise<ResolverFactory> {
   const mod = (await import("../src/tools/lib/project-resolver")) as {
     projectResolver: ResolverFactory;
   };
+
   return mod.projectResolver;
 }
 
@@ -83,6 +84,7 @@ const registered = (name: string) => ({ name }) as ProjectProgress;
 function repo(parent: string, ...parts: string[]): string {
   const dir = join(parent, ...parts);
   mkdirSync(join(dir, ".git"), { recursive: true });
+
   return dir;
 }
 
@@ -388,6 +390,7 @@ describe("readClaudeCode", () => {
 
     function homes() {
       const dir = tempHome();
+
       return { live: join(dir, "projects"), archive: join(dir, "archive") };
     }
 

@@ -39,6 +39,7 @@ beforeEach(() => {
 function logLines(dir: string): Record<string, unknown>[] {
   const path = resolve(home, dir, "events");
   if (!existsSync(path)) return [];
+
   return readdirSync(path)
     .flatMap((f) => readFileSync(resolve(path, f), "utf-8").trim().split("\n"))
     .filter(Boolean)
@@ -106,6 +107,7 @@ describe("project history becomes events", () => {
 describe("project history streams live", () => {
   async function cli(...args: string[]): Promise<void> {
     const quiet = spyOn(console, "log").mockImplementation(() => {});
+
     try {
       await run(args);
     } finally {

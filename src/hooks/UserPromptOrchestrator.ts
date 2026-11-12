@@ -23,6 +23,7 @@ recordHookRunOnExit();
 // Recursion guard — the "prompt" inside a spawned inference is the dispatcher's
 // payload, not a real user message. Skip rating capture, session naming, etc.
 if (isPalSpawnedInference()) process.exit(0);
+
 if (duplicatesCursorHooks()) process.exit(0);
 
 interface PromptSubmitInput extends HookTurnPayload {
@@ -34,6 +35,7 @@ interface PromptSubmitInput extends HookTurnPayload {
 const input = await readStdinJSON<PromptSubmitInput>();
 logDebug("UserPromptOrchestrator", `Input: ${JSON.stringify(input).slice(0, 200)}`);
 const compactionVerdict = recordCompactionNear(input, Boolean(input?.prompt));
+
 if (!input?.prompt) process.exit(0);
 
 const timing = startHookTiming("prompt");

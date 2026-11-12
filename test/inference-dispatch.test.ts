@@ -172,6 +172,7 @@ describe("logPromptSnapshot", () => {
     writeFileSync(resolve(stateDir, "debug-enabled"), "");
     const palHomeSaved = process.env.PAL_HOME;
     process.env.PAL_HOME = tmpHome;
+
     try {
       logPromptSnapshot("hello world", null);
       const out = readFileSync(resolve(tmpHome, "debug", "last-prompt.md"), "utf-8");
@@ -187,6 +188,7 @@ describe("logPromptSnapshot", () => {
     const tmpHome = freshTestDir(import.meta.file);
     const palHomeSaved = process.env.PAL_HOME;
     process.env.PAL_HOME = tmpHome;
+
     try {
       logPromptSnapshot("should not appear", null);
       const exists = Bun.file(resolve(tmpHome, "debug", "last-prompt.md")).size;

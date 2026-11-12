@@ -29,6 +29,7 @@ function commands(): { event: string; command: string }[] {
   const cfg = loadCodexHooksTemplate(TEMPLATE, PKG_ROOT) as {
     hooks: Record<string, { hooks: { command: string }[] }[]>;
   };
+
   return Object.entries(cfg.hooks).flatMap(([event, groups]) =>
     groups.flatMap((g) => g.hooks.map((h) => ({ event, command: h.command })))
   );
@@ -179,6 +180,7 @@ describe("every Codex hooks config this repo ships", () => {
 
   function rejectedKeys(path: string): string[] {
     const keys = Object.keys(JSON.parse(readFileSync(path, "utf-8")));
+
     return keys.filter((key) => key !== "hooks" && key !== "description");
   }
 

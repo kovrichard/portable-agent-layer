@@ -22,6 +22,7 @@ if (!OC_GLOBAL_DIR || !PAL_CLAUDE_DIR) {
 }
 
 const pluginPath = resolve(OC_GLOBAL_DIR, "plugins", "pal-plugin.ts");
+
 try {
   unlinkSync(pluginPath);
   log.success("Removed PAL plugin");
@@ -39,12 +40,14 @@ removePalDocs();
 
 const agentsMd = resolve(OC_GLOBAL_DIR, "AGENTS.md");
 const claudeMd = resolve(PAL_CLAUDE_DIR, "CLAUDE.md");
+
 try {
   unlinkSync(claudeMd);
   log.success("Removed ~/.claude/CLAUDE.md");
 } catch {
   /* gone */
 }
+
 try {
   unlinkSync(agentsMd);
   log.success("Removed ~/.config/opencode/AGENTS.md");

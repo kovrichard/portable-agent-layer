@@ -262,6 +262,7 @@ describe("measuring a turn", () => {
 
 function fastShortTurn(session: string, i: number): string | null {
   recordReply(session, "short answer", at(i * 30));
+
   return observeTurn("yes pls", session, at(i * 30 + 10));
 }
 
@@ -279,6 +280,7 @@ describe("telling the agent", () => {
 
   test("logs the mood each turn was read as, and whether the agent was told", () => {
     observeTurn("start", "s1", T0);
+
     for (const i of [1, 2, 3, 4]) fastShortTurn("s1", i);
 
     expect(loggedEvents().map((e) => [e.mood, e.hinted])).toEqual([
@@ -292,6 +294,7 @@ describe("telling the agent", () => {
 
   test("says once when the pattern is back to usual", () => {
     observeTurn("start", "s1", T0);
+
     for (const i of [1, 2, 3]) fastShortTurn("s1", i);
     recordReply("s1", "short answer", at(200));
     const back = observeTurn(words(40), "s1", at(200 + 3 * 3600));
@@ -367,6 +370,7 @@ function seedShortRepliesApprovedMore() {
 
 function settleIntoFastShort(session: string): void {
   observeTurn("start", session, T0);
+
   for (const i of [1, 2, 3, 4]) fastShortTurn(session, i);
 }
 
@@ -449,6 +453,7 @@ describe("checking the hint worked", () => {
   test("a label that asks for nothing in particular is not checked", () => {
     seedReplyHistory(200);
     observeTurn("start", "s1", T0);
+
     for (const i of [1, 2, 3, 4]) {
       recordReply("s1", "an answer", at(i * 200));
       observeTurn(words(100), "s1", at(i * 200 + 100));

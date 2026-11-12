@@ -27,6 +27,7 @@ import { type StopTurnPayload, stopTurn } from "./lib/stop";
 recordHookRunOnExit();
 
 if (isPalSpawnedInference()) process.exit(0);
+
 if (duplicatesCursorHooks()) process.exit(0);
 
 const received = await readStdinJSON<StopTurnPayload & AntigravityStopFields>();
@@ -65,6 +66,7 @@ try {
 } catch (err) {
   logError("StopOrchestrator:reply-checks", err);
 }
+
 // After the reply checks: a reply that needs fixing goes back for the fix, not for the next task.
 try {
   const keepGoing = unattendedStopReason(process.cwd());

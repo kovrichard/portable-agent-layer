@@ -64,6 +64,7 @@ describe("replaceConfig", () => {
   test("a name is a backup only when all of it after .bak. is a timestamp", () => {
     writeFileSync(config, "a");
     const lookalikes = [1, 2, 3, 4, 5, 6].flatMap((n) => [`v${n}`, `${n}v`]);
+
     for (const suffix of lookalikes) writeFileSync(`${config}.bak.${suffix}`, "mine");
     replaceConfig(config, "a");
     expect(backups()).toHaveLength(lookalikes.length);

@@ -30,7 +30,9 @@ const PRESERVED = [
 
 function savedEnv(): Record<string, string | undefined> {
   const saved: Record<string, string | undefined> = {};
+
   for (const k of PRESERVED) saved[k] = process.env[k];
+
   return saved;
 }
 function restoreEnv(saved: Record<string, string | undefined>) {

@@ -66,6 +66,7 @@ describe("generate-pdf --demo", () => {
 
   test("--demo leaves the demo's build output and installed dependencies behind", async () => {
     const source = join(cwd, "bundled");
+
     for (const dir of ["lib", "node_modules/next", ".next/cache", "out"]) {
       mkdirSync(join(source, dir), { recursive: true });
     }

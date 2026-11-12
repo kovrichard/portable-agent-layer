@@ -23,7 +23,9 @@ export function followedHint(
   usualReplyWords: number | null
 ): boolean | null {
   if (replyWords === undefined || usualReplyWords === null) return null;
+
   if (!asksForLess(moodKey)) return null;
+
   return replyWords <= lengthTarget(usualReplyWords);
 }
 
@@ -33,6 +35,7 @@ function pct(s: Side): string {
 
 function citedApprovals(evidence: Split | null): string {
   if (!evidence) return "";
+
   return ` Replies ${evidence.shape} were approved ${pct(evidence.has)} of the time, longer ones ${pct(evidence.lacks)}.`;
 }
 
@@ -42,5 +45,6 @@ export function ignoredHintReminder(
   evidence: Split | null
 ): string {
   const target = lengthTarget(usualReplyWords);
+
   return `<system-reminder>Interaction: the user still wants less. Your last reply was ${replyWords} words (usually ${usualReplyWords}); keep this one under ${target} words.${citedApprovals(evidence)}</system-reminder>`;
 }

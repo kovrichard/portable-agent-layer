@@ -54,11 +54,13 @@ function quietly(fn: () => void): string {
   const captured: string[] = [];
   const log = console.log;
   console.log = (...parts: unknown[]) => captured.push(parts.join(" "));
+
   try {
     fn();
   } finally {
     console.log = log;
   }
+
   return captured.join("\n");
 }
 
@@ -173,6 +175,7 @@ describe("v9-progress-tree-names: what it reports", () => {
     ],
   ])("a dry run with the new folder present=%p says what it would do", (both, line) => {
     writeEvents(oldFolder(), [EVENT]);
+
     if (both) writeEvents(newFolder(), [EVENT]);
     expect(quietly(() => runMigrate(["--dry-run"]))).toContain(line);
   });
@@ -259,7 +262,9 @@ describe("the old names are gone from src/ and assets/", () => {
   function filesUnder(dir: string): string[] {
     return readdirSync(dir).flatMap((name) => {
       const path = resolve(dir, name);
+
       if (name === "node_modules" || name === "dist") return [];
+
       return statSync(path).isDirectory() ? filesUnder(path) : [path];
     });
   }

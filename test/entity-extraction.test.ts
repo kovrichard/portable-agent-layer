@@ -101,6 +101,7 @@ describe("extractionSchema", () => {
     const { properties } = extractionSchema().properties.entities.items;
     expect(properties.kind).toEqual({ type: "string", enum: ["person", "company"] });
     expect(properties.aliases).toEqual({ type: "array", items: { type: "string" } });
+
     for (const field of ["name", "existing", "role", "organization", "relation", "fact"])
       expect(properties[field as keyof typeof properties]).toEqual({ type: "string" });
   });

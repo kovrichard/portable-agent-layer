@@ -28,12 +28,15 @@ export function applyAttribution(
   opts: { enabled: boolean; name: string; repoUrl?: string }
 ): Settings {
   const result = { ...settings };
+
   if (opts.enabled) {
     result.attribution = buildAttributionText(opts.name, opts.repoUrl);
     result.includeCoAuthoredBy = false;
   } else {
     result.attribution = { commit: "", pr: "", sessionUrl: false };
+
     if (result.includeCoAuthoredBy === false) delete result.includeCoAuthoredBy;
   }
+
   return result;
 }

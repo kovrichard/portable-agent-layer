@@ -41,6 +41,7 @@ function replanWorld(runs: Run[], options: Options = {}) {
   const dir = taskDir(TASK, world.env);
   writeFileSync(join(dir, "plan.md"), "old plan");
   appendEvent({ event: "plan_written", task: TASK, specSha256: STALE_HASH }, world.env);
+
   return world;
 }
 
@@ -50,6 +51,7 @@ function settleWorld(runs: Run[], options: Options = {}) {
     { event: "plan_gate", task: TASK, round: 2, findings: SETTLE_FINDINGS },
     world.env
   );
+
   return world;
 }
 
@@ -65,8 +67,10 @@ function checksWhenRoleStarts(world: World, wanted: string, nth: number) {
   let count = 0;
   world.effects.runRoleHeadless = (taskId: string, role: string, args: object) => {
     if (role === wanted && ++count === nth) seen.push(world.checkCommands.length);
+
     return original(taskId, role, args);
   };
+
   return seen;
 }
 

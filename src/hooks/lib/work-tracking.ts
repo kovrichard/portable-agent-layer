@@ -40,8 +40,10 @@ function sessionsPath(): string {
 function readSessions(): SessionRecord[] {
   const p = sessionsPath();
   if (!existsSync(p)) return [];
+
   try {
     const data = JSON.parse(readFileSync(p, "utf-8"));
+
     return Array.isArray(data) ? data : [];
   } catch {
     return [];
@@ -54,6 +56,7 @@ function sessionArchiveDir(): string {
 
 function sessionArchiveFile(record: SessionRecord): string {
   const month = Number.isNaN(Date.parse(record.ts)) ? "undated" : record.ts.slice(0, 7);
+
   return resolve(sessionArchiveDir(), `${month}.jsonl`);
 }
 
@@ -67,6 +70,7 @@ function parseArchiveLine(line: string): SessionRecord[] {
 
 function readArchivedSessions(): SessionRecord[] {
   const dir = sessionArchiveDir();
+
   return readdirSync(dir)
     .filter((f) => f.endsWith(".jsonl"))
     .flatMap((f) => readFileSync(resolve(dir, f), "utf-8").split("\n"))
@@ -77,10 +81,12 @@ function readArchivedSessions(): SessionRecord[] {
 /** Every session still on record, archived or current, each at its latest state. */
 export function readSessionHistory(): SessionRecord[] {
   const latest = new Map<string, SessionRecord>();
+
   for (const record of [...readArchivedSessions(), ...readSessions()]) {
     const seen = latest.get(record.sessionId);
     if (!seen || seen.ts <= record.ts) latest.set(record.sessionId, record);
   }
+
   return [...latest.values()];
 }
 
@@ -115,6 +121,7 @@ export function writeSession(record: SessionRecord): void {
 export function detectStatus(lastAssistant: string): SessionRecord["status"] {
   const completionSignals =
     /\b(done|all set|let me know|ready to|complete|finished|that's it|looks good|should be good|merged|shipped|deployed)\b/i;
+
   return completionSignals.test(lastAssistant) ? "completed" : "in-progress";
 }
 
@@ -122,6 +129,7 @@ function mentionedPaths(content: unknown): string[] {
   const text = typeof content === "string" ? content : "";
   // Match file paths: /absolute/paths and relative/paths with extensions
   const pathMatches = text.match(/(?:\/[\w./-]+\.\w+|[\w./-]+\/[\w.-]+\.\w+)/g) ?? [];
+
   // Skip URLs, common noise
   return pathMatches.filter((p) => !p.includes("://") && !p.includes("node_modules"));
 }
@@ -135,11 +143,13 @@ export function extractArtifacts(
 
   for (const msg of messages) {
     if (msg.role !== "assistant") continue;
+
     for (const p of mentionedPaths(msg.content)) {
       if (!seen.has(p)) {
         seen.add(p);
         artifacts.push(p);
       }
+
       if (artifacts.length >= MAX_ARTIFACTS) return artifacts;
     }
   }
@@ -192,7 +202,9 @@ export function extractHandoff(lastAssistant: string): string {
   if (closingMatch) return closingMatch[0].trim();
   const last = paragraphs.at(-1);
   if (last !== undefined) return last;
+
   if (cleaned.length > 200) return cleaned.slice(-200).trim();
+
   return cleaned;
 }
 
@@ -214,6 +226,7 @@ interface ProjectHistoryEntry {
  */
 function historyFileFor(cwd: string): string {
   const project = resolveProjectFromCwd(cwd, readAllProjects());
+
   return project
     ? resolve(paths.projectHistory(), project.name, "history.jsonl")
     : resolve(paths.unboundHistory(), `${defaultSlug(cwd)}.jsonl`);
@@ -234,8 +247,10 @@ export function appendProjectHistory(cwd: string, entry: ProjectHistoryEntry): v
   const historyPath = historyFileFor(cwd);
   ensureDir(dirname(historyPath));
   const line = JSON.stringify(entry);
+
   if (!entry.session || !existsSync(historyPath)) {
     appendFileSync(historyPath, `${line}\n`, "utf-8");
+
     return;
   }
   const lines = readFileSync(historyPath, "utf-8").split("\n").filter(Boolean);
@@ -250,13 +265,16 @@ export function readProjectHistory(cwd: string, limit = 15): ProjectHistoryEntry
 
 export function lastSessionTitle(project: string): string | undefined {
   const historyPath = resolve(paths.projectHistory(), project, "history.jsonl");
+
   return readHistoryFile(historyPath, 1)[0]?.title;
 }
 
 function readHistoryFile(historyPath: string, limit: number): ProjectHistoryEntry[] {
   if (!existsSync(historyPath)) return [];
+
   try {
     const lines = readFileSync(historyPath, "utf-8").trim().split("\n").filter(Boolean);
+
     return lines.slice(-limit).map((line) => JSON.parse(line) as ProjectHistoryEntry);
   } catch {
     return [];

@@ -29,15 +29,20 @@ function escapePowerShellSingle(s: string): string {
 
 export async function notify(title: string, body: string): Promise<void> {
   if (process.env.PAL_NOTIFICATIONS_DISABLED === "1") return;
+
   if (process.platform === "darwin") {
     const script = `display notification "${escapeAppleScript(body)}" with title "${escapeAppleScript(title)}"`;
     await spawnSilent("osascript", ["-e", script]);
+
     return;
   }
+
   if (process.platform === "linux") {
     await spawnSilent("notify-send", [title, body]);
+
     return;
   }
+
   if (process.platform === "win32") {
     const t = escapePowerShellSingle(title);
     const b = escapePowerShellSingle(body);
@@ -51,6 +56,7 @@ export async function notify(title: string, body: string): Promise<void> {
       "$n.Dispose()",
     ].join(" ");
     await spawnSilent("powershell.exe", ["-NoProfile", "-Command", ps]);
+
     return;
   }
 }

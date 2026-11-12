@@ -18,6 +18,7 @@ export function isSpawnTestFile(file: string): boolean {
 
 export function spawnRefusal(file: string, command: string): string {
   const name = basename(file).replace(/\.test\.(tsx?)$/, ".spawn.test.$1");
+
   return `${relative(process.cwd(), file)} started a subprocess (${command}), which only a *.spawn.test.ts file may: move this test into ${name}`;
 }
 
@@ -25,6 +26,7 @@ function commandName(args: unknown[]): string {
   const first = args[0] as unknown[] | { cmd?: unknown[] } | string;
   if (typeof first === "string") return first;
   const argv = Array.isArray(first) ? first : first?.cmd;
+
   return String(argv?.[0] ?? "unknown");
 }
 
@@ -46,6 +48,7 @@ function refuseOutsideSpawnFiles<T extends (...args: never[]) => unknown>(real: 
 
 function guardChildProcess() {
   const guarded: Record<string, unknown> = { ...childProcess };
+
   for (const name of SPAWNING_EXPORTS)
     guarded[name] = refuseOutsideSpawnFiles(childProcess[name]);
   guarded.default = guarded;
@@ -57,11 +60,13 @@ function withCurrentEnv(
   options: Record<string, unknown> | undefined
 ): Record<string, unknown> {
   const given = options ?? {};
+
   return given.env === undefined ? { ...given, env: process.env } : given;
 }
 
 function defaultToCurrentEnv<T extends (...args: never[]) => unknown>(real: T): T {
   const call = real as unknown as (...args: unknown[]) => unknown;
+
   return ((...args: unknown[]) => {
     if (Array.isArray(args[0])) {
       return call(
@@ -69,6 +74,7 @@ function defaultToCurrentEnv<T extends (...args: never[]) => unknown>(real: T): 
         withCurrentEnv(args[1] as Record<string, unknown> | undefined)
       );
     }
+
     return call(withCurrentEnv(args[0] as Record<string, unknown> | undefined));
   }) as unknown as T;
 }

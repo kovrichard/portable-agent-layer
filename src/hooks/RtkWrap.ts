@@ -42,6 +42,7 @@ async function run(): Promise<void> {
 
   const stdin = await Bun.stdin.text();
   noteHookPayloadText(stdin);
+
   if (isWorktreeAgentGitCall(stdin)) return;
   const proc = Bun.spawn([rtk, "hook", subcommand], {
     stdin: Buffer.from(stdin),
@@ -50,6 +51,7 @@ async function run(): Promise<void> {
   });
   const out = await new Response(proc.stdout).text();
   await proc.exited;
+
   if (proc.exitCode === 0 && out) {
     process.stdout.write(keepJqUnwrapped(out));
   }

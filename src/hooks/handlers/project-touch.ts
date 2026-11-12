@@ -18,6 +18,7 @@ export async function projectTouch(): Promise<void> {
 
     const resolved = resolveProjectFromCwd(process.cwd(), projects);
     if (!resolved) return;
+
     if (resolved.status !== "active") return;
 
     resolved.updated = new Date().toISOString();

@@ -58,9 +58,13 @@ export function renderNodeDetail(tree: ScopeTree, node: WorkNode): string {
     `Path: ${path}`,
     `Stopped at: ${node.stoppedAt ?? "(not recorded)"}`,
   ];
+
   if (node.waitingOn) lines.push(`Waiting on: ${node.waitingOn}`);
+
   if (node.summary) lines.push(`Summary: ${node.summary}`);
+
   if (node.links.isc !== undefined) lines.push(`ISC: ${node.links.isc}`);
+
   if (node.links.commitment) lines.push(`Commitment: ${node.links.commitment}`);
   const section = (title: string, rows: string[]) => {
     if (rows.length) lines.push(`${title}:`, ...rows.map((r) => `  - ${r}`));
@@ -79,6 +83,7 @@ export function renderNodeDetail(tree: ScopeTree, node: WorkNode): string {
     "Follow-ups",
     node.followUps.map((f) => `${f.text}${due(f)}`)
   );
+
   return lines.join("\n");
 }
 
@@ -118,6 +123,7 @@ export function renderTreeList(
   const merged = new Set(mergedButOpen(tree).map(({ node }) => node.id));
   const markOf = (node: WorkNode) => {
     if (merged.has(node.id)) return MERGED_MARK;
+
     return idle.has(node.id) ? MARK.parked : MARK[node.status];
   };
   const lines: string[] = [];
@@ -128,9 +134,12 @@ export function renderTreeList(
     lines.push(
       `${"  ".repeat(depth)}${markOf(node)} ${label(node)}${since ? idleClause(since) : ""}${stop}`
     );
+
     for (const child of childrenOf(tree, node.id)) walk(child, depth + 1);
   };
+
   for (const top of childrenOf(tree, tree.root.id)) walk(top, 1);
+
   return lines.length
     ? [`◆ ${tree.root.title}`, ...lines].join("\n")
     : `No work recorded for ${tree.scope} yet.`;
@@ -144,9 +153,12 @@ function activeSection(tree: ScopeTree): string[] {
       `Active: the project root (${tree.scope}) — this session's first stopped/decide/attach opens its node here; to continue earlier work, enter a node below.`,
     ];
   const lines = [`Active: ${label(active)}${stoppedClause(active)}`];
+
   if (path.length > 1) lines.push(`  Inside: ${path.map((n) => n.title).join(" › ")}`);
+
   for (const d of active.decisions.slice(-RECENT_DECISIONS))
     lines.push(`  Decided ${d.ts.slice(0, 10)}: ${d.text}`);
+
   return lines;
 }
 
@@ -156,6 +168,7 @@ function listSection(title: string, rows: string[]): string[] {
 
 function prNumber(ref: string): string {
   const digits = /(\d+)$/.exec(ref)?.[1];
+
   return digits ? `#${digits}` : ref;
 }
 
@@ -175,6 +188,7 @@ function parkedNodes(tree: ScopeTree, now: Date): WorkNode[] {
     (id) => tree.nodes.get(id) ?? []
   );
   const listedAsDone = new Set(mergedButOpen(tree).map(({ node }) => node.id));
+
   return [...nodesWithStatus(tree, "parked"), ...held].filter(
     (n) => !listedAsDone.has(n.id)
   );
@@ -182,11 +196,13 @@ function parkedNodes(tree: ScopeTree, now: Date): WorkNode[] {
 
 function parkedRows(tree: ScopeTree, now: Date): string[] {
   const idle = idleSinceById(tree, now);
+
   return parkedNodes(tree, now)
     .sort((a, b) => b.updated.localeCompare(a.updated))
     .slice(0, LISTED_PARKED)
     .map((n) => {
       const since = idle.get(n.id);
+
       return `${label(n)}${since ? idleClause(since) : touchedClause(n.updated)}${stoppedClause(n)}`;
     });
 }
@@ -222,6 +238,7 @@ export function renderSessionContext(tree: ScopeTree, now: Date = new Date()): s
     ),
     RECORD_HINT,
   ];
+
   return clip(lines.join("\n"), SESSION_BUDGET);
 }
 
@@ -243,5 +260,6 @@ export function renderPromptLine(
     : `Progress: ${tree.scope} root — this session has no node yet`;
   const tail = elsewhere ? ` · ${elsewhere} active in other sessions` : "";
   const line = clip(`${head} · ${parked} parked${tail}`, PROMPT_LINE_MAX);
+
   return newTopic ? `${line}\n${NEW_TOPIC_HINT}` : line;
 }

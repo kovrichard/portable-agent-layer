@@ -20,6 +20,7 @@ function shownNotes(): { notes: unknown[][]; restore: () => void } {
   const info = spyOn(clack.log, "info").mockImplementation((...args) => {
     notes.push(args);
   });
+
   return {
     notes,
     restore: () => {
@@ -41,6 +42,7 @@ describe("the telemetry notice at install", () => {
   test("is shown once in a terminal, with how to turn it off", async () => {
     setTTY(true);
     const { notes, restore } = shownNotes();
+
     try {
       expect(await noticeTelemetry()).toBe(true);
     } finally {
@@ -57,6 +59,7 @@ describe("the telemetry notice at install", () => {
     write({ telemetry: { enabled: false } });
     reload();
     const { restore } = shownNotes();
+
     try {
       await noticeTelemetry();
     } finally {
@@ -70,6 +73,7 @@ describe("the telemetry notice at install", () => {
     write({ telemetry: { noticeShown: true } });
     reload();
     const { notes, restore } = shownNotes();
+
     try {
       expect(await noticeTelemetry()).toBe(false);
     } finally {
@@ -81,6 +85,7 @@ describe("the telemetry notice at install", () => {
   test("without a terminal it counts as not shown", async () => {
     setTTY(undefined);
     const { notes, restore } = shownNotes();
+
     try {
       expect(await noticeTelemetry()).toBe(false);
     } finally {

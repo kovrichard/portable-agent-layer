@@ -22,7 +22,9 @@ const SNOOZE_DAYS = 7;
 
 function outcomeVariant(outcome: string) {
   if (outcome === "applied") return "neutral" as const;
+
   if (outcome === "failed") return "outline" as const;
+
   return "alarm" as const;
 }
 
@@ -37,11 +39,13 @@ function Criteria({
   onChanged: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
+
   if (iscs.length === 0) return <Empty>No criteria written yet.</Empty>;
 
   const toggle = (isc: SnoozableIsc) => {
     void setIsc(slug, isc.id, isc.status === "open" ? "done" : "open").then((failure) => {
       setError(failure);
+
       if (!failure) onChanged();
     });
   };
@@ -94,6 +98,7 @@ function Criteria({
                     void setSnooze(slug, isc.id, isc.snoozedUntil ? 0 : SNOOZE_DAYS).then(
                       (failure) => {
                         setError(failure);
+
                         if (!failure) onChanged();
                       }
                     );
@@ -112,6 +117,7 @@ function Criteria({
 
 function Decisions({ decisions }: { decisions: Decision[] }) {
   if (decisions.length === 0) return <Empty>Nothing recorded.</Empty>;
+
   return (
     <div className="flex flex-col gap-1.5 text-[12.5px]">
       {decisions.map((d) => (
@@ -131,6 +137,7 @@ function Runtimes({ runtimes }: { runtimes: Record<string, number> }) {
   const entries = Object.entries(runtimes);
   if (entries.length === 0) return <Empty>No recorded actions in the window.</Empty>;
   const max = Math.max(1, ...entries.map(([, n]) => n));
+
   return (
     <div className="flex flex-col gap-1.5">
       {entries.map(([runtime, n]) => (
@@ -154,6 +161,7 @@ function Runtimes({ runtimes }: { runtimes: Record<string, number> }) {
 
 function RecentActions({ rows }: { rows: LedgerViewRow[] }) {
   if (rows.length === 0) return <Empty>Nothing recorded yet.</Empty>;
+
   return (
     <div className="flex flex-col gap-1.5">
       {rows.map((r) => (
@@ -172,6 +180,7 @@ function RecentActions({ rows }: { rows: LedgerViewRow[] }) {
 
 function Head({ d }: { d: ProjectDetailView }) {
   const open = d.iscs.filter((i) => i.status === "open").length;
+
   return (
     <>
       <nav className="mb-1.5 text-[12px] text-neutral-600">

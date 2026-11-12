@@ -22,6 +22,7 @@ export function loadProgressTreeContext(
 ): string {
   attachFactoryPrs(scopeOf(cwd));
   settleAttachedPrs(scopeOf(cwd), cwd, { gh });
+
   return renderSessionContext(sessionTree(cwd, hookSession));
 }
 
@@ -32,5 +33,6 @@ export function progressTreePromptLine(
 ): string | null {
   const newTopic = userText !== "" && reactionTo(userText, undefined) === "new-topic";
   const line = renderPromptLine(sessionTree(cwd, hookSession), newTopic);
+
   return line ? `<system-reminder>${line}</system-reminder>` : null;
 }

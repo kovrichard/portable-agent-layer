@@ -22,6 +22,7 @@ const REACTIONS = ["approved", "follow-up", "new-topic", "corrected", "repeated"
 
 function proofLine(proof: TriggerProof | undefined): string {
   if (!proof) return "not proven";
+
   return `fired on ${proof.firedCorrections}/${proof.corrections} corrections, ${proof.firedOrdinary}/${proof.ordinary} ordinary turns`;
 }
 
@@ -42,6 +43,7 @@ function Facts({ rows }: { rows: [string, string | undefined][] }) {
 
 function triggerLine(rule: AdaptationRule): string {
   if (rule.delivery === "always") return "none, an opinion steers every session";
+
   return rule.trigger ? `${rule.trigger.side} · /${rule.trigger.pattern}/i` : "none";
 }
 
@@ -56,6 +58,7 @@ function ruleFacts(rule: AdaptationRule): [string, string | undefined][] {
 
 function Evidence({ items }: { items: string[] }) {
   if (items.length === 0) return null;
+
   return (
     <ul className="m-0 mt-2 list-disc pl-5 text-[12px] text-neutral-700">
       {items.map((item) => (
@@ -69,6 +72,7 @@ function replacedTrigger(rule: AdaptationRule, active: ActiveRule[]): string | u
   if (!rule.widens) return undefined;
   const target = active.find((r) => r.id === rule.widens);
   if (!target?.trigger) return `the trigger of rule ${rule.widens}`;
+
   return `/${target.trigger.pattern}/i`;
 }
 
@@ -80,14 +84,17 @@ function useDecision(id: string, onDecided: () => void) {
     void decideRule(id, decision).then((failure) => {
       setBusy(false);
       setError(failure);
+
       if (!failure) onDecided();
     });
   };
+
   return { error, busy, decide };
 }
 
 function Refusal({ error }: { error: string | null }) {
   if (!error) return null;
+
   return (
     <p className="border-l-2 border-alarm bg-alarm/10 px-3 py-2 text-[12px] text-alarm">
       {error}
@@ -99,13 +106,16 @@ function offeredDecisions(rule: AdaptationRule): [PageDecision, string][] {
   if (rule.widens) return [["approved", "Approve"]];
   const asOpinion: [PageDecision, string][] =
     rule.kind && !rule.opinionGate ? [["opinion", "Keep as opinion"]] : [];
+
   if (rule.offer === "opinion-only") return asOpinion;
+
   return [["approved", "Approve as rule"], ...asOpinion];
 }
 
 function offerLine(rule: AdaptationRule): string | undefined {
   if (rule.offer !== "opinion-only" || rule.opinionGate) return undefined;
   const why = rule.trigger ? "the trigger did not prove" : "no trigger";
+
   return `${why}; keep it as an opinion or deny it`;
 }
 
@@ -119,6 +129,7 @@ function Draft({
   onDecided: () => void;
 }) {
   const { error, busy, decide } = useDecision(rule.id, onDecided);
+
   return (
     <div className="flex flex-col gap-3 border-t border-divider py-3 first:border-t-0">
       <div className="font-heading text-[15px] font-semibold">{rule.when}</div>
@@ -156,6 +167,7 @@ function firingLine(rule: ActiveRule): string {
   const { fired, sentBack, judged, correctedAfter } = rule.effect;
   if (fired === 0) return "has not fired yet";
   const back = rule.trigger?.side === "reply" ? `, sent back ${sentBack}` : "";
+
   return `fired ${fired}${back} · corrected after ${correctedAfter} of ${judged} judged`;
 }
 
@@ -166,6 +178,7 @@ function windowsLine({ before, after }: Pick<OpinionEffect, "before" | "after">)
 function effectRows(rule: ActiveRule): [string, string | undefined][] {
   const opinion = rule.opinionEffect;
   if (!opinion) return [["effect", firingLine(rule)]];
+
   return [
     ["kind", opinion.kind],
     ["effect", `${windowsLine(opinion)} · ${opinion.verdict}`],
@@ -175,6 +188,7 @@ function effectRows(rule: ActiveRule): [string, string | undefined][] {
 
 function Active({ rule, onDecided }: { rule: ActiveRule; onDecided: () => void }) {
   const { error, busy, decide } = useDecision(rule.id, onDecided);
+
   return (
     <div className="flex flex-col gap-2 border-t border-divider py-3 first:border-t-0">
       <div className="font-heading text-[15px] font-semibold">{rule.when}</div>
@@ -196,6 +210,7 @@ function percent(part: number, whole: number): string {
 function LastDays({ view }: { view: RelationshipView }) {
   const { turns } = view;
   const corrected = turns.byReaction.corrected ?? 0;
+
   return (
     <Panel title={`Our last ${view.windowDays} days`}>
       <div className="flex flex-col gap-4">
@@ -237,6 +252,7 @@ function LastDays({ view }: { view: RelationshipView }) {
 function pipelineLine(candidate: PipelineCandidate): string {
   if (candidate.verdict === "waiting")
     return `needs ${candidate.ordinaryNeeded} more ordinary turns`;
+
   return `failed · ${proofLine(candidate.proof)}`;
 }
 
@@ -262,6 +278,7 @@ function Pipeline({ candidates }: { candidates: PipelineCandidate[] }) {
 
 function Denied({ rules }: { rules: AdaptationRule[] }) {
   if (rules.length === 0) return null;
+
   return (
     <Panel title="Denied">
       <details className="text-[12.5px]">
@@ -287,6 +304,7 @@ export function Relationship() {
   if (view.state !== "ready") return <Pending value={view} />;
   const { drafts, active, denied, pipeline } = view.data;
   const reload = () => setVersion(version + 1);
+
   return (
     <div className="grid items-start gap-6 md:grid-cols-2">
       <Panel title="Waiting on you">

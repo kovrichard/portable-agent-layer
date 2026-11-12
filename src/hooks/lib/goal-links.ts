@@ -38,8 +38,10 @@ function goalLinksPath(): string {
 export function readGoalLinks(): GoalLinks | null {
   const path = goalLinksPath();
   if (!existsSync(path)) return null;
+
   try {
     const parsed = JSON.parse(readFileSync(path, "utf-8")) as GoalLinks;
+
     return Array.isArray(parsed.links) && parsed.generatedAt ? parsed : null;
   } catch {
     return null;
@@ -74,10 +76,12 @@ export function progressFor(
   if (known.length === 0) return null;
   let closed = 0;
   let written = 0;
+
   for (const slug of known) {
     const counts = criteriaBySlug.get(slug) as { closed: number; written: number };
     closed += counts.closed;
     written += counts.written;
   }
+
   return { projects: known, closed, written };
 }

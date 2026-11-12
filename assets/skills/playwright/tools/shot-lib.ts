@@ -16,12 +16,14 @@ const USAGE =
 function parseViewport(raw: string | undefined): ShotOptions["viewport"] {
   const m = /^(\d+)[x,](\d+)$/.exec(raw ?? "");
   if (!m) throw new Error("--viewport expects WxH, e.g. 1440x900");
+
   return { width: Number(m[1]), height: Number(m[2]) };
 }
 
 function parseWait(raw: string | undefined): number {
   const n = Number(raw);
   if (!Number.isFinite(n)) throw new Error("--wait expects a number of milliseconds");
+
   return n;
 }
 
@@ -55,6 +57,7 @@ export function parseArgs(argv: string[]): ShotOptions {
   }
 
   if (!opts.url) throw new Error(`a URL is required\n${USAGE}`);
+
   return opts;
 }
 
@@ -72,6 +75,8 @@ export function chooseTier(opts: {
   fullPage?: boolean;
 }): Tier {
   if (!opts.cliAvailable) return "node";
+
   if (opts.viewport || opts.fullPage) return "node";
+
   return "cli";
 }

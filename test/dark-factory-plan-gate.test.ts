@@ -42,6 +42,7 @@ const handoverReasonsTo = (world: World, role: string) =>
 function seedStalePlan(world: World, sessionId?: string) {
   writeFileSync(join(taskDir(TASK, world.env), "plan.md"), "old plan");
   appendEvent({ event: "plan_written", task: TASK, specSha256: STALE_HASH }, world.env);
+
   if (sessionId)
     appendEvent(
       { event: "role_finished", task: TASK, role: "planner", sessionId },
@@ -170,6 +171,7 @@ describe("a re-plan and its plan gate", () => {
           const testWriterRan = current.roleCalls.some(
             (call) => call.role === "test-writer"
           );
+
           return {
             exitCode: 1,
             output: testWriterRan ? " 1 pass\n 3 fail" : " 1 pass\n 2 fail",
@@ -238,6 +240,7 @@ describe("an unsettled plan gate on the next build", () => {
       { event: "plan_gate", task: TASK, round: 2, findings: 1 },
       ...extra,
     ];
+
     for (const event of events) appendEvent(event, world.env);
   }
 
@@ -323,6 +326,7 @@ describe("planGateEndedWithFindings", () => {
       true,
     ],
   ];
+
   for (const [name, events, expected] of rows)
     test(name, () => {
       expect(build.planGateEndedWithFindings(events, "t1")).toBe(expected);
@@ -335,6 +339,7 @@ describe("the planner prompt", () => {
       join(import.meta.dir, "../assets/plugins/dark-factory/agents/planner.md"),
       "utf8"
     );
+
     for (const word of [
       "Criteria map",
       "pure",

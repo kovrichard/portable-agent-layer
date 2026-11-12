@@ -7,6 +7,7 @@ import { log } from "./log";
 export function scaffoldTelos(): void {
   const templatesDir = assets.telosTemplates();
   const telosDir = resolve(palHome(), "telos");
+
   if (!existsSync(templatesDir)) return;
   mkdirSync(telosDir, { recursive: true });
 

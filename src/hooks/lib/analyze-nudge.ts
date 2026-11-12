@@ -17,6 +17,7 @@ function markFile(): string {
 function readLastAnalyzeDate(): string | null {
   try {
     const parsed = JSON.parse(readFileSync(markFile(), "utf-8"));
+
     return typeof parsed.lastAnalyzedTs === "string" ? parsed.lastAnalyzedTs : null;
   } catch {
     return null;
@@ -40,6 +41,7 @@ export function loadAnalyzeNudge(now: Date = new Date()): string {
   if (daysSince < MAX_DAYS) return "";
 
   const since = new Date(last).toISOString().slice(0, 10);
+
   return [
     "## Learning Analysis Due",
     `📊 Learning analysis last run ${Math.floor(daysSince)}d ago (${since}) — offer to run \`/pal-analyze\` for a health check.`,

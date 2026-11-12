@@ -49,6 +49,7 @@ function run(...args: string[]): string {
     },
   });
   if (result.status !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr}`);
+
   return result.stdout.trim();
 }
 
@@ -57,12 +58,14 @@ function commitFiles(message: string, files: Record<string, string>): string {
     writeFileSync(resolve(repo, name), text);
   run("add", "-A");
   run("commit", "-q", "-m", message);
+
   return run("rev-parse", "HEAD");
 }
 
 function logLines(dir: string): Record<string, unknown>[] {
   const path = resolve(home, "pal", dir, "events");
   if (!existsSync(path)) return [];
+
   return readdirSync(path)
     .flatMap((f) => readFileSync(resolve(path, f), "utf-8").trim().split("\n"))
     .filter(Boolean)

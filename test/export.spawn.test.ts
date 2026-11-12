@@ -142,6 +142,7 @@ describe("exportZip", () => {
 
   async function writeZip() {
     const { exportZip } = await import("../src/hooks/lib/export");
+
     return exportZip(zipPath);
   }
 
@@ -174,6 +175,7 @@ describe("timestamp", () => {
 describe("cli export — folder arg", () => {
   test("auto-names zip inside given directory", () => {
     const outDir = freshTestDir(import.meta.file);
+
     try {
       const result = palCli(["export", outDir]);
       expect(result.status).toBe(0);
@@ -188,6 +190,7 @@ describe("cli export — folder arg", () => {
 
   test("dry-run with folder arg lists files without writing", () => {
     const outDir = freshTestDir(import.meta.file);
+
     try {
       const result = palCli(["export", outDir, "--dry-run"]);
       expect(result.status).toBe(0);
@@ -204,6 +207,7 @@ describe("cli export — folder arg", () => {
 describe("cli import — folder arg", () => {
   test("finds latest zip in given directory and dry-runs import", () => {
     const workDir = freshTestDir(import.meta.file);
+
     try {
       // Export to workDir first so there is a zip to find
       const exportResult = palCli(["export", workDir]);
@@ -228,6 +232,7 @@ describe("cli import — folder arg", () => {
 
   test("exits non-zero when folder has no zip files", () => {
     const emptyDir = freshTestDir(import.meta.file);
+
     try {
       const result = palCli(["import", emptyDir], { input: "y\n" });
       expect(result.status).not.toBe(0);
@@ -240,6 +245,7 @@ describe("cli import — folder arg", () => {
   test("round-trips a personal skill and subagent into a fresh home", () => {
     const workDir = freshTestDir(import.meta.file);
     const freshHome = freshTestDir(import.meta.file);
+
     try {
       // Export the seeded TEST_HOME (has skills/my-skill + agents/my-helper).
       const exportResult = palCli(["export", workDir]);
@@ -279,6 +285,7 @@ describe("a tilde in the path positional", () => {
     const marker = resolve(TEST_HOME, "memory", "state", "debug-enabled");
     const log = resolve(TEST_HOME, "debug", "debug.log");
     writeFileSync(marker, "");
+
     try {
       palCli(["import", "~/pal-import-nowhere.zip"], { input: "n\n" });
       const contents = readFileSync(log, "utf-8");

@@ -28,6 +28,7 @@ async function evalUserPrompt(messages: string): Promise<string> {
     prompts: { raw: string }[];
     defaultTest: { vars: { known: string } };
   };
+
   return config.prompts[0].raw
     .replace("{{known}}", config.defaultTest.vars.known)
     .replace("{{messages}}", messages)

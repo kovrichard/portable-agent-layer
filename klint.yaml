@@ -10,6 +10,7 @@ include:
   - "!**/vendor/**"
 plugins: [sonar]
 rules:
+  blank-line-before-control-flow: error
   no-unguarded-json-parse: error
   no-sync-in-async:
     severity: error

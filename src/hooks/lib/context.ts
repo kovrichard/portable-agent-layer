@@ -25,6 +25,7 @@ function loadStartupFiles(): string {
   for (const file of files) {
     const resolved = toPath(file);
     if (!existsSync(resolved)) continue;
+
     try {
       const content = readFileSync(resolved, "utf-8").trim();
       if (content) sections.push(content);
@@ -76,12 +77,18 @@ export function buildSystemReminder(
   const progressTree = loadProgressTreeContext(sessionDir(), opts.sessionId);
   const dueNudges = opts.agent === "cursor" ? dueNudgeSections() : [];
   const parts: string[] = [];
+
   if (startup) parts.push(startup);
+
   if (progressTree) parts.push(progressTree);
   parts.push(...dueNudges);
+
   if (opinions) parts.push(opinions);
+
   if (activeProjects) parts.push(activeProjects);
+
   if (steering) parts.push(steering);
+
   if (parts.length === 0) return "";
 
   const now = new Date();

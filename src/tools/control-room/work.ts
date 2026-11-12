@@ -44,9 +44,11 @@ export function openWork(
   events: WorkEvent[] = readEvents()
 ): WorkCard[] {
   const projects = new Set(readAllProjects().map((p) => p.name));
+
   return scopesIn(events)
     .flatMap((scope) => {
       const slug = projects.has(scope) ? scope : null;
+
       return [...buildTree(scope, events).nodes.values()]
         .filter((n) => OPEN_STATUSES.has(n.status))
         .map((n) => ({

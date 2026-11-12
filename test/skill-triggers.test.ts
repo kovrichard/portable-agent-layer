@@ -80,6 +80,7 @@ async function generateIndex() {
   const { generateSkillIndex } = await import(
     `../src/targets/skill-index.ts?t=${Date.now()}`
   );
+
   return generateSkillIndex();
 }
 
@@ -89,6 +90,7 @@ async function triggersFor(frontmatter: string): Promise<string[]> {
   const index = JSON.parse(
     readFileSync(resolve(HOME, "memory", "state", "skill-index.json"), "utf-8")
   );
+
   return index.skills.probe.triggers;
 }
 

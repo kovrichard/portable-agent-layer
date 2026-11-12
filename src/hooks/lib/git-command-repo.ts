@@ -39,6 +39,7 @@ function isLiteralPath(dir: string): boolean {
 function firstLiteralDir(command: string, pattern: RegExp): string | null {
   const match = pattern.exec(command);
   const dir = match ? (match[1] ?? match[2] ?? match[3]) : null;
+
   return dir && isLiteralPath(dir) ? dir : null;
 }
 
@@ -47,6 +48,7 @@ export function literalCommandDir(command: string, cwd: string): string | null {
   const dir =
     firstLiteralDir(command, GIT_DASH_C_DIR) ?? firstLiteralDir(command, CD_DIR);
   if (!dir) return null;
+
   try {
     return toPath(dir, cwd);
   } catch {
@@ -63,6 +65,7 @@ export function worktreePaths(porcelain: string): string[] {
 
 function headCommitMs(git: Git, path: string): number | null {
   const seconds = Number(git(path, "log", "-1", "--format=%ct", "HEAD"));
+
   return Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : null;
 }
 
@@ -77,6 +80,7 @@ function worktreeCommittedSince(
     .map((path) => ({ path, at: headCommitMs(git, path) }))
     .filter(({ at }) => at !== null && at >= startedAtMs - COMMIT_TIME_SLACK_MS)
     .sort((a, b) => (b.at ?? 0) - (a.at ?? 0));
+
   return fresh[0]?.path ?? null;
 }
 
@@ -106,5 +110,6 @@ export function chooseRepo(
     const toplevel = dir ? git(dir, "rev-parse", "--show-toplevel") : null;
     if (toplevel) return { toplevel, source };
   }
+
   return null;
 }

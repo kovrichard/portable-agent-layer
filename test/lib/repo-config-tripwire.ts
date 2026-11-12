@@ -7,8 +7,10 @@ function gitDirAbove(from: string): string | null {
     if (existsSync(dotGit)) {
       if (statSync(dotGit).isDirectory()) return dotGit;
       const pointer = /^gitdir:\s*(.+)$/m.exec(readFileSync(dotGit, "utf-8"))?.[1];
+
       return pointer ? resolve(dir, pointer.trim()) : null;
     }
+
     if (dirname(dir) === dir) return null;
   }
 }
@@ -16,6 +18,7 @@ function gitDirAbove(from: string): string | null {
 function commonDirOf(gitDir: string): string {
   const commondir = resolve(gitDir, "commondir");
   if (!existsSync(commondir)) return gitDir;
+
   return resolve(gitDir, readFileSync(commondir, "utf-8").trim());
 }
 
@@ -28,16 +31,19 @@ export function sharedRepoConfig(from: string): string | null {
   const gitDir = gitDirAbove(from);
   if (!gitDir) return null;
   const config = resolve(commonDirOf(gitDir), "config");
+
   return existsSync(config) ? config : null;
 }
 
 /** Returns a check that restores the file and names the change when anything rewrote it. */
 export function guardFile(path: string): () => string | null {
   const original = readFileSync(path, "utf-8");
+
   return () => {
     const now = readFileSync(path, "utf-8");
     if (now === original) return null;
     writeFileSync(path, original);
+
     return `The test that ran before this point changed the real repository's ${path}; it was restored. Run git inside a fixture repo under .test/.`;
   };
 }

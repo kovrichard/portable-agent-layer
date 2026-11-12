@@ -14,6 +14,7 @@ const MINUTE = 60_000;
 beforeEach(() => {
   home = freshTestDir(import.meta.file);
   process.env.PAL_HOME = home;
+
   for (const { env } of agentDirOverrides()) process.env[env] = resolve(home, env);
   process.env.XDG_DATA_HOME = resolve(home, "data");
   mkdirSync(resolve(home, "memory", "state"), { recursive: true });

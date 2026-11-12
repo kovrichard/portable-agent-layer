@@ -38,6 +38,7 @@ beforeEach(() => {
 function fixtureRepo(slug: string): string {
   const dir = resolve(TEST_HOME, "fixtures", slug);
   mkdirSync(dir, { recursive: true });
+
   return dir;
 }
 
@@ -48,6 +49,7 @@ function nowIso(offsetMs = 0): string {
 async function freshHandler() {
   const t = Date.now();
   const mod = await import(`../src/hooks/handlers/project-touch.ts?t=${t}`);
+
   return mod.projectTouch as (lastAssistantMessage?: string) => Promise<void>;
 }
 
@@ -191,6 +193,7 @@ describe("projectTouch — auto-write contract", () => {
     process.chdir(repo);
 
     const projectTouch = await freshHandler();
+
     for (let i = 0; i < 50; i++) {
       await projectTouch();
     }

@@ -27,12 +27,14 @@ function instructionFilesUnder(dir: string): string[] {
         ? instructionFilesUnder(path)
         : [];
     }
+
     return /\.(md|ts|json|rules|template)$/.test(entry) ? [path] : [];
   });
 }
 
 function toolIsShipped(skill: string, tool: string): boolean {
   const tools = resolve(ROOT, "assets/skills", skill, "tools");
+
   return existsSync(resolve(tools, tool)) || existsSync(resolve(tools, `${tool}.ts`));
 }
 
@@ -48,6 +50,7 @@ function commandWords(text: string): string[] {
 function resolveCommand(words: string[]): { node: Command; rest: string[] } | string {
   let node: Command = TREE;
   let depth = 0;
+
   for (const word of words) {
     if (node.kind !== "group" || !/^[a-z][a-z-]*$/.test(word)) break;
     const next: Command | undefined = node.commands[node.aliases?.[word] ?? word];
@@ -55,6 +58,7 @@ function resolveCommand(words: string[]): { node: Command; rest: string[] } | st
     node = next;
     depth += 1;
   }
+
   return { node, rest: words.slice(depth) };
 }
 
@@ -62,12 +66,14 @@ function undeclaredFlag(command: Leaf, words: string[]): string | null {
   const options = Object.entries(command.options ?? {});
   const longs = new Set(["help", ...options.map(([name]) => name)]);
   const shorts = new Set(["h", ...options.map(([, spec]) => spec.short)]);
+
   for (const word of words) {
     const long = /^--([a-z][a-z0-9-]*)/.exec(word)?.[1];
     if (long && !longs.has(long)) return `--${long} is not declared`;
     const short = /^-([a-zA-Z])$/.exec(word)?.[1];
     if (short && !shorts.has(short)) return `-${short} is not declared`;
   }
+
   return null;
 }
 
@@ -80,6 +86,7 @@ function invocationProblem(text: string): string | null {
   if (typeof resolved === "string") return resolved;
   const { node, rest } = resolved;
   if (node.kind !== "leaf" || node.passThrough) return null;
+
   return undeclaredFlag(node, rest);
 }
 
@@ -127,6 +134,7 @@ describe("the `pal cli` commands PAL ships in its own instruction text", () => {
 
     const missing = uses.filter(({ command }) => {
       const [skill, tool] = command.split(" ").slice(4);
+
       return !skill || !tool || !toolIsShipped(skill, tool);
     });
     expect(missing).toEqual([]);

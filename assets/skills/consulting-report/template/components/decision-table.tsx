@@ -13,6 +13,7 @@ function StatusBadge({ status }: { status: Decision["status"] }) {
       </span>
     );
   }
+
   return (
     <span className="inline-block px-2 py-0.5 rounded font-sans text-[0.65rem] font-bold uppercase tracking-widest bg-warning/10 text-warning border border-warning/30">
       Confirm at sync

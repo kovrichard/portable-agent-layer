@@ -35,6 +35,7 @@ function readsRealAgentDirs(): boolean {
 
 export function spawnCollectIfDue(): void {
   if (!eventLogEnabled() || !readsRealAgentDirs() || !collectDue()) return;
+
   try {
     markCollected();
     const cli = resolve(palPkg(), "src", "cli", "index.ts");

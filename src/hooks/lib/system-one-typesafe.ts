@@ -22,6 +22,7 @@ function retryDelayMs(attempt: number): number {
 function inputTokensOf(body: unknown): number {
   const tokens = (body as { usage?: { input_tokens?: unknown } } | null)?.usage
     ?.input_tokens;
+
   return typeof tokens === "number" && Number.isFinite(tokens) ? tokens : 0;
 }
 
@@ -46,16 +47,19 @@ async function readReply(
   response: Response
 ): Promise<{ answers: JudgeAnswers; inputTokens: number }> {
   const text = await response.text();
+
   if (!response.ok) {
     logError("judge:typesafe", `HTTP ${response.status}: ${text.slice(0, 200)}`);
     throw new SystemOneError("http");
   }
   let parsed: unknown;
+
   try {
     parsed = JSON.parse(text);
   } catch {
     throw new SystemOneError("http", "reply is not JSON");
   }
+
   return {
     answers: (parsed as { answers: JudgeAnswers }).answers,
     inputTokens: inputTokensOf(parsed),
@@ -70,11 +74,14 @@ async function askTypesafe(
     state: input.state,
     questions: input.questions,
   });
+
   for (let attempt = 0; ; attempt++) {
     const response = await postOnce(input, body);
     if (!RETRYABLE.has(response.status)) return await readReply(response);
+
     if (attempt === RETRY_LIMIT) throw new SystemOneError("rate-limited");
     await input.sleep(retryDelayMs(attempt));
+
     if (input.signal.aborted) throw new SystemOneError("timeout");
   }
 }

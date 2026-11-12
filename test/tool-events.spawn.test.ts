@@ -19,6 +19,7 @@ function month(): string {
 function lines(dir: string[]): Record<string, unknown>[] {
   const file = resolve(home, "memory", ...dir, `${month()}.jsonl`);
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .trim()
     .split("\n")

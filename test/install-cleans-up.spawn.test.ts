@@ -38,11 +38,13 @@ function fakeClaudeOnPath(): string {
   mkdirSync(bin, { recursive: true });
   writeFileSync(resolve(bin, "claude"), "#!/bin/sh\necho 1.0.0\n");
   chmodSync(resolve(bin, "claude"), 0o755);
+
   return [bin, dirname(process.execPath), "/usr/bin", "/bin"].join(delimiter);
 }
 
 function pal(...args: string[]) {
   const { PAL_SKIP_DOCTOR: _skip, ...env } = process.env;
+
   return spawnSync("bun", ["run", CLI, "cli", ...args], {
     env: {
       ...env,

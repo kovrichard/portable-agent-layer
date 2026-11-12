@@ -25,6 +25,7 @@ async function setSettings(data: Record<string, unknown>) {
 
 async function repoStateReminder(cwd: string) {
   const { getRepoStateReminder } = await import("../src/hooks/lib/repo-state");
+
   return getRepoStateReminder(cwd);
 }
 
@@ -63,6 +64,7 @@ function released(name = "app"): string {
   git(dir, "tag", "v1.0.0");
   git(dir, "remote", "add", "origin", remote);
   git(dir, "push", "-q", "-u", "origin", "main", "--tags");
+
   return dir;
 }
 

@@ -54,6 +54,7 @@ function startNight(): Promise<number> {
 function estimateRecords(): RunEstimateRecord[] {
   const file = runEstimatesFile();
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .trim()
     .split("\n")
@@ -180,6 +181,7 @@ describe("pal cli unattended", () => {
     expect(printed).toEqual(["Logged (1 entries).", "Logged (2 entries)."]);
     const log = stored()?.log ?? [];
     expect(log.map((l) => l.entry)).toEqual(["parser fixed", "tests added"]);
+
     for (const { at } of log) {
       expect(Date.parse(at)).toBeGreaterThanOrEqual(before);
       expect(Date.parse(at)).toBeLessThanOrEqual(after);

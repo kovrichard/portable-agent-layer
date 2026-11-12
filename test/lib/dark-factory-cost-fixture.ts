@@ -7,9 +7,11 @@ export function message(
   options: { ts?: string; tools?: number } = {}
 ) {
   const content: Record<string, unknown>[] = [{ type: "text", text: "ok" }];
+
   for (let i = 0; i < (options.tools ?? 0); i++) {
     content.push({ type: "tool_use", id: `${id}-t${i}`, name: "Bash", input: {} });
   }
+
   return {
     type: "assistant",
     timestamp: options.ts ?? "2026-11-08T08:00:01.000Z",

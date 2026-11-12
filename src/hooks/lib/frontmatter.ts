@@ -25,6 +25,7 @@ interface FrontmatterSplit {
 export function splitFrontmatter(content: string): FrontmatterSplit | null {
   const parts = content.split(DELIMITER);
   if (parts.length < 3) return null;
+
   return { leading: parts[0], frontmatter: parts[1], body: parts.slice(2).join("---") };
 }
 
@@ -42,6 +43,7 @@ export function parse<T = Record<string, string>>(content: string): Parsed<T> {
   const body = split.body.trim();
 
   const meta: Record<string, unknown> = {};
+
   for (const line of rawMeta.split("\n")) {
     const match = new RegExp(/^(\w[\w-]*)\s*:\s*(.*)$/).exec(line);
     if (!match) continue;
@@ -56,6 +58,7 @@ const NOT_JSON = Symbol("not-json");
 
 function parseInlineArray(value: string): unknown {
   if (!(value.startsWith("[") && value.endsWith("]"))) return NOT_JSON;
+
   try {
     return JSON.parse(value);
   } catch {
@@ -72,16 +75,22 @@ function isQuoted(value: string): boolean {
 
 function coerceScalar(value: string): unknown {
   if (value === "true") return true;
+
   if (value === "false") return false;
+
   if (/^\d+$/.test(value)) return Number.parseInt(value, 10);
+
   if (/^\d+\.\d+$/.test(value)) return Number.parseFloat(value);
+
   return value;
 }
 
 function parseValue(value: string): unknown {
   const array = parseInlineArray(value);
   if (array !== NOT_JSON) return array;
+
   if (isQuoted(value)) return value.slice(1, -1).replaceAll('\\"', '"');
+
   return coerceScalar(value);
 }
 
@@ -94,6 +103,7 @@ export function stringify(meta: Record<string, unknown>, body: string): string {
 
   for (const [key, value] of Object.entries(meta)) {
     if (value === undefined || value === null) continue;
+
     if (Array.isArray(value)) {
       lines.push(`${key}: ${JSON.stringify(value)}`);
     } else if (typeof value === "string") {
@@ -104,6 +114,7 @@ export function stringify(meta: Record<string, unknown>, body: string): string {
   }
 
   lines.push("---");
+
   return `${lines.join("\n")}\n\n${body.trim()}\n`;
 }
 

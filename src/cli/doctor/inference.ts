@@ -51,7 +51,9 @@ export function leakedEnvFindings(env: Env, os: NodeJS.Platform): Finding[] {
 function shellKeyConsequence(shellValue: string, fileValue: string | undefined): string {
   if (fileValue === undefined)
     return "so agents launched outside a terminal never see it";
+
   if (fileValue === shellValue) return `and duplicated in ${palEnvPath()}`;
+
   return `and overrides the different value in ${palEnvPath()}`;
 }
 
@@ -76,7 +78,9 @@ function keyFinding(
 ): Finding | null {
   const shellValue = shell[name];
   if (shellValue) return shellKeyFinding(name, shellValue, file[name]);
+
   if (file[name]) return passed(`key.${name}`, `${name} set`);
+
   return ifUnset();
 }
 
@@ -92,6 +96,7 @@ export function apiKeyFindings(
     )
   );
   const skills = SKILL_KEYS.map((name) => keyFinding(name, shell, file, () => null));
+
   return [...inference, ...skills].filter((f): f is Finding => f !== null);
 }
 
@@ -110,12 +115,14 @@ export function oauthTokenFindings(
   const fileToken = file[OAUTH_TOKEN];
   if (shellToken === undefined && fileToken === undefined) return [];
   const findings: Finding[] = [];
+
   if ([shellToken, fileToken].some((t) => t !== undefined && isMalformedToken(t)))
     findings.push(
       warning("oauth.malformed", `${OAUTH_TOKEN} is empty or contains spaces or quotes`, {
         say: `Paste the token from 'claude setup-token' as a bare value in ${palEnvPath()}`,
       })
     );
+
   if (shellToken && fileToken && shellToken !== fileToken)
     findings.push(
       warning(
@@ -126,6 +133,7 @@ export function oauthTokenFindings(
         }
       )
     );
+
   return findings.length > 0 ? findings : [passed("oauth", `${OAUTH_TOKEN} set`)];
 }
 
@@ -137,18 +145,21 @@ function modelSuffix(preview: Preview): string {
 
 export function routeFinding(preview: Preview = previewInferenceRoute()): Finding | null {
   if (preview.route === "disabled") return null;
+
   if (preview.route === "none")
     return failing(
       "inference.none",
       `Background inference has no route for ${preview.agent} — ${preview.reason}`,
       { say: "Install the agent's CLI, or set an API key PAL can fall back to" }
     );
+
   if (preview.route.endsWith("-api"))
     return warning(
       "inference.api",
       `Background inference goes through ${preview.route}${modelSuffix(preview)} (${preview.reason}) — it bills the API key`,
       { say: "Put the agent's CLI on PATH to use your subscription instead" }
     );
+
   return passed(
     "inference",
     `Inference: ${preview.route}${modelSuffix(preview)} (${preview.reason})`
@@ -169,6 +180,7 @@ function opencodeModelFinding(): Finding {
 
 function aboutField(about: string, field: string): string | null {
   const line = about.split("\n").find((l) => l.startsWith(`${field} `));
+
   return line ? line.slice(field.length).trim() || null : null;
 }
 
@@ -177,12 +189,14 @@ export function cursorPlanFinding(about: string): Finding | null {
   const model = aboutField(about, "Model");
   const tier = aboutField(about, "Subscription Tier");
   if (!model || !tier) return null;
+
   if (tier === "Free" && model !== "Auto")
     return warning(
       "cursor.model",
       `Cursor is set to ${model}, but its free plan only runs Auto — background inference fails`,
       { say: "Switch Cursor's model to Auto, or upgrade the plan" }
     );
+
   return passed(
     "cursor.model",
     `Cursor model ${model} runs on the ${tier} plan`,
@@ -196,16 +210,19 @@ function cursorAbout(): string {
     shell: true,
     timeout: 15_000,
   });
+
   return result.status === 0 ? result.stdout : "";
 }
 
 function cursorFindings(): Finding[] {
   const finding = cursorPlanFinding(cursorAbout());
+
   return finding ? [finding] : [];
 }
 
 export function inferenceFindings(agents: AgentName[]): Finding[] {
   const route = routeFinding();
+
   return [
     ...(route ? [route] : []),
     ...(agents.includes("opencode") ? [opencodeModelFinding()] : []),

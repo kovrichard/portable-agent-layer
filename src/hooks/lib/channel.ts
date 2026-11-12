@@ -9,6 +9,7 @@ interface ChannelLine {
 function parseLine(line: string): ChannelLine | null {
   try {
     const parsed = JSON.parse(line) as Partial<ChannelLine>;
+
     return typeof parsed.channel === "string" && parsed.channel
       ? (parsed as ChannelLine)
       : null;
@@ -19,6 +20,7 @@ function parseLine(line: string): ChannelLine | null {
 
 function channelLines(path: string | undefined): ChannelLine[] {
   if (!path) return [];
+
   try {
     return readFileSync(path, "utf-8")
       .split("\n")
@@ -40,6 +42,7 @@ function ownChannel(
 ): string | undefined {
   if (prompt === undefined) return undefined;
   const sha = hashOf(prompt);
+
   return lines.findLast((line) => line.sha256 === sha)?.channel;
 }
 
@@ -48,5 +51,6 @@ export function currentChannel(
   env: NodeJS.ProcessEnv = process.env
 ): string | null {
   const lines = channelLines(env.PAL_CHANNEL_FILE);
+
   return ownChannel(lines, prompt) ?? lines.at(-1)?.channel ?? (env.PAL_CHANNEL || null);
 }

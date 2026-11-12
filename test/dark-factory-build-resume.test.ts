@@ -17,7 +17,9 @@ function withGit(world: World, git: GitState) {
   const base = world.effects.spawnTool as () => object;
   world.effects.spawnTool = (_command: string, args: string[]) => {
     if (args[0] === "rev-parse") return { status: 0, stdout: `${git.head}\n` };
+
     if (args[0] === "status") return { status: 0, stdout: git.dirty ? " M a.ts\n" : "" };
+
     return base();
   };
 }
@@ -25,6 +27,7 @@ function withGit(world: World, git: GitState) {
 function worldAt(git: GitState, options: Parameters<typeof buildWorld>[1] = {}) {
   const world = buildWorld(import.meta.file, { category: "feature", ...options });
   withGit(world, git);
+
   return world;
 }
 
@@ -46,6 +49,7 @@ describe("step_done events", () => {
     expect(runBuild(world).status).toBe("ready");
     const done = eventsNamed(world, "step_done");
     expect(done.map((event) => event.step)).toEqual(STEP_NAMES);
+
     for (const event of done) expect(event).toMatchObject({ task: TASK, head: HEAD });
   });
 
@@ -102,6 +106,7 @@ describe("resuming at the last finished step", () => {
     runBuild(world);
     const skipped = eventsNamed(world, "step_skipped");
     expect(skipped.map((event) => event.step)).toEqual(["code", "review"]);
+
     for (const event of skipped) expect(event).toMatchObject({ task: TASK, head: HEAD });
   });
 });

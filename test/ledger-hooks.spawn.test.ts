@@ -48,6 +48,7 @@ function hashOf(content: string): string {
 function entries(): Record<string, unknown>[] {
   const file = resolve(HOME, "memory", "ledger", "actions.jsonl");
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .trim()
     .split("\n")

@@ -34,6 +34,7 @@ export function ghPrView(
       encoding: "utf-8",
       timeout: timeoutMs,
     });
+
     return result.status === 0 ? result.stdout : null;
   } catch {
     return null;
@@ -74,6 +75,7 @@ interface Candidate {
 function parsePrView(stdout: string): PrView | null {
   try {
     const view = JSON.parse(stdout) as PrView;
+
     return typeof view.state === "string" ? view : null;
   } catch {
     return null;
@@ -83,19 +85,23 @@ function parsePrView(stdout: string): PrView | null {
 function unsettledPrRefs(node: WorkNode): string[] {
   const settled = new Set(node.settledPrs.map((pr) => pr.ref));
   const refs = node.artifacts.filter((a) => a.kind === "pr").map((a) => a.ref);
+
   return [...new Set(refs)].filter((ref) => !settled.has(ref));
 }
 
 function settledOutcome(view: PrView): Outcome | null {
   if (view.state === "MERGED" && view.mergedAt)
     return { state: "merged", at: view.mergedAt };
+
   if (view.state === "CLOSED" && view.closedAt)
     return { state: "closed", at: view.closedAt };
+
   return null;
 }
 
 function refNumber(ref: string): number | null {
   const digits = /(\d+)$/.exec(ref)?.[1];
+
   return digits ? Number(digits) : null;
 }
 
@@ -104,6 +110,7 @@ function settledOf(ref: string, stdout: string | null): Settled | null {
   const outcome = view ? settledOutcome(view) : null;
   const number = refNumber(ref);
   if (!outcome || number === null) return null;
+
   return view?.headRefName
     ? { number, outcome, branch: view.headRefName }
     : { number, outcome };
@@ -111,6 +118,7 @@ function settledOf(ref: string, stdout: string | null): Settled | null {
 
 function settledLine({ number, outcome }: Settled): string {
   const day = outcome.at.slice(0, 10);
+
   return outcome.state === "merged"
     ? `PR #${number} merged ${day}`
     : `PR #${number} closed without merging ${day}`;
@@ -118,6 +126,7 @@ function settledLine({ number, outcome }: Settled): string {
 
 function setsStoppedAt(event: WorkEvent): boolean {
   if (event.type === "stopped") return true;
+
   return (
     (event.type === "park" || event.type === "pr-settled") &&
     event.stoppedAt !== undefined
@@ -128,6 +137,7 @@ function lastLineTs(events: WorkEvent[], scope: string, node: string): string | 
   const lines = events.filter(
     (event) => event.scope === scope && event.node === node && setsStoppedAt(event)
   );
+
   return lines.at(-1)?.ts ?? null;
 }
 
@@ -155,17 +165,20 @@ function settledWithinBudget(
   const clock = options.clock ?? Date.now;
   const deadline = clock() + (options.budgetMs ?? PR_CHECK_BUDGET_MS);
   const results: Result[] = [];
+
   for (const candidate of unsettledCandidates(tree)) {
     const remaining = deadline - clock();
     if (remaining <= 0) break;
     const settled = settledOf(candidate.ref, gh(candidate.ref, cwd, remaining));
     if (settled) results.push({ candidate, settled });
   }
+
   return results;
 }
 
 function newestPerNode(results: Result[]): Set<Result> {
   const newest = new Map<string, Result>();
+
   for (const result of results) {
     const held = newest.get(result.candidate.node.id);
     const later =
@@ -173,6 +186,7 @@ function newestPerNode(results: Result[]): Set<Result> {
       Date.parse(result.settled.outcome.at) > Date.parse(held.settled.outcome.at);
     if (later) newest.set(result.candidate.node.id, result);
   }
+
   return new Set(newest.values());
 }
 
@@ -199,6 +213,7 @@ function checkCandidates(scope: string, cwd: string, options: SettleOptions): vo
   const results = settledWithinBudget(buildTree(scope, events), cwd, options);
   const newest = newestPerNode(results);
   const now = options.now ?? new Date();
+
   for (const result of results) {
     const lineTs = lastLineTs(events, scope, result.candidate.node.id);
     const writesLine =

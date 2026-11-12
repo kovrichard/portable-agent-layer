@@ -46,6 +46,7 @@ export function encodeAnchor(
   if (rel.startsWith("..")) return absPath;
 
   const relPosix = rel.split(sep).join("/");
+
   return relPosix ? `{proj:${proj.name}}/${relPosix}` : `{proj:${proj.name}}`;
 }
 
@@ -75,6 +76,7 @@ export function resolveAnchor(
   const root = projectPathOnThisMachine(proj);
   if (!root) return { state: "unresolvable", slug };
   const path = rel ? resolve(root, `.${rel}`) : root;
+
   return { state: "anchored", path };
 }
 
@@ -86,5 +88,6 @@ export function anchorMatchesCwd(
 ): boolean {
   const resolved = resolveAnchor(value, projects);
   if (resolved.state === "unresolvable") return false;
+
   return resolve(resolved.path) === resolve(cwd);
 }

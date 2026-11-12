@@ -75,6 +75,7 @@ function classifyDomain(text: string): string {
   for (const [pattern, domain] of DOMAIN_MAP) {
     if (pattern.test(text)) return domain;
   }
+
   return "general";
 }
 
@@ -100,7 +101,9 @@ function toAnalysisEntries(failures: FailureEntry[]): AnalysisEntry[] {
 function isActionable(text: string): boolean {
   const trimmed = text.trim();
   if (/\?\s*$/.test(trimmed)) return false;
+
   if (extractKeywords(trimmed).size < 4) return false;
+
   return true;
 }
 
@@ -145,6 +148,7 @@ function loadRatings(): RatingLine[] {
   try {
     const file = resolve(paths.signals(), "ratings.jsonl");
     if (!existsSync(file)) return [];
+
     return readFileSync(file, "utf-8")
       .trim()
       .split("\n")
@@ -188,6 +192,7 @@ async function generateRecommendations(
   ratings: RatingsSummary | null
 ): Promise<string[]> {
   if (candidates.length === 0 && !ratings) return [];
+
   if (!canInfer()) {
     return candidates
       .slice(0, 3)
@@ -257,6 +262,7 @@ function stateFilePath(): string {
 function readState(): GraduationState {
   const fp = stateFilePath();
   if (!existsSync(fp)) return { lastRun: "", graduated: [] };
+
   try {
     return JSON.parse(readFileSync(fp, "utf-8"));
   } catch {
@@ -275,7 +281,9 @@ function synthesizePrinciple(group: PatternGroup): string {
   let principle = sorted[0].text;
   const firstSentence = new RegExp(/^[^.!?]+[.!?]?/).exec(principle);
   if (firstSentence) principle = firstSentence[0];
+
   if (principle.length > 120) principle = `${principle.slice(0, 117)}...`;
+
   return principle.trim();
 }
 
@@ -303,6 +311,7 @@ export async function analyze(opts: AnalyzeOptions = {}): Promise<AnalysisResult
     : [];
 
   const graduated: GraduatedEntry[] = [];
+
   for (const group of candidates) {
     graduated.push({
       pattern: synthesizePrinciple(group),

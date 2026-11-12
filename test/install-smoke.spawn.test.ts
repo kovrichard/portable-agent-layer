@@ -63,8 +63,10 @@ describe("pal cli install (smoke)", () => {
         .flatMap((block) => (block as { hooks: Record<string, unknown>[] }).hooks)
         .filter((hook) => String(hook.command).includes(`--only=${only}`));
     expect(postToolHooks("events")).toHaveLength(3);
+
     for (const hook of postToolHooks("events")) expect(hook.async).toBe(true);
     expect(postToolHooks("ledger")).toHaveLength(3);
+
     for (const hook of postToolHooks("ledger")) expect(hook.async).toBeUndefined();
   }, 90000);
 
@@ -210,6 +212,7 @@ describe("pal cli install (smoke)", () => {
     const hooks = readFileSync(resolve(plugin, "hooks.json"), "utf-8");
     const commands = Array.from(hooks.matchAll(/"command": "([^"]+)"/g), (m) => m[1]);
     expect(commands.length).toBe(5);
+
     for (const command of commands) {
       expect(command).not.toContain("{{PKG_ROOT}}");
       expect(command).toEndWith(" --agent=antigravity");
@@ -252,6 +255,7 @@ describe("pal cli install (smoke)", () => {
     { flag: "--codex", dir: resolve(CODEX_DIR, "rules") },
     { flag: "--antigravity", dir: resolve(GEMINI_DIR, "antigravity-cli") },
   ];
+
   for (const { flag, dir } of reinstalls) {
     const where = relative(TEST_HOME, dir);
     test(`reinstalling ${flag} over unchanged configs leaves no new backup in ${where}`, () => {

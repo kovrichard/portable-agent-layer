@@ -74,6 +74,7 @@ describe("tools", () => {
   test("an installed command with a missing working folder names the folder, not the tool", () => {
     const gone = join(home, "deleted-repo");
     let message = "";
+
     try {
       spawnTool("git", ["--version"], { env, cwd: gone });
     } catch (error) {
@@ -120,6 +121,7 @@ describe("tools", () => {
     const bin = join(home, "bin");
     const ran = join(bin, "ran.log");
     mkdirSync(bin, { recursive: true });
+
     for (const tool of ["git", "gh", "bash"])
       writeFakeBin(
         bin,
@@ -153,6 +155,7 @@ function git(cwd: string, ...args: string[]): string {
     env: { ...process.env, ...GIT_ENV },
   });
   if (result.status !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr}`);
+
   return result.stdout.trim();
 }
 
@@ -175,6 +178,7 @@ function remoteWithClone(): { remote: string; clone: string } {
   git(seed, "push", "-q", "origin", "canary");
   git(home, "clone", "-q", remote, clone);
   git(clone, "checkout", "-q", "-b", "factory/t1");
+
   return { remote, clone };
 }
 
@@ -210,6 +214,7 @@ function runScript(script: string, args: string[], scriptEnv: object, input = ""
       input,
     }
   );
+
   return { status: run.status, stdout: run.stdout, stderr: run.stderr };
 }
 
@@ -358,6 +363,7 @@ function fakeGh(bin: string, prList: string) {
       "",
     ].join("\n")
   );
+
   return log;
 }
 

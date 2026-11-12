@@ -36,6 +36,7 @@ let current: AgySandbox = { sandbox: "", workspace: "", transcript: "" };
 /** A fresh sandbox, PAL home and agent dirs, with the runtime env and cwd put back. */
 export function freshAgySandbox(testFile: string): AgySandbox {
   process.chdir(ORIGINAL_CWD);
+
   for (const key of RUNTIME_ENV) {
     if (savedRuntimeEnv[key] === undefined) delete process.env[key];
     else process.env[key] = savedRuntimeEnv[key];
@@ -45,8 +46,10 @@ export function freshAgySandbox(testFile: string): AgySandbox {
   mkdirSync(workspace, { recursive: true });
   current = { sandbox, workspace, transcript: resolve(sandbox, "transcript_full.jsonl") };
   process.env.PAL_HOME = resolve(sandbox, "home");
+
   for (const { env } of agentDirOverrides()) process.env[env] = resolve(sandbox, env);
   delete process.env.PAL_AGENT;
+
   return current;
 }
 

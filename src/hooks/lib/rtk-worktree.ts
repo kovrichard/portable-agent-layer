@@ -11,6 +11,7 @@ export function isWorktreeAgentGitCall(hookInput: string): boolean {
       cwd?: string;
       tool_input?: { command?: string };
     };
+
     return AGENT_WORKTREE.test(cwd ?? "") && GIT_WORD.test(tool_input?.command ?? "");
   } catch {
     return false;

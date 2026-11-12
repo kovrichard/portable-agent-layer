@@ -31,6 +31,7 @@ function captureOutput(): {
   const errSpy = spyOn(console, "error").mockImplementation((...a: unknown[]) => {
     lines.push(a.join(" "));
   });
+
   return {
     flush: () => lines.join("\n"),
     logSpy,

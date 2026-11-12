@@ -31,10 +31,12 @@ const BUDGET_MS = 250;
  *  @lintignore exported for test/inject-retrieval.test.ts */
 export function withinBudget<T>(work: () => T, ms: number): T | null {
   const started = performance.now();
+
   try {
     return work();
   } catch (err) {
     logError("inject-retrieval", err);
+
     return null;
   } finally {
     const elapsed = performance.now() - started;
@@ -93,5 +95,6 @@ export async function injectPromptContext(
 ): Promise<string | null> {
   const combined = await getPromptContext(prompt, sessionId, lastPart);
   if (combined) writeForAgent(combined, sessionId);
+
   return combined;
 }

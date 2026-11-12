@@ -22,6 +22,7 @@ import { spawnTranscriptPreserve } from "./lib/transcript-preserve";
 recordHookRunOnExit();
 
 if (isPalSpawnedInference()) process.exit(0);
+
 if (duplicatesCursorHooks()) process.exit(0);
 
 spawnTranscriptPreserve();

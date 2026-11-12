@@ -25,6 +25,7 @@ function printCost(): undefined {
     ...shareLines("PAL's own spend per caller, already in the totals", palSpend(events)),
     ...overheadLines(contextOverhead(events)),
   ];
+
   for (const line of lines) console.log(line);
 }
 

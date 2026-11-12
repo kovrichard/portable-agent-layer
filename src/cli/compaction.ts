@@ -27,12 +27,14 @@ function parseMargins(raw: string | undefined): number[] {
   const parts = raw.split(",").map((part) => part.trim());
   const valid = parts.every((part) => {
     const value = Number(part);
+
     return part !== "" && Number.isFinite(value) && value > 0 && value < 1;
   });
   if (!valid)
     throw new UsageError(
       `--margin must be fractions between 0 and 1 such as 0.2,0.3, got "${raw}"`
     );
+
   return parts.map(Number);
 }
 
@@ -46,16 +48,21 @@ function parseWindowEntry(raw: string): WindowEntry {
   const match = /^([1-9]\d*)(?:@(.+))?$/.exec(raw);
   if (!match) throw windowError(raw);
   const tokens = Number(match[1]);
+
   if (match[2] === undefined) return { tokens, until: null };
   const until = Date.parse(match[2]);
   if (Number.isNaN(until)) throw windowError(raw);
+
   return { tokens, until };
 }
 
 function untilOrder(a: WindowEntry, b: WindowEntry): number {
   if (a.until === b.until) return 0;
+
   if (a.until === null) return 1;
+
   if (b.until === null) return -1;
+
   return a.until - b.until;
 }
 
@@ -63,6 +70,7 @@ function parseWindowSchedule(raw: string[] | undefined): WindowEntry[] {
   const entries = (raw ?? []).map(parseWindowEntry);
   if (entries.filter((entry) => entry.until === null).length > 1)
     throw new UsageError("only one --window may leave out @<until>");
+
   return entries.sort(untilOrder);
 }
 
@@ -76,6 +84,7 @@ function formatRow(row: BacktestRow): string {
 
 function formatLabels(labels: BacktestLabels): string {
   const noContext = labels.no_context > 0 ? `, ${labels.no_context} no_context` : "";
+
   return `auto compactions: ${labels.threshold} threshold, ${labels.idle} idle${noContext}, ${labels.unexplained} unexplained`;
 }
 
@@ -100,12 +109,16 @@ function cmdBacktest(values: {
     margins,
     windowAt
   );
+
   if (values.json) {
     console.log(JSON.stringify(result, null, 2));
+
     return 0;
   }
+
   for (const row of result.rows) console.log(formatRow(row));
   console.log(formatLabels(result.labels));
+
   return 0;
 }
 

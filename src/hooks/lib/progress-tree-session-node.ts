@@ -14,6 +14,7 @@ export function sessionNodeTitle(
   summaryTitle?: string
 ): string {
   const named = session ? names[session] : undefined;
+
   return (
     named ?? summaryTitle ?? `Session ${now.toISOString().slice(0, 16).replace("T", " ")}`
   );
@@ -39,5 +40,6 @@ export function openSessionNode(
     now,
     session
   );
+
   return id;
 }

@@ -98,6 +98,7 @@ describe("cache", () => {
     expect(isEnabled("projects")).toBe(false);
     const otherHome = testHome(import.meta.file, "other");
     mkdirSync(resolve(otherHome, "memory"), { recursive: true });
+
     try {
       process.env.PAL_HOME = otherHome;
       expect(isEnabled("projects")).toBe(true);

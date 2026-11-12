@@ -17,9 +17,12 @@ export function agentFileName(stem: string, platform: AgentName): string {
 
 export function renderAgentForPlatform(content: string, platform: AgentName): string {
   const definition = parseAgentDefinition(content);
+
   if (platform === "codex") return renderCodexAgent(definition);
+
   if (!definition.hasFrontmatter) return content;
   const frontmatter = [...definition.global, ...(definition.platforms[platform] ?? [])];
+
   return `---\n${frontmatter.join("\n")}\n---${definition.body}`;
 }
 
@@ -43,6 +46,7 @@ function renderCodexAgent(definition: AgentDefinition): string {
     ),
     `developer_instructions = ${tomlText(instructions)}`,
   ];
+
   return `${lines.join("\n")}\n`;
 }
 
@@ -52,6 +56,7 @@ function yamlMapping(lines: string[], where: string): Record<string, unknown> {
   if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new Error(`the ${where} is not a YAML mapping`);
   }
+
   return parsed as Record<string, unknown>;
 }
 
@@ -73,9 +78,13 @@ function codexOverrideValue(key: string, value: unknown): string {
       `codex.${key} is built from the shared definition and cannot be overridden`
     );
   }
+
   if (typeof value === "string") return tomlString(value);
+
   if (typeof value === "boolean") return String(value);
+
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
+
   if (Array.isArray(value) && value.every((item) => typeof item === "string")) {
     return `[${value.map(tomlString).join(", ")}]`;
   }
@@ -96,8 +105,10 @@ function tomlText(text: string): string {
 
 function fitsLiteralString(text: string): boolean {
   if (text.includes("'''")) return false;
+
   return Array.from(text).every((char) => {
     const code = char.charCodeAt(0);
+
     return char === "\t" || char === "\n" || (code >= 0x20 && code !== 0x7f);
   });
 }

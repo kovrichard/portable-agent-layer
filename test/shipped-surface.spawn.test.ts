@@ -28,6 +28,7 @@ const AGENTS = ["claude", "opencode", "cursor-agent", "copilot", "codex"];
 function fakeAgentsOnPath(root: string): void {
   const bin = resolve(root, "bin");
   mkdirSync(bin, { recursive: true });
+
   for (const agent of AGENTS) {
     writeFileSync(resolve(bin, agent), "#!/bin/sh\necho 1.0.0\n");
     chmodSync(resolve(bin, agent), 0o755);
@@ -64,6 +65,7 @@ function sandbox(): string {
   mkdirSync(resolve(root, "user"));
   fakeAgentsOnPath(root);
   install(root);
+
   return root;
 }
 
@@ -76,6 +78,7 @@ function refreshed(previous: Manifest, current: string[]): Manifest {
   const retired = [...new Set([...previous.retired, ...dropped])]
     .filter((item) => !current.includes(item))
     .sort();
+
   return { current, retired };
 }
 
@@ -87,6 +90,7 @@ describe.skipIf(process.platform === "win32")("what PAL ships", () => {
   beforeAll(() => {
     const clean = sandbox();
     fresh = surface(clean, PKG);
+
     if (process.env.PAL_SURFACE_UPDATE === "1")
       writeFileSync(
         MANIFEST,
@@ -94,6 +98,7 @@ describe.skipIf(process.platform === "win32")("what PAL ships", () => {
       );
 
     const old = sandbox();
+
     for (const item of readManifest().retired) plant(old, PKG, item);
     planted = surface(old, PKG);
     install(old);

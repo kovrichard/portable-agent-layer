@@ -39,24 +39,30 @@ function scenario(setup: Setup) {
   effects.spawnTool = ((command: string, args: string[]) => {
     if (command === "git" && args[0] === "diff" && args[1] === "--name-only") {
       if (setup.diff === null) return { status: 128, stdout: "", stderr: "fatal" };
+
       return {
         status: 0,
         stdout: `${(setup.diff ?? TYPIST_FILES).join("\n")}\n`,
         stderr: "",
       };
     }
+
     return realSpawn(command, args);
   }) as never;
+
   if (setup.dropSessionId) {
     const realRole = effects.runRoleHeadless as (...a: unknown[]) => object;
     let testWriterRuns = 0;
     effects.runRoleHeadless = ((taskId: string, role: string, args: object) => {
       const outcome = realRole(taskId, role, args);
+
       if (role === "test-writer" && ++testWriterRuns === 2)
         return { ...outcome, sessionId: null };
+
       return outcome;
     }) as never;
   }
+
   return world;
 }
 
@@ -105,6 +111,7 @@ describe("a unit typist that does not raise the failing count goes back once", (
     run(world);
     const instructions = typistRuns(world)[1]?.instructions ?? "";
     expect(instructions).toMatch(/\b3\b/);
+
     for (const file of TYPIST_FILES) expect(instructions).toContain(file);
     expect(instructions).toMatch(/fails? to load/i);
     expect(instructions).toMatch(/one failure/i);

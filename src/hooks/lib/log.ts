@@ -49,9 +49,11 @@ function rotateIfNeeded(path: string): void {
         /* ignore */
       }
     }
+
     for (let i = MAX_ROTATED - 1; i >= 1; i--) {
       const src = `${path}.${i}`;
       const dst = `${path}.${i + 1}`;
+
       if (existsSync(src)) {
         try {
           renameSync(src, dst);
@@ -89,6 +91,7 @@ function logFilesOldestFirst(): string[] {
     { length: MAX_ROTATED },
     (_, i) => `${path}.${MAX_ROTATED - i}`
   );
+
   return [...rotated, path];
 }
 
@@ -104,17 +107,20 @@ const ERROR_LINE = new RegExp(`${LOGGED_LINE.source}ERROR `);
 
 function loggedAt(line: string): number {
   const match = LOGGED_LINE.exec(line);
+
   return match ? Date.parse(`${match[1]}T${match[2]}Z`) : 0;
 }
 
 function whatTheAgentSaid(message: string): string {
   const output = / stderr\(\d+\)=(.*?) stdout\(\d+\)=(.*)$/.exec(message);
   if (!output) return message;
+
   return output[1].trim() || output[2].trim() || message;
 }
 
 function groupBySource(errors: LoggedError[]): HookErrorGroup[] {
   const groups = new Map<string, HookErrorGroup>();
+
   for (const { at, message } of errors) {
     const source = /^([^:]+):/.exec(message)?.[1] ?? "unknown";
     const group = groups.get(source) ?? { source, count: 0, last: "", lastAt: 0 };
@@ -124,6 +130,7 @@ function groupBySource(errors: LoggedError[]): HookErrorGroup[] {
     group.lastAt = at;
     groups.set(source, group);
   }
+
   return [...groups.values()].sort((a, b) => b.count - a.count);
 }
 
@@ -136,6 +143,7 @@ export function recentHookErrors(now: number = Date.now()): HookErrorGroup[] {
         at: loggedAt(line),
         message: line.replace(ERROR_LINE, ""),
       }));
+
     return groupBySource(recent);
   } catch {
     return [];
@@ -151,6 +159,7 @@ export function logDebug(source: string, message: string): void {
   if (!isDebugEnabled()) return;
   const path = logFile();
   rotateIfNeeded(path);
+
   try {
     appendFileSync(path, `[${timestamp()}] DEBUG ${source}: ${message}\n`);
   } catch {
@@ -165,6 +174,7 @@ export function logPromptSnapshot(prompt: string, retrieval: string | null): voi
   const content = retrieval
     ? `## Prompt\n\n${prompt}\n\n## Retrieval Injection\n\n${retrieval}`
     : `## Prompt\n\n${prompt}`;
+
   try {
     writeFileSync(path, content, "utf-8");
   } catch {
@@ -176,6 +186,7 @@ export function logPromptSnapshot(prompt: string, retrieval: string | null): voi
 export function logContextSnapshot(content: string): void {
   if (!isDebugEnabled()) return;
   const path = resolve(paths.debug(), "context-snapshot.md");
+
   try {
     writeFileSync(path, content, "utf-8");
   } catch {
@@ -188,6 +199,7 @@ export function logError(source: string, error: unknown): void {
   const path = logFile();
   rotateIfNeeded(path);
   const msg = error instanceof Error ? `${error.message}\n${error.stack}` : String(error);
+
   try {
     appendFileSync(path, `[${timestamp()}] ERROR ${source}: ${msg}\n`);
   } catch {

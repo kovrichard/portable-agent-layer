@@ -10,12 +10,14 @@ const at = (...parts: string[]) => resolve(DIR, ...parts);
 
 function makeFolder(path: string) {
   mkdirSync(path, { recursive: true });
+
   return path;
 }
 
 function makeRealSkill(path: string) {
   makeFolder(path);
   writeFileSync(resolve(path, "SKILL.md"), "# skill");
+
   return path;
 }
 

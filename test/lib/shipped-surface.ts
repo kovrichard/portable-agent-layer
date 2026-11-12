@@ -72,10 +72,12 @@ function concrete(text: string, root: string, pkg: string): string {
 
 function walk(root: string, dir: string): string[] {
   if (!existsSync(dir)) return [];
+
   return readdirSync(dir).flatMap((name) => {
     const path = resolve(dir, name);
     const stat = lstatSync(path);
     if (stat.isDirectory()) return walk(root, path);
+
     return [relative(root, path)];
   });
 }
@@ -83,6 +85,7 @@ function walk(root: string, dir: string): string[] {
 function fileItem(root: string, pkg: string, rel: string): string {
   const path = resolve(root, rel);
   if (!lstatSync(path).isSymbolicLink()) return rel;
+
   return `${rel} -> ${normalised(readlinkSync(path), root, pkg)}`;
 }
 
@@ -97,15 +100,18 @@ function keyItems(file: string, value: unknown, path: string): string[] {
     value.every((v) => typeof v === "string")
   )
     return value.map((entry) => `${file}#${path}[]=${entry}`);
+
   if (isPlainObject(value) && Object.keys(value).length > 0)
     return Object.entries(value).flatMap(([key, child]) =>
       keyItems(file, child, path ? `${path}.${key}` : key)
     );
+
   return [`${file}#${path}`];
 }
 
 function parseConfig(path: string): Json {
   const text = readFileSync(path, "utf-8");
+
   return path.endsWith(".toml") ? (Bun.TOML.parse(text) as Json) : JSON.parse(text);
 }
 
@@ -113,6 +119,7 @@ function configItems(root: string, pkg: string, file: string): string[] {
   const path = resolve(root, file);
   if (!existsSync(path)) return [];
   const { hooks: _runByHookItems, ...config } = parseConfig(path);
+
   return keyItems(file, config, "").map((item) => normalised(item, root, pkg));
 }
 
@@ -120,6 +127,7 @@ function hookItems(root: string, file: string): string[] {
   const path = resolve(root, file);
   if (!existsSync(path)) return [];
   const scripts = readFileSync(path, "utf-8").matchAll(HOOK_SCRIPT);
+
   return [...new Set(Array.from(scripts, (m) => `${file}#hook=${m[1]}`))];
 }
 
@@ -127,6 +135,7 @@ export function surface(root: string, pkg: string): string[] {
   const files = ROOTS.flatMap((dir) => walk(root, resolve(root, dir)))
     .filter((rel) => !NOT_SURFACE.some((pattern) => pattern.test(rel)))
     .map((rel) => fileItem(root, pkg, rel));
+
   return [
     ...new Set([
       ...files,
@@ -141,6 +150,7 @@ function setKey(config: Json, path: string, leaf: (current: unknown) => unknown)
   const last = keys.pop() as string;
   const parent = keys.reduce<Json>((node, key) => {
     if (!isPlainObject(node[key])) node[key] = {};
+
     return node[key] as Json;
   }, config);
   parent[last] = leaf(parent[last]);
@@ -152,6 +162,7 @@ const VALUES_AN_OLDER_PAL_WROTE: Record<string, string> = {
 
 function plantedValue(root: string, key: string): unknown {
   const written = VALUES_AN_OLDER_PAL_WROTE[key];
+
   return written === undefined ? true : written.replaceAll("{root}", root);
 }
 
@@ -159,6 +170,7 @@ function plantInConfig(path: string, spec: string, root: string): void {
   if (path.endsWith(".toml")) {
     if (spec.includes("[]=")) throw new Error(`cannot plant a TOML list entry: ${spec}`);
     writeFileSync(path, `${spec} = true\n${readFileSync(path, "utf-8")}`);
+
     return;
   }
   const config = existsSync(path) ? JSON.parse(readFileSync(path, "utf-8")) : {};
@@ -194,6 +206,7 @@ function plantFile(root: string, pkg: string, item: string): void {
   const [rel, target] = item.split(" -> ");
   const path = resolve(root, rel);
   mkdirSync(dirname(path), { recursive: true });
+
   if (target) plantLink(concrete(target, root, pkg), path);
   else writeFileSync(path, rel.endsWith(".json") ? "{}" : "left by an older PAL\n");
 }

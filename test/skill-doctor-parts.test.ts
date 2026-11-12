@@ -22,12 +22,14 @@ let counter = 0;
 function skillDir(files: Record<string, string>): string {
   counter += 1;
   const dir = resolve(ROOT, `case-${counter}`);
+
   for (const [rel, content] of Object.entries(files)) {
     const target = resolve(dir, rel);
     mkdirSync(dirname(target), { recursive: true });
     writeFileSync(target, content);
   }
   mkdirSync(dir, { recursive: true });
+
   return dir;
 }
 
@@ -309,6 +311,7 @@ function lintOf(fm: string, body = "\n# Body\n", folder = "s") {
   const dir = resolve(ROOT, `lint-${counter}`, folder);
   mkdirSync(dir, { recursive: true });
   writeFileSync(resolve(dir, "SKILL.md"), `---\n${fm}\n---${body}`);
+
   return lintSkill(dir);
 }
 
@@ -476,6 +479,7 @@ describe("absolute-path reporting truncates", () => {
     mkdirSync(dir, { recursive: true });
     const lines = Array.from({ length: hits }, (_, i) => `/home/user${i}/x`).join("\n");
     writeFileSync(resolve(dir, "SKILL.md"), `---\nname: s\n---\n${lines}\n`);
+
     return lintSkill(dir);
   }
 
@@ -508,6 +512,7 @@ describe("reference depth", () => {
   function refReport(files: Record<string, string>) {
     counter += 1;
     const dir = resolve(ROOT, `ref-${counter}`, "s");
+
     for (const [rel, content] of Object.entries(files)) {
       const target = resolve(dir, rel);
       mkdirSync(dirname(target), { recursive: true });
@@ -515,6 +520,7 @@ describe("reference depth", () => {
     }
     const found = lintSkill(dir).findings.filter((f) => f.check === "references.depth");
     expect(found.length).toBe(1);
+
     return found[0].level;
   }
 

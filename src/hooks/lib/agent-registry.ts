@@ -80,6 +80,7 @@ export const LAUNCH_PRIORITY = [
 export function skillsDirOf(agent: AgentName): string {
   const entry: AgentEntry = AGENT_REGISTRY[agent];
   const root = entry.skills === "own-skills-dir" ? entry.home() : platform.agentsDir();
+
   return resolve(root, "skills");
 }
 

@@ -57,6 +57,7 @@ function render(): string {
         encoding: "utf-8",
         env,
       });
+
   return run.stdout ?? "";
 }
 

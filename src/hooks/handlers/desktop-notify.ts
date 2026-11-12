@@ -18,5 +18,6 @@ function resolveBody(sessionId?: string): string {
     if (name && name !== "untitled session") return `New message in task "${name}".`;
   }
   const cwd = basename(process.cwd());
+
   return cwd && cwd !== "/" ? `New message in task "${cwd}".` : "You have a new message.";
 }

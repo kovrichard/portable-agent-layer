@@ -19,8 +19,10 @@ function writeMonth(file: string, timestamps: string[]) {
 
 async function printed(argv: string[]): Promise<string> {
   const log = spyOn(console, "log").mockImplementation(() => {});
+
   try {
     await run(argv);
+
     return log.mock.calls.map((c) => c.join(" ")).join("\n");
   } finally {
     log.mockRestore();
@@ -83,6 +85,7 @@ describe("pal cli interaction", () => {
 
   test("a day count that is not positive fails with the report's usage", async () => {
     const error = spyOn(console, "error").mockImplementation(() => {});
+
     try {
       expect(await run(["report", "--days", "0"])).toBe(1);
       expect(error.mock.calls.join("\n")).toContain(

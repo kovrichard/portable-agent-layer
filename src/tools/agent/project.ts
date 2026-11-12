@@ -62,6 +62,7 @@ function ok(payload: Record<string, unknown>): void {
 function requireProject(name: string): ProjectProgress {
   const p = readProject(name);
   if (!p) fail(`No project named "${name}". Run 'list' to see registered projects.`);
+
   return p as ProjectProgress;
 }
 
@@ -72,6 +73,7 @@ function positiveId(value: string, label: string): number {
   if (!Number.isInteger(id) || id < 1) {
     throw new UsageError(`${label} must be a positive integer, got "${value}"`);
   }
+
   return id;
 }
 
@@ -80,12 +82,14 @@ function listIndex(value: string): number {
   if (!Number.isInteger(index) || index < 0) {
     throw new UsageError(`<index> must be a non-negative integer, got "${value}"`);
   }
+
   return index;
 }
 
 function nonBlank(text: string, slot: string): string {
   const trimmed = text.trim();
   if (!trimmed) throw new UsageError(`${slot} is empty`);
+
   return trimmed;
 }
 
@@ -93,6 +97,7 @@ function servesKind(value: string, label: string): ServesKind {
   if (!isServesKind(value)) {
     throw new UsageError(`${label} must be one of: ${SERVES_KINDS.join(", ")}`);
   }
+
   return value;
 }
 
@@ -129,6 +134,7 @@ function projectName(
   if (positional !== undefined && flag !== undefined) {
     throw new UsageError("give the name once: as [name] or as --name");
   }
+
   return positional ?? flag;
 }
 
@@ -306,6 +312,7 @@ function sectionKey(section: string): Section {
       `Unknown section "${section}". Valid: ${VALID_SECTIONS.join(", ")}`
     );
   }
+
   return key as Section;
 }
 
@@ -341,12 +348,14 @@ function cmdIsaInit(name: string): undefined {
   ];
   let scaffolded = 0;
   const pr = p as unknown as Record<string, unknown>;
+
   for (const s of sections) {
     if (!pr[s as string]) {
       pr[s as string] = "";
       scaffolded++;
     }
   }
+
   // Remove empty strings so they don't clutter the ISA body
   for (const s of sections) {
     if (pr[s as string] === "") pr[s as string] = undefined;
@@ -362,12 +371,14 @@ function cmdMigrate(): undefined {
   const progressDir = paths.progress();
   if (!existsSync(progressDir)) {
     ok({ migrated: 0, skipped: 0, results: [] });
+
     return;
   }
 
   const files = readdirSync(progressDir).filter((f) => f.endsWith(".json"));
   if (files.length === 0) {
     ok({ migrated: 0, skipped: 0, results: [] });
+
     return;
   }
 
@@ -444,8 +455,10 @@ function cmdCompleteIsc(name: string, id: number): undefined {
   const p = requireProject(name);
   const move = completeIsc(sectionsOf(p), id);
   if (!move.ok) fail(`${move.reason} in project "${name}"`);
+
   if (move.already) {
     ok({ checked: true, id, alreadyDone: true });
+
     return;
   }
   applyIscMove(p, move);
@@ -470,8 +483,10 @@ function cmdReopenIsc(name: string, id: number): undefined {
   const p = requireProject(name);
   const move = reopenIsc(sectionsOf(p), id);
   if (!move.ok) fail(`${move.reason} in project "${name}"`);
+
   if (move.already) {
     ok({ checked: false, id, alreadyOpen: true });
+
     return;
   }
   applyIscMove(p, move);
@@ -492,6 +507,7 @@ function iscListFlag(flags: IscListFlags): Set<string> {
   if (chosen.length > 1) {
     throw new UsageError(`${chosen.join(" and ")} cannot be combined; pick one`);
   }
+
   return new Set(chosen);
 }
 
@@ -530,6 +546,7 @@ function cmdRetireIsc(name: string, id: number, by: number | null): undefined {
   const p = requireProject(name);
   if (parseIscs(p.changelog ?? "").some((i) => i.id === id && i.status === "retired")) {
     ok({ retired: true, id, alreadyRetired: true });
+
     return;
   }
   const { line, rest } = removeIscLine(p.criteria ?? "", id);
@@ -586,12 +603,14 @@ function cmdEditIsc(name: string, id: number, newText: string): undefined {
 function cmdPruneIsc(name: string): undefined {
   const p = requireProject(name);
   const done = parseIscs(p.criteria ?? "").filter((i) => i.status !== "open");
+
   for (const isc of done) {
     const { line, rest } = removeIscLine(p.criteria ?? "", isc.id);
     if (!line) continue;
     p.criteria = rest;
     p.changelog = archiveLine(p.changelog, line);
   }
+
   if (done.length > 0) {
     p.updated = now();
     writeProject(p);
@@ -605,6 +624,7 @@ function cmdPruneIsc(name: string): undefined {
 function taskIsaPath(slug: string): string {
   const dir = resolve(paths.work(), slug);
   mkdirSync(dir, { recursive: true });
+
   return resolve(dir, "ISA.md");
 }
 

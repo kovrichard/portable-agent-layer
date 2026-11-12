@@ -29,6 +29,7 @@ const PRESERVED = [
 
 function flagValue(args: string[], flag: string): string | undefined {
   const i = args.indexOf(flag);
+
   return i === -1 ? undefined : args[i + 1];
 }
 
@@ -47,10 +48,12 @@ function seedConversation(cliDir: string, id: string): string[] {
     resolve(cliDir, "annotations", `${id}.pbtxt`),
     resolve(cliDir, "presence", `${id}.lock`),
   ];
+
   for (const file of files) {
     mkdirSync(resolve(file, ".."), { recursive: true });
     writeFileSync(file, "x");
   }
+
   return [brain, ...files];
 }
 

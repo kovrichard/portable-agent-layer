@@ -59,11 +59,13 @@ function sessionStatusAnswers(output: string): JudgeAnswers | null {
   if (typeof parsed !== "object" || parsed === null) return null;
   const status = (parsed as { status?: unknown }).status;
   if (status !== "in-progress" && status !== "completed") return null;
+
   return { status: { choice: status } };
 }
 
 function namesEntityAnswers(output: string): JudgeAnswers | null {
   if (jsonOf(output) === undefined) return null;
+
   return { names_entity: { noul: parseExtraction(output).length > 0 } };
 }
 
@@ -72,7 +74,9 @@ function recurringAnswers(output: string): JudgeAnswers | null {
   if (typeof parsed !== "object" || parsed === null) return null;
   const { widens, recurring } = parsed as { widens?: unknown; recurring?: unknown };
   if (typeof widens === "string" && widens.length > 0) return null;
+
   if (typeof recurring !== "boolean") return null;
+
   return { recurring: { noul: recurring } };
 }
 
@@ -133,6 +137,7 @@ export function ruleRecurringJudgment(
   request: InferenceRequest
 ): JudgeRequest {
   const [newest] = corrections.slice(-1);
+
   return shadowJudgment(
     "rule-recurring",
     {

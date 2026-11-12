@@ -87,6 +87,7 @@ describe("a build restarts a ready task", () => {
         status: storedTask(world).status,
         started: eventsNamed(world, "task_started").length,
       });
+
       return original(...args);
     };
     runBuild(world);
@@ -743,6 +744,7 @@ describe("the unit typist", () => {
     const world = worldFor({ category: "feature" });
     runBuild(world);
     const instructions = typist(world)?.instructions ?? "";
+
     for (const text of [
       "example table",
       "plan.md",
@@ -827,6 +829,7 @@ describe("the unit typist must raise the failing count", () => {
     world.effects.runRoleHeadless = (taskId: string, role: string, args: object) => {
       if (role === "test-writer" && ++testWriterRuns === 2)
         checksAtTypistStart.push(world.checkCommands.length);
+
       return original(taskId, role, args);
     };
     runBuild(world);
@@ -935,6 +938,7 @@ describe("the unit typist must raise the failing count", () => {
     world.effects.runRoleHeadless = (taskId: string, role: string, args: object) => {
       if (role === "code-writer")
         checksWhenCodeWriterStarts.push(world.checkCommands.length);
+
       return original(taskId, role, args);
     };
     const result = runBuild(world);
@@ -973,6 +977,7 @@ describe("the unit typist must raise the failing count", () => {
       const outcome = original(taskId, role, args);
       snapshots.porcelain.push(read(["status", "--porcelain"]));
       snapshots.tree.push(read(["write-tree"]));
+
       return outcome;
     };
     const result = runBuild(world);
@@ -1143,7 +1148,9 @@ describe("a rerun before the first code step", () => {
   function worldWithPlan(events: object[]) {
     const world = worldFor({ category: "feature" });
     writeFileSync(join(taskDir(TASK, world.env), "plan.md"), "plan\n");
+
     for (const event of events) appendEvent(event as never, world.env);
+
     return world;
   }
 
@@ -1193,6 +1200,7 @@ describe("worktreeStatusChanged", () => {
     ["", null, true],
     [null, null, true],
   ];
+
   for (const [before, after, changed] of rows)
     test(`${JSON.stringify(before)} → ${JSON.stringify(after)} is ${changed}`, () => {
       expect(build.worktreeStatusChanged(before, after)).toBe(changed);
@@ -1210,14 +1218,18 @@ describe("worktreeFingerprint", () => {
     const spawnTool = (command: string, args: string[]) => {
       if (args[0] === "add")
         return { status: worktree.addStatus, stdout: "", stderr: "" };
+
       if (args[0] === "write-tree") {
         const tree = createHash("sha1")
           .update(JSON.stringify(worktree.files))
           .digest("hex");
+
         return { status: worktree.writeTreeStatus, stdout: `${tree}\n`, stderr: "" };
       }
+
       return { status: 1, stdout: "", stderr: `unexpected ${command}` };
     };
+
     return { worktree: "/fake/worktree", env: {}, effects: { spawnTool } };
   };
 

@@ -5,6 +5,7 @@ function printPreserve(): undefined {
   const result = preserveTranscriptsOnce();
   if (!result) {
     console.log("Another copy is already running.");
+
     return;
   }
   console.log(

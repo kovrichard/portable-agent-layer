@@ -59,10 +59,12 @@ function sumOf(events: LoggedEvent[], field: string): number {
 
 function tally(events: LoggedEvent[], field: string): Record<string, number> {
   const counts: Record<string, number> = {};
+
   for (const e of events) {
     const key = e[field];
     if (typeof key === "string") counts[key] = (counts[key] ?? 0) + 1;
   }
+
   return counts;
 }
 
@@ -73,12 +75,14 @@ function distinct(events: LoggedEvent[], field: string): string[] {
 function belongsToRun(window: RunWindow, scopeOfCwd: (cwd: string) => string) {
   const inScope = (e: LoggedEvent) => !!e.cwd && scopeOfCwd(e.cwd) === window.scope;
   const knowsSessions = window.sessions.length > 0;
+
   return (e: LoggedEvent) =>
     e.session && knowsSessions ? window.sessions.includes(e.session) : inScope(e);
 }
 
 function inWindow(window: RunWindow, scopeOfCwd: (cwd: string) => string) {
   const belongs = belongsToRun(window, scopeOfCwd);
+
   return (e: LoggedEvent) =>
     e.ts >= window.startedAt && e.ts <= window.finishedAt && belongs(e);
 }
@@ -96,6 +100,7 @@ function toolStats(calls: LoggedEvent[]) {
 
 function modelStats(calls: LoggedEvent[]) {
   const prices = calls.map(apiPriceOf);
+
   return {
     modelCalls: calls.length,
     models: distinct(calls, "model"),
@@ -119,6 +124,7 @@ export function runStats(
   const of = (type: EventType) => inRun.filter((e) => e.type === type);
   const edits = of("action");
   const commits = of("commit");
+
   return {
     sessions: distinct(inRun, "session").length,
     turns: of("turn").length,
@@ -136,11 +142,13 @@ export function runStats(
 
 function memoized(resolveScope: (cwd: string) => string): (cwd: string) => string {
   const seen = new Map<string, string>();
+
   return (cwd) => {
     const known = seen.get(cwd);
     if (known !== undefined) return known;
     const scope = resolveScope(cwd);
     seen.set(cwd, scope);
+
     return scope;
   };
 }
@@ -154,6 +162,7 @@ function catchUpEventLog(repo: string, since: string): boolean {
   if (!readsRealAgentDirs()) return true;
   const collected = collectEvents();
   backfillGit([repo], loggedEventIds(), since);
+
   return collected !== null;
 }
 
@@ -165,5 +174,6 @@ export function gatherRunStats(
   if (!eventLogEnabled()) return null;
   const complete = catchUpEventLog(repo, window.startedAt);
   const events = allEventsSince(new Date(window.startedAt));
+
   return { ...runStats(events, window, memoized(scopeOf)), complete };
 }

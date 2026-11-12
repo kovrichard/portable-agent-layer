@@ -430,6 +430,7 @@ describe("the knobs behind the grid", () => {
 
     const quietAt = async () => {
       const grid = await getJson<Matrix>(`${base}/api/matrix`);
+
       return (
         [...grid.now, ...grid.plan].find((i) => i.id === "demo")?.urgentBecause ?? []
       );
@@ -571,6 +572,7 @@ describe("the one thing the page may change", () => {
 describe("the relationship tab", () => {
   const draftRule = async () => {
     const { addDraft } = await import("../src/hooks/lib/adaptation-rules");
+
     return addDraft({
       when: "Claiming tests pass",
       trigger: { side: "reply", pattern: "tests? pass" },

@@ -51,6 +51,7 @@ log.success(`${countSkills()} skills · ${agentCount} agents → ~/.config/openc
 const configPath = resolve(OC_GLOBAL_DIR, "config.json");
 const staticFiles = getSemiStaticSources().map((s) => s.path);
 let ocConfig: Record<string, unknown> = {};
+
 if (existsSync(configPath) && statSync(configPath).size > 0) {
   try {
     ocConfig = JSON.parse(readFileSync(configPath, "utf-8"));

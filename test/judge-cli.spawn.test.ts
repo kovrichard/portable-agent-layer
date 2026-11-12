@@ -25,6 +25,7 @@ function run(home: string, args: string[], input?: string) {
   };
   delete env.PAL_TYPESAFE_API_KEY;
   delete env.TYPESAFE_API_KEY;
+
   return spawnSync("bun", ["run", CLI, "cli", "judge", ...args], {
     env,
     input,

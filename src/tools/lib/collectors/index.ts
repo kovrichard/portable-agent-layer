@@ -50,16 +50,19 @@ function lockIsFresh(now: number): boolean {
 function takeLock(now: number): boolean {
   try {
     writeFileSync(lockPath(), String(process.pid), { flag: "wx" });
+
     return true;
   } catch {
     if (lockIsFresh(now)) return false;
     writeFileSync(lockPath(), String(process.pid));
+
     return true;
   }
 }
 
 function runCollectors(): Record<string, number | "failed"> {
   const emitted: Record<string, number | "failed"> = {};
+
   for (const [source, collect] of Object.entries(COLLECTORS)) {
     try {
       emitted[source] = collect();
@@ -68,6 +71,7 @@ function runCollectors(): Record<string, number | "failed"> {
       emitted[source] = "failed";
     }
   }
+
   return emitted;
 }
 
@@ -76,9 +80,12 @@ export function collectEvents(
   now: number = Date.now()
 ): Record<string, number | "failed"> | null {
   if (!eventLogEnabled()) return {};
+
   if (!takeLock(now)) return null;
+
   try {
     markCollected(now);
+
     return runCollectors();
   } finally {
     rmSync(lockPath(), { force: true });

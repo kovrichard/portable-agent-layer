@@ -16,8 +16,10 @@ beforeEach(() => {
     value: realPlatform,
     configurable: true,
   });
+
   if (savedXdg === undefined) delete process.env.XDG_CONFIG_HOME;
   else process.env.XDG_CONFIG_HOME = savedXdg;
+
   if (savedAppData === undefined) delete process.env.APPDATA;
   else process.env.APPDATA = savedAppData;
 });

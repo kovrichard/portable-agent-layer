@@ -14,6 +14,7 @@ const CLAUDE = resolve(HOME, ".claude");
 
 function skill(name: string, withManifest = true) {
   mkdirSync(resolve(HOME, "skills", name), { recursive: true });
+
   if (withManifest) writeFileSync(resolve(HOME, "skills", name, "SKILL.md"), "x");
 }
 

@@ -84,6 +84,7 @@ function evaluatedModel(
   caller?: string
 ): string | undefined {
   const onAnthropicSmall = models === ANTHROPIC_MODELS && tier === "small";
+
   return onAnthropicSmall && caller && ANTHROPIC_ON_HAIKU_5_5.has(caller)
     ? HAIKU_5_5_MODEL
     : undefined;
@@ -97,6 +98,7 @@ export function inferenceModel(
   const models = INFERENCE_MODELS[route];
   const model = evaluatedModel(models, tier, caller) ?? models[tier];
   if (!model) throw new Error(`${route} has no ${tier} model`);
+
   return model;
 }
 
@@ -121,6 +123,7 @@ const AGENT_SPAWN_ROUTE: Partial<Record<AgentType, FixedModelRoute>> = {
  */
 export function flagshipAuthorModel(agent: AgentType): string | undefined {
   const route = AGENT_SPAWN_ROUTE[agent];
+
   return route
     ? (SUBAGENT_FLAGSHIP[route] ?? INFERENCE_MODELS[route].flagship)
     : undefined;
@@ -321,9 +324,11 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
 
 function longestPrefixKey(model: string): string | null {
   let best: string | null = null;
+
   for (const key of Object.keys(MODEL_PRICING)) {
     if (model.startsWith(key) && (best === null || key.length > best.length)) best = key;
   }
+
   return best;
 }
 
@@ -334,12 +339,14 @@ function longestPrefixKey(model: string): string | null {
  */
 export function pricingFor(model: string, at?: string): ModelPricing | null {
   const key = MODEL_PRICING[model] ? model : longestPrefixKey(model);
+
   return key ? ratesInForce(key, at) : null;
 }
 
 function ratesInForce(key: string, at: string | undefined): ModelPricing {
   const when = Date.parse(at ?? "");
   const superseded = PRICE_HISTORY[key]?.find((s) => when < Date.parse(s.until));
+
   return superseded?.rates ?? MODEL_PRICING[key];
 }
 
@@ -347,6 +354,7 @@ function ratesInForce(key: string, at: string | undefined): ModelPricing {
 export function costOfUsage(model: string, usage: TokenUsage, at?: string): number {
   const p = pricingFor(model, at);
   if (!p) return 0;
+
   return (
     (usage.input * p.input +
       usage.output * p.output +

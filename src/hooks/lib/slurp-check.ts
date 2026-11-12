@@ -26,17 +26,20 @@ function riskyBytes(totalMemory = totalmem()): number {
 
 function textOf(value: unknown): string {
   if (value === undefined || value === null) return "";
+
   return typeof value === "string" ? value : JSON.stringify(value);
 }
 
 function outputTail(payload: Record<string, unknown>): string {
   const text = `${textOf(payload.error)}\n${textOf(resultOf(payload))}`;
+
   return text.slice(-OUTPUT_TAIL_CHARS);
 }
 
 export function showsOutOfMemory(payload: Record<string, unknown>): boolean {
   const tail = outputTail(payload);
   const exit = payload.exit_code ?? payload.exitCode;
+
   return exit === 137 || exit === -9 || OOM_SIGNS.some((sign) => sign.test(tail));
 }
 
@@ -67,6 +70,7 @@ export function slurpVerdictOf(
   const oom = showsOutOfMemory(payload);
   if (hits.length === 0 && !oom) return null;
   const predicted = hits.some((h) => h.bytes >= thresholdBytes);
+
   return { command, hits, predicted, oom, thresholdBytes };
 }
 

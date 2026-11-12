@@ -33,8 +33,10 @@ function printSent(): undefined {
   const events = recentHeartbeats();
   if (events.length === 0) {
     console.log("Nothing sent or skipped in the last 30 days.");
+
     return;
   }
+
   for (const event of events) {
     const detail = event.payload ?? { skipReason: event.skipReason };
     console.log(`${event.ts}  ${event.outcome}  ${JSON.stringify(detail)}`);

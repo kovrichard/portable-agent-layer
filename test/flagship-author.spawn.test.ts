@@ -17,8 +17,10 @@ function authorModel(agent: string | undefined) {
   delete env.CURSOR_VERSION;
   delete env.CODEX_CLI_VERSION;
   delete env.OPENAI_CODEX;
+
   if (agent === undefined) delete env.PAL_AGENT;
   else env.PAL_AGENT = agent;
+
   return spawnSync("bun", ["run", CLI, "cli", "skill", "author-model"], {
     env,
     encoding: "utf-8",

@@ -63,6 +63,7 @@ export function dueFrom(text: string): string | null {
 function firstSentenceOf(text: string): string {
   const flat = text.replace(/\s+/g, " ").trim();
   const match = new RegExp(/^.*?[.!?](?=\s|$)/).exec(flat);
+
   return match ? match[0] : flat;
 }
 
@@ -74,11 +75,13 @@ function slug(title: string, index: number): string {
     .split(/\s+/)
     .slice(0, 5)
     .join("-");
+
   return base || `goal-${index + 1}`;
 }
 
 function isScaffolding(line: string): boolean {
   const l = line.trim();
+
   return !l || l.startsWith("<!--") || l.startsWith("-->") || /^(-{3,}|_{3,})$/.test(l);
 }
 
@@ -99,6 +102,7 @@ function entriesIn(lines: string[]): string[] {
     .filter(hasWords);
   if (bullets.length > 0) return bullets;
   const paragraph = lines.join(" ").trim();
+
   return hasWords(paragraph) ? [paragraph] : [];
 }
 
@@ -128,6 +132,7 @@ function goalsFrom(content: string): TelosGoal[] {
       horizon = /^goals$/i.test(heading) ? null : heading;
       continue;
     }
+
     if (isScaffolding(line)) {
       flush();
       continue;
@@ -142,6 +147,7 @@ function goalsFrom(content: string): TelosGoal[] {
 export function readTelosGoals(home: string = palHome()): TelosGoal[] {
   const path = resolve(home, "telos", "GOALS.md");
   if (!existsSync(path)) return [];
+
   try {
     return goalsFrom(readFileSync(path, "utf-8"));
   } catch {

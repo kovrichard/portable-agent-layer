@@ -38,6 +38,7 @@ function git(dir: string, ...args: string[]): string {
     { cwd: dir, encoding: "utf-8" }
   );
   if (result.status !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr}`);
+
   return result.stdout.trim();
 }
 
@@ -57,6 +58,7 @@ function checkout(): string {
   commit(dir, "a");
   git(dir, "remote", "add", "origin", remote);
   git(dir, "push", "-q", "-u", "origin", "main");
+
   return dir;
 }
 
@@ -65,6 +67,7 @@ function pushedWorktree(dir: string, branch: string): string {
   git(dir, "worktree", "add", "-q", "-b", branch, path, "origin/main");
   commit(path, `${branch.replace("/", "-")}.txt`);
   git(path, "push", "-q", "-u", "origin", branch);
+
   return path;
 }
 
@@ -86,6 +89,7 @@ function withGitThatOnRemove<T>(action: string, run: () => T): T {
   );
   const savedPath = process.env.PATH;
   process.env.PATH = `${bin}:${savedPath}`;
+
   try {
     return run();
   } finally {
@@ -106,11 +110,13 @@ async function runPrune(
   const printed = spyOn(console, "log").mockImplementation((line: string) => {
     lines.push(line);
   });
+
   try {
     const code = await capturingLog(
       (level, message) => lines.push(`${level}: ${message}`),
       async () => prune(dir, dryRun)
     );
+
     return { code, lines };
   } finally {
     printed.mockRestore();
@@ -124,6 +130,7 @@ async function lib() {
 function prunedEvents(): Record<string, unknown>[] {
   const dir = resolve(ROOT, "pal", "memory", "events");
   if (!existsSync(dir)) return [];
+
   return readdirSync(dir)
     .flatMap((f) => readFileSync(resolve(dir, f), "utf-8").split("\n"))
     .filter(Boolean)

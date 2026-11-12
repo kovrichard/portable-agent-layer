@@ -21,6 +21,7 @@ export function loadCursorHooksTemplate(
 ): CursorHooks {
   const raw = readFileSync(templatePath, "utf-8");
   const resolved = raw.replaceAll("{{PKG_ROOT}}", pkgRoot);
+
   try {
     return JSON.parse(resolved) as CursorHooks;
   } catch (e) {
@@ -52,15 +53,18 @@ type CursorHookMap = NonNullable<CursorHooks["hooks"]>;
 
 function canonicalTemplateCommands(templateHooks: CursorHookMap): Set<string> {
   const palCanonical = new Set<string>();
+
   for (const entries of Object.values(templateHooks)) {
     for (const entry of entries) palCanonical.add(canonicalPalCmd(entry.command));
   }
+
   return palCanonical;
 }
 
 function stripOutdatedPalHooks(hooks: CursorHookMap, palCanonical: Set<string>): void {
   for (const [event, entries] of Object.entries(hooks)) {
     hooks[event] = entries.filter((e) => !isOutdatedPalHook(e.command, palCanonical));
+
     if (hooks[event].length === 0) delete hooks[event];
   }
 }
@@ -68,6 +72,7 @@ function stripOutdatedPalHooks(hooks: CursorHookMap, palCanonical: Set<string>):
 function appendTemplateHooks(hooks: CursorHookMap, templateHooks: CursorHookMap): void {
   for (const [event, entries] of Object.entries(templateHooks)) {
     const current = hooks[event] ?? [];
+
     for (const entry of entries) current.push(entry);
     hooks[event] = current;
   }
@@ -85,6 +90,7 @@ export function unmergeCursorHooks(
 
   if (template.hooks && result.hooks) {
     const palCommands = new Set<string>();
+
     for (const entries of Object.values(template.hooks)) {
       for (const entry of entries) {
         palCommands.add(entry.command);
@@ -93,8 +99,10 @@ export function unmergeCursorHooks(
 
     for (const [event, entries] of Object.entries(result.hooks)) {
       result.hooks[event] = entries.filter((e) => !palCommands.has(e.command));
+
       if (result.hooks[event].length === 0) delete result.hooks[event];
     }
+
     if (Object.keys(result.hooks).length === 0) delete result.hooks;
   }
 

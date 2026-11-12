@@ -43,11 +43,13 @@ function quietly(fn: () => void): string {
   const captured: string[] = [];
   const log = console.log;
   console.log = (...parts: unknown[]) => captured.push(parts.join(" "));
+
   try {
     fn();
   } finally {
     console.log = log;
   }
+
   return captured.join("\n");
 }
 

@@ -66,19 +66,24 @@ const EMPTY_FILTER: LogFilter = {
 /** The machines a row could name are whatever the window actually contains. */
 function machinesIn(view: Loaded<LedgerView>): string[] {
   if (view.state !== "ready") return [];
+
   return [...new Set(view.data.rows.map((r) => r.machine))].filter(Boolean).sort();
 }
 
 function ledgerQuery(filter: LogFilter): string {
   const params = new URLSearchParams();
+
   for (const [key, value] of Object.entries(filter)) if (value) params.set(key, value);
   const query = params.toString();
+
   return query ? `/api/ledger?${query}` : "/api/ledger";
 }
 
 function outcomeVariant(outcome: string) {
   if (outcome === "applied") return "neutral" as const;
+
   if (outcome === "failed") return "outline" as const;
+
   return "alarm" as const;
 }
 
@@ -90,6 +95,7 @@ function Field({
   control: (id: string) => React.ReactNode;
 }) {
   const id = useId();
+
   return (
     <div className="flex flex-col gap-1">
       <Label htmlFor={id}>{label}</Label>
@@ -107,6 +113,7 @@ function Stats({ view }: { view: LedgerView }) {
       label: o,
     })),
   ];
+
   return (
     <div className="mb-4 grid grid-cols-2 gap-px border border-divider bg-divider sm:grid-cols-3 lg:grid-cols-6">
       {cells.map((cell) => (

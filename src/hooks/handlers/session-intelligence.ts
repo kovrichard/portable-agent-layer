@@ -89,6 +89,7 @@ interface IntelligenceOutput {
 /** A reply states its verdict first and its question to the user last. */
 export function openingAndClosing(text: string, each: number): string {
   if (text.length <= each * 2) return text;
+
   return `${text.slice(0, each)} … ${text.slice(-each)}`;
 }
 
@@ -120,6 +121,7 @@ export async function captureSessionIntelligence(
   // Skip if no inference path is available (no CLI binary AND no API key)
   if (!canInfer()) {
     logDebug("session-intelligence", "Skipped: canInfer() false (no CLI + no API key)");
+
     return;
   }
 
@@ -167,6 +169,7 @@ function recordSessionOutcome(
   const title = output?.title || extractContent(lastUser).slice(0, 80) || "session";
   const summary = output?.summary || lastAssistantText.slice(0, 600);
   const insights = output?.insights || "";
+
   if (output)
     recordWhereSessionStopped(sessionDir(), progressSession(sessionId), {
       title,
@@ -174,6 +177,7 @@ function recordSessionOutcome(
       next: output.next,
       waitingOn: output.waitingOn,
     });
+
   if (!historyDue) return;
 
   if (output) {
@@ -199,6 +203,7 @@ async function summarizeSession(
   logDebug("session-intelligence", "Calling inference...");
   const numberedMessages = userWindow.map((m, i) => `${i + 1}. ${m}`).join("\n");
   let output: IntelligenceOutput | null = null;
+
   try {
     const result = await judge(
       sessionStatusJudgment(numberedMessages, assistantWindow, {
@@ -226,6 +231,7 @@ async function summarizeSession(
   } catch (err) {
     logError("session-intelligence", err);
   }
+
   return output;
 }
 
@@ -235,6 +241,7 @@ if (process.argv[2] === "--run") {
   const transcriptPath = process.argv[4];
   if (transcriptPath) {
     const { readFile, unlink } = await import("node:fs/promises");
+
     try {
       const transcript = await readFile(transcriptPath, "utf-8");
       await captureSessionIntelligence(transcript, sid === "" ? undefined : sid);

@@ -15,6 +15,7 @@ let file: string;
 function git(...args: string[]): string {
   const result = spawnSync("git", ["-C", repo, ...args], { encoding: "utf-8" });
   if (result.status !== 0) throw new Error(result.stderr);
+
   return result.stdout.trim();
 }
 

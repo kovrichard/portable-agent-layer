@@ -31,6 +31,7 @@ async function labelsAfterGap(gapMinutes: number) {
     { ts: new Date(BASE + gapMinutes * MIN).toISOString(), session }
   );
   await runCompaction(["backtest", "--window", "500000", "--json"]);
+
   return (JSON.parse(printed[0] ?? "{}") as { labels: Record<string, number> }).labels;
 }
 

@@ -37,6 +37,7 @@ describe("compaction_near table rows", () => {
     const path = resolve(home, name);
     const usage = { input_tokens: 10, cache_read_input_tokens: tokens - 10 };
     writeFileSync(path, `${JSON.stringify({ message: { usage } })}\n`);
+
     return path;
   }
 
@@ -64,10 +65,12 @@ describe("compaction_near table rows", () => {
     const settingsFiles = settings.map((body, index) => {
       const path = resolve(home, `settings-${index}.json`);
       writeFileSync(path, JSON.stringify(body));
+
       return path;
     });
     const claudeJsonPath = resolve(home, "claude.json");
     writeFileSync(claudeJsonPath, JSON.stringify({ autoCompactWindowsCache: cache }));
+
     return resolveCompactionWindow({
       model,
       modelContextWindow,
@@ -285,6 +288,7 @@ describe("compaction_near table rows", () => {
         resolve(dir, ".claude", "settings.json"),
         JSON.stringify({ autoCompactWindow: tokens })
       );
+
       return dir;
     }
 
@@ -306,6 +310,7 @@ describe("compaction_near table rows", () => {
       const dir = projectWithWindow(400_000);
       const original = process.cwd();
       process.chdir(dir);
+
       try {
         recordCompactionNear({
           ...payloadFor(transcriptWith("t.jsonl", 300_000)),
@@ -325,6 +330,7 @@ describe("compaction_near table rows", () => {
       const dir = projectWithWindow(400_000);
       const original = process.cwd();
       process.chdir(dir);
+
       try {
         recordCompactionNear(payloadFor(transcriptWith("t.jsonl", 300_000)));
       } finally {
@@ -417,6 +423,7 @@ describe("compaction backtest table rows", () => {
   async function backtest(...args: string[]) {
     const { runCompaction } = await cliLib();
     const code = await runCompaction(["backtest", ...args]);
+
     return { code, text: printed.join("\n") };
   }
 
@@ -466,6 +473,7 @@ describe("compaction backtest table rows", () => {
     margin = 0.2
   ) {
     const { backtestCompaction } = await backtestLib();
+
     return backtestCompaction(calls, compactions, [margin], flat(window)).rows[0];
   }
 
@@ -475,12 +483,14 @@ describe("compaction backtest table rows", () => {
       [compactionEvent(20, "auto", 462_000)],
       500_000
     );
+
     return row?.medianLeadTokens;
   }
 
   describe("parsesAsTime rows (compaction timestamps)", () => {
     const labelsWithCompactionTs = async (when: number | string | null) => {
       const { backtestCompaction } = await backtestLib();
+
       return backtestCompaction(
         [modelCall(0, { inputTokens: 100_000 })],
         [compactionEvent(when, "auto", 462_000)],
@@ -679,6 +689,7 @@ describe("compaction backtest table rows", () => {
   describe("reaching rows (a call reaches the margin)", () => {
     const alarmsFor = async (tokens: number, window: number | null, margin: number) => {
       const { backtestCompaction } = await backtestLib();
+
       return backtestCompaction(
         [modelCall(0, { inputTokens: tokens })],
         [],
@@ -726,6 +737,7 @@ describe("compaction backtest table rows", () => {
       current: number | null = null
     ) {
       const { windowResolver } = await backtestLib();
+
       return windowResolver(near, schedule, () => current);
     }
 

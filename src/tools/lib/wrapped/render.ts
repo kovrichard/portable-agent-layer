@@ -17,6 +17,7 @@ function recordRow(
 ): string {
   const value =
     record === null ? "unknown" : `${format(record.value)}  (${record.label})`;
+
   return `    ${label.padEnd(36)} ${value}`;
 }
 
@@ -73,12 +74,14 @@ function neverUsedLines(never: SkillsNeverUsed | null): string[] {
   if (never === null) return [row("skills never used", "unknown")];
   const summary = `${count(never.names.length)} of ${count(never.installed)} since ${never.since}`;
   const names = never.names.length > 0 ? [row("", never.names.join(", "))] : [];
+
   return [row("skills never used", summary), ...names];
 }
 
 /** Nothing logs a steering rule being approved yet. */
 export function palLines(pal: WrappedPal): string[] {
   const onTime = pal.promisesOnTime;
+
   return [
     "\n  PAL\n",
     row("skills used", tallyLabel(pal.skillsUsed)),
@@ -93,6 +96,7 @@ export function palLines(pal: WrappedPal): string[] {
 
 function tokensLabel(totals: WrappedTotals): string {
   const unknown = totals.callsWithoutTokens;
+
   return unknown > 0
     ? `${count(totals.tokens)} + ${count(unknown)} calls without counts`
     : count(totals.tokens);
@@ -100,6 +104,7 @@ function tokensLabel(totals: WrappedTotals): string {
 
 function apiEquivalentLabel(cost: CostTotals): string {
   const priced = fmtCost(cost.apiEquivalent);
+
   return cost.unpriced > 0
     ? `${priced} + ${count(cost.unpriced)} unpriced calls`
     : priced;
@@ -109,6 +114,7 @@ const paidLabel = (paid: number | null) => (paid === null ? "unknown" : fmtCost(
 
 function runtimeCostLabel({ runtime, calls, cost }: RuntimeCost): string {
   const api = cost.unpriced === calls ? "unknown" : apiEquivalentLabel(cost);
+
   return `${labelOfRuntime(runtime)}  API-equivalent ${api}, paid ${paidLabel(cost.paid)}`;
 }
 
@@ -118,6 +124,7 @@ const labelled = (tallies: Tally[]) =>
 /** No agent reports which of Cursor's lines a human typed yet. */
 export function agentsLines(agents: WrappedAgents): string[] {
   const [first, ...rest] = agents.costs.map(runtimeCostLabel);
+
   return [
     "\n  Agents\n",
     row("messages by agent", tallyLabel(labelled(agents.messages))),

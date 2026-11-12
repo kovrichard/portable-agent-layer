@@ -70,6 +70,7 @@ function seedLegacy(opts?: {
       ? { "src-1": { id: "S1", url: null, author: "Anon", publication: null } }
       : {},
   };
+
   if (opts?.extraPeople) {
     for (let i = 0; i < opts.extraPeople; i++) {
       const key = `extra-${i}`;
@@ -90,6 +91,7 @@ function silently<T>(fn: () => T): T {
   const err = console.error;
   console.log = () => {};
   console.error = () => {};
+
   try {
     return fn();
   } finally {
@@ -106,6 +108,7 @@ describe("v3-entities-to-knowledge — check", () => {
     const captured: string[] = [];
     const log = console.log;
     console.log = (...a: unknown[]) => captured.push(a.join(" "));
+
     try {
       runMigrate(["--list"]);
     } finally {
@@ -122,6 +125,7 @@ describe("v3-entities-to-knowledge — check", () => {
     const captured: string[] = [];
     const log = console.log;
     console.log = (...a: unknown[]) => captured.push(a.join(" "));
+
     try {
       runMigrate(["--list"]);
     } finally {
@@ -136,6 +140,7 @@ describe("v3-entities-to-knowledge — check", () => {
     const captured: string[] = [];
     const log = console.log;
     console.log = (...a: unknown[]) => captured.push(a.join(" "));
+
     try {
       runMigrate(["--list"]);
     } finally {
@@ -156,6 +161,7 @@ describe("v3 — dry-run", () => {
     const captured: string[] = [];
     const log = console.log;
     console.log = (...a: unknown[]) => captured.push(a.join(" "));
+
     try {
       runMigrate(["--dry-run"]);
     } finally {
@@ -241,6 +247,7 @@ describe("v3 — idempotence", () => {
     const captured: string[] = [];
     const log = console.log;
     console.log = (...a: unknown[]) => captured.push(a.join(" "));
+
     try {
       seedLegacy();
       runMigrate([]);
@@ -262,6 +269,7 @@ describe("v3 — bails on non-empty links/sources", () => {
     const captured: string[] = [];
     const log = console.log;
     console.log = (...a: unknown[]) => captured.push(a.join(" "));
+
     try {
       runMigrate([]);
     } finally {
@@ -280,6 +288,7 @@ describe("v3 — bails on non-empty links/sources", () => {
     const captured: string[] = [];
     const log = console.log;
     console.log = (...a: unknown[]) => captured.push(a.join(" "));
+
     try {
       runMigrate([]);
     } finally {

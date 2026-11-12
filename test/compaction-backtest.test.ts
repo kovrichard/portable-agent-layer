@@ -83,6 +83,7 @@ function seedHistory() {
 
 async function backtest(...args: string[]) {
   const code = await runCompaction(["backtest", ...args]);
+
   return { code, text: printed.join("\n") };
 }
 

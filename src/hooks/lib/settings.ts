@@ -74,6 +74,7 @@ function settingsPath(): string {
 
 function readSettingsFile(p: string): PalSettingsData {
   if (!existsSync(p)) return {};
+
   try {
     return JSON.parse(readFileSync(p, "utf-8")) as PalSettingsData;
   } catch {
@@ -84,12 +85,14 @@ function readSettingsFile(p: string): PalSettingsData {
 function load(): PalSettingsData {
   const p = settingsPath();
   if (cached?.path !== p) cached = { path: p, data: readSettingsFile(p) };
+
   return cached.data;
 }
 
 /** Force re-read from disk (useful after writes) */
 export function reload(): PalSettingsData {
   cached = null;
+
   return load();
 }
 

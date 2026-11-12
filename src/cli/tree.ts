@@ -73,6 +73,7 @@ function agentOptions(verb: string): OptionSpecs {
     agent,
     { type: "boolean", description: `${verb} ${AGENT_REGISTRY[agent].label}` },
   ]);
+
   return {
     ...Object.fromEntries(perAgent),
     all: { type: "boolean", description: `${verb} every supported agent` },
@@ -88,6 +89,7 @@ const DRY_RUN: OptionSpec = { type: "boolean", description: "Show what would hap
 function debugCommand(admin: AdminHandlers): Group {
   const state = (s: DebugState, summary: string) =>
     leaf({ summary, run: () => admin.debug(s) });
+
   return group({
     summary: "Verbose hook debug logging (persisted)",
     fallback: "status",
@@ -220,5 +222,6 @@ export function inertAdmin(): AdminHandlers {
 
 export function adminCommandNames(): string[] {
   const names = Object.keys(cliTree(inertAdmin()).commands);
+
   return names.filter((name) => !builtinToolVerbs.includes(name));
 }

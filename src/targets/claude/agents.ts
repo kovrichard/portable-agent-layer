@@ -20,6 +20,7 @@ export function removeAgents(): string[] {
   if (!existsSync(agentsDir)) return [];
 
   const removed: string[] = [];
+
   for (const file of readdirSync(agentsDir).filter((f) => f.endsWith(".md"))) {
     const dst = resolve(claudeAgentsDir(), file);
     if (existsSync(dst)) {
@@ -29,12 +30,14 @@ export function removeAgents(): string[] {
       log.detail(`Removed agent: ${name}`);
     }
   }
+
   return removed;
 }
 
 /** Count agent .md files in ~/.claude/agents/ */
 export function countAgents(): number {
   if (!existsSync(claudeAgentsDir())) return 0;
+
   try {
     return readdirSync(claudeAgentsDir()).filter((f) => f.endsWith(".md")).length;
   } catch {
@@ -45,6 +48,7 @@ export function countAgents(): number {
 /** Count .md files in a directory */
 export function countMd(dir: string): number {
   if (!existsSync(dir)) return 0;
+
   try {
     return readdirSync(dir).filter((f) => f.endsWith(".md")).length;
   } catch {

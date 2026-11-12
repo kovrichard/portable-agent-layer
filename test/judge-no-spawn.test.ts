@@ -8,6 +8,7 @@ function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
     const path = resolve(dir, name);
     if (statSync(path).isDirectory()) return sources(path);
+
     return path.endsWith(".ts") ? [path] : [];
   });
 }

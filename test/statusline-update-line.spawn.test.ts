@@ -45,6 +45,7 @@ function render(): string {
     encoding: "utf-8",
     env: { ...process.env, HOME },
   });
+
   return run.stdout ?? "";
 }
 

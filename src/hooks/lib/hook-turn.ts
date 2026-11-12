@@ -31,6 +31,7 @@ export function hookSessionId(payload: HookTurnPayload | null | undefined) {
 function declaredWorkspace(payload: object | null | undefined): string | null {
   const paths = payload && "workspacePaths" in payload ? payload.workspacePaths : null;
   const first = Array.isArray(paths) ? paths[0] : undefined;
+
   return typeof first === "string" && existsSync(first) ? first : null;
 }
 

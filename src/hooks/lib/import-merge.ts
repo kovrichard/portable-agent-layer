@@ -53,6 +53,7 @@ function normalize(path: string): string {
 
 export function isNeverImport(path: string): boolean {
   const rel = normalize(path);
+
   return NEVER_IMPORT.some((deny) => rel === deny || rel.endsWith(`/${deny}`));
 }
 
@@ -78,12 +79,14 @@ export function mergeJsonlLines(
   const local = splitLines(localRaw);
   const seen = new Set(local);
   const added: string[] = [];
+
   for (const line of splitLines(incomingRaw)) {
     if (seen.has(line)) continue;
     seen.add(line);
     added.push(line);
   }
   const all = [...local, ...added];
+
   return { text: all.length > 0 ? `${all.join("\n")}\n` : "", added: added.length };
 }
 
@@ -166,10 +169,12 @@ export function mergeArchive(
 export function readManifest(entries: ArchiveEntry[]): ExportManifest | null {
   const hit = entries.find((e) => normalize(e.path) === MANIFEST_NAME);
   if (!hit) return null;
+
   try {
     const parsed = JSON.parse(hit.data().toString("utf-8")) as Partial<ExportManifest>;
     if (typeof parsed.machineId !== "string" || parsed.machineId.length === 0)
       return null;
+
     return {
       machineId: parsed.machineId,
       label: parsed.label ?? parsed.machineId,
@@ -201,8 +206,10 @@ export function appendImportLog(home: string, entry: ImportLogEntry): void {
   const logPath = resolve(home, "memory", "state", "import-log.jsonl");
   mkdirSync(dirname(logPath), { recursive: true });
   const line = `${JSON.stringify(entry)}\n`;
+
   if (existsSync(logPath)) {
     writeFileSync(logPath, readFileSync(logPath, "utf-8") + line);
+
     return;
   }
   writeFileSync(logPath, line);
@@ -214,7 +221,10 @@ export function summarize(result: MergeResult): string {
     `${result.merged.length} merged (+${result.linesAdded} records)`,
     `${result.identical.length} unchanged`,
   ];
+
   if (result.conflicts.length > 0) parts.push(`${result.conflicts.length} conflicts`);
+
   if (result.skipped.length > 0) parts.push(`${result.skipped.length} skipped`);
+
   return parts.join(", ");
 }

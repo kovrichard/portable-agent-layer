@@ -18,6 +18,7 @@ const NOW = new Date("2026-10-04T12:00:00Z");
 function transcript(entries: unknown[]): string {
   const path = resolve(HOME, "transcript.jsonl");
   writeFileSync(path, entries.map((e) => JSON.stringify(e)).join("\n"));
+
   return path;
 }
 

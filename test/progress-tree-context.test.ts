@@ -54,6 +54,7 @@ describe("progress tree in context", () => {
     function recordingGh(calls: string[]): GhRunner {
       return (ref) => {
         calls.push(ref);
+
         return JSON.stringify({
           state: "MERGED",
           mergedAt: "2026-10-19T14:00:00Z",

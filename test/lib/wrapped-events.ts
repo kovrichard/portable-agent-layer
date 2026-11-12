@@ -13,6 +13,7 @@ export function budapestHome(testFile: string): string {
     JSON.stringify({ identity: { principal: { timezone: "Europe/Budapest" } } })
   );
   reload();
+
   return home;
 }
 
@@ -24,6 +25,7 @@ export function event(
   envelope: Partial<LoggedEvent> = {}
 ): LoggedEvent {
   seq++;
+
   return {
     v: 1,
     id: `e${seq}`,

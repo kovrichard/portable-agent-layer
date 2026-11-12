@@ -12,8 +12,10 @@ import { resolve } from "node:path";
 export function removePalContextFiles(dir: string, suffix: string): string[] {
   if (!existsSync(dir)) return [];
   const removed: string[] = [];
+
   for (const file of readdirSync(dir)) {
     if (!file.startsWith("pal-") || !file.endsWith(suffix)) continue;
+
     try {
       unlinkSync(resolve(dir, file));
       removed.push(file);
@@ -21,5 +23,6 @@ export function removePalContextFiles(dir: string, suffix: string): string[] {
       /* gone or not ours to remove */
     }
   }
+
   return removed;
 }

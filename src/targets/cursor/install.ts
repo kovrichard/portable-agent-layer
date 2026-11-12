@@ -37,6 +37,7 @@ const agentCount = copyAgentsForCursor(cursorAgentsDir);
 log.success(`${countSkills()} skills · ${agentCount} agents → ~/.cursor/`);
 
 copyStatusline("cursor");
+
 if (!existsSync(CLI_CONFIG)) {
   writeFileSync(CLI_CONFIG, "{}\n", "utf-8");
   log.info("Created new cli-config.json");

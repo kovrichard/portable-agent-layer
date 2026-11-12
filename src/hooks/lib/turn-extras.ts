@@ -35,6 +35,7 @@ export function languageOf(text: string): string | null {
   const words = new Set(tokens(text));
   let best: string | null = null;
   let bestHits = MIN_STOPWORD_HITS - 1;
+
   for (const [language, stopwords] of Object.entries(STOPWORDS)) {
     const hits = stopwords.filter((w) => words.has(w)).length;
     if (hits > bestHits) {
@@ -42,6 +43,7 @@ export function languageOf(text: string): string | null {
       bestHits = hits;
     }
   }
+
   return best;
 }
 
@@ -59,6 +61,7 @@ export function imageCount(prompt: string): number {
 export function slashCommandOf(prompt: string): string | null {
   const tagged = COMMAND_TAG_RE.exec(prompt)?.[1];
   if (tagged) return tagged;
+
   return SLASH_RE.exec(prompt.trim())?.[1] ?? null;
 }
 
@@ -74,5 +77,6 @@ export function turnExtras(prompt: string, text: string) {
 export function responseModeOf(reply: string): string | null {
   const match = MODE_RE.exec(reply.slice(0, 400));
   if (!match) return null;
+
   return match[1] ?? "MINIMAL";
 }

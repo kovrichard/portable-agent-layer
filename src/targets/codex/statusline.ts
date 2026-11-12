@@ -15,6 +15,7 @@ function codexStatusLineToml(): string {
   const quotedItems = PAL_CODEX_STATUS_LINE.map((item) => JSON.stringify(item)).join(
     ", "
   );
+
   return `tui.status_line = [${quotedItems}]\ntui.status_line_use_colors = true\n`;
 }
 
@@ -27,6 +28,7 @@ export function addCodexStatuslineConfig(content: string): string {
   if (hasCodexStatusLine(content)) return content;
 
   const block = codexStatusLineToml();
+
   if (content.trim() === "") return block;
 
   const firstTable = content.search(/^[ \t]*\[/m);
@@ -36,6 +38,7 @@ export function addCodexStatuslineConfig(content: string): string {
 
   const before = content.slice(0, firstTable);
   const after = content.slice(firstTable);
+
   return `${before}${before.endsWith("\n") || before === "" ? "" : "\n"}${block}\n${after}`;
 }
 

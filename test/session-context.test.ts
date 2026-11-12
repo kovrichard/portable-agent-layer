@@ -23,6 +23,7 @@ const AGENTS_MD = "# AGENTS.md\nidentity and routing";
 function envelopeOf(agent: string): ContextEnvelope {
   const envelope = contextEnvelope(agent, REMINDER, AGENTS_MD);
   if (!envelope) throw new Error(`no envelope for ${agent}`);
+
   return envelope;
 }
 
@@ -74,6 +75,7 @@ describe("the envelope each agent is handed", () => {
 
   test("only Copilot also writes a file — its CLI and its extension read differently", () => {
     expect(envelopeOf("copilot").file).toContain(REMINDER);
+
     for (const agent of ["cursor", "codex", "claude"]) {
       expect(envelopeOf(agent).file).toBeUndefined();
     }
@@ -125,6 +127,7 @@ describe("the file Copilot's extension reads", () => {
   test("is written where the extension looks, creating the folder", () => {
     const dir = resolve(freshTestDir(import.meta.file), "copilot");
     process.env.PAL_COPILOT_DIR = dir;
+
     try {
       writeCopilotInstructions("body");
       const path = resolve(dir, "instructions", "pal-session.instructions.md");

@@ -30,6 +30,7 @@ export function injectRetrievalHome(file: string): string {
     const settings = await import("../../src/hooks/lib/settings");
     settings.reload();
   });
+
   return home;
 }
 
@@ -42,6 +43,7 @@ export async function setSettings(data: Record<string, unknown>) {
 export async function loadHandlers() {
   const t = Date.now();
   const mod = await import(`../../src/hooks/handlers/inject-retrieval.ts?t=${t}`);
+
   return {
     injectPromptContext: mod.injectPromptContext as (prompt: string) => Promise<void>,
     withinBudget: mod.withinBudget as <T>(work: () => T, ms: number) => T | null,
@@ -54,12 +56,15 @@ export async function captureStdout(work: () => Promise<void>): Promise<string> 
   // biome-ignore lint/suspicious/noExplicitAny: test stub
   (process.stdout as any).write = (chunk: string | Uint8Array) => {
     captured += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString();
+
     return true;
   };
+
   try {
     await work();
   } finally {
     process.stdout.write = original;
   }
+
   return captured;
 }

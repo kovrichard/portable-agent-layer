@@ -16,6 +16,7 @@ export function projectsHome(file: string): string {
   beforeEach(() => {
     removeOnceReleased(resolve(home, "memory", "projects"));
   });
+
   return home;
 }
 

@@ -108,12 +108,14 @@ export function synthesizeAlgorithm(since?: Date): AlgorithmSynthesis {
     string,
     { sentiments: number[]; projects: Set<string>; quotes: string[] }
   >();
+
   for (const b of BUCKETS) {
     acc.set(b.key, { sentiments: [], projects: new Set(), quotes: [] });
   }
 
   let unbucketed = 0;
   const unbucketedQuotes: string[] = [];
+
   for (const r of q2s) {
     const matched = BUCKETS.filter((b) => b.patterns.test(r.q2));
     if (matched.length === 0) {
@@ -121,10 +123,12 @@ export function synthesizeAlgorithm(since?: Date): AlgorithmSynthesis {
       unbucketedQuotes.push(r.q2.trim());
       continue;
     }
+
     for (const b of matched) {
       const a = acc.get(b.key);
       if (!a) continue;
       a.sentiments.push(r.sentiment);
+
       if (r.cwd) a.projects.add(projectOf(r.cwd));
       a.quotes.push(r.q2.trim());
     }
@@ -140,6 +144,7 @@ export function synthesizeAlgorithm(since?: Date): AlgorithmSynthesis {
     // --json carries every member so nothing is lost; the human report caps the
     // display per bucket. Zero-loss is the contract.
     const quotes = [...new Set(a?.quotes ?? [])].sort((x, y) => y.length - x.length);
+
     return {
       key: b.key,
       label: b.label,
@@ -183,7 +188,9 @@ export function formatAlgorithmReport(s: AlgorithmSynthesis): string {
       `${b.count} reflections · avg sentiment ${b.avgSentiment}/10 · ${b.projects} project(s)`,
       ""
     );
+
     for (const q of b.quotes.slice(0, 5)) lines.push(`- ${q}`);
+
     if (b.quotes.length > 5) lines.push(`- _…+${b.quotes.length - 5} more (see --json)_`);
     lines.push("");
   });
@@ -191,15 +198,19 @@ export function formatAlgorithmReport(s: AlgorithmSynthesis): string {
     `## Unbucketed — ${s.unbucketed} general Q2s the pre-sort missed (cluster these by hand)`,
     ""
   );
+
   for (const q of s.unbucketedQuotes) lines.push(`- ${q}`);
+
   if (s.taskSpecific > 0) {
     lines.push(
       "",
       `## Task-specific — ${s.taskSpecific} Q2s tagged not-generalizable (review, don't fold into ALGORITHM.md)`,
       ""
     );
+
     for (const q of s.taskSpecificQuotes) lines.push(`- ${q}`);
   }
+
   return lines.join("\n");
 }
 
@@ -235,6 +246,7 @@ function sinceDate(raw: string | undefined): Date | undefined {
   const since = new Date(raw);
   if (Number.isNaN(since.getTime()))
     throw new UsageError(`--since is not a date: ${raw}`);
+
   return since;
 }
 

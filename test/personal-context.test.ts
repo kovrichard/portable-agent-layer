@@ -24,6 +24,7 @@ function answer(file: string) {
 function storedTimezone(): string | undefined {
   const path = resolve(HOME, "memory", "pal-settings.json");
   if (!existsSync(path)) return undefined;
+
   return JSON.parse(readFileSync(path, "utf-8")).identity?.principal?.timezone;
 }
 
@@ -35,8 +36,10 @@ async function capture(
   console.log = (...args: unknown[]) => {
     out += `${args.join(" ")}\n`;
   };
+
   try {
     const code = await work();
+
     return { code, out };
   } finally {
     console.log = original;
@@ -45,6 +48,7 @@ async function capture(
 
 async function cli() {
   const fresh = await import(`../src/cli/personal-context.ts?t=${Date.now()}`);
+
   return {
     runTelos: (args: string[]) =>
       runCommand(fresh.telosCommand, args, ["pal", "cli", "telos"]),

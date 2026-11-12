@@ -12,6 +12,7 @@ function readConfig(name: string): OpencodeConfig | null {
     const config = Bun.JSONC.parse(
       readFileSync(resolve(platform.opencodeDir(), name), "utf-8")
     );
+
     return config && typeof config === "object" ? (config as OpencodeConfig) : null;
   } catch {
     return null;
@@ -20,6 +21,7 @@ function readConfig(name: string): OpencodeConfig | null {
 
 function pinnedModel(config: OpencodeConfig | null, key = "model"): string | null {
   const value = config?.[key];
+
   return typeof value === "string" && value ? value : null;
 }
 
@@ -28,6 +30,7 @@ function firstPinned(key: string): string | null {
     const model = pinnedModel(readConfig(name), key);
     if (model) return model;
   }
+
   return null;
 }
 
@@ -38,11 +41,13 @@ export function opencodeBackgroundModel(): string | null {
 
 export function opencodeTierModel(tier: InferenceTier): string | null {
   const small = tier === "small" ? firstPinned("small_model") : null;
+
   return small ?? opencodeBackgroundModel();
 }
 
 function withoutInstructions(config: OpencodeConfig): OpencodeConfig {
   const { instructions: _, ...rest } = config;
+
   return rest;
 }
 
@@ -53,6 +58,7 @@ function withoutInstructions(config: OpencodeConfig): OpencodeConfig {
 export function writeInstructionFreeConfig(configHome: string): void {
   const dir = resolve(configHome, "opencode");
   mkdirSync(dir, { recursive: true });
+
   for (const name of GLOBAL_CONFIG_FILES) {
     const config = readConfig(name);
     if (config)

@@ -34,6 +34,7 @@ function linkWithUnsandboxedAgentDirs() {
     USERPROFILE: FAKE_HOME,
     PAL_HOME,
   };
+
   for (const v of [
     "PAL_CLAUDE_DIR",
     "PAL_CURSOR_DIR",
@@ -45,6 +46,7 @@ function linkWithUnsandboxedAgentDirs() {
   ]) {
     delete env[v];
   }
+
   return spawnSync("bun", ["run", CLI, "cli", "skill", "link", "guard-probe"], {
     env,
     encoding: "utf-8",
@@ -54,6 +56,7 @@ function linkWithUnsandboxedAgentDirs() {
 
 beforeAll(() => {
   removeOnceReleased(ROOT);
+
   // The agent dirs must exist, or linkPersonalSkill treats them as "not installed".
   for (const dir of AGENT_DIRS) {
     mkdirSync(resolve(FAKE_HOME, dir, "skills"), { recursive: true });

@@ -35,6 +35,7 @@ function heartbeatEvents(): Record<string, unknown>[] {
     `${new Date().toISOString().slice(0, 7)}.jsonl`
   );
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .trim()
     .split("\n")
@@ -46,8 +47,10 @@ function recordingFetch(status = 204) {
   const bodies: unknown[] = [];
   const fetchImpl = (async (_url: string, init: RequestInit) => {
     bodies.push(JSON.parse(String(init.body)));
+
     return new Response(null, { status });
   }) as unknown as typeof fetch;
+
   return { bodies, fetchImpl };
 }
 
@@ -60,11 +63,13 @@ async function telemetry(...args: string[]): Promise<string> {
   const log = spyOn(console, "log").mockImplementation((line) =>
     lines.push(String(line))
   );
+
   try {
     await runCommand(telemetryCommand, args, ["pal", "cli", "telemetry"]);
   } finally {
     log.mockRestore();
   }
+
   return lines.join("\n");
 }
 
@@ -108,6 +113,7 @@ describe("what is sent", () => {
     let request: RequestInit | undefined;
     const fetchImpl = (async (_url: string, init: RequestInit) => {
       request = init;
+
       return new Response(null, { status: 204 });
     }) as unknown as typeof fetch;
     await sendHeartbeat([], { env: ON, fetchImpl });
@@ -225,6 +231,7 @@ describe("pal cli telemetry", () => {
 
   test("status says why it is off, which endpoint, and that nothing was tried yet", async () => {
     process.env.PAL_TELEMETRY_URL = "";
+
     try {
       expect((await telemetry("status")).split("\n")).toEqual([
         "telemetry    off (test sandbox)",

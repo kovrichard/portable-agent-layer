@@ -91,6 +91,7 @@ function missedApprovedRules(
 ): TriggeredRule[] {
   const newest = corrections.at(-1);
   if (!newest) return [];
+
   return known.filter(isTriggerRule).filter((rule) => !firesOn(rule.trigger, newest));
 }
 
@@ -100,22 +101,27 @@ export function canWiden(corrections: Correction[], known: KnownRule[]): boolean
 
 function correctionBlock(correction: Correction, n: number, newest: boolean): string {
   const request = correction.prompt ? `<request>${correction.prompt}</request>\n` : "";
+
   return `<correction n="${n}"${newest ? ' newest="true"' : ""}>\n${request}<reply_end>${correction.replyEnd}</reply_end>\n<user_message>${correction.message}</user_message>\n<what_was_wrong>${correction.issue}</what_was_wrong>\n</correction>`;
 }
 
 function knownRuleLine(rule: KnownRule, newest: Correction | undefined): string {
   if (rule.widens)
     return `- draft widening of rule ${rule.widens}: ${rule.trigger?.pattern}`;
+
   if (!isTriggerRule(rule)) {
     const label = rule.delivery === "always" ? `opinion ${rule.id}` : rule.status;
+
     return `- ${label}: ${rule.when}. ${rule.steering}`;
   }
   const fires = newest && firesOn(rule.trigger, newest) ? "yes" : "no";
+
   return `- approved rule ${rule.id}: ${rule.when}. ${rule.steering} Trigger on the ${rule.trigger.side}: ${rule.trigger.pattern}. Fires on the newest correction: ${fires}.`;
 }
 
 function knownRulesBlock(known: KnownRule[], newest: Correction | undefined): string {
   const lines = known.map((rule) => knownRuleLine(rule, newest));
+
   return `Known rules:\n${lines.length ? lines.join("\n") : "none"}`;
 }
 
@@ -126,6 +132,7 @@ export function drafterRequest(
 ) {
   const last = corrections.length - 1;
   const blocks = corrections.map((c, n) => correctionBlock(c, n, n === last));
+
   return {
     system: DRAFTER_SYSTEM_PROMPT,
     user: `${blocks.join("\n\n")}\n\n${knownRulesBlock(known, corrections[last])}`,
@@ -158,6 +165,7 @@ function bareExpression(pattern: string): string {
 function isValidPattern(pattern: string): boolean {
   try {
     new RegExp(pattern, "i");
+
     return pattern.trim() !== "";
   } catch {
     return false;
@@ -169,6 +177,7 @@ function validCites(cites: unknown, count: number, minCited: number): number[] |
   const distinct = [...new Set(cites)];
   const inRange = distinct.every((n) => Number.isInteger(n) && n >= 0 && n < count);
   const citesNewest = distinct.includes(count - 1);
+
   return inRange && citesNewest && distinct.length >= minCited
     ? (distinct as number[]).sort((a, b) => a - b)
     : null;
@@ -189,6 +198,7 @@ function hasText(...fields: unknown[]): boolean {
 function citedEvidence(cites: number[], corrections: Correction[]): string[] {
   return cites.map((n) => {
     const cited = corrections[n];
+
     return `${cited.issue}: ${cited.message.slice(0, EVIDENCE_MESSAGE_MAX)}`;
   });
 }
@@ -207,6 +217,7 @@ export function citedKind(
   const newestFirst = namedKindsOf(cites.map((n) => corrections[n])).reverse();
   const count = (kind: string) => newestFirst.filter((k) => k === kind).length;
   const most = Math.max(...newestFirst.map(count));
+
   return newestFirst.find((kind) => count(kind) === most);
 }
 
@@ -217,6 +228,7 @@ function withKind<T extends CandidateInput>(candidate: T, kind: string | undefin
 function optionalTrigger({ side, pattern }: DraftOutput): RuleTrigger | undefined {
   if ((side !== "prompt" && side !== "reply") || !hasText(pattern)) return undefined;
   const bare = bareExpression(pattern);
+
   return isValidPattern(bare) ? { side, pattern: bare } : undefined;
 }
 
@@ -234,6 +246,7 @@ function parseNewRule(
     check: draft.check.trim(),
     evidence: citedEvidence(cites, corrections),
   };
+
   return withKind(candidate, citedKind(cites, corrections));
 }
 
@@ -250,6 +263,7 @@ function parseWidening(
   const trigger = { ...rule.trigger, pattern: `${rule.trigger.pattern}|${addition}` };
   const newest = corrections.at(-1);
   if (!newest || !firesOn(trigger, newest)) return null;
+
   return {
     when: rule.when,
     trigger,
@@ -267,6 +281,7 @@ export function parseDraft(
 ): CandidateInput | null {
   const draft = output ? parseOutput(output) : null;
   if (draft?.recurring !== true) return null;
+
   return draft.widens
     ? parseWidening(draft, corrections, known)
     : parseNewRule(draft, corrections);

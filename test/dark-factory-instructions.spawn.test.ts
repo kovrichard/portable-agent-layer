@@ -43,6 +43,7 @@ function env(): Env {
   const base = Object.fromEntries(
     Object.entries(process.env).filter(([key]) => key.toLowerCase() !== "path")
   );
+
   return {
     ...base,
     ...GIT_ENV,
@@ -98,11 +99,13 @@ type Setup = {
 
 function setup({ user, repo, repoConfig = {}, factoryConfig }: Setup = {}) {
   if (user !== undefined) put(join(userHome, ".claude", "CLAUDE.md"), user);
+
   if (factoryConfig) put(join(home, "config.json"), JSON.stringify(factoryConfig));
   put(
     join(clone, ".dark-factory.json"),
     JSON.stringify({ gate: [], baseBranch: "canary", ...repoConfig })
   );
+
   if (repo !== undefined) put(join(clone, "CLAUDE.md"), repo);
   commitAll(clone);
   const e = env();
@@ -128,6 +131,7 @@ function run(role = "reviewer") {
 function appended(): string {
   const text = recorded().appended;
   if (text === null) throw new Error(`claude was not given ${FLAG}`);
+
   return text;
 }
 
@@ -231,6 +235,7 @@ describe("@path imports", () => {
 
   test("imports stop after 5 levels", () => {
     setup({ repo: "@l1.md\n" });
+
     for (let level = 1; level <= 7; level += 1) {
       put(join(clone, `l${level}.md`), `LEVEL${level}\n@l${level + 1}.md\n`);
     }

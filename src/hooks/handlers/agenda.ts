@@ -25,6 +25,7 @@ const MAX_PROJECTS_PER_GUESS = 40;
 function hoursSince(iso: string, now: Date): number {
   const at = new Date(iso).getTime();
   if (!Number.isFinite(at)) return Number.POSITIVE_INFINITY;
+
   return (now.getTime() - at) / 3_600_000;
 }
 
@@ -114,9 +115,11 @@ const MOVES_SCHEMA = {
 function goalsBrief(): string {
   const goals = readTelosGoals();
   if (goals.length === 0) return "The user has not written any goals down yet.";
+
   return goals
     .map((g) => {
       const by = g.due ? ` [by ${g.due}]` : "";
+
       return `- ${g.text}${by}`;
     })
     .join("\n");
@@ -128,6 +131,7 @@ function parsePayload<T>(raw: string, caller: string): T | null {
     return JSON.parse(raw) as T;
   } catch (err) {
     logError(caller, err);
+
     return null;
   }
 }
@@ -142,6 +146,7 @@ async function guessMissingServes(sessionId?: string): Promise<number> {
   const described = missing
     .map((p) => {
       const purpose = (p.goal ?? p.problem ?? "").replace(/\s+/g, " ").slice(0, 200);
+
       return `- ${p.name}: ${purpose || "no description on record"}`;
     })
     .join("\n");
@@ -173,6 +178,7 @@ async function guessMissingServes(sessionId?: string): Promise<number> {
 
   const known = new Set(missing.map((p) => p.name));
   let written = 0;
+
   for (const guess of parsed.projects) {
     if (!known.has(guess.name) || !isServesKind(guess.serves)) continue;
     const outcome = setServes({
@@ -183,6 +189,7 @@ async function guessMissingServes(sessionId?: string): Promise<number> {
     });
     if (outcome === "written") written++;
   }
+
   return written;
 }
 
@@ -191,8 +198,10 @@ function matrixBrief(): string {
   const lines = rankedItems(grid).map((item) => {
     const why = item.urgentBecause.join(", ") || "nothing pressing";
     const waiting = item.waitingOn ? ` — waiting on the user for: ${item.waitingOn}` : "";
+
     return `- [${item.kind}] ${item.label}: ${item.importantBecause}; ${why}${waiting}`;
   });
+
   return lines.length > 0 ? lines.join("\n") : "Nothing is ranked yet.";
 }
 
@@ -257,6 +266,7 @@ async function refreshGoalLinks(
     }));
 
   await writeGoalLinks({ generatedAt: new Date().toISOString(), inputs, links });
+
   return "written";
 }
 
@@ -304,11 +314,13 @@ async function writeMoves(sessionId?: string): Promise<boolean> {
     .slice(0, 3)
     .map(({ move, because, project }) => {
       const slug = knownSlug(project, slugs);
+
       return slug ? { move, because, project: slug } : { move, because };
     });
   if (moves.length === 0) return false;
 
   await writeAgenda({ generatedAt: new Date().toISOString(), moves });
+
   return true;
 }
 
@@ -322,6 +334,7 @@ export async function refreshAgenda(
 ): Promise<AgendaOutcome> {
   const existing = readAgenda();
   if (existing && hoursSince(existing.generatedAt, now) < FRESH_HOURS) return "fresh";
+
   if (!canInfer()) return "no-inference";
 
   const guessed = await guessMissingServes(sessionId);
@@ -331,11 +344,13 @@ export async function refreshAgenda(
     "agenda",
     `serves guessed: ${guessed}, links: ${linked}, moves written: ${wrote}`
   );
+
   return wrote ? "written" : "failed";
 }
 
 if (process.argv[2] === "--run") {
   const sid = process.argv[3];
+
   try {
     const outcome = await refreshAgenda(new Date(), sid === "" ? undefined : sid);
     logDebug("agenda", outcome);

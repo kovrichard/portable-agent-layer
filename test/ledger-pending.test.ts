@@ -29,6 +29,7 @@ const SNAPSHOT = {
 
 function pendingFiles(): string[] {
   const dir = resolve(HOME, "memory", "ledger", "pending");
+
   return existsSync(dir) ? readdirSync(dir) : [];
 }
 

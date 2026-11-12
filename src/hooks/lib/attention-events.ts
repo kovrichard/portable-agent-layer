@@ -16,6 +16,7 @@ function logPermissionPrompt(
   logQuietly("permission_prompt", () => {
     const session = hookSessionId(payload) ?? null;
     appendEvent("permission_prompt", { tool }, { ts: now.toISOString(), session });
+
     if (session)
       markWaiting("permission", session, { ts: now.toISOString(), tool: tool ?? "" });
   });
@@ -27,6 +28,7 @@ function logNotification(payload: Record<string, unknown> | null, now: Date): vo
     const kind =
       typeof payload?.notification_type === "string" ? payload.notification_type : null;
     appendEvent("notification", { kind }, { ts: now.toISOString(), session });
+
     if (session) markWaiting("notified", session, { ts: now.toISOString() });
   });
 }
@@ -38,6 +40,7 @@ export function logAttention(
 ): void {
   const event = payload?.hook_event_name ?? payload?.hookEventName;
   if (event === "Notification") logNotification(payload, now);
+
   if (event === "PermissionRequest")
     logPermissionPrompt(payload, normalizeToolUse(payload)?.toolName ?? null, now);
 }

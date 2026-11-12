@@ -27,10 +27,12 @@ export function projectResolver(
   const nameOf = (cwd: string): string => {
     const registered = resolveProjectFromCwd(cwd, projects, bindings, paths);
     if (registered) return registered.name;
+
     if (!existsSync(cwd)) return UNKNOWN_PROJECT;
     const root = repoRootOf(cwd);
     if (root === null) return UNKNOWN_PROJECT;
     const rootProject = resolveProjectFromCwd(root, projects, bindings, paths);
+
     return rootProject ? rootProject.name : paths.basename(root);
   };
 
@@ -41,6 +43,7 @@ export function projectResolver(
       name = nameOf(cwd);
       memo.set(cwd, name);
     }
+
     return name;
   };
 }

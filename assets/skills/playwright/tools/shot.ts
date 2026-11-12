@@ -35,12 +35,15 @@ function runViaCli(opts: ShotOptions, out: string): boolean {
   const work = mkdtempSync(join(tmpdir(), "pal-pwcli-"));
   const run = (args: string[], quiet = false) =>
     spawnSync("playwright-cli", args, { stdio: quiet ? "ignore" : "inherit", cwd: work });
+
   try {
     if (run(["open", opts.url]).status !== 0) return false;
     const args = ["screenshot", `--filename=${out}`];
+
     if (opts.selector) args.push(opts.selector);
     const shot = run(args);
     run(["close"], true);
+
     return shot.status === 0 && existsSync(out);
   } finally {
     rmSync(work, { recursive: true, force: true });
@@ -53,6 +56,7 @@ type NodeResult = "ok" | "unavailable" | "error";
 
 async function runViaNode(opts: ShotOptions, out: string): Promise<NodeResult> {
   let chromium: typeof import("playwright").chromium;
+
   try {
     ({ chromium } = await import("playwright"));
   } catch {
@@ -60,22 +64,28 @@ async function runViaNode(opts: ShotOptions, out: string): Promise<NodeResult> {
   }
 
   let browser: Awaited<ReturnType<typeof chromium.launch>>;
+
   try {
     browser = await chromium.launch();
   } catch (e) {
     console.error(`chromium launch failed: ${(e as Error).message}`);
+
     return "unavailable"; // browser not installed / can't launch
   }
 
   try {
     const page = await browser.newPage(opts.viewport ? { viewport: opts.viewport } : {});
     await page.goto(opts.url, { waitUntil: "networkidle" });
+
     if (opts.waitMs) await page.waitForTimeout(opts.waitMs);
+
     if (opts.selector) await page.locator(opts.selector).screenshot({ path: out });
     else await page.screenshot({ path: out, fullPage: opts.fullPage });
+
     return existsSync(out) ? "ok" : "error";
   } catch (e) {
     console.error(`screenshot failed: ${(e as Error).message}`);
+
     return "error";
   } finally {
     await browser.close();
@@ -84,6 +94,7 @@ async function runViaNode(opts: ShotOptions, out: string): Promise<NodeResult> {
 
 async function main(): Promise<void> {
   let opts: ShotOptions;
+
   try {
     opts = parseArgs(process.argv.slice(2));
   } catch (e) {
@@ -100,14 +111,17 @@ async function main(): Promise<void> {
 
   if (tier === "cli" && runViaCli(opts, out)) {
     console.log(out);
+
     return;
   }
 
   const result = await runViaNode(opts, out);
   if (result === "ok") {
     console.log(out);
+
     return;
   }
+
   if (result === "unavailable") {
     console.error("NO_PLAYWRIGHT_CLI");
     process.exit(3); // no local engine → caller falls back to Playwright MCP

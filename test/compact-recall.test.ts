@@ -26,6 +26,7 @@ beforeEach(() => {
 function saveExchange(name: string): string {
   const path = resolve(HOME, "memory", "state", "last-exchange", `${name}.json`);
   writeFileSync(path, JSON.stringify({ sessionId: name }), "utf-8");
+
   return path;
 }
 

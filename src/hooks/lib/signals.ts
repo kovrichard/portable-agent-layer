@@ -19,6 +19,7 @@ function emitSignal(
   const signal: Signal = { ts: now(), ...currentAttribution(), ...data };
   const filepath = resolve(paths.signals(), filename);
   appendFileSync(filepath, `${JSON.stringify(signal)}\n`);
+
   return signal;
 }
 
@@ -62,6 +63,7 @@ function parseSignal(line: string): RatingSignal[] {
 export function readRatings(): RatingSignal[] {
   const filepath = resolve(paths.signals(), "ratings.jsonl");
   if (!existsSync(filepath)) return [];
+
   return readFileSync(filepath, "utf-8")
     .split("\n")
     .filter(Boolean)

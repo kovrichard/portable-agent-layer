@@ -13,6 +13,7 @@ const run: { event: string | null; session: string | null } = {
 
 function firstString(payload: Record<string, unknown>, names: string[]): string | null {
   const value = names.map((n) => payload[n]).find((v) => typeof v === "string" && v);
+
   return (value as string | undefined) ?? null;
 }
 

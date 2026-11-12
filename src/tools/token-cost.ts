@@ -35,6 +35,7 @@ function agentReports(project: string | undefined): AgentReport[] {
     usage: read(),
   });
   const projectOf = projectResolver(readAllProjects(), readBindings());
+
   return [
     report("claude", () =>
       readClaudeCode(
@@ -67,6 +68,7 @@ function rtkGain(): RtkGain {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
   });
+
   return {
     installed: true,
     summary: parseRtkSummary(result.status, result.stdout ?? ""),

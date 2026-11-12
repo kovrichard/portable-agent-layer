@@ -36,12 +36,14 @@ export interface RecallBudget {
 
 export function recallBudget(max: number = MAX_OUTPUT): RecallBudget {
   const user = Math.floor(max * USER_SHARE);
+
   return { user, assistant: max - user - FRAMING_RESERVE };
 }
 
 /** Says how much was dropped, so a truncated message cannot read as a complete one. */
 export function truncate(s: string, max: number): string {
   if (s.length <= max) return s;
+
   return `${s.slice(0, max)}\n[... truncated ${s.length - max} chars]`;
 }
 
@@ -58,6 +60,7 @@ export function findSavedExchange(sessionId?: string): string | null {
     sessionId ? resolve(exchangeDir(), `${sessionId}.json`) : null,
     resolve(exchangeDir(), "latest.json"),
   ].filter((path): path is string => path !== null);
+
   return candidates.find((path) => existsSync(path)) ?? null;
 }
 
@@ -67,6 +70,7 @@ export function findSavedExchange(sessionId?: string): string | null {
  */
 export function isConsumable(file: string, sessionId?: string): boolean {
   if (!sessionId) return false;
+
   return file === resolve(exchangeDir(), `${sessionId}.json`);
 }
 

@@ -13,6 +13,7 @@ function entries(): Array<{ event: string; entry: Entry }> {
   const cfg = loadCopilotHooksTemplate(TEMPLATE, PKG_ROOT) as {
     hooks: Record<string, Entry[]>;
   };
+
   return Object.entries(cfg.hooks).flatMap(([event, list]) =>
     list.map((entry) => ({ event, entry }))
   );
@@ -71,6 +72,7 @@ describe("Copilot hooks template", () => {
 
   test("both shells point at the same hook script", () => {
     const script = (cmd: string) => cmd.slice(cmd.lastIndexOf("/") + 1);
+
     for (const { entry } of entries()) {
       expect(script(entry.powershell ?? "")).toBe(script(entry.bash ?? ""));
     }
@@ -78,6 +80,7 @@ describe("Copilot hooks template", () => {
 
   test("PKG_ROOT is substituted, leaving no unresolved placeholder", () => {
     expect(readFileSync(TEMPLATE, "utf-8")).toContain("{{PKG_ROOT}}");
+
     for (const { entry } of entries()) {
       expect(entry.bash).toContain(`${PKG_ROOT}/src/hooks/`);
       expect(entry.powershell).toContain(`${PKG_ROOT}/src/hooks/`);

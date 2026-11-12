@@ -34,9 +34,13 @@ const TELOS_TOPICS: TelosTopic[] = [
 function isScaffolding(line: string): boolean {
   const l = line.trim();
   if (!l) return true;
+
   if (l.startsWith("#")) return true;
+
   if (l.startsWith("<!--") || l.startsWith("-->")) return true;
+
   if (/^(-{3,}|\*{3,}|_{3,})$/.test(l)) return true;
+
   return /^[-*+]$/.test(l);
 }
 
@@ -46,6 +50,7 @@ function isScaffolding(line: string): boolean {
  */
 export function hasRealContent(filePath: string): boolean {
   if (!existsSync(filePath)) return false;
+
   try {
     return readFileSync(filePath, "utf-8")
       .split("\n")
@@ -63,6 +68,7 @@ export interface TopicStatus extends TelosTopic {
 export function telosStatus(home: string = palHome()): TopicStatus[] {
   return TELOS_TOPICS.map((topic) => {
     const path = resolve(home, topic.file);
+
     return { ...topic, path, answered: hasRealContent(path) };
   });
 }

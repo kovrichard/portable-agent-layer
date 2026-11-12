@@ -57,6 +57,7 @@ export async function captureWorkSession(
       name = extractFallbackName(userTexts);
       if (name !== "untitled session") writeSessionName(id, name);
     }
+
     if (!name || name === "untitled session") name = "untitled session";
 
     // Extract content

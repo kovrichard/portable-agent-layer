@@ -106,6 +106,7 @@ function segmentsOf(session: string, items: SessionItem[]): Segment[] {
   const segments: Segment[] = [];
   let current: Segment = { session, calls: [], end: null };
   let previousCall: Call | null = null;
+
   for (const item of sorted) {
     if (item.kind === "call") {
       const call: Call = {
@@ -126,16 +127,21 @@ function segmentsOf(session: string, items: SessionItem[]): Segment[] {
       current = { session, calls: [], end: null };
     }
   }
+
   if (current.calls.length > 0) segments.push(current);
+
   return segments;
 }
 
 function sessionSegments(calls: LoggedEvent[], compactions: LoggedEvent[]): Segment[] {
   const bySession = new Map<string, SessionItem[]>();
+
   for (const call of calls) if (isMainThreadCall(call)) addItem(bySession, call, "call");
+
   for (const compaction of compactions) {
     if (compaction.runtime === "claude") addItem(bySession, compaction, "compaction");
   }
+
   return [...bySession].flatMap(([session, items]) => segmentsOf(session, items));
 }
 
@@ -155,9 +161,11 @@ function labelOf(segment: Segment, windowAt: WindowAt): Label | null {
   }
   const previous = end.previousCall;
   if (previous && end.ts - previous.ts >= IDLE_LABEL_AFTER_MS) return "idle";
+
   if (typeof end.contextTokens !== "number" || end.contextTokens === 0) {
     return "no_context";
   }
+
   return "unexplained";
 }
 
@@ -170,6 +178,7 @@ function reaches(
   const window = windowAt(session, call.ts, call.model);
   if (window === null) return false;
   const input = compactionInput(call.model, window);
+
   return compactionPredicted(
     compactionPoint(input) - call.tokens,
     compactionMarginTokens(input, margin)
@@ -186,6 +195,7 @@ function scoreMargin(
   let falseAlarms = 0;
   const leadMinutes: number[] = [];
   const leadTokens: number[] = [];
+
   for (const { segment, label } of scored) {
     const first = segment.calls.find((call) =>
       reaches(call, segment.session, margin, windowAt)
@@ -195,6 +205,7 @@ function scoreMargin(
       if (first) falseAlarms++;
       continue;
     }
+
     if (label !== "threshold") continue;
     const last = segment.calls.at(-1);
     if (first && last) {
@@ -205,6 +216,7 @@ function scoreMargin(
       missed++;
     }
   }
+
   return {
     margin,
     warned,
@@ -226,7 +238,9 @@ export function backtestCompaction(
     label: labelOf(segment, windowAt),
   }));
   const labels: BacktestLabels = { threshold: 0, idle: 0, no_context: 0, unexplained: 0 };
+
   for (const { label } of scored) if (label) labels[label]++;
+
   return {
     labels,
     rows: margins.map((margin) => scoreMargin(scored, margin, windowAt)),
@@ -235,6 +249,7 @@ export function backtestCompaction(
 
 function scheduledWindow(schedule: WindowEntry[], ts: number): number | null {
   const entry = schedule.find((e) => e.until === null || ts < e.until);
+
   return entry ? entry.tokens : null;
 }
 
@@ -244,9 +259,11 @@ function nearWindowOf(
   ts: number
 ): number | null {
   let latest: number | null = null;
+
   for (const entry of nearBySession.get(session) ?? []) {
     if (entry.ts <= ts) latest = entry.tokens;
   }
+
   return latest;
 }
 
@@ -256,6 +273,7 @@ export function windowResolver(
   current: (model: string | null) => number | null
 ): WindowAt {
   const nearBySession = new Map<string, { ts: number; tokens: number }[]>();
+
   for (const event of nearEvents) {
     if (
       event.trigger !== "threshold" ||
@@ -269,12 +287,15 @@ export function windowResolver(
     entries.push({ ts: Date.parse(String(event.ts)), tokens: event.windowTokens });
     nearBySession.set(event.session, entries);
   }
+
   for (const entries of nearBySession.values()) entries.sort((a, b) => a.ts - b.ts);
   const currentByModel = new Map<string | null, number | null>();
   const currentWindow = (model: string | null): number | null => {
     if (!currentByModel.has(model)) currentByModel.set(model, current(model));
+
     return currentByModel.get(model) ?? null;
   };
+
   return (session, ts, model) =>
     nearWindowOf(nearBySession, session, ts) ??
     scheduledWindow(schedule, ts) ??

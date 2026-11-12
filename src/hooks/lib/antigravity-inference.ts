@@ -49,6 +49,7 @@ function parseEvents(rawStdout: string): StreamEvent[] {
 
 export function extractAntigravityText(rawStdout: string): string {
   const result = parseEvents(rawStdout).find((event) => event.event === "result")?.result;
+
   return result?.status === "SUCCESS" ? (result.response ?? "").trim() : "";
 }
 
@@ -62,6 +63,7 @@ function spawnedConversationId(rawStdout: string): string | undefined {
 
 function conversationFiles(id: string): string[] {
   const cli = platform.antigravityCliDir();
+
   return [
     resolve(cli, "conversations", `${id}.db`),
     resolve(cli, "brain", id),
@@ -74,6 +76,7 @@ function conversationFiles(id: string): string[] {
 export function removeSpawnedConversation(rawStdout: string): void {
   const id = spawnedConversationId(rawStdout);
   if (!id) return;
+
   for (const path of conversationFiles(id)) {
     try {
       rmSync(path, { recursive: true, force: true });

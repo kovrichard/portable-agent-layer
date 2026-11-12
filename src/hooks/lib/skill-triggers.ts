@@ -16,11 +16,14 @@ function metadataBlock(frontmatter: string): string[] {
   if (start === -1) return [];
 
   const block: string[] = [];
+
   for (const line of lines.slice(start + 1)) {
     if (line.trim() === "") continue;
+
     if (!/^\s/.test(line)) break;
     block.push(line);
   }
+
   return block;
 }
 
@@ -42,17 +45,20 @@ function splitFlowSequence(value: string): string[] {
   } catch {
     /* not strict JSON — fall through to the permissive split */
   }
+
   return value.slice(1, -1).split(",");
 }
 
 /** Items of a YAML block sequence: the `- item` lines directly under a key. */
 function blockSequenceItems(lines: string[]): string[] {
   const items: string[] = [];
+
   for (const line of lines) {
     const item = /^\s*-\s+(.*)$/.exec(line);
     if (!item) break;
     items.push(item[1]);
   }
+
   return items;
 }
 

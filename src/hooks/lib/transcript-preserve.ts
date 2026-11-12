@@ -54,6 +54,7 @@ function readManifest(path: string): Manifest {
 
 function filesUnder(dir: string): string[] {
   if (!existsSync(dir)) return [];
+
   return readdirSync(dir, { recursive: true, withFileTypes: true })
     .filter((entry) => entry.isFile())
     .map((entry) => resolve(entry.parentPath, entry.name));
@@ -61,6 +62,7 @@ function filesUnder(dir: string): string[] {
 
 function versionOf(file: string): string {
   const stat = statSync(file);
+
   return `${stat.size}:${Math.trunc(stat.mtimeMs)}`;
 }
 
@@ -72,8 +74,10 @@ function gzipCopy(file: string, destination: string): void {
 export function preserveTranscripts(at: PreserveLocations): PreserveResult {
   const manifest = readManifest(at.manifest);
   const result: PreserveResult = { copied: 0, unchanged: 0, failed: 0 };
+
   for (const file of filesUnder(at.source)) {
     const key = relative(at.source, file).replaceAll("\\", "/");
+
     try {
       const version = versionOf(file);
       if (manifest[key] === version) {
@@ -90,6 +94,7 @@ export function preserveTranscripts(at: PreserveLocations): PreserveResult {
   }
   ensureDir(dirname(at.manifest));
   writeFileSync(at.manifest, JSON.stringify(manifest), "utf-8");
+
   return result;
 }
 
@@ -100,8 +105,10 @@ function lockPath(): string {
 function takeLock(path: string, now = Date.now()): boolean {
   if (existsSync(path) && now - statSync(path).mtimeMs < STALE_LOCK_MS) return false;
   rmSync(path, { force: true });
+
   try {
     closeSync(openSync(path, "wx"));
+
     return true;
   } catch {
     return false;
@@ -113,6 +120,7 @@ export function preserveTranscriptsOnce(
 ): PreserveResult | null {
   const lock = lockPath();
   if (!takeLock(lock)) return null;
+
   try {
     return preserveTranscripts(at);
   } finally {

@@ -168,8 +168,10 @@ async function wrapped(
   const log = spyOn(console, "log").mockImplementation(() => {});
   const error = spyOn(console, "error").mockImplementation(() => {});
   const joined = (calls: unknown[][]) => calls.map((c) => c.join(" ")).join("\n");
+
   try {
     const code = await runCommand(wrappedCommand, args, ["pal", "cli", "wrapped"]);
+
     return { code, text: joined(log.mock.calls), errors: joined(error.mock.calls) };
   } finally {
     log.mockRestore();

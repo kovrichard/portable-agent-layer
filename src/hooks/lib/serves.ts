@@ -49,12 +49,15 @@ export interface ServesUpdate {
 export function setServes(update: ServesUpdate): "written" | "kept" | "missing" {
   const project = readProject(update.name);
   if (!project) return "missing";
+
   if (update.by === "inferred" && project.serves_by === "user") return "kept";
 
   project.serves = update.kind;
   project.serves_by = update.by;
+
   if (update.note) project.serves_note = update.note;
   project.updated = new Date().toISOString();
   writeProject(project);
+
   return "written";
 }

@@ -68,6 +68,7 @@ function events(type: string): Record<string, unknown>[] {
     `${new Date().toISOString().slice(0, 7)}.jsonl`
   );
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .trim()
     .split("\n")
@@ -102,8 +103,10 @@ function http(
   const calls: { url: string; init: RequestInit }[] = [];
   const fn = async (url: string | URL | Request, init?: RequestInit) => {
     calls.push({ url: String(url), init: init ?? {} });
+
     return new Response(JSON.stringify(reply), { status });
   };
+
   return { calls, fn: fn as unknown as typeof fetch };
 }
 
@@ -111,8 +114,10 @@ function infer(output = '{"reaction":"corrected"}', success = true) {
   const calls: InferCall[] = [];
   const fn: Infer = async (call) => {
     calls.push(call);
+
     return success ? { success, output } : { success, error: "boom" };
   };
+
   return { calls, fn };
 }
 
@@ -171,6 +176,7 @@ describe("provider registry (criterion 3)", () => {
       keyNames: [],
       ask: async (input) => {
         asked.push(input);
+
         return { answers: ANSWERS, inputTokens: 10 };
       },
     };
@@ -515,12 +521,14 @@ describe("edge cases", () => {
       order.push("http-start");
       await new Promise((r) => setTimeout(r, 150));
       order.push("http-end");
+
       return new Response(
         JSON.stringify({ answers: ANSWERS, usage: { input_tokens: 1 } })
       );
     }) as unknown as typeof fetch;
     const f: Infer = async () => {
       order.push("infer");
+
       return { success: true, output: '{"reaction":"corrected"}' };
     };
     await judge({ ...base, fallback }, { http: slowHttp, infer: f });
@@ -567,6 +575,7 @@ function deps(h: { fn: typeof fetch }, f: { fn: Infer }): Deps {
 async function renderedCall(request: JudgeRequest): Promise<InferCall | undefined> {
   const f = infer();
   await judge(request, deps(http(), f));
+
   return f.calls[0];
 }
 
@@ -675,6 +684,7 @@ describe("retry backoff table (plan step 5)", () => {
         },
       }
     );
+
     return sleeps;
   }
 
@@ -695,6 +705,7 @@ describe("inputTokensOf table (plan step 5)", () => {
   async function loggedTokens(reply: unknown): Promise<unknown> {
     on({ callers: { t: "live" } });
     await judge({ ...base, fallback }, deps(http(reply), infer()));
+
     return events("judge_call")[0]?.inputTokens;
   }
 
@@ -947,6 +958,7 @@ describe("judge() scenario table (plan step 8)", () => {
     let hangs = 0;
     const hanging = (async () => {
       hangs++;
+
       return new Promise<Response>(() => {});
     }) as unknown as typeof fetch;
     const f = infer();
@@ -1017,6 +1029,7 @@ describe("boundedState table (plan step 8)", () => {
       keyNames: [],
       ask: async (input) => {
         seen.push(input.state);
+
         return { answers: ANSWERS };
       },
     };
@@ -1027,6 +1040,7 @@ describe("boundedState table (plan step 8)", () => {
     JUDGE_ADAPTERS.fake = capturing(seen);
     settings({ provider: "fake", callers: { t: "live" } });
     await judge({ ...base, state }, deps(http(), infer()));
+
     return seen[0];
   }
 
@@ -1055,6 +1069,7 @@ describe("boundedState table (plan step 8)", () => {
 describe("judgeMode table (plan step 8)", () => {
   async function modeOf(): Promise<unknown> {
     await judge({ ...base, fallback }, deps(http(), infer()));
+
     return events("judge_call")[0]?.mode;
   }
 
@@ -1161,6 +1176,7 @@ describe("judgment builders table (plan step 9)", () => {
 
 function parserOf(req: JudgeRequest): (output: string) => unknown {
   if (!req.fallback) throw new Error("no fallback");
+
   return req.fallback.parse;
 }
 

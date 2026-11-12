@@ -159,6 +159,7 @@ function hash(content: string): string {
 
 function stateOf(content: string | null): LedgerState | null {
   if (content === null) return null;
+
   return { hash: hash(content), bytes: Buffer.byteLength(content, "utf-8") };
 }
 
@@ -179,6 +180,7 @@ const WITHHELD: LedgerDelta = { hunks: [], redacted: true };
 
 function deltaFor(input: RecordActionInput): LedgerDelta | undefined {
   if (isSensitivePath(input.target)) return WITHHELD;
+
   return deltaOf(input.before, input.after);
 }
 
@@ -186,12 +188,15 @@ function deltaOf(before: string | null, after: string | null): LedgerDelta | und
   if (after === null) return undefined;
 
   const hunks: LedgerHunk[] = [];
+
   for (const [at, end, insert] of calcPatch(toLines(before), toLines(after))) {
     hunks.push({ at, remove: end - at, insert: [...insert] });
   }
+
   if (hunks.length === 0) return undefined;
 
   const delta: LedgerDelta = { hunks };
+
   return Buffer.byteLength(JSON.stringify(delta), "utf-8") > MAX_DELTA_BYTES
     ? { hunks: [], truncated: true }
     : delta;
@@ -211,11 +216,13 @@ export function applyDelta(before: string | null, delta: LedgerDelta): string | 
   const lines = toLines(before);
   const out: string[] = [];
   let cursor = 0;
+
   for (const hunk of delta.hunks) {
     out.push(...lines.slice(cursor, hunk.at), ...hunk.insert);
     cursor = hunk.at + hunk.remove;
   }
   out.push(...lines.slice(cursor));
+
   return out.join("\n");
 }
 
@@ -241,10 +248,13 @@ function rotateIfFull(file: string): void {
 function freeArchivePath(stamp: string): string {
   const nth = (n: number) => {
     const suffix = n ? `-${n}` : "";
+
     return resolve(paths.ledger(), `actions-${stamp}${suffix}.jsonl`);
   };
   let n = 0;
+
   while (existsSync(nth(n))) n++;
+
   return nth(n);
 }
 
@@ -275,6 +285,7 @@ export function recordAction(input: RecordActionInput): LedgerEntry {
   rotateIfFull(file);
   appendFileSync(file, `${JSON.stringify(entry)}\n`, "utf-8");
   logActionEvent(entry);
+
   return entry;
 }
 
@@ -282,8 +293,11 @@ export const actionEventId = (entry: LedgerEntry) => `ledger:${entry.id}`;
 
 function changeKindOf(delta: LedgerDelta | undefined): string {
   if (!delta) return "none";
+
   if (delta.redacted) return "redacted";
+
   if (delta.truncated) return "truncated";
+
   return "hunks";
 }
 
@@ -291,6 +305,7 @@ function changeOf({ delta }: LedgerEntry) {
   const change = changeKindOf(delta);
   if (change !== "hunks" || !delta)
     return { change, linesAdded: null, linesRemoved: null };
+
   return {
     change,
     linesAdded: delta.hunks.reduce((n, h) => n + h.insert.length, 0),
@@ -301,6 +316,7 @@ function changeOf({ delta }: LedgerEntry) {
 function directoryOf(entry: LedgerEntry): string {
   const resolved = resolveAnchor(entry.target);
   if (resolved.state === "unresolvable") return "";
+
   return entry.command === undefined ? dirname(resolved.path) : resolved.path;
 }
 
@@ -403,6 +419,7 @@ function pendingPath(toolUseId: string): string {
 function withheldWhenSensitive(snapshot: PendingSnapshot): PendingSnapshot {
   if (snapshot.before === null || !isSensitivePath(snapshot.target)) return snapshot;
   const state = stateOf(snapshot.before);
+
   return { ...snapshot, before: null, ...(state ? { beforeState: state } : {}) };
 }
 
@@ -419,12 +436,15 @@ export function savePending(snapshot: PendingSnapshot): void {
 export function claimPending(toolUseId: string): PendingSnapshot | null {
   const file = pendingPath(toolUseId);
   if (!existsSync(file)) return null;
+
   try {
     const snapshot = JSON.parse(readFileSync(file, "utf-8")) as PendingSnapshot;
     unlinkSync(file);
+
     return snapshot;
   } catch {
     unlinkSync(file);
+
     return null;
   }
 }
@@ -444,11 +464,13 @@ export function claimPending(toolUseId: string): PendingSnapshot | null {
 export function reapStalePending(now: number = Date.now()): number {
   const dir = pendingDir();
   let reaped = 0;
+
   for (const name of readdirSync(dir)) {
     const file = resolve(dir, name);
     if (now - statSync(file).mtimeMs < PENDING_TTL_MS) continue;
     unlinkSync(file);
     reaped++;
   }
+
   return reaped;
 }
