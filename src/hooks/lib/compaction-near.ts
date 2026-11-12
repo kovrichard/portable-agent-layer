@@ -6,7 +6,7 @@ import { appendEvent, logQuietly } from "./events";
 import { type HookTurnPayload, hookSessionId } from "./hook-turn";
 import { modelLimitsFor } from "./models";
 import { platform } from "./paths";
-import { contextModelOf, contextTokensOf } from "./session-events";
+import { contextModelOf, contextTokensOf, lastCompactionAt } from "./session-events";
 import { isPalSpawnedInference } from "./spawn-guard";
 
 const MAX_OUTPUT_CAP = 20_000;
@@ -211,6 +211,13 @@ function hookProjectDir(payload: CompactionHookPayload): string {
     : process.cwd();
 }
 
+function freshContextTokens(payload: CompactionHookPayload): number | null {
+  return contextTokensOf(
+    payload.transcript_path ?? undefined,
+    lastCompactionAt(hookSessionId(payload) ?? null)
+  );
+}
+
 export function recordCompactionNear(
   payload: CompactionHookPayload | null,
   live = false
@@ -219,7 +226,7 @@ export function recordCompactionNear(
   logQuietly("compaction_near", () => {
     if (!payload || isPalSpawnedInference() || !isClaude()) return;
     const transcriptPath = payload.transcript_path ?? undefined;
-    const contextTokens = contextTokensOf(transcriptPath);
+    const contextTokens = freshContextTokens(payload);
     if (contextTokens === null) return;
     const model = contextModelOf(transcriptPath);
     const compactionWindow = currentCompactionWindow(model, hookProjectDir(payload));
@@ -264,7 +271,7 @@ export function compactionWarningReminder(
 export function recordIdleCompactionNear(payload: CompactionHookPayload | null): void {
   logQuietly("compaction_near", () => {
     if (!payload || isPalSpawnedInference() || !isClaude()) return;
-    const contextTokens = contextTokensOf(payload.transcript_path ?? undefined);
+    const contextTokens = freshContextTokens(payload);
     if (contextTokens === null) return;
     const idleMinTokens = idleCompactMinTokens(process.env);
     if (contextTokens < idleMinTokens) return;

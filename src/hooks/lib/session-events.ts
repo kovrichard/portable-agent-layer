@@ -190,9 +190,16 @@ interface ContextUsage {
   cache_creation_input_tokens?: number;
 }
 
-function usageOfLine(line: string): ContextUsage | null {
+interface UsageLine {
+  usage: ContextUsage;
+  timestamp?: string;
+}
+
+function usageLineOf(line: string): UsageLine | null {
   try {
-    return JSON.parse(line)?.message?.usage ?? null;
+    const entry = JSON.parse(line);
+    const usage = entry?.message?.usage;
+    return usage ? { usage, timestamp: entry.timestamp } : null;
   } catch {
     return null;
   }
@@ -202,18 +209,41 @@ function isCompactBoundary(line: string): boolean {
   return line.includes('"compact_boundary"');
 }
 
-function usageSinceLastCompaction(lines: string[]): ContextUsage | null {
+function predatesCompaction(entry: UsageLine, compactedAt: string | null): boolean {
+  return Boolean(compactedAt && entry.timestamp && entry.timestamp < compactedAt);
+}
+
+function usageSinceLastCompaction(
+  lines: string[],
+  compactedAt: string | null
+): ContextUsage | null {
   for (const line of lines.toReversed()) {
     if (isCompactBoundary(line)) return null;
-    const usage = usageOfLine(line);
-    if (usage) return usage;
+    const entry = usageLineOf(line);
+    if (entry) return predatesCompaction(entry, compactedAt) ? null : entry.usage;
   }
   return null;
 }
 
-export function contextTokensOf(transcriptPath: string | undefined): number | null {
+export function lastCompactionAt(
+  session: string | null,
+  now: Date = new Date()
+): string | null {
+  if (!session) return null;
+  const since = new Date(now.getTime() - SESSION_LOOKBACK_MS);
+  const times = eventsSince("compaction", since)
+    .filter((e) => e.session === session)
+    .map((e) => e.ts);
+  return times.length > 0 ? (times.toSorted().at(-1) ?? null) : null;
+}
+
+export function contextTokensOf(
+  transcriptPath: string | undefined,
+  compactedAt: string | null = null
+): number | null {
   if (!transcriptPath || !existsSync(transcriptPath)) return null;
-  const usage = usageSinceLastCompaction(transcriptTail(transcriptPath).split("\n"));
+  const lines = transcriptTail(transcriptPath).split("\n");
+  const usage = usageSinceLastCompaction(lines, compactedAt);
   if (!usage) return null;
   return (
     (usage.input_tokens ?? 0) +
