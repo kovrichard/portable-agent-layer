@@ -370,6 +370,69 @@ describe("a file an accepted test fix changed", () => {
   });
 });
 
+describe("the PO rules on test edits before a restore", () => {
+  const path = "test/a.test.ts";
+  const other = "test/c.test.ts";
+  const keeps = (...files: string[]) => ({
+    reply: { answer: "the edit is right", testFix: { files, change: "keep it" } },
+  });
+  const poInstructions = (world: World) =>
+    world.roleCalls.find((call) => call.role === "po")?.instructions ?? "";
+  const content = (world: World, file: string) =>
+    readFileSync(join(world.worktree, file), "utf8");
+
+  test("the PO's question names the file and shows the diff", () => {
+    const { world } = editedThenRestored(path);
+    run(world);
+    expect(poInstructions(world)).toContain(path);
+    expect(poInstructions(world)).toContain("-original");
+    expect(poInstructions(world)).toContain("+edited");
+    expect(poInstructions(world)).toContain("testFix");
+  });
+
+  test("an edit the PO names in testFix stays, with no restore", () => {
+    const { world } = scenario({
+      committed: { [path]: ORIGINAL },
+      roles: { po: [keeps(path)] },
+      actions: { "code-writer#0": write(path, EDITED) },
+    });
+    expect(run(world).status).toBe("ready");
+    expect(restoredEvents(world)).toHaveLength(0);
+    expect(eventsNamed(world, "test_edits_kept")).toEqual([
+      expect.objectContaining({ task: TASK, files: [path] }),
+    ]);
+    expect(content(world, path)).toBe(EDITED);
+    expect(codeWriterRuns(world)).toBe(1);
+  });
+
+  test("only the edits the PO does not name are restored", () => {
+    const { world } = scenario({
+      committed: { [path]: ORIGINAL, [other]: ORIGINAL },
+      roles: { po: [keeps(path)] },
+      actions: {
+        "code-writer#0": together(write(path, EDITED), write(other, EDITED)),
+        [FIXER]: together(write(other, ORIGINAL), commitAll),
+      },
+    });
+    expect(run(world).status).toBe("ready");
+    expect(restoredFiles(world)).toEqual([other]);
+    expect(fixerInstructions(world)).not.toContain(path);
+    expect(content(world, path)).toBe(EDITED);
+  });
+
+  test("a PO that hands the question to the user leaves the build waiting", () => {
+    const { world } = scenario({
+      committed: { [path]: ORIGINAL },
+      roles: { po: [{ reply: { userQuestion: "Is the macOS path right?" } }] },
+      actions: { "code-writer#0": write(path, EDITED) },
+    });
+    const result = run(world);
+    expect(result.status).toBe("waiting");
+    expect(result.message).toContain("Is the macOS path right?");
+    expect(restoredEvents(world)).toHaveLength(0);
+  });
+});
+
 describe("the restore event and the fixer's instructions", () => {
   const path = "test/a.test.ts";
 
@@ -381,10 +444,11 @@ describe("the restore event and the fixer's instructions", () => {
     ]);
     expect(world.roleCalls.map((call) => call.role)).toEqual([
       "code-writer",
+      "po",
       "code-writer",
       "reviewer",
     ]);
-    expect(world.roleCalls[1]?.model).toBe(FACTORY_MODELS.medium);
+    expect(world.roleCalls[2]?.model).toBe(FACTORY_MODELS.medium);
   });
 
   test("the event comes before the fixer runs", () => {
@@ -531,7 +595,7 @@ describe("when the restore ladder does not finish", () => {
     const result = run(world);
     expect(result.status).toBe("stuck");
     expect(result.message).toContain("could not be fixed with the gate green");
-    expect(world.roleCalls).toHaveLength(5);
+    expect(world.roleCalls.filter((call) => call.role !== "po")).toHaveLength(5);
     expect(world.pushes).toBe(0);
   });
 });
