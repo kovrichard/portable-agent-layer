@@ -41,7 +41,6 @@ arch:
     - from: skills
       deny: ["src/**"]
       message: "Skill imports from the repo's src/ directory — skills must be self-contained and portable across machines."
-      severity: warn
 
     - from: core
       deny: targets

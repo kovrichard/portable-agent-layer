@@ -19,10 +19,11 @@ import {
   readFileSync,
   writeFileSync,
 } from "node:fs";
+import { homedir } from "node:os";
 import { resolve } from "node:path";
-import { palHome } from "../../../../src/hooks/lib/paths";
 
-const TELOS_DIR = resolve(palHome(), "telos");
+const PAL_HOME = process.env.PAL_HOME || resolve(homedir(), ".pal");
+const TELOS_DIR = resolve(PAL_HOME, "telos");
 const BACKUPS_DIR = resolve(TELOS_DIR, "backups");
 const UPDATES_LOG = resolve(TELOS_DIR, "updates.md");
 

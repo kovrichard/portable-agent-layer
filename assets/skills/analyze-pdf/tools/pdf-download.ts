@@ -12,11 +12,12 @@
  */
 
 import { mkdir } from "node:fs/promises";
+import { homedir } from "node:os";
 import { basename, join } from "node:path";
 import { parseArgs } from "node:util";
-import { palHome } from "../../../../src/hooks/lib/paths";
 
-const DOWNLOADS_DIR = join(palHome(), "memory", "downloads");
+const PAL_HOME = process.env.PAL_HOME || join(homedir(), ".pal");
+const DOWNLOADS_DIR = join(PAL_HOME, "memory", "downloads");
 
 function buildDatePath(): string {
   const now = new Date();
