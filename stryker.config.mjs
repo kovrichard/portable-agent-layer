@@ -28,7 +28,6 @@ const SUBPROCESS_SUITES = new Set([
 const SUITES_THAT_READ_THE_GIT_CHECKOUT = new Set([
   "test/check-exact-versions.spawn.test.ts",
   "test/dark-factory-no-repo-hooks.test.ts",
-  "test/klint-max-lines.spawn.test.ts",
 ]);
 
 function isInProcessSuite(file) {
