@@ -96,57 +96,53 @@ interface BucketAcc {
   quotes: string[];
 }
 
+/** One accumulator per entry of BUCKETS, at the same index. */
 function sortIntoBuckets(q2s: Reflection[]) {
-  const acc = new Map<string, BucketAcc>();
-
-  for (const b of BUCKETS) {
-    acc.set(b.key, { sentiments: [], projects: new Set(), quotes: [] });
-  }
-
+  const accs: BucketAcc[] = BUCKETS.map(() => ({
+    sentiments: [],
+    projects: new Set(),
+    quotes: [],
+  }));
   let unbucketed = 0;
   const unbucketedQuotes: string[] = [];
 
   for (const r of q2s) {
-    const matched = BUCKETS.filter((b) => b.patterns.test(r.q2));
+    const matched = accs.filter((_, i) => BUCKETS[i].patterns.test(r.q2));
     if (matched.length === 0) {
       unbucketed += 1;
       unbucketedQuotes.push(r.q2.trim());
       continue;
     }
 
-    for (const b of matched) addToBucket(acc.get(b.key), r);
+    for (const a of matched) addToBucket(a, r);
   }
 
-  return { acc, unbucketed, unbucketedQuotes };
+  return { accs, unbucketed, unbucketedQuotes };
 }
 
-function addToBucket(a: BucketAcc | undefined, r: Reflection): void {
-  if (!a) return;
+function addToBucket(a: BucketAcc, r: Reflection): void {
   a.sentiments.push(r.sentiment);
 
   if (r.cwd) a.projects.add(projectOf(r.cwd));
   a.quotes.push(r.q2.trim());
 }
 
-function summarizeBucket(
-  b: (typeof BUCKETS)[number],
-  a: BucketAcc | undefined
-): AlgorithmBucket {
-  const sentiments = a?.sentiments ?? [];
+function summarizeBucket(b: (typeof BUCKETS)[number], a: BucketAcc): AlgorithmBucket {
+  const { sentiments } = a;
   const avg = sentiments.length
     ? sentiments.reduce((s, n) => s + n, 0) / sentiments.length
     : 0;
   // Full deduped membership, longest (most specific) first. Not capped here —
   // --json carries every member so nothing is lost; the human report caps the
   // display per bucket. Zero-loss is the contract.
-  const quotes = [...new Set(a?.quotes ?? [])].sort((x, y) => y.length - x.length);
+  const quotes = [...new Set(a.quotes)].sort((x, y) => y.length - x.length);
 
   return {
     key: b.key,
     label: b.label,
     count: sentiments.length,
     avgSentiment: Math.round(avg * 10) / 10,
-    projects: a?.projects.size ?? 0,
+    projects: a.projects.size,
     quotes,
   };
 }
@@ -167,8 +163,8 @@ export function synthesizeAlgorithm(since?: Date): AlgorithmSynthesis {
     ...new Set(withQ2.filter((r) => r.scope === "task-specific").map((r) => r.q2.trim())),
   ];
 
-  const { acc, unbucketed, unbucketedQuotes } = sortIntoBuckets(q2s);
-  const buckets = BUCKETS.map((b) => summarizeBucket(b, acc.get(b.key)))
+  const { accs, unbucketed, unbucketedQuotes } = sortIntoBuckets(q2s);
+  const buckets = BUCKETS.map((b, i) => summarizeBucket(b, accs[i]))
     .filter((b) => b.count > 0)
     .sort((x, y) => y.count - x.count);
 

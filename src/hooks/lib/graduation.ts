@@ -11,7 +11,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { canInfer } from "./inference";
+import { canInfer, inference } from "./inference";
 import { type FailureEntry, readFailures } from "./learning-store";
 import { logDebug } from "./log";
 import { ensureDir, paths } from "./paths";
@@ -214,27 +214,36 @@ function recommendationContext(
     .join("\n");
 }
 
-const RECOMMENDATIONS_SCHEMA = {
-  type: "object" as const,
-  additionalProperties: false,
-  properties: {
-    recommendations: {
-      type: "array" as const,
-      items: { type: "string" as const },
+function recommendationsSchema() {
+  return {
+    type: "object" as const,
+    additionalProperties: false,
+    properties: {
+      recommendations: {
+        type: "array" as const,
+        items: { type: "string" as const },
+      },
     },
-  },
-  required: ["recommendations"],
-};
+    required: ["recommendations"],
+  };
+}
 
-async function inferRecommendations(context: string): Promise<string[] | null> {
-  const { inference } = await import("./inference");
-  const result = await inference({
+interface RecommendationDeps {
+  canInfer: () => boolean;
+  infer: typeof inference;
+}
+
+async function inferRecommendations(
+  context: string,
+  infer: typeof inference
+): Promise<string[] | null> {
+  const result = await infer({
     system:
       "Generate 3-5 specific, actionable recommendations based on recurring AI assistant interaction patterns. Each must reference a concrete pattern from the data. One sentence each. Return a JSON object with a recommendations array.",
     user: context,
     maxTokens: 300,
     timeout: 15000,
-    jsonSchema: RECOMMENDATIONS_SCHEMA,
+    jsonSchema: recommendationsSchema(),
     caller: "graduation",
   });
   if (!result.success || !result.output) return null;
@@ -246,23 +255,26 @@ function parsedRecommendations(output: string): string[] | null {
   try {
     const parsed = JSON.parse(output) as { recommendations: string[] };
 
-    return parsed.recommendations?.length > 0 ? parsed.recommendations.slice(0, 5) : null;
+    return parsed.recommendations.length > 0 ? parsed.recommendations.slice(0, 5) : null;
   } catch {
     return null;
   }
 }
 
-async function generateRecommendations(
+/** @lintignore exercised directly by test/graduation-recommendations.test.ts */
+export async function generateRecommendations(
   candidates: PatternGroup[],
-  ratings: RatingsSummary | null
+  ratings: RatingsSummary | null,
+  deps: RecommendationDeps = { canInfer, infer: inference }
 ): Promise<string[]> {
   if (candidates.length === 0 && !ratings) return [];
 
-  if (!canInfer()) return patternRecommendations(candidates);
+  if (!deps.canInfer()) return patternRecommendations(candidates);
 
   try {
     const inferred = await inferRecommendations(
-      recommendationContext(candidates, ratings)
+      recommendationContext(candidates, ratings),
+      deps.infer
     );
     if (inferred) return inferred;
   } catch {
