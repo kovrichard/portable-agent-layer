@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { mergeCodexHooks, mergeCursorHooks, mergeSettings } from "../src/targets/lib";
+import { mergeCodexHooks } from "../src/targets/codex/hooks";
+import { mergeCursorHooks } from "../src/targets/cursor/hooks";
+import { mergeSettings } from "../src/targets/settings-merge";
 import { freshTestDir } from "./lib/test-home";
 
 let DIR: string;

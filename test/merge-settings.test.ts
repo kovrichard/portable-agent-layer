@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
-import { loadSettingsTemplate, mergeSettings, unmergeSettings } from "../src/targets/lib";
+import {
+  loadSettingsTemplate,
+  mergeSettings,
+  unmergeSettings,
+} from "../src/targets/settings-merge";
 
 const PAL_TEMPLATE = {
   hooks: {

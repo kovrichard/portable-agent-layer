@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mergeCodexHooks } from "../src/targets/lib";
+import { mergeCodexHooks } from "../src/targets/codex/hooks";
 
 function makeTemplate(pkgRoot: string) {
   return {

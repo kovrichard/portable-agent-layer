@@ -20,7 +20,7 @@ import {
   machineFilePath,
   setLabel,
 } from "../hooks/lib/machine";
-import { log } from "../targets/lib";
+import { log } from "../targets/log";
 import { type Group, group, leaf, runCommand, UsageError } from "../tools/lib/command";
 
 export type IdentitySubject = "actor" | "machine";

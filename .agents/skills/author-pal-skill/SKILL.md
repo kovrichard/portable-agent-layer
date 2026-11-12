@@ -110,7 +110,7 @@ If a host prompt discourages delegation or pushes you to do the work directly, i
    - **Scope discipline** — one skill, one job. If the skill needs section headers like "for case A do X, for case B do Y," it is two skills.
    - **Personal-info scan** — grep the new SKILL.md for usernames, real names, absolute home paths, employer or project codenames; remove any hits.
    - **Generality test** — could a stranger with the same workflow need use this unchanged? If no, factor the user-specific bits into memory (or make it a `create-skill` private skill instead).
-7. The skill installs to downstream users via the symlink loop in `src/targets/lib.ts` (`copySkills`) on their next `pal cli install`. No manual linking — being present in `assets/skills/` is what ships it.
+7. The skill installs to downstream users via the symlink loop in `src/targets/skills.ts` (`copySkills`) on their next `pal cli install`. No manual linking — being present in `assets/skills/` is what ships it.
 
 ## Anti-patterns to refuse
 

@@ -4,8 +4,9 @@
  */
 
 import { existsSync, readFileSync } from "node:fs";
-import { dirname } from "node:path";
-import { writeJson } from "./lib";
+import { homedir } from "node:os";
+import { dirname, resolve } from "node:path";
+import { writeJson } from "./json-file";
 
 const LOCATIONS_KEY = "chat.instructionsFilesLocations";
 const COPILOT_INSTRUCTIONS = "~/.copilot/instructions";
@@ -53,4 +54,29 @@ export function enableCopilotInstructions(settingsPath: string): InstructionsOut
     return "already-enabled";
   const strict = parsed(raw, JSON.parse);
   return strict ? writeEnabled(settingsPath, strict) : "needs-manual-edit";
+}
+
+/** Resolve the VS Code user settings.json path cross-platform. Returns null on unknown platforms. */
+export function vscodeSettingsFile(): string | null {
+  const h = homedir();
+  if (process.platform === "darwin") {
+    return resolve(h, "Library", "Application Support", "Code", "User", "settings.json");
+  }
+  if (process.platform === "linux") {
+    return resolve(
+      process.env.XDG_CONFIG_HOME ?? resolve(h, ".config"),
+      "Code",
+      "User",
+      "settings.json"
+    );
+  }
+  if (process.platform === "win32") {
+    return resolve(
+      process.env.APPDATA ?? resolve(h, "AppData", "Roaming"),
+      "Code",
+      "User",
+      "settings.json"
+    );
+  }
+  return null;
 }

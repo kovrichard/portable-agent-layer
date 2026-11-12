@@ -7,18 +7,13 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
-import {
-  addStatuslineConfig,
-  copyAgentsForCursor,
-  copySkills,
-  copyStatusline,
-  countSkills,
-  loadCursorHooksTemplate,
-  log,
-  mergeCursorHooks,
-  readJson,
-  replaceJsonConfig,
-} from "../lib";
+import { replaceJsonConfig } from "../config-backups";
+import { readJson } from "../json-file";
+import { log } from "../log";
+import { copyAgentsForCursor } from "../shipped-agents";
+import { copySkills, countSkills } from "../skills";
+import { addStatuslineConfig, copyStatusline } from "../statusline";
+import { loadCursorHooksTemplate, mergeCursorHooks } from "./hooks";
 
 const PKG_ROOT = palPkg().replaceAll("\\", "/");
 const CURSOR_DIR = platform.cursorDir();

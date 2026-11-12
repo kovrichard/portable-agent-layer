@@ -7,7 +7,10 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "no
 import { resolve } from "node:path";
 import { palPkg, platform } from "../../hooks/lib/paths";
 import { getSemiStaticSources } from "../../hooks/lib/semi-static";
-import { copyAgentsForOpencode, copySkills, countSkills, log, writeJson } from "../lib";
+import { writeJson } from "../json-file";
+import { log } from "../log";
+import { copyAgentsForOpencode } from "../shipped-agents";
+import { copySkills, countSkills } from "../skills";
 import { allowPalHome, palHomePattern } from "./permission";
 
 const PKG_ROOT = palPkg();

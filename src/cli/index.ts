@@ -32,7 +32,7 @@ import { inference, previewInferenceRoute } from "../hooks/lib/inference";
 import { logDebug } from "../hooks/lib/log";
 import { ensureRegistered, writeRegistryEntry } from "../hooks/lib/machine";
 import { palHome, palPkg, paths, platform, toPath } from "../hooks/lib/paths";
-import { log, narrateSteps } from "../targets/lib";
+import { log, narrateSteps } from "../targets/log";
 import { helpText, runCommand } from "../tools/lib/command";
 import { type DoctorResult, detectAgents } from "./doctor/agents";
 import { runDoctor } from "./doctor/run";
@@ -275,7 +275,7 @@ async function probeInference(): Promise<void> {
  * leave every writer of memory/state with nowhere to write.
  */
 async function createPalHome(): Promise<void> {
-  const { scaffoldTelos } = await import("../targets/lib");
+  const { scaffoldTelos } = await import("../targets/scaffold");
   const home = palHome();
   mkdirSync(resolve(home, "telos"), { recursive: true });
   mkdirSync(resolve(home, "memory", "state"), { recursive: true });

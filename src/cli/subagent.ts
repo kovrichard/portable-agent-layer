@@ -3,7 +3,11 @@
  * merged definition split per platform on install.
  */
 
-import { installPersonalSubagent, listPersonalSubagents, log } from "../targets/lib";
+import { log } from "../targets/log";
+import {
+  installPersonalSubagent,
+  listPersonalSubagents,
+} from "../targets/personal-subagents";
 import { group, leaf } from "../tools/lib/command";
 import {
   formatSubagentReport,

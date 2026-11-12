@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, lstatSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { generateSkillIndex, linkPersonalSkill } from "../src/targets/lib";
+import { generateSkillIndex } from "../src/targets/skill-index";
+import { linkPersonalSkill } from "../src/targets/skills";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { loadCopilotHooksTemplate } from "../src/targets/lib";
+import { loadCopilotHooksTemplate } from "../src/targets/copilot/hooks";
 
 const TEMPLATE = resolve(import.meta.dir, "../assets/templates/hooks.copilot.json");
 const PKG_ROOT = "C:/pkg";

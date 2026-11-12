@@ -7,7 +7,9 @@ import { existsSync, readFileSync, statSync, unlinkSync, writeFileSync } from "n
 import { resolve } from "node:path";
 import { platform } from "../../hooks/lib/paths";
 import { getSemiStaticSources } from "../../hooks/lib/semi-static";
-import { log, removeAgentsFromOpencode, removePalDocs } from "../lib";
+import { log } from "../log";
+import { removePalDocs } from "../pal-docs";
+import { removeAgentsFromOpencode } from "../shipped-agents";
 import { palHomePattern, removePalHomeAllow } from "./permission";
 
 const OC_GLOBAL_DIR = platform.opencodeDir() || "";

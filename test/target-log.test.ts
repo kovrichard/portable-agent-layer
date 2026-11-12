@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { capturingLog, type LogLevel, log } from "../src/targets/lib";
+import { capturingLog, type LogLevel, log } from "../src/targets/log";
 
 // The suite drives these installers by the hundred against temp directories, so
 // their per-item narration describes files that were never on this machine —

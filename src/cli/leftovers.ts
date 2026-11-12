@@ -1,7 +1,7 @@
 import { existsSync, lstatSync, readlinkSync, renameSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
 import { palHome, paths, platform } from "../hooks/lib/paths";
-import { readJson, writeJson } from "../targets/lib";
+import { readJson, writeJson } from "../targets/json-file";
 
 /** Something an older PAL wrote that the current one neither writes nor reads. */
 export interface Leftover {

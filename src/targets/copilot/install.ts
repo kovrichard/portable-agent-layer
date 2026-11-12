@@ -8,15 +8,11 @@
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
-import {
-  copyAgentsForCopilot,
-  copySkills,
-  countSkills,
-  loadCopilotHooksTemplate,
-  log,
-  vscodeSettingsFile,
-} from "../lib";
-import { enableCopilotInstructions } from "../vscode-settings";
+import { log } from "../log";
+import { copyAgentsForCopilot } from "../shipped-agents";
+import { copySkills, countSkills } from "../skills";
+import { enableCopilotInstructions, vscodeSettingsFile } from "../vscode-settings";
+import { loadCopilotHooksTemplate } from "./hooks";
 
 const PKG_ROOT = palPkg().replaceAll("\\", "/");
 const COPILOT_DIR = platform.copilotDir();

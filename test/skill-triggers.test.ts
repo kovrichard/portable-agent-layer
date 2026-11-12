@@ -73,11 +73,13 @@ function writeSkill(name: string, frontmatter: string) {
   writeFileSync(resolve(dir, "SKILL.md"), `---\n${frontmatter}\n---\nbody`);
 }
 
-// src/targets/lib resolves the skills dir once at import time, so the module has
+// src/targets/skill-index resolves the skills dir once at import time, so the module has
 // to be re-evaluated after PAL_HOME is pointed at this test's sandbox — a plain
 // import would hand back whatever home an earlier test file froze in.
 async function generateIndex() {
-  const { generateSkillIndex } = await import(`../src/targets/lib.ts?t=${Date.now()}`);
+  const { generateSkillIndex } = await import(
+    `../src/targets/skill-index.ts?t=${Date.now()}`
+  );
   return generateSkillIndex();
 }
 
