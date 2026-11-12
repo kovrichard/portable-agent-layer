@@ -279,6 +279,62 @@ A comment directly above a statement belongs to it, so the blank line goes above
 Python docstring counts as a comment. A C# preprocessor line or a Swift `#if`/`#else`/`#endif` line
 separates statements like a blank line, so no line is inserted next to it.
 
+### Cognitive complexity — cap per-function complexity
+
+Pick `cognitive-complexity` to gate how complex each function may get, the way Biome's
+`noExcessiveCognitiveComplexity` does, with the same scores, on TypeScript/JavaScript, Python, Swift,
+Rust and C#. It is opt-in.
+
+```yaml
+rules:
+  cognitive-complexity: error
+```
+
+Or with options:
+
+```yaml
+rules:
+  cognitive-complexity:
+    severity: warn
+    include: ["src/**", "!src/generated/**"]
+    max: 14
+```
+
+- `max` defaults to 15, and a function whose score is **above** it is reported. An invalid `max`
+  (0, a negative number, a fraction, a string) raises one `klint/config` warning and the rule uses 15.
+- There is no `--fix`: split the function. A nested closure is reported on its own, not added to the
+  enclosing function. Files with a syntax error are skipped.
+
+### Function length — cap per-function length
+
+Pick `function-length` to gate how long each function body may be, the way Biome's
+`noExcessiveLinesPerFunction` does, with the same counts, on TypeScript/JavaScript, Python, Swift,
+Rust and C#. It is opt-in.
+
+```yaml
+rules:
+  function-length: error
+```
+
+Or with options:
+
+```yaml
+rules:
+  function-length:
+    severity: warn
+    include: ["src/**", "!src/generated/**"]
+    max: 40
+    skipBlankLines: true
+```
+
+- `max` defaults to 50, and a function whose body counts **above** it is reported. An invalid `max`
+  (0, a negative number, a fraction, a string) raises one `klint/config` warning and the rule uses 50.
+- `skipBlankLines` defaults to `false`. A non-boolean value raises one `klint/config` warning and the
+  rule uses `false`.
+- There is no `--fix`: split the function. A nested function's lines count toward its parent, and it
+  is also reported on its own. Getters and setters are not checked. Files with a syntax error are
+  skipped.
+
 ## Pitfalls
 
 - `pattern` in `singleton` and `forbidden` is a **literal substring** by default — it will not catch `process.env["KEY"]` (bracket notation). Either grep for both forms, or use a `re:` regex prefix to match them in one rule. Caveat: a literal pattern that itself begins with `re:` cannot be expressed (it is always read as a regex), and regexes must stay in the common JS/RE2 subset (no lookaround or backreferences) so both engines agree.
