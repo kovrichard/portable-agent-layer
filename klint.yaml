@@ -27,6 +27,9 @@ rules:
     no-string-match: error
   sonar:
     prefer-string-raw: off
+  experimental:
+    no-date-equality: error
+    no-floating-promise: error
 
 arch:
   layers:
