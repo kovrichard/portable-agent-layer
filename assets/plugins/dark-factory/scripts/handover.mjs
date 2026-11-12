@@ -12,6 +12,7 @@ export function savePayload(taskId, folder, name, text, env = process.env) {
   mkdirSync(dir, { recursive: true });
   const file = join(folder, `${String(nextNumber(dir)).padStart(3, "0")}-${name}`);
   writeFileSync(join(taskDir(taskId, env), file), text);
+
   return {
     file,
     sha256: createHash("sha256").update(text).digest("hex"),
@@ -28,5 +29,6 @@ export function recordHandover(taskId, { from, to, reason, payload }, env = proc
     env
   );
   appendEvent({ event: "handover", task: taskId, from, to, reason, payload: saved }, env);
+
   return saved;
 }

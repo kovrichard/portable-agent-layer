@@ -14,6 +14,7 @@ function latestRun(events, taskId) {
   const start = mine.findLastIndex((event) => event.event === "task_started");
   if (start === -1) return null;
   const run = mine.slice(start);
+
   return run.some((event) => event.event === "run_finished") ? run : null;
 }
 
@@ -52,6 +53,7 @@ export function recordSessionEnd(input, env = process.env) {
     afterRunFinished: true,
   };
   appendEvent(event, env);
+
   return event;
 }
 

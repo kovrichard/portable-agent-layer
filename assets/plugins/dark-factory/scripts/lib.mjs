@@ -42,6 +42,7 @@ function appendToTaskLog(taskId, line, env) {
 export function readEvents(env = process.env) {
   const file = eventsFile(env);
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf8")
     .split("\n")
     .filter((line) => line.trim())
@@ -54,13 +55,24 @@ export function readEvents(env = process.env) {
     });
 }
 
+export function parseJson(text, source) {
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    throw new Error(`${source} is not valid JSON: ${error.message}`);
+  }
+}
+
 export function readTask(id, env = process.env) {
-  return JSON.parse(readFileSync(join(taskDir(id, env), "task.json"), "utf8"));
+  const file = join(taskDir(id, env), "task.json");
+
+  return parseJson(readFileSync(file, "utf8"), file);
 }
 
 export function listTasks(env = process.env) {
   const dir = join(factoryHome(env), "tasks");
   if (!existsSync(dir)) return [];
+
   return readdirSync(dir)
     .filter((id) => existsSync(join(dir, id, "task.json")))
     .map((id) => readTask(id, env));
@@ -68,6 +80,7 @@ export function listTasks(env = process.env) {
 
 function insideFolder(folder, path) {
   const rel = relative(resolve(folder), resolve(path));
+
   return !rel.startsWith("..") && !isAbsolute(rel);
 }
 
@@ -93,6 +106,7 @@ function missingToolMessage(name) {
 
 function spawnErrorMessage(command, cwd) {
   if (cwd && !existsSync(cwd)) return `working folder ${cwd} does not exist`;
+
   return missingToolMessage(command);
 }
 
@@ -101,6 +115,7 @@ const CMD_META_CHARS = /([()\][%!^"`<>&|;, *?])/g;
 
 function pathEntries(env) {
   const key = Object.keys(env).find((name) => name.toUpperCase() === "PATH");
+
   return (key ? env[key] : "").split(delimiter).filter(Boolean);
 }
 
@@ -109,12 +124,14 @@ function windowsExecutable(command, env) {
   const candidates = pathEntries(env).flatMap((dir) =>
     extensions.map((extension) => join(dir, `${command}${extension}`))
   );
+
   return candidates.find((candidate) => existsSync(candidate)) ?? null;
 }
 
 function batchFileFor(command, env) {
   if (process.platform !== "win32") return null;
   const resolved = BATCH_FILE.test(command) ? command : windowsExecutable(command, env);
+
   return resolved && BATCH_FILE.test(resolved) ? resolved : null;
 }
 
@@ -122,18 +139,21 @@ function quotedForBatchFile(arg) {
   const escapedQuotes = String(arg)
     .replace(/(\\*)"/g, '$1$1\\"')
     .replace(/(\\*)$/, "$1$1");
+
   return `"${escapedQuotes}"`.replace(CMD_META_CHARS, "^^^$1");
 }
 
 // cmd.exe parses a batch file's command line twice (once to start it, again where it expands %*), so each argument is caret-escaped for both passes.
 function batchFileCommandLine(file, args) {
   const command = file.replace(CMD_META_CHARS, "^$1");
+
   return [command, ...args.map(quotedForBatchFile)].join(" ");
 }
 
 function spawnArgs(command, args, env) {
   const batchFile = batchFileFor(command, env);
   if (!batchFile) return [command, args, {}];
+
   return [batchFileCommandLine(batchFile, args), [], { shell: true }];
 }
 
@@ -150,12 +170,14 @@ export function spawnTool(command, args, options = {}) {
   });
   if (result.error?.code === "ENOENT")
     throw new Error(spawnErrorMessage(command, options.cwd));
+
   return result;
 }
 
 /** Found on PATH, never run: `gh --version` alone has taken 19 s on a Windows runner. */
 function isInstalled(name, env) {
   if (process.platform === "win32") return windowsExecutable(name, env) !== null;
+
   return pathEntries(env).some((dir) => existsSync(join(dir, name)));
 }
 
@@ -170,7 +192,8 @@ export function readRepoConfig(repo) {
   const file = join(repo, ".dark-factory.json");
   if (!existsSync(file))
     throw new Error(`${file} is missing; it lists the gate commands for this repo`);
-  return JSON.parse(readFileSync(file, "utf8"));
+
+  return parseJson(readFileSync(file, "utf8"), file);
 }
 
 export function userHome(env = process.env) {
@@ -181,11 +204,13 @@ export function readUserConfig(env = process.env) {
   const file = join(factoryHome(env), "config.json");
   if (!existsSync(file)) return {};
   let value;
+
   try {
     value = JSON.parse(readFileSync(file, "utf8"));
   } catch (error) {
     throw new Error(`${file} is not valid JSON: ${error.message}`);
   }
+
   return isPlainObject(value) ? value : {};
 }
 
@@ -220,6 +245,7 @@ export function runTotals(events, taskId, startedIso) {
       event.event === "role_finished" && event.task === taskId && event.ts >= startedIso
   );
   const costs = runs.filter((event) => typeof event.costUsd === "number");
+
   return {
     costUsd: costs.length > 0 ? sumOf(costs, (event) => event.costUsd) : null,
     tokens: TOKEN_FIELDS.reduce(
@@ -232,6 +258,7 @@ export function runTotals(events, taskId, startedIso) {
 
 export function transcriptLines(path) {
   if (!path || !existsSync(path)) return [];
+
   return readFileSync(path, "utf8")
     .split("\n")
     .flatMap((line) => {
@@ -245,9 +272,11 @@ export function transcriptLines(path) {
 
 export function onePerMessage(lines) {
   const byId = new Map();
+
   for (const line of lines) {
     if (line.type === "assistant" && line.message?.id) byId.set(line.message.id, line);
   }
+
   return [...byId.values()];
 }
 
@@ -257,12 +286,14 @@ function sumUsage(messages, field) {
 
 function durationMs(lines) {
   const times = lines.map((line) => Date.parse(line.timestamp)).filter(Number.isFinite);
+
   return times.length ? Math.max(...times) - Math.min(...times) : null;
 }
 
 export function cacheWriteSplit(total, fiveMin, oneHour) {
   const hour = oneHour ?? 0;
   const five = fiveMin ?? 0;
+
   return {
     fiveMin: five + Math.max(0, (total ?? 0) - five - hour),
     oneHour: hour,
@@ -280,12 +311,14 @@ export function messageCacheWrites(usage) {
 function toolCallsOf(message) {
   const content = message.message?.content;
   if (!Array.isArray(content)) return 0;
+
   return content.filter((part) => part.type === "tool_use").length;
 }
 
 export function transcriptTotals(lines) {
   const messages = onePerMessage(lines);
   const writes = messages.map((line) => messageCacheWrites(line.message.usage));
+
   return {
     model: messages.at(-1)?.message.model ?? "default",
     inputTokens: sumUsage(messages, "input_tokens"),

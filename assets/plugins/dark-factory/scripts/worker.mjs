@@ -22,6 +22,7 @@ const WORKER_DIED =
 
 export function buildFiles(taskId, env = process.env) {
   const dir = taskDir(taskId, env);
+
   return {
     dir,
     lock: join(dir, "build.lock"),
@@ -33,6 +34,7 @@ export function buildFiles(taskId, env = process.env) {
 export function isAlive(pid) {
   try {
     process.kill(pid, 0);
+
     return true;
   } catch (error) {
     return error.code === "EPERM";
@@ -42,6 +44,7 @@ export function isAlive(pid) {
 function readLockPid(lockFile) {
   try {
     const pid = Number(readFileSync(lockFile, "utf8").trim());
+
     return Number.isInteger(pid) && pid > 0 ? pid : null;
   } catch {
     return null;
@@ -50,6 +53,7 @@ function readLockPid(lockFile) {
 
 function workerAlive(lockFile) {
   const pid = readLockPid(lockFile);
+
   return pid !== null && isAlive(pid);
 }
 
@@ -58,6 +62,7 @@ export function liveLockPid(dir, alive = isAlive) {
   const pid = readLockPid(lockFile);
   if (pid !== null && alive(pid)) return pid;
   rmSync(lockFile, { force: true });
+
   return null;
 }
 
@@ -72,6 +77,7 @@ export function releaseLock(lockFile, pid) {
 function tryCreateLock(files) {
   try {
     writeFileSync(files.lock, String(process.pid), { flag: "wx" });
+
     return true;
   } catch (error) {
     if (error.code === "EEXIST") return false;
@@ -83,8 +89,10 @@ function claimLock(files) {
   for (let attempt = 0; attempt < 2; attempt += 1) {
     if (liveLockPid(files.dir) !== null) return false;
     rmSync(files.result, { force: true });
+
     if (tryCreateLock(files)) return true;
   }
+
   return false;
 }
 
@@ -123,11 +131,13 @@ export function chooseIsolation({
 
 function workerCommand(taskId, isolation) {
   const baseArgs = [BUILD_WORKER_SCRIPT, taskId, isolation];
+
   if (isolation === "systemd-scope")
     return {
       command: "systemd-run",
       args: [...SCOPE_ARGS, process.execPath, ...baseArgs],
     };
+
   return { command: process.execPath, args: baseArgs };
 }
 
@@ -140,6 +150,7 @@ function startWorker(taskId, files, env) {
   const { command, args } = workerCommand(taskId, isolation);
   const logFd = openSync(files.log, "a");
   let child;
+
   try {
     child = spawn(command, args, {
       detached: true,
@@ -150,19 +161,25 @@ function startWorker(taskId, files, env) {
   } finally {
     closeSync(logFd);
   }
+
   child.on("error", () => {});
+
   if (child.pid === undefined) {
     rmSync(files.lock, { force: true });
+
     return stuckResult(taskId, "could not start the build worker");
   }
+
   writeLock(files.lock, child.pid);
   child.unref();
+
   return null;
 }
 
 function saveStuckStatus(taskId, env) {
   try {
     setStatus(taskId, "stuck", WORKER_DIED, env);
+
     return null;
   } catch (error) {
     return error.message;
@@ -175,15 +192,18 @@ function workerDied(taskId, files, env) {
   const message = statusError
     ? `${WORKER_DIED}; could not set the task status to stuck: ${statusError}`
     : WORKER_DIED;
+
   return stuckResult(taskId, message);
 }
 
 async function waitForResult(taskId, files, env) {
   let result = readResult(files.result);
+
   while (result === null && workerAlive(files.lock)) {
     await sleep(WAIT_POLL_MS);
     result = readResult(files.result);
   }
+
   return result ?? readResult(files.result) ?? workerDied(taskId, files, env);
 }
 
@@ -194,6 +214,7 @@ export async function superviseBuild(taskId, { env = process.env } = {}) {
       taskId,
       `task ${taskId} does not exist: ${files.dir} has no task.json`
     );
+
   if (claimLock(files)) {
     const failed = startWorker(taskId, files, env);
     if (failed) return failed;
@@ -203,5 +224,6 @@ export async function superviseBuild(taskId, { env = process.env } = {}) {
       env
     );
   }
+
   return waitForResult(taskId, files, env);
 }
