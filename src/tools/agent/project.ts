@@ -195,10 +195,8 @@ function cmdServes(name: string, kind: ServesKind, note: string): undefined {
 
 // ── resume ────────────────────────────────────────────────────────
 
-// resume returns a lean orientation view: all narrative sections, but the
-// Criteria/Changelog blobs collapse to open-ISC titles + counts. Full ISC text
-// is fetched on demand via show-isc / list-isc, so resume stays cheap on
-// projects carrying a large backlog.
+// Criteria and Changelog collapse to open-ISC titles and counts; show-isc and list-isc
+// give the full text, so resume stays cheap on a large backlog.
 function cmdResume(name: string): undefined {
   const { criteria, changelog, ...project } = requireProject(name);
   const iscs = parseIscs(criteria ?? "");
@@ -207,9 +205,6 @@ function cmdResume(name: string): undefined {
   const all = [...iscs, ...archived];
   const done = all.filter((i) => i.status === "done").length;
   const retired = all.filter((i) => i.status === "retired").length;
-  // Resuming a project PAL cannot locate is the natural moment to offer a
-  // binding: the user just named this project, so the suggestion is wanted rather
-  // than volunteered. It is only ever a command — nothing binds on its own.
   const unlocatable = !project.path || !existsSync(project.path);
   const binding = unlocatable
     ? proposeBinding({ ...project, criteria, changelog })
@@ -279,9 +274,8 @@ function addDecision(name: string, decision: string, rationale: string): undefin
 
 // ── set-path ──────────────────────────────────────────────────────
 
-// Where a project lives is machine-local, so this writes a binding rather than a
-// field on the record. Unlike the save path it does not require the directory to
-// exist yet: naming where a repo is about to be cloned is a legitimate use.
+// Unlike saving a record, the directory need not exist yet: naming where a repo is
+// about to be cloned is a legitimate use.
 function cmdSetPath(name: string, rawPath: string): undefined {
   const newPath = toPath(nonBlank(rawPath, "<path...>"));
   const p = requireProject(name);
@@ -429,9 +423,6 @@ function cmdRm(name: string): undefined {
 
 // ── ISC helpers ──────────────────────────────────────────────────
 
-// Three states, not two: a retired ISC is one that stopped being valid, which the
-// record must not report as completed work. The box character is the storage form
-// and the id stays in it, so a retired line keeps reserving its id in nextIscId.
 function cmdAddIsc(name: string, text: string): undefined {
   const title = nonBlank(text, "<title...>");
   const p = requireProject(name);
@@ -544,9 +535,8 @@ function cmdShowIsc(name: string, id: number): undefined {
   ok({ name, id: isc.id, status: isc.status, text: isc.text });
 }
 
-// retire-isc closes an ISC that stopped being valid, which complete-isc cannot say:
-// completing files it as done work. The line moves to the Changelog under its own
-// heading as [~], so it still reserves its id and never reads as finished.
+// A retired ISC stopped being valid; it moves to the Changelog as [~], so it keeps
+// reserving its id and never reads as finished work.
 function cmdRetireIsc(name: string, id: number, by: number | null): undefined {
   const p = requireProject(name);
   if (parseIscs(p.changelog ?? "").some((i) => i.id === id && i.status === "retired")) {
@@ -570,9 +560,7 @@ function cmdRetireIsc(name: string, id: number, by: number | null): undefined {
   ok({ retired: true, id, supersededBy: by, archived: true });
 }
 
-// edit-isc rewrites one ISC's text in place, keeping its id and open/done state.
-// The id never leaves the record, so nextIscId still reserves it. Returns the
-// previous text because the ISA files carry no version history of their own.
+// Returns the previous text, because the ISA files keep no version history.
 function cmdEditIsc(name: string, id: number, newText: string): undefined {
   const text = nonBlank(newText, "<text...>");
   const p = requireProject(name);

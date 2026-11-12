@@ -404,9 +404,7 @@ async function routeInference(opts: InferenceOptions): Promise<InferenceResult> 
   return { success: false };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Per-agent CLI metadata — binary presence + argv builders
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Per-agent CLI metadata: binary presence and argv builders ──
 
 const binaryCache = new Map<string, string | null>();
 
@@ -1158,9 +1156,8 @@ function isEmptyAbort(attempt: RawSpawnResult): boolean {
   );
 }
 
-// An empty-output exit≠0 correlates strongly with burst-concurrency races — the
-// binary silently aborts without writing to either stream. One retry only,
-// 500-1500ms jitter so the burst settles.
+// Under burst concurrency the agent binary can exit non-zero with no output at all;
+// one retry after 500-1500 ms of jitter lets the burst settle.
 async function attemptWithEmptyAbortRetry(
   runOnce: () => Promise<RawSpawnResult>,
   log: SpawnLog,
@@ -1235,10 +1232,7 @@ function replyOutcome(
   return { success: true, output: JSON.stringify(parsed) };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Anthropic API path — used when no claude binary is available, or when the
-// active agent is not claude. Preserves the original PAL inference behavior.
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Anthropic API path: no claude binary, or the active agent is not claude ──
 
 async function inferenceViaApi(opts: InferenceOptions): Promise<InferenceResult> {
   const apiKey = withPalEnv().PAL_ANTHROPIC_API_KEY;
@@ -1299,12 +1293,7 @@ async function inferenceViaApi(opts: InferenceOptions): Promise<InferenceResult>
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// OpenAI API path — fallback for codex users without a codex binary on PATH.
-// Codex users almost always have an OpenAI key already; falling back to
-// Anthropic for them would be backwards. Uses chat/completions with the
-// structured-output schema for JSON-mode callers.
-// ─────────────────────────────────────────────────────────────────────────────
+// ── OpenAI API path: codex users without a codex binary, who already hold an OpenAI key ──
 
 export function buildOpenAiBody(opts: InferenceOptions): Record<string, unknown> {
   const { system, user, maxTokens = 500, jsonSchema } = opts;

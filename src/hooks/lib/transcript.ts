@@ -65,11 +65,6 @@ function codexMessage(payload: CodexPayload | undefined): Message | null {
   return texts.length > 0 ? { role, content: texts.join(" ") } : null;
 }
 
-// Claude Code tags transcript lines `type: "user"|"assistant"` with the text
-// under `message.content`. VS Code Copilot's own event log instead uses
-// `type: "user.message"|"assistant.message"` with a flat `data.content`
-// string. Codex nests each message as a `response_item` payload. Antigravity
-// writes one step per line, `type: "USER_INPUT"|"PLANNER_RESPONSE"|…`.
 function parseTranscriptEntry(entry: {
   type?: string;
   message?: { content?: unknown };

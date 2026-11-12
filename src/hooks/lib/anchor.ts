@@ -36,9 +36,6 @@ export function encodeAnchor(
   const proj = resolveProjectFromCwd(absPath, projects);
   if (!proj) return absPath;
 
-  // The same effective path the resolver matched on, not the record's own field:
-  // a bound project's path lives in bindings, so anchoring off proj.path directly
-  // would measure the relative segment against the wrong root.
   const root = projectPathOnThisMachine(proj);
   if (!root) return absPath;
 

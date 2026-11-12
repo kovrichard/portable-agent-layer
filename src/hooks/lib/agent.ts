@@ -263,6 +263,10 @@ function isStopEvent(hookEventName?: string): boolean {
  * carrying both spellings here is what lets one registration serve both — a
  * second VS Code-specific hooks file made every event run twice.
  */
+function sharesClaudeSettingsFile(): boolean {
+  return isClaude() || isVscode();
+}
+
 function claudeBlock(reason: string, hookEventName?: string): string {
   return JSON.stringify({
     decision: "block",
@@ -341,12 +345,7 @@ export function blockResponse(reason: string, hookEventName?: string): string {
     });
   }
 
-  // Only the surfaces that share ~/.claude/settings.json need both spellings.
-  // Handing the extra key to codex or opencode would be a shape they never
-  // asked to parse, for a duplication problem they don't have.
-  if (isClaude() || isVscode()) {
-    return claudeBlock(reason, hookEventName);
-  }
+  if (sharesClaudeSettingsFile()) return claudeBlock(reason, hookEventName);
 
   return JSON.stringify({ decision: "block", reason });
 }

@@ -184,9 +184,8 @@ export function lintSkill(skillDir: string): DoctorReport {
     return { dir: skillDir, name: null, findings, errors: 1, warnings: 0 };
   }
 
-  // The runtime only loads a file named exactly `SKILL.md`. On case-insensitive
-  // filesystems (macOS, Windows) `existsSync` would accept `skill.md`, so match
-  // the real on-disk entry, not a case-folded path.
+  // The runtime loads only an exact `SKILL.md`, and on macOS and Windows existsSync
+  // would also accept `skill.md`, so match the real on-disk entry.
   const skillFile = readdirSync(skillDir).find((e) => e.toLowerCase() === "skill.md");
   if (!skillFile) {
     add("error", "structure", `No SKILL.md found in ${skillDir}`);
@@ -433,9 +432,8 @@ function checkWindowsPaths(body: string, add: AddFinding): void {
 }
 
 function checkAbsolutePaths(skillDir: string, add: AddFinding): void {
-  // A personal skill MAY legitimately hardcode a machine-specific path (e.g. a
-  // cloud-mount vault), so this is a warning, never an error — it flags paths
-  // that will not survive being exported to another machine or user.
+  // A warning, never an error: a personal skill may rightly hardcode a path on
+  // this machine, such as a cloud-mounted vault.
   const absHits = findAbsolutePaths(skillDir);
   if (absHits.length > 0) {
     const shown = absHits.slice(0, 3).join("; ");
@@ -452,13 +450,14 @@ function checkAbsolutePaths(skillDir: string, add: AddFinding): void {
 
 /** Render a report as a human-readable string. */
 /** One scannable line per skill for a whole-store run: verdict plus the checks that fired. */
+function folderNameTheReaderPassesBack(dir: string): string {
+  return basename(dir).padEnd(20);
+}
+
 export function formatSummary(r: DoctorReport): string {
   const fired = (level: Level) =>
     r.findings.filter((f) => f.level === level).map((f) => f.check);
-  // The folder name, not the frontmatter name — the folder is what the reader
-  // passes back to `pal cli skill doctor <name>`, and a mismatch between the two
-  // is itself one of the errors this line reports.
-  const name = basename(r.dir).padEnd(20);
+  const name = folderNameTheReaderPassesBack(r.dir);
 
   if (r.errors > 0) {
     return `✗ ${name} ${r.errors} error(s): ${fired("error").join(", ")}`;

@@ -385,6 +385,10 @@ function findExistingCompanyByTitle(name: string, rootDir?: string): string | nu
   return null;
 }
 
+function onlyTopicTagsSoNoPhantomEdges(company: Entity): string[] {
+  return company.frontmatter.tags.filter((tag) => tag.startsWith("topic:"));
+}
+
 function linkPersonToCompany(
   personSlug: string,
   companyName: string,
@@ -392,10 +396,6 @@ function linkPersonToCompany(
   sourceId: string,
   rootDir?: string
 ): void {
-  // Resolution order: (1) in-call lookup map (domain-derived slug wins when
-  // the same payload defines both), (2) existing-store title scan (ISC-21
-  // — re-ingest of a person referencing an already-known company), (3)
-  // fall back to slugify(name) and stub the company.
   const companySlug =
     nameToSlug.get(companyName.toLowerCase()) ??
     findExistingCompanyByTitle(companyName, rootDir) ??
@@ -408,13 +408,8 @@ function linkPersonToCompany(
 
   const person = load("People", personSlug, rootDir);
   if (!person) return;
-  // ISC-18: inherit ONLY the company's topic:* tags. Structural tags stay
-  // company-scoped so we don't create phantom graph edges between unrelated
-  // people sharing only their employer's slug or other non-facet labels.
   const company = load("Companies", companySlug, rootDir);
-  const inheritedTopicTags = company
-    ? company.frontmatter.tags.filter((t) => t.startsWith("topic:"))
-    : [];
+  const inheritedTopicTags = company ? onlyTopicTagsSoNoPhantomEdges(company) : [];
   const updated: Entity = {
     ...person,
     frontmatter: {

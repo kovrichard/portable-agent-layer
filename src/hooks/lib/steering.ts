@@ -31,9 +31,7 @@ interface SteeringRule {
   snippet: string;
 }
 
-// Ordered rule table. Multiple rules may match one prompt; classifyPrompt
-// returns every match in declaration order. Patterns are anchored on word
-// boundaries to avoid substring false-positives (e.g. "warm" ≠ "rm").
+// classifyPrompt returns every matching rule in this order; word boundaries keep "warm" from matching "rm".
 const STEERING_RULES: Array<SteeringRule & { tag: SteeringTag }> = [
   {
     tag: "debugging",
