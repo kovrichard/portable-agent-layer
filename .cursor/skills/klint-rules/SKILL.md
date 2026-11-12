@@ -298,9 +298,9 @@ separates statements like a blank line, so no line is inserted next to it.
 
 ### Cognitive complexity — cap per-function complexity
 
-Pick `cognitive-complexity` to gate how complex each function may get, the way Biome's
-`noExcessiveCognitiveComplexity` does, with the same scores, on TypeScript/JavaScript, Python, Swift,
-Rust and C#. It is opt-in.
+Pick `cognitive-complexity` to gate how complex each function may get, the way SonarJS's
+`cognitive-complexity` rule (S3776, `eslint-plugin-sonarjs` 3.0.5) does, with the same scores, on
+TypeScript/JavaScript, Python, Swift, Rust and C#. It is opt-in.
 
 ```yaml
 rules:
@@ -313,16 +313,37 @@ Or with options:
 ```yaml
 rules:
   core:
-    cognitive-complexity:
-      severity: warn
-      include: ["src/**", "!src/generated/**"]
-      max: 14
+    cognitive-complexity: {warn: 10, error: 20}
 ```
 
-- `max` defaults to 15, and a function whose score is **above** it is reported. An invalid `max`
-  (0, a negative number, a fraction, a string) raises one `klint/config` warning and the rule uses 15.
-- There is no `--fix`: split the function. A nested closure is reported on its own, not added to the
-  enclosing function. Files with a syntax error are skipped.
+```yaml
+rules:
+  core:
+    cognitive-complexity:
+      - {error: 15}
+      - {warn: 10, error: 20, include: ["scripts/**"]}
+```
+
+- `warn` and `error` are integers of at least 1; set either or both. A bare `error` or `warn` uses 15.
+  A function whose score is **above** a limit is reported, one diagnostic at the highest level it
+  exceeds. An invalid limit (0, a negative number, a fraction, a string) raises one `klint/config`
+  warning and that entry is ignored. `error` below `warn` raises one warning and the rule runs with
+  `error` only.
+- A list sets limits per glob. The last entry whose `include` matches a file wins; entries do not
+  merge; a file no entry matches is not checked; an empty list turns the rule off.
+- The old `{max, severity}` form is still read, with one `klint/config` warning in a v2 config. Run
+  `klint migrate` to upgrade it. The migration:
+
+| old | new |
+|---|---|
+| `{max: M}` or `{max: M, severity: error}` | `{error: M}` |
+| `{max: M, severity: warn}` | `{warn: M}` |
+| `{max: M, severity: off}` | `off` |
+| `{severity: S}` (no `max`) | `{S: <default>}`, i.e. `{error: 15}` / `{warn: 50}`; `off` → `off` |
+| `include`, `skipBlankLines` | kept unchanged in the same object |
+
+- There is no `--fix`: split the function. A nested closure is reported on its own, starting at
+  nesting 0, not added to the enclosing function. Files with a syntax error are skipped.
 
 ### Function length — cap per-function length
 
@@ -341,17 +362,36 @@ Or with options:
 ```yaml
 rules:
   core:
-    function-length:
-      severity: warn
-      include: ["src/**", "!src/generated/**"]
-      max: 40
-      skipBlankLines: true
+    function-length: {warn: 60, error: 80, skipBlankLines: true}
 ```
 
-- `max` defaults to 50, and a function whose body counts **above** it is reported. An invalid `max`
-  (0, a negative number, a fraction, a string) raises one `klint/config` warning and the rule uses 50.
+```yaml
+rules:
+  core:
+    function-length:
+      - {error: 50}
+      - {warn: 60, error: 80, include: ["scripts/**"]}
+```
+
+- `warn` and `error` are integers of at least 1; set either or both. A bare `error` or `warn` uses 50.
+  A function whose body counts **above** a limit is reported, one diagnostic at the highest level it
+  exceeds. An invalid limit (0, a negative number, a fraction, a string) raises one `klint/config`
+  warning and that entry is ignored. `error` below `warn` raises one warning and the rule runs with
+  `error` only.
+- A list sets limits per glob. The last entry whose `include` matches a file wins; entries do not
+  merge; a file no entry matches is not checked; an empty list turns the rule off.
 - `skipBlankLines` defaults to `false`. A non-boolean value raises one `klint/config` warning and the
   rule uses `false`.
+- The old `{max, severity}` form is still read, with one `klint/config` warning in a v2 config. Run
+  `klint migrate` to upgrade it. The migration:
+
+| old | new |
+|---|---|
+| `{max: M}` or `{max: M, severity: error}` | `{error: M}` |
+| `{max: M, severity: warn}` | `{warn: M}` |
+| `{max: M, severity: off}` | `off` |
+| `{severity: S}` (no `max`) | `{S: <default>}`, i.e. `{error: 15}` / `{warn: 50}`; `off` → `off` |
+| `include`, `skipBlankLines` | kept unchanged in the same object |
 - There is no `--fix`: split the function. A nested function's lines count toward its parent, and it
   is also reported on its own. Getters and setters are not checked. Files with a syntax error are
   skipped.
