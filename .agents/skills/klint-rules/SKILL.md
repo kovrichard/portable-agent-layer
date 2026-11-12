@@ -48,8 +48,8 @@ Wire it into `klint.yaml` for editor autocomplete and validation:
 
 6. **Verify zero new violations on the current codebase:**
    ```sh
-   bun klint/cli.ts        # in-repo
-   npx klint               # after npm install
+   npx klint               # npm
+   klint                   # PyPI, NuGet, Homebrew
    ```
    If new violations appear on existing code, fix them first or adjust the rule scope — then land the rule.
 
@@ -237,6 +237,48 @@ Two rules govern how an ignored line behaves, and both matter:
 `ignore` tests the **physical source line**, so it only ever applies to lines already identified as
 comments — code containing the same text is untouched. Enforced identically in both engines.
 
+### Blank lines — control flow and blocks
+
+Pick `blank-line-before-control-flow` to keep an `if`, loop, `switch`/`match`, `try`, `return` or
+similar statement visually separate from the statement above it. Pick `blank-line-after-block` for the
+IDE2003-style rule: a blank line below a block statement when another statement follows it. Both run
+on TypeScript/JavaScript, Python, Swift, Rust and C#, and both are opt-in.
+
+```yaml
+rules:
+  blank-line-before-control-flow: error
+  blank-line-after-block: warn
+```
+
+Or with options:
+
+```yaml
+rules:
+  blank-line-before-control-flow:
+    severity: error
+    include: ["src/**", "!src/generated/**"]
+    statements: [if, for, while, switch, try, return, guard, loop, with]
+    allowSetup: true
+  blank-line-after-block:
+    severity: warn
+    include: ["src/**"]
+    statements: [if, for, while, switch, try, guard, loop, with]
+```
+
+- `statements` narrows the kinds a rule targets. The default is every kind the rule supports, and
+  `statements: []` turns the rule off. `match` is an alias of `switch`. `return` belongs only to
+  `blank-line-before-control-flow`; an unknown keyword, or `return` on the after rule, raises one
+  `klint/config` warning and the other keywords still apply.
+- `allowSetup` (before rule only, default `true`) skips an `if`, `guard` or `switch` whose condition
+  uses a plain name assigned by the statement directly above it, such as `x = f();` then `if (x) …`.
+
+`klint --fix` inserts the missing blank lines, one per gap, and changes nothing else. Files with a
+syntax error are skipped. Run `klint --fix` again to confirm it reports nothing left to fix.
+
+A comment directly above a statement belongs to it, so the blank line goes above the comment. A
+Python docstring counts as a comment. A C# preprocessor line or a Swift `#if`/`#else`/`#endif` line
+separates statements like a blank line, so no line is inserted next to it.
+
 ## Pitfalls
 
 - `pattern` in `singleton` and `forbidden` is a **literal substring** by default — it will not catch `process.env["KEY"]` (bracket notation). Either grep for both forms, or use a `re:` regex prefix to match them in one rule. Caveat: a literal pattern that itself begins with `re:` cannot be expressed (it is always read as a regex), and regexes must stay in the common JS/RE2 subset (no lookaround or backreferences) so both engines agree.
@@ -255,10 +297,10 @@ After adding or modifying a rule, report:
 - The YAML stanza added
 - The grep evidence that confirmed the pattern is real
 - The test written and its result
-- The output of `bun run klint` (or `npx klint`) confirming zero new violations
+- The output of `npx klint` (or `klint`) confirming zero new violations
 
 ## Do NOT use
 
 - To fix TypeScript type errors, lint issues, or Biome violations — those are separate tools
 - To enforce naming conventions (hooks must start with `use`, components must be PascalCase) — use ESLint with the appropriate plugin
-- To write custom TypeScript AST rules in `klint.rules.ts` — that is a separate, code-level workflow
+- To write custom code-level rules — klint has no plugin API; express the policy as an `arch` rule or use a linter with one
