@@ -21,6 +21,7 @@
     ".claude/settings.json#hook=CompactRecover.ts",
     ".claude/settings.json#hook=LedgerSnapshot.ts",
     ".claude/settings.json#hook=LoadContext.ts",
+    ".claude/settings.json#hook=PostGitInfo.ts",
     ".claude/settings.json#hook=PostToolOrchestrator.ts",
     ".claude/settings.json#hook=PreCompactPersist.ts",
     ".claude/settings.json#hook=RtkWrap.ts",

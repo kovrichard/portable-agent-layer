@@ -10,6 +10,10 @@ Correct: Hook throws error → read it, trace the error, fix the specific line.
 Bad: "The file is correct" without reading it. "Tests pass" without running them. "The deploy succeeded" without checking.
 Correct: Read the file → confirm contents. Run tests → report actual output. Check deploy status → report what you see.
 
+**Fresh git status before any worktree claim.** Before any claim about the worktree's state, run a fresh git status; an earlier one is stale. The user commits in parallel, and the per-prompt Repo line is read before your turn starts.
+Bad: "You have 3 uncommitted files" from a status read ten tool calls ago. "The commit includes X" without looking at what HEAD contains.
+Correct: `git status` (and `git show --stat HEAD` after a commit) → state only what that output shows.
+
 **First principles over bolt-ons.** Most problems are symptoms. Understand → Simplify → Reduce → Add (last resort). Don't accrue technical debt through band-aid solutions.
 Bad: Page slow → add caching layer. Actual issue: bad SQL query.
 Correct: Profile → find the slow query → fix it. No new components.

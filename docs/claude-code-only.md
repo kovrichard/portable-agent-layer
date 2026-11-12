@@ -11,6 +11,7 @@ lives in `event-log-coverage.md` and is not repeated here.
 | ------- | ----- | -------------------- | ----- |
 | Dark factory | `assets/plugins/dark-factory/` | A Claude Code plugin: roles are Claude Code subagents, `build.mjs` maps tiers to Claude model ids and launches `claude`. Breaks principle 3 (tiers through `pal cli`). | 2026-10 |
 | Compaction warning (ISC-100) | `compaction_near` event, `pal cli compaction backtest` | Reads Claude Code transcript usage and Claude Code's own compaction rules (window, summary buffer, idle compaction). The threshold warning is live: a predicted prompt gets one line of prompt context. The idle trigger is shadow. | 2026-11-08 |
+| Repo state after git commands (ISC-120) | `src/hooks/PostGitInfo.ts`, `git_state_injected` event | Replies with Claude Code's PostToolUse `additionalContext` shape; wired only in `settings.claude.json`. | 2026-11-12 |
 | Last exchange restored after compaction | `src/hooks/CompactRecover.ts` | Wired only in `settings.claude.json` (SessionStart `compact`). | — |
 
 ## Hooks wired per agent
@@ -23,6 +24,7 @@ From the hook configs PAL installs (`assets/templates/settings.claude.json`,
 | ---- | ----------- | ------ | ------- | ----- | ----------- |
 | `CompactRecover` | ✅ | — | — | — | — |
 | `AttentionEvent` | ✅ | — | — | — | — |
+| `PostGitInfo` | ✅ | — | — | — | — |
 | `RtkWrap` | ✅ | ✅ | ✅ | — | — |
 | `SkillGuard` | ✅ | ✅ | ✅ | — | — |
 | `LoadContext` | ✅ | ✅ | ✅ | ✅ | — |
