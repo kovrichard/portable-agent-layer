@@ -17,6 +17,21 @@ Wire it into `klint.yaml` for editor autocomplete and validation:
 # yaml-language-server: $schema=./klint.schema.yaml
 ```
 
+## Config format (v2)
+
+`rules` has three parts: `recommended: true` enables the six sonar rules at `error`, `core` holds the built-in rules by name, and `sonar` holds the sonar rules by name without the `sonar/` prefix (an entry there overrides `recommended`). Output rule ids stay `sonar/…`.
+
+```yaml
+rules:
+  recommended: true
+  core:
+    no-string-match: error
+  sonar:
+    prefer-at: warn
+```
+
+The v1 format (a flat `rules` map with `sonar/` prefixes, and `plugins: [sonar]`) still reads, with one `klint/config` warning. Run `klint migrate` to upgrade the config in place; comments, blank lines and key order are kept. `klint migrate --check` exits 1 on v1 and 0 on v2 and never writes. `klint --fix` migrates first, and when the migration is refused it adds one `klint/config` warning and keeps fixing.
+
 ## Workflow
 
 1. **Understand the constraint** — if scope is ambiguous, ask: which files/layers are involved? should it block or warn? are there legitimate exceptions?
@@ -246,23 +261,25 @@ on TypeScript/JavaScript, Python, Swift, Rust and C#, and both are opt-in.
 
 ```yaml
 rules:
-  blank-line-before-control-flow: error
-  blank-line-after-block: warn
+  core:
+    blank-line-before-control-flow: error
+    blank-line-after-block: warn
 ```
 
 Or with options:
 
 ```yaml
 rules:
-  blank-line-before-control-flow:
-    severity: error
-    include: ["src/**", "!src/generated/**"]
-    statements: [if, for, while, switch, try, return, guard, loop, with]
-    allowSetup: true
-  blank-line-after-block:
-    severity: warn
-    include: ["src/**"]
-    statements: [if, for, while, switch, try, guard, loop, with]
+  core:
+    blank-line-before-control-flow:
+      severity: error
+      include: ["src/**", "!src/generated/**"]
+      statements: [if, for, while, switch, try, return, guard, loop, with]
+      allowSetup: true
+    blank-line-after-block:
+      severity: warn
+      include: ["src/**"]
+      statements: [if, for, while, switch, try, guard, loop, with]
 ```
 
 - `statements` narrows the kinds a rule targets. The default is every kind the rule supports, and
@@ -287,17 +304,19 @@ Rust and C#. It is opt-in.
 
 ```yaml
 rules:
-  cognitive-complexity: error
+  core:
+    cognitive-complexity: error
 ```
 
 Or with options:
 
 ```yaml
 rules:
-  cognitive-complexity:
-    severity: warn
-    include: ["src/**", "!src/generated/**"]
-    max: 14
+  core:
+    cognitive-complexity:
+      severity: warn
+      include: ["src/**", "!src/generated/**"]
+      max: 14
 ```
 
 - `max` defaults to 15, and a function whose score is **above** it is reported. An invalid `max`
@@ -313,18 +332,20 @@ Rust and C#. It is opt-in.
 
 ```yaml
 rules:
-  function-length: error
+  core:
+    function-length: error
 ```
 
 Or with options:
 
 ```yaml
 rules:
-  function-length:
-    severity: warn
-    include: ["src/**", "!src/generated/**"]
-    max: 40
-    skipBlankLines: true
+  core:
+    function-length:
+      severity: warn
+      include: ["src/**", "!src/generated/**"]
+      max: 40
+      skipBlankLines: true
 ```
 
 - `max` defaults to 50, and a function whose body counts **above** it is reported. An invalid `max`
