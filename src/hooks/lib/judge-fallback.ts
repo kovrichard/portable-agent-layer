@@ -2,7 +2,7 @@
  * The small-tier fallback of a judgment: the caller's own evaluated request, or the questions rendered into a prompt with a JSON schema.
  */
 
-import { parseJsonFromOutput } from "./inference";
+import { parseJsonFromOutput } from "./inference-prompt";
 import {
   answersProblem,
   type JudgeAnswers,

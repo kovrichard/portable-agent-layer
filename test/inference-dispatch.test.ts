@@ -1,19 +1,19 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { canInfer, hasApiKey, inference } from "../src/hooks/lib/inference";
 import {
   buildClaudeArgs,
   buildCodexArgs,
   buildCopilotArgs,
   buildCursorArgs,
   buildOpencodeArgs,
-  canInfer,
-  hasApiKey,
-  inference,
+} from "../src/hooks/lib/inference-agents";
+import {
   injectJsonSchemaInstruction,
   parseJsonFromOutput,
   schemaInstruction,
-} from "../src/hooks/lib/inference";
+} from "../src/hooks/lib/inference-prompt";
 import { logPromptSnapshot } from "../src/hooks/lib/log";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";

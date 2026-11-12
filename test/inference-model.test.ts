@@ -2,16 +2,18 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { chmodSync, writeFileSync } from "node:fs";
 import { delimiter, resolve } from "node:path";
 import {
-  buildClaudeArgs,
-  buildCodexArgs,
-  buildCopilotArgs,
-  buildCursorArgs,
-  buildOpenAiBody,
-  buildOpencodeArgs,
   inference,
   plannedInferenceRoute,
   previewInferenceRoute,
 } from "../src/hooks/lib/inference";
+import {
+  buildClaudeArgs,
+  buildCodexArgs,
+  buildCopilotArgs,
+  buildCursorArgs,
+  buildOpencodeArgs,
+} from "../src/hooks/lib/inference-agents";
+import { buildOpenAiBody } from "../src/hooks/lib/inference-api";
 import {
   FABLE_MODEL,
   HAIKU_5_5_MODEL,

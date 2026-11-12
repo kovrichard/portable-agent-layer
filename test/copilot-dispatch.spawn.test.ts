@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test"
 import { existsSync, writeFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import { eventsSince } from "../src/hooks/lib/events";
-import { buildCliPrompt, buildCopilotArgs, inference } from "../src/hooks/lib/inference";
+import { inference } from "../src/hooks/lib/inference";
+import { buildCopilotArgs } from "../src/hooks/lib/inference-agents";
+import { buildCliPrompt } from "../src/hooks/lib/inference-prompt";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { copilotReplying, prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";

@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { cachedStatus, type UpdateCache } from "../../hooks/handlers/update-check";
-import { loggedClaudeAuthMode } from "../../hooks/lib/inference";
+import { loggedClaudeAuthMode } from "../../hooks/lib/inference-agents";
 import { type HookErrorGroup, recentHookErrors } from "../../hooks/lib/log";
 import { palEnvPath } from "../../hooks/lib/pal-env";
 import { palHome } from "../../hooks/lib/paths";
