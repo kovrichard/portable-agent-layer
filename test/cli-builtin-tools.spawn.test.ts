@@ -270,7 +270,7 @@ describe("pal cli skill run — the tool learns where PAL's home is", () => {
     mkdirSync(resolve(pal, "skills", "where", "tools"), { recursive: true });
     writeFileSync(
       resolve(pal, "skills", "where", "tools", "home.ts"),
-      "console.log(`home=[${process.env.PAL_HOME ?? ''}]`);\n"
+      `console.log(\`home=[\${process.env.PAL_HOME ?? ""}]\`);\n`
     );
     const env: Record<string, string | undefined> = {
       ...process.env,
