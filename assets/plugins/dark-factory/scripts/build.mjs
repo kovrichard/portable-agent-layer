@@ -105,6 +105,8 @@ export const FINGERPRINT_UNREADABLE =
 const TEST_FIX_DIFF_UNREADABLE =
   "could not list the files the test fix changed: git diff --name-only failed";
 const TEST_EDITS_EVENT = "test_edits_restored";
+const TEST_EDITS_KEPT_EVENT = "test_edits_kept";
+const TEST_EDIT_DIFF_LIMIT = 4000;
 const UNIT_TESTS_NO_RISE_EVENT = "unit_tests_no_rise";
 
 function stuck(message) {
@@ -1071,7 +1073,43 @@ export function editedTestFiles(run, start, fixesFrom) {
   const changedByTree = changedFilesByTree(run, baselines, end);
   if (changedByTree === null) return { stop: stuck(FINGERPRINT_UNREADABLE) };
 
-  return { edits: editedBaselines(baselines, changedByTree) };
+  return { edits: editedBaselines(baselines, changedByTree), end };
+}
+
+function testEditDiff(run, edit, end) {
+  const diff = gitOutput(run, ["diff", edit.tree, end, "--", edit.file]) ?? "";
+
+  return `### ${edit.file}\n${diff.slice(0, TEST_EDIT_DIFF_LIMIT)}`;
+}
+
+function testEditsQuestion(run, edits, end) {
+  const diffs = edits.map((edit) => testEditDiff(run, edit, end)).join("\n\n");
+
+  return `The code step changed these test files, and the code writer and the debugger never edit a test:
+
+${diffs}
+
+When a change only makes its test correct, contradicting no acceptance criterion and no Decision and weakening no check the spec asks for, put that file in testFix.files, and the change stays. Leave out every file whose change is not right: the build restores it, and the code writer makes the gate pass without it.`;
+}
+
+function keepRuledTestEdits(run, edits, end, reply) {
+  const named = requestedTestFix(reply.testFix)?.files ?? [];
+  const kept = edits.filter((edit) => named.includes(edit.file)).map((edit) => edit.file);
+  if (kept.length === 0) return edits;
+  run.testFixTrees.push({ tree: end, files: kept });
+  appendEvent({ event: TEST_EDITS_KEPT_EVENT, task: run.id, files: kept }, run.env);
+
+  return edits.filter((edit) => !kept.includes(edit.file));
+}
+
+function poRulesOnTestEdits(run, found) {
+  if (run.testFixes >= TEST_FIX_LIMIT) return { edits: found.edits };
+  run.testFixes += 1;
+  const question = testEditsQuestion(run, found.edits, found.end);
+  const reply = askPo(run, UNPLANNED_FILES_ASKER, question);
+  if (reply.userQuestion) return { stop: waiting(reply.userQuestion) };
+
+  return { edits: keepRuledTestEdits(run, found.edits, found.end, reply) };
 }
 
 function testEditsStep(run, start, fixesFrom) {
@@ -1079,8 +1117,12 @@ function testEditsStep(run, start, fixesFrom) {
   if (found.stop) return found.stop;
 
   if (found.edits.length === 0) return null;
+  const ruled = poRulesOnTestEdits(run, found);
+  if (ruled.stop) return ruled.stop;
 
-  return restoreTestEdits(run, start, fixesFrom, found.edits);
+  if (ruled.edits.length === 0) return null;
+
+  return restoreTestEdits(run, start, fixesFrom, ruled.edits);
 }
 
 function restoreTestEdits(run, start, fixesFrom, edits) {
