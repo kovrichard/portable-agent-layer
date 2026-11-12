@@ -12,6 +12,13 @@ plugins: [sonar]
 rules:
   blank-line-after-block: error
   blank-line-before-control-flow: error
+  cognitive-complexity:
+    severity: error
+    max: 14
+  function-length:
+    severity: error
+    max: 40
+    skipBlankLines: true
   no-unguarded-json-parse: error
   no-sync-in-async:
     severity: error

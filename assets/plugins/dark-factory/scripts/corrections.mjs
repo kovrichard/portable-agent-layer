@@ -8,6 +8,7 @@ const TRUNCATED_MARK = "\n[truncated]";
 
 function truncated(text) {
   if (text.length <= MAX_CORRECTION_DIFF_CHARS) return text;
+
   return `${text.slice(0, MAX_CORRECTION_DIFF_CHARS)}${TRUNCATED_MARK}`;
 }
 
@@ -15,6 +16,7 @@ export function prMergedAt(task, env = process.env) {
   if (!task.pr) return null;
   const result = run("gh", ["pr", "view", task.pr, "--json", "mergedAt"], task.repo, env);
   if (!result.ok) return null;
+
   try {
     return JSON.parse(result.out).mergedAt || null;
   } catch {
@@ -45,6 +47,7 @@ function alreadyHandledAfter(events, taskId, ts) {
 
 function markChecked(taskId, env) {
   appendEvent({ event: "coach_checked", task: taskId }, env);
+
   return [];
 }
 
@@ -55,6 +58,7 @@ function fetchBranch(task, env) {
 function refFor(task, env) {
   const remote = `origin/${task.branch}`;
   const found = run("git", ["rev-parse", "--verify", "--quiet", remote], task.repo, env);
+
   return found.ok ? remote : task.branch;
 }
 
@@ -63,6 +67,7 @@ function shasSince(task, lastPush, ref, env) {
     ? ["rev-list", "--reverse", `${lastPush.head}..${ref}`]
     : ["rev-list", "--reverse", "--first-parent", `--since=${lastPush.ts}`, ref];
   const result = run("git", args, task.repo, env);
+
   return result.ok ? result.out.split("\n").filter(Boolean) : [];
 }
 
@@ -82,11 +87,13 @@ function correctionOf(task, events, env) {
   if (!lastPush || alreadyHandledAfter(events, task.id, lastPush.ts)) return [];
   const mergedAt = prMergedAt(task, env);
   if (!mergedAt) return [];
+
   if (!isLater(mergedAt, lastPush.ts)) return markChecked(task.id, env);
   fetchBranch(task, env);
   const shas = shasSince(task, lastPush, refFor(task, env), env);
   const commits = shas.map((sha) => commitOf(task, sha, env));
   if (commits.length === 0) return markChecked(task.id, env);
+
   return [{ task: task.id, pr: task.pr, commits }];
 }
 
@@ -97,6 +104,7 @@ function hasRepoFolder(task) {
 function wouldHaveBeenRead(task, events) {
   if (!task.pr || !task.branch) return false;
   const lastPush = eventsOf(events, task.id, "pushed").at(-1);
+
   return Boolean(lastPush) && !alreadyHandledAfter(events, task.id, lastPush.ts);
 }
 
@@ -104,10 +112,12 @@ export function readCorrections(env = process.env) {
   const events = readEvents(env);
   const corrections = [];
   const skipped = [];
+
   for (const task of listTasks(env)) {
     if (hasRepoFolder(task)) corrections.push(...correctionOf(task, events, env));
     else if (wouldHaveBeenRead(task, events)) skipped.push(task.id);
   }
+
   return { corrections, skipped };
 }
 

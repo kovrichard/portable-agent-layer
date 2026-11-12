@@ -39,6 +39,7 @@ export function runWorker(
   const result = buildOutcome(taskId, env, build);
   writeResult(files.result, result);
   releaseLock(files.lock, process.pid);
+
   return result;
 }
 

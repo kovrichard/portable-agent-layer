@@ -12,6 +12,7 @@ import {
 
 export function run(command, args, cwd, env, input) {
   const result = spawnTool(command, args, { cwd, env, input });
+
   return {
     ok: result.status === 0,
     out: (result.stdout ?? "").trim(),
@@ -22,6 +23,7 @@ export function run(command, args, cwd, env, input) {
 export function must(command, args, cwd, env, input) {
   const result = run(command, args, cwd, env, input);
   if (!result.ok) throw new Error(`${command} ${args.join(" ")} failed: ${result.err}`);
+
   return result.out;
 }
 
@@ -30,9 +32,11 @@ function specSections(spec) {
   const sections = new Map(
     rest.map((chunk) => {
       const [heading, ...body] = chunk.split("\n");
+
       return [heading.trim(), body.join("\n").trim()];
     })
   );
+
   return { lead: lead.replace(/^# .*\n?/, "").trim(), sections };
 }
 
@@ -43,8 +47,9 @@ function capped(text) {
 }
 
 function headlineOf(item) {
-  const bold = item.match(/^\*\*(.+?)\*\*(?![`\w*])/);
+  const bold = new RegExp(/^\*\*(.+?)\*\*(?![`\w*])/).exec(item);
   if (bold) return bold[1];
+
   return item.split(/\s+Reason:|(?<=[.)]):\s|\.\s/)[0].replace(/\.$/, "");
 }
 
@@ -63,6 +68,7 @@ function prSections({ lead, sections }) {
   const goal = sections.get("Goal");
   const decisions = decisionHeadlines(sections.get("Decisions") ?? "");
   const weakest = sections.get("Weakest assumption");
+
   return [
     lead,
     goal && `## Goal\n\n${goal}`,
@@ -74,6 +80,7 @@ function prSections({ lead, sections }) {
 export function prBody(spec, footer = "Opened by dark-factory.") {
   const parts = prSections(specSections(spec));
   const body = parts.length > 1 ? parts.join("\n\n") : spec.trim();
+
   return `${body}\n\n---\nThe full spec, with acceptance criteria and each decision's reasoning, is in the task folder.\n${footer}\n`;
 }
 
@@ -87,12 +94,14 @@ export function push(id, env = process.env) {
   );
   const head = must("git", ["rev-parse", "HEAD"], task.worktree, env);
   appendEvent({ event: "pushed", task: id, head }, env);
+
   return { pushed: task.branch };
 }
 
 function parsePrList(text) {
   try {
     const list = JSON.parse(text || "[]");
+
     return Array.isArray(list) ? list : [];
   } catch {
     throw new Error(`gh pr list printed no JSON: ${text.slice(0, 200)}`);
@@ -106,12 +115,14 @@ function existingPr(task, env) {
     task.worktree,
     env
   );
+
   return parsePrList(out)[0]?.url ?? null;
 }
 
 function adoptPr(task, url, env) {
   writeTask({ ...task, pr: url }, env);
   appendEvent({ event: "pr_adopted", task: task.id, pr: url }, env);
+
   return { pr: url, adopted: true };
 }
 
@@ -142,6 +153,7 @@ export function openPr(id, env = process.env) {
   );
   writeTask({ ...task, pr: url }, env);
   appendEvent({ event: "pr_opened", task: id, pr: url }, env);
+
   return { pr: url };
 }
 
@@ -154,8 +166,10 @@ function unmergedFiles(cwd, env) {
 function rebaseFailed(id, task, rebase, env) {
   const files = unmergedFiles(task.worktree, env);
   run("git", ["rebase", "--abort"], task.worktree, env);
+
   if (files.length === 0) throw new Error(`git rebase failed: ${rebase.err}`);
   appendEvent({ event: "sync", task: id, result: "conflict", files }, env);
+
   return { rebased: false, conflict: true, files };
 }
 
@@ -167,6 +181,7 @@ export function sync(id, env = process.env) {
   if (!rebase.ok) return rebaseFailed(id, task, rebase, env);
   const moved = must("git", ["rev-parse", "HEAD"], task.worktree, env) !== before;
   appendEvent({ event: "sync", task: id, result: moved ? "rebased" : "current" }, env);
+
   return { rebased: moved, conflict: false };
 }
 
@@ -174,6 +189,7 @@ export function markReady(id, env = process.env) {
   const task = readTask(id, env);
   must("gh", ["pr", "ready", task.pr], task.worktree, env);
   appendEvent({ event: "pr_ready", task: id, pr: task.pr }, env);
+
   return { ready: task.pr };
 }
 
@@ -188,6 +204,7 @@ if (isMain(import.meta.url)) {
     );
     process.exit(2);
   }
+
   try {
     const result = handler(id);
     printJson(result);

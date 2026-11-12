@@ -3,16 +3,19 @@ import { tokenCost } from "./prices.mjs";
 
 function countBy(items, key) {
   const counts = {};
+
   for (const item of items) {
     const value = typeof key === "function" ? key(item) : item[key];
     counts[value] = (counts[value] ?? 0) + 1;
   }
+
   return counts;
 }
 
 function firstTryPassRate(gates) {
   const firstTries = gates.filter((gate) => gate.attempt === 1);
   if (firstTries.length === 0) return null;
+
   return firstTries.filter((gate) => gate.result === "pass").length / firstTries.length;
 }
 
@@ -23,6 +26,7 @@ export function summarize(events) {
   const finals = of("task_status").filter((event) =>
     ["ready", "stuck", "waiting"].includes(event.status)
   );
+
   return {
     tasks: of("task_created").length,
     byCategory: countBy(of("task_created"), "category"),
@@ -54,6 +58,7 @@ const ofName = (events, name) => events.filter((event) => event.event === name);
 export const METRICS = {
   firstTryGatePass: (events) => {
     const first = ofName(events, "gate").find((gate) => gate.attempt === 1);
+
     return first?.result === "pass" ? 1 : 0;
   },
   reviewFindings: (events) =>
@@ -76,18 +81,22 @@ function attachAfter(runs, event) {
 export function runsOf(events) {
   const runs = [];
   const open = new Map();
+
   for (const event of events) {
     if (event.event === "task_started") {
       open.set(event.task, { task: event.task, events: [event] });
       continue;
     }
+
     if (isAfterRunFinished(event)) {
       attachAfter(runs, event);
       continue;
     }
+
     const run = open.get(event.task);
     if (!run) continue;
     run.events.push(event);
+
     if (event.event === "run_finished") {
       runs.push({
         task: run.task,
@@ -98,6 +107,7 @@ export function runsOf(events) {
       open.delete(event.task);
     }
   }
+
   return runs;
 }
 
@@ -105,6 +115,7 @@ function runCostUsd(run) {
   const finishedCost = run.events.at(-1).costUsd ?? null;
   const tailCost = costTotal(run.after).costUsd;
   if (finishedCost === null && tailCost === null) return null;
+
   return (finishedCost ?? 0) + (tailCost ?? 0);
 }
 
@@ -114,7 +125,9 @@ function median(values) {
     .sort((a, b) => a - b);
   if (numbers.length === 0) return null;
   const middle = Math.floor(numbers.length / 2);
+
   if (numbers.length % 2 === 1) return numbers[middle];
+
   return (numbers[middle - 1] + numbers[middle]) / 2;
 }
 
@@ -125,6 +138,7 @@ export function estimateFor(events, category) {
     )
     .slice(-10);
   const finished = history.map((run) => run.events.at(-1));
+
   return {
     wallMs: median(finished.map((event) => event.wallMs)),
     tokens: median(history.map(runTokens)),
@@ -143,6 +157,7 @@ const TOKEN_KINDS = [
 function runTokens(run) {
   const finished = run.events.at(-1);
   if (typeof finished.tokens !== "number") return finished.tokens;
+
   return (
     finished.tokens + TOKEN_KINDS.reduce((sum, field) => sum + total(run.after, field), 0)
   );
@@ -150,6 +165,7 @@ function runTokens(run) {
 
 function actualOf(run) {
   const finished = run.events.at(-1);
+
   return {
     ...finished,
     costUsd: runCostUsd(run),
@@ -175,6 +191,7 @@ function estimateAccuracy(runs) {
         )
         .map(({ estimate, actual }) => actual[field] / estimate[field])
     );
+
   return {
     runs: pairs.length,
     wallRatio: ratios("wallMs"),
@@ -185,18 +202,22 @@ function estimateAccuracy(runs) {
 
 export function metricOver(name, runs) {
   if (!Object.hasOwn(METRICS, name)) throw new Error(`unknown metric "${name}"`);
+
   if (runs.length === 0) return null;
   const values = runs.map((run) => METRICS[name](run.events));
+
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
 function groupBy(items, keyOf) {
   const groups = new Map();
+
   for (const item of items) {
     const key = keyOf(item);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(item);
   }
+
   return groups;
 }
 
@@ -216,12 +237,14 @@ function eventCost(event) {
     cacheWrite1h: split.oneHour,
   });
   if (cost === null) return { costUsd: null, costEstimated: false };
+
   return { costUsd: cost, costEstimated: true };
 }
 
 function costTotal(events) {
   const priced = events.map(eventCost);
   const known = priced.filter((p) => p.costUsd !== null);
+
   return {
     costUsd: known.length ? known.reduce((sum, p) => sum + p.costUsd, 0) : null,
     costEstimated: priced.some((p) => p.costEstimated),
@@ -234,6 +257,7 @@ function total(events, field) {
 
 function roleRows(roleEvents) {
   const groups = groupBy(roleEvents, (e) => JSON.stringify([e.role, e.model ?? null]));
+
   return [...groups.values()].map((group) => ({
     role: group[0].role,
     model: group[0].model ?? null,
@@ -254,6 +278,7 @@ function runReport({ events: runEvents, after }) {
   const finished = last.event === "run_finished" ? last : null;
   const estimate = runEvents.find((e) => e.event === "estimate");
   const roles = [...runEvents.filter((e) => e.event === "role_finished"), ...after];
+
   return {
     status: finished?.status ?? null,
     startedAt: runEvents[0].ts,
@@ -291,18 +316,22 @@ const CUMULATIVE_FIELDS = [
 
 function withoutCumulative(events) {
   const last = new Map();
+
   return events.map((event) => {
     if (event.event !== "role_finished" || event.agentId == null) return event;
     const key = JSON.stringify([event.task, event.agentId]);
     const earlier = last.get(key);
     last.set(key, event);
+
     if ("costUsd" in event || !earlier) return event;
     const subtracted = {};
+
     for (const field of CUMULATIVE_FIELDS) {
       if (typeof event[field] === "number") {
         subtracted[field] = Math.max(0, event[field] - (earlier[field] ?? 0));
       }
     }
+
     return { ...event, ...subtracted };
   });
 }
@@ -318,6 +347,7 @@ function taskRuns(events, taskId) {
     start !== -1 && !mine.slice(start + 1).some((e) => e.event === "run_finished")
       ? [{ events: mine.slice(start).filter((e) => !isAfterRunFinished(e)), after: [] }]
       : [];
+
   return [...finished, ...open];
 }
 
@@ -327,6 +357,7 @@ export function taskReport(events, taskId) {
 
 function costByRole(roleEvents) {
   const groups = groupBy(roleEvents, (e) => e.role);
+
   return Object.fromEntries(
     [...groups].map(([role, group]) => [
       role,
