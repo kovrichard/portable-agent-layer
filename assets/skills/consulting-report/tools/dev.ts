@@ -1,9 +1,7 @@
 #!/usr/bin/env bun
 
-// consulting-report skill tool: launch the Next.js dev server for live preview.
-//
-// Usage:
-//   pal cli skill run consulting-report dev <report-dir>
+// Launch the report's Next.js dev server for live preview.
+// Usage: pal cli skill run consulting-report dev <report-dir>
 
 import { spawnSync } from "node:child_process";
 import { constants as fsConstants } from "node:fs";

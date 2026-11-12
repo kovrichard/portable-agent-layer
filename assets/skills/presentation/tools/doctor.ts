@@ -1,15 +1,6 @@
 #!/usr/bin/env bun
-// presentation skill — lint a deck before build.
-//
-// Usage:
-//   bun doctor.ts <deck-dir> [--strict]
-//
-// Reads slides/*.md (or legacy content.md), runs slide-scope and deck-scope
-// rules from `lib/lint-rules.ts`, prints per-slide findings + a summary,
-// and exits 0 (clean) or 1 (errors). --strict promotes warnings to errors.
-//
-// Rules are heuristic — thresholds documented in SKILL.md. The doctor is a
-// safety-net, not a style guide; intentionally permissive.
+// Lint a deck before build with the rules in lib/lint-rules.ts; exits 1 on errors, --strict counts warnings.
+// Usage: pal cli skill run presentation doctor <deck-dir> [--strict]
 
 import { readdir } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";

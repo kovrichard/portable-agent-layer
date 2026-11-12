@@ -1,8 +1,5 @@
-// presentation skill — types shared across the lint pipeline.
-//
-// The doctor is structured as a rule registry: each rule is a small object
-// with a `check` function that emits Findings. Rules are either slide-scoped
-// (run once per slide) or deck-scoped (run once across the whole deck).
+// Types for the deck lint rule registry: a rule's check emits Findings, once per
+// slide or once per deck.
 
 export type Severity = "E" | "W";
 export type Finding = { rule: string; severity: Severity; msg: string };

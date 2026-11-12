@@ -1,17 +1,6 @@
 #!/usr/bin/env bun
-// playwright skill tool: capture a screenshot of a URL and print its absolute path.
-//
-// Engine selection (see chooseTier):
-//   Tier 1 — system `playwright-cli` binary (Microsoft's stateful agent CLI), when on
-//            PATH and no exact viewport/full-page is requested.
-//   Tier 2 — PAL-installed Playwright, launched in-process.
-// If neither engine works, prints NO_PLAYWRIGHT_CLI on stderr and exits non-zero so the
-// caller (SKILL.md) can fall back to the Playwright MCP.
-//
-// Runs under Bun on every OS:
-//   pal cli skill run playwright shot <url> [opts]
-// It used to ship a Node-compiled .mjs sibling because chromium.launch hung under Bun on
-// Windows; bun 1.4.0 fixes that, so the Node hop and the build step are gone.
+// Screenshot a URL and print its absolute path; NO_PLAYWRIGHT_CLI on stderr means no engine works.
+// Usage: pal cli skill run playwright shot <url> [opts]; chooseTier picks playwright-cli or PAL's Playwright.
 
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
@@ -28,10 +17,8 @@ function playwrightCliAvailable(): boolean {
 }
 
 function runViaCli(opts: ShotOptions, out: string): boolean {
-  // playwright-cli writes a `.playwright-cli/` session dir (logs + page snapshots)
-  // into its cwd. Run it inside a throwaway temp dir so nothing lands in the user's
-  // repo, then remove it. `out` is already absolute, so the screenshot is unaffected.
-  // Cross-platform: os.tmpdir + fs.mkdtemp/rm — no shell, no platform-specific paths.
+  // playwright-cli writes a `.playwright-cli/` session folder into its cwd, so it runs
+  // in a throwaway temp folder instead of the user's repo.
   const work = mkdtempSync(join(tmpdir(), "pal-pwcli-"));
   const run = (args: string[], quiet = false) =>
     spawnSync("playwright-cli", args, { stdio: quiet ? "ignore" : "inherit", cwd: work });

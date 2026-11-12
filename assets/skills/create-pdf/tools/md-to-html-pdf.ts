@@ -1,11 +1,6 @@
 #!/usr/bin/env bun
-// create-pdf skill tool: Markdown -> HTML (marked, GFM) -> PDF (Playwright).
-// Self-contained HTML: all CSS inlined, no CDN at render time.
-//
-// Usage:
-//   pal cli skill run create-pdf md-to-html-pdf <input.md> \
-//     [--html <out.html>] [--pdf <out.pdf>] [--margin <css>] [--header <html|file>] [--footer <html|file>]
-//   --margin defaults to 25mm (all sides). --header/--footer accept inline HTML or a file path.
+// Markdown to self-contained HTML (marked, GFM, CSS inlined) to PDF (Playwright).
+// Usage: pal cli skill run create-pdf md-to-html-pdf <input.md> [flags]; the flags are in SKILL.md.
 
 import { readFile, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, resolve } from "node:path";
@@ -41,9 +36,8 @@ const dir = dirname(input);
 htmlOut ||= resolve(dir, `${stem}.html`);
 pdfOut ||= resolve(dir, `${stem}.pdf`);
 
-// --header/--footer take inline HTML or a path to an HTML file. Playwright renders
-// them inside the page margin, so widen --margin when you use them. Templates may use
-// Playwright's injected classes: pageNumber, totalPages, date, title, url.
+// Playwright renders headers and footers inside the page margin and fills its
+// pageNumber, totalPages, date, title and url classes.
 async function resolveTemplate(value: string): Promise<string> {
   if (!value) return "";
 

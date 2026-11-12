@@ -62,7 +62,6 @@ arch:
       in: ["src/**", "assets/skills/**", "!assets/skills/consulting-report/template/**"]
       countDocComments: false
       message: "Extract a well-named function instead of stacking comment lines — see the Documenting code rules in AGENTS.md."
-      severity: warn
 
   # A hook entrypoint is only ever spawned, so it exports nothing and no test can
   # import it — Stryker's instrumentation never sees it run and its logic can be
