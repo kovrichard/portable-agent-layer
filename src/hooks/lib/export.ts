@@ -44,9 +44,8 @@ function walkDir(dir: string, root: string): string[] {
 
     if (shouldSkip(relPath)) continue;
 
-    // Symlinks report neither isDirectory nor isFile, so they are skipped —
-    // this is what keeps shipped-skill symlinks (skills/<name> → repo) out of
-    // the export. Do not switch to stat()-based following.
+    // A Dirent symlink is neither a directory nor a file, which keeps shipped-skill
+    // symlinks out of the export; stat()-based following would pull them in.
     if (entry.isDirectory()) {
       files.push(...walkDir(fullPath, root));
     } else if (entry.isFile()) {

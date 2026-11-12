@@ -223,15 +223,16 @@ function linkTagGroup(
   }
 }
 
+function isFacetFilterNotALink(tag: string): boolean {
+  return tag.startsWith("topic:");
+}
+
 function indexByStructuralTag(graph: KnowledgeGraph): Map<string, string[]> {
   const tagIndex = new Map<string, string[]>();
 
   for (const node of graph.nodes.values()) {
     for (const tag of node.tags) {
-      // ISC-18: topic:* tags are facet filters, not structural links.
-      // Skip them here so two unrelated entities that merely share a
-      // broad topic (e.g. "ai") don't get a phantom navigation edge.
-      if (tag.startsWith("topic:")) continue;
+      if (isFacetFilterNotALink(tag)) continue;
       const list = tagIndex.get(tag);
       if (list) list.push(node.slug);
       else tagIndex.set(tag, [node.slug]);

@@ -84,13 +84,14 @@ function assertNotRealHomeDuringTests(home: string): void {
   );
 }
 
+function nonEmptySoABadWriteCannotEraseTheBackup(file: string): boolean {
+  return existsSync(file) && readFileSync(file, "utf-8").trim().length > 0;
+}
+
 export function writeBindings(bindings: Bindings, home: string = palHome()): void {
   assertNotRealHomeDuringTests(home);
   const file = bindingsFilePath(home);
-  // Only a differing, non-empty predecessor is worth keeping: backing up an
-  // identical file is noise, and backing up an empty one would let a bad write
-  // erase the copy that made it recoverable.
-  if (existsSync(file) && readFileSync(file, "utf-8").trim().length > 0) {
+  if (nonEmptySoABadWriteCannotEraseTheBackup(file)) {
     copyFileSync(file, bindingsBackupPath(home));
   }
 

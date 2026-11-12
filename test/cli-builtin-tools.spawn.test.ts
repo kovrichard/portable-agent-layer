@@ -262,3 +262,28 @@ describe("pal cli skill run — ~/.pal/.env reaches shipped skills only", () => 
     expect(runKeyTool("linked").stdout.trim()).toBe("key=[]");
   });
 });
+
+describe("pal cli skill run — the tool learns where PAL's home is", () => {
+  test("with PAL_HOME unset, the tool receives the home pal resolved", () => {
+    const userHome = freshTestDir(`${import.meta.file}-user-home`);
+    const pal = resolve(userHome, ".pal");
+    mkdirSync(resolve(pal, "skills", "where", "tools"), { recursive: true });
+    writeFileSync(
+      resolve(pal, "skills", "where", "tools", "home.ts"),
+      `console.log(\`home=[\${process.env.PAL_HOME ?? ""}]\`);\n`
+    );
+    const env: Record<string, string | undefined> = {
+      ...process.env,
+      HOME: userHome,
+      USERPROFILE: userHome,
+    };
+    delete env.PAL_HOME;
+    delete env.PAL_TEST_SANDBOX;
+    const result = spawnSync("bun", [CLI, "cli", "skill", "run", "where", "home"], {
+      env,
+      encoding: "utf-8",
+      timeout: 20000,
+    });
+    expect(result.stdout.trim()).toBe(`home=[${pal}]`);
+  });
+});

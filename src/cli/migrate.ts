@@ -408,6 +408,12 @@ function archiveLegacyIndex(results: string[]): void {
 
 // ── v4: project paths out of records, into machine-local bindings ──
 
+function rewriteSoTheWriterMovesThePathToABinding(
+  project: NonNullable<ReturnType<typeof readProject>>
+): void {
+  writeProject(project);
+}
+
 /** Records written before bindings existed carry their own `path:` in frontmatter. */
 function recordsCarryingAPath(): string[] {
   const base = paths.projectHistory();
@@ -438,9 +444,6 @@ const v4PathsToBindings: Migration = {
     };
   },
 
-  // Reading a record and writing it straight back is the whole migration: the
-  // writer already routes the path to a binding, drops the field, and picks up
-  // the git remote. Nothing here reimplements that, so the two cannot drift.
   run(dryRun = false): MigrationResult {
     const stale = recordsCarryingAPath();
     const results: string[] = [];
@@ -461,7 +464,7 @@ const v4PathsToBindings: Migration = {
         continue;
       }
 
-      writeProject(project);
+      rewriteSoTheWriterMovesThePathToABinding(project);
       migrated++;
       results.push(`${slug}: path moved to a binding`);
     }

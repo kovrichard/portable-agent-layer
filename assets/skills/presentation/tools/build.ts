@@ -1,17 +1,6 @@
 #!/usr/bin/env bun
-// presentation skill — build a deck folder to a self-contained HTML.
-//
-// Usage:
-//   bun build.ts <deck-dir> [--out <dir>] [--force]
-//
-// Output:
-//   <out>/<deck-name>/<deck-name>.md     concatenated slides (written first)
-//   <out>/<deck-name>/<deck-name>.html   self-contained presentation
-//
-// --out defaults to the deck-dir itself (output lands at <deck-dir>/<deck-name>/,
-// which the scaffolder gitignores). The deck-name subdir is always created
-// inside --out, even when --out is explicitly provided. Existing files in
-// the subdir are preserved unless --force is passed.
+// Build a deck folder into <deck-name>.md and a self-contained <deck-name>.html; SKILL.md has the layout.
+// Usage: pal cli skill run presentation build <deck-dir> [--out <dir>] [--force]
 
 import { constants as fsConst } from "node:fs";
 import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
@@ -20,9 +9,6 @@ import { dataUri, escapeForTextarea, readText } from "./lib/inline";
 import { THEME_BASE, VENDOR_REVEAL } from "./lib/paths";
 import { getTemplate } from "./lib/registry";
 
-// Walk markdown line-by-line, skipping fenced code blocks, applying `transform`
-// to each non-fenced line. Used by both the concat-step path rewrite and the
-// HTML-step image inliner so neither touches example image syntax inside ``` blocks.
 async function mapMarkdownOutsideFences(
   md: string,
   transform: (line: string) => string | Promise<string>
@@ -43,10 +29,8 @@ async function mapMarkdownOutsideFences(
   return out.join("\n");
 }
 
-// Rewrite `../assets/X` (the natural relative path from a `slides/*.md` file)
-// to `assets/X` so the concatenated markdown — which lives at the deck root —
-// resolves images correctly when previewed directly. Bare `X.png` references
-// (no path) are left to the doctor to flag; we don't guess where they live.
+// `../assets/X` from a slide becomes `assets/X` for the concat at the deck root;
+// a bare `X.png` is left for the doctor to flag.
 function rewriteImageRefsForConcat(md: string): Promise<string> {
   return mapMarkdownOutsideFences(md, (line) =>
     line.replace(/(!\[[^\]]*\]\()([^)]+)(\))/g, (whole, open, ref, close) => {
@@ -62,10 +46,8 @@ function rewriteImageRefsForConcat(md: string): Promise<string> {
   );
 }
 
-// Inline every local image reference in the concatenated markdown as a data: URI
-// so the resulting HTML is truly self-contained (emailable, USB-stickable).
-// Resolves refs against `deckDir` (the concat-md's location). Missing files are
-// left untouched — the doctor flags them; build doesn't crash on author errors.
+// A missing image stays as written for the doctor to flag, so build never crashes
+// on an author's mistake.
 async function inlineImagesInMarkdown(md: string, deckDir: string): Promise<string> {
   return mapMarkdownOutsideFences(md, async (line) => {
     const matches = [...line.matchAll(/(!\[[^\]]*\]\()([^)]+)(\))/g)];
@@ -100,7 +82,6 @@ const ASPECTS: Record<string, [number, number]> = {
   "4:3": [1440, 1080],
 };
 
-// Minimal YAML reader — only handles flat key: value lines (sufficient for slides.config.yml + template.yml).
 function parseSimpleYaml(s: string): Record<string, string> {
   const out: Record<string, string> = {};
 
@@ -138,19 +119,14 @@ async function exists(p: string): Promise<boolean> {
 }
 
 function deckSlug(deckDir: string): string {
-  // Filesystem-safe name. Falls back to "deck" if basename is empty (shouldn't happen).
   const raw = basename(resolve(deckDir));
   const slug = raw.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
 
   return slug || "deck";
 }
 
-// Build-time injection: code-layout slides with > 15 lines of code get a
-// `style="--code-scale: X"` attribute baked into the slide directive. CSS in
-// layouts.css multiplies the base code font by this variable. Linear from 1.0
-// at 15 lines to 0.6 at 25 lines; clamped at 0.6 beyond. Build-time keeps the
-// attribute on the rendered <section>, so navigation/Highlight re-runs cannot
-// strip it.
+// Baked in at build time so reveal.js navigation and Highlight re-runs cannot strip it;
+// layouts.css scales code from 1.0 at 15 lines down to 0.6 at 25.
 function injectCodeScale(slideMarkdown: string): string {
   const layoutRe = /<!--\s*\.slide:\s*data-layout="code"([^>]*)-->/i;
   const layoutMatch = layoutRe.exec(slideMarkdown);
@@ -164,7 +140,6 @@ function injectCodeScale(slideMarkdown: string): string {
   if (lines <= 15) return slideMarkdown;
 
   const scale = Math.max(0.6, 1 - (lines - 15) * 0.04).toFixed(2);
-  // Don't double-inject if a previous build already set it.
   const extras = layoutMatch[1].replace(/\s+style="--code-scale:\s*[^"]+"/i, "").trim();
   const attrs = extras
     ? `${extras} style="--code-scale: ${scale}"`
@@ -174,11 +149,8 @@ function injectCodeScale(slideMarkdown: string): string {
   return slideMarkdown.replace(layoutMatch[0], newDirective);
 }
 
-// Build-time injection: table-layout slides with > 4 rows get a
-// `style="--table-scale: X"` attribute baked into the slide directive. CSS
-// multiplies cell font-size AND cell padding by this var so both shrink
-// together (font-only shrinking is dampened by static padding). Linear from
-// 1.0 at 4 rows to 0.6 at ≥10 rows. Mirrors `injectCodeScale`.
+// Like injectCodeScale: font and padding shrink together, from 1.0 at 4 rows to
+// 0.6 at 10, because shrinking only the font is dampened by fixed padding.
 function injectTableScale(slideMarkdown: string): string {
   const layoutRe = /<!--\s*\.slide:\s*data-layout="table"([^>]*)-->/i;
   const layoutMatch = layoutRe.exec(slideMarkdown);
@@ -267,9 +239,8 @@ async function refuseOverwrite(paths: string[]): Promise<void> {
   process.exit(1);
 }
 
-// When --out is the deck-dir itself (the default), write directly into it —
-// no extra <slug>/ subdir. Otherwise create the subdir so multiple decks
-// can coexist under one shared --out.
+// Flat in the deck folder by default; under <slug>/ for any other --out, so decks
+// can share one folder.
 function deckOutputPaths(deckDir: string, outRoot: string) {
   const slug = deckSlug(deckDir);
   const outDir = resolve(outRoot) === deckDir ? deckDir : join(outRoot, slug);
@@ -324,9 +295,8 @@ function fontsLinkFor(tplYml: Record<string, string>): string {
     : "";
 }
 
-// The concat is read back from disk, then image refs are inlined as data: URIs
-// so the HTML is self-contained. The on-disk concat keeps plain `assets/X` paths
-// for direct markdown preview; only the HTML embeds full image bytes.
+// Only the HTML embeds image bytes; the concat on disk keeps `assets/X` paths for
+// previewing the markdown directly.
 async function renderDeckHtml(
   deckDir: string,
   concatPath: string,

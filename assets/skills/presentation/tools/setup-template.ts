@@ -1,13 +1,7 @@
 #!/usr/bin/env bun
 
-// presentation skill — set up a brand template.
-// Interactive Q&A by default; flag-driven for non-interactive use (Claude / scripts).
-//
-// Usage:
-//   bun setup-template.ts                                    # interactive
-//   bun setup-template.ts --name <slug> --logo <path> --primary "#0E1335" [--accent "#..."] \
-//     [--footer "..."] [--logo-placement footer] [--fonts system] [--aspect 16:9] \
-//     [--showcase] [--yes]
+// Set up a brand template, by questions or, for scripts and agents, by the flags in SKILL.md.
+// Usage: pal cli skill run presentation setup-template [--name <slug> --logo <path> --primary <hex> ...]
 
 import { spawn } from "node:child_process";
 import { constants as fsConst } from "node:fs";

@@ -27,7 +27,6 @@ export async function dataUri(path: string): Promise<string> {
   return `url("data:${mime};base64,${buf.toString("base64")}")`;
 }
 
-// Escape literal "</textarea>" inside markdown so it doesn't terminate the data-template wrapper.
 export function escapeForTextarea(content: string): string {
   return content.replace(/<\/textarea>/gi, "<\\/textarea>");
 }

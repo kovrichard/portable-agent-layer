@@ -93,9 +93,10 @@ function runSkillTool(skill: string, tool: string, toolArgs: string[]): number {
     return 1;
   }
 
+  const env = isShippedTool(path) ? withPalEnv(process.env) : process.env;
   const { status } = spawnSync("bun", [path, ...toolArgs], {
     stdio: "inherit",
-    env: isShippedTool(path) ? withPalEnv(process.env) : process.env,
+    env: { ...env, PAL_HOME: palHome() },
   });
 
   return status ?? 1;

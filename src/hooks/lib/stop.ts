@@ -185,9 +185,8 @@ export async function runStopHandlers(
   // Always persist last exchange — drives CompactRecover + "Pick Up Where You Left Off"
   if (options.sessionId) persistLastExchange(messages, options.sessionId);
 
-  // Detach inference-bearing handlers — claude --print cold-start can exceed
-  // any in-hook budget. These spawn detached bun subprocesses that run the
-  // inference and write results to disk; they don't block this hook.
+  // A claude --print cold start can exceed any in-hook budget, so inference runs in
+  // detached subprocesses that write their results to disk.
   await timing.time("detach-inference", async () => {
     sweepStaleHandoffs();
     await detachSessionIntelligence(transcript, options.sessionId);

@@ -6,8 +6,6 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parse } from "./frontmatter";
 
-// ── Types ──
-
 export interface FailureEntry {
   slug: string;
   path: string;
@@ -149,7 +147,7 @@ export function readReflections(file: string, limit?: number): ReflectionEntry[]
     }
   }
 
-  entries.reverse(); // JSONL is appended chronologically → newest first
+  entries.reverse();
 
   return limit ? entries.slice(0, limit) : entries;
 }

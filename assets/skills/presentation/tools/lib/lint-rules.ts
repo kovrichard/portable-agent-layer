@@ -1,10 +1,4 @@
-// presentation skill — rule registry.
-//
-// Each rule is a small object with a `check` function that emits Findings.
-// Slide-scope rules run once per slide; deck-scope rules run once over the
-// whole deck. Adding a rule = appending to the array. The runner in
-// doctor.ts is layout-agnostic — `appliesTo` controls which slides a rule
-// runs on.
+// The deck lint rules; add one by appending to the array, and `appliesTo` picks its slides.
 
 import { resolve } from "node:path";
 import {
@@ -137,9 +131,7 @@ export const RULES: Rule[] = [
       const findings: Finding[] = [];
 
       for (const ref of findImageRefs(ctx.bodyNoNotes)) {
-        // `../assets/X` is the natural relative path from a slides/*.md file —
-        // resolve it from inside `slides/`. Plain `assets/X` (deck-root style)
-        // resolves from the deck root. Both resolve to the same file on disk.
+        // `../assets/X` is relative to slides/, plain `assets/X` to the deck root.
         const base = ref.startsWith("../") ? resolve(ctx.deckDir, "slides") : ctx.deckDir;
         const abs = resolve(base, ref);
         if (!(await fileExists(abs))) {
@@ -159,11 +151,8 @@ export const RULES: Rule[] = [
     name: "bullet-emdash-continuation",
     scope: "slide",
     check: (ctx) => {
-      // Em-dash continuation in body bullets is disallowed by SKILL.md content
-      // rules. Em-dash is reserved for title qualifiers in headings ("Block 4
-      // — Landscape") and Q&A format in notes (`"Question?" — short answer`).
-      // Inside the slide body, a bullet of the form `- foo — bar` is prose
-      // pretending to be a bullet. Convert to a sub-bullet instead.
+      // SKILL.md keeps em-dashes for heading qualifiers and Q&A notes; `- foo — bar`
+      // in the body is prose posing as a bullet and belongs in a sub-bullet.
       const findings: Finding[] = [];
 
       for (const line of ctx.bodyNoNotes.split("\n")) {
@@ -205,15 +194,8 @@ export const RULES: Rule[] = [
   // ── Content-quality rules (Tier 1) ──────────────────────────────────────
 
   {
-    // Top-level bullets should land 2–15 words. Below 2 = stub; above 15 =
-    // prose pretending to be a bullet. SKILL.md's stricter target is 6–12;
-    // the doctor uses looser bounds to flag only egregious cases.
-    //
-    // Two carve-outs:
-    //   1. A bullet with nested children is a "label" — minimum doesn't apply.
-    //      "Locations" → sub-bullets is fine.
-    //   2. Comparison layout has its own visual rhythm (column labels under
-    //      headers); skip the rule there entirely.
+    // 2-15 words, looser than SKILL.md's 6-12 so only egregious bullets fire; a label
+    // bullet with children has no minimum, and the comparison layout is exempt.
     name: "bullet-length-top-level",
     scope: "slide",
     appliesTo: (ctx) => isBulletLayout(ctx) && ctx.layout !== "comparison",
@@ -265,10 +247,8 @@ export const RULES: Rule[] = [
   },
 
   {
-    // If notes contain source links, the FIRST bullet should be one (or a
-    // "Sources" parent whose children are links). The rule is "if you cite,
-    // cite first" — slides without any source link are exempt because the
-    // content is analysis, not citation.
+    // If you cite, cite first: notes with a source link start with it or with a
+    // "Sources" parent; notes without links are analysis and exempt.
     name: "notes-link-first",
     scope: "slide",
     appliesTo: (ctx) =>
@@ -304,11 +284,8 @@ export const RULES: Rule[] = [
   },
 
   {
-    // Body should be bullets + headings + blockquotes + HTML wrappers + code.
-    // A bare prose paragraph in body usually means "what happens in the room"
-    // narration leaked onto the slide. Only enforced on content/agenda where
-    // prose is least legitimate; two-column and image-text legitimately host
-    // prose inside their wrappers.
+    // A bare paragraph is usually speaker narration leaked onto the slide; only content
+    // and agenda slides are checked, since two-column and image-text host prose.
     name: "prose-paragraph-in-body",
     scope: "slide",
     appliesTo: (ctx) => ctx.layout === "content" || ctx.layout === "agenda",
@@ -341,9 +318,7 @@ export const RULES: Rule[] = [
   },
 
   {
-    // Exercise slides should have h2 starting with "Exercise — " so the room
-    // can see they've changed mode. The em-dash here is a legal title
-    // qualifier (per SKILL.md), not a continuation.
+    // "Exercise — " tells the room the mode changed; this em-dash is a legal title qualifier.
     name: "exercise-title-prefix",
     scope: "slide",
     appliesTo: isExerciseSlide,
@@ -372,10 +347,8 @@ export const RULES: Rule[] = [
   },
 
   {
-    // Exercise notes should have the four standard facilitation beats so the
-    // speaker can scan during delivery. Each missing beat is its own warning.
-    // Beats live as top-level bullets in the Note: section; sub-bullets carry
-    // the actual content under each beat.
+    // The four facilitation beats are top-level note bullets the speaker scans while
+    // delivering; each missing beat is its own warning.
     name: "exercise-note-beats",
     scope: "slide",
     appliesTo: isExerciseSlide,
@@ -707,11 +680,8 @@ export const RULES: Rule[] = [
   },
 
   {
-    // Notes get printed as separate pages with `showNotes: 'separate-page'`.
-    // Browsers split long *list* content across pages cleanly, but a single
-    // fenced code block inside notes is one indivisible element — if it runs
-    // longer than one printed page it gets clipped. Warn at 30 lines so the
-    // author can split or shorten before the trainer discovers it on paper.
+    // Printed notes pages split lists cleanly, but a fenced code block cannot split
+    // and is clipped past one page, so warn at 30 lines.
     name: "notes-code-too-long",
     scope: "slide",
     check: (ctx) => {
@@ -736,19 +706,8 @@ export const RULES: Rule[] = [
   // ── Deck-scope rules (Tier 3) ───────────────────────────────────────────
 
   {
-    // Visual rhythm check (period-aware). Each slide gets a shape signature:
-    // - non-content slides → just their layout name (interleaving naturally
-    //   breaks runs)
-    // - content slides → `content:<top-count>:<flat|nested>` so a flat slide
-    //   and a nested slide count as different shapes even at the same count
-    //
-    // Detects periodic patterns of length 1, 2, or 3:
-    //   period 1: 4+ same in a row (e.g., `5-flat, 5-flat, 5-flat, 5-flat`)
-    //   period 2: 3+ AB cycles, 6+ slides (e.g., `4-flat, 5-flat, 4-flat...`)
-    //   period 3: 3+ ABC cycles, 9+ slides
-    //
-    // When multiple periods fit a run, the smallest wins. Adding a single
-    // nested slide to a flat stretch breaks the run.
+    // Flags a run of slide shapes repeating with period 1 (4+), 2 (3 cycles) or 3 (3 cycles);
+    // a content slide's shape is its bullet count plus flat or nested.
     name: "monotone-rhythm",
     scope: "deck",
     check: (ctx) => {
@@ -794,10 +753,8 @@ export const RULES: Rule[] = [
   },
 
   {
-    // Each section divider opens a block; the slide after it should earn the
-    // block. Strict check here only flags structural failures: a section as
-    // the last slide, or two section slides in a row (empty block). The
-    // qualitative "earn-it" judgement stays human.
+    // Flags only an empty block: a section slide last, or two in a row; whether the
+    // next slide earns the block stays a human call.
     name: "block-needs-opener",
     scope: "deck",
     check: (ctx) => {

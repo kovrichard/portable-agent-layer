@@ -1,8 +1,6 @@
 #!/usr/bin/env bun
-// presentation skill — scaffold a new deck folder.
-//
-// Usage:
-//   bun new-deck.ts <deck-dir> [--template <name>] [--title "Deck title"] [--showcase]
+// Scaffold a new deck folder.
+// Usage: pal cli skill run presentation new-deck <deck-dir> [--template <name>] [--title <title>] [--showcase]
 
 import { constants as fsConst } from "node:fs";
 import { access, copyFile, mkdir, readdir, writeFile } from "node:fs/promises";
@@ -90,9 +88,8 @@ lang: en
 `;
   await writeFile(join(target, "slides.config.yml"), cfg, "utf8");
 
-  // Author surface = slides/ folder of small files (one slide per file). At build time they're
-  // concatenated in filename order. One file per slide means a malformed edit only takes down
-  // its own slide, and parallel writes don't conflict.
+  // One file per slide: a malformed edit breaks only its own slide, and parallel writes
+  // never conflict.
   const sourceSlidesDir = join(showcase ? SKILL_DEMO : SKILL_TEMPLATE, "slides");
   const slidesDir = join(target, "slides");
   await mkdir(slidesDir, { recursive: true });
@@ -104,9 +101,7 @@ lang: en
     await copyFile(join(sourceSlidesDir, f), join(slidesDir, f));
   }
 
-  // Build output lands in this deck-dir by default — flat (slug.html, slug.md)
-  // when --out defaults to the deck-dir, or under slug/ when --out is explicit.
-  // Pre-ignore both shapes.
+  // Ignore both build layouts: flat slug.html and slug.md, and the slug/ folder.
   const slug =
     basename(target)
       .replace(/[^a-zA-Z0-9._-]+/g, "-")

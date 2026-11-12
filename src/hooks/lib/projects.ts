@@ -63,9 +63,7 @@ export interface ProjectProgress {
   changelog?: string;
 }
 
-// ── Legacy migration types ────────────────────────────────────────
-// Shared by `pal cli migrate` and `pal tool agent project --migrate` —
-// both convert the old progress-JSON format to current ProjectProgress.
+// ── Legacy progress-JSON types, read by both migrate commands ──
 
 interface LegacyDecision {
   ts: string;
@@ -309,11 +307,11 @@ export function writeProject(p: ProjectProgress): void {
   if (p.placed_by) meta.placed_by = p.placed_by;
   writeFileSync(ensureAndGetIsaFile(p.name), stringify(meta, buildBody(p)), "utf-8");
 
-  // Only a path that exists here may be bound. Saving a record is not a claim
-  // about this machine's disk — `path` may have arrived from an imported record
-  // written elsewhere, and binding it would recreate the very leak bindings exist
-  // to prevent. An explicit `writeBinding` from the user stays unguarded.
-  if (p.path && existsSync(p.path)) writeBinding(p.name, p.path);
+  if (pathExistsOnThisMachine(p.path)) writeBinding(p.name, p.path);
+}
+
+function pathExistsOnThisMachine(path: string | undefined): path is string {
+  return Boolean(path) && existsSync(path as string);
 }
 
 export function deleteProject(name: string): boolean {

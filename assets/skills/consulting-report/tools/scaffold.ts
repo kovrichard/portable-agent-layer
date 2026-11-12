@@ -1,11 +1,7 @@
 #!/usr/bin/env bun
 
-// consulting-report skill tool: scaffold a new report directory from the template
-// and install Next.js dependencies.
-//
-// Usage:
-//   pal cli skill run consulting-report scaffold <target-dir> \
-//        [--client "Client Name"] [--title "Report Title"] [--no-install]
+// Scaffold a report directory from the template and install its Next.js dependencies.
+// Usage: pal cli skill run consulting-report scaffold <target-dir> [--client <name>] [--title <title>] [--no-install]
 
 import { spawnSync } from "node:child_process";
 import { constants as fsConstants } from "node:fs";

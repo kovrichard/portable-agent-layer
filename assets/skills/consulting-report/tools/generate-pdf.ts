@@ -1,12 +1,7 @@
 #!/usr/bin/env bun
 
-// consulting-report skill tool: build the Next.js report and render it to PDF.
-// Pipeline: `next build` produces a static export at out/ — Playwright loads
-// out/index.html and prints a PDF with branded header/footer/page numbers.
-//
-// Usage:
-//   pal cli skill run consulting-report generate-pdf <report-dir> [--pdf <out>] [--html <out>] [--skip-build]
-//   pal cli skill run consulting-report generate-pdf --demo [--pdf <out>] [--html <out>] [--skip-build]
+// Build the report's static export with `next build`, then print it to PDF with Playwright.
+// Usage: pal cli skill run consulting-report generate-pdf <report-dir>|--demo [--pdf <out>] [--skip-build]
 
 import { spawnSync } from "node:child_process";
 import { createReadStream, constants as fsConstants } from "node:fs";
@@ -108,9 +103,8 @@ function buildNext(reportDir: string): void {
   }
 }
 
-// Static export uses absolute paths (e.g. /_next/static/...). Loading via
-// file:// breaks those because `/` resolves to the filesystem root. Spin up a
-// tiny HTTP server rooted at out/ so Playwright sees real URLs.
+// Next's static export links /_next/... absolutely, which file:// resolves to the
+// filesystem root, so the export is served over HTTP instead.
 function serveStatic(rootDir: string): Promise<{ server: Server; url: string }> {
   const MIME: Record<string, string> = {
     ".html": "text/html; charset=utf-8",

@@ -169,7 +169,7 @@ function ensureClaudeCodeMd(): void {
       if (current === expected) return; // no change needed
       // @imports changed — rewrite
     } else if (existsSync(claudeMdPath)) {
-      unlinkSync(claudeMdPath); // remove symlink
+      unlinkSync(claudeMdPath);
     }
   } catch {
     /* fall through */

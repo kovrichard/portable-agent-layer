@@ -127,15 +127,16 @@ function addToBucket(a: BucketAcc, r: Reflection): void {
   a.quotes.push(r.q2.trim());
 }
 
+function everyQuoteMostSpecificFirst(quotes: string[]): string[] {
+  return [...new Set(quotes)].sort((x, y) => y.length - x.length);
+}
+
 function summarizeBucket(b: (typeof BUCKETS)[number], a: BucketAcc): AlgorithmBucket {
   const { sentiments } = a;
   const avg = sentiments.length
     ? sentiments.reduce((s, n) => s + n, 0) / sentiments.length
     : 0;
-  // Full deduped membership, longest (most specific) first. Not capped here —
-  // --json carries every member so nothing is lost; the human report caps the
-  // display per bucket. Zero-loss is the contract.
-  const quotes = [...new Set(a.quotes)].sort((x, y) => y.length - x.length);
+  const quotes = everyQuoteMostSpecificFirst(a.quotes);
 
   return {
     key: b.key,
