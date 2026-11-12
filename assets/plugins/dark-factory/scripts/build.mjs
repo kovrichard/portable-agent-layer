@@ -501,11 +501,38 @@ function untilGreen(run, ladder, instructions, reason) {
   return { passed: false, failure };
 }
 
-export function failingTestCount(output) {
+const PER_TEST_SUMMARY_LINES = [
+  /^test result: .*?\b(\d+) failed\b/,
+  /^\s*(\d+) fail\s*$/,
+  /^\s*Tests:?\s+.*?\b(\d+) failed\b/,
+];
+
+function summaryLineFailures(line) {
+  const match = PER_TEST_SUMMARY_LINES.map((pattern) => line.match(pattern)).find(
+    Boolean
+  );
+
+  return match ? Number(match[1]) : null;
+}
+
+function summedSummaryFailures(output) {
+  const counts = String(output)
+    .split(/\r?\n/)
+    .map(summaryLineFailures)
+    .filter((count) => count !== null);
+
+  return counts.length === 0 ? null : counts.reduce((sum, count) => sum + count, 0);
+}
+
+function lastFailureMention(output) {
   const matches = Array.from(String(output).matchAll(/\b(\d+) fail(?:ed)?\b/g));
   const last = matches.at(-1);
 
   return last ? Number(last[1]) : null;
+}
+
+export function failingTestCount(output) {
+  return summedSummaryFailures(output) ?? lastFailureMention(output);
 }
 
 export function planGateEndedWithFindings(events, taskId) {

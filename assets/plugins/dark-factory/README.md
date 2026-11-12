@@ -121,6 +121,8 @@ A spec can name the test files the task is meant to change in a section headed e
 
 The categories with a test writer (`bug`, `feature` and `big-feature`) need a gate check named exactly `tests`. The build runs it right after the test writer, and the task is stuck when no test fails. Before that check, the build runs the gate for the role `test-writer`; when it fails, the test writer runs again with the failed checks, at most 2 more times, and then the task is stuck.
 
+The `tests` check must run every test file even when one fails, because the build counts failures to prove the new tests fail. Give `cargo test` the `--no-fail-fast` flag, and do not join two suites with `&&`, which skips the second when the first fails. Run both and keep the first one's failure, for example `cargo test --no-fail-fast; status=$?; bun run test && exit $status`. The build adds up every per-test summary it finds: cargo's `test result:` line for each test binary, bun's ` N fail`, and jest's or vitest's `Tests` line. Per-file lines (`Test Suites`, `Test Files`) are not counted. When the output has none of these lines, the last `N fail` or `N failed` in it is the count.
+
 A gate entry may carry `"roles"`, a list of the roles it gates, for example `{ "name": "lint", "run": "bun run lint", "roles": ["test-writer", "code-writer", "debugger"] }`. An entry without `"roles"` gates the code writer and the debugger, as before; an entry with `"roles"` gates exactly the roles listed. The build gates the test writer and the code-writing rungs; `"roles"` may name other roles, but nothing gates them. A config without any `"roles"` gates exactly as it did.
 
 ## Notifications
