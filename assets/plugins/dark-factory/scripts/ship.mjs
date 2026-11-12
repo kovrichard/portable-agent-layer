@@ -25,8 +25,56 @@ export function must(command, args, cwd, env, input) {
   return result.out;
 }
 
+function specSections(spec) {
+  const [lead, ...rest] = spec.trim().split(/^## /m);
+  const sections = new Map(
+    rest.map((chunk) => {
+      const [heading, ...body] = chunk.split("\n");
+      return [heading.trim(), body.join("\n").trim()];
+    })
+  );
+  return { lead: lead.replace(/^# .*\n?/, "").trim(), sections };
+}
+
+const HEADLINE_MAX = 140;
+
+function capped(text) {
+  return text.length > HEADLINE_MAX ? `${text.slice(0, HEADLINE_MAX - 1)}…` : text;
+}
+
+function headlineOf(item) {
+  const bold = item.match(/^\*\*(.+?)\*\*(?![`\w*])/);
+  if (bold) return bold[1];
+  return item.split(/\s+Reason:|(?<=[.)]):\s|\.\s/)[0].replace(/\.$/, "");
+}
+
+function decisionHeadlines(decisions) {
+  return Array.from(
+    decisions.matchAll(/^(\d+\.|[-*])\s+(.+)$/gm),
+    ([, marker, item]) => `${marker} ${capped(headlineOf(item))}`
+  ).join("\n");
+}
+
+function firstParagraph(text) {
+  return text.split(/\n\s*\n/)[0].trim();
+}
+
+function prSections({ lead, sections }) {
+  const goal = sections.get("Goal");
+  const decisions = decisionHeadlines(sections.get("Decisions") ?? "");
+  const weakest = sections.get("Weakest assumption");
+  return [
+    lead,
+    goal && `## Goal\n\n${goal}`,
+    decisions && `## Decisions\n\n${decisions}`,
+    weakest && `## Weakest assumption\n\n${firstParagraph(weakest)}`,
+  ].filter(Boolean);
+}
+
 export function prBody(spec, footer = "Opened by dark-factory.") {
-  return `${spec.trim()}\n\n---\n${footer}\n`;
+  const parts = prSections(specSections(spec));
+  const body = parts.length > 1 ? parts.join("\n\n") : spec.trim();
+  return `${body}\n\n---\nThe full spec, with acceptance criteria and each decision's reasoning, is in the task folder.\n${footer}\n`;
 }
 
 export function push(id, env = process.env) {
