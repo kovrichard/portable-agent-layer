@@ -15,7 +15,7 @@ import { createServer, type Server } from "node:http";
 import { dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { PDFDocument } from "pdf-lib";
-import { chromium } from "playwright";
+import { chromium, type Page } from "playwright";
 import { copyReportSource } from "./lib/copy-report";
 
 interface ReportMeta {
@@ -149,6 +149,118 @@ function serveStatic(rootDir: string): Promise<{ server: Server; url: string }> 
   });
 }
 
+async function waitForFontsAndImages(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    await (document as { fonts?: { ready: Promise<unknown> } }).fonts?.ready;
+    const imgs = Array.from(document.querySelectorAll("img"));
+    await Promise.all(
+      imgs.map((img) =>
+        img.complete
+          ? Promise.resolve()
+          : new Promise((res) => {
+              img.onload = () => res(null);
+              img.onerror = () => res(null);
+              setTimeout(() => res(null), 5000);
+            })
+      )
+    );
+  });
+}
+
+interface PageTemplates {
+  header: string;
+  footer: string;
+}
+
+// Logos are inlined as base64 data URIs — Playwright's header/footer templates
+// run in an isolated context and cannot load external or local-path URLs.
+async function headerFooterTemplates(
+  outDir: string,
+  meta: ReportMeta
+): Promise<PageTemplates> {
+  const [clientUri, consultancyUri] = await Promise.all([
+    logoDataUri(outDir, meta.clientLogoSrc),
+    logoDataUri(outDir, meta.consultancyLogoSrc),
+  ]);
+
+  const clientSlot = clientUri
+    ? `<img src="${clientUri}" style="height:18px; width:auto; object-fit:contain; display:block;">`
+    : `<span style="font-weight:600; color:${COLOR.navy}; letter-spacing:0.05em;">${escapeHtml(meta.clientName.toUpperCase())}</span>`;
+
+  const consultancySlot = consultancyUri
+    ? `<img src="${consultancyUri}" style="height:14px; width:auto; object-fit:contain; display:block;">`
+    : `<span style="color:${COLOR.navy};">${escapeHtml(meta.consultancyName)}</span>`;
+
+  const header = `
+<div style="width:100%; font-family:Inter,'Helvetica Neue',Arial,sans-serif; font-size:7.5pt; padding:0 0.7in; display:flex; justify-content:space-between; align-items:center;">
+  ${clientSlot}
+  <span style="color:#94a3b8;">${escapeHtml(meta.reportTitle)}</span>
+</div>`;
+
+  // Footer: consultancy logo left, page number right — no classification (cover carries it)
+  const footer = `
+<div style="width:100%; font-family:Inter,'Helvetica Neue',Arial,sans-serif; font-size:7.5pt; padding:0 0.7in; display:flex; justify-content:space-between; align-items:center;">
+  ${consultancySlot}
+  <span style="color:${COLOR.navy};"><span class="pageNumber"></span></span>
+</div>`;
+
+  return { header, footer };
+}
+
+// The cover (page 1) and body (pages 2+) print separately so the cover has
+// no header/footer and full-bleed margins.
+async function printCoverAndBody(
+  page: Page,
+  tmpCover: string,
+  tmpBody: string,
+  { header, footer }: PageTemplates
+): Promise<void> {
+  const margin = { top: "0.7in", right: "0.7in", bottom: "0.7in", left: "0.7in" };
+
+  await Promise.all([
+    page.pdf({
+      path: tmpCover,
+      format: "A4",
+      pageRanges: "1",
+      printBackground: true,
+      displayHeaderFooter: false,
+      margin: { top: "0", right: "0", bottom: "0", left: "0" },
+      preferCSSPageSize: false,
+    }),
+    page.pdf({
+      path: tmpBody,
+      format: "A4",
+      pageRanges: "2-",
+      printBackground: true,
+      displayHeaderFooter: true,
+      headerTemplate: header,
+      footerTemplate: footer,
+      margin,
+      preferCSSPageSize: false,
+    }),
+  ]);
+}
+
+// The body PDF is the base so its named destinations and link annotations
+// stay intact; the cover page is inserted at position 0.
+async function mergeCoverIntoBody(
+  tmpCover: string,
+  tmpBody: string,
+  pdfPath: string
+): Promise<void> {
+  const [coverBytes, bodyBytes] = await Promise.all([
+    readFile(tmpCover),
+    readFile(tmpBody),
+  ]);
+  const [coverDoc, bodyDoc] = await Promise.all([
+    PDFDocument.load(coverBytes),
+    PDFDocument.load(bodyBytes),
+  ]);
+  const [coverPage] = await bodyDoc.copyPages(coverDoc, [0]);
+  bodyDoc.insertPage(0, coverPage);
+  await writeFile(pdfPath, await bodyDoc.save());
+}
+
 async function renderPdf(
   htmlPath: string,
   pdfPath: string,
@@ -161,95 +273,13 @@ async function renderPdf(
   try {
     const page = await browser.newPage();
     await page.goto(url, { waitUntil: "networkidle" });
+    await waitForFontsAndImages(page);
+    const templates = await headerFooterTemplates(outDir, meta);
 
-    // Wait for fonts and images to settle
-    await page.evaluate(async () => {
-      await (document as { fonts?: { ready: Promise<unknown> } }).fonts?.ready;
-      const imgs = Array.from(document.querySelectorAll("img"));
-      await Promise.all(
-        imgs.map((img) =>
-          img.complete
-            ? Promise.resolve()
-            : new Promise((res) => {
-                img.onload = () => res(null);
-                img.onerror = () => res(null);
-                setTimeout(() => res(null), 5000);
-              })
-        )
-      );
-    });
-
-    // Load logos as base64 data URIs — Playwright's header/footer templates
-    // run in an isolated context and cannot load external or local-path URLs.
-    const [clientUri, consultancyUri] = await Promise.all([
-      logoDataUri(outDir, meta.clientLogoSrc),
-      logoDataUri(outDir, meta.consultancyLogoSrc),
-    ]);
-
-    const clientSlot = clientUri
-      ? `<img src="${clientUri}" style="height:18px; width:auto; object-fit:contain; display:block;">`
-      : `<span style="font-weight:600; color:${COLOR.navy}; letter-spacing:0.05em;">${escapeHtml(meta.clientName.toUpperCase())}</span>`;
-
-    const consultancySlot = consultancyUri
-      ? `<img src="${consultancyUri}" style="height:14px; width:auto; object-fit:contain; display:block;">`
-      : `<span style="color:${COLOR.navy};">${escapeHtml(meta.consultancyName)}</span>`;
-
-    const header = `
-<div style="width:100%; font-family:Inter,'Helvetica Neue',Arial,sans-serif; font-size:7.5pt; padding:0 0.7in; display:flex; justify-content:space-between; align-items:center;">
-  ${clientSlot}
-  <span style="color:#94a3b8;">${escapeHtml(meta.reportTitle)}</span>
-</div>`;
-
-    // Footer: consultancy logo left, page number right — no classification (cover carries it)
-    const footer = `
-<div style="width:100%; font-family:Inter,'Helvetica Neue',Arial,sans-serif; font-size:7.5pt; padding:0 0.7in; display:flex; justify-content:space-between; align-items:center;">
-  ${consultancySlot}
-  <span style="color:${COLOR.navy};"><span class="pageNumber"></span></span>
-</div>`;
-
-    const margin = { top: "0.7in", right: "0.7in", bottom: "0.7in", left: "0.7in" };
-
-    // Render cover (page 1) and body (pages 2+) separately so the cover has
-    // no header/footer and full-bleed margins, then merge with pdf-lib.
     const tmpCover = `${pdfPath}.cover.tmp.pdf`;
     const tmpBody = `${pdfPath}.body.tmp.pdf`;
-
-    await Promise.all([
-      page.pdf({
-        path: tmpCover,
-        format: "A4",
-        pageRanges: "1",
-        printBackground: true,
-        displayHeaderFooter: false,
-        margin: { top: "0", right: "0", bottom: "0", left: "0" },
-        preferCSSPageSize: false,
-      }),
-      page.pdf({
-        path: tmpBody,
-        format: "A4",
-        pageRanges: "2-",
-        printBackground: true,
-        displayHeaderFooter: true,
-        headerTemplate: header,
-        footerTemplate: footer,
-        margin,
-        preferCSSPageSize: false,
-      }),
-    ]);
-
-    // Merge: use body PDF as the base so its named destinations and link
-    // annotations stay intact. Insert the cover page at position 0.
-    const [coverBytes, bodyBytes] = await Promise.all([
-      readFile(tmpCover),
-      readFile(tmpBody),
-    ]);
-    const [coverDoc, bodyDoc] = await Promise.all([
-      PDFDocument.load(coverBytes),
-      PDFDocument.load(bodyBytes),
-    ]);
-    const [coverPage] = await bodyDoc.copyPages(coverDoc, [0]);
-    bodyDoc.insertPage(0, coverPage);
-    await writeFile(pdfPath, await bodyDoc.save());
+    await printCoverAndBody(page, tmpCover, tmpBody, templates);
+    await mergeCoverIntoBody(tmpCover, tmpBody, pdfPath);
 
     await Promise.all([unlink(tmpCover), unlink(tmpBody)]);
   } finally {

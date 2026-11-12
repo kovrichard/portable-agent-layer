@@ -140,6 +140,92 @@ describe("lintSkill", () => {
     expect(levelOf(fixture(GOOD), "description.quoted")).toBe("pass");
   });
 
+  function descriptionFindings(dir: string) {
+    return lintSkill(dir).findings.filter((f) => f.check.startsWith("description"));
+  }
+
+  test("a good description passes every description check, in order", () => {
+    const length =
+      "Summarizes a thing into a report. Use when the user asks to summarize a thing."
+        .length;
+
+    expect(descriptionFindings(fixture(GOOD))).toEqual([
+      { level: "pass", check: "description.length", message: `${length}/1024 chars` },
+      {
+        level: "pass",
+        check: "description.quoted",
+        message: "value is wrapped in double quotes",
+      },
+      { level: "pass", check: "description.xml", message: "no XML tags" },
+      {
+        level: "pass",
+        check: "description.trigger",
+        message: "states when to use the skill",
+      },
+      { level: "pass", check: "description.pov", message: "third person" },
+    ]);
+  });
+
+  test("a description of exactly 1024 chars is within the limit", () => {
+    const exact = `Use when ${"a".repeat(1015)}`;
+    const dir = fixture(GOOD.replace(/description: .*/, `description: "${exact}"`));
+
+    expect(descriptionFindings(dir)[0]).toEqual({
+      level: "pass",
+      check: "description.length",
+      message: "1024/1024 chars",
+    });
+  });
+
+  test("a bad description says what is wrong with it", () => {
+    const bad = `I can store it under <project>. ${"a".repeat(1000)}`;
+    const dir = fixture(GOOD.replace(/description: .*/, `description: ${bad}`));
+
+    expect(descriptionFindings(dir)).toEqual([
+      {
+        level: "error",
+        check: "description.length",
+        message: `${bad.length} chars exceeds 1024`,
+      },
+      {
+        level: "warn",
+        check: "description.quoted",
+        message:
+          'value is not wrapped in double quotes — unquoted YAML mis-parses on colons, commas, and quotes; wrap it in "..." (escaping any inner " as \\")',
+      },
+      {
+        level: "warn",
+        check: "description.xml",
+        message:
+          "contains angle-bracket content — Anthropic disallows XML tags; rephrase placeholders like <x> in prose",
+      },
+      {
+        level: "warn",
+        check: "description.trigger",
+        message:
+          "no 'when to use' trigger — add 'Use when …' so the dispatcher can match it",
+      },
+      {
+        level: "warn",
+        check: "description.pov",
+        message:
+          "reads first/second person — write descriptions in third person (e.g. 'Processes…', 'Generates…')",
+      },
+    ]);
+  });
+
+  test("a missing description is a single error", () => {
+    const dir = fixture(GOOD.replace(/description: .*\n/, ""));
+
+    expect(descriptionFindings(dir)).toEqual([
+      {
+        level: "error",
+        check: "description",
+        message: "Missing `description` in frontmatter",
+      },
+    ]);
+  });
+
   test("a skill with no declared triggers warns", () => {
     const noTriggers = GOOD.replace(/metadata:\n(?: {2}.*\n| {4}.*\n)+/, "");
 

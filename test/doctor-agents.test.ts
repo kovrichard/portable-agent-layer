@@ -82,6 +82,14 @@ describe("an installed agent", () => {
     expect(problems(agentFindings(["claude"]))).toEqual([]);
   });
 
+  test("a healthy hook config yields only real findings, one of them for the hooks", () => {
+    healthyClaude();
+    const findings = agentFindings(["claude"]);
+
+    expect(findings.every((f) => typeof f.id === "string")).toBe(true);
+    expect(findings.filter((f) => f.id.startsWith("claude.hooks"))).toHaveLength(1);
+  });
+
   test("hooks that are not registered fail, with the reinstall command", () => {
     healthyClaude();
     removeOnceReleased(resolve(ROOT, "claude", "settings.json"));
@@ -110,6 +118,9 @@ describe("an installed agent", () => {
     const finding = byId(agentFindings(["claude"]), "claude.hooks.scripts");
     expect(finding?.severity).toBe("fail");
     expect(finding?.title).toContain("1 of 2");
+    expect(finding?.title).toContain(
+      `(${resolve(ROOT, "moved", "src", "hooks", "StopOrchestrator.ts")})`
+    );
     expect(finding?.fix?.command).toBe("pal cli install --claude");
   });
 

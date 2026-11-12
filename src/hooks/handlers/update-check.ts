@@ -71,56 +71,67 @@ export function getInstalledVersion(): string {
 
 const PULLED_BRANCH = "@{upstream}";
 
+async function gitOutput(repoDir: string, args: string[]): Promise<string> {
+  const git = Bun.spawn(["git", ...args], {
+    cwd: repoDir,
+    stdout: "pipe",
+    stderr: "ignore",
+    windowsHide: true,
+  });
+
+  return await new Response(git.stdout).text();
+}
+
+async function gitFetch(repoDir: string): Promise<void> {
+  const fetch = Bun.spawn(["git", "fetch", "--quiet"], {
+    cwd: repoDir,
+    stdout: "ignore",
+    stderr: "ignore",
+    windowsHide: true,
+  });
+  await fetch.exited;
+}
+
+// "Ahead" (local unpushed commits) is not an update — only remote commits we
+// lack are. Count HEAD..upstream so being ahead or diverged never nags.
+async function commitsBehind(repoDir: string): Promise<number> {
+  const count = await gitOutput(repoDir, [
+    "rev-list",
+    "--count",
+    `HEAD..${PULLED_BRANCH}`,
+  ]);
+
+  return Number.parseInt(count.trim(), 10) || 0;
+}
+
+async function upstreamVersion(
+  repoDir: string,
+  current: string,
+  remoteHash: string
+): Promise<string> {
+  try {
+    const remotePkg = JSON.parse(
+      await gitOutput(repoDir, ["show", `${PULLED_BRANCH}:package.json`])
+    );
+
+    return remotePkg.version || current;
+  } catch {
+    return `${remoteHash.slice(0, 7)} (ahead)`;
+  }
+}
+
 async function checkRepo(): Promise<UpdateCache> {
   const repoDir = palPkg();
   const current = getInstalledVersion();
 
   try {
-    const fetch = Bun.spawn(["git", "fetch", "--quiet"], {
-      cwd: repoDir,
-      stdout: "ignore",
-      stderr: "ignore",
-      windowsHide: true,
-    });
-    await fetch.exited;
-
-    const remote = Bun.spawn(["git", "rev-parse", PULLED_BRANCH], {
-      cwd: repoDir,
-      stdout: "pipe",
-      stderr: "ignore",
-      windowsHide: true,
-    });
-    const remoteHash = (await new Response(remote.stdout).text()).trim();
-
-    // "Ahead" (local unpushed commits) is not an update — only remote commits we
-    // lack are. Count HEAD..upstream so being ahead or diverged never nags.
-    const behind = Bun.spawn(["git", "rev-list", "--count", `HEAD..${PULLED_BRANCH}`], {
-      cwd: repoDir,
-      stdout: "pipe",
-      stderr: "ignore",
-      windowsHide: true,
-    });
-    const behindCount =
-      Number.parseInt((await new Response(behind.stdout).text()).trim(), 10) || 0;
-
+    await gitFetch(repoDir);
+    const remoteHash = (await gitOutput(repoDir, ["rev-parse", PULLED_BRANCH])).trim();
+    const behindCount = await commitsBehind(repoDir);
     const available = behindCount > 0 && remoteHash.length > 0;
-
-    let latest = current;
-
-    if (available) {
-      try {
-        const show = Bun.spawn(["git", "show", `${PULLED_BRANCH}:package.json`], {
-          cwd: repoDir,
-          stdout: "pipe",
-          stderr: "ignore",
-          windowsHide: true,
-        });
-        const remotePkg = JSON.parse(await new Response(show.stdout).text());
-        latest = remotePkg.version || current;
-      } catch {
-        latest = `${remoteHash.slice(0, 7)} (ahead)`;
-      }
-    }
+    const latest = available
+      ? await upstreamVersion(repoDir, current, remoteHash)
+      : current;
 
     return {
       checkedAt: new Date().toISOString(),

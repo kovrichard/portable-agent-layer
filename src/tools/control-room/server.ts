@@ -357,6 +357,32 @@ const WRITES: Record<string, (request: Request) => Promise<Response>> = {
   "/api/update/run": updateNow,
 };
 
+const READS: Record<string, (url: URL) => Response | Promise<Response>> = {
+  "/api/agenda": () => json(agenda()),
+  "/api/matrix": () => json(matrix()),
+  "/api/board": () => json(board()),
+  "/api/work": () => json(inProgressWork(openWork())),
+  "/api/signal": () => json(signal()),
+  "/api/agents": (url) => withFilter(url, agentsAtWork),
+  "/api/ledger": (url) => withFilter(url, ledgerView),
+  "/api/project": (url) => oneProject(url.searchParams.get("slug")),
+  "/api/summary": (url) => summaryFor(url.searchParams.get("days")),
+  "/api/projects": () => projects(),
+  "/api/settings": () => json(readInstallSettings()),
+  "/api/prefs": () => json(readPrefs()),
+  "/api/update": () => json(autoUpdateStatus()),
+  "/api/attention": () => json(attention()),
+  "/api/relationship": () => json(relationship()),
+};
+
+function readApi(url: URL, status: () => Response | Promise<Response>) {
+  if (url.pathname === "/api/status") return status();
+
+  const read = READS[url.pathname];
+
+  return read ? read(url) : json({ error: "not found" }, 404);
+}
+
 export function startControlRoom(port: number = DEFAULT_PORT) {
   const startedAt = new Date().toISOString();
 
@@ -376,42 +402,7 @@ export function startControlRoom(port: number = DEFAULT_PORT) {
         return staticAsset(url.pathname) ?? json({ error: "not found" }, 404);
       }
 
-      switch (url.pathname) {
-        case "/api/agenda":
-          return json(agenda());
-        case "/api/matrix":
-          return json(matrix());
-        case "/api/board":
-          return json(board());
-        case "/api/work":
-          return json(inProgressWork(openWork()));
-        case "/api/signal":
-          return json(signal());
-        case "/api/agents":
-          return withFilter(url, agentsAtWork);
-        case "/api/ledger":
-          return withFilter(url, ledgerView);
-        case "/api/project":
-          return oneProject(url.searchParams.get("slug"));
-        case "/api/summary":
-          return summaryFor(url.searchParams.get("days"));
-        case "/api/projects":
-          return projects();
-        case "/api/settings":
-          return json(readInstallSettings());
-        case "/api/prefs":
-          return json(readPrefs());
-        case "/api/update":
-          return json(autoUpdateStatus());
-        case "/api/attention":
-          return json(attention());
-        case "/api/relationship":
-          return json(relationship());
-        case "/api/status":
-          return status(server.port ?? port, startedAt);
-        default:
-          return json({ error: "not found" }, 404);
-      }
+      return readApi(url, () => status(server.port ?? port, startedAt));
     },
   });
 }

@@ -402,10 +402,12 @@ describe("modes (criterion 8)", () => {
 describe("judge_call events (criteria 9, 10)", () => {
   test("a shadow call logs both sides, the cost and the mode", async () => {
     on({ callers: { t: "shadow" } });
+    const before = performance.now();
     await judge(
       { ...base, fallback, sessionId: "s9" },
       { http: http().fn, infer: infer().fn }
     );
+    const elapsedMs = performance.now() - before;
     const logged = events("judge_call");
     expect(logged).toHaveLength(1);
     expect(logged[0]).toMatchObject({
@@ -422,6 +424,7 @@ describe("judge_call events (criteria 9, 10)", () => {
     });
     expect(logged[0]?.costUsd as number).toBeCloseTo(0.000042, 9);
     expect(logged[0]?.latencyMs as number).toBeGreaterThanOrEqual(0);
+    expect(logged[0]?.latencyMs as number).toBeLessThanOrEqual(Math.ceil(elapsedMs));
   });
 
   test("a fallback-only call logs one event with no System One fields", async () => {

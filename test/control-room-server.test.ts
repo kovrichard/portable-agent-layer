@@ -201,7 +201,10 @@ describe("what each route answers", () => {
 
   test("anything else is a 404", async () => {
     const base = await listen();
-    expect((await fetch(`${base}/api/nope`)).status).toBe(404);
+    const response = await fetch(`${base}/api/nope`);
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "not found" });
   });
 
   test("/api/ledger narrows by runtime, machine and authority", async () => {

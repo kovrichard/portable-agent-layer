@@ -34,61 +34,43 @@ type Args = Partial<{
   yes: boolean;
 }>;
 
+type ValueArg = Exclude<keyof Args, "showcase" | "yes">;
+
+const VALUE_FLAGS: Record<string, ValueArg> = {
+  "--name": "name",
+  "--path": "path",
+  "--logo": "logo",
+  "--primary": "primary",
+  "--accent": "accent",
+  "--footer": "footer",
+  "--logo-placement": "logoPlacement",
+  "--fonts": "fonts",
+  "--aspect": "aspect",
+};
+
+const SWITCH_FLAGS: Record<string, "showcase" | "yes"> = {
+  "--showcase": "showcase",
+  "--yes": "yes",
+  "-y": "yes",
+};
+
 function parseArgs(argv: string[]): Args {
-  const a: Args = {};
+  const a: Record<string, string | boolean | undefined> = {};
 
   for (let i = 0; i < argv.length; i++) {
     const cur = argv[i];
-    const next = argv[i + 1];
+    const valueKey = Object.hasOwn(VALUE_FLAGS, cur) ? VALUE_FLAGS[cur] : undefined;
+    const switchKey = Object.hasOwn(SWITCH_FLAGS, cur) ? SWITCH_FLAGS[cur] : undefined;
 
-    switch (cur) {
-      case "--name":
-        a.name = next;
-        i++;
-        break;
-      case "--path":
-        a.path = next;
-        i++;
-        break;
-      case "--logo":
-        a.logo = next;
-        i++;
-        break;
-      case "--primary":
-        a.primary = next;
-        i++;
-        break;
-      case "--accent":
-        a.accent = next;
-        i++;
-        break;
-      case "--footer":
-        a.footer = next;
-        i++;
-        break;
-      case "--logo-placement":
-        a.logoPlacement = next as LogoPlacement;
-        i++;
-        break;
-      case "--fonts":
-        a.fonts = next;
-        i++;
-        break;
-      case "--aspect":
-        a.aspect = next as Aspect;
-        i++;
-        break;
-      case "--showcase":
-        a.showcase = true;
-        break;
-      case "--yes":
-      case "-y":
-        a.yes = true;
-        break;
+    if (valueKey) {
+      a[valueKey] = argv[i + 1];
+      i++;
+    } else if (switchKey) {
+      a[switchKey] = true;
     }
   }
 
-  return a;
+  return a as Args;
 }
 
 async function exists(p: string): Promise<boolean> {
