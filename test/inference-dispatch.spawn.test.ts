@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { eventsSince } from "../src/hooks/lib/events";
-import { hasApiKey, inference, loggedClaudeAuthMode } from "../src/hooks/lib/inference";
+import { hasApiKey, inference } from "../src/hooks/lib/inference";
+import { loggedClaudeAuthMode } from "../src/hooks/lib/inference-agents";
 import { recentHookErrors } from "../src/hooks/lib/log";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { claudeReplying, prependPath, writeFakeBin } from "./fixtures/fake-bin";

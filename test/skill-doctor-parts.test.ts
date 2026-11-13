@@ -1,17 +1,17 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
+import { lintSkill } from "../src/tools/lib/skill-doctor";
 import {
   collectSkillFiles,
   findAbsolutePaths,
   leadTriggers,
-  lintSkill,
   metadataField,
   parseSkill,
   quoteList,
   stripCode,
   topLevelField,
-} from "../src/tools/lib/skill-doctor";
+} from "../src/tools/lib/skill-parse";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 

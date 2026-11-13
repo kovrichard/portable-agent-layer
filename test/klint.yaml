@@ -10,6 +10,9 @@ rules:
     blank-line-before-control-flow: error
     cognitive-complexity:
       error: 14
+  experimental:
+    no-date-equality: error
+    no-floating-promise: error
 
 arch:
   singleton:

@@ -7,7 +7,8 @@ import {
   streamJsonPrompt,
 } from "../src/hooks/lib/antigravity-inference";
 import { eventsSince } from "../src/hooks/lib/events";
-import { buildAntigravityArgs, inference } from "../src/hooks/lib/inference";
+import { inference } from "../src/hooks/lib/inference";
+import { buildAntigravityArgs } from "../src/hooks/lib/inference-agents";
 import { inferenceModel } from "../src/hooks/lib/models";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";

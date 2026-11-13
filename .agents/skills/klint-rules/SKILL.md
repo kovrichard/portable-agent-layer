@@ -19,7 +19,7 @@ Wire it into `klint.yaml` for editor autocomplete and validation:
 
 ## Config format (v2)
 
-`rules` has three parts: `recommended: true` enables the six sonar rules at `error`, `core` holds the built-in rules by name, and `sonar` holds the sonar rules by name without the `sonar/` prefix (an entry there overrides `recommended`). Output rule ids stay `sonar/…`.
+`rules` has four parts: `recommended: true` enables the six sonar rules at `error`, `core` holds the built-in rules by name, and `sonar` holds the sonar rules by name without the `sonar/` prefix (an entry there overrides `recommended`), and `experimental` holds opt-in rules under trial (`no-date-equality`, `no-floating-promise`); `recommended` never enables them and their ids have no prefix. Output rule ids stay `sonar/…`.
 
 ```yaml
 rules:

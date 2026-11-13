@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
-import { buildCliPrompt, buildCursorArgs, inference } from "../src/hooks/lib/inference";
+import { inference } from "../src/hooks/lib/inference";
+import { buildCursorArgs } from "../src/hooks/lib/inference-agents";
+import { buildCliPrompt } from "../src/hooks/lib/inference-prompt";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";

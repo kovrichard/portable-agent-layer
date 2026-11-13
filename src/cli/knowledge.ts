@@ -5,37 +5,21 @@
  * formatting + argv parsing only; all entity logic lives in the tools.
  */
 
-import { readFileSync } from "node:fs";
-import type { ReviewItem } from "../hooks/lib/entity-extraction";
-import { renderProfile } from "../hooks/lib/entity-research";
-import {
-  type AcceptChoice,
-  acceptReview,
-  pendingReviews,
-  rejectReview,
-} from "../hooks/lib/entity-review";
-import { toPath } from "../hooks/lib/paths";
 import { buildGraph, resolveSlug, stats, traverse } from "../tools/knowledge/graph";
-import {
-  type CompanyInput,
-  ingestEntities,
-  type PersonInput,
-} from "../tools/knowledge/ingest";
 import {
   DOMAINS,
   type Domain,
   type Entity,
-  getOrCreate,
   list,
   load,
   RELATION_TYPES,
-  type Related,
-  type RelationType,
   STATUSES,
-  type Status,
 } from "../tools/knowledge/lib";
 import { group, leaf, runCommand, UsageError } from "../tools/lib/command";
+import { cmdAdd, parseAddFlags } from "./knowledge-add";
+import { cmdIngest } from "./knowledge-ingest";
 import { researchCommand } from "./knowledge-research";
+import { reviewCommand } from "./knowledge-review";
 
 const VOCABULARY = `Domains: ${DOMAINS.join(", ")}
 Relation types: ${RELATION_TYPES.join(", ")}`;
@@ -123,36 +107,7 @@ export const knowledgeCommand = group({
       run: ({ values }) => cmdIngest(values.source ?? "manual", values.file),
     }),
     research: researchCommand,
-    review: group({
-      summary: "People and companies the background extractor would not guess",
-      fallback: "list",
-      commands: {
-        list: leaf({ summary: "Show what waits for an answer", run: cmdReviewList }),
-        accept: leaf({
-          summary: "Write an item, to an existing entry (--as) or a new one",
-          args: "<id>",
-          options: {
-            as: {
-              type: "string",
-              value: "<slug>",
-              description: "Existing entry to update",
-            },
-            name: {
-              type: "string",
-              value: "<name>",
-              description: "Name for a new entry (default: as extracted)",
-            },
-          },
-          run: ({ positionals, values }) =>
-            cmdReviewAccept(positionals[0], { as: values.as, name: values.name }),
-        }),
-        reject: leaf({
-          summary: "Drop an item without writing it",
-          args: "<id>",
-          run: ({ positionals }) => cmdReviewReject(positionals[0]),
-        }),
-      },
-    }),
+    review: reviewCommand,
   },
   details: VOCABULARY,
 });
@@ -170,14 +125,6 @@ function parseDomain(value: string): Domain {
     throw new UsageError(`domain must be one of: ${DOMAINS.join(", ")}`);
 
   return value;
-}
-
-function isStatus(s: string): s is Status {
-  return (STATUSES as readonly string[]).includes(s);
-}
-
-function isRelationType(s: string): s is RelationType {
-  return (RELATION_TYPES as readonly string[]).includes(s);
 }
 
 function shortLine(entity: Entity, extra?: string): string {
@@ -476,155 +423,6 @@ function cmdShow(query: string): number {
   return 0;
 }
 
-// ── add ────────────────────────────────────────────────────────────
-
-interface AddFlags {
-  tags: string[];
-  related: Related[];
-  quality?: number;
-  status?: Status;
-  type?: string;
-  body?: string;
-}
-
-interface AddFlagValues {
-  tags?: string;
-  related?: string[];
-  quality?: string;
-  status?: string;
-  type?: string;
-  body?: string;
-}
-
-function parseRelatedFlag(value: string): Related {
-  const [slug, type] = value.split(":");
-  if (!slug || !type) {
-    throw new UsageError(`--related must be slug:type, got "${value}"`);
-  }
-
-  if (!isRelationType(type)) {
-    throw new UsageError(
-      `--related type must be one of: ${RELATION_TYPES.join(", ")} (got "${type}")`
-    );
-  }
-
-  return { slug, type };
-}
-
-function parseQuality(value: string | undefined): number | undefined {
-  if (value === undefined) return undefined;
-  const quality = Number(value);
-  if (!Number.isInteger(quality) || quality < 0 || quality > 10) {
-    throw new UsageError("--quality must be an integer 0-10");
-  }
-
-  return quality;
-}
-
-function parseStatus(value: string | undefined): Status | undefined {
-  if (value === undefined) return undefined;
-
-  if (!isStatus(value))
-    throw new UsageError(`--status must be one of: ${STATUSES.join(", ")}`);
-
-  return value;
-}
-
-function parseAddFlags(values: AddFlagValues): AddFlags {
-  const tags = (values.tags ?? "")
-    .split(",")
-    .map((t) => t.trim())
-    .filter(Boolean);
-
-  return {
-    tags,
-    related: (values.related ?? []).map(parseRelatedFlag),
-    quality: parseQuality(values.quality),
-    status: parseStatus(values.status),
-    type: values.type,
-    body: values.body,
-  };
-}
-
-async function cmdAdd(
-  domain: Domain,
-  name: string,
-  given: AddFlags,
-  anyFlagGiven: boolean
-): Promise<number> {
-  let flags = given;
-
-  if (!anyFlagGiven && process.stdin.isTTY) {
-    const enriched = await runInteractiveAdd(flags);
-    if (enriched === null) return 1;
-    flags = enriched;
-  }
-
-  const entity = getOrCreate({
-    domain,
-    name,
-    tags: flags.tags,
-    related: flags.related,
-    quality: flags.quality,
-    status: flags.status,
-    type: flags.type,
-    body: flags.body,
-  });
-  console.log(`✓ ${entity.domain}/${entity.slug} — "${entity.frontmatter.title}"`);
-
-  return 0;
-}
-
-async function runInteractiveAdd(prefilled: AddFlags): Promise<AddFlags | null> {
-  const clack = await import("@clack/prompts");
-  clack.intro("Add knowledge entry");
-  const tagsInput = await clack.text({
-    message: "Tags (comma-separated, optional):",
-    placeholder: "ai, research",
-  });
-  if (clack.isCancel(tagsInput)) {
-    clack.cancel("Cancelled");
-
-    return null;
-  }
-
-  const tags = String(tagsInput || "")
-    .split(",")
-    .map((t) => t.trim())
-    .filter(Boolean);
-
-  const statusSel = await clack.select({
-    message: "Status:",
-    options: STATUSES.map((s) => ({ value: s, label: s })),
-    initialValue: prefilled.status ?? "seedling",
-  });
-  if (clack.isCancel(statusSel)) {
-    clack.cancel("Cancelled");
-
-    return null;
-  }
-
-  const qualityInput = await clack.text({
-    message: "Quality (0-10):",
-    placeholder: "5",
-    initialValue: String(prefilled.quality ?? 5),
-  });
-  if (clack.isCancel(qualityInput)) {
-    clack.cancel("Cancelled");
-
-    return null;
-  }
-
-  clack.outro("Saved");
-
-  return {
-    ...prefilled,
-    tags: prefilled.tags.length ? prefilled.tags : tags,
-    status: statusSel as Status,
-    quality: Number(qualityInput),
-  };
-}
-
 // ── ls ─────────────────────────────────────────────────────────────
 
 function cmdLs(target: Domain | undefined): number {
@@ -637,150 +435,6 @@ function cmdLs(target: Domain | undefined): number {
 
   for (const e of entries) console.log(shortLine(e));
   console.log();
-
-  return 0;
-}
-
-// ── ingest ─────────────────────────────────────────────────────────
-
-interface IngestPayload {
-  people?: PersonInput[];
-  companies?: CompanyInput[];
-}
-
-async function readIngestInput(file: string | undefined): Promise<string | null> {
-  if (file) return readFileSync(toPath(file), "utf-8");
-
-  if (process.stdin.isTTY) return null;
-
-  return await Bun.stdin.text();
-}
-
-async function cmdIngest(sourceId: string, file: string | undefined): Promise<number> {
-  const raw = await readIngestInput(file);
-  if (raw === null || !raw.trim()) {
-    throw new UsageError("pipe the JSON on stdin or pass --file <path>");
-  }
-
-  let data: IngestPayload;
-
-  try {
-    data = JSON.parse(raw) as IngestPayload;
-  } catch {
-    console.error("Error: invalid JSON input.");
-
-    return 1;
-  }
-
-  if (!Array.isArray(data.people) && !Array.isArray(data.companies)) {
-    console.error(
-      'Error: JSON must include at least one of "people" or "companies" arrays.'
-    );
-
-    return 1;
-  }
-
-  const result = ingestEntities(
-    { people: data.people ?? [], companies: data.companies ?? [] },
-    sourceId
-  );
-
-  const summary = {
-    source: sourceId,
-    people: {
-      total: result.people.length,
-      created: result.people.filter((p) => p.created).length,
-      updated: result.people.filter((p) => !p.created).length,
-      slugs: result.people.map((p) => p.slug),
-    },
-    companies: {
-      total: result.companies.length,
-      created: result.companies.filter((c) => c.created).length,
-      updated: result.companies.filter((c) => !c.created).length,
-      slugs: result.companies.map((c) => c.slug),
-    },
-  };
-
-  console.log(JSON.stringify(summary, null, 2));
-
-  return 0;
-}
-
-// ── review ─────────────────────────────────────────────────────────
-
-function reviewReason(reason: ReviewItem["reason"]): string {
-  const reasons: Record<ReviewItem["reason"], string> = {
-    ambiguous: "could be more than one known entry",
-    "unknown-existing": "named an entry the store does not have",
-    "first-name-only": "first name only",
-    "web-profile": "found on the web",
-  };
-
-  return reasons[reason];
-}
-
-function reviewDetails(item: ReviewItem): string[] {
-  if (item.profile)
-    return [
-      item.entity.existing ? `for ${item.entity.existing}` : "as a new entry",
-      ...renderProfile(item.profile).split("\n"),
-    ];
-  const candidates =
-    item.candidates.length > 0 ? [`could be: ${item.candidates.join(", ")}`] : [];
-
-  return [item.entity.fact, ...candidates, `from ${item.source}`];
-}
-
-function reviewLines(item: ReviewItem): string[] {
-  const { kind, name } = item.entity;
-
-  return [
-    `  ${item.id}  ${kind} "${name}" — ${reviewReason(item.reason)}`,
-    ...reviewDetails(item)
-      .filter(Boolean)
-      .map((line) => `            ${line}`),
-  ];
-}
-
-function cmdReviewList(): number {
-  const items = pendingReviews();
-  if (items.length === 0) {
-    console.log("Nothing waits for review.");
-
-    return 0;
-  }
-
-  console.log(`\n${items.length} waiting for review\n`);
-
-  for (const item of items) console.log(reviewLines(item).join("\n"));
-  console.log(
-    "\nAccept: pal cli knowledge review accept <id> [--as <slug>] [--name <name>]\nReject: pal cli knowledge review reject <id>\n"
-  );
-
-  return 0;
-}
-
-function acceptOrExplain(id: string, choice: AcceptChoice) {
-  try {
-    return acceptReview(id, choice);
-  } catch (err) {
-    throw new UsageError(err instanceof Error ? err.message : String(err));
-  }
-}
-
-function cmdReviewAccept(id: string, choice: AcceptChoice): number {
-  const accepted = acceptOrExplain(id, choice);
-  if (!accepted) throw new UsageError(`no review item "${id}"`);
-  const verb = accepted.created ? "Created" : "Updated";
-  console.log(`${verb} ${accepted.slug} from "${accepted.item.entity.name}".`);
-
-  return 0;
-}
-
-function cmdReviewReject(id: string): number {
-  const rejected = rejectReview(id);
-  if (!rejected) throw new UsageError(`no review item "${id}"`);
-  console.log(`Dropped "${rejected.entity.name}".`);
 
   return 0;
 }

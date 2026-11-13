@@ -2,6 +2,7 @@ import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runMigrate } from "../src/cli/migrate";
+import { v3EntitiesToKnowledge as v3 } from "../src/cli/migrations/v3-entities-to-knowledge";
 import { exists, load } from "../src/tools/knowledge/lib";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
@@ -304,5 +305,96 @@ describe("v3 — bails on non-empty links/sources", () => {
 
     expect(captured.join("\n")).toContain("aborted");
     expect(exists("People", "alice-example")).toBe(false);
+  });
+});
+
+describe("v3 — what check and run return", () => {
+  const nothing = { migrated: 0, skipped: 0, results: [] };
+  const archivedToday = () =>
+    `${LEGACY_FILE}.migrated-${new Date().toISOString().slice(0, 10)}`;
+
+  test.each([
+    ["no legacy index", undefined],
+    ["an unreadable index", "{ not json"],
+    ["an index with no entries", '{"people":{},"companies":{}}'],
+  ])("is not pending with %s", (_label, content) => {
+    if (content) writeFileSync(LEGACY_FILE, content);
+
+    expect(v3.check()).toStrictEqual({ pending: false });
+  });
+
+  test("run does nothing without a readable index", () => {
+    expect(v3.run()).toEqual(nothing);
+    writeFileSync(LEGACY_FILE, "{ not json");
+    expect(v3.run()).toEqual(nothing);
+  });
+
+  test("counts both links and sources it refuses to drop", () => {
+    seedLegacy({ withLinks: true, withSources: true });
+    expect(v3.run().skipped).toBe(2);
+  });
+
+  test("skips what the new store already holds and archives the index under today's date", () => {
+    seedLegacy();
+    silently(() => runMigrate([]));
+    seedLegacy({ extraPeople: 1 });
+    expect(v3.check().detail).toBe("1 of 5 entries to migrate");
+
+    const { migrated, skipped, results } = v3.run();
+
+    expect({ migrated, skipped }).toEqual({ migrated: 1, skipped: 4 });
+    expect(results).toContain("People/alice-example: skipped (already in new store)");
+    expect(results).toContain("People/extra-person-0: migrated");
+    expect(results.at(-1)).toBe(`archived legacy index → ${archivedToday()}`);
+    expect(existsSync(archivedToday())).toBe(true);
+
+    const extra = load("People", "extra-person-0");
+    expect(extra?.frontmatter.tags).toEqual([]);
+    expect(extra?.body.trim()).toBe("");
+    expect(load("Companies", "acmelabs")?.frontmatter).toMatchObject({
+      type: "company",
+      tags: [],
+    });
+  });
+
+  test("leaves the index in place when nothing new was migrated", () => {
+    seedLegacy();
+    silently(() => runMigrate([]));
+    seedLegacy();
+
+    expect(v3.check()).toStrictEqual({ pending: false, detail: undefined });
+    expect(v3.run().migrated).toBe(0);
+    expect(existsSync(LEGACY_FILE)).toBe(true);
+    expect(load("Companies", "acmelabs")?.body).toContain(
+      "<!-- src:https://example.com/post-1 -->"
+    );
+  });
+
+  test("warns instead of failing when the index cannot be archived", () => {
+    seedLegacy();
+    mkdirSync(resolve(archivedToday(), "occupied"), { recursive: true });
+
+    const { migrated, results } = v3.run();
+
+    expect(migrated).toBe(4);
+    expect(results.at(-1)).toStartWith("warn: could not rename legacy index (");
+    expect(existsSync(LEGACY_FILE)).toBe(true);
+  });
+
+  test("a company whose domain is blank is keyed by its name", () => {
+    const company = {
+      id: "uuid-blank",
+      name: "Blank Domain Co",
+      domain: "  ",
+      first_seen: "2026-03-19T18:28:39.587Z",
+      occurrences: 1,
+      source_ids: [],
+    };
+    writeFileSync(LEGACY_FILE, JSON.stringify({ companies: { blank: company } }));
+
+    expect(v3.run(true).results).toEqual(["Companies/blank-domain-co: would migrate"]);
+    v3.run();
+    writeFileSync(LEGACY_FILE, JSON.stringify({ companies: { blank: company } }));
+    expect(v3.check().pending).toBe(false);
   });
 });

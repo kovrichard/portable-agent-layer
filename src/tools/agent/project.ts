@@ -8,16 +8,13 @@
  * Usage: pal cli project <command> --help
  */
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync } from "node:fs";
 import { writeBinding } from "../../hooks/lib/bindings";
-import { logCommitment } from "../../hooks/lib/commitment-events";
-import { paths, toPath } from "../../hooks/lib/paths";
+import { toPath } from "../../hooks/lib/paths";
 import {
   defaultSlug,
   deleteProject,
   isStale,
-  legacyJsonToProgress,
   type ProjectProgress,
   type ProjectStatus,
   proposeBinding,
@@ -29,53 +26,14 @@ import {
 import { isServesKind, SERVES_KINDS, setServes } from "../../hooks/lib/serves";
 import { group, type Leaf, leaf, runCommand, UsageError } from "../lib/command";
 import { decisionRow, emitHistoryRow, registrationRow } from "../lib/project-history";
-import {
-  archiveLine,
-  completeIsc,
-  encodeIscText,
-  ISC_BOX,
-  type IscMove,
-  type IscSections,
-  iscTitle,
-  nextIscId,
-  parseIscs,
-  removeIscLine,
-  reopenIsc,
-  selectIscs,
-  taskSlug,
-} from "../lib/project-isc";
+import { iscTitle, parseIscs } from "../lib/project-isc";
 import { scriptArgs } from "../lib/script-args";
-
-function now(): string {
-  return new Date().toISOString();
-}
-
-function fail(msg: string): never {
-  process.stderr.write(`${msg}\n`);
-  process.exit(1);
-}
-
-function ok(payload: Record<string, unknown>): void {
-  console.log(JSON.stringify(payload, null, 2));
-}
-
-function requireProject(name: string): ProjectProgress {
-  const p = readProject(name);
-  if (!p) fail(`No project named "${name}". Run 'list' to see registered projects.`);
-
-  return p as ProjectProgress;
-}
+import { fail, joined, nonBlank, now, ok, requireProject } from "./project-io";
+import { iscCommands } from "./project-isc-commands";
+import { cmdMigrate } from "./project-migrate";
+import { taskIsaCommands } from "./project-task-isa";
 
 // ── argument values ───────────────────────────────────────────────
-
-function positiveId(value: string, label: string): number {
-  const id = Number(value);
-  if (!Number.isInteger(id) || id < 1) {
-    throw new UsageError(`${label} must be a positive integer, got "${value}"`);
-  }
-
-  return id;
-}
 
 function listIndex(value: string): number {
   const index = Number(value);
@@ -84,13 +42,6 @@ function listIndex(value: string): number {
   }
 
   return index;
-}
-
-function nonBlank(text: string, slot: string): string {
-  const trimmed = text.trim();
-  if (!trimmed) throw new UsageError(`${slot} is empty`);
-
-  return trimmed;
 }
 
 function servesKind(value: string, label: string): ServesKind {
@@ -361,58 +312,6 @@ function cmdIsaInit(name: string): undefined {
   ok({ initialized: true, name, scaffolded });
 }
 
-// ── migrate (from old JSON format) ───────────────────────────────
-
-function cmdMigrate(): undefined {
-  const progressDir = paths.progress();
-  if (!existsSync(progressDir)) {
-    ok({ migrated: 0, skipped: 0, results: [] });
-
-    return;
-  }
-
-  const files = readdirSync(progressDir).filter((f) => f.endsWith(".json"));
-  if (files.length === 0) {
-    ok({ migrated: 0, skipped: 0, results: [] });
-
-    return;
-  }
-
-  let migrated = 0;
-  let skipped = 0;
-  const results: string[] = [];
-
-  for (const file of files) {
-    const slug = file.slice(0, -5);
-    const filePath = resolve(progressDir, file);
-
-    if (readProject(slug)) {
-      skipped++;
-      results.push(`${slug}: skipped (ISA.md already exists)`);
-      continue;
-    }
-
-    try {
-      const raw = JSON.parse(readFileSync(filePath, "utf-8"));
-      const p = legacyJsonToProgress(raw);
-      if (!p) {
-        skipped++;
-        results.push(`${slug}: skipped (malformed JSON)`);
-        continue;
-      }
-
-      writeProject(p);
-      migrated++;
-      results.push(`${slug}: migrated`);
-    } catch {
-      skipped++;
-      results.push(`${slug}: skipped (read/write error)`);
-    }
-  }
-
-  ok({ migrated, skipped, results });
-}
-
 // ── rm (project) ──────────────────────────────────────────────────
 
 function cmdRm(name: string): undefined {
@@ -421,249 +320,7 @@ function cmdRm(name: string): undefined {
   ok({ deleted: true, name });
 }
 
-// ── ISC helpers ──────────────────────────────────────────────────
-
-function cmdAddIsc(name: string, text: string): undefined {
-  const title = nonBlank(text, "<title...>");
-  const p = requireProject(name);
-  const current = p.criteria ?? "";
-  const id = nextIscId(current, p.changelog ?? "");
-  const newLine = `- [ ] ISC-${id}: ${encodeIscText(title)}`;
-  p.criteria = current ? `${current.trimEnd()}\n${newLine}` : newLine;
-  p.updated = now();
-  writeProject(p);
-  logCommitment(name, id, "opened", "cli");
-  ok({
-    added: true,
-    id,
-    title,
-    announce: `🎟️ ISC #${id} — ${title}`,
-    reminder:
-      "Surface the `announce` line to the user verbatim, on its own line. Every ISC you open MUST be announced with the 🎟️ ticket marker, in any response mode — omitting it is a defect.",
-  });
-}
-
-// Completing an ISC moves its line out of Criteria and into the dated Changelog
-// archive, so Criteria stays exactly the open set and never re-bloats context.
-function cmdCompleteIsc(name: string, id: number): undefined {
-  const p = requireProject(name);
-  const move = completeIsc(sectionsOf(p), id);
-  if (!move.ok) fail(`${move.reason} in project "${name}"`);
-
-  if (move.already) {
-    ok({ checked: true, id, alreadyDone: true });
-
-    return;
-  }
-
-  applyIscMove(p, move);
-  logCommitment(name, id, "kept", "cli");
-  ok({ checked: true, id, archived: true });
-}
-
-function sectionsOf(p: ProjectProgress): IscSections {
-  return { criteria: p.criteria ?? "", changelog: p.changelog ?? "" };
-}
-
-function applyIscMove(p: ProjectProgress, move: IscMove & { ok: true }): void {
-  p.criteria = move.criteria;
-  p.changelog = move.changelog;
-  p.updated = now();
-  writeProject(p);
-}
-
-// Reopening pulls the line back out of the Changelog (or legacy Criteria) into
-// the open set.
-function cmdReopenIsc(name: string, id: number): undefined {
-  const p = requireProject(name);
-  const move = reopenIsc(sectionsOf(p), id);
-  if (!move.ok) fail(`${move.reason} in project "${name}"`);
-
-  if (move.already) {
-    ok({ checked: false, id, alreadyOpen: true });
-
-    return;
-  }
-
-  applyIscMove(p, move);
-  logCommitment(name, id, "reopened", "cli");
-  ok({ checked: false, id });
-}
-
-interface IscListFlags {
-  all?: boolean;
-  closed?: boolean;
-  retired?: boolean;
-}
-
-function iscListFlag(flags: IscListFlags): Set<string> {
-  const chosen = Object.entries(flags)
-    .filter(([, on]) => on)
-    .map(([flag]) => `--${flag}`);
-  if (chosen.length > 1) {
-    throw new UsageError(`${chosen.join(" and ")} cannot be combined; pick one`);
-  }
-
-  return new Set(chosen);
-}
-
-function cmdListIsc(name: string, flags: Set<string>): undefined {
-  const p = requireProject(name);
-  const criteria = parseIscs(p.criteria ?? "");
-  const all = [...criteria, ...parseIscs(p.changelog ?? "")];
-  const open = all.filter((i) => i.status === "open");
-  const done = all.filter((i) => i.status === "done");
-  const retired = all.filter((i) => i.status === "retired");
-  ok({
-    name,
-    total: open.length + done.length + retired.length,
-    open: open.length,
-    done: done.length,
-    retired: retired.length,
-    iscs: selectIscs(open, done, retired, flags),
-  });
-}
-
-// show-isc prints one ISC's full text on demand — the "detail" counterpart to
-// resume's titles. Scans Criteria (open + not-yet-archived) and Changelog.
-function cmdShowIsc(name: string, id: number): undefined {
-  const p = requireProject(name);
-  const isc = [...parseIscs(p.criteria ?? ""), ...parseIscs(p.changelog ?? "")].find(
-    (i) => i.id === id
-  );
-  if (!isc) fail(`ISC-${id} not found in project "${name}".`);
-  ok({ name, id: isc.id, status: isc.status, text: isc.text });
-}
-
-// A retired ISC stopped being valid; it moves to the Changelog as [~], so it keeps
-// reserving its id and never reads as finished work.
-function cmdRetireIsc(name: string, id: number, by: number | null): undefined {
-  const p = requireProject(name);
-  if (parseIscs(p.changelog ?? "").some((i) => i.id === id && i.status === "retired")) {
-    ok({ retired: true, id, alreadyRetired: true });
-
-    return;
-  }
-
-  const { line, rest } = removeIscLine(p.criteria ?? "", id);
-  if (!line) fail(`ISC-${id} not found in project "${name}"`);
-  const suffix = by ? ` (superseded by ISC-${by})` : "";
-  p.criteria = rest;
-  p.changelog = archiveLine(
-    p.changelog,
-    `${line.replace(/\[[ x]\]/i, "[~]")}${suffix}`,
-    "Retired"
-  );
-  p.updated = now();
-  writeProject(p);
-  logCommitment(name, id, "dropped", "cli");
-  ok({ retired: true, id, supersededBy: by, archived: true });
-}
-
-// Returns the previous text, because the ISA files keep no version history.
-function cmdEditIsc(name: string, id: number, newText: string): undefined {
-  const text = nonBlank(newText, "<text...>");
-  const p = requireProject(name);
-  const inCriteria = parseIscs(p.criteria ?? "").find((i) => i.id === id);
-  const isc = inCriteria ?? parseIscs(p.changelog ?? "").find((i) => i.id === id);
-  if (!isc) fail(`ISC-${id} not found in project "${name}".`);
-
-  const box = ISC_BOX[isc.status];
-  const rewrite = (section: string) =>
-    section
-      .split("\n")
-      .map((l) =>
-        new RegExp(String.raw`^-\s+\[[ x~]\]\s+ISC-${id}:`, "i").test(l)
-          ? `- ${box} ISC-${id}: ${encodeIscText(text)}`
-          : l
-      )
-      .join("\n");
-
-  if (inCriteria) p.criteria = rewrite(p.criteria ?? "");
-  else p.changelog = rewrite(p.changelog ?? "");
-  p.updated = now();
-  writeProject(p);
-  ok({
-    edited: true,
-    id,
-    status: isc.status,
-    previous: isc.text,
-    text,
-  });
-}
-
-// Backfill: sweep any done ISCs still sitting in Criteria (legacy projects, or
-// completions from before archive-on-complete) into the Changelog in one pass.
-function cmdPruneIsc(name: string): undefined {
-  const p = requireProject(name);
-  const done = parseIscs(p.criteria ?? "").filter((i) => i.status !== "open");
-
-  for (const isc of done) {
-    const { line, rest } = removeIscLine(p.criteria ?? "", isc.id);
-    if (!line) continue;
-    p.criteria = rest;
-    p.changelog = archiveLine(p.changelog, line);
-  }
-
-  if (done.length > 0) {
-    p.updated = now();
-    writeProject(p);
-  }
-
-  const openLeft = parseIscs(p.criteria ?? "").filter((i) => i.status === "open").length;
-  ok({ pruned: done.length, name, remaining_open: openLeft });
-}
-
-// ── Task ISA (work/) ──────────────────────────────────────────────
-
-function taskIsaPath(slug: string): string {
-  const dir = resolve(paths.work(), slug);
-  mkdirSync(dir, { recursive: true });
-
-  return resolve(dir, "ISA.md");
-}
-
-function cmdScaffoldTaskIsa(text: string): undefined {
-  const title = nonBlank(text, "<title...>");
-  const slug = taskSlug(title);
-  const ts = new Date().toISOString();
-  const content = [
-    "---",
-    `task: "${title}"`,
-    `slug: "${slug}"`,
-    "phase: active",
-    `started: "${ts}"`,
-    `updated: "${ts}"`,
-    "---",
-    "",
-    "## Goal",
-    "",
-    "",
-    "## Criteria",
-    "",
-    "",
-  ].join("\n");
-  const filePath = taskIsaPath(slug);
-  writeFileSync(filePath, content, "utf-8");
-  ok({ created: true, slug, path: filePath });
-}
-
-function cmdCompleteTaskIsa(slug: string): undefined {
-  const filePath = resolve(paths.work(), slug, "ISA.md");
-  if (!existsSync(filePath)) fail(`Task ISA not found: ${slug}`);
-  const content = readFileSync(filePath, "utf-8");
-  const updated = content
-    .replace(/^phase: .+$/m, "phase: complete")
-    .replace(/^updated: .+$/m, `updated: "${new Date().toISOString()}"`);
-  writeFileSync(filePath, updated, "utf-8");
-  ok({ completed: true, slug });
-}
-
 // ── command tree ──────────────────────────────────────────────────
-
-function joined(words: string[]): string {
-  return words.join(" ");
-}
 
 function nameLeaf(summary: string, act: (name: string) => undefined): Leaf {
   return leaf({ summary, args: "<name>", run: ({ positionals }) => act(positionals[0]) });
@@ -671,14 +328,6 @@ function nameLeaf(summary: string, act: (name: string) => undefined): Leaf {
 
 function statusLeaf(summary: string, status: ProjectStatus): Leaf {
   return nameLeaf(summary, (name) => setStatus(name, status));
-}
-
-function iscLeaf(summary: string, act: (name: string, id: number) => undefined): Leaf {
-  return leaf({
-    summary,
-    args: "<name> <id>",
-    run: ({ positionals }) => act(positionals[0], positiveId(positionals[1], "<id>")),
-  });
 }
 
 function textLeaf(
@@ -780,54 +429,9 @@ export const command = group({
         cmdUpdateSection(name, section, joined(content)),
     }),
     criteria: nameLeaf("Print the Criteria section", cmdCriteria),
-    "add-isc": textLeaf("Append a new open ISC to Criteria", "<title...>", cmdAddIsc),
-    "complete-isc": iscLeaf("Mark ISC-N as done", cmdCompleteIsc),
-    "reopen-isc": iscLeaf("Reopen ISC-N (mark not done)", cmdReopenIsc),
-    "list-isc": leaf({
-      summary: "List open ISCs (default), or the closed or retired ones",
-      args: "<name>",
-      options: {
-        all: { type: "boolean", description: "Open, done and retired" },
-        closed: { type: "boolean", description: "Done only" },
-        retired: { type: "boolean", description: "Retired only" },
-      },
-      run: ({ positionals, values }) => cmdListIsc(positionals[0], iscListFlag(values)),
-    }),
-    "show-isc": iscLeaf("Print one ISC's full text", cmdShowIsc),
-    "edit-isc": leaf({
-      summary: "Rewrite ISC-N's text, keeping its id and state",
-      args: "<name> <id> <text...>",
-      run: ({ positionals: [name, id, ...text] }) =>
-        cmdEditIsc(name, positiveId(id, "<id>"), joined(text)),
-    }),
-    "retire-isc": leaf({
-      summary: "Close ISC-N as no longer valid, not as done",
-      args: "<name> <id>",
-      options: {
-        by: { type: "string", value: "<id>", description: "The ISC that supersedes it" },
-      },
-      run: ({ positionals: [name, id], values }) =>
-        cmdRetireIsc(
-          name,
-          positiveId(id, "<id>"),
-          values.by === undefined ? null : positiveId(values.by, "--by")
-        ),
-    }),
-    "prune-isc": nameLeaf(
-      "Archive done ISCs from Criteria into the Changelog",
-      cmdPruneIsc
-    ),
+    ...iscCommands,
     "isa-init": nameLeaf("Mark project as ISA-initialized", cmdIsaInit),
-    "scaffold-task-isa": leaf({
-      summary: "Create a one-shot task ISA in memory/work/",
-      args: "<title...>",
-      run: ({ positionals }) => cmdScaffoldTaskIsa(joined(positionals)),
-    }),
-    "complete-task-isa": leaf({
-      summary: "Mark a task ISA as complete",
-      args: "<slug>",
-      run: ({ positionals }) => cmdCompleteTaskIsa(positionals[0]),
-    }),
+    ...taskIsaCommands,
     migrate: leaf({
       summary: "Migrate old JSON progress files → ISA.md",
       run: cmdMigrate,

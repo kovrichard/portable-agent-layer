@@ -27,6 +27,9 @@ rules:
     no-string-match: error
   sonar:
     prefer-string-raw: off
+  experimental:
+    no-date-equality: error
+    no-floating-promise: error
 
 arch:
   layers:
@@ -75,7 +78,6 @@ arch:
     - limit: 500
       in: ["src/**"]
       message: "File is over 500 lines — split it into modules with one purpose each."
-      severity: warn
 
   forbidden:
     - pattern: "process.exit("
