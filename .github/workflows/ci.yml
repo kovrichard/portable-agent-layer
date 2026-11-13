@@ -87,6 +87,9 @@ jobs:
       - name: Exact dependency versions
         run: bun run exact-versions
 
+      - name: Lockfile matches package.json
+        run: bun run lock:check
+
       - name: Secretlint
         run: bun run secretlint
 

@@ -28,6 +28,9 @@
       },
       {
         "command": "bun .agents/hooks/exact-versions.ts"
+      },
+      {
+        "command": "bun .agents/hooks/lock-check.ts"
       }
     ]
   }
